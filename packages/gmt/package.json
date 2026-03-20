@@ -1,0 +1,79 @@
+{
+  "name": "@burglekitt/gmt",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Temporal-based date and time utilities with timezone support and polyfill integration",
+  "license": "MIT",
+  "author": "Burglekitt <https://github.com/burglekitt>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/burglekitt/gmt.git",
+    "directory": "packages/gmt"
+  },
+  "bugs": {
+    "url": "https://github.com/burglekitt/gmt/issues"
+  },
+  "homepage": "https://github.com/burglekitt/gmt#readme",
+  "keywords": [
+    "temporal",
+    "timezone",
+    "date",
+    "time",
+    "datetime",
+    "polyfill"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./plain": {
+      "types": "./dist/plain/index.d.ts",
+      "default": "./dist/plain/index.js"
+    },
+    "./plain/*": {
+      "types": "./dist/plain/*/index.d.ts",
+      "default": "./dist/plain/*/index.js"
+    },
+    "./plain/*/*": null,
+    "./plain/test": null,
+    "./zoned": {
+      "types": "./dist/zoned/index.d.ts",
+      "default": "./dist/zoned/index.js"
+    },
+    "./zoned/*": {
+      "types": "./dist/zoned/*/index.d.ts",
+      "default": "./dist/zoned/*/index.js"
+    },
+    "./zoned/*/*": null,
+    "./regex": {
+      "types": "./dist/regex/index.d.ts",
+      "default": "./dist/regex/index.js"
+    },
+    "./regex/*": {
+      "types": "./dist/regex/*.d.ts",
+      "default": "./dist/regex/*.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc --project tsconfig.build.json && tsc-alias -p tsconfig.build.json --resolve-full-paths --resolve-full-extension .js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "biome check .",
+    "format": "biome check --write ."
+  },
+  "dependencies": {
+    "@js-temporal/polyfill": "^0.5.1"
+  }
+}

@@ -1,0 +1,7 @@
+[test]
+# Exclude vitest test files from Bun's native test runner
+# Use `bun run test` to run vitest instead
+exclude = ["**/__tests__/**/*", "**/*.test.ts", "**/*.test.js"]
+
+[install]
+peer = true

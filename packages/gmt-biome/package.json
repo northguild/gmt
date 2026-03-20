@@ -1,0 +1,27 @@
+{
+  "name": "@burglekitt/gmt-biome",
+  "version": "0.0.1",
+  "private": false,
+  "description": "Shared Biome configuration for gmt projects",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "files": [
+    "biome.json",
+    "plugins",
+    "README.md"
+  ],
+  "scripts": {
+    "pack": "npm pack --dry-run",
+    "publish:dry-run": "npm publish --access public --dry-run",
+    "publish:public": "npm publish --access public"
+  },
+  "exports": {
+    ".": "./biome.json"
+  },
+  "peerDependencies": {
+    "@biomejs/biome": ">=2.0.0"
+  }
+}

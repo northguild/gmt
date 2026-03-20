@@ -1,0 +1,39 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.7/schema.json",
+  "plugins": [
+    "./packages/gmt-biome/plugins/no-date-now.grit",
+    "./packages/gmt-biome/plugins/no-date-parse.grit",
+    "./packages/gmt-biome/plugins/no-date-utc.grit",
+    "./packages/gmt-biome/plugins/no-new-date.grit"
+  ],
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/.nx",
+      "!**/dist",
+      "!**/coverage",
+      "!**/.cache",
+      "!**/out",
+      "!**/*.tsbuildinfo"
+    ]
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": { "level": "on" }
+      }
+    }
+  },
+  "linter": { "enabled": true },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2
+  }
+}

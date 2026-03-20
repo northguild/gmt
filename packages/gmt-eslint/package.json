@@ -1,0 +1,28 @@
+{
+  "name": "@burglekitt/gmt-eslint",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Shared ESLint configuration for gmt projects",
+  "license": "MIT",
+  "main": "./eslint/index.mjs",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "files": [
+    "eslint",
+    "README.md"
+  ],
+  "scripts": {
+    "pack": "npm pack --dry-run",
+    "publish:dry-run": "npm publish --access public --dry-run",
+    "publish:public": "npm publish --access public"
+  },
+  "exports": {
+    ".": "./eslint/index.mjs"
+  },
+  "peerDependencies": {
+    "eslint": "^9.0.0",
+    "@typescript-eslint/parser": "^8.0.0"
+  }
+}

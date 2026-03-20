@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+out/
+*.tsbuildinfo
+
+# Nx
+.nx/
+
+# Testing
+coverage/
+.cache/
+*.lcov
+
+# IDEs and editors
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+.project
+.classpath
+*.sublime-workspace
+
+# Misc
+.DS_Store
+Thumbs.db
+.eslintcache
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+npm-debug.log*
+yarn-error.log*

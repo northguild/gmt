@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: tree:0
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      # This enables task distribution via Nx Cloud
+      # Run this command as early as possible, before dependencies are installed
+      # Learn more at https://nx.dev/ci/reference/nx-cloud-cli#npx-nxcloud-startcirun
+      # Uncomment this line to enable task distribution
+      # - run: bunx nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="build"
+
+      - run: bun install --no-cache
+
+      # Sets NX_BASE and NX_HEAD for reliable affected calculations
+      - uses: nrwl/nx-set-shas@v4
+
+      # Pull requests: run only what changed
+      - run: bunx nx affected -t lint test typecheck build --base=$NX_BASE --head=$NX_HEAD
+        if: github.event_name == 'pull_request'
+
+      # Main branch: run the full monorepo checks
+      - run: bunx nx run-many -t lint test typecheck build
+        if: github.event_name == 'push'
+
+      # Verify config packages are packagable — no build step needed for config-only packages
+      - name: Verify gmt-biome pack
+        run: cd packages/gmt-biome && npm pack --dry-run
+
+      - name: Verify gmt-eslint pack
+        run: cd packages/gmt-eslint && npm pack --dry-run
+

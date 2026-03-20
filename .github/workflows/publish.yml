@@ -1,0 +1,49 @@
+name: Publish Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: "Package to publish"
+        required: true
+        type: choice
+        options:
+          - gmt
+          - gmt-biome
+          - gmt-eslint
+      tag:
+        description: "npm dist-tag (e.g. latest, next, beta)"
+        required: true
+        default: "latest"
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish @burglekitt/${{ inputs.package }}
+    runs-on: ubuntu-latest
+    environment: npm-publish
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
+
+      - run: bun install --no-cache
+
+      - name: Build (gmt only — config packages need no build)
+        if: inputs.package == 'gmt'
+        run: bunx nx run @burglekitt/gmt:build
+
+      - name: Publish @burglekitt/${{ inputs.package }}
+        run: npm publish --access public --tag ${{ inputs.tag }}
+        working-directory: packages/${{ inputs.package }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

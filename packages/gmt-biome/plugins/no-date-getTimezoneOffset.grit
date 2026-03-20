@@ -1,0 +1,3 @@
+`$obj.getTimezoneOffset()` where {
+  register_diagnostic(span=`getTimezoneOffset`, message="Aint nobody got time for getTimezoneOffset(). Timezone offsets change throughout the year, so use @burglekitt/gmt zoned methods instead.", severity="error")
+}

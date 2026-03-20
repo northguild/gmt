@@ -1,0 +1,3 @@
+`Date.parse($args)` where {
+  register_diagnostic(span=`Date.parse`, message="Aint nobody got time for Date.parse(). Use @burglekitt/gmt convertToUnixMilliseconds(value) or convertToUnixSeconds(value) instead.", severity="error")
+}
