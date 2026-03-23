@@ -1,6 +1,18 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidTime, isValidTimeUnit } from "../validate";
 
+/**
+ * Return the difference between two PlainTime values in the requested unit.
+ *
+ * - Returns `null` if inputs or unit are invalid.
+ * - Uses Temporal.PlainTime.until with `largestUnit` and extracts the
+ *   requested unit value from the resulting Duration.
+ *
+ * @param time1 ISO PlainTime string for the start
+ * @param time2 ISO PlainTime string for the end
+ * @param unit Temporal.TimeUnit to measure the difference
+ * @returns numeric difference in the requested unit, or null on invalid input
+ */
 export function diffTime(
   time1: string,
   time2: string,

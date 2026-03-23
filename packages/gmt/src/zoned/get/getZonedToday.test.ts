@@ -14,18 +14,29 @@ describe("getZonedToday", () => {
   });
 
   it.each`
-    timeZone
-    ${"UTC"}
-    ${"America/New_York"}
+    timeZone                 | expected
+    ${"UTC"}                 | ${"2024-02-29"}
+    ${"GMT"}                 | ${"2024-02-29"}
+    ${"Etc/GMT"}             | ${"2024-02-29"}
+    ${"Europe/Lisbon"}       | ${"2024-02-29"}
+    ${"Europe/Dublin"}       | ${"2024-02-29"}
+    ${"Europe/Berlin"}       | ${"2024-02-29"}
+    ${"Europe/Helsinki"}     | ${"2024-02-29"}
+    ${"Europe/Istanbul"}     | ${"2024-02-29"}
+    ${"Asia/Kolkata"}        | ${"2024-02-29"}
+    ${"Asia/Kathmandu"}      | ${"2024-02-29"}
+    ${"Asia/Shanghai"}       | ${"2024-02-29"}
+    ${"Australia/Lord_Howe"} | ${"2024-02-29"}
+    ${"Pacific/Chatham"}     | ${"2024-02-29"}
+    ${"Pacific/Apia"}        | ${"2024-02-29"}
+    ${"Pacific/Niue"}        | ${"2024-02-28"}
+    ${"America/New_York"}    | ${"2024-02-28"}
+    ${"America/Chicago"}     | ${"2024-02-28"}
+    ${"America/Phoenix"}     | ${"2024-02-28"}
   `(
     "returns an exact ISO date string for valid timezone $timeZone",
-    ({ timeZone }) => {
+    ({ timeZone, expected }) => {
       const value = getZonedToday(timeZone);
-
-      const expected = Temporal.Instant.from(fixedNowInstant)
-        .toZonedDateTimeISO(timeZone)
-        .toPlainDate()
-        .toString();
 
       expect(value).toBe(expected);
       expect(isValidDate(value)).toBe(true);

@@ -76,7 +76,7 @@ module.exports = [...gmtEslintConfig];
 | `new Date(...)` | `no-restricted-syntax` | Use `getUtcNow()`, `getNow()`, or `getZonedNow(timezone)` |
 | `Date.now()` | `no-restricted-properties` | Use `getUnixNow('milliseconds' \| 'seconds')` or `getNow()` |
 | `Date.UTC(...)` | `no-restricted-properties` | Use `convertUtcDateTimeToUnix('YYYY-MM-DDTHH:mm:ss', 'milliseconds' \| 'seconds')` |
-| `Date.parse(...)` | `no-restricted-properties` | Use `convertToUnixMilliseconds(value)` or `convertToUnixSeconds(value)` |
+| `Date.parse(...)` | `no-restricted-properties` | Use `convertZonedToUnix(value)` |
 | `$date.getTimezoneOffset()` | `no-restricted-syntax` | Use `getZonedNow(timezone)` or `convertZonedDateTimeToUnix(date, timezone)` |
 
 ## Why Temporal?

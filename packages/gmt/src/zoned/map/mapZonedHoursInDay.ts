@@ -1,6 +1,16 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate";
 
+/**
+ * Return an array of zoned datetime strings representing each hour boundary
+ * for the 24-hour window starting at midnight of the anchor's local day.
+ *
+ * - Accounts for days longer/shorter than 24 hours due to DST shifts.
+ * - Returns an empty array for invalid anchor input.
+ *
+ * @param anchor zoned ISO 8601 datetime string used as anchor
+ * @returns array of zoned ISO 8601 strings for each hour in the day
+ */
 export function mapZonedHoursInDay(anchor: string): string[] {
   if (!isValidZonedDateTime(anchor)) {
     return [];

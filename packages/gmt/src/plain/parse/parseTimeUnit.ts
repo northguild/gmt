@@ -2,6 +2,16 @@ import { Temporal } from "@js-temporal/polyfill";
 
 import { isValidTime } from "../validate";
 
+/**
+ * Return a specific time unit extracted from a PlainTime string.
+ *
+ * - Valid units: hour, minute, second, millisecond.
+ * - Returns an empty string on invalid input.
+ *
+ * @param value ISO PlainTime string
+ * @param unit unit to extract from the time
+ * @returns string representation of the requested unit or "" on invalid input
+ */
 export function parseTimeUnit(
   value: string,
   unit: "hour" | "minute" | "second" | "millisecond",

@@ -26,7 +26,17 @@ function isValidZonedUnit(unit: string): unit is ZonedParseUnit {
   ].includes(unit);
 }
 
-// Returns the requested unit from an ISO 8601 zoned datetime string.
+/**
+ * Return the requested unit value from an ISO 8601 zoned datetime string.
+ *
+ * - Supported units include year, month, day, hour, minute, second,
+ *   millisecond, nanosecond, and timezone.
+ * - Returns empty string "" for invalid zoned datetime or unit.
+ *
+ * @param value zoned ISO 8601 datetime string
+ * @param unit unit to extract
+ * @returns string representation of the requested unit or empty string when invalid
+ */
 export function parseZonedUnit(value: string, unit: ZonedParseUnit): string {
   if (!isValidZonedDateTime(value) || !isValidZonedUnit(unit)) {
     return "";

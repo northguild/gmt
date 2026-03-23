@@ -44,6 +44,39 @@ describe("mapZonedHoursInDay", () => {
     },
   );
 
+  it.each`
+    anchor                                              | expectedLength
+    ${"2024-02-29T12:00:00+00:00[UTC]"}                 | ${24}
+    ${"2024-02-29T12:00:00+00:00[GMT]"}                 | ${24}
+    ${"2024-02-29T12:00:00+00:00[Etc/GMT]"}             | ${24}
+    ${"2024-02-29T12:00:00+00:00[Europe/Lisbon]"}       | ${24}
+    ${"2024-02-29T12:00:00+00:00[Europe/Dublin]"}       | ${24}
+    ${"2024-02-29T12:00:00+01:00[Europe/Berlin]"}       | ${24}
+    ${"2024-02-29T12:00:00+02:00[Europe/Helsinki]"}     | ${24}
+    ${"2024-02-29T12:00:00+03:00[Europe/Istanbul]"}     | ${24}
+    ${"2024-02-29T12:00:00+05:30[Asia/Kolkata]"}        | ${24}
+    ${"2024-02-29T12:00:00+05:45[Asia/Kathmandu]"}      | ${24}
+    ${"2024-02-29T12:00:00+08:00[Asia/Shanghai]"}       | ${24}
+    ${"2024-02-29T12:00:00+11:00[Australia/Lord_Howe]"} | ${24}
+    ${"2024-02-29T12:00:00+13:45[Pacific/Chatham]"}     | ${24}
+    ${"2024-02-29T12:00:00+13:00[Pacific/Apia]"}        | ${24}
+    ${"2024-02-29T12:00:00-11:00[Pacific/Niue]"}        | ${24}
+    ${"2024-02-29T12:00:00-05:00[America/New_York]"}    | ${24}
+    ${"2024-02-29T12:00:00-06:00[America/Chicago]"}     | ${24}
+    ${"2024-02-29T12:00:00-07:00[America/Phoenix]"}     | ${24}
+  `(
+    "returns $expectedLength hourly entries for battle-test anchor $anchor",
+    ({
+      anchor,
+      expectedLength,
+    }: {
+      anchor: string;
+      expectedLength: number;
+    }) => {
+      expect(mapZonedHoursInDay(anchor)).toHaveLength(expectedLength);
+    },
+  );
+
   for (const { timeZone, value } of localNoonBattleCases) {
     it(`returns 24 hourly entries for battle-test timezone ${timeZone}`, () => {
       expect(mapZonedHoursInDay(value)).toHaveLength(24);

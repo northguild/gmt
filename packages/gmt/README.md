@@ -222,6 +222,14 @@ isValidZonedDateTime("2024-03-17T14:30:45+00:00[UTC]");
 - `subtractDateTime`
 - `subtractTime`
 
+### `@burglekitt/gmt/plain/chop`
+
+- `chopDate`
+- `chopMilliseconds`
+- `chopSeconds`
+- `chopTime`
+- `chopUtc`
+
 ### `@burglekitt/gmt/plain/compare`
 
 - `areDatesEqual`
@@ -260,6 +268,7 @@ isValidZonedDateTime("2024-03-17T14:30:45+00:00[UTC]");
 
 ### `@burglekitt/gmt/plain/validate`
 
+- `isLeapSecond`
 - `isValidDate`
 - `isValidDateOrDateTime`
 - `isValidDateRange`
@@ -277,9 +286,17 @@ isValidZonedDateTime("2024-03-17T14:30:45+00:00[UTC]");
 - `addZoned`
 - `subtractZoned`
 
+### `@burglekitt/gmt/zoned/chop`
+
+- `chopZonedDate`
+- `chopZonedDateTime`
+- `chopZonedMilliseconds`
+- `chopZonedSeconds`
+- `chopZonedTime`
+- `chopZonedTimezone`
+
 ### `@burglekitt/gmt/zoned/compare`
 
-- `areZonedDateTimesEqual`
 - `areZonedEqual`
 - `isAfterZoned`
 - `isBeforeZoned`
@@ -288,8 +305,6 @@ isValidZonedDateTime("2024-03-17T14:30:45+00:00[UTC]");
 
 - `convertTimezoneToUnix`
 - `convertTimezoneToUtc`
-- `convertToUnixMilliseconds`
-- `convertToUnixSeconds`
 - `convertUnixToTimezone`
 - `convertUnixToZoned`
 - `convertUnixToUtc`
@@ -331,10 +346,22 @@ isValidZonedDateTime("2024-03-17T14:30:45+00:00[UTC]");
 
 ### `@burglekitt/gmt/regex`
 
-- `date`
-- `date-time`
-- `time`
-- `timezone`
+- `year`
+- `month`
+- `day`
+- `plainDate`
+- `plainDateTime`
+- `leapSecond`
+- `hour`
+- `minute`
+- `second`
+- `fractionalSecond`
+- `millisecond`
+- `plainTime`
+- `timezoneLike`
+- `unixSeconds`
+- `unixMilliseconds`
+- `utcDateTime`
 
 ---
 
@@ -344,7 +371,7 @@ Prioritized roadmap and parity checks against Luxon, Moment, and date-fns.
 
 1. Interval primitives and helpers (`Interval` type, overlap checks, containment checks, interval sorting, interval normalization/merge).
 2. Range iteration helpers (each day/week/month/quarter across a range for plain and zoned inputs).
-3. Clamp/min/max helpers for dates and datetimes (bounded values and collection min/max selectors).
+3. Clamp/min/max helpers for dates datetimes times (bounded values and collection min/max selectors).
 4. `isBetween` and inclusive/exclusive boundary helpers for plain and zoned APIs.
 5. Quarter helpers beyond parse-only accessors (`getQuarter`, `startOfQuarter`, `endOfQuarter`).
 6. Additional start/end boundaries (`startOfWeek`, `endOfWeek`, ISO-week variants, month/year boundaries where missing).
@@ -354,7 +381,7 @@ Prioritized roadmap and parity checks against Luxon, Moment, and date-fns.
 10. Parsing pack for non-ISO but common user inputs (`YYYY/MM/DD`, `HHmm`, month-name parsing) in a separate optional package.
 11. Business-day helpers (`addBusinessDays`, `differenceInBusinessDays`) as an optional domain module.
 12. Optional validation package (`gmt-zod`) kept separate from core `@burglekitt/gmt`.
-
+13. Descriptive parsing errors for timezones, GMT offsets
 ---
 
 ## Testing Matrix

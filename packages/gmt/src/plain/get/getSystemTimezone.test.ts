@@ -3,14 +3,32 @@ import { mockSystemTimezone } from "../test/runtimeFixtures";
 import { getSystemTimezone } from "./getSystemTimezone";
 
 describe("getSystemTimezone", () => {
-  it("returns the mocked IANA timezone", () => {
-    const restoreTimezone = mockSystemTimezone("Pacific/Chatham");
+  it.each`
+    mockTimezone
+    ${"UTC"}
+    ${"Etc/GMT"}
+    ${"GMT"}
+    ${"Europe/Lisbon"}
+    ${"Europe/Dublin"}
+    ${"Europe/Berlin"}
+    ${"Europe/Helsinki"}
+    ${"Europe/Istanbul"}
+    ${"Asia/Kolkata"}
+    ${"Asia/Kathmandu"}
+    ${"Asia/Shanghai"}
+    ${"Australia/Lord_Howe"}
+    ${"Pacific/Chatham"}
+    ${"Pacific/Apia"}
+    ${"Pacific/Niue"}
+    ${"America/New_York"}
+    ${"America/Chicago"}
+    ${"America/Phoenix"}
+  `("returns the mocked IANA timezone", ({ mockTimezone }) => {
+    const restoreTimezone = mockSystemTimezone(mockTimezone);
 
     const timezone = getSystemTimezone();
-
-    expect(timezone).toBe("Pacific/Chatham");
+    expect(timezone).toBe(mockTimezone);
     expect(isValidTimezone(timezone)).toBe(true);
-
     restoreTimezone();
   });
 

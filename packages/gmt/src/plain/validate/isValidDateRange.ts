@@ -9,6 +9,18 @@ interface IsValidDateRangeProps {
   };
 }
 
+/**
+ * Return whether `value1` is before `value2`. If `options.allowEqual` is
+ * true then equality is considered valid as well.
+ *
+ * - Validates both inputs using regex and Temporal.PlainDate.from.
+ * - Returns false for invalid inputs or on error.
+ *
+ * @param value1 first ISO PlainDate string
+ * @param value2 second ISO PlainDate string
+ * @param options optional allowEqual flag
+ * @returns boolean indicating whether the date range is valid
+ */
 export function isValidDateRange({
   value1,
   value2,

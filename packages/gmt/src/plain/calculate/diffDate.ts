@@ -1,6 +1,19 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidDate, isValidDateUnit } from "../validate";
 
+/**
+ * Return the difference between two PlainDate values using the provided
+ * `unit` (day|week|month|year).
+ *
+ * - Returns `null` for invalid inputs or units.
+ * - Uses Temporal.PlainDate.until and extracts the requested unit from the
+ *   resulting Duration.
+ *
+ * @param date1 ISO PlainDate string for the start
+ * @param date2 ISO PlainDate string for the end
+ * @param unit Temporal.DateUnit (day|week|month|year)
+ * @returns numeric difference in the requested unit, or null on invalid input
+ */
 export function diffDate(
   date1: string,
   date2: string,

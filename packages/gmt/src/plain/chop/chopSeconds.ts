@@ -2,6 +2,16 @@ import { Temporal } from "@js-temporal/polyfill";
 import { isValidDateTime } from "../validate/isValidDateTime";
 import { isValidTime } from "../validate/isValidTime";
 
+/**
+ * Return an ISO string with second precision removed (rounded/truncated to
+ * minutes) for PlainDateTime or PlainTime values.
+ *
+ * - Converts inputs to minute precision.
+ * - Returns an empty string for invalid input.
+ *
+ * @param value ISO PlainDateTime or PlainTime string
+ * @returns ISO string trimmed to minutes or "" on invalid input
+ */
 export function chopSeconds(value: string): string {
   if (isValidDateTime(value)) {
     return Temporal.PlainDateTime.from(value).toString({

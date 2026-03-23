@@ -1,6 +1,21 @@
 import { Temporal, Intl as TemporalIntl } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate";
 
+/**
+ * Format a zoned datetime range using the Temporal Intl.DateTimeFormat
+ * `formatRange` API.
+ *
+ * - Both `from` and `to` must be valid zoned ISO 8601 strings and share the
+ *   same IANA timezone id.
+ * - `locale` and `options` are forwarded to the formatter.
+ * - Returns an empty string "" for invalid input or when formatting fails.
+ *
+ * @param from zoned ISO 8601 datetime string (range start)
+ * @param to zoned ISO 8601 datetime string (range end)
+ * @param locale optional locale tag
+ * @param options optional Intl.DateTimeFormatOptions
+ * @returns localized range string or empty string when invalid
+ */
 export function formatZonedRange(
   from: string,
   to: string,

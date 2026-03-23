@@ -14,6 +14,33 @@ describe("getZonedDate", () => {
   );
 
   it.each`
+    timeZone
+    ${"UTC"}
+    ${"GMT"}
+    ${"Etc/GMT"}
+    ${"Europe/Lisbon"}
+    ${"Europe/Dublin"}
+    ${"Europe/Berlin"}
+    ${"Europe/Helsinki"}
+    ${"Europe/Istanbul"}
+    ${"Asia/Kolkata"}
+    ${"Asia/Kathmandu"}
+    ${"Asia/Shanghai"}
+    ${"Australia/Lord_Howe"}
+    ${"Pacific/Chatham"}
+    ${"Pacific/Apia"}
+    ${"Pacific/Niue"}
+    ${"America/New_York"}
+    ${"America/Chicago"}
+    ${"America/Phoenix"}
+  `(
+    "returns the plain date unchanged for battle-test timezone $timeZone",
+    ({ timeZone }: { timeZone: string }) => {
+      expect(getZonedDate("2024-02-29", timeZone)).toBe("2024-02-29");
+    },
+  );
+
+  it.each`
     value
     ${"1970-01-01"}
   `("returns a non-empty date for edge case date $value", ({ value }) => {

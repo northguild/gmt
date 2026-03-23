@@ -1,6 +1,19 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate";
 
+/**
+ * Return an array of plain ISO date strings covering the inclusive date range
+ * between two zoned datetimes in the same timezone.
+ *
+ * - `stepDays` is optional and defaults to 1; must be a positive integer.
+ * - Returns empty array for invalid inputs, mismatched timezones, or when
+ *   start > end.
+ *
+ * @param startZonedDateTime start zoned ISO 8601 datetime string
+ * @param endZonedDateTime end zoned ISO 8601 datetime string
+ * @param stepDays optional positive integer step in days
+ * @returns array of ISO date strings or empty array when invalid
+ */
 export function mapZonedDatesInRange(
   startZonedDateTime: string,
   endZonedDateTime: string,

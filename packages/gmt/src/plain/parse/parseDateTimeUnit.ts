@@ -2,6 +2,16 @@ import { Temporal } from "@js-temporal/polyfill";
 
 import { isValidDateTime } from "../validate";
 
+/**
+ * Return a specific unit extracted from a PlainDateTime string.
+ *
+ * - Valid units: year, month, day, hour, minute, second, millisecond.
+ * - Returns an empty string on invalid input.
+ *
+ * @param value ISO PlainDateTime string
+ * @param unit unit to extract from the datetime
+ * @returns string representation of the requested unit or "" on invalid input
+ */
 export function parseDateTimeUnit(
   value: string,
   unit: "year" | "month" | "day" | "hour" | "minute" | "second" | "millisecond",

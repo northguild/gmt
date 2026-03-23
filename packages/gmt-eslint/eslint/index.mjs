@@ -35,7 +35,7 @@ export default [
           object: "Date",
           property: "parse",
           message:
-            "Aint nobody got time for Date.parse(). Use @burglekitt/gmt convertToUnixMilliseconds(value) or convertToUnixSeconds(value) instead.",
+            "Aint nobody got time for Date.parse(). Use @burglekitt/gmt convertZonedToUnix(value) instead.",
         },
       ],
       "no-restricted-syntax": [

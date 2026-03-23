@@ -2,6 +2,18 @@ import { Temporal } from "@js-temporal/polyfill";
 import { isValidAmount } from "../../internal";
 import { isValidTime, isValidTimeUnit } from "../validate";
 
+/**
+ * Return a PlainTime ISO string with `amount` added to `value` using the
+ * specified `unit`.
+ *
+ * - Validates `value`, `unit`, and `amount` before performing the add.
+ * - Returns an empty string for invalid inputs.
+ *
+ * @param value ISO PlainTime string
+ * @param amount numeric amount to add
+ * @param unit Temporal.TimeUnit (hour|minute|second|...)
+ * @returns ISO PlainTime string with amount added, or "" on invalid input
+ */
 export function addTime(
   value: string,
   amount: number,

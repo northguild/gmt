@@ -2,9 +2,13 @@ import { utcDateTime } from "../../regex/utc-date-time";
 import { isLeapSecond } from "./isLeapSecond";
 
 /**
- * Validates whether a string is a valid ISO 8601 UTC datetime.
- * @param value The string to validate
- * @returns `true` if the string is a valid UTC datetime (e.g. "2024-02-29T14:30:45Z"), `false` otherwise
+ * Return true when the provided string is a valid ISO 8601 UTC datetime.
+ *
+ * - Rejects leap-seconds explicitly.
+ * - Uses a regex to validate the UTC datetime format.
+ *
+ * @param value input UTC datetime string (ISO 8601)
+ * @returns boolean indicating whether the input is a valid UTC datetime
  */
 export function isUtcDateTime(value: string): boolean {
   if (isLeapSecond(value)) {

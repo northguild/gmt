@@ -67,7 +67,7 @@ extends = ["@burglekitt/gmt-biome"]
 |---|---|---|
 | `new Date(...)` | `no-new-date` | Use `getUtcNow()`, `getNow()`, or `getZonedNow(timezone)` |
 | `Date.now()` | `no-date-now` | Use `getUnixNow('milliseconds' \| 'seconds')` or `getNow()` |
-| `Date.parse(...)` | `no-date-parse` | Use `convertToUnixMilliseconds(value)` or `convertToUnixSeconds(value)` |
+| `Date.parse(...)` | `no-date-parse` | Use `convertZonedToUnix(value)` |
 | `Date.UTC(...)` | `no-date-utc` | Use `convertUtcDateTimeToUnix('YYYY-MM-DDTHH:mm:ss', 'milliseconds' \| 'seconds')` |
 | `$date.getTimezoneOffset()` | `no-date-getTimezoneOffset` | Use `getZonedNow(timezone)` or `convertZonedDateTimeToUnix(date, timezone)` |
 

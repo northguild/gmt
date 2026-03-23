@@ -23,6 +23,33 @@ describe("subtractZoned", () => {
   );
 
   it.each`
+    value                                               | expected
+    ${"2024-02-29T14:30:00+00:00[UTC]"}                 | ${"2023-03-01T14:30:00+00:00[UTC]"}
+    ${"2024-02-29T14:30:00+00:00[GMT]"}                 | ${"2023-03-01T14:30:00+00:00[GMT]"}
+    ${"2024-02-29T14:30:00+00:00[Etc/GMT]"}             | ${"2023-03-01T14:30:00+00:00[Etc/GMT]"}
+    ${"2024-02-29T14:30:00+00:00[Europe/Lisbon]"}       | ${"2023-03-01T14:30:00+00:00[Europe/Lisbon]"}
+    ${"2024-02-29T14:30:00+00:00[Europe/Dublin]"}       | ${"2023-03-01T14:30:00+00:00[Europe/Dublin]"}
+    ${"2024-02-29T14:30:00+01:00[Europe/Berlin]"}       | ${"2023-03-01T14:30:00+01:00[Europe/Berlin]"}
+    ${"2024-02-29T14:30:00+02:00[Europe/Helsinki]"}     | ${"2023-03-01T14:30:00+02:00[Europe/Helsinki]"}
+    ${"2024-02-29T14:30:00+03:00[Europe/Istanbul]"}     | ${"2023-03-01T14:30:00+03:00[Europe/Istanbul]"}
+    ${"2024-02-29T14:30:00+05:30[Asia/Kolkata]"}        | ${"2023-03-01T14:30:00+05:30[Asia/Kolkata]"}
+    ${"2024-02-29T14:30:00+05:45[Asia/Kathmandu]"}      | ${"2023-03-01T14:30:00+05:45[Asia/Kathmandu]"}
+    ${"2024-02-29T14:30:00+08:00[Asia/Shanghai]"}       | ${"2023-03-01T14:30:00+08:00[Asia/Shanghai]"}
+    ${"2024-02-29T14:30:00+11:00[Australia/Lord_Howe]"} | ${"2023-03-01T14:30:00+11:00[Australia/Lord_Howe]"}
+    ${"2024-02-29T14:30:00+13:45[Pacific/Chatham]"}     | ${"2023-03-01T14:30:00+13:45[Pacific/Chatham]"}
+    ${"2024-02-29T14:30:00+13:00[Pacific/Apia]"}        | ${"2023-03-01T14:30:00+13:00[Pacific/Apia]"}
+    ${"2024-02-29T14:30:00-11:00[Pacific/Niue]"}        | ${"2023-03-01T14:30:00-11:00[Pacific/Niue]"}
+    ${"2024-02-29T14:30:00-05:00[America/New_York]"}    | ${"2023-03-01T14:30:00-05:00[America/New_York]"}
+    ${"2024-02-29T14:30:00-06:00[America/Chicago]"}     | ${"2023-03-01T14:30:00-06:00[America/Chicago]"}
+    ${"2024-02-29T14:30:00-07:00[America/Phoenix]"}     | ${"2023-03-01T14:30:00-07:00[America/Phoenix]"}
+  `(
+    "works across ordered battle-test timezones for $value",
+    ({ value, expected }) => {
+      expect(subtractZoned(value, 365, "day")).toBe(expected);
+    },
+  );
+
+  it.each`
     value                               | amount | unit        | expected
     ${"2024-02-29T14:30:00+00:00[UTC]"} | ${-1}  | ${"hour"}   | ${"2024-02-29T15:30:00+00:00[UTC]"}
     ${"2024-02-29T14:30:00+00:00[UTC]"} | ${-30} | ${"minute"} | ${"2024-02-29T15:00:00+00:00[UTC]"}

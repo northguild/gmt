@@ -2,6 +2,18 @@ import { Temporal } from "@js-temporal/polyfill";
 
 import { isValidDate } from "../validate";
 
+/**
+ * Return an array of ISO PlainDate strings between `startDate` and `endDate`
+ * inclusive, stepping by `stepDays`.
+ *
+ * - `stepDays` defaults to 1 when omitted.
+ * - Returns an empty array for invalid dates or invalid step values.
+ *
+ * @param startDate ISO PlainDate string for the first date
+ * @param endDate ISO PlainDate string for the last date (inclusive)
+ * @param stepDays optional number of days to step between results
+ * @returns array of ISO PlainDate strings, or an empty array on invalid input
+ */
 export function mapDatesInRange(
   startDate: string,
   endDate: string,

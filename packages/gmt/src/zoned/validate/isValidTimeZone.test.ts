@@ -3,11 +3,25 @@ import { isValidTimezone } from ".";
 
 describe("isValidTimezone", () => {
   it.each`
-    timezone              | expected
-    ${"Pacific/Apia"}     | ${true}
-    ${"America/New_York"} | ${true}
-    ${"Europe/London"}    | ${true}
-    ${"Pacific/Niue"}     | ${true}
+    timezone                 | expected
+    ${"UTC"}                 | ${true}
+    ${"Etc/GMT"}             | ${true}
+    ${"GMT"}                 | ${true}
+    ${"Europe/Lisbon"}       | ${true}
+    ${"Europe/Dublin"}       | ${true}
+    ${"Europe/Berlin"}       | ${true}
+    ${"Europe/Helsinki"}     | ${true}
+    ${"Europe/Istanbul"}     | ${true}
+    ${"Asia/Kolkata"}        | ${true}
+    ${"Asia/Kathmandu"}      | ${true}
+    ${"Asia/Shanghai"}       | ${true}
+    ${"Australia/Lord_Howe"} | ${true}
+    ${"Pacific/Chatham"}     | ${true}
+    ${"Pacific/Apia"}        | ${true}
+    ${"Pacific/Niue"}        | ${true}
+    ${"America/New_York"}    | ${true}
+    ${"America/Chicago"}     | ${true}
+    ${"America/Phoenix"}     | ${true}
   `("validates $timezone as $expected", ({ timezone, expected }) => {
     expect(isValidTimezone(timezone)).toBe(expected);
   });

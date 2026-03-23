@@ -1,12 +1,20 @@
 import { Temporal } from "@js-temporal/polyfill";
+import {
+  isValidUnixUnit,
+  type UnixUnit,
+} from "../../plain/validate/isValidUnixUnit";
 import { isValidZonedDateTime } from "../validate";
 
-export type UnixUnit = "seconds" | "milliseconds";
-
-function isValidUnixUnit(unit: string): unit is UnixUnit {
-  return unit === "seconds" || unit === "milliseconds";
-}
-
+/**
+ * Convert an ISO 8601 zoned datetime string to a unix epoch value in
+ * milliseconds (default) or seconds.
+ *
+ * - Returns `null` for invalid zoned datetime or invalid unit.
+ *
+ * @param value zoned ISO 8601 datetime string
+ * @param unit optional unit, "seconds" or "milliseconds"
+ * @returns epoch number or null when invalid
+ */
 export function convertZonedToUnix(
   value: string,
   ...unitInput: [unit?: UnixUnit]

@@ -1,7 +1,4 @@
-export * from "./convertTimezoneToUnix";
 export * from "./convertTimezoneToUtc";
-export * from "./convertToUnixMilliseconds";
-export * from "./convertToUnixSeconds";
 export * from "./convertUnixToTimezone";
 export * from "./convertUnixToUtc";
 export * from "./convertUnixToZoned";

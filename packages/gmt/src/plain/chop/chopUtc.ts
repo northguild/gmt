@@ -1,5 +1,14 @@
 import { isUtcDateTime } from "../validate/isUtcDateTime";
 
+/**
+ * Return the UTC datetime string with a trailing Z removed if present.
+ *
+ * - Only removes a trailing 'Z' or 'z' from valid UTC datetime strings.
+ * - Returns an empty string for invalid input.
+ *
+ * @param value UTC datetime string (ISO 8601)
+ * @returns UTC datetime string without trailing Z or "" on invalid input
+ */
 export function chopUtc(value: string): string {
   if (!isUtcDateTime(value)) {
     return "";

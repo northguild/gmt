@@ -2,6 +2,17 @@ import { Temporal } from "@js-temporal/polyfill";
 import { isValidAmount } from "../../internal";
 import { isValidDateTime, isValidDateTimeUnit } from "../validate";
 
+/**
+ * Return a PlainDateTime ISO string with `amount` added according to `unit`.
+ *
+ * - Validates `value`, `unit`, and `amount` before performing the add.
+ * - Returns an empty string for invalid inputs.
+ *
+ * @param value ISO PlainDateTime string
+ * @param amount numeric amount to add
+ * @param unit Temporal.DateTimeUnit (year|month|day|hour|...)
+ * @returns ISO PlainDateTime string after addition, or "" on invalid input
+ */
 export function addDateTime(
   value: string,
   amount: number,

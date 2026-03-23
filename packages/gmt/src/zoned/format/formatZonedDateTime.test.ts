@@ -403,4 +403,12 @@ describe("formatZonedDateTime", () => {
       expect(formatZonedDateTime(value, MustTestLocales.enUS)).not.toBe("");
     });
   }
+
+  // Locale-native smoke: every locale formatted using its canonical timezone input
+  for (const locale of Object.values(MustTestLocales)) {
+    it(`smoke: formats zoned datetime for locale ${locale} in its canonical timezone`, () => {
+      const value = localeZonedDateTimeInputByLocale[locale];
+      expect(formatZonedDateTime(value, locale)).not.toBe("");
+    });
+  }
 });

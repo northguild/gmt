@@ -3,6 +3,16 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { timezoneLike } from "../../regex";
 
+/**
+ * Validate whether a string is a valid IANA timezone identifier.
+ *
+ * - Uses the Temporal polyfill to construct a ZonedDateTime and a regex
+ *   sanity-check on the timezone string.
+ * - Returns `true` when the timezone appears valid, otherwise `false`.
+ *
+ * @param timeZone timezone identifier to validate
+ * @returns boolean indicating validity
+ */
 export function isValidTimezone(timeZone: string): boolean {
   try {
     Temporal.ZonedDateTime.from({
