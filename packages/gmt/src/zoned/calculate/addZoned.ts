@@ -1,6 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidAmount } from "../../internal";
-import { isValidDateTimeUnit } from "../../plain/validate";
+import { isValidDateTimeDurationUnit } from "../../plain/validate";
+import type { DateTimeDurationUnit } from "../../types";
 import { isValidZonedDateTime } from "../validate";
 
 /**
@@ -14,32 +15,30 @@ import { isValidZonedDateTime } from "../validate";
  *
  * Examples:
  * ```ts
- * addZoned("2024-02-29T14:30:00+00:00[UTC]", 1, "year")
+ * addZoned("2024-02-29T14:30:00+00:00[UTC]", {years: 1}) // => "2025-02-28T14:30:00+00:00[UTC]"
  * // => "2025-02-28T14:30:00+00:00[UTC]"
  * ```
  *
  * @param value ISO 8601 zoned datetime string
- * @param amount numeric amount to add (can be negative)
- * @param unit Temporal.DateTimeUnit unit to add (e.g. "day", "hour")
+ * @param units Partial<Record<DateTimeDurationUnit, number>> object specifying units to add (e.g. { days: 1, months: 2 })
  * @returns zoned ISO 8601 string on success, or empty string on invalid input
  */
 export function addZoned(
   value: string,
-  amount: number,
-  unit: Temporal.DateTimeUnit,
+  units: Partial<Record<DateTimeDurationUnit, number>>,
 ): string {
-  if (
-    !isValidZonedDateTime(value) ||
-    !isValidAmount(amount) ||
-    !isValidDateTimeUnit(unit)
-  ) {
+  const validZonedDateTime = isValidZonedDateTime(value);
+  const validUnits = Object.keys(units).every(isValidDateTimeDurationUnit);
+  const validAmounts = Object.values(units).every(isValidAmount);
+
+  if (!validZonedDateTime || !validUnits || !validAmounts) {
     // TODO descriptive messages of what failed - likely could be GMT offset for historical changes and DST
     return "";
   }
 
   try {
     const zoned = Temporal.ZonedDateTime.from(value);
-    return zoned.add({ [`${unit}s`]: amount }).toString();
+    return zoned.add(units).toString();
   } catch {
     return "";
   }

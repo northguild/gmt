@@ -1,5 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { isValidDateTime, isValidDateTimeUnit } from "../validate";
+import type { DateTimeDurationUnit } from "../../types";
+import { isValidDateTime, isValidDateTimeDurationUnit } from "../validate";
+import { getLargestDateTimeDurationUnit } from "./getLargestDateTimeDurationUnit";
 
 /**
  * Return the difference between two PlainDateTime values in the requested
@@ -11,26 +13,46 @@ import { isValidDateTime, isValidDateTimeUnit } from "../validate";
  *
  * @param dateTime1 ISO PlainDateTime string for the start
  * @param dateTime2 ISO PlainDateTime string for the end
- * @param unit Temporal.DateTimeUnit to measure the difference
+ * @param units DateTimeDurationUnit|DateTimeDurationUnit[] to measure the difference (e.g. ["years", "months", "hours"])
  * @returns numeric difference in the requested unit, or null on invalid input
  */
 export function diffDateTime(
   dateTime1: string,
   dateTime2: string,
-  unit: Temporal.DateTimeUnit,
-): number | null {
+  units: DateTimeDurationUnit | DateTimeDurationUnit[],
+): number | Record<DateTimeDurationUnit, number> | null {
   const validDateTimes =
     isValidDateTime(dateTime1) && isValidDateTime(dateTime2);
-  const validUnit = isValidDateTimeUnit(unit);
+  const isSingleUnit = !Array.isArray(units);
+  const validUnits = isSingleUnit
+    ? isValidDateTimeDurationUnit(units)
+    : units.every(isValidDateTimeDurationUnit);
+  //
 
-  if (!validDateTimes || !validUnit) {
+  if (!validDateTimes || !validUnits) {
     return null;
   }
 
-  const dt1 = Temporal.PlainDateTime.from(dateTime1);
-  const dt2 = Temporal.PlainDateTime.from(dateTime2);
+  try {
+    const dt1 = Temporal.PlainDateTime.from(dateTime1);
+    const dt2 = Temporal.PlainDateTime.from(dateTime2);
 
-  const duration = dt1.until(dt2, { largestUnit: unit });
+    const duration = dt1.until(dt2, {
+      largestUnit: isSingleUnit ? units : getLargestDateTimeDurationUnit(units),
+    });
+    if (isSingleUnit) {
+      return duration[units] ?? 0;
+    }
 
-  return duration[`${unit}s`] ?? null;
+    // craft record for units passed
+    return (units as DateTimeDurationUnit[]).reduce(
+      (result, unit) => {
+        result[unit] = duration[unit] ?? 0;
+        return result;
+      },
+      {} as Record<DateTimeDurationUnit, number>,
+    );
+  } catch {
+    return null;
+  }
 }

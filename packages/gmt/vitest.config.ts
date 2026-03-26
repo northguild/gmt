@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: true,
-    include: ["src/**/*.test.ts"],
+    // Support running from repository root or package cwd
+    include: ["packages/gmt/src/**/*.test.ts", "src/**/*.test.ts"],
   },
 });

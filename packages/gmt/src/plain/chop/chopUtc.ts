@@ -1,4 +1,4 @@
-import { isUtcDateTime } from "../validate/isUtcDateTime";
+import { isUtcDateTime } from "../validate";
 
 /**
  * Return the UTC datetime string with a trailing Z removed if present.

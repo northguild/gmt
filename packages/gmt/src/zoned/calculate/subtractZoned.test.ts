@@ -18,7 +18,9 @@ describe("subtractZoned", () => {
   `(
     "returns $expected for $value - $amount $unit",
     ({ value, amount, unit, expected }) => {
-      expect(subtractZoned(value, amount, unit)).toBe(expected);
+      expect(subtractZoned(value, { [`${unit}s`]: amount } as never)).toBe(
+        expected,
+      );
     },
   );
 
@@ -45,7 +47,7 @@ describe("subtractZoned", () => {
   `(
     "works across ordered battle-test timezones for $value",
     ({ value, expected }) => {
-      expect(subtractZoned(value, 365, "day")).toBe(expected);
+      expect(subtractZoned(value, { days: 365 })).toBe(expected);
     },
   );
 
@@ -56,7 +58,9 @@ describe("subtractZoned", () => {
   `(
     "returns $expected for negative amount $amount",
     ({ value, amount, unit, expected }) => {
-      expect(subtractZoned(value, amount, unit)).toBe(expected);
+      expect(subtractZoned(value, { [`${unit}s`]: amount } as never)).toBe(
+        expected,
+      );
     },
   );
 
@@ -70,7 +74,9 @@ describe("subtractZoned", () => {
   `(
     "returns an empty string for invalid zoned datetime $invalidValue",
     ({ invalidValue }) => {
-      expect(subtractZoned(invalidValue as never, 1, "hour")).toBe("");
+      expect(subtractZoned(invalidValue as never, { hours: 1 } as never)).toBe(
+        "",
+      );
     },
   );
 
@@ -84,11 +90,9 @@ describe("subtractZoned", () => {
     "returns an empty string for invalid amount $invalidAmount",
     ({ invalidAmount }) => {
       expect(
-        subtractZoned(
-          "2024-02-29T14:30:00+00:00[UTC]",
-          invalidAmount as never,
-          "hour",
-        ),
+        subtractZoned("2024-02-29T14:30:00+00:00[UTC]", {
+          hours: invalidAmount as never,
+        } as never),
       ).toBe("");
     },
   );
@@ -103,18 +107,16 @@ describe("subtractZoned", () => {
     "returns an empty string for invalid unit $invalidUnit",
     ({ invalidUnit }) => {
       expect(
-        subtractZoned(
-          "2024-02-29T14:30:00+00:00[UTC]",
-          1,
-          invalidUnit as never,
-        ),
+        subtractZoned("2024-02-29T14:30:00+00:00[UTC]", {
+          [String(invalidUnit)]: 1,
+        } as never),
       ).toBe("");
     },
   );
 
   for (const { timeZone, value } of localNoonBattleCases) {
     it(`preserves battle-test timezone ${timeZone} when subtracting`, () => {
-      expect(parseZonedTimezone(subtractZoned(value, 1, "hour"))).toBe(
+      expect(parseZonedTimezone(subtractZoned(value, { hours: 1 }))).toBe(
         timeZone,
       );
     });

@@ -18,7 +18,7 @@ describe("addZoned", () => {
   `(
     "returns $expected for $value + $amount $unit",
     ({ value, amount, unit, expected }) => {
-      expect(addZoned(value, amount, unit)).toBe(expected);
+      expect(addZoned(value, { [`${unit}s`]: amount } as never)).toBe(expected);
     },
   );
 
@@ -46,7 +46,7 @@ describe("addZoned", () => {
     "works across ordered battle-test timezones for $value",
     ({ value, expected }) => {
       // just add 365 days to leap day
-      expect(addZoned(value, 365, "day")).toBe(expected);
+      expect(addZoned(value, { days: 365 })).toBe(expected);
     },
   );
 
@@ -57,7 +57,7 @@ describe("addZoned", () => {
   `(
     "returns $expected for negative amount $amount",
     ({ value, amount, unit, expected }) => {
-      expect(addZoned(value, amount, unit)).toBe(expected);
+      expect(addZoned(value, { [`${unit}s`]: amount } as never)).toBe(expected);
     },
   );
 
@@ -71,7 +71,7 @@ describe("addZoned", () => {
   `(
     "returns an empty string for invalid zoned datetime $invalidValue",
     ({ invalidValue }) => {
-      expect(addZoned(invalidValue as never, 1, "hour")).toBe("");
+      expect(addZoned(invalidValue as never, { hours: 1 } as never)).toBe("");
     },
   );
 
@@ -85,11 +85,9 @@ describe("addZoned", () => {
     "returns an empty string for invalid amount $invalidAmount",
     ({ invalidAmount }) => {
       expect(
-        addZoned(
-          "2024-02-29T14:30:00+00:00[UTC]",
-          invalidAmount as never,
-          "hour",
-        ),
+        addZoned("2024-02-29T14:30:00+00:00[UTC]", {
+          hours: invalidAmount as never,
+        } as never),
       ).toBe("");
     },
   );
@@ -104,14 +102,16 @@ describe("addZoned", () => {
     "returns an empty string for invalid unit $invalidUnit",
     ({ invalidUnit }) => {
       expect(
-        addZoned("2024-02-29T14:30:00+00:00[UTC]", 1, invalidUnit as never),
+        addZoned("2024-02-29T14:30:00+00:00[UTC]", {
+          [String(invalidUnit)]: 1,
+        } as never),
       ).toBe("");
     },
   );
 
   for (const { timeZone, value } of localNoonBattleCases) {
     it(`preserves battle-test timezone ${timeZone} when adding`, () => {
-      expect(parseZonedTimezone(addZoned(value, 1, "hour"))).toBe(timeZone);
+      expect(parseZonedTimezone(addZoned(value, { hours: 1 }))).toBe(timeZone);
     });
   }
 });

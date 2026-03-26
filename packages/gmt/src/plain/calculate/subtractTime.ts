@@ -1,6 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidAmount } from "../../internal";
-import { isValidTime, isValidTimeUnit } from "../validate";
+import type { TimeDurationUnit } from "../../types";
+import { isValidTime, isValidTimeDurationUnit } from "../validate";
 
 /**
  * Return a PlainTime ISO string with `amount` subtracted from `value`
@@ -10,24 +11,25 @@ import { isValidTime, isValidTimeUnit } from "../validate";
  * - Returns an empty string for invalid inputs.
  *
  * @param value ISO PlainTime string
- * @param amount numeric amount to subtract
- * @param unit Temporal.TimeUnit (hour|minute|second|...)
+ * @param units Partial record of TimeDurationUnits with numeric values to subtract
  * @returns ISO PlainTime string with amount subtracted, or "" on invalid input
  */
 export function subtractTime(
   value: string,
-  amount: number,
-  unit: Temporal.TimeUnit,
+  units: Partial<Record<TimeDurationUnit, number>>,
 ): string {
   const validTime = isValidTime(value);
-  const validUnit = isValidTimeUnit(unit);
-  const validAmount = isValidAmount(amount);
+  const validUnits = Object.keys(units).every(isValidTimeDurationUnit);
+  const validAmounts = Object.values(units).every(isValidAmount);
 
-  if (!validTime || !validUnit || !validAmount) {
+  if (!validTime || !validUnits || !validAmounts) {
     return "";
   }
 
-  const time = Temporal.PlainTime.from(value);
-
-  return time.subtract({ [`${unit}s`]: amount }).toString();
+  try {
+    const time = Temporal.PlainTime.from(value);
+    return time.subtract(units).toString();
+  } catch {
+    return "";
+  }
 }

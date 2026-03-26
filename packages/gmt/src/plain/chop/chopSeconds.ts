@@ -1,6 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { isValidDateTime } from "../validate/isValidDateTime";
-import { isValidTime } from "../validate/isValidTime";
+import { isValidDateTime, isValidTime } from "../validate";
 
 /**
  * Return an ISO string with second precision removed (rounded/truncated to

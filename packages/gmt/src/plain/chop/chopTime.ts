@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { isValidDateTime } from "../validate/isValidDateTime";
+import { isValidDateTime } from "../validate";
 
 /**
  * Return the PlainDate portion extracted from an ISO PlainDateTime string.

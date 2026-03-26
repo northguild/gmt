@@ -1,5 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { isValidDateTimeUnit } from "../../plain/validate";
+import { getLargestDateTimeDurationUnit } from "../../plain/calculate/getLargestDateTimeDurationUnit";
+import { isValidDateTimeDurationUnit } from "../../plain/validate";
+import type { DateTimeDurationUnit } from "../../types";
 import { isValidZonedDateTime } from "../validate";
 
 /**
@@ -12,19 +14,22 @@ import { isValidZonedDateTime } from "../validate";
  *
  * @param value1 zoned ISO 8601 datetime string (start)
  * @param value2 zoned ISO 8601 datetime string (end)
- * @param unit Temporal.DateTimeUnit
+ * @param units DateTimeDurationUnit | DateTimeDurationUnit[] to measure the difference (e.g. "hours" | ["years", "months", "hours"])
  * @returns numeric difference in the requested unit, or null on invalid input
  */
 export function diffZoned(
   value1: string,
   value2: string,
-  unit: Temporal.DateTimeUnit,
-): number | null {
-  if (
-    !isValidZonedDateTime(value1) ||
-    !isValidZonedDateTime(value2) ||
-    !isValidDateTimeUnit(unit)
-  ) {
+  units: DateTimeDurationUnit | DateTimeDurationUnit[],
+): number | Record<DateTimeDurationUnit, number> | null {
+  const validZonedDateTimes =
+    isValidZonedDateTime(value1) && isValidZonedDateTime(value2);
+  const isSingleUnit = !Array.isArray(units);
+  const validUnits = isSingleUnit
+    ? isValidDateTimeDurationUnit(units)
+    : units.every(isValidDateTimeDurationUnit);
+
+  if (!validZonedDateTimes || !validUnits) {
     return null;
   }
 
@@ -35,10 +40,20 @@ export function diffZoned(
       Temporal.ZonedDateTime.from(value2).withTimeZone("UTC");
 
     const duration = normalizedZdt1.until(normalizedZdt2, {
-      largestUnit: unit,
+      largestUnit: isSingleUnit ? units : getLargestDateTimeDurationUnit(units),
     });
 
-    return duration[`${unit}s`] ?? null;
+    if (isSingleUnit) {
+      return duration[units] ?? 0;
+    }
+
+    return units.reduce(
+      (result, unit) => {
+        result[unit] = duration[unit] ?? 0;
+        return result;
+      },
+      {} as Record<DateTimeDurationUnit, number>,
+    );
   } catch {
     return null;
   }

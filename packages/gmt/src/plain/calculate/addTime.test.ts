@@ -1,36 +1,34 @@
+import type { TimeDurationUnit } from "../../types";
 import { addTime } from "./addTime";
 
 describe("addTime", () => {
   it.each`
-    value         | amount  | unit             | expected
-    ${"14:30:00"} | ${2}    | ${"hour"}        | ${"16:30:00"}
-    ${"14:30:00"} | ${45}   | ${"minute"}      | ${"15:15:00"}
-    ${"23:59:30"} | ${45}   | ${"second"}      | ${"00:00:15"}
-    ${"14:30:00"} | ${250}  | ${"millisecond"} | ${"14:30:00.25"}
-    ${"14:30:00"} | ${500}  | ${"microsecond"} | ${"14:30:00.0005"}
-    ${"14:30:00"} | ${1000} | ${"nanosecond"}  | ${"14:30:00.000001"}
-  `(
-    "returns $expected for $value + $amount $unit",
-    ({ value, amount, unit, expected }) => {
-      expect(addTime(value, amount, unit)).toBe(expected);
-    },
-  );
+    value         | units                    | expected
+    ${"14:30:00"} | ${{ hours: 2 }}          | ${"16:30:00"}
+    ${"14:30:00"} | ${{ minutes: 45 }}       | ${"15:15:00"}
+    ${"23:59:30"} | ${{ seconds: 45 }}       | ${"00:00:15"}
+    ${"14:30:00"} | ${{ milliseconds: 250 }} | ${"14:30:00.25"}
+    ${"14:30:00"} | ${{ microseconds: 500 }} | ${"14:30:00.0005"}
+    ${"14:30:00"} | ${{ nanoseconds: 1000 }} | ${"14:30:00.000001"}
+  `("returns $expected for $value + $units", ({ value, units, expected }) => {
+    expect(addTime(value, units)).toBe(expected);
+  });
 
   it.each`
-    negativeAmount | expectedTime
-    ${-1}          | ${"14:29:00"}
-    ${-30}         | ${"14:00:00"}
-    ${-90}         | ${"13:00:00"}
+    negativeUnits       | expectedTime
+    ${{ minutes: -1 }}  | ${"14:29:00"}
+    ${{ minutes: -30 }} | ${"14:00:00"}
+    ${{ minutes: -90 }} | ${"13:00:00"}
   `(
-    "returns $expectedTime for $value + $negativeAmount minutes",
+    "returns $expectedTime for $value + $negativeUnits",
     ({
-      negativeAmount,
+      negativeUnits,
       expectedTime,
     }: {
-      negativeAmount: number;
+      negativeUnits: Partial<Record<TimeDurationUnit, number>>;
       expectedTime: string;
     }) => {
-      expect(addTime("14:30:00", negativeAmount, "minute")).toBe(expectedTime);
+      expect(addTime("14:30:00", negativeUnits)).toBe(expectedTime);
     },
   );
 
@@ -46,7 +44,7 @@ describe("addTime", () => {
   `(
     "returns an empty string for an invalid amount: $invalidAmount",
     ({ invalidAmount, expected }) => {
-      expect(addTime("14:30:00", invalidAmount as never, "minute")).toBe(
+      expect(addTime("14:30:00", { minutes: invalidAmount } as never)).toBe(
         expected,
       );
     },
@@ -67,7 +65,7 @@ describe("addTime", () => {
   `(
     "returns an empty string for an invalid time value: $invalidValue",
     ({ invalidValue }) => {
-      expect(addTime(invalidValue, 30, "minute")).toBe("");
+      expect(addTime(invalidValue, { minutes: 30 })).toBe("");
     },
   );
 });

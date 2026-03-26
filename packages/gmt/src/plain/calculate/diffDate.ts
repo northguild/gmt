@@ -1,5 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { isValidDate, isValidDateUnit } from "../validate";
+import type { DateDurationUnit } from "../../types";
+import { isValidDate, isValidDateDurationUnit } from "../validate";
+import { getLargestDateDurationUnit } from "./getLargestDateDurationUnit";
 
 /**
  * Return the difference between two PlainDate values using the provided
@@ -11,37 +13,47 @@ import { isValidDate, isValidDateUnit } from "../validate";
  *
  * @param date1 ISO PlainDate string for the start
  * @param date2 ISO PlainDate string for the end
- * @param unit Temporal.DateUnit (day|week|month|year)
+ * @param unit DateDurationUnit | DateDurationUnit[] to measure the difference (e.g. "days" | ["years", "months"])
  * @returns numeric difference in the requested unit, or null on invalid input
  */
 export function diffDate(
   date1: string,
   date2: string,
-  unit: Temporal.DateUnit,
-): number | null {
+  unitArg: DateDurationUnit | DateDurationUnit[],
+): number | Record<DateDurationUnit, number> | null {
   const validDates = isValidDate(date1) && isValidDate(date2);
-  const validUnit = isValidDateUnit(unit);
+  const isSingleUnit = !Array.isArray(unitArg);
+  const validUnits = isSingleUnit
+    ? isValidDateDurationUnit(unitArg)
+    : (unitArg as DateDurationUnit[]).every(isValidDateDurationUnit);
 
-  if (!validDates || !validUnit) {
+  if (!validDates || !validUnits) {
     return null;
   }
 
-  const d1 = Temporal.PlainDate.from(date1);
-  const d2 = Temporal.PlainDate.from(date2);
+  try {
+    const d1 = Temporal.PlainDate.from(date1);
+    const d2 = Temporal.PlainDate.from(date2);
 
-  const duration = d1.until(d2, { largestUnit: unit });
+    const duration = d1.until(d2, {
+      largestUnit: isSingleUnit
+        ? unitArg
+        : getLargestDateDurationUnit(unitArg as DateDurationUnit[]),
+    });
 
-  // Extract the specific unit
-  switch (unit) {
-    case "day":
-      return duration.days;
-    case "week":
-      return duration.weeks;
-    case "month":
-      return duration.months;
-    case "year":
-      return duration.years;
-    default:
-      return null; // Invalid unit
+    // craft record for units passed
+    if (isSingleUnit) {
+      return duration[unitArg as DateDurationUnit] ?? 0;
+    }
+
+    return (unitArg as DateDurationUnit[]).reduce(
+      (result, unit) => {
+        result[unit] = duration[unit] ?? 0;
+        return result;
+      },
+      {} as Record<DateDurationUnit, number>,
+    );
+  } catch {
+    return null;
   }
 }

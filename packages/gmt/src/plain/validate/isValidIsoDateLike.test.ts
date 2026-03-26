@@ -1,6 +1,6 @@
-import { isValidDateOrDateTime } from "./isValidDateOrDateTime";
+import { isValidIsoDateLike } from "./isValidIsoDateLike";
 
-describe("isValidDateOrDateTime", () => {
+describe("isValidIsoDateLike", () => {
   it.each`
     value
     ${"2024-02-29"}
@@ -13,7 +13,7 @@ describe("isValidDateOrDateTime", () => {
   `(
     "returns true for valid date or datetime string $value",
     ({ value }: { value: string }) => {
-      expect(isValidDateOrDateTime(value)).toBe(true);
+      expect(isValidIsoDateLike(value)).toBe(true);
     },
   );
 
@@ -34,7 +34,7 @@ describe("isValidDateOrDateTime", () => {
   `(
     "returns false for invalid date or datetime string $value",
     ({ value }: { value: string }) => {
-      expect(isValidDateOrDateTime(value)).toBe(false);
+      expect(isValidIsoDateLike(value)).toBe(false);
     },
   );
 });

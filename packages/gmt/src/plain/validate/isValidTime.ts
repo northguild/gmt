@@ -9,6 +9,10 @@ import { plainTime } from "../../regex";
  * - Returns false for invalid inputs.
  *
  * @param value ISO PlainTime string
+ * @example isValidTime("12:34:56") => true
+ * @example isValidTime("24:00:00") => false (invalid hour)
+ * @example isValidTime("23:60:00") => false (invalid minute)
+ * @example isValidTime("23:59:60") => false (invalid second)
  * @returns boolean indicating validity
  */
 export function isValidTime(value: string): boolean {

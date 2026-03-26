@@ -1,5 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { isValidTime, isValidTimeUnit } from "../validate";
+import type { TimeDurationUnit } from "../../types";
+import { isValidTime, isValidTimeDurationUnit } from "../validate";
+import { getLargestTimeDurationUnit } from "./getLargestTimeDurationUnit";
 
 /**
  * Return the difference between two PlainTime values in the requested unit.
@@ -10,25 +12,45 @@ import { isValidTime, isValidTimeUnit } from "../validate";
  *
  * @param time1 ISO PlainTime string for the start
  * @param time2 ISO PlainTime string for the end
- * @param unit Temporal.TimeUnit to measure the difference
+ * @param units TimeDurationUnit | TimeDurationUnit[] to measure the difference (e.g. "hours", "minutes", "seconds")
  * @returns numeric difference in the requested unit, or null on invalid input
  */
 export function diffTime(
   time1: string,
   time2: string,
-  unit: Temporal.TimeUnit,
-): number | null {
+  units: TimeDurationUnit | TimeDurationUnit[],
+): number | Record<TimeDurationUnit, number> | null {
   const validTimes = isValidTime(time1) && isValidTime(time2);
-  const validUnit = isValidTimeUnit(unit);
+  const isSingleUnit = !Array.isArray(units);
+  const validUnits = isSingleUnit
+    ? isValidTimeDurationUnit(units)
+    : units.every(isValidTimeDurationUnit);
 
-  if (!validTimes || !validUnit) {
+  if (!validTimes || !validUnits) {
     return null;
   }
 
-  const t1 = Temporal.PlainTime.from(time1);
-  const t2 = Temporal.PlainTime.from(time2);
+  try {
+    const t1 = Temporal.PlainTime.from(time1);
+    const t2 = Temporal.PlainTime.from(time2);
 
-  const duration = t1.until(t2, { largestUnit: unit });
+    const duration = t1.until(t2, {
+      largestUnit: isSingleUnit ? units : getLargestTimeDurationUnit(units),
+    });
 
-  return duration[`${unit}s`] ?? null;
+    // craft record for units passed
+    if (isSingleUnit) {
+      return duration[units] ?? 0;
+    }
+
+    return (units as TimeDurationUnit[]).reduce(
+      (result, unit) => {
+        result[unit] = duration[unit] ?? 0;
+        return result;
+      },
+      {} as Record<TimeDurationUnit, number>,
+    );
+  } catch {
+    return null;
+  }
 }
