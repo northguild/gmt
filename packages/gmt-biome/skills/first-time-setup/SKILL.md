@@ -16,9 +16,28 @@ Use this skill when a user wants to adopt `@burglekitt/gmt-biome`.
 - Install `@burglekitt/gmt-biome` and `@biomejs/biome` as dev dependencies.
 
 2. Configure Biome
-- In `biome.json` or `biome.jsonc`, set:
-  - `"extends": ["@burglekitt/gmt-biome"]`
-- Preserve existing project-specific rules unless explicitly asked to replace them.
+ - In `biome.json` or `biome.jsonc`, set either:
+   - To extend the full recommended rules:
+     ```json
+     {
+       "$schema": "https://biomejs.dev/schemas/2.4.11/schema.json",
+       "extends": ["@burglekitt/gmt-biome"]
+     }
+     ```
+   - To include only specific plugin(s):
+     ```json
+     {
+       "$schema": "https://biomejs.dev/schemas/2.4.11/schema.json",
+       "plugins": [
+        "@burglekitt/gmt-biome/plugins/no-new-date",
+        "@burglekitt/gmt-biome/plugins/no-date-now"
+       ]
+     }
+     ```
+    
+    // Both `@burglekitt/gmt-biome/plugins/<name>` and `@burglekitt/gmt-biome/plugins/<name>.grit` are supported; prefer the extensionless form.
+ - If your repository already has a root `biome.json`, do not add another nested `biome.json` in this package — that causes a nested-root conflict. Use `extends` at your project root or reference plugin subpaths instead.
+ - Preserve existing project-specific rules unless explicitly asked to replace them.
 
 3. Verify plugin activation
 - Run a Biome check command and confirm Date API bans are enforced.

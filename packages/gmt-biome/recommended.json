@@ -1,0 +1,12 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.11/schema.json",
+  "plugins": [
+    "./plugins/no-new-date.grit",
+    "./plugins/no-date-now.grit",
+    "./plugins/no-date-parse.grit",
+    "./plugins/no-date-utc.grit",
+    "./plugins/no-date-getTimezoneOffset.grit"
+  ],
+  "linter": { "enabled": true },
+  "formatter": { "enabled": true }
+}

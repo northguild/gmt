@@ -32,6 +32,8 @@ Use this skill when Biome flags Date usage and the user asks for code fixes.
 - `Date.parse(...)` -> gmt conversion helper where available.
 - `Date.UTC(...)` -> gmt UTC conversion helper where available.
 
+Note: if a consumer has chosen only a subset of plugins, the set of diagnostics will be narrower — verify which plugin(s) are enabled before running broad automated refactors.
+
 ## Safety checks
 
 - Verify fallback behavior for invalid inputs is preserved.

@@ -15,15 +15,18 @@ Use this skill when a team wants automated enforcement of gmt-biome rules.
 1. Add lint/check command
 - Ensure CI runs a Biome check command on pull requests.
 
-2. Scope rollout
+2. Plugin selection
+- Decide whether to extend the full `@burglekitt/gmt-biome` bundle or include specific plugins by referencing `@burglekitt/gmt-biome/plugins/<name>` (or `@burglekitt/gmt-biome/plugins/<name>.grit`) in your project's `plugins` list. Prefer plugin subpaths when you only want a subset of rules.
+
+3. Scope rollout
 - If the repository has many existing violations, propose incremental adoption:
   - start on changed files or selected paths,
   - then expand to full repository enforcement.
 
-3. Keep output actionable
+4. Keep output actionable
 - Configure CI so diagnostics are visible and easy to triage.
 
-4. Coordinate with other linters
+5. Coordinate with other linters
 - If ESLint/Oxlint are present, avoid redundant failures where possible.
 - Keep Date-ban policy consistent across tools.
 
