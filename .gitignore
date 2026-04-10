@@ -35,6 +35,8 @@ Thumbs.db
 .env.local
 .env.*.local
 
+
+
 # Logs
 npm-debug.log*
 yarn-error.log*

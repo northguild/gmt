@@ -22,7 +22,7 @@ npm install @burglekitt/gmt
 ```
 
 ```bash
-bun add @burglekitt/gmt
+pnpm add @burglekitt/gmt
 ```
 
 ---

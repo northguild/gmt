@@ -2,7 +2,7 @@
 
 Home of [@burglekitt/gmt](./packages/gmt) — **Give Me Temporal!**
 
-A monorepo for Burglekitt community libraries, built with Nx, powered by Bun, and dead serious about making JavaScript date handling not terrible.
+A monorepo for Burglekitt community libraries, built with Nx, powered by pnpm, and dead serious about making JavaScript date handling not terrible.
 
 ## Aint Nobody Got Time For...
 
@@ -30,17 +30,17 @@ If you see a Date API in code, replace it with a GMT helper.
 
 ```bash
 # Install all workspace dependencies
-bun install
+pnpm install
 
 # Run tests across all packages
-bun nx run-many -t test
+pnpm -w exec nx run-many -t test
 
 # Build all packages
-bun nx run-many -t build
+pnpm -w exec nx run-many -t build
 
 # Lint and format
-bun run lint
-bun run format
+pnpm run lint
+pnpm run format
 ```
 
 ---
@@ -92,18 +92,18 @@ Run from the root:
 
 ```bash
 # Test, build, typecheck
-bun nx run-many -t test
-bun nx run-many -t build
-bun nx run-many -t typecheck
+pnpm -w exec nx run-many -t test
+pnpm -w exec nx run-many -t build
+pnpm -w exec nx run-many -t typecheck
 
 # Code quality
-bun run check
-bun run lint
-bun run format
+pnpm run check
+pnpm run lint
+pnpm run format
 
 # Nx utilities
-bunx nx graph        # Visual dependency graph
-bunx nx sync         # Sync TypeScript project references
+pnpm -w exec nx graph        # Visual dependency graph
+pnpm -w exec nx sync         # Sync TypeScript project references
 ```
 
 ## Nx Commands You Will Actually Use
@@ -112,34 +112,34 @@ As more packages are added under `packages/*`, these commands become the default
 
 ```bash
 # Run targets for every package
-bun run build
-bun run test:nx
-bun run lint:nx
-bun run typecheck
+pnpm run build
+pnpm run test:nx
+pnpm run lint:nx
+pnpm run typecheck
 
 # Full local gate before PR
-bun run validate
+pnpm run validate
 
 # Only run on projects affected by your branch changes
-bun run affected:build
-bun run affected:test
-bun run affected:lint
-bun run affected:typecheck
+pnpm run affected:build
+pnpm run affected:test
+pnpm run affected:lint
+pnpm run affected:typecheck
 
 # Workspace maintenance
-bun run graph
-bun run sync
-bun run sync:check
-bun run reset
+pnpm run graph
+pnpm run sync
+pnpm run sync:check
+pnpm run reset
 ```
 
 Recommended PR flow:
 
 ```bash
-bun run affected:lint
-bun run affected:test
-bun run affected:typecheck
-bun run affected:build
+pnpm run affected:lint
+pnpm run affected:test
+pnpm run affected:typecheck
+pnpm run affected:build
 ```
 
 CI strategy:
@@ -152,9 +152,9 @@ Run within a specific package:
 
 ```bash
 cd packages/gmt
-bun run test
-bun run build
-bun run lint
+pnpm run test
+pnpm run build
+pnpm run lint
 ```
 
 ---
@@ -172,6 +172,8 @@ All Biome rules are in [biome.json](./biome.json) (Grit plugins live in [package
 
 **For consumers:** [@burglekitt/gmt-eslint](./packages/gmt-eslint) provides a standalone ESLint flat config with the same Date API ban rules.
 
+**For Oxlint users:** [@burglekitt/gmt-oxlint](./packages/gmt-oxlint) provides the same Date API ban rules as an Oxlint JS plugin.
+
 ---
 
 ## Packages
@@ -181,6 +183,7 @@ All Biome rules are in [biome.json](./biome.json) (Grit plugins live in [package
 | [`@burglekitt/gmt`](./packages/gmt) | `npm install @burglekitt/gmt` | Give Me Temporal — string-in/string-out date library |
 | [`@burglekitt/gmt-biome`](./packages/gmt-biome) | `npm install -D @burglekitt/gmt-biome` | Shared Biome config — bans `Date` APIs via Grit plugins |
 | [`@burglekitt/gmt-eslint`](./packages/gmt-eslint) | `npm install -D @burglekitt/gmt-eslint` | Shared ESLint flat config — bans `Date` APIs |
+| [`@burglekitt/gmt-oxlint`](./packages/gmt-oxlint) | `npm install -D @burglekitt/gmt-oxlint oxlint` | Shared Oxlint JS plugin — bans `Date` APIs |
 
 `@burglekitt/gmt` currently exports top-level `Temporal`, `plain`, `zoned`, and `regex` namespaces, with direct subpath imports available under `@burglekitt/gmt/*`.
 
@@ -188,49 +191,37 @@ All Biome rules are in [biome.json](./biome.json) (Grit plugins live in [package
 
 ## Releases
 
-Pre-alpha. Each package follows semantic versioning and will be published independently to npm when stable.
+Pre-alpha. Each package follows semantic versioning and is published independently to npm.
 
-## TODO
+### Publishing (manual)
 
-Explore [Changesets](https://github.com/changesets/changesets) for monorepo publishing
+Publishing is manual only. We use [Changesets](https://github.com/changesets/changesets) to manage per-package versioning. Nothing publishes automatically — releases are triggered by maintainers.
 
-### Publishing
+Two supported publish paths:
 
-Publishing is **manual only** — triggered via the [Publish Package workflow](.github/workflows/publish.yml) in GitHub Actions (`Actions → Publish Package → Run workflow`).
+- **Local publish (recommended):** run Changesets locally with your npm credentials (passkey). This gives maintainers direct control and creates git tags when publishing.
+- **GitHub Actions (optional):** run the manual `Publish Package` workflow at `.github/workflows/publish.yml` via Actions → Run workflow. The workflow reads `NPM_TOKEN` from secrets and is gated by the `release` environment.
 
-**Prerequisites (one-time setup):**
+Prerequisites for Actions-based publishing (optional):
 
-1. Create an npm access token at [npmjs.com](https://www.npmjs.com/) with `Publish` permission for the `@burglekitt` org.
-2. Add it as a repository secret named `NPM_TOKEN` in GitHub (`Settings → Secrets → Actions`).
-3. Create a `npm-publish` environment in GitHub (`Settings → Environments`) and add the secret there to gate production publishes.
+1. Create an npm access token with `Publish` permission for the `@burglekitt` org at https://www.npmjs.com/.
+2. Add it as a repository secret named `NPM_TOKEN` (or add it to the `release` environment) in GitHub (`Settings → Secrets` / `Settings → Environments`).
 
-**To publish a package:**
+Basic Changesets workflow:
 
-```bash
-# 1. Bump the version in the package's package.json
-#    Follow semantic versioning: patch / minor / major
+- On your feature branch, run `pnpm run changeset:add` to record the change and desired bump.
+- Merge the PR. If no `.changeset/*` files were merged, create changesets before versioning — Changesets only acts on files in `.changeset/`.
+- On `main`, run `pnpm run changeset:version` to apply version bumps and update changelogs; commit and push those changes.
+- To publish locally, run `pnpm run changeset:publish` from the repo root — this will publish packages and create package-scoped git tags.
+- If you use the Actions workflow to publish, run the workflow, then run `pnpm exec changeset tag` locally and `git push --follow-tags` to synchronize tags (Actions publish does not create tags).
 
-# 2. Commit and push to main
-git add packages/<package>/package.json
-git commit -m "chore(release): @burglekitt/<package>@<version>"
-git push origin main
+Notes:
 
-# 3. Trigger the workflow on GitHub
-#    Actions → Publish Package → Run workflow
-#    Select: package, tag (usually "latest")
-```
+- Prefer using Changesets rather than manually bumping `package.json`; manual bumps can be used but they bypass the Changesets workflow.
+- Verify packages with `npm pack --dry-run` before publishing. For `@burglekitt/gmt`, run the dry-run after building.
+- The `Publish Package` workflow will build `@burglekitt/gmt` automatically when publishing that package.
 
-**Config packages (gmt-biome, gmt-eslint) need no build step** — their source files are published directly.
-
-**`@burglekitt/gmt` must be built before publish** — the workflow runs `nx run @burglekitt/gmt:build` automatically.
-
-**To verify a package is ready before publishing:**
-
-```bash
-cd packages/gmt-biome && npm pack --dry-run
-cd packages/gmt-eslint && npm pack --dry-run
-cd packages/gmt      && npm pack --dry-run   # after building
-```
+See [PUBLISHING.md](./PUBLISHING.md) for the full, step-by-step guide and examples.
 
 ---
 

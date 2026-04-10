@@ -1,0 +1,70 @@
+{
+  "name": "@burglekitt/gmt-oxlint",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Oxlint JS plugin for banning Date APIs in Temporal-first projects",
+  "license": "MIT",
+  "contributors": [
+    {
+      "name": "Baldur Páll Hólmgeirsson",
+      "url": "https://github.com/baldurpan"
+    },
+    {
+      "name": "Craig O. Curtis",
+      "url": "https://github.com/craig-o-curtis"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/burglekitt/gmt.git",
+    "directory": "packages/gmt-oxlint"
+  },
+  "bugs": {
+    "url": "https://github.com/burglekitt/gmt/issues"
+  },
+  "homepage": "https://github.com/burglekitt/gmt#readme",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "keywords": [
+    "oxlint",
+    "eslint-plugin",
+    "temporal",
+    "date",
+    "lint",
+    "tanstack-intent"
+  ],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "skills"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run --config vitest.config.ts",
+    "test:watch": "vitest --config vitest.config.ts",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "prepack": "npm run build",
+    "pack": "npm pack --dry-run",
+    "publish:dry-run": "npm publish --access public --dry-run",
+    "publish:public": "npm publish --access public"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "peerDependencies": {
+    "oxlint": ">=1.0.0"
+  },
+  "devDependencies": {
+    "@tanstack/intent": "^0.0.29",
+    "tsup": "^8.5.0",
+    "typescript": "^5.0.0"
+  }
+}

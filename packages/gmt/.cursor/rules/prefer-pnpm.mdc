@@ -1,0 +1,36 @@
+---
+description: Prefer Node.js and pnpm for tooling and avoid Bun-only runtime APIs.
+globs: "*.ts, *.tsx, *.html, *.css, *.js, *.jsx, package.json"
+alwaysApply: false
+---
+
+Default to using Node.js and pnpm for development tooling.
+
+- Use `node <file>` or `ts-node` for local scripts and debugging.
+- Use `pnpm install` for workspace dependency installation.
+- Use `pnpm run <script>` to run package scripts (or `pnpm -w exec <binary>` for workspace binaries).
+- Use `pnpm -w exec <package> <command>` instead of `npx` or Bun's `bunx`.
+
+## APIs
+
+- Avoid Bun-specific runtime APIs (e.g. `Bun.serve`, `bun:sqlite`, `Bun.redis`, `Bun.sql`) so code remains portable across Node.js runtimes.
+- Prefer standard Node APIs and well-maintained libraries (e.g. `express`/Fastify, `better-sqlite3`, `ioredis`, `pg`).
+
+## Testing
+
+Use the workspace test runner via `pnpm run test` or `pnpm -w exec vitest`.
+
+```ts#index.test.ts
+import { expect, it } from "vitest";
+
+it("hello world", () => {
+  expect(1).toBe(1);
+});
+```
+
+## Frontend
+
+Use standard bundlers or tooling compatible with the Node.js ecosystem (Vite, esbuild, etc.).
+
+For development, run your server with Node-based tooling or the bundler's dev server. Avoid Bun-specific `--hot` invocation.
+

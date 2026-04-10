@@ -4,14 +4,34 @@
   "private": false,
   "description": "Shared Biome configuration for gmt projects",
   "license": "MIT",
+  "contributors": [
+    {
+      "name": "Baldur Páll Hólmgeirsson",
+      "url": "https://github.com/baldurpan"
+    },
+    {
+      "name": "Craig O. Curtis",
+      "url": "https://github.com/craig-o-curtis"
+    }
+  ],
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
+  "keywords": [
+    "biome",
+    "biome-plugin",
+    "temporal",
+    "date",
+    "lint",
+    "tanstack-intent"
+  ],
   "files": [
     "biome.json",
     "plugins",
-    "README.md"
+    "LICENSE",
+    "README.md",
+    "skills"
   ],
   "scripts": {
     "pack": "npm pack --dry-run",
@@ -20,6 +40,9 @@
   },
   "exports": {
     ".": "./biome.json"
+  },
+  "devDependencies": {
+    "@tanstack/intent": "^0.0.29"
   },
   "peerDependencies": {
     "@biomejs/biome": ">=2.0.0"

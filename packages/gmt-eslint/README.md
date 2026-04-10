@@ -25,7 +25,7 @@ pnpm add --save-dev @burglekitt/gmt-eslint eslint @typescript-eslint/parser
 ### bun
 
 ```sh
-bun add --dev @burglekitt/gmt-eslint eslint @typescript-eslint/parser
+bun add --save-dev @burglekitt/gmt-eslint eslint @typescript-eslint/parser
 ```
 
 ## Usage
@@ -77,7 +77,7 @@ module.exports = [...gmtEslintConfig];
 | `Date.now()` | `no-restricted-properties` | Use `getUnixNow('milliseconds' \| 'seconds')` or `getNow()` |
 | `Date.UTC(...)` | `no-restricted-properties` | Use `convertUtcDateTimeToUnix('YYYY-MM-DDTHH:mm:ss', 'milliseconds' \| 'seconds')` |
 | `Date.parse(...)` | `no-restricted-properties` | Use `convertZonedToUnix(value)` |
-| `$date.getTimezoneOffset()` | `no-restricted-syntax` | Use `getZonedNow(timezone)` or `convertZonedDateTimeToUnix(date, timezone)` |
+| `$date.getTimezoneOffset()` | `no-restricted-syntax` | Use `getZonedNow(timezone)`, other gmt zoned helpers such as `convertZonedToUnix(value)`, or `Temporal.ZonedDateTime` |
 
 ## Why Temporal?
 

@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-
+import { normalizeDateTime } from "../../internal";
 import { isValidTime } from "../validate";
 
 /**
@@ -24,7 +24,8 @@ export function formatTime(
   }
 
   try {
-    return Temporal.PlainTime.from(value).toLocaleString(locale, options);
+    const out = Temporal.PlainTime.from(value).toLocaleString(locale, options);
+    return normalizeDateTime(out);
   } catch {
     return "";
   }

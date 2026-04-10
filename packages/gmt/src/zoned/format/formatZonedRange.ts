@@ -1,4 +1,5 @@
 import { Temporal, Intl as TemporalIntl } from "@js-temporal/polyfill";
+import { normalizeDateTime } from "../../internal";
 import { isValidZonedDateTime } from "../validate";
 
 /**
@@ -45,10 +46,11 @@ export function formatZonedRange(
   };
 
   try {
-    return new TemporalIntl.DateTimeFormat(locale, formatOptions).formatRange(
-      zdt1.toInstant(),
-      zdt2.toInstant(),
-    );
+    const out = new TemporalIntl.DateTimeFormat(
+      locale,
+      formatOptions,
+    ).formatRange(zdt1.toInstant(), zdt2.toInstant());
+    return normalizeDateTime(out);
   } catch {
     return "";
   }

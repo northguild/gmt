@@ -4,7 +4,16 @@
   "type": "module",
   "description": "Temporal-based date and time utilities with timezone support and polyfill integration",
   "license": "MIT",
-  "author": "Burglekitt <https://github.com/burglekitt>",
+  "contributors": [
+    {
+      "name": "Baldur Páll Hólmgeirsson",
+      "url": "https://github.com/baldurpan"
+    },
+    {
+      "name": "Craig O. Curtis",
+      "url": "https://github.com/craig-o-curtis"
+    }
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/burglekitt/gmt.git",
@@ -20,7 +29,8 @@
     "date",
     "time",
     "datetime",
-    "polyfill"
+    "polyfill",
+    "tanstack-intent"
   ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -59,7 +69,8 @@
   },
   "files": [
     "dist",
-    "LICENSE"
+    "LICENSE",
+    "skills"
   ],
   "publishConfig": {
     "access": "public",
@@ -75,5 +86,8 @@
   },
   "dependencies": {
     "@js-temporal/polyfill": "^0.5.1"
+  },
+  "devDependencies": {
+    "@tanstack/intent": "^0.0.29"
   }
 }

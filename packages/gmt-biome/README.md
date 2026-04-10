@@ -25,7 +25,7 @@ pnpm add --save-dev @burglekitt/gmt-biome @biomejs/biome
 ### bun
 
 ```sh
-bun add --dev @burglekitt/gmt-biome @biomejs/biome
+bun add --save-dev @burglekitt/gmt-biome @biomejs/biome
 ```
 
 ## Usage
@@ -69,7 +69,7 @@ extends = ["@burglekitt/gmt-biome"]
 | `Date.now()` | `no-date-now` | Use `getUnixNow('milliseconds' \| 'seconds')` or `getNow()` |
 | `Date.parse(...)` | `no-date-parse` | Use `convertZonedToUnix(value)` |
 | `Date.UTC(...)` | `no-date-utc` | Use `convertUtcDateTimeToUnix('YYYY-MM-DDTHH:mm:ss', 'milliseconds' \| 'seconds')` |
-| `$date.getTimezoneOffset()` | `no-date-getTimezoneOffset` | Use `getZonedNow(timezone)` or `convertZonedDateTimeToUnix(date, timezone)` |
+| `$date.getTimezoneOffset()` | `no-date-getTimezoneOffset` | Use `getZonedNow(timezone)`, other gmt zoned helpers such as `convertZonedToUnix(value)`, or `Temporal.ZonedDateTime` |
 
 ## Why Temporal?
 

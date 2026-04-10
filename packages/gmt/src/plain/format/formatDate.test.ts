@@ -291,14 +291,14 @@ describe("formatDate", () => {
     value           | options                                                  | expected
     ${"2024-02-03"} | ${{ dateStyle: "full" }}                                 | ${"السبت، ٣ فبراير ٢٠٢٤"}
     ${"2024-02-03"} | ${{ dateStyle: "long" }}                                 | ${"٣ فبراير ٢٠٢٤"}
-    ${"2024-02-03"} | ${{ dateStyle: "medium" }}                               | ${"٠٣‏/٠٢‏/٢٠٢٤"}
-    ${"2024-02-03"} | ${{ dateStyle: "short" }}                                | ${"٣‏/٢‏/٢٠٢٤"}
+    ${"2024-02-03"} | ${{ dateStyle: "medium" }}                               | ${"٠٣/٠٢/٢٠٢٤"}
+    ${"2024-02-03"} | ${{ dateStyle: "short" }}                                | ${"٣/٢/٢٠٢٤"}
     ${"2024-02-03"} | ${{ year: "numeric", month: "long", day: "numeric" }}    | ${"٣ فبراير ٢٠٢٤"}
     ${"2024-02-03"} | ${{ year: "numeric", month: "short", day: "numeric" }}   | ${"٣ فبراير ٢٠٢٤"}
-    ${"2024-02-03"} | ${{ year: "numeric", month: "2-digit", day: "2-digit" }} | ${"٠٣‏/٠٢‏/٢٠٢٤"}
-    ${"2024-02-03"} | ${{ year: "numeric", month: "numeric", day: "numeric" }} | ${"٣‏/٢‏/٢٠٢٤"}
-    ${"2024-02-03"} | ${{ year: "2-digit", month: "numeric", day: "numeric" }} | ${"٣‏/٢‏/٢٤"}
-    ${"2024-02-03"} | ${{ year: "2-digit", month: "2-digit", day: "2-digit" }} | ${"٠٣‏/٠٢‏/٢٤"}
+    ${"2024-02-03"} | ${{ year: "numeric", month: "2-digit", day: "2-digit" }} | ${"٠٣/٠٢/٢٠٢٤"}
+    ${"2024-02-03"} | ${{ year: "numeric", month: "numeric", day: "numeric" }} | ${"٣/٢/٢٠٢٤"}
+    ${"2024-02-03"} | ${{ year: "2-digit", month: "numeric", day: "numeric" }} | ${"٣/٢/٢٤"}
+    ${"2024-02-03"} | ${{ year: "2-digit", month: "2-digit", day: "2-digit" }} | ${"٠٣/٠٢/٢٤"}
   `(
     "formats valid date $value for ar-SA with options $options to $expected",
     ({ value, options, expected }) => {

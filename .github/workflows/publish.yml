@@ -11,6 +11,7 @@ on:
           - gmt
           - gmt-biome
           - gmt-eslint
+          - gmt-oxlint
       tag:
         description: "npm dist-tag (e.g. latest, next, beta)"
         required: true
@@ -23,24 +24,32 @@ jobs:
   publish:
     name: Publish @burglekitt/${{ inputs.package }}
     runs-on: ubuntu-latest
-    environment: npm-publish
+    environment: release
     steps:
       - uses: actions/checkout@v4
 
-      - uses: oven-sh/setup-bun@v1
+      - uses: pnpm/action-setup@v4
         with:
-          bun-version: latest
+          version: 10.32.1
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           registry-url: "https://registry.npmjs.org"
+          cache: pnpm
 
-      - run: bun install --no-cache
+      - name: Approve pnpm build scripts
+        run: pnpm approve-builds --all
 
-      - name: Build (gmt only — config packages need no build)
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build @burglekitt/gmt
         if: inputs.package == 'gmt'
-        run: bunx nx run @burglekitt/gmt:build
+        run: pnpm -w exec nx run @burglekitt/gmt:build
+
+      - name: Build @burglekitt/gmt-oxlint
+        if: inputs.package == 'gmt-oxlint'
+        run: cd packages/gmt-oxlint && npm run build
 
       - name: Publish @burglekitt/${{ inputs.package }}
         run: npm publish --access public --tag ${{ inputs.tag }}

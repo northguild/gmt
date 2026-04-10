@@ -1,99 +1,86 @@
 # Contributing
 
-Thanks for contributing to the Burglekitt monorepo.
+Node.js 24.x (recommended for development; see `.nvmrc`)
+pnpm (recommended package manager). Use Corepack or Volta to manage pnpm locally.
 
 This guide covers local development, quality checks, and publishing for workspace packages.
 
-## Requirements
-
-- Node.js 18+
-- Bun (recommended package manager and script runner)
-
-## Local setup
+Local setup (recommended):
 
 ```bash
-bun install
+# Activate Corepack and install workspace deps
+corepack enable
+corepack prepare pnpm@10.32.1 --activate
+pnpm install --frozen-lockfile
 ```
 
-## Development workflow
-
-Run from repo root.
-
-### Core checks
+Common workspace commands (run from repository root):
 
 ```bash
-bun run build
-bun run typecheck
-bun run test
-bun run lint
-bun run format
-```
-
-### Recommended pre-PR gate
-
-```bash
-bun run validate
-```
-
-### Nx-focused commands
-
-```bash
-# All projects
-bun nx run-many -t build
-bun nx run-many -t test
-bun nx run-many -t lint
-bun nx run-many -t typecheck
+# Run targets across the workspace
+pnpm -w exec nx run-many -t build
+pnpm -w exec nx run-many -t test
+pnpm -w exec nx run-many -t lint
+pnpm -w exec nx run-many -t typecheck
 
 # Affected projects only
-bun run affected:build
-bun run affected:test
-bun run affected:lint
-bun run affected:typecheck
+pnpm -w exec nx affected -t build
+pnpm -w exec nx affected -t test
+pnpm -w exec nx affected -t lint
+pnpm -w exec nx affected -t typecheck
+```
+
+Nx-focused workflow examples:
+
+```bash
+# Visual dependency graph
+pnpm -w exec nx graph
+
+# Sync TypeScript project references
+pnpm -w exec nx sync
+pnpm -w exec nx sync:check
+```
+
+Run commands inside a specific package directory:
+
+```bash
+cd packages/gmt
+pnpm run build
+pnpm run test
+pnpm run lint
 ```
 
 ## Package-level development
 
-Example for GMT package:
+Example for the `gmt` package:
 
 ```bash
 cd packages/gmt
-bun run build
-bun run test
-bun run lint
+pnpm run build
+pnpm run test
+pnpm run lint
 ```
 
 ## Publishing
 
-Publishing is manual and package-scoped.
+Publishing is managed with Changesets and is triggered manually — nothing publishes automatically.
 
-### Package publish scripts
+**See [PUBLISHING.md](./PUBLISHING.md) for the full step-by-step guide** including one-time npm org setup, how to record changesets, how to cut a release, and how git tags work in this monorepo.
 
-For publishable packages (for example, `packages/gmt-biome` and `packages/gmt-eslint`):
+Quick reference:
 
 ```bash
-# from the package directory
-bun run publish:dry-run
-bun run publish:public
-```
+# Run on your feature branch before merging — commit the generated file as part of the PR
+pnpm run changeset:add
 
-These scripts run `npm publish --access public` under the hood.
+# See what versions would be bumped today
+pnpm run changeset status
 
-### Monorepo config usage (maintainers)
+# Apply version bumps and update changelogs
+pnpm run changeset:version
 
-When wiring local package configs inside this monorepo:
-
-```json
-{
-	"$schema": "https://biomejs.dev/schemas/2.4.7/schema.json",
-	"extends": ["./packages/gmt-biome/biome.json"]
-}
-```
-
-```js
-// eslint.config.mjs
-import gmtEslintConfig from "./packages/gmt-eslint/eslint/index.mjs";
-
-export default [...gmtEslintConfig];
+# Publish (recommended via Actions) or run locally with changeset:publish
+pnpm run changeset:publish
 ```
 
 ## PR checklist
