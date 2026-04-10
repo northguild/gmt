@@ -1,6 +1,6 @@
 {
   "name": "@burglekitt/gmt",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "type": "module",
   "description": "Temporal-based date and time utilities with timezone support and polyfill integration",
   "license": "MIT",

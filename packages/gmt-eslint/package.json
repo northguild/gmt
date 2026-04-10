@@ -1,6 +1,6 @@
 {
   "name": "@burglekitt/gmt-eslint",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "type": "module",
   "description": "Shared ESLint configuration for gmt projects",
   "license": "MIT",
