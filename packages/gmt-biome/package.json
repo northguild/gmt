@@ -1,6 +1,6 @@
 {
   "name": "@burglekitt/gmt-biome",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": false,
   "description": "Shared Biome configuration for gmt projects",
   "license": "MIT",

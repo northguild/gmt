@@ -1,5 +1,11 @@
 # @burglekitt/gmt-biome
 
+## 1.0.3
+
+### Patch Changes
+
+- 38f2e23: Fix .grit file export. This now works with explicit node_modules references in the plugins array in biome.json of consumers
+
 ## 1.0.2
 
 ### Patch Changes
