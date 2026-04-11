@@ -1,0 +1,17 @@
+or {
+  `new Date($args)` where {
+    register_diagnostic(span=`new Date`, message="Aint nobody got time for new Date(). Use @burglekitt/gmt getUtcNow(), getNow(), or getZonedNow(timezone) instead.", severity="error")
+  },
+  `Date.now()` where {
+    register_diagnostic(span=`Date.now`, message="Aint nobody got time for Date.now(). Use @burglekitt/gmt getUnixNow('milliseconds' | 'seconds') or getNow() instead.", severity="error")
+  },
+  `Date.parse($args)` where {
+    register_diagnostic(span=`Date.parse`, message="Aint nobody got time for Date.parse(). Use @burglekitt/gmt convertZonedToUnix(value) instead.", severity="error")
+  },
+  `Date.UTC($args)` where {
+    register_diagnostic(span=`Date.UTC`, message="Aint nobody got time for Date.UTC(). Use @burglekitt/gmt convertUtcDateTimeToUnix('YYYY-MM-DDTHH:mm:ss', 'milliseconds' | 'seconds') instead.", severity="error")
+  },
+  `$obj.getTimezoneOffset()` where {
+    register_diagnostic(span=`getTimezoneOffset`, message="Aint nobody got time for getTimezoneOffset(). Timezone offsets change throughout the year, so use @burglekitt/gmt zoned methods instead.", severity="error")
+  }
+}

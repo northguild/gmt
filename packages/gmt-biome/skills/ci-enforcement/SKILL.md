@@ -16,7 +16,8 @@ Use this skill when a team wants automated enforcement of gmt-biome rules.
 - Ensure CI runs a Biome check command on pull requests.
 
 2. Plugin selection
-- Decide whether to extend the full `@burglekitt/gmt-biome` bundle or include specific plugins by referencing `@burglekitt/gmt-biome/plugins/<name>` (or `@burglekitt/gmt-biome/plugins/<name>.grit`) in your project's `plugins` list. Prefer plugin subpaths when you only want a subset of rules.
+- Use `"plugins": ["./node_modules/@burglekitt/gmt-biome/plugins/all.grit"]` as a common way to enforce all Date-ban rules at once. Reference individual files (for example, `./node_modules/@burglekitt/gmt-biome/plugins/<name>.grit`) only when you want a strict subset. Plugin entries must be filesystem paths to `.grit` files, and those paths may be relative or absolute depending on your repository layout.
+- **Never use `extends`** for these plugins — `extends` only accepts `biome.json` config files, not `.grit` files.
 
 3. Scope rollout
 - If the repository has many existing violations, propose incremental adoption:
