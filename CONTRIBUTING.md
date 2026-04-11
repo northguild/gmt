@@ -67,21 +67,7 @@ Publishing is managed with Changesets and is triggered manually — nothing publ
 
 **See [PUBLISHING.md](./PUBLISHING.md) for the full step-by-step guide** including one-time npm org setup, how to record changesets, how to cut a release, and how git tags work in this monorepo.
 
-Quick reference:
-
-```bash
-# Run on your feature branch before merging — commit the generated file as part of the PR
-pnpm run changeset:add
-
-# See what versions would be bumped today
-pnpm run changeset status
-
-# Apply version bumps and update changelogs
-pnpm run changeset:version
-
-# Publish (recommended via Actions) or run locally with changeset:publish
-pnpm run changeset:publish
-```
+For copyable commands and a quick reference, see [PUBLISHING.md](./PUBLISHING.md).
 
 ## PR checklist
 

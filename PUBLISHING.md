@@ -125,8 +125,26 @@ npm publish --access public
 
 Option C — GitHub Actions publish (optional):
 
-- If you want to publish from the Actions UI instead of your machine, create an environment `release` in GitHub and add an environment secret named `NPM_TOKEN` containing an npm Automation token. The `publish.yml` workflow uses `environment: release` and will read `secrets.NPM_TOKEN` from that environment.
-- This is optional — local publishing works with your local npm auth/passkey and requires no repo secrets.
+If you publish from GitHub Actions, use an npm Automation token with the minimal required permission (publish). Store the token as a repository secret named `NPM_TOKEN` or (preferably) in a protected GitHub Environment called `release`. In Actions map the secret to the Node auth environment variable:
+
+```yaml
+env:
+  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+```
+
+Security checklist for Actions-based publishing:
+
+- Create an npm Automation token limited to publish scope; avoid broad or long-lived tokens.
+- Store the token in a protected environment or as a repo secret and restrict who can approve environment-protected workflow runs (use GitHub Environment approvals).
+- Never print or echo `NPM_TOKEN` (or `NODE_AUTH_TOKEN`) in workflow logs or steps; avoid exposing it in PRs or forked workflows.
+- Prefer local publishing where possible; if using Actions require explicit environment approvals and limit who can trigger the `release` environment.
+
+Relevant docs:
+
+- npm Automation tokens: https://docs.npmjs.com/creating-and-viewing-authentication-tokens
+- GitHub Environments & Secrets: https://docs.github.com/en/actions/deployment/targeting-specific-environments/using-environments-for-deployments
+
+This is optional — local publishing works with your local npm auth/passkey and requires no repo secrets.
 
 ---
 

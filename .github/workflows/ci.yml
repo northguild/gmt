@@ -14,8 +14,6 @@ permissions:
 jobs:
   ci:
     runs-on: ubuntu-latest
-    env:
-      NODE_ICU_DATA: node_modules/full-icu
     steps:
       - uses: actions/checkout@v4
         with:

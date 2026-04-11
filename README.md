@@ -1,8 +1,23 @@
-# Burglekitt Monorepo
+# GMT: Give Me Temporal!
 
 Home of [@burglekitt/gmt](./packages/gmt) — **Give Me Temporal!**
 
 A monorepo for Burglekitt community libraries, built with Nx, powered by pnpm, and dead serious about making JavaScript date handling not terrible.
+
+## Install
+
+Install the runtime package:
+
+```bash
+pnpm add @burglekitt/gmt
+```
+
+Quick example:
+
+```js
+import { getNow } from "@burglekitt/gmt";
+console.log(getNow()); // ISO 8601 string
+```
 
 ## Aint Nobody Got Time For...
 

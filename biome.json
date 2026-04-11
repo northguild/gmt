@@ -1,5 +1,6 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.4.11/schema.json",
+  "root": true,
   "plugins": [
     "./packages/gmt-biome/plugins/no-date-now.grit",
     "./packages/gmt-biome/plugins/no-date-parse.grit",
