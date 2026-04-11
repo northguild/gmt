@@ -1,5 +1,11 @@
 # @burglekitt/gmt-biome
 
+## 1.0.2
+
+### Patch Changes
+
+- 9348e7c: Add `.grit` extension exports for all plugins to support both extensionless and `.grit` subpath imports (for example, `plugins/no-new-date` and `plugins/no-new-date.grit`), and change the package entrypoint from `recommended.json` to `biome.json` by removing `recommended.json`.
+
 ## 1.0.1
 
 ### Patch Changes
