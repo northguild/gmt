@@ -1,5 +1,11 @@
 # @burglekitt/gmt
 
+## 1.1.0
+
+### Minor Changes
+
+- cc4feab: Adds more unix and utc methods. Adds min, max, sort methods.
+
 ## 1.0.0
 
 ### Major Changes
