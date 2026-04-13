@@ -1,6 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { battleTestTimeZones, fixedNowInstant } from "../../test";
 import { parseZonedTimezone } from "../parse";
-import { battleTestTimeZones, fixedNowInstant } from "../test/timezoneFixtures";
 import { getZonedNow } from "./getZonedNow";
 
 describe("getZonedNow", () => {
@@ -34,7 +34,7 @@ describe("getZonedNow", () => {
     ${"America/Chicago"}     | ${"2024-02-28T18:00:00.000-06:00[America/Chicago]"}
     ${"America/Phoenix"}     | ${"2024-02-28T17:00:00.000-07:00[America/Phoenix]"}
   `(
-    "returns an exact zoned datetime string for valid timezone $timeZone",
+    "returns an exact zoned datetime string for valid timeZone $timeZone",
     ({ timeZone, expected }) => {
       const value = getZonedNow(timeZone);
 
@@ -54,14 +54,14 @@ describe("getZonedNow", () => {
     ${null}
     ${undefined}
   `(
-    "returns an empty string for invalid timezone $invalidTimeZone",
+    "returns an empty string for invalid timeZone $invalidTimeZone",
     ({ invalidTimeZone }) => {
       expect(getZonedNow(invalidTimeZone as never)).toBe("");
     },
   );
 
   for (const timeZone of battleTestTimeZones) {
-    it(`returns an exact zoned datetime for battle-test timezone ${timeZone}`, () => {
+    it(`returns an exact zoned datetime for battle-test timeZone ${timeZone}`, () => {
       const value = getZonedNow(timeZone);
 
       const expected = Temporal.Instant.from(fixedNowInstant)

@@ -1,9 +1,9 @@
-import { validOnlyBattleTestTimeZones } from "../test/timezoneFixtures";
-import { isValidTimezone } from ".";
+import { validOnlyBattleTestTimeZones } from "../../test";
+import { isValidTimeZone } from ".";
 
-describe("isValidTimezone", () => {
+describe("isValidTimeZone", () => {
   it.each`
-    timezone                 | expected
+    timeZone                 | expected
     ${"UTC"}                 | ${true}
     ${"Etc/GMT"}             | ${true}
     ${"GMT"}                 | ${true}
@@ -22,24 +22,24 @@ describe("isValidTimezone", () => {
     ${"America/New_York"}    | ${true}
     ${"America/Chicago"}     | ${true}
     ${"America/Phoenix"}     | ${true}
-  `("validates $timezone as $expected", ({ timezone, expected }) => {
-    expect(isValidTimezone(timezone)).toBe(expected);
+  `("validates $timeZone as $expected", ({ timeZone, expected }) => {
+    expect(isValidTimeZone(timeZone)).toBe(expected);
   });
 
   it.each`
-    timezone
+    timeZone
     ${"Not/AZone"}
     ${"UTC+1"}
     ${""}
     ${null}
     ${undefined}
-  `("returns false for invalid timezone $timezone", ({ timezone }) => {
-    expect(isValidTimezone(timezone as never)).toBe(false);
+  `("returns false for invalid timeZone $timeZone", ({ timeZone }) => {
+    expect(isValidTimeZone(timeZone as never)).toBe(false);
   });
 
-  for (const timezone of validOnlyBattleTestTimeZones) {
-    it(`accepts battle-test timezone ${timezone}`, () => {
-      expect(isValidTimezone(timezone)).toBe(true);
+  for (const timeZone of validOnlyBattleTestTimeZones) {
+    it(`accepts battle-test timeZone ${timeZone}`, () => {
+      expect(isValidTimeZone(timeZone)).toBe(true);
     });
   }
 });

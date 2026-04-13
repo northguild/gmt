@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { plainDate } from "../../regex";
+import { isLeapSecond } from "./isLeapSecond";
 
 interface IsValidDateRangeProps {
   value1: string;
@@ -14,6 +15,7 @@ interface IsValidDateRangeProps {
  * true then equality is considered valid as well.
  *
  * - Validates both inputs using regex and Temporal.PlainDate.from.
+ * - Rejects leap-second inputs explicitly.
  * - Returns false for invalid inputs or on error.
  *
  * @param value1 first ISO PlainDate string
@@ -30,6 +32,10 @@ export function isValidDateRange({
   value2,
   options,
 }: IsValidDateRangeProps): boolean {
+  if (isLeapSecond(value1) || isLeapSecond(value2)) {
+    return false;
+  }
+
   if (!plainDate.test(value1) || !plainDate.test(value2)) {
     return false;
   }

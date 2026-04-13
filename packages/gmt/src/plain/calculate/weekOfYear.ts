@@ -15,7 +15,7 @@ function isWeekStartsOn(value: unknown): value is "monday" | "sunday" {
  * @example weekOfYear("2024-01-07") => 1
  * @example weekOfYear("2024-01-08") => 2
  * @example weekOfYear("2024-12-31") => 1 (since it falls in the first week of 2025 if week starts on Monday)
- * @returns Week number of the year (1-53), or NaN for invalid input
+ * @returns Week number of the year (1-53), or null for invalid input
  */
 export function weekOfYear(
   value: string,

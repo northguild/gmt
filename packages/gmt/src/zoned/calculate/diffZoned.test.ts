@@ -46,7 +46,7 @@ describe("diffZonedDateTime", () => {
     ${"2028-01-01T13:00:00+13:00[Pacific/Apia]"} | ${"2028-01-01T13:00:00-11:00[Pacific/Niue]"}
     ${"2027-12-31T13:00:00-11:00[Pacific/Niue]"} | ${"2028-01-02T13:00:00+13:00[Pacific/Apia]"}
   `(
-    "supports multi timezone diffs for $value1 and $value2, expecting 1 day difference",
+    "supports multi timeZone diffs for $value1 and $value2, expecting 1 day difference",
     ({ value1, value2 }) => {
       expect(diffZoned(value1, value2, ["days"])).toEqual({ days: 1 });
     },

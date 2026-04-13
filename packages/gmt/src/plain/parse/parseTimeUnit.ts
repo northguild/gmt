@@ -10,6 +10,11 @@ import { isValidTime } from "../validate";
  *
  * @param value ISO PlainTime string
  * @param unit unit to extract from the time
+ * @example parseTimeUnit("14:30:45.123", "hour") // "14"
+ * @example parseTimeUnit("14:30:45.123", "minute") // "30"
+ * @example parseTimeUnit("14:30:45.123", "second") // "45"
+ * @example parseTimeUnit("14:30:45.123", "millisecond") // "123"
+ * @example parseTimeUnit("invalid", "hour") // ""
  * @returns string representation of the requested unit or "" on invalid input
  */
 export function parseTimeUnit(

@@ -1,4 +1,4 @@
-import { sameInstantBattleCases } from "../test/timezoneFixtures";
+import { sameInstantBattleCases } from "../../test";
 import { isValidZonedDateTime } from "../validate/isValidZonedDateTime";
 import { chopZonedMilliseconds } from "./chopZonedMilliseconds";
 
@@ -37,7 +37,7 @@ describe("chopZonedMilliseconds", () => {
   });
 
   for (const { timeZone, value } of sameInstantBattleCases) {
-    it(`returns a valid zoned datetime at second precision for battle-test timezone ${timeZone}`, () => {
+    it(`returns a valid zoned datetime at second precision for battle-test timeZone ${timeZone}`, () => {
       const result = chopZonedMilliseconds(value);
       expect(isValidZonedDateTime(result)).toBe(true);
       // no fractional seconds in the result
@@ -47,7 +47,7 @@ describe("chopZonedMilliseconds", () => {
   }
 });
 
-describe("chopZonedMilliseconds battle-test timezones (2024-02-29T00:00:00Z)", () => {
+describe("chopZonedMilliseconds battle-test timeZones (2024-02-29T00:00:00Z)", () => {
   it.each`
     value                                               | expected
     ${"2024-02-29T00:00:00+00:00[UTC]"}                 | ${"2024-02-29T00:00:00+00:00[UTC]"}

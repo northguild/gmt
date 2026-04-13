@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { isValidTimezone, isValidZonedDateTime } from "../validate";
+import { isValidTimeZone, isValidZonedDateTime } from "../validate";
 
 /**
  * Convert a zoned ISO 8601 datetime string to the same instant in a
@@ -8,11 +8,11 @@ import { isValidTimezone, isValidZonedDateTime } from "../validate";
  * - Returns an empty string "" for invalid inputs.
  *
  * @param value zoned ISO 8601 datetime string
- * @param timeZone target IANA timezone identifier
- * @returns zoned ISO 8601 string in target timezone or empty string when invalid
+ * @param timeZone target IANA timeZone identifier
+ * @returns zoned ISO 8601 string in target timeZone or empty string when invalid
  */
 export function convertZonedToZoned(value: string, timeZone: string): string {
-  if (!isValidZonedDateTime(value) || !isValidTimezone(timeZone)) {
+  if (!isValidZonedDateTime(value) || !isValidTimeZone(timeZone)) {
     return "";
   }
 

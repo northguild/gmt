@@ -13,14 +13,13 @@ import { isValidZonedDateTime } from "../validate";
  * - On invalid input (bad zoned datetime, amount, or unit) this returns an
  *   empty string "" (consistent with library error handling semantics).
  *
- * Examples:
- * ```ts
- * subtractZoned("2024-02-29T14:30:00+00:00[UTC]", { years: 1 })
- * // => "2023-02-28T14:30:00+00:00[UTC]"
- * ```
- *
  * @param value ISO 8601 zoned datetime string
  * @param units Partial<Record<DateTimeDurationUnit, number>> object specifying units to subtract (e.g. { days: 1, months: 2 })
+ * @example subtractZoned("2024-03-10T12:00:00[America/New_York]", { days: 5 }) // "2024-03-05T12:00:00-05:00[America/New_York]"
+ * @example subtractZoned("2024-03-10T12:00:00[America/New_York]", { months: 1, years: 1 }) // "2023-02-10T12:00:00-05:00[America/New_York]"
+ * @example subtractZoned("invalid", { days: 5 }) // ""
+ * @example subtractZoned("2024-03-10T12:00:00[America/New_York]", { invalidUnit: 5 }) // ""
+ * @example subtractZoned("2024-03-10T12:00:00[America/New_York]", { days: -5 }) // "2024-03-15T12:00:00-04:00[America/New_York]"
  * @returns zoned ISO 8601 string on success, or empty string on invalid input
  */
 export function subtractZoned(

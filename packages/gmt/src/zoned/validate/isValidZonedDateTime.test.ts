@@ -3,7 +3,7 @@ import {
   sameInstantBattleCases,
   unixEpochBattleCases,
   validOnlyBattleTestTimeZones,
-} from "../test/timezoneFixtures";
+} from "../../test";
 import { isValidZonedDateTime } from ".";
 
 describe("isValidZonedDateTime", () => {
@@ -35,7 +35,7 @@ describe("isValidZonedDateTime", () => {
   );
 
   for (const timeZone of validOnlyBattleTestTimeZones) {
-    it(`accepts valid fixture timezone without explicit offset: ${timeZone}`, () => {
+    it(`accepts valid fixture timeZone without explicit offset: ${timeZone}`, () => {
       expect(isValidZonedDateTime(`2024-03-17T14:30:45.123[${timeZone}]`)).toBe(
         true,
       );
@@ -84,7 +84,7 @@ describe("isValidZonedDateTime", () => {
     ${"2024-02-29T00:00:00+01:00[Europe/Berlin]"}       | ${true}
     ${"2024-07-01T00:00:00+02:00[Europe/Berlin]"}       | ${true}
   `(
-    "recognizes validity historical offset in $historical as $validity for timezone offsets have changed",
+    "recognizes validity historical offset in $historical as $validity for timeZone offsets have changed",
     ({ historical, validity }) => {
       expect(isValidZonedDateTime(historical)).toBe(validity);
     },

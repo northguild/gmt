@@ -7,13 +7,15 @@ import { getLargestDateDurationUnit } from "./getLargestDateDurationUnit";
  * Return the difference between two PlainDate values using the provided
  * `unit` (day|week|month|year).
  *
- * - Returns `null` for invalid inputs or units.
+ * - Returns `null` for invalid inputs (no sentinel since negative diffs are valid).
  * - Uses Temporal.PlainDate.until and extracts the requested unit from the
  *   resulting Duration.
  *
  * @param date1 ISO PlainDate string for the start
  * @param date2 ISO PlainDate string for the end
  * @param unit DateDurationUnit | DateDurationUnit[] to measure the difference (e.g. "days" | ["years", "months"])
+ * @example diffDate("2024-03-10", "2024-03-15", "day") // 5
+ * @example diffDate("2024-03-10", "2025-04-10", ["year", "month"]) // { year: 1, month: 1 }
  * @returns numeric difference in the requested unit, or null on invalid input
  */
 export function diffDate(

@@ -1,18 +1,18 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { isValidTimezone } from "../validate";
+import { isValidTimeZone } from "../validate";
 
 /**
- * Return today's date in the given IANA timezone as an ISO date string.
+ * Return today's date in the given IANA timeZone as an ISO date string.
  *
  * - Uses `Temporal.Now.zonedDateTimeISO(ianaTimezone)` and returns
  *   `toPlainDate().toString()`.
- * - Returns empty string "" for invalid timezone or on failure.
+ * - Returns empty string "" for invalid timeZone or on failure.
  *
- * @param ianaTimezone IANA timezone identifier
+ * @param ianaTimezone IANA timeZone identifier
  * @returns ISO date string (YYYY-MM-DD) or empty string when invalid
  */
 export function getZonedToday(ianaTimezone: string): string {
-  if (!isValidTimezone(ianaTimezone)) {
+  if (!isValidTimeZone(ianaTimezone)) {
     return "";
   }
 

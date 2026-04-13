@@ -1,4 +1,4 @@
-import { MustTestLocales } from "../../test/localeMatrix";
+import { MustTestLocales } from "../../test";
 import { formatDate } from "./formatDate";
 
 describe("formatDate", () => {

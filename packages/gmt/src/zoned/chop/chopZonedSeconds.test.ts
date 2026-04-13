@@ -1,4 +1,4 @@
-import { sameInstantBattleCases } from "../test/timezoneFixtures";
+import { sameInstantBattleCases } from "../../test";
 import { isValidZonedDateTime } from "../validate/isValidZonedDateTime";
 import { chopZonedSeconds } from "./chopZonedSeconds";
 
@@ -37,18 +37,18 @@ describe("chopZonedSeconds", () => {
   });
 
   for (const { timeZone, value } of sameInstantBattleCases) {
-    it(`returns a valid zoned datetime at minute precision for battle-test timezone ${timeZone}`, () => {
+    it(`returns a valid zoned datetime at minute precision for battle-test timeZone ${timeZone}`, () => {
       const result = chopZonedSeconds(value);
       expect(isValidZonedDateTime(result)).toBe(true);
       // time portion ends at minutes (HH:MM) then immediately transitions to offset sign
       expect(result).toMatch(/T\d{2}:\d{2}[+-]/);
-      // offset and timezone are preserved
+      // offset and timeZone are preserved
       expect(result).toMatch(/\[.+\]$/);
     });
   }
 });
 
-describe("chopZonedSeconds battle-test timezones (2024-02-29T00:00:00Z)", () => {
+describe("chopZonedSeconds battle-test timeZones (2024-02-29T00:00:00Z)", () => {
   it.each`
     value                                               | expected
     ${"2024-02-29T00:00:00+00:00[UTC]"}                 | ${"2024-02-29T00:00+00:00[UTC]"}

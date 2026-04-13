@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { localNoonBattleCases } from "../test/timezoneFixtures";
+import { localNoonBattleCases } from "../../test";
 import { isBeforeZoned } from "./isBeforeZoned";
 
 describe("isBeforeZoned", () => {
@@ -45,7 +45,7 @@ describe("isBeforeZoned", () => {
     ${"2024-02-29T11:59:00-06:00[America/Chicago]"}     | ${"2024-02-29T12:00:00-06:00[America/Chicago]"}     | ${true}
     ${"2024-02-29T11:59:00-07:00[America/Phoenix]"}     | ${"2024-02-29T12:00:00-07:00[America/Phoenix]"}     | ${true}
   `(
-    "returns $expected when $value1 (noon-1m) is before $value2 (noon) in battle-test timezone",
+    "returns $expected when $value1 (noon-1m) is before $value2 (noon) in battle-test timeZone",
     ({
       value1,
       value2,

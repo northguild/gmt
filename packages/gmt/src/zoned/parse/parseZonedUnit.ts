@@ -10,7 +10,7 @@ export type ZonedParseUnit =
   | "second"
   | "millisecond"
   | "nanosecond"
-  | "timezone";
+  | "timeZone";
 
 function isValidZonedUnit(unit: string): unit is ZonedParseUnit {
   return [
@@ -22,7 +22,7 @@ function isValidZonedUnit(unit: string): unit is ZonedParseUnit {
     "second",
     "millisecond",
     "nanosecond",
-    "timezone",
+    "timeZone",
   ].includes(unit);
 }
 
@@ -30,7 +30,7 @@ function isValidZonedUnit(unit: string): unit is ZonedParseUnit {
  * Return the requested unit value from an ISO 8601 zoned datetime string.
  *
  * - Supported units include year, month, day, hour, minute, second,
- *   millisecond, nanosecond, and timezone.
+ *   millisecond, nanosecond, and timeZone.
  * - Returns empty string "" for invalid zoned datetime or unit.
  *
  * @param value zoned ISO 8601 datetime string
@@ -66,7 +66,7 @@ export function parseZonedUnit(value: string, unit: ZonedParseUnit): string {
       return zonedDateTime.millisecond.toString().padStart(3, "0");
     case "nanosecond":
       return zonedDateTime.nanosecond.toString().padStart(3, "0");
-    case "timezone":
+    case "timeZone":
       return zonedDateTime.timeZoneId;
     default:
       return "";

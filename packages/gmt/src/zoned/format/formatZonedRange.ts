@@ -7,7 +7,7 @@ import { isValidZonedDateTime } from "../validate";
  * `formatRange` API.
  *
  * - Both `from` and `to` must be valid zoned ISO 8601 strings and share the
- *   same IANA timezone id.
+ *   same IANA timeZone id.
  * - `locale` and `options` are forwarded to the formatter.
  * - Returns an empty string "" for invalid input or when formatting fails.
  *

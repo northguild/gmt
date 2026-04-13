@@ -1,5 +1,5 @@
+import { battleTestTimeZones } from "../../test";
 import { parseZonedTimezone } from "../parse";
-import { battleTestTimeZones } from "../test/timezoneFixtures";
 import { getZonedDateTime } from "./getZonedDateTime";
 
 describe("getZonedDateTime", () => {
@@ -61,7 +61,7 @@ describe("getZonedDateTime", () => {
     ${null}
     ${undefined}
   `(
-    "returns an empty string for invalid timezone $invalidTimeZone",
+    "returns an empty string for invalid timeZone $invalidTimeZone",
     ({ invalidTimeZone }) => {
       expect(
         getZonedDateTime("2024-02-29T14:30:45", invalidTimeZone as never),
@@ -70,7 +70,7 @@ describe("getZonedDateTime", () => {
   );
 
   for (const timeZone of battleTestTimeZones) {
-    it(`creates a zoned datetime in battle-test timezone ${timeZone}`, () => {
+    it(`creates a zoned datetime in battle-test timeZone ${timeZone}`, () => {
       const value = getZonedDateTime("2024-02-29T00:00:00", timeZone);
       expect(value).not.toBe("");
       expect(parseZonedTimezone(value)).toBe(timeZone);

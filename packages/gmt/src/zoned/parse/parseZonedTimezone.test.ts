@@ -1,4 +1,4 @@
-import { sameInstantBattleCases } from "../test/timezoneFixtures";
+import { sameInstantBattleCases } from "../../test";
 import { parseZonedTimezone } from "./parseZonedTimezone";
 
 describe("parseZonedTimezone", () => {
@@ -6,7 +6,7 @@ describe("parseZonedTimezone", () => {
     value                                                | expected
     ${"2024-02-29T14:30:45.123-05:00[America/New_York]"} | ${"America/New_York"}
     ${"2024-02-29T14:30:45Z[UTC]"}                       | ${"UTC"}
-  `("returns timezone $expected for $value", ({ value, expected }) => {
+  `("returns timeZone $expected for $value", ({ value, expected }) => {
     expect(parseZonedTimezone(value)).toBe(expected);
   });
 
@@ -14,7 +14,7 @@ describe("parseZonedTimezone", () => {
     value                                        | expected
     ${"2024-02-29T14:30:45+01:00[Europe/Paris]"} | ${"Europe/Paris"}
   `(
-    "returns edge case timezone $expected for $value",
+    "returns edge case timeZone $expected for $value",
     ({ value, expected }) => {
       expect(parseZonedTimezone(value)).toBe(expected);
     },
@@ -62,7 +62,7 @@ describe("parseZonedTimezone", () => {
   );
 
   for (const { timeZone, value } of sameInstantBattleCases) {
-    it(`returns the battle-test timezone ${timeZone}`, () => {
+    it(`returns the battle-test timeZone ${timeZone}`, () => {
       expect(parseZonedTimezone(value)).toBe(timeZone);
     });
   }

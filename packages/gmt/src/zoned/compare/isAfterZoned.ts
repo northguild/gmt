@@ -6,7 +6,7 @@ import { isValidZonedDateTime } from "../validate";
  *
  * - Both inputs must be valid zoned ISO 8601 datetime strings.
  * - Comparison is performed using Temporal.Instant (same instant semantics),
- *   so differing timezone representations but the same instant will compare
+ *   so differing timeZone representations but the same instant will compare
  *   as equal.
  * - Invalid inputs return `false`.
  *

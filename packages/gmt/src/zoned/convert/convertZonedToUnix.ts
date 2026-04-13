@@ -2,7 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import {
   isValidUnixUnit,
   type UnixUnit,
-} from "../../plain/validate/isValidUnixUnit";
+} from "../../unix/validate/isValidUnixUnit";
 import { isValidZonedDateTime } from "../validate";
 
 /**

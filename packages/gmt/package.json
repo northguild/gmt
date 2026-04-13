@@ -48,7 +48,6 @@
       "default": "./dist/plain/*/index.js"
     },
     "./plain/*/*": null,
-    "./plain/test": null,
     "./zoned": {
       "types": "./dist/zoned/index.d.ts",
       "default": "./dist/zoned/index.js"
@@ -65,7 +64,25 @@
     "./regex/*": {
       "types": "./dist/regex/*.d.ts",
       "default": "./dist/regex/*.js"
-    }
+    },
+    "./unix": {
+      "types": "./dist/unix/index.d.ts",
+      "default": "./dist/unix/index.js"
+    },
+    "./unix/*": {
+      "types": "./dist/unix/*/index.d.ts",
+      "default": "./dist/unix/*/index.js"
+    },
+    "./unix/*/*": null,
+    "./utc": {
+      "types": "./dist/utc/index.d.ts",
+      "default": "./dist/utc/index.js"
+    },
+    "./utc/*": {
+      "types": "./dist/utc/*/index.d.ts",
+      "default": "./dist/utc/*/index.js"
+    },
+    "./utc/*/*": null
   },
   "files": [
     "dist",

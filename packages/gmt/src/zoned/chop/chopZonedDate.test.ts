@@ -1,5 +1,5 @@
 import { isValidTime } from "../../plain/validate/isValidTime";
-import { sameInstantBattleCases } from "../test/timezoneFixtures";
+import { sameInstantBattleCases } from "../../test";
 import { chopZonedDate } from "./chopZonedDate";
 
 describe("chopZonedDate", () => {
@@ -40,7 +40,7 @@ describe("chopZonedDate", () => {
     ${"2024-02-28T18:00:00-06:00[America/Chicago]"}     | ${"18:00:00"}
     ${"2024-02-28T17:00:00-07:00[America/Phoenix]"}     | ${"17:00:00"}
   `(
-    "returns local time $expected for battle-test timezone $value (2024-02-29T00:00:00Z)",
+    "returns local time $expected for battle-test timeZone $value (2024-02-29T00:00:00Z)",
     ({ value, expected }: { value: string; expected: string }) => {
       expect(chopZonedDate(value)).toBe(expected);
     },
@@ -64,7 +64,7 @@ describe("chopZonedDate", () => {
   });
 
   for (const { timeZone, value } of sameInstantBattleCases) {
-    it(`returns a valid plain time for battle-test timezone ${timeZone}`, () => {
+    it(`returns a valid plain time for battle-test timeZone ${timeZone}`, () => {
       const result = chopZonedDate(value);
       expect(isValidTime(result)).toBe(true);
     });

@@ -2,7 +2,7 @@ import {
   battleTestLeapYearUnix,
   sameInstantBattleCases,
   unixEpochBattleCases,
-} from "../test/timezoneFixtures";
+} from "../../test";
 import { convertZonedToUnix } from "./convertZonedToUnix";
 
 describe("convertZonedToUnix", () => {
@@ -102,7 +102,7 @@ describe("convertZonedToUnix", () => {
     unixMilliseconds,
     unixSeconds,
   } of sameInstantBattleCases) {
-    it(`returns consistent unix values for battle-test timezone ${timeZone}`, () => {
+    it(`returns consistent unix values for battle-test timeZone ${timeZone}`, () => {
       expect(convertZonedToUnix(value, "milliseconds")).toBe(unixMilliseconds);
       expect(convertZonedToUnix(value, "seconds")).toBe(unixSeconds);
     });
@@ -114,7 +114,7 @@ describe("convertZonedToUnix", () => {
     unixMilliseconds,
     unixSeconds,
   } of unixEpochBattleCases) {
-    it(`returns historical unix values for battle-test timezone ${timeZone}`, () => {
+    it(`returns historical unix values for battle-test timeZone ${timeZone}`, () => {
       expect(convertZonedToUnix(value, "milliseconds")).toBe(unixMilliseconds);
       expect(convertZonedToUnix(value, "seconds")).toBe(unixSeconds);
     });

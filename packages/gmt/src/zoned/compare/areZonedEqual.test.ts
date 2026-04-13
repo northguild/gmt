@@ -1,4 +1,4 @@
-import { sameInstantBattleCases } from "../test/timezoneFixtures";
+import { sameInstantBattleCases } from "../../test";
 import { areZonedDateTimesEqual } from "./areZonedEqual";
 
 describe("areZonedDateTimesEqual", () => {

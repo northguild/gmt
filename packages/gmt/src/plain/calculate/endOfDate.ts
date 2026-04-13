@@ -12,6 +12,12 @@ const supported: Temporal.DateUnit[] = ["year", "month", "week", "day"];
  * @param unit Temporal.DateUnit to specify the unit for the end (e.g. "month")
  * @param options { weekStartsOn: "monday" | "sunday" } - Optional parameter to specify the start of the week when unit is "week". Default is "monday".
  * @example endOfDate("2024-02-29", "month") => "2024-02-29"
+ * @example endOfDate("2024-02-29", "year") => "2024-12-31"
+ * @example endOfDate("2024-02-29", "week", { weekStartsOn: "monday" }) => "2024-03-03"
+ * @example endOfDate("2024-02-29", "week", { weekStartsOn: "sunday" }) => "2024-03-02"
+ * @example endOfDate("2024-02-29", "day") => "2024-02-29"
+ * @example endOfDate("invalid-date", "month") => ""
+ * @example endOfDate("2024-02-29", "invalid-unit") => ""
  * @returns ISO 8601 string representing the end of the specified unit, or empty string on invalid input
  */
 export function endOfDate(

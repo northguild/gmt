@@ -1,4 +1,4 @@
-import { localRangeBattleCases } from "../test/timezoneFixtures";
+import { localRangeBattleCases } from "../../test";
 import { mapZonedDatesInRange } from "./mapZonedDatesInRange";
 
 describe("mapZonedDatesInRange", () => {
@@ -106,7 +106,7 @@ describe("mapZonedDatesInRange", () => {
     ${"2024-02-29T10:00:00-06:00[America/Chicago]"}     | ${"2024-03-02T10:00:00-06:00[America/Chicago]"}     | ${["2024-02-29", "2024-03-01", "2024-03-02"]}
     ${"2024-02-29T10:00:00-07:00[America/Phoenix]"}     | ${"2024-03-02T10:00:00-07:00[America/Phoenix]"}     | ${["2024-02-29", "2024-03-01", "2024-03-02"]}
   `(
-    "maps a normal date range from $start to $end in battle-test timezone",
+    "maps a normal date range from $start to $end in battle-test timeZone",
     ({
       start,
       end,
@@ -121,7 +121,7 @@ describe("mapZonedDatesInRange", () => {
   );
 
   for (const { timeZone, start, end, expected } of localRangeBattleCases) {
-    it(`maps a normal date range in battle-test timezone ${timeZone}`, () => {
+    it(`maps a normal date range in battle-test timeZone ${timeZone}`, () => {
       expect(mapZonedDatesInRange(start, end)).toEqual(expected);
     });
   }

@@ -10,7 +10,7 @@ import { isValidZonedDateTime } from "../validate";
  *
  * - Uses Temporal.ZonedDateTime.until with `largestUnit` and extracts the
  *   requested unit from the resulting Duration.
- * - Returns `null` for invalid inputs.
+ * - Returns `null` for invalid inputs (no sentinel since negative diffs are valid).
  *
  * @param value1 zoned ISO 8601 datetime string (start)
  * @param value2 zoned ISO 8601 datetime string (end)

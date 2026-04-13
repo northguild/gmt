@@ -40,3 +40,6 @@ Thumbs.db
 # Logs
 npm-debug.log*
 yarn-error.log*
+
+# Kilo
+.kilo/

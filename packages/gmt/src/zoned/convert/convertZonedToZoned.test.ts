@@ -1,5 +1,5 @@
+import { sameInstantBattleCases } from "../../test";
 import { parseZonedTimezone } from "../parse";
-import { sameInstantBattleCases } from "../test/timezoneFixtures";
 import { convertZonedToZoned } from "./convertZonedToZoned";
 
 describe("convertZonedToZoned", () => {
@@ -69,7 +69,7 @@ describe("convertZonedToZoned", () => {
     ${null}
     ${undefined}
   `(
-    "returns an empty string for invalid timezone $invalidTimeZone",
+    "returns an empty string for invalid timeZone $invalidTimeZone",
     ({ invalidTimeZone }) => {
       expect(
         convertZonedToZoned(

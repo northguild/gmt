@@ -10,6 +10,10 @@ import { isValidDateTime } from "../validate";
  *
  * @param value ISO PlainDateTime string
  * @param unit unit to extract from the datetime
+ * @example parseDateTimeUnit("2024-03-15T14:30:45.123", "year") // "2024"
+ * @example parseDateTimeUnit("2024-03-15T14:30:45.123", "hour") // "14"
+ * @example parseDateTimeUnit("2024-03-15T14:30:45.123", "millisecond") // "123"
+ * @example parseDateTimeUnit("invalid", "year") // ""
  * @returns string representation of the requested unit or "" on invalid input
  */
 export function parseDateTimeUnit(

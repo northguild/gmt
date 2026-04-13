@@ -1,4 +1,4 @@
-import { localNoonBattleCases } from "../test/timezoneFixtures";
+import { localNoonBattleCases } from "../../test";
 import { mapZonedHoursInDay } from "./mapZonedHoursInDay";
 
 describe("mapZonedHoursInDay", () => {
@@ -78,7 +78,7 @@ describe("mapZonedHoursInDay", () => {
   );
 
   for (const { timeZone, value } of localNoonBattleCases) {
-    it(`returns 24 hourly entries for battle-test timezone ${timeZone}`, () => {
+    it(`returns 24 hourly entries for battle-test timeZone ${timeZone}`, () => {
       expect(mapZonedHoursInDay(value)).toHaveLength(24);
     });
   }

@@ -1,5 +1,4 @@
 export * from "./isLeapSecond";
-export * from "./isUtcDateTime";
 export * from "./isValidDate";
 export * from "./isValidDateDurationUnit";
 export * from "./isValidDateRange";
@@ -8,5 +7,3 @@ export * from "./isValidDateTimeDurationUnit";
 export * from "./isValidIsoDateLike";
 export * from "./isValidTime";
 export * from "./isValidTimeDurationUnit";
-export * from "./isValidUnixMilliseconds";
-export * from "./isValidUnixSeconds";

@@ -49,5 +49,3 @@ export function normalizeDateTime(
 
   return lower ? s.toLocaleLowerCase(locale) : s;
 }
-
-export default normalizeDateTime;

@@ -1,2 +1,2 @@
-export * from "./isValidTimezone";
+export * from "./isValidTimeZone";
 export * from "./isValidZonedDateTime";

@@ -1,4 +1,4 @@
-import { localNoonBattleCases } from "../test/timezoneFixtures";
+import { localNoonBattleCases } from "../../test";
 import { parseZonedTime } from "./parseZonedTime";
 
 describe("parseZonedTime", () => {
@@ -59,7 +59,7 @@ describe("parseZonedTime", () => {
   );
 
   for (const { timeZone, value } of localNoonBattleCases) {
-    it(`returns the local time for battle-test timezone ${timeZone}`, () => {
+    it(`returns the local time for battle-test timeZone ${timeZone}`, () => {
       expect(parseZonedTime(value)).toBe("12:00:00");
     });
   }

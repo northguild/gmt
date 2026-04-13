@@ -16,6 +16,8 @@ Use this skill when a user asks for behavior that is not currently covered by gm
 - Search `packages/gmt/src/plain` and `packages/gmt/src/zoned`.
 - If capability exists, use the existing method and do not add new API.
 
+ - When evaluating whether to add a new API, enforce the library's strict input/output policy: new public methods must accept explicit shapes (ISO 8601 strings, IANA timezone ids, or numeric unix epochs) and return normalized outputs. If the requested capability implies permissive parsing, recommend implementing a small adapter outside of core gmt instead of widening gmt's surface.
+
 2. If capability does not exist
 - Tell the user it is possible with Temporal because gmt ships Temporal.
 - Tell the user it requires a new custom method in gmt.

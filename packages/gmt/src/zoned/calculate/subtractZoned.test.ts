@@ -1,5 +1,5 @@
+import { localNoonBattleCases } from "../../test";
 import { parseZonedTimezone } from "../parse";
-import { localNoonBattleCases } from "../test/timezoneFixtures";
 import { subtractZoned } from "./subtractZoned";
 
 describe("subtractZoned", () => {
@@ -45,7 +45,7 @@ describe("subtractZoned", () => {
     ${"2024-02-29T14:30:00-06:00[America/Chicago]"}     | ${"2023-03-01T14:30:00-06:00[America/Chicago]"}
     ${"2024-02-29T14:30:00-07:00[America/Phoenix]"}     | ${"2023-03-01T14:30:00-07:00[America/Phoenix]"}
   `(
-    "works across ordered battle-test timezones for $value",
+    "works across ordered battle-test timeZones for $value",
     ({ value, expected }) => {
       expect(subtractZoned(value, { days: 365 })).toBe(expected);
     },
@@ -99,7 +99,7 @@ describe("subtractZoned", () => {
 
   it.each`
     invalidUnit
-    ${"timezone"}
+    ${"timeZone"}
     ${""}
     ${null}
     ${undefined}
@@ -115,7 +115,7 @@ describe("subtractZoned", () => {
   );
 
   for (const { timeZone, value } of localNoonBattleCases) {
-    it(`preserves battle-test timezone ${timeZone} when subtracting`, () => {
+    it(`preserves battle-test timeZone ${timeZone} when subtracting`, () => {
       expect(parseZonedTimezone(subtractZoned(value, { hours: 1 }))).toBe(
         timeZone,
       );

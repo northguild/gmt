@@ -6,7 +6,7 @@ import { isLeapSecond } from "../../plain/validate/isLeapSecond";
  *
  * - Rejects non-strings, empty strings, and leap-second inputs.
  * - Uses `Temporal.ZonedDateTime.from` to verify parseability and ensures a
- *   non-empty timezone id is present.
+ *   non-empty timeZone id is present.
  * - Returns `true` for valid zoned datetimes, otherwise `false`.
  *
  * @param value candidate zoned datetime string

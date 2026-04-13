@@ -2,27 +2,27 @@ import { chopTime, chopUtc } from "../chop";
 import { areDatesEqual } from "../compare";
 import { isValidDate } from "../validate";
 import { getNow } from "./getNow";
-import * as getSystemTimezoneModule from "./getSystemTimezone";
+import * as getSystemTimeZoneModule from "./getSystemTimeZone";
 import { getToday } from "./getToday";
 
 describe("getToday", () => {
-  let timezoneSpy: ReturnType<typeof vi.spyOn>;
+  let timeZoneSpy: ReturnType<typeof vi.spyOn>;
   const systemTime = "2024-02-29T00:00:00.000Z";
 
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(systemTime);
-    timezoneSpy = vi
-      .spyOn(getSystemTimezoneModule, "getSystemTimezone")
+    timeZoneSpy = vi
+      .spyOn(getSystemTimeZoneModule, "getSystemTimeZone")
       .mockReturnValue("UTC");
   });
 
   afterEach(() => {
-    timezoneSpy.mockRestore();
+    timeZoneSpy.mockRestore();
     vi.useRealTimers();
   });
 
-  it("returns an exact plain date for the mocked system timezone", () => {
+  it("returns an exact plain date for the mocked system timeZone", () => {
     const today = getToday();
 
     // today should be same day as system time

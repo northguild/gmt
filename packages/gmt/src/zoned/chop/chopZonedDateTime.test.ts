@@ -1,8 +1,5 @@
-import {
-  sameInstantBattleCases,
-  unixEpochBattleCases,
-} from "../test/timezoneFixtures";
-import { isValidTimezone } from "../validate";
+import { sameInstantBattleCases, unixEpochBattleCases } from "../../test";
+import { isValidTimeZone } from "../validate";
 import { chopZonedDateTime } from "./chopZonedDateTime";
 
 describe("chopZonedDateTime", () => {
@@ -43,7 +40,7 @@ describe("chopZonedDateTime", () => {
     ${"2024-02-28T18:00:00-06:00[America/Chicago]"}     | ${"America/Chicago"}
     ${"2024-02-28T17:00:00-07:00[America/Phoenix]"}     | ${"America/Phoenix"}
   `(
-    "returns timezone name $expected for battle-test $value (2024-02-29T00:00:00Z)",
+    "returns timeZone name $expected for battle-test $value (2024-02-29T00:00:00Z)",
     ({ value, expected }: { value: string; expected: string }) => {
       expect(chopZonedDateTime(value)).toBe(expected);
     },
@@ -67,13 +64,13 @@ describe("chopZonedDateTime", () => {
   });
 
   for (const { timeZone, value } of sameInstantBattleCases) {
-    it(`returns matching timezone for battle-test timezone ${timeZone}`, () => {
+    it(`returns matching timeZone for battle-test timeZone ${timeZone}`, () => {
       expect(chopZonedDateTime(value)).toBe(timeZone);
     });
   }
 
   for (const { timeZone, value } of unixEpochBattleCases) {
-    it(`returns matching timezone for historical battle-test timezone ${timeZone}`, () => {
+    it(`returns matching timeZone for historical battle-test timeZone ${timeZone}`, () => {
       expect(chopZonedDateTime(value)).toBe(timeZone);
     });
   }
@@ -91,16 +88,16 @@ describe("chopZonedDateTime edge cases", () => {
   );
 
   for (const { timeZone, value } of sameInstantBattleCases) {
-    it(`returns valid timezone id for battle-test timezone ${timeZone}`, () => {
+    it(`returns valid timeZone id for battle-test timeZone ${timeZone}`, () => {
       const result = chopZonedDateTime(value);
-      expect(isValidTimezone(result)).toBe(true);
+      expect(isValidTimeZone(result)).toBe(true);
     });
   }
 
   for (const { timeZone, value } of unixEpochBattleCases) {
-    it(`returns valid timezone id for historical battle-test timezone ${timeZone}`, () => {
+    it(`returns valid timeZone id for historical battle-test timeZone ${timeZone}`, () => {
       const result = chopZonedDateTime(value);
-      expect(isValidTimezone(result)).toBe(true);
+      expect(isValidTimeZone(result)).toBe(true);
     });
   }
 });

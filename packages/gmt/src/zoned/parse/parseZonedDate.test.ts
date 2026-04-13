@@ -1,4 +1,4 @@
-import { localNoonBattleCases } from "../test/timezoneFixtures";
+import { localNoonBattleCases } from "../../test";
 import { parseZonedDate } from "./parseZonedDate";
 
 describe("parseZonedDate", () => {
@@ -58,7 +58,7 @@ describe("parseZonedDate", () => {
   );
 
   for (const { timeZone, value } of localNoonBattleCases) {
-    it(`returns the local date for battle-test timezone ${timeZone}`, () => {
+    it(`returns the local date for battle-test timeZone ${timeZone}`, () => {
       expect(parseZonedDate(value)).toBe("2024-02-29");
     });
   }

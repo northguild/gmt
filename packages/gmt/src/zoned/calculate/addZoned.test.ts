@@ -1,5 +1,5 @@
+import { localNoonBattleCases } from "../../test";
 import { parseZonedTimezone } from "../parse";
-import { localNoonBattleCases } from "../test/timezoneFixtures";
 import { addZoned } from "./addZoned";
 
 describe("addZoned", () => {
@@ -43,7 +43,7 @@ describe("addZoned", () => {
     ${"2024-02-29T14:30:00-06:00[America/Chicago]"}     | ${"2025-02-28T14:30:00-06:00[America/Chicago]"}
     ${"2024-02-29T14:30:00-07:00[America/Phoenix]"}     | ${"2025-02-28T14:30:00-07:00[America/Phoenix]"}
   `(
-    "works across ordered battle-test timezones for $value",
+    "works across ordered battle-test timeZones for $value",
     ({ value, expected }) => {
       // just add 365 days to leap day
       expect(addZoned(value, { days: 365 })).toBe(expected);
@@ -94,7 +94,7 @@ describe("addZoned", () => {
 
   it.each`
     invalidUnit
-    ${"timezone"}
+    ${"timeZone"}
     ${""}
     ${null}
     ${undefined}
@@ -110,7 +110,7 @@ describe("addZoned", () => {
   );
 
   for (const { timeZone, value } of localNoonBattleCases) {
-    it(`preserves battle-test timezone ${timeZone} when adding`, () => {
+    it(`preserves battle-test timeZone ${timeZone} when adding`, () => {
       expect(parseZonedTimezone(addZoned(value, { hours: 1 }))).toBe(timeZone);
     });
   }

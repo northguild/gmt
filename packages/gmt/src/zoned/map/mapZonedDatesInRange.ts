@@ -3,10 +3,10 @@ import { isValidZonedDateTime } from "../validate";
 
 /**
  * Return an array of plain ISO date strings covering the inclusive date range
- * between two zoned datetimes in the same timezone.
+ * between two zoned datetimes in the same timeZone.
  *
  * - `stepDays` is optional and defaults to 1; must be a positive integer.
- * - Returns empty array for invalid inputs, mismatched timezones, or when
+ * - Returns empty array for invalid inputs, mismatched timeZones, or when
  *   start > end.
  *
  * @param startZonedDateTime start zoned ISO 8601 datetime string

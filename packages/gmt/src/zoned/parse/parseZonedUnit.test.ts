@@ -1,4 +1,4 @@
-import { sameInstantBattleCases } from "../test/timezoneFixtures";
+import { sameInstantBattleCases } from "../../test";
 import { parseZonedUnit } from "./parseZonedUnit";
 
 describe("parseZonedUnit", () => {
@@ -11,14 +11,14 @@ describe("parseZonedUnit", () => {
     ${"2024-02-29T14:30:45.123+02:00[Europe/Helsinki]"} | ${"minute"}      | ${"30"}
     ${"2024-02-29T14:30:45.123+02:00[Europe/Helsinki]"} | ${"second"}      | ${"45"}
     ${"2024-02-29T14:30:45.123+02:00[Europe/Helsinki]"} | ${"millisecond"} | ${"123"}
-    ${"2024-02-29T14:30:45.123+02:00[Europe/Helsinki]"} | ${"timezone"}    | ${"Europe/Helsinki"}
+    ${"2024-02-29T14:30:45.123+02:00[Europe/Helsinki]"} | ${"timeZone"}    | ${"Europe/Helsinki"}
   `("returns $expected for valid unit $unit", ({ value, unit, expected }) => {
     expect(parseZonedUnit(value, unit)).toBe(expected);
   });
 
   it.each`
     value                          | unit          | expected
-    ${"2024-02-29T14:30:45Z[UTC]"} | ${"timezone"} | ${"UTC"}
+    ${"2024-02-29T14:30:45Z[UTC]"} | ${"timeZone"} | ${"UTC"}
   `(
     "returns $expected for edge case unit $unit",
     ({ value, unit, expected }) => {
@@ -80,15 +80,15 @@ describe("parseZonedUnit", () => {
     ${"2024-02-28T18:00:00-06:00[America/Chicago]"}     | ${"America/Chicago"}
     ${"2024-02-28T17:00:00-07:00[America/Phoenix]"}     | ${"America/Phoenix"}
   `(
-    "returns timezone $expected for battle-test $value (2024-02-29T00:00:00Z)",
+    "returns timeZone $expected for battle-test $value (2024-02-29T00:00:00Z)",
     ({ value, expected }: { value: string; expected: string }) => {
-      expect(parseZonedUnit(value, "timezone")).toBe(expected);
+      expect(parseZonedUnit(value, "timeZone")).toBe(expected);
     },
   );
 
   for (const { timeZone, value } of sameInstantBattleCases) {
-    it(`returns timezone unit for battle-test timezone ${timeZone}`, () => {
-      expect(parseZonedUnit(value, "timezone")).toBe(timeZone);
+    it(`returns timeZone unit for battle-test timeZone ${timeZone}`, () => {
+      expect(parseZonedUnit(value, "timeZone")).toBe(timeZone);
     });
   }
 });

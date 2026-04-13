@@ -69,10 +69,64 @@ Publishing is managed with Changesets and is triggered manually — nothing publ
 
 For copyable commands and a quick reference, see [PUBLISHING.md](./PUBLISHING.md).
 
+## Development conventions
+
+- Use `pnpm` for package management and scripts.
+- Use `pnpm -w exec <binary>` instead of `npx`.
+- Avoid Bun-specific runtime APIs (e.g. `Bun.serve`, `bun:sqlite`) — prefer standard Node.js libraries.
+
 ## PR checklist
 
 - Ensure tests pass for affected projects.
 - Ensure lint/typecheck pass for affected projects.
 - Keep APIs string-in/string-out and Temporal-only.
 - Add or update tests for behavior changes.
+
+## JSDoc conventions
+
+All public methods must have comprehensive JSDoc comments with `@example` tags. This ensures proper documentation generation and helps users understand usage patterns.
+
+### Required JSDoc structure
+
+```ts
+/**
+ * Brief description of what the function does.
+ *
+ * - Bullet points covering behavior, validation, edge cases, etc.
+ * - Each bullet on its own line.
+ *
+ * @param paramName Description of the parameter
+ * @example functionName(input) // expected output
+ * @example functionName(input, options) // expected output
+ * @example functionName(invalidInput) // expected output (error case)
+ * @returns Description of return value, or "or <sentinel> on invalid input"
+ */
+export function functionName(...): ... {}
+```
+
+### Example with permutations
+
+```ts
+/**
+ * Return the latest (maximum) of the given PlainDate values.
+ *
+ * - Returns null if the array is empty or contains no valid dates.
+ * - Validation is performed on each item in the array.
+ *
+ * @param dates Array of ISO PlainDate strings (e.g. "2024-03-10")
+ * @example maxDate(["2024-03-10", "2024-03-15", "2024-03-12"]) // "2024-03-15"
+ * @example maxDate(["invalid", "2024-03-15", "2024-03-12"]) // "2024-03-15"
+ * @example maxDate(["invalid", "also invalid"]) // null
+ * @example maxDate([]) // null
+ * @returns The latest date string, or null on invalid input
+ */
+```
+
+### Key rules
+
+1. **Use `it.each` backtick syntax** in tests (see AGENTS.md for details)
+2. **Show permutations**: valid inputs, invalid inputs, edge cases, empty cases
+3. **Include return type in @returns**: `or "" on invalid input`, `or null on invalid input`, `or false on invalid input`
+4. **No Date objects**: Use Temporal or ISO strings only (enforced elsewhere)
+5. **Match return sentinel**: `""` for strings, `null` for numbers, `false` for booleans
 

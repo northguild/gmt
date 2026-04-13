@@ -2,28 +2,28 @@ import { chopMilliseconds, chopTime, chopUtc } from "../chop";
 import { isAfterDateTime } from "../compare";
 import { isValidDateTime } from "../validate";
 import { getNow } from "./getNow";
-import * as getSystemTimezoneModule from "./getSystemTimezone";
+import * as getSystemTimeZoneModule from "./getSystemTimeZone";
 import { getToday } from "./getToday";
 
 describe("getNow", () => {
-  let timezoneSpy: ReturnType<typeof vi.spyOn>;
+  let timeZoneSpy: ReturnType<typeof vi.spyOn>;
   const systemTime = "2024-02-29T00:00:00.000Z";
 
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(systemTime);
 
-    timezoneSpy = vi
-      .spyOn(getSystemTimezoneModule, "getSystemTimezone")
+    timeZoneSpy = vi
+      .spyOn(getSystemTimeZoneModule, "getSystemTimeZone")
       .mockReturnValue("UTC");
   });
 
   afterEach(() => {
-    timezoneSpy.mockRestore();
+    timeZoneSpy.mockRestore();
     vi.useRealTimers();
   });
 
-  it("returns an exact plain datetime for the mocked system timezone", () => {
+  it("returns an exact plain datetime for the mocked system timeZone", () => {
     const now = getNow();
     // ensure that now is greater or equal to system time
     expect(isAfterDateTime(now, chopUtc(systemTime))).toBe(true);
@@ -35,9 +35,9 @@ describe("getNow", () => {
     expect(chopTime(now)).toBe(getToday());
   });
 
-  // 2024-02-29T00:00:00.000Z in each must-test timezone: UTC → east → Pacific → Americas
+  // 2024-02-29T00:00:00.000Z in each must-test timeZone: UTC → east → Pacific → Americas
   it.each`
-    timezone                 | expected
+    timeZone                 | expected
     ${"UTC"}                 | ${"2024-02-29T00:00:00"}
     ${"Etc/GMT"}             | ${"2024-02-29T00:00:00"}
     ${"GMT"}                 | ${"2024-02-29T00:00:00"}
@@ -57,9 +57,9 @@ describe("getNow", () => {
     ${"America/Chicago"}     | ${"2024-02-28T18:00:00"}
     ${"America/Phoenix"}     | ${"2024-02-28T17:00:00"}
   `(
-    "returns $expected for system timezone $timezone",
-    ({ timezone, expected }) => {
-      timezoneSpy.mockReturnValue(timezone);
+    "returns $expected for system timeZone $timeZone",
+    ({ timeZone, expected }) => {
+      timeZoneSpy.mockReturnValue(timeZone);
       const now = getNow();
       expect(chopMilliseconds(now)).toBe(expected);
     },

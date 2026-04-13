@@ -28,6 +28,9 @@ Use this skill when writing or updating tests for `packages/gmt/src/*` methods.
 - Number-returning method returns `null`.
 - Boolean-returning method returns `false`.
 
+ - Tests should assert the strict input contract: only ISO 8601 strings, IANA timezone identifiers, or explicit unix epoch numbers are accepted by public APIs. When inputs are outside these shapes, assert the library's typed fallbacks are returned rather than relying on permissive parsing.
+
+
 3. Boundary path
 - Include leap day and month rollover scenarios.
 - For zoned behavior, include DST or offset-sensitive scenarios.

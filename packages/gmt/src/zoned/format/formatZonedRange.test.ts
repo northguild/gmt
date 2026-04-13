@@ -1,6 +1,5 @@
 import { normalizeDateTime } from "../../internal";
-import { MustTestLocales } from "../../test/localeMatrix";
-import { localeZonedRangeInputByLocale } from "../test/localeZonedFixtures";
+import { localeZonedRangeInputByLocale, MustTestLocales } from "../../test";
 import { formatZonedRange } from "./formatZonedRange";
 
 describe("formatZonedRange", () => {
@@ -37,7 +36,7 @@ describe("formatZonedRange", () => {
     ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00+01:00[Europe/Paris]"}
     ${"2024-02-29T10:00:00+00:00[UTC]"}              | ${"2024-02-29T12:00:00+09:00[Asia/Tokyo]"}
   `(
-    "returns empty string when range endpoints use different timezones: $from -> $to",
+    "returns empty string when range endpoints use different timeZones: $from -> $to",
     ({ from, to }) => {
       expect(
         formatZonedRange(from, to, "en-US", {
@@ -48,7 +47,7 @@ describe("formatZonedRange", () => {
     },
   );
 
-  it("forces formatting to use endpoint timezone even when options.timeZone is provided", () => {
+  it("forces formatting to use endpoint timeZone even when options.timeZone is provided", () => {
     const from = "2024-02-29T10:00:00-05:00[America/New_York]";
     const to = "2024-02-29T12:00:00-05:00[America/New_York]";
     const options = {

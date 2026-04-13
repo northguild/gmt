@@ -12,6 +12,9 @@ import { isValidTime } from "../validate";
  * @param value ISO PlainTime string
  * @param locale optional BCP 47 locale identifier
  * @param options optional Intl.DateTimeFormatOptions
+ * @example formatTime("14:30:00", "en-US", { timeStyle: "short" }) // "2:30 PM"
+ * @example formatTime("14:30:00", "de-DE", { timeStyle: "short" }) // "14:30"
+ * @example formatTime("invalid") // ""
  * @returns localized time string or "" on invalid input
  */
 export function formatTime(

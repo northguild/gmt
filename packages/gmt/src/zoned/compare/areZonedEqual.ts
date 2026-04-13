@@ -6,7 +6,7 @@ import { isValidZonedDateTime } from "../validate";
  *
  * - Inputs must be valid ISO 8601 zoned datetime strings.
  * - Returns `true` when year/month/day/hour/minute/second/millisecond/microsecond/
- *   nanosecond and IANA timezone id all match; otherwise `false`.
+ *   nanosecond and IANA timeZone id all match; otherwise `false`.
  * - Invalid inputs return `false`.
  *
  * @param value1 first zoned datetime string

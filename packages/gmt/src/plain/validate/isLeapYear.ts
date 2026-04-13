@@ -7,6 +7,9 @@ import { Temporal } from "@js-temporal/polyfill";
  * - Returns false for invalid input.
  *
  * @param value ISO PlainDate string
+ * @example isLeapYear("2024-03-15") // true
+ * @example isLeapYear("2023-03-15") // false
+ * @example isLeapYear("invalid") // false
  * @returns boolean indicating whether the date is in a leap year
  */
 export function isLeapYear(value: string): boolean {

@@ -14,6 +14,9 @@ permissions:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20, 22, 24]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -25,7 +28,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: ${{ matrix.node-version }}
           cache: pnpm
 
       - name: Approve pnpm build scripts
@@ -34,6 +37,12 @@ jobs:
       # Install all dependencies (including devDependencies)
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # Clean any stale TypeScript build artifacts that could cause module resolution issues
+      - name: Clean stale build artifacts
+        run: |
+          find . -name "*.tsbuildinfo" -delete 2>/dev/null || true
+          rm -rf .nx/cache 2>/dev/null || true
 
       # Debug: Verify Nx modules are installed
       - name: Debug Nx modules

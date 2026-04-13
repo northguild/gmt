@@ -7,3 +7,6 @@ export * from "./isAfterTime";
 export * from "./isBeforeDate";
 export * from "./isBeforeDateTime";
 export * from "./isBeforeTime";
+export * from "./isBetweenDate";
+export * from "./isBetweenDateTime";
+export * from "./isBetweenTime";
