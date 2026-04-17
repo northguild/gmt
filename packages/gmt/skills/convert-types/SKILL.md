@@ -5,7 +5,7 @@ description: >
   Use convertPlainToZoned, convertZonedToPlain, convertUtcToUnix.
 type: core
 library: '@burglekitt/gmt'
-library_version: '1.1.0'
+library_version: '1.2.0'
 sources:
   - 'burglekitt/gmt:packages/gmt/src/zoned/convert/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/convert/index.ts'

@@ -5,7 +5,7 @@ description: >
   for timezone-aware operations. Use getZonedNow, formatZonedDateTime.
 type: core
 library: '@burglekitt/gmt'
-library_version: '1.1.0'
+library_version: '1.2.0'
 sources:
   - 'burglekitt/gmt:packages/gmt/src/zoned/get/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/format/index.ts'

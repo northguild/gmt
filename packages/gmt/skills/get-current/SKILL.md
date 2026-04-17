@@ -6,7 +6,7 @@ description: >
   String output for logging; use Temporal for manipulation.
 type: core
 library: '@burglekitt/gmt'
-library_version: '1.1.0'
+library_version: '1.2.0'
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/get/getNow.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/get/getToday.ts'

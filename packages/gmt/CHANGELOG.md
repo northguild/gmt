@@ -1,5 +1,11 @@
 # @burglekitt/gmt
 
+## 1.2.0
+
+### Minor Changes
+
+- Adds parser methods for plain, unix, utc, zoned. Updates tanstack-intent skills.
+
 ## 1.1.0
 
 ### Minor Changes

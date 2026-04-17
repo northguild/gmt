@@ -5,7 +5,7 @@ description: >
   Use formatDate, formatTime, formatDateTime with locale option.
 type: core
 library: '@burglekitt/gmt'
-library_version: '1.1.0'
+library_version: '1.2.0'
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/format/index.ts'
 ---
