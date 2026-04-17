@@ -32,7 +32,7 @@ describe("getQuarterForDateTime", () => {
   `(
     "returns null for invalid dateTime $invalidDateTime",
     ({ invalidDateTime }) => {
-      expect(getQuarterForDateTime(invalidDateTime)).toBe(null);
+      expect(getQuarterForDateTime(invalidDateTime)).toBeNull();
     },
   );
 });

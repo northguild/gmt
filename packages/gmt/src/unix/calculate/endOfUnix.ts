@@ -1,34 +1,25 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { isValidDateTimeUnit } from "../../plain";
 import { getSystemTimeZone } from "../../plain/get";
 import { isValidUnixUnit } from "../../unix/validate/isValidUnixUnit";
 import { isValidTimeZone } from "../../zoned/validate";
 
-const supported: (Temporal.DateUnit | Temporal.TimeUnit)[] = [
-  "year",
-  "month",
-  "week",
-  "day",
-  "hour",
-  "minute",
-  "second",
-  "millisecond",
-  "microsecond",
-  "nanosecond",
-];
-
 /**
  * Return the end of the specified unit for a Unix timestamp.
  *
- * - Accepts Unix timestamps in milliseconds (default) or seconds.
- * - Returns null for invalid inputs.
+ * - Converts to ZonedDateTime, sets to end of unit, converts back to epoch.
+ * - Supports: "year", "month", "week", "day", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond".
+ * - Returns null for invalid input.
  *
  * @param value Unix timestamp (number)
  * @param unit Temporal.DateUnit | Temporal.TimeUnit to specify the end
- * @param options epochUnit optional "seconds" | "milliseconds", timeZone optional IANA timeZone, weekStartsOn optional "monday" | "sunday"
+ * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA), weekStartsOn ("monday" | "sunday")
+ * @returns Unix epoch number representing the end of the unit, or null on invalid input
+ *
  * @example endOfUnix(1706659200000, "year") // 1735689600000
  * @example endOfUnix(1706659200000, "month") // 1708012800000
  * @example endOfUnix(1706659200, "day", { epochUnit: "seconds" }) // 1706736000
- * @returns Unix epoch number representing the end of the unit, or null on invalid input
+ * @example endOfUnix(-86400000, "year") // -1 (end of 1969)
  */
 export function endOfUnix(
   value: number,
@@ -45,14 +36,14 @@ export function endOfUnix(
 
   if (
     !timeZone ||
-    !supported.includes(unit) ||
+    !isValidDateTimeUnit(unit) ||
     !isValidTimeZone(timeZone) ||
     !isValidUnixUnit(epochUnit)
   ) {
     return null;
   }
 
-  if (!Number.isFinite(value) || !Number.isInteger(value) || value < 0) {
+  if (!Number.isFinite(value) || !Number.isInteger(value)) {
     return null;
   }
 

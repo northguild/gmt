@@ -1,8 +1,12 @@
 import {
   localNoonBattleCases,
   sameInstantBattleCases,
+  TomorrowTimeZone,
+  TomorrowTimeZoneGmtOffset,
   unixEpochBattleCases,
   validOnlyBattleTestTimeZones,
+  YesterdayTimeZone,
+  YesterdayTimeZoneGmtOffset,
 } from "../../test";
 import { isValidZonedDateTime } from ".";
 
@@ -22,8 +26,8 @@ describe("isValidZonedDateTime", () => {
     ${"2024-02-29T00:00:00+08:00[Asia/Shanghai]"}
     ${"2024-02-29T00:00:00+11:00[Australia/Lord_Howe]"}
     ${"2024-02-29T00:00:00+13:45[Pacific/Chatham]"}
-    ${"2024-02-29T00:00:00+13:00[Pacific/Apia]"}
-    ${"2024-02-29T00:00:00-11:00[Pacific/Niue]"}
+    ${`2024-02-29T00:00:00${TomorrowTimeZoneGmtOffset}[${TomorrowTimeZone}]`}
+    ${`2024-02-29T00:00:00${YesterdayTimeZoneGmtOffset}[${YesterdayTimeZone}]`}
     ${"2024-02-29T00:00:00-05:00[America/New_York]"}
     ${"2024-02-29T00:00:00-06:00[America/Chicago]"}
     ${"2024-02-29T00:00:00-07:00[America/Phoenix]"}
@@ -59,10 +63,6 @@ describe("isValidZonedDateTime", () => {
     ${"1970-07-01T00:00:00+10:00[Australia/Lord_Howe]"} | ${true}
     ${"2024-02-29T00:00:00+11:00[Australia/Lord_Howe]"} | ${true}
     ${"2024-07-01T00:00:00+10:30[Australia/Lord_Howe]"} | ${true}
-    ${"1970-01-01T00:00:00-11:00[Pacific/Apia]"}        | ${true}
-    ${"1970-07-01T00:00:00-11:00[Pacific/Apia]"}        | ${true}
-    ${"2024-02-29T00:00:00+13:00[Pacific/Apia]"}        | ${true}
-    ${"2024-07-01T00:00:00+13:00[Pacific/Apia]"}        | ${true}
     ${"1970-01-01T00:00:00+12:45[Pacific/Chatham]"}     | ${true}
     ${"1970-07-01T00:00:00+12:45[Pacific/Chatham]"}     | ${true}
     ${"2024-02-29T00:00:00+13:45[Pacific/Chatham]"}     | ${true}
@@ -94,16 +94,13 @@ describe("isValidZonedDateTime", () => {
   it.each`
     value
     ${"1970-01-01T05:45:00+05:45[Asia/Kathmandu]"}
-    ${"1970-01-01T00:00:00+11:00[Australia/Lord_Howe]"} | ${true}
-    ${"1970-07-01T00:00:00+10:30[Australia/Lord_Howe]"} | ${true}
-    ${"1970-01-01T00:00:00+13:45[Pacific/Chatham]"}     | ${true}
-    ${"1970-01-01T00:00:00+03:00[Europe/Istanbul]"}     | ${true}
-    ${"1970-07-01T00:00:00+03:00[Europe/Istanbul]"}     | ${true}
-    ${"1970-01-01T00:00:00+13:00[Pacific/Apia]"}        | ${true}
-    ${"1970-07-01T00:00:00+13:00[Pacific/Apia]"}        | ${true}
-    ${"1970-01-01T00:00:00+00:00[Europe/Lisbon]"}       | ${true}
-    ${"1970-01-01T00:00:00+00:00[Europe/Dublin]"}       | ${true}
-    ${"1970-07-01T00:00:00+02:00[Europe/Berlin]"}       | ${true}
+    ${"1970-01-01T00:00:00+11:00[Australia/Lord_Howe]"} | ${false}
+    ${"1970-07-01T00:00:00+10:30[Australia/Lord_Howe]"} | ${false}
+    ${"1970-01-01T00:00:00+03:00[Europe/Istanbul]"}     | ${false}
+    ${"1970-07-01T00:00:00+03:00[Europe/Istanbul]"}     | ${false}
+    ${"1970-01-01T00:00:00+00:00[Europe/Lisbon]"}       | ${false}
+    ${"1970-01-01T00:00:00+00:00[Europe/Dublin]"}       | ${false}
+    ${"1970-07-01T00:00:00+02:00[Europe/Berlin]"}       | ${false}
   `("returns false for invalid historical offset: $value", ({ value }) => {
     expect(isValidZonedDateTime(value)).toBe(false);
   });

@@ -1,32 +1,23 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { isValidDateTimeUnit } from "../../plain";
 import type { FractionalDigit } from "../../types";
 import { isValidUtc } from "../validate";
-
-const supported: (Temporal.DateUnit | Temporal.TimeUnit)[] = [
-  "year",
-  "month",
-  "week",
-  "day",
-  "hour",
-  "minute",
-  "second",
-  "millisecond",
-  "microsecond",
-  "nanosecond",
-];
 
 /**
  * Return the start of the specified date-time `unit` for a given UTC datetime string.
  *
- * - Returns empty string for invalid inputs or units.
+ * - Converts to ZonedDateTime, sets to start of unit, converts back to Instant.
+ * - Supports: "year", "month", "week", "day", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond".
+ * - Returns "" for invalid input.
  *
  * @param value ISO UTC datetime string
  * @param unit Temporal.DateUnit | Temporal.TimeUnit to specify the start
- * @param options weekStartsOn optional "monday" | "sunday", fractionalSecondDigits optional
+ * @param options optional: weekStartsOn ("monday" | "sunday"), fractionalSecondDigits (number)
+ * @returns UTC Instant string representing the start of the unit, or "" on invalid input
+ *
  * @example startOfUtc("2024-03-15T14:30:45Z", "year") // "2024-01-01T00:00:00Z"
  * @example startOfUtc("2024-03-15T14:30:45Z", "month") // "2024-03-01T00:00:00Z"
  * @example startOfUtc("invalid", "year") // ""
- * @returns UTC Instant string representing the start of the unit, or "" on invalid input
  */
 export function startOfUtc(
   value: string,
@@ -39,7 +30,7 @@ export function startOfUtc(
   const weekStartsOn = options?.weekStartsOn ?? "monday";
   const fractionalSecondDigits = options?.fractionalSecondDigits;
 
-  if (!isValidUtc(value) || !supported.includes(unit)) return "";
+  if (!isValidUtc(value) || !isValidDateTimeUnit(unit)) return "";
 
   try {
     const instant = Temporal.Instant.from(value);

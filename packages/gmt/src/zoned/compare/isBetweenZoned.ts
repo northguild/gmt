@@ -10,8 +10,11 @@ import { isValidZonedDateTime } from "../validate";
  * @param zoned ISO ZonedDateTime string to check
  * @param start ISO ZonedDateTime string for the start of the range
  * @param end ISO ZonedDateTime string for the end of the range
- * @param options { inclusiveStart?: boolean = true, inclusiveEnd?: boolean = true }
+ * @param options optional: inclusiveStart (boolean), inclusiveEnd (boolean)
  * @returns boolean indicating whether zoned is between start and end
+ *
+ * @example isBetweenZoned("2024-02-29T12:00:00+00:00[UTC]", "2024-02-29T11:00:00+00:00[UTC]", "2024-02-29T13:00:00+00:00[UTC]") // true
+ * @example isBetweenZoned("invalid", "2024-02-29T11:00:00+00:00[UTC]", "2024-02-29T13:00:00+00:00[UTC]") // false
  */
 export function isBetweenZoned(
   zoned: string,

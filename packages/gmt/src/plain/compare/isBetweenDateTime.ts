@@ -5,14 +5,24 @@ import { isValidDateTime } from "../validate";
 /**
  * Return true when `dateTime` is between `start` and `end` (inclusive by default).
  *
- * - Validates inputs and then compares using Temporal.PlainDateTime.compare.
- * - Returns false for invalid inputs.
+ * - Uses Temporal.PlainDateTime.compare to compare date-times.
+ * - Returns false if start > end (invalid range).
+ * - Returns false if any input is invalid.
+ * - Use options.inclusiveStart and options.inclusiveEnd to control boundary inclusivity.
  *
  * @param dateTime ISO PlainDateTime string to check
  * @param start ISO PlainDateTime string for the start of the range
  * @param end ISO PlainDateTime string for the end of the range
  * @param options { inclusiveStart?: boolean = true, inclusiveEnd?: boolean = true }
  * @returns boolean indicating whether dateTime is between start and end
+ *
+ * @example isBetweenDateTime("2024-02-29T12:00:00", "2024-02-01T00:00:00", "2024-02-28T23:59:59") // false
+ * @example isBetweenDateTime("2024-02-29T12:00:00", "2024-02-01T00:00:00", "2024-02-29T12:00:00") // true
+ * @example isBetweenDateTime("2024-02-29T12:00:00", "2024-02-29T12:00:00", "2024-02-28T23:59:59") // false
+ * @example isBetweenDateTime("2024-02-29T12:00:00", "2024-02-28T23:59:59", "2024-03-01T00:00:00") // true
+ * @example isBetweenDateTime("invalid", "2024-02-01T00:00:00", "2024-02-28T23:59:59") // false
+ * @example isBetweenDateTime("2024-02-29T12:00:00", "invalid", "2024-02-28T23:59:59") // false
+ * @example isBetweenDateTime("2024-02-29T12:00:00", "2024-02-01T00:00:00", "invalid") // false
  */
 export function isBetweenDateTime(
   dateTime: string,

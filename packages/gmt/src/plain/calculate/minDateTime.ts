@@ -8,11 +8,10 @@ import { isValidDateTime } from "../validate";
  * - Validation is performed on each item in the array.
  *
  * @param dateTimes Array of ISO PlainDateTime strings (e.g. "2024-03-10T12:00:00")
- * @example minDateTime(["2024-03-10T12:00:00", "2024-03-15T12:00:00", "2024-03-12T12:00:00"]) // "2024-03-10T12:00:00"
- * @example minDateTime(["invalid", "2024-03-15T12:00:00"]) // "2024-03-15T12:00:00"
- * @example minDateTime(["invalid", "also invalid"]) // null
- * @example minDateTime([]) // null
  * @returns The earliest datetime string, or null on invalid input
+ *
+ * @example minDateTime(["2024-03-10T12:00:00", "2024-03-15T12:00:00", "2024-03-12T12:00:00"]) // "2024-03-10T12:00:00"
+ * @example minDateTime([]) // null
  */
 export function minDateTime(dateTimes: string[]): string | null {
   if (!dateTimes.length) return null;
@@ -20,8 +19,16 @@ export function minDateTime(dateTimes: string[]): string | null {
   const valid = dateTimes.filter(isValidDateTime);
   if (!valid.length) return null;
 
-  const comparables = valid.map((d) => Temporal.PlainDateTime.from(d));
-  comparables.sort(Temporal.PlainDateTime.compare);
+  try {
+    const min = valid.reduce((currentMin, candidateStr) => {
+      const candidate = Temporal.PlainDateTime.from(candidateStr);
+      return Temporal.PlainDateTime.compare(candidate, currentMin) < 0
+        ? candidate
+        : currentMin;
+    }, Temporal.PlainDateTime.from(valid[0]));
 
-  return comparables[0].toString();
+    return min.toString();
+  } catch {
+    return null;
+  }
 }

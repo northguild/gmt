@@ -8,15 +8,18 @@ import { isValidTimeZone } from "../../zoned/validate";
 /**
  * Subtract a temporal amount from a Unix epoch value and return the resulting epoch.
  *
- * - Accepts Unix timestamps in milliseconds (default) or seconds.
- * - Returns null for invalid inputs.
+ * - Converts to ZonedDateTime, subtracts the duration, then converts back to epoch.
+ * - Validates duration units and values.
+ * - Returns null for invalid input.
  *
  * @param value Unix timestamp (number)
  * @param units Partial<Record<DateTimeDurationUnit, number>> object specifying units to subtract
- * @param options epochUnit optional "seconds" | "milliseconds", timeZone optional IANA timeZone
+ * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA)
+ * @returns Unix epoch number after subtraction, or null on invalid input
+ *
  * @example subtractUnix(1706745600000, { days: 1 }) // 1706659200000
  * @example subtractUnix(1706745600, { days: 1 }, { epochUnit: "seconds" }) // 1706659200
- * @returns Unix epoch number after subtraction, or null on invalid input
+ * @example subtractUnix(0, { days: 1 }) // -86400000 (Jan 1 1970 - 1 day = Dec 31 1969)
  */
 export function subtractUnix(
   value: number,
@@ -38,7 +41,7 @@ export function subtractUnix(
     return null;
   }
 
-  if (!Number.isFinite(value) || !Number.isInteger(value) || value < 0) {
+  if (!Number.isFinite(value) || !Number.isInteger(value)) {
     return null;
   }
 

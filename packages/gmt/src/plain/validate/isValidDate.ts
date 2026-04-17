@@ -5,17 +5,17 @@ import { isLeapSecond } from "./isLeapSecond";
 /**
  * Return true if `value` is a valid ISO PlainDate string.
  *
- * - Uses a regex pre-check followed by Temporal.PlainDate.from for strong
- *   validation.
- * - Explicitly rejects leap-second inputs (datetime strings with 60 seconds).
- * - Returns false on invalid input.
+ * - Uses regex to check format before parsing.
+ * - Rejects leap seconds (e.g., "2024-12-31T23:59:60").
+ * - Rejects invalid dates (e.g., "2024-02-30").
  *
  * @param value ISO PlainDate string
+ * @returns boolean indicating validity
+ *
  * @example isValidDate("2024-03-10") // true
  * @example isValidDate("2024-02-30") // false
  * @example isValidDate("invalid") // false
  * @example isValidDate("2024-12-31T23:59:60") // false (leap second - not a valid date)
- * @returns boolean indicating validity
  */
 export function isValidDate(value: string): boolean {
   if (isLeapSecond(value)) {

@@ -8,16 +8,19 @@ import { isValidTimeZone } from "../../zoned/validate";
 /**
  * Return the difference between two Unix timestamps measured in the given unit.
  *
- * - Accepts Unix timestamps in milliseconds (default) or seconds.
- * - Returns `null` for invalid inputs.
+ * - Uses Temporal.Instant.until() to calculate the difference.
+ * - Supports single unit or array of units.
+ * - Returns null for invalid input.
  *
  * @param value1 first Unix timestamp
  * @param value2 second Unix timestamp
  * @param units DateTimeDurationUnit | DateTimeDurationUnit[] to measure the difference
- * @param options epochUnit optional "seconds" | "milliseconds", timeZone optional IANA timeZone
+ * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA)
+ * @returns numeric difference in the requested unit, or null on invalid input
+ *
  * @example diffUnix(1706745600000, 1706659200000, "day") // 1
  * @example diffUnix(1706745600, 1706659200, "day", { epochUnit: "seconds" }) // 1
- * @returns numeric difference in the requested unit, or null on invalid input
+ * @example diffUnix(0, -86400000, "day") // 1 (Jan 1 1970 - Dec 31 1969 = 1 day)
  */
 export function diffUnix(
   value1: number,
@@ -45,10 +48,8 @@ export function diffUnix(
   if (
     !Number.isFinite(value1) ||
     !Number.isInteger(value1) ||
-    value1 < 0 ||
     !Number.isFinite(value2) ||
-    !Number.isInteger(value2) ||
-    value2 < 0
+    !Number.isInteger(value2)
   ) {
     return null;
   }

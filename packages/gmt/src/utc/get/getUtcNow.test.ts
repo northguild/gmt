@@ -1,6 +1,5 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { mockTemporalNowInstantThrow } from "../../test/mocks";
 import { convertUtcToUnix } from "../convert";
-
 import { getUtcNow } from "./getUtcNow";
 
 describe("getUtcNow", () => {
@@ -19,15 +18,17 @@ describe("getUtcNow", () => {
     expect(utcNow).toBeTruthy();
   });
 
-  it("returns a parseable Temporal instant", () => {
-    const value = getUtcNow();
-    expect(() => Temporal.Instant.from(value)).not.toThrow();
-  });
-
   it("returns a value consumable by zoned unix converters", () => {
     const value = getUtcNow();
 
     expect(convertUtcToUnix(value, "milliseconds")).toBe(1709164800000);
     expect(convertUtcToUnix(value, "seconds")).toBe(1709164800);
+  });
+
+  it("returns empty string on failure", () => {
+    vi.useRealTimers();
+    mockTemporalNowInstantThrow();
+    const result = getUtcNow();
+    expect(result).toBe("");
   });
 });

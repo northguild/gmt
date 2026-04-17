@@ -14,6 +14,7 @@ export * from "./getLargestDateTimeDurationUnit";
 export * from "./getLargestTimeDurationUnit";
 export * from "./getQuarterForDate";
 export * from "./getQuarterForDateTime";
+export * from "./getWeekNumber";
 export * from "./maxDate";
 export * from "./maxDateTime";
 export * from "./maxTime";

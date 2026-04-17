@@ -8,11 +8,10 @@ import { isValidDate } from "../validate";
  * - Validation is performed on each item in the array.
  *
  * @param dates Array of ISO PlainDate strings (e.g. "2024-03-10")
- * @example minDate(["2024-03-10", "2024-03-15", "2024-03-12"]) // "2024-03-10"
- * @example minDate(["invalid", "2024-03-15", "2024-03-12"]) // "2024-03-12"
- * @example minDate(["invalid", "also invalid"]) // null
- * @example minDate([]) // null
  * @returns The earliest date string, or null on invalid input
+ *
+ * @example minDate(["2024-03-10", "2024-03-15", "2024-03-12"]) // "2024-03-10"
+ * @example minDate([]) // null
  */
 export function minDate(dates: string[]): string | null {
   if (!dates.length) return null;
@@ -20,8 +19,16 @@ export function minDate(dates: string[]): string | null {
   const valid = dates.filter(isValidDate);
   if (!valid.length) return null;
 
-  const comparables = valid.map((d) => Temporal.PlainDate.from(d));
-  comparables.sort(Temporal.PlainDate.compare);
+  try {
+    const min = valid.reduce((currentMin, candidateStr) => {
+      const candidate = Temporal.PlainDate.from(candidateStr);
+      return Temporal.PlainDate.compare(candidate, currentMin) < 0
+        ? candidate
+        : currentMin;
+    }, Temporal.PlainDate.from(valid[0]));
 
-  return comparables[0].toString();
+    return min.toString();
+  } catch {
+    return null;
+  }
 }

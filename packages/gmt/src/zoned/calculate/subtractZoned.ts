@@ -5,22 +5,18 @@ import type { DateTimeDurationUnit } from "../../types";
 import { isValidZonedDateTime } from "../validate";
 
 /**
- * Subtract a temporal amount from a zoned ISO 8601 datetime string and
- * return a zoned ISO 8601 string.
+ * Subtract a temporal amount from a zoned ISO 8601 datetime string and return a zoned ISO 8601 string.
  *
- * - Inputs and outputs are ISO 8601 strings.
- * - Uses `@js-temporal/polyfill` `Temporal.ZonedDateTime` for arithmetic.
- * - On invalid input (bad zoned datetime, amount, or unit) this returns an
- *   empty string "" (consistent with library error handling semantics).
+ * - Uses Temporal.ZonedDateTime.subtract to subtract duration.
+ * - Validates duration units and values.
+ * - Returns "" for invalid input.
  *
  * @param value ISO 8601 zoned datetime string
- * @param units Partial<Record<DateTimeDurationUnit, number>> object specifying units to subtract (e.g. { days: 1, months: 2 })
+ * @param units Partial<Record<DateTimeDurationUnit, number>> object specifying units to subtract
+ * @returns zoned ISO 8601 string on success, or "" on invalid input
+ *
  * @example subtractZoned("2024-03-10T12:00:00[America/New_York]", { days: 5 }) // "2024-03-05T12:00:00-05:00[America/New_York]"
- * @example subtractZoned("2024-03-10T12:00:00[America/New_York]", { months: 1, years: 1 }) // "2023-02-10T12:00:00-05:00[America/New_York]"
  * @example subtractZoned("invalid", { days: 5 }) // ""
- * @example subtractZoned("2024-03-10T12:00:00[America/New_York]", { invalidUnit: 5 }) // ""
- * @example subtractZoned("2024-03-10T12:00:00[America/New_York]", { days: -5 }) // "2024-03-15T12:00:00-04:00[America/New_York]"
- * @returns zoned ISO 8601 string on success, or empty string on invalid input
  */
 export function subtractZoned(
   value: string,

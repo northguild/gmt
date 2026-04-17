@@ -28,11 +28,10 @@ describe("startOfQuarterForUnix", () => {
   it.each`
     invalidValue
     ${"invalid"}
-    ${-1}
     ${1.5}
     ${null}
     ${undefined}
   `("returns null for invalid value $invalidValue", ({ invalidValue }) => {
-    expect(startOfQuarterForUnix(invalidValue as never)).toBe(null);
+    expect(startOfQuarterForUnix(invalidValue as never)).toBeNull();
   });
 });

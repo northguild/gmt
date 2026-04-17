@@ -7,15 +7,17 @@ import { isValidUtc } from "../validate/isValidUtc";
 /**
  * Add a temporal amount to a UTC datetime string and return a new UTC Instant string.
  *
- * - Validates `value`, `unit`, and `amount` before performing the add.
- * - Returns an empty string for invalid inputs.
+ * - Uses Temporal.Instant.from to parse, adds duration, returns new Instant.
+ * - Validates duration units and values.
+ * - Returns "" for invalid input.
  *
  * @param value ISO UTC datetime string (e.g. "2024-03-10T12:00:00Z")
  * @param units Partial<Record<DateTimeDurationUnit, number>> object specifying units to add
- * @example addUtc("2024-03-10T12:00:00Z", { day: 5 }) // "2024-03-15T12:00:00Z"
- * @example addUtc("2024-03-10T12:00:00Z", { month: 1, year: 1 }) // "2025-04-10T12:00:00Z"
- * @example addUtc("invalid", { day: 5 }) // ""
  * @returns UTC Instant string after addition, or "" on invalid input
+ *
+ * @example addUtc("2024-03-10T12:00:00Z", { days: 5 }) // "2024-03-15T12:00:00Z"
+ * @example addUtc("2024-03-10T12:00:00Z", { months: 1, years: 1 }) // "2025-04-10T12:00:00Z"
+ * @example addUtc("invalid", { days: 5 }) // ""
  */
 export function addUtc(
   value: string,

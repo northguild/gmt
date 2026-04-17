@@ -4,13 +4,20 @@ import { isValidDateTime } from "../validate";
 /**
  * Return the PlainTime portion extracted from an ISO PlainDateTime string.
  *
- * - Converts a PlainDateTime string into its PlainTime component.
- * - Returns an empty string for invalid input.
+ * - Extracts time components from a PlainDateTime.
+ * - Returns "" for invalid input.
  *
  * @param value ISO PlainDateTime string
  * @returns ISO PlainTime string or "" on invalid input
+ *
+ * @example chopDate("2024-02-29T12:34:56") // "12:34:56"
+ * @example chopDate("invalid") // ""
  */
 export function chopDate(value: string): string {
   if (!isValidDateTime(value)) return "";
-  return Temporal.PlainDateTime.from(value).toPlainTime().toString();
+  try {
+    return Temporal.PlainDateTime.from(value).toPlainTime().toString();
+  } catch {
+    return "";
+  }
 }

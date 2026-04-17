@@ -33,6 +33,8 @@ Timezone-aware comparison:
 
 Timezone/format conversion:
 
+- `convertPlainDateTimeToZoned`
+- `convertZonedToPlainDateTime`
 - `convertZonedToUnix`, `convertZonedToUtc`, `convertZonedToZoned`
 
 ### format
@@ -43,10 +45,13 @@ Locale-aware timezone formatting:
 
 ### get
 
-Current time in specific timezone:
+Current in specific timezone:
 
-- `getZonedDate`, `getZonedDateTime`, `getZonedNow`
-- `getZonedNowUnit`, `getZonedToday`
+- `getZonedNow`, `getZonedNowUnit`, `getZonedToday`
+- `getZonedYear`, `getZonedMonth`, `getZonedDay`, `getZonedDayOfWeek`
+- `getZonedHour`, `getZonedMinute`, `getZonedSecond`
+- `getZonedMillisecond`, `getZonedMicrosecond`, `getZonedNanosecond`
+- `getZonedWeekOfYear`
 
 ### map
 
@@ -58,8 +63,17 @@ Generate multiple timezone values:
 
 Extract timezone components:
 
-- `parseZonedDate`, `parseZonedDateTime`, `parseZonedTime`
-- `parseZonedTimezone`, `parseZonedUnit`
+- `parseDateFromZoned`, `parseDateTimeFromZoned`
+- `parseDayFromZoned`, `parseDayOfWeekFromZoned`
+- `parseHourFromZoned`
+- `parseMicrosecondFromZoned`, `parseMillisecondFromZoned`
+- `parseMinuteFromZoned`
+- `parseMonthFromZoned`
+- `parseNanosecondFromZoned`, `parseSecondFromZoned`
+- `parseTimeFromZoned`, `parseTimeZoneFromZoned`
+- `parseUnitFromZoned`
+- `parseWeekFromZoned`
+- `parseYearFromZoned`
 
 ### validate
 

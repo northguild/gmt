@@ -1,4 +1,5 @@
 import * as getSystemTimeZoneModule from "../../plain/get/getSystemTimeZone";
+import { TomorrowTimeZone, YesterdayTimeZone } from "../../test";
 import { convertUnixToPlainTime } from "./convertUnixToPlainTime";
 
 describe("convertUnixToPlainTime", () => {
@@ -16,10 +17,12 @@ describe("convertUnixToPlainTime", () => {
 
   it.each`
     unix             | epochUnit         | expected
-    ${1706659200000} | ${undefined}      | ${"00:00:00"}
-    ${1706659200}    | ${"seconds"}      | ${"00:00:00"}
-    ${1706659200000} | ${"milliseconds"} | ${"00:00:00"}
-    ${1706713200000} | ${undefined}      | ${"15:00:00"}
+    ${1709164800000} | ${undefined}      | ${"00:00:00"}
+    ${1709164800}    | ${"seconds"}      | ${"00:00:00"}
+    ${1709164800000} | ${"milliseconds"} | ${"00:00:00"}
+    ${1709218800000} | ${undefined}      | ${"15:00:00"}
+    ${-1}            | ${undefined}      | ${"23:59:59.999"}
+    ${-86400}        | ${"seconds"}      | ${"00:00:00"}
   `(
     "returns $expected for unix $unix with epochUnit $epochUnit",
     ({ unix, epochUnit, expected }) => {
@@ -31,10 +34,12 @@ describe("convertUnixToPlainTime", () => {
     },
   );
 
+  // yesterday tomorrow tests
   it.each`
-    unix             | timeZone              | expected
-    ${1706659200000} | ${"UTC"}              | ${"00:00:00"}
-    ${1706659200000} | ${"America/New_York"} | ${"19:00:00"}
+    unix             | timeZone             | expected
+    ${1709164800000} | ${"UTC"}             | ${"00:00:00"}
+    ${1709164800000} | ${YesterdayTimeZone} | ${"13:00:00"}
+    ${1709164800000} | ${TomorrowTimeZone}  | ${"13:00:00"}
   `(
     "returns $expected for unix $unix in timeZone $timeZone",
     ({ unix, timeZone, expected }) => {
@@ -47,9 +52,10 @@ describe("convertUnixToPlainTime", () => {
   it.each`
     unix
     ${"invalid"}
-    ${-1}
     ${null}
     ${undefined}
+    ${1.5}
+    ${-1.5}
   `("returns empty string for invalid unix $unix", ({ unix }) => {
     expect(convertUnixToPlainTime(unix as never)).toBe("");
   });

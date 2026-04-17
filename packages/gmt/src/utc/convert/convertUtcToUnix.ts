@@ -6,14 +6,19 @@ import {
 import { isValidUtc } from "../validate";
 
 /**
- * Convert a UTC Instant string to a unix epoch value in milliseconds or
- * seconds.
+ * Convert a UTC Instant string to a unix epoch value in milliseconds or seconds.
  *
- * - Returns `null` for invalid inputs or unit.
+ * - Uses Temporal.Instant.from to parse.
+ * - Validates unit ("seconds" | "milliseconds").
+ * - Returns null for invalid input.
  *
  * @param value UTC Instant string
  * @param unit optional unit, "seconds" or "milliseconds"
- * @returns epoch number or null when invalid
+ * @returns epoch number or null on invalid
+ *
+ * @example convertUtcToUnix("2024-02-29T00:00:00Z") // 1709164800000
+ * @example convertUtcToUnix("2024-02-29T00:00:00Z", "seconds") // 1709164800
+ * @example convertUtcToUnix("invalid") // null
  */
 export function convertUtcToUnix(
   value: string,

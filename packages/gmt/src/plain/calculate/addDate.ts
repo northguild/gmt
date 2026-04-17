@@ -4,19 +4,17 @@ import type { DateDurationUnit } from "../../types";
 import { isValidDate, isValidDateDurationUnit } from "../validate";
 
 /**
- * Return a PlainDate ISO string with `amount` added according to `unit`.
+ * Return a PlainDate ISO string with `amount` added according to `units`.
  *
- * - Validates `value`, `unit`, and `amount` before performing the add.
- * - Returns an empty string for invalid inputs.
+ * - Validates `value`, `units`, and `amount` before performing the add.
+ * - Returns "" for invalid inputs.
  *
  * @param value ISO PlainDate string
- * @param units Partial<Record<DateDurationUnit, number>> object specifying units to add (e.g. { day: 1, month: 2 })
- * @example addDate("2024-03-10", { day: 5 }) // "2024-03-15"
- * @example addDate("2024-03-10", { month: 1, year: 1 }) // "2025-04-10"
- * @example addDate("invalid", { day: 5 }) // ""
- * @example addDate("2024-03-10", { invalidUnit: 5 }) // ""
- * @example addDate("2024-03-10", { day: -5 }) // "2024-03-05"
+ * @param units Partial<Record<DateDurationUnit, number>> object specifying units to add
  * @returns ISO PlainDate string after addition, or "" on invalid input
+ *
+ * @example addDate("2024-03-10", { days: 5 }) // "2024-03-15"
+ * @example addDate("invalid", { days: 5 }) // ""
  */
 export function addDate(
   value: string /* ISO 8601 date */,

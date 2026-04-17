@@ -1,5 +1,5 @@
 import { localNoonBattleCases } from "../../test";
-import { parseZonedTimezone } from "../parse";
+import { parseTimeZoneFromZoned } from "../parse";
 import { addZoned } from "./addZoned";
 
 describe("addZoned", () => {
@@ -111,7 +111,9 @@ describe("addZoned", () => {
 
   for (const { timeZone, value } of localNoonBattleCases) {
     it(`preserves battle-test timeZone ${timeZone} when adding`, () => {
-      expect(parseZonedTimezone(addZoned(value, { hours: 1 }))).toBe(timeZone);
+      expect(parseTimeZoneFromZoned(addZoned(value, { hours: 1 }))).toBe(
+        timeZone,
+      );
     });
   }
 });

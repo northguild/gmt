@@ -5,17 +5,18 @@ import { isValidDate } from "../validate";
 /**
  * Return the quarter of the year (1-4) for a given ISO date.
  *
+ * - Returns the quarter (1-4) containing the input date.
+ * - Q1 = months 1-3, Q2 = months 4-6, Q3 = months 7-9, Q4 = months 10-12.
  * - Validates input using isValidDate.
- * - Computes quarter from month: Q1 = months 1-3, Q2 = months 4-6, Q3 = months 7-9, Q4 = months 10-12.
- * - Returns null for invalid inputs.
  *
  * @param value ISO PlainDate string
+ * @returns number (1-4) or null for invalid input
+ *
  * @example getQuarterForDate("2024-01-15") // 1
  * @example getQuarterForDate("2024-04-15") // 2
  * @example getQuarterForDate("2024-07-15") // 3
  * @example getQuarterForDate("2024-10-15") // 4
  * @example getQuarterForDate("invalid") // null
- * @returns number (1-4) or null for invalid input
  */
 export function getQuarterForDate(value: string): number | null {
   if (!isValidDate(value)) {

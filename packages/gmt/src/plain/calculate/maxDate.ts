@@ -8,11 +8,10 @@ import { isValidDate } from "../validate";
  * - Validation is performed on each item in the array.
  *
  * @param dates Array of ISO PlainDate strings (e.g. "2024-03-10")
- * @example maxDate(["2024-03-10", "2024-03-15", "2024-03-12"]) // "2024-03-15"
- * @example maxDate(["invalid", "2024-03-15", "2024-03-12"]) // "2024-03-15"
- * @example maxDate(["invalid", "also invalid"]) // null
- * @example maxDate([]) // null
  * @returns The latest date string, or null on invalid input
+ *
+ * @example maxDate(["2024-03-10", "2024-03-15", "2024-03-12"]) // "2024-03-15"
+ * @example maxDate([]) // null
  */
 export function maxDate(dates: string[]): string | null {
   if (!dates.length) return null;
@@ -20,8 +19,16 @@ export function maxDate(dates: string[]): string | null {
   const valid = dates.filter(isValidDate);
   if (!valid.length) return null;
 
-  const comparables = valid.map((d) => Temporal.PlainDate.from(d));
-  comparables.sort(Temporal.PlainDate.compare);
+  try {
+    const max = valid.reduce((currentMax, candidateStr) => {
+      const candidate = Temporal.PlainDate.from(candidateStr);
+      return Temporal.PlainDate.compare(candidate, currentMax) > 0
+        ? candidate
+        : currentMax;
+    }, Temporal.PlainDate.from(valid[0]));
 
-  return comparables[comparables.length - 1].toString();
+    return max.toString();
+  } catch {
+    return null;
+  }
 }

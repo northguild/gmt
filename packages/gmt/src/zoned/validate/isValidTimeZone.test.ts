@@ -1,4 +1,8 @@
-import { validOnlyBattleTestTimeZones } from "../../test";
+import {
+  TomorrowTimeZone,
+  validOnlyBattleTestTimeZones,
+  YesterdayTimeZone,
+} from "../../test";
 import { isValidTimeZone } from ".";
 
 describe("isValidTimeZone", () => {
@@ -17,8 +21,8 @@ describe("isValidTimeZone", () => {
     ${"Asia/Shanghai"}       | ${true}
     ${"Australia/Lord_Howe"} | ${true}
     ${"Pacific/Chatham"}     | ${true}
-    ${"Pacific/Apia"}        | ${true}
-    ${"Pacific/Niue"}        | ${true}
+    ${YesterdayTimeZone}     | ${true}
+    ${TomorrowTimeZone}      | ${true}
     ${"America/New_York"}    | ${true}
     ${"America/Chicago"}     | ${true}
     ${"America/Phoenix"}     | ${true}

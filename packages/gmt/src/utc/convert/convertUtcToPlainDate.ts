@@ -5,15 +5,17 @@ import { isValidUtc } from "../validate";
 /**
  * Convert a UTC datetime string to a plain date string in the format "YYYY-MM-DD".
  *
- * - Input must be a valid UTC ISO 8601 datetime string (ending in Z).
- * - Returns an empty string for invalid inputs.
- * - The output date is in the specified timeZone.
+ * - Converts to specified timezone before extracting date.
+ * - Defaults to UTC if no timezone specified.
+ * - Returns "" for invalid input.
  *
  * @param value UTC datetime string (e.g., "2024-02-29T00:00:00Z")
- * @param options conversion options
+ * @param options optional: timeZone (IANA)
+ * @returns plain date string in "YYYY-MM-DD" format or "" on invalid input
+ *
  * @example convertUtcToPlainDate("2024-02-29T00:00:00Z") // "2024-02-29"
  * @example convertUtcToPlainDate("2024-02-29T00:00:00Z", { timeZone: "America/New_York" }) // "2024-02-28"
- * @returns plain date string in "YYYY-MM-DD" format or "" on invalid input
+ * @example convertUtcToPlainDate("invalid") // ""
  */
 export function convertUtcToPlainDate(
   value: string,

@@ -1,6 +1,16 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { MustTestLocales } from "./localeMatrix";
 
+// Absolute must test timezones
+export const TomorrowTimeZone = "Pacific/Apia";
+export const YesterdayTimeZone = "Pacific/Niue";
+
+// GMT offsets for extreme edge case timezones (standard time, not DST)
+export const TomorrowTimeZoneGmtOffset = "+13:00";
+export const YesterdayTimeZoneGmtOffset = "-11:00";
+
+// Note: Pacific/Apia and Pacific/Niue do not observe DST at the instants used in these tests
+
 /**
  * Canonical timeZone IDs that stress offset and date-boundary behavior.
  *
@@ -8,13 +18,13 @@ import { MustTestLocales } from "./localeMatrix";
  * - MustTestDstTimeZones["UTC"] => "UTC"
  * - MustTestDstTimeZones["America/New_York"] => "America/New_York"
  * - MustTestDstTimeZones["Europe/Helsinki"] => "Europe/Helsinki"
- * - MustTestDstTimeZones["Pacific/Apia"] => "Pacific/Apia"
- * - MustTestDstTimeZones["Pacific/Niue"] => "Pacific/Niue"
  */
 export const MustTestDstTimeZones = {
   UTC: "UTC",
   GMT: "GMT",
   "Etc/GMT": "Etc/GMT",
+  "America/Nome": "America/Nome", // This is Yesterday when it's Today in New York
+  "Asia/Anadyr": "Asia/Anadyr", // This is Tomorrow when it's Today in New York
   "Europe/Lisbon": "Europe/Lisbon",
   "Europe/Dublin": "Europe/Dublin",
   "Europe/Berlin": "Europe/Berlin",
@@ -25,8 +35,8 @@ export const MustTestDstTimeZones = {
   "Asia/Shanghai": "Asia/Shanghai",
   "Australia/Lord_Howe": "Australia/Lord_Howe",
   "Pacific/Chatham": "Pacific/Chatham",
-  "Pacific/Apia": "Pacific/Apia",
-  "Pacific/Niue": "Pacific/Niue",
+  "Pacific/Apia": TomorrowTimeZone,
+  "Pacific/Niue": YesterdayTimeZone,
   "America/New_York": "America/New_York",
   "America/Chicago": "America/Chicago",
   "America/Phoenix": "America/Phoenix",
@@ -202,6 +212,7 @@ export const localRangeBattleCases = battleTestTimeZones.map((timeZone) => ({
 }));
 
 // Stable fake "now" instant used by now/today related tests.
+// Equivalent to Unix time 1709164800000, which is 2024-02-29T00:00:00Z.
 export const fixedNowInstant = "2024-02-29T00:00:00.000Z";
 
 // Test for leap year handling in timeZone conversions. 2024-02-29T00:00:00Z is 1709164800000 in unix milliseconds.

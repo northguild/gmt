@@ -1,3 +1,4 @@
+import { TomorrowTimeZone, YesterdayTimeZone } from "../../test";
 import { chopMilliseconds, chopTime, chopUtc } from "../chop";
 import { isAfterDateTime } from "../compare";
 import { isValidDateTime } from "../validate";
@@ -35,6 +36,21 @@ describe("getNow", () => {
     expect(chopTime(now)).toBe(getToday());
   });
 
+  // yesterday tomorrow tests
+  it.each`
+    timeZone             | expected
+    ${"UTC"}             | ${"2024-02-29T00:00:00"}
+    ${YesterdayTimeZone} | ${"2024-02-28T13:00:00"}
+    ${TomorrowTimeZone}  | ${"2024-02-29T13:00:00"}
+  `(
+    "yesterday / today tests: returns $expected for system timeZone $timeZone",
+    ({ timeZone, expected }) => {
+      timeZoneSpy.mockReturnValue(timeZone);
+      const now = getNow();
+      expect(chopMilliseconds(now)).toBe(expected);
+    },
+  );
+
   // 2024-02-29T00:00:00.000Z in each must-test timeZone: UTC → east → Pacific → Americas
   it.each`
     timeZone                 | expected
@@ -51,8 +67,6 @@ describe("getNow", () => {
     ${"Asia/Shanghai"}       | ${"2024-02-29T08:00:00"}
     ${"Australia/Lord_Howe"} | ${"2024-02-29T11:00:00"}
     ${"Pacific/Chatham"}     | ${"2024-02-29T13:45:00"}
-    ${"Pacific/Apia"}        | ${"2024-02-29T13:00:00"}
-    ${"Pacific/Niue"}        | ${"2024-02-28T13:00:00"}
     ${"America/New_York"}    | ${"2024-02-28T19:00:00"}
     ${"America/Chicago"}     | ${"2024-02-28T18:00:00"}
     ${"America/Phoenix"}     | ${"2024-02-28T17:00:00"}

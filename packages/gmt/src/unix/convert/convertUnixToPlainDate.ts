@@ -10,15 +10,17 @@ import {
 /**
  * Convert a Unix timestamp to a plain date string in the format "YYYY-MM-DD".
  *
- * - Accepts Unix timestamps in seconds or milliseconds (default is milliseconds).
- * - Returns an empty string for invalid inputs.
- * - Uses Temporal.ZonedDateTime for accurate date conversion.
+ * - Converts to PlainDate using the specified or system timezone.
+ * - Validates epoch unit ("seconds" | "milliseconds").
+ * - Returns "" for invalid input.
  *
  * @param unix Unix timestamp (number)
- * @param options conversion options
+ * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA)
+ * @returns plain date string in "YYYY-MM-DD" format or "" on invalid input
+ *
  * @example convertUnixToPlainDate(1709164800000) // "2024-02-29"
  * @example convertUnixToPlainDate(1709164800, { epochUnit: "seconds" }) // "2024-02-29"
- * @returns plain date string in "YYYY-MM-DD" format or "" on invalid input
+ * @example convertUnixToPlainDate(-1) // "1969-12-31"
  */
 
 export function convertUnixToPlainDate(

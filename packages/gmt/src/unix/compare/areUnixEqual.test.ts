@@ -33,8 +33,6 @@ describe("areUnixEqual", () => {
     value1        | value2
     ${"invalid"}  | ${1706659200}
     ${1706659200} | ${"invalid"}
-    ${-1}         | ${1706659200}
-    ${1706659200} | ${-1}
     ${null}       | ${1706659200}
   `(
     "returns false for invalid inputs: $value1 | $value2",

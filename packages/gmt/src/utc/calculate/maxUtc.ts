@@ -4,15 +4,16 @@ import { isValidUtc } from "../validate/isValidUtc";
 /**
  * Return the latest (maximum) of the given UTC datetime values.
  *
- * - Returns null if the array is empty or contains no valid UTC datetimes.
- * - Validation is performed on each item in the array.
+ * - Filters invalid values before finding maximum.
+ * - Returns null if array is empty or has no valid values.
  *
  * @param utcDateTimes Array of ISO datetime strings (e.g. "2024-03-10T12:00:00Z")
+ * @returns The latest UTC datetime string, or null on invalid input
+ *
  * @example maxUtc(["2024-03-10T12:00:00Z", "2024-03-15T12:00:00Z", "2024-03-12T12:00:00Z"]) // "2024-03-15T12:00:00Z"
  * @example maxUtc(["invalid", "2024-03-15T12:00:00Z"]) // "2024-03-15T12:00:00Z"
  * @example maxUtc(["invalid", "also invalid"]) // null
  * @example maxUtc([]) // null
- * @returns The latest UTC datetime string, or null on invalid input
  */
 export function maxUtc(utcDateTimes: string[]): string | null {
   if (!utcDateTimes.length) return null;
@@ -20,8 +21,16 @@ export function maxUtc(utcDateTimes: string[]): string | null {
   const valid = utcDateTimes.filter(isValidUtc);
   if (!valid.length) return null;
 
-  const comparables = valid.map((d) => Temporal.Instant.from(d));
-  comparables.sort(Temporal.Instant.compare);
+  try {
+    const max = valid.reduce((currentMax, candidateStr) => {
+      const candidate = Temporal.Instant.from(candidateStr);
+      return Temporal.Instant.compare(candidate, currentMax) > 0
+        ? candidate
+        : currentMax;
+    }, Temporal.Instant.from(valid[0]));
 
-  return comparables[comparables.length - 1].toString();
+    return max.toString();
+  } catch {
+    return null;
+  }
 }

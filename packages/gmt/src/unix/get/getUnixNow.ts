@@ -4,12 +4,15 @@ import { isValidUnixUnit, type UnixUnit } from "../validate/isValidUnixUnit";
 /**
  * Return the current Unix timestamp in either seconds or milliseconds.
  *
- * - Pass the optional unit `"seconds"` to receive seconds; defaults to
- *   milliseconds when omitted or when an invalid unit is provided.
- * - This function never returns `null`; it falls back to `"milliseconds"`.
+ * - Uses Temporal.Now.instant() to get current time.
+ * - Defaults to "milliseconds" if no unit specified.
+ * - Returns 0 on failure.
  *
  * @param unit optional unit specifier: "seconds" | "milliseconds"
  * @returns number (unix timestamp)
+ *
+ * @example getUnixNow() // 1700000000000
+ * @example getUnixNow("seconds") // 1700000000
  */
 export function getUnixNow(...unitInput: [unit?: UnixUnit]): number {
   const rawUnit = unitInput.length === 0 ? undefined : unitInput[0];

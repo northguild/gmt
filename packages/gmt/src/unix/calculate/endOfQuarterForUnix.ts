@@ -6,14 +6,16 @@ import { isValidTimeZone } from "../../zoned/validate";
 /**
  * Return the end of the quarter for a Unix timestamp.
  *
- * - Accepts Unix timestamps in milliseconds (default) or seconds.
- * - Returns null for invalid inputs.
+ * - Converts to ZonedDateTime, calculates quarter end, converts back to epoch.
+ * - Q1 ends month 3, Q2 ends month 6, Q3 ends month 9, Q4 ends month 12.
+ * - Returns null for invalid input.
  *
  * @param value Unix timestamp (number)
- * @param options epochUnit optional "seconds" | "milliseconds", timeZone optional IANA timeZone
- * @example endOfQuarterForUnix(1706659200000) // 1711977599999
- * @example endOfQuarterForUnix(1706659200, { epochUnit: "seconds" }) // 1711977599
+ * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA)
  * @returns Unix epoch number representing the end of the quarter, or null on invalid input
+ *
+ * @example endOfQuarterForUnix(1706659200000) // 1711977599999
+ * @example endOfQuarterForUnix(-86400000) // -1 (Q4 1969 ends Dec 31)
  */
 export function endOfQuarterForUnix(
   value: number,
@@ -29,7 +31,7 @@ export function endOfQuarterForUnix(
     return null;
   }
 
-  if (!Number.isFinite(value) || !Number.isInteger(value) || value < 0) {
+  if (!Number.isFinite(value) || !Number.isInteger(value)) {
     return null;
   }
 

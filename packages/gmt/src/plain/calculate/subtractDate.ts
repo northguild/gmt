@@ -4,19 +4,17 @@ import type { DateDurationUnit } from "../../types";
 import { isValidDate, isValidDateDurationUnit } from "../validate";
 
 /**
- * Return a PlainDate ISO string with `amount` subtracted according to `unit`.
+ * Return a PlainDate ISO string with `units` subtracted from `value`.
  *
- * - Validates `value`, `unit`, and `amount` before subtracting.
- * - Returns an empty string for invalid inputs.
+ * - Validates `value`, `units`, and `amount` before performing the subtract.
+ * - Returns "" for invalid inputs.
  *
  * @param value ISO PlainDate string
- * @param units Partial<Record<DateDurationUnit, number>> object specifying units to subtract (e.g. { day: 1, month: 2 })
- * @example subtractDate("2024-03-15", { day: 5 }) // "2024-03-10"
- * @example subtractDate("2024-03-15", { month: 1, year: 1 }) // "2023-02-15"
- * @example subtractDate("invalid", { day: 5 }) // ""
- * @example subtractDate("2024-03-15", { invalidUnit: 5 }) // ""
- * @example subtractDate("2024-03-15", { day: -5 }) // "2024-03-20"
+ * @param units Partial<Record<DateDurationUnit, number>> object specifying units to subtract
  * @returns ISO PlainDate string after subtraction, or "" on invalid input
+ *
+ * @example subtractDate("2024-03-15", { day: 5 }) // "2024-03-10"
+ * @example subtractDate("invalid", { day: 5 }) // ""
  */
 export function subtractDate(
   value: string,

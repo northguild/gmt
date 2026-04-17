@@ -1,3 +1,5 @@
+import { TomorrowTimeZone, YesterdayTimeZone } from "../../test";
+import { mockTemporalNowZonedDateTimeISOThrow } from "../../test/mocks";
 import { chopTime, chopUtc } from "../chop";
 import { areDatesEqual } from "../compare";
 import { isValidDate } from "../validate";
@@ -32,5 +34,25 @@ describe("getToday", () => {
   it("returns a valid ISO date and matches the date part of getNow", () => {
     expect(isValidDate(getToday())).toBe(true);
     expect(getToday()).toBe(chopTime(getNow()));
+  });
+
+  it.each`
+    timeZone             | expected
+    ${"UTC"}             | ${"2024-02-29"}
+    ${YesterdayTimeZone} | ${"2024-02-28"}
+    ${TomorrowTimeZone}  | ${"2024-02-29"}
+  `(
+    "yesterday / today tests: returns $expected for system timeZone $timeZone",
+    ({ timeZone, expected }) => {
+      timeZoneSpy.mockReturnValue(timeZone);
+      expect(getToday()).toBe(expected);
+    },
+  );
+
+  it("returns empty string on failure", () => {
+    vi.useRealTimers();
+    mockTemporalNowZonedDateTimeISOThrow();
+    const result = getToday();
+    expect(result).toBe("");
   });
 });

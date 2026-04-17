@@ -14,6 +14,7 @@ Arithmetic and date manipulation:
 - `endOfQuarterForDate`, `endOfQuarterForDateTime`
 - `getLargestDateDurationUnit`, `getLargestDateTimeDurationUnit`, `getLargestTimeDurationUnit`
 - `getQuarterForDate`, `getQuarterForDateTime`
+- `getWeekNumber`
 - `maxDate`, `maxDateTime`, `maxTime`
 - `minDate`, `minDateTime`, `minTime`
 - `sortDates`, `sortDateTimes`, `sortTimes`
@@ -46,9 +47,13 @@ Locale-aware formatting:
 
 ### get
 
-Current time values:
+Current values:
 
-- `getNow`, `getSystemTimeZone`, `getToday`
+- `getNow`, `getNowUnit`, `getSystemTimeZone`, `getToday`
+- `getYear`, `getMonth`, `getDay`, `getDayOfWeek`
+- `getHour`, `getMinute`, `getSecond`
+- `getMillisecond`, `getMicrosecond`, `getNanosecond`
+- `getWeekOfYear`
 
 ### map
 
@@ -60,7 +65,18 @@ Generate multiple values:
 
 Extract components:
 
-- `parseDateTimeUnit`, `parseDateUnit`, `parseTimeUnit`
+- `parseDayFromDate`, `parseDayFromDateTime`
+- `parseDayOfWeekFromDate`, `parseDayOfWeekFromDateTime`
+- `parseHourFromDateTime`, `parseHourFromTime`
+- `parseMicrosecondFromDateTime`, `parseMicrosecondFromTime`
+- `parseMillisecondFromDateTime`, `parseMillisecondFromTime`
+- `parseMinuteFromDateTime`, `parseMinuteFromTime`
+- `parseMonthFromDate`, `parseMonthFromDateTime`
+- `parseNanosecondFromDateTime`, `parseNanosecondFromTime`
+- `parseSecondFromDateTime`, `parseSecondFromTime`
+- `parseUnitFromDate`, `parseUnitFromDateTime`, `parseUnitFromTime`
+- `parseWeekFromDate`, `parseWeekFromDateTime`
+- `parseYearFromDate`, `parseYearFromDateTime`
 
 ### validate
 
@@ -68,4 +84,5 @@ Validation helpers:
 
 - `isLeapSecond`, `isValidDate`, `isValidDateDurationUnit`
 - `isValidDateRange`, `isValidDateTime`, `isValidDateTimeDurationUnit`
-- `isValidIsoDateLike`, `isValidTime`, `isValidTimeDurationUnit`
+- `isValidDateTimeUnit`, `isValidDateUnit`
+- `isValidIsoDateLike`, `isValidTime`, `isValidTimeDurationUnit`, `isValidTimeUnit`

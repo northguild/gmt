@@ -31,6 +31,6 @@ describe("getQuarterForDate", () => {
     ${true}
     ${false}
   `("returns null for invalid date $invalidDate", ({ invalidDate }) => {
-    expect(getQuarterForDate(invalidDate)).toBe(null);
+    expect(getQuarterForDate(invalidDate)).toBeNull();
   });
 });

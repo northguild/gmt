@@ -4,19 +4,18 @@ import { isValidDateTime, isValidDateTimeDurationUnit } from "../validate";
 import { getLargestDateTimeDurationUnit } from "./getLargestDateTimeDurationUnit";
 
 /**
- * Return the difference between two PlainDateTime values in the requested
- * largest unit (year|month|day|hour|...).
+ * Return the difference between two PlainDateTime values in the requested unit.
  *
- * - Returns `null` for invalid inputs (no sentinel since negative diffs are valid).
- * - Uses Temporal.PlainDateTime.until with `largestUnit` and extracts the
- *   requested unit value from the resulting Duration.
+ * - Returns `null` for invalid inputs (negative diffs are valid).
+ * - Uses Temporal.PlainDateTime.until and extracts the requested unit.
  *
  * @param dateTime1 ISO PlainDateTime string for the start
  * @param dateTime2 ISO PlainDateTime string for the end
- * @param units DateTimeDurationUnit|DateTimeDurationUnit[] to measure the difference (e.g. ["years", "months", "hours"])
- * @example diffDateTime("2024-03-10T12:00:00", "2024-03-15T12:00:00", "day") // 5
- * @example diffDateTime("2024-03-10T12:00:00", "2025-04-10T15:30:00", ["year", "month", "hour"]) // { year: 1, month: 1, hour: 3 }
+ * @param units DateTimeDurationUnit | DateTimeDurationUnit[] to measure the difference
  * @returns numeric difference in the requested unit, or null on invalid input
+ *
+ * @example diffDateTime("2024-03-10T12:00:00", "2024-03-15T12:00:00", "day") // 5
+ * @example diffDateTime("invalid", "2024-03-15T12:00:00", "day") // null
  */
 export function diffDateTime(
   dateTime1: string,

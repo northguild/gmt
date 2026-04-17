@@ -1,47 +1,39 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { weekOfYear } from "../calculate/weekOfYear";
+import type { DateTimeUnit } from "../../types";
+import { parseWeekFromDate } from "../parse";
+import { isValidDateTimeUnit } from "../validate";
 import { getSystemTimeZone } from "./getSystemTimeZone";
 
-export type PlainNowUnit =
-  | "year"
-  | "month"
-  | "week"
-  | "day"
-  | "dayOfWeek"
-  | "hour"
-  | "minute"
-  | "second"
-  | "millisecond"
-  | "microsecond"
-  | "nanosecond";
+type NowUnit = DateTimeUnit | "dayOfWeek";
 
-function isValidPlainNowUnit(unit: string): unit is PlainNowUnit {
-  return [
-    "year",
-    "month",
-    "week",
-    "day",
-    "dayOfWeek",
-    "hour",
-    "minute",
-    "second",
-    "millisecond",
-    "microsecond",
-    "nanosecond",
-  ].includes(unit);
+function isValidPlainNowUnit(unit: string): unit is NowUnit {
+  return isValidDateTimeUnit(unit) || ["dayOfWeek"].includes(unit);
 }
 
 /**
  * Return the requested current unit value using the system timeZone.
  *
- * - Uses the runtime system timeZone via `getSystemTimeZone()`.
- * - Returns an empty string on invalid unit or when the system timeZone
- *   cannot be determined.
+ * - Valid units: "year", "month", "week", "day", "dayOfWeek", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond".
+ * - Uses Temporal.Now.zonedDateTimeISO to get current time in system timezone.
+ * - Returns "" when unit is invalid or system timezone is unavailable.
  *
  * @param unit unit to extract from current local time
- * @returns string representation of the requested unit or "" when invalid
+ * @returns string representation of the requested unit or "" on invalid
+ *
+ * @example getNowUnit("year") // "2024"
+ * @example getNowUnit("month") // "03"
+ * @example getNowUnit("week") // "11"
+ * @example getNowUnit("day") // "15"
+ * @example getNowUnit("dayOfWeek") // "5"
+ * @example getNowUnit("hour") // "14"
+ * @example getNowUnit("minute") // "30"
+ * @example getNowUnit("second") // "45"
+ * @example getNowUnit("millisecond") // "000"
+ * @example getNowUnit("microsecond") // "000"
+ * @example getNowUnit("nanosecond") // "000"
+ * @example getNowUnit("invalid") // ""
  */
-export function getNowUnit(unit: PlainNowUnit): string {
+export function getNowUnit(unit: NowUnit): string {
   if (!isValidPlainNowUnit(String(unit ?? ""))) return "";
 
   const timeZone = getSystemTimeZone();
@@ -60,7 +52,7 @@ export function getNowUnit(unit: PlainNowUnit): string {
     case "month":
       return now.month.toString().padStart(2, "0");
     case "week": {
-      const w = weekOfYear(now.toPlainDate().toString());
+      const w = parseWeekFromDate(now.toPlainDate().toString());
       return w === null ? "" : w.toString();
     }
     case "day":

@@ -29,11 +29,10 @@ describe("endOfQuarterForUnix", () => {
   it.each`
     invalidValue
     ${"invalid"}
-    ${-1}
     ${1.5}
     ${null}
     ${undefined}
   `("returns null for invalid value $invalidValue", ({ invalidValue }) => {
-    expect(endOfQuarterForUnix(invalidValue as never)).toBe(null);
+    expect(endOfQuarterForUnix(invalidValue as never)).toBeNull();
   });
 });

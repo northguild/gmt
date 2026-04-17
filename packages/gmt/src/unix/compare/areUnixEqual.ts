@@ -5,16 +5,19 @@ import type { UnixUnit } from "../validate/isValidUnixUnit";
 /**
  * Return whether `value1` and `value2` represent the same instant.
  *
- * - Both inputs must be valid unix epoch numbers.
- * - Comparison is performed using Temporal.Instant (same instant semantics).
- * - Invalid inputs return `false`.
+ * - Uses Temporal.Instant.compare to check equality.
+ * - Returns false if either input is invalid.
  *
  * @param value1 first unix epoch value
  * @param value2 second unix epoch value
  * @param options epoch unit and options
+ * @returns `true` if `value1` and `value2` are equal, otherwise `false`
+ *
  * @example areUnixEqual(1706659200, 1706659200) // true
  * @example areUnixEqual(1706659200, 1704067200) // false
- * @returns `true` if `value1` and `value2` are equal, otherwise `false`
+ * @example areUnixEqual(1706659200, 1706659200000, { epochUnit: "seconds" }) // true
+ * @example areUnixEqual(1706659200, 1706659200000) // false
+ * @example areUnixEqual(-86400000, 0) // false (1969-12-31 is not equal to 1970-01-01)
  */
 export function areUnixEqual(
   value1: number,

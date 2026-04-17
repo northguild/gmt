@@ -29,6 +29,6 @@ describe("getQuarterForZoned", () => {
     ${true}
     ${false}
   `("returns null for invalid zoned $invalidZoned", ({ invalidZoned }) => {
-    expect(getQuarterForZoned(invalidZoned)).toBe(null);
+    expect(getQuarterForZoned(invalidZoned)).toBeNull();
   });
 });

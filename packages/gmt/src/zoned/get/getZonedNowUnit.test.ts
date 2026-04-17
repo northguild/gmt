@@ -1,3 +1,4 @@
+import { mockTemporalNowZonedDateTimeISOThrow } from "../../test/mocks";
 import { getZonedNowUnit } from "./getZonedNowUnit";
 
 describe("getZonedNowUnit", () => {
@@ -92,5 +93,12 @@ describe("getZonedNowUnit", () => {
     ${"invalid"}
   `("returns empty string for invalid unit $invalidUnit", ({ invalidUnit }) => {
     expect(getZonedNowUnit("UTC", invalidUnit as never)).toBe("");
+  });
+
+  it("returns empty string on failure", () => {
+    vi.useRealTimers();
+    mockTemporalNowZonedDateTimeISOThrow();
+    const result = getZonedNowUnit("America/New_York", "year");
+    expect(result).toBe("");
   });
 });

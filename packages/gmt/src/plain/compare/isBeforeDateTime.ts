@@ -3,15 +3,20 @@ import { Temporal } from "@js-temporal/polyfill";
 import { isValidDateTime } from "../validate";
 
 /**
- * Return true when `value1` is strictly before `value2` (PlainDateTime
- * comparison).
+ * Return true when `value1` is strictly before `value2` for PlainDateTime values.
  *
- * - Validates inputs and then uses Temporal.PlainDateTime.compare.
- * - Returns false for invalid inputs.
+ * - Uses Temporal.PlainDateTime.compare to compare date-times.
+ * - Returns false if either input is invalid.
  *
  * @param value1 ISO PlainDateTime string for the first value
  * @param value2 ISO PlainDateTime string for the second value
  * @returns boolean indicating whether value1 < value2
+ *
+ * @example isBeforeDateTime("2024-02-28T12:34:56", "2024-02-29T12:34:56") // true
+ * @example isBeforeDateTime("2024-02-29T12:34:56", "2024-02-29T12:34:56") // false
+ * @example isBeforeDateTime("2024-02-29T12:34:56", "2024-02-28T12:34:56") // false
+ * @example isBeforeDateTime("invalid", "2024-02-29T12:34:56") // false
+ * @example isBeforeDateTime("2024-02-29T12:34:56", "invalid") // false
  */
 export function isBeforeDateTime(value1: string, value2: string): boolean {
   if (!isValidDateTime(value1) || !isValidDateTime(value2)) {

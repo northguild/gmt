@@ -4,15 +4,16 @@ import { timeZoneLike } from "../../regex";
 /**
  * Validate whether a string is a valid IANA timeZone identifier.
  *
- * - Uses the Temporal polyfill to construct a ZonedDateTime and a regex
- *   sanity-check on the timeZone string.
- * - Returns `true` when the timeZone appears valid, otherwise `false`.
+ * - Uses Temporal.ZonedDateTime.from to test timezone validity.
+ * - Uses regex to check format.
+ * - Returns false for invalid timezone formats.
  *
  * @param timeZone timeZone identifier to validate
+ * @returns boolean indicating validity
+ *
  * @example isValidTimeZone("America/New_York") // true
  * @example isValidTimeZone("Europe/London") // true
  * @example isValidTimeZone("Invalid/Timezone") // false
- * @returns boolean indicating validity
  */
 export function isValidTimeZone(timeZone: string): boolean {
   try {

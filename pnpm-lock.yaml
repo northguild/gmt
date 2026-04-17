@@ -70,14 +70,13 @@ importers:
         version: 0.0.29
 
   packages/gmt-oxlint:
-    dependencies:
-      oxlint:
-        specifier: '>=1.0.0'
-        version: 1.59.0
     devDependencies:
       '@tanstack/intent':
         specifier: ^0.0.29
         version: 0.0.29
+      oxlint:
+        specifier: ^1.0.0
+        version: 1.59.0
       tsup:
         specifier: ^8.5.0
         version: 8.5.1(postcss@8.5.9)(typescript@5.9.3)(yaml@2.8.3)

@@ -5,14 +5,16 @@ import { isValidDateTime } from "../validate";
 /**
  * Return the end of the quarter for a given ISO datetime.
  *
+ * - Returns the last moment of the quarter with time set to 23:59:59.999999999.
+ * - Q1 ends on "03-31T23:59:59.999999999", Q2 ends on "06-30T23:59:59.999999999", etc.
  * - Validates input using isValidDateTime.
- * - Returns an empty string for invalid inputs.
  *
  * @param value ISO PlainDateTime string
+ * @returns ISO PlainDateTime string for the end of the quarter, or "" on invalid input
+ *
  * @example endOfQuarterForDateTime("2024-03-15T12:00:00") // "2024-03-31T23:59:59.999999999"
  * @example endOfQuarterForDateTime("2024-06-15T12:00:00") // "2024-06-30T23:59:59.999999999"
  * @example endOfQuarterForDateTime("invalid") // ""
- * @returns ISO PlainDateTime string for the end of the quarter, or empty string on invalid input
  */
 export function endOfQuarterForDateTime(value: string): string {
   if (!isValidDateTime(value)) {

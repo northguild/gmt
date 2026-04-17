@@ -19,7 +19,7 @@ import { getNow } from "@burglekitt/gmt";
 console.log(getNow()); // ISO 8601 string
 ```
 
-## Aint Nobody Got Time For...
+## Aint Nobody Got Time For JavaScript Date objects
 
 ![Aint nobody got time for that](https://media.giphy.com/media/bWM2eWYfN3r20/giphy.gif)
 
@@ -39,9 +39,29 @@ Use GMT instead:
 
 If you see a Date API in code, replace it with a GMT helper.
 
+## Packages
+
+| Package | npm | Description |
+|---|---|---|
+| [`@burglekitt/gmt`](./packages/gmt) | `npm install @burglekitt/gmt` | Give Me Temporal — string-in/string-out date library |
+
+`@burglekitt/gmt` currently exports top-level `Temporal`, `plain`, `zoned`, and `regex` namespaces, with direct subpath imports available under `@burglekitt/gmt/*`.
+
+## Optional: Add Linting for Date API Bans
+
+Want to ban `Date` APIs in your own project? GMT provides linting packages:
+
+| Package | npm | Description |
+|---|---|---|
+| [`@burglekitt/gmt-biome`](./packages/gmt-biome) | `npm install -D @burglekitt/gmt-biome` | Shared Biome config — bans `Date` APIs via Grit plugins ([docs](./packages/gmt-biome/README.md)) |
+| [`@burglekitt/gmt-eslint`](./packages/gmt-eslint) | `npm install -D @burglekitt/gmt-eslint` | Shared ESLint flat config — bans `Date` APIs ([docs](./packages/gmt-eslint/README.md)) |
+| [`@burglekitt/gmt-oxlint`](./packages/gmt-oxlint) | `npm install -D @burglekitt/gmt-oxlint oxlint` | Shared Oxlint JS plugin — bans `Date` APIs ([docs](./packages/gmt-oxlint/README.md)) |
+
 ---
 
-## Quick Start
+## Contributing
+
+Quick start for contributors:
 
 ```bash
 # Install all workspace dependencies
@@ -58,9 +78,7 @@ pnpm run lint
 pnpm run format
 ```
 
----
-
-## Project Structure
+### Project Structure
 
 ```
 .
@@ -82,10 +100,10 @@ pnpm run format
 │   │   │   │   ├── format/     # formatZonedDateTime, formatZonedRange
 │   │   │   │   ├── get/        # getZonedNow, getZonedToday, ...
 │   │   │   │   ├── map/        # mapZonedHoursInDay, mapZonedDatesInRange
-│   │   │   │   ├── parse/      # parseZonedDate, parseZonedTimezone, ...
+│   │   │   │   ├── parse/      # parseZonedDate, parseTimeFromZoned, ...
 │   │   │   │   └── validate/   # isValidZonedDateTime, isValidTimezone
 │   │   │   ├── regex/          # Composable regex patterns for date/time strings
-│   │   └── package.json
+│   │   │   └── package.json
 │   ├── gmt-biome/              # @burglekitt/gmt-biome — Shared Biome config
 │   │   ├── biome.json          # Consumer-facing config (uses ./plugins/ paths)
 │   │   └── plugins/            # Grit plugins banning Date APIs
@@ -99,9 +117,7 @@ pnpm run format
 └── package.json                 # Workspace root
 ```
 
----
-
-## Workspace Scripts
+### Workspace Scripts
 
 Run from the root:
 
@@ -121,7 +137,7 @@ pnpm -w exec nx graph        # Visual dependency graph
 pnpm -w exec nx sync         # Sync TypeScript project references
 ```
 
-## Nx Commands You Will Actually Use
+### Nx Commands You Will Actually Use
 
 As more packages are added under `packages/*`, these commands become the default workflow:
 
@@ -172,9 +188,7 @@ pnpm run build
 pnpm run lint
 ```
 
----
-
-## Code Quality
+### Code Quality
 
 | Tool | Purpose |
 |---|---|
@@ -185,30 +199,11 @@ pnpm run lint
 
 All Biome rules are in [biome.json](./biome.json) (Grit plugins live in [packages/gmt-biome/plugins/](./packages/gmt-biome/plugins/)).
 
-**For consumers:** [@burglekitt/gmt-eslint](./packages/gmt-eslint) provides a standalone ESLint flat config with the same Date API ban rules.
-
-**For Oxlint users:** [@burglekitt/gmt-oxlint](./packages/gmt-oxlint) provides the same Date API ban rules as an Oxlint JS plugin.
-
----
-
-## Packages
-
-| Package | npm | Description |
-|---|---|---|
-| [`@burglekitt/gmt`](./packages/gmt) | `npm install @burglekitt/gmt` | Give Me Temporal — string-in/string-out date library |
-| [`@burglekitt/gmt-biome`](./packages/gmt-biome) | `npm install -D @burglekitt/gmt-biome` | Shared Biome config — bans `Date` APIs via Grit plugins |
-| [`@burglekitt/gmt-eslint`](./packages/gmt-eslint) | `npm install -D @burglekitt/gmt-eslint` | Shared ESLint flat config — bans `Date` APIs |
-| [`@burglekitt/gmt-oxlint`](./packages/gmt-oxlint) | `npm install -D @burglekitt/gmt-oxlint oxlint` | Shared Oxlint JS plugin — bans `Date` APIs |
-
-`@burglekitt/gmt` currently exports top-level `Temporal`, `plain`, `zoned`, and `regex` namespaces, with direct subpath imports available under `@burglekitt/gmt/*`.
-
----
-
-## Releases
+### Releases
 
 Pre-alpha. Each package follows semantic versioning and is published independently to npm.
 
-### Publishing (manual)
+#### Publishing (manual)
 
 Publishing is manual only. We use [Changesets](https://github.com/changesets/changesets) to manage per-package versioning. Nothing publishes automatically — releases are triggered by maintainers.
 

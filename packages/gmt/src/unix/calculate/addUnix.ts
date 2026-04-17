@@ -8,16 +8,18 @@ import { isValidTimeZone } from "../../zoned/validate";
 /**
  * Add a temporal amount to a Unix epoch value and return the resulting epoch.
  *
- * - Accepts Unix timestamps in milliseconds (default) or seconds.
- * - Uses the system timeZone to interpret the epoch, or a provided IANA timeZone.
- * - Returns 0 for invalid inputs.
+ * - Converts to ZonedDateTime, adds the duration, then converts back to epoch.
+ * - Validates duration units and values.
+ * - Returns null for invalid input.
  *
  * @param value Unix timestamp (number)
  * @param units Partial<Record<DateTimeDurationUnit, number>> object specifying units to add
- * @param options epochUnit optional "seconds" | "milliseconds", timeZone optional IANA timeZone
+ * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA)
+ * @returns Unix epoch number after addition, or null on invalid input
+ *
  * @example addUnix(1706659200000, { days: 1 }) // 1706745600000
  * @example addUnix(1706659200, { days: 1 }, { epochUnit: "seconds" }) // 1706745600
- * @returns Unix epoch number after addition, or null on invalid input
+ * @example addUnix(-86400000, { days: 1 }) // 0 (Dec 31 1969 + 1 day = Jan 1 1970)
  */
 export function addUnix(
   value: number,
@@ -39,7 +41,7 @@ export function addUnix(
     return null;
   }
 
-  if (!Number.isFinite(value) || !Number.isInteger(value) || value < 0) {
+  if (!Number.isFinite(value) || !Number.isInteger(value)) {
     return null;
   }
 

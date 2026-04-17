@@ -8,11 +8,10 @@ import { isValidTime } from "../validate";
  * - Validation is performed on each item in the array.
  *
  * @param times Array of ISO PlainTime strings (e.g. "14:30:00")
- * @example minTime(["14:30:00", "09:00:00", "20:45:00"]) // "09:00:00"
- * @example minTime(["invalid", "09:00:00", "20:45:00"]) // "09:00:00"
- * @example minTime(["invalid", "also invalid"]) // null
- * @example minTime([]) // null
  * @returns The earliest time string, or null on invalid input
+ *
+ * @example minTime(["14:30:00", "09:00:00", "20:45:00"]) // "09:00:00"
+ * @example minTime([]) // null
  */
 export function minTime(times: string[]): string | null {
   if (!times.length) return null;
@@ -20,8 +19,16 @@ export function minTime(times: string[]): string | null {
   const valid = times.filter(isValidTime);
   if (!valid.length) return null;
 
-  const comparables = valid.map((t) => Temporal.PlainTime.from(t));
-  comparables.sort(Temporal.PlainTime.compare);
+  try {
+    const min = valid.reduce((currentMin, candidateStr) => {
+      const candidate = Temporal.PlainTime.from(candidateStr);
+      return Temporal.PlainTime.compare(candidate, currentMin) < 0
+        ? candidate
+        : currentMin;
+    }, Temporal.PlainTime.from(valid[0]));
 
-  return comparables[0].toString();
+    return min.toString();
+  } catch {
+    return null;
+  }
 }

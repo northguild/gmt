@@ -1,6 +1,12 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidDate } from "../../plain/validate";
-import { battleTestTimeZones, fixedNowInstant } from "../../test";
+import {
+  battleTestTimeZones,
+  fixedNowInstant,
+  TomorrowTimeZone,
+  YesterdayTimeZone,
+} from "../../test";
+import { mockTemporalNowZonedDateTimeISOThrow } from "../../test/mocks";
 import { getZonedToday } from "./getZonedToday";
 
 describe("getZonedToday", () => {
@@ -11,6 +17,17 @@ describe("getZonedToday", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  // yesterday tomorrow tests
+  it.each`
+    timeZone             | expected
+    ${"UTC"}             | ${"2024-02-29"}
+    ${YesterdayTimeZone} | ${"2024-02-28"}
+    ${TomorrowTimeZone}  | ${"2024-02-29"}
+  `("returns $expected for timeZone $timeZone", ({ timeZone, expected }) => {
+    const value = getZonedToday(timeZone);
+    expect(value).toBe(expected);
   });
 
   it.each`
@@ -28,8 +45,8 @@ describe("getZonedToday", () => {
     ${"Asia/Shanghai"}       | ${"2024-02-29"}
     ${"Australia/Lord_Howe"} | ${"2024-02-29"}
     ${"Pacific/Chatham"}     | ${"2024-02-29"}
-    ${"Pacific/Apia"}        | ${"2024-02-29"}
-    ${"Pacific/Niue"}        | ${"2024-02-28"}
+    ${TomorrowTimeZone}      | ${"2024-02-29"}
+    ${YesterdayTimeZone}     | ${"2024-02-28"}
     ${"America/New_York"}    | ${"2024-02-28"}
     ${"America/Chicago"}     | ${"2024-02-28"}
     ${"America/Phoenix"}     | ${"2024-02-28"}
@@ -66,4 +83,11 @@ describe("getZonedToday", () => {
       expect(getZonedToday(timeZone)).toBe(expected);
     });
   }
+
+  it("returns empty string on failure", () => {
+    vi.useRealTimers();
+    mockTemporalNowZonedDateTimeISOThrow();
+    const result = getZonedToday("America/New_York");
+    expect(result).toBe("");
+  });
 });

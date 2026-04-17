@@ -4,17 +4,14 @@ import { isValidZonedDateTime } from "../validate";
 /**
  * Convert an ISO 8601 zoned datetime string to a UTC Instant string (ISO).
  *
- * - Accepts a zoned ISO 8601 datetime string and returns an Instant string
- *   (e.g. "2024-02-29T00:00:00Z").
- * - On invalid input returns an empty string "".
+ * - Uses Temporal.ZonedDateTime.toInstant to convert.
+ * - Returns "" for invalid input.
  *
  * @param value zoned ISO 8601 datetime string
- * @example
- * ```ts
- * convertZonedToUtc("2024-02-29T00:00:00-08:00[America/Los_Angeles]");
- * // => "2024-02-29T08:00:00Z"
- * ```
- * @returns UTC Instant ISO string or empty string when invalid
+ * @returns UTC Instant ISO string or "" when invalid
+ *
+ * @example convertZonedToUtc("2024-02-29T12:34:56.789+00:00[UTC]") // "2024-02-29T12:34:56.789Z"
+ * @example convertZonedToUtc("invalid") // ""
  */
 export function convertZonedToUtc(value: string): string {
   if (!isValidZonedDateTime(value)) {

@@ -5,23 +5,18 @@ import type { DateTimeDurationUnit } from "../../types";
 import { isValidZonedDateTime } from "../validate";
 
 /**
- * Add a temporal amount to a zoned ISO 8601 datetime string and return a
- * zoned ISO 8601 string.
+ * Add a temporal amount to a zoned ISO 8601 datetime string and return a zoned ISO 8601 string.
  *
- * - Inputs and outputs are ISO 8601 strings.
- * - Uses `@js-temporal/polyfill` `Temporal.ZonedDateTime` for arithmetic.
- * - On invalid input (bad zoned datetime, amount, or unit) this returns an
- *   empty string "" (consistent with library error handling semantics).
- *
- * Examples:
- * ```ts
- * addZoned("2024-02-29T14:30:00+00:00[UTC]", {years: 1}) // => "2025-02-28T14:30:00+00:00[UTC]"
- * // => "2025-02-28T14:30:00+00:00[UTC]"
- * ```
+ * - Uses Temporal.ZonedDateTime.add to add duration.
+ * - Validates duration units and values.
+ * - Returns "" for invalid input.
  *
  * @param value ISO 8601 zoned datetime string
- * @param units Partial<Record<DateTimeDurationUnit, number>> object specifying units to add (e.g. { days: 1, months: 2 })
- * @returns zoned ISO 8601 string on success, or empty string on invalid input
+ * @param units Partial<Record<DateTimeDurationUnit, number>> object specifying units to add
+ * @returns zoned ISO 8601 string on success, or "" on invalid input
+ *
+ * @example addZoned("2024-02-29T14:30:45.123-05:00[America/New_York]", { days: 1 }) // "2024-03-01T14:30:45.123-05:00[America/New_York]"
+ * @example addZoned("invalid", { days: 1 }) // ""
  */
 export function addZoned(
   value: string,

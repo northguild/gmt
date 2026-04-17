@@ -26,13 +26,23 @@ Unix timestamp conversion:
 
 Current Unix timestamps:
 
-- `getUnixNow`
+- `getUnixNow`, `getUnixNowUnit`
+- `getUnixYear`, `getUnixMonth`, `getUnixDay`
+- `getUnixHour`, `getUnixMinute`, `getUnixSecond`
+- `getUnixMillisecond`, `getUnixMicrosecond`, `getUnixNanosecond`
 
 ### parse
 
 Parse Unix timestamps:
 
-- `parseUnixDate`, `parseUnixTime`, `parseUnixUnit`
+- `parseDateFromUnix`, `parseDayFromUnix`, `parseDayOfWeekFromUnix`
+- `parseHourFromUnix`
+- `parseMicrosecondFromUnix`, `parseNanosecondFromUnix`
+- `parseMonthFromUnix`, `parseSecondFromUnix`
+- `parseTimeFromUnix`
+- `parseUnitFromUnix`
+- `parseWeekFromUnix`
+- `parseYearFromUnix`
 
 ### validate
 

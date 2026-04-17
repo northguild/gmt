@@ -5,13 +5,15 @@ import { isValidZonedDateTime } from "../validate";
  * Compare two zoned datetime strings for exact local-field equality.
  *
  * - Inputs must be valid ISO 8601 zoned datetime strings.
- * - Returns `true` when year/month/day/hour/minute/second/millisecond/microsecond/
- *   nanosecond and IANA timeZone id all match; otherwise `false`.
+ * - Returns `true` when year/month/day/hour/minute/second/millisecond/microsecond/nanosecond and IANA timeZone id all match; otherwise `false`.
  * - Invalid inputs return `false`.
  *
  * @param value1 first zoned datetime string
  * @param value2 second zoned datetime string
  * @returns boolean indicating whether the two zoned datetimes are equal
+ *
+ * @example areZonedEqual("2024-02-29T12:34:56.789+00:00[UTC]", "2024-02-29T12:34:56.789+00:00[UTC]") // true
+ * @example areZonedEqual("invalid", "2024-02-29T12:34:56.789+00:00[UTC]") // false
  */
 export function areZonedEqual(value1: string, value2: string): boolean {
   if (!isValidZonedDateTime(value1) || !isValidZonedDateTime(value2)) {
@@ -44,5 +46,3 @@ export function areZonedEqual(value1: string, value2: string): boolean {
     return false;
   }
 }
-
-export const areZonedDateTimesEqual = areZonedEqual;

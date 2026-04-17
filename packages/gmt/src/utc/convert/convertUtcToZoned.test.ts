@@ -1,5 +1,5 @@
 import { battleTestTimeZones } from "../../test";
-import { parseZonedTimezone } from "../../zoned/parse";
+import { parseTimeZoneFromZoned } from "../../zoned/parse";
 import { convertUtcToZoned } from "./convertUtcToZoned";
 
 describe("convertUtcToZoned", () => {
@@ -62,7 +62,9 @@ describe("convertUtcToZoned", () => {
   for (const timeZone of battleTestTimeZones) {
     it(`converts UTC to battle-test timeZone ${timeZone}`, () => {
       expect(
-        parseZonedTimezone(convertUtcToZoned("2024-02-29T14:30:45Z", timeZone)),
+        parseTimeZoneFromZoned(
+          convertUtcToZoned("2024-02-29T14:30:45Z", timeZone),
+        ),
       ).toBe(timeZone);
     });
   }

@@ -2,15 +2,14 @@ import { Temporal } from "@js-temporal/polyfill";
 import { getSystemTimeZone } from "./getSystemTimeZone";
 
 /**
- * Return the current local PlainDateTime as an ISO string using the
- * system timeZone.
+ * Return the current local PlainDateTime as an ISO string using the system timeZone.
  *
- * - Uses the system timeZone resolved via Intl.DateTimeFormat.
- * - Returns an empty string if the system timeZone cannot be determined
- *   or if obtaining the current time fails.
+ * - Uses Temporal.Now.zonedDateTimeISO to get current time in system timezone.
+ * - Returns "" when system timezone is unavailable.
+ *
+ * @returns ISO 8601 PlainDateTime string or "" on error
  *
  * @example getNow() // "2024-03-15T14:30:45" (current time)
- * @returns ISO 8601 PlainDateTime string or an empty string on error
  */
 export function getNow(): string {
   const timeZone = getSystemTimeZone();

@@ -5,15 +5,20 @@ import type { DateTimeDurationUnit } from "../../types";
 import { isValidUtc } from "../validate/isValidUtc";
 
 /**
- * Return the difference between two UTC datetimes measured in the given
- * date-time `unit`.
+ * Return the difference between two UTC datetimes measured in the given date-time unit.
  *
- * - Returns `null` for invalid inputs (no sentinel since negative diffs are valid).
+ * - Uses Temporal.Instant.until() to calculate the difference.
+ * - Supports single unit or array of units.
+ * - Returns null for invalid input.
  *
  * @param value1 UTC ISO datetime string (start)
  * @param value2 UTC ISO datetime string (end)
- * @param units DateTimeDurationUnit | DateTimeDurationUnit[] to measure the difference (e.g. "hours" | ["years", "months", "hours"])
+ * @param units DateTimeDurationUnit | DateTimeDurationUnit[] to measure the difference
  * @returns numeric difference in the requested unit, or null on invalid input
+ *
+ * @example diffUtc("2024-03-10T12:00:00Z", "2024-03-11T12:00:00Z", "hour") // 24
+ * @example diffUtc("2024-03-10T12:00:00Z", "2025-04-10T12:00:00Z", ["year", "month"]) // { year: 1, month: 1 }
+ * @example diffUtc("invalid", "2024-03-11T12:00:00Z", "hour") // null
  */
 export function diffUtc(
   value1: string,

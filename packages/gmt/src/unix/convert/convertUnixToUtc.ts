@@ -5,12 +5,17 @@ import { isValidUnixUnit, type UnixUnit } from "../validate/isValidUnixUnit";
 /**
  * Convert a unix epoch value to a UTC Instant ISO string.
  *
- * - `value` is numeric milliseconds (default) or seconds when `unit` is "seconds".
- * - Returns empty string "" for invalid inputs.
+ * - Converts to UTC Instant using Temporal.Instant.
+ * - Validates value and epoch unit ("seconds" | "milliseconds").
+ * - Returns "" for invalid input.
  *
  * @param value epoch value (number)
  * @param unit optional unit, "seconds" or "milliseconds"
- * @returns UTC Instant string or empty string when invalid
+ * @returns UTC Instant string or "" on invalid
+ *
+ * @example convertUnixToUtc(1709164800000) // "2024-02-29T00:00:00Z"
+ * @example convertUnixToUtc(1709164800, "seconds") // "2024-02-29T00:00:00Z"
+ * @example convertUnixToUtc(-1) // "1969-12-31T23:59:59.999Z"
  */
 export function convertUnixToUtc(
   value: number,

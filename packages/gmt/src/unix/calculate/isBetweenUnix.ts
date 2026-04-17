@@ -5,17 +5,19 @@ import { isValidTimeZone } from "../../zoned/validate";
 /**
  * Return true when the Unix timestamp is between start and end (inclusive by default).
  *
- * - Accepts Unix timestamps in milliseconds (default) or seconds.
- * - Returns false for invalid inputs.
+ * - Uses Temporal.Instant.compare for comparison.
+ * - Returns false if start > end or inputs are invalid.
+ * - Use options.inclusiveStart/inclusiveEnd to control boundaries.
  *
  * @param value Unix timestamp to check
  * @param start Unix timestamp for range start
  * @param end Unix timestamp for range end
- * @param options epochUnit optional "seconds" | "milliseconds", timeZone optional IANA timeZone, inclusiveStart optional, inclusiveEnd optional
+ * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA), inclusiveStart (boolean), inclusiveEnd (boolean)
+ * @returns boolean indicating whether value is between start and end
+ *
  * @example isBetweenUnix(1705000000000, 1704000000000, 1706000000000) // true
  * @example isBetweenUnix(1705000000, 1704000000, 1706000000, { epochUnit: "seconds" }) // true
  * @example isBetweenUnix(1703000000000, 1704000000000, 1706000000000) // false
- * @returns boolean indicating whether value is between start and end
  */
 export function isBetweenUnix(
   value: number,
@@ -38,13 +40,10 @@ export function isBetweenUnix(
   if (
     !Number.isFinite(value) ||
     !Number.isInteger(value) ||
-    value < 0 ||
     !Number.isFinite(start) ||
     !Number.isInteger(start) ||
-    start < 0 ||
     !Number.isFinite(end) ||
-    !Number.isInteger(end) ||
-    end < 0
+    !Number.isInteger(end)
   ) {
     return false;
   }

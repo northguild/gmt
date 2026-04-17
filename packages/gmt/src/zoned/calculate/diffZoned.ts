@@ -5,17 +5,20 @@ import type { DateTimeDurationUnit } from "../../types";
 import { isValidZonedDateTime } from "../validate";
 
 /**
- * Return the difference between two zoned datetimes measured in the given
- * date-time `unit` (year|month|day|hour|minute|...).
+ * Return the difference between two zoned datetimes measured in the given date-time unit.
  *
- * - Uses Temporal.ZonedDateTime.until with `largestUnit` and extracts the
- *   requested unit from the resulting Duration.
- * - Returns `null` for invalid inputs (no sentinel since negative diffs are valid).
+ * - Uses Temporal.ZonedDateTime.until to calculate difference.
+ * - Converts both to UTC for consistent calculation.
+ * - Supports single unit or array of units.
+ * - Returns null for invalid input.
  *
  * @param value1 zoned ISO 8601 datetime string (start)
  * @param value2 zoned ISO 8601 datetime string (end)
- * @param units DateTimeDurationUnit | DateTimeDurationUnit[] to measure the difference (e.g. "hours" | ["years", "months", "hours"])
+ * @param units DateTimeDurationUnit | DateTimeDurationUnit[] to measure the difference
  * @returns numeric difference in the requested unit, or null on invalid input
+ *
+ * @example diffZoned("2024-02-28T14:30:00+00:00[UTC]", "2024-03-01T15:30:00+00:00[UTC]", "days") // 2
+ * @example diffZoned("invalid", "2024-03-01T15:30:00+00:00[UTC]", "days") // null
  */
 export function diffZoned(
   value1: string,

@@ -1,13 +1,18 @@
 import type { TimeDurationUnit } from "../../types";
 
 /**
- * Return the largest TimeDurationUnit from the provided array, based on the order of units in Temporal.
- * The order of units from largest to smallest is: hours, minutes, seconds, milliseconds, microseconds, nanoseconds.
- * If no valid unit is found, defaults to "seconds" (though this case should be prevented by validation).
+ * Return the largest TimeDurationUnit from the provided array.
+ *
+ * - Returns the largest unit based on Temporal's unit order: hours > minutes > seconds > milliseconds > microseconds > nanoseconds.
+ * - Defaults to "seconds" if no valid unit is found in the array.
  *
  * @param units array of TimeDurationUnits to evaluate
- * @example getLargestTimeDurationUnit(["minutes", "seconds"]) => "minutes"
  * @returns the largest TimeDurationUnit found in the array, or "seconds" if none are valid
+ *
+ * @example getLargestTimeDurationUnit(["minutes", "seconds"]) // "minutes"
+ * @example getLargestTimeDurationUnit(["seconds", "milliseconds"]) // "seconds"
+ * @example getLargestTimeDurationUnit(["milliseconds", "microseconds"]) // "milliseconds"
+ * @example getLargestTimeDurationUnit([]) // "seconds"
  */
 export function getLargestTimeDurationUnit(
   units: TimeDurationUnit[],

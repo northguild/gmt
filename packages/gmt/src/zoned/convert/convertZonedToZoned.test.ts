@@ -1,5 +1,5 @@
 import { sameInstantBattleCases } from "../../test";
-import { parseZonedTimezone } from "../parse";
+import { parseTimeZoneFromZoned } from "../parse";
 import { convertZonedToZoned } from "./convertZonedToZoned";
 
 describe("convertZonedToZoned", () => {
@@ -82,7 +82,9 @@ describe("convertZonedToZoned", () => {
 
   for (const { timeZone, value } of sameInstantBattleCases) {
     it(`converts a battle-test zoned datetime from ${timeZone} to UTC`, () => {
-      expect(parseZonedTimezone(convertZonedToZoned(value, "UTC"))).toBe("UTC");
+      expect(parseTimeZoneFromZoned(convertZonedToZoned(value, "UTC"))).toBe(
+        "UTC",
+      );
     });
   }
 });

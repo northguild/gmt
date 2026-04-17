@@ -1,5 +1,5 @@
 import { battleTestTimeZones } from "../../test";
-import { parseZonedTimezone } from "../../zoned/parse";
+import { parseTimeZoneFromZoned } from "../../zoned/parse";
 import { convertUnixToZoned } from "./convertUnixToZoned";
 
 describe("convertUnixToZoned", () => {
@@ -155,7 +155,7 @@ describe("convertUnixToZoned", () => {
   for (const timeZone of battleTestTimeZones) {
     it(`returns a zoned datetime in battle-test timeZone ${timeZone}`, () => {
       const value = convertUnixToZoned(1709217045000, timeZone);
-      expect(parseZonedTimezone(value)).toBe(timeZone);
+      expect(parseTimeZoneFromZoned(value)).toBe(timeZone);
     });
   }
 });

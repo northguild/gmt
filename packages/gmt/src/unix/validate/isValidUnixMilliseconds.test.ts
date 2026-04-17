@@ -6,13 +6,14 @@ describe("isValidUnixMilliseconds", () => {
     ${1709164800000}
     ${0}
     ${9999999999999}
+    ${-86400000}
+    ${-31536000000}
   `("returns true for valid unix milliseconds $value", ({ value }) => {
     expect(isValidUnixMilliseconds(value)).toBe(true);
   });
 
   it.each`
     value
-    ${-1}
     ${1.5}
     ${null}
     ${undefined}

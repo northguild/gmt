@@ -4,21 +4,17 @@ import type { TimeDurationUnit } from "../../types";
 import { isValidTime, isValidTimeDurationUnit } from "../validate";
 
 /**
- * Return a PlainTime ISO string with `amount` added to `value` using the
- * specified `unit`.
+ * Return a PlainTime ISO string with `units` added to `value`.
  *
- * - Validates `value`, `unit`, and `amount` before performing the add.
- * - Returns an empty string for invalid inputs.
+ * - Validates `value`, `units`, and `amount` before performing the add.
+ * - Returns "" for invalid inputs.
  *
  * @param value ISO PlainTime string
- * @param units Partial record of TimeDurationUnit with numeric values to add
- * @example addTime("12:00:00", { hour: 1 }) // "13:00:00"
- * @example addTime("12:00:00", { minute: 30 }) // "12:30:00"
- * @example addTime("12:00:00", { second: 45 }) // "12:00:45"
- * @example addTime("invalid", { hour: 1 }) // ""
- * @example addTime("12:00:00", { invalidUnit: 5 }) // ""
- * @example addTime("12:00:00", { hour: -1 }) // "11:00:00"
- * @returns ISO PlainTime string with amount added, or "" on invalid input
+ * @param units Partial<Record<TimeDurationUnit, number>> object specifying units to add
+ * @returns ISO PlainTime string after addition, or "" on invalid input
+ *
+ * @example addTime("12:00:00", { hours: 1 }) // "13:00:00"
+ * @example addTime("invalid", { hours: 1 }) // ""
  */
 export function addTime(
   value: string,

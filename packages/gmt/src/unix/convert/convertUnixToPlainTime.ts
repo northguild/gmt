@@ -9,14 +9,18 @@ import {
 
 /**
  * Convert a Unix timestamp to a plain time string in the format "HH:mm:ss".
- * - Accepts Unix timestamps in seconds or milliseconds (default is milliseconds).
- * - Returns an empty string for invalid inputs.
- * - Uses Temporal.ZonedDateTime for accurate time conversion.
+ *
+ * - Converts to PlainTime using the specified or system timezone.
+ * - Validates epoch unit ("seconds" | "milliseconds").
+ * - Returns "" for invalid input.
+ *
  * @param unix Unix timestamp (number)
- * @param options conversion options
+ * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA)
+ * @returns plain time string in "HH:mm:ss" format or "" on invalid input
+ *
  * @example convertUnixToPlainTime(1706659200000) // "00:00:00"
  * @example convertUnixToPlainTime(1706659200, { epochUnit: "seconds" }) // "00:00:00"
- * @returns plain time string in "HH:mm:ss" format or "" on invalid input
+ * @example convertUnixToPlainTime(-1) // "23:59:59.999"
  */
 export function convertUnixToPlainTime(
   unix: number,

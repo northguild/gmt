@@ -5,14 +5,24 @@ import { isValidDate } from "../validate";
 /**
  * Return true when `date` is between `start` and `end` (inclusive by default).
  *
- * - Validates inputs and then compares using Temporal.PlainDate.compare.
- * - Returns false for invalid inputs.
+ * - Uses Temporal.PlainDate.compare to compare dates.
+ * - Returns false if start > end (invalid range).
+ * - Returns false if any input is invalid.
+ * - Use options.inclusiveStart and options.inclusiveEnd to control boundary inclusivity.
  *
  * @param date ISO PlainDate string to check
  * @param start ISO PlainDate string for the start of the range
  * @param end ISO PlainDate string for the end of the range
  * @param options { inclusiveStart?: boolean = true, inclusiveEnd?: boolean = true }
  * @returns boolean indicating whether date is between start and end
+ *
+ * @example isBetweenDate("2024-02-29", "2024-02-01", "2024-02-28") // false
+ * @example isBetweenDate("2024-02-29", "2024-02-01", "2024-02-29") // true
+ * @example isBetweenDate("2024-02-29", "2024-02-29", "2024-02-28") // false
+ * @example isBetweenDate("2024-02-29", "2024-02-28", "2024-03-01") // true
+ * @example isBetweenDate("invalid", "2024-02-01", "2024-02-28") // false
+ * @example isBetweenDate("2024-02-29", "invalid", "2024-02-28") // false
+ * @example isBetweenDate("2024-02-29", "2024-02-01", "invalid") // false
  */
 export function isBetweenDate(
   date: string,

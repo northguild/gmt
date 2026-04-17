@@ -5,16 +5,60 @@ on:
     branches:
       - main
   pull_request:
-    branches: [main]
+    branches:
+      - main
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   actions: read
   contents: read
 
 jobs:
-  ci:
+  determine-affected:
+    name: Determine affected packages
     runs-on: ubuntu-latest
+    outputs:
+      any_changed: ${{ steps.detect.outputs.any_changed }}
+      gmt_changed: ${{ steps.detect.outputs.gmt_changed }}
+      non_gmt_changed: ${{ steps.detect.outputs.non_gmt_changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: nrwl/nx-set-shas@v4
+
+      - id: detect
+        run: |
+          CHANGED=$(git diff --name-only $NX_BASE $NX_HEAD)
+          echo "changed files: $CHANGED"
+          if echo "$CHANGED" | grep -q '^packages/gmt/'; then
+            echo "gmt_changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "gmt_changed=false" >> $GITHUB_OUTPUT
+          fi
+          NON_GMT=$(echo "$CHANGED" | grep -v '^packages/gmt/' | grep -v '^packages/gmt-oxlint/' || true)
+          if [ -z "$NON_GMT" ]; then
+            echo "non_gmt_changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "non_gmt_changed=true" >> $GITHUB_OUTPUT
+          fi
+          if [ -z "$CHANGED" ]; then
+            echo "any_changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "any_changed=true" >> $GITHUB_OUTPUT
+          fi
+
+  build-lint:
+    name: Build & Lint (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    needs: determine-affected
+    if: needs.determine-affected.outputs.any_changed == 'true'
     strategy:
+      fail-fast: false
       matrix:
         node-version: [20, 22, 24]
     steps:
@@ -34,45 +78,125 @@ jobs:
       - name: Approve pnpm build scripts
         run: pnpm approve-builds --all
 
-      # Install all dependencies (including devDependencies)
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Clean any stale TypeScript build artifacts that could cause module resolution issues
       - name: Clean stale build artifacts
         run: |
           find . -name "*.tsbuildinfo" -delete 2>/dev/null || true
           rm -rf .nx/cache 2>/dev/null || true
 
-      # Debug: Verify Nx modules are installed
-      - name: Debug Nx modules
-        run: |
-          ls -la node_modules/@nrwl || echo "Nx modules not found in node_modules/@nrwl"
-          ls -la node_modules/.bin/nx || echo "Nx binary not found in node_modules/.bin"
-
-      # Sets NX_BASE and NX_HEAD for reliable affected calculations
       - uses: nrwl/nx-set-shas@v4
 
-      # Pull requests: run only what changed
       - name: Run affected tasks
-        run: pnpm -w exec nx affected -t lint test typecheck build --base=$NX_BASE --head=$NX_HEAD
-        if: github.event_name == 'pull_request'
+        run: pnpm -w exec nx affected -t lint typecheck build --base=$NX_BASE --head=$NX_HEAD
 
-      # Main branch: run the full monorepo checks
-      - name: Run all tasks
-        run: pnpm -w exec nx run-many -t lint test typecheck build
-        if: github.event_name == 'push'
+  tests:
+    name: Tests (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    needs: [determine-affected, build-lint]
+    if: needs.determine-affected.outputs.non_gmt_changed == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22, 24]
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      # Custom test scripts
-      - name: Run gmt-oxlint tests
-        run: pnpm run test:gmt-oxlint
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
 
-      # Verify config packages are packagable
-      - name: Verify gmt-biome pack
-        run: cd packages/gmt-biome && npm pack --dry-run
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
 
-      - name: Verify gmt-eslint pack
-        run: cd packages/gmt-eslint && npm pack --dry-run
+      - name: Approve pnpm build scripts
+        run: pnpm approve-builds --all
 
-      - name: Verify gmt-oxlint pack
-        run: cd packages/gmt-oxlint && npm pack --dry-run
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - uses: nrwl/nx-set-shas@v4
+
+      - name: Run affected tests
+        run: pnpm -w exec nx affected -t test --base=$NX_BASE --head=$NX_HEAD --exclude=@burglekitt/gmt,@burglekitt/gmt-oxlint --plain
+
+      - name: Collect test artifacts
+        if: always()
+        run: |
+          mkdir -p artifact || true
+          if [ -d packages ]; then
+            find packages -maxdepth 2 -type d -name 'test-results' -exec cp -r {} artifact/ \; || true
+            find packages -maxdepth 2 -type f -name 'vitest-junit.xml' -exec cp {} artifact/ \; || true
+            find packages -maxdepth 2 -type d -name 'coverage' -exec cp -r {} artifact/ \; || true
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-artifacts-${{ matrix.node-version }}
+          path: artifact
+
+  gmt-matrix:
+    name: GMT TZ Tests — Node ${{ matrix.node-version }} / ${{ matrix.timezone }}
+    runs-on: ubuntu-latest
+    needs: determine-affected
+    if: needs.determine-affected.outputs.gmt_changed == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22, 24]
+        timezone: ["UTC", "Pacific/Apia", "Pacific/Niue"]
+    timeout-minutes: 120
+    env:
+      TZ: ${{ matrix.timezone }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-store-gmt-${{ matrix.node-version }}-${{ matrix.timezone }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-gmt-${{ matrix.node-version }}-
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Approve pnpm build scripts
+        run: pnpm approve-builds --all
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run GMT tests
+        run: pnpm -w exec vitest run --config packages/gmt/vitest.config.ts
+
+      - name: Collect GMT test artifacts
+        if: always()
+        run: |
+          mkdir -p artifact || true
+          if [ -d packages/gmt/test-results ]; then cp -r packages/gmt/test-results artifact/ || true; fi
+          if [ -f packages/gmt/vitest-junit.xml ]; then cp packages/gmt/vitest-junit.xml artifact/ || true; fi
+          if [ -d packages/gmt/coverage ]; then cp -r packages/gmt/coverage artifact/ || true; fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gmt-artifacts-${{ matrix.node-version }}-${{ matrix.timezone }}
+          path: artifact

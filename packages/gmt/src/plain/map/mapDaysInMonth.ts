@@ -1,14 +1,18 @@
 import { Temporal } from "@js-temporal/polyfill";
 
 /**
- * Return an array of ISO PlainDate strings for every day within the given
- * year-month (e.g. "2024-02").
+ * Return an array of ISO PlainDate strings for every day in the given year-month.
  *
- * - Validates the `month` input using Temporal.PlainYearMonth.
- * - Returns an empty array for invalid input.
+ * - Generates array of dates for the specified month.
+ * - Validates input matches the year-month format exactly.
+ * - Returns [] for invalid input.
  *
  * @param month ISO PlainYearMonth string (YYYY-MM)
  * @returns array of ISO PlainDate strings for each day in the month
+ *
+ * @example mapDaysInMonth("2024-02") // ["2024-02-01", "2024-02-02", ..., "2024-02-29"]
+ * @example mapDaysInMonth("2024-04") // ["2024-04-01", "2024-04-02", ..., "2024-04-30"]
+ * @example mapDaysInMonth("invalid") // []
  */
 export function mapDaysInMonth(month: string): string[] {
   try {

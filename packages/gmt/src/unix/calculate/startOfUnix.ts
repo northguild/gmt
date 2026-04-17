@@ -1,34 +1,25 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { isValidDateTimeUnit } from "../../plain";
 import { getSystemTimeZone } from "../../plain/get";
 import { isValidUnixUnit } from "../../unix/validate/isValidUnixUnit";
 import { isValidTimeZone } from "../../zoned/validate";
 
-const supported: (Temporal.DateUnit | Temporal.TimeUnit)[] = [
-  "year",
-  "month",
-  "week",
-  "day",
-  "hour",
-  "minute",
-  "second",
-  "millisecond",
-  "microsecond",
-  "nanosecond",
-];
-
 /**
  * Return the start of the specified unit for a Unix timestamp.
  *
- * - Accepts Unix timestamps in milliseconds (default) or seconds.
- * - Returns null for invalid inputs.
+ * - Converts to ZonedDateTime, sets to start of unit, converts back to epoch.
+ * - Supports: "year", "month", "week", "day", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond".
+ * - Returns null for invalid input.
  *
  * @param value Unix timestamp (number)
  * @param unit Temporal.DateUnit | Temporal.TimeUnit to specify the start
- * @param options epochUnit optional "seconds" | "milliseconds", timeZone optional IANA timeZone, weekStartsOn optional "monday" | "sunday"
+ * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA), weekStartsOn ("monday" | "sunday")
+ * @returns Unix epoch number representing the start of the unit, or null on invalid input
+ *
  * @example startOfUnix(1706659200000, "year") // 1704067200000
  * @example startOfUnix(1706659200000, "month") // 1705353600000
  * @example startOfUnix(1706659200, "day", { epochUnit: "seconds" }) // 1706640000
- * @returns Unix epoch number representing the start of the unit, or null on invalid input
+ * @example startOfUnix(-86400000, "year") // -31536000001 (start of 1969)
  */
 export function startOfUnix(
   value: number,
@@ -45,14 +36,14 @@ export function startOfUnix(
 
   if (
     !timeZone ||
-    !supported.includes(unit) ||
+    !isValidDateTimeUnit(unit) ||
     !isValidTimeZone(timeZone) ||
     !isValidUnixUnit(epochUnit)
   ) {
     return null;
   }
 
-  if (!Number.isFinite(value) || !Number.isInteger(value) || value < 0) {
+  if (!Number.isFinite(value) || !Number.isInteger(value)) {
     return null;
   }
 

@@ -1,6 +1,19 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidUtc } from "../validate/isValidUtc";
 
+/**
+ * Return the end of the quarter for a given UTC Instant string.
+ *
+ * - Calculates quarter end month: Q1=3, Q2=6, Q3=9, Q4=12.
+ * - Returns last moment of the quarter.
+ * - Returns "" for invalid input.
+ *
+ * @param value UTC Instant string
+ * @returns UTC Instant string for the end of the quarter, or "" on invalid input
+ *
+ * @example endOfQuarterForUtc("2024-03-15T12:00:00Z") // "2024-03-31T23:59:59.999Z"
+ * @example endOfQuarterForUtc("invalid") // ""
+ */
 export function endOfQuarterForUtc(value: string): string {
   if (!isValidUtc(value)) {
     return "";

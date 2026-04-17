@@ -5,16 +5,19 @@ import type { UnixUnit } from "../validate/isValidUnixUnit";
 /**
  * Return whether `value1` represents an instant strictly before `value2`.
  *
- * - Both inputs must be valid unix epoch numbers.
- * - Comparison is performed using Temporal.Instant (same instant semantics).
- * - Invalid inputs return `false`.
+ * - Uses Temporal.Instant.compare to check ordering.
+ * - Returns false if either input is invalid.
  *
  * @param value1 first unix epoch value
  * @param value2 second unix epoch value
- * @param options epoch unit and options
+ * @param options optional: epochUnit ("seconds" | "milliseconds")
+ * @returns `true` if `value1` is before `value2`, otherwise `false`
+ *
  * @example isBeforeUnix(1704067200, 1706659200) // true
  * @example isBeforeUnix(1706659200, 1706659200) // false
- * @returns `true` if `value1` is before `value2`, otherwise `false`
+ * @example isBeforeUnix(-1, 0) // true (1969-12-31T23:59:59.999Z is before 1970-01-01T00:00:00Z)
+ * @example isBeforeUnix('invalid', 1704067200000) // false
+ * @example isBeforeUnix(1704067200000, 'invalid') // false
  */
 export function isBeforeUnix(
   value1: number,
