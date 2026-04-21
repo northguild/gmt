@@ -1,5 +1,11 @@
 # @burglekitt/gmt-oxlint
 
+## 1.1.0
+
+### Minor Changes
+
+- 5fb3d57: Fixes consumption of gmt-oxlint, adding @burglekitt/gmt-oxlint to entire path
+
 ## 1.0.0
 
 ### Major Changes
