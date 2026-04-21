@@ -8,7 +8,7 @@ import type { OxlintPlugin } from "./types";
 
 const plugin: OxlintPlugin = {
   meta: {
-    name: "gmt-oxlint",
+    name: "@burglekitt/gmt-oxlint",
   },
   rules: {
     "no-date-global": noDateGlobalRule,
@@ -17,6 +17,18 @@ const plugin: OxlintPlugin = {
     "no-date-parse": noDateParseRule,
     "no-date-utc": noDateUtcRule,
     "no-date-getTimezoneOffset": noDateGetTimezoneOffsetRule,
+  },
+  configs: {
+    recommended: {
+      rules: {
+        "@burglekitt/gmt-oxlint/no-date-global": "error",
+        "@burglekitt/gmt-oxlint/no-new-date": "error",
+        "@burglekitt/gmt-oxlint/no-date-now": "error",
+        "@burglekitt/gmt-oxlint/no-date-parse": "error",
+        "@burglekitt/gmt-oxlint/no-date-utc": "error",
+        "@burglekitt/gmt-oxlint/no-date-getTimezoneOffset": "error",
+      },
+    },
   },
 };
 

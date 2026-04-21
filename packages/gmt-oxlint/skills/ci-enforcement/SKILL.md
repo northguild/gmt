@@ -20,7 +20,7 @@ Use this skill when enabling Oxlint-based Date policy checks in CI.
 - Expand to full repository enforcement once baseline is controlled.
 
 3. Keep diagnostics actionable
-- Ensure CI output clearly reports `gmt-oxlint/*` rule failures and paths.
+- Ensure CI output clearly reports `@burglekitt/gmt-oxlint/*` rule failures and paths.
 
 4. Align multi-linter policy
 - If ESLint/Biome are also enabled, keep Date-ban expectations consistent.

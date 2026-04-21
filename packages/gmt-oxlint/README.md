@@ -32,19 +32,50 @@ bun add --save-dev @burglekitt/gmt-oxlint oxlint
 
 ## Usage
 
+### Quick start (recommended)
+
 In your `.oxlintrc.json`:
 
 ```json
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "jsPlugins": ["@burglekitt/gmt-oxlint"],
+  "extends": ["@burglekitt/gmt-oxlint/recommended"]
+}
+```
+
+### Manual configuration
+
+Or explicitly configure each rule. You can use either a string or an array form:
+
+```json
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "jsPlugins": ["@burglekitt/gmt-oxlint"],
   "rules": {
-    "gmt-oxlint/no-date-global": "error",
-    "gmt-oxlint/no-new-date": "error",
-    "gmt-oxlint/no-date-now": "error",
-    "gmt-oxlint/no-date-parse": "error",
-    "gmt-oxlint/no-date-utc": "error",
-    "gmt-oxlint/no-date-getTimezoneOffset": "error"
+    "@burglekitt/gmt-oxlint/no-date-global": "error",
+    "@burglekitt/gmt-oxlint/no-new-date": "error",
+    "@burglekitt/gmt-oxlint/no-date-now": "error",
+    "@burglekitt/gmt-oxlint/no-date-parse": "error",
+    "@burglekitt/gmt-oxlint/no-date-utc": "error",
+    "@burglekitt/gmt-oxlint/no-date-getTimezoneOffset": "error"
+  }
+}
+```
+
+Array form also supported:
+
+```json
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "jsPlugins": ["@burglekitt/gmt-oxlint"],
+  "rules": {
+    "@burglekitt/gmt-oxlint/no-date-global": ["error"],
+    "@burglekitt/gmt-oxlint/no-new-date": ["error"],
+    "@burglekitt/gmt-oxlint/no-date-now": ["error"],
+    "@burglekitt/gmt-oxlint/no-date-parse": ["error"],
+    "@burglekitt/gmt-oxlint/no-date-utc": ["error"],
+    "@burglekitt/gmt-oxlint/no-date-getTimezoneOffset": ["error"]
   }
 }
 ```
