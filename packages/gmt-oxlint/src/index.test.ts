@@ -1,4 +1,4 @@
-import plugin from "./index";
+import plugin, { recommendedConfig, recommendedRules } from "./index";
 
 describe("plugin", () => {
   it("has correct meta name", () => {
@@ -41,5 +41,14 @@ describe("plugin", () => {
     expect(rules?.["@burglekitt/gmt-oxlint/no-date-getTimezoneOffset"]).toBe(
       "error",
     );
+  });
+
+  it("exports recommendedRules aligned with plugin recommended config", () => {
+    expect(recommendedRules).toEqual(plugin.configs?.recommended?.rules);
+  });
+
+  it("exports recommendedConfig with jsPlugins and recommended rules", () => {
+    expect(recommendedConfig.jsPlugins).toEqual(["@burglekitt/gmt-oxlint"]);
+    expect(recommendedConfig.rules).toEqual(recommendedRules);
   });
 });

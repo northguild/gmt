@@ -1,2 +1,5 @@
 packages:
   - 'packages/*'
+overrides:
+  axios@>=1.0.0 <1.15.0: '>=1.15.0'
+  follow-redirects@<=1.15.11: '>=1.16.0'

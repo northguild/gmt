@@ -25,6 +25,7 @@
   "homepage": "https://github.com/burglekitt/gmt#readme",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "oxlint": "./dist/index.js",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
@@ -39,6 +40,7 @@
   ],
   "files": [
     "dist",
+    "config",
     "README.md",
     "LICENSE",
     "skills"
@@ -59,8 +61,8 @@
       "default": "./dist/index.js"
     },
     "./recommended": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "types": "./config/recommended.d.ts",
+      "default": "./config/recommended.json"
     }
   },
   "peerDependencies": {
