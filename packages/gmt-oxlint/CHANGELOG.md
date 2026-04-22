@@ -1,5 +1,11 @@
 # @burglekitt/gmt-oxlint
 
+## 1.1.1
+
+### Patch Changes
+
+- 7c4dbed: Fix @burglekitt/gmt-oxlint consumer integration by adding plugin discovery metadata and publishing a real recommended config artifact. Also update docs to reflect current Oxlint extends behavior (file-path based) and ensure recommended rules stay in sync via tests.
+
 ## 1.1.0
 
 ### Minor Changes
