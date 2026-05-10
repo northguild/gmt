@@ -1,5 +1,11 @@
 # @burglekitt/gmt
 
+## 1.2.1
+
+### Patch Changes
+
+- 8d49857: Add missing barrel exports for unix and utc comparators, and add a new public export for `plain/validate/isLeapYear`
+
 ## 1.2.0
 
 ### Minor Changes
