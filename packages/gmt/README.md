@@ -34,12 +34,12 @@ GMT enforces a strict input/output contract to keep behavior predictable and aud
 
 ## Core Rules
 
-| Rule | Current behavior |
-|---|---|
-| String-first API | Public helpers consume ISO strings and return normalized strings where appropriate |
-| Temporal-only internals | `Temporal` does the parsing and timezone math |
-| Plain/zoned separation | `plain/*` is timezone-free, `zoned/*` is timezone-aware |
-| No-throw public helpers | Invalid input returns a typed fallback instead of throwing |
+| Rule                    | Current behavior                                                                   |
+| ----------------------- | ---------------------------------------------------------------------------------- |
+| String-first API        | Public helpers consume ISO strings and return normalized strings where appropriate |
+| Temporal-only internals | `Temporal` does the parsing and timezone math                                      |
+| Plain/zoned separation  | `plain/*` is timezone-free, `zoned/*` is timezone-aware                            |
+| No-throw public helpers | Invalid input returns a typed fallback instead of throwing                         |
 
 Invalid input fallbacks are consistent across the library:
 
@@ -50,22 +50,23 @@ Invalid input fallbacks are consistent across the library:
 
 ## Package Layout
 
-The package exports four top-level namespaces:
+The package exports six top-level namespaces:
 
 ```typescript
-import { Temporal, plain, zoned, regex } from "@burglekitt/gmt";
+import { Temporal, plain, zoned, unix, utc, regex } from "@burglekitt/gmt";
 ```
 
 - `Temporal`: re-exported from `@js-temporal/polyfill`
 - `plain`: timezone-free helpers
 - `zoned`: timezone-aware helpers
+- `unix`: Unix epoch (seconds or milliseconds) helpers
+- `utc`: UTC instant helpers
 - `regex`: low-level regex building blocks
 
 You can also import subpaths directly:
 
 ```typescript
-import { addDate } from "@burglekitt/gmt/plain/calculate";
-import { getNow } from "@burglekitt/gmt/plain/get";
+import { addDate, getNow, formatRelativeZoned } from "@burglekitt/gmt";
 ```
 
 ## Quick Start
@@ -73,8 +74,12 @@ import { getNow } from "@burglekitt/gmt/plain/get";
 ### Plain arithmetic and comparisons
 
 ```typescript
-import { addDate, diffDateTime } from "@burglekitt/gmt/plain/calculate";
-import { areDatesEqual, isBeforeDateTime } from "@burglekitt/gmt/plain/compare";
+import {
+  addDate,
+  areDatesEqual,
+  diffDateTime,
+  isBeforeDateTime,
+} from "@burglekitt/gmt";
 
 addDate("2026-01-01", 90, "day");
 // "2026-03-32" is impossible, so Temporal normalizes correctly -> "2026-04-01"
@@ -92,8 +97,7 @@ isBeforeDateTime("2026-03-17T09:00:00", "2026-03-17T10:00:00");
 ### Zoned operations
 
 ```typescript
-import { addZoned } from "@burglekitt/gmt/zoned/calculate";
-import { formatZonedDateTime } from "@burglekitt/gmt/zoned/format";
+import { addZoned, formatZonedDateTime } from "@burglekitt/gmt";
 
 addZoned("2026-03-07T23:00:00-05:00[America/New_York]", 2, "hour");
 // "2026-03-08T01:00:00-05:00[America/New_York]"
@@ -105,12 +109,54 @@ formatZonedDateTime("2024-03-17T14:30:45+00:00[UTC]", "en-US", {
 // locale-dependent non-empty formatted string
 ```
 
+### Formatting
+
+```typescript
+import {
+  formatDate,
+  formatRelativeDate,
+  formatTime,
+  formatRelativeTime,
+  formatDateTime,
+  formatRelativeDateTime,
+  formatZonedDateTime,
+  formatZonedRange,
+  formatRelativeZoned,
+  formatUtc,
+  formatRelativeUtc,
+  formatUnix,
+  formatRelativeUnix,
+} from "@burglekitt/gmt";
+
+// Relative to "now" — auto-picks the best unit.
+formatRelativeDate("2026-01-15");
+// e.g. "3 months ago"
+
+formatRelativeTime("14:30:00", "en-US", { style: "short" });
+// e.g. "2 hours ago"
+
+formatRelativeDateTime("2026-03-17T09:00:00", "en-GB", {
+  style: "long",
+  numeric: "always",
+});
+// e.g. "17 March, 2026 at 09:00"
+
+// Zoned relative formatting — reference can be a ZonedDateTime, UTC string, or unix epoch.
+formatRelativeZoned("2026-03-08T01:00:00-05:00[America/New_York]", "en-US");
+// e.g. "tomorrow"
+
+formatRelativeUtc("2024-03-17T14:30:45+00:00[UTC]", "en-US");
+// e.g. "2 years ago"
+
+// Unix epoch relative formatting.
+formatRelativeUnix(1710685845000, "en-US", { epochUnit: "milliseconds" });
+// e.g. "3 years ago"
+```
+
 ### Unix and UTC helpers
 
 ```typescript
-import { getUnixNow } from "@burglekitt/gmt/unix/get";
-import { getUtcNow } from "@burglekitt/gmt/utc/get";
-import { convertUnixToPlainDate } from "@burglekitt/gmt/unix/convert";
+import { getUnixNow, getUtcNow, convertUnixToPlainDate } from "@burglekitt/gmt";
 
 getUnixNow("milliseconds");
 // 1710685845000

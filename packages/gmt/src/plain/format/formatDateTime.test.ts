@@ -1,4 +1,5 @@
-import { MustTestLocales } from "../../test";
+import { hasFullIcu, MustTestLocales } from "../../test";
+import { mockTemporalPlainDateTimeFromThrow } from "../../test/mocks";
 import { formatDateTime } from "./formatDateTime";
 
 describe("formatDateTime", () => {
@@ -94,10 +95,10 @@ describe("formatDateTime", () => {
   it.each`
     value                    | options                                                                                                                        | expected
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"sábado, 3 de febrero de 2024, 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"3 de febrero de 2024 a las 14:30:45"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${hasFullIcu ? "3 de febrero de 2024, 14:30:45" : "3 de febrero de 2024 a las 14:30:45"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"3 feb 2024, 14:30:45"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"3/2/24, 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"3 de febrero de 2024 a las 14:30:45"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${hasFullIcu ? "3 de febrero de 2024, 14:30:45" : "3 de febrero de 2024 a las 14:30:45"}
     ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"3 feb 2024, 14:30"}
     ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"03/02/2024, 14:30:45"}
     ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"03/02/2024, 14:30"}
@@ -145,7 +146,7 @@ describe("formatDateTime", () => {
     ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"3/02/2024, 14:30"}
     ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"03/02/2024, 14:30:45"}
     ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"03/02/2024, 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"03/02/2024, 02:30:45 p.m."}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${hasFullIcu ? "03/02/2024, 02:30:45 da tarde" : "03/02/2024, 02:30:45 p.m."}
     ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"03/02/2024, 14:30:45"}
   `(
     "formats valid datetime $value for pt-PT with options $options to $expected",
@@ -225,7 +226,7 @@ describe("formatDateTime", () => {
   // zh-TW
   it.each`
     value                    | options                                                                                                                        | expected
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"2024年2月3日星期六 下午2:30:45"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${hasFullIcu ? "2024年2月3日 星期六 下午2:30:45" : "2024年2月3日星期六 下午2:30:45"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"2024年2月3日 下午2:30:45"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"2024年2月3日 下午2:30:45"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"2024/2/3 下午2:30"}
@@ -269,15 +270,15 @@ describe("formatDateTime", () => {
   // ko-KR
   it.each`
     value                    | options                                                                                                                        | expected
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"2024년 2월 3일 토요일 PM 2:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"2024년 2월 3일 PM 2:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"2024. 2. 3. PM 2:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"24. 2. 3. PM 2:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"2024년 2월 3일 PM 2:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"2024년 2월 3일 PM 2:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2024. 02. 03. PM 02:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2024. 02. 03. PM 02:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2024. 02. 03. PM 02:30:45"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${hasFullIcu ? "2024년 2월 3일 토요일 오후 2:30:45" : "2024년 2월 3일 토요일 PM 2:30:45"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${hasFullIcu ? "2024년 2월 3일 오후 2:30:45" : "2024년 2월 3일 PM 2:30:45"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${hasFullIcu ? "2024. 2. 3. 오후 2:30:45" : "2024. 2. 3. PM 2:30:45"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${hasFullIcu ? "24. 2. 3. 오후 2:30" : "24. 2. 3. PM 2:30"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${hasFullIcu ? "2024년 2월 3일 오후 2:30:45" : "2024년 2월 3일 PM 2:30:45"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${hasFullIcu ? "2024년 2월 3일 오후 2:30" : "2024년 2월 3일 PM 2:30"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${hasFullIcu ? "2024. 02. 03. 오후 02:30:45" : "2024. 02. 03. PM 02:30:45"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${hasFullIcu ? "2024. 02. 03. 오후 02:30" : "2024. 02. 03. PM 02:30"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${hasFullIcu ? "2024. 02. 03. 오후 02:30:45" : "2024. 02. 03. PM 02:30:45"}
     ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"2024. 2. 3. 14시 30분 45초"}
   `(
     "formats valid datetime $value for ko-KR with options $options to $expected",
@@ -398,4 +399,10 @@ describe("formatDateTime", () => {
       expect(formatDateTime(invalidValue as never)).toBe("");
     },
   );
+
+  it("returns empty string on failure", () => {
+    mockTemporalPlainDateTimeFromThrow();
+    const result = formatDateTime("2024-02-29T00:00:00");
+    expect(result).toBe("");
+  });
 });

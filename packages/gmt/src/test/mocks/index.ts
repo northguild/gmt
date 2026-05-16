@@ -1,6 +1,8 @@
 export { mockTemporalInstantFromThrow } from "./mockTemporalInstantFromThrow";
 export { mockTemporalNowInstantThrow } from "./mockTemporalNowInstantThrow";
+export { mockTemporalNowPlainDateISOThrow } from "./mockTemporalNowPlainDateISOThrow";
 export { mockTemporalNowPlainDateTimeISOThrow } from "./mockTemporalNowPlainDateTimeISOThrow";
+export { mockTemporalNowPlainTimeISOThrow } from "./mockTemporalNowPlainTimeISOThrow";
 export { mockTemporalNowZonedDateTimeISOThrow } from "./mockTemporalNowZonedDateTimeISOThrow";
 export { mockTemporalPlainDateFromThrow } from "./mockTemporalPlainDateFromThrow";
 export { mockTemporalPlainDateTimeFromThrow } from "./mockTemporalPlainDateTimeFromThrow";

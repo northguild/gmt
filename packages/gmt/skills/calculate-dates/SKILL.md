@@ -5,7 +5,7 @@ description: >
   for date arithmetic. Use diffDate for calculating differences.
 type: core
 library: '@burglekitt/gmt'
-library_version: '1.2.0'
+library_version: '1.3.0'
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/calculate/index.ts'
 ---

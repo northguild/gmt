@@ -1,7 +1,4 @@
-import {
-  mockTemporalInstantFromThrow,
-  mockTemporalPlainDateFromThrow,
-} from "../../test/mocks";
+import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import { parseWeekFromUtc } from "./parseWeekFromUtc";
 
 describe("parseWeekFromUtc", () => {
@@ -37,14 +34,8 @@ describe("parseWeekFromUtc", () => {
     expect(parseWeekFromUtc(value)).toBeNull();
   });
 
-  it("returns valid result when Temporal.Instant.from throws but fallback works", () => {
+  it("returns null when Temporal.Instant.from throws", () => {
     mockTemporalInstantFromThrow();
-    const result = parseWeekFromUtc("2024-03-17T14:30:45Z");
-    expect(result).toBe(11);
-  });
-
-  it("returns null when Temporal.PlainDate.from throws", () => {
-    mockTemporalPlainDateFromThrow();
     const result = parseWeekFromUtc("2024-03-17T14:30:45Z");
     expect(result).toBeNull();
   });

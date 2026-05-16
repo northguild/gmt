@@ -2,10 +2,12 @@
 name: zoned-date-ops
 description: >
   Work with timezone-aware dates and times. Use IANA timezone identifiers
-  for timezone-aware operations. Use getZonedNow, formatZonedDateTime.
+  for timezone-aware operations. Use getZonedNow, formatZonedDateTime,
+  formatZonedRange for absolute formatting, and formatRelativeZoned for
+  DST-safe relative output across timezones.
 type: core
 library: '@burglekitt/gmt'
-library_version: '1.2.0'
+library_version: '1.3.0'
 sources:
   - 'burglekitt/gmt:packages/gmt/src/zoned/get/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/format/index.ts'
@@ -67,6 +69,31 @@ const formatted = formatZonedDateTime("2024-03-15T14:30:45[America/New_York]", "
 // "3/15/2024, 10:30:45 AM"
 ```
 
+### Format zoned range
+
+```ts
+import { formatZonedRange } from "@burglekitt/gmt/zoned";
+
+const from = "2024-02-29T10:00:00-05:00[America/New_York]";
+const to = "2024-02-29T12:00:00-05:00[America/New_York]";
+formatZonedRange(from, to, "en-US", { dateStyle: "long", timeStyle: "short" });
+// "February 29, 2024, 10:00 AM – 12:00 PM"
+```
+
+> Both endpoints must share the same IANA timezone. Mismatched zones return `""`.
+
+### Format relative zoned datetime (DST-safe)
+
+```ts
+import { formatRelativeZoned } from "@burglekitt/gmt/zoned";
+
+const value = "2024-03-15T10:00:00-05:00[America/New_York]";
+const reference = "2024-03-15T12:00:00-05:00[America/New_York]";
+formatRelativeZoned(value, "en-US", { reference }); // "2 hours ago"
+```
+
+`formatRelativeZoned` computes the diff via `Temporal.ZonedDateTime` arithmetic, so it correctly handles DST transitions and spans that cross "fall back" / "spring forward" days.
+
 ### Validate timezone
 
 ```ts
@@ -106,6 +133,15 @@ Common IANA timezone identifiers:
 | Asia | Asia/Tokyo, Asia/Shanghai, Asia/Singapore |
 | Pacific | Pacific/Auckland, Pacific/Honolulu |
 | UTC | UTC |
+
+## Runtime ICU data
+
+Zoned formatters delegate locale and timezone-name rendering to the host runtime's `Intl.DateTimeFormat`. Output therefore depends on the ICU data shipped with the running Node (or browser):
+
+- **Full ICU** runtimes (official Node binaries from nodejs.org, all modern browsers) return fully localized strings — e.g. `formatZonedDateTime(value, "ko-KR", { dateStyle: "full", timeStyle: "full" })` includes `"오후"` and the long Korean timezone name `"대한민국 표준시"`.
+- **Small/partial ICU** runtimes (some Node builds compiled with `--with-intl=small-icu` or repackaged distributions) fall back to English day periods and shorter timezone names — the same call may return `"PM"`, `"한국 표준시"`, or offset strings like `"GMT+9"`/`"GMT+03:00"` in place of long zone names.
+
+This is a property of the runtime, not gmt. For consistent non-English output, deploy on a full-ICU Node build or polyfill `Intl` with a package that bundles locale data.
 
 ## Common Mistakes
 

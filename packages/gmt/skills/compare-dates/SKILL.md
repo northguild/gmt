@@ -5,7 +5,7 @@ description: >
   for comparisons. Returns false on invalid input.
 type: core
 library: '@burglekitt/gmt'
-library_version: '1.2.0'
+library_version: '1.3.0'
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/compare/index.ts'
 ---

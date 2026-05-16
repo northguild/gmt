@@ -8,13 +8,13 @@ import { utcDateTime } from "../../regex/utc-date-time";
  * - Uses regex to check format before parsing.
  * - Rejects leap seconds (e.g., "2024-12-31T23:59:60Z").
  * - Uses Temporal.Instant.from for validation.
- * - Accepts both date-only ("2024-01-01Z") and datetime ("2024-01-01T00:00:00Z").
+ * - Requires a time component — date-only strings ("2024-01-01Z") are rejected.
  *
  * @param value input UTC datetime string (ISO 8601)
  * @returns boolean indicating whether the input is a valid UTC datetime
  *
  * @example isValidUtc("2024-03-17T14:30:45Z") // true
- * @example isValidUtc("2024-01-01Z") // true
+ * @example isValidUtc("2024-01-01Z") // false — date-only not supported
  * @example isValidUtc("2024-12-31T23:59:60Z") // false
  * @example isValidUtc("invalid") // false
  */
@@ -31,11 +31,6 @@ export function isValidUtc(value: string): boolean {
     Temporal.Instant.from(value);
     return true;
   } catch {
-    try {
-      Temporal.PlainDate.from(value.replace("Z", ""));
-      return true;
-    } catch {
-      return false;
-    }
+    return false;
   }
 }

@@ -1,4 +1,5 @@
 import { MustTestLocales } from "../../test";
+import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { formatDate } from "./formatDate";
 
 describe("formatDate", () => {
@@ -389,4 +390,10 @@ describe("formatDate", () => {
       expect(formatDate(invalidValue as never)).toBe("");
     },
   );
+
+  it("returns empty string on failure", () => {
+    mockTemporalPlainDateFromThrow();
+    const result = formatDate("2024-02-29");
+    expect(result).toBe("");
+  });
 });
