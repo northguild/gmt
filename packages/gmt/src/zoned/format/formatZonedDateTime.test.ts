@@ -1,8 +1,11 @@
 import { normalizeDateTime } from "../../internal";
 import {
-  hasFullIcu,
+  expectDateTimeEqual,
+  expectOneOfDateTimeIcu,
+  expectOneOfIcu,
   localeZonedDateTimeInputByLocale,
   MustTestLocales,
+  oneOfIcu,
   sameInstantBattleCases,
 } from "../../test";
 import { formatZonedDateTime } from "./formatZonedDateTime";
@@ -104,10 +107,8 @@ describe("formatZonedDateTime", () => {
   it.each`
     value                                  | options                                                                                                                        | expected
     ${valueByLocale[MustTestLocales.esES]} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"sábado, 3 de febrero de 2024, 14:30:45 (hora estándar de Europa central)"}
-    ${valueByLocale[MustTestLocales.esES]} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${hasFullIcu ? "3 de febrero de 2024, 14:30:45 CET" : "3 de febrero de 2024 a las 14:30:45 CET"}
     ${valueByLocale[MustTestLocales.esES]} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"3 feb 2024, 14:30:45"}
     ${valueByLocale[MustTestLocales.esES]} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"3/2/24, 14:30"}
-    ${valueByLocale[MustTestLocales.esES]} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${hasFullIcu ? "3 de febrero de 2024, 14:30:45" : "3 de febrero de 2024 a las 14:30:45"}
     ${valueByLocale[MustTestLocales.esES]} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"3 feb 2024, 14:30"}
     ${valueByLocale[MustTestLocales.esES]} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"03/02/2024, 14:30:45"}
     ${valueByLocale[MustTestLocales.esES]} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"03/02/2024, 14:30"}
@@ -118,6 +119,26 @@ describe("formatZonedDateTime", () => {
     ({ value, options, expected }) => {
       expect(formatZonedDateTime(value, MustTestLocales.esES, options)).toBe(
         normalizeDateTime(expected),
+      );
+    },
+  );
+
+  // es-ES dateStyle:"long" — CLDR changed the date/time connector from a
+  // comma (ICU 77 / Node 20) to " a las " (ICU 78 / Node 22/24).
+  it.each`
+    options                                                                                                      | expectedVariants
+    ${{ dateStyle: "long", timeStyle: "long" }}                                                                  | ${oneOfIcu(normalizeDateTime("3 de febrero de 2024, 14:30:45 CET"), normalizeDateTime("3 de febrero de 2024 a las 14:30:45 CET"))}
+    ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }} | ${oneOfIcu(normalizeDateTime("3 de febrero de 2024, 14:30:45"), normalizeDateTime("3 de febrero de 2024 a las 14:30:45"))}
+  `(
+    "formats valid zoned datetime for es-ES with options $options as one of the known ICU variants",
+    ({ options, expectedVariants }) => {
+      expectOneOfIcu(
+        formatZonedDateTime(
+          valueByLocale[MustTestLocales.esES],
+          MustTestLocales.esES,
+          options,
+        ),
+        expectedVariants,
       );
     },
   );
@@ -155,7 +176,6 @@ describe("formatZonedDateTime", () => {
     ${valueByLocale[MustTestLocales.ptPT]} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"3/02/2024, 14:30"}
     ${valueByLocale[MustTestLocales.ptPT]} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"03/02/2024, 14:30:45"}
     ${valueByLocale[MustTestLocales.ptPT]} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"03/02/2024, 14:30"}
-    ${valueByLocale[MustTestLocales.ptPT]} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${hasFullIcu ? "03/02/2024, 02:30:45 da tarde" : "03/02/2024, 02:30:45 p.m."}
     ${valueByLocale[MustTestLocales.ptPT]} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"03/02/2024, 14:30:45"}
   `(
     "formats valid zoned datetime $value for pt-PT with options $options to $expected",
@@ -165,6 +185,30 @@ describe("formatZonedDateTime", () => {
       );
     },
   );
+
+  // pt-PT 12-hour day period — CLDR changed the wording from "da tarde"
+  // (ICU 77 / Node 20) to "p.m." (ICU 78 / Node 22/24).
+  it("formats valid zoned datetime for pt-PT with 12-hour day period as one of the known ICU variants", () => {
+    expectOneOfIcu(
+      formatZonedDateTime(
+        valueByLocale[MustTestLocales.ptPT],
+        MustTestLocales.ptPT,
+        {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: true,
+        },
+      ),
+      oneOfIcu(
+        normalizeDateTime("03/02/2024, 02:30:45 da tarde"),
+        normalizeDateTime("03/02/2024, 02:30:45 p.m."),
+      ),
+    );
+  });
 
   // sv-SE
   it.each`
@@ -192,7 +236,6 @@ describe("formatZonedDateTime", () => {
   it.each`
     value                                  | options                                                                                                                        | expected
     ${valueByLocale[MustTestLocales.isIS]} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"laugardagur, 3. febrúar 2024 kl. 14:30:45 Greenwich-staðaltími"}
-    ${valueByLocale[MustTestLocales.isIS]} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${hasFullIcu ? "3. febrúar 2024 kl. 14:30:45 GMT" : "3. febrúar 2024 kl. 14:30:45 GMT+0"}
     ${valueByLocale[MustTestLocales.isIS]} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"3. feb. 2024, 14:30:45"}
     ${valueByLocale[MustTestLocales.isIS]} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"3.2.2024, 14:30"}
     ${valueByLocale[MustTestLocales.isIS]} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"3. febrúar 2024 kl. 14:30:45"}
@@ -210,6 +253,22 @@ describe("formatZonedDateTime", () => {
     },
   );
 
+  // is-IS long/long GMT offset display — CLDR changed the UTC time zone
+  // name from "GMT" (ICU 77 / Node 20) to "GMT+0" (ICU 78 / Node 22/24).
+  it("formats valid zoned datetime for is-IS with dateStyle/timeStyle long as one of the known ICU variants", () => {
+    expectOneOfIcu(
+      formatZonedDateTime(
+        valueByLocale[MustTestLocales.isIS],
+        MustTestLocales.isIS,
+        { dateStyle: "long", timeStyle: "long" },
+      ),
+      oneOfIcu(
+        normalizeDateTime("3. febrúar 2024 kl. 14:30:45 GMT"),
+        normalizeDateTime("3. febrúar 2024 kl. 14:30:45 GMT+0"),
+      ),
+    );
+  });
+
   // zh-CN
   it.each`
     value                                  | options                                                                                                                        | expected
@@ -226,7 +285,8 @@ describe("formatZonedDateTime", () => {
   `(
     "formats valid zoned datetime $value for zh-CN with options $options to $expected",
     ({ value, options, expected }) => {
-      expect(formatZonedDateTime(value, MustTestLocales.zhCN, options)).toBe(
+      expectDateTimeEqual(
+        formatZonedDateTime(value, MustTestLocales.zhCN, options),
         normalizeDateTime(expected),
       );
     },
@@ -248,7 +308,8 @@ describe("formatZonedDateTime", () => {
   `(
     "formats valid zoned datetime $value for zh-TW with options $options to $expected",
     ({ value, options, expected }) => {
-      expect(formatZonedDateTime(value, MustTestLocales.zhTW, options)).toBe(
+      expectDateTimeEqual(
+        formatZonedDateTime(value, MustTestLocales.zhTW, options),
         normalizeDateTime(expected),
       );
     },
@@ -270,7 +331,8 @@ describe("formatZonedDateTime", () => {
   `(
     "formats valid zoned datetime $value for ja-JP with options $options to $expected",
     ({ value, options, expected }) => {
-      expect(formatZonedDateTime(value, MustTestLocales.jaJP, options)).toBe(
+      expectDateTimeEqual(
+        formatZonedDateTime(value, MustTestLocales.jaJP, options),
         normalizeDateTime(expected),
       );
     },
@@ -279,24 +341,45 @@ describe("formatZonedDateTime", () => {
   // ko-KR
   it.each`
     value                                  | options                                                                                                                        | expected
-    ${valueByLocale[MustTestLocales.koKR]} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${hasFullIcu ? "2024년 2월 3일 토요일 오후 2시 30분 45초 대한민국 표준시" : "2024년 2월 3일 토요일 PM 2시 30분 45초 한국 표준시"}
-    ${valueByLocale[MustTestLocales.koKR]} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${hasFullIcu ? "2024년 2월 3일 오후 2시 30분 45초 GMT+9" : "2024년 2월 3일 PM 2시 30분 45초 GMT+9"}
-    ${valueByLocale[MustTestLocales.koKR]} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${hasFullIcu ? "2024. 2. 3. 오후 2:30:45" : "2024. 2. 3. PM 2:30:45"}
-    ${valueByLocale[MustTestLocales.koKR]} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${hasFullIcu ? "24. 2. 3. 오후 2:30" : "24. 2. 3. PM 2:30"}
-    ${valueByLocale[MustTestLocales.koKR]} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${hasFullIcu ? "2024년 2월 3일 오후 2:30:45" : "2024년 2월 3일 PM 2:30:45"}
-    ${valueByLocale[MustTestLocales.koKR]} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${hasFullIcu ? "2024년 2월 3일 오후 2:30" : "2024년 2월 3일 PM 2:30"}
-    ${valueByLocale[MustTestLocales.koKR]} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${hasFullIcu ? "2024. 02. 03. 오후 02:30:45" : "2024. 02. 03. PM 02:30:45"}
-    ${valueByLocale[MustTestLocales.koKR]} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${hasFullIcu ? "2024. 02. 03. 오후 02:30" : "2024. 02. 03. PM 02:30"}
-    ${valueByLocale[MustTestLocales.koKR]} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${hasFullIcu ? "2024. 02. 03. 오후 02:30:45" : "2024. 02. 03. PM 02:30:45"}
+    ${valueByLocale[MustTestLocales.koKR]} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"2024년 2월 3일 오후 2시 30분 45초 GMT+9"}
+    ${valueByLocale[MustTestLocales.koKR]} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"2024. 2. 3. 오후 2:30:45"}
+    ${valueByLocale[MustTestLocales.koKR]} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"24. 2. 3. 오후 2:30"}
+    ${valueByLocale[MustTestLocales.koKR]} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"2024년 2월 3일 오후 2:30:45"}
+    ${valueByLocale[MustTestLocales.koKR]} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"2024년 2월 3일 오후 2:30"}
+    ${valueByLocale[MustTestLocales.koKR]} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2024. 02. 03. 오후 02:30:45"}
+    ${valueByLocale[MustTestLocales.koKR]} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2024. 02. 03. 오후 02:30"}
+    ${valueByLocale[MustTestLocales.koKR]} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2024. 02. 03. 오후 02:30:45"}
     ${valueByLocale[MustTestLocales.koKR]} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"2024. 2. 3. 14시 30분 45초"}
   `(
     "formats valid zoned datetime $value for ko-KR with options $options to $expected",
     ({ value, options, expected }) => {
-      expect(formatZonedDateTime(value, MustTestLocales.koKR, options)).toBe(
+      expectDateTimeEqual(
+        formatZonedDateTime(value, MustTestLocales.koKR, options),
         normalizeDateTime(expected),
       );
     },
   );
+
+  // ko-KR dateStyle:"full" long time zone name — CLDR shortened the
+  // South Korea Standard Time name from "대한민국 표준시" (ICU 77 / Node 20)
+  // to "한국 표준시" (ICU 78 / Node 22/24).
+  it("formats valid zoned datetime for ko-KR with dateStyle/timeStyle full as one of the known ICU variants", () => {
+    expectOneOfDateTimeIcu(
+      formatZonedDateTime(
+        valueByLocale[MustTestLocales.koKR],
+        MustTestLocales.koKR,
+        { dateStyle: "full", timeStyle: "full" },
+      ),
+      oneOfIcu(
+        normalizeDateTime(
+          "2024년 2월 3일 토요일 오후 2시 30분 45초 대한민국 표준시",
+        ),
+        normalizeDateTime(
+          "2024년 2월 3일 토요일 오후 2시 30분 45초 한국 표준시",
+        ),
+      ),
+    );
+  });
 
   // ar-SA
   it.each`
@@ -367,7 +450,6 @@ describe("formatZonedDateTime", () => {
   // tr-TR
   it.each`
     value                                  | options                                                                                                                        | expected
-    ${valueByLocale[MustTestLocales.trTR]} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${hasFullIcu ? "3 Şubat 2024 Cumartesi 14:30:45 GMT+03:00" : "3 Şubat 2024 Cumartesi 14:30:45 Türkiye Standart Saati"}
     ${valueByLocale[MustTestLocales.trTR]} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"3 Şubat 2024 14:30:45 GMT+3"}
     ${valueByLocale[MustTestLocales.trTR]} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"3 Şub 2024 14:30:45"}
     ${valueByLocale[MustTestLocales.trTR]} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"3.02.2024 14:30"}
@@ -385,6 +467,25 @@ describe("formatZonedDateTime", () => {
       );
     },
   );
+
+  // tr-TR dateStyle:"full" long time zone name — CLDR changed the offset
+  // display "GMT+03:00" (ICU 77 / Node 20) to the named zone
+  // "Türkiye Standart Saati" (ICU 78 / Node 22/24).
+  it("formats valid zoned datetime for tr-TR with dateStyle/timeStyle full as one of the known ICU variants", () => {
+    expectOneOfIcu(
+      formatZonedDateTime(
+        valueByLocale[MustTestLocales.trTR],
+        MustTestLocales.trTR,
+        { dateStyle: "full", timeStyle: "full" },
+      ),
+      oneOfIcu(
+        normalizeDateTime("3 Şubat 2024 Cumartesi 14:30:45 GMT+03:00"),
+        normalizeDateTime(
+          "3 Şubat 2024 Cumartesi 14:30:45 Türkiye Standart Saati",
+        ),
+      ),
+    );
+  });
 
   // Invalid input
   it.each`

@@ -1,8 +1,10 @@
 import { normalizeDateTime } from "../../internal";
 import {
-  hasFullIcu,
+  expectDateTimeEqual,
+  expectOneOfIcu,
   localeZonedRangeInputByLocale,
   MustTestLocales,
+  oneOfIcu,
 } from "../../test";
 import { formatZonedRange } from "./formatZonedRange";
 
@@ -174,7 +176,6 @@ describe("formatZonedRange", () => {
   // is-IS
   it.each`
     from                                         | to                                         | options                                                                | expected
-    ${rangeByLocale[MustTestLocales.isIS].start} | ${rangeByLocale[MustTestLocales.isIS].end} | ${{ dateStyle: "long", timeStyle: "long" }}                            | ${hasFullIcu ? "3. febrúar 2024, 14:30:45 GMT – 16:46:15 GMT" : "3. febrúar 2024, 14:30:45 GMT+0 – 16:46:15 GMT+0"}
     ${rangeByLocale[MustTestLocales.isIS].start} | ${rangeByLocale[MustTestLocales.isIS].end} | ${{ dateStyle: "short", timeStyle: "short" }}                          | ${"3.2.2024, 14:30–16:46"}
     ${rangeByLocale[MustTestLocales.isIS].start} | ${rangeByLocale[MustTestLocales.isIS].end} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "shortOffset" }} | ${"14:30–16:46"}
   `(
@@ -185,6 +186,23 @@ describe("formatZonedRange", () => {
       );
     },
   );
+
+  // is-IS long/long GMT offset display — CLDR changed the UTC time zone
+  // name from "GMT" (ICU 77 / Node 20) to "GMT+0" (ICU 78 / Node 22/24).
+  it("formats valid zoned datetime range for is-IS with dateStyle/timeStyle long as one of the known ICU variants", () => {
+    expectOneOfIcu(
+      formatZonedRange(
+        rangeByLocale[MustTestLocales.isIS].start,
+        rangeByLocale[MustTestLocales.isIS].end,
+        MustTestLocales.isIS,
+        { dateStyle: "long", timeStyle: "long" },
+      ),
+      oneOfIcu(
+        normalizeDateTime("3. febrúar 2024, 14:30:45 GMT – 16:46:15 GMT"),
+        normalizeDateTime("3. febrúar 2024, 14:30:45 GMT+0 – 16:46:15 GMT+0"),
+      ),
+    );
+  });
 
   // zh-CN
   it.each`
@@ -210,7 +228,8 @@ describe("formatZonedRange", () => {
   `(
     "formats valid zoned datetime range for zh-TW",
     ({ from, to, options, expected }) => {
-      expect(formatZonedRange(from, to, MustTestLocales.zhTW, options)).toBe(
+      expectDateTimeEqual(
+        formatZonedRange(from, to, MustTestLocales.zhTW, options),
         normalizeDateTime(expected),
       );
     },
@@ -234,13 +253,14 @@ describe("formatZonedRange", () => {
   // ko-KR
   it.each`
     from                                         | to                                         | options                                                                | expected
-    ${rangeByLocale[MustTestLocales.koKR].start} | ${rangeByLocale[MustTestLocales.koKR].end} | ${{ dateStyle: "long", timeStyle: "long" }}                            | ${hasFullIcu ? "2024년 2월 3일 오후 2시 30분 45초 GMT+9 ~ 오후 4시 46분 15초 GMT+9" : "2024년 2월 3일 PM 2시 30분 45초 GMT+9 ~ PM 4시 46분 15초 GMT+9"}
-    ${rangeByLocale[MustTestLocales.koKR].start} | ${rangeByLocale[MustTestLocales.koKR].end} | ${{ dateStyle: "short", timeStyle: "short" }}                          | ${hasFullIcu ? "24. 2. 3. 오후 2:30~4:46" : "24. 2. 3. PM 2:30~4:46"}
-    ${rangeByLocale[MustTestLocales.koKR].start} | ${rangeByLocale[MustTestLocales.koKR].end} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "shortOffset" }} | ${hasFullIcu ? "오후 2:30~4:46" : "PM 2:30~4:46"}
+    ${rangeByLocale[MustTestLocales.koKR].start} | ${rangeByLocale[MustTestLocales.koKR].end} | ${{ dateStyle: "long", timeStyle: "long" }}                            | ${"2024년 2월 3일 오후 2시 30분 45초 GMT+9 ~ 오후 4시 46분 15초 GMT+9"}
+    ${rangeByLocale[MustTestLocales.koKR].start} | ${rangeByLocale[MustTestLocales.koKR].end} | ${{ dateStyle: "short", timeStyle: "short" }}                          | ${"24. 2. 3. 오후 2:30~4:46"}
+    ${rangeByLocale[MustTestLocales.koKR].start} | ${rangeByLocale[MustTestLocales.koKR].end} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "shortOffset" }} | ${"오후 2:30~4:46"}
   `(
     "formats valid zoned datetime range for ko-KR",
     ({ from, to, options, expected }) => {
-      expect(formatZonedRange(from, to, MustTestLocales.koKR, options)).toBe(
+      expectDateTimeEqual(
+        formatZonedRange(from, to, MustTestLocales.koKR, options),
         normalizeDateTime(expected),
       );
     },

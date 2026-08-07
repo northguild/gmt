@@ -1,10 +1,10 @@
-import * as getSystemTimeZoneModule from "../../plain/get/getSystemTimeZone";
 import {
   battleTestLeapYearUnix,
   battleTestLeapYearUnixSeconds,
   MustTestDstTimeZones,
 } from "../../test";
 import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
+import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
 import { parseDateFromUnix } from "./parseDateFromUnix";
 
 describe("parseDateFromUnix", () => {

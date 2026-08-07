@@ -23,6 +23,7 @@ skills:
     description: Get the current date, time, or timestamp as ISO 8601 strings
     sources:
       - 'burglekitt/gmt:packages/gmt/src/plain/get/index.ts'
+      - 'burglekitt/gmt:packages/gmt/src/zoned/get/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/utc/get/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/unix/get/index.ts'
 

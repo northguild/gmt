@@ -1,3 +1,3 @@
-export * from "./hasFullIcu";
+export * from "./icuVariants";
 export * from "./localeMatrix";
 export * from "./timeZoneMatrix";

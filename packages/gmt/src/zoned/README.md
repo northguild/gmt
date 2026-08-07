@@ -55,6 +55,7 @@ Locale-aware timezone formatting:
 
 Current in specific timezone:
 
+- `getSystemTimeZone`, `getTimeZones`
 - `getZonedNow`, `getZonedNowUnit`, `getZonedToday`
 - `getZonedYear`, `getZonedMonth`, `getZonedDay`, `getZonedDayOfWeek`
 - `getZonedHour`, `getZonedMinute`, `getZonedSecond`

@@ -1,7 +1,7 @@
 import { vi } from "vitest";
-import * as getSystemTimeZoneModule from "../../plain/get/getSystemTimeZone";
 import { MustTestLocales } from "../../test";
 import { mockTemporalNowInstantThrow } from "../../test/mocks";
+import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
 import { formatRelativeUtc } from "./formatRelativeUtc";
 
 // All tests use a fixed reference so output is deterministic regardless of

@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import { hasFullIcu, MustTestLocales } from "../../test";
+import { expectOneOfIcu, MustTestLocales, oneOfIcu } from "../../test";
 import { mockTemporalNowPlainDateISOThrow } from "../../test/mocks";
 import { formatRelativeDate } from "./formatRelativeDate";
 
@@ -240,7 +240,6 @@ describe("formatRelativeDate", () => {
     ${"2024-03-22"} | ${{ reference: REF }}                                                           | ${"nästa vecka"}
     ${"2024-01-15"} | ${{ reference: REF }}                                                           | ${"för 2 månader sedan"}
     ${"2024-05-15"} | ${{ reference: REF }}                                                           | ${"om 2 månader"}
-    ${"2023-03-15"} | ${{ reference: REF }}                                                           | ${hasFullIcu ? "i fjol" : "förra året"}
     ${"2025-03-15"} | ${{ reference: REF }}                                                           | ${"nästa år"}
     ${"2024-02-23"} | ${{ reference: REF, largestUnit: "week" as const, numeric: "always" as const }} | ${"för 3 veckor sedan"}
   `(
@@ -251,6 +250,17 @@ describe("formatRelativeDate", () => {
       );
     },
   );
+
+  // sv-SE "last year" — CLDR changed the idiom from "i fjol" (ICU 77 /
+  // Node 20) to "förra året" (ICU 78 / Node 22/24).
+  it("formats 2023-03-15 for sv-SE with default options as one of the known ICU variants", () => {
+    expectOneOfIcu(
+      formatRelativeDate("2023-03-15", MustTestLocales.svSE, {
+        reference: REF,
+      }),
+      oneOfIcu("i fjol", "förra året"),
+    );
+  });
 
   // is-IS
   it.each`
@@ -406,8 +416,6 @@ describe("formatRelativeDate", () => {
     ${"2024-03-18"} | ${{ reference: REF, style: "narrow" as const }}                                 | ${"בעוד 3 ימים"}
     ${"2024-03-08"} | ${{ reference: REF }}                                                           | ${"השבוע שעבר"}
     ${"2024-03-22"} | ${{ reference: REF }}                                                           | ${"השבוע הבא"}
-    ${"2024-01-15"} | ${{ reference: REF }}                                                           | ${hasFullIcu ? "לפני חודשיים" : "לפני חודשיים (2)"}
-    ${"2024-05-15"} | ${{ reference: REF }}                                                           | ${hasFullIcu ? "בעוד חודשיים" : "בעוד חודשיים (2)"}
     ${"2023-03-15"} | ${{ reference: REF }}                                                           | ${"השנה שעברה"}
     ${"2025-03-15"} | ${{ reference: REF }}                                                           | ${"השנה הבאה"}
     ${"2024-02-23"} | ${{ reference: REF, largestUnit: "week" as const, numeric: "always" as const }} | ${"לפני 3 שבועות"}
@@ -416,6 +424,23 @@ describe("formatRelativeDate", () => {
     ({ value, options, expected }) => {
       expect(formatRelativeDate(value, MustTestLocales.heIL, options)).toBe(
         expected,
+      );
+    },
+  );
+
+  // he-IL dual-form month pluralization — CLDR started appending the
+  // numeral in parentheses to the dual form ("חודשיים") starting ICU 78
+  // (Node 22/24); ICU 77 (Node 20) omits it.
+  it.each`
+    value           | options               | expectedVariants
+    ${"2024-01-15"} | ${{ reference: REF }} | ${oneOfIcu("לפני חודשיים", "לפני חודשיים (2)")}
+    ${"2024-05-15"} | ${{ reference: REF }} | ${oneOfIcu("בעוד חודשיים", "בעוד חודשיים (2)")}
+  `(
+    "formats $value for he-IL with $options as one of the known ICU variants",
+    ({ value, options, expectedVariants }) => {
+      expectOneOfIcu(
+        formatRelativeDate(value, MustTestLocales.heIL, options),
+        expectedVariants,
       );
     },
   );

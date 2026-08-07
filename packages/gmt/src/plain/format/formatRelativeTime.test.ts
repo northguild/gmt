@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import { hasFullIcu, MustTestLocales } from "../../test";
+import { expectOneOfIcu, MustTestLocales, oneOfIcu } from "../../test";
 import {
   mockTemporalNowPlainTimeISOThrow,
   mockTemporalPlainTimeFromThrow,
@@ -391,8 +391,6 @@ describe("formatRelativeTime", () => {
     ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"בעוד 30 דק׳"}
     ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"לפני 45 שניות"}
     ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"בעוד 45 שניות"}
-    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${hasFullIcu ? "לפני שעתיים" : "לפני שעתיים (2)"}
-    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${hasFullIcu ? "בעוד שעתיים" : "בעוד שעתיים (2)"}
     ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"לפני 90 שניות"}
     ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"לפני 120 דקות"}
   `(
@@ -400,6 +398,23 @@ describe("formatRelativeTime", () => {
     ({ value, options, expected }) => {
       expect(formatRelativeTime(value, MustTestLocales.heIL, options)).toBe(
         expected,
+      );
+    },
+  );
+
+  // he-IL dual-form hour pluralization — CLDR started appending the
+  // numeral in parentheses to the dual form ("שעתיים") starting ICU 78
+  // (Node 22/24); ICU 77 (Node 20) omits it.
+  it.each`
+    value         | options               | expectedVariants
+    ${"10:00:00"} | ${{ reference: REF }} | ${oneOfIcu("לפני שעתיים", "לפני שעתיים (2)")}
+    ${"14:00:00"} | ${{ reference: REF }} | ${oneOfIcu("בעוד שעתיים", "בעוד שעתיים (2)")}
+  `(
+    "formats $value for he-IL with $options as one of the known ICU variants",
+    ({ value, options, expectedVariants }) => {
+      expectOneOfIcu(
+        formatRelativeTime(value, MustTestLocales.heIL, options),
+        expectedVariants,
       );
     },
   );

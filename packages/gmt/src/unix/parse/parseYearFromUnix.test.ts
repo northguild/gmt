@@ -1,5 +1,5 @@
-import * as getSystemTimeZoneModule from "../../plain/get/getSystemTimeZone";
 import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
+import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
 import { parseYearFromUnix } from "./parseYearFromUnix";
 
 describe("parseYearFromUnix", () => {

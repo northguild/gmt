@@ -1,5 +1,5 @@
-import * as getSystemTimeZoneModule from "../../plain/get/getSystemTimeZone";
 import { MustTestLocales } from "../../test";
+import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
 import { formatUtc } from "./formatUtc";
 
 describe("formatUtc", () => {

@@ -1,6 +1,6 @@
 import { TomorrowTimeZone, YesterdayTimeZone } from "../../test";
 import { mockTemporalNowPlainDateTimeISOThrow } from "../../test/mocks";
-import * as getSystemTimeZoneModule from "./getSystemTimeZone";
+import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
 import { getWeekOfYear } from "./getWeekOfYear";
 
 describe("getWeekOfYear", () => {

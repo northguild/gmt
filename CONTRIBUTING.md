@@ -107,6 +107,38 @@ it("returns empty string when Temporal.PlainDate.from throws", () => {
 });
 ```
 
+## Testing: ICU/CLDR Wording Variance Across Node Versions
+
+`Intl` locale output can vary between Node versions and even between runners on the *same* Node version, since CLDR data ships embedded in Node's ICU build. Two helpers in `packages/gmt/src/test/icuVariants.ts` handle the known cases — use whichever matches the failure:
+
+**`oneOfIcu` / `expectOneOfIcu`** — for a golden verified to differ solely by CLDR wording between ICU 77 (Node 20) and ICU 78 (Node 22/24), e.g. pt-PT's day period ("da tarde" → "p.m."), Turkish/Korean long time zone names, Hebrew/Swedish relative-time phrasing:
+
+```ts
+import { expectOneOfIcu, oneOfIcu } from "../../test";
+
+it("formats valid time for pt-PT with 12-hour day period as one of the known ICU variants", () => {
+  expectOneOfIcu(
+    formatZonedDateTime(value, MustTestLocales.ptPT, options),
+    oneOfIcu("03/02/2024, 02:30:45 da tarde", "03/02/2024, 02:30:45 p.m."),
+  );
+});
+```
+
+Only add a variant independently confirmed to come from a real ICU version — this is for masking known wording revisions, not for tolerating an unexplained mismatch.
+
+**`expectDateTimeEqual` / `expectOneOfDateTimeIcu`** — some CI runners render the 12-hour day-period marker for ko-KR/ja-JP/zh-CN/zh-TW as ASCII `"AM"`/`"PM"` instead of the native-script word (오전/오후, 午前/午後, 上午/下午), even on the same Node version that renders the native word locally — this is host/runner-dependent, not reliably reproducible locally. Use these in place of `.toBe`/`.toEqual` (or `expectOneOfIcu`) for any golden containing one of those words:
+
+```ts
+import { expectDateTimeEqual, MustTestLocales } from "../../test";
+
+expectDateTimeEqual(
+  formatTime(value, MustTestLocales.koKR, options),
+  expected,
+);
+```
+
+**Do not** fix this by normalizing day-period words inside library source (e.g. `src/internal/normalizeDateTime.ts`) — that function's output feeds real `formatDateTime`/`formatTime`/etc. return values, so canonicalizing there silently changes production output for every caller. This is a test-comparison concern only.
+
 ## JSDoc conventions
 
 All public methods must have comprehensive JSDoc comments with `@example` tags. This ensures proper documentation generation and helps users understand usage patterns.

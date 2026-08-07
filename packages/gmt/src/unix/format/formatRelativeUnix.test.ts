@@ -1,7 +1,7 @@
 import { vi } from "vitest";
-import * as getSystemTimeZoneModule from "../../plain/get/getSystemTimeZone";
 import { MustTestLocales } from "../../test";
 import { mockTemporalNowInstantThrow } from "../../test/mocks";
+import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
 import { formatRelativeUnix } from "./formatRelativeUnix";
 
 // Base: 2024-02-29T00:00:00Z (leap day)

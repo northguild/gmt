@@ -1,7 +1,7 @@
 import { TomorrowTimeZone, YesterdayTimeZone } from "../../test";
 import { mockTemporalNowPlainDateTimeISOThrow } from "../../test/mocks";
+import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
 import { getMillisecond } from "./getMillisecond";
-import * as getSystemTimeZoneModule from "./getSystemTimeZone";
 
 describe("getMillisecond", () => {
   const systemTime = "2024-02-29T00:00:00.000Z";

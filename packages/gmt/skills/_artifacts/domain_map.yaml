@@ -37,6 +37,8 @@ skills:
     covers:
       - getNow
       - getToday
+      - getSystemTimeZone
+      - getTimeZones
       - getUnixNow
       - getUtcNow
     tasks:
@@ -44,6 +46,8 @@ skills:
       - Get current time as ISO string
       - Get current unix timestamp
       - Get current UTC time
+      - Get system timezone name
+      - Get all available IANA timezones
 
   - name: Parse Date/Time
     slug: parse-date-time

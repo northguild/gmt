@@ -1,4 +1,4 @@
-import { getSystemTimeZone } from "../plain/get/getSystemTimeZone";
+import { getSystemTimeZone } from "../zoned/get/getSystemTimeZone";
 import { isValidTimeZone } from "../zoned/validate";
 
 /**

@@ -2,7 +2,7 @@
 name: get-current
 description: >
   Get the current date, time, or datetime as ISO 8601 strings.
-  Use getNow(), getToday(), or Temporal.Now for current temporal values.
+  Use getNow(), getToday(), getSystemTimeZone(), or getTimeZones() for current temporal values.
   String output for logging; use Temporal for manipulation.
 type: core
 library: '@burglekitt/gmt'
@@ -10,6 +10,8 @@ library_version: '1.3.0'
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/get/getNow.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/get/getToday.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/get/getSystemTimeZone.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/get/getTimeZones.ts'
   - 'burglekitt/gmt:packages/gmt/src/utc/get/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/get/index.ts'
 ---
@@ -22,6 +24,7 @@ Use this skill when you need to get the current date, time, or datetime.
 
 ```ts
 import { getNow, getToday } from "@burglekitt/gmt";
+import { getSystemTimeZone, getTimeZones } from "@burglekitt/gmt/zoned";
 import { getUtcNow, getUtcToday } from "@burglekitt/gmt/utc";
 import { getUnixNow, getUnixTimeMs } from "@burglekitt/gmt/unix";
 ```
@@ -72,6 +75,23 @@ const unixNow = getUnixNow(); // 1710504645
 import { getUnixTimeMs } from "@burglekitt/gmt/unix";
 
 const unixMs = getUnixTimeMs(); // 1710504645000
+```
+
+### Get the system timezone
+
+```ts
+import { getSystemTimeZone } from "@burglekitt/gmt/zoned";
+
+const tz = getSystemTimeZone(); // "America/New_York"
+```
+
+### Get all available IANA timezones
+
+```ts
+import { getTimeZones } from "@burglekitt/gmt/zoned";
+
+const timeZones = getTimeZones(); // ["America/New_York", "Europe/London", ...]
+timeZones.length; // ~422 (varies by runtime/ICU)
 ```
 
 ### Using Temporal directly for manipulation

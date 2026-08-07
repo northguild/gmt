@@ -4,7 +4,8 @@ description: >
   Work with timezone-aware dates and times. Use IANA timezone identifiers
   for timezone-aware operations. Use getZonedNow, formatZonedDateTime,
   formatZonedRange for absolute formatting, and formatRelativeZoned for
-  DST-safe relative output across timezones.
+  DST-safe relative output across timezones. Use getSystemTimeZone and
+  getTimeZones for system timezone discovery and IANA timezone lists.
 type: core
 library: '@burglekitt/gmt'
 library_version: '1.3.0'
@@ -22,11 +23,29 @@ Use this skill when you need timezone-aware date/time operations.
 
 ```ts
 import { getZonedNow, getZonedToday } from "@burglekitt/gmt/zoned";
+import { getSystemTimeZone, getTimeZones } from "@burglekitt/gmt/zoned";
 import { formatZonedDateTime } from "@burglekitt/gmt/zoned";
 import { isValidTimeZone } from "@burglekitt/gmt/zoned";
 ```
 
 ## Core Patterns
+
+### Get the system timezone
+
+```ts
+import { getSystemTimeZone } from "@burglekitt/gmt/zoned";
+
+const tz = getSystemTimeZone(); // "America/New_York"
+```
+
+### Get all available IANA timezones
+
+```ts
+import { getTimeZones } from "@burglekitt/gmt/zoned";
+
+const timeZones = getTimeZones(); // ["America/New_York", "Europe/London", ...]
+timeZones.length; // ~422 (varies by runtime/ICU)
+```
 
 ### Get current time in timezone
 

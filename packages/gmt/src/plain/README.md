@@ -57,7 +57,7 @@ Locale-aware formatting:
 
 Current values:
 
-- `getNow`, `getNowUnit`, `getSystemTimeZone`, `getToday`
+- `getNow`, `getNowUnit`, `getToday`
 - `getYear`, `getMonth`, `getDay`, `getDayOfWeek`
 - `getHour`, `getMinute`, `getSecond`
 - `getMillisecond`, `getMicrosecond`, `getNanosecond`
