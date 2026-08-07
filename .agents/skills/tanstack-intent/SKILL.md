@@ -21,6 +21,17 @@ The goal: agents that consume `@burglekitt/gmt`'s skills get an accurate, curren
 
 ## Steps
 
+### 0. Check the `@tanstack/intent` tool itself isn't stale
+
+The `intent` CLI (`devDependency` in `package.json` and every `packages/*/package.json`) is a separate concern from the *content* drift this skill otherwise handles — it can fall behind npm just like any other dependency, and its CLI/frontmatter contract does change between releases (e.g. the `type`/`library`/`library_version` frontmatter fields moved under a nested `metadata:` key at some point after 0.0.x). Check before doing anything else:
+
+```bash
+npm view @tanstack/intent version
+grep '"@tanstack/intent"' package.json packages/*/package.json
+```
+
+If the installed `devDependency` version is behind latest, use context7/`find-docs` against `/tanstack/intent` to confirm what changed (CLI flags, frontmatter schema, new commands) before bumping — don't assume it's purely additive. Bump the version string in all four `package.json` files that declare it (`package.json`, `packages/gmt/package.json`, `packages/gmt-eslint/package.json`, `packages/gmt-biome/package.json`, `packages/gmt-oxlint/package.json`), run `pnpm install`, then run `pnpm exec intent validate packages/gmt/skills` — a schema-migration error here (like the `metadata:` nesting one) is expected and has a one-shot fix: `pnpm exec intent validate packages/gmt/skills --fix`.
+
 ### 1. Audit what changed
 
 Run these in parallel to ground the audit in real state, not memory:
@@ -104,7 +115,7 @@ Then write the body, mirroring the structure of similar existing skills:
 
 The skill tree is the canonical registry that downstream tooling reads.
 
-1. Bump `library.version` to the next published version.
+1. Bump `library.version` to the next published version (or use the `--set-version` shortcut in step 8, which bumps `metadata.library_version` on every SKILL.md at once — you still need to bump this file's `library.version`/`generated_at` by hand, `--set-version` only touches SKILL.md frontmatter).
 2. Bump `generated_at` to today's date (format `YYYY-MM-DD`).
 3. For each updated skill, refresh its `description` to mention any new method names or scope changes.
 4. For each new skill, add a top-level entry with:
@@ -149,16 +160,29 @@ The validator checks:
 - `type: framework` skills include a `requires:` array.
 - Each SKILL.md ≤ 500 lines.
 - `_artifacts/` files (`domain_map.yaml`, `skill_spec.md`, `skill_tree.yaml`) parse and are non-empty.
+- Client-specific scalar fields (`type`, `library`, `library_version`) live under a nested `metadata:` key, not top-level. (This nesting requirement is new as of Intent ≥0.1 — older skill files written against Intent 0.0.x had these fields top-level and will fail validation until migrated.)
 
-Fix any reported issues before stopping.
+If validation reports the `metadata:` nesting error, auto-fix it instead of hand-editing every file:
+
+```bash
+pnpm exec intent validate packages/gmt/skills --fix
+```
+
+To bump every skill's `metadata.library_version` in one pass instead of hand-editing each SKILL.md (step 3's version bump):
+
+```bash
+pnpm exec intent validate packages/gmt/skills --set-version <next-version>
+```
+
+Fix any remaining reported issues before stopping.
 
 ### 9. Sanity-check staleness
 
 ```bash
-pnpm exec intent stale 2>&1 | head -40
+pnpm exec intent stale packages/gmt/skills
 ```
 
-This compares `library_version` in skill frontmatter against installed package version. It should report no version drift after step 3.
+This compares `library_version` in skill frontmatter against installed package version. It should report no version drift after step 3 (or the `--set-version` shortcut above).
 
 ### 10. Run the test suite
 

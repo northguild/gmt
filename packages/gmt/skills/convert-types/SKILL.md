@@ -1,15 +1,17 @@
 ---
 name: convert-types
 description: >
-  Convert between temporal types, unix time, and UTC representations.
-  Use convertPlainToZoned, convertZonedToPlain, convertUtcToUnix.
-type: core
-library: '@burglekitt/gmt'
-library_version: '1.3.0'
+  Convert between temporal types, unix time, and UTC representations. Use
+  convertPlainDateTimeToZoned (with optional disambiguation for DST gaps/
+  overlaps), convertZonedToPlainDateTime, convertUtcToUnix.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/zoned/convert/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/convert/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/utc/convert/index.ts'
+metadata:
+  type: core
+  library: '@burglekitt/gmt'
+  library_version: '1.4.0'
 ---
 
 # Convert Temporal Types
@@ -19,7 +21,7 @@ Use this skill when you need to convert between different temporal representatio
 ## Setup
 
 ```ts
-import { convertPlainToZoned, convertZonedToPlain } from "@burglekitt/gmt/zoned";
+import { convertPlainDateTimeToZoned, convertZonedToPlainDateTime } from "@burglekitt/gmt/zoned";
 import { convertUtcToUnix, convertUnixToUtc } from "@burglekitt/gmt/unix";
 import { convertUtcToZoned, convertZonedToUtc } from "@burglekitt/gmt/utc";
 ```
@@ -29,10 +31,19 @@ import { convertUtcToZoned, convertZonedToUtc } from "@burglekitt/gmt/utc";
 ### Convert plain to zoned datetime
 
 ```ts
-import { convertPlainToZoned } from "@burglekitt/gmt/zoned";
+import { convertPlainDateTimeToZoned } from "@burglekitt/gmt/zoned";
 
-const zoned = convertPlainToZoned("2024-03-15T14:30:45", "America/New_York");
+const zoned = convertPlainDateTimeToZoned("2024-03-15T14:30:45", "America/New_York");
 // "2024-03-15T14:30:45[America/New_York]"
+```
+
+Twice a year, DST creates local times that don't exist (spring-forward gap) or happen twice (fall-back overlap). Pass `disambiguation` (`"compatible"` (default) | `"earlier"` | `"later"` | `"reject"`) to control resolution instead of silently guessing — see the [Zoned Date Operations skill](../zoned-date-ops/SKILL.md) for the full gap/overlap walkthrough:
+
+```ts
+convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York", {
+  disambiguation: "reject",
+});
+// "" — 2024-03-10T02:30:00 doesn't exist in America/New_York (spring-forward gap)
 ```
 
 ### Convert zoned to plain datetime
@@ -148,7 +159,7 @@ Source: packages/gmt/src/unix/convert/convertUnixToUtc.ts — expects seconds
 Wrong:
 
 ```ts
-const zoned = convertPlainToZoned("invalid", "America/New_York");
+const zoned = convertPlainDateTimeToZoned("invalid", "America/New_York");
 // Assume zoned is always valid
 process(zoned);
 ```
@@ -156,12 +167,12 @@ process(zoned);
 Correct:
 
 ```ts
-import { convertPlainToZoned, isValidTimeZone } from "@burglekitt/gmt/zoned";
+import { convertPlainDateTimeToZoned, isValidTimeZone } from "@burglekitt/gmt/zoned";
 
 if (!isValidTimeZone("America/New_York")) {
   throw new Error("Invalid timezone");
 }
-const zoned = convertPlainToZoned("2024-03-15T14:30:45", "America/New_York");
+const zoned = convertPlainDateTimeToZoned("2024-03-15T14:30:45", "America/New_York");
 if (!zoned) {
   throw new Error("Conversion failed");
 }

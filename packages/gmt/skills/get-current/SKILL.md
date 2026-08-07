@@ -1,12 +1,9 @@
 ---
 name: get-current
 description: >
-  Get the current date, time, or datetime as ISO 8601 strings.
-  Use getNow(), getToday(), getSystemTimeZone(), or getTimeZones() for current temporal values.
-  String output for logging; use Temporal for manipulation.
-type: core
-library: '@burglekitt/gmt'
-library_version: '1.3.0'
+  Get the current date, time, or datetime as ISO 8601 strings. Use getNow(),
+  getToday(), getSystemTimeZone(), or getTimeZones() for current temporal
+  values. String output for logging; use Temporal for manipulation.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/get/getNow.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/get/getToday.ts'
@@ -14,6 +11,10 @@ sources:
   - 'burglekitt/gmt:packages/gmt/src/zoned/get/getTimeZones.ts'
   - 'burglekitt/gmt:packages/gmt/src/utc/get/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/get/index.ts'
+metadata:
+  type: core
+  library: '@burglekitt/gmt'
+  library_version: '1.4.0'
 ---
 
 # Get Current Date/Time

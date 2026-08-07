@@ -1,9 +1,11 @@
 ---
 name: issue-creation
 description: >
-  Create feature requests for missing @burglekitt/gmt functionality
-  with proper context, examples, and details that help maintainers
-  understand and implement the requested feature.
+  Create feature requests for missing @burglekitt/gmt functionality with proper
+  context, examples, and details that help maintainers understand and implement
+  the requested feature.
+metadata:
+  library_version: 1.4.0
 ---
 
 # Issue Creation

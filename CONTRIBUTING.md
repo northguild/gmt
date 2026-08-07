@@ -81,6 +81,47 @@ For copyable commands and a quick reference, see [PUBLISHING.md](./PUBLISHING.md
 - Ensure lint/typecheck pass for affected projects.
 - Keep APIs string-in/string-out and Temporal-only.
 - Add or update tests for behavior changes.
+- If you added, renamed, removed, or changed the options of an exported function in `packages/gmt/src/`, update the TanStack Intent agent skills in the same PR — see "Keeping agent skills current" below.
+
+## Keeping agent skills current (TanStack Intent)
+
+`packages/gmt/skills/` contains [TanStack Intent](https://github.com/tanstack/intent) skill files that teach coding agents how to use `@burglekitt/gmt`'s API. They are published as part of the npm package (see `files` in `packages/gmt/package.json`) and go stale silently — nothing fails CI if a skill still references a renamed or removed function, so this is a manual discipline, not an automated gate.
+
+Two independent things can go stale, and both matter:
+
+1. **Skill content** — a skill file's code examples, `covers:` lists, or `library_version` no longer match the actual exports in `packages/gmt/src/`. Fix this whenever you change the public API surface, using the `/tanstack-intent` skill (or `.agents/skills/tanstack-intent/SKILL.md` directly).
+2. **The `@tanstack/intent` tool itself** — the `devDependency` version (declared in `package.json` and every `packages/*/package.json`) can fall behind what's published on npm, and the CLI's frontmatter contract has changed between releases (for example, the `type`/`library`/`library_version` frontmatter fields moved under a nested `metadata:` key in a later 0.x release). Check periodically, independent of any specific feature PR:
+
+```bash
+npm view @tanstack/intent version
+grep '"@tanstack/intent"' package.json packages/*/package.json
+```
+
+If behind, consult current docs (via context7/`find-docs` against `/tanstack/intent`) before bumping, since the CLI's flags and frontmatter schema are not guaranteed stable across minor versions. After bumping the version string in all four `package.json` files and running `pnpm install`, run:
+
+```bash
+pnpm exec intent validate packages/gmt/skills
+```
+
+A schema-migration failure here has a one-shot fix built into the CLI:
+
+```bash
+pnpm exec intent validate packages/gmt/skills --fix
+```
+
+And to bump every skill's `library_version` to match a new package release in one pass instead of hand-editing each `SKILL.md`:
+
+```bash
+pnpm exec intent validate packages/gmt/skills --set-version <next-version>
+```
+
+Always finish with a staleness check:
+
+```bash
+pnpm exec intent stale packages/gmt/skills
+```
+
+See `.agents/skills/tanstack-intent/SKILL.md` for the full step-by-step (deciding new skill vs. extend existing, updating `_artifacts/domain_map.yaml` and `_artifacts/skill_tree.yaml`, etc.), and `context/roadmap.md`'s "Instructions for the agent picking up a story" for when this is required as part of a roadmap story.
 
 ## Testing: Pre-built Mock Functions for Error Path Testing
 

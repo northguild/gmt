@@ -1,14 +1,14 @@
 ---
 name: parse-date-time
 description: >
-  Parse individual components (year, month, day, hour, etc.) from
-  date/time strings. Use parse* functions for extraction.
-  Returns null on invalid input.
-type: core
-library: '@burglekitt/gmt'
-library_version: '1.3.0'
+  Parse individual components (year, month, day, hour, etc.) from date/time
+  strings. Use parse* functions for extraction. Returns null on invalid input.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/parse/index.ts'
+metadata:
+  type: core
+  library: '@burglekitt/gmt'
+  library_version: '1.4.0'
 ---
 
 # Parse Date/Time Components

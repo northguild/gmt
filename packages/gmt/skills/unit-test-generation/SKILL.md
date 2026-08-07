@@ -4,6 +4,8 @@ description: >
   Write or update gmt unit tests with deterministic Temporal-safe patterns,
   invalid-input fallback assertions, locale-matrix coverage, and DST/timezone
   boundary cases required by project policy.
+metadata:
+  library_version: 1.4.0
 ---
 
 # Unit Test Generation

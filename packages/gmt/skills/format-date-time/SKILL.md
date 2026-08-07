@@ -5,11 +5,12 @@ description: >
   options. Use formatDate, formatTime, formatDateTime for absolute formatting;
   use formatRelativeDate, formatRelativeTime, formatRelativeDateTime for
   human-friendly relative output ("yesterday", "in 2 hours").
-type: core
-library: '@burglekitt/gmt'
-library_version: '1.3.0'
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/format/index.ts'
+metadata:
+  type: core
+  library: '@burglekitt/gmt'
+  library_version: '1.4.0'
 ---
 
 # Format Date/Time

@@ -43,7 +43,7 @@
     "@biomejs/biome": "^2.4.11",
     "@changesets/cli": "^2.30.0",
     "@nx/js": "^22.5.4",
-    "@tanstack/intent": "^0.0.29",
+    "@tanstack/intent": "^0.3.6",
     "@types/node": "^22.13.10",
     "nx": "^22.5.4",
     "tsc-alias": "^1.8.16",

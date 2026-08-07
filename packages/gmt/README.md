@@ -109,6 +109,20 @@ formatZonedDateTime("2024-03-17T14:30:45+00:00[UTC]", "en-US", {
 // locale-dependent non-empty formatted string
 ```
 
+Twice a year, DST creates local times that don't exist (spring-forward gap) or happen twice (fall-back overlap). Functions that attach a timezone to a plain/local value accept an optional `disambiguation` (`"compatible"` (default) | `"earlier"` | `"later"` | `"reject"`) to control how that's resolved instead of silently guessing:
+
+```typescript
+import { convertPlainDateTimeToZoned } from "@burglekitt/gmt";
+
+// 2024-03-10T02:30:00 doesn't exist in America/New_York (clocks jump 2am -> 3am).
+convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York", {
+  disambiguation: "reject",
+});
+// "" — no such local time exists
+```
+
+See [`docs/dst-disambiguation.md`](../../docs/dst-disambiguation.md) for the full explanation.
+
 ### Formatting
 
 ```typescript

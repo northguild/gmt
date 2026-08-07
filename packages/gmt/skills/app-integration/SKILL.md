@@ -1,9 +1,11 @@
 ---
 name: app-integration
 description: >
-  Guidance for integrating `@burglekitt/gmt` with application frameworks
-  and libraries (routers, query caches, table sorting, state management).
-  Emphasizes strict I/O, canonicalization, and cache-key hygiene.
+  Guidance for integrating `@burglekitt/gmt` with application frameworks and
+  libraries (routers, query caches, table sorting, state management). Emphasizes
+  strict I/O, canonicalization, and cache-key hygiene.
+metadata:
+  library_version: 1.4.0
 ---
 
 # App Integration

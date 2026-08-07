@@ -9,65 +9,9 @@ Follow these guidelines when reviewing code for GMT Temporal projects.
 
 ## Review Checklist
 
-### Core Principles (Critical)
+**The canonical, up-to-date checklist is [context/code-review-checklist.md](../../../context/code-review-checklist.md) — read and apply it in full for every review.** It covers API Contract, Architecture, Tests, Documentation (including README and TanStack Intent skill freshness), Long-Term Impact flags, and reviewer Tone. Do not rely on a separate copy here; that file is the single source of truth so it doesn't drift out of sync with this skill.
 
-1. **String-Only Inputs/Outputs**
-   - All functions MUST accept/return ISO 8601 strings (e.g., `"2024-03-10"`, `"2024-03-10T12:00:00+01:00[Europe/Paris]"`)
-   - NO `Date` objects, `new Date()`, or `Date.now()` anywhere in the codebase
-   - Zod schemas must validate all public API inputs
-
-2. **Temporal-Only**
-   - Use ONLY `@js-temporal/polyfill` - no `Date` imports or usage
-   - ESLint/Biome rules block `Date` imports
-
-3. **Plain/Zoned Separation**
-   - Never mix `PlainDateTime` and `ZonedDateTime` in the same function/module
-   - Maintain strict separation between `plain/` and `zoned/` directories
-
-### Identifying Problems
-
-- **Temporal errors**: Missing try-catch around `.from()`, `.add()`, `.subtract()`, `.since()`, `.until()` - these throw `RangeError` on invalid input
-- **Error handling**: Functions returning `string` return `""` on invalid input, `number` returns `null`, `boolean` returns `false`
-- **Timezone bugs**: Mixing plain and zoned types, incorrect timezone handling
-- **Test gaps**: Missing locale matrix coverage, missing error path tests, missing edge cases
-
-### Design Assessment
-
-- Plain/zoned separation maintained in new code
-- Functions follow the string-in, string-out pattern
-- No direct `Date` usage anywhere
-- Error handling follows type-safe sentinel pattern
-
-### Test Coverage
-
-Every PR must have:
-
-- Tests using `it.each`` (template literal syntax) for iterative cases
-- Mock functions from `@gmt/test/mocks` for error path testing (e.g., `mockTemporalPlainDateFromThrow()`)
-- Full locale matrix coverage for locale-aware APIs (en-US, en-GB, de-DE, fr-FR, es-ES, it-IT, pt-PT, sv-SE, is-IS, zh-CN, zh-TW, ja-JP, ko-KR, ar-SA, he-IL, ru-RU, tr-TR)
-- Edge case tests (leap years, DST transitions, invalid inputs)
-
-### Long-Term Impact
-
-Flag for senior review when changes involve:
-- New Temporal API adoption patterns
-- Cross-plain/zoned type mixing
-- Public API signature changes
-- New locale support requirements
-
-## Feedback Guidelines
-
-### Tone
-
-- Be polite and empathetic
-- Provide actionable suggestions, not vague criticism
-- Phrase as questions when uncertain: "Have you considered...?"
-
-### Approval
-
-- Approve when only minor issues remain
-- Don't block PRs for stylistic preferences
-- Goal is risk reduction, not perfect code
+The rest of this skill supplements that checklist with worked examples of common violations — useful for recognizing patterns quickly, not a substitute for the checklist itself. Reviewer tone and approval guidance also live in the checklist's Tone section — don't duplicate it here.
 
 ## Common Patterns to Flag
 
@@ -162,4 +106,5 @@ it("returns empty string when Temporal.PlainDate.from throws", () => {
 
 ## References
 
-- [GMT Temporal Agent Rules](../AGENTS.md)
+- [Code Review Checklist](../../../context/code-review-checklist.md) — the canonical checklist this skill defers to
+- [GMT Temporal Agent Rules](../../../AGENTS.md)

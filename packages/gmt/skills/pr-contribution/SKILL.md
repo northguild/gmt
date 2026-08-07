@@ -1,8 +1,10 @@
 ---
 name: pr-contribution
 description: >
-  Contribute improvements to @burglekitt/gmt via pull requests,
-  including new methods, bug fixes, and documentation updates.
+  Contribute improvements to @burglekitt/gmt via pull requests, including new
+  methods, bug fixes, and documentation updates.
+metadata:
+  library_version: 1.4.0
 ---
 
 # PR Contribution

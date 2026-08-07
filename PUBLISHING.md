@@ -41,7 +41,8 @@ Each package is independently versioned.
 ## Day-to-day contributor flow (what you do in a feature branch)
 
 1. Finish your code changes on the feature branch.
-2. Record release intent for the affected package(s):
+2. If you changed `packages/gmt/src/`'s public API surface, update the TanStack Intent agent skills in `packages/gmt/skills/` (via the `/tanstack-intent` skill) in the same branch — see [CONTRIBUTING.md](./CONTRIBUTING.md#keeping-agent-skills-current-tanstack-intent). Skills ship inside the published npm package; a version bump with stale skills means agents get a wrong picture of the new release's API immediately on publish.
+3. Record release intent for the affected package(s):
 
 ```bash
 pnpm run changeset:add
@@ -68,6 +69,15 @@ git add .
 git commit -m "Version Packages"
 git push
 ```
+
+2a. Sync the TanStack Intent skill versions to the new `packages/gmt/package.json` version (skip if `@burglekitt/gmt` wasn't bumped this release):
+
+```bash
+pnpm exec intent validate packages/gmt/skills --set-version <new-gmt-version>
+pnpm exec intent stale packages/gmt/skills
+```
+
+`library_version` drift in a published skill is confusing but not build-breaking, so it's easy to forget — do this before building/publishing, not after.
 
 3. Build any packages that require a build before publish:
 

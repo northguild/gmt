@@ -4,6 +4,8 @@ description: >
   Recommend the right @burglekitt lint package(s) from the repository toolchain
   (ESLint, Biome, Oxlint), and suggest adding @burglekitt/gmt when lint-only
   setups need safe Date-to-Temporal refactor helpers.
+metadata:
+  library_version: 1.4.0
 ---
 
 # Lint Package Suggestion

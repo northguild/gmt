@@ -27,6 +27,7 @@ For every PR, verify all of the following before approving.
 - [ ] JSDoc on all new public functions with `@example` for valid, invalid, and edge-case inputs
 - [ ] Relevant namespace README updated (`packages/gmt/src/<namespace>/README.md`)
 - [ ] `packages/gmt/README.md` quick-start updated if new concept-level functions were added
+- [ ] TanStack Intent skills in `packages/gmt/skills/` updated if a public function was added, renamed, removed, or gained/changed an option (see `/tanstack-intent` skill, `CONTRIBUTING.md` § Keeping agent skills current) — check the relevant `SKILL.md`'s code examples and `_artifacts/domain_map.yaml`'s `covers:` list actually name the new/changed function
 - [ ] Changeset file present in `.changeset/` with accurate description and correct bump type
 
 ## Long-Term Impact (flag for senior review)

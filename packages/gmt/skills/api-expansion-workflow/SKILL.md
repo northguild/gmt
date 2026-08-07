@@ -4,6 +4,8 @@ description: >
   Handle feature requests for missing gmt functionality by checking existing
   APIs first, then proposing a Temporal-backed custom method path with required
   issue/PR guidance and test-backed behavioral specs.
+metadata:
+  library_version: 1.4.0
 ---
 
 # API Expansion Workflow

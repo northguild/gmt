@@ -119,4 +119,52 @@ describe("convertPlainDateTimeToZoned", () => {
       expect(parseTimeZoneFromZoned(value)).toBe(timeZone);
     });
   }
+
+  // disambiguation: spring-forward gap (nonexistent local time)
+  it.each`
+    value                    | timeZone              | disambiguation  | expected
+    ${"2024-03-10T02:30:00"} | ${"America/New_York"} | ${undefined}    | ${"2024-03-10T03:30:00.000-04:00[America/New_York]"}
+    ${"2024-03-10T02:30:00"} | ${"America/New_York"} | ${"compatible"} | ${"2024-03-10T03:30:00.000-04:00[America/New_York]"}
+    ${"2024-03-10T02:30:00"} | ${"America/New_York"} | ${"earlier"}    | ${"2024-03-10T01:30:00.000-05:00[America/New_York]"}
+    ${"2024-03-10T02:30:00"} | ${"America/New_York"} | ${"later"}      | ${"2024-03-10T03:30:00.000-04:00[America/New_York]"}
+    ${"2024-03-10T02:30:00"} | ${"America/New_York"} | ${"reject"}     | ${""}
+    ${"2024-03-31T02:30:00"} | ${"Europe/Berlin"}    | ${undefined}    | ${"2024-03-31T03:30:00.000+02:00[Europe/Berlin]"}
+    ${"2024-03-31T02:30:00"} | ${"Europe/Berlin"}    | ${"compatible"} | ${"2024-03-31T03:30:00.000+02:00[Europe/Berlin]"}
+    ${"2024-03-31T02:30:00"} | ${"Europe/Berlin"}    | ${"earlier"}    | ${"2024-03-31T01:30:00.000+01:00[Europe/Berlin]"}
+    ${"2024-03-31T02:30:00"} | ${"Europe/Berlin"}    | ${"later"}      | ${"2024-03-31T03:30:00.000+02:00[Europe/Berlin]"}
+    ${"2024-03-31T02:30:00"} | ${"Europe/Berlin"}    | ${"reject"}     | ${""}
+  `(
+    "resolves spring-forward gap $value in $timeZone with disambiguation $disambiguation to $expected",
+    ({ value, timeZone, disambiguation, expected }) => {
+      const optionsArg =
+        disambiguation === undefined ? undefined : { disambiguation };
+      expect(convertPlainDateTimeToZoned(value, timeZone, optionsArg)).toBe(
+        expected,
+      );
+    },
+  );
+
+  // disambiguation: fall-back overlap (ambiguous local time)
+  it.each`
+    value                    | timeZone              | disambiguation  | expected
+    ${"2024-11-03T01:30:00"} | ${"America/New_York"} | ${undefined}    | ${"2024-11-03T01:30:00.000-04:00[America/New_York]"}
+    ${"2024-11-03T01:30:00"} | ${"America/New_York"} | ${"compatible"} | ${"2024-11-03T01:30:00.000-04:00[America/New_York]"}
+    ${"2024-11-03T01:30:00"} | ${"America/New_York"} | ${"earlier"}    | ${"2024-11-03T01:30:00.000-04:00[America/New_York]"}
+    ${"2024-11-03T01:30:00"} | ${"America/New_York"} | ${"later"}      | ${"2024-11-03T01:30:00.000-05:00[America/New_York]"}
+    ${"2024-11-03T01:30:00"} | ${"America/New_York"} | ${"reject"}     | ${""}
+    ${"2024-10-27T02:30:00"} | ${"Europe/Berlin"}    | ${undefined}    | ${"2024-10-27T02:30:00.000+02:00[Europe/Berlin]"}
+    ${"2024-10-27T02:30:00"} | ${"Europe/Berlin"}    | ${"compatible"} | ${"2024-10-27T02:30:00.000+02:00[Europe/Berlin]"}
+    ${"2024-10-27T02:30:00"} | ${"Europe/Berlin"}    | ${"earlier"}    | ${"2024-10-27T02:30:00.000+02:00[Europe/Berlin]"}
+    ${"2024-10-27T02:30:00"} | ${"Europe/Berlin"}    | ${"later"}      | ${"2024-10-27T02:30:00.000+01:00[Europe/Berlin]"}
+    ${"2024-10-27T02:30:00"} | ${"Europe/Berlin"}    | ${"reject"}     | ${""}
+  `(
+    "resolves fall-back overlap $value in $timeZone with disambiguation $disambiguation to $expected",
+    ({ value, timeZone, disambiguation, expected }) => {
+      const optionsArg =
+        disambiguation === undefined ? undefined : { disambiguation };
+      expect(convertPlainDateTimeToZoned(value, timeZone, optionsArg)).toBe(
+        expected,
+      );
+    },
+  );
 });

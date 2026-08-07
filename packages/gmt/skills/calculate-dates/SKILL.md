@@ -1,13 +1,14 @@
 ---
 name: calculate-dates
 description: >
-  Add or subtract time from dates. Use addDays, addMonths, subtractTime
-  for date arithmetic. Use diffDate for calculating differences.
-type: core
-library: '@burglekitt/gmt'
-library_version: '1.3.0'
+  Add or subtract time from dates. Use addDays, addMonths, subtractTime for date
+  arithmetic. Use diffDate for calculating differences.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/calculate/index.ts'
+metadata:
+  type: core
+  library: '@burglekitt/gmt'
+  library_version: '1.4.0'
 ---
 
 # Calculate Dates

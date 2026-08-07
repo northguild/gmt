@@ -1,15 +1,12 @@
 ---
 name: format-relative-time
 description: >
-  Produce human-friendly relative time strings ("yesterday", "in 2 hours",
-  "3 days ago") for any gmt value type. Use formatRelativeDate,
-  formatRelativeTime, formatRelativeDateTime for plain values;
-  formatRelativeZoned for IANA zoned values; formatRelativeUnix for epoch
-  ms/seconds; formatRelativeUtc for UTC ISO strings. All accept a reference
-  anchor and Intl.RelativeTimeFormat options (numeric, style).
-type: core
-library: '@burglekitt/gmt'
-library_version: '1.3.0'
+  Produce human-friendly relative time strings ("yesterday", "in 2 hours", "3
+  days ago") for any gmt value type. Use formatRelativeDate, formatRelativeTime,
+  formatRelativeDateTime for plain values; formatRelativeZoned for IANA zoned
+  values; formatRelativeUnix for epoch ms/seconds; formatRelativeUtc for UTC ISO
+  strings. All accept a reference anchor and Intl.RelativeTimeFormat options
+  (numeric, style).
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/format/formatRelativeDate.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/format/formatRelativeTime.ts'
@@ -17,6 +14,10 @@ sources:
   - 'burglekitt/gmt:packages/gmt/src/zoned/format/formatRelativeZoned.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/format/formatRelativeUnix.ts'
   - 'burglekitt/gmt:packages/gmt/src/utc/format/formatRelativeUtc.ts'
+metadata:
+  type: core
+  library: '@burglekitt/gmt'
+  library_version: '1.4.0'
 ---
 
 # Format Relative Time

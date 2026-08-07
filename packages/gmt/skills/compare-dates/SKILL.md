@@ -3,11 +3,12 @@ name: compare-dates
 description: >
   Compare date values for ordering. Use isAfterDate, isBeforeDate, areDatesEqual
   for comparisons. Returns false on invalid input.
-type: core
-library: '@burglekitt/gmt'
-library_version: '1.3.0'
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/compare/index.ts'
+metadata:
+  type: core
+  library: '@burglekitt/gmt'
+  library_version: '1.4.0'
 ---
 
 # Compare Dates

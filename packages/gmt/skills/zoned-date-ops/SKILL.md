@@ -1,18 +1,23 @@
 ---
 name: zoned-date-ops
 description: >
-  Work with timezone-aware dates and times. Use IANA timezone identifiers
-  for timezone-aware operations. Use getZonedNow, formatZonedDateTime,
-  formatZonedRange for absolute formatting, and formatRelativeZoned for
-  DST-safe relative output across timezones. Use getSystemTimeZone and
-  getTimeZones for system timezone discovery and IANA timezone lists.
-type: core
-library: '@burglekitt/gmt'
-library_version: '1.3.0'
+  Work with timezone-aware dates and times. Use IANA timezone identifiers for
+  timezone-aware operations. Use getZonedNow, formatZonedDateTime,
+  formatZonedRange for absolute formatting, and formatRelativeZoned for DST-safe
+  relative output across timezones. Use getSystemTimeZone and getTimeZones for
+  system timezone discovery and IANA timezone lists. Use
+  convertPlainDateTimeToZoned to attach a timezone to a plain datetime, with an
+  optional disambiguation option ("compatible" | "earlier" | "later" | "reject")
+  to control DST gap/overlap resolution.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/zoned/get/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/format/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/validate/index.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/convert/index.ts'
+metadata:
+  type: core
+  library: '@burglekitt/gmt'
+  library_version: '1.4.0'
 ---
 
 # Zoned Date Operations
@@ -141,6 +146,51 @@ getMonth(zoned); // 3
 getDay(zoned); // 15
 ```
 
+### Attach a timezone to a plain datetime (with DST disambiguation)
+
+```ts
+import { convertPlainDateTimeToZoned } from "@burglekitt/gmt/zoned";
+
+convertPlainDateTimeToZoned("2024-03-15T14:30:45", "America/New_York");
+// "2024-03-15T14:30:45.000-04:00[America/New_York]"
+```
+
+Twice a year, the local time you pass in doesn't map 1:1 to a real instant:
+
+- **Spring-forward gap**: clocks skip an hour, so a wall-clock time never happens (e.g. `2024-03-10T02:30:00` doesn't exist in `America/New_York`).
+- **Fall-back overlap**: clocks repeat an hour, so a wall-clock time happens twice (e.g. `2024-11-03T01:30:00` occurs twice in `America/New_York`).
+
+Pass `disambiguation` to control how that's resolved instead of silently guessing:
+
+```ts
+import { convertPlainDateTimeToZoned } from "@burglekitt/gmt/zoned";
+
+// Gap: 2024-03-10T02:30:00 doesn't exist in America/New_York.
+convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York");
+// "2024-03-10T03:30:00.000-04:00[America/New_York]" (default "compatible" == "later" for gaps)
+
+convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York", {
+  disambiguation: "earlier",
+});
+// "2024-03-10T01:30:00.000-05:00[America/New_York]"
+
+convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York", {
+  disambiguation: "reject",
+});
+// "" — no such local time exists
+
+// Overlap: 2024-11-03T01:30:00 happens twice in America/New_York.
+convertPlainDateTimeToZoned("2024-11-03T01:30:00", "America/New_York");
+// "2024-11-03T01:30:00.000-04:00[America/New_York]" (default "compatible" == "earlier" for overlaps)
+
+convertPlainDateTimeToZoned("2024-11-03T01:30:00", "America/New_York", {
+  disambiguation: "later",
+});
+// "2024-11-03T01:30:00.000-05:00[America/New_York]"
+```
+
+`disambiguation` accepts `"compatible"` (default), `"earlier"`, `"later"`, or `"reject"`. See [DST Disambiguation](../../../../docs/dst-disambiguation.md) for the full explanation of gaps vs. overlaps.
+
 ## Timezone List
 
 Common IANA timezone identifiers:
@@ -224,6 +274,29 @@ const time = getZonedNow("America/New_York");
 ```
 
 Source: Temporal.ZonedDateTime — handles DST transitions
+
+### MEDIUM Ignoring DST gap/overlap ambiguity when converting a plain datetime
+
+Wrong:
+
+```ts
+// Silently accepts whatever Temporal's default ("compatible") resolves to,
+// even for a local time that's ambiguous (fall-back) or doesn't exist (spring-forward).
+const zoned = convertPlainDateTimeToZoned("2024-11-03T01:30:00", "America/New_York");
+```
+
+Correct:
+
+```ts
+import { convertPlainDateTimeToZoned } from "@burglekitt/gmt/zoned";
+
+// Be explicit about which occurrence you mean, or reject ambiguous input outright.
+const zoned = convertPlainDateTimeToZoned("2024-11-03T01:30:00", "America/New_York", {
+  disambiguation: "reject", // "" if this local time is ambiguous or nonexistent
+});
+```
+
+Source: packages/gmt/src/zoned/convert/convertPlainDateTimeToZoned.ts — `disambiguation` option
 
 ## References
 

@@ -4,6 +4,8 @@ description: >
   Implement or extend a gmt API in packages/gmt/src by reusing existing gmt
   helpers first, then Temporal only when needed, while preserving string-first
   I/O, plain/zoned separation, and fallback-return rules.
+metadata:
+  library_version: 1.4.0
 ---
 
 # New Method Implementation

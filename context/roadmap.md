@@ -27,6 +27,7 @@ This roadmap is intentionally a skeleton, not a spec. Before implementing any st
 4. **Expand the one-line story below into a full spec** before writing code: exact function signature(s), which Temporal API(s) it wraps, the sentinel return value, the locale matrix if locale-aware, and the specific edge cases the tests must cover (invalid input, DST boundaries, leap years/seconds, etc. as applicable).
 5. **One story = one PR = one changeset.** Do not bundle multiple stories into one PR even if they touch the same namespace, unless the story list explicitly groups them (e.g. C1-C3 are sequenced together but are still separate, reviewable commits).
 6. **Update `packages/gmt/README.md`** (via `/update-readme`) and add a changeset (via `/changelog`) as part of the same PR, not a follow-up.
+7. **Update the TanStack Intent agent skills** (via `/tanstack-intent`, or manually following `.agents/skills/tanstack-intent/SKILL.md`) as part of the same PR whenever the story adds/renames/removes an exported function, adds an option to an existing one, or introduces a new domain concept. Skills that fall behind the actual API surface actively mislead agents consuming `@burglekitt/gmt` — this is not optional cleanup. The skill's own step 0 also checks whether the `@tanstack/intent` **tool** itself (the devDependency, not just the skill content) has drifted behind npm — run it periodically even outside of a specific story, since tool drift and content drift are independent failure modes.
 
 ---
 
@@ -56,9 +57,13 @@ Range math over two ISO datetime/zoned strings. Each function takes `{ start, en
 
 Extend existing zoned-producing functions with an **optional** `disambiguation?: 'compatible' | 'earlier' | 'later' | 'reject'` parameter (default `'compatible'`, matching current behavior — non-breaking).
 
-- **C1. `convertPlainDateTimeToZoned`** — add the parameter, thread through to `Temporal.ZonedDateTime.from(..., { disambiguation })`. Write the DST gap/overlap test cases explicitly (spring-forward gap, fall-back overlap, for at least 2-3 timezones per `context/testing-standards.md`'s locale-matrix approach).
-- **C2. `addZoned` / `subtractZoned`** — same parameter, same test pattern, for arithmetic that crosses a DST boundary.
-- **C3. Audit remaining `zoned/convert/*` and `zoned/calculate/*` functions** for any other implicit-disambiguation call sites and extend consistently — one PR, mechanical once C1/C2 establish the pattern.
+- **C1. `convertPlainDateTimeToZoned`** — ✅ Done. Added the parameter, threaded through to `Temporal.ZonedDateTime.from(..., { disambiguation })`. DST gap/overlap test cases cover spring-forward gap and fall-back overlap for `America/New_York` and `Europe/Berlin`.
+- **C2. `addZoned` / `subtractZoned`** — ⚠️ **Re-scoped: cannot be implemented as originally written.** Verified against the actual `@js-temporal/polyfill` spec/runtime (context7 + empirical test, 2026-08-07): `Temporal.ZonedDateTime.prototype.add()`/`.subtract()` take `ArithmeticOptions` (`{ overflow?: 'constrain' | 'reject' }` only) — there is **no `disambiguation` field on arithmetic methods at all**, in the spec or the polyfill. Per spec (`AddDurationToOrSubtractDurationFromZonedDateTime`), arithmetic always internally resolves ambiguity as `'compatible'`, with no caller-facing override. Confirmed empirically: passing `{ disambiguation: "reject" }` to `.add()` is silently ignored — output is byte-identical with or without it, and adding across a fall-back overlap (`America/New_York`, `2024-11-02T01:30:00` + 1 day) silently lands on `-04:00` (the "compatible"/"earlier" instant) with no way to request `-05:00` or to reject. **Before picking this up:** re-verify this hasn't changed upstream (unlikely — it's spec-level, not a polyfill quirk), then either (a) close/skip this story as infeasible, or (b) re-scope it to a different, achievable goal — e.g. JSDoc-documenting the `'compatible'`-always behavior on `addZoned`/`subtractZoned` so it's not silently surprising, or exposing a *check* function (e.g. "does this add cross a DST boundary ambiguously?") rather than a resolution *control*, since Temporal gives no lever to pull.
+- **C3. Audit remaining `zoned/convert/*` and `zoned/calculate/*` functions** for any other implicit-disambiguation call sites and extend consistently — one PR, mechanical once C1 establishes the pattern (no longer "C1/C2" since C2 may not land as scoped — see above). **Scope confirmed via full-codebase audit (2026-08-07):** `disambiguation` is only meaningful for calls that construct/mutate a `ZonedDateTime` from plain fields against a *real* (non-UTC) IANA timezone via `Temporal.ZonedDateTime.prototype.with()` (confirmed empirically that `.with()`, unlike `.add()`/`.subtract()`, does respect `disambiguation` — `{ disambiguation: "reject" }` correctly throws when `.with()` lands in a gap). The audit found **9 functions** with this exact unhandled pattern — note 4 of them are **outside** the directories literally named above, so the audit must not be scoped narrowly to just `zoned/convert/*` + `zoned/calculate/*`:
+  - `zoned/calculate/startOfZoned.ts`, `endOfZoned.ts`, `startOfQuarterForZoned.ts`, `endOfQuarterForZoned.ts` — jump to unit/quarter boundaries via `.with({ month, day, hour, ... })`.
+  - `zoned/map/mapZonedHoursInDay.ts` — its midnight anchor (`.with({ hour: 0, ... })`) has the same gap.
+  - `unix/calculate/startOfUnix.ts`, `endOfUnix.ts`, `startOfQuarterForUnix.ts`, `endOfQuarterForUnix.ts` — **not under `zoned/`** — these derive a `ZonedDateTime` via `instant.toZonedDateTimeISO(timeZone)` then apply the identical unhandled `.with()` pattern as their `zoned/calculate` counterparts.
+  - Not real gaps (documented for completeness, do not add `disambiguation` to these): `utc/calculate/startOfUtc.ts`/`endOfUtc.ts`/`startOfQuarterForUtc.ts`/`endOfQuarterForUtc.ts` use the same `.with()` shape but hardcode timezone `"UTC"`, which has no DST transitions — the option would be a permanent no-op there. `zoned/validate/isValidTimeZone.ts` combines plain fields + timeZone but only to probe a fixed non-DST date (`2020-02-28`) for validity — disambiguation behavior doesn't affect its correctness.
 
 ## Story Group D — Locale-Aware Calendar Helpers
 
@@ -99,26 +104,28 @@ Workflow: copy the title + description below into a new GitHub issue for each st
 
 Issue number tracker (fill in as issues are created). `Order` is the sequence to actually work these in — it follows the "Suggested Sequencing" section above (C-group first as a correctness fix, then A1–A2, then D-group in parallel, then finishing A3–A5, then B-group, then E1 last) — **not** ascending issue number. `Publish` marks when to cut a release after that story lands: every story is additive-only (new functions, or new optional parameters defaulting to current behavior), so every bump is `minor`; publish once per Story Group rather than per-story.
 
-| Order | Story | GitHub Issue | Publish                                      |
-| ----- | ----- | ------------ | -------------------------------------------- |
-| 1     | C1    | Issue #38    | not yet                                      |
-| 2     | C2    | Issue #39    | not yet                                      |
-| 3     | C3    | Issue #40    | minor, Story Group C complete                |
-| 4     | A1    | Issue #27    | not yet                                      |
-| 5     | A2    | Issue #28    | not yet                                      |
-| 6     | D1    | Issue #41    | not yet                                      |
-| 7     | D2    | Issue #42    | not yet                                      |
-| 8     | D3    | Issue #43    | minor, Story Group D complete                |
-| 9     | A3    | Issue #29    | not yet                                      |
-| 10    | A4    | Issue #30    | not yet                                      |
-| 11    | A5    | Issue #31    | minor, Story Group A complete                |
-| 12    | B1    | Issue #32    | not yet                                      |
-| 13    | B2    | Issue #33    | not yet                                      |
-| 14    | B3    | Issue #34    | not yet                                      |
-| 15    | B4    | Issue #35    | not yet                                      |
-| 16    | B5    | Issue #36    | not yet                                      |
-| 17    | B6    | Issue #37    | minor, Story Group B complete                |
-| 18    | E1    | Issue #44    | unscheduled, no publish plan until picked up |
+**Changeset note:** each story's PR still adds its own `.changeset/*.md` file with a `minor` bump label (that's the correct per-change label, independent of when a release is cut). Changesets accumulate un-versioned in `.changeset/` across multiple merged PRs; only running `pnpm changeset:version` actually consumes them and cuts a release. Do **not** run `changeset:version` / publish until the `Publish` column for that row says so (i.e. wait for the last story in the Story Group, not the first).
+
+| Order | Story | GitHub Issue | Status      | Publish                                      |
+| ----- | ----- | ------------ | ----------- | -------------------------------------------- |
+| 1     | C1    | Issue #38    | Done        | not yet                                      |
+| 2     | C2    | Issue #39    | Not started | not yet                                      |
+| 3     | C3    | Issue #40    | Not started | minor, Story Group C complete                |
+| 4     | A1    | Issue #27    | Not started | not yet                                      |
+| 5     | A2    | Issue #28    | Not started | not yet                                      |
+| 6     | D1    | Issue #41    | Not started | not yet                                      |
+| 7     | D2    | Issue #42    | Not started | not yet                                      |
+| 8     | D3    | Issue #43    | Not started | minor, Story Group D complete                |
+| 9     | A3    | Issue #29    | Not started | not yet                                      |
+| 10    | A4    | Issue #30    | Not started | not yet                                      |
+| 11    | A5    | Issue #31    | Not started | minor, Story Group A complete                |
+| 12    | B1    | Issue #32    | Not started | not yet                                      |
+| 13    | B2    | Issue #33    | Not started | not yet                                      |
+| 14    | B3    | Issue #34    | Not started | not yet                                      |
+| 15    | B4    | Issue #35    | Not started | not yet                                      |
+| 16    | B5    | Issue #36    | Not started | not yet                                      |
+| 17    | B6    | Issue #37    | Not started | minor, Story Group B complete                |
+| 18    | E1    | Issue #44    | Not started | unscheduled, no publish plan until picked up |
 
 ### A1 — `parseDuration` / `isValidDuration`
 
@@ -475,6 +482,8 @@ Tests covering all four disambiguation values across DST gap and overlap scenari
 
 **GitHub Issue:** #39
 
+**Status: re-scoped, not implementable as originally written.** Verified 2026-08-07 against `@js-temporal/polyfill`'s actual type declarations, the underlying Temporal spec algorithm, and empirical runtime testing: `Temporal.ZonedDateTime.prototype.add()`/`.subtract()` accept only `ArithmeticOptions` (`{ overflow?: 'constrain' | 'reject' }`) — there is no `disambiguation` field on these methods, in the spec or the polyfill. Per spec, `AddDurationToOrSubtractDurationFromZonedDateTime` always internally resolves DST ambiguity as `'compatible'`, with no caller-facing override. Confirmed empirically: passing `{ disambiguation: "reject" }` as a second argument to `.add()` is silently ignored (output identical with/without it), and adding across a fall-back overlap (e.g. `America/New_York`, `2024-11-02T01:30:00` + 1 day) silently resolves to the `'compatible'` instant with no way to request the other one or to reject.
+
 **Title:**
 
 ```
@@ -487,47 +496,71 @@ C2 Add disambiguation parameter to addZoned, subtractZoned
 Part of the parity roadmap — see `context/roadmap.md`, Story Group C, item C2. Depends on C1 establishing the pattern.
 
 ## Gap
-Same as C1, but for arithmetic that crosses a DST boundary. `addZoned` (src/zoned/calculate/addZoned.ts) and `subtractZoned` currently have no caller-facing DST disambiguation control.
+Originally: same as C1, but for arithmetic that crosses a DST boundary. `addZoned` (src/zoned/calculate/addZoned.ts) and `subtractZoned` currently have no caller-facing DST disambiguation control.
 
-## Scope
-- Same optional `disambiguation` parameter and default as C1, applied to `addZoned` and `subtractZoned`.
-- Same DST gap/overlap test pattern as C1, specifically for arithmetic crossing the boundary (not just conversion into a zoned value).
+## IMPORTANT — re-verify this first
+Before writing any code, re-confirm (via `find-docs`/context7 against `/js-temporal/temporal-polyfill`, and an empirical test against the installed polyfill) whether `Temporal.ZonedDateTime.prototype.add()`/`.subtract()` accept a `disambiguation` option. As of 2026-08-07 they do not — `ArithmeticOptions` only has `overflow`, and arithmetic always resolves ambiguity as `'compatible'` per spec, with no override. If this is still true, **do not implement `disambiguation` on `addZoned`/`subtractZoned` as originally scoped** — there is no Temporal API surface to thread it through to.
+
+## Scope (pending the re-verification above)
+If Temporal still has no `disambiguation` option on arithmetic, choose one of:
+- (a) Close this story as infeasible upstream, noting the spec limitation, and skip straight to C3.
+- (b) Re-scope to a documentation-only fix: add a JSDoc note on `addZoned`/`subtractZoned` explaining that arithmetic across a DST gap/overlap always resolves as `'compatible'` with no override, so callers aren't surprised.
+- (c) Re-scope to a new, different function — e.g. a boolean check like `doesZonedArithmeticCrossDstBoundary(value, units)` — that lets callers detect the ambiguity case and react (e.g. reject the operation themselves), since Temporal gives no resolution lever to pull.
+Do not force a `disambiguation` parameter onto `addZoned`/`subtractZoned` that silently has no effect — that would be worse than not having the parameter at all (a false promise of control).
 
 ## Before starting
-See "Instructions for the agent picking up a story" in `context/roadmap.md`. Reuse the exact parameter shape and JSDoc pattern established in C1 — do not diverge.
+See "Instructions for the agent picking up a story" in `context/roadmap.md`.
 
 ## Definition of done
-Same checklist as C1.
+Depends on which path (a/b/c) is chosen above — document the decision and rationale in the PR description either way.
 ```
 
 ### C3 — Audit remaining zoned functions for disambiguation
 
 **GitHub Issue:** #40
 
+**Status: scope expanded.** A full-codebase audit (2026-08-07) confirmed `disambiguation` is only meaningful for `Temporal.ZonedDateTime.prototype.with()` calls against a real (non-UTC) IANA timezone — confirmed empirically that `.with()`, unlike `.add()`/`.subtract()` (see C2), does respect `disambiguation` (`{ disambiguation: "reject" }` correctly throws when `.with()` would land in a gap). The audit found **9 functions** with this exact pattern and no disambiguation control, **4 of which are outside** the directories the story originally named (`zoned/convert/*`, `zoned/calculate/*`) — see the full list below. Scope this story to all 9, not just the two named directories.
+
 **Title:**
 
 ```
-C3 Audit zoned convert and zoned calculate for remaining disambiguation gaps
+C3 Audit zoned calculate, zoned map, and unix calculate for remaining disambiguation gaps
 ```
 
 **Description:**
 
 ```
-Part of the parity roadmap — see `context/roadmap.md`, Story Group C, item C3. Depends on C1 and C2 establishing the pattern — this story is mechanical once those land.
+Part of the parity roadmap — see `context/roadmap.md`, Story Group C, item C3. Depends on C1 establishing the pattern (not C2 — see C2's re-scope note; C2 may not land as a `disambiguation`-parameter story at all).
 
 ## Gap
-C1/C2 add explicit DST disambiguation control to the two most obvious call sites. Other functions in `zoned/convert/*` and `zoned/calculate/*` may have the same implicit-disambiguation gap.
+C1 added explicit DST disambiguation control to `convertPlainDateTimeToZoned`. A full-codebase audit found the same implicit-disambiguation gap in every function that calls `Temporal.ZonedDateTime.prototype.with()` to jump to a unit/quarter boundary against a real (non-UTC) IANA timezone:
+
+- `packages/gmt/src/zoned/calculate/startOfZoned.ts`
+- `packages/gmt/src/zoned/calculate/endOfZoned.ts`
+- `packages/gmt/src/zoned/calculate/startOfQuarterForZoned.ts`
+- `packages/gmt/src/zoned/calculate/endOfQuarterForZoned.ts`
+- `packages/gmt/src/zoned/map/mapZonedHoursInDay.ts` (the midnight anchor `.with({ hour: 0, ... })`)
+- `packages/gmt/src/unix/calculate/startOfUnix.ts` — NOT under `zoned/`, derives a ZonedDateTime via `instant.toZonedDateTimeISO(timeZone)` then applies the same unhandled `.with()` pattern
+- `packages/gmt/src/unix/calculate/endOfUnix.ts` — same as above
+- `packages/gmt/src/unix/calculate/startOfQuarterForUnix.ts` — same as above
+- `packages/gmt/src/unix/calculate/endOfQuarterForUnix.ts` — same as above
+
+Explicitly NOT in scope (verified not real gaps, do not touch):
+- `packages/gmt/src/utc/calculate/startOfUtc.ts`/`endOfUtc.ts`/`startOfQuarterForUtc.ts`/`endOfQuarterForUtc.ts` — same `.with()` shape but timezone is hardcoded to `"UTC"`, which has no DST transitions; the option would be a permanent no-op.
+- `packages/gmt/src/zoned/validate/isValidTimeZone.ts` — combines plain fields + timeZone but only to probe a fixed non-DST date (`2020-02-28`); disambiguation behavior doesn't affect its correctness.
+- `addZoned`/`subtractZoned` — see C2; Temporal's `.add()`/`.subtract()` have no `disambiguation` option at all, so these are out of scope for this story regardless of what C2 decides to do instead.
 
 ## Scope
-- Audit every function in `packages/gmt/src/zoned/convert/` and `packages/gmt/src/zoned/calculate/` for calls into `Temporal.ZonedDateTime.from`/`.add`/`.subtract` that don't expose disambiguation.
-- Extend each with the same optional parameter and default established in C1/C2.
-- One PR covering all remaining call sites (this is explicitly scoped as one PR per the roadmap, since it's mechanical repetition of an established pattern).
+- Re-verify the 9-function list above is still accurate (`grep -rn '\.with(' packages/gmt/src/zoned packages/gmt/src/unix` and check each call site's timezone is a real IANA zone, not hardcoded UTC) before starting — library surfaces and this audit's findings could both have moved.
+- Extend each of the 9 functions with the same optional `disambiguation` parameter and `'compatible'` default established in C1.
+- Note these functions have a `switch (unit)` with multiple `.with()` call sites per function (e.g. `startOfZoned.ts` has 6+ separate `.with()` calls, one per unit case) — the `disambiguation` option must be threaded into all of them, not just the first.
+- One PR covering all 9 call sites (still one PR per the roadmap's original intent — it's mechanical repetition of an established pattern once C1's shape is set).
 
 ## Before starting
-See "Instructions for the agent picking up a story" in `context/roadmap.md`. Confirm C1 and C2 have landed first — this story's pattern depends on their exact parameter shape.
+See "Instructions for the agent picking up a story" in `context/roadmap.md`. Confirm C1 has landed first — this story's pattern depends on its exact parameter shape and JSDoc format. Do NOT wait on C2 — see C2's re-scope note; C2 is likely to become a different kind of story (or be closed) rather than a companion `disambiguation` parameter to reuse a pattern from.
 
 ## Definition of done
-Every touched function has matching tests to C1/C2's pattern, JSDoc updated, README/changeset updated, lint/test pass.
+Every touched function (all 9) has matching tests to C1's gap/overlap pattern, JSDoc updated, README/changeset updated, lint/test pass.
 ```
 
 ### D1 — `isWeekend` / `isZonedWeekend`

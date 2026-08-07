@@ -1,15 +1,15 @@
 ---
 name: validate-dates
 description: >
-  Validate date/time strings or timezone identifiers.
-  Use isValidDate, isValidTime, isValidDateTime for validation.
-  Returns false on invalid input.
-type: core
-library: '@burglekitt/gmt'
-library_version: '1.3.0'
+  Validate date/time strings or timezone identifiers. Use isValidDate,
+  isValidTime, isValidDateTime for validation. Returns false on invalid input.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/validate/index.ts'
+metadata:
+  type: core
+  library: '@burglekitt/gmt'
+  library_version: '1.4.0'
 ---
 
 # Validate Dates
