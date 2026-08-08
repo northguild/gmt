@@ -121,4 +121,49 @@ describe("subtractZoned", () => {
       );
     });
   }
+
+  // disambiguation: fall-back overlap (result of - 1 day lands on an ambiguous local time)
+  it.each`
+    value                                            | disambiguation  | expected
+    ${"2024-11-04T01:30:00-05:00[America/New_York]"} | ${undefined}    | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
+    ${"2024-11-04T01:30:00-05:00[America/New_York]"} | ${"compatible"} | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
+    ${"2024-11-04T01:30:00-05:00[America/New_York]"} | ${"earlier"}    | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
+    ${"2024-11-04T01:30:00-05:00[America/New_York]"} | ${"later"}      | ${"2024-11-03T01:30:00-05:00[America/New_York]"}
+    ${"2024-11-04T01:30:00-05:00[America/New_York]"} | ${"reject"}     | ${""}
+    ${"2024-10-28T02:30:00+01:00[Europe/Berlin]"}    | ${undefined}    | ${"2024-10-27T02:30:00+02:00[Europe/Berlin]"}
+    ${"2024-10-28T02:30:00+01:00[Europe/Berlin]"}    | ${"compatible"} | ${"2024-10-27T02:30:00+02:00[Europe/Berlin]"}
+    ${"2024-10-28T02:30:00+01:00[Europe/Berlin]"}    | ${"earlier"}    | ${"2024-10-27T02:30:00+02:00[Europe/Berlin]"}
+    ${"2024-10-28T02:30:00+01:00[Europe/Berlin]"}    | ${"later"}      | ${"2024-10-27T02:30:00+01:00[Europe/Berlin]"}
+    ${"2024-10-28T02:30:00+01:00[Europe/Berlin]"}    | ${"reject"}     | ${""}
+  `(
+    "resolves fall-back overlap for $value - 1 day with disambiguation $disambiguation to $expected",
+    ({ value, disambiguation, expected }) => {
+      const optionsArg =
+        disambiguation === undefined ? undefined : { disambiguation };
+      expect(subtractZoned(value, { days: 1 }, optionsArg)).toBe(expected);
+    },
+  );
+
+  // disambiguation: spring-forward gap (result of - 1 day lands on a nonexistent local time,
+  // but Temporal's arithmetic already advances past it, so disambiguation has no effect)
+  it.each`
+    value                                            | disambiguation  | expected
+    ${"2024-03-11T02:30:00-04:00[America/New_York]"} | ${undefined}    | ${"2024-03-10T03:30:00-04:00[America/New_York]"}
+    ${"2024-03-11T02:30:00-04:00[America/New_York]"} | ${"compatible"} | ${"2024-03-10T03:30:00-04:00[America/New_York]"}
+    ${"2024-03-11T02:30:00-04:00[America/New_York]"} | ${"earlier"}    | ${"2024-03-10T03:30:00-04:00[America/New_York]"}
+    ${"2024-03-11T02:30:00-04:00[America/New_York]"} | ${"later"}      | ${"2024-03-10T03:30:00-04:00[America/New_York]"}
+    ${"2024-03-11T02:30:00-04:00[America/New_York]"} | ${"reject"}     | ${"2024-03-10T03:30:00-04:00[America/New_York]"}
+    ${"2024-04-01T02:30:00+02:00[Europe/Berlin]"}    | ${undefined}    | ${"2024-03-31T03:30:00+02:00[Europe/Berlin]"}
+    ${"2024-04-01T02:30:00+02:00[Europe/Berlin]"}    | ${"compatible"} | ${"2024-03-31T03:30:00+02:00[Europe/Berlin]"}
+    ${"2024-04-01T02:30:00+02:00[Europe/Berlin]"}    | ${"earlier"}    | ${"2024-03-31T03:30:00+02:00[Europe/Berlin]"}
+    ${"2024-04-01T02:30:00+02:00[Europe/Berlin]"}    | ${"later"}      | ${"2024-03-31T03:30:00+02:00[Europe/Berlin]"}
+    ${"2024-04-01T02:30:00+02:00[Europe/Berlin]"}    | ${"reject"}     | ${"2024-03-31T03:30:00+02:00[Europe/Berlin]"}
+  `(
+    "spring-forward gap for $value - 1 day is unaffected by disambiguation $disambiguation, returns $expected",
+    ({ value, disambiguation, expected }) => {
+      const optionsArg =
+        disambiguation === undefined ? undefined : { disambiguation };
+      expect(subtractZoned(value, { days: 1 }, optionsArg)).toBe(expected);
+    },
+  );
 });

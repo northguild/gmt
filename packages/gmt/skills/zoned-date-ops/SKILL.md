@@ -8,16 +8,21 @@ description: >
   system timezone discovery and IANA timezone lists. Use
   convertPlainDateTimeToZoned to attach a timezone to a plain datetime, with an
   optional disambiguation option ("compatible" | "earlier" | "later" | "reject")
-  to control DST gap/overlap resolution.
+  to control DST gap/overlap resolution. Use addZoned and subtractZoned for
+  zoned duration arithmetic, which also accept disambiguation but only for
+  fall-back overlaps — spring-forward gaps are unaffected, see DST
+  Disambiguation reference.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/zoned/get/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/format/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/convert/index.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/addZoned.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/subtractZoned.ts'
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.4.0'
+  library_version: '1.5.0'
 ---
 
 # Zoned Date Operations
@@ -191,6 +196,47 @@ convertPlainDateTimeToZoned("2024-11-03T01:30:00", "America/New_York", {
 
 `disambiguation` accepts `"compatible"` (default), `"earlier"`, `"later"`, or `"reject"`. See [DST Disambiguation](../../../../docs/dst-disambiguation.md) for the full explanation of gaps vs. overlaps.
 
+### Add/subtract a duration from a zoned datetime (with partial DST disambiguation)
+
+```ts
+import { addZoned, subtractZoned } from "@burglekitt/gmt/zoned";
+
+addZoned("2024-03-15T14:30:45[America/New_York]", { days: 1 });
+// "2024-03-16T14:30:45-04:00[America/New_York]"
+
+subtractZoned("2024-03-15T14:30:45[America/New_York]", { hours: 2 });
+// "2024-03-15T12:30:45-04:00[America/New_York]"
+```
+
+Both accept the same `disambiguation` option as `convertPlainDateTimeToZoned`, but it only controls the result when the arithmetic **lands on a fall-back (DST-end) overlap** — it has **no effect** on a spring-forward (DST-start) gap landing, because Temporal's arithmetic already resolves gap landings internally before `disambiguation` is ever evaluated:
+
+```ts
+import { addZoned } from "@burglekitt/gmt/zoned";
+
+// Fall-back overlap: adding 1 day lands on 2024-11-03T01:30:00, ambiguous in America/New_York.
+addZoned("2024-11-02T01:30:00-04:00[America/New_York]", { days: 1 });
+// "2024-11-03T01:30:00-04:00[America/New_York]" (default "compatible")
+
+addZoned("2024-11-02T01:30:00-04:00[America/New_York]", { days: 1 }, {
+  disambiguation: "later",
+});
+// "2024-11-03T01:30:00-05:00[America/New_York]" — the other occurrence
+
+addZoned("2024-11-02T01:30:00-04:00[America/New_York]", { days: 1 }, {
+  disambiguation: "reject",
+});
+// "" — ambiguous result rejected
+
+// Spring-forward gap: adding 1 day lands on a wall-clock time that never happened.
+// disambiguation has NO effect here — all four values return the same result.
+addZoned("2024-03-09T02:30:00-05:00[America/New_York]", { days: 1 }, {
+  disambiguation: "reject",
+});
+// "2024-03-10T03:30:00-04:00[America/New_York]" — does NOT throw/return ""
+```
+
+See [Which function do I actually need?](../../../../docs/dst-disambiguation.md#which-function-do-i-actually-need) for guidance on choosing between `convertPlainDateTimeToZoned` and `addZoned`/`subtractZoned`, and why the gap limitation exists.
+
 ## Timezone List
 
 Common IANA timezone identifiers:
@@ -297,6 +343,33 @@ const zoned = convertPlainDateTimeToZoned("2024-11-03T01:30:00", "America/New_Yo
 ```
 
 Source: packages/gmt/src/zoned/convert/convertPlainDateTimeToZoned.ts — `disambiguation` option
+
+### MEDIUM Assuming `addZoned`/`subtractZoned`'s `disambiguation: "reject"` catches DST gaps
+
+Wrong:
+
+```ts
+// Assumes "reject" will throw/return "" if the arithmetic result lands in a
+// spring-forward gap — it won't. Only fall-back overlaps are rejectable here.
+const zoned = addZoned("2024-03-09T02:30:00-05:00[America/New_York]", { days: 1 }, {
+  disambiguation: "reject",
+});
+// Silently returns a valid result, not ""
+```
+
+Correct:
+
+```ts
+import { addZoned } from "@burglekitt/gmt/zoned";
+
+// If you need gap-rejection too, validate the result separately —
+// convertPlainDateTimeToZoned's "reject" does see gaps.
+const added = addZoned(value, { days: 1 });
+// ...then re-validate `added`'s local time through convertPlainDateTimeToZoned
+// with { disambiguation: "reject" } if gap-safety matters for your domain.
+```
+
+Source: packages/gmt/src/zoned/calculate/addZoned.ts — `disambiguation` has no effect on spring-forward gaps; see [DST Disambiguation](../../../../docs/dst-disambiguation.md)
 
 ## References
 
