@@ -6,13 +6,14 @@ description: >
   getSystemTimeZone, getTimeZones for the basics. Use
   convertPlainDateTimeToZoned, addZoned, subtractZoned, startOfZoned,
   endOfZoned, startOfQuarterForZoned, endOfQuarterForZoned, mapZonedHoursInDay,
-  and their unix/ counterparts (startOfUnix, endOfUnix, startOfQuarterForUnix,
+  getLocaleZonedStartOfWeek, getLocaleZonedEndOfWeek, and their unix/
+  counterparts (startOfUnix, endOfUnix, startOfQuarterForUnix,
   endOfQuarterForUnix) for DST-aware construction, arithmetic, and
-  boundary/quarter/hour computations — most accept a disambiguation option
-  ("compatible" | "earlier" | "later" | "reject") for gap/overlap resolution,
-  and the boundary family also accepts offset ("prefer" | "use" | "ignore" |
-  "reject", default "ignore", which must stay default for disambiguation to
-  work).
+  boundary/quarter/hour/locale-week computations — most accept a
+  disambiguation option ("compatible" | "earlier" | "later" | "reject") for
+  gap/overlap resolution, and the boundary family (including the locale-week
+  functions) also accepts offset ("prefer" | "use" | "ignore" | "reject",
+  default "ignore", which must stay default for disambiguation to work).
 sources:
   - 'burglekitt/gmt:packages/gmt/src/zoned/get/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/format/index.ts'
@@ -24,6 +25,8 @@ sources:
   - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/endOfZoned.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/startOfQuarterForZoned.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/endOfQuarterForZoned.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/getLocaleZonedStartOfWeek.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/getLocaleZonedEndOfWeek.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/map/mapZonedHoursInDay.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/calculate/startOfUnix.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/calculate/endOfUnix.ts'
@@ -276,6 +279,23 @@ startOfZoned(source, "hour", { disambiguation: "reject", offset: "prefer" });
 ```
 
 Leave `offset` at its default unless you deliberately need Temporal's raw `.with()` semantics. See [The offset parameter](../../../../docs/dst-disambiguation.md#the-offset-parameter) for the full mechanism.
+
+### Get locale-aware week boundaries (with full DST disambiguation)
+
+```ts
+import { getLocaleZonedStartOfWeek, getLocaleZonedEndOfWeek } from "@burglekitt/gmt/zoned";
+
+getLocaleZonedStartOfWeek("2024-02-29T12:00:00+00:00[UTC]", "en-US");
+// "2024-02-25T00:00:00+00:00[UTC]" (Sunday, en-US weeks start Sunday)
+
+getLocaleZonedStartOfWeek("2024-02-29T12:00:00+00:00[UTC]", "fr-FR");
+// "2024-02-26T00:00:00+00:00[UTC]" (Monday, fr-FR weeks start Monday)
+
+getLocaleZonedEndOfWeek("2024-02-29T12:00:00+00:00[UTC]", "en-US");
+// "2024-03-02T23:59:59+00:00[UTC]" (Saturday)
+```
+
+Like `startOfZoned`/`endOfZoned`, these derive the week's first day from the locale (via `Intl.Locale.prototype.weekInfo`, same as the plain `getLocaleStartOfWeek`/`getLocaleEndOfWeek` in the `calculate-dates` skill) instead of taking an explicit `weekStartsOn` option, and accept the same `disambiguation`/`offset` options as the rest of the boundary family — `offset` must stay at its default `"ignore"` for `disambiguation` to actually take effect on the week-boundary time-of-day reset. Both return `""` for invalid `value` or an unresolvable `locale`.
 
 ## Timezone List
 

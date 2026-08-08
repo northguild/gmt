@@ -13,6 +13,7 @@ Arithmetic and date manipulation:
 - `endOfDate`, `endOfDateTime`, `endOfTime`
 - `endOfQuarterForDate`, `endOfQuarterForDateTime`
 - `getLargestDateDurationUnit`, `getLargestDateTimeDurationUnit`, `getLargestTimeDurationUnit`
+- `getLocaleEndOfWeek`, `getLocaleStartOfWeek`
 - `getQuarterForDate`, `getQuarterForDateTime`
 - `getWeekNumber`
 - `maxDate`, `maxDateTime`, `maxTime`

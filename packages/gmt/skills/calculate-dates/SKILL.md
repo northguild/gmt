@@ -4,7 +4,10 @@ description: >
   Add or subtract time from dates. Use addDays, addMonths, subtractTime for date
   arithmetic. Use diffDate for calculating differences. add*/subtract* accept an
   optional overflow ("constrain" | "reject") option; diff* accept optional
-  smallestUnit/roundingIncrement/roundingMode options to round the result.
+  smallestUnit/roundingIncrement/roundingMode options to round the result. Use
+  getLocaleStartOfWeek/getLocaleEndOfWeek for locale-driven week boundaries
+  (first day of week derived from the locale, e.g. en-US Sunday vs fr-FR
+  Monday) instead of startOfDate/endOfDate's ISO-biased weekStartsOn option.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/calculate/index.ts'
 metadata:
@@ -103,6 +106,20 @@ import { startOfQuarterForDate, endOfQuarterForDate } from "@burglekitt/gmt";
 const q1Start = startOfQuarterForDate("2024-03-15"); // "2024-01-01"
 const q1End = endOfQuarterForDate("2024-03-15"); // "2024-03-31"
 ```
+
+### Get locale-aware week boundaries
+
+```ts
+import { getLocaleStartOfWeek, getLocaleEndOfWeek } from "@burglekitt/gmt";
+
+getLocaleStartOfWeek("2024-02-29", "en-US"); // "2024-02-25" (Sunday, en-US weeks start Sunday)
+getLocaleStartOfWeek("2024-02-29", "fr-FR"); // "2024-02-26" (Monday, fr-FR weeks start Monday)
+
+getLocaleEndOfWeek("2024-02-29", "en-US"); // "2024-03-02" (Saturday)
+getLocaleEndOfWeek("2024-02-29", "fr-FR"); // "2024-03-03" (Sunday)
+```
+
+Unlike `startOfDate(value, "week", { weekStartsOn })`/`endOfDate(value, "week", { weekStartsOn })`, which take an explicit ISO-biased `weekStartsOn` (`"monday"` | `"sunday"`, default `"monday"`), `getLocaleStartOfWeek`/`getLocaleEndOfWeek` derive the week's first day automatically from the locale via `Intl.Locale.prototype.weekInfo`, falling back to Monday if the runtime can't resolve `weekInfo` for the locale. Both return `""` for invalid `value` or an unresolvable `locale`. Zoned equivalents (`getLocaleZonedStartOfWeek`/`getLocaleZonedEndOfWeek`) live in the `zoned-date-ops` skill.
 
 ### Control out-of-range add/subtract results with overflow
 

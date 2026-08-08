@@ -749,6 +749,9 @@ react-aria's `getDayOfWeek(date, locale)` returns a day-of-week index relative t
 ## Before starting
 See "Instructions for the agent picking up a story" in `context/roadmap.md`. Nearest analog: `plain/get/getDayOfWeek.ts`.
 
+## Misc
+Add full unit test coverage for all internal utils.
+
 ## Definition of done
 Full 17-locale test matrix, JSDoc, exports, README/changeset, lint/test pass.
 ```

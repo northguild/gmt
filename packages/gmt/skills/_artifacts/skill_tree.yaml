@@ -70,7 +70,7 @@ skills:
     domain: core-date-operations
     path: 'skills/calculate-dates/SKILL.md'
     package: 'packages/gmt'
-    description: Add or subtract time from dates; add*/subtract* accept an optional overflow ("constrain" | "reject") option, diff* accept optional smallestUnit/roundingIncrement/roundingMode rounding options
+    description: Add or subtract time from dates; add*/subtract* accept an optional overflow ("constrain" | "reject") option, diff* accept optional smallestUnit/roundingIncrement/roundingMode rounding options; getLocaleStartOfWeek/getLocaleEndOfWeek compute locale-driven week boundaries
     sources:
       - 'burglekitt/gmt:packages/gmt/src/plain/calculate/index.ts'
 
@@ -118,7 +118,7 @@ skills:
     domain: zoned-date-operations
     path: 'skills/zoned-date-ops/SKILL.md'
     package: 'packages/gmt'
-    description: Work with timezone-aware dates and times; includes formatZonedDateTime, formatZonedRange, formatRelativeZoned, convertPlainDateTimeToZoned with full DST disambiguation control, addZoned/subtractZoned with overlap-only DST disambiguation control, and the startOfZoned/endOfZoned/startOfQuarterForZoned/endOfQuarterForZoned/mapZonedHoursInDay family (plus unix/ counterparts) with full disambiguation + offset control
+    description: Work with timezone-aware dates and times; includes formatZonedDateTime, formatZonedRange, formatRelativeZoned, convertPlainDateTimeToZoned with full DST disambiguation control, addZoned/subtractZoned with overlap-only DST disambiguation control, and the startOfZoned/endOfZoned/startOfQuarterForZoned/endOfQuarterForZoned/mapZonedHoursInDay/getLocaleZonedStartOfWeek/getLocaleZonedEndOfWeek family (plus unix/ counterparts) with full disambiguation + offset control
     sources:
       - 'burglekitt/gmt:packages/gmt/src/zoned/get/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/format/index.ts'
@@ -130,6 +130,8 @@ skills:
       - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/endOfZoned.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/startOfQuarterForZoned.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/endOfQuarterForZoned.ts'
+      - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/getLocaleZonedStartOfWeek.ts'
+      - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/getLocaleZonedEndOfWeek.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/map/mapZonedHoursInDay.ts'
       - 'burglekitt/gmt:packages/gmt/src/unix/calculate/startOfUnix.ts'
       - 'burglekitt/gmt:packages/gmt/src/unix/calculate/endOfUnix.ts'

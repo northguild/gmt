@@ -3,6 +3,8 @@ export * from "./diffZoned";
 export * from "./diffZonedAsDuration";
 export * from "./endOfQuarterForZoned";
 export * from "./endOfZoned";
+export * from "./getLocaleZonedEndOfWeek";
+export * from "./getLocaleZonedStartOfWeek";
 export * from "./getQuarterForZoned";
 export * from "./maxZoned";
 export * from "./minZoned";

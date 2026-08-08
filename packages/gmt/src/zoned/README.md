@@ -10,6 +10,7 @@ Timezone-aware arithmetic:
 
 - `addZoned`, `diffZoned`, `diffZonedAsDuration`
 - `endOfQuarterForZoned`, `endOfZoned`
+- `getLocaleZonedEndOfWeek`, `getLocaleZonedStartOfWeek`
 - `getQuarterForZoned`
 - `maxZoned`, `minZoned`, `sortZoned`
 - `startOfQuarterForZoned`, `startOfZoned`

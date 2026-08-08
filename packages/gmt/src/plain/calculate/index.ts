@@ -14,6 +14,8 @@ export * from "./endOfTime";
 export * from "./getLargestDateDurationUnit";
 export * from "./getLargestDateTimeDurationUnit";
 export * from "./getLargestTimeDurationUnit";
+export * from "./getLocaleEndOfWeek";
+export * from "./getLocaleStartOfWeek";
 export * from "./getQuarterForDate";
 export * from "./getQuarterForDateTime";
 export * from "./getWeekNumber";

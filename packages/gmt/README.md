@@ -133,6 +133,21 @@ isZonedWeekend("2024-02-04T10:00:00+02:00[Asia/Jerusalem]", "he-IL");
 // false (Sunday isn't part of he-IL's weekend)
 ```
 
+`getLocaleStartOfWeek`/`getLocaleEndOfWeek` (and their zoned equivalents) compute week boundaries from the locale's first day of week, instead of an ISO-Monday default:
+
+```typescript
+import { getLocaleStartOfWeek, getLocaleEndOfWeek } from "@burglekitt/gmt";
+
+getLocaleStartOfWeek("2024-02-29", "en-US");
+// "2024-02-25" (Sunday, en-US weeks start Sunday)
+
+getLocaleStartOfWeek("2024-02-29", "fr-FR");
+// "2024-02-26" (Monday, fr-FR weeks start Monday)
+
+getLocaleEndOfWeek("2024-02-29", "en-US");
+// "2024-03-02" (Saturday)
+```
+
 ### Durations
 
 ```typescript

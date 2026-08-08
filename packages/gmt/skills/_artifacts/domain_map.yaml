@@ -127,12 +127,15 @@ skills:
       - smallestUnit
       - roundingIncrement
       - roundingMode
+      - getLocaleStartOfWeek
+      - getLocaleEndOfWeek
     tasks:
       - Add days to a date
       - Subtract months from a date
       - Calculate date difference
       - Reject out-of-range add/subtract results instead of clamping
       - Round a diff result to a coarser unit
+      - Get locale-aware week boundaries instead of ISO-Monday defaults
 
   - name: Durations
     slug: durations
@@ -220,6 +223,8 @@ skills:
       - endOfUnix
       - startOfQuarterForUnix
       - endOfQuarterForUnix
+      - getLocaleZonedStartOfWeek
+      - getLocaleZonedEndOfWeek
     tasks:
       - Get current time in timezone
       - Format datetime in timezone
@@ -230,6 +235,7 @@ skills:
       - Add or subtract a duration from a zoned datetime, with overlap-only DST disambiguation control
       - Attach a timezone to a plain datetime with explicit DST disambiguation
       - Jump to the start or end of a unit/quarter/hours-in-day for a zoned or unix timestamp, with full DST disambiguation and offset control
+      - Get locale-aware week boundaries for a zoned datetime, with full DST disambiguation and offset control
 
   - name: Convert Temporal Types
     slug: convert-types
