@@ -2,14 +2,18 @@
 
 ## Context
 
-GMT (`@burglekitt/gmt`) is a pre-alpha Temporal-first date library with strong plain/zoned/unix/utc coverage already. The goal is to reach — and exceed — feature parity with **Luxon** and **react-aria's `@internationalized/date`**, the two most relevant comparison libraries (see `context/project-overview.md`).
+GMT (`@burglekitt/gmt`) is a pre-alpha Temporal-first date library with strong plain/zoned/unix/utc coverage already. The goal is to reach — and exceed — feature parity with **Luxon**, **react-aria's `@internationalized/date`**, **Moment.js**, and **date-fns** — the four most relevant comparison libraries (see `context/project-overview.md`) — and to stay ahead of emerging Temporal-first competitors.
 
-Research via context7 against both libraries' current docs, cross-referenced with GMT's existing `src/` surface, surfaced four real functional gaps (not just API-shape differences):
+Research via context7 against these libraries' current docs, cross-referenced with GMT's existing `src/` surface, surfaced four real functional gaps (not just API-shape differences):
 
 1. **No Duration type or ISO 8601 duration string support.** GMT's `add*`/`diff*` functions take/return plain `{unit: number}` objects. Luxon has a full `Duration` class (`fromObject`, `fromISO`, `fromMillis`, `.plus/.minus/.negate/.shiftTo/.rescale/.normalize/.toISO/.toHuman`). GMT has no way to parse or emit `"P1DT2H30M"` style strings, and no way to humanize a duration standalone (only relative-to-now formatting exists today).
-2. **No Interval/range type.** Luxon's `Interval` supports `contains`, `overlaps`, `union`, `intersection`, `splitBy`, `divideEqually`, `length`. GMT only has scalar `isBetween*` checks and `mapDatesInRange`/`mapZonedDatesInRange` — no range-vs-range math.
+2. **No Interval/range type.** Luxon's `Interval` supports `contains`, `overlaps`, `union`, `intersection`, `splitBy`, `divideEqually`, `length`, `count`, and constructing an interval from a point + duration (`.after`/`.before`). date-fns's `areIntervalsOverlapping` additionally exposes an `inclusive` option (edge-adjacent intervals count as overlapping or not). GMT only has scalar `isBetween*` checks and `mapDatesInRange`/`mapZonedDatesInRange` — no range-vs-range math.
 3. **No DST disambiguation control.** Functions that produce a `ZonedDateTime` from a plain/local value (`convertPlainDateTimeToZoned`, `addZoned`, etc.) silently take Temporal's default `"compatible"` resolution for DST gaps/overlaps, with no way for callers to opt into `"earlier"`, `"later"`, or `"reject"`. This is a known bug-report source in Luxon's tracker — exposing it explicitly is a differentiator.
 4. **No locale-aware calendar helpers.** react-aria has `isWeekend(date, locale)`, `startOfWeek(date, locale)`, `endOfWeek(date, locale)`, `getDayOfWeek(date, locale)` — all locale-sensitive (first day of week and weekend days vary by region: en-US week starts Sunday, fr-FR starts Monday, he-IL's weekend is Fri/Sat). GMT's `getDayOfWeek`/`getWeekOfYear` are ISO-8601-only (Monday-start), no locale parameter.
+
+**Moment.js**: confirmed via context7 (2026-08-08) to be officially in maintenance mode — no new features, no immutability, bug fixes deprioritized. Not a source of new gaps; GMT (immutable, Temporal-backed) already supersedes it in kind. No dedicated story group needed.
+
+**Emerging competitor watch:** `temporal-kit` (KristjanESPERANTO, ~11KB, functional/tree-shakable, Temporal-first) is the nearest direct competitor in GMT's own category — a Temporal-wrapping utility library rather than a legacy `Date`-based one. Surfaced via web search (2026-08-08) as it's too new/small to appear in context7's library index. It already ships `startOf`/`endOf`/`add`/`subtract`/`isBefore`/`isAfter`/`isBetween`/`isWeekend`/`addBusinessDays`. GMT already exceeds its scope (DST disambiguation, Duration, zoned/unix/utc namespaces are absent from temporal-kit) with one confirmed exception: **business-day arithmetic** (`addBusinessDays`), which GMT has no equivalent of — tracked as Story Group F below. Re-check this library's surface periodically (it's small and could grow quickly) rather than treating this snapshot as durable.
 
 **Explicitly out of scope** (per user decision): non-Gregorian calendar systems (Buddhist, Hebrew, Islamic, Japanese, etc. via react-aria's `toCalendar`) — tracked as a single stretch story at the end, not a priority.
 
@@ -47,11 +51,12 @@ Range math over two ISO datetime/zoned strings. Each function takes `{ start, en
 
 - **B1. `isValidInterval`** — validate a start/end pair (start <= end, both parseable).
 - **B2. `intervalContains`** — does interval A contain a point or fully contain interval B.
-- **B3. `intervalsOverlap`** — do two intervals overlap at all.
+- **B3. `intervalsOverlap`** — do two intervals overlap at all. Spec should include an `inclusive?: boolean` option (default `false`) matching date-fns's `areIntervalsOverlapping({ inclusive })` — controls whether edge-adjacent intervals (A's end === B's start) count as overlapping. Luxon's `Interval.overlaps` has no equivalent switch (always exclusive-adjacent); GMT exposing both is a differentiator, not just parity.
 - **B4. `intervalIntersection`** — the overlapping sub-interval of two intervals, or `null`/`""` if none.
 - **B5. `intervalUnion`** — combined span of two overlapping/adjacent intervals.
 - **B6. `splitIntervalByUnit`** — divide an interval into sub-intervals by a duration unit (parallels `mapDatesInRange` but interval-typed), e.g. weekly billing periods.
 - Zoned equivalents (`zonedInterval*`) as a follow-up story once the plain versions establish the pattern — do not build both in parallel.
+- Luxon's `Interval.count(unit)` (number of calendar-unit boundaries crossed, distinct from `.length(unit)`'s exact duration) and `.after`/`.before` (construct an interval from a point + duration) are additional gaps confirmed via context7 (2026-08-08) — not yet stories; see Story Group G below.
 
 ## Story Group C — DST Disambiguation
 
@@ -73,13 +78,41 @@ Extend existing zoned-producing functions with an **optional** `disambiguation?:
 
 New locale-sensitive variants alongside the existing ISO-only functions (additive, not replacing).
 
-- **D1. `isWeekend(value, locale)`** (plain) + `isZonedWeekend` — via `Intl.Locale` weekend data (`weekInfo`) where available, falling back sensibly where not.
+- **D1. `isWeekend(value, locale)`** (plain) + `isZonedWeekend` — ✅ **Done (2026-08-08).** Added `plain/compare/isWeekend.ts` and `zoned/compare/isZonedWeekend.ts`, resolving weekend days via `Intl.Locale.prototype.weekInfo` (e.g. `en-US`/most locales: Sat/Sun; `he-IL`/`ar-SA`: Fri/Sat — confirmed empirically across all 17 `MustTestLocales`, which split into exactly those two groups). `isZonedWeekend` checks the `ZonedDateTime`'s own local `dayOfWeek` directly — no separate conversion needed, since the value already carries its IANA timezone. **Key finding**: `weekInfo` works at runtime on Node 20/22/24 (shipped since Node 18 / V8 99) but is not yet declared in TypeScript's bundled `lib.*.d.ts` (confirmed on TS 5.9.3) — added a local `declare global { namespace Intl { interface Locale { weekInfo... } } }` augmentation in a new `internal/getLocaleWeekendDays.ts` shared helper rather than casting at each call site. Both return `false` on invalid `value` or an unresolvable `locale` tag; falls back to Sat/Sun if `weekInfo` doesn't resolve. Updated `packages/gmt/README.md`, `plain/README.md`, `zoned/README.md`, and the `compare-dates` TanStack Intent skill (new Core Pattern + a "Common Mistakes" entry on the Sat/Sun-assumption trap).
 - **D2. `getLocaleStartOfWeek` / `getLocaleEndOfWeek`** (plain + zoned) — locale-aware week boundaries, distinct from the existing ISO-Monday `startOfDate`/`endOfDate` family.
 - **D3. `getLocaleDayOfWeek`** (plain + zoned) — day-of-week index relative to the locale's first day, distinct from the existing ISO `getDayOfWeek`.
 
 ## Story Group E — Stretch / Future (not prioritized)
 
 - **E1. Non-Gregorian calendar system support** (Buddhist, Hebrew, Islamic, Japanese, etc., matching react-aria's `toCalendar`). Large surface, narrow demand — single tracking story, not scheduled.
+
+## Story Group F — Business-Day Arithmetic (competitive gap vs. `temporal-kit`)
+
+New locale-agnostic business-day helpers (Mon–Fri, no holiday calendar — holiday-aware scheduling is a much larger, separate surface and explicitly out of scope here). Mirrors the existing `plain/calculate` pattern.
+
+**Full `temporal-kit` audit (2026-08-08):** with `temporal-kit` gaining real adoption (900+ weekly downloads, a polished docs/playground site), did a complete function-by-function audit of its public API (~50 exports across `business/collection/compare/convert/format/guards/math/parse/range/rounding/timezone/validation`, fetched from its GitHub repo and docs site directly — too new/small to be indexed in context7 yet) against GMT's `src/` tree. Most of its surface turned out to already be covered under different names, which is worth recording so this doesn't get re-litigated:
+
+- `sortAsc`/`sortDesc` → GMT's `sortDates`/`sortDateTimes`/`sortTimes`/`sortZoned`/`sortUnix`/`sortUtc` with an `order` param.
+- `min`/`max` → GMT's `minDate`/`maxDate` (+ `minDateTime`/`maxDateTime`/`minTime`/`maxTime`).
+- `isSameDay` → GMT's `areDatesEqual` (and `areDateTimesEqual`/`areTimesEqual`).
+- `nextDay` → GMT's `addDate(value, { days: 1 })` (temporal-kit's is a trivial convenience wrapper, not new capability).
+- `rangesOverlap` → already roadmapped as B3 (`intervalsOverlap`).
+- `eachDayOfInterval`/`stepInterval` → already covered by `mapDatesInRange` and roadmapped B6 (`splitIntervalByUnit`).
+- `isValidDateString` etc., type guards (`isPlainDate`/`isInstant`/`isDuration`/`isZonedDateTime`), `pipe`/`compose` → GMT's validate/\* functions cover the validation surface; type guards and functional-composition helpers (`pipe`/`compose`) don't fit GMT's string-in/string-out contract (per `context/coding-standards.md`) and are deliberately not being added — composing GMT's own string-returning functions already works with plain JS function composition, no library helper needed.
+
+Four genuine, non-overlapping gaps survived the audit — scoped as F1–F4 below.
+
+- **F1. `addBusinessDays` / `subtractBusinessDays`** (plain) — add/subtract N business days (Mon–Fri), skipping weekends. `temporal-kit` has `addBusinessDays`; GMT has no equivalent today (`addDate` counts calendar days only). Zoned equivalents as a follow-up once the plain versions establish the pattern, consistent with how Group B sequences plain-then-zoned.
+- **F2. `isBusinessDay`** (plain) — locale-agnostic Mon–Fri check, distinct from Story Group D's locale-aware `isWeekend`/`isZonedWeekend` (D1). Small, but a natural pairing with F1 since `addBusinessDays` needs the same boundary check internally.
+- **F3. `clampDate` / `closestDateTo`** (plain, zoned equivalents as follow-up) — `clampDate(value, min, max)` restricts a single value to `[min, max]` bounds; `closestDateTo(target, candidates)` finds the candidate nearest a target point. Both distinct from the existing `minDate`/`maxDate` (which reduce an array to its extremum, not bound/compare against a target) — confirmed no existing GMT equivalent for either. Matches `temporal-kit`'s `clamp`/`closestTo`.
+- **F4. `roundTime` (and `roundDateTime`)** — round a time-of-day value to the nearest multiple of a unit (e.g. round `14:37` to the nearest 15 minutes) via `Temporal.PlainTime.prototype.round`. Distinct from GMT's existing `startOfDate`/`endOfDate` (calendar-boundary floor/ceil only, no arbitrary granularity) and from the `RoundingOptions` type already in `packages/gmt/src/types/rounding-options.ts` (currently only used to round `diff*` output, not a standalone value). The clearest real product gap found in the audit — matches UI patterns like time-picker snapping. `temporal-kit` calls this `floor`/`ceil`/`round`; confirm exact unit granularity (minutes/seconds) and rounding-mode options to expose during spec expansion.
+
+## Story Group G — Interval API Rounding-Out (Luxon/date-fns parity gaps found during competitive research)
+
+Confirmed via context7 (2026-08-08) against Luxon's `Interval` and date-fns's interval functions. Additive to Story Group B — sequence after B1–B6 establish the base `interval/` namespace and its object-return convention (per B4's note), since G1/G2 are thin extensions of that same shape.
+
+- **G1. `intervalCount`** — number of calendar-unit boundaries crossed between an interval's start and end (Luxon's `Interval.count(unit)`), distinct from B-group's exact-duration length math. E.g. an interval from 11:59pm to 12:01am crosses one day boundary (`count("days") === 2`) despite being 2 minutes long.
+- **G2. `intervalFromDuration`** — construct `{ start, end }` from a point + an ISO 8601 duration string, either anchored at the start (Luxon's `Interval.after`) or at the end (`Interval.before`). Depends on Story Group A (Duration) for the ISO duration string input, so must sequence after Group A even though it's filed under Group B/G's interval namespace.
 
 ---
 
@@ -88,8 +121,10 @@ New locale-sensitive variants alongside the existing ISO-only functions (additiv
 1. **C1–C3** (DST disambiguation) first — smallest, additive, no new namespace, immediately closes a correctness gap in existing code.
 2. **A1–A5** (Duration parse/validate/add/subtract/normalize/format/diff-bridge) — foundational, kept together so Group A publishes as a single clean release with no other group's changesets riding along.
 3. **D1–D3** (locale calendar helpers) — independent of A/B; sequenced after Group A finishes so each group's publish stays isolated (see the Publish column note below).
-4. **B1–B6** (Interval) — largest group, benefits from Duration existing (B6 splits by duration unit).
-5. **E1** — backlog, not scheduled.
+4. **F1–F4** (business-day arithmetic, clamp/closest, time rounding) — small, independent of A/B/D; closes all four confirmed `temporal-kit` competitive gaps early rather than leaving them exposed through the whole B-group build-out.
+5. **B1–B6** (Interval) — largest group, benefits from Duration existing (B6 splits by duration unit).
+6. **G1–G2** (Interval rounding-out) — depends on B-group's namespace/conventions and (for G2) Group A's Duration strings; sequenced immediately after B so Group B's changesets don't sit half-published waiting on G.
+7. **E1** — backlog, not scheduled.
 
 ## Verification (per story)
 
@@ -103,9 +138,9 @@ New locale-sensitive variants alongside the existing ISO-only functions (additiv
 
 ## GitHub Issues
 
-Workflow: copy the title + description below into a new GitHub issue for each story, then paste the resulting issue number into the `GitHub Issue:` line for that story **both here and in the story's bullet above** (Story Group A–E). When starting a branch for a story, tell the agent which story ID (e.g. "work on C1") — it will find the matching issue link here and the full context in the Story Group section above.
+Workflow: copy the title + description below into a new GitHub issue for each story, then paste the resulting issue number into the `GitHub Issue:` line for that story **both here and in the story's bullet above** (Story Group A–G). When starting a branch for a story, tell the agent which story ID (e.g. "work on C1") — it will find the matching issue link here and the full context in the Story Group section above.
 
-Issue number tracker (fill in as issues are created). `Order` is the sequence to actually work these in — it follows the "Suggested Sequencing" section above (C-group first as a correctness fix, then A1–A5 straight through, then D-group, then B-group, then E1 last) — **not** ascending issue number. `Publish` marks when to cut a release after that story lands: every story is additive-only (new functions, or new optional parameters defaulting to current behavior), so every bump is `minor`; publish once per Story Group rather than per-story.
+Issue number tracker (fill in as issues are created). `Order` is the sequence to actually work these in — it follows the "Suggested Sequencing" section above (C-group first as a correctness fix, then A1–A5 straight through, then D-group, then F-group, then B-group, then G-group, then E1 last) — **not** ascending issue number. `Publish` marks when to cut a release after that story lands: every story is additive-only (new functions, or new optional parameters defaulting to current behavior), so every bump is `minor`; publish once per Story Group rather than per-story.
 
 **Changeset note:** each story's PR still adds its own `.changeset/*.md` file with a `minor` bump label (that's the correct per-change label, independent of when a release is cut). Changesets accumulate un-versioned in `.changeset/` across multiple merged PRs; only running `pnpm changeset:version` actually consumes them and cuts a release. Do **not** run `changeset:version` / publish until the `Publish` column for that row says so (i.e. wait for the last story in the Story Group, not the first). Story Groups are kept **un-interleaved** in `Order` specifically so this holds: `changeset:version` versions everything sitting in `.changeset/` at the time it's run, not just the "completing" group's own changesets, so interleaving two groups' stories would cause an earlier group's publish to sweep up a later, still-in-progress group's changesets too.
 
@@ -119,16 +154,22 @@ Issue number tracker (fill in as issues are created). `Order` is the sequence to
 | 6     | A3    | Issue #29    | Done        | v1.6.0                                       |
 | 7     | A4    | Issue #30    | Done        | v1.6.0                                       |
 | 8     | A5    | Issue #31    | Done        | v1.6.0                                       |
-| 9     | D1    | Issue #41    | Not started | not yet                                      |
+| 9     | D1    | Issue #41    | Done        | not yet                                      |
 | 10    | D2    | Issue #42    | Not started | not yet                                      |
 | 11    | D3    | Issue #43    | Not started | minor, Story Group D complete                |
-| 12    | B1    | Issue #32    | Not started | not yet                                      |
-| 13    | B2    | Issue #33    | Not started | not yet                                      |
-| 14    | B3    | Issue #34    | Not started | not yet                                      |
-| 15    | B4    | Issue #35    | Not started | not yet                                      |
-| 16    | B5    | Issue #36    | Not started | not yet                                      |
-| 17    | B6    | Issue #37    | Not started | minor, Story Group B complete                |
-| 18    | E1    | Issue #44    | Not started | unscheduled, no publish plan until picked up |
+| 12    | F1    | Issue #54    | Not started | not yet                                      |
+| 13    | F2    | Issue #55    | Not started | not yet                                      |
+| 14    | F3    | Issue #56    | Not started | not yet                                      |
+| 15    | F4    | Issue #57    | Not started | minor, Story Group F complete                |
+| 16    | B1    | Issue #32    | Not started | not yet                                      |
+| 17    | B2    | Issue #33    | Not started | not yet                                      |
+| 18    | B3    | Issue #34    | Not started | not yet                                      |
+| 19    | B4    | Issue #35    | Not started | not yet                                      |
+| 20    | B5    | Issue #36    | Not started | not yet                                      |
+| 21    | B6    | Issue #37    | Not started | minor, Story Group B complete                |
+| 22    | G1    | Issue #58    | Not started | not yet                                      |
+| 23    | G2    | Issue #59    | Not started | minor, Story Group G complete                |
+| 24    | E1    | Issue #44    | Not started | unscheduled, no publish plan until picked up |
 
 ### A1 — `parseDuration` / `isValidDuration`
 
@@ -451,6 +492,62 @@ See "Instructions for the agent picking up a story" in `context/roadmap.md`. Nea
 Tests (exact division, remainder/partial-final-interval handling), JSDoc, exports, README/changeset, lint/test pass.
 ```
 
+### G1 — `intervalCount`
+
+**GitHub Issue:** #58
+
+**Title:**
+
+```
+G1 Add intervalCount
+```
+
+**Description:**
+
+```
+Part of the parity roadmap — see `context/roadmap.md`, Story Group G, item G1. Depends on B1 (interval namespace/conventions established). Gap confirmed via context7 against Luxon (2026-08-08), found during a competitive research pass.
+
+## Gap
+Luxon's `Interval.count(unit)` returns the number of calendar-unit boundaries crossed between an interval's start and end — distinct from `.length(unit)`'s exact duration. E.g. an interval from 11:59pm to 12:01am crosses one day boundary (`count("days") === 2`) despite being 2 minutes long. GMT's B-group interval functions have no equivalent of this calendar-boundary-counting semantic.
+
+## Scope
+- `intervalCount(start: string, end: string, unit: DateTimeDurationUnit): number | null` — return `null` on invalid input, per GMT's number-return sentinel convention. Confirm exact semantics against Luxon's `Interval.count` during spec expansion (inclusive/exclusive boundary treatment needs explicit test cases).
+
+## Before starting
+See "Instructions for the agent picking up a story" in `context/roadmap.md`. Nearest analog: whichever B-group function established the interval namespace (B1) and any B-group function returning a number (e.g. compare with `plain/get/getDayOfWeek.ts`'s sentinel convention).
+
+## Definition of done
+Tests (sub-unit-length interval crossing a boundary, exact-multiple interval, zero-length interval, invalid input), JSDoc, exports, README/changeset, lint/test pass.
+```
+
+### G2 — `intervalFromDuration`
+
+**GitHub Issue:** #59
+
+**Title:**
+
+```
+G2 Add intervalFromDuration
+```
+
+**Description:**
+
+```
+Part of the parity roadmap — see `context/roadmap.md`, Story Group G, item G2. Depends on B1 (interval namespace/conventions) and Story Group A (Duration — needs an ISO 8601 duration string as input). Gap confirmed via context7 against Luxon (2026-08-08).
+
+## Gap
+Luxon's `Interval.after(start, duration)` / `Interval.before(end, duration)` construct an interval from a single point plus a duration, anchored at either end. GMT's B-group functions all take two explicit endpoints — there's no convenience constructor from a point + duration.
+
+## Scope
+- `intervalFromDuration(value: string, duration: string, anchor: 'start' | 'end'): { start: string; end: string } | null` — exact signature (single function with an anchor param vs. two sibling functions mirroring Luxon's `after`/`before`) to be finalized at implementation time; follow whichever convention B4/B5 established for object-returning functions. Return `null` on invalid input (unparseable `value`, invalid `duration` per `isValidDuration`, or a `duration` requiring `relativeTo` that isn't satisfiable from a bare point — document this constraint, mirroring A2/A3's documented `relativeTo` gaps).
+
+## Before starting
+See "Instructions for the agent picking up a story" in `context/roadmap.md`. Nearest analog: B4 (`intervalIntersection`)/B5 (`intervalUnion`) for the object-return convention, A1 (`parseDuration`/`isValidDuration`) for validating the `duration` input.
+
+## Definition of done
+Tests (both anchors, invalid `value`, invalid `duration`, a calendar-unit duration that hits the `relativeTo` constraint), JSDoc, exports, README/changeset, lint/test pass.
+```
+
 ### C1 — `convertPlainDateTimeToZoned` disambiguation
 
 **GitHub Issue:** #38
@@ -654,6 +751,125 @@ See "Instructions for the agent picking up a story" in `context/roadmap.md`. Nea
 
 ## Definition of done
 Full 17-locale test matrix, JSDoc, exports, README/changeset, lint/test pass.
+```
+
+### F1 — `addBusinessDays` / `subtractBusinessDays`
+
+**GitHub Issue:** #54
+
+**Title:**
+
+```
+F1 Add addBusinessDays, subtractBusinessDays
+```
+
+**Description:**
+
+```
+Part of the parity roadmap — see `context/roadmap.md`, Story Group F, item F1. Motivated by a competitive gap found against `temporal-kit`, an emerging Temporal-first utility library (see roadmap Context section) — it has `addBusinessDays`, GMT has no equivalent.
+
+## Gap
+GMT's `addDate`/`subtractDate` count calendar days only. There is no way to add/subtract N business days (Mon–Fri), skipping weekends. Holiday calendars are explicitly out of scope — this is Mon–Fri only, matching `temporal-kit`'s scope.
+
+## Scope
+- `addBusinessDays(value: string, amount: number): string` / `subtractBusinessDays(value: string, amount: number): string` (plain, ISO date string in/out).
+- Zoned equivalents as a follow-up story once the plain versions establish the pattern (do not build both in parallel, consistent with how Story Group B sequences plain-then-zoned).
+- Decide during spec expansion whether a negative `amount` on `addBusinessDays` should behave like `subtractBusinessDays` or be rejected — document the choice.
+
+## Before starting
+See "Instructions for the agent picking up a story" in `context/roadmap.md`. Nearest analog: `plain/calculate/addDate.ts`. F2 (`isBusinessDay`) is a natural prerequisite/pairing since the weekend-skip logic is shared — consider whether to land F2 first or inline the check here and extract later.
+
+## Definition of done
+Tests (crossing weekend boundaries in both directions, multi-week spans, zero-amount, negative-amount), JSDoc, exports, README/changeset, lint/test pass.
+```
+
+### F2 — `isBusinessDay`
+
+**GitHub Issue:** #55
+
+**Title:**
+
+```
+F2 Add isBusinessDay
+```
+
+**Description:**
+
+```
+Part of the parity roadmap — see `context/roadmap.md`, Story Group F, item F2. Pairs with F1.
+
+## Gap
+GMT has no locale-agnostic Mon–Fri business-day check. This is distinct from Story Group D's locale-aware `isWeekend`/`isZonedWeekend` (D1), which vary by region (e.g. he-IL's weekend is Fri/Sat) — `isBusinessDay` is a fixed ISO Mon–Fri check, matching `temporal-kit`'s scope and needed internally by F1's boundary-skipping logic.
+
+## Scope
+- `isBusinessDay(value: string): boolean` (plain), `false` on invalid input per GMT's boolean-return sentinel convention.
+
+## Before starting
+See "Instructions for the agent picking up a story" in `context/roadmap.md`. Nearest analog: `plain/compare/` boolean-returning functions. Do not confuse with D1's locale-aware `isWeekend` — this is intentionally ISO-fixed.
+
+## Definition of done
+Tests (each day of the week, invalid input), JSDoc, exports, README/changeset, lint/test pass.
+```
+
+### F3 — `clampDate` / `closestDateTo`
+
+**GitHub Issue:** #56
+
+**Title:**
+
+```
+F3 Add clampDate, closestDateTo
+```
+
+**Description:**
+
+```
+Part of the parity roadmap — see `context/roadmap.md`, Story Group F, item F3. Found during a full function-by-function audit of `temporal-kit`'s API (2026-08-08) — it has `clamp`/`closestTo`, GMT has no equivalent.
+
+## Gap
+GMT's `minDate`/`maxDate` reduce an array to its extremum. Neither covers: (a) restricting a single value to a `[min, max]` bound (clamp), or (b) finding the candidate in a collection nearest to a target point (closest-to), which is a different operation from either extremum.
+
+## Scope
+- `clampDate(value: string, min: string, max: string): string` (plain) — returns `value` if within bounds, otherwise the nearest bound. Returns `""` on invalid input (including `min > max`).
+- `closestDateTo(target: string, candidates: string[]): string | null` (plain) — returns the candidate nearest `target`; `null` on invalid input or empty/all-invalid `candidates`. Decide and document tie-breaking behavior (two equidistant candidates) during spec expansion.
+- Zoned equivalents as a follow-up story once the plain versions establish the pattern, consistent with how Story Group B and F1 sequence plain-then-zoned.
+
+## Before starting
+See "Instructions for the agent picking up a story" in `context/roadmap.md`. Nearest analogs: `plain/calculate/minDate.ts`/`maxDate.ts` for the validation/reduce pattern, `plain/compare/isBetweenDate.ts` for the bounds-checking shape `clampDate` needs internally.
+
+## Definition of done
+Tests (`clampDate`: value within/below/above bounds, invalid `min > max`; `closestDateTo`: target before/after/between candidates, tie-breaking case, empty array, all-invalid array), JSDoc, exports, README/changeset, lint/test pass.
+```
+
+### F4 — `roundTime` (and `roundDateTime`)
+
+**GitHub Issue:** #57
+
+**Title:**
+
+```
+F4 Add roundTime, roundDateTime
+```
+
+**Description:**
+
+```
+Part of the parity roadmap — see `context/roadmap.md`, Story Group F, item F4. Found during a full function-by-function audit of `temporal-kit`'s API (2026-08-08) — it has `floor`/`ceil`/`round` on arbitrary units; this was judged the clearest real product gap in the audit (matches UI patterns like time-picker snapping to 15-minute increments).
+
+## Gap
+GMT's `startOfDate`/`endOfDate` floor/ceil to calendar-unit boundaries (start of month, end of quarter, etc.) but there is no way to round a time-of-day value to an arbitrary granularity (e.g. round `14:37:00` to the nearest 15 minutes). The `RoundingOptions` type at `packages/gmt/src/types/rounding-options.ts` currently only rounds the *difference* between two values (`diff*` functions), not a standalone value.
+
+## Scope
+- `roundTime(value: string, options: { smallestUnit: Temporal.SmallestUnit<"hour">; roundingIncrement?: number; roundingMode?: Temporal.RoundingMode }): string` (plain) via `Temporal.PlainTime.prototype.round`. Returns `""` on invalid input.
+- `roundDateTime(value: string, options: ...): string` (plain) via `Temporal.PlainDateTime.prototype.round`.
+- Confirm during spec expansion whether to reuse the existing `RoundingOptions` type (currently typed against `Temporal.DateTimeUnit` for diff rounding) or introduce a narrower type scoped to time-granular units (minutes/seconds/etc. — rounding a calendar unit like "month" on a bare time doesn't apply).
+- Zoned/unix/utc equivalents as follow-up stories once the plain version establishes the pattern.
+
+## Before starting
+See "Instructions for the agent picking up a story" in `context/roadmap.md`. Nearest analog: `plain/calculate/startOfDate.ts` for the file/JSDoc shape, `packages/gmt/src/types/rounding-options.ts` and its usage in `plain/calculate/diffDate.ts` for the existing rounding-option conventions to reuse or extend.
+
+## Definition of done
+Tests (round up/down/nearest across the increment boundary, each `roundingMode`, invalid input, an increment that doesn't evenly divide the unit), JSDoc, exports, README/changeset, lint/test pass.
 ```
 
 ### E1 — Non-Gregorian calendar system support (stretch, unscheduled)

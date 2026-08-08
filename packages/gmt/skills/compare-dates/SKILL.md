@@ -2,9 +2,12 @@
 name: compare-dates
 description: >
   Compare date values for ordering. Use isAfterDate, isBeforeDate, areDatesEqual
-  for comparisons. Returns false on invalid input.
+  for comparisons. Use isWeekend/isZonedWeekend for locale-aware weekend checks
+  (weekend days vary by locale — not always Saturday/Sunday). Returns false on
+  invalid input.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/compare/index.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/compare/index.ts'
 metadata:
   type: core
   library: '@burglekitt/gmt'
@@ -72,6 +75,19 @@ const before = isBeforeTime("14:30:00", "14:30:45"); // true
 const equal = areTimesEqual("14:30:45", "14:30:45"); // true
 ```
 
+### Check if a date falls on a weekend (locale-aware)
+
+```ts
+import { isWeekend, isZonedWeekend } from "@burglekitt/gmt";
+
+isWeekend("2024-02-03", "en-US"); // true (Saturday, en-US weekend is Sat/Sun)
+isWeekend("2024-02-02", "he-IL"); // true (Friday, he-IL weekend is Fri/Sat)
+
+isZonedWeekend("2024-02-04T10:00:00+02:00[Asia/Jerusalem]", "he-IL"); // false (Sunday isn't part of he-IL's weekend)
+```
+
+`isZonedWeekend` checks the `ZonedDateTime`'s own local calendar day — no separate timezone conversion needed.
+
 ## Common Mistakes
 
 ### HIGH Using string comparison for dates
@@ -137,6 +153,29 @@ const result = isAfterDate("2024-03-05", "2024-03-15");
 ```
 
 Source: Temporal.PlainDate.from() — canonicalizes input
+
+### MEDIUM Assuming weekends are always Saturday/Sunday
+
+Wrong:
+
+```ts
+import { getDayOfWeek } from "@burglekitt/gmt";
+
+const day = getDayOfWeek(); // ISO day of week, always Monday-start
+const isWeekendDay = day === 6 || day === 7; // wrong for he-IL/ar-SA (Fri/Sat)
+```
+
+Correct:
+
+```ts
+import { isWeekend } from "@burglekitt/gmt";
+
+const isWeekendDay = isWeekend("2024-02-02", "he-IL"); // true — Friday is part of he-IL's weekend
+```
+
+Most locales use Saturday/Sunday, but `he-IL`/`ar-SA` use Friday/Saturday — `isWeekend`/`isZonedWeekend` resolve this per-locale via `Intl.Locale`'s `weekInfo` instead of hardcoding a day pair.
+
+Source: packages/gmt/src/plain/compare/isWeekend.ts — locale-aware via Intl.Locale weekInfo
 
 ## References
 

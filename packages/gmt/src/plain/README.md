@@ -38,6 +38,7 @@ Date/time comparison:
 - `isAfterDate`, `isAfterDateTime`, `isAfterTime`
 - `isBeforeDate`, `isBeforeDateTime`, `isBeforeTime`
 - `isBetweenDate`, `isBetweenDateTime`, `isBetweenTime`
+- `isWeekend`
 
 ### format
 

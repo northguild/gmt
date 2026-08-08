@@ -1,192 +1,101 @@
 # Publishing to npm
 
-This is the canonical, up-to-date guide for publishing packages from this monorepo.
-Primary workflow: publish locally from your machine using your npm login/passkey. GitHub
-Actions publishing is optional — if you enable it the environment name is `release`.
+Primary workflow: publish locally from your machine using your npm login/passkey.
+GitHub Actions publishing is optional (see [Alternatives](#alternatives) below).
 
----
+Packages (each independently versioned):
 
-## What is a Changeset?
-
-A changeset is a tiny markdown file (created by `changeset add`) that records:
-- which package(s) changed, and
-- the intended bump: `patch`, `minor`, or `major`.
-
-Changesets are committed on your feature branch as part of the PR. They do not publish anything by themselves.
-
----
-
-## Packages
-
-| Package dir | npm name |
-| --- | --- |
-| `packages/gmt` | `@burglekitt/gmt` |
-| `packages/gmt-biome` | `@burglekitt/gmt-biome` |
+| Package dir           | npm name                 |
+| --------------------- | ------------------------ |
+| `packages/gmt`        | `@burglekitt/gmt`        |
+| `packages/gmt-biome`  | `@burglekitt/gmt-biome`  |
 | `packages/gmt-eslint` | `@burglekitt/gmt-eslint` |
 | `packages/gmt-oxlint` | `@burglekitt/gmt-oxlint` |
-
-Each package is independently versioned.
 
 ---
 
 ## One-time setup
 
-- Ensure the `@burglekitt` npm org exists and you are a member (or ask an owner to invite you).
-- Ensure you can publish locally from your machine: run `npm whoami`. If not logged in, run `npm login` or `npm login --auth-type=web` (for passkey/SSO).
+- Ensure you're a member of the `@burglekitt` npm org.
+- Run `npm whoami` to confirm you're logged in locally. If not, `npm login` (or `npm login --auth-type=web` for passkey/SSO).
+- Run `gh auth login` once, for creating GitHub Releases later.
 
-> No GitHub secrets are required for local publishing. If you want GitHub Action publishing, see the Optional section below (environment name: `release`).
-
----
-
-## Day-to-day contributor flow (what you do in a feature branch)
-
-1. Finish your code changes on the feature branch.
-2. If you changed `packages/gmt/src/`'s public API surface, update the TanStack Intent agent skills in `packages/gmt/skills/` (via the `/tanstack-intent` skill) in the same branch — see [CONTRIBUTING.md](./CONTRIBUTING.md#keeping-agent-skills-current-tanstack-intent). Skills ship inside the published npm package; a version bump with stale skills means agents get a wrong picture of the new release's API immediately on publish.
-3. Record release intent for the affected package(s):
-
-```bash
-pnpm run changeset:add
-```
-
-- The CLI is interactive: select which package(s) your change touches (space to toggle), pick `patch|minor|major`, and write a one-line summary.
-- Commit the generated file in `.changeset/` alongside your code and push the PR.
+No GitHub secrets are required for local publishing.
 
 ---
 
-## Maintainer release flow (recommended: run from your machine)
+## Contributor flow (every feature branch)
 
-1. Inspect pending changesets:
+1. Finish your code changes.
+2. If you changed `packages/gmt/src/`'s public API surface, update the TanStack Intent agent skills in `packages/gmt/skills/` (via the `/tanstack-intent` skill) in the same branch — see [CONTRIBUTING.md](./CONTRIBUTING.md#keeping-agent-skills-current-tanstack-intent). Skills ship inside the published npm package, so stale skills would go out immediately on the next publish.
+3. Record release intent:
+
+   ```bash
+   pnpm run changeset:add
+   ```
+
+   Interactive: pick the changed package(s), pick `patch|minor|major`, write a one-line summary.
+
+4. Commit the generated `.changeset/*.md` file with your code and push the PR.
+
+A changeset is just a markdown file recording what changed and the intended bump — it doesn't publish anything by itself.
+
+---
+
+## Maintainer flow (releasing what's on `main`)
+
+Run these in order, from repo root.
 
 ```bash
+# 1. See what's pending
 pnpm run changeset status
-```
 
-2. Apply version bumps and update changelogs (locally) or merge the automatic Version PR:
-
-```bash
+# 2. Bump versions, update changelogs, and sync TanStack Intent skill
+#    versions to match the new gmt version — all in one step
 pnpm run changeset:version
 git add .
 git commit -m "Version Packages"
 git push
-```
 
-2a. Sync the TanStack Intent skill versions to the new `packages/gmt/package.json` version (skip if `@burglekitt/gmt` wasn't bumped this release):
-
-```bash
-pnpm exec intent validate packages/gmt/skills --set-version <new-gmt-version>
-pnpm exec intent stale packages/gmt/skills
-```
-
-`library_version` drift in a published skill is confusing but not build-breaking, so it's easy to forget — do this before building/publishing, not after.
-
-3. Build any packages that require a build before publish:
-
-```bash
-# build gmt (Nx)
+# 3. Build packages that need a build before publish
 pnpm exec nx run @burglekitt/gmt:build
-
-# build gmt-oxlint
 cd packages/gmt-oxlint && pnpm run build && cd ../..
-```
 
-4. Dry-run the npm package contents (recommended):
-
-```bash
+# 4. Sanity-check package contents before they go out
 cd packages/gmt && npm pack --dry-run && cd ../..
 cd packages/gmt-biome && npm pack --dry-run && cd ../..
 cd packages/gmt-eslint && npm pack --dry-run && cd ../..
 cd packages/gmt-oxlint && npm pack --dry-run && cd ../..
-```
 
-5. Publish (preferred: local; see options below).
-
----
-
-## Publish options
-
-Option A — Local publish (recommended):
-
-```bash
-# confirm you're logged in
-npm whoami
-
-# publish all pending packages (Changesets handles per-package logic)
+# 5. Publish + tag (Changesets creates one git tag per published package,
+#    e.g. @burglekitt/gmt@1.3.0)
+npm whoami   # confirm you're logged in as the right user
 pnpm run changeset:publish
-```
-
-When you run `pnpm run changeset:publish` locally it will call `npm publish --access public` for each package with an unpublished version and will create git tags for each package it publishes.
-
-If you publish packages via the `publish.yml` GitHub Actions workflow (the optional Actions route), that workflow runs `npm publish` but does **not** create git tags. After a successful Actions publish, create and push tags locally:
-
-```bash
-pnpm exec changeset tag
 git push --follow-tags
 ```
 
-Option B — Manual per-package publish (local):
+Step 2's `changeset:version` runs `changeset version` and then
+`node scripts/sync-intent-version.mjs`, which syncs all skill `library_version`
+fields to the new gmt version automatically — no separate step needed.
 
-```bash
-# from a package folder (after build)
-cd packages/gmt
-npm publish --access public
-```
-
-- If you publish manually, create tags with `pnpm exec changeset tag` and push them.
-
-Option C — GitHub Actions publish (optional):
-
-If you publish from GitHub Actions, use an npm Automation token with the minimal required permission (publish). Store the token as a repository secret named `NPM_TOKEN` or (preferably) in a protected GitHub Environment called `release`. In Actions map the secret to the Node auth environment variable:
-
-```yaml
-env:
-  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-```
-
-Security checklist for Actions-based publishing:
-
-- Create an npm Automation token limited to publish scope; avoid broad or long-lived tokens.
-- Store the token in a protected environment or as a repo secret and restrict who can approve environment-protected workflow runs (use GitHub Environment approvals).
-- Never print or echo `NPM_TOKEN` (or `NODE_AUTH_TOKEN`) in workflow logs or steps; avoid exposing it in PRs or forked workflows.
-- Prefer local publishing where possible; if using Actions require explicit environment approvals and limit who can trigger the `release` environment.
-
-Relevant docs:
-
-- npm Automation tokens: https://docs.npmjs.com/creating-and-viewing-authentication-tokens
-- GitHub Environments & Secrets: https://docs.github.com/en/actions/deployment/targeting-specific-environments/using-environments-for-deployments
-
-This is optional — local publishing works with your local npm auth/passkey and requires no repo secrets.
+Then create GitHub Releases for what you just published — see below.
 
 ---
 
-## Tags (monorepo behavior)
+## GitHub Releases (after publishing)
 
-- Tags are package-scoped in this repo, e.g. `@burglekitt/gmt@1.0.0`.
-`changeset:publish` (when run locally) creates these tags automatically. If you published via the `publish.yml` workflow or used `npm publish` directly, run the following to create and push tags:
-
-```bash
-pnpm exec changeset tag
-git push --follow-tags
-```
-
----
-
-## GitHub Releases (manual, after publishing)
-
-`changeset:publish` creates git tags but does **not** create GitHub Releases. Create one per new tag so the repo's Releases page reflects what's on npm.
-
-For each new tag, run from repo root:
+`changeset:publish` creates git tags but not GitHub Releases. Do one per new tag:
 
 ```bash
-# 1. find the tag(s) just created
+# 1. Find the tag(s) just created
 git tag --sort=-creatordate | head
 
-# 2. pull the top changelog section (the just-added one) into a notes file,
-#    stripping the "## <version>" header so the body starts at "### ..."
+# 2. Pull that version's changelog section into a notes file
 PKG=gmt                          # or gmt-biome | gmt-eslint | gmt-oxlint
 TAG='@burglekitt/gmt@1.3.0'      # the tag you're releasing
 awk '/^## /{f++} f==1' packages/$PKG/CHANGELOG.md | sed '1,2d' > /tmp/release-notes.md
 
-# 3. create the release
+# 3. Create the release
 gh release create "$TAG" \
   --title "$TAG" \
   --notes-file /tmp/release-notes.md \
@@ -195,59 +104,62 @@ gh release create "$TAG" \
 
 Notes:
 
-- The tag name contains `@` and `/` — **always quote it** in shell commands. GitHub URL-encodes it (`%40`, `%2F`) in the release URL, which is normal.
-- Mark only one release per publish batch as `--latest` (typically the main `@burglekitt/gmt` package). Use `--latest=false` on the rest.
-- `gh` will create the tag if missing, but with the Changesets flow the tag already exists — `gh` just attaches the release to it.
-- Requires `gh auth login` once per machine.
+- Quote the tag — it contains `@` and `/`. GitHub URL-encodes these in the release URL; that's expected.
+- Mark only one release per batch `--latest` (normally `@burglekitt/gmt`); use `--latest=false` on the rest.
 
 ---
 
 ## First release (initial `1.0.0`)
 
-If you want to publish initial stable `1.0.0` packages:
-
-1. On your feature branch, run `pnpm run changeset:add`, select the packages, and choose `major` (or pick `major` meaning 1.0.0).
-2. Commit and merge the PR to `main`.
-3. On `main`, run `pnpm run changeset:version` (or merge the Version PR).
-4. Build packages and run `pnpm run changeset:publish` locally. That will publish packages and create tags.
+Same as the flows above, with one difference: in step 3 of the contributor flow,
+pick `major` for each package you're taking to `1.0.0`.
 
 ---
 
-## Semver cheat-sheet
+## Alternatives
 
-- `patch` — bug fix (e.g. `1.0.0 → 1.0.1`)
-- `minor` — new feature, backwards-compatible (e.g. `1.0.0 → 1.1.0`)
-- `major` — breaking change or initial stable release (e.g. `0.x → 1.0.0`)
+### Publishing via GitHub Actions instead of locally
 
----
+Not used in this repo — publishing is done manually/locally. Documented here only
+in case that ever changes.
 
-## Quick reference (copyable)
+If you do publish from Actions, use an npm Automation token scoped to publish
+only, stored in a protected GitHub Environment called `release`:
+
+```yaml
+env:
+  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+```
+
+- Never print/echo `NPM_TOKEN` or `NODE_AUTH_TOKEN` in logs, PRs, or forked workflows.
+- Restrict who can approve `release` environment runs.
+- The `publish.yml` workflow runs `npm publish` but does **not** create git tags. After a successful Actions publish, create and push them yourself:
+
+  ```bash
+  pnpm exec changeset tag
+  git push --follow-tags
+  ```
+
+Docs: [npm Automation tokens](https://docs.npmjs.com/creating-and-viewing-authentication-tokens) · [GitHub Environments](https://docs.github.com/en/actions/deployment/targeting-specific-environments/using-environments-for-deployments)
+
+### Manual per-package publish (no Changesets publish step)
 
 ```bash
-# On feature branch
-pnpm run changeset:add
-git add .changeset/
-git commit -m "add changeset"
+cd packages/gmt
+npm publish --access public
+```
 
-# After main has changesets merged
-pnpm run changeset:version
-git add .
-git commit -m "Version Packages"
-git push
+Then create and push tags yourself, since this skips Changesets' auto-tagging:
 
-# Build (if needed)
-pnpm exec nx run @burglekitt/gmt:build
-cd packages/gmt-oxlint && pnpm run build && cd ../..
-
-# Dry-run
-cd packages/gmt && npm pack --dry-run && cd ../..
-
-# Publish locally (recommended)
-pnpm run changeset:publish
+```bash
 pnpm exec changeset tag
 git push --follow-tags
 ```
 
 ---
 
-If you want, I can now either (a) remove the optional `publish.yml` workflow from the repo, or (b) leave it in place and mark it as optional in docs. Which would you prefer?
+## Semver cheat-sheet
+
+- `patch` — bug fix (`1.0.0 → 1.0.1`)
+- `minor` — new feature, backwards-compatible (`1.0.0 → 1.1.0`)
+- `major` — breaking change or initial stable release (`0.x → 1.0.0`)

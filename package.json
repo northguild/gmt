@@ -35,7 +35,7 @@
     "test:gmt-oxlint": "vitest run --config packages/gmt-oxlint/vitest.config.ts",
     "changeset": "changeset",
     "changeset:add": "changeset add",
-    "changeset:version": "changeset version",
+    "changeset:version": "changeset version && node scripts/sync-intent-version.mjs",
     "changeset:publish": "changeset publish",
     "release:publish": "pnpm run validate && pnpm run changeset:publish"
   },

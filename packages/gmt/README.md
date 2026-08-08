@@ -118,6 +118,21 @@ diffDate("2023-01-01", "2023-01-10", "week", {
 // 1
 ```
 
+`isWeekend`/`isZonedWeekend` check locale-specific weekend days (via `Intl.Locale`'s `weekInfo`) rather than assuming Saturday/Sunday:
+
+```typescript
+import { isWeekend, isZonedWeekend } from "@burglekitt/gmt";
+
+isWeekend("2024-02-03", "en-US");
+// true (Saturday, en-US weekend is Sat/Sun)
+
+isWeekend("2024-02-03", "he-IL");
+// true (Saturday is also part of he-IL's Fri/Sat weekend)
+
+isZonedWeekend("2024-02-04T10:00:00+02:00[Asia/Jerusalem]", "he-IL");
+// false (Sunday isn't part of he-IL's weekend)
+```
+
 ### Durations
 
 ```typescript
