@@ -34,4 +34,26 @@ describe("endOfQuarterForZoned", () => {
       expect(endOfQuarterForZoned(invalidZoned)).toBe("");
     },
   );
+
+  // disambiguation + offset are wired through, though quarter boundaries (Mar31/Jun30/Sep30/Dec31
+  // end-of-day) rarely coincide with a DST transition in common IANA zones — this verifies the
+  // parameters are accepted and don't change output for the common case
+  it.each`
+    disambiguation  | offset
+    ${"compatible"} | ${undefined}
+    ${"earlier"}    | ${undefined}
+    ${"later"}      | ${undefined}
+    ${"reject"}     | ${undefined}
+    ${"reject"}     | ${"prefer"}
+    ${"reject"}     | ${"ignore"}
+  `(
+    "accepts disambiguation $disambiguation and offset $offset without changing output for a non-transition quarter end",
+    ({ disambiguation, offset }) => {
+      const optionsArg =
+        offset === undefined ? { disambiguation } : { disambiguation, offset };
+      expect(
+        endOfQuarterForZoned("2024-02-15T14:30:00+00:00[UTC]", optionsArg),
+      ).toBe("2024-03-31T23:59:59.999999999+00:00[UTC]");
+    },
+  );
 });

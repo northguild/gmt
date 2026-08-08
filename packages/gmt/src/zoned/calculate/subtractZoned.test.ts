@@ -166,4 +166,36 @@ describe("subtractZoned", () => {
       expect(subtractZoned(value, { days: 1 }, optionsArg)).toBe(expected);
     },
   );
+
+  // offset is accepted but inert: the internal rebuild step reconstructs from a plain datetime
+  // string with no offset embedded, so every offset value produces identical output
+  it.each`
+    offset
+    ${undefined}
+    ${"prefer"}
+    ${"use"}
+    ${"ignore"}
+    ${"reject"}
+  `(
+    "produces identical output regardless of offset $offset (inert on this function)",
+    ({ offset }) => {
+      const value = "2024-11-04T01:30:00-05:00[America/New_York]";
+      const withoutOffset = subtractZoned(
+        value,
+        { days: 1 },
+        {
+          disambiguation: "later",
+        },
+      );
+      const withOffset = subtractZoned(
+        value,
+        { days: 1 },
+        {
+          disambiguation: "later",
+          offset,
+        },
+      );
+      expect(withOffset).toBe(withoutOffset);
+    },
+  );
 });

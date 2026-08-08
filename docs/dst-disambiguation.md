@@ -31,15 +31,15 @@ Both scenarios need a tiebreak rule. Temporal (and GMT, which wraps it) offers f
 
 `disambiguation` shows up on more than one function, and they don't all behave the same way — this is the part people get tripped up on. Use this table to route to the right one:
 
-| Your situation                                | Function                      | Real control?      |
-| --------------------------------------------- | ----------------------------- | ------------------ |
-| Attach a plain local time + timezone          | `convertPlainDateTimeToZoned` | **Yes, fully.**    |
-| Add/subtract a duration from a zoned datetime | `addZoned` / `subtractZoned`  | **Overlaps only.** |
-| Jump to start/end of day/week/month/quarter   | `startOfZoned` family         | **Yes, fully.**    |
+| Your situation                                | Function                      | Real control?                  |
+| --------------------------------------------- | ----------------------------- | ------------------------------ |
+| Attach a plain local time + timezone          | `convertPlainDateTimeToZoned` | **Yes, fully.**                |
+| Add/subtract a duration from a zoned datetime | `addZoned` / `subtractZoned`  | **Overlaps only.**             |
+| Jump to start/end of a boundary               | `startOfZoned` family         | **Yes — if `offset` default.** |
 
 - **`convertPlainDateTimeToZoned`** — every value (`earlier`/`later`/`reject`) changes the result, for both gaps and overlaps.
 - **`addZoned` / `subtractZoned`** — only controls overlaps; has no effect on gaps. See below.
-- **`startOfZoned` family** (`startOfZoned`, `endOfZoned`, `startOfQuarterForZoned`, `endOfQuarterForZoned` — Story C3) — fully controllable; these construct a new local time via `.with()`, same mechanism as `convertPlainDateTimeToZoned`.
+- **`startOfZoned` family** (`startOfZoned`, `endOfZoned`, `startOfQuarterForZoned`, `endOfQuarterForZoned`, `mapZonedHoursInDay`, and their `unix/` counterparts `startOfUnix`, `endOfUnix`, `startOfQuarterForUnix`, `endOfQuarterForUnix` — Story C3) — fully controllable; these construct a new local time via `.with()`, same mechanism as `convertPlainDateTimeToZoned` — **but see "The `offset` parameter" below**, since `.with()` has an extra option that `.from()` doesn't need to worry about.
 
 ### Real-world scenarios
 
@@ -55,6 +55,41 @@ You can get there for overlaps (pass `disambiguation: "reject"` to `addZoned`/`s
 ### Why `addZoned`/`subtractZoned` can't fully control gaps
 
 `Temporal.ZonedDateTime.prototype.add()`/`.subtract()` don't accept a `disambiguation` option at all — arithmetic always resolves ambiguity internally as `"compatible"`. GMT's `addZoned`/`subtractZoned` work around this by re-resolving the _result_ through the same construction path `convertPlainDateTimeToZoned` uses (dropping the offset and reconstructing from the local time + timezone). That trick genuinely works for overlaps, because the ambiguity is still there to resolve when you look at the result's local time. It does _not_ work for gaps: by the time arithmetic finishes, a gap landing has already been silently advanced past (the local time it hands back is a real, unambiguous one) — there's nothing left to disambiguate. This is a property of how Temporal's arithmetic algorithm works, not a GMT limitation we can lift later without an upstream spec change.
+
+### The `offset` parameter
+
+The `startOfZoned` family (Story C3) constructs its boundary via `Temporal.ZonedDateTime.prototype.with()`, not `.from()`. `.with()` has an option `convertPlainDateTimeToZoned`/`addZoned`/`subtractZoned` never need to think about, because they don't have it: **`offset`**, which controls what happens to the _existing_ offset already attached to the source `ZonedDateTime` when you change some of its fields.
+
+`offset` accepts four values, mirroring Temporal's own `OffsetDisambiguationOptions`:
+
+| Value                                          | Behavior                                                                                                                                        |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `"prefer"` (Temporal's default)                | Keep the source's offset if it's still valid for the new fields; only fall back to `disambiguation` if it isn't.                                |
+| `"use"`                                        | Always keep the source's offset, even if that produces a different real-world instant than the local time implies.                              |
+| `"ignore"` (**GMT's default for this family**) | Always discard the source's offset and recompute purely from time zone + local time — this is what makes `disambiguation` actually take effect. |
+| `"reject"`                                     | Throw if the source's offset isn't valid for the new fields, regardless of `disambiguation`.                                                    |
+
+**Why this matters, concretely**: every function in the `startOfZoned` family starts from an already-built `ZonedDateTime` — which already has a valid, resolved offset — and then resets some of its fields (e.g. zeroing the minutes for "start of hour"). For a same-day field reset, the source's offset is _almost always still valid_ for the new fields. With `offset: "prefer"` (Temporal's default), that means the source offset just gets kept — and `disambiguation` is never even consulted, because there was nothing ambiguous to resolve from Temporal's point of view. This was discovered empirically while wiring up `disambiguation` on these functions: passing `disambiguation` alone (matching the pattern used by `convertPlainDateTimeToZoned`) produced byte-identical output across all four values on a real fall-back-overlap case, until `offset: "ignore"` was also passed.
+
+GMT defaults `offset` to `"ignore"` on every function in this family, specifically so that `disambiguation` works the way you'd expect out of the box. You only need to touch `offset` if you deliberately want Temporal's raw `.with()` semantics (e.g. "keep whatever offset this ZonedDateTime already had, even across a boundary jump") — and if you do, know that setting it away from `"ignore"` can make `disambiguation` silently do nothing, exactly like the bug described above.
+
+```typescript
+import { startOfZoned } from "@burglekitt/gmt/zoned";
+
+// 2024-11-03T01:45:00-05:00 is the SECOND, repeated 1am of the fall-back overlap in America/New_York.
+const source = "2024-11-03T01:45:00-05:00[America/New_York]";
+
+startOfZoned(source, "hour", { disambiguation: "reject" });
+// "" — offset defaults to "ignore", so disambiguation actually fires and "reject" throws
+
+startOfZoned(source, "hour", { disambiguation: "reject", offset: "prefer" });
+// "2024-11-03T01:00:00-05:00[America/New_York]" — offset:"prefer" keeps the source's
+// still-valid -05:00 offset, so disambiguation is never consulted and "reject" never fires
+```
+
+`convertPlainDateTimeToZoned` and `addZoned`/`subtractZoned` also accept an `offset` parameter (for API consistency across the disambiguation-aware functions), but it's **permanently inert** on both: their underlying `.from()` call always parses a plain datetime string with no offset embedded in the first place, so there's never a stored offset for `offset` to prefer/use/ignore/reject against. `disambiguation` alone fully controls those two.
+
+**Why not `overflow` too?** `Temporal.ZonedDateTime.prototype.with()` also accepts a third option, `overflow` (`"constrain" | "reject"`, controlling what happens when a field value like `day` or `month` is out of range). GMT deliberately doesn't expose it: every field value these functions pass to `.with()` is a fixed, always-in-range literal (`day: 1`, `hour: 0`, `hour: 23`, `nanosecond: 999`, and so on), so `overflow` can never actually branch at any call site in this library today. Exposing it would just be a documented no-op, so it's left off the public API.
 
 ## Using it in GMT
 

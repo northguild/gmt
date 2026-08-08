@@ -4,5 +4,6 @@ export * from "./date-time-unit";
 export * from "./date-unit";
 export * from "./disambiguation";
 export * from "./fractional-digit";
+export * from "./offset";
 export * from "./time-duration-unit";
 export * from "./time-unit";

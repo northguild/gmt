@@ -82,4 +82,52 @@ describe("mapZonedHoursInDay", () => {
       expect(mapZonedHoursInDay(value)).toHaveLength(24);
     });
   }
+
+  // disambiguation: the midnight anchor itself is ambiguous in this historical Brazil zone/date
+  // (2018-11-04's DST-start transition landed exactly on local midnight)
+  it.each`
+    disambiguation  | expectedLength
+    ${undefined}    | ${24}
+    ${"compatible"} | ${24}
+    ${"earlier"}    | ${23}
+    ${"later"}      | ${24}
+    ${"reject"}     | ${0}
+  `(
+    "with disambiguation $disambiguation on an anchor whose midnight is ambiguous, returns $expectedLength entries",
+    ({ disambiguation, expectedLength }) => {
+      const optionsArg =
+        disambiguation === undefined ? undefined : { disambiguation };
+      expect(
+        mapZonedHoursInDay(
+          "2018-11-04T12:00:00-02:00[America/Sao_Paulo]",
+          optionsArg,
+        ),
+      ).toHaveLength(expectedLength);
+    },
+  );
+
+  // offset controls whether disambiguation takes effect for the midnight anchor. Unlike
+  // startOfZoned's Nov 3 America/New_York case, the source's -02:00 offset here is ALSO invalid
+  // at midnight, so "prefer" falls through to disambiguation and "reject" still throws — offset
+  // does not universally suppress disambiguation, only when the source offset happens to remain valid
+  it.each`
+    offset       | expectedLength
+    ${undefined} | ${0}
+    ${"ignore"}  | ${0}
+    ${"prefer"}  | ${0}
+  `(
+    "with disambiguation reject and offset $offset, returns $expectedLength entries",
+    ({ offset, expectedLength }) => {
+      const optionsArg =
+        offset === undefined
+          ? { disambiguation: "reject" as const }
+          : { disambiguation: "reject" as const, offset };
+      expect(
+        mapZonedHoursInDay(
+          "2018-11-04T12:00:00-02:00[America/Sao_Paulo]",
+          optionsArg,
+        ),
+      ).toHaveLength(expectedLength);
+    },
+  );
 });

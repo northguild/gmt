@@ -1,7 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidAmount } from "../../internal";
 import { isValidDateTimeDurationUnit } from "../../plain/validate";
-import type { DateTimeDurationUnit, Disambiguation } from "../../types";
+import type { DateTimeDurationUnit, Disambiguation, Offset } from "../../types";
 import { isValidZonedDateTime } from "../validate";
 
 /**
@@ -14,11 +14,16 @@ import { isValidZonedDateTime } from "../validate";
  *   "reject" (throws, resulting in ""). Has no effect when the result lands in a spring-forward
  *   (DST-start) gap — Temporal's arithmetic always resolves gap landings unambiguously (by advancing
  *   past the gap) before disambiguation is ever evaluated.
+ * - `offset` ("prefer" | "use" | "ignore" (default) | "reject") is accepted for API consistency with
+ *   sibling zoned-construction functions (see `startOfZoned`, `endOfZoned`, etc.) but has **no effect
+ *   here**: the internal rebuild step reconstructs from a plain datetime string with no UTC offset
+ *   embedded, so there is never a stored offset for `offset` to prefer/use/ignore/reject against.
+ *   `disambiguation` is the only option that affects this function's output.
  * - Returns "" for invalid input.
  *
  * @param value ISO 8601 zoned datetime string
  * @param units Partial<Record<DateTimeDurationUnit, number>> object specifying units to subtract
- * @param optionsArg optional: disambiguation ("compatible" | "earlier" | "later" | "reject")
+ * @param optionsArg optional: disambiguation ("compatible" | "earlier" | "later" | "reject"), offset ("prefer" | "use" | "ignore" | "reject" — accepted but inert, see above)
  * @returns zoned ISO 8601 string on success, or "" on invalid input
  *
  * @example subtractZoned("2024-03-10T12:00:00-04:00[America/New_York]", { days: 5 }) // "2024-03-05T12:00:00-05:00[America/New_York]"
@@ -30,7 +35,7 @@ import { isValidZonedDateTime } from "../validate";
 export function subtractZoned(
   value: string,
   units: Partial<Record<DateTimeDurationUnit, number>>,
-  optionsArg?: { disambiguation?: Disambiguation },
+  optionsArg?: { disambiguation?: Disambiguation; offset?: Offset },
 ): string {
   const validZonedDateTime = isValidZonedDateTime(value);
   const validUnits = Object.keys(units).every(isValidDateTimeDurationUnit);
@@ -41,6 +46,7 @@ export function subtractZoned(
   }
 
   const disambiguation = optionsArg?.disambiguation ?? "compatible";
+  const offset = optionsArg?.offset ?? "ignore";
 
   try {
     const zoned = Temporal.ZonedDateTime.from(value);
@@ -53,7 +59,7 @@ export function subtractZoned(
     const plainDateTime = subtracted.toPlainDateTime().toString();
     const resolved = Temporal.ZonedDateTime.from(
       `${plainDateTime}[${subtracted.timeZoneId}]`,
-      { disambiguation },
+      { disambiguation, offset },
     );
     return resolved.toString();
   } catch {

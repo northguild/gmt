@@ -1,17 +1,18 @@
 ---
 name: zoned-date-ops
 description: >
-  Work with timezone-aware dates and times. Use IANA timezone identifiers for
-  timezone-aware operations. Use getZonedNow, formatZonedDateTime,
-  formatZonedRange for absolute formatting, and formatRelativeZoned for DST-safe
-  relative output across timezones. Use getSystemTimeZone and getTimeZones for
-  system timezone discovery and IANA timezone lists. Use
-  convertPlainDateTimeToZoned to attach a timezone to a plain datetime, with an
-  optional disambiguation option ("compatible" | "earlier" | "later" | "reject")
-  to control DST gap/overlap resolution. Use addZoned and subtractZoned for
-  zoned duration arithmetic, which also accept disambiguation but only for
-  fall-back overlaps — spring-forward gaps are unaffected, see DST
-  Disambiguation reference.
+  Work with timezone-aware dates and times using IANA timezone identifiers.
+  Use getZonedNow, formatZonedDateTime, formatZonedRange, formatRelativeZoned,
+  getSystemTimeZone, getTimeZones for the basics. Use
+  convertPlainDateTimeToZoned, addZoned, subtractZoned, startOfZoned,
+  endOfZoned, startOfQuarterForZoned, endOfQuarterForZoned,
+  mapZonedHoursInDay, and their unix/ counterparts (startOfUnix, endOfUnix,
+  startOfQuarterForUnix, endOfQuarterForUnix) for DST-aware construction,
+  arithmetic, and boundary/quarter/hour computations — most accept a
+  disambiguation option ("compatible" | "earlier" | "later" | "reject") for
+  gap/overlap resolution, and the boundary family also accepts offset
+  ("prefer" | "use" | "ignore" | "reject", default "ignore", which must stay
+  default for disambiguation to work).
 sources:
   - 'burglekitt/gmt:packages/gmt/src/zoned/get/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/format/index.ts'
@@ -19,6 +20,15 @@ sources:
   - 'burglekitt/gmt:packages/gmt/src/zoned/convert/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/addZoned.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/subtractZoned.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/startOfZoned.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/endOfZoned.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/startOfQuarterForZoned.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/endOfQuarterForZoned.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/map/mapZonedHoursInDay.ts'
+  - 'burglekitt/gmt:packages/gmt/src/unix/calculate/startOfUnix.ts'
+  - 'burglekitt/gmt:packages/gmt/src/unix/calculate/endOfUnix.ts'
+  - 'burglekitt/gmt:packages/gmt/src/unix/calculate/startOfQuarterForUnix.ts'
+  - 'burglekitt/gmt:packages/gmt/src/unix/calculate/endOfQuarterForUnix.ts'
 metadata:
   type: core
   library: '@burglekitt/gmt'
@@ -237,6 +247,36 @@ addZoned("2024-03-09T02:30:00-05:00[America/New_York]", { days: 1 }, {
 
 See [Which function do I actually need?](../../../../docs/dst-disambiguation.md#which-function-do-i-actually-need) for guidance on choosing between `convertPlainDateTimeToZoned` and `addZoned`/`subtractZoned`, and why the gap limitation exists.
 
+### Jump to a boundary (start/end of unit, quarter, or hours-in-day — with full DST disambiguation)
+
+```ts
+import { startOfZoned, endOfZoned } from "@burglekitt/gmt/zoned";
+
+startOfZoned("2024-03-15T14:30:45[America/New_York]", "month");
+// "2024-03-01T00:00:00-05:00[America/New_York]"
+
+endOfZoned("2024-03-15T14:30:45[America/New_York]", "hour");
+// "2024-03-15T14:59:59.999999999-04:00[America/New_York]"
+```
+
+`startOfZoned`, `endOfZoned`, `startOfQuarterForZoned`, `endOfQuarterForZoned`, `mapZonedHoursInDay`, and the `unix/` counterparts `startOfUnix`, `endOfUnix`, `startOfQuarterForUnix`, `endOfQuarterForUnix` all accept `disambiguation`, same as `convertPlainDateTimeToZoned` — full control over both gaps and overlaps, unlike `addZoned`/`subtractZoned`. But they also accept a second option, `offset` (`"prefer" | "use" | "ignore" | "reject"`, defaulting to `"ignore"`), that `disambiguation` alone doesn't fully control without:
+
+```ts
+import { startOfZoned } from "@burglekitt/gmt/zoned";
+
+// 2024-11-03T01:45:00-05:00 is the SECOND, repeated 1am of the fall-back overlap.
+const source = "2024-11-03T01:45:00-05:00[America/New_York]";
+
+startOfZoned(source, "hour", { disambiguation: "reject" });
+// "" — offset defaults to "ignore", so disambiguation actually fires
+
+startOfZoned(source, "hour", { disambiguation: "reject", offset: "prefer" });
+// "2024-11-03T01:00:00-05:00[America/New_York]" — offset:"prefer" keeps the
+// source's still-valid offset, so disambiguation is never consulted
+```
+
+Leave `offset` at its default unless you deliberately need Temporal's raw `.with()` semantics. See [The offset parameter](../../../../docs/dst-disambiguation.md#the-offset-parameter) for the full mechanism.
+
 ## Timezone List
 
 Common IANA timezone identifiers:
@@ -370,6 +410,34 @@ const added = addZoned(value, { days: 1 });
 ```
 
 Source: packages/gmt/src/zoned/calculate/addZoned.ts — `disambiguation` has no effect on spring-forward gaps; see [DST Disambiguation](../../../../docs/dst-disambiguation.md)
+
+### MEDIUM Passing `offset: "prefer"` and expecting `disambiguation` to still fire
+
+Wrong:
+
+```ts
+// Expects "reject" to throw on this fall-back overlap, but offset:"prefer"
+// keeps the source's still-valid offset before disambiguation is ever consulted.
+const start = startOfZoned("2024-11-03T01:45:00-05:00[America/New_York]", "hour", {
+  disambiguation: "reject",
+  offset: "prefer",
+});
+// "2024-11-03T01:00:00-05:00[America/New_York]" — does NOT throw/return ""
+```
+
+Correct:
+
+```ts
+import { startOfZoned } from "@burglekitt/gmt/zoned";
+
+// Leave offset at its default ("ignore") so disambiguation actually takes effect.
+const start = startOfZoned("2024-11-03T01:45:00-05:00[America/New_York]", "hour", {
+  disambiguation: "reject",
+});
+// "" — ambiguous, correctly rejected
+```
+
+Source: packages/gmt/src/zoned/calculate/startOfZoned.ts — `offset` defaults to `"ignore"` specifically so `disambiguation` works; see [The offset parameter](../../../../docs/dst-disambiguation.md#the-offset-parameter)
 
 ## References
 

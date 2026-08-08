@@ -121,7 +121,25 @@ convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York", {
 // "" — no such local time exists
 ```
 
-See [`docs/dst-disambiguation.md`](../../docs/dst-disambiguation.md) for the full explanation.
+The `startOfZoned`/`endOfZoned`/`startOfQuarterForZoned`/`endOfQuarterForZoned`/`mapZonedHoursInDay` family (and their `unix/` counterparts) also accept `disambiguation`, plus an `offset` option (`"prefer"` | `"use"` | `"ignore"` (default) | `"reject"`) that controls whether the source's existing UTC offset is kept when computing the new boundary. **`offset` must stay at its default (`"ignore"`) for `disambiguation` to take effect** — Temporal's own default (`"prefer"`) keeps the source offset whenever still valid, which silently makes `disambiguation` a no-op:
+
+```typescript
+import { startOfZoned } from "@burglekitt/gmt";
+
+// 2024-11-03T01:45:00-05:00 is the SECOND, repeated 1am of the fall-back overlap in America/New_York.
+const source = "2024-11-03T01:45:00-05:00[America/New_York]";
+
+startOfZoned(source, "hour", { disambiguation: "reject" });
+// "" — offset defaults to "ignore", so disambiguation actually fires and "reject" throws
+
+startOfZoned(source, "hour", { disambiguation: "reject", offset: "prefer" });
+// "2024-11-03T01:00:00-05:00[America/New_York]" — offset:"prefer" keeps the source's
+// still-valid -05:00 offset, so disambiguation is never consulted and "reject" never fires
+```
+
+`convertPlainDateTimeToZoned` and `addZoned`/`subtractZoned` also accept `offset` for API consistency, but it's permanently inert on both — their construction path never has a stored offset for it to act on.
+
+See [`docs/dst-disambiguation.md`](../../docs/dst-disambiguation.md) for the full explanation, including why `overflow` was deliberately left off the public API.
 
 ### Formatting
 

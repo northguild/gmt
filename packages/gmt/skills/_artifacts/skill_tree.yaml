@@ -10,7 +10,7 @@ library:
 generated_from:
   domain_map: 'skills/_artifacts/domain_map.yaml'
   skill_spec: 'skills/_artifacts/skill_spec.md'
-generated_at: '2026-08-07'
+generated_at: '2026-08-08'
 
 skills:
   # Consumer-facing core skills
@@ -101,7 +101,7 @@ skills:
     domain: zoned-date-operations
     path: 'skills/zoned-date-ops/SKILL.md'
     package: 'packages/gmt'
-    description: Work with timezone-aware dates and times; includes formatZonedDateTime, formatZonedRange, formatRelativeZoned, convertPlainDateTimeToZoned with full DST disambiguation control, and addZoned/subtractZoned with overlap-only DST disambiguation control
+    description: Work with timezone-aware dates and times; includes formatZonedDateTime, formatZonedRange, formatRelativeZoned, convertPlainDateTimeToZoned with full DST disambiguation control, addZoned/subtractZoned with overlap-only DST disambiguation control, and the startOfZoned/endOfZoned/startOfQuarterForZoned/endOfQuarterForZoned/mapZonedHoursInDay family (plus unix/ counterparts) with full disambiguation + offset control
     sources:
       - 'burglekitt/gmt:packages/gmt/src/zoned/get/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/format/index.ts'
@@ -109,6 +109,15 @@ skills:
       - 'burglekitt/gmt:packages/gmt/src/zoned/convert/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/addZoned.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/subtractZoned.ts'
+      - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/startOfZoned.ts'
+      - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/endOfZoned.ts'
+      - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/startOfQuarterForZoned.ts'
+      - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/endOfQuarterForZoned.ts'
+      - 'burglekitt/gmt:packages/gmt/src/zoned/map/mapZonedHoursInDay.ts'
+      - 'burglekitt/gmt:packages/gmt/src/unix/calculate/startOfUnix.ts'
+      - 'burglekitt/gmt:packages/gmt/src/unix/calculate/endOfUnix.ts'
+      - 'burglekitt/gmt:packages/gmt/src/unix/calculate/startOfQuarterForUnix.ts'
+      - 'burglekitt/gmt:packages/gmt/src/unix/calculate/endOfQuarterForUnix.ts'
 
   - name: Convert Temporal Types
     slug: convert-types

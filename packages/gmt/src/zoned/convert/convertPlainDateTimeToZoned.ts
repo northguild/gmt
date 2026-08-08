@@ -1,6 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidDateTime } from "../../plain/validate";
-import type { Disambiguation } from "../../types";
+import type { Disambiguation, Offset } from "../../types";
 import { isValidTimeZone } from "../validate";
 
 /**
@@ -8,11 +8,12 @@ import { isValidTimeZone } from "../validate";
  *
  * - Combines plain datetime with timezone to create ZonedDateTime.
  * - `disambiguation` controls DST gap/overlap resolution: "compatible" (default, matches Temporal's default), "earlier", "later", or "reject" (throws, resulting in "").
+ * - `offset` ("prefer" | "use" | "ignore" (default) | "reject", per Temporal's `OffsetDisambiguationOptions`) is accepted for API consistency with sibling zoned-construction functions (see `startOfZoned`, `endOfZoned`, etc.) but has **no effect here**: `value` is a plain datetime string with no UTC offset embedded, so there is never a stored offset for `offset` to prefer/use/ignore/reject against. `disambiguation` is the only option that affects this function's output.
  * - Returns "" for invalid input.
  *
  * @param value plain datetime string (e.g. "2024-02-29T14:30:45")
  * @param timeZone IANA timeZone identifier
- * @param optionsArg optional: smallestUnit, disambiguation ("compatible" | "earlier" | "later" | "reject")
+ * @param optionsArg optional: smallestUnit, disambiguation ("compatible" | "earlier" | "later" | "reject"), offset ("prefer" | "use" | "ignore" | "reject" — accepted but inert, see above)
  * @returns zoned ISO 8601 datetime string or "" when invalid
  *
  * @example convertPlainDateTimeToZoned("2024-02-29T14:30:45", "America/New_York") // "2024-02-29T14:30:45.123-05:00[America/New_York]"
@@ -27,6 +28,7 @@ export function convertPlainDateTimeToZoned(
   optionsArg?: {
     smallestUnit?: Temporal.ZonedDateTimeToStringOptions["smallestUnit"];
     disambiguation?: Disambiguation;
+    offset?: Offset;
   },
 ): string {
   if (!isValidDateTime(value) || !isValidTimeZone(timeZone)) {
@@ -34,6 +36,7 @@ export function convertPlainDateTimeToZoned(
   }
 
   const disambiguation = optionsArg?.disambiguation ?? "compatible";
+  const offset = optionsArg?.offset ?? "ignore";
 
   const options: Partial<Temporal.ZonedDateTimeToStringOptions> = {
     smallestUnit: optionsArg?.smallestUnit ?? "milliseconds",
@@ -42,6 +45,7 @@ export function convertPlainDateTimeToZoned(
   try {
     const zonedDateTime = Temporal.ZonedDateTime.from(`${value}[${timeZone}]`, {
       disambiguation,
+      offset,
     });
     return zonedDateTime.toString(options);
   } catch {

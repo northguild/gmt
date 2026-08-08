@@ -167,4 +167,29 @@ describe("convertPlainDateTimeToZoned", () => {
       );
     },
   );
+
+  // offset is accepted but inert: value has no offset embedded, so every offset value produces identical output
+  it.each`
+    offset
+    ${undefined}
+    ${"prefer"}
+    ${"use"}
+    ${"ignore"}
+    ${"reject"}
+  `(
+    "produces identical output regardless of offset $offset (inert on this function)",
+    ({ offset }) => {
+      const withoutOffset = convertPlainDateTimeToZoned(
+        "2024-11-03T01:30:00",
+        "America/New_York",
+        { disambiguation: "later" },
+      );
+      const withOffset = convertPlainDateTimeToZoned(
+        "2024-11-03T01:30:00",
+        "America/New_York",
+        { disambiguation: "later", offset },
+      );
+      expect(withOffset).toBe(withoutOffset);
+    },
+  );
 });

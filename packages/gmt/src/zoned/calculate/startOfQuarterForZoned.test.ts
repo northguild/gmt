@@ -34,4 +34,26 @@ describe("startOfQuarterForZoned", () => {
       expect(startOfQuarterForZoned(invalidZoned)).toBe("");
     },
   );
+
+  // disambiguation + offset are wired through, though quarter starts (Jan1/Apr1/Jul1/Oct1) rarely
+  // coincide with a DST transition in common IANA zones — this verifies the parameters are accepted
+  // and don't change output for the common case (mechanism verification, not a gap/overlap case)
+  it.each`
+    disambiguation  | offset
+    ${"compatible"} | ${undefined}
+    ${"earlier"}    | ${undefined}
+    ${"later"}      | ${undefined}
+    ${"reject"}     | ${undefined}
+    ${"reject"}     | ${"prefer"}
+    ${"reject"}     | ${"ignore"}
+  `(
+    "accepts disambiguation $disambiguation and offset $offset without changing output for a non-transition quarter start",
+    ({ disambiguation, offset }) => {
+      const optionsArg =
+        offset === undefined ? { disambiguation } : { disambiguation, offset };
+      expect(
+        startOfQuarterForZoned("2024-02-15T14:30:00+00:00[UTC]", optionsArg),
+      ).toBe("2024-01-01T00:00:00+00:00[UTC]");
+    },
+  );
 });
