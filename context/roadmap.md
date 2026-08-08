@@ -35,7 +35,7 @@ This roadmap is intentionally a skeleton, not a spec. Before implementing any st
 
 Mirrors the `plain/calculate` pattern: one function per file, string-in/string-out contract intact (ISO 8601 duration strings like `"P1DT2H30M"`, not Duration objects, per GMT's core rule).
 
-- **A1. `parseDuration` / `isValidDuration`** — parse and validate ISO 8601 duration strings via `Temporal.Duration.from`. Foundation for everything else in this group.
+- **A1. `parseDuration` / `isValidDuration`** — ✅ **Done (2026-08-08).** Parse and validate ISO 8601 duration strings via `Temporal.Duration.from`. Foundation for everything else in this group. New `src/duration/` namespace with `validate/isValidDuration.ts` and `parse/parseDuration.ts`; `parseDuration` accepts optional `smallestUnit`/`fractionalSecondDigits`/`roundingMode` (Temporal's `ToStringPrecisionOptions`, the only options `Temporal.Duration.prototype.toString()` exposes — `Temporal.Duration.from` itself takes no options). **Scope expanded per user request** to also add relevant, previously-missing Temporal options to the *existing* `add*`/`subtract*`/`diff*` functions across `plain`/`zoned`/`unix`/`utc` (18 functions total): `add*`/`subtract*` gained an optional `overflow` (`"constrain"` (default) | `"reject"`) controlling out-of-range arithmetic (e.g. Jan 31 + 1 month), extracted as a shared `Overflow` type at `packages/gmt/src/types/overflow.ts` (mirroring how `Disambiguation`/`Offset` were extracted for C1–C3, since it's reused identically across all 12 functions); `diff*` gained optional `smallestUnit`/`roundingIncrement`/`roundingMode` (Temporal's `DifferenceOptions` rounding controls) to round the computed difference instead of always returning the exact value. All new options are optional and default to prior behavior — non-breaking. Added a new `durations` TanStack Intent skill and extended `calculate-dates` with the new options; added `packages/gmt/src/duration/README.md` and updated root/package READMEs.
 - **A2. `addDuration` / `subtractDuration`** — combine two ISO duration strings (`Temporal.Duration.add/subtract`), return ISO duration string.
 - **A3. `normalizeDuration`** (round-trip through `Temporal.Duration.round`/`balance` semantics) — roll small units into larger ones (Luxon's `shiftTo`/`rescale` equivalent), still string-in/string-out.
 - **A4. `formatDuration`** — human-readable rendering of an ISO duration string via `Intl.DurationFormat` (or manual fallback if runtime support is thin) — the "humanize a duration standalone" gap called out above, distinct from the existing `formatRelative*` family which is anchored to "now."
@@ -112,10 +112,10 @@ Issue number tracker (fill in as issues are created). `Order` is the sequence to
 
 | Order | Story | GitHub Issue | Status      | Publish                                      |
 | ----- | ----- | ------------ | ----------- | -------------------------------------------- |
-| 1     | C1    | Issue #38    | Done        | not yet                                      |
-| 2     | C2    | Issue #39    | Done        | not yet                                      |
-| 3     | C3    | Issue #40    | Done        | minor, Story Group C complete                |
-| 4     | A1    | Issue #27    | Not started | not yet                                      |
+| 1     | C1    | Issue #38    | Done        | v1.5.0                                       |
+| 2     | C2    | Issue #39    | Done        | v1.5.0                                       |
+| 3     | C3    | Issue #40    | Done        | v1.5.0                                       |
+| 4     | A1    | Issue #27    | Done        | not yet                                      |
 | 5     | A2    | Issue #28    | Not started | not yet                                      |
 | 6     | D1    | Issue #41    | Not started | not yet                                      |
 | 7     | D2    | Issue #42    | Not started | not yet                                      |

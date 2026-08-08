@@ -5,5 +5,7 @@ export * from "./date-unit";
 export * from "./disambiguation";
 export * from "./fractional-digit";
 export * from "./offset";
+export * from "./overflow";
+export * from "./rounding-options";
 export * from "./time-duration-unit";
 export * from "./time-unit";

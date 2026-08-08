@@ -68,4 +68,25 @@ describe("addTime", () => {
       expect(addTime(invalidValue, { minutes: 30 })).toBe("");
     },
   );
+
+  it.each`
+    value         | units            | overflow       | expected
+    ${"23:00:00"} | ${{ hours: 2 }}  | ${undefined}   | ${"01:00:00"}
+    ${"23:00:00"} | ${{ hours: 2 }}  | ${"constrain"} | ${"01:00:00"}
+    ${"23:00:00"} | ${{ hours: 2 }}  | ${"reject"}    | ${"01:00:00"}
+    ${"23:00:00"} | ${{ hours: 24 }} | ${undefined}   | ${"23:00:00"}
+    ${"23:00:00"} | ${{ hours: 24 }} | ${"constrain"} | ${"23:00:00"}
+    ${"23:00:00"} | ${{ hours: 24 }} | ${"reject"}    | ${"23:00:00"}
+  `(
+    "produces the identical wrapped result $expected for $value + $units regardless of overflow $overflow (PlainTime always wraps around the clock)",
+    ({ value, units, overflow, expected }) => {
+      expect(
+        addTime(
+          value,
+          units,
+          overflow === undefined ? undefined : { overflow },
+        ),
+      ).toBe(expected);
+    },
+  );
 });

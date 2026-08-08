@@ -45,7 +45,7 @@ If you see a Date API in code, replace it with a GMT helper.
 |---|---|---|
 | [`@burglekitt/gmt`](./packages/gmt) | `npm install @burglekitt/gmt` | Give Me Temporal — string-in/string-out date library |
 
-`@burglekitt/gmt` currently exports top-level `Temporal`, `plain`, `zoned`, `unix`, `utc`, and `regex` namespaces, with direct subpath imports available under `@burglekitt/gmt/*`.
+`@burglekitt/gmt` currently exports top-level `Temporal`, `duration`, `plain`, `zoned`, `unix`, `utc`, and `regex` namespaces, with direct subpath imports available under `@burglekitt/gmt/*`.
 
 ## Optional: Add Linting for Date API Bans
 
@@ -85,6 +85,9 @@ pnpm run format
 ├── packages/
 │   ├── gmt/                    # @burglekitt/gmt — Give Me Temporal!
 │   │   ├── src/
+│   │   │   ├── duration/       # ISO 8601 duration parsing and validation
+│   │   │   │   ├── parse/      # parseDuration
+│   │   │   │   └── validate/   # isValidDuration
 │   │   │   ├── plain/          # Timezone-free operations
 │   │   │   │   ├── calculate/  # addDate, diffDateTime, subtractTime, ...
 │   │   │   │   ├── compare/    # isAfterDate, isBeforeDate, areDatesEqual, ...

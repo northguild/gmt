@@ -1,7 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { getLargestDateTimeDurationUnit } from "../../plain/calculate/getLargestDateTimeDurationUnit";
 import { isValidDateTimeDurationUnit } from "../../plain/validate";
-import type { DateTimeDurationUnit } from "../../types";
+import type { DateTimeDurationUnit, RoundingOptions } from "../../types";
 import { getSystemTimeZone } from "../../zoned/get";
 import { isValidTimeZone } from "../../zoned/validate";
 
@@ -12,10 +12,17 @@ import { isValidTimeZone } from "../../zoned/validate";
  * - Supports single unit or array of units.
  * - Returns null for invalid input.
  *
+ * `smallestUnit`, `roundingIncrement`, and `roundingMode` control optional rounding of the result,
+ * per Temporal's DifferenceOptions — e.g. `{ smallestUnit: "hour", roundingMode: "halfExpand" }`
+ * rounds the difference to the nearest hour before extracting the requested unit.
+ * - When `units` is an array, `smallestUnit` must not be coarser than the largest unit in the
+ *   array (e.g. `["day", "hour"]` with `smallestUnit: "week"`) — this combination is rejected by
+ *   Temporal and returns null, same as other invalid input.
+ *
  * @param value1 first Unix timestamp
  * @param value2 second Unix timestamp
  * @param units DateTimeDurationUnit | DateTimeDurationUnit[] to measure the difference
- * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA)
+ * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA), smallestUnit, roundingIncrement, roundingMode (Temporal.DifferenceOptions rounding controls)
  * @returns numeric difference in the requested unit, or null on invalid input
  *
  * @example diffUnix(1706745600000, 1706659200000, "day") // 1
@@ -29,7 +36,7 @@ export function diffUnix(
   options?: {
     epochUnit?: "seconds" | "milliseconds";
     timeZone?: string;
-  },
+  } & RoundingOptions<Temporal.DateTimeUnit>,
 ): number | Record<DateTimeDurationUnit, number> | null {
   const epochUnit = options?.epochUnit ?? "milliseconds";
   const timeZone = options?.timeZone ?? getSystemTimeZone();
@@ -67,6 +74,9 @@ export function diffUnix(
 
     const duration = zdt1.until(zdt2, {
       largestUnit: isSingleUnit ? units : getLargestDateTimeDurationUnit(units),
+      smallestUnit: options?.smallestUnit,
+      roundingIncrement: options?.roundingIncrement,
+      roundingMode: options?.roundingMode,
     });
 
     if (isSingleUnit) {

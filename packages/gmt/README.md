@@ -50,13 +50,22 @@ Invalid input fallbacks are consistent across the library:
 
 ## Package Layout
 
-The package exports six top-level namespaces:
+The package exports seven top-level namespaces:
 
 ```typescript
-import { Temporal, plain, zoned, unix, utc, regex } from "@burglekitt/gmt";
+import {
+  Temporal,
+  duration,
+  plain,
+  zoned,
+  unix,
+  utc,
+  regex,
+} from "@burglekitt/gmt";
 ```
 
 - `Temporal`: re-exported from `@js-temporal/polyfill`
+- `duration`: ISO 8601 duration string parsing and validation
 - `plain`: timezone-free helpers
 - `zoned`: timezone-aware helpers
 - `unix`: Unix epoch (seconds or milliseconds) helpers
@@ -92,6 +101,39 @@ areDatesEqual("2026-03-17", "2026-03-17T09:00:00");
 
 isBeforeDateTime("2026-03-17T09:00:00", "2026-03-17T10:00:00");
 // true
+```
+
+`add*`/`subtract*` accept an optional `overflow` (`"constrain"` (default) | `"reject"`) to control out-of-range results (e.g. adding a month to Jan 31), and `diff*` accept optional `smallestUnit`/`roundingIncrement`/`roundingMode` to round the computed difference:
+
+```typescript
+import { addDate, diffDate } from "@burglekitt/gmt";
+
+addDate("2024-01-31", { months: 1 }, { overflow: "reject" });
+// "" — Feb 31 doesn't exist and overflow: "reject" refuses to clamp it
+
+diffDate("2023-01-01", "2023-01-10", "week", {
+  smallestUnit: "week",
+  roundingMode: "halfExpand",
+});
+// 1
+```
+
+### Durations
+
+```typescript
+import { isValidDuration, parseDuration } from "@burglekitt/gmt";
+
+isValidDuration("P1DT2H30M");
+// true
+
+parseDuration("P1DT2H30M");
+// "P1DT2H30M"
+
+parseDuration("PT1.5S", { smallestUnit: "second", roundingMode: "trunc" });
+// "PT1S"
+
+parseDuration("not a duration");
+// ""
 ```
 
 ### Zoned operations
@@ -204,6 +246,7 @@ convertUnixToPlainDate(1710685845);
 
 For the complete API listing, see the namespace documentation on GitHub:
 
+- [Duration API](https://github.com/burglekitt/gmt/tree/main/packages/gmt/src/duration) — ISO 8601 duration parsing and validation
 - [Plain API](https://github.com/burglekitt/gmt/tree/main/packages/gmt/src/plain) — timezone-free operations
 - [Zoned API](https://github.com/burglekitt/gmt/tree/main/packages/gmt/src/zoned) — IANA timezone-aware operations
 - [Unix API](https://github.com/burglekitt/gmt/tree/main/packages/gmt/src/unix) — Unix epoch utilities

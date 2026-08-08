@@ -2,7 +2,9 @@
 name: calculate-dates
 description: >
   Add or subtract time from dates. Use addDays, addMonths, subtractTime for date
-  arithmetic. Use diffDate for calculating differences.
+  arithmetic. Use diffDate for calculating differences. add*/subtract* accept an
+  optional overflow ("constrain" | "reject") option; diff* accept optional
+  smallestUnit/roundingIncrement/roundingMode options to round the result.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/calculate/index.ts'
 metadata:
@@ -99,6 +101,37 @@ import { startOfQuarterForDate, endOfQuarterForDate } from "@burglekitt/gmt";
 const q1Start = startOfQuarterForDate("2024-03-15"); // "2024-01-01"
 const q1End = endOfQuarterForDate("2024-03-15"); // "2024-03-31"
 ```
+
+### Control out-of-range add/subtract results with overflow
+
+```ts
+import { addDate } from "@burglekitt/gmt";
+
+// default overflow: "constrain" clamps to the nearest valid date
+const clamped = addDate("2024-01-31", { months: 1 }); // "2024-02-29"
+
+// overflow: "reject" returns the sentinel instead of clamping
+const rejected = addDate("2024-01-31", { months: 1 }, { overflow: "reject" }); // ""
+```
+
+`overflow` is available on `addDate`, `addDateTime`, `addTime`, `addUnix`, `addUtc`, `addZoned`, and their `subtract` equivalents. It defaults to `"constrain"` (matches prior behavior) and is accepted-but-inert on `addTime`/`subtractTime`, since `PlainTime` arithmetic always wraps around the clock rather than producing an out-of-range value.
+
+### Round a diff result with smallestUnit/roundingIncrement/roundingMode
+
+```ts
+import { diffDate } from "@burglekitt/gmt";
+
+// unrounded (default): exact difference in the requested unit
+const exact = diffDate("2023-01-01", "2023-01-10", "day"); // 9
+
+// round to the nearest week
+const rounded = diffDate("2023-01-01", "2023-01-10", "week", {
+  smallestUnit: "week",
+  roundingMode: "halfExpand",
+}); // 1
+```
+
+`smallestUnit`, `roundingIncrement`, and `roundingMode` are available on `diffDate`, `diffDateTime`, `diffTime`, `diffUnix`, `diffUtc`, and `diffZoned`. All default to no rounding (the prior, exact behavior) when omitted.
 
 ## Common Mistakes
 

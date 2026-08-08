@@ -82,4 +82,47 @@ describe("subtractUtc", () => {
       ).toBe("");
     },
   );
+
+  it.each`
+    value                     | units             | overflow       | expected
+    ${"2024-03-31T12:00:00Z"} | ${{ months: 1 }}  | ${undefined}   | ${"2024-02-29T12:00:00Z"}
+    ${"2024-03-31T12:00:00Z"} | ${{ months: 1 }}  | ${"constrain"} | ${"2024-02-29T12:00:00Z"}
+    ${"2024-03-31T12:00:00Z"} | ${{ months: 1 }}  | ${"reject"}    | ${""}
+    ${"2024-03-31T12:00:00Z"} | ${{ months: 13 }} | ${undefined}   | ${"2023-02-28T12:00:00Z"}
+    ${"2024-03-31T12:00:00Z"} | ${{ months: 13 }} | ${"constrain"} | ${"2023-02-28T12:00:00Z"}
+    ${"2024-03-31T12:00:00Z"} | ${{ months: 13 }} | ${"reject"}    | ${""}
+    ${"2024-02-29T12:00:00Z"} | ${{ years: 1 }}   | ${undefined}   | ${"2023-02-28T12:00:00Z"}
+    ${"2024-02-29T12:00:00Z"} | ${{ years: 1 }}   | ${"constrain"} | ${"2023-02-28T12:00:00Z"}
+    ${"2024-02-29T12:00:00Z"} | ${{ years: 1 }}   | ${"reject"}    | ${""}
+    ${"2024-01-15T12:00:00Z"} | ${{ months: 1 }}  | ${"reject"}    | ${"2023-12-15T12:00:00Z"}
+  `(
+    "returns $expected for $value - $units with overflow $overflow",
+    ({ value, units, overflow, expected }) => {
+      expect(
+        subtractUtc(
+          value,
+          units,
+          overflow === undefined ? undefined : { overflow },
+        ),
+      ).toBe(expected);
+    },
+  );
+
+  it.each`
+    value                     | units             | overflow       | expected
+    ${"2024-03-31T12:00:00Z"} | ${{ months: -1 }} | ${undefined}   | ${"2024-04-30T12:00:00Z"}
+    ${"2024-03-31T12:00:00Z"} | ${{ months: -1 }} | ${"constrain"} | ${"2024-04-30T12:00:00Z"}
+    ${"2024-03-31T12:00:00Z"} | ${{ months: -1 }} | ${"reject"}    | ${""}
+  `(
+    "returns $expected for negative amount $units on $value with overflow $overflow",
+    ({ value, units, overflow, expected }) => {
+      expect(
+        subtractUtc(
+          value,
+          units,
+          overflow === undefined ? undefined : { overflow },
+        ),
+      ).toBe(expected);
+    },
+  );
 });

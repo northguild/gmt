@@ -1,7 +1,12 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { isValidAmount } from "../../internal";
+import { isValidAmount, resolveOverflow } from "../../internal";
 import { isValidDateTimeDurationUnit } from "../../plain/validate";
-import type { DateTimeDurationUnit, Disambiguation, Offset } from "../../types";
+import type {
+  DateTimeDurationUnit,
+  Disambiguation,
+  Offset,
+  Overflow,
+} from "../../types";
 import { isValidZonedDateTime } from "../validate";
 
 /**
@@ -19,11 +24,13 @@ import { isValidZonedDateTime } from "../validate";
  *   here**: the internal rebuild step reconstructs from a plain datetime string with no UTC offset
  *   embedded, so there is never a stored offset for `offset` to prefer/use/ignore/reject against.
  *   `disambiguation` is the only option that affects this function's output.
+ * - `overflow` ("constrain" (default) | "reject") controls out-of-range results, e.g. adding 1 month
+ *   to Jan 31: "constrain" clamps to Feb 29/28, "reject" throws (resulting in "").
  * - Returns "" for invalid input.
  *
  * @param value ISO 8601 zoned datetime string
  * @param units Partial<Record<DateTimeDurationUnit, number>> object specifying units to add
- * @param optionsArg optional: disambiguation ("compatible" | "earlier" | "later" | "reject"), offset ("prefer" | "use" | "ignore" | "reject" — accepted but inert, see above)
+ * @param optionsArg optional: disambiguation ("compatible" | "earlier" | "later" | "reject"), offset ("prefer" | "use" | "ignore" | "reject" — accepted but inert, see above), overflow ("constrain" | "reject")
  * @returns zoned ISO 8601 string on success, or "" on invalid input
  *
  * @example addZoned("2024-02-29T14:30:45.123-05:00[America/New_York]", { days: 1 }) // "2024-03-01T14:30:45.123-05:00[America/New_York]"
@@ -31,11 +38,16 @@ import { isValidZonedDateTime } from "../validate";
  * @example addZoned("2024-11-02T01:30:00-04:00[America/New_York]", { days: 1 }, { disambiguation: "later" }) // "2024-11-03T01:30:00-05:00[America/New_York]" (fall-back overlap resolved; default "compatible" would return the -04:00 instant instead)
  * @example addZoned("2024-11-02T01:30:00-04:00[America/New_York]", { days: 1 }, { disambiguation: "reject" }) // "" (fall-back overlap rejected)
  * @example addZoned("2024-03-09T02:30:00-05:00[America/New_York]", { days: 1 }, { disambiguation: "reject" }) // "2024-03-10T03:30:00-04:00[America/New_York]" (spring-forward gap — disambiguation has no effect, arithmetic already advanced past it, so "reject" does not throw here)
+ * @example addZoned("2024-01-31T12:00:00-05:00[America/New_York]", { months: 1 }, { overflow: "reject" }) // ""
  */
 export function addZoned(
   value: string,
   units: Partial<Record<DateTimeDurationUnit, number>>,
-  optionsArg?: { disambiguation?: Disambiguation; offset?: Offset },
+  optionsArg?: {
+    disambiguation?: Disambiguation;
+    offset?: Offset;
+    overflow?: Overflow;
+  },
 ): string {
   const validZonedDateTime = isValidZonedDateTime(value);
   const validUnits = Object.keys(units).every(isValidDateTimeDurationUnit);
@@ -48,10 +60,11 @@ export function addZoned(
 
   const disambiguation = optionsArg?.disambiguation ?? "compatible";
   const offset = optionsArg?.offset ?? "ignore";
+  const overflow = resolveOverflow(optionsArg?.overflow);
 
   try {
     const zoned = Temporal.ZonedDateTime.from(value);
-    const added = zoned.add(units);
+    const added = zoned.add(units, { overflow });
 
     if (disambiguation === "compatible") {
       return added.toString();

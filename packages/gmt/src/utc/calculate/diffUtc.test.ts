@@ -46,4 +46,82 @@ describe("diffUtc", () => {
       );
     },
   );
+
+  it.each`
+    roundingMode    | expected
+    ${"ceil"}       | ${2}
+    ${"floor"}      | ${1}
+    ${"trunc"}      | ${1}
+    ${"halfExpand"} | ${2}
+  `(
+    "rounds a 90-minute span to $expected hours with smallestUnit hour, roundingMode $roundingMode",
+    ({ roundingMode, expected }) => {
+      expect(
+        diffUtc("2028-01-01T00:00:00Z", "2028-01-01T01:30:00Z", "hours", {
+          smallestUnit: "hours",
+          roundingMode,
+        }),
+      ).toBe(expected);
+    },
+  );
+
+  it("returns the unrounded result when no rounding options are provided", () => {
+    expect(
+      diffUtc("2028-01-01T00:00:00Z", "2028-01-01T01:40:00Z", "minutes"),
+    ).toBe(100);
+  });
+
+  it("returns null when roundingIncrement does not evenly divide the unit (minutes must divide 60)", () => {
+    expect(
+      diffUtc("2028-01-01T00:00:00Z", "2028-01-01T01:30:00Z", "minutes", {
+        smallestUnit: "minutes",
+        roundingIncrement: 7,
+        roundingMode: "trunc",
+      }),
+    ).toBeNull();
+  });
+
+  it("rounds a negative diff (value1 after value2)", () => {
+    expect(
+      diffUtc("2028-01-01T01:30:00Z", "2028-01-01T00:00:00Z", "hours", {
+        smallestUnit: "hours",
+        roundingMode: "halfExpand",
+      }),
+    ).toBe(-2);
+  });
+
+  it("rounds a result requested as an array of units", () => {
+    expect(
+      diffUtc(
+        "2028-01-01T00:00:00Z",
+        "2028-01-01T01:45:00Z",
+        ["hours", "minutes"],
+        {
+          smallestUnit: "minutes",
+          roundingIncrement: 30,
+          roundingMode: "halfExpand",
+        },
+      ),
+    ).toEqual({ hours: 2, minutes: 0 });
+  });
+
+  it("returns the unrounded array-of-units result when no options are provided", () => {
+    expect(
+      diffUtc("2028-01-01T00:00:00Z", "2028-01-01T01:45:00Z", [
+        "hours",
+        "minutes",
+      ]),
+    ).toEqual({ hours: 1, minutes: 45 });
+  });
+
+  it("returns null when smallestUnit is coarser than the largest requested unit", () => {
+    expect(
+      diffUtc(
+        "2028-01-01T00:00:00Z",
+        "2028-01-01T01:45:00Z",
+        ["minutes", "seconds"],
+        { smallestUnit: "hours" },
+      ),
+    ).toBeNull();
+  });
 });

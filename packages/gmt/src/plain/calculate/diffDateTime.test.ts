@@ -156,4 +156,113 @@ describe("diffDateTime", () => {
       ] as never),
     ).toBeNull();
   });
+
+  it.each`
+    roundingMode    | expected
+    ${"ceil"}       | ${2}
+    ${"floor"}      | ${1}
+    ${"trunc"}      | ${1}
+    ${"halfExpand"} | ${2}
+    ${"halfCeil"}   | ${2}
+    ${"halfFloor"}  | ${1}
+    ${"halfTrunc"}  | ${1}
+    ${"halfEven"}   | ${2}
+    ${"expand"}     | ${2}
+  `(
+    "rounds a 90-minute span to $expected hours with smallestUnit hour, roundingMode $roundingMode",
+    ({ roundingMode, expected }) => {
+      expect(
+        diffDateTime("2024-02-29T00:00:00", "2024-02-29T01:30:00", "hours", {
+          smallestUnit: "hours",
+          roundingMode,
+        }),
+      ).toBe(expected);
+    },
+  );
+
+  it("returns the unrounded result when no options are provided", () => {
+    expect(
+      diffDateTime("2024-02-29T00:00:00", "2024-02-29T01:40:00", "hours"),
+    ).toBe(1);
+  });
+
+  it("rounds sub-second precision with roundingIncrement", () => {
+    expect(
+      diffDateTime(
+        "2024-02-29T00:00:00.000",
+        "2024-02-29T00:00:00.750",
+        "milliseconds",
+        {
+          smallestUnit: "milliseconds",
+          roundingIncrement: 100,
+          roundingMode: "halfExpand",
+        },
+      ),
+    ).toBe(800);
+  });
+
+  it("returns null when roundingIncrement is invalid for the unit (does not divide evenly)", () => {
+    expect(
+      diffDateTime("2024-02-29T00:00:00", "2024-02-29T00:32:00", "minutes", {
+        smallestUnit: "minutes",
+        roundingIncrement: 7,
+        roundingMode: "trunc",
+      }),
+    ).toBeNull();
+  });
+
+  it("rounds a negative diff (dateTime1 after dateTime2)", () => {
+    expect(
+      diffDateTime("2024-02-29T01:30:00", "2024-02-29T00:00:00", "hours", {
+        smallestUnit: "hours",
+        roundingMode: "halfExpand",
+      }),
+    ).toBe(-2);
+  });
+
+  it("rounds a zero-length diff to zero", () => {
+    expect(
+      diffDateTime("2024-02-29T00:00:00", "2024-02-29T00:00:00", "hours", {
+        smallestUnit: "hours",
+        roundingMode: "halfExpand",
+      }),
+    ).toBe(0);
+  });
+
+  it("rounds a result requested as an array of units", () => {
+    expect(
+      diffDateTime(
+        "2023-01-01T00:00:00",
+        "2023-01-01T01:45:00",
+        ["hours", "minutes"],
+        {
+          smallestUnit: "minutes",
+          roundingIncrement: 30,
+          roundingMode: "halfExpand",
+        },
+      ),
+    ).toEqual({ hours: 2, minutes: 0 });
+  });
+
+  it("returns the unrounded array-of-units result when no options are provided", () => {
+    expect(
+      diffDateTime("2023-01-01T00:00:00", "2023-01-01T01:45:00", [
+        "hours",
+        "minutes",
+      ]),
+    ).toEqual({ hours: 1, minutes: 45 });
+  });
+
+  it("returns null when smallestUnit is coarser than the largest requested unit", () => {
+    expect(
+      diffDateTime(
+        "2023-01-01T00:00:00",
+        "2023-01-01T01:45:00",
+        ["minutes", "seconds"],
+        {
+          smallestUnit: "hours",
+        },
+      ),
+    ).toBeNull();
+  });
 });

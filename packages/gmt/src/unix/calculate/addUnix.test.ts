@@ -37,4 +37,24 @@ describe("addUnix", () => {
   `("returns null for invalid input", ({ value, units, options }) => {
     expect(addUnix(value as never, units as never, options)).toBeNull();
   });
+
+  it.each`
+    value            | units             | options                                                    | expected
+    ${1706702400000} | ${{ months: 1 }}  | ${undefined}                                               | ${1709208000000}
+    ${1706702400000} | ${{ months: 1 }}  | ${{ overflow: "constrain" }}                               | ${1709208000000}
+    ${1706702400000} | ${{ months: 1 }}  | ${{ overflow: "reject" }}                                  | ${null}
+    ${1706702400000} | ${{ months: 1 }}  | ${{ overflow: "constrain", timeZone: "America/New_York" }} | ${1709208000000}
+    ${1706702400000} | ${{ months: 1 }}  | ${{ overflow: "reject", timeZone: "America/New_York" }}    | ${null}
+    ${1706702400}    | ${{ months: 1 }}  | ${{ overflow: "constrain", epochUnit: "seconds" }}         | ${1709208000}
+    ${1706702400}    | ${{ months: 1 }}  | ${{ overflow: "reject", epochUnit: "seconds" }}            | ${null}
+    ${1706702400000} | ${{ days: 1 }}    | ${{ overflow: "reject" }}                                  | ${1706788800000}
+    ${1711886400000} | ${{ months: -1 }} | ${undefined}                                               | ${1709208000000}
+    ${1711886400000} | ${{ months: -1 }} | ${{ overflow: "constrain" }}                               | ${1709208000000}
+    ${1711886400000} | ${{ months: -1 }} | ${{ overflow: "reject" }}                                  | ${null}
+  `(
+    "returns $expected for $value + $units with options $options",
+    ({ value, units, options, expected }) => {
+      expect(addUnix(value, units, options)).toBe(expected);
+    },
+  );
 });

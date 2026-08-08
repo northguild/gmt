@@ -1,6 +1,21 @@
-import { localNoonBattleCases } from "../../test";
+import { Temporal } from "@js-temporal/polyfill";
+import { battleTestTimeZones, localNoonBattleCases } from "../../test";
 import { parseTimeZoneFromZoned } from "../parse";
 import { subtractZoned } from "./subtractZoned";
+
+// Local Mar 31 noon in each battle-test timeZone — used for overflow (month-end) tests.
+const localMar31NoonBattleCases = battleTestTimeZones.map((timeZone) => ({
+  timeZone,
+  value: Temporal.ZonedDateTime.from({
+    year: 2024,
+    month: 3,
+    day: 31,
+    hour: 12,
+    minute: 0,
+    second: 0,
+    timeZone,
+  }).toString(),
+}));
 
 describe("subtractZoned", () => {
   it.each`
@@ -198,4 +213,65 @@ describe("subtractZoned", () => {
       expect(withOffset).toBe(withoutOffset);
     },
   );
+
+  for (const { timeZone, value } of localMar31NoonBattleCases) {
+    it(`clamps out-of-range results with the default overflow (constrain) across battle-test timeZone ${timeZone}`, () => {
+      const result = subtractZoned(value, { months: 1 });
+      expect(result).not.toBe("");
+      expect(parseTimeZoneFromZoned(result)).toBe(timeZone);
+      expect(result.startsWith("2024-02-29T12:00:00")).toBe(true);
+    });
+
+    it(`returns an empty string when overflow is reject and the result is out of range across battle-test timeZone ${timeZone}`, () => {
+      expect(subtractZoned(value, { months: 1 }, { overflow: "reject" })).toBe(
+        "",
+      );
+    });
+  }
+
+  it.each`
+    value                                            | units             | overflow       | expected
+    ${"2024-03-31T12:00:00-04:00[America/New_York]"} | ${{ months: 1 }}  | ${undefined}   | ${"2024-02-29T12:00:00-05:00[America/New_York]"}
+    ${"2024-03-31T12:00:00-04:00[America/New_York]"} | ${{ months: 1 }}  | ${"constrain"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"}
+    ${"2024-03-31T12:00:00-04:00[America/New_York]"} | ${{ months: 1 }}  | ${"reject"}    | ${""}
+    ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${{ years: 1 }}   | ${undefined}   | ${"2023-02-28T12:00:00-05:00[America/New_York]"}
+    ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${{ years: 1 }}   | ${"reject"}    | ${""}
+    ${"2024-01-15T12:00:00-05:00[America/New_York]"} | ${{ months: 1 }}  | ${"reject"}    | ${"2023-12-15T12:00:00-05:00[America/New_York]"}
+    ${"2024-03-31T12:00:00-04:00[America/New_York]"} | ${{ months: -1 }} | ${undefined}   | ${"2024-04-30T12:00:00-04:00[America/New_York]"}
+    ${"2024-03-31T12:00:00-04:00[America/New_York]"} | ${{ months: -1 }} | ${"constrain"} | ${"2024-04-30T12:00:00-04:00[America/New_York]"}
+    ${"2024-03-31T12:00:00-04:00[America/New_York]"} | ${{ months: -1 }} | ${"reject"}    | ${""}
+  `(
+    "returns $expected for $value - $units with overflow $overflow",
+    ({ value, units, overflow, expected }) => {
+      expect(
+        subtractZoned(
+          value,
+          units,
+          overflow === undefined ? undefined : { overflow },
+        ),
+      ).toBe(expected);
+    },
+  );
+
+  it("does not reject a non-overflowing subtract across a DST transition (overflow is orthogonal to disambiguation)", () => {
+    // Apr 10 - 1 month = Mar 10, a valid date; the subtract also happens to cross the NY spring-forward
+    // boundary (Mar 10 2024), but since the day-of-month never overflows, overflow: "reject" never fires.
+    expect(
+      subtractZoned(
+        "2024-04-10T02:30:00-04:00[America/New_York]",
+        { months: 1 },
+        { overflow: "reject" },
+      ),
+    ).toBe("2024-03-10T03:30:00-04:00[America/New_York]");
+  });
+
+  it("succeeds when overflow (constrain) and disambiguation (reject) are both provided but only overflow is actually triggered", () => {
+    expect(
+      subtractZoned(
+        "2024-03-31T12:00:00-04:00[America/New_York]",
+        { months: 1 },
+        { overflow: "constrain", disambiguation: "reject" },
+      ),
+    ).toBe("2024-02-29T12:00:00-05:00[America/New_York]");
+  });
 });

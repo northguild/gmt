@@ -103,4 +103,94 @@ describe("diffDate", () => {
       diffDate("2024-01-01", "2024-01-02", [invalidUnit] as never),
     ).toBeNull();
   });
+
+  it.each`
+    roundingMode    | expected
+    ${"ceil"}       | ${4}
+    ${"floor"}      | ${2}
+    ${"trunc"}      | ${2}
+    ${"halfExpand"} | ${4}
+    ${"halfCeil"}   | ${4}
+    ${"halfFloor"}  | ${2}
+    ${"halfTrunc"}  | ${2}
+    ${"halfEven"}   | ${4}
+    ${"expand"}     | ${4}
+  `(
+    "rounds a 3-day span to $expected days with smallestUnit day, roundingIncrement 2, roundingMode $roundingMode",
+    ({ roundingMode, expected }) => {
+      expect(
+        diffDate("2023-01-01", "2023-01-04", "days", {
+          smallestUnit: "days",
+          roundingIncrement: 2,
+          roundingMode,
+        }),
+      ).toBe(expected);
+    },
+  );
+
+  it("returns the unrounded result when no options are provided", () => {
+    expect(diffDate("2023-01-01", "2023-01-10", "days")).toBe(9);
+  });
+
+  it("rounds using a roundingIncrement that does not evenly divide the span", () => {
+    expect(
+      diffDate("2023-01-01", "2023-01-10", "days", {
+        smallestUnit: "days",
+        roundingIncrement: 5,
+        roundingMode: "halfExpand",
+      }),
+    ).toBe(10);
+  });
+
+  it("returns null when roundingIncrement is invalid (negative)", () => {
+    expect(
+      diffDate("2023-01-01", "2023-01-10", "days", {
+        smallestUnit: "days",
+        roundingIncrement: -1,
+        roundingMode: "trunc",
+      }),
+    ).toBeNull();
+  });
+
+  it("rounds a negative diff (date1 after date2)", () => {
+    expect(
+      diffDate("2023-01-10", "2023-01-01", "weeks", {
+        smallestUnit: "weeks",
+        roundingMode: "halfExpand",
+      }),
+    ).toBe(-1);
+  });
+
+  it("rounds a zero-length diff to zero", () => {
+    expect(
+      diffDate("2023-01-01", "2023-01-01", "weeks", {
+        smallestUnit: "weeks",
+        roundingMode: "halfExpand",
+      }),
+    ).toBe(0);
+  });
+
+  it("rounds a result requested as an array of units", () => {
+    expect(
+      diffDate("2023-01-01", "2024-08-20", ["years", "months"], {
+        smallestUnit: "months",
+        roundingMode: "halfExpand",
+      }),
+    ).toEqual({ years: 1, months: 8 });
+  });
+
+  it("returns the unrounded array-of-units result when no options are provided", () => {
+    expect(diffDate("2023-01-01", "2024-08-20", ["years", "months"])).toEqual({
+      years: 1,
+      months: 7,
+    });
+  });
+
+  it("returns null when smallestUnit is coarser than the largest requested unit", () => {
+    expect(
+      diffDate("2023-01-01", "2024-01-10", ["months", "days"], {
+        smallestUnit: "years",
+      }),
+    ).toBeNull();
+  });
 });

@@ -114,7 +114,7 @@ skills:
   - name: Calculate Dates
     slug: calculate-dates
     domain: core-date-operations
-    description: Add or subtract time from dates
+    description: Add or subtract time from dates; add*/subtract* accept an optional overflow option, diff* accept optional rounding options
     type: core
     packages:
       - '@burglekitt/gmt'
@@ -123,10 +123,31 @@ skills:
       - addMonths
       - addYears
       - subtractTime
+      - overflow
+      - smallestUnit
+      - roundingIncrement
+      - roundingMode
     tasks:
       - Add days to a date
       - Subtract months from a date
       - Calculate date difference
+      - Reject out-of-range add/subtract results instead of clamping
+      - Round a diff result to a coarser unit
+
+  - name: Durations
+    slug: durations
+    domain: core-date-operations
+    description: Parse and validate ISO 8601 duration strings
+    type: core
+    packages:
+      - '@burglekitt/gmt'
+    covers:
+      - isValidDuration
+      - parseDuration
+    tasks:
+      - Validate an ISO 8601 duration string
+      - Normalize a duration string
+      - Round a duration string's output precision
 
   - name: Compare Dates
     slug: compare-dates

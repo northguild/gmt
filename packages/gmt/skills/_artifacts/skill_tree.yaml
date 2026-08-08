@@ -70,9 +70,19 @@ skills:
     domain: core-date-operations
     path: 'skills/calculate-dates/SKILL.md'
     package: 'packages/gmt'
-    description: Add or subtract time from dates
+    description: Add or subtract time from dates; add*/subtract* accept an optional overflow ("constrain" | "reject") option, diff* accept optional smallestUnit/roundingIncrement/roundingMode rounding options
     sources:
       - 'burglekitt/gmt:packages/gmt/src/plain/calculate/index.ts'
+
+  - name: Durations
+    slug: durations
+    type: core
+    domain: core-date-operations
+    path: 'skills/durations/SKILL.md'
+    package: 'packages/gmt'
+    description: Parse and validate ISO 8601 duration strings via isValidDuration and parseDuration
+    sources:
+      - 'burglekitt/gmt:packages/gmt/src/duration/index.ts'
 
   - name: Compare Dates
     slug: compare-dates
