@@ -9,7 +9,7 @@ sources:
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.4.0'
+  library_version: '1.5.0'
 ---
 
 # Validate Dates
