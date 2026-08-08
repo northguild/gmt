@@ -1,10 +1,11 @@
 ---
 name: durations
 description: >
-  Parse and validate ISO 8601 duration strings (e.g. "P1DT2H30M"). Use
-  isValidDuration to check a duration string is well-formed, and parseDuration
+  Parse, validate, and combine ISO 8601 duration strings (e.g. "P1DT2H30M").
+  Use isValidDuration to check a duration string is well-formed, parseDuration
   to normalize one and optionally control its output precision/rounding via
-  smallestUnit, fractionalSecondDigits, and roundingMode.
+  smallestUnit, fractionalSecondDigits, and roundingMode, and addDuration /
+  subtractDuration to combine two duration strings.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/duration/index.ts'
 metadata:
@@ -20,7 +21,12 @@ Use this skill when you need to parse, validate, or re-normalize ISO 8601 durati
 ## Setup
 
 ```ts
-import { isValidDuration, parseDuration } from "@burglekitt/gmt";
+import {
+  addDuration,
+  isValidDuration,
+  parseDuration,
+  subtractDuration,
+} from "@burglekitt/gmt";
 ```
 
 ## Core Patterns
@@ -54,6 +60,14 @@ const truncated = parseDuration("PT1.9S", {
   smallestUnit: "second",
   roundingMode: "trunc",
 }); // "PT1S"
+```
+
+### Combine two duration strings
+
+```ts
+const combined = addDuration("P1D", "PT2H"); // "P1DT2H"
+const remainder = subtractDuration("P1D", "PT2H"); // "PT22H"
+const negative = subtractDuration("PT1H", "PT2H"); // "-PT1H"
 ```
 
 ## Common Mistakes
@@ -101,6 +115,22 @@ const result = parseDuration(userInput);
 ```
 
 Source: packages/gmt/src/duration/parse/parseDuration.ts — returns `""` on invalid input rather than throwing
+
+### MEDIUM Combining calendar-unit durations without relativeTo
+
+Wrong:
+
+```ts
+import { addDuration } from "@burglekitt/gmt";
+
+// years/months/weeks arithmetic needs a reference point Temporal.Duration
+// doesn't have — this throws internally and returns "" rather than combining
+const result = addDuration("P1Y", "P1M"); // ""
+```
+
+Correct: only combine day/time-unit durations (days, hours, minutes, seconds, ...) with `addDuration`/`subtractDuration`. For calendar-unit arithmetic relative to a specific date, use `addDate`/`subtractDate` with a unit object instead.
+
+Source: packages/gmt/src/duration/calculate/addDuration.ts — `Temporal.Duration.prototype.add`/`.subtract` have no `relativeTo` option, so calendar-unit operands throw and result in `""`
 
 ## References
 

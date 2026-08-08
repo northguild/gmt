@@ -35,8 +35,8 @@ This roadmap is intentionally a skeleton, not a spec. Before implementing any st
 
 Mirrors the `plain/calculate` pattern: one function per file, string-in/string-out contract intact (ISO 8601 duration strings like `"P1DT2H30M"`, not Duration objects, per GMT's core rule).
 
-- **A1. `parseDuration` / `isValidDuration`** — ✅ **Done (2026-08-08).** Parse and validate ISO 8601 duration strings via `Temporal.Duration.from`. Foundation for everything else in this group. New `src/duration/` namespace with `validate/isValidDuration.ts` and `parse/parseDuration.ts`; `parseDuration` accepts optional `smallestUnit`/`fractionalSecondDigits`/`roundingMode` (Temporal's `ToStringPrecisionOptions`, the only options `Temporal.Duration.prototype.toString()` exposes — `Temporal.Duration.from` itself takes no options). **Scope expanded per user request** to also add relevant, previously-missing Temporal options to the *existing* `add*`/`subtract*`/`diff*` functions across `plain`/`zoned`/`unix`/`utc` (18 functions total): `add*`/`subtract*` gained an optional `overflow` (`"constrain"` (default) | `"reject"`) controlling out-of-range arithmetic (e.g. Jan 31 + 1 month), extracted as a shared `Overflow` type at `packages/gmt/src/types/overflow.ts` (mirroring how `Disambiguation`/`Offset` were extracted for C1–C3, since it's reused identically across all 12 functions); `diff*` gained optional `smallestUnit`/`roundingIncrement`/`roundingMode` (Temporal's `DifferenceOptions` rounding controls) to round the computed difference instead of always returning the exact value. All new options are optional and default to prior behavior — non-breaking. Added a new `durations` TanStack Intent skill and extended `calculate-dates` with the new options; added `packages/gmt/src/duration/README.md` and updated root/package READMEs.
-- **A2. `addDuration` / `subtractDuration`** — combine two ISO duration strings (`Temporal.Duration.add/subtract`), return ISO duration string.
+- **A1. `parseDuration` / `isValidDuration`** — ✅ **Done (2026-08-08).** Parse and validate ISO 8601 duration strings via `Temporal.Duration.from`. Foundation for everything else in this group. New `src/duration/` namespace with `validate/isValidDuration.ts` and `parse/parseDuration.ts`; `parseDuration` accepts optional `smallestUnit`/`fractionalSecondDigits`/`roundingMode` (Temporal's `ToStringPrecisionOptions`, the only options `Temporal.Duration.prototype.toString()` exposes — `Temporal.Duration.from` itself takes no options). **Scope expanded per user request** to also add relevant, previously-missing Temporal options to the _existing_ `add*`/`subtract*`/`diff*` functions across `plain`/`zoned`/`unix`/`utc` (18 functions total): `add*`/`subtract*` gained an optional `overflow` (`"constrain"` (default) | `"reject"`) controlling out-of-range arithmetic (e.g. Jan 31 + 1 month), extracted as a shared `Overflow` type at `packages/gmt/src/types/overflow.ts` (mirroring how `Disambiguation`/`Offset` were extracted for C1–C3, since it's reused identically across all 12 functions); `diff*` gained optional `smallestUnit`/`roundingIncrement`/`roundingMode` (Temporal's `DifferenceOptions` rounding controls) to round the computed difference instead of always returning the exact value. All new options are optional and default to prior behavior — non-breaking. Added a new `durations` TanStack Intent skill and extended `calculate-dates` with the new options; added `packages/gmt/src/duration/README.md` and updated root/package READMEs.
+- **A2. `addDuration` / `subtractDuration`** — ✅ **Done (2026-08-08).** Combine two ISO duration strings via `Temporal.Duration.prototype.add`/`.subtract`, returning an ISO duration string; `""` on invalid input on either side. New `src/duration/calculate/` module (`addDuration.ts`, `subtractDuration.ts`). No options — `Temporal.Duration.prototype.add`/`.subtract` have no `relativeTo` parameter (unlike `Duration.compare`), so combining any pair where either operand has a nonzero years/months/weeks component throws and results in `""`; documented explicitly in JSDoc, the `duration/README.md`, and a new "Common Mistakes" entry in the `durations` TanStack Intent skill. Updated `packages/gmt/README.md` and `packages/gmt/src/duration/README.md`.
 - **A3. `normalizeDuration`** (round-trip through `Temporal.Duration.round`/`balance` semantics) — roll small units into larger ones (Luxon's `shiftTo`/`rescale` equivalent), still string-in/string-out.
 - **A4. `formatDuration`** — human-readable rendering of an ISO duration string via `Intl.DurationFormat` (or manual fallback if runtime support is thin) — the "humanize a duration standalone" gap called out above, distinct from the existing `formatRelative*` family which is anchored to "now."
 - **A5. `getDurationBetween` bridge functions** — thin wrappers so `diffDate`/`diffDateTime`/`diffZoned`/`diffUnix`/`diffUtc` can optionally return an ISO duration string instead of a single-unit number (additive, non-breaking — new optional return-shape param or new sibling functions, to be decided at implementation time).
@@ -86,11 +86,10 @@ New locale-sensitive variants alongside the existing ISO-only functions (additiv
 ## Suggested Sequencing
 
 1. **C1–C3** (DST disambiguation) first — smallest, additive, no new namespace, immediately closes a correctness gap in existing code.
-2. **A1–A2** (Duration parse/validate/add/subtract) — foundational, unlocks A3–A5.
-3. **D1–D3** (locale calendar helpers) — independent of A/B, can run in parallel with Duration work.
-4. **A3–A5** (Duration normalize/format/diff-bridge) — builds on A1–A2.
-5. **B1–B6** (Interval) — largest group, benefits from Duration existing (B6 splits by duration unit).
-6. **E1** — backlog, not scheduled.
+2. **A1–A5** (Duration parse/validate/add/subtract/normalize/format/diff-bridge) — foundational, kept together so Group A publishes as a single clean release with no other group's changesets riding along.
+3. **D1–D3** (locale calendar helpers) — independent of A/B; sequenced after Group A finishes so each group's publish stays isolated (see the Publish column note below).
+4. **B1–B6** (Interval) — largest group, benefits from Duration existing (B6 splits by duration unit).
+5. **E1** — backlog, not scheduled.
 
 ## Verification (per story)
 
@@ -106,9 +105,9 @@ New locale-sensitive variants alongside the existing ISO-only functions (additiv
 
 Workflow: copy the title + description below into a new GitHub issue for each story, then paste the resulting issue number into the `GitHub Issue:` line for that story **both here and in the story's bullet above** (Story Group A–E). When starting a branch for a story, tell the agent which story ID (e.g. "work on C1") — it will find the matching issue link here and the full context in the Story Group section above.
 
-Issue number tracker (fill in as issues are created). `Order` is the sequence to actually work these in — it follows the "Suggested Sequencing" section above (C-group first as a correctness fix, then A1–A2, then D-group in parallel, then finishing A3–A5, then B-group, then E1 last) — **not** ascending issue number. `Publish` marks when to cut a release after that story lands: every story is additive-only (new functions, or new optional parameters defaulting to current behavior), so every bump is `minor`; publish once per Story Group rather than per-story.
+Issue number tracker (fill in as issues are created). `Order` is the sequence to actually work these in — it follows the "Suggested Sequencing" section above (C-group first as a correctness fix, then A1–A5 straight through, then D-group, then B-group, then E1 last) — **not** ascending issue number. `Publish` marks when to cut a release after that story lands: every story is additive-only (new functions, or new optional parameters defaulting to current behavior), so every bump is `minor`; publish once per Story Group rather than per-story.
 
-**Changeset note:** each story's PR still adds its own `.changeset/*.md` file with a `minor` bump label (that's the correct per-change label, independent of when a release is cut). Changesets accumulate un-versioned in `.changeset/` across multiple merged PRs; only running `pnpm changeset:version` actually consumes them and cuts a release. Do **not** run `changeset:version` / publish until the `Publish` column for that row says so (i.e. wait for the last story in the Story Group, not the first).
+**Changeset note:** each story's PR still adds its own `.changeset/*.md` file with a `minor` bump label (that's the correct per-change label, independent of when a release is cut). Changesets accumulate un-versioned in `.changeset/` across multiple merged PRs; only running `pnpm changeset:version` actually consumes them and cuts a release. Do **not** run `changeset:version` / publish until the `Publish` column for that row says so (i.e. wait for the last story in the Story Group, not the first). Story Groups are kept **un-interleaved** in `Order` specifically so this holds: `changeset:version` versions everything sitting in `.changeset/` at the time it's run, not just the "completing" group's own changesets, so interleaving two groups' stories would cause an earlier group's publish to sweep up a later, still-in-progress group's changesets too.
 
 | Order | Story | GitHub Issue | Status      | Publish                                      |
 | ----- | ----- | ------------ | ----------- | -------------------------------------------- |
@@ -116,13 +115,13 @@ Issue number tracker (fill in as issues are created). `Order` is the sequence to
 | 2     | C2    | Issue #39    | Done        | v1.5.0                                       |
 | 3     | C3    | Issue #40    | Done        | v1.5.0                                       |
 | 4     | A1    | Issue #27    | Done        | not yet                                      |
-| 5     | A2    | Issue #28    | Not started | not yet                                      |
-| 6     | D1    | Issue #41    | Not started | not yet                                      |
-| 7     | D2    | Issue #42    | Not started | not yet                                      |
-| 8     | D3    | Issue #43    | Not started | minor, Story Group D complete                |
-| 9     | A3    | Issue #29    | Not started | not yet                                      |
-| 10    | A4    | Issue #30    | Not started | not yet                                      |
-| 11    | A5    | Issue #31    | Not started | minor, Story Group A complete                |
+| 5     | A2    | Issue #28    | Done        | not yet                                      |
+| 6     | A3    | Issue #29    | Not started | not yet                                      |
+| 7     | A4    | Issue #30    | Not started | not yet                                      |
+| 8     | A5    | Issue #31    | Not started | minor, Story Group A complete                |
+| 9     | D1    | Issue #41    | Not started | not yet                                      |
+| 10    | D2    | Issue #42    | Not started | not yet                                      |
+| 11    | D3    | Issue #43    | Not started | minor, Story Group D complete                |
 | 12    | B1    | Issue #32    | Not started | not yet                                      |
 | 13    | B2    | Issue #33    | Not started | not yet                                      |
 | 14    | B3    | Issue #34    | Not started | not yet                                      |
@@ -314,7 +313,7 @@ Tests, JSDoc, exports, README/changeset, lint/test pass — per `context/coding-
 
 ### B2 — `intervalContains`
 
-**GitHub Issue:** #31
+**GitHub Issue:** #33
 
 **Title:**
 

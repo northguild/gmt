@@ -65,7 +65,7 @@ import {
 ```
 
 - `Temporal`: re-exported from `@js-temporal/polyfill`
-- `duration`: ISO 8601 duration string parsing and validation
+- `duration`: ISO 8601 duration string parsing, validation, and arithmetic
 - `plain`: timezone-free helpers
 - `zoned`: timezone-aware helpers
 - `unix`: Unix epoch (seconds or milliseconds) helpers
@@ -121,7 +121,12 @@ diffDate("2023-01-01", "2023-01-10", "week", {
 ### Durations
 
 ```typescript
-import { isValidDuration, parseDuration } from "@burglekitt/gmt";
+import {
+  addDuration,
+  isValidDuration,
+  parseDuration,
+  subtractDuration,
+} from "@burglekitt/gmt";
 
 isValidDuration("P1DT2H30M");
 // true
@@ -134,6 +139,12 @@ parseDuration("PT1.5S", { smallestUnit: "second", roundingMode: "trunc" });
 
 parseDuration("not a duration");
 // ""
+
+addDuration("P1D", "PT2H");
+// "P1DT2H"
+
+subtractDuration("P1D", "PT2H");
+// "PT22H"
 ```
 
 ### Zoned operations
@@ -246,7 +257,7 @@ convertUnixToPlainDate(1710685845);
 
 For the complete API listing, see the namespace documentation on GitHub:
 
-- [Duration API](https://github.com/burglekitt/gmt/tree/main/packages/gmt/src/duration) — ISO 8601 duration parsing and validation
+- [Duration API](https://github.com/burglekitt/gmt/tree/main/packages/gmt/src/duration) — ISO 8601 duration parsing, validation, and arithmetic
 - [Plain API](https://github.com/burglekitt/gmt/tree/main/packages/gmt/src/plain) — timezone-free operations
 - [Zoned API](https://github.com/burglekitt/gmt/tree/main/packages/gmt/src/zoned) — IANA timezone-aware operations
 - [Unix API](https://github.com/burglekitt/gmt/tree/main/packages/gmt/src/unix) — Unix epoch utilities

@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { isValidDateTimeUnit } from "../..";
+import { isValidDateTimeUnit } from "../../plain/validate";
 import type {
   DateTimeUnit,
   Disambiguation,
