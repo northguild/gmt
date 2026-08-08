@@ -137,17 +137,22 @@ skills:
   - name: Durations
     slug: durations
     domain: core-date-operations
-    description: Parse and validate ISO 8601 duration strings
+    description: Parse, validate, combine, and rebalance ISO 8601 duration strings
     type: core
     packages:
       - '@burglekitt/gmt'
     covers:
       - isValidDuration
       - parseDuration
+      - addDuration
+      - subtractDuration
+      - normalizeDuration
     tasks:
       - Validate an ISO 8601 duration string
       - Normalize a duration string
       - Round a duration string's output precision
+      - Combine two duration strings by addition or subtraction
+      - Roll a duration string's small units into larger ones
 
   - name: Compare Dates
     slug: compare-dates

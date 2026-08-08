@@ -124,6 +124,7 @@ diffDate("2023-01-01", "2023-01-10", "week", {
 import {
   addDuration,
   isValidDuration,
+  normalizeDuration,
   parseDuration,
   subtractDuration,
 } from "@burglekitt/gmt";
@@ -145,6 +146,12 @@ addDuration("P1D", "PT2H");
 
 subtractDuration("P1D", "PT2H");
 // "PT22H"
+
+normalizeDuration("PT90M", { largestUnit: "hour" });
+// "PT1H30M"
+
+normalizeDuration("P45D", { largestUnit: "month", relativeTo: "2024-01-01" });
+// "P1M14D"
 ```
 
 ### Zoned operations

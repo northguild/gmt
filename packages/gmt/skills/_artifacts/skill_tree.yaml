@@ -80,7 +80,7 @@ skills:
     domain: core-date-operations
     path: 'skills/durations/SKILL.md'
     package: 'packages/gmt'
-    description: Parse and validate ISO 8601 duration strings via isValidDuration and parseDuration
+    description: Parse, validate, combine, and rebalance ISO 8601 duration strings via isValidDuration, parseDuration, addDuration/subtractDuration, and normalizeDuration
     sources:
       - 'burglekitt/gmt:packages/gmt/src/duration/index.ts'
 
