@@ -123,6 +123,7 @@ diffDate("2023-01-01", "2023-01-10", "week", {
 ```typescript
 import {
   addDuration,
+  diffDateAsDuration,
   formatDuration,
   isValidDuration,
   normalizeDuration,
@@ -162,7 +163,12 @@ formatDuration("P1DT2H30M", "en-US", { style: "short" });
 
 formatDuration("P1DT0H30M", "en-US");
 // "1 day and 30 minutes"
+
+diffDateAsDuration("2024-03-10", "2024-04-05", "days");
+// "P26D" — bridges diffDate to an ISO duration string instead of a single-unit number
 ```
+
+`diffDateAsDuration`/`diffDateTimeAsDuration`/`diffZonedAsDuration`/`diffUnixAsDuration`/`diffUtcAsDuration` are sibling functions to `diffDate`/`diffDateTime`/`diffZoned`/`diffUnix`/`diffUtc`, returning an ISO 8601 duration string (sentinel `""`) instead of a single-unit number (sentinel `null`). They take a single `unit` (not an array) to set the duration's `largestUnit`.
 
 ### Zoned operations
 

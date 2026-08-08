@@ -8,7 +8,7 @@ IANA timezone-aware date and time operations. All functions accept and return IS
 
 Timezone-aware arithmetic:
 
-- `addZoned`, `diffZoned`
+- `addZoned`, `diffZoned`, `diffZonedAsDuration`
 - `endOfQuarterForZoned`, `endOfZoned`
 - `getQuarterForZoned`
 - `maxZoned`, `minZoned`, `sortZoned`

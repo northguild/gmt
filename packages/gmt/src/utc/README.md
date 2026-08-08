@@ -8,7 +8,7 @@ UTC instant utilities. All functions work with UTC-labeled ISO 8601 strings (end
 
 UTC timestamp arithmetic:
 
-- `addUtc`, `diffUtc`
+- `addUtc`, `diffUtc`, `diffUtcAsDuration`
 - `endOfQuarterForUtc`, `endOfUtc`
 - `isBetweenUtc`
 - `maxUtc`, `minUtc`, `sortUtc`

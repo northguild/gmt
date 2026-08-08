@@ -8,7 +8,7 @@ Unix epoch (seconds or milliseconds) utilities. All functions work with numeric 
 
 Unix timestamp arithmetic:
 
-- `addUnix`, `diffUnix`
+- `addUnix`, `diffUnix`, `diffUnixAsDuration`
 - `endOfQuarterForUnix`, `endOfUnix`
 - `isBetweenUnix`
 - `maxUnix`, `minUnix`, `sortUnix`

@@ -1,18 +1,18 @@
 ---
 name: zoned-date-ops
 description: >
-  Work with timezone-aware dates and times using IANA timezone identifiers.
-  Use getZonedNow, formatZonedDateTime, formatZonedRange, formatRelativeZoned,
+  Work with timezone-aware dates and times using IANA timezone identifiers. Use
+  getZonedNow, formatZonedDateTime, formatZonedRange, formatRelativeZoned,
   getSystemTimeZone, getTimeZones for the basics. Use
   convertPlainDateTimeToZoned, addZoned, subtractZoned, startOfZoned,
-  endOfZoned, startOfQuarterForZoned, endOfQuarterForZoned,
-  mapZonedHoursInDay, and their unix/ counterparts (startOfUnix, endOfUnix,
-  startOfQuarterForUnix, endOfQuarterForUnix) for DST-aware construction,
-  arithmetic, and boundary/quarter/hour computations — most accept a
-  disambiguation option ("compatible" | "earlier" | "later" | "reject") for
-  gap/overlap resolution, and the boundary family also accepts offset
-  ("prefer" | "use" | "ignore" | "reject", default "ignore", which must stay
-  default for disambiguation to work).
+  endOfZoned, startOfQuarterForZoned, endOfQuarterForZoned, mapZonedHoursInDay,
+  and their unix/ counterparts (startOfUnix, endOfUnix, startOfQuarterForUnix,
+  endOfQuarterForUnix) for DST-aware construction, arithmetic, and
+  boundary/quarter/hour computations — most accept a disambiguation option
+  ("compatible" | "earlier" | "later" | "reject") for gap/overlap resolution,
+  and the boundary family also accepts offset ("prefer" | "use" | "ignore" |
+  "reject", default "ignore", which must stay default for disambiguation to
+  work).
 sources:
   - 'burglekitt/gmt:packages/gmt/src/zoned/get/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/format/index.ts'
@@ -32,7 +32,7 @@ sources:
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.5.0'
+  library_version: '1.6.0'
 ---
 
 # Zoned Date Operations

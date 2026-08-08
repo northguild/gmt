@@ -10,7 +10,7 @@ sources:
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.5.0'
+  library_version: '1.6.0'
 ---
 
 # Calculate Dates
@@ -60,6 +60,8 @@ import { diffDate } from "@burglekitt/gmt";
 
 const diff = diffDate("2024-03-15", "2024-03-20", "day"); // 5
 ```
+
+Need a full multi-unit breakdown (e.g. `"P26D"`) instead of a single-unit number? See the `durations` skill's `diffDateAsDuration`/`diffDateTimeAsDuration`/`diffZonedAsDuration`/`diffUnixAsDuration`/`diffUtcAsDuration` bridge functions.
 
 ### Get start of day
 

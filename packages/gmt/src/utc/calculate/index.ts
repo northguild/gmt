@@ -1,5 +1,6 @@
 export * from "./addUtc";
 export * from "./diffUtc";
+export * from "./diffUtcAsDuration";
 export * from "./endOfQuarterForUtc";
 export * from "./endOfUtc";
 export * from "./isBetweenUtc";

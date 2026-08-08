@@ -40,3 +40,7 @@ Parse and normalize:
 Validation helpers:
 
 - `isValidDuration`
+
+## Bridge from `diff*` functions
+
+`diffDateAsDuration`, `diffDateTimeAsDuration`, `diffZonedAsDuration`, `diffUnixAsDuration`, and `diffUtcAsDuration` — sibling functions to `diffDate`/`diffDateTime`/`diffZoned`/`diffUnix`/`diffUtc` (in `plain/calculate`, `zoned/calculate`, `unix/calculate`, `utc/calculate` respectively, not this namespace) — return an ISO 8601 duration string instead of a single-unit number. Unlike their counterparts, they take a single `unit` (not an array) to set the resulting duration's `largestUnit`, since an ISO duration string already expresses a full multi-unit breakdown. They return `""` on invalid input, matching this namespace's sentinel convention rather than their counterparts' `null`.

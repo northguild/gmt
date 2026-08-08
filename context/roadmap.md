@@ -114,11 +114,11 @@ Issue number tracker (fill in as issues are created). `Order` is the sequence to
 | 1     | C1    | Issue #38    | Done        | v1.5.0                                       |
 | 2     | C2    | Issue #39    | Done        | v1.5.0                                       |
 | 3     | C3    | Issue #40    | Done        | v1.5.0                                       |
-| 4     | A1    | Issue #27    | Done        | not yet                                      |
-| 5     | A2    | Issue #28    | Done        | not yet                                      |
-| 6     | A3    | Issue #29    | Done        | not yet                                      |
-| 7     | A4    | Issue #30    | Done        | not yet                                      |
-| 8     | A5    | Issue #31    | Not started | minor, Story Group A complete                |
+| 4     | A1    | Issue #27    | Done        | v1.6.0                                       |
+| 5     | A2    | Issue #28    | Done        | v1.6.0                                       |
+| 6     | A3    | Issue #29    | Done        | v1.6.0                                       |
+| 7     | A4    | Issue #30    | Done        | v1.6.0                                       |
+| 8     | A5    | Issue #31    | Done        | v1.6.0                                       |
 | 9     | D1    | Issue #41    | Not started | not yet                                      |
 | 10    | D2    | Issue #42    | Not started | not yet                                      |
 | 11    | D3    | Issue #43    | Not started | minor, Story Group D complete                |

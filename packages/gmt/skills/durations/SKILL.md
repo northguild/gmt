@@ -3,20 +3,25 @@ name: durations
 description: >
   Parse, validate, combine, rebalance, and format ISO 8601 duration strings
   (e.g. "P1DT2H30M"). Use isValidDuration to check a duration string is
-  well-formed, parseDuration to normalize one and optionally control its
-  output precision/rounding via smallestUnit, fractionalSecondDigits, and
-  roundingMode, addDuration / subtractDuration to combine two duration
-  strings, normalizeDuration to roll small units into larger ones (e.g.
-  90 minutes into 1 hour 30 minutes) via largestUnit/smallestUnit/
+  well-formed, parseDuration to normalize one and optionally control its output
+  precision/rounding via smallestUnit, fractionalSecondDigits, and roundingMode,
+  addDuration / subtractDuration to combine two duration strings,
+  normalizeDuration to roll small units into larger ones (e.g. 90 minutes into 1
+  hour 30 minutes) via largestUnit/smallestUnit/
   roundingIncrement/roundingMode/relativeTo, and formatDuration to render a
-  duration as a human-readable, locale-aware string (e.g. "1 day, 2 hours,
-  and 30 minutes").
+  duration as a human-readable, locale-aware string (e.g. "1 day, 2 hours, and
+  30 minutes").
 sources:
   - 'burglekitt/gmt:packages/gmt/src/duration/index.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/diffDateAsDuration.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/diffDateTimeAsDuration.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/diffZonedAsDuration.ts'
+  - 'burglekitt/gmt:packages/gmt/src/unix/calculate/diffUnixAsDuration.ts'
+  - 'burglekitt/gmt:packages/gmt/src/utc/calculate/diffUtcAsDuration.ts'
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.5.0'
+  library_version: '1.6.0'
 ---
 
 # Durations
@@ -118,6 +123,26 @@ const withZeros = formatDuration("P1DT0H30M", "en-US", { zero: true });
 const zero = formatDuration("PT0S", "en-US"); // "0 seconds"
 ```
 
+### Bridge a diff into an ISO duration string
+
+`diffDate`/`diffDateTime`/`diffZoned`/`diffUnix`/`diffUtc` return a single-unit number (or a `Record<Unit, number>` for an array of units). Their `*AsDuration` siblings return an ISO 8601 duration string instead — the same string shape every other function in this skill consumes/produces.
+
+```ts
+import { diffDateAsDuration, diffZonedAsDuration } from "@burglekitt/gmt";
+
+const span = diffDateAsDuration("2024-03-10", "2024-04-05", "days"); // "P26D"
+
+const negative = diffDateAsDuration("2024-04-05", "2024-03-10", "days"); // "-P26D"
+
+const zoned = diffZonedAsDuration(
+  "2024-03-09T12:00:00-05:00[America/New_York]",
+  "2024-03-11T12:00:00-04:00[America/New_York]",
+  "days",
+); // "P1DT23H" — real elapsed time across a DST spring-forward transition
+```
+
+Feed the result straight into a `duration` namespace function, e.g. `formatDuration(diffDateAsDuration(a, b, "days"), "en-US")`.
+
 ## Common Mistakes
 
 ### HIGH Confusing duration strings with unit objects
@@ -210,6 +235,28 @@ Source: packages/gmt/src/duration/normalize/normalizeDuration.ts — `Temporal.D
 `formatDuration` does not use `Intl.DurationFormat` — that constructor is absent entirely on Node 20/22 (only ships natively on Node 24+), and GMT does not carry a polyfill dependency for it. Instead, `formatDuration` builds its output from `Intl.NumberFormat({ style: "unit" })` per component plus `Intl.ListFormat` for joining — both universally available, so behavior is identical across all supported Node versions, but output is not guaranteed byte-for-byte identical to what native `Intl.DurationFormat` would produce (e.g. no `"digital"` `01:30:00`-style output is supported).
 
 Source: packages/gmt/src/duration/format/formatDuration.ts
+
+### MEDIUM Passing an array of units to a `*AsDuration` bridge function
+
+Wrong:
+
+```ts
+import { diffDateAsDuration } from "@burglekitt/gmt";
+
+// diffDate accepts unit | unit[], but diffDateAsDuration only accepts a
+// single unit — an array here fails validation and returns ""
+const result = diffDateAsDuration("2024-03-10", "2024-04-05", ["days"]); // ""
+```
+
+Correct: pass a single unit. It only sets the resulting duration's `largestUnit` — an ISO duration string already expresses a full multi-unit breakdown (e.g. `"P1DT23H"`) without needing an array of requested units the way `diffDate`'s `Record<Unit, number>` return shape does.
+
+```ts
+import { diffDateAsDuration } from "@burglekitt/gmt";
+
+const result = diffDateAsDuration("2024-03-10", "2024-04-05", "days"); // "P26D"
+```
+
+Source: packages/gmt/src/plain/calculate/diffDateAsDuration.ts (and its `diffDateTimeAsDuration`/`diffZonedAsDuration`/`diffUnixAsDuration`/`diffUtcAsDuration` siblings) — signature takes `unit: DateDurationUnit`, not `unit: DateDurationUnit | DateDurationUnit[]` like their counterparts
 
 ## References
 

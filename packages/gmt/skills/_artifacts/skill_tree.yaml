@@ -80,9 +80,16 @@ skills:
     domain: core-date-operations
     path: 'skills/durations/SKILL.md'
     package: 'packages/gmt'
-    description: Parse, validate, combine, and rebalance ISO 8601 duration strings via isValidDuration, parseDuration, addDuration/subtractDuration, and normalizeDuration
+    description: Parse, validate, combine, rebalance, and format ISO 8601 duration strings via isValidDuration, parseDuration, addDuration/subtractDuration, normalizeDuration, and formatDuration; bridge diff* functions to duration strings via diffDateAsDuration/diffDateTimeAsDuration/diffZonedAsDuration/diffUnixAsDuration/diffUtcAsDuration
+    requires:
+      - calculate-dates
     sources:
       - 'burglekitt/gmt:packages/gmt/src/duration/index.ts'
+      - 'burglekitt/gmt:packages/gmt/src/plain/calculate/diffDateAsDuration.ts'
+      - 'burglekitt/gmt:packages/gmt/src/plain/calculate/diffDateTimeAsDuration.ts'
+      - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/diffZonedAsDuration.ts'
+      - 'burglekitt/gmt:packages/gmt/src/unix/calculate/diffUnixAsDuration.ts'
+      - 'burglekitt/gmt:packages/gmt/src/utc/calculate/diffUtcAsDuration.ts'
 
   - name: Compare Dates
     slug: compare-dates

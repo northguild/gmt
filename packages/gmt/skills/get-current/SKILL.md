@@ -14,7 +14,7 @@ sources:
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.5.0'
+  library_version: '1.6.0'
 ---
 
 # Get Current Date/Time

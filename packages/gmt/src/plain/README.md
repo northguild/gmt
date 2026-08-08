@@ -9,7 +9,7 @@ Timezone-free date and time operations. All functions accept and return ISO 8601
 Arithmetic and date manipulation:
 
 - `addDate`, `addDateTime`, `addTime`
-- `diffDate`, `diffDateTime`, `diffTime`
+- `diffDate`, `diffDateAsDuration`, `diffDateTime`, `diffDateTimeAsDuration`, `diffTime`
 - `endOfDate`, `endOfDateTime`, `endOfTime`
 - `endOfQuarterForDate`, `endOfQuarterForDateTime`
 - `getLargestDateDurationUnit`, `getLargestDateTimeDurationUnit`, `getLargestTimeDurationUnit`

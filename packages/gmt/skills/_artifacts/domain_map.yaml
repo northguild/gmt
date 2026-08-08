@@ -137,7 +137,7 @@ skills:
   - name: Durations
     slug: durations
     domain: core-date-operations
-    description: Parse, validate, combine, and rebalance ISO 8601 duration strings
+    description: Parse, validate, combine, rebalance, and format ISO 8601 duration strings; bridge diff* functions to duration strings
     type: core
     packages:
       - '@burglekitt/gmt'
@@ -147,12 +147,20 @@ skills:
       - addDuration
       - subtractDuration
       - normalizeDuration
+      - formatDuration
+      - diffDateAsDuration
+      - diffDateTimeAsDuration
+      - diffZonedAsDuration
+      - diffUnixAsDuration
+      - diffUtcAsDuration
     tasks:
       - Validate an ISO 8601 duration string
       - Normalize a duration string
       - Round a duration string's output precision
       - Combine two duration strings by addition or subtraction
       - Roll a duration string's small units into larger ones
+      - Format a duration string as human-readable, locale-aware text
+      - Get the difference between two dates/times as an ISO duration string instead of a single-unit number
 
   - name: Compare Dates
     slug: compare-dates
@@ -313,5 +321,8 @@ cross_references:
   - from: zoned-date-ops
     to: format-relative-time
     reason: formatRelativeZoned is DST-safe; the relative-time skill explains shared option semantics across all six relative formatters
+  - from: calculate-dates
+    to: durations
+    reason: diff* functions return a single-unit number; the durations skill's *AsDuration siblings return a full multi-unit ISO duration string instead
 
 gaps: []

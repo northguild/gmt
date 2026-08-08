@@ -1,9 +1,11 @@
 import { Temporal } from "@js-temporal/polyfill";
+import {
+  isValidUnixEpochPair,
+  resolveUnixTimeZone,
+} from "../../internal/resolveUnixTimeZone";
 import { getLargestDateTimeDurationUnit } from "../../plain/calculate/getLargestDateTimeDurationUnit";
 import { isValidDateTimeDurationUnit } from "../../plain/validate";
 import type { DateTimeDurationUnit, RoundingOptions } from "../../types";
-import { getSystemTimeZone } from "../../zoned/get";
-import { isValidTimeZone } from "../../zoned/validate";
 
 /**
  * Return the difference between two Unix timestamps measured in the given unit.
@@ -39,9 +41,9 @@ export function diffUnix(
   } & RoundingOptions<Temporal.DateTimeUnit>,
 ): number | Record<DateTimeDurationUnit, number> | null {
   const epochUnit = options?.epochUnit ?? "milliseconds";
-  const timeZone = options?.timeZone ?? getSystemTimeZone();
+  const timeZone = resolveUnixTimeZone(options?.timeZone);
 
-  if (!timeZone || !isValidTimeZone(timeZone)) return null;
+  if (!timeZone) return null;
 
   const isSingleUnit = !Array.isArray(units);
   const validUnits = isSingleUnit
@@ -52,12 +54,7 @@ export function diffUnix(
     return null;
   }
 
-  if (
-    !Number.isFinite(value1) ||
-    !Number.isInteger(value1) ||
-    !Number.isFinite(value2) ||
-    !Number.isInteger(value2)
-  ) {
+  if (!isValidUnixEpochPair(value1, value2)) {
     return null;
   }
 
