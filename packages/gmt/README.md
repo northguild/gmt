@@ -123,6 +123,7 @@ diffDate("2023-01-01", "2023-01-10", "week", {
 ```typescript
 import {
   addDuration,
+  formatDuration,
   isValidDuration,
   normalizeDuration,
   parseDuration,
@@ -152,6 +153,15 @@ normalizeDuration("PT90M", { largestUnit: "hour" });
 
 normalizeDuration("P45D", { largestUnit: "month", relativeTo: "2024-01-01" });
 // "P1M14D"
+
+formatDuration("P1DT2H30M", "en-US");
+// "1 day, 2 hours, and 30 minutes"
+
+formatDuration("P1DT2H30M", "en-US", { style: "short" });
+// "1 day, 2 hr, & 30 min"
+
+formatDuration("P1DT0H30M", "en-US");
+// "1 day and 30 minutes"
 ```
 
 ### Zoned operations
@@ -264,7 +274,7 @@ convertUnixToPlainDate(1710685845);
 
 For the complete API listing, see the namespace documentation on GitHub:
 
-- [Duration API](https://github.com/burglekitt/gmt/tree/main/packages/gmt/src/duration) — ISO 8601 duration parsing, validation, and arithmetic
+- [Duration API](https://github.com/burglekitt/gmt/tree/main/packages/gmt/src/duration) — ISO 8601 duration parsing, validation, arithmetic, and formatting
 - [Plain API](https://github.com/burglekitt/gmt/tree/main/packages/gmt/src/plain) — timezone-free operations
 - [Zoned API](https://github.com/burglekitt/gmt/tree/main/packages/gmt/src/zoned) — IANA timezone-aware operations
 - [Unix API](https://github.com/burglekitt/gmt/tree/main/packages/gmt/src/unix) — Unix epoch utilities

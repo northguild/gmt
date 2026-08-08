@@ -1,6 +1,6 @@
 # Duration API
 
-Parsing, validation, and arithmetic for ISO 8601 duration strings (e.g. `"P1DT2H30M"`). All functions accept and return ISO 8601 duration strings.
+Parsing, validation, arithmetic, and formatting for ISO 8601 duration strings (e.g. `"P1DT2H30M"`). All functions accept ISO 8601 duration strings; all but `formatDuration` return one too.
 
 ## Modules
 
@@ -12,6 +12,14 @@ Combine two durations:
 - `subtractDuration`
 
 Both operate on day/time units (days, hours, minutes, seconds, ...). Combining any pair where either operand has a nonzero years/months/weeks component returns `""` — `Temporal.Duration.prototype.add`/`.subtract` have no `relativeTo` option, so calendar-unit duration arithmetic isn't supported here.
+
+### format
+
+Render a duration as a human-readable, locale-aware string:
+
+- `formatDuration`
+
+Built on `Intl.NumberFormat({ style: "unit" })` (per-component labels and pluralization) and `Intl.ListFormat` (joining) — both universally available, unlike `Intl.DurationFormat`, which is absent on Node 20/22 (only ships natively on Node 24+). This keeps `formatDuration` dependency-free and behaviorally identical across all currently-supported Node versions, at the cost of not being a byte-for-byte match to native `Intl.DurationFormat` output (e.g. no `"digital"` `01:30:00`-style output). Zero-valued components are omitted by default (`{ zero: true }` to include them); a zero-length duration always renders `"0 seconds"`.
 
 ### normalize
 

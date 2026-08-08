@@ -1,14 +1,16 @@
 ---
 name: durations
 description: >
-  Parse, validate, combine, and rebalance ISO 8601 duration strings (e.g.
-  "P1DT2H30M"). Use isValidDuration to check a duration string is
+  Parse, validate, combine, rebalance, and format ISO 8601 duration strings
+  (e.g. "P1DT2H30M"). Use isValidDuration to check a duration string is
   well-formed, parseDuration to normalize one and optionally control its
   output precision/rounding via smallestUnit, fractionalSecondDigits, and
   roundingMode, addDuration / subtractDuration to combine two duration
-  strings, and normalizeDuration to roll small units into larger ones (e.g.
+  strings, normalizeDuration to roll small units into larger ones (e.g.
   90 minutes into 1 hour 30 minutes) via largestUnit/smallestUnit/
-  roundingIncrement/roundingMode/relativeTo.
+  roundingIncrement/roundingMode/relativeTo, and formatDuration to render a
+  duration as a human-readable, locale-aware string (e.g. "1 day, 2 hours,
+  and 30 minutes").
 sources:
   - 'burglekitt/gmt:packages/gmt/src/duration/index.ts'
 metadata:
@@ -19,13 +21,14 @@ metadata:
 
 # Durations
 
-Use this skill when you need to parse, validate, or re-normalize ISO 8601 duration strings — distinct from date/time arithmetic, which takes a `{ unit: number }` object rather than a duration string. See the `calculate-dates` skill for `add*`/`subtract*`/`diff*`.
+Use this skill when you need to parse, validate, re-normalize, or format ISO 8601 duration strings — distinct from date/time arithmetic, which takes a `{ unit: number }` object rather than a duration string. See the `calculate-dates` skill for `add*`/`subtract*`/`diff*`.
 
 ## Setup
 
 ```ts
 import {
   addDuration,
+  formatDuration,
   isValidDuration,
   normalizeDuration,
   parseDuration,
@@ -92,6 +95,27 @@ const withRef = normalizeDuration("P45D", {
   largestUnit: "month",
   relativeTo: "2024-01-01",
 }); // "P1M14D"
+```
+
+### Render a duration as human-readable text
+
+```ts
+const long = formatDuration("P1DT2H30M", "en-US");
+// "1 day, 2 hours, and 30 minutes"
+
+const short = formatDuration("P1DT2H30M", "en-US", { style: "short" });
+// "1 day, 2 hr, & 30 min"
+
+const narrow = formatDuration("P1DT2H30M", "en-US", { style: "narrow" });
+// "1d, 2h, & 30m"
+
+// zero-valued components are omitted by default
+const noZeros = formatDuration("P1DT0H30M", "en-US"); // "1 day and 30 minutes"
+const withZeros = formatDuration("P1DT0H30M", "en-US", { zero: true });
+// "0 years, 0 months, 0 weeks, 1 day, 0 hours, 30 minutes, and 0 seconds"
+
+// a zero-length duration always renders "0 seconds"
+const zero = formatDuration("PT0S", "en-US"); // "0 seconds"
 ```
 
 ## Common Mistakes
@@ -180,6 +204,12 @@ const result = normalizeDuration("P1M", {
 ```
 
 Source: packages/gmt/src/duration/normalize/normalizeDuration.ts — `Temporal.Duration.prototype.round` requires `relativeTo` for any week-or-larger unit, whether requested via `largestUnit` or already present in the duration being rounded
+
+### MEDIUM Expecting `formatDuration` to match native `Intl.DurationFormat` output exactly
+
+`formatDuration` does not use `Intl.DurationFormat` — that constructor is absent entirely on Node 20/22 (only ships natively on Node 24+), and GMT does not carry a polyfill dependency for it. Instead, `formatDuration` builds its output from `Intl.NumberFormat({ style: "unit" })` per component plus `Intl.ListFormat` for joining — both universally available, so behavior is identical across all supported Node versions, but output is not guaranteed byte-for-byte identical to what native `Intl.DurationFormat` would produce (e.g. no `"digital"` `01:30:00`-style output is supported).
+
+Source: packages/gmt/src/duration/format/formatDuration.ts
 
 ## References
 
