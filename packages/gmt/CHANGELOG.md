@@ -1,5 +1,37 @@
 # @burglekitt/gmt
 
+## 1.7.0
+
+### Minor Changes
+
+- 54d238e: Adds `isWeekend` (plain) and `isZonedWeekend` (zoned) — locale-aware weekend checks, matching react-aria's `@internationalized/date` `isWeekend(date, locale)`.
+
+  - `isWeekend(value, locale)` checks an ISO `PlainDate` string; `isZonedWeekend(value, locale)` checks an ISO `ZonedDateTime` string against its own local calendar day.
+  - Uses `Intl.Locale.prototype.weekInfo` to resolve which days count as the weekend for a given locale — e.g. `en-US`/most locales use Saturday/Sunday, while `he-IL`/`ar-SA` use Friday/Saturday.
+  - Falls back to Saturday/Sunday if the runtime can't resolve `weekInfo` data for the locale.
+  - Both return `false` for invalid input (unparseable date/zoned value, or an invalid locale tag).
+
+  This starts Story Group D (locale-aware calendar helpers) of the Luxon/react-aria parity roadmap.
+
+- 002deea: Adds `getLocaleDayOfWeek` (plain) and `getLocaleZonedDayOfWeek` (zoned) — locale-aware day-of-week index extraction.
+
+  - `getLocaleDayOfWeek(value, locale)` returns a 0-based index where `0` = the locale's first day of week (e.g. Sunday for en-US, Monday for fr-FR, Saturday for he-IL).
+  - `getLocaleZonedDayOfWeek(value, locale)` does the same for zoned ISO datetimes, reading the local calendar day.
+  - Both derive the locale's first day from `Intl.Locale.prototype.weekInfo` and fall back to Monday if unavailable.
+  - Both return `null` for invalid input (unparseable date/zoned value, or an invalid locale tag).
+  - The formula `(isoDay - firstDay + 7) % 7` is the same one used by `getLocaleStartOfWeek`/`getLocaleZonedStartOfWeek`.
+
+  Completes Story Group D (locale-aware calendar helpers) of the Luxon/react-aria parity roadmap.
+
+- 317a1b8: Adds `getLocaleStartOfWeek`/`getLocaleEndOfWeek` (plain) and `getLocaleZonedStartOfWeek`/`getLocaleZonedEndOfWeek` (zoned) — locale-aware week boundaries, matching react-aria's `@internationalized/date` `startOfWeek(date, locale)`/`endOfWeek(date, locale)`.
+
+  - Derives the week's first day from the locale via `Intl.Locale.prototype.weekInfo` (e.g. `en-US` weeks start Sunday, `fr-FR` weeks start Monday), instead of the existing `startOfDate`/`endOfDate`/`startOfZoned`/`endOfZoned`'s explicit, ISO-biased `weekStartsOn` option.
+  - Falls back to Monday if the runtime can't resolve `weekInfo` data for the locale.
+  - The zoned variants accept the same `disambiguation`/`offset` options as `startOfZoned`/`endOfZoned`, controlling DST gap/overlap resolution when the week-boundary time-of-day reset lands on an ambiguous local time.
+  - All four return `""` for invalid input (unparseable date/zoned value, or an invalid locale tag).
+
+  Part of Story Group D (locale-aware calendar helpers) of the Luxon/react-aria parity roadmap.
+
 ## 1.6.0
 
 ### Minor Changes

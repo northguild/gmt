@@ -6,14 +6,14 @@ description: >
   optional overflow ("constrain" | "reject") option; diff* accept optional
   smallestUnit/roundingIncrement/roundingMode options to round the result. Use
   getLocaleStartOfWeek/getLocaleEndOfWeek for locale-driven week boundaries
-  (first day of week derived from the locale, e.g. en-US Sunday vs fr-FR
-  Monday) instead of startOfDate/endOfDate's ISO-biased weekStartsOn option.
+  (first day of week derived from the locale, e.g. en-US Sunday vs fr-FR Monday)
+  instead of startOfDate/endOfDate's ISO-biased weekStartsOn option.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/calculate/index.ts'
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.6.0'
+  library_version: '1.7.0'
 ---
 
 # Calculate Dates

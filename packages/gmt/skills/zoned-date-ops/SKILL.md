@@ -9,11 +9,11 @@ description: >
   getLocaleZonedStartOfWeek, getLocaleZonedEndOfWeek, and their unix/
   counterparts (startOfUnix, endOfUnix, startOfQuarterForUnix,
   endOfQuarterForUnix) for DST-aware construction, arithmetic, and
-  boundary/quarter/hour/locale-week computations — most accept a
-  disambiguation option ("compatible" | "earlier" | "later" | "reject") for
-  gap/overlap resolution, and the boundary family (including the locale-week
-  functions) also accepts offset ("prefer" | "use" | "ignore" | "reject",
-  default "ignore", which must stay default for disambiguation to work).
+  boundary/quarter/hour/locale-week computations — most accept a disambiguation
+  option ("compatible" | "earlier" | "later" | "reject") for gap/overlap
+  resolution, and the boundary family (including the locale-week functions) also
+  accepts offset ("prefer" | "use" | "ignore" | "reject", default "ignore",
+  which must stay default for disambiguation to work).
 sources:
   - 'burglekitt/gmt:packages/gmt/src/zoned/get/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/format/index.ts'
@@ -35,7 +35,7 @@ sources:
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.6.0'
+  library_version: '1.7.0'
 ---
 
 # Zoned Date Operations

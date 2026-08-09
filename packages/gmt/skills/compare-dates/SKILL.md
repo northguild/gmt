@@ -4,8 +4,9 @@ description: >
   Compare date values for ordering. Use isAfterDate, isBeforeDate, areDatesEqual
   for comparisons. Use isWeekend/isZonedWeekend for locale-aware weekend checks
   (weekend days vary by locale — not always Saturday/Sunday). Use
-  getLocaleDayOfWeek/getLocaleZonedDayOfWeek to get a locale-relative day-of-week
-  index (0 = first day of week). Returns false/null on invalid input.
+  getLocaleDayOfWeek/getLocaleZonedDayOfWeek to get a locale-relative
+  day-of-week index (0 = first day of week). Returns false/null on invalid
+  input.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/compare/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/compare/index.ts'
@@ -14,7 +15,7 @@ sources:
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.6.0'
+  library_version: '1.7.0'
 ---
 
 # Compare Dates

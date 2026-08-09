@@ -8,7 +8,7 @@ sources:
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.6.0'
+  library_version: '1.7.0'
 ---
 
 # Parse Date/Time Components
