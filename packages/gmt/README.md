@@ -148,6 +148,24 @@ getLocaleEndOfWeek("2024-02-29", "en-US");
 // "2024-03-02" (Saturday)
 ```
 
+`getLocaleDayOfWeek`/`getLocaleZonedDayOfWeek` return a locale-relative day-of-week index (0 = first day of the locale's week):
+
+```typescript
+import { getLocaleDayOfWeek, getLocaleZonedDayOfWeek } from "@burglekitt/gmt";
+
+getLocaleDayOfWeek("2024-02-25", "en-US");
+// 0 (Sunday = first day of en-US week)
+
+getLocaleDayOfWeek("2024-02-26", "fr-FR");
+// 0 (Monday = first day of fr-FR week)
+
+getLocaleDayOfWeek("2024-02-24", "he-IL");
+// 0 (Saturday = first day of he-IL week)
+
+getLocaleZonedDayOfWeek("2024-02-25T12:00:00+00:00[UTC]", "en-US");
+// 0
+```
+
 ### Durations
 
 ```typescript

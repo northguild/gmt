@@ -1,6 +1,7 @@
 export * from "./getDay";
 export * from "./getDayOfWeek";
 export * from "./getHour";
+export * from "./getLocaleDayOfWeek";
 export * from "./getMicrosecond";
 export * from "./getMillisecond";
 export * from "./getMinute";

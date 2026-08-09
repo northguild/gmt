@@ -57,13 +57,14 @@ Locale-aware formatting:
 
 ### get
 
-Current values:
+Current values and locale-aware extraction:
 
 - `getNow`, `getNowUnit`, `getToday`
 - `getYear`, `getMonth`, `getDay`, `getDayOfWeek`
 - `getHour`, `getMinute`, `getSecond`
 - `getMillisecond`, `getMicrosecond`, `getNanosecond`
 - `getWeekOfYear`
+- `getLocaleDayOfWeek`
 
 ### map
 

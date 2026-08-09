@@ -19,7 +19,7 @@ Temporal-based date and time utilities with timezone support and polyfill integr
 | parse-date-time         | core        | Core Date Operations  | parseYearFromDate, parseMonthFromDate, parseDayFromDate, parseHourFromTime... |               |
 | format-date-time        | core        | Core Date Operations  | formatDate, formatTime, formatDateTime                                        |               |
 | calculate-dates         | core        | Core Date Operations  | addDays, addMonths, addYears, subtractTime                                    |               |
-| compare-dates           | core        | Core Date Operations  | isAfterDate, isBeforeDate, areDatesEqual                                      |               |
+| compare-dates           | core        | Core Date Operations  | isAfterDate, isBeforeDate, areDatesEqual, isWeekend, isZonedWeekend, getLocaleDayOfWeek, getLocaleZonedDayOfWeek |               |
 | validate-dates          | core        | Core Date Operations  | isValidDate, isValidTime, isValidDateTime                                     |               |
 | zoned-date-ops          | core        | Zoned Date Operations | getZonedNow, formatZonedDateTime, isValidTimezone, convertUtcToZoned...       |               |
 | convert-types           | core        | Conversion            | convertPlainToZoned, convertZonedToPlain, convertUtcToUnix...                 |               |

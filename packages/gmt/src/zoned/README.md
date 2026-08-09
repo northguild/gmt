@@ -54,7 +54,7 @@ Locale-aware timezone formatting:
 
 ### get
 
-Current in specific timezone:
+Current in specific timezone and locale-aware extraction:
 
 - `getSystemTimeZone`, `getTimeZones`
 - `getZonedNow`, `getZonedNowUnit`, `getZonedToday`
@@ -62,6 +62,7 @@ Current in specific timezone:
 - `getZonedHour`, `getZonedMinute`, `getZonedSecond`
 - `getZonedMillisecond`, `getZonedMicrosecond`, `getZonedNanosecond`
 - `getZonedWeekOfYear`
+- `getLocaleZonedDayOfWeek`
 
 ### map
 

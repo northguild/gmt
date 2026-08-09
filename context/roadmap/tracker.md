@@ -18,7 +18,7 @@ Issue number tracker (fill in as issues are created). `Order` is the sequence to
 | 8     | A5    | Issue #31    | Done        | v1.6.0                                       |
 | 9     | D1    | Issue #41    | Done        | not yet                                      |
 | 10    | D2    | Issue #42    | Done        | not yet                                      |
-| 11    | D3    | Issue #43    | Not started | minor, Story Group D complete                |
+| 11    | D3    | Issue #43    | In Progress | minor, Story Group D complete                |
 | 12    | F1    | Issue #54    | Not started | not yet                                      |
 | 13    | F2    | Issue #55    | Not started | not yet                                      |
 | 14    | F3    | Issue #56    | Not started | not yet                                      |

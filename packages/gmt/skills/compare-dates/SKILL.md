@@ -3,11 +3,14 @@ name: compare-dates
 description: >
   Compare date values for ordering. Use isAfterDate, isBeforeDate, areDatesEqual
   for comparisons. Use isWeekend/isZonedWeekend for locale-aware weekend checks
-  (weekend days vary by locale — not always Saturday/Sunday). Returns false on
-  invalid input.
+  (weekend days vary by locale — not always Saturday/Sunday). Use
+  getLocaleDayOfWeek/getLocaleZonedDayOfWeek to get a locale-relative day-of-week
+  index (0 = first day of week). Returns false/null on invalid input.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/compare/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/compare/index.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/get/index.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/get/index.ts'
 metadata:
   type: core
   library: '@burglekitt/gmt'
@@ -87,6 +90,22 @@ isZonedWeekend("2024-02-04T10:00:00+02:00[Asia/Jerusalem]", "he-IL"); // false (
 ```
 
 `isZonedWeekend` checks the `ZonedDateTime`'s own local calendar day — no separate timezone conversion needed.
+
+### Get the locale-relative day-of-week index
+
+```ts
+import { getLocaleDayOfWeek, getLocaleZonedDayOfWeek } from "@burglekitt/gmt";
+
+getLocaleDayOfWeek("2024-02-25", "en-US");       // 0 (Sunday = first day of en-US week)
+getLocaleDayOfWeek("2024-02-26", "en-US");       // 1 (Monday)
+getLocaleDayOfWeek("2024-02-26", "fr-FR");       // 0 (Monday = first day of fr-FR week)
+getLocaleDayOfWeek("2024-02-24", "he-IL");       // 0 (Saturday = first day of he-IL week)
+
+getLocaleZonedDayOfWeek("2024-02-25T12:00:00+00:00[UTC]", "en-US"); // 0
+getLocaleZonedDayOfWeek("2024-02-26T12:00:00+00:00[UTC]", "fr-FR"); // 0
+```
+
+`getLocaleDayOfWeek` returns `null` on invalid input. `getLocaleZonedDayOfWeek` reads the `ZonedDateTime`'s local calendar day — no separate timezone conversion needed.
 
 ## Common Mistakes
 
