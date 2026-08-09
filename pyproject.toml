@@ -1,0 +1,19 @@
+[project]
+name = "gmt-skills"
+version = "1.0.0"
+description = "Shared Python environment for agent skill scripts under .agents/skills/"
+requires-python = ">=3.14,<3.15"
+dependencies = ["pyyaml>=6.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "types-PyYAML>=6.0", "pyright>=1.1.300"]
+
+[tool.pytest.ini_options]
+testpaths = [".agents/skills"]
+python_files = ["test_*.py"]
+addopts = "--import-mode=importlib"
+
+[tool.pyright]
+include = [".agents/skills"]
+venvPath = "."
+venv = ".venv"

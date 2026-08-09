@@ -28,6 +28,8 @@
   "biome.enabled": true,
   "biome.requireConfiguration": true,
   "cSpell.words": ["burglekitt", "oclif", "worktree"],
+  "python.defaultInterpreterPath": "/opt/homebrew/opt/python@3.14/bin/python3.14",
+  "python.analysis.extraPaths": [".agents/skills"],
   "editor.codeActionsOnSave": {
     "source.organizeImports.biome": "explicit",
     "source.fixAll.biome": "explicit"

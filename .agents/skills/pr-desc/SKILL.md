@@ -1,6 +1,6 @@
 ---
 name: pr-desc
-description: Look at the diff vs main and generate a PR title and description ready to copy-paste
+description: Look at the diff vs main and generate a PR title and description ready to copy-paste. Use when the user asks to "write a PR description", "generate a PR title", or "draft the pull request".
 argument-hint: ""
 ---
 

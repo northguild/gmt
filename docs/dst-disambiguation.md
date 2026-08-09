@@ -134,4 +134,4 @@ Silently resolving DST ambiguity is a well-known source of subtle bugs — a sch
 ## Further reading
 
 - [Temporal's own writeup of disambiguation](https://tc39.es/proposal-temporal/docs/ambiguity.html) — the underlying spec this option maps onto.
-- `context/roadmap.md` (Story Group C) — the internal tracking doc for rolling `disambiguation` support out across the rest of GMT's zoned-producing functions.
+- `context/roadmap/index.md` (Story Group C) — the internal tracking doc for rolling `disambiguation` support out across the rest of GMT's zoned-producing functions.

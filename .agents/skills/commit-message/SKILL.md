@@ -1,6 +1,6 @@
 ---
 name: commit-message
-description: Look at unstaged and staged changes since the last commit and produce a ready-to-copy git commit message. Does not run any git commands — output only.
+description: Look at unstaged and staged changes since the last commit and produce a ready-to-copy git commit message. Use when the user asks to "write a commit message", "generate a commit message", or "draft a commit". Does not run any git commands that modify state — output only.
 argument-hint: "no arguments needed"
 ---
 

@@ -14,6 +14,8 @@ Read these before working in the repo. Each is scoped — load only what you nee
 | [context/jsdoc-standards.md](./context/jsdoc-standards.md) | When adding or updating public function JSDoc |
 | [context/code-review-checklist.md](./context/code-review-checklist.md) | When reviewing a PR |
 | [context/linting-packages.md](./context/linting-packages.md) | When working on gmt-eslint, gmt-oxlint, or gmt-biome |
+| [context/roadmap/index.md](./context/roadmap/index.md) | When picking up or reviewing roadmap work |
+| [context/roadmap/index.md](./context/roadmap/index.md) | Roadmap entry point (redirects to progressive-disclosure directory) |
 
 ## Core Rules (Quick Reference)
 
@@ -27,3 +29,9 @@ These are the non-negotiables. Full detail is in the context files above.
 6. **Full locale matrix for any locale-aware function.** 17 locales, explicit rows, `hasFullIcu` ternaries where output differs.
 7. **Use pre-built mocks for error-path tests.** See `packages/gmt/src/test/mocks`.
 8. **JSDoc with `@example` on every public function.** Cover valid, invalid, and edge-case inputs.
+
+## Python in Skills
+
+All Python used by skills shares one root-level setup — `pyproject.toml` / `uv.lock` / `.venv` at the repo root. Skills under `.agents/skills/` do not each carry their own Python env; scripts live in the skill's `scripts/` directory and run against the shared root venv (`uv run`).
+
+Run `uv sync --extra dev` once at the repo root to install the shared env (needed for IDE import resolution and to run `pytest`/`pyright` locally).

@@ -1,3 +1,4 @@
+import path from "node:path";
 import { defineProject } from "vitest/config";
 
 export default [
@@ -8,6 +9,9 @@ export default [
       environment: "node",
       root: "packages/gmt",
       include: ["src/**/*.test.ts"],
+      setupFiles: [
+        path.resolve(__dirname, "packages/gmt/src/test/setupTests.ts"),
+      ],
     },
   }),
 ];
