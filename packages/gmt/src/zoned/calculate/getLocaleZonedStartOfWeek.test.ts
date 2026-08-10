@@ -82,16 +82,16 @@ describe("getLocaleZonedStartOfWeek", () => {
         ? "2024-02-04T00:00:00" // rolled forward: start of the NEW week (Sunday)
         : "2024-01-28T00:00:00", // still Saturday: start of the PRIOR week
     })),
-  )("returns start-of-week with date $expected for $timeZone at the Sat/Sun rollover instant (en-US)", ({
-    timeZone,
-    expected,
-  }) => {
-    const value = Temporal.Instant.from(saturdayRollsToSundayInstant)
-      .toZonedDateTimeISO(timeZone)
-      .toString();
-    const result = getLocaleZonedStartOfWeek(value, MustTestLocales.enUS);
-    expect(result.startsWith(expected)).toBe(true);
-  });
+  )(
+    "returns start-of-week with date $expected for $timeZone at the Sat/Sun rollover instant (en-US)",
+    ({ timeZone, expected }) => {
+      const value = Temporal.Instant.from(saturdayRollsToSundayInstant)
+        .toZonedDateTimeISO(timeZone)
+        .toString();
+      const result = getLocaleZonedStartOfWeek(value, MustTestLocales.enUS);
+      expect(result.startsWith(expected)).toBe(true);
+    },
+  );
 
   // One representative Saturday check per must-test locale, using the shared
   // locale-zoned fixture (2024-02-03, a Saturday, per timeZone/offset).

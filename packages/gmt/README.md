@@ -85,6 +85,8 @@ import { addDate, getNow, formatRelativeZoned } from "@burglekitt/gmt";
 ```typescript
 import {
   addDate,
+  addBusinessDays,
+  subtractBusinessDays,
   areDatesEqual,
   diffDateTime,
   isBeforeDateTime,
@@ -92,6 +94,12 @@ import {
 
 addDate("2026-01-01", 90, "day");
 // "2026-03-32" is impossible, so Temporal normalizes correctly -> "2026-04-01"
+
+addBusinessDays("2024-03-15", 1);
+// "2024-03-18" (skips weekend)
+
+subtractBusinessDays("2024-03-18", 1);
+// "2024-03-15" (skips weekend)
 
 diffDateTime("2024-03-17T12:00:00", "2024-03-17T12:30:00", "minute");
 // 30

@@ -80,15 +80,15 @@ describe("isZonedWeekend", () => {
       timeZone,
       expected: true, // every zone lands on Sat or Sun at this instant
     })),
-  )("returns true for $timeZone at the Sat/Sun UTC-day-rollover instant (en-US)", ({
-    timeZone,
-    expected,
-  }) => {
-    const value = Temporal.Instant.from(saturdayRollsToSundayInstant)
-      .toZonedDateTimeISO(timeZone)
-      .toString();
-    expect(isZonedWeekend(value, MustTestLocales.enUS)).toBe(expected);
-  });
+  )(
+    "returns true for $timeZone at the Sat/Sun UTC-day-rollover instant (en-US)",
+    ({ timeZone, expected }) => {
+      const value = Temporal.Instant.from(saturdayRollsToSundayInstant)
+        .toZonedDateTimeISO(timeZone)
+        .toString();
+      expect(isZonedWeekend(value, MustTestLocales.enUS)).toBe(expected);
+    },
+  );
 
   // Same day-boundary instant one day earlier: zones split between
   // Thursday (weekday everywhere) and Friday (weekend only for
@@ -107,16 +107,15 @@ describe("isZonedWeekend", () => {
         expected: zonesRolledForward.has(timeZone), // Fri is weekend for Fri/Sat locales
       },
     ]),
-  )("returns $expected for $timeZone at the Thu/Fri UTC-day-rollover instant ($locale)", ({
-    timeZone,
-    locale,
-    expected,
-  }) => {
-    const value = Temporal.Instant.from(thursdayRollsToFridayInstant)
-      .toZonedDateTimeISO(timeZone)
-      .toString();
-    expect(isZonedWeekend(value, locale)).toBe(expected);
-  });
+  )(
+    "returns $expected for $timeZone at the Thu/Fri UTC-day-rollover instant ($locale)",
+    ({ timeZone, locale, expected }) => {
+      const value = Temporal.Instant.from(thursdayRollsToFridayInstant)
+        .toZonedDateTimeISO(timeZone)
+        .toString();
+      expect(isZonedWeekend(value, locale)).toBe(expected);
+    },
+  );
 
   // One representative Saturday check per must-test locale, fixed at UTC.
   it.each`

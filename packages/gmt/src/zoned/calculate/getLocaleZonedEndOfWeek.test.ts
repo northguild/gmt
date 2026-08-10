@@ -82,16 +82,16 @@ describe("getLocaleZonedEndOfWeek", () => {
         ? "2024-02-10T23:59:59" // rolled forward: end of the NEW week (Saturday)
         : "2024-02-03T23:59:59", // still Saturday: end of the CURRENT week
     })),
-  )("returns end-of-week with date $expected for $timeZone at the Sat/Sun rollover instant (en-US)", ({
-    timeZone,
-    expected,
-  }) => {
-    const value = Temporal.Instant.from(saturdayRollsToSundayInstant)
-      .toZonedDateTimeISO(timeZone)
-      .toString();
-    const result = getLocaleZonedEndOfWeek(value, MustTestLocales.enUS);
-    expect(result.startsWith(expected)).toBe(true);
-  });
+  )(
+    "returns end-of-week with date $expected for $timeZone at the Sat/Sun rollover instant (en-US)",
+    ({ timeZone, expected }) => {
+      const value = Temporal.Instant.from(saturdayRollsToSundayInstant)
+        .toZonedDateTimeISO(timeZone)
+        .toString();
+      const result = getLocaleZonedEndOfWeek(value, MustTestLocales.enUS);
+      expect(result.startsWith(expected)).toBe(true);
+    },
+  );
 
   // One representative Saturday check per must-test locale, using the shared
   // locale-zoned fixture (2024-02-03, a Saturday, per timeZone/offset).

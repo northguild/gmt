@@ -40,7 +40,7 @@
     "release:publish": "pnpm run validate && pnpm run changeset:publish"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.11",
+    "@biomejs/biome": "^2.5.7",
     "@changesets/cli": "^2.30.0",
     "@nx/js": "^22.5.4",
     "@tanstack/intent": "^0.3.6",

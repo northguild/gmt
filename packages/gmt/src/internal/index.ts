@@ -1,3 +1,4 @@
+export { advanceBusinessDays } from "./advanceBusinessDays";
 export { durationUntilString } from "./durationUntilString";
 export { getLocaleFirstDayOfWeek } from "./getLocaleFirstDayOfWeek";
 export { getLocaleWeekendDays } from "./getLocaleWeekendDays";

@@ -2,8 +2,9 @@
 name: calculate-dates
 description: >
   Add or subtract time from dates. Use addDays, addMonths, subtractTime for date
-  arithmetic. Use diffDate for calculating differences. add*/subtract* accept an
-  optional overflow ("constrain" | "reject") option; diff* accept optional
+  arithmetic. Use addBusinessDays/subtractBusinessDays for Mon–Fri business-day
+  arithmetic that skips weekends. Use diffDate for calculating differences.
+  add*/subtract* accept an optional overflow ("constrain" | "reject") option; diff* accept optional
   smallestUnit/roundingIncrement/roundingMode options to round the result. Use
   getLocaleStartOfWeek/getLocaleEndOfWeek for locale-driven week boundaries
   (first day of week derived from the locale, e.g. en-US Sunday vs fr-FR Monday)
@@ -13,7 +14,7 @@ sources:
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.7.0'
+  library_version: '1.8.0'
 ---
 
 # Calculate Dates
@@ -54,6 +55,18 @@ const result = addYears("2024-03-15", 1); // "2025-03-15"
 import { subtractTime } from "@burglekitt/gmt";
 
 const result = subtractTime("2024-03-15T14:30:45", { hours: 2 }); // "2024-03-15T12:30:45"
+```
+
+### Add business days (skip weekends)
+
+```ts
+import { addBusinessDays, subtractBusinessDays } from "@burglekitt/gmt";
+
+addBusinessDays("2024-03-15", 1); // "2024-03-18" — skips Sat/Sun
+addBusinessDays("2024-03-16", 1); // "2024-03-18" — Saturday start still skips to Monday
+
+subtractBusinessDays("2024-03-18", 1); // "2024-03-15"
+subtractBusinessDays("2024-03-17", 1); // "2024-03-15" — Sunday start still skips to Friday
 ```
 
 ### Calculate difference between dates (in days)
@@ -134,6 +147,32 @@ const rejected = addDate("2024-01-31", { months: 1 }, { overflow: "reject" }); /
 ```
 
 `overflow` is available on `addDate`, `addDateTime`, `addTime`, `addUnix`, `addUtc`, `addZoned`, and their `subtract` equivalents. It defaults to `"constrain"` (matches prior behavior) and is accepted-but-inert on `addTime`/`subtractTime`, since `PlainTime` arithmetic always wraps around the clock rather than producing an out-of-range value.
+
+### Add/subtract business days (Mon–Fri only)
+
+```ts
+import { addBusinessDays, subtractBusinessDays } from "@burglekitt/gmt";
+
+addBusinessDays("2024-03-15", 1);
+// "2024-03-18" (Friday + 1 business day skips Sat/Sun to Monday)
+
+subtractBusinessDays("2024-03-18", 1);
+// "2024-03-15" (Monday - 1 business day skips Sat/Sun to Friday)
+
+addBusinessDays("2024-03-16", 1);
+// "2024-03-18" (Saturday start: skip weekend, Monday is the first business day)
+
+subtractBusinessDays("2024-03-17", 1);
+// "2024-03-15" (Sunday start skips to Saturday, then -1 = Friday)
+
+addBusinessDays("2024-03-15", 0);
+// "2024-03-15" (zero returns the input unchanged)
+
+addBusinessDays("invalid", 1);
+// "" (sentinel on invalid input)
+```
+
+`addBusinessDays`/`subtractBusinessDays` skip Saturday and Sunday during the count. They use fixed ISO Monday–Friday business days with no locale parameter. Negative `amount` on `addBusinessDays` behaves identically to `subtractBusinessDays(value, Math.abs(amount))`, and vice versa.
 
 ### Round a diff result with smallestUnit/roundingIncrement/roundingMode
 

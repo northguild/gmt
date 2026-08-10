@@ -125,15 +125,17 @@ describe("getLocaleZonedDayOfWeek", () => {
       const expected = (zoned.dayOfWeek - firstDay + 7) % 7;
       return { timeZone, expected };
     }),
-  )("returns $expected for $timeZone at the Monday-UTC instant (en-US)", ({
-    timeZone,
-    expected,
-  }) => {
-    const value = Temporal.Instant.from("2024-02-26T12:00:00Z")
-      .toZonedDateTimeISO(timeZone)
-      .toString();
-    expect(getLocaleZonedDayOfWeek(value, MustTestLocales.enUS)).toBe(expected);
-  });
+  )(
+    "returns $expected for $timeZone at the Monday-UTC instant (en-US)",
+    ({ timeZone, expected }) => {
+      const value = Temporal.Instant.from("2024-02-26T12:00:00Z")
+        .toZonedDateTimeISO(timeZone)
+        .toString();
+      expect(getLocaleZonedDayOfWeek(value, MustTestLocales.enUS)).toBe(
+        expected,
+      );
+    },
+  );
 
   it.each`
     value

@@ -8,7 +8,7 @@ Timezone-free date and time operations. All functions accept and return ISO 8601
 
 Arithmetic and date manipulation:
 
-- `addDate`, `addDateTime`, `addTime`
+- `addBusinessDays`, `addDate`, `addDateTime`, `addTime`
 - `diffDate`, `diffDateAsDuration`, `diffDateTime`, `diffDateTimeAsDuration`, `diffTime`
 - `endOfDate`, `endOfDateTime`, `endOfTime`
 - `endOfQuarterForDate`, `endOfQuarterForDateTime`
@@ -21,7 +21,7 @@ Arithmetic and date manipulation:
 - `sortDates`, `sortDateTimes`, `sortTimes`
 - `startOfDate`, `startOfDateTime`, `startOfTime`
 - `startOfQuarterForDate`, `startOfQuarterForDateTime`
-- `subtractDate`, `subtractDateTime`, `subtractTime`
+- `subtractBusinessDays`, `subtractDate`, `subtractDateTime`, `subtractTime`
 - `weekOfYear`
 
 ### chop
