@@ -3,10 +3,10 @@ name: calculate-dates
 description: >
   Add or subtract time from dates. Use addDays, addMonths, subtractTime for date
   arithmetic. Use addBusinessDays/subtractBusinessDays for Mon–Fri business-day
-  arithmetic that skips weekends. Use diffDate for calculating differences.
-  Use clampDate to restrict a date to a range, or closestDateTo to find the
-  nearest candidate by calendar distance. add*/subtract* accept an optional
-  overflow ("constrain" | "reject") option; diff* accept optional
+  arithmetic that skips weekends. Use diffDate for calculating differences. Use
+  clampDate to restrict a date to a range, or closestDateTo to find the nearest
+  candidate by calendar distance. add*/subtract* accept an optional overflow
+  ("constrain" | "reject") option; diff* accept optional
   smallestUnit/roundingIncrement/roundingMode options to round the result. Use
   getLocaleStartOfWeek/getLocaleEndOfWeek for locale-driven week boundaries
   (first day of week derived from the locale, e.g. en-US Sunday vs fr-FR Monday)

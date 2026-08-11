@@ -19,10 +19,10 @@ Issue number tracker (fill in as issues are created). `Order` is the sequence to
 | 9     | D1    | Issue #41    | Done        | v1.7.0                                       |
 | 10    | D2    | Issue #42    | Done        | v1.7.0                                       |
 | 11    | D3    | Issue #43    | Done        | v1.7.0                                       |
-| 12    | F1    | Issue #54    | Done        | not yet                                      |
-| 13    | F2    | Issue #55    | Done        | not yet                                      |
-| 14    | F3    | Issue #56    | Done        | not yet                                      |
-| 15    | F4    | Issue #57    | Done        | minor, Story Group F complete                |
+| 12    | F1    | Issue #54    | Done        | v1.8.0                                       |
+| 13    | F2    | Issue #55    | Done        | v1.8.0                                       |
+| 14    | F3    | Issue #56    | Done        | v1.8.0                                       |
+| 15    | F4    | Issue #57    | Done        | v1.8.0                                       |
 | 16    | B1    | Issue #32    | Not started | not yet                                      |
 | 17    | B2    | Issue #33    | Not started | not yet                                      |
 | 18    | B3    | Issue #34    | Not started | not yet                                      |
