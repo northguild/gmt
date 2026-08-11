@@ -181,6 +181,7 @@ skills:
       - areDatesEqual
       - isWeekend
       - isZonedWeekend
+      - isBusinessDay
       - getLocaleDayOfWeek
       - getLocaleZonedDayOfWeek
     tasks:
@@ -188,6 +189,7 @@ skills:
       - Check if date is before another
       - Check date equality
       - Check if a date falls on a weekend (locale-aware)
+      - Check if a date falls on a Mon–Fri business day (fixed ISO boundary)
       - Get the locale-relative day-of-week index
 
   - name: Validate Dates
@@ -341,5 +343,8 @@ cross_references:
   - from: calculate-dates
     to: durations
     reason: diff* functions return a single-unit number; the durations skill's *AsDuration siblings return a full multi-unit ISO duration string instead
+  - from: calculate-dates
+    to: compare-dates
+    reason: addBusinessDays/subtractBusinessDays use a fixed ISO Mon–Fri boundary; isBusinessDay checks whether a date is itself a business day before doing arithmetic
 
 gaps: []

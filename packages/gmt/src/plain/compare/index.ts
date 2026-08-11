@@ -10,4 +10,5 @@ export * from "./isBeforeTime";
 export * from "./isBetweenDate";
 export * from "./isBetweenDateTime";
 export * from "./isBetweenTime";
+export * from "./isBusinessDay";
 export * from "./isWeekend";

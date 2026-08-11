@@ -174,6 +174,8 @@ addBusinessDays("invalid", 1);
 
 `addBusinessDays`/`subtractBusinessDays` skip Saturday and Sunday during the count. They use fixed ISO Monday–Friday business days with no locale parameter. Negative `amount` on `addBusinessDays` behaves identically to `subtractBusinessDays(value, Math.abs(amount))`, and vice versa.
 
+To test whether a given date is itself a business day before doing arithmetic on it, use `isBusinessDay` (see the `compare-dates` skill) — it shares this exact fixed ISO Mon–Fri boundary.
+
 ### Round a diff result with smallestUnit/roundingIncrement/roundingMode
 
 ```ts

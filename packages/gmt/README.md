@@ -141,6 +141,18 @@ isZonedWeekend("2024-02-04T10:00:00+02:00[Asia/Jerusalem]", "he-IL");
 // false (Sunday isn't part of he-IL's weekend)
 ```
 
+`isBusinessDay` returns true for fixed ISO Monday–Friday business days (Mon=1 … Fri=5), locale-agnostic and with no holiday calendar. It's the complement to locale-aware `isWeekend` and matches the boundary that `addBusinessDays`/`subtractBusinessDays` use:
+
+```typescript
+import { isBusinessDay } from "@burglekitt/gmt";
+
+isBusinessDay("2024-02-05");
+// true (Monday)
+
+isBusinessDay("2024-02-10");
+// false (Saturday)
+```
+
 `getLocaleStartOfWeek`/`getLocaleEndOfWeek` (and their zoned equivalents) compute week boundaries from the locale's first day of week, instead of an ISO-Monday default:
 
 ```typescript

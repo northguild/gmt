@@ -3,10 +3,11 @@ name: compare-dates
 description: >
   Compare date values for ordering. Use isAfterDate, isBeforeDate, areDatesEqual
   for comparisons. Use isWeekend/isZonedWeekend for locale-aware weekend checks
-  (weekend days vary by locale — not always Saturday/Sunday). Use
-  getLocaleDayOfWeek/getLocaleZonedDayOfWeek to get a locale-relative
-  day-of-week index (0 = first day of week). Returns false/null on invalid
-  input.
+  (weekend days vary by locale — not always Saturday/Sunday). Use isBusinessDay
+  for fixed ISO Monday–Friday business-day checks (locale-agnostic, matches
+  addBusinessDays). Use getLocaleDayOfWeek/getLocaleZonedDayOfWeek to get a
+  locale-relative day-of-week index (0 = first day of week). Returns false/null
+  on invalid input.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/compare/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/compare/index.ts'
@@ -15,7 +16,7 @@ sources:
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.7.0'
+  library_version: '1.8.0'
 ---
 
 # Compare Dates
@@ -91,6 +92,18 @@ isZonedWeekend("2024-02-04T10:00:00+02:00[Asia/Jerusalem]", "he-IL"); // false (
 ```
 
 `isZonedWeekend` checks the `ZonedDateTime`'s own local calendar day — no separate timezone conversion needed.
+
+### Check if a date is a business day (fixed Mon–Fri)
+
+```ts
+import { isBusinessDay } from "@burglekitt/gmt";
+
+isBusinessDay("2024-02-05"); // true (Monday)
+isBusinessDay("2024-02-10"); // false (Saturday)
+isBusinessDay("2024-02-04"); // false (Sunday)
+```
+
+`isBusinessDay` uses the fixed ISO Monday–Friday boundary (Mon=1 … Fri=5) — locale-agnostic and with no holiday calendar. It matches the boundary that `addBusinessDays`/`subtractBusinessDays` use, and is the locale-agnostic complement to `isWeekend` (which resolves weekend days per locale via `Intl.Locale`'s `weekInfo`).
 
 ### Get the locale-relative day-of-week index
 
@@ -196,6 +209,31 @@ const isWeekendDay = isWeekend("2024-02-02", "he-IL"); // true — Friday is par
 Most locales use Saturday/Sunday, but `he-IL`/`ar-SA` use Friday/Saturday — `isWeekend`/`isZonedWeekend` resolve this per-locale via `Intl.Locale`'s `weekInfo` instead of hardcoding a day pair.
 
 Source: packages/gmt/src/plain/compare/isWeekend.ts — locale-aware via Intl.Locale weekInfo
+
+### MEDIUM Confusing isBusinessDay with isWeekend
+
+Wrong:
+
+```ts
+const isWeekendDay = isBusinessDay("2024-02-02"); // false (it's a Friday)
+// then assume isBusinessDay captures locale-specific weekend days
+```
+
+Correct:
+
+```ts
+import { isWeekend } from "@burglekitt/gmt";
+
+// isBusinessDay is fixed ISO Mon–Fri (no locale lookup, no holidays)
+isBusinessDay("2024-02-02"); // true (Friday)
+
+// For locale-aware weekend detection (e.g. he-IL Fri/Sat), use isWeekend
+isWeekend("2024-02-02", "he-IL"); // true (Friday is part of he-IL's weekend)
+```
+
+`isBusinessDay` uses a fixed Monday–Friday boundary and never consults `Intl.Locale`'s `weekInfo`; it does not account for holidays. Do not reach for it when you need locale-aware weekend detection — that's `isWeekend`/`isZonedWeekend`'s job.
+
+Source: packages/gmt/src/plain/compare/isBusinessDay.ts — fixed ISO Mon–Fri, locale-agnostic
 
 ## References
 
