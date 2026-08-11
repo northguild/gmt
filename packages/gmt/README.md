@@ -153,6 +153,18 @@ isBusinessDay("2024-02-10");
 // false (Saturday)
 ```
 
+`clampDate` restricts a date to a range, and `closestDateTo` finds the nearest candidate by calendar distance:
+
+```typescript
+import { clampDate, closestDateTo } from "@burglekitt/gmt";
+
+clampDate("2024-02-01", "2024-03-01", "2024-03-31");
+// "2024-03-01"
+
+closestDateTo("2024-03-15", ["2024-03-01", "2024-03-20", "2024-03-18"]);
+// "2024-03-18"
+```
+
 `getLocaleStartOfWeek`/`getLocaleEndOfWeek` (and their zoned equivalents) compute week boundaries from the locale's first day of week, instead of an ISO-Monday default:
 
 ```typescript
@@ -282,6 +294,25 @@ startOfZoned(source, "hour", { disambiguation: "reject", offset: "prefer" });
 ```
 
 `convertPlainDateTimeToZoned` and `addZoned`/`subtractZoned` also accept `offset` for API consistency, but it's permanently inert on both — their construction path never has a stored offset for it to act on.
+
+`clampZoned` restricts a zoned datetime to a range, and `closestZonedTo` finds the nearest candidate by temporal distance:
+
+```typescript
+import { clampZoned, closestZonedTo } from "@burglekitt/gmt";
+
+clampZoned(
+  "2024-02-01T12:00:00[America/New_York]",
+  "2024-03-01T00:00:00[America/New_York]",
+  "2024-03-31T23:59:59[America/New_York]",
+);
+// "2024-03-01T00:00:00-05:00[America/New_York]"
+
+closestZonedTo(
+  "2024-03-15T12:00:00[America/New_York]",
+  ["2024-03-01T00:00:00[America/New_York]", "2024-03-20T00:00:00[America/New_York]", "2024-03-18T00:00:00[America/New_York]"],
+);
+// "2024-03-18T00:00:00-04:00[America/New_York]"
+```
 
 See [`docs/dst-disambiguation.md`](../../docs/dst-disambiguation.md) for the full explanation, including why `overflow` was deliberately left off the public API.
 

@@ -10,7 +10,7 @@ library:
 generated_from:
   domain_map: 'skills/_artifacts/domain_map.yaml'
   skill_spec: 'skills/_artifacts/skill_spec.md'
-generated_at: '2026-08-10'
+generated_at: '2026-08-11'
 
 skills:
   # Consumer-facing core skills
@@ -70,9 +70,11 @@ skills:
     domain: core-date-operations
     path: 'skills/calculate-dates/SKILL.md'
     package: 'packages/gmt'
-    description: Add or subtract time from dates; add*/subtract* accept an optional overflow ("constrain" | "reject") option, diff* accept optional smallestUnit/roundingIncrement/roundingMode rounding options, addBusinessDays/subtractBusinessDays skip weekends for Mon–Fri arithmetic, getLocaleStartOfWeek/getLocaleEndOfWeek compute locale-driven week boundaries
+    description: Add or subtract time from dates; add*/subtract* accept an optional overflow ("constrain" | "reject") option, diff* accept optional smallestUnit/roundingIncrement/roundingMode rounding options, addBusinessDays/subtractBusinessDays skip weekends for Mon–Fri arithmetic, clampDate restricts a date to a range, closestDateTo finds the nearest candidate by calendar distance, getLocaleStartOfWeek/getLocaleEndOfWeek compute locale-driven week boundaries
     sources:
       - 'burglekitt/gmt:packages/gmt/src/plain/calculate/index.ts'
+      - 'burglekitt/gmt:packages/gmt/src/plain/calculate/clampDate.ts'
+      - 'burglekitt/gmt:packages/gmt/src/plain/calculate/closestDateTo.ts'
 
   - name: Durations
     slug: durations
@@ -121,7 +123,7 @@ skills:
     domain: zoned-date-operations
     path: 'skills/zoned-date-ops/SKILL.md'
     package: 'packages/gmt'
-    description: Work with timezone-aware dates and times; includes formatZonedDateTime, formatZonedRange, formatRelativeZoned, convertPlainDateTimeToZoned with full DST disambiguation control, addZoned/subtractZoned with overlap-only DST disambiguation control, and the startOfZoned/endOfZoned/startOfQuarterForZoned/endOfQuarterForZoned/mapZonedHoursInDay/getLocaleZonedStartOfWeek/getLocaleZonedEndOfWeek/getLocaleZonedDayOfWeek family (plus unix/ counterparts) with full disambiguation + offset control
+    description: Work with timezone-aware dates and times; includes formatZonedDateTime, formatZonedRange, formatRelativeZoned, convertPlainDateTimeToZoned with full DST disambiguation control, addZoned/subtractZoned with overlap-only DST disambiguation control, clampZoned/closestZonedTo for range restriction and nearest-candidate selection, and the startOfZoned/endOfZoned/startOfQuarterForZoned/endOfQuarterForZoned/mapZonedHoursInDay/getLocaleZonedStartOfWeek/getLocaleZonedEndOfWeek/getLocaleZonedDayOfWeek family (plus unix/ counterparts) with full disambiguation + offset control
     sources:
       - 'burglekitt/gmt:packages/gmt/src/zoned/get/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/format/index.ts'
@@ -135,6 +137,8 @@ skills:
       - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/endOfQuarterForZoned.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/getLocaleZonedStartOfWeek.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/getLocaleZonedEndOfWeek.ts'
+      - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/clampZoned.ts'
+      - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/closestZonedTo.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/map/mapZonedHoursInDay.ts'
       - 'burglekitt/gmt:packages/gmt/src/unix/calculate/startOfUnix.ts'
       - 'burglekitt/gmt:packages/gmt/src/unix/calculate/endOfUnix.ts'

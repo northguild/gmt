@@ -6,8 +6,8 @@ description: >
   getSystemTimeZone, getTimeZones for the basics. Use
   convertPlainDateTimeToZoned, addZoned, subtractZoned, startOfZoned,
   endOfZoned, startOfQuarterForZoned, endOfQuarterForZoned, mapZonedHoursInDay,
-  getLocaleZonedStartOfWeek, getLocaleZonedEndOfWeek, and their unix/
-  counterparts (startOfUnix, endOfUnix, startOfQuarterForUnix,
+  getLocaleZonedStartOfWeek, getLocaleZonedEndOfWeek, clampZoned, closestZonedTo,
+  and their unix/ counterparts (startOfUnix, endOfUnix, startOfQuarterForUnix,
   endOfQuarterForUnix) for DST-aware construction, arithmetic, and
   boundary/quarter/hour/locale-week computations — most accept a disambiguation
   option ("compatible" | "earlier" | "later" | "reject") for gap/overlap
@@ -27,6 +27,8 @@ sources:
   - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/endOfQuarterForZoned.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/getLocaleZonedStartOfWeek.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/getLocaleZonedEndOfWeek.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/clampZoned.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/closestZonedTo.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/map/mapZonedHoursInDay.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/calculate/startOfUnix.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/calculate/endOfUnix.ts'
@@ -35,7 +37,7 @@ sources:
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.7.0'
+  library_version: '1.8.0'
 ---
 
 # Zoned Date Operations
@@ -173,41 +175,28 @@ convertPlainDateTimeToZoned("2024-03-15T14:30:45", "America/New_York");
 // "2024-03-15T14:30:45.000-04:00[America/New_York]"
 ```
 
-Twice a year, the local time you pass in doesn't map 1:1 to a real instant:
-
-- **Spring-forward gap**: clocks skip an hour, so a wall-clock time never happens (e.g. `2024-03-10T02:30:00` doesn't exist in `America/New_York`).
-- **Fall-back overlap**: clocks repeat an hour, so a wall-clock time happens twice (e.g. `2024-11-03T01:30:00` occurs twice in `America/New_York`).
-
-Pass `disambiguation` to control how that's resolved instead of silently guessing:
+Twice a year, the local time you pass in doesn't map 1:1 to a real instant. Pass `disambiguation` to control how that's resolved:
 
 ```ts
 import { convertPlainDateTimeToZoned } from "@burglekitt/gmt/zoned";
 
-// Gap: 2024-03-10T02:30:00 doesn't exist in America/New_York.
+// Spring-forward gap: 2024-03-10T02:30:00 doesn't exist in America/New_York.
 convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York");
-// "2024-03-10T03:30:00.000-04:00[America/New_York]" (default "compatible" == "later" for gaps)
-
-convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York", {
-  disambiguation: "earlier",
-});
-// "2024-03-10T01:30:00.000-05:00[America/New_York]"
+// "2024-03-10T03:30:00.000-04:00[America/New_York]" (default "compatible")
 
 convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York", {
   disambiguation: "reject",
 });
 // "" — no such local time exists
 
-// Overlap: 2024-11-03T01:30:00 happens twice in America/New_York.
-convertPlainDateTimeToZoned("2024-11-03T01:30:00", "America/New_York");
-// "2024-11-03T01:30:00.000-04:00[America/New_York]" (default "compatible" == "earlier" for overlaps)
-
+// Fall-back overlap: 2024-11-03T01:30:00 happens twice.
 convertPlainDateTimeToZoned("2024-11-03T01:30:00", "America/New_York", {
   disambiguation: "later",
 });
 // "2024-11-03T01:30:00.000-05:00[America/New_York]"
 ```
 
-`disambiguation` accepts `"compatible"` (default), `"earlier"`, `"later"`, or `"reject"`. See [DST Disambiguation](../../../../docs/dst-disambiguation.md) for the full explanation of gaps vs. overlaps.
+`disambiguation` accepts `"compatible"` (default), `"earlier"`, `"later"`, or `"reject"`. See [DST Disambiguation](../../../../docs/dst-disambiguation.md) for the full explanation.
 
 ### Add/subtract a duration from a zoned datetime (with partial DST disambiguation)
 
@@ -221,7 +210,7 @@ subtractZoned("2024-03-15T14:30:45[America/New_York]", { hours: 2 });
 // "2024-03-15T12:30:45-04:00[America/New_York]"
 ```
 
-Both accept the same `disambiguation` option as `convertPlainDateTimeToZoned`, but it only controls the result when the arithmetic **lands on a fall-back (DST-end) overlap** — it has **no effect** on a spring-forward (DST-start) gap landing, because Temporal's arithmetic already resolves gap landings internally before `disambiguation` is ever evaluated:
+Both accept the same `disambiguation` option as `convertPlainDateTimeToZoned`, but it only controls the result when the arithmetic **lands on a fall-back (DST-end) overlap** — it has **no effect** on a spring-forward (DST-start) gap landing:
 
 ```ts
 import { addZoned } from "@burglekitt/gmt/zoned";
@@ -241,7 +230,7 @@ addZoned("2024-11-02T01:30:00-04:00[America/New_York]", { days: 1 }, {
 // "" — ambiguous result rejected
 
 // Spring-forward gap: adding 1 day lands on a wall-clock time that never happened.
-// disambiguation has NO effect here — all four values return the same result.
+// disambiguation has NO effect here.
 addZoned("2024-03-09T02:30:00-05:00[America/New_York]", { days: 1 }, {
   disambiguation: "reject",
 });
@@ -296,6 +285,53 @@ getLocaleZonedEndOfWeek("2024-02-29T12:00:00+00:00[UTC]", "en-US");
 ```
 
 Like `startOfZoned`/`endOfZoned`, these derive the week's first day from the locale (via `Intl.Locale.prototype.weekInfo`, same as the plain `getLocaleStartOfWeek`/`getLocaleEndOfWeek` in the `calculate-dates` skill) instead of taking an explicit `weekStartsOn` option, and accept the same `disambiguation`/`offset` options as the rest of the boundary family — `offset` must stay at its default `"ignore"` for `disambiguation` to actually take effect on the week-boundary time-of-day reset. Both return `""` for invalid `value` or an unresolvable `locale`.
+
+### Clamp a zoned datetime to a range
+
+```ts
+import { clampZoned } from "@burglekitt/gmt/zoned";
+
+clampZoned(
+  "2024-03-15T12:00:00[America/New_York]",
+  "2024-03-01T00:00:00[America/New_York]",
+  "2024-03-31T23:59:59[America/New_York]",
+);
+// "2024-03-15T12:00:00-04:00[America/New_York]"
+
+clampZoned(
+  "2024-02-01T12:00:00[America/New_York]",
+  "2024-03-01T00:00:00[America/New_York]",
+  "2024-03-31T23:59:59[America/New_York]",
+);
+// "2024-03-01T00:00:00-05:00[America/New_York]"
+
+clampZoned(
+  "2024-03-15T12:00:00[America/New_York]",
+  "2024-03-31T00:00:00[America/New_York]",
+  "2024-03-01T00:00:00[America/New_York]",
+);
+// "" (min > max is invalid)
+```
+
+### Find the nearest zoned datetime to a target
+
+```ts
+import { closestZonedTo } from "@burglekitt/gmt/zoned";
+
+closestZonedTo(
+  "2024-03-15T12:00:00[America/New_York]",
+  ["2024-03-01T00:00:00[America/New_York]", "2024-03-20T00:00:00[America/New_York]", "2024-03-18T00:00:00[America/New_York]"],
+);
+// "2024-03-18T00:00:00-04:00[America/New_York]"
+
+closestZonedTo("2024-03-15T12:00:00[America/New_York]", []);
+// null (empty candidates)
+
+closestZonedTo("invalid", ["2024-03-01T00:00:00[America/New_York]"]);
+// null (invalid target)
+```
+
+Distance is measured in total days via `Temporal.Instant` epoch milliseconds. On a tie, the first candidate in array order wins.
 
 ## Timezone List
 
@@ -458,7 +494,6 @@ const start = startOfZoned("2024-11-03T01:45:00-05:00[America/New_York]", "hour"
 ```
 
 Source: packages/gmt/src/zoned/calculate/startOfZoned.ts — `offset` defaults to `"ignore"` specifically so `disambiguation` works; see [The offset parameter](../../../../docs/dst-disambiguation.md#the-offset-parameter)
-
 ## References
 
 - [Full zoned API](references/zoned-api.md)

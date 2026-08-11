@@ -1,4 +1,6 @@
 export * from "./addZoned";
+export * from "./clampZoned";
+export * from "./closestZonedTo";
 export * from "./diffZoned";
 export * from "./diffZonedAsDuration";
 export * from "./endOfQuarterForZoned";

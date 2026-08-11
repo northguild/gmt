@@ -9,6 +9,7 @@ Timezone-free date and time operations. All functions accept and return ISO 8601
 Arithmetic and date manipulation:
 
 - `addBusinessDays`, `addDate`, `addDateTime`, `addTime`
+- `clampDate`, `closestDateTo`
 - `diffDate`, `diffDateAsDuration`, `diffDateTime`, `diffDateTimeAsDuration`, `diffTime`
 - `endOfDate`, `endOfDateTime`, `endOfTime`
 - `endOfQuarterForDate`, `endOfQuarterForDateTime`

@@ -4,13 +4,17 @@ description: >
   Add or subtract time from dates. Use addDays, addMonths, subtractTime for date
   arithmetic. Use addBusinessDays/subtractBusinessDays for Mon–Fri business-day
   arithmetic that skips weekends. Use diffDate for calculating differences.
-  add*/subtract* accept an optional overflow ("constrain" | "reject") option; diff* accept optional
+  Use clampDate to restrict a date to a range, or closestDateTo to find the
+  nearest candidate by calendar distance. add*/subtract* accept an optional
+  overflow ("constrain" | "reject") option; diff* accept optional
   smallestUnit/roundingIncrement/roundingMode options to round the result. Use
   getLocaleStartOfWeek/getLocaleEndOfWeek for locale-driven week boundaries
   (first day of week derived from the locale, e.g. en-US Sunday vs fr-FR Monday)
   instead of startOfDate/endOfDate's ISO-biased weekStartsOn option.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/calculate/index.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/clampDate.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/closestDateTo.ts'
 metadata:
   type: core
   library: '@burglekitt/gmt'
@@ -119,6 +123,44 @@ import { startOfQuarterForDate, endOfQuarterForDate } from "@burglekitt/gmt";
 const q1Start = startOfQuarterForDate("2024-03-15"); // "2024-01-01"
 const q1End = endOfQuarterForDate("2024-03-15"); // "2024-03-31"
 ```
+
+### Clamp a date to a range
+
+```ts
+import { clampDate } from "@burglekitt/gmt";
+
+clampDate("2024-03-15", "2024-03-01", "2024-03-31");
+// "2024-03-15"
+
+clampDate("2024-02-01", "2024-03-01", "2024-03-31");
+// "2024-03-01" (below min)
+
+clampDate("2024-05-01", "2024-03-01", "2024-03-31");
+// "2024-03-31" (above max)
+
+clampDate("2024-03-15", "2024-03-31", "2024-03-01");
+// "" (min > max is invalid)
+```
+
+### Find the nearest date to a target
+
+```ts
+import { closestDateTo } from "@burglekitt/gmt";
+
+closestDateTo("2024-03-15", ["2024-03-01", "2024-03-20", "2024-03-18"]);
+// "2024-03-18"
+
+closestDateTo("2024-03-15", ["2024-03-01", "2024-03-29"]);
+// "2024-03-01" (tie-breaking favors first in array order when equidistant)
+
+closestDateTo("2024-03-15", []);
+// null (empty candidates)
+
+closestDateTo("invalid", ["2024-03-01"]);
+// null (invalid target)
+```
+
+Distance is measured in whole calendar days via `Temporal.PlainDate.until()`. On a tie between two equidistant candidates, the first one in array order wins.
 
 ### Get locale-aware week boundaries
 

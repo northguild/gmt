@@ -2,6 +2,8 @@ export * from "./addBusinessDays";
 export * from "./addDate";
 export * from "./addDateTime";
 export * from "./addTime";
+export * from "./clampDate";
+export * from "./closestDateTo";
 export * from "./diffDate";
 export * from "./diffDateAsDuration";
 export * from "./diffDateTime";
