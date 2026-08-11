@@ -60,7 +60,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [20, 22, 24]
+        node-version: [22, 24]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -98,7 +98,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [20, 22, 24]
+        node-version: [22, 24]
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
@@ -167,8 +167,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [20, 22, 24]
-        timezone: ["Pacific/Niue", "UTC", "Asia/Kolkata", "Asia/Kathmandu", "Pacific/Apia"]
+        node-version: [22, 24]
+        timezone: ["Pacific/Niue", "America/New_York", "UTC", "Europe/London", "Asia/Kolkata", "Asia/Kathmandu", "Asia/Shanghai", "Australia/Lord_Howe", "Pacific/Chatham", "Pacific/Apia"]
     timeout-minutes: 120
     env:
       TZ: ${{ matrix.timezone }}

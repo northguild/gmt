@@ -1,18 +1,6 @@
 import type { Temporal } from "@js-temporal/polyfill";
 import type { DurationStringOptions, RoundingOptions } from "../types";
 
-type UntilCapable<Self, Unit extends Temporal.DateTimeUnit> = {
-  until(
-    other: Self,
-    options: {
-      largestUnit: Temporal.LargestUnit<Unit>;
-      smallestUnit?: Temporal.SmallestUnit<Unit>;
-      roundingIncrement?: number;
-      roundingMode?: Temporal.RoundingMode;
-    },
-  ): Temporal.Duration;
-};
-
 /**
  * Compute the ISO 8601 duration string between two Temporal objects via `.until()` + `.toString()`.
  *
@@ -25,18 +13,49 @@ type UntilCapable<Self, Unit extends Temporal.DateTimeUnit> = {
  * @param options .until() rounding options and .toString() precision options
  * @returns ISO 8601 duration string
  */
-export function durationUntilString<Self, Unit extends Temporal.DateTimeUnit>(
-  start: UntilCapable<Self, Unit>,
-  end: Self,
-  largestUnit: Temporal.LargestUnit<Unit>,
-  options?: RoundingOptions<Unit> & DurationStringOptions,
+export function durationUntilString(
+  start: Temporal.PlainDate,
+  end: Temporal.PlainDate,
+  largestUnit: string,
+  options?: RoundingOptions<Temporal.DateUnit> & DurationStringOptions,
+): string;
+export function durationUntilString(
+  start: Temporal.PlainDateTime,
+  end: Temporal.PlainDateTime,
+  largestUnit: string,
+  options?: RoundingOptions<Temporal.DateTimeUnit> & DurationStringOptions,
+): string;
+export function durationUntilString(
+  start: Temporal.ZonedDateTime,
+  end: Temporal.ZonedDateTime,
+  largestUnit: string,
+  options?: RoundingOptions<Temporal.DateTimeUnit> & DurationStringOptions,
+): string;
+export function durationUntilString(
+  start: Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime,
+  end: Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime,
+  largestUnit: string,
+  options?: RoundingOptions<Temporal.DateTimeUnit> & DurationStringOptions,
 ): string {
-  const duration = start.until(end, {
-    largestUnit,
-    smallestUnit: options?.smallestUnit,
-    roundingIncrement: options?.roundingIncrement,
-    roundingMode: options?.roundingMode,
-  });
+  const duration = (
+    start as {
+      until(
+        end:
+          | Temporal.PlainDate
+          | Temporal.PlainDateTime
+          | Temporal.ZonedDateTime,
+        opts: Record<string, unknown>,
+      ): Temporal.Duration;
+    }
+  ).until(
+    end as Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime,
+    {
+      largestUnit,
+      smallestUnit: options?.smallestUnit,
+      roundingIncrement: options?.roundingIncrement,
+      roundingMode: options?.roundingMode,
+    },
+  );
 
   return duration.toString({
     smallestUnit: options?.toStringSmallestUnit,

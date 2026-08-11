@@ -11,7 +11,7 @@ UTC timestamp arithmetic:
 - `addUtc`, `diffUtc`, `diffUtcAsDuration`
 - `endOfQuarterForUtc`, `endOfUtc`
 - `isBetweenUtc`
-- `maxUtc`, `minUtc`, `sortUtc`
+- `maxUtc`, `minUtc`, `roundUtc`, `sortUtc`
 - `startOfQuarterForUtc`, `startOfUtc`
 - `subtractUtc`
 

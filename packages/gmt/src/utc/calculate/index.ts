@@ -6,6 +6,7 @@ export * from "./endOfUtc";
 export * from "./isBetweenUtc";
 export * from "./maxUtc";
 export * from "./minUtc";
+export * from "./roundUtc";
 export * from "./sortUtc";
 export * from "./startOfQuarterForUtc";
 export * from "./startOfUtc";

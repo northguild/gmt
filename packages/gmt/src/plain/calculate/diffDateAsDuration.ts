@@ -53,12 +53,7 @@ export function diffDateAsDuration(
     const d1 = Temporal.PlainDate.from(date1);
     const d2 = Temporal.PlainDate.from(date2);
 
-    return durationUntilString<Temporal.PlainDate, Temporal.DateUnit>(
-      d1,
-      d2,
-      unit,
-      options,
-    );
+    return durationUntilString(d1, d2, unit, options);
   } catch {
     return "";
   }

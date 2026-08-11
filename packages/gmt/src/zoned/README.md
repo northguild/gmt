@@ -8,14 +8,14 @@ IANA timezone-aware date and time operations. All functions accept and return IS
 
 Timezone-aware arithmetic:
 
-- `addZoned`, `clampZoned`, `closestZonedTo`
+- `addZoned`, `addZonedBusinessDays`, `clampZoned`, `closestZonedTo`
 - `diffZoned`, `diffZonedAsDuration`
 - `endOfQuarterForZoned`, `endOfZoned`
 - `getLocaleZonedEndOfWeek`, `getLocaleZonedStartOfWeek`
 - `getQuarterForZoned`
-- `maxZoned`, `minZoned`, `sortZoned`
+- `maxZoned`, `minZoned`, `roundZoned`, `sortZoned`
 - `startOfQuarterForZoned`, `startOfZoned`
-- `subtractZoned`
+- `subtractZoned`, `subtractZonedBusinessDays`
 
 ### chop
 
@@ -29,7 +29,7 @@ Strip timezone components:
 
 Timezone-aware comparison:
 
-- `areZonedEqual`, `isAfterZoned`, `isBeforeZoned`, `isBetweenZoned`, `isZonedWeekend`
+- `areZonedEqual`, `isAfterZoned`, `isBeforeZoned`, `isBetweenZoned`, `isZonedBusinessDay`, `isZonedWeekend`
 
 ### convert
 

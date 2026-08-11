@@ -6,3 +6,13 @@ export type RoundingOptions<Unit extends Temporal.DateTimeUnit> = {
   roundingIncrement?: number;
   roundingMode?: Temporal.RoundingMode;
 };
+
+// Options for rounding a standalone time-of-day value via Temporal.PlainTime.prototype.round
+// or Temporal.PlainDateTime.prototype.round. Only time-granular units apply (hour through nanosecond).
+export type TimeRoundingOptions = {
+  smallestUnit: Temporal.SmallestUnit<
+    "hour" | "minute" | "second" | "millisecond" | "microsecond" | "nanosecond"
+  >;
+  roundingIncrement?: number;
+  roundingMode?: Temporal.RoundingMode;
+};

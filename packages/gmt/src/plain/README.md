@@ -19,6 +19,7 @@ Arithmetic and date manipulation:
 - `getWeekNumber`
 - `maxDate`, `maxDateTime`, `maxTime`
 - `minDate`, `minDateTime`, `minTime`
+- `roundDate`, `roundDateTime`, `roundTime`
 - `sortDates`, `sortDateTimes`, `sortTimes`
 - `startOfDate`, `startOfDateTime`, `startOfTime`
 - `startOfQuarterForDate`, `startOfQuarterForDateTime`

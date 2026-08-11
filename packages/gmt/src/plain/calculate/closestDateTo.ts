@@ -35,10 +35,6 @@ export function closestDateTo(
     const t = Temporal.PlainDate.from(target);
     const validCandidates = candidates.filter(isValidDate);
 
-    if (!validCandidates.length) {
-      return null;
-    }
-
     const parsed = validCandidates.map((c) => ({
       str: c,
       date: Temporal.PlainDate.from(c),

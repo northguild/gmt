@@ -11,7 +11,7 @@ Unix timestamp arithmetic:
 - `addUnix`, `diffUnix`, `diffUnixAsDuration`
 - `endOfQuarterForUnix`, `endOfUnix`
 - `isBetweenUnix`
-- `maxUnix`, `minUnix`, `sortUnix`
+- `maxUnix`, `minUnix`, `roundUnix`, `sortUnix`
 - `startOfQuarterForUnix`, `startOfUnix`
 - `subtractUnix`
 

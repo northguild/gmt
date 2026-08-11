@@ -1,4 +1,5 @@
 export * from "./addZoned";
+export * from "./addZonedBusinessDays";
 export * from "./clampZoned";
 export * from "./closestZonedTo";
 export * from "./diffZoned";
@@ -10,7 +11,9 @@ export * from "./getLocaleZonedStartOfWeek";
 export * from "./getQuarterForZoned";
 export * from "./maxZoned";
 export * from "./minZoned";
+export * from "./roundZoned";
 export * from "./sortZoned";
 export * from "./startOfQuarterForZoned";
 export * from "./startOfZoned";
 export * from "./subtractZoned";
+export * from "./subtractZonedBusinessDays";
