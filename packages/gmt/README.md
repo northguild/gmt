@@ -250,6 +250,58 @@ diffDateAsDuration("2024-03-10", "2024-04-05", "days");
 
 `diffDateAsDuration`/`diffDateTimeAsDuration`/`diffZonedAsDuration`/`diffUnixAsDuration`/`diffUtcAsDuration` are sibling functions to `diffDate`/`diffDateTime`/`diffZoned`/`diffUnix`/`diffUtc`, returning an ISO 8601 duration string (sentinel `""`) instead of a single-unit number (sentinel `null`). They take a single `unit` (not an array) to set the duration's `largestUnit`.
 
+### Intervals
+
+Interval and range validators are available in two API shapes — **range validators** (matching `isValidDateRange`'s `{ value1, value2, options? }` object-param shape) and **interval validators** (`(start, end)` positional args, `start <= end` always):
+
+```typescript
+import {
+  isValidDateInterval,
+  isValidTimeInterval,
+  isValidDateTimeInterval,
+  isValidDateRange,
+  isValidTimeRange,
+  isValidDateTimeRange,
+  isValidUtcRange,
+  isValidUnixRange,
+  isValidZonedRange,
+  isValidUtcInterval,
+  isValidUnixInterval,
+  isValidZonedInterval,
+} from "@burglekitt/gmt";
+
+// Interval validators — positional args, start <= end
+isValidDateInterval("2024-01-01", "2024-12-31");
+// true
+
+isValidTimeInterval("09:00:00", "17:00:00");
+// true
+
+isValidDateTimeInterval("2024-01-01T10:00:00", "2024-12-31T23:59:59");
+// true
+
+isValidZonedInterval(
+  "2024-01-01T10:00:00+00:00[UTC]",
+  "2024-12-31T23:59:59+00:00[UTC]",
+);
+// true
+
+// Range validators — object params, with optional allowEqual
+isValidDateRange({ value1: "2024-01-01", value2: "2024-12-31" });
+// true
+
+isValidTimeRange({ value1: "09:00:00", value2: "17:00:00" });
+// true
+
+isValidZonedRange({
+  value1: "2024-01-01T10:00:00+00:00[UTC]",
+  value2: "2024-12-31T23:59:59+00:00[UTC]",
+});
+// true
+```
+
+All validators return `false` on invalid input (wrong type, malformed strings, leap seconds, mixed kinds for plain interval validators, non-finite values for Unix).
+
 ### Zoned operations
 
 ```typescript
@@ -307,10 +359,11 @@ clampZoned(
 );
 // "2024-03-01T00:00:00-05:00[America/New_York]"
 
-closestZonedTo(
-  "2024-03-15T12:00:00[America/New_York]",
-  ["2024-03-01T00:00:00[America/New_York]", "2024-03-20T00:00:00[America/New_York]", "2024-03-18T00:00:00[America/New_York]"],
-);
+closestZonedTo("2024-03-15T12:00:00[America/New_York]", [
+  "2024-03-01T00:00:00[America/New_York]",
+  "2024-03-20T00:00:00[America/New_York]",
+  "2024-03-18T00:00:00[America/New_York]",
+]);
 // "2024-03-18T00:00:00-04:00[America/New_York]"
 ```
 

@@ -37,6 +37,12 @@ Current UTC time:
 - `getUtcHour`, `getUtcMinute`, `getUtcSecond`
 - `getUtcMillisecond`, `getUtcMicrosecond`, `getUtcNanosecond`
 
+### interval
+
+Validate UTC intervals:
+
+- `isValidUtcInterval`
+
 ### format
 
 Locale-aware UTC formatting:
@@ -70,4 +76,4 @@ Parse UTC components:
 
 Validation helpers:
 
-- `isValidUtc`
+- `isValidUtc`, `isValidUtcRange`

@@ -65,6 +65,12 @@ Current in specific timezone and locale-aware extraction:
 - `getZonedWeekOfYear`
 - `getLocaleZonedDayOfWeek`
 
+### interval
+
+Validate zoned intervals:
+
+- `isValidZonedInterval`
+
 ### map
 
 Generate multiple timezone values:
@@ -91,4 +97,4 @@ Extract timezone components:
 
 Validation helpers:
 
-- `isValidTimeZone`, `isValidZonedDateTime`
+- `isValidTimeZone`, `isValidZonedDateTime`, `isValidZonedRange`

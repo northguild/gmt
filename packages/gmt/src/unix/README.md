@@ -31,6 +31,12 @@ Current Unix timestamps:
 - `getUnixHour`, `getUnixMinute`, `getUnixSecond`
 - `getUnixMillisecond`, `getUnixMicrosecond`, `getUnixNanosecond`
 
+### interval
+
+Validate Unix intervals:
+
+- `isValidUnixInterval`
+
 ### format
 
 Locale-aware Unix formatting:
@@ -62,4 +68,4 @@ Parse Unix timestamps:
 
 Validation helpers:
 
-- `isValidUnixMilliseconds`, `isValidUnixSeconds`, `isValidUnixUnit`
+- `isValidUnixMilliseconds`, `isValidUnixRange`, `isValidUnixSeconds`, `isValidUnixUnit`

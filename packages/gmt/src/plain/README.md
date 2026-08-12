@@ -69,6 +69,12 @@ Current values and locale-aware extraction:
 - `getWeekOfYear`
 - `getLocaleDayOfWeek`
 
+### interval
+
+Validate date/time intervals:
+
+- `isValidDateInterval`, `isValidDateTimeInterval`, `isValidTimeInterval`
+
 ### map
 
 Generate multiple values:
@@ -97,6 +103,6 @@ Extract components:
 Validation helpers:
 
 - `isLeapSecond`, `isValidDate`, `isValidDateDurationUnit`
-- `isValidDateRange`, `isValidDateTime`, `isValidDateTimeDurationUnit`
+- `isValidDateRange`, `isValidDateTime`, `isValidDateTimeDurationUnit`, `isValidDateTimeRange`
 - `isValidDateTimeUnit`, `isValidDateUnit`
-- `isValidIsoDateLike`, `isValidTime`, `isValidTimeDurationUnit`, `isValidTimeUnit`
+- `isValidIsoDateLike`, `isValidTime`, `isValidTimeDurationUnit`, `isValidTimeRange`, `isValidTimeUnit`
