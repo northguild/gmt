@@ -67,9 +67,10 @@ Current in specific timezone and locale-aware extraction:
 
 ### interval
 
-Validate zoned intervals:
+Validate and check zoned intervals:
 
 - `isValidZonedInterval`
+- `intervalContainsZoned`
 
 ### map
 

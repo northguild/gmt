@@ -39,9 +39,10 @@ Current UTC time:
 
 ### interval
 
-Validate UTC intervals:
+Validate and check UTC intervals:
 
 - `isValidUtcInterval`
+- `intervalContainsUtc`
 
 ### format
 

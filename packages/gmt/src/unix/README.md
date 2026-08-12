@@ -33,9 +33,10 @@ Current Unix timestamps:
 
 ### interval
 
-Validate Unix intervals:
+Validate and check Unix intervals:
 
 - `isValidUnixInterval`
+- `intervalContainsUnix`
 
 ### format
 

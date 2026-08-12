@@ -3,16 +3,25 @@ name: validate-dates
 description: >
   Validate date/time strings, timezone identifiers, intervals, or ranges. Use isValidDate,
   isValidTime, isValidDateTime, isValidDateInterval, isValidTimeInterval, isValidDateTimeInterval
-  for scalar and interval validation. Returns false on invalid input.
+  for scalar and interval validation. Use intervalContainsDate, intervalContainsTime,
+  intervalContainsDateTime, intervalContainsUtc, intervalContainsUnix, intervalContainsZoned
+  for point-in-interval and interval-in-interval containment checks. All validation functions
+  return false on invalid input.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/interval/validate/index.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalContainsDate.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalContainsTime.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalContainsDateTime.ts'
   - 'burglekitt/gmt:packages/gmt/src/utc/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/utc/interval/validate/index.ts'
+  - 'burglekitt/gmt:packages/gmt/src/utc/interval/intervalContainsUtc.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/interval/validate/index.ts'
+  - 'burglekitt/gmt:packages/gmt/src/unix/interval/intervalContainsUnix.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/interval/validate/index.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/interval/intervalContainsZoned.ts'
 metadata:
   type: core
   library: '@burglekitt/gmt'
@@ -158,6 +167,72 @@ const invalid = isValidZonedInterval(
   "2024-12-31T17:00:00+00:00[UTC]",
   "2024-01-01T09:00:00+00:00[UTC]"
 ); // false
+```
+
+### Check point-in-interval (3-arg)
+
+```ts
+import { intervalContainsDate } from "@burglekitt/gmt";
+
+const inside = intervalContainsDate("2024-01-01", "2024-12-31", "2024-06-15"); // true
+const onBoundary = intervalContainsDate("2024-01-01", "2024-12-31", "2024-01-01"); // true
+const outside = intervalContainsDate("2024-01-01", "2024-12-31", "2025-01-01"); // false
+```
+
+### Check interval-in-interval (4-arg)
+
+```ts
+import { intervalContainsDate } from "@burglekitt/gmt";
+
+const inside = intervalContainsDate("2024-01-01", "2024-12-31", "2024-03-01", "2024-09-01"); // true
+const equal = intervalContainsDate("2024-01-01", "2024-12-31", "2024-01-01", "2024-12-31"); // true
+const partial = intervalContainsDate("2024-01-01", "2024-12-31", "2024-06-15", "2025-01-01"); // false
+```
+
+### Check time interval containment
+
+```ts
+import { intervalContainsTime } from "@burglekitt/gmt";
+
+const inside = intervalContainsTime("09:00:00", "17:00:00", "12:00:00"); // true
+const inner = intervalContainsTime("09:00:00", "17:00:00", "10:00:00", "16:00:00"); // true
+```
+
+### Check datetime interval containment
+
+```ts
+import { intervalContainsDateTime } from "@burglekitt/gmt";
+
+const inside = intervalContainsDateTime("2024-01-01T10:00:00", "2024-12-31T23:59:59", "2024-06-15T12:00:00"); // true
+const inner = intervalContainsDateTime("2024-01-01T10:00:00", "2024-12-31T23:59:59", "2024-03-01T00:00:00", "2024-09-01T00:00:00"); // true
+```
+
+### Check UTC interval containment
+
+```ts
+import { intervalContainsUtc } from "@burglekitt/gmt/utc";
+
+const inside = intervalContainsUtc("2024-01-01T00:00:00Z", "2024-12-31T23:59:59Z", "2024-06-15T12:00:00Z"); // true
+const inner = intervalContainsUtc("2024-01-01T00:00:00Z", "2024-12-31T23:59:59Z", "2024-03-01T00:00:00Z", "2024-09-01T00:00:00Z"); // true
+```
+
+### Check Unix interval containment
+
+```ts
+import { intervalContainsUnix } from "@burglekitt/gmt/unix";
+
+const inside = intervalContainsUnix(0, 1700000000, 170000000); // true
+const inner = intervalContainsUnix(0, 1700000000, 100000, 1000000); // true
+const stringInput = intervalContainsUnix("0", "1700000000", "170000000"); // true
+```
+
+### Check zoned interval containment
+
+```ts
+import { intervalContainsZoned } from "@burglekitt/gmt/zoned";
+
+const inside = intervalContainsZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]", "2024-06-15T12:00:00+00:00[UTC]"); // true
+const inner = intervalContainsZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]", "2024-03-01T00:00:00+00:00[UTC]", "2024-09-01T00:00:00+00:00[UTC]"); // true
 ```
 
 ## Common Mistakes

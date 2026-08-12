@@ -1,0 +1,89 @@
+import { Temporal } from "@js-temporal/polyfill";
+import { isLeapSecond } from "../../plain/validate/isLeapSecond";
+import { utcDateTime } from "../../regex/utc-date-time";
+
+/**
+ * Return true when `pointOrStart` falls within the interval `[intervalStart, intervalEnd]`
+ * (3-arg), or when the inner interval `[innerStart, innerEnd]` is fully contained within
+ * the outer interval `[intervalStart, intervalEnd]` (4-arg).
+ *
+ * - Uses `Temporal.Instant.compare` for comparison (same instant semantics).
+ * - Always-inclusive boundaries: `start <= point <= end`.
+ * - Returns `false` if `intervalStart > intervalEnd` (invalid outer interval).
+ * - Returns `false` if `innerStart > innerEnd` in 4-arg mode (invalid inner interval).
+ * - Returns `false` on invalid input (wrong type, malformed strings, leap seconds).
+ *
+ * @param intervalStart ISO 8601 UTC datetime string for the outer interval start
+ * @param intervalEnd ISO 8601 UTC datetime string for the outer interval end
+ * @param pointOrStart ISO 8601 UTC datetime string for the point (3-arg) or inner start (4-arg)
+ * @param pointEnd optional ISO 8601 UTC datetime string for the inner interval end (4-arg mode)
+ * @returns true if the point or inner interval is contained, or false on invalid input
+ *
+ * @example intervalContainsUtc("2024-01-01T00:00:00Z", "2024-12-31T23:59:59Z", "2024-06-15T12:00:00Z") // true
+ * @example intervalContainsUtc("2024-01-01T00:00:00Z", "2024-12-31T23:59:59Z", "2024-06-15T12:00:00Z", "2024-07-15T12:00:00Z") // true
+ * @example intervalContainsUtc("2024-12-31T23:59:59Z", "2024-01-01T00:00:00Z", "2024-06-15T12:00:00Z") // false
+ * @example intervalContainsUtc("invalid", "2024-12-31T23:59:59Z", "2024-06-15T12:00:00Z") // false
+ */
+export function intervalContainsUtc(
+  intervalStart: string,
+  intervalEnd: string,
+  pointOrStart: string,
+  pointEnd?: string,
+): boolean {
+  if (
+    typeof intervalStart !== "string" ||
+    typeof intervalEnd !== "string" ||
+    typeof pointOrStart !== "string" ||
+    (pointEnd !== undefined && typeof pointEnd !== "string")
+  ) {
+    return false;
+  }
+
+  if (
+    !utcDateTime.test(intervalStart) ||
+    !utcDateTime.test(intervalEnd) ||
+    !utcDateTime.test(pointOrStart) ||
+    (pointEnd !== undefined && !utcDateTime.test(pointEnd))
+  ) {
+    return false;
+  }
+
+  if (
+    isLeapSecond(intervalStart) ||
+    isLeapSecond(intervalEnd) ||
+    isLeapSecond(pointOrStart) ||
+    (pointEnd !== undefined && isLeapSecond(pointEnd))
+  ) {
+    return false;
+  }
+
+  try {
+    const startInstant = Temporal.Instant.from(intervalStart);
+    const endInstant = Temporal.Instant.from(intervalEnd);
+    const pointInstant = Temporal.Instant.from(pointOrStart);
+
+    if (Temporal.Instant.compare(startInstant, endInstant) > 0) {
+      return false;
+    }
+
+    if (pointEnd === undefined) {
+      return (
+        Temporal.Instant.compare(startInstant, pointInstant) <= 0 &&
+        Temporal.Instant.compare(pointInstant, endInstant) <= 0
+      );
+    }
+
+    const endPointInstant = Temporal.Instant.from(pointEnd);
+
+    if (Temporal.Instant.compare(pointInstant, endPointInstant) > 0) {
+      return false;
+    }
+
+    return (
+      Temporal.Instant.compare(startInstant, pointInstant) <= 0 &&
+      Temporal.Instant.compare(endPointInstant, endInstant) <= 0
+    );
+  } catch {
+    return false;
+  }
+}

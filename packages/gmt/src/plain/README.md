@@ -71,9 +71,10 @@ Current values and locale-aware extraction:
 
 ### interval
 
-Validate date/time intervals:
+Validate and check date/time intervals:
 
 - `isValidDateInterval`, `isValidDateTimeInterval`, `isValidTimeInterval`
+- `intervalContainsDate`, `intervalContainsDateTime`, `intervalContainsTime`
 
 ### map
 

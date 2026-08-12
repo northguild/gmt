@@ -236,3 +236,40 @@ See "Instructions for the agent picking up a story" in `context/roadmap/index.md
 ## Definition of done
 Tests (exact division, remainder/partial-final-interval, zero/negative amount → [], unparseable input → [], unsupported unit → []), JSDoc with `@example` for each environment, barrel exports for each environment's `interval/` directory, `packages/gmt/README.md` update, changeset, lint/test pass.
 ```
+
+### B7 — Interval set operations (`difference`, `xor`, `abuts`, `engulfs`)
+
+**GitHub Issue:** Issue #79
+
+**Title:**
+
+```
+B7 Add intervalDifference, intervalXor, intervalAbuts, intervalEngulfs
+```
+
+**Description:**
+
+```
+Part of the parity roadmap — see `context/roadmap/index.md`, Story Group B, item B7. Depends on B1, B4 (reuse the `{ start, end } | null` / array return conventions established there). Surfaced by a full ground-truth `.d.ts` audit against Luxon's `Interval` class (2026-08-12) — B1–B6 cover `contains`/`overlaps`/`intersection`/`union`/`splitBy`, but four distinct `Interval` capabilities were missed by the original context7-sampling-based gap research and are not implemented by any B1–B6 story: `Interval.difference`, `.xor`, `.abutsStart`/`.abutsEnd`, `.engulfs`.
+
+## Gap
+Luxon's `Interval` class has four set-relationship/set-operation methods with no GMT equivalent, verified absent from both GMT's source (`packages/gmt/src` full grep, 2026-08-12) and every B1–B6 spec:
+- `Interval.difference(...intervals)` — subtracts one or more intervals from another, returning the remaining piece(s). Distinct from B4's `intervalIntersection` (which returns the overlap, not what's left over).
+- `Interval.xor(intervals)` — symmetric difference across a set of intervals (time covered by exactly one interval, not by an even number of them). Distinct from B5's `intervalUnion` (combined span) and B4's intersection.
+- `Interval.abutsStart` / `Interval.abutsEnd` — adjacency check: does another interval touch this one's start/end with zero gap and zero overlap. Distinct from B3's `intervalsOverlap` (which is `false` for adjacent-but-touching intervals) — this is the complementary "exactly touching" case B3 explicitly excludes.
+- `Interval.engulfs` — full containment of one interval by another (every instant of B is within A), as an interval-vs-interval boolean. Distinct from B2's `intervalContains` 4-argument mode — confirm during spec expansion whether B2's existing 4-arg interval-in-interval mode already covers this exactly, or whether a dedicated function is still warranted for API-naming parity with Luxon (this may turn out to be a naming/aliasing decision rather than new logic — do not implement duplicate logic if B2 already covers it).
+
+## Scope
+One function per Temporal environment per capability that survives the B2-overlap check above:
+- `intervalDifference(aStart: string, aEnd: string, bStart: string, bEnd: string): Array<{ start: string; end: string }>` — the portion(s) of interval A not covered by interval B; can return 0, 1, or 2 sub-intervals (B fully inside A with gaps on both sides), `[]` on invalid input.
+- `intervalXor(aStart: string, aEnd: string, bStart: string, bEnd: string): Array<{ start: string; end: string }>` — symmetric difference; `[]` on invalid input.
+- `intervalAbuts(aStart: string, aEnd: string, bStart: string, bEnd: string): boolean` — `true` only when the intervals are exactly adjacent (one's end equals the other's start) with no overlap; `false` on invalid input.
+- `intervalEngulfs(aStart: string, aEnd: string, bStart: string, bEnd: string): boolean` — only add if confirmed distinct from B2's 4-argument `intervalContains` per the Gap section above.
+Environment variants: same six-namespace pattern as B1–B6 (`plain/date`, `plain/time`, `plain/dateTime`, `utc`, `unix`, `zoned`) for each function that's added.
+
+## Before starting
+See "Instructions for the agent picking up a story" in `context/roadmap/index.md`. Nearest analog: B4 (`intervalIntersection`)/B5 (`intervalUnion`) for return-shape conventions, B3 (`intervalsOverlap`) for the adjacency-vs-overlap boundary logic `intervalAbuts` needs to complement rather than duplicate. Re-verify Luxon's exact `difference`/`xor`/`abutsStart`/`abutsEnd`/`engulfs` semantics via context7 before finalizing signatures — this spec's description is from a `.d.ts` surface read, not full behavioral verification.
+
+## Definition of done
+Tests per function (adjacency edge cases for `intervalAbuts` specifically — off-by-one on touching vs. one-unit-gap; multi-piece results for `intervalDifference`/`intervalXor`; invalid input sentinel returns), JSDoc with `@example`, barrel exports, `packages/gmt/README.md` update, changeset, lint/test pass.
+```

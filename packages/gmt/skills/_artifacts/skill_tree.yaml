@@ -116,12 +116,18 @@ skills:
     sources:
       - 'burglekitt/gmt:packages/gmt/src/plain/validate/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/plain/interval/validate/index.ts'
+      - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalContainsDate.ts'
+      - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalContainsTime.ts'
+      - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalContainsDateTime.ts'
       - 'burglekitt/gmt:packages/gmt/src/utc/validate/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/utc/interval/validate/index.ts'
+      - 'burglekitt/gmt:packages/gmt/src/utc/interval/intervalContainsUtc.ts'
       - 'burglekitt/gmt:packages/gmt/src/unix/validate/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/unix/interval/validate/index.ts'
+      - 'burglekitt/gmt:packages/gmt/src/unix/interval/intervalContainsUnix.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/validate/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/interval/validate/index.ts'
+      - 'burglekitt/gmt:packages/gmt/src/zoned/interval/intervalContainsZoned.ts'
 
   - name: Zoned Date Operations
     slug: zoned-date-ops

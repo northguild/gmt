@@ -289,6 +289,47 @@ isValidZonedRange({
 // true
 ```
 
+Interval containment checks (`intervalContains*`) test whether a point or inner interval falls within an outer interval. Each supports two modes via an optional fourth argument:
+
+- 3-arg: `intervalContains(start, end, point)` — true when `start <= point <= end`
+- 4-arg: `intervalContains(start, end, innerStart, innerEnd)` — true when the inner interval is fully contained
+
+```typescript
+import {
+  intervalContainsDate,
+  intervalContainsTime,
+  intervalContainsDateTime,
+  intervalContainsUtc,
+  intervalContainsUnix,
+  intervalContainsZoned,
+} from "@burglekitt/gmt";
+
+// Point-in-interval (3-arg)
+intervalContainsDate("2024-01-01", "2024-12-31", "2024-06-15");
+// true
+
+intervalContainsTime("09:00:00", "17:00:00", "12:00:00");
+// true
+
+intervalContainsUtc("2024-01-01T00:00:00Z", "2024-12-31T23:59:59Z", "2024-06-15T12:00:00Z");
+// true
+
+intervalContainsUnix(0, 1700000000, 170000000);
+// true
+
+intervalContainsZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]", "2024-06-15T12:00:00+00:00[UTC]");
+// true
+
+// Interval-in-interval (4-arg)
+intervalContainsDate("2024-01-01", "2024-12-31", "2024-03-01", "2024-09-01");
+// true
+
+intervalContainsTime("09:00:00", "17:00:00", "10:00:00", "16:00:00");
+// true
+```
+
+All interval containment checks return `false` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
+
 All validators return `false` on invalid input (wrong type, malformed strings, leap seconds, mixed kinds for plain interval validators, non-finite values for Unix).
 
 ### Zoned operations
