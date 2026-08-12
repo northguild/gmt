@@ -330,6 +330,36 @@ intervalContainsTime("09:00:00", "17:00:00", "10:00:00", "16:00:00");
 
 All interval containment checks return `false` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
 
+`intervalIntersection*` returns the overlapping span of two intervals, or `null` when they do not overlap. Adjacent intervals (sharing one instant) count as overlapping and return a single-point span:
+
+```typescript
+import {
+  intervalIntersectionDate,
+  intervalIntersectionTime,
+  intervalIntersectionDateTime,
+  intervalIntersectionUtc,
+  intervalIntersectionUnix,
+  intervalIntersectionZoned,
+} from "@burglekitt/gmt";
+
+intervalIntersectionDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
+// { start: "2024-04-01", end: "2024-06-30" }
+
+intervalIntersectionDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31");
+// { start: "2024-06-30", end: "2024-06-30" } (adjacent, shares one instant)
+
+intervalIntersectionDate("2024-01-01", "2024-06-30", "2024-07-01", "2024-12-31");
+// null (disjoint)
+
+intervalIntersectionUnix(0, 1700000000, 1000000, 2000000);
+// { start: 1000000, end: 1700000000 }
+
+intervalIntersectionUtc("2024-01-01T00:00:00Z", "2024-06-30T23:59:59Z", "2024-04-01T00:00:00Z", "2024-12-31T23:59:59Z");
+// { start: "2024-04-01T00:00:00Z", end: "2024-06-30T23:59:59Z" }
+```
+
+All intersection functions return `null` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
+
 All validators return `false` on invalid input (wrong type, malformed strings, leap seconds, mixed kinds for plain interval validators, non-finite values for Unix).
 
 ### Zoned operations
