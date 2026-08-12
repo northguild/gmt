@@ -1,0 +1,22 @@
+{
+  "singleQuote": true,
+  "ignorePatterns": ["**/*.yaml", "**/*.md", "**/*.mdx"],
+  "overrides": [
+    {
+      "files": ["packages/**/*.{ts,tsx,js,jsx,json,jsonc}"],
+      "excludeFiles": ["**/node_modules/**", "**/dist/**", "**/.nx/**", "**/coverage/**", "**/*.tsbuildinfo", "**/out/**"]
+    },
+    {
+      "files": ["docs/**/*.{ts,tsx,js,jsx,md,mdx}"],
+      "excludeFiles": ["**/node_modules/**", "**/dist/**", "**/.nx/**", "**/coverage/**", "**/*.tsbuildinfo", "**/out/**"]
+    },
+    {
+      "files": ["context/**/*.{ts,tsx,md}"],
+      "excludeFiles": ["**/node_modules/**", "**/dist/**", "**/.nx/**", "**/coverage/**", "**/*.tsbuildinfo", "**/out/**"]
+    },
+    {
+      "files": ["scripts/**/*.{ts,tsx,js,mjs}"],
+      "excludeFiles": ["**/node_modules/**", "**/dist/**", "**/.nx/**", "**/coverage/**", "**/*.tsbuildinfo", "**/out/**"]
+    }
+  ]
+}

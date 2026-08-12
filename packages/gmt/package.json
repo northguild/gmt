@@ -1,8 +1,20 @@
 {
   "name": "@burglekitt/gmt",
   "version": "1.8.0",
-  "type": "module",
   "description": "Temporal-based date and time utilities with timezone support and polyfill integration",
+  "keywords": [
+    "date",
+    "datetime",
+    "polyfill",
+    "tanstack-intent",
+    "temporal",
+    "time",
+    "timezone"
+  ],
+  "homepage": "https://github.com/burglekitt/gmt#readme",
+  "bugs": {
+    "url": "https://github.com/burglekitt/gmt/issues"
+  },
   "license": "MIT",
   "contributors": [
     {
@@ -19,19 +31,12 @@
     "url": "https://github.com/burglekitt/gmt.git",
     "directory": "packages/gmt"
   },
-  "bugs": {
-    "url": "https://github.com/burglekitt/gmt/issues"
-  },
-  "homepage": "https://github.com/burglekitt/gmt#readme",
-  "keywords": [
-    "temporal",
-    "timezone",
-    "date",
-    "time",
-    "datetime",
-    "polyfill",
-    "tanstack-intent"
+  "files": [
+    "dist",
+    "LICENSE",
+    "skills"
   ],
+  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -84,11 +89,6 @@
     },
     "./utc/*/*": null
   },
-  "files": [
-    "dist",
-    "LICENSE",
-    "skills"
-  ],
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
@@ -98,13 +98,16 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "biome check .",
-    "format": "biome check --write ."
+    "lint": "oxlint",
+    "format": "oxfmt"
   },
   "dependencies": {
     "@js-temporal/polyfill": "^0.5.1"
   },
   "devDependencies": {
-    "@tanstack/intent": "^0.3.6"
+    "@burglekitt/gmt-oxlint": "workspace:*",
+    "@tanstack/intent": "^0.3.6",
+    "oxfmt": "^0.62.0",
+    "oxlint": "^1.0.0"
   }
 }

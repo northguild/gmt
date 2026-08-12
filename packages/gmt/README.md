@@ -53,15 +53,7 @@ Invalid input fallbacks are consistent across the library:
 The package exports seven top-level namespaces:
 
 ```typescript
-import {
-  Temporal,
-  duration,
-  plain,
-  zoned,
-  unix,
-  utc,
-  regex,
-} from "@burglekitt/gmt";
+import { Temporal, duration, plain, zoned, unix, utc, regex } from "@burglekitt/gmt";
 ```
 
 - `Temporal`: re-exported from `@js-temporal/polyfill`
@@ -280,10 +272,7 @@ isValidTimeInterval("09:00:00", "17:00:00");
 isValidDateTimeInterval("2024-01-01T10:00:00", "2024-12-31T23:59:59");
 // true
 
-isValidZonedInterval(
-  "2024-01-01T10:00:00+00:00[UTC]",
-  "2024-12-31T23:59:59+00:00[UTC]",
-);
+isValidZonedInterval("2024-01-01T10:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]");
 // true
 
 // Range validators — object params, with optional allowEqual

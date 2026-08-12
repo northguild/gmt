@@ -1,8 +1,19 @@
 {
   "name": "@burglekitt/gmt-oxlint",
   "version": "1.1.1",
-  "type": "module",
   "description": "Oxlint JS plugin for banning Date APIs in Temporal-first projects",
+  "keywords": [
+    "date",
+    "eslint-plugin",
+    "lint",
+    "oxlint",
+    "tanstack-intent",
+    "temporal"
+  ],
+  "homepage": "https://github.com/burglekitt/gmt#readme",
+  "bugs": {
+    "url": "https://github.com/burglekitt/gmt/issues"
+  },
   "license": "MIT",
   "contributors": [
     {
@@ -19,25 +30,6 @@
     "url": "https://github.com/burglekitt/gmt.git",
     "directory": "packages/gmt-oxlint"
   },
-  "bugs": {
-    "url": "https://github.com/burglekitt/gmt/issues"
-  },
-  "homepage": "https://github.com/burglekitt/gmt#readme",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "oxlint": "./dist/index.js",
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
-  },
-  "keywords": [
-    "oxlint",
-    "eslint-plugin",
-    "temporal",
-    "date",
-    "lint",
-    "tanstack-intent"
-  ],
   "files": [
     "dist",
     "config",
@@ -45,16 +37,9 @@
     "LICENSE",
     "skills"
   ],
-  "scripts": {
-    "build": "tsup",
-    "test": "vitest run --config vitest.config.ts",
-    "test:watch": "vitest --config vitest.config.ts",
-    "typecheck": "tsc --project tsconfig.json --noEmit",
-    "prepack": "npm run build",
-    "pack": "npm pack --dry-run",
-    "publish:dry-run": "npm publish --access public --dry-run",
-    "publish:public": "npm publish --access public"
-  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -65,13 +50,28 @@
       "default": "./config/recommended.json"
     }
   },
-  "peerDependencies": {
-    "oxlint": ">=1.0.0"
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run --config vitest.config.ts",
+    "test:watch": "vitest --config vitest.config.ts",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "prepack": "npm run build",
+    "pack": "npm pack --dry-run",
+    "publish:dry-run": "npm publish --access public --dry-run",
+    "publish:public": "npm publish --access public"
   },
   "devDependencies": {
     "@tanstack/intent": "^0.3.6",
     "oxlint": "^1.0.0",
     "tsup": "^8.5.0",
     "typescript": "^5.0.0"
-  }
+  },
+  "peerDependencies": {
+    "oxlint": ">=1.0.0"
+  },
+  "oxlint": "./dist/index.js"
 }
