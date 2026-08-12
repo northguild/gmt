@@ -21,9 +21,7 @@ export const recommendedConfig = {
 } as const;
 
 const plugin: OxlintPlugin = {
-  meta: {
-    name: "@burglekitt/gmt-oxlint",
-  },
+  meta: { name: "@burglekitt/gmt-oxlint" },
   rules: {
     "no-date-global": noDateGlobalRule,
     "no-new-date": noNewDateRule,
@@ -32,11 +30,7 @@ const plugin: OxlintPlugin = {
     "no-date-utc": noDateUtcRule,
     "no-date-getTimezoneOffset": noDateGetTimezoneOffsetRule,
   },
-  configs: {
-    recommended: {
-      rules: recommendedRules,
-    },
-  },
+  configs: { recommended: { rules: recommendedRules } },
 };
 
 export default plugin;

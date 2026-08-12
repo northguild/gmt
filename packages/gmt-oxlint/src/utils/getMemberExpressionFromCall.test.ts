@@ -21,10 +21,7 @@ describe("getMemberExpressionFromCall", () => {
   it("returns inner member expression for chain expression callee", () => {
     const callNode: CallExpressionNode = {
       type: "CallExpression",
-      callee: {
-        type: "ChainExpression",
-        expression: memberCallee,
-      },
+      callee: { type: "ChainExpression", expression: memberCallee },
     };
 
     expect(getMemberExpressionFromCall(callNode)).toBe(memberCallee);

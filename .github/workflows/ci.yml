@@ -168,7 +168,19 @@ jobs:
       fail-fast: false
       matrix:
         node-version: [22, 24]
-        timezone: ["Pacific/Niue", "America/New_York", "UTC", "Europe/London", "Asia/Kolkata", "Asia/Kathmandu", "Asia/Shanghai", "Australia/Lord_Howe", "Pacific/Chatham", "Pacific/Apia"]
+        timezone:
+          [
+            "Pacific/Niue",
+            "America/New_York",
+            "UTC",
+            "Europe/London",
+            "Asia/Kolkata",
+            "Asia/Kathmandu",
+            "Asia/Shanghai",
+            "Australia/Lord_Howe",
+            "Pacific/Chatham",
+            "Pacific/Apia",
+          ]
     timeout-minutes: 120
     env:
       TZ: ${{ matrix.timezone }}

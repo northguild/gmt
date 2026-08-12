@@ -3,7 +3,7 @@ import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 
 describe("intervalContainsDate", () => {
   it.each`
-    intervalStart   | intervalEnd     | pointOrStart   | pointEnd | expected
+    intervalStart   | intervalEnd     | pointOrStart    | pointEnd     | expected
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-06-15"} | ${undefined} | ${true}
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-01-01"} | ${undefined} | ${true}
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-12-31"} | ${undefined} | ${true}
@@ -15,13 +15,18 @@ describe("intervalContainsDate", () => {
     "returns $expected for point $pointOrStart in date interval $intervalStart to $intervalEnd",
     ({ intervalStart, intervalEnd, pointOrStart, pointEnd, expected }) => {
       expect(
-        intervalContainsDate(intervalStart, intervalEnd, pointOrStart, pointEnd),
+        intervalContainsDate(
+          intervalStart,
+          intervalEnd,
+          pointOrStart,
+          pointEnd,
+        ),
       ).toBe(expected);
     },
   );
 
   it.each`
-    intervalStart   | intervalEnd     | innerStart     | innerEnd   | expected
+    intervalStart   | intervalEnd     | innerStart      | innerEnd        | expected
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-03-01"} | ${"2024-09-01"} | ${true}
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-01-01"} | ${"2024-12-31"} | ${true}
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-12-31"} | ${"2024-12-31"} | ${true}
@@ -39,21 +44,26 @@ describe("intervalContainsDate", () => {
   );
 
   it.each`
-    intervalStart   | intervalEnd     | pointOrStart   | pointEnd | expected
-    ${"2024-12-31"} | ${"2024-01-01"} | ${"2024-06-15"} | ${undefined} | ${false}
+    intervalStart   | intervalEnd     | pointOrStart    | pointEnd        | expected
+    ${"2024-12-31"} | ${"2024-01-01"} | ${"2024-06-15"} | ${undefined}    | ${false}
     ${"2024-12-31"} | ${"2024-01-01"} | ${"2024-06-15"} | ${"2024-07-15"} | ${false}
     ${"2024-06-15"} | ${"2024-06-15"} | ${"2024-06-15"} | ${"2024-06-10"} | ${false}
   `(
     "returns $expected for reversed outer interval",
     ({ intervalStart, intervalEnd, pointOrStart, pointEnd, expected }) => {
       expect(
-        intervalContainsDate(intervalStart, intervalEnd, pointOrStart, pointEnd),
+        intervalContainsDate(
+          intervalStart,
+          intervalEnd,
+          pointOrStart,
+          pointEnd,
+        ),
       ).toBe(expected);
     },
   );
 
   it.each`
-    intervalStart   | intervalEnd     | innerStart     | innerEnd   | expected
+    intervalStart   | intervalEnd     | innerStart      | innerEnd        | expected
     ${"2024-01-01"} | ${"2024-06-15"} | ${"2024-06-15"} | ${"2024-06-10"} | ${false}
     ${"2024-01-01"} | ${"2024-06-15"} | ${"2024-06-20"} | ${"2024-06-15"} | ${false}
   `(
@@ -91,7 +101,7 @@ describe("intervalContainsDate", () => {
   );
 
   it.each`
-    intervalStart   | intervalEnd     | pointOrStart   | pointEnd
+    intervalStart   | intervalEnd     | pointOrStart    | pointEnd
     ${null}         | ${"2024-12-31"} | ${"2024-06-15"} | ${undefined}
     ${undefined}    | ${"2024-12-31"} | ${"2024-06-15"} | ${undefined}
     ${123}          | ${"2024-12-31"} | ${"2024-06-15"} | ${undefined}
@@ -110,38 +120,44 @@ describe("intervalContainsDate", () => {
     ${"2024-01-01"} | ${"2024-12-31"} | ${true}         | ${undefined}
     ${"2024-01-01"} | ${"2024-12-31"} | ${[]}           | ${undefined}
     ${"2024-01-01"} | ${"2024-12-31"} | ${{}}           | ${undefined}
-  `("returns false for non-string input: $intervalStart, $intervalEnd, $pointOrStart", ({ intervalStart, intervalEnd, pointOrStart }) => {
-    expect(
-      intervalContainsDate(
-        intervalStart as never,
-        intervalEnd as never,
-        pointOrStart as never,
-        undefined,
-      ),
-    ).toBe(false);
-  });
+  `(
+    "returns false for non-string input: $intervalStart, $intervalEnd, $pointOrStart",
+    ({ intervalStart, intervalEnd, pointOrStart }) => {
+      expect(
+        intervalContainsDate(
+          intervalStart as never,
+          intervalEnd as never,
+          pointOrStart as never,
+          undefined,
+        ),
+      ).toBe(false);
+    },
+  );
 
   it.each`
-    intervalStart   | intervalEnd     | innerStart     | innerEnd
+    intervalStart   | intervalEnd     | innerStart      | innerEnd
     ${null}         | ${"2024-12-31"} | ${"2024-06-15"} | ${"2024-07-15"}
     ${"2024-01-01"} | ${null}         | ${"2024-06-15"} | ${"2024-07-15"}
     ${"2024-01-01"} | ${"2024-12-31"} | ${null}         | ${"2024-07-15"}
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-06-15"} | ${null}
-  `("returns false for non-string 4-arg input", ({ intervalStart, intervalEnd, innerStart, innerEnd }) => {
-    expect(
-      intervalContainsDate(
-        intervalStart as never,
-        intervalEnd as never,
-        innerStart as never,
-        innerEnd as never,
-      ),
-    ).toBe(false);
-  });
+  `(
+    "returns false for non-string 4-arg input",
+    ({ intervalStart, intervalEnd, innerStart, innerEnd }) => {
+      expect(
+        intervalContainsDate(
+          intervalStart as never,
+          intervalEnd as never,
+          innerStart as never,
+          innerEnd as never,
+        ),
+      ).toBe(false);
+    },
+  );
 
   it("returns false when Temporal.PlainDate.from throws", () => {
     mockTemporalPlainDateFromThrow();
-    expect(
-      intervalContainsDate("2024-01-01", "2024-12-31", "2024-06-15"),
-    ).toBe(false);
+    expect(intervalContainsDate("2024-01-01", "2024-12-31", "2024-06-15")).toBe(
+      false,
+    );
   });
 });

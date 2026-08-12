@@ -148,10 +148,7 @@ describe("diffDateTimeAsDuration", () => {
           "2024-02-29T00:00:00",
           "2024-02-29T01:30:00",
           "hours",
-          {
-            smallestUnit: "hours",
-            roundingMode,
-          },
+          { smallestUnit: "hours", roundingMode },
         ),
       ).toBe(expected);
     },

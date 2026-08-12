@@ -70,9 +70,7 @@ describe("addUtc", () => {
     "returns an empty string for invalid unit $invalidUnit",
     ({ invalidUnit }) => {
       expect(
-        addUtc("2024-02-29T14:30:00Z", {
-          [String(invalidUnit)]: 1,
-        } as never),
+        addUtc("2024-02-29T14:30:00Z", { [String(invalidUnit)]: 1 } as never),
       ).toBe("");
     },
   );

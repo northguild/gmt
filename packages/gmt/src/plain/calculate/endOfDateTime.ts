@@ -78,11 +78,7 @@ export function endOfDateTime(
             ? 7 - source.dayOfWeek
             : (6 - source.dayOfWeek) % 7;
         result = source
-          .with({
-            year: source.year,
-            month: source.month,
-            day: source.day,
-          })
+          .with({ year: source.year, month: source.month, day: source.day })
           .add({ days: daysToAdd })
           .withPlainTime({
             hour: 23,
@@ -150,9 +146,7 @@ export function endOfDateTime(
     const fractionalDigits =
       fractionalSecondDigits ?? (precisionMap[unit] || 0);
 
-    return result.toString({
-      fractionalSecondDigits: fractionalDigits,
-    });
+    return result.toString({ fractionalSecondDigits: fractionalDigits });
   } catch {
     return "";
   }

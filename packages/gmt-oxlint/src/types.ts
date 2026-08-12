@@ -4,10 +4,7 @@ export type Node = {
   [key: string]: unknown;
 };
 
-export type IdentifierNode = Node & {
-  type: "Identifier";
-  name: string;
-};
+export type IdentifierNode = Node & { type: "Identifier"; name: string };
 
 export type MemberExpressionNode = Node & {
   type: "MemberExpression";
@@ -26,26 +23,15 @@ export type CallExpressionNode = Node & {
   callee: Node;
 };
 
-export type NewExpressionNode = Node & {
-  type: "NewExpression";
-  callee: Node;
-};
+export type NewExpressionNode = Node & { type: "NewExpression"; callee: Node };
 
-export type ProgramNode = Node & {
-  type: "Program";
-};
+export type ProgramNode = Node & { type: "Program" };
 
-export type ScopeReference = {
-  identifier: IdentifierNode;
-};
+export type ScopeReference = { identifier: IdentifierNode };
 
-export type ScopeInfo = {
-  through?: ScopeReference[];
-};
+export type ScopeInfo = { through?: ScopeReference[] };
 
-export type SourceCodeLike = {
-  getScope(node: Node): ScopeInfo;
-};
+export type SourceCodeLike = { getScope(node: Node): ScopeInfo };
 
 export type RuleContext = {
   sourceCode: SourceCodeLike;
@@ -61,9 +47,7 @@ export type RuleListener = {
 export type RuleModule = {
   meta: {
     type: "problem" | "suggestion" | "layout";
-    docs: {
-      description: string;
-    };
+    docs: { description: string };
     schema: unknown[];
   };
   create(context: RuleContext): RuleListener;
@@ -81,9 +65,7 @@ export interface OxlintPluginConfig {
 }
 
 export type OxlintPlugin = {
-  meta: {
-    name: string;
-  };
+  meta: { name: string };
   rules: Record<string, RuleModule>;
   configs?: Record<string, OxlintPluginConfig>;
 };

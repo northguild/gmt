@@ -263,9 +263,7 @@ describe("formatRelativeZoned", () => {
 
     it("accepts a unix epoch (ms) reference", () => {
       expect(
-        formatRelativeZoned(value, MustTestLocales.enUS, {
-          reference: REF_MS,
-        }),
+        formatRelativeZoned(value, MustTestLocales.enUS, { reference: REF_MS }),
       ).toBe("30 minutes ago");
     });
   });

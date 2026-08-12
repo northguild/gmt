@@ -5,9 +5,7 @@ import { isIdentifier } from "../utils";
 export const noNewDateRule: RuleModule = {
   meta: {
     type: "problem",
-    docs: {
-      description: "Disallow new Date(...).",
-    },
+    docs: { description: "Disallow new Date(...)." },
     schema: [],
   },
   create(context) {
@@ -17,10 +15,7 @@ export const noNewDateRule: RuleModule = {
           return;
         }
 
-        context.report({
-          node,
-          message: MSG_NEW_DATE,
-        });
+        context.report({ node, message: MSG_NEW_DATE });
       },
     };
   },

@@ -5,12 +5,7 @@
       "description": "Master Agent — single entry point, classifies requests and orchestrates the pipeline",
       "mode": "all",
       "prompt": "{file:.agents/master.md}",
-      "permission": {
-        "task": {
-          "*": "deny",
-          "driver": "allow"
-        }
-      }
+      "permission": { "task": { "*": "deny", "driver": "allow" } },
     },
     "driver": {
       "description": "Driver — execution orchestrator, delegates to specialists",
@@ -23,51 +18,39 @@
           "researcher": "allow",
           "tdd-dev": "allow",
           "tester": "allow",
-          "finalizer": "allow"
-        }
-      }
+          "finalizer": "allow",
+        },
+      },
     },
     "architect": {
       "description": "Architect — planning and design for new GMT functions",
       "mode": "subagent",
       "prompt": "{file:.agents/architect.md}",
-      "permission": {
-        "task": { "*": "deny" }
-      }
+      "permission": { "task": { "*": "deny" } },
     },
     "researcher": {
       "description": "Researcher — Temporal API docs lookup and legacy library comparisons",
       "mode": "subagent",
       "prompt": "{file:.agents/researcher.md}",
-      "permission": {
-        "task": { "*": "deny" }
-      }
+      "permission": { "task": { "*": "deny" } },
     },
     "tdd-dev": {
       "description": "TDD Developer — test-first implementation cycle",
       "mode": "subagent",
       "prompt": "{file:.agents/tdd-dev.md}",
-      "permission": {
-        "task": { "*": "deny" },
-        "mcp": "ask"
-      }
+      "permission": { "task": { "*": "deny" }, "mcp": "ask" },
     },
     "tester": {
       "description": "Tester — coverage audit and gap expansion",
       "mode": "subagent",
       "prompt": "{file:.agents/tester.md}",
-      "permission": {
-        "task": { "*": "deny" },
-        "mcp": "ask"
-      }
+      "permission": { "task": { "*": "deny" }, "mcp": "ask" },
     },
     "finalizer": {
       "description": "Finalizer — story closure, changesets, READMEs, commits",
       "mode": "subagent",
       "prompt": "{file:.agents/finalizer.md}",
-      "permission": {
-        "task": { "*": "deny" }
-      }
-    }
-  }
+      "permission": { "task": { "*": "deny" } },
+    },
+  },
 }

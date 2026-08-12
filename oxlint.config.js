@@ -2,10 +2,7 @@ import { defineConfig } from "oxlint";
 import plugin, { recommendedRules } from "./packages/gmt-oxlint/dist/index.js";
 
 export default defineConfig([
-  {
-    plugins: [plugin],
-    rules: recommendedRules,
-  },
+  { plugins: [plugin], rules: recommendedRules },
   {
     root: true,
     files: {
@@ -24,9 +21,6 @@ export default defineConfig([
         "**/out/**",
       ],
     },
-    rules: {
-      noUnusedImports: "error",
-      noUnusedVariables: "warn",
-    },
+    rules: { noUnusedImports: "error", noUnusedVariables: "warn" },
   },
 ]);

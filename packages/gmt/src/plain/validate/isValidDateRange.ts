@@ -5,9 +5,7 @@ import { isLeapSecond } from "./isLeapSecond";
 interface IsValidDateRangeProps {
   value1: string;
   value2: string;
-  options?: {
-    allowEqual?: boolean;
-  };
+  options?: { allowEqual?: boolean };
 }
 
 /**

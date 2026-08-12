@@ -7,9 +7,7 @@ describe("recommended config artifact", () => {
       new URL("../config/recommended.json", import.meta.url),
       "utf-8",
     );
-    const json = JSON.parse(raw) as {
-      rules?: Record<string, string>;
-    };
+    const json = JSON.parse(raw) as { rules?: Record<string, string> };
 
     expect(json.rules).toEqual(plugin.configs?.recommended?.rules);
   });

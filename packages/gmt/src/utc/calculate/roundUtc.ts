@@ -74,9 +74,7 @@ export function roundUtc(
     const fractionalDigits =
       fractionalSecondDigits ?? (precisionMap[smallestUnit] || 0);
 
-    return result.toString({
-      fractionalSecondDigits: fractionalDigits,
-    });
+    return result.toString({ fractionalSecondDigits: fractionalDigits });
   } catch {
     return "";
   }

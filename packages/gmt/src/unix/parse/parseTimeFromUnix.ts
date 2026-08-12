@@ -24,10 +24,7 @@ import {
  */
 export function parseTimeFromUnix(
   value: number,
-  options?: {
-    epochUnit?: UnixUnit;
-    timeZone?: string;
-  },
+  options?: { epochUnit?: UnixUnit; timeZone?: string },
 ): string {
   const epochUnit = options?.epochUnit ?? "milliseconds";
 

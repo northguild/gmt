@@ -3,6 +3,14 @@
   "version": "1.0.3",
   "private": false,
   "description": "Shared Biome configuration for gmt projects",
+  "keywords": [
+    "biome",
+    "biome-plugin",
+    "date",
+    "lint",
+    "tanstack-intent",
+    "temporal"
+  ],
   "license": "MIT",
   "contributors": [
     {
@@ -14,23 +22,6 @@
       "url": "https://github.com/craig-o-curtis"
     }
   ],
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
-  },
-  "keywords": [
-    "biome",
-    "biome-plugin",
-    "temporal",
-    "date",
-    "lint",
-    "tanstack-intent"
-  ],
-  "scripts": {
-    "pack": "npm pack --dry-run",
-    "publish:dry-run": "npm publish --access public --dry-run",
-    "publish:public": "npm publish --access public"
-  },
   "files": [
     "plugins/",
     "LICENSE",
@@ -44,6 +35,15 @@
     "./plugins/no-date-parse.grit": "./plugins/no-date-parse.grit",
     "./plugins/no-date-utc.grit": "./plugins/no-date-utc.grit",
     "./plugins/no-date-getTimezoneOffset.grit": "./plugins/no-date-getTimezoneOffset.grit"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "pack": "npm pack --dry-run",
+    "publish:dry-run": "npm publish --access public --dry-run",
+    "publish:public": "npm publish --access public"
   },
   "devDependencies": {
     "@tanstack/intent": "^0.3.6"

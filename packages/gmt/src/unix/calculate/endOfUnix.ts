@@ -147,22 +147,13 @@ export function endOfUnix(
         break;
       case "minute":
         result = source.with(
-          {
-            second: 59,
-            millisecond: 999,
-            microsecond: 999,
-            nanosecond: 999,
-          },
+          { second: 59, millisecond: 999, microsecond: 999, nanosecond: 999 },
           { disambiguation, offset },
         );
         break;
       case "second":
         result = source.with(
-          {
-            millisecond: 999,
-            microsecond: 999,
-            nanosecond: 999,
-          },
+          { millisecond: 999, microsecond: 999, nanosecond: 999 },
           { disambiguation, offset },
         );
         break;

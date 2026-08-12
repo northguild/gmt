@@ -49,10 +49,7 @@ describe("endOfUnix", () => {
     "supports weekStartsOn $weekStartsOn returning $expected for value $value and unit $unit",
     ({ value, unit, weekStartsOn, expected }) => {
       expect(
-        endOfUnix(value, unit, {
-          epochUnit: "seconds",
-          weekStartsOn,
-        }),
+        endOfUnix(value, unit, { epochUnit: "seconds", weekStartsOn }),
       ).toBe(expected);
     },
   );

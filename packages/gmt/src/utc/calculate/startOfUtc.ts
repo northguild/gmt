@@ -73,11 +73,7 @@ export function startOfUtc(
         });
         break;
       case "second":
-        result = source.with({
-          millisecond: 0,
-          microsecond: 0,
-          nanosecond: 0,
-        });
+        result = source.with({ millisecond: 0, microsecond: 0, nanosecond: 0 });
         break;
       case "millisecond":
         result = source.with({ microsecond: 0, nanosecond: 0 });
@@ -100,9 +96,9 @@ export function startOfUtc(
     const fractionalDigits =
       fractionalSecondDigits ?? (precisionMap[unit] || 0);
 
-    return result.toInstant().toString({
-      fractionalSecondDigits: fractionalDigits,
-    });
+    return result
+      .toInstant()
+      .toString({ fractionalSecondDigits: fractionalDigits });
   } catch {
     return "";
   }

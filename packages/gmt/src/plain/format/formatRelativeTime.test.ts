@@ -586,9 +586,7 @@ describe("formatRelativeTime", () => {
 
     it("returns '' when reference is an empty string", () => {
       expect(
-        formatRelativeTime("11:30:00", MustTestLocales.enUS, {
-          reference: "",
-        }),
+        formatRelativeTime("11:30:00", MustTestLocales.enUS, { reference: "" }),
       ).toBe("");
     });
   });

@@ -46,9 +46,7 @@ export function roundTime(
     };
     const fractionalDigits = precisionMap[smallestUnit] || 0;
 
-    return result.toString({
-      fractionalSecondDigits: fractionalDigits,
-    });
+    return result.toString({ fractionalSecondDigits: fractionalDigits });
   } catch {
     return "";
   }

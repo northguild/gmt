@@ -17,26 +17,15 @@
       "outputs": ["{projectRoot}/dist"],
       "cache": true
     },
-    "typecheck": {
-      "dependsOn": ["^typecheck"],
-      "cache": true
-    },
-    "test": {
-      "cache": true,
-      "inputs": ["default", "^production"]
-    },
-    "lint": {
-      "cache": true,
-      "inputs": ["default"]
-    }
+    "typecheck": { "dependsOn": ["^typecheck"], "cache": true },
+    "test": { "cache": true, "inputs": ["default", "^production"] },
+    "lint": { "cache": true, "inputs": ["default"] }
   },
   "plugins": [
     {
       "plugin": "@nx/js/typescript",
       "options": {
-        "typecheck": {
-          "targetName": "typecheck"
-        },
+        "typecheck": { "targetName": "typecheck" },
         "build": {
           "targetName": "build",
           "configName": "tsconfig.build.json",

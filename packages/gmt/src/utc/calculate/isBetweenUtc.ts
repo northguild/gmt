@@ -22,10 +22,7 @@ export function isBetweenUtc(
   value: string,
   start: string,
   end: string,
-  options?: {
-    inclusiveStart?: boolean;
-    inclusiveEnd?: boolean;
-  },
+  options?: { inclusiveStart?: boolean; inclusiveEnd?: boolean },
 ): boolean {
   const inclusiveStart = options?.inclusiveStart ?? true;
   const inclusiveEnd = options?.inclusiveEnd ?? true;

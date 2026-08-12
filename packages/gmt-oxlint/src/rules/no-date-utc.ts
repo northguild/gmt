@@ -5,9 +5,7 @@ import { hasDateStaticMemberCall } from "../utils";
 export const noDateUtcRule: RuleModule = {
   meta: {
     type: "problem",
-    docs: {
-      description: "Disallow Date.UTC().",
-    },
+    docs: { description: "Disallow Date.UTC()." },
     schema: [],
   },
   create(context) {
@@ -17,10 +15,7 @@ export const noDateUtcRule: RuleModule = {
           return;
         }
 
-        context.report({
-          node,
-          message: MSG_DATE_UTC,
-        });
+        context.report({ node, message: MSG_DATE_UTC });
       },
     };
   },

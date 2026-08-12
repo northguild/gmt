@@ -198,17 +198,12 @@ describe("subtractZoned", () => {
       const withoutOffset = subtractZoned(
         value,
         { days: 1 },
-        {
-          disambiguation: "later",
-        },
+        { disambiguation: "later" },
       );
       const withOffset = subtractZoned(
         value,
         { days: 1 },
-        {
-          disambiguation: "later",
-          offset,
-        },
+        { disambiguation: "later", offset },
       );
       expect(withOffset).toBe(withoutOffset);
     },

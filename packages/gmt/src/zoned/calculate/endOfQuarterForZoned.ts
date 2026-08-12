@@ -38,13 +38,7 @@ export function endOfQuarterForZoned(
     const quarterEndMonth = Math.floor((month - 1) / 3) * 3 + 3;
 
     const quarterStart = zdt.with(
-      {
-        month: quarterEndMonth,
-        day: 1,
-        hour: 0,
-        minute: 0,
-        second: 0,
-      },
+      { month: quarterEndMonth, day: 1, hour: 0, minute: 0, second: 0 },
       { disambiguation, offset },
     );
     const nextQuarterStart = quarterStart.add({ months: 1 });

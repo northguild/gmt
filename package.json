@@ -1,10 +1,6 @@
 {
   "name": "root",
   "private": true,
-  "packageManager": "pnpm@10.32.1",
-  "engines": {
-    "node": ">=20 <25"
-  },
   "workspaces": [
     "packages/*"
   ],
@@ -23,12 +19,12 @@
     "affected:test": "nx affected -t test",
     "affected:lint": "nx affected -t lint",
     "affected:typecheck": "nx affected -t typecheck",
-    "format": "biome format",
-    "format:fix": "biome format --write",
-    "lint": "biome lint",
-    "lint:fix": "biome lint --write",
-    "check": "biome check",
-    "check:fix": "biome check --write",
+    "format": "oxfmt",
+    "format:fix": "oxfmt --write",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "check": "oxlint",
+    "check:fix": "oxlint --fix",
     "test": "vitest run",
     "test:gmt": "vitest run --config packages/gmt/vitest.config.ts",
     "test:gmt:watch": "vitest --config packages/gmt/vitest.config.ts",
@@ -40,14 +36,19 @@
     "release:publish": "pnpm run validate && pnpm run changeset:publish"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.7",
     "@changesets/cli": "^2.30.0",
     "@nx/js": "^22.5.4",
     "@tanstack/intent": "^0.3.6",
     "@types/node": "^22.13.10",
     "nx": "^22.5.4",
+    "oxfmt": "^0.63.0",
+    "oxlint": "^1.78.0",
     "tsc-alias": "^1.8.16",
     "typescript": "^5.0.0",
     "vitest": "^4.1.0"
-  }
+  },
+  "engines": {
+    "node": ">=20 <25"
+  },
+  "packageManager": "pnpm@10.32.1"
 }

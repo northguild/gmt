@@ -23,10 +23,7 @@ import {
  */
 export function parseYearFromUnix(
   value: number | string,
-  options?: {
-    epochUnit?: UnixUnit;
-    timeZone?: string;
-  },
+  options?: { epochUnit?: UnixUnit; timeZone?: string },
 ): string {
   const numValue = typeof value === "string" ? Number(value) : value;
   const epochUnit = options?.epochUnit ?? "milliseconds";

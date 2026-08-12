@@ -421,17 +421,13 @@ describe("formatRelativeUnix", () => {
 
     it("returns '' when string reference is empty", () => {
       expect(
-        formatRelativeUnix(REF_MS, MustTestLocales.enUS, {
-          reference: "",
-        }),
+        formatRelativeUnix(REF_MS, MustTestLocales.enUS, { reference: "" }),
       ).toBe("");
     });
 
     it("returns '' when numeric reference is NaN", () => {
       expect(
-        formatRelativeUnix(REF_MS, MustTestLocales.enUS, {
-          reference: NaN,
-        }),
+        formatRelativeUnix(REF_MS, MustTestLocales.enUS, { reference: NaN }),
       ).toBe("");
     });
 

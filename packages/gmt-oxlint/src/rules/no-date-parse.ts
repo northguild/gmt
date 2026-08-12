@@ -5,9 +5,7 @@ import { hasDateStaticMemberCall } from "../utils";
 export const noDateParseRule: RuleModule = {
   meta: {
     type: "problem",
-    docs: {
-      description: "Disallow Date.parse().",
-    },
+    docs: { description: "Disallow Date.parse()." },
     schema: [],
   },
   create(context) {
@@ -17,10 +15,7 @@ export const noDateParseRule: RuleModule = {
           return;
         }
 
-        context.report({
-          node,
-          message: MSG_DATE_PARSE,
-        });
+        context.report({ node, message: MSG_DATE_PARSE });
       },
     };
   },

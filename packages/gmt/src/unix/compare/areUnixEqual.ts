@@ -22,9 +22,7 @@ import type { UnixUnit } from "../validate/isValidUnixUnit";
 export function areUnixEqual(
   value1: number,
   value2: number,
-  options?: {
-    epochUnit?: UnixUnit;
-  },
+  options?: { epochUnit?: UnixUnit },
 ): boolean {
   const epochUnit = options?.epochUnit ?? "milliseconds";
 

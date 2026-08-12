@@ -22,10 +22,7 @@ export interface FormatRelativeUtcOptions {
   timeZone?: string;
 }
 
-const AUTO_UNITS: Array<{
-  unit: RelativeUnit;
-  maxSeconds: number;
-}> = [
+const AUTO_UNITS: Array<{ unit: RelativeUnit; maxSeconds: number }> = [
   { unit: "second", maxSeconds: 60 },
   { unit: "minute", maxSeconds: 3_600 },
   { unit: "hour", maxSeconds: 86_400 },

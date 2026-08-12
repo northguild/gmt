@@ -5,9 +5,7 @@ import { getMemberExpressionFromCall, isIdentifier } from "../utils";
 export const noDateGetTimezoneOffsetRule: RuleModule = {
   meta: {
     type: "problem",
-    docs: {
-      description: "Disallow getTimezoneOffset().",
-    },
+    docs: { description: "Disallow getTimezoneOffset()." },
     schema: [],
   },
   create(context) {
@@ -22,10 +20,7 @@ export const noDateGetTimezoneOffsetRule: RuleModule = {
           return;
         }
 
-        context.report({
-          node,
-          message: MSG_GET_TIMEZONE_OFFSET,
-        });
+        context.report({ node, message: MSG_GET_TIMEZONE_OFFSET });
       },
     };
   },

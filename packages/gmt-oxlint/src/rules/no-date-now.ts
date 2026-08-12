@@ -5,9 +5,7 @@ import { hasDateStaticMemberCall } from "../utils";
 export const noDateNowRule: RuleModule = {
   meta: {
     type: "problem",
-    docs: {
-      description: "Disallow Date.now().",
-    },
+    docs: { description: "Disallow Date.now()." },
     schema: [],
   },
   create(context) {
@@ -17,10 +15,7 @@ export const noDateNowRule: RuleModule = {
           return;
         }
 
-        context.report({
-          node,
-          message: MSG_DATE_NOW,
-        });
+        context.report({ node, message: MSG_DATE_NOW });
       },
     };
   },

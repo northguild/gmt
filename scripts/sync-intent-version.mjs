@@ -9,9 +9,9 @@
  * Exit silently (code 0) if gmt wasn't bumped this release.
  */
 
-import { readFileSync } from "node:fs";
 import { execSync } from "node:child_process";
-import { resolve, dirname } from "node:path";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

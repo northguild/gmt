@@ -193,17 +193,12 @@ describe("addZoned", () => {
       const withoutOffset = addZoned(
         value,
         { days: 1 },
-        {
-          disambiguation: "later",
-        },
+        { disambiguation: "later" },
       );
       const withOffset = addZoned(
         value,
         { days: 1 },
-        {
-          disambiguation: "later",
-          offset,
-        },
+        { disambiguation: "later", offset },
       );
       expect(withOffset).toBe(withoutOffset);
     },

@@ -27,19 +27,14 @@ const reportThroughDateReferences = (
     }
 
     seen.add(key);
-    context.report({
-      node: id,
-      message,
-    });
+    context.report({ node: id, message });
   }
 };
 
 export const noDateGlobalRule: RuleModule = {
   meta: {
     type: "problem",
-    docs: {
-      description: "Disallow the global Date object.",
-    },
+    docs: { description: "Disallow the global Date object." },
     schema: [],
   },
   create(context) {

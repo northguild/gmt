@@ -259,9 +259,7 @@ describe("diffDateTime", () => {
         "2023-01-01T00:00:00",
         "2023-01-01T01:45:00",
         ["minutes", "seconds"],
-        {
-          smallestUnit: "hours",
-        },
+        { smallestUnit: "hours" },
       ),
     ).toBeNull();
   });

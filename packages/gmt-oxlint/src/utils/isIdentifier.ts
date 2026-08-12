@@ -12,7 +12,7 @@ export function isIdentifier(
 ): node is IdentifierNode {
   return Boolean(
     node &&
-      node.type === "Identifier" &&
-      (node as IdentifierNode).name === name,
+    node.type === "Identifier" &&
+    (node as IdentifierNode).name === name,
   );
 }

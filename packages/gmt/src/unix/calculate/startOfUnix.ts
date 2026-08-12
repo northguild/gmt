@@ -139,22 +139,13 @@ export function startOfUnix(
         break;
       case "minute":
         result = source.with(
-          {
-            second: 0,
-            millisecond: 0,
-            microsecond: 0,
-            nanosecond: 0,
-          },
+          { second: 0, millisecond: 0, microsecond: 0, nanosecond: 0 },
           { disambiguation, offset },
         );
         break;
       case "second":
         result = source.with(
-          {
-            millisecond: 0,
-            microsecond: 0,
-            nanosecond: 0,
-          },
+          { millisecond: 0, microsecond: 0, nanosecond: 0 },
           { disambiguation, offset },
         );
         break;

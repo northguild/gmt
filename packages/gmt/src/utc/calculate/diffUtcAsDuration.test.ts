@@ -78,10 +78,7 @@ describe("diffUtcAsDuration", () => {
           "2028-01-01T00:00:00Z",
           "2028-01-01T01:30:00Z",
           "hours",
-          {
-            smallestUnit: "hours",
-            roundingMode,
-          },
+          { smallestUnit: "hours", roundingMode },
         ),
       ).toBe(expected);
     },
@@ -125,10 +122,7 @@ describe("diffUtcAsDuration", () => {
           "2028-01-01T00:00:00Z",
           "2028-01-01T01:00:00Z",
           "hours",
-          {
-            toStringSmallestUnit,
-            fractionalSecondDigits,
-          },
+          { toStringSmallestUnit, fractionalSecondDigits },
         ),
       ).toBe(expected);
     },

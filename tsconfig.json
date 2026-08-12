@@ -2,9 +2,5 @@
   "extends": "./tsconfig.base.json",
   "compileOnSave": false,
   "files": [],
-  "references": [
-    {
-      "path": "./packages/gmt"
-    }
-  ]
+  "references": [{ "path": "./packages/gmt" }]
 }

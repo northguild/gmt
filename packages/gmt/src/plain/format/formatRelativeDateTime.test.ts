@@ -27,9 +27,7 @@ describe("formatRelativeDateTime", () => {
       ${"2024-03-18T12:00:00"} | ${"in 3 days"}
     `("formats $value relative to REF as $expected", ({ value, expected }) => {
       expect(
-        formatRelativeDateTime(value, MustTestLocales.enUS, {
-          reference: REF,
-        }),
+        formatRelativeDateTime(value, MustTestLocales.enUS, { reference: REF }),
       ).toBe(expected);
     });
   });
@@ -51,9 +49,7 @@ describe("formatRelativeDateTime", () => {
       ${"2024-03-14T12:00:00"} | ${"yesterday"}
     `("formats $value (en-US, auto) as $expected", ({ value, expected }) => {
       expect(
-        formatRelativeDateTime(value, MustTestLocales.enUS, {
-          reference: REF,
-        }),
+        formatRelativeDateTime(value, MustTestLocales.enUS, { reference: REF }),
       ).toBe(expected);
     });
   });

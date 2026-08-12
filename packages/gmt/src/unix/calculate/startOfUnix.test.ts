@@ -52,10 +52,7 @@ describe("startOfUnix", () => {
     "supports weekStartsOn $weekStartsOn returning $expected for value $value and unit $unit",
     ({ value, unit, weekStartsOn, expected }) => {
       expect(
-        startOfUnix(value, unit, {
-          epochUnit: "seconds",
-          weekStartsOn,
-        }),
+        startOfUnix(value, unit, { epochUnit: "seconds", weekStartsOn }),
       ).toBe(expected);
     },
   );

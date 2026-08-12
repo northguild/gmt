@@ -75,9 +75,7 @@ export function roundDateTime(
       };
       const fractionalDigits = precisionMap[smallestUnit] || 0;
 
-      return result.toString({
-        fractionalSecondDigits: fractionalDigits,
-      });
+      return result.toString({ fractionalSecondDigits: fractionalDigits });
     }
 
     // Manual rounding for date units (year, month, week)

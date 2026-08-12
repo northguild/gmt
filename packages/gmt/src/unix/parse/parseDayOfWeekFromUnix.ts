@@ -22,10 +22,7 @@ import {
  */
 export function parseDayOfWeekFromUnix(
   value: number | string,
-  options?: {
-    epochUnit?: UnixUnit;
-    timeZone?: string;
-  },
+  options?: { epochUnit?: UnixUnit; timeZone?: string },
 ): number | null {
   const numValue = typeof value === "string" ? Number(value) : value;
   const epochUnit = options?.epochUnit ?? "milliseconds";

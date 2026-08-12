@@ -74,9 +74,7 @@ export function startOfTime(
     const fractionalDigits =
       fractionalSecondDigits ?? (precisionMap[unit] || 0);
 
-    return result.toString({
-      fractionalSecondDigits: fractionalDigits,
-    });
+    return result.toString({ fractionalSecondDigits: fractionalDigits });
   } catch {
     return "";
   }

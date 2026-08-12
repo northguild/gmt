@@ -94,10 +94,7 @@ export const LocaleTimezones = {
   "Europe/Istanbul": "Europe/Istanbul",
 };
 
-export const TestTimezones = {
-  ...MustTestDstTimeZones,
-  ...LocaleTimezones,
-};
+export const TestTimezones = { ...MustTestDstTimeZones, ...LocaleTimezones };
 
 // Core timeZone matrix used by zoned tests.
 // Includes DST, UTC-like, negative offset, half-hour, and quarter-hour zones.
@@ -235,10 +232,7 @@ export function mockSystemTimeZone(
   const defaultOptions = Intl.DateTimeFormat().resolvedOptions();
   const resolvedOptionsSpy = vi
     .spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions")
-    .mockReturnValue({
-      ...defaultOptions,
-      timeZone,
-    });
+    .mockReturnValue({ ...defaultOptions, timeZone });
 
   return () => {
     resolvedOptionsSpy.mockRestore();

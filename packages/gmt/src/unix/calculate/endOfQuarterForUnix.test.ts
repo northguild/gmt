@@ -23,9 +23,7 @@ describe("endOfQuarterForUnix", () => {
     ${1706659200} | ${1711929599}
     ${1709251200} | ${1711929599}
   `("returns $expected for value $value", ({ value, expected }) => {
-    const result = endOfQuarterForUnix(value, {
-      epochUnit: "seconds",
-    });
+    const result = endOfQuarterForUnix(value, { epochUnit: "seconds" });
     expect(result).toBe(expected);
   });
 

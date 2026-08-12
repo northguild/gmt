@@ -1,8 +1,10 @@
 {
   "name": "@burglekitt/gmt-eslint",
   "version": "1.0.0",
-  "type": "module",
   "description": "Shared ESLint configuration for gmt projects",
+  "keywords": [
+    "tanstack-intent"
+  ],
   "license": "MIT",
   "contributors": [
     {
@@ -14,33 +16,31 @@
       "url": "https://github.com/craig-o-curtis"
     }
   ],
-  "main": "./eslint/index.mjs",
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
-  },
-  "keywords": [
-    "tanstack-intent"
-  ],
   "files": [
     "eslint",
     "LICENSE",
     "README.md",
     "skills"
   ],
+  "type": "module",
+  "main": "./eslint/index.mjs",
+  "exports": {
+    ".": "./eslint/index.mjs"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "scripts": {
     "pack": "npm pack --dry-run",
     "publish:dry-run": "npm publish --access public --dry-run",
     "publish:public": "npm publish --access public"
   },
-  "exports": {
-    ".": "./eslint/index.mjs"
-  },
   "devDependencies": {
     "@tanstack/intent": "^0.3.6"
   },
   "peerDependencies": {
-    "eslint": "^9.0.0",
-    "@typescript-eslint/parser": "^8.0.0"
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0"
   }
 }

@@ -52,13 +52,7 @@ export function startOfQuarterForUnix(
     const quarterStartMonth = Math.floor((month - 1) / 3) * 3 + 1;
 
     const result = zdt.with(
-      {
-        month: quarterStartMonth,
-        day: 1,
-        hour: 0,
-        minute: 0,
-        second: 0,
-      },
+      { month: quarterStartMonth, day: 1, hour: 0, minute: 0, second: 0 },
       { disambiguation, offset },
     );
 

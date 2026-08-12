@@ -28,24 +28,15 @@ export function intervalContainsUnix(
   pointOrStart: number | string,
   pointEnd?: number | string,
 ): boolean {
-  if (
-    typeof intervalStart !== "number" &&
-    typeof intervalStart !== "string"
-  ) {
+  if (typeof intervalStart !== "number" && typeof intervalStart !== "string") {
     return false;
   }
 
-  if (
-    typeof intervalEnd !== "number" &&
-    typeof intervalEnd !== "string"
-  ) {
+  if (typeof intervalEnd !== "number" && typeof intervalEnd !== "string") {
     return false;
   }
 
-  if (
-    typeof pointOrStart !== "number" &&
-    typeof pointOrStart !== "string"
-  ) {
+  if (typeof pointOrStart !== "number" && typeof pointOrStart !== "string") {
     return false;
   }
 
@@ -76,8 +67,7 @@ export function intervalContainsUnix(
     return n1 <= n3 && n3 <= n2;
   }
 
-  const n4 =
-    typeof pointEnd === "number" ? pointEnd : Number(pointEnd);
+  const n4 = typeof pointEnd === "number" ? pointEnd : Number(pointEnd);
 
   if (!Number.isFinite(n4)) {
     return false;
