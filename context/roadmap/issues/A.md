@@ -22,7 +22,7 @@ GMT has no way to parse or validate ISO 8601 duration strings (e.g. "P1DT2H30M")
 - New `src/duration/` namespace, following the existing `src/plain/validate/` and `src/plain/parse/` file structure.
 
 ## Before starting
-Read the "Instructions for the agent picking up a story" section in `context/roadmap/index.md` — re-verify the gap, read `context/coding-standards.md` / `context/testing-standards.md` / `context/jsdoc-standards.md`, find the nearest existing analog (`plain/validate/isValidDate.ts`, `plain/parse/parseYearFromDate.ts`), and expand this into a full spec before writing code.
+Read the "Instructions for the agent picking up a story" section in `context/roadmap/index.md` — re-verify the gap, read `context/coding-standards.md` / `context/testing-standards/index.md` / `context/jsdoc-standards.md`, find the nearest existing analog (`plain/validate/isValidDate.ts`, `plain/parse/parseYearFromDate.ts`), and expand this into a full spec before writing code.
 
 ## Definition of done
 - `.test.ts` alongside each function, full edge-case coverage (invalid strings, negative durations, zero duration, fractional units if Temporal supports them).
@@ -112,7 +112,7 @@ Luxon's `Duration.toHuman` humanizes a duration standalone (not relative to "now
 ## Scope
 - `formatDuration(value: string, locale: string, options?: ...): string` — render an ISO duration string via `Intl.DurationFormat` where available.
 - Investigate `Intl.DurationFormat` runtime support; document a fallback plan if support is thin (per `context/project-overview.md`'s notes on ICU/runtime variance).
-- Full locale matrix required per `context/testing-standards.md` (17 locales), with `hasFullIcu` ternaries where output differs.
+- Full locale matrix required per `context/testing-standards/index.md` (17 locales), with `hasFullIcu` ternaries where output differs.
 
 ## Before starting
 See "Instructions for the agent picking up a story" in `context/roadmap/index.md`. Look at `formatRelativeDate.ts` for the locale-handling and `hasFullIcu` pattern to mirror.

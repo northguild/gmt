@@ -210,21 +210,13 @@ export const localRangeBattleCases = battleTestTimeZones.map((timeZone) => ({
 
 // Stable fake "now" instant used by now/today related tests.
 // Equivalent to Unix time 1709164800000, which is 2024-02-29T00:00:00Z.
-export const fixedNowInstant = "2024-02-29T00:00:00.000Z";
 
 // Test for leap year handling in timeZone conversions. 2024-02-29T00:00:00Z is 1709164800000 in unix milliseconds.
 export const battleTestLeapYearUnix = 1709164800000;
 export const battleTestLeapYearUnixSeconds = 1709164800;
 export const battleTestLeapYearUtc = "2024-02-29T00:00:00Z";
 
-// Unix time for 2024-02-29T00:00:00Z
-export const unixFixture = {
-  seconds: "1709164800",
-  milliseconds: "1709164800000",
-  invalid: ["", "not-a-timestamp", "171068584", "17092170450", "-1"],
-} as const;
-
-export const fixedSystemTimezone = "Europe/Helsinki";
+const fixedSystemTimezone = "Europe/Helsinki";
 
 export function mockSystemTimeZone(
   timeZone: string = fixedSystemTimezone,

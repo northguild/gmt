@@ -5,23 +5,31 @@ description: >
   isValidTime, isValidDateTime, isValidDateInterval, isValidTimeInterval, isValidDateTimeInterval
   for scalar and interval validation. Use intervalContainsDate, intervalContainsTime,
   intervalContainsDateTime, intervalContainsUtc, intervalContainsUnix, intervalContainsZoned
-  for point-in-interval and interval-in-interval containment checks. All validation functions
-  return false on invalid input.
+  for point-in-interval and interval-in-interval containment checks. Use intervalUnionDate,
+  intervalUnionTime, intervalUnionDateTime, intervalUnionUtc, intervalUnionUnix, intervalUnionZoned
+  to merge two overlapping or adjacent intervals into their combined span. All validation functions
+  return false on invalid input; interval union returns null on disjoint or invalid input.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/interval/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalContainsDate.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalContainsTime.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalContainsDateTime.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalUnionDate.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalUnionTime.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalUnionDateTime.ts'
   - 'burglekitt/gmt:packages/gmt/src/utc/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/utc/interval/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/utc/interval/intervalContainsUtc.ts'
+  - 'burglekitt/gmt:packages/gmt/src/utc/interval/intervalUnionUtc.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/interval/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/interval/intervalContainsUnix.ts'
+  - 'burglekitt/gmt:packages/gmt/src/unix/interval/intervalUnionUnix.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/interval/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/interval/intervalContainsZoned.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/interval/intervalUnionZoned.ts'
 metadata:
   type: core
   library: '@burglekitt/gmt'
@@ -234,6 +242,23 @@ import { intervalContainsZoned } from "@burglekitt/gmt/zoned";
 const inside = intervalContainsZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]", "2024-06-15T12:00:00+00:00[UTC]"); // true
 const inner = intervalContainsZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]", "2024-03-01T00:00:00+00:00[UTC]", "2024-09-01T00:00:00+00:00[UTC]"); // true
 ```
+
+### Merge overlapping or adjacent intervals (union)
+
+```ts
+import { intervalUnionDate } from "@burglekitt/gmt";
+
+const merged = intervalUnionDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
+// { start: "2024-01-01", end: "2024-12-31" }
+
+const adjacent = intervalUnionDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31");
+// { start: "2024-01-01", end: "2024-12-31" } — adjacent intervals ARE merged
+
+const disjoint = intervalUnionDate("2024-01-01", "2024-06-30", "2024-07-01", "2024-12-31");
+// null — gap between intervals
+```
+
+`intervalUnionTime`, `intervalUnionDateTime`, `intervalUnionUtc`, `intervalUnionUnix`, and `intervalUnionZoned` follow the same pattern across their respective types. Unix returns `{ start: number; end: number } | null`; all others return `{ start: string; end: string } | null`.
 
 ## Common Mistakes
 

@@ -75,6 +75,7 @@ Validate and check date/time intervals:
 
 - `isValidDateInterval`, `isValidDateTimeInterval`, `isValidTimeInterval`
 - `intervalContainsDate`, `intervalContainsDateTime`, `intervalContainsTime`
+- `intervalUnionDate`, `intervalUnionDateTime`, `intervalUnionTime`
 
 ### map
 

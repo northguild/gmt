@@ -25,7 +25,7 @@ react-aria's `isWeekend(date, locale)` checks whether a date falls on a weekend 
 See "Instructions for the agent picking up a story" in `context/roadmap/index.md`. This is additive — do not modify the existing ISO-only `getDayOfWeek`.
 
 ## Definition of done
-Full 17-locale test matrix per `context/testing-standards.md` (weekend days differ meaningfully across at least en-US, fr-FR, he-IL, ar-SA — make sure the matrix actually exercises the locale-dependent branches, not just default English), JSDoc, exports, README/changeset, lint/test pass.
+Full 17-locale test matrix per `context/testing-standards/index.md` (weekend days differ meaningfully across at least en-US, fr-FR, he-IL, ar-SA — make sure the matrix actually exercises the locale-dependent branches, not just default English), JSDoc, exports, README/changeset, lint/test pass.
 ```
 
 ### D2 — `getLocaleStartOfWeek` / `getLocaleEndOfWeek`

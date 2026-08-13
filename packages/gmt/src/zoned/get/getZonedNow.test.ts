@@ -1,7 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import {
   battleTestTimeZones,
-  fixedNowInstant,
   TomorrowTimeZone,
   YesterdayTimeZone,
 } from "../../test";
@@ -80,7 +79,7 @@ describe("getZonedNow", () => {
     it(`returns an exact zoned datetime for battle-test timeZone ${timeZone}`, () => {
       const value = getZonedNow(timeZone);
 
-      const expected = Temporal.Instant.from(fixedNowInstant)
+      const expected = Temporal.Instant.from("2024-02-29T00:00:00.000Z")
         .toZonedDateTimeISO(timeZone)
         .toString({ smallestUnit: "milliseconds" });
 

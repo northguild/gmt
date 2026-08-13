@@ -112,22 +112,28 @@ skills:
     domain: core-date-operations
     path: 'skills/validate-dates/SKILL.md'
     package: 'packages/gmt'
-    description: Validate date/time strings, timezone identifiers, intervals, and ranges; returns false on invalid input
+    description: Validate date/time strings, timezone identifiers, intervals, and ranges; check point-in-interval and interval-in-interval containment; merge overlapping or adjacent intervals
     sources:
       - 'burglekitt/gmt:packages/gmt/src/plain/validate/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/plain/interval/validate/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalContainsDate.ts'
       - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalContainsTime.ts'
       - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalContainsDateTime.ts'
+      - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalUnionDate.ts'
+      - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalUnionTime.ts'
+      - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalUnionDateTime.ts'
       - 'burglekitt/gmt:packages/gmt/src/utc/validate/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/utc/interval/validate/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/utc/interval/intervalContainsUtc.ts'
+      - 'burglekitt/gmt:packages/gmt/src/utc/interval/intervalUnionUtc.ts'
       - 'burglekitt/gmt:packages/gmt/src/unix/validate/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/unix/interval/validate/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/unix/interval/intervalContainsUnix.ts'
+      - 'burglekitt/gmt:packages/gmt/src/unix/interval/intervalUnionUnix.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/validate/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/interval/validate/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/interval/intervalContainsZoned.ts'
+      - 'burglekitt/gmt:packages/gmt/src/zoned/interval/intervalUnionZoned.ts'
 
   - name: Zoned Date Operations
     slug: zoned-date-ops

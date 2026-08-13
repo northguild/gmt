@@ -34,7 +34,7 @@ This means `@internationalized/date` is the only real bar to clear here, and GMT
 See "Instructions for the agent picking up a story" in `context/roadmap/index.md`. Re-verify against `@internationalized/date`'s current `HebrewCalendar.ts` source (not just its docs) via context7/WebFetch before implementing — port the arithmetic, not just the shape. Decide and document the string round-trip format before writing tests, since every other E-group story inherits this decision.
 
 ## Definition of done
-Tests: leap-year/non-leap-year conversion round-trips, all 12/13 month boundaries, epoch-adjacent dates, invalid input sentinel returns. JSDoc with `@example`. New `calendar-system.ts` shared type. `packages/gmt/README.md` update documenting the new calendar-system concept (likely warrants its own README section, not just a function list entry, given this is a new domain concept for the library). Changeset. Lint/test pass per `context/coding-standards.md` / `context/testing-standards.md` / `context/jsdoc-standards.md`.
+Tests: leap-year/non-leap-year conversion round-trips, all 12/13 month boundaries, epoch-adjacent dates, invalid input sentinel returns. JSDoc with `@example`. New `calendar-system.ts` shared type. `packages/gmt/README.md` update documenting the new calendar-system concept (likely warrants its own README section, not just a function list entry, given this is a new domain concept for the library). Changeset. Lint/test pass per `context/coding-standards.md` / `context/testing-standards/index.md` / `context/jsdoc-standards.md`.
 ```
 
 ### E2 — Islamic calendar family (Civil, Tabular, Umm al-Qura)

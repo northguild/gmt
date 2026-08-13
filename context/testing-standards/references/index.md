@@ -136,3 +136,32 @@ it.each`
 ```
 
 Both helpers canonicalize known day-period variants on both sides before comparing, so the assertion still fails on a genuinely different result — only the AM/PM-vs-native-script divergence is tolerated.
+
+## Test Name Standards
+
+Every `it.each` name must interpolate the distinguishing variables (`$aEnd`, `$bStart`, `$timeZone`, etc.) so a Vitest failure report is self-debugging:
+
+- Good: `"returns merged interval when $aEnd equals $bStart (adjacent)"`
+- Bad: `"returns $expected for adjacent intervals"`
+
+For error-path blocks where all inputs produce the same sentinel, the name should list the _type_ of bad input: `"returns null when $input is non-string"`.
+
+## Canonical Date Fixtures
+
+Reference `context/testing-standards/references/test-matrix.md` for the canonical date/time strings. Tests may use the string values directly or import the exported constants from `packages/gmt/src/test/localeMatrix.ts` and `packages/gmt/src/test/timeZoneMatrix.ts`. Zoned variants for non-UTC zones are derived at test time by mapping `unix2024Jan01T000000Ms` over `battleTestTimeZones` — see `test-matrix.md` for the pattern.
+
+A local override is allowed only when the scenario requires a different date (DST transition, leap-second, etc.) — document the override reason in a comment.
+
+## Edge-Case Taxonomy
+
+Define the permutation space for every function explicitly:
+
+- **Valid input** — default options and each explicit option value.
+- **Invalid input** — sentinel return, not throw — collapse `null`/`undefined`/`123`/`true`/`[]`/`{}` into a single `"non-string input"` row unless a specific type has distinct behavior.
+- **Boundary units** — month-end, year-end, leap day.
+- **Negative/zero amounts** — zero is the identity case; negative values must round-trip correctly.
+- **Empty/no-op inputs** — zero-length intervals, empty arrays, identity transforms.
+- **Zoned/unix** — full `battleTestTimeZones` matrix via `battleTestTimeZones.map(...)`.
+- **Locale-aware** — all 17 locales from `MustTestLocales` with explicit rows.
+
+When an `it.each` block covers more than one permutation category (valid + invalid + boundary), split into separate named tables so failures are debuggable.

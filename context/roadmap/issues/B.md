@@ -31,7 +31,7 @@ Implementation pattern: regex/typeof kind detection → single Temporal parse �
 See "Instructions for the agent picking up a story" in `context/roadmap/index.md`. Nearest analog: `plain/validate/isValidDateRange.ts` — check whether it already covers this before building new.
 
 ## Definition of done
-Tests (valid pairs, invalid pairs, boundary equal-case, malformed input → false), JSDoc with `@example` for each environment, per-namespace `interval/` barrel exports, root `interval/` barrel export, `packages/gmt/README.md` update, changeset, lint/test pass — per `context/coding-standards.md` / `context/testing-standards.md` / `context/jsdoc-standards.md`.
+Tests (valid pairs, invalid pairs, boundary equal-case, malformed input → false), JSDoc with `@example` for each environment, per-namespace `interval/` barrel exports, root `interval/` barrel export, `packages/gmt/README.md` update, changeset, lint/test pass — per `context/coding-standards.md` / `context/testing-standards/index.md` / `context/jsdoc-standards.md`.
 ```
 
 ### B2 — `intervalContains`

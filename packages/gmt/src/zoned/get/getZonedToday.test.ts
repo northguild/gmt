@@ -2,7 +2,6 @@ import { Temporal } from "@js-temporal/polyfill";
 import { isValidDate } from "../../plain/validate";
 import {
   battleTestTimeZones,
-  fixedNowInstant,
   TomorrowTimeZone,
   YesterdayTimeZone,
 } from "../../test";
@@ -75,7 +74,7 @@ describe("getZonedToday", () => {
 
   for (const timeZone of battleTestTimeZones) {
     it(`returns an exact ISO date for battle-test timeZone ${timeZone}`, () => {
-      const expected = Temporal.Instant.from(fixedNowInstant)
+      const expected = Temporal.Instant.from("2024-02-29T00:00:00.000Z")
         .toZonedDateTimeISO(timeZone)
         .toPlainDate()
         .toString();

@@ -48,12 +48,44 @@ Invalid input fallbacks are consistent across the library:
 - boolean-returning helpers return `false`
 - array-returning helpers return `[]`
 
+## Testing
+
+| Metric     | Count  |
+| ---------- | ------ |
+| Test files | 361    |
+| Tests      | 11,288 |
+
+Every function is exercised across **17 locales** and a full IANA timezone matrix. The CI pipeline runs the complete suite in **20 environments** — 2 Node versions (22, 24) × 10 timezones spanning every UTC offset band from Pacific/Niue (−11:00) to Pacific/Apia (+13:00):
+
+| Timezone            | UTC Offset      |
+| ------------------- | --------------- |
+| Pacific/Niue        | −11:00          |
+| America/New_York    | −05:00 / −04:00 |
+| UTC                 | ±00:00          |
+| Europe/London       | ±00:00 / +01:00 |
+| Asia/Kolkata        | +05:30          |
+| Asia/Kathmandu      | +05:45          |
+| Asia/Shanghai       | +08:00          |
+| Australia/Lord_Howe | +10:00 / +11:00 |
+| Pacific/Chatham     | +12:45 / +13:45 |
+| Pacific/Apia        | +13:00 / +14:00 |
+
+This guarantees that DST transitions, leap seconds, half-hour offsets, and locale-specific weekend boundaries are all covered — not just the happy path.
+
 ## Package Layout
 
 The package exports seven top-level namespaces:
 
 ```typescript
-import { Temporal, duration, plain, zoned, unix, utc, regex } from "@burglekitt/gmt";
+import {
+  Temporal,
+  duration,
+  plain,
+  zoned,
+  unix,
+  utc,
+  regex,
+} from "@burglekitt/gmt";
 ```
 
 - `Temporal`: re-exported from `@js-temporal/polyfill`
@@ -272,7 +304,10 @@ isValidTimeInterval("09:00:00", "17:00:00");
 isValidDateTimeInterval("2024-01-01T10:00:00", "2024-12-31T23:59:59");
 // true
 
-isValidZonedInterval("2024-01-01T10:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]");
+isValidZonedInterval(
+  "2024-01-01T10:00:00+00:00[UTC]",
+  "2024-12-31T23:59:59+00:00[UTC]",
+);
 // true
 
 // Range validators — object params, with optional allowEqual
@@ -311,13 +346,21 @@ intervalContainsDate("2024-01-01", "2024-12-31", "2024-06-15");
 intervalContainsTime("09:00:00", "17:00:00", "12:00:00");
 // true
 
-intervalContainsUtc("2024-01-01T00:00:00Z", "2024-12-31T23:59:59Z", "2024-06-15T12:00:00Z");
+intervalContainsUtc(
+  "2024-01-01T00:00:00Z",
+  "2024-12-31T23:59:59Z",
+  "2024-06-15T12:00:00Z",
+);
 // true
 
 intervalContainsUnix(0, 1700000000, 170000000);
 // true
 
-intervalContainsZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]", "2024-06-15T12:00:00+00:00[UTC]");
+intervalContainsZoned(
+  "2024-01-01T00:00:00+00:00[UTC]",
+  "2024-12-31T23:59:59+00:00[UTC]",
+  "2024-06-15T12:00:00+00:00[UTC]",
+);
 // true
 
 // Interval-in-interval (4-arg)
@@ -342,23 +385,78 @@ import {
   intervalIntersectionZoned,
 } from "@burglekitt/gmt";
 
-intervalIntersectionDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
+intervalIntersectionDate(
+  "2024-01-01",
+  "2024-06-30",
+  "2024-04-01",
+  "2024-12-31",
+);
 // { start: "2024-04-01", end: "2024-06-30" }
 
-intervalIntersectionDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31");
+intervalIntersectionDate(
+  "2024-01-01",
+  "2024-06-30",
+  "2024-06-30",
+  "2024-12-31",
+);
 // { start: "2024-06-30", end: "2024-06-30" } (adjacent, shares one instant)
 
-intervalIntersectionDate("2024-01-01", "2024-06-30", "2024-07-01", "2024-12-31");
+intervalIntersectionDate(
+  "2024-01-01",
+  "2024-06-30",
+  "2024-07-01",
+  "2024-12-31",
+);
 // null (disjoint)
 
 intervalIntersectionUnix(0, 1700000000, 1000000, 2000000);
 // { start: 1000000, end: 1700000000 }
 
-intervalIntersectionUtc("2024-01-01T00:00:00Z", "2024-06-30T23:59:59Z", "2024-04-01T00:00:00Z", "2024-12-31T23:59:59Z");
+intervalIntersectionUtc(
+  "2024-01-01T00:00:00Z",
+  "2024-06-30T23:59:59Z",
+  "2024-04-01T00:00:00Z",
+  "2024-12-31T23:59:59Z",
+);
 // { start: "2024-04-01T00:00:00Z", end: "2024-06-30T23:59:59Z" }
 ```
 
 All intersection functions return `null` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
+
+`intervalUnion*` returns the combined span of two overlapping or adjacent intervals, or `null` when they are disjoint with a gap. Adjacent intervals (sharing one instant) count as mergeable:
+
+```typescript
+import {
+  intervalUnionDate,
+  intervalUnionTime,
+  intervalUnionDateTime,
+  intervalUnionUtc,
+  intervalUnionUnix,
+  intervalUnionZoned,
+} from "@burglekitt/gmt";
+
+intervalUnionDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
+// { start: "2024-01-01", end: "2024-12-31" }
+
+intervalUnionDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31");
+// { start: "2024-01-01", end: "2024-12-31" } (adjacent, merged)
+
+intervalUnionDate("2024-01-01", "2024-06-30", "2024-07-01", "2024-12-31");
+// null (disjoint with a gap)
+
+intervalUnionUnix(0, 1700000000, 1000000, 2000000);
+// { start: 0, end: 1700000000 }
+
+intervalUnionUtc(
+  "2024-01-01T00:00:00Z",
+  "2024-06-30T23:59:59Z",
+  "2024-04-01T00:00:00Z",
+  "2024-12-31T23:59:59Z",
+);
+// { start: "2024-01-01T00:00:00Z", end: "2024-12-31T23:59:59Z" }
+```
+
+All union functions return `null` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
 
 All validators return `false` on invalid input (wrong type, malformed strings, leap seconds, mixed kinds for plain interval validators, non-finite values for Unix).
 
@@ -498,6 +596,19 @@ For the complete API listing, see the namespace documentation on GitHub:
 - [Unix API](https://github.com/burglekitt/gmt/tree/main/packages/gmt/src/unix) — Unix epoch utilities
 - [UTC API](https://github.com/burglekitt/gmt/tree/main/packages/gmt/src/utc) — UTC instant utilities
 - [Regex API](https://github.com/burglekitt/gmt/tree/main/packages/gmt/src/regex) — composable regex patterns
+
+## Agent Prompt
+
+When working with `@burglekitt/gmt`, follow these rules:
+
+1. **No `Date` object.** Use `Temporal` exclusively.
+2. **String-in, string-out.** Public APIs accept ISO 8601 strings; return strings, numbers, booleans, or arrays.
+3. **Invalid input returns a sentinel, never throws.** `""` for strings, `null` for numbers, `false` for booleans, `[]` for arrays.
+4. **Wrap all Temporal calls in `try-catch`.** `.from()`, `.add()`, `.since()`, etc. throw `RangeError` on bad input.
+5. **Keep `plain/` and `zoned/` strictly separate.** Never mix `PlainDateTime` and `ZonedDateTime`.
+6. **Full locale matrix for any locale-aware function.** 17 locales, explicit rows, `hasFullIcu` ternaries where output differs.
+7. **Use pre-built mocks for error-path tests.** See `packages/gmt/src/test/mocks`.
+8. **JSDoc with `@example` on every public function.** Cover valid, invalid, and edge-case inputs.
 
 ## License
 

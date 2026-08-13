@@ -71,6 +71,7 @@ Validate and check zoned intervals:
 
 - `isValidZonedInterval`
 - `intervalContainsZoned`
+- `intervalUnionZoned`
 
 ### map
 

@@ -199,7 +199,7 @@ skills:
   - name: Validate Dates
     slug: validate-dates
     domain: core-date-operations
-    description: Validate date/time strings, timezone identifiers, intervals, and ranges; check point-in-interval and interval-in-interval containment
+    description: Validate date/time strings, timezone identifiers, intervals, and ranges; check point-in-interval and interval-in-interval containment; merge overlapping or adjacent intervals
     type: core
     packages:
       - '@burglekitt/gmt'
@@ -219,6 +219,12 @@ skills:
       - intervalContainsUtc
       - intervalContainsUnix
       - intervalContainsZoned
+      - intervalUnionDate
+      - intervalUnionTime
+      - intervalUnionDateTime
+      - intervalUnionUtc
+      - intervalUnionUnix
+      - intervalUnionZoned
       - isValidDateRange
       - isValidDateTimeRange
       - isValidTimeRange
@@ -237,6 +243,7 @@ skills:
       - Validate zoned interval
       - Check if a point falls within an interval (3-arg)
       - Check if an inner interval is fully contained within an outer interval (4-arg)
+      - Merge two overlapping or adjacent intervals into their combined span
       - Validate date range (object-param shape)
       - Validate time range
       - Validate datetime range

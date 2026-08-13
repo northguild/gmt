@@ -50,5 +50,5 @@ Beyond individual file findings, use the report to judge the directory shape as 
   routing table with an "Always" trigger; narrowly-scoped files should have a specific
   "when..." trigger, not "sometimes" or no description.
 - A context file over budget is a signal to split by sub-topic (mirror how this repo already
-  splits `coding-standards.md` from `testing-standards.md` rather than one `standards.md`),
+  splits `coding-standards.md` from `testing-standards/index.md` rather than one `standards.md`),
   not to shrink prose at the cost of clarity.

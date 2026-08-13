@@ -26,7 +26,7 @@ When planning is complete, hand the finished plan to `driver` for execution. In 
 
 1. Read the user's request and any referenced plan/story/spec documents.
 2. Re-verify the gap still exists — check `packages/gmt/src` for existing equivalents (`grep`/`glob`) before proposing a new function.
-3. Reference `context/coding-standards.md`, `context/testing-standards.md`, `context/jsdoc-standards.md`, and `context/project-overview.md` for conventions.
+3. Reference `context/coding-standards.md`, `context/testing-standards/references/index.md`, `context/jsdoc-standards.md`, and `context/project-overview.md` for conventions.
 4. Expand the one-line story into a full spec: exact signatures, Temporal API calls, sentinel return value, locale matrix if locale-aware, specific edge cases tests must cover.
 5. Sequence deliverables so Story Groups stay un-interleaved for clean publishing (see `context/roadmap/overview.md` suggested sequencing).
 

@@ -29,7 +29,7 @@ format used by `scripts/optimize.py`. Tune values here, not in the script or SKI
   doesn't exist. Fix the path or remove the row.
 - `CONTEXT_FILE_BUDGET = 15000` — total characters in a single `context/*.md` file. Over budget
   → warning to split into smaller, more narrowly scoped files (e.g. split a giant
-  `standards.md` into `coding-standards.md` / `testing-standards.md`, as this repo already
+  `standards.md` into `coding-standards.md` / `testing-standards/index.md`, as this repo already
   does).
 - `CONTEXT_SIMILARITY = 0.80` — pairwise `SequenceMatcher` ratio between two context files' full
   content at or above this is reported as "near-duplicate context files" (candidates to merge
@@ -53,7 +53,11 @@ format used by `scripts/optimize.py`. Tune values here, not in the script or SKI
       "chars": 2414,
       "over_budget": false,
       "section_candidates": [
-        { "section": "Core Rules", "chars": 900, "suggest": "context/core-rules.md" }
+        {
+          "section": "Core Rules",
+          "chars": 900,
+          "suggest": "context/core-rules.md"
+        }
       ],
       "warnings": []
     }
@@ -62,8 +66,15 @@ format used by `scripts/optimize.py`. Tune values here, not in the script or SKI
     "dir": "/abs/path/context",
     "exists": true,
     "files": [
-      { "file": "/abs/path/context/roadmap.md", "chars": 71576, "over_budget": true,
-        "linked_from": [], "warnings": ["71576 chars (budget 15000); split into smaller scoped files"] }
+      {
+        "file": "/abs/path/context/roadmap.md",
+        "chars": 71576,
+        "over_budget": true,
+        "linked_from": [],
+        "warnings": [
+          "71576 chars (budget 15000); split into smaller scoped files"
+        ]
+      }
     ],
     "orphans": ["/abs/path/context/roadmap.md"],
     "near_duplicates": []

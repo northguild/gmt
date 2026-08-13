@@ -8,3 +8,6 @@ export * from "./intervalsOverlapDateTime";
 export * from "./intervalIntersectionDate";
 export * from "./intervalIntersectionTime";
 export * from "./intervalIntersectionDateTime";
+export * from "./intervalUnionDate";
+export * from "./intervalUnionTime";
+export * from "./intervalUnionDateTime";

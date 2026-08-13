@@ -6,16 +6,16 @@
 
 Read these before working in the repo. Each is scoped — load only what you need for the task at hand.
 
-| File | When to read it |
-|---|---|
-| [context/project-overview.md](./context/project-overview.md) | Always — covers what GMT is, why it exists, Temporal API references, and comparison library links |
-| [context/coding-standards.md](./context/coding-standards.md) | When writing or reviewing source code |
-| [context/testing-standards.md](./context/testing-standards.md) | When writing or reviewing tests |
-| [context/jsdoc-standards.md](./context/jsdoc-standards.md) | When adding or updating public function JSDoc |
-| [context/code-review-checklist.md](./context/code-review-checklist.md) | When reviewing a PR |
-| [context/linting-packages.md](./context/linting-packages.md) | When working on gmt-eslint, gmt-oxlint, or gmt-biome |
-| [context/roadmap/index.md](./context/roadmap/index.md) | When picking up or reviewing roadmap work |
-| [context/roadmap/index.md](./context/roadmap/index.md) | Roadmap entry point (redirects to progressive-disclosure directory) |
+| File                                                                                             | When to read it                                                                                   |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| [context/project-overview.md](./context/project-overview.md)                                     | Always — covers what GMT is, why it exists, Temporal API references, and comparison library links |
+| [context/coding-standards.md](./context/coding-standards.md)                                     | When writing or reviewing source code                                                             |
+| [context/testing-standards/references/index.md](./context/testing-standards/references/index.md) | When writing or reviewing tests                                                                   |
+| [context/jsdoc-standards.md](./context/jsdoc-standards.md)                                       | When adding or updating public function JSDoc                                                     |
+| [context/code-review-checklist.md](./context/code-review-checklist.md)                           | When reviewing a PR                                                                               |
+| [context/linting-packages.md](./context/linting-packages.md)                                     | When working on gmt-eslint, gmt-oxlint, or gmt-biome                                              |
+| [context/roadmap/index.md](./context/roadmap/index.md)                                           | When picking up or reviewing roadmap work                                                         |
+| [context/roadmap/index.md](./context/roadmap/index.md)                                           | Roadmap entry point (redirects to progressive-disclosure directory)                               |
 
 ## Core Rules (Quick Reference)
 

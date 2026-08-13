@@ -19,7 +19,7 @@ Part of the parity roadmap — see `context/roadmap/index.md`, Story Group C, it
 ## Scope
 - Add optional `disambiguation?: 'compatible' | 'earlier' | 'later' | 'reject'` parameter, defaulting to `'compatible'` (matches current behavior — non-breaking).
 - Thread through to `Temporal.ZonedDateTime.from(..., { disambiguation })`.
-- Write explicit DST gap/overlap test cases: spring-forward gap and fall-back overlap, for at least 2-3 timezones, per `context/testing-standards.md`'s locale-matrix approach.
+- Write explicit DST gap/overlap test cases: spring-forward gap and fall-back overlap, for at least 2-3 timezones, per `context/testing-standards/index.md`'s locale-matrix approach.
 
 ## Before starting
 See "Instructions for the agent picking up a story" in `context/roadmap/index.md`. Read the current implementation at `packages/gmt/src/zoned/convert/convertPlainDateTimeToZoned.ts` first.

@@ -29,7 +29,7 @@ Three standalone functions, no date value input required — locale (and optiona
 See "Instructions for the agent picking up a story" in `context/roadmap/index.md`. Nearest analog: existing `format*` functions under `plain/format/` for the `Intl.DateTimeFormat` usage pattern, and D1's `weekInfo`/locale-matrix handling for the locale-variance test approach. Re-verify Luxon's exact `Info.months`/`.weekdays`/`.meridiems` signatures via context7 before finalizing the style-parameter shape, since this spec's `'long' | 'short' | 'narrow'` values are carried over from `Intl.DateTimeFormat`'s own options, not verified 1:1 against Luxon's naming.
 
 ## Definition of done
-Full 17-locale test matrix per `context/testing-standards.md`, including at least one locale with a non-Latin calendar name set and one with non-AM/PM meridiem labels if any target locale has them (verify during implementation — document if none do, don't skip the check). `hasFullIcu` ternaries where ICU-dependent output differs, per the established D1/A4 pattern. JSDoc with `@example`, exports, `packages/gmt/README.md` update, changeset, lint/test pass.
+Full 17-locale test matrix per `context/testing-standards/index.md`, including at least one locale with a non-Latin calendar name set and one with non-AM/PM meridiem labels if any target locale has them (verify during implementation — document if none do, don't skip the check). `hasFullIcu` ternaries where ICU-dependent output differs, per the established D1/A4 pattern. JSDoc with `@example`, exports, `packages/gmt/README.md` update, changeset, lint/test pass.
 ```
 
 ### H2 — `getLocaleEraNames`

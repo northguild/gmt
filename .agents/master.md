@@ -122,7 +122,7 @@ For trivial stories (single function, < 50 lines, no new namespace, no locale-aw
 Before invoking any specialist, ensure these are available in context:
 
 - `context/coding-standards.md` — always
-- `context/testing-standards.md` — when tdd-dev or tester is involved
+- `context/testing-standards/references/index.md` — when tdd-dev or tester is involved
 - `context/jsdoc-standards.md` — when implementation or finalizer is involved
 - `context/project-overview.md` — when researcher or architect is involved
 - `context/roadmap/tracker.md` — when finalizer is involved
