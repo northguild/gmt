@@ -7,8 +7,11 @@ description: >
   intervalContainsDateTime, intervalContainsUtc, intervalContainsUnix, intervalContainsZoned
   for point-in-interval and interval-in-interval containment checks. Use intervalUnionDate,
   intervalUnionTime, intervalUnionDateTime, intervalUnionUtc, intervalUnionUnix, intervalUnionZoned
-  to merge two overlapping or adjacent intervals into their combined span. All validation functions
-  return false on invalid input; interval union returns null on disjoint or invalid input.
+  to merge two overlapping or adjacent intervals into their combined span. Use splitIntervalByUnitDate,
+  splitIntervalByUnitTime, splitIntervalByUnitDateTime, splitIntervalByUnitUtc, splitIntervalByUnitUnix,
+  splitIntervalByUnitZoned to split an interval into sub-intervals of amount × unit. All validation
+  functions return false on invalid input; interval union returns null on disjoint or invalid input;
+  split functions return [] on invalid input.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/interval/validate/index.ts'
@@ -18,18 +21,24 @@ sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalUnionDate.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalUnionTime.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalUnionDateTime.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/interval/splitIntervalByUnitDate.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/interval/splitIntervalByUnitTime.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/interval/splitIntervalByUnitDateTime.ts'
   - 'burglekitt/gmt:packages/gmt/src/utc/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/utc/interval/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/utc/interval/intervalContainsUtc.ts'
   - 'burglekitt/gmt:packages/gmt/src/utc/interval/intervalUnionUtc.ts'
+  - 'burglekitt/gmt:packages/gmt/src/utc/interval/splitIntervalByUnitUtc.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/interval/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/interval/intervalContainsUnix.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/interval/intervalUnionUnix.ts'
+  - 'burglekitt/gmt:packages/gmt/src/unix/interval/splitIntervalByUnitUnix.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/interval/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/interval/intervalContainsZoned.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/interval/intervalUnionZoned.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/interval/splitIntervalByUnitZoned.ts'
 metadata:
   type: core
   library: '@burglekitt/gmt'
@@ -259,6 +268,23 @@ const disjoint = intervalUnionDate("2024-01-01", "2024-06-30", "2024-07-01", "20
 ```
 
 `intervalUnionTime`, `intervalUnionDateTime`, `intervalUnionUtc`, `intervalUnionUnix`, and `intervalUnionZoned` follow the same pattern across their respective types. Unix returns `{ start: number; end: number } | null`; all others return `{ start: string; end: string } | null`.
+
+### Split interval into sub-intervals by unit
+
+```ts
+import { splitIntervalByUnitDate } from "@burglekitt/gmt";
+
+const slices = splitIntervalByUnitDate("2024-01-01", "2024-01-10", "day", 2);
+// [
+//   { start: "2024-01-01", end: "2024-01-03" },
+//   { start: "2024-01-03", end: "2024-01-05" },
+//   { start: "2024-01-05", end: "2024-01-07" },
+//   { start: "2024-01-07", end: "2024-01-09" },
+//   { start: "2024-01-09", end: "2024-01-10" }
+// ]
+```
+
+`splitIntervalByUnitTime`, `splitIntervalByUnitDateTime`, `splitIntervalByUnitUtc`, `splitIntervalByUnitUnix`, and `splitIntervalByUnitZoned` follow the same pattern. The final sub-interval is trimmed so its `end` never exceeds the original `end`. All split functions return `[]` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-positive amount, unsupported unit, or a unit that has no effect on the target type).
 
 ## Common Mistakes
 

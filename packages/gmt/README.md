@@ -458,6 +458,30 @@ intervalUnionUtc(
 
 All union functions return `null` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
 
+`splitIntervalByUnit*` splits an interval into sub-intervals of `amount × unit`, returning an array of `{ start, end }` records. The final sub-interval is trimmed so its `end` never exceeds the original `end`:
+
+```typescript
+import {
+  splitIntervalByUnitDate,
+  splitIntervalByUnitTime,
+  splitIntervalByUnitDateTime,
+  splitIntervalByUnitUtc,
+  splitIntervalByUnitUnix,
+  splitIntervalByUnitZoned,
+} from "@burglekitt/gmt";
+
+splitIntervalByUnitDate("2024-01-01", "2024-01-10", "day", 2);
+// [{ start: "2024-01-01", end: "2024-01-03" }, { start: "2024-01-03", end: "2024-01-05" }, { start: "2024-01-05", end: "2024-01-07" }, { start: "2024-01-07", end: "2024-01-09" }, { start: "2024-01-09", end: "2024-01-10" }]
+
+splitIntervalByUnitUtc("2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z", "hour", 6);
+// [{ start: "2024-01-01T00:00:00Z", end: "2024-01-01T06:00:00Z" }, { start: "2024-01-01T06:00:00Z", end: "2024-01-01T12:00:00Z" }, { start: "2024-01-01T12:00:00Z", end: "2024-01-01T18:00:00Z" }, { start: "2024-01-01T18:00:00Z", end: "2024-01-02T00:00:00Z" }]
+
+splitIntervalByUnitUnix(0, 86400000, "hour", 6);
+// [{ start: 0, end: 21600000 }, { start: 21600000, end: 43200000 }, { start: 43200000, end: 64800000 }, { start: 64800000, end: 86400000 }]
+```
+
+All split functions return `[]` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-positive amount, unsupported unit, or a unit that has no effect on the target type).
+
 All validators return `false` on invalid input (wrong type, malformed strings, leap seconds, mixed kinds for plain interval validators, non-finite values for Unix).
 
 ### Zoned operations

@@ -44,6 +44,7 @@ Validate and check UTC intervals:
 - `isValidUtcInterval`
 - `intervalContainsUtc`
 - `intervalUnionUtc`
+- `splitIntervalByUnitUtc`
 
 ### format
 

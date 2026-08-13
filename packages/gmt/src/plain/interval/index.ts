@@ -11,3 +11,6 @@ export * from "./intervalIntersectionDateTime";
 export * from "./intervalUnionDate";
 export * from "./intervalUnionTime";
 export * from "./intervalUnionDateTime";
+export * from "./splitIntervalByUnitDate";
+export * from "./splitIntervalByUnitTime";
+export * from "./splitIntervalByUnitDateTime";

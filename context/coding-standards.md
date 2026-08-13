@@ -51,6 +51,10 @@ export function addDays(dateStr: string, days: number): string {
 - The catch block takes no argument (`catch { ... }`) — we never need the error value.
 - Return the appropriate sentinel for the function's return type.
 
+## Loop Style
+
+Avoid `while` loops in new code. Prefer `for` loops or array methods (`map`, `filter`, `reduce`, etc.). `while` loops are more error-prone and harder to reason about than bounded `for` loops.
+
 ## Plain / Zoned Separation
 
 - `plain/` — timezone-free operations (`PlainDate`, `PlainTime`, `PlainDateTime`)

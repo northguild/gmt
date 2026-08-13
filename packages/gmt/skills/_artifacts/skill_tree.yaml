@@ -10,7 +10,7 @@ library:
 generated_from:
   domain_map: 'skills/_artifacts/domain_map.yaml'
   skill_spec: 'skills/_artifacts/skill_spec.md'
-generated_at: '2026-08-12'
+generated_at: '2026-08-13'
 
 skills:
   # Consumer-facing core skills
@@ -112,7 +112,7 @@ skills:
     domain: core-date-operations
     path: 'skills/validate-dates/SKILL.md'
     package: 'packages/gmt'
-    description: Validate date/time strings, timezone identifiers, intervals, and ranges; check point-in-interval and interval-in-interval containment; merge overlapping or adjacent intervals
+    description: Validate date/time strings, timezone identifiers, intervals, and ranges; check point-in-interval and interval-in-interval containment; merge overlapping or adjacent intervals; split intervals into sub-intervals by duration unit
     sources:
       - 'burglekitt/gmt:packages/gmt/src/plain/validate/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/plain/interval/validate/index.ts'
@@ -122,18 +122,24 @@ skills:
       - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalUnionDate.ts'
       - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalUnionTime.ts'
       - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalUnionDateTime.ts'
+      - 'burglekitt/gmt:packages/gmt/src/plain/interval/splitIntervalByUnitDate.ts'
+      - 'burglekitt/gmt:packages/gmt/src/plain/interval/splitIntervalByUnitTime.ts'
+      - 'burglekitt/gmt:packages/gmt/src/plain/interval/splitIntervalByUnitDateTime.ts'
       - 'burglekitt/gmt:packages/gmt/src/utc/validate/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/utc/interval/validate/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/utc/interval/intervalContainsUtc.ts'
       - 'burglekitt/gmt:packages/gmt/src/utc/interval/intervalUnionUtc.ts'
+      - 'burglekitt/gmt:packages/gmt/src/utc/interval/splitIntervalByUnitUtc.ts'
       - 'burglekitt/gmt:packages/gmt/src/unix/validate/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/unix/interval/validate/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/unix/interval/intervalContainsUnix.ts'
       - 'burglekitt/gmt:packages/gmt/src/unix/interval/intervalUnionUnix.ts'
+      - 'burglekitt/gmt:packages/gmt/src/unix/interval/splitIntervalByUnitUnix.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/validate/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/interval/validate/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/interval/intervalContainsZoned.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/interval/intervalUnionZoned.ts'
+      - 'burglekitt/gmt:packages/gmt/src/zoned/interval/splitIntervalByUnitZoned.ts'
 
   - name: Zoned Date Operations
     slug: zoned-date-ops

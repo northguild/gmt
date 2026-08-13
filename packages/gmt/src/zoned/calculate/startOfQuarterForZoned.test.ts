@@ -21,16 +21,16 @@ describe("startOfQuarterForZoned", () => {
 
   it.each`
     fractionalSecondDigits | value                         | expected
-    ${0}                    | ${"2024-02-15T12:00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC]"}
-    ${3}                    | ${"2024-02-15T12:00:00[UTC]"} | ${"2024-01-01T00:00:00.000+00:00[UTC]"}
-    ${6}                    | ${"2024-02-15T12:00:00[UTC]"} | ${"2024-01-01T00:00:00.000000+00:00[UTC]"}
-    ${9}                    | ${"2024-02-15T12:00:00[UTC]"} | ${"2024-01-01T00:00:00.000000000+00:00[UTC]"}
+    ${0}                   | ${"2024-02-15T12:00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC]"}
+    ${3}                   | ${"2024-02-15T12:00:00[UTC]"} | ${"2024-01-01T00:00:00.000+00:00[UTC]"}
+    ${6}                   | ${"2024-02-15T12:00:00[UTC]"} | ${"2024-01-01T00:00:00.000000+00:00[UTC]"}
+    ${9}                   | ${"2024-02-15T12:00:00[UTC]"} | ${"2024-01-01T00:00:00.000000000+00:00[UTC]"}
   `(
     "returns $expected for $value with fractionalSecondDigits $fractionalSecondDigits",
     ({ value, fractionalSecondDigits, expected }) => {
-      expect(
-        startOfQuarterForZoned(value, { fractionalSecondDigits }),
-      ).toBe(expected);
+      expect(startOfQuarterForZoned(value, { fractionalSecondDigits })).toBe(
+        expected,
+      );
     },
   );
 
