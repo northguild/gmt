@@ -25,9 +25,9 @@ Issue number tracker (fill in as issues are created). `Order` is the sequence to
 | 15    | F4    | Issue #57    | Done        | v1.8.0                                       |
 | 16    | B1    | Issue #32    | Done        | not yet                                      |
 | 17    | B2    | Issue #33    | Done        | not yet                                      |
-| 18    | B3    | Issue #34    | Not started | not yet                                      |
-| 19    | B4    | Issue #35    | Not started | not yet                                      |
-| 20    | B5    | Issue #36    | Not started | not yet                                      |
+| 18    | B3    | Issue #34    | Done        | not yet                                      |
+| 19    | B4    | Issue #35    | Done        | not yet                                      |
+| 20    | B5    | Issue #36    | Done        | not yet                                      |
 | 21    | B6    | Issue #37    | Not started | not yet                                      |
 | 22    | B7    | Issue #79    | Not started | minor, Story Group B complete                |
 | 23    | G1    | Issue #58    | Not started | not yet                                      |

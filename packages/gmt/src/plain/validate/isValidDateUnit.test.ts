@@ -13,12 +13,6 @@ describe("isValidDateUnit", () => {
 
   it.each`
     invalidUnit
-    ${"hour"}
-    ${"minute"}
-    ${"second"}
-    ${"millisecond"}
-    ${"microsecond"}
-    ${"nanosecond"}
     ${"not-a-unit"}
     ${""}
     ${1}

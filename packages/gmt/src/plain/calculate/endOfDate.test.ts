@@ -11,7 +11,6 @@ describe("endOfDate", () => {
     expect(endOfDate(value, unit)).toBe(expected);
   });
 
-  // supports weekStartsOn option
   it.each`
     value           | unit      | weekStartsOn | expected
     ${"2024-02-29"} | ${"week"} | ${undefined} | ${"2024-03-03"}
@@ -24,9 +23,8 @@ describe("endOfDate", () => {
     },
   );
 
-  // invalid value
   it.each`
-    invalidDate
+    nonStringInput
     ${"invalid-date"}
     ${"2024-02-30"}
     ${"2024-02-29T00:00:00"}
@@ -36,11 +34,13 @@ describe("endOfDate", () => {
     ${12}
     ${true}
     ${false}
-  `("returns empty string for invalid date $invalidDate", ({ invalidDate }) => {
-    expect(endOfDate(invalidDate, "month")).toBe("");
-  });
+  `(
+    "returns empty string for non-string input $nonStringInput",
+    ({ nonStringInput }) => {
+      expect(endOfDate(nonStringInput, "month")).toBe("");
+    },
+  );
 
-  // invalid unit
   it.each`
     invalidUnit
     ${"invalid-unit"}

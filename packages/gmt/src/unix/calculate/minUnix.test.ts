@@ -2,9 +2,9 @@ import { minUnix } from "./minUnix";
 
 describe("minUnix", () => {
   it.each`
-    unixValues                              | expected
-    ${[1707403200, 1704067200, 1708166400]} | ${1704067200}
-    ${[1704067200, 1707403200]}             | ${1704067200}
+    unixValues                  | expected
+    ${[1704067200, 1735689599]} | ${1704067200}
+    ${[1735689599, 1704067200]} | ${1704067200}
   `(
     "returns $expected for unixValues $unixValues",
     ({ unixValues, expected }) => {

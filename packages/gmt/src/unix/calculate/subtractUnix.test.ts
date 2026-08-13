@@ -1,17 +1,16 @@
-import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
+import { Temporal } from "@js-temporal/polyfill";
+import { mockSystemTimeZone } from "../../test/timeZoneMatrix";
 import { subtractUnix } from "./subtractUnix";
 
 describe("subtractUnix", () => {
-  let timeZoneSpy: ReturnType<typeof vi.spyOn>;
+  let cleanup: () => void;
 
   beforeEach(() => {
-    timeZoneSpy = vi
-      .spyOn(getSystemTimeZoneModule, "getSystemTimeZone")
-      .mockReturnValue("UTC");
+    cleanup = mockSystemTimeZone("UTC");
   });
 
   afterEach(() => {
-    timeZoneSpy.mockRestore();
+    cleanup();
   });
 
   it.each`
@@ -72,4 +71,13 @@ describe("subtractUnix", () => {
       ).toBe(expected);
     },
   );
+
+  it("returns null when Temporal.Instant.fromEpochMilliseconds throws", () => {
+    vi.spyOn(Temporal.Instant, "fromEpochMilliseconds").mockImplementation(
+      () => {
+        throw new Error("simulated failure");
+      },
+    );
+    expect(subtractUnix(1709251200000, { days: 1 })).toBeNull();
+  });
 });

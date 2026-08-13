@@ -1,25 +1,24 @@
-import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
+import { Temporal } from "@js-temporal/polyfill";
+import { mockSystemTimeZone } from "../../test/timeZoneMatrix";
 import { isBetweenUnix } from "./isBetweenUnix";
 
 describe("isBetweenUnix", () => {
-  let timeZoneSpy: ReturnType<typeof vi.spyOn>;
+  let cleanup: () => void;
 
   beforeEach(() => {
-    timeZoneSpy = vi
-      .spyOn(getSystemTimeZoneModule, "getSystemTimeZone")
-      .mockReturnValue("UTC");
+    cleanup = mockSystemTimeZone("UTC");
   });
 
   afterEach(() => {
-    timeZoneSpy.mockRestore();
+    cleanup();
   });
 
   it.each`
     value         | start         | end           | expected
-    ${1706659200} | ${1704067200} | ${1709251200} | ${true}
-    ${1704067200} | ${1704067200} | ${1709251200} | ${true}
-    ${1709251200} | ${1704067200} | ${1709251200} | ${true}
-    ${1700000000} | ${1704067200} | ${1709251200} | ${false}
+    ${1706659200} | ${1704067200} | ${1709155200} | ${true}
+    ${1704067200} | ${1704067200} | ${1709155200} | ${true}
+    ${1709155200} | ${1704067200} | ${1709155200} | ${true}
+    ${1700000000} | ${1704067200} | ${1709155200} | ${false}
   `(
     "returns $expected for value $value between $start and $end",
     ({ value, start, end, expected }) => {
@@ -31,10 +30,10 @@ describe("isBetweenUnix", () => {
 
   it.each`
     value         | start         | end           | inclusiveStart | inclusiveEnd | expected
-    ${1704067200} | ${1704067200} | ${1709251200} | ${false}       | ${true}      | ${false}
+    ${1704067200} | ${1704067200} | ${1709155200} | ${false}       | ${true}      | ${false}
     ${1706659200} | ${1704067200} | ${1706652800} | ${true}        | ${false}     | ${false}
-    ${1704067200} | ${1704067200} | ${1709251200} | ${false}       | ${false}     | ${false}
-    ${1706659200} | ${1704067200} | ${1709251200} | ${false}       | ${false}     | ${true}
+    ${1704067200} | ${1704067200} | ${1709155200} | ${false}       | ${false}     | ${false}
+    ${1706659200} | ${1704067200} | ${1709155200} | ${false}       | ${false}     | ${true}
   `(
     "supports inclusive options for value $value between $start and $end",
     ({ value, start, end, inclusiveStart, inclusiveEnd, expected }) => {
@@ -50,8 +49,8 @@ describe("isBetweenUnix", () => {
 
   it.each`
     value         | start         | end
-    ${"invalid"}  | ${1704067200} | ${1709251200}
-    ${1706659200} | ${"invalid"}  | ${1709251200}
+    ${"invalid"}  | ${1704067200} | ${1709155200}
+    ${1706659200} | ${"invalid"}  | ${1709155200}
     ${1706659200} | ${1704067200} | ${"invalid"}
   `(
     "returns false for invalid inputs: $value | $start | $end",
@@ -63,6 +62,15 @@ describe("isBetweenUnix", () => {
   );
 
   it("returns false when start is after end", () => {
-    expect(isBetweenUnix(1706659200, 1709251200, 1704067200)).toBe(false);
+    expect(isBetweenUnix(1706659200, 1709155200, 1704067200)).toBe(false);
+  });
+
+  it("returns false when Temporal.Instant.fromEpochMilliseconds throws", () => {
+    vi.spyOn(Temporal.Instant, "fromEpochMilliseconds").mockImplementation(
+      () => {
+        throw new Error("simulated failure");
+      },
+    );
+    expect(isBetweenUnix(1706659200, 1704067200, 1709155200)).toBe(false);
   });
 });

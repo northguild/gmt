@@ -1,4 +1,5 @@
 import { endOfQuarterForUtc } from "./endOfQuarterForUtc";
+import { mockTemporalInstantFromThrow } from "../../test/mocks";
 
 describe("endOfQuarterForUtc", () => {
   it.each`
@@ -26,4 +27,9 @@ describe("endOfQuarterForUtc", () => {
       expect(endOfQuarterForUtc(invalidValue as never)).toBe("");
     },
   );
+
+  it("returns empty string when Temporal.Instant.from throws", () => {
+    mockTemporalInstantFromThrow();
+    expect(endOfQuarterForUtc("2024-01-15T12:00:00Z")).toBe("");
+  });
 });

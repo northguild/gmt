@@ -3,15 +3,15 @@ import { isValidTimeRange } from "./isValidTimeRange";
 describe("isValidTimeRange", () => {
   it.each`
     value1        | value2        | allowEqual | expected
-    ${"09:00:00"} | ${"17:00:00"} | ${false}   | ${true}
     ${"00:00:00"} | ${"23:59:59"} | ${false}   | ${true}
     ${"12:00:00"} | ${"12:01:00"} | ${false}   | ${true}
+    ${"09:00:00"} | ${"17:00:00"} | ${false}   | ${true}
   `(
     "returns $expected for valid time range $value1 to $value2 (allowEqual=$allowEqual)",
     ({ value1, value2, allowEqual, expected }) => {
       expect(
         isValidTimeRange({ value1, value2, options: { allowEqual } }),
-      ).toEqual(expected);
+      ).toBe(expected);
     },
   );
 
@@ -24,7 +24,7 @@ describe("isValidTimeRange", () => {
     ({ value1, value2, allowEqual, expected }) => {
       expect(
         isValidTimeRange({ value1, value2, options: { allowEqual } }),
-      ).toEqual(expected);
+      ).toBe(expected);
     },
   );
 
@@ -38,7 +38,7 @@ describe("isValidTimeRange", () => {
     ({ value1, value2, allowEqual, expected }) => {
       expect(
         isValidTimeRange({ value1, value2, options: { allowEqual } }),
-      ).toEqual(expected);
+      ).toBe(expected);
     },
   );
 

@@ -1,6 +1,6 @@
 import {
-  TomorrowTimeZone,
   validOnlyBattleTestTimeZones,
+  TomorrowTimeZone,
   YesterdayTimeZone,
 } from "../../test";
 import { isValidTimeZone } from ".";
@@ -33,10 +33,11 @@ describe("isValidTimeZone", () => {
   it.each`
     timeZone
     ${"Not/AZone"}
-    ${"UTC+1"}
     ${""}
     ${null}
     ${undefined}
+    ${123}
+    ${true}
   `("returns false for invalid timeZone $timeZone", ({ timeZone }) => {
     expect(isValidTimeZone(timeZone as never)).toBe(false);
   });

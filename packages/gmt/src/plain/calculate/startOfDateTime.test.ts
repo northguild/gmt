@@ -17,7 +17,6 @@ describe("startOfDateTime", () => {
     expect(startOfDateTime(value, unit)).toBe(expected);
   });
 
-  // supports weekStartsOn option
   it.each`
     value                    | unit      | weekStartsOn | expected
     ${"2024-02-29T12:34:56"} | ${"week"} | ${undefined} | ${"2024-02-26T00:00:00"}
@@ -30,7 +29,6 @@ describe("startOfDateTime", () => {
     },
   );
 
-  // supports fractionalSecondDigits option
   it.each`
     value                              | unit        | fractionalSecondDigits | expected
     ${"2024-02-29T12:34:56.789"}       | ${"second"} | ${0}                   | ${"2024-02-29T12:34:56"}
@@ -47,9 +45,8 @@ describe("startOfDateTime", () => {
     },
   );
 
-  // invalid value
   it.each`
-    invalidDateTime
+    nonStringInput
     ${"invalid-datetime"}
     ${"2024-02-30T12:34:56"}
     ${"2024-02-29T24:00:00"}
@@ -61,13 +58,12 @@ describe("startOfDateTime", () => {
     ${true}
     ${false}
   `(
-    "returns empty string for invalid datetime $invalidDateTime",
-    ({ invalidDateTime }) => {
-      expect(startOfDateTime(invalidDateTime, "month")).toBe("");
+    "returns empty string for non-string input $nonStringInput",
+    ({ nonStringInput }) => {
+      expect(startOfDateTime(nonStringInput, "month")).toBe("");
     },
   );
 
-  // invalid unit
   it.each`
     invalidUnit
     ${"invalid-unit"}
@@ -78,6 +74,8 @@ describe("startOfDateTime", () => {
     ${true}
     ${false}
   `("returns empty string for invalid unit $invalidUnit", ({ invalidUnit }) => {
-    expect(startOfDateTime("2024-02-29T12:34:56", invalidUnit)).toBe("");
+    expect(startOfDateTime("2024-02-29T12:34:56", invalidUnit as never)).toBe(
+      "",
+    );
   });
 });

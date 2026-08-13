@@ -2,7 +2,6 @@ import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { roundDate } from "./roundDate";
 
 describe("roundDate", () => {
-  // happy path: all supported date units with default rounding
   it.each`
     value           | unit       | expected
     ${"2024-06-15"} | ${"year"}  | ${"2024-01-01"}
@@ -16,7 +15,6 @@ describe("roundDate", () => {
     },
   );
 
-  // rounding modes
   it.each`
     value           | unit       | roundingMode    | expected
     ${"2024-02-15"} | ${"month"} | ${"floor"}      | ${"2024-02-01"}
@@ -39,7 +37,6 @@ describe("roundDate", () => {
     },
   );
 
-  // rounding increments
   it.each`
     value           | unit      | roundingIncrement | expected
     ${"2024-06-15"} | ${"day"}  | ${2}              | ${"2024-06-15"}
@@ -55,7 +52,6 @@ describe("roundDate", () => {
     },
   );
 
-  // zero and negative roundingIncrement return ""
   it.each`
     value           | unit       | roundingIncrement
     ${"2024-06-15"} | ${"day"}   | ${0}
@@ -71,7 +67,6 @@ describe("roundDate", () => {
     },
   );
 
-  // exact half-boundary cases
   it.each`
     value           | unit       | roundingMode    | expected
     ${"2024-06-16"} | ${"month"} | ${"halfExpand"} | ${"2024-07-01"}
@@ -88,9 +83,8 @@ describe("roundDate", () => {
     },
   );
 
-  // invalid date values
   it.each`
-    invalidDate
+    nonStringInput
     ${"invalid-date"}
     ${"2024-02-30"}
     ${"2024-02-29T00:00:00"}
@@ -100,11 +94,13 @@ describe("roundDate", () => {
     ${12}
     ${true}
     ${false}
-  `("returns empty string for invalid date $invalidDate", ({ invalidDate }) => {
-    expect(roundDate(invalidDate, { smallestUnit: "month" })).toBe("");
-  });
+  `(
+    "returns empty string for non-string input $nonStringInput",
+    ({ nonStringInput }) => {
+      expect(roundDate(nonStringInput, { smallestUnit: "month" })).toBe("");
+    },
+  );
 
-  // invalid unit values
   it.each`
     invalidUnit
     ${"invalid-unit"}
@@ -125,7 +121,6 @@ describe("roundDate", () => {
     ).toBe("");
   });
 
-  // error path: Temporal.PlainDate.from throws
   it("returns empty string when Temporal.PlainDate.from throws", () => {
     mockTemporalPlainDateFromThrow();
     expect(roundDate("2024-06-15", { smallestUnit: "month" })).toBe("");

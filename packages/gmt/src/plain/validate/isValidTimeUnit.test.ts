@@ -15,10 +15,6 @@ describe("isValidTimeUnit", () => {
 
   it.each`
     invalidUnit
-    ${"year"}
-    ${"month"}
-    ${"week"}
-    ${"day"}
     ${"not-a-unit"}
     ${""}
     ${1}

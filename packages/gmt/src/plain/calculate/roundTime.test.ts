@@ -2,7 +2,6 @@ import { mockTemporalPlainTimeFromThrow } from "../../test/mocks";
 import { roundTime } from "./roundTime";
 
 describe("roundTime", () => {
-  // happy path: all supported time units with default rounding
   it.each`
     value                   | unit             | expected
     ${"12:34:56"}           | ${"hour"}        | ${"13:00:00"}
@@ -18,7 +17,6 @@ describe("roundTime", () => {
     },
   );
 
-  // rounding modes
   it.each`
     value                   | unit             | roundingMode | expected
     ${"12:34:56"}           | ${"hour"}        | ${"floor"}   | ${"12:00:00"}
@@ -40,7 +38,6 @@ describe("roundTime", () => {
     },
   );
 
-  // rounding increments
   it.each`
     value         | unit        | roundingIncrement | expected
     ${"12:34:56"} | ${"minute"} | ${15}             | ${"12:30:00"}
@@ -56,7 +53,6 @@ describe("roundTime", () => {
     },
   );
 
-  // zero and negative roundingIncrement return ""
   it.each`
     value         | unit        | roundingIncrement
     ${"12:34:56"} | ${"minute"} | ${0}
@@ -71,7 +67,6 @@ describe("roundTime", () => {
     },
   );
 
-  // exact half-boundary and boundary cases
   it.each`
     value                   | unit             | roundingMode    | expected
     ${"12:30:00"}           | ${"minute"}      | ${"halfExpand"} | ${"12:30:00"}
@@ -96,9 +91,8 @@ describe("roundTime", () => {
     },
   );
 
-  // invalid time values
   it.each`
-    invalidTime
+    nonStringInput
     ${"invalid-time"}
     ${"24:34:56"}
     ${"12:60:00"}
@@ -110,11 +104,13 @@ describe("roundTime", () => {
     ${12}
     ${true}
     ${false}
-  `("returns empty string for invalid time $invalidTime", ({ invalidTime }) => {
-    expect(roundTime(invalidTime, { smallestUnit: "hour" })).toBe("");
-  });
+  `(
+    "returns empty string for non-string input $nonStringInput",
+    ({ nonStringInput }) => {
+      expect(roundTime(nonStringInput, { smallestUnit: "hour" })).toBe("");
+    },
+  );
 
-  // invalid unit values
   it.each`
     invalidUnit
     ${"invalid-unit"}
@@ -136,7 +132,6 @@ describe("roundTime", () => {
     );
   });
 
-  // invalid roundingIncrement returns "" via catch block
   it.each`
     value         | unit        | roundingIncrement
     ${"12:34:56"} | ${"minute"} | ${7}
@@ -150,7 +145,6 @@ describe("roundTime", () => {
     },
   );
 
-  // error path: Temporal.PlainTime.from throws
   it("returns empty string when Temporal.PlainTime.from throws", () => {
     mockTemporalPlainTimeFromThrow();
     expect(roundTime("12:34:56", { smallestUnit: "hour" })).toBe("");

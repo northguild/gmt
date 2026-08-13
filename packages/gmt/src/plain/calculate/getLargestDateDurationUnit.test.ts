@@ -1,15 +1,13 @@
 import { getLargestDateDurationUnit } from "./getLargestDateDurationUnit";
 
 describe("getLargestDateDurationUnit", () => {
-  it("should return the largest unit from the array", () => {
-    expect(getLargestDateDurationUnit(["days", "months", "years"])).toBe(
-      "years",
-    );
-    expect(getLargestDateDurationUnit(["weeks", "days"])).toBe("weeks");
-    expect(getLargestDateDurationUnit(["months", "days"])).toBe("months");
-  });
-
-  it("should default to days if no valid unit is found", () => {
-    expect(getLargestDateDurationUnit([])).toBe("days");
+  it.each`
+    units                          | expected
+    ${["days", "months", "years"]} | ${"years"}
+    ${["weeks", "days"]}           | ${"weeks"}
+    ${["months", "days"]}          | ${"months"}
+    ${[]}                          | ${"days"}
+  `("returns $expected for units $units", ({ units, expected }) => {
+    expect(getLargestDateDurationUnit(units)).toBe(expected);
   });
 });

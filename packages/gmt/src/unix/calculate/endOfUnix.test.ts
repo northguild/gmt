@@ -1,29 +1,17 @@
-import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
+import { Temporal } from "@js-temporal/polyfill";
+import { mockSystemTimeZone } from "../../test/timeZoneMatrix";
+import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { endOfUnix } from "./endOfUnix";
 
-// Epoch values used below, in ISO 8601 UTC:
-// 1706659200    is 2024-01-31T00:00:00Z
-// 1706659259    is 2024-01-31T00:00:59Z
-// 1706662799    is 2024-01-31T00:59:59Z
-// 1706745599    is 2024-01-31T23:59:59Z
-// 1707004799    is 2024-02-03T23:59:59Z
-// 1707091199    is 2024-02-04T23:59:59Z
-// 1735689599    is 2024-12-31T23:59:59Z
-// 1730613599999 is 2024-11-03T05:59:59.999Z
-// 1730616300000 is 2024-11-03T06:45:00.000Z
-// 1730617199999 is 2024-11-03T06:59:59.999Z
-
 describe("endOfUnix", () => {
-  let timeZoneSpy: ReturnType<typeof vi.spyOn>;
+  let cleanup: () => void;
 
   beforeEach(() => {
-    timeZoneSpy = vi
-      .spyOn(getSystemTimeZoneModule, "getSystemTimeZone")
-      .mockReturnValue("UTC");
+    cleanup = mockSystemTimeZone("UTC");
   });
 
   afterEach(() => {
-    timeZoneSpy.mockRestore();
+    cleanup();
   });
 
   it.each`
@@ -113,4 +101,18 @@ describe("endOfUnix", () => {
       expect(endOfUnix(1730616300000, "hour", optionsArg)).toBe(expected);
     },
   );
+
+  it("returns null when Temporal.Instant.fromEpochMilliseconds throws", () => {
+    vi.spyOn(Temporal.Instant, "fromEpochMilliseconds").mockImplementation(
+      () => {
+        throw new Error("simulated failure");
+      },
+    );
+    expect(endOfUnix(1706659200, "day")).toBeNull();
+  });
+
+  it("returns null when Temporal.PlainDate.from throws", () => {
+    mockTemporalPlainDateFromThrow();
+    expect(endOfUnix(1706659200, "month")).toBeNull();
+  });
 });

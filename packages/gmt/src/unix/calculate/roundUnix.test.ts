@@ -1,27 +1,16 @@
-import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
+import { Temporal } from "@js-temporal/polyfill";
+import { mockSystemTimeZone } from "../../test/timeZoneMatrix";
 import { roundUnix } from "./roundUnix";
 
-// Epoch values used below, in ISO 8601 UTC:
-// 1704067200000    is 2024-01-01T00:00:00Z
-// 1706400000000    is 2024-01-28T00:00:00Z
-// 1706486400000    is 2024-01-29T00:00:00Z
-// 1706659200000    is 2024-01-31T00:00:00Z
-// 1706745600000    is 2024-02-01T00:00:00Z
-// 1706778000000    is 2024-02-01T09:00:00Z
-// 1706780760000    is 2024-02-01T09:46:00Z
-// 1706780800000    is 2024-02-01T09:46:40Z
-
 describe("roundUnix", () => {
-  let timeZoneSpy: ReturnType<typeof vi.spyOn>;
+  let cleanup: () => void;
 
   beforeEach(() => {
-    timeZoneSpy = vi
-      .spyOn(getSystemTimeZoneModule, "getSystemTimeZone")
-      .mockReturnValue("UTC");
+    cleanup = mockSystemTimeZone("UTC");
   });
 
   afterEach(() => {
-    timeZoneSpy.mockRestore();
+    cleanup();
   });
 
   // happy path: all supported units with default rounding
@@ -174,4 +163,13 @@ describe("roundUnix", () => {
       );
     },
   );
+
+  it("returns null when Temporal.Instant.fromEpochMilliseconds throws", () => {
+    vi.spyOn(Temporal.Instant, "fromEpochMilliseconds").mockImplementation(
+      () => {
+        throw new Error("simulated failure");
+      },
+    );
+    expect(roundUnix(1706780800000, { smallestUnit: "hour" })).toBeNull();
+  });
 });

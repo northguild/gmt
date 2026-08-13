@@ -2,7 +2,6 @@ import { mockTemporalPlainDateTimeFromThrow } from "../../test/mocks";
 import { roundDateTime } from "./roundDateTime";
 
 describe("roundDateTime", () => {
-  // date units: year, month, week (manual rounding)
   it.each`
     value                    | unit       | expected
     ${"2024-06-15T12:34:56"} | ${"year"}  | ${"2024-01-01T00:00:00"}
@@ -15,7 +14,6 @@ describe("roundDateTime", () => {
     },
   );
 
-  // time units: day, hour, minute, second (Temporal.PlainDateTime.round)
   it.each`
     value                    | unit        | expected
     ${"2024-06-15T12:34:56"} | ${"day"}    | ${"2024-06-16T00:00:00"}
@@ -29,7 +27,6 @@ describe("roundDateTime", () => {
     },
   );
 
-  // sub-second units with precision
   it.each`
     value                              | unit             | expected
     ${"2024-06-15T12:34:56.789"}       | ${"millisecond"} | ${"2024-06-15T12:34:56.789"}
@@ -42,7 +39,6 @@ describe("roundDateTime", () => {
     },
   );
 
-  // rounding modes for date units
   it.each`
     value                    | unit       | roundingMode    | expected
     ${"2024-02-15T12:34:56"} | ${"month"} | ${"floor"}      | ${"2024-02-01T00:00:00"}
@@ -63,7 +59,6 @@ describe("roundDateTime", () => {
     },
   );
 
-  // rounding modes for time units
   it.each`
     value                    | unit        | roundingMode | expected
     ${"2024-06-15T12:34:56"} | ${"hour"}   | ${"floor"}   | ${"2024-06-15T12:00:00"}
@@ -80,7 +75,6 @@ describe("roundDateTime", () => {
     },
   );
 
-  // rounding increments for time units
   it.each`
     value                    | unit        | roundingIncrement | expected
     ${"2024-06-15T12:34:56"} | ${"hour"}   | ${2}              | ${"2024-06-15T12:00:00"}
@@ -95,7 +89,6 @@ describe("roundDateTime", () => {
     },
   );
 
-  // zero and negative roundingIncrement return ""
   it.each`
     value                    | unit        | roundingIncrement
     ${"2024-06-15T12:34:56"} | ${"hour"}   | ${0}
@@ -110,7 +103,6 @@ describe("roundDateTime", () => {
     },
   );
 
-  // exact half-boundary for date units
   it.each`
     value                    | unit       | roundingMode    | expected
     ${"2024-06-16T12:34:56"} | ${"month"} | ${"halfExpand"} | ${"2024-07-01T00:00:00"}
@@ -126,7 +118,6 @@ describe("roundDateTime", () => {
     },
   );
 
-  // leap day edge case
   it.each`
     value                    | unit       | roundingMode    | expected
     ${"2024-02-29T12:34:56"} | ${"month"} | ${"halfExpand"} | ${"2024-03-01T00:00:00"}
@@ -140,13 +131,12 @@ describe("roundDateTime", () => {
     },
   );
 
-  // invalid datetime values
   it.each`
-    invalidDateTime
+    nonStringInput
     ${"invalid"}
     ${"2024-02-30T12:34:56"}
     ${"2024-02-29T24:00:00"}
-    ${"2024-02-29T23:59:60"}
+    ${"2024-02-29T12:34:60"}
     ${"2024-02-29T12:34:56Z"}
     ${null}
     ${undefined}
@@ -154,13 +144,12 @@ describe("roundDateTime", () => {
     ${true}
     ${false}
   `(
-    "returns empty string for invalid datetime $invalidDateTime",
-    ({ invalidDateTime }) => {
-      expect(roundDateTime(invalidDateTime, { smallestUnit: "hour" })).toBe("");
+    "returns empty string for non-string input $nonStringInput",
+    ({ nonStringInput }) => {
+      expect(roundDateTime(nonStringInput, { smallestUnit: "hour" })).toBe("");
     },
   );
 
-  // invalid unit values
   it.each`
     invalidUnit
     ${"invalid-unit"}
@@ -180,7 +169,6 @@ describe("roundDateTime", () => {
     ).toBe("");
   });
 
-  // error path: Temporal.PlainDateTime.from throws
   it("returns empty string when Temporal.PlainDateTime.from throws", () => {
     mockTemporalPlainDateTimeFromThrow();
     expect(roundDateTime("2024-06-15T12:34:56", { smallestUnit: "hour" })).toBe(

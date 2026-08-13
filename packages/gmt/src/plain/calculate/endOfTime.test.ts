@@ -14,7 +14,6 @@ describe("endOfTime", () => {
     expect(endOfTime(value, unit)).toBe(expected);
   });
 
-  // supports fractionalSecondDigits option
   it.each`
     value                   | unit        | fractionalSecondDigits | expected
     ${"12:34:56.123456789"} | ${"second"} | ${0}                   | ${"12:34:56"}
@@ -28,9 +27,8 @@ describe("endOfTime", () => {
     },
   );
 
-  // invalid plain time
   it.each`
-    invalidTime
+    nonStringInput
     ${"invalid-time"}
     ${"24:34:56.1234567890"}
     ${"2024-02-29T12:34:56"}
@@ -40,11 +38,13 @@ describe("endOfTime", () => {
     ${12}
     ${true}
     ${false}
-  `("returns empty string for invalid time $invalidTime", ({ invalidTime }) => {
-    expect(endOfTime(invalidTime, "hour")).toBe("");
-  });
+  `(
+    "returns empty string for non-string input $nonStringInput",
+    ({ nonStringInput }) => {
+      expect(endOfTime(nonStringInput, "hour")).toBe("");
+    },
+  );
 
-  // invalid unit
   it.each`
     invalidUnit
     ${"invalid-unit"}
@@ -57,6 +57,6 @@ describe("endOfTime", () => {
     ${true}
     ${false}
   `("returns empty string for invalid unit $invalidUnit", ({ invalidUnit }) => {
-    expect(endOfTime("12:34:56", invalidUnit)).toBe("");
+    expect(endOfTime("12:34:56", invalidUnit as never)).toBe("");
   });
 });

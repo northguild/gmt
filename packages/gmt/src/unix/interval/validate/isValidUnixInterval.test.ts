@@ -2,11 +2,11 @@ import { isValidUnixInterval } from "./isValidUnixInterval";
 
 describe("isValidUnixInterval", () => {
   it.each`
-    start     | end             | expected
-    ${0}      | ${1700000000}   | ${true}
-    ${-86400} | ${0}            | ${true}
-    ${1000}   | ${2000}         | ${true}
-    ${"0"}    | ${"1700000000"} | ${true}
+    start         | end             | expected
+    ${0}          | ${1704067200}   | ${true}
+    ${-86400}     | ${0}            | ${true}
+    ${1704067200} | ${1735689599}   | ${true}
+    ${"0"}        | ${"1704067200"} | ${true}
   `(
     "returns $expected for valid Unix interval $start to $end",
     ({ start, end, expected }) => {
@@ -16,9 +16,9 @@ describe("isValidUnixInterval", () => {
 
   it.each`
     start   | end     | expected
-    ${1000} | ${1000} | ${true}
+    ${1000} | ${2000} | ${true}
   `(
-    "returns $expected for equal Unix values $start",
+    "returns $expected for equal Unix interval values $start",
     ({ start, end, expected }) => {
       expect(isValidUnixInterval(start, end)).toBe(expected);
     },
@@ -26,8 +26,8 @@ describe("isValidUnixInterval", () => {
 
   it.each`
     start         | end     | expected
-    ${1700000000} | ${0}    | ${false}
-    ${2000}       | ${1000} | ${false}
+    ${1735689599} | ${0}    | ${false}
+    ${1704067200} | ${1000} | ${false}
   `(
     "returns $expected for reversed Unix interval $start to $end",
     ({ start, end, expected }) => {

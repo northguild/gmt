@@ -1,17 +1,21 @@
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { subtractBusinessDays } from "./subtractBusinessDays";
 
-const testDay = "2024-02-29"; // Thursday
+const testDay = "2024-02-29";
 
 describe("subtractBusinessDays", () => {
   it.each`
-    value      | amount | expected
-    ${testDay} | ${1}   | ${"2024-02-28"}
-    ${testDay} | ${10}  | ${"2024-02-15"}
-    ${testDay} | ${0}   | ${"2024-02-29"}
-    ${testDay} | ${5}   | ${"2024-02-22"}
-    ${testDay} | ${20}  | ${"2024-02-01"}
-    ${testDay} | ${50}  | ${"2023-12-21"}
+    value      | amount  | expected
+    ${testDay} | ${1}    | ${"2024-02-28"}
+    ${testDay} | ${10}   | ${"2024-02-15"}
+    ${testDay} | ${0}    | ${"2024-02-29"}
+    ${testDay} | ${5}    | ${"2024-02-22"}
+    ${testDay} | ${20}   | ${"2024-02-01"}
+    ${testDay} | ${50}   | ${"2023-12-21"}
+    ${testDay} | ${-1}   | ${"2024-03-01"}
+    ${testDay} | ${-5}   | ${"2024-03-07"}
+    ${testDay} | ${-10}  | ${"2024-03-14"}
+    ${testDay} | ${-100} | ${"2024-07-18"}
   `(
     "returns $expected for $value - $amount business days",
     ({ value, amount, expected }) => {
@@ -20,60 +24,7 @@ describe("subtractBusinessDays", () => {
   );
 
   it.each`
-    value      | amount | expected
-    ${testDay} | ${-1}  | ${"2024-03-01"}
-    ${testDay} | ${-5}  | ${"2024-03-07"}
-    ${testDay} | ${-10} | ${"2024-03-14"}
-  `(
-    "returns $expected when subtracting a negative amount: $amount",
-    ({ value, amount, expected }) => {
-      expect(subtractBusinessDays(value, amount)).toBe(expected);
-    },
-  );
-
-  it.each`
-    value      | amount | expected
-    ${testDay} | ${1}   | ${"2024-02-28"}
-    ${testDay} | ${2}   | ${"2024-02-27"}
-  `(
-    "returns $expected for $value - $amount business days",
-    ({ value, amount, expected }) => {
-      expect(subtractBusinessDays(value, amount)).toBe(expected);
-    },
-  );
-
-  it.each`
-    value      | amount | expected
-    ${testDay} | ${1}   | ${"2024-02-28"}
-    ${testDay} | ${2}   | ${"2024-02-27"}
-    ${testDay} | ${3}   | ${"2024-02-26"}
-    ${testDay} | ${4}   | ${"2024-02-23"}
-    ${testDay} | ${5}   | ${"2024-02-22"}
-    ${testDay} | ${10}  | ${"2024-02-15"}
-  `(
-    "returns $expected for $value - $amount business days",
-    ({ value, amount, expected }) => {
-      expect(subtractBusinessDays(value, amount)).toBe(expected);
-    },
-  );
-
-  it.each`
-    value      | amount | expected
-    ${testDay} | ${2}   | ${"2024-02-27"}
-    ${testDay} | ${5}   | ${"2024-02-22"}
-    ${testDay} | ${10}  | ${"2024-02-15"}
-    ${testDay} | ${20}  | ${"2024-02-01"}
-    ${testDay} | ${50}  | ${"2023-12-21"}
-    ${testDay} | ${100} | ${"2023-10-12"}
-  `(
-    "returns $expected for boundary-crossing $value - $amount business days",
-    ({ value, amount, expected }) => {
-      expect(subtractBusinessDays(value, amount)).toBe(expected);
-    },
-  );
-
-  it.each`
-    invalidValue
+    nonStringInput
     ${"invalid-date"}
     ${"2024-02-30"}
     ${""}
@@ -85,9 +36,9 @@ describe("subtractBusinessDays", () => {
     ${"2024/03/18"}
     ${"18-03-2024"}
   `(
-    "returns an empty string for invalid value $invalidValue",
-    ({ invalidValue }) => {
-      expect(subtractBusinessDays(invalidValue as never, 1)).toBe("");
+    "returns an empty string for non-string input $nonStringInput",
+    ({ nonStringInput }) => {
+      expect(subtractBusinessDays(nonStringInput as never, 1)).toBe("");
     },
   );
 

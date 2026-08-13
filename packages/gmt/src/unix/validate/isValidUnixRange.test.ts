@@ -2,11 +2,11 @@ import { isValidUnixRange } from "./isValidUnixRange";
 
 describe("isValidUnixRange", () => {
   it.each`
-    value1    | value2          | allowEqual | expected
-    ${0}      | ${1700000000}   | ${false}   | ${true}
-    ${-86400} | ${0}            | ${false}   | ${true}
-    ${1000}   | ${2000}         | ${false}   | ${true}
-    ${"0"}    | ${"1700000000"} | ${false}   | ${true}
+    value1        | value2          | allowEqual | expected
+    ${1704067200} | ${1735689599}   | ${false}   | ${true}
+    ${-86400}     | ${0}            | ${false}   | ${true}
+    ${1704067200} | ${1735689599}   | ${true}    | ${true}
+    ${"0"}        | ${"1704067200"} | ${false}   | ${true}
   `(
     "returns $expected for valid Unix range $value1 to $value2 (allowEqual=$allowEqual)",
     ({ value1, value2, allowEqual, expected }) => {
@@ -17,9 +17,9 @@ describe("isValidUnixRange", () => {
   );
 
   it.each`
-    value1  | value2  | allowEqual | expected
-    ${1000} | ${1000} | ${false}   | ${false}
-    ${1000} | ${1000} | ${true}    | ${true}
+    value1        | value2        | allowEqual | expected
+    ${1704067200} | ${1704067200} | ${false}   | ${false}
+    ${1704067200} | ${1704067200} | ${true}    | ${true}
   `(
     "returns $expected for equal Unix values $value1 (allowEqual=$allowEqual)",
     ({ value1, value2, allowEqual, expected }) => {
@@ -30,15 +30,13 @@ describe("isValidUnixRange", () => {
   );
 
   it.each`
-    value1        | value2  | allowEqual | expected
-    ${1700000000} | ${0}    | ${false}   | ${false}
-    ${2000}       | ${1000} | ${false}   | ${false}
+    value1        | value2  | expected
+    ${1735689599} | ${0}    | ${false}
+    ${1704067200} | ${1000} | ${false}
   `(
-    "returns $expected for reversed Unix range $value1 to $value2 (allowEqual=$allowEqual)",
-    ({ value1, value2, allowEqual, expected }) => {
-      expect(
-        isValidUnixRange({ value1, value2, options: { allowEqual } }),
-      ).toBe(expected);
+    "returns $expected for reversed Unix range $value1 to $value2",
+    ({ value1, value2, expected }) => {
+      expect(isValidUnixRange({ value1, value2 })).toBe(expected);
     },
   );
 
@@ -62,14 +60,17 @@ describe("isValidUnixRange", () => {
     ${null}      | ${1000}
     ${undefined} | ${1000}
     ${"abc"}     | ${1000}
-    ${"1000"}    | ${null}
-    ${"1000"}    | ${undefined}
-    ${"1000"}    | ${"abc"}
+    ${1000}      | ${null}
+    ${1000}      | ${undefined}
+    ${1000}      | ${"abc"}
   `(
     "returns false for non-numeric input: $value1, $value2",
     ({ value1, value2 }) => {
       expect(
-        isValidUnixRange({ value1: value1 as never, value2: value2 as never }),
+        isValidUnixRange({
+          value1: value1 as never,
+          value2: value2 as never,
+        }),
       ).toBe(false);
     },
   );

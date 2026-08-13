@@ -20,7 +20,7 @@ describe("endOfQuarterForDate", () => {
   });
 
   it.each`
-    invalidDate
+    nonStringInput
     ${"invalid-date"}
     ${"2024-02-30"}
     ${"2024-02-29T00:00:00"}
@@ -30,7 +30,10 @@ describe("endOfQuarterForDate", () => {
     ${12}
     ${true}
     ${false}
-  `("returns empty string for invalid date $invalidDate", ({ invalidDate }) => {
-    expect(endOfQuarterForDate(invalidDate)).toBe("");
-  });
+  `(
+    "returns empty string for non-string input $nonStringInput",
+    ({ nonStringInput }) => {
+      expect(endOfQuarterForDate(nonStringInput)).toBe("");
+    },
+  );
 });

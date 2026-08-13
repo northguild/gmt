@@ -1,23 +1,16 @@
-import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
+import { Temporal } from "@js-temporal/polyfill";
+import { mockSystemTimeZone } from "../../test/timeZoneMatrix";
 import { startOfQuarterForUnix } from "./startOfQuarterForUnix";
 
-// Epoch values used below, in ISO 8601 UTC:
-// 1704067200 is 2024-01-01T00:00:00Z
-// 1706659200 is 2024-01-31T00:00:00Z
-// 1711929600 is 2024-04-01T00:00:00Z
-// 1711968000 is 2024-04-01T10:40:00Z
-
 describe("startOfQuarterForUnix", () => {
-  let timeZoneSpy: ReturnType<typeof vi.spyOn>;
+  let cleanup: () => void;
 
   beforeEach(() => {
-    timeZoneSpy = vi
-      .spyOn(getSystemTimeZoneModule, "getSystemTimeZone")
-      .mockReturnValue("UTC");
+    cleanup = mockSystemTimeZone("UTC");
   });
 
   afterEach(() => {
-    timeZoneSpy.mockRestore();
+    cleanup();
   });
 
   it.each`
@@ -63,4 +56,13 @@ describe("startOfQuarterForUnix", () => {
       expect(startOfQuarterForUnix(1706659200, optionsArg)).toBe(1704067200);
     },
   );
+
+  it("returns null when Temporal.Instant.fromEpochMilliseconds throws", () => {
+    vi.spyOn(Temporal.Instant, "fromEpochMilliseconds").mockImplementation(
+      () => {
+        throw new Error("simulated failure");
+      },
+    );
+    expect(startOfQuarterForUnix(1706659200)).toBeNull();
+  });
 });

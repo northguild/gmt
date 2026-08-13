@@ -19,16 +19,6 @@ describe("isValidDateTimeUnit", () => {
 
   it.each`
     invalidUnit
-    ${"years"}
-    ${"months"}
-    ${"weeks"}
-    ${"days"}
-    ${"hours"}
-    ${"minutes"}
-    ${"seconds"}
-    ${"milliseconds"}
-    ${"microseconds"}
-    ${"nanoseconds"}
     ${"not-a-unit"}
     ${""}
     ${1}

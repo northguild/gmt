@@ -1,27 +1,23 @@
-import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
+import { Temporal } from "@js-temporal/polyfill";
+import { mockSystemTimeZone } from "../../test/timeZoneMatrix";
 import { endOfQuarterForUnix } from "./endOfQuarterForUnix";
 
-// 1704067200 is 2024-01-01T00:00:00Z
-// 1711929599 is 2024-03-31T23:59:59Z
-
 describe("endOfQuarterForUnix", () => {
-  let timeZoneSpy: ReturnType<typeof vi.spyOn>;
+  let cleanup: () => void;
 
   beforeEach(() => {
-    timeZoneSpy = vi
-      .spyOn(getSystemTimeZoneModule, "getSystemTimeZone")
-      .mockReturnValue("UTC");
+    cleanup = mockSystemTimeZone("UTC");
   });
 
   afterEach(() => {
-    timeZoneSpy.mockRestore();
+    cleanup();
   });
 
   it.each`
     value         | expected
     ${1704067200} | ${1711929599}
     ${1706659200} | ${1711929599}
-    ${1709251200} | ${1711929599}
+    ${1711968000} | ${1719791999}
   `("returns $expected for value $value", ({ value, expected }) => {
     const result = endOfQuarterForUnix(value, { epochUnit: "seconds" });
     expect(result).toBe(expected);
@@ -59,4 +55,13 @@ describe("endOfQuarterForUnix", () => {
       expect(endOfQuarterForUnix(1704067200, optionsArg)).toBe(1711929599);
     },
   );
+
+  it("returns null when Temporal.Instant.fromEpochMilliseconds throws", () => {
+    vi.spyOn(Temporal.Instant, "fromEpochMilliseconds").mockImplementation(
+      () => {
+        throw new Error("simulated failure");
+      },
+    );
+    expect(endOfQuarterForUnix(1704067200)).toBeNull();
+  });
 });

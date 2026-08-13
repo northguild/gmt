@@ -2,9 +2,9 @@ import { maxUnix } from "./maxUnix";
 
 describe("maxUnix", () => {
   it.each`
-    unixValues                              | expected
-    ${[1707403200, 1704067200, 1708166400]} | ${1708166400}
-    ${[1704067200, 1707403200]}             | ${1707403200}
+    unixValues                  | expected
+    ${[1704067200, 1735689599]} | ${1735689599}
+    ${[1735689599, 1704067200]} | ${1735689599}
   `(
     "returns $expected for unixValues $unixValues",
     ({ unixValues, expected }) => {

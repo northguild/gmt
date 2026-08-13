@@ -1,31 +1,36 @@
+import { Temporal } from "@js-temporal/polyfill";
 import { battleTestTimeZones } from "../../test";
-import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
+import { mockSystemTimeZone } from "../../test/timeZoneMatrix";
 import { diffUnixAsDuration } from "./diffUnixAsDuration";
 
 describe("diffUnixAsDuration", () => {
-  for (const timeZone of battleTestTimeZones) {
-    it(`rounds a 90-minute span to PT2H across battle-test timeZone ${timeZone}`, () => {
+  let cleanup: () => void;
+
+  beforeEach(() => {
+    cleanup = mockSystemTimeZone("UTC");
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it.each(
+    battleTestTimeZones.map((timeZone) => ({
+      timeZone,
+      expected: "PT2H",
+    })),
+  )(
+    "rounds a 90-minute span to $expected across battle-test timeZone $timeZone",
+    ({ timeZone, expected }) => {
       expect(
         diffUnixAsDuration(1709164800000, 1709170200000, "hours", {
           smallestUnit: "hours",
           roundingMode: "halfExpand",
           timeZone,
         }),
-      ).toBe("PT2H");
-    });
-  }
-
-  let timeZoneSpy: ReturnType<typeof vi.spyOn>;
-
-  beforeEach(() => {
-    timeZoneSpy = vi
-      .spyOn(getSystemTimeZoneModule, "getSystemTimeZone")
-      .mockReturnValue("UTC");
-  });
-
-  afterEach(() => {
-    timeZoneSpy.mockRestore();
-  });
+      ).toBe(expected);
+    },
+  );
 
   it.each`
     value1        | value2        | unit       | expected
@@ -43,8 +48,8 @@ describe("diffUnixAsDuration", () => {
 
   it.each`
     value1           | value2           | unit      | expected
-    ${1706659200000} | ${1706745600000} | ${"days"} | ${"P1D"}
-    ${1706745600000} | ${1706659200000} | ${"days"} | ${"-P1D"}
+    ${1704067200000} | ${1704153600000} | ${"days"} | ${"P1D"}
+    ${1704153600000} | ${1704067200000} | ${"days"} | ${"-P1D"}
   `(
     "handles direction correctly: $expected for $value1 -> $value2",
     ({ value1, value2, unit, expected }) => {
@@ -54,7 +59,7 @@ describe("diffUnixAsDuration", () => {
 
   it("supports seconds epochUnit", () => {
     expect(
-      diffUnixAsDuration(1706659200, 1706745600, "days", {
+      diffUnixAsDuration(1704067200, 1704153600, "days", {
         epochUnit: "seconds",
       }),
     ).toBe("P1D");
@@ -167,4 +172,13 @@ describe("diffUnixAsDuration", () => {
       ).toBe(expected);
     },
   );
+
+  it("returns null when Temporal.Instant.fromEpochMilliseconds throws", () => {
+    vi.spyOn(Temporal.Instant, "fromEpochMilliseconds").mockImplementation(
+      () => {
+        throw new Error("simulated failure");
+      },
+    );
+    expect(diffUnixAsDuration(1709164800000, 1709170200000, "hours")).toBe("");
+  });
 });

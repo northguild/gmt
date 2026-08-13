@@ -14,9 +14,8 @@ describe("startOfTime", () => {
     expect(startOfTime(value, unit)).toBe(expected);
   });
 
-  // invalid plain time
   it.each`
-    invalidTime
+    nonStringInput
     ${"invalid-time"}
     ${"24:34:56.1234567890"}
     ${"2024-02-29T12:34:56"}
@@ -26,11 +25,13 @@ describe("startOfTime", () => {
     ${12}
     ${true}
     ${false}
-  `("returns empty string for invalid time $invalidTime", ({ invalidTime }) => {
-    expect(startOfTime(invalidTime, "hour")).toBe("");
-  });
+  `(
+    "returns empty string for non-string input $nonStringInput",
+    ({ nonStringInput }) => {
+      expect(startOfTime(nonStringInput, "hour")).toBe("");
+    },
+  );
 
-  // invalid unit
   it.each`
     invalidUnit
     ${"invalid-unit"}
@@ -43,6 +44,6 @@ describe("startOfTime", () => {
     ${true}
     ${false}
   `("returns empty string for invalid unit $invalidUnit", ({ invalidUnit }) => {
-    expect(startOfTime("12:34:56", invalidUnit)).toBe("");
+    expect(startOfTime("12:34:56", invalidUnit as never)).toBe("");
   });
 });

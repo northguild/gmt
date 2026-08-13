@@ -3,9 +3,10 @@ import { isValidUnixMilliseconds } from "./isValidUnixMilliseconds";
 describe("isValidUnixMilliseconds", () => {
   it.each`
     value
+    ${1704067200000}
+    ${1735689599000}
     ${1709164800000}
     ${0}
-    ${9999999999999}
     ${-86400000}
     ${-31536000000}
   `("returns true for valid unix milliseconds $value", ({ value }) => {
@@ -17,9 +18,10 @@ describe("isValidUnixMilliseconds", () => {
     ${1.5}
     ${null}
     ${undefined}
-    ${"1709164800000"}
+    ${"1704067200000"}
     ${"not-a-timestamp"}
-  `("returns false for invalid unix milliseconds $value", ({ value }) => {
+    ${true}
+  `("returns false for non-integer input $value", ({ value }) => {
     expect(isValidUnixMilliseconds(value as never)).toBe(false);
   });
 });

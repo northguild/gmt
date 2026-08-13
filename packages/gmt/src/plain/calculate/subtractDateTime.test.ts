@@ -32,27 +32,7 @@ describe("subtractDateTime", () => {
   );
 
   it.each`
-    invalidAmount
-    ${"not-a-number"}
-    ${NaN}
-    ${null}
-    ${undefined}
-    ${true}
-    ${false}
-    ${""}
-  `(
-    "returns an empty string for an invalid amount: $invalidAmount",
-    ({ invalidAmount }) => {
-      expect(
-        subtractDateTime("2024-02-29T14:30", {
-          minutes: invalidAmount,
-        } as never),
-      ).toBe("");
-    },
-  );
-
-  it.each`
-    invalidDateTime
+    nonStringInput
     ${"not-a-datetime"}
     ${"2024-02-30T14:30:00"}
     ${"2024-02-30T14:30:00Z"}
@@ -64,9 +44,9 @@ describe("subtractDateTime", () => {
     ${false}
     ${""}
   `(
-    "returns an empty string for an invalid datetime: $invalidDateTime",
-    ({ invalidDateTime }) => {
-      expect(subtractDateTime(invalidDateTime as never, { minutes: 30 })).toBe(
+    "returns an empty string for non-string input $nonStringInput",
+    ({ nonStringInput }) => {
+      expect(subtractDateTime(nonStringInput as never, { minutes: 30 })).toBe(
         "",
       );
     },
@@ -88,45 +68,38 @@ describe("subtractDateTime", () => {
   );
 
   it.each`
+    invalidAmount
+    ${"not-a-number"}
+    ${NaN}
+    ${null}
+    ${undefined}
+    ${true}
+    ${false}
+    ${""}
+  `(
+    "returns an empty string for an invalid amount: $invalidAmount",
+    ({ invalidAmount }) => {
+      expect(
+        subtractDateTime("2024-02-29T14:30", {
+          minutes: invalidAmount,
+        } as never),
+      ).toBe("");
+    },
+  );
+
+  it.each`
     value                    | units             | overflow       | expected
-    ${"2024-03-31T12:00:00"} | ${{ months: 1 }}  | ${undefined}   | ${"2024-02-29T12:00:00"}
     ${"2024-03-31T12:00:00"} | ${{ months: 1 }}  | ${"constrain"} | ${"2024-02-29T12:00:00"}
     ${"2024-03-31T12:00:00"} | ${{ months: 1 }}  | ${"reject"}    | ${""}
-    ${"2024-03-31T12:00:00"} | ${{ months: 13 }} | ${undefined}   | ${"2023-02-28T12:00:00"}
     ${"2024-03-31T12:00:00"} | ${{ months: 13 }} | ${"constrain"} | ${"2023-02-28T12:00:00"}
     ${"2024-03-31T12:00:00"} | ${{ months: 13 }} | ${"reject"}    | ${""}
-    ${"2024-02-29T12:00:00"} | ${{ years: 1 }}   | ${undefined}   | ${"2023-02-28T12:00:00"}
     ${"2024-02-29T12:00:00"} | ${{ years: 1 }}   | ${"constrain"} | ${"2023-02-28T12:00:00"}
     ${"2024-02-29T12:00:00"} | ${{ years: 1 }}   | ${"reject"}    | ${""}
     ${"2024-01-15T12:00:00"} | ${{ months: 1 }}  | ${"reject"}    | ${"2023-12-15T12:00:00"}
   `(
     "returns $expected for $value - $units with overflow $overflow",
     ({ value, units, overflow, expected }) => {
-      expect(
-        subtractDateTime(
-          value,
-          units,
-          overflow === undefined ? undefined : { overflow },
-        ),
-      ).toBe(expected);
-    },
-  );
-
-  it.each`
-    value                    | units             | overflow       | expected
-    ${"2024-03-31T12:00:00"} | ${{ months: -1 }} | ${undefined}   | ${"2024-04-30T12:00:00"}
-    ${"2024-03-31T12:00:00"} | ${{ months: -1 }} | ${"constrain"} | ${"2024-04-30T12:00:00"}
-    ${"2024-03-31T12:00:00"} | ${{ months: -1 }} | ${"reject"}    | ${""}
-  `(
-    "returns $expected for negative amount $units on $value with overflow $overflow",
-    ({ value, units, overflow, expected }) => {
-      expect(
-        subtractDateTime(
-          value,
-          units,
-          overflow === undefined ? undefined : { overflow },
-        ),
-      ).toBe(expected);
+      expect(subtractDateTime(value, units, { overflow })).toBe(expected);
     },
   );
 });

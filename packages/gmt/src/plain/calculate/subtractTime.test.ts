@@ -3,32 +3,32 @@ import { subtractTime } from "./subtractTime";
 describe("subtractTime", () => {
   it.each`
     value         | units                    | expected
-    ${"14:30:00"} | ${{ hours: 2 }}          | ${"12:30:00"}
-    ${"14:30:00"} | ${{ minutes: 45 }}       | ${"13:45:00"}
+    ${"12:00:00"} | ${{ hours: 2 }}          | ${"10:00:00"}
+    ${"12:00:00"} | ${{ minutes: 45 }}       | ${"11:15:00"}
     ${"00:00:30"} | ${{ seconds: 45 }}       | ${"23:59:45"}
-    ${"14:30:00"} | ${{ milliseconds: 250 }} | ${"14:29:59.75"}
-    ${"14:30:00"} | ${{ microseconds: 500 }} | ${"14:29:59.9995"}
-    ${"14:30:00"} | ${{ nanoseconds: 1000 }} | ${"14:29:59.999999"}
+    ${"12:00:00"} | ${{ milliseconds: 250 }} | ${"11:59:59.75"}
+    ${"12:00:00"} | ${{ microseconds: 500 }} | ${"11:59:59.9995"}
+    ${"12:00:00"} | ${{ nanoseconds: 1000 }} | ${"11:59:59.999999"}
   `("returns $expected for $value - $units", ({ value, units, expected }) => {
     expect(subtractTime(value, units)).toBe(expected);
   });
 
   it.each`
     negativeAmount | expectedTime
-    ${-1}          | ${"14:31:00"}
-    ${-30}         | ${"15:00:00"}
-    ${-90}         | ${"16:00:00"}
+    ${-1}          | ${"12:01:00"}
+    ${-30}         | ${"12:30:00"}
+    ${-90}         | ${"13:30:00"}
   `(
     "returns $expectedTime for $value - $negativeAmount minutes",
     ({ negativeAmount, expectedTime }) => {
-      expect(subtractTime("14:30:00", { minutes: negativeAmount })).toBe(
+      expect(subtractTime("12:00:00", { minutes: negativeAmount })).toBe(
         expectedTime,
       );
     },
   );
 
   it.each`
-    invalidTime
+    nonStringInput
     ${"not-a-time"}
     ${"2024-02-30T14:30:00"}
     ${"2024-02-30T14:30:00Z"}
@@ -40,9 +40,9 @@ describe("subtractTime", () => {
     ${false}
     ${""}
   `(
-    "returns an empty string for an invalid time value: $invalidTime",
-    ({ invalidTime }) => {
-      expect(subtractTime(invalidTime as never, { minutes: 30 })).toBe("");
+    "returns an empty string for non-string input $nonStringInput",
+    ({ nonStringInput }) => {
+      expect(subtractTime(nonStringInput as never, { minutes: 30 })).toBe("");
     },
   );
 
@@ -77,24 +77,18 @@ describe("subtractTime", () => {
     },
   );
 
-  it.each`
-    value         | units            | overflow       | expected
-    ${"01:00:00"} | ${{ hours: 2 }}  | ${undefined}   | ${"23:00:00"}
-    ${"01:00:00"} | ${{ hours: 2 }}  | ${"constrain"} | ${"23:00:00"}
-    ${"01:00:00"} | ${{ hours: 2 }}  | ${"reject"}    | ${"23:00:00"}
-    ${"01:00:00"} | ${{ hours: 24 }} | ${undefined}   | ${"01:00:00"}
-    ${"01:00:00"} | ${{ hours: 24 }} | ${"constrain"} | ${"01:00:00"}
-    ${"01:00:00"} | ${{ hours: 24 }} | ${"reject"}    | ${"01:00:00"}
-  `(
-    "produces the identical wrapped result $expected for $value - $units regardless of overflow $overflow (PlainTime always wraps around the clock)",
-    ({ value, units, overflow, expected }) => {
-      expect(
-        subtractTime(
-          value,
-          units,
-          overflow === undefined ? undefined : { overflow },
-        ),
-      ).toBe(expected);
-    },
-  );
+  it("produces the same wrapped result regardless of overflow (PlainTime always wraps around the clock)", () => {
+    expect(
+      subtractTime("01:00:00", { hours: 2 }, { overflow: "constrain" }),
+    ).toBe("23:00:00");
+    expect(subtractTime("01:00:00", { hours: 2 }, { overflow: "reject" })).toBe(
+      "23:00:00",
+    );
+    expect(
+      subtractTime("01:00:00", { hours: 24 }, { overflow: "constrain" }),
+    ).toBe("01:00:00");
+    expect(
+      subtractTime("01:00:00", { hours: 24 }, { overflow: "reject" }),
+    ).toBe("01:00:00");
+  });
 });

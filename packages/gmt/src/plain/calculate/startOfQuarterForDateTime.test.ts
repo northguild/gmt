@@ -20,7 +20,7 @@ describe("startOfQuarterForDateTime", () => {
   });
 
   it.each`
-    invalidDateTime
+    nonStringInput
     ${"invalid-date"}
     ${"2024-02-30T12:00:00"}
     ${"2024-02-29T00:00:00Z"}
@@ -30,9 +30,9 @@ describe("startOfQuarterForDateTime", () => {
     ${true}
     ${false}
   `(
-    "returns empty string for invalid dateTime $invalidDateTime",
-    ({ invalidDateTime }) => {
-      expect(startOfQuarterForDateTime(invalidDateTime)).toBe("");
+    "returns empty string for non-string input $nonStringInput",
+    ({ nonStringInput }) => {
+      expect(startOfQuarterForDateTime(nonStringInput)).toBe("");
     },
   );
 });

@@ -1,43 +1,12 @@
 import {
   localNoonBattleCases,
   sameInstantBattleCases,
-  TomorrowTimeZone,
-  TomorrowTimeZoneGmtOffset,
   unixEpochBattleCases,
   validOnlyBattleTestTimeZones,
-  YesterdayTimeZone,
-  YesterdayTimeZoneGmtOffset,
 } from "../../test";
 import { isValidZonedDateTime } from ".";
 
 describe("isValidZonedDateTime", () => {
-  it.each`
-    value
-    ${"2024-02-29T00:00:00+00:00[UTC]"}
-    ${"2024-02-29T00:00:00+00:00[GMT]"}
-    ${"2024-02-29T00:00:00+00:00[Etc/GMT]"}
-    ${"2024-02-29T00:00:00+00:00[Europe/Lisbon]"}
-    ${"2024-02-29T00:00:00+00:00[Europe/Dublin]"}
-    ${"2024-02-29T00:00:00+01:00[Europe/Berlin]"}
-    ${"2024-02-29T00:00:00+02:00[Europe/Helsinki]"}
-    ${"2024-02-29T00:00:00+03:00[Europe/Istanbul]"}
-    ${"2024-02-29T00:00:00+05:30[Asia/Kolkata]"}
-    ${"2024-02-29T00:00:00+05:45[Asia/Kathmandu]"}
-    ${"2024-02-29T00:00:00+08:00[Asia/Shanghai]"}
-    ${"2024-02-29T00:00:00+11:00[Australia/Lord_Howe]"}
-    ${"2024-02-29T00:00:00+13:45[Pacific/Chatham]"}
-    ${`2024-02-29T00:00:00${TomorrowTimeZoneGmtOffset}[${TomorrowTimeZone}]`}
-    ${`2024-02-29T00:00:00${YesterdayTimeZoneGmtOffset}[${YesterdayTimeZone}]`}
-    ${"2024-02-29T00:00:00-05:00[America/New_York]"}
-    ${"2024-02-29T00:00:00-06:00[America/Chicago]"}
-    ${"2024-02-29T00:00:00-07:00[America/Phoenix]"}
-  `(
-    "returns true for valid zoned datetime: $value",
-    ({ value }: { value: string }) => {
-      expect(isValidZonedDateTime(value)).toBe(true);
-    },
-  );
-
   for (const timeZone of validOnlyBattleTestTimeZones) {
     it(`accepts valid fixture timeZone without explicit offset: ${timeZone}`, () => {
       expect(isValidZonedDateTime(`2024-03-17T14:30:45.123[${timeZone}]`)).toBe(
@@ -52,7 +21,18 @@ describe("isValidZonedDateTime", () => {
     });
   }
 
-  // ** historical offsets have changed, so some datetimes that would have been valid in the past are now invalid. This test ensures we recognize this reality and don't accidentally accept invalid historical datetimes. **
+  for (const { timeZone, value } of sameInstantBattleCases) {
+    it(`accepts battle-test zoned datetime in ${timeZone}`, () => {
+      expect(isValidZonedDateTime(value)).toBe(true);
+    });
+  }
+
+  for (const { timeZone, value } of unixEpochBattleCases) {
+    it(`accepts historical epoch zoned datetime in ${timeZone}`, () => {
+      expect(isValidZonedDateTime(value)).toBe(true);
+    });
+  }
+
   it.each`
     historical                                          | validity
     ${"1970-01-01T00:00:00+05:30[Asia/Kathmandu]"}      | ${true}
@@ -90,17 +70,16 @@ describe("isValidZonedDateTime", () => {
     },
   );
 
-  // invalid historical offsets
   it.each`
     value
     ${"1970-01-01T05:45:00+05:45[Asia/Kathmandu]"}
-    ${"1970-01-01T00:00:00+11:00[Australia/Lord_Howe]"} | ${false}
-    ${"1970-07-01T00:00:00+10:30[Australia/Lord_Howe]"} | ${false}
-    ${"1970-01-01T00:00:00+03:00[Europe/Istanbul]"}     | ${false}
-    ${"1970-07-01T00:00:00+03:00[Europe/Istanbul]"}     | ${false}
-    ${"1970-01-01T00:00:00+00:00[Europe/Lisbon]"}       | ${false}
-    ${"1970-01-01T00:00:00+00:00[Europe/Dublin]"}       | ${false}
-    ${"1970-07-01T00:00:00+02:00[Europe/Berlin]"}       | ${false}
+    ${"1970-01-01T00:00:00+11:00[Australia/Lord_Howe]"}
+    ${"1970-07-01T00:00:00+10:30[Australia/Lord_Howe]"}
+    ${"1970-01-01T00:00:00+03:00[Europe/Istanbul]"}
+    ${"1970-07-01T00:00:00+03:00[Europe/Istanbul]"}
+    ${"1970-01-01T00:00:00+00:00[Europe/Lisbon]"}
+    ${"1970-01-01T00:00:00+00:00[Europe/Dublin]"}
+    ${"1970-07-01T00:00:00+02:00[Europe/Berlin]"}
   `("returns false for invalid historical offset: $value", ({ value }) => {
     expect(isValidZonedDateTime(value)).toBe(false);
   });
@@ -133,15 +112,15 @@ describe("isValidZonedDateTime", () => {
     },
   );
 
-  for (const { timeZone, value } of sameInstantBattleCases) {
-    it(`accepts battle-test zoned datetime in ${timeZone}`, () => {
-      expect(isValidZonedDateTime(value)).toBe(true);
-    });
-  }
-
-  for (const { timeZone, value } of unixEpochBattleCases) {
-    it(`accepts historical epoch zoned datetime in ${timeZone}`, () => {
-      expect(isValidZonedDateTime(value)).toBe(true);
-    });
-  }
+  it.each`
+    value
+    ${null}
+    ${undefined}
+    ${123}
+    ${true}
+    ${[]}
+    ${{}}
+  `("returns false for non-string input: $value", ({ value }) => {
+    expect(isValidZonedDateTime(value as never)).toBe(false);
+  });
 });

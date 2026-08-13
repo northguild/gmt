@@ -13,22 +13,20 @@ describe("startOfDate", () => {
     },
   );
 
-  // supports weekStart option
   it.each`
     value           | unit      | weekStartsOn | expected
     ${"2024-02-29"} | ${"week"} | ${undefined} | ${"2024-02-26"}
     ${"2024-02-29"} | ${"week"} | ${"monday"}  | ${"2024-02-26"}
     ${"2024-02-29"} | ${"week"} | ${"sunday"}  | ${"2024-02-25"}
   `(
-    "returns $expected for value $value, unit $unit, and weekStartsOn $weekStartsOn, defaulting to Sunday",
+    "returns $expected for value $value, unit $unit, and weekStartsOn $weekStartsOn",
     ({ value, unit, weekStartsOn, expected }) => {
       expect(startOfDate(value, unit, { weekStartsOn })).toBe(expected);
     },
   );
 
-  // error handling - invalid date
   it.each`
-    invalidDate
+    nonStringInput
     ${"invalid-date"}
     ${"2024-02-30"}
     ${"2024-02-29T00:00:00"}
@@ -38,11 +36,13 @@ describe("startOfDate", () => {
     ${12}
     ${true}
     ${false}
-  `("returns empty string for invalid date $invalidDate", ({ invalidDate }) => {
-    expect(startOfDate(invalidDate, "month")).toBe("");
-  });
+  `(
+    "returns empty string for non-string input $nonStringInput",
+    ({ nonStringInput }) => {
+      expect(startOfDate(nonStringInput, "month")).toBe("");
+    },
+  );
 
-  // error handling - invalid unit
   it.each`
     invalidUnit
     ${"invalid-unit"}
@@ -55,6 +55,6 @@ describe("startOfDate", () => {
     ${true}
     ${false}
   `("returns empty string for invalid unit $invalidUnit", ({ invalidUnit }) => {
-    expect(startOfDate("2024-02-29", invalidUnit)).toBe("");
+    expect(startOfDate("2024-02-29", invalidUnit as never)).toBe("");
   });
 });
