@@ -1,5 +1,7 @@
-import { splitIntervalByUnitZoned } from "./splitIntervalByUnitZoned";
+import { Temporal } from "@js-temporal/polyfill";
 import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
+import { battleTestTimeZones } from "../../test/timeZoneMatrix";
+import { splitIntervalByUnitZoned } from "./splitIntervalByUnitZoned";
 
 describe("splitIntervalByUnitZoned", () => {
   const expectedExactDivision = [
@@ -164,5 +166,85 @@ describe("splitIntervalByUnitZoned", () => {
         6,
       ),
     ).toEqual([]);
+  });
+
+  it("proves zone-invariance across battleTestTimeZones for exact division", () => {
+    const startInstant = Temporal.Instant.from("2024-01-01T00:00:00Z");
+    const endInstant = Temporal.Instant.from("2024-01-02T00:00:00Z");
+
+    for (const timeZone of battleTestTimeZones) {
+      const start = startInstant.toZonedDateTimeISO(timeZone).toString();
+      const end = endInstant.toZonedDateTimeISO(timeZone).toString();
+
+      const result = splitIntervalByUnitZoned(start, end, "hour", 6);
+
+      expect(result).toHaveLength(4);
+      expect(result[0].start).toBe(start);
+      expect(result[3].end).toBe(end);
+    }
+  });
+
+  it("proves zone-invariance across battleTestTimeZones for remainder case", () => {
+    const startInstant = Temporal.Instant.from("2024-01-01T00:00:00Z");
+    const endInstant = Temporal.Instant.from("2024-01-01T01:30:00Z");
+
+    for (const timeZone of battleTestTimeZones) {
+      const start = startInstant.toZonedDateTimeISO(timeZone).toString();
+      const end = endInstant.toZonedDateTimeISO(timeZone).toString();
+
+      const result = splitIntervalByUnitZoned(start, end, "hour", 1);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].start).toBe(start);
+      expect(result[1].end).toBe(end);
+    }
+  });
+
+  it("proves zone-invariance across battleTestTimeZones for day unit", () => {
+    const startInstant = Temporal.Instant.from("2024-01-01T00:00:00Z");
+    const endInstant = Temporal.Instant.from("2024-01-10T00:00:00Z");
+
+    for (const timeZone of battleTestTimeZones) {
+      const start = startInstant.toZonedDateTimeISO(timeZone).toString();
+      const end = endInstant.toZonedDateTimeISO(timeZone).toString();
+
+      const result = splitIntervalByUnitZoned(start, end, "day", 2);
+
+      expect(result).toHaveLength(5);
+      expect(result[0].start).toBe(start);
+      expect(result[4].end).toBe(end);
+    }
+  });
+
+  it("proves zone-invariance across battleTestTimeZones for zero-length interval", () => {
+    const instant = Temporal.Instant.from("2024-01-01T00:00:00Z");
+
+    for (const timeZone of battleTestTimeZones) {
+      const zdt = instant.toZonedDateTimeISO(timeZone);
+      const start = zdt.toString();
+      const end = zdt.toString();
+
+      const result = splitIntervalByUnitZoned(start, end, "hour", 1);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].start).toBe(start);
+      expect(result[0].end).toBe(end);
+    }
+  });
+
+  it("proves zone-invariance across battleTestTimeZones for single step", () => {
+    const startInstant = Temporal.Instant.from("2024-01-01T00:00:00Z");
+    const endInstant = Temporal.Instant.from("2024-01-01T02:00:00Z");
+
+    for (const timeZone of battleTestTimeZones) {
+      const start = startInstant.toZonedDateTimeISO(timeZone).toString();
+      const end = endInstant.toZonedDateTimeISO(timeZone).toString();
+
+      const result = splitIntervalByUnitZoned(start, end, "hour", 2);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].start).toBe(start);
+      expect(result[0].end).toBe(end);
+    }
   });
 });

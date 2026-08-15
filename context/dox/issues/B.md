@@ -11,14 +11,14 @@ B1 Extract JSDoc, READMEs, and skills into dox-knowledge.json
 **Description:**
 
 ```
-Part of the Dox epic — see `context/cyber-dox/index.md`, Story Group B, item B1.
+Part of the Dox epic — see `context/dox/index.md`, Story Group B, item B1.
 Depends on A1 (workspace exists). Independent of A2/A3 — this is a build script, not UI,
 and can proceed in parallel with them if useful.
 
 ## Gap
 Dox has no corpus yet. The model must be grounded strictly in `@burglekitt/gmt`'s actual
 documented surface — 349 functions across `plain`/`zoned`/`unix`/`utc`/`duration` plus 16
-`regex` consts, per `context/cyber-dox/overview.md` §1.
+`regex` consts, per `context/dox/overview.md` §1.
 
 ## Scope
 - `apps/dox/scripts/build-knowledge.ts` walks `packages/gmt/src/**/*.ts` using the
@@ -38,7 +38,7 @@ documented surface — 349 functions across `plain`/`zoned`/`unix`/`utc`/`durati
 
 ## Before starting
 Re-verify the 349-function / ~999-`@example` counts are still current
-(`context/cyber-dox/overview.md` §1 cites them as of when it was written) — the gmt
+(`context/dox/overview.md` §1 cites them as of when it was written) — the gmt
 package continues to grow per its own roadmap (`context/roadmap/`), so these numbers
 will have moved. Read `context/jsdoc-standards.md` for the exact `@example` format
 (`fn(args) // result`) the parser needs to handle.
@@ -66,12 +66,12 @@ B2 Cloudflare Worker proxy for Gemini with grounded systemInstruction
 **Description:**
 
 ```
-Part of the Dox epic — see `context/cyber-dox/index.md`, Story Group B, item B2.
+Part of the Dox epic — see `context/dox/index.md`, Story Group B, item B2.
 Depends on B1 (the corpus this injects).
 
 ## Gap
 A Gemini API key cannot live in a client-side SPA bundle — it is trivially extractable.
-A server-side hop is required. See `context/cyber-dox/overview.md` §2's "Decisions
+A server-side hop is required. See `context/dox/overview.md` §2's "Decisions
 taken" table for why Cloudflare Workers specifically (free tier, 100k req/day).
 
 ## Scope

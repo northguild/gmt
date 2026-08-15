@@ -11,7 +11,7 @@ F1 Author real-world scenario docs and fold into the knowledge corpus
 **Description:**
 
 ```
-Part of the Dox epic — see `context/cyber-dox/index.md`, Story Group F, item F1.
+Part of the Dox epic — see `context/dox/index.md`, Story Group F, item F1.
 Depends on B1 (the corpus this extends) and B2 (the Worker that will need re-deploying
 with the enlarged corpus).
 
@@ -26,7 +26,7 @@ remember.
 Author ~12–15 markdown docs in `apps/dox/content/scenarios/`, seeded from the 17
 existing `packages/gmt/skills/*/SKILL.md` guides (their `sources:` frontmatter maps
 directly to relevant functions). Suggested set, per
-`context/cyber-dox/overview.md` §5 Chunk 14:
+`context/dox/overview.md` §5 Chunk 14:
 
 - Booking a meeting across a DST boundary.
 - Storing timestamps vs. displaying them (the perennial UTC-storage mistake).
@@ -74,7 +74,7 @@ F2 GitHub Actions deploy: apps/dox to Pages, worker via wrangler-action
 **Description:**
 
 ```
-Part of the Dox epic — see `context/cyber-dox/index.md`, Story Group F, item F2.
+Part of the Dox epic — see `context/dox/index.md`, Story Group F, item F2.
 Depends on every prior story — this is the final integration/launch step.
 
 ## Gap

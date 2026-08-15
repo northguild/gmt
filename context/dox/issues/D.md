@@ -11,7 +11,7 @@ D1 Build ambient 3D globe/clockface scene reacting to chat topic
 **Description:**
 
 ```
-Part of the Dox epic — see `context/cyber-dox/index.md`, Story Group D, item D1.
+Part of the Dox epic — see `context/dox/index.md`, Story Group D, item D1.
 Depends on A2 (Octane runtime) and A3 (design system — the glass panels this scene sits
 behind). Can proceed in parallel with C1–C3 once A3 is done, since it doesn't depend on
 chat being complete.
@@ -27,13 +27,13 @@ No 3D backdrop exists yet. The scene is not decorative — it's what the A3 `<Gl
 - A blended idle state for when no specific namespace is active.
 - `@octanejs/drei` supplies `OrbitControls`/`Html` — re-verify current parity coverage
   on the registry before relying on any specific Drei export, per the note in
-  `context/cyber-dox/overview.md` §1 about this ecosystem's fast release cadence.
+  `context/dox/overview.md` §1 about this ecosystem's fast release cadence.
 - Scene subscribes to the active chat namespace and crossfades between states.
 - Respect `prefers-reduced-motion`; pause `requestAnimationFrame` when the tab is
   hidden.
 
 ## Before starting
-Read `context/cyber-dox/overview.md` §3's "Panel construction — real glass" section —
+Read `context/dox/overview.md` §3's "Panel construction — real glass" section —
 the scene must read clearly *through* a 24px blur + darkened backdrop, not just at full
 opacity. Design and test it behind an actual `<GlassPanel>` from A3, not in isolation.
 
@@ -60,7 +60,7 @@ D2 Add view-transition morph choreography and boot sequence
 **Description:**
 
 ```
-Part of the Dox epic — see `context/cyber-dox/index.md`, Story Group D, item D2.
+Part of the Dox epic — see `context/dox/index.md`, Story Group D, item D2.
 Depends on C2/C3 (widgets to animate) and D1 (scene to choreograph against).
 
 ## Gap
@@ -79,7 +79,7 @@ called out explicitly in the original ask ("UI elements morph and pop into place
 - Debounce `startViewTransition` — calling it per streamed token thrashes badly.
 
 ## Before starting
-Read `context/cyber-dox/overview.md` §3's "Motion" and "Performance budget" sections.
+Read `context/dox/overview.md` §3's "Motion" and "Performance budget" sections.
 This story is where the performance risk in overview.md §7 ("scene + streaming +
 border animation together") first becomes measurable — profile it here, not later.
 

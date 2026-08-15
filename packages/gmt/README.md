@@ -52,8 +52,8 @@ Invalid input fallbacks are consistent across the library:
 
 | Metric     | Count  |
 | ---------- | ------ |
-| Test files | 361    |
-| Tests      | 11,288 |
+| Test files | 394    |
+| Tests      | 11,898 |
 
 Every function is exercised across **17 locales** and a full IANA timezone matrix. The CI pipeline runs the complete suite in **20 environments** — 2 Node versions (22, 24) × 10 timezones spanning every UTC offset band from Pacific/Niue (−11:00) to Pacific/Apia (+13:00):
 
@@ -373,6 +373,38 @@ intervalContainsTime("09:00:00", "17:00:00", "10:00:00", "16:00:00");
 
 All interval containment checks return `false` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
 
+`intervalsOverlap*` checks whether two intervals share any time. Returns `true` when intervals overlap, `false` when they are disjoint or only adjacent (touching at a single instant with no shared time):
+
+```typescript
+import {
+  intervalsOverlapDate,
+  intervalsOverlapTime,
+  intervalsOverlapDateTime,
+  intervalsOverlapUtc,
+  intervalsOverlapUnix,
+  intervalsOverlapZoned,
+} from "@burglekitt/gmt";
+
+intervalsOverlapDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
+// true
+
+intervalsOverlapDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31");
+// false (adjacent, no shared time)
+
+intervalsOverlapUnix(0, 1700000000, 1000000, 2000000);
+// true
+
+intervalsOverlapUtc(
+  "2024-01-01T00:00:00Z",
+  "2024-06-30T23:59:59Z",
+  "2024-04-01T00:00:00Z",
+  "2024-12-31T23:59:59Z",
+);
+// true
+```
+
+All overlap checks return `false` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
+
 `intervalIntersection*` returns the overlapping span of two intervals, or `null` when they do not overlap. Adjacent intervals (sharing one instant) count as overlapping and return a single-point span:
 
 ```typescript
@@ -458,6 +490,140 @@ intervalUnionUtc(
 
 All union functions return `null` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
 
+`intervalDifference*` returns the portion(s) of interval A not covered by interval B, as an array of `{ start, end }` records:
+
+```typescript
+import {
+  intervalDifferenceDate,
+  intervalDifferenceTime,
+  intervalDifferenceDateTime,
+  intervalDifferenceUtc,
+  intervalDifferenceUnix,
+  intervalDifferenceZoned,
+} from "@burglekitt/gmt";
+
+intervalDifferenceDate("2024-01-01", "2024-12-31", "2024-06-01", "2024-07-01");
+// [{ start: "2024-01-01", end: "2024-05-31" }, { start: "2024-07-02", end: "2024-12-31" }]
+
+intervalDifferenceDate("2024-01-01", "2024-12-31", "2024-01-01", "2024-12-31");
+// [] (B fully covers A)
+
+intervalDifferenceUnix(0, 1700000000, 1000000, 2000000);
+// [{ start: 0, end: 999999 }, { start: 2000001, end: 1700000000 }]
+
+intervalDifferenceUtc(
+  "2024-01-01T00:00:00Z",
+  "2024-12-31T23:59:59Z",
+  "2024-06-01T00:00:00Z",
+  "2024-07-01T00:00:00Z",
+);
+// [{ start: "2024-01-01T00:00:00Z", end: "2024-05-31T23:59:59Z" }, { start: "2024-07-02T00:00:00Z", end: "2024-12-31T23:59:59Z" }]
+```
+
+All difference functions return `[]` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
+
+`intervalXor*` returns the symmetric difference of two intervals — the portions covered by exactly one of them, not both — as an array of `{ start, end }` records:
+
+```typescript
+import {
+  intervalXorDate,
+  intervalXorTime,
+  intervalXorDateTime,
+  intervalXorUtc,
+  intervalXorUnix,
+  intervalXorZoned,
+} from "@burglekitt/gmt";
+
+intervalXorDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
+// [{ start: "2024-01-01", end: "2024-03-31" }, { start: "2024-07-01", end: "2024-12-31" }]
+
+intervalXorDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31");
+// [{ start: "2024-01-01", end: "2024-06-29" }, { start: "2024-07-01", end: "2024-12-31" }] (adjacent)
+
+intervalXorUnix(0, 1700000000, 1000000, 2000000);
+// [{ start: 0, end: 999999 }, { start: 2000001, end: 1700000000 }]
+
+intervalXorUtc(
+  "2024-01-01T00:00:00Z",
+  "2024-06-30T23:59:59Z",
+  "2024-04-01T00:00:00Z",
+  "2024-12-31T23:59:59Z",
+);
+// [{ start: "2024-01-01T00:00:00Z", end: "2024-03-31T23:59:59Z" }, { start: "2024-07-01T00:00:00Z", end: "2024-12-31T23:59:59Z" }]
+```
+
+All xor functions return `[]` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
+
+`intervalAbuts*` checks whether two intervals are exactly adjacent — one's end equals the other's start with zero gap and zero overlap:
+
+```typescript
+import {
+  intervalAbutsDate,
+  intervalAbutsTime,
+  intervalAbutsDateTime,
+  intervalAbutsUtc,
+  intervalAbutsUnix,
+  intervalAbutsZoned,
+} from "@burglekitt/gmt";
+
+intervalAbutsDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31");
+// true
+
+intervalAbutsDate("2024-01-01", "2024-06-29", "2024-06-30", "2024-12-31");
+// false (one-day gap)
+
+intervalAbutsDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
+// false (overlap)
+
+intervalAbutsUnix(0, 1000000, 1000000, 2000000);
+// true
+
+intervalAbutsUtc(
+  "2024-01-01T00:00:00Z",
+  "2024-06-30T23:59:59Z",
+  "2024-06-30T23:59:59Z",
+  "2024-12-31T23:59:59Z",
+);
+// true
+```
+
+All abuts checks return `false` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
+
+`intervalEngulfs*` checks whether interval B is fully contained within interval A — every instant of B falls within A. Equivalent to the 4-argument `intervalContains*` mode:
+
+```typescript
+import {
+  intervalEngulfsDate,
+  intervalEngulfsTime,
+  intervalEngulfsDateTime,
+  intervalEngulfsUtc,
+  intervalEngulfsUnix,
+  intervalEngulfsZoned,
+} from "@burglekitt/gmt";
+
+intervalEngulfsDate("2024-01-01", "2024-12-31", "2024-06-01", "2024-07-01");
+// true
+
+intervalEngulfsDate("2024-01-01", "2024-12-31", "2024-01-01", "2024-12-31");
+// true (equal intervals)
+
+intervalEngulfsDate("2024-06-01", "2024-07-01", "2024-01-01", "2024-12-31");
+// false
+
+intervalEngulfsUnix(0, 1700000000, 1000000, 2000000);
+// true
+
+intervalEngulfsUtc(
+  "2024-01-01T00:00:00Z",
+  "2024-12-31T23:59:59Z",
+  "2024-06-01T00:00:00Z",
+  "2024-07-01T00:00:00Z",
+);
+// true
+```
+
+All engulfs checks return `false` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
+
 `splitIntervalByUnit*` splits an interval into sub-intervals of `amount × unit`, returning an array of `{ start, end }` records. The final sub-interval is trimmed so its `end` never exceeds the original `end`:
 
 ```typescript
@@ -473,7 +639,12 @@ import {
 splitIntervalByUnitDate("2024-01-01", "2024-01-10", "day", 2);
 // [{ start: "2024-01-01", end: "2024-01-03" }, { start: "2024-01-03", end: "2024-01-05" }, { start: "2024-01-05", end: "2024-01-07" }, { start: "2024-01-07", end: "2024-01-09" }, { start: "2024-01-09", end: "2024-01-10" }]
 
-splitIntervalByUnitUtc("2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z", "hour", 6);
+splitIntervalByUnitUtc(
+  "2024-01-01T00:00:00Z",
+  "2024-01-02T00:00:00Z",
+  "hour",
+  6,
+);
 // [{ start: "2024-01-01T00:00:00Z", end: "2024-01-01T06:00:00Z" }, { start: "2024-01-01T06:00:00Z", end: "2024-01-01T12:00:00Z" }, { start: "2024-01-01T12:00:00Z", end: "2024-01-01T18:00:00Z" }, { start: "2024-01-01T18:00:00Z", end: "2024-01-02T00:00:00Z" }]
 
 splitIntervalByUnitUnix(0, 86400000, "hour", 6);

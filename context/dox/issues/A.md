@@ -11,7 +11,7 @@ A1 Create apps/dox workspace package and wire pnpm/nx/oxlint
 **Description:**
 
 ```
-Part of the Dox epic — see `context/cyber-dox/index.md`, Story Group A, item A1.
+Part of the Dox epic — see `context/dox/index.md`, Story Group A, item A1.
 
 ## Gap
 `apps/` does not exist in this monorepo and is not a workspace glob. Dox needs its own
@@ -28,7 +28,7 @@ package before any code can land.
 - Add root scripts `dox:dev` and `dox:build`.
 
 ## Before starting
-Read `context/cyber-dox/overview.md` §2 (Architecture) and §4 (Workspace integration).
+Read `context/dox/overview.md` §2 (Architecture) and §4 (Workspace integration).
 Confirm none of the three files listed above have already drifted since this was
 written — re-check `pnpm-workspace.yaml`, root `package.json`, and `oxlint.config.ts`
 directly rather than trusting this issue's snapshot.
@@ -55,12 +55,12 @@ A2 Boot Octane + TSRX runtime in apps/dox
 **Description:**
 
 ```
-Part of the Dox epic — see `context/cyber-dox/index.md`, Story Group A, item A2.
+Part of the Dox epic — see `context/dox/index.md`, Story Group A, item A2.
 Depends on A1.
 
 ## Gap
 `apps/dox` has no runtime yet. Dox is built on Octane (`.tsrx`), not React — see
-`context/cyber-dox/overview.md` §1 "Verified findings" and §2 "Decisions taken" for why,
+`context/dox/overview.md` §1 "Verified findings" and §2 "Decisions taken" for why,
 including the version trap and why `@octanejs/vite-plugin` is not needed.
 
 ## Scope
@@ -76,7 +76,7 @@ including the version trap and why `@octanejs/vite-plugin` is not needed.
 - One `App.tsrx` rendering a static shell (no chat, no widgets, no scene yet).
 
 ## Before starting
-Read `context/cyber-dox/overview.md` §1 and §2 in full. Re-verify Octane's current
+Read `context/dox/overview.md` §1 and §2 in full. Re-verify Octane's current
 version and `@octanejs/*` adapter coverage on the npm registry (`pnpm view octane
 version`, `pnpm view @octanejs/three version`, etc.) — this ecosystem was moving fast
 (35 releases in 7 weeks) as of when this was written; do not assume the pinned versions
@@ -111,7 +111,7 @@ A3 Build Dox design system: glass panels, animated borders, restyled native cont
 **Description:**
 
 ```
-Part of the Dox epic — see `context/cyber-dox/index.md`, Story Group A, item A3.
+Part of the Dox epic — see `context/dox/index.md`, Story Group A, item A3.
 Depends on A2.
 
 ## Gap
@@ -120,7 +120,7 @@ epic — six later chunks (C1, C2, C3, D1, D2, F1) are all built from these prim
 so getting this wrong means restyling five chunks downstream.
 
 ## Scope
-Read `context/cyber-dox/overview.md` §3 "Visual design language" in full — this story
+Read `context/dox/overview.md` §3 "Visual design language" in full — this story
 *is* that section, implemented, and every decision below is explained there in more
 depth than repeated here:
 
@@ -150,7 +150,7 @@ depth than repeated here:
   the start.
 
 ## Before starting
-Read `context/cyber-dox/overview.md` §3 completely, including the "core tension"
+Read `context/dox/overview.md` §3 completely, including the "core tension"
 subsection (maximal chrome, disciplined content surface) — this is the rule every
 subsequent visual decision should be checked against.
 

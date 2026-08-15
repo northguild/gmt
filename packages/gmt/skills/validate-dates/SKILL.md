@@ -1,17 +1,20 @@
 ---
 name: validate-dates
 description: >
-  Validate date/time strings, timezone identifiers, intervals, or ranges. Use isValidDate,
-  isValidTime, isValidDateTime, isValidDateInterval, isValidTimeInterval, isValidDateTimeInterval
-  for scalar and interval validation. Use intervalContainsDate, intervalContainsTime,
-  intervalContainsDateTime, intervalContainsUtc, intervalContainsUnix, intervalContainsZoned
-  for point-in-interval and interval-in-interval containment checks. Use intervalUnionDate,
-  intervalUnionTime, intervalUnionDateTime, intervalUnionUtc, intervalUnionUnix, intervalUnionZoned
-  to merge two overlapping or adjacent intervals into their combined span. Use splitIntervalByUnitDate,
-  splitIntervalByUnitTime, splitIntervalByUnitDateTime, splitIntervalByUnitUtc, splitIntervalByUnitUnix,
-  splitIntervalByUnitZoned to split an interval into sub-intervals of amount × unit. All validation
-  functions return false on invalid input; interval union returns null on disjoint or invalid input;
-  split functions return [] on invalid input.
+  Validate date/time strings, timezone identifiers, intervals, or ranges. Use
+  isValidDate, isValidTime, isValidDateTime, isValidDateInterval,
+  isValidTimeInterval, isValidDateTimeInterval for scalar and interval
+  validation. Use intervalContainsDate, intervalContainsTime,
+  intervalContainsDateTime, intervalContainsUtc, intervalContainsUnix,
+  intervalContainsZoned for point-in-interval and interval-in-interval
+  containment checks. Use intervalUnionDate, intervalUnionTime,
+  intervalUnionDateTime, intervalUnionUtc, intervalUnionUnix, intervalUnionZoned
+  to merge two overlapping or adjacent intervals into their combined span. Use
+  splitIntervalByUnitDate, splitIntervalByUnitTime, splitIntervalByUnitDateTime,
+  splitIntervalByUnitUtc, splitIntervalByUnitUnix, splitIntervalByUnitZoned to
+  split an interval into sub-intervals of amount × unit. All validation
+  functions return false on invalid input; interval union returns null on
+  disjoint or invalid input; split functions return [] on invalid input.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/interval/validate/index.ts'

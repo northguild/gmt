@@ -11,7 +11,7 @@ C1 Build streaming chat transcript and composer, text only
 **Description:**
 
 ```
-Part of the Dox epic — see `context/cyber-dox/index.md`, Story Group C, item C1.
+Part of the Dox epic — see `context/dox/index.md`, Story Group C, item C1.
 Depends on A3 (design system) and B2 (Worker proxy).
 
 ## Gap
@@ -55,12 +55,12 @@ C2 Generative-UI widget registry with live gmt playground
 **Description:**
 
 ```
-Part of the Dox epic — see `context/cyber-dox/index.md`, Story Group C, item C2.
+Part of the Dox epic — see `context/dox/index.md`, Story Group C, item C2.
 Depends on C1.
 
 ## Gap
 This is the epic's central mechanism: Dox does not write a code block, it invokes a
-component. See `context/cyber-dox/overview.md` §2 "Data flow" for the full rationale —
+component. See `context/dox/overview.md` §2 "Data flow" for the full rationale —
 because `apps/dox` depends on `@burglekitt/gmt` via `workspace:*`, widgets execute the
 real library, so their output can never drift from shipped behavior.
 
@@ -104,7 +104,7 @@ C3 Add timezone converter, DST inspector, interval visualizer, regex tester, sig
 **Description:**
 
 ```
-Part of the Dox epic — see `context/cyber-dox/index.md`, Story Group C, item C3.
+Part of the Dox epic — see `context/dox/index.md`, Story Group C, item C3.
 Depends on C2 (the widget registry pattern).
 
 ## Gap

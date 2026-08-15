@@ -10,7 +10,7 @@ library:
 generated_from:
   domain_map: 'skills/_artifacts/domain_map.yaml'
   skill_spec: 'skills/_artifacts/skill_spec.md'
-generated_at: '2026-08-13'
+generated_at: '2026-08-14'
 
 skills:
   # Consumer-facing core skills
@@ -180,6 +180,21 @@ skills:
       - 'burglekitt/gmt:packages/gmt/src/zoned/convert/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/unix/convert/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/utc/convert/index.ts'
+
+  # Consumer-facing interval skills
+  - name: Interval Operations
+    slug: interval-ops
+    type: core
+    domain: interval-operations
+    path: 'skills/interval-ops/SKILL.md'
+    package: 'packages/gmt'
+    description: Range math over two-point intervals — validate, contain, overlap, intersect, union, difference, xor, abut, engulf, and split by duration unit across plain, zoned, unix, and utc
+    requires: []
+    sources:
+      - 'burglekitt/gmt:packages/gmt/src/plain/interval/index.ts'
+      - 'burglekitt/gmt:packages/gmt/src/zoned/interval/index.ts'
+      - 'burglekitt/gmt:packages/gmt/src/unix/interval/index.ts'
+      - 'burglekitt/gmt:packages/gmt/src/utc/interval/index.ts'
 
   # Consumer-facing composition skills
   - name: App Integration

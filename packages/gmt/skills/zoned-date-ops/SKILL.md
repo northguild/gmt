@@ -7,10 +7,10 @@ description: >
   addZoned, subtractZoned, startOfZoned, endOfZoned, startOfQuarterForZoned,
   endOfQuarterForZoned, mapZonedHoursInDay, getLocaleZonedStartOfWeek,
   getLocaleZonedEndOfWeek, clampZoned, closestZonedTo for DST-aware
-  construction, arithmetic, boundaries, and locale-week computations. Most accept
-  disambiguation ("compatible" | "earlier" | "later" | "reject") for gap/overlap
-  resolution; boundary functions also accept offset ("prefer" | "use" | "ignore"
-  | "reject", default "ignore").
+  construction, arithmetic, boundaries, and locale-week computations. Most
+  accept disambiguation ("compatible" | "earlier" | "later" | "reject") for
+  gap/overlap resolution; boundary functions also accept offset ("prefer" |
+  "use" | "ignore" | "reject", default "ignore").
 sources:
   - 'burglekitt/gmt:packages/gmt/src/zoned/get/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/format/index.ts'
@@ -34,7 +34,7 @@ sources:
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.8.0'
+  library_version: '1.9.0'
 ---
 
 # Zoned Date Operations

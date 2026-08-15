@@ -1,5 +1,9 @@
-import { sameInstantBattleCases } from "../../test/timeZoneMatrix";
+import { Temporal } from "@js-temporal/polyfill";
 import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
+import {
+  battleTestTimeZones,
+  sameInstantBattleCases,
+} from "../../test/timeZoneMatrix";
 import { intervalContainsZoned } from "./intervalContainsZoned";
 
 describe("intervalContainsZoned", () => {
@@ -173,6 +177,105 @@ describe("intervalContainsZoned", () => {
 
     for (const { value: point } of sameInstantBattleCases) {
       expect(intervalContainsZoned(outerStart, outerEnd, point)).toBe(true);
+    }
+  });
+
+  it("proves zone-invariance across battleTestTimeZones for point containment", () => {
+    const intervalStartInstant = Temporal.Instant.from("2024-01-01T00:00:00Z");
+    const intervalEndInstant = Temporal.Instant.from("2024-12-31T23:59:59Z");
+    const pointInstant = Temporal.Instant.from("2024-06-15T12:00:00Z");
+
+    for (const timeZone of battleTestTimeZones) {
+      const intervalStart = intervalStartInstant
+        .toZonedDateTimeISO(timeZone)
+        .toString();
+      const intervalEnd = intervalEndInstant
+        .toZonedDateTimeISO(timeZone)
+        .toString();
+      const point = pointInstant.toZonedDateTimeISO(timeZone).toString();
+
+      expect(intervalContainsZoned(intervalStart, intervalEnd, point)).toBe(
+        true,
+      );
+    }
+  });
+
+  it("proves zone-invariance across battleTestTimeZones for point outside interval", () => {
+    const intervalStartInstant = Temporal.Instant.from("2024-01-01T00:00:00Z");
+    const intervalEndInstant = Temporal.Instant.from("2024-12-31T23:59:59Z");
+    const pointInstant = Temporal.Instant.from("2023-12-01T00:00:00Z");
+
+    for (const timeZone of battleTestTimeZones) {
+      const intervalStart = intervalStartInstant
+        .toZonedDateTimeISO(timeZone)
+        .toString();
+      const intervalEnd = intervalEndInstant
+        .toZonedDateTimeISO(timeZone)
+        .toString();
+      const point = pointInstant.toZonedDateTimeISO(timeZone).toString();
+
+      expect(intervalContainsZoned(intervalStart, intervalEnd, point)).toBe(
+        false,
+      );
+    }
+  });
+
+  it("proves zone-invariance across battleTestTimeZones for inner interval containment", () => {
+    const outerStartInstant = Temporal.Instant.from("2024-01-01T00:00:00Z");
+    const outerEndInstant = Temporal.Instant.from("2024-12-31T23:59:59Z");
+    const innerStartInstant = Temporal.Instant.from("2024-03-01T00:00:00Z");
+    const innerEndInstant = Temporal.Instant.from("2024-09-01T00:00:00Z");
+
+    for (const timeZone of battleTestTimeZones) {
+      const outerStart = outerStartInstant
+        .toZonedDateTimeISO(timeZone)
+        .toString();
+      const outerEnd = outerEndInstant.toZonedDateTimeISO(timeZone).toString();
+      const innerStart = innerStartInstant
+        .toZonedDateTimeISO(timeZone)
+        .toString();
+      const innerEnd = innerEndInstant.toZonedDateTimeISO(timeZone).toString();
+
+      expect(
+        intervalContainsZoned(outerStart, outerEnd, innerStart, innerEnd),
+      ).toBe(true);
+    }
+  });
+
+  it("proves zone-invariance across battleTestTimeZones for inner interval outside", () => {
+    const outerStartInstant = Temporal.Instant.from("2024-01-01T00:00:00Z");
+    const outerEndInstant = Temporal.Instant.from("2024-12-31T23:59:59Z");
+    const innerStartInstant = Temporal.Instant.from("2023-12-01T00:00:00Z");
+    const innerEndInstant = Temporal.Instant.from("2024-06-15T00:00:00Z");
+
+    for (const timeZone of battleTestTimeZones) {
+      const outerStart = outerStartInstant
+        .toZonedDateTimeISO(timeZone)
+        .toString();
+      const outerEnd = outerEndInstant.toZonedDateTimeISO(timeZone).toString();
+      const innerStart = innerStartInstant
+        .toZonedDateTimeISO(timeZone)
+        .toString();
+      const innerEnd = innerEndInstant.toZonedDateTimeISO(timeZone).toString();
+
+      expect(
+        intervalContainsZoned(outerStart, outerEnd, innerStart, innerEnd),
+      ).toBe(false);
+    }
+  });
+
+  it("proves zone-invariance across battleTestTimeZones for identical intervals (contains = true)", () => {
+    const instant = Temporal.Instant.from("2024-06-15T12:00:00Z");
+
+    for (const timeZone of battleTestTimeZones) {
+      const outerStart = instant.toZonedDateTimeISO(timeZone).toString();
+      const outerEnd = instant.toZonedDateTimeISO(timeZone).toString();
+      const innerStart = instant.toZonedDateTimeISO(timeZone).toString();
+      const innerEnd = instant.toZonedDateTimeISO(timeZone).toString();
+
+      expect(
+        intervalContainsZoned(outerStart, outerEnd, innerStart, innerEnd),
+      ).toBe(true);
     }
   });
 

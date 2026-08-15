@@ -11,7 +11,7 @@ E1 Synthesized UI sound cues via Web Audio oscillators
 **Description:**
 
 ```
-Part of the Dox epic — see `context/cyber-dox/index.md`, Story Group E, item E1.
+Part of the Dox epic — see `context/dox/index.md`, Story Group E, item E1.
 Depends on A3 (the interactions being scored: keypress, send, focus, etc.) and C1–C3
 (the chat/widget events being scored). Independent of E2/E3.
 
@@ -30,7 +30,7 @@ voice (E2/E3), it requires no external audio and no capture workaround.
 - `AudioContext` created only after an explicit user gesture — never autoplay.
 - Silence everything under `prefers-reduced-motion` as well as any dedicated mute
   toggle — motion sensitivity and sound sensitivity correlate, per
-  `context/cyber-dox/overview.md` §5 Chunk 11 (E1's origin).
+  `context/dox/overview.md` §5 Chunk 11 (E1's origin).
 
 ## Before starting
 No external research needed here — this is pure Web Audio API oscillator/gain-envelope
@@ -58,7 +58,7 @@ E2 speechSynthesis voice with sentence chunking and driven visualizer
 **Description:**
 
 ```
-Part of the Dox epic — see `context/cyber-dox/index.md`, Story Group E, item E2.
+Part of the Dox epic — see `context/dox/index.md`, Story Group E, item E2.
 Depends on C1 (text responses to speak).
 
 ## Gap
@@ -79,7 +79,7 @@ No voice exists yet. This tier is the free, zero-download baseline —
   analysis** — see the next point for why.
 
 ## Before starting
-Read `context/cyber-dox/overview.md` §1's finding on `speechSynthesis`: **no browser
+Read `context/dox/overview.md` §1's finding on `speechSynthesis`: **no browser
 spec exposes its audio output to the Web Audio graph.** A frequency visualizer "synced
 to" `speechSynthesis` is not achievable — only an honestly-approximated one driven from
 `boundary` event timing. Do not spend time trying to route `speechSynthesis` through an
@@ -107,7 +107,7 @@ E3 Opt-in Kokoro on-device TTS with real vocoder chain and synced visualizer
 **Description:**
 
 ```
-Part of the Dox epic — see `context/cyber-dox/index.md`, Story Group E, item E3.
+Part of the Dox epic — see `context/dox/index.md`, Story Group E, item E3.
 Depends on E2 (the tier this sits above) — E2 must ship first so voice works at zero
 download before this heavier opt-in path is offered.
 

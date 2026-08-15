@@ -1,4 +1,4 @@
-# GMT: Give Me Temporal!
+# GMT: Give Me Temporal
 
 Home of [@burglekitt/gmt](./packages/gmt) — **Give Me Temporal!**
 
