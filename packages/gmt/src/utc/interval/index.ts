@@ -3,6 +3,7 @@ export * from "./intervalContainsUtc";
 export * from "./intervalCountUtc";
 export * from "./intervalDifferenceUtc";
 export * from "./intervalEngulfsUtc";
+export * from "./intervalFromDurationUtc";
 export * from "./intervalIntersectionUtc";
 export * from "./intervalsOverlapUtc";
 export * from "./intervalUnionUtc";

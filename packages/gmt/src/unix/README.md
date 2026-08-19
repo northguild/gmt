@@ -40,6 +40,7 @@ Validate and check Unix intervals:
 - `intervalUnionUnix`
 - `splitIntervalByUnitUnix`
 - `intervalCountUnix`
+- `intervalFromDurationUnix`
 
 ### format
 

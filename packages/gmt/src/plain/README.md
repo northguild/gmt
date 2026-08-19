@@ -78,6 +78,7 @@ Validate and check date/time intervals:
 - `intervalUnionDate`, `intervalUnionDateTime`, `intervalUnionTime`
 - `splitIntervalByUnitDate`, `splitIntervalByUnitDateTime`, `splitIntervalByUnitTime`
 - `intervalCountDate`, `intervalCountDateTime`, `intervalCountTime`
+- `intervalFromDurationDate`, `intervalFromDurationDateTime`, `intervalFromDurationTime`
 
 ### map
 

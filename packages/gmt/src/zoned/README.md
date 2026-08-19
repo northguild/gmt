@@ -74,6 +74,7 @@ Validate and check zoned intervals:
 - `intervalUnionZoned`
 - `splitIntervalByUnitZoned`
 - `intervalCountZoned`
+- `intervalFromDurationZoned`
 
 ### map
 

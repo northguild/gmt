@@ -6,19 +6,22 @@ description: >
   point-or-interval containment, intervalsOverlap* for overlap booleans,
   intervalIntersection* / intervalUnion* for set-theoretic combine/difference
   returning { start, end } | null, intervalDifference* / intervalXor* /
-  intervalAbuts* / intervalEngulfs* for set operations, splitIntervalByUnit*
-  to tile an interval by duration unit, and intervalCount* for how many
-  calendar-unit boundaries an interval crosses. Covers plain, zoned, unix, and
-  utc namespaces. Returns false/null/[] on invalid input — never throws.
+  intervalAbuts* / intervalEngulfs* for set operations, intervalFromDuration*
+  to construct an interval from a single point plus an ISO 8601 duration
+  anchored at "start" or "end", splitIntervalByUnit* to tile an interval by
+  duration unit, and intervalCount* for how many calendar-unit boundaries an
+  interval crosses. Covers plain, zoned, unix, and utc namespaces. Returns
+  false/null/[] on invalid input — never throws.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/interval/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/interval/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/interval/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/utc/interval/index.ts'
+  - 'burglekitt/gmt:packages/gmt/src/duration/validate/isValidDuration.ts'
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.9.0'
+  library_version: '1.10.0'
 ---
 
 # Interval Operations
@@ -38,6 +41,7 @@ import {
   intervalXorDate,
   intervalAbutsDate,
   intervalEngulfsDate,
+  intervalFromDurationDate,
   splitIntervalByUnitDate,
   intervalCountDate,
 } from "@burglekitt/gmt";
@@ -58,6 +62,7 @@ Every function has `Time`, `DateTime`, `Zoned`, `Unix`, and `Utc` siblings. Repl
 | `intervalXor*` | `(aStart, aEnd, bStart, bEnd)` | `Array<{ start, end }>` | `[]` |
 | `intervalAbuts*` | `(aStart, aEnd, bStart, bEnd)` | `boolean` | `false` |
 | `intervalEngulfs*` | `(aStart, aEnd, bStart, bEnd)` | `boolean` | `false` |
+| `intervalFromDuration*` | `(value, duration, anchor, options?)` | `{ start, end } \| null` | `null` |
 | `splitIntervalByUnit*` | `(start, end, unit, amount)` | `Array<{ start, end }>` | `[]` |
 | `intervalCount*` | `(start, end, unit)` | `number \| null` | `null` |
 
@@ -137,6 +142,34 @@ intervalXorDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
 
 Both return `[]` when B fully covers A or on invalid input.
 
+### Construct an interval from a point + duration
+
+`intervalFromDuration*` builds an interval from a single point and an ISO 8601 duration string, anchored at either end — Luxon's `Interval.after`/`Interval.before` as one function with an `anchor` param:
+
+```ts
+intervalFromDurationDate("2024-01-01", "P1M", "start");
+// { start: "2024-01-01", end: "2024-02-01" }
+
+intervalFromDurationDate("2024-02-01", "P1M", "end");
+// { start: "2024-01-01", end: "2024-02-01" }
+
+intervalFromDurationZoned(
+  "2024-03-09T02:30:00-05:00[America/New_York]",
+  "P1D",
+  "start",
+);
+// { start: "2024-03-09T02:30:00-05:00[America/New_York]", end: "2024-03-10T03:30:00-04:00[America/New_York]" }
+```
+
+Calendar units (years/months/weeks) resolve against `value` itself via Temporal's `add()`/`subtract()` — no separate `relativeTo` is needed. `intervalFromDurationZoned` accepts the same `disambiguation`/`offset`/`overflow` options as `addZoned`; `intervalFromDurationUnix` accepts `addUnix`'s `epochUnit`/`timeZone`/`overflow` options. A negative `duration` that inverts the computed span returns `null`, same as any other invalid input.
+
+`intervalFromDurationTime` is the one exception: `PlainTime` has no calendar, so a `duration` with a nonzero years/months/weeks/days component returns `null` rather than silently ignoring those fields:
+
+```ts
+intervalFromDurationTime("12:00:00", "PT1H", "start"); // { start: "12:00:00", end: "13:00:00" }
+intervalFromDurationTime("12:00:00", "P1D", "start");  // null (date units need relativeTo, unsupported)
+```
+
 ### Split by duration unit
 
 ```ts
@@ -161,7 +194,7 @@ This is calendar-boundary counting, not duration. Use `diff*` when you want exac
 ## Return Conventions
 
 - `boolean` families (`isValid*Interval`, `intervalContains*`, `intervalsOverlap*`, `intervalAbuts*`, `intervalEngulfs*`): `false` on invalid input.
-- Object families (`intervalIntersection*`, `intervalUnion*`): `null` on no-result or invalid input.
+- Object families (`intervalIntersection*`, `intervalUnion*`, `intervalFromDuration*`): `null` on no-result or invalid input.
 - Array families (`intervalDifference*`, `intervalXor*`, `splitIntervalByUnit*`): `[]` on no-result or invalid input.
 - Number families (`intervalCount*`): `null` on invalid input.
 
@@ -207,3 +240,11 @@ A zero-length interval counts `1` only when it sits mid-unit. Exactly on a bound
 ### LOW: Using `intervalContains` 3-arg for intervals
 
 `intervalContains(start, end, innerStart)` treats the third arg as a single point. To test interval-in-interval, pass all four arguments.
+
+### HIGH: Assuming `intervalFromDurationTime` applies a calendar-unit duration
+
+`Temporal.PlainTime.prototype.add`/`.subtract` silently discard `years`/`months`/`weeks`/`days` fields rather than throwing — `intervalFromDurationTime` guards this explicitly and returns `null` instead of producing a misleadingly zero-length interval. Only `PlainTime` has this restriction; `Date`/`DateTime`/`Utc`/`Unix`/`Zoned` all resolve calendar units against the point itself with no `relativeTo` needed.
+
+### MEDIUM: Forgetting a negative `duration` can invert the span
+
+`intervalFromDuration*("2024-01-05", "-P10D", "start")` computes an end before the start and returns `null`, same as any other invalid input — it does not swap the endpoints for you.

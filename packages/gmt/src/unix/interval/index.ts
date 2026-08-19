@@ -3,6 +3,7 @@ export * from "./intervalContainsUnix";
 export * from "./intervalCountUnix";
 export * from "./intervalDifferenceUnix";
 export * from "./intervalEngulfsUnix";
+export * from "./intervalFromDurationUnix";
 export * from "./intervalIntersectionUnix";
 export * from "./intervalsOverlapUnix";
 export * from "./intervalUnionUnix";

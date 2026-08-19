@@ -690,6 +690,37 @@ intervalCountUnix(0, 86400000, "hour");
 
 Zero-length intervals count `1` when they sit mid-unit and `0` when they sit exactly on a unit boundary — `intervalCountDate("2024-01-15", "2024-01-15", "month")` is `1`, while `intervalCountDate("2024-01-01", "2024-01-01", "month")` is `0`. Weeks start on Monday (ISO 8601), singular and plural units are interchangeable (`"day"` and `"days"`), and `intervalCountUnix` uses the system timeZone for calendar boundaries (consistent with `addUnix`). All count functions return `null` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, unsupported unit, or a unit that has no effect on the target type).
 
+`intervalFromDuration*` constructs an interval from a single point plus an ISO 8601 duration, anchored at either end — Luxon's `Interval.after`/`Interval.before` as one function with an `anchor` param instead of two:
+
+```typescript
+import {
+  intervalFromDurationDate,
+  intervalFromDurationTime,
+  intervalFromDurationDateTime,
+  intervalFromDurationUtc,
+  intervalFromDurationUnix,
+  intervalFromDurationZoned,
+} from "@burglekitt/gmt";
+
+intervalFromDurationDate("2024-01-01", "P1M", "start");
+// { start: "2024-01-01", end: "2024-02-01" }
+
+intervalFromDurationDate("2024-02-01", "P1M", "end");
+// { start: "2024-01-01", end: "2024-02-01" }
+
+intervalFromDurationZoned(
+  "2024-03-09T02:30:00-05:00[America/New_York]",
+  "P1D",
+  "start",
+);
+// { start: "2024-03-09T02:30:00-05:00[America/New_York]", end: "2024-03-10T03:30:00-04:00[America/New_York]" } (spring-forward day is 23 hours long)
+
+intervalFromDurationTime("12:00:00", "P1D", "start");
+// null (PlainTime has no calendar — a date-unit duration needs a relativeTo it can't supply)
+```
+
+Calendar units (years/months/weeks) resolve against `value` itself, so no separate `relativeTo` is needed — except for `intervalFromDurationTime`, which returns `null` for a `duration` with a nonzero years/months/weeks/days component, since `PlainTime` has no calendar to resolve it against. `intervalFromDurationZoned` accepts the same `disambiguation`/`offset`/`overflow` options as `addZoned`; `intervalFromDurationUnix` accepts `addUnix`'s `epochUnit`/`timeZone`/`overflow` options. A negative `duration` that inverts the computed span, or an `overflow: "reject"` result, returns `null` — same sentinel as any other invalid input.
+
 All validators return `false` on invalid input (wrong type, malformed strings, leap seconds, mixed kinds for plain interval validators, non-finite values for Unix).
 
 ### Zoned operations

@@ -3,6 +3,7 @@ export * from "./intervalContainsZoned";
 export * from "./intervalCountZoned";
 export * from "./intervalDifferenceZoned";
 export * from "./intervalEngulfsZoned";
+export * from "./intervalFromDurationZoned";
 export * from "./intervalIntersectionZoned";
 export * from "./intervalsOverlapZoned";
 export * from "./intervalUnionZoned";
