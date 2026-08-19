@@ -28,7 +28,7 @@ domains:
 
   - name: Interval Operations
     slug: interval-operations
-    description: Range math over two-point intervals — validation, containment, overlap, intersection, union, difference, xor, adjacency, engulfing, and splitting by duration unit across plain, zoned, unix, and utc namespaces
+    description: Range math over two-point intervals — validation, containment, overlap, intersection, union, difference, xor, adjacency, engulfing, splitting by duration unit, and counting calendar-unit boundaries across plain, zoned, unix, and utc namespaces
 
 skills:
   - name: Get Current Date/Time
@@ -381,7 +381,7 @@ skills:
   - name: Interval Operations
     slug: interval-ops
     domain: interval-operations
-    description: Range math over two-point intervals — validate, contain, overlap, intersect, union, difference, xor, abut, engulf, and split by duration unit across plain, zoned, unix, and utc
+    description: Range math over two-point intervals — validate, contain, overlap, intersect, union, difference, xor, abut, engulf, split by duration unit, and count calendar-unit boundaries across plain, zoned, unix, and utc
     type: core
     packages:
       - '@burglekitt/gmt'
@@ -446,6 +446,12 @@ skills:
       - splitIntervalByUnitUtc
       - splitIntervalByUnitUnix
       - splitIntervalByUnitZoned
+      - intervalCountDate
+      - intervalCountTime
+      - intervalCountDateTime
+      - intervalCountUtc
+      - intervalCountUnix
+      - intervalCountZoned
     tasks:
       - Validate a start/end interval
       - Check if a point or inner interval is contained
@@ -457,6 +463,7 @@ skills:
       - Check if two intervals are exactly adjacent
       - Check if one interval fully contains another
       - Split an interval into sub-intervals by duration unit
+      - Count how many calendar-unit boundaries an interval crosses
 
 failure_modes: []
 

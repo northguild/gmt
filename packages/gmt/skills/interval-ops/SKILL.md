@@ -6,9 +6,10 @@ description: >
   point-or-interval containment, intervalsOverlap* for overlap booleans,
   intervalIntersection* / intervalUnion* for set-theoretic combine/difference
   returning { start, end } | null, intervalDifference* / intervalXor* /
-  intervalAbuts* / intervalEngulfs* for set operations, and splitIntervalByUnit*
-  to tile an interval by duration unit. Covers plain, zoned, unix, and utc
-  namespaces. Returns false/null/[] on invalid input — never throws.
+  intervalAbuts* / intervalEngulfs* for set operations, splitIntervalByUnit*
+  to tile an interval by duration unit, and intervalCount* for how many
+  calendar-unit boundaries an interval crosses. Covers plain, zoned, unix, and
+  utc namespaces. Returns false/null/[] on invalid input — never throws.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/interval/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/interval/index.ts'
@@ -38,6 +39,7 @@ import {
   intervalAbutsDate,
   intervalEngulfsDate,
   splitIntervalByUnitDate,
+  intervalCountDate,
 } from "@burglekitt/gmt";
 ```
 
@@ -57,6 +59,7 @@ Every function has `Time`, `DateTime`, `Zoned`, `Unix`, and `Utc` siblings. Repl
 | `intervalAbuts*` | `(aStart, aEnd, bStart, bEnd)` | `boolean` | `false` |
 | `intervalEngulfs*` | `(aStart, aEnd, bStart, bEnd)` | `boolean` | `false` |
 | `splitIntervalByUnit*` | `(start, end, unit, amount)` | `Array<{ start, end }>` | `[]` |
+| `intervalCount*` | `(start, end, unit)` | `number \| null` | `null` |
 
 `intervalContains*` supports two modes:
 - 3-arg: `intervalContains(start, end, point)` — point-in-interval
@@ -143,11 +146,24 @@ splitIntervalByUnitDate("2024-01-01", "2024-01-10", "day", 2);
 
 The final slice is trimmed so its `end` never exceeds the original `end`.
 
+### Count unit boundaries crossed
+
+```ts
+intervalCountDateTime("2024-01-01T23:59:00", "2024-01-02T00:01:00", "day");
+// 2 — two minutes long, but it crosses a day boundary
+
+intervalCountDate("2024-01-01", "2024-01-03", "day"); // 2 (end boundary excluded)
+intervalCountDate("2024-01-15", "2024-03-10", "month"); // 3
+```
+
+This is calendar-boundary counting, not duration. Use `diff*` when you want exact elapsed time.
+
 ## Return Conventions
 
 - `boolean` families (`isValid*Interval`, `intervalContains*`, `intervalsOverlap*`, `intervalAbuts*`, `intervalEngulfs*`): `false` on invalid input.
 - Object families (`intervalIntersection*`, `intervalUnion*`): `null` on no-result or invalid input.
 - Array families (`intervalDifference*`, `intervalXor*`, `splitIntervalByUnit*`): `[]` on no-result or invalid input.
+- Number families (`intervalCount*`): `null` on invalid input.
 
 Never throws. Wrap in try-catch only if you need to distinguish "invalid input" from other errors.
 
@@ -175,6 +191,18 @@ Adjacent intervals (A ends where B starts) do **not** overlap. `intervalsOverlap
 ### MEDIUM: Off-by-one on `splitIntervalByUnit` final slice
 
 The last sub-interval's `end` is **trimmed** to the original `end`, not advanced by `amount × unit`. Do not assume all slices have equal length.
+
+### HIGH: Using `intervalCount` where you meant a duration
+
+`intervalCount*` counts calendar-unit boundaries the half-open interval `[start, end)` touches, not
+elapsed time. `intervalCountDateTime("2024-01-01T23:59:00", "2024-01-02T00:01:00", "day")` is `2`
+for a two-minute interval. Use `diffDateTime`/`diffUnix`/etc. for exact duration.
+
+### MEDIUM: Expecting a zero-length interval to count 1
+
+A zero-length interval counts `1` only when it sits mid-unit. Exactly on a boundary it counts `0` —
+`intervalCountDate("2024-01-01", "2024-01-01", "month")` is `0`, while
+`intervalCountDate("2024-01-15", "2024-01-15", "month")` is `1`.
 
 ### LOW: Using `intervalContains` 3-arg for intervals
 

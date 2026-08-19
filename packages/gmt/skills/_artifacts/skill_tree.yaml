@@ -188,7 +188,7 @@ skills:
     domain: interval-operations
     path: 'skills/interval-ops/SKILL.md'
     package: 'packages/gmt'
-    description: Range math over two-point intervals — validate, contain, overlap, intersect, union, difference, xor, abut, engulf, and split by duration unit across plain, zoned, unix, and utc
+    description: Range math over two-point intervals — validate, contain, overlap, intersect, union, difference, xor, abut, engulf, split by duration unit, and count calendar-unit boundaries across plain, zoned, unix, and utc
     requires: []
     sources:
       - 'burglekitt/gmt:packages/gmt/src/plain/interval/index.ts'

@@ -1,5 +1,6 @@
 export * from "./intervalAbutsUtc";
 export * from "./intervalContainsUtc";
+export * from "./intervalCountUtc";
 export * from "./intervalDifferenceUtc";
 export * from "./intervalEngulfsUtc";
 export * from "./intervalIntersectionUtc";

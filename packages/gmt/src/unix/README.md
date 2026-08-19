@@ -39,6 +39,7 @@ Validate and check Unix intervals:
 - `intervalContainsUnix`
 - `intervalUnionUnix`
 - `splitIntervalByUnitUnix`
+- `intervalCountUnix`
 
 ### format
 

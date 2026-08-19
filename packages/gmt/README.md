@@ -653,6 +653,43 @@ splitIntervalByUnitUnix(0, 86400000, "hour", 6);
 
 All split functions return `[]` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-positive amount, unsupported unit, or a unit that has no effect on the target type).
 
+`intervalCount*` returns how many calendar-unit boundaries an interval crosses — the number of units the half-open interval `[start, end)` touches. This is distinct from `diff*`, which measures exact elapsed duration: an interval from 23:59 to 00:01 is two minutes long but touches two days:
+
+```typescript
+import {
+  intervalCountDate,
+  intervalCountTime,
+  intervalCountDateTime,
+  intervalCountUtc,
+  intervalCountUnix,
+  intervalCountZoned,
+} from "@burglekitt/gmt";
+
+intervalCountDateTime("2024-01-01T23:59:00", "2024-01-02T00:01:00", "day");
+// 2 (two minutes long, but two days touched)
+
+intervalCountDate("2024-01-01", "2024-01-03", "day");
+// 2 (the end boundary is excluded)
+
+intervalCountDate("2024-01-15", "2024-03-10", "month");
+// 3
+
+intervalCountTime("12:30:00", "13:00:00", "hour");
+// 1
+
+intervalCountZoned(
+  "2024-03-10T00:00:00-05:00[America/New_York]",
+  "2024-03-11T00:00:00-04:00[America/New_York]",
+  "hour",
+);
+// 23 (the spring-forward local day is 23 hours long)
+
+intervalCountUnix(0, 86400000, "hour");
+// 24
+```
+
+Zero-length intervals count `1` when they sit mid-unit and `0` when they sit exactly on a unit boundary — `intervalCountDate("2024-01-15", "2024-01-15", "month")` is `1`, while `intervalCountDate("2024-01-01", "2024-01-01", "month")` is `0`. Weeks start on Monday (ISO 8601), singular and plural units are interchangeable (`"day"` and `"days"`), and `intervalCountUnix` uses the system timeZone for calendar boundaries (consistent with `addUnix`). All count functions return `null` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, unsupported unit, or a unit that has no effect on the target type).
+
 All validators return `false` on invalid input (wrong type, malformed strings, leap seconds, mixed kinds for plain interval validators, non-finite values for Unix).
 
 ### Zoned operations

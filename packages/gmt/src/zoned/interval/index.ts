@@ -1,5 +1,6 @@
 export * from "./intervalAbutsZoned";
 export * from "./intervalContainsZoned";
+export * from "./intervalCountZoned";
 export * from "./intervalDifferenceZoned";
 export * from "./intervalEngulfsZoned";
 export * from "./intervalIntersectionZoned";
