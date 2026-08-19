@@ -18,7 +18,7 @@ sources:
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.9.0'
+  library_version: '1.10.0'
 ---
 
 # Calculate Dates
