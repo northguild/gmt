@@ -75,6 +75,7 @@ Validate and check zoned intervals:
 - `splitIntervalByUnitZoned`
 - `intervalCountZoned`
 - `intervalFromDurationZoned`
+- `intervalOverlappingDaysZoned`
 
 ### map
 

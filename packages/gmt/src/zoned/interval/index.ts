@@ -5,6 +5,7 @@ export * from "./intervalDifferenceZoned";
 export * from "./intervalEngulfsZoned";
 export * from "./intervalFromDurationZoned";
 export * from "./intervalIntersectionZoned";
+export * from "./intervalOverlappingDaysZoned";
 export * from "./intervalsOverlapZoned";
 export * from "./intervalUnionZoned";
 export * from "./intervalXorZoned";

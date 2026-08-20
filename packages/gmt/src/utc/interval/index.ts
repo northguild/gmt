@@ -5,6 +5,7 @@ export * from "./intervalDifferenceUtc";
 export * from "./intervalEngulfsUtc";
 export * from "./intervalFromDurationUtc";
 export * from "./intervalIntersectionUtc";
+export * from "./intervalOverlappingDaysUtc";
 export * from "./intervalsOverlapUtc";
 export * from "./intervalUnionUtc";
 export * from "./intervalXorUtc";

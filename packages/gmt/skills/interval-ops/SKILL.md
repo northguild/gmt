@@ -9,9 +9,10 @@ description: >
   intervalAbuts* / intervalEngulfs* for set operations, intervalFromDuration* to
   construct an interval from a single point plus an ISO 8601 duration anchored
   at "start" or "end", splitIntervalByUnit* to tile an interval by duration
-  unit, and intervalCount* for how many calendar-unit boundaries an interval
-  crosses. Covers plain, zoned, unix, and utc namespaces. Returns false/null/[]
-  on invalid input — never throws.
+  unit, intervalCount* for how many calendar-unit boundaries an interval
+  crosses, and intervalOverlappingDays* for how many distinct calendar dates
+  two intervals share. Covers plain, zoned, unix, and utc namespaces. Returns
+  false/null/[] on invalid input — never throws.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/interval/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/interval/index.ts'
@@ -44,6 +45,7 @@ import {
   intervalFromDurationDate,
   splitIntervalByUnitDate,
   intervalCountDate,
+  intervalOverlappingDaysDate,
 } from "@burglekitt/gmt";
 ```
 
@@ -65,6 +67,9 @@ Every function has `Time`, `DateTime`, `Zoned`, `Unix`, and `Utc` siblings. Repl
 | `intervalFromDuration*` | `(value, duration, anchor, options?)` | `{ start, end } \| null` | `null` |
 | `splitIntervalByUnit*` | `(start, end, unit, amount)` | `Array<{ start, end }>` | `[]` |
 | `intervalCount*` | `(start, end, unit)` | `number \| null` | `null` |
+| `intervalOverlappingDays*` | `(aStart, aEnd, bStart, bEnd)` — `Unix` variant takes a 5th `options?: { epochUnit?, timeZone? }` | `number \| null` | `null` (`0` when disjoint) |
+
+`intervalOverlappingDays*` has no `Time` sibling — `PlainTime` has no calendar, so a day count is undefined for it.
 
 `intervalContains*` supports two modes:
 - 3-arg: `intervalContains(start, end, point)` — point-in-interval
@@ -191,12 +196,32 @@ intervalCountDate("2024-01-15", "2024-03-10", "month"); // 3
 
 This is calendar-boundary counting, not duration. Use `diff*` when you want exact elapsed time.
 
+### Count shared days between two intervals
+
+`intervalOverlappingDays*` is the numeric counterpart to `intervalIntersection*` — how many distinct calendar dates the two intervals' closed intersection touches, inclusive of both endpoints:
+
+```ts
+intervalOverlappingDaysDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
+// 91
+
+intervalOverlappingDaysDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31");
+// 1 (adjacent, shares one date)
+
+intervalOverlappingDaysDate("2024-01-01", "2024-06-30", "2024-07-01", "2024-12-31");
+// 0 (disjoint — a well-defined answer, not invalid input)
+
+intervalOverlappingDaysUnix(0, 172800000, 86400000, 259200000, { timeZone: "UTC" });
+// 2
+```
+
+`intervalOverlappingDaysZoned` and `intervalOverlappingDaysUnix` count days in `aStart`'s zone (`intervalOverlappingDaysUnix` defaults to the system zone, overridable via `{ timeZone }`), same rule as `intervalCountZoned`/`intervalCountUnix` — so `intervalOverlappingDaysZoned` is not commutative when the two intervals carry different zones.
+
 ## Return Conventions
 
 - `boolean` families (`isValid*Interval`, `intervalContains*`, `intervalsOverlap*`, `intervalAbuts*`, `intervalEngulfs*`): `false` on invalid input.
 - Object families (`intervalIntersection*`, `intervalUnion*`, `intervalFromDuration*`): `null` on no-result or invalid input.
 - Array families (`intervalDifference*`, `intervalXor*`, `splitIntervalByUnit*`): `[]` on no-result or invalid input.
-- Number families (`intervalCount*`): `null` on invalid input.
+- Number families (`intervalCount*`, `intervalOverlappingDays*`): `null` on invalid input; `intervalOverlappingDays*` additionally returns `0` for a disjoint pair (not invalid — a well-defined "zero shared days").
 
 Never throws. Wrap in try-catch only if you need to distinguish "invalid input" from other errors.
 
@@ -248,3 +273,20 @@ A zero-length interval counts `1` only when it sits mid-unit. Exactly on a bound
 ### MEDIUM: Forgetting a negative `duration` can invert the span
 
 `intervalFromDuration*("2024-01-05", "-P10D", "start")` computes an end before the start and returns `null`, same as any other invalid input — it does not swap the endpoints for you.
+
+### HIGH: Expecting date-fns's `getOverlappingDaysInIntervals` number from `intervalOverlappingDays*`
+
+date-fns's `getOverlappingDaysInIntervals` rounds up elapsed 24-hour periods; GMT's `intervalOverlappingDays*` counts inclusive calendar dates instead — they disagree at every exact-day boundary. date-fns's own doc example:
+
+```ts
+// date-fns: getOverlappingDaysInIntervals(Jan 10–20, Jan 17–21) → 3
+intervalOverlappingDaysDate("2014-01-10", "2014-01-20", "2014-01-17", "2014-01-21");
+// 4 — not 3
+```
+
+To reproduce date-fns's number exactly, compose `intervalIntersection*` with `intervalCount*` instead:
+
+```ts
+const span = intervalIntersectionDate(aStart, aEnd, bStart, bEnd);
+span ? intervalCountDate(span.start, span.end, "day") : 0; // date-fns semantics
+```

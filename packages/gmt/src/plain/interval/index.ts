@@ -19,6 +19,8 @@ export * from "./intervalFromDurationTime";
 export * from "./intervalIntersectionDate";
 export * from "./intervalIntersectionDateTime";
 export * from "./intervalIntersectionTime";
+export * from "./intervalOverlappingDaysDate";
+export * from "./intervalOverlappingDaysDateTime";
 export * from "./intervalsOverlapDate";
 export * from "./intervalsOverlapDateTime";
 export * from "./intervalsOverlapTime";

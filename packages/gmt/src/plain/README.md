@@ -90,6 +90,7 @@ Validate and check date/time intervals:
 - `splitIntervalByUnitDate`, `splitIntervalByUnitDateTime`, `splitIntervalByUnitTime`
 - `intervalCountDate`, `intervalCountDateTime`, `intervalCountTime`
 - `intervalFromDurationDate`, `intervalFromDurationDateTime`, `intervalFromDurationTime`
+- `intervalOverlappingDaysDate`, `intervalOverlappingDaysDateTime` (no `Time` sibling — `PlainTime` has no calendar)
 
 ### map
 

@@ -492,6 +492,39 @@ intervalIntersectionUtc(
 
 All intersection functions return `null` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
 
+`intervalOverlappingDays*` returns how many distinct calendar dates two intervals share — the numeric counterpart to `intervalIntersection*`'s span. Counting is inclusive of both endpoints of the closed intersection `[max(aStart, bStart), min(aEnd, bEnd)]`, so `intervalOverlappingDaysDate("2024-01-01", "2024-01-01", "2024-01-01", "2024-01-01")` is `1`, not `0`. There is no `Time` variant — `PlainTime` has no calendar, so a day count is undefined for it:
+
+```typescript
+import {
+  intervalOverlappingDaysDate,
+  intervalOverlappingDaysDateTime,
+  intervalOverlappingDaysUtc,
+  intervalOverlappingDaysUnix,
+  intervalOverlappingDaysZoned,
+} from "@burglekitt/gmt";
+
+intervalOverlappingDaysDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
+// 91
+
+intervalOverlappingDaysDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31");
+// 1 (adjacent, shares one date)
+
+intervalOverlappingDaysDate("2024-01-01", "2024-06-30", "2024-07-01", "2024-12-31");
+// 0 (disjoint)
+
+intervalOverlappingDaysUnix(0, 172800000, 86400000, 259200000, { timeZone: "UTC" });
+// 2
+```
+
+Returns `0` when the intervals do not overlap (a well-defined answer, not invalid input) and `null` on invalid input, including an inverted interval (`start > end`). `intervalOverlappingDaysZoned` and `intervalOverlappingDaysUnix` count days in `aStart`'s time zone (`intervalOverlappingDaysUnix` defaults to the system time zone, overridable via `{ timeZone }`) — the same rule `intervalCountZoned`/`intervalCountUnix` use — so `intervalOverlappingDaysZoned` is **not commutative** when the two intervals carry different zones: swapping the arguments can change the answer.
+
+This deliberately diverges from date-fns's `getOverlappingDaysInIntervals`, which rounds up elapsed 24-hour periods instead of counting calendar dates — its own doc example (`Jan 10–20` vs `Jan 17–21`) returns `3` there and `4` here. To reproduce date-fns's number, compose `intervalIntersection*` with `intervalCount*`:
+
+```typescript
+const span = intervalIntersectionDate(aStart, aEnd, bStart, bEnd);
+span ? intervalCountDate(span.start, span.end, "day") : 0; // date-fns semantics
+```
+
 `intervalUnion*` returns the combined span of two overlapping or adjacent intervals, or `null` when they are disjoint with a gap. Adjacent intervals (sharing one instant) count as mergeable:
 
 ```typescript

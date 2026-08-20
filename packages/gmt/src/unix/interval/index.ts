@@ -5,6 +5,7 @@ export * from "./intervalDifferenceUnix";
 export * from "./intervalEngulfsUnix";
 export * from "./intervalFromDurationUnix";
 export * from "./intervalIntersectionUnix";
+export * from "./intervalOverlappingDaysUnix";
 export * from "./intervalsOverlapUnix";
 export * from "./intervalUnionUnix";
 export * from "./intervalXorUnix";

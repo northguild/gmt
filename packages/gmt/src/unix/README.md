@@ -41,6 +41,7 @@ Validate and check Unix intervals:
 - `splitIntervalByUnitUnix`
 - `intervalCountUnix`
 - `intervalFromDurationUnix`
+- `intervalOverlappingDaysUnix`
 
 ### format
 

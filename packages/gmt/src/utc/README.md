@@ -47,6 +47,7 @@ Validate and check UTC intervals:
 - `splitIntervalByUnitUtc`
 - `intervalCountUtc`
 - `intervalFromDurationUtc`
+- `intervalOverlappingDaysUtc`
 
 ### format
 
