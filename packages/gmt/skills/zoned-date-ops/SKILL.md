@@ -34,7 +34,7 @@ sources:
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.10.0'
+  library_version: '1.11.0'
 ---
 
 # Zoned Date Operations

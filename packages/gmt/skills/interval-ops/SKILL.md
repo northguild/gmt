@@ -6,12 +6,12 @@ description: >
   point-or-interval containment, intervalsOverlap* for overlap booleans,
   intervalIntersection* / intervalUnion* for set-theoretic combine/difference
   returning { start, end } | null, intervalDifference* / intervalXor* /
-  intervalAbuts* / intervalEngulfs* for set operations, intervalFromDuration*
-  to construct an interval from a single point plus an ISO 8601 duration
-  anchored at "start" or "end", splitIntervalByUnit* to tile an interval by
-  duration unit, and intervalCount* for how many calendar-unit boundaries an
-  interval crosses. Covers plain, zoned, unix, and utc namespaces. Returns
-  false/null/[] on invalid input — never throws.
+  intervalAbuts* / intervalEngulfs* for set operations, intervalFromDuration* to
+  construct an interval from a single point plus an ISO 8601 duration anchored
+  at "start" or "end", splitIntervalByUnit* to tile an interval by duration
+  unit, and intervalCount* for how many calendar-unit boundaries an interval
+  crosses. Covers plain, zoned, unix, and utc namespaces. Returns false/null/[]
+  on invalid input — never throws.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/interval/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/interval/index.ts'
@@ -21,7 +21,7 @@ sources:
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.10.0'
+  library_version: '1.11.0'
 ---
 
 # Interval Operations

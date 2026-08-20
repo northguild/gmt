@@ -5,9 +5,10 @@ description: >
   options. Use formatDate, formatTime, formatDateTime for absolute formatting;
   use formatRelativeDate, formatRelativeTime, formatRelativeDateTime for
   human-friendly relative output ("yesterday", "in 2 hours"). Also
-  getLocaleEraNames, getLocaleMonthNames, getLocaleWeekdayNames, getLocaleMeridiems
-  for standalone locale calendar-name lookups — the GMT equivalent of Luxon's
-  Info.eras, Info.months, Info.weekdays, and Info.meridiems.
+  getLocaleEraNames, getLocaleMonthNames, getLocaleWeekdayNames,
+  getLocaleMeridiems for standalone locale calendar-name lookups — the GMT
+  equivalent of Luxon's Info.eras, Info.months, Info.weekdays, and
+  Info.meridiems.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/format/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/locale/index.ts'

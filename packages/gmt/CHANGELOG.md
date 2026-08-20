@@ -1,5 +1,25 @@
 # @burglekitt/gmt
 
+## 1.11.0
+
+### Minor Changes
+
+- a9a7c17: Add standalone, locale-aware calendar-name lookups (Story H1):
+
+  - `getLocaleMonthNames(locale, style?)` — 12 Gregorian month names in calendar order
+  - `getLocaleWeekdayNames(locale, style?)` — 7 weekday names in the locale's first-day order
+  - `getLocaleMeridiems(locale)` — `[AM-label, PM-label]` day-period labels
+
+  These are the GMT equivalents of Luxon's `Info.months` / `weekdays` / `meridiems`: they return locale-formatted calendar names without requiring a date value. All three delegate to the host runtime's `Intl` data and return `[]` for an invalid BCP 47 locale tag. `getLocaleWeekdayNames` uses locale-first-day ordering to stay consistent with `getLocaleDayOfWeek`.
+
+- 51c3f12: Add standalone, locale-aware Gregorian era-name lookup (Story H2):
+
+  - `getLocaleEraNames(locale, style?)` — 2-element `[BCE-label, CE-label]` array
+
+  This is the GMT equivalent of Luxon's `Info.eras`: it returns locale-formatted era names without requiring a date value, delegating to the host runtime's `Intl` data. Returns `[]` for an invalid BCP 47 locale tag. If a locale has no distinct BCE/CE era names, both array elements contain the same string — the sentinel is reserved for invalid input only.
+
+- d2be1e3: Add `hasDaylightSaving` — reports whether an IANA timezone observes daylight saving time at all. Returns `false` on invalid or unresolvable timezone identifiers.
+
 ## 1.10.0
 
 ### Minor Changes
