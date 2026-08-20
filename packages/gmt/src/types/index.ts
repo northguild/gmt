@@ -7,6 +7,7 @@ export * from "./duration-string-options";
 export * from "./fractional-digit";
 export * from "./offset";
 export * from "./overflow";
+export * from "./relative-rounding-method";
 export * from "./rounding-options";
 export * from "./time-duration-unit";
 export * from "./time-unit";

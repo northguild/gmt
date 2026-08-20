@@ -609,6 +609,89 @@ describe("formatRelativeDate", () => {
   });
 
   // ---------------------------------------------------------------------------
+  // roundingMethod option
+  // Controls how the fractional distance rounds to the display unit.
+  // "round" (default) matches current Math.round behavior; "floor"/"ceil"
+  // apply directly to the signed value, so they respect past vs. future.
+  // PlainDate has no sub-day component, so "day" totals are always whole
+  // numbers — the fractional cases live at "week" (10/11 days ÷ 7) and
+  // "month" (calendrical) instead.
+  // ---------------------------------------------------------------------------
+  describe("roundingMethod option", () => {
+    it.each`
+      value           | roundingMethod | expected
+      ${"2024-03-05"} | ${"floor"}     | ${"2 weeks ago"}
+      ${"2024-03-05"} | ${"ceil"}      | ${"1 week ago"}
+      ${"2024-03-05"} | ${"round"}     | ${"1 week ago"}
+      ${"2024-03-25"} | ${"floor"}     | ${"in 1 week"}
+      ${"2024-03-25"} | ${"ceil"}      | ${"in 2 weeks"}
+      ${"2024-03-25"} | ${"round"}     | ${"in 1 week"}
+      ${"2024-03-04"} | ${"floor"}     | ${"2 weeks ago"}
+      ${"2024-03-04"} | ${"ceil"}      | ${"1 week ago"}
+      ${"2024-03-04"} | ${"round"}     | ${"2 weeks ago"}
+      ${"2024-02-23"} | ${"floor"}     | ${"3 weeks ago"}
+      ${"2024-02-23"} | ${"ceil"}      | ${"3 weeks ago"}
+      ${"2024-02-23"} | ${"round"}     | ${"3 weeks ago"}
+    `(
+      "roundingMethod:$roundingMethod for $value → $expected",
+      ({ value, roundingMethod, expected }) => {
+        expect(
+          formatRelativeDate(value, MustTestLocales.enUS, {
+            reference: REF,
+            largestUnit: "week",
+            numeric: "always",
+            roundingMethod,
+          }),
+        ).toBe(expected);
+      },
+    );
+
+    it("defaults to 'round' when roundingMethod is omitted (matches explicit 'round')", () => {
+      const value = "2024-02-23";
+      const omitted = formatRelativeDate(value, MustTestLocales.enUS, {
+        reference: REF,
+        largestUnit: "week",
+        numeric: "always",
+      });
+      const explicit = formatRelativeDate(value, MustTestLocales.enUS, {
+        reference: REF,
+        largestUnit: "week",
+        numeric: "always",
+        roundingMethod: "round",
+      });
+      expect(omitted).toBe("3 weeks ago");
+      expect(explicit).toBe(omitted);
+    });
+
+    it.each`
+      roundingMethod | expected
+      ${"floor"}     | ${"3 months ago"}
+      ${"ceil"}      | ${"2 months ago"}
+      ${"round"}     | ${"2 months ago"}
+    `(
+      "combines with largestUnit:month (calendrical branch): $roundingMethod → $expected",
+      ({ roundingMethod, expected }) => {
+        expect(
+          formatRelativeDate("2024-01-10", MustTestLocales.enUS, {
+            reference: REF,
+            largestUnit: "month",
+            roundingMethod,
+          }),
+        ).toBe(expected);
+      },
+    );
+
+    it("returns '' for an invalid roundingMethod", () => {
+      expect(
+        formatRelativeDate("2024-03-05", MustTestLocales.enUS, {
+          reference: REF,
+          roundingMethod: "nonsense" as never,
+        }),
+      ).toBe("");
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // Invalid inputs — must return ""
   // ---------------------------------------------------------------------------
   describe("invalid inputs", () => {

@@ -1,6 +1,8 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { normalizeDateTime } from "../../internal/normalizeDateTime";
 import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
+import { resolveRelativeRounding } from "../../internal/resolveRelativeRounding";
+import type { RelativeRoundingMethod } from "../../types";
 import { isValidUtc } from "../../utc/validate";
 
 // Intl.RelativeTimeFormatUnit includes "quarter" which Temporal doesn't support.
@@ -17,6 +19,12 @@ export interface FormatRelativeUnixOptions {
   style?: "long" | "short" | "narrow";
   numeric?: "always" | "auto";
   largestUnit?: RelativeUnit;
+  /**
+   * How the computed distance rounds to the display unit: "floor" rounds toward the
+   * earlier boundary, "ceil" toward the later boundary, "round" (default) to the nearest —
+   * matches current behavior when omitted.
+   */
+  roundingMethod?: RelativeRoundingMethod;
   epochUnit?: "milliseconds" | "seconds";
   reference?: string | number;
   timeZone?: string;
@@ -54,6 +62,22 @@ function toInstant(
   }
 }
 
+/**
+ * Format the relative time between a unix epoch value and a reference instant.
+ *
+ * - Auto-picks the display unit (second through year) based on the distance, unless
+ *   `largestUnit` forces one.
+ * - `roundingMethod` controls how the distance rounds to the display unit.
+ *
+ * @param value unix epoch (string or number, per `epochUnit`) to format
+ * @param locale optional: BCP 47 locale tag
+ * @param options optional: { style, numeric, largestUnit, roundingMethod, epochUnit, reference, timeZone }
+ * @returns the formatted relative-time string, or "" on invalid input
+ *
+ * @example formatRelativeUnix(1710685845000, "en-US", { epochUnit: "milliseconds" }) // "3 years ago"
+ * @example formatRelativeUnix(value, "en-US", { roundingMethod: "floor" }) // rounds toward the earlier boundary
+ * @example formatRelativeUnix("not-a-number") // ""
+ */
 export function formatRelativeUnix(
   value: string | number,
   locale?: string,
@@ -104,13 +128,17 @@ export function formatRelativeUnix(
 
     let amount: number;
     try {
-      amount = Math.round(diff.total(unit));
+      amount = resolveRelativeRounding(
+        diff.total(unit),
+        options.roundingMethod,
+      );
     } catch {
       // month/year are calendrical and need a relativeTo anchor.
       // Defer timezone normalization until we know we need it.
       const tz = normalizeTimeZone(options.timeZone);
-      amount = Math.round(
+      amount = resolveRelativeRounding(
         diff.total({ unit, relativeTo: reference.toZonedDateTimeISO(tz) }),
+        options.roundingMethod,
       );
     }
 

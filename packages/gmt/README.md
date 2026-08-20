@@ -917,6 +917,10 @@ formatRelativeUtc("2024-03-17T14:30:45+00:00[UTC]", "en-US");
 // Unix epoch relative formatting.
 formatRelativeUnix(1710685845000, "en-US", { epochUnit: "milliseconds" });
 // e.g. "3 years ago"
+
+// roundingMethod ("floor" | "ceil" | "round", default "round") controls how the
+// computed distance rounds to the display unit — every formatRelative* function accepts it.
+formatRelativeUtc(value, "en-US", { roundingMethod: "floor" });
 ```
 
 ### Unix and UTC helpers

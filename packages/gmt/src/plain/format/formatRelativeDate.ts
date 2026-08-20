@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { normalizeDateTime } from "../../internal";
+import { normalizeDateTime, resolveRelativeRounding } from "../../internal";
+import type { RelativeRoundingMethod } from "../../types";
 import { isValidDate } from "../validate";
 
 // No "hour"/"minute"/"second" — PlainDate has no time component.
@@ -9,6 +10,12 @@ export interface FormatRelativeDateOptions {
   style?: "long" | "short" | "narrow";
   numeric?: "always" | "auto";
   largestUnit?: RelativeUnit;
+  /**
+   * How the computed distance rounds to the display unit: "floor" rounds toward the
+   * earlier boundary, "ceil" toward the later boundary, "round" (default) to the nearest —
+   * matches current behavior when omitted.
+   */
+  roundingMethod?: RelativeRoundingMethod;
   reference?: string;
 }
 
@@ -19,6 +26,22 @@ const AUTO_UNITS: Array<{ unit: RelativeUnit; maxDays: number }> = [
   { unit: "year", maxDays: Infinity },
 ];
 
+/**
+ * Format the relative time between a plain date and a reference date.
+ *
+ * - Auto-picks the display unit (day/week/month/year) based on the distance, unless
+ *   `largestUnit` forces one.
+ * - `roundingMethod` controls how the distance rounds to the display unit.
+ *
+ * @param value ISO date string to format
+ * @param locale optional: BCP 47 locale tag
+ * @param options optional: { style, numeric, largestUnit, roundingMethod, reference }
+ * @returns the formatted relative-time string, or "" on invalid input
+ *
+ * @example formatRelativeDate("2026-01-15", "en-US", { reference: "2026-04-15" }) // "3 months ago"
+ * @example formatRelativeDate(value, "en-US", { roundingMethod: "floor" }) // rounds toward the earlier boundary
+ * @example formatRelativeDate("not-a-date") // ""
+ */
 export function formatRelativeDate(
   value: string,
   locale?: string,
@@ -44,10 +67,16 @@ export function formatRelativeDate(
 
     let amount: number;
     try {
-      amount = Math.round(diff.total(unit));
+      amount = resolveRelativeRounding(
+        diff.total(unit),
+        options.roundingMethod,
+      );
     } catch {
       // month/year are calendrical and need a relativeTo anchor
-      amount = Math.round(diff.total({ unit, relativeTo: reference }));
+      amount = resolveRelativeRounding(
+        diff.total({ unit, relativeTo: reference }),
+        options.roundingMethod,
+      );
     }
 
     return normalizeDateTime(

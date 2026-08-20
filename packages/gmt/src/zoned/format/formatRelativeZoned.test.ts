@@ -240,6 +240,91 @@ describe("formatRelativeZoned", () => {
   });
 
   // ---------------------------------------------------------------------------
+  // roundingMethod option
+  // Controls how the fractional distance rounds to the display unit.
+  // "round" (default) matches current Math.round behavior; "floor"/"ceil"
+  // apply directly to the signed value, so they respect past vs. future.
+  // ---------------------------------------------------------------------------
+  describe("roundingMethod option", () => {
+    it.each`
+      value                               | roundingMethod | expected
+      ${"2024-02-28T21:42:00+00:00[UTC]"} | ${"floor"}     | ${"3 hours ago"}
+      ${"2024-02-28T21:42:00+00:00[UTC]"} | ${"ceil"}      | ${"2 hours ago"}
+      ${"2024-02-28T21:42:00+00:00[UTC]"} | ${"round"}     | ${"2 hours ago"}
+      ${"2024-02-29T02:18:00+00:00[UTC]"} | ${"floor"}     | ${"in 2 hours"}
+      ${"2024-02-29T02:18:00+00:00[UTC]"} | ${"ceil"}      | ${"in 3 hours"}
+      ${"2024-02-29T02:18:00+00:00[UTC]"} | ${"round"}     | ${"in 2 hours"}
+      ${"2024-02-28T21:30:00+00:00[UTC]"} | ${"floor"}     | ${"3 hours ago"}
+      ${"2024-02-28T21:30:00+00:00[UTC]"} | ${"ceil"}      | ${"2 hours ago"}
+      ${"2024-02-28T21:30:00+00:00[UTC]"} | ${"round"}     | ${"2 hours ago"}
+      ${"2024-02-28T21:00:00+00:00[UTC]"} | ${"floor"}     | ${"3 hours ago"}
+      ${"2024-02-28T21:00:00+00:00[UTC]"} | ${"ceil"}      | ${"3 hours ago"}
+      ${"2024-02-28T21:00:00+00:00[UTC]"} | ${"round"}     | ${"3 hours ago"}
+    `(
+      "roundingMethod:$roundingMethod for $value → $expected",
+      ({ value, roundingMethod, expected }) => {
+        expect(
+          formatRelativeZoned(value, MustTestLocales.enUS, {
+            reference: REF,
+            largestUnit: "hour",
+            numeric: "always",
+            roundingMethod,
+          }),
+        ).toBe(expected);
+      },
+    );
+
+    it("defaults to 'round' when roundingMethod is omitted (matches explicit 'round')", () => {
+      const value = "2024-02-28T21:00:00+00:00[UTC]";
+      const omitted = formatRelativeZoned(value, MustTestLocales.enUS, {
+        reference: REF,
+      });
+      const explicit = formatRelativeZoned(value, MustTestLocales.enUS, {
+        reference: REF,
+        roundingMethod: "round",
+      });
+      expect(omitted).toBe("3 hours ago");
+      expect(explicit).toBe(omitted);
+    });
+
+    it.each`
+      roundingMethod | expected
+      ${"floor"}     | ${"2 months ago"}
+      ${"ceil"}      | ${"1 month ago"}
+      ${"round"}     | ${"2 months ago"}
+    `(
+      "combines with largestUnit:month (calendrical branch): $roundingMethod → $expected",
+      ({ roundingMethod, expected }) => {
+        expect(
+          formatRelativeZoned(
+            "2024-01-10T12:00:00+00:00[UTC]",
+            MustTestLocales.enUS,
+            {
+              reference: REF,
+              largestUnit: "month",
+              numeric: "always",
+              roundingMethod,
+            },
+          ),
+        ).toBe(expected);
+      },
+    );
+
+    it("returns '' for an invalid roundingMethod", () => {
+      expect(
+        formatRelativeZoned(
+          "2024-02-28T21:42:00+00:00[UTC]",
+          MustTestLocales.enUS,
+          {
+            reference: REF,
+            roundingMethod: "nonsense" as never,
+          },
+        ),
+      ).toBe("");
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // reference type variants
   // The reference can be a ZonedDateTime string, a UTC ISO string, or a
   // unix epoch in milliseconds. All three represent the same instant.

@@ -560,6 +560,82 @@ describe("formatRelativeDateTime", () => {
   });
 
   // ---------------------------------------------------------------------------
+  // roundingMethod option
+  // Controls how the fractional distance rounds to the display unit.
+  // "round" (default) matches current Math.round behavior; "floor"/"ceil"
+  // apply directly to the signed value, so they respect past vs. future.
+  // ---------------------------------------------------------------------------
+  describe("roundingMethod option", () => {
+    it.each`
+      value                    | roundingMethod | expected
+      ${"2024-03-15T09:42:00"} | ${"floor"}     | ${"3 hours ago"}
+      ${"2024-03-15T09:42:00"} | ${"ceil"}      | ${"2 hours ago"}
+      ${"2024-03-15T09:42:00"} | ${"round"}     | ${"2 hours ago"}
+      ${"2024-03-15T14:18:00"} | ${"floor"}     | ${"in 2 hours"}
+      ${"2024-03-15T14:18:00"} | ${"ceil"}      | ${"in 3 hours"}
+      ${"2024-03-15T14:18:00"} | ${"round"}     | ${"in 2 hours"}
+      ${"2024-03-15T09:30:00"} | ${"floor"}     | ${"3 hours ago"}
+      ${"2024-03-15T09:30:00"} | ${"ceil"}      | ${"2 hours ago"}
+      ${"2024-03-15T09:30:00"} | ${"round"}     | ${"2 hours ago"}
+      ${"2024-03-15T09:00:00"} | ${"floor"}     | ${"3 hours ago"}
+      ${"2024-03-15T09:00:00"} | ${"ceil"}      | ${"3 hours ago"}
+      ${"2024-03-15T09:00:00"} | ${"round"}     | ${"3 hours ago"}
+    `(
+      "roundingMethod:$roundingMethod for $value → $expected",
+      ({ value, roundingMethod, expected }) => {
+        expect(
+          formatRelativeDateTime(value, MustTestLocales.enUS, {
+            reference: REF,
+            largestUnit: "hour",
+            numeric: "always",
+            roundingMethod,
+          }),
+        ).toBe(expected);
+      },
+    );
+
+    it("defaults to 'round' when roundingMethod is omitted (matches explicit 'round')", () => {
+      const value = "2024-03-15T09:00:00";
+      const omitted = formatRelativeDateTime(value, MustTestLocales.enUS, {
+        reference: REF,
+      });
+      const explicit = formatRelativeDateTime(value, MustTestLocales.enUS, {
+        reference: REF,
+        roundingMethod: "round",
+      });
+      expect(omitted).toBe("3 hours ago");
+      expect(explicit).toBe(omitted);
+    });
+
+    it.each`
+      roundingMethod | expected
+      ${"floor"}     | ${"3 months ago"}
+      ${"ceil"}      | ${"2 months ago"}
+      ${"round"}     | ${"2 months ago"}
+    `(
+      "combines with largestUnit:month (calendrical branch): $roundingMethod → $expected",
+      ({ roundingMethod, expected }) => {
+        expect(
+          formatRelativeDateTime("2024-01-10T12:00:00", MustTestLocales.enUS, {
+            reference: REF,
+            largestUnit: "month",
+            roundingMethod,
+          }),
+        ).toBe(expected);
+      },
+    );
+
+    it("returns '' for an invalid roundingMethod", () => {
+      expect(
+        formatRelativeDateTime("2024-03-15T09:42:00", MustTestLocales.enUS, {
+          reference: REF,
+          roundingMethod: "nonsense" as never,
+        }),
+      ).toBe("");
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // Invalid inputs — must return ""
   // ---------------------------------------------------------------------------
   describe("invalid inputs", () => {

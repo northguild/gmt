@@ -237,6 +237,82 @@ describe("formatRelativeUtc", () => {
   });
 
   // ---------------------------------------------------------------------------
+  // roundingMethod option
+  // Controls how the fractional distance rounds to the display unit.
+  // "round" (default) matches current Math.round behavior; "floor"/"ceil"
+  // apply directly to the signed value, so they respect past vs. future.
+  // ---------------------------------------------------------------------------
+  describe("roundingMethod option", () => {
+    it.each`
+      value                     | roundingMethod | expected
+      ${"2024-03-15T09:42:00Z"} | ${"floor"}     | ${"3 hours ago"}
+      ${"2024-03-15T09:42:00Z"} | ${"ceil"}      | ${"2 hours ago"}
+      ${"2024-03-15T09:42:00Z"} | ${"round"}     | ${"2 hours ago"}
+      ${"2024-03-15T14:18:00Z"} | ${"floor"}     | ${"in 2 hours"}
+      ${"2024-03-15T14:18:00Z"} | ${"ceil"}      | ${"in 3 hours"}
+      ${"2024-03-15T14:18:00Z"} | ${"round"}     | ${"in 2 hours"}
+      ${"2024-03-15T09:30:00Z"} | ${"floor"}     | ${"3 hours ago"}
+      ${"2024-03-15T09:30:00Z"} | ${"ceil"}      | ${"2 hours ago"}
+      ${"2024-03-15T09:30:00Z"} | ${"round"}     | ${"2 hours ago"}
+      ${"2024-03-15T09:00:00Z"} | ${"floor"}     | ${"3 hours ago"}
+      ${"2024-03-15T09:00:00Z"} | ${"ceil"}      | ${"3 hours ago"}
+      ${"2024-03-15T09:00:00Z"} | ${"round"}     | ${"3 hours ago"}
+    `(
+      "roundingMethod:$roundingMethod for $value → $expected",
+      ({ value, roundingMethod, expected }) => {
+        expect(
+          formatRelativeUtc(value, MustTestLocales.enUS, {
+            reference: REF,
+            largestUnit: "hour",
+            numeric: "always",
+            roundingMethod,
+          }),
+        ).toBe(expected);
+      },
+    );
+
+    it("defaults to 'round' when roundingMethod is omitted (matches explicit 'round')", () => {
+      const value = "2024-03-15T09:00:00Z";
+      const omitted = formatRelativeUtc(value, MustTestLocales.enUS, {
+        reference: REF,
+      });
+      const explicit = formatRelativeUtc(value, MustTestLocales.enUS, {
+        reference: REF,
+        roundingMethod: "round",
+      });
+      expect(omitted).toBe("3 hours ago");
+      expect(explicit).toBe(omitted);
+    });
+
+    it.each`
+      roundingMethod | expected
+      ${"floor"}     | ${"3 months ago"}
+      ${"ceil"}      | ${"2 months ago"}
+      ${"round"}     | ${"2 months ago"}
+    `(
+      "combines with largestUnit:month (calendrical branch): $roundingMethod → $expected",
+      ({ roundingMethod, expected }) => {
+        expect(
+          formatRelativeUtc("2024-01-10T12:00:00Z", MustTestLocales.enUS, {
+            reference: REF,
+            largestUnit: "month",
+            roundingMethod,
+          }),
+        ).toBe(expected);
+      },
+    );
+
+    it("returns '' for an invalid roundingMethod", () => {
+      expect(
+        formatRelativeUtc("2024-03-15T09:42:00Z", MustTestLocales.enUS, {
+          reference: REF,
+          roundingMethod: "nonsense" as never,
+        }),
+      ).toBe("");
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // timezone handling
   // timeZone only affects calendrical (month/year) diffs via the relativeTo
   // anchor. For second/minute/hour/day the result is pure-seconds arithmetic

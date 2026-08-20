@@ -557,6 +557,65 @@ describe("formatRelativeTime", () => {
   });
 
   // ---------------------------------------------------------------------------
+  // roundingMethod option
+  // Controls how the fractional distance rounds to the display unit.
+  // "round" (default) matches current Math.round behavior; "floor"/"ceil"
+  // apply directly to the signed value, so they respect past vs. future.
+  // No calendrical branch exists for PlainTime (only hour/minute/second).
+  // ---------------------------------------------------------------------------
+  describe("roundingMethod option", () => {
+    it.each`
+      value         | roundingMethod | expected
+      ${"09:42:00"} | ${"floor"}     | ${"3 hours ago"}
+      ${"09:42:00"} | ${"ceil"}      | ${"2 hours ago"}
+      ${"09:42:00"} | ${"round"}     | ${"2 hours ago"}
+      ${"14:18:00"} | ${"floor"}     | ${"in 2 hours"}
+      ${"14:18:00"} | ${"ceil"}      | ${"in 3 hours"}
+      ${"14:18:00"} | ${"round"}     | ${"in 2 hours"}
+      ${"09:30:00"} | ${"floor"}     | ${"3 hours ago"}
+      ${"09:30:00"} | ${"ceil"}      | ${"2 hours ago"}
+      ${"09:30:00"} | ${"round"}     | ${"2 hours ago"}
+      ${"09:00:00"} | ${"floor"}     | ${"3 hours ago"}
+      ${"09:00:00"} | ${"ceil"}      | ${"3 hours ago"}
+      ${"09:00:00"} | ${"round"}     | ${"3 hours ago"}
+    `(
+      "roundingMethod:$roundingMethod for $value → $expected",
+      ({ value, roundingMethod, expected }) => {
+        expect(
+          formatRelativeTime(value, MustTestLocales.enUS, {
+            reference: REF,
+            largestUnit: "hour",
+            numeric: "always",
+            roundingMethod,
+          }),
+        ).toBe(expected);
+      },
+    );
+
+    it("defaults to 'round' when roundingMethod is omitted (matches explicit 'round')", () => {
+      const value = "09:00:00";
+      const omitted = formatRelativeTime(value, MustTestLocales.enUS, {
+        reference: REF,
+      });
+      const explicit = formatRelativeTime(value, MustTestLocales.enUS, {
+        reference: REF,
+        roundingMethod: "round",
+      });
+      expect(omitted).toBe("3 hours ago");
+      expect(explicit).toBe(omitted);
+    });
+
+    it("returns '' for an invalid roundingMethod", () => {
+      expect(
+        formatRelativeTime("09:42:00", MustTestLocales.enUS, {
+          reference: REF,
+          roundingMethod: "nonsense" as never,
+        }),
+      ).toBe("");
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // Invalid inputs — must return ""
   // ---------------------------------------------------------------------------
   describe("invalid inputs", () => {

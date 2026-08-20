@@ -8,3 +8,4 @@ export { normalizeDateTime } from "./normalizeDateTime";
 export { resolveDateTimeUnit } from "./resolveDateTimeUnit";
 export { resolveDurationUnit } from "./resolveDurationUnit";
 export { resolveOverflow } from "./resolveOverflow";
+export { resolveRelativeRounding } from "./resolveRelativeRounding";

@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { normalizeDateTime } from "../../internal";
+import { normalizeDateTime, resolveRelativeRounding } from "../../internal";
+import type { RelativeRoundingMethod } from "../../types";
 import { isValidTime } from "../validate";
 
 // PlainTime has no date component so only sub-day units are meaningful.
@@ -9,6 +10,12 @@ export interface FormatRelativeTimeOptions {
   style?: "long" | "short" | "narrow";
   numeric?: "always" | "auto";
   largestUnit?: RelativeUnit;
+  /**
+   * How the computed distance rounds to the display unit: "floor" rounds toward the
+   * earlier boundary, "ceil" toward the later boundary, "round" (default) to the nearest —
+   * matches current behavior when omitted.
+   */
+  roundingMethod?: RelativeRoundingMethod;
   reference?: string;
 }
 
@@ -18,6 +25,22 @@ const AUTO_UNITS: Array<{ unit: RelativeUnit; maxSeconds: number }> = [
   { unit: "hour", maxSeconds: Infinity },
 ];
 
+/**
+ * Format the relative time between a plain time and a reference time.
+ *
+ * - Auto-picks the display unit (second/minute/hour) based on the distance, unless
+ *   `largestUnit` forces one.
+ * - `roundingMethod` controls how the distance rounds to the display unit.
+ *
+ * @param value ISO time string to format
+ * @param locale optional: BCP 47 locale tag
+ * @param options optional: { style, numeric, largestUnit, roundingMethod, reference }
+ * @returns the formatted relative-time string, or "" on invalid input
+ *
+ * @example formatRelativeTime("14:30:00", "en-US", { style: "short" }) // "2 hr. ago"
+ * @example formatRelativeTime(value, "en-US", { roundingMethod: "floor" }) // rounds toward the earlier boundary
+ * @example formatRelativeTime("not-a-time") // ""
+ */
 export function formatRelativeTime(
   value: string,
   locale?: string,
@@ -41,7 +64,10 @@ export function formatRelativeTime(
       AUTO_UNITS.find((t) => absSeconds < t.maxSeconds)?.unit ??
       "hour";
 
-    const amount = Math.round(diff.total(unit));
+    const amount = resolveRelativeRounding(
+      diff.total(unit),
+      options.roundingMethod,
+    );
 
     return normalizeDateTime(
       new Intl.RelativeTimeFormat(locale, {

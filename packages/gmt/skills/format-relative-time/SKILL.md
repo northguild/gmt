@@ -127,6 +127,7 @@ All relative formatters accept the same option shape (besides their type-specifi
   - `"short"`: `"3 min. ago"`
   - `"narrow"`: `"3m ago"`
 - `largestUnit` — pick a specific bucket (`"second" | "minute" | "hour" | "day" | "week" | "month" | "quarter" | "year"`). Useful when you want `"3 weeks ago"` even though the difference would auto-bucket to `"last month"`.
+- `roundingMethod: "floor" | "ceil" | "round"` — default `"round"`. Controls how the fractional distance rounds to the display unit; `"floor"`/`"ceil"` apply directly to the signed value (not its absolute value), so they respect whether the distance is past or future.
 
 ## Runtime ICU data
 
