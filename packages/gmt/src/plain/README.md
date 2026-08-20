@@ -58,6 +58,16 @@ Locale-aware formatting:
 >
 > This is a property of the runtime, not the library. If you need consistent non-English output across all environments, ensure your Node deployments use a full-ICU build, or polyfill `Intl` with a package that bundles locale data.
 
+### locale
+
+Standalone, locale-aware calendar-name lookups (no date value required):
+
+- `getLocaleMonthNames(locale, style?)` — 12 Gregorian month names, calendar order (January first)
+- `getLocaleWeekdayNames(locale, style?)` — 7 weekday names, in the locale's first-day order
+- `getLocaleMeridiems(locale)` — `[AM-label, PM-label]`
+
+These delegate to the host runtime's `Intl` data, so output depends on the runtime's ICU build (full-ICU runtimes localize every locale; partial-ICU runtimes fall back to English).
+
 ### get
 
 Current values and locale-aware extraction:

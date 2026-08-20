@@ -32,7 +32,7 @@ Issue number tracker (fill in as issues are created). `Order` is the sequence to
 | 22    | B7    | Issue #79    | Done        | v1.9.0                                       |
 | 23    | G1    | Issue #58    | Done        | v1.10.0                                      |
 | 24    | G2    | Issue #59    | Done        | v1.10.0                                      |
-| 25    | H1    | Issue #72    | Not started | not yet                                      |
+| 25    | H1    | Issue #72    | Done        | not yet                                      |
 | 26    | H2    | Issue #73    | Not started | not yet                                      |
 | 27    | H3    | Issue #74    | Not started | minor, Story Group H complete                |
 | 28    | I1    | Issue #80    | Not started | not yet                                      |

@@ -4,13 +4,20 @@ description: >
   Format plain date/time values for display with locale and Intl.DateTimeFormat
   options. Use formatDate, formatTime, formatDateTime for absolute formatting;
   use formatRelativeDate, formatRelativeTime, formatRelativeDateTime for
-  human-friendly relative output ("yesterday", "in 2 hours").
+  human-friendly relative output ("yesterday", "in 2 hours"). Also
+  getLocaleMonthNames, getLocaleWeekdayNames, getLocaleMeridiems for standalone
+  locale calendar-name lookups — the GMT equivalent of Luxon's Info.months,
+  weekdays, and meridiems.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/format/index.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/locale/index.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/locale/getLocaleMonthNames.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/locale/getLocaleWeekdayNames.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/locale/getLocaleMeridiems.ts'
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.10.0'
+  library_version: '1.11.0'
 ---
 
 # Format Date/Time
@@ -103,6 +110,40 @@ formatRelativeDateTime("2024-03-15T10:00:00", "en-US", {
 - `numeric: "auto" | "always"` — default `"auto"`. `"auto"` produces "yesterday"/"tomorrow"; `"always"` forces "1 day ago"/"in 1 day"
 - `style: "long" | "short" | "narrow"` — default `"long"`
 - `largestUnit` — override the auto-picked unit (e.g. `"week"` to force "3 weeks ago" instead of "last month")
+
+### Standalone locale calendar names (no date value needed)
+
+These return locale-formatted calendar names directly — the GMT equivalent of Luxon's `Info` class — without requiring a date value:
+
+```ts
+import { getLocaleMonthNames, getLocaleWeekdayNames, getLocaleMeridiems } from "@burglekitt/gmt";
+
+getLocaleMonthNames("en-US");
+// ["January", "February", ... "December"]
+
+getLocaleMonthNames("de-DE", "short");
+// ["Jan", "Feb", "Mär", ... "Dez"]
+
+getLocaleWeekdayNames("en-US");
+// ["Sunday", "Monday", ... "Saturday"] (locale-first-day order)
+
+getLocaleWeekdayNames("fr-FR");
+// ["lundi", "mardi", ... "dimanche"]
+
+getLocaleMeridiems("en-US");
+// ["AM", "PM"]
+
+getLocaleMeridiems("zh-CN");
+// ["上午", "下午"]
+```
+
+Options:
+
+- `getLocaleMonthNames(locale, style?)` — 12 Gregorian month names in calendar order. `style: "long" | "short" | "narrow"` (default `"long"`).
+- `getLocaleWeekdayNames(locale, style?)` — 7 weekday names in the locale's **first-day order** (Sunday-first for en-US, Monday-first for fr-FR). This matches `getLocaleDayOfWeek`, where index 0 is the locale's first day of the week.
+- `getLocaleMeridiems(locale)` — `[AM-label, PM-label]`; labels are locale-varying (e.g. `en-GB` → `["am","pm"]`, `sv-SE` → `["fm","em"]`, `zh-CN` → `["上午","下午"]`).
+
+All three return `[]` for an invalid BCP 47 locale tag.
 
 ## Locale Matrix
 
@@ -198,6 +239,29 @@ const formatted = formatDate("2024-03-15", "en-US");
 ```
 
 Source: Intl.DateTimeFormat — Throws on unsupported locale
+
+### MEDIUM Assuming getLocale* throws or returns English for an invalid locale
+
+Wrong:
+
+```ts
+const names = getLocaleMonthNames("not-a-locale");
+// Assume names is non-empty or throws
+render(names);
+```
+
+Correct:
+
+```ts
+import { getLocaleMonthNames } from "@burglekitt/gmt";
+
+const names = getLocaleMonthNames("en-US");
+if (names.length === 0) {
+  // invalid BCP 47 tag — fall back or surface an error
+}
+```
+
+Source: packages/gmt/src/plain/locale/getLocaleMonthNames.ts — Returns [] for an invalid locale
 
 ## References
 

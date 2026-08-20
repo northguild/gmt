@@ -222,6 +222,32 @@ getLocaleZonedDayOfWeek("2024-02-25T12:00:00+00:00[UTC]", "en-US");
 // 0
 ```
 
+`getLocaleMonthNames`/`getLocaleWeekdayNames`/`getLocaleMeridiems` return standalone, locale-aware calendar names with no date value required — the GMT equivalents of Luxon's `Info.months`/`weekdays`/`meridiems`:
+
+```typescript
+import { getLocaleMonthNames, getLocaleWeekdayNames, getLocaleMeridiems } from "@burglekitt/gmt";
+
+getLocaleMonthNames("en-US");
+// ["January", "February", ... "December"]
+
+getLocaleMonthNames("de-DE", "short");
+// ["Jan", "Feb", "Mär", ... "Dez"]
+
+getLocaleWeekdayNames("en-US");
+// ["Sunday", "Monday", ... "Saturday"] (locale-first-day order)
+
+getLocaleWeekdayNames("fr-FR");
+// ["lundi", "mardi", ... "dimanche"]
+
+getLocaleMeridiems("en-US");
+// ["AM", "PM"]
+
+getLocaleMeridiems("zh-CN");
+// ["上午", "下午"]
+```
+
+`getLocaleWeekdayNames` returns names in the locale's first-day order, consistent with `getLocaleDayOfWeek` (index 0 is the locale's first day of the week). All three delegate to the host runtime's `Intl` data, so their output depends on the runtime's ICU build.
+
 ### Durations
 
 ```typescript
