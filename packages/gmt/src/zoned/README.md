@@ -102,4 +102,4 @@ Extract timezone components:
 
 Validation helpers:
 
-- `isValidTimeZone`, `isValidZonedDateTime`, `isValidZonedRange`
+- `hasDaylightSaving`, `isValidTimeZone`, `isValidZonedDateTime`, `isValidZonedRange`

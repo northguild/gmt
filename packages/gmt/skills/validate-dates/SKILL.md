@@ -4,17 +4,11 @@ description: >
   Validate date/time strings, timezone identifiers, intervals, or ranges. Use
   isValidDate, isValidTime, isValidDateTime, isValidDateInterval,
   isValidTimeInterval, isValidDateTimeInterval for scalar and interval
-  validation. Use intervalContainsDate, intervalContainsTime,
-  intervalContainsDateTime, intervalContainsUtc, intervalContainsUnix,
-  intervalContainsZoned for point-in-interval and interval-in-interval
-  containment checks. Use intervalUnionDate, intervalUnionTime,
-  intervalUnionDateTime, intervalUnionUtc, intervalUnionUnix, intervalUnionZoned
-  to merge two overlapping or adjacent intervals into their combined span. Use
-  splitIntervalByUnitDate, splitIntervalByUnitTime, splitIntervalByUnitDateTime,
-  splitIntervalByUnitUtc, splitIntervalByUnitUnix, splitIntervalByUnitZoned to
-  split an interval into sub-intervals of amount × unit. All validation
-  functions return false on invalid input; interval union returns null on
-  disjoint or invalid input; split functions return [] on invalid input.
+  validation. Use hasDaylightSaving to check whether an IANA timezone observes
+  daylight saving time. Use intervalContains*, intervalUnion*, and
+  splitIntervalByUnit* for interval containment, merging, and splitting. All
+  validation functions return false on invalid input; interval union returns
+  null on disjoint or invalid input; split functions return [] on invalid input.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/interval/validate/index.ts'
@@ -38,6 +32,7 @@ sources:
   - 'burglekitt/gmt:packages/gmt/src/unix/interval/intervalUnionUnix.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/interval/splitIntervalByUnitUnix.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/validate/index.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/validate/hasDaylightSaving.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/interval/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/interval/intervalContainsZoned.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/interval/intervalUnionZoned.ts'
@@ -45,7 +40,7 @@ sources:
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.10.0'
+  library_version: '1.11.0'
 ---
 
 # Validate Dates
@@ -104,6 +99,16 @@ import { isValidZonedDateTime } from "@burglekitt/gmt/zoned";
 
 const valid = isValidZonedDateTime("2024-03-15T14:30:45[America/New_York]"); // true
 const invalid = isValidZonedDateTime("2024-02-30T14:30:45[America/New_York]"); // false
+```
+
+### Check daylight saving time
+
+```ts
+import { hasDaylightSaving } from "@burglekitt/gmt/zoned";
+
+const hasDst = hasDaylightSaving("America/New_York"); // true
+const noDst = hasDaylightSaving("Asia/Tokyo"); // false
+const invalid = hasDaylightSaving("Invalid/Zone"); // false
 ```
 
 ### Validate date duration unit

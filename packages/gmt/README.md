@@ -805,6 +805,21 @@ startOfZoned(source, "hour", { disambiguation: "reject", offset: "prefer" });
 
 `convertPlainDateTimeToZoned` and `addZoned`/`subtractZoned` also accept `offset` for API consistency, but it's permanently inert on both — their construction path never has a stored offset for it to act on.
 
+`hasDaylightSaving` reports whether an IANA timezone observes daylight saving time at all:
+
+```typescript
+import { hasDaylightSaving } from "@burglekitt/gmt";
+
+hasDaylightSaving("America/New_York");
+// true
+
+hasDaylightSaving("Asia/Tokyo");
+// false
+
+hasDaylightSaving("Invalid/Zone");
+// false
+```
+
 `clampZoned` restricts a zoned datetime to a range, and `closestZonedTo` finds the nearest candidate by temporal distance:
 
 ```typescript

@@ -157,3 +157,51 @@ See "Instructions for the agent picking up a story" in `context/roadmap/index.md
 ## Definition of done
 Per-function audit findings documented (even the "no change needed, verified why" cases — don't skip documenting negatives), tests for calendar-boundary-crossing cases (leap month, era transition) on whichever functions needed fixes, README update, changeset, lint/test pass.
 ```
+
+### E6 — `cycle*` wrap-around field adjustment
+
+**GitHub Issue:** _not yet created_
+
+**Title:**
+
+```
+E6 Add cycleDate, cycleDateTime, cycleTime, cycleZoned
+```
+
+**Description:**
+
+````
+Part of the parity roadmap — see `context/roadmap/index.md`, Story Group E, item E6. Originally scoped as Story Group J's J2, moved here 2026-08-20 (`issues/J.md` Decision 6) — not because the capability isn't real, but because its own motivation is UI-primitive territory this group already owns, not a "gap users hit on day one" the way the rest of Group J is scoped. **Depends on J1** (Group J, field setters) across groups — builds on the same `.with()` foundation; sequence after J1 lands regardless of when this group is picked up.
+
+## Why this belongs in Group E, not Group J
+`overview.md`'s Group E paragraph already states the reasoning this story fits: "future `gmt-react`/`gmt-svelte`/`gmt-solid`/`gmt-octane` packages will need calendar-aware date math, the same role `@internationalized/date` plays under react-aria's own Calendar/DatePicker components... E1–E5 are pure calendar-arithmetic library additions, no UI dependency." `cycle*`'s use case — datepicker segment editing, where pressing Up on a month segment should wrap 12 → 1 without touching the year — is exactly that category, and E1's own framing ("Explicitly not a UI story... deferred to whenever a UI-primitives package is actually started") applies here too: this is a pure library addition, not a reason to start a UI package.
+
+## Gap
+`@internationalized/date`'s `cycle(field, amount, options)` adjusts a single field and **wraps** at that field's limits: December + 1 month → January of the *same* year, not January of the next. GMT has no equivalent — `addDate(value, { months: 1 })` carries into the next year, which is correct arithmetic but wrong for the use case.
+
+This is not merely inconvenient to compose from what GMT already has — it is categorically impossible. `add()`'s defining behavior is to overflow into the next larger field, which is exactly what wrap-without-carry must not do. No delta composition, at any degree of cleverness, can express "stay in the same year." This is the kind of GMT-specific impossibility argument `issues/J.md`'s Decision 6 requires a story to lead with, independent of how many comparison libraries happen to have the same shape.
+
+The use case is datepicker segment editing: pressing Up on the month segment should cycle 12 → 1 without silently changing the year the user already set. This is why `@internationalized/date` has it and why react-aria's DateField depends on it.
+
+## Scope
+- `cycleDate(value, field, amount, options?): string`
+- `cycleDateTime(value, field, amount, options?): string`
+- `cycleTime(value, field, amount, options?): string`
+- `cycleZoned(value, field, amount, options?): string`
+
+`""` on invalid input. `options.round?: boolean` — round to the nearest increment before cycling, matching `@internationalized/date`'s `CycleOptions`. Zoned variant takes `disambiguation` and `offset` for the same reason Group J's J1 does; carry J1's `offset: 'ignore'` default and its reasoning.
+
+Verify at spec-expansion time whether hour cycling in a 12-hour context needs separate handling from 24-hour, as `@internationalized/date` handles this via a `hourCycle` concern.
+
+## Required inline comments
+On the wrap-around boundary arithmetic: what happens at each field's minimum and maximum, and how `round` interacts with the wrap. This is the part a reader cannot infer, and the part most likely to be "simplified" into a bug.
+
+## Common Mistakes entry (required)
+`cycle` is not `add`. Cycling December by +1 month stays in the same year; adding 1 month does not. Reaching for `cycleDate` when calendar arithmetic is wanted silently produces dates a year off.
+
+## Before starting
+See "Instructions for the agent picking up a story" in `context/roadmap/index.md`. Nearest analog: Group J's J1 setters (same `.with()` foundation, same option handling) — read that story's spec even though it's in a different group. Re-verify `@internationalized/date`'s `CycleOptions` semantics via context7.
+
+## Definition of done
+Tests: each cyclable field at both its minimum and maximum boundary, in both directions; amounts larger than the field's range (cycling month by +13); negative amounts; `round: true` vs. default on a non-aligned value; day-of-month cycling in a 31-, 30-, and 28/29-day month; `battleTestTimeZones` and DST cases for `cycleZoned`; invalid field name → `""`; invalid input → `""`. JSDoc with `@example`. `packages/gmt/README.md` and the owning namespace READMEs updated. Changeset. `zoned-date-ops`/`calculate-dates` TanStack Intent skills updated. Lint/test pass per `context/coding-standards.md` / `context/testing-standards/index.md` / `context/jsdoc-standards.md`.
+````

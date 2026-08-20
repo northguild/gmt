@@ -117,7 +117,7 @@ skills:
     domain: core-date-operations
     path: 'skills/validate-dates/SKILL.md'
     package: 'packages/gmt'
-    description: Validate date/time strings, timezone identifiers, intervals, and ranges; check point-in-interval and interval-in-interval containment; merge overlapping or adjacent intervals; split intervals into sub-intervals by duration unit
+    description: Validate date/time strings, timezone identifiers, intervals, and ranges; check whether a timezone observes daylight saving time (hasDaylightSaving); check point-in-interval and interval-in-interval containment; merge overlapping or adjacent intervals; split intervals into sub-intervals by duration unit
     sources:
       - 'burglekitt/gmt:packages/gmt/src/plain/validate/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/plain/interval/validate/index.ts'
@@ -141,6 +141,7 @@ skills:
       - 'burglekitt/gmt:packages/gmt/src/unix/interval/intervalUnionUnix.ts'
       - 'burglekitt/gmt:packages/gmt/src/unix/interval/splitIntervalByUnitUnix.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/validate/index.ts'
+      - 'burglekitt/gmt:packages/gmt/src/zoned/validate/hasDaylightSaving.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/interval/validate/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/interval/intervalContainsZoned.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/interval/intervalUnionZoned.ts'
