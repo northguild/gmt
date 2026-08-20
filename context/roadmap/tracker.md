@@ -41,22 +41,22 @@ Issue number tracker (fill in as issues are created). `Order` is the sequence to
 | 29    | I2    | Issue #81    | Not started | not yet                                      |
 | 30    | I3    | Issue #82    | Not started | not yet                                      |
 | 31    | I4    | Issue #83    | Not started | minor, Story Group I complete                |
-| 32    | J0a   | _pending_    | Not started | not yet (docs-only, no changeset)            |
-| 33    | J0b   | _pending_    | Not started | not yet                                      |
-| 34    | J1    | _pending_    | Not started | not yet                                      |
-| 35    | J3    | _pending_    | Not started | not yet                                      |
-| 36    | J4    | _pending_    | Not started | not yet                                      |
-| 37    | J5    | _pending_    | Not started | not yet                                      |
-| 38    | J6    | _pending_    | Not started | not yet                                      |
-| 39    | J7    | _pending_    | Not started | not yet                                      |
-| 40    | J8    | _pending_    | Not started | not yet                                      |
-| 41    | J9    | _pending_    | Not started | not yet                                      |
-| 42    | J10   | _pending_    | Not started | not yet                                      |
-| 43    | J11   | _pending_    | Not started | not yet                                      |
-| 44    | J12   | _pending_    | Not started | not yet                                      |
-| 45    | J13   | _pending_    | Not started | not yet                                      |
-| 46    | J14   | _pending_    | Not started | not yet                                      |
-| 47    | J15   | _pending_    | Not started | minor, Story Group J complete                |
+| 32    | J0a   | Issue #96    | Not started | not yet (docs-only, no changeset)            |
+| 33    | J0b   | Issue #97    | Not started | not yet                                      |
+| 34    | J1    | Issue #98    | Not started | not yet                                      |
+| 35    | J3    | Issue #99    | Not started | not yet                                      |
+| 36    | J4    | Issue #107   | Not started | not yet                                      |
+| 37    | J5    | Issue #100   | Not started | not yet                                      |
+| 38    | J6    | Issue #101   | Not started | not yet                                      |
+| 39    | J7    | Issue #108   | Not started | not yet                                      |
+| 40    | J8    | Issue #103   | Not started | not yet                                      |
+| 41    | J9    | Issue #104   | Not started | not yet                                      |
+| 42    | J10   | Issue #105   | Not started | not yet                                      |
+| 43    | J11   | Issue #102   | Not started | not yet                                      |
+| 44    | J12   | Issue #106   | Not started | not yet                                      |
+| 45    | J13   | Issue #109   | Not started | not yet                                      |
+| 46    | J14   | Issue #110   | Not started | not yet                                      |
+| 47    | J15   | Issue #111   | Not started | minor, Story Group J complete                |
 | 48    | E1    | Issue #44    | Not started | unscheduled, no publish plan until picked up |
 | 49    | E2    | Issue #75    | Not started | unscheduled, no publish plan until picked up |
 | 50    | E3    | Issue #76    | Not started | unscheduled, no publish plan until picked up |
@@ -81,4 +81,4 @@ Group J is split into two phases. Full specs for every row above live in [issues
 
 A fifteenth story, `cycle*` field wrap-around, was moved out of this group entirely on 2026-08-20 (`issues/J.md` Decision 6) — it now runs as **E6** at Order 53, since its own motivation (datepicker segment editing) is Group E's UI-primitive-ambition territory, not a day-one gap. It still depends on J1 across groups.
 
-**Decisions of record.** `issues/J.md` opens with six settled decisions that must not be re-opened — most importantly that a **token formatter is deliberately excluded, not missing** (it hard-codes field order and ships US ordering to every locale; J12's `formatToParts` is the i18n-correct replacement), while token *parsing* (J11) is in scope because no consumer-side workaround exists at any layer; and that **a comparison library having a function is evidence, never the justification** (Decision 6) — every story's Gap section must lead with a GMT-specific correctness/impossibility/consistency reason, competitor prior art is secondary. A future parity audit needs to read that section before filing `toFormat` as a gap, or re-adding a story on headcount grounds alone.
+**Decisions of record.** `issues/J.md` opens with six settled decisions that must not be re-opened — most importantly that a **token formatter is deliberately excluded, not missing** (it hard-codes field order and ships US ordering to every locale; J12's `formatToParts` is the i18n-correct replacement), while token _parsing_ (J11) is in scope because no consumer-side workaround exists at any layer; and that **a comparison library having a function is evidence, never the justification** (Decision 6) — every story's Gap section must lead with a GMT-specific correctness/impossibility/consistency reason, competitor prior art is secondary. A future parity audit needs to read that section before filing `toFormat` as a gap, or re-adding a story on headcount grounds alone.

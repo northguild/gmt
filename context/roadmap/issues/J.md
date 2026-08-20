@@ -14,13 +14,13 @@ Group J opens with **Phase 0** (J0a, J0b) — two pre-existing defects found by 
 
 Settled decisions, not open questions. A future audit must be able to tell "deliberately excluded" from "missed", and a future agent must not re-open these. Each is echoed into the JSDoc and skill content of the functions it governs.
 
-### Decision 1 — Token *parsing* is in scope; token *formatting* is deliberately excluded
+### Decision 1 — Token _parsing_ is in scope; token _formatting_ is deliberately excluded
 
 **Excluded:** a general token formatter (Luxon `toFormat`, date-fns `format`, Moment `.format("YYYY-MM-DD")`). This is **not** a gap. Do not add it, and do not re-file it as one.
 
-**Why:** a pattern like `"MM/dd/yyyy"` hard-codes US field order and ships it to every locale. Tokens localize the *lexicon* — month and weekday names follow the locale — but never the *structure*, so a French user gets `03/15/2024` where they expect `15/03/2024`. Luxon's own documentation directs users to `toLocaleString` and treats `toFormat` as an escape hatch. GMT's existing Intl-options `formatDate`/`formatDateTime` already serve display better, and **J12 (`formatToParts`)** is the i18n-correct answer to "I need exact control over the output": the caller receives locale-ordered parts and restyles them without hard-coding field order.
+**Why:** a pattern like `"MM/dd/yyyy"` hard-codes US field order and ships it to every locale. Tokens localize the _lexicon_ — month and weekday names follow the locale — but never the _structure_, so a French user gets `03/15/2024` where they expect `15/03/2024`. Luxon's own documentation directs users to `toLocaleString` and treats `toFormat` as an escape hatch. GMT's existing Intl-options `formatDate`/`formatDateTime` already serve display better, and **J12 (`formatToParts`)** is the i18n-correct answer to "I need exact control over the output": the caller receives locale-ordered parts and restyles them without hard-coding field order.
 
-**In scope:** token parsing (J11). Locale-hostility is not a defect when *decoding* — you are reading a known fixed producer format (a CSV column, a legacy API response, a form field), not generating output for a human. And no alternative exists at any layer: neither Temporal nor `Intl` can parse a custom pattern, so consumers have no workaround at all.
+**In scope:** token parsing (J11). Locale-hostility is not a defect when _decoding_ — you are reading a known fixed producer format (a CSV column, a legacy API response, a form field), not generating output for a human. And no alternative exists at any layer: neither Temporal nor `Intl` can parse a custom pattern, so consumers have no workaround at all.
 
 **Must appear in:** J11's and J12's JSDoc; the `format-date-time` skill's Common Mistakes; `packages/gmt/README.md`.
 
@@ -34,7 +34,7 @@ Per `tracker.md`'s Changeset note, `changeset:version` sweeps up everything sitt
 
 ### Decision 4 — J11 gets a narrow, named exception to the manual-parsing prohibition
 
-`context/coding-standards.md` forbids manual string parsing. J11 cannot satisfy that rule, because Temporal exposes no `fromFormat` equivalent. The exception is scoped to the `parse*WithPattern` family only, and carries three binding constraints: the regex is built *from the pattern* (never hand-rolled per-format string slicing); extracted fields are always handed to `Temporal.*.from()` for final construction and validation rather than trusted from the match; the try-catch and sentinel-return rules are unchanged. The prohibition stands for every other function in the library.
+`context/coding-standards.md` forbids manual string parsing. J11 cannot satisfy that rule, because Temporal exposes no `fromFormat` equivalent. The exception is scoped to the `parse*WithPattern` family only, and carries three binding constraints: the regex is built _from the pattern_ (never hand-rolled per-format string slicing); extracted fields are always handed to `Temporal.*.from()` for final construction and validation rather than trusted from the match; the try-catch and sentinel-return rules are unchanged. The prohibition stands for every other function in the library.
 
 ### Decision 5 — Parameterized functions, not per-variant families
 
@@ -42,10 +42,11 @@ Where a comparison library ships many near-identical functions, GMT ships one pa
 
 ### Decision 6 — "a comparison library has it" is evidence, never the justification
 
-A 2026-08-20 re-review of this group found several stories' "Gap" sections leading with a competitor function count ("Luxon has X, date-fns has Y, Moment has Z") as the primary argument for adding something. That is backwards for a library whose own positioning (`context/project-overview.md`) is a **narrow, opinionated** surface, and whose stated goal (`overview.md`) is to *exceed* parity, not replicate every method a comparison library ships.
+A 2026-08-20 re-review of this group found several stories' "Gap" sections leading with a competitor function count ("Luxon has X, date-fns has Y, Moment has Z") as the primary argument for adding something. That is backwards for a library whose own positioning (`context/project-overview.md`) is a **narrow, opinionated** surface, and whose stated goal (`overview.md`) is to _exceed_ parity, not replicate every method a comparison library ships.
 
 **The binding test, going forward:** every story's "Gap" section must lead with a GMT-specific reason — one of:
-- **A correctness hole in GMT's own composability.** J1 is the worked example: the only existing workaround (`parse*FromDate` + `addDate({unit: delta})`) is not just clumsy, it is *provably unsafe* for multi-field updates — sequential `.add()` calls each resolve overflow independently, so setting month-then-day vs. day-then-month on the same target can silently diverge, where `.with({month, day})` resolves all fields in one atomic overflow pass. That is a real bug waiting to happen in GMT's own surface, not a feature-count gap.
+
+- **A correctness hole in GMT's own composability.** J1 is the worked example: the only existing workaround (`parse*FromDate` + `addDate({unit: delta})`) is not just clumsy, it is _provably unsafe_ for multi-field updates — sequential `.add()` calls each resolve overflow independently, so setting month-then-day vs. day-then-month on the same target can silently diverge, where `.with({month, day})` resolves all fields in one atomic overflow pass. That is a real bug waiting to happen in GMT's own surface, not a feature-count gap.
 - **A capability that is categorically impossible to compose from what GMT already has**, not merely inconvenient. E6 (`cycle*`, formerly J2 — see below) is the worked example: `add()`'s defining behavior is to overflow into the next larger field, which is exactly what wrap-without-carry must not do. No delta composition can express it, at any degree of cleverness.
 - **An internal-consistency gap** — GMT already has the pairwise/zoned/plain sibling of this capability and is missing the other member of the same family (e.g. J9's list-form `mergeIntervals` generalizing B5's pairwise `intervalUnion*`; J14's plain range formatting alongside the existing zoned one).
 
@@ -70,31 +71,31 @@ The existing `issues/*.md` files leave docs, skills, and test rigor implicit, de
 
 `overview.md` step 7 already states that skills falling behind the API surface actively mislead agents consuming `@burglekitt/gmt`. Update via `/tanstack-intent`, or manually per `.agents/skills/tanstack-intent/SKILL.md`:
 
-| Story | Skill(s) to update |
-| --- | --- |
-| J0b | `get-current`, `compare-dates` |
-| J1 | `calculate-dates`, `zoned-date-ops` (for the `disambiguation`/`offset` pair) |
-| J3, J4 | `get-current`, `parse-date-time` |
-| J5, J6, J7 | `compare-dates` |
-| J8 | `durations` |
-| J9 | `interval-ops` |
-| J10 | `zoned-date-ops` |
-| J11 | `parse-date-time`, plus a `format-date-time` Common Mistakes entry pointing at Decision 1 |
-| J12, J14, J15 | `format-date-time` |
-| J13 | `format-date-time`, `parse-date-time` |
+| Story         | Skill(s) to update                                                                        |
+| ------------- | ----------------------------------------------------------------------------------------- |
+| J0b           | `get-current`, `compare-dates`                                                            |
+| J1            | `calculate-dates`, `zoned-date-ops` (for the `disambiguation`/`offset` pair)              |
+| J3, J4        | `get-current`, `parse-date-time`                                                          |
+| J5, J6, J7    | `compare-dates`                                                                           |
+| J8            | `durations`                                                                               |
+| J9            | `interval-ops`                                                                            |
+| J10           | `zoned-date-ops`                                                                          |
+| J11           | `parse-date-time`, plus a `format-date-time` Common Mistakes entry pointing at Decision 1 |
+| J12, J14, J15 | `format-date-time`                                                                        |
+| J13           | `format-date-time`, `parse-date-time`                                                     |
 
 Every story introducing a trap adds a **Common Mistakes** entry, not just a Core Pattern. The traps are known in advance and named in each story below.
 
 ### Code comments
 
-Beyond the JSDoc `context/jsdoc-standards.md` already requires (description, `@param`, `@returns`, `@example` covering valid/invalid/edge input), Group J functions carry inline `//` comments explaining *why* wherever the reason is not evident from the code — following the precedent in `plain/calculate/startOfDate.ts`, whose week-start branch explains Temporal's 1–7 day numbering before doing the arithmetic. Per-story requirements are listed in each story below.
+Beyond the JSDoc `context/jsdoc-standards.md` already requires (description, `@param`, `@returns`, `@example` covering valid/invalid/edge input), Group J functions carry inline `//` comments explaining _why_ wherever the reason is not evident from the code — following the precedent in `plain/calculate/startOfDate.ts`, whose week-start branch explains Temporal's 1–7 day numbering before doing the arithmetic. Per-story requirements are listed in each story below.
 
 ### Tests
 
 Every function gets a `.test.ts` alongside it meeting `context/testing-standards/references/index.md`'s bar. This is stricter than "tests exist" — A3 had to go back and expand A2's tests to reach it. Binding:
 
 - **`it.each` with backtick template-literal syntax.** Array syntax is forbidden.
-- **Exhaustive option tables, not a few `it()` blocks.** Every meaningfully different enum value, on an input where they actually diverge. The default *and* the explicit value matching the default, as separate rows — a bug that breaks only the explicit path is otherwise invisible. A case where the option has *no* effect, proving it isn't over-applying. Combinations with negative amounts, zero-length inputs, and invalid values routing to the sentinel.
+- **Exhaustive option tables, not a few `it()` blocks.** Every meaningfully different enum value, on an input where they actually diverge. The default _and_ the explicit value matching the default, as separate rows — a bug that breaks only the explicit path is otherwise invisible. A case where the option has _no_ effect, proving it isn't over-applying. Combinations with negative amounts, zero-length inputs, and invalid values routing to the sentinel.
 - **Every zoned/unix function uses `packages/gmt/src/test/timeZoneMatrix.ts`'s `battleTestTimeZones`** — the canonical 20-zone list including `Pacific/Apia` (+13:00) and `Pacific/Niue` (-11:00). No one-off zone lists; no UTC-and-New-York-only. Applies to J1, J5, J6, J9, J10.
 - **Every locale-aware function runs the full 17-locale matrix** from `packages/gmt/src/test/localeMatrix.ts`, with `hasFullIcu` ternaries where ICU-dependent output differs. Applies to J3, J4, J10, J11, J12, J14, J15.
 - **DST edge cases** for J1, J10: spring-forward gap and fall-back overlap, in both `America/Chicago` and `Europe/Berlin`.
@@ -107,7 +108,7 @@ Every function gets a `.test.ts` alongside it meeting `context/testing-standards
 
 ### J0a — Reconcile the duplicate release-checkpoint paragraphs in `overview.md`
 
-**GitHub Issue:** _not yet created_
+**GitHub Issue:** #96
 
 **Title:**
 
@@ -117,7 +118,7 @@ J0a Reconcile duplicate release-checkpoint paragraphs in roadmap overview
 
 **Description:**
 
-````
+```
 Part of the parity roadmap — see `context/roadmap/index.md`, Story Group J, item J0a. Documentation-only defect found by the 2026-08-20 parity audit. Not a code change.
 
 ## Gap
@@ -138,11 +139,11 @@ See "Instructions for the agent picking up a story" in `context/roadmap/index.md
 
 ## Definition of done
 `grep -c "surpasses" context/roadmap/overview.md` returns 1, not 2. The surviving paragraph reads `A–D, F–J, and E1–E5`. Documentation-only: no changeset, no source files touched, no skills affected.
-````
+```
 
 ### J0b — Move `getLocaleDayOfWeek` / `getLocaleZonedDayOfWeek` out of the `get/` namespace
 
-**GitHub Issue:** _not yet created_
+**GitHub Issue:** #97
 
 **Title:**
 
@@ -152,7 +153,7 @@ J0b Move getLocaleDayOfWeek and getLocaleZonedDayOfWeek from get/ to calculate/
 
 **Description:**
 
-````
+```
 Part of the parity roadmap — see `context/roadmap/index.md`, Story Group J, item J0b. Pre-existing defect found by the 2026-08-20 parity audit, in Story Group D3's output. **Blocks J3 and J4** — do not start those until this lands.
 
 ## Gap
@@ -185,7 +186,7 @@ See "Instructions for the agent picking up a story" in `context/roadmap/index.md
 
 ## Definition of done
 `pnpm test` and `pnpm lint` pass. `grep -rn "get/getLocaleDayOfWeek\|get/getLocaleZonedDayOfWeek" packages/gmt/src` returns nothing. Every remaining signature in both `get/` directories is now-based. `packages/gmt/README.md`, `plain/README.md`, `zoned/README.md` updated; `get-current` and `compare-dates` skills updated; `context/coding-standards.md` carries the new namespace rule; changeset explicitly names the subpath change.
-````
+```
 
 ---
 
@@ -193,7 +194,7 @@ See "Instructions for the agent picking up a story" in `context/roadmap/index.md
 
 ### J1 — Field setters
 
-**GitHub Issue:** _not yet created_
+**GitHub Issue:** #98
 
 **Title:**
 
@@ -203,7 +204,7 @@ J1 Add setDate, setDateTime, setTime, setZoned, setUnix, setUtc
 
 **Description:**
 
-````
+```
 Part of the parity roadmap — see `context/roadmap/index.md`, Story Group J, item J1. Surfaced by the 2026-08-20 parity audit. **Foundational for Group J — sequence first.** Group E's E6 (`cycle*`) builds directly on it too, across groups — see `issues/E.md`.
 
 ## Gap
@@ -254,11 +255,11 @@ See "Instructions for the agent picking up a story" in `context/roadmap/index.md
 
 ## Definition of done
 Everything in Group J's shared Definition of Done, plus: tests across `battleTestTimeZones`; spring-forward and fall-back cases in `America/Chicago` and `Europe/Berlin`; **the C3 regression pairing — `disambiguation: "reject"` with `offset: "prefer"` that does NOT throw, alongside the default-`offset` case that does** (this is the specific regression class that caught C3's bug and it must be present); overflow-constrain vs overflow-reject on Jan 31 → month 2; partial field objects; empty field object as a no-op; invalid input → `""`. `docs/dst-disambiguation.md` extended.
-````
+```
 
 ### J3 — Calendar quantity getters
 
-**GitHub Issue:** _not yet created_
+**GitHub Issue:** #99
 
 **Title:**
 
@@ -268,7 +269,7 @@ J3 Add getDaysInMonth, getDaysInYear, getDayOfYear, getWeeksInMonth, getWeekOfMo
 
 **Description:**
 
-````
+```
 Part of the parity roadmap — see `context/roadmap/index.md`, Story Group J, item J3. Surfaced by the 2026-08-20 parity audit. **Depends on J0b** — that story establishes which namespace these belong in.
 
 ## Gap
@@ -303,11 +304,11 @@ See "Instructions for the agent picking up a story" in `context/roadmap/index.md
 
 ## Definition of done
 Everything in Group J's shared Definition of Done, plus: leap-year February (29) and common-year February (28); 30- vs 31-day months; day-of-year at Jan 1, Dec 31, and across a leap day; a 53-ISO-week year; the full 17-locale matrix for `getWeeksInMonth`/`getWeekOfMonth`, covering both the Sat/Sun and Fri/Sat weekend groups D1 identified; a month that spans 4, 5, and 6 week-rows depending on locale; invalid input → `null`.
-````
+```
 
 ### J5 — Same-unit comparison
 
-**GitHub Issue:** _not yet created_
+**GitHub Issue:** #100
 
 **Title:**
 
@@ -317,7 +318,7 @@ J5 Add areDatesEqualBy and namespace variants
 
 **Description:**
 
-````
+```
 Part of the parity roadmap — see `context/roadmap/index.md`, Story Group J, item J5. Surfaced by the 2026-08-20 parity audit.
 
 ## Gap
@@ -352,11 +353,11 @@ See "Instructions for the agent picking up a story" in `context/roadmap/index.md
 
 ## Definition of done
 Everything in Group J's shared Definition of Done, plus: every supported unit, each on a pair that is equal at that unit and unequal at the next-finer one; the year-boundary case from the Common Mistakes entry above; `battleTestTimeZones` for the zoned/unix variants, including a pair that is the same day in one zone and different days in another; an unsupported unit → `false`; invalid input on either side → `false`.
-````
+```
 
 ### J6 — Now-relative predicates
 
-**GitHub Issue:** _not yet created_
+**GitHub Issue:** #101
 
 **Title:**
 
@@ -366,7 +367,7 @@ J6 Add isRelativeDay, isThisUnit, isPast, isFuture
 
 **Description:**
 
-````
+```
 Part of the parity roadmap — see `context/roadmap/index.md`, Story Group J, item J6. Surfaced by the 2026-08-20 parity audit. **Re-scoped 2026-08-20 (Decision 6)** — the original spec proposed eight near-duplicate functions (`isToday`/`isYesterday`/`isTomorrow`/`isThisWeek`/`isThisMonth`/`isThisYear` plus `isPast`/`isFuture`), which is exactly the per-variant-family shape Decision 5 already forbids when a comparison library does it (date-fns ships the same eight, plus three more for hour/minute/second). Consolidated below to four functions.
 
 ## Gap
@@ -390,11 +391,11 @@ See "Instructions for the agent picking up a story" in `context/roadmap/index.md
 
 ## Definition of done
 Everything in Group J's shared Definition of Done, plus: **`Temporal.Now` mocked via the existing `packages/gmt/src/test/mocks/` — no reliance on real wall-clock time**, since a test asserting "today" is a guaranteed future flake otherwise; boundary cases at midnight either side; every `offsetDays` value date-fns's three named functions cover (0, -1, 1), plus at least one further-out offset proving the parameterization isn't hardcoded to those three; every `unit` value for `isThisUnit`; `isPast`/`isFuture` on the current instant exactly; the full 17-locale matrix for `isThisUnit(value, "week", locale)`, covering a date that falls in this week under one locale's week start and last week under another's; `battleTestTimeZones` for the zoned variants, including the `Pacific/Apia`/`Pacific/Niue` pair from the Common Mistakes entry; invalid input → `false`.
-````
+```
 
 ### J11 — Token-based parsing
 
-**GitHub Issue:** _not yet created_
+**GitHub Issue:** Issue #102
 
 **Title:**
 
@@ -404,7 +405,7 @@ J11 Add parseDateWithPattern, parseDateTimeWithPattern, parseTimeWithPattern
 
 **Description:**
 
-````
+```
 Part of the parity roadmap — see `context/roadmap/index.md`, Story Group J, item J11. Surfaced by the 2026-08-20 parity audit. **Read Decision 1 and Decision 4 at the top of this file before starting** — this story's scope boundary and its standards exception are both non-obvious and both deliberate.
 
 ## Gap
@@ -448,7 +449,7 @@ See "Instructions for the agent picking up a story" in `context/roadmap/index.md
 
 ## Definition of done
 Everything in Group J's shared Definition of Done, plus: every documented token, individually; literal/escaped text within a pattern; the full 17-locale matrix for month/weekday/meridiem/era tokens, with `hasFullIcu` ternaries; **a shape-valid but date-invalid input (`"02/31/2024"` against `MM/dd/yyyy`) returning `""`, proving the Temporal handoff is doing the validating**; two-digit year handling; ambiguous patterns; value not matching pattern → `""`; malformed pattern → `""`; invalid input → `""`. `context/coding-standards.md` carries the scoped exception.
-````
+```
 
 ---
 
@@ -458,7 +459,7 @@ Everything in Group J's shared Definition of Done, plus: every documented token,
 
 ### J8 — Duration introspection
 
-**GitHub Issue:** _not yet created_
+**GitHub Issue:** Issue #103
 
 **Title:**
 
@@ -468,7 +469,7 @@ J8 Add getDurationUnit, durationAs, negateDuration, absDuration, compareDuration
 
 **Description:**
 
-````
+```
 Part of the parity roadmap — see `context/roadmap/index.md`, Story Group J, item J8. Surfaced by the 2026-08-20 parity audit.
 
 ## Gap
@@ -502,11 +503,11 @@ See "Instructions for the agent picking up a story" in `context/roadmap/index.md
 
 ## Definition of done
 Everything in Group J's shared Definition of Done, plus: every unit for `getDurationUnit` and `durationAs`; calendar units with and without `relativeTo` (the latter → sentinel); negative durations, where Temporal stores every field as negative; zero-length duration; `compareDurations` at all three results plus an equal-but-differently-expressed pair (`"PT60M"` vs `"PT1H"`); fractional seconds; invalid duration string → sentinel.
-````
+```
 
 ### J9 — Interval length and partitioning
 
-**GitHub Issue:** _not yet created_
+**GitHub Issue:** Issue #104
 
 **Title:**
 
@@ -516,7 +517,7 @@ J9 Add intervalLength, intervalDivideEqually, intervalSplitAt, mergeIntervals, i
 
 **Description:**
 
-````
+```
 Part of the parity roadmap — see `context/roadmap/index.md`, Story Group J, item J9. Surfaced by the 2026-08-20 parity audit. Depends on Groups B and G (interval namespace and its conventions).
 
 ## Gap
@@ -544,11 +545,11 @@ See "Instructions for the agent picking up a story" in `context/roadmap/index.md
 
 ## Definition of done
 Everything in Group J's shared Definition of Done, plus: **an explicit test asserting `intervalLength` and `intervalCount` diverge on the 11:59pm→12:01am case** — this is the regression that keeps the two from being "simplified" into each other; `divideEqually` with n not dividing evenly; n = 1 and n = 0; `splitAt` with points outside the interval, on the boundaries, and unsorted; `mergeIntervals` on already-disjoint, fully-overlapping, adjacent, and empty lists; `battleTestTimeZones` for zoned variants including an interval spanning a DST transition; invalid input → `[]` or `null` per return type.
-````
+```
 
 ### J10 — Offset and DST-instant accessors
 
-**GitHub Issue:** _not yet created_
+**GitHub Issue:** Issue #105
 
 **Title:**
 
@@ -558,7 +559,7 @@ J10 Add getZonedOffset, getTimeZoneOffset, formatTimeZoneName, isInDaylightSavin
 
 **Description:**
 
-````
+```
 Part of the parity roadmap — see `context/roadmap/index.md`, Story Group J, item J10. Surfaced by the 2026-08-20 parity audit. Sequence after H3 and I3. **Re-scoped 2026-08-20 (Decision 6)** — the original spec proposed three near-duplicate offset-representation functions (`getZonedOffset`/`getZonedOffsetMinutes`/`getZonedOffsetNanoseconds`), the same per-unit-variant shape J8 already solved correctly with `getDurationUnit(value, unit)`. Consolidated below to one string getter plus one parameterized numeric getter.
 
 ## Gap
@@ -595,11 +596,11 @@ See "Instructions for the agent picking up a story" in `context/roadmap/index.md
 
 ## Definition of done
 Everything in Group J's shared Definition of Done, plus: `battleTestTimeZones`, including the half- and quarter-hour zones (`Asia/Kolkata` +5:30, `Asia/Kathmandu` +5:45, `Pacific/Chatham` +13:45) — an offset formatter that assumes whole hours passes a UTC-only test and fails in production; both sides of a spring-forward and a fall-back transition in `America/Chicago` and `Europe/Berlin`; a southern-hemisphere zone, where DST spans the new year; a zone with no DST → `isInDaylightSaving` always `false`; the full 17-locale matrix for `formatTimeZoneName` with `hasFullIcu` ternaries; every `style` value; invalid input → sentinel. `docs/dst-disambiguation.md` updated with the four-way distinction.
-````
+```
 
 ### J12 — `formatToParts` family
 
-**GitHub Issue:** _not yet created_
+**GitHub Issue:** Issue #106
 
 **Title:**
 
@@ -609,7 +610,7 @@ J12 Add formatDateToParts, formatDateTimeToParts, formatZonedToParts
 
 **Description:**
 
-````
+```
 Part of the parity roadmap — see `context/roadmap/index.md`, Story Group J, item J12. Surfaced by the 2026-08-20 parity audit. **This story is the sanctioned answer to the token-formatter request — read Decision 1 at the top of this file first.**
 
 ## Gap
@@ -638,7 +639,7 @@ See "Instructions for the agent picking up a story" in `context/roadmap/index.md
 
 ## Definition of done
 Everything in Group J's shared Definition of Done, plus: the full 17-locale matrix with `hasFullIcu` ternaries; **an assertion that part *order* differs between at least two locales** (en-US month-first vs. fr-FR day-first) — this is the property the function exists for and it must be pinned by a test; RTL locales (ar-SA, he-IL); `literal` parts present and correct; every `type` value the chosen options produce; `timeZoneName` parts for the zoned variant; invalid input → `[]`.
-````
+```
 
 ---
 
@@ -646,7 +647,7 @@ Everything in Group J's shared Definition of Done, plus: the full 17-locale matr
 
 ### J4 — Week-numbering year
 
-**GitHub Issue:** _not yet created_
+**GitHub Issue:** Issue #107
 
 **Title:**
 
@@ -656,7 +657,7 @@ J4 Add getWeekYear, getLocaleWeekYear, getWeeksInLocaleWeekYear
 
 **Description:**
 
-````
+```
 Part of the parity roadmap — see `context/roadmap/index.md`, Story Group J, item J4. Surfaced by the 2026-08-20 parity audit. **Depends on J0b** for namespace placement; pairs with J3.
 
 ## Gap
@@ -686,11 +687,11 @@ See "Instructions for the agent picking up a story" in `context/roadmap/index.md
 
 ## Definition of done
 Everything in Group J's shared Definition of Done, plus: **2024-12-30 → week-year 2025** and the symmetric early-January case where a date falls in the previous week-year; a 53-week year; the full 17-locale matrix, including at least one locale where the locale week-year and the ISO week-year disagree for the same date; invalid input → `null`.
-````
+```
 
 ### J7 — Weekday navigation
 
-**GitHub Issue:** _not yet created_
+**GitHub Issue:** Issue #108
 
 **Title:**
 
@@ -700,7 +701,7 @@ J7 Add nextWeekday and previousWeekday
 
 **Description:**
 
-````
+```
 Part of the parity roadmap — see `context/roadmap/index.md`, Story Group J, item J7. Surfaced by the 2026-08-20 parity audit.
 
 ## Gap
@@ -733,11 +734,11 @@ See "Instructions for the agent picking up a story" in `context/roadmap/index.md
 
 ## Definition of done
 Everything in Group J's shared Definition of Done, plus: all seven `dayOfWeek` values from a fixed start date; `inclusive` true and false on a value already falling on the target day, plus the explicit-default row; month and year boundary crossings; a leap-day start; `dayOfWeek` out of range (0, 8) → `""`; invalid input → `""`.
-````
+```
 
 ### J13 — Named machine formats
 
-**GitHub Issue:** _not yet created_
+**GitHub Issue:** Issue #109
 
 **Title:**
 
@@ -747,7 +748,7 @@ J13 Add RFC 2822, HTTP, SQL, and RFC 3339 format and parse functions
 
 **Description:**
 
-````
+```
 Part of the parity roadmap — see `context/roadmap/index.md`, Story Group J, item J13. Surfaced by the 2026-08-20 parity audit. **Sequence after J11** — the parse side shares its regex infrastructure.
 
 ## Gap
@@ -778,11 +779,11 @@ See "Instructions for the agent picking up a story" in `context/roadmap/index.md
 
 ## Definition of done
 Everything in Group J's shared Definition of Done, plus: a real-world header value round-tripping for each format; the obsolete RFC 2822 forms an email parser must still accept, if in scope; single-digit days, which the grammars pad differently; a non-UTC offset for the formats that permit one; **an assertion that output is identical across all 17 locales** — these formats must not vary by locale, and that is exactly the regression to pin; malformed input → `""`.
-````
+```
 
 ### J14 — Plain range formatting
 
-**GitHub Issue:** _not yet created_
+**GitHub Issue:** Issue #110
 
 **Title:**
 
@@ -792,7 +793,7 @@ J14 Add formatDateRange and formatDateTimeRange
 
 **Description:**
 
-````
+```
 Part of the parity roadmap — see `context/roadmap/index.md`, Story Group J, item J14. Surfaced by the 2026-08-20 parity audit.
 
 ## Gap
@@ -813,11 +814,11 @@ See "Instructions for the agent picking up a story" in `context/roadmap/index.md
 
 ## Definition of done
 Everything in Group J's shared Definition of Done, plus: the full 17-locale matrix with `hasFullIcu` ternaries; same-day, same-month, same-year, and cross-year ranges, each of which `Intl` elides differently; a reversed range (end before start); an identical start and end, which `Intl` collapses to a single formatted value rather than a range; RTL locales; invalid input on either side → `""`.
-````
+```
 
 ### J15 — `formatCalendar`
 
-**GitHub Issue:** _not yet created_
+**GitHub Issue:** Issue #111
 
 **Title:**
 
@@ -827,7 +828,7 @@ J15 Add formatCalendar
 
 **Description:**
 
-````
+```
 Part of the parity roadmap — see `context/roadmap/index.md`, Story Group J, item J15. Surfaced by the 2026-08-20 parity audit.
 
 ## Gap
@@ -858,4 +859,4 @@ See "Instructions for the agent picking up a story" in `context/roadmap/index.md
 
 ## Definition of done
 Everything in Group J's shared Definition of Done, plus: today, tomorrow, yesterday, within-the-last-week, within-the-next-week, and beyond-threshold in both directions; the full 17-locale matrix with `hasFullIcu` ternaries, **including an assertion that the connector word is not the English "at" in non-English locales** — or, if the documented-limitation route is taken, a test pinning the known-limited output plus a JSDoc statement of the limitation; `Temporal.Now` mocked via `packages/gmt/src/test/mocks/`; an explicit `reference` overriding now; invalid input → `""`.
-````
+```
