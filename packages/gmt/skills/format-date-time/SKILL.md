@@ -5,12 +5,13 @@ description: >
   options. Use formatDate, formatTime, formatDateTime for absolute formatting;
   use formatRelativeDate, formatRelativeTime, formatRelativeDateTime for
   human-friendly relative output ("yesterday", "in 2 hours"). Also
-  getLocaleMonthNames, getLocaleWeekdayNames, getLocaleMeridiems for standalone
-  locale calendar-name lookups — the GMT equivalent of Luxon's Info.months,
-  weekdays, and meridiems.
+  getLocaleEraNames, getLocaleMonthNames, getLocaleWeekdayNames, getLocaleMeridiems
+  for standalone locale calendar-name lookups — the GMT equivalent of Luxon's
+  Info.eras, Info.months, Info.weekdays, and Info.meridiems.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/format/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/locale/index.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/locale/getLocaleEraNames.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/locale/getLocaleMonthNames.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/locale/getLocaleWeekdayNames.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/locale/getLocaleMeridiems.ts'
@@ -116,7 +117,18 @@ formatRelativeDateTime("2024-03-15T10:00:00", "en-US", {
 These return locale-formatted calendar names directly — the GMT equivalent of Luxon's `Info` class — without requiring a date value:
 
 ```ts
-import { getLocaleMonthNames, getLocaleWeekdayNames, getLocaleMeridiems } from "@burglekitt/gmt";
+import {
+  getLocaleEraNames,
+  getLocaleMonthNames,
+  getLocaleWeekdayNames,
+  getLocaleMeridiems,
+} from "@burglekitt/gmt";
+
+getLocaleEraNames("en-US");
+// ["Before Christ", "Anno Domini"]
+
+getLocaleEraNames("ja-JP", "short");
+// ["紀元前", "西暦"]
 
 getLocaleMonthNames("en-US");
 // ["January", "February", ... "December"]
@@ -139,11 +151,12 @@ getLocaleMeridiems("zh-CN");
 
 Options:
 
+- `getLocaleEraNames(locale, style?)` — 2-element `[BCE-label, CE-label]` Gregorian era names. `style: "long" | "short" | "narrow"` (default `"long"`).
 - `getLocaleMonthNames(locale, style?)` — 12 Gregorian month names in calendar order. `style: "long" | "short" | "narrow"` (default `"long"`).
 - `getLocaleWeekdayNames(locale, style?)` — 7 weekday names in the locale's **first-day order** (Sunday-first for en-US, Monday-first for fr-FR). This matches `getLocaleDayOfWeek`, where index 0 is the locale's first day of the week.
 - `getLocaleMeridiems(locale)` — `[AM-label, PM-label]`; labels are locale-varying (e.g. `en-GB` → `["am","pm"]`, `sv-SE` → `["fm","em"]`, `zh-CN` → `["上午","下午"]`).
 
-All three return `[]` for an invalid BCP 47 locale tag.
+All four return `[]` for an invalid BCP 47 locale tag. If a locale has no distinct BCE/CE era names, `getLocaleEraNames` returns both elements as the same string — the sentinel is reserved for invalid input only.
 
 ## Locale Matrix
 
@@ -253,10 +266,11 @@ render(names);
 Correct:
 
 ```ts
-import { getLocaleMonthNames } from "@burglekitt/gmt";
+import { getLocaleEraNames, getLocaleMonthNames } from "@burglekitt/gmt";
 
 const names = getLocaleMonthNames("en-US");
-if (names.length === 0) {
+const eras = getLocaleEraNames("en-US");
+if (names.length === 0 || eras.length === 0) {
   // invalid BCP 47 tag — fall back or surface an error
 }
 ```

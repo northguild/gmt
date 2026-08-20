@@ -56,7 +56,12 @@ export function intervalFromDurationTime(
   try {
     const dur = Temporal.Duration.from(duration);
 
-    if (dur.years !== 0 || dur.months !== 0 || dur.weeks !== 0 || dur.days !== 0) {
+    if (
+      dur.years !== 0 ||
+      dur.months !== 0 ||
+      dur.weeks !== 0 ||
+      dur.days !== 0
+    ) {
       return null;
     }
 

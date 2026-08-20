@@ -222,10 +222,21 @@ getLocaleZonedDayOfWeek("2024-02-25T12:00:00+00:00[UTC]", "en-US");
 // 0
 ```
 
-`getLocaleMonthNames`/`getLocaleWeekdayNames`/`getLocaleMeridiems` return standalone, locale-aware calendar names with no date value required — the GMT equivalents of Luxon's `Info.months`/`weekdays`/`meridiems`:
+`getLocaleEraNames`/`getLocaleMonthNames`/`getLocaleWeekdayNames`/`getLocaleMeridiems` return standalone, locale-aware calendar names with no date value required — the GMT equivalents of Luxon's `Info.eras`/`Info.months`/`Info.weekdays`/`Info.meridiems`:
 
 ```typescript
-import { getLocaleMonthNames, getLocaleWeekdayNames, getLocaleMeridiems } from "@burglekitt/gmt";
+import {
+  getLocaleEraNames,
+  getLocaleMonthNames,
+  getLocaleWeekdayNames,
+  getLocaleMeridiems,
+} from "@burglekitt/gmt";
+
+getLocaleEraNames("en-US");
+// ["Before Christ", "Anno Domini"]
+
+getLocaleEraNames("ja-JP", "short");
+// ["紀元前", "西暦"]
 
 getLocaleMonthNames("en-US");
 // ["January", "February", ... "December"]
@@ -246,7 +257,7 @@ getLocaleMeridiems("zh-CN");
 // ["上午", "下午"]
 ```
 
-`getLocaleWeekdayNames` returns names in the locale's first-day order, consistent with `getLocaleDayOfWeek` (index 0 is the locale's first day of the week). All three delegate to the host runtime's `Intl` data, so their output depends on the runtime's ICU build.
+`getLocaleWeekdayNames` returns names in the locale's first-day order, consistent with `getLocaleDayOfWeek` (index 0 is the locale's first day of the week). All four delegate to the host runtime's `Intl` data, so their output depends on the runtime's ICU build.
 
 ### Durations
 

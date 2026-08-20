@@ -62,6 +62,7 @@ Locale-aware formatting:
 
 Standalone, locale-aware calendar-name lookups (no date value required):
 
+- `getLocaleEraNames(locale, style?)` — 2-element `[BCE-label, CE-label]` array
 - `getLocaleMonthNames(locale, style?)` — 12 Gregorian month names, calendar order (January first)
 - `getLocaleWeekdayNames(locale, style?)` — 7 weekday names, in the locale's first-day order
 - `getLocaleMeridiems(locale)` — `[AM-label, PM-label]`

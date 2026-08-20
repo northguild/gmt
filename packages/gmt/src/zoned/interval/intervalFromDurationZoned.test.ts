@@ -17,12 +17,12 @@ const localJan31NoonBattleCases = battleTestTimeZones.map((timeZone) => ({
 
 describe("intervalFromDurationZoned", () => {
   it.each`
-    value                                            | duration    | anchor      | expected
-    ${"2024-01-01T00:00:00+00:00[UTC]"}              | ${"P1D"}    | ${"start"}  | ${{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-02T00:00:00+00:00[UTC]" }}
-    ${"2024-01-02T00:00:00+00:00[UTC]"}              | ${"P1D"}    | ${"end"}    | ${{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-02T00:00:00+00:00[UTC]" }}
-    ${"2024-01-01T12:00:00+00:00[UTC]"}              | ${"PT30M"}  | ${"start"}  | ${{ start: "2024-01-01T12:00:00+00:00[UTC]", end: "2024-01-01T12:30:00+00:00[UTC]" }}
-    ${"2024-01-01T00:00:00+00:00[UTC]"}              | ${"P0D"}    | ${"start"}  | ${{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-01T00:00:00+00:00[UTC]" }}
-    ${"2024-01-01T00:00:00+00:00[UTC]"}              | ${"PT0S"}   | ${"end"}    | ${{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-01T00:00:00+00:00[UTC]" }}
+    value                               | duration   | anchor     | expected
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"P1D"}   | ${"start"} | ${{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-02T00:00:00+00:00[UTC]" }}
+    ${"2024-01-02T00:00:00+00:00[UTC]"} | ${"P1D"}   | ${"end"}   | ${{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-02T00:00:00+00:00[UTC]" }}
+    ${"2024-01-01T12:00:00+00:00[UTC]"} | ${"PT30M"} | ${"start"} | ${{ start: "2024-01-01T12:00:00+00:00[UTC]", end: "2024-01-01T12:30:00+00:00[UTC]" }}
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"P0D"}   | ${"start"} | ${{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-01T00:00:00+00:00[UTC]" }}
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"PT0S"}  | ${"end"}   | ${{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-01T00:00:00+00:00[UTC]" }}
   `(
     "returns $expected for $value with duration $duration anchored at $anchor",
     ({ value, duration, anchor, expected }) => {
@@ -60,12 +60,12 @@ describe("intervalFromDurationZoned", () => {
 
   // disambiguation: fall-back overlap (span end lands on an ambiguous local time)
   it.each`
-    value                                              | disambiguation   | expectedEnd
-    ${"2024-11-02T01:30:00-04:00[America/New_York]"}   | ${undefined}     | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
-    ${"2024-11-02T01:30:00-04:00[America/New_York]"}   | ${"compatible"}  | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
-    ${"2024-11-02T01:30:00-04:00[America/New_York]"}   | ${"earlier"}     | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
-    ${"2024-11-02T01:30:00-04:00[America/New_York]"}   | ${"later"}       | ${"2024-11-03T01:30:00-05:00[America/New_York]"}
-    ${"2024-11-02T01:30:00-04:00[America/New_York]"}   | ${"reject"}      | ${null}
+    value                                            | disambiguation  | expectedEnd
+    ${"2024-11-02T01:30:00-04:00[America/New_York]"} | ${undefined}    | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
+    ${"2024-11-02T01:30:00-04:00[America/New_York]"} | ${"compatible"} | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
+    ${"2024-11-02T01:30:00-04:00[America/New_York]"} | ${"earlier"}    | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
+    ${"2024-11-02T01:30:00-04:00[America/New_York]"} | ${"later"}      | ${"2024-11-03T01:30:00-05:00[America/New_York]"}
+    ${"2024-11-02T01:30:00-04:00[America/New_York]"} | ${"reject"}     | ${null}
   `(
     "resolves fall-back overlap for $value + P1D with disambiguation $disambiguation to $expectedEnd",
     ({ value, disambiguation, expectedEnd }) => {
@@ -83,12 +83,12 @@ describe("intervalFromDurationZoned", () => {
 
   // spring-forward gap: disambiguation has no effect, arithmetic already advances past it
   it.each`
-    value                                              | disambiguation
-    ${"2024-03-09T02:30:00-05:00[America/New_York]"}   | ${undefined}
-    ${"2024-03-09T02:30:00-05:00[America/New_York]"}   | ${"compatible"}
-    ${"2024-03-09T02:30:00-05:00[America/New_York]"}   | ${"earlier"}
-    ${"2024-03-09T02:30:00-05:00[America/New_York]"}   | ${"later"}
-    ${"2024-03-09T02:30:00-05:00[America/New_York]"}   | ${"reject"}
+    value                                            | disambiguation
+    ${"2024-03-09T02:30:00-05:00[America/New_York]"} | ${undefined}
+    ${"2024-03-09T02:30:00-05:00[America/New_York]"} | ${"compatible"}
+    ${"2024-03-09T02:30:00-05:00[America/New_York]"} | ${"earlier"}
+    ${"2024-03-09T02:30:00-05:00[America/New_York]"} | ${"later"}
+    ${"2024-03-09T02:30:00-05:00[America/New_York]"} | ${"reject"}
   `(
     "spring-forward gap for $value + P1D is unaffected by disambiguation $disambiguation",
     ({ value, disambiguation }) => {
@@ -127,9 +127,9 @@ describe("intervalFromDurationZoned", () => {
   );
 
   it.each`
-    value                                 | duration   | anchor
-    ${"2024-01-05T00:00:00+00:00[UTC]"}   | ${"-P10D"} | ${"start"}
-    ${"2024-01-05T00:00:00+00:00[UTC]"}   | ${"-P10D"} | ${"end"}
+    value                               | duration   | anchor
+    ${"2024-01-05T00:00:00+00:00[UTC]"} | ${"-P10D"} | ${"start"}
+    ${"2024-01-05T00:00:00+00:00[UTC]"} | ${"-P10D"} | ${"end"}
   `(
     "returns null when $duration anchored at $anchor inverts the span from $value",
     ({ value, duration, anchor }) => {
@@ -138,11 +138,11 @@ describe("intervalFromDurationZoned", () => {
   );
 
   it.each`
-    value                                 | duration | anchor
-    ${"invalid"}                          | ${"P1D"} | ${"start"}
-    ${"2024-01-01T00:00:00"}              | ${"P1D"} | ${"start"}
-    ${123}                                | ${"P1D"} | ${"start"}
-    ${null}                               | ${"P1D"} | ${"start"}
+    value                    | duration | anchor
+    ${"invalid"}             | ${"P1D"} | ${"start"}
+    ${"2024-01-01T00:00:00"} | ${"P1D"} | ${"start"}
+    ${123}                   | ${"P1D"} | ${"start"}
+    ${null}                  | ${"P1D"} | ${"start"}
   `("returns null for invalid value $value", ({ value, duration, anchor }) => {
     expect(
       intervalFromDurationZoned(value as never, duration, anchor),
@@ -150,11 +150,11 @@ describe("intervalFromDurationZoned", () => {
   });
 
   it.each`
-    value                                 | duration       | anchor
-    ${"2024-01-01T00:00:00+00:00[UTC]"}   | ${"not-a-dur"} | ${"start"}
-    ${"2024-01-01T00:00:00+00:00[UTC]"}   | ${""}          | ${"start"}
-    ${"2024-01-01T00:00:00+00:00[UTC]"}   | ${123}         | ${"start"}
-    ${"2024-01-01T00:00:00+00:00[UTC]"}   | ${null}        | ${"start"}
+    value                               | duration       | anchor
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"not-a-dur"} | ${"start"}
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${""}          | ${"start"}
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${123}         | ${"start"}
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${null}        | ${"start"}
   `(
     "returns null for invalid duration $duration",
     ({ value, duration, anchor }) => {
@@ -165,11 +165,11 @@ describe("intervalFromDurationZoned", () => {
   );
 
   it.each`
-    value                                 | duration | anchor
-    ${"2024-01-01T00:00:00+00:00[UTC]"}   | ${"P1D"} | ${"middle"}
-    ${"2024-01-01T00:00:00+00:00[UTC]"}   | ${"P1D"} | ${""}
-    ${"2024-01-01T00:00:00+00:00[UTC]"}   | ${"P1D"} | ${null}
-    ${"2024-01-01T00:00:00+00:00[UTC]"}   | ${"P1D"} | ${undefined}
+    value                               | duration | anchor
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"P1D"} | ${"middle"}
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"P1D"} | ${""}
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"P1D"} | ${null}
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"P1D"} | ${undefined}
   `(
     "returns null for invalid anchor $anchor",
     ({ value, duration, anchor }) => {

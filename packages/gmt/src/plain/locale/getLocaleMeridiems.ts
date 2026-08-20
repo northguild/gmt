@@ -32,9 +32,8 @@ export function getLocaleMeridiems(locale: string): string[] {
       hour12: true,
     });
     const am =
-      formatter
-        .formatToParts(0)
-        .find((part) => part.type === "dayPeriod")?.value ?? "";
+      formatter.formatToParts(0).find((part) => part.type === "dayPeriod")
+        ?.value ?? "";
     const pm =
       formatter
         .formatToParts(12 * 60 * 60 * 1000)

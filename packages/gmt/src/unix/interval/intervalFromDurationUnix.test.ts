@@ -1,5 +1,8 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { battleTestTimeZones, mockSystemTimeZone } from "../../test/timeZoneMatrix";
+import {
+  battleTestTimeZones,
+  mockSystemTimeZone,
+} from "../../test/timeZoneMatrix";
 import { intervalFromDurationUnix } from "./intervalFromDurationUnix";
 
 // Epoch values used below, in ISO 8601 UTC:
@@ -22,12 +25,12 @@ describe("intervalFromDurationUnix", () => {
   });
 
   it.each`
-    value             | duration    | anchor      | expected
-    ${1704067200000}  | ${"P1D"}    | ${"start"}  | ${{ start: 1704067200000, end: 1704153600000 }}
-    ${1704153600000}  | ${"P1D"}    | ${"end"}    | ${{ start: 1704067200000, end: 1704153600000 }}
-    ${1704067200000}  | ${"P0D"}    | ${"start"}  | ${{ start: 1704067200000, end: 1704067200000 }}
-    ${1704067200000}  | ${"PT0S"}   | ${"end"}    | ${{ start: 1704067200000, end: 1704067200000 }}
-    ${"1704067200000"}| ${"P1D"}    | ${"start"}  | ${{ start: 1704067200000, end: 1704153600000 }}
+    value              | duration  | anchor     | expected
+    ${1704067200000}   | ${"P1D"}  | ${"start"} | ${{ start: 1704067200000, end: 1704153600000 }}
+    ${1704153600000}   | ${"P1D"}  | ${"end"}   | ${{ start: 1704067200000, end: 1704153600000 }}
+    ${1704067200000}   | ${"P0D"}  | ${"start"} | ${{ start: 1704067200000, end: 1704067200000 }}
+    ${1704067200000}   | ${"PT0S"} | ${"end"}   | ${{ start: 1704067200000, end: 1704067200000 }}
+    ${"1704067200000"} | ${"P1D"}  | ${"start"} | ${{ start: 1704067200000, end: 1704153600000 }}
   `(
     "returns $expected for $value with duration $duration anchored at $anchor (default system timeZone = UTC)",
     ({ value, duration, anchor, expected }) => {
@@ -38,18 +41,18 @@ describe("intervalFromDurationUnix", () => {
   );
 
   it.each`
-    value          | duration | anchor     | options                                                   | expected
-    ${1704067200}  | ${"P1D"} | ${"start"} | ${{ epochUnit: "seconds" }}                              | ${{ start: 1704067200, end: 1704153600 }}
-    ${1706659200000}| ${"P1M"} | ${"start"} | ${{ timeZone: "UTC" }}                                   | ${{ start: 1706659200000, end: 1709164800000 }}
-    ${1706659200000}| ${"P1M"} | ${"start"} | ${{ timeZone: "UTC", overflow: "constrain" }}            | ${{ start: 1706659200000, end: 1709164800000 }}
-    ${1706659200000}| ${"P1M"} | ${"start"} | ${{ timeZone: "UTC", overflow: "reject" }}               | ${null}
-    ${1704067200000}| ${"P1D"} | ${"start"} | ${{ timeZone: "UTC", overflow: "reject" }}               | ${{ start: 1704067200000, end: 1704153600000 }}
+    value            | duration | anchor     | options                                       | expected
+    ${1704067200}    | ${"P1D"} | ${"start"} | ${{ epochUnit: "seconds" }}                   | ${{ start: 1704067200, end: 1704153600 }}
+    ${1706659200000} | ${"P1M"} | ${"start"} | ${{ timeZone: "UTC" }}                        | ${{ start: 1706659200000, end: 1709164800000 }}
+    ${1706659200000} | ${"P1M"} | ${"start"} | ${{ timeZone: "UTC", overflow: "constrain" }} | ${{ start: 1706659200000, end: 1709164800000 }}
+    ${1706659200000} | ${"P1M"} | ${"start"} | ${{ timeZone: "UTC", overflow: "reject" }}    | ${null}
+    ${1704067200000} | ${"P1D"} | ${"start"} | ${{ timeZone: "UTC", overflow: "reject" }}    | ${{ start: 1704067200000, end: 1704153600000 }}
   `(
     "returns $expected for $value + $duration anchored at $anchor with options $options",
     ({ value, duration, anchor, options, expected }) => {
-      expect(intervalFromDurationUnix(value, duration, anchor, options)).toEqual(
-        expected,
-      );
+      expect(
+        intervalFromDurationUnix(value, duration, anchor, options),
+      ).toEqual(expected);
     },
   );
 
@@ -70,9 +73,9 @@ describe("intervalFromDurationUnix", () => {
         hour: 0,
         timeZone,
       });
-      const expectedEnd = point
-        .add(Temporal.Duration.from("P1M"))
-        .epochMilliseconds;
+      const expectedEnd = point.add(
+        Temporal.Duration.from("P1M"),
+      ).epochMilliseconds;
 
       expect(
         intervalFromDurationUnix(point.epochMilliseconds, "P1M", "start", {
@@ -84,9 +87,9 @@ describe("intervalFromDurationUnix", () => {
   });
 
   it.each`
-    value             | duration   | anchor
-    ${1704067200000}  | ${"-P10D"} | ${"start"}
-    ${1704067200000}  | ${"-P10D"} | ${"end"}
+    value            | duration   | anchor
+    ${1704067200000} | ${"-P10D"} | ${"start"}
+    ${1704067200000} | ${"-P10D"} | ${"end"}
   `(
     "returns null when $duration anchored at $anchor inverts the span from $value",
     ({ value, duration, anchor }) => {
@@ -95,8 +98,8 @@ describe("intervalFromDurationUnix", () => {
   );
 
   it.each`
-    value            | duration | anchor
-    ${NaN}           | ${"P1D"} | ${"start"}
+    value             | duration | anchor
+    ${NaN}            | ${"P1D"} | ${"start"}
     ${Infinity}       | ${"P1D"} | ${"start"}
     ${1.5}            | ${"P1D"} | ${"start"}
     ${"not-a-number"} | ${"P1D"} | ${"start"}
@@ -110,11 +113,11 @@ describe("intervalFromDurationUnix", () => {
   });
 
   it.each`
-    value             | duration       | anchor
-    ${1704067200000}  | ${"not-a-dur"} | ${"start"}
-    ${1704067200000}  | ${""}          | ${"start"}
-    ${1704067200000}  | ${123}         | ${"start"}
-    ${1704067200000}  | ${null}        | ${"start"}
+    value            | duration       | anchor
+    ${1704067200000} | ${"not-a-dur"} | ${"start"}
+    ${1704067200000} | ${""}          | ${"start"}
+    ${1704067200000} | ${123}         | ${"start"}
+    ${1704067200000} | ${null}        | ${"start"}
   `(
     "returns null for invalid duration $duration",
     ({ value, duration, anchor }) => {
@@ -125,11 +128,11 @@ describe("intervalFromDurationUnix", () => {
   );
 
   it.each`
-    value             | duration | anchor
-    ${1704067200000}  | ${"P1D"} | ${"middle"}
-    ${1704067200000}  | ${"P1D"} | ${""}
-    ${1704067200000}  | ${"P1D"} | ${null}
-    ${1704067200000}  | ${"P1D"} | ${undefined}
+    value            | duration | anchor
+    ${1704067200000} | ${"P1D"} | ${"middle"}
+    ${1704067200000} | ${"P1D"} | ${""}
+    ${1704067200000} | ${"P1D"} | ${null}
+    ${1704067200000} | ${"P1D"} | ${undefined}
   `(
     "returns null for invalid anchor $anchor",
     ({ value, duration, anchor }) => {

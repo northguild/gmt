@@ -87,6 +87,7 @@ skills:
       - formatRelativeDate
       - formatRelativeTime
       - formatRelativeDateTime
+      - getLocaleEraNames
       - getLocaleMonthNames
       - getLocaleWeekdayNames
       - getLocaleMeridiems
@@ -97,6 +98,7 @@ skills:
       - Format relative date ("yesterday", "in 2 days")
       - Format relative time ("30 minutes ago")
       - Format relative datetime with reference
+      - Get locale era names (getLocaleEraNames)
       - Get locale month names (getLocaleMonthNames)
       - Get locale weekday names (getLocaleWeekdayNames)
       - Get locale AM/PM labels (getLocaleMeridiems)
