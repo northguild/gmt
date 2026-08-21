@@ -211,7 +211,7 @@ skills:
   - name: Validate Dates
     slug: validate-dates
     domain: core-date-operations
-    description: Validate date/time strings, timezone identifiers, intervals, and ranges; check whether a timezone observes daylight saving time; check point-in-interval and interval-in-interval containment; merge overlapping or adjacent intervals; split intervals into sub-intervals by duration unit
+    description: Validate date/time strings, timezone identifiers, intervals, and ranges; check whether a timezone observes daylight saving time; list DST transition instants for a timezone in a given year; check point-in-interval and interval-in-interval containment; merge overlapping or adjacent intervals; split intervals into sub-intervals by duration unit
     type: core
     packages:
       - '@burglekitt/gmt'
@@ -226,6 +226,7 @@ skills:
       - isValidUnixInterval
       - isValidZonedInterval
       - hasDaylightSaving
+      - getDstTransitions
       - intervalContainsDate
       - intervalContainsTime
       - intervalContainsDateTime
@@ -261,6 +262,7 @@ skills:
       - Validate Unix interval
       - Validate zoned interval
       - Check whether an IANA timezone observes daylight saving time
+      - List DST transition instants for a timezone in a given year
       - Check if a point falls within an interval (3-arg)
       - Check if an inner interval is fully contained within an outer interval (4-arg)
       - Merge two overlapping or adjacent intervals into their combined span

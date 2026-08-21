@@ -63,9 +63,7 @@ export function intervalOverlappingDaysZoned(
     // Boundaries are counted in the start's zone, so the others are re-expressed there —
     // Temporal refuses calendar-unit differences across two zones outright.
     const aE = Temporal.ZonedDateTime.from(aEnd).withTimeZone(aS.timeZoneId);
-    const bS = Temporal.ZonedDateTime.from(bStart).withTimeZone(
-      aS.timeZoneId,
-    );
+    const bS = Temporal.ZonedDateTime.from(bStart).withTimeZone(aS.timeZoneId);
     const bE = Temporal.ZonedDateTime.from(bEnd).withTimeZone(aS.timeZoneId);
 
     if (Temporal.ZonedDateTime.compare(aS, aE) > 0) {

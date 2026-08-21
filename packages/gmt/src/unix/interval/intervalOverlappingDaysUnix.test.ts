@@ -8,10 +8,10 @@ const D = 86400000;
 
 describe("intervalOverlappingDaysUnix", () => {
   it.each`
-    aStart | aEnd     | bStart  | bEnd     | timeZone            | expected
-    ${0}   | ${2 * D} | ${D}    | ${3 * D} | ${"UTC"}            | ${2}
-    ${0}   | ${2 * D} | ${D}    | ${3 * D} | ${"Pacific/Apia"}   | ${2}
-    ${0}   | ${2 * D} | ${D}    | ${3 * D} | ${"Pacific/Niue"}   | ${2}
+    aStart | aEnd     | bStart | bEnd     | timeZone          | expected
+    ${0}   | ${2 * D} | ${D}   | ${3 * D} | ${"UTC"}          | ${2}
+    ${0}   | ${2 * D} | ${D}   | ${3 * D} | ${"Pacific/Apia"} | ${2}
+    ${0}   | ${2 * D} | ${D}   | ${3 * D} | ${"Pacific/Niue"} | ${2}
   `(
     "returns $expected for $aStart..$aEnd × $bStart..$bEnd in $timeZone",
     ({ aStart, aEnd, bStart, bEnd, timeZone, expected }) => {
@@ -22,9 +22,9 @@ describe("intervalOverlappingDaysUnix", () => {
   );
 
   it("returns 1 for a zero-length interval sitting mid-day (UTC)", () => {
-    expect(
-      intervalOverlappingDaysUnix(0, 0, 0, 0, { timeZone: "UTC" }),
-    ).toBe(1);
+    expect(intervalOverlappingDaysUnix(0, 0, 0, 0, { timeZone: "UTC" })).toBe(
+      1,
+    );
   });
 
   it("returns 1 for adjacent intervals sharing one instant (UTC)", () => {
@@ -92,9 +92,9 @@ describe("intervalOverlappingDaysUnix", () => {
   });
 
   it.each`
-    aStart    | aEnd | bStart  | bEnd
-    ${D}      | ${0} | ${2*D}  | ${3*D}
-    ${0}      | ${D} | ${3*D}  | ${2*D}
+    aStart | aEnd | bStart   | bEnd
+    ${D}   | ${0} | ${2 * D} | ${3 * D}
+    ${0}   | ${D} | ${3 * D} | ${2 * D}
   `(
     "returns null for inverted interval $aStart..$aEnd × $bStart..$bEnd",
     ({ aStart, aEnd, bStart, bEnd }) => {
@@ -107,15 +107,15 @@ describe("intervalOverlappingDaysUnix", () => {
   );
 
   it.each`
-    aStart        | aEnd          | bStart       | bEnd
-    ${NaN}        | ${1700000000} | ${1000000}   | ${2000000}
-    ${Infinity}   | ${1700000000} | ${1000000}   | ${2000000}
-    ${-Infinity}  | ${1700000000} | ${1000000}   | ${2000000}
-    ${1.5}        | ${1700000000} | ${1000000}   | ${2000000}
-    ${1700000000} | ${NaN}        | ${1000000}   | ${2000000}
-    ${1700000000} | ${Infinity}   | ${1000000}   | ${2000000}
-    ${1700000000} | ${1700000000} | ${NaN}       | ${2000000}
-    ${1700000000} | ${1700000000} | ${1000000}   | ${NaN}
+    aStart        | aEnd          | bStart     | bEnd
+    ${NaN}        | ${1700000000} | ${1000000} | ${2000000}
+    ${Infinity}   | ${1700000000} | ${1000000} | ${2000000}
+    ${-Infinity}  | ${1700000000} | ${1000000} | ${2000000}
+    ${1.5}        | ${1700000000} | ${1000000} | ${2000000}
+    ${1700000000} | ${NaN}        | ${1000000} | ${2000000}
+    ${1700000000} | ${Infinity}   | ${1000000} | ${2000000}
+    ${1700000000} | ${1700000000} | ${NaN}     | ${2000000}
+    ${1700000000} | ${1700000000} | ${1000000} | ${NaN}
   `(
     "returns null for non-finite/non-integer: $aStart, $aEnd, $bStart, $bEnd",
     ({ aStart, aEnd, bStart, bEnd }) => {
@@ -158,9 +158,15 @@ describe("intervalOverlappingDaysUnix", () => {
 
   it("accepts string epoch inputs", () => {
     expect(
-      intervalOverlappingDaysUnix("0", String(2 * D), String(D), String(3 * D), {
-        timeZone: "UTC",
-      }),
+      intervalOverlappingDaysUnix(
+        "0",
+        String(2 * D),
+        String(D),
+        String(3 * D),
+        {
+          timeZone: "UTC",
+        },
+      ),
     ).toBe(2);
   });
 

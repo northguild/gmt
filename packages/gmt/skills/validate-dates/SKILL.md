@@ -5,8 +5,9 @@ description: >
   isValidDate, isValidTime, isValidDateTime, isValidDateInterval,
   isValidTimeInterval, isValidDateTimeInterval for scalar and interval
   validation. Use hasDaylightSaving to check whether an IANA timezone observes
-  daylight saving time. Use intervalContains*, intervalUnion*, and
-  splitIntervalByUnit* for interval containment, merging, and splitting. All
+  daylight saving time. Use getDstTransitions to enumerate DST transition
+  instants for a timezone in a given year. Use intervalContains*, intervalUnion*,
+  and splitIntervalByUnit* for interval containment, merging, and splitting. All
   validation functions return false on invalid input; interval union returns
   null on disjoint or invalid input; split functions return [] on invalid input.
 sources:
@@ -33,6 +34,7 @@ sources:
   - 'burglekitt/gmt:packages/gmt/src/unix/interval/splitIntervalByUnitUnix.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/validate/hasDaylightSaving.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/get/getDstTransitions.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/interval/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/interval/intervalContainsZoned.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/interval/intervalUnionZoned.ts'
@@ -109,6 +111,21 @@ import { hasDaylightSaving } from "@burglekitt/gmt/zoned";
 const hasDst = hasDaylightSaving("America/New_York"); // true
 const noDst = hasDaylightSaving("Asia/Tokyo"); // false
 const invalid = hasDaylightSaving("Invalid/Zone"); // false
+```
+
+### List DST transition instants
+
+```ts
+import { getDstTransitions } from "@burglekitt/gmt/zoned";
+
+const transitions = getDstTransitions("America/New_York", 2024);
+// [
+//   { instant: "2024-03-10T07:00:00Z", offsetBefore: "-05:00", offsetAfter: "-04:00" },
+//   { instant: "2024-11-03T06:00:00Z", offsetBefore: "-04:00", offsetAfter: "-05:00" }
+// ]
+
+const noTransitions = getDstTransitions("Asia/Tokyo", 2024);
+// []
 ```
 
 ### Validate date duration unit

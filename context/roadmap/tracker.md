@@ -38,8 +38,8 @@ Issue number tracker (fill in as issues are created). `Order` is the sequence to
 | 26    | H2    | Issue #73    | Done        | v1.11.0                                      |
 | 27    | H3    | Issue #74    | Done        | v1.11.0                                      |
 | 28    | I1    | Issue #80    | Done        | not yet                                      |
-| 29    | I2    | Issue #81    | Not started | not yet                                      |
-| 30    | I3    | Issue #82    | Not started | not yet                                      |
+| 29    | I2    | Issue #81    | Done        | not yet                                      |
+| 30    | I3    | Issue #82    | Done        | not yet                                      |
 | 31    | I4    | Issue #83    | Not started | minor, Story Group I complete                |
 | 32    | J0a   | Issue #96    | Not started | not yet (docs-only, no changeset)            |
 | 33    | J0b   | Issue #97    | Not started | not yet                                      |

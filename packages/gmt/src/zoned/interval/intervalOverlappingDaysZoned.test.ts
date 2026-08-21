@@ -5,11 +5,11 @@ import { battleTestTimeZones } from "../../test/timeZoneMatrix";
 
 describe("intervalOverlappingDaysZoned", () => {
   it.each`
-    aStart                                             | aEnd                                                | expected
-    ${"2024-03-09T12:00:00-05:00[America/New_York]"}   | ${"2024-03-11T12:00:00-04:00[America/New_York]"}   | ${3}
-    ${"2024-11-02T12:00:00-04:00[America/New_York]"}   | ${"2024-11-04T12:00:00-05:00[America/New_York]"}   | ${3}
-    ${"2024-03-30T12:00:00+01:00[Europe/Berlin]"}       | ${"2024-04-01T12:00:00+02:00[Europe/Berlin]"}      | ${3}
-    ${"2011-12-29T12:00:00-10:00[Pacific/Apia]"}        | ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}       | ${3}
+    aStart                                           | aEnd                                             | expected
+    ${"2024-03-09T12:00:00-05:00[America/New_York]"} | ${"2024-03-11T12:00:00-04:00[America/New_York]"} | ${3}
+    ${"2024-11-02T12:00:00-04:00[America/New_York]"} | ${"2024-11-04T12:00:00-05:00[America/New_York]"} | ${3}
+    ${"2024-03-30T12:00:00+01:00[Europe/Berlin]"}    | ${"2024-04-01T12:00:00+02:00[Europe/Berlin]"}    | ${3}
+    ${"2011-12-29T12:00:00-10:00[Pacific/Apia]"}     | ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}     | ${3}
   `(
     "returns $expected for self-overlapping $aStart..$aEnd",
     ({ aStart, aEnd, expected }) => {

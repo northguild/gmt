@@ -64,6 +64,7 @@ Current in specific timezone and locale-aware extraction:
 - `getZonedMillisecond`, `getZonedMicrosecond`, `getZonedNanosecond`
 - `getZonedWeekOfYear`
 - `getLocaleZonedDayOfWeek`
+- `getDstTransitions`
 
 ### interval
 

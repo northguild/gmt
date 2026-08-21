@@ -853,6 +853,26 @@ hasDaylightSaving("Invalid/Zone");
 // false
 ```
 
+`getDstTransitions` enumerates the exact transition instants for a timezone in a given year:
+
+```typescript
+import { getDstTransitions } from "@burglekitt/gmt/zoned";
+
+getDstTransitions("America/New_York", 2024);
+// [
+//   { instant: "2024-03-10T07:00:00Z", offsetBefore: "-05:00", offsetAfter: "-04:00" },
+//   { instant: "2024-11-03T06:00:00Z", offsetBefore: "-04:00", offsetAfter: "-05:00" }
+// ]
+
+getDstTransitions("Asia/Tokyo", 2024);
+// []
+
+getDstTransitions("Invalid/Zone", 2024);
+// []
+```
+
+Each object's `instant` is a UTC ISO 8601 string; `offsetBefore`/`offsetAfter` are `±HH:MM` offset strings. Returns `[]` for zones with no transitions in the requested year and on invalid input.
+
 `clampZoned` restricts a zoned datetime to a range, and `closestZonedTo` finds the nearest candidate by temporal distance:
 
 ```typescript
