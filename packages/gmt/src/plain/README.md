@@ -13,11 +13,12 @@ Arithmetic and date manipulation:
 - `diffDate`, `diffDateAsDuration`, `diffDateTime`, `diffDateTimeAsDuration`, `diffTime`
 - `endOfDate`, `endOfDateTime`, `endOfTime`
 - `endOfQuarterForDate`, `endOfQuarterForDateTime`
+- `getDayOfYear`, `getDaysInMonth`, `getDaysInYear`
 - `getLargestDateDurationUnit`, `getLargestDateTimeDurationUnit`, `getLargestTimeDurationUnit`
 - `getLocaleDayOfWeek`
 - `getLocaleEndOfWeek`, `getLocaleStartOfWeek`
 - `getQuarterForDate`, `getQuarterForDateTime`
-- `getWeekNumber`
+- `getWeekNumber`, `getWeekOfMonth`, `getWeeksInMonth`, `getWeeksInYear`
 - `maxDate`, `maxDateTime`, `maxTime`
 - `minDate`, `minDateTime`, `minTime`
 - `roundDate`, `roundDateTime`, `roundTime`

@@ -44,7 +44,7 @@ Issue number tracker (fill in as issues are created). `Order` is the sequence to
 | 32    | J0a   | Issue #96    | Done        | not yet (docs-only, no changeset)            |
 | 33    | J0b   | Issue #97    | Done        | not yet (minor, breaking for deep subpaths)  |
 | 34    | J1    | Issue #98    | Done        | not yet                                      |
-| 35    | J3    | Issue #99    | Not started | not yet                                      |
+| 35    | J3    | Issue #99    | Done        | not yet                                      |
 | 36    | J4    | Issue #107   | Not started | not yet                                      |
 | 37    | J5    | Issue #100   | Not started | not yet                                      |
 | 38    | J6    | Issue #101   | Not started | not yet                                      |

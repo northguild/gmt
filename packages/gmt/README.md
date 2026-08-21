@@ -52,9 +52,9 @@ Invalid input fallbacks are consistent across the library:
 
 | Metric     | Count  |
 | ---------- | ------ |
-| Test files | 418    |
-| Tests      | 13,006 |
-| Exports    | 472    |
+| Test files | 431    |
+| Tests      | 13,372 |
+| Exports    | 479    |
 
 Every function is exercised across **17 locales** and a full IANA timezone matrix. The CI pipeline runs the complete suite in **20 environments** — 2 Node versions (22, 24) × 10 timezones spanning every UTC offset band from Pacific/Niue (−11:00) to Pacific/Apia (+13:00):
 

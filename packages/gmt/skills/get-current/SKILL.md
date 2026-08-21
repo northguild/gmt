@@ -173,6 +173,30 @@ process(now);
 
 Source: packages/gmt/src/plain/get/getNow.ts — Returns "" on error
 
+### MEDIUM Looking for value-taking `get*` functions here
+
+`getDaysInMonth`, `getDaysInYear`, `getDayOfYear`, `getWeeksInYear`,
+`getWeeksInMonth`, and `getWeekOfMonth` take a date value, so despite the
+`get` prefix they live in `calculate/`, not `get/`. GMT's `get/` namespaces
+are current-moment accessors only (no argument, or timezone only) — see
+`context/coding-standards.md`'s API Contract section.
+
+Wrong:
+
+```ts
+import { getDaysInMonth } from "@burglekitt/gmt/plain/get"; // not exported here
+```
+
+Correct:
+
+```ts
+import { getDaysInMonth } from "@burglekitt/gmt"; // or "@burglekitt/gmt/plain/calculate"
+
+getDaysInMonth("2024-02-15"); // 29
+```
+
+Source: context/coding-standards.md — `get/` namespaces hold current-moment accessors only
+
 ## References
 
 - [Full get API](references/get-api.md)

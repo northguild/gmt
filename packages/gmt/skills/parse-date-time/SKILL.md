@@ -86,6 +86,30 @@ import { parseWeekFromDate } from "@burglekitt/gmt";
 const week = parseWeekFromDate("2024-03-15"); // 11
 ```
 
+### Get calendar quantities (days in month/year, day of year, week counts)
+
+These aren't `parse*` functions — they don't extract a stored field, they compute
+a derived quantity — so they live in `calculate/`, not `parse/`. Grouped here
+because they answer the same "read a calendar fact off a date" need.
+
+```ts
+import {
+  getDaysInMonth,
+  getDaysInYear,
+  getDayOfYear,
+  getWeeksInYear,
+  getWeeksInMonth,
+  getWeekOfMonth,
+} from "@burglekitt/gmt";
+
+getDaysInMonth("2024-02-15"); // 29 (leap year)
+getDaysInYear("2024-06-15"); // 366 (leap year)
+getDayOfYear("2024-03-01"); // 61
+getWeeksInYear("2024-06-15"); // 52 (ISO week-numbering year)
+getWeeksInMonth("2024-02-15", "en-US"); // 5 (calendar-grid rows, locale week start)
+getWeekOfMonth("2024-02-29", "en-US"); // 5 (which grid row this date falls on)
+```
+
 ## Common Mistakes
 
 ### HIGH Not handling null on invalid input
@@ -146,6 +170,30 @@ const monthName = ["Jan", "Feb", "Mar"][month - 1]; // "Jan"
 ```
 
 Source: Temporal spec — months are 1-indexed
+
+### MEDIUM Confusing getWeekOfMonth with parseWeekFromDate
+
+`parseWeekFromDate` returns the ISO week-of-**year** (1-53, resets every
+January). `getWeekOfMonth` returns the calendar-grid row within the
+**month** (1-4/5/6, resets every month, and depends on `locale`'s first
+day of week). They answer different questions and are not interchangeable.
+
+Wrong:
+
+```ts
+// Trying to size a datepicker's month grid
+const row = parseWeekFromDate("2024-02-29"); // 9 — ISO week-of-year, not useful here
+```
+
+Correct:
+
+```ts
+import { getWeekOfMonth } from "@burglekitt/gmt";
+
+const row = getWeekOfMonth("2024-02-29", "en-US"); // 5 — grid row within February
+```
+
+Source: packages/gmt/src/plain/calculate/getWeekOfMonth.ts
 
 ## References
 

@@ -4,6 +4,7 @@ export { getLocaleFirstDayOfWeek } from "./getLocaleFirstDayOfWeek";
 export { getLocaleWeekendDays } from "./getLocaleWeekendDays";
 export { getStartOfZonedUnit, getUnitSpan } from "./intervalCountHelpers";
 export { isValidAmount } from "./isValidAmount";
+export { monthGridWeekRow } from "./monthGridWeekRow";
 export { normalizeDateTime } from "./normalizeDateTime";
 export { resolveDateTimeUnit } from "./resolveDateTimeUnit";
 export { resolveDurationUnit } from "./resolveDurationUnit";
