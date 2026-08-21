@@ -11,6 +11,8 @@ Timezone-aware arithmetic:
 - `addZoned`, `addZonedBusinessDays`, `clampZoned`, `closestZonedTo`
 - `diffZoned`, `diffZonedAsDuration`
 - `endOfQuarterForZoned`, `endOfZoned`
+- `getHoursInZonedDay`
+- `getLocaleZonedDayOfWeek`
 - `getLocaleZonedEndOfWeek`, `getLocaleZonedStartOfWeek`
 - `getQuarterForZoned`
 - `maxZoned`, `minZoned`, `roundZoned`, `sortZoned`
@@ -63,9 +65,7 @@ Current in specific timezone and locale-aware extraction:
 - `getZonedHour`, `getZonedMinute`, `getZonedSecond`
 - `getZonedMillisecond`, `getZonedMicrosecond`, `getZonedNanosecond`
 - `getZonedWeekOfYear`
-- `getLocaleZonedDayOfWeek`
 - `getDstTransitions`
-- `getHoursInZonedDay`
 
 ### interval
 

@@ -14,6 +14,7 @@ Arithmetic and date manipulation:
 - `endOfDate`, `endOfDateTime`, `endOfTime`
 - `endOfQuarterForDate`, `endOfQuarterForDateTime`
 - `getLargestDateDurationUnit`, `getLargestDateTimeDurationUnit`, `getLargestTimeDurationUnit`
+- `getLocaleDayOfWeek`
 - `getLocaleEndOfWeek`, `getLocaleStartOfWeek`
 - `getQuarterForDate`, `getQuarterForDateTime`
 - `getWeekNumber`
@@ -78,7 +79,6 @@ Current values and locale-aware extraction:
 - `getHour`, `getMinute`, `getSecond`
 - `getMillisecond`, `getMicrosecond`, `getNanosecond`
 - `getWeekOfYear`
-- `getLocaleDayOfWeek`
 
 ### interval
 

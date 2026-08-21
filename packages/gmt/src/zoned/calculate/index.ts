@@ -6,6 +6,8 @@ export * from "./diffZoned";
 export * from "./diffZonedAsDuration";
 export * from "./endOfQuarterForZoned";
 export * from "./endOfZoned";
+export * from "./getHoursInZonedDay";
+export * from "./getLocaleZonedDayOfWeek";
 export * from "./getLocaleZonedEndOfWeek";
 export * from "./getLocaleZonedStartOfWeek";
 export * from "./getQuarterForZoned";

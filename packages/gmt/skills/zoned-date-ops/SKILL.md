@@ -26,6 +26,7 @@ sources:
   - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/getLocaleZonedEndOfWeek.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/clampZoned.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/closestZonedTo.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/getHoursInZonedDay.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/map/mapZonedHoursInDay.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/calculate/startOfUnix.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/calculate/endOfUnix.ts'

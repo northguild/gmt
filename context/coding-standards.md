@@ -13,6 +13,8 @@
 | `boolean` | `false` |
 | `array` | `[]` |
 
+- **`get/` namespaces hold current-moment accessors only** — no argument, or timezone only, reporting a value for *now* (e.g. `getDay()`, `getZonedDay(timeZone)`). Any function taking a date value belongs in `calculate/` (or `parse/`, `compare/`, `format/` as its verb dictates) — see J0b, which relocated `getLocaleDayOfWeek`/`getLocaleZonedDayOfWeek` out of `get/` for violating this.
+
 ## Allowed vs. Forbidden Patterns
 
 ### Allowed

@@ -11,8 +11,8 @@ description: >
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/compare/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/compare/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/get/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/get/index.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/getLocaleDayOfWeek.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/getLocaleZonedDayOfWeek.ts'
 metadata:
   type: core
   library: '@burglekitt/gmt'
