@@ -9,8 +9,12 @@ description: >
   Saturday/Sunday). Use isBusinessDay for fixed ISO Monday–Friday business-day
   checks (locale-agnostic, matches addBusinessDays). Use
   getLocaleDayOfWeek/getLocaleZonedDayOfWeek to get a locale-relative
-  day-of-week index (0 = first day of week). Returns false/null on invalid
-  input.
+  day-of-week index (0 = first day of week). Use isRelativeDay/isThisUnit/
+  isPast/isFuture and their isZonedRelativeDay/isZonedThisUnit/isZonedPast/
+  isZonedFuture variants for now-relative predicates ("is this today",
+  "is this overdue") — these depend on the system clock and system timeZone
+  unless you use the zoned variants with an explicit timeZone. Returns
+  false/null on invalid input.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/compare/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/compare/index.ts'
@@ -149,6 +153,39 @@ getLocaleZonedDayOfWeek("2024-02-26T12:00:00+00:00[UTC]", "fr-FR"); // 0
 ```
 
 `getLocaleDayOfWeek` returns `null` on invalid input. `getLocaleZonedDayOfWeek` reads the `ZonedDateTime`'s local calendar day — no separate timezone conversion needed.
+
+### Check now-relative predicates (today, this month, past, future)
+
+```ts
+import { isRelativeDay, isThisUnit, isPast, isFuture } from "@burglekitt/gmt";
+
+isRelativeDay("2024-03-15", 0);   // "is today" — true if today is 2024-03-15
+isRelativeDay("2024-03-14", -1);  // "is yesterday" — true if today is 2024-03-15
+isRelativeDay("2024-03-16", 1);   // "is tomorrow" — true if today is 2024-03-15
+
+isThisUnit("2024-03-15", "month");            // true if today is any day in March 2024
+isThisUnit("2024-02-26", "week", "fr-FR");    // locale-aware week boundary (fr-FR starts Monday)
+
+isPast("2024-03-14");   // true if today is 2024-03-15 (strictly before, not on-or-before)
+isFuture("2024-03-16"); // true if today is 2024-03-15 (strictly after, not on-or-before)
+```
+
+`isRelativeDay` subsumes `isToday`/`isYesterday`/`isTomorrow` (`offsetDays: 0`/`-1`/`1`); `isThisUnit` subsumes `isThisWeek`/`isThisMonth`/`isThisYear` (Decision 5, `context/roadmap/issues/J.md`). All four compare against `getToday()`, so they depend on the **system clock and system timeZone** — see the Common Mistakes entry below before using these in a server or test context.
+
+Zoned counterparts — `isZonedRelativeDay`, `isZonedThisUnit`, `isZonedPast`, `isZonedFuture` — take a `ZonedDateTime` string and resolve "today"/"now" in *that value's own* timeZone, making them deterministic regardless of the host's system timeZone:
+
+```ts
+import { isZonedRelativeDay, isZonedThisUnit, isZonedPast, isZonedFuture } from "@burglekitt/gmt";
+
+isZonedRelativeDay("2024-03-15T10:00:00-04:00[America/New_York]", 0); // "today" in America/New_York, not the host's timeZone
+isZonedThisUnit("2024-03-15T10:00:00-04:00[America/New_York]", "month");
+
+// isZonedPast/isZonedFuture compare the exact instant (not just the calendar
+// day) against Temporal.Now.instant() — the zoned counterpart carries a
+// full time-of-day, unlike the plain, day-only isPast/isFuture.
+isZonedPast("2020-01-01T00:00:00Z[UTC]");   // true
+isZonedFuture("2999-01-01T00:00:00Z[UTC]"); // true
+```
 
 ## Common Mistakes
 
@@ -293,6 +330,31 @@ const sameMonthOfYear =
 `areDatesEqualBy(a, b, unit)` compares the start-of-`unit` boundary for each value, so any unit implicitly requires every coarser unit above it to match too — this is deliberate (Decision 5/6, `context/roadmap/issues/J.md`) and matches date-fns/Luxon precedent, not a GMT-specific quirk.
 
 Source: packages/gmt/src/plain/compare/areDatesEqualBy.ts — start-of-unit comparison
+
+### HIGH Assuming isRelativeDay/isThisUnit/isPast/isFuture are timeZone-independent
+
+Wrong:
+
+```ts
+import { isRelativeDay } from "@burglekitt/gmt";
+
+// Assuming "today" means the same thing everywhere
+const isDueToday = isRelativeDay(dueDate, 0);
+```
+
+Correct:
+
+```ts
+import { isZonedRelativeDay } from "@burglekitt/gmt";
+
+// "Today" is resolved in the value's own timeZone — deterministic
+// regardless of the host machine's system timeZone
+const isDueToday = isZonedRelativeDay(dueZonedDateTime, 0);
+```
+
+`isRelativeDay`/`isThisUnit`/`isPast`/`isFuture` depend on the **system clock and system timeZone** (they compare against `getToday()`). The same call returns different answers on hosts in different timeZones at the same instant — `isRelativeDay("2024-03-15", 0)` can be true in one timeZone and false in another 24 hours apart (e.g. `Pacific/Apia` vs. `Pacific/Niue`). Callers needing determinism — server-side rendering, tests, scheduled jobs — should use the zoned variants (`isZonedRelativeDay`, `isZonedThisUnit`, `isZonedPast`, `isZonedFuture`) with an explicit timeZone, or compare against an explicit reference with `areDatesEqualBy`/`isBeforeDate`/`isAfterDate`.
+
+Source: packages/gmt/src/plain/compare/isRelativeDay.ts, packages/gmt/src/plain/get/getToday.ts — system clock/timeZone dependency
 
 ## References
 

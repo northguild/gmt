@@ -4,4 +4,8 @@ export * from "./isAfterZoned";
 export * from "./isBeforeZoned";
 export * from "./isBetweenZoned";
 export * from "./isZonedBusinessDay";
+export * from "./isZonedFuture";
+export * from "./isZonedPast";
+export * from "./isZonedRelativeDay";
+export * from "./isZonedThisUnit";
 export * from "./isZonedWeekend";

@@ -47,6 +47,8 @@ Date/time comparison:
 - `isBeforeDate`, `isBeforeDateTime`, `isBeforeTime`
 - `isBetweenDate`, `isBetweenDateTime`, `isBetweenTime`
 - `isBusinessDay`
+- `isFuture`, `isPast`
+- `isRelativeDay`, `isThisUnit`
 - `isWeekend`
 
 ### format

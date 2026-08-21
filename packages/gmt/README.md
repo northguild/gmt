@@ -52,9 +52,9 @@ Invalid input fallbacks are consistent across the library:
 
 | Metric     | Count  |
 | ---------- | ------ |
-| Test files | 443    |
-| Tests      | 13,652 |
-| Exports    | 479    |
+| Test files | 451    |
+| Tests      | 13,939 |
+| Exports    | 487    |
 
 Every function is exercised across **17 locales** and a full IANA timezone matrix. The CI pipeline runs the complete suite in **20 environments** — 2 Node versions (22, 24) × 10 timezones spanning every UTC offset band from Pacific/Niue (−11:00) to Pacific/Apia (+13:00):
 
@@ -196,6 +196,34 @@ isBusinessDay("2024-02-05");
 
 isBusinessDay("2024-02-10");
 // false (Saturday)
+```
+
+`isRelativeDay`/`isThisUnit`/`isPast`/`isFuture` are now-relative predicates — `isRelativeDay` subsumes `isToday`/`isYesterday`/`isTomorrow`, `isThisUnit` subsumes `isThisWeek`/`isThisMonth`/`isThisYear`. They compare against `getToday()`, so they depend on the **system clock and system timeZone**; the zoned variants (`isZonedRelativeDay`, `isZonedThisUnit`, `isZonedPast`, `isZonedFuture`) resolve "today"/"now" in the value's own timeZone instead, for deterministic results regardless of the host machine's timeZone:
+
+```typescript
+import { isRelativeDay, isThisUnit, isPast, isFuture } from "@burglekitt/gmt";
+
+isRelativeDay("2024-03-15", 0);
+// true, if today is 2024-03-15 ("isToday")
+
+isThisUnit("2024-02-26", "week", "fr-FR");
+// locale-aware week boundary — fr-FR weeks start Monday
+
+isPast("2024-03-14");
+// true, if today is 2024-03-15 (strictly before, not on-or-before)
+
+isFuture("2024-03-16");
+// true, if today is 2024-03-15 (strictly after, not on-or-before)
+```
+
+```typescript
+import { isZonedRelativeDay, isZonedPast } from "@burglekitt/gmt";
+
+isZonedRelativeDay("2024-03-15T10:00:00-04:00[America/New_York]", 0);
+// "today" resolved in America/New_York, not the host's system timeZone
+
+isZonedPast("2020-01-01T00:00:00Z[UTC]");
+// true — compares the exact instant, not just the calendar day
 ```
 
 `clampDate` restricts a date to a range, and `closestDateTo` finds the nearest candidate by calendar distance:

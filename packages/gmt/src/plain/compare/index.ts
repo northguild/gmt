@@ -13,4 +13,8 @@ export * from "./isBetweenDate";
 export * from "./isBetweenDateTime";
 export * from "./isBetweenTime";
 export * from "./isBusinessDay";
+export * from "./isFuture";
+export * from "./isPast";
+export * from "./isRelativeDay";
+export * from "./isThisUnit";
 export * from "./isWeekend";
