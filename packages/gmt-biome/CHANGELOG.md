@@ -1,5 +1,11 @@
 # @burglekitt/gmt-biome
 
+## 1.0.4
+
+### Patch Changes
+
+- c064e99: Rewrite lint rule messages to remove informal "Aint nobody got time for..." phrasing in favor of direct, professional wording. No rule behavior changes — only the emitted message text.
+
 ## 1.0.3
 
 ### Patch Changes

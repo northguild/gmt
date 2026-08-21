@@ -6,10 +6,11 @@ description: >
   isValidTimeInterval, isValidDateTimeInterval for scalar and interval
   validation. Use hasDaylightSaving to check whether an IANA timezone observes
   daylight saving time. Use getDstTransitions to enumerate DST transition
-  instants for a timezone in a given year. Use intervalContains*, intervalUnion*,
-  and splitIntervalByUnit* for interval containment, merging, and splitting. All
-  validation functions return false on invalid input; interval union returns
-  null on disjoint or invalid input; split functions return [] on invalid input.
+  instants for a timezone in a given year. Use intervalContains*,
+  intervalUnion*, and splitIntervalByUnit* for interval containment, merging,
+  and splitting. All validation functions return false on invalid input;
+  interval union returns null on disjoint or invalid input; split functions
+  return [] on invalid input.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/validate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/interval/validate/index.ts'
@@ -42,7 +43,7 @@ sources:
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.11.0'
+  library_version: '1.12.0'
 ---
 
 # Validate Dates

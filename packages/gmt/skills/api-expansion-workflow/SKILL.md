@@ -5,7 +5,7 @@ description: >
   APIs first, then proposing a Temporal-backed custom method path with required
   issue/PR guidance and test-backed behavioral specs.
 metadata:
-  library_version: 1.11.0
+  library_version: 1.12.0
 ---
 
 # API Expansion Workflow

@@ -1,5 +1,33 @@
 # @burglekitt/gmt
 
+## 1.12.0
+
+### Minor Changes
+
+- 7d45b85: Add `intervalOverlappingDays*` — the number of distinct calendar days two intervals share (Story I1):
+
+  - `intervalOverlappingDaysDate`, `intervalOverlappingDaysDateTime`, `intervalOverlappingDaysZoned`, `intervalOverlappingDaysUnix`, `intervalOverlappingDaysUtc`
+
+  Returns `0` when the intervals are disjoint and `null` on invalid input. Counting is inclusive of both endpoints, matching GMT's closed-interval model: `["2024-01-01", "2024-01-01"]` overlapping itself is `1` day, not `0`. This differs from date-fns's `getOverlappingDaysInIntervals`, which rounds up elapsed 24-hour periods instead — compose `intervalCount*` over `intervalIntersection*`'s result for that behavior. There is no `Time` variant: `PlainTime` has no calendar.
+
+- a0de5fb: Add `roundingMethod` option to the `formatRelative*` family (Story I2):
+
+  - `formatRelativeDate`, `formatRelativeDateTime`, `formatRelativeTime`, `formatRelativeZoned`, `formatRelativeUnix`, `formatRelativeUtc`
+
+  `roundingMethod?: "floor" | "ceil" | "round"` controls how the computed distance rounds to the display unit — applied to the signed fractional value, matching date-fns's `formatDistanceStrict`. Defaults to `"round"`, matching existing behavior; no call-signature changes.
+
+- e4d5344: Add `getDstTransitions` — enumerate daylight-saving-time transition points for an IANA timezone in a given year (Story I3):
+
+  - `getDstTransitions`
+
+  Returns an array of `{ instant, offsetBefore, offsetAfter }` objects representing each DST transition. Returns `[]` for zones with no transitions in the requested year or on invalid input.
+
+- 5988a93: Add `getHoursInZonedDay` — the number of hours in a specific zoned calendar day (Story I4):
+
+  - `getHoursInZonedDay(value: string): number | null`
+
+  Returns `23` on spring-forward days, `25` on fall-back days, and `24` on normal days — or a fractional value for zones whose DST shift isn't a whole hour (e.g. `Australia/Lord_Howe`'s 30-minute shift returns `23.5`/`24.5`). Zoned-only — this is meaningless without a timezone. Returns `null` on invalid input per GMT's number-return sentinel convention.
+
 ## 1.11.0
 
 ### Minor Changes

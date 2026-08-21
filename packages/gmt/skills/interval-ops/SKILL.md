@@ -10,8 +10,8 @@ description: >
   construct an interval from a single point plus an ISO 8601 duration anchored
   at "start" or "end", splitIntervalByUnit* to tile an interval by duration
   unit, intervalCount* for how many calendar-unit boundaries an interval
-  crosses, and intervalOverlappingDays* for how many distinct calendar dates
-  two intervals share. Covers plain, zoned, unix, and utc namespaces. Returns
+  crosses, and intervalOverlappingDays* for how many distinct calendar dates two
+  intervals share. Covers plain, zoned, unix, and utc namespaces. Returns
   false/null/[] on invalid input — never throws.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/interval/index.ts'
@@ -22,7 +22,7 @@ sources:
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.11.0'
+  library_version: '1.12.0'
 ---
 
 # Interval Operations
