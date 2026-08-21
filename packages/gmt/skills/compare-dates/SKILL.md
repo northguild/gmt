@@ -13,8 +13,10 @@ description: >
   isPast/isFuture and their isZonedRelativeDay/isZonedThisUnit/isZonedPast/
   isZonedFuture variants for now-relative predicates ("is this today",
   "is this overdue") — these depend on the system clock and system timeZone
-  unless you use the zoned variants with an explicit timeZone. Returns
-  false/null on invalid input.
+  unless you use the zoned variants with an explicit timeZone. Use
+  nextWeekday/previousWeekday to find the next/previous occurrence of a given
+  ISO day of week on or after/before a date ("next Friday", "previous
+  Monday"). Returns false/null/"" on invalid input.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/compare/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/compare/index.ts'
@@ -22,6 +24,8 @@ sources:
   - 'burglekitt/gmt:packages/gmt/src/utc/compare/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/calculate/getLocaleDayOfWeek.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/getLocaleZonedDayOfWeek.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/nextWeekday.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/previousWeekday.ts'
 metadata:
   type: core
   library: '@burglekitt/gmt'
@@ -186,6 +190,31 @@ isZonedThisUnit("2024-03-15T10:00:00-04:00[America/New_York]", "month");
 isZonedPast("2020-01-01T00:00:00Z[UTC]");   // true
 isZonedFuture("2999-01-01T00:00:00Z[UTC]"); // true
 ```
+
+### Find the next/previous occurrence of a weekday
+
+```ts
+import { nextWeekday, previousWeekday } from "@burglekitt/gmt";
+
+nextWeekday("2024-03-13", 5); // "2024-03-15" (Wednesday -> next Friday)
+nextWeekday("2024-03-15", 5); // "2024-03-22" (already Friday -> advances a full week by default)
+nextWeekday("2024-03-15", 5, { inclusive: true }); // "2024-03-15" (already Friday -> returned as-is)
+
+previousWeekday("2024-03-13", 5); // "2024-03-08" (Wednesday -> previous Friday)
+previousWeekday("2024-03-15", 5); // "2024-03-08" (already Friday -> goes back a full week by default)
+```
+
+`dayOfWeek` uses Temporal's ISO numbering (1 = Monday … 7 = Sunday), the same as `getDayOfWeek`/`parseDayOfWeekFromDate`. These replace date-fns's sixteen `next*`/`previous*` functions with two parameterized calls (Decision 5, `context/roadmap/issues/J.md`):
+
+| date-fns          | GMT                          |
+| ------------------ | ------------------------------ |
+| `nextMonday(v)`    | `nextWeekday(v, 1)`           |
+| `nextFriday(v)`    | `nextWeekday(v, 5)`           |
+| `nextDay(v, n)`    | `nextWeekday(v, n)`           |
+| `previousFriday(v)`| `previousWeekday(v, 5)`       |
+| `previousDay(v, n)`| `previousWeekday(v, n)`       |
+
+`date-fns`'s `lastDayOfMonth` is already covered by `endOfDate(value, "month")` — not a gap this pair fills.
 
 ## Common Mistakes
 
@@ -355,6 +384,30 @@ const isDueToday = isZonedRelativeDay(dueZonedDateTime, 0);
 `isRelativeDay`/`isThisUnit`/`isPast`/`isFuture` depend on the **system clock and system timeZone** (they compare against `getToday()`). The same call returns different answers on hosts in different timeZones at the same instant — `isRelativeDay("2024-03-15", 0)` can be true in one timeZone and false in another 24 hours apart (e.g. `Pacific/Apia` vs. `Pacific/Niue`). Callers needing determinism — server-side rendering, tests, scheduled jobs — should use the zoned variants (`isZonedRelativeDay`, `isZonedThisUnit`, `isZonedPast`, `isZonedFuture`) with an explicit timeZone, or compare against an explicit reference with `areDatesEqualBy`/`isBeforeDate`/`isAfterDate`.
 
 Source: packages/gmt/src/plain/compare/isRelativeDay.ts, packages/gmt/src/plain/get/getToday.ts — system clock/timeZone dependency
+
+### MEDIUM Assuming nextWeekday/previousWeekday return the input when it's already on the target day
+
+Wrong:
+
+```ts
+import { nextWeekday } from "@burglekitt/gmt";
+
+// Assuming a Friday input returns itself when asking for "next Friday"
+const result = nextWeekday("2024-03-15", 5); // "2024-03-22", not "2024-03-15"
+```
+
+Correct:
+
+```ts
+import { nextWeekday } from "@burglekitt/gmt";
+
+// Pass { inclusive: true } to return the input as-is when it already falls on dayOfWeek
+const result = nextWeekday("2024-03-15", 5, { inclusive: true }); // "2024-03-15"
+```
+
+`options.inclusive` defaults to `false`, matching date-fns: a `value` already on `dayOfWeek` advances a full week rather than returning itself. Same default applies to `previousWeekday`.
+
+Source: packages/gmt/src/plain/calculate/nextWeekday.ts, packages/gmt/src/plain/calculate/previousWeekday.ts — inclusive defaults to false
 
 ## References
 

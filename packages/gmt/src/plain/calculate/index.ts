@@ -38,6 +38,8 @@ export * from "./maxTime";
 export * from "./minDate";
 export * from "./minDateTime";
 export * from "./minTime";
+export * from "./nextWeekday";
+export * from "./previousWeekday";
 export * from "./roundDate";
 export * from "./roundDateTime";
 export * from "./roundTime";

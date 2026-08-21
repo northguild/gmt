@@ -160,7 +160,7 @@ Per-function audit findings documented (even the "no change needed, verified why
 
 ### E6 — `cycle*` wrap-around field adjustment
 
-**GitHub Issue:** _not yet created_
+**GitHub Issue:** Issue #125
 
 **Title:**
 
@@ -170,7 +170,7 @@ E6 Add cycleDate, cycleDateTime, cycleTime, cycleZoned
 
 **Description:**
 
-````
+```
 Part of the parity roadmap — see `context/roadmap/index.md`, Story Group E, item E6. Originally scoped as Story Group J's J2, moved here 2026-08-20 (`issues/J.md` Decision 6) — not because the capability isn't real, but because its own motivation is UI-primitive territory this group already owns, not a "gap users hit on day one" the way the rest of Group J is scoped. **Depends on J1** (Group J, field setters) across groups — builds on the same `.with()` foundation; sequence after J1 lands regardless of when this group is picked up.
 
 ## Why this belongs in Group E, not Group J
@@ -204,4 +204,4 @@ See "Instructions for the agent picking up a story" in `context/roadmap/index.md
 
 ## Definition of done
 Tests: each cyclable field at both its minimum and maximum boundary, in both directions; amounts larger than the field's range (cycling month by +13); negative amounts; `round: true` vs. default on a non-aligned value; day-of-month cycling in a 31-, 30-, and 28/29-day month; `battleTestTimeZones` and DST cases for `cycleZoned`; invalid field name → `""`; invalid input → `""`. JSDoc with `@example`. `packages/gmt/README.md` and the owning namespace READMEs updated. Changeset. `zoned-date-ops`/`calculate-dates` TanStack Intent skills updated. Lint/test pass per `context/coding-standards.md` / `context/testing-standards/index.md` / `context/jsdoc-standards.md`.
-````
+```

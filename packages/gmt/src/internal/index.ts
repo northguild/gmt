@@ -1,4 +1,5 @@
 export { advanceBusinessDays } from "./advanceBusinessDays";
+export { advanceToWeekday } from "./advanceToWeekday";
 export { durationUntilString } from "./durationUntilString";
 export { getLocaleFirstDayOfWeek } from "./getLocaleFirstDayOfWeek";
 export { getLocaleMinimalDaysInFirstWeek } from "./getLocaleMinimalDaysInFirstWeek";
@@ -7,6 +8,7 @@ export type { LocaleWeekYearBounds } from "./getLocaleWeekYearBounds";
 export { getLocaleWeekendDays } from "./getLocaleWeekendDays";
 export { getStartOfZonedUnit, getUnitSpan } from "./intervalCountHelpers";
 export { isValidAmount } from "./isValidAmount";
+export { isValidDayOfWeek } from "./isValidDayOfWeek";
 export { monthGridWeekRow } from "./monthGridWeekRow";
 export { normalizeDateTime } from "./normalizeDateTime";
 export { resolveDateTimeUnit } from "./resolveDateTimeUnit";

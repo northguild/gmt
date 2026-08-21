@@ -23,6 +23,7 @@ Arithmetic and date manipulation:
 - `getWeeksInLocaleWeekYear`, `getWeeksInMonth`, `getWeeksInYear`
 - `maxDate`, `maxDateTime`, `maxTime`
 - `minDate`, `minDateTime`, `minTime`
+- `nextWeekday`, `previousWeekday`
 - `roundDate`, `roundDateTime`, `roundTime`
 - `setDate`, `setDateTime`, `setTime`
 - `sortDates`, `sortDateTimes`, `sortTimes`

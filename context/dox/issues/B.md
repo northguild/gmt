@@ -1,103 +1,132 @@
-### B1 — Knowledge extraction
+# Story Group B — Live examples
+
+Two stories. Interactivity that needs no API key, no server, and no model — every one of
+the 1,514 `@example` lines becomes runnable.
+
+## Definition of done — binding for every Group B story
+
+- Widgets execute the **real** `@burglekitt/gmt`. No simulation, no `eval`, no
+  reimplementation. Because `apps/docs` depends on the package via `workspace:*`, output
+  can never drift from shipped behavior — that property is the whole point and must not
+  be traded away for convenience.
+- Islands hydrate `client:visible`, never `client:load`.
+- `pnpm nx run-many -t lint test typecheck build` stays green.
+
+---
+
+### B1 — `<Playground>` island
 
 **GitHub Issue:** _blank — see tracker.md_
 
 **Title:**
 
 ```
-B1 Extract JSDoc, READMEs, and skills into dox-knowledge.json
+B1 Build the live Playground island running real gmt in the browser
 ```
 
 **Description:**
 
 ```
 Part of the Dox epic — see `context/dox/index.md`, Story Group B, item B1.
-Depends on A1 (workspace exists). Independent of A2/A3 — this is a build script, not UI,
-and can proceed in parallel with them if useful.
+Depends on A5 (tokens, and specifically the Signal-lost amber).
 
 ## Gap
-Dox has no corpus yet. The model must be grounded strictly in `@burglekitt/gmt`'s actual
-documented surface — 349 functions across `plain`/`zoned`/`unix`/`utc`/`duration` plus 16
-`regex` consts, per `context/dox/overview.md` §1.
+A3's reference pages show examples as static text. A temporal library is exactly the
+kind of API where reading `startOfZoned(..., { disambiguation: "reject" }) // ""` teaches
+far less than changing `"reject"` to `"earlier"` and watching the output change.
 
 ## Scope
-- `apps/dox/scripts/build-knowledge.ts` walks `packages/gmt/src/**/*.ts` using the
-  TypeScript compiler API — **not regex** — emitting per function: namespace, category,
-  name, signature, description, `@param`/`@returns`, and every `@example` as
-  `{ call, result }`. The codebase's layout (one exported function per file, sibling
-  `*.test.ts`, barrel `index.ts` per category) makes this mechanical; see
-  `context/jsdoc-standards.md` for the exact JSDoc shape being parsed.
-- Also ingest: the six namespace READMEs (`packages/gmt/src/{plain,zoned,unix,utc,
-  duration,regex}/README.md`), the root `packages/gmt/README.md`,
-  `docs/dst-disambiguation.md`, and the 17 `packages/gmt/skills/*/SKILL.md` guides —
-  their `sources:` frontmatter gives a symbol→file map for free.
-- Emit `apps/dox/dox-knowledge.json` (or equivalent build output location).
-- Add a Vitest test asserting the corpus's function/example counts, so a future
-  `@burglekitt/gmt` change that isn't re-extracted fails CI rather than silently going
-  stale.
+- An interactive component: editable inputs per parameter, live output computed by
+  calling the real function.
+- **Sentinel-aware rendering — this is the point, not a detail.** An invalid-input
+  result (`""` / `null` / `false` / `[]`) renders as `⟨ NO SIGNAL — invalid input ⟩` in
+  A5's Signal-lost amber, never as a blank field. A user seeing an empty output box
+  learns nothing; a user seeing the signal-lost state learns GMT's sentinel contract,
+  which is one of the library's four core rules and one of the least obvious things
+  about it.
+- Distinguish the sentinel from a legitimately empty result where the two differ (e.g.
+  an interval function correctly returning `[]`) — otherwise the treatment teaches the
+  wrong lesson.
+- Deep-import per function (`@burglekitt/gmt/plain/...`) rather than importing the
+  package root. The exports map already exposes one level of deep import per namespace;
+  root imports pull the entire surface plus `@js-temporal/polyfill` onto every page.
+- Import from the built `dist`, not source. `packages/gmt` sets
+  `customConditions: ["@burglekitt/source"]`, but matching it means configuring Vite's
+  `resolve.conditions`; letting Nx build the package first (A1's `dependsOn: ["^build"]`)
+  is fewer moving parts.
+- Handle option-object parameters, not just positional strings — a playground that only
+  supports `fn(string)` misses most of the interesting surface (`disambiguation`,
+  `offset`, `weekStartsOn`, `fractionalSecondDigits`).
 
 ## Before starting
-Re-verify the 349-function / ~999-`@example` counts are still current
-(`context/dox/overview.md` §1 cites them as of when it was written) — the gmt
-package continues to grow per its own roadmap (`context/roadmap/`), so these numbers
-will have moved. Read `context/jsdoc-standards.md` for the exact `@example` format
-(`fn(args) // result`) the parser needs to handle.
+Read `context/dox/overview.md` §3's Color section for the sentinel rationale, and
+`context/coding-standards.md` for the actual sentinel contract — which sentinel maps to
+which return type (`""` strings, `null` numbers/arrays, `false` booleans). Getting this
+mapping wrong makes the widget lie about the library's behavior.
+
+Check the real bundle cost of `@js-temporal/polyfill` on a page with a playground before
+deciding hydration strategy. It is not small, and reference pages are the most-visited
+pages on the site.
 
 ## Definition of done
-- `dox-knowledge.json` contains every currently-exported function with its examples.
-- Spot-check at least one function (e.g. `formatDate`) against its actual source file to
-  confirm the extraction is byte-accurate, not approximate.
-- The corpus-count Vitest test is in place and passing.
-- `pnpm lint` / `pnpm typecheck` pass on the new script.
+- A playground on `startOfZoned`'s page recomputes live when `disambiguation` is changed
+  between `"compatible"`, `"earlier"`, `"later"`, and `"reject"`, and correctly shows the
+  `"reject"` case producing the sentinel.
+- An invalid input renders the signal-lost treatment, not a blank field.
+- Output values are produced by the real library — verify by breaking a gmt function
+  locally and confirming the playground breaks with it.
+- Lighthouse/devtools confirm the polyfill is not loaded on pages without a playground.
+- Keyboard-operable: every input reachable and editable without a mouse.
 ```
 
 ---
 
-### B2 — Worker proxy
+### B2 — Auto-embed
 
 **GitHub Issue:** _blank — see tracker.md_
 
 **Title:**
 
 ```
-B2 Cloudflare Worker proxy for Gemini with grounded systemInstruction
+B2 Auto-embed playgrounds into every generated @example
 ```
 
 **Description:**
 
 ```
 Part of the Dox epic — see `context/dox/index.md`, Story Group B, item B2.
-Depends on B1 (the corpus this injects).
+Depends on B1 (the component) and A3 (the generator).
 
 ## Gap
-A Gemini API key cannot live in a client-side SPA bundle — it is trivially extractable.
-A server-side hop is required. See `context/dox/overview.md` §2's "Decisions
-taken" table for why Cloudflare Workers specifically (free tier, 100k req/day).
+B1 gives one component. Wiring it in by hand across ~424 pages is not viable, and
+hand-authoring would guarantee drift.
 
 ## Scope
-- `workers/dox-proxy` with `wrangler.toml`.
-- Key stored via `wrangler secret put GEMINI_API_KEY` — never in source, never in the
-  client bundle.
-- CORS locked to the deployed origin plus localhost for development.
-- Stream Gemini responses as unbuffered SSE straight through to the client.
-- `systemInstruction` carries: the B1 corpus, GMT's core rules (ISO strings in/out,
-  never `Date`, sentinel returns `""`/`null`/`false`/`[]`, invalid input never throws —
-  see `context/coding-standards.md`), and an explicit instruction to refuse questions
-  outside the corpus. **There is no `systemKnowledge` Gemini setting** — this
-  prompt-and-context approach is the actual mechanism; see overview.md §1.
-- Enable Gemini context caching so the large corpus isn't re-billed/re-sent per request.
+- Extend A3's `build-reference.ts` to mark up each `@example` so it renders as a
+  playground seeded with that example's own arguments.
+- This is cheap precisely because A3 already did the hard part: its parser splits each
+  example into `{ call, result, note }`, and the `call` half is exactly the seed data
+  B2 needs. If A3's parse was done properly, this story is small; if it was done
+  loosely, this is where that shows up.
+- Keep the static rendering as the non-JS fallback — the example text must still be
+  readable with JavaScript disabled and in the Pagefind index. **Do not let auto-embed
+  remove content from search**: if the examples become JS-only, the site loses a large
+  fraction of what makes it searchable.
+- Not every example should hydrate. A page with 15 examples should not mount 15 islands.
+  Decide a strategy (one shared playground per page seeded by clicking an example, or
+  hydrate on interaction) and record it.
 
 ## Before starting
-Confirm current Gemini API request-size limits against the actual serialized size of
-`dox-knowledge.json` from B1. If the corpus is too large for a single request even with
-caching, the fallback (per overview.md §7 Risks) is namespace-scoped slices selected by
-a cheap first-pass classification — not a vector database. Decide this before writing
-the refusal-instruction logic, since it affects what "the corpus" means at request time.
+Re-read A3's emitted `gmt-corpus.json` structure. If the `call` field is a raw string
+rather than parsed arguments, decide here whether to parse it in the generator (better —
+one place, testable) or in the browser (worse — ships a parser to every reader).
 
 ## Definition of done
-- `curl -N` against the deployed Worker streams tokens.
-- An off-topic question (nothing to do with `@burglekitt/gmt`) is refused, not
-  improvised — this is the single most important behavioral test for the whole epic.
-- Grepping the built client bundle confirms the API key never appears there.
-- CORS rejects requests from origins other than the deployed site and localhost.
+- Examples across all namespaces render as runnable playgrounds with no per-page
+  authoring.
+- With JavaScript disabled, every example is still readable as text.
+- Pagefind still indexes example content — search for a distinctive string from an
+  example and confirm it is found.
+- Page weight on a heavy reference page (e.g. `startOfZoned`, five examples) is measured
+  and acceptable.
 ```

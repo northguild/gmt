@@ -48,7 +48,7 @@ Issue number tracker (fill in as issues are created). `Order` is the sequence to
 | 36    | J4    | Issue #107   | Done        | not yet                                      |
 | 37    | J5    | Issue #100   | Done        | not yet                                      |
 | 38    | J6    | Issue #101   | Done        | not yet                                      |
-| 39    | J7    | Issue #108   | Not started | not yet                                      |
+| 39    | J7    | Issue #108   | Done        | not yet                                      |
 | 40    | J8    | Issue #103   | Not started | not yet                                      |
 | 41    | J9    | Issue #104   | Not started | not yet                                      |
 | 42    | J10   | Issue #105   | Not started | not yet                                      |
@@ -62,7 +62,7 @@ Issue number tracker (fill in as issues are created). `Order` is the sequence to
 | 50    | E3    | Issue #76    | Not started | unscheduled, no publish plan until picked up |
 | 51    | E4    | Issue #77    | Not started | unscheduled, no publish plan until picked up |
 | 52    | E5    | Issue #78    | Not started | unscheduled, no publish plan until picked up |
-| 53    | E6    | _pending_    | Not started | unscheduled, no publish plan until picked up |
+| 53    | E6    | Issue #125   | Not started | unscheduled, no publish plan until picked up |
 
 ## Story Group J phases
 

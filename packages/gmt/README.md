@@ -52,9 +52,9 @@ Invalid input fallbacks are consistent across the library:
 
 | Metric     | Count  |
 | ---------- | ------ |
-| Test files | 451    |
-| Tests      | 13,939 |
-| Exports    | 487    |
+| Test files | 453    |
+| Tests      | 13,991 |
+| Exports    | 489    |
 
 Every function is exercised across **17 locales** and a full IANA timezone matrix. The CI pipeline runs the complete suite in **20 environments** — 2 Node versions (22, 24) × 10 timezones spanning every UTC offset band from Pacific/Niue (−11:00) to Pacific/Apia (+13:00):
 
@@ -214,6 +214,24 @@ isPast("2024-03-14");
 
 isFuture("2024-03-16");
 // true, if today is 2024-03-15 (strictly after, not on-or-before)
+```
+
+`nextWeekday`/`previousWeekday` find the next/previous occurrence of a given ISO day of week (1 = Monday … 7 = Sunday, matching `getDayOfWeek`) on or after/before a date, replacing date-fns's sixteen `next*`/`previous*` functions with two parameterized calls. `options.inclusive` (default `false`) controls what happens when the input already falls on the target day — `false` advances/retreats a full week, matching date-fns:
+
+```typescript
+import { nextWeekday, previousWeekday } from "@burglekitt/gmt";
+
+nextWeekday("2024-03-13", 5);
+// "2024-03-15" (Wednesday -> next Friday)
+
+nextWeekday("2024-03-15", 5);
+// "2024-03-22" (already a Friday -> advances a full week by default)
+
+nextWeekday("2024-03-15", 5, { inclusive: true });
+// "2024-03-15" (already a Friday -> returned as-is)
+
+previousWeekday("2024-03-13", 5);
+// "2024-03-08" (Wednesday -> previous Friday)
 ```
 
 ```typescript
