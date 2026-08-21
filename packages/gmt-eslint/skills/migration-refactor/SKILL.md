@@ -4,6 +4,8 @@ description: >
   Resolve @burglekitt/gmt-eslint Date-rule violations with careful, behavior-
   preserving refactors to existing gmt helpers first, then guide the custom
   Temporal method + issue workflow when no helper exists.
+metadata:
+  library_version: 1.0.1
 ---
 
 # Migration Refactor

@@ -1,9 +1,11 @@
 ---
 name: migration-refactor
 description: >
-  Resolve @burglekitt/gmt-oxlint Date-rule violations by preferring existing
-  gmt helpers, preserving behavior, and guiding the Temporal custom-method path
-  when gmt does not yet provide a needed helper.
+  Resolve @burglekitt/gmt-oxlint Date-rule violations by preferring existing gmt
+  helpers, preserving behavior, and guiding the Temporal custom-method path when
+  gmt does not yet provide a needed helper.
+metadata:
+  library_version: 1.1.2
 ---
 
 # Migration Refactor

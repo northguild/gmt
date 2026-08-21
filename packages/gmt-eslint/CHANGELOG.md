@@ -1,5 +1,11 @@
 # @burglekitt/gmt-eslint
 
+## 1.0.2
+
+### Patch Changes
+
+- Nest skill frontmatter fields (`library_version`, etc.) under `metadata:` to match the Intent ≥0.1 schema. The previously published skill files used the older flat frontmatter and fail validation under current `@tanstack/intent` versions. No skill content or lint rule behavior changes.
+
 ## 1.0.1
 
 ### Patch Changes

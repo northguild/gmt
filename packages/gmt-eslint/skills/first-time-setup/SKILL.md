@@ -4,6 +4,8 @@ description: >
   Install and wire @burglekitt/gmt-eslint into eslint.config.* (flat config),
   verify Date-ban rules are active, and keep existing project lint behavior
   intact with minimal config churn.
+metadata:
+  library_version: 1.0.1
 ---
 
 # First-Time Setup

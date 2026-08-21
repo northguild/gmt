@@ -4,6 +4,8 @@ description: >
   Install and configure @burglekitt/gmt-biome by wiring biome.json plugins,
   validating Date-ban plugin diagnostics, and preserving existing Biome rules
   with minimal adoption churn.
+metadata:
+  library_version: 1.0.4
 ---
 
 # First-Time Setup

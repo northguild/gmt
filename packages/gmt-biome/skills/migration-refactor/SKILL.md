@@ -4,6 +4,8 @@ description: >
   Resolve @burglekitt/gmt-biome Date-rule violations with delicate, behavior-
   safe refactors to existing gmt helpers first, then use the Temporal custom-
   method plus issue/PR workflow when helpers are missing.
+metadata:
+  library_version: 1.0.4
 ---
 
 # Migration Refactor

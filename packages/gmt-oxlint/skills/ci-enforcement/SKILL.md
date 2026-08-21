@@ -1,9 +1,11 @@
 ---
 name: ci-enforcement
 description: >
-  Enforce @burglekitt/gmt-oxlint Date-ban rules in CI with staged rollout,
-  clear gmt-oxlint/* diagnostics, and policy alignment with ESLint/Biome where
+  Enforce @burglekitt/gmt-oxlint Date-ban rules in CI with staged rollout, clear
+  gmt-oxlint/* diagnostics, and policy alignment with ESLint/Biome where
   multiple linters are used.
+metadata:
+  library_version: 1.1.2
 ---
 
 # CI Enforcement

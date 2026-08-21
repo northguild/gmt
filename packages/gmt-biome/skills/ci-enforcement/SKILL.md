@@ -4,6 +4,8 @@ description: >
   Add reliable CI enforcement for @burglekitt/gmt-biome Date-ban policy across
   PR and mainline builds, with phased rollout controls to avoid blocking
   unrelated migration progress.
+metadata:
+  library_version: 1.0.4
 ---
 
 # CI Enforcement

@@ -2,8 +2,10 @@
 name: first-time-setup
 description: >
   Install and configure @burglekitt/gmt-oxlint with the simplest consumer DX,
-  prefer oxlint.config.ts + recommendedConfig import, and verify
-  gmt-oxlint diagnostics while preserving current repository lint behavior.
+  prefer oxlint.config.ts + recommendedConfig import, and verify gmt-oxlint
+  diagnostics while preserving current repository lint behavior.
+metadata:
+  library_version: 1.1.2
 ---
 
 # First-Time Setup
