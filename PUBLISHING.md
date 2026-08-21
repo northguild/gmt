@@ -58,17 +58,17 @@ git commit -m "Version Packages"
 git push
 
 # 3. Build packages that need a build before publish
+#    (gmt-oxlint builds itself automatically via its `prepack` script)
 pnpm exec nx run @burglekitt/gmt:build
-cd packages/gmt-oxlint && pnpm run build && cd ../..
 
 # 4. Sanity-check package contents before they go out
-cd packages/gmt && npm pack --dry-run && cd ../..
-cd packages/gmt-biome && npm pack --dry-run && cd ../..
-cd packages/gmt-eslint && npm pack --dry-run && cd ../..
-cd packages/gmt-oxlint && npm pack --dry-run && cd ../..
+for PKG in gmt gmt-biome gmt-eslint gmt-oxlint; do
+  echo "== $PKG =="
+  (cd "packages/$PKG" && npm pack --dry-run)
+done
 
 # 5. Publish + tag (Changesets creates one git tag per published package,
-#    e.g. @burglekitt/gmt@1.3.0)
+#    e.g. @burglekitt/<pkg>@<new-version>)
 npm whoami   # confirm you're logged in as the right user
 pnpm run changeset:publish
 git push --follow-tags
@@ -84,28 +84,32 @@ Then create GitHub Releases for what you just published — see below.
 
 ## GitHub Releases (after publishing)
 
-`changeset:publish` creates git tags but not GitHub Releases. Do one per new tag:
+`changeset:publish` creates git tags but not GitHub Releases. This creates one
+release per tag `changeset:publish` just made, in one pass. Run it right after
+`git push --follow-tags`, in the same shell session — it relies on `HEAD`
+still being the version-bump commit (nothing in steps 3–5 creates a new
+commit, so this holds as long as you haven't done anything else in between):
 
 ```bash
-# 1. Find the tag(s) just created
-git tag --sort=-creatordate | head
+for TAG in $(git tag --points-at HEAD); do
+  PKG=${TAG#@burglekitt/}   # "@burglekitt/gmt-oxlint@1.1.2" -> "gmt-oxlint@1.1.2"
+  PKG=${PKG%@*}             # "gmt-oxlint@1.1.2" -> "gmt-oxlint"
 
-# 2. Pull that version's changelog section into a notes file
-PKG=gmt                          # or gmt-biome | gmt-eslint | gmt-oxlint
-TAG='@burglekitt/gmt@1.3.0'      # the tag you're releasing
-awk '/^## /{f++} f==1' packages/$PKG/CHANGELOG.md | sed '1,2d' > /tmp/release-notes.md
+  NOTES="/tmp/release-notes-$PKG.md"
+  awk '/^## /{f++} f==1' "packages/$PKG/CHANGELOG.md" | sed '1,2d' > "$NOTES"
 
-# 3. Create the release
-gh release create "$TAG" \
-  --title "$TAG" \
-  --notes-file /tmp/release-notes.md \
-  --latest                       # or --latest=false for non-headline pkgs
+  LATEST_FLAG=--latest=false
+  [ "$PKG" = "gmt" ] && LATEST_FLAG=--latest   # only the headline package
+
+  gh release create "$TAG" --title "$TAG" --notes-file "$NOTES" $LATEST_FLAG
+done
 ```
 
 Notes:
 
-- Quote the tag — it contains `@` and `/`. GitHub URL-encodes these in the release URL; that's expected.
-- Mark only one release per batch `--latest` (normally `@burglekitt/gmt`); use `--latest=false` on the rest.
+- The tag is quoted (`"$TAG"`) since it contains `@` and `/`, which GitHub URL-encodes in the release URL; that's expected.
+- Only `@burglekitt/gmt` gets `--latest`; every other package gets `--latest=false` automatically.
+- If `HEAD` has moved since publishing (e.g. you made another commit first), fall back to `git tag --sort=-creatordate | head -n <count>` to find the right tags manually.
 
 ---
 

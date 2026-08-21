@@ -1,4 +1,5 @@
 export * from "./getDstTransitions";
+export * from "./getHoursInZonedDay";
 export * from "./getLocaleZonedDayOfWeek";
 export * from "./getSystemTimeZone";
 export * from "./getTimeZones";

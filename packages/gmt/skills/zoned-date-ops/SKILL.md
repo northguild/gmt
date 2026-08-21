@@ -6,11 +6,11 @@ description: >
   getSystemTimeZone, getTimeZones for basics. Use convertPlainDateTimeToZoned,
   addZoned, subtractZoned, startOfZoned, endOfZoned, startOfQuarterForZoned,
   endOfQuarterForZoned, mapZonedHoursInDay, getLocaleZonedStartOfWeek,
-  getLocaleZonedEndOfWeek, clampZoned, closestZonedTo for DST-aware
-  construction, arithmetic, boundaries, and locale-week computations. Most
-  accept disambiguation ("compatible" | "earlier" | "later" | "reject") for
-  gap/overlap resolution; boundary functions also accept offset ("prefer" |
-  "use" | "ignore" | "reject", default "ignore").
+  getLocaleZonedEndOfWeek, clampZoned, closestZonedTo, getHoursInZonedDay for
+  DST-aware construction, arithmetic, boundaries, locale-week computations, and
+  day-length queries. Most accept disambiguation ("compatible" | "earlier" |
+  "later" | "reject") for gap/overlap resolution; boundary functions also accept
+  offset ("prefer" | "use" | "ignore" | "reject", default "ignore").
 sources:
   - 'burglekitt/gmt:packages/gmt/src/zoned/get/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/format/index.ts'
@@ -50,7 +50,7 @@ import {
   convertPlainDateTimeToZoned, addZoned, subtractZoned,
   startOfZoned, endOfZoned, startOfQuarterForZoned, endOfQuarterForZoned,
   getLocaleZonedStartOfWeek, getLocaleZonedEndOfWeek,
-  clampZoned, closestZonedTo, mapZonedHoursInDay
+  clampZoned, closestZonedTo, mapZonedHoursInDay, getHoursInZonedDay
 } from "@burglekitt/gmt/zoned";
 ```
 
@@ -136,6 +136,21 @@ endOfZoned("2024-03-15T14:30:45[America/New_York]", "hour");
 ```
 
 These accept `disambiguation` (full gap/overlap control) and `offset` (`"prefer" | "use" | "ignore" | "reject"`, default `"ignore"`). Leave `offset` at default unless you deliberately need Temporal's raw `.with()` semantics. See [The offset parameter](../../../../docs/dst-disambiguation.md#the-offset-parameter).
+
+### Get the number of hours in a zoned calendar day
+
+```ts
+getHoursInZonedDay("2024-03-10T12:00:00-04:00[America/New_York]");
+// 23 — spring-forward day "loses" an hour
+
+getHoursInZonedDay("2024-11-03T12:00:00-05:00[America/New_York]");
+// 25 — fall-back day "gains" an hour
+
+getHoursInZonedDay("2024-02-29T12:00:00+00:00[UTC]");
+// 24 — normal day
+```
+
+Returns `23`, `24`, or `25` depending on whether the local calendar day contains a DST transition — or a fractional value for zones whose DST shift isn't a whole hour (e.g. `Australia/Lord_Howe`'s 30-minute shift returns `23.5`/`24.5`). Returns `null` for invalid input. This is zoned-only — timezone-free days are always 24 hours.
 
 ### Locale-aware week boundaries
 
