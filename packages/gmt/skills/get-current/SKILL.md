@@ -176,7 +176,8 @@ Source: packages/gmt/src/plain/get/getNow.ts — Returns "" on error
 ### MEDIUM Looking for value-taking `get*` functions here
 
 `getDaysInMonth`, `getDaysInYear`, `getDayOfYear`, `getWeeksInYear`,
-`getWeeksInMonth`, and `getWeekOfMonth` take a date value, so despite the
+`getWeeksInMonth`, `getWeekOfMonth`, `getWeekYear`, `getLocaleWeekYear`,
+and `getWeeksInLocaleWeekYear` take a date value, so despite the
 `get` prefix they live in `calculate/`, not `get/`. GMT's `get/` namespaces
 are current-moment accessors only (no argument, or timezone only) — see
 `context/coding-standards.md`'s API Contract section.
@@ -186,6 +187,31 @@ Wrong:
 ```ts
 import { getDaysInMonth } from "@burglekitt/gmt/plain/get"; // not exported here
 ```
+
+### MEDIUM Bucketing by week number without its week-year
+
+`weekOfYearForDate`/`getWeekNumber` return a week number alone (1-53),
+which is ambiguous across a year boundary: 2024-12-30 is a Monday in ISO
+week 1, but of **2025**, not 2024. A date-only week number will silently
+land December dates in the wrong bucket. Pair it with `getWeekYear`
+(ISO) or `getLocaleWeekYear` (locale-relative) whenever you bucket or key
+by week.
+
+Wrong:
+
+```ts
+const bucketKey = weekOfYearForDate(value); // "1" — but which year's week 1?
+```
+
+Correct:
+
+```ts
+import { getWeekYear, weekOfYearForDate } from "@burglekitt/gmt";
+
+const bucketKey = `${getWeekYear(value)}-W${weekOfYearForDate(value)}`;
+```
+
+Source: packages/gmt/src/plain/calculate/getWeekYear.ts, getLocaleWeekYear.ts, getWeeksInLocaleWeekYear.ts
 
 Correct:
 

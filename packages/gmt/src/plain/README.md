@@ -17,8 +17,10 @@ Arithmetic and date manipulation:
 - `getLargestDateDurationUnit`, `getLargestDateTimeDurationUnit`, `getLargestTimeDurationUnit`
 - `getLocaleDayOfWeek`
 - `getLocaleEndOfWeek`, `getLocaleStartOfWeek`
+- `getLocaleWeekYear`
 - `getQuarterForDate`, `getQuarterForDateTime`
-- `getWeekNumber`, `getWeekOfMonth`, `getWeeksInMonth`, `getWeeksInYear`
+- `getWeekNumber`, `getWeekOfMonth`, `getWeekYear`
+- `getWeeksInLocaleWeekYear`, `getWeeksInMonth`, `getWeeksInYear`
 - `maxDate`, `maxDateTime`, `maxTime`
 - `minDate`, `minDateTime`, `minTime`
 - `roundDate`, `roundDateTime`, `roundTime`

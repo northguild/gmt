@@ -50,9 +50,7 @@ describe("getWeeksInMonth", () => {
   it("returns the correct week-row count for is-IS regardless of its CLDR-version-dependent firstDay", () => {
     const firstDay = new Intl.Locale(MustTestLocales.isIS).weekInfo.firstDay;
     const expected = firstDay === 1 ? 5 : 4;
-    expect(getWeeksInMonth("2026-02-15", MustTestLocales.isIS)).toBe(
-      expected,
-    );
+    expect(getWeeksInMonth("2026-02-15", MustTestLocales.isIS)).toBe(expected);
   });
 
   it.each`
@@ -65,7 +63,7 @@ describe("getWeeksInMonth", () => {
     ${12}
     ${true}
     ${false}
-  `('returns null for invalid value $value', ({ value }) => {
+  `("returns null for invalid value $value", ({ value }) => {
     expect(getWeeksInMonth(value, MustTestLocales.enUS)).toBeNull();
   });
 
@@ -75,7 +73,7 @@ describe("getWeeksInMonth", () => {
     ${""}
     ${null}
     ${undefined}
-  `('returns null for invalid locale $locale', ({ locale }) => {
+  `("returns null for invalid locale $locale", ({ locale }) => {
     expect(getWeeksInMonth("2026-02-15", locale)).toBeNull();
   });
 

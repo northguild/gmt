@@ -76,7 +76,7 @@ describe("getWeekOfMonth", () => {
     ${12}
     ${true}
     ${false}
-  `('returns null for invalid value $value', ({ value }) => {
+  `("returns null for invalid value $value", ({ value }) => {
     expect(getWeekOfMonth(value, MustTestLocales.enUS)).toBeNull();
   });
 
@@ -86,7 +86,7 @@ describe("getWeekOfMonth", () => {
     ${""}
     ${null}
     ${undefined}
-  `('returns null for invalid locale $locale', ({ locale }) => {
+  `("returns null for invalid locale $locale", ({ locale }) => {
     expect(getWeekOfMonth("2024-02-18", locale)).toBeNull();
   });
 

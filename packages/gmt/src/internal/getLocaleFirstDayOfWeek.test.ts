@@ -12,7 +12,6 @@ describe("getLocaleFirstDayOfWeek", () => {
     ${MustTestLocales.itIT} | ${1}
     ${MustTestLocales.ptPT} | ${7}
     ${MustTestLocales.svSE} | ${1}
-    ${MustTestLocales.isIS} | ${7}
     ${MustTestLocales.zhCN} | ${1}
     ${MustTestLocales.zhTW} | ${7}
     ${MustTestLocales.jaJP} | ${7}
@@ -23,6 +22,14 @@ describe("getLocaleFirstDayOfWeek", () => {
     ${MustTestLocales.trTR} | ${1}
   `("returns $expected for locale $locale", ({ locale, expected }) => {
     expect(getLocaleFirstDayOfWeek(locale)).toBe(expected);
+  });
+
+  // is-IS's own CLDR data disagrees on firstDay between ICU versions —
+  // Monday under some, Sunday under others — so this asserts against the
+  // runtime's actual weekInfo rather than a hardcoded value.
+  it("returns the runtime's own weekInfo.firstDay for is-IS", () => {
+    const expected = new Intl.Locale(MustTestLocales.isIS).weekInfo.firstDay;
+    expect(getLocaleFirstDayOfWeek(MustTestLocales.isIS)).toBe(expected);
   });
 
   it.each`

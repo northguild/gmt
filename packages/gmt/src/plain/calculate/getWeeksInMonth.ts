@@ -25,10 +25,7 @@ import { isValidDate } from "../validate";
  * @example getWeeksInMonth("2026-02-15", "en-GB") // 5
  * @example getWeeksInMonth("invalid", "en-US") // null
  */
-export function getWeeksInMonth(
-  value: string,
-  locale: string,
-): number | null {
+export function getWeeksInMonth(value: string, locale: string): number | null {
   if (!isValidDate(value)) return null;
 
   const firstDay = getLocaleFirstDayOfWeek(locale);

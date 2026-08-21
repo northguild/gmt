@@ -100,6 +100,9 @@ import {
   getWeeksInYear,
   getWeeksInMonth,
   getWeekOfMonth,
+  getWeekYear,
+  getLocaleWeekYear,
+  getWeeksInLocaleWeekYear,
 } from "@burglekitt/gmt";
 
 getDaysInMonth("2024-02-15"); // 29 (leap year)
@@ -108,6 +111,9 @@ getDayOfYear("2024-03-01"); // 61
 getWeeksInYear("2024-06-15"); // 52 (ISO week-numbering year)
 getWeeksInMonth("2024-02-15", "en-US"); // 5 (calendar-grid rows, locale week start)
 getWeekOfMonth("2024-02-29", "en-US"); // 5 (which grid row this date falls on)
+getWeekYear("2024-12-30"); // 2025 (ISO week-numbering year — a Monday in week 1 of 2025)
+getLocaleWeekYear("2022-01-01", "en-US"); // 2022 (locale-relative: en-US always counts Jan 1 as week 1)
+getWeeksInLocaleWeekYear("2020-06-15", "de-DE"); // 53
 ```
 
 ## Common Mistakes
@@ -194,6 +200,30 @@ const row = getWeekOfMonth("2024-02-29", "en-US"); // 5 — grid row within Febr
 ```
 
 Source: packages/gmt/src/plain/calculate/getWeekOfMonth.ts
+
+### MEDIUM Week number without week-year is a bug in waiting
+
+`parseWeekFromDate`/`getWeekNumber` return the week number alone, which
+is ambiguous across a year boundary — 2024-12-30 is ISO week 1, but of
+2025, not 2024. Always pair it with `getWeekYear` (ISO) or
+`getLocaleWeekYear` (locale-relative) when bucketing by week, or
+December dates land in the wrong bucket.
+
+Wrong:
+
+```ts
+const key = parseWeekFromDate("2024-12-30"); // "1" — 1 of which year?
+```
+
+Correct:
+
+```ts
+import { getWeekYear, parseWeekFromDate } from "@burglekitt/gmt";
+
+const key = `${getWeekYear("2024-12-30")}-W${parseWeekFromDate("2024-12-30")}`; // "2025-W1"
+```
+
+Source: packages/gmt/src/plain/calculate/getWeekYear.ts, getLocaleWeekYear.ts
 
 ## References
 

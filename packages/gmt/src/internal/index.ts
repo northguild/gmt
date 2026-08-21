@@ -1,6 +1,9 @@
 export { advanceBusinessDays } from "./advanceBusinessDays";
 export { durationUntilString } from "./durationUntilString";
 export { getLocaleFirstDayOfWeek } from "./getLocaleFirstDayOfWeek";
+export { getLocaleMinimalDaysInFirstWeek } from "./getLocaleMinimalDaysInFirstWeek";
+export { getLocaleWeekYearBounds } from "./getLocaleWeekYearBounds";
+export type { LocaleWeekYearBounds } from "./getLocaleWeekYearBounds";
 export { getLocaleWeekendDays } from "./getLocaleWeekendDays";
 export { getStartOfZonedUnit, getUnitSpan } from "./intervalCountHelpers";
 export { isValidAmount } from "./isValidAmount";
