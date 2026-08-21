@@ -31,7 +31,7 @@ Strip timezone components:
 
 Timezone-aware comparison:
 
-- `areZonedEqual`, `isAfterZoned`, `isBeforeZoned`, `isBetweenZoned`, `isZonedBusinessDay`, `isZonedWeekend`
+- `areZonedEqual`, `areZonedEqualBy`, `isAfterZoned`, `isBeforeZoned`, `isBetweenZoned`, `isZonedBusinessDay`, `isZonedWeekend`
 
 ### convert
 

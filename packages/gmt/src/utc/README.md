@@ -21,6 +21,13 @@ Strip UTC components:
 
 - `chopUtc`
 
+### compare
+
+UTC comparison:
+
+- `areUtcEqual`, `areUtcEqualBy`
+- `isAfterUtc`, `isBeforeUtc`
+
 ### convert
 
 UTC conversion:

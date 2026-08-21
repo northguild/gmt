@@ -1,4 +1,5 @@
 export * from "./areZonedEqual";
+export * from "./areZonedEqualBy";
 export * from "./isAfterZoned";
 export * from "./isBeforeZoned";
 export * from "./isBetweenZoned";

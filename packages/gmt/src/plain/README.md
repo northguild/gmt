@@ -42,7 +42,7 @@ Strip components from date/time strings:
 
 Date/time comparison:
 
-- `areDatesEqual`, `areDateTimesEqual`, `areTimesEqual`
+- `areDatesEqual`, `areDatesEqualBy`, `areDateTimesEqual`, `areDateTimesEqualBy`, `areTimesEqual`
 - `isAfterDate`, `isAfterDateTime`, `isAfterTime`
 - `isBeforeDate`, `isBeforeDateTime`, `isBeforeTime`
 - `isBetweenDate`, `isBetweenDateTime`, `isBetweenTime`

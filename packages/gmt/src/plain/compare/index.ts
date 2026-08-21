@@ -1,5 +1,7 @@
 export * from "./areDatesEqual";
+export * from "./areDatesEqualBy";
 export * from "./areDateTimesEqual";
+export * from "./areDateTimesEqualBy";
 export * from "./areTimesEqual";
 export * from "./isAfterDate";
 export * from "./isAfterDateTime";

@@ -15,6 +15,13 @@ Unix timestamp arithmetic:
 - `startOfQuarterForUnix`, `startOfUnix`
 - `subtractUnix`
 
+### compare
+
+Unix timestamp comparison:
+
+- `areUnixEqual`, `areUnixEqualBy`
+- `isAfterUnix`, `isBeforeUnix`
+
 ### convert
 
 Unix timestamp conversion:

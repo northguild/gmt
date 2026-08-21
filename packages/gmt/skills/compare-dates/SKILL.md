@@ -2,15 +2,20 @@
 name: compare-dates
 description: >
   Compare date values for ordering. Use isAfterDate, isBeforeDate, areDatesEqual
-  for comparisons. Use isWeekend/isZonedWeekend for locale-aware weekend checks
-  (weekend days vary by locale — not always Saturday/Sunday). Use isBusinessDay
-  for fixed ISO Monday–Friday business-day checks (locale-agnostic, matches
-  addBusinessDays). Use getLocaleDayOfWeek/getLocaleZonedDayOfWeek to get a
-  locale-relative day-of-week index (0 = first day of week). Returns false/null
-  on invalid input.
+  for comparisons. Use areDatesEqualBy/areDateTimesEqualBy/areZonedEqualBy/
+  areUnixEqualBy/areUtcEqualBy to compare two values at a given calendar unit
+  ("are these in the same month?"). Use isWeekend/isZonedWeekend for
+  locale-aware weekend checks (weekend days vary by locale — not always
+  Saturday/Sunday). Use isBusinessDay for fixed ISO Monday–Friday business-day
+  checks (locale-agnostic, matches addBusinessDays). Use
+  getLocaleDayOfWeek/getLocaleZonedDayOfWeek to get a locale-relative
+  day-of-week index (0 = first day of week). Returns false/null on invalid
+  input.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/compare/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/compare/index.ts'
+  - 'burglekitt/gmt:packages/gmt/src/unix/compare/index.ts'
+  - 'burglekitt/gmt:packages/gmt/src/utc/compare/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/calculate/getLocaleDayOfWeek.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/getLocaleZonedDayOfWeek.ts'
 metadata:
@@ -51,6 +56,30 @@ import { areDatesEqual } from "@burglekitt/gmt";
 
 const result = areDatesEqual("2024-03-15", "2024-03-15"); // true
 ```
+
+### Check if two values are equal at a given unit (same month, same year, ...)
+
+```ts
+import { areDatesEqualBy } from "@burglekitt/gmt";
+
+areDatesEqualBy("2024-03-15", "2024-03-20", "month"); // true
+areDatesEqualBy("2023-03-15", "2024-03-15", "month"); // false — same month, different year
+areDatesEqualBy("2024-03-11", "2024-03-17", "week"); // true (default weekStartsOn: "monday")
+```
+
+`areDatesEqualBy`/`areDateTimesEqualBy`/`areZonedEqualBy`/`areUnixEqualBy`/`areUtcEqualBy` are the namespace variants of this pattern (Decision 5 — one parameterized function per namespace instead of a `isSameDay`/`isSameMonth`/`isSameYear`/... family). Equality is measured by comparing the *start of that unit* for each value, so a coarser unit like `"month"` implicitly requires every unit above it (year) to match too — see the Common Mistakes entry below. `areZonedEqualBy` compares each value's own local calendar fields (its own time zone), not the underlying instant.
+
+Migrating from date-fns:
+
+| date-fns                     | GMT                                  |
+| ----------------------------- | ------------------------------------- |
+| `isSameDay(a, b)`             | `areDatesEqualBy(a, b, "day")`        |
+| `isSameWeek(a, b, opts)`      | `areDatesEqualBy(a, b, "week", opts)` |
+| `isSameMonth(a, b)`           | `areDatesEqualBy(a, b, "month")`      |
+| `isSameYear(a, b)`            | `areDatesEqualBy(a, b, "year")`       |
+| `isSameHour(a, b)`            | `areDateTimesEqualBy(a, b, "hour")`   |
+| `isSameMinute(a, b)`          | `areDateTimesEqualBy(a, b, "minute")` |
+| `isSameSecond(a, b)`          | `areDateTimesEqualBy(a, b, "second")` |
 
 ### Check if date is between two dates
 
@@ -234,6 +263,36 @@ isWeekend("2024-02-02", "he-IL"); // true (Friday is part of he-IL's weekend)
 `isBusinessDay` uses a fixed Monday–Friday boundary and never consults `Intl.Locale`'s `weekInfo`; it does not account for holidays. Do not reach for it when you need locale-aware weekend detection — that's `isWeekend`/`isZonedWeekend`'s job.
 
 Source: packages/gmt/src/plain/compare/isBusinessDay.ts — fixed ISO Mon–Fri, locale-agnostic
+
+### MEDIUM Assuming "same month" ignores the year
+
+Wrong:
+
+```ts
+import { areDatesEqualBy } from "@burglekitt/gmt";
+
+// Assuming this checks "is it March, regardless of year"
+const bothMarch = areDatesEqualBy("2023-03-15", "2024-03-15", "month"); // false, not true
+```
+
+Correct:
+
+```ts
+import { areDatesEqualBy } from "@burglekitt/gmt";
+
+// "Same month" means the same month AND year — matches date-fns's isSameMonth
+// and Luxon's dt.hasSame(other, "month")
+areDatesEqualBy("2024-03-01", "2024-03-31", "month"); // true (same month, same year)
+
+// To check "same month-of-year regardless of year", compare the month field directly
+import { parseMonthFromDate } from "@burglekitt/gmt";
+const sameMonthOfYear =
+  parseMonthFromDate("2023-03-15") === parseMonthFromDate("2024-03-15"); // true
+```
+
+`areDatesEqualBy(a, b, unit)` compares the start-of-`unit` boundary for each value, so any unit implicitly requires every coarser unit above it to match too — this is deliberate (Decision 5/6, `context/roadmap/issues/J.md`) and matches date-fns/Luxon precedent, not a GMT-specific quirk.
+
+Source: packages/gmt/src/plain/compare/areDatesEqualBy.ts — start-of-unit comparison
 
 ## References
 
