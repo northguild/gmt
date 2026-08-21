@@ -2,7 +2,7 @@
 
 Home of [@burglekitt/gmt](./packages/gmt) — **Give Me Temporal!**
 
-A monorepo for Burglekitt community libraries, built with Nx, powered by pnpm, and dead serious about making JavaScript date handling not terrible.
+A monorepo for Burglekitt community libraries, built with Nx and powered by pnpm, focused on making JavaScript date handling reliable and predictable.
 
 ## Agent prompt
 
@@ -35,16 +35,14 @@ import { getNow } from "@burglekitt/gmt";
 console.log(getNow()); // ISO 8601 string
 ```
 
-## Aint Nobody Got Time For JavaScript Date objects
-
-![Aint nobody got time for that](https://media.giphy.com/media/bWM2eWYfN3r20/giphy.gif)
+## Why not JavaScript Date objects
 
 We do not use JavaScript `Date` APIs in this monorepo.
 
-- Aint nobody got time for `new Date()` mutability and environment drift.
-- Aint nobody got time for `Date.parse()` guessing what you meant.
-- Aint nobody got time for `Date.UTC()` argument gymnastics.
-- Aint nobody got time for `Date.now()` scattered magic numbers.
+- `new Date()` introduces mutability and environment drift.
+- `Date.parse()` relies on ambiguous, engine-dependent parsing.
+- `Date.UTC()` requires awkward positional arguments.
+- `Date.now()` scatters untyped timestamps throughout code.
 
 Use GMT instead:
 
