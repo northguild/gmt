@@ -3,6 +3,7 @@ export * from "./date-time-duration-units";
 export * from "./date-time-unit";
 export * from "./date-unit";
 export * from "./disambiguation";
+export * from "./duration-relative-to";
 export * from "./duration-string-options";
 export * from "./fractional-digit";
 export * from "./offset";

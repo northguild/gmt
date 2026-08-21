@@ -1,6 +1,6 @@
 # Duration API
 
-Parsing, validation, arithmetic, and formatting for ISO 8601 duration strings (e.g. `"P1DT2H30M"`). All functions accept ISO 8601 duration strings; all but `formatDuration` return one too.
+Parsing, validation, arithmetic, introspection, comparison, and formatting for ISO 8601 duration strings (e.g. `"P1DT2H30M"`). All functions accept ISO 8601 duration strings; those that return a duration return one too, while the introspection and comparison helpers return numbers (sentinel `null`) rather than strings (sentinel `""`).
 
 ## Modules
 
@@ -12,6 +12,31 @@ Combine two durations:
 - `subtractDuration`
 
 Both operate on day/time units (days, hours, minutes, seconds, ...). Combining any pair where either operand has a nonzero years/months/weeks component returns `""` — `Temporal.Duration.prototype.add`/`.subtract` have no `relativeTo` option, so calendar-unit duration arithmetic isn't supported here.
+
+Flip or drop a duration's sign:
+
+- `negateDuration`
+- `absDuration`
+
+Both are pure sign operations, so neither needs `relativeTo` and both work on calendar-unit durations. Temporal canonicalizes every zero-length duration, so `"P0D"` comes back as `"PT0S"`.
+
+Read a duration's contents:
+
+- `getDurationUnit` — one component, as stored
+- `durationAs` — the whole duration totalled into one unit
+- `getDurationSign` — `-1`, `0`, or `1`
+
+`getDurationUnit` and `durationAs` answer different questions and disagree on purpose: `getDurationUnit("PT90M", "hours")` is `0` (the hours *field* is empty — "PT90M" stores 90 minutes), while `durationAs("PT90M", "hours")` is `1.5`. `durationAs` returns a fractional total and does not round; pass the result through `normalizeDuration` instead if you want a rebalanced duration string.
+
+`durationAs` needs `relativeTo` whenever a calendar unit is involved on either side — as the requested `unit`, or because the input duration already carries a nonzero year/month/week component. Without it, returns `null`. The requested-unit half applies even to day/time-only input: `durationAs("PT36H", "weeks")` is `null`, because a week is a calendar quantity to Temporal regardless of what is being measured. `getDurationUnit` and `getDurationSign` never need it — reading a stored field is not a unit conversion.
+
+### compare
+
+Compare two durations by length:
+
+- `compareDurations`
+
+Returns `-1`/`0`/`1`, comparing by length rather than by spelling: `compareDurations("PT60M", "PT1H")` is `0`. `relativeTo` is required when either side has a calendar unit, and — unlike `addDuration`/`subtractDuration` — `Temporal.Duration.compare` actually accepts it, so calendar-unit durations *are* comparable here even though they cannot be combined. The anchor decides the answer rather than merely unblocking it: `"P1M"` is longer than `"P30D"` relative to `2024-01-01` (31 days) and shorter relative to `2024-02-01` (29). It matters for non-calendar units too when it names a zoned instant — across a DST spring-forward, `"P1D"` is 23 real hours and compares shorter than `"PT24H"`.
 
 ### format
 

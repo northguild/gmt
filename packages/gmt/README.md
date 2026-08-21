@@ -52,8 +52,8 @@ Invalid input fallbacks are consistent across the library:
 
 | Metric     | Count  |
 | ---------- | ------ |
-| Test files | 453    |
-| Tests      | 13,991 |
+| Test files | 459    |
+| Tests      | 14,295 |
 | Exports    | 489    |
 
 Every function is exercised across **17 locales** and a full IANA timezone matrix. The CI pipeline runs the complete suite in **20 environments** — 2 Node versions (22, 24) × 10 timezones spanning every UTC offset band from Pacific/Niue (−11:00) to Pacific/Apia (+13:00):
@@ -330,10 +330,16 @@ getLocaleMeridiems("zh-CN");
 
 ```typescript
 import {
+  absDuration,
   addDuration,
+  compareDurations,
   diffDateAsDuration,
+  durationAs,
   formatDuration,
+  getDurationSign,
+  getDurationUnit,
   isValidDuration,
+  negateDuration,
   normalizeDuration,
   parseDuration,
   subtractDuration,
@@ -363,6 +369,33 @@ normalizeDuration("PT90M", { largestUnit: "hour" });
 normalizeDuration("P45D", { largestUnit: "month", relativeTo: "2024-01-01" });
 // "P1M14D"
 
+getDurationUnit("P1DT2H30M", "hours");
+// 2 — the hours component as stored
+
+durationAs("P1DT2H30M", "hours");
+// 26.5 — the whole duration totalled into hours
+
+durationAs("P1M", "days");
+// null — a calendar unit needs a relativeTo anchor
+
+durationAs("P1M", "days", { relativeTo: "2024-02-01" });
+// 29
+
+negateDuration("P1DT2H");
+// "-P1DT2H"
+
+absDuration("-P1DT2H");
+// "P1DT2H"
+
+getDurationSign("-P1DT2H");
+// -1
+
+compareDurations("PT60M", "PT1H");
+// 0 — equal by length, not by spelling
+
+compareDurations("P1M", "P30D", { relativeTo: "2024-01-01" });
+// 1 — January is 31 days; relativeTo "2024-02-01" gives -1
+
 formatDuration("P1DT2H30M", "en-US");
 // "1 day, 2 hours, and 30 minutes"
 
@@ -375,6 +408,8 @@ formatDuration("P1DT0H30M", "en-US");
 diffDateAsDuration("2024-03-10", "2024-04-05", "days");
 // "P26D" — bridges diffDate to an ISO duration string instead of a single-unit number
 ```
+
+`getDurationUnit` reads a component as stored, while `durationAs` converts the whole duration — `getDurationUnit("PT90M", "hours")` is `0` but `durationAs("PT90M", "hours")` is `1.5`. `durationAs` and `compareDurations` return `null` when a calendar unit (year/month/week) is involved without a `relativeTo` anchor, the same documented constraint `normalizeDuration` carries; `negateDuration`, `absDuration`, `getDurationSign`, and `getDurationUnit` are sign/field reads and never need one.
 
 `diffDateAsDuration`/`diffDateTimeAsDuration`/`diffZonedAsDuration`/`diffUnixAsDuration`/`diffUtcAsDuration` are sibling functions to `diffDate`/`diffDateTime`/`diffZoned`/`diffUnix`/`diffUtc`, returning an ISO 8601 duration string (sentinel `""`) instead of a single-unit number (sentinel `null`). They take a single `unit` (not an array) to set the duration's `largestUnit`.
 

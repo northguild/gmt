@@ -8,11 +8,20 @@ description: >
   addDuration / subtractDuration to combine two duration strings,
   normalizeDuration to roll small units into larger ones (e.g. 90 minutes into 1
   hour 30 minutes) via largestUnit/smallestUnit/
-  roundingIncrement/roundingMode/relativeTo, and formatDuration to render a
-  duration as a human-readable, locale-aware string (e.g. "1 day, 2 hours, and
-  30 minutes").
+  roundingIncrement/roundingMode/relativeTo, getDurationUnit to read one stored
+  component, durationAs to total a duration into a single unit, negateDuration /
+  absDuration to flip or drop its sign, getDurationSign to test whether it is
+  negative/zero/positive, compareDurations to order two durations by length, and
+  formatDuration to render a duration as a human-readable, locale-aware string
+  (e.g. "1 day, 2 hours, and 30 minutes").
 sources:
   - 'burglekitt/gmt:packages/gmt/src/duration/index.ts'
+  - 'burglekitt/gmt:packages/gmt/src/duration/calculate/getDurationUnit.ts'
+  - 'burglekitt/gmt:packages/gmt/src/duration/calculate/durationAs.ts'
+  - 'burglekitt/gmt:packages/gmt/src/duration/calculate/negateDuration.ts'
+  - 'burglekitt/gmt:packages/gmt/src/duration/calculate/absDuration.ts'
+  - 'burglekitt/gmt:packages/gmt/src/duration/calculate/getDurationSign.ts'
+  - 'burglekitt/gmt:packages/gmt/src/duration/compare/compareDurations.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/calculate/diffDateAsDuration.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/calculate/diffDateTimeAsDuration.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/diffZonedAsDuration.ts'
@@ -32,9 +41,15 @@ Use this skill when you need to parse, validate, re-normalize, or format ISO 860
 
 ```ts
 import {
+  absDuration,
   addDuration,
+  compareDurations,
+  durationAs,
   formatDuration,
+  getDurationSign,
+  getDurationUnit,
   isValidDuration,
+  negateDuration,
   normalizeDuration,
   parseDuration,
   subtractDuration,
@@ -100,6 +115,77 @@ const withRef = normalizeDuration("P45D", {
   largestUnit: "month",
   relativeTo: "2024-01-01",
 }); // "P1M14D"
+```
+
+### Read one component out of a duration
+
+`getDurationUnit` returns the component **as stored**, not a converted total.
+
+```ts
+const hours = getDurationUnit("P1DT2H30M", "hours"); // 2
+const minutes = getDurationUnit("P1DT2H30M", "minutes"); // 30
+
+// "PT90M" stores 90 in its minutes field and nothing in its hours field
+const noHours = getDurationUnit("PT90M", "hours"); // 0
+
+// a negative duration stores every field as negative
+const negative = getDurationUnit("-P1DT2H", "hours"); // -2
+
+// reading a field is not a unit conversion, so calendar units need no relativeTo
+const months = getDurationUnit("P1M", "months"); // 1
+
+const invalid = getDurationUnit("not a duration", "hours"); // null
+```
+
+### Total a duration into a single unit
+
+`durationAs` converts the whole duration and returns a fractional number.
+
+```ts
+const asHours = durationAs("P1DT2H30M", "hours"); // 26.5
+const asMinutes = durationAs("P1DT2H30M", "minutes"); // 1590
+const asDays = durationAs("PT36H", "days"); // 1.5 — fractional, not rounded
+
+// calendar units need a relativeTo anchor, in either direction
+const noAnchor = durationAs("P1M", "days"); // null
+const feb = durationAs("P1M", "days", { relativeTo: "2024-02-01" }); // 29
+const jan = durationAs("P1M", "days", { relativeTo: "2024-01-01" }); // 31
+
+// a zoned anchor resolves real elapsed time across a DST transition
+const springForward = durationAs("P1D", "hours", {
+  relativeTo: "2024-03-10T00:00:00-05:00[America/New_York]",
+}); // 23
+```
+
+### Flip, drop, or test a duration's sign
+
+```ts
+const negated = negateDuration("P1DT2H"); // "-P1DT2H"
+const backAgain = negateDuration("-P1DT2H"); // "P1DT2H"
+const positive = absDuration("-P1DT2H"); // "P1DT2H"
+
+const sign = getDurationSign("-P1DT2H"); // -1
+const zero = getDurationSign("PT0S"); // 0
+const invalid = getDurationSign("not a duration"); // null
+
+// all three are pure sign operations — calendar units work, no relativeTo needed
+const negatedMonth = negateDuration("P1Y2M"); // "-P1Y2M"
+```
+
+### Compare two durations by length
+
+```ts
+const longer = compareDurations("PT1H", "PT30M"); // 1
+const shorter = compareDurations("PT30M", "PT1H"); // -1
+
+// equal by length, not by spelling
+const equal = compareDurations("PT60M", "PT1H"); // 0
+
+// unlike addDuration, Temporal.Duration.compare DOES take relativeTo, so
+// calendar-unit durations are comparable — the anchor decides the answer
+const noAnchor = compareDurations("P1M", "P30D"); // null
+const fromJan = compareDurations("P1M", "P30D", { relativeTo: "2024-01-01" }); // 1
+const fromFeb = compareDurations("P1M", "P30D", { relativeTo: "2024-02-01" }); // -1
 ```
 
 ### Render a duration as human-readable text
@@ -189,21 +275,84 @@ const result = parseDuration(userInput);
 
 Source: packages/gmt/src/duration/parse/parseDuration.ts — returns `""` on invalid input rather than throwing
 
-### MEDIUM Combining calendar-unit durations without relativeTo
+### MEDIUM Expecting a best-effort answer for calendar units without relativeTo
+
+`"P1M"` has no fixed length, so nothing in this namespace will guess one for you. Every function that has to *measure* a duration returns its sentinel (`""` for strings, `null` for numbers) when a year/month/week is involved and no `relativeTo` anchor was supplied — it does not fall back to a nominal 30-day month.
 
 Wrong:
 
 ```ts
-import { addDuration } from "@burglekitt/gmt";
+import { addDuration, compareDurations, durationAs } from "@burglekitt/gmt";
 
-// years/months/weeks arithmetic needs a reference point Temporal.Duration
-// doesn't have — this throws internally and returns "" rather than combining
-const result = addDuration("P1Y", "P1M"); // ""
+const combined = addDuration("P1Y", "P1M"); // ""
+const asDays = durationAs("P1M", "days"); // null — not 30
+const ordered = compareDurations("P1M", "P30D"); // null
 ```
 
-Correct: only combine day/time-unit durations (days, hours, minutes, seconds, ...) with `addDuration`/`subtractDuration`. For calendar-unit arithmetic relative to a specific date, use `addDate`/`subtractDate` with a unit object instead.
+Correct: supply `relativeTo` wherever the function accepts one. Note the three tiers, which differ by what Temporal itself allows:
 
-Source: packages/gmt/src/duration/calculate/addDuration.ts — `Temporal.Duration.prototype.add`/`.subtract` have no `relativeTo` option, so calendar-unit operands throw and result in `""`
+```ts
+import {
+  absDuration,
+  compareDurations,
+  durationAs,
+  getDurationSign,
+  getDurationUnit,
+  negateDuration,
+  normalizeDuration,
+} from "@burglekitt/gmt";
+
+// 1. Takes relativeTo — pass it and calendar units work
+durationAs("P1M", "days", { relativeTo: "2024-02-01" }); // 29
+compareDurations("P1M", "P30D", { relativeTo: "2024-01-01" }); // 1
+normalizeDuration("P45D", { largestUnit: "month", relativeTo: "2024-01-01" }); // "P1M14D"
+
+// 2. Never needs relativeTo — reads a stored field or flips a sign, no measuring
+getDurationUnit("P1M", "months"); // 1
+getDurationSign("-P1Y"); // -1
+negateDuration("P1Y2M"); // "-P1Y2M"
+absDuration("-P1Y2M"); // "P1Y2M"
+
+// 3. Has no relativeTo option at all — use addDate/subtractDate with a unit object
+addDuration("P1Y", "P1M"); // "" — no way to make this work
+```
+
+`durationAs`'s rule cuts in both directions, and the requested-unit half bites even on day/time-only input:
+
+```ts
+durationAs("PT36H", "weeks"); // null — a week is a calendar quantity to Temporal
+durationAs("P1M", "hours"); // null — the input's month component needs an anchor
+```
+
+The anchor decides the answer rather than merely unblocking it: `compareDurations("P1M", "P30D", { relativeTo: "2024-01-01" })` is `1` (January is 31 days) while the same call anchored to `"2024-02-01"` is `-1` (February 2024 is 29). It matters for non-calendar units too when the anchor names a zoned instant — `durationAs("P1D", "hours", { relativeTo: "2024-03-10T00:00:00-05:00[America/New_York]" })` is `23`, not `24`, because that day spans a DST spring-forward.
+
+Source: packages/gmt/src/duration/calculate/addDuration.ts (`Temporal.Duration.prototype.add`/`.subtract` have no `relativeTo` option, so calendar-unit operands throw and result in `""`), packages/gmt/src/duration/calculate/durationAs.ts and packages/gmt/src/duration/compare/compareDurations.ts (`.total()` and `Temporal.Duration.compare` both accept `relativeTo` and require it for calendar units)
+
+### HIGH Reading a component with getDurationUnit when you wanted a total
+
+`getDurationUnit` reads the named field **as stored**; `durationAs` converts the whole duration. They disagree whenever the duration isn't already spelled in the unit you're asking for, and `getDurationUnit`'s wrong answer is a plausible-looking `0` rather than an error.
+
+Wrong:
+
+```ts
+import { getDurationUnit } from "@burglekitt/gmt";
+
+// "PT90M" holds 90 in its minutes field and nothing in its hours field
+const hours = getDurationUnit("PT90M", "hours"); // 0, not 1.5
+```
+
+Correct:
+
+```ts
+import { durationAs, getDurationUnit } from "@burglekitt/gmt";
+
+const total = durationAs("PT90M", "hours"); // 1.5 — the whole duration in hours
+const stored = getDurationUnit("P1DT2H30M", "hours"); // 2 — the hours component itself
+```
+
+`durationAs` returns a fractional total and never rounds — `durationAs("P1DT2H30M", "days")` is `1.1041666666666667`. If you want a rebalanced duration *string* rather than a number, reach for `normalizeDuration("PT90M", { largestUnit: "hour" })` instead.
+
+Source: packages/gmt/src/duration/calculate/getDurationUnit.ts (reads `Temporal.Duration`'s field directly) vs. packages/gmt/src/duration/calculate/durationAs.ts (wraps `Temporal.Duration.prototype.total`)
 
 ### MEDIUM Assuming `normalizeDuration`'s default is always `relativeTo`-free
 

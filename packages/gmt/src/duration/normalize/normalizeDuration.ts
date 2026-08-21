@@ -1,4 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
+import type { DurationRelativeTo } from "../../types";
 
 /**
  * Roll an ISO 8601 duration string's small units into larger ones.
@@ -33,12 +34,7 @@ export function normalizeDuration(
     smallestUnit?: Temporal.SmallestUnit<Temporal.DateTimeUnit>;
     roundingIncrement?: number;
     roundingMode?: Temporal.RoundingMode;
-    relativeTo?:
-      | Temporal.PlainDateTime
-      | Temporal.ZonedDateTime
-      | Temporal.PlainDateTimeLike
-      | Temporal.ZonedDateTimeLike
-      | string;
+    relativeTo?: DurationRelativeTo;
   },
 ): string {
   if (typeof value !== "string") {
