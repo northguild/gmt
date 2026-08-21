@@ -6,11 +6,13 @@ description: >
   getSystemTimeZone, getTimeZones for basics. Use convertPlainDateTimeToZoned,
   addZoned, subtractZoned, startOfZoned, endOfZoned, startOfQuarterForZoned,
   endOfQuarterForZoned, mapZonedHoursInDay, getLocaleZonedStartOfWeek,
-  getLocaleZonedEndOfWeek, clampZoned, closestZonedTo, getHoursInZonedDay for
-  DST-aware construction, arithmetic, boundaries, locale-week computations, and
-  day-length queries. Most accept disambiguation ("compatible" | "earlier" |
-  "later" | "reject") for gap/overlap resolution; boundary functions also accept
-  offset ("prefer" | "use" | "ignore" | "reject", default "ignore").
+  getLocaleZonedEndOfWeek, clampZoned, closestZonedTo, getHoursInZonedDay,
+  setZoned, setUnix, setUtc for DST-aware construction, arithmetic,
+  boundaries, locale-week computations, day-length queries, and single-call
+  field setting. Most accept disambiguation ("compatible" | "earlier" |
+  "later" | "reject") for gap/overlap resolution; boundary and set* functions
+  also accept offset ("prefer" | "use" | "ignore" | "reject", default
+  "ignore").
 sources:
   - 'burglekitt/gmt:packages/gmt/src/zoned/get/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/format/index.ts'
@@ -32,6 +34,9 @@ sources:
   - 'burglekitt/gmt:packages/gmt/src/unix/calculate/endOfUnix.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/calculate/startOfQuarterForUnix.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/calculate/endOfQuarterForUnix.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/setZoned.ts'
+  - 'burglekitt/gmt:packages/gmt/src/unix/calculate/setUnix.ts'
+  - 'burglekitt/gmt:packages/gmt/src/utc/calculate/setUtc.ts'
 metadata:
   type: core
   library: '@burglekitt/gmt'
@@ -51,7 +56,8 @@ import {
   convertPlainDateTimeToZoned, addZoned, subtractZoned,
   startOfZoned, endOfZoned, startOfQuarterForZoned, endOfQuarterForZoned,
   getLocaleZonedStartOfWeek, getLocaleZonedEndOfWeek,
-  clampZoned, closestZonedTo, mapZonedHoursInDay, getHoursInZonedDay
+  clampZoned, closestZonedTo, mapZonedHoursInDay, getHoursInZonedDay,
+  setZoned
 } from "@burglekitt/gmt/zoned";
 ```
 
@@ -138,6 +144,22 @@ endOfZoned("2024-03-15T14:30:45[America/New_York]", "hour");
 
 These accept `disambiguation` (full gap/overlap control) and `offset` (`"prefer" | "use" | "ignore" | "reject"`, default `"ignore"`). Leave `offset` at default unless you deliberately need Temporal's raw `.with()` semantics. See [The offset parameter](../../../../docs/dst-disambiguation.md#the-offset-parameter).
 
+### Set one or more fields directly
+
+```ts
+setZoned("2024-03-15T14:30:45[America/New_York]", { hour: 9 });
+// "2024-03-15T09:30:45-04:00[America/New_York]"
+
+setZoned(
+  "2024-11-03T01:45:00-05:00[America/New_York]",
+  { minute: 0 },
+  { disambiguation: "reject" },
+);
+// "" — offset defaults to "ignore" so disambiguation actually fires on this fall-back overlap
+```
+
+`setZoned`/`setUnix`/`setUtc` wrap `Temporal.ZonedDateTime.prototype.with()`, resolving every supplied field in a single atomic overflow pass — the safe alternative to composing `addZoned()`/`addUnix()`/`addUtc()` calls field-by-field, and the only construction path that can reproduce `startOfZoned`'s disambiguation-plus-offset handling (`addZoned()` has no `offset` control equivalent, because `ZonedDateTime.prototype.add()` doesn't accept `disambiguation`/`offset` at all). They accept `disambiguation`, `offset` (default `"ignore"`, same rule as the `startOfZoned` family), and `overflow` (real effect here, since fields are caller-supplied rather than fixed literals). `setUtc`'s `disambiguation`/`offset` are accepted for signature consistency but are permanently inert — `"UTC"` has no DST transitions.
+
 ### Get the number of hours in a zoned calendar day
 
 ```ts
@@ -215,6 +237,23 @@ Correct: validate with `isValidTimeZone()` first.
 ### Passing `offset: "prefer"` with `disambiguation`
 
 `offset: "prefer"` keeps the source's offset before disambiguation is consulted, so `disambiguation` never fires. Leave `offset` at its default `"ignore"`.
+
+### "I passed `disambiguation: 'reject'` to `setZoned` and it didn't throw"
+
+This is the C3 silent-no-op trap, and `setZoned`/`setUnix` hit it head-on because they're `.with()`-based. `offset` defaults to `"ignore"` specifically so `disambiguation` takes effect — but if you've also passed `offset: "prefer"` (or anything other than `"ignore"`), the source's still-valid offset gets kept and `disambiguation` is silently never consulted:
+
+```ts
+const source = "2024-11-03T01:45:00-05:00[America/New_York]"; // second, repeated 1am of the fall-back overlap
+
+setZoned(source, { minute: 0 }, { disambiguation: "reject" });
+// "" — offset defaults to "ignore", so disambiguation actually fires and "reject" throws
+
+setZoned(source, { minute: 0 }, { disambiguation: "reject", offset: "prefer" });
+// "2024-11-03T01:00:00-05:00[America/New_York]" — offset:"prefer" keeps the source's
+// still-valid -05:00 offset, so disambiguation is never consulted and "reject" never fires
+```
+
+Leave `offset` at its default unless you deliberately need Temporal's raw `.with()` semantics. See [The offset parameter](../../../../docs/dst-disambiguation.md#the-offset-parameter).
 
 ## References
 

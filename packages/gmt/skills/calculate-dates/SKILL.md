@@ -10,11 +10,18 @@ description: >
   smallestUnit/roundingIncrement/roundingMode options to round the result. Use
   getLocaleStartOfWeek/getLocaleEndOfWeek for locale-driven week boundaries
   (first day of week derived from the locale, e.g. en-US Sunday vs fr-FR Monday)
-  instead of startOfDate/endOfDate's ISO-biased weekStartsOn option.
+  instead of startOfDate/endOfDate's ISO-biased weekStartsOn option. Use
+  setDate/setDateTime/setTime to set one or more fields (year, month, day,
+  hour, ...) on a value in a single atomic call — the safe alternative to
+  composing add* calls field-by-field, which resolves each field's overflow
+  independently and can silently diverge on multi-field updates.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/calculate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/calculate/clampDate.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/calculate/closestDateTo.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/setDate.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/setDateTime.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/setTime.ts'
 metadata:
   type: core
   library: '@burglekitt/gmt'
@@ -175,6 +182,22 @@ getLocaleEndOfWeek("2024-02-29", "fr-FR"); // "2024-03-03" (Sunday)
 ```
 
 Unlike `startOfDate(value, "week", { weekStartsOn })`/`endOfDate(value, "week", { weekStartsOn })`, which take an explicit ISO-biased `weekStartsOn` (`"monday"` | `"sunday"`, default `"monday"`), `getLocaleStartOfWeek`/`getLocaleEndOfWeek` derive the week's first day automatically from the locale via `Intl.Locale.prototype.weekInfo`, falling back to Monday if the runtime can't resolve `weekInfo` for the locale. Both return `""` for invalid `value` or an unresolvable `locale`. Zoned equivalents (`getLocaleZonedStartOfWeek`/`getLocaleZonedEndOfWeek`) live in the `zoned-date-ops` skill.
+
+### Set one or more fields directly
+
+```ts
+import { setDate, setDateTime, setTime } from "@burglekitt/gmt";
+
+setDate("2024-03-10", { year: 2025 }); // "2025-03-10"
+setDate("2024-01-31", { month: 2 }); // "2024-02-29" (constrain clamps to the last valid day)
+setDate("2024-01-31", { month: 2 }, { overflow: "reject" }); // "" (Feb 31 doesn't exist)
+setDate("2024-03-10", {}); // "2024-03-10" (empty fields object is a no-op)
+
+setDateTime("2024-03-10T12:00:00", { hour: 9 }); // "2024-03-10T09:00:00"
+setTime("12:00:00", { hour: 25 }); // "23:00:00" (constrain clamps; overflow has a real effect here, unlike addTime's clock wraparound)
+```
+
+`setDate`/`setDateTime`/`setTime` wrap `Temporal.*.prototype.with()`, which resolves every supplied field in a single atomic overflow pass. This is the safe alternative to composing `addDate()`/`addDateTime()`/`addTime()` calls field-by-field: each sequential `.add()` resolves overflow against its own intermediate value, so setting month-then-day vs. day-then-month on the same target can silently diverge — `.with()` has no such order-dependence. Zoned/unix/utc equivalents (`setZoned`/`setUnix`/`setUtc`) live in the `zoned-date-ops` skill, since they also take `disambiguation`/`offset`.
 
 ### Control out-of-range add/subtract results with overflow
 

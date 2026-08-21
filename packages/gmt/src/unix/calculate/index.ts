@@ -7,6 +7,7 @@ export * from "./isBetweenUnix";
 export * from "./maxUnix";
 export * from "./minUnix";
 export * from "./roundUnix";
+export * from "./setUnix";
 export * from "./sortUnix";
 export * from "./startOfQuarterForUnix";
 export * from "./startOfUnix";

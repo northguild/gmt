@@ -14,6 +14,7 @@ export * from "./getQuarterForZoned";
 export * from "./maxZoned";
 export * from "./minZoned";
 export * from "./roundZoned";
+export * from "./setZoned";
 export * from "./sortZoned";
 export * from "./startOfQuarterForZoned";
 export * from "./startOfZoned";

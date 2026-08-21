@@ -61,10 +61,10 @@ If you see a Date API in code, replace it with a GMT helper.
 
 `@burglekitt/gmt` currently exports top-level `Temporal`, `duration`, `plain`, `zoned`, `unix`, `utc`, and `regex` namespaces, with direct subpath imports available under `@burglekitt/gmt/*`.
 
-| Metric  | Count |
-| ------- | ----- |
-| Tests   | 13,006 |
-| Exports | 472   |
+| Metric  | Count  |
+| ------- | ------ |
+| Tests   | 13,207 |
+| Exports | 472    |
 
 ## Optional: Add Linting for Date API Bans
 

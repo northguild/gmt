@@ -151,6 +151,26 @@ diffDate("2023-01-01", "2023-01-10", "week", {
 // 1
 ```
 
+`setDate`/`setDateTime`/`setTime`/`setZoned`/`setUnix`/`setUtc` set one or more fields on a value in a single atomic `.with()`-based call — the safe alternative to composing `add*` calls field-by-field, which resolves each field's overflow independently and can silently diverge on multi-field updates:
+
+```typescript
+import { setDate, setZoned } from "@burglekitt/gmt";
+
+setDate("2024-01-31", { month: 2 });
+// "2024-02-29" (constrain, the default, clamps to the last valid day)
+
+setZoned(
+  "2024-11-03T01:45:00-05:00[America/New_York]",
+  { minute: 0 },
+  {
+    disambiguation: "reject",
+  },
+);
+// "" — offset defaults to "ignore" so disambiguation actually fires on this fall-back overlap
+```
+
+`setZoned`/`setUnix`/`setUtc` also accept `disambiguation` and `offset` for DST gap/overlap control — see [DST Disambiguation](../../docs/dst-disambiguation.md).
+
 `isWeekend`/`isZonedWeekend` check locale-specific weekend days (via `Intl.Locale`'s `weekInfo`) rather than assuming Saturday/Sunday:
 
 ```typescript
@@ -504,16 +524,33 @@ import {
   intervalOverlappingDaysZoned,
 } from "@burglekitt/gmt";
 
-intervalOverlappingDaysDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
+intervalOverlappingDaysDate(
+  "2024-01-01",
+  "2024-06-30",
+  "2024-04-01",
+  "2024-12-31",
+);
 // 91
 
-intervalOverlappingDaysDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31");
+intervalOverlappingDaysDate(
+  "2024-01-01",
+  "2024-06-30",
+  "2024-06-30",
+  "2024-12-31",
+);
 // 1 (adjacent, shares one date)
 
-intervalOverlappingDaysDate("2024-01-01", "2024-06-30", "2024-07-01", "2024-12-31");
+intervalOverlappingDaysDate(
+  "2024-01-01",
+  "2024-06-30",
+  "2024-07-01",
+  "2024-12-31",
+);
 // 0 (disjoint)
 
-intervalOverlappingDaysUnix(0, 172800000, 86400000, 259200000, { timeZone: "UTC" });
+intervalOverlappingDaysUnix(0, 172800000, 86400000, 259200000, {
+  timeZone: "UTC",
+});
 // 2
 ```
 

@@ -21,6 +21,7 @@ Arithmetic and date manipulation:
 - `maxDate`, `maxDateTime`, `maxTime`
 - `minDate`, `minDateTime`, `minTime`
 - `roundDate`, `roundDateTime`, `roundTime`
+- `setDate`, `setDateTime`, `setTime`
 - `sortDates`, `sortDateTimes`, `sortTimes`
 - `startOfDate`, `startOfDateTime`, `startOfTime`
 - `startOfQuarterForDate`, `startOfQuarterForDateTime`

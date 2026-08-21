@@ -15,7 +15,7 @@ Timezone-aware arithmetic:
 - `getLocaleZonedDayOfWeek`
 - `getLocaleZonedEndOfWeek`, `getLocaleZonedStartOfWeek`
 - `getQuarterForZoned`
-- `maxZoned`, `minZoned`, `roundZoned`, `sortZoned`
+- `maxZoned`, `minZoned`, `roundZoned`, `setZoned`, `sortZoned`
 - `startOfQuarterForZoned`, `startOfZoned`
 - `subtractZoned`, `subtractZonedBusinessDays`
 
