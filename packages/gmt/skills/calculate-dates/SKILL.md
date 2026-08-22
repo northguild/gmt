@@ -11,10 +11,10 @@ description: >
   getLocaleStartOfWeek/getLocaleEndOfWeek for locale-driven week boundaries
   (first day of week from the locale, e.g. en-US Sunday vs fr-FR Monday) instead
   of startOfDate/endOfDate's ISO-biased weekStartsOn option. Use
-  setDate/setDateTime/setTime to set one or more fields (year, month, day,
-  hour, ...) atomically — the safe alternative to composing add* calls
-  field-by-field, which resolves each field's overflow independently and can
-  silently diverge on multi-field updates.
+  setDate/setDateTime/setTime to set one or more fields (year, month, day, hour,
+  ...) atomically — the safe alternative to composing add* calls field-by-field,
+  which resolves each field's overflow independently and can silently diverge on
+  multi-field updates.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/calculate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/calculate/clampDate.ts'
@@ -25,7 +25,7 @@ sources:
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.12.0'
+  library_version: '1.13.0'
 ---
 
 # Calculate Dates

@@ -4,7 +4,7 @@ description: >
   Contribute improvements to @burglekitt/gmt via pull requests, including new
   methods, bug fixes, and documentation updates.
 metadata:
-  library_version: 1.12.0
+  library_version: 1.13.0
 ---
 
 # PR Contribution

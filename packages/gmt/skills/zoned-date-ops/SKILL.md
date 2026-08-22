@@ -7,14 +7,13 @@ description: >
   addZoned, subtractZoned, startOfZoned, endOfZoned, startOfQuarterForZoned,
   endOfQuarterForZoned, mapZonedHoursInDay, getLocaleZonedStartOfWeek,
   getLocaleZonedEndOfWeek, clampZoned, closestZonedTo, getHoursInZonedDay,
-  setZoned, setUnix, setUtc for DST-aware construction, arithmetic,
-  boundaries, locale-week computations, day-length queries, and single-call
-  field setting. Most accept disambiguation ("compatible" | "earlier" |
-  "later" | "reject") for gap/overlap resolution; boundary and set* functions
-  also accept offset ("prefer" | "use" | "ignore" | "reject", default
-  "ignore"). Use getZonedOffset, getZonedOffsetAs, getTimeZoneOffset,
-  formatTimeZoneName, isInDaylightSaving for reading a zoned value's UTC
-  offset and DST status.
+  setZoned, setUnix, setUtc for DST-aware construction, arithmetic, boundaries,
+  locale-week computations, day-length queries, and single-call field setting.
+  Most accept disambiguation ("compatible" | "earlier" | "later" | "reject") for
+  gap/overlap resolution; boundary and set* functions also accept offset
+  ("prefer" | "use" | "ignore" | "reject", default "ignore"). Use
+  getZonedOffset, getZonedOffsetAs, getTimeZoneOffset, formatTimeZoneName,
+  isInDaylightSaving for reading a zoned value's UTC offset and DST status.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/zoned/get/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/format/index.ts'
@@ -45,7 +44,7 @@ sources:
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.12.0'
+  library_version: '1.13.0'
 ---
 
 # Zoned Date Operations

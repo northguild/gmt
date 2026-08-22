@@ -4,9 +4,9 @@ description: >
   Parse individual components (year, month, day, hour, etc.) from date/time
   strings. Use parse* functions for extraction. Returns null on invalid input.
   Also parseRfc2822, parseHttp, parseSql, parseRfc3339 for decoding fixed
-  interchange grammars (email Date headers, HTTP headers, SQL datetime
-  literals, RFC 3339) into GMT's own ISO strings — these return "" on
-  invalid input, not null.
+  interchange grammars (email Date headers, HTTP headers, SQL datetime literals,
+  RFC 3339) into GMT's own ISO strings — these return "" on invalid input, not
+  null.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/parse/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/parse/parseRfc2822.ts'
@@ -16,7 +16,7 @@ sources:
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.12.0'
+  library_version: '1.13.0'
 ---
 
 # Parse Date/Time Components

@@ -17,7 +17,7 @@ sources:
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.12.0'
+  library_version: '1.13.0'
 ---
 
 # Format Relative Time

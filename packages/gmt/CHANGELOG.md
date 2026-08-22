@@ -1,5 +1,132 @@
 # @burglekitt/gmt
 
+## 1.13.0
+
+### Minor Changes
+
+- 9d341ce: Add calendar quantity getters: `getDaysInMonth`, `getDaysInYear`, `getDayOfYear`, `getWeeksInYear`, `getWeeksInMonth`, `getWeekOfMonth` (Story J3).
+
+  All six take a `PlainDate` ISO string and return `number | null`. `getDaysInMonth`, `getDaysInYear`, and `getDayOfYear` wrap Temporal's own `daysInMonth`/`daysInYear`/`dayOfYear`. `getWeeksInYear` reports the ISO week-numbering year's total week count (52 or 53), resolved from `value`'s own `yearOfWeek` rather than its calendar year, since late-December/early-January dates can belong to a different ISO week-year than their calendar year.
+
+  `getWeeksInMonth` and `getWeekOfMonth` are locale-aware — they size and index a month's calendar-grid rows using `locale`'s first day of week, matching date-fns's `getWeekOfMonth` convention (the row containing the 1st of the month counts as row 1, even when partial). They live in `plain/calculate/`, not `plain/get/`, per the rule J0b established: `get/` namespaces are current-moment accessors only, and these take a date value.
+
+- 6d9ed5e: Add duration introspection and comparison: `getDurationUnit`, `durationAs`, `negateDuration`, `absDuration`, `compareDurations`, `getDurationSign` (Story J8).
+
+  `getDurationUnit` reads a single component as stored (`getDurationUnit("PT90M", "hours")` is `0` — the minutes field holds 90, not a converted total); `durationAs` totals the whole duration into one unit instead (`durationAs("PT90M", "hours")` is `1.5`). `negateDuration`/`absDuration` flip or drop the sign; `getDurationSign` reports `-1`/`0`/`1`. New `duration/compare/` module holds `compareDurations`, wrapping `Temporal.Duration.compare`.
+
+  `durationAs` and `compareDurations` follow the `relativeTo` pattern already documented for `normalizeDuration` (A3): any calendar unit (years/months/weeks) on either side requires `relativeTo`, returning the sentinel (`null`) without it — this applies even when the _requested_ unit is the only calendar-shaped one, e.g. `durationAs("PT36H", "weeks")` is `null`. Worth noting the asymmetry with `addDuration`/`subtractDuration` (A2): `Temporal.Duration.compare` **does** accept `relativeTo`, so `compareDurations` can order calendar-unit durations in cases `addDuration` cannot combine. `negateDuration`, `absDuration`, and `getDurationSign` are pure sign operations and never need `relativeTo`, even on calendar-unit durations.
+
+  Updated `packages/gmt/README.md`, `packages/gmt/src/duration/README.md`, and the `durations` skill (new Core Patterns plus two Common Mistakes entries extending the existing `relativeTo` guidance).
+
+- 3eae84e: Add field setters: `setDate`, `setDateTime`, `setTime`, `setZoned`, `setUnix`, `setUtc` (Story J1).
+
+  Each takes a partial fields object and wraps `Temporal.*.prototype.with()`, resolving every supplied field in a single atomic overflow pass — the safe alternative to composing `add*` calls field-by-field, which resolves each field's overflow independently and can silently diverge on multi-field updates (e.g. setting month-then-day vs. day-then-month on the same target).
+
+  All six take `overflow` ("constrain" (default) | "reject"). `setZoned`, `setUnix`, and `setUtc` additionally take `disambiguation` and `offset` (default `"ignore"`, same rule as the `startOfZoned` family — see `docs/dst-disambiguation.md`) for DST gap/overlap control; `setUtc`'s `disambiguation`/`offset` are accepted for signature consistency but are permanently inert, since `"UTC"` has no DST transitions.
+
+  An empty fields object is a no-op on all six.
+
+- f948e85: Add `formatCalendar`, `formatCalendarZoned`, `formatCalendarUnix`, `formatCalendarUtc` (Story J15) — Story Group J complete.
+
+  Moment's `.calendar()`: a relative day label plus time-of-day, e.g. `"Tomorrow at 2:30 PM"`. This is distinct from the existing `formatRelative*` family, which renders an elapsed-time phrase ("in 1 day") and never includes a clock time — Group I's notes over-generalized Luxon's `toRelativeCalendar` parity claim to Moment's `.calendar()`, which this story corrects.
+
+  Within `±6` days of `reference` (default "now"), renders `<day label> <connector> <time>` — "today"/"tomorrow"/"yesterday" near the boundary, "in N days"/"N days ago" further out, via `Intl.RelativeTimeFormat`. Beyond that, falls back to an absolute `dateStyle: "long"` + `timeStyle` string with no relative wording, matching Moment's `sameElse` behavior.
+
+  The day label and time are joined using the **locale's own connector** — read from `Intl.DateTimeFormat`'s combined `dateStyle` + `timeStyle` part sequence for the same instant, never a hardcoded `"at"`. This is the go/no-go decision the story required before implementation: a verified `Intl`-only route with no hardcoded English, covering all 17 `MustTestLocales` including a locale (ru-RU) whose combined date+time pattern fuses a date-side suffix onto the connector literal, which the new `internal/joinDateTimeConnector.ts` helper detects and strips.
+
+  `timeStyle: "full"` is available on the zoned/unix/utc variants (a real IANA zone) but not on plain `formatCalendar` — a plain value has no real timezone, so `"full"`'s `timeZoneName` would misrepresent the internal UTC anchor as a fact about the input.
+
+  Updated `packages/gmt/README.md`, `plain/README.md`, `zoned/README.md`, `unix/README.md`, `utc/README.md`, and the `format-date-time` skill (new Core Pattern + a Common Mistakes entry distinguishing `formatCalendar` from `formatRelativeDateTime`).
+
+- c14db2a: Add `formatDateToParts`, `formatDateTimeToParts`, `formatZonedToParts` (Story J12).
+
+  Each returns the locale-ordered `Array<{ type, value }>` parts behind `formatDate`/`formatDateTime`/`formatZonedDateTime`'s finished strings, mirroring those functions' `(value, locale?, options?)` signature exactly. `formatZonedToParts` also emits `timeZoneName` parts when `options.timeZoneName` is set. All three return `[]` on invalid input.
+
+  This is GMT's sanctioned substitute for a token formatter (Luxon `toFormat`, date-fns `format`), which remains deliberately excluded (roadmap Decision 1): a token pattern like `"MM/dd/yyyy"` hard-codes US field order and ships it to every locale. `formatToParts` gives the caller full control over presentation while the locale keeps control of field order — iterate the returned array instead of reassembling parts in a fixed order.
+
+- 7ff6484: Add interval length and partitioning: `intervalLength*`, `intervalDivideEqually*`, `intervalSplitAt*`, `mergeIntervals*`, `intervalXorAll*` across `Date`/`DateTime`/`Time`/`Zoned`/`Unix`/`Utc` (Story J9).
+
+  `intervalLength*` is `intervalCount*`'s exact-duration counterpart — it answers "how long is this interval" as a real, possibly fractional number via `Temporal.Duration.prototype.total`, rather than "how many `unit` boundaries does it touch". The same interval from `23:59` to `00:01` is `2` day boundaries via `intervalCountDateTime` but `~0.0014` days via `intervalLengthDateTime`. Zoned/Unix/Utc variants are DST-aware the same way `intervalCount*` is.
+
+  `intervalDivideEqually*` splits an interval into `n` equal-length sub-intervals; `intervalSplitAt*` splits at arbitrary (unsorted, out-of-range-safe) points instead of by count. `PlainDate` rounds internal boundaries to the nearest whole day since it has no fractional-day representation; every other variant is exact, computed from total elapsed nanoseconds — `intervalDivideEquallyZoned` splits DST-crossing intervals by real elapsed time, not local clock time.
+
+  `mergeIntervals*` and `intervalXorAll*` are the list-form generalizations of the existing pairwise `intervalUnion*` (B5) and `intervalXor*` (B7) — each takes a single array of `{ start, end }` records instead of two flat intervals. `intervalXorAll*` is implemented as a coverage sweep and reduces to the pairwise `intervalXor*` result for exactly two intervals.
+
+  Updated `packages/gmt/README.md`, all four namespace READMEs (`plain`/`zoned`/`unix`/`utc`), and the `interval-ops` skill (new Core Patterns plus two Common Mistakes entries, including the required `intervalLength` vs `intervalCount` distinction).
+
+- 7b391a4: Add named machine-format format/parse pairs: `formatRfc2822`/`parseRfc2822` (zoned), `formatHttp`/`parseHttp` (utc), `formatSql`/`parseSql` (plain), `formatRfc3339`/`parseRfc3339` (zoned) (Story J13).
+
+  These are **fixed, non-locale-adaptive grammars** — RFC 5322 and RFC 7231 mandate English weekday/month abbreviations regardless of locale, by specification — so none of the eight take a `locale` argument, unlike GMT's `Intl`-backed formatters. `""` on invalid input for every function.
+
+  - `formatRfc2822`/`parseRfc2822` — RFC 5322 (RFC 2822) email `Date:` header format, e.g. `"Fri, 15 Mar 2024 14:30:00 -0400"`. Parsing accepts a 1- or 2-digit day and RFC 5322's obsolete named zones (`GMT`, `UT`, and the eight North American zones); formatting always emits a zero-padded, numeric offset.
+  - `formatHttp`/`parseHttp` — RFC 7231 IMF-fixdate, e.g. `"Fri, 15 Mar 2024 14:30:00 GMT"`, for `Last-Modified`/`Date`/`Expires` headers. Strict 2-digit fields and a literal `GMT` only; the obsolete RFC 850/asctime HTTP-date forms are a documented limitation, not accepted.
+  - `formatSql`/`parseSql` — ANSI SQL / ODBC datetime literal, e.g. `"2024-03-15 14:30:00"`, for `DATETIME`/`TIMESTAMP` columns without a time zone. SQL's offset-carrying `TIMESTAMPTZ` literal is out of scope.
+  - `formatRfc3339`/`parseRfc3339` — strict RFC 3339. This is _not_ a passthrough on GMT's existing ISO output: GMT's own zoned strings always carry a bracketed IANA zone annotation (`...+00:00[UTC]`) that RFC 3339 does not permit, so `formatRfc3339` strips it. A parallel `utc`/`unix` wrapper was deliberately not added — `Temporal.Instant.prototype.toString()` is already fully RFC 3339 compliant with no bracket to strip, so a wrapper there would be a pure passthrough.
+
+- e9e8649: Add now-relative predicates: `isRelativeDay`, `isThisUnit`, `isPast`, `isFuture`, and their zoned counterparts `isZonedRelativeDay`, `isZonedThisUnit`, `isZonedPast`, `isZonedFuture` (Story J6).
+
+  `isRelativeDay(value, offsetDays)` subsumes `isToday`/`isYesterday`/`isTomorrow` (`offsetDays: 0`/`-1`/`1`, or any other integer offset); `isThisUnit(value, unit, locale?)` subsumes `isThisWeek`/`isThisMonth`/`isThisYear`. Per Decision 5 in `context/roadmap/issues/J.md`, GMT ships one parameterized function per axis rather than date-fns's eleven near-duplicate named functions. `isPast`/`isFuture` stay separate — genuinely distinct before/after-now predicates, not one more value on an enumerable axis.
+
+  The plain functions compare against `getToday()` and so depend on the **system clock and system timeZone** — the same call can return a different answer on hosts in different timeZones at the same instant. The zoned variants resolve "today"/"now" in the value's own timeZone instead, making them deterministic regardless of the host machine's timeZone; `isZonedPast`/`isZonedFuture` additionally compare the exact instant rather than just the calendar day, since a `ZonedDateTime` carries a full time-of-day where a `PlainDate` does not.
+
+- 9170eb1: Add offset and DST-instant accessors: `getZonedOffset`, `getZonedOffsetAs`, `getTimeZoneOffset`, `formatTimeZoneName`, `isInDaylightSaving` (Story J10).
+
+  GMT could construct and manipulate zoned values but couldn't report their UTC offset — `getZonedOffset(value)` returns it as a `±HH:MM` string; `getZonedOffsetAs(value, unit)` reads it as a number in `"minutes"` or `"nanoseconds"` (following J8's `getDurationUnit(value, unit)` precedent, replacing what would otherwise be a `getZonedOffsetMinutes`/`getZonedOffsetNanoseconds` pair). `getTimeZoneOffset(timeZone, instant)` looks up a zone's offset at an arbitrary instant without needing an existing zoned value in hand. `formatTimeZoneName(timeZone, locale, options?)` returns a zone's localized display name across all six `Intl.DateTimeFormatOptions` `timeZoneName` styles.
+
+  `isInDaylightSaving(value)` is the third DST-related function in the roadmap and answers a distinct question from the other two: `hasDaylightSaving(timeZone)` asks whether a zone observes DST _at all_ (zone-level, no instant), `getDstTransitions(timeZone, year)` asks _where_ a zone's transitions fall (enumerates instants), and `isInDaylightSaving(value)` asks whether _this particular instant_ is currently in DST. `docs/dst-disambiguation.md` now documents all four (including `disambiguation`/`offset`, the orthogonal construction-time concern) as one table.
+
+  Both `getZonedOffset`/`getZonedOffsetAs` live in `zoned/parse/`, not `zoned/get/` — per J0b's rule, they take a date _value_ rather than reporting on _now_ or a bare timezone. `getTimeZoneOffset` stays in `zoned/get/` alongside `getDstTransitions`, since neither argument is a value being described, both are coordinates for a zone-level lookup.
+
+  Updated `packages/gmt/README.md`, `packages/gmt/src/zoned/README.md`, `docs/dst-disambiguation.md`, and the `zoned-date-ops` skill.
+
+- cbc8384: Add plain range formatting: `formatDateRange`, `formatDateTimeRange` (Story J14).
+
+  Plain counterparts of the existing `zoned/format/formatZonedRange` — same `(start, end, locale?, options?)` parameter order and `Intl.DateTimeFormatOptions` shape, but wrapping `Temporal.PlainDate`/`Temporal.PlainDateTime` directly since there's no timezone to reconcile between endpoints. Both use `Intl.DateTimeFormat.prototype.formatRange` under the hood, so the locale elides shared fields between `start` and `end` (`"February 3 – 5, 2024"` for same-month, `"November 3, 2024 – February 10, 2025"` once the year differs) instead of the caller having to format both ends and join them by hand. Returns `""` when either endpoint is invalid; a reversed range (`end` before `start`) still formats rather than throwing or auto-correcting.
+
+  Updated `packages/gmt/README.md`, `packages/gmt/src/plain/README.md`, and the `format-date-time` skill.
+
+- bffb00c: Add same-unit comparison: `areDatesEqualBy`, `areDateTimesEqualBy`, `areZonedEqualBy`, `areUnixEqualBy`, `areUtcEqualBy` (Story J5).
+
+  Each function answers "are these two values equal at a given calendar unit?" — `areDatesEqualBy(a, b, "month")` replaces the pattern of manually truncating both values before comparing. Per Decision 5 in `context/roadmap/issues/J.md`, GMT ships one parameterized function per namespace rather than date-fns's twelve `isSameX` functions; each function's JSDoc carries the full date-fns mapping table.
+
+  **Semantics, decided explicitly:** equality is measured by comparing the start-of-unit boundary for each value, so a unit implicitly requires every coarser unit above it to match too — `areDatesEqualBy("2023-03-15", "2024-03-15", "month")` is `false`, not `true`, because "same month" means the same month _and_ year. This matches date-fns's `isSameMonth`/`isSameWeek`/etc. and Luxon's `dt.hasSame(other, unit)` (verified against date-fns's source), not a bare "same month-of-year across any year" comparison.
+
+  `areZonedEqualBy` compares each value's own local calendar fields in its own time zone, not the underlying instant or time zone identifier — two zoned values representing the same instant can land on different local calendar days depending on their zone, and vice versa.
+
+- 8663839: Add token-pattern-based parsing: `parseDateWithPattern`, `parseDateTimeWithPattern`, `parseTimeWithPattern` (Story J11).
+
+  Each decodes a string against a caller-supplied token pattern (e.g. `"MM/dd/yyyy"`, `"dd-MMM-yyyy h:mm a"`) and returns the matching ISO `PlainDate`/`PlainDateTime`/`PlainTime` string, or `""` on no match, a malformed pattern, or a shape-valid-but-not-real date/time (`"02/31/2024"` against `"MM/dd/yyyy"` still fails — the regex only proves shape, `Temporal.*.from(..., { overflow: "reject" })` proves it's real).
+
+  This is a decoding tool for a _known, fixed_ producer format — a CSV column, a legacy API field, a partially-typed form value — not a display formatter. GMT still has no token-pattern _formatter_: hard-coding a field order like `"MM/dd/yyyy"` for output would ship US field ordering to every locale (roadmap Decision 1). Use `formatDate`/`formatDateTime`/`formatDateToParts` for locale-correct display; use these new functions only to consume input whose shape you don't control.
+
+  Supports numeric tokens (`yyyy`/`yy`/`MM`/`M`/`dd`/`d`/`HH`/`H`/`hh`/`h`/`mm`/`m`/`ss`/`s`/`SSS`), locale-aware name tokens (`MMMM`/`MMM`/`EEEE`/`EEE`/`a`/`GGGG`/`GG`, defaulting to `"en-US"` when `locale` is omitted), and literal text via automatic literal characters or `'single quotes'`. `parseDateWithPattern`/`parseTimeWithPattern` each reject the other's tokens (returning `""`); `parseDateTimeWithPattern` accepts the full combined set.
+
+- 77e9c80: Add week-numbering year getters: `getWeekYear`, `getLocaleWeekYear`, `getWeeksInLocaleWeekYear` (Story J4).
+
+  `getWeekYear` reports the ISO 8601 week-numbering year a date belongs to (via `Temporal.PlainDate.yearOfWeek`), which can differ from the calendar year — 2024-12-30 is a Monday in ISO week 1 of **2025**, not 2024. Pair it with the existing `weekOfYearForDate`/`getWeekNumber` whenever bucketing by week number, since a week number alone is ambiguous across a year boundary.
+
+  `getLocaleWeekYear` and `getWeeksInLocaleWeekYear` are the locale-relative equivalents, resolved from `locale`'s first day of week and minimal-days-in-first-week (`Intl.Locale.prototype.weekInfo`) instead of the fixed ISO rule (Monday-start, 4 minimal days). The two can disagree on the same date near a year boundary — e.g. en-US always counts Jan 1 as week 1, while ISO-style locales do not.
+
+  All three take a `PlainDate` ISO string and return `number | null`. They live in `plain/calculate/`, not `plain/get/`, per the rule J0b established.
+
+- 511f2de: Add weekday navigation: `nextWeekday`, `previousWeekday` (Story J7).
+
+  Each function finds the next/previous occurrence of a given ISO day of week (1 = Monday … 7 = Sunday, matching `getDayOfWeek`/`parseDayOfWeekFromDate`) on or after/before a date. Per Decision 5 in `context/roadmap/issues/J.md`, GMT ships two parameterized functions rather than date-fns's sixteen `nextMonday`…`previousSunday` functions; each function's JSDoc carries the full date-fns mapping table.
+
+  **`options.inclusive`** (default `false`) controls what happens when the input already falls on the target day: `false` advances/retreats a full week, matching date-fns's behavior; `true` returns the input as-is. This default is easy to get surprised by — `nextWeekday("2024-03-15", 5)` on a date that _is_ already a Friday returns the following Friday, not the input — so it's called out explicitly in both functions' JSDoc and the `compare-dates` skill's Common Mistakes.
+
+  date-fns's `lastDayOfMonth` is not a gap this pair fills — it's already covered by GMT's existing `endOfDate(value, "month")`.
+
+- 3ecb5a9: Move `getLocaleDayOfWeek`, `getLocaleZonedDayOfWeek`, and `getHoursInZonedDay` from the `get/` namespace to `calculate/` (Story J0b):
+
+  - `plain/get/getLocaleDayOfWeek.ts` → `plain/calculate/getLocaleDayOfWeek.ts`
+  - `zoned/get/getLocaleZonedDayOfWeek.ts` → `zoned/calculate/getLocaleZonedDayOfWeek.ts`
+  - `zoned/get/getHoursInZonedDay.ts` → `zoned/calculate/getHoursInZonedDay.ts`
+
+  `get/` namespaces are now current-moment accessors only (no argument, or timezone only, reporting a value for _now_); any function taking a date value belongs in `calculate/`. Function names, signatures, and behavior are unchanged.
+
+  **Technically breaking for deep-subpath consumers.** Root imports (`from "@burglekitt/gmt"`) are unaffected. But anyone importing from `@burglekitt/gmt/plain/get` or `@burglekitt/gmt/zoned/get` loses these symbols — switch those imports to `@burglekitt/gmt/plain/calculate` and `@burglekitt/gmt/zoned/calculate` respectively.
+
 ## 1.12.0
 
 ### Minor Changes

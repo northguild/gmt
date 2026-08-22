@@ -3,22 +3,18 @@ name: format-date-time
 description: >
   Format plain date/time values for display with locale and Intl.DateTimeFormat
   options. Use formatDate, formatTime, formatDateTime for absolute formatting;
-  use formatDateRange, formatDateTimeRange for a locale-elided range between
-  two plain values (the plain counterpart of formatZonedRange); use
-  formatDateToParts, formatDateTimeToParts, formatZonedToParts for
-  locale-ordered { type, value } parts (GMT's substitute for a token
-  formatter); use formatRelativeDate, formatRelativeTime,
-  formatRelativeDateTime for human-friendly relative output ("yesterday",
-  "in 2 hours"); use formatCalendar, formatCalendarZoned, formatCalendarUnix,
-  formatCalendarUtc for a relative day label + time-of-day ("tomorrow at
-  2:30 PM", Moment's .calendar()) — distinct from formatRelative*'s
-  elapsed-time phrasing. Also getLocaleEraNames, getLocaleMonthNames,
-  getLocaleWeekdayNames, getLocaleMeridiems for standalone locale
-  calendar-name lookups — the GMT equivalent of Luxon's Info.eras,
-  Info.months, Info.weekdays, and Info.meridiems. Also formatRfc2822,
-  formatHttp, formatSql, formatRfc3339 for fixed, non-locale-adaptive
-  interchange grammars (email Date headers, HTTP headers, SQL datetime
-  literals, RFC 3339) — none of these take a locale argument.
+  formatDateRange, formatDateTimeRange for a locale-elided range between two
+  plain values; formatDateToParts, formatDateTimeToParts, formatZonedToParts for
+  locale-ordered { type, value } parts; formatRelativeDate, formatRelativeTime,
+  formatRelativeDateTime for human-friendly relative output ("yesterday", "in 2
+  hours"); formatCalendar, formatCalendarZoned, formatCalendarUnix,
+  formatCalendarUtc for a relative day label + time-of-day ("tomorrow at 2:30
+  PM") — distinct from the elapsed-time formatRelative* phrasing. Also
+  getLocaleEraNames, getLocaleMonthNames, getLocaleWeekdayNames,
+  getLocaleMeridiems for standalone locale calendar-name lookups (Luxon Info
+  equivalent). Also formatRfc2822, formatHttp, formatSql, formatRfc3339 for
+  fixed, non-locale interchange grammars (email/HTTP headers, SQL, RFC 3339) —
+  no locale argument.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/format/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/format/formatDateRange.ts'
@@ -44,7 +40,7 @@ sources:
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.12.0'
+  library_version: '1.13.0'
 ---
 
 # Format Date/Time
@@ -306,38 +302,11 @@ formatRfc3339("2024-03-15T14:30:00-04:00[America/New_York]");
 
 Each has a `parse*` counterpart in the `parse-date-time` skill.
 
-## Locale Matrix
+## Locale Matrix and Runtime ICU data
 
-Supported locales for formatting:
-
-| Locale | Date Format | Time Format |
-|--------|------------|-------------|
-| en-US | 3/15/2024 | 2:30:45 PM |
-| en-GB | 15/03/2024 | 14:30:45 |
-| de-DE | 15.3.2024 | 14:30:45 |
-| fr-FR | 15/03/2024 | 14:30:45 |
-| es-ES | 15/3/2024 | 14:30:45 |
-| it-IT | 15/03/2024 | 14:30:45 |
-| pt-PT | 15/03/2024 | 14:30:45 |
-| sv-SE | 2024-03-15 | 14:30:45 |
-| is-IS | 15.3.2024 | 14:30:45 |
-| zh-CN | 2024/3/15 | 下午2:30:45 |
-| zh-TW | 2024/3/15 | 下午2:30:45 |
-| ja-JP | 2024/3/15 | 14:30:45 |
-| ko-KR | 2024. 3. 15. | 오후 2:30:45 |
-| ar-SA | ١٥‏/٣‏/٢٠٢٤ | ٢:٣٠:٤٥ م |
-| he-IL | 15/03/2024 | 14:30:45 |
-| ru-RU | 15.03.2024 | 14:30:45 |
-| tr-TR | 15.03.2024 | 14:30:45 |
-
-## Runtime ICU data
-
-These formatters delegate locale rendering to the host runtime's `Intl.DateTimeFormat` / `Intl.RelativeTimeFormat`. Output therefore depends on the ICU data shipped with the running Node (or browser):
-
-- **Full ICU** runtimes (official Node binaries from nodejs.org, all modern browsers) return fully localized strings — e.g. `formatTime("14:30:00", "ko-KR", { timeStyle: "short" })` returns `"오후 2:30"`.
-- **Small/partial ICU** runtimes (some Node builds compiled with `--with-intl=small-icu` or repackaged distributions) fall back to English day periods and other locale data — the same call may return `"PM 2:30"`.
-
-This is a property of the runtime, not gmt. For consistent non-English output, deploy on a full-ICU Node build or polyfill `Intl` with a package that bundles locale data.
+See [Full format API](references/format-api.md) for the supported-locale
+formatting matrix and how host ICU data (full vs. small-icu Node builds)
+affects locale output.
 
 ## Common Mistakes
 
@@ -383,23 +352,6 @@ if (!isValidDate(input)) {
 ```
 
 Source: packages/gmt/src/plain/format/formatDate.ts — Returns "" on invalid input
-
-### MEDIUM Locale not supported
-
-Wrong:
-
-```ts
-const formatted = formatDate("2024-03-15", "xx-XX"); // May produce unexpected output
-```
-
-Correct:
-
-```ts
-// Use supported locale from matrix
-const formatted = formatDate("2024-03-15", "en-US");
-```
-
-Source: Intl.DateTimeFormat — Throws on unsupported locale
 
 ### MEDIUM Assuming getLocale* throws or returns English for an invalid locale
 
@@ -494,35 +446,6 @@ const display = parts.map((p) => p.value).join("");
 ```
 
 Source: context/roadmap/issues/J12 — "iterate the array as returned; reassembling parts in a fixed order reintroduces exactly the bug formatToParts exists to avoid"
-
-### MEDIUM Assuming formatRfc2822/formatHttp/formatSql/formatRfc3339 are locale-hostile the way a token formatter is
-
-Wrong:
-
-```ts
-// "These hard-code English month names — isn't that the same
-// locale bug Decision 1 excluded a token formatter for?"
-```
-
-Correct: no — these are **fixed grammars**, not display formats. RFC 5322
-mandates `"Mon"`/`"Jan"` regardless of the sender's or recipient's locale;
-there is no French or Japanese variant of an email `Date:` header to lose by
-hard-coding English. Decision 1 excluded a token *formatter* because a
-pattern like `"MM/dd/yyyy"` bakes in a field order that *should* vary by
-locale for display. These four functions produce a byte-identical
-machine-readable string for every caller, by specification — that is
-correct, not a gap.
-
-```ts
-import { formatRfc2822 } from "@burglekitt/gmt";
-
-// No locale argument, and none needed — RFC 5322 output is the same
-// string regardless of who's reading it.
-formatRfc2822("2024-03-15T14:30:00-04:00[America/New_York]");
-// "Fri, 15 Mar 2024 14:30:00 -0400"
-```
-
-Source: context/roadmap/issues/J.md — Decision 1 (token formatter excluded) vs. J13's "Why this survives Decision 1" (fixed grammars are not display formats)
 
 ### MEDIUM Confusing formatCalendar with formatRelativeDateTime
 
