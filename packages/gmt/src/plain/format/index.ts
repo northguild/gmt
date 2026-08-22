@@ -1,5 +1,7 @@
 export * from "./formatDate";
+export * from "./formatDateRange";
 export * from "./formatDateTime";
+export * from "./formatDateTimeRange";
 export * from "./formatDateTimeToParts";
 export * from "./formatDateToParts";
 export * from "./formatRelativeDate";

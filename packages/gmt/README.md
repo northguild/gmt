@@ -1199,6 +1199,8 @@ import {
   formatRelativeTime,
   formatDateTime,
   formatRelativeDateTime,
+  formatDateRange,
+  formatDateTimeRange,
   formatDateToParts,
   formatDateTimeToParts,
   formatZonedDateTime,
@@ -1238,6 +1240,20 @@ formatRelativeUnix(1710685845000, "en-US", { epochUnit: "milliseconds" });
 // roundingMethod ("floor" | "ceil" | "round", default "round") controls how the
 // computed distance rounds to the display unit — every formatRelative* function accepts it.
 formatRelativeUtc(value, "en-US", { roundingMethod: "floor" });
+
+// formatDateRange / formatDateTimeRange — plain counterparts of
+// formatZonedRange (same parameter order and option shape), for a
+// locale-elided range between two timezone-free values.
+formatDateRange("2024-02-03", "2024-02-05", "en-US", { dateStyle: "long" });
+// "February 3 – 5, 2024"
+
+formatDateTimeRange(
+  "2024-02-03T09:00:00",
+  "2024-02-03T17:00:00",
+  "en-US",
+  { dateStyle: "long", timeStyle: "short" },
+);
+// "February 3, 2024, 9:00 AM – 5:00 PM"
 
 // formatDateToParts / formatDateTimeToParts / formatZonedToParts return the
 // locale-ordered Array<{ type, value }> parts behind the strings above,

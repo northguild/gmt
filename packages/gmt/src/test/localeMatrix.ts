@@ -133,3 +133,27 @@ export const localeZonedRangeInputByLocale: Record<
     end: "2024-02-03T16:46:15+03:00[Europe/Istanbul]",
   },
 };
+
+// Plain-date counterpart for formatDateRange (J14). A PlainDate has no
+// timezone, so unlike localeZonedRangeInputByLocale this is not derived
+// per-locale — every locale formats the same two-calendar-day span.
+const PLAIN_DATE_RANGE = { start: "2024-02-03", end: "2024-02-05" };
+export const localeDateRangeInputByLocale: Record<
+  LocaleKey,
+  { start: string; end: string }
+> = Object.fromEntries(
+  Object.values(MustTestLocales).map((locale) => [locale, PLAIN_DATE_RANGE]),
+) as Record<LocaleKey, { start: string; end: string }>;
+
+// Plain-datetime counterpart of the zoned range fixtures above, for
+// formatDateTimeRange (J14). Same calendar date/time values, no offset or
+// IANA zone attached.
+export const localeDateTimeRangeInputByLocale: Record<
+  LocaleKey,
+  { start: string; end: string }
+> = Object.fromEntries(
+  Object.entries(localeZonedRangeInputByLocale).map(([locale, range]) => [
+    locale,
+    { start: range.start.slice(0, 19), end: range.end.slice(0, 19) },
+  ]),
+) as Record<LocaleKey, { start: string; end: string }>;

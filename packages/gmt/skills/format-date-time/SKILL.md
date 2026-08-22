@@ -3,7 +3,9 @@ name: format-date-time
 description: >
   Format plain date/time values for display with locale and Intl.DateTimeFormat
   options. Use formatDate, formatTime, formatDateTime for absolute formatting;
-  use formatDateToParts, formatDateTimeToParts, formatZonedToParts for
+  use formatDateRange, formatDateTimeRange for a locale-elided range between
+  two plain values (the plain counterpart of formatZonedRange); use
+  formatDateToParts, formatDateTimeToParts, formatZonedToParts for
   locale-ordered { type, value } parts (GMT's substitute for a token
   formatter); use formatRelativeDate, formatRelativeTime,
   formatRelativeDateTime for human-friendly relative output ("yesterday",
@@ -16,6 +18,9 @@ description: >
   literals, RFC 3339) — none of these take a locale argument.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/format/index.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/format/formatDateRange.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/format/formatDateTimeRange.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/format/formatZonedRange.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/format/formatDateToParts.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/format/formatDateTimeToParts.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/format/formatZonedToParts.ts'
@@ -92,6 +97,34 @@ const formatted = formatDate("2024-03-15", "en-US", {
   day: "numeric"
 }); // "March 15, 2024"
 ```
+
+### Format a plain date/datetime range
+
+```ts
+import { formatDateRange, formatDateTimeRange } from "@burglekitt/gmt";
+
+formatDateRange("2024-02-03", "2024-02-05", "en-US", { dateStyle: "long" });
+// "February 3 – 5, 2024" — Intl elides the shared month/year automatically
+
+formatDateRange("2024-11-03", "2025-02-10", "en-US", { dateStyle: "long" });
+// "November 3, 2024 – February 10, 2025" — no elision once the year differs
+
+formatDateTimeRange(
+  "2024-02-03T09:00:00",
+  "2024-02-03T17:00:00",
+  "en-US",
+  { dateStyle: "long", timeStyle: "short" },
+);
+// "February 3, 2024, 9:00 AM – 5:00 PM" — same day collapses to one date
+```
+
+These are the plain (timezone-free) counterparts of `formatZonedRange` (zoned
+namespace) — same parameter order (`start, end, locale?, options?`) and
+option shape, wrapping `Intl.DateTimeFormat.prototype.formatRange` directly
+instead of joining two separately-formatted strings by hand. Do not swap
+`start`/`end` before calling — a reversed range still formats (it does not
+throw or auto-correct), so validate ordering yourself if that matters to the
+caller.
 
 ### Get locale-ordered parts instead of a finished string
 

@@ -57,6 +57,7 @@ Date/time comparison:
 Locale-aware formatting:
 
 - `formatDate`, `formatDateTime`, `formatTime`
+- `formatDateRange`, `formatDateTimeRange` — locale-elided range between two plain values (e.g. `"February 3 – 5, 2024"`); plain counterpart of `zoned`'s `formatZonedRange`, same parameter order and option shape
 - `formatDateToParts`, `formatDateTimeToParts` — locale-ordered `{ type, value }` parts, for callers restyling output without hard-coding field order (GMT's substitute for a token formatter — see `formatDate`'s JSDoc)
 - `formatRelativeDate`, `formatRelativeTime`, `formatRelativeDateTime`
 - `formatSql` — ANSI SQL / ODBC datetime literal (`"YYYY-MM-DD HH:MM:SS"`, no time zone); a **fixed grammar**, not a display format, so it takes no `locale` argument
