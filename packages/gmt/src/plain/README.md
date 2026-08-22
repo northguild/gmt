@@ -59,6 +59,7 @@ Locale-aware formatting:
 - `formatDate`, `formatDateTime`, `formatTime`
 - `formatDateToParts`, `formatDateTimeToParts` — locale-ordered `{ type, value }` parts, for callers restyling output without hard-coding field order (GMT's substitute for a token formatter — see `formatDate`'s JSDoc)
 - `formatRelativeDate`, `formatRelativeTime`, `formatRelativeDateTime`
+- `formatSql` — ANSI SQL / ODBC datetime literal (`"YYYY-MM-DD HH:MM:SS"`, no time zone); a **fixed grammar**, not a display format, so it takes no `locale` argument
 
 > **Locale data note.** These formatters delegate locale rendering to the host runtime's `Intl.DateTimeFormat` / `Intl.RelativeTimeFormat`. Output therefore depends on the ICU data shipped with the running Node (or browser):
 >
@@ -128,6 +129,7 @@ Extract components:
 - `parseWeekFromDate`, `parseWeekFromDateTime`
 - `parseYearFromDate`, `parseYearFromDateTime`
 - `parseDateWithPattern`, `parseDateTimeWithPattern`, `parseTimeWithPattern` — decode a fixed producer format (e.g. `"MM/dd/yyyy"`) against a caller-supplied token pattern
+- `parseSql` — decode an ANSI SQL / ODBC datetime literal (`"YYYY-MM-DD HH:MM:SS"`, no time zone)
 
 ### validate
 

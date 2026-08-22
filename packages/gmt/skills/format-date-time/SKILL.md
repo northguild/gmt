@@ -10,7 +10,10 @@ description: >
   "in 2 hours"). Also getLocaleEraNames, getLocaleMonthNames,
   getLocaleWeekdayNames, getLocaleMeridiems for standalone locale
   calendar-name lookups — the GMT equivalent of Luxon's Info.eras,
-  Info.months, Info.weekdays, and Info.meridiems.
+  Info.months, Info.weekdays, and Info.meridiems. Also formatRfc2822,
+  formatHttp, formatSql, formatRfc3339 for fixed, non-locale-adaptive
+  interchange grammars (email Date headers, HTTP headers, SQL datetime
+  literals, RFC 3339) — none of these take a locale argument.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/format/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/format/formatDateToParts.ts'
@@ -21,6 +24,10 @@ sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/locale/getLocaleMonthNames.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/locale/getLocaleWeekdayNames.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/locale/getLocaleMeridiems.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/format/formatRfc2822.ts'
+  - 'burglekitt/gmt:packages/gmt/src/utc/format/formatHttp.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/format/formatSql.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/format/formatRfc3339.ts'
 metadata:
   type: core
   library: '@burglekitt/gmt'
@@ -191,6 +198,38 @@ Options:
 - `getLocaleMeridiems(locale)` — `[AM-label, PM-label]`; labels are locale-varying (e.g. `en-GB` → `["am","pm"]`, `sv-SE` → `["fm","em"]`, `zh-CN` → `["上午","下午"]`).
 
 All four return `[]` for an invalid BCP 47 locale tag. If a locale has no distinct BCE/CE era names, `getLocaleEraNames` returns both elements as the same string — the sentinel is reserved for invalid input only.
+
+### Named machine formats (email, HTTP, SQL, RFC 3339)
+
+These are **fixed, non-locale-adaptive grammars** — RFC 5322/RFC 7231 mandate
+English weekday/month abbreviations regardless of caller locale, by
+specification. This does not contradict the token-formatter exclusion above
+(Decision 1): there is no locale-appropriate alternative field order to lose,
+because the grammar is a constant, not a display choice. None of these four
+take a `locale` argument.
+
+```ts
+import { formatRfc2822, formatHttp, formatSql, formatRfc3339 } from "@burglekitt/gmt";
+
+// Email `Date:` headers (RFC 5322 / RFC 2822) — zoned namespace.
+formatRfc2822("2024-03-15T14:30:00-04:00[America/New_York]");
+// "Fri, 15 Mar 2024 14:30:00 -0400"
+
+// HTTP headers (RFC 7231 IMF-fixdate) — utc namespace, always GMT.
+formatHttp("2024-03-15T14:30:00Z");
+// "Fri, 15 Mar 2024 14:30:00 GMT"
+
+// ANSI SQL / ODBC datetime literal — plain namespace, no time zone.
+formatSql("2024-03-15T14:30:00");
+// "2024-03-15 14:30:00"
+
+// Strict RFC 3339 — zoned namespace; strips the bracketed IANA zone
+// GMT's own zoned strings carry, which RFC 3339 does not permit.
+formatRfc3339("2024-03-15T14:30:00-04:00[America/New_York]");
+// "2024-03-15T14:30:00-04:00"
+```
+
+Each has a `parse*` counterpart in the `parse-date-time` skill.
 
 ## Locale Matrix
 
@@ -380,6 +419,35 @@ const display = parts.map((p) => p.value).join("");
 ```
 
 Source: context/roadmap/issues/J12 — "iterate the array as returned; reassembling parts in a fixed order reintroduces exactly the bug formatToParts exists to avoid"
+
+### MEDIUM Assuming formatRfc2822/formatHttp/formatSql/formatRfc3339 are locale-hostile the way a token formatter is
+
+Wrong:
+
+```ts
+// "These hard-code English month names — isn't that the same
+// locale bug Decision 1 excluded a token formatter for?"
+```
+
+Correct: no — these are **fixed grammars**, not display formats. RFC 5322
+mandates `"Mon"`/`"Jan"` regardless of the sender's or recipient's locale;
+there is no French or Japanese variant of an email `Date:` header to lose by
+hard-coding English. Decision 1 excluded a token *formatter* because a
+pattern like `"MM/dd/yyyy"` bakes in a field order that *should* vary by
+locale for display. These four functions produce a byte-identical
+machine-readable string for every caller, by specification — that is
+correct, not a gap.
+
+```ts
+import { formatRfc2822 } from "@burglekitt/gmt";
+
+// No locale argument, and none needed — RFC 5322 output is the same
+// string regardless of who's reading it.
+formatRfc2822("2024-03-15T14:30:00-04:00[America/New_York]");
+// "Fri, 15 Mar 2024 14:30:00 -0400"
+```
+
+Source: context/roadmap/issues/J.md — Decision 1 (token formatter excluded) vs. J13's "Why this survives Decision 1" (fixed grammars are not display formats)
 
 ## References
 

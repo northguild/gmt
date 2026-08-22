@@ -54,7 +54,7 @@ Issue number tracker (fill in as issues are created). `Order` is the sequence to
 | 42    | J10   | Issue #105   | Done        | not yet                                      |
 | 43    | J11   | Issue #102   | Done        | not yet                                      |
 | 44    | J12   | Issue #106   | Done        | not yet                                      |
-| 45    | J13   | Issue #109   | Not started | not yet                                      |
+| 45    | J13   | Issue #109   | Done        | not yet                                      |
 | 46    | J14   | Issue #110   | Not started | not yet                                      |
 | 47    | J15   | Issue #111   | Not started | minor, Story Group J complete                |
 | 48    | E1    | Issue #44    | Not started | unscheduled, no publish plan until picked up |

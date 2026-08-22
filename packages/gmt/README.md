@@ -1261,6 +1261,51 @@ formatZonedToParts("2024-03-15T14:30:00-04:00[America/New_York]", "en-US", {
 // includes { type: "timeZoneName", value: "GMT-4" }
 ```
 
+### Named machine formats
+
+Fixed, non-locale-adaptive grammars for interchange with email, HTTP, SQL, and
+RFC 3339 consumers — none of these take a `locale` argument, since the
+grammar itself is constant (English weekday/month names where the format
+mandates them).
+
+```typescript
+import {
+  formatRfc2822,
+  parseRfc2822,
+  formatHttp,
+  parseHttp,
+  formatSql,
+  parseSql,
+  formatRfc3339,
+  parseRfc3339,
+} from "@burglekitt/gmt";
+
+// Email `Date:` headers (RFC 5322 / RFC 2822).
+formatRfc2822("2024-03-15T14:30:00-04:00[America/New_York]");
+// "Fri, 15 Mar 2024 14:30:00 -0400"
+parseRfc2822("Fri, 15 Mar 2024 14:30:00 -0400");
+// "2024-03-15T14:30:00-04:00[-04:00]"
+
+// HTTP headers (RFC 7231 IMF-fixdate) — Last-Modified, Date, Expires.
+formatHttp("2024-03-15T14:30:00Z");
+// "Fri, 15 Mar 2024 14:30:00 GMT"
+parseHttp("Fri, 15 Mar 2024 14:30:00 GMT");
+// "2024-03-15T14:30:00Z"
+
+// ANSI SQL / ODBC datetime literals (DATETIME/TIMESTAMP columns, no tz).
+formatSql("2024-03-15T14:30:00");
+// "2024-03-15 14:30:00"
+parseSql("2024-03-15 14:30:00");
+// "2024-03-15T14:30:00"
+
+// Strict RFC 3339 — strips the bracketed IANA zone GMT's own zoned strings
+// carry, which RFC 3339 does not permit.
+formatRfc3339("2024-03-15T14:30:00-04:00[America/New_York]");
+// "2024-03-15T14:30:00-04:00"
+parseRfc3339("2024-03-15T14:30:00-04:00");
+// "2024-03-15T14:30:00-04:00[-04:00]"
+```
+
 ### Unix and UTC helpers
 
 ```typescript

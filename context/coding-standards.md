@@ -63,6 +63,16 @@ export function addDays(dateStr: string, days: number): string {
 
 See `context/roadmap/issues/J.md` Decision 4 for the full rationale. This prohibition stands for every other function in the library.
 
+### Scoped exception: fixed non-ISO grammars in `parseRfc2822`/`parseHttp` (J13)
+
+The same three rules extend to `parseRfc2822` (`packages/gmt/src/zoned/parse/`) and `parseHttp` (`packages/gmt/src/utc/parse/`), for the same underlying reason as Decision 4: RFC 5322 and RFC 7231 date-times (`"Fri, 15 Mar 2024 14:30:00 -0400"`, `"Fri, 15 Mar 2024 14:30:00 GMT"`) are not ISO 8601 and Temporal's `.from()` cannot parse them at all — there is no `fromRFC2822`/`fromHTTPDate` equivalent to defer to, at any layer. Unlike `parse*WithPattern`, the grammar here is fixed (a hardcoded regex per format, not built from a caller-supplied pattern), which makes this an even narrower case than Decision 4's, not a broader one:
+
+1. The regex encodes the fixed RFC grammar exactly (`regex/rfc-2822.ts`, `regex/http-date.ts`) — never hand-rolled per-call string slicing.
+2. Extracted fields are **always** handed to `Temporal.PlainDateTime.from(fields, { overflow: "reject" })` for final construction and validation.
+3. The try-catch and sentinel-return rules above are unchanged.
+
+`parseSql` and `parseRfc3339` are **not** part of this exception — both validate shape with a regex and then hand the whole string to `Temporal.*.from(string)` directly (which strictly validates the calendar date on its own), never extracting or constructing a field property bag by hand. This prohibition stands for every other function in the library.
+
 ## Loop Style
 
 Avoid `while` loops in new code. Prefer `for` loops or array methods (`map`, `filter`, `reduce`, etc.). `while` loops are more error-prone and harder to reason about than bounded `for` loops.

@@ -2,6 +2,7 @@ export * from "./parseDateFromUtc";
 export * from "./parseDayFromUtc";
 export * from "./parseDayOfWeekFromUtc";
 export * from "./parseHourFromUtc";
+export * from "./parseHttp";
 export * from "./parseMicrosecondFromUtc";
 export * from "./parseMillisecondFromUtc";
 export * from "./parseMinuteFromUtc";

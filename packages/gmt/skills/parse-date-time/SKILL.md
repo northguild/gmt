@@ -3,8 +3,16 @@ name: parse-date-time
 description: >
   Parse individual components (year, month, day, hour, etc.) from date/time
   strings. Use parse* functions for extraction. Returns null on invalid input.
+  Also parseRfc2822, parseHttp, parseSql, parseRfc3339 for decoding fixed
+  interchange grammars (email Date headers, HTTP headers, SQL datetime
+  literals, RFC 3339) into GMT's own ISO strings — these return "" on
+  invalid input, not null.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/parse/index.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/parse/parseRfc2822.ts'
+  - 'burglekitt/gmt:packages/gmt/src/utc/parse/parseHttp.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/parse/parseSql.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/parse/parseRfc3339.ts'
 metadata:
   type: core
   library: '@burglekitt/gmt'
@@ -164,6 +172,39 @@ value is real).
 Full docs: `packages/gmt/src/plain/parse/parseDateWithPattern.ts`,
 `parseDateTimeWithPattern.ts`, `parseTimeWithPattern.ts`.
 
+### Parse a named machine format (email, HTTP, SQL, RFC 3339)
+
+Unlike every other function on this page, these four return `""` on invalid
+input (they produce a whole datetime string, not a numeric/component value),
+matching the sentinel convention of their `format*` counterparts in the
+`format-date-time` skill rather than `parse*From*`'s `null`.
+
+```ts
+import { parseRfc2822, parseHttp, parseSql, parseRfc3339 } from "@burglekitt/gmt";
+
+// Email `Date:` headers (RFC 5322 / RFC 2822) → zoned ISO string.
+parseRfc2822("Fri, 15 Mar 2024 14:30:00 -0400");
+// "2024-03-15T14:30:00-04:00[-04:00]"
+
+// HTTP headers (RFC 7231 IMF-fixdate only — not RFC 850/asctime) → utc ISO string.
+parseHttp("Fri, 15 Mar 2024 14:30:00 GMT");
+// "2024-03-15T14:30:00Z"
+
+// ANSI SQL / ODBC datetime literal (no time zone) → plain ISO string.
+parseSql("2024-03-15 14:30:00");
+// "2024-03-15T14:30:00"
+
+// Strict RFC 3339 → zoned ISO string (offset doubles as the zone identifier,
+// since RFC 3339 carries no IANA zone name).
+parseRfc3339("2024-03-15T14:30:00-04:00");
+// "2024-03-15T14:30:00-04:00[-04:00]"
+```
+
+`parseRfc2822` accepts a 1- or 2-digit day and RFC 5322's obsolete named
+zones (`GMT`, `UT`, and the eight North American zones); `parseHttp` requires
+strict 2-digit fields and a literal `GMT` only. Each has a `format*`
+counterpart in the `format-date-time` skill.
+
 ## Common Mistakes
 
 ### HIGH Not handling null on invalid input
@@ -272,6 +313,35 @@ const key = `${getWeekYear("2024-12-30")}-W${parseWeekFromDate("2024-12-30")}`; 
 ```
 
 Source: packages/gmt/src/plain/calculate/getWeekYear.ts, getLocaleWeekYear.ts
+
+### MEDIUM Checking for `null` on parseRfc2822/parseHttp/parseSql/parseRfc3339
+
+Unlike every `parse*From*` component extractor on this page, these four
+return a **string** (a whole datetime), so their sentinel is `""`, not
+`null` — checking for `null` silently lets an empty string through.
+
+Wrong:
+
+```ts
+const value = parseHttp(headerValue);
+if (value === null) {
+  throw new Error("bad Last-Modified header");
+}
+// "" passes this check and flows downstream as if valid.
+```
+
+Correct:
+
+```ts
+import { parseHttp } from "@burglekitt/gmt";
+
+const value = parseHttp(headerValue);
+if (value === "") {
+  throw new Error("bad Last-Modified header");
+}
+```
+
+Source: packages/gmt/src/utc/parse/parseHttp.ts — Returns "" on invalid input, matching GMT's string-return sentinel convention
 
 ## References
 

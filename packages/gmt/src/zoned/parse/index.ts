@@ -10,6 +10,8 @@ export * from "./parseMillisecondFromZoned";
 export * from "./parseMinuteFromZoned";
 export * from "./parseMonthFromZoned";
 export * from "./parseNanosecondFromZoned";
+export * from "./parseRfc2822";
+export * from "./parseRfc3339";
 export * from "./parseSecondFromZoned";
 export * from "./parseTimeFromZoned";
 export * from "./parseTimeZoneFromZoned";

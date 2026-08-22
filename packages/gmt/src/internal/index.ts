@@ -1,6 +1,14 @@
 export { advanceBusinessDays } from "./advanceBusinessDays";
 export { advanceToWeekday } from "./advanceToWeekday";
 export { durationUntilString } from "./durationUntilString";
+export {
+  ENGLISH_MONTH_NAMES,
+  ENGLISH_WEEKDAY_NAMES,
+} from "./englishCalendarNames";
+export type {
+  EnglishMonthName,
+  EnglishWeekdayName,
+} from "./englishCalendarNames";
 export { getLocaleFirstDayOfWeek } from "./getLocaleFirstDayOfWeek";
 export { getLocaleMinimalDaysInFirstWeek } from "./getLocaleMinimalDaysInFirstWeek";
 export { getLocaleWeekYearBounds } from "./getLocaleWeekYearBounds";

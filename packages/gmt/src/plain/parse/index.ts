@@ -18,6 +18,7 @@ export * from "./parseNanosecondFromDateTime";
 export * from "./parseNanosecondFromTime";
 export * from "./parseSecondFromDateTime";
 export * from "./parseSecondFromTime";
+export * from "./parseSql";
 export * from "./parseTimeWithPattern";
 export * from "./parseUnitFromDate";
 export * from "./parseUnitFromDateTime";

@@ -67,6 +67,7 @@ Locale-aware UTC formatting:
 
 - `formatUtc`
 - `formatRelativeUtc`
+- `formatHttp` — RFC 7231 IMF-fixdate (`"Fri, 15 Mar 2024 14:30:00 GMT"`) for HTTP headers like `Last-Modified`/`Date`/`Expires`; a **fixed grammar**, not a display format, so it takes no `locale` argument
 
 > **Locale data note.** These formatters delegate locale rendering to the host runtime's `Intl.DateTimeFormat` / `Intl.RelativeTimeFormat`. Output therefore depends on the ICU data shipped with the running Node (or browser):
 >
@@ -89,6 +90,7 @@ Parse UTC components:
 - `parseTimeFromUtc`
 - `parseUnitFromUtc`
 - `parseWeekFromUtc`, `parseYearFromUtc`
+- `parseHttp` — decode an RFC 7231 IMF-fixdate string (the sole HTTP-date form GMT accepts; obsolete RFC 850/asctime forms are a documented limitation)
 
 ### validate
 

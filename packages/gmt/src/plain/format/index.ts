@@ -5,4 +5,5 @@ export * from "./formatDateToParts";
 export * from "./formatRelativeDate";
 export * from "./formatRelativeDateTime";
 export * from "./formatRelativeTime";
+export * from "./formatSql";
 export * from "./formatTime";

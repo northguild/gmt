@@ -52,7 +52,11 @@ Locale-aware timezone formatting:
 - `formatZonedToParts` — locale-ordered `{ type, value }` parts, including `timeZoneName` parts; GMT's substitute for a token formatter
 - `formatRelativeZoned`
 - `formatTimeZoneName`
+- `formatRfc2822` — RFC 5322 (RFC 2822) email `Date:` header format
+- `formatRfc3339` — strict RFC 3339 (strips the bracketed IANA zone annotation GMT's own zoned strings carry, which is not valid RFC 3339)
 
+> `formatRfc2822`/`formatRfc3339` are **fixed grammars**, not display formats — RFC 5322 mandates English weekday/month abbreviations regardless of locale, so neither takes a `locale` argument. See each function's JSDoc.
+>
 > **Locale data note.** These formatters delegate locale rendering to the host runtime's `Intl.DateTimeFormat` / `Intl.RelativeTimeFormat`. Output therefore depends on the ICU data shipped with the running Node (or browser):
 >
 > - **Full ICU** runtimes (official Node binaries from nodejs.org, all modern browsers) return fully localized strings — e.g. `formatZonedDateTime(value, "ko-KR", { dateStyle: "full", timeStyle: "full" })` includes `"오후"` and the long Korean timezone name `"대한민국 표준시"`.
@@ -112,6 +116,8 @@ Extract timezone components:
 - `parseUnitFromZoned`
 - `parseWeekFromZoned`
 - `parseYearFromZoned`
+- `parseRfc2822` — decode an RFC 5322 (RFC 2822) email `Date:` header
+- `parseRfc3339` — decode a strict RFC 3339 datetime string
 
 ### validate
 

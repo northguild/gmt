@@ -61,20 +61,91 @@ If you see a Date API in code, replace it with a GMT helper.
 
 `@burglekitt/gmt` currently exports top-level `Temporal`, `duration`, `plain`, `zoned`, `unix`, `utc`, and `regex` namespaces, with direct subpath imports available under `@burglekitt/gmt/*`.
 
-| Metric  | Count  |
-| ------- | ------ |
-| Tests   | 15,310 |
-| Exports | 5      |
+### How GMT is tested, vs. the libraries it targets
+
+GMT's roadmap (see [context/roadmap](./context/roadmap)) is explicitly scoped against react-aria's **`@internationalized/date`**, **Luxon**, **date-fns**, and **Moment.js** — the same four libraries compared below. All numbers were verified **2026-08-22** against the exact package versions/commits below — nothing is estimated. Re-verify before citing these numbers elsewhere; library surfaces and CI configs move.
+
+| Library                   | Version tested                          |
+| ------------------------- | --------------------------------------- |
+| GMT (`@burglekitt/gmt`)   | 1.12.0                                  |
+| `@internationalized/date` | 3.12.3 (`adobe/react-spectrum@5d191ab`) |
+| Luxon                     | 3.7.2 (`moment/luxon@f427515`)          |
+| date-fns                  | 4.4.0 (`date-fns/date-fns@a0a3922`)     |
+| Moment.js                 | 2.30.1 (`moment/moment@cf524af`)        |
+
+| Metric                | GMT                                      | `@internationalized/date`      | Luxon                                | date-fns                                  | Moment.js                        |
+| --------------------- | ---------------------------------------- | ------------------------------ | ------------------------------------ | ----------------------------------------- | -------------------------------- |
+| Test files            | 514                                      | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
+| Individual test cases | **15,519**                               | 347<sup>†</sup>                | 1,222                                | 3,213                                     | 3,901                            |
+| CI Node.js matrix     | 22, 24                                   | n/a — tests<br>React 16–canary | 10, 12, 14                           | not explicit<br>(`node = "latest"`)       | LTS, LTS-1,<br>latest            |
+| CI timezone matrix    | **10 zones × 2**<br>**Node, full suite** | none found                     | none found                           | dedicated workflow,<br>zone scope unclear | 6 zones,<br>partial suite only   |
+| Locale test matrix    | **17 locales**,<br>every locale fn       | none found                     | none found                           | none found                                | none found                       |
+| Real-browser CI       | not yet                                  | yes (Playwright)               | not found                            | yes (Playwright)                          | not found                        |
+| Maintenance           | active                                   | active                         | active                               | active                                    | **maintenance<br>mode**          |
+
+<sub>Methodology: "Test files" and the CI/maintenance rows come from each project's public CI configuration and repository file listing. "Individual test cases" for GMT, Luxon, date-fns, and Moment.js were obtained by actually cloning the repo at the commit above, installing dependencies, running the project's own test command (`vitest run` / `jest` / `node scripts/test.js`), and reading that runner's own final summary — not grepped from source. Luxon (39 failures) and date-fns (46 failures) had environment-dependent local failures that don't affect the total count: Luxon's suite assumes its CI container's local time zone is `America/New_York`; date-fns's experimental native-`Temporal` code path needs a global `Temporal` Node doesn't yet provide natively. Moment.js passed cleanly (0 failed) on Node 24. <sup>†</sup>`@internationalized/date`'s 347 is an exact count of `it()`/`test()` blocks in its 6 test files, not a run count — its test runner isn't invocable outside the full react-spectrum monorepo. Sources: [GMT](./.github/workflows/ci.yml) · [`@internationalized/date`](https://github.com/adobe/react-spectrum/blob/main/.circleci/config.yml) · [Luxon](https://github.com/moment/luxon/blob/master/.github/workflows/test.yml) · [date-fns](https://github.com/date-fns/date-fns/tree/main/.github/workflows) · [Moment.js](https://github.com/moment/moment/tree/develop/.github/workflows).</sub>
+
+### Functionality parity progress
+
+GMT's roadmap tracks parity against the same four libraries story-by-story, with each gap sourced against the specific competitor function it closes — see [context/roadmap](./context/roadmap) for the full, source-verified audit trail. This is a live snapshot, not a finished-parity claim: ✅ shipped, 🟡 in progress, ⏳ backlog and not yet scheduled.
+
+| Capability                                                                         | Status                       | Also has it                                                              |
+| ---------------------------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------ |
+| Duration type<br>(ISO 8601 parse/format/arithmetic)                                | ✅ Done                      | Luxon `Duration`                                                         |
+| Interval/range math<br>(contains, overlap, union,<br>intersection, split, set ops) | ✅ Done                      | Luxon `Interval`,<br>date-fns `areIntervalsOverlapping`                  |
+| DST disambiguation control<br>on construction _and_ arithmetic                     | ✅ Done — **differentiator** | None of the others expose<br>this on arithmetic                          |
+| Locale-aware calendar helpers<br>(weekend, week start/end, day-of-week)            | ✅ Done                      | `@internationalized/date`                                                |
+| Business-day arithmetic,<br>clamp/closest, time rounding                           | ✅ Done                      | `temporal-kit`                                                           |
+| Interval rounding-out<br>(boundary count, from-duration)                           | ✅ Done                      | Luxon                                                                    |
+| Locale calendar metadata<br>(names, `hasDST`)                                      | ✅ Done                      | Luxon `Info`                                                             |
+| Overlap-day count, relative<br>rounding, DST transitions, hours-in-day             | ✅ Done                      | date-fns, `@internationalized/date`                                      |
+| Field setters, token-pattern<br>parsing, named machine formats                     | 🟡 14 of 16 stories done     | Luxon `.set()`,<br>`toRFC2822`/`toHTTP`/`toSQL`,<br>Moment `.calendar()` |
+| Non-Gregorian calendar systems<br>(Hebrew, Islamic, solar, Ethiopic)               | ⏳ Backlog                   | `@internationalized/date`'s<br>`toCalendar`                              |
+
+<sub>Status reflects [context/roadmap/tracker.md](./context/roadmap/tracker.md) as of this writing.</sub>
+
+### Where GMT stands alone
+
+Specific, sourced claims — not a repeat of the metrics above.
+
+| Claim                                                                                                                                         | The others                                                                                                                            |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Only GMT runs its **entire** suite in CI<br>under a real `TZ` env var across 10<br>real-world zones × 2 Node versions<br>(20 full-suite runs) | Luxon/`@internationalized/date`: no<br>CI timezone matrix. date-fns: zone<br>scope unclear. Moment.js: 6 zones,<br>partial suite only |
+| Only GMT enforces a mandatory<br>17-locale test matrix on every<br>locale-aware function                                                      | No CI-level or systematic<br>locale-matrix testing found<br>in any of the four                                                        |
+| Only GMT exposes explicit DST<br>disambiguation control on both<br>construction _and_ arithmetic                                              | Luxon's docs call this explicitly<br>undefined; `@internationalized/date`<br>only covers construction, not arithmetic                 |
+| Only GMT is Temporal-native with<br>zero `Date` usage, enforced by<br>3 dedicated lint packages                                               | Luxon, date-fns, and Moment.js all<br>still wrap or depend on `Date` internally                                                       |
+| GMT's test suite has more test<br>cases than Luxon + date-fns +<br>Moment.js **combined**                                                     | 15,519 vs. 1,222 + 3,213 + 3,901<br>= 8,336                                                                                           |
 
 ## Optional: Add Linting for Date API Bans
 
-Want to ban `Date` APIs in your own project? GMT provides linting packages:
+Want to ban `Date` APIs in your own project? GMT provides three linting packages — pick the one matching your existing toolchain.
 
-| Package                                           | npm                                            | yarn                                        | pnpm                                        | bun                                        |
-| ------------------------------------------------- | ---------------------------------------------- | ------------------------------------------- | ------------------------------------------- | ------------------------------------------ |
-| [`@burglekitt/gmt-biome`](./packages/gmt-biome)   | `npm install -D @burglekitt/gmt-biome`         | `yarn add -D @burglekitt/gmt-biome`         | `pnpm add -D @burglekitt/gmt-biome`         | `bun add -D @burglekitt/gmt-biome`         |
-| [`@burglekitt/gmt-eslint`](./packages/gmt-eslint) | `npm install -D @burglekitt/gmt-eslint`        | `yarn add -D @burglekitt/gmt-eslint`        | `pnpm add -D @burglekitt/gmt-eslint`        | `bun add -D @burglekitt/gmt-eslint`        |
-| [`@burglekitt/gmt-oxlint`](./packages/gmt-oxlint) | `npm install -D @burglekitt/gmt-oxlint oxlint` | `yarn add -D @burglekitt/gmt-oxlint oxlint` | `pnpm add -D @burglekitt/gmt-oxlint oxlint` | `bun add -D @burglekitt/gmt-oxlint oxlint` |
+**`@burglekitt/gmt-biome`**
+
+| Package manager | Command                                |
+| --------------- | -------------------------------------- |
+| npm             | `npm install -D @burglekitt/gmt-biome` |
+| yarn            | `yarn add -D @burglekitt/gmt-biome`    |
+| pnpm            | `pnpm add -D @burglekitt/gmt-biome`    |
+| bun             | `bun add -D @burglekitt/gmt-biome`     |
+
+**`@burglekitt/gmt-eslint`**
+
+| Package manager | Command                                 |
+| --------------- | --------------------------------------- |
+| npm             | `npm install -D @burglekitt/gmt-eslint` |
+| yarn            | `yarn add -D @burglekitt/gmt-eslint`    |
+| pnpm            | `pnpm add -D @burglekitt/gmt-eslint`    |
+| bun             | `bun add -D @burglekitt/gmt-eslint`     |
+
+**`@burglekitt/gmt-oxlint`** (requires `oxlint`)
+
+| Package manager | Command                                        |
+| --------------- | ---------------------------------------------- |
+| npm             | `npm install -D @burglekitt/gmt-oxlint oxlint` |
+| yarn            | `yarn add -D @burglekitt/gmt-oxlint oxlint`    |
+| pnpm            | `pnpm add -D @burglekitt/gmt-oxlint oxlint`    |
+| bun             | `bun add -D @burglekitt/gmt-oxlint oxlint`     |
 
 ## Contributing
 
