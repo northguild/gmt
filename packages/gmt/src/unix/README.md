@@ -47,6 +47,11 @@ Validate and check Unix intervals:
 - `intervalUnionUnix`
 - `splitIntervalByUnitUnix`
 - `intervalCountUnix`
+- `intervalLengthUnix`
+- `intervalDivideEquallyUnix`
+- `intervalSplitAtUnix`
+- `mergeIntervalsUnix`
+- `intervalXorAllUnix`
 - `intervalFromDurationUnix`
 - `intervalOverlappingDaysUnix`
 

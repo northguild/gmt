@@ -78,6 +78,11 @@ Validate and check zoned intervals:
 - `intervalUnionZoned`
 - `splitIntervalByUnitZoned`
 - `intervalCountZoned`
+- `intervalLengthZoned`
+- `intervalDivideEquallyZoned`
+- `intervalSplitAtZoned`
+- `mergeIntervalsZoned`
+- `intervalXorAllZoned`
 - `intervalFromDurationZoned`
 - `intervalOverlappingDaysZoned`
 

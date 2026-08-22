@@ -10,9 +10,13 @@ description: >
   construct an interval from a single point plus an ISO 8601 duration anchored
   at "start" or "end", splitIntervalByUnit* to tile an interval by duration
   unit, intervalCount* for how many calendar-unit boundaries an interval
-  crosses, and intervalOverlappingDays* for how many distinct calendar dates two
-  intervals share. Covers plain, zoned, unix, and utc namespaces. Returns
-  false/null/[] on invalid input — never throws.
+  crosses, intervalLength* for the exact (fractional) duration of an interval
+  in a unit, intervalDivideEqually* to split an interval into n equal parts,
+  intervalSplitAt* to split an interval at arbitrary points, mergeIntervals*
+  and intervalXorAll* as the list-form generalizations of intervalUnion* and
+  intervalXor*, and intervalOverlappingDays* for how many distinct calendar
+  dates two intervals share. Covers plain, zoned, unix, and utc namespaces.
+  Returns false/null/[] on invalid input — never throws.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/interval/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/interval/index.ts'
@@ -45,6 +49,11 @@ import {
   intervalFromDurationDate,
   splitIntervalByUnitDate,
   intervalCountDate,
+  intervalLengthDate,
+  intervalDivideEquallyDate,
+  intervalSplitAtDate,
+  mergeIntervalsDate,
+  intervalXorAllDate,
   intervalOverlappingDaysDate,
 } from "@burglekitt/gmt";
 ```
@@ -67,6 +76,11 @@ Every function has `Time`, `DateTime`, `Zoned`, `Unix`, and `Utc` siblings. Repl
 | `intervalFromDuration*` | `(value, duration, anchor, options?)` | `{ start, end } \| null` | `null` |
 | `splitIntervalByUnit*` | `(start, end, unit, amount)` | `Array<{ start, end }>` | `[]` |
 | `intervalCount*` | `(start, end, unit)` | `number \| null` | `null` |
+| `intervalLength*` | `(start, end, unit)` | `number \| null` (fractional) | `null` |
+| `intervalDivideEqually*` | `(start, end, n)` | `Array<{ start, end }>` | `[]` |
+| `intervalSplitAt*` | `(start, end, points)` | `Array<{ start, end }>` | `[]` |
+| `mergeIntervals*` | `(intervals: Array<{ start, end }>)` | `Array<{ start, end }>` | `[]` |
+| `intervalXorAll*` | `(intervals: Array<{ start, end }>)` | `Array<{ start, end }>` | `[]` |
 | `intervalOverlappingDays*` | `(aStart, aEnd, bStart, bEnd)` — `Unix` variant takes a 5th `options?: { epochUnit?, timeZone? }` | `number \| null` | `null` (`0` when disjoint) |
 
 `intervalOverlappingDays*` has no `Time` sibling — `PlainTime` has no calendar, so a day count is undefined for it.
@@ -196,6 +210,60 @@ intervalCountDate("2024-01-15", "2024-03-10", "month"); // 3
 
 This is calendar-boundary counting, not duration. Use `diff*` when you want exact elapsed time.
 
+### Exact interval length vs boundary count
+
+`intervalLength*` answers "how long is this interval" as a real, possibly fractional number — `intervalCount*` answers "how many `unit` boundaries does it touch". They read as synonyms but are not:
+
+```ts
+intervalCountDateTime("2024-01-01T23:59:00", "2024-01-02T00:01:00", "day");
+// 2 — touches 2 day boundaries
+
+intervalLengthDateTime("2024-01-01T23:59:00", "2024-01-02T00:01:00", "day");
+// 0.001388888888888889 — the interval is only ~2 minutes long
+```
+
+`intervalLength*` uses `Duration.prototype.total`, so calendar units (month, year) resolve against the interval's own `start` rather than truncating: `intervalLengthDate("2024-01-01", "2024-01-16", "month")` is `15/31`, not `0`. `intervalLengthZoned`/`intervalLengthUnix`/`intervalLengthUtc` are DST-aware the same way `intervalCountZoned` is — a spring-forward day is `23` hours via `intervalLengthZoned(..., "hour")` but exactly `1` via `intervalLengthZoned(..., "day")`.
+
+### Split an interval into n equal parts
+
+```ts
+intervalDivideEquallyDate("2024-01-01", "2024-01-05", 4);
+// [{ start: "2024-01-01", end: "2024-01-02" }, ..., { start: "2024-01-04", end: "2024-01-05" }]
+```
+
+`n` must be a positive integer (`n <= 0` or non-integer returns `[]`). `n === 1` returns the original interval as a single-element array. A zero-length interval returns `n` identical zero-length sub-intervals. `PlainDate` has no fractional-day representation, so `intervalDivideEquallyDate` rounds internal boundaries to the nearest whole day when the total doesn't divide evenly by `n`; every other variant computes boundaries from total elapsed nanoseconds and is exact (`intervalDivideEquallyZoned` splits by real elapsed time, so a DST-crossing interval's midpoint lands on the real midpoint, not the local-clock midpoint).
+
+### Split an interval at arbitrary points
+
+```ts
+intervalSplitAtDate("2024-01-01", "2024-01-10", ["2024-01-07", "2024-01-03"]);
+// [{ start: "2024-01-01", end: "2024-01-03" }, { start: "2024-01-03", end: "2024-01-07" }, { start: "2024-01-07", end: "2024-01-10" }]
+```
+
+Points need not be sorted — `intervalSplitAt*` sorts them internally. Points outside `[start, end]` or exactly on a boundary are dropped (they cannot introduce a new sub-interval). An empty `points` array, or one containing only out-of-range/duplicate points, returns `[{ start, end }]` — the whole interval, unsplit.
+
+### Merge and XOR a list of intervals
+
+`mergeIntervals*` and `intervalXorAll*` are the list-form generalizations of `intervalUnion*` and `intervalXor*`, which are pairwise only:
+
+```ts
+mergeIntervalsDate([
+  { start: "2024-01-01", end: "2024-01-10" },
+  { start: "2024-01-05", end: "2024-01-15" },
+  { start: "2024-02-01", end: "2024-02-05" },
+]);
+// [{ start: "2024-01-01", end: "2024-01-15" }, { start: "2024-02-01", end: "2024-02-05" }]
+
+intervalXorAllDate([
+  { start: "2024-01-01", end: "2024-01-10" },
+  { start: "2024-01-05", end: "2024-01-15" },
+  { start: "2024-01-08", end: "2024-01-20" },
+]);
+// [{ start: "2024-01-01", end: "2024-01-04" }, { start: "2024-01-08", end: "2024-01-10" }, { start: "2024-01-16", end: "2024-01-20" }]
+```
+
+Both take a single array of `{ start, end }` records (order doesn't matter) instead of two flat 4-arg intervals. `mergeIntervals*` collapses overlapping/adjacent intervals into the minimum non-overlapping set. `intervalXorAll*` returns the set covered by an odd number of the input intervals — two identical intervals cancel out to `[]`, and for exactly two intervals the result is identical to the pairwise `intervalXor*`.
+
 ### Count shared days between two intervals
 
 `intervalOverlappingDays*` is the numeric counterpart to `intervalIntersection*` — how many distinct calendar dates the two intervals' closed intersection touches, inclusive of both endpoints:
@@ -220,8 +288,8 @@ intervalOverlappingDaysUnix(0, 172800000, 86400000, 259200000, { timeZone: "UTC"
 
 - `boolean` families (`isValid*Interval`, `intervalContains*`, `intervalsOverlap*`, `intervalAbuts*`, `intervalEngulfs*`): `false` on invalid input.
 - Object families (`intervalIntersection*`, `intervalUnion*`, `intervalFromDuration*`): `null` on no-result or invalid input.
-- Array families (`intervalDifference*`, `intervalXor*`, `splitIntervalByUnit*`): `[]` on no-result or invalid input.
-- Number families (`intervalCount*`, `intervalOverlappingDays*`): `null` on invalid input; `intervalOverlappingDays*` additionally returns `0` for a disjoint pair (not invalid — a well-defined "zero shared days").
+- Array families (`intervalDifference*`, `intervalXor*`, `splitIntervalByUnit*`, `intervalDivideEqually*`, `intervalSplitAt*`, `mergeIntervals*`, `intervalXorAll*`): `[]` on no-result or invalid input.
+- Number families (`intervalCount*`, `intervalLength*`, `intervalOverlappingDays*`): `null` on invalid input; `intervalOverlappingDays*` additionally returns `0` for a disjoint pair (not invalid — a well-defined "zero shared days").
 
 Never throws. Wrap in try-catch only if you need to distinguish "invalid input" from other errors.
 
@@ -290,3 +358,18 @@ To reproduce date-fns's number exactly, compose `intervalIntersection*` with `in
 const span = intervalIntersectionDate(aStart, aEnd, bStart, bEnd);
 span ? intervalCountDate(span.start, span.end, "day") : 0; // date-fns semantics
 ```
+
+### HIGH: Confusing `intervalLength` with `intervalCount`
+
+Same trap as above, one level deeper: `intervalLength*` and `intervalCount*` read as synonyms but answer different questions. The same interval returns different numbers from each:
+
+```ts
+intervalCountDateTime("2024-01-01T23:59:00", "2024-01-02T00:01:00", "day");  // 2  — boundaries crossed
+intervalLengthDateTime("2024-01-01T23:59:00", "2024-01-02T00:01:00", "day"); // 0.0014 — exact elapsed duration
+```
+
+Use `intervalCount*` for "how many `unit`s does this span touch" (calendar-boundary counting) and `intervalLength*` for "how long is this, expressed in `unit`" (exact, possibly fractional duration).
+
+### MEDIUM: Expecting `intervalXorAll`/`mergeIntervals` to take flat arguments like their pairwise siblings
+
+`intervalXor*`/`intervalUnion*` take four flat string/number arguments (`aStart, aEnd, bStart, bEnd`). Their list-form generalizations `intervalXorAll*`/`mergeIntervals*` take one array of `{ start, end }` records instead, since the list can be any length. Passing flat arguments to the list form is a type error, not a runtime sentinel.

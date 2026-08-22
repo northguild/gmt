@@ -53,6 +53,11 @@ Validate and check UTC intervals:
 - `intervalUnionUtc`
 - `splitIntervalByUnitUtc`
 - `intervalCountUtc`
+- `intervalLengthUtc`
+- `intervalDivideEquallyUtc`
+- `intervalSplitAtUtc`
+- `mergeIntervalsUtc`
+- `intervalXorAllUtc`
 - `intervalFromDurationUtc`
 - `intervalOverlappingDaysUtc`
 

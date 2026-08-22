@@ -52,9 +52,8 @@ Invalid input fallbacks are consistent across the library:
 
 | Metric     | Count  |
 | ---------- | ------ |
-| Test files | 459    |
-| Tests      | 14,295 |
-| Exports    | 489    |
+| Test files | 489    |
+| Tests      | 14,784 |
 
 Every function is exercised across **17 locales** and a full IANA timezone matrix. The CI pipeline runs the complete suite in **20 environments** — 2 Node versions (22, 24) × 10 timezones spanning every UTC offset band from Pacific/Niue (−11:00) to Pacific/Apia (+13:00):
 
@@ -878,6 +877,72 @@ intervalCountUnix(0, 86400000, "hour");
 ```
 
 Zero-length intervals count `1` when they sit mid-unit and `0` when they sit exactly on a unit boundary — `intervalCountDate("2024-01-15", "2024-01-15", "month")` is `1`, while `intervalCountDate("2024-01-01", "2024-01-01", "month")` is `0`. Weeks start on Monday (ISO 8601), singular and plural units are interchangeable (`"day"` and `"days"`), and `intervalCountUnix` uses the system timeZone for calendar boundaries (consistent with `addUnix`). All count functions return `null` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, unsupported unit, or a unit that has no effect on the target type).
+
+`intervalLength*` is `intervalCount*`'s exact-duration counterpart — it answers "how long is this interval" as a real, possibly fractional number, rather than "how many boundaries does it touch":
+
+```typescript
+import {
+  intervalLengthDate,
+  intervalLengthTime,
+  intervalLengthDateTime,
+  intervalLengthUtc,
+  intervalLengthUnix,
+  intervalLengthZoned,
+} from "@burglekitt/gmt";
+
+intervalLengthDateTime("2024-01-01T23:59:00", "2024-01-02T00:01:00", "day");
+// 0.001388888888888889 (the same interval intervalCount* reports as 2 day boundaries)
+
+intervalLengthDate("2024-01-01", "2024-01-16", "month");
+// 0.4838709677419355 (15 of January's 31 days)
+
+intervalLengthZoned(
+  "2024-03-10T00:00:00-05:00[America/New_York]",
+  "2024-03-11T00:00:00-04:00[America/New_York]",
+  "hour",
+);
+// 23 (spring-forward local day is 23 real hours)
+```
+
+`intervalLength*` uses `Temporal.Duration.prototype.total`, so calendar units (month, year) resolve against the interval's own `start` rather than truncating, and zoned/unix/utc variants are DST-aware the same way `intervalCount*` is. Returns `0` for a zero-length interval, and `null` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, unsupported unit).
+
+`intervalDivideEqually*` splits an interval into `n` equal-length sub-intervals, and `intervalSplitAt*` splits an interval at arbitrary points instead of by count:
+
+```typescript
+import {
+  intervalDivideEquallyDate,
+  intervalSplitAtDate,
+} from "@burglekitt/gmt";
+
+intervalDivideEquallyDate("2024-01-01", "2024-01-05", 4);
+// [{ start: "2024-01-01", end: "2024-01-02" }, { start: "2024-01-02", end: "2024-01-03" }, { start: "2024-01-03", end: "2024-01-04" }, { start: "2024-01-04", end: "2024-01-05" }]
+
+intervalSplitAtDate("2024-01-01", "2024-01-10", ["2024-01-07", "2024-01-03"]);
+// [{ start: "2024-01-01", end: "2024-01-03" }, { start: "2024-01-03", end: "2024-01-07" }, { start: "2024-01-07", end: "2024-01-10" }]
+```
+
+`n` must be a positive integer (`[]` otherwise); `n === 1` returns the original interval unchanged, and a zero-length interval returns `n` identical zero-length sub-intervals. Non-fractional types (`PlainDate`) round internal boundaries to the nearest whole unit; every other variant is exact, computed from total elapsed nanoseconds (`intervalDivideEquallyZoned` splits DST-crossing intervals by real elapsed time, not local clock time). `intervalSplitAt*` sorts its `points` internally — they need not be pre-sorted — and drops points outside `[start, end]` or exactly on a boundary, since those cannot introduce a new sub-interval; an empty or all-dropped `points` array returns `[{ start, end }]` unsplit.
+
+`mergeIntervals*` and `intervalXorAll*` are the list-form generalizations of `intervalUnion*` and `intervalXor*`, which are pairwise only — each takes a single array of `{ start, end }` records instead of two flat intervals:
+
+```typescript
+import { mergeIntervalsDate, intervalXorAllDate } from "@burglekitt/gmt";
+
+mergeIntervalsDate([
+  { start: "2024-01-01", end: "2024-01-10" },
+  { start: "2024-01-05", end: "2024-01-15" },
+]);
+// [{ start: "2024-01-01", end: "2024-01-15" }]
+
+intervalXorAllDate([
+  { start: "2024-01-01", end: "2024-01-10" },
+  { start: "2024-01-05", end: "2024-01-15" },
+  { start: "2024-01-08", end: "2024-01-20" },
+]);
+// [{ start: "2024-01-01", end: "2024-01-04" }, { start: "2024-01-08", end: "2024-01-10" }, { start: "2024-01-16", end: "2024-01-20" }]
+```
+
+`mergeIntervals*` collapses overlapping or adjacent intervals (shared endpoint) into the minimum non-overlapping set. `intervalXorAll*` returns the set covered by an odd number of the input intervals — for exactly two intervals the result is identical to the pairwise `intervalXor*`, and two identical intervals cancel out to `[]`. All four return `[]` for an empty list or on invalid input.
 
 `intervalFromDuration*` constructs an interval from a single point plus an ISO 8601 duration, anchored at either end — Luxon's `Interval.after`/`Interval.before` as one function with an `anchor` param instead of two:
 

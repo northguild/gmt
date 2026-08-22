@@ -96,6 +96,11 @@ Validate and check date/time intervals:
 - `intervalUnionDate`, `intervalUnionDateTime`, `intervalUnionTime`
 - `splitIntervalByUnitDate`, `splitIntervalByUnitDateTime`, `splitIntervalByUnitTime`
 - `intervalCountDate`, `intervalCountDateTime`, `intervalCountTime`
+- `intervalLengthDate`, `intervalLengthDateTime`, `intervalLengthTime`
+- `intervalDivideEquallyDate`, `intervalDivideEquallyDateTime`, `intervalDivideEquallyTime`
+- `intervalSplitAtDate`, `intervalSplitAtDateTime`, `intervalSplitAtTime`
+- `mergeIntervalsDate`, `mergeIntervalsDateTime`, `mergeIntervalsTime`
+- `intervalXorAllDate`, `intervalXorAllDateTime`, `intervalXorAllTime`
 - `intervalFromDurationDate`, `intervalFromDurationDateTime`, `intervalFromDurationTime`
 - `intervalOverlappingDaysDate`, `intervalOverlappingDaysDateTime` (no `Time` sibling — `PlainTime` has no calendar)
 
