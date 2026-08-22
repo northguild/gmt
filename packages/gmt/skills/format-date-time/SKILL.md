@@ -3,14 +3,19 @@ name: format-date-time
 description: >
   Format plain date/time values for display with locale and Intl.DateTimeFormat
   options. Use formatDate, formatTime, formatDateTime for absolute formatting;
-  use formatRelativeDate, formatRelativeTime, formatRelativeDateTime for
-  human-friendly relative output ("yesterday", "in 2 hours"). Also
-  getLocaleEraNames, getLocaleMonthNames, getLocaleWeekdayNames,
-  getLocaleMeridiems for standalone locale calendar-name lookups — the GMT
-  equivalent of Luxon's Info.eras, Info.months, Info.weekdays, and
-  Info.meridiems.
+  use formatDateToParts, formatDateTimeToParts, formatZonedToParts for
+  locale-ordered { type, value } parts (GMT's substitute for a token
+  formatter); use formatRelativeDate, formatRelativeTime,
+  formatRelativeDateTime for human-friendly relative output ("yesterday",
+  "in 2 hours"). Also getLocaleEraNames, getLocaleMonthNames,
+  getLocaleWeekdayNames, getLocaleMeridiems for standalone locale
+  calendar-name lookups — the GMT equivalent of Luxon's Info.eras,
+  Info.months, Info.weekdays, and Info.meridiems.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/format/index.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/format/formatDateToParts.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/format/formatDateTimeToParts.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/format/formatZonedToParts.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/locale/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/locale/getLocaleEraNames.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/locale/getLocaleMonthNames.ts'
@@ -80,6 +85,34 @@ const formatted = formatDate("2024-03-15", "en-US", {
   day: "numeric"
 }); // "March 15, 2024"
 ```
+
+### Get locale-ordered parts instead of a finished string
+
+```ts
+import { formatDateToParts, formatDateTimeToParts } from "@burglekitt/gmt";
+import { formatZonedToParts } from "@burglekitt/gmt";
+
+formatDateToParts("2024-03-15", "en-US");
+// [{ type: "month", value: "3" }, { type: "literal", value: "/" },
+//  { type: "day", value: "15" }, { type: "literal", value: "/" },
+//  { type: "year", value: "2024" }]
+
+formatDateToParts("2024-03-15", "fr-FR");
+// day comes before month — same locale-order guarantee formatDate gives you,
+// but as parts you can restyle instead of a finished string.
+// [{ type: "day", value: "15" }, { type: "literal", value: "/" },
+//  { type: "month", value: "3" }, { type: "literal", value: "/" },
+//  { type: "year", value: "2024" }]
+
+formatZonedToParts(
+  "2024-03-15T14:30:00-04:00[America/New_York]",
+  "en-US",
+  { timeZoneName: "longOffset" },
+);
+// includes { type: "timeZoneName", value: "GMT-4" }
+```
+
+Iterate the returned array in order — do not pick out `.find(p => p.type === "month")` and reassemble parts into a fixed order, since that reintroduces the exact locale-ordering bug `formatToParts` exists to avoid (see Common Mistakes below).
 
 ### Format relative date
 
@@ -311,11 +344,42 @@ formatDate("2024-03-15", "de-DE"); // "15.3.2024"
 ```
 
 `formatDate`/`formatTime`/`formatDateTime` (locale-ordered strings) are the
-current answer for display. GMT's planned answer for field-level output
-control (a custom layout that still needs per-locale field order) is
-`formatDateToParts` — tracked as Story J12, not yet shipped.
+current answer for display. For field-level output control (a custom layout
+that still needs per-locale field order), use `formatDateToParts` /
+`formatDateTimeToParts` / `formatZonedToParts` — GMT's substitute for a
+token formatter (Story J12).
 
 Source: context/roadmap/issues/J.md — Decision 1 (token formatter deliberately excluded); packages/gmt/src/plain/parse/parseDateWithPattern.ts — the parsing-only counterpart
+
+### MEDIUM Reassembling `formatToParts` output in a fixed order
+
+Wrong:
+
+```ts
+import { formatDateToParts } from "@burglekitt/gmt";
+
+const parts = formatDateToParts("2024-03-15", locale);
+const month = parts.find((p) => p.type === "month")?.value;
+const day = parts.find((p) => p.type === "day")?.value;
+const year = parts.find((p) => p.type === "year")?.value;
+// Hard-codes US field order onto every locale — exactly the bug
+// formatToParts exists to avoid.
+const display = `${month}/${day}/${year}`;
+```
+
+Correct:
+
+```ts
+import { formatDateToParts } from "@burglekitt/gmt";
+
+const parts = formatDateToParts("2024-03-15", locale);
+const display = parts.map((p) => p.value).join("");
+// Iterate as returned — the locale already ordered the parts. Restyle
+// individual part values (e.g. wrap { type: "literal" } parts differently)
+// without changing their relative order.
+```
+
+Source: context/roadmap/issues/J12 — "iterate the array as returned; reassembling parts in a fixed order reintroduces exactly the bug formatToParts exists to avoid"
 
 ## References
 

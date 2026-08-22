@@ -63,8 +63,8 @@ If you see a Date API in code, replace it with a GMT helper.
 
 | Metric  | Count  |
 | ------- | ------ |
-| Tests   | 13,207 |
-| Exports | 472    |
+| Tests   | 15,310 |
+| Exports | 5      |
 
 ## Optional: Add Linting for Date API Bans
 

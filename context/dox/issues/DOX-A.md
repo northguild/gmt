@@ -15,14 +15,14 @@ them can be dropped or reordered without losing the docs.
 
 ---
 
-### A1 — Workspace skeleton + first pages
+### DOX-A1 — Workspace skeleton + first pages
 
-**GitHub Issue:** _blank — see tracker.md_
+**GitHub Issue:** #130 — see tracker.md\_
 
 **Title:**
 
 ```
-A1 Create apps/docs (Astro + Starlight) and wire pnpm/nx/oxlint
+DOX-A1 Create apps/docs (Astro + Starlight) and wire pnpm/nx/oxlint
 ```
 
 **Description:**
@@ -93,14 +93,14 @@ an explicit branch — do not leave it accidental.
 
 ---
 
-### A2 — Deploy
+### DOX-A2 — Deploy
 
-**GitHub Issue:** _blank — see tracker.md_
+**GitHub Issue:** #131 — see tracker.md\_
 
 **Title:**
 
 ```
-A2 Deploy apps/docs to GitHub Pages via GitHub Actions
+DOX-A2 Deploy apps/docs to GitHub Pages via GitHub Actions
 ```
 
 **Description:**
@@ -149,14 +149,14 @@ missed.
 
 ---
 
-### A3 — Reference generator
+### DOX-A3 — Reference generator
 
-**GitHub Issue:** _blank — see tracker.md_
+**GitHub Issue:** #132 — see tracker.md\_
 
 **Title:**
 
 ```
-A3 Generate one MDX reference page per gmt function from JSDoc
+DOX-A3 Generate one MDX reference page per gmt function from JSDoc
 ```
 
 **Description:**
@@ -275,14 +275,14 @@ them to silently rot.
 
 ---
 
-### A4 — Guides
+### DOX-A4 — Guides
 
-**GitHub Issue:** _blank — see tracker.md_
+**GitHub Issue:** #133 — see tracker.md\_
 
 **Title:**
 
 ```
-A4 Port README Quick Start, DST doc, and skills guides into the docs site
+DOX-A4 Port README Quick Start, DST doc, and skills guides into the docs site
 ```
 
 **Description:**
@@ -340,14 +340,14 @@ maintainer/workflow skills (`pr-contribution`, `issue-creation`, etc.) do not an
 
 ---
 
-### A5 — Brand pass
+### DOX-A5 — Brand pass
 
-**GitHub Issue:** _blank — see tracker.md_
+**GitHub Issue:** #134 — see tracker.md\_
 
 **Title:**
 
 ```
-A5 Apply gmt palette, typography, and token layer to Starlight
+DOX-A5 Apply gmt palette, typography, and token layer to Starlight
 ```
 
 **Description:**

@@ -79,14 +79,14 @@ emits a **function call** that the client maps to a real widget executing actual
 ### Why it is parked
 
 The idea is genuinely good, and **most of its value is already delivered without a model
-at all** by Story Group B. B1's `<Playground>` runs the real library; B2 embeds one into
+at all** by Story Group DOX-B. DOX-B1's `<Playground>` runs the real library; DOX-B2 embeds one into
 every one of the 1,514 examples. A reader gets live, runnable, sentinel-aware widgets on
 every reference page, deterministically, with no API key and no latency.
 
 What the generative version adds on top is that the model chooses *which* widget to show
 for a free-form question. That is a real increment, but it is a small one over "the
 answer cites a page that already has a live playground on it" — which is exactly what
-Story Group C produces. It is also substantially more machinery: a widget registry with
+Story Group DOX-C produces. It is also substantially more machinery: a widget registry with
 typed params, Gemini function declarations, and partial-argument streaming.
 
 ### The finding worth preserving
@@ -116,7 +116,7 @@ built as a plain Group B widget with no model involved.
 
 ## 3. Full-bleed conversation-reactive 3D scene
 
-The superseded plan's D1: a full-bleed `@octanejs/three` canvas behind every glass panel,
+The superseded plan's DOX-D1: a full-bleed `@octanejs/three` canvas behind every glass panel,
 subscribing to the active namespace — wireframe globe for `zoned`/`utc`/`unix`, analog
 clockface for `plain`, crossfading between them, with a blended idle state.
 
@@ -133,7 +133,7 @@ It made the scene load-bearing in three ways simultaneously:
    streaming **and** border animation, together, verified on integrated graphics. Each
    is fine alone; the combination is what drops frames.
 
-Story E1 scopes the globe to a landing-page hero, which removes all three at once.
+Story DOX-E1 scopes the globe to a landing-page hero, which removes all three at once.
 Nothing must stay legible over it, no panel samples it, and there is no combined worst
 case. That is a large reduction in risk for a small reduction in effect.
 

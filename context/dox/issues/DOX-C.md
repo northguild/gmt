@@ -30,14 +30,14 @@ own numbers rule that out at our scale, and C1 exists to measure exactly that.
 
 ---
 
-### C1 — Retrieval index
+### DOX-C1 — Retrieval index
 
-**GitHub Issue:** _blank — see tracker.md_
+**GitHub Issue:** #137 — see tracker.md\_
 
 **Title:**
 
 ```
-C1 Build retrieval chunks and lookup over gmt-corpus.json
+DOX-C1 Build retrieval chunks and lookup over gmt-corpus.json
 ```
 
 **Description:**
@@ -124,14 +124,14 @@ manifest share one extraction is so correctness is structural rather than best-e
 
 ---
 
-### C2 — Worker proxy
+### DOX-C2 — Worker proxy
 
-**GitHub Issue:** _blank — see tracker.md_
+**GitHub Issue:** #138 — see tracker.md\_
 
 **Title:**
 
 ```
-C2 Cloudflare Worker proxying grounded Gemini SSE with key custody
+DOX-C2 Cloudflare Worker proxying grounded Gemini SSE with key custody
 ```
 
 **Description:**
@@ -243,14 +243,14 @@ removes a recurring papercut.
 
 ---
 
-### C3 — Chat panel
+### DOX-C3 — Chat panel
 
-**GitHub Issue:** _blank — see tracker.md_
+**GitHub Issue:** #139 — see tracker.md\_
 
 **Title:**
 
 ```
-C3 Add the Ask Dox chat panel with hardened, verifiable citations
+DOX-C3 Add the Ask Dox chat panel with hardened, verifiable citations
 ```
 
 **Description:**

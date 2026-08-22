@@ -6,7 +6,7 @@ This file has been split into a progressive-disclosure directory. Read what you 
   integration, visual design language, verification, risks
 - [story-groups.md](story-groups.md) — A–E story group summaries (the 13-story build)
 - [tracker.md](tracker.md) — Issue/status table, build order
-- [issues/A.md](issues/A.md) … [issues/E.md](issues/E.md) — Full per-story
+- [issues/DOX-A.md](issues/DOX-A.md) … [issues/DOX-E.md](issues/DOX-E.md) — Full per-story
   GitHub-issue-ready specs
 - [appendix-parked.md](appendix-parked.md) — Researched but deliberately unscheduled
   work (audio, voice, generative-UI widgets, reactive scene). No story IDs, not in the

@@ -49,6 +49,7 @@ Timezone/format conversion:
 Locale-aware timezone formatting:
 
 - `formatZonedDateTime`, `formatZonedRange`
+- `formatZonedToParts` — locale-ordered `{ type, value }` parts, including `timeZoneName` parts; GMT's substitute for a token formatter
 - `formatRelativeZoned`
 - `formatTimeZoneName`
 

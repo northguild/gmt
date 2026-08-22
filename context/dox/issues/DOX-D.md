@@ -35,14 +35,14 @@ reading a long reference page end to end, never by the screenshot.**
 
 ---
 
-### D1 — Chrome
+### DOX-D1 — Chrome
 
-**GitHub Issue:** _blank — see tracker.md_
+**GitHub Issue:** #140 — see tracker.md\_
 
 **Title:**
 
 ```
-D1 Add glass panels, animated borders, and chamfered corners
+DOX-D1 Add glass panels, animated borders, and chamfered corners
 ```
 
 **Description:**
@@ -105,14 +105,14 @@ within glass.
 
 ---
 
-### D2 — Motion
+### DOX-D2 — Motion
 
-**GitHub Issue:** _blank — see tracker.md_
+**GitHub Issue:** #141 — see tracker.md\_
 
 **Title:**
 
 ```
-D2 Add boot sequence, view-transition morphs, and state-change motion
+DOX-D2 Add boot sequence, view-transition morphs, and state-change motion
 ```
 
 **Description:**

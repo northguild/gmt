@@ -14,14 +14,14 @@ the 1,514 `@example` lines becomes runnable.
 
 ---
 
-### B1 — `<Playground>` island
+### DOX-B1 — `<Playground>` island
 
-**GitHub Issue:** _blank — see tracker.md_
+**GitHub Issue:** #135 — see tracker.md\_
 
 **Title:**
 
 ```
-B1 Build the live Playground island running real gmt in the browser
+DOX-B1 Build the live Playground island running real gmt in the browser
 ```
 
 **Description:**
@@ -81,14 +81,14 @@ pages on the site.
 
 ---
 
-### B2 — Auto-embed
+### DOX-B2 — Auto-embed
 
-**GitHub Issue:** _blank — see tracker.md_
+**GitHub Issue:** #136 — see tracker.md\_
 
 **Title:**
 
 ```
-B2 Auto-embed playgrounds into every generated @example
+DOX-B2 Auto-embed playgrounds into every generated @example
 ```
 
 **Description:**

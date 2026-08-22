@@ -4,7 +4,7 @@
 > `context/roadmap/`. Start at [index.md](index.md). This file (overview.md) holds
 > context, architecture, integration constraints, and the visual design language;
 > [story-groups.md](story-groups.md) holds the A–E build summary; [tracker.md](tracker.md)
-> holds the issue/status table; `issues/A.md`–`issues/E.md` hold full per-story
+> holds the issue/status table; `issues/DOX-A.md`–`issues/DOX-E.md` hold full per-story
 > GitHub-issue-ready specs; [appendix-parked.md](appendix-parked.md) holds researched
 > work that is deliberately unscheduled.
 >
@@ -59,7 +59,7 @@ This is why a docs site here is a **generation** problem, not an authoring probl
   parenthetical explanation)` — never a fenced code block. TypeDoc and any TSDoc-spec
   tool treat `@example` content as a code block and would mangle the `// result`
   pairing 1,514 times. **This is the single reason a custom generator beats TypeDoc
-  here**, and it is the first thing to get right in story A3.
+  here**, and it is the first thing to get right in story DOX-A3.
 - **There are zero `@category`, `@see`, `{@link}`, `@throws`, and `@since` tags** in
   `src/`. Taxonomy and cross-linking cannot come from tags; they must come from the
   directory tree, which is fortunately already correct.
@@ -76,11 +76,11 @@ This is why a docs site here is a **generation** problem, not an authoring probl
   `@octanejs/markdown@0.0.9` — all republished 2026-08-21. 43 releases in roughly eight
   weeks, with the adapters this epic would have depended on still at `0.0.x`. It is a
   moving pre-1.0 target with no benefit for a documentation site, and the superseded
-  plan's own story A2 contained a gate admitting the `.tsrx` toolchain might fight the
+  plan's own story DOX-A2 contained a gate admitting the `.tsrx` toolchain might fight the
   repo's `nodenext` setup. **Nothing in Groups A–E depends on it.** Revisit only as an
   optional island if it matures.
 - **The superseded plan's counts were stale.** It cited 349 functions and ~999
-  examples; the real figures are ~424 and 1,514. Story A3 derives its counts from source
+  examples; the real figures are ~424 and 1,514. Story DOX-A3 derives its counts from source
   and asserts them in CI rather than hardcoding a snapshot, because
   `context/roadmap/` is actively adding functions.
 - **There is no `systemKnowledge` Gemini setting.** Grounding is achieved with
@@ -161,36 +161,35 @@ What was taken from it, and what was deliberately not:
 | From the sibling repo | Verdict |
 | --- | --- |
 | **Generated route allowlist + client-side `resolveHref()`** — a hallucinated link degrades to plain text rather than a 404 | **Adopted, and it upgraded the plan.** See §2 "Citation integrity" below |
-| Pure, side-effect-free, unit-tested SSE line parser returning a discriminated union | **Adopted** into C2. "Do this from day one" is correct |
-| Generated-file stub aliased in the test config, so tests run on a clean checkout with no build | **Adopted** into A3/C2 — our generated output is gitignored, so we have exactly this problem |
-| Explicit worker validation pipeline (method, message count, content length, role and model allowlists, mapped upstream errors) | **Adopted** into C2 as a checklist |
-| Dual timeouts: overall request cap plus a shorter _idle_ timeout that resets per chunk | **Adopted** into C3 — catches stalled streams without killing long answers |
-| Error-vs-warning classification, with warnings excluded from history sent upstream | **Adopted** into C3 |
-| Default the query's scope from the page the reader is on | **Adopted in modified form** — namespace, not package, since we ship one package |
-| SKILL.md placed _before_ reference material so the model learns vocabulary first | **Adopted** into C2 |
-| Generated version map so the site can never show a stale version | **Adopted** as a small A1 addition |
+| Pure, side-effect-free, unit-tested SSE line parser returning a discriminated union | **Adopted** into DOX-C2. "Do this from day one" is correct |
+| Generated-file stub aliased in the test config, so tests run on a clean checkout with no build | **Adopted** into DOX-A3/DOX-C2 — our generated output is gitignored, so we have exactly this problem |
+| Explicit worker validation pipeline (method, message count, content length, role and model allowlists, mapped upstream errors) | **Adopted** into DOX-C2 as a checklist |
+| Dual timeouts: overall request cap plus a shorter _idle_ timeout that resets per chunk | **Adopted** into DOX-C3 — catches stalled streams without killing long answers |
+| Error-vs-warning classification, with warnings excluded from history sent upstream | **Adopted** into DOX-C3 |
+| SKILL.md placed _before_ reference material so the model learns vocabulary first | **Adopted** into DOX-C2 |
+| Generated version map so the site can never show a stale version | **Adopted** as a small DOX-A1 addition |
 | **Nextra 4 + Next.js 16 App Router** | **Rejected.** Astro + Starlight was chosen deliberately; Starlight gives sidebar, search, and the a11y baseline without hand-maintained `_meta.ts` at every level |
-| **"The AI has no retrieval layer"** — whole corpus baked into one system prompt | **Rejected, using their own arithmetic.** Their §5 measures one package at ~29 KB and four at 80–150 KB "which you pay for on **every** request," and puts real retrieval at "past ~500 KB of docs." We have 424 functions and 1,514 examples — well past that line. C1 measures it rather than assuming |
-| Package-scoped prompt bundles | **Rejected as primary**, retained as C1's documented fallback if retrieval underperforms |
-| Tailwind v4, React Query, TanStack Form for the chat client | **Rejected.** Weight without payoff for one streaming panel; A5's token layer already covers styling |
+| **"The AI has no retrieval layer"** — whole corpus baked into one system prompt | **Rejected, using their own arithmetic.** Their §5 measures one package at ~29 KB and four at 80–150 KB "which you pay for on **every** request," and puts real retrieval at "past ~500 KB of docs." We have 424 functions and 1,514 examples — well past that line. DOX-C1 measures it rather than assuming |
+| Package-scoped prompt bundles | **Rejected as primary**, retained as DOX-C1's documented fallback if retrieval underperforms |
+| Tailwind v4, React Query, TanStack Form for the chat client | **Rejected.** Weight without payoff for one streaming panel; DOX-A5's token layer already covers styling |
 | Auto-linking **bold** phrases that match page titles | **Rejected.** Turning prose the model did not intend as a link into a link is a correctness risk, not a nicety |
 
-The deepest idea worth restating, because it is the same principle A3 already runs on:
+The deepest idea worth restating, because it is the same principle DOX-A3 already runs on:
 **generate, don't maintain — one source of truth, two consumers.**
 
 ### Citation integrity — a structural guarantee, not a test
 
 The prior art changed this plan in one concrete way, and it is worth calling out.
 
-The original C3 spec asserted "every citation must resolve" as a **test**. A test samples;
+The original DOX-C3 spec asserted "every citation must resolve" as a **test**. A test samples;
 it cannot cover what a model emits at runtime. The sibling repo does better: it derives a
 route allowlist from the same filesystem scan that produces the pages, ships it to the
 client, and runs **every** href the model emits through a resolver. A link that is not in
 the allowlist renders as plain text instead of a broken link.
 
 That is a structural guarantee rather than a hope, and it costs almost nothing here
-because A3 already knows every route it generated. **A3 therefore emits a third artifact:
-a route manifest.** C3 consumes it defensively. The test stays, but it is no longer the
+because DOX-A3 already knows every route it generated. **DOX-A3 therefore emits a third artifact:
+a route manifest.** DOX-C3 consumes it defensively. The test stays, but it is no longer the
 only thing standing between a reader and a 404.
 
 ---
@@ -198,8 +197,8 @@ only thing standing between a reader and a 404.
 ## 3. Visual design language
 
 This section is unchanged in substance from the superseded plan — it was the strongest
-part of it — but it is **demoted from a day-one gate to a Story Group D input**. A5
-ships the cheap 80% (palette, typography, tokens) with the site; D1–D2 apply the
+part of it — but it is **demoted from a day-one gate to a Story Group DOX-D input**. DOX-A5
+ships the cheap 80% (palette, typography, tokens) with the site; DOX-D1–DOX-D2 apply the
 expensive chrome over pages that already work.
 
 **Nothing may look like a default HTML control.** No stock `border-radius` buttons, no
@@ -231,7 +230,7 @@ angular gold-on-black chamfered geometry. Secondary texture cues from Alien: Iso
 Deliberately _not_ Cyberpunk 2077's maximal glitch — it is the obvious reference and the
 worst fit for a reading surface.
 
-### Color — cyber blue/green (story A5)
+### Color — cyber blue/green (story DOX-A5)
 
 Cool blue→green ramp on a blue-tinted near-black. Everything is a token; no literals in
 component styles. In Starlight these map onto its documented CSS custom properties via
@@ -240,7 +239,7 @@ the `customCss` config option.
 | Role | Value | Use |
 | --- | --- | --- |
 | Void | `#03080C` | Page base |
-| Glass tint | `rgba(6, 20, 26, 0.35)` | Panel fill over `backdrop-filter` (D1) |
+| Glass tint | `rgba(6, 20, 26, 0.35)` | Panel fill over `backdrop-filter` (DOX-D1) |
 | Cyan (primary) | `#22D3EE` | Borders, active state, primary accent |
 | Spring (secondary) | `#4ADE80` | Success, live values, ticking data |
 | Teal (deep) | `#0E7490` | Idle borders, dividers, inactive chrome |
@@ -258,13 +257,13 @@ Invalid input returning `""` / `null` / `false` / `[]` renders as a distinct "si
 lost" state (amber, degraded, bracketed) rather than a blank field. A user seeing an
 empty output box learns nothing; a user seeing `⟨ NO SIGNAL — invalid input ⟩` learns
 the sentinel contract. Amber is reserved exclusively for this — its rarity is what makes
-it communicate. This is the rule that makes story B1's playground _teach_ rather than
+it communicate. This is the rule that makes story DOX-B1's playground _teach_ rather than
 just execute.
 
 Body text must clear **7:1**, measured against real rendered pages, not flat swatches.
 Glow is decoration, never a contrast mechanism.
 
-### Typography (story A5)
+### Typography (story DOX-A5)
 
 Two faces, strictly separated:
 
@@ -275,7 +274,7 @@ Two faces, strictly separated:
 Long-form teaching content is **never** set in the display face. All Google Fonts —
 self-host the subsets, no external CDN request at runtime.
 
-### Panel construction — real glass (story D1)
+### Panel construction — real glass (story DOX-D1)
 
 Surfaces are layered, never a single `div` with a border:
 
@@ -292,7 +291,7 @@ Surfaces are layered, never a single `div` with a border:
 
 Under `prefers-reduced-transparency`, drop to a near-opaque fill and skip the blur.
 
-### Animated borders (story D1)
+### Animated borders (story DOX-D1)
 
 The signature motion element. Three techniques, in order of preference:
 
@@ -309,7 +308,7 @@ Rules: animate **only** the focused/active/streaming panel — every panel pulsi
 reads as broken, not alive. Idle panels get a static border. All of it stops under
 `prefers-reduced-motion`.
 
-### Chamfered corners (story D1)
+### Chamfered corners (story DOX-D1)
 
 Use `corner-shape: bevel` + `border-radius` where supported — `box-shadow`, `outline`,
 `overflow` and `backdrop-filter` all follow the corner shape, which is exactly what
@@ -320,7 +319,7 @@ via `@supports`, with a `clip-path: polygon(…)` fallback — and note that und
 fallback, `box-shadow` and `outline` are clipped, so focus states must come from an
 inset ring or a pseudo-element instead.
 
-### Controls — the one hard engineering rule (story D1)
+### Controls — the one hard engineering rule (story DOX-D1)
 
 **Restyle native elements. Never rebuild them from `div`s.**
 
@@ -343,11 +342,11 @@ Specifics:
   animated bracket or inset ring. Removing the outline without replacing it is the
   single fastest way to make this unusable by keyboard.
 
-### Motion (story D2)
+### Motion (story DOX-D2)
 
 Boot sequence on first paint. Typewriter reveal for chat replies. Glitch/RGB-split only
 on state _transitions_, never idle, never over text being read. Scanline sweep confined
-to panel chrome. Chromatic aberration and bloom belong in the WebGL layer (story E1),
+to panel chrome. Chromatic aberration and bloom belong in the WebGL layer (story DOX-E1),
 not as CSS `text-shadow` on copy, which destroys readability.
 
 All of it gated behind `prefers-reduced-motion`, `prefers-reduced-transparency`, and
@@ -357,7 +356,7 @@ All of it gated behind `prefers-reduced-motion`, `prefers-reduced-transparency`,
 
 The superseded plan's largest performance liability — glass panels over a
 continuously-rendering full-bleed WebGL scene — **no longer exists**, because the globe
-is scoped to the landing-page hero (story E1) and nothing needs to stay legible over it.
+is scoped to the landing-page hero (story DOX-E1) and nothing needs to stay legible over it.
 What remains:
 
 - Cap blurred surfaces. Each `backdrop-filter` element re-samples what is behind it
@@ -412,19 +411,19 @@ pattern as `context/roadmap/`:
 
 - [story-groups.md](story-groups.md) — narrative summary of each story
 - [tracker.md](tracker.md) — issue/status table, build order
-- `issues/A.md` … `issues/E.md` — full GitHub-issue-ready spec per story
+- `issues/DOX-A.md` … `issues/DOX-E.md` — full GitHub-issue-ready spec per story
 - [appendix-parked.md](appendix-parked.md) — unscheduled work
 
 | Group | Covers | Ships |
 | --- | --- | --- |
-| A | Skeleton, deploy, reference generator, guides, brand pass | **A working docs site** |
-| B | Live `<Playground>` island, auto-embedded into every example | Interactivity |
-| C | Retrieval index, Worker proxy, "Ask Dox" chat panel with citations | The chatbot |
-| D | Glass/chrome, motion | The HUD identity |
-| E | Landing-page hero globe | The flourish |
+| DOX-A | Skeleton, deploy, reference generator, guides, brand pass | **A working docs site** |
+| DOX-B | Live `<Playground>` island, auto-embedded into every example | Interactivity |
+| DOX-C | Retrieval index, Worker proxy, "Ask Dox" chat panel with citations | The chatbot |
+| DOX-D | Glass/chrome, motion | The HUD identity |
+| DOX-E | Landing-page hero globe | The flourish |
 
 Each story is independently verifiable; do not start the next until the current one's
-Definition of Done passes. **Group A must complete first**, and A1–A2 specifically
+Definition of Done passes. **Group DOX-A must complete first**, and DOX-A1–DOX-A2 specifically
 should land before anything else so every subsequent story is visible on a live site.
 
 Unlike `context/roadmap/`, these stories do **not** publish to npm — `apps/docs` is
@@ -437,7 +436,7 @@ private. No changesets are needed unless a story also modifies `packages/gmt`.
 - `pnpm nx run-many -t lint test typecheck build` stays green, **including the existing
   20-cell GMT timezone matrix** — Dox must not perturb `packages/gmt`.
 - `pnpm nx run docs:build` produces a static site; `pnpm nx run docs:dev` serves it.
-- **The generator spot-check (story A3, the highest-leverage test in the epic):**
+- **The generator spot-check (story DOX-A3, the highest-leverage test in the epic):**
   compare the generated page for `startOfZoned` against
   `packages/gmt/src/zoned/calculate/startOfZoned.ts` line by line. It has the heaviest
   JSDoc in the codebase — an options object, multi-clause bullets, and five annotated
@@ -447,7 +446,7 @@ private. No changesets are needed unless a story also modifies `packages/gmt`.
 - The corpus-count Vitest test fails when a `gmt` function is added without
   re-extraction.
 - **Keyboard-only pass with the mouse unplugged.** Starlight gives a good baseline;
-  Group D is exactly what puts it at risk, so run this before and after D1.
+  Group DOX-D is exactly what puts it at risk, so run this before and after DOX-D1.
 - **Contrast audit against real rendered pages**, not flat swatches.
 - Group C only, and the single most important behavioral test in the epic: a question
   with no corpus answer must be **refused, not improvised**. Separately, stub a response
@@ -458,14 +457,14 @@ private. No changesets are needed unless a story also modifies `packages/gmt`.
 
 - **Generator fidelity is the whole bet in Group A.** 424 pages are only as good as the
   parse. Mitigation: the TypeScript compiler API rather than regex, the `startOfZoned`
-  byte-exact spot-check in A3's Definition of Done, and count assertions in CI.
+  byte-exact spot-check in DOX-A3's Definition of Done, and count assertions in CI.
 - **The non-standard `@example` format** is the specific thing a naive implementation
   will get wrong, and it will get it wrong 1,514 times. Handle it first, against the
   hardest file, before generating anything at scale.
 - **Namespace READMEs become redundant.** The six `src/*/README.md` files are flat
   function-name indexes with no signatures or examples; a generated site fully
   supersedes them. They ship in the npm tarball and `.agents/skills/update-readme`
-  maintains them, so decide deliberately in A3 whether they stay as-is or become short
+  maintains them, so decide deliberately in DOX-A3 whether they stay as-is or become short
   stubs pointing at the site. Do not let them silently rot.
 - **Group D can undo Group A.** The most likely failure mode in this epic remains a
   screenshot that looks incredible over a UI nobody can read for ten minutes. The
@@ -476,16 +475,16 @@ private. No changesets are needed unless a story also modifies `packages/gmt`.
   `clip-path` fallback clips `box-shadow` and `outline`, so focus states must be
   verified in _both_ paths.
 - **Corpus size vs. free tier (Group C).** 424 functions plus 1,514 examples is too
-  large to inject wholesale on every request. This is why C1 is retrieval rather than
-  full-corpus injection — measure the real token size in C1 before committing to any
+  large to inject wholesale on every request. This is why DOX-C1 is retrieval rather than
+  full-corpus injection — measure the real token size in DOX-C1 before committing to any
   heavier approach. The sibling repo (see "Reviewed prior art") puts the bake-vs-retrieve
-  threshold at ~500 KB of docs; we are plausibly past it, but C1 measures rather than
+  threshold at ~500 KB of docs; we are plausibly past it, but DOX-C1 measures rather than
   assumes.
-- **Corpus staleness (Group C).** If C1 chooses to bake the corpus into the Worker
+- **Corpus staleness (Group DOX-C).** If DOX-C1 chooses to bake the corpus into the Worker
   bundle, a docs-only change leaves the chatbot answering from stale content until the
   Worker is redeployed. The sibling repo calls this its single most important CI change,
   and it is the kind of failure that is invisible until someone notices the bot citing a
-  page that changed. Whichever runtime location C1 picks, the CI consequence ships in
+  page that changed. Whichever runtime location DOX-C1 picks, the CI consequence ships in
   the same story.
 - **Astro/Starlight churn.** Both move quickly and Starlight peers on an exact-ish Astro
   major. Pin both, upgrade deliberately, and keep the generator emitting plain MDX so

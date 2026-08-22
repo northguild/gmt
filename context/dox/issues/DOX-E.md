@@ -12,14 +12,14 @@ One story. The flourish, scoped so that it cannot compromise anything else.
 
 ---
 
-### E1 — Landing-page hero globe
+### DOX-E1 — Landing-page hero globe
 
-**GitHub Issue:** _blank — see tracker.md_
+**GitHub Issue:** #142 — see tracker.md\_
 
 **Title:**
 
 ```
-E1 Add a wireframe globe hero to the docs landing page
+DOX-E1 Add a wireframe globe hero to the docs landing page
 ```
 
 **Description:**

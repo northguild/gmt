@@ -57,6 +57,7 @@ Date/time comparison:
 Locale-aware formatting:
 
 - `formatDate`, `formatDateTime`, `formatTime`
+- `formatDateToParts`, `formatDateTimeToParts` — locale-ordered `{ type, value }` parts, for callers restyling output without hard-coding field order (GMT's substitute for a token formatter — see `formatDate`'s JSDoc)
 - `formatRelativeDate`, `formatRelativeTime`, `formatRelativeDateTime`
 
 > **Locale data note.** These formatters delegate locale rendering to the host runtime's `Intl.DateTimeFormat` / `Intl.RelativeTimeFormat`. Output therefore depends on the ICU data shipped with the running Node (or browser):

@@ -52,8 +52,8 @@ Invalid input fallbacks are consistent across the library:
 
 | Metric     | Count  |
 | ---------- | ------ |
-| Test files | 467    |
-| Tests      | 14,965 |
+| Test files | 502    |
+| Tests      | 15,310 |
 
 Every function is exercised across **17 locales** and a full IANA timezone matrix. The CI pipeline runs the complete suite in **20 environments** — 2 Node versions (22, 24) × 10 timezones spanning every UTC offset band from Pacific/Niue (−11:00) to Pacific/Apia (+13:00):
 
@@ -324,6 +324,32 @@ getLocaleMeridiems("zh-CN");
 ```
 
 `getLocaleWeekdayNames` returns names in the locale's first-day order, consistent with `getLocaleDayOfWeek` (index 0 is the locale's first day of the week). All four delegate to the host runtime's `Intl` data, so their output depends on the runtime's ICU build.
+
+### Parsing
+
+`parseDateWithPattern`/`parseDateTimeWithPattern`/`parseTimeWithPattern` decode a known, fixed producer format — a CSV column, a legacy API field, or a partially-typed form value — against a caller-supplied token pattern. This is for **decoding**, not display: the pattern hard-codes field order, so `formatDate`/`formatDateToParts` remain the correct choice for locale-correct output.
+
+```typescript
+import {
+  parseDateWithPattern,
+  parseDateTimeWithPattern,
+  parseTimeWithPattern,
+} from "@burglekitt/gmt";
+
+parseDateWithPattern("03/15/2024", "MM/dd/yyyy");
+// "2024-03-15"
+
+parseDateTimeWithPattern("15-Mar-2024 14:30", "dd-MMM-yyyy HH:mm");
+// "2024-03-15T14:30:00"
+
+parseTimeWithPattern("02:30:45 PM", "hh:mm:ss a");
+// "14:30:45"
+
+parseDateWithPattern("02/31/2024", "MM/dd/yyyy");
+// "" — shape-valid but not a real date; Temporal validates after the regex match
+```
+
+Supported tokens include `yyyy`/`MM`/`dd`/`HH`/`mm`/`ss`/`SSS` for fixed-width fields, `M`/`d`/`H`/`h`/`m`/`s` for variable-width, `MMMM`/`MMM`/`EEEE`/`EEE`/`a`/`GGGG`/`GG` for locale-aware names, and `'single quotes'` for literal text. A `locale` parameter (default `"en-US"`) controls name-token matching. Invalid input, no-match, and malformed patterns all return `""`.
 
 ### Durations
 
@@ -1173,8 +1199,11 @@ import {
   formatRelativeTime,
   formatDateTime,
   formatRelativeDateTime,
+  formatDateToParts,
+  formatDateTimeToParts,
   formatZonedDateTime,
   formatZonedRange,
+  formatZonedToParts,
   formatRelativeZoned,
   formatUtc,
   formatRelativeUtc,
@@ -1209,6 +1238,27 @@ formatRelativeUnix(1710685845000, "en-US", { epochUnit: "milliseconds" });
 // roundingMethod ("floor" | "ceil" | "round", default "round") controls how the
 // computed distance rounds to the display unit — every formatRelative* function accepts it.
 formatRelativeUtc(value, "en-US", { roundingMethod: "floor" });
+
+// formatDateToParts / formatDateTimeToParts / formatZonedToParts return the
+// locale-ordered Array<{ type, value }> parts behind the strings above,
+// instead of a finished string — GMT's substitute for a token formatter.
+// Iterate the array as returned; reassembling parts in a fixed order
+// reintroduces the locale-ordering bug formatToParts exists to avoid.
+formatDateToParts("2024-03-15", "en-US");
+// [{ type: "month", value: "3" }, { type: "literal", value: "/" },
+//  { type: "day", value: "15" }, { type: "literal", value: "/" },
+//  { type: "year", value: "2024" }]
+
+formatDateToParts("2024-03-15", "fr-FR");
+// day comes before month, same locale-order guarantee as formatDate:
+// [{ type: "day", value: "15" }, { type: "literal", value: "/" },
+//  { type: "month", value: "3" }, { type: "literal", value: "/" },
+//  { type: "year", value: "2024" }]
+
+formatZonedToParts("2024-03-15T14:30:00-04:00[America/New_York]", "en-US", {
+  timeZoneName: "longOffset",
+});
+// includes { type: "timeZoneName", value: "GMT-4" }
 ```
 
 ### Unix and UTC helpers
