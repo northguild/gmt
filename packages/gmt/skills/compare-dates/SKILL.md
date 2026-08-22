@@ -4,19 +4,16 @@ description: >
   Compare date values for ordering. Use isAfterDate, isBeforeDate, areDatesEqual
   for comparisons. Use areDatesEqualBy/areDateTimesEqualBy/areZonedEqualBy/
   areUnixEqualBy/areUtcEqualBy to compare two values at a given calendar unit
-  ("are these in the same month?"). Use isWeekend/isZonedWeekend for
-  locale-aware weekend checks (weekend days vary by locale — not always
-  Saturday/Sunday). Use isBusinessDay for fixed ISO Monday–Friday business-day
-  checks (locale-agnostic, matches addBusinessDays). Use
-  getLocaleDayOfWeek/getLocaleZonedDayOfWeek to get a locale-relative
-  day-of-week index (0 = first day of week). Use isRelativeDay/isThisUnit/
-  isPast/isFuture and their isZonedRelativeDay/isZonedThisUnit/isZonedPast/
-  isZonedFuture variants for now-relative predicates ("is this today",
-  "is this overdue") — these depend on the system clock and system timeZone
-  unless you use the zoned variants with an explicit timeZone. Use
-  nextWeekday/previousWeekday to find the next/previous occurrence of a given
-  ISO day of week on or after/before a date ("next Friday", "previous
-  Monday"). Returns false/null/"" on invalid input.
+  ("same month?"). Use isWeekend/isZonedWeekend for locale-aware weekend checks
+  (weekend days vary by locale). Use isBusinessDay for fixed ISO Mon-Fri checks
+  (locale-agnostic, matches addBusinessDays). Use
+  getLocaleDayOfWeek/getLocaleZonedDayOfWeek for a locale-relative day-of-week
+  index (0 = first day of week). Use isRelativeDay/isThisUnit/isPast/isFuture
+  (plus isZoned* variants) for now-relative predicates ("is this today", "is
+  this overdue") — depend on system clock/timeZone unless using the zoned
+  variants with an explicit timeZone. Use nextWeekday/previousWeekday for the
+  next/previous occurrence of an ISO day of week ("next Friday"). Returns
+  false/null/"" on invalid input.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/compare/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/compare/index.ts'

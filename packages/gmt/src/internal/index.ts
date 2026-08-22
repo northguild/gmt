@@ -11,6 +11,13 @@ export { isValidAmount } from "./isValidAmount";
 export { isValidDayOfWeek } from "./isValidDayOfWeek";
 export { monthGridWeekRow } from "./monthGridWeekRow";
 export { normalizeDateTime } from "./normalizeDateTime";
+export {
+  DATE_PATTERN_FIELDS,
+  DATE_TIME_PATTERN_FIELDS,
+  parseValueWithPattern,
+  TIME_PATTERN_FIELDS,
+} from "./patternToken";
+export type { ParsedPatternFields, PatternField } from "./patternToken";
 export { resolveDateTimeUnit } from "./resolveDateTimeUnit";
 export { resolveDurationUnit } from "./resolveDurationUnit";
 export { resolveOverflow } from "./resolveOverflow";

@@ -116,6 +116,54 @@ getLocaleWeekYear("2022-01-01", "en-US"); // 2022 (locale-relative: en-US always
 getWeeksInLocaleWeekYear("2020-06-15", "de-DE"); // 53
 ```
 
+### Parse a fixed producer format against a token pattern
+
+Unlike the `parse*From*` functions above, these decode a whole string against a
+caller-supplied token pattern instead of pulling one field out of an ISO
+string — use them for a known, fixed non-ISO producer format (a CSV column, a
+legacy API field, a partially-typed form value).
+
+```ts
+import {
+  parseDateWithPattern,
+  parseDateTimeWithPattern,
+  parseTimeWithPattern,
+} from "@burglekitt/gmt";
+
+parseDateWithPattern("03/15/2024", "MM/dd/yyyy"); // "2024-03-15"
+parseDateWithPattern("15-Mar-2024", "dd-MMM-yyyy"); // "2024-03-15"
+parseTimeWithPattern("02:30:45 PM", "hh:mm:ss a"); // "14:30:45"
+parseDateTimeWithPattern("15-Mar-2024 2:30 PM", "dd-MMM-yyyy h:mm a"); // "2024-03-15T14:30:00"
+parseDateWithPattern("02/31/2024", "MM/dd/yyyy"); // "" — shape-valid, not a real date
+```
+
+Token table (subset — see JSDoc on each function for the full table):
+
+| Token             | Field                | Notes                                              |
+| ----------------- | --------------------- | --------------------------------------------------- |
+| `yyyy` / `yy`      | year                   | `yy` pivots 00–68 → 2000s, 69–99 → 1900s             |
+| `MM` / `M`         | month (numeric)        |                                                       |
+| `MMMM` / `MMM`     | month name             | locale-aware, via `getLocaleMonthNames`              |
+| `dd` / `d`         | day                    |                                                       |
+| `EEEE` / `EEE`     | weekday name           | locale-aware; consumed but not cross-validated       |
+| `HH` / `H`         | hour (24h)             |                                                       |
+| `hh` / `h`         | hour (12h)             | needs `a` in the pattern to resolve to 24h           |
+| `mm` / `m`         | minute                 |                                                       |
+| `ss` / `s`         | second                 |                                                       |
+| `SSS`              | millisecond            |                                                       |
+| `a`                | meridiem               | locale-aware, via `getLocaleMeridiems`               |
+| `GGGG` / `GG`      | era name               | locale-aware; BCE label ⇒ final year = 1 − parsed year |
+
+`parseDateWithPattern` rejects time-only tokens and `parseTimeWithPattern`
+rejects date-only tokens (both return `""`); `parseDateTimeWithPattern`
+accepts the combined set. All three return `""` — never `null` — on no
+match, a malformed pattern, or a shape-valid-but-unreal date/time (the regex
+only proves shape; `Temporal.*.from(..., { overflow: "reject" })` proves the
+value is real).
+
+Full docs: `packages/gmt/src/plain/parse/parseDateWithPattern.ts`,
+`parseDateTimeWithPattern.ts`, `parseTimeWithPattern.ts`.
+
 ## Common Mistakes
 
 ### HIGH Not handling null on invalid input

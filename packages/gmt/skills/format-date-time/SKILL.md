@@ -278,6 +278,45 @@ if (names.length === 0 || eras.length === 0) {
 
 Source: packages/gmt/src/plain/locale/getLocaleMonthNames.ts — Returns [] for an invalid locale
 
+### MEDIUM Looking for a token-pattern formatter (there isn't one, deliberately)
+
+GMT has `parseDateWithPattern`/`parseDateTimeWithPattern`/`parseTimeWithPattern`
+for *decoding* a string against a caller-supplied token pattern (e.g.
+`"MM/dd/yyyy"`), but deliberately has no inverse token *formatter* for
+producing output. This is not a gap to work around — it's roadmap Decision 1
+(`context/roadmap/issues/J.md`): a hard-coded token pattern like
+`"MM/dd/yyyy"` bakes in US field ordering (month before day) and ships it to
+every locale, which is exactly the kind of locale bug GMT exists to prevent.
+Parsing a *known, fixed* producer format is fine because there's no ambiguity
+about what the input shape is; formatting *for output* by a fixed pattern
+would impose that same fixed shape on every locale's display.
+
+Wrong:
+
+```ts
+// There is no formatDateWithPattern — don't go looking for one, and don't
+// hand-roll one by string-splitting/concatenating a formatted value into a
+// fixed field order.
+```
+
+Correct:
+
+```ts
+import { formatDate } from "@burglekitt/gmt";
+
+// Let Intl.DateTimeFormat pick field order per locale instead of a fixed
+// pattern string.
+formatDate("2024-03-15", "en-US"); // "3/15/2024"
+formatDate("2024-03-15", "de-DE"); // "15.3.2024"
+```
+
+`formatDate`/`formatTime`/`formatDateTime` (locale-ordered strings) are the
+current answer for display. GMT's planned answer for field-level output
+control (a custom layout that still needs per-locale field order) is
+`formatDateToParts` — tracked as Story J12, not yet shipped.
+
+Source: context/roadmap/issues/J.md — Decision 1 (token formatter deliberately excluded); packages/gmt/src/plain/parse/parseDateWithPattern.ts — the parsing-only counterpart
+
 ## References
 
 - [Full format API](references/format-api.md)

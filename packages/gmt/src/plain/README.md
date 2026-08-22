@@ -126,6 +126,7 @@ Extract components:
 - `parseUnitFromDate`, `parseUnitFromDateTime`, `parseUnitFromTime`
 - `parseWeekFromDate`, `parseWeekFromDateTime`
 - `parseYearFromDate`, `parseYearFromDateTime`
+- `parseDateWithPattern`, `parseDateTimeWithPattern`, `parseTimeWithPattern` — decode a fixed producer format (e.g. `"MM/dd/yyyy"`) against a caller-supplied token pattern
 
 ### validate
 

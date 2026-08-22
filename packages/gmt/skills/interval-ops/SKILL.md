@@ -4,19 +4,17 @@ description: >
   Interval and range math over ISO datetime/zoned/unix strings. Use
   isValid*Interval to validate start/end pairs, intervalContains* for
   point-or-interval containment, intervalsOverlap* for overlap booleans,
-  intervalIntersection* / intervalUnion* for set-theoretic combine/difference
-  returning { start, end } | null, intervalDifference* / intervalXor* /
-  intervalAbuts* / intervalEngulfs* for set operations, intervalFromDuration* to
-  construct an interval from a single point plus an ISO 8601 duration anchored
-  at "start" or "end", splitIntervalByUnit* to tile an interval by duration
-  unit, intervalCount* for how many calendar-unit boundaries an interval
-  crosses, intervalLength* for the exact (fractional) duration of an interval
-  in a unit, intervalDivideEqually* to split an interval into n equal parts,
-  intervalSplitAt* to split an interval at arbitrary points, mergeIntervals*
-  and intervalXorAll* as the list-form generalizations of intervalUnion* and
-  intervalXor*, and intervalOverlappingDays* for how many distinct calendar
-  dates two intervals share. Covers plain, zoned, unix, and utc namespaces.
-  Returns false/null/[] on invalid input — never throws.
+  intervalIntersection*/intervalUnion* for set-theoretic combine/difference
+  returning { start, end } | null, intervalDifference*/intervalXor*/
+  intervalAbuts*/intervalEngulfs* for set operations, intervalFromDuration* to
+  build an interval from a point plus an ISO 8601 duration, splitIntervalByUnit*
+  to tile an interval by duration unit, intervalCount* for calendar-unit
+  boundaries crossed, intervalLength* for exact fractional duration in a unit,
+  intervalDivideEqually* to split into n equal parts, intervalSplitAt* to split
+  at arbitrary points, mergeIntervals*/intervalXorAll* as list-form
+  generalizations of intervalUnion*/intervalXor*, and intervalOverlappingDays*
+  for shared calendar dates between two intervals. Covers plain, zoned, unix,
+  utc. Returns false/null/[] on invalid input — never throws.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/interval/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/interval/index.ts'

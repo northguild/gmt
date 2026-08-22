@@ -53,6 +53,16 @@ export function addDays(dateStr: string, days: number): string {
 - The catch block takes no argument (`catch { ... }`) — we never need the error value.
 - Return the appropriate sentinel for the function's return type.
 
+### Scoped exception: manual string parsing in `parse*WithPattern` (J11 / Decision 4)
+
+"Manual string parsing" is forbidden everywhere in GMT **except** the `parseDateWithPattern` / `parseDateTimeWithPattern` / `parseTimeWithPattern` family (`packages/gmt/src/plain/parse/`, engine in `packages/gmt/src/internal/patternToken.ts`), because Temporal has no `fromFormat`-style equivalent and this is the only way to decode a caller-supplied token pattern. The exception is bound by three rules, not a blanket carve-out:
+
+1. The regex is built **from the pattern string itself** at call time — never hand-rolled per-format string slicing.
+2. Extracted fields are **always** handed to `Temporal.*.from(fields, { overflow: "reject" })` for final construction and validation — a regex match only proves shape, never validity (e.g. `"02/31/2024"` matches `"MM/dd/yyyy"` but is not a real date).
+3. The try-catch and sentinel-return rules above are unchanged.
+
+See `context/roadmap/issues/J.md` Decision 4 for the full rationale. This prohibition stands for every other function in the library.
+
 ## Loop Style
 
 Avoid `while` loops in new code. Prefer `for` loops or array methods (`map`, `filter`, `reduce`, etc.). `while` loops are more error-prone and harder to reason about than bounded `for` loops.

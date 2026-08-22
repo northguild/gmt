@@ -2,19 +2,19 @@
 name: calculate-dates
 description: >
   Add or subtract time from dates. Use addDays, addMonths, subtractTime for date
-  arithmetic. Use addBusinessDays/subtractBusinessDays for Mon–Fri business-day
-  arithmetic that skips weekends. Use diffDate for calculating differences. Use
-  clampDate to restrict a date to a range, or closestDateTo to find the nearest
-  candidate by calendar distance. add*/subtract* accept an optional overflow
-  ("constrain" | "reject") option; diff* accept optional
-  smallestUnit/roundingIncrement/roundingMode options to round the result. Use
+  arithmetic. Use addBusinessDays/subtractBusinessDays for Mon-Fri business-day
+  arithmetic that skips weekends. Use diffDate for differences. Use clampDate to
+  restrict a date to a range, or closestDateTo to find the nearest candidate by
+  calendar distance. add*/subtract* accept an optional overflow ("constrain" |
+  "reject") option; diff* accept optional
+  smallestUnit/roundingIncrement/roundingMode options. Use
   getLocaleStartOfWeek/getLocaleEndOfWeek for locale-driven week boundaries
-  (first day of week derived from the locale, e.g. en-US Sunday vs fr-FR Monday)
-  instead of startOfDate/endOfDate's ISO-biased weekStartsOn option. Use
+  (first day of week from the locale, e.g. en-US Sunday vs fr-FR Monday) instead
+  of startOfDate/endOfDate's ISO-biased weekStartsOn option. Use
   setDate/setDateTime/setTime to set one or more fields (year, month, day,
-  hour, ...) on a value in a single atomic call — the safe alternative to
-  composing add* calls field-by-field, which resolves each field's overflow
-  independently and can silently diverge on multi-field updates.
+  hour, ...) atomically — the safe alternative to composing add* calls
+  field-by-field, which resolves each field's overflow independently and can
+  silently diverge on multi-field updates.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/calculate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/calculate/clampDate.ts'
