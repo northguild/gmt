@@ -5,15 +5,15 @@ import { intervalLengthZoned } from "./intervalLengthZoned";
 
 describe("intervalLengthZoned", () => {
   it.each`
-    start                                                | end                                                  | unit       | expected
-    ${"2024-03-10T00:00:00-05:00[America/New_York]"}     | ${"2024-03-11T00:00:00-04:00[America/New_York]"}    | ${"hour"}  | ${23}
-    ${"2024-03-10T00:00:00-05:00[America/New_York]"}     | ${"2024-03-11T00:00:00-04:00[America/New_York]"}    | ${"day"}   | ${1}
-    ${"2024-11-03T00:00:00-04:00[America/New_York]"}     | ${"2024-11-04T00:00:00-05:00[America/New_York]"}    | ${"hour"}  | ${25}
-    ${"2024-11-03T00:00:00-04:00[America/New_York]"}     | ${"2024-11-04T00:00:00-05:00[America/New_York]"}    | ${"day"}   | ${1}
-    ${"2024-01-01T00:00:00+00:00[UTC]"}                  | ${"2024-01-08T00:00:00+00:00[UTC]"}                 | ${"week"}  | ${1}
-    ${"2024-01-01T00:00:00+00:00[UTC]"}                  | ${"2024-03-05T00:00:00+00:00[UTC]"}                 | ${"month"} | ${2.129032258064516}
-    ${"2024-01-01T00:00:00+00:00[UTC]"}                  | ${"2025-01-01T00:00:00+00:00[UTC]"}                 | ${"year"}  | ${1}
-    ${"2024-02-29T00:00:00+00:00[UTC]"}                  | ${"2024-03-01T00:00:00+00:00[UTC]"}                 | ${"day"}   | ${1}
+    start                                            | end                                              | unit       | expected
+    ${"2024-03-10T00:00:00-05:00[America/New_York]"} | ${"2024-03-11T00:00:00-04:00[America/New_York]"} | ${"hour"}  | ${23}
+    ${"2024-03-10T00:00:00-05:00[America/New_York]"} | ${"2024-03-11T00:00:00-04:00[America/New_York]"} | ${"day"}   | ${1}
+    ${"2024-11-03T00:00:00-04:00[America/New_York]"} | ${"2024-11-04T00:00:00-05:00[America/New_York]"} | ${"hour"}  | ${25}
+    ${"2024-11-03T00:00:00-04:00[America/New_York]"} | ${"2024-11-04T00:00:00-05:00[America/New_York]"} | ${"day"}   | ${1}
+    ${"2024-01-01T00:00:00+00:00[UTC]"}              | ${"2024-01-08T00:00:00+00:00[UTC]"}              | ${"week"}  | ${1}
+    ${"2024-01-01T00:00:00+00:00[UTC]"}              | ${"2024-03-05T00:00:00+00:00[UTC]"}              | ${"month"} | ${2.129032258064516}
+    ${"2024-01-01T00:00:00+00:00[UTC]"}              | ${"2025-01-01T00:00:00+00:00[UTC]"}              | ${"year"}  | ${1}
+    ${"2024-02-29T00:00:00+00:00[UTC]"}              | ${"2024-03-01T00:00:00+00:00[UTC]"}              | ${"day"}   | ${1}
   `(
     "returns $expected $unit for $start..$end",
     ({ start, end, unit, expected }) => {
@@ -22,9 +22,9 @@ describe("intervalLengthZoned", () => {
   );
 
   it.each`
-    start                                | end                                  | unit
-    ${"2024-01-01T00:00:00+00:00[UTC]"}  | ${"2024-01-01T00:00:00+00:00[UTC]"}  | ${"day"}
-    ${"2024-01-01T00:00:00+00:00[UTC]"}  | ${"2024-01-01T00:00:00+00:00[UTC]"}  | ${"hour"}
+    start                               | end                                 | unit
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"day"}
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"hour"}
   `(
     "returns 0 for zero-length $start..$end in $unit",
     ({ start, end, unit }) => {
@@ -46,7 +46,7 @@ describe("intervalLengthZoned", () => {
   );
 
   it.each`
-    start   | end                                  | unit
+    start   | end                                 | unit
     ${123}  | ${"2024-01-02T00:00:00+00:00[UTC]"} | ${"day"}
     ${null} | ${"2024-01-02T00:00:00+00:00[UTC]"} | ${"day"}
   `("returns null for wrong-type start $start", ({ start, end, unit }) => {

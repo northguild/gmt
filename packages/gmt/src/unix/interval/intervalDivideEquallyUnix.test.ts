@@ -2,9 +2,9 @@ import { intervalDivideEquallyUnix } from "./intervalDivideEquallyUnix";
 
 describe("intervalDivideEquallyUnix", () => {
   it.each`
-    start | end          | n    | expected
-    ${0}  | ${90000000}  | ${3} | ${[{ start: 0, end: 30000000 }, { start: 30000000, end: 60000000 }, { start: 60000000, end: 90000000 }]}
-    ${0}  | ${90000000}  | ${1} | ${[{ start: 0, end: 90000000 }]}
+    start  | end         | n    | expected
+    ${0}   | ${90000000} | ${3} | ${[{ start: 0, end: 30000000 }, { start: 30000000, end: 60000000 }, { start: 60000000, end: 90000000 }]}
+    ${0}   | ${90000000} | ${1} | ${[{ start: 0, end: 90000000 }]}
     ${500} | ${500}      | ${2} | ${[{ start: 500, end: 500 }, { start: 500, end: 500 }]}
   `(
     "splits $start..$end into $n parts as $expected",
@@ -46,12 +46,12 @@ describe("intervalDivideEquallyUnix", () => {
   });
 
   it.each`
-    start       | end
-    ${NaN}      | ${90000000}
-    ${90000000} | ${0}
-    ${1.5}      | ${90000000}
-    ${null}     | ${90000000}
-    ${{}}       | ${90000000}
+    start             | end
+    ${NaN}            | ${90000000}
+    ${90000000}       | ${0}
+    ${1.5}            | ${90000000}
+    ${null}           | ${90000000}
+    ${{}}             | ${90000000}
     ${"not-a-number"} | ${90000000}
   `("returns [] for invalid $start, $end", ({ start, end }) => {
     expect(intervalDivideEquallyUnix(start, end, 3)).toEqual([]);

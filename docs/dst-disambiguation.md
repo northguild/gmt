@@ -27,6 +27,37 @@ Both scenarios need a tiebreak rule. Temporal (and GMT, which wraps it) offers f
 
 `"compatible"` is the default because it matches what most runtimes and other datetime libraries do out of the box — it's the safe, unsurprising choice if you don't have an opinion. Reach for `"earlier"`/`"later"` when your domain has a specific rule (e.g. "always round DST-gap appointments forward"), and `"reject"` when an ambiguous/nonexistent time should be a hard validation error rather than silently resolved.
 
+## Four DST-related questions, four different functions
+
+Beyond `disambiguation`/`offset` (this doc's main subject — what to do when _constructing_ a value lands on an ambiguous or nonexistent instant), GMT has three more DST-related functions with easily-confused names. Route by the question you're actually asking:
+
+| Your question | Function | Scope |
+| --- | --- | --- |
+| Does this zone observe DST at all? | `hasDaylightSaving(timeZone)` | Zone-level, no instant |
+| Where do this zone's transitions fall? | `getDstTransitions(timeZone, year)` | Enumerates instants |
+| Is _this particular instant_ currently in DST? | `isInDaylightSaving(value)` | A single zoned value |
+| What should happen when construction lands on an ambiguous/nonexistent instant? | `disambiguation` / `offset` (this doc) | Orthogonal — a construction-time choice, not a query |
+
+`isInDaylightSaving` compares a zoned value's own offset against its timeZone's standard (non-DST) offset for that same year — the smaller of the offsets a Jan 15 and a Jul 15 reference point attain, since DST always shifts a zone's clocks forward relative to its own standard time, in every hemisphere:
+
+```typescript
+import { isInDaylightSaving } from "@burglekitt/gmt/zoned";
+
+isInDaylightSaving("2024-07-15T12:00:00-04:00[America/New_York]");
+// true
+
+isInDaylightSaving("2024-01-15T12:00:00-05:00[America/New_York]");
+// false
+
+// Southern-hemisphere DST spans the new year — one of the two reference
+// points still falls in standard time and the other in DST either way.
+isInDaylightSaving("2024-01-15T12:00:00+11:00[Australia/Sydney]");
+// true
+
+isInDaylightSaving("2024-07-15T12:00:00+09:00[Asia/Tokyo]");
+// false — Asia/Tokyo has no DST, so this is always false
+```
+
 ## Which function do I actually need?
 
 `disambiguation` shows up on more than one function, and they don't all behave the same way — this is the part people get tripped up on. Use this table to route to the right one:

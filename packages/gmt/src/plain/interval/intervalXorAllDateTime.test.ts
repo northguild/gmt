@@ -9,9 +9,7 @@ describe("intervalXorAllDateTime", () => {
 
     const result = intervalXorAllDateTime([a, b]);
 
-    expect(result).toEqual(
-      intervalXorDateTime(a.start, a.end, b.start, b.end),
-    );
+    expect(result).toEqual(intervalXorDateTime(a.start, a.end, b.start, b.end));
     expect(result).toEqual([
       { start: "2024-01-01T09:00:00", end: "2024-04-01T10:59:59.999999999" },
       { start: "2024-06-30T12:00:00.000000001", end: "2024-12-31T17:00:00" },

@@ -52,8 +52,8 @@ Invalid input fallbacks are consistent across the library:
 
 | Metric     | Count  |
 | ---------- | ------ |
-| Test files | 489    |
-| Tests      | 14,784 |
+| Test files | 467    |
+| Tests      | 14,965 |
 
 Every function is exercised across **17 locales** and a full IANA timezone matrix. The CI pipeline runs the complete suite in **20 environments** — 2 Node versions (22, 24) × 10 timezones spanning every UTC offset band from Pacific/Niue (−11:00) to Pacific/Apia (+13:00):
 
@@ -1056,6 +1056,90 @@ getDstTransitions("Invalid/Zone", 2024);
 ```
 
 Each object's `instant` is a UTC ISO 8601 string; `offsetBefore`/`offsetAfter` are `±HH:MM` offset strings. Returns `[]` for zones with no transitions in the requested year and on invalid input.
+
+**Four DST-related questions, four different functions.** The names are close enough to be misread, so here's the map:
+
+| Question                                                                        | Function                                      | Scope                                                |
+| ------------------------------------------------------------------------------- | --------------------------------------------- | ---------------------------------------------------- |
+| Does this zone observe DST at all?                                              | `hasDaylightSaving(timeZone)`                 | Zone-level, no instant                               |
+| Where do this zone's transitions fall?                                          | `getDstTransitions(timeZone, year)`           | Enumerates instants                                  |
+| Is _this particular instant_ currently in DST?                                  | `isInDaylightSaving(value)`                   | A single zoned value                                 |
+| What should happen when construction lands on an ambiguous/nonexistent instant? | `disambiguation` / `offset` options (Group C) | Orthogonal — a construction-time choice, not a query |
+
+`isInDaylightSaving` answers the third question:
+
+```typescript
+import { isInDaylightSaving } from "@burglekitt/gmt/zoned";
+
+isInDaylightSaving("2024-07-15T12:00:00-04:00[America/New_York]");
+// true
+
+isInDaylightSaving("2024-01-15T12:00:00-05:00[America/New_York]");
+// false
+
+// Southern-hemisphere DST spans the new year.
+isInDaylightSaving("2024-01-15T12:00:00+11:00[Australia/Sydney]");
+// true
+
+isInDaylightSaving("2024-07-15T12:00:00+09:00[Asia/Tokyo]");
+// false — Asia/Tokyo has no DST, so this is always false
+
+isInDaylightSaving("invalid");
+// false
+```
+
+`getZonedOffset` and `getZonedOffsetAs` read a zoned value's UTC offset — the former as a `±HH:MM` string, the latter as a number in minutes or nanoseconds:
+
+```typescript
+import { getZonedOffset, getZonedOffsetAs } from "@burglekitt/gmt/zoned";
+
+getZonedOffset("2024-07-15T12:00:00-04:00[America/New_York]");
+// "-04:00"
+
+getZonedOffsetAs("2024-07-15T12:00:00-04:00[America/New_York]", "minutes");
+// -240
+
+getZonedOffsetAs("2024-05-15T12:00:00+05:45[Asia/Kathmandu]", "minutes");
+// 345 — GMT has half- and quarter-hour offsets too, not just whole hours
+
+getZonedOffset("invalid");
+// ""
+```
+
+`getTimeZoneOffset` looks up a timezone's offset at a given instant without needing an existing zoned value in hand:
+
+```typescript
+import { getTimeZoneOffset } from "@burglekitt/gmt/zoned";
+
+getTimeZoneOffset("America/New_York", "2024-07-15T12:00:00Z");
+// "-04:00"
+
+getTimeZoneOffset("America/New_York", "2024-01-15T12:00:00Z");
+// "-05:00"
+
+getTimeZoneOffset("Invalid/Zone", "2024-07-15T12:00:00Z");
+// ""
+```
+
+`formatTimeZoneName` returns a timezone's localized display name. `options.style` covers every `Intl.DateTimeFormatOptions` `timeZoneName` value:
+
+```typescript
+import { formatTimeZoneName } from "@burglekitt/gmt/zoned";
+
+formatTimeZoneName("America/New_York", "en-US", { style: "shortGeneric" });
+// "ET" — season-independent
+
+formatTimeZoneName("America/New_York", "en-US", { style: "longGeneric" });
+// "Eastern Time" — season-independent
+
+formatTimeZoneName("America/New_York", "en-US", { style: "long" });
+// "Eastern Standard Time" or "Eastern Daylight Time", depending on the current date
+
+formatTimeZoneName("Invalid/Zone", "en-US");
+// ""
+```
+
+The `"short"`/`"long"`/`"shortOffset"`/`"longOffset"` styles name the zone's _current_ offset — for a DST-observing zone the label flips between standard and daylight names depending on when this is called, since there's no instant parameter to pin it to (this matches how `Intl.DateTimeFormat.prototype.format()` itself defaults to "now" with no argument). The `"shortGeneric"`/`"longGeneric"` styles are season-independent and don't have this issue — prefer them for a name that won't change twice a year.
 
 `clampZoned` restricts a zoned datetime to a range, and `closestZonedTo` finds the nearest candidate by temporal distance:
 

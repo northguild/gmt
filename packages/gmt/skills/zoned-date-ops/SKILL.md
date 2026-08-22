@@ -12,11 +12,16 @@ description: >
   field setting. Most accept disambiguation ("compatible" | "earlier" |
   "later" | "reject") for gap/overlap resolution; boundary and set* functions
   also accept offset ("prefer" | "use" | "ignore" | "reject", default
-  "ignore").
+  "ignore"). Use getZonedOffset, getZonedOffsetAs, getTimeZoneOffset,
+  formatTimeZoneName, isInDaylightSaving for reading a zoned value's UTC
+  offset and DST status.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/zoned/get/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/format/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/validate/index.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/parse/getZonedOffset.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/parse/getZonedOffsetAs.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/compare/isInDaylightSaving.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/convert/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/addZoned.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/subtractZoned.ts'
@@ -57,7 +62,8 @@ import {
   startOfZoned, endOfZoned, startOfQuarterForZoned, endOfQuarterForZoned,
   getLocaleZonedStartOfWeek, getLocaleZonedEndOfWeek,
   clampZoned, closestZonedTo, mapZonedHoursInDay, getHoursInZonedDay,
-  setZoned
+  setZoned, getZonedOffset, getZonedOffsetAs, getTimeZoneOffset,
+  formatTimeZoneName, isInDaylightSaving
 } from "@burglekitt/gmt/zoned";
 ```
 
@@ -210,6 +216,34 @@ closestZonedTo(
 
 Returns `null` for empty candidates or invalid target.
 
+### Read a zoned value's UTC offset
+
+```ts
+getZonedOffset("2024-07-15T12:00:00-04:00[America/New_York]"); // "-04:00"
+getZonedOffsetAs("2024-07-15T12:00:00-04:00[America/New_York]", "minutes"); // -240
+getTimeZoneOffset("America/New_York", "2024-07-15T12:00:00Z"); // "-04:00"
+```
+
+`getZonedOffset`/`getZonedOffsetAs` read the offset off an existing zoned value. `getTimeZoneOffset` looks one up for a bare timezone + instant, without needing a zoned value in hand.
+
+### Format a timezone's display name
+
+```ts
+formatTimeZoneName("America/New_York", "en-US", { style: "shortGeneric" }); // "ET"
+formatTimeZoneName("America/New_York", "en-US", { style: "long" }); // "Eastern Standard Time" or "Eastern Daylight Time", depending on today's date
+```
+
+`style` covers all six `Intl.DateTimeFormatOptions` `timeZoneName` values. `"shortGeneric"`/`"longGeneric"` are season-independent (`"ET"`, `"Eastern Time"`); `"short"`/`"long"`/`"shortOffset"`/`"longOffset"` name the zone's *current* offset and flip between standard/daylight forms depending on when this is called — there's no instant parameter to pin it to.
+
+### Check whether an instant is in daylight saving time
+
+```ts
+isInDaylightSaving("2024-07-15T12:00:00-04:00[America/New_York]"); // true
+isInDaylightSaving("2024-01-15T12:00:00-05:00[America/New_York]"); // false
+```
+
+See the Common Mistakes entry below for how this differs from `hasDaylightSaving` and `getDstTransitions`.
+
 ## Timezone Reference
 
 See [references/timezones.md](references/timezones.md) for common IANA timezone identifiers.
@@ -254,6 +288,19 @@ setZoned(source, { minute: 0 }, { disambiguation: "reject", offset: "prefer" });
 ```
 
 Leave `offset` at its default unless you deliberately need Temporal's raw `.with()` semantics. See [The offset parameter](../../../../docs/dst-disambiguation.md#the-offset-parameter).
+
+### Confusing `hasDaylightSaving`, `getDstTransitions`, and `isInDaylightSaving`
+
+The names are close enough to be misread. Four different DST-related questions, four different functions:
+
+| Question | Function | Scope |
+| --- | --- | --- |
+| Does this zone observe DST at all? | `hasDaylightSaving(timeZone)` | Zone-level, no instant |
+| Where do this zone's transitions fall? | `getDstTransitions(timeZone, year)` | Enumerates instants |
+| Is *this particular instant* currently in DST? | `isInDaylightSaving(value)` | A single zoned value |
+| What happens when construction lands on an ambiguous/nonexistent instant? | `disambiguation` / `offset` | Orthogonal — a construction-time choice, not a query |
+
+Picking the wrong one is a common mistake: `hasDaylightSaving("America/New_York")` is `true` year-round (the zone observes DST), which tells you nothing about whether a *specific* March 15th value is currently in it — that's `isInDaylightSaving`'s job.
 
 ## References
 

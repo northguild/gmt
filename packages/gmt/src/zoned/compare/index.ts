@@ -3,6 +3,7 @@ export * from "./areZonedEqualBy";
 export * from "./isAfterZoned";
 export * from "./isBeforeZoned";
 export * from "./isBetweenZoned";
+export * from "./isInDaylightSaving";
 export * from "./isZonedBusinessDay";
 export * from "./isZonedFuture";
 export * from "./isZonedPast";

@@ -3,12 +3,12 @@ import { intervalLengthTime } from "./intervalLengthTime";
 
 describe("intervalLengthTime", () => {
   it.each`
-    start              | end               | unit             | expected
-    ${"12:00:00"}      | ${"14:30:00"}     | ${"hour"}        | ${2.5}
-    ${"12:59:00"}      | ${"13:01:00"}     | ${"hour"}        | ${2 / 60}
-    ${"12:00:00"}      | ${"12:30:00"}     | ${"minute"}      | ${30}
-    ${"12:00:00.500"}  | ${"12:00:01.750"} | ${"second"}      | ${1.25}
-    ${"12:00:00"}      | ${"12:00:00.001"} | ${"millisecond"} | ${1}
+    start             | end               | unit             | expected
+    ${"12:00:00"}     | ${"14:30:00"}     | ${"hour"}        | ${2.5}
+    ${"12:59:00"}     | ${"13:01:00"}     | ${"hour"}        | ${2 / 60}
+    ${"12:00:00"}     | ${"12:30:00"}     | ${"minute"}      | ${30}
+    ${"12:00:00.500"} | ${"12:00:01.750"} | ${"second"}      | ${1.25}
+    ${"12:00:00"}     | ${"12:00:00.001"} | ${"millisecond"} | ${1}
   `(
     "returns $expected $unit for $start..$end",
     ({ start, end, unit, expected }) => {

@@ -34,6 +34,7 @@ Timezone-aware comparison:
 - `areZonedEqual`, `areZonedEqualBy`, `isAfterZoned`, `isBeforeZoned`, `isBetweenZoned`, `isZonedBusinessDay`, `isZonedWeekend`
 - `isZonedFuture`, `isZonedPast`
 - `isZonedRelativeDay`, `isZonedThisUnit`
+- `isInDaylightSaving`
 
 ### convert
 
@@ -49,6 +50,7 @@ Locale-aware timezone formatting:
 
 - `formatZonedDateTime`, `formatZonedRange`
 - `formatRelativeZoned`
+- `formatTimeZoneName`
 
 > **Locale data note.** These formatters delegate locale rendering to the host runtime's `Intl.DateTimeFormat` / `Intl.RelativeTimeFormat`. Output therefore depends on the ICU data shipped with the running Node (or browser):
 >
@@ -68,6 +70,7 @@ Current in specific timezone and locale-aware extraction:
 - `getZonedMillisecond`, `getZonedMicrosecond`, `getZonedNanosecond`
 - `getZonedWeekOfYear`
 - `getDstTransitions`
+- `getTimeZoneOffset`
 
 ### interval
 
@@ -104,6 +107,7 @@ Extract timezone components:
 - `parseMonthFromZoned`
 - `parseNanosecondFromZoned`, `parseSecondFromZoned`
 - `parseTimeFromZoned`, `parseTimeZoneFromZoned`
+- `getZonedOffset`, `getZonedOffsetAs`
 - `parseUnitFromZoned`
 - `parseWeekFromZoned`
 - `parseYearFromZoned`

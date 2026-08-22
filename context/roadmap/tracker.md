@@ -51,7 +51,7 @@ Issue number tracker (fill in as issues are created). `Order` is the sequence to
 | 39    | J7    | Issue #108   | Done        | not yet                                      |
 | 40    | J8    | Issue #103   | Done        | not yet                                      |
 | 41    | J9    | Issue #104   | Done        | not yet                                      |
-| 42    | J10   | Issue #105   | Not started | not yet                                      |
+| 42    | J10   | Issue #105   | Done        | not yet                                      |
 | 43    | J11   | Issue #102   | Not started | not yet                                      |
 | 44    | J12   | Issue #106   | Not started | not yet                                      |
 | 45    | J13   | Issue #109   | Not started | not yet                                      |

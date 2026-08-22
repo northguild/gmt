@@ -19,8 +19,14 @@ describe("intervalXorAllZoned", () => {
 
     expect(result).toEqual(intervalXorZoned(a.start, a.end, b.start, b.end));
     expect(result).toEqual([
-      { start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-04-01T10:59:59.999999999+00:00[UTC]" },
-      { start: "2024-06-30T12:00:00.000000001+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" },
+      {
+        start: "2024-01-01T09:00:00+00:00[UTC]",
+        end: "2024-04-01T10:59:59.999999999+00:00[UTC]",
+      },
+      {
+        start: "2024-06-30T12:00:00.000000001+00:00[UTC]",
+        end: "2024-12-31T17:00:00+00:00[UTC]",
+      },
     ]);
   });
 

@@ -2,6 +2,8 @@ export * from "./parseDateFromZoned";
 export * from "./parseDateTimeFromZoned";
 export * from "./parseDayFromZoned";
 export * from "./parseDayOfWeekFromZoned";
+export * from "./getZonedOffset";
+export * from "./getZonedOffsetAs";
 export * from "./parseHourFromZoned";
 export * from "./parseMicrosecondFromZoned";
 export * from "./parseMillisecondFromZoned";
