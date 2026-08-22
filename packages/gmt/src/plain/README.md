@@ -57,6 +57,7 @@ Date/time comparison:
 Locale-aware formatting:
 
 - `formatDate`, `formatDateTime`, `formatTime`
+- `formatCalendar` — relative day label + time-of-day (e.g. `"tomorrow at 2:30 PM"`), Moment's `.calendar()`; distinct from `formatRelativeDateTime`'s elapsed-time phrasing (`"in 1 day"`) — see its JSDoc for the day-label/threshold/connector design
 - `formatDateRange`, `formatDateTimeRange` — locale-elided range between two plain values (e.g. `"February 3 – 5, 2024"`); plain counterpart of `zoned`'s `formatZonedRange`, same parameter order and option shape
 - `formatDateToParts`, `formatDateTimeToParts` — locale-ordered `{ type, value }` parts, for callers restyling output without hard-coding field order (GMT's substitute for a token formatter — see `formatDate`'s JSDoc)
 - `formatRelativeDate`, `formatRelativeTime`, `formatRelativeDateTime`

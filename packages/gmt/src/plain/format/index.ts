@@ -1,3 +1,4 @@
+export * from "./formatCalendar";
 export * from "./formatDate";
 export * from "./formatDateRange";
 export * from "./formatDateTime";

@@ -41,22 +41,22 @@ Issue number tracker (fill in as issues are created). `Order` is the sequence to
 | 29    | I2    | Issue #81    | Done        | v1.12.0                                      |
 | 30    | I3    | Issue #82    | Done        | v1.12.0                                      |
 | 31    | I4    | Issue #83    | Done        | v1.12.0                                      |
-| 32    | J0a   | Issue #96    | Done        | not yet (docs-only, no changeset)            |
-| 33    | J0b   | Issue #97    | Done        | not yet (minor, breaking for deep subpaths)  |
-| 34    | J1    | Issue #98    | Done        | not yet                                      |
-| 35    | J3    | Issue #99    | Done        | not yet                                      |
-| 36    | J4    | Issue #107   | Done        | not yet                                      |
-| 37    | J5    | Issue #100   | Done        | not yet                                      |
-| 38    | J6    | Issue #101   | Done        | not yet                                      |
-| 39    | J7    | Issue #108   | Done        | not yet                                      |
-| 40    | J8    | Issue #103   | Done        | not yet                                      |
-| 41    | J9    | Issue #104   | Done        | not yet                                      |
-| 42    | J10   | Issue #105   | Done        | not yet                                      |
-| 43    | J11   | Issue #102   | Done        | not yet                                      |
-| 44    | J12   | Issue #106   | Done        | not yet                                      |
-| 45    | J13   | Issue #109   | Done        | not yet                                      |
-| 46    | J14   | Issue #110   | Done        | not yet                                      |
-| 47    | J15   | Issue #111   | Not started | minor, Story Group J complete                |
+| 32    | J0a   | Issue #96    | Done        | v1.13.0                                      |
+| 33    | J0b   | Issue #97    | Done        | v1.13.0                                      |
+| 34    | J1    | Issue #98    | Done        | v1.13.0                                      |
+| 35    | J3    | Issue #99    | Done        | v1.13.0                                      |
+| 36    | J4    | Issue #107   | Done        | v1.13.0                                      |
+| 37    | J5    | Issue #100   | Done        | v1.13.0                                      |
+| 38    | J6    | Issue #101   | Done        | v1.13.0                                      |
+| 39    | J7    | Issue #108   | Done        | v1.13.0                                      |
+| 40    | J8    | Issue #103   | Done        | v1.13.0                                      |
+| 41    | J9    | Issue #104   | Done        | v1.13.0                                      |
+| 42    | J10   | Issue #105   | Done        | v1.13.0                                      |
+| 43    | J11   | Issue #102   | Done        | v1.13.0                                      |
+| 44    | J12   | Issue #106   | Done        | v1.13.0                                      |
+| 45    | J13   | Issue #109   | Done        | v1.13.0                                      |
+| 46    | J14   | Issue #110   | Done        | v1.13.0                                      |
+| 47    | J15   | Issue #111   | Done        | v1.13.0                                      |
 | 48    | E1    | Issue #44    | Not started | unscheduled, no publish plan until picked up |
 | 49    | E2    | Issue #75    | Not started | unscheduled, no publish plan until picked up |
 | 50    | E3    | Issue #76    | Not started | unscheduled, no publish plan until picked up |

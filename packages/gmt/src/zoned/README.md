@@ -49,6 +49,7 @@ Timezone/format conversion:
 Locale-aware timezone formatting:
 
 - `formatZonedDateTime`, `formatZonedRange`
+- `formatCalendarZoned` — relative day label + time-of-day (e.g. `"tomorrow at 2:30 PM"`); zoned counterpart of `plain`'s `formatCalendar`
 - `formatZonedToParts` — locale-ordered `{ type, value }` parts, including `timeZoneName` parts; GMT's substitute for a token formatter
 - `formatRelativeZoned`
 - `formatTimeZoneName`

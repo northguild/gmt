@@ -50,11 +50,6 @@ Invalid input fallbacks are consistent across the library:
 
 ## Testing
 
-| Metric     | Count  |
-| ---------- | ------ |
-| Test files | 502    |
-| Tests      | 15,310 |
-
 Every function is exercised across **17 locales** and a full IANA timezone matrix. The CI pipeline runs the complete suite in **20 environments** — 2 Node versions (22, 24) × 10 timezones spanning every UTC offset band from Pacific/Niue (−11:00) to Pacific/Apia (+13:00):
 
 | Timezone            | UTC Offset      |
@@ -71,6 +66,62 @@ Every function is exercised across **17 locales** and a full IANA timezone matri
 | Pacific/Apia        | +13:00 / +14:00 |
 
 This guarantees that DST transitions, leap seconds, half-hour offsets, and locale-specific weekend boundaries are all covered — not just the happy path.
+
+## How GMT is tested, vs. the libraries it targets
+
+GMT's roadmap (see [context/roadmap](https://github.com/burglekitt/gmt/tree/main/context/roadmap)) is explicitly scoped against react-aria's **`@internationalized/date`**, **Luxon**, **date-fns**, and **Moment.js** — the same four libraries compared below. All numbers were verified **2026-08-22** against the exact package versions/commits below — nothing is estimated. Re-verify before citing these numbers elsewhere; library surfaces and CI configs move.
+
+| Library                   | Version tested                          |
+| ------------------------- | --------------------------------------- |
+| GMT (`@burglekitt/gmt`)   | 1.12.0                                  |
+| `@internationalized/date` | 3.12.3 (`adobe/react-spectrum@5d191ab`) |
+| Luxon                     | 3.7.2 (`moment/luxon@f427515`)          |
+| date-fns                  | 4.4.0 (`date-fns/date-fns@a0a3922`)     |
+| Moment.js                 | 2.30.1 (`moment/moment@cf524af`)        |
+
+| Metric                          | GMT                                                | `@internationalized/date`      | Luxon                                | date-fns                                  | Moment.js                        |
+| ------------------------------- | -------------------------------------------------- | ------------------------------ | ------------------------------------ | ----------------------------------------- | -------------------------------- |
+| Test files                      | 522                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
+| Individual test cases           | **15,901**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
+| Effective CI test<br>executions | **318,020**<br>(15,901 × 2 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
+| CI Node.js matrix               | 22, 24                                             | n/a — tests<br>React 16–canary | 20, 22, 24, 25                       | not explicit<br>(`node = "latest"`)       | LTS, LTS-1,<br>latest            |
+| CI timezone matrix              | **10 zones × 2**<br>**Node, full suite**           | none found                     | none found                           | dedicated workflow,<br>zone scope unclear | 6 zones,<br>partial suite only   |
+| Locale test matrix              | **17 locales**,<br>every locale fn                 | none found                     | none found                           | none found                                | none found                       |
+| Real-browser CI                 | not yet                                            | yes (Playwright)               | not found                            | yes (Playwright)                          | not found                        |
+| Maintenance                     | active                                             | active                         | active                               | active                                    | **maintenance<br>mode**          |
+
+<sub>Methodology: "Test files" and the CI/maintenance rows come from each project's public CI configuration and repository file listing. "Individual test cases" for GMT, Luxon, date-fns, and Moment.js were obtained by actually cloning the repo at the commit above, installing dependencies, running the project's own test command (`vitest run` / `jest` / `node scripts/test.js`), and reading that runner's own final summary — not grepped from source. `@internationalized/date` was run by cloning `adobe/react-spectrum` at `5d191ab`, installing dependencies, and executing `npx jest packages/@internationalized/date/tests/`, yielding 386 passing tests. Luxon (39 failures) and date-fns (46 failures) had environment-dependent local failures that don't affect the total count: Luxon's suite assumes its CI container's local time zone is `America/New_York`; date-fns's experimental native-`Temporal` code path needs a global `Temporal` Node doesn't yet provide natively. Moment.js passed cleanly (0 failed) on Node 24. Sources: [GMT](https://github.com/burglekitt/gmt/blob/main/.github/workflows/ci.yml) · [`@internationalized/date`](https://github.com/adobe/react-spectrum/blob/main/.circleci/config.yml) · [Luxon](https://github.com/moment/luxon/blob/master/.github/workflows/test.yml) · [date-fns](https://github.com/date-fns/date-fns/tree/main/.github/workflows) · [Moment.js](https://github.com/moment/moment/tree/develop/.github/workflows).</sub>
+
+### Functionality parity progress
+
+GMT's roadmap tracks parity against the same four libraries story-by-story, with each gap sourced against the specific competitor function it closes — see [context/roadmap](https://github.com/burglekitt/gmt/tree/main/context/roadmap) for the full, source-verified audit trail. This is a live snapshot, not a finished-parity claim: ✅ shipped, 🟡 in progress, ⏳ backlog and not yet scheduled.
+
+| Capability                                                                         | Status                       | Also has it                                                              |
+| ---------------------------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------ |
+| Duration type<br>(ISO 8601 parse/format/arithmetic)                                | ✅ Done                      | Luxon `Duration`                                                         |
+| Interval/range math<br>(contains, overlap, union,<br>intersection, split, set ops) | ✅ Done                      | Luxon `Interval`,<br>date-fns `areIntervalsOverlapping`                  |
+| DST disambiguation control<br>on construction _and_ arithmetic                     | ✅ Done — **differentiator** | None of the others expose<br>this on arithmetic                          |
+| Locale-aware calendar helpers<br>(weekend, week start/end, day-of-week)            | ✅ Done                      | `@internationalized/date`                                                |
+| Business-day arithmetic,<br>clamp/closest, time rounding                           | ✅ Done                      | `temporal-kit`                                                           |
+| Interval rounding-out<br>(boundary count, from-duration)                           | ✅ Done                      | Luxon                                                                    |
+| Locale calendar metadata<br>(names, `hasDST`)                                      | ✅ Done                      | Luxon `Info`                                                             |
+| Overlap-day count, relative<br>rounding, DST transitions, hours-in-day             | ✅ Done                      | date-fns, `@internationalized/date`                                      |
+| Field setters, token-pattern<br>parsing, named machine formats,<br>calendar-style formatting        | ✅ Done | Luxon `.set()`,<br>`toRFC2822`/`toHTTP`/`toSQL`,<br>Moment `.calendar()` |
+| Non-Gregorian calendar systems<br>(Hebrew, Islamic, solar, Ethiopic)               | ⏳ Backlog                   | `@internationalized/date`'s<br>`toCalendar`                              |
+
+<sub>Status reflects [context/roadmap/tracker.md](https://github.com/burglekitt/gmt/tree/main/context/roadmap/tracker.md) as of this writing.</sub>
+
+### Where GMT stands alone
+
+Specific, sourced claims — not a repeat of the metrics above.
+
+| Claim                                                                                                                                         | The others                                                                                                                            |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Only GMT runs its **entire** suite in CI<br>under a real `TZ` env var across 10<br>real-world zones × 2 Node versions<br>(20 full-suite runs) | Luxon/`@internationalized/date`: no<br>CI timezone matrix. date-fns: zone<br>scope unclear. Moment.js: 6 zones,<br>partial suite only |
+| Only GMT enforces a mandatory<br>17-locale test matrix on every<br>locale-aware function                                                      | No CI-level or systematic<br>locale-matrix testing found<br>in any of the four                                                        |
+| Only GMT exposes explicit DST<br>disambiguation control on both<br>construction _and_ arithmetic                                              | Luxon's docs call this explicitly<br>undefined; `@internationalized/date`<br>only covers construction, not arithmetic                 |
+| Only GMT is Temporal-native with<br>zero `Date` usage, enforced by<br>3 dedicated lint packages                                               | Luxon, date-fns, and Moment.js all<br>still wrap or depend on `Date` internally                                                       |
+| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~15×                                                  | 318,020 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
 
 ## Package Layout
 
@@ -1199,6 +1250,7 @@ import {
   formatRelativeTime,
   formatDateTime,
   formatRelativeDateTime,
+  formatCalendar,
   formatDateRange,
   formatDateTimeRange,
   formatDateToParts,
@@ -1207,10 +1259,13 @@ import {
   formatZonedRange,
   formatZonedToParts,
   formatRelativeZoned,
+  formatCalendarZoned,
   formatUtc,
   formatRelativeUtc,
+  formatCalendarUtc,
   formatUnix,
   formatRelativeUnix,
+  formatCalendarUnix,
 } from "@burglekitt/gmt";
 
 // Relative to "now" — auto-picks the best unit.
@@ -1241,18 +1296,33 @@ formatRelativeUnix(1710685845000, "en-US", { epochUnit: "milliseconds" });
 // computed distance rounds to the display unit — every formatRelative* function accepts it.
 formatRelativeUtc(value, "en-US", { roundingMethod: "floor" });
 
+// formatCalendar* — a relative day label + time-of-day, joined with the
+// locale's own connector (never a hardcoded "at"). Distinct from
+// formatRelative*'s elapsed-time phrasing ("in 1 day"): this is Moment's
+// `.calendar()` — for user-facing schedules, not elapsed-time displays.
+// Within ±6 days of "now" (or an explicit `reference`) it stays relative;
+// beyond that it falls back to an absolute date + time, no relative wording.
+formatCalendar("2026-03-16T14:30:00", "en-US", { reference: "2026-03-15T09:00:00" });
+// "tomorrow at 2:30 PM"
+
+formatCalendar("2026-03-08T14:30:00", "en-US", { reference: "2026-03-15T09:00:00" });
+// "March 8, 2026 at 2:30 PM" — 7 days out, beyond the threshold
+
+formatCalendarZoned("2026-03-16T14:30:00-04:00[America/New_York]", "de-DE", {
+  reference: "2026-03-15T09:00:00-04:00[America/New_York]",
+});
+// "morgen um 14:30" — locale's own connector, not "at"
+
 // formatDateRange / formatDateTimeRange — plain counterparts of
 // formatZonedRange (same parameter order and option shape), for a
 // locale-elided range between two timezone-free values.
 formatDateRange("2024-02-03", "2024-02-05", "en-US", { dateStyle: "long" });
 // "February 3 – 5, 2024"
 
-formatDateTimeRange(
-  "2024-02-03T09:00:00",
-  "2024-02-03T17:00:00",
-  "en-US",
-  { dateStyle: "long", timeStyle: "short" },
-);
+formatDateTimeRange("2024-02-03T09:00:00", "2024-02-03T17:00:00", "en-US", {
+  dateStyle: "long",
+  timeStyle: "short",
+});
 // "February 3, 2024, 9:00 AM – 5:00 PM"
 
 // formatDateToParts / formatDateTimeToParts / formatZonedToParts return the

@@ -66,6 +66,7 @@ Validate and check UTC intervals:
 Locale-aware UTC formatting:
 
 - `formatUtc`
+- `formatCalendarUtc` — relative day label + time-of-day (e.g. `"tomorrow at 2:30 PM"`); UTC counterpart of `plain`'s `formatCalendar`
 - `formatRelativeUtc`
 - `formatHttp` — RFC 7231 IMF-fixdate (`"Fri, 15 Mar 2024 14:30:00 GMT"`) for HTTP headers like `Last-Modified`/`Date`/`Expires`; a **fixed grammar**, not a display format, so it takes no `locale` argument
 

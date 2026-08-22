@@ -9,7 +9,10 @@ description: >
   locale-ordered { type, value } parts (GMT's substitute for a token
   formatter); use formatRelativeDate, formatRelativeTime,
   formatRelativeDateTime for human-friendly relative output ("yesterday",
-  "in 2 hours"). Also getLocaleEraNames, getLocaleMonthNames,
+  "in 2 hours"); use formatCalendar, formatCalendarZoned, formatCalendarUnix,
+  formatCalendarUtc for a relative day label + time-of-day ("tomorrow at
+  2:30 PM", Moment's .calendar()) — distinct from formatRelative*'s
+  elapsed-time phrasing. Also getLocaleEraNames, getLocaleMonthNames,
   getLocaleWeekdayNames, getLocaleMeridiems for standalone locale
   calendar-name lookups — the GMT equivalent of Luxon's Info.eras,
   Info.months, Info.weekdays, and Info.meridiems. Also formatRfc2822,
@@ -33,6 +36,11 @@ sources:
   - 'burglekitt/gmt:packages/gmt/src/utc/format/formatHttp.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/format/formatSql.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/format/formatRfc3339.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/format/formatCalendar.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/format/formatCalendarZoned.ts'
+  - 'burglekitt/gmt:packages/gmt/src/unix/format/formatCalendarUnix.ts'
+  - 'burglekitt/gmt:packages/gmt/src/utc/format/formatCalendarUtc.ts'
+  - 'burglekitt/gmt:packages/gmt/src/internal/joinDateTimeConnector.ts'
 metadata:
   type: core
   library: '@burglekitt/gmt'
@@ -185,6 +193,40 @@ formatRelativeDateTime("2024-03-15T10:00:00", "en-US", {
 - `numeric: "auto" | "always"` — default `"auto"`. `"auto"` produces "yesterday"/"tomorrow"; `"always"` forces "1 day ago"/"in 1 day"
 - `style: "long" | "short" | "narrow"` — default `"long"`
 - `largestUnit` — override the auto-picked unit (e.g. `"week"` to force "3 weeks ago" instead of "last month")
+
+### Format a relative day label + time-of-day (Moment's `.calendar()`)
+
+```ts
+import { formatCalendar, formatCalendarZoned } from "@burglekitt/gmt";
+
+const ref = "2026-03-15T09:00:00";
+formatCalendar("2026-03-16T14:30:00", "en-US", { reference: ref });
+// "tomorrow at 2:30 PM"
+
+formatCalendar("2026-03-15T14:30:00", "en-US", { reference: ref });
+// "today at 2:30 PM"
+
+formatCalendar("2026-03-08T14:30:00", "en-US", { reference: ref });
+// "March 8, 2026 at 2:30 PM" — 7 days out, beyond the ±6-day threshold,
+// falls back to an absolute date + time with no relative wording
+
+formatCalendarZoned(
+  "2026-03-16T14:30:00-04:00[America/New_York]",
+  "de-DE",
+  { reference: "2026-03-15T09:00:00-04:00[America/New_York]" },
+);
+// "morgen um 14:30" — the connector ("um") is the locale's own, read from
+// Intl's combined date+time pattern, never a hardcoded "at"
+```
+
+Unlike `formatRelativeDate`/`formatRelativeDateTime` (which auto-pick a unit
+and always render an elapsed-time phrase — "in 1 day"), `formatCalendar*`
+always renders a day-granularity label plus the time-of-day, and switches to
+an absolute date beyond a fixed ±6-day threshold instead of degrading to
+"in 9 days". Options: `reference` (default "now"), `timeStyle` ("short"
+default, "medium", plus "full" on the zoned/unix/utc variants — not on plain
+`formatCalendar`, since a plain value has no real timezone for "full"'s
+`timeZoneName` to name; see its JSDoc).
 
 ### Standalone locale calendar names (no date value needed)
 
@@ -481,6 +523,39 @@ formatRfc2822("2024-03-15T14:30:00-04:00[America/New_York]");
 ```
 
 Source: context/roadmap/issues/J.md — Decision 1 (token formatter excluded) vs. J13's "Why this survives Decision 1" (fixed grammars are not display formats)
+
+### MEDIUM Confusing formatCalendar with formatRelativeDateTime
+
+They answer different questions and are not interchangeable:
+
+- `formatCalendar` (and its `formatCalendarZoned`/`formatCalendarUnix`/
+  `formatCalendarUtc` siblings) — "what should I show on a schedule/agenda
+  item?" → `"Tomorrow at 2:30 PM"`. Always includes the clock time; switches
+  to an absolute date beyond ±6 days.
+- `formatRelativeDateTime` (and its `formatRelative*` siblings) — "how long
+  ago/from now was this?" → `"in 1 day"`. Never includes a clock time;
+  auto-picks the coarsest sensible unit (seconds through years) with no
+  distance threshold.
+
+Wrong:
+
+```ts
+import { formatRelativeDateTime } from "@burglekitt/gmt";
+
+// Building a meeting-list row and reaching for the relative formatter —
+// it has no time-of-day in its output at all.
+const row = formatRelativeDateTime(meeting.startsAt); // "in 1 day"
+```
+
+Correct:
+
+```ts
+import { formatCalendar } from "@burglekitt/gmt";
+
+const row = formatCalendar(meeting.startsAt); // "tomorrow at 2:30 PM"
+```
+
+Source: context/roadmap/issues/J.md — J15's Common Mistakes requirement; packages/gmt/src/plain/format/formatCalendar.ts
 
 ## References
 

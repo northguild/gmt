@@ -60,6 +60,7 @@ Validate and check Unix intervals:
 Locale-aware Unix formatting:
 
 - `formatUnix`
+- `formatCalendarUnix` — relative day label + time-of-day (e.g. `"tomorrow at 2:30 PM"`); unix counterpart of `plain`'s `formatCalendar`
 - `formatRelativeUnix`
 
 > **Locale data note.** These formatters delegate locale rendering to the host runtime's `Intl.DateTimeFormat` / `Intl.RelativeTimeFormat`. Output therefore depends on the ICU data shipped with the running Node (or browser):

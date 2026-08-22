@@ -16,6 +16,7 @@ export type { LocaleWeekYearBounds } from "./getLocaleWeekYearBounds";
 export { getLocaleWeekendDays } from "./getLocaleWeekendDays";
 export { getStartOfZonedUnit, getUnitSpan } from "./intervalCountHelpers";
 export { isValidAmount } from "./isValidAmount";
+export { joinDateTimeConnector } from "./joinDateTimeConnector";
 export { isValidDayOfWeek } from "./isValidDayOfWeek";
 export { monthGridWeekRow } from "./monthGridWeekRow";
 export { normalizeDateTime } from "./normalizeDateTime";
