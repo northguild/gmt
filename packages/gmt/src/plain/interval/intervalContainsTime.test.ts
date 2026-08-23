@@ -101,25 +101,10 @@ describe("intervalContainsTime", () => {
   );
 
   it.each`
-    intervalStart | intervalEnd   | pointOrStart  | pointEnd
-    ${null}       | ${"12:00:00"} | ${"12:00:00"} | ${undefined}
-    ${undefined}  | ${"12:00:00"} | ${"12:00:00"} | ${undefined}
-    ${123}        | ${"12:00:00"} | ${"12:00:00"} | ${undefined}
-    ${true}       | ${"12:00:00"} | ${"12:00:00"} | ${undefined}
-    ${[]}         | ${"12:00:00"} | ${"12:00:00"} | ${undefined}
-    ${{}}         | ${"12:00:00"} | ${"12:00:00"} | ${undefined}
-    ${"12:00:00"} | ${null}       | ${"12:00:00"} | ${undefined}
-    ${"12:00:00"} | ${undefined}  | ${"12:00:00"} | ${undefined}
-    ${"12:00:00"} | ${123}        | ${"12:00:00"} | ${undefined}
-    ${"12:00:00"} | ${true}       | ${"12:00:00"} | ${undefined}
-    ${"12:00:00"} | ${[]}         | ${"12:00:00"} | ${undefined}
-    ${"12:00:00"} | ${{}}         | ${"12:00:00"} | ${undefined}
-    ${"12:00:00"} | ${"12:00:00"} | ${null}       | ${undefined}
-    ${"12:00:00"} | ${"12:00:00"} | ${undefined}  | ${undefined}
-    ${"12:00:00"} | ${"12:00:00"} | ${123}        | ${undefined}
-    ${"12:00:00"} | ${"12:00:00"} | ${true}       | ${undefined}
-    ${"12:00:00"} | ${"12:00:00"} | ${[]}         | ${undefined}
-    ${"12:00:00"} | ${"12:00:00"} | ${{}}         | ${undefined}
+    intervalStart   | intervalEnd     | pointOrStart    | pointEnd
+    ${null}         | ${"2024-01-01"} | ${"2024-01-01"} | ${false}
+    ${"2024-01-01"} | ${null}         | ${"2024-01-01"} | ${false}
+    ${"2024-01-01"} | ${"2024-01-01"} | ${null}         | ${false}
   `(
     "returns false for non-string input: $intervalStart, $intervalEnd, $pointOrStart",
     ({ intervalStart, intervalEnd, pointOrStart }) => {

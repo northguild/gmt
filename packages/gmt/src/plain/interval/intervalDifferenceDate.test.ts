@@ -3,6 +3,19 @@ import { intervalDifferenceDate } from "./intervalDifferenceDate";
 describe("intervalDifferenceDate", () => {
   it.each`
     aStart          | aEnd            | bStart          | bEnd            | expected
+    ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-02"} | ${"2024-01-05"} | ${[{ start: "2024-01-01", end: "2024-01-01" }]}
+    ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${[]}
+  `(
+    "returns $expected for zero-length A=$aStart..$aEnd minus B=$bStart..$bEnd",
+    ({ aStart, aEnd, bStart, bEnd, expected }) => {
+      expect(intervalDifferenceDate(aStart, aEnd, bStart, bEnd)).toEqual(
+        expected,
+      );
+    },
+  );
+
+  it.each`
+    aStart          | aEnd            | bStart          | bEnd            | expected
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-06-01"} | ${"2024-07-01"} | ${{ result: [{ start: "2024-01-01", end: "2024-05-31" }, { start: "2024-07-02", end: "2024-12-31" }] }}
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-03-01"} | ${"2024-10-31"} | ${{ result: [{ start: "2024-01-01", end: "2024-02-29" }, { start: "2024-11-01", end: "2024-12-31" }] }}
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-06-01"} | ${"2024-12-31"} | ${{ result: [{ start: "2024-01-01", end: "2024-05-31" }] }}

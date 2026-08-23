@@ -67,6 +67,24 @@ Every function is exercised across **17 locales** and a full IANA timezone matri
 
 This guarantees that DST transitions, leap seconds, half-hour offsets, and locale-specific weekend boundaries are all covered — not just the happy path.
 
+### Testing strategy
+
+GMT's test suite balances **thoroughness** against **maintenance burden** by testing behavior, not permutations.
+
+**What we test exhaustively:**
+
+- **17-locale matrix** — every locale-aware function is exercised across all 17 `MustTestLocales` (en-US, en-GB, de-DE, fr-FR, es-ES, it-IT, pt-PT, sv-SE, zh-CN, zh-TW, ja-JP, ko-KR, ar-SA, he-IL, ru-RU, tr-TR, is-IS). This covers script direction, first-day-of-week differences, and calendar metadata.
+- **Timezone battle matrix** — every zoned function is exercised across 10 IANA timezones spanning every UTC offset band from Pacific/Niue (−11:00) to Pacific/Apia (+14:00), including DST-transition and half-hour-offset zones.
+- **Zero-length and identity cases** — every interval and arithmetic function is tested with zero-length inputs, identity operations, and boundary-adjacent values.
+- **Invalid-input sentinels** — every public function is tested for the documented fallback behavior (`""`, `null`, `false`, `[]`) on malformed strings, wrong types, leap seconds, and inverted intervals.
+
+**What we collapse:**
+
+- **Non-string input tables** — functions that guard with `typeof x !== "string"` return the same sentinel for `null`, `undefined`, `123`, `true`, `[]`, and `{}`. We test one representative non-string per argument position rather than all six types × N positions. The collapse is safe because all non-string types hit the identical early-return code path.
+- **Redundant permutations** — adjacent/disjoint/reversed interval cases that produce identical results are not duplicated across every function variant. The `plain/`, `zoned/`, `utc/`, and `unix/` families share the same mathematical behavior; each family gets the minimum set of cases needed to prove correctness.
+
+**Result:** 15,475 tests across 526 files that exercise real behavior differences without redundant permutations. The suite runs in CI as 309,500 executions (15,475 × 2 Node versions × 10 timezones).
+
 ## How GMT is tested, vs. the libraries it targets
 
 GMT's roadmap (see [context/roadmap](https://github.com/burglekitt/gmt/tree/main/context/roadmap)) is explicitly scoped against react-aria's **`@internationalized/date`**, **Luxon**, **date-fns**, and **Moment.js** — the same four libraries compared below. All numbers were verified **2026-08-22** against the exact package versions/commits below — nothing is estimated. Re-verify before citing these numbers elsewhere; library surfaces and CI configs move.
@@ -81,9 +99,9 @@ GMT's roadmap (see [context/roadmap](https://github.com/burglekitt/gmt/tree/main
 
 | Metric                          | GMT                                                | `@internationalized/date`      | Luxon                                | date-fns                                  | Moment.js                        |
 | ------------------------------- | -------------------------------------------------- | ------------------------------ | ------------------------------------ | ----------------------------------------- | -------------------------------- |
-| Test files                      | 522                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
-| Individual test cases           | **15,901**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
-| Effective CI test<br>executions | **318,020**<br>(15,901 × 2 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
+| Test files                      | 526                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
+| Individual test cases           | **15,475**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
+| Effective CI test<br>executions | **309,500**<br>(15,475 × 2 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
 | CI Node.js matrix               | 22, 24                                             | n/a — tests<br>React 16–canary | 20, 22, 24, 25                       | not explicit<br>(`node = "latest"`)       | LTS, LTS-1,<br>latest            |
 | CI timezone matrix              | **10 zones × 2**<br>**Node, full suite**           | none found                     | none found                           | dedicated workflow,<br>zone scope unclear | 6 zones,<br>partial suite only   |
 | Locale test matrix              | **17 locales**,<br>every locale fn                 | none found                     | none found                           | none found                                | none found                       |
@@ -107,7 +125,7 @@ GMT's roadmap tracks parity against the same four libraries story-by-story, with
 | Locale calendar metadata<br>(names, `hasDST`)                                      | ✅ Done                      | Luxon `Info`                                                             |
 | Overlap-day count, relative<br>rounding, DST transitions, hours-in-day             | ✅ Done                      | date-fns, `@internationalized/date`                                      |
 | Field setters, token-pattern<br>parsing, named machine formats,<br>calendar-style formatting        | ✅ Done | Luxon `.set()`,<br>`toRFC2822`/`toHTTP`/`toSQL`,<br>Moment `.calendar()` |
-| Non-Gregorian calendar systems<br>(Hebrew, Islamic, solar, Ethiopic)               | ⏳ Backlog                   | `@internationalized/date`'s<br>`toCalendar`                              |
+| Non-Gregorian calendar systems<br>(Hebrew done; Islamic, solar,<br>Ethiopic backlog) | 🟡 In progress | `@internationalized/date`'s<br>`toCalendar` |
 
 <sub>Status reflects [context/roadmap/tracker.md](https://github.com/burglekitt/gmt/tree/main/context/roadmap/tracker.md) as of this writing.</sub>
 
@@ -401,6 +419,27 @@ parseDateWithPattern("02/31/2024", "MM/dd/yyyy");
 ```
 
 Supported tokens include `yyyy`/`MM`/`dd`/`HH`/`mm`/`ss`/`SSS` for fixed-width fields, `M`/`d`/`H`/`h`/`m`/`s` for variable-width, `MMMM`/`MMM`/`EEEE`/`EEE`/`a`/`GGGG`/`GG` for locale-aware names, and `'single quotes'` for literal text. A `locale` parameter (default `"en-US"`) controls name-token matching. Invalid input, no-match, and malformed patterns all return `""`.
+
+### Calendar systems
+
+GMT's `CalendarSystem` type (`"gregorian" | "hebrew"`, extended by later stories) and `convertDateToCalendar` express a date in a non-Gregorian calendar system, built entirely on Temporal's native calendar support — no bundled leap-year tables or ported arithmetic.
+
+```typescript
+import { convertDateToCalendar } from "@burglekitt/gmt";
+
+convertDateToCalendar("2024-10-03", "hebrew");
+// "5785-01-01[u-ca=hebrew]" — Rosh Hashanah 5785
+
+convertDateToCalendar("5785-01-01[u-ca=hebrew]", "gregorian");
+// "2024-10-03" — round-trips back
+
+convertDateToCalendar("invalid", "hebrew");
+// ""
+```
+
+The output string shape is the key design decision here, and it deliberately **diverges from Temporal's own** `[u-ca=...]` convention. Temporal's `Temporal.PlainDate.prototype.toString()` always keeps the ISO/proleptic-Gregorian year-month-day digits and only tags the calendar (`"2024-10-03[u-ca=hebrew]"` — still literally October 3rd's Gregorian digits). That hides the calendar's own fields behind calendar-aware accessors, which GMT's string-only contract has no place for. GMT's annotated string instead carries the **calendar-native** year/month/day — Hebrew year 5785, not 2024 — so the calendar-system concept is visible directly in the string, not just in an object property. A plain, unannotated ISO string is always treated as (and always produced for) the `"gregorian"` calendar, so every existing GMT function keeps working unchanged.
+
+Hebrew years can run 12 or 13 months (7 leap years per 19-year Metonic cycle insert a 13th month, Adar I, before the regular Adar); `convertDateToCalendar` resolves this the same way Temporal does internally, via ordinal month numbers (`1`-`13`) rather than fixed month names, so no month-counting logic lives in GMT itself.
 
 ### Durations
 

@@ -38,6 +38,30 @@ describe("intervalDifferenceZoned", () => {
     );
   });
 
+  it("proves zone-invariance across battleTestTimeZones for interval difference", () => {
+    const aStartInstant = Temporal.Instant.from("2024-01-01T00:00:00Z");
+    const aEndInstant = Temporal.Instant.from("2024-06-30T23:59:59Z");
+    const bStartInstant = Temporal.Instant.from("2024-04-01T00:00:00Z");
+    const bEndInstant = Temporal.Instant.from("2024-06-15T12:00:00Z");
+
+    for (const timeZone of battleTestTimeZones) {
+      const aStart = aStartInstant.toZonedDateTimeISO(timeZone).toString();
+      const aEnd = aEndInstant.toZonedDateTimeISO(timeZone).toString();
+      const bStart = bStartInstant.toZonedDateTimeISO(timeZone).toString();
+      const bEnd = bEndInstant.toZonedDateTimeISO(timeZone).toString();
+
+      const result = intervalDifferenceZoned(aStart, aEnd, bStart, bEnd);
+      expect(Array.isArray(result)).toBe(true);
+      expect(result).toHaveLength(2);
+      expect(
+        Temporal.ZonedDateTime.from(result[0].start).toInstant().toString(),
+      ).toBe(aStartInstant.toString());
+      expect(
+        Temporal.ZonedDateTime.from(result[1].end).toInstant().toString(),
+      ).toBe(aEndInstant.toString());
+    }
+  });
+
   it("returns [] when Temporal.ZonedDateTime.from throws", () => {
     mockTemporalZonedDateTimeFromThrow();
     expect(

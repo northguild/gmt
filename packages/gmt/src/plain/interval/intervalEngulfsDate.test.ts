@@ -2,6 +2,20 @@ import { intervalEngulfsDate } from "./intervalEngulfsDate";
 
 describe("intervalEngulfsDate", () => {
   it.each`
+    outerStart      | outerEnd        | innerStart      | innerEnd        | expected
+    ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${true}
+    ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-02"} | ${"2024-01-02"} | ${false}
+    ${"2024-01-01"} | ${"2024-01-10"} | ${"2024-01-01"} | ${"2024-01-01"} | ${true}
+  `(
+    "returns $expected for zero-length inner interval $innerStart..$innerEnd inside $outerStart..$outerEnd",
+    ({ outerStart, outerEnd, innerStart, innerEnd, expected }) => {
+      expect(
+        intervalEngulfsDate(outerStart, outerEnd, innerStart, innerEnd),
+      ).toBe(expected);
+    },
+  );
+
+  it.each`
     aStart          | aEnd            | bStart          | bEnd            | expected
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-06-01"} | ${"2024-07-01"} | ${true}
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-01-01"} | ${"2024-12-31"} | ${true}

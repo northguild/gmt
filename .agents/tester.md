@@ -44,21 +44,21 @@ Coverage audit and expansion. Your job is to find gaps in `tdd-dev`'s test suite
 
 ## Process
 
-1. Read the implementation file and its sibling `.test.ts`.
-2. Cross-reference the test coverage against `context/testing-standards/references/index.md` requirements:
-   - `it.each` tables covering the full permutation space of any options (enums, defaults, negative amounts, boundaries, zero/noop inputs)
-   - Locale matrix (17 named locales) if the function is locale-aware
-   - `battleTestTimeZones` matrix if the function accepts a `timeZone`
-   - Pre-built mocks for error paths (not custom mocks)
-   - Sentinel returns (`""`, `null`, `false`, `[]`) asserted for each invalid input type
-   - Edge cases: leap years, DST boundaries, extreme-offset zones, invalid/empty inputs
-3. **Audit checklist** — for every `it.each` block and test file:
-   - Does the name interpolate the distinguishing variables (see `context/testing-standards/references/index.md` → "Test name standards")?
-   - Are dates from `context/testing-standards/references/test-matrix.md`, or is there a documented override reason?
-   - Does the edge-case taxonomy pass: valid, invalid (collapsed non-string rows), boundary, negative/zero, empty/no-op, zoned/unix matrix?
-   - Flag redundant non-string permutations that should be collapsed into a single `"non-string input"` row.
-4. Verify every expected value you question or add against real `@js-temporal/polyfill` runtime output before writing it.
-5. Report specific missing cases: exact `it.each` row or `it()` block with the input, the expected value (verified against real Temporal), and a one-line justification for why it matters.
+1. Read the implementation file and its sibling `.test.ts`. Identify which priority tiers apply (P0–P4 from tdd-dev.md).
+2. **Audit what's there against P-tier requirements** — only flag gaps in tiers that apply to THIS function. A formatting function doesn't need timezone coverage; a date-arithmetic function doesn't need locale coverage.
+3. **Audit checklist (prioritized):**
+   - **P0 critical:** Happy path exists? Invalid input collapsed to ONE row (not 6 permutations of `null`/`undefined`/`123`/`true`/`[]`/`{}`)? Zero/identity case tested if applicable?
+   - **P1 if options exist:** Each option value that changes behavior has a row? Default-vs-explicit-equal case covered? Option on no-effect input covered?
+   - **P2 if timezone-aware:** `battleTestTimeZones` matrix used? DST + extreme-offset zones included?
+   - **P3 if locale-aware:** All 17 locales with explicit rows? ICU variants handled where CLDR differs?
+   - **P4 if calendar/date arithmetic:** Boundaries (month-end, year-end, leap day)? Negative amounts? Empty/no-op inputs?
+
+4. **Remove useless tests** — you have authority to cut tests that:
+   - Exercise code paths that don't exist in the function (e.g., timezone tests on a pure string parser).
+   - Test permutations that produce identical output (e.g., `null` and `undefined` both return `""`).
+   - Are redundant with existing rows in the same `it.each` table.
+5. **Verify every expected value you question or add** against real `@js-temporal/polyfill` runtime output before writing it.
+6. **Report only P-tier gaps and bloat removals** — not style nitpicks. For each missing case: exact `it.each` row or `it()` block with the input, the expected value (verified against real Temporal), and a one-line justification for why it matters.
 
 ## Iteration cap
 

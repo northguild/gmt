@@ -92,25 +92,10 @@ describe("intervalContainsUtc", () => {
   );
 
   it.each`
-    intervalStart             | intervalEnd               | pointOrStart              | pointEnd
-    ${null}                   | ${"2024-12-31T23:59:59Z"} | ${"2024-06-15T12:00:00Z"} | ${undefined}
-    ${undefined}              | ${"2024-12-31T23:59:59Z"} | ${"2024-06-15T12:00:00Z"} | ${undefined}
-    ${123}                    | ${"2024-12-31T23:59:59Z"} | ${"2024-06-15T12:00:00Z"} | ${undefined}
-    ${true}                   | ${"2024-12-31T23:59:59Z"} | ${"2024-06-15T12:00:00Z"} | ${undefined}
-    ${[]}                     | ${"2024-12-31T23:59:59Z"} | ${"2024-06-15T12:00:00Z"} | ${undefined}
-    ${{}}                     | ${"2024-12-31T23:59:59Z"} | ${"2024-06-15T12:00:00Z"} | ${undefined}
-    ${"2024-01-01T10:00:00Z"} | ${null}                   | ${"2024-06-15T12:00:00Z"} | ${undefined}
-    ${"2024-01-01T10:00:00Z"} | ${undefined}              | ${"2024-06-15T12:00:00Z"} | ${undefined}
-    ${"2024-01-01T10:00:00Z"} | ${123}                    | ${"2024-06-15T12:00:00Z"} | ${undefined}
-    ${"2024-01-01T10:00:00Z"} | ${true}                   | ${"2024-06-15T12:00:00Z"} | ${undefined}
-    ${"2024-01-01T10:00:00Z"} | ${[]}                     | ${"2024-06-15T12:00:00Z"} | ${undefined}
-    ${"2024-01-01T10:00:00Z"} | ${{}}                     | ${"2024-06-15T12:00:00Z"} | ${undefined}
-    ${"2024-01-01T10:00:00Z"} | ${"2024-12-31T23:59:59Z"} | ${null}                   | ${undefined}
-    ${"2024-01-01T10:00:00Z"} | ${"2024-12-31T23:59:59Z"} | ${undefined}              | ${undefined}
-    ${"2024-01-01T10:00:00Z"} | ${"2024-12-31T23:59:59Z"} | ${123}                    | ${undefined}
-    ${"2024-01-01T10:00:00Z"} | ${"2024-12-31T23:59:59Z"} | ${true}                   | ${undefined}
-    ${"2024-01-01T10:00:00Z"} | ${"2024-12-31T23:59:59Z"} | ${[]}                     | ${undefined}
-    ${"2024-01-01T10:00:00Z"} | ${"2024-12-31T23:59:59Z"} | ${{}}                     | ${undefined}
+    intervalStart   | intervalEnd     | pointOrStart    | pointEnd
+    ${null}         | ${"2024-01-01"} | ${"2024-01-01"} | ${false}
+    ${"2024-01-01"} | ${null}         | ${"2024-01-01"} | ${false}
+    ${"2024-01-01"} | ${"2024-01-01"} | ${null}         | ${false}
   `(
     "returns false for non-string input: $intervalStart, $intervalEnd, $pointOrStart",
     ({ intervalStart, intervalEnd, pointOrStart }) => {

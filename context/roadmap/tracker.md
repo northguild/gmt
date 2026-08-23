@@ -57,7 +57,7 @@ Issue number tracker (fill in as issues are created). `Order` is the sequence to
 | 45    | J13   | Issue #109   | Done        | v1.13.0                                      |
 | 46    | J14   | Issue #110   | Done        | v1.13.0                                      |
 | 47    | J15   | Issue #111   | Done        | v1.13.0                                      |
-| 48    | E1    | Issue #44    | Not started | unscheduled, no publish plan until picked up |
+| 48    | E1    | Issue #44    | Done        | unscheduled, not yet published               |
 | 49    | E2    | Issue #75    | Not started | unscheduled, no publish plan until picked up |
 | 50    | E3    | Issue #76    | Not started | unscheduled, no publish plan until picked up |
 | 51    | E4    | Issue #77    | Not started | unscheduled, no publish plan until picked up |

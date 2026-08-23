@@ -18,6 +18,10 @@ describe("isFuture", () => {
     vi.useRealTimers();
   });
 
+  it("returns false for the current instant (not future)", () => {
+    expect(isFuture("2024-02-29")).toBe(false);
+  });
+
   it.each`
     value           | expected
     ${"2024-03-01"} | ${true}

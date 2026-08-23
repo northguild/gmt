@@ -1,6 +1,10 @@
 import { isBeforeDate } from "./isBeforeDate";
 
 describe("isBeforeDate", () => {
+  it("returns false when comparing a date to itself", () => {
+    expect(isBeforeDate("2024-01-01", "2024-01-01")).toBe(false);
+  });
+
   it.each`
     value1          | value2          | expected
     ${"2024-02-01"} | ${"2024-02-29"} | ${true}

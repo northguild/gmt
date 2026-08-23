@@ -75,9 +75,9 @@ GMT's roadmap (see [context/roadmap](./context/roadmap)) is explicitly scoped ag
 
 | Metric                          | GMT                                                | `@internationalized/date`      | Luxon                                | date-fns                                  | Moment.js                        |
 | ------------------------------- | -------------------------------------------------- | ------------------------------ | ------------------------------------ | ----------------------------------------- | -------------------------------- |
-| Test files                      | 522                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
-| Individual test cases           | **15,901**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
-| Effective CI test<br>executions | **318,020**<br>(15,901 × 2 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
+| Test files                      | 526                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
+| Individual test cases           | **15,475**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
+| Effective CI test<br>executions | **309,500**<br>(15,475 × 2 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
 | CI Node.js matrix               | 22, 24                                             | n/a — tests<br>React 16–canary | 20, 22, 24, 25                       | not explicit<br>(`node = "latest"`)       | LTS, LTS-1,<br>latest            |
 | CI timezone matrix              | **10 zones × 2**<br>**Node, full suite**           | none found                     | none found                           | dedicated workflow,<br>zone scope unclear | 6 zones,<br>partial suite only   |
 | Locale test matrix              | **17 locales**,<br>every locale fn                 | none found                     | none found                           | none found                                | none found                       |
@@ -85,6 +85,24 @@ GMT's roadmap (see [context/roadmap](./context/roadmap)) is explicitly scoped ag
 | Maintenance                     | active                                             | active                         | active                               | active                                    | **maintenance<br>mode**          |
 
 <sub>Methodology: "Test files" and the CI/maintenance rows come from each project's public CI configuration and repository file listing. "Individual test cases" for GMT, Luxon, date-fns, and Moment.js were obtained by actually cloning the repo at the commit above, installing dependencies, running the project's own test command (`vitest run` / `jest` / `node scripts/test.js`), and reading that runner's own final summary — not grepped from source. `@internationalized/date` was run by cloning `adobe/react-spectrum` at `5d191ab`, installing dependencies, and executing `npx jest packages/@internationalized/date/tests/`, yielding 386 passing tests. Luxon (39 failures) and date-fns (46 failures) had environment-dependent local failures that don't affect the total count: Luxon's suite assumes its CI container's local time zone is `America/New_York`; date-fns's experimental native-`Temporal` code path needs a global `Temporal` Node doesn't yet provide natively. Moment.js passed cleanly (0 failed) on Node 24. Sources: [GMT](./.github/workflows/ci.yml) · [`@internationalized/date`](https://github.com/adobe/react-spectrum/blob/main/.circleci/config.yml) · [Luxon](https://github.com/moment/luxon/blob/master/.github/workflows/test.yml) · [date-fns](https://github.com/date-fns/date-fns/tree/main/.github/workflows) · [Moment.js](https://github.com/moment/moment/tree/develop/.github/workflows).</sub>
+
+### Testing strategy
+
+GMT's test suite balances **thoroughness** against **maintenance burden** by testing behavior, not permutations.
+
+**What we test exhaustively:**
+
+- **17-locale matrix** — every locale-aware function is exercised across all 17 `MustTestLocales` (en-US, en-GB, de-DE, fr-FR, es-ES, it-IT, pt-PT, sv-SE, zh-CN, zh-TW, ja-JP, ko-KR, ar-SA, he-IL, ru-RU, tr-TR, is-IS). This covers script direction, first-day-of-week differences, and calendar metadata.
+- **Timezone battle matrix** — every zoned function is exercised across 10 IANA timezones spanning every UTC offset band from Pacific/Niue (−11:00) to Pacific/Apia (+14:00), including DST-transition and half-hour-offset zones.
+- **Zero-length and identity cases** — every interval and arithmetic function is tested with zero-length inputs, identity operations, and boundary-adjacent values.
+- **Invalid-input sentinels** — every public function is tested for the documented fallback behavior (`""`, `null`, `false`, `[]`) on malformed strings, wrong types, leap seconds, and inverted intervals.
+
+**What we collapse:**
+
+- **Non-string input tables** — functions that guard with `typeof x !== "string"` return the same sentinel for `null`, `undefined`, `123`, `true`, `[]`, and `{}`. We test one representative non-string per argument position rather than all six types × N positions. The collapse is safe because all non-string types hit the identical early-return code path.
+- **Redundant permutations** — adjacent/disjoint/reversed interval cases that produce identical results are not duplicated across every function variant. The `plain/`, `zoned/`, `utc/`, and `unix/` families share the same mathematical behavior; each family gets the minimum set of cases needed to prove correctness.
+
+**Result:** 15,475 tests across 526 files that exercise real behavior differences without redundant permutations. The suite runs in CI as 309,500 executions (15,475 × 2 Node versions × 10 timezones).
 
 ### Functionality parity progress
 
@@ -101,7 +119,7 @@ GMT's roadmap tracks parity against the same four libraries story-by-story, with
 | Locale calendar metadata<br>(names, `hasDST`)                                      | ✅ Done                      | Luxon `Info`                                                             |
 | Overlap-day count, relative<br>rounding, DST transitions, hours-in-day             | ✅ Done                      | date-fns, `@internationalized/date`                                      |
 | Field setters, token-pattern<br>parsing, named machine formats,<br>calendar-style formatting        | ✅ Done | Luxon `.set()`,<br>`toRFC2822`/`toHTTP`/`toSQL`,<br>Moment `.calendar()` |
-| Non-Gregorian calendar systems<br>(Hebrew, Islamic, solar, Ethiopic)               | ⏳ Backlog                   | `@internationalized/date`'s<br>`toCalendar`                              |
+| Non-Gregorian calendar systems<br>(Hebrew done; Islamic, solar,<br>Ethiopic backlog) | 🟡 In progress | `@internationalized/date`'s<br>`toCalendar`                              |
 
 <sub>Status reflects [context/roadmap/tracker.md](./context/roadmap/tracker.md) as of this writing.</sub>
 

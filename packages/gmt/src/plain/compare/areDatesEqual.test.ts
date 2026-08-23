@@ -1,6 +1,10 @@
 import { areDatesEqual } from "./areDatesEqual";
 
 describe("areDatesEqual", () => {
+  it("returns true for identical dates", () => {
+    expect(areDatesEqual("2024-01-01", "2024-01-01")).toBe(true);
+  });
+
   it.each`
     value1          | value2
     ${"2024-01-01"} | ${"2024-01-01"}

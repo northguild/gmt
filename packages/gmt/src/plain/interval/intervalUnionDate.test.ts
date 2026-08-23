@@ -4,6 +4,17 @@ import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 describe("intervalUnionDate", () => {
   it.each`
     aStart          | aEnd            | bStart          | bEnd            | expected
+    ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${{ start: "2024-01-01", end: "2024-01-01" }}
+    ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-06-15"} | ${"2024-06-15"} | ${null}
+  `(
+    "returns $expected for zero-length A=$aStart..$aEnd union B=$bStart..$bEnd",
+    ({ aStart, aEnd, bStart, bEnd, expected }) => {
+      expect(intervalUnionDate(aStart, aEnd, bStart, bEnd)).toEqual(expected);
+    },
+  );
+
+  it.each`
+    aStart          | aEnd            | bStart          | bEnd            | expected
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-04-01"} | ${"2024-12-31"} | ${{ start: "2024-01-01", end: "2024-12-31" }}
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-01-01"} | ${"2024-06-30"} | ${{ start: "2024-01-01", end: "2024-12-31" }}
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-06-30"} | ${"2024-12-31"} | ${{ start: "2024-01-01", end: "2024-12-31" }}

@@ -1,5 +1,10 @@
 export { advanceBusinessDays } from "./advanceBusinessDays";
 export { advanceToWeekday } from "./advanceToWeekday";
+export {
+  formatCalendarDate,
+  parseCalendarDateValue,
+} from "./calendarDateString";
+export { isCalendarSystem, temporalCalendarIds } from "./calendarSystemIds";
 export { durationUntilString } from "./durationUntilString";
 export {
   ENGLISH_MONTH_NAMES,

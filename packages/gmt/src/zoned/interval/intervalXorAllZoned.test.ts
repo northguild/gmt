@@ -223,6 +223,36 @@ describe("intervalXorAllZoned", () => {
     expect(intervalXorAllZoned(intervals)).toEqual([]);
   });
 
+  it("proves zone-invariance across battleTestTimeZones for xor all", () => {
+    const intervals = [
+      {
+        start: "2024-01-01T00:00:00+00:00[UTC]",
+        end: "2024-03-31T23:59:59+00:00[UTC]",
+      },
+      {
+        start: "2024-04-01T00:00:00+00:00[UTC]",
+        end: "2024-06-30T23:59:59+00:00[UTC]",
+      },
+      {
+        start: "2024-07-01T00:00:00+00:00[UTC]",
+        end: "2024-09-30T23:59:59+00:00[UTC]",
+      },
+    ];
+
+    for (const timeZone of battleTestTimeZones) {
+      const zonedIntervals = intervals.map(({ start, end }) => ({
+        start: Temporal.Instant.from(start)
+          .toZonedDateTimeISO(timeZone)
+          .toString(),
+        end: Temporal.Instant.from(end).toZonedDateTimeISO(timeZone).toString(),
+      }));
+
+      const result = intervalXorAllZoned(zonedIntervals);
+      expect(result).not.toBeNull();
+      expect(Array.isArray(result)).toBe(true);
+    }
+  });
+
   it("returns [] when Temporal.ZonedDateTime.from throws", () => {
     mockTemporalZonedDateTimeFromThrow();
     expect(

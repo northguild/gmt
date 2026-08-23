@@ -1,6 +1,12 @@
 import { areDateTimesEqual } from "./areDateTimesEqual";
 
 describe("areDateTimesEqual", () => {
+  it("returns true for identical DateTimes", () => {
+    expect(
+      areDateTimesEqual("2024-01-01T12:00:00", "2024-01-01T12:00:00"),
+    ).toBe(true);
+  });
+
   it.each`
     value1                       | value2                       | expected
     ${"2024-01-01T08:30"}        | ${"2024-01-01T08:30:00"}     | ${true}

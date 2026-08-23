@@ -3,6 +3,7 @@ export * from "@js-temporal/polyfill";
 export * from "./calculate";
 export * from "./chop";
 export * from "./compare";
+export * from "./convert";
 export * from "./format";
 export * from "./get";
 export * from "./interval";

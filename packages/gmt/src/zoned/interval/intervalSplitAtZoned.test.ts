@@ -162,6 +162,24 @@ describe("intervalSplitAtZoned", () => {
     ).toEqual([]);
   });
 
+  it("proves zone-invariance across battleTestTimeZones for split point", () => {
+    const startInstant = Temporal.Instant.from("2024-01-01T00:00:00Z");
+    const endInstant = Temporal.Instant.from("2024-06-30T23:59:59Z");
+    const pointInstant = Temporal.Instant.from("2024-03-15T00:00:00Z");
+
+    for (const timeZone of battleTestTimeZones) {
+      const start = startInstant.toZonedDateTimeISO(timeZone).toString();
+      const end = endInstant.toZonedDateTimeISO(timeZone).toString();
+      const point = pointInstant.toZonedDateTimeISO(timeZone).toString();
+
+      const result = intervalSplitAtZoned(start, end, [point]);
+      expect(result).toHaveLength(2);
+      expect(
+        Temporal.ZonedDateTime.from(result[0].end).toInstant().toString(),
+      ).toBe(pointInstant.toString());
+    }
+  });
+
   it("returns [] when Temporal.ZonedDateTime.from throws", () => {
     mockTemporalZonedDateTimeFromThrow();
     expect(

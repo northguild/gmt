@@ -73,6 +73,16 @@ The same three rules extend to `parseRfc2822` (`packages/gmt/src/zoned/parse/`) 
 
 `parseSql` and `parseRfc3339` are **not** part of this exception — both validate shape with a regex and then hand the whole string to `Temporal.*.from(string)` directly (which strictly validates the calendar date on its own), never extracting or constructing a field property bag by hand. This prohibition stands for every other function in the library.
 
+### Scoped exception: GMT's calendar-annotated date string in `convertDateToCalendar` (E1)
+
+The same three rules extend to `internal/calendarDateString.ts`'s `parseCalendarDateValue`, used by `convertDateToCalendar` (`packages/gmt/src/plain/convert/`). GMT's calendar-annotated PlainDate string (`"5785-01-01[u-ca=hebrew]"`) is a fixed, GMT-invented grammar — deliberately diverging from Temporal's own `[u-ca=...]` string convention (which keeps ISO/proleptic-Gregorian digits and only tags the calendar) so the calendar's native year/month/day are visible in the string itself, per the story's design rationale:
+
+1. The regex (`regex/calendar-date.ts`) encodes the fixed grammar exactly — never hand-rolled per-call string slicing.
+2. Extracted fields are **always** handed to `Temporal.PlainDate.from(fields, { overflow: "reject" })` for final construction and validation — including rejecting unknown calendar identifiers, which Temporal validates on GMT's behalf.
+3. The try-catch and sentinel-return rules above are unchanged.
+
+This prohibition stands for every other function in the library.
+
 ## Loop Style
 
 Avoid `while` loops in new code. Prefer `for` loops or array methods (`map`, `filter`, `reduce`, etc.). `while` loops are more error-prone and harder to reason about than bounded `for` loops.

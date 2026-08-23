@@ -5,6 +5,7 @@ description: >
   convertPlainDateTimeToZoned (with optional disambiguation for DST gaps/
   overlaps), convertZonedToPlainDateTime, convertUtcToUnix.
 sources:
+  - 'burglekitt/gmt:packages/gmt/src/plain/convert/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/convert/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/convert/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/utc/convert/index.ts'
@@ -114,6 +115,20 @@ const converted = convertZonedToZoned(
 ); // "2024-03-15T18:30:45[Europe/London]"
 ```
 
+### Convert a date to a non-Gregorian calendar system
+
+```ts
+import { convertDateToCalendar } from "@burglekitt/gmt/plain";
+
+const hebrew = convertDateToCalendar("2024-10-03", "hebrew");
+// "5785-01-01[u-ca=hebrew]" — Rosh Hashanah 5785, calendar-native year/month/day
+
+const back = convertDateToCalendar(hebrew, "gregorian");
+// "2024-10-03" — round-trips back to a bare ISO string
+```
+
+`CalendarSystem` is `"gregorian" | "hebrew"` today (extended by later Story Group E stories). The annotated string carries the target calendar's own year/month/day — not the ISO/Gregorian digits Temporal's own `[u-ca=...]` string convention keeps — so a Hebrew year like 5785 is visible directly in the string. A plain, unannotated string is always the `"gregorian"` calendar and works with every other GMT function unchanged.
+
 ## Common Mistakes
 
 ### HIGH Using Date.getTime() for conversion
@@ -179,6 +194,21 @@ if (!zoned) {
 ```
 
 Source: packages/gmt/src/zoned/convert/convertPlainDateTimeToZoned.ts — Returns "" on error
+
+### MEDIUM Assuming a `[u-ca=...]` string means Temporal's own convention
+
+Wrong:
+
+```ts
+// Assuming the digits are still the ISO/Gregorian year, like Temporal.PlainDate's own
+// toString() would produce
+const hebrew = convertDateToCalendar("2024-10-03", "hebrew"); // "5785-01-01[u-ca=hebrew]"
+const year = hebrew.slice(0, 4); // "5785" is the Hebrew year, NOT 2024 — don't assume ISO digits
+```
+
+Correct: treat the annotated string as GMT's own format (calendar-native fields, produced/consumed only by `convertDateToCalendar`) — never hand-parse it or assume it matches `Temporal.PlainDate.prototype.toString()`'s own `[u-ca=...]` output, which keeps the ISO digits and only tags the calendar. Round-trip it through `convertDateToCalendar` itself instead of extracting fields manually.
+
+Source: packages/gmt/src/plain/convert/convertDateToCalendar.ts — see JSDoc for the full rationale
 
 ## References
 

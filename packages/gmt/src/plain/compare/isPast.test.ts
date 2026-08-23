@@ -18,6 +18,10 @@ describe("isPast", () => {
     vi.useRealTimers();
   });
 
+  it("returns false for the current instant (not past)", () => {
+    expect(isPast("2024-02-29")).toBe(false);
+  });
+
   it.each`
     value           | expected
     ${"2024-02-28"} | ${true}

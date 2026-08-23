@@ -204,9 +204,9 @@ describe("formatCalendar", () => {
       vi.spyOn(Temporal.Now, "plainDateTimeISO").mockReturnValue(
         Temporal.PlainDateTime.from(REF),
       );
-      expect(
-        formatCalendar("2024-03-16T14:30:00", MustTestLocales.enUS),
-      ).toBe("tomorrow at 2:30 PM");
+      expect(formatCalendar("2024-03-16T14:30:00", MustTestLocales.enUS)).toBe(
+        "tomorrow at 2:30 PM",
+      );
     });
 
     it("returns '' when reference is provided but invalid", () => {

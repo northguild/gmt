@@ -32,6 +32,12 @@ Arithmetic and date manipulation:
 - `subtractBusinessDays`, `subtractDate`, `subtractDateTime`, `subtractTime`
 - `weekOfYear`
 
+### convert
+
+Calendar-system conversion:
+
+- `convertDateToCalendar` — express a date in a different `CalendarSystem` ("gregorian" | "hebrew")
+
 ### chop
 
 Strip components from date/time strings:
@@ -137,7 +143,7 @@ Extract components:
 
 Validation helpers:
 
-- `isLeapSecond`, `isValidDate`, `isValidDateDurationUnit`
+- `isLeapSecond`, `isValidCalendarDate`, `isValidDate`, `isValidDateDurationUnit`
 - `isValidDateRange`, `isValidDateTime`, `isValidDateTimeDurationUnit`, `isValidDateTimeRange`
 - `isValidDateTimeUnit`, `isValidDateUnit`
 - `isValidIsoDateLike`, `isValidTime`, `isValidTimeDurationUnit`, `isValidTimeRange`, `isValidTimeUnit`

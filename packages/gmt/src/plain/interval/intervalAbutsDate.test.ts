@@ -3,6 +3,18 @@ import { intervalAbutsDate } from "./intervalAbutsDate";
 describe("intervalAbutsDate", () => {
   it.each`
     aStart          | aEnd            | bStart          | bEnd            | expected
+    ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-02"} | ${"2024-01-02"} | ${true}
+    ${"2024-01-01"} | ${"2024-01-01"} | ${"2023-12-31"} | ${"2023-12-31"} | ${true}
+    ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${false}
+  `(
+    "returns $expected for zero-length A=$aStart..$aEnd abutting B=$bStart..$bEnd",
+    ({ aStart, aEnd, bStart, bEnd, expected }) => {
+      expect(intervalAbutsDate(aStart, aEnd, bStart, bEnd)).toBe(expected);
+    },
+  );
+
+  it.each`
+    aStart          | aEnd            | bStart          | bEnd            | expected
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-07-01"} | ${"2024-12-31"} | ${true}
     ${"2024-07-01"} | ${"2024-12-31"} | ${"2024-01-01"} | ${"2024-06-30"} | ${true}
     ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-02"} | ${"2024-01-02"} | ${true}

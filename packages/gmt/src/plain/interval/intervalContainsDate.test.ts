@@ -102,24 +102,9 @@ describe("intervalContainsDate", () => {
 
   it.each`
     intervalStart   | intervalEnd     | pointOrStart    | pointEnd
-    ${null}         | ${"2024-12-31"} | ${"2024-06-15"} | ${undefined}
-    ${undefined}    | ${"2024-12-31"} | ${"2024-06-15"} | ${undefined}
-    ${123}          | ${"2024-12-31"} | ${"2024-06-15"} | ${undefined}
-    ${true}         | ${"2024-12-31"} | ${"2024-06-15"} | ${undefined}
-    ${[]}           | ${"2024-12-31"} | ${"2024-06-15"} | ${undefined}
-    ${{}}           | ${"2024-12-31"} | ${"2024-06-15"} | ${undefined}
-    ${"2024-01-01"} | ${null}         | ${"2024-06-15"} | ${undefined}
-    ${"2024-01-01"} | ${undefined}    | ${"2024-06-15"} | ${undefined}
-    ${"2024-01-01"} | ${123}          | ${"2024-06-15"} | ${undefined}
-    ${"2024-01-01"} | ${true}         | ${"2024-06-15"} | ${undefined}
-    ${"2024-01-01"} | ${[]}           | ${"2024-06-15"} | ${undefined}
-    ${"2024-01-01"} | ${{}}           | ${"2024-06-15"} | ${undefined}
-    ${"2024-01-01"} | ${"2024-12-31"} | ${null}         | ${undefined}
-    ${"2024-01-01"} | ${"2024-12-31"} | ${undefined}    | ${undefined}
-    ${"2024-01-01"} | ${"2024-12-31"} | ${123}          | ${undefined}
-    ${"2024-01-01"} | ${"2024-12-31"} | ${true}         | ${undefined}
-    ${"2024-01-01"} | ${"2024-12-31"} | ${[]}           | ${undefined}
-    ${"2024-01-01"} | ${"2024-12-31"} | ${{}}           | ${undefined}
+    ${null}         | ${"2024-01-01"} | ${"2024-01-01"} | ${false}
+    ${"2024-01-01"} | ${null}         | ${"2024-01-01"} | ${false}
+    ${"2024-01-01"} | ${"2024-01-01"} | ${null}         | ${false}
   `(
     "returns false for non-string input: $intervalStart, $intervalEnd, $pointOrStart",
     ({ intervalStart, intervalEnd, pointOrStart }) => {

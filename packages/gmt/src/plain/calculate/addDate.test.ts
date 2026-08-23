@@ -27,6 +27,18 @@ describe("addDate", () => {
   );
 
   it.each`
+    value           | units                      | expected
+    ${"2024-01-01"} | ${{ days: 0 }}             | ${"2024-01-01"}
+    ${"2024-02-29"} | ${{ days: 0 }}             | ${"2024-02-29"}
+    ${"2024-01-01"} | ${{ months: 0, years: 0 }} | ${"2024-01-01"}
+  `(
+    "returns $expected for zero-unit $value + $units",
+    ({ value, units, expected }) => {
+      expect(addDate(value, units)).toBe(expected);
+    },
+  );
+
+  it.each`
     invalidDate
     ${"2024-02-30"}
     ${"not-a-date"}

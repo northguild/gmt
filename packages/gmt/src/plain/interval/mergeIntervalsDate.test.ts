@@ -79,6 +79,33 @@ describe("mergeIntervalsDate", () => {
     expect(mergeIntervalsDate(intervals)).toEqual([]);
   });
 
+  it("preserves a single zero-length interval", () => {
+    expect(
+      mergeIntervalsDate([{ start: "2024-01-01", end: "2024-01-01" }]),
+    ).toEqual([{ start: "2024-01-01", end: "2024-01-01" }]);
+  });
+
+  it("merges a zero-length interval with an overlapping interval", () => {
+    expect(
+      mergeIntervalsDate([
+        { start: "2024-01-01", end: "2024-01-01" },
+        { start: "2024-01-01", end: "2024-01-10" },
+      ]),
+    ).toEqual([{ start: "2024-01-01", end: "2024-01-10" }]);
+  });
+
+  it("keeps a zero-length interval separate from a disjoint interval", () => {
+    expect(
+      mergeIntervalsDate([
+        { start: "2024-01-01", end: "2024-01-01" },
+        { start: "2024-01-05", end: "2024-01-10" },
+      ]),
+    ).toEqual([
+      { start: "2024-01-01", end: "2024-01-01" },
+      { start: "2024-01-05", end: "2024-01-10" },
+    ]);
+  });
+
   it("returns [] when Temporal.PlainDate.from throws", () => {
     mockTemporalPlainDateFromThrow();
     expect(

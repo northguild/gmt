@@ -1,6 +1,10 @@
 import { maxDate } from "./maxDate";
 
 describe("maxDate", () => {
+  it("returns the date when all dates are identical", () => {
+    expect(maxDate(["2024-01-01", "2024-01-01"])).toBe("2024-01-01");
+  });
+
   it.each`
     dates                                         | expected
     ${["2024-03-10", "2024-01-01", "2024-02-15"]} | ${"2024-03-10"}

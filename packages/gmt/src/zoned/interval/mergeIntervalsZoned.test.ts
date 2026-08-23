@@ -60,6 +60,32 @@ describe("mergeIntervalsZoned", () => {
     expect(mergeIntervalsZoned(intervals)).toEqual([]);
   });
 
+  it("proves zone-invariance across battleTestTimeZones for merge intervals", () => {
+    const intervals = [
+      {
+        start: "2024-01-01T00:00:00+00:00[UTC]",
+        end: "2024-01-10T00:00:00+00:00[UTC]",
+      },
+      {
+        start: "2024-01-05T00:00:00+00:00[UTC]",
+        end: "2024-01-15T00:00:00+00:00[UTC]",
+      },
+    ];
+
+    for (const timeZone of battleTestTimeZones) {
+      const zonedIntervals = intervals.map(({ start, end }) => ({
+        start: Temporal.Instant.from(start)
+          .toZonedDateTimeISO(timeZone)
+          .toString(),
+        end: Temporal.Instant.from(end).toZonedDateTimeISO(timeZone).toString(),
+      }));
+
+      const result = mergeIntervalsZoned(zonedIntervals);
+      expect(result).not.toBeNull();
+      expect(Array.isArray(result)).toBe(true);
+    }
+  });
+
   it("returns [] when Temporal.ZonedDateTime.from throws", () => {
     mockTemporalZonedDateTimeFromThrow();
     expect(

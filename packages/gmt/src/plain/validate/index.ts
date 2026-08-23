@@ -1,5 +1,6 @@
 export * from "./isLeapSecond";
 export * from "./isLeapYear";
+export * from "./isValidCalendarDate";
 export * from "./isValidDate";
 export * from "./isValidDateDurationUnit";
 export * from "./isValidDateRange";

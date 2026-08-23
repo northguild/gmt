@@ -25,10 +25,19 @@ Own the initial test + implementation cycle for new functions. Write tests first
 1. **Read the plan/spec** and the nearest existing analog in `packages/gmt/src` (e.g. for a new `plain/calculate/` function, look at `plain/calculate/addBusinessDays.ts`). Match file structure, error-handling shape, and JSDoc format exactly.
 
 2. **Write `.test.ts`** covering:
-   - Happy paths (use `it.each` template-literal tables)
-   - Error paths with sentinel returns (use pre-built mocks from `packages/gmt/src/test/mocks`)
-   - Edge cases: invalid input, zero/negative amounts, boundary values, leap years, DST boundaries (if timezone-aware)
-   - Locale matrix (17 locales via `MustTestLocales`) if the function is locale-aware — see `context/testing-standards/references/index.md`
+
+   **Priority tiers — only test what applies to THIS function:**
+   - **P0 (always):** Happy path with default options. Invalid input → sentinel (single collapsed row, see below). Zero/identity case if the function accepts a numeric or array parameter.
+   - **P1 (if the function has options/params):** Each explicit option value that changes behavior. Default-vs-explicit-equal case if omitting the option and passing an explicit value produce the same result. Option on an input where it has no effect.
+   - **P2 (if timezone-aware):** `battleTestTimeZones` matrix via `battleTestTimeZones.map(...)`. DST boundaries, extreme-offset zones (`Pacific/Apia`, `Pacific/Niue`).
+   - **P3 (if locale-aware):** All 17 locales from `MustTestLocales` with explicit rows. ICU-variant assertions where CLDR wording differs across Node versions.
+   - **P4 (if calendar/date arithmetic):** Boundary values (month-end, year-end, leap day). Negative amounts. Empty/no-op inputs.
+
+   **Rules to keep permutation count sane:**
+   - **Invalid input = ONE row.** Collapse `null`/`undefined`/`123`/`true`/`[]`/`{}` into a single `"non-string input"` row. Only split into separate rows if a specific type produces distinct behavior (document why).
+   - **No irrelevant edge cases.** A pure string-formatting function does NOT need DST, timezone, or leap-year tests. A duration-addition function does NOT need locale tests. Ask: "does this edge case exercise a real code path in THIS function?" If no, skip it.
+   - **One `it.each` table per permutation category.** Don't mix valid + invalid + boundary in one table — split them so failures are debuggable (per testing standards).
+   - **Verify expected values against real `@js-temporal/polyfill`** before writing them. Never guess.
 
 3. **Verify every expected value** by running the equivalent `@js-temporal/polyfill` call first (`node -e` or a scratch script). Never write expected values from memory or intuition — Temporal's rounding, overflow, and DST semantics are full of subtle behavior.
 
