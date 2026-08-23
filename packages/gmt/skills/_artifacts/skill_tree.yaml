@@ -112,7 +112,7 @@ skills:
     domain: core-date-operations
     path: 'skills/compare-dates/SKILL.md'
     package: 'packages/gmt'
-     description: Compare date values for ordering; use isWeekend/isZonedWeekend for locale-aware weekend checks, isBusinessDay for fixed ISO Mon–Fri business-day checks, and getLocaleDayOfWeek/getLocaleZonedDayOfWeek for locale-relative day-of-week indices
+    description: Compare date values for ordering; use isWeekend/isZonedWeekend for locale-aware weekend checks, isBusinessDay for fixed ISO Mon–Fri business-day checks, and getLocaleDayOfWeek/getLocaleZonedDayOfWeek for locale-relative day-of-week indices
     sources:
       - 'burglekitt/gmt:packages/gmt/src/plain/compare/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/compare/index.ts'
@@ -190,7 +190,7 @@ skills:
     domain: conversion
     path: 'skills/convert-types/SKILL.md'
     package: 'packages/gmt'
-    description: Convert between plain and zoned (with DST disambiguation control), or unix/utc representations; convertDateToCalendar expresses a date in a non-Gregorian CalendarSystem (gregorian, hebrew, islamic-civil, islamic-tabular, islamic-umalqura)
+    description: Convert between plain and zoned (with DST disambiguation control), or unix/utc representations; convertDateToCalendar expresses a date in a non-Gregorian CalendarSystem (gregorian, hebrew, islamic-civil, islamic-tabular, islamic-umalqura, japanese, buddhist, taiwan, persian, indian)
     sources:
       - 'burglekitt/gmt:packages/gmt/src/plain/convert/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/convert/index.ts'

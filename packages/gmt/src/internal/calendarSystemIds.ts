@@ -11,12 +11,21 @@ import type { CalendarSystem } from "../types";
 // per E1's "no ported leap-year tables or arithmetic" precedent, the polyfill already
 // carries the correct tabulated/algorithmic data, so a GMT-owned copy would only add a
 // second, divergence-prone source of truth.
+//
+// "taiwan" maps to Temporal's "roc" id (Republic of China calendar — the same calendar
+// react-aria's TaiwanCalendar wraps under a different name). "japanese", "buddhist", and
+// "persian"/"indian" match Temporal's own ids directly.
 export const temporalCalendarIds: Record<CalendarSystem, string> = {
   gregorian: "iso8601",
   hebrew: "hebrew",
   "islamic-civil": "islamic-civil",
   "islamic-tabular": "islamic-tbla",
   "islamic-umalqura": "islamic-umalqura",
+  japanese: "japanese",
+  buddhist: "buddhist",
+  taiwan: "roc",
+  persian: "persian",
+  indian: "indian",
 };
 
 export function isCalendarSystem(value: string): value is CalendarSystem {

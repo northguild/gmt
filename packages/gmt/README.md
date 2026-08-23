@@ -83,7 +83,7 @@ GMT's test suite balances **thoroughness** against **maintenance burden** by tes
 - **Non-string input tables** — functions that guard with `typeof x !== "string"` return the same sentinel for `null`, `undefined`, `123`, `true`, `[]`, and `{}`. We test one representative non-string per argument position rather than all six types × N positions. The collapse is safe because all non-string types hit the identical early-return code path.
 - **Redundant permutations** — adjacent/disjoint/reversed interval cases that produce identical results are not duplicated across every function variant. The `plain/`, `zoned/`, `utc/`, and `unix/` families share the same mathematical behavior; each family gets the minimum set of cases needed to prove correctness.
 
-**Result:** 15,501 tests across 526 files that exercise real behavior differences without redundant permutations. The suite runs in CI as 310,020 executions (15,501 × 2 Node versions × 10 timezones).
+**Result:** 15,548 tests across 526 files that exercise real behavior differences without redundant permutations. The suite runs in CI as 310,960 executions (15,548 × 2 Node versions × 10 timezones).
 
 ## How GMT is tested, vs. the libraries it targets
 
@@ -100,8 +100,8 @@ GMT's roadmap (see [context/roadmap](https://github.com/burglekitt/gmt/tree/main
 | Metric                          | GMT                                                | `@internationalized/date`      | Luxon                                | date-fns                                  | Moment.js                        |
 | ------------------------------- | -------------------------------------------------- | ------------------------------ | ------------------------------------ | ----------------------------------------- | -------------------------------- |
 | Test files                      | 526                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
-| Individual test cases           | **15,501**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
-| Effective CI test<br>executions | **310,020**<br>(15,501 × 2 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
+| Individual test cases           | **15,548**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
+| Effective CI test<br>executions | **310,960**<br>(15,548 × 2 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
 | CI Node.js matrix               | 22, 24                                             | n/a — tests<br>React 16–canary | 20, 22, 24, 25                       | not explicit<br>(`node = "latest"`)       | LTS, LTS-1,<br>latest            |
 | CI timezone matrix              | **10 zones × 2**<br>**Node, full suite**           | none found                     | none found                           | dedicated workflow,<br>zone scope unclear | 6 zones,<br>partial suite only   |
 | Locale test matrix              | **17 locales**,<br>every locale fn                 | none found                     | none found                           | none found                                | none found                       |
@@ -125,7 +125,7 @@ GMT's roadmap tracks parity against the same four libraries story-by-story, with
 | Locale calendar metadata<br>(names, `hasDST`)                                                | ✅ Done                      | Luxon `Info`                                                             |
 | Overlap-day count, relative<br>rounding, DST transitions, hours-in-day                       | ✅ Done                      | date-fns, `@internationalized/date`                                      |
 | Field setters, token-pattern<br>parsing, named machine formats,<br>calendar-style formatting | ✅ Done                      | Luxon `.set()`,<br>`toRFC2822`/`toHTTP`/`toSQL`,<br>Moment `.calendar()` |
-| Non-Gregorian calendar systems<br>(Hebrew done; Islamic, solar,<br>Ethiopic backlog)         | 🟡 In progress               | `@internationalized/date`'s<br>`toCalendar`                              |
+| Non-Gregorian calendar systems<br>(Hebrew, Islamic, solar<br>done; Ethiopic backlog)         | 🟡 In progress               | `@internationalized/date`'s<br>`toCalendar`                              |
 
 <sub>Status reflects [context/roadmap/tracker.md](https://github.com/burglekitt/gmt/tree/main/context/roadmap/tracker.md) as of this writing.</sub>
 
@@ -139,7 +139,7 @@ Specific, sourced claims — not a repeat of the metrics above.
 | Only GMT enforces a mandatory<br>17-locale test matrix on every<br>locale-aware function                                                      | No CI-level or systematic<br>locale-matrix testing found<br>in any of the four                                                        |
 | Only GMT exposes explicit DST<br>disambiguation control on both<br>construction _and_ arithmetic                                              | Luxon's docs call this explicitly<br>undefined; `@internationalized/date`<br>only covers construction, not arithmetic                 |
 | Only GMT is Temporal-native with<br>zero `Date` usage, enforced by<br>3 dedicated lint packages                                               | Luxon, date-fns, and Moment.js all<br>still wrap or depend on `Date` internally                                                       |
-| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~15×                                                  | 310,020 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
+| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~15×                                                  | 310,960 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
 
 ## Package Layout
 
@@ -422,7 +422,7 @@ Supported tokens include `yyyy`/`MM`/`dd`/`HH`/`mm`/`ss`/`SSS` for fixed-width f
 
 ### Calendar systems
 
-GMT's `CalendarSystem` type (`"gregorian" | "hebrew" | "islamic-civil" | "islamic-tabular" | "islamic-umalqura"`, extended by later stories) and `convertDateToCalendar` express a date in a non-Gregorian calendar system, built entirely on Temporal's native calendar support — no bundled leap-year tables or ported arithmetic.
+GMT's `CalendarSystem` type (`"gregorian" | "hebrew" | "islamic-civil" | "islamic-tabular" | "islamic-umalqura" | "japanese" | "buddhist" | "taiwan" | "persian" | "indian"`, extended by later stories) and `convertDateToCalendar` express a date in a non-Gregorian calendar system, built entirely on Temporal's native calendar support — no bundled leap-year tables or ported arithmetic.
 
 ```typescript
 import { convertDateToCalendar } from "@burglekitt/gmt";
@@ -449,6 +449,29 @@ Three Islamic (Hijri) calendar variants are supported, and they are **not interc
 - `"islamic-civil"` — a fixed 30-year leap-year cycle, Friday epoch (`1 AH = 622-07-19`).
 - `"islamic-tabular"` — the same style of fixed arithmetic cycle, but a Thursday epoch one day earlier (`1 AH = 622-07-18`); maps to Temporal's `"islamic-tbla"` calendar id internally, though GMT's own string annotation always reads `[u-ca=islamic-tabular]`.
 - `"islamic-umalqura"` — the Saudi civil calendar, based on Umm al-Qura University's own published tables rather than a fixed arithmetic rule. This is **not** approximated by the tabular variant's math — `convertDateToCalendar("2020-02-24", "islamic-umalqura")` returns `"1441-06-30[u-ca=islamic-umalqura]"` while the same input under `"islamic-tabular"` returns `"1441-07-01[u-ca=islamic-tabular]"`, a genuine one-day divergence, not a rounding difference.
+
+Five era-based solar calendars round out the set. Unlike Hebrew and the Islamic variants, none of these needed new leap-year logic — each is either Gregorian-shaped with a different year numbering layered on top, or a distinct-but-simple solar calendar, so they were materially less work than Hebrew or Islamic:
+
+- `"buddhist"` — Gregorian day/month structure, a fixed `+543` year offset (`convertDateToCalendar("2024-10-03", "buddhist")` → `"2567-10-03[u-ca=buddhist]"`). One continuous era, no reset.
+- `"taiwan"` — Gregorian day/month structure, year numbering reset at 1912 (the Republic of China's founding): `2024` → `"0113-10-03[u-ca=taiwan]"` (`2024 - 1911`). Dates before 1912 count backward through Temporal's inverse era instead of going negative in the way a plain offset would — `convertDateToCalendar("1911-12-31", "taiwan")` is `"0000-12-31[u-ca=taiwan]"`, not `"-0001-12-31"`.
+- `"persian"` — a genuinely distinct solar calendar (not Gregorian-derived): own month lengths (6 months of 31 days, 5 of 30, a 29/30-day 12th month) and its own 33-year leap-year cycle (a year is leap when `(25 × year + 11) mod 33 < 8`), verified against `@internationalized/date`'s `PersianCalendar.ts` rather than assumed from the offset-only calendars above.
+- `"indian"` — the Indian National Calendar (Saka era, epoch 78 CE). Also not offset-only: its leap-year alignment follows the Gregorian rule rather than an independent cycle — the calendar's first month is 31 days in a Gregorian leap year, 30 otherwise, which is why its Saka-year boundary (`convertDateToCalendar("2024-03-20", "indian")` → `"1945-12-30[u-ca=indian]"`, `convertDateToCalendar("2024-03-21", "indian")` → `"1946-01-01[u-ca=indian]"`) doesn't land on a fixed day-of-year every year.
+- `"japanese"` — era-based: the year resets to `1` at each imperial era change (Meiji, Taishō, Shōwa, Heisei, Reiwa). This is the one calendar where GMT's annotated string carries an era-relative year instead of the calendar's plain native year, and needs its own explanation below.
+
+**Why `"japanese"` gets a different string shape.** Every other supported calendar's plain `year` field is exactly what belongs in GMT's annotated string — Hebrew year 5785, Taiwan year 113, and so on are each already the single number that identifies the year. Japanese is the exception: Temporal's `.year` for the `"japanese"` calendar stays **proleptic** across era changes (it doesn't reset — `1912-07-30`, the first day of Taishō, still reports `.year === 1912`, not `1`), because Temporal's `.year` is designed to be a stable sort key, not a display value. Using it directly would silently contradict the calendar's entire reason for existing. So `convertDateToCalendar` uses Temporal's `.eraYear` (the field that _does_ reset) paired with the era name, tagged onto the annotation as `;era=<name>`:
+
+```typescript
+convertDateToCalendar("2024-10-03", "japanese");
+// "0006-10-03[u-ca=japanese;era=reiwa]" — year 6 of the Reiwa era, not the proleptic 2024
+
+convertDateToCalendar("1912-07-30", "japanese");
+// "0001-07-30[u-ca=japanese;era=taisho]" — the first day of Taishō reads year 1
+
+convertDateToCalendar("0001-07-30[u-ca=japanese;era=taisho]", "gregorian");
+// "1912-07-30" — round-trips back through the era + eraYear pair
+```
+
+`@internationalized/date` documents pre-Meiji (before 1868-10-23) dates as unsupported for its Japanese calendar. GMT does not replicate that restriction: since `convertDateToCalendar` is built entirely on Temporal's own calendar support rather than a ported implementation, and Temporal resolves those dates correctly under a synthetic `"japanese"` era (with an ISO-aligned `eraYear`), rejecting them would mean writing new validation solely to reproduce another library's gap rather than an actual GMT limitation. `convertDateToCalendar("1800-01-01", "japanese")` returns `"1800-01-01[u-ca=japanese;era=japanese]"` rather than `""`.
 
 ### Durations
 

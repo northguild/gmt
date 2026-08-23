@@ -10,6 +10,11 @@ describe("isValidCalendarDate", () => {
     ${"1446-03-29[u-ca=islamic-civil]"}
     ${"1446-03-30[u-ca=islamic-tabular]"}
     ${"1446-03-30[u-ca=islamic-umalqura]"}
+    ${"0006-10-03[u-ca=japanese;era=reiwa]"}
+    ${"2567-10-03[u-ca=buddhist]"}
+    ${"0113-10-03[u-ca=taiwan]"}
+    ${"1403-07-12[u-ca=persian]"}
+    ${"1946-07-11[u-ca=indian]"}
   `(
     "returns true for valid calendar date: $value",
     ({ value }: { value: string }) => {
@@ -24,6 +29,7 @@ describe("isValidCalendarDate", () => {
     ${"2024-10-03[u-ca=martian]"}
     ${"not-a-date"}
     ${""}
+    ${"0006-10-03[u-ca=japanese;era=unknown-era]"}
   `(
     "returns false for invalid calendar date: $value",
     ({ value }: { value: string }) => {

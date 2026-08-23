@@ -6,13 +6,18 @@ import {
 
 describe("parseCalendarDateValue", () => {
   it.each`
-    value                                  | expectedIso
-    ${"2024-10-03"}                        | ${"2024-10-03"}
-    ${"5785-01-01[u-ca=hebrew]"}           | ${"2024-10-03"}
-    ${"5784-06-01[u-ca=hebrew]"}           | ${"2024-02-10"}
-    ${"1446-03-29[u-ca=islamic-civil]"}    | ${"2024-10-03"}
-    ${"1446-03-30[u-ca=islamic-tabular]"}  | ${"2024-10-03"}
-    ${"1446-03-30[u-ca=islamic-umalqura]"} | ${"2024-10-03"}
+    value                                    | expectedIso
+    ${"2024-10-03"}                          | ${"2024-10-03"}
+    ${"5785-01-01[u-ca=hebrew]"}             | ${"2024-10-03"}
+    ${"5784-06-01[u-ca=hebrew]"}             | ${"2024-02-10"}
+    ${"1446-03-29[u-ca=islamic-civil]"}      | ${"2024-10-03"}
+    ${"1446-03-30[u-ca=islamic-tabular]"}    | ${"2024-10-03"}
+    ${"1446-03-30[u-ca=islamic-umalqura]"}   | ${"2024-10-03"}
+    ${"0006-10-03[u-ca=japanese;era=reiwa]"} | ${"2024-10-03"}
+    ${"2567-10-03[u-ca=buddhist]"}           | ${"2024-10-03"}
+    ${"0113-10-03[u-ca=taiwan]"}             | ${"2024-10-03"}
+    ${"1403-07-12[u-ca=persian]"}            | ${"2024-10-03"}
+    ${"1946-07-11[u-ca=indian]"}             | ${"2024-10-03"}
   `(
     "parses $value to iso $expectedIso",
     ({ value, expectedIso }: { value: string; expectedIso: string }) => {
@@ -28,6 +33,7 @@ describe("parseCalendarDateValue", () => {
     ${"5783-14-01[u-ca=hebrew]"}
     ${"2024-10-03[u-ca=martian]"}
     ${"not-a-date"}
+    ${"0000-10-03[u-ca=japanese;era=unknown-era]"}
   `("throws for invalid $value", ({ value }: { value: string }) => {
     expect(() => parseCalendarDateValue(value)).toThrow();
   });
@@ -59,5 +65,29 @@ describe("formatCalendarDate", () => {
       Temporal.PlainDate.from("2024-10-03").withCalendar("islamic-tbla");
     expect(date.calendarId).toBe("islamic-tbla");
     expect(formatCalendarDate(date)).toBe("1446-03-30[u-ca=islamic-tabular]");
+  });
+
+  it("annotates with GMT's own id, not Temporal's differing calendarId (taiwan/roc)", () => {
+    const date = Temporal.PlainDate.from("2024-10-03").withCalendar("roc");
+    expect(date.calendarId).toBe("roc");
+    expect(formatCalendarDate(date)).toBe("0113-10-03[u-ca=taiwan]");
+  });
+
+  it("tags a japanese PlainDate with eraYear and an era suffix instead of the proleptic year", () => {
+    const date = Temporal.PlainDate.from("2024-10-03").withCalendar("japanese");
+    expect(date.year).toBe(2024);
+    expect(date.eraYear).toBe(6);
+    expect(date.era).toBe("reiwa");
+    expect(formatCalendarDate(date)).toBe(
+      "0006-10-03[u-ca=japanese;era=reiwa]",
+    );
+  });
+
+  it("tags a pre-Meiji japanese PlainDate with the synthetic 'japanese' era", () => {
+    const date = Temporal.PlainDate.from("1800-01-01").withCalendar("japanese");
+    expect(date.era).toBe("japanese");
+    expect(formatCalendarDate(date)).toBe(
+      "1800-01-01[u-ca=japanese;era=japanese]",
+    );
   });
 });

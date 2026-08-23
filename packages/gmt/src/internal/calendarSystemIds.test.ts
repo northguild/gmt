@@ -8,6 +8,11 @@ describe("temporalCalendarIds", () => {
     ${"islamic-civil"}    | ${"islamic-civil"}
     ${"islamic-tabular"}  | ${"islamic-tbla"}
     ${"islamic-umalqura"} | ${"islamic-umalqura"}
+    ${"japanese"}         | ${"japanese"}
+    ${"buddhist"}         | ${"buddhist"}
+    ${"taiwan"}           | ${"roc"}
+    ${"persian"}          | ${"persian"}
+    ${"indian"}           | ${"indian"}
   `(
     "maps $calendar to Temporal calendar id $temporalId",
     ({
@@ -19,7 +24,12 @@ describe("temporalCalendarIds", () => {
         | "hebrew"
         | "islamic-civil"
         | "islamic-tabular"
-        | "islamic-umalqura";
+        | "islamic-umalqura"
+        | "japanese"
+        | "buddhist"
+        | "taiwan"
+        | "persian"
+        | "indian";
       temporalId: string;
     }) => {
       expect(temporalCalendarIds[calendar]).toBe(temporalId);
@@ -28,11 +38,16 @@ describe("temporalCalendarIds", () => {
 
   it("exposes exactly the CalendarSystem identifiers, no more and no fewer", () => {
     expect(Object.keys(temporalCalendarIds).sort()).toEqual([
+      "buddhist",
       "gregorian",
       "hebrew",
+      "indian",
       "islamic-civil",
       "islamic-tabular",
       "islamic-umalqura",
+      "japanese",
+      "persian",
+      "taiwan",
     ]);
   });
 });
@@ -45,6 +60,11 @@ describe("isCalendarSystem", () => {
     ${"islamic-civil"}
     ${"islamic-tabular"}
     ${"islamic-umalqura"}
+    ${"japanese"}
+    ${"buddhist"}
+    ${"taiwan"}
+    ${"persian"}
+    ${"indian"}
   `(
     "returns true for supported calendar: $value",
     ({ value }: { value: string }) => {
@@ -56,7 +76,7 @@ describe("isCalendarSystem", () => {
     value
     ${"islamic-tbla"}
     ${"islamic"}
-    ${"japanese"}
+    ${"roc"}
     ${"martian"}
     ${""}
     ${"Hebrew"}

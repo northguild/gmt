@@ -258,4 +258,153 @@ describe("convertDateToCalendar", () => {
     mockTemporalPlainDateFromThrow();
     expect(convertDateToCalendar("2024-10-03", "hebrew")).toBe("");
   });
+
+  // Buddhist and Taiwan are pure fixed-offset calendars (Gregorian day/month structure);
+  // Persian and Indian are distinct solar calendars with their own leap-year rule.
+  it.each`
+    value           | calendar      | expected
+    ${"2024-10-03"} | ${"japanese"} | ${"0006-10-03[u-ca=japanese;era=reiwa]"}
+    ${"2024-10-03"} | ${"buddhist"} | ${"2567-10-03[u-ca=buddhist]"}
+    ${"2024-10-03"} | ${"taiwan"}   | ${"0113-10-03[u-ca=taiwan]"}
+    ${"2024-10-03"} | ${"persian"}  | ${"1403-07-12[u-ca=persian]"}
+    ${"2024-10-03"} | ${"indian"}   | ${"1946-07-11[u-ca=indian]"}
+  `(
+    "converts $value to $calendar as $expected",
+    ({
+      value,
+      calendar,
+      expected,
+    }: {
+      value: string;
+      calendar: "japanese" | "buddhist" | "taiwan" | "persian" | "indian";
+      expected: string;
+    }) => {
+      expect(convertDateToCalendar(value, calendar)).toBe(expected);
+    },
+  );
+
+  // Every Japanese imperial era boundary Temporal supports, both sides of the transition.
+  it.each`
+    lastIsoOfEra    | expectedLast                              | firstIsoOfNextEra | expectedNext
+    ${"1912-07-29"} | ${"0045-07-29[u-ca=japanese;era=meiji]"}  | ${"1912-07-30"}   | ${"0001-07-30[u-ca=japanese;era=taisho]"}
+    ${"1926-12-24"} | ${"0015-12-24[u-ca=japanese;era=taisho]"} | ${"1926-12-25"}   | ${"0001-12-25[u-ca=japanese;era=showa]"}
+    ${"1989-01-07"} | ${"0064-01-07[u-ca=japanese;era=showa]"}  | ${"1989-01-08"}   | ${"0001-01-08[u-ca=japanese;era=heisei]"}
+    ${"2019-04-30"} | ${"0031-04-30[u-ca=japanese;era=heisei]"} | ${"2019-05-01"}   | ${"0001-05-01[u-ca=japanese;era=reiwa]"}
+  `(
+    "japanese era boundary: $lastIsoOfEra -> $expectedLast, $firstIsoOfNextEra -> $expectedNext",
+    ({
+      lastIsoOfEra,
+      expectedLast,
+      firstIsoOfNextEra,
+      expectedNext,
+    }: {
+      lastIsoOfEra: string;
+      expectedLast: string;
+      firstIsoOfNextEra: string;
+      expectedNext: string;
+    }) => {
+      expect(convertDateToCalendar(lastIsoOfEra, "japanese")).toBe(
+        expectedLast,
+      );
+      expect(convertDateToCalendar(firstIsoOfNextEra, "japanese")).toBe(
+        expectedNext,
+      );
+    },
+  );
+
+  // Dates before the Meiji era (1868-10-23) are a known gap in `@internationalized/date`
+  // (documented as unsupported there), but GMT delegates entirely to Temporal's own
+  // calendar support rather than porting/replicating that limitation — Temporal resolves
+  // pre-Meiji dates under a synthetic "japanese" era with an ISO-aligned eraYear, and GMT
+  // passes that straight through as an intentional extension, not an error case.
+  it("converts a pre-Meiji date under the synthetic 'japanese' era rather than rejecting it", () => {
+    expect(convertDateToCalendar("1800-01-01", "japanese")).toBe(
+      "1800-01-01[u-ca=japanese;era=japanese]",
+    );
+    expect(
+      convertDateToCalendar(
+        "1800-01-01[u-ca=japanese;era=japanese]",
+        "gregorian",
+      ),
+    ).toBe("1800-01-01");
+  });
+
+  it("round-trips a japanese date through gregorian and back", () => {
+    const converted = convertDateToCalendar("2024-10-03", "japanese");
+    expect(converted).toBe("0006-10-03[u-ca=japanese;era=reiwa]");
+    expect(convertDateToCalendar(converted, "gregorian")).toBe("2024-10-03");
+  });
+
+  // 1403 AP is a leap year (30-day 12th month, Esfand) under Persian's 33-year cycle rule
+  // (`(25 * year + 11) % 33 < 8`); the Gregorian year/month boundary lands mid-Persian-year.
+  it("converts the leap-year boundary of Persian year 1403 (Esfand 30 -> Farvardin 1)", () => {
+    expect(convertDateToCalendar("2024-03-19", "persian")).toBe(
+      "1402-12-29[u-ca=persian]",
+    );
+    expect(convertDateToCalendar("2024-03-20", "persian")).toBe(
+      "1403-01-01[u-ca=persian]",
+    );
+  });
+
+  it("round-trips a persian date through gregorian and back", () => {
+    const converted = convertDateToCalendar("2024-10-03", "persian");
+    expect(converted).toBe("1403-07-12[u-ca=persian]");
+    expect(convertDateToCalendar(converted, "gregorian")).toBe("2024-10-03");
+  });
+
+  // Indian's leap alignment follows the Gregorian rule (its first month is 31 days in a
+  // Gregorian leap year, 30 otherwise) rather than an independent cycle of its own.
+  it("converts the Saka-year boundary that crosses a Gregorian-aligned leap adjustment", () => {
+    expect(convertDateToCalendar("2024-03-20", "indian")).toBe(
+      "1945-12-30[u-ca=indian]",
+    );
+    expect(convertDateToCalendar("2024-03-21", "indian")).toBe(
+      "1946-01-01[u-ca=indian]",
+    );
+  });
+
+  it("round-trips an indian date through gregorian and back", () => {
+    const converted = convertDateToCalendar("2024-10-03", "indian");
+    expect(converted).toBe("1946-07-11[u-ca=indian]");
+    expect(convertDateToCalendar(converted, "gregorian")).toBe("2024-10-03");
+  });
+
+  it("converts a taiwan (ROC) date before the 1912 epoch using the inverse era's signed year", () => {
+    expect(convertDateToCalendar("1911-12-31", "taiwan")).toBe(
+      "0000-12-31[u-ca=taiwan]",
+    );
+    expect(convertDateToCalendar("1912-01-01", "taiwan")).toBe(
+      "0001-01-01[u-ca=taiwan]",
+    );
+  });
+
+  it("round-trips buddhist and taiwan dates through gregorian and back", () => {
+    const buddhist = convertDateToCalendar("2024-10-03", "buddhist");
+    expect(buddhist).toBe("2567-10-03[u-ca=buddhist]");
+    expect(convertDateToCalendar(buddhist, "gregorian")).toBe("2024-10-03");
+
+    const taiwan = convertDateToCalendar("2024-10-03", "taiwan");
+    expect(taiwan).toBe("0113-10-03[u-ca=taiwan]");
+    expect(convertDateToCalendar(taiwan, "gregorian")).toBe("2024-10-03");
+  });
+
+  it.each`
+    value           | calendar
+    ${"invalid"}    | ${"japanese"}
+    ${"2024-02-30"} | ${"buddhist"}
+    ${""}           | ${"taiwan"}
+    ${null}         | ${"persian"}
+    ${123}          | ${"indian"}
+  `(
+    "returns empty string for invalid input: $value / $calendar",
+    ({
+      value,
+      calendar,
+    }: {
+      value: unknown;
+      calendar: "japanese" | "buddhist" | "taiwan" | "persian" | "indian";
+    }) => {
+      expect(convertDateToCalendar(value as string, calendar)).toBe("");
+    },
+  );
 });

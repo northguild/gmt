@@ -22,15 +22,24 @@ import { isValidCalendarDate } from "../validate";
  *   underlying date never changes, only which calendar's fields it resolves through.
  * - Returns "" on invalid input or an unsupported `calendar`.
  *
+ * "japanese" is the one calendar tagged with an era instead of a plain native year — see
+ * the README's calendar-systems section for why.
+ *
  * @param value ISO PlainDate string, optionally calendar-annotated
  * @param calendar target calendar system ("gregorian" | "hebrew" | "islamic-civil" |
- *   "islamic-tabular" | "islamic-umalqura")
+ *   "islamic-tabular" | "islamic-umalqura" | "japanese" | "buddhist" | "taiwan" |
+ *   "persian" | "indian")
  * @returns calendar-native ISO-shaped PlainDate string, or "" on invalid input
  *
  * @example convertDateToCalendar("2024-10-03", "hebrew") // "5785-01-01[u-ca=hebrew]"
  * @example convertDateToCalendar("5785-01-01[u-ca=hebrew]", "gregorian") // "2024-10-03"
  * @example convertDateToCalendar("2024-10-03", "gregorian") // "2024-10-03"
  * @example convertDateToCalendar("2024-10-03", "islamic-umalqura") // "1446-03-30[u-ca=islamic-umalqura]"
+ * @example convertDateToCalendar("2024-10-03", "japanese") // "0006-10-03[u-ca=japanese;era=reiwa]"
+ * @example convertDateToCalendar("2024-10-03", "buddhist") // "2567-10-03[u-ca=buddhist]"
+ * @example convertDateToCalendar("2024-10-03", "taiwan") // "0113-10-03[u-ca=taiwan]"
+ * @example convertDateToCalendar("2024-10-03", "persian") // "1403-07-12[u-ca=persian]"
+ * @example convertDateToCalendar("2024-10-03", "indian") // "1946-07-11[u-ca=indian]"
  * @example convertDateToCalendar("invalid", "hebrew") // ""
  */
 export function convertDateToCalendar(

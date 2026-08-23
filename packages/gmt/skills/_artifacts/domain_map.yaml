@@ -339,7 +339,7 @@ skills:
   - name: Convert Temporal Types
     slug: convert-types
     domain: conversion
-    description: Convert between plain and zoned (with DST disambiguation control), or unix/utc representations; convertDateToCalendar expresses a date in a non-Gregorian CalendarSystem (gregorian, hebrew, islamic-civil, islamic-tabular, islamic-umalqura)
+    description: Convert between plain and zoned (with DST disambiguation control), or unix/utc representations; convertDateToCalendar expresses a date in a non-Gregorian CalendarSystem (gregorian, hebrew, islamic-civil, islamic-tabular, islamic-umalqura, japanese, buddhist, taiwan, persian, indian)
     type: core
     packages:
       - '@burglekitt/gmt'
@@ -354,7 +354,7 @@ skills:
       - Convert zoned to plain
       - Convert UTC to unix epoch
       - Convert unix to UTC
-      - Convert a date to a non-Gregorian calendar system (Hebrew, Islamic civil/tabular/Umm al-Qura)
+      - Convert a date to a non-Gregorian calendar system (Hebrew, Islamic civil/tabular/Umm al-Qura, Japanese, Buddhist, Taiwan, Persian, Indian)
 
   - name: App Integration
     slug: app-integration

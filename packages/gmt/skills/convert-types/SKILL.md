@@ -5,7 +5,8 @@ description: >
   convertPlainDateTimeToZoned (with optional disambiguation for DST gaps/
   overlaps), convertZonedToPlainDateTime, convertUtcToUnix, and
   convertDateToCalendar to express a date in a non-Gregorian CalendarSystem
-  (gregorian, hebrew, islamic-civil, islamic-tabular, islamic-umalqura).
+  (gregorian, hebrew, islamic-civil, islamic-tabular, islamic-umalqura,
+  japanese, buddhist, taiwan, persian, indian).
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/convert/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/convert/index.ts'
@@ -131,11 +132,19 @@ const back = convertDateToCalendar(hebrew, "gregorian");
 
 const umalqura = convertDateToCalendar("2024-10-03", "islamic-umalqura");
 // "1446-03-30[u-ca=islamic-umalqura]" — Saudi civil calendar
+
+const buddhist = convertDateToCalendar("2024-10-03", "buddhist");
+// "2567-10-03[u-ca=buddhist]" — fixed +543 year offset
+
+const japanese = convertDateToCalendar("2024-10-03", "japanese");
+// "0006-10-03[u-ca=japanese;era=reiwa]" — era-relative year, not proleptic 2024
 ```
 
-`CalendarSystem` is `"gregorian" | "hebrew" | "islamic-civil" | "islamic-tabular" | "islamic-umalqura"` today (extended by later Story Group E stories). The annotated string carries the target calendar's own year/month/day — not the ISO/Gregorian digits Temporal's own `[u-ca=...]` string convention keeps — so a Hebrew year like 5785 is visible directly in the string. A plain, unannotated string is always the `"gregorian"` calendar and works with every other GMT function unchanged.
+`CalendarSystem` is `"gregorian" | "hebrew" | "islamic-civil" | "islamic-tabular" | "islamic-umalqura" | "japanese" | "buddhist" | "taiwan" | "persian" | "indian"` today (extended by later Story Group E stories). The annotated string carries the target calendar's own year/month/day — not the ISO/Gregorian digits Temporal's own `[u-ca=...]` string convention keeps — so a Hebrew year like 5785 is visible directly in the string. A plain, unannotated string is always the `"gregorian"` calendar and works with every other GMT function unchanged.
 
-Every calendar is resolved through Temporal's own built-in calendar support (`PlainDate.prototype.withCalendar`) — GMT ports no leap-year tables or arithmetic of its own, for Islamic calendars any more than for Hebrew. The three Islamic variants are **not interchangeable**: `"islamic-civil"` and `"islamic-tabular"` use different fixed leap-year cycles one day apart in epoch, and `"islamic-umalqura"` is a tabulated calendar (the Saudi civil calendar) that can diverge from both by more than a fixed offset on a given date — `convertDateToCalendar` never approximates one variant with another's math. Note that GMT's own id for the tabular variant, `"islamic-tabular"`, differs from Temporal's internal id for the same calendar (`"islamic-tbla"`); the annotated string always reads `[u-ca=islamic-tabular]` regardless.
+Every calendar is resolved through Temporal's own built-in calendar support (`PlainDate.prototype.withCalendar`) — GMT ports no leap-year tables or arithmetic of its own, for Islamic or era-based solar calendars any more than for Hebrew. The three Islamic variants are **not interchangeable**: `"islamic-civil"` and `"islamic-tabular"` use different fixed leap-year cycles one day apart in epoch, and `"islamic-umalqura"` is a tabulated calendar (the Saudi civil calendar) that can diverge from both by more than a fixed offset on a given date — `convertDateToCalendar` never approximates one variant with another's math. Note that GMT's own id for the tabular variant, `"islamic-tabular"`, differs from Temporal's internal id for the same calendar (`"islamic-tbla"`); the annotated string always reads `[u-ca=islamic-tabular]` regardless.
+
+`"buddhist"` and `"taiwan"` are fixed year-offset calendars over the same Gregorian day/month structure (`+543`, and reset-at-1912 respectively); `"persian"` and `"indian"` are distinct solar calendars with their own leap-year rules (Persian: a 33-year cycle; Indian: aligned to the Gregorian leap-year rule, not an independent one). `"japanese"` is the odd one out: Temporal's `.year` for it stays **proleptic** across imperial era changes rather than resetting the way the calendar's own numbering does, so `convertDateToCalendar` tags it with `.eraYear` and an era name instead of a plain year — `"0006-10-03[u-ca=japanese;era=reiwa]"`, not `"2024-10-03[u-ca=japanese]"`. GMT also does not reject pre-Meiji (before 1868-10-23) dates the way `@internationalized/date` does — Temporal resolves them under a synthetic `"japanese"` era and GMT passes that through rather than adding validation just to reproduce another library's gap.
 
 ## Common Mistakes
 
@@ -217,6 +226,22 @@ const year = hebrew.slice(0, 4); // "5785" is the Hebrew year, NOT 2024 — don'
 Correct: treat the annotated string as GMT's own format (calendar-native fields, produced/consumed only by `convertDateToCalendar`) — never hand-parse it or assume it matches `Temporal.PlainDate.prototype.toString()`'s own `[u-ca=...]` output, which keeps the ISO digits and only tags the calendar. Round-trip it through `convertDateToCalendar` itself instead of extracting fields manually.
 
 Source: packages/gmt/src/plain/convert/convertDateToCalendar.ts — see JSDoc for the full rationale
+
+### MEDIUM Assuming `"japanese"`'s annotated year is proleptic like every other calendar
+
+Wrong:
+
+```ts
+// Assuming the year digits are the ISO/Gregorian year, the way "buddhist"/"taiwan"'s
+// digits are always a fixed transform of it
+const japanese = convertDateToCalendar("2024-10-03", "japanese");
+// "0006-10-03[u-ca=japanese;era=reiwa]" — "0006" is year 6 of the Reiwa era, NOT 2024
+const gregorianGuess = 2024 - Number(japanese.slice(0, 4)); // wrong: not how eras work
+```
+
+Correct: `"japanese"` is the one `CalendarSystem` whose annotated string carries an era-relative `eraYear` plus an `;era=<name>` tag instead of a plain native year — Temporal's own `.year` for this calendar stays proleptic across era changes, so a plain year would silently misrepresent it. Round-trip through `convertDateToCalendar(value, "gregorian")` instead of computing the ISO year by hand.
+
+Source: packages/gmt/src/internal/calendarDateString.ts — see JSDoc for why "japanese" is tagged differently
 
 ## References
 
