@@ -407,4 +407,153 @@ describe("convertDateToCalendar", () => {
       expect(convertDateToCalendar(value as string, calendar)).toBe("");
     },
   );
+
+  // Ethiopic, Ethiopic Amete Alem, and Coptic share the same 13-month structure (12 x 30
+  // days + a short Pagume/Nasie 13th month) but differ in epoch: Ethiopic additionally
+  // resets to the Amete Mihret era at ~AD 8 (hence the eraYear-based string, unlike its
+  // two siblings), Amete Alem counts continuously from ~5493 BCE, and Coptic's epoch is
+  // the Diocletian/Martyrs era (~AD 284).
+  it.each`
+    value           | calendar                 | expected
+    ${"2024-10-03"} | ${"ethiopic"}            | ${"2017-01-23[u-ca=ethiopic;era=ethiopic]"}
+    ${"2024-10-03"} | ${"ethiopic-amete-alem"} | ${"7517-01-23[u-ca=ethiopic-amete-alem]"}
+    ${"2024-10-03"} | ${"coptic"}              | ${"1741-01-23[u-ca=coptic]"}
+  `(
+    "converts $value to $calendar as $expected",
+    ({
+      value,
+      calendar,
+      expected,
+    }: {
+      value: string;
+      calendar: "ethiopic" | "ethiopic-amete-alem" | "coptic";
+      expected: string;
+    }) => {
+      expect(convertDateToCalendar(value, calendar)).toBe(expected);
+    },
+  );
+
+  // 13th-month (Pagume/Nasie) boundary: a non-leap year's 13th month is 5 days, crossing
+  // straight into next year's month 1 day 1.
+  it.each`
+    lastIsoOfYear   | calendar                 | expectedLast                                | firstIsoOfNextYear | expectedNext
+    ${"2025-09-10"} | ${"ethiopic"}            | ${"2017-13-05[u-ca=ethiopic;era=ethiopic]"} | ${"2025-09-11"}    | ${"2018-01-01[u-ca=ethiopic;era=ethiopic]"}
+    ${"2025-09-10"} | ${"ethiopic-amete-alem"} | ${"7517-13-05[u-ca=ethiopic-amete-alem]"}   | ${"2025-09-11"}    | ${"7518-01-01[u-ca=ethiopic-amete-alem]"}
+    ${"2025-09-10"} | ${"coptic"}              | ${"1741-13-05[u-ca=coptic]"}                | ${"2025-09-11"}    | ${"1742-01-01[u-ca=coptic]"}
+  `(
+    "non-leap 13th month boundary for $calendar: $lastIsoOfYear -> $expectedLast, $firstIsoOfNextYear -> $expectedNext",
+    ({
+      lastIsoOfYear,
+      calendar,
+      expectedLast,
+      firstIsoOfNextYear,
+      expectedNext,
+    }: {
+      lastIsoOfYear: string;
+      calendar: "ethiopic" | "ethiopic-amete-alem" | "coptic";
+      expectedLast: string;
+      firstIsoOfNextYear: string;
+      expectedNext: string;
+    }) => {
+      expect(convertDateToCalendar(lastIsoOfYear, calendar)).toBe(expectedLast);
+      expect(convertDateToCalendar(firstIsoOfNextYear, calendar)).toBe(
+        expectedNext,
+      );
+    },
+  );
+
+  // Leap-year-equivalent boundary: a leap year's 13th month is 6 days (Pagume/Nasie 6, the
+  // Julian-calendar-aligned leap day), one day longer than the non-leap case above.
+  it.each`
+    lastIsoOfYear   | calendar                 | expectedLast                                | firstIsoOfNextYear | expectedNext
+    ${"2027-09-11"} | ${"ethiopic"}            | ${"2019-13-06[u-ca=ethiopic;era=ethiopic]"} | ${"2027-09-12"}    | ${"2020-01-01[u-ca=ethiopic;era=ethiopic]"}
+    ${"2027-09-11"} | ${"ethiopic-amete-alem"} | ${"7519-13-06[u-ca=ethiopic-amete-alem]"}   | ${"2027-09-12"}    | ${"7520-01-01[u-ca=ethiopic-amete-alem]"}
+    ${"2027-09-11"} | ${"coptic"}              | ${"1743-13-06[u-ca=coptic]"}                | ${"2027-09-12"}    | ${"1744-01-01[u-ca=coptic]"}
+  `(
+    "leap 13th month boundary for $calendar: $lastIsoOfYear -> $expectedLast, $firstIsoOfNextYear -> $expectedNext",
+    ({
+      lastIsoOfYear,
+      calendar,
+      expectedLast,
+      firstIsoOfNextYear,
+      expectedNext,
+    }: {
+      lastIsoOfYear: string;
+      calendar: "ethiopic" | "ethiopic-amete-alem" | "coptic";
+      expectedLast: string;
+      firstIsoOfNextYear: string;
+      expectedNext: string;
+    }) => {
+      expect(convertDateToCalendar(lastIsoOfYear, calendar)).toBe(expectedLast);
+      expect(convertDateToCalendar(firstIsoOfNextYear, calendar)).toBe(
+        expectedNext,
+      );
+    },
+  );
+
+  // Ethiopic's own era boundary: the Amete Alem ("ethioaa") era gives way to the Amete
+  // Mihret ("ethiopic") era at this Julian-calendar date, mirroring the japanese era
+  // boundary tests above.
+  it("converts the ethiopic era boundary (amete-alem -> amete-mihret)", () => {
+    expect(convertDateToCalendar("0008-08-26", "ethiopic")).toBe(
+      "5500-13-05[u-ca=ethiopic;era=ethioaa]",
+    );
+    expect(convertDateToCalendar("0008-08-27", "ethiopic")).toBe(
+      "0001-01-01[u-ca=ethiopic;era=ethiopic]",
+    );
+  });
+
+  it("round-trips epoch-adjacent dates for each Ethiopic-family calendar", () => {
+    const ethiopic = convertDateToCalendar("-005492-07-17", "ethiopic");
+    expect(ethiopic).toBe("0001-01-01[u-ca=ethiopic;era=ethioaa]");
+    expect(convertDateToCalendar(ethiopic, "gregorian")).toBe("-005492-07-17");
+
+    const ameteAlem = convertDateToCalendar(
+      "-005492-07-17",
+      "ethiopic-amete-alem",
+    );
+    expect(ameteAlem).toBe("0001-01-01[u-ca=ethiopic-amete-alem]");
+    expect(convertDateToCalendar(ameteAlem, "gregorian")).toBe("-005492-07-17");
+
+    const coptic = convertDateToCalendar("0284-08-29", "coptic");
+    expect(coptic).toBe("0001-01-01[u-ca=coptic]");
+    expect(convertDateToCalendar(coptic, "gregorian")).toBe("0284-08-29");
+  });
+
+  it("round-trips ethiopic-family dates through gregorian and back", () => {
+    const ethiopic = convertDateToCalendar("2024-10-03", "ethiopic");
+    expect(ethiopic).toBe("2017-01-23[u-ca=ethiopic;era=ethiopic]");
+    expect(convertDateToCalendar(ethiopic, "gregorian")).toBe("2024-10-03");
+
+    const ameteAlem = convertDateToCalendar(
+      "2024-10-03",
+      "ethiopic-amete-alem",
+    );
+    expect(ameteAlem).toBe("7517-01-23[u-ca=ethiopic-amete-alem]");
+    expect(convertDateToCalendar(ameteAlem, "gregorian")).toBe("2024-10-03");
+
+    const coptic = convertDateToCalendar("2024-10-03", "coptic");
+    expect(coptic).toBe("1741-01-23[u-ca=coptic]");
+    expect(convertDateToCalendar(coptic, "gregorian")).toBe("2024-10-03");
+  });
+
+  it.each`
+    value           | calendar
+    ${"invalid"}    | ${"ethiopic"}
+    ${"2024-02-30"} | ${"ethiopic-amete-alem"}
+    ${""}           | ${"coptic"}
+    ${null}         | ${"ethiopic"}
+    ${123}          | ${"coptic"}
+  `(
+    "returns empty string for invalid input: $value / $calendar",
+    ({
+      value,
+      calendar,
+    }: {
+      value: unknown;
+      calendar: "ethiopic" | "ethiopic-amete-alem" | "coptic";
+    }) => {
+      expect(convertDateToCalendar(value as string, calendar)).toBe("");
+    },
+  );
 });

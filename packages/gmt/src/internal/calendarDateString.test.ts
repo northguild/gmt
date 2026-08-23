@@ -6,18 +6,21 @@ import {
 
 describe("parseCalendarDateValue", () => {
   it.each`
-    value                                    | expectedIso
-    ${"2024-10-03"}                          | ${"2024-10-03"}
-    ${"5785-01-01[u-ca=hebrew]"}             | ${"2024-10-03"}
-    ${"5784-06-01[u-ca=hebrew]"}             | ${"2024-02-10"}
-    ${"1446-03-29[u-ca=islamic-civil]"}      | ${"2024-10-03"}
-    ${"1446-03-30[u-ca=islamic-tabular]"}    | ${"2024-10-03"}
-    ${"1446-03-30[u-ca=islamic-umalqura]"}   | ${"2024-10-03"}
-    ${"0006-10-03[u-ca=japanese;era=reiwa]"} | ${"2024-10-03"}
-    ${"2567-10-03[u-ca=buddhist]"}           | ${"2024-10-03"}
-    ${"0113-10-03[u-ca=taiwan]"}             | ${"2024-10-03"}
-    ${"1403-07-12[u-ca=persian]"}            | ${"2024-10-03"}
-    ${"1946-07-11[u-ca=indian]"}             | ${"2024-10-03"}
+    value                                       | expectedIso
+    ${"2024-10-03"}                             | ${"2024-10-03"}
+    ${"5785-01-01[u-ca=hebrew]"}                | ${"2024-10-03"}
+    ${"5784-06-01[u-ca=hebrew]"}                | ${"2024-02-10"}
+    ${"1446-03-29[u-ca=islamic-civil]"}         | ${"2024-10-03"}
+    ${"1446-03-30[u-ca=islamic-tabular]"}       | ${"2024-10-03"}
+    ${"1446-03-30[u-ca=islamic-umalqura]"}      | ${"2024-10-03"}
+    ${"0006-10-03[u-ca=japanese;era=reiwa]"}    | ${"2024-10-03"}
+    ${"2567-10-03[u-ca=buddhist]"}              | ${"2024-10-03"}
+    ${"0113-10-03[u-ca=taiwan]"}                | ${"2024-10-03"}
+    ${"1403-07-12[u-ca=persian]"}               | ${"2024-10-03"}
+    ${"1946-07-11[u-ca=indian]"}                | ${"2024-10-03"}
+    ${"2017-01-23[u-ca=ethiopic;era=ethiopic]"} | ${"2024-10-03"}
+    ${"7517-01-23[u-ca=ethiopic-amete-alem]"}   | ${"2024-10-03"}
+    ${"1741-01-23[u-ca=coptic]"}                | ${"2024-10-03"}
   `(
     "parses $value to iso $expectedIso",
     ({ value, expectedIso }: { value: string; expectedIso: string }) => {
@@ -34,6 +37,7 @@ describe("parseCalendarDateValue", () => {
     ${"2024-10-03[u-ca=martian]"}
     ${"not-a-date"}
     ${"0000-10-03[u-ca=japanese;era=unknown-era]"}
+    ${"0000-01-01[u-ca=ethiopic;era=unknown-era]"}
   `("throws for invalid $value", ({ value }: { value: string }) => {
     expect(() => parseCalendarDateValue(value)).toThrow();
   });
@@ -90,4 +94,9 @@ describe("formatCalendarDate", () => {
       "1800-01-01[u-ca=japanese;era=japanese]",
     );
   });
+
+  // Ethiopic-family dates ("ethiopic" / "ethiopic-amete-alem" / "coptic") never reach this
+  // function — they format via formatEthiopicFamilyDate in ethiopicFamilyCalendar.ts
+  // instead, which never constructs or reads a Temporal PlainDate calendared as "ethiopic"
+  // or "coptic" (see that file's tests, and its module comment for why).
 });

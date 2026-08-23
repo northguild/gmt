@@ -15,6 +15,9 @@ describe("isValidCalendarDate", () => {
     ${"0113-10-03[u-ca=taiwan]"}
     ${"1403-07-12[u-ca=persian]"}
     ${"1946-07-11[u-ca=indian]"}
+    ${"2017-01-23[u-ca=ethiopic;era=ethiopic]"}
+    ${"7517-01-23[u-ca=ethiopic-amete-alem]"}
+    ${"1741-01-23[u-ca=coptic]"}
   `(
     "returns true for valid calendar date: $value",
     ({ value }: { value: string }) => {
@@ -30,6 +33,7 @@ describe("isValidCalendarDate", () => {
     ${"not-a-date"}
     ${""}
     ${"0006-10-03[u-ca=japanese;era=unknown-era]"}
+    ${"0000-01-01[u-ca=ethiopic;era=unknown-era]"}
   `(
     "returns false for invalid calendar date: $value",
     ({ value }: { value: string }) => {

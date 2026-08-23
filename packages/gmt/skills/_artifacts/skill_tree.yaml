@@ -190,13 +190,14 @@ skills:
     domain: conversion
     path: 'skills/convert-types/SKILL.md'
     package: 'packages/gmt'
-    description: Convert between plain and zoned (with DST disambiguation control), or unix/utc representations; convertDateToCalendar expresses a date in a non-Gregorian CalendarSystem (gregorian, hebrew, islamic-civil, islamic-tabular, islamic-umalqura, japanese, buddhist, taiwan, persian, indian)
+    description: Convert between plain and zoned (with DST disambiguation control), or unix/utc representations; convertDateToCalendar expresses a date in a non-Gregorian CalendarSystem (gregorian, hebrew, islamic-civil, islamic-tabular, islamic-umalqura, japanese, buddhist, taiwan, persian, indian, ethiopic, ethiopic-amete-alem, coptic)
     sources:
       - 'burglekitt/gmt:packages/gmt/src/plain/convert/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/zoned/convert/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/unix/convert/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/utc/convert/index.ts'
       - 'burglekitt/gmt:packages/gmt/src/types/calendar-system.ts'
+      - 'burglekitt/gmt:packages/gmt/src/internal/ethiopicFamilyCalendar.ts'
 
   # Consumer-facing interval skills
   - name: Interval Operations

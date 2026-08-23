@@ -11,6 +11,11 @@ export {
   ENGLISH_MONTH_NAMES,
   ENGLISH_WEEKDAY_NAMES,
 } from "./englishCalendarNames";
+export {
+  dateFromEthiopicFamilyFields,
+  formatEthiopicFamilyDate,
+  isEthiopicFamilyCalendar,
+} from "./ethiopicFamilyCalendar";
 export { getLocaleFirstDayOfWeek } from "./getLocaleFirstDayOfWeek";
 export { getLocaleMinimalDaysInFirstWeek } from "./getLocaleMinimalDaysInFirstWeek";
 export { getLocaleWeekYearBounds } from "./getLocaleWeekYearBounds";

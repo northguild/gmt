@@ -1,5 +1,7 @@
 import {
   formatCalendarDate,
+  formatEthiopicFamilyDate,
+  isEthiopicFamilyCalendar,
   parseCalendarDateValue,
   temporalCalendarIds,
 } from "../../internal";
@@ -18,17 +20,20 @@ import { isValidCalendarDate } from "../validate";
  *   diverges from Temporal's own `[u-ca=...]` string convention (which keeps ISO digits
  *   and only annotates the calendar) specifically so the calendar's native fields are
  *   visible in GMT's string contract, not hidden behind calendar-aware accessors.
- * - Uses Temporal's built-in calendar support (`PlainDate.prototype.withCalendar`) — the
- *   underlying date never changes, only which calendar's fields it resolves through.
+ * - Uses Temporal's built-in calendar support (`PlainDate.prototype.withCalendar`) for every
+ *   calendar except the Ethiopic family ("ethiopic" / "ethiopic-amete-alem" / "coptic"),
+ *   which is computed with GMT-owned arithmetic instead — see
+ *   `internal/ethiopicFamilyCalendar.ts` for why. Either way, the underlying date never
+ *   changes, only which calendar's fields it resolves through.
  * - Returns "" on invalid input or an unsupported `calendar`.
  *
- * "japanese" is the one calendar tagged with an era instead of a plain native year — see
- * the README's calendar-systems section for why.
+ * "japanese" and "ethiopic" are the two calendars tagged with an era instead of a plain
+ * native year — see the README's calendar-systems section for why.
  *
  * @param value ISO PlainDate string, optionally calendar-annotated
  * @param calendar target calendar system ("gregorian" | "hebrew" | "islamic-civil" |
  *   "islamic-tabular" | "islamic-umalqura" | "japanese" | "buddhist" | "taiwan" |
- *   "persian" | "indian")
+ *   "persian" | "indian" | "ethiopic" | "ethiopic-amete-alem" | "coptic")
  * @returns calendar-native ISO-shaped PlainDate string, or "" on invalid input
  *
  * @example convertDateToCalendar("2024-10-03", "hebrew") // "5785-01-01[u-ca=hebrew]"
@@ -40,6 +45,9 @@ import { isValidCalendarDate } from "../validate";
  * @example convertDateToCalendar("2024-10-03", "taiwan") // "0113-10-03[u-ca=taiwan]"
  * @example convertDateToCalendar("2024-10-03", "persian") // "1403-07-12[u-ca=persian]"
  * @example convertDateToCalendar("2024-10-03", "indian") // "1946-07-11[u-ca=indian]"
+ * @example convertDateToCalendar("2024-10-03", "ethiopic") // "2017-01-23[u-ca=ethiopic;era=ethiopic]"
+ * @example convertDateToCalendar("2024-10-03", "ethiopic-amete-alem") // "7517-01-23[u-ca=ethiopic-amete-alem]"
+ * @example convertDateToCalendar("2024-10-03", "coptic") // "1741-01-23[u-ca=coptic]"
  * @example convertDateToCalendar("invalid", "hebrew") // ""
  */
 export function convertDateToCalendar(
@@ -52,6 +60,9 @@ export function convertDateToCalendar(
 
   try {
     const date = parseCalendarDateValue(value);
+    if (isEthiopicFamilyCalendar(calendar)) {
+      return formatEthiopicFamilyDate(date, calendar);
+    }
     return formatCalendarDate(date.withCalendar(temporalCalendarIds[calendar]));
   } catch {
     return "";

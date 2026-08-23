@@ -15,6 +15,14 @@ import type { CalendarSystem } from "../types";
 // "taiwan" maps to Temporal's "roc" id (Republic of China calendar — the same calendar
 // react-aria's TaiwanCalendar wraps under a different name). "japanese", "buddhist", and
 // "persian"/"indian" match Temporal's own ids directly.
+//
+// "ethiopic-amete-alem" maps to Temporal's "ethioaa" id (Ethiopic calendar anchored to the
+// Amete Alem/"Year of the World" epoch, ~5493 BCE — a single continuous era, never resets).
+// "ethiopic" and "coptic" match Temporal's own ids directly; both share the Ethiopic
+// family's 13-month structure (12 x 30 days + a 5/6-day Pagume/Nasie) but differ in epoch —
+// "ethiopic" additionally resets to the Amete Mihret/"Incarnation" era at its own epoch
+// (~AD 8), which is why it needs the same eraYear-based string handling as "japanese" (see
+// calendarDateString.ts's isEraBased).
 export const temporalCalendarIds: Record<CalendarSystem, string> = {
   gregorian: "iso8601",
   hebrew: "hebrew",
@@ -26,6 +34,9 @@ export const temporalCalendarIds: Record<CalendarSystem, string> = {
   taiwan: "roc",
   persian: "persian",
   indian: "indian",
+  ethiopic: "ethiopic",
+  "ethiopic-amete-alem": "ethioaa",
+  coptic: "coptic",
 };
 
 export function isCalendarSystem(value: string): value is CalendarSystem {

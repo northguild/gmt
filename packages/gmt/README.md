@@ -83,7 +83,7 @@ GMT's test suite balances **thoroughness** against **maintenance burden** by tes
 - **Non-string input tables** — functions that guard with `typeof x !== "string"` return the same sentinel for `null`, `undefined`, `123`, `true`, `[]`, and `{}`. We test one representative non-string per argument position rather than all six types × N positions. The collapse is safe because all non-string types hit the identical early-return code path.
 - **Redundant permutations** — adjacent/disjoint/reversed interval cases that produce identical results are not duplicated across every function variant. The `plain/`, `zoned/`, `utc/`, and `unix/` families share the same mathematical behavior; each family gets the minimum set of cases needed to prove correctness.
 
-**Result:** 15,548 tests across 526 files that exercise real behavior differences without redundant permutations. The suite runs in CI as 310,960 executions (15,548 × 2 Node versions × 10 timezones).
+**Result:** 15,611 tests across 527 files that exercise real behavior differences without redundant permutations. The suite runs in CI as 312,220 executions (15,611 × 2 Node versions × 10 timezones).
 
 ## How GMT is tested, vs. the libraries it targets
 
@@ -99,9 +99,9 @@ GMT's roadmap (see [context/roadmap](https://github.com/burglekitt/gmt/tree/main
 
 | Metric                          | GMT                                                | `@internationalized/date`      | Luxon                                | date-fns                                  | Moment.js                        |
 | ------------------------------- | -------------------------------------------------- | ------------------------------ | ------------------------------------ | ----------------------------------------- | -------------------------------- |
-| Test files                      | 526                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
-| Individual test cases           | **15,548**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
-| Effective CI test<br>executions | **310,960**<br>(15,548 × 2 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
+| Test files                      | 527                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
+| Individual test cases           | **15,611**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
+| Effective CI test<br>executions | **312,220**<br>(15,611 × 2 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
 | CI Node.js matrix               | 22, 24                                             | n/a — tests<br>React 16–canary | 20, 22, 24, 25                       | not explicit<br>(`node = "latest"`)       | LTS, LTS-1,<br>latest            |
 | CI timezone matrix              | **10 zones × 2**<br>**Node, full suite**           | none found                     | none found                           | dedicated workflow,<br>zone scope unclear | 6 zones,<br>partial suite only   |
 | Locale test matrix              | **17 locales**,<br>every locale fn                 | none found                     | none found                           | none found                                | none found                       |
@@ -139,7 +139,7 @@ Specific, sourced claims — not a repeat of the metrics above.
 | Only GMT enforces a mandatory<br>17-locale test matrix on every<br>locale-aware function                                                      | No CI-level or systematic<br>locale-matrix testing found<br>in any of the four                                                        |
 | Only GMT exposes explicit DST<br>disambiguation control on both<br>construction _and_ arithmetic                                              | Luxon's docs call this explicitly<br>undefined; `@internationalized/date`<br>only covers construction, not arithmetic                 |
 | Only GMT is Temporal-native with<br>zero `Date` usage, enforced by<br>3 dedicated lint packages                                               | Luxon, date-fns, and Moment.js all<br>still wrap or depend on `Date` internally                                                       |
-| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~15×                                                  | 310,960 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
+| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~15×                                                  | 312,220 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
 
 ## Package Layout
 
@@ -422,7 +422,7 @@ Supported tokens include `yyyy`/`MM`/`dd`/`HH`/`mm`/`ss`/`SSS` for fixed-width f
 
 ### Calendar systems
 
-GMT's `CalendarSystem` type (`"gregorian" | "hebrew" | "islamic-civil" | "islamic-tabular" | "islamic-umalqura" | "japanese" | "buddhist" | "taiwan" | "persian" | "indian"`, extended by later stories) and `convertDateToCalendar` express a date in a non-Gregorian calendar system, built entirely on Temporal's native calendar support — no bundled leap-year tables or ported arithmetic.
+GMT's `CalendarSystem` type (`"gregorian" | "hebrew" | "islamic-civil" | "islamic-tabular" | "islamic-umalqura" | "japanese" | "buddhist" | "taiwan" | "persian" | "indian" | "ethiopic" | "ethiopic-amete-alem" | "coptic"`, extended by later stories) and `convertDateToCalendar` express a date in a non-Gregorian calendar system, built almost entirely on Temporal's native calendar support — no bundled leap-year tables or ported arithmetic, with one deliberate exception (the Ethiopic family, covered below).
 
 ```typescript
 import { convertDateToCalendar } from "@burglekitt/gmt";
@@ -472,6 +472,14 @@ convertDateToCalendar("0001-07-30[u-ca=japanese;era=taisho]", "gregorian");
 ```
 
 `@internationalized/date` documents pre-Meiji (before 1868-10-23) dates as unsupported for its Japanese calendar. GMT does not replicate that restriction: since `convertDateToCalendar` is built entirely on Temporal's own calendar support rather than a ported implementation, and Temporal resolves those dates correctly under a synthetic `"japanese"` era (with an ISO-aligned `eraYear`), rejecting them would mean writing new validation solely to reproduce another library's gap rather than an actual GMT limitation. `convertDateToCalendar("1800-01-01", "japanese")` returns `"1800-01-01[u-ca=japanese;era=japanese]"` rather than `""`.
+
+Three Ethiopic-family calendars round out the set, all sharing one 13-month structure (12 months of 30 days, plus a short Pagume/Nasie 13th month of 5 days, or 6 in a leap year) but differing in epoch:
+
+- `"ethiopic"` — the modern Ethiopian calendar, era-based like `"japanese"`: it resets to the Amete Mihret ("Year of Mercy"/Incarnation) era at its own epoch (~AD 8), so `convertDateToCalendar("2024-10-03", "ethiopic")` returns `"2017-01-23[u-ca=ethiopic;era=ethiopic]"` — year 2017, not a 5-digit proleptic number. Dates before that epoch resolve under the Amete Alem ("Year of the World") era instead: `convertDateToCalendar("0001-01-01", "ethiopic")` → `"5493-05-08[u-ca=ethiopic;era=ethioaa]"`.
+- `"ethiopic-amete-alem"` — the same calendar, but always counted continuously from the Amete Alem epoch (~5493 BCE), never resetting: `convertDateToCalendar("2024-10-03", "ethiopic-amete-alem")` → `"7517-01-23[u-ca=ethiopic-amete-alem]"`.
+- `"coptic"` — the Coptic Orthodox calendar: same 13-month structure, its own epoch (the Diocletian/Martyrs era, AD 284): `convertDateToCalendar("2024-10-03", "coptic")` → `"1741-01-23[u-ca=coptic]"`.
+
+**Why this family isn't built on Temporal's native `"ethiopic"`/`"coptic"` calendar ids, unlike every other calendar above.** `@js-temporal/polyfill`'s implementation of these two calendars resolves year/era by formatting the date through `Intl.DateTimeFormat` and matching the result against a hardcoded era-name table — unlike calendars with a fixed year-offset from ISO (Buddhist, Taiwan, and Ethiopic Amete Alem, which the polyfill computes with pure arithmetic and never touches `Intl` for). CLDR's era-name output for these two calendars changed between the ICU versions bundled with different Node releases: under Node 24's ICU, every read _or_ write of Temporal's `"ethiopic"`/`"coptic"` calendar ids throws a `RangeError` (`Era am (ISO year …) was not matched by any era`) — confirmed directly, not a hypothetical. `"ethiopic-amete-alem"` (Temporal's `"ethioaa"` id) is unaffected, since it has no era at all and is resolved with pure arithmetic. GMT routes around the bug rather than inheriting it: month/day are identical across all three calendars (they share one annual cycle), so `convertDateToCalendar` reads/writes them via the safe `"ethioaa"` calendar and computes each calendar's own displayed year (+ era, for `"ethiopic"`) with GMT-owned arithmetic — ported from the same `EthiopicHelper`/`CopticHelper` epoch constants `@js-temporal/polyfill` itself uses internally, just evaluated in GMT's code instead of through the ICU-dependent path. See `internal/ethiopicFamilyCalendar.ts` for the implementation.
 
 ### Durations
 

@@ -5,6 +5,10 @@ import {
   isCalendarSystem,
   temporalCalendarIds,
 } from "./calendarSystemIds";
+import {
+  dateFromEthiopicFamilyFields,
+  isEthiopicFamilyCalendar,
+} from "./ethiopicFamilyCalendar";
 
 /**
  * Parse a plain ISO PlainDate string or a GMT calendar-annotated PlainDate string
@@ -14,7 +18,10 @@ import {
  *
  * The regex only proves shape; `Temporal.PlainDate.from` performs the real construction
  * and validation (rejecting overflowed fields and unknown calendar identifiers), per the
- * scoped manual-string-parsing exception for fixed, non-caller-supplied grammars.
+ * scoped manual-string-parsing exception for fixed, non-caller-supplied grammars. The
+ * Ethiopic family ("ethiopic" / "ethiopic-amete-alem" / "coptic") is the one exception —
+ * see ethiopicFamilyCalendar.ts for why they're constructed via GMT-owned arithmetic
+ * instead of Temporal's own calendar ids for those three.
  */
 export function parseCalendarDateValue(value: string): Temporal.PlainDate {
   const match = calendarDate.exec(value);
@@ -23,6 +30,16 @@ export function parseCalendarDateValue(value: string): Temporal.PlainDate {
   }
 
   const [, year, month, day, calendarId, era] = match;
+  if (isEthiopicFamilyCalendar(calendarId)) {
+    return dateFromEthiopicFamilyFields(calendarId, {
+      year: era ? undefined : Number(year),
+      era,
+      eraYear: era ? Number(year) : undefined,
+      month: Number(month),
+      day: Number(day),
+    });
+  }
+
   // The regex captures GMT's own calendar identifier (e.g. "islamic-tabular"), which
   // doesn't always match Temporal's id for the same calendar (e.g. "islamic-tbla") — an
   // unrecognized id is passed through as-is so Temporal.PlainDate.from rejects it the
@@ -30,8 +47,8 @@ export function parseCalendarDateValue(value: string): Temporal.PlainDate {
   const temporalCalendarId = isCalendarSystem(calendarId)
     ? temporalCalendarIds[calendarId]
     : calendarId;
-  // A captured `;era=` suffix (only ever present for "japanese", the one calendar whose
-  // plain `.year` doesn't reset at an era change) means `year` is an era-relative
+  // A captured `;era=` suffix (only ever present for "japanese", the one remaining calendar
+  // whose plain `.year` doesn't reset at an era change) means `year` is an era-relative
   // `eraYear`, not a proleptic year — Temporal needs `era`+`eraYear` together to resolve
   // it back to the correct date.
   const fields = era
@@ -54,6 +71,11 @@ export function parseCalendarDateValue(value: string): Temporal.PlainDate {
  * and `;era=<name>` instead, both of which Temporal always populates for this calendar
  * (including for pre-Meiji dates, under a synthetic "japanese" era — see the README's
  * calendar-systems section for why GMT doesn't reject those unlike `@internationalized/date`).
+ *
+ * This function is never called with an Ethiopic-family ("ethiopic" /
+ * "ethiopic-amete-alem" / "coptic") calendared date — those three format through
+ * `formatEthiopicFamilyDate` in ethiopicFamilyCalendar.ts instead, which never touches
+ * Temporal's own "ethiopic"/"coptic" calendar ids. See that file for why.
  */
 export function formatCalendarDate(date: Temporal.PlainDate): string {
   if (date.calendarId === "iso8601") {

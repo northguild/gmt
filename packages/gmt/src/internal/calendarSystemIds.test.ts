@@ -2,17 +2,20 @@ import { isCalendarSystem, temporalCalendarIds } from "./calendarSystemIds";
 
 describe("temporalCalendarIds", () => {
   it.each`
-    calendar              | temporalId
-    ${"gregorian"}        | ${"iso8601"}
-    ${"hebrew"}           | ${"hebrew"}
-    ${"islamic-civil"}    | ${"islamic-civil"}
-    ${"islamic-tabular"}  | ${"islamic-tbla"}
-    ${"islamic-umalqura"} | ${"islamic-umalqura"}
-    ${"japanese"}         | ${"japanese"}
-    ${"buddhist"}         | ${"buddhist"}
-    ${"taiwan"}           | ${"roc"}
-    ${"persian"}          | ${"persian"}
-    ${"indian"}           | ${"indian"}
+    calendar                 | temporalId
+    ${"gregorian"}           | ${"iso8601"}
+    ${"hebrew"}              | ${"hebrew"}
+    ${"islamic-civil"}       | ${"islamic-civil"}
+    ${"islamic-tabular"}     | ${"islamic-tbla"}
+    ${"islamic-umalqura"}    | ${"islamic-umalqura"}
+    ${"japanese"}            | ${"japanese"}
+    ${"buddhist"}            | ${"buddhist"}
+    ${"taiwan"}              | ${"roc"}
+    ${"persian"}             | ${"persian"}
+    ${"indian"}              | ${"indian"}
+    ${"ethiopic"}            | ${"ethiopic"}
+    ${"ethiopic-amete-alem"} | ${"ethioaa"}
+    ${"coptic"}              | ${"coptic"}
   `(
     "maps $calendar to Temporal calendar id $temporalId",
     ({
@@ -29,7 +32,10 @@ describe("temporalCalendarIds", () => {
         | "buddhist"
         | "taiwan"
         | "persian"
-        | "indian";
+        | "indian"
+        | "ethiopic"
+        | "ethiopic-amete-alem"
+        | "coptic";
       temporalId: string;
     }) => {
       expect(temporalCalendarIds[calendar]).toBe(temporalId);
@@ -39,6 +45,9 @@ describe("temporalCalendarIds", () => {
   it("exposes exactly the CalendarSystem identifiers, no more and no fewer", () => {
     expect(Object.keys(temporalCalendarIds).sort()).toEqual([
       "buddhist",
+      "coptic",
+      "ethiopic",
+      "ethiopic-amete-alem",
       "gregorian",
       "hebrew",
       "indian",
@@ -65,6 +74,9 @@ describe("isCalendarSystem", () => {
     ${"taiwan"}
     ${"persian"}
     ${"indian"}
+    ${"ethiopic"}
+    ${"ethiopic-amete-alem"}
+    ${"coptic"}
   `(
     "returns true for supported calendar: $value",
     ({ value }: { value: string }) => {
@@ -77,6 +89,7 @@ describe("isCalendarSystem", () => {
     ${"islamic-tbla"}
     ${"islamic"}
     ${"roc"}
+    ${"ethioaa"}
     ${"martian"}
     ${""}
     ${"Hebrew"}
