@@ -137,6 +137,117 @@ describe("convertDateToCalendar", () => {
     },
   );
 
+  it.each`
+    value                                  | calendar              | expected
+    ${"2024-10-03"}                        | ${"islamic-civil"}    | ${"1446-03-29[u-ca=islamic-civil]"}
+    ${"2024-10-03"}                        | ${"islamic-tabular"}  | ${"1446-03-30[u-ca=islamic-tabular]"}
+    ${"2024-10-03"}                        | ${"islamic-umalqura"} | ${"1446-03-30[u-ca=islamic-umalqura]"}
+    ${"1446-03-30[u-ca=islamic-civil]"}    | ${"gregorian"}        | ${"2024-10-04"}
+    ${"1446-03-30[u-ca=islamic-tabular]"}  | ${"gregorian"}        | ${"2024-10-03"}
+    ${"1446-03-30[u-ca=islamic-umalqura]"} | ${"gregorian"}        | ${"2024-10-03"}
+  `(
+    "converts $value to $calendar as $expected",
+    ({
+      value,
+      calendar,
+      expected,
+    }: {
+      value: string;
+      calendar:
+        | "gregorian"
+        | "islamic-civil"
+        | "islamic-tabular"
+        | "islamic-umalqura";
+      expected: string;
+    }) => {
+      expect(convertDateToCalendar(value, calendar)).toBe(expected);
+    },
+  );
+
+  // Islamic civil/tabular share a 12-lunar-month, 354/355-day-year structure but differ
+  // in epoch alignment and leap-year cycle, so the two calendars land on different
+  // calendar-native digits for the same Gregorian day.
+  it.each`
+    calendar             | expected
+    ${"islamic-civil"}   | ${"1446-01-01[u-ca=islamic-civil]"}
+    ${"islamic-tabular"} | ${"1446-01-01[u-ca=islamic-tabular]"}
+  `(
+    "epoch of Islamic year 1446 differs by one day between $calendar and its sibling",
+    ({
+      calendar,
+      expected,
+    }: {
+      calendar: "islamic-civil" | "islamic-tabular";
+      expected: string;
+    }) => {
+      const iso = calendar === "islamic-civil" ? "2024-07-08" : "2024-07-07";
+      expect(convertDateToCalendar(iso, calendar)).toBe(expected);
+    },
+  );
+
+  // 1445 AH is a leap year (355 days / 12 months, extra day in month 12) for both civil
+  // and tabular; 1446 AH is a non-leap year (354 days) for both.
+  it.each`
+    lastIsoOfYear   | calendar             | expectedLast                          | firstIsoOfNextYear | expectedNext
+    ${"2024-07-07"} | ${"islamic-civil"}   | ${"1445-12-30[u-ca=islamic-civil]"}   | ${"2024-07-08"}    | ${"1446-01-01[u-ca=islamic-civil]"}
+    ${"2024-07-06"} | ${"islamic-tabular"} | ${"1445-12-30[u-ca=islamic-tabular]"} | ${"2024-07-07"}    | ${"1446-01-01[u-ca=islamic-tabular]"}
+  `(
+    "leap year 1445 -> non-leap year 1446 boundary for $calendar",
+    ({
+      lastIsoOfYear,
+      calendar,
+      expectedLast,
+      firstIsoOfNextYear,
+      expectedNext,
+    }: {
+      lastIsoOfYear: string;
+      calendar: "islamic-civil" | "islamic-tabular";
+      expectedLast: string;
+      firstIsoOfNextYear: string;
+      expectedNext: string;
+    }) => {
+      expect(convertDateToCalendar(lastIsoOfYear, calendar)).toBe(expectedLast);
+      expect(convertDateToCalendar(firstIsoOfNextYear, calendar)).toBe(
+        expectedNext,
+      );
+    },
+  );
+
+  it("round-trips epoch-adjacent Islamic year 1 dates to gregorian for each variant", () => {
+    expect(convertDateToCalendar("0622-07-19", "islamic-civil")).toBe(
+      "0001-01-01[u-ca=islamic-civil]",
+    );
+    expect(
+      convertDateToCalendar("0001-01-01[u-ca=islamic-civil]", "gregorian"),
+    ).toBe("0622-07-19");
+
+    expect(convertDateToCalendar("0622-07-18", "islamic-tabular")).toBe(
+      "0001-01-01[u-ca=islamic-tabular]",
+    );
+    expect(
+      convertDateToCalendar("0001-01-01[u-ca=islamic-tabular]", "gregorian"),
+    ).toBe("0622-07-18");
+
+    expect(convertDateToCalendar("0622-07-19", "islamic-umalqura")).toBe(
+      "0001-01-01[u-ca=islamic-umalqura]",
+    );
+    expect(
+      convertDateToCalendar("0001-01-01[u-ca=islamic-umalqura]", "gregorian"),
+    ).toBe("0622-07-19");
+  });
+
+  // Umm al-Qura is a tabulated calendar (Saudi civil calendar), not the tabular variant's
+  // pure arithmetic rule — this date is a table-boundary case where they diverge, proving
+  // GMT does not silently approximate Umm al-Qura with tabular's math.
+  it("Umm al-Qura diverges from the tabular calendar's arithmetic on a table-boundary date", () => {
+    expect(convertDateToCalendar("2020-02-24", "islamic-umalqura")).toBe(
+      "1441-06-30[u-ca=islamic-umalqura]",
+    );
+    expect(convertDateToCalendar("2020-02-24", "islamic-tabular")).toBe(
+      "1441-07-01[u-ca=islamic-tabular]",
+    );
+  });
+
   it("returns empty string for an unsupported calendar system", () => {
     expect(
       convertDateToCalendar("2024-10-03", "martian" as unknown as "hebrew"),

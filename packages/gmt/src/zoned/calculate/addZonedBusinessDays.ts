@@ -1,5 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
-import { advanceBusinessDays, isValidAmount } from "../../internal";
+import { adjustZonedBusinessDays, isValidAmount } from "../../internal";
 import { isValidZonedDateTime } from "../validate";
 
 /**
@@ -28,21 +27,7 @@ export function addZonedBusinessDays(value: string, amount: number): string {
     return value;
   }
 
-  try {
-    const zoned = Temporal.ZonedDateTime.from(value);
-    const plainDate = zoned.toPlainDate();
-    const direction = amount > 0 ? 1 : -1;
-    const resultDate = advanceBusinessDays(
-      plainDate,
-      direction,
-      Math.abs(amount),
-    );
-    // Reattach the original time component — Temporal handles DST on reconstruction
-    const resultZoned = resultDate
-      .toZonedDateTime(zoned.timeZoneId)
-      .withPlainTime(zoned.toPlainTime());
-    return resultZoned.toString();
-  } catch {
-    return "";
-  }
+  const absAmount = Math.abs(amount);
+  const direction = amount > 0 ? 1 : -1;
+  return adjustZonedBusinessDays(value, direction, absAmount);
 }

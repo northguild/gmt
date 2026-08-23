@@ -36,7 +36,7 @@ Arithmetic and date manipulation:
 
 Calendar-system conversion:
 
-- `convertDateToCalendar` — express a date in a different `CalendarSystem` ("gregorian" | "hebrew")
+- `convertDateToCalendar` — express a date in a different `CalendarSystem` ("gregorian" | "hebrew" | "islamic-civil" | "islamic-tabular" | "islamic-umalqura")
 
 ### chop
 

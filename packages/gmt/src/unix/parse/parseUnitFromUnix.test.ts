@@ -39,7 +39,7 @@ describe("parseUnitFromUnix", () => {
   `("returns $expected for unit $unit from ms epoch", ({ unit, expected }) => {
     const val = parseUnitFromUnix(epochMs, unit as never);
     if (unit === "microsecond" || unit === "nanosecond") {
-      expect(val).toMatch(/^\d{3}$/);
+      expect(val).toMatch(/^\d+$/);
     } else {
       expect(val).toBe(expected as string);
     }

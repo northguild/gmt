@@ -3,16 +3,19 @@ name: convert-types
 description: >
   Convert between temporal types, unix time, and UTC representations. Use
   convertPlainDateTimeToZoned (with optional disambiguation for DST gaps/
-  overlaps), convertZonedToPlainDateTime, convertUtcToUnix.
+  overlaps), convertZonedToPlainDateTime, convertUtcToUnix, and
+  convertDateToCalendar to express a date in a non-Gregorian CalendarSystem
+  (gregorian, hebrew, islamic-civil, islamic-tabular, islamic-umalqura).
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/convert/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/convert/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/convert/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/utc/convert/index.ts'
+  - 'burglekitt/gmt:packages/gmt/src/types/calendar-system.ts'
 metadata:
   type: core
   library: '@burglekitt/gmt'
-  library_version: '1.13.0'
+  library_version: '1.14.0'
 ---
 
 # Convert Temporal Types
@@ -125,9 +128,14 @@ const hebrew = convertDateToCalendar("2024-10-03", "hebrew");
 
 const back = convertDateToCalendar(hebrew, "gregorian");
 // "2024-10-03" — round-trips back to a bare ISO string
+
+const umalqura = convertDateToCalendar("2024-10-03", "islamic-umalqura");
+// "1446-03-30[u-ca=islamic-umalqura]" — Saudi civil calendar
 ```
 
-`CalendarSystem` is `"gregorian" | "hebrew"` today (extended by later Story Group E stories). The annotated string carries the target calendar's own year/month/day — not the ISO/Gregorian digits Temporal's own `[u-ca=...]` string convention keeps — so a Hebrew year like 5785 is visible directly in the string. A plain, unannotated string is always the `"gregorian"` calendar and works with every other GMT function unchanged.
+`CalendarSystem` is `"gregorian" | "hebrew" | "islamic-civil" | "islamic-tabular" | "islamic-umalqura"` today (extended by later Story Group E stories). The annotated string carries the target calendar's own year/month/day — not the ISO/Gregorian digits Temporal's own `[u-ca=...]` string convention keeps — so a Hebrew year like 5785 is visible directly in the string. A plain, unannotated string is always the `"gregorian"` calendar and works with every other GMT function unchanged.
+
+Every calendar is resolved through Temporal's own built-in calendar support (`PlainDate.prototype.withCalendar`) — GMT ports no leap-year tables or arithmetic of its own, for Islamic calendars any more than for Hebrew. The three Islamic variants are **not interchangeable**: `"islamic-civil"` and `"islamic-tabular"` use different fixed leap-year cycles one day apart in epoch, and `"islamic-umalqura"` is a tabulated calendar (the Saudi civil calendar) that can diverge from both by more than a fixed offset on a given date — `convertDateToCalendar` never approximates one variant with another's math. Note that GMT's own id for the tabular variant, `"islamic-tabular"`, differs from Temporal's internal id for the same calendar (`"islamic-tbla"`); the annotated string always reads `[u-ca=islamic-tabular]` regardless.
 
 ## Common Mistakes
 

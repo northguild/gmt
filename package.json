@@ -40,6 +40,7 @@
     "@nx/js": "^22.5.4",
     "@tanstack/intent": "^0.3.6",
     "@types/node": "^22.13.10",
+    "fallow": "^3.17.0",
     "nx": "^22.5.4",
     "oxfmt": "^0.63.0",
     "oxlint": "^1.78.0",
@@ -48,7 +49,7 @@
     "vitest": "^4.1.0"
   },
   "engines": {
-    "node": ">=20 <25"
+    "node": ">=22 <25"
   },
   "packageManager": "pnpm@10.32.1"
 }

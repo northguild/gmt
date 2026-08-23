@@ -56,6 +56,37 @@ Own the initial test + implementation cycle for new functions. Write tests first
 
 8. **Pre-commit checklist** — verify each `it.each` name embeds its distinguishing variables (see `context/testing-standards/references/index.md` → "Test name standards").
 
+## Fallow Static Analysis Gate
+
+Run `npx fallow` (or `fallow` if installed as dev dep) before committing. Exit 0 = clean, exit 1 = findings (normal), exit 2 = error.
+
+### Must Fix (Pre-Commit)
+
+1. **New circular dependencies** — break import cycles in source files; existing side-effect barrel cycles are suppressed (see below).
+2. **CRAP > 50** — extract complex functions before they grow (e.g. `patternToken.ts` `resolvePatternFields` at 349.9 CRAP).
+3. **Unresolved imports** — ensure build artifacts exist or add to `.fallowrc.json` ignorePatterns.
+
+### Acceptable (Suppress or Document)
+
+1. **Test file duplication** — intentional locale matrix coverage across 17 locales; each test case needs explicit, self-contained assertions.
+2. **Calendar family scaffolding** — structural duplication across `unix/`, `utc/`, `plain/`, `zoned/` variants (e.g. `endOfUnix.ts` vs `endOfZoned.ts`). Each variant has different Temporal types; extracting shared utils would create abstraction leaks with generic type parameters callers don't need.
+3. **Side-effect barrel cycles** — intentional re-export chains through `index.ts` files. Suppress with `// fallow-ignore-next-line circular-dependency` or add to `.fallowrc.json`.
+4. **High cyclomatic in calendar switches** — 17+ case branches for calendar family branching are expected. Suppress with `// fallow-ignore-next-line complexity -- 17-calendar switch, expected branching`.
+
+### Refactoring Backlog (Low Priority)
+
+- `parse*FromUnix.ts` family (9 files) → shared `parseUnitFromUnix<T>(input, offset, unit)` helper — pure string extraction with no type divergence.
+- `patternToken.ts` (518 LOC) → extract `compilePattern`, `resolvePatternFields`, `tokenizePattern` into focused functions.
+- Clone families in `format/` and `interval/` modules → generic shared utilities across variant families.
+
+### Suppression Pattern
+
+```typescript
+// fallow-ignore-next-line duplication -- calendar family variant, different Temporal types
+// fallow-ignore-next-line complexity -- 17-calendar switch, expected branching
+// fallow-ignore-next-line circular-dependency -- intentional barrel re-export chain
+```
+
 ## Hard rules
 
 - **Tests come first.** Write `.test.ts` before the implementation.
@@ -64,3 +95,16 @@ Own the initial test + implementation cycle for new functions. Write tests first
 - **No `Date` object.** Import from `@js-temporal/polyfill` exclusively.
 - **String-in, string-out** for all public APIs — return ISO strings, numbers, booleans, or arrays, never Temporal objects.
 - **Export from the namespace's `index.ts`** barrel per `context/coding-standards.md`.
+
+## Duplication discipline
+
+- Prefer **one parameterized function per axis** over near-duplicate named variants (precedent: `isRelativeDay`, `isThisUnit`; `J.md` Decision 5; interval-ops "don't implement duplicate logic").
+- If core logic repeats in **3+ functions**, extract it to `packages/gmt/src/internal/` and export from `internal/index.ts` (existing pattern: `advanceBusinessDays`, `isValidAmount`). Example already in repo: `parseUnitFromUnix(value, unit)` subsumes the per-unit `parse*FromUnix` wrappers.
+- **Cross-family (plain/zoned/utc/unix) clones are by design** — different Temporal types must stay separate (core rule #5). Do NOT build generic helpers that mix types. Mark unavoidable clones: `// fallow-ignore-next-line code-duplication — cross-family Temporal type, by-design (rule #5)`.
+- Keep each public function's explicit guard (`isValidDate`/`isValidAmount`) + `try { Temporal.X.from(value) } catch { return sentinel }` + JSDoc — do not hide it behind a wrapper that weakens the per-function contract.
+- After implementing, run `npx fallow dupes --changed-since HEAD~1` (or the VS Code Fallow view) and confirm no NEW extractable duplication; suppress only inherent boilerplate, each with a reason.
+
+## Pre-commit checklist
+
+- Verify each `it.each` name embeds its distinguishing variables (see `context/testing-standards/references/index.md` → "Test name standards").
+- Fallow check: `npx fallow dupes --changed-since HEAD~1` shows no new extractable duplication (suppressions carry a reason).

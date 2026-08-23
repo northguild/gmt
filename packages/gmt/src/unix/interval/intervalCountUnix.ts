@@ -1,12 +1,5 @@
-import { Temporal } from "@js-temporal/polyfill";
-import {
-  getStartOfZonedUnit,
-  getUnitSpan,
-  resolveDateTimeUnit,
-} from "../../internal";
-import { isValidDateTimeUnit } from "../../plain/validate";
-import { getSystemTimeZone } from "../../zoned/get";
-import { isValidTimeZone } from "../../zoned/validate";
+import { getStartOfZonedUnit, getUnitSpan } from "../../internal";
+import { resolveUnixIntervalPair } from "./resolveUnixIntervalPair";
 
 /**
  * Count how many `unit` boundaries a Unix epoch interval crosses.
@@ -40,55 +33,11 @@ export function intervalCountUnix(
   end: number | string,
   unit: string,
 ): number | null {
-  if (typeof start !== "number" && typeof start !== "string") {
-    return null;
-  }
-
-  if (typeof end !== "number" && typeof end !== "string") {
-    return null;
-  }
-
-  const startMs = typeof start === "number" ? start : Number(start);
-  const endMs = typeof end === "number" ? end : Number(end);
-
-  if (!Number.isFinite(startMs) || !Number.isInteger(startMs)) {
-    return null;
-  }
-
-  if (!Number.isFinite(endMs) || !Number.isInteger(endMs)) {
-    return null;
-  }
-
-  if (startMs > endMs) {
-    return null;
-  }
-
-  if (typeof unit !== "string") {
-    return null;
-  }
-
-  const resolvedUnit = resolveDateTimeUnit(unit);
-
-  if (!isValidDateTimeUnit(resolvedUnit)) {
-    return null;
-  }
+  const resolved = resolveUnixIntervalPair(start, end, unit);
+  if (!resolved) return null;
 
   try {
-    const timeZone = getSystemTimeZone();
-
-    if (!timeZone || !isValidTimeZone(timeZone)) {
-      return null;
-    }
-
-    const startVal =
-      Temporal.Instant.fromEpochMilliseconds(startMs).toZonedDateTimeISO(
-        timeZone,
-      );
-    const endVal =
-      Temporal.Instant.fromEpochMilliseconds(endMs).toZonedDateTimeISO(
-        timeZone,
-      );
-
+    const { startVal, endVal, resolvedUnit } = resolved;
     const startOfStart = getStartOfZonedUnit(startVal, resolvedUnit);
     const startOfEnd = getStartOfZonedUnit(endVal, resolvedUnit);
 

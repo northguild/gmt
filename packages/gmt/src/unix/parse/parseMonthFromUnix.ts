@@ -1,16 +1,10 @@
-import { Temporal } from "@js-temporal/polyfill";
-import { getSystemTimeZone } from "../../zoned/get";
-import { convertUnixToZoned } from "../convert";
-import {
-  isValidUnixMilliseconds,
-  isValidUnixSeconds,
-  type UnixUnit,
-} from "../validate";
+import { parseUnitFromUnix } from "./parseUnitFromUnix";
+import type { UnixUnit } from "../validate";
 
 /**
  * Return the month (1-12) from a unix epoch value.
  *
- * - Converts to ZonedDateTime then extracts the month.
+ * - Delegates to {@link parseUnitFromUnix} with unit "month".
  * - Returns "" for invalid input.
  *
  * @param value unix epoch in milliseconds or seconds (number or string)
@@ -25,28 +19,5 @@ export function parseMonthFromUnix(
   value: number | string,
   options?: { epochUnit?: UnixUnit; timeZone?: string },
 ): string {
-  const numValue = typeof value === "string" ? Number(value) : value;
-  const epochUnit = options?.epochUnit ?? "milliseconds";
-
-  if (epochUnit === "seconds") {
-    if (!isValidUnixSeconds(numValue)) return "";
-  } else {
-    if (!isValidUnixMilliseconds(numValue)) return "";
-  }
-
-  const timeZone = options?.timeZone ?? getSystemTimeZone();
-  if (!timeZone) return "";
-
-  const zoned =
-    typeof options?.epochUnit === "undefined"
-      ? convertUnixToZoned(numValue, timeZone)
-      : convertUnixToZoned(numValue, timeZone, options.epochUnit);
-  if (!zoned) return "";
-
-  try {
-    const zdt = Temporal.ZonedDateTime.from(zoned);
-    return zdt.month.toString().padStart(2, "0");
-  } catch {
-    return "";
-  }
+  return parseUnitFromUnix(value, "month", options);
 }

@@ -2,16 +2,24 @@ import { isCalendarSystem, temporalCalendarIds } from "./calendarSystemIds";
 
 describe("temporalCalendarIds", () => {
   it.each`
-    calendar       | temporalId
-    ${"gregorian"} | ${"iso8601"}
-    ${"hebrew"}    | ${"hebrew"}
+    calendar              | temporalId
+    ${"gregorian"}        | ${"iso8601"}
+    ${"hebrew"}           | ${"hebrew"}
+    ${"islamic-civil"}    | ${"islamic-civil"}
+    ${"islamic-tabular"}  | ${"islamic-tbla"}
+    ${"islamic-umalqura"} | ${"islamic-umalqura"}
   `(
     "maps $calendar to Temporal calendar id $temporalId",
     ({
       calendar,
       temporalId,
     }: {
-      calendar: "gregorian" | "hebrew";
+      calendar:
+        | "gregorian"
+        | "hebrew"
+        | "islamic-civil"
+        | "islamic-tabular"
+        | "islamic-umalqura";
       temporalId: string;
     }) => {
       expect(temporalCalendarIds[calendar]).toBe(temporalId);
@@ -22,6 +30,9 @@ describe("temporalCalendarIds", () => {
     expect(Object.keys(temporalCalendarIds).sort()).toEqual([
       "gregorian",
       "hebrew",
+      "islamic-civil",
+      "islamic-tabular",
+      "islamic-umalqura",
     ]);
   });
 });
@@ -31,6 +42,9 @@ describe("isCalendarSystem", () => {
     value
     ${"gregorian"}
     ${"hebrew"}
+    ${"islamic-civil"}
+    ${"islamic-tabular"}
+    ${"islamic-umalqura"}
   `(
     "returns true for supported calendar: $value",
     ({ value }: { value: string }) => {
@@ -40,7 +54,8 @@ describe("isCalendarSystem", () => {
 
   it.each`
     value
-    ${"islamic-civil"}
+    ${"islamic-tbla"}
+    ${"islamic"}
     ${"japanese"}
     ${"martian"}
     ${""}

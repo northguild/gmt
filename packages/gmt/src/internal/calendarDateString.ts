@@ -1,5 +1,10 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { calendarDate } from "../regex";
+import {
+  calendarSystemIdFromTemporal,
+  isCalendarSystem,
+  temporalCalendarIds,
+} from "./calendarSystemIds";
 
 /**
  * Parse a plain ISO PlainDate string or a GMT calendar-annotated PlainDate string
@@ -18,12 +23,19 @@ export function parseCalendarDateValue(value: string): Temporal.PlainDate {
   }
 
   const [, year, month, day, calendarId] = match;
+  // The regex captures GMT's own calendar identifier (e.g. "islamic-tabular"), which
+  // doesn't always match Temporal's id for the same calendar (e.g. "islamic-tbla") — an
+  // unrecognized id is passed through as-is so Temporal.PlainDate.from rejects it the
+  // same way it rejects any other unknown calendar identifier.
+  const temporalCalendarId = isCalendarSystem(calendarId)
+    ? temporalCalendarIds[calendarId]
+    : calendarId;
   return Temporal.PlainDate.from(
     {
       year: Number(year),
       month: Number(month),
       day: Number(day),
-      calendar: calendarId,
+      calendar: temporalCalendarId,
     },
     { overflow: "reject" },
   );
@@ -42,5 +54,6 @@ export function formatCalendarDate(date: Temporal.PlainDate): string {
   const year = String(date.year).padStart(4, "0");
   const month = String(date.month).padStart(2, "0");
   const day = String(date.day).padStart(2, "0");
-  return `${year}-${month}-${day}[u-ca=${date.calendarId}]`;
+  const calendarId = calendarSystemIdFromTemporal(date.calendarId);
+  return `${year}-${month}-${day}[u-ca=${calendarId}]`;
 }

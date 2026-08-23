@@ -98,7 +98,7 @@ export function parseUnitFromUnix(
       case "microsecond":
         return (zdt.microsecond ?? 0).toString().padStart(3, "0");
       case "nanosecond":
-        return (zdt.nanosecond ?? 0).toString().padStart(3, "0");
+        return (zdt.nanosecond ?? 0).toString().padStart(9, "0");
       default:
         return "";
     }

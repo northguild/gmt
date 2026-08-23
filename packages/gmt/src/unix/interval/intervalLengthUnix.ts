@@ -1,10 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
-import { resolveDateTimeUnit } from "../../internal";
-import {
-  isValidUnixEpochPair,
-  resolveUnixTimeZone,
-} from "../../internal/resolveUnixTimeZone";
-import { isValidDateTimeUnit } from "../../plain/validate";
+import { resolveUnixIntervalPair } from "./resolveUnixIntervalPair";
 
 /**
  * Return the exact length of a Unix epoch interval in `unit`, as a real (possibly fractional) number.
@@ -34,51 +28,12 @@ export function intervalLengthUnix(
   end: number | string,
   unit: string,
 ): number | null {
-  if (typeof start !== "number" && typeof start !== "string") {
-    return null;
-  }
+  const resolved = resolveUnixIntervalPair(start, end, unit);
 
-  if (typeof end !== "number" && typeof end !== "string") {
-    return null;
-  }
-
-  const startMs = typeof start === "number" ? start : Number(start);
-  const endMs = typeof end === "number" ? end : Number(end);
-
-  if (!isValidUnixEpochPair(startMs, endMs)) {
-    return null;
-  }
-
-  if (startMs > endMs) {
-    return null;
-  }
-
-  if (typeof unit !== "string") {
-    return null;
-  }
-
-  const resolvedUnit = resolveDateTimeUnit(unit);
-
-  if (!isValidDateTimeUnit(resolvedUnit)) {
-    return null;
-  }
+  if (!resolved) return null;
 
   try {
-    const timeZone = resolveUnixTimeZone();
-
-    if (!timeZone) {
-      return null;
-    }
-
-    const startVal =
-      Temporal.Instant.fromEpochMilliseconds(startMs).toZonedDateTimeISO(
-        timeZone,
-      );
-    const endVal =
-      Temporal.Instant.fromEpochMilliseconds(endMs).toZonedDateTimeISO(
-        timeZone,
-      );
-
+    const { startVal, endVal, resolvedUnit } = resolved;
     const duration = startVal.until(endVal, { largestUnit: resolvedUnit });
 
     // total() gives the exact elapsed length, unlike intervalCountUnix's boundary-crossing

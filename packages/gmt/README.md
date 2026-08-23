@@ -83,7 +83,7 @@ GMT's test suite balances **thoroughness** against **maintenance burden** by tes
 - **Non-string input tables** — functions that guard with `typeof x !== "string"` return the same sentinel for `null`, `undefined`, `123`, `true`, `[]`, and `{}`. We test one representative non-string per argument position rather than all six types × N positions. The collapse is safe because all non-string types hit the identical early-return code path.
 - **Redundant permutations** — adjacent/disjoint/reversed interval cases that produce identical results are not duplicated across every function variant. The `plain/`, `zoned/`, `utc/`, and `unix/` families share the same mathematical behavior; each family gets the minimum set of cases needed to prove correctness.
 
-**Result:** 15,475 tests across 526 files that exercise real behavior differences without redundant permutations. The suite runs in CI as 309,500 executions (15,475 × 2 Node versions × 10 timezones).
+**Result:** 15,501 tests across 526 files that exercise real behavior differences without redundant permutations. The suite runs in CI as 310,020 executions (15,501 × 2 Node versions × 10 timezones).
 
 ## How GMT is tested, vs. the libraries it targets
 
@@ -100,8 +100,8 @@ GMT's roadmap (see [context/roadmap](https://github.com/burglekitt/gmt/tree/main
 | Metric                          | GMT                                                | `@internationalized/date`      | Luxon                                | date-fns                                  | Moment.js                        |
 | ------------------------------- | -------------------------------------------------- | ------------------------------ | ------------------------------------ | ----------------------------------------- | -------------------------------- |
 | Test files                      | 526                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
-| Individual test cases           | **15,475**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
-| Effective CI test<br>executions | **309,500**<br>(15,475 × 2 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
+| Individual test cases           | **15,501**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
+| Effective CI test<br>executions | **310,020**<br>(15,501 × 2 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
 | CI Node.js matrix               | 22, 24                                             | n/a — tests<br>React 16–canary | 20, 22, 24, 25                       | not explicit<br>(`node = "latest"`)       | LTS, LTS-1,<br>latest            |
 | CI timezone matrix              | **10 zones × 2**<br>**Node, full suite**           | none found                     | none found                           | dedicated workflow,<br>zone scope unclear | 6 zones,<br>partial suite only   |
 | Locale test matrix              | **17 locales**,<br>every locale fn                 | none found                     | none found                           | none found                                | none found                       |
@@ -114,18 +114,18 @@ GMT's roadmap (see [context/roadmap](https://github.com/burglekitt/gmt/tree/main
 
 GMT's roadmap tracks parity against the same four libraries story-by-story, with each gap sourced against the specific competitor function it closes — see [context/roadmap](https://github.com/burglekitt/gmt/tree/main/context/roadmap) for the full, source-verified audit trail. This is a live snapshot, not a finished-parity claim: ✅ shipped, 🟡 in progress, ⏳ backlog and not yet scheduled.
 
-| Capability                                                                         | Status                       | Also has it                                                              |
-| ---------------------------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------ |
-| Duration type<br>(ISO 8601 parse/format/arithmetic)                                | ✅ Done                      | Luxon `Duration`                                                         |
-| Interval/range math<br>(contains, overlap, union,<br>intersection, split, set ops) | ✅ Done                      | Luxon `Interval`,<br>date-fns `areIntervalsOverlapping`                  |
-| DST disambiguation control<br>on construction _and_ arithmetic                     | ✅ Done — **differentiator** | None of the others expose<br>this on arithmetic                          |
-| Locale-aware calendar helpers<br>(weekend, week start/end, day-of-week)            | ✅ Done                      | `@internationalized/date`                                                |
-| Business-day arithmetic,<br>clamp/closest, time rounding                           | ✅ Done                      | `temporal-kit`                                                           |
-| Interval rounding-out<br>(boundary count, from-duration)                           | ✅ Done                      | Luxon                                                                    |
-| Locale calendar metadata<br>(names, `hasDST`)                                      | ✅ Done                      | Luxon `Info`                                                             |
-| Overlap-day count, relative<br>rounding, DST transitions, hours-in-day             | ✅ Done                      | date-fns, `@internationalized/date`                                      |
-| Field setters, token-pattern<br>parsing, named machine formats,<br>calendar-style formatting        | ✅ Done | Luxon `.set()`,<br>`toRFC2822`/`toHTTP`/`toSQL`,<br>Moment `.calendar()` |
-| Non-Gregorian calendar systems<br>(Hebrew done; Islamic, solar,<br>Ethiopic backlog) | 🟡 In progress | `@internationalized/date`'s<br>`toCalendar` |
+| Capability                                                                                   | Status                       | Also has it                                                              |
+| -------------------------------------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------ |
+| Duration type<br>(ISO 8601 parse/format/arithmetic)                                          | ✅ Done                      | Luxon `Duration`                                                         |
+| Interval/range math<br>(contains, overlap, union,<br>intersection, split, set ops)           | ✅ Done                      | Luxon `Interval`,<br>date-fns `areIntervalsOverlapping`                  |
+| DST disambiguation control<br>on construction _and_ arithmetic                               | ✅ Done — **differentiator** | None of the others expose<br>this on arithmetic                          |
+| Locale-aware calendar helpers<br>(weekend, week start/end, day-of-week)                      | ✅ Done                      | `@internationalized/date`                                                |
+| Business-day arithmetic,<br>clamp/closest, time rounding                                     | ✅ Done                      | `temporal-kit`                                                           |
+| Interval rounding-out<br>(boundary count, from-duration)                                     | ✅ Done                      | Luxon                                                                    |
+| Locale calendar metadata<br>(names, `hasDST`)                                                | ✅ Done                      | Luxon `Info`                                                             |
+| Overlap-day count, relative<br>rounding, DST transitions, hours-in-day                       | ✅ Done                      | date-fns, `@internationalized/date`                                      |
+| Field setters, token-pattern<br>parsing, named machine formats,<br>calendar-style formatting | ✅ Done                      | Luxon `.set()`,<br>`toRFC2822`/`toHTTP`/`toSQL`,<br>Moment `.calendar()` |
+| Non-Gregorian calendar systems<br>(Hebrew done; Islamic, solar,<br>Ethiopic backlog)         | 🟡 In progress               | `@internationalized/date`'s<br>`toCalendar`                              |
 
 <sub>Status reflects [context/roadmap/tracker.md](https://github.com/burglekitt/gmt/tree/main/context/roadmap/tracker.md) as of this writing.</sub>
 
@@ -139,7 +139,7 @@ Specific, sourced claims — not a repeat of the metrics above.
 | Only GMT enforces a mandatory<br>17-locale test matrix on every<br>locale-aware function                                                      | No CI-level or systematic<br>locale-matrix testing found<br>in any of the four                                                        |
 | Only GMT exposes explicit DST<br>disambiguation control on both<br>construction _and_ arithmetic                                              | Luxon's docs call this explicitly<br>undefined; `@internationalized/date`<br>only covers construction, not arithmetic                 |
 | Only GMT is Temporal-native with<br>zero `Date` usage, enforced by<br>3 dedicated lint packages                                               | Luxon, date-fns, and Moment.js all<br>still wrap or depend on `Date` internally                                                       |
-| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~15×                                                  | 318,020 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
+| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~15×                                                  | 310,020 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
 
 ## Package Layout
 
@@ -422,7 +422,7 @@ Supported tokens include `yyyy`/`MM`/`dd`/`HH`/`mm`/`ss`/`SSS` for fixed-width f
 
 ### Calendar systems
 
-GMT's `CalendarSystem` type (`"gregorian" | "hebrew"`, extended by later stories) and `convertDateToCalendar` express a date in a non-Gregorian calendar system, built entirely on Temporal's native calendar support — no bundled leap-year tables or ported arithmetic.
+GMT's `CalendarSystem` type (`"gregorian" | "hebrew" | "islamic-civil" | "islamic-tabular" | "islamic-umalqura"`, extended by later stories) and `convertDateToCalendar` express a date in a non-Gregorian calendar system, built entirely on Temporal's native calendar support — no bundled leap-year tables or ported arithmetic.
 
 ```typescript
 import { convertDateToCalendar } from "@burglekitt/gmt";
@@ -433,6 +433,9 @@ convertDateToCalendar("2024-10-03", "hebrew");
 convertDateToCalendar("5785-01-01[u-ca=hebrew]", "gregorian");
 // "2024-10-03" — round-trips back
 
+convertDateToCalendar("2024-10-03", "islamic-umalqura");
+// "1446-03-30[u-ca=islamic-umalqura]" — Saudi Umm al-Qura calendar
+
 convertDateToCalendar("invalid", "hebrew");
 // ""
 ```
@@ -440,6 +443,12 @@ convertDateToCalendar("invalid", "hebrew");
 The output string shape is the key design decision here, and it deliberately **diverges from Temporal's own** `[u-ca=...]` convention. Temporal's `Temporal.PlainDate.prototype.toString()` always keeps the ISO/proleptic-Gregorian year-month-day digits and only tags the calendar (`"2024-10-03[u-ca=hebrew]"` — still literally October 3rd's Gregorian digits). That hides the calendar's own fields behind calendar-aware accessors, which GMT's string-only contract has no place for. GMT's annotated string instead carries the **calendar-native** year/month/day — Hebrew year 5785, not 2024 — so the calendar-system concept is visible directly in the string, not just in an object property. A plain, unannotated ISO string is always treated as (and always produced for) the `"gregorian"` calendar, so every existing GMT function keeps working unchanged.
 
 Hebrew years can run 12 or 13 months (7 leap years per 19-year Metonic cycle insert a 13th month, Adar I, before the regular Adar); `convertDateToCalendar` resolves this the same way Temporal does internally, via ordinal month numbers (`1`-`13`) rather than fixed month names, so no month-counting logic lives in GMT itself.
+
+Three Islamic (Hijri) calendar variants are supported, and they are **not interchangeable** — each resolves the same Gregorian date to different calendar-native digits:
+
+- `"islamic-civil"` — a fixed 30-year leap-year cycle, Friday epoch (`1 AH = 622-07-19`).
+- `"islamic-tabular"` — the same style of fixed arithmetic cycle, but a Thursday epoch one day earlier (`1 AH = 622-07-18`); maps to Temporal's `"islamic-tbla"` calendar id internally, though GMT's own string annotation always reads `[u-ca=islamic-tabular]`.
+- `"islamic-umalqura"` — the Saudi civil calendar, based on Umm al-Qura University's own published tables rather than a fixed arithmetic rule. This is **not** approximated by the tabular variant's math — `convertDateToCalendar("2020-02-24", "islamic-umalqura")` returns `"1441-06-30[u-ca=islamic-umalqura]"` while the same input under `"islamic-tabular"` returns `"1441-07-01[u-ca=islamic-tabular]"`, a genuine one-day divergence, not a rounding difference.
 
 ### Durations
 
@@ -1341,10 +1350,14 @@ formatRelativeUtc(value, "en-US", { roundingMethod: "floor" });
 // `.calendar()` — for user-facing schedules, not elapsed-time displays.
 // Within ±6 days of "now" (or an explicit `reference`) it stays relative;
 // beyond that it falls back to an absolute date + time, no relative wording.
-formatCalendar("2026-03-16T14:30:00", "en-US", { reference: "2026-03-15T09:00:00" });
+formatCalendar("2026-03-16T14:30:00", "en-US", {
+  reference: "2026-03-15T09:00:00",
+});
 // "tomorrow at 2:30 PM"
 
-formatCalendar("2026-03-08T14:30:00", "en-US", { reference: "2026-03-15T09:00:00" });
+formatCalendar("2026-03-08T14:30:00", "en-US", {
+  reference: "2026-03-15T09:00:00",
+});
 // "March 8, 2026 at 2:30 PM" — 7 days out, beyond the threshold
 
 formatCalendarZoned("2026-03-16T14:30:00-04:00[America/New_York]", "de-DE", {

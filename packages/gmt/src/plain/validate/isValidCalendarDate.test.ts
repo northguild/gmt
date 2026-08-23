@@ -7,6 +7,9 @@ describe("isValidCalendarDate", () => {
     ${"2024-10-03"}
     ${"5785-01-01[u-ca=hebrew]"}
     ${"5784-06-01[u-ca=hebrew]"}
+    ${"1446-03-29[u-ca=islamic-civil]"}
+    ${"1446-03-30[u-ca=islamic-tabular]"}
+    ${"1446-03-30[u-ca=islamic-umalqura]"}
   `(
     "returns true for valid calendar date: $value",
     ({ value }: { value: string }) => {

@@ -30,6 +30,3 @@ export const ENGLISH_MONTH_NAMES = [
   "Nov",
   "Dec",
 ] as const;
-
-export type EnglishWeekdayName = (typeof ENGLISH_WEEKDAY_NAMES)[number];
-export type EnglishMonthName = (typeof ENGLISH_MONTH_NAMES)[number];

@@ -23,12 +23,14 @@ import { isValidCalendarDate } from "../validate";
  * - Returns "" on invalid input or an unsupported `calendar`.
  *
  * @param value ISO PlainDate string, optionally calendar-annotated
- * @param calendar target calendar system ("gregorian" | "hebrew")
+ * @param calendar target calendar system ("gregorian" | "hebrew" | "islamic-civil" |
+ *   "islamic-tabular" | "islamic-umalqura")
  * @returns calendar-native ISO-shaped PlainDate string, or "" on invalid input
  *
  * @example convertDateToCalendar("2024-10-03", "hebrew") // "5785-01-01[u-ca=hebrew]"
  * @example convertDateToCalendar("5785-01-01[u-ca=hebrew]", "gregorian") // "2024-10-03"
  * @example convertDateToCalendar("2024-10-03", "gregorian") // "2024-10-03"
+ * @example convertDateToCalendar("2024-10-03", "islamic-umalqura") // "1446-03-30[u-ca=islamic-umalqura]"
  * @example convertDateToCalendar("invalid", "hebrew") // ""
  */
 export function convertDateToCalendar(

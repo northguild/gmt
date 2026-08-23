@@ -6,10 +6,13 @@ import {
 
 describe("parseCalendarDateValue", () => {
   it.each`
-    value                        | expectedIso
-    ${"2024-10-03"}              | ${"2024-10-03"}
-    ${"5785-01-01[u-ca=hebrew]"} | ${"2024-10-03"}
-    ${"5784-06-01[u-ca=hebrew]"} | ${"2024-02-10"}
+    value                                  | expectedIso
+    ${"2024-10-03"}                        | ${"2024-10-03"}
+    ${"5785-01-01[u-ca=hebrew]"}           | ${"2024-10-03"}
+    ${"5784-06-01[u-ca=hebrew]"}           | ${"2024-02-10"}
+    ${"1446-03-29[u-ca=islamic-civil]"}    | ${"2024-10-03"}
+    ${"1446-03-30[u-ca=islamic-tabular]"}  | ${"2024-10-03"}
+    ${"1446-03-30[u-ca=islamic-umalqura]"} | ${"2024-10-03"}
   `(
     "parses $value to iso $expectedIso",
     ({ value, expectedIso }: { value: string; expectedIso: string }) => {
@@ -49,5 +52,12 @@ describe("formatCalendarDate", () => {
       calendar: "hebrew",
     });
     expect(formatCalendarDate(date)).toBe("5784-06-01[u-ca=hebrew]");
+  });
+
+  it("annotates with GMT's own id, not Temporal's differing calendarId", () => {
+    const date =
+      Temporal.PlainDate.from("2024-10-03").withCalendar("islamic-tbla");
+    expect(date.calendarId).toBe("islamic-tbla");
+    expect(formatCalendarDate(date)).toBe("1446-03-30[u-ca=islamic-tabular]");
   });
 });

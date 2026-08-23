@@ -74,28 +74,6 @@ export const MustTestLocaleTimezones = {
   [MustTestLocales.trTR]: "Europe/Istanbul",
 } as const;
 
-export const LocaleTimezones = {
-  "America/New_York": "America/New_York",
-  "Europe/London": "Europe/London",
-  "Europe/Berlin": "Europe/Berlin",
-  "Europe/Paris": "Europe/Paris",
-  "Europe/Madrid": "Europe/Madrid",
-  "Europe/Rome": "Europe/Rome",
-  "Europe/Lisbon": "Europe/Lisbon",
-  "Europe/Stockholm": "Europe/Stockholm",
-  "Atlantic/Reykjavik": "Atlantic/Reykjavik",
-  "Asia/Shanghai": "Asia/Shanghai",
-  "Asia/Taipei": "Asia/Taipei",
-  "Asia/Tokyo": "Asia/Tokyo",
-  "Asia/Seoul": "Asia/Seoul",
-  "Asia/Riyadh": "Asia/Riyadh",
-  "Asia/Jerusalem": "Asia/Jerusalem",
-  "Europe/Moscow": "Europe/Moscow",
-  "Europe/Istanbul": "Europe/Istanbul",
-};
-
-export const TestTimezones = { ...MustTestDstTimeZones, ...LocaleTimezones };
-
 // Core timeZone matrix used by zoned tests.
 // Includes DST, UTC-like, negative offset, half-hour, and quarter-hour zones.
 export const battleTestTimeZones = Object.values(MustTestDstTimeZones);
