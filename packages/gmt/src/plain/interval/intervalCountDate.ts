@@ -1,8 +1,11 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { getUnitSpan, resolveDateTimeUnit } from "../../internal";
+import {
+  getUnitSpan,
+  parseCalendarDatePairForArithmetic,
+  resolveDateTimeUnit,
+} from "../../internal";
 import { getStartOfDateUnit } from "../../internal/dateUnitHelpers";
-import { plainDate } from "../../regex";
-import { isValidDate, isValidDateUnit } from "../validate";
+import { isValidCalendarDate, isValidDateUnit } from "../validate";
 
 /**
  * Count how many `unit` boundaries a date interval crosses.
@@ -16,9 +19,13 @@ import { isValidDate, isValidDateUnit } from "../validate";
  * - Accepts singular or plural units (`"day"` and `"days"` behave identically).
  * - Returns `null` on invalid input (unparseable start/end, `start > end`, unsupported unit,
  *   or a unit that has no effect on `PlainDate`, e.g. `"hours"`).
+ * - Accepts GMT calendar-annotated PlainDate strings — E5 (issue #78). When `start` and `end`
+ *   carry the *same* calendar tag, boundaries are counted in that calendar (a Hebrew leap year
+ *   crosses 13 month boundaries, not 12 — see the roadmap's E5 decisions of record, D5). When
+ *   they carry different tags (or either is bare ISO), counting falls back to Gregorian.
  *
- * @param start ISO PlainDate string for the interval start
- * @param end ISO PlainDate string for the interval end
+ * @param start ISO PlainDate string for the interval start, optionally calendar-annotated
+ * @param end ISO PlainDate string for the interval end, optionally calendar-annotated
  * @param unit unit string — `"year" | "month" | "week" | "day"` (time units return null)
  * @returns number of unit boundaries touched, or null on invalid input
  *
@@ -28,6 +35,7 @@ import { isValidDate, isValidDateUnit } from "../validate";
  * @example intervalCountDate("2024-01-01", "2024-01-01", "month") // 0 (zero-length, on the boundary)
  * @example intervalCountDate("2024-01-01", "2024-01-10", "hour") // null
  * @example intervalCountDate("invalid", "2024-01-10", "day") // null
+ * @example intervalCountDate("5784-01-01[u-ca=hebrew]", "5785-01-01[u-ca=hebrew]", "month") // 13 (Hebrew leap year, measured in Hebrew)
  */
 export function intervalCountDate(
   start: string,
@@ -38,11 +46,7 @@ export function intervalCountDate(
     return null;
   }
 
-  if (!plainDate.test(start) || !plainDate.test(end)) {
-    return null;
-  }
-
-  if (!isValidDate(start) || !isValidDate(end)) {
+  if (!isValidCalendarDate(start) || !isValidCalendarDate(end)) {
     return null;
   }
 
@@ -57,8 +61,10 @@ export function intervalCountDate(
   }
 
   try {
-    const startVal = Temporal.PlainDate.from(start);
-    const endVal = Temporal.PlainDate.from(end);
+    const { a: startVal, b: endVal } = parseCalendarDatePairForArithmetic(
+      start,
+      end,
+    );
 
     if (Temporal.PlainDate.compare(startVal, endVal) > 0) {
       return null;

@@ -65,4 +65,15 @@ describe("intervalLengthDate", () => {
     mockTemporalPlainDateFromThrow();
     expect(intervalLengthDate("2024-01-01", "2024-01-10", "day")).toBeNull();
   });
+  // E5 (issue #78): same shared-calendar-or-fallback rule as intervalCountDate (D5). Golden
+  // verified directly against @js-temporal/polyfill.
+  it("measures length in the shared calendar when start and end carry the same tag", () => {
+    expect(
+      intervalLengthDate(
+        "5784-06-15[u-ca=hebrew]",
+        "5784-07-15[u-ca=hebrew]",
+        "months",
+      ),
+    ).toBe(1);
+  });
 });

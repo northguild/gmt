@@ -102,6 +102,13 @@ import { isValidZonedDateTime } from "@burglekitt/gmt/zoned";
 
 const valid = isValidZonedDateTime("2024-03-15T14:30:45[America/New_York]"); // true
 const invalid = isValidZonedDateTime("2024-02-30T14:30:45[America/New_York]"); // false
+
+// E5 (issue #78): a [u-ca=...] calendar annotation is always invalid here — calendar-system
+// awareness is plain/ PlainDate only. Same rejection applies to isValidZonedInterval below and
+// every zoned/interval/* function.
+const rejected = isValidZonedDateTime(
+  "2024-03-15T14:30:45-04:00[America/New_York][u-ca=hebrew]",
+); // false
 ```
 
 ### Check daylight saving time
@@ -158,6 +165,13 @@ import { isValidDateInterval } from "@burglekitt/gmt";
 const valid = isValidDateInterval("2024-01-01", "2024-12-31"); // true
 const invalid = isValidDateInterval("2024-12-31", "2024-01-01"); // false (start > end)
 const invalid = isValidDateInterval("not-a-date", "2024-12-31"); // false
+
+// E5 (issue #78): accepts GMT calendar-annotated PlainDate strings, and start/end may carry
+// different calendars — ordering is calendar-independent.
+const mixedCalendars = isValidDateInterval(
+  "5785-01-01[u-ca=hebrew]",
+  "2024-12-31",
+); // true
 ```
 
 ### Validate time interval

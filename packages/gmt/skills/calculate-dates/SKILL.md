@@ -258,6 +258,22 @@ const rounded = diffDate("2023-01-01", "2023-01-10", "week", {
 
 `smallestUnit`, `roundingIncrement`, and `roundingMode` are available on `diffDate`, `diffDateTime`, `diffTime`, `diffUnix`, `diffUtc`, and `diffZoned`. All default to no rounding (the prior, exact behavior) when omitted.
 
+### Calendar-unit arithmetic on a non-Gregorian date (E5)
+
+`addDate`, `subtractDate`, `diffDate`, and `diffDateAsDuration` accept a GMT calendar-annotated `PlainDate` string (as produced by `convertDateToCalendar`, e.g. `"5784-06-15[u-ca=hebrew]"`), not just a bare ISO string. Calendar-unit arithmetic ("add 1 month") resolves in that calendar:
+
+```ts
+import { addDate, convertDateToCalendar, diffDate } from "@burglekitt/gmt";
+
+const adarI = convertDateToCalendar("2024-02-24", "hebrew"); // "5784-06-15[u-ca=hebrew]"
+addDate(adarI, { months: 1 }); // "5784-07-15[u-ca=hebrew]" — Adar I (leap-only) -> Adar
+
+diffDate(adarI, "5784-07-15[u-ca=hebrew]", "months"); // 1 — measured in Hebrew
+diffDate(adarI, "2024-11-03", "days"); // falls back to Gregorian — the two arguments carry different (or no) calendar tags
+```
+
+Only `plain/` `PlainDate` functions accept this — `addDateTime`/`addTime`/`addZoned`/`addUtc`/`addUnix` and their `subtract*`/`diff*` siblings reject a calendar annotation (return the sentinel), since GMT has no calendar-annotated `PlainDateTime`/`ZonedDateTime`/UTC grammar and `PlainTime` has no calendar concept at all. `addBusinessDays`/`subtractBusinessDays` also reject it — weekday is calendar-independent in every supported calendar, so a tag would change nothing about the answer while implying it might. See `packages/gmt/README.md`'s "Calendar-aware interval and duration arithmetic" section and `context/roadmap/issues/E.md`'s E5 outcome for the full audit.
+
 ## Common Mistakes
 
 ### HIGH Using manual date arithmetic

@@ -91,4 +91,21 @@ describe("subtractDate", () => {
       expect(subtractDate(value, units, { overflow })).toBe(expected);
     },
   );
+
+  // E5 (issue #78): mirror of addDate's calendar-aware coverage — see its JSDoc/tests for
+  // the full rationale. Goldens verified directly against @js-temporal/polyfill.
+  it.each`
+    value                                     | units            | expected                                   | note
+    ${"5784-07-15[u-ca=hebrew]"}              | ${{ months: 1 }} | ${"5784-06-15[u-ca=hebrew]"}               | ${"Adar -> Adar I (Hebrew leap month)"}
+    ${"7516-01-05[u-ca=ethiopic-amete-alem]"} | ${{ months: 1 }} | ${"7515-13-05[u-ca=ethiopic-amete-alem]"}  | ${"1st month day 5 -> back into the 5-day Pagumen"}
+  `(
+    "returns $expected for calendar-annotated $value - $units ($note)",
+    ({ value, units, expected }) => {
+      expect(subtractDate(value, units)).toBe(expected);
+    },
+  );
+
+  it("returns \"\" for a datetime/zoned string instead of silently truncating to its date portion (parseCalendarDateValue regression, E5)", () => {
+    expect(subtractDate("2024-03-10T14:30:00", { days: 1 })).toBe("");
+  });
 });

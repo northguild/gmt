@@ -138,4 +138,22 @@ describe("diffDateAsDuration", () => {
       ).toBe(expected);
     },
   );
+
+  // E5 (issue #78): same shared-calendar rule as diffDate — see its test file. Golden
+  // verified directly against @js-temporal/polyfill.
+  it("measures in the shared calendar when both endpoints carry the same tag (Hebrew Adar I -> Adar)", () => {
+    expect(
+      diffDateAsDuration(
+        "5784-06-15[u-ca=hebrew]",
+        "5784-07-15[u-ca=hebrew]",
+        "months",
+      ),
+    ).toBe("P1M");
+  });
+
+  it("returns \"\" for a datetime/zoned string instead of silently truncating to its date portion (parseCalendarDateValue regression, E5)", () => {
+    expect(
+      diffDateAsDuration("2024-03-10T14:30:00", "2024-03-15", "days"),
+    ).toBe("");
+  });
 });

@@ -294,9 +294,36 @@ Never throws. Wrap in try-catch only if you need to distinguish "invalid input" 
 ## Namespace selection
 
 - `plain/*` — timezone-free dates, times, or datetimes.
-- `zoned/*` — IANA-timezone-aware strings (`"2024-01-01T00:00:00+00:00[UTC]"`).
+- `zoned/*` — IANA-timezone-aware strings (`"2024-01-01T00:00:00+00:00[UTC]"`). Rejects any `[u-ca=...]` calendar annotation (E5) — calendar-system awareness is `plain/`-only.
 - `unix/*` — epoch-second numbers (returns arrays of numbers, not strings).
 - `utc/*` — UTC instants (`"2024-01-01T00:00:00Z"`).
+
+## Calendar-aware `Date` intervals (E5)
+
+Every `Date`-suffixed function in this namespace (`intervalContainsDate`, `intervalUnionDate`, `intervalCountDate`, `splitIntervalByUnitDate`, and the rest) accepts a GMT calendar-annotated `PlainDate` string (as produced by `convertDateToCalendar`), not just bare ISO strings. The policy differs by return family:
+
+- **Ordering/count families accept mixed calendars** — `intervalContains*`, `intervalsOverlap*`, `intervalAbuts*`, `intervalEngulfs*`, `isValidDateInterval`, `intervalOverlappingDaysDate` compare or count regardless of which calendar each argument is tagged with, since ordering and day-counting are calendar-independent.
+- **Value-returning families require all arguments to share one calendar** — `intervalUnion*`, `intervalIntersection*`, `intervalDifference*`, `intervalXor*`, `intervalXorAll*`, `mergeIntervals*`, `intervalDivideEqually*`, `intervalSplitAt*` return their sentinel (`null`/`[]`) on a calendar mismatch, since there's no principled output calendar to pick for a returned date value.
+- **Calendar-unit arithmetic families measure in the shared calendar, falling back to Gregorian on a mismatch** — `intervalCountDate`, `intervalLengthDate`, `splitIntervalByUnitDate`, `intervalFromDurationDate`. A Hebrew leap year crosses **13** month boundaries, not 12:
+
+```ts
+import { intervalCountDate, splitIntervalByUnitDate } from "@burglekitt/gmt";
+
+intervalCountDate(
+  "5784-01-01[u-ca=hebrew]",
+  "5785-01-01[u-ca=hebrew]",
+  "month",
+); // 13, not 12 — Hebrew leap years insert Adar I
+
+splitIntervalByUnitDate(
+  "5784-01-01[u-ca=hebrew]",
+  "5785-01-01[u-ca=hebrew]",
+  "month",
+  1,
+).length; // 13 slices, each a real Hebrew month
+```
+
+`*DateTime`/`*Time`/`unix/*`/`utc/*` intervals are unaffected — no calendar-annotated `PlainDateTime` grammar exists, and `PlainTime` has no calendar. See `packages/gmt/README.md`'s "Calendar-aware interval and duration arithmetic" and `context/roadmap/issues/E.md`'s E5 outcome for the full per-function audit.
 
 ## Common Mistakes
 

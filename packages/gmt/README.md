@@ -125,7 +125,7 @@ GMT's roadmap tracks parity against the same four libraries story-by-story, with
 | Locale calendar metadata<br>(names, `hasDST`)                                                | ✅ Done                      | Luxon `Info`                                                             |
 | Overlap-day count, relative<br>rounding, DST transitions, hours-in-day                       | ✅ Done                      | date-fns, `@internationalized/date`                                      |
 | Field setters, token-pattern<br>parsing, named machine formats,<br>calendar-style formatting | ✅ Done                      | Luxon `.set()`,<br>`toRFC2822`/`toHTTP`/`toSQL`,<br>Moment `.calendar()` |
-| Non-Gregorian calendar systems<br>(Hebrew, Islamic, solar<br>done; Ethiopic backlog)         | 🟡 In progress               | `@internationalized/date`'s<br>`toCalendar`                              |
+| Non-Gregorian calendar systems<br>(conversion + calendar-aware<br>interval/duration math)    | ✅ Done                      | `@internationalized/date`'s<br>`toCalendar`                              |
 
 <sub>Status reflects [context/roadmap/tracker.md](https://github.com/burglekitt/gmt/tree/main/context/roadmap/tracker.md) as of this writing.</sub>
 
@@ -479,7 +479,31 @@ Three Ethiopic-family calendars round out the set, all sharing one 13-month stru
 - `"ethiopic-amete-alem"` — the same calendar, but always counted continuously from the Amete Alem epoch (~5493 BCE), never resetting: `convertDateToCalendar("2024-10-03", "ethiopic-amete-alem")` → `"7517-01-23[u-ca=ethiopic-amete-alem]"`.
 - `"coptic"` — the Coptic Orthodox calendar: same 13-month structure, its own epoch (the Diocletian/Martyrs era, AD 284): `convertDateToCalendar("2024-10-03", "coptic")` → `"1741-01-23[u-ca=coptic]"`.
 
-**Why this family isn't built on Temporal's native `"ethiopic"`/`"coptic"` calendar ids, unlike every other calendar above.** `@js-temporal/polyfill`'s implementation of these two calendars resolves year/era by formatting the date through `Intl.DateTimeFormat` and matching the result against a hardcoded era-name table — unlike calendars with a fixed year-offset from ISO (Buddhist, Taiwan, and Ethiopic Amete Alem, which the polyfill computes with pure arithmetic and never touches `Intl` for). CLDR's era-name output for these two calendars changed between the ICU versions bundled with different Node releases: under Node 24's ICU, every read _or_ write of Temporal's `"ethiopic"`/`"coptic"` calendar ids throws a `RangeError` (`Era am (ISO year …) was not matched by any era`) — confirmed directly, not a hypothetical. `"ethiopic-amete-alem"` (Temporal's `"ethioaa"` id) is unaffected, since it has no era at all and is resolved with pure arithmetic. GMT routes around the bug rather than inheriting it: month/day are identical across all three calendars (they share one annual cycle), so `convertDateToCalendar` reads/writes them via the safe `"ethioaa"` calendar and computes each calendar's own displayed year (+ era, for `"ethiopic"`) with GMT-owned arithmetic — ported from the same `EthiopicHelper`/`CopticHelper` epoch constants `@js-temporal/polyfill` itself uses internally, just evaluated in GMT's code instead of through the ICU-dependent path. See `internal/ethiopicFamilyCalendar.ts` for the implementation.
+**Why this family isn't built on Temporal's native `"ethiopic"`/`"coptic"` calendar ids, unlike every other calendar above.** `@js-temporal/polyfill`'s implementation of these two calendars resolves year/era by formatting the date through `Intl.DateTimeFormat` and matching the result against a hardcoded era-name table — unlike calendars with a fixed year-offset from ISO (Buddhist, Taiwan, and Ethiopic Amete Alem, which the polyfill computes with pure arithmetic and never touches `Intl` for). CLDR's era-name output for these two calendars changed between ICU versions: under ICU ≥ 78 (the version Node 22 and 24 both bundle — this is an ICU-version boundary, not a Node-major one), every read _or_ write of Temporal's `"ethiopic"`/`"coptic"` calendar ids throws a `RangeError` (`Era am (ISO year …) was not matched by any era`) — confirmed directly, not a hypothetical. `"ethiopic-amete-alem"` (Temporal's `"ethioaa"` id) is unaffected, since it has no era at all and is resolved with pure arithmetic. GMT routes around the bug rather than inheriting it: month/day are identical across all three calendars (they share one annual cycle), so `convertDateToCalendar` reads/writes them via the safe `"ethioaa"` calendar and computes each calendar's own displayed year (+ era, for `"ethiopic"`) with GMT-owned arithmetic — ported from the same `EthiopicHelper`/`CopticHelper` epoch constants `@js-temporal/polyfill` itself uses internally, just evaluated in GMT's code instead of through the ICU-dependent path. See `internal/ethiopicFamilyCalendar.ts` for the implementation.
+
+#### Calendar-aware interval and duration arithmetic
+
+`convertDateToCalendar`'s output feeds directly back into `addDate`/`subtractDate`/`diffDate`/`diffDateAsDuration` and every `Date`-suffixed `plain/interval/*` function (`intervalContainsDate`, `intervalCountDate`, `splitIntervalByUnitDate`, and the rest) — calendar-unit arithmetic ("add 1 month") resolves in the value's own calendar rather than being rejected or silently treated as Gregorian:
+
+```typescript
+addDate("5784-06-15[u-ca=hebrew]", { months: 1 });
+// "5784-07-15[u-ca=hebrew]" — Adar I (a leap-only 30-day month) -> Adar
+
+intervalCountDate("5784-01-01[u-ca=hebrew]", "5785-01-01[u-ca=hebrew]", "month");
+// 13 — a Hebrew leap year crosses 13 month boundaries, not 12 (ISO's answer for the same span)
+
+diffDate("5784-06-15[u-ca=hebrew]", "5784-07-15[u-ca=hebrew]", "months");
+// 1 — measured in the shared calendar when both endpoints carry the same tag
+```
+
+This is confined to `plain/` `PlainDate` values only: `zoned/`, `utc/`, and `unix/` reject a `[u-ca=...]` calendar annotation outright, and `duration/`'s `relativeTo` option accepts GMT's calendar-annotated string (not Temporal's own differently-shaped `[u-ca=...]` convention) when a calendar-aware anchor is needed:
+
+```typescript
+durationAs("P1Y", "days", { relativeTo: "5784-06-15[u-ca=hebrew]" });
+// 385 — a Hebrew leap year, not the 366 a Gregorian P1Y would total
+```
+
+Interval functions that only compare or diff absolute instants (`intervalContainsDate`, `intervalsOverlapDate`, `intervalAbutsDate`, `intervalEngulfsDate`, `isValidDateInterval`, `intervalOverlappingDaysDate`) accept endpoints tagged with *different* calendars, since ordering and day-counting don't depend on which calendar a date is expressed in. Functions that return a date *value* (`intervalUnionDate`, `intervalIntersectionDate`, `intervalDifferenceDate`, `intervalXorDate`, `intervalXorAllDate`, `mergeIntervalsDate`, `intervalDivideEquallyDate`, `intervalSplitAtDate`) require every argument to share one calendar and return their sentinel (`null`/`[]`) on a mismatch, since there's no principled way to pick which calendar the output should be expressed in. See `context/roadmap/issues/E.md`'s "E5 outcome" section for the full per-function audit, including the negatives ("no change needed, verified why") this scope boundary implies — `*DateTime`/`*Time` variants, `unix/`, and `utc/` were all confirmed unaffected rather than assumed to be.
 
 ### Durations
 

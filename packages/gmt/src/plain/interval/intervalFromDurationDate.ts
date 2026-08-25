@@ -1,8 +1,13 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidDuration } from "../../duration/validate";
-import { resolveOverflow } from "../../internal";
+import {
+  calendarSystemOfDateValue,
+  formatDateInCalendar,
+  parseCalendarDateValue,
+  resolveOverflow,
+} from "../../internal";
 import type { Overflow } from "../../types";
-import { isValidDate } from "../validate";
+import { isValidCalendarDate } from "../validate";
 
 /**
  * Construct a date interval from a single point plus an ISO 8601 duration, anchored at either end.
@@ -15,10 +20,15 @@ import { isValidDate } from "../validate";
  *   happens, mirroring `intervalIntersectionDate`'s `start > end` rejection.
  * - `overflow` ("constrain" (default) | "reject") controls out-of-range results, e.g. adding 1 month
  *   to Jan 31: "constrain" clamps to Feb 29/28, "reject" returns null.
+ * - Accepts a GMT calendar-annotated PlainDate string — E5 (issue #78). The computed endpoint
+ *   is resolved in `value`'s own calendar (no `relativeTo`/pair-matching question, since there
+ *   is only one calendar-tagged input) and both endpoints are re-formatted in that calendar,
+ *   re-derived from the actual result rather than copied from `value`'s tag (a leap-month or
+ *   era boundary can fall between them).
  * - Returns null on invalid input (unparseable `value`, invalid `duration`, or an `anchor` other
  *   than `"start"`/`"end"`).
  *
- * @param value ISO PlainDate string
+ * @param value ISO PlainDate string, optionally calendar-annotated
  * @param duration ISO 8601 duration string
  * @param anchor "start" | "end" — which endpoint `value` represents
  * @param options optional: overflow ("constrain" | "reject")
@@ -29,6 +39,7 @@ import { isValidDate } from "../validate";
  * @example intervalFromDurationDate("2024-01-31", "P1M", "start", { overflow: "reject" }) // null
  * @example intervalFromDurationDate("2024-01-05", "-P10D", "start") // null (inverted span)
  * @example intervalFromDurationDate("invalid", "P1M", "start") // null
+ * @example intervalFromDurationDate("5784-06-15[u-ca=hebrew]", "P1M", "start") // { start: "5784-06-15[u-ca=hebrew]", end: "5784-07-15[u-ca=hebrew]" } (Adar I -> Adar)
  */
 export function intervalFromDurationDate(
   value: string,
@@ -36,7 +47,7 @@ export function intervalFromDurationDate(
   anchor: "start" | "end",
   options?: { overflow?: Overflow },
 ): { start: string; end: string } | null {
-  if (typeof value !== "string" || !isValidDate(value)) {
+  if (typeof value !== "string" || !isValidCalendarDate(value)) {
     return null;
   }
 
@@ -49,7 +60,11 @@ export function intervalFromDurationDate(
   }
 
   try {
-    const point = Temporal.PlainDate.from(value);
+    const calendar = calendarSystemOfDateValue(value);
+    if (!calendar) {
+      return null;
+    }
+    const point = parseCalendarDateValue(value);
     const dur = Temporal.Duration.from(duration);
     const overflow = resolveOverflow(options?.overflow);
 
@@ -65,7 +80,10 @@ export function intervalFromDurationDate(
       return null;
     }
 
-    return { start: start.toString(), end: end.toString() };
+    return {
+      start: formatDateInCalendar(start, calendar),
+      end: formatDateInCalendar(end, calendar),
+    };
   } catch {
     return null;
   }

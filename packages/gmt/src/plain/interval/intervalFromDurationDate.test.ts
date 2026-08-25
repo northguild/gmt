@@ -92,4 +92,16 @@ describe("intervalFromDurationDate", () => {
     mockTemporalPlainDateFromThrow();
     expect(intervalFromDurationDate("2024-01-01", "P1D", "start")).toBeNull();
   });
+  // E5 (issue #78): accepts a GMT calendar-annotated PlainDate string; the computed endpoint
+  // is resolved in value's own calendar and both endpoints are re-formatted in it, re-derived
+  // from the actual result rather than copied from value's tag (D7). Golden verified directly
+  // against @js-temporal/polyfill.
+  it("constructs the span in value's calendar (Hebrew Adar I + 1 month -> Adar)", () => {
+    expect(
+      intervalFromDurationDate("5784-06-15[u-ca=hebrew]", "P1M", "start"),
+    ).toEqual({
+      start: "5784-06-15[u-ca=hebrew]",
+      end: "5784-07-15[u-ca=hebrew]",
+    });
+  });
 });

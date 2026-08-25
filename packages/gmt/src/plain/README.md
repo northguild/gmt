@@ -36,7 +36,7 @@ Arithmetic and date manipulation:
 
 Calendar-system conversion:
 
-- `convertDateToCalendar` — express a date in a different `CalendarSystem` ("gregorian" | "hebrew" | "islamic-civil" | "islamic-tabular" | "islamic-umalqura")
+- `convertDateToCalendar` — express a date in a different `CalendarSystem` ("gregorian" | "hebrew" | "islamic-civil" | "islamic-tabular" | "islamic-umalqura" | "japanese" | "buddhist" | "taiwan" | "persian" | "indian" | "ethiopic" | "ethiopic-amete-alem" | "coptic"). Its output feeds directly into `addDate`/`subtractDate`/`diffDate`/`diffDateAsDuration` (below) and the `Date`-suffixed `interval` functions — calendar-unit arithmetic resolves in the value's own calendar (see `packages/gmt/README.md`'s "Calendar-aware interval and duration arithmetic" section, and `context/roadmap/issues/E.md`'s E5 outcome for the full per-function audit).
 
 ### chop
 
@@ -113,6 +113,8 @@ Validate and check date/time intervals:
 - `intervalXorAllDate`, `intervalXorAllDateTime`, `intervalXorAllTime`
 - `intervalFromDurationDate`, `intervalFromDurationDateTime`, `intervalFromDurationTime`
 - `intervalOverlappingDaysDate`, `intervalOverlappingDaysDateTime` (no `Time` sibling — `PlainTime` has no calendar)
+
+The `Date`-suffixed functions above accept GMT calendar-annotated `PlainDate` strings (E5) — see "convert" above and `packages/gmt/README.md`'s "Calendar-aware interval and duration arithmetic" section.
 
 ### map
 

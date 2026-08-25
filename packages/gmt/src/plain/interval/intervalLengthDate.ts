@@ -1,5 +1,7 @@
-import { Temporal } from "@js-temporal/polyfill";
-import { resolveDateTimeUnit } from "../../internal";
+import {
+  parseCalendarDatePairForArithmetic,
+  resolveDateTimeUnit,
+} from "../../internal";
 import { isValidDateUnit } from "../validate";
 import { isValidDateInterval } from "./validate";
 
@@ -16,9 +18,13 @@ import { isValidDateInterval } from "./validate";
  * - Returns `0` for a zero-length interval (`start === end`).
  * - Returns `null` on invalid input (unparseable start/end, `start > end`, unsupported unit,
  *   or a unit that has no effect on `PlainDate`, e.g. `"hours"`).
+ * - Accepts GMT calendar-annotated PlainDate strings — E5 (issue #78). When `start` and `end`
+ *   carry the *same* calendar tag, the length is measured in that calendar; otherwise (or if
+ *   either is bare ISO) it falls back to Gregorian — same shared-calendar rule as
+ *   `intervalCountDate` (E5 decision of record D5).
  *
- * @param start ISO PlainDate string for the interval start
- * @param end ISO PlainDate string for the interval end
+ * @param start ISO PlainDate string for the interval start, optionally calendar-annotated
+ * @param end ISO PlainDate string for the interval end, optionally calendar-annotated
  * @param unit unit string — `"year" | "month" | "week" | "day"` (time units return null)
  * @returns exact length of the interval expressed in `unit`, or null on invalid input
  *
@@ -49,8 +55,10 @@ export function intervalLengthDate(
   }
 
   try {
-    const startVal = Temporal.PlainDate.from(start);
-    const endVal = Temporal.PlainDate.from(end);
+    const { a: startVal, b: endVal } = parseCalendarDatePairForArithmetic(
+      start,
+      end,
+    );
 
     const duration = startVal.until(endVal, { largestUnit: resolvedUnit });
 

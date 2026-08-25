@@ -30,6 +30,8 @@ Read a duration's contents:
 
 `durationAs` needs `relativeTo` whenever a calendar unit is involved on either side — as the requested `unit`, or because the input duration already carries a nonzero year/month/week component. Without it, returns `null`. The requested-unit half applies even to day/time-only input: `durationAs("PT36H", "weeks")` is `null`, because a week is a calendar quantity to Temporal regardless of what is being measured. `getDurationUnit` and `getDurationSign` never need it — reading a stored field is not a unit conversion.
 
+`relativeTo` accepts a GMT calendar-annotated `PlainDate` string (E5, e.g. `"5784-06-15[u-ca=hebrew]"`, as produced by `convertDateToCalendar`), not Temporal's own differently-shaped `[u-ca=...]` convention — `durationAs("P1Y", "days", { relativeTo: "5784-06-15[u-ca=hebrew]" })` is `385`, a Hebrew leap year, not the `366` a Gregorian `P1Y` would total. `compareDurations` and `normalizeDuration` (below) accept the same calendar-annotated shape for their own `relativeTo`.
+
 ### compare
 
 Compare two durations by length:

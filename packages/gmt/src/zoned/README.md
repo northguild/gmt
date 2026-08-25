@@ -125,3 +125,5 @@ Extract timezone components:
 Validation helpers:
 
 - `hasDaylightSaving`, `isValidTimeZone`, `isValidZonedDateTime`, `isValidZonedRange`
+
+`zoned/` (this whole namespace, including `interval` above) rejects any `[u-ca=...]` calendar annotation — E5 (issue #78) confined calendar-system awareness to `plain/` `PlainDate` values only (see `packages/gmt/README.md`'s "Calendar-aware interval and duration arithmetic" and `context/roadmap/issues/E.md`'s E5 outcome for the full rationale and a proposed follow-up story to extend `zoned/` deliberately).

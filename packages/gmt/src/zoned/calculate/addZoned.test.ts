@@ -262,4 +262,11 @@ describe("addZoned", () => {
       ),
     ).toBe("2024-02-29T12:00:00-05:00[America/New_York]");
   });
+  // E5 (issue #78), decision of record D2 -- zoned/ rejects any [u-ca=...] calendar
+  // annotation outright (previously accepted it by accident and did genuinely calendar-aware
+  // but undocumented, untested arithmetic -- verified directly against @js-temporal/polyfill
+  // during E5 research). See isValidZonedDateTime.test.ts for the full rationale.
+  it("returns \"\" when value carries a calendar annotation", () => {
+    expect(addZoned("2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]", { months: 1 })).toBe("");
+  });
 });

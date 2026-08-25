@@ -77,4 +77,17 @@ describe("intervalAbutsDate", () => {
   `("returns false for non-string input", ({ aStart, aEnd, bStart, bEnd }) => {
     expect(intervalAbutsDate(aStart, aEnd, bStart, bEnd)).toBe(false);
   });
+  // E5 (issue #78): accepts GMT calendar-annotated PlainDate strings; ordering is calendar-
+  // independent so mixed calendars are accepted (D4). Golden verified directly against
+  // @js-temporal/polyfill: 2024-10-02 + 1 day = 2024-10-03 = Hebrew 5785-01-01.
+  it("accepts mixed calendars since abutting is an ordering check, not a value", () => {
+    expect(
+      intervalAbutsDate(
+        "2024-09-01",
+        "2024-10-02",
+        "5785-01-01[u-ca=hebrew]",
+        "2024-10-10",
+      ),
+    ).toBe(true);
+  });
 });

@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { plainDate } from "../../regex";
+import { parseCalendarDateValue } from "../../internal";
+import { isValidCalendarDate } from "../validate";
 
 /**
  * Return true when intervals `[aStart, aEnd]` and `[bStart, bEnd]` share at least one instant.
@@ -8,11 +9,13 @@ import { plainDate } from "../../regex";
  * - Adjacent intervals (e.g. `aEnd === bStart`) do NOT overlap — returns `false`.
  * - Returns `false` if either interval is invalid (`start > end`).
  * - Returns `false` on invalid input (wrong type, malformed strings).
+ * - Accepts GMT calendar-annotated PlainDate strings — E5 (issue #78). Ordering is
+ *   calendar-independent, so arguments may carry different or no calendar tags (D4).
  *
- * @param aStart ISO 8601 date string for the first interval start
- * @param aEnd ISO 8601 date string for the first interval end
- * @param bStart ISO 8601 date string for the second interval start
- * @param bEnd ISO 8601 date string for the second interval end
+ * @param aStart ISO 8601 date string for the first interval start, optionally calendar-annotated
+ * @param aEnd ISO 8601 date string for the first interval end, optionally calendar-annotated
+ * @param bStart ISO 8601 date string for the second interval start, optionally calendar-annotated
+ * @param bEnd ISO 8601 date string for the second interval end, optionally calendar-annotated
  * @returns true if intervals overlap, or false on invalid input
  *
  * @example intervalsOverlapDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31") // true
@@ -37,19 +40,19 @@ export function intervalsOverlapDate(
   }
 
   if (
-    !plainDate.test(aStart) ||
-    !plainDate.test(aEnd) ||
-    !plainDate.test(bStart) ||
-    !plainDate.test(bEnd)
+    !isValidCalendarDate(aStart) ||
+    !isValidCalendarDate(aEnd) ||
+    !isValidCalendarDate(bStart) ||
+    !isValidCalendarDate(bEnd)
   ) {
     return false;
   }
 
   try {
-    const aS = Temporal.PlainDate.from(aStart);
-    const aE = Temporal.PlainDate.from(aEnd);
-    const bS = Temporal.PlainDate.from(bStart);
-    const bE = Temporal.PlainDate.from(bEnd);
+    const aS = parseCalendarDateValue(aStart);
+    const aE = parseCalendarDateValue(aEnd);
+    const bS = parseCalendarDateValue(bStart);
+    const bE = parseCalendarDateValue(bEnd);
 
     if (Temporal.PlainDate.compare(aS, aE) > 0) {
       return false;

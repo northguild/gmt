@@ -121,4 +121,27 @@ describe("intervalIntersectionDate", () => {
       ),
     ).toBeNull();
   });
+  // E5 (issue #78): same shared-calendar-or-reject rule as intervalUnionDate (D4). Goldens
+  // verified directly against @js-temporal/polyfill.
+  it("intersects in the shared calendar when all four arguments carry the same tag", () => {
+    expect(
+      intervalIntersectionDate(
+        "5784-06-15[u-ca=hebrew]",
+        "5784-06-25[u-ca=hebrew]",
+        "5784-06-20[u-ca=hebrew]",
+        "5784-07-01[u-ca=hebrew]",
+      ),
+    ).toEqual({ start: "5784-06-20[u-ca=hebrew]", end: "5784-06-25[u-ca=hebrew]" });
+  });
+
+  it("returns null when calendars mismatch across the four arguments", () => {
+    expect(
+      intervalIntersectionDate(
+        "5784-06-15[u-ca=hebrew]",
+        "5784-06-25[u-ca=hebrew]",
+        "2024-01-01",
+        "2024-01-05",
+      ),
+    ).toBeNull();
+  });
 });

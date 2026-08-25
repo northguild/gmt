@@ -159,4 +159,24 @@ describe("diffDate", () => {
       }),
     ).toBeNull();
   });
+
+  // E5 (issue #78): diffDate accepts GMT calendar-annotated PlainDate strings. When both
+  // endpoints carry the same tag, the difference is measured in that calendar (E5 decision
+  // of record D5); a mismatch (or a bare ISO string on either side) falls back to Gregorian.
+  // Goldens verified directly against @js-temporal/polyfill.
+  it("measures in the shared calendar when both endpoints carry the same tag (Hebrew Adar I -> Adar)", () => {
+    expect(
+      diffDate("5784-06-15[u-ca=hebrew]", "5784-07-15[u-ca=hebrew]", "months"),
+    ).toBe(1);
+  });
+
+  it("falls back to Gregorian when the two endpoints' calendars mismatch", () => {
+    expect(
+      diffDate("5785-01-01[u-ca=hebrew]", "2024-11-03", "days"), // 5785-01-01 hebrew = 2024-10-03
+    ).toBe(31);
+  });
+
+  it("returns null for a datetime/zoned string instead of silently truncating to its date portion (parseCalendarDateValue regression, E5)", () => {
+    expect(diffDate("2024-03-10T14:30:00", "2024-03-15", "days")).toBeNull();
+  });
 });

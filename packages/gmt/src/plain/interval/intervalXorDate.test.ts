@@ -55,4 +55,30 @@ describe("intervalXorDate", () => {
   `("returns [] for non-string input", ({ aStart, aEnd, bStart, bEnd }) => {
     expect(intervalXorDate(aStart, aEnd, bStart, bEnd)).toEqual([]);
   });
+  // E5 (issue #78): same shared-calendar-or-reject rule as intervalUnionDate (D4). Golden
+  // verified directly against @js-temporal/polyfill.
+  it("computes the symmetric difference in the shared calendar when all four arguments carry the same tag", () => {
+    expect(
+      intervalXorDate(
+        "5784-06-01[u-ca=hebrew]",
+        "5784-06-20[u-ca=hebrew]",
+        "5784-06-10[u-ca=hebrew]",
+        "5784-06-30[u-ca=hebrew]",
+      ),
+    ).toEqual([
+      { start: "5784-06-01[u-ca=hebrew]", end: "5784-06-09[u-ca=hebrew]" },
+      { start: "5784-06-21[u-ca=hebrew]", end: "5784-06-30[u-ca=hebrew]" },
+    ]);
+  });
+
+  it("returns [] when calendars mismatch across the four arguments", () => {
+    expect(
+      intervalXorDate(
+        "5784-06-01[u-ca=hebrew]",
+        "5784-06-20[u-ca=hebrew]",
+        "2024-01-01",
+        "2024-01-05",
+      ),
+    ).toEqual([]);
+  });
 });

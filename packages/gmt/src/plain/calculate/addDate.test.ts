@@ -1,3 +1,10 @@
+import {
+  ethiopicPagumenFixture,
+  hebrewLeapYear5784,
+  islamicVariantDivergence,
+  japaneseEraBoundary,
+  persianLeapYearFixture,
+} from "../../test";
 import { addDate } from "./addDate";
 
 describe("addDate", () => {
@@ -115,4 +122,38 @@ describe("addDate", () => {
       ).toBe(expected);
     },
   );
+
+  // E5 (issue #78): addDate accepts a GMT calendar-annotated PlainDate string, resolves
+  // calendar-unit arithmetic in that calendar, and re-derives the output tag (never copies
+  // it) since arithmetic can cross a leap-month or era boundary. All goldens verified
+  // directly against @js-temporal/polyfill during E5 research.
+  it.each`
+    value                                    | units            | options                      | expected                                | note
+    ${hebrewLeapYear5784.adarI15}            | ${{ months: 1 }} | ${undefined}                 | ${hebrewLeapYear5784.adar15}            | ${"Adar I -> Adar (Hebrew leap month)"}
+    ${japaneseEraBoundary.heisei31_0430}     | ${{ days: 1 }}   | ${undefined}                 | ${japaneseEraBoundary.reiwa1_0501}      | ${"Heisei -> Reiwa era transition"}
+    ${islamicVariantDivergence.civil}        | ${{ months: 1 }} | ${undefined}                 | ${"1441-07-29[u-ca=islamic-civil]"}     | ${"islamic-civil variant"}
+    ${islamicVariantDivergence.tabular}      | ${{ months: 1 }} | ${undefined}                 | ${"1441-08-01[u-ca=islamic-tabular]"}   | ${"islamic-tabular variant"}
+    ${islamicVariantDivergence.umalqura}     | ${{ months: 1 }} | ${undefined}                 | ${"1441-07-29[u-ca=islamic-umalqura]"}  | ${"islamic-umalqura variant"}
+    ${persianLeapYearFixture.month12day30_1403} | ${{ years: 1 }} | ${undefined}              | ${"1404-12-29[u-ca=persian]"}           | ${"Persian leap year -> non-leap (30 -> 29 day month 12)"}
+    ${ethiopicPagumenFixture.m12d30_7515}    | ${{ months: 1 }} | ${{ overflow: "constrain" }} | ${ethiopicPagumenFixture.pagumen6_7515} | ${"30-day month 12 constrains into the 6-day leap Pagumen"}
+  `(
+    "returns $expected for calendar-annotated $value + $units ($note)",
+    ({ value, units, options, expected }) => {
+      expect(addDate(value, units, options)).toBe(expected);
+    },
+  );
+
+  it("returns \"\" when overflow: \"reject\" hits the Ethiopic Pagumen boundary (the sharpest overflow case in the library)", () => {
+    expect(
+      addDate(
+        ethiopicPagumenFixture.m12d30_7515,
+        { months: 1 },
+        { overflow: "reject" },
+      ),
+    ).toBe("");
+  });
+
+  it("returns \"\" for a datetime/zoned string instead of silently truncating to its date portion (parseCalendarDateValue regression, E5)", () => {
+    expect(addDate("2024-03-10T14:30:00", { days: 1 })).toBe("");
+  });
 });

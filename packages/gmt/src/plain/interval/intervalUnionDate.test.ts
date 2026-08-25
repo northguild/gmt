@@ -103,4 +103,29 @@ describe("intervalUnionDate", () => {
       intervalUnionDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31"),
     ).toBeNull();
   });
+  // E5 (issue #78): accepts GMT calendar-annotated PlainDate strings when all four arguments
+  // share the same tag -- the output's date value is re-derived in that calendar (E5
+  // decision of record D4). A mismatch returns null rather than guessing an output calendar.
+  // Goldens verified directly against @js-temporal/polyfill.
+  it("merges in the shared calendar when all four arguments carry the same tag", () => {
+    expect(
+      intervalUnionDate(
+        "5784-06-15[u-ca=hebrew]",
+        "5784-06-20[u-ca=hebrew]",
+        "5784-06-18[u-ca=hebrew]",
+        "5784-07-01[u-ca=hebrew]",
+      ),
+    ).toEqual({ start: "5784-06-15[u-ca=hebrew]", end: "5784-07-01[u-ca=hebrew]" });
+  });
+
+  it("returns null when calendars mismatch across the four arguments", () => {
+    expect(
+      intervalUnionDate(
+        "5784-06-15[u-ca=hebrew]",
+        "5784-06-20[u-ca=hebrew]",
+        "2024-01-01",
+        "2024-01-05",
+      ),
+    ).toBeNull();
+  });
 });

@@ -116,4 +116,49 @@ describe("intervalCountDate", () => {
     mockTemporalPlainDateFromThrow();
     expect(intervalCountDate("2024-01-01", "2024-01-10", "day")).toBeNull();
   });
+  // E5 (issue #78): when start and end share a calendar tag, boundaries are counted in that
+  // calendar (E5 decision of record D5) -- a Hebrew leap year crosses 13 month boundaries and
+  // 1 year boundary, not 12/2. A mismatch (or bare ISO) falls back to Gregorian. Goldens
+  // verified directly against @js-temporal/polyfill.
+  it("counts 13 month boundaries across a Hebrew leap year (not 12, ISO's answer for the same span)", () => {
+    expect(
+      intervalCountDate(
+        "5784-01-01[u-ca=hebrew]",
+        "5785-01-01[u-ca=hebrew]",
+        "month",
+      ),
+    ).toBe(13);
+  });
+
+  it("counts 1 year boundary across a Hebrew leap year (not 2, ISO's answer for the same span)", () => {
+    expect(
+      intervalCountDate(
+        "5784-01-01[u-ca=hebrew]",
+        "5785-01-01[u-ca=hebrew]",
+        "year",
+      ),
+    ).toBe(1);
+  });
+
+  // Indian National Calendar (Saka era) leap-year alignment follows the Gregorian rule rather
+  // than an independent cycle, so its year boundary doesn't land on a fixed Gregorian
+  // day-of-year -- verified directly against @js-temporal/polyfill:
+  // convertDateToCalendar("2024-03-20", "indian") -> "1945-12-30[u-ca=indian]",
+  // convertDateToCalendar("2024-03-21", "indian") -> "1946-01-01[u-ca=indian]".
+  it("crosses an Indian-calendar year boundary that doesn't align to a fixed Gregorian date", () => {
+    expect(
+      intervalCountDate(
+        "1945-12-29[u-ca=indian]", // 2024-03-19
+        "1946-01-01[u-ca=indian]", // 2024-03-21
+        "year",
+      ),
+    ).toBe(1);
+  });
+
+  it("falls back to Gregorian when start and end carry mismatched calendars", () => {
+    // 5785-01-01 hebrew = 2024-10-03 (verified); crosses the Nov 1 boundary -> 2 months.
+    expect(
+      intervalCountDate("5785-01-01[u-ca=hebrew]", "2024-11-03", "month"),
+    ).toBe(2);
+  });
 });

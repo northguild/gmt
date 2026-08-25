@@ -189,4 +189,9 @@ describe("intervalFromDurationZoned", () => {
       ),
     ).toBeNull();
   });
+  // E5 (issue #78), decision of record D2 — see isValidZonedDateTime.test.ts for the full
+  // rationale: zoned/ rejects any [u-ca=...] calendar annotation outright.
+  it("returns null when value carries a calendar annotation", () => {
+    expect(intervalFromDurationZoned("2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]", "P1M", "start")).toBeNull();
+  });
 });

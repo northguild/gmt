@@ -76,4 +76,12 @@ describe("isValidDateInterval", () => {
   `("returns false for non-string input: $start, $end", ({ start, end }) => {
     expect(isValidDateInterval(start as never, end as never)).toBe(false);
   });
+  // E5 (issue #78): accepts GMT calendar-annotated PlainDate strings; mixed calendars are
+  // accepted since ordering is calendar-independent (D4). Golden verified directly against
+  // @js-temporal/polyfill.
+  it("accepts mixed calendars", () => {
+    expect(isValidDateInterval("5785-01-01[u-ca=hebrew]", "2024-10-31")).toBe(
+      true,
+    );
+  });
 });

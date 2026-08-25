@@ -1,5 +1,10 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { plainDate } from "../../regex";
+import {
+  calendarOfAllDateValues,
+  formatDateInCalendar,
+  parseCalendarDateValue,
+} from "../../internal";
+import { isValidCalendarDate } from "../validate";
 import { isValidDateInterval } from "./validate";
 
 /**
@@ -15,11 +20,15 @@ import { isValidDateInterval } from "./validate";
  * - Returns `[{ start, end }]` (the whole interval, unsplit) when no valid in-range point remains.
  * - Returns `[]` when `points` is not an array, when any element is not a valid ISO PlainDate
  *   string, or on invalid input (unparseable start/end, `start > end`).
+ * - Accepts GMT calendar-annotated PlainDate strings — E5 (issue #78). `start`, `end`, and
+ *   every element of `points` must carry the *same* calendar tag (or all be bare ISO); any
+ *   mismatch returns `[]` (E5 decision of record D4) — this also makes `.equals()`'s dedup of
+ *   duplicate points safe, since same-calendar `PlainDate`s compare equal correctly.
  *
- * @param start ISO PlainDate string for the interval start
- * @param end ISO PlainDate string for the interval end
- * @param points array of ISO PlainDate strings to split at
- * @returns array of `{ start, end }` records, or `[]` on invalid input
+ * @param start ISO PlainDate string for the interval start, optionally calendar-annotated
+ * @param end ISO PlainDate string for the interval end, optionally calendar-annotated
+ * @param points array of ISO PlainDate strings to split at, optionally calendar-annotated (must match `start`/`end`'s calendar)
+ * @returns array of `{ start, end }` records, or `[]` on invalid input / mismatched calendars
  *
  * @example intervalSplitAtDate("2024-01-01", "2024-01-10", ["2024-01-05"]) // [{ start: "2024-01-01", end: "2024-01-05" }, { start: "2024-01-05", end: "2024-01-10" }]
  * @example intervalSplitAtDate("2024-01-01", "2024-01-10", ["2024-01-07", "2024-01-03"]) // [{ start: "2024-01-01", end: "2024-01-03" }, { start: "2024-01-03", end: "2024-01-07" }, { start: "2024-01-07", end: "2024-01-10" }]
@@ -45,15 +54,20 @@ export function intervalSplitAtDate(
     return [];
   }
 
-  if (!points.every((point) => plainDate.test(point))) {
+  if (!points.every((point) => isValidCalendarDate(point))) {
+    return [];
+  }
+
+  const calendar = calendarOfAllDateValues([start, end, ...points]);
+  if (!calendar) {
     return [];
   }
 
   try {
-    const startVal = Temporal.PlainDate.from(start);
-    const endVal = Temporal.PlainDate.from(end);
+    const startVal = parseCalendarDateValue(start);
+    const endVal = parseCalendarDateValue(end);
 
-    const parsedPoints = points.map((point) => Temporal.PlainDate.from(point));
+    const parsedPoints = points.map((point) => parseCalendarDateValue(point));
 
     const inRangePoints = parsedPoints.filter(
       (point) =>
@@ -72,8 +86,8 @@ export function intervalSplitAtDate(
     const result: Array<{ start: string; end: string }> = [];
     for (let i = 0; i < boundaries.length - 1; i++) {
       result.push({
-        start: boundaries[i].toString(),
-        end: boundaries[i + 1].toString(),
+        start: formatDateInCalendar(boundaries[i], calendar),
+        end: formatDateInCalendar(boundaries[i + 1], calendar),
       });
     }
 

@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { plainDate } from "../../regex";
+import { parseCalendarDateValue } from "../../internal";
+import { isValidCalendarDate } from "../validate";
 
 /**
  * Return how many distinct calendar dates two date intervals share.
@@ -17,10 +18,14 @@ import { plainDate } from "../../regex";
  *   `intervalIntersectionDate` with `intervalCountDate`:
  *   `const span = intervalIntersectionDate(aStart, aEnd, bStart, bEnd); span ? intervalCountDate(span.start, span.end, "day") : 0;`
  *
- * @param aStart ISO 8601 date string for the first interval start
- * @param aEnd ISO 8601 date string for the first interval end
- * @param bStart ISO 8601 date string for the second interval start
- * @param bEnd ISO 8601 date string for the second interval end
+ * - Accepts GMT calendar-annotated PlainDate strings — E5 (issue #78). A day is a day in every
+ *   supported calendar, so this returns the same count whether or not the endpoints are
+ *   calendar-tagged, and arguments may carry different or no tags (D4).
+ *
+ * @param aStart ISO 8601 date string for the first interval start, optionally calendar-annotated
+ * @param aEnd ISO 8601 date string for the first interval end, optionally calendar-annotated
+ * @param bStart ISO 8601 date string for the second interval start, optionally calendar-annotated
+ * @param bEnd ISO 8601 date string for the second interval end, optionally calendar-annotated
  * @returns number of shared calendar dates, `0` when disjoint, or null on invalid input
  *
  * @example intervalOverlappingDaysDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31") // 91
@@ -45,19 +50,19 @@ export function intervalOverlappingDaysDate(
   }
 
   if (
-    !plainDate.test(aStart) ||
-    !plainDate.test(aEnd) ||
-    !plainDate.test(bStart) ||
-    !plainDate.test(bEnd)
+    !isValidCalendarDate(aStart) ||
+    !isValidCalendarDate(aEnd) ||
+    !isValidCalendarDate(bStart) ||
+    !isValidCalendarDate(bEnd)
   ) {
     return null;
   }
 
   try {
-    const aS = Temporal.PlainDate.from(aStart);
-    const aE = Temporal.PlainDate.from(aEnd);
-    const bS = Temporal.PlainDate.from(bStart);
-    const bE = Temporal.PlainDate.from(bEnd);
+    const aS = parseCalendarDateValue(aStart);
+    const aE = parseCalendarDateValue(aEnd);
+    const bS = parseCalendarDateValue(bStart);
+    const bE = parseCalendarDateValue(bEnd);
 
     if (Temporal.PlainDate.compare(aS, aE) > 0) {
       return null;
@@ -77,7 +82,16 @@ export function intervalOverlappingDaysDate(
     const start = Temporal.PlainDate.compare(aS, bS) >= 0 ? aS : bS;
     const end = Temporal.PlainDate.compare(aE, bE) <= 0 ? aE : bE;
 
-    return start.until(end, { largestUnit: "day" }).days + 1;
+    // start/end may carry different calendars when the four arguments' tags don't all match
+    // (D4: this function accepts mixed calendars since it returns a count, not a date value) —
+    // Temporal.PlainDate.prototype.until throws outright across two different calendars, even
+    // though .compare above does not, so both are normalized to iso8601 first. A day is the
+    // same length in every supported calendar, so this never changes the answer.
+    return (
+      start.withCalendar("iso8601").until(end.withCalendar("iso8601"), {
+        largestUnit: "day",
+      }).days + 1
+    );
   } catch {
     return null;
   }

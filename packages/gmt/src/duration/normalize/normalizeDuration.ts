@@ -1,4 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { resolveDurationRelativeTo } from "../../internal";
 import type { DurationRelativeTo } from "../../types";
 
 /**
@@ -26,6 +27,7 @@ import type { DurationRelativeTo } from "../../types";
  * @example normalizeDuration("P45D", { largestUnit: "month" }) // "" (relativeTo required)
  * @example normalizeDuration("P45D", { largestUnit: "month", relativeTo: "2024-01-01" }) // "P1M14D"
  * @example normalizeDuration("invalid") // ""
+ * @example normalizeDuration("P400D", { largestUnit: "year", relativeTo: "5784-06-15[u-ca=hebrew]" }) // "P1Y15D" (Hebrew leap year — relativeTo accepts GMT's calendar-annotated PlainDate string, not Temporal's own ISO-digit u-ca convention)
  */
 export function normalizeDuration(
   value: string,
@@ -49,7 +51,7 @@ export function normalizeDuration(
         smallestUnit: options?.smallestUnit,
         roundingIncrement: options?.roundingIncrement,
         roundingMode: options?.roundingMode,
-        relativeTo: options?.relativeTo,
+        relativeTo: resolveDurationRelativeTo(options?.relativeTo),
       })
       .toString();
   } catch {

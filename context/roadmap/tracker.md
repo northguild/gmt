@@ -2,7 +2,7 @@
 
 Workflow: copy the title + description below into a new GitHub issue for each story, then paste the resulting issue number into the `GitHub Issue:` line for that story **both here and in the story's bullet above** (Story Group A–J). When starting a branch for a story, tell the agent which story ID (e.g. "work on C1") — it will find the matching issue link here and the full context in the Story Group section above.
 
-Issue number tracker (fill in as issues are created). `Order` is the sequence to actually work these in — it follows the "Suggested Sequencing" section above (C-group first as a correctness fix, then A1–A5 straight through, then D-group, then F-group, then B-group, then G-group, then H-group, then I-group, then J-group, then E1–E5 last) — **not** ascending issue number. `Publish` marks when to cut a release after that story lands: nearly every story is additive-only (new functions, or new optional parameters defaulting to current behavior), so nearly every bump is `minor`; publish once per Story Group rather than per-story. Groups B, G, H, I, and J are adjacent in `Order` but are **not** bundled into one publish — see the Changeset note below on why interleaving unpublished groups is unsafe.
+Issue number tracker (fill in as issues are created). `Order` is the sequence to actually work these in — it follows the "Suggested Sequencing" section above (C-group first as a correctness fix, then A1–A5 straight through, then D-group, then F-group, then B-group, then G-group, then H-group, then I-group, then J-group, then E1–E7 last) — **not** ascending issue number. `Publish` marks when to cut a release after that story lands: nearly every story is additive-only (new functions, or new optional parameters defaulting to current behavior), so nearly every bump is `minor`; publish once per Story Group rather than per-story. Groups B, G, H, I, and J are adjacent in `Order` but are **not** bundled into one publish — see the Changeset note below on why interleaving unpublished groups is unsafe.
 
 **One exception to "additive-only":** J0b moves two functions between published subpaths (`@burglekitt/gmt/plain/get` → `.../plain/calculate`). Root imports are unaffected, but deep-subpath importers break. Treat it as `minor` with an explicit changeset note naming both paths — not as a silent additive change. See [issues/J.md](issues/J.md).
 
@@ -60,9 +60,10 @@ Issue number tracker (fill in as issues are created). `Order` is the sequence to
 | 48    | E1    | Issue #44    | Done        | unscheduled, not yet published               |
 | 49    | E2    | Issue #75    | Done        | unscheduled, no publish plan until picked up |
 | 50    | E3    | Issue #76    | Done        | unscheduled, no publish plan until picked up |
-| 51    | E4    | Issue #77    | Not started | unscheduled, no publish plan until picked up |
-| 52    | E5    | Issue #78    | Not started | unscheduled, no publish plan until picked up |
+| 51    | E4    | Issue #77    | Done        | unscheduled, no publish plan until picked up |
+| 52    | E5    | Issue #78    | Done        | unscheduled, no publish plan until picked up (release cut after E6) |
 | 53    | E6    | Issue #125   | Not started | unscheduled, no publish plan until picked up |
+| 54    | E7    | Not yet filed | Not started | unscheduled, no publish plan until picked up (spec in [issues/E.md](issues/E.md)) |
 
 ## Story Group J phases
 

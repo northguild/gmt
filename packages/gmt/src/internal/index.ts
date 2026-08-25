@@ -6,7 +6,15 @@ export {
   parseCalendarDateValue,
 } from "./calendarDateString";
 export { isCalendarSystem, temporalCalendarIds } from "./calendarSystemIds";
+export { parseCalendarDatePairForArithmetic } from "./calendarDatePairPolicy";
+export {
+  calendarOfAllDateValues,
+  calendarSystemOfDateValue,
+} from "./calendarValueOfDate";
 export { durationUntilString } from "./durationUntilString";
+export { formatDateInCalendar } from "./formatDateInCalendar";
+export { hasCalendarAnnotation } from "./hasCalendarAnnotation";
+export { resolveDurationRelativeTo } from "./resolveDurationRelativeTo";
 export {
   ENGLISH_MONTH_NAMES,
   ENGLISH_WEEKDAY_NAMES,

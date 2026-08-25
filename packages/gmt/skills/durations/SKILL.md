@@ -328,6 +328,12 @@ The anchor decides the answer rather than merely unblocking it: `compareDuration
 
 Source: packages/gmt/src/duration/calculate/addDuration.ts (`Temporal.Duration.prototype.add`/`.subtract` have no `relativeTo` option, so calendar-unit operands throw and result in `""`), packages/gmt/src/duration/calculate/durationAs.ts and packages/gmt/src/duration/compare/compareDurations.ts (`.total()` and `Temporal.Duration.compare` both accept `relativeTo` and require it for calendar units)
 
+`relativeTo` also accepts a GMT calendar-annotated `PlainDate` string (E5, e.g. `"5784-06-15[u-ca=hebrew]"`, as produced by `convertDateToCalendar`) — not Temporal's own differently-shaped `[u-ca=...]` convention. `durationAs`, `compareDurations`, and `normalizeDuration` all resolve it the same way:
+
+```ts
+durationAs("P1Y", "days", { relativeTo: "5784-06-15[u-ca=hebrew]" }); // 385, not the 366 a Gregorian P1Y would total — a Hebrew leap year
+```
+
 ### HIGH Reading a component with getDurationUnit when you wanted a total
 
 `getDurationUnit` reads the named field **as stored**; `durationAs` converts the whole duration. They disagree whenever the duration isn't already spelled in the unit you're asking for, and `getDurationUnit`'s wrong answer is a plausible-looking `0` rather than an error.

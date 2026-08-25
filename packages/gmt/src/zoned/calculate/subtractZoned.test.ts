@@ -269,4 +269,8 @@ describe("subtractZoned", () => {
       ),
     ).toBe("2024-02-29T12:00:00-05:00[America/New_York]");
   });
+  // E5 (issue #78), decision of record D2 -- see addZoned.test.ts for the full rationale.
+  it("returns \"\" when value carries a calendar annotation", () => {
+    expect(subtractZoned("2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]", { months: 1 })).toBe("");
+  });
 });

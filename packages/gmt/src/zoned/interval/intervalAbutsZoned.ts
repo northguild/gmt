@@ -1,4 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { hasCalendarAnnotation } from "../../internal";
 import { isLeapSecond } from "../../plain/validate/isLeapSecond";
 
 /**
@@ -9,6 +10,8 @@ import { isLeapSecond } from "../../plain/validate/isLeapSecond";
  * - Returns `true` when `aEnd + 1 nanosecond === bStart` or `bEnd + 1 nanosecond === aStart`.
  * - Returns `false` when intervals overlap, are disjoint with a gap, or are invalid.
  * - Returns `false` on invalid input (wrong type, malformed strings, leap seconds).
+ * - Rejects any `[u-ca=...]` calendar annotation (E5 issue #78, decision of record D2) —
+ *   see `isValidZonedDateTime`'s JSDoc for why.
  *
  * @param aStart ISO 8601 zoned datetime string for the first interval start
  * @param aEnd ISO 8601 zoned datetime string for the first interval end
@@ -41,7 +44,11 @@ export function intervalAbutsZoned(
     isLeapSecond(aStart) ||
     isLeapSecond(aEnd) ||
     isLeapSecond(bStart) ||
-    isLeapSecond(bEnd)
+    isLeapSecond(bEnd) ||
+    hasCalendarAnnotation(aStart) ||
+    hasCalendarAnnotation(aEnd) ||
+    hasCalendarAnnotation(bStart) ||
+    hasCalendarAnnotation(bEnd)
   ) {
     return false;
   }

@@ -123,4 +123,22 @@ describe("isValidZonedDateTime", () => {
   `("returns false for non-string input: $value", ({ value }) => {
     expect(isValidZonedDateTime(value as never)).toBe(false);
   });
+
+  // E5 (issue #78), decision of record D2: zoned/ previously accepted a [u-ca=...] calendar
+  // annotation by accident (nothing gated it) and did genuinely calendar-aware but
+  // undocumented, untested arithmetic (verified directly against @js-temporal/polyfill during
+  // E5 research: addZoned on this exact value returned "2024-03-11..." instead of the ISO
+  // answer "2024-03-10..."). Calendar-system awareness is confined to plain/ PlainDate (D1);
+  // zoned/ now rejects the annotation outright rather than continuing to accept it silently.
+  it.each`
+    value
+    ${"2024-02-10T12:00:00-05:00[America/New_York][u-ca=hebrew]"}
+    ${"2024-02-10T12:00:00+00:00[UTC][u-ca=hebrew]"}
+    ${"2024-02-10T12:00:00-05:00[America/New_York][u-ca=islamic-civil]"}
+  `(
+    "returns false for a zoned datetime with a calendar annotation: $value",
+    ({ value }: { value: string }) => {
+      expect(isValidZonedDateTime(value)).toBe(false);
+    },
+  );
 });

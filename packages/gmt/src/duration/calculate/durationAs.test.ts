@@ -90,6 +90,29 @@ describe("durationAs", () => {
     },
   );
 
+  // E5 (issue #78): relativeTo accepts a GMT calendar-annotated PlainDate string ("5784-06-
+  // 15[u-ca=hebrew]" — calendar-native digits, as convertDateToCalendar produces), not
+  // Temporal's own ISO-digit u-ca convention. Regression goldens verified directly against
+  // @js-temporal/polyfill: before this fix, the Hebrew-shape string below was silently
+  // misread as ISO year 5784 and returned 354, not 385.
+  it.each`
+    value    | unit      | relativeTo                        | expected | note
+    ${"P1Y"} | ${"days"} | ${"5784-06-15[u-ca=hebrew]"}       | ${385}   | ${"Hebrew leap year 5784"}
+    ${"P1M"} | ${"days"} | ${"5785-04-15[u-ca=hebrew]"}       | ${29}    | ${"Tevet, a 29-day Hebrew month"}
+    ${"P1M"} | ${"days"} | ${"2024-02-10[u-ca=hebrew]"}       | ${30}    | ${"Temporal's own u-ca shape still works unchanged (ISO digits)"}
+  `(
+    "totals $value as $expected in $unit relativeTo calendar-annotated $relativeTo ($note)",
+    ({ value, unit, relativeTo, expected }) => {
+      expect(durationAs(value, unit, { relativeTo })).toBe(expected);
+    },
+  );
+
+  it("returns null when a calendar-annotated relativeTo is malformed", () => {
+    expect(
+      durationAs("P1M", "days", { relativeTo: "5783-14-01[u-ca=hebrew]" }),
+    ).toBeNull();
+  });
+
   // relativeTo is not inert on day/time units: anchored to a zoned instant it resolves real
   // elapsed time, so a calendar day across a DST transition is not 24 hours.
   it.each`

@@ -108,4 +108,19 @@ describe("intervalOverlappingDaysDate", () => {
       ),
     ).toBeNull();
   });
+  // E5 (issue #78): accepts GMT calendar-annotated PlainDate strings; mixed calendars are
+  // accepted since a day is a day in every calendar (D4). Internally normalizes to iso8601
+  // before calling .until() -- calling .until() directly across two different Temporal
+  // calendars throws RangeError even though .compare() does not (verified during E5
+  // research). Golden verified directly against @js-temporal/polyfill.
+  it("accepts mixed calendars and does not throw when Temporal.until would", () => {
+    expect(
+      intervalOverlappingDaysDate(
+        "2024-10-01",
+        "2024-10-31",
+        "5785-01-01[u-ca=hebrew]",
+        "2024-11-15",
+      ),
+    ).toBe(29);
+  });
 });

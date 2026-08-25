@@ -145,4 +145,12 @@ describe("intervalContainsDate", () => {
       false,
     );
   });
+  // E5 (issue #78): accepts GMT calendar-annotated PlainDate strings; ordering is calendar-
+  // independent so mixed calendars are accepted (D4). Golden verified directly against
+  // @js-temporal/polyfill.
+  it("accepts mixed calendars since containment is an ordering check, not a value", () => {
+    expect(
+      intervalContainsDate("2024-10-01", "2024-10-31", "5785-01-01[u-ca=hebrew]"),
+    ).toBe(true);
+  });
 });

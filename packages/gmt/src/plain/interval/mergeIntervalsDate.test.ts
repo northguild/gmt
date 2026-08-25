@@ -112,4 +112,23 @@ describe("mergeIntervalsDate", () => {
       mergeIntervalsDate([{ start: "2024-01-01", end: "2024-01-10" }]),
     ).toEqual([]);
   });
+  // E5 (issue #78): every start/end across the whole list must share the same calendar tag
+  // (D4). Golden verified directly against @js-temporal/polyfill.
+  it("merges in the shared calendar when every interval carries the same tag", () => {
+    expect(
+      mergeIntervalsDate([
+        { start: "5784-01-01[u-ca=hebrew]", end: "5784-01-10[u-ca=hebrew]" },
+        { start: "5784-01-05[u-ca=hebrew]", end: "5784-01-20[u-ca=hebrew]" },
+      ]),
+    ).toEqual([{ start: "5784-01-01[u-ca=hebrew]", end: "5784-01-20[u-ca=hebrew]" }]);
+  });
+
+  it("returns [] when any interval in the list carries a mismatched calendar tag", () => {
+    expect(
+      mergeIntervalsDate([
+        { start: "5784-01-01[u-ca=hebrew]", end: "5784-01-10[u-ca=hebrew]" },
+        { start: "2024-01-05", end: "2024-01-20" },
+      ]),
+    ).toEqual([]);
+  });
 });

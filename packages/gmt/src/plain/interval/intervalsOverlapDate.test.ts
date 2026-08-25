@@ -105,4 +105,16 @@ describe("intervalsOverlapDate", () => {
       ),
     ).toBe(false);
   });
+  // E5 (issue #78): accepts GMT calendar-annotated PlainDate strings; mixed calendars are
+  // accepted (D4). Golden verified directly against @js-temporal/polyfill.
+  it("accepts mixed calendars since overlap is an ordering check, not a value", () => {
+    expect(
+      intervalsOverlapDate(
+        "2024-10-01",
+        "2024-10-31",
+        "5785-01-01[u-ca=hebrew]",
+        "2024-11-15",
+      ),
+    ).toBe(true);
+  });
 });

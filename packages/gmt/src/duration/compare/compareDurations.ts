@@ -1,4 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { resolveDurationRelativeTo } from "../../internal";
 import type { DurationRelativeTo } from "../../types";
 import { isValidDuration } from "../validate/isValidDuration";
 
@@ -33,6 +34,7 @@ import { isValidDuration } from "../validate/isValidDuration";
  * @example compareDurations("P1M", "P30D", { relativeTo: "2024-02-01" }) // -1
  * @example compareDurations("P1D", "PT24H", { relativeTo: "2024-03-10T00:00:00-05:00[America/New_York]" }) // -1 (spring-forward)
  * @example compareDurations("not a duration", "PT1H") // null
+ * @example compareDurations("P1M", "P30D", { relativeTo: "5785-04-15[u-ca=hebrew]" }) // -1 (Tevet, a 29-day Hebrew month — relativeTo accepts GMT's calendar-annotated PlainDate string, not Temporal's own ISO-digit u-ca convention)
  */
 export function compareDurations(
   a: string,
@@ -45,7 +47,7 @@ export function compareDurations(
 
   try {
     return Temporal.Duration.compare(a, b, {
-      relativeTo: options?.relativeTo,
+      relativeTo: resolveDurationRelativeTo(options?.relativeTo),
     });
   } catch {
     return null;

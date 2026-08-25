@@ -1,4 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { resolveDurationRelativeTo } from "../../internal";
 import { isValidDateTimeDurationUnit } from "../../plain/validate";
 import type { DateTimeDurationUnit, DurationRelativeTo } from "../../types";
 import { isValidDuration } from "../validate/isValidDuration";
@@ -35,6 +36,7 @@ import { isValidDuration } from "../validate/isValidDuration";
  * @example durationAs("P1M", "days", { relativeTo: "2024-02-01" }) // 29
  * @example durationAs("P1D", "hours", { relativeTo: "2024-03-10T00:00:00-05:00[America/New_York]" }) // 23 (spring-forward)
  * @example durationAs("not a duration", "hours") // null
+ * @example durationAs("P1Y", "days", { relativeTo: "5784-06-15[u-ca=hebrew]" }) // 385 (Hebrew leap year — relativeTo accepts GMT's calendar-annotated PlainDate string, not Temporal's own ISO-digit u-ca convention)
  */
 export function durationAs(
   value: string,
@@ -48,7 +50,7 @@ export function durationAs(
   try {
     return Temporal.Duration.from(value).total({
       unit,
-      relativeTo: options?.relativeTo,
+      relativeTo: resolveDurationRelativeTo(options?.relativeTo),
     });
   } catch {
     return null;

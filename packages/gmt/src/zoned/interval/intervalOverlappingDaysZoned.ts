@@ -1,4 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { hasCalendarAnnotation } from "../../internal";
 import { isLeapSecond } from "../../plain/validate/isLeapSecond";
 
 /**
@@ -19,6 +20,8 @@ import { isLeapSecond } from "../../plain/validate/isLeapSecond";
  *   invalid input).
  * - Returns `null` if either interval is invalid (`start > end`).
  * - Returns `null` on invalid input (wrong type, malformed strings, leap seconds).
+ * - Rejects any `[u-ca=...]` calendar annotation (E5 issue #78, decision of record D2) —
+ *   see `isValidZonedDateTime`'s JSDoc for why.
  * - Diverges from date-fns's `getOverlappingDaysInIntervals`, which rounds up elapsed
  *   24-hour periods instead of counting calendar dates. To reproduce date-fns's number,
  *   compose `intervalIntersectionZoned` with `intervalCountZoned`:
@@ -53,7 +56,11 @@ export function intervalOverlappingDaysZoned(
     isLeapSecond(aStart) ||
     isLeapSecond(aEnd) ||
     isLeapSecond(bStart) ||
-    isLeapSecond(bEnd)
+    isLeapSecond(bEnd) ||
+    hasCalendarAnnotation(aStart) ||
+    hasCalendarAnnotation(aEnd) ||
+    hasCalendarAnnotation(bStart) ||
+    hasCalendarAnnotation(bEnd)
   ) {
     return null;
   }

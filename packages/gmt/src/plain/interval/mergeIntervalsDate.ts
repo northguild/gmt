@@ -1,4 +1,9 @@
 import { Temporal } from "@js-temporal/polyfill";
+import {
+  calendarOfAllDateValues,
+  formatDateInCalendar,
+  parseCalendarDateValue,
+} from "../../internal";
 import { isValidDateInterval } from "./validate";
 
 /**
@@ -12,9 +17,12 @@ import { isValidDateInterval } from "./validate";
  * - Returns `[]` when `intervals` is not an array, when any element is not a
  *   `{ start, end }` record of valid ISO PlainDate strings, or when any element has
  *   `start > end`.
+ * - Accepts GMT calendar-annotated PlainDate strings — E5 (issue #78). Since the result is
+ *   date *values*, every `start`/`end` across the whole list must carry the *same* calendar tag
+ *   (or all be bare ISO); any mismatch returns `[]` (E5 decision of record D4).
  *
- * @param intervals array of `{ start, end }` records
- * @returns the minimum set of non-overlapping `{ start, end }` records, sorted by start, or `[]` on invalid input
+ * @param intervals array of `{ start, end }` records, optionally calendar-annotated
+ * @returns the minimum set of non-overlapping `{ start, end }` records, sorted by start, or `[]` on invalid input / mismatched calendars
  *
  * @example mergeIntervalsDate([{ start: "2024-01-01", end: "2024-01-10" }, { start: "2024-01-05", end: "2024-01-15" }]) // [{ start: "2024-01-01", end: "2024-01-15" }]
  * @example mergeIntervalsDate([{ start: "2024-01-01", end: "2024-01-10" }, { start: "2024-01-10", end: "2024-01-20" }]) // [{ start: "2024-01-01", end: "2024-01-20" }] (adjacent, merged)
@@ -40,10 +48,17 @@ export function mergeIntervalsDate(
     return [];
   }
 
+  const calendar = calendarOfAllDateValues(
+    intervals.flatMap((interval) => [interval.start, interval.end]),
+  );
+  if (!calendar) {
+    return [];
+  }
+
   try {
     const parsed = intervals.map((interval) => ({
-      start: Temporal.PlainDate.from(interval.start),
-      end: Temporal.PlainDate.from(interval.end),
+      start: parseCalendarDateValue(interval.start),
+      end: parseCalendarDateValue(interval.end),
     }));
 
     parsed.sort((a, b) => Temporal.PlainDate.compare(a.start, b.start));
@@ -66,8 +81,8 @@ export function mergeIntervalsDate(
     }
 
     return merged.map((interval) => ({
-      start: interval.start.toString(),
-      end: interval.end.toString(),
+      start: formatDateInCalendar(interval.start, calendar),
+      end: formatDateInCalendar(interval.end, calendar),
     }));
   } catch {
     return [];

@@ -165,4 +165,8 @@ describe("diffZonedAsDuration", () => {
       ).toBe(expected);
     },
   );
+  // E5 (issue #78), decision of record D2 -- see addZoned.test.ts for the full rationale.
+  it("returns \"\" when value1 carries a calendar annotation", () => {
+    expect(diffZonedAsDuration("2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]", "2024-06-30T23:59:59+00:00[UTC]", "months")).toBe("");
+  });
 });

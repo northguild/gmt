@@ -79,4 +79,16 @@ describe("intervalEngulfsDate", () => {
   `("returns false for non-string input", ({ aStart, aEnd, bStart, bEnd }) => {
     expect(intervalEngulfsDate(aStart, aEnd, bStart, bEnd)).toBe(false);
   });
+  // E5 (issue #78): accepts GMT calendar-annotated PlainDate strings; mixed calendars are
+  // accepted (D4). Golden verified directly against @js-temporal/polyfill.
+  it("accepts mixed calendars since engulfment is an ordering check, not a value", () => {
+    expect(
+      intervalEngulfsDate(
+        "2024-10-01",
+        "2024-10-31",
+        "5785-01-01[u-ca=hebrew]",
+        "5785-01-01[u-ca=hebrew]",
+      ),
+    ).toBe(true);
+  });
 });

@@ -1,7 +1,10 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { plainDate } from "../../regex";
-import { isValidDate } from "../validate";
-import { resolveDurationUnit } from "../../internal";
+import {
+  formatDateInCalendar,
+  parseCalendarDatePairForArithmetic,
+  resolveDurationUnit,
+} from "../../internal";
+import { isValidCalendarDate } from "../validate";
 
 /**
  * Split a date interval into sub-intervals of `amount × unit`.
@@ -11,9 +14,15 @@ import { resolveDurationUnit } from "../../internal";
  * - Returns `[{ start, end }]` when `start === end` (zero-length interval).
  * - Returns `[]` on invalid input (unparseable start/end, unsupported unit, non-positive amount,
  *   or a unit that has no effect on `PlainDate`, e.g. `"hours"`).
+ * - Accepts GMT calendar-annotated PlainDate strings — E5 (issue #78). When `start` and `end`
+ *   carry the *same* calendar tag, stepping (and each slice's boundaries) happens in that
+ *   calendar — a Hebrew leap year splits into 13 month-slices, not 12 (E5 decision of record
+ *   D5); otherwise (or if either is bare ISO) it falls back to Gregorian. Each boundary's tag is
+ *   re-derived from the actual stepped date, never copied — a month-by-month step can cross a
+ *   leap-month or era boundary mid-split.
  *
- * @param start ISO PlainDate string for the interval start
- * @param end ISO PlainDate string for the interval end
+ * @param start ISO PlainDate string for the interval start, optionally calendar-annotated
+ * @param end ISO PlainDate string for the interval end, optionally calendar-annotated
  * @param unit duration unit string — `"years" | "months" | "weeks" | "days"` (time units are ignored by PlainDate and return [])
  * @param amount positive number of units per step
  * @returns array of `{ start, end }` records, or [] on invalid input
@@ -23,6 +32,7 @@ import { resolveDurationUnit } from "../../internal";
  * @example splitIntervalByUnitDate("2024-01-01", "2024-01-01", "day", 2) // [{ start: "2024-01-01", end: "2024-01-01" }]
  * @example splitIntervalByUnitDate("2024-01-01", "2024-01-10", "day", 0) // []
  * @example splitIntervalByUnitDate("invalid", "2024-01-10", "day", 2) // []
+ * @example splitIntervalByUnitDate("5784-01-01[u-ca=hebrew]", "5785-01-01[u-ca=hebrew]", "month", 1) // 13 slices, tiling the Hebrew leap year (including Adar I)
  */
 export function splitIntervalByUnitDate(
   start: string,
@@ -34,11 +44,7 @@ export function splitIntervalByUnitDate(
     return [];
   }
 
-  if (!plainDate.test(start) || !plainDate.test(end)) {
-    return [];
-  }
-
-  if (!isValidDate(start) || !isValidDate(end)) {
+  if (!isValidCalendarDate(start) || !isValidCalendarDate(end)) {
     return [];
   }
 
@@ -57,15 +63,20 @@ export function splitIntervalByUnitDate(
   }
 
   try {
-    const startVal = Temporal.PlainDate.from(start);
-    const endVal = Temporal.PlainDate.from(end);
+    const { calendar, a: startVal, b: endVal } =
+      parseCalendarDatePairForArithmetic(start, end);
 
     if (Temporal.PlainDate.compare(startVal, endVal) > 0) {
       return [];
     }
 
     if (Temporal.PlainDate.compare(startVal, endVal) === 0) {
-      return [{ start: startVal.toString(), end: endVal.toString() }];
+      return [
+        {
+          start: formatDateInCalendar(startVal, calendar),
+          end: formatDateInCalendar(endVal, calendar),
+        },
+      ];
     }
 
     const result: Array<{ start: string; end: string }> = [];
@@ -84,8 +95,8 @@ export function splitIntervalByUnitDate(
         Temporal.PlainDate.compare(next, endVal) > 0 ? endVal : next;
 
       result.push({
-        start: current.toString(),
-        end: sliceEnd.toString(),
+        start: formatDateInCalendar(current, calendar),
+        end: formatDateInCalendar(sliceEnd, calendar),
       });
 
       current = next;

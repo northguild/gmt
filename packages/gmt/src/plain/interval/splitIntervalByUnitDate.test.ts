@@ -116,4 +116,21 @@ describe("splitIntervalByUnitDate", () => {
       splitIntervalByUnitDate("2024-01-01", "2024-01-10", "day", 2),
     ).toEqual([]);
   });
+  // E5 (issue #78): when start and end share a calendar tag, stepping (and each slice's
+  // boundaries) happens in that calendar (D5) -- a Hebrew leap year splits into 13 month-
+  // slices, not 12. Each boundary's tag is re-derived from the stepped date, never copied.
+  // Goldens verified directly against @js-temporal/polyfill.
+  it("splits a Hebrew leap year into 13 month-slices, not 12 (ISO's answer for the same span)", () => {
+    const slices = splitIntervalByUnitDate(
+      "5784-01-01[u-ca=hebrew]",
+      "5785-01-01[u-ca=hebrew]",
+      "month",
+      1,
+    );
+    expect(slices).toHaveLength(13);
+    expect(slices[0]).toEqual({
+      start: "5784-01-01[u-ca=hebrew]",
+      end: "5784-02-01[u-ca=hebrew]",
+    });
+  });
 });

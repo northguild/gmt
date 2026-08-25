@@ -75,6 +75,21 @@ describe("compareDurations", () => {
     },
   );
 
+  // E5 (issue #78): relativeTo accepts a GMT calendar-annotated PlainDate string, not
+  // Temporal's own ISO-digit u-ca convention. Regression golden verified directly against
+  // @js-temporal/polyfill: before this fix, the Hebrew-shape relativeTo below compared 0
+  // (misread as ISO year 5785), not -1.
+  it.each`
+    a        | b         | relativeTo                    | expected | note
+    ${"P1M"} | ${"P30D"} | ${"5785-04-15[u-ca=hebrew]"}   | ${-1}    | ${"Tevet, a 29-day Hebrew month"}
+    ${"P1M"} | ${"P30D"} | ${"5784-06-15[u-ca=hebrew]"}   | ${0}     | ${"Adar I, a 30-day Hebrew month"}
+  `(
+    "returns $expected comparing $a to $b relativeTo calendar-annotated $relativeTo ($note)",
+    ({ a, b, relativeTo, expected }) => {
+      expect(compareDurations(a, b, { relativeTo })).toBe(expected);
+    },
+  );
+
   // relativeTo is not calendar-units-only: anchored to a zoned instant it resolves real
   // elapsed time, so "P1D" stops being exactly 24 hours across a DST transition.
   it.each`

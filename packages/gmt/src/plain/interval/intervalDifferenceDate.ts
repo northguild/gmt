@@ -1,5 +1,10 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { plainDate } from "../../regex";
+import {
+  calendarOfAllDateValues,
+  formatDateInCalendar,
+  parseCalendarDateValue,
+} from "../../internal";
+import { isValidCalendarDate } from "../validate";
 
 /**
  * Return the portion(s) of interval A not covered by interval B.
@@ -10,12 +15,16 @@ import { plainDate } from "../../regex";
  * - Returns `[{ start, end }, { start, end }]` when B is fully inside A with gaps on both sides.
  * - Returns `[]` if either interval is invalid (`start > end`).
  * - Returns `[]` on invalid input (wrong type, malformed strings).
+ * - Accepts GMT calendar-annotated PlainDate strings — E5 (issue #78). Since the result is
+ *   date *values*, all four arguments must carry the *same* calendar tag (or all be bare ISO);
+ *   a mismatch returns `[]` (E5 decision of record D4). Each output piece's tag is re-derived,
+ *   never copied from an input.
  *
- * @param aStart ISO 8601 date string for the first interval start
- * @param aEnd ISO 8601 date string for the first interval end
- * @param bStart ISO 8601 date string for the second interval start
- * @param bEnd ISO 8601 date string for the second interval end
- * @returns array of `{ start, end }` records representing A minus B, or `[]` on invalid input
+ * @param aStart ISO 8601 date string for the first interval start, optionally calendar-annotated
+ * @param aEnd ISO 8601 date string for the first interval end, optionally calendar-annotated
+ * @param bStart ISO 8601 date string for the second interval start, optionally calendar-annotated
+ * @param bEnd ISO 8601 date string for the second interval end, optionally calendar-annotated
+ * @returns array of `{ start, end }` records representing A minus B, or `[]` on invalid input / mismatched calendars
  *
  * @example intervalDifferenceDate("2024-01-01", "2024-12-31", "2024-06-01", "2024-07-01") // [{ start: "2024-01-01", end: "2024-05-31" }, { start: "2024-07-02", end: "2024-12-31" }]
  * @example intervalDifferenceDate("2024-01-01", "2024-12-31", "2024-03-01", "2024-10-31") // [{ start: "2024-01-01", end: "2024-02-29" }, { start: "2024-11-01", end: "2024-12-31" }]
@@ -39,19 +48,24 @@ export function intervalDifferenceDate(
   }
 
   if (
-    !plainDate.test(aStart) ||
-    !plainDate.test(aEnd) ||
-    !plainDate.test(bStart) ||
-    !plainDate.test(bEnd)
+    !isValidCalendarDate(aStart) ||
+    !isValidCalendarDate(aEnd) ||
+    !isValidCalendarDate(bStart) ||
+    !isValidCalendarDate(bEnd)
   ) {
     return [];
   }
 
+  const calendar = calendarOfAllDateValues([aStart, aEnd, bStart, bEnd]);
+  if (!calendar) {
+    return [];
+  }
+
   try {
-    const aS = Temporal.PlainDate.from(aStart);
-    const aE = Temporal.PlainDate.from(aEnd);
-    const bS = Temporal.PlainDate.from(bStart);
-    const bE = Temporal.PlainDate.from(bEnd);
+    const aS = parseCalendarDateValue(aStart);
+    const aE = parseCalendarDateValue(aEnd);
+    const bS = parseCalendarDateValue(bStart);
+    const bE = parseCalendarDateValue(bEnd);
 
     if (Temporal.PlainDate.compare(aS, aE) > 0) {
       return [];
@@ -78,15 +92,18 @@ export function intervalDifferenceDate(
           : null;
 
       if (leftEnd !== null && Temporal.PlainDate.compare(leftEnd, aS) >= 0) {
-        result.push({ start: aS.toString(), end: leftEnd.toString() });
+        result.push({
+          start: formatDateInCalendar(aS, calendar),
+          end: formatDateInCalendar(leftEnd, calendar),
+        });
       }
     }
 
     // Right piece: A after B ends
     if (Temporal.PlainDate.compare(aE, bE) > 0) {
       result.push({
-        start: bE.add({ days: 1 }).toString(),
-        end: aE.toString(),
+        start: formatDateInCalendar(bE.add({ days: 1 }), calendar),
+        end: formatDateInCalendar(aE, calendar),
       });
     }
 

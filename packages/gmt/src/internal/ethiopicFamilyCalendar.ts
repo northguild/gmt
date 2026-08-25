@@ -20,11 +20,14 @@ export function isEthiopicFamilyCalendar(
 // against a hardcoded era-name table (its HelperBase.isoToCalendarDate — used because,
 // unlike "ethioaa", these two calendars aren't a fixed year-offset from ISO, so the
 // polyfill can't compute them with pure arithmetic the way it does for "ethioaa"). CLDR's
-// era abbreviation for both calendars changed between the ICU versions bundled with
-// different Node releases: Node 20's ICU emits an era string the polyfill's table matches;
-// Node 24's ICU emits "am", which isn't in that table. The result is that *every* read or
-// write of Temporal's "ethiopic"/"coptic" calendar ids throws a RangeError under the newer
-// ICU data (verified directly — this isn't a hypothetical). "ethioaa" (Ethiopic Amete Alem)
+// era abbreviation for both calendars changed at the ICU 78 boundary, not at any particular
+// Node major version: ICU < 78 emits an era string the polyfill's table matches; ICU >= 78
+// emits "am", which isn't in that table. This is a real trap for "which Node am I on" bug
+// hunting — ICU 78 ships in *both* Node 22 and Node 24 (confirmed directly against a Node 20 /
+// ICU 78.2 environment during E5, issue #78, where the bug reproduces despite being on Node
+// 20 — an earlier draft of this comment wrongly pinned the boundary to "Node 24"). The result
+// is that *every* read or write of Temporal's "ethiopic"/"coptic" calendar ids throws a
+// RangeError under ICU >= 78 (verified directly — this isn't a hypothetical). "ethioaa" (Ethiopic Amete Alem)
 // has no era at all — a single continuous count from a fixed epoch — so the polyfill
 // resolves it with pure arithmetic and never touches Intl, making it stable across Node
 // versions. This module uses "ethioaa" as a computation carrier for the whole Ethiopic

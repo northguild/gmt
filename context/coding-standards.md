@@ -81,6 +81,8 @@ The same three rules extend to `internal/calendarDateString.ts`'s `parseCalendar
 2. Extracted fields are **always** handed to `Temporal.PlainDate.from(fields, { overflow: "reject" })` for final construction and validation — including rejecting unknown calendar identifiers, which Temporal validates on GMT's behalf.
 3. The try-catch and sentinel-return rules above are unchanged.
 
+**Which namespaces accept this grammar (E5, issue #78):** only `plain/` `PlainDate` functions — `addDate`/`subtractDate`/`diffDate`/`diffDateAsDuration` and the `Date`-suffixed `plain/interval/*` functions, plus `duration/`'s `relativeTo` option (via `internal/resolveDurationRelativeTo.ts`). `plain/` `PlainDateTime`/`PlainTime` functions have no calendar-annotated grammar of their own and simply treat a `PlainDate` annotation as invalid input. `zoned/`, `utc/`, and `unix/` reject the annotation outright (`internal/hasCalendarAnnotation.ts`) — `zoned/` did so only as of E5; before it, `isValidZonedDateTime` had no gate against it and silently accepted it (see `context/roadmap/issues/E.md`'s E5 outcome, decision D2, for why that was closed rather than kept). Do not extend the grammar to a new namespace without a new roadmap story — see E5's decision D1 and the proposed E7 follow-up for `zoned/`.
+
 This prohibition stands for every other function in the library.
 
 ## Loop Style

@@ -48,4 +48,10 @@ describe("isValidUtc", () => {
     mockTemporalInstantFromThrow();
     expect(isValidUtc("2024-01-01T00:00:00Z")).toBe(false);
   });
+  // E5 (issue #78) audit negative: utc/ was already regex-gated to a strict
+  // <date>T<time>Z shape before E5 -- a [u-ca=...] annotation fails that regex outright, so
+  // no source change was needed here. Documented as a verified negative, not assumed.
+  it("returns false for a calendar-annotated value (already regex-gated before E5, unaffected by it)", () => {
+    expect(isValidUtc("2024-02-10T12:00:00Z[u-ca=hebrew]")).toBe(false);
+  });
 });

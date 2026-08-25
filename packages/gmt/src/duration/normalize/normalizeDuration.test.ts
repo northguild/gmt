@@ -100,6 +100,19 @@ describe("normalizeDuration", () => {
     },
   );
 
+  // E5 (issue #78): relativeTo accepts a GMT calendar-annotated PlainDate string, not
+  // Temporal's own ISO-digit u-ca convention. Regression golden verified directly against
+  // @js-temporal/polyfill: before this fix, relativeTo below rebalanced to "P1Y3D" (misread
+  // as ISO year 5784), not "P1Y15D".
+  it("rebalances relative to a GMT calendar-annotated PlainDate string (Hebrew leap year)", () => {
+    expect(
+      normalizeDuration("P400D", {
+        largestUnit: "year",
+        relativeTo: "5784-06-15[u-ca=hebrew]",
+      }),
+    ).toBe("P1Y15D");
+  });
+
   it.each`
     value    | options                                             | expected
     ${"P1M"} | ${{}}                                               | ${""}

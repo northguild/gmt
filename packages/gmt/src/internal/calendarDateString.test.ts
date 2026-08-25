@@ -41,6 +41,23 @@ describe("parseCalendarDateValue", () => {
   `("throws for invalid $value", ({ value }: { value: string }) => {
     expect(() => parseCalendarDateValue(value)).toThrow();
   });
+
+  // Regression (E5, issue #78): a bare (non-calendar-annotated) datetime/zoned string used to
+  // silently succeed here — Temporal.PlainDate.from truncates a full datetime string to its
+  // date portion rather than rejecting it, which this function's fallback branch inherited
+  // before E5 added the strict `plainDate` regex pre-check. Predates E5 but is fixed as part
+  // of it, since this function is E5's own shared parsing gate for `plain/` calendar-aware
+  // functions and must not inherit the hazard.
+  it.each`
+    value
+    ${"2024-03-10T14:30:00"}
+    ${"2024-03-10T14:30:00-05:00[America/New_York]"}
+  `(
+    "throws for a datetime/zoned string $value instead of silently truncating to its date portion",
+    ({ value }: { value: string }) => {
+      expect(() => parseCalendarDateValue(value)).toThrow();
+    },
+  );
 });
 
 describe("formatCalendarDate", () => {

@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { calendarDate } from "../regex";
+import { calendarDate, plainDate } from "../regex";
 import {
   calendarSystemIdFromTemporal,
   isCalendarSystem,
@@ -22,10 +22,21 @@ import {
  * Ethiopic family ("ethiopic" / "ethiopic-amete-alem" / "coptic") is the one exception —
  * see ethiopicFamilyCalendar.ts for why they're constructed via GMT-owned arithmetic
  * instead of Temporal's own calendar ids for those three.
+ *
+ * The non-annotated fallback branch requires the strict PlainDate-only shape (via the
+ * `plainDate` regex) before delegating to `Temporal.PlainDate.from` — bare `.from()` silently
+ * truncates a full datetime/zoned string to its date portion (`Temporal.PlainDate.from("2024-
+ * 03-10T14:30:00")` succeeds), which would make this function (and therefore
+ * `isValidCalendarDate`/`convertDateToCalendar`) wrongly accept datetime input. Found and
+ * fixed as part of E5 (issue #78) — it predates this story but this function is E5's shared
+ * gate, so it must not inherit the hazard.
  */
 export function parseCalendarDateValue(value: string): Temporal.PlainDate {
   const match = calendarDate.exec(value);
   if (!match) {
+    if (!plainDate.test(value)) {
+      throw new RangeError(`Not a valid GMT PlainDate string: ${value}`);
+    }
     return Temporal.PlainDate.from(value);
   }
 

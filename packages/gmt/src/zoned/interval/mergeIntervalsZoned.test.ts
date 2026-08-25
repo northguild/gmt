@@ -178,4 +178,11 @@ describe("mergeIntervalsZoned", () => {
       },
     ]);
   });
+  // E5 (issue #78), decision of record D2 — see isValidZonedDateTime.test.ts for the full
+  // rationale: zoned/ rejects any [u-ca=...] calendar annotation outright.
+  it("returns [] when any interval endpoint carries a calendar annotation", () => {
+    expect(
+      mergeIntervalsZoned([{ start: "2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]", end: "2024-06-30T23:59:59+00:00[UTC]" }]),
+    ).toEqual([]);
+  });
 });

@@ -112,4 +112,11 @@ describe("intervalCountTime", () => {
     mockTemporalPlainTimeFromThrow();
     expect(intervalCountTime("12:00:00", "14:00:00", "hour")).toBeNull();
   });
+  // E5 (issue #78) audit negative: PlainTime has no calendar concept, so a calendar-annotated
+  // PlainDate string is simply not a valid PlainTime string here -- unaffected by E5, same as
+  // GMT's existing precedent (intervalOverlappingDaysDate/DateTime has no Time sibling for
+  // the same reason).
+  it("returns null for a calendar-annotated PlainDate string (PlainTime has no calendar)", () => {
+    expect(intervalCountTime("5784-06-15[u-ca=hebrew]", "14:00:00", "hour")).toBeNull();
+  });
 });

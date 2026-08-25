@@ -297,4 +297,17 @@ describe("intervalContainsZoned", () => {
       ),
     ).toBe(false);
   });
+
+  // E5 (issue #78), decision of record D2 — see isValidZonedDateTime.test.ts for the full
+  // rationale: zoned/ rejects any [u-ca=...] calendar annotation outright.
+  it.each`
+    aStart | aEnd | bStart | bEnd
+    ${"2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"}
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]"} | ${"2024-06-30T23:59:59+00:00[UTC]"}
+  `(
+    "returns false when an argument carries a calendar annotation: $aStart, $aEnd, $bStart, $bEnd",
+    ({ aStart, aEnd, bStart, bEnd }: { aStart: string; aEnd: string; bStart: string; bEnd: string }) => {
+      expect(intervalContainsZoned(aStart, aEnd, bStart, bEnd)).toBe(false);
+    },
+  );
 });

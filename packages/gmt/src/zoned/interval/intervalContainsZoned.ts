@@ -1,4 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { hasCalendarAnnotation } from "../../internal";
 import { isLeapSecond } from "../../plain/validate/isLeapSecond";
 
 /**
@@ -11,6 +12,8 @@ import { isLeapSecond } from "../../plain/validate/isLeapSecond";
  * - Returns `false` if `intervalStart > intervalEnd` (invalid outer interval).
  * - Returns `false` if `innerStart > innerEnd` in 4-arg mode (invalid inner interval).
  * - Returns `false` on invalid input (wrong type, malformed strings, leap seconds).
+ * - Rejects any `[u-ca=...]` calendar annotation (E5 issue #78, decision of record D2) — see
+ *   `isValidZonedDateTime`'s JSDoc for why.
  *
  * @param intervalStart ISO 8601 zoned datetime string for the outer interval start
  * @param intervalEnd ISO 8601 zoned datetime string for the outer interval end
@@ -42,7 +45,11 @@ export function intervalContainsZoned(
     isLeapSecond(intervalStart) ||
     isLeapSecond(intervalEnd) ||
     isLeapSecond(pointOrStart) ||
-    (pointEnd !== undefined && isLeapSecond(pointEnd))
+    (pointEnd !== undefined && isLeapSecond(pointEnd)) ||
+    hasCalendarAnnotation(intervalStart) ||
+    hasCalendarAnnotation(intervalEnd) ||
+    hasCalendarAnnotation(pointOrStart) ||
+    (pointEnd !== undefined && hasCalendarAnnotation(pointEnd))
   ) {
     return false;
   }
