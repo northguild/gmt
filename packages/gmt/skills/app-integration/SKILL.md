@@ -5,7 +5,7 @@ description: >
   libraries (routers, query caches, table sorting, state management). Emphasizes
   strict I/O, canonicalization, and cache-key hygiene.
 metadata:
-  library_version: 1.14.0
+  library_version: 1.14.1
 ---
 
 # App Integration

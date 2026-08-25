@@ -1,5 +1,11 @@
 # @burglekitt/gmt
 
+## 1.14.1
+
+### Patch Changes
+
+- 131087a: Add deprecation notice: this package is moving to `@northguild/gmt` under the [northguild](https://github.com/northguild) GitHub organization. `@burglekitt/gmt` will receive no further updates after this release.
+
 ## 1.14.0
 
 ### Minor Changes

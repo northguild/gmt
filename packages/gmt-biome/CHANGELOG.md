@@ -1,5 +1,11 @@
 # @burglekitt/gmt-biome
 
+## 1.0.6
+
+### Patch Changes
+
+- 131087a: Add deprecation notice: this package is moving to `@northguild/gmt-biome` under the [northguild](https://github.com/northguild) GitHub organization. `@burglekitt/gmt-biome` will receive no further updates after this release.
+
 ## 1.0.5
 
 ### Patch Changes

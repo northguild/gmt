@@ -1,5 +1,11 @@
 # @burglekitt/gmt-oxlint
 
+## 1.1.4
+
+### Patch Changes
+
+- 131087a: Add deprecation notice: this package is moving to `@northguild/gmt-oxlint` under the [northguild](https://github.com/northguild) GitHub organization. `@burglekitt/gmt-oxlint` will receive no further updates after this release.
+
 ## 1.1.3
 
 ### Patch Changes
