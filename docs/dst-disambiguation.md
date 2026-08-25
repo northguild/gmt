@@ -68,11 +68,13 @@ isInDaylightSaving("2024-07-15T12:00:00+09:00[Asia/Tokyo]");
 | Add/subtract a duration from a zoned datetime | `addZoned` / `subtractZoned`      | **Overlaps only.**             |
 | Jump to start/end of a boundary               | `startOfZoned` family             | **Yes — if `offset` default.** |
 | Set one or more fields directly               | `setZoned` / `setUnix` / `setUtc` | **Yes — if `offset` default.** |
+| Cycle (wrap) a single field                   | `cycleZoned`                      | **Yes — if `offset` default.** |
 
 - **`convertPlainDateTimeToZoned`** — every value (`earlier`/`later`/`reject`) changes the result, for both gaps and overlaps.
 - **`addZoned` / `subtractZoned`** — only controls overlaps; has no effect on gaps. See below.
 - **`startOfZoned` family** (`startOfZoned`, `endOfZoned`, `startOfQuarterForZoned`, `endOfQuarterForZoned`, `mapZonedHoursInDay`, and their `unix/` counterparts `startOfUnix`, `endOfUnix`, `startOfQuarterForUnix`, `endOfQuarterForUnix` — Story C3) — fully controllable; these construct a new local time via `.with()`, same mechanism as `convertPlainDateTimeToZoned` — **but see "The `offset` parameter" below**, since `.with()` has an extra option that `.from()` doesn't need to worry about.
 - **`setZoned` / `setUnix` / `setUtc`** (Story J1) — also `.with()`-based, same rule as the `startOfZoned` family: leave `offset` at its default (`"ignore"`) for `disambiguation` to take effect. Unlike `startOfZoned`'s fixed reset values (`day: 1`, `hour: 0`, ...), these take **caller-supplied** field values, so they also expose `overflow` — a fixed literal like `day: 1` can never be out of range, but a caller-supplied `day: 31` can be. `setUtc`'s `disambiguation`/`offset` are accepted for signature consistency but are permanently inert: `"UTC"` has no DST transitions.
+- **`cycleZoned`** (Story E6) — same `.with()`-based rule as `setZoned`: leave `offset` at its default (`"ignore"`) for `disambiguation` to take effect. `cycleZoned` computes its target field value with plain, DST-agnostic wrap bounds (e.g. `hour` always wraps `0–23`), then hands it to `setZoned` — so a cycled `hour` that lands in a gap or overlap is resolved by `disambiguation`/`offset` exactly the way any other field-set call is, rather than by deriving DST-aware wrap boundaries directly.
 
 ### Real-world scenarios
 

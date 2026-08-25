@@ -190,7 +190,7 @@ E5 shipped as one PR (issue #78, no version bump — Group E's release is cut af
 2. **`Temporal.PlainDate.prototype.until` throws across two different calendars even though `.compare` does not.** `hebrewDate.until(isoDate, {...})` throws `RangeError: cannot compute difference between dates of hebrew and iso8601 calendars`. This bit `intervalOverlappingDaysDate` specifically (a D4-"accept mixed calendars" function that determines its span via `.compare` then previously called `.until` on the result) — fixed by normalizing both operands to `iso8601` immediately before the `.until` call. Every other function that needed cross-calendar arithmetic used `parseCalendarDatePairForArithmetic`/`calendarOfAllDateValues`, which already avoid this by construction.
 3. **The `.equals()` calendar-sensitivity trap resolved itself once D1 and D4 were enforced — no dedicated `.equals()`→`.compare()` patch was needed.** The original architect plan flagged 13 at-risk `.equals()` call sites (coincident-point dedup in `intervalXorAll*`/`intervalSplitAt*`/`intervalDivideEqually*`/`intervalCount*`). Verified: `.equals()` is calendar-sensitive *across* calendars but correct *within* one (same-calendar `PlainDate`s compare equal correctly, including after round-trip arithmetic). Since D1 confines calendar-awareness to `plain/` `PlainDate`, and D4 rejects mismatched-calendar inputs to every function that later calls `.equals()`, the cross-calendar scenario that made `.equals()` unsafe is structurally unreachable by the time it runs. No source change was needed at these sites beyond the D4 gate already added for other reasons.
 
-### Follow-up story — E7 (spec written; GitHub issue not yet filed)
+### Follow-up story — E7 (Issue #152)
 
 **Extend `zoned/` with a GMT-shape calendar-annotated zoned string.** D2 removed `zoned/`'s accidental calendar-awareness rather than blessing it, on contract-coherence grounds — but the underlying capability (calendar-aware zoned arithmetic) was real and verified-correct before removal. The full spec is now written up as **E7** at the end of this file: a GMT-native calendar-annotated `ZonedDateTime` string grammar (not a re-acceptance of Temporal's own shape, per D1's reasoning), decisions for how `disambiguation`/`offset` interact with a calendar-tagged value, and the D4/D5/D7 policy questions E5 answered for `plain/`, re-derived for the zoned case. It is its own E-group story — do not fold it into E6.
 
@@ -288,7 +288,7 @@ Tests: each cyclable field at both its minimum and maximum boundary, in both dir
 
 ### E7 — Calendar-aware zoned datetime strings
 
-**GitHub Issue:** not yet filed — create it via `tracker.md`'s workflow and paste the number here and in the `story-groups.md` bullet.
+**GitHub Issue:** #152
 
 **Title:**
 

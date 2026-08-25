@@ -2,6 +2,7 @@ export * from "./addZoned";
 export * from "./addZonedBusinessDays";
 export * from "./clampZoned";
 export * from "./closestZonedTo";
+export * from "./cycleZoned";
 export * from "./diffZoned";
 export * from "./diffZonedAsDuration";
 export * from "./endOfQuarterForZoned";

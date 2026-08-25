@@ -239,6 +239,24 @@ setZoned(
 
 `setZoned`/`setUnix`/`setUtc` also accept `disambiguation` and `offset` for DST gap/overlap control — see [DST Disambiguation](../../docs/dst-disambiguation.md).
 
+`cycleDate`/`cycleDateTime`/`cycleTime`/`cycleZoned` adjust a single field and **wrap** at that field's own min/max instead of carrying into the next larger field — the datepicker-segment-editing primitive `add*` can't express, since overflowing into the next field is exactly what `add*` is for:
+
+```typescript
+import { addDate, cycleDate, cycleZoned } from "@burglekitt/gmt";
+
+cycleDate("2024-12-15", "month", 1);
+// "2024-01-15" — stays in the same year
+
+addDate("2024-12-15", { months: 1 });
+// "2025-01-15" — addDate correctly overflows into the next year instead
+
+cycleZoned("2024-03-10T01:30:00-06:00[America/Chicago]", "hour", 1);
+// "2024-03-10T03:30:00-05:00[America/Chicago]" — the cycled hour lands in a spring-forward
+// gap; disambiguation ("compatible" by default) resolves it the same way setZoned does
+```
+
+`cycleZoned` also accepts `disambiguation` and `offset` (default `offset: "ignore"`) for the same DST gap/overlap control as `setZoned` — see [DST Disambiguation](../../docs/dst-disambiguation.md). `options.round` on any of the four steps to the next multiple of `amount` rather than rounding to the nearest one, matching `@internationalized/date`'s `CycleOptions.round`.
+
 `isWeekend`/`isZonedWeekend` check locale-specific weekend days (via `Intl.Locale`'s `weekInfo`) rather than assuming Saturday/Sunday:
 
 ```typescript

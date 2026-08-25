@@ -7,13 +7,14 @@ description: >
   addZoned, subtractZoned, startOfZoned, endOfZoned, startOfQuarterForZoned,
   endOfQuarterForZoned, mapZonedHoursInDay, getLocaleZonedStartOfWeek,
   getLocaleZonedEndOfWeek, clampZoned, closestZonedTo, getHoursInZonedDay,
-  setZoned, setUnix, setUtc for DST-aware construction, arithmetic, boundaries,
-  locale-week computations, day-length queries, and single-call field setting.
-  Most accept disambiguation ("compatible" | "earlier" | "later" | "reject") for
-  gap/overlap resolution; boundary and set* functions also accept offset
-  ("prefer" | "use" | "ignore" | "reject", default "ignore"). Use
-  getZonedOffset, getZonedOffsetAs, getTimeZoneOffset, formatTimeZoneName,
-  isInDaylightSaving for reading a zoned value's UTC offset and DST status.
+  setZoned, setUnix, setUtc, cycleZoned for DST-aware construction, arithmetic,
+  boundaries, locale-week, day-length, field setting, and field cycling (wrap,
+  don't carry into the next field). Most accept disambiguation ("compatible" |
+  "earlier" | "later" | "reject") for gap/overlap resolution; boundary, set*,
+  and cycleZoned also accept offset ("prefer" | "use" | "ignore" | "reject",
+  default "ignore"). Use getZonedOffset, getZonedOffsetAs, getTimeZoneOffset,
+  formatTimeZoneName, isInDaylightSaving for reading a zoned value's UTC offset
+  and DST status.
 sources:
   - 'burglekitt/gmt:packages/gmt/src/zoned/get/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/format/index.ts'
@@ -41,6 +42,7 @@ sources:
   - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/setZoned.ts'
   - 'burglekitt/gmt:packages/gmt/src/unix/calculate/setUnix.ts'
   - 'burglekitt/gmt:packages/gmt/src/utc/calculate/setUtc.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/cycleZoned.ts'
 metadata:
   type: core
   library: '@burglekitt/gmt'
@@ -164,6 +166,30 @@ setZoned(
 ```
 
 `setZoned`/`setUnix`/`setUtc` wrap `Temporal.ZonedDateTime.prototype.with()`, resolving every supplied field in a single atomic overflow pass — the safe alternative to composing `addZoned()`/`addUnix()`/`addUtc()` calls field-by-field, and the only construction path that can reproduce `startOfZoned`'s disambiguation-plus-offset handling (`addZoned()` has no `offset` control equivalent, because `ZonedDateTime.prototype.add()` doesn't accept `disambiguation`/`offset` at all). They accept `disambiguation`, `offset` (default `"ignore"`, same rule as the `startOfZoned` family), and `overflow` (real effect here, since fields are caller-supplied rather than fixed literals). `setUtc`'s `disambiguation`/`offset` are accepted for signature consistency but are permanently inert — `"UTC"` has no DST transitions.
+
+### Cycle (wrap) a single field instead of setting it directly (E6)
+
+```ts
+import { cycleZoned } from "@burglekitt/gmt";
+
+cycleZoned("2024-12-15T09:30:00-06:00[America/Chicago]", "month", 1);
+// "2024-01-15T09:30:00-06:00[America/Chicago]" — wraps, stays in the same year
+
+cycleZoned("2024-03-10T01:30:00-06:00[America/Chicago]", "hour", 1);
+// "2024-03-10T03:30:00-05:00[America/Chicago]" — cycled hour lands in a spring-forward
+// gap; disambiguation ("compatible" by default) resolves it the same way setZoned does
+
+cycleZoned(
+  "2024-11-03T00:30:00-05:00[America/Chicago]",
+  "hour",
+  1,
+  { disambiguation: "reject" },
+);
+// "" — cycled hour lands in the fall-back overlap; offset defaults to "ignore" so
+// disambiguation actually fires (see the C3 trap below)
+```
+
+`cycleZoned` is not `addZoned`: it adjusts one field and wraps at that field's own min/max (`hour` always `0–23`, etc.) instead of carrying into the next larger field — building on `setZoned`'s J1 field-setting foundation the same way `cycleDate`/`cycleDateTime`/`cycleTime` build on `setDate`/`setDateTime`/`setTime` (see the `calculate-dates` skill). The wrap bounds themselves are plain, DST-agnostic local-field bounds; whatever DST edge case the wrapped local time lands on is then resolved by `disambiguation`/`offset`, passed straight through to `setZoned`, exactly like any other field-set call.
 
 ### Get the number of hours in a zoned calendar day
 
@@ -300,6 +326,10 @@ The names are close enough to be misread. Four different DST-related questions, 
 | What happens when construction lands on an ambiguous/nonexistent instant? | `disambiguation` / `offset` | Orthogonal — a construction-time choice, not a query |
 
 Picking the wrong one is a common mistake: `hasDaylightSaving("America/New_York")` is `true` year-round (the zone observes DST), which tells you nothing about whether a *specific* March 15th value is currently in it — that's `isInDaylightSaving`'s job.
+
+### Reaching for `cycleZoned` when calendar arithmetic is wanted (or vice versa)
+
+`cycleZoned` is not `addZoned`. Cycling `month` by `+1` from December stays in the same year — `cycleZoned("2024-12-15T09:30:00-06:00[America/Chicago]", "month", 1)` returns `"2024-01-15T09:30:00-06:00[America/Chicago]"`, not `"2025-01-15..."`. Use `addZoned`/`subtractZoned` for calendar arithmetic where crossing a year boundary is the expected outcome; use `cycleZoned` only when a single field (e.g. a datepicker segment) must stay isolated from the others.
 
 ## References
 

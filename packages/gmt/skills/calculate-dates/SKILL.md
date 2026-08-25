@@ -2,19 +2,17 @@
 name: calculate-dates
 description: >
   Add or subtract time from dates. Use addDays, addMonths, subtractTime for date
-  arithmetic. Use addBusinessDays/subtractBusinessDays for Mon-Fri business-day
-  arithmetic that skips weekends. Use diffDate for differences. Use clampDate to
-  restrict a date to a range, or closestDateTo to find the nearest candidate by
-  calendar distance. add*/subtract* accept an optional overflow ("constrain" |
-  "reject") option; diff* accept optional
-  smallestUnit/roundingIncrement/roundingMode options. Use
-  getLocaleStartOfWeek/getLocaleEndOfWeek for locale-driven week boundaries
-  (first day of week from the locale, e.g. en-US Sunday vs fr-FR Monday) instead
-  of startOfDate/endOfDate's ISO-biased weekStartsOn option. Use
-  setDate/setDateTime/setTime to set one or more fields (year, month, day, hour,
-  ...) atomically — the safe alternative to composing add* calls field-by-field,
-  which resolves each field's overflow independently and can silently diverge on
-  multi-field updates.
+  arithmetic. Use addBusinessDays/subtractBusinessDays for business-day
+  arithmetic (skips weekends). Use diffDate for differences. Use clampDate to
+  restrict a date to a range, or closestDateTo for the nearest candidate by
+  calendar distance. add*/subtract* accept optional overflow ("constrain" |
+  "reject"); diff* accept optional smallestUnit/roundingIncrement/roundingMode.
+  Use getLocaleStartOfWeek/getLocaleEndOfWeek for locale-driven week boundaries
+  instead of startOfDate/endOfDate's ISO-biased weekStartsOn. Use
+  setDate/setDateTime/setTime to set fields atomically (safer than composing
+  add* calls field-by-field). Use cycleDate/cycleDateTime/cycleTime to wrap a
+  single field instead of carrying into the next (month +1 from December stays
+  in the same year, unlike addMonths).
 sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/calculate/index.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/calculate/clampDate.ts'
@@ -22,6 +20,9 @@ sources:
   - 'burglekitt/gmt:packages/gmt/src/plain/calculate/setDate.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/calculate/setDateTime.ts'
   - 'burglekitt/gmt:packages/gmt/src/plain/calculate/setTime.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/cycleDate.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/cycleDateTime.ts'
+  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/cycleTime.ts'
 metadata:
   type: core
   library: '@burglekitt/gmt'
@@ -274,6 +275,23 @@ diffDate(adarI, "2024-11-03", "days"); // falls back to Gregorian — the two ar
 
 Only `plain/` `PlainDate` functions accept this — `addDateTime`/`addTime`/`addZoned`/`addUtc`/`addUnix` and their `subtract*`/`diff*` siblings reject a calendar annotation (return the sentinel), since GMT has no calendar-annotated `PlainDateTime`/`ZonedDateTime`/UTC grammar and `PlainTime` has no calendar concept at all. `addBusinessDays`/`subtractBusinessDays` also reject it — weekday is calendar-independent in every supported calendar, so a tag would change nothing about the answer while implying it might. See `packages/gmt/README.md`'s "Calendar-aware interval and duration arithmetic" section and `context/roadmap/issues/E.md`'s E5 outcome for the full audit.
 
+### Cycle a single field without changing others (E6)
+
+```ts
+import { cycleDate, cycleDateTime, cycleTime } from "@burglekitt/gmt";
+
+cycleDate("2024-12-15", "month", 1); // "2024-01-15" — wraps, stays in the same year
+cycleDate("2024-12-31", "day", 1); // "2024-12-01" — wraps within the same month
+cycleDate("2024-01-15", "month", 13); // "2024-02-15" — an amount larger than the range still wraps correctly
+
+cycleDateTime("2024-06-15T23:30:00", "hour", 1); // "2024-06-15T00:30:00" — wraps, stays on the same day
+cycleTime("09:22:00", "minute", 15, { round: true }); // "09:30:00" — steps to the next multiple of 15, not the nearest
+
+cycleDate("2024-06-15", "week", 1); // "" — "week" isn't a cyclable field (only year/month/day/hour/minute/second/ms/us/ns)
+```
+
+`cycleDate`/`cycleDateTime`/`cycleTime` are not `addDate`/`addDateTime`/`addTime`: they adjust one field and wrap at that field's own min/max instead of carrying into the next larger field. Cycling `month`/`year` can still clamp (or, with `overflow: "reject"`, reject) `day` — the same `.with()`-based clamping `setDate` documents — since they build on the same J1 field setters. `overflow` is accepted on `cycleTime` for signature consistency but is inert there: a cycled time field's wrapped value is always already in range. The `zoned/` equivalent, `cycleZoned`, lives in the `zoned-date-ops` skill since it also takes `disambiguation`/`offset`.
+
 ## Common Mistakes
 
 ### HIGH Using manual date arithmetic
@@ -355,6 +373,29 @@ const result = addDays("2024-02-28", 1); // "2024-02-29" (correct for leap year)
 ```
 
 Source: Temporal handles leap years automatically
+
+### HIGH Reaching for cycleDate when calendar arithmetic is wanted (or vice versa)
+
+Wrong:
+
+```ts
+// Trying to move a date forward by a month, but landing a year off:
+const nextBillingDate = cycleDate("2024-12-15", "month", 1); // "2024-01-15" — same year!
+```
+
+Correct:
+
+```ts
+import { addDate, cycleDate } from "@burglekitt/gmt";
+
+// Calendar arithmetic (crossing year boundaries is expected): use addDate
+const nextBillingDate = addDate("2024-12-15", { months: 1 }); // "2025-01-15"
+
+// Datepicker segment editing (year must NOT change when the month segment wraps): use cycleDate
+const monthSegmentIncremented = cycleDate("2024-12-15", "month", 1); // "2024-01-15"
+```
+
+Source: packages/gmt/src/plain/calculate/cycleDate.ts — cycling wraps at the field's own boundary; adding overflows into the next field
 
 ## References
 

@@ -161,6 +161,9 @@ skills:
       - roundingMode
       - getLocaleStartOfWeek
       - getLocaleEndOfWeek
+      - cycleDate
+      - cycleDateTime
+      - cycleTime
     tasks:
       - Add days to a date
       - Subtract months from a date
@@ -171,6 +174,7 @@ skills:
       - Clamp a date to a min/max range
       - Find the nearest date to a target from a list of candidates
       - Get locale-aware week boundaries instead of ISO-Monday defaults
+      - Cycle (wrap) a single field without changing its neighbors, e.g. for datepicker segment editing
 
   - name: Durations
     slug: durations
@@ -321,6 +325,7 @@ skills:
       - getLocaleZonedDayOfWeek
       - clampZoned
       - closestZonedTo
+      - cycleZoned
     tasks:
       - Get current time in timezone
       - Format datetime in timezone
@@ -335,6 +340,7 @@ skills:
       - Get the locale-relative day-of-week index for a zoned datetime
       - Clamp a zoned datetime to a min/max range
       - Find the nearest zoned datetime to a target from a list of candidates
+      - Cycle (wrap) a single zoned field without changing its neighbors, with full DST disambiguation and offset control
 
   - name: Convert Temporal Types
     slug: convert-types

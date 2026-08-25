@@ -9,6 +9,7 @@ IANA timezone-aware date and time operations. All functions accept and return IS
 Timezone-aware arithmetic:
 
 - `addZoned`, `addZonedBusinessDays`, `clampZoned`, `closestZonedTo`
+- `cycleZoned`
 - `diffZoned`, `diffZonedAsDuration`
 - `endOfQuarterForZoned`, `endOfZoned`
 - `getHoursInZonedDay`

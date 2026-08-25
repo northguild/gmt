@@ -10,6 +10,7 @@ Arithmetic and date manipulation:
 
 - `addBusinessDays`, `addDate`, `addDateTime`, `addTime`
 - `clampDate`, `closestDateTo`
+- `cycleDate`, `cycleDateTime`, `cycleTime`
 - `diffDate`, `diffDateAsDuration`, `diffDateTime`, `diffDateTimeAsDuration`, `diffTime`
 - `endOfDate`, `endOfDateTime`, `endOfTime`
 - `endOfQuarterForDate`, `endOfQuarterForDateTime`

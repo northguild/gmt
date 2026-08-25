@@ -11,6 +11,9 @@ export {
   calendarOfAllDateValues,
   calendarSystemOfDateValue,
 } from "./calendarValueOfDate";
+export { cycleFieldValue } from "./cycleFieldValue";
+export { dateCycleFieldBounds } from "./dateCycleFieldBounds";
+export { timeCycleFieldBounds } from "./timeCycleFieldBounds";
 export { durationUntilString } from "./durationUntilString";
 export { formatDateInCalendar } from "./formatDateInCalendar";
 export { hasCalendarAnnotation } from "./hasCalendarAnnotation";

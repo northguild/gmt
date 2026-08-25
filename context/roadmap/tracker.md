@@ -62,8 +62,8 @@ Issue number tracker (fill in as issues are created). `Order` is the sequence to
 | 50    | E3    | Issue #76    | Done        | unscheduled, no publish plan until picked up |
 | 51    | E4    | Issue #77    | Done        | unscheduled, no publish plan until picked up |
 | 52    | E5    | Issue #78    | Done        | unscheduled, no publish plan until picked up (release cut after E6) |
-| 53    | E6    | Issue #125   | Not started | unscheduled, no publish plan until picked up |
-| 54    | E7    | Not yet filed | Not started | unscheduled, no publish plan until picked up (spec in [issues/E.md](issues/E.md)) |
+| 53    | E6    | Issue #125   | Done        | not yet published — Group E's release is now due (E1–E6; E7 is a separate follow-up) |
+| 54    | E7    | Issue #152   | Not started | unscheduled, no publish plan until picked up (spec in [issues/E.md](issues/E.md)) |
 
 ## Story Group J phases
 
