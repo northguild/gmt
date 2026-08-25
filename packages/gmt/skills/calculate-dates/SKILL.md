@@ -294,6 +294,35 @@ cycleDate("2024-06-15", "week", 1); // "" — "week" isn't a cyclable field (onl
 
 ## Common Mistakes
 
+### Doing calendar arithmetic and timezone arithmetic in two steps
+
+`addZoned`/`subtractZoned` accept GMT's calendar-annotated zoned string and resolve the calendar
+unit and the DST rules together:
+
+```ts
+addZoned("5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]", { months: 1 });
+// "5784-07-15T14:30:00-04:00[u-ca=hebrew][America/New_York]" — Adar I -> Adar AND EST -> EDT
+```
+
+Splitting this into a `plain/` calendar step plus a zoned conversion gives the wrong answer in
+either order: do the calendar step first and DST is applied to an already-resolved wall time; do
+the zoned step first and there is no calendar left to step in. Note that `addZonedBusinessDays` /
+`subtractZonedBusinessDays` still reject the annotation — day-of-week is ISO-fixed in every
+supported calendar, so a tag would change nothing.
+
+### Building a calendar-annotated zoned string by hand
+
+GMT's zoned calendar grammar puts `[u-ca=...]` **before** `[timeZone]` — the reverse of RFC 9557
+and of Temporal's own `toString()`:
+
+```
+5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]   // correct
+5784-06-15T14:30:00-05:00[America/New_York][u-ca=hebrew]   // WRONG — silently misparses in Temporal
+```
+
+Always produce these with `convertZonedToCalendar`, never by concatenation. See the
+`zoned-date-ops` skill's Common Mistakes for the full trap.
+
 ### HIGH Using manual date arithmetic
 
 Wrong:

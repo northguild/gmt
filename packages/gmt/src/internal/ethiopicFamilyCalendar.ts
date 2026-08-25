@@ -138,6 +138,37 @@ export function dateFromEthiopicFamilyFields(
 }
 
 /**
+ * Split a Temporal.PlainDate into GMT's calendar-annotated string halves for an Ethiopic-family
+ * calendar, mirroring `calendarDateParts`' shape for the rest of the calendar systems but
+ * routed entirely through `ethiopicFamilyFieldsFromDate` — see the module comment above.
+ *
+ * Returned as `{ date, annotation }` rather than one string so the zoned grammar can splice its
+ * time/offset between the two halves — see `calendarDateParts`' doc comment for why.
+ */
+export function ethiopicFamilyDateParts(
+  date: Temporal.PlainDate,
+  calendar: EthiopicFamilyCalendar,
+): { date: string; annotation: string } {
+  const fields = ethiopicFamilyFieldsFromDate(date, calendar);
+  const month = String(fields.month).padStart(2, "0");
+  const day = String(fields.day).padStart(2, "0");
+
+  if (calendar === "ethiopic") {
+    const eraYear = String(fields.eraYear).padStart(4, "0");
+    return {
+      date: `${eraYear}-${month}-${day}`,
+      annotation: `[u-ca=ethiopic;era=${fields.era}]`,
+    };
+  }
+
+  const year = String(fields.year).padStart(4, "0");
+  return {
+    date: `${year}-${month}-${day}`,
+    annotation: `[u-ca=${calendar}]`,
+  };
+}
+
+/**
  * Format a Temporal.PlainDate as GMT's calendar-annotated string for an Ethiopic-family
  * calendar, mirroring `formatCalendarDate`'s shape for the rest of the calendar systems but
  * routed entirely through `ethiopicFamilyFieldsFromDate` — see the module comment above.
@@ -146,15 +177,9 @@ export function formatEthiopicFamilyDate(
   date: Temporal.PlainDate,
   calendar: EthiopicFamilyCalendar,
 ): string {
-  const fields = ethiopicFamilyFieldsFromDate(date, calendar);
-  const month = String(fields.month).padStart(2, "0");
-  const day = String(fields.day).padStart(2, "0");
-
-  if (calendar === "ethiopic") {
-    const eraYear = String(fields.eraYear).padStart(4, "0");
-    return `${eraYear}-${month}-${day}[u-ca=ethiopic;era=${fields.era}]`;
-  }
-
-  const year = String(fields.year).padStart(4, "0");
-  return `${year}-${month}-${day}[u-ca=${calendar}]`;
+  const { date: datePart, annotation } = ethiopicFamilyDateParts(
+    date,
+    calendar,
+  );
+  return `${datePart}${annotation}`;
 }

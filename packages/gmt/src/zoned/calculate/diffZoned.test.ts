@@ -1,3 +1,5 @@
+import { calendarZonedFixtures } from "../../test";
+import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
 import { diffZoned } from "./diffZoned";
 
 describe("diffZonedDateTime", () => {
@@ -214,6 +216,62 @@ describe("diffZonedDateTime", () => {
   });
   // E5 (issue #78), decision of record D2 -- see addZoned.test.ts for the full rationale.
   it("returns null when value1 carries a calendar annotation", () => {
-    expect(diffZoned("2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]", "2024-06-30T23:59:59+00:00[UTC]", "months")).toBeNull();
+    expect(
+      diffZoned(
+        "2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]",
+        "2024-06-30T23:59:59+00:00[UTC]",
+        "months",
+      ),
+    ).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// E7 (issue #152), D5-zoned — measure in the endpoints' shared calendar, fall back to
+// Gregorian/ISO on mismatch or bare input. Every expected value produced by running
+// @js-temporal/polyfill@0.5.1.
+// ---------------------------------------------------------------------------------------------
+describe("diffZoned with GMT calendar-annotated values", () => {
+  const Y = calendarZonedFixtures.hebrewLeapYearSpan;
+  const ISLAMIC_END =
+    "1446-03-30T00:00:00-04:00[u-ca=islamic-tabular][America/New_York]";
+
+  it("measures a Hebrew leap year as 13 months where the ISO control measures 12", () => {
+    expect(
+      diffZoned(Y.tishri1_5784NewYork, Y.tishri1_5785NewYork, "months"),
+    ).toBe(13);
+    expect(diffZoned(Y.isoStart, Y.isoEnd, "months")).toBe(12);
+  });
+
+  // The fallback is what makes a purely time-unit question answerable across calendars at all:
+  // ZonedDateTime.until throws for EVERY largestUnit when the calendars differ.
+  it("falls back to Gregorian for mismatched tags instead of returning null", () => {
+    expect(diffZoned(Y.tishri1_5784NewYork, ISLAMIC_END, "hours")).toBe(9192);
+    expect(diffZoned(Y.isoStart, Y.isoEnd, "hours")).toBe(9192);
+  });
+
+  it.each`
+    label                       | start                    | end                      | expected
+    ${"mismatched tags"}        | ${Y.tishri1_5784NewYork} | ${ISLAMIC_END}           | ${12}
+    ${"tagged start, bare end"} | ${Y.tishri1_5784NewYork} | ${Y.isoEnd}              | ${12}
+    ${"both bare"}              | ${Y.isoStart}            | ${Y.isoEnd}              | ${12}
+    ${"both hebrew"}            | ${Y.tishri1_5784NewYork} | ${Y.tishri1_5785NewYork} | ${13}
+  `("returns $expected months for $label", ({ start, end, expected }) => {
+    expect(diffZoned(start, end, "months")).toBe(expected);
+  });
+
+  it.each`
+    value                                                         | reason
+    ${"5784-01-01T00:00:00-04:00[America/New_York][u-ca=hebrew]"} | ${"GMT digits in Temporal's segment ordering"}
+    ${"5785-13-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"} | ${"month 13 in a non-leap Hebrew year"}
+  `("returns null when the start is $value ($reason)", ({ value }) => {
+    expect(diffZoned(value, Y.isoEnd, "days")).toBeNull();
+  });
+
+  it("returns null when Temporal.ZonedDateTime.from throws for a calendar-tagged pair", () => {
+    mockTemporalZonedDateTimeFromThrow();
+    expect(
+      diffZoned(Y.tishri1_5784NewYork, Y.tishri1_5785NewYork, "months"),
+    ).toBeNull();
   });
 });

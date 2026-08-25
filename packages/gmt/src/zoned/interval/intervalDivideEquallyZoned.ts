@@ -1,6 +1,9 @@
-import { Temporal } from "@js-temporal/polyfill";
-import { isLeapSecond } from "../../plain/validate/isLeapSecond";
-import { isValidZonedInterval } from "./validate";
+import {
+  calendarOfAllZonedValues,
+  formatZonedInCalendar,
+  parseCalendarZonedValue,
+} from "../../internal";
+import { isValidCalendarZonedInterval } from "./validate";
 
 /**
  * Split a zoned interval into `n` equal-length sub-intervals.
@@ -15,6 +18,13 @@ import { isValidZonedInterval } from "./validate";
  * - A zero-length interval (`start === end`) returns `n` identical zero-length sub-intervals.
  * - Returns `[]` when `n` is not a positive integer, or on invalid input (unparseable
  *   start/end, `start > end`, leap-second strings).
+ * - Accepts GMT calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
+ *   well as bare ISO ones — E7 (issue #152) — but **rejects a mismatched pair**: `start` and `end`
+ *   must name the same calendar system (E7's D4-zoned), since the synthesized boundaries are
+ *   values the caller reads back as datetimes and an array of differently-tagged records would be
+ *   unreadable as a set. A mismatch returns `[]`.
+ * - Output boundaries are re-derived in the resolved calendar via `formatZonedInCalendar`, never
+ *   copied from an input string (E7's D7-zoned).
  *
  * @param start ISO 8601 zoned datetime string for the interval start
  * @param end ISO 8601 zoned datetime string for the interval end
@@ -35,22 +45,29 @@ export function intervalDivideEquallyZoned(
     return [];
   }
 
-  if (isLeapSecond(start) || isLeapSecond(end)) {
+  if (!isValidCalendarZonedInterval(start, end)) {
     return [];
   }
 
-  if (!isValidZonedInterval(start, end)) {
+  // D4-zoned reject gate: both endpoints must agree on a calendar, or there is no calendar to
+  // express the synthesized boundaries in.
+  const calendar = calendarOfAllZonedValues([start, end]);
+  if (!calendar) {
     return [];
   }
 
   try {
-    const startVal = Temporal.ZonedDateTime.from(start);
-    const endVal = Temporal.ZonedDateTime.from(end);
+    const startVal = parseCalendarZonedValue(start);
+    const endVal = parseCalendarZonedValue(end);
 
+    // Safe: `.equals()` here is `Temporal.Instant.prototype.equals`, and `Instant` carries no
+    // calendar field at all — verified calendar-blind. E7 re-audited this site rather than
+    // inheriting E5's "structurally unreachable" verdict, which depended on mixed calendars never
+    // reaching `zoned/` at all.
     if (startVal.toInstant().equals(endVal.toInstant())) {
       return Array.from({ length: n }, () => ({
-        start: startVal.toString(),
-        end: endVal.toString(),
+        start: formatZonedInCalendar(startVal, calendar),
+        end: formatZonedInCalendar(endVal, calendar),
       }));
     }
 
@@ -58,7 +75,7 @@ export function intervalDivideEquallyZoned(
       .until(endVal, { largestUnit: "nanosecond" })
       .total({ unit: "nanosecond", relativeTo: startVal });
 
-    const boundaries: Temporal.ZonedDateTime[] = [startVal];
+    const boundaries: Array<typeof startVal> = [startVal];
     for (let i = 1; i < n; i++) {
       boundaries.push(
         startVal.add({ nanoseconds: Math.round((totalNs * i) / n) }),
@@ -69,8 +86,8 @@ export function intervalDivideEquallyZoned(
     const result: Array<{ start: string; end: string }> = [];
     for (let i = 0; i < boundaries.length - 1; i++) {
       result.push({
-        start: boundaries[i].toString(),
-        end: boundaries[i + 1].toString(),
+        start: formatZonedInCalendar(boundaries[i], calendar),
+        end: formatZonedInCalendar(boundaries[i + 1], calendar),
       });
     }
 

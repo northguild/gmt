@@ -1,5 +1,11 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { battleTestTimeZones, localNoonBattleCases } from "../../test";
+import {
+  battleTestTimeZones,
+  calendarZonedFixtures,
+  localNoonBattleCases,
+} from "../../test";
+import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
+import { convertZonedToCalendar } from "../convert";
 import { parseTimeZoneFromZoned } from "../parse";
 import { subtractZoned } from "./subtractZoned";
 
@@ -270,7 +276,92 @@ describe("subtractZoned", () => {
     ).toBe("2024-02-29T12:00:00-05:00[America/New_York]");
   });
   // E5 (issue #78), decision of record D2 -- see addZoned.test.ts for the full rationale.
-  it("returns \"\" when value carries a calendar annotation", () => {
-    expect(subtractZoned("2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]", { months: 1 })).toBe("");
+  it('returns "" when value carries a calendar annotation', () => {
+    expect(
+      subtractZoned("2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]", {
+        months: 1,
+      }),
+    ).toBe("");
   });
+});
+
+// ---------------------------------------------------------------------------------------------
+// E7 (issue #152) — GMT calendar-annotated zoned strings. Every expected value below was produced
+// by running @js-temporal/polyfill@0.5.1, never hand-written.
+// ---------------------------------------------------------------------------------------------
+describe("subtractZoned with GMT calendar-annotated values", () => {
+  const H = calendarZonedFixtures.hebrewLeapMonth;
+  const J = calendarZonedFixtures.japaneseEraFold;
+
+  it("crosses a Hebrew leap month and a DST transition in one call", () => {
+    expect(subtractZoned(H.adar15NewYork, { months: 1 })).toBe(
+      H.adarI15NewYork,
+    );
+  });
+
+  it("re-derives the Heisei era on a plain -1 day in Tokyo", () => {
+    expect(subtractZoned(J.reiwa1_0501Tokyo, { days: 1 })).toBe(
+      J.heisei31_0430Tokyo,
+    );
+  });
+
+  // R1 regression — see addZoned's equivalent test for why this returns "" without the fix.
+  it("resolves a non-compatible disambiguation on a calendar-tagged value instead of returning the sentinel", () => {
+    expect(
+      subtractZoned(
+        H.adar15NewYork,
+        { months: 1 },
+        { disambiguation: "later" },
+      ),
+    ).toBe(H.adarI15NewYork);
+  });
+
+  it.each`
+    disambiguation
+    ${"compatible"}
+    ${"earlier"}
+    ${"later"}
+  `(
+    "returns the Adar I value for disambiguation $disambiguation (no fold involved)",
+    ({ disambiguation }) => {
+      expect(
+        subtractZoned(H.adar15NewYork, { months: 1 }, { disambiguation }),
+      ).toBe(H.adarI15NewYork);
+    },
+  );
+
+  it.each`
+    value                                                         | reason
+    ${"5784-07-15T14:30:00-04:00[America/New_York][u-ca=hebrew]"} | ${"GMT digits in Temporal's segment ordering"}
+    ${"5785-13-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"} | ${"month 13 in a non-leap Hebrew year"}
+    ${"5784-07-15[u-ca=hebrew]"}                                  | ${"a plain calendar date, not a zoned value"}
+  `('returns "" for $value ($reason)', ({ value }) => {
+    expect(subtractZoned(value, { months: 1 })).toBe("");
+  });
+
+  it('returns "" when Temporal.ZonedDateTime.from throws for a calendar-tagged value', () => {
+    mockTemporalZonedDateTimeFromThrow();
+    expect(subtractZoned(H.adar15NewYork, { months: 1 })).toBe("");
+  });
+
+  it.each(
+    battleTestTimeZones.map((timeZone) => ({
+      timeZone,
+      value: convertZonedToCalendar(
+        Temporal.Instant.from("2024-10-03T14:30:45Z")
+          .toZonedDateTimeISO(timeZone)
+          .toString(),
+        "hebrew",
+      ),
+    })),
+  )(
+    "subtracts 1 Hebrew month from $value in $timeZone and keeps the calendar tag and zone",
+    ({ timeZone, value }) => {
+      const result = subtractZoned(value, { months: 1 });
+
+      expect(result).not.toBe("");
+      expect(result).toContain("[u-ca=hebrew]");
+      expect(result).toContain(`[${timeZone}]`);
+    },
+  );
 });

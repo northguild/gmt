@@ -1,6 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { hasCalendarAnnotation } from "../../internal";
-import { isLeapSecond } from "../../plain/validate/isLeapSecond";
+import { parseCalendarZonedValue } from "../../internal";
+import { isValidCalendarZonedDateTime } from "../validate";
 
 /**
  * Return true when `pointOrStart` falls within the interval `[intervalStart, intervalEnd]`
@@ -12,8 +12,14 @@ import { isLeapSecond } from "../../plain/validate/isLeapSecond";
  * - Returns `false` if `intervalStart > intervalEnd` (invalid outer interval).
  * - Returns `false` if `innerStart > innerEnd` in 4-arg mode (invalid inner interval).
  * - Returns `false` on invalid input (wrong type, malformed strings, leap seconds).
- * - Rejects any `[u-ca=...]` calendar annotation (E5 issue #78, decision of record D2) — see
- *   `isValidZonedDateTime`'s JSDoc for why.
+ * - **Accepts mixed calendar systems** (E7's D4-zoned, issue #152): both bare ISO zoned strings
+ *   and GMT calendar-annotated ones (`"5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"`),
+ *   and the endpoints need not agree on a calendar. Ordering is calendar-independent — verified
+ *   that `Temporal.Instant` carries no calendar field at all and that
+ *   `Instant.compare`/`ZonedDateTime.compare` both return `0` for the same instant expressed in
+ *   hebrew, islamic-civil, japanese and iso8601.
+ * - Still rejects Temporal's own `[timeZone][u-ca=...]` RFC 9557 ordering, which reads GMT's
+ *   calendar-native digits as ISO digits — see `regex/calendar-zoned-date-time.ts`.
  *
  * @param intervalStart ISO 8601 zoned datetime string for the outer interval start
  * @param intervalEnd ISO 8601 zoned datetime string for the outer interval end
@@ -32,32 +38,23 @@ export function intervalContainsZoned(
   pointOrStart: string,
   pointEnd?: string,
 ): boolean {
+  // One gate per endpoint: `isValidCalendarZonedDateTime` already covers non-strings, empty
+  // strings, leap seconds (which Temporal would otherwise silently clamp to :59), unknown zones
+  // and Temporal's forbidden segment ordering — and, unlike `isValidZonedDateTime`, accepts GMT's
+  // calendar-annotated grammar. `pointEnd` is optional, so it is only checked when supplied.
   if (
-    typeof intervalStart !== "string" ||
-    typeof intervalEnd !== "string" ||
-    typeof pointOrStart !== "string" ||
-    (pointEnd !== undefined && typeof pointEnd !== "string")
-  ) {
-    return false;
-  }
-
-  if (
-    isLeapSecond(intervalStart) ||
-    isLeapSecond(intervalEnd) ||
-    isLeapSecond(pointOrStart) ||
-    (pointEnd !== undefined && isLeapSecond(pointEnd)) ||
-    hasCalendarAnnotation(intervalStart) ||
-    hasCalendarAnnotation(intervalEnd) ||
-    hasCalendarAnnotation(pointOrStart) ||
-    (pointEnd !== undefined && hasCalendarAnnotation(pointEnd))
+    !isValidCalendarZonedDateTime(intervalStart) ||
+    !isValidCalendarZonedDateTime(intervalEnd) ||
+    !isValidCalendarZonedDateTime(pointOrStart) ||
+    (pointEnd !== undefined && !isValidCalendarZonedDateTime(pointEnd))
   ) {
     return false;
   }
 
   try {
-    const startZdt = Temporal.ZonedDateTime.from(intervalStart);
-    const endZdt = Temporal.ZonedDateTime.from(intervalEnd);
-    const pointZdt = Temporal.ZonedDateTime.from(pointOrStart);
+    const startZdt = parseCalendarZonedValue(intervalStart);
+    const endZdt = parseCalendarZonedValue(intervalEnd);
+    const pointZdt = parseCalendarZonedValue(pointOrStart);
 
     const startInstant = startZdt.toInstant();
     const endInstant = endZdt.toInstant();
@@ -74,7 +71,7 @@ export function intervalContainsZoned(
       );
     }
 
-    const endPointZdt = Temporal.ZonedDateTime.from(pointEnd);
+    const endPointZdt = parseCalendarZonedValue(pointEnd);
     const endPointInstant = endPointZdt.toInstant();
 
     if (Temporal.Instant.compare(pointInstant, endPointInstant) > 0) {

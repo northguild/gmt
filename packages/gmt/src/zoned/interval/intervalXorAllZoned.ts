@@ -1,6 +1,10 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { isLeapSecond } from "../../plain/validate/isLeapSecond";
-import { isValidZonedInterval } from "./validate";
+import {
+  calendarOfAllZonedValues,
+  formatZonedInCalendar,
+  parseCalendarZonedValue,
+} from "../../internal";
+import { isValidCalendarZonedInterval } from "./validate";
 
 /**
  * Return the symmetric difference across a list of zoned intervals — the set of instants
@@ -18,6 +22,13 @@ import { isValidZonedInterval } from "./validate";
  * - Returns `[]` when `intervals` is not an array, when any element is not a
  *   `{ start, end }` record of valid ISO ZonedDateTime strings, or when any element has
  *   `start > end` or a leap-second string.
+ * - Accepts GMT calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
+ *   well as bare ISO ones — E7 (issue #152) — but **rejects a mismatched set**: every endpoint in
+ *   the list must name the same calendar system (E7's D4-zoned). This function returns *values*
+ *   the caller reads back as datetimes, and an array whose elements carried different calendar
+ *   tags would be unreadable as a set. A mismatch returns `[]`.
+ * - Output boundaries are re-derived in the resolved calendar via `formatZonedInCalendar`, never
+ *   copied from an input string (E7's D7-zoned).
  *
  * @param intervals array of `{ start, end }` records
  * @returns array of `{ start, end }` records covered an odd number of times, or `[]` on invalid input
@@ -39,11 +50,18 @@ export function intervalXorAllZoned(
         typeof interval === "object" &&
         typeof interval.start === "string" &&
         typeof interval.end === "string" &&
-        !isLeapSecond(interval.start) &&
-        !isLeapSecond(interval.end) &&
-        isValidZonedInterval(interval.start, interval.end),
+        isValidCalendarZonedInterval(interval.start, interval.end),
     )
   ) {
+    return [];
+  }
+
+  // D4-zoned reject gate: every endpoint across every interval must agree on a calendar, or there
+  // is no calendar to express the returned boundaries in.
+  const calendar = calendarOfAllZonedValues(
+    intervals.flatMap((interval) => [interval.start, interval.end]),
+  );
+  if (!calendar) {
     return [];
   }
 
@@ -55,8 +73,8 @@ export function intervalXorAllZoned(
     }> = [];
 
     for (const interval of intervals) {
-      const startVal = Temporal.ZonedDateTime.from(interval.start);
-      const endVal = Temporal.ZonedDateTime.from(interval.end);
+      const startVal = parseCalendarZonedValue(interval.start);
+      const endVal = parseCalendarZonedValue(interval.end);
       const closesAfter = endVal.toInstant().add({ nanoseconds: 1 });
 
       events.push({
@@ -76,6 +94,11 @@ export function intervalXorAllZoned(
     const grouped: typeof events = [];
     for (const event of events) {
       const last = grouped[grouped.length - 1];
+      // Safe: `.equals()` here is `Temporal.Instant.prototype.equals`, and `Instant` carries no
+      // calendar field at all — verified calendar-blind (`heb.toInstant().equals(iso.toInstant())`
+      // is `true` for the same instant, while `ZonedDateTime.prototype.equals` is not). E7
+      // re-audited this site rather than inheriting E5's "structurally unreachable" verdict, which
+      // depended on mixed calendars never reaching `zoned/` at all.
       if (last && last.instant.equals(event.instant)) {
         last.delta += event.delta;
       } else {
@@ -95,11 +118,13 @@ export function intervalXorAllZoned(
         runStart = group.boundary;
       } else if (previousCoverage % 2 === 1 && coverage % 2 === 0 && runStart) {
         result.push({
-          start: runStart.toString(),
-          end: group.instant
-            .subtract({ nanoseconds: 1 })
-            .toZonedDateTimeISO(group.boundary.timeZoneId)
-            .toString(),
+          start: formatZonedInCalendar(runStart, calendar),
+          end: formatZonedInCalendar(
+            group.instant
+              .subtract({ nanoseconds: 1 })
+              .toZonedDateTimeISO(group.boundary.timeZoneId),
+            calendar,
+          ),
         });
         runStart = null;
       }

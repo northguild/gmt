@@ -1,8 +1,13 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidDuration } from "../../duration/validate";
-import { resolveOverflow } from "../../internal";
+import {
+  calendarSystemOfZonedValue,
+  formatZonedInCalendar,
+  parseCalendarZonedValue,
+  resolveOverflow,
+} from "../../internal";
 import type { Disambiguation, Offset, Overflow } from "../../types";
-import { isValidZonedDateTime } from "../validate";
+import { isValidCalendarZonedDateTime } from "../validate";
 
 /**
  * Construct a zoned interval from a single point plus an ISO 8601 duration, anchored at either end.
@@ -21,10 +26,14 @@ import { isValidZonedDateTime } from "../validate";
  *   happens, mirroring `intervalIntersectionZoned`'s `start > end` rejection.
  * - `overflow` ("constrain" (default) | "reject") controls out-of-range results, e.g. adding 1 month
  *   to Jan 31: "constrain" clamps to Feb 29/28, "reject" returns null.
+ * - Accepts a GMT calendar-annotated zoned string (as produced by `convertZonedToCalendar`) as
+ *   well as a bare ISO one — E7 (issue #152). Calendar units in `duration` resolve against that
+ *   calendar, and both returned endpoints are re-derived in it via `formatZonedInCalendar`. There
+ *   is only ONE calendar-tagged input here, so no D5 pair policy applies — nothing can mismatch.
  * - Returns null on invalid input (unparseable `value`, invalid `duration`, or an `anchor` other
  *   than `"start"`/`"end"`).
  *
- * @param value ISO 8601 zoned datetime string
+ * @param value ISO 8601 zoned datetime string, optionally calendar-annotated
  * @param duration ISO 8601 duration string
  * @param anchor "start" | "end" — which endpoint `value` represents
  * @param options optional: disambiguation ("compatible" | "earlier" | "later" | "reject"), offset ("prefer" | "use" | "ignore" | "reject" — accepted but inert, see above), overflow ("constrain" | "reject")
@@ -46,7 +55,7 @@ export function intervalFromDurationZoned(
     overflow?: Overflow;
   },
 ): { start: string; end: string } | null {
-  if (typeof value !== "string" || !isValidZonedDateTime(value)) {
+  if (!isValidCalendarZonedDateTime(value)) {
     return null;
   }
 
@@ -63,7 +72,11 @@ export function intervalFromDurationZoned(
   const overflow = resolveOverflow(options?.overflow);
 
   try {
-    const point = Temporal.ZonedDateTime.from(value);
+    const calendar = calendarSystemOfZonedValue(value);
+    if (!calendar) {
+      return null;
+    }
+    const point = parseCalendarZonedValue(value);
     const dur = Temporal.Duration.from(duration);
 
     const rawOther =
@@ -71,13 +84,18 @@ export function intervalFromDurationZoned(
         ? point.add(dur, { overflow })
         : point.subtract(dur, { overflow });
 
+    // The calendar MUST be stripped before this rebuild string is composed (E7 risk R1) — see
+    // `addZoned`'s equivalent comment. A calendared `.toPlainDateTime().toString()` already
+    // carries Temporal's own `[u-ca=...]` annotation, so appending `[${timeZoneId}]` produces
+    // GMT's forbidden segment ordering and `Temporal.ZonedDateTime.from` rejects it, silently
+    // degrading every non-"compatible" disambiguation to null.
     const other =
       disambiguation === "compatible"
         ? rawOther
         : Temporal.ZonedDateTime.from(
-            `${rawOther.toPlainDateTime().toString()}[${rawOther.timeZoneId}]`,
+            `${rawOther.withCalendar("iso8601").toPlainDateTime().toString()}[${rawOther.timeZoneId}]`,
             { disambiguation, offset },
-          );
+          ).withCalendar(rawOther.calendarId);
 
     const start = anchor === "start" ? point : other;
     const end = anchor === "start" ? other : point;
@@ -86,7 +104,10 @@ export function intervalFromDurationZoned(
       return null;
     }
 
-    return { start: start.toString(), end: end.toString() };
+    return {
+      start: formatZonedInCalendar(start, calendar),
+      end: formatZonedInCalendar(end, calendar),
+    };
   } catch {
     return null;
   }

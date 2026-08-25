@@ -1,6 +1,10 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { hasCalendarAnnotation } from "../../internal";
-import { isLeapSecond } from "../../plain/validate/isLeapSecond";
+import {
+  calendarOfAllZonedValues,
+  formatZonedInCalendar,
+  parseCalendarZonedValue,
+} from "../../internal";
+import { isValidCalendarZonedDateTime } from "../validate";
 
 /**
  * Return the portion(s) of interval A not covered by interval B.
@@ -11,8 +15,20 @@ import { isLeapSecond } from "../../plain/validate/isLeapSecond";
  * - Returns `[{ start, end }, { start, end }]` when B is fully inside A with gaps on both sides.
  * - Returns `[]` if either interval is invalid (`start > end`).
  * - Returns `[]` on invalid input (wrong type, malformed strings, leap seconds).
- * - Rejects any `[u-ca=...]` calendar annotation (E5 issue #78, decision of record D2) —
- *   see `isValidZonedDateTime`'s JSDoc for why.
+ * - Accepts GMT calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
+ *   well as bare ISO ones — E7 (issue #152) — but **rejects a mismatched pair**: every endpoint
+ *   must name the same calendar system (E7's D4-zoned). Unlike the ordering functions, this one
+ *   returns a *value* the caller reads back as a datetime, and there is no principled way to pick
+ *   one endpoint's calendar as the answer's. Rejection also keeps a uniform policy across all
+ *   eight value-returning zoned set operations, four of which return arrays — a per-element
+ *   "winner's tag" would produce a result set whose members disagree about which calendar they
+ *   are in. (`intervalUnionZoned`'s existing "winning endpoint's *time zone* wins" is not
+ *   precedent: the zone is a property of the surviving point, the calendar is a property of the
+ *   answer.) A mismatch returns the sentinel.
+ * - Output boundaries are re-derived in the resolved calendar via `formatZonedInCalendar`, never
+ *   copied from an input string (E7's D7-zoned).
+ * - Still rejects Temporal's own `[timeZone][u-ca=...]` RFC 9557 ordering — see
+ *   `regex/calendar-zoned-date-time.ts`.
  *
  * @param aStart ISO 8601 zoned datetime string for the first interval start
  * @param aEnd ISO 8601 zoned datetime string for the first interval end
@@ -30,33 +46,30 @@ export function intervalDifferenceZoned(
   bStart: string,
   bEnd: string,
 ): Array<{ start: string; end: string }> {
+  // One gate for all four endpoints: `isValidCalendarZonedDateTime` covers non-strings, empty
+  // strings, leap seconds (which Temporal would otherwise silently clamp to :59), unknown zones
+  // and Temporal's forbidden segment ordering, while accepting GMT's calendar-annotated grammar.
   if (
-    typeof aStart !== "string" ||
-    typeof aEnd !== "string" ||
-    typeof bStart !== "string" ||
-    typeof bEnd !== "string"
+    !isValidCalendarZonedDateTime(aStart) ||
+    !isValidCalendarZonedDateTime(aEnd) ||
+    !isValidCalendarZonedDateTime(bStart) ||
+    !isValidCalendarZonedDateTime(bEnd)
   ) {
     return [];
   }
 
-  if (
-    isLeapSecond(aStart) ||
-    isLeapSecond(aEnd) ||
-    isLeapSecond(bStart) ||
-    isLeapSecond(bEnd) ||
-    hasCalendarAnnotation(aStart) ||
-    hasCalendarAnnotation(aEnd) ||
-    hasCalendarAnnotation(bStart) ||
-    hasCalendarAnnotation(bEnd)
-  ) {
+  // D4-zoned reject gate: all four endpoints must agree on a calendar, or there is no calendar to
+  // express the returned value in.
+  const calendar = calendarOfAllZonedValues([aStart, aEnd, bStart, bEnd]);
+  if (!calendar) {
     return [];
   }
 
   try {
-    const aSZdt = Temporal.ZonedDateTime.from(aStart);
-    const aEZdt = Temporal.ZonedDateTime.from(aEnd);
-    const bSZdt = Temporal.ZonedDateTime.from(bStart);
-    const bEZdt = Temporal.ZonedDateTime.from(bEnd);
+    const aSZdt = parseCalendarZonedValue(aStart);
+    const aEZdt = parseCalendarZonedValue(aEnd);
+    const bSZdt = parseCalendarZonedValue(bStart);
+    const bEZdt = parseCalendarZonedValue(bEnd);
 
     const aS = aSZdt.toInstant();
     const aE = aEZdt.toInstant();
@@ -81,8 +94,11 @@ export function intervalDifferenceZoned(
           : bS.subtract({ nanoseconds: 1 });
       if (Temporal.Instant.compare(leftEnd, aS) >= 0) {
         result.push({
-          start: aSZdt.toString(),
-          end: leftEnd.toZonedDateTimeISO(bEZdt.timeZoneId).toString(),
+          start: formatZonedInCalendar(aSZdt, calendar),
+          end: formatZonedInCalendar(
+            leftEnd.toZonedDateTimeISO(bEZdt.timeZoneId),
+            calendar,
+          ),
         });
       }
     }
@@ -90,11 +106,11 @@ export function intervalDifferenceZoned(
     // Right piece: A after B ends
     if (Temporal.Instant.compare(aE, bE) > 0) {
       result.push({
-        start: bE
-          .add({ nanoseconds: 1 })
-          .toZonedDateTimeISO(aEZdt.timeZoneId)
-          .toString(),
-        end: aEZdt.toString(),
+        start: formatZonedInCalendar(
+          bE.add({ nanoseconds: 1 }).toZonedDateTimeISO(aEZdt.timeZoneId),
+          calendar,
+        ),
+        end: formatZonedInCalendar(aEZdt, calendar),
       });
     }
 

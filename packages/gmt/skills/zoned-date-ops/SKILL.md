@@ -23,6 +23,7 @@ sources:
   - 'burglekitt/gmt:packages/gmt/src/zoned/parse/getZonedOffsetAs.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/compare/isInDaylightSaving.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/convert/index.ts'
+  - 'burglekitt/gmt:packages/gmt/src/zoned/convert/convertZonedToCalendar.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/addZoned.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/subtractZoned.ts'
   - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/startOfZoned.ts'
@@ -277,7 +278,90 @@ See [references/timezones.md](references/timezones.md) for common IANA timezone 
 
 Zoned formatters delegate locale and timezone-name rendering to the host runtime's `Intl.DateTimeFormat`. Output depends on ICU data shipped with the running Node or browser. For consistent non-English output, deploy on a full-ICU Node build or polyfill `Intl`.
 
+## Calendar-Aware Zoned Datetimes
+
+`convertZonedToCalendar(value, calendar)` expresses a zoned datetime in any of the 13 supported
+calendar systems, keeping the instant, wall time, UTC offset and IANA zone unchanged:
+
+```
+<calendar-native-date>T<time><offset>[u-ca=<id>[;era=<era>]][<timeZone>]
+```
+
+```ts
+convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "hebrew");
+// "5785-01-01T14:30:45-04:00[u-ca=hebrew][America/New_York]"
+convertZonedToCalendar("2024-10-03T14:30:45+00:00[UTC]", "japanese");
+// "0006-10-03T14:30:45+00:00[u-ca=japanese;era=reiwa][UTC]"
+```
+
+`addZoned`/`subtractZoned` then do calendar-unit arithmetic and DST resolution in a single
+operation, re-deriving the calendar tag, era, wall time and offset from the result:
+
+```ts
+addZoned("0031-04-30T12:00:00+09:00[u-ca=japanese;era=heisei][Asia/Tokyo]", { days: 1 });
+// "0001-05-01T12:00:00+09:00[u-ca=japanese;era=reiwa][Asia/Tokyo]" — era changes
+```
+
+Validate with `isValidCalendarZonedDateTime` (not `isValidZonedDateTime`, which still rejects the
+annotation). See the Common Mistakes section for the segment-ordering trap.
+
 ## Common Mistakes
+
+### Writing the calendar annotation in RFC 9557 order
+
+**This is the trap most likely to be hit by pattern-matching against Temporal's own docs.**
+
+GMT's calendar-annotated zoned string puts `[u-ca=...]` **before** `[timeZone]`:
+
+```
+5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]   // correct — GMT's grammar
+5784-06-15T14:30:00-05:00[America/New_York][u-ca=hebrew]   // WRONG — RFC 9557 / Temporal order
+```
+
+Every GMT function returns its sentinel for the second form. That looks like GMT being fussy; it
+is GMT refusing to guess. Temporal's ordering is a *silent misparse* here:
+
+```ts
+Temporal.ZonedDateTime.from("5784-01-01T14:30:00-05:00[America/New_York][u-ca=hebrew]");
+// SUCCEEDS — and reads 5784 as an ISO year, not a Hebrew year. A ~3760-year error, no throw.
+```
+
+GMT's digits are calendar-native (Hebrew year 5784), unlike Temporal's convention, which keeps ISO
+digits and only tags the calendar. The two shapes are indistinguishable by inspection, so GMT
+accepts exactly one ordering and rejects the other outright. The `;era=` suffix
+(`[u-ca=japanese;era=heisei]`) is not valid RFC 9557 at *any* ordering, so round-tripping GMT's
+string through `Temporal.ZonedDateTime.from` was never possible regardless.
+
+Always build these strings with `convertZonedToCalendar`, never by hand or by string concatenation.
+
+### Converting a calendar-annotated PlainDate to a zoned value drops the calendar
+
+```ts
+const hebrew = convertDateToCalendar("2024-10-03", "hebrew"); // "5785-01-01[u-ca=hebrew]"
+convertPlainDateTimeToZoned(`${hebrew}T14:30:00`, "America/New_York"); // "" — not a zoned grammar
+```
+
+Reaching for `convertDateToCalendar` and then a zoned conversion silently produces a Gregorian
+value (or a sentinel), and the calendar-unit arithmetic that follows is then wrong in exactly the
+cases the calendar was chosen for. Use `convertZonedToCalendar` on the zoned value instead:
+
+```ts
+convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "hebrew");
+// "5785-01-01T14:30:45-04:00[u-ca=hebrew][America/New_York]"
+
+addZoned("5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]", { months: 1 });
+// "5784-07-15T14:30:00-04:00[u-ca=hebrew][America/New_York]"
+// Adar I -> Adar AND EST -> EDT in one call — no ordering of plain/ and zoned/ operations
+// reproduces this.
+```
+
+### Assuming every `zoned/` function accepts the annotation
+
+Only `addZoned`, `subtractZoned`, `diffZoned`, `diffZonedAsDuration`, `convertZonedToCalendar` and
+the `zoned/interval/*` family do. Everything else — `formatZonedDateTime`, `roundZoned`,
+`setZoned`, `startOfZoned`, `parseDateFromZoned`, `convertZonedToUtc`, the business-day pair, and
+~60 more — still rejects it and returns its sentinel. `isValidZonedDateTime` also still returns
+`false` for it; validate with `isValidCalendarZonedDateTime` when you mean the calendar grammar.
 
 ### Using offset instead of IANA timezone
 

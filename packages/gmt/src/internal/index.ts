@@ -2,20 +2,34 @@ export { advanceBusinessDays } from "./advanceBusinessDays";
 export { adjustZonedBusinessDays } from "./adjustZonedBusinessDays";
 export { advanceToWeekday } from "./advanceToWeekday";
 export {
+  calendarDateParts,
+  type CalendarDateStringParts,
   formatCalendarDate,
   parseCalendarDateValue,
 } from "./calendarDateString";
 export { isCalendarSystem, temporalCalendarIds } from "./calendarSystemIds";
 export { parseCalendarDatePairForArithmetic } from "./calendarDatePairPolicy";
+export { parseCalendarZonedPairForArithmetic } from "./calendarZonedPairPolicy";
 export {
   calendarOfAllDateValues,
   calendarSystemOfDateValue,
 } from "./calendarValueOfDate";
+export {
+  calendarOfAllZonedValues,
+  calendarSystemOfZonedValue,
+} from "./calendarValueOfZoned";
+export {
+  formatZonedInCalendar,
+  parseCalendarZonedValue,
+} from "./calendarZonedString";
 export { cycleFieldValue } from "./cycleFieldValue";
 export { dateCycleFieldBounds } from "./dateCycleFieldBounds";
 export { timeCycleFieldBounds } from "./timeCycleFieldBounds";
 export { durationUntilString } from "./durationUntilString";
-export { formatDateInCalendar } from "./formatDateInCalendar";
+export {
+  calendarDateStringParts,
+  formatDateInCalendar,
+} from "./formatDateInCalendar";
 export { hasCalendarAnnotation } from "./hasCalendarAnnotation";
 export { resolveDurationRelativeTo } from "./resolveDurationRelativeTo";
 export {
@@ -24,6 +38,7 @@ export {
 } from "./englishCalendarNames";
 export {
   dateFromEthiopicFamilyFields,
+  ethiopicFamilyDateParts,
   formatEthiopicFamilyDate,
   isEthiopicFamilyCalendar,
 } from "./ethiopicFamilyCalendar";

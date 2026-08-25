@@ -196,7 +196,7 @@ E5 shipped as one PR (issue #78, no version bump — Group E's release is cut af
 
 ### Per-function audit table
 
-Legend: **(a)** no change needed (verified, not assumed) · **(b)** calendar-unit arithmetic, gate opened · **(b→a)** was accidentally calendar-aware, now rejects (D2) · **(a, pre-existing gate)** already correctly rejected before E5, unaffected by it.
+Legend: **(a)** no change needed (verified, not assumed) · **(b)** calendar-unit arithmetic, gate opened · **(b→a)** was accidentally calendar-aware, now rejects (D2) · **(a, pre-existing gate)** already correctly rejected before E5, unaffected by it · **(b→a→b)** was accidentally calendar-aware, rejected by E5's D2, then deliberately reopened by E7 (issue #152) onto GMT's own zoned grammar.
 
 **`duration/`**
 
@@ -219,7 +219,8 @@ Legend: **(a)** no change needed (verified, not assumed) · **(b)** calendar-uni
 | `addBusinessDays`, `subtractBusinessDays` | (a) | D9 — `dayOfWeek` is ISO-fixed in every calendar. |
 | `addUnix`, `subtractUnix`, `diffUnix`, `diffUnixAsDuration` | (a) | Numeric epoch input, structurally immune. |
 | `addUtc`, `subtractUtc`, `diffUtc`, `diffUtcAsDuration` | (a, pre-existing gate) | `utc/` was already regex-gated to a strict `<date>T<time>Z` shape before E5. |
-| `addZoned`, `subtractZoned`, `diffZoned`, `diffZonedAsDuration`, `addZonedBusinessDays`, `subtractZonedBusinessDays` | **(b→a)** | D2 — now reject via `isValidZonedDateTime`. |
+| `addZoned`, `subtractZoned`, `diffZoned`, `diffZonedAsDuration` | **(b→a→b)** | D2 rejected these; **E7 (issue #152) reopened the gate** onto a GMT-native zoned grammar. Now gate on `isValidCalendarZonedDateTime`, parse via `parseCalendarZonedValue`, format via `formatZonedInCalendar`. `diffZoned`/`diffZonedAsDuration` additionally apply D5-zoned via `parseCalendarZonedPairForArithmetic`. |
+| `addZonedBusinessDays`, `subtractZonedBusinessDays` | **(b→a)** | D2, and unchanged by E7 — D9 stands (`dayOfWeek` is ISO-fixed in every supported calendar, so a tag would change nothing while implying it might). Still gate on `isValidZonedDateTime`. |
 
 **`plain/interval` (18 `*Date` functions + `isValidDateInterval`)**
 
@@ -234,7 +235,14 @@ Legend: **(a)** no change needed (verified, not assumed) · **(b)** calendar-uni
 
 **`unix/interval/*`, `utc/interval/*`** — (a): numeric epoch (unix) or pre-existing strict regex gate (utc), both unaffected by E5, verified.
 
-**`zoned/interval/*` (17 functions)** — **(b→a)**: all now reject `[u-ca=...]` via `hasCalendarAnnotation`, applied at `isValidZonedDateTime`/`isValidZonedInterval` (covers `intervalFromDurationZoned`, `intervalCountZoned`, `splitIntervalByUnitZoned`, `mergeIntervalsZoned`, `intervalDivideEquallyZoned`, `intervalLengthZoned`, `intervalXorAllZoned`, `intervalSplitAtZoned`) or directly in their own `isLeapSecond`-adjacent guard (`intervalAbutsZoned`, `intervalContainsZoned`, `intervalDifferenceZoned`, `intervalEngulfsZoned`, `intervalIntersectionZoned`, `intervalOverlappingDaysZoned`, `intervalUnionZoned`, `intervalXorZoned`, `intervalsOverlapZoned`).
+**`zoned/interval/*` (17 functions)** — E5 recorded these as **(b→a)** (all rejecting `[u-ca=...]`). **E7 (issue #152) reversed that verdict for all 17**, which now gate on `isValidCalendarZonedDateTime`/`isValidCalendarZonedInterval` and split into the same three classes as `plain/interval` above:
+
+| Function | Class | Verdict | Note |
+|---|---|---|---|
+| `intervalAbutsZoned`, `intervalContainsZoned`, `intervalsOverlapZoned`, `intervalEngulfsZoned`, `isValidCalendarZonedInterval` (new) | 1 (ordering) | **(b→a→b)** | Gate reopened; mixed calendars accepted (D4-zoned). Verified: `Instant` has no calendar field at all, and `Instant.compare`/`ZonedDateTime.compare` return `0` for the same instant across hebrew/islamic/japanese/iso. |
+| `intervalOverlappingDaysZoned` | 1 (day count) | **(b→a→b)** | Gate reopened; mixed calendars accepted; normalizes both `PlainDate` operands to `iso8601` immediately before `.until()` — the same hazard as `plain/`'s finding 2, reproduced in zoned. |
+| `intervalUnionZoned`, `intervalIntersectionZoned`, `intervalDifferenceZoned`, `intervalXorZoned`, `intervalXorAllZoned`, `mergeIntervalsZoned`, `intervalDivideEquallyZoned`, `intervalSplitAtZoned` | 2 (value-returning set ops) | **(b→a→b)** | Gate reopened; mismatched calendars rejected via `calendarOfAllZonedValues` (D4-zoned); output tags re-derived through `formatZonedInCalendar` (D7-zoned). Rejection rather than a "winner's tag" partly because four of the eight return arrays, whose elements would otherwise disagree about their calendar. |
+| `intervalCountZoned`, `intervalLengthZoned`, `splitIntervalByUnitZoned`, `intervalFromDurationZoned` | 3 (calendar-unit arithmetic) | **(b→a→b)** | Shared-calendar-or-Gregorian-fallback via `parseCalendarZonedPairForArithmetic` (D5-zoned), except `intervalFromDurationZoned`, which has a single calendar-tagged input and needs no pair policy. |
 
 ### E6 — `cycle*` wrap-around field adjustment
 
@@ -348,3 +356,76 @@ See "Instructions for the agent picking up a story" in `context/roadmap/index.md
 ## Definition of done
 Tests: the grammar round-tripping through every supported calendar system, including an era-bearing one; calendar-unit arithmetic across a Hebrew leap month, an Ethiopic Pagumen overflow, and a Japanese era transition, each *combined with* a DST transition in the same operation; `battleTestTimeZones` coverage on the calendar-aware paths; mixed-calendar endpoints per the re-derived D4 policy; DST gap/fold interaction with `disambiguation` and `offset` on a calendar-tagged value; bare ISO zoned strings verified unaffected; invalid grammar → sentinel. JSDoc with `@example`. `packages/gmt/README.md` and `zoned/README.md` updated, including the grammar itself. Changeset. `zoned-date-ops` and any other affected TanStack Intent skills updated. The `issues/E.md` "E5 outcome" audit table updated to reflect which `(b→a)` verdicts this story reverses. Lint/test pass per `context/coding-standards.md` / `context/testing-standards/references/index.md` / `context/jsdoc-standards.md`.
 ```
+
+---
+
+## E7 outcome — decisions of record (landed)
+
+E7 shipped as one PR (issue #152). Settled decisions must not be re-opened.
+
+**Grammar.** `<calendar-native-date>T<time><offset>[u-ca=<id>[;era=<era>]][<timeZone>]`, in
+`regex/calendar-zoned-date-time.ts`. Its date half and annotation half are byte-identical to
+`calendarDate`'s, with a sync test (DoD-10) that fails loudly if they drift.
+
+**Segment ordering — `[u-ca=]` BEFORE `[timeZone]`, the reverse of RFC 9557. Not re-openable.**
+Four verified reasons: (1) RFC 9557's own ordering is rejected by the polyfill at every Temporal
+entry point for all 13 calendars, which is correct since GMT's digits are calendar-native;
+(2) the RFC-legal ordering is *actively dangerous* —
+`Temporal.ZonedDateTime.from("5784-01-01T14:30:00-05:00[America/New_York][u-ca=hebrew]")`
+**succeeds**, silently misreading Hebrew year 5784 as ISO year 5784, a ~3760-year misparse with no
+error anywhere; (3) with `[u-ca=]` first, the ~72 out-of-scope `zoned/` functions fail closed
+instead of answering in the wrong calendar; (4) `;era=` is never valid RFC 9557 at any ordering,
+so full RFC-9557 round-trippability was never achievable — better to fail uniformly for all 13
+calendars than for only the 2 era-bearing ones.
+
+**Q1 — `convertZonedToCalendar` is in scope.** Without a producer the feature is write-only.
+
+**Q2 — parallel validator, not a loosened one.** `isValidZonedDateTime`/`isValidZonedInterval` are
+unchanged and still reject every annotation; `isValidCalendarZonedDateTime`/
+`isValidCalendarZonedInterval` sit beside them. Loosening the originals would make
+`isValidZonedDateTime(x) === true` while `getZonedYear(x) === null` — a validator certifying
+strings the library still refuses. Pinned by a DoD-8 test table over 13 out-of-scope functions.
+
+**Q3 — value-returning interval ops reject mismatched calendars** (do not copy a "winner's" tag).
+`intervalUnionZoned`'s existing "winning endpoint's *time zone* wins" is about the zone, not the
+calendar, and does not transfer.
+
+**Q4 — `duration/`'s `relativeTo` accepting the zoned grammar: OUT OF SCOPE, not implemented.** A
+genuine capability gap, but it touches another namespace's contract. Left for a follow-up story.
+
+**D4-zoned / D5-zoned / D7-zoned** — as tabulated in the per-function audit above. D5-zoned is a
+*stronger* requirement than `plain/`'s D5: `ZonedDateTime.prototype.until` throws across mismatched
+calendars for **every** `largestUnit` (verified for `"month"`, `"hour"` and `"nanosecond"`), not
+just date units, so the Gregorian fallback is mandatory rather than merely reasonable.
+
+### Unanticipated findings
+
+1. **Two pre-existing latent bugs fixed (risk R1).** `addZoned.ts` and
+   `intervalFromDurationZoned.ts` both rebuilt their non-`"compatible"` disambiguation path via
+   `` `${x.toPlainDateTime().toString()}[${x.timeZoneId}]` ``. Harmless while all input was
+   plain-ISO, but a calendared `.toPlainDateTime().toString()` emits Temporal's own
+   `[u-ca=...]` annotation, so appending `[timeZone]` produces GMT's forbidden ordering and
+   `Temporal.ZonedDateTime.from` rejects it — silently degrading every non-default
+   `disambiguation` to `""`/`null` the moment a tag reached them. Fixed by stripping the calendar
+   before the rebuild and re-attaching it to the *result*. `subtractZoned` had the same shape and
+   was fixed alongside. Verified by mutation: reverting the fix fails 6 tests.
+2. **The `relativeTo` trap (risk R2) is real and silent.** Anchoring
+   `Duration.prototype.total`'s `relativeTo` on the *raw* calendar-tagged operand while measuring
+   in ISO does not throw — it returns `12.586206896551724`, sitting plausibly between the correct
+   ISO `12.566666666666666` and the correct Hebrew `13`. Every consumer must use the pair policy's
+   *normalized* operands. Verified by mutation: reintroducing the bug fails 3 tests.
+3. **Finding 3 re-audit (the four `.equals()` sites) — three safe structurally, one safe only by
+   construction.** `intervalDivideEquallyZoned`, `intervalSplitAtZoned` and `intervalXorAllZoned`
+   call `Temporal.Instant.prototype.equals`, and `Instant` has no calendar field at all (verified
+   calendar-blind). `intervalCountZoned:88` calls `ZonedDateTime.prototype.equals`, which **is**
+   calendar-sensitive (`iso.equals(heb)` is `false` at the same instant) — safe only because
+   `startOfEnd` is derived from `endVal` one line earlier, so they always share a calendar by
+   construction. An inline comment now records that invariant; a refactor hoisting `endVal` out
+   would break it silently.
+4. **`formatZonedInCalendar` re-calendars its input.** Several interval functions synthesize
+   boundaries via `Instant.prototype.toZonedDateTimeISO`, which always returns an
+   `iso8601`-calendared value. Rather than remembering to re-attach the tag at each synthesis
+   site, the single formatter converts, removing the whole bug class by construction.
+5. **`test/calendarMatrix.ts`'s Ethiopic doc comment was wrong and predated E7** — it claimed
+   `m12d30_7515` was "(2023-08-12 ISO)"; it is actually 2023-09-05 (and `pagumen6_7515` is
+   2023-09-11). The fixture *strings* were always correct. Fixed.

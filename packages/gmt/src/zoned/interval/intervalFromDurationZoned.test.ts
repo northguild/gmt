@@ -1,3 +1,4 @@
+import { calendarZonedFixtures } from "../../test";
 import { Temporal } from "@js-temporal/polyfill";
 import { battleTestTimeZones, localNoonBattleCases } from "../../test";
 import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
@@ -192,6 +193,81 @@ describe("intervalFromDurationZoned", () => {
   // E5 (issue #78), decision of record D2 — see isValidZonedDateTime.test.ts for the full
   // rationale: zoned/ rejects any [u-ca=...] calendar annotation outright.
   it("returns null when value carries a calendar annotation", () => {
-    expect(intervalFromDurationZoned("2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]", "P1M", "start")).toBeNull();
+    expect(
+      intervalFromDurationZoned(
+        "2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]",
+        "P1M",
+        "start",
+      ),
+    ).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// E7 (issue #152). Single calendar-tagged input, so no D5 pair policy applies — but the R1
+// rebuild fix does. Every expected value produced by running @js-temporal/polyfill@0.5.1.
+// ---------------------------------------------------------------------------------------------
+describe("intervalFromDurationZoned with GMT calendar-annotated values", () => {
+  const H = calendarZonedFixtures.hebrewLeapMonth;
+  const J = calendarZonedFixtures.japaneseEraFold;
+
+  it("anchors at the start and re-derives the end in the same calendar", () => {
+    expect(intervalFromDurationZoned(H.adarI15NewYork, "P1M", "start")).toEqual(
+      {
+        start: H.adarI15NewYork,
+        end: H.adar15NewYork,
+      },
+    );
+  });
+
+  it("anchors at the end and re-derives the start in the same calendar", () => {
+    expect(intervalFromDurationZoned(H.adar15NewYork, "P1M", "end")).toEqual({
+      start: H.adarI15NewYork,
+      end: H.adar15NewYork,
+    });
+  });
+
+  it("re-derives a changed era on the computed endpoint", () => {
+    expect(
+      intervalFromDurationZoned(J.heisei31_0405Casablanca, "P1M", "start"),
+    ).toEqual({
+      start: J.heisei31_0405Casablanca,
+      end: J.reiwa1_0505CasablancaEarlier,
+    });
+  });
+
+  // R1 regression: before E7 this function rebuilt through
+  // `${zdt.toPlainDateTime()}[${tz}]`, which emits Temporal's forbidden segment ordering once the
+  // value carries a calendar — every non-"compatible" disambiguation would return null.
+  it.each`
+    disambiguation  | expected
+    ${"compatible"} | ${"0001-05-05T02:30:00+01:00[u-ca=japanese;era=reiwa][Africa/Casablanca]"}
+    ${"earlier"}    | ${"0001-05-05T02:30:00+01:00[u-ca=japanese;era=reiwa][Africa/Casablanca]"}
+    ${"later"}      | ${"0001-05-05T02:30:00+00:00[u-ca=japanese;era=reiwa][Africa/Casablanca]"}
+  `(
+    "resolves the Casablanca fold to $expected with disambiguation $disambiguation",
+    ({ disambiguation, expected }) => {
+      expect(
+        intervalFromDurationZoned(J.heisei31_0405Casablanca, "P1M", "start", {
+          disambiguation,
+        }),
+      ).toEqual({ start: J.heisei31_0405Casablanca, end: expected });
+    },
+  );
+
+  it('returns null for disambiguation "reject" on the Casablanca fold', () => {
+    expect(
+      intervalFromDurationZoned(J.heisei31_0405Casablanca, "P1M", "start", {
+        disambiguation: "reject",
+      }),
+    ).toBeNull();
+  });
+
+  it.each`
+    value                                                         | reason
+    ${"5784-06-15T14:30:00-05:00[America/New_York][u-ca=hebrew]"} | ${"GMT digits in Temporal's segment ordering"}
+    ${"5785-13-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"} | ${"month 13 in a non-leap Hebrew year"}
+  `("returns null for $value ($reason)", ({ value }) => {
+    expect(intervalFromDurationZoned(value, "P1D", "start")).toBeNull();
   });
 });

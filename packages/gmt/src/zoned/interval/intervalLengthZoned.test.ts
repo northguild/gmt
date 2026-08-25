@@ -1,3 +1,4 @@
+import { calendarZonedFixtures } from "../../test";
 import { Temporal } from "@js-temporal/polyfill";
 import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
 import { battleTestTimeZones } from "../../test/timeZoneMatrix";
@@ -78,6 +79,68 @@ describe("intervalLengthZoned", () => {
   // E5 (issue #78), decision of record D2 — see isValidZonedDateTime.test.ts for the full
   // rationale: zoned/ rejects any [u-ca=...] calendar annotation outright.
   it("returns null when start carries a calendar annotation", () => {
-    expect(intervalLengthZoned("2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]", "2024-06-30T23:59:59+00:00[UTC]", "day")).toBeNull();
+    expect(
+      intervalLengthZoned(
+        "2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]",
+        "2024-06-30T23:59:59+00:00[UTC]",
+        "day",
+      ),
+    ).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// E7 (issue #152), D5-zoned. Every expected value produced by running
+// @js-temporal/polyfill@0.5.1 — see the R2 note below for why that matters more here than usual.
+// ---------------------------------------------------------------------------------------------
+describe("intervalLengthZoned with GMT calendar-annotated values", () => {
+  const Y = calendarZonedFixtures.hebrewLeapYearSpan;
+  const ISLAMIC_END =
+    "1446-03-30T00:00:00-04:00[u-ca=islamic-tabular][America/New_York]";
+
+  it("measures a Hebrew leap year as exactly 13 months", () => {
+    expect(
+      intervalLengthZoned(
+        Y.tishri1_5784NewYork,
+        Y.tishri1_5785NewYork,
+        "month",
+      ),
+    ).toBe(13);
+  });
+
+  it("measures the same span as 383 Hebrew days", () => {
+    expect(
+      intervalLengthZoned(Y.tishri1_5784NewYork, Y.tishri1_5785NewYork, "day"),
+    ).toBe(383);
+  });
+
+  // R2: this is the number the `relativeTo` trap corrupts. If `relativeTo` is anchored on the
+  // RAW calendar-tagged operand instead of the pair policy's normalized one, this returns
+  // 12.586206896551724 — plausible, between the correct ISO answer and the correct Hebrew 13, and
+  // invisible to inspection. Both values below came from actually running the polyfill.
+  it.each`
+    label                       | start                    | end            | expected
+    ${"mismatched tags"}        | ${Y.tishri1_5784NewYork} | ${ISLAMIC_END} | ${12.566666666666666}
+    ${"tagged start, bare end"} | ${Y.tishri1_5784NewYork} | ${Y.isoEnd}    | ${12.566666666666666}
+    ${"both bare ISO"}          | ${Y.isoStart}            | ${Y.isoEnd}    | ${12.566666666666666}
+  `(
+    "returns the Gregorian-fallback length $expected for $label",
+    ({ start, end, expected }) => {
+      expect(intervalLengthZoned(start, end, "month")).toBe(expected);
+    },
+  );
+
+  it("never returns the wrong-relativeTo value for a mismatched pair", () => {
+    expect(
+      intervalLengthZoned(Y.tishri1_5784NewYork, ISLAMIC_END, "month"),
+    ).not.toBe(12.586206896551724);
+  });
+
+  it.each`
+    value                                                         | reason
+    ${"5784-01-01T00:00:00-04:00[America/New_York][u-ca=hebrew]"} | ${"GMT digits in Temporal's segment ordering"}
+    ${"5785-13-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"} | ${"month 13 in a non-leap Hebrew year"}
+  `("returns null when the start is $value ($reason)", ({ value }) => {
+    expect(intervalLengthZoned(value, Y.isoEnd, "day")).toBeNull();
   });
 });

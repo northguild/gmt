@@ -514,14 +514,71 @@ diffDate("5784-06-15[u-ca=hebrew]", "5784-07-15[u-ca=hebrew]", "months");
 // 1 — measured in the shared calendar when both endpoints carry the same tag
 ```
 
-This is confined to `plain/` `PlainDate` values only: `zoned/`, `utc/`, and `unix/` reject a `[u-ca=...]` calendar annotation outright, and `duration/`'s `relativeTo` option accepts GMT's calendar-annotated string (not Temporal's own differently-shaped `[u-ca=...]` convention) when a calendar-aware anchor is needed:
+`utc/` and `unix/` reject a `[u-ca=...]` calendar annotation outright, and `duration/`'s `relativeTo` option accepts GMT's calendar-annotated string (not Temporal's own differently-shaped `[u-ca=...]` convention) when a calendar-aware anchor is needed:
 
 ```typescript
 durationAs("P1Y", "days", { relativeTo: "5784-06-15[u-ca=hebrew]" });
 // 385 — a Hebrew leap year, not the 366 a Gregorian P1Y would total
 ```
 
+`zoned/` has its own calendar-annotated grammar as of E7 (issue #152) — see "Calendar-aware zoned datetimes" below.
+
 Interval functions that only compare or diff absolute instants (`intervalContainsDate`, `intervalsOverlapDate`, `intervalAbutsDate`, `intervalEngulfsDate`, `isValidDateInterval`, `intervalOverlappingDaysDate`) accept endpoints tagged with *different* calendars, since ordering and day-counting don't depend on which calendar a date is expressed in. Functions that return a date *value* (`intervalUnionDate`, `intervalIntersectionDate`, `intervalDifferenceDate`, `intervalXorDate`, `intervalXorAllDate`, `mergeIntervalsDate`, `intervalDivideEquallyDate`, `intervalSplitAtDate`) require every argument to share one calendar and return their sentinel (`null`/`[]`) on a mismatch, since there's no principled way to pick which calendar the output should be expressed in. See `context/roadmap/issues/E.md`'s "E5 outcome" section for the full per-function audit, including the negatives ("no change needed, verified why") this scope boundary implies — `*DateTime`/`*Time` variants, `unix/`, and `utc/` were all confirmed unaffected rather than assumed to be.
+
+#### Calendar-aware zoned datetimes
+
+A calendar-annotated `ZonedDateTime` string adds a time, a UTC offset and an IANA zone to the
+plain grammar above:
+
+```
+<calendar-native-date>T<time><offset>[u-ca=<id>[;era=<era>]][<timeZone>]
+
+5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]
+0031-04-30T12:00:00+09:00[u-ca=japanese;era=heisei][Asia/Tokyo]
+7517-12-30T00:30:00-04:00[u-ca=ethiopic-amete-alem][America/Santiago]
+```
+
+`convertZonedToCalendar` produces it, and `isValidCalendarZonedDateTime` validates it:
+
+```typescript
+convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "hebrew");
+// "5785-01-01T14:30:45-04:00[u-ca=hebrew][America/New_York]"
+
+addZoned("5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]", { months: 1 });
+// "5784-07-15T14:30:00-04:00[u-ca=hebrew][America/New_York]"
+// Adar I -> Adar AND EST -> EDT, resolved in one call. No ordering of a plain/ calendar
+// operation and a zoned/ conversion produces this: do the calendar step first and DST is
+// applied to an already-resolved wall time; do the zoned step first and there is no calendar
+// left to step in.
+
+addZoned("0031-04-30T12:00:00+09:00[u-ca=japanese;era=heisei][Asia/Tokyo]", { days: 1 });
+// "0001-05-01T12:00:00+09:00[u-ca=japanese;era=reiwa][Asia/Tokyo]" — era re-derived, never copied
+```
+
+> **The `[u-ca=...]` segment comes BEFORE `[timeZone]` — the reverse of RFC 9557.** This is
+> deliberate. GMT's digits are calendar-native (Hebrew year 5784, not ISO year 5784), so the
+> string is never valid RFC 9557 to begin with, and the `;era=` suffix is not valid RFC 9557 at
+> any ordering. Writing it in RFC order is actively dangerous:
+> `Temporal.ZonedDateTime.from("5784-01-01T14:30:00-05:00[America/New_York][u-ca=hebrew]")`
+> *succeeds*, silently reading 5784 as an ISO year — a ~3760-year misparse with no error. GMT's
+> ordering makes that shape uniformly rejected instead.
+
+Scope: `addZoned`, `subtractZoned`, `diffZoned`, `diffZonedAsDuration`, `convertZonedToCalendar`,
+and the `zoned/interval/*` family. Everything else in `zoned/` still rejects the annotation —
+`isValidZonedDateTime` is unchanged, so a function that has not opted in fails closed rather than
+silently answering in the wrong calendar. `addZonedBusinessDays`/`subtractZonedBusinessDays` stay
+out by design: day-of-week is ISO-fixed in every supported calendar, so a tag would change nothing
+while implying it might.
+
+Mixed-calendar endpoints follow the same split as `plain/`: ordering functions
+(`intervalContainsZoned`, `intervalsOverlapZoned`, `intervalAbutsZoned`, `intervalEngulfsZoned`,
+`intervalOverlappingDaysZoned`, `isValidCalendarZonedInterval`) accept them; the eight
+value-returning set operations require one shared calendar and return their sentinel on a
+mismatch. Measurement functions (`diffZoned`, `diffZonedAsDuration`, `intervalCountZoned`,
+`intervalLengthZoned`, `splitIntervalByUnitZoned`) measure in the endpoints' shared calendar when
+both tags match and fall back to Gregorian otherwise — mandatory here rather than merely
+convenient, because `Temporal.ZonedDateTime.prototype.until` throws across mismatched calendars
+for *every* unit, including pure time units like hours.
 
 ### Durations
 

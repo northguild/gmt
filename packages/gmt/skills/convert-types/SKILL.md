@@ -157,7 +157,35 @@ Every calendar except the Ethiopic family (below) is resolved through Temporal's
 
 **The annotated string this function produces feeds directly into calendar-aware arithmetic (E5, issue #78):** `addDate`/`subtractDate`/`diffDate`/`diffDateAsDuration`, every `Date`-suffixed `plain/interval/*` function, and `duration/`'s `relativeTo` option all accept it — see the `calculate-dates`, `interval-ops`, and `durations` skills for how each resolves calendar-unit arithmetic in the value's own calendar. `zoned/`, `utc/`, and `unix/` reject it outright; there is no calendar-annotated `PlainDateTime`/`ZonedDateTime` grammar.
 
+## Calendar Conversion
+
+- `convertDateToCalendar(value, calendar)` — PlainDate in any of the 13 calendar systems, e.g.
+  `"5785-01-01[u-ca=hebrew]"`.
+- `convertZonedToCalendar(value, calendar)` — the zoned equivalent, keeping the instant, offset
+  and IANA zone unchanged:
+  `"5785-01-01T14:30:45-04:00[u-ca=hebrew][America/New_York]"`.
+
+Both chain: pass either function's output back in with a different target calendar. Converting to
+`"gregorian"` returns a bare, unannotated ISO string.
+
+Do **not** try to bridge between them by string surgery — a calendar-annotated `PlainDate` is not
+a valid input to any zoned conversion, and a calendar-annotated zoned string is not a valid
+`PlainDate`. Convert the value in its own namespace.
+
 ## Common Mistakes
+
+### Building a calendar-annotated zoned string by hand
+
+GMT's zoned calendar grammar puts `[u-ca=...]` **before** `[timeZone]` — the reverse of RFC 9557
+and of Temporal's own `toString()`:
+
+```
+5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]   // correct
+5784-06-15T14:30:00-05:00[America/New_York][u-ca=hebrew]   // WRONG — silently misparses in Temporal
+```
+
+Always produce these with `convertZonedToCalendar`, never by concatenation. See the
+`zoned-date-ops` skill's Common Mistakes for the full trap.
 
 ### HIGH Using Date.getTime() for conversion
 

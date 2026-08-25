@@ -1,3 +1,4 @@
+import { calendarZonedFixtures } from "../../test";
 import { Temporal } from "@js-temporal/polyfill";
 import { localNoonBattleCases } from "../../test";
 import { diffZonedAsDuration } from "./diffZonedAsDuration";
@@ -166,7 +167,44 @@ describe("diffZonedAsDuration", () => {
     },
   );
   // E5 (issue #78), decision of record D2 -- see addZoned.test.ts for the full rationale.
-  it("returns \"\" when value1 carries a calendar annotation", () => {
-    expect(diffZonedAsDuration("2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]", "2024-06-30T23:59:59+00:00[UTC]", "months")).toBe("");
+  it('returns "" when value1 carries a calendar annotation', () => {
+    expect(
+      diffZonedAsDuration(
+        "2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]",
+        "2024-06-30T23:59:59+00:00[UTC]",
+        "months",
+      ),
+    ).toBe("");
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// E7 (issue #152), D5-zoned. Every expected value produced by running
+// @js-temporal/polyfill@0.5.1.
+// ---------------------------------------------------------------------------------------------
+describe("diffZonedAsDuration with GMT calendar-annotated values", () => {
+  const Y = calendarZonedFixtures.hebrewLeapYearSpan;
+  const ISLAMIC_END =
+    "1446-03-30T00:00:00-04:00[u-ca=islamic-tabular][America/New_York]";
+
+  it.each`
+    label                       | start                    | end                      | expected
+    ${"both hebrew"}            | ${Y.tishri1_5784NewYork} | ${Y.tishri1_5785NewYork} | ${"P13M"}
+    ${"both bare ISO"}          | ${Y.isoStart}            | ${Y.isoEnd}              | ${"P12M17D"}
+    ${"mismatched tags"}        | ${Y.tishri1_5784NewYork} | ${ISLAMIC_END}           | ${"P12M17D"}
+    ${"tagged start, bare end"} | ${Y.tishri1_5784NewYork} | ${Y.isoEnd}              | ${"P12M17D"}
+  `(
+    "returns $expected for $label measured in months",
+    ({ start, end, expected }) => {
+      expect(diffZonedAsDuration(start, end, "months")).toBe(expected);
+    },
+  );
+
+  it.each`
+    value                                                         | reason
+    ${"5784-01-01T00:00:00-04:00[America/New_York][u-ca=hebrew]"} | ${"GMT digits in Temporal's segment ordering"}
+    ${"5785-13-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"} | ${"month 13 in a non-leap Hebrew year"}
+  `('returns "" when the start is $value ($reason)', ({ value }) => {
+    expect(diffZonedAsDuration(value, Y.isoEnd, "days")).toBe("");
   });
 });

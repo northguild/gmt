@@ -1,7 +1,10 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { isLeapSecond } from "../../plain/validate/isLeapSecond";
-import { isValidZonedDateTime } from "../validate/isValidZonedDateTime";
-import { resolveDurationUnit } from "../../internal";
+import {
+  formatZonedInCalendar,
+  parseCalendarZonedPairForArithmetic,
+  resolveDurationUnit,
+} from "../../internal";
+import { isValidCalendarZonedDateTime } from "../validate/isValidCalendarZonedDateTime";
 
 /**
  * Split a zoned interval into sub-intervals of `amount × unit`.
@@ -9,6 +12,12 @@ import { resolveDurationUnit } from "../../internal";
  * - Returns an array of `{ start, end }` records that tile the interval.
  * - The final sub-interval is trimmed so its `end` never exceeds the original `end`.
  * - Returns `[{ start, end }]` when `start === end` (zero-length interval).
+ * - Accepts GMT calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
+ *   well as bare ISO ones — E7 (issue #152). Stepping by a calendar unit ("1 month") resolves
+ *   against the endpoints' shared calendar when both tags match, and falls back to Gregorian/ISO
+ *   when they mismatch or either endpoint is bare (E7's D5-zoned). Sub-interval boundaries are
+ *   re-derived in the resolved calendar via `formatZonedInCalendar`, never copied from an input
+ *   string (E7's D7-zoned).
  * - Returns `[]` on invalid input (unparseable start/end, unsupported unit, non-positive amount,
  *   leap-second strings).
  *
@@ -30,15 +39,10 @@ export function splitIntervalByUnitZoned(
   unit: string,
   amount: number,
 ): Array<{ start: string; end: string }> {
-  if (typeof start !== "string" || typeof end !== "string") {
-    return [];
-  }
-
-  if (isLeapSecond(start) || isLeapSecond(end)) {
-    return [];
-  }
-
-  if (!isValidZonedDateTime(start) || !isValidZonedDateTime(end)) {
+  if (
+    !isValidCalendarZonedDateTime(start) ||
+    !isValidCalendarZonedDateTime(end)
+  ) {
     return [];
   }
 
@@ -57,15 +61,23 @@ export function splitIntervalByUnitZoned(
   }
 
   try {
-    const startVal = Temporal.ZonedDateTime.from(start);
-    const endVal = Temporal.ZonedDateTime.from(end);
+    const {
+      calendar,
+      a: startVal,
+      b: endVal,
+    } = parseCalendarZonedPairForArithmetic(start, end);
 
     if (Temporal.ZonedDateTime.compare(startVal, endVal) > 0) {
       return [];
     }
 
     if (Temporal.ZonedDateTime.compare(startVal, endVal) === 0) {
-      return [{ start: startVal.toString(), end: endVal.toString() }];
+      return [
+        {
+          start: formatZonedInCalendar(startVal, calendar),
+          end: formatZonedInCalendar(endVal, calendar),
+        },
+      ];
     }
 
     const result: Array<{ start: string; end: string }> = [];
@@ -84,8 +96,8 @@ export function splitIntervalByUnitZoned(
         Temporal.ZonedDateTime.compare(next, endVal) > 0 ? endVal : next;
 
       result.push({
-        start: current.toString(),
-        end: sliceEnd.toString(),
+        start: formatZonedInCalendar(current, calendar),
+        end: formatZonedInCalendar(sliceEnd, calendar),
       });
 
       current = next;

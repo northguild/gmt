@@ -2,11 +2,11 @@ import { Temporal } from "@js-temporal/polyfill";
 import {
   getStartOfZonedUnit,
   getUnitSpan,
+  parseCalendarZonedPairForArithmetic,
   resolveDateTimeUnit,
 } from "../../internal";
-import { isLeapSecond } from "../../plain/validate/isLeapSecond";
 import { isValidDateTimeUnit } from "../../plain/validate";
-import { isValidZonedDateTime } from "../validate/isValidZonedDateTime";
+import { isValidCalendarZonedDateTime } from "../validate/isValidCalendarZonedDateTime";
 
 /**
  * Count how many `unit` boundaries a zoned interval crosses.
@@ -22,6 +22,13 @@ import { isValidZonedDateTime } from "../validate/isValidZonedDateTime";
  * - When `start` and `end` carry different time zones, boundaries are counted in `start`'s zone.
  * - Weeks start on Monday (ISO 8601).
  * - Accepts singular or plural units (`"day"` and `"days"` behave identically).
+ * - Accepts GMT calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
+ *   well as bare ISO ones — E7 (issue #152). When BOTH endpoints carry the same calendar tag the
+ *   measurement is made in that calendar; when the tags mismatch, or either endpoint is bare ISO,
+ *   it falls back to Gregorian/ISO rather than returning the sentinel (E7's D5-zoned). The
+ *   fallback is mandatory, not a convenience: `ZonedDateTime.prototype.until` throws across
+ *   mismatched calendars for EVERY `largestUnit` — verified, including `"hour"` and
+ *   `"nanosecond"`.
  * - Returns `null` on invalid input (unparseable start/end, `start > end`, unsupported unit,
  *   leap-second strings).
  *
@@ -36,6 +43,7 @@ import { isValidZonedDateTime } from "../validate/isValidZonedDateTime";
  * @example intervalCountZoned("2024-01-01T00:00:00-05:00[America/New_York]", "2024-01-03T00:00:00+09:00[Asia/Tokyo]", "day") // 2 (counted in America/New_York)
  * @example intervalCountZoned("2024-01-01T05:00:00+00:00[UTC]", "2024-01-01T05:00:00+00:00[UTC]", "day") // 1 (zero-length, mid-day)
  * @example intervalCountZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-01-01T00:00:00+00:00[UTC]", "day") // 0 (zero-length, on the boundary)
+ * @example intervalCountZoned("5784-01-01T00:00:00-04:00[u-ca=hebrew][America/New_York]", "5785-01-01T00:00:00-04:00[u-ca=hebrew][America/New_York]", "month") // 13 (Hebrew leap year; the ISO equivalent is 14)
  * @example intervalCountZoned("invalid", "2024-01-02T00:00:00+00:00[UTC]", "day") // null
  */
 export function intervalCountZoned(
@@ -43,15 +51,10 @@ export function intervalCountZoned(
   end: string,
   unit: string,
 ): number | null {
-  if (typeof start !== "string" || typeof end !== "string") {
-    return null;
-  }
-
-  if (isLeapSecond(start) || isLeapSecond(end)) {
-    return null;
-  }
-
-  if (!isValidZonedDateTime(start) || !isValidZonedDateTime(end)) {
+  if (
+    !isValidCalendarZonedDateTime(start) ||
+    !isValidCalendarZonedDateTime(end)
+  ) {
     return null;
   }
 
@@ -66,12 +69,17 @@ export function intervalCountZoned(
   }
 
   try {
-    const startVal = Temporal.ZonedDateTime.from(start);
-    // Boundaries are counted in the start's zone, so the end is re-expressed there.
-    // Temporal refuses calendar-unit differences across two zones outright.
-    const endVal = Temporal.ZonedDateTime.from(end).withTimeZone(
-      startVal.timeZoneId,
+    // The pair is resolved BEFORE either endpoint reaches `getStartOfZonedUnit`. Normalizing only
+    // one side would leave `startOfStart.until(startOfEnd)` throwing on a mismatched pair
+    // (verified), so the D5 policy has to be applied to both operands together, up front.
+    const { a: startVal, b: pairedEnd } = parseCalendarZonedPairForArithmetic(
+      start,
+      end,
     );
+    // Boundaries are counted in the start's zone, so the end is re-expressed there.
+    // Temporal refuses calendar-unit differences across two zones outright. `withTimeZone`
+    // preserves the calendar tag (verified), so this does not undo the pair normalization above.
+    const endVal = pairedEnd.withTimeZone(startVal.timeZoneId);
 
     if (Temporal.ZonedDateTime.compare(startVal, endVal) > 0) {
       return null;
@@ -85,6 +93,13 @@ export function intervalCountZoned(
       resolvedUnit,
     );
 
+    // `.equals()` here IS calendar-sensitive — it is `ZonedDateTime.prototype.equals`, and
+    // `iso.equals(heb)` is `false` even at the same instant (verified). It is safe only by
+    // construction: `startOfEnd` is derived from `endVal` one line above
+    // (`getStartOfZonedUnit(endVal, resolvedUnit)`), so the two always share `endVal`'s calendar
+    // by definition of how `startOfEnd` is built. A refactor that hoists `endVal` out, or that
+    // sources `startOfEnd` from anywhere but `endVal`, breaks this silently — compare instants
+    // (or re-derive `startOfEnd` from `endVal`) if that ever happens.
     return spanned + (startOfEnd.equals(endVal) ? 0 : 1);
   } catch {
     return null;

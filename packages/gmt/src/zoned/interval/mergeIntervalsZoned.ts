@@ -1,6 +1,10 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { isLeapSecond } from "../../plain/validate/isLeapSecond";
-import { isValidZonedInterval } from "./validate";
+import {
+  calendarOfAllZonedValues,
+  formatZonedInCalendar,
+  parseCalendarZonedValue,
+} from "../../internal";
+import { isValidCalendarZonedInterval } from "./validate";
 
 /**
  * Collapse a list of zoned intervals into the minimum set of non-overlapping intervals.
@@ -17,6 +21,13 @@ import { isValidZonedInterval } from "./validate";
  * - Returns `[]` when `intervals` is not an array, when any element is not a
  *   `{ start, end }` record of valid ISO ZonedDateTime strings, or when any element has
  *   `start > end` or a leap-second string.
+ * - Accepts GMT calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
+ *   well as bare ISO ones — E7 (issue #152) — but **rejects a mismatched set**: every endpoint in
+ *   the list must name the same calendar system (E7's D4-zoned). This function returns *values*
+ *   the caller reads back as datetimes, and an array whose elements carried different calendar
+ *   tags would be unreadable as a set. A mismatch returns `[]`.
+ * - Output boundaries are re-derived in the resolved calendar via `formatZonedInCalendar`, never
+ *   copied from an input string (E7's D7-zoned).
  *
  * @param intervals array of `{ start, end }` records
  * @returns the minimum set of non-overlapping `{ start, end }` records, sorted by start, or `[]` on invalid input
@@ -38,18 +49,25 @@ export function mergeIntervalsZoned(
         typeof interval === "object" &&
         typeof interval.start === "string" &&
         typeof interval.end === "string" &&
-        !isLeapSecond(interval.start) &&
-        !isLeapSecond(interval.end) &&
-        isValidZonedInterval(interval.start, interval.end),
+        isValidCalendarZonedInterval(interval.start, interval.end),
     )
   ) {
     return [];
   }
 
+  // D4-zoned reject gate: every endpoint across every interval must agree on a calendar, or there
+  // is no calendar to express the merged boundaries in.
+  const calendar = calendarOfAllZonedValues(
+    intervals.flatMap((interval) => [interval.start, interval.end]),
+  );
+  if (!calendar) {
+    return [];
+  }
+
   try {
     const parsed = intervals.map((interval) => ({
-      start: Temporal.ZonedDateTime.from(interval.start),
-      end: Temporal.ZonedDateTime.from(interval.end),
+      start: parseCalendarZonedValue(interval.start),
+      end: parseCalendarZonedValue(interval.end),
     }));
 
     parsed.sort((a, b) =>
@@ -85,8 +103,8 @@ export function mergeIntervalsZoned(
     }
 
     return merged.map((interval) => ({
-      start: interval.start.toString(),
-      end: interval.end.toString(),
+      start: formatZonedInCalendar(interval.start, calendar),
+      end: formatZonedInCalendar(interval.end, calendar),
     }));
   } catch {
     return [];

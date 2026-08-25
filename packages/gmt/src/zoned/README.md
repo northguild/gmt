@@ -126,5 +126,41 @@ Extract timezone components:
 Validation helpers:
 
 - `hasDaylightSaving`, `isValidTimeZone`, `isValidZonedDateTime`, `isValidZonedRange`
+- `isValidCalendarZonedDateTime` — accepts GMT's calendar-annotated zoned grammar (see below)
 
-`zoned/` (this whole namespace, including `interval` above) rejects any `[u-ca=...]` calendar annotation — E5 (issue #78) confined calendar-system awareness to `plain/` `PlainDate` values only (see `packages/gmt/README.md`'s "Calendar-aware interval and duration arithmetic" and `context/roadmap/issues/E.md`'s E5 outcome for the full rationale and a proposed follow-up story to extend `zoned/` deliberately).
+## Calendar-annotated zoned strings (E7, issue #152)
+
+`zoned/` has its own GMT-native calendar-annotated grammar:
+
+```
+<calendar-native-date>T<time><offset>[u-ca=<id>[;era=<era>]][<timeZone>]
+
+5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]
+0031-04-30T12:00:00+09:00[u-ca=japanese;era=heisei][Asia/Tokyo]
+7517-12-30T00:30:00-04:00[u-ca=ethiopic-amete-alem][America/Santiago]
+```
+
+Produced by `convertZonedToCalendar`, validated by `isValidCalendarZonedDateTime` /
+`isValidCalendarZonedInterval`. A bare ISO zoned string is unaffected and reports `"gregorian"`.
+
+**The `[u-ca=...]` segment precedes `[timeZone]` — the reverse of RFC 9557, deliberately.** GMT's
+digits are calendar-native, so the string is never valid RFC 9557 anyway, and `;era=` is not valid
+RFC 9557 at any ordering. Writing it in RFC order is the dangerous option:
+`Temporal.ZonedDateTime.from("5784-01-01T14:30:00-05:00[America/New_York][u-ca=hebrew]")` succeeds
+and silently reads 5784 as an ISO year. GMT's ordering makes that shape uniformly rejected. See
+`regex/calendar-zoned-date-time.ts`.
+
+**In scope** (gated on the new validators): `addZoned`, `subtractZoned`, `diffZoned`,
+`diffZonedAsDuration`, `convertZonedToCalendar`, and every `zoned/interval/*` function.
+
+**Out of scope, unchanged**: every other `zoned/` function still gates on `isValidZonedDateTime`,
+which still rejects all `[u-ca=...]` annotations — including `addZonedBusinessDays` /
+`subtractZonedBusinessDays` (day-of-week is ISO-fixed in every supported calendar, so a tag would
+change nothing while implying it might). `isValidZonedDateTime` was deliberately NOT loosened: a
+validator that certified strings most of the namespace still refuses would be worse than one that
+is narrower than the namespace.
+
+Mixed-calendar endpoints: ordering functions accept them (ordering is calendar-independent);
+the eight value-returning set operations reject a mismatch; measurement functions measure in the
+shared calendar or fall back to Gregorian. See `packages/gmt/README.md`'s "Calendar-aware zoned
+datetimes" and `context/roadmap/issues/E.md`'s E5/E7 sections for the full rationale.

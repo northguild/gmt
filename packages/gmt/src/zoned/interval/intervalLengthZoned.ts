@@ -1,8 +1,9 @@
-import { Temporal } from "@js-temporal/polyfill";
-import { resolveDateTimeUnit } from "../../internal";
+import {
+  parseCalendarZonedPairForArithmetic,
+  resolveDateTimeUnit,
+} from "../../internal";
 import { isValidDateTimeUnit } from "../../plain/validate";
-import { isLeapSecond } from "../../plain/validate/isLeapSecond";
-import { isValidZonedInterval } from "./validate";
+import { isValidCalendarZonedInterval } from "./validate";
 
 /**
  * Return the exact length of a zoned interval in `unit`, as a real (possibly fractional) number.
@@ -14,6 +15,13 @@ import { isValidZonedInterval } from "./validate";
  * - Uses `Temporal.Duration.prototype.total` with `relativeTo` set to `start`, so the result is
  *   DST-aware: dividing a spring-forward day's length in hours returns `23`, not `24`.
  * - Returns `0` for a zero-length interval (`start === end`).
+ * - Accepts GMT calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
+ *   well as bare ISO ones — E7 (issue #152). When BOTH endpoints carry the same calendar tag the
+ *   measurement is made in that calendar; when the tags mismatch, or either endpoint is bare ISO,
+ *   it falls back to Gregorian/ISO rather than returning the sentinel (E7's D5-zoned). The
+ *   fallback is mandatory, not a convenience: `ZonedDateTime.prototype.until` throws across
+ *   mismatched calendars for EVERY `largestUnit` — verified, including `"hour"` and
+ *   `"nanosecond"`.
  * - Returns `null` on invalid input (unparseable start/end, `start > end`, unsupported unit,
  *   leap-second strings).
  *
@@ -42,23 +50,26 @@ export function intervalLengthZoned(
     return null;
   }
 
-  if (isLeapSecond(start) || isLeapSecond(end)) {
-    return null;
-  }
-
-  if (!isValidZonedInterval(start, end)) {
+  if (!isValidCalendarZonedInterval(start, end)) {
     return null;
   }
 
   try {
-    const startVal = Temporal.ZonedDateTime.from(start);
-    const endVal = Temporal.ZonedDateTime.from(end);
+    const { a: startVal, b: endVal } = parseCalendarZonedPairForArithmetic(
+      start,
+      end,
+    );
 
     const duration = startVal.until(endVal, { largestUnit: resolvedUnit });
 
     // total() with relativeTo gives the exact, DST-aware elapsed length, unlike
     // intervalCountZoned's boundary-crossing count — a spring-forward day touches 1 day
     // boundary via intervalCountZoned but is exactly 23/24 days (or 23 hours) here.
+    //
+    // `relativeTo` MUST be the pair policy's normalized `startVal`, never the raw parse of
+    // `start`. Anchoring to a still-calendar-tagged operand while the duration was measured in
+    // ISO does not throw — it returns a plausible-looking WRONG number (verified: 12.586…, sitting
+    // between the correct ISO 12.5666… and the correct Hebrew 13), which no sanity check catches.
     return duration.total({ unit: resolvedUnit, relativeTo: startVal });
   } catch {
     return null;

@@ -1,6 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { hasCalendarAnnotation } from "../../internal";
-import { isLeapSecond } from "../../plain/validate/isLeapSecond";
+import { parseCalendarZonedValue } from "../../internal";
+import { isValidCalendarZonedDateTime } from "../validate";
 
 /**
  * Return how many distinct calendar dates two zoned intervals share, counted in the
@@ -20,8 +20,14 @@ import { isLeapSecond } from "../../plain/validate/isLeapSecond";
  *   invalid input).
  * - Returns `null` if either interval is invalid (`start > end`).
  * - Returns `null` on invalid input (wrong type, malformed strings, leap seconds).
- * - Rejects any `[u-ca=...]` calendar annotation (E5 issue #78, decision of record D2) —
- *   see `isValidZonedDateTime`'s JSDoc for why.
+ * - **Accepts mixed calendar systems** (E7's D4-zoned, issue #152): both bare ISO zoned strings
+ *   and GMT calendar-annotated ones (`"5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"`),
+ *   and the two endpoints need not agree on a calendar. Ordering is calendar-independent —
+ *   verified that `Temporal.Instant` carries no calendar field at all and that
+ *   `Instant.compare`/`ZonedDateTime.compare` both return `0` for the same instant expressed in
+ *   hebrew, islamic-civil, japanese and iso8601.
+ * - Still rejects Temporal's own `[timeZone][u-ca=...]` RFC 9557 ordering, which reads GMT's
+ *   calendar-native digits as ISO digits — see `regex/calendar-zoned-date-time.ts`.
  * - Diverges from date-fns's `getOverlappingDaysInIntervals`, which rounds up elapsed
  *   24-hour periods instead of counting calendar dates. To reproduce date-fns's number,
  *   compose `intervalIntersectionZoned` with `intervalCountZoned`:
@@ -43,35 +49,26 @@ export function intervalOverlappingDaysZoned(
   bStart: string,
   bEnd: string,
 ): number | null {
+  // One gate for all four endpoints: `isValidCalendarZonedDateTime` already covers non-strings,
+  // empty strings, leap seconds (which Temporal would otherwise silently clamp to :59), unknown
+  // zones and Temporal's forbidden segment ordering — and, unlike `isValidZonedDateTime`, accepts
+  // GMT's calendar-annotated grammar.
   if (
-    typeof aStart !== "string" ||
-    typeof aEnd !== "string" ||
-    typeof bStart !== "string" ||
-    typeof bEnd !== "string"
-  ) {
-    return null;
-  }
-
-  if (
-    isLeapSecond(aStart) ||
-    isLeapSecond(aEnd) ||
-    isLeapSecond(bStart) ||
-    isLeapSecond(bEnd) ||
-    hasCalendarAnnotation(aStart) ||
-    hasCalendarAnnotation(aEnd) ||
-    hasCalendarAnnotation(bStart) ||
-    hasCalendarAnnotation(bEnd)
+    !isValidCalendarZonedDateTime(aStart) ||
+    !isValidCalendarZonedDateTime(aEnd) ||
+    !isValidCalendarZonedDateTime(bStart) ||
+    !isValidCalendarZonedDateTime(bEnd)
   ) {
     return null;
   }
 
   try {
-    const aS = Temporal.ZonedDateTime.from(aStart);
+    const aS = parseCalendarZonedValue(aStart);
     // Boundaries are counted in the start's zone, so the others are re-expressed there —
     // Temporal refuses calendar-unit differences across two zones outright.
-    const aE = Temporal.ZonedDateTime.from(aEnd).withTimeZone(aS.timeZoneId);
-    const bS = Temporal.ZonedDateTime.from(bStart).withTimeZone(aS.timeZoneId);
-    const bE = Temporal.ZonedDateTime.from(bEnd).withTimeZone(aS.timeZoneId);
+    const aE = parseCalendarZonedValue(aEnd).withTimeZone(aS.timeZoneId);
+    const bS = parseCalendarZonedValue(bStart).withTimeZone(aS.timeZoneId);
+    const bE = parseCalendarZonedValue(bEnd).withTimeZone(aS.timeZoneId);
 
     if (Temporal.ZonedDateTime.compare(aS, aE) > 0) {
       return null;
@@ -90,8 +87,15 @@ export function intervalOverlappingDaysZoned(
 
     const start = Temporal.ZonedDateTime.compare(aS, bS) >= 0 ? aS : bS;
     const end = Temporal.ZonedDateTime.compare(aE, bE) <= 0 ? aE : bE;
-    const startDate = start.toPlainDate();
-    const endDate = end.toPlainDate();
+    // Both operands are normalized to iso8601 immediately before `.until()`. `.compare` above is
+    // calendar-independent, but `PlainDate.prototype.until` is NOT — it throws
+    // `RangeError: cannot compute difference between dates of hebrew and iso8601 calendars`
+    // whenever the two endpoints came from different calendars, which this function explicitly
+    // accepts (E7's D4-zoned). Counting distinct calendar DATES is a Gregorian/ISO question
+    // regardless of how either endpoint was tagged, so normalizing is the right answer, not just
+    // the safe one. Exactly the same hazard `intervalOverlappingDaysDate` hit in E5 (finding 2).
+    const startDate = start.toPlainDate().withCalendar("iso8601");
+    const endDate = end.toPlainDate().withCalendar("iso8601");
 
     return startDate.until(endDate, { largestUnit: "day" }).days + 1;
   } catch {

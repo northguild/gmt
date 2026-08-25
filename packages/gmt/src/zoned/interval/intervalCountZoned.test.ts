@@ -1,3 +1,4 @@
+import { calendarZonedFixtures } from "../../test";
 import { Temporal } from "@js-temporal/polyfill";
 import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
 import { battleTestTimeZones } from "../../test/timeZoneMatrix";
@@ -258,6 +259,64 @@ describe("intervalCountZoned", () => {
   // E5 (issue #78), decision of record D2 — see isValidZonedDateTime.test.ts for the full
   // rationale: zoned/ rejects any [u-ca=...] calendar annotation outright.
   it("returns null when start carries a calendar annotation", () => {
-    expect(intervalCountZoned("2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]", "2024-06-30T23:59:59+00:00[UTC]", "month")).toBeNull();
+    expect(
+      intervalCountZoned(
+        "2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]",
+        "2024-06-30T23:59:59+00:00[UTC]",
+        "month",
+      ),
+    ).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// E7 (issue #152), D5-zoned + DoD-11. Every expected value produced by running
+// @js-temporal/polyfill@0.5.1.
+// ---------------------------------------------------------------------------------------------
+describe("intervalCountZoned with GMT calendar-annotated values", () => {
+  const Y = calendarZonedFixtures.hebrewLeapYearSpan;
+  const ISLAMIC_END =
+    "1446-03-30T00:00:00-04:00[u-ca=islamic-tabular][America/New_York]";
+
+  // DoD-11: the headline number. A Hebrew leap year crosses 13 month boundaries; the same span
+  // measured in ISO crosses 14.
+  it("counts 13 Hebrew month boundaries where the ISO equivalent counts 14", () => {
+    expect(
+      intervalCountZoned(Y.tishri1_5784NewYork, Y.tishri1_5785NewYork, "month"),
+    ).toBe(13);
+    expect(intervalCountZoned(Y.isoStart, Y.isoEnd, "month")).toBe(14);
+  });
+
+  it("counts 1 Hebrew year boundary where the ISO equivalent counts 2", () => {
+    expect(
+      intervalCountZoned(Y.tishri1_5784NewYork, Y.tishri1_5785NewYork, "year"),
+    ).toBe(1);
+    expect(intervalCountZoned(Y.isoStart, Y.isoEnd, "year")).toBe(2);
+  });
+
+  // The `.equals()` regression guard: mismatched-calendar endpoints must produce the D5
+  // Gregorian-fallback NUMBER, not the sentinel. Before the pair policy was applied to both
+  // operands together, `startOfStart.until(startOfEnd)` threw here and this returned null.
+  it.each`
+    label                       | start                    | end                      | expected
+    ${"mismatched tags"}        | ${Y.tishri1_5784NewYork} | ${ISLAMIC_END}           | ${14}
+    ${"tagged start, bare end"} | ${Y.tishri1_5784NewYork} | ${Y.isoEnd}              | ${14}
+    ${"bare start, tagged end"} | ${Y.isoStart}            | ${Y.tishri1_5785NewYork} | ${14}
+  `(
+    "returns the Gregorian-fallback count $expected for $label rather than null",
+    ({ start, end, expected }) => {
+      const result = intervalCountZoned(start, end, "month");
+      expect(result).not.toBeNull();
+      expect(result).toBe(expected);
+    },
+  );
+
+  it.each`
+    value                                                         | reason
+    ${"5784-01-01T00:00:00-04:00[America/New_York][u-ca=hebrew]"} | ${"GMT digits in Temporal's segment ordering"}
+    ${"5785-13-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"} | ${"month 13 in a non-leap Hebrew year"}
+    ${"2024-06-30T23:59:60+00:00[UTC]"}                           | ${"leap second"}
+  `("returns null when the start is $value ($reason)", ({ value }) => {
+    expect(intervalCountZoned(value, Y.isoEnd, "day")).toBeNull();
   });
 });

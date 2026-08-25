@@ -327,6 +327,38 @@ splitIntervalByUnitDate(
 
 ## Common Mistakes
 
+### Mixing calendar systems across interval endpoints
+
+Both `plain/` and `zoned/` interval families split by return type:
+
+- **Ordering / counting functions accept mixed calendars** — `intervalContains*`,
+  `intervalsOverlap*`, `intervalAbuts*`, `intervalEngulfs*`, `intervalOverlappingDays*`,
+  `isValidDateInterval` / `isValidCalendarZonedInterval`. Ordering does not depend on calendar.
+- **Value-returning set operations reject a mismatch** — `intervalUnion*`, `intervalIntersection*`,
+  `intervalDifference*`, `intervalXor*`, `intervalXorAll*`, `mergeIntervals*`,
+  `intervalDivideEqually*`, `intervalSplitAt*` return their sentinel (`null`/`[]`) unless every
+  endpoint names the same calendar. There is no principled output calendar to pick, and four of
+  them return arrays whose elements would otherwise disagree.
+- **Measurement functions fall back to Gregorian** — `intervalCount*`, `intervalLength*`,
+  `splitIntervalByUnit*` measure in the shared calendar when both tags match, else in
+  Gregorian/ISO. They do **not** return the sentinel on a mismatch.
+
+For `zoned/`, use `isValidCalendarZonedInterval` (not `isValidZonedInterval`, which still rejects
+every `[u-ca=...]` annotation).
+
+### Building a calendar-annotated zoned string by hand
+
+GMT's zoned calendar grammar puts `[u-ca=...]` **before** `[timeZone]` — the reverse of RFC 9557
+and of Temporal's own `toString()`:
+
+```
+5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]   // correct
+5784-06-15T14:30:00-05:00[America/New_York][u-ca=hebrew]   // WRONG — silently misparses in Temporal
+```
+
+Always produce these with `convertZonedToCalendar`, never by concatenation. See the
+`zoned-date-ops` skill's Common Mistakes for the full trap.
+
 ### HIGH: Confusing `intervalsOverlap` with `intervalAbuts`
 
 Adjacent intervals (A ends where B starts) do **not** overlap. `intervalsOverlap` returns `false`; `intervalAbuts` returns `true`. They are complementary, not interchangeable.

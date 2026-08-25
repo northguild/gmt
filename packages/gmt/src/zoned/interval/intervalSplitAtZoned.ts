@@ -1,7 +1,11 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { isLeapSecond } from "../../plain/validate/isLeapSecond";
-import { isValidZonedDateTime } from "../validate/isValidZonedDateTime";
-import { isValidZonedInterval } from "./validate";
+import {
+  calendarOfAllZonedValues,
+  formatZonedInCalendar,
+  parseCalendarZonedValue,
+} from "../../internal";
+import { isValidCalendarZonedDateTime } from "../validate/isValidCalendarZonedDateTime";
+import { isValidCalendarZonedInterval } from "./validate";
 
 /**
  * Split a zoned interval at arbitrary `points`, producing consecutive sub-intervals.
@@ -18,6 +22,13 @@ import { isValidZonedInterval } from "./validate";
  * - Returns `[]` when `points` is not an array, when any element is not a valid ISO
  *   ZonedDateTime string, or on invalid input (unparseable start/end, `start > end`,
  *   leap-second strings).
+ * - Accepts GMT calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
+ *   well as bare ISO ones — E7 (issue #152) — but **rejects a mismatched set**: `start`, `end`
+ *   and every element of `points` must name the same calendar system (E7's D4-zoned), since the
+ *   returned sub-intervals are values the caller reads back as datetimes and an array of
+ *   differently-tagged records would be unreadable as a set. A mismatch returns `[]`.
+ * - Output boundaries are re-derived in the resolved calendar via `formatZonedInCalendar`, never
+ *   copied from an input string (E7's D7-zoned).
  *
  * @param start ISO 8601 zoned datetime string for the interval start
  * @param end ISO 8601 zoned datetime string for the interval end
@@ -37,31 +48,28 @@ export function intervalSplitAtZoned(
     return [];
   }
 
-  if (isLeapSecond(start) || isLeapSecond(end)) {
+  if (!isValidCalendarZonedInterval(start, end)) {
     return [];
   }
 
-  if (!isValidZonedInterval(start, end)) {
+  if (!points.every((point) => isValidCalendarZonedDateTime(point))) {
     return [];
   }
 
-  if (
-    !points.every(
-      (point) => typeof point === "string" && isValidZonedDateTime(point),
-    )
-  ) {
+  // D4-zoned reject gate: the interval's endpoints AND every split point must agree on a
+  // calendar, or there is no calendar to express the returned sub-intervals in.
+  const calendar = calendarOfAllZonedValues([start, end, ...points]);
+  if (!calendar) {
     return [];
   }
 
   try {
-    const startVal = Temporal.ZonedDateTime.from(start);
-    const endVal = Temporal.ZonedDateTime.from(end);
+    const startVal = parseCalendarZonedValue(start);
+    const endVal = parseCalendarZonedValue(end);
     const startInstant = startVal.toInstant();
     const endInstant = endVal.toInstant();
 
-    const parsedPoints = points.map((point) =>
-      Temporal.ZonedDateTime.from(point),
-    );
+    const parsedPoints = points.map((point) => parseCalendarZonedValue(point));
 
     const inRangePoints = parsedPoints.filter((point) => {
       const instant = point.toInstant();
@@ -75,6 +83,10 @@ export function intervalSplitAtZoned(
       Temporal.Instant.compare(a.toInstant(), b.toInstant()),
     );
 
+    // Safe: `.equals()` here is `Temporal.Instant.prototype.equals`, and `Instant` carries no
+    // calendar field at all — verified calendar-blind. E7 re-audited this site rather than
+    // inheriting E5's "structurally unreachable" verdict, which depended on mixed calendars never
+    // reaching `zoned/` at all.
     const uniquePoints = inRangePoints.filter(
       (point, index) =>
         index === 0 ||
@@ -86,8 +98,8 @@ export function intervalSplitAtZoned(
     const result: Array<{ start: string; end: string }> = [];
     for (let i = 0; i < boundaries.length - 1; i++) {
       result.push({
-        start: boundaries[i].toString(),
-        end: boundaries[i + 1].toString(),
+        start: formatZonedInCalendar(boundaries[i], calendar),
+        end: formatZonedInCalendar(boundaries[i + 1], calendar),
       });
     }
 

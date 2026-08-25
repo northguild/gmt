@@ -1,5 +1,14 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { battleTestTimeZones, localNoonBattleCases } from "../../test";
+import {
+  battleTestTimeZones,
+  calendarZonedFixtures,
+  localNoonBattleCases,
+} from "../../test";
+import {
+  mockTemporalPlainDateFromThrow,
+  mockTemporalZonedDateTimeFromThrow,
+} from "../../test/mocks";
+import { convertZonedToCalendar } from "../convert";
 import { parseTimeZoneFromZoned } from "../parse";
 import { addZoned } from "./addZoned";
 
@@ -266,7 +275,166 @@ describe("addZoned", () => {
   // annotation outright (previously accepted it by accident and did genuinely calendar-aware
   // but undocumented, untested arithmetic -- verified directly against @js-temporal/polyfill
   // during E5 research). See isValidZonedDateTime.test.ts for the full rationale.
-  it("returns \"\" when value carries a calendar annotation", () => {
-    expect(addZoned("2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]", { months: 1 })).toBe("");
+  it('returns "" when value carries a calendar annotation', () => {
+    expect(
+      addZoned("2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]", { months: 1 }),
+    ).toBe("");
   });
+});
+
+// ---------------------------------------------------------------------------------------------
+// E7 (issue #152) — GMT calendar-annotated zoned strings. Every expected value below was produced
+// by running @js-temporal/polyfill@0.5.1, never hand-written.
+// ---------------------------------------------------------------------------------------------
+describe("addZoned with GMT calendar-annotated values", () => {
+  const H = calendarZonedFixtures.hebrewLeapMonth;
+  const E = calendarZonedFixtures.ethiopicPagumen;
+  const J = calendarZonedFixtures.japaneseEraFold;
+  const G = calendarZonedFixtures.jerusalemGap;
+
+  // DoD-2: the calendar boundary and the DST boundary move in the SAME call, and the answer is a
+  // calendar day away from the ISO control — which is the whole reason E7 exists.
+  it("crosses a Hebrew leap month and a DST transition in one call", () => {
+    expect(addZoned(H.adarI15NewYork, { months: 1 })).toBe(H.adar15NewYork);
+  });
+
+  it("differs from the ISO control by one calendar day for the same +1 month", () => {
+    expect(addZoned(H.isoControl, { months: 1 })).toBe(H.isoControlPlusMonth);
+    // Hebrew lands on 2024-03-25, ISO on 2024-03-24 — one day apart, and the Hebrew answer also
+    // carries the -04:00 EDT offset rather than the input's -05:00 EST.
+    expect(H.adar15NewYork).toContain("-04:00");
+    expect(H.adarI15NewYork).toContain("-05:00");
+  });
+
+  // DoD-3: Ethiopic Pagumen overflow crossing Chile's 2025-09-07 spring-forward.
+  it("overflows the 30-day 12th month into Pagumen while crossing a DST transition", () => {
+    expect(addZoned(E.m12d30_7517Santiago, { months: 1 })).toBe(
+      E.pagumen5_7517Santiago,
+    );
+  });
+
+  it('returns "" for the same Pagumen overflow under overflow: "reject"', () => {
+    expect(
+      addZoned(E.m12d30_7517Santiago, { months: 1 }, { overflow: "reject" }),
+    ).toBe("");
+  });
+
+  // DoD-4: era transition AND a DST fold in one call, across all four disambiguation values.
+  it.each`
+    disambiguation  | expected
+    ${undefined}    | ${"0001-05-05T02:30:00+01:00[u-ca=japanese;era=reiwa][Africa/Casablanca]"}
+    ${"compatible"} | ${"0001-05-05T02:30:00+01:00[u-ca=japanese;era=reiwa][Africa/Casablanca]"}
+    ${"earlier"}    | ${"0001-05-05T02:30:00+01:00[u-ca=japanese;era=reiwa][Africa/Casablanca]"}
+    ${"later"}      | ${"0001-05-05T02:30:00+00:00[u-ca=japanese;era=reiwa][Africa/Casablanca]"}
+    ${"reject"}     | ${""}
+  `(
+    "resolves the Heisei->Reiwa Casablanca fold to $expected with disambiguation $disambiguation",
+    ({ disambiguation, expected }) => {
+      expect(
+        addZoned(
+          J.heisei31_0405Casablanca,
+          { months: 1 },
+          disambiguation === undefined ? undefined : { disambiguation },
+        ),
+      ).toBe(expected);
+    },
+  );
+
+  // R1 regression: before E7 both non-"compatible" branches rebuilt through
+  // `${zdt.toPlainDateTime()}[${tz}]`, which emits Temporal's forbidden segment ordering the
+  // moment the value carries a calendar. Without the `.withCalendar("iso8601")` strip this row
+  // returns "" instead of the resolved value.
+  it("resolves a non-compatible disambiguation on a calendar-tagged value instead of returning the sentinel", () => {
+    expect(
+      addZoned(
+        J.heisei31_0405Casablanca,
+        { months: 1 },
+        { disambiguation: "later" },
+      ),
+    ).not.toBe("");
+  });
+
+  it("crosses the Heisei->Reiwa boundary on a plain +1 day in Tokyo", () => {
+    expect(addZoned(J.heisei31_0430Tokyo, { days: 1 })).toBe(
+      J.reiwa1_0501Tokyo,
+    );
+  });
+
+  // DoD-7 gap half: disambiguation has NO effect on a spring-forward gap landing, because
+  // Temporal's arithmetic advances past the gap before disambiguation is evaluated. A calendar
+  // tag does not change that.
+  it.each`
+    disambiguation
+    ${"compatible"}
+    ${"earlier"}
+    ${"later"}
+    ${"reject"}
+  `(
+    "returns the same post-gap value for the Jerusalem gap with disambiguation $disambiguation",
+    ({ disambiguation }) => {
+      expect(addZoned(G.beforeGap, { days: 1 }, { disambiguation })).toBe(
+        G.afterGap,
+      );
+    },
+  );
+
+  // `offset` is documented as inert on this function; a calendar tag does not change that either.
+  it.each`
+    offset
+    ${"prefer"}
+    ${"use"}
+    ${"ignore"}
+    ${"reject"}
+  `(
+    "returns the same value for offset $offset on a calendar-tagged input",
+    ({ offset }) => {
+      expect(addZoned(H.adarI15NewYork, { months: 1 }, { offset })).toBe(
+        H.adar15NewYork,
+      );
+    },
+  );
+
+  it.each`
+    value                                                          | reason
+    ${"5784-06-15T14:30:00-05:00[America/New_York][u-ca=hebrew]"}  | ${"GMT digits in Temporal's segment ordering"}
+    ${"5785-13-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"}  | ${"month 13 in a non-leap Hebrew year"}
+    ${"5784-06-15T14:30:00-05:00[u-ca=martian][America/New_York]"} | ${"unknown calendar identifier"}
+    ${"5784-06-15[u-ca=hebrew]"}                                   | ${"a plain calendar date, not a zoned value"}
+  `('returns "" for $value ($reason)', ({ value }) => {
+    expect(addZoned(value, { months: 1 })).toBe("");
+  });
+
+  it('returns "" when Temporal.ZonedDateTime.from throws for a calendar-tagged value', () => {
+    mockTemporalZonedDateTimeFromThrow();
+    expect(addZoned(H.adarI15NewYork, { months: 1 })).toBe("");
+  });
+
+  it('returns "" when Temporal.PlainDate.from throws while decomposing the date half', () => {
+    mockTemporalPlainDateFromThrow();
+    expect(addZoned(H.adarI15NewYork, { months: 1 })).toBe("");
+  });
+
+  it.each(
+    battleTestTimeZones.map((timeZone) => ({
+      timeZone,
+      value: convertZonedToCalendar(
+        Temporal.Instant.from("2024-10-03T14:30:45Z")
+          .toZonedDateTimeISO(timeZone)
+          .toString(),
+        "hebrew",
+      ),
+    })),
+  )(
+    "adds 1 Hebrew month to $value in $timeZone and keeps the calendar tag and zone",
+    ({ timeZone, value }) => {
+      const result = addZoned(value, { months: 1 });
+
+      expect(result).not.toBe("");
+      expect(result).toContain("[u-ca=hebrew]");
+      expect(result).toContain(`[${timeZone}]`);
+      expect(result.indexOf("[u-ca=")).toBeLessThan(
+        result.indexOf(`[${timeZone}]`),
+      );
+    },
+  );
 });

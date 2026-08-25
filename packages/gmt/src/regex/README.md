@@ -10,6 +10,25 @@ Date patterns:
 
 - `year`, `month`, `day`, `plainDate`
 
+### calendar-date
+
+GMT's calendar-annotated PlainDate pattern (calendar-native digits, not Temporal's ISO-digit
+`[u-ca=...]` convention):
+
+- `calendarDate` — e.g. `"5785-01-01[u-ca=hebrew]"`, `"0006-10-03[u-ca=japanese;era=reiwa]"`
+
+### calendar-zoned-date-time
+
+GMT's calendar-annotated ZonedDateTime pattern. **The `[u-ca=...]` segment precedes
+`[timeZone]` — the reverse of RFC 9557, deliberately**; see the file's own comment for why
+(short version: GMT's digits are calendar-native, so the string is never valid RFC 9557, and
+writing it in RFC order makes Temporal silently misparse a Hebrew year as an ISO year):
+
+- `calendarZonedDateTime` — e.g. `"5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"`
+
+Its date half and annotation half are byte-identical to `calendarDate`'s, with a sync test
+asserting the two never drift apart.
+
 ### date-time
 
 DateTime patterns:
