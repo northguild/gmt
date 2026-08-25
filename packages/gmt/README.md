@@ -1,5 +1,17 @@
 # @burglekitt/gmt
 
+> ## ⚠️ Deprecation Notice
+>
+> This package has moved. **`gmt` is now published as
+> [`@northguild/gmt`](https://www.npmjs.com/package/@northguild/gmt)** under the
+> [northguild](https://github.com/northguild) GitHub organization.
+>
+> - **New repository:** <https://github.com/northguild/gmt>
+> - **New package:** `@northguild/gmt`
+>
+> `@burglekitt/gmt` is deprecated and will receive no further updates. Please
+> migrate to `@northguild/gmt`.
+
 Give Me Temporal.
 
 `@burglekitt/gmt` is a Temporal-first date and time library with a simple rule set:

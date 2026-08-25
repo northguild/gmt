@@ -1,5 +1,17 @@
 # @burglekitt/gmt-oxlint
 
+> ## ⚠️ Deprecation Notice
+>
+> This package has moved. **`gmt-oxlint` is now published as
+> [`@northguild/gmt-oxlint`](https://www.npmjs.com/package/@northguild/gmt-oxlint)**
+> under the [northguild](https://github.com/northguild) GitHub organization.
+>
+> - **New repository:** <https://github.com/northguild/gmt>
+> - **New package:** `@northguild/gmt-oxlint`
+>
+> `@burglekitt/gmt-oxlint` is deprecated and will receive no further updates.
+> Please migrate to `@northguild/gmt-oxlint`.
+
 Shared [Oxlint](https://oxc.rs/docs/guide/usage/linter) JS plugin for `@burglekitt/gmt` projects.
 
 It enforces the same Date bans used by `@burglekitt/gmt-eslint` and `@burglekitt/gmt-biome`.

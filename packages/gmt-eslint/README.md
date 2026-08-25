@@ -1,5 +1,17 @@
 # @burglekitt/gmt-eslint
 
+> ## ⚠️ Deprecation Notice
+>
+> This package has moved. **`gmt-eslint` is now published as
+> [`@northguild/gmt-eslint`](https://www.npmjs.com/package/@northguild/gmt-eslint)**
+> under the [northguild](https://github.com/northguild) GitHub organization.
+>
+> - **New repository:** <https://github.com/northguild/gmt>
+> - **New package:** `@northguild/gmt-eslint`
+>
+> `@burglekitt/gmt-eslint` is deprecated and will receive no further updates.
+> Please migrate to `@northguild/gmt-eslint`.
+
 Shared [ESLint](https://eslint.org/) flat configuration for `@burglekitt/gmt` projects. Enforces the Temporal-only policy by banning all `Date` APIs via ESLint rules.
 
 ## Installation

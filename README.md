@@ -1,5 +1,16 @@
 # GMT: Give Me Temporal
 
+> ## ⚠️ Deprecation Notice
+>
+> This package and repository have moved. **`gmt` is now maintained under the
+> [northguild](https://github.com/northguild) organization.**
+>
+> - **New repository:** <https://github.com/northguild/gmt>
+>
+> This `burglekitt/gmt` repository and its published package are deprecated and
+> will receive no further updates. Please update any bookmarks, forks, and CI
+> references to point at **`northguild/gmt`**.
+
 Home of [@burglekitt/gmt](./packages/gmt) — **Give Me Temporal!**
 
 A monorepo for Burglekitt community libraries, built with Nx and powered by pnpm, focused on making JavaScript date handling reliable and predictable.
@@ -108,18 +119,18 @@ GMT's test suite balances **thoroughness** against **maintenance burden** by tes
 
 GMT's roadmap tracks parity against the same four libraries story-by-story, with each gap sourced against the specific competitor function it closes — see [context/roadmap](./context/roadmap) for the full, source-verified audit trail. This is a live snapshot, not a finished-parity claim: ✅ shipped, 🟡 in progress, ⏳ backlog and not yet scheduled.
 
-| Capability                                                                         | Status                       | Also has it                                                              |
-| ---------------------------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------ |
-| Duration type<br>(ISO 8601 parse/format/arithmetic)                                | ✅ Done                      | Luxon `Duration`                                                         |
-| Interval/range math<br>(contains, overlap, union,<br>intersection, split, set ops) | ✅ Done                      | Luxon `Interval`,<br>date-fns `areIntervalsOverlapping`                  |
-| DST disambiguation control<br>on construction _and_ arithmetic                     | ✅ Done — **differentiator** | None of the others expose<br>this on arithmetic                          |
-| Locale-aware calendar helpers<br>(weekend, week start/end, day-of-week)            | ✅ Done                      | `@internationalized/date`                                                |
-| Business-day arithmetic,<br>clamp/closest, time rounding                           | ✅ Done                      | `temporal-kit`                                                           |
-| Interval rounding-out<br>(boundary count, from-duration)                           | ✅ Done                      | Luxon                                                                    |
-| Locale calendar metadata<br>(names, `hasDST`)                                      | ✅ Done                      | Luxon `Info`                                                             |
-| Overlap-day count, relative<br>rounding, DST transitions, hours-in-day             | ✅ Done                      | date-fns, `@internationalized/date`                                      |
-| Field setters, token-pattern<br>parsing, named machine formats,<br>calendar-style formatting        | ✅ Done | Luxon `.set()`,<br>`toRFC2822`/`toHTTP`/`toSQL`,<br>Moment `.calendar()` |
-| Non-Gregorian calendar systems<br>(Hebrew done; Islamic, solar,<br>Ethiopic backlog) | 🟡 In progress | `@internationalized/date`'s<br>`toCalendar`                              |
+| Capability                                                                                   | Status                       | Also has it                                                              |
+| -------------------------------------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------ |
+| Duration type<br>(ISO 8601 parse/format/arithmetic)                                          | ✅ Done                      | Luxon `Duration`                                                         |
+| Interval/range math<br>(contains, overlap, union,<br>intersection, split, set ops)           | ✅ Done                      | Luxon `Interval`,<br>date-fns `areIntervalsOverlapping`                  |
+| DST disambiguation control<br>on construction _and_ arithmetic                               | ✅ Done — **differentiator** | None of the others expose<br>this on arithmetic                          |
+| Locale-aware calendar helpers<br>(weekend, week start/end, day-of-week)                      | ✅ Done                      | `@internationalized/date`                                                |
+| Business-day arithmetic,<br>clamp/closest, time rounding                                     | ✅ Done                      | `temporal-kit`                                                           |
+| Interval rounding-out<br>(boundary count, from-duration)                                     | ✅ Done                      | Luxon                                                                    |
+| Locale calendar metadata<br>(names, `hasDST`)                                                | ✅ Done                      | Luxon `Info`                                                             |
+| Overlap-day count, relative<br>rounding, DST transitions, hours-in-day                       | ✅ Done                      | date-fns, `@internationalized/date`                                      |
+| Field setters, token-pattern<br>parsing, named machine formats,<br>calendar-style formatting | ✅ Done                      | Luxon `.set()`,<br>`toRFC2822`/`toHTTP`/`toSQL`,<br>Moment `.calendar()` |
+| Non-Gregorian calendar systems<br>(Hebrew done; Islamic, solar,<br>Ethiopic backlog)         | 🟡 In progress               | `@internationalized/date`'s<br>`toCalendar`                              |
 
 <sub>Status reflects [context/roadmap/tracker.md](./context/roadmap/tracker.md) as of this writing.</sub>
 
