@@ -1,9 +1,0 @@
----
-"@burglekitt/gmt": minor
----
-
-Add Ethiopic calendar family: `"ethiopic"`, `"ethiopic-amete-alem"`, and `"coptic"` calendar systems (Story E4), extending `CalendarSystem` and `convertDateToCalendar` from E1–E3.
-
-All three share one 13-month structure (12 months of 30 days, plus a short 5/6-day Pagume/Nasie 13th month) but differ in epoch. `"ethiopic"` resets to the Amete Mihret era at its own epoch (~AD 8) and is tagged with `.eraYear`/`;era=<name>` like `"japanese"` (`"2017-01-23[u-ca=ethiopic;era=ethiopic]"`, not a 5-digit proleptic year). `"ethiopic-amete-alem"` is the same calendar counted continuously from a much older epoch (~5493 BCE) with no era reset. `"coptic"` has its own epoch (AD 284, the Diocletian/Martyrs era) and a plain native year.
-
-Unlike every other calendar `convertDateToCalendar` supports, this family is **not** resolved through Temporal's native `"ethiopic"`/`"coptic"` calendar ids: `@js-temporal/polyfill@0.5.1` resolves those two calendars' year/era via `Intl.DateTimeFormat`-derived era-name matching, and CLDR's era-name output for them changed between the ICU versions bundled with different Node releases — every read or write of Temporal's `"ethiopic"`/`"coptic"` calendar ids throws a `RangeError` under Node 24's ICU (confirmed directly, not a hypothetical; `"ethiopic-amete-alem"`/Temporal's `"ethioaa"` id is unaffected, since it has no era and is resolved with pure arithmetic). GMT routes around this bug rather than inheriting it: month/day are identical across the whole family (they share one annual cycle), so `convertDateToCalendar` reads/writes them through the safe `"ethioaa"` id and computes each calendar's own displayed year (+ era, for `"ethiopic"`) with GMT-owned arithmetic ported from the same epoch/anchor-year constants `@js-temporal/polyfill` itself uses internally (`internal/ethiopicFamilyCalendar.ts`).

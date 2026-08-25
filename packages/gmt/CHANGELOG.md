@@ -1,5 +1,103 @@
 # @burglekitt/gmt
 
+## 1.14.0
+
+### Minor Changes
+
+- a7858f6: Add a GMT-native calendar-annotated `ZonedDateTime` string and make `zoned/` calendar-aware (Story E7), deliberately restoring — with a grammar, tests and docs — the capability E5's decision D2 removed.
+
+  The new grammar adds a time, a UTC offset and an IANA zone to E1's plain calendar string:
+
+  ```
+  <calendar-native-date>T<time><offset>[u-ca=<id>[;era=<era>]][<timeZone>]
+
+  5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]
+  0031-04-30T12:00:00+09:00[u-ca=japanese;era=heisei][Asia/Tokyo]
+  7517-12-30T00:30:00-04:00[u-ca=ethiopic-amete-alem][America/Santiago]
+  ```
+
+  `convertZonedToCalendar(value, calendar)` produces it across all 13 supported calendar systems, keeping the instant, wall time, offset and zone unchanged; `isValidCalendarZonedDateTime` and `isValidCalendarZonedInterval` validate it. `addZoned`, `subtractZoned`, `diffZoned`, `diffZonedAsDuration` and the 17 `zoned/interval/*` functions now accept it alongside bare ISO strings.
+
+  This closes a gap that was categorically impossible to compose around: adding one Hebrew month to a date in `America/New_York` needs calendar-unit arithmetic and DST resolution in the _same_ operation. Doing the calendar step first applies DST to an already-resolved wall time; doing the zoned step first leaves no calendar to step in. `addZoned("5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]", { months: 1 })` now returns `"5784-07-15T14:30:00-04:00[u-ca=hebrew][America/New_York]"` — Adar I to Adar and EST to EDT together, one calendar day away from the ISO answer for the same input. The calendar tag, era, wall time and UTC offset are always re-derived from the arithmetic result, never copied: a Japanese Heisei value crossing 2019-05-01 comes back tagged Reiwa.
+
+  **The `[u-ca=...]` segment precedes `[timeZone]` — the reverse of RFC 9557, deliberately.** GMT's digits are calendar-native (Hebrew year 5784, not ISO year 5784), so the string is never valid RFC 9557 to begin with, and the `;era=` suffix is not valid RFC 9557 at any ordering. The RFC-legal ordering is the dangerous one: `Temporal.ZonedDateTime.from("5784-01-01T14:30:00-05:00[America/New_York][u-ca=hebrew]")` _succeeds_ and silently reads 5784 as an ISO year — a ~3760-year misparse with no error anywhere. GMT's ordering makes that shape uniformly rejected instead.
+
+  **Purely additive — no existing behavior changes.** `isValidZonedDateTime` and `isValidZonedInterval` are deliberately left untouched and still reject every `[u-ca=...]` annotation, so the ~72 `zoned/` functions outside this story's scope (`formatZonedDateTime`, `roundZoned`, `setZoned`, `startOfZoned`, `parseDateFromZoned`, `convertZonedToUtc`, and the rest) continue to return their sentinel for a calendar-annotated value. Loosening them would have made `isValidZonedDateTime(x) === true` while `getZonedYear(x) === null` — a validator certifying strings the library still refuses. `addZonedBusinessDays`/`subtractZonedBusinessDays` also stay out by design: day-of-week is ISO-fixed in every supported calendar, so a tag would change nothing while implying it might.
+
+  Mixed-calendar endpoints follow the split E5 established for `plain/`: ordering functions accept them (ordering is calendar-independent — `Temporal.Instant` has no calendar field at all); the eight value-returning set operations require one shared calendar and return their sentinel on a mismatch; measurement functions (`diffZoned`, `diffZonedAsDuration`, `intervalCountZoned`, `intervalLengthZoned`, `splitIntervalByUnitZoned`) measure in the shared calendar when both tags match and fall back to Gregorian otherwise. That fallback is mandatory rather than merely convenient here: unlike `PlainDate`, `Temporal.ZonedDateTime.prototype.until` throws across mismatched calendars for _every_ unit, including pure time units like hours.
+
+  **Two pre-existing latent bugs fixed along the way.** `addZoned` and `intervalFromDurationZoned` both rebuilt their non-`"compatible"` disambiguation path via `` `${x.toPlainDateTime().toString()}[${x.timeZoneId}]` ``. That was harmless while every input was plain ISO, but a calendared `toPlainDateTime().toString()` emits Temporal's own `[u-ca=...]` annotation, so appending the zone produced the forbidden segment ordering and silently degraded every non-default `disambiguation` to `""`/`null`. Both now round-trip the rebuild through bare ISO and re-attach the calendar to the result; `subtractZoned` had the same shape and was fixed alongside.
+
+  Decisions of record, the reversed `(b→a→b)` audit verdicts, and the unanticipated findings are recorded permanently in `context/roadmap/issues/E.md`'s new "E7 outcome" section. Extending `duration/`'s `relativeTo` to accept the zoned grammar was explicitly left out of scope as a follow-up.
+
+- addaeb9: Add calendar-system foundation: `CalendarSystem` type and `convertDateToCalendar` (Story E1), with Hebrew as the first supported non-Gregorian calendar.
+
+  `convertDateToCalendar(value, calendar)` expresses a PlainDate in a different calendar system, built entirely on Temporal's native calendar support (`PlainDate.prototype.withCalendar`) — no ported leap-year tables or arithmetic, since the polyfill already implements the full Metonic 19-year Hebrew leap-year cycle (7 leap years per cycle, a 13th month inserted before Adar) correctly.
+
+  The output string format deliberately diverges from Temporal's own `[u-ca=...]` annotation convention: Temporal's `toString()` always keeps the ISO/proleptic-Gregorian digits and only tags the calendar, hiding the calendar-native fields behind object accessors GMT's string-only contract has no equivalent for. GMT's annotated string instead carries the calendar's own year/month/day (e.g. `"5785-01-01[u-ca=hebrew]"` for Hebrew year 5785, not the ISO year), so the calendar-system concept is visible directly in the string. A plain, unannotated ISO string is always the `"gregorian"` calendar, so every existing GMT function keeps working unchanged, and `convertDateToCalendar(value, "gregorian")` always returns a bare ISO string.
+
+  New `CalendarSystem` type at `packages/gmt/src/types/calendar-system.ts` (seeded with `"gregorian" | "hebrew"`, extended by E2–E4 as they land), new `plain/convert/` module, and a new `isValidCalendarDate` validator accepting both plain and calendar-annotated PlainDate strings.
+
+- d296372: Extend `duration/` and interval functions to be calendar-system-aware (Story E5), completing the audit-and-fix pass over Story Groups A/B/G's functions promised by E1–E4's calendar-system foundation.
+
+  `addDate`, `subtractDate`, `diffDate`, `diffDateAsDuration`, and the `Date`-suffixed `plain/interval/*` functions (`intervalContainsDate`, `intervalsOverlapDate`, `intervalUnionDate`, `intervalCountDate`, `splitIntervalByUnitDate`, and 13 others) now accept GMT calendar-annotated `PlainDate` strings (e.g. `"5784-06-15[u-ca=hebrew]"`, as produced by `convertDateToCalendar`) in addition to bare ISO strings. Calendar-unit arithmetic ("add 1 month") resolves in the value's own calendar — a Hebrew leap year now correctly reports 13 month boundaries and splits into 13 month-slices, not 12, and adding a month from Hebrew Adar I lands on Adar rather than being rejected as invalid input. Ordering functions (`intervalContains*`, `intervalsOverlap*`, `intervalAbuts*`, `intervalEngulfs*`, `isValidDateInterval`, `intervalOverlappingDaysDate`) accept endpoints in different calendars, since ordering and day-counting are calendar-independent; value-returning set operations (union, intersection, difference, xor, split, divide, merge) require all arguments to share one calendar and return the type's sentinel on a mismatch, since there is no principled way to pick an output calendar for a value the caller reads back as a date.
+
+  **Two behavior changes, not purely additive:**
+
+  - **`zoned/` now rejects any `[u-ca=...]` calendar annotation.** Before this change, `isValidZonedDateTime` and most `zoned/interval/*` functions had no gate against a calendar annotation, so a zoned string carrying one (e.g. `"2024-02-10T12:00:00-05:00[America/New_York][u-ca=hebrew]"`) was silently accepted and produced genuinely calendar-aware — but undocumented and untested — arithmetic. Calendar-system awareness is now confined to `plain/` `PlainDate` values only, for contract coherence with the string format `convertDateToCalendar` established in E1: GMT's own calendar-annotated string uses calendar-native digits, which is a different (and incompatible) convention from the ISO-digit `[u-ca=...]` shape Temporal itself accepts, so a single string could otherwise mean two different dates depending on which function received it. Any caller that was unknowingly relying on this accidental behavior will now get `""`/`false`/`null`/`[]` from the affected function instead. A follow-up story to deliberately support a GMT-shape calendar-annotated zoned string is proposed (not yet filed) in `context/roadmap/issues/E.md`'s E5 section.
+  - **`duration/`'s `relativeTo` option now validates a GMT calendar-annotated `PlainDate` string instead of silently misreading it as Temporal's ISO-digit convention.** `durationAs`, `compareDurations`, and `normalizeDuration` previously passed `relativeTo` straight through to `Temporal.Duration`, so `relativeTo: "5784-06-15[u-ca=hebrew]"` (GMT's own documented calendar-annotated output shape) was silently interpreted as ISO year 5784 and produced a wrong-but-plausible number with no error. This is fixed as part of E5 (it predates this story but shares E5's parsing gate); the number these three functions return for a GMT-shape `relativeTo` argument changes for anyone who was passing one before this fix, from a silently wrong answer to the correct one.
+
+  Full per-function audit findings — including the "no change needed, verified why" negatives the story's definition of done requires — are recorded permanently in `context/roadmap/issues/E.md`'s new "E5 outcome" section, alongside the decisions of record this story settled (D1–D10) and a follow-up story candidate (E7) for deliberately extending `zoned/`.
+
+- 71b5b43: Add `cycleDate`, `cycleDateTime`, `cycleTime`, and `cycleZoned` (Story E6), matching
+  `@internationalized/date`'s `cycle(field, amount, options)` — the datepicker-segment-editing
+  primitive GMT had no equivalent for.
+
+  `cycle*` is not `add*`: it adjusts a single field and **wraps** at that field's own min/max instead
+  of carrying into the next larger field. Cycling December's `month` by `+1` stays in the same year
+  (`cycleDate("2024-12-15", "month", 1)` → `"2024-01-15"`), where `addDate(value, { months: 1 })`
+  correctly overflows into January of the _next_ year — the right answer for arithmetic, but not for
+  "pressing Up on a month segment shouldn't silently change the year." No composition of `addDate`
+  calls can express this; the wrap boundary is a property of the field itself, not of an amount to add.
+
+  - `cycleDate`/`cycleTime`/`cycleDateTime` cycle a single field of a `PlainDate`/`PlainTime`/
+    `PlainDateTime` string. `cycleZoned` does the same for a `ZonedDateTime` string, and additionally
+    takes `disambiguation`/`offset` (default `offset: "ignore"`, the same C3 precedent as `setZoned`/
+    `startOfZoned`) to resolve any DST gap or overlap the wrapped local time lands on.
+  - All four build on Story J1's field setters (`setDate`/`setDateTime`/`setTime`/`setZoned`),
+    computing the wrapped target value and delegating to the matching setter for the atomic
+    overflow/disambiguation/offset resolution — so cycling `month` or `year` can still clamp (or, with
+    `overflow: "reject"`, reject) `day` exactly the way `setDate`'s own `.with()` call does.
+  - `options.round` does not round to the nearest increment — it steps to the _next_ multiple of
+    `amount` in the direction of its sign (ceiling for positive, floor for negative), matching
+    `@internationalized/date`'s `CycleOptions.round` exactly.
+  - `cycleTime`'s `overflow` option is accepted for signature consistency but is inert: a cycled time
+    field's wrapped value is always already in range, so there's nothing for `setTime`'s `.with()` to
+    constrain or reject.
+  - No `hourCycle: 12` option — GMT's `hour` field always cycles `0–23`; a 12-hour, AM/PM-preserving
+    wrap is a display/formatting concern with no ISO representation to round-trip through GMT's string
+    contract.
+
+  Purely additive — no existing function's behavior changes.
+
+- cfdee87: Add era-based solar calendar family: `"japanese"`, `"buddhist"`, `"taiwan"`, `"persian"`, `"indian"` calendar systems (Story E3), extending `CalendarSystem` and `convertDateToCalendar` from E1/E2.
+
+  All five are built entirely on Temporal's native calendar support — no ported leap-year tables or arithmetic. Buddhist and Taiwan are fixed year-offset calendars over the same Gregorian day/month structure; Persian and Indian are distinct solar calendars with their own leap-year rules (Persian: a 33-year cycle; Indian: aligned to the Gregorian leap-year rule rather than an independent cycle), verified against `@internationalized/date`'s corresponding sources rather than assumed to be offset-only.
+
+  `"japanese"` gets a different annotated-string shape than every other calendar: Temporal's `.year` for it stays proleptic across imperial era changes (it does not reset to `1` the way the calendar's own numbering does), so `convertDateToCalendar` tags it with `.eraYear` and an era name instead (`"0006-10-03[u-ca=japanese;era=reiwa]"`, not a plain proleptic year). GMT also does not replicate `@internationalized/date`'s pre-Meiji (before 1868-10-23) restriction — since the conversion is built entirely on Temporal's own calendar support, and Temporal resolves those dates correctly under a synthetic `"japanese"` era, rejecting them would mean adding validation solely to reproduce another library's gap rather than an actual GMT limitation.
+
+- ad034e5: Add Ethiopic calendar family: `"ethiopic"`, `"ethiopic-amete-alem"`, and `"coptic"` calendar systems (Story E4), extending `CalendarSystem` and `convertDateToCalendar` from E1–E3.
+
+  All three share one 13-month structure (12 months of 30 days, plus a short 5/6-day Pagume/Nasie 13th month) but differ in epoch. `"ethiopic"` resets to the Amete Mihret era at its own epoch (~AD 8) and is tagged with `.eraYear`/`;era=<name>` like `"japanese"` (`"2017-01-23[u-ca=ethiopic;era=ethiopic]"`, not a 5-digit proleptic year). `"ethiopic-amete-alem"` is the same calendar counted continuously from a much older epoch (~5493 BCE) with no era reset. `"coptic"` has its own epoch (AD 284, the Diocletian/Martyrs era) and a plain native year.
+
+  Unlike every other calendar `convertDateToCalendar` supports, this family is **not** resolved through Temporal's native `"ethiopic"`/`"coptic"` calendar ids: `@js-temporal/polyfill@0.5.1` resolves those two calendars' year/era via `Intl.DateTimeFormat`-derived era-name matching, and CLDR's era-name output for them changed between the ICU versions bundled with different Node releases — every read or write of Temporal's `"ethiopic"`/`"coptic"` calendar ids throws a `RangeError` under Node 24's ICU (confirmed directly, not a hypothetical; `"ethiopic-amete-alem"`/Temporal's `"ethioaa"` id is unaffected, since it has no era and is resolved with pure arithmetic). GMT routes around this bug rather than inheriting it: month/day are identical across the whole family (they share one annual cycle), so `convertDateToCalendar` reads/writes them through the safe `"ethioaa"` id and computes each calendar's own displayed year (+ era, for `"ethiopic"`) with GMT-owned arithmetic ported from the same epoch/anchor-year constants `@js-temporal/polyfill` itself uses internally (`internal/ethiopicFamilyCalendar.ts`).
+
+- a4285ae: Add Islamic calendar family: `"islamic-civil"`, `"islamic-tabular"`, and `"islamic-umalqura"` calendar systems (Story E2), extending `CalendarSystem` and `convertDateToCalendar` from E1.
+
+  Like Hebrew, all three are built entirely on Temporal's native calendar support — no ported leap-year tables or arithmetic. This includes `"islamic-umalqura"`, the Saudi civil calendar: rather than porting `@internationalized/date`'s bundled Umm al-Qura lookup table into GMT, `convertDateToCalendar` resolves it through the polyfill's own built-in Umm al-Qura implementation, avoiding a second, divergence-prone copy of the same data. The three variants are not interchangeable — civil and tabular use different fixed leap-year cycles (Friday vs. Thursday epoch, one day apart), and Umm al-Qura's tabulated dates diverge from both by more than a fixed offset on some dates, so GMT does not approximate one variant with another's arithmetic.
+
+  Fixed a latent bug this story surfaced: `convertDateToCalendar`'s output annotation used to read a Temporal `PlainDate`'s own `calendarId` directly, which happened to match GMT's calendar identifiers for `"gregorian"`/`"hebrew"` but diverges for `"islamic-tabular"` (Temporal's id is `"islamic-tbla"`). The annotation now always maps back through GMT's own `CalendarSystem` identifiers, so `convertDateToCalendar(value, "islamic-tabular")` reliably returns `[u-ca=islamic-tabular]`, not `[u-ca=islamic-tbla]`.
+
 ## 1.13.0
 
 ### Minor Changes

@@ -1,6 +1,6 @@
 {
   "name": "@burglekitt/gmt",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "description": "Temporal-based date and time utilities with timezone support and polyfill integration",
   "keywords": [
     "date",
