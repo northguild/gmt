@@ -57,13 +57,13 @@ Issue number tracker (fill in as issues are created). `Order` is the sequence to
 | 45    | J13   | Issue #109   | Done        | v1.13.0                                      |
 | 46    | J14   | Issue #110   | Done        | v1.13.0                                      |
 | 47    | J15   | Issue #111   | Done        | v1.13.0                                      |
-| 48    | E1    | Issue #44    | Done        | unscheduled, not yet published               |
-| 49    | E2    | Issue #75    | Done        | unscheduled, no publish plan until picked up |
-| 50    | E3    | Issue #76    | Done        | unscheduled, no publish plan until picked up |
-| 51    | E4    | Issue #77    | Done        | unscheduled, no publish plan until picked up |
-| 52    | E5    | Issue #78    | Done        | unscheduled, no publish plan until picked up (release cut after E6) |
-| 53    | E6    | Issue #125   | Done        | not yet published — folds into Group E's release once E7 merges |
-| 54    | E7    | Issue #152   | Done        | publish planned immediately after this PR merges — Group E's release (E1–E7) is due. Changeset added, `changeset:version` NOT run yet. |
+| 48    | E1    | Issue #44    | Done        | v1.14.0                                      |
+| 49    | E2    | Issue #75    | Done        | v1.14.0                                      |
+| 50    | E3    | Issue #76    | Done        | v1.14.0                                      |
+| 51    | E4    | Issue #77    | Done        | v1.14.0                                      |
+| 52    | E5    | Issue #78    | Done        | v1.14.0                                      |
+| 53    | E6    | Issue #125   | Done        | v1.14.0                                      |
+| 54    | E7    | Issue #152   | Done        | v1.14.0                                      |
 
 ## Story Group J phases
 
