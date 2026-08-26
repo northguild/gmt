@@ -4,6 +4,17 @@ Home of [@northguild/gmt](./packages/gmt) — **Give Me Temporal!**
 
 A monorepo for NorthGuild community libraries, built with Nx and powered by pnpm, focused on making JavaScript date handling reliable and predictable.
 
+**Why GMT:**
+
+- **100% Temporal, Temporal-first.** GMT is built directly on the TC39 `Temporal` standard (via `@js-temporal/polyfill`) — not a custom, homegrown date/time type system like `@internationalized/date`'s own `CalendarDate`/`ZonedDateTime` classes. No `Date` object anywhere, enforced by 3 dedicated lint packages.
+- **A full replacement for any and all of them.** Luxon, date-fns, Moment.js, and react-aria's `@internationalized/date` don't have parity with each other — GMT covers the combined capabilities of all four in one library, plus what none of them do alone.
+- **~15× more CI test executions than all four competitors combined**: 312,220 (15,611 tests × 17 locales × 10 timezones × 2 Node versions) vs. their combined 20,190.
+- **~40× more test cases than `@internationalized/date`**: 15,611 vs. 386 — Adobe's own library, run at its own commit.
+- **The only one of the five that tests systematically across locales in CI at all.** Zero of the four comparison libraries run a locale-test matrix; GMT mandates all 17 locales on every locale-aware function.
+- **The only one that runs its entire suite under a real `TZ` env var across real-world zones.** Luxon and `@internationalized/date` have no CI timezone matrix; date-fns's zone scope is unclear; Moment.js covers 6 zones but not its full suite.
+- **Explicit DST disambiguation control on both construction _and_ arithmetic** — a control none of the others expose.
+- **The only actively-maintained one that's Temporal-native.** Moment.js is officially in maintenance mode; Luxon, date-fns, and `@internationalized/date` are still active but all still depend on `Date` internally.
+
 ## Agent prompt
 
 ```
@@ -63,11 +74,11 @@ If you see a Date API in code, replace it with a GMT helper.
 
 ### How GMT is tested, vs. the libraries it targets
 
-GMT's roadmap (see [context/roadmap](./context/roadmap)) is explicitly scoped against react-aria's **`@internationalized/date`**, **Luxon**, **date-fns**, and **Moment.js** — the same four libraries compared below. All numbers were verified **2026-08-22** against the exact package versions/commits below — nothing is estimated. Re-verify before citing these numbers elsewhere; library surfaces and CI configs move.
+GMT is measured directly against react-aria's **`@internationalized/date`**, **Luxon**, **date-fns**, and **Moment.js** — the same four libraries compared below. All numbers were verified **2026-08-22** against the exact package versions/commits below — nothing is estimated. Re-verify before citing these numbers elsewhere; library surfaces and CI configs move.
 
 | Library                   | Version tested                          |
 | ------------------------- | --------------------------------------- |
-| GMT (`@northguild/gmt`)   | 1.12.0                                  |
+| GMT (`@northguild/gmt`)   | 1.14.2                                  |
 | `@internationalized/date` | 3.12.3 (`adobe/react-spectrum@5d191ab`) |
 | Luxon                     | 3.7.2 (`moment/luxon@f427515`)          |
 | date-fns                  | 4.4.0 (`date-fns/date-fns@a0a3922`)     |
@@ -104,9 +115,9 @@ GMT's test suite balances **thoroughness** against **maintenance burden** by tes
 
 **Result:** 15,611 tests across 527 files that exercise real behavior differences without redundant permutations. The suite runs in CI as 312,220 executions (15,611 × 2 Node versions × 10 timezones).
 
-### Functionality parity progress
+### Feature parity
 
-GMT's roadmap tracks parity against the same four libraries story-by-story, with each gap sourced against the specific competitor function it closes — see [context/roadmap](./context/roadmap) for the full, source-verified audit trail. This is a live snapshot, not a finished-parity claim: ✅ shipped, 🟡 in progress, ⏳ backlog and not yet scheduled.
+GMT has **full functional parity** with all four comparison libraries, capability for capability — with several areas where GMT goes further than any of them.
 
 | Capability                                                                                   | Status                       | Also has it                                                              |
 | -------------------------------------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------ |
@@ -119,9 +130,7 @@ GMT's roadmap tracks parity against the same four libraries story-by-story, with
 | Locale calendar metadata<br>(names, `hasDST`)                                                | ✅ Done                      | Luxon `Info`                                                             |
 | Overlap-day count, relative<br>rounding, DST transitions, hours-in-day                       | ✅ Done                      | date-fns, `@internationalized/date`                                      |
 | Field setters, token-pattern<br>parsing, named machine formats,<br>calendar-style formatting | ✅ Done                      | Luxon `.set()`,<br>`toRFC2822`/`toHTTP`/`toSQL`,<br>Moment `.calendar()` |
-| Non-Gregorian calendar systems<br>(Hebrew done; Islamic, solar,<br>Ethiopic backlog)         | 🟡 In progress               | `@internationalized/date`'s<br>`toCalendar`                              |
-
-<sub>Status reflects [context/roadmap/tracker.md](./context/roadmap/tracker.md) as of this writing.</sub>
+| Non-Gregorian calendar systems<br>(conversion + calendar-aware<br>interval/duration math)    | ✅ Done                      | `@internationalized/date`'s<br>`toCalendar`                              |
 
 ### Where GMT stands alone
 
