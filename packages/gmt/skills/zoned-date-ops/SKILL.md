@@ -16,37 +16,37 @@ description: >
   formatTimeZoneName, isInDaylightSaving for reading a zoned value's UTC offset
   and DST status.
 sources:
-  - 'burglekitt/gmt:packages/gmt/src/zoned/get/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/format/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/validate/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/parse/getZonedOffset.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/parse/getZonedOffsetAs.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/compare/isInDaylightSaving.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/convert/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/convert/convertZonedToCalendar.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/addZoned.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/subtractZoned.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/startOfZoned.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/endOfZoned.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/startOfQuarterForZoned.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/endOfQuarterForZoned.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/getLocaleZonedStartOfWeek.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/getLocaleZonedEndOfWeek.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/clampZoned.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/closestZonedTo.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/getHoursInZonedDay.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/map/mapZonedHoursInDay.ts'
-  - 'burglekitt/gmt:packages/gmt/src/unix/calculate/startOfUnix.ts'
-  - 'burglekitt/gmt:packages/gmt/src/unix/calculate/endOfUnix.ts'
-  - 'burglekitt/gmt:packages/gmt/src/unix/calculate/startOfQuarterForUnix.ts'
-  - 'burglekitt/gmt:packages/gmt/src/unix/calculate/endOfQuarterForUnix.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/setZoned.ts'
-  - 'burglekitt/gmt:packages/gmt/src/unix/calculate/setUnix.ts'
-  - 'burglekitt/gmt:packages/gmt/src/utc/calculate/setUtc.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/cycleZoned.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/get/index.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/format/index.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/validate/index.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/parse/getZonedOffset.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/parse/getZonedOffsetAs.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/compare/isInDaylightSaving.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/convert/index.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/convert/convertZonedToCalendar.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/calculate/addZoned.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/calculate/subtractZoned.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/calculate/startOfZoned.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/calculate/endOfZoned.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/calculate/startOfQuarterForZoned.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/calculate/endOfQuarterForZoned.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/calculate/getLocaleZonedStartOfWeek.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/calculate/getLocaleZonedEndOfWeek.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/calculate/clampZoned.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/calculate/closestZonedTo.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/calculate/getHoursInZonedDay.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/map/mapZonedHoursInDay.ts'
+  - 'northguild/gmt:packages/gmt/src/unix/calculate/startOfUnix.ts'
+  - 'northguild/gmt:packages/gmt/src/unix/calculate/endOfUnix.ts'
+  - 'northguild/gmt:packages/gmt/src/unix/calculate/startOfQuarterForUnix.ts'
+  - 'northguild/gmt:packages/gmt/src/unix/calculate/endOfQuarterForUnix.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/calculate/setZoned.ts'
+  - 'northguild/gmt:packages/gmt/src/unix/calculate/setUnix.ts'
+  - 'northguild/gmt:packages/gmt/src/utc/calculate/setUtc.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/calculate/cycleZoned.ts'
 metadata:
   type: core
-  library: '@burglekitt/gmt'
+  library: '@northguild/gmt'
   library_version: '1.14.1'
 ---
 
@@ -66,7 +66,7 @@ import {
   clampZoned, closestZonedTo, mapZonedHoursInDay, getHoursInZonedDay,
   setZoned, getZonedOffset, getZonedOffsetAs, getTimeZoneOffset,
   formatTimeZoneName, isInDaylightSaving
-} from "@burglekitt/gmt/zoned";
+} from "@northguild/gmt/zoned";
 ```
 
 ## Core Patterns
@@ -171,7 +171,7 @@ setZoned(
 ### Cycle (wrap) a single field instead of setting it directly (E6)
 
 ```ts
-import { cycleZoned } from "@burglekitt/gmt";
+import { cycleZoned } from "@northguild/gmt";
 
 cycleZoned("2024-12-15T09:30:00-06:00[America/Chicago]", "month", 1);
 // "2024-01-15T09:30:00-06:00[America/Chicago]" — wraps, stays in the same year

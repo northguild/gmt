@@ -1,45 +1,33 @@
-# @burglekitt/gmt-oxlint
+# @northguild/gmt-oxlint
 
-> ## ⚠️ Deprecation Notice
->
-> This package has moved. **`gmt-oxlint` is now published as
-> [`@northguild/gmt-oxlint`](https://www.npmjs.com/package/@northguild/gmt-oxlint)**
-> under the [northguild](https://github.com/northguild) GitHub organization.
->
-> - **New repository:** <https://github.com/northguild/gmt>
-> - **New package:** `@northguild/gmt-oxlint`
->
-> `@burglekitt/gmt-oxlint` is deprecated and will receive no further updates.
-> Please migrate to `@northguild/gmt-oxlint`.
+Shared [Oxlint](https://oxc.rs/docs/guide/usage/linter) JS plugin for `@northguild/gmt` projects.
 
-Shared [Oxlint](https://oxc.rs/docs/guide/usage/linter) JS plugin for `@burglekitt/gmt` projects.
-
-It enforces the same Date bans used by `@burglekitt/gmt-eslint` and `@burglekitt/gmt-biome`.
+It enforces the same Date bans used by `@northguild/gmt-eslint` and `@northguild/gmt-biome`.
 
 ## Installation
 
 ### npm
 
 ```sh
-npm install --save-dev @burglekitt/gmt-oxlint oxlint
+npm install --save-dev @northguild/gmt-oxlint oxlint
 ```
 
 ### yarn
 
 ```sh
-yarn add --dev @burglekitt/gmt-oxlint oxlint
+yarn add --dev @northguild/gmt-oxlint oxlint
 ```
 
 ### pnpm
 
 ```sh
-pnpm add --save-dev @burglekitt/gmt-oxlint oxlint
+pnpm add --save-dev @northguild/gmt-oxlint oxlint
 ```
 
 ### bun
 
 ```sh
-bun add --save-dev @burglekitt/gmt-oxlint oxlint
+bun add --save-dev @northguild/gmt-oxlint oxlint
 ```
 
 ## Usage
@@ -50,7 +38,7 @@ In `oxlint.config.ts`:
 
 ```ts
 import { defineConfig } from "oxlint";
-import { recommendedConfig } from "@burglekitt/gmt-oxlint";
+import { recommendedConfig } from "@northguild/gmt-oxlint";
 
 export default defineConfig(recommendedConfig);
 ```
@@ -59,10 +47,10 @@ If you prefer a custom alias for shorter rule names:
 
 ```ts
 import { defineConfig } from "oxlint";
-import { recommendedRules } from "@burglekitt/gmt-oxlint";
+import { recommendedRules } from "@northguild/gmt-oxlint";
 
 export default defineConfig({
-  jsPlugins: [{ name: "gmt", specifier: "@burglekitt/gmt-oxlint" }],
+  jsPlugins: [{ name: "gmt", specifier: "@northguild/gmt-oxlint" }],
   rules: {
     // Copy rules under your alias if you want "gmt/..." rule IDs.
     "gmt/no-date-global": "error",
@@ -82,13 +70,13 @@ In your `.oxlintrc.json`:
 ```json
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "jsPlugins": ["@burglekitt/gmt-oxlint"],
-  "extends": ["./node_modules/@burglekitt/gmt-oxlint/config/recommended.json"]
+  "jsPlugins": ["@northguild/gmt-oxlint"],
+  "extends": ["./node_modules/@northguild/gmt-oxlint/config/recommended.json"]
 }
 ```
 
 Oxlint currently resolves `extends` as file paths. Named shared config specifiers
-such as `@burglekitt/gmt-oxlint/recommended` are not currently supported.
+such as `@northguild/gmt-oxlint/recommended` are not currently supported.
 
 ### Manual configuration
 
@@ -97,14 +85,14 @@ Or explicitly configure each rule. You can use either a string or an array form:
 ```json
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "jsPlugins": ["@burglekitt/gmt-oxlint"],
+  "jsPlugins": ["@northguild/gmt-oxlint"],
   "rules": {
-    "@burglekitt/gmt-oxlint/no-date-global": "error",
-    "@burglekitt/gmt-oxlint/no-new-date": "error",
-    "@burglekitt/gmt-oxlint/no-date-now": "error",
-    "@burglekitt/gmt-oxlint/no-date-parse": "error",
-    "@burglekitt/gmt-oxlint/no-date-utc": "error",
-    "@burglekitt/gmt-oxlint/no-date-getTimezoneOffset": "error"
+    "@northguild/gmt-oxlint/no-date-global": "error",
+    "@northguild/gmt-oxlint/no-new-date": "error",
+    "@northguild/gmt-oxlint/no-date-now": "error",
+    "@northguild/gmt-oxlint/no-date-parse": "error",
+    "@northguild/gmt-oxlint/no-date-utc": "error",
+    "@northguild/gmt-oxlint/no-date-getTimezoneOffset": "error"
   }
 }
 ```
@@ -114,14 +102,14 @@ Array form also supported:
 ```json
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "jsPlugins": ["@burglekitt/gmt-oxlint"],
+  "jsPlugins": ["@northguild/gmt-oxlint"],
   "rules": {
-    "@burglekitt/gmt-oxlint/no-date-global": ["error"],
-    "@burglekitt/gmt-oxlint/no-new-date": ["error"],
-    "@burglekitt/gmt-oxlint/no-date-now": ["error"],
-    "@burglekitt/gmt-oxlint/no-date-parse": ["error"],
-    "@burglekitt/gmt-oxlint/no-date-utc": ["error"],
-    "@burglekitt/gmt-oxlint/no-date-getTimezoneOffset": ["error"]
+    "@northguild/gmt-oxlint/no-date-global": ["error"],
+    "@northguild/gmt-oxlint/no-new-date": ["error"],
+    "@northguild/gmt-oxlint/no-date-now": ["error"],
+    "@northguild/gmt-oxlint/no-date-parse": ["error"],
+    "@northguild/gmt-oxlint/no-date-utc": ["error"],
+    "@northguild/gmt-oxlint/no-date-getTimezoneOffset": ["error"]
   }
 }
 ```

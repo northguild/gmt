@@ -17,6 +17,6 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
-    "customConditions": ["@burglekitt/source"]
+    "customConditions": ["@northguild/source"]
   }
 }

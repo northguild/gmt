@@ -12,7 +12,7 @@ send to my colleague."
 
 ## Prior art
 
-A sibling `@burglekitt/worktree` repo has a working version of this, documented in
+A sibling `@northguild/worktree` repo has a working version of this, documented in
 `context/dox/example-sibling-repo-docs.md`. Several of its mechanisms are adopted below
 and attributed inline. Read `context/dox/overview.md` §2 "Reviewed prior art" for the
 full take/reject list before starting any story here — in particular, **do not adopt its

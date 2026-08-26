@@ -7,16 +7,16 @@ Packages (each independently versioned):
 
 | Package dir           | npm name                 |
 | --------------------- | ------------------------ |
-| `packages/gmt`        | `@burglekitt/gmt`        |
-| `packages/gmt-biome`  | `@burglekitt/gmt-biome`  |
-| `packages/gmt-eslint` | `@burglekitt/gmt-eslint` |
-| `packages/gmt-oxlint` | `@burglekitt/gmt-oxlint` |
+| `packages/gmt`        | `@northguild/gmt`        |
+| `packages/gmt-biome`  | `@northguild/gmt-biome`  |
+| `packages/gmt-eslint` | `@northguild/gmt-eslint` |
+| `packages/gmt-oxlint` | `@northguild/gmt-oxlint` |
 
 ---
 
 ## One-time setup
 
-- Ensure you're a member of the `@burglekitt` npm org.
+- Ensure you're a member of the `@northguild` npm org.
 - Run `npm whoami` to confirm you're logged in locally. If not, `npm login` (or `npm login --auth-type=web` for passkey/SSO).
 - Run `gh auth login` once, for creating GitHub Releases later.
 
@@ -59,7 +59,7 @@ git push
 
 # 3. Build packages that need a build before publish
 #    (gmt-oxlint builds itself automatically via its `prepack` script)
-pnpm exec nx run @burglekitt/gmt:build
+pnpm exec nx run @northguild/gmt:build
 
 # 4. Sanity-check package contents before they go out
 for PKG in gmt gmt-biome gmt-eslint gmt-oxlint; do
@@ -68,7 +68,7 @@ for PKG in gmt gmt-biome gmt-eslint gmt-oxlint; do
 done
 
 # 5. Publish + tag (Changesets creates one git tag per published package,
-#    e.g. @burglekitt/<pkg>@<new-version>)
+#    e.g. @northguild/<pkg>@<new-version>)
 npm whoami   # confirm you're logged in as the right user
 pnpm run changeset:publish
 git push --follow-tags
@@ -92,7 +92,7 @@ commit, so this holds as long as you haven't done anything else in between):
 
 ```bash
 for TAG in $(git tag --points-at HEAD); do
-  PKG=${TAG#@burglekitt/}   # "@burglekitt/gmt-oxlint@1.1.2" -> "gmt-oxlint@1.1.2"
+  PKG=${TAG#@northguild/}   # "@northguild/gmt-oxlint@1.1.2" -> "gmt-oxlint@1.1.2"
   PKG=${PKG%@*}             # "gmt-oxlint@1.1.2" -> "gmt-oxlint"
 
   NOTES="/tmp/release-notes-$PKG.md"
@@ -108,7 +108,7 @@ done
 Notes:
 
 - The tag is quoted (`"$TAG"`) since it contains `@` and `/`, which GitHub URL-encodes in the release URL; that's expected.
-- Only `@burglekitt/gmt` gets `--latest`; every other package gets `--latest=false` automatically.
+- Only `@northguild/gmt` gets `--latest`; every other package gets `--latest=false` automatically.
 - If `HEAD` has moved since publishing (e.g. you made another commit first), fall back to `git tag --sort=-creatordate | head -n <count>` to find the right tags manually.
 
 ---

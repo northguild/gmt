@@ -9,14 +9,14 @@ description: >
   japanese, buddhist, taiwan, persian, indian, ethiopic, ethiopic-amete-alem,
   coptic).
 sources:
-  - 'burglekitt/gmt:packages/gmt/src/plain/convert/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/convert/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/unix/convert/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/utc/convert/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/types/calendar-system.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/convert/index.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/convert/index.ts'
+  - 'northguild/gmt:packages/gmt/src/unix/convert/index.ts'
+  - 'northguild/gmt:packages/gmt/src/utc/convert/index.ts'
+  - 'northguild/gmt:packages/gmt/src/types/calendar-system.ts'
 metadata:
   type: core
-  library: '@burglekitt/gmt'
+  library: '@northguild/gmt'
   library_version: '1.14.1'
 ---
 
@@ -27,9 +27,9 @@ Use this skill when you need to convert between different temporal representatio
 ## Setup
 
 ```ts
-import { convertPlainDateTimeToZoned, convertZonedToPlainDateTime } from "@burglekitt/gmt/zoned";
-import { convertUtcToUnix, convertUnixToUtc } from "@burglekitt/gmt/unix";
-import { convertUtcToZoned, convertZonedToUtc } from "@burglekitt/gmt/utc";
+import { convertPlainDateTimeToZoned, convertZonedToPlainDateTime } from "@northguild/gmt/zoned";
+import { convertUtcToUnix, convertUnixToUtc } from "@northguild/gmt/unix";
+import { convertUtcToZoned, convertZonedToUtc } from "@northguild/gmt/utc";
 ```
 
 ## Core Patterns
@@ -37,7 +37,7 @@ import { convertUtcToZoned, convertZonedToUtc } from "@burglekitt/gmt/utc";
 ### Convert plain to zoned datetime
 
 ```ts
-import { convertPlainDateTimeToZoned } from "@burglekitt/gmt/zoned";
+import { convertPlainDateTimeToZoned } from "@northguild/gmt/zoned";
 
 const zoned = convertPlainDateTimeToZoned("2024-03-15T14:30:45", "America/New_York");
 // "2024-03-15T14:30:45[America/New_York]"
@@ -55,7 +55,7 @@ convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York", {
 ### Convert zoned to plain datetime
 
 ```ts
-import { convertZonedToPlainDateTime } from "@burglekitt/gmt/zoned";
+import { convertZonedToPlainDateTime } from "@northguild/gmt/zoned";
 
 const plain = convertZonedToPlainDateTime("2024-03-15T14:30:45[America/New_York]");
 // "2024-03-15T14:30:45"
@@ -64,7 +64,7 @@ const plain = convertZonedToPlainDateTime("2024-03-15T14:30:45[America/New_York]
 ### Convert UTC to Unix epoch (seconds)
 
 ```ts
-import { convertUtcToUnix } from "@burglekitt/gmt/unix";
+import { convertUtcToUnix } from "@northguild/gmt/unix";
 
 const unix = convertUtcToUnix("2024-03-15T14:30:45"); // 1710504645
 ```
@@ -72,7 +72,7 @@ const unix = convertUtcToUnix("2024-03-15T14:30:45"); // 1710504645
 ### Convert Unix epoch to UTC (seconds)
 
 ```ts
-import { convertUnixToUtc } from "@burglekitt/gmt/unix";
+import { convertUnixToUtc } from "@northguild/gmt/unix";
 
 const utc = convertUnixToUtc(1710504645); // "2024-03-15T14:30:45"
 ```
@@ -80,7 +80,7 @@ const utc = convertUnixToUtc(1710504645); // "2024-03-15T14:30:45"
 ### Convert UTC datetime to Unix milliseconds
 
 ```ts
-import { convertUtcToUnixMs } from "@burglekitt/gmt/unix";
+import { convertUtcToUnixMs } from "@northguild/gmt/unix";
 
 const unixMs = convertUtcToUnixMs("2024-03-15T14:30:45"); // 1710504645000
 ```
@@ -88,7 +88,7 @@ const unixMs = convertUtcToUnixMs("2024-03-15T14:30:45"); // 1710504645000
 ### Convert Unix milliseconds to UTC datetime
 
 ```ts
-import { convertUnixMsToUtc } from "@burglekitt/gmt/unix";
+import { convertUnixMsToUtc } from "@northguild/gmt/unix";
 
 const utc = convertUnixMsToUtc(1710504645000); // "2024-03-15T14:30:45"
 ```
@@ -96,7 +96,7 @@ const utc = convertUnixMsToUtc(1710504645000); // "2024-03-15T14:30:45"
 ### Convert zoned to UTC
 
 ```ts
-import { convertZonedToUtc } from "@burglekitt/gmt/zoned";
+import { convertZonedToUtc } from "@northguild/gmt/zoned";
 
 const utc = convertZonedToUtc("2024-03-15T14:30:45[America/New_York]"); // "2024-03-15T19:30:45"
 ```
@@ -104,7 +104,7 @@ const utc = convertZonedToUtc("2024-03-15T14:30:45[America/New_York]"); // "2024
 ### Convert UTC to zoned
 
 ```ts
-import { convertUtcToZoned } from "@burglekitt/gmt/utc";
+import { convertUtcToZoned } from "@northguild/gmt/utc";
 
 const zoned = convertUtcToZoned("2024-03-15T14:30:45", "America/New_York"); // "2024-03-15T10:30:45[America/New_York]"
 ```
@@ -112,7 +112,7 @@ const zoned = convertUtcToZoned("2024-03-15T14:30:45", "America/New_York"); // "
 ### Convert between timezones
 
 ```ts
-import { convertZonedToZoned } from "@burglekitt/gmt/zoned";
+import { convertZonedToZoned } from "@northguild/gmt/zoned";
 
 const converted = convertZonedToZoned(
   "2024-03-15T14:30:45[America/New_York]",
@@ -123,7 +123,7 @@ const converted = convertZonedToZoned(
 ### Convert a date to a non-Gregorian calendar system
 
 ```ts
-import { convertDateToCalendar } from "@burglekitt/gmt/plain";
+import { convertDateToCalendar } from "@northguild/gmt/plain";
 
 const hebrew = convertDateToCalendar("2024-10-03", "hebrew");
 // "5785-01-01[u-ca=hebrew]" — Rosh Hashanah 5785, calendar-native year/month/day
@@ -198,7 +198,7 @@ const unix = new Date("2024-03-15T14:30:45").getTime() / 1000; // manual convers
 Correct:
 
 ```ts
-import { convertUtcToUnix } from "@burglekitt/gmt/unix";
+import { convertUtcToUnix } from "@northguild/gmt/unix";
 
 const unix = convertUtcToUnix("2024-03-15T14:30:45"); // proper conversion
 ```
@@ -217,7 +217,7 @@ new Date(timestamp); // treats as milliseconds, wrong date
 Correct:
 
 ```ts
-import { convertUnixToUtc } from "@burglekitt/gmt/unix";
+import { convertUnixToUtc } from "@northguild/gmt/unix";
 
 const timestamp = 1710504645; // seconds
 const utc = convertUnixToUtc(timestamp);
@@ -238,7 +238,7 @@ process(zoned);
 Correct:
 
 ```ts
-import { convertPlainDateTimeToZoned, isValidTimeZone } from "@burglekitt/gmt/zoned";
+import { convertPlainDateTimeToZoned, isValidTimeZone } from "@northguild/gmt/zoned";
 
 if (!isValidTimeZone("America/New_York")) {
   throw new Error("Invalid timezone");

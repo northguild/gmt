@@ -6,11 +6,11 @@ works. See [overview.md](overview.md) §1 for why the ordering is the point.
 
 ## Story Group DOX-A — Ship the site
 
-The MVP. After DOX-A5, `@burglekitt/gmt` has a documentation site that anyone can search,
+The MVP. After DOX-A5, `@northguild/gmt` has a documentation site that anyone can search,
 link, and read. Nothing in DOX-B–DOX-E is required for that to be true.
 
 - **DOX-A1. Workspace skeleton + first pages** — Create `apps/docs` as `@gmt/docs` (private,
-  `type: module`), depending on `@burglekitt/gmt` via `workspace:*`. Astro `7.2.4` +
+  `type: module`), depending on `@northguild/gmt` via `workspace:*`. Astro `7.2.4` +
   `@astrojs/starlight` `0.41.7`, with `src/content.config.ts` using Starlight's
   `docsLoader()` + `docsSchema()`. Ship a real landing page plus two hand-written pages
   (Install, Core Rules), both lifted from `packages/gmt/README.md`, so the site has real
@@ -65,13 +65,13 @@ link, and read. Nothing in DOX-B–DOX-E is required for that to be true.
 Interactivity that requires no API key, no server, and no model.
 
 - **DOX-B1. `<Playground>` island** — An interactive component that runs the **real**
-  `@burglekitt/gmt` in the browser: editable inputs, live output, never simulated.
+  `@northguild/gmt` in the browser: editable inputs, live output, never simulated.
   Because `apps/docs` depends on the package via `workspace:*`, output can never drift
   from shipped behavior. Sentinel-aware rendering is the point, not a detail: an
   invalid-input result (`""` / `null` / `false` / `[]`) renders as
   `⟨ NO SIGNAL — invalid input ⟩`, not a blank field. A blank box teaches nothing; the
   signal-lost state teaches GMT's sentinel contract. Hydrate `client:visible` and
-  deep-import per function (`@burglekitt/gmt/plain/...`, already exposed by the exports
+  deep-import per function (`@northguild/gmt/plain/...`, already exposed by the exports
   map) so the island tree-shakes rather than pulling the whole surface plus
   `@js-temporal/polyfill` on every page.
 - **DOX-B2. Auto-embed** — Extend DOX-A3's generator to mark up each `@example` so it renders as

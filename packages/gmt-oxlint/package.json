@@ -1,5 +1,5 @@
 {
-  "name": "@burglekitt/gmt-oxlint",
+  "name": "@northguild/gmt-oxlint",
   "version": "1.1.4",
   "description": "Oxlint JS plugin for banning Date APIs in Temporal-first projects",
   "keywords": [
@@ -10,9 +10,9 @@
     "tanstack-intent",
     "temporal"
   ],
-  "homepage": "https://github.com/burglekitt/gmt#readme",
+  "homepage": "https://github.com/northguild/gmt#readme",
   "bugs": {
-    "url": "https://github.com/burglekitt/gmt/issues"
+    "url": "https://github.com/northguild/gmt/issues"
   },
   "license": "MIT",
   "contributors": [
@@ -27,7 +27,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/burglekitt/gmt.git",
+    "url": "https://github.com/northguild/gmt.git",
     "directory": "packages/gmt-oxlint"
   },
   "files": [

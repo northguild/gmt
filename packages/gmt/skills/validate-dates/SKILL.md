@@ -12,37 +12,37 @@ description: >
   interval union returns null on disjoint or invalid input; split functions
   return [] on invalid input.
 sources:
-  - 'burglekitt/gmt:packages/gmt/src/plain/validate/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/interval/validate/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalContainsDate.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalContainsTime.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalContainsDateTime.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalUnionDate.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalUnionTime.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/interval/intervalUnionDateTime.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/interval/splitIntervalByUnitDate.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/interval/splitIntervalByUnitTime.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/interval/splitIntervalByUnitDateTime.ts'
-  - 'burglekitt/gmt:packages/gmt/src/utc/validate/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/utc/interval/validate/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/utc/interval/intervalContainsUtc.ts'
-  - 'burglekitt/gmt:packages/gmt/src/utc/interval/intervalUnionUtc.ts'
-  - 'burglekitt/gmt:packages/gmt/src/utc/interval/splitIntervalByUnitUtc.ts'
-  - 'burglekitt/gmt:packages/gmt/src/unix/validate/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/unix/interval/validate/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/unix/interval/intervalContainsUnix.ts'
-  - 'burglekitt/gmt:packages/gmt/src/unix/interval/intervalUnionUnix.ts'
-  - 'burglekitt/gmt:packages/gmt/src/unix/interval/splitIntervalByUnitUnix.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/validate/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/validate/hasDaylightSaving.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/get/getDstTransitions.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/interval/validate/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/interval/intervalContainsZoned.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/interval/intervalUnionZoned.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/interval/splitIntervalByUnitZoned.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/validate/index.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/interval/validate/index.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/interval/intervalContainsDate.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/interval/intervalContainsTime.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/interval/intervalContainsDateTime.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/interval/intervalUnionDate.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/interval/intervalUnionTime.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/interval/intervalUnionDateTime.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/interval/splitIntervalByUnitDate.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/interval/splitIntervalByUnitTime.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/interval/splitIntervalByUnitDateTime.ts'
+  - 'northguild/gmt:packages/gmt/src/utc/validate/index.ts'
+  - 'northguild/gmt:packages/gmt/src/utc/interval/validate/index.ts'
+  - 'northguild/gmt:packages/gmt/src/utc/interval/intervalContainsUtc.ts'
+  - 'northguild/gmt:packages/gmt/src/utc/interval/intervalUnionUtc.ts'
+  - 'northguild/gmt:packages/gmt/src/utc/interval/splitIntervalByUnitUtc.ts'
+  - 'northguild/gmt:packages/gmt/src/unix/validate/index.ts'
+  - 'northguild/gmt:packages/gmt/src/unix/interval/validate/index.ts'
+  - 'northguild/gmt:packages/gmt/src/unix/interval/intervalContainsUnix.ts'
+  - 'northguild/gmt:packages/gmt/src/unix/interval/intervalUnionUnix.ts'
+  - 'northguild/gmt:packages/gmt/src/unix/interval/splitIntervalByUnitUnix.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/validate/index.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/validate/hasDaylightSaving.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/get/getDstTransitions.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/interval/validate/index.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/interval/intervalContainsZoned.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/interval/intervalUnionZoned.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/interval/splitIntervalByUnitZoned.ts'
 metadata:
   type: core
-  library: '@burglekitt/gmt'
+  library: '@northguild/gmt'
   library_version: '1.14.1'
 ---
 
@@ -53,8 +53,8 @@ Use this skill when you need to validate date, time, or datetime strings before 
 ## Setup
 
 ```ts
-import { isValidDate, isValidTime, isValidDateTime } from "@burglekitt/gmt";
-import { isValidTimeZone, isValidZonedDateTime } from "@burglekitt/gmt/zoned";
+import { isValidDate, isValidTime, isValidDateTime } from "@northguild/gmt";
+import { isValidTimeZone, isValidZonedDateTime } from "@northguild/gmt/zoned";
 ```
 
 ## Core Patterns
@@ -70,7 +70,7 @@ const invalidFormat = isValidDate("invalid"); // false
 ### Validate ISO time string
 
 ```ts
-import { isValidTime } from "@burglekitt/gmt";
+import { isValidTime } from "@northguild/gmt";
 
 const valid = isValidTime("14:30:45"); // true
 const invalid = isValidTime("25:00:00"); // false (invalid hour)
@@ -80,7 +80,7 @@ const invalidFormat = isValidTime("not a time"); // false
 ### Validate ISO datetime string
 
 ```ts
-import { isValidDateTime } from "@burglekitt/gmt";
+import { isValidDateTime } from "@northguild/gmt";
 
 const valid = isValidDateTime("2024-03-15T14:30:45"); // true
 const invalid = isValidDateTime("2024-02-30T14:30:45"); // false
@@ -89,7 +89,7 @@ const invalid = isValidDateTime("2024-02-30T14:30:45"); // false
 ### Validate IANA timezone
 
 ```ts
-import { isValidTimeZone } from "@burglekitt/gmt/zoned";
+import { isValidTimeZone } from "@northguild/gmt/zoned";
 
 const valid = isValidTimeZone("America/New_York"); // true
 const invalid = isValidTimeZone("Invalid/Zone"); // false
@@ -98,7 +98,7 @@ const invalid = isValidTimeZone("Invalid/Zone"); // false
 ### Validate zoned datetime string
 
 ```ts
-import { isValidZonedDateTime } from "@burglekitt/gmt/zoned";
+import { isValidZonedDateTime } from "@northguild/gmt/zoned";
 
 const valid = isValidZonedDateTime("2024-03-15T14:30:45[America/New_York]"); // true
 const invalid = isValidZonedDateTime("2024-02-30T14:30:45[America/New_York]"); // false
@@ -114,7 +114,7 @@ const rejected = isValidZonedDateTime(
 ### Check daylight saving time
 
 ```ts
-import { hasDaylightSaving } from "@burglekitt/gmt/zoned";
+import { hasDaylightSaving } from "@northguild/gmt/zoned";
 
 const hasDst = hasDaylightSaving("America/New_York"); // true
 const noDst = hasDaylightSaving("Asia/Tokyo"); // false
@@ -124,7 +124,7 @@ const invalid = hasDaylightSaving("Invalid/Zone"); // false
 ### List DST transition instants
 
 ```ts
-import { getDstTransitions } from "@burglekitt/gmt/zoned";
+import { getDstTransitions } from "@northguild/gmt/zoned";
 
 const transitions = getDstTransitions("America/New_York", 2024);
 // [
@@ -139,7 +139,7 @@ const noTransitions = getDstTransitions("Asia/Tokyo", 2024);
 ### Validate date duration unit
 
 ```ts
-import { isValidDateUnit } from "@burglekitt/gmt";
+import { isValidDateUnit } from "@northguild/gmt";
 
 const valid = isValidDateUnit("day"); // true
 const valid = isValidDateUnit("month"); // true
@@ -150,7 +150,7 @@ const invalid = isValidDateUnit("invalid"); // false
 ### Validate time duration unit
 
 ```ts
-import { isValidTimeUnit } from "@burglekitt/gmt";
+import { isValidTimeUnit } from "@northguild/gmt";
 
 const valid = isValidTimeUnit("hour"); // true
 const valid = isValidTimeUnit("minute"); // true
@@ -160,7 +160,7 @@ const invalid = isValidTimeUnit("invalid"); // false
 ### Validate date interval
 
 ```ts
-import { isValidDateInterval } from "@burglekitt/gmt";
+import { isValidDateInterval } from "@northguild/gmt";
 
 const valid = isValidDateInterval("2024-01-01", "2024-12-31"); // true
 const invalid = isValidDateInterval("2024-12-31", "2024-01-01"); // false (start > end)
@@ -177,7 +177,7 @@ const mixedCalendars = isValidDateInterval(
 ### Validate time interval
 
 ```ts
-import { isValidTimeInterval } from "@burglekitt/gmt";
+import { isValidTimeInterval } from "@northguild/gmt";
 
 const valid = isValidTimeInterval("09:00:00", "17:00:00"); // true
 const invalid = isValidTimeInterval("25:00:00", "17:00:00"); // false (invalid start)
@@ -186,7 +186,7 @@ const invalid = isValidTimeInterval("25:00:00", "17:00:00"); // false (invalid s
 ### Validate datetime interval
 
 ```ts
-import { isValidDateTimeInterval } from "@burglekitt/gmt";
+import { isValidDateTimeInterval } from "@northguild/gmt";
 
 const valid = isValidDateTimeInterval("2024-01-01T09:00:00", "2024-12-31T17:00:00"); // true
 const invalid = isValidDateTimeInterval("2024-12-31T17:00:00", "2024-01-01T09:00:00"); // false
@@ -195,7 +195,7 @@ const invalid = isValidDateTimeInterval("2024-12-31T17:00:00", "2024-01-01T09:00
 ### Validate UTC interval
 
 ```ts
-import { isValidUtcInterval } from "@burglekitt/gmt/utc";
+import { isValidUtcInterval } from "@northguild/gmt/utc";
 
 const valid = isValidUtcInterval("2024-01-01T09:00:00Z", "2024-12-31T17:00:00Z"); // true
 const invalid = isValidUtcInterval("2024-12-31T17:00:00Z", "2024-01-01T09:00:00Z"); // false
@@ -204,7 +204,7 @@ const invalid = isValidUtcInterval("2024-12-31T17:00:00Z", "2024-01-01T09:00:00Z
 ### Validate Unix interval
 
 ```ts
-import { isValidUnixInterval } from "@burglekitt/gmt/unix";
+import { isValidUnixInterval } from "@northguild/gmt/unix";
 
 const valid = isValidUnixInterval("1704067200", "1704067800"); // true (seconds)
 const validMs = isValidUnixInterval("1704067200000", "1704067800000"); // true (milliseconds)
@@ -214,7 +214,7 @@ const invalid = isValidUnixInterval("1704067800", "1704067200"); // false
 ### Validate zoned interval
 
 ```ts
-import { isValidZonedInterval } from "@burglekitt/gmt/zoned";
+import { isValidZonedInterval } from "@northguild/gmt/zoned";
 
 const valid = isValidZonedInterval(
   "2024-01-01T09:00:00+00:00[UTC]",
@@ -229,7 +229,7 @@ const invalid = isValidZonedInterval(
 ### Check point-in-interval (3-arg)
 
 ```ts
-import { intervalContainsDate } from "@burglekitt/gmt";
+import { intervalContainsDate } from "@northguild/gmt";
 
 const inside = intervalContainsDate("2024-01-01", "2024-12-31", "2024-06-15"); // true
 const onBoundary = intervalContainsDate("2024-01-01", "2024-12-31", "2024-01-01"); // true
@@ -239,7 +239,7 @@ const outside = intervalContainsDate("2024-01-01", "2024-12-31", "2025-01-01"); 
 ### Check interval-in-interval (4-arg)
 
 ```ts
-import { intervalContainsDate } from "@burglekitt/gmt";
+import { intervalContainsDate } from "@northguild/gmt";
 
 const inside = intervalContainsDate("2024-01-01", "2024-12-31", "2024-03-01", "2024-09-01"); // true
 const equal = intervalContainsDate("2024-01-01", "2024-12-31", "2024-01-01", "2024-12-31"); // true
@@ -249,7 +249,7 @@ const partial = intervalContainsDate("2024-01-01", "2024-12-31", "2024-06-15", "
 ### Check time interval containment
 
 ```ts
-import { intervalContainsTime } from "@burglekitt/gmt";
+import { intervalContainsTime } from "@northguild/gmt";
 
 const inside = intervalContainsTime("09:00:00", "17:00:00", "12:00:00"); // true
 const inner = intervalContainsTime("09:00:00", "17:00:00", "10:00:00", "16:00:00"); // true
@@ -258,7 +258,7 @@ const inner = intervalContainsTime("09:00:00", "17:00:00", "10:00:00", "16:00:00
 ### Check datetime interval containment
 
 ```ts
-import { intervalContainsDateTime } from "@burglekitt/gmt";
+import { intervalContainsDateTime } from "@northguild/gmt";
 
 const inside = intervalContainsDateTime("2024-01-01T10:00:00", "2024-12-31T23:59:59", "2024-06-15T12:00:00"); // true
 const inner = intervalContainsDateTime("2024-01-01T10:00:00", "2024-12-31T23:59:59", "2024-03-01T00:00:00", "2024-09-01T00:00:00"); // true
@@ -267,7 +267,7 @@ const inner = intervalContainsDateTime("2024-01-01T10:00:00", "2024-12-31T23:59:
 ### Check UTC interval containment
 
 ```ts
-import { intervalContainsUtc } from "@burglekitt/gmt/utc";
+import { intervalContainsUtc } from "@northguild/gmt/utc";
 
 const inside = intervalContainsUtc("2024-01-01T00:00:00Z", "2024-12-31T23:59:59Z", "2024-06-15T12:00:00Z"); // true
 const inner = intervalContainsUtc("2024-01-01T00:00:00Z", "2024-12-31T23:59:59Z", "2024-03-01T00:00:00Z", "2024-09-01T00:00:00Z"); // true
@@ -276,7 +276,7 @@ const inner = intervalContainsUtc("2024-01-01T00:00:00Z", "2024-12-31T23:59:59Z"
 ### Check Unix interval containment
 
 ```ts
-import { intervalContainsUnix } from "@burglekitt/gmt/unix";
+import { intervalContainsUnix } from "@northguild/gmt/unix";
 
 const inside = intervalContainsUnix(0, 1700000000, 170000000); // true
 const inner = intervalContainsUnix(0, 1700000000, 100000, 1000000); // true
@@ -286,7 +286,7 @@ const stringInput = intervalContainsUnix("0", "1700000000", "170000000"); // tru
 ### Check zoned interval containment
 
 ```ts
-import { intervalContainsZoned } from "@burglekitt/gmt/zoned";
+import { intervalContainsZoned } from "@northguild/gmt/zoned";
 
 const inside = intervalContainsZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]", "2024-06-15T12:00:00+00:00[UTC]"); // true
 const inner = intervalContainsZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]", "2024-03-01T00:00:00+00:00[UTC]", "2024-09-01T00:00:00+00:00[UTC]"); // true
@@ -295,7 +295,7 @@ const inner = intervalContainsZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-12-3
 ### Merge overlapping or adjacent intervals (union)
 
 ```ts
-import { intervalUnionDate } from "@burglekitt/gmt";
+import { intervalUnionDate } from "@northguild/gmt";
 
 const merged = intervalUnionDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
 // { start: "2024-01-01", end: "2024-12-31" }
@@ -312,7 +312,7 @@ const disjoint = intervalUnionDate("2024-01-01", "2024-06-30", "2024-07-01", "20
 ### Split interval into sub-intervals by unit
 
 ```ts
-import { splitIntervalByUnitDate } from "@burglekitt/gmt";
+import { splitIntervalByUnitDate } from "@northguild/gmt";
 
 const slices = splitIntervalByUnitDate("2024-01-01", "2024-01-10", "day", 2);
 // [
@@ -339,7 +339,7 @@ const date = Temporal.PlainDate.from(input); // may throw
 Correct:
 
 ```ts
-import { isValidDate } from "@burglekitt/gmt";
+import { isValidDate } from "@northguild/gmt";
 
 if (!isValidDate(input)) {
   throw new Error("Invalid date");
@@ -360,7 +360,7 @@ const zoned = Temporal.ZonedDateTime.from("2024-03-15T14:30:45[Invalid/Zone]"); 
 Correct:
 
 ```ts
-import { isValidTimeZone } from "@burglekitt/gmt/zoned";
+import { isValidTimeZone } from "@northguild/gmt/zoned";
 
 if (!isValidTimeZone("America/New_York")) {
   throw new Error("Invalid timezone");
@@ -387,7 +387,7 @@ try {
 Correct:
 
 ```ts
-import { isValidDate } from "@burglekitt/gmt";
+import { isValidDate } from "@northguild/gmt";
 
 const valid = isValidDate(input);
 ```
@@ -399,7 +399,7 @@ Source: AGENTS.md — Use validation functions, not exceptions for flow
 Wrong:
 
 ```ts
-import { isValidDateRange } from "@burglekitt/gmt";
+import { isValidDateRange } from "@northguild/gmt";
 
 isValidDateRange("2024-01-01", "2024-12-31"); // false — expects { value1, value2 }
 ```
@@ -407,7 +407,7 @@ isValidDateRange("2024-01-01", "2024-12-31"); // false — expects { value1, val
 Correct:
 
 ```ts
-import { isValidDateInterval } from "@burglekitt/gmt";
+import { isValidDateInterval } from "@northguild/gmt";
 
 const valid = isValidDateInterval("2024-01-01", "2024-12-31"); // true
 ```
@@ -419,7 +419,7 @@ Source: `plain/validate/isValidDateRange.ts` — range validators take `{ value1
 Wrong:
 
 ```ts
-import { isValidDateInterval } from "@burglekitt/gmt";
+import { isValidDateInterval } from "@northguild/gmt";
 
 const valid = isValidDateInterval("2024-12-31", "2024-01-01"); // false — start must be <= end
 ```

@@ -14,18 +14,18 @@ description: >
   single field instead of carrying into the next (month +1 from December stays
   in the same year, unlike addMonths).
 sources:
-  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/clampDate.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/closestDateTo.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/setDate.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/setDateTime.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/setTime.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/cycleDate.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/cycleDateTime.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/cycleTime.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/calculate/index.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/calculate/clampDate.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/calculate/closestDateTo.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/calculate/setDate.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/calculate/setDateTime.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/calculate/setTime.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/calculate/cycleDate.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/calculate/cycleDateTime.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/calculate/cycleTime.ts'
 metadata:
   type: core
-  library: '@burglekitt/gmt'
+  library: '@northguild/gmt'
   library_version: '1.14.1'
 ---
 
@@ -36,9 +36,9 @@ Use this skill when you need to perform date arithmetic (add, subtract, diff).
 ## Setup
 
 ```ts
-import { addDays, addMonths, addYears } from "@burglekitt/gmt";
-import { subtractTime, diffDate } from "@burglekitt/gmt";
-import { startOfDate, endOfDate } from "@burglekitt/gmt";
+import { addDays, addMonths, addYears } from "@northguild/gmt";
+import { subtractTime, diffDate } from "@northguild/gmt";
+import { startOfDate, endOfDate } from "@northguild/gmt";
 ```
 
 ## Core Patterns
@@ -64,7 +64,7 @@ const result = addYears("2024-03-15", 1); // "2025-03-15"
 ### Subtract time from date
 
 ```ts
-import { subtractTime } from "@burglekitt/gmt";
+import { subtractTime } from "@northguild/gmt";
 
 const result = subtractTime("2024-03-15T14:30:45", { hours: 2 }); // "2024-03-15T12:30:45"
 ```
@@ -72,7 +72,7 @@ const result = subtractTime("2024-03-15T14:30:45", { hours: 2 }); // "2024-03-15
 ### Add business days (skip weekends)
 
 ```ts
-import { addBusinessDays, subtractBusinessDays } from "@burglekitt/gmt";
+import { addBusinessDays, subtractBusinessDays } from "@northguild/gmt";
 
 addBusinessDays("2024-03-15", 1); // "2024-03-18" — skips Sat/Sun
 addBusinessDays("2024-03-16", 1); // "2024-03-18" — Saturday start still skips to Monday
@@ -84,7 +84,7 @@ subtractBusinessDays("2024-03-17", 1); // "2024-03-15" — Sunday start still sk
 ### Calculate difference between dates (in days)
 
 ```ts
-import { diffDate } from "@burglekitt/gmt";
+import { diffDate } from "@northguild/gmt";
 
 const diff = diffDate("2024-03-15", "2024-03-20", "day"); // 5
 ```
@@ -94,7 +94,7 @@ Need a full multi-unit breakdown (e.g. `"P26D"`) instead of a single-unit number
 ### Get start of day
 
 ```ts
-import { startOfDate } from "@burglekitt/gmt";
+import { startOfDate } from "@northguild/gmt";
 
 const start = startOfDate("2024-03-15T14:30:45"); // "2024-03-15T00:00:00"
 ```
@@ -102,7 +102,7 @@ const start = startOfDate("2024-03-15T14:30:45"); // "2024-03-15T00:00:00"
 ### Get end of day
 
 ```ts
-import { endOfDate } from "@burglekitt/gmt";
+import { endOfDate } from "@northguild/gmt";
 
 const end = endOfDate("2024-03-15T14:30:45"); // "2024-03-15T23:59:59.999999999"
 ```
@@ -110,7 +110,7 @@ const end = endOfDate("2024-03-15T14:30:45"); // "2024-03-15T23:59:59.999999999"
 ### Get start of month
 
 ```ts
-import { startOfDate } from "@burglekitt/gmt";
+import { startOfDate } from "@northguild/gmt";
 
 const start = startOfDate("2024-03-15", "month"); // "2024-03-01"
 ```
@@ -118,7 +118,7 @@ const start = startOfDate("2024-03-15", "month"); // "2024-03-01"
 ### Get end of month
 
 ```ts
-import { endOfDate } from "@burglekitt/gmt";
+import { endOfDate } from "@northguild/gmt";
 
 const end = endOfDate("2024-03-15", "month"); // "2024-03-31"
 ```
@@ -126,7 +126,7 @@ const end = endOfDate("2024-03-15", "month"); // "2024-03-31"
 ### Get quarter boundaries
 
 ```ts
-import { startOfQuarterForDate, endOfQuarterForDate } from "@burglekitt/gmt";
+import { startOfQuarterForDate, endOfQuarterForDate } from "@northguild/gmt";
 
 const q1Start = startOfQuarterForDate("2024-03-15"); // "2024-01-01"
 const q1End = endOfQuarterForDate("2024-03-15"); // "2024-03-31"
@@ -135,7 +135,7 @@ const q1End = endOfQuarterForDate("2024-03-15"); // "2024-03-31"
 ### Clamp a date to a range
 
 ```ts
-import { clampDate } from "@burglekitt/gmt";
+import { clampDate } from "@northguild/gmt";
 
 clampDate("2024-03-15", "2024-03-01", "2024-03-31");
 // "2024-03-15"
@@ -153,7 +153,7 @@ clampDate("2024-03-15", "2024-03-31", "2024-03-01");
 ### Find the nearest date to a target
 
 ```ts
-import { closestDateTo } from "@burglekitt/gmt";
+import { closestDateTo } from "@northguild/gmt";
 
 closestDateTo("2024-03-15", ["2024-03-01", "2024-03-20", "2024-03-18"]);
 // "2024-03-18"
@@ -173,7 +173,7 @@ Distance is measured in whole calendar days via `Temporal.PlainDate.until()`. On
 ### Get locale-aware week boundaries
 
 ```ts
-import { getLocaleStartOfWeek, getLocaleEndOfWeek } from "@burglekitt/gmt";
+import { getLocaleStartOfWeek, getLocaleEndOfWeek } from "@northguild/gmt";
 
 getLocaleStartOfWeek("2024-02-29", "en-US"); // "2024-02-25" (Sunday, en-US weeks start Sunday)
 getLocaleStartOfWeek("2024-02-29", "fr-FR"); // "2024-02-26" (Monday, fr-FR weeks start Monday)
@@ -187,7 +187,7 @@ Unlike `startOfDate(value, "week", { weekStartsOn })`/`endOfDate(value, "week", 
 ### Set one or more fields directly
 
 ```ts
-import { setDate, setDateTime, setTime } from "@burglekitt/gmt";
+import { setDate, setDateTime, setTime } from "@northguild/gmt";
 
 setDate("2024-03-10", { year: 2025 }); // "2025-03-10"
 setDate("2024-01-31", { month: 2 }); // "2024-02-29" (constrain clamps to the last valid day)
@@ -203,7 +203,7 @@ setTime("12:00:00", { hour: 25 }); // "23:00:00" (constrain clamps; overflow has
 ### Control out-of-range add/subtract results with overflow
 
 ```ts
-import { addDate } from "@burglekitt/gmt";
+import { addDate } from "@northguild/gmt";
 
 // default overflow: "constrain" clamps to the nearest valid date
 const clamped = addDate("2024-01-31", { months: 1 }); // "2024-02-29"
@@ -217,7 +217,7 @@ const rejected = addDate("2024-01-31", { months: 1 }, { overflow: "reject" }); /
 ### Add/subtract business days (Mon–Fri only)
 
 ```ts
-import { addBusinessDays, subtractBusinessDays } from "@burglekitt/gmt";
+import { addBusinessDays, subtractBusinessDays } from "@northguild/gmt";
 
 addBusinessDays("2024-03-15", 1);
 // "2024-03-18" (Friday + 1 business day skips Sat/Sun to Monday)
@@ -245,7 +245,7 @@ To test whether a given date is itself a business day before doing arithmetic on
 ### Round a diff result with smallestUnit/roundingIncrement/roundingMode
 
 ```ts
-import { diffDate } from "@burglekitt/gmt";
+import { diffDate } from "@northguild/gmt";
 
 // unrounded (default): exact difference in the requested unit
 const exact = diffDate("2023-01-01", "2023-01-10", "day"); // 9
@@ -264,7 +264,7 @@ const rounded = diffDate("2023-01-01", "2023-01-10", "week", {
 `addDate`, `subtractDate`, `diffDate`, and `diffDateAsDuration` accept a GMT calendar-annotated `PlainDate` string (as produced by `convertDateToCalendar`, e.g. `"5784-06-15[u-ca=hebrew]"`), not just a bare ISO string. Calendar-unit arithmetic ("add 1 month") resolves in that calendar:
 
 ```ts
-import { addDate, convertDateToCalendar, diffDate } from "@burglekitt/gmt";
+import { addDate, convertDateToCalendar, diffDate } from "@northguild/gmt";
 
 const adarI = convertDateToCalendar("2024-02-24", "hebrew"); // "5784-06-15[u-ca=hebrew]"
 addDate(adarI, { months: 1 }); // "5784-07-15[u-ca=hebrew]" — Adar I (leap-only) -> Adar
@@ -278,7 +278,7 @@ Only `plain/` `PlainDate` functions accept this — `addDateTime`/`addTime`/`add
 ### Cycle a single field without changing others (E6)
 
 ```ts
-import { cycleDate, cycleDateTime, cycleTime } from "@burglekitt/gmt";
+import { cycleDate, cycleDateTime, cycleTime } from "@northguild/gmt";
 
 cycleDate("2024-12-15", "month", 1); // "2024-01-15" — wraps, stays in the same year
 cycleDate("2024-12-31", "day", 1); // "2024-12-01" — wraps within the same month
@@ -335,7 +335,7 @@ date.setDate(date.getDate() + 5); // mutates original
 Correct:
 
 ```ts
-import { addDays } from "@burglekitt/gmt";
+import { addDays } from "@northguild/gmt";
 
 const result = addDays("2024-03-15", 5); // new immutable date
 ```
@@ -353,7 +353,7 @@ const result = addMonths("2024-01-31", 1); // may throw or be incorrect
 Correct:
 
 ```ts
-import { addMonths } from "@burglekitt/gmt";
+import { addMonths } from "@northguild/gmt";
 
 const result = addMonths("2024-01-31", 1); // "2024-03-02" (clamped to end of month)
 ```
@@ -373,7 +373,7 @@ processDate(result);
 Correct:
 
 ```ts
-import { addDays, isValidDate } from "@burglekitt/gmt";
+import { addDays, isValidDate } from "@northguild/gmt";
 
 const input = "2024-03-15";
 const result = addDays(input, 5);
@@ -396,7 +396,7 @@ const day = parseDayFromDate(result); // 28, 29, or 1?
 Correct:
 
 ```ts
-import { addDays } from "@burglekitt/gmt";
+import { addDays } from "@northguild/gmt";
 
 const result = addDays("2024-02-28", 1); // "2024-02-29" (correct for leap year)
 ```
@@ -415,7 +415,7 @@ const nextBillingDate = cycleDate("2024-12-15", "month", 1); // "2024-01-15" —
 Correct:
 
 ```ts
-import { addDate, cycleDate } from "@burglekitt/gmt";
+import { addDate, cycleDate } from "@northguild/gmt";
 
 // Calendar arithmetic (crossing year boundaries is expected): use addDate
 const nextBillingDate = addDate("2024-12-15", { months: 1 }); // "2025-01-15"

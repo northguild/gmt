@@ -52,7 +52,7 @@ importers:
         specifier: ^0.5.1
         version: 0.5.1
     devDependencies:
-      '@burglekitt/gmt-oxlint':
+      '@northguild/gmt-oxlint':
         specifier: workspace:*
         version: link:../gmt-oxlint
       '@tanstack/intent':

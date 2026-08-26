@@ -8,15 +8,15 @@ description: >
   strings. All accept a reference anchor and Intl.RelativeTimeFormat options
   (numeric, style).
 sources:
-  - 'burglekitt/gmt:packages/gmt/src/plain/format/formatRelativeDate.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/format/formatRelativeTime.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/format/formatRelativeDateTime.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/format/formatRelativeZoned.ts'
-  - 'burglekitt/gmt:packages/gmt/src/unix/format/formatRelativeUnix.ts'
-  - 'burglekitt/gmt:packages/gmt/src/utc/format/formatRelativeUtc.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/format/formatRelativeDate.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/format/formatRelativeTime.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/format/formatRelativeDateTime.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/format/formatRelativeZoned.ts'
+  - 'northguild/gmt:packages/gmt/src/unix/format/formatRelativeUnix.ts'
+  - 'northguild/gmt:packages/gmt/src/utc/format/formatRelativeUtc.ts'
 metadata:
   type: core
-  library: '@burglekitt/gmt'
+  library: '@northguild/gmt'
   library_version: '1.14.1'
 ---
 
@@ -28,19 +28,19 @@ Use this skill when you need a human-friendly relative time label — "yesterday
 
 | Input shape | Formatter | Module |
 |---|---|---|
-| ISO date `"2024-03-15"` | `formatRelativeDate` | `@burglekitt/gmt` |
-| ISO time `"14:30:45"` | `formatRelativeTime` | `@burglekitt/gmt` |
-| ISO datetime `"2024-03-15T14:30:45"` | `formatRelativeDateTime` | `@burglekitt/gmt` |
-| Zoned `"2024-03-15T14:30:45-05:00[America/New_York]"` | `formatRelativeZoned` | `@burglekitt/gmt/zoned` |
-| Unix epoch (ms or seconds) | `formatRelativeUnix` | `@burglekitt/gmt/unix` |
-| UTC ISO `"2024-03-15T14:30:45Z"` | `formatRelativeUtc` | `@burglekitt/gmt/utc` |
+| ISO date `"2024-03-15"` | `formatRelativeDate` | `@northguild/gmt` |
+| ISO time `"14:30:45"` | `formatRelativeTime` | `@northguild/gmt` |
+| ISO datetime `"2024-03-15T14:30:45"` | `formatRelativeDateTime` | `@northguild/gmt` |
+| Zoned `"2024-03-15T14:30:45-05:00[America/New_York]"` | `formatRelativeZoned` | `@northguild/gmt/zoned` |
+| Unix epoch (ms or seconds) | `formatRelativeUnix` | `@northguild/gmt/unix` |
+| UTC ISO `"2024-03-15T14:30:45Z"` | `formatRelativeUtc` | `@northguild/gmt/utc` |
 
 ## Core Patterns
 
 ### Plain date relative
 
 ```ts
-import { formatRelativeDate } from "@burglekitt/gmt";
+import { formatRelativeDate } from "@northguild/gmt";
 
 const ref = "2024-03-15";
 formatRelativeDate("2024-03-14", "en-US", { reference: ref }); // "yesterday"
@@ -56,7 +56,7 @@ formatRelativeDate("2024-02-23", "en-US", {
 ### Plain time relative
 
 ```ts
-import { formatRelativeTime } from "@burglekitt/gmt";
+import { formatRelativeTime } from "@northguild/gmt";
 
 const ref = "12:00:00";
 formatRelativeTime("11:30:00", "en-US", { reference: ref }); // "30 minutes ago"
@@ -66,7 +66,7 @@ formatRelativeTime("12:00:30", "en-US", { reference: ref }); // "in 30 seconds"
 ### Plain datetime relative
 
 ```ts
-import { formatRelativeDateTime } from "@burglekitt/gmt";
+import { formatRelativeDateTime } from "@northguild/gmt";
 
 const ref = "2024-03-15T12:00:00";
 formatRelativeDateTime("2024-03-15T10:00:00", "en-US", { reference: ref });
@@ -76,7 +76,7 @@ formatRelativeDateTime("2024-03-15T10:00:00", "en-US", { reference: ref });
 ### Zoned relative (DST-safe)
 
 ```ts
-import { formatRelativeZoned } from "@burglekitt/gmt/zoned";
+import { formatRelativeZoned } from "@northguild/gmt/zoned";
 
 const ref = "2024-03-15T12:00:00-04:00[America/New_York]";
 formatRelativeZoned(
@@ -91,7 +91,7 @@ Zoned arithmetic uses `Temporal.ZonedDateTime`, so spans that cross DST transiti
 ### Unix relative
 
 ```ts
-import { formatRelativeUnix } from "@burglekitt/gmt/unix";
+import { formatRelativeUnix } from "@northguild/gmt/unix";
 
 // Default epoch unit is milliseconds.
 formatRelativeUnix(1710507600000, "en-US", { reference: 1710511200000 });
@@ -107,7 +107,7 @@ formatRelativeUnix(1710507600, "en-US", {
 ### UTC relative
 
 ```ts
-import { formatRelativeUtc } from "@burglekitt/gmt/utc";
+import { formatRelativeUtc } from "@northguild/gmt/utc";
 
 formatRelativeUtc("2024-03-15T11:00:00Z", "en-US", {
   reference: "2024-03-15T12:00:00Z",
@@ -183,7 +183,7 @@ const label = `${Math.round(diffMs / 60000)} minutes ago`; // ignores locale, DS
 Correct:
 
 ```ts
-import { formatRelativeDateTime } from "@burglekitt/gmt";
+import { formatRelativeDateTime } from "@northguild/gmt";
 
 formatRelativeDateTime(value, locale, { reference: ref });
 ```
@@ -195,7 +195,7 @@ Source: AGENTS.md — Never use JavaScript Date APIs.
 Wrong:
 
 ```ts
-import { formatRelativeUtc } from "@burglekitt/gmt/utc";
+import { formatRelativeUtc } from "@northguild/gmt/utc";
 
 formatRelativeUtc(1710507600000, "en-US", { reference: 1710511200000 });
 // "" — formatRelativeUtc expects ISO strings, not numbers
@@ -204,7 +204,7 @@ formatRelativeUtc(1710507600000, "en-US", { reference: 1710511200000 });
 Correct:
 
 ```ts
-import { formatRelativeUnix } from "@burglekitt/gmt/unix";
+import { formatRelativeUnix } from "@northguild/gmt/unix";
 
 formatRelativeUnix(1710507600000, "en-US", { reference: 1710511200000 });
 // "1 hour ago"

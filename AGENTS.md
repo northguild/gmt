@@ -1,6 +1,6 @@
 # GMT Temporal Library — Agent Guide
 
-`@burglekitt/gmt` is a Temporal-first date/time library. String-in, string-out. No `Date` object anywhere.
+`@northguild/gmt` is a Temporal-first date/time library. String-in, string-out. No `Date` object anywhere.
 
 ## Context Files
 

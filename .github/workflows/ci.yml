@@ -142,7 +142,7 @@ jobs:
 
       - name: Run affected tests
         if: steps.check-non-gmt.outputs.run_tests == 'true'
-        run: pnpm -w exec nx affected -t test --base=$NX_BASE --head=$NX_HEAD --exclude=@burglekitt/gmt,@burglekitt/gmt-oxlint --plain
+        run: pnpm -w exec nx affected -t test --base=$NX_BASE --head=$NX_HEAD --exclude=@northguild/gmt,@northguild/gmt-oxlint --plain
 
       - name: Collect test artifacts
         if: steps.check-non-gmt.outputs.run_tests == 'true' && always()

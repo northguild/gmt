@@ -16,7 +16,7 @@ The changeset file format is:
 
 ```markdown
 ---
-"@burglekitt/<package>": minor   # or patch | major
+"@northguild/<package>": minor   # or patch | major
 ---
 
 <free-form markdown description>

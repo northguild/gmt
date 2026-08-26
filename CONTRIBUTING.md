@@ -9,7 +9,7 @@ This guide covers local development, quality checks, and publishing for workspac
 
 - Node.js 24.x (see `.nvmrc`)
 - pnpm (use Corepack or Volta)
-- npm account with publish access to the `@burglekitt` org (for publishing)
+- npm account with publish access to the `@northguild` org (for publishing)
 - [uv](https://docs.astral.sh/uv/) (only needed to run Python-backed agent skill scripts under `.agents/skills/`)
 
 ## Local Setup
@@ -95,7 +95,7 @@ pnpm run lint
 ```
 .
 ├── packages/
-│   ├── gmt/                    # @burglekitt/gmt — Give Me Temporal!
+│   ├── gmt/                    # @northguild/gmt — Give Me Temporal!
 │   │   ├── src/
 │   │   │   ├── duration/       # ISO 8601 duration parsing and validation
 │   │   │   │   ├── parse/      # parseDuration
@@ -134,13 +134,13 @@ pnpm run lint
 │   │   │   │   └── validate/   # isValidUtc
 │   │   │   ├── regex/          # Composable regex patterns for date/time strings
 │   │   │   └── package.json
-│   ├── gmt-biome/              # @burglekitt/gmt-biome — Shared Biome config
+│   ├── gmt-biome/              # @northguild/gmt-biome — Shared Biome config
 │   │   ├── biome.json          # Consumer-facing config (uses ./plugins/ paths)
 │   │   └── plugins/            # Grit plugins banning Date APIs
-│   └── gmt-eslint/             # @burglekitt/gmt-eslint — Shared ESLint flat config
+│   └── gmt-eslint/             # @northguild/gmt-eslint — Shared ESLint flat config
 │       └── eslint/
 │           └── index.mjs       # Flat config banning Date APIs
-├── burglekitt/                  # Nx workspace configuration (internal, do not publish)
+├── northguild/                  # Nx workspace configuration (internal, do not publish)
 ├── biome.json                   # Root Biome config — references gmt-biome plugins directly
 ├── eslint.config.mjs            # Root ESLint config — imports gmt-eslint
 ├── tsconfig.base.json           # Shared TypeScript base config
@@ -363,7 +363,7 @@ Two supported publish paths:
 
 Prerequisites for Actions-based publishing (optional):
 
-1. Create an npm access token with `Publish` permission for the `@burglekitt` org at https://www.npmjs.com/.
+1. Create an npm access token with `Publish` permission for the `@northguild` org at https://www.npmjs.com/.
 2. Add it as a repository secret named `NPM_TOKEN` (or add it to the `release` environment) in GitHub (`Settings → Secrets` / `Settings → Environments`).
 
 Basic Changesets workflow:
@@ -377,8 +377,8 @@ Basic Changesets workflow:
 Notes:
 
 - Prefer using Changesets rather than manually bumping `package.json`; manual bumps can be used but they bypass the Changesets workflow.
-- Verify packages with `npm pack --dry-run` before publishing. For `@burglekitt/gmt`, run the dry-run after building.
-- The `Publish Package` workflow will build `@burglekitt/gmt` automatically when publishing that package.
+- Verify packages with `npm pack --dry-run` before publishing. For `@northguild/gmt`, run the dry-run after building.
+- The `Publish Package` workflow will build `@northguild/gmt` automatically when publishing that package.
 
 See [PUBLISHING.md](./PUBLISHING.md) for the full, step-by-step guide and examples.
 
@@ -391,12 +391,12 @@ CI strategy:
 ## Agent prompt
 
 ```
-You are working with the @burglekitt/gmt library — a Temporal-first date/time library for JavaScript. Before writing any date-related code, read the skill files in packages/gmt/skills/ and packages/gmt/skills/_artifacts/ to understand the full API surface, naming conventions, and Temporal patterns this project uses. For maintenance procedures (stale skill detection, version bumps, artifact updates), see .agents/skills/tanstack-intent/SKILL.md.
+You are working with the @northguild/gmt library — a Temporal-first date/time library for JavaScript. Before writing any date-related code, read the skill files in packages/gmt/skills/ and packages/gmt/skills/_artifacts/ to understand the full API surface, naming conventions, and Temporal patterns this project uses. For maintenance procedures (stale skill detection, version bumps, artifact updates), see .agents/skills/tanstack-intent/SKILL.md.
 ```
 
 ## Agent Skills
 
-`packages/gmt/skills/` contains [TanStack Intent](https://github.com/tanstack/intent) skill files that teach coding agents how to use `@burglekitt/gmt`'s API. They are published as part of the npm package (see `files` in `packages/gmt/package.json`) and go stale silently — nothing fails CI if a skill still references a renamed or removed function, so this is a manual discipline, not an automated gate.
+`packages/gmt/skills/` contains [TanStack Intent](https://github.com/tanstack/intent) skill files that teach coding agents how to use `@northguild/gmt`'s API. They are published as part of the npm package (see `files` in `packages/gmt/package.json`) and go stale silently — nothing fails CI if a skill still references a renamed or removed function, so this is a manual discipline, not an automated gate.
 
 Two independent things can go stale, and both matter:
 

@@ -1,24 +1,13 @@
 # GMT: Give Me Temporal
 
-> ## ⚠️ Deprecation Notice
->
-> This package and repository have moved. **`gmt` is now maintained under the
-> [northguild](https://github.com/northguild) organization.**
->
-> - **New repository:** <https://github.com/northguild/gmt>
->
-> This `burglekitt/gmt` repository and its published package are deprecated and
-> will receive no further updates. Please update any bookmarks, forks, and CI
-> references to point at **`northguild/gmt`**.
+Home of [@northguild/gmt](./packages/gmt) — **Give Me Temporal!**
 
-Home of [@burglekitt/gmt](./packages/gmt) — **Give Me Temporal!**
-
-A monorepo for Burglekitt community libraries, built with Nx and powered by pnpm, focused on making JavaScript date handling reliable and predictable.
+A monorepo for NorthGuild community libraries, built with Nx and powered by pnpm, focused on making JavaScript date handling reliable and predictable.
 
 ## Agent prompt
 
 ```
-You are working with the @burglekitt/gmt library — a Temporal-first date/time library for JavaScript. Before writing any date-related code, read the skill files in packages/gmt/skills/ and packages/gmt/skills/_artifacts/ to understand the full API surface, naming conventions, and Temporal patterns this project uses.
+You are working with the @northguild/gmt library — a Temporal-first date/time library for JavaScript. Before writing any date-related code, read the skill files in packages/gmt/skills/ and packages/gmt/skills/_artifacts/ to understand the full API surface, naming conventions, and Temporal patterns this project uses.
 
 When a user asks about dates or times:
 
@@ -34,15 +23,15 @@ Install the runtime package:
 
 | Package manager | Command                       |
 | --------------- | ----------------------------- |
-| npm             | `npm install @burglekitt/gmt` |
-| yarn            | `yarn add @burglekitt/gmt`    |
-| pnpm            | `pnpm add @burglekitt/gmt`    |
-| bun             | `bun add @burglekitt/gmt`     |
+| npm             | `npm install @northguild/gmt` |
+| yarn            | `yarn add @northguild/gmt`    |
+| pnpm            | `pnpm add @northguild/gmt`    |
+| bun             | `bun add @northguild/gmt`     |
 
 Quick example:
 
 ```js
-import { getNow } from "@burglekitt/gmt";
+import { getNow } from "@northguild/gmt";
 console.log(getNow()); // ISO 8601 string
 ```
 
@@ -68,9 +57,9 @@ If you see a Date API in code, replace it with a GMT helper.
 
 | Package                             | npm                           | Description                                          |
 | ----------------------------------- | ----------------------------- | ---------------------------------------------------- |
-| [`@burglekitt/gmt`](./packages/gmt) | `npm install @burglekitt/gmt` | Give Me Temporal — string-in/string-out date library |
+| [`@northguild/gmt`](./packages/gmt) | `npm install @northguild/gmt` | Give Me Temporal — string-in/string-out date library |
 
-`@burglekitt/gmt` currently exports top-level `Temporal`, `duration`, `plain`, `zoned`, `unix`, `utc`, and `regex` namespaces, with direct subpath imports available under `@burglekitt/gmt/*`.
+`@northguild/gmt` currently exports top-level `Temporal`, `duration`, `plain`, `zoned`, `unix`, `utc`, and `regex` namespaces, with direct subpath imports available under `@northguild/gmt/*`.
 
 ### How GMT is tested, vs. the libraries it targets
 
@@ -78,7 +67,7 @@ GMT's roadmap (see [context/roadmap](./context/roadmap)) is explicitly scoped ag
 
 | Library                   | Version tested                          |
 | ------------------------- | --------------------------------------- |
-| GMT (`@burglekitt/gmt`)   | 1.12.0                                  |
+| GMT (`@northguild/gmt`)   | 1.12.0                                  |
 | `@internationalized/date` | 3.12.3 (`adobe/react-spectrum@5d191ab`) |
 | Luxon                     | 3.7.2 (`moment/luxon@f427515`)          |
 | date-fns                  | 4.4.0 (`date-fns/date-fns@a0a3922`)     |
@@ -150,32 +139,32 @@ Specific, sourced claims — not a repeat of the metrics above.
 
 Want to ban `Date` APIs in your own project? GMT provides three linting packages — pick the one matching your existing toolchain.
 
-**`@burglekitt/gmt-biome`**
+**`@northguild/gmt-biome`**
 
 | Package manager | Command                                |
 | --------------- | -------------------------------------- |
-| npm             | `npm install -D @burglekitt/gmt-biome` |
-| yarn            | `yarn add -D @burglekitt/gmt-biome`    |
-| pnpm            | `pnpm add -D @burglekitt/gmt-biome`    |
-| bun             | `bun add -D @burglekitt/gmt-biome`     |
+| npm             | `npm install -D @northguild/gmt-biome` |
+| yarn            | `yarn add -D @northguild/gmt-biome`    |
+| pnpm            | `pnpm add -D @northguild/gmt-biome`    |
+| bun             | `bun add -D @northguild/gmt-biome`     |
 
-**`@burglekitt/gmt-eslint`**
+**`@northguild/gmt-eslint`**
 
 | Package manager | Command                                 |
 | --------------- | --------------------------------------- |
-| npm             | `npm install -D @burglekitt/gmt-eslint` |
-| yarn            | `yarn add -D @burglekitt/gmt-eslint`    |
-| pnpm            | `pnpm add -D @burglekitt/gmt-eslint`    |
-| bun             | `bun add -D @burglekitt/gmt-eslint`     |
+| npm             | `npm install -D @northguild/gmt-eslint` |
+| yarn            | `yarn add -D @northguild/gmt-eslint`    |
+| pnpm            | `pnpm add -D @northguild/gmt-eslint`    |
+| bun             | `bun add -D @northguild/gmt-eslint`     |
 
-**`@burglekitt/gmt-oxlint`** (requires `oxlint`)
+**`@northguild/gmt-oxlint`** (requires `oxlint`)
 
 | Package manager | Command                                        |
 | --------------- | ---------------------------------------------- |
-| npm             | `npm install -D @burglekitt/gmt-oxlint oxlint` |
-| yarn            | `yarn add -D @burglekitt/gmt-oxlint oxlint`    |
-| pnpm            | `pnpm add -D @burglekitt/gmt-oxlint oxlint`    |
-| bun             | `bun add -D @burglekitt/gmt-oxlint oxlint`     |
+| npm             | `npm install -D @northguild/gmt-oxlint oxlint` |
+| yarn            | `yarn add -D @northguild/gmt-oxlint oxlint`    |
+| pnpm            | `pnpm add -D @northguild/gmt-oxlint oxlint`    |
+| bun             | `bun add -D @northguild/gmt-oxlint oxlint`     |
 
 ## Contributing
 

@@ -8,14 +8,14 @@ description: >
   RFC 3339) into GMT's own ISO strings — these return "" on invalid input, not
   null.
 sources:
-  - 'burglekitt/gmt:packages/gmt/src/plain/parse/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/parse/parseRfc2822.ts'
-  - 'burglekitt/gmt:packages/gmt/src/utc/parse/parseHttp.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/parse/parseSql.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/parse/parseRfc3339.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/parse/index.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/parse/parseRfc2822.ts'
+  - 'northguild/gmt:packages/gmt/src/utc/parse/parseHttp.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/parse/parseSql.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/parse/parseRfc3339.ts'
 metadata:
   type: core
-  library: '@burglekitt/gmt'
+  library: '@northguild/gmt'
   library_version: '1.14.1'
 ---
 
@@ -26,8 +26,8 @@ Use this skill when you need to extract a specific component (year, month, day, 
 ## Setup
 
 ```ts
-import { parseYearFromDate, parseMonthFromDate, parseDayFromDate } from "@burglekitt/gmt";
-import { parseHourFromTime, parseMinuteFromTime, parseSecondFromTime } from "@burglekitt/gmt";
+import { parseYearFromDate, parseMonthFromDate, parseDayFromDate } from "@northguild/gmt";
+import { parseHourFromTime, parseMinuteFromTime, parseSecondFromTime } from "@northguild/gmt";
 ```
 
 ## Core Patterns
@@ -71,7 +71,7 @@ const second = parseSecondFromTime("14:30:45"); // 45
 ### Parse from datetime string
 
 ```ts
-import { parseYearFromDateTime, parseMonthFromDateTime, parseDayFromDateTime } from "@burglekitt/gmt";
+import { parseYearFromDateTime, parseMonthFromDateTime, parseDayFromDateTime } from "@northguild/gmt";
 
 const year = parseYearFromDateTime("2024-03-15T14:30:45"); // 2024
 const month = parseMonthFromDateTime("2024-03-15T14:30:45"); // 3
@@ -81,7 +81,7 @@ const day = parseDayFromDateTime("2024-03-15T14:30:45"); // 15
 ### Parse day of week
 
 ```ts
-import { parseDayOfWeekFromDate } from "@burglekitt/gmt";
+import { parseDayOfWeekFromDate } from "@northguild/gmt";
 
 const dayOfWeek = parseDayOfWeekFromDate("2024-03-15"); // 5 (Friday)
 ```
@@ -89,7 +89,7 @@ const dayOfWeek = parseDayOfWeekFromDate("2024-03-15"); // 5 (Friday)
 ### Parse week of year
 
 ```ts
-import { parseWeekFromDate } from "@burglekitt/gmt";
+import { parseWeekFromDate } from "@northguild/gmt";
 
 const week = parseWeekFromDate("2024-03-15"); // 11
 ```
@@ -111,7 +111,7 @@ import {
   getWeekYear,
   getLocaleWeekYear,
   getWeeksInLocaleWeekYear,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 
 getDaysInMonth("2024-02-15"); // 29 (leap year)
 getDaysInYear("2024-06-15"); // 366 (leap year)
@@ -136,7 +136,7 @@ import {
   parseDateWithPattern,
   parseDateTimeWithPattern,
   parseTimeWithPattern,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 
 parseDateWithPattern("03/15/2024", "MM/dd/yyyy"); // "2024-03-15"
 parseDateWithPattern("15-Mar-2024", "dd-MMM-yyyy"); // "2024-03-15"
@@ -180,7 +180,7 @@ matching the sentinel convention of their `format*` counterparts in the
 `format-date-time` skill rather than `parse*From*`'s `null`.
 
 ```ts
-import { parseRfc2822, parseHttp, parseSql, parseRfc3339 } from "@burglekitt/gmt";
+import { parseRfc2822, parseHttp, parseSql, parseRfc3339 } from "@northguild/gmt";
 
 // Email `Date:` headers (RFC 5322 / RFC 2822) → zoned ISO string.
 parseRfc2822("Fri, 15 Mar 2024 14:30:00 -0400");
@@ -240,7 +240,7 @@ const year = "2024-03-15".split("-")[0]; // "2024" as string
 Correct:
 
 ```ts
-import { parseYearFromDate } from "@burglekitt/gmt";
+import { parseYearFromDate } from "@northguild/gmt";
 
 const year = parseYearFromDate("2024-03-15"); // 2024 as number
 ```
@@ -283,7 +283,7 @@ const row = parseWeekFromDate("2024-02-29"); // 9 — ISO week-of-year, not usef
 Correct:
 
 ```ts
-import { getWeekOfMonth } from "@burglekitt/gmt";
+import { getWeekOfMonth } from "@northguild/gmt";
 
 const row = getWeekOfMonth("2024-02-29", "en-US"); // 5 — grid row within February
 ```
@@ -307,7 +307,7 @@ const key = parseWeekFromDate("2024-12-30"); // "1" — 1 of which year?
 Correct:
 
 ```ts
-import { getWeekYear, parseWeekFromDate } from "@burglekitt/gmt";
+import { getWeekYear, parseWeekFromDate } from "@northguild/gmt";
 
 const key = `${getWeekYear("2024-12-30")}-W${parseWeekFromDate("2024-12-30")}`; // "2025-W1"
 ```
@@ -333,7 +333,7 @@ if (value === null) {
 Correct:
 
 ```ts
-import { parseHttp } from "@burglekitt/gmt";
+import { parseHttp } from "@northguild/gmt";
 
 const value = parseHttp(headerValue);
 if (value === "") {

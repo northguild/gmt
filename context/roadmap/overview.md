@@ -2,7 +2,7 @@
 
 ## Context
 
-GMT (`@burglekitt/gmt`) is a pre-alpha Temporal-first date library with strong plain/zoned/unix/utc coverage already. The goal is to reach — and exceed — feature parity with **Luxon**, **react-aria's `@internationalized/date`**, **Moment.js**, and **date-fns** — the four most relevant comparison libraries (see `context/project-overview.md`) — and to stay ahead of emerging Temporal-first competitors.
+GMT (`@northguild/gmt`) is a pre-alpha Temporal-first date library with strong plain/zoned/unix/utc coverage already. The goal is to reach — and exceed — feature parity with **Luxon**, **react-aria's `@internationalized/date`**, **Moment.js**, and **date-fns** — the four most relevant comparison libraries (see `context/project-overview.md`) — and to stay ahead of emerging Temporal-first competitors.
 
 Research via context7 against these libraries' current docs, cross-referenced with GMT's existing `src/` surface, surfaced four real functional gaps (not just API-shape differences):
 
@@ -33,7 +33,7 @@ This roadmap is intentionally a skeleton, not a spec. Before implementing any st
 4. **Expand the one-line story into a full spec** before writing code: exact function signature(s), which Temporal API(s) it wraps, the sentinel return value, the locale matrix if locale-aware, and the specific edge cases the tests must cover (invalid input, DST boundaries, leap years/seconds, etc. as applicable).
 5. **One story = one PR = one changeset.** Do not bundle multiple stories into one PR even if they touch the same namespace, unless the story list explicitly groups them (e.g. C1-C3 are sequenced together but are still separate, reviewable commits).
 6. **Update `packages/gmt/README.md`** (via `/update-readme`) and add a changeset (via `/changelog`) as part of the same PR, not a follow-up.
-7. **Update the TanStack Intent agent skills** (via `/tanstack-intent`, or manually following `.agents/skills/tanstack-intent/SKILL.md`) as part of the same PR whenever the story adds/renames/removes an exported function, adds an option to an existing one, or introduces a new domain concept. Skills that fall behind the actual API surface actively mislead agents consuming `@burglekitt/gmt` — this is not optional cleanup. The skill's own step 0 also checks whether the `@tanstack/intent` **tool** itself (the devDependency, not just the skill content) has drifted behind npm — run it periodically even outside of a specific story, since tool drift and content drift are independent failure modes.
+7. **Update the TanStack Intent agent skills** (via `/tanstack-intent`, or manually following `.agents/skills/tanstack-intent/SKILL.md`) as part of the same PR whenever the story adds/renames/removes an exported function, adds an option to an existing one, or introduces a new domain concept. Skills that fall behind the actual API surface actively mislead agents consuming `@northguild/gmt` — this is not optional cleanup. The skill's own step 0 also checks whether the `@tanstack/intent` **tool** itself (the devDependency, not just the skill content) has drifted behind npm — run it periodically even outside of a specific story, since tool drift and content drift are independent failure modes.
 
 See [story-groups.md](story-groups.md) for the Story Groups (A–G), [tracker.md](tracker.md) for the issue/status table, and `issues/<letter>.md` for each story's full GitHub-issue-ready spec.
 

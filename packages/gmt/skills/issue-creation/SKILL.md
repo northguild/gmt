@@ -1,7 +1,7 @@
 ---
 name: issue-creation
 description: >
-  Create feature requests for missing @burglekitt/gmt functionality with proper
+  Create feature requests for missing @northguild/gmt functionality with proper
   context, examples, and details that help maintainers understand and implement
   the requested feature.
 metadata:

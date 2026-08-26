@@ -1,4 +1,4 @@
-# EPIC — Dox: the documentation site for `@burglekitt/gmt`
+# EPIC — Dox: the documentation site for `@northguild/gmt`
 
 > This directory follows the same progressive-disclosure structure as
 > `context/roadmap/`. Start at [index.md](index.md). This file (overview.md) holds
@@ -19,7 +19,7 @@
 
 ## 1. Context and the ordering principle
 
-`@burglekitt/gmt` exposes roughly **424 public functions** — `plain` (187), `zoned` (98),
+`@northguild/gmt` exposes roughly **424 public functions** — `plain` (187), `zoned` (98),
 `unix` (67), `utc` (66), `duration` (6) — plus 20 exported consts (16 of them `regex`
 patterns) and ~14 exported option types. Today the only discovery path is
 `packages/gmt/README.md`, whose "API Surface" section just links to GitHub tree URLs.
@@ -42,21 +42,21 @@ design system and a chat runtime.
 
 This is why a docs site here is a **generation** problem, not an authoring problem:
 
-| Source | Scale | Value |
-| --- | --- | --- |
-| JSDoc `@example` tags | **1,514 lines** across 430 files | Rigid, machine-parseable `fn(args) // result` format |
-| JSDoc coverage | **425 / 434** public impl files (97.9%) | Description + bullets + `@param` + `@returns` on nearly everything |
-| `packages/gmt/README.md` | 1,071 lines | ~930 of them runnable, annotated examples in 6 topical sections |
-| `packages/gmt/skills/` | 18 `SKILL.md`, ~3,700 lines | Already structured as Core Patterns + severity-graded Common Mistakes |
-| `skills/_artifacts/` | `domain_map.yaml`, `skill_tree.yaml` | A ready-made information architecture |
-| `docs/dst-disambiguation.md` | 139 lines | Excellent long-form conceptual guide, currently orphaned |
-| `src/` directory tree | namespace → module → function | Already a correct nav taxonomy |
+| Source                       | Scale                                   | Value                                                                 |
+| ---------------------------- | --------------------------------------- | --------------------------------------------------------------------- |
+| JSDoc `@example` tags        | **1,514 lines** across 430 files        | Rigid, machine-parseable `fn(args) // result` format                  |
+| JSDoc coverage               | **425 / 434** public impl files (97.9%) | Description + bullets + `@param` + `@returns` on nearly everything    |
+| `packages/gmt/README.md`     | 1,071 lines                             | ~930 of them runnable, annotated examples in 6 topical sections       |
+| `packages/gmt/skills/`       | 18 `SKILL.md`, ~3,700 lines             | Already structured as Core Patterns + severity-graded Common Mistakes |
+| `skills/_artifacts/`         | `domain_map.yaml`, `skill_tree.yaml`    | A ready-made information architecture                                 |
+| `docs/dst-disambiguation.md` | 139 lines                               | Excellent long-form conceptual guide, currently orphaned              |
+| `src/` directory tree        | namespace → module → function           | Already a correct nav taxonomy                                        |
 
 ### Verified findings that shaped this plan
 
 - **The `@example` format is non-standard, and this drives the tooling choice.** Every
   example is a single inline line — `@example fnName(args) // result (optional
-  parenthetical explanation)` — never a fenced code block. TypeDoc and any TSDoc-spec
+parenthetical explanation)` — never a fenced code block. TypeDoc and any TSDoc-spec
   tool treat `@example` content as a code block and would mangle the `// result`
   pairing 1,514 times. **This is the single reason a custom generator beats TypeDoc
   here**, and it is the first thing to get right in story DOX-A3.
@@ -124,55 +124,55 @@ That shared artifact is the load-bearing idea. The superseded plan built a corpu
 model only; here the corpus and the site are the same extraction, which means they
 cannot drift and the chatbot's citations are guaranteed to resolve.
 
-Widgets run the **real** library — `apps/docs` depends on `@burglekitt/gmt` via
+Widgets run the **real** library — `apps/docs` depends on `@northguild/gmt` via
 `workspace:*`, so a playground's output is never simulated and can never drift from
 shipped behavior.
 
 ### Decisions taken
 
-| Area | Choice |
-| --- | --- |
-| Framework | **Astro `7.2.4` + `@astrojs/starlight` `0.41.7`** — routes, MDX, islands, static output |
-| Search | **Pagefind**, built into the Starlight build. Static index, zero infra |
-| Reference | **Generated** from JSDoc via the TS compiler API. **Not TypeDoc** — see §1 |
+| Area             | Choice                                                                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Framework        | **Astro `7.2.4` + `@astrojs/starlight` `0.41.7`** — routes, MDX, islands, static output                                   |
+| Search           | **Pagefind**, built into the Starlight build. Static index, zero infra                                                    |
+| Reference        | **Generated** from JSDoc via the TS compiler API. **Not TypeDoc** — see §1                                                |
 | Page granularity | **One page per function**, as date-fns and Luxon do — exact-match search titles, and a stable URL for the chatbot to cite |
-| Nav | Starlight `autogenerate: { directory: 'reference' }` over the generated tree |
-| Octane | **Not used.** Off the critical path entirely |
-| Model | Gemini 2.5 Flash — free tier, good SSE streaming |
-| Key custody | Cloudflare Worker (free tier 100k req/day). Key never reaches the client |
-| Grounding | Retrieval over `gmt-corpus.json` + `systemInstruction` + refusal instruction |
-| Chat role | **Answer + cite + link** to real doc pages. Not a replacement for the site |
-| Hosting | GitHub Pages, static, from GitHub Actions |
-| 3D | Landing-page hero only — not a full-bleed backdrop |
-| Audio | Parked. See [appendix-parked.md](appendix-parked.md) |
+| Nav              | Starlight `autogenerate: { directory: 'reference' }` over the generated tree                                              |
+| Octane           | **Not used.** Off the critical path entirely                                                                              |
+| Model            | Gemini 2.5 Flash — free tier, good SSE streaming                                                                          |
+| Key custody      | Cloudflare Worker (free tier 100k req/day). Key never reaches the client                                                  |
+| Grounding        | Retrieval over `gmt-corpus.json` + `systemInstruction` + refusal instruction                                              |
+| Chat role        | **Answer + cite + link** to real doc pages. Not a replacement for the site                                                |
+| Hosting          | GitHub Pages, static, from GitHub Actions                                                                                 |
+| 3D               | Landing-page hero only — not a full-bleed backdrop                                                                        |
+| Audio            | Parked. See [appendix-parked.md](appendix-parked.md)                                                                      |
 
 **Use `pnpm` for all install and registry commands.**
 
 ### Reviewed prior art — the Worktree CLI docs site
 
 `example-sibling-repo-docs.md` in this directory documents how a sibling
-`@burglekitt/worktree` repo built its docs site and AI chat. It is a working system, and
+`@northguild/worktree` repo built its docs site and AI chat. It is a working system, and
 it was reviewed in full on 2026-08-21. It is **an example, not a target** — its own
 warning notes it lacks a real textarea, multiline chat, and copyable code blocks, and it
 does not meet this project's design or functional needs.
 
 What was taken from it, and what was deliberately not:
 
-| From the sibling repo | Verdict |
-| --- | --- |
-| **Generated route allowlist + client-side `resolveHref()`** — a hallucinated link degrades to plain text rather than a 404 | **Adopted, and it upgraded the plan.** See §2 "Citation integrity" below |
-| Pure, side-effect-free, unit-tested SSE line parser returning a discriminated union | **Adopted** into DOX-C2. "Do this from day one" is correct |
-| Generated-file stub aliased in the test config, so tests run on a clean checkout with no build | **Adopted** into DOX-A3/DOX-C2 — our generated output is gitignored, so we have exactly this problem |
-| Explicit worker validation pipeline (method, message count, content length, role and model allowlists, mapped upstream errors) | **Adopted** into DOX-C2 as a checklist |
-| Dual timeouts: overall request cap plus a shorter _idle_ timeout that resets per chunk | **Adopted** into DOX-C3 — catches stalled streams without killing long answers |
-| Error-vs-warning classification, with warnings excluded from history sent upstream | **Adopted** into DOX-C3 |
-| SKILL.md placed _before_ reference material so the model learns vocabulary first | **Adopted** into DOX-C2 |
-| Generated version map so the site can never show a stale version | **Adopted** as a small DOX-A1 addition |
-| **Nextra 4 + Next.js 16 App Router** | **Rejected.** Astro + Starlight was chosen deliberately; Starlight gives sidebar, search, and the a11y baseline without hand-maintained `_meta.ts` at every level |
-| **"The AI has no retrieval layer"** — whole corpus baked into one system prompt | **Rejected, using their own arithmetic.** Their §5 measures one package at ~29 KB and four at 80–150 KB "which you pay for on **every** request," and puts real retrieval at "past ~500 KB of docs." We have 424 functions and 1,514 examples — well past that line. DOX-C1 measures it rather than assuming |
-| Package-scoped prompt bundles | **Rejected as primary**, retained as DOX-C1's documented fallback if retrieval underperforms |
-| Tailwind v4, React Query, TanStack Form for the chat client | **Rejected.** Weight without payoff for one streaming panel; DOX-A5's token layer already covers styling |
-| Auto-linking **bold** phrases that match page titles | **Rejected.** Turning prose the model did not intend as a link into a link is a correctness risk, not a nicety |
+| From the sibling repo                                                                                                          | Verdict                                                                                                                                                                                                                                                                                                      |
+| ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Generated route allowlist + client-side `resolveHref()`** — a hallucinated link degrades to plain text rather than a 404     | **Adopted, and it upgraded the plan.** See §2 "Citation integrity" below                                                                                                                                                                                                                                     |
+| Pure, side-effect-free, unit-tested SSE line parser returning a discriminated union                                            | **Adopted** into DOX-C2. "Do this from day one" is correct                                                                                                                                                                                                                                                   |
+| Generated-file stub aliased in the test config, so tests run on a clean checkout with no build                                 | **Adopted** into DOX-A3/DOX-C2 — our generated output is gitignored, so we have exactly this problem                                                                                                                                                                                                         |
+| Explicit worker validation pipeline (method, message count, content length, role and model allowlists, mapped upstream errors) | **Adopted** into DOX-C2 as a checklist                                                                                                                                                                                                                                                                       |
+| Dual timeouts: overall request cap plus a shorter _idle_ timeout that resets per chunk                                         | **Adopted** into DOX-C3 — catches stalled streams without killing long answers                                                                                                                                                                                                                               |
+| Error-vs-warning classification, with warnings excluded from history sent upstream                                             | **Adopted** into DOX-C3                                                                                                                                                                                                                                                                                      |
+| SKILL.md placed _before_ reference material so the model learns vocabulary first                                               | **Adopted** into DOX-C2                                                                                                                                                                                                                                                                                      |
+| Generated version map so the site can never show a stale version                                                               | **Adopted** as a small DOX-A1 addition                                                                                                                                                                                                                                                                       |
+| **Nextra 4 + Next.js 16 App Router**                                                                                           | **Rejected.** Astro + Starlight was chosen deliberately; Starlight gives sidebar, search, and the a11y baseline without hand-maintained `_meta.ts` at every level                                                                                                                                            |
+| **"The AI has no retrieval layer"** — whole corpus baked into one system prompt                                                | **Rejected, using their own arithmetic.** Their §5 measures one package at ~29 KB and four at 80–150 KB "which you pay for on **every** request," and puts real retrieval at "past ~500 KB of docs." We have 424 functions and 1,514 examples — well past that line. DOX-C1 measures it rather than assuming |
+| Package-scoped prompt bundles                                                                                                  | **Rejected as primary**, retained as DOX-C1's documented fallback if retrieval underperforms                                                                                                                                                                                                                 |
+| Tailwind v4, React Query, TanStack Form for the chat client                                                                    | **Rejected.** Weight without payoff for one streaming panel; DOX-A5's token layer already covers styling                                                                                                                                                                                                     |
+| Auto-linking **bold** phrases that match page titles                                                                           | **Rejected.** Turning prose the model did not intend as a link into a link is a correctness risk, not a nicety                                                                                                                                                                                               |
 
 The deepest idea worth restating, because it is the same principle DOX-A3 already runs on:
 **generate, don't maintain — one source of truth, two consumers.**
@@ -236,15 +236,15 @@ Cool blue→green ramp on a blue-tinted near-black. Everything is a token; no li
 component styles. In Starlight these map onto its documented CSS custom properties via
 the `customCss` config option.
 
-| Role | Value | Use |
-| --- | --- | --- |
-| Void | `#03080C` | Page base |
-| Glass tint | `rgba(6, 20, 26, 0.35)` | Panel fill over `backdrop-filter` (DOX-D1) |
-| Cyan (primary) | `#22D3EE` | Borders, active state, primary accent |
-| Spring (secondary) | `#4ADE80` | Success, live values, ticking data |
-| Teal (deep) | `#0E7490` | Idle borders, dividers, inactive chrome |
-| Ice (body) | `#CFEAF2` | **Long-form body copy** |
-| Signal-lost | `#F5A524` | Sentinel returns — the one warm colour in the system |
+| Role               | Value                   | Use                                                  |
+| ------------------ | ----------------------- | ---------------------------------------------------- |
+| Void               | `#03080C`               | Page base                                            |
+| Glass tint         | `rgba(6, 20, 26, 0.35)` | Panel fill over `backdrop-filter` (DOX-D1)           |
+| Cyan (primary)     | `#22D3EE`               | Borders, active state, primary accent                |
+| Spring (secondary) | `#4ADE80`               | Success, live values, ticking data                   |
+| Teal (deep)        | `#0E7490`               | Idle borders, dividers, inactive chrome              |
+| Ice (body)         | `#CFEAF2`               | **Long-form body copy**                              |
+| Signal-lost        | `#F5A524`               | Sentinel returns — the one warm colour in the system |
 
 **Body copy is Ice, not cyan or green.** Saturated blue-green text at paragraph length
 is fatiguing and rarely clears contrast. The blue/green identity is carried by borders,
@@ -298,7 +298,7 @@ The signature motion element. Three techniques, in order of preference:
 - **Rotating conic gradient** — register an angle with `@property --angle` (Baseline
   since Firefox 128 completed support in 2024), animate it, and use it as a
   `conic-gradient` border via `background-origin: border-box` + `mask-composite:
-  exclude`. GPU-friendly.
+exclude`. GPU-friendly.
 - **SVG stroke trace** — an inset `rect` with animated `stroke-dashoffset`. Best when
   corners are chamfered, since the path can follow the bevel exactly.
 - **Edge-gradient shimmer** — a translating linear-gradient masked to the border, for
@@ -385,19 +385,19 @@ What remains:
 4. **`apps/docs/project.json`** — **required, unlike `packages/*`.** Nx infers
    `build`/`typecheck` from `@nx/js/typescript` keyed on the presence of
    `tsconfig.build.json`, which an Astro app will not have. Declare `build`, `dev`, and
-   `typecheck` explicitly, with `dependsOn: ["^build"]` so `@burglekitt/gmt` is built
+   `typecheck` explicitly, with `dependsOn: ["^build"]` so `@northguild/gmt` is built
    before the docs site consumes it.
 
 Two more constraints:
 
 - **`apps/docs` must not extend `tsconfig.base.json`.** The base sets
   `composite: true`, `emitDeclarationOnly: true`, `module: nodenext`, and
-  `customConditions: ["@burglekitt/source"]` — all wrong for an Astro app. Extend
+  `customConditions: ["@northguild/source"]` — all wrong for an Astro app. Extend
   `astro/tsconfigs/strict` instead.
-- **Import `@burglekitt/gmt` from its built `dist`, not from source.** The
-  `@burglekitt/source` custom condition exists, but matching it would require
+- **Import `@northguild/gmt` from its built `dist`, not from source.** The
+  `@northguild/source` custom condition exists, but matching it would require
   configuring Vite's `resolve.conditions`; letting Nx build the package first is fewer
-  moving parts. Deep-import per function (`@burglekitt/gmt/plain/...`, already exposed
+  moving parts. Deep-import per function (`@northguild/gmt/plain/...`, already exposed
   by the exports map) so islands tree-shake.
 
 Node `>=22.12` (Astro 7's floor — declare it on `apps/docs`), pnpm `10.32.1`.
@@ -414,13 +414,13 @@ pattern as `context/roadmap/`:
 - `issues/DOX-A.md` … `issues/DOX-E.md` — full GitHub-issue-ready spec per story
 - [appendix-parked.md](appendix-parked.md) — unscheduled work
 
-| Group | Covers | Ships |
-| --- | --- | --- |
-| DOX-A | Skeleton, deploy, reference generator, guides, brand pass | **A working docs site** |
-| DOX-B | Live `<Playground>` island, auto-embedded into every example | Interactivity |
-| DOX-C | Retrieval index, Worker proxy, "Ask Dox" chat panel with citations | The chatbot |
-| DOX-D | Glass/chrome, motion | The HUD identity |
-| DOX-E | Landing-page hero globe | The flourish |
+| Group | Covers                                                             | Ships                   |
+| ----- | ------------------------------------------------------------------ | ----------------------- |
+| DOX-A | Skeleton, deploy, reference generator, guides, brand pass          | **A working docs site** |
+| DOX-B | Live `<Playground>` island, auto-embedded into every example       | Interactivity           |
+| DOX-C | Retrieval index, Worker proxy, "Ask Dox" chat panel with citations | The chatbot             |
+| DOX-D | Glass/chrome, motion                                               | The HUD identity        |
+| DOX-E | Landing-page hero globe                                            | The flourish            |
 
 Each story is independently verifiable; do not start the next until the current one's
 Definition of Done passes. **Group DOX-A must complete first**, and DOX-A1–DOX-A2 specifically

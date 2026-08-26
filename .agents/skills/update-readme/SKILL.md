@@ -13,7 +13,7 @@ Keep the project's README files in sync with the changes on the current branch. 
 There are four levels of README in this repo:
 
 1. **Root** — `README.md`: monorepo overview, install, package table, project structure tree, contributing commands.
-2. **Package** — `packages/gmt/README.md`: full API overview for `@burglekitt/gmt`. Includes design philosophy, quick-start examples, and the API surface section.
+2. **Package** — `packages/gmt/README.md`: full API overview for `@northguild/gmt`. Includes design philosophy, quick-start examples, and the API surface section.
 3. **Namespace** — `packages/gmt/src/{plain,zoned,unix,utc,regex}/README.md`: per-namespace function lists, one per module (calculate, format, get, …).
 4. **Sub-package** — `packages/gmt-biome/README.md`, `packages/gmt-eslint/README.md`, `packages/gmt-oxlint/README.md`: each linting package's own docs (usually untouched by API changes).
 

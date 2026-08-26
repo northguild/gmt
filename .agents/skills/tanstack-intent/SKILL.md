@@ -13,7 +13,7 @@ Keep the [TanStack Intent](https://github.com/tanstack/intent) agent skills unde
 - The package version in `packages/gmt/package.json` changes (or a changeset bumps it)
 - A whole domain of functionality is introduced (which may need a brand-new skill)
 
-The goal: agents that consume `@burglekitt/gmt`'s skills get an accurate, current picture of the API surface and how to use it.
+The goal: agents that consume `@northguild/gmt`'s skills get an accurate, current picture of the API surface and how to use it.
 
 ## Inputs
 
@@ -94,10 +94,10 @@ description: >
   <1–3 sentences. Concrete enough that an agent can route to this skill from
   a user request. Name the functions, options, and concept keywords.>
 type: core   # or: sub-skill | framework | lifecycle | composition | security
-library: '@burglekitt/gmt'
+library: '@northguild/gmt'
 library_version: '<next-version>'
 sources:
-  - 'burglekitt/gmt:packages/gmt/src/<path-to-source-file>.ts'
+  - 'northguild/gmt:packages/gmt/src/<path-to-source-file>.ts'
   # ...one per source file the skill teaches
 ---
 ```
@@ -131,7 +131,7 @@ The skill tree is the canonical registry that downstream tooling reads.
     requires:
       - <other slug>     # omit array if none
     sources:
-      - 'burglekitt/gmt:packages/gmt/src/<file>.ts'
+      - 'northguild/gmt:packages/gmt/src/<file>.ts'
 ```
 
 ### 6. Update `_artifacts/domain_map.yaml`
@@ -196,7 +196,7 @@ pnpm test:gmt
 
 - **Never invent function names.** Every function mentioned in a SKILL.md must exist in `packages/gmt/src/`. Cross-check with `grep` or by reading `src/<domain>/<sub>/index.ts` barrel exports.
 - **Never demote semantic precision in `description`.** Mention concrete function names and concept keywords — the description is what agents route on.
-- **Use `'burglekitt/gmt:packages/gmt/src/...'` for `sources:` paths.** This is the `Owner/repo:path` form Intent expects.
+- **Use `'northguild/gmt:packages/gmt/src/...'` for `sources:` paths.** This is the `Owner/repo:path` form Intent expects.
 - **Keep ICU notes consistent.** Use the wording established in `format-date-time` / `zoned-date-ops` / `format-relative-time`. Don't paraphrase — agents searching for "small-icu" / "full-icu" rely on the canonical phrasing.
 - **Don't bump `library_version` to a version that isn't going to ship.** Cross-check against `package.json` + the latest changeset's bump level.
 - **Don't delete a skill** without asking the user first. Removing a skill breaks downstream consumers' skill-to-task mappings.

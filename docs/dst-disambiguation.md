@@ -31,17 +31,17 @@ Both scenarios need a tiebreak rule. Temporal (and GMT, which wraps it) offers f
 
 Beyond `disambiguation`/`offset` (this doc's main subject — what to do when _constructing_ a value lands on an ambiguous or nonexistent instant), GMT has three more DST-related functions with easily-confused names. Route by the question you're actually asking:
 
-| Your question | Function | Scope |
-| --- | --- | --- |
-| Does this zone observe DST at all? | `hasDaylightSaving(timeZone)` | Zone-level, no instant |
-| Where do this zone's transitions fall? | `getDstTransitions(timeZone, year)` | Enumerates instants |
-| Is _this particular instant_ currently in DST? | `isInDaylightSaving(value)` | A single zoned value |
+| Your question                                                                   | Function                               | Scope                                                |
+| ------------------------------------------------------------------------------- | -------------------------------------- | ---------------------------------------------------- |
+| Does this zone observe DST at all?                                              | `hasDaylightSaving(timeZone)`          | Zone-level, no instant                               |
+| Where do this zone's transitions fall?                                          | `getDstTransitions(timeZone, year)`    | Enumerates instants                                  |
+| Is _this particular instant_ currently in DST?                                  | `isInDaylightSaving(value)`            | A single zoned value                                 |
 | What should happen when construction lands on an ambiguous/nonexistent instant? | `disambiguation` / `offset` (this doc) | Orthogonal — a construction-time choice, not a query |
 
 `isInDaylightSaving` compares a zoned value's own offset against its timeZone's standard (non-DST) offset for that same year — the smaller of the offsets a Jan 15 and a Jul 15 reference point attain, since DST always shifts a zone's clocks forward relative to its own standard time, in every hemisphere:
 
 ```typescript
-import { isInDaylightSaving } from "@burglekitt/gmt/zoned";
+import { isInDaylightSaving } from "@northguild/gmt/zoned";
 
 isInDaylightSaving("2024-07-15T12:00:00-04:00[America/New_York]");
 // true
@@ -109,7 +109,7 @@ The `startOfZoned` family (Story C3) constructs its boundary via `Temporal.Zoned
 GMT defaults `offset` to `"ignore"` on every function in this family, specifically so that `disambiguation` works the way you'd expect out of the box. You only need to touch `offset` if you deliberately want Temporal's raw `.with()` semantics (e.g. "keep whatever offset this ZonedDateTime already had, even across a boundary jump") — and if you do, know that setting it away from `"ignore"` can make `disambiguation` silently do nothing, exactly like the bug described above.
 
 ```typescript
-import { startOfZoned } from "@burglekitt/gmt/zoned";
+import { startOfZoned } from "@northguild/gmt/zoned";
 
 // 2024-11-03T01:45:00-05:00 is the SECOND, repeated 1am of the fall-back overlap in America/New_York.
 const source = "2024-11-03T01:45:00-05:00[America/New_York]";
@@ -131,7 +131,7 @@ startOfZoned(source, "hour", { disambiguation: "reject", offset: "prefer" });
 `convertPlainDateTimeToZoned` (and, as the DST disambiguation work continues, other functions that produce a `ZonedDateTime` from a plain/local value) accepts an optional `disambiguation` option:
 
 ```typescript
-import { convertPlainDateTimeToZoned } from "@burglekitt/gmt/zoned";
+import { convertPlainDateTimeToZoned } from "@northguild/gmt/zoned";
 
 // Spring-forward gap: 2024-03-10T02:30:00 doesn't exist in America/New_York.
 convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York");

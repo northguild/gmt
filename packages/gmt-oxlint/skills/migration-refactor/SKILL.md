@@ -1,7 +1,7 @@
 ---
 name: migration-refactor
 description: >
-  Resolve @burglekitt/gmt-oxlint Date-rule violations by preferring existing gmt
+  Resolve @northguild/gmt-oxlint Date-rule violations by preferring existing gmt
   helpers, preserving behavior, and guiding the Temporal custom-method path when
   gmt does not yet provide a needed helper.
 metadata:
@@ -15,7 +15,7 @@ Use this skill when Oxlint reports Date API violations and the user asks for fix
 ## Refactor policy
 
 1. Prefer existing gmt helpers
-- Replace Date APIs with available `@burglekitt/gmt` methods first.
+- Replace Date APIs with available `@northguild/gmt` methods first.
 
 2. Preserve behavior
 - Keep output format, timezone intent, and edge-case semantics stable.

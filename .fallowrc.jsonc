@@ -1,5 +1,5 @@
 {
-  "ignoreDependencies": ["@tanstack/intent", "@burglekitt/gmt-oxlint"],
+  "ignoreDependencies": ["@tanstack/intent", "@northguild/gmt-oxlint"],
   "ignorePatterns": ["oxlint.config.js"],
   "ignoreUnresolvedImports": ["./packages/gmt-oxlint/dist/index.js"],
   "ignoreExports": [

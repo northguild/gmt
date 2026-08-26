@@ -15,21 +15,21 @@ description: >
   formatDuration to render a duration as a human-readable, locale-aware string
   (e.g. "1 day, 2 hours, and 30 minutes").
 sources:
-  - 'burglekitt/gmt:packages/gmt/src/duration/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/duration/calculate/getDurationUnit.ts'
-  - 'burglekitt/gmt:packages/gmt/src/duration/calculate/durationAs.ts'
-  - 'burglekitt/gmt:packages/gmt/src/duration/calculate/negateDuration.ts'
-  - 'burglekitt/gmt:packages/gmt/src/duration/calculate/absDuration.ts'
-  - 'burglekitt/gmt:packages/gmt/src/duration/calculate/getDurationSign.ts'
-  - 'burglekitt/gmt:packages/gmt/src/duration/compare/compareDurations.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/diffDateAsDuration.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/diffDateTimeAsDuration.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/diffZonedAsDuration.ts'
-  - 'burglekitt/gmt:packages/gmt/src/unix/calculate/diffUnixAsDuration.ts'
-  - 'burglekitt/gmt:packages/gmt/src/utc/calculate/diffUtcAsDuration.ts'
+  - 'northguild/gmt:packages/gmt/src/duration/index.ts'
+  - 'northguild/gmt:packages/gmt/src/duration/calculate/getDurationUnit.ts'
+  - 'northguild/gmt:packages/gmt/src/duration/calculate/durationAs.ts'
+  - 'northguild/gmt:packages/gmt/src/duration/calculate/negateDuration.ts'
+  - 'northguild/gmt:packages/gmt/src/duration/calculate/absDuration.ts'
+  - 'northguild/gmt:packages/gmt/src/duration/calculate/getDurationSign.ts'
+  - 'northguild/gmt:packages/gmt/src/duration/compare/compareDurations.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/calculate/diffDateAsDuration.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/calculate/diffDateTimeAsDuration.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/calculate/diffZonedAsDuration.ts'
+  - 'northguild/gmt:packages/gmt/src/unix/calculate/diffUnixAsDuration.ts'
+  - 'northguild/gmt:packages/gmt/src/utc/calculate/diffUtcAsDuration.ts'
 metadata:
   type: core
-  library: '@burglekitt/gmt'
+  library: '@northguild/gmt'
   library_version: '1.14.1'
 ---
 
@@ -53,7 +53,7 @@ import {
   normalizeDuration,
   parseDuration,
   subtractDuration,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 ```
 
 ## Core Patterns
@@ -214,7 +214,7 @@ const zero = formatDuration("PT0S", "en-US"); // "0 seconds"
 `diffDate`/`diffDateTime`/`diffZoned`/`diffUnix`/`diffUtc` return a single-unit number (or a `Record<Unit, number>` for an array of units). Their `*AsDuration` siblings return an ISO 8601 duration string instead — the same string shape every other function in this skill consumes/produces.
 
 ```ts
-import { diffDateAsDuration, diffZonedAsDuration } from "@burglekitt/gmt";
+import { diffDateAsDuration, diffZonedAsDuration } from "@northguild/gmt";
 
 const span = diffDateAsDuration("2024-03-10", "2024-04-05", "days"); // "P26D"
 
@@ -236,7 +236,7 @@ Feed the result straight into a `duration` namespace function, e.g. `formatDurat
 Wrong:
 
 ```ts
-import { addDate } from "@burglekitt/gmt";
+import { addDate } from "@northguild/gmt";
 
 // addDate takes a { unit: number } object, not an ISO duration string
 const result = addDate("2024-03-15", "P5D");
@@ -245,7 +245,7 @@ const result = addDate("2024-03-15", "P5D");
 Correct:
 
 ```ts
-import { addDate } from "@burglekitt/gmt";
+import { addDate } from "@northguild/gmt";
 
 const result = addDate("2024-03-15", { days: 5 }); // "2024-03-20"
 ```
@@ -265,7 +265,7 @@ useDuration(result);
 Correct:
 
 ```ts
-import { isValidDuration, parseDuration } from "@burglekitt/gmt";
+import { isValidDuration, parseDuration } from "@northguild/gmt";
 
 if (!isValidDuration(userInput)) {
   throw new Error("Invalid duration");
@@ -282,7 +282,7 @@ Source: packages/gmt/src/duration/parse/parseDuration.ts — returns `""` on inv
 Wrong:
 
 ```ts
-import { addDuration, compareDurations, durationAs } from "@burglekitt/gmt";
+import { addDuration, compareDurations, durationAs } from "@northguild/gmt";
 
 const combined = addDuration("P1Y", "P1M"); // ""
 const asDays = durationAs("P1M", "days"); // null — not 30
@@ -300,7 +300,7 @@ import {
   getDurationUnit,
   negateDuration,
   normalizeDuration,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 
 // 1. Takes relativeTo — pass it and calendar units work
 durationAs("P1M", "days", { relativeTo: "2024-02-01" }); // 29
@@ -341,7 +341,7 @@ durationAs("P1Y", "days", { relativeTo: "5784-06-15[u-ca=hebrew]" }); // 385, no
 Wrong:
 
 ```ts
-import { getDurationUnit } from "@burglekitt/gmt";
+import { getDurationUnit } from "@northguild/gmt";
 
 // "PT90M" holds 90 in its minutes field and nothing in its hours field
 const hours = getDurationUnit("PT90M", "hours"); // 0, not 1.5
@@ -350,7 +350,7 @@ const hours = getDurationUnit("PT90M", "hours"); // 0, not 1.5
 Correct:
 
 ```ts
-import { durationAs, getDurationUnit } from "@burglekitt/gmt";
+import { durationAs, getDurationUnit } from "@northguild/gmt";
 
 const total = durationAs("PT90M", "hours"); // 1.5 — the whole duration in hours
 const stored = getDurationUnit("P1DT2H30M", "hours"); // 2 — the hours component itself
@@ -365,7 +365,7 @@ Source: packages/gmt/src/duration/calculate/getDurationUnit.ts (reads `Temporal.
 Wrong:
 
 ```ts
-import { normalizeDuration } from "@burglekitt/gmt";
+import { normalizeDuration } from "@northguild/gmt";
 
 // input already has a month component — the "auto" default does NOT
 // exempt calendar-unit inputs, this still throws internally and returns ""
@@ -375,7 +375,7 @@ const result = normalizeDuration("P1M"); // ""
 Correct: pass `relativeTo` whenever a calendar unit (year/month/week) is involved — either as an explicit `largestUnit`, or because the input duration itself already has a nonzero year/month/week component, even under the default `{ largestUnit: "auto" }`.
 
 ```ts
-import { normalizeDuration } from "@burglekitt/gmt";
+import { normalizeDuration } from "@northguild/gmt";
 
 const result = normalizeDuration("P1M", {
   largestUnit: "day",
@@ -396,7 +396,7 @@ Source: packages/gmt/src/duration/format/formatDuration.ts
 Wrong:
 
 ```ts
-import { diffDateAsDuration } from "@burglekitt/gmt";
+import { diffDateAsDuration } from "@northguild/gmt";
 
 // diffDate accepts unit | unit[], but diffDateAsDuration only accepts a
 // single unit — an array here fails validation and returns ""
@@ -406,7 +406,7 @@ const result = diffDateAsDuration("2024-03-10", "2024-04-05", ["days"]); // ""
 Correct: pass a single unit. It only sets the resulting duration's `largestUnit` — an ISO duration string already expresses a full multi-unit breakdown (e.g. `"P1DT23H"`) without needing an array of requested units the way `diffDate`'s `Record<Unit, number>` return shape does.
 
 ```ts
-import { diffDateAsDuration } from "@burglekitt/gmt";
+import { diffDateAsDuration } from "@northguild/gmt";
 
 const result = diffDateAsDuration("2024-03-10", "2024-04-05", "days"); // "P26D"
 ```

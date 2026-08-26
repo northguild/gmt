@@ -1,10 +1,10 @@
-# @burglekitt/gmt-oxlint
+# @northguild/gmt-oxlint
 
 ## 1.1.4
 
 ### Patch Changes
 
-- 131087a: Add deprecation notice: this package is moving to `@northguild/gmt-oxlint` under the [northguild](https://github.com/northguild) GitHub organization. `@burglekitt/gmt-oxlint` will receive no further updates after this release.
+- 131087a: Add deprecation notice: this package is moving to `@northguild/gmt-oxlint` under the [northguild](https://github.com/northguild) GitHub organization. `@northguild/gmt-oxlint` will receive no further updates after this release.
 
 ## 1.1.3
 
@@ -22,13 +22,13 @@
 
 ### Patch Changes
 
-- 7c4dbed: Fix @burglekitt/gmt-oxlint consumer integration by adding plugin discovery metadata and publishing a real recommended config artifact. Also update docs to reflect current Oxlint extends behavior (file-path based) and ensure recommended rules stay in sync via tests.
+- 7c4dbed: Fix @northguild/gmt-oxlint consumer integration by adding plugin discovery metadata and publishing a real recommended config artifact. Also update docs to reflect current Oxlint extends behavior (file-path based) and ensure recommended rules stay in sync via tests.
 
 ## 1.1.0
 
 ### Minor Changes
 
-- 5fb3d57: Fixes consumption of gmt-oxlint, adding @burglekitt/gmt-oxlint to entire path
+- 5fb3d57: Fixes consumption of gmt-oxlint, adding @northguild/gmt-oxlint to entire path
 
 ## 1.0.0
 
@@ -36,26 +36,26 @@
 
 - fa5a465: Initial public release of the gmt suite.
 
-  ## @burglekitt/gmt
+  ## @northguild/gmt
 
   Temporal-first date and time library. String-in, string-out API wrapping
   `@js-temporal/polyfill`. Covers plain and zoned arithmetic, comparison,
   formatting, parsing, mapping, conversion, and validation. No `Date` object
   used anywhere.
 
-  ## @burglekitt/gmt-eslint
+  ## @northguild/gmt-eslint
 
   ESLint flat-config plugin that bans the `Date` API (`new Date`, `Date.now`,
   `Date.UTC`, `Date.parse`, and the global `Date` reference) and points
-  consumers toward `@burglekitt/gmt` replacements.
+  consumers toward `@northguild/gmt` replacements.
 
-  ## @burglekitt/gmt-oxlint
+  ## @northguild/gmt-oxlint
 
   Oxlint JS plugin with the same `Date`-ban policy as `gmt-eslint`. Rules
   cover `new Date`, `Date.now`, `Date.UTC`, `Date.parse`,
   `date.getTimezoneOffset`, and bare `Date` global references.
 
-  ## @burglekitt/gmt-biome
+  ## @northguild/gmt-biome
 
   Biome GritQL plugin enforcing the same `Date`-ban rules for projects using
   Biome as their formatter/linter.

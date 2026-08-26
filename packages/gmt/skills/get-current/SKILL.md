@@ -5,15 +5,15 @@ description: >
   getToday(), getSystemTimeZone(), or getTimeZones() for current temporal
   values. String output for logging; use Temporal for manipulation.
 sources:
-  - 'burglekitt/gmt:packages/gmt/src/plain/get/getNow.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/get/getToday.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/get/getSystemTimeZone.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/get/getTimeZones.ts'
-  - 'burglekitt/gmt:packages/gmt/src/utc/get/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/unix/get/index.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/get/getNow.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/get/getToday.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/get/getSystemTimeZone.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/get/getTimeZones.ts'
+  - 'northguild/gmt:packages/gmt/src/utc/get/index.ts'
+  - 'northguild/gmt:packages/gmt/src/unix/get/index.ts'
 metadata:
   type: core
-  library: '@burglekitt/gmt'
+  library: '@northguild/gmt'
   library_version: '1.14.1'
 ---
 
@@ -24,10 +24,10 @@ Use this skill when you need to get the current date, time, or datetime.
 ## Setup
 
 ```ts
-import { getNow, getToday } from "@burglekitt/gmt";
-import { getSystemTimeZone, getTimeZones } from "@burglekitt/gmt/zoned";
-import { getUtcNow, getUtcToday } from "@burglekitt/gmt/utc";
-import { getUnixNow, getUnixTimeMs } from "@burglekitt/gmt/unix";
+import { getNow, getToday } from "@northguild/gmt";
+import { getSystemTimeZone, getTimeZones } from "@northguild/gmt/zoned";
+import { getUtcNow, getUtcToday } from "@northguild/gmt/utc";
+import { getUnixNow, getUnixTimeMs } from "@northguild/gmt/unix";
 ```
 
 ## Core Patterns
@@ -49,7 +49,7 @@ const now = getNow(); // "2024-03-15T14:30:45"
 ### Get current UTC date
 
 ```ts
-import { getUtcToday } from "@burglekitt/gmt/utc";
+import { getUtcToday } from "@northguild/gmt/utc";
 
 const utcToday = getUtcToday(); // "2024-03-15"
 ```
@@ -57,7 +57,7 @@ const utcToday = getUtcToday(); // "2024-03-15"
 ### Get current UTC datetime
 
 ```ts
-import { getUtcNow } from "@burglekitt/gmt/utc";
+import { getUtcNow } from "@northguild/gmt/utc";
 
 const utcNow = getUtcNow(); // "2024-03-15T14:30:45"
 ```
@@ -65,7 +65,7 @@ const utcNow = getUtcNow(); // "2024-03-15T14:30:45"
 ### Get current Unix timestamp (seconds)
 
 ```ts
-import { getUnixNow } from "@burglekitt/gmt/unix";
+import { getUnixNow } from "@northguild/gmt/unix";
 
 const unixNow = getUnixNow(); // 1710504645
 ```
@@ -73,7 +73,7 @@ const unixNow = getUnixNow(); // 1710504645
 ### Get current Unix timestamp (milliseconds)
 
 ```ts
-import { getUnixTimeMs } from "@burglekitt/gmt/unix";
+import { getUnixTimeMs } from "@northguild/gmt/unix";
 
 const unixMs = getUnixTimeMs(); // 1710504645000
 ```
@@ -81,7 +81,7 @@ const unixMs = getUnixTimeMs(); // 1710504645000
 ### Get the system timezone
 
 ```ts
-import { getSystemTimeZone } from "@burglekitt/gmt/zoned";
+import { getSystemTimeZone } from "@northguild/gmt/zoned";
 
 const tz = getSystemTimeZone(); // "America/New_York"
 ```
@@ -89,7 +89,7 @@ const tz = getSystemTimeZone(); // "America/New_York"
 ### Get all available IANA timezones
 
 ```ts
-import { getTimeZones } from "@burglekitt/gmt/zoned";
+import { getTimeZones } from "@northguild/gmt/zoned";
 
 const timeZones = getTimeZones(); // ["America/New_York", "Europe/London", ...]
 timeZones.length; // ~422 (varies by runtime/ICU)
@@ -126,7 +126,7 @@ const now = Date.now(); // returns milliseconds number
 Correct:
 
 ```ts
-import { getUnixNow } from "@burglekitt/gmt/unix";
+import { getUnixNow } from "@northguild/gmt/unix";
 
 const now = getUnixNow(); // returns number in seconds
 ```
@@ -144,7 +144,7 @@ const now = new Date(); // mutable Date object
 Correct:
 
 ```ts
-import { getNow } from "@burglekitt/gmt";
+import { getNow } from "@northguild/gmt";
 
 const now = getNow(); // immutable ISO string
 ```
@@ -185,7 +185,7 @@ are current-moment accessors only (no argument, or timezone only) — see
 Wrong:
 
 ```ts
-import { getDaysInMonth } from "@burglekitt/gmt/plain/get"; // not exported here
+import { getDaysInMonth } from "@northguild/gmt/plain/get"; // not exported here
 ```
 
 ### MEDIUM Bucketing by week number without its week-year
@@ -206,7 +206,7 @@ const bucketKey = weekOfYearForDate(value); // "1" — but which year's week 1?
 Correct:
 
 ```ts
-import { getWeekYear, weekOfYearForDate } from "@burglekitt/gmt";
+import { getWeekYear, weekOfYearForDate } from "@northguild/gmt";
 
 const bucketKey = `${getWeekYear(value)}-W${weekOfYearForDate(value)}`;
 ```
@@ -216,7 +216,7 @@ Source: packages/gmt/src/plain/calculate/getWeekYear.ts, getLocaleWeekYear.ts, g
 Correct:
 
 ```ts
-import { getDaysInMonth } from "@burglekitt/gmt"; // or "@burglekitt/gmt/plain/calculate"
+import { getDaysInMonth } from "@northguild/gmt"; // or "@northguild/gmt/plain/calculate"
 
 getDaysInMonth("2024-02-15"); // 29
 ```

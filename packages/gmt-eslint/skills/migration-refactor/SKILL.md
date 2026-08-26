@@ -1,7 +1,7 @@
 ---
 name: migration-refactor
 description: >
-  Resolve @burglekitt/gmt-eslint Date-rule violations with careful, behavior-
+  Resolve @northguild/gmt-eslint Date-rule violations with careful, behavior-
   preserving refactors to existing gmt helpers first, then guide the custom
   Temporal method + issue workflow when no helper exists.
 metadata:
@@ -15,7 +15,7 @@ Use this skill when ESLint surfaces Date-related violations and code changes are
 ## Refactor policy
 
 1. Prefer existing gmt methods
-- Replace Date APIs with available `@burglekitt/gmt` plain/zoned helpers.
+- Replace Date APIs with available `@northguild/gmt` plain/zoned helpers.
 
 2. Preserve behavior
 - Maintain output shape, timezone intent, and boundary behavior.

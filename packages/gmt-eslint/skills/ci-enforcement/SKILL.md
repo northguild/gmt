@@ -1,7 +1,7 @@
 ---
 name: ci-enforcement
 description: >
-  Add or tighten CI enforcement for @burglekitt/gmt-eslint Date-ban rules on PR
+  Add or tighten CI enforcement for @northguild/gmt-eslint Date-ban rules on PR
   and mainline pipelines, including staged rollout options for legacy-heavy
   repositories.
 metadata:

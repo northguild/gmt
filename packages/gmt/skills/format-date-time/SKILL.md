@@ -16,30 +16,30 @@ description: >
   fixed, non-locale interchange grammars (email/HTTP headers, SQL, RFC 3339) —
   no locale argument.
 sources:
-  - 'burglekitt/gmt:packages/gmt/src/plain/format/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/format/formatDateRange.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/format/formatDateTimeRange.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/format/formatZonedRange.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/format/formatDateToParts.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/format/formatDateTimeToParts.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/format/formatZonedToParts.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/locale/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/locale/getLocaleEraNames.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/locale/getLocaleMonthNames.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/locale/getLocaleWeekdayNames.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/locale/getLocaleMeridiems.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/format/formatRfc2822.ts'
-  - 'burglekitt/gmt:packages/gmt/src/utc/format/formatHttp.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/format/formatSql.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/format/formatRfc3339.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/format/formatCalendar.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/format/formatCalendarZoned.ts'
-  - 'burglekitt/gmt:packages/gmt/src/unix/format/formatCalendarUnix.ts'
-  - 'burglekitt/gmt:packages/gmt/src/utc/format/formatCalendarUtc.ts'
-  - 'burglekitt/gmt:packages/gmt/src/internal/joinDateTimeConnector.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/format/index.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/format/formatDateRange.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/format/formatDateTimeRange.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/format/formatZonedRange.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/format/formatDateToParts.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/format/formatDateTimeToParts.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/format/formatZonedToParts.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/locale/index.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/locale/getLocaleEraNames.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/locale/getLocaleMonthNames.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/locale/getLocaleWeekdayNames.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/locale/getLocaleMeridiems.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/format/formatRfc2822.ts'
+  - 'northguild/gmt:packages/gmt/src/utc/format/formatHttp.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/format/formatSql.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/format/formatRfc3339.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/format/formatCalendar.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/format/formatCalendarZoned.ts'
+  - 'northguild/gmt:packages/gmt/src/unix/format/formatCalendarUnix.ts'
+  - 'northguild/gmt:packages/gmt/src/utc/format/formatCalendarUtc.ts'
+  - 'northguild/gmt:packages/gmt/src/internal/joinDateTimeConnector.ts'
 metadata:
   type: core
-  library: '@burglekitt/gmt'
+  library: '@northguild/gmt'
   library_version: '1.14.1'
 ---
 
@@ -57,7 +57,7 @@ import {
   formatRelativeDate,
   formatRelativeTime,
   formatRelativeDateTime,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 ```
 
 ## Core Patterns
@@ -93,7 +93,7 @@ const formattedUk = formatDateTime("2024-03-15T14:30:45", "en-GB"); // "15/03/20
 ### Format with options
 
 ```ts
-import { formatDate } from "@burglekitt/gmt";
+import { formatDate } from "@northguild/gmt";
 
 const formatted = formatDate("2024-03-15", "en-US", {
   year: "numeric",
@@ -105,7 +105,7 @@ const formatted = formatDate("2024-03-15", "en-US", {
 ### Format a plain date/datetime range
 
 ```ts
-import { formatDateRange, formatDateTimeRange } from "@burglekitt/gmt";
+import { formatDateRange, formatDateTimeRange } from "@northguild/gmt";
 
 formatDateRange("2024-02-03", "2024-02-05", "en-US", { dateStyle: "long" });
 // "February 3 – 5, 2024" — Intl elides the shared month/year automatically
@@ -133,8 +133,8 @@ caller.
 ### Get locale-ordered parts instead of a finished string
 
 ```ts
-import { formatDateToParts, formatDateTimeToParts } from "@burglekitt/gmt";
-import { formatZonedToParts } from "@burglekitt/gmt";
+import { formatDateToParts, formatDateTimeToParts } from "@northguild/gmt";
+import { formatZonedToParts } from "@northguild/gmt";
 
 formatDateToParts("2024-03-15", "en-US");
 // [{ type: "month", value: "3" }, { type: "literal", value: "/" },
@@ -161,7 +161,7 @@ Iterate the returned array in order — do not pick out `.find(p => p.type === "
 ### Format relative date
 
 ```ts
-import { formatRelativeDate } from "@burglekitt/gmt";
+import { formatRelativeDate } from "@northguild/gmt";
 
 const ref = "2024-03-15";
 formatRelativeDate("2024-03-12", "en-US", { reference: ref }); // "3 days ago"
@@ -173,7 +173,7 @@ formatRelativeDate("2023-03-15", "en-US", { reference: ref }); // "last year"
 ### Format relative time / datetime
 
 ```ts
-import { formatRelativeTime, formatRelativeDateTime } from "@burglekitt/gmt";
+import { formatRelativeTime, formatRelativeDateTime } from "@northguild/gmt";
 
 formatRelativeTime("11:30:00", "en-US", { reference: "12:00:00" });
 // "30 minutes ago"
@@ -193,7 +193,7 @@ formatRelativeDateTime("2024-03-15T10:00:00", "en-US", {
 ### Format a relative day label + time-of-day (Moment's `.calendar()`)
 
 ```ts
-import { formatCalendar, formatCalendarZoned } from "@burglekitt/gmt";
+import { formatCalendar, formatCalendarZoned } from "@northguild/gmt";
 
 const ref = "2026-03-15T09:00:00";
 formatCalendar("2026-03-16T14:30:00", "en-US", { reference: ref });
@@ -234,7 +234,7 @@ import {
   getLocaleMonthNames,
   getLocaleWeekdayNames,
   getLocaleMeridiems,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 
 getLocaleEraNames("en-US");
 // ["Before Christ", "Anno Domini"]
@@ -280,7 +280,7 @@ because the grammar is a constant, not a display choice. None of these four
 take a `locale` argument.
 
 ```ts
-import { formatRfc2822, formatHttp, formatSql, formatRfc3339 } from "@burglekitt/gmt";
+import { formatRfc2822, formatHttp, formatSql, formatRfc3339 } from "@northguild/gmt";
 
 // Email `Date:` headers (RFC 5322 / RFC 2822) — zoned namespace.
 formatRfc2822("2024-03-15T14:30:00-04:00[America/New_York]");
@@ -321,7 +321,7 @@ const formatted = new Intl.DateTimeFormat("en-US").format(new Date("2024-03-15")
 Correct:
 
 ```ts
-import { formatDate } from "@burglekitt/gmt";
+import { formatDate } from "@northguild/gmt";
 
 const formatted = formatDate("2024-03-15", "en-US");
 ```
@@ -341,7 +341,7 @@ display(formatted);
 Correct:
 
 ```ts
-import { formatDate, isValidDate } from "@burglekitt/gmt";
+import { formatDate, isValidDate } from "@northguild/gmt";
 
 const input = "invalid-date";
 if (!isValidDate(input)) {
@@ -366,7 +366,7 @@ render(names);
 Correct:
 
 ```ts
-import { getLocaleEraNames, getLocaleMonthNames } from "@burglekitt/gmt";
+import { getLocaleEraNames, getLocaleMonthNames } from "@northguild/gmt";
 
 const names = getLocaleMonthNames("en-US");
 const eras = getLocaleEraNames("en-US");
@@ -401,7 +401,7 @@ Wrong:
 Correct:
 
 ```ts
-import { formatDate } from "@burglekitt/gmt";
+import { formatDate } from "@northguild/gmt";
 
 // Let Intl.DateTimeFormat pick field order per locale instead of a fixed
 // pattern string.
@@ -422,7 +422,7 @@ Source: context/roadmap/issues/J.md — Decision 1 (token formatter deliberately
 Wrong:
 
 ```ts
-import { formatDateToParts } from "@burglekitt/gmt";
+import { formatDateToParts } from "@northguild/gmt";
 
 const parts = formatDateToParts("2024-03-15", locale);
 const month = parts.find((p) => p.type === "month")?.value;
@@ -436,7 +436,7 @@ const display = `${month}/${day}/${year}`;
 Correct:
 
 ```ts
-import { formatDateToParts } from "@burglekitt/gmt";
+import { formatDateToParts } from "@northguild/gmt";
 
 const parts = formatDateToParts("2024-03-15", locale);
 const display = parts.map((p) => p.value).join("");
@@ -463,7 +463,7 @@ They answer different questions and are not interchangeable:
 Wrong:
 
 ```ts
-import { formatRelativeDateTime } from "@burglekitt/gmt";
+import { formatRelativeDateTime } from "@northguild/gmt";
 
 // Building a meeting-list row and reaching for the relative formatter —
 // it has no time-of-day in its output at all.
@@ -473,7 +473,7 @@ const row = formatRelativeDateTime(meeting.startsAt); // "in 1 day"
 Correct:
 
 ```ts
-import { formatCalendar } from "@burglekitt/gmt";
+import { formatCalendar } from "@northguild/gmt";
 
 const row = formatCalendar(meeting.startsAt); // "tomorrow at 2:30 PM"
 ```

@@ -1,20 +1,8 @@
-# @burglekitt/gmt
-
-> ## ⚠️ Deprecation Notice
->
-> This package has moved. **`gmt` is now published as
-> [`@northguild/gmt`](https://www.npmjs.com/package/@northguild/gmt)** under the
-> [northguild](https://github.com/northguild) GitHub organization.
->
-> - **New repository:** <https://github.com/northguild/gmt>
-> - **New package:** `@northguild/gmt`
->
-> `@burglekitt/gmt` is deprecated and will receive no further updates. Please
-> migrate to `@northguild/gmt`.
+# @northguild/gmt
 
 Give Me Temporal.
 
-`@burglekitt/gmt` is a Temporal-first date and time library with a simple rule set:
+`@northguild/gmt` is a Temporal-first date and time library with a simple rule set:
 
 - ISO 8601 strings in
 - ISO 8601 strings, numbers, booleans, or arrays out
@@ -28,11 +16,11 @@ It wraps `@js-temporal/polyfill` behind a smaller, more opinionated API aimed at
 ## Install
 
 ```bash
-npm install @burglekitt/gmt
+npm install @northguild/gmt
 ```
 
 ```bash
-pnpm add @burglekitt/gmt
+pnpm add @northguild/gmt
 ```
 
 ## Design Philosophy
@@ -41,7 +29,7 @@ GMT enforces a strict input/output contract to keep behavior predictable and aud
 
 - **Explicit inputs only**: Public APIs accept clearly defined shapes — ISO 8601 date/time strings, IANA timezone identifiers, or numeric Unix epoch values (explicitly seconds or milliseconds). We do not attempt to parse arbitrary or ambiguous date formats.
 - **Predictable outputs**: Helpers return normalized values (ISO strings, numbers, booleans, or arrays). Invalid input yields typed fallbacks (`""`, `null`, or `false`) instead of throwing.
-- **No fuzzy parsing**: Avoid "throw everything at the wall" patterns found in permissive libraries. If you need permissive parsing, perform it outside of `@burglekitt/gmt` and then canonicalize to the strict shapes before calling into gmt.
+- **No fuzzy parsing**: Avoid "throw everything at the wall" patterns found in permissive libraries. If you need permissive parsing, perform it outside of `@northguild/gmt` and then canonicalize to the strict shapes before calling into gmt.
 - **Developer comfort with standards**: The library's goal is to make developers comfortable and deliberate with ISO 8601, IANA timezones, UTC instants, and Unix epochs by keeping APIs small and explicit.
 
 ## Core Rules
@@ -99,11 +87,11 @@ GMT's test suite balances **thoroughness** against **maintenance burden** by tes
 
 ## How GMT is tested, vs. the libraries it targets
 
-GMT's roadmap (see [context/roadmap](https://github.com/burglekitt/gmt/tree/main/context/roadmap)) is explicitly scoped against react-aria's **`@internationalized/date`**, **Luxon**, **date-fns**, and **Moment.js** — the same four libraries compared below. All numbers were verified **2026-08-22** against the exact package versions/commits below — nothing is estimated. Re-verify before citing these numbers elsewhere; library surfaces and CI configs move.
+GMT's roadmap (see [context/roadmap](https://github.com/northguild/gmt/tree/main/context/roadmap)) is explicitly scoped against react-aria's **`@internationalized/date`**, **Luxon**, **date-fns**, and **Moment.js** — the same four libraries compared below. All numbers were verified **2026-08-22** against the exact package versions/commits below — nothing is estimated. Re-verify before citing these numbers elsewhere; library surfaces and CI configs move.
 
 | Library                   | Version tested                          |
 | ------------------------- | --------------------------------------- |
-| GMT (`@burglekitt/gmt`)   | 1.12.0                                  |
+| GMT (`@northguild/gmt`)   | 1.12.0                                  |
 | `@internationalized/date` | 3.12.3 (`adobe/react-spectrum@5d191ab`) |
 | Luxon                     | 3.7.2 (`moment/luxon@f427515`)          |
 | date-fns                  | 4.4.0 (`date-fns/date-fns@a0a3922`)     |
@@ -120,11 +108,11 @@ GMT's roadmap (see [context/roadmap](https://github.com/burglekitt/gmt/tree/main
 | Real-browser CI                 | not yet                                            | yes (Playwright)               | not found                            | yes (Playwright)                          | not found                        |
 | Maintenance                     | active                                             | active                         | active                               | active                                    | **maintenance<br>mode**          |
 
-<sub>Methodology: "Test files" and the CI/maintenance rows come from each project's public CI configuration and repository file listing. "Individual test cases" for GMT, Luxon, date-fns, and Moment.js were obtained by actually cloning the repo at the commit above, installing dependencies, running the project's own test command (`vitest run` / `jest` / `node scripts/test.js`), and reading that runner's own final summary — not grepped from source. `@internationalized/date` was run by cloning `adobe/react-spectrum` at `5d191ab`, installing dependencies, and executing `npx jest packages/@internationalized/date/tests/`, yielding 386 passing tests. Luxon (39 failures) and date-fns (46 failures) had environment-dependent local failures that don't affect the total count: Luxon's suite assumes its CI container's local time zone is `America/New_York`; date-fns's experimental native-`Temporal` code path needs a global `Temporal` Node doesn't yet provide natively. Moment.js passed cleanly (0 failed) on Node 24. Sources: [GMT](https://github.com/burglekitt/gmt/blob/main/.github/workflows/ci.yml) · [`@internationalized/date`](https://github.com/adobe/react-spectrum/blob/main/.circleci/config.yml) · [Luxon](https://github.com/moment/luxon/blob/master/.github/workflows/test.yml) · [date-fns](https://github.com/date-fns/date-fns/tree/main/.github/workflows) · [Moment.js](https://github.com/moment/moment/tree/develop/.github/workflows).</sub>
+<sub>Methodology: "Test files" and the CI/maintenance rows come from each project's public CI configuration and repository file listing. "Individual test cases" for GMT, Luxon, date-fns, and Moment.js were obtained by actually cloning the repo at the commit above, installing dependencies, running the project's own test command (`vitest run` / `jest` / `node scripts/test.js`), and reading that runner's own final summary — not grepped from source. `@internationalized/date` was run by cloning `adobe/react-spectrum` at `5d191ab`, installing dependencies, and executing `npx jest packages/@internationalized/date/tests/`, yielding 386 passing tests. Luxon (39 failures) and date-fns (46 failures) had environment-dependent local failures that don't affect the total count: Luxon's suite assumes its CI container's local time zone is `America/New_York`; date-fns's experimental native-`Temporal` code path needs a global `Temporal` Node doesn't yet provide natively. Moment.js passed cleanly (0 failed) on Node 24. Sources: [GMT](https://github.com/northguild/gmt/blob/main/.github/workflows/ci.yml) · [`@internationalized/date`](https://github.com/adobe/react-spectrum/blob/main/.circleci/config.yml) · [Luxon](https://github.com/moment/luxon/blob/master/.github/workflows/test.yml) · [date-fns](https://github.com/date-fns/date-fns/tree/main/.github/workflows) · [Moment.js](https://github.com/moment/moment/tree/develop/.github/workflows).</sub>
 
 ### Functionality parity progress
 
-GMT's roadmap tracks parity against the same four libraries story-by-story, with each gap sourced against the specific competitor function it closes — see [context/roadmap](https://github.com/burglekitt/gmt/tree/main/context/roadmap) for the full, source-verified audit trail. This is a live snapshot, not a finished-parity claim: ✅ shipped, 🟡 in progress, ⏳ backlog and not yet scheduled.
+GMT's roadmap tracks parity against the same four libraries story-by-story, with each gap sourced against the specific competitor function it closes — see [context/roadmap](https://github.com/northguild/gmt/tree/main/context/roadmap) for the full, source-verified audit trail. This is a live snapshot, not a finished-parity claim: ✅ shipped, 🟡 in progress, ⏳ backlog and not yet scheduled.
 
 | Capability                                                                                   | Status                       | Also has it                                                              |
 | -------------------------------------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------ |
@@ -139,7 +127,7 @@ GMT's roadmap tracks parity against the same four libraries story-by-story, with
 | Field setters, token-pattern<br>parsing, named machine formats,<br>calendar-style formatting | ✅ Done                      | Luxon `.set()`,<br>`toRFC2822`/`toHTTP`/`toSQL`,<br>Moment `.calendar()` |
 | Non-Gregorian calendar systems<br>(conversion + calendar-aware<br>interval/duration math)    | ✅ Done                      | `@internationalized/date`'s<br>`toCalendar`                              |
 
-<sub>Status reflects [context/roadmap/tracker.md](https://github.com/burglekitt/gmt/tree/main/context/roadmap/tracker.md) as of this writing.</sub>
+<sub>Status reflects [context/roadmap/tracker.md](https://github.com/northguild/gmt/tree/main/context/roadmap/tracker.md) as of this writing.</sub>
 
 ### Where GMT stands alone
 
@@ -166,7 +154,7 @@ import {
   unix,
   utc,
   regex,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 ```
 
 - `Temporal`: re-exported from `@js-temporal/polyfill`
@@ -180,7 +168,7 @@ import {
 You can also import subpaths directly:
 
 ```typescript
-import { addDate, getNow, formatRelativeZoned } from "@burglekitt/gmt";
+import { addDate, getNow, formatRelativeZoned } from "@northguild/gmt";
 ```
 
 ## Quick Start
@@ -195,7 +183,7 @@ import {
   areDatesEqual,
   diffDateTime,
   isBeforeDateTime,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 
 addDate("2026-01-01", 90, "day");
 // "2026-03-32" is impossible, so Temporal normalizes correctly -> "2026-04-01"
@@ -219,7 +207,7 @@ isBeforeDateTime("2026-03-17T09:00:00", "2026-03-17T10:00:00");
 `add*`/`subtract*` accept an optional `overflow` (`"constrain"` (default) | `"reject"`) to control out-of-range results (e.g. adding a month to Jan 31), and `diff*` accept optional `smallestUnit`/`roundingIncrement`/`roundingMode` to round the computed difference:
 
 ```typescript
-import { addDate, diffDate } from "@burglekitt/gmt";
+import { addDate, diffDate } from "@northguild/gmt";
 
 addDate("2024-01-31", { months: 1 }, { overflow: "reject" });
 // "" — Feb 31 doesn't exist and overflow: "reject" refuses to clamp it
@@ -234,7 +222,7 @@ diffDate("2023-01-01", "2023-01-10", "week", {
 `setDate`/`setDateTime`/`setTime`/`setZoned`/`setUnix`/`setUtc` set one or more fields on a value in a single atomic `.with()`-based call — the safe alternative to composing `add*` calls field-by-field, which resolves each field's overflow independently and can silently diverge on multi-field updates:
 
 ```typescript
-import { setDate, setZoned } from "@burglekitt/gmt";
+import { setDate, setZoned } from "@northguild/gmt";
 
 setDate("2024-01-31", { month: 2 });
 // "2024-02-29" (constrain, the default, clamps to the last valid day)
@@ -254,7 +242,7 @@ setZoned(
 `cycleDate`/`cycleDateTime`/`cycleTime`/`cycleZoned` adjust a single field and **wrap** at that field's own min/max instead of carrying into the next larger field — the datepicker-segment-editing primitive `add*` can't express, since overflowing into the next field is exactly what `add*` is for:
 
 ```typescript
-import { addDate, cycleDate, cycleZoned } from "@burglekitt/gmt";
+import { addDate, cycleDate, cycleZoned } from "@northguild/gmt";
 
 cycleDate("2024-12-15", "month", 1);
 // "2024-01-15" — stays in the same year
@@ -272,7 +260,7 @@ cycleZoned("2024-03-10T01:30:00-06:00[America/Chicago]", "hour", 1);
 `isWeekend`/`isZonedWeekend` check locale-specific weekend days (via `Intl.Locale`'s `weekInfo`) rather than assuming Saturday/Sunday:
 
 ```typescript
-import { isWeekend, isZonedWeekend } from "@burglekitt/gmt";
+import { isWeekend, isZonedWeekend } from "@northguild/gmt";
 
 isWeekend("2024-02-03", "en-US");
 // true (Saturday, en-US weekend is Sat/Sun)
@@ -287,7 +275,7 @@ isZonedWeekend("2024-02-04T10:00:00+02:00[Asia/Jerusalem]", "he-IL");
 `isBusinessDay` returns true for fixed ISO Monday–Friday business days (Mon=1 … Fri=5), locale-agnostic and with no holiday calendar. It's the complement to locale-aware `isWeekend` and matches the boundary that `addBusinessDays`/`subtractBusinessDays` use:
 
 ```typescript
-import { isBusinessDay } from "@burglekitt/gmt";
+import { isBusinessDay } from "@northguild/gmt";
 
 isBusinessDay("2024-02-05");
 // true (Monday)
@@ -299,7 +287,7 @@ isBusinessDay("2024-02-10");
 `isRelativeDay`/`isThisUnit`/`isPast`/`isFuture` are now-relative predicates — `isRelativeDay` subsumes `isToday`/`isYesterday`/`isTomorrow`, `isThisUnit` subsumes `isThisWeek`/`isThisMonth`/`isThisYear`. They compare against `getToday()`, so they depend on the **system clock and system timeZone**; the zoned variants (`isZonedRelativeDay`, `isZonedThisUnit`, `isZonedPast`, `isZonedFuture`) resolve "today"/"now" in the value's own timeZone instead, for deterministic results regardless of the host machine's timeZone:
 
 ```typescript
-import { isRelativeDay, isThisUnit, isPast, isFuture } from "@burglekitt/gmt";
+import { isRelativeDay, isThisUnit, isPast, isFuture } from "@northguild/gmt";
 
 isRelativeDay("2024-03-15", 0);
 // true, if today is 2024-03-15 ("isToday")
@@ -317,7 +305,7 @@ isFuture("2024-03-16");
 `nextWeekday`/`previousWeekday` find the next/previous occurrence of a given ISO day of week (1 = Monday … 7 = Sunday, matching `getDayOfWeek`) on or after/before a date, replacing date-fns's sixteen `next*`/`previous*` functions with two parameterized calls. `options.inclusive` (default `false`) controls what happens when the input already falls on the target day — `false` advances/retreats a full week, matching date-fns:
 
 ```typescript
-import { nextWeekday, previousWeekday } from "@burglekitt/gmt";
+import { nextWeekday, previousWeekday } from "@northguild/gmt";
 
 nextWeekday("2024-03-13", 5);
 // "2024-03-15" (Wednesday -> next Friday)
@@ -333,7 +321,7 @@ previousWeekday("2024-03-13", 5);
 ```
 
 ```typescript
-import { isZonedRelativeDay, isZonedPast } from "@burglekitt/gmt";
+import { isZonedRelativeDay, isZonedPast } from "@northguild/gmt";
 
 isZonedRelativeDay("2024-03-15T10:00:00-04:00[America/New_York]", 0);
 // "today" resolved in America/New_York, not the host's system timeZone
@@ -345,7 +333,7 @@ isZonedPast("2020-01-01T00:00:00Z[UTC]");
 `clampDate` restricts a date to a range, and `closestDateTo` finds the nearest candidate by calendar distance:
 
 ```typescript
-import { clampDate, closestDateTo } from "@burglekitt/gmt";
+import { clampDate, closestDateTo } from "@northguild/gmt";
 
 clampDate("2024-02-01", "2024-03-01", "2024-03-31");
 // "2024-03-01"
@@ -357,7 +345,7 @@ closestDateTo("2024-03-15", ["2024-03-01", "2024-03-20", "2024-03-18"]);
 `getLocaleStartOfWeek`/`getLocaleEndOfWeek` (and their zoned equivalents) compute week boundaries from the locale's first day of week, instead of an ISO-Monday default:
 
 ```typescript
-import { getLocaleStartOfWeek, getLocaleEndOfWeek } from "@burglekitt/gmt";
+import { getLocaleStartOfWeek, getLocaleEndOfWeek } from "@northguild/gmt";
 
 getLocaleStartOfWeek("2024-02-29", "en-US");
 // "2024-02-25" (Sunday, en-US weeks start Sunday)
@@ -372,7 +360,7 @@ getLocaleEndOfWeek("2024-02-29", "en-US");
 `getLocaleDayOfWeek`/`getLocaleZonedDayOfWeek` return a locale-relative day-of-week index (0 = first day of the locale's week):
 
 ```typescript
-import { getLocaleDayOfWeek, getLocaleZonedDayOfWeek } from "@burglekitt/gmt";
+import { getLocaleDayOfWeek, getLocaleZonedDayOfWeek } from "@northguild/gmt";
 
 getLocaleDayOfWeek("2024-02-25", "en-US");
 // 0 (Sunday = first day of en-US week)
@@ -395,7 +383,7 @@ import {
   getLocaleMonthNames,
   getLocaleWeekdayNames,
   getLocaleMeridiems,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 
 getLocaleEraNames("en-US");
 // ["Before Christ", "Anno Domini"]
@@ -433,7 +421,7 @@ import {
   parseDateWithPattern,
   parseDateTimeWithPattern,
   parseTimeWithPattern,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 
 parseDateWithPattern("03/15/2024", "MM/dd/yyyy");
 // "2024-03-15"
@@ -455,7 +443,7 @@ Supported tokens include `yyyy`/`MM`/`dd`/`HH`/`mm`/`ss`/`SSS` for fixed-width f
 GMT's `CalendarSystem` type (`"gregorian" | "hebrew" | "islamic-civil" | "islamic-tabular" | "islamic-umalqura" | "japanese" | "buddhist" | "taiwan" | "persian" | "indian" | "ethiopic" | "ethiopic-amete-alem" | "coptic"`, extended by later stories) and `convertDateToCalendar` express a date in a non-Gregorian calendar system, built almost entirely on Temporal's native calendar support — no bundled leap-year tables or ported arithmetic, with one deliberate exception (the Ethiopic family, covered below).
 
 ```typescript
-import { convertDateToCalendar } from "@burglekitt/gmt";
+import { convertDateToCalendar } from "@northguild/gmt";
 
 convertDateToCalendar("2024-10-03", "hebrew");
 // "5785-01-01[u-ca=hebrew]" — Rosh Hashanah 5785
@@ -519,7 +507,11 @@ Three Ethiopic-family calendars round out the set, all sharing one 13-month stru
 addDate("5784-06-15[u-ca=hebrew]", { months: 1 });
 // "5784-07-15[u-ca=hebrew]" — Adar I (a leap-only 30-day month) -> Adar
 
-intervalCountDate("5784-01-01[u-ca=hebrew]", "5785-01-01[u-ca=hebrew]", "month");
+intervalCountDate(
+  "5784-01-01[u-ca=hebrew]",
+  "5785-01-01[u-ca=hebrew]",
+  "month",
+);
 // 13 — a Hebrew leap year crosses 13 month boundaries, not 12 (ISO's answer for the same span)
 
 diffDate("5784-06-15[u-ca=hebrew]", "5784-07-15[u-ca=hebrew]", "months");
@@ -535,7 +527,7 @@ durationAs("P1Y", "days", { relativeTo: "5784-06-15[u-ca=hebrew]" });
 
 `zoned/` has its own calendar-annotated grammar as of E7 (issue #152) — see "Calendar-aware zoned datetimes" below.
 
-Interval functions that only compare or diff absolute instants (`intervalContainsDate`, `intervalsOverlapDate`, `intervalAbutsDate`, `intervalEngulfsDate`, `isValidDateInterval`, `intervalOverlappingDaysDate`) accept endpoints tagged with *different* calendars, since ordering and day-counting don't depend on which calendar a date is expressed in. Functions that return a date *value* (`intervalUnionDate`, `intervalIntersectionDate`, `intervalDifferenceDate`, `intervalXorDate`, `intervalXorAllDate`, `mergeIntervalsDate`, `intervalDivideEquallyDate`, `intervalSplitAtDate`) require every argument to share one calendar and return their sentinel (`null`/`[]`) on a mismatch, since there's no principled way to pick which calendar the output should be expressed in. See `context/roadmap/issues/E.md`'s "E5 outcome" section for the full per-function audit, including the negatives ("no change needed, verified why") this scope boundary implies — `*DateTime`/`*Time` variants, `unix/`, and `utc/` were all confirmed unaffected rather than assumed to be.
+Interval functions that only compare or diff absolute instants (`intervalContainsDate`, `intervalsOverlapDate`, `intervalAbutsDate`, `intervalEngulfsDate`, `isValidDateInterval`, `intervalOverlappingDaysDate`) accept endpoints tagged with _different_ calendars, since ordering and day-counting don't depend on which calendar a date is expressed in. Functions that return a date _value_ (`intervalUnionDate`, `intervalIntersectionDate`, `intervalDifferenceDate`, `intervalXorDate`, `intervalXorAllDate`, `mergeIntervalsDate`, `intervalDivideEquallyDate`, `intervalSplitAtDate`) require every argument to share one calendar and return their sentinel (`null`/`[]`) on a mismatch, since there's no principled way to pick which calendar the output should be expressed in. See `context/roadmap/issues/E.md`'s "E5 outcome" section for the full per-function audit, including the negatives ("no change needed, verified why") this scope boundary implies — `*DateTime`/`*Time` variants, `unix/`, and `utc/` were all confirmed unaffected rather than assumed to be.
 
 #### Calendar-aware zoned datetimes
 
@@ -556,14 +548,18 @@ plain grammar above:
 convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "hebrew");
 // "5785-01-01T14:30:45-04:00[u-ca=hebrew][America/New_York]"
 
-addZoned("5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]", { months: 1 });
+addZoned("5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]", {
+  months: 1,
+});
 // "5784-07-15T14:30:00-04:00[u-ca=hebrew][America/New_York]"
 // Adar I -> Adar AND EST -> EDT, resolved in one call. No ordering of a plain/ calendar
 // operation and a zoned/ conversion produces this: do the calendar step first and DST is
 // applied to an already-resolved wall time; do the zoned step first and there is no calendar
 // left to step in.
 
-addZoned("0031-04-30T12:00:00+09:00[u-ca=japanese;era=heisei][Asia/Tokyo]", { days: 1 });
+addZoned("0031-04-30T12:00:00+09:00[u-ca=japanese;era=heisei][Asia/Tokyo]", {
+  days: 1,
+});
 // "0001-05-01T12:00:00+09:00[u-ca=japanese;era=reiwa][Asia/Tokyo]" — era re-derived, never copied
 ```
 
@@ -572,7 +568,7 @@ addZoned("0031-04-30T12:00:00+09:00[u-ca=japanese;era=heisei][Asia/Tokyo]", { da
 > string is never valid RFC 9557 to begin with, and the `;era=` suffix is not valid RFC 9557 at
 > any ordering. Writing it in RFC order is actively dangerous:
 > `Temporal.ZonedDateTime.from("5784-01-01T14:30:00-05:00[America/New_York][u-ca=hebrew]")`
-> *succeeds*, silently reading 5784 as an ISO year — a ~3760-year misparse with no error. GMT's
+> _succeeds_, silently reading 5784 as an ISO year — a ~3760-year misparse with no error. GMT's
 > ordering makes that shape uniformly rejected instead.
 
 Scope: `addZoned`, `subtractZoned`, `diffZoned`, `diffZonedAsDuration`, `convertZonedToCalendar`,
@@ -590,7 +586,7 @@ mismatch. Measurement functions (`diffZoned`, `diffZonedAsDuration`, `intervalCo
 `intervalLengthZoned`, `splitIntervalByUnitZoned`) measure in the endpoints' shared calendar when
 both tags match and fall back to Gregorian otherwise — mandatory here rather than merely
 convenient, because `Temporal.ZonedDateTime.prototype.until` throws across mismatched calendars
-for *every* unit, including pure time units like hours.
+for _every_ unit, including pure time units like hours.
 
 ### Durations
 
@@ -609,7 +605,7 @@ import {
   normalizeDuration,
   parseDuration,
   subtractDuration,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 
 isValidDuration("P1DT2H30M");
 // true
@@ -697,7 +693,7 @@ import {
   isValidUtcInterval,
   isValidUnixInterval,
   isValidZonedInterval,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 
 // Interval validators — positional args, start <= end
 isValidDateInterval("2024-01-01", "2024-12-31");
@@ -742,7 +738,7 @@ import {
   intervalContainsUtc,
   intervalContainsUnix,
   intervalContainsZoned,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 
 // Point-in-interval (3-arg)
 intervalContainsDate("2024-01-01", "2024-12-31", "2024-06-15");
@@ -788,7 +784,7 @@ import {
   intervalsOverlapUtc,
   intervalsOverlapUnix,
   intervalsOverlapZoned,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 
 intervalsOverlapDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
 // true
@@ -820,7 +816,7 @@ import {
   intervalIntersectionUtc,
   intervalIntersectionUnix,
   intervalIntersectionZoned,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 
 intervalIntersectionDate(
   "2024-01-01",
@@ -869,7 +865,7 @@ import {
   intervalOverlappingDaysUtc,
   intervalOverlappingDaysUnix,
   intervalOverlappingDaysZoned,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 
 intervalOverlappingDaysDate(
   "2024-01-01",
@@ -920,7 +916,7 @@ import {
   intervalUnionUtc,
   intervalUnionUnix,
   intervalUnionZoned,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 
 intervalUnionDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
 // { start: "2024-01-01", end: "2024-12-31" }
@@ -955,7 +951,7 @@ import {
   intervalDifferenceUtc,
   intervalDifferenceUnix,
   intervalDifferenceZoned,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 
 intervalDifferenceDate("2024-01-01", "2024-12-31", "2024-06-01", "2024-07-01");
 // [{ start: "2024-01-01", end: "2024-05-31" }, { start: "2024-07-02", end: "2024-12-31" }]
@@ -987,7 +983,7 @@ import {
   intervalXorUtc,
   intervalXorUnix,
   intervalXorZoned,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 
 intervalXorDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
 // [{ start: "2024-01-01", end: "2024-03-31" }, { start: "2024-07-01", end: "2024-12-31" }]
@@ -1019,7 +1015,7 @@ import {
   intervalAbutsUtc,
   intervalAbutsUnix,
   intervalAbutsZoned,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 
 intervalAbutsDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31");
 // true
@@ -1054,7 +1050,7 @@ import {
   intervalEngulfsUtc,
   intervalEngulfsUnix,
   intervalEngulfsZoned,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 
 intervalEngulfsDate("2024-01-01", "2024-12-31", "2024-06-01", "2024-07-01");
 // true
@@ -1089,7 +1085,7 @@ import {
   splitIntervalByUnitUtc,
   splitIntervalByUnitUnix,
   splitIntervalByUnitZoned,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 
 splitIntervalByUnitDate("2024-01-01", "2024-01-10", "day", 2);
 // [{ start: "2024-01-01", end: "2024-01-03" }, { start: "2024-01-03", end: "2024-01-05" }, { start: "2024-01-05", end: "2024-01-07" }, { start: "2024-01-07", end: "2024-01-09" }, { start: "2024-01-09", end: "2024-01-10" }]
@@ -1118,7 +1114,7 @@ import {
   intervalCountUtc,
   intervalCountUnix,
   intervalCountZoned,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 
 intervalCountDateTime("2024-01-01T23:59:00", "2024-01-02T00:01:00", "day");
 // 2 (two minutes long, but two days touched)
@@ -1155,7 +1151,7 @@ import {
   intervalLengthUtc,
   intervalLengthUnix,
   intervalLengthZoned,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 
 intervalLengthDateTime("2024-01-01T23:59:00", "2024-01-02T00:01:00", "day");
 // 0.001388888888888889 (the same interval intervalCount* reports as 2 day boundaries)
@@ -1179,7 +1175,7 @@ intervalLengthZoned(
 import {
   intervalDivideEquallyDate,
   intervalSplitAtDate,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 
 intervalDivideEquallyDate("2024-01-01", "2024-01-05", 4);
 // [{ start: "2024-01-01", end: "2024-01-02" }, { start: "2024-01-02", end: "2024-01-03" }, { start: "2024-01-03", end: "2024-01-04" }, { start: "2024-01-04", end: "2024-01-05" }]
@@ -1193,7 +1189,7 @@ intervalSplitAtDate("2024-01-01", "2024-01-10", ["2024-01-07", "2024-01-03"]);
 `mergeIntervals*` and `intervalXorAll*` are the list-form generalizations of `intervalUnion*` and `intervalXor*`, which are pairwise only — each takes a single array of `{ start, end }` records instead of two flat intervals:
 
 ```typescript
-import { mergeIntervalsDate, intervalXorAllDate } from "@burglekitt/gmt";
+import { mergeIntervalsDate, intervalXorAllDate } from "@northguild/gmt";
 
 mergeIntervalsDate([
   { start: "2024-01-01", end: "2024-01-10" },
@@ -1221,7 +1217,7 @@ import {
   intervalFromDurationUtc,
   intervalFromDurationUnix,
   intervalFromDurationZoned,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 
 intervalFromDurationDate("2024-01-01", "P1M", "start");
 // { start: "2024-01-01", end: "2024-02-01" }
@@ -1247,7 +1243,7 @@ All validators return `false` on invalid input (wrong type, malformed strings, l
 ### Zoned operations
 
 ```typescript
-import { addZoned, formatZonedDateTime } from "@burglekitt/gmt";
+import { addZoned, formatZonedDateTime } from "@northguild/gmt";
 
 addZoned("2026-03-07T23:00:00-05:00[America/New_York]", 2, "hour");
 // "2026-03-08T01:00:00-05:00[America/New_York]"
@@ -1262,7 +1258,7 @@ formatZonedDateTime("2024-03-17T14:30:45+00:00[UTC]", "en-US", {
 Twice a year, DST creates local times that don't exist (spring-forward gap) or happen twice (fall-back overlap). Functions that attach a timezone to a plain/local value accept an optional `disambiguation` (`"compatible"` (default) | `"earlier"` | `"later"` | `"reject"`) to control how that's resolved instead of silently guessing:
 
 ```typescript
-import { convertPlainDateTimeToZoned } from "@burglekitt/gmt";
+import { convertPlainDateTimeToZoned } from "@northguild/gmt";
 
 // 2024-03-10T02:30:00 doesn't exist in America/New_York (clocks jump 2am -> 3am).
 convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York", {
@@ -1274,7 +1270,7 @@ convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York", {
 The `startOfZoned`/`endOfZoned`/`startOfQuarterForZoned`/`endOfQuarterForZoned`/`mapZonedHoursInDay` family (and their `unix/` counterparts) also accept `disambiguation`, plus an `offset` option (`"prefer"` | `"use"` | `"ignore"` (default) | `"reject"`) that controls whether the source's existing UTC offset is kept when computing the new boundary. **`offset` must stay at its default (`"ignore"`) for `disambiguation` to take effect** — Temporal's own default (`"prefer"`) keeps the source offset whenever still valid, which silently makes `disambiguation` a no-op:
 
 ```typescript
-import { startOfZoned } from "@burglekitt/gmt";
+import { startOfZoned } from "@northguild/gmt";
 
 // 2024-11-03T01:45:00-05:00 is the SECOND, repeated 1am of the fall-back overlap in America/New_York.
 const source = "2024-11-03T01:45:00-05:00[America/New_York]";
@@ -1292,7 +1288,7 @@ startOfZoned(source, "hour", { disambiguation: "reject", offset: "prefer" });
 `hasDaylightSaving` reports whether an IANA timezone observes daylight saving time at all:
 
 ```typescript
-import { hasDaylightSaving } from "@burglekitt/gmt";
+import { hasDaylightSaving } from "@northguild/gmt";
 
 hasDaylightSaving("America/New_York");
 // true
@@ -1307,7 +1303,7 @@ hasDaylightSaving("Invalid/Zone");
 `getDstTransitions` enumerates the exact transition instants for a timezone in a given year:
 
 ```typescript
-import { getDstTransitions } from "@burglekitt/gmt/zoned";
+import { getDstTransitions } from "@northguild/gmt/zoned";
 
 getDstTransitions("America/New_York", 2024);
 // [
@@ -1336,7 +1332,7 @@ Each object's `instant` is a UTC ISO 8601 string; `offsetBefore`/`offsetAfter` a
 `isInDaylightSaving` answers the third question:
 
 ```typescript
-import { isInDaylightSaving } from "@burglekitt/gmt/zoned";
+import { isInDaylightSaving } from "@northguild/gmt/zoned";
 
 isInDaylightSaving("2024-07-15T12:00:00-04:00[America/New_York]");
 // true
@@ -1358,7 +1354,7 @@ isInDaylightSaving("invalid");
 `getZonedOffset` and `getZonedOffsetAs` read a zoned value's UTC offset — the former as a `±HH:MM` string, the latter as a number in minutes or nanoseconds:
 
 ```typescript
-import { getZonedOffset, getZonedOffsetAs } from "@burglekitt/gmt/zoned";
+import { getZonedOffset, getZonedOffsetAs } from "@northguild/gmt/zoned";
 
 getZonedOffset("2024-07-15T12:00:00-04:00[America/New_York]");
 // "-04:00"
@@ -1376,7 +1372,7 @@ getZonedOffset("invalid");
 `getTimeZoneOffset` looks up a timezone's offset at a given instant without needing an existing zoned value in hand:
 
 ```typescript
-import { getTimeZoneOffset } from "@burglekitt/gmt/zoned";
+import { getTimeZoneOffset } from "@northguild/gmt/zoned";
 
 getTimeZoneOffset("America/New_York", "2024-07-15T12:00:00Z");
 // "-04:00"
@@ -1391,7 +1387,7 @@ getTimeZoneOffset("Invalid/Zone", "2024-07-15T12:00:00Z");
 `formatTimeZoneName` returns a timezone's localized display name. `options.style` covers every `Intl.DateTimeFormatOptions` `timeZoneName` value:
 
 ```typescript
-import { formatTimeZoneName } from "@burglekitt/gmt/zoned";
+import { formatTimeZoneName } from "@northguild/gmt/zoned";
 
 formatTimeZoneName("America/New_York", "en-US", { style: "shortGeneric" });
 // "ET" — season-independent
@@ -1411,7 +1407,7 @@ The `"short"`/`"long"`/`"shortOffset"`/`"longOffset"` styles name the zone's _cu
 `clampZoned` restricts a zoned datetime to a range, and `closestZonedTo` finds the nearest candidate by temporal distance:
 
 ```typescript
-import { clampZoned, closestZonedTo } from "@burglekitt/gmt";
+import { clampZoned, closestZonedTo } from "@northguild/gmt";
 
 clampZoned(
   "2024-02-01T12:00:00[America/New_York]",
@@ -1456,7 +1452,7 @@ import {
   formatUnix,
   formatRelativeUnix,
   formatCalendarUnix,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 
 // Relative to "now" — auto-picks the best unit.
 formatRelativeDate("2026-01-15");
@@ -1558,7 +1554,7 @@ import {
   parseSql,
   formatRfc3339,
   parseRfc3339,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 
 // Email `Date:` headers (RFC 5322 / RFC 2822).
 formatRfc2822("2024-03-15T14:30:00-04:00[America/New_York]");
@@ -1589,7 +1585,7 @@ parseRfc3339("2024-03-15T14:30:00-04:00");
 ### Unix and UTC helpers
 
 ```typescript
-import { getUnixNow, getUtcNow, convertUnixToPlainDate } from "@burglekitt/gmt";
+import { getUnixNow, getUtcNow, convertUnixToPlainDate } from "@northguild/gmt";
 
 getUnixNow("milliseconds");
 // 1710685845000
@@ -1605,16 +1601,16 @@ convertUnixToPlainDate(1710685845);
 
 For the complete API listing, see the namespace documentation on GitHub:
 
-- [Duration API](https://github.com/burglekitt/gmt/tree/main/packages/gmt/src/duration) — ISO 8601 duration parsing, validation, arithmetic, and formatting
-- [Plain API](https://github.com/burglekitt/gmt/tree/main/packages/gmt/src/plain) — timezone-free operations
-- [Zoned API](https://github.com/burglekitt/gmt/tree/main/packages/gmt/src/zoned) — IANA timezone-aware operations
-- [Unix API](https://github.com/burglekitt/gmt/tree/main/packages/gmt/src/unix) — Unix epoch utilities
-- [UTC API](https://github.com/burglekitt/gmt/tree/main/packages/gmt/src/utc) — UTC instant utilities
-- [Regex API](https://github.com/burglekitt/gmt/tree/main/packages/gmt/src/regex) — composable regex patterns
+- [Duration API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/duration) — ISO 8601 duration parsing, validation, arithmetic, and formatting
+- [Plain API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/plain) — timezone-free operations
+- [Zoned API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/zoned) — IANA timezone-aware operations
+- [Unix API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/unix) — Unix epoch utilities
+- [UTC API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/utc) — UTC instant utilities
+- [Regex API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/regex) — composable regex patterns
 
 ## Agent Prompt
 
-When working with `@burglekitt/gmt`, follow these rules:
+When working with `@northguild/gmt`, follow these rules:
 
 1. **No `Date` object.** Use `Temporal` exclusively.
 2. **String-in, string-out.** Public APIs accept ISO 8601 strings; return strings, numbers, booleans, or arrays.

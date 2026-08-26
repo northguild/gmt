@@ -34,7 +34,7 @@ Reusable slash commands live in `.agents/skills/`. Run them with `/skill-name`.
 
 ```
 packages/
-  gmt/          # @burglekitt/gmt — the main library
+  gmt/          # @northguild/gmt — the main library
   gmt-eslint/   # ESLint flat config plugin
   gmt-oxlint/   # Oxlint JS plugin
   gmt-biome/    # Biome GritQL plugins

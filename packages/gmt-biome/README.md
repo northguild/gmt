@@ -1,43 +1,31 @@
-# @burglekitt/gmt-biome
+# @northguild/gmt-biome
 
-> ## ⚠️ Deprecation Notice
->
-> This package has moved. **`gmt-biome` is now published as
-> [`@northguild/gmt-biome`](https://www.npmjs.com/package/@northguild/gmt-biome)**
-> under the [northguild](https://github.com/northguild) GitHub organization.
->
-> - **New repository:** <https://github.com/northguild/gmt>
-> - **New package:** `@northguild/gmt-biome`
->
-> `@burglekitt/gmt-biome` is deprecated and will receive no further updates.
-> Please migrate to `@northguild/gmt-biome`.
-
-Shared [Biome](https://biomejs.dev/) configuration for `@burglekitt/gmt` projects. Enforces the Temporal-only policy by banning all `Date` APIs via Grit plugins.
+Shared [Biome](https://biomejs.dev/) configuration for `@northguild/gmt` projects. Enforces the Temporal-only policy by banning all `Date` APIs via Grit plugins.
 
 ## Installation
 
 ### npm
 
 ```sh
-npm install --save-dev @burglekitt/gmt-biome @biomejs/biome
+npm install --save-dev @northguild/gmt-biome @biomejs/biome
 ```
 
 ### yarn
 
 ```sh
-yarn add --dev @burglekitt/gmt-biome @biomejs/biome
+yarn add --dev @northguild/gmt-biome @biomejs/biome
 ```
 
 ### pnpm
 
 ```sh
-pnpm add --save-dev @burglekitt/gmt-biome @biomejs/biome
+pnpm add --save-dev @northguild/gmt-biome @biomejs/biome
 ```
 
 ### bun
 
 ```sh
-bun add --save-dev @burglekitt/gmt-biome @biomejs/biome
+bun add --save-dev @northguild/gmt-biome @biomejs/biome
 ```
 
 ## Usage
@@ -51,7 +39,7 @@ Use the combined `all` plugin to enable every Date-ban rule in a single entry:
 ```json
 {
   "$schema": "https://biomejs.dev/schemas/2.4.11/schema.json",
-  "plugins": ["./node_modules/@burglekitt/gmt-biome/plugins/all.grit"]
+  "plugins": ["./node_modules/@northguild/gmt-biome/plugins/all.grit"]
 }
 ```
 
@@ -63,11 +51,11 @@ Include only the plugins you need:
 {
   "$schema": "https://biomejs.dev/schemas/2.4.11/schema.json",
   "plugins": [
-    "./node_modules/@burglekitt/gmt-biome/plugins/no-new-date.grit",
-    "./node_modules/@burglekitt/gmt-biome/plugins/no-date-now.grit",
-    "./node_modules/@burglekitt/gmt-biome/plugins/no-date-parse.grit",
-    "./node_modules/@burglekitt/gmt-biome/plugins/no-date-utc.grit",
-    "./node_modules/@burglekitt/gmt-biome/plugins/no-date-getTimezoneOffset.grit"
+    "./node_modules/@northguild/gmt-biome/plugins/no-new-date.grit",
+    "./node_modules/@northguild/gmt-biome/plugins/no-date-now.grit",
+    "./node_modules/@northguild/gmt-biome/plugins/no-date-parse.grit",
+    "./node_modules/@northguild/gmt-biome/plugins/no-date-utc.grit",
+    "./node_modules/@northguild/gmt-biome/plugins/no-date-getTimezoneOffset.grit"
   ]
 }
 ```
@@ -78,12 +66,12 @@ Include only the plugins you need:
 
 ## Banned patterns
 
-| Pattern | Plugin | Suggestion |
-|---|---|---|
-| `new Date(...)` | `no-new-date` | Use `getUtcNow()`, `getNow()`, or `getZonedNow(timezone)` |
-| `Date.now()` | `no-date-now` | Use `getUnixNow('milliseconds' \| 'seconds')` or `getNow()` |
-| `Date.parse(...)` | `no-date-parse` | Use `convertZonedToUnix(value)` |
-| `Date.UTC(...)` | `no-date-utc` | Use `convertUtcDateTimeToUnix('YYYY-MM-DDTHH:mm:ss', 'milliseconds' \| 'seconds')` |
+| Pattern                     | Plugin                      | Suggestion                                                                                                            |
+| --------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `new Date(...)`             | `no-new-date`               | Use `getUtcNow()`, `getNow()`, or `getZonedNow(timezone)`                                                             |
+| `Date.now()`                | `no-date-now`               | Use `getUnixNow('milliseconds' \| 'seconds')` or `getNow()`                                                           |
+| `Date.parse(...)`           | `no-date-parse`             | Use `convertZonedToUnix(value)`                                                                                       |
+| `Date.UTC(...)`             | `no-date-utc`               | Use `convertUtcDateTimeToUnix('YYYY-MM-DDTHH:mm:ss', 'milliseconds' \| 'seconds')`                                    |
 | `$date.getTimezoneOffset()` | `no-date-getTimezoneOffset` | Use `getZonedNow(timezone)`, other gmt zoned helpers such as `convertZonedToUnix(value)`, or `Temporal.ZonedDateTime` |
 
 ## Why Temporal?

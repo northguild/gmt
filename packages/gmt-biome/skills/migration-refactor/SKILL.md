@@ -1,7 +1,7 @@
 ---
 name: migration-refactor
 description: >
-  Resolve @burglekitt/gmt-biome Date-rule violations with delicate, behavior-
+  Resolve @northguild/gmt-biome Date-rule violations with delicate, behavior-
   safe refactors to existing gmt helpers first, then use the Temporal custom-
   method plus issue/PR workflow when helpers are missing.
 metadata:
@@ -15,7 +15,7 @@ Use this skill when Biome flags Date usage and the user asks for code fixes.
 ## Refactor policy
 
 1. Prefer existing gmt APIs
-- Replace Date patterns with existing `@burglekitt/gmt` methods first.
+- Replace Date patterns with existing `@northguild/gmt` methods first.
 
 2. Keep refactors delicate
 - Preserve runtime behavior, timezone intent, and output format.
@@ -34,7 +34,7 @@ Use this skill when Biome flags Date usage and the user asks for code fixes.
 - `Date.parse(...)` -> gmt conversion helper where available.
 - `Date.UTC(...)` -> gmt UTC conversion helper where available.
 
-Note: if a consumer has chosen only a subset of plugins (individual plugin `.grit` file entries by path, for example `./node_modules/@burglekitt/gmt-biome/plugins/<name>.grit`, instead of `all.grit`), the set of diagnostics will be narrower — verify which plugin(s) are enabled before running broad automated refactors.
+Note: if a consumer has chosen only a subset of plugins (individual plugin `.grit` file entries by path, for example `./node_modules/@northguild/gmt-biome/plugins/<name>.grit`, instead of `all.grit`), the set of diagnostics will be narrower — verify which plugin(s) are enabled before running broad automated refactors.
 
 ## Safety checks
 

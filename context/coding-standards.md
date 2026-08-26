@@ -7,32 +7,32 @@
 - Invalid input returns a typed sentinel — never throws:
 
 | Return type | Sentinel |
-|---|---|
-| `string` | `""` |
-| `number` | `null` |
-| `boolean` | `false` |
-| `array` | `[]` |
+| ----------- | -------- |
+| `string`    | `""`     |
+| `number`    | `null`   |
+| `boolean`   | `false`  |
+| `array`     | `[]`     |
 
-- **`get/` namespaces hold current-moment accessors only** — no argument, or timezone only, reporting a value for *now* (e.g. `getDay()`, `getZonedDay(timeZone)`). Any function taking a date value belongs in `calculate/` (or `parse/`, `compare/`, `format/` as its verb dictates) — see J0b, which relocated `getLocaleDayOfWeek`/`getLocaleZonedDayOfWeek` out of `get/` for violating this.
+- **`get/` namespaces hold current-moment accessors only** — no argument, or timezone only, reporting a value for _now_ (e.g. `getDay()`, `getZonedDay(timeZone)`). Any function taking a date value belongs in `calculate/` (or `parse/`, `compare/`, `format/` as its verb dictates) — see J0b, which relocated `getLocaleDayOfWeek`/`getLocaleZonedDayOfWeek` out of `get/` for violating this.
 
 ## Allowed vs. Forbidden Patterns
 
 ### Allowed
 
-| Pattern | Example |
-|---|---|
-| ISO strings | `"2024-03-10"` |
+| Pattern                          | Example                                 |
+| -------------------------------- | --------------------------------------- |
+| ISO strings                      | `"2024-03-10"`                          |
 | Temporal objects (internal only) | `Temporal.PlainDate.from("2024-03-10")` |
-| Tree-shakable exports | `export * from "./plain"` |
+| Tree-shakable exports            | `export * from "./plain"`               |
 
 ### Forbidden
 
-| Pattern | Replacement |
-|---|---|
-| `new Date()` | `Temporal.Now.instant()` |
-| `date.getTime()` | `Temporal.Instant.from(date).epochSeconds` |
-| Manual string parsing | `Temporal.PlainDate.from(string)` |
-| Mutating methods | Use Temporal's immutable methods |
+| Pattern               | Replacement                                |
+| --------------------- | ------------------------------------------ |
+| `new Date()`          | `Temporal.Now.instant()`                   |
+| `date.getTime()`      | `Temporal.Instant.from(date).epochSeconds` |
+| Manual string parsing | `Temporal.PlainDate.from(string)`          |
+| Mutating methods      | Use Temporal's immutable methods           |
 
 ## Always Wrap Temporal Calls in Try-Catch
 
@@ -84,8 +84,8 @@ The same three rules extend to `internal/calendarDateString.ts`'s `parseCalendar
 **Which namespaces accept this grammar (E5 issue #78, extended by E7 issue #152):**
 
 - **`plain/` `PlainDate`** — `addDate`/`subtractDate`/`diffDate`/`diffDateAsDuration` and the `Date`-suffixed `plain/interval/*` functions, plus `duration/`'s `relativeTo` option (via `internal/resolveDurationRelativeTo.ts`). `plain/` `PlainDateTime`/`PlainTime` functions have no calendar-annotated grammar of their own and simply treat a `PlainDate` annotation as invalid input.
-- **`zoned/`, the ~18 calendar-aware functions** — E7 added a *separate* GMT-native zoned grammar, `<date>T<time><offset>[u-ca=<id>[;era=<era>]][<timeZone>]` (`regex/calendar-zoned-date-time.ts`, parsed/formatted by `internal/calendarZonedString.ts`). The same three rules above apply to it: the regex encodes the fixed grammar, the extracted date half is handed to `Temporal.PlainDate.from(fields, { overflow: "reject" })` via the *existing* `parseCalendarDateValue`, and the recomposed ISO string is handed to `Temporal.ZonedDateTime.from` for zone/offset/DST validation. In scope: `addZoned`, `subtractZoned`, `diffZoned`, `diffZonedAsDuration`, `convertZonedToCalendar`, and `zoned/interval/*`. These gate on the parallel `isValidCalendarZonedDateTime`/`isValidCalendarZonedInterval`.
-- **`zoned/`, everything else (~72 functions), plus `utc/` and `unix/`** — reject the annotation outright (`internal/hasCalendarAnnotation.ts`, and `isValidZonedDateTime`/`isValidZonedInterval`, which E7 deliberately did NOT loosen). `zoned/` rejected it wholesale only between E5 and E7; before E5, `isValidZonedDateTime` had no gate and silently accepted Temporal's *own* shape (see `context/roadmap/issues/E.md`'s E5 outcome, decision D2, and E7's reversal of that verdict for the in-scope subset).
+- **`zoned/`, the ~18 calendar-aware functions** — E7 added a _separate_ GMT-native zoned grammar, `<date>T<time><offset>[u-ca=<id>[;era=<era>]][<timeZone>]` (`regex/calendar-zoned-date-time.ts`, parsed/formatted by `internal/calendarZonedString.ts`). The same three rules above apply to it: the regex encodes the fixed grammar, the extracted date half is handed to `Temporal.PlainDate.from(fields, { overflow: "reject" })` via the _existing_ `parseCalendarDateValue`, and the recomposed ISO string is handed to `Temporal.ZonedDateTime.from` for zone/offset/DST validation. In scope: `addZoned`, `subtractZoned`, `diffZoned`, `diffZonedAsDuration`, `convertZonedToCalendar`, and `zoned/interval/*`. These gate on the parallel `isValidCalendarZonedDateTime`/`isValidCalendarZonedInterval`.
+- **`zoned/`, everything else (~72 functions), plus `utc/` and `unix/`** — reject the annotation outright (`internal/hasCalendarAnnotation.ts`, and `isValidZonedDateTime`/`isValidZonedInterval`, which E7 deliberately did NOT loosen). `zoned/` rejected it wholesale only between E5 and E7; before E5, `isValidZonedDateTime` had no gate and silently accepted Temporal's _own_ shape (see `context/roadmap/issues/E.md`'s E5 outcome, decision D2, and E7's reversal of that verdict for the in-scope subset).
 
 **Segment ordering in the zoned grammar is `[u-ca=...]` before `[timeZone]` — the reverse of RFC 9557 — and is not re-openable.** GMT's digits are calendar-native, so the string is never valid RFC 9557 regardless; the `;era=` suffix is not valid RFC 9557 at any ordering; and the RFC-legal ordering is the dangerous one, because `Temporal.ZonedDateTime.from("5784-01-01T14:30:00-05:00[America/New_York][u-ca=hebrew]")` succeeds and silently reads a Hebrew year as an ISO year. See `regex/calendar-zoned-date-time.ts`.
 
@@ -107,8 +107,8 @@ Avoid `while` loops in new code. Prefer `for` loops or array methods (`map`, `fi
 
 The `Date` API ban is enforced at the AST level by three optional linting packages:
 
-- `@burglekitt/gmt-eslint` — ESLint flat config
-- `@burglekitt/gmt-biome` — Biome + GritQL plugins
-- `@burglekitt/gmt-oxlint` — Oxlint JS plugin
+- `@northguild/gmt-eslint` — ESLint flat config
+- `@northguild/gmt-biome` — Biome + GritQL plugins
+- `@northguild/gmt-oxlint` — Oxlint JS plugin
 
 If the linter passes, no `Date` object crept in.

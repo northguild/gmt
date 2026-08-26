@@ -69,7 +69,7 @@ The existing `issues/*.md` files leave docs, skills, and test rigor implicit, de
 
 ### TanStack Intent skills — same PR, non-optional
 
-`overview.md` step 7 already states that skills falling behind the API surface actively mislead agents consuming `@burglekitt/gmt`. Update via `/tanstack-intent`, or manually per `.agents/skills/tanstack-intent/SKILL.md`:
+`overview.md` step 7 already states that skills falling behind the API surface actively mislead agents consuming `@northguild/gmt`. Update via `/tanstack-intent`, or manually per `.agents/skills/tanstack-intent/SKILL.md`:
 
 | Story         | Skill(s) to update                                                                        |
 | ------------- | ----------------------------------------------------------------------------------------- |
@@ -176,7 +176,7 @@ Their own D2 siblings got this right: `getLocaleStartOfWeek`/`getLocaleEndOfWeek
 - Record the resulting rule in `context/coding-standards.md`'s API Contract section: **`get/` namespaces hold current-moment accessors only** — no argument, or timezone only, reporting a value for *now*. Any function taking a date value belongs in `calculate/` (or `parse/`, `compare/`, `format/` as its verb dictates).
 
 ## Release impact — decide before implementing
-Root imports (`from "@burglekitt/gmt"`) are unaffected: `src/index.ts` re-exports whole namespaces. But `package.json`'s `exports` map publishes `./plain/*` and `./zoned/*` as real public subpaths, so anyone importing from `@burglekitt/gmt/plain/get` loses the symbol. At v1.10.0 this is defensible as a `minor` with a prominent changeset note, but it is **technically breaking for deep-subpath consumers** — the changeset must say so explicitly and name both old and new subpaths, not bury it under "moved some files".
+Root imports (`from "@northguild/gmt"`) are unaffected: `src/index.ts` re-exports whole namespaces. But `package.json`'s `exports` map publishes `./plain/*` and `./zoned/*` as real public subpaths, so anyone importing from `@northguild/gmt/plain/get` loses the symbol. At v1.10.0 this is defensible as a `minor` with a prominent changeset note, but it is **technically breaking for deep-subpath consumers** — the changeset must say so explicitly and name both old and new subpaths, not bury it under "moved some files".
 
 ## Why this blocks J3/J4
 J3 and J4 add four more value-taking accessors (`getDaysInMonth`, `getDayOfYear`, `getWeekYear`, `getWeeksInMonth`). While D3 sits in `get/`, there is no unambiguous rule for where they go, and the ambiguity will simply reproduce itself. Once this lands, the rule is clean and J3/J4's specs cite it.

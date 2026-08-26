@@ -1,7 +1,7 @@
 ---
 name: ci-enforcement
 description: >
-  Add reliable CI enforcement for @burglekitt/gmt-biome Date-ban policy across
+  Add reliable CI enforcement for @northguild/gmt-biome Date-ban policy across
   PR and mainline builds, with phased rollout controls to avoid blocking
   unrelated migration progress.
 metadata:
@@ -18,7 +18,7 @@ Use this skill when a team wants automated enforcement of gmt-biome rules.
 - Ensure CI runs a Biome check command on pull requests.
 
 2. Plugin selection
-- Use `"plugins": ["./node_modules/@burglekitt/gmt-biome/plugins/all.grit"]` as a common way to enforce all Date-ban rules at once. Reference individual files (for example, `./node_modules/@burglekitt/gmt-biome/plugins/<name>.grit`) only when you want a strict subset. Plugin entries must be filesystem paths to `.grit` files, and those paths may be relative or absolute depending on your repository layout.
+- Use `"plugins": ["./node_modules/@northguild/gmt-biome/plugins/all.grit"]` as a common way to enforce all Date-ban rules at once. Reference individual files (for example, `./node_modules/@northguild/gmt-biome/plugins/<name>.grit`) only when you want a strict subset. Plugin entries must be filesystem paths to `.grit` files, and those paths may be relative or absolute depending on your repository layout.
 - **Never use `extends`** for these plugins — `extends` only accepts `biome.json` config files, not `.grit` files.
 
 3. Scope rollout

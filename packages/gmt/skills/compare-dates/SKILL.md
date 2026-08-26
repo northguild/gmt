@@ -15,17 +15,17 @@ description: >
   next/previous occurrence of an ISO day of week ("next Friday"). Returns
   false/null/"" on invalid input.
 sources:
-  - 'burglekitt/gmt:packages/gmt/src/plain/compare/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/compare/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/unix/compare/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/utc/compare/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/getLocaleDayOfWeek.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/calculate/getLocaleZonedDayOfWeek.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/nextWeekday.ts'
-  - 'burglekitt/gmt:packages/gmt/src/plain/calculate/previousWeekday.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/compare/index.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/compare/index.ts'
+  - 'northguild/gmt:packages/gmt/src/unix/compare/index.ts'
+  - 'northguild/gmt:packages/gmt/src/utc/compare/index.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/calculate/getLocaleDayOfWeek.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/calculate/getLocaleZonedDayOfWeek.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/calculate/nextWeekday.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/calculate/previousWeekday.ts'
 metadata:
   type: core
-  library: '@burglekitt/gmt'
+  library: '@northguild/gmt'
   library_version: '1.14.1'
 ---
 
@@ -36,8 +36,8 @@ Use this skill when you need to compare date values for ordering.
 ## Setup
 
 ```ts
-import { isAfterDate, isBeforeDate, areDatesEqual } from "@burglekitt/gmt";
-import { isBetweenDate } from "@burglekitt/gmt";
+import { isAfterDate, isBeforeDate, areDatesEqual } from "@northguild/gmt";
+import { isBetweenDate } from "@northguild/gmt";
 ```
 
 ## Core Patterns
@@ -57,7 +57,7 @@ const result = isBeforeDate("2024-03-10", "2024-03-15"); // true
 ### Check if dates are equal
 
 ```ts
-import { areDatesEqual } from "@burglekitt/gmt";
+import { areDatesEqual } from "@northguild/gmt";
 
 const result = areDatesEqual("2024-03-15", "2024-03-15"); // true
 ```
@@ -65,7 +65,7 @@ const result = areDatesEqual("2024-03-15", "2024-03-15"); // true
 ### Check if two values are equal at a given unit (same month, same year, ...)
 
 ```ts
-import { areDatesEqualBy } from "@burglekitt/gmt";
+import { areDatesEqualBy } from "@northguild/gmt";
 
 areDatesEqualBy("2024-03-15", "2024-03-20", "month"); // true
 areDatesEqualBy("2023-03-15", "2024-03-15", "month"); // false — same month, different year
@@ -89,7 +89,7 @@ Migrating from date-fns:
 ### Check if date is between two dates
 
 ```ts
-import { isBetweenDate } from "@burglekitt/gmt";
+import { isBetweenDate } from "@northguild/gmt";
 
 const result = isBetweenDate("2024-03-15", "2024-03-10", "2024-03-20"); // true
 ```
@@ -97,7 +97,7 @@ const result = isBetweenDate("2024-03-15", "2024-03-10", "2024-03-20"); // true
 ### Compare datetime values
 
 ```ts
-import { isAfterDateTime, isBeforeDateTime, areDateTimesEqual } from "@burglekitt/gmt";
+import { isAfterDateTime, isBeforeDateTime, areDateTimesEqual } from "@northguild/gmt";
 
 const after = isAfterDateTime("2024-03-15T14:30:45", "2024-03-15T14:30:00"); // true
 const before = isBeforeDateTime("2024-03-15T14:30:00", "2024-03-15T14:30:45"); // true
@@ -107,7 +107,7 @@ const equal = areDateTimesEqual("2024-03-15T14:30:45", "2024-03-15T14:30:45"); /
 ### Compare time values
 
 ```ts
-import { isAfterTime, isBeforeTime, areTimesEqual } from "@burglekitt/gmt";
+import { isAfterTime, isBeforeTime, areTimesEqual } from "@northguild/gmt";
 
 const after = isAfterTime("14:30:45", "14:30:00"); // true
 const before = isBeforeTime("14:30:00", "14:30:45"); // true
@@ -117,7 +117,7 @@ const equal = areTimesEqual("14:30:45", "14:30:45"); // true
 ### Check if a date falls on a weekend (locale-aware)
 
 ```ts
-import { isWeekend, isZonedWeekend } from "@burglekitt/gmt";
+import { isWeekend, isZonedWeekend } from "@northguild/gmt";
 
 isWeekend("2024-02-03", "en-US"); // true (Saturday, en-US weekend is Sat/Sun)
 isWeekend("2024-02-02", "he-IL"); // true (Friday, he-IL weekend is Fri/Sat)
@@ -130,7 +130,7 @@ isZonedWeekend("2024-02-04T10:00:00+02:00[Asia/Jerusalem]", "he-IL"); // false (
 ### Check if a date is a business day (fixed Mon–Fri)
 
 ```ts
-import { isBusinessDay } from "@burglekitt/gmt";
+import { isBusinessDay } from "@northguild/gmt";
 
 isBusinessDay("2024-02-05"); // true (Monday)
 isBusinessDay("2024-02-10"); // false (Saturday)
@@ -142,7 +142,7 @@ isBusinessDay("2024-02-04"); // false (Sunday)
 ### Get the locale-relative day-of-week index
 
 ```ts
-import { getLocaleDayOfWeek, getLocaleZonedDayOfWeek } from "@burglekitt/gmt";
+import { getLocaleDayOfWeek, getLocaleZonedDayOfWeek } from "@northguild/gmt";
 
 getLocaleDayOfWeek("2024-02-25", "en-US");       // 0 (Sunday = first day of en-US week)
 getLocaleDayOfWeek("2024-02-26", "en-US");       // 1 (Monday)
@@ -158,7 +158,7 @@ getLocaleZonedDayOfWeek("2024-02-26T12:00:00+00:00[UTC]", "fr-FR"); // 0
 ### Check now-relative predicates (today, this month, past, future)
 
 ```ts
-import { isRelativeDay, isThisUnit, isPast, isFuture } from "@burglekitt/gmt";
+import { isRelativeDay, isThisUnit, isPast, isFuture } from "@northguild/gmt";
 
 isRelativeDay("2024-03-15", 0);   // "is today" — true if today is 2024-03-15
 isRelativeDay("2024-03-14", -1);  // "is yesterday" — true if today is 2024-03-15
@@ -176,7 +176,7 @@ isFuture("2024-03-16"); // true if today is 2024-03-15 (strictly after, not on-o
 Zoned counterparts — `isZonedRelativeDay`, `isZonedThisUnit`, `isZonedPast`, `isZonedFuture` — take a `ZonedDateTime` string and resolve "today"/"now" in *that value's own* timeZone, making them deterministic regardless of the host's system timeZone:
 
 ```ts
-import { isZonedRelativeDay, isZonedThisUnit, isZonedPast, isZonedFuture } from "@burglekitt/gmt";
+import { isZonedRelativeDay, isZonedThisUnit, isZonedPast, isZonedFuture } from "@northguild/gmt";
 
 isZonedRelativeDay("2024-03-15T10:00:00-04:00[America/New_York]", 0); // "today" in America/New_York, not the host's timeZone
 isZonedThisUnit("2024-03-15T10:00:00-04:00[America/New_York]", "month");
@@ -191,7 +191,7 @@ isZonedFuture("2999-01-01T00:00:00Z[UTC]"); // true
 ### Find the next/previous occurrence of a weekday
 
 ```ts
-import { nextWeekday, previousWeekday } from "@burglekitt/gmt";
+import { nextWeekday, previousWeekday } from "@northguild/gmt";
 
 nextWeekday("2024-03-13", 5); // "2024-03-15" (Wednesday -> next Friday)
 nextWeekday("2024-03-15", 5); // "2024-03-22" (already Friday -> advances a full week by default)
@@ -226,7 +226,7 @@ const isAfter = "2024-03-20" > "2024-03-15"; // true but fragile
 Correct:
 
 ```ts
-import { isAfterDate } from "@burglekitt/gmt";
+import { isAfterDate } from "@northguild/gmt";
 
 const isAfter = isAfterDate("2024-03-20", "2024-03-15"); // true
 ```
@@ -248,7 +248,7 @@ if (result) { // false, not throwing
 Correct:
 
 ```ts
-import { isAfterDate, isValidDate } from "@burglekitt/gmt";
+import { isAfterDate, isValidDate } from "@northguild/gmt";
 
 const dateA = "invalid";
 const dateB = "2024-03-15";
@@ -272,7 +272,7 @@ Correct:
 
 ```ts
 // Ensure canonical format before comparison
-import { isAfterDate } from "@burglekitt/gmt";
+import { isAfterDate } from "@northguild/gmt";
 
 const result = isAfterDate("2024-03-05", "2024-03-15");
 ```
@@ -284,7 +284,7 @@ Source: Temporal.PlainDate.from() — canonicalizes input
 Wrong:
 
 ```ts
-import { getDayOfWeek } from "@burglekitt/gmt";
+import { getDayOfWeek } from "@northguild/gmt";
 
 const day = getDayOfWeek(); // ISO day of week, always Monday-start
 const isWeekendDay = day === 6 || day === 7; // wrong for he-IL/ar-SA (Fri/Sat)
@@ -293,7 +293,7 @@ const isWeekendDay = day === 6 || day === 7; // wrong for he-IL/ar-SA (Fri/Sat)
 Correct:
 
 ```ts
-import { isWeekend } from "@burglekitt/gmt";
+import { isWeekend } from "@northguild/gmt";
 
 const isWeekendDay = isWeekend("2024-02-02", "he-IL"); // true — Friday is part of he-IL's weekend
 ```
@@ -314,7 +314,7 @@ const isWeekendDay = isBusinessDay("2024-02-02"); // false (it's a Friday)
 Correct:
 
 ```ts
-import { isWeekend } from "@burglekitt/gmt";
+import { isWeekend } from "@northguild/gmt";
 
 // isBusinessDay is fixed ISO Mon–Fri (no locale lookup, no holidays)
 isBusinessDay("2024-02-02"); // true (Friday)
@@ -332,7 +332,7 @@ Source: packages/gmt/src/plain/compare/isBusinessDay.ts — fixed ISO Mon–Fri,
 Wrong:
 
 ```ts
-import { areDatesEqualBy } from "@burglekitt/gmt";
+import { areDatesEqualBy } from "@northguild/gmt";
 
 // Assuming this checks "is it March, regardless of year"
 const bothMarch = areDatesEqualBy("2023-03-15", "2024-03-15", "month"); // false, not true
@@ -341,14 +341,14 @@ const bothMarch = areDatesEqualBy("2023-03-15", "2024-03-15", "month"); // false
 Correct:
 
 ```ts
-import { areDatesEqualBy } from "@burglekitt/gmt";
+import { areDatesEqualBy } from "@northguild/gmt";
 
 // "Same month" means the same month AND year — matches date-fns's isSameMonth
 // and Luxon's dt.hasSame(other, "month")
 areDatesEqualBy("2024-03-01", "2024-03-31", "month"); // true (same month, same year)
 
 // To check "same month-of-year regardless of year", compare the month field directly
-import { parseMonthFromDate } from "@burglekitt/gmt";
+import { parseMonthFromDate } from "@northguild/gmt";
 const sameMonthOfYear =
   parseMonthFromDate("2023-03-15") === parseMonthFromDate("2024-03-15"); // true
 ```
@@ -362,7 +362,7 @@ Source: packages/gmt/src/plain/compare/areDatesEqualBy.ts — start-of-unit comp
 Wrong:
 
 ```ts
-import { isRelativeDay } from "@burglekitt/gmt";
+import { isRelativeDay } from "@northguild/gmt";
 
 // Assuming "today" means the same thing everywhere
 const isDueToday = isRelativeDay(dueDate, 0);
@@ -371,7 +371,7 @@ const isDueToday = isRelativeDay(dueDate, 0);
 Correct:
 
 ```ts
-import { isZonedRelativeDay } from "@burglekitt/gmt";
+import { isZonedRelativeDay } from "@northguild/gmt";
 
 // "Today" is resolved in the value's own timeZone — deterministic
 // regardless of the host machine's system timeZone
@@ -387,7 +387,7 @@ Source: packages/gmt/src/plain/compare/isRelativeDay.ts, packages/gmt/src/plain/
 Wrong:
 
 ```ts
-import { nextWeekday } from "@burglekitt/gmt";
+import { nextWeekday } from "@northguild/gmt";
 
 // Assuming a Friday input returns itself when asking for "next Friday"
 const result = nextWeekday("2024-03-15", 5); // "2024-03-22", not "2024-03-15"
@@ -396,7 +396,7 @@ const result = nextWeekday("2024-03-15", 5); // "2024-03-22", not "2024-03-15"
 Correct:
 
 ```ts
-import { nextWeekday } from "@burglekitt/gmt";
+import { nextWeekday } from "@northguild/gmt";
 
 // Pass { inclusive: true } to return the input as-is when it already falls on dayOfWeek
 const result = nextWeekday("2024-03-15", 5, { inclusive: true }); // "2024-03-15"

@@ -74,7 +74,7 @@ support before committing — this was assessed in mid-2026.
 
 The superseded plan's central mechanism: rather than writing a code block, the model
 emits a **function call** that the client maps to a real widget executing actual
-`@burglekitt/gmt` code.
+`@northguild/gmt` code.
 
 ### Why it is parked
 
@@ -83,7 +83,7 @@ at all** by Story Group DOX-B. DOX-B1's `<Playground>` runs the real library; DO
 every one of the 1,514 examples. A reader gets live, runnable, sentinel-aware widgets on
 every reference page, deterministically, with no API key and no latency.
 
-What the generative version adds on top is that the model chooses *which* widget to show
+What the generative version adds on top is that the model chooses _which_ widget to show
 for a free-form question. That is a real increment, but it is a small one over "the
 answer cites a page that already has a live playground on it" — which is exactly what
 Story Group DOX-C produces. It is also substantially more machinery: a widget registry with
@@ -94,7 +94,7 @@ typed params, Gemini function declarations, and partial-argument streaming.
 Streamed function-call arguments are **partial JSON, which is by definition invalid
 JSON** until the call completes. Never `JSON.parse` a raw chunk — a partial-JSON parser
 is required. Additionally, if a provider's fine-grained tool streaming is used, note that
-some do not guarantee valid JSON even at the *final* chunk, so the parser must handle a
+some do not guarantee valid JSON even at the _final_ chunk, so the parser must handle a
 malformed terminal object gracefully rather than only handling truncation.
 
 ### What was specified
@@ -126,7 +126,7 @@ It made the scene load-bearing in three ways simultaneously:
 
 1. It was what every `backdrop-filter` panel sampled, so **glass legibility depended on
    scene content**. The scene could not be tuned for its own sake.
-2. It had to read clearly *through* a 24px blur plus a darkened backdrop — a much harder
+2. It had to read clearly _through_ a 24px blur plus a darkened backdrop — a much harder
    design constraint than looking good on its own, and one that can only be evaluated
    behind a real glass panel, never in isolation.
 3. It created the epic's worst-case frame budget: scene rendering **and** a response

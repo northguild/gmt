@@ -16,14 +16,14 @@ description: >
   for shared calendar dates between two intervals. Covers plain, zoned, unix,
   utc. Returns false/null/[] on invalid input — never throws.
 sources:
-  - 'burglekitt/gmt:packages/gmt/src/plain/interval/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/zoned/interval/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/unix/interval/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/utc/interval/index.ts'
-  - 'burglekitt/gmt:packages/gmt/src/duration/validate/isValidDuration.ts'
+  - 'northguild/gmt:packages/gmt/src/plain/interval/index.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/interval/index.ts'
+  - 'northguild/gmt:packages/gmt/src/unix/interval/index.ts'
+  - 'northguild/gmt:packages/gmt/src/utc/interval/index.ts'
+  - 'northguild/gmt:packages/gmt/src/duration/validate/isValidDuration.ts'
 metadata:
   type: core
-  library: '@burglekitt/gmt'
+  library: '@northguild/gmt'
   library_version: '1.14.1'
 ---
 
@@ -53,7 +53,7 @@ import {
   mergeIntervalsDate,
   intervalXorAllDate,
   intervalOverlappingDaysDate,
-} from "@burglekitt/gmt";
+} from "@northguild/gmt";
 ```
 
 Every function has `Time`, `DateTime`, `Zoned`, `Unix`, and `Utc` siblings. Replace the suffix to match your value type.
@@ -307,7 +307,7 @@ Every `Date`-suffixed function in this namespace (`intervalContainsDate`, `inter
 - **Calendar-unit arithmetic families measure in the shared calendar, falling back to Gregorian on a mismatch** — `intervalCountDate`, `intervalLengthDate`, `splitIntervalByUnitDate`, `intervalFromDurationDate`. A Hebrew leap year crosses **13** month boundaries, not 12:
 
 ```ts
-import { intervalCountDate, splitIntervalByUnitDate } from "@burglekitt/gmt";
+import { intervalCountDate, splitIntervalByUnitDate } from "@northguild/gmt";
 
 intervalCountDate(
   "5784-01-01[u-ca=hebrew]",

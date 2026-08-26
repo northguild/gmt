@@ -1,7 +1,7 @@
 ---
 name: app-integration
 description: >
-  Guidance for integrating `@burglekitt/gmt` with application frameworks and
+  Guidance for integrating `@northguild/gmt` with application frameworks and
   libraries (routers, query caches, table sorting, state management). Emphasizes
   strict I/O, canonicalization, and cache-key hygiene.
 metadata:

@@ -2,7 +2,7 @@ import plugin, { recommendedConfig, recommendedRules } from "./index";
 
 describe("plugin", () => {
   it("has correct meta name", () => {
-    expect(plugin.meta.name).toBe("@burglekitt/gmt-oxlint");
+    expect(plugin.meta.name).toBe("@northguild/gmt-oxlint");
   });
 
   it("exports all expected rules", () => {
@@ -20,25 +20,25 @@ describe("plugin", () => {
     expect(cfg).toBeDefined();
     const rules = cfg?.rules;
     expect(rules).toBeDefined();
-    expect(rules).toHaveProperty("@burglekitt/gmt-oxlint/no-date-global");
-    expect(rules).toHaveProperty("@burglekitt/gmt-oxlint/no-new-date");
-    expect(rules).toHaveProperty("@burglekitt/gmt-oxlint/no-date-now");
-    expect(rules).toHaveProperty("@burglekitt/gmt-oxlint/no-date-parse");
-    expect(rules).toHaveProperty("@burglekitt/gmt-oxlint/no-date-utc");
+    expect(rules).toHaveProperty("@northguild/gmt-oxlint/no-date-global");
+    expect(rules).toHaveProperty("@northguild/gmt-oxlint/no-new-date");
+    expect(rules).toHaveProperty("@northguild/gmt-oxlint/no-date-now");
+    expect(rules).toHaveProperty("@northguild/gmt-oxlint/no-date-parse");
+    expect(rules).toHaveProperty("@northguild/gmt-oxlint/no-date-utc");
     expect(rules).toHaveProperty(
-      "@burglekitt/gmt-oxlint/no-date-getTimezoneOffset",
+      "@northguild/gmt-oxlint/no-date-getTimezoneOffset",
     );
   });
 
   it("recommended config rules are set to error severity", () => {
     const rules = plugin.configs?.recommended?.rules;
     expect(rules).toBeDefined();
-    expect(rules?.["@burglekitt/gmt-oxlint/no-date-global"]).toBe("error");
-    expect(rules?.["@burglekitt/gmt-oxlint/no-new-date"]).toBe("error");
-    expect(rules?.["@burglekitt/gmt-oxlint/no-date-now"]).toBe("error");
-    expect(rules?.["@burglekitt/gmt-oxlint/no-date-parse"]).toBe("error");
-    expect(rules?.["@burglekitt/gmt-oxlint/no-date-utc"]).toBe("error");
-    expect(rules?.["@burglekitt/gmt-oxlint/no-date-getTimezoneOffset"]).toBe(
+    expect(rules?.["@northguild/gmt-oxlint/no-date-global"]).toBe("error");
+    expect(rules?.["@northguild/gmt-oxlint/no-new-date"]).toBe("error");
+    expect(rules?.["@northguild/gmt-oxlint/no-date-now"]).toBe("error");
+    expect(rules?.["@northguild/gmt-oxlint/no-date-parse"]).toBe("error");
+    expect(rules?.["@northguild/gmt-oxlint/no-date-utc"]).toBe("error");
+    expect(rules?.["@northguild/gmt-oxlint/no-date-getTimezoneOffset"]).toBe(
       "error",
     );
   });
@@ -48,7 +48,7 @@ describe("plugin", () => {
   });
 
   it("exports recommendedConfig with jsPlugins and recommended rules", () => {
-    expect(recommendedConfig.jsPlugins).toEqual(["@burglekitt/gmt-oxlint"]);
+    expect(recommendedConfig.jsPlugins).toEqual(["@northguild/gmt-oxlint"]);
     expect(recommendedConfig.rules).toEqual(recommendedRules);
   });
 });

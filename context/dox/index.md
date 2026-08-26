@@ -1,4 +1,4 @@
-# Dox: the documentation site for `@burglekitt/gmt`
+# Dox: the documentation site for `@northguild/gmt`
 
 This file has been split into a progressive-disclosure directory. Read what you need:
 
@@ -12,7 +12,7 @@ This file has been split into a progressive-disclosure directory. Read what you 
   work (audio, voice, generative-UI widgets, reactive scene). No story IDs, not in the
   sequence — read before proposing any of it, so the findings aren't re-derived.
 - [example-sibling-repo-docs.md](example-sibling-repo-docs.md) — **Reference only, not a
-  target.** How a sibling `@burglekitt/worktree` repo built its docs site and AI chat.
+  target.** How a sibling `@northguild/worktree` repo built its docs site and AI chat.
   Reviewed 2026-08-21; what was taken from it and what was rejected is recorded in
   [overview.md](overview.md) §2 "Reviewed prior art". Do not build what it describes —
   its stack and its no-retrieval design are both deliberate rejections here.

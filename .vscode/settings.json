@@ -19,7 +19,7 @@
     "editor.formatOnSaveMode": "file",
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
-  "cSpell.words": ["burglekitt", "oclif", "worktree"],
+  "cSpell.words": ["northguild", "oclif", "worktree"],
   "python.defaultInterpreterPath": "/opt/homebrew/opt/python@3.14/bin/python3.14",
   "python.analysis.extraPaths": [".agents/skills"],
   "editor.codeActionsOnSave": {

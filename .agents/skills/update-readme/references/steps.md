@@ -57,7 +57,7 @@ This README has several sections to keep in sync:
 
 The root README is mostly stable. Only update it when:
 
-- A new top-level namespace is added to the `@burglekitt/gmt` exports (update the "currently exports…" line and possibly the project structure tree).
+- A new top-level namespace is added to the `@northguild/gmt` exports (update the "currently exports…" line and possibly the project structure tree).
 - A new function is added that belongs in the "Use GMT instead" bullet list under the "no JavaScript Date objects" section.
 - A new package is added to the Packages table.
 

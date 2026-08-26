@@ -5,7 +5,7 @@ the 1,514 `@example` lines becomes runnable.
 
 ## Definition of done — binding for every Group B story
 
-- Widgets execute the **real** `@burglekitt/gmt`. No simulation, no `eval`, no
+- Widgets execute the **real** `@northguild/gmt`. No simulation, no `eval`, no
   reimplementation. Because `apps/docs` depends on the package via `workspace:*`, output
   can never drift from shipped behavior — that property is the whole point and must not
   be traded away for convenience.
@@ -47,11 +47,11 @@ far less than changing `"reject"` to `"earlier"` and watching the output change.
 - Distinguish the sentinel from a legitimately empty result where the two differ (e.g.
   an interval function correctly returning `[]`) — otherwise the treatment teaches the
   wrong lesson.
-- Deep-import per function (`@burglekitt/gmt/plain/...`) rather than importing the
+- Deep-import per function (`@northguild/gmt/plain/...`) rather than importing the
   package root. The exports map already exposes one level of deep import per namespace;
   root imports pull the entire surface plus `@js-temporal/polyfill` onto every page.
 - Import from the built `dist`, not source. `packages/gmt` sets
-  `customConditions: ["@burglekitt/source"]`, but matching it means configuring Vite's
+  `customConditions: ["@northguild/source"]`, but matching it means configuring Vite's
   `resolve.conditions`; letting Nx build the package first (A1's `dependsOn: ["^build"]`)
   is fewer moving parts.
 - Handle option-object parameters, not just positional strings — a playground that only

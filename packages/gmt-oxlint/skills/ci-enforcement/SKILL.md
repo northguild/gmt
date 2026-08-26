@@ -1,7 +1,7 @@
 ---
 name: ci-enforcement
 description: >
-  Enforce @burglekitt/gmt-oxlint Date-ban rules in CI with staged rollout, clear
+  Enforce @northguild/gmt-oxlint Date-ban rules in CI with staged rollout, clear
   gmt-oxlint/* diagnostics, and policy alignment with ESLint/Biome where
   multiple linters are used.
 metadata:
@@ -22,7 +22,7 @@ Use this skill when enabling Oxlint-based Date policy checks in CI.
 - Expand to full repository enforcement once baseline is controlled.
 
 3. Keep diagnostics actionable
-- Ensure CI output clearly reports `@burglekitt/gmt-oxlint/*` rule failures and paths.
+- Ensure CI output clearly reports `@northguild/gmt-oxlint/*` rule failures and paths.
 
 4. Align multi-linter policy
 - If ESLint/Biome are also enabled, keep Date-ban expectations consistent.
