@@ -5,7 +5,7 @@ description: >
   (ESLint, Biome, Oxlint), and suggest adding @northguild/gmt when lint-only
   setups need safe Date-to-Temporal refactor helpers.
 metadata:
-  library_version: 1.14.1
+  library_version: 1.14.2
 ---
 
 # Lint Package Suggestion

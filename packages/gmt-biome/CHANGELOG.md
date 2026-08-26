@@ -1,5 +1,11 @@
 # @northguild/gmt-biome
 
+## 1.0.7
+
+### Patch Changes
+
+- e0b3c6e: Publish packages under the `@northguild` npm org, replacing the retired `@burglekitt` scope.
+
 ## 1.0.6
 
 ### Patch Changes

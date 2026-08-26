@@ -1,6 +1,6 @@
 {
   "name": "@northguild/gmt",
-  "version": "1.14.1",
+  "version": "1.14.2",
   "description": "Temporal-based date and time utilities with timezone support and polyfill integration",
   "keywords": [
     "date",

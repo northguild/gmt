@@ -1,6 +1,6 @@
 {
   "name": "@northguild/gmt-biome",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "private": false,
   "description": "Shared Biome configuration for gmt projects",
   "keywords": [

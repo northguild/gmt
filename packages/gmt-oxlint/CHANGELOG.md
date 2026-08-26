@@ -1,5 +1,11 @@
 # @northguild/gmt-oxlint
 
+## 1.1.5
+
+### Patch Changes
+
+- e0b3c6e: Publish packages under the `@northguild` npm org, replacing the retired `@burglekitt` scope.
+
 ## 1.1.4
 
 ### Patch Changes

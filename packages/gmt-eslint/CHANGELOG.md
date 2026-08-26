@@ -1,5 +1,11 @@
 # @northguild/gmt-eslint
 
+## 1.0.4
+
+### Patch Changes
+
+- e0b3c6e: Publish packages under the `@northguild` npm org, replacing the retired `@burglekitt` scope.
+
 ## 1.0.3
 
 ### Patch Changes

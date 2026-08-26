@@ -1,6 +1,6 @@
 {
   "name": "@northguild/gmt-eslint",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Shared ESLint configuration for gmt projects",
   "keywords": [
     "tanstack-intent"

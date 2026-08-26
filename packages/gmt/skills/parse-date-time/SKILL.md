@@ -16,7 +16,7 @@ sources:
 metadata:
   type: core
   library: '@northguild/gmt'
-  library_version: '1.14.1'
+  library_version: '1.14.2'
 ---
 
 # Parse Date/Time Components

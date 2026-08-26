@@ -1,5 +1,11 @@
 # @northguild/gmt
 
+## 1.14.2
+
+### Patch Changes
+
+- e0b3c6e: Publish packages under the `@northguild` npm org, replacing the retired `@burglekitt` scope.
+
 ## 1.14.1
 
 ### Patch Changes
@@ -49,6 +55,7 @@
   `addDate`, `subtractDate`, `diffDate`, `diffDateAsDuration`, and the `Date`-suffixed `plain/interval/*` functions (`intervalContainsDate`, `intervalsOverlapDate`, `intervalUnionDate`, `intervalCountDate`, `splitIntervalByUnitDate`, and 13 others) now accept GMT calendar-annotated `PlainDate` strings (e.g. `"5784-06-15[u-ca=hebrew]"`, as produced by `convertDateToCalendar`) in addition to bare ISO strings. Calendar-unit arithmetic ("add 1 month") resolves in the value's own calendar — a Hebrew leap year now correctly reports 13 month boundaries and splits into 13 month-slices, not 12, and adding a month from Hebrew Adar I lands on Adar rather than being rejected as invalid input. Ordering functions (`intervalContains*`, `intervalsOverlap*`, `intervalAbuts*`, `intervalEngulfs*`, `isValidDateInterval`, `intervalOverlappingDaysDate`) accept endpoints in different calendars, since ordering and day-counting are calendar-independent; value-returning set operations (union, intersection, difference, xor, split, divide, merge) require all arguments to share one calendar and return the type's sentinel on a mismatch, since there is no principled way to pick an output calendar for a value the caller reads back as a date.
 
   **Two behavior changes, not purely additive:**
+
   - **`zoned/` now rejects any `[u-ca=...]` calendar annotation.** Before this change, `isValidZonedDateTime` and most `zoned/interval/*` functions had no gate against a calendar annotation, so a zoned string carrying one (e.g. `"2024-02-10T12:00:00-05:00[America/New_York][u-ca=hebrew]"`) was silently accepted and produced genuinely calendar-aware — but undocumented and untested — arithmetic. Calendar-system awareness is now confined to `plain/` `PlainDate` values only, for contract coherence with the string format `convertDateToCalendar` established in E1: GMT's own calendar-annotated string uses calendar-native digits, which is a different (and incompatible) convention from the ISO-digit `[u-ca=...]` shape Temporal itself accepts, so a single string could otherwise mean two different dates depending on which function received it. Any caller that was unknowingly relying on this accidental behavior will now get `""`/`false`/`null`/`[]` from the affected function instead. A follow-up story to deliberately support a GMT-shape calendar-annotated zoned string is proposed (not yet filed) in `context/roadmap/issues/E.md`'s E5 section.
   - **`duration/`'s `relativeTo` option now validates a GMT calendar-annotated `PlainDate` string instead of silently misreading it as Temporal's ISO-digit convention.** `durationAs`, `compareDurations`, and `normalizeDuration` previously passed `relativeTo` straight through to `Temporal.Duration`, so `relativeTo: "5784-06-15[u-ca=hebrew]"` (GMT's own documented calendar-annotated output shape) was silently interpreted as ISO year 5784 and produced a wrong-but-plausible number with no error. This is fixed as part of E5 (it predates this story but shares E5's parsing gate); the number these three functions return for a GMT-shape `relativeTo` argument changes for anyone who was passing one before this fix, from a silently wrong answer to the correct one.
 
@@ -64,6 +71,7 @@
   correctly overflows into January of the _next_ year — the right answer for arithmetic, but not for
   "pressing Up on a month segment shouldn't silently change the year." No composition of `addDate`
   calls can express this; the wrap boundary is a property of the field itself, not of an amount to add.
+
   - `cycleDate`/`cycleTime`/`cycleDateTime` cycle a single field of a `PlainDate`/`PlainTime`/
     `PlainDateTime` string. `cycleZoned` does the same for a `ZonedDateTime` string, and additionally
     takes `disambiguation`/`offset` (default `offset: "ignore"`, the same C3 precedent as `setZoned`/
@@ -159,6 +167,7 @@
 - 7b391a4: Add named machine-format format/parse pairs: `formatRfc2822`/`parseRfc2822` (zoned), `formatHttp`/`parseHttp` (utc), `formatSql`/`parseSql` (plain), `formatRfc3339`/`parseRfc3339` (zoned) (Story J13).
 
   These are **fixed, non-locale-adaptive grammars** — RFC 5322 and RFC 7231 mandate English weekday/month abbreviations regardless of locale, by specification — so none of the eight take a `locale` argument, unlike GMT's `Intl`-backed formatters. `""` on invalid input for every function.
+
   - `formatRfc2822`/`parseRfc2822` — RFC 5322 (RFC 2822) email `Date:` header format, e.g. `"Fri, 15 Mar 2024 14:30:00 -0400"`. Parsing accepts a 1- or 2-digit day and RFC 5322's obsolete named zones (`GMT`, `UT`, and the eight North American zones); formatting always emits a zero-padded, numeric offset.
   - `formatHttp`/`parseHttp` — RFC 7231 IMF-fixdate, e.g. `"Fri, 15 Mar 2024 14:30:00 GMT"`, for `Last-Modified`/`Date`/`Expires` headers. Strict 2-digit fields and a literal `GMT` only; the obsolete RFC 850/asctime HTTP-date forms are a documented limitation, not accepted.
   - `formatSql`/`parseSql` — ANSI SQL / ODBC datetime literal, e.g. `"2024-03-15 14:30:00"`, for `DATETIME`/`TIMESTAMP` columns without a time zone. SQL's offset-carrying `TIMESTAMPTZ` literal is out of scope.
@@ -219,6 +228,7 @@
   date-fns's `lastDayOfMonth` is not a gap this pair fills — it's already covered by GMT's existing `endOfDate(value, "month")`.
 
 - 3ecb5a9: Move `getLocaleDayOfWeek`, `getLocaleZonedDayOfWeek`, and `getHoursInZonedDay` from the `get/` namespace to `calculate/` (Story J0b):
+
   - `plain/get/getLocaleDayOfWeek.ts` → `plain/calculate/getLocaleDayOfWeek.ts`
   - `zoned/get/getLocaleZonedDayOfWeek.ts` → `zoned/calculate/getLocaleZonedDayOfWeek.ts`
   - `zoned/get/getHoursInZonedDay.ts` → `zoned/calculate/getHoursInZonedDay.ts`
@@ -232,21 +242,25 @@
 ### Minor Changes
 
 - 7d45b85: Add `intervalOverlappingDays*` — the number of distinct calendar days two intervals share (Story I1):
+
   - `intervalOverlappingDaysDate`, `intervalOverlappingDaysDateTime`, `intervalOverlappingDaysZoned`, `intervalOverlappingDaysUnix`, `intervalOverlappingDaysUtc`
 
   Returns `0` when the intervals are disjoint and `null` on invalid input. Counting is inclusive of both endpoints, matching GMT's closed-interval model: `["2024-01-01", "2024-01-01"]` overlapping itself is `1` day, not `0`. This differs from date-fns's `getOverlappingDaysInIntervals`, which rounds up elapsed 24-hour periods instead — compose `intervalCount*` over `intervalIntersection*`'s result for that behavior. There is no `Time` variant: `PlainTime` has no calendar.
 
 - a0de5fb: Add `roundingMethod` option to the `formatRelative*` family (Story I2):
+
   - `formatRelativeDate`, `formatRelativeDateTime`, `formatRelativeTime`, `formatRelativeZoned`, `formatRelativeUnix`, `formatRelativeUtc`
 
   `roundingMethod?: "floor" | "ceil" | "round"` controls how the computed distance rounds to the display unit — applied to the signed fractional value, matching date-fns's `formatDistanceStrict`. Defaults to `"round"`, matching existing behavior; no call-signature changes.
 
 - e4d5344: Add `getDstTransitions` — enumerate daylight-saving-time transition points for an IANA timezone in a given year (Story I3):
+
   - `getDstTransitions`
 
   Returns an array of `{ instant, offsetBefore, offsetAfter }` objects representing each DST transition. Returns `[]` for zones with no transitions in the requested year or on invalid input.
 
 - 5988a93: Add `getHoursInZonedDay` — the number of hours in a specific zoned calendar day (Story I4):
+
   - `getHoursInZonedDay(value: string): number | null`
 
   Returns `23` on spring-forward days, `25` on fall-back days, and `24` on normal days — or a fractional value for zones whose DST shift isn't a whole hour (e.g. `Australia/Lord_Howe`'s 30-minute shift returns `23.5`/`24.5`). Zoned-only — this is meaningless without a timezone. Returns `null` on invalid input per GMT's number-return sentinel convention.
@@ -256,6 +270,7 @@
 ### Minor Changes
 
 - a9a7c17: Add standalone, locale-aware calendar-name lookups (Story H1):
+
   - `getLocaleMonthNames(locale, style?)` — 12 Gregorian month names in calendar order
   - `getLocaleWeekdayNames(locale, style?)` — 7 weekday names in the locale's first-day order
   - `getLocaleMeridiems(locale)` — `[AM-label, PM-label]` day-period labels
@@ -263,6 +278,7 @@
   These are the GMT equivalents of Luxon's `Info.months` / `weekdays` / `meridiems`: they return locale-formatted calendar names without requiring a date value. All three delegate to the host runtime's `Intl` data and return `[]` for an invalid BCP 47 locale tag. `getLocaleWeekdayNames` uses locale-first-day ordering to stay consistent with `getLocaleDayOfWeek`.
 
 - 51c3f12: Add standalone, locale-aware Gregorian era-name lookup (Story H2):
+
   - `getLocaleEraNames(locale, style?)` — 2-element `[BCE-label, CE-label]` array
 
   This is the GMT equivalent of Luxon's `Info.eras`: it returns locale-formatted era names without requiring a date value, delegating to the host runtime's `Intl` data. Returns `[]` for an invalid BCP 47 locale tag. If a locale has no distinct BCE/CE era names, both array elements contain the same string — the sentinel is reserved for invalid input only.
@@ -284,6 +300,7 @@
   (plain), `intervalContainsUtc` (utc), `intervalContainsUnix` (unix), and
   `intervalContainsZoned` (zoned) — interval containment checks. Each supports
   two modes via an optional fourth argument:
+
   - 3-arg: `intervalContains(start, end, point)` — true when `start <= point <= end`
   - 4-arg: `intervalContains(start, end, innerStart, innerEnd)` — true when the
     inner interval is fully contained within the outer interval
@@ -292,6 +309,7 @@
   (plain), `intervalIntersectionUtc` (utc), `intervalIntersectionUnix` (unix), and
   `intervalIntersectionZoned` (zoned) — interval intersection. Each accepts two
   intervals and returns the overlapping span, or `null` when they do not overlap:
+
   - Adjacent intervals (e.g. `aEnd === bStart`) share one instant and DO overlap,
     returning a single-point span.
   - Returns `null` when intervals are disjoint with a gap, or when either interval
@@ -304,6 +322,7 @@ end: number } | null` for Unix).
   (plain), `intervalsOverlapUtc` (utc), `intervalsOverlapUnix` (unix), and
   `intervalsOverlapZoned` (zoned) — interval overlap detection. Each accepts two
   intervals and returns `true` when they share at least one instant:
+
   - Adjacent intervals (e.g. `aEnd === bStart`) are treated as overlapping because
     they share the boundary instant.
   - Returns `false` when intervals are disjoint with a gap, or when either interval
@@ -311,11 +330,13 @@ end: number } | null` for Unix).
   - Returns `false` on malformed input (never throws).
 
 - 5681f6d: Adds `intervalUnionDate`, `intervalUnionTime`, `intervalUnionDateTime` (plain), `intervalUnionUtc` (utc), `intervalUnionUnix` (unix), and `intervalUnionZoned` (zoned) — merge two intervals into their combined span when they overlap or are directly adjacent.
+
   - Overlapping or adjacent intervals return `{ start, end }` with the merged span. Adjacent intervals (e.g. `aEnd === bStart`) share one instant and ARE merged.
   - Returns `null` when intervals are disjoint with a gap, when either interval is invalid (`start > end`), or on malformed input (never throws).
   - Return shape: `{ start: string; end: string } | null` for plain/utc/zoned; `{ start: number; end: number } | null` for Unix.
 
 - afb1c0a: Add interval and range validators across plain, utc, unix, and zoned namespaces.
+
   - `isValidDateInterval`, `isValidTimeInterval`, `isValidDateTimeInterval` (plain) — positional `(start, end)` args returning `true` when both parse and `start <= end`.
   - `isValidUtcInterval`, `isValidUnixInterval`, `isValidZonedInterval` (utc, unix, zoned) — same pattern, comparing by instant for utc/zoned.
   - `isValidDateTimeRange`, `isValidTimeRange` (plain), `isValidUtcRange`, `isValidUnixRange`, `isValidZonedRange` (utc, unix, zoned) — object-param `{ value1, value2 }` shape matching the existing `isValidDateRange` convention.
@@ -323,6 +344,7 @@ end: number } | null` for Unix).
   All functions return `false` on invalid input (never throw).
 
 - 6dbb941: Add `splitIntervalByUnit*` functions across plain, utc, unix, and zoned namespaces.
+
   - `splitIntervalByUnitDate`, `splitIntervalByUnitTime`, `splitIntervalByUnitDateTime` (plain) — split an interval into sub-intervals of `amount × unit`, returning an array of `{ start, end }` records.
   - `splitIntervalByUnitUtc`, `splitIntervalByUnitUnix`, `splitIntervalByUnitZoned` (utc, unix, zoned) — same pattern adapted to each Temporal environment.
 
@@ -348,6 +370,7 @@ end: number } | null` for Unix).
 ### Minor Changes
 
 - 54d238e: Adds `isWeekend` (plain) and `isZonedWeekend` (zoned) — locale-aware weekend checks, matching react-aria's `@internationalized/date` `isWeekend(date, locale)`.
+
   - `isWeekend(value, locale)` checks an ISO `PlainDate` string; `isZonedWeekend(value, locale)` checks an ISO `ZonedDateTime` string against its own local calendar day.
   - Uses `Intl.Locale.prototype.weekInfo` to resolve which days count as the weekend for a given locale — e.g. `en-US`/most locales use Saturday/Sunday, while `he-IL`/`ar-SA` use Friday/Saturday.
   - Falls back to Saturday/Sunday if the runtime can't resolve `weekInfo` data for the locale.
@@ -356,6 +379,7 @@ end: number } | null` for Unix).
   This starts Story Group D (locale-aware calendar helpers) of the Luxon/react-aria parity roadmap.
 
 - 002deea: Adds `getLocaleDayOfWeek` (plain) and `getLocaleZonedDayOfWeek` (zoned) — locale-aware day-of-week index extraction.
+
   - `getLocaleDayOfWeek(value, locale)` returns a 0-based index where `0` = the locale's first day of week (e.g. Sunday for en-US, Monday for fr-FR, Saturday for he-IL).
   - `getLocaleZonedDayOfWeek(value, locale)` does the same for zoned ISO datetimes, reading the local calendar day.
   - Both derive the locale's first day from `Intl.Locale.prototype.weekInfo` and fall back to Monday if unavailable.
@@ -365,6 +389,7 @@ end: number } | null` for Unix).
   Completes Story Group D (locale-aware calendar helpers) of the Luxon/react-aria parity roadmap.
 
 - 317a1b8: Adds `getLocaleStartOfWeek`/`getLocaleEndOfWeek` (plain) and `getLocaleZonedStartOfWeek`/`getLocaleZonedEndOfWeek` (zoned) — locale-aware week boundaries, matching react-aria's `@internationalized/date` `startOfWeek(date, locale)`/`endOfWeek(date, locale)`.
+
   - Derives the week's first day from the locale via `Intl.Locale.prototype.weekInfo` (e.g. `en-US` weeks start Sunday, `fr-FR` weeks start Monday), instead of the existing `startOfDate`/`endOfDate`/`startOfZoned`/`endOfZoned`'s explicit, ISO-biased `weekStartsOn` option.
   - Falls back to Monday if the runtime can't resolve `weekInfo` data for the locale.
   - The zoned variants accept the same `disambiguation`/`offset` options as `startOfZoned`/`endOfZoned`, controlling DST gap/overlap resolution when the week-boundary time-of-day reset lands on an ambiguous local time.
@@ -377,6 +402,7 @@ end: number } | null` for Unix).
 ### Minor Changes
 
 - b7a9440: Adds `diffDateAsDuration`, `diffDateTimeAsDuration`, `diffZonedAsDuration`, `diffUnixAsDuration`, and `diffUtcAsDuration` — sibling functions to the existing `diffDate`/`diffDateTime`/`diffZoned`/`diffUnix`/`diffUtc`, bridging to the `duration` namespace by returning an ISO 8601 duration string (e.g. `"P1DT2H"`) instead of a single-unit number.
+
   - Each takes a single `unit` (not an array like its counterpart) to set the duration's `largestUnit` — an ISO duration string already expresses a full multi-unit breakdown via `largestUnit` alone.
   - Accepts the same `smallestUnit`/`roundingIncrement`/`roundingMode` rounding options as its counterpart (controlling the underlying difference), plus new `toStringSmallestUnit`/`fractionalSecondDigits`/`toStringRoundingMode` options controlling the precision of the rendered string itself (mirroring `parseDuration`'s options) — kept as separately-named keys since both option sets have colliding `smallestUnit`/`roundingMode` names with different Temporal types.
   - Returns `""` on invalid input, matching the `duration` namespace's string sentinel convention (rather than `null`, which its counterpart number-returning functions use).
@@ -384,6 +410,7 @@ end: number } | null` for Unix).
   This completes Story Group A (Duration) of the Luxon/react-aria parity roadmap.
 
 - 0eb2052: Adds `formatDuration` to the `duration` namespace, rendering an ISO 8601 duration string as a human-readable, locale-aware string (e.g. `"P1DT2H30M"` + `"en-US"` → `"1 day, 2 hours, and 30 minutes"`).
+
   - Built on `Intl.NumberFormat({ style: "unit" })` for per-locale unit labels and pluralization, joined via `Intl.ListFormat` — both universally available on Node 20/22/24 with no version variance, unlike `Intl.DurationFormat`, which is absent entirely on Node 20/22 (only ships natively on Node 24+). This keeps `formatDuration` free of any new runtime dependency, at the cost of not being a byte-for-byte match to native `Intl.DurationFormat` output (e.g. no `"digital"` style).
   - Accepts an optional `locale` (system default if omitted) and `{ style?: "long" | "short" | "narrow", zero?: boolean }` options.
   - Zero-valued components are omitted by default; pass `{ zero: true }` to include them. A zero-length duration (`"PT0S"`) always renders `"0 seconds"`.
@@ -395,6 +422,7 @@ end: number } | null` for Unix).
   Both operate on day/time units only — combining a pair where either operand has a nonzero years/months/weeks component returns `""`, since `Temporal.Duration.prototype.add`/`.subtract` have no `relativeTo` option to resolve calendar-unit arithmetic.
 
 - eeee737: Adds `normalizeDuration` to the `duration` namespace, rolling an ISO 8601 duration string's small units into larger ones via `Temporal.Duration.prototype.round` (e.g. `"PT90M"` + `{ largestUnit: "hour" }` → `"PT1H30M"`).
+
   - Defaults to `{ largestUnit: "auto" }` when no options are given, which reformats a day/time-only duration without promoting units — pass an explicit `largestUnit` to promote.
   - Accepts `largestUnit`, `smallestUnit`, `roundingIncrement`, `roundingMode`, and `relativeTo` options, mirroring `Temporal.Duration.prototype.round`'s options.
   - `relativeTo` is required whenever a calendar unit (year/month/week) is involved — either as the requested `largestUnit`, or because the input duration already has a nonzero year/month/week component (this applies even under the `"auto"` default). Without it in either case, returns `""`.
@@ -403,10 +431,12 @@ end: number } | null` for Unix).
   Also expands `addDuration`/`subtractDuration`'s test coverage with additional permutations (overflow-without-borrow, negative-operand cancellation, fractional-second combination, negative-result subtraction) per `context/testing-standards/index.md`'s exhaustive `it.each` coverage bar.
 
 - 6839dca: Adds a new `duration` namespace for parsing and validating ISO 8601 duration strings:
+
   - `isValidDuration` — validates an ISO 8601 duration string (e.g. `"P1DT2H30M"`) via `Temporal.Duration.from`.
   - `parseDuration` — parses and re-normalizes an ISO 8601 duration string, returning `""` on invalid input. Accepts `smallestUnit`, `fractionalSecondDigits`, and `roundingMode` options to control the precision/rounding of the output.
 
   Also extends the existing `add*`/`subtract*`/`diff*` functions across the `plain`, `zoned`, `unix`, and `utc` namespaces (`addDate`, `addDateTime`, `addTime`, `addUnix`, `addUtc`, `addZoned`, and their `subtract`/`diff` equivalents) with additional Temporal options that were previously unreachable:
+
   - `add*`/`subtract*` gain an `overflow` option (`"constrain"` (default, matches current behavior) | `"reject"`) controlling how an out-of-range arithmetic result (e.g. adding 1 month to Jan 31) is resolved — clamp to the nearest valid date, or reject and return the function's sentinel (`""`/`null`).
   - `diff*` gain `smallestUnit`, `roundingIncrement`, and `roundingMode` options to round the computed difference before it's returned, instead of always returning the exact unrounded value.
 
@@ -442,6 +472,7 @@ end: number } | null` for Unix).
 - 9868c37: Adds relative time formatters across all value types, and fills in the missing base formatters for the unix and utc namespaces.
 
   New relative formatters — all accept `locale`, `style` (`"long" | "short" | "narrow"`), `numeric` (`"auto" | "always"`), `largestUnit`, and an optional `reference` anchor; auto-select the largest sensible unit when `largestUnit` is omitted; return `""` for invalid input:
+
   - `formatRelativeDate` — relative plain date (e.g. `"3 days ago"`, `"next year"`)
   - `formatRelativeTime` — relative plain time (e.g. `"30 minutes ago"`)
   - `formatRelativeDateTime` — relative plain datetime (e.g. `"in 2 hours"`)
@@ -450,6 +481,7 @@ end: number } | null` for Unix).
   - `formatRelativeUtc` — relative time from a UTC ISO string
 
   New base formatters:
+
   - `formatUnix` — locale-aware formatting for Unix epochs (ms or seconds); accepts `timeZone` (including `"local"`) and `includeTimeZoneName`
   - `formatUtc` — locale-aware formatting for UTC ISO strings; accepts `timeZone` and `includeTimeZoneName`
 
