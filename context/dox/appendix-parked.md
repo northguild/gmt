@@ -8,6 +8,12 @@ several of them cost real investigation and one of them is a hard technical impo
 that is easy to misread as solvable. Second, so that parking these is a recorded decision
 rather than a silent omission.
 
+**Re-audited 2026-08-26.** One section that lived here — the generative-UI widget
+registry — has been **promoted out** to `DOX-C3b` by explicit user decision; see §2 below
+for the pointer. The reactive-3D-scene section has been **partially promoted**: its
+live-data idea is now `DOX-E1a`, the interactive globe, while the full-bleed-behind-glass
+version it originally specified stays parked for the reasons recorded in §3.
+
 **Read this before proposing any of it.** If something here is picked up later, promote
 it into a numbered story in `story-groups.md` and `tracker.md` rather than working
 from this file directly.
@@ -70,57 +76,37 @@ support before committing — this was assessed in mid-2026.
 
 ---
 
-## 2. Generative-UI widget registry
+## 2. Generative-UI widget registry — PROMOTED to DOX-C3b (2026-08-26)
 
-The superseded plan's central mechanism: rather than writing a code block, the model
-emits a **function call** that the client maps to a real widget executing actual
-`@northguild/gmt` code.
+**No longer parked.** By explicit user decision, this is now story `DOX-C3b` (issue
+#139, Tier 6) — see `issues/DOX-C.md`. It became viable to schedule for the same reason
+it was parked in the first place: Tier 2 now ships the real widgets (the playground and
+the DST, interval, and converter inspectors, `DOX-B1a`/`DOX-B2a`–`d`) _before_ the chat is
+built, so `DOX-C3b` is a typed registry over widgets that already exist rather than a
+combined widget-plus-generative-UI build.
 
-### Why it is parked
-
-The idea is genuinely good, and **most of its value is already delivered without a model
-at all** by Story Group DOX-B. DOX-B1's `<Playground>` runs the real library; DOX-B2 embeds one into
-every one of the 1,514 examples. A reader gets live, runnable, sentinel-aware widgets on
-every reference page, deterministically, with no API key and no latency.
-
-What the generative version adds on top is that the model chooses _which_ widget to show
-for a free-form question. That is a real increment, but it is a small one over "the
-answer cites a page that already has a live playground on it" — which is exactly what
-Story Group DOX-C produces. It is also substantially more machinery: a widget registry with
-typed params, Gemini function declarations, and partial-argument streaming.
-
-### The finding worth preserving
-
-Streamed function-call arguments are **partial JSON, which is by definition invalid
-JSON** until the call completes. Never `JSON.parse` a raw chunk — a partial-JSON parser
-is required. Additionally, if a provider's fine-grained tool streaming is used, note that
-some do not guarantee valid JSON even at the _final_ chunk, so the parser must handle a
-malformed terminal object gracefully rather than only handling truncation.
-
-### What was specified
-
-A fixed, typed widget registry (never `eval`), registered as Gemini function
-declarations, with a generic `showPlayground({ fn, args })` plus purpose-built widgets: a
-timezone converter, a DST-transition inspector seeded from `docs/dst-disambiguation.md`,
-an interval/duration visualizer, a regex tester for the 16 exported `regex` consts, and a
-non-executing signature card. Optionally a command palette for jumping to a function by
-name.
-
-The DST inspector is the one worth revisiting first if this is ever picked up — it
-surfaces genuinely non-obvious documented behavior (the `offset` parameter being
-effectively inert on some functions, gap-versus-overlap resolution differing between
-construction and arithmetic) that a generic playground papers over. It could also be
-built as a plain Group B widget with no model involved.
+The two findings originally recorded here — that streamed tool-call arguments are
+partial JSON and must never be raw-`JSON.parse`d, and that the registry must be fixed
+and typed with no `eval` — are preserved verbatim in `issues/DOX-C.md` under `DOX-C3b`.
+Read them there; this entry is now a pointer, not a specification.
 
 ---
 
-## 3. Full-bleed conversation-reactive 3D scene
+## 3. Full-bleed conversation-reactive 3D scene — PARTIALLY PROMOTED (2026-08-26)
 
 The superseded plan's DOX-D1: a full-bleed `@octanejs/three` canvas behind every glass panel,
 subscribing to the active namespace — wireframe globe for `zoned`/`utc`/`unix`, analog
 clockface for `plain`, crossfading between them, with a blended idle state.
 
-### Why it is parked
+**Its live-data idea is promoted.** `DOX-E1a` (issue #142, Tier 4) is now an interactive
+globe — click a zone, read live time, offset, and DST state — by explicit user decision.
+That is this section's core idea, taken out of "decoration" and made a real feature.
+
+**Its full-bleed-behind-glass staging stays parked.** The three reasons below are exactly
+why: promoting the globe to interactive did not, and must not, also promote it to living
+behind every panel. `DOX-E1a` still lives on the landing page only.
+
+### Why the full-bleed staging stays parked
 
 It made the scene load-bearing in three ways simultaneously:
 
@@ -133,11 +119,14 @@ It made the scene load-bearing in three ways simultaneously:
    streaming **and** border animation, together, verified on integrated graphics. Each
    is fine alone; the combination is what drops frames.
 
-Story DOX-E1 scopes the globe to a landing-page hero, which removes all three at once.
-Nothing must stay legible over it, no panel samples it, and there is no combined worst
-case. That is a large reduction in risk for a small reduction in effect.
+`DOX-E1a` scopes the globe to a landing-page hero, which removes all three at once —
+even now that the globe is interactive rather than decorative. Nothing must stay legible
+over it, no panel samples it, and there is no combined worst case. **This is the one
+part of the 2026-08-21 draft's scoping decision that the 2026-08-26 rewrite did not
+reverse**, and it should not be reversed casually: promoting interactivity is cheap;
+promoting staging reintroduces the exact three-way coupling this section documents.
 
-### If it is ever picked up
+### If the full-bleed staging is ever picked up
 
 The honest lever when the frame budget cannot be met is **scene fidelity** — fewer
 meridians, lower render scale, slower rotation — not removing the glass, which is core
@@ -148,3 +137,30 @@ Also note this was specified against `@octanejs/three` and `@octanejs/drei`. As 
 2026-08-21 `@octanejs/drei` was at `0.0.9` with 43 `octane` releases in roughly eight
 weeks. Re-verify the whole ecosystem's maturity before depending on it; see
 [overview.md](overview.md) §1.
+
+---
+
+## 4. Candidates raised and declined in the 2026-08-26 spike
+
+Three "amazing tier" candidates were evaluated alongside the DST Transition Inspector
+(now `DOX-B2b`) and **declined** rather than scheduled. Recorded so they are not
+re-proposed without knowing they were already considered.
+
+- **A `domain_map.yaml`-driven discovery page**, distinct from a scenario index. Declined
+  as a separate concept because `DOX-A4d` (Tier 5) already builds a mentor-voiced index
+  driven by the same `domain_map.yaml` — a second, differently-framed discovery page
+  would compete with it rather than add coverage. If `DOX-A4d`'s index turns out not to
+  serve the "which function do I need" case well in practice, revisit as a distinct page
+  rather than folding more into `DOX-A4d`.
+- **Per-page generated OG images.** A `satori`/`astro-og`-style generated link-preview
+  image per reference page, so a shared reference link looks deliberate rather than like
+  a raw URL. Declined for this rewrite as a nice-to-have with no correctness or teaching
+  value — it does not fail any of this epic's core goals (search, link, read, teach) by
+  its absence. Revisit if the site's external sharing volume ever makes it worth the
+  build.
+- **A docs feedback / analytics loop.** Nothing in any tier currently tells the team
+  whether the docs work — no "was this helpful", no search-with-no-results log, no 404
+  log. Declined for this rewrite because it is orthogonal to every tier's Definition of
+  Done and would need its own privacy/hosting decisions independent of the rest of the
+  epic. Worth a dedicated look once Tier 0 has real traffic to measure, since Group D's
+  chrome work in particular is currently styled on faith rather than data.
