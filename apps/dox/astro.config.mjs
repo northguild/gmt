@@ -2,9 +2,10 @@
 import starlight from "@astrojs/starlight";
 import { defineConfig } from "astro/config";
 
-// Placeholder origin until DOX-A2 provisions the Cloudflare hostname. `site` must
-// be set or @astrojs/sitemap (a Starlight dependency) warns on every build.
-const SITE = "https://gmt.northguild.dev";
+// DOX-A2 deploys to Cloudflare Workers' default *.workers.dev subdomain (no
+// custom domain yet). `site` must be set or @astrojs/sitemap (a Starlight
+// dependency) warns on every build.
+const SITE = "https://gmt-dox.northguild.workers.dev";
 
 export default defineConfig({
   site: SITE,

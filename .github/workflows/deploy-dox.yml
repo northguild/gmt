@@ -1,0 +1,52 @@
+name: Deploy Dox
+
+on:
+  push:
+    branches:
+      - main
+
+# An in-flight deploy should never be cancelled mid-publish (unlike ci.yml's
+# cancel-in-progress: true, which is fine for tests but wrong for deploys).
+concurrency:
+  group: deploy-dox-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read # deployments: write is only needed when passing gitHubToken to
+  # wrangler-action to create Pages deployment records; this deploys a plain Worker
+  # and never passes gitHubToken, so contents: read alone is sufficient.
+
+jobs:
+  deploy:
+    name: Build & deploy apps/dox
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Approve pnpm build scripts
+        run: pnpm approve-builds --all
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build apps/dox
+        run: pnpm exec nx run dox:build
+
+      - uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/dox
+          command: deploy
+          wranglerVersion: "4.126.0"

@@ -192,6 +192,31 @@ see overview.md §7.
 - The workflow does not run on pull requests from forks with write permissions.
 ```
 
+**Corrections found while implementing (2026-08-26).** Full detail and evidence in
+`.agents/dox/tier0-infra.md`; that pack is authoritative where it disagrees with this
+issue.
+
+| Claim above                                                 | Reality                                                                                                                                                                                                                         |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `assets` binding: `directory`, `binding: "ASSETS"`, `not_found_handling`, no `main` | Cloudflare's own docs: *"Omit the ASSETS binding if the Worker does not have a main script."* A binding with nothing to consume it is inert. Shipped `wrangler.jsonc` has **no `binding`** — it returns in Tier 6 alongside the `main` script that reads it |
+| (implicit) `nx run docs:build` / project named `docs`        | The Nx project has been named **`dox`** since `DOX-A1`, not `docs`. Every command in the deploy workflow uses `dox`. `dox-tester.md`'s Tier-0 gate still says `docs` — flagged there, not fixed as part of this story         |
+| —                                                             | **New:** adding `wrangler` as a devDependency required a new `pnpm-workspace.yaml` `allowBuilds` entry (`workerd: true`) — `workerd`'s own `package.json` declares a `postinstall` pnpm blocks by default. Lockfile regenerated in the same commit |
+
+**Decisions recorded:** Worker name `gmt-dox`, deployed to the default `*.workers.dev`
+subdomain — no custom domain at this tier. Deploy triggers on every push to `main` (no
+path filtering); the workflow carries no `pull_request` trigger at all, which is the
+mechanism satisfying the "does not run on PRs from forks" line structurally rather than
+via a runtime guard. `astro.config.mjs`'s placeholder `SITE` constant is left as-is
+pending a fast-follow commit once the real `workers.dev` subdomain is confirmed
+post-provisioning.
+
+**Status at end of story:** workflow, `wrangler.jsonc`, and supporting config are built
+and verified everywhere possible without live Cloudflare credentials (cold-cache build,
+`wrangler deploy --dry-run`, YAML/schema validation). `CLOUDFLARE_API_TOKEN` and
+`CLOUDFLARE_ACCOUNT_ID` are not yet provisioned, so the three DoD lines requiring a live
+deployed site remain unverified until the user completes Cloudflare provisioning and a
+push to `main` triggers the first real deploy.
+
 ---
 
 ### DOX-A3a — Reference generator

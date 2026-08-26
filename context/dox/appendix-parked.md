@@ -164,3 +164,29 @@ re-proposed without knowing they were already considered.
   Done and would need its own privacy/hosting decisions independent of the rest of the
   epic. Worth a dedicated look once Tier 0 has real traffic to measure, since Group D's
   chrome work in particular is currently styled on faith rather than data.
+
+---
+
+## 5. Re-evaluate AI model provider(s) and Tanstack AI when `DOX-C1` is planned
+
+Raised by the user during `DOX-A2` planning (2026-08-26), while confirming Cloudflare
+deploy details — explicitly out of scope for `DOX-A2` (a pure static-site deploy story,
+20 stories before `DOX-C1`) and deferred rather than researched then.
+
+- A prior Gemini-based chat flow exists from a sibling repo, built "many months ago." The
+  user flagged it may be stale — the AI landscape moves fast, and cheaper/better free-tier
+  options may now exist worth comparing against it.
+- The user also asked whether "Tanstack AI" or similar newer tooling would fit better than
+  whatever the sibling repo used.
+- **A concrete new fact surfaced mid-session, not yet evaluated:** the user created a
+  Google AI Studio API key and added it to `apps/dox/.env` as
+  `NORTHGUILD_GMT_GEMINI_API_KEY` (confirmed gitignored via `.gitignore:57`, not tracked).
+  This is a real credential sitting in the repo now — when `DOX-C1` is planned, decide
+  deliberately whether Gemini is still the right call before wiring it up, rather than
+  defaulting to it because the key already exists.
+
+When `DOX-C1` is planned: re-derive current free-tier model options (Cloudflare Workers AI
+is a natural first candidate given the Worker is already the deploy target — same-origin,
+no separate API key management), and evaluate Tanstack AI against whatever the corpus/
+retrieval shape from `DOX-A3a`/`DOX-A3b` actually looks like by then, rather than assuming
+either now.

@@ -245,21 +245,112 @@ surprising thing about the library.
 
 ---
 
-## `DOX-A2` notes (not yet started)
+## `DOX-A2` notes
 
-- `wrangler.jsonc` with an `assets` binding: `directory: "./dist"`, `binding: "ASSETS"`,
-  `not_found_handling: "404-page"`. **No `main`** — assets-only until Tier 6 adds `/api/*`.
-- One Worker serves both the site and, later, `/api/*` in the same isolate. This removes
-  CORS entirely, the second pipeline, and `DOX-C1`'s corpus-location question.
-- **GitHub Pages was never enabled on this repo** (`gh api repos/northguild/gmt/pages` →
-  404 as of 2026-08-26), so there is nothing to migrate away from.
-- **A Cloudflare account is a hard dependency for shipping the MVP at all**, not just for
-  the eventual chat. Confirm account access and that a token can be provisioned _before_
-  starting.
-- Verify `dependsOn: ["^build"]` actually orders the build correctly in CI, where the Nx
-  cache is cold.
-- Pagefind runs only in the production build, so the deployed site is the first place search
-  can be tested.
+**Re-verified against the live repo and Cloudflare's own current docs on 2026-08-26,
+during `DOX-A2` planning.** The issue's `assets` config is wrong in one specific way —
+see finding 1 below.
+
+### 1. `binding: "ASSETS"` with no `main` is inert — omit it
+
+The issue spec says: `directory: "./dist"`, `binding: "ASSETS"`, `not_found_handling:
+"404-page"`, no `main`. Cloudflare's own migration guide (verified via ctx7,
+`/websites/developers_cloudflare_workers`, "Configure Workers static asset directory"):
+
+> "Omit the ASSETS binding if the Worker does not have a main script."
+
+A `binding` exists so a Worker's own script can read `env.ASSETS`. With no `main` script,
+nothing consumes the binding — it does nothing. The confirmed minimal config for this
+tier:
+
+```jsonc
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "gmt-dox",
+  "compatibility_date": "2026-08-26",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "404-page",
+  },
+}
+```
+
+Add `binding: "ASSETS"` back in Tier 6, alongside the `main` script that will actually
+read it for `/api/*`. `compatibility_date` and `name` are required top-level fields
+regardless of assets-only status — the issue's snippet omitted them.
+
+One Worker serves both the site and, later, `/api/*` in the same isolate. This removes
+CORS entirely, the second pipeline, and `DOX-C1`'s corpus-location question.
+
+### 2. The project is named `dox`, not `docs`
+
+`DOX-A1` landed `apps/dox/project.json` with `"name": "dox"` (not `"docs"` as the issue
+text and `dox-tester.md`'s Tier-0 gate say), and root scripts are `dox:dev` / `dox:build`
+/ `dox:preview`. Use `dox` in every Nx command (`pnpm exec nx run dox:build`, `nx show
+projects --with-target build`, etc.) — `docs` will resolve to nothing. `dox-tester.md`
+needs a one-line correction to match; not fixed as part of `DOX-A2` itself.
+
+### 3. Starlight ships a default 404 page automatically
+
+Confirmed via ctx7 (`/withastro/starlight`): Starlight injects a default 404 route with
+no config needed. `dist/404.html` exists in the build output without adding
+`src/content/docs/404.md`, so `not_found_handling: "404-page"` has something to serve
+out of the box.
+
+### 4. No Cloudflare secrets exist on the repo yet
+
+`gh secret list` returned empty as of 2026-08-26 — `CLOUDFLARE_API_TOKEN` and
+`CLOUDFLARE_ACCOUNT_ID` are not configured. **This is a hard dependency for shipping the
+MVP at all**, not just for the eventual chat. The user provisions these personally
+(credential-bearing steps, not something an agent does): create a Cloudflare account,
+note the Account ID, create an API token scoped to that one account via the "Edit
+Cloudflare Workers" template, then `gh secret set CLOUDFLARE_API_TOKEN` / `gh secret set
+CLOUDFLARE_ACCOUNT_ID`. Until this is done, the live-deploy DoD lines (live URL, links
+resolve, Pagefind returns results) are correctly "not verified," not failed.
+
+### 5. `wrangler-action@4.0.0` exact usage (verified via ctx7)
+
+```yaml
+permissions:
+  contents: read # deployments: write is only needed when passing gitHubToken to create
+  # Pages deployment records — this deploys a plain Worker and never passes gitHubToken.
+
+steps:
+  - uses: cloudflare/wrangler-action@v4
+    with:
+      apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      workingDirectory: apps/dox
+      command: deploy
+      wranglerVersion: "4.126.0" # pin exact, matching the local devDependency
+```
+
+Decided: Worker name `gmt-dox`, deployed to the default `*.workers.dev` subdomain (no
+custom domain yet). Deploy trigger is every push to `main` (no path filtering — Nx
+caching keeps unaffected builds fast, and `wrangler deploy` is idempotent). No
+`pull_request` trigger at all, which trivially satisfies the DoD's "does not run on PRs
+from forks" line rather than needing a runtime guard.
+
+`astro.config.mjs`'s `SITE` constant is a placeholder (`https://gmt.northguild.dev`) that
+`DOX-A1` left for this story. Since the decision is `workers.dev`, not a custom domain,
+the real URL (`https://gmt-dox.<subdomain>.workers.dev`) is only knowable once the user's
+account subdomain is confirmed post-provisioning — left as a fast-follow commit, not a
+blocker (the placeholder still satisfies `@astrojs/sitemap`'s requirement that `site` be
+set, so build/lint/typecheck are unaffected).
+
+**GitHub Pages was never enabled on this repo** (`gh api repos/northguild/gmt/pages` →
+404, re-confirmed 2026-08-26), so there is nothing to migrate away from.
+
+### Remaining items
+
+- Verify `dependsOn: ["^build", "generate"]` actually orders the build correctly in CI,
+  where the Nx cache is cold — the deploy workflow's own build step is the first place
+  this runs against a genuinely cold cache in an environment the team doesn't control.
+- Pagefind runs only in the production build, so the deployed site is the first place
+  search can be tested.
+- Adding `wrangler` as a devDependency may need a new `pnpm-workspace.yaml` allowBuilds
+  entry (risk #2 below — `workerd` sometimes ships a postinstall). Verify during install;
+  if needed, regenerate the lockfile in the same commit.
 
 ---
 

@@ -54,3 +54,5 @@ apps/dox/.astro/
 apps/dox/dist/
 apps/dox/src/generated/
 apps/dox/src/content/docs/reference/
+apps/dox/.env
+apps/dox/.wrangler/
