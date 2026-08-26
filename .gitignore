@@ -47,3 +47,10 @@ __pycache__/
 .pytest_cache/
 .venv/
 *.egg-info/
+
+# Astro docs site (apps/dox)
+# NOTE: apps/dox/dist is already covered by the unanchored `dist/` rule above.
+apps/dox/.astro/
+apps/dox/dist/
+apps/dox/src/generated/
+apps/dox/src/content/docs/reference/

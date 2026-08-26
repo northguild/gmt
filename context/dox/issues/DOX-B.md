@@ -9,7 +9,7 @@ becomes runnable, plus three purpose-built inspectors nothing else in this space
 ## Definition of done — binding for every story in this file
 
 - Widgets execute the **real** `@northguild/gmt`. No simulation, no `eval`, no
-  reimplementation. Because `apps/docs` depends on the package via `workspace:*`, output
+  reimplementation. Because `apps/dox` depends on the package via `workspace:*`, output
   can never drift from shipped behavior — that property is the whole point and must not
   be traded away for convenience.
 - Islands hydrate `client:visible`, never `client:load`.

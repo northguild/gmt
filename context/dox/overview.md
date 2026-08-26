@@ -108,7 +108,7 @@ past:
   generator knows anyway.
 - **Astro 7 raises the Node floor.** `astro@7.2.7` requires `node >=22.12.0`; the repo
   root declares `engines: >=20 <25`. `.nvmrc` is `24` and CI runs Node 22 and 24, so CI is
-  unaffected — but `apps/docs` must declare its own `engines`, and **a local shell may
+  unaffected — but `apps/dox` must declare its own `engines`, and **a local shell may
   well be on Node 20**, which is the first wall DOX-A1 hits. `nvm use` before starting.
 - **`@astrojs/starlight@0.41.9` peers on `astro ^7.0.2` _and_
   `@astrojs/markdown-remark ^7.2.0`** — the second peer is easy to miss. Verified
@@ -172,7 +172,7 @@ Recorded so these are not re-litigated:
 ## 2. Architecture
 
 ```text
-apps/docs/                  Astro 7 + @astrojs/starlight 0.41 — a real multi-page site
+apps/dox/                  Astro 7 + @astrojs/starlight 0.41 — a real multi-page site
   ├── astro.config.mjs
   ├── project.json                    explicit Nx targets (see §4.3)
   ├── wrangler.jsonc                  assets binding → dist/; /api/* once C exists
@@ -215,7 +215,7 @@ That shared artifact is the load-bearing idea. The superseded plan built a corpu
 model only; here the corpus, the site, the AI surface and the widget seeds are all the
 same extraction, which means they cannot drift.
 
-Widgets run the **real** library — `apps/docs` depends on `@northguild/gmt` via
+Widgets run the **real** library — `apps/dox` depends on `@northguild/gmt` via
 `workspace:*`, so a playground's output is never simulated and can never drift from
 shipped behavior.
 
@@ -549,9 +549,9 @@ budget — it is still one canvas on one page. What remains:
 3. **`oxlint.config.js`** — note the **`.js` extension**; the superseded plan said
    `oxlint.config.ts`, which does not exist. `files.include` currently lists
    `packages/**`, `docs/**`, `context/**`, `scripts/**`; add `apps/**`. Also add
-   `apps/docs/dist`, `apps/docs/.astro`, and the generated reference directory to
+   `apps/dox/dist`, `apps/dox/.astro`, and the generated reference directory to
    `files.ignore` — generated MDX and `.astro` files should not be linted.
-4. **`apps/docs/project.json`** — **required, unlike `packages/*`.** Nx infers
+4. **`apps/dox/project.json`** — **required, unlike `packages/*`.** Nx infers
    `build`/`typecheck` from `@nx/js/typescript` keyed on the presence of
    `tsconfig.build.json`, which an Astro app will not have. Declare `build`, `dev`, and
    `typecheck` explicitly, with `dependsOn: ["^build"]` so `@northguild/gmt` is built
@@ -559,7 +559,7 @@ budget — it is still one canvas on one page. What remains:
 
 Two more constraints:
 
-- **`apps/docs` must not extend `tsconfig.base.json`.** The base sets
+- **`apps/dox` must not extend `tsconfig.base.json`.** The base sets
   `composite: true`, `emitDeclarationOnly: true`, `module: nodenext`, and
   `customConditions: ["@northguild/source"]` — all wrong for an Astro app. Extend
   `astro/tsconfigs/strict` instead.
@@ -571,14 +571,14 @@ Two more constraints:
   see §1: the exports map sets `"./plain/*/*": null`, and the namespace barrels re-export
   the 2.98 MB polyfill.
 
-Node `>=22.12` (Astro 7's floor — declare it on `apps/docs`), pnpm `10.32.1`. **Check the
+Node `>=22.12` (Astro 7's floor — declare it on `apps/dox`), pnpm `10.32.1`. **Check the
 local shell before starting `DOX-A1`** — `.nvmrc` is `24`, but a shell can easily be on an
 older Node that predates Astro 7's floor; `nvm use` first.
 
 **CI classification note.** `.github/workflows/ci.yml`'s `determine-affected` job
 classifies changes by grepping `^packages/gmt/`. Anything under `apps/**` lands in
 `non_gmt_changed` and runs the `tests` job, not the `gmt-matrix` job — confirm that is the
-intended routing for `apps/docs` changes in `DOX-A1` rather than leaving it accidental.
+intended routing for `apps/dox` changes in `DOX-A1` rather than leaving it accidental.
 
 ---
 
@@ -617,7 +617,7 @@ work into 13 issues: `#132` (`DOX-A3`, Tier 0 + 1), `#133` (`DOX-A4`, Tier 1 + 5
 and `#136` (`DOX-B1`/`DOX-B2`, both Tier 2 but `DOX-B1b` lands after `DOX-B2a`–`d`). **An
 issue closes when its last sub-story lands, not its first** — see `tracker.md`.
 
-Unlike `context/roadmap/`, these stories do **not** publish to npm — `apps/docs` is
+Unlike `context/roadmap/`, these stories do **not** publish to npm — `apps/dox` is
 private. No changesets are needed unless a story also modifies `packages/gmt`.
 
 ---

@@ -1,8 +1,23 @@
 packages:
   - 'packages/*'
+  - 'apps/*'
 allowBuilds:
   esbuild: true
   nx: true
 overrides:
   axios@>=1.0.0 <1.15.0: '>=1.15.0'
   follow-redirects@<=1.15.11: '>=1.16.0'
+packageExtensions:
+  # Upstream bug: @astrojs/mdx@7.0.8's dist/satteri/index.js imports bare
+  # `satteri` without declaring it. It resolves by accident under npm/yarn flat
+  # hoisting, but not under pnpm's strict layout. pnpm normally papers over this
+  # via its default hoist to .pnpm/node_modules, but two satteri versions
+  # (0.9.5 and 0.10.5) are in the tree, so pnpm hoists neither and the import
+  # fails outright at `astro build`.
+  #
+  # Declaring it here pins the same range @astrojs/markdown-satteri uses, rather
+  # than hoisting an arbitrary one of the two. Remove once @astrojs/mdx > 7.0.8
+  # declares its own dependency.
+  '@astrojs/mdx':
+    dependencies:
+      satteri: '^0.10.3'

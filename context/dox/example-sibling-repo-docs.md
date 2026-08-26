@@ -44,7 +44,7 @@ gmt/
 │  └─ gmt-oxlint/
 │     └─ skills/core/SKILL.md
 │
-├─ apps/docs/                    # the one docs site
+├─ apps/dox/                    # the one docs site
 │  ├─ src/
 │  │  ├─ app/
 │  │  │  ├─ layout.tsx           # Nextra Layout + <Chat /> mounted globally
@@ -90,7 +90,7 @@ Package manager is **pnpm workspaces**; every docs command is run from the repo 
 ### Next.js config (static export + GitHub Pages)
 
 ```js
-// apps/docs/next.config.mjs
+// apps/dox/next.config.mjs
 import nextra from "nextra";
 const withNextra = nextra({});
 const isProduction = process.env.NODE_ENV === "production";
@@ -462,7 +462,7 @@ The net effect: **a hallucinated link degrades to plain text instead of a 404.**
 | Name                    | Where it lives                                    | Secret?              | Purpose                                               |
 | ----------------------- | ------------------------------------------------- | -------------------- | ----------------------------------------------------- |
 | `GEMINI_API_KEY`        | Cloudflare secret store (`wrangler secret put`)   | **Yes**              | Injected by the worker runtime per request            |
-| `GEMINI_API_KEY`        | `apps/docs/.env.local` → `worker/.dev.vars`       | **Yes** (gitignored) | Local `wrangler dev` only                             |
+| `GEMINI_API_KEY`        | `apps/dox/.env.local` → `worker/.dev.vars`        | **Yes** (gitignored) | Local `wrangler dev` only                             |
 | `GEMINI_WORKER_URL`     | GitHub Actions **variable**, `.env.local` locally | No                   | Which worker the site talks to; baked into the bundle |
 | `CLOUDFLARE_API_TOKEN`  | GitHub Actions **secret**                         | **Yes**              | `wrangler deploy` in CI                               |
 | `CLOUDFLARE_ACCOUNT_ID` | GitHub Actions **secret**                         | **Yes**              | `wrangler deploy` in CI                               |
@@ -491,7 +491,7 @@ Root aliases:
   "docs:dev-local": "pnpm docs:sync-version && pnpm --filter docs run dev:local:watch",
   "docs:build": "pnpm docs:sync-version && pnpm --filter docs build",
   "docs:test": "pnpm --filter docs test",
-  "docs:sync-version": "node ./scripts/sync-docs-version.mjs && biome format ./apps/docs/src/lib/site-meta.ts --write"
+  "docs:sync-version": "node ./scripts/sync-docs-version.mjs && biome format ./apps/dox/src/lib/site-meta.ts --write"
 }
 ```
 
@@ -522,12 +522,12 @@ because the Next.js build consumes `docs-routes.generated.ts`. Wiring it into `p
 
 Two path-filtered workflows on push to `main`:
 
-**`docs-deploy.yml`** — triggers on `docs/**` (in a monorepo: `apps/docs/**`, plus
+**`docs-deploy.yml`** — triggers on `docs/**` (in a monorepo: `apps/dox/**`, plus
 `packages/*/skills/**` and the docs-relevant package.json files, since those feed the AI context).
 Runs `pnpm docs:test` → `pnpm docs:build` with `GEMINI_WORKER_URL: ${{ vars.GEMINI_WORKER_URL }}` →
-`upload-pages-artifact` (`apps/docs/out`) → `deploy-pages`. Uses `concurrency: { group: pages }`.
+`upload-pages-artifact` (`apps/dox/out`) → `deploy-pages`. Uses `concurrency: { group: pages }`.
 
-**`worker-deploy.yml`** — triggers on `apps/docs/worker/**`. Runs worker tests → `worker:build` →
+**`worker-deploy.yml`** — triggers on `apps/dox/worker/**`. Runs worker tests → `worker:build` →
 `wrangler deploy` with the two Cloudflare secrets.
 
 > **Monorepo gotcha:** the worker's prompt embeds docs content, so a _docs-only_ change should also
@@ -553,7 +553,7 @@ be faked.
 
 ## 12. Adaptation checklist for `gmt`
 
-1. Scaffold `apps/docs` with Nextra 4 + `output: "export"`, `basePath: "/gmt"`.
+1. Scaffold `apps/dox` with Nextra 4 + `output: "export"`, `basePath: "/gmt"`.
 2. Lay out `src/app/docs/{gmt,biome,eslint,oxlint}` with `_meta.ts` per level.
 3. Port `src/chat/` wholesale — it's provider-shaped only at `parseGeminiSseLine` and the worker's
    role mapping.

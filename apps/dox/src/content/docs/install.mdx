@@ -1,0 +1,73 @@
+---
+title: Install
+description: Add @northguild/gmt to your project, and what the package exports.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+import { gmtVersion } from "~/generated/versions";
+
+Latest release: **v{gmtVersion}**
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+
+```bash
+pnpm add @northguild/gmt
+```
+
+  </TabItem>
+  <TabItem label="npm">
+
+```bash
+npm install @northguild/gmt
+```
+
+  </TabItem>
+  <TabItem label="yarn">
+
+```bash
+yarn add @northguild/gmt
+```
+
+  </TabItem>
+  <TabItem label="bun">
+
+```bash
+bun add @northguild/gmt
+```
+
+  </TabItem>
+</Tabs>
+
+## What you get
+
+The package exports seven top-level namespaces:
+
+```typescript
+import {
+  Temporal,
+  duration,
+  plain,
+  zoned,
+  unix,
+  utc,
+  regex,
+} from "@northguild/gmt";
+```
+
+| Namespace  | What it covers                                              |
+| ---------- | ----------------------------------------------------------- |
+| `Temporal` | Re-exported from `@js-temporal/polyfill`                    |
+| `duration` | ISO 8601 duration string parsing, validation, and arithmetic |
+| `plain`    | Timezone-free helpers                                       |
+| `zoned`    | Timezone-aware helpers                                      |
+| `unix`     | Unix epoch (seconds or milliseconds) helpers                |
+| `utc`      | UTC instant helpers                                         |
+| `regex`    | Low-level regex building blocks                             |
+
+You can also import members directly from the package root:
+
+```typescript
+import { addDate, getNow, formatRelativeZoned } from "@northguild/gmt";
+```

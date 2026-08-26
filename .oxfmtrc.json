@@ -46,6 +46,19 @@
         "**/*.tsbuildinfo",
         "**/out/**"
       ]
+    },
+    {
+      "files": ["apps/**/*.{ts,tsx,js,jsx,mjs,json}"],
+      "excludeFiles": [
+        "**/node_modules/**",
+        "**/dist/**",
+        "**/.nx/**",
+        "**/.astro/**",
+        "**/coverage/**",
+        "**/*.tsbuildinfo",
+        "**/out/**",
+        "apps/dox/src/generated/**"
+      ]
     }
   ]
 }

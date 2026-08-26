@@ -1,0 +1,75 @@
+---
+title: "@northguild/gmt"
+description: Give Me Temporal. A Temporal-first date and time library with a strict string-in, string-out contract and no Date object anywhere.
+template: splash
+hero:
+  tagline: ISO 8601 strings in. Strings, numbers, booleans, or arrays out. No <code>Date</code>, anywhere.
+  actions:
+    - text: Install
+      link: /install/
+      icon: right-arrow
+    - text: Core Rules
+      link: /core-rules/
+      variant: minimal
+    - text: View on GitHub
+      link: https://github.com/northguild/gmt
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+import { gmtVersion } from "~/generated/versions";
+
+Current release: **v{gmtVersion}**
+
+`@northguild/gmt` wraps `@js-temporal/polyfill` behind a smaller, more opinionated API
+aimed at the cases application code actually hits: arithmetic, comparison, parsing,
+formatting, unix conversions, timezone conversion, and validation.
+
+## Agent prompt
+
+Paste this into your coding agent before it touches a date or time:
+
+```
+You are working with the @northguild/gmt library — a Temporal-first date/time library
+for JavaScript. Install @northguild/gmt (and, if the user wants lint enforcement,
+whichever of @northguild/gmt-eslint, @northguild/gmt-oxlint, or @northguild/gmt-biome
+matches their toolchain).
+
+Every one of these packages ships its own skill files. After installing, read them
+before writing any code:
+
+- node_modules/@northguild/gmt/skills/ — API surface, naming conventions, and Temporal
+  patterns, one skill per task (parsing, formatting, comparing, converting, durations,
+  zoned operations, and more). Also read node_modules/@northguild/gmt/skills/_artifacts/.
+- node_modules/@northguild/gmt-eslint/skills/, node_modules/@northguild/gmt-oxlint/skills/,
+  or node_modules/@northguild/gmt-biome/skills/ — whichever linter was installed, covering
+  first-time setup, migrating existing code, and CI enforcement.
+
+Ask what difficulties the user is having with JavaScript dates — this helps match them
+to the right GMT namespace (plain, zoned, unix, utc, regex). Then generate code using
+GMT's string-in/string-out API, never `new Date()`.
+```
+
+<CardGrid stagger>
+  <Card title="100% Temporal, Temporal-first" icon="star">
+    Built directly on the TC39 `Temporal` standard — not a homegrown date/time type system.
+    No `Date` object anywhere, enforced by three dedicated lint packages.
+  </Card>
+
+  <Card title="A full replacement for all four" icon="approve-check">
+    Luxon, date-fns, Moment.js, and `@internationalized/date` don't have parity with each
+    other. GMT covers the combined capabilities of all four, plus what none of them do alone.
+  </Card>
+
+  <Card title="~15× more CI test executions" icon="rocket">
+    312,220 executions — 15,611 tests × 17 locales × 10 timezones × 2 Node versions —
+    against the four competitors' combined 20,190.
+  </Card>
+
+  <Card title="Explicit DST disambiguation" icon="setting">
+    Control over DST disambiguation on both construction *and* arithmetic — a control none
+    of the other four expose.
+  </Card>
+</CardGrid>

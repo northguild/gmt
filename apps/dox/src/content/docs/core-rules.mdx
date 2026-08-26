@@ -1,0 +1,49 @@
+---
+title: Core Rules
+description: GMT's input/output contract — string-first APIs, Temporal-only internals, plain/zoned separation, and sentinel returns instead of thrown errors.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+GMT enforces a strict input/output contract to keep behavior predictable and auditable.
+These four rules are the non-negotiables.
+
+| Rule                    | Current behavior                                                                   |
+| ----------------------- | ---------------------------------------------------------------------------------- |
+| String-first API        | Public helpers consume ISO strings and return normalized strings where appropriate |
+| Temporal-only internals | `Temporal` does the parsing and timezone math                                      |
+| Plain/zoned separation  | `plain/*` is timezone-free, `zoned/*` is timezone-aware                            |
+| No-throw public helpers | Invalid input returns a typed fallback instead of throwing                         |
+
+## Sentinel returns
+
+<Aside type="caution" title="Public helpers never throw">
+Invalid input does not raise an error — it returns a typed fallback. If you are checking
+for thrown exceptions, you will never see one, and an unchecked sentinel will flow onward
+silently.
+</Aside>
+
+Invalid input fallbacks are consistent across the library:
+
+| Helper returns | Sentinel on invalid input |
+| -------------- | ------------------------- |
+| string         | `""`                      |
+| number         | `null`                    |
+| boolean        | `false`                   |
+| array          | `[]`                      |
+
+## Design philosophy
+
+The rules above follow from four deliberate choices:
+
+- **Explicit inputs only.** Public APIs accept clearly defined shapes — ISO 8601 date/time
+  strings, IANA timezone identifiers, or numeric Unix epoch values (explicitly seconds or
+  milliseconds). We do not attempt to parse arbitrary or ambiguous date formats.
+- **Predictable outputs.** Helpers return normalized values (ISO strings, numbers,
+  booleans, or arrays). Invalid input yields typed fallbacks instead of throwing.
+- **No fuzzy parsing.** Avoid "throw everything at the wall" patterns found in permissive
+  libraries. If you need permissive parsing, perform it outside `@northguild/gmt` and then
+  canonicalize to the strict shapes before calling into gmt.
+- **Developer comfort with standards.** The library's goal is to make developers
+  comfortable and deliberate with ISO 8601, IANA timezones, UTC instants, and Unix epochs
+  by keeping APIs small and explicit.

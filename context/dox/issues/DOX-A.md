@@ -16,8 +16,8 @@ without losing the docs.
 ## Definition of done — binding for every story in this file
 
 - `pnpm nx run-many -t lint test typecheck build` stays green, **including the 20-cell
-  GMT timezone matrix**. `apps/docs` must not perturb `packages/gmt`.
-- No changeset is needed — `apps/docs` is private and unpublished. The one exception is
+  GMT timezone matrix**. `apps/dox` must not perturb `packages/gmt`.
+- No changeset is needed — `apps/dox` is private and unpublished. The one exception is
   a story that also modifies `packages/gmt` (see `DOX-A3a`'s namespace-README decision),
   which follows the normal repo convention.
 - No dependency on Octane or any `@octanejs/*` package. See overview.md §1 for why.
@@ -31,7 +31,7 @@ without losing the docs.
 **Title:**
 
 ```
-DOX-A1 Create apps/docs (Astro + Starlight) and wire pnpm/nx/oxlint
+DOX-A1 Create apps/dox (Astro + Starlight) and wire pnpm/nx/oxlint
 ```
 
 **Description:**
@@ -45,7 +45,7 @@ has 504 public functions and no documentation site — the only discovery path i
 `packages/gmt/README.md`, whose "API Surface" section just links to GitHub tree URLs.
 
 ## Scope
-- Create `apps/docs` as `@gmt/docs` (private, `"type": "module"`), depending on
+- Create `apps/dox` as `@gmt/docs` (private, `"type": "module"`), depending on
   `@northguild/gmt` via `workspace:*`.
 - Install `astro@7.2.7` and `@astrojs/starlight@0.41.9` (Starlight peers on
   `astro ^7.0.2` **and `@astrojs/markdown-remark ^7.2.0`** — verify both).
@@ -58,9 +58,9 @@ has 504 public functions and no documentation site — the only discovery path i
   1. `pnpm-workspace.yaml` — add `- 'apps/*'`
   2. root `package.json` — the `"workspaces"` array duplicates the glob; add `apps/*`
   3. `oxlint.config.js` — **note the `.js` extension**. Add `apps/**` to
-     `files.include`; add `apps/docs/dist`, `apps/docs/.astro`, and the generated
+     `files.include`; add `apps/dox/dist`, `apps/dox/.astro`, and the generated
      reference directory to `files.ignore`.
-  4. `apps/docs/project.json` — **required.** Nx's `@nx/js/typescript` plugin infers
+  4. `apps/dox/project.json` — **required.** Nx's `@nx/js/typescript` plugin infers
      `build`/`typecheck` from the presence of `tsconfig.build.json`, which an Astro app
      will not have, so Nx will infer nothing. Declare `build`, `dev`, and `typecheck`
      explicitly with `dependsOn: ["^build"]` so `@northguild/gmt` builds first.
@@ -69,9 +69,9 @@ has 504 public functions and no documentation site — the only discovery path i
   `packages/*/package.json` in a `prebuild`/`predev` step, so the docs cannot ship a
   stale version badge. `scripts/sync-intent-version.mjs` is the existing precedent for
   this shape of script — follow it rather than inventing a new pattern.
-- Declare `engines: { "node": ">=22.12.0" }` on `apps/docs` — Astro 7's floor is higher
+- Declare `engines: { "node": ">=22.12.0" }` on `apps/dox` — Astro 7's floor is higher
   than the repo root's `>=20 <25`.
-- Add `apps/docs/dist`, `apps/docs/.astro`, and the generated reference directory to
+- Add `apps/dox/dist`, `apps/dox/.astro`, and the generated reference directory to
   `.gitignore`.
 
 ## Before starting
@@ -84,7 +84,7 @@ root `package.json`, `oxlint.config.js`, and `nx.json` directly rather than trus
 this issue's snapshot. In particular the superseded plan said `oxlint.config.ts`; that
 file does not exist and never did.
 
-**Gate — resolve here, not later:** `apps/docs` must NOT extend `tsconfig.base.json`.
+**Gate — resolve here, not later:** `apps/dox` must NOT extend `tsconfig.base.json`.
 The base config sets `composite: true`, `emitDeclarationOnly: true`, `module: nodenext`,
 and `customConditions: ["@northguild/source"]`, all of which are wrong for an Astro app.
 Extend `astro/tsconfigs/strict` instead. If this fights the repo's setup in some way not
@@ -96,13 +96,35 @@ Also check `.github/workflows/ci.yml`: it classifies changes as `gmt_changed` /
 an explicit branch — do not leave it accidental.
 
 ## Definition of done
-- `pnpm install` resolves with `apps/docs` present.
+- `pnpm install` resolves with `apps/dox` present.
 - `pnpm nx show projects` lists `docs`.
 - `pnpm docs:dev` serves a site with a working landing page and two readable content
   pages — real content from `packages/gmt/README.md`, not lorem ipsum.
 - `pnpm docs:build` produces static output.
 - `pnpm nx run-many -t lint typecheck build` is green across the monorepo.
 ```
+
+**Corrections found while implementing (2026-08-26).** Five claims above did not survive
+contact with the repo. Full detail and evidence in `.agents/dox/tier0-infra.md`; that pack
+is authoritative where it disagrees with this issue.
+
+| Claim above                                           | Reality                                                                                                                                                                                           |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "`nvm use` first"                                     | The toolchain is **`fnm`**, and `fnm use` alone is a **silent no-op** in a non-interactive shell — it prints success and changes nothing. Use `eval "$(fnm env)" && fnm use && …`                 |
+| Starlight peers on `@astrojs/markdown-remark ^7.2.0`  | That peer is **optional** (`peerDependenciesMeta.optional: true`). Astro 7 ships `@astrojs/markdown-satteri` instead. **Do not declare it**                                                       |
+| Version map in a `prebuild`/`predev` step             | pnpm 10 defaults `enable-pre-post-scripts` to false and there is no `.npmrc`, so those hooks **never fire**. Chained with `&&` and wired to an Nx `generate` target instead                       |
+| `oxlint.config.js` — add `apps/**` to `files.include` | That config is **never loaded** (`.js` is not in oxlint's discovery list), so the edit is inert. Landed anyway to document intent; the real mechanism is an explicit `docs:lint` target           |
+| —                                                     | **New:** `@astrojs/mdx@7.0.8` imports `satteri` without declaring it, and two satteri versions in the tree stop pnpm hoisting it. Fixed with a `packageExtensions` entry in `pnpm-workspace.yaml` |
+
+Also landed beyond the scope above, because the story could not be verified without them:
+an `apps/**` override in `.oxfmtrc.json` (its `overrides` are an allow-list, so `pnpm
+format` skipped the app), and a `docs_changed` output plus an `apps`-aware artifact
+collector in `ci.yml`.
+
+**Decision recorded:** the generated version map is **gitignored, not stubbed** —
+deliberately breaking symmetry with `DOX-A3a`'s committed-stub pattern. A stub would render
+a _wrong_ version badge, which is the exact failure this story exists to prevent, and
+`DOX-A1` ships no tests that would need it to resolve on a clean checkout.
 
 ---
 
@@ -113,7 +135,7 @@ an explicit branch — do not leave it accidental.
 **Title:**
 
 ```
-DOX-A2 Deploy apps/docs to Cloudflare Workers via GitHub Actions
+DOX-A2 Deploy apps/dox to Cloudflare Workers via GitHub Actions
 ```
 
 **Description:**
@@ -144,7 +166,7 @@ deploy last (story F2 of 15), which meant nothing was ever seen in its real envi
 until the very end. Two stories' worth of cost buys the fastest feedback loop available.
 
 ## Scope
-- `apps/docs/wrangler.jsonc` with an `assets` binding: `directory: "./dist"`,
+- `apps/dox/wrangler.jsonc` with an `assets` binding: `directory: "./dist"`,
   `binding: "ASSETS"`, `not_found_handling: "404-page"`. **No `main` is needed at this
   tier** — this is an assets-only Worker until Tier 6 adds `/api/*`.
 - A GitHub Actions workflow deploying via `cloudflare/wrangler-action`, matching
@@ -152,7 +174,7 @@ until the very end. Two stories' worth of cost buys the fastest feedback loop av
   `pnpm/action-setup@v4` pinned to `10.32.1`, `actions/setup-node@v4` with
   `cache: pnpm`, `pnpm install --frozen-lockfile`, Nx for the build.
 - `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as GitHub Actions repo secrets.
-- Build order matters: `@northguild/gmt` must be built before `apps/docs`. DOX-A1's
+- Build order matters: `@northguild/gmt` must be built before `apps/dox`. DOX-A1's
   `project.json` `dependsOn: ["^build"]` should handle this — verify it actually does
   in CI, where the Nx cache is cold.
 - Confirm Pagefind search works in the deployed build — it is part of the Starlight
@@ -195,7 +217,7 @@ highest-value piece of work in the epic — it converts existing, already-writte
 already-accurate documentation into a browsable site.
 
 ## Scope
-- `apps/docs/scripts/build-reference.ts` walks `packages/gmt/src/**/*.ts` using the
+- `apps/dox/scripts/build-reference.ts` walks `packages/gmt/src/**/*.ts` using the
   **TypeScript compiler API** — not regex — and extracts per function: namespace,
   module, name, full signature, description, behavior bullets, `@param`, `@returns`,
   and every `@example` as a `{ call, result, note }` triple.

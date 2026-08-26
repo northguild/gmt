@@ -52,5 +52,29 @@
       "prompt": "{file:.agents/finalizer.md}",
       "permission": { "task": { "*": "deny" } },
     },
+
+    // Dox epic — the apps/dox documentation site. See context/dox/index.md.
+    // Separate from the library pipeline above: Dox consumes @northguild/gmt,
+    // it does not change it.
+    "dox-architect": {
+      "description": "Dox Architect — plans and orchestrates the documentation-site epic",
+      "mode": "all",
+      "prompt": "{file:.agents/dox-architect.md}",
+      "permission": {
+        "task": { "*": "deny", "dox-builder": "allow", "dox-tester": "allow" },
+      },
+    },
+    "dox-builder": {
+      "description": "Dox Builder — executes a planned Dox story in apps/dox",
+      "mode": "subagent",
+      "prompt": "{file:.agents/dox-builder.md}",
+      "permission": { "task": { "*": "deny" } },
+    },
+    "dox-tester": {
+      "description": "Dox Tester — verifies a Dox story against its Definition of Done",
+      "mode": "subagent",
+      "prompt": "{file:.agents/dox-tester.md}",
+      "permission": { "task": { "*": "deny" } },
+    },
   },
 }

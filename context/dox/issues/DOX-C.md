@@ -157,7 +157,7 @@ story instead adds `main` and `/api/chat` to the same Worker `DOX-A2` already de
 deployment. **CORS is not needed at all**: there is only one origin.
 
 ## Scope
-- Add `main` to `apps/docs/wrangler.jsonc` and route `/api/chat` inside the Worker's
+- Add `main` to `apps/dox/wrangler.jsonc` and route `/api/chat` inside the Worker's
   `fetch` handler, falling back to `env.ASSETS.fetch(request)` for everything else. Key
   set via `wrangler secret put` (name depends on the model chosen in `DOX-C1`) — never in
   the repo, never in a committed env file. Zero npm dependencies is achievable and worth

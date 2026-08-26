@@ -1,0 +1,84 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "dox",
+  "projectType": "application",
+  "sourceRoot": "apps/dox/src",
+  "tags": [],
+  "targets": {
+    "generate": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/scripts/generate-version-map.mjs",
+        "{workspaceRoot}/packages/*/package.json"
+      ],
+      "outputs": ["{projectRoot}/src/generated"],
+      "options": {
+        "cwd": "{projectRoot}",
+        "command": "node ./scripts/generate-version-map.mjs",
+        "forwardAllArgs": false
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["^build", "generate"],
+      "cache": true,
+      "inputs": [
+        "production",
+        "^production",
+        "{workspaceRoot}/packages/*/package.json"
+      ],
+      "outputs": ["{projectRoot}/dist"],
+      "options": {
+        "cwd": "{projectRoot}",
+        "command": "astro build",
+        "forwardAllArgs": false
+      }
+    },
+    "dev": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["^build", "generate"],
+      "cache": false,
+      "continuous": true,
+      "options": {
+        "cwd": "{projectRoot}",
+        "command": "astro dev"
+      }
+    },
+    "preview": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "cache": false,
+      "continuous": true,
+      "options": {
+        "cwd": "{projectRoot}",
+        "command": "astro preview"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["^build", "generate"],
+      "cache": true,
+      "inputs": [
+        "default",
+        "^production",
+        "{workspaceRoot}/packages/*/package.json"
+      ],
+      "options": {
+        "cwd": "{projectRoot}",
+        "command": "astro sync && astro check",
+        "forwardAllArgs": false
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["default"],
+      "options": {
+        "cwd": "{projectRoot}",
+        "command": "oxlint astro.config.mjs scripts src",
+        "forwardAllArgs": false
+      }
+    }
+  }
+}

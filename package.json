@@ -2,7 +2,8 @@
   "name": "root",
   "private": true,
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "scripts": {
     "nx": "nx",
@@ -19,6 +20,9 @@
     "affected:test": "nx affected -t test",
     "affected:lint": "nx affected -t lint",
     "affected:typecheck": "nx affected -t typecheck",
+    "dox:dev": "nx run dox:dev",
+    "dox:build": "nx run dox:build",
+    "dox:preview": "nx run dox:preview",
     "format": "oxfmt",
     "format:fix": "oxfmt --write",
     "lint": "oxlint",

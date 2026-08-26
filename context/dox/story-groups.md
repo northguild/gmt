@@ -20,19 +20,19 @@ Three stories, order-locked. After `DOX-A3a`, `@northguild/gmt` has a documentat
 that anyone can search, link, and read, covering all 504 functions. Nothing in Tier 1
 onward is required for that to be true.
 
-- **DOX-A1. Workspace skeleton + first pages** — Create `apps/docs` as `@gmt/docs`
+- **DOX-A1. Workspace skeleton + first pages** — Create `apps/dox` as `@gmt/docs`
   (private, `type: module`), depending on `@northguild/gmt` via `workspace:*`. Astro
   `7.2.7` + `@astrojs/starlight` `0.41.9`, with `src/content.config.ts` using Starlight's
   `docsLoader()` + `docsSchema()`. Ship a real landing page plus two hand-written pages
   (Install, Core Rules), both lifted from `packages/gmt/README.md`, so the site has real
   content from the first commit rather than placeholder text. Wire the four easy-to-miss
   integration files — see overview.md §4, and note `oxlint.config.js` is `.js`, not
-  `.ts`, and that `apps/docs` needs an explicit `project.json` because Nx will not infer
-  targets for it. **Gate:** `apps/docs` must not extend `tsconfig.base.json`; use
+  `.ts`, and that `apps/dox` needs an explicit `project.json` because Nx will not infer
+  targets for it. **Gate:** `apps/dox` must not extend `tsconfig.base.json`; use
   `astro/tsconfigs/strict`. **Check the local Node version before starting** — Astro 7
   needs `>=22.12.0` and a local shell can easily be older than `.nvmrc`'s `24`.
 - **DOX-A2. Deploy** — A single Cloudflare Worker with an `assets` binding serves
-  `apps/docs/dist`; no `main` is needed at this tier (`not_found_handling: "404-page"`
+  `apps/dox/dist`; no `main` is needed at this tier (`not_found_handling: "404-page"`
   is the whole config). Deploy via `cloudflare/wrangler-action` in a GitHub Actions
   workflow matching `ci.yml`'s existing conventions (`pnpm/action-setup@v4` at
   `10.32.1`, `actions/setup-node@v4` with `cache: pnpm`, `pnpm install
@@ -45,7 +45,7 @@ onward is required for that to be true.
   migrate away from; see overview.md §2 "Hosting" for why one Cloudflare origin beats a
   Pages + Worker split even before the chat exists.
 - **DOX-A3a. Reference generator** — The heart of the epic.
-  `apps/docs/scripts/build-reference.ts` walks `packages/gmt/src/**/*.ts` with the
+  `apps/dox/scripts/build-reference.ts` walks `packages/gmt/src/**/*.ts` with the
   **TypeScript compiler API** (not regex) and emits one MDX page per exported function
   into `src/content/docs/reference/<namespace>/<module>/`, plus a module index page per
   directory. The sidebar falls out for free via Starlight's
@@ -111,7 +111,7 @@ model. No competing date-library documentation site does this at this scale.
 
 - **DOX-B1a. `<Playground>` island** — An interactive component that runs the **real**
   `@northguild/gmt` in the browser: editable inputs, live output, never simulated.
-  Because `apps/docs` depends on the package via `workspace:*`, output can never drift
+  Because `apps/dox` depends on the package via `workspace:*`, output can never drift
   from shipped behavior. Sentinel-aware rendering is the point, not a detail: an
   invalid-input result (`""` / `null` / `false` / `[]`) renders as
   `⟨ NO SIGNAL — invalid input ⟩`, not a blank field. A blank box teaches nothing; the
@@ -252,7 +252,7 @@ explicit user decision.**
   choice here.** Gemini 2.5 Flash was chosen for free-tier SSE streaming before widgets
   were central; `DOX-C3b` now requires streamed tool calls, which changes the calculus
   toward whichever provider has better streaming tool-use ergonomics.
-- **DOX-C2. Worker proxy** — Same-origin `/api/chat` inside `apps/docs`'s Worker (see
+- **DOX-C2. Worker proxy** — Same-origin `/api/chat` inside `apps/dox`'s Worker (see
   overview.md §2 "Hosting" — this is no longer a separate `workers/dox-proxy` deployment,
   which removes the CORS allowlist entirely). Key via `wrangler secret put
 GEMINI_API_KEY` (or the chosen provider's equivalent). Unbuffered SSE passthrough.

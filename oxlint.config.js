@@ -11,6 +11,8 @@ export default defineConfig([
         "docs/**/*.{ts,tsx,js,jsx,md,mdx}",
         "context/**/*.{ts,tsx,md}",
         "scripts/**/*.{ts,tsx,js,mjs}",
+        // .astro and .mdx are deliberately absent — oxlint cannot parse either.
+        "apps/**/*.{ts,tsx,js,jsx,mjs}",
       ],
       ignore: [
         "**/node_modules/**",
@@ -19,6 +21,9 @@ export default defineConfig([
         "**/coverage/**",
         "**/*.tsbuildinfo",
         "**/out/**",
+        "apps/dox/.astro/**",
+        "apps/dox/src/generated/**",
+        "apps/dox/src/content/docs/reference/**",
       ],
     },
     rules: { noUnusedImports: "error", noUnusedVariables: "warn" },

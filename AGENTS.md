@@ -16,6 +16,7 @@ Read these before working in the repo. Each is scoped — load only what you nee
 | [context/linting-packages.md](./context/linting-packages.md)                                     | When working on gmt-eslint, gmt-oxlint, or gmt-biome                                              |
 | [context/roadmap/index.md](./context/roadmap/index.md)                                           | When picking up or reviewing roadmap work                                                         |
 | [context/roadmap/index.md](./context/roadmap/index.md)                                           | Roadmap entry point (redirects to progressive-disclosure directory)                               |
+| [context/dox/index.md](./context/dox/index.md)                                                   | When working on the `apps/dox` documentation site (the Dox epic)                                 |
 
 ## Core Rules (Quick Reference)
 

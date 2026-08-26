@@ -1,0 +1,32 @@
+{
+  "name": "@gmt/dox",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Documentation site for @northguild/gmt",
+  "type": "module",
+  "scripts": {
+    "generate": "node ./scripts/generate-version-map.mjs",
+    "dev": "pnpm run generate && astro dev",
+    "build": "pnpm run generate && astro build",
+    "preview": "astro preview",
+    "typecheck": "pnpm run generate && astro sync && astro check",
+    "lint": "oxlint astro.config.mjs scripts src",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "0.41.9",
+    "@northguild/gmt": "workspace:*",
+    "astro": "7.2.7"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "oxlint": "^1.78.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "nx": {
+    "includedScripts": []
+  }
+}
