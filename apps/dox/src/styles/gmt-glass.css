@@ -15,16 +15,10 @@
   border-radius: var(--gmt-radius-lg);
   corner-shape: scoop;
   padding: var(--gmt-space-4);
-}
-
-@supports (backdrop-filter: blur(1px)) {
-  .gmt-glass {
-    background: color(from var(--gmt-teal) srgb r g b / 0.12);
-    backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate))
-      brightness(var(--gmt-brightness));
-    -webkit-backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate))
-      brightness(var(--gmt-brightness));
-  }
+  backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate))
+    brightness(var(--gmt-brightness));
+  -webkit-backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate))
+    brightness(var(--gmt-brightness));
 }
 
 /* ---- Hairline border gradient on two edges ---- */
@@ -107,15 +101,10 @@
 .gmt-glass-heavy {
   /* deeper stained glass wash */
   background: color(from var(--gmt-teal) srgb r g b / 0.18);
-}
-
-@supports (backdrop-filter: blur(1px)) {
-  .gmt-glass-heavy {
-    backdrop-filter: blur(var(--gmt-blur-heavy)) saturate(var(--gmt-saturate))
-      brightness(var(--gmt-brightness));
-    -webkit-backdrop-filter: blur(var(--gmt-blur-heavy))
-      saturate(var(--gmt-saturate)) brightness(var(--gmt-brightness));
-  }
+  backdrop-filter: blur(var(--gmt-blur-heavy)) saturate(var(--gmt-saturate))
+    brightness(var(--gmt-brightness));
+  -webkit-backdrop-filter: blur(var(--gmt-blur-heavy))
+    saturate(var(--gmt-saturate)) brightness(var(--gmt-brightness));
 }
 
 /* ---- Apply glass to site elements ---- */
@@ -124,13 +113,8 @@
 header {
   background: color(from var(--gmt-teal) srgb r g b / 0.12);
   border-bottom: 1px solid color(from var(--gmt-cyan) srgb r g b / 0.18);
-}
-
-@supports (backdrop-filter: blur(1px)) {
-  header {
-    backdrop-filter: blur(var(--gmt-blur));
-    -webkit-backdrop-filter: blur(var(--gmt-blur));
-  }
+  backdrop-filter: blur(var(--gmt-blur));
+  -webkit-backdrop-filter: blur(var(--gmt-blur));
 }
 
 /* Sidebar — subtle blue-tinted glass, content shows through */
@@ -138,14 +122,8 @@ header {
 #starlight__sidebar {
   background: color(from var(--gmt-teal) srgb r g b / 0.08);
   border-right: 1px solid color(from var(--gmt-cyan) srgb r g b / 0.18);
-}
-
-@supports (backdrop-filter: blur(1px)) {
-  .sidebar-pane,
-  #starlight__sidebar {
-    backdrop-filter: blur(var(--gmt-blur));
-    -webkit-backdrop-filter: blur(var(--gmt-blur));
-  }
+  backdrop-filter: blur(var(--gmt-blur));
+  -webkit-backdrop-filter: blur(var(--gmt-blur));
 }
 
 /* Code blocks — stained glass wash */
@@ -154,6 +132,8 @@ header {
   border: 1px solid color(from var(--gmt-cyan) srgb r g b / 0.18);
   border-radius: var(--gmt-radius-lg);
   position: relative;
+  backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+  -webkit-backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
 }
 
 [data-theme="light"] .sl-markdown-content pre {
@@ -164,47 +144,21 @@ header {
   --ec-codeBg: color(from var(--gmt-teal) srgb r g b / 0.06);
 }
 
-@supports (backdrop-filter: blur(1px)) {
-  .sl-markdown-content pre {
-    background: color(from var(--gmt-teal) srgb r g b / 0.08);
-    backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
-    -webkit-backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
-  }
-
-  [data-theme="light"] .sl-markdown-content pre {
-    background: color(from var(--gmt-teal) srgb r g b / 0.06);
-  }
-
-  [data-theme="light"] .expressive-code {
-    --ec-codeBg: color(from var(--gmt-teal) srgb r g b / 0.06);
-  }
-}
-
 /* Tables — stained glass wash */
 .sl-markdown-content table {
   background: color(from var(--gmt-teal) srgb r g b / 0.06);
   border: 1px solid color(from var(--gmt-cyan) srgb r g b / 0.18);
   border-radius: var(--gmt-radius-lg);
   overflow: hidden;
-}
-
-@supports (backdrop-filter: blur(1px)) {
-  .sl-markdown-content table {
-    backdrop-filter: blur(calc(var(--gmt-blur) * 0.5));
-    -webkit-backdrop-filter: blur(calc(var(--gmt-blur) * 0.5));
-  }
+  backdrop-filter: blur(calc(var(--gmt-blur) * 0.5));
+  -webkit-backdrop-filter: blur(calc(var(--gmt-blur) * 0.5));
 }
 
 /* Table headers — deeper blue tint */
 .sl-markdown-content thead {
   background: color(from var(--gmt-teal) srgb r g b / 0.15);
-}
-
-@supports (backdrop-filter: blur(1px)) {
-  .sl-markdown-content thead {
-    backdrop-filter: blur(var(--gmt-blur));
-    -webkit-backdrop-filter: blur(var(--gmt-blur));
-  }
+  backdrop-filter: blur(var(--gmt-blur));
+  -webkit-backdrop-filter: blur(var(--gmt-blur));
 }
 
 /* Alerts / Asides — stained glass wash */
@@ -213,13 +167,8 @@ header {
   border: 1px solid color(from var(--gmt-cyan) srgb r g b / 0.18);
   border-radius: var(--gmt-radius-lg);
   corner-shape: bevel;
-}
-
-@supports (backdrop-filter: blur(1px)) {
-  .starlight-aside {
-    backdrop-filter: blur(var(--gmt-blur));
-    -webkit-backdrop-filter: blur(var(--gmt-blur));
-  }
+  backdrop-filter: blur(var(--gmt-blur));
+  -webkit-backdrop-filter: blur(var(--gmt-blur));
 }
 
 /* Caution / Warning aside — signal yellow translucent bg */
@@ -235,14 +184,8 @@ header {
   border: 1px solid color(from var(--gmt-cyan) srgb r g b / 0.18);
   border-radius: var(--gmt-radius-lg);
   corner-shape: scoop;
-}
-
-@supports (backdrop-filter: blur(1px)) {
-  [class*="card"],
-  .comparison-card {
-    backdrop-filter: blur(var(--gmt-blur));
-    -webkit-backdrop-filter: blur(var(--gmt-blur));
-  }
+  backdrop-filter: blur(var(--gmt-blur));
+  -webkit-backdrop-filter: blur(var(--gmt-blur));
 }
 
 /* Search input — translucent glass fill */
@@ -273,13 +216,6 @@ site-search input:focus {
   background: color(from var(--gmt-teal) srgb r g b / 0.15);
   border: 1px solid color(from var(--gmt-cyan) srgb r g b / 0.18);
   border-radius: var(--gmt-radius-lg);
-}
-
-@supports (backdrop-filter: blur(1px)) {
-  [role="dialog"],
-  .search-dialog,
-  .DocSearch-Modal {
-    backdrop-filter: blur(var(--gmt-blur-heavy));
-    -webkit-backdrop-filter: blur(var(--gmt-blur-heavy));
-  }
+  backdrop-filter: blur(var(--gmt-blur-heavy));
+  -webkit-backdrop-filter: blur(var(--gmt-blur-heavy));
 }

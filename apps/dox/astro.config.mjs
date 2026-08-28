@@ -10,6 +10,7 @@ const SITE = "https://gmt-dox.northguild.workers.dev";
 
 export default defineConfig({
   site: SITE,
+  vite: { build: { cssTarget: ["chrome107","edge107","firefox104","safari16"] } },
   markdown: {
     shikiConfig: {
       theme: "github-dark",

@@ -363,15 +363,8 @@ dialog {
   background: color(from var(--gmt-teal) srgb r g b / 0.12);
   border-color: color(from var(--gmt-cyan) srgb r g b / 0.18);
   box-shadow: 0 0 8px color(from var(--gmt-cyan) srgb r g b / 0.15);
-}
-
-@supports (backdrop-filter: blur(1px)) {
-  .social-icons a:hover,
-  .theme-toggle:hover,
-  .expressive-code .copy button:hover {
-    backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
-    -webkit-backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
-  }
+  backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+  -webkit-backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
 }
 
 /* Expressive-code tooltip — ice background */
@@ -480,11 +473,14 @@ html.is-scrolling ::-webkit-scrollbar-thumb {
   color: var(--gmt-cyan);
 }
 
-@supports (backdrop-filter: blur(1px)) {
-  [data-theme="light"] :is(#starlight__main, main) a.sl-link-button.primary {
-    backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
-    -webkit-backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
-  }
+/* Light mode primary buttons — glass effect */
+[data-theme="light"] :is(#starlight__main, main) a.sl-link-button.primary {
+  background: color(from var(--gmt-teal) srgb r g b / 0.12);
+  border: 1px solid color(from var(--gmt-cyan) srgb r g b / 0.18);
+  color: var(--gmt-cyan);
+  corner-shape: scoop;
+  backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+  -webkit-backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
 }
 
 /* Landing page links - hero section */
