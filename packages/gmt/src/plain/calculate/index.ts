@@ -61,4 +61,5 @@ export * from "./subtractBusinessDays";
 export * from "./subtractDate";
 export * from "./subtractDateTime";
 export * from "./subtractTime";
-export * from "./weekOfYear";
+export * from "./weekOfYearForDate";
+export * from "./weekOfYearForDateTime";

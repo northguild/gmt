@@ -3,7 +3,7 @@ title: Install
 description: Add @northguild/gmt to your project, and what the package exports.
 ---
 
-import { Tabs, TabItem } from "@astrojs/starlight/components";
+import { TabItem, Tabs } from "@astrojs/starlight/components";
 
 import { gmtVersion } from "~/generated/versions";
 
@@ -45,26 +45,28 @@ bun add @northguild/gmt
 The package exports seven top-level namespaces:
 
 ```typescript
-import {
-  Temporal,
-  duration,
-  plain,
-  zoned,
-  unix,
-  utc,
-  regex,
-} from "@northguild/gmt";
+// The most common helpers are re-exported from the package root
+import { addDate, getNow, formatRelativeZoned } from "@northguild/gmt";
+
+// Import from name-spaced if you only want to focus on a certain signature
+import { addDate, getNow } from "@northguild/gmt/plain";
+import { addZoned, getNowZoned } from "@northguild/gmt/zoned";
+import { addUtc, getNowUtc } from "@northguild/gmt/utc";
+import { addUnix, getNowUnix } from "@northguild/gmt/unix";
+
+// Of course we give you Temporal for fine-grained control
+import { Temporal } from "@northguild/gmt";
 ```
 
-| Namespace  | What it covers                                              |
-| ---------- | ----------------------------------------------------------- |
-| `Temporal` | Re-exported from `@js-temporal/polyfill`                    |
+| Namespace  | What it covers                                               |
+| ---------- | ------------------------------------------------------------ |
+| `Temporal` | Re-exported from `@js-temporal/polyfill`                     |
 | `duration` | ISO 8601 duration string parsing, validation, and arithmetic |
-| `plain`    | Timezone-free helpers                                       |
-| `zoned`    | Timezone-aware helpers                                      |
-| `unix`     | Unix epoch (seconds or milliseconds) helpers                |
-| `utc`      | UTC instant helpers                                         |
-| `regex`    | Low-level regex building blocks                             |
+| `plain`    | Timezone-free helpers                                        |
+| `zoned`    | Timezone-aware helpers                                       |
+| `unix`     | Unix epoch (seconds or milliseconds) helpers                 |
+| `utc`      | UTC instant helpers                                          |
+| `regex`    | Low-level regex building blocks                              |
 
 You can also import members directly from the package root:
 

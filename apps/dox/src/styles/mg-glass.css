@@ -1,0 +1,113 @@
+/*
+ * Military-glass panel recipe.
+ *
+ * Guarantees a contrast floor (low-alpha tinted fill) for browsers without
+ * backdrop-filter support, then layers the glass effect on top. Hairline
+ * border gradient on two edges, 1px inset top highlight, L-shaped corner
+ * brackets. Deliberately instrument-like / HUD — not glossy-AI.
+ */
+
+.mg-glass {
+  position: relative;
+  background: var(--mg-fill);
+  border: 1px solid var(--mg-border);
+  border-radius: var(--mg-radius-md);
+  padding: var(--mg-space-4);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .mg-glass {
+    background: var(--mg-fill);
+    backdrop-filter: blur(var(--mg-blur)) saturate(var(--mg-saturate))
+      brightness(var(--mg-brightness));
+    -webkit-backdrop-filter: blur(var(--mg-blur)) saturate(var(--mg-saturate))
+      brightness(var(--mg-brightness));
+  }
+}
+
+/* ---- Hairline border gradient on two edges ---- */
+.mg-glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    var(--mg-border-bright) 0%,
+    transparent 40%,
+    transparent 60%,
+    var(--mg-border-bright) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ---- 1px inset top highlight ---- */
+.mg-glass::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: var(--mg-space-4);
+  right: var(--mg-space-4);
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--mg-highlight) 30%,
+    var(--mg-highlight) 70%,
+    transparent
+  );
+  pointer-events: none;
+}
+
+/* ---- L-shaped corner brackets ---- */
+.mg-brackets {
+  position: relative;
+}
+
+.mg-brackets::before,
+.mg-brackets::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: var(--mg-cyan);
+  border-style: solid;
+  border-width: 0;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* top-left + bottom-right */
+.mg-brackets::before {
+  top: -1px;
+  left: -1px;
+  border-top-width: 2px;
+  border-left-width: 2px;
+}
+
+.mg-brackets::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom-width: 2px;
+  border-right-width: 2px;
+}
+
+/* ---- Heavy glass (for hero / elevated surfaces) ---- */
+.mg-glass-heavy {
+  background: var(--mg-fill-strong);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .mg-glass-heavy {
+    backdrop-filter: blur(var(--mg-blur-heavy)) saturate(var(--mg-saturate))
+      brightness(var(--mg-brightness));
+    -webkit-backdrop-filter: blur(var(--mg-blur-heavy))
+      saturate(var(--mg-saturate)) brightness(var(--mg-brightness));
+  }
+}

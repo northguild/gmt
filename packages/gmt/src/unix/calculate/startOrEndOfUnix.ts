@@ -5,6 +5,24 @@ import { isValidUnixUnit } from "../../unix/validate/isValidUnixUnit";
 import { getSystemTimeZone } from "../../zoned/get";
 import { isValidTimeZone } from "../../zoned/validate";
 
+/**
+ * Internal shared implementation for `startOfUnix` / `endOfUnix`.
+ *
+ * - Converts the epoch to a ZonedDateTime, snaps to the start or end of the
+ *   requested unit, then converts back to an epoch number.
+ * - Supports every Temporal `DateUnit` and `TimeUnit`.
+ * - `epochUnit` controls whether the input/output is interpreted as `"milliseconds"` (default) or `"seconds"`.
+ * - `timeZone` defaults to the system time zone via `getSystemTimeZone()`.
+ * - `disambiguation` and `offset` are forwarded to Temporal's `.with()` for
+ *   DST-gap/overlap boundaries; see `startOfUnix`'s JSDoc for the full
+ *   semantics — they behave identically here.
+ *
+ * @param value Unix epoch number
+ * @param unit Temporal.DateUnit | Temporal.TimeUnit to snap to
+ * @param options optional: epochUnit, timeZone, weekStartsOn, disambiguation, offset
+ * @param isEnd false for start-of-unit, true for end-of-unit
+ * @returns Unix epoch number, or null on invalid input
+ */
 export function startOrEndOfUnix(
   value: number,
   unit: Temporal.DateUnit | Temporal.TimeUnit,

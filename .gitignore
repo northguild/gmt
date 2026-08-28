@@ -56,3 +56,9 @@ apps/dox/src/generated/
 apps/dox/src/content/docs/reference/
 apps/dox/.env
 apps/dox/.wrangler/
+
+apps/dox/public/llms.txt
+apps/dox/public/llms-full.txt
+
+# Playwright mcp
+.playwright-mcp/

@@ -227,8 +227,8 @@ failure the story exists to prevent. Flag the asymmetry in the PR so A3a does no
 
 ### Content sourcing
 
-Port from `packages/gmt/README.md`; do not re-derive. Its figures (312,220 test executions,
-15,611 tests, 17 locales) are audited.
+Port from `packages/gmt/README.md`; do not re-derive. Its figures (334,020 test executions,
+16,701 tests, 17 locales) are audited.
 
 | Page             | Source                                                        |
 | ---------------- | ------------------------------------------------------------- |

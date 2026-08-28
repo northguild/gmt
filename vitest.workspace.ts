@@ -14,4 +14,13 @@ export default [
       ],
     },
   }),
+  defineProject({
+    test: {
+      name: "dox",
+      globals: true,
+      environment: "node",
+      root: "apps/dox",
+      include: ["scripts/**/*.test.ts"],
+    },
+  }),
 ];

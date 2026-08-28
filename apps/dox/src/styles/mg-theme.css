@@ -1,0 +1,144 @@
+/*
+ * Military-glass theme seed — CSS custom properties.
+ *
+ * Dual-mode design: dark mode uses a near-black void field with cyan
+ * instrument accents; light mode inverts to a bright field with darker
+ * accents. Both preserve glass surfaces and restrained motion.
+ */
+
+:root {
+  /* ---- Light/Dark mode detection (default to dark) ---- */
+  color-scheme: light dark;
+  /* ---- Color palette ---- */
+  --mg-void: #03080c;
+  --mg-void-2: #061018;
+  --mg-void-3: #0a1a24;
+  --mg-cyan: #22d3ee;
+  --mg-cyan-dim: #0e7490;
+  --mg-cyan-glow: #67e8f9;
+  --mg-spring: #4ade80;
+  --mg-teal: #0e7490;
+  --mg-ice: #cfeaf2;
+  --mg-ice-dim: #7a9baa;
+  --mg-signal: #f5a524;
+  --mg-danger: #ef4444;
+
+  /* ---- Glass tokens ---- */
+  --mg-blur: 16px;
+  --mg-blur-heavy: 32px;
+  --mg-saturate: 1.6;
+  --mg-brightness: 1.1;
+  --mg-fill: rgba(10, 26, 36, 0.55);
+  --mg-fill-strong: rgba(10, 26, 36, 0.78);
+  --mg-border: rgba(34, 211, 238, 0.18);
+  --mg-border-bright: rgba(34, 211, 238, 0.42);
+  --mg-highlight: rgba(207, 234, 242, 0.08);
+
+  /* ---- Typography ---- */
+  --mg-font-mono:
+    ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  --mg-font-display: "Michroma", var(--mg-font-mono);
+
+  /* ---- Spacing ---- */
+  --mg-space-1: 4px;
+  --mg-space-2: 8px;
+  --mg-space-3: 12px;
+  --mg-space-4: 16px;
+  --mg-space-6: 24px;
+  --mg-space-8: 32px;
+  --mg-space-12: 48px;
+
+  /* ---- Tracking ---- */
+  --mg-tracking-tight: -0.02em;
+  --mg-tracking-wide: 0.08em;
+  --mg-tracking-wider: 0.18em;
+
+  /* ---- Timing ---- */
+  --mg-duration-fast: 120ms;
+  --mg-duration-med: 240ms;
+  --mg-easing: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ---- Radii ---- */
+  --mg-radius-sm: 4px;
+  --mg-radius-md: 8px;
+
+  /* ---- Starlight variable overrides ---- */
+  --sl-color-white: var(--mg-ice);
+  --sl-color-gray-1: var(--mg-ice);
+  --sl-color-gray-2: var(--mg-ice-dim);
+  --sl-color-gray-3: #5c7a85;
+  --sl-color-gray-4: #3d5560;
+  --sl-color-gray-5: var(--mg-void-3);
+  --sl-color-gray-6: var(--mg-void-2);
+  --sl-color-black: var(--mg-void);
+  --sl-color-accent: var(--mg-cyan);
+  --sl-color-accent-high: var(--mg-cyan-glow);
+  --sl-color-accent-low: var(--mg-cyan-dim);
+  --sl-color-text: var(--mg-ice);
+  --sl-color-text-accent: var(--mg-cyan);
+  --sl-color-bg: var(--mg-void);
+  --sl-color-bg-nav: var(--mg-void-2);
+  --sl-color-bg-sidebar: var(--mg-void-2);
+  --sl-color-hairline: var(--mg-border);
+  --sl-color-hairline-shade: rgba(34, 211, 238, 0.08);
+}
+
+/* ---- Font imports (self-hosted, no CDN) ---- */
+/*
+ * The file is vendored into `public/fonts/` (source: `@fontsource/michroma`,
+ * a root devDependency) so it has a stable, un-hashed URL that the Starlight
+ * `head` config can `<link rel="preload">`. Preloading it stops the site
+ * title and every heading from reflowing out of the mono fallback on each
+ * navigation.
+ */
+@font-face {
+  font-family: "Michroma";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/michroma-latin-400-normal.woff2") format("woff2");
+}
+
+/* ---- Light mode overrides ---- */
+[data-theme="light"] {
+  /* ---- Color palette (inverted for light background) ---- */
+  --mg-void: #ffffff;
+  --mg-void-2: #f5f5f5;
+  --mg-void-3: #ececec;
+  --mg-cyan: #0891b2;
+  --mg-cyan-dim: #22d3ee;
+  --mg-cyan-glow: #0e7490;
+  --mg-spring: #16a34a;
+  --mg-teal: #0891b2;
+  --mg-ice: #1a1a1a;
+  --mg-ice-dim: #666666;
+  --mg-signal: #ea580c;
+  --mg-danger: #dc2626;
+
+  /* ---- Glass tokens (adapted for light mode) ---- */
+  --mg-fill: rgba(245, 245, 245, 0.8);
+  --mg-fill-strong: rgba(236, 236, 236, 0.95);
+  --mg-border: rgba(8, 145, 178, 0.15);
+  --mg-border-bright: rgba(8, 145, 178, 0.35);
+  --mg-highlight: rgba(26, 26, 26, 0.04);
+
+  /* ---- Starlight color overrides for light mode ---- */
+  --sl-color-white: var(--mg-void);
+  --sl-color-gray-1: var(--mg-ice);
+  --sl-color-gray-2: var(--mg-ice-dim);
+  --sl-color-gray-3: #999999;
+  --sl-color-gray-4: #cccccc;
+  --sl-color-gray-5: var(--mg-void-3);
+  --sl-color-gray-6: var(--mg-void-2);
+  --sl-color-black: var(--mg-ice);
+  --sl-color-accent: var(--mg-cyan);
+  --sl-color-accent-high: var(--mg-cyan-glow);
+  --sl-color-accent-low: var(--mg-cyan-dim);
+  --sl-color-text: var(--mg-ice);
+  --sl-color-text-accent: var(--mg-cyan);
+  --sl-color-bg: var(--mg-void);
+  --sl-color-bg-nav: var(--mg-void-2);
+  --sl-color-bg-sidebar: var(--mg-void-2);
+  --sl-color-hairline: var(--mg-border);
+  --sl-color-hairline-shade: rgba(8, 145, 178, 0.08);
+}

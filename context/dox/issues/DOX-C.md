@@ -3,8 +3,8 @@
 **Re-audited 2026-08-26 and escalated, not demoted, by explicit user decision** — the
 chatbot is now Tier 6, the epic's final tier, and its ambition is higher than the
 2026-08-21 draft's: answer, cite, and **mount a real Tier 2 widget** rather than print a
-code block. Four stories now fold into these three issues: `DOX-C1` and `DOX-C2` are
-unchanged in ID, `DOX-C3` splits into `DOX-C3a` (panel + link hardening) and `DOX-C3b`
+code block. Four stories now fold into these three issues: `DOX-C1` is #137, `DOX-C2` is
+#138, and `DOX-C3` (#139) splits into `DOX-C3a` (panel + link hardening) and `DOX-C3b`
 (widget registry, new). **No new GitHub issues** — both land on #139.
 
 Because Tiers 0–5 already produced real pages, real URLs, and a full widget platform,
@@ -34,7 +34,11 @@ exactly that.
 
 ---
 
-### DOX-C1 — Retrieval index
+### Issue #137 — DOX-C1
+
+**GitHub Issue:** #137 — see tracker.md
+
+#### DOX-C1 — Retrieval index
 
 **GitHub Issue:** #137 — see tracker.md\_
 
@@ -128,7 +132,11 @@ best-effort.
 
 ---
 
-### DOX-C2 — Worker proxy
+### Issue #138 — DOX-C2
+
+**GitHub Issue:** #138 — see tracker.md
+
+#### DOX-C2 — Worker proxy
 
 **GitHub Issue:** #138 — see tracker.md\_
 
@@ -260,7 +268,14 @@ removes a recurring papercut.
 
 ---
 
-### DOX-C3a — Chat panel
+### Issue #139 — DOX-C3
+
+**GitHub Issue:** #139 — see tracker.md
+
+`DOX-C3` spans two sub-stories, both Tier 6: `DOX-C3a` (chat panel + link hardening) and
+`DOX-C3b` (widget registry). The issue stays open until `DOX-C3b` also lands.
+
+#### DOX-C3a — Chat panel
 
 **GitHub Issue:** #139 — see tracker.md\_
 
@@ -375,7 +390,7 @@ plain `fetch` reader are enough, and less weight on every page.
 
 ---
 
-### DOX-C3b — Widget registry
+#### DOX-C3b — Widget registry
 
 **GitHub Issue:** #139 — see tracker.md\_ (folds into the same issue as `DOX-C3a`)
 

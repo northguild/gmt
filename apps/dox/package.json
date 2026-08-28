@@ -5,11 +5,13 @@
   "description": "Documentation site for @northguild/gmt",
   "type": "module",
   "scripts": {
-    "generate": "node ./scripts/generate-version-map.mjs",
-    "dev": "pnpm run generate && astro dev",
+    "generate": "node ./scripts/generate-version-map.mjs && tsx ./scripts/build-reference.ts",
+    "dev": "pnpm run generate && astro dev --force",
     "build": "pnpm run generate && astro build",
     "preview": "astro preview",
-    "typecheck": "pnpm run generate && astro sync && astro check",
+    "check": "pnpm run generate && astro sync && astro check",
+    "typecheck": "pnpm run check",
+    "test": "pnpm run generate && vitest run",
     "lint": "oxlint astro.config.mjs scripts src",
     "astro": "astro"
   },
@@ -21,7 +23,8 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
     "oxlint": "^1.78.0",
-    "typescript": "^5.0.0",
+    "tsx": "^4.23.0",
+    "typescript": "5.9.3",
     "wrangler": "4.126.0"
   },
   "engines": {

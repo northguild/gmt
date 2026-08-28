@@ -8,6 +8,9 @@ layer). **No new GitHub issues** — `DOX-A3b` folds into #132 alongside `DOX-A3
 `DOX-A4b`–`d` fold into #133 alongside `DOX-A4a`. See tracker.md for the full mapping and
 the note on issues that now span more than one tier.
 
+Each issue below is one logical unit; its sub-stories are nested under it and ordered as
+they should be built. The issue stays open until its last sub-story lands.
+
 After Tier 0's three stories (`DOX-A1`, `DOX-A2`, `DOX-A3a`), `@northguild/gmt` has a real,
 deployed, searchable, linkable documentation site covering all 504 functions. Nothing in
 Tier 1 onward is required for that to be true, and any of it can be dropped or reordered
@@ -24,7 +27,11 @@ without losing the docs.
 
 ---
 
-### DOX-A1 — Workspace skeleton + first pages
+### Issue #130 — DOX-A1
+
+**GitHub Issue:** #130 — see tracker.md
+
+#### DOX-A1 — Workspace skeleton + first pages
 
 **GitHub Issue:** #130 — see tracker.md\_
 
@@ -128,7 +135,11 @@ a _wrong_ version badge, which is the exact failure this story exists to prevent
 
 ---
 
-### DOX-A2 — Deploy
+### Issue #131 — DOX-A2
+
+**GitHub Issue:** #131 — see tracker.md
+
+#### DOX-A2 — Deploy
 
 **GitHub Issue:** #131 — see tracker.md\_
 
@@ -219,9 +230,17 @@ push to `main` triggers the first real deploy.
 
 ---
 
-### DOX-A3a — Reference generator
+### Issue #132 — DOX-A3
 
-**GitHub Issue:** #132 — see tracker.md\_
+**GitHub Issue:** #132 — see tracker.md
+
+`DOX-A3` spans two sub-stories: `DOX-A3a` (Tier 0) and `DOX-A3b` (Tier 1). The issue stays
+open until `DOX-A3b` also lands.
+
+#### DOX-A3a — Reference generator
+
+**GitHub Issue:** #132 — see tracker.md\_ (folds into #132 alongside `DOX-A3b`; the issue
+stays open until `DOX-A3b` also lands)
 
 **Title:**
 
@@ -366,7 +385,65 @@ them to silently rot.
 
 ---
 
-### DOX-A5 — Brand pass
+#### DOX-A3b — AI surface (`llms.txt`)
+
+**GitHub Issue:** #132 — see tracker.md\_ (folds into the same issue as `DOX-A3a`; the
+issue stays open until this sub-story also lands)
+
+**Title:**
+
+```
+DOX-A3b Emit llms.txt, llms-full.txt, and per-page raw markdown from the corpus
+```
+
+**Description:**
+
+```
+Part of the Dox epic — see `context/dox/index.md`, Tier 1, item DOX-A3b. New in the
+2026-08-26 rewrite.
+Depends on DOX-A3a (the corpus and route manifest) and DOX-A5 (so the "copy as markdown"
+affordance has somewhere to live in the token layer).
+
+## Gap
+`llms.txt`/`llms-full.txt` are absent from every story in the 2026-08-21 draft. They cost
+roughly a day given DOX-A3a's corpus already exists, and they make every model the reader
+already has open — not only a purpose-built chatbot — answer correctly about GMT. This
+library already ships `skills/` for agents; a meaningful fraction of its audience is
+machine, and this is the cheapest possible extension of that audience to the docs site.
+
+## Scope
+- `llms.txt` — a nav index in the llms.txt convention, generated from the route
+  manifest and page titles/descriptions DOX-A3a already extracted.
+- `llms-full.txt` — the full corpus as plain text, generated from `gmt-corpus.json`.
+- A raw `.md` route alongside every rendered reference and guide page (e.g.
+  `/reference/zoned/calculate/startOfZoned.md`), and a "copy as markdown" affordance on
+  each page using DOX-A5's tokens.
+- Evaluate `starlight-llms-txt@0.11.0` against emitting directly from DOX-A3a's
+  already-parsed corpus. The plugin derives its output from rendered MDX, which would
+  duplicate parsing work the generator already did and risks a second source of drift;
+  emitting directly from the corpus is probably the better call here, but confirm rather
+  than assume.
+- Every URL this story emits must exist in DOX-A3a's route manifest — reuse it rather
+  than reconstructing the page list.
+
+## Before starting
+Confirm DOX-A3a's corpus carries everything needed (title, description, full body text)
+for a plain-text nav index and full corpus dump without re-walking `packages/gmt/src`.
+
+## Definition of done
+- `llms.txt` is reachable at the site root and lists every generated page.
+- `llms-full.txt` contains the full corpus as plain text.
+- Every page has a working raw `.md` route and a working "copy as markdown" control.
+- No URL in either file is absent from DOX-A3a's route manifest.
+```
+
+---
+
+### Issue #134 — DOX-A5
+
+**GitHub Issue:** #134 — see tracker.md
+
+#### DOX-A5 — Brand pass
 
 **GitHub Issue:** #134 — see tracker.md\_
 
@@ -437,9 +514,16 @@ correctly.
 
 ---
 
-### DOX-A4a — Guides
+### Issue #133 — DOX-A4
 
-**GitHub Issue:** #133 — see tracker.md\_
+**GitHub Issue:** #133 — see tracker.md
+
+`DOX-A4` spans four sub-stories: `DOX-A4a` (Tier 1) and `DOX-A4b`–`d` (Tier 5). The issue
+stays open until `DOX-A4d` also lands.
+
+#### DOX-A4a — Guides
+
+**GitHub Issue:** #133 — see tracker.md\_ (folds into #133 alongside `DOX-A4b`–`DOX-A4d`)
 
 **Title:**
 
@@ -509,61 +593,7 @@ maintainer/workflow skills (`pr-contribution`, `issue-creation`, etc.) do not an
 
 ---
 
-### DOX-A3b — AI surface (`llms.txt`)
-
-**GitHub Issue:** #132 — see tracker.md\_ (folds into the same issue as `DOX-A3a`; the
-issue stays open until this sub-story also lands)
-
-**Title:**
-
-```
-DOX-A3b Emit llms.txt, llms-full.txt, and per-page raw markdown from the corpus
-```
-
-**Description:**
-
-```
-Part of the Dox epic — see `context/dox/index.md`, Tier 1, item DOX-A3b. New in the
-2026-08-26 rewrite.
-Depends on DOX-A3a (the corpus and route manifest) and DOX-A5 (so the "copy as markdown"
-affordance has somewhere to live in the token layer).
-
-## Gap
-`llms.txt`/`llms-full.txt` are absent from every story in the 2026-08-21 draft. They cost
-roughly a day given DOX-A3a's corpus already exists, and they make every model the reader
-already has open — not only a purpose-built chatbot — answer correctly about GMT. This
-library already ships `skills/` for agents; a meaningful fraction of its audience is
-machine, and this is the cheapest possible extension of that audience to the docs site.
-
-## Scope
-- `llms.txt` — a nav index in the llms.txt convention, generated from the route
-  manifest and page titles/descriptions DOX-A3a already extracted.
-- `llms-full.txt` — the full corpus as plain text, generated from `gmt-corpus.json`.
-- A raw `.md` route alongside every rendered reference and guide page (e.g.
-  `/reference/zoned/calculate/startOfZoned.md`), and a "copy as markdown" affordance on
-  each page using DOX-A5's tokens.
-- Evaluate `starlight-llms-txt@0.11.0` against emitting directly from DOX-A3a's
-  already-parsed corpus. The plugin derives its output from rendered MDX, which would
-  duplicate parsing work the generator already did and risks a second source of drift;
-  emitting directly from the corpus is probably the better call here, but confirm rather
-  than assume.
-- Every URL this story emits must exist in DOX-A3a's route manifest — reuse it rather
-  than reconstructing the page list.
-
-## Before starting
-Confirm DOX-A3a's corpus carries everything needed (title, description, full body text)
-for a plain-text nav index and full corpus dump without re-walking `packages/gmt/src`.
-
-## Definition of done
-- `llms.txt` is reachable at the site root and lists every generated page.
-- `llms-full.txt` contains the full corpus as plain text.
-- Every page has a working raw `.md` route and a working "copy as markdown" control.
-- No URL in either file is absent from DOX-A3a's route manifest.
-```
-
----
-
-### DOX-A4b — Scenario template + first three scenarios
+#### DOX-A4b — Scenario template + first three scenarios
 
 **GitHub Issue:** #133 — see tracker.md\_ (folds into the same issue as `DOX-A4a`)
 
@@ -615,7 +645,7 @@ twice in two different tiers.
 
 ---
 
-### DOX-A4c — Ported pitfalls
+#### DOX-A4c — Ported pitfalls
 
 **GitHub Issue:** #133 — see tracker.md\_ (folds into the same issue as `DOX-A4a`)
 
@@ -663,7 +693,7 @@ severity counts (1 CRITICAL, 23 HIGH, 39 MEDIUM) to confirm none are dropped sil
 
 ---
 
-### DOX-A4d — Scenario index
+#### DOX-A4d — Scenario index
 
 **GitHub Issue:** #133 — see tracker.md\_ (folds into the same issue as `DOX-A4a`)
 

@@ -33,13 +33,19 @@ Determine which READMEs need changes:
 
 ### 3. Update namespace READMEs
 
+Namespace READMEs are one-line stubs pointing at the docs site. The full function reference is generated automatically by the docs build.
+
 For each affected `packages/gmt/src/<namespace>/README.md`:
 
-- Add new functions to the correct module section. Match the existing list style exactly: one bullet per function, alphabetically sorted within the list, backtick-quoted names.
-- If a new module is introduced within the namespace (e.g. a `format/` module that previously didn't exist), add a new `### <module>` section in the same style as the others.
-- If the new module involves locale-aware formatting via `Intl.DateTimeFormat` or `Intl.RelativeTimeFormat`, include the **Locale data note** blockquote under the `### format` heading. Copy the canonical wording from an existing namespace README — do not paraphrase it.
-- Remove any function names that were deleted or renamed.
-- Do not add prose or examples — namespace READMEs are reference lists only.
+- Ensure the stub follows the shape:
+  ```markdown
+  # <Namespace> API
+
+  See the full reference at [/reference/<slug>](/reference/<slug>).
+  ```
+  where `<slug>` is `plain`, `zoned`, `unix`, `utc`, `duration`, or `regex`.
+- Do **not** expand the stub into a function list. The docs generator owns the function index.
+- Only update a namespace README if the reference path slug itself changes (e.g. a namespace rename).
 
 ### 4. Update `packages/gmt/README.md`
 

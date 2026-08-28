@@ -10,12 +10,17 @@
       "cache": true,
       "inputs": [
         "{projectRoot}/scripts/generate-version-map.mjs",
+        "{projectRoot}/scripts/build-reference.ts",
+        "{workspaceRoot}/packages/gmt/src/**/*.ts",
         "{workspaceRoot}/packages/*/package.json"
       ],
-      "outputs": ["{projectRoot}/src/generated"],
+      "outputs": [
+        "{projectRoot}/src/generated",
+        "{projectRoot}/src/content/docs/reference"
+      ],
       "options": {
         "cwd": "{projectRoot}",
-        "command": "node ./scripts/generate-version-map.mjs",
+        "command": "node ./scripts/generate-version-map.mjs && tsx ./scripts/build-reference.ts",
         "forwardAllArgs": false
       }
     },
@@ -42,7 +47,7 @@
       "continuous": true,
       "options": {
         "cwd": "{projectRoot}",
-        "command": "astro dev"
+        "command": "astro dev --force"
       }
     },
     "preview": {
@@ -77,6 +82,16 @@
       "options": {
         "cwd": "{projectRoot}",
         "command": "oxlint astro.config.mjs scripts src",
+        "forwardAllArgs": false
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["default"],
+      "options": {
+        "cwd": "{projectRoot}",
+        "command": "vitest run --passWithNoTests",
         "forwardAllArgs": false
       }
     }

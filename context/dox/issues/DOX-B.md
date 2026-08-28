@@ -6,6 +6,9 @@ these two issues, all in Tier 2: `DOX-B1a`/`DOX-B1b` on #135, `DOX-B2a`–`DOX-B
 **No new GitHub issues.** This is the epic's differentiator — every one of 1,860 examples
 becomes runnable, plus three purpose-built inspectors nothing else in this space has.
 
+Each issue below is one logical unit; its sub-stories are nested under it. The issue stays
+open until its last sub-story lands.
+
 ## Definition of done — binding for every story in this file
 
 - Widgets execute the **real** `@northguild/gmt`. No simulation, no `eval`, no
@@ -23,7 +26,14 @@ becomes runnable, plus three purpose-built inspectors nothing else in this space
 
 ---
 
-### DOX-B1a — `<Playground>` island
+### Issue #135 — DOX-B1
+
+**GitHub Issue:** #135 — see tracker.md
+
+`DOX-B1` spans two sub-stories, both Tier 2: `DOX-B1a` (the `<Playground>` island) and
+`DOX-B1b` (widget permalinks). The issue stays open until `DOX-B1b` also lands.
+
+#### DOX-B1a — `<Playground>` island
 
 **GitHub Issue:** #135 — see tracker.md\_
 
@@ -106,7 +116,57 @@ free performance win available in the whole epic; verify rather than assume eith
 
 ---
 
-### DOX-B2a — Auto-embed
+#### DOX-B1b — Widget permalinks
+
+**GitHub Issue:** #135 — see tracker.md\_ (folds into the same issue as `DOX-B1a`; the
+issue stays open until this sub-story also lands)
+
+**Title:**
+
+```
+DOX-B1b Encode every widget's state into the URL
+```
+
+**Description:**
+
+```
+Part of the Dox epic — see `context/dox/index.md`, Tier 2, item DOX-B1b. New in the
+2026-08-26 rewrite.
+Depends on DOX-B1a, DOX-B2a, DOX-B2b, DOX-B2c, and DOX-B2d (every widget this tier ships).
+
+## Gap
+Without this, a widget is a toy — its state resets on reload and cannot be sent to a
+colleague. With it, a widget is exactly as linkable as a reference page, which is the
+entire premise the docs site is built on (overview.md §1: "someone who wants to send a
+colleague the DST rules has nothing to link").
+
+## Scope
+- A shared mechanism, used by every Tier 2 widget, that serializes current widget state
+  (inputs, toggles, selected zone/year, dragged interval positions) into the URL query
+  string or hash, and rehydrates a widget from it on load.
+- Must not fight Astro/Starlight's routing or break the back button.
+
+## Before starting
+Design this as one shared utility consumed by all five widgets rather than five
+independent implementations — divergence here would be expensive to unify later.
+
+## Definition of done
+- Every widget shipped in `DOX-B1a`/`DOX-B2a`–`d` can be configured, copied as a URL,
+  opened in a new tab, and reproduces the exact same state.
+- Back/forward navigation behaves sensibly with widget state changes.
+```
+
+---
+
+### Issue #136 — DOX-B2
+
+**GitHub Issue:** #136 — see tracker.md
+
+`DOX-B2` spans four sub-stories, all Tier 2: `DOX-B2a` (auto-embed), `DOX-B2b` (DST
+Transition Inspector), `DOX-B2c` (interval algebra visualizer), and `DOX-B2d` (converter +
+format bench). The issue stays open until `DOX-B2d` also lands.
+
+#### DOX-B2a — Auto-embed
 
 **GitHub Issue:** #136 — see tracker.md\_
 
@@ -159,7 +219,7 @@ reader).
 
 ---
 
-### DOX-B2b — DST Transition Inspector
+#### DOX-B2b — DST Transition Inspector
 
 **GitHub Issue:** #136 — see tracker.md\_ (folds into the same issue as `DOX-B2a`)
 
@@ -209,7 +269,7 @@ behavior to demonstrate.
 
 ---
 
-### DOX-B2c — Interval algebra visualizer
+#### DOX-B2c — Interval algebra visualizer
 
 **GitHub Issue:** #136 — see tracker.md\_ (folds into the same issue as `DOX-B2a`)
 
@@ -257,7 +317,7 @@ functions the first version demonstrates — do not attempt all 109 in one widge
 
 ---
 
-### DOX-B2d — Converter + format bench
+#### DOX-B2d — Converter + format bench
 
 **GitHub Issue:** #136 — see tracker.md\_ (folds into the same issue as `DOX-B2a`)
 
@@ -294,45 +354,4 @@ set, not a sample.
 - Zone conversion, format/relative-time output, and the regex tester are each
   independently usable and produce output from the real library.
 - All 22 `regex` consts are selectable in the tester.
-```
-
----
-
-### DOX-B1b — Widget permalinks
-
-**GitHub Issue:** #135 — see tracker.md\_ (folds into the same issue as `DOX-B1a`)
-
-**Title:**
-
-```
-DOX-B1b Encode every widget's state into the URL
-```
-
-**Description:**
-
-```
-Part of the Dox epic — see `context/dox/index.md`, Tier 2, item DOX-B1b. New in the
-2026-08-26 rewrite.
-Depends on DOX-B1a, DOX-B2a, DOX-B2b, DOX-B2c, and DOX-B2d (every widget this tier ships).
-
-## Gap
-Without this, a widget is a toy — its state resets on reload and cannot be sent to a
-colleague. With it, a widget is exactly as linkable as a reference page, which is the
-entire premise the docs site is built on (overview.md §1: "someone who wants to send a
-colleague the DST rules has nothing to link").
-
-## Scope
-- A shared mechanism, used by every Tier 2 widget, that serializes current widget state
-  (inputs, toggles, selected zone/year, dragged interval positions) into the URL query
-  string or hash, and rehydrates a widget from it on load.
-- Must not fight Astro/Starlight's routing or break the back button.
-
-## Before starting
-Design this as one shared utility consumed by all five widgets rather than five
-independent implementations — divergence here would be expensive to unify later.
-
-## Definition of done
-- Every widget shipped in `DOX-B1a`/`DOX-B2a`–`d` can be configured, copied as a URL,
-  opened in a new tab, and reproduces the exact same state.
-- Back/forward navigation behaves sensibly with widget state changes.
 ```

@@ -1,1 +1,0 @@
-../../.agents/finalizer.md

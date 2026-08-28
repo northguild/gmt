@@ -48,7 +48,11 @@ to end, never by the screenshot.**
 
 ---
 
-### DOX-D1 — Chrome
+### Issue #140 — DOX-D1
+
+**GitHub Issue:** #140 — see tracker.md
+
+#### DOX-D1 — Chrome
 
 **GitHub Issue:** #140 — see tracker.md\_
 
@@ -122,7 +126,11 @@ panels, per overview.md §3 "Widget chrome".
 
 ---
 
-### DOX-D2 — Motion
+### Issue #141 — DOX-D2
+
+**GitHub Issue:** #141 — see tracker.md
+
+#### DOX-D2 — Motion
 
 **GitHub Issue:** #141 — see tracker.md\_
 

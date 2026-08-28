@@ -4,8 +4,11 @@
 scoped this as a purely decorative, droppable landing-page flourish and told future
 readers not to undo that scoping. **The user has deliberately undone it.** The globe is
 now an interactive product feature — click a zone, read its live state — and a second
-story, `DOX-E1b`, adds a multi-zone time scrubber. Both fold into the same GitHub issue,
-#142. **No new GitHub issues.**
+sub-story, `DOX-E1b`, adds a multi-zone time scrubber. Both fold into the same GitHub
+issue, #142. **No new GitHub issues.**
+
+`DOX-E1` spans two sub-stories, both Tier 4: `DOX-E1a` (interactive globe) and `DOX-E1b`
+(multi-zone time scrubber). The issue stays open until `DOX-E1b` also lands.
 
 ## Definition of done — binding for every story in this file
 
@@ -22,7 +25,14 @@ story, `DOX-E1b`, adds a multi-zone time scrubber. Both fold into the same GitHu
 
 ---
 
-### DOX-E1a — Interactive globe
+### Issue #142 — DOX-E1
+
+**GitHub Issue:** #142 — see tracker.md
+
+`DOX-E1` spans two sub-stories, both Tier 4: `DOX-E1a` (interactive globe) and `DOX-E1b`
+(multi-zone time scrubber). The issue stays open until `DOX-E1b` also lands.
+
+#### DOX-E1a — Interactive globe
 
 **GitHub Issue:** #142 — see tracker.md\_
 
@@ -110,7 +120,7 @@ roughly eight weeks — re-verify the ecosystem's maturity before ever depending
 
 ---
 
-### DOX-E1b — Multi-zone time scrubber
+#### DOX-E1b — Multi-zone time scrubber
 
 **GitHub Issue:** #142 — see tracker.md\_ (folds into the same issue as `DOX-E1a`)
 

@@ -3,6 +3,23 @@ import { isValidDateTimeUnit } from "../../plain";
 import type { FractionalDigit } from "../../types";
 import { isValidUtc } from "../validate/isValidUtc";
 
+/**
+ * Internal shared implementation for `startOfUtc` / `endOfUtc`.
+ *
+ * - Converts the UTC Instant to a ZonedDateTime, snaps to the start or end of
+ *   the requested unit, then converts back to an Instant string.
+ * - Supports every Temporal `DateUnit` and `TimeUnit`.
+ * - `weekStartsOn` shifts the week boundary: `"monday"` (default) or `"sunday"`.
+ * - `fractionalSecondDigits` overrides the default sub-second precision for the
+ *   returned Instant string; defaults to 3 for millisecond, 6 for microsecond,
+ *   9 for nanosecond, and 0 for all coarser units.
+ *
+ * @param value ISO UTC datetime string
+ * @param unit Temporal.DateUnit | Temporal.TimeUnit to snap to
+ * @param options optional: weekStartsOn, fractionalSecondDigits
+ * @param isEnd false for start-of-unit, true for end-of-unit
+ * @returns UTC Instant string, or "" on invalid input
+ */
 export function startOrEndOfUtc(
   value: string,
   unit: Temporal.DateUnit | Temporal.TimeUnit,

@@ -14,7 +14,7 @@
  * .npmrc, so those hooks never fire.
  */
 
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -22,6 +22,29 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(__dirname, "..");
 const repoRoot = resolve(appRoot, "..", "..");
 const packagesDir = resolve(repoRoot, "packages");
+const outPath = resolve(appRoot, "src", "generated", "versions.ts");
+
+function shouldSkip() {
+  if (!existsSync(outPath)) return false;
+  const inputs = [];
+  try {
+    for (const dir of readdirSync(packagesDir, { withFileTypes: true }).sort()) {
+      if (dir.isDirectory()) inputs.push(join(packagesDir, dir.name, "package.json"));
+    }
+  } catch {
+    return false;
+  }
+  if (inputs.length === 0) return false;
+  const newestInput = inputs.reduce((a, b) =>
+    statSync(a).mtime > statSync(b).mtime ? a : b
+  );
+  return statSync(outPath).mtime > statSync(newestInput).mtime;
+}
+
+if (shouldSkip()) {
+  console.log("[versions] up-to-date, skipping");
+  process.exit(0);
+}
 
 // 1. Collect every publishable workspace package's name and version.
 const entries = [];
@@ -66,9 +89,7 @@ export type PackageName = keyof typeof packageVersions;
 export const gmtVersion: string = packageVersions["@northguild/gmt"];
 `;
 
-const outDir = resolve(appRoot, "src", "generated");
-const outPath = join(outDir, "versions.ts");
-mkdirSync(outDir, { recursive: true });
+mkdirSync(resolve(appRoot, "src", "generated"), { recursive: true });
 
 // 4. Idempotent write — don't bump mtime when nothing changed, so `astro dev`
 //    doesn't HMR-thrash and Nx doesn't see a spurious output change.

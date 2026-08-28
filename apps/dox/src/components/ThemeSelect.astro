@@ -1,0 +1,109 @@
+---
+// Override of Starlight's ThemeSelect for 2-state theme toggle.
+---
+
+<starlight-theme-select>
+  <button
+    type="button"
+    class="theme-toggle"
+    aria-label="Toggle color theme"
+  >
+    <svg
+      class="theme-icon"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+    ></svg>
+  </button>
+</starlight-theme-select>
+
+{/* Inlined to avoid FOUC. Uses global scope from `ThemeProvider.astro`. */}
+<script is:inline>
+  StarlightThemeProvider.updatePickers();
+</script>
+
+<script>
+  declare const StarlightThemeProvider: {
+    updatePickers(): void;
+  };
+
+  const storageKey = 'starlight-theme';
+
+  function loadTheme(): string {
+    const stored =
+      typeof localStorage !== 'undefined' && localStorage.getItem(storageKey);
+    return stored === 'light' || stored === 'dark' ? stored : '';
+  }
+
+  function getSystemPref(): string {
+    return window.matchMedia('(prefers-color-scheme: light)').matches
+      ? 'light'
+      : 'dark';
+  }
+
+  function applyTheme(theme: string) {
+    document.documentElement.dataset.theme = theme || getSystemPref();
+    StarlightThemeProvider.updatePickers();
+  }
+
+  class StarlightThemeSelect extends HTMLElement {
+    constructor() {
+      super();
+      const btn = this.querySelector('button.theme-toggle');
+      if (btn) {
+        btn.addEventListener('click', () => {
+          const stored = loadTheme();
+          const systemPref = getSystemPref();
+          if (stored === 'light' || stored === 'dark') {
+            localStorage.removeItem(storageKey);
+            applyTheme(systemPref);
+          } else {
+            const opposite = systemPref === 'light' ? 'dark' : 'light';
+            localStorage.setItem(storageKey, opposite);
+            applyTheme(opposite);
+          }
+        });
+      }
+
+      matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+        const stored = loadTheme();
+        if (!stored) {
+          applyTheme(getSystemPref());
+        }
+      });
+
+      applyTheme(loadTheme());
+    }
+  }
+
+  customElements.define('starlight-theme-select', StarlightThemeSelect);
+</script>
+
+<style>
+  .theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+    background: transparent;
+    border: 1px solid var(--sl-color-gray-4);
+    border-radius: var(--mg-radius-sm);
+    color: var(--sl-color-gray-2);
+    cursor: pointer;
+    transition:
+      color var(--mg-duration-fast) var(--mg-easing),
+      border-color var(--mg-duration-fast) var(--mg-easing);
+  }
+
+  .theme-toggle:hover {
+    color: var(--sl-color-white);
+    border-color: var(--sl-color-gray-2);
+  }
+
+  .theme-icon {
+    width: 1em;
+    height: 1em;
+  }
+</style>

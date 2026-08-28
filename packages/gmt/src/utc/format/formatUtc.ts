@@ -8,6 +8,23 @@ export interface FormatUtcOptions extends Intl.DateTimeFormatOptions {
   includeTimeZoneName?: boolean;
 }
 
+/**
+ * Format a UTC ISO string as a localized date/time string.
+ *
+ * - Returns `""` if the input is not a valid UTC string.
+ * - `timeZone` controls the IANA zone used for rendering; defaults to `"UTC"`.
+ * - `includeTimeZoneName` appends the localized timezone name when true.
+ *
+ * @param value UTC ISO string to format
+ * @param locale optional: BCP 47 locale tag
+ * @param options optional: { timeZone, includeTimeZoneName }
+ * @returns the formatted date/time string, or "" on invalid input
+ *
+ * @example formatUtc("2026-03-16T18:30:00Z") // "3/16/2026, 6:30:00 PM"
+ * @example formatUtc("2026-03-16T18:30:00Z", "en-US", { timeZone: "America/New_York" }) // "3/16/2026, 2:30:00 PM"
+ * @example formatUtc("2026-03-16T18:30:00Z", "en-US", { timeZone: "America/New_York", includeTimeZoneName: true }) // "3/16/2026, 2:30:00 PM EDT"
+ * @example formatUtc("not-a-date") // ""
+ */
 export function formatUtc(
   value: string,
   locale?: string,
