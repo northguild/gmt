@@ -1,5 +1,8 @@
 import type { Temporal } from "@js-temporal/polyfill";
-import { durationUntilString, parseCalendarDatePairForArithmetic } from "../../internal";
+import {
+  durationUntilString,
+  parseCalendarDatePairForArithmetic,
+} from "../../internal";
 import type {
   DateDurationUnit,
   DurationStringOptions,
@@ -54,10 +57,7 @@ export function diffDateAsDuration(
   }
 
   try {
-    const { a: d1, b: d2 } = parseCalendarDatePairForArithmetic(
-      date1,
-      date2,
-    );
+    const { a: d1, b: d2 } = parseCalendarDatePairForArithmetic(date1, date2);
 
     return durationUntilString(d1, d2, unit, options);
   } catch {

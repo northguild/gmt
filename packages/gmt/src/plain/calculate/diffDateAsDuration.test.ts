@@ -151,7 +151,7 @@ describe("diffDateAsDuration", () => {
     ).toBe("P1M");
   });
 
-  it("returns \"\" for a datetime/zoned string instead of silently truncating to its date portion (parseCalendarDateValue regression, E5)", () => {
+  it('returns "" for a datetime/zoned string instead of silently truncating to its date portion (parseCalendarDateValue regression, E5)', () => {
     expect(
       diffDateAsDuration("2024-03-10T14:30:00", "2024-03-15", "days"),
     ).toBe("");

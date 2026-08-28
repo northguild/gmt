@@ -38,9 +38,8 @@ describe("formatDateInCalendar", () => {
   });
 
   it("re-derives a japanese date's era from the actual date, not a copied tag", () => {
-    const heisei = Temporal.PlainDate.from("2019-04-30").withCalendar(
-      "japanese",
-    );
+    const heisei =
+      Temporal.PlainDate.from("2019-04-30").withCalendar("japanese");
     const reiwa = heisei.add({ days: 1 });
     expect(formatDateInCalendar(heisei, "japanese")).toBe(
       "0031-04-30[u-ca=japanese;era=heisei]",

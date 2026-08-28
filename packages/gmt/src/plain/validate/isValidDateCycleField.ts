@@ -19,9 +19,7 @@ import type { DateCycleField } from "../../types";
  * @example isValidDateCycleField(123) // false
  * @example isValidDateCycleField(null) // false
  */
-export function isValidDateCycleField(
-  field: unknown,
-): field is DateCycleField {
+export function isValidDateCycleField(field: unknown): field is DateCycleField {
   if (typeof field !== "string") {
     return false;
   }

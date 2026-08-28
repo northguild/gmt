@@ -113,7 +113,7 @@ describe("addDateTime", () => {
   // (out of scope per the E5 decisions of record -- calendar-system awareness is confined to
   // plain/ PlainDate, D1/D3). A PlainDate calendar annotation is simply not a valid
   // PlainDateTime string, so this returns "" unchanged.
-  it("returns \"\" for a calendar-annotated PlainDate string (no PlainDateTime calendar grammar exists)", () => {
+  it('returns "" for a calendar-annotated PlainDate string (no PlainDateTime calendar grammar exists)', () => {
     expect(addDateTime("5784-06-15[u-ca=hebrew]", { months: 1 })).toBe("");
   });
 });

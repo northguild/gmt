@@ -115,7 +115,10 @@ describe("intervalUnionDate", () => {
         "5784-06-18[u-ca=hebrew]",
         "5784-07-01[u-ca=hebrew]",
       ),
-    ).toEqual({ start: "5784-06-15[u-ca=hebrew]", end: "5784-07-01[u-ca=hebrew]" });
+    ).toEqual({
+      start: "5784-06-15[u-ca=hebrew]",
+      end: "5784-07-01[u-ca=hebrew]",
+    });
   });
 
   it("returns null when calendars mismatch across the four arguments", () => {

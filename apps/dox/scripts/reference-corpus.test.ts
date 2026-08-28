@@ -2,8 +2,21 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const outGen = resolve(import.meta.dirname, "..", "src", "generated", "reference");
-const refDir = resolve(import.meta.dirname, "..", "src", "content", "docs", "reference");
+const outGen = resolve(
+  import.meta.dirname,
+  "..",
+  "src",
+  "generated",
+  "reference",
+);
+const refDir = resolve(
+  import.meta.dirname,
+  "..",
+  "src",
+  "content",
+  "docs",
+  "reference",
+);
 const mdxExists = existsSync(refDir);
 
 describe("reference corpus", () => {
@@ -17,12 +30,7 @@ describe("reference corpus", () => {
   it("regex MDX pages exist with a pattern literal", () => {
     if (!mdxExists) return;
     const yearMdx = readFileSync(
-      resolve(
-        refDir,
-        "regex",
-        "date",
-        "year.mdx",
-      ),
+      resolve(refDir, "regex", "date", "year.mdx"),
       "utf8",
     );
     expect(yearMdx).toContain("const year: RegExp");
@@ -95,10 +103,7 @@ describe("reference corpus", () => {
       const slug = slugMatch[1].startsWith("/")
         ? slugMatch[1]
         : `/${slugMatch[1]}`;
-      expect(
-        routes.has(slug),
-        `manifest has slug ${slug} (${f})`,
-      ).toBe(true);
+      expect(routes.has(slug), `manifest has slug ${slug} (${f})`).toBe(true);
     }
   });
 });

@@ -63,8 +63,11 @@ export function splitIntervalByUnitDate(
   }
 
   try {
-    const { calendar, a: startVal, b: endVal } =
-      parseCalendarDatePairForArithmetic(start, end);
+    const {
+      calendar,
+      a: startVal,
+      b: endVal,
+    } = parseCalendarDatePairForArithmetic(start, end);
 
     if (Temporal.PlainDate.compare(startVal, endVal) > 0) {
       return [];

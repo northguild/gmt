@@ -32,11 +32,8 @@ export default defineConfig({
           href: "https://github.com/northguild/gmt",
         },
       ],
-      editLink: {
-        baseUrl: "https://github.com/northguild/gmt/edit/main/apps/dox/",
-      },
       // Preload the self-hosted display font (vendored to `public/fonts/`, see
-      // mg-theme.css). Without this the browser only discovers the @font-face
+      // gmt-tokens.css). Without this the browser only discovers the @font-face
       // after the CSS bundle parses, so the site title and every heading
       // reflow out of the mono fallback on each navigation — the "header flash".
       head: [
@@ -72,28 +69,6 @@ export default defineConfig({
             window.addEventListener('scroll', end, { passive: true });
           })();`,
         },
-        {
-          tag: "script",
-          content: `(() => {
-            const mq = window.matchMedia('(min-width: 50rem)');
-            const syncSidebar = () => {
-              const sidebar = document.querySelector('.sidebar-pane');
-              const html = document.documentElement;
-              if (sidebar && html.hasAttribute('data-has-sidebar') && mq.matches) {
-                html.style.setProperty('--sl-content-inline-start', Math.ceil(sidebar.getBoundingClientRect().width) + 'px');
-              } else {
-                html.style.removeProperty('--sl-content-inline-start');
-              }
-            };
-            if (document.readyState === 'loading') {
-              document.addEventListener('DOMContentLoaded', syncSidebar);
-            } else {
-              syncSidebar();
-            }
-            mq.addEventListener('change', syncSidebar);
-            window.addEventListener('resize', syncSidebar);
-          })();`,
-        },
       ],
       sidebar: [
         {
@@ -103,15 +78,15 @@ export default defineConfig({
         { label: "Reference", items: referenceSidebar },
       ],
       components: {
-        SocialIcons: "./src/components/SocialIcons.astro",
         ThemeProvider: "./src/components/ThemeProvider.astro",
         ThemeSelect: "./src/components/ThemeSelect.astro",
         PageTitle: "./src/components/PageTitle.astro",
+        Hero: "./src/components/Hero.astro",
       },
       customCss: [
-        "./src/styles/mg-theme.css",
-        "./src/styles/mg-glass.css",
-        "./src/styles/mg-site.css",
+        "./src/styles/gmt-tokens.css",
+        "./src/styles/gmt-glass.css",
+        "./src/styles/gmt-site.css",
       ],
     }),
   ],

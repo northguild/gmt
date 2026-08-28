@@ -61,6 +61,7 @@
   /* ---- Radii ---- */
   --mg-radius-sm: 4px;
   --mg-radius-md: 8px;
+  --mg-radius-lg: 16px;
 
   /* ---- Starlight variable overrides ---- */
   --sl-color-white: var(--mg-ice);

@@ -14,7 +14,14 @@
  * .npmrc, so those hooks never fire.
  */
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -28,15 +35,18 @@ function shouldSkip() {
   if (!existsSync(outPath)) return false;
   const inputs = [];
   try {
-    for (const dir of readdirSync(packagesDir, { withFileTypes: true }).sort()) {
-      if (dir.isDirectory()) inputs.push(join(packagesDir, dir.name, "package.json"));
+    for (const dir of readdirSync(packagesDir, {
+      withFileTypes: true,
+    }).sort()) {
+      if (dir.isDirectory())
+        inputs.push(join(packagesDir, dir.name, "package.json"));
     }
   } catch {
     return false;
   }
   if (inputs.length === 0) return false;
   const newestInput = inputs.reduce((a, b) =>
-    statSync(a).mtime > statSync(b).mtime ? a : b
+    statSync(a).mtime > statSync(b).mtime ? a : b,
   );
   return statSync(outPath).mtime > statSync(newestInput).mtime;
 }

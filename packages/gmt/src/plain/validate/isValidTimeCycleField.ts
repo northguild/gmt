@@ -16,9 +16,7 @@ import type { TimeCycleField } from "../../types";
  * @example isValidTimeCycleField(123) // false
  * @example isValidTimeCycleField(null) // false
  */
-export function isValidTimeCycleField(
-  field: unknown,
-): field is TimeCycleField {
+export function isValidTimeCycleField(field: unknown): field is TimeCycleField {
   if (typeof field !== "string") {
     return false;
   }

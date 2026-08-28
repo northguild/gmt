@@ -62,3 +62,6 @@ apps/dox/public/llms-full.txt
 
 # Playwright mcp
 .playwright-mcp/
+
+# Plans
+.github/plans/

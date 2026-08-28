@@ -1,0 +1,152 @@
+/*
+ * GMT palette and token layer — per overview.md §3.
+ *
+ * Six named roles (Void / Cyan / Spring / Teal / Ice / Signal) with derived
+ * tokens for the site's surfaces, accents, and Starlight overrides.
+ * Dual-mode: dark (default) uses a near-black void with cyan accents;
+ * light mode inverts to a bright field with darker accents.
+ */
+
+:root {
+  /* ---- Color-scheme ---- */
+  color-scheme: light dark;
+
+  /* ---- Six named roles (overview.md §3) ---- */
+  --gmt-void: #03080c;
+  --gmt-cyan: #22d3ee;
+  --gmt-spring: #4ade80;
+  --gmt-teal: #0e7490;
+  --gmt-ice: #cfeaf2;
+  --gmt-signal: #f5a524;
+
+  /* ---- Derived tokens ---- */
+  --gmt-surface: #061018; /* elevated bg / nav / sidebar (was --mg-void-2) */
+  --gmt-surface-2: #0a1a24; /* inline-code bg / hover (was --mg-void-3) */
+  --gmt-cyan-bright: #67e8f9; /* h3 / hover accent (was --mg-cyan-glow) */
+  --gmt-ice-dim: #7a9baa; /* muted text (was --mg-ice-dim) */
+  --gmt-hairline: rgba(34, 211, 238, 0.18); /* border hairline */
+  --gmt-accent-wash: rgba(
+    34,
+    211,
+    238,
+    0.06
+  ); /* sidebar-active / row-hover tint */
+  --gmt-selection: rgba(34, 211, 238, 0.3); /* ::selection background */
+
+  /* ---- Glass tokens (blur/saturate/brightness only — fills use relative colors) ---- */
+  --gmt-blur: 16px;
+  --gmt-blur-heavy: 32px;
+  --gmt-saturate: 1.6;
+  --gmt-brightness: 1.1;
+
+  /* ---- Typography ---- */
+  --gmt-font-mono:
+    ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  --gmt-font-display: "Michroma", var(--gmt-font-mono);
+
+  /* ---- Spacing ---- */
+  --gmt-space-1: 4px;
+  --gmt-space-2: 8px;
+  --gmt-space-3: 12px;
+  --gmt-space-4: 16px;
+  --gmt-space-6: 24px;
+  --gmt-space-8: 32px;
+  --gmt-space-12: 48px;
+
+  /* ---- Tracking ---- */
+  --gmt-tracking-tight: -0.02em;
+  --gmt-tracking-wide: 0.08em;
+  --gmt-tracking-wider: 0.18em;
+
+  /* ---- Timing ---- */
+  --gmt-duration-fast: 120ms;
+  --gmt-duration-med: 240ms;
+  --gmt-easing: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ---- Radii ---- */
+  --gmt-radius-sm: 4px;
+  --gmt-radius-md: 8px;
+  --gmt-radius-lg: 16px;
+
+  /* ---- Starlight variable overrides ---- */
+  --sl-color-white: var(--gmt-ice);
+  --sl-color-gray-1: var(--gmt-ice);
+  --sl-color-gray-2: var(--gmt-ice-dim);
+  --sl-color-gray-3: #5c7a85;
+  --sl-color-gray-4: #3d5560;
+  --sl-color-gray-5: var(--gmt-surface-2);
+  --sl-color-gray-6: var(--gmt-surface);
+  --sl-color-black: var(--gmt-void);
+  --sl-color-accent: var(--gmt-cyan);
+  --sl-color-accent-high: var(--gmt-cyan-bright);
+  --sl-color-accent-low: var(--gmt-teal);
+  --sl-color-text: var(--gmt-ice);
+  --sl-color-text-accent: var(--gmt-cyan);
+  --sl-color-bg: var(--gmt-void);
+  --sl-color-bg-nav: var(--gmt-surface);
+  --sl-color-bg-sidebar: var(--gmt-surface);
+  --sl-color-hairline: var(--gmt-hairline);
+  --sl-color-hairline-shade: rgba(34, 211, 238, 0.08);
+
+  /* ---- Starlight font knobs ---- */
+  --sl-font: var(--gmt-font-mono);
+  --sl-font-mono: var(--gmt-font-mono);
+}
+
+/* ---- Font imports (self-hosted, no CDN) ---- */
+/*
+ * The file is vendored into `public/fonts/` (source: `@fontsource/michroma`,
+ * a root devDependency) so it has a stable, un-hashed URL that the Starlight
+ * `head` config can `<link rel="preload">`. Preloading it stops the site
+ * title and every heading from reflowing out of the mono fallback on each
+ * navigation.
+ */
+@font-face {
+  font-family: "Michroma";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/michroma-latin-400-normal.woff2") format("woff2");
+}
+
+/* ---- Light mode overrides ---- */
+[data-theme="light"] {
+  /* ---- Color palette (inverted for light background) ---- */
+  --gmt-void: #ffffff;
+  --gmt-surface: #f5f5f5;
+  --gmt-surface-2: #ececec;
+  --gmt-cyan: #0891b2;
+  --gmt-teal: #22d3ee;
+  --gmt-cyan-bright: #0e7490;
+  --gmt-spring: #16a34a;
+  --gmt-ice: #1a1a1a;
+  --gmt-ice-dim: #666666;
+  --gmt-signal: #ea580c;
+  --gmt-accent-wash: rgba(
+    8,
+    145,
+    178,
+    0.06
+  ); /* sidebar-active / row-hover tint */
+  --gmt-selection: rgba(8, 145, 178, 0.3); /* ::selection background */
+
+  /* ---- Starlight color overrides for light mode ---- */
+  --sl-color-white: var(--gmt-void);
+  --sl-color-gray-1: var(--gmt-ice);
+  --sl-color-gray-2: var(--gmt-ice-dim);
+  --sl-color-gray-3: #999999;
+  --sl-color-gray-4: #cccccc;
+  --sl-color-gray-5: var(--gmt-surface-2);
+  --sl-color-gray-6: var(--gmt-surface);
+  --sl-color-black: var(--gmt-ice);
+  --sl-color-accent: var(--gmt-cyan);
+  --sl-color-accent-high: var(--gmt-cyan-bright);
+  --sl-color-accent-low: var(--gmt-teal);
+  --sl-color-text: var(--gmt-ice);
+  --sl-color-text-accent: var(--gmt-cyan);
+  --sl-color-bg: var(--gmt-void);
+  --sl-color-bg-nav: var(--gmt-surface);
+  --sl-color-bg-sidebar: var(--gmt-surface);
+  --sl-color-hairline: var(--gmt-hairline);
+  --sl-color-hairline-shade: rgba(8, 145, 178, 0.08);
+}

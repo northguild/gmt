@@ -2,7 +2,7 @@ import { cycleFieldValue } from "./cycleFieldValue";
 
 describe("cycleFieldValue", () => {
   it.each`
-    current | amount | bounds                | expected
+    current | amount | bounds                 | expected
     ${5}    | ${1}   | ${{ min: 1, max: 12 }} | ${6}
     ${5}    | ${-1}  | ${{ min: 1, max: 12 }} | ${4}
     ${12}   | ${1}   | ${{ min: 1, max: 12 }} | ${1}
@@ -22,7 +22,7 @@ describe("cycleFieldValue", () => {
   );
 
   it.each`
-    current | amount | bounds                | expected | label
+    current | amount | bounds                 | expected | label
     ${1}    | ${13}  | ${{ min: 1, max: 12 }} | ${2}     | ${"one full range past the range"}
     ${3}    | ${-25} | ${{ min: 1, max: 12 }} | ${2}     | ${"two full ranges past the range, negative"}
     ${1}    | ${100} | ${{ min: 1, max: 31 }} | ${8}     | ${"many ranges past the range"}
@@ -46,9 +46,9 @@ describe("cycleFieldValue", () => {
   );
 
   it.each`
-    current | amount | bounds                 | expected
-    ${2022} | ${5}   | ${null}                | ${2027}
-    ${2022} | ${-5}  | ${null}                | ${2017}
+    current | amount | bounds  | expected
+    ${2022} | ${5}   | ${null} | ${2027}
+    ${2022} | ${-5}  | ${null} | ${2017}
   `(
     "adds plainly when bounds is null (unbounded year): $current by $amount -> $expected",
     ({ current, amount, bounds, expected }) => {
@@ -64,15 +64,12 @@ describe("cycleFieldValue", () => {
     ${22}   | ${-15} | ${{ min: 0, max: 59 }} | ${false} | ${7}     | ${"subtracts plainly without round"}
     ${2022} | ${5}   | ${null}                | ${true}  | ${2025}  | ${"rounds an unbounded field up"}
     ${2022} | ${-5}  | ${null}                | ${true}  | ${2020}  | ${"rounds an unbounded field down"}
-  `("round:$round for $current by $amount -> $expected ($label)", ({
-    current,
-    amount,
-    bounds,
-    round,
-    expected,
-  }) => {
-    expect(cycleFieldValue(current, amount, bounds, round)).toBe(expected);
-  });
+  `(
+    "round:$round for $current by $amount -> $expected ($label)",
+    ({ current, amount, bounds, round, expected }) => {
+      expect(cycleFieldValue(current, amount, bounds, round)).toBe(expected);
+    },
+  );
 
   it("wraps the rounded value when the stepped value exceeds max", () => {
     // 58 + sign(15) = 59; ceil(59/15)*15 = 60 > max(59), so it wraps to min(0).

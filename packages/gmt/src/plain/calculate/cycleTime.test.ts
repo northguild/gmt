@@ -2,13 +2,13 @@ import { cycleTime } from "./cycleTime";
 
 describe("cycleTime", () => {
   it.each`
-    value          | field         | amount | expected
-    ${"09:30:00"}  | ${"hour"}     | ${1}   | ${"10:30:00"}
-    ${"09:30:00"}  | ${"hour"}     | ${-1}  | ${"08:30:00"}
-    ${"09:30:00"}  | ${"minute"}   | ${1}   | ${"09:31:00"}
-    ${"09:30:00"}  | ${"minute"}   | ${-1}  | ${"09:29:00"}
-    ${"09:30:00"}  | ${"second"}   | ${1}   | ${"09:30:01"}
-    ${"09:30:00"}  | ${"second"}   | ${-1}  | ${"09:30:59"}
+    value         | field       | amount | expected
+    ${"09:30:00"} | ${"hour"}   | ${1}   | ${"10:30:00"}
+    ${"09:30:00"} | ${"hour"}   | ${-1}  | ${"08:30:00"}
+    ${"09:30:00"} | ${"minute"} | ${1}   | ${"09:31:00"}
+    ${"09:30:00"} | ${"minute"} | ${-1}  | ${"09:29:00"}
+    ${"09:30:00"} | ${"second"} | ${1}   | ${"09:30:01"}
+    ${"09:30:00"} | ${"second"} | ${-1}  | ${"09:30:59"}
   `(
     "returns $expected for $value cycling $field by $amount",
     ({ value, field, amount, expected }) => {
@@ -17,13 +17,13 @@ describe("cycleTime", () => {
   );
 
   it.each`
-    value           | field           | amount | expected        | label
-    ${"23:00:00"}   | ${"hour"}       | ${1}   | ${"00:00:00"}   | ${"hour 23 +1 wraps to 0"}
-    ${"00:00:00"}   | ${"hour"}       | ${-1}  | ${"23:00:00"}   | ${"hour 0 -1 wraps to 23"}
-    ${"09:59:00"}   | ${"minute"}     | ${1}   | ${"09:00:00"}   | ${"minute 59 +1 wraps to 0"}
-    ${"09:00:00"}   | ${"minute"}     | ${-1}  | ${"09:59:00"}   | ${"minute 0 -1 wraps to 59"}
-    ${"09:30:59"}   | ${"second"}     | ${1}   | ${"09:30:00"}   | ${"second 59 +1 wraps to 0"}
-    ${"09:30:00.999"} | ${"millisecond"} | ${1} | ${"09:30:00"}  | ${"millisecond 999 +1 wraps to 0"}
+    value             | field            | amount | expected      | label
+    ${"23:00:00"}     | ${"hour"}        | ${1}   | ${"00:00:00"} | ${"hour 23 +1 wraps to 0"}
+    ${"00:00:00"}     | ${"hour"}        | ${-1}  | ${"23:00:00"} | ${"hour 0 -1 wraps to 23"}
+    ${"09:59:00"}     | ${"minute"}      | ${1}   | ${"09:00:00"} | ${"minute 59 +1 wraps to 0"}
+    ${"09:00:00"}     | ${"minute"}      | ${-1}  | ${"09:59:00"} | ${"minute 0 -1 wraps to 59"}
+    ${"09:30:59"}     | ${"second"}      | ${1}   | ${"09:30:00"} | ${"second 59 +1 wraps to 0"}
+    ${"09:30:00.999"} | ${"millisecond"} | ${1}   | ${"09:30:00"} | ${"millisecond 999 +1 wraps to 0"}
   `(
     "wraps at the field boundary ($label): $value cycling $field by $amount -> $expected",
     ({ value, field, amount, expected }) => {

@@ -1,0 +1,285 @@
+/*
+ * GMT glass panel recipe — using CSS relative colors for dynamic tints.
+ *
+ * Derives glass fills, borders, and highlights from base tokens via
+ * `color(from <base> <space> <ch> <ch> <ch> / <alpha>)` so every surface
+ * stays in-palette without hard-coded rgba values.
+ */
+
+/* ---- Base glass surface ---- */
+.gmt-glass {
+  position: relative;
+  /* stained glass wash — subtle teal tint, content shows through */
+  background: color(from var(--gmt-teal) srgb r g b / 0.12);
+  border: 1px solid color(from var(--gmt-cyan) srgb r g b / 0.18);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: scoop;
+  padding: var(--gmt-space-4);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .gmt-glass {
+    background: color(from var(--gmt-teal) srgb r g b / 0.12);
+    backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate))
+      brightness(var(--gmt-brightness));
+    -webkit-backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate))
+      brightness(var(--gmt-brightness));
+  }
+}
+
+/* ---- Hairline border gradient on two edges ---- */
+.gmt-glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    color(from var(--gmt-cyan) srgb r g b / 0.42) 0%,
+    transparent 40%,
+    transparent 60%,
+    color(from var(--gmt-cyan) srgb r g b / 0.42) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ---- 1px inset top highlight ---- */
+.gmt-glass::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: var(--gmt-space-4);
+  right: var(--gmt-space-4);
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color(from var(--gmt-ice) srgb r g b / 0.08) 30%,
+    color(from var(--gmt-ice) srgb r g b / 0.08) 70%,
+    transparent
+  );
+  pointer-events: none;
+}
+
+/* ---- L-shaped corner brackets ---- */
+.gmt-brackets {
+  position: relative;
+}
+
+.gmt-brackets::before,
+.gmt-brackets::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: var(--gmt-cyan);
+  border-style: solid;
+  border-width: 0;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* top-left + bottom-right */
+.gmt-brackets::before {
+  top: -1px;
+  left: -1px;
+  border-top-width: 2px;
+  border-left-width: 2px;
+}
+
+.gmt-brackets::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom-width: 2px;
+  border-right-width: 2px;
+}
+
+/* ---- Heavy glass (for hero / elevated surfaces) ---- */
+.gmt-glass-heavy {
+  /* deeper stained glass wash */
+  background: color(from var(--gmt-teal) srgb r g b / 0.18);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .gmt-glass-heavy {
+    backdrop-filter: blur(var(--gmt-blur-heavy)) saturate(var(--gmt-saturate))
+      brightness(var(--gmt-brightness));
+    -webkit-backdrop-filter: blur(var(--gmt-blur-heavy))
+      saturate(var(--gmt-saturate)) brightness(var(--gmt-brightness));
+  }
+}
+
+/* ---- Apply glass to site elements ---- */
+
+/* Header — stained glass wash, content visible behind */
+header {
+  background: color(from var(--gmt-teal) srgb r g b / 0.12);
+  border-bottom: 1px solid color(from var(--gmt-cyan) srgb r g b / 0.18);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  header {
+    backdrop-filter: blur(var(--gmt-blur));
+    -webkit-backdrop-filter: blur(var(--gmt-blur));
+  }
+}
+
+/* Sidebar — subtle blue-tinted glass, content shows through */
+.sidebar-pane,
+#starlight__sidebar {
+  background: color(from var(--gmt-teal) srgb r g b / 0.08);
+  border-right: 1px solid color(from var(--gmt-cyan) srgb r g b / 0.18);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .sidebar-pane,
+  #starlight__sidebar {
+    backdrop-filter: blur(var(--gmt-blur));
+    -webkit-backdrop-filter: blur(var(--gmt-blur));
+  }
+}
+
+/* Code blocks — stained glass wash */
+.sl-markdown-content pre {
+  background: color(from var(--gmt-teal) srgb r g b / 0.08);
+  border: 1px solid color(from var(--gmt-cyan) srgb r g b / 0.18);
+  border-radius: var(--gmt-radius-lg);
+  position: relative;
+}
+
+[data-theme="light"] .sl-markdown-content pre {
+  background: color(from var(--gmt-teal) srgb r g b / 0.06);
+}
+
+[data-theme="light"] .expressive-code {
+  --ec-codeBg: color(from var(--gmt-teal) srgb r g b / 0.06);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .sl-markdown-content pre {
+    background: color(from var(--gmt-teal) srgb r g b / 0.08);
+    backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+    -webkit-backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+  }
+
+  [data-theme="light"] .sl-markdown-content pre {
+    background: color(from var(--gmt-teal) srgb r g b / 0.06);
+  }
+
+  [data-theme="light"] .expressive-code {
+    --ec-codeBg: color(from var(--gmt-teal) srgb r g b / 0.06);
+  }
+}
+
+/* Tables — stained glass wash */
+.sl-markdown-content table {
+  background: color(from var(--gmt-teal) srgb r g b / 0.06);
+  border: 1px solid color(from var(--gmt-cyan) srgb r g b / 0.18);
+  border-radius: var(--gmt-radius-lg);
+  overflow: hidden;
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .sl-markdown-content table {
+    backdrop-filter: blur(calc(var(--gmt-blur) * 0.5));
+    -webkit-backdrop-filter: blur(calc(var(--gmt-blur) * 0.5));
+  }
+}
+
+/* Table headers — deeper blue tint */
+.sl-markdown-content thead {
+  background: color(from var(--gmt-teal) srgb r g b / 0.15);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .sl-markdown-content thead {
+    backdrop-filter: blur(var(--gmt-blur));
+    -webkit-backdrop-filter: blur(var(--gmt-blur));
+  }
+}
+
+/* Alerts / Asides — stained glass wash */
+.starlight-aside {
+  background: color(from var(--gmt-teal) srgb r g b / 0.08);
+  border: 1px solid color(from var(--gmt-cyan) srgb r g b / 0.18);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .starlight-aside {
+    backdrop-filter: blur(var(--gmt-blur));
+    -webkit-backdrop-filter: blur(var(--gmt-blur));
+  }
+}
+
+/* Caution / Warning aside — signal yellow translucent bg */
+.starlight-aside--caution {
+  background: color(from var(--gmt-signal) srgb r g b / 0.08);
+  border-color: color(from var(--gmt-signal) srgb r g b / 0.35);
+}
+
+/* Cards — subtle blue-tinted glass */
+[class*="card"],
+.comparison-card {
+  background: color(from var(--gmt-teal) srgb r g b / 0.06);
+  border: 1px solid color(from var(--gmt-cyan) srgb r g b / 0.18);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: scoop;
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  [class*="card"],
+  .comparison-card {
+    backdrop-filter: blur(var(--gmt-blur));
+    -webkit-backdrop-filter: blur(var(--gmt-blur));
+  }
+}
+
+/* Search input — translucent glass fill */
+header input[type="search"],
+header input[type="text"],
+.search input,
+site-search input {
+  background: color(from var(--gmt-teal) srgb r g b / 0.06);
+  border: 1px solid color(from var(--gmt-cyan) srgb r g b / 0.18);
+  color: var(--gmt-ice);
+  transition:
+    background var(--gmt-duration-fast) var(--gmt-easing),
+    border-color var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+header input[type="search"]:focus,
+header input[type="text"]:focus,
+.search input:focus,
+site-search input:focus {
+  background: color(from var(--gmt-teal) srgb r g b / 0.1);
+  border-color: color(from var(--gmt-cyan) srgb r g b / 0.35);
+}
+
+/* Modals / Dialogs — deeper stained glass */
+[role="dialog"],
+.search-dialog,
+.DocSearch-Modal {
+  background: color(from var(--gmt-teal) srgb r g b / 0.15);
+  border: 1px solid color(from var(--gmt-cyan) srgb r g b / 0.18);
+  border-radius: var(--gmt-radius-lg);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  [role="dialog"],
+  .search-dialog,
+  .DocSearch-Modal {
+    backdrop-filter: blur(var(--gmt-blur-heavy));
+    -webkit-backdrop-filter: blur(var(--gmt-blur-heavy));
+  }
+}

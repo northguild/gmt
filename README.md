@@ -4,6 +4,8 @@ Home of [@northguild/gmt](./packages/gmt) — **Give Me Temporal!**
 
 A monorepo for NorthGuild community libraries, built with Nx and powered by pnpm, focused on making JavaScript date handling reliable and predictable.
 
+Head to our [docs site](https://gmt-dox.northguild.workers.dev/) for the best way to get started.
+
 **Why GMT:**
 
 - **100% Temporal, Temporal-first.** GMT is built directly on the TC39 `Temporal` standard (via `@js-temporal/polyfill`) — not a custom, homegrown date/time type system like `@internationalized/date`'s own `CalendarDate`/`ZonedDateTime` classes. No `Date` object anywhere, enforced by 3 dedicated lint packages.

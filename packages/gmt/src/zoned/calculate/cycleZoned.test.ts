@@ -4,19 +4,19 @@ import { cycleZoned } from "./cycleZoned";
 
 describe("cycleZoned", () => {
   it.each`
-    value                                                | field       | amount | expected
-    ${"2024-06-15T09:30:00-05:00[America/Chicago]"}      | ${"year"}   | ${1}   | ${"2025-06-15T09:30:00-05:00[America/Chicago]"}
-    ${"2024-06-15T09:30:00-05:00[America/Chicago]"}      | ${"month"}  | ${1}   | ${"2024-07-15T09:30:00-05:00[America/Chicago]"}
-    ${"2024-06-15T09:30:00-05:00[America/Chicago]"}      | ${"day"}    | ${1}   | ${"2024-06-16T09:30:00-05:00[America/Chicago]"}
-    ${"2024-06-15T09:30:00-05:00[America/Chicago]"}      | ${"hour"}   | ${1}   | ${"2024-06-15T10:30:00-05:00[America/Chicago]"}
-    ${"2024-06-15T09:30:00-05:00[America/Chicago]"}      | ${"minute"} | ${1}   | ${"2024-06-15T09:31:00-05:00[America/Chicago]"}
-    ${"2024-06-15T09:30:00-05:00[America/Chicago]"}      | ${"second"} | ${1}   | ${"2024-06-15T09:30:01-05:00[America/Chicago]"}
-    ${"2024-06-15T09:30:00-05:00[America/Chicago]"}      | ${"year"}   | ${-1}  | ${"2023-06-15T09:30:00-05:00[America/Chicago]"}
-    ${"2024-06-15T09:30:00-05:00[America/Chicago]"}      | ${"month"}  | ${-1}  | ${"2024-05-15T09:30:00-05:00[America/Chicago]"}
-    ${"2024-06-15T09:30:00-05:00[America/Chicago]"}      | ${"day"}    | ${-1}  | ${"2024-06-14T09:30:00-05:00[America/Chicago]"}
-    ${"2024-06-15T09:30:00-05:00[America/Chicago]"}      | ${"hour"}   | ${-1}  | ${"2024-06-15T08:30:00-05:00[America/Chicago]"}
-    ${"2024-06-15T09:30:00-05:00[America/Chicago]"}      | ${"minute"} | ${-1}  | ${"2024-06-15T09:29:00-05:00[America/Chicago]"}
-    ${"2024-06-15T09:30:00-05:00[America/Chicago]"}      | ${"second"} | ${-1}  | ${"2024-06-15T09:30:59-05:00[America/Chicago]"}
+    value                                           | field       | amount | expected
+    ${"2024-06-15T09:30:00-05:00[America/Chicago]"} | ${"year"}   | ${1}   | ${"2025-06-15T09:30:00-05:00[America/Chicago]"}
+    ${"2024-06-15T09:30:00-05:00[America/Chicago]"} | ${"month"}  | ${1}   | ${"2024-07-15T09:30:00-05:00[America/Chicago]"}
+    ${"2024-06-15T09:30:00-05:00[America/Chicago]"} | ${"day"}    | ${1}   | ${"2024-06-16T09:30:00-05:00[America/Chicago]"}
+    ${"2024-06-15T09:30:00-05:00[America/Chicago]"} | ${"hour"}   | ${1}   | ${"2024-06-15T10:30:00-05:00[America/Chicago]"}
+    ${"2024-06-15T09:30:00-05:00[America/Chicago]"} | ${"minute"} | ${1}   | ${"2024-06-15T09:31:00-05:00[America/Chicago]"}
+    ${"2024-06-15T09:30:00-05:00[America/Chicago]"} | ${"second"} | ${1}   | ${"2024-06-15T09:30:01-05:00[America/Chicago]"}
+    ${"2024-06-15T09:30:00-05:00[America/Chicago]"} | ${"year"}   | ${-1}  | ${"2023-06-15T09:30:00-05:00[America/Chicago]"}
+    ${"2024-06-15T09:30:00-05:00[America/Chicago]"} | ${"month"}  | ${-1}  | ${"2024-05-15T09:30:00-05:00[America/Chicago]"}
+    ${"2024-06-15T09:30:00-05:00[America/Chicago]"} | ${"day"}    | ${-1}  | ${"2024-06-14T09:30:00-05:00[America/Chicago]"}
+    ${"2024-06-15T09:30:00-05:00[America/Chicago]"} | ${"hour"}   | ${-1}  | ${"2024-06-15T08:30:00-05:00[America/Chicago]"}
+    ${"2024-06-15T09:30:00-05:00[America/Chicago]"} | ${"minute"} | ${-1}  | ${"2024-06-15T09:29:00-05:00[America/Chicago]"}
+    ${"2024-06-15T09:30:00-05:00[America/Chicago]"} | ${"second"} | ${-1}  | ${"2024-06-15T09:30:59-05:00[America/Chicago]"}
   `(
     "returns $expected for $value cycling $field by $amount",
     ({ value, field, amount, expected }) => {
@@ -25,10 +25,10 @@ describe("cycleZoned", () => {
   );
 
   it.each`
-    value                                                | field      | amount | expected                                        | label
-    ${"2024-12-15T09:30:00-06:00[America/Chicago]"}      | ${"month"} | ${1}   | ${"2024-01-15T09:30:00-06:00[America/Chicago]"} | ${"month wraps within the same year"}
-    ${"2024-06-15T23:30:00-05:00[America/Chicago]"}      | ${"hour"}  | ${1}   | ${"2024-06-15T00:30:00-05:00[America/Chicago]"} | ${"hour wraps within the same day (non-DST date)"}
-    ${"2024-06-30T09:00:00-05:00[America/Chicago]"}      | ${"day"}   | ${1}   | ${"2024-06-01T09:00:00-05:00[America/Chicago]"} | ${"day wraps within the same month (30-day month)"}
+    value                                           | field      | amount | expected                                        | label
+    ${"2024-12-15T09:30:00-06:00[America/Chicago]"} | ${"month"} | ${1}   | ${"2024-01-15T09:30:00-06:00[America/Chicago]"} | ${"month wraps within the same year"}
+    ${"2024-06-15T23:30:00-05:00[America/Chicago]"} | ${"hour"}  | ${1}   | ${"2024-06-15T00:30:00-05:00[America/Chicago]"} | ${"hour wraps within the same day (non-DST date)"}
+    ${"2024-06-30T09:00:00-05:00[America/Chicago]"} | ${"day"}   | ${1}   | ${"2024-06-01T09:00:00-05:00[America/Chicago]"} | ${"day wraps within the same month (30-day month)"}
   `(
     "wraps at the field boundary ($label): $value cycling $field by $amount -> $expected",
     ({ value, field, amount, expected }) => {
@@ -43,9 +43,9 @@ describe("cycleZoned", () => {
   });
 
   it.each`
-    value                                                | field      | amount | overflow       | expected
-    ${"2024-01-31T09:00:00-06:00[America/Chicago]"}      | ${"month"} | ${1}   | ${undefined}   | ${"2024-02-29T09:00:00-06:00[America/Chicago]"}
-    ${"2024-01-31T09:00:00-06:00[America/Chicago]"}      | ${"month"} | ${1}   | ${"reject"}    | ${""}
+    value                                           | field      | amount | overflow     | expected
+    ${"2024-01-31T09:00:00-06:00[America/Chicago]"} | ${"month"} | ${1}   | ${undefined} | ${"2024-02-29T09:00:00-06:00[America/Chicago]"}
+    ${"2024-01-31T09:00:00-06:00[America/Chicago]"} | ${"month"} | ${1}   | ${"reject"}  | ${""}
   `(
     "returns $expected for $value cycling $field by $amount with overflow $overflow",
     ({ value, field, amount, overflow, expected }) => {

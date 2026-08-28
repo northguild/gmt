@@ -50,10 +50,7 @@ export function diffDate(
   }
 
   try {
-    const { a: d1, b: d2 } = parseCalendarDatePairForArithmetic(
-      date1,
-      date2,
-    );
+    const { a: d1, b: d2 } = parseCalendarDatePairForArithmetic(date1, date2);
 
     const duration = d1.until(d2, {
       largestUnit: isSingleUnit

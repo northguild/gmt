@@ -38,7 +38,10 @@ describe("resolveDurationRelativeTo", () => {
     // @js-temporal/polyfill during E5 research.
     const resolved = resolveDurationRelativeTo("5784-06-15[u-ca=hebrew]");
     expect(
-      Temporal.Duration.from("P1Y").total({ unit: "days", relativeTo: resolved }),
+      Temporal.Duration.from("P1Y").total({
+        unit: "days",
+        relativeTo: resolved,
+      }),
     ).toBe(385);
   });
 

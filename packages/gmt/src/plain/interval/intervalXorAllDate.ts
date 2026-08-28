@@ -98,7 +98,10 @@ export function intervalXorAllDate(
       } else if (previousCoverage % 2 === 1 && coverage % 2 === 0 && runStart) {
         result.push({
           start: formatDateInCalendar(runStart, calendar),
-          end: formatDateInCalendar(group.point.subtract({ days: 1 }), calendar),
+          end: formatDateInCalendar(
+            group.point.subtract({ days: 1 }),
+            calendar,
+          ),
         });
         runStart = null;
       }

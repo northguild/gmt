@@ -7,20 +7,20 @@ import {
 
 describe("calendarSystemOfDateValue", () => {
   it.each`
-    value                                        | expected
-    ${"2024-10-03"}                               | ${MustTestCalendars.gregorian}
-    ${"5785-01-01[u-ca=hebrew]"}                   | ${MustTestCalendars.hebrew}
-    ${"1446-03-29[u-ca=islamic-civil]"}            | ${MustTestCalendars["islamic-civil"]}
-    ${"1446-03-30[u-ca=islamic-tabular]"}          | ${MustTestCalendars["islamic-tabular"]}
-    ${"1446-03-30[u-ca=islamic-umalqura]"}         | ${MustTestCalendars["islamic-umalqura"]}
-    ${"0006-10-03[u-ca=japanese;era=reiwa]"}       | ${MustTestCalendars.japanese}
-    ${"2567-10-03[u-ca=buddhist]"}                 | ${MustTestCalendars.buddhist}
-    ${"0113-10-03[u-ca=taiwan]"}                   | ${MustTestCalendars.taiwan}
-    ${"1403-07-12[u-ca=persian]"}                  | ${MustTestCalendars.persian}
-    ${"1946-07-11[u-ca=indian]"}                   | ${MustTestCalendars.indian}
-    ${"2017-01-23[u-ca=ethiopic;era=ethiopic]"}    | ${MustTestCalendars.ethiopic}
-    ${"7517-01-23[u-ca=ethiopic-amete-alem]"}      | ${MustTestCalendars["ethiopic-amete-alem"]}
-    ${"1741-01-23[u-ca=coptic]"}                   | ${MustTestCalendars.coptic}
+    value                                       | expected
+    ${"2024-10-03"}                             | ${MustTestCalendars.gregorian}
+    ${"5785-01-01[u-ca=hebrew]"}                | ${MustTestCalendars.hebrew}
+    ${"1446-03-29[u-ca=islamic-civil]"}         | ${MustTestCalendars["islamic-civil"]}
+    ${"1446-03-30[u-ca=islamic-tabular]"}       | ${MustTestCalendars["islamic-tabular"]}
+    ${"1446-03-30[u-ca=islamic-umalqura]"}      | ${MustTestCalendars["islamic-umalqura"]}
+    ${"0006-10-03[u-ca=japanese;era=reiwa]"}    | ${MustTestCalendars.japanese}
+    ${"2567-10-03[u-ca=buddhist]"}              | ${MustTestCalendars.buddhist}
+    ${"0113-10-03[u-ca=taiwan]"}                | ${MustTestCalendars.taiwan}
+    ${"1403-07-12[u-ca=persian]"}               | ${MustTestCalendars.persian}
+    ${"1946-07-11[u-ca=indian]"}                | ${MustTestCalendars.indian}
+    ${"2017-01-23[u-ca=ethiopic;era=ethiopic]"} | ${MustTestCalendars.ethiopic}
+    ${"7517-01-23[u-ca=ethiopic-amete-alem]"}   | ${MustTestCalendars["ethiopic-amete-alem"]}
+    ${"1741-01-23[u-ca=coptic]"}                | ${MustTestCalendars.coptic}
   `(
     "returns $expected for $value",
     ({ value, expected }: { value: string; expected: string }) => {

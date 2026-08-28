@@ -60,7 +60,11 @@ export function cycleDate(
       bounds,
       options?.round ?? false,
     );
-    return setDate(value, { [field]: newValue }, { overflow: options?.overflow });
+    return setDate(
+      value,
+      { [field]: newValue },
+      { overflow: options?.overflow },
+    );
   } catch {
     return "";
   }

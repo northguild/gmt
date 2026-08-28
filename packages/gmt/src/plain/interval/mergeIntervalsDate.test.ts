@@ -120,7 +120,9 @@ describe("mergeIntervalsDate", () => {
         { start: "5784-01-01[u-ca=hebrew]", end: "5784-01-10[u-ca=hebrew]" },
         { start: "5784-01-05[u-ca=hebrew]", end: "5784-01-20[u-ca=hebrew]" },
       ]),
-    ).toEqual([{ start: "5784-01-01[u-ca=hebrew]", end: "5784-01-20[u-ca=hebrew]" }]);
+    ).toEqual([
+      { start: "5784-01-01[u-ca=hebrew]", end: "5784-01-20[u-ca=hebrew]" },
+    ]);
   });
 
   it("returns [] when any interval in the list carries a mismatched calendar tag", () => {

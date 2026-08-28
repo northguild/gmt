@@ -86,9 +86,9 @@ describe("isValidZonedInterval", () => {
   // E5 (issue #78), decision of record D2 — see isValidZonedDateTime.test.ts for the full
   // rationale.
   it.each`
-    start                                                          | end
-    ${"2024-01-01T10:00:00+00:00[UTC][u-ca=hebrew]"}               | ${"2024-12-31T23:59:59+00:00[UTC]"}
-    ${"2024-01-01T10:00:00+00:00[UTC]"}                            | ${"2024-12-31T23:59:59+00:00[UTC][u-ca=hebrew]"}
+    start                                            | end
+    ${"2024-01-01T10:00:00+00:00[UTC][u-ca=hebrew]"} | ${"2024-12-31T23:59:59+00:00[UTC]"}
+    ${"2024-01-01T10:00:00+00:00[UTC]"}              | ${"2024-12-31T23:59:59+00:00[UTC][u-ca=hebrew]"}
   `(
     "returns false when either endpoint carries a calendar annotation: $start, $end",
     ({ start, end }: { start: string; end: string }) => {

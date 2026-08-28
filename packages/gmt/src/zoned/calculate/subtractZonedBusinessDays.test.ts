@@ -186,7 +186,12 @@ describe("subtractZonedBusinessDays", () => {
     expect(subtractZonedBusinessDays(value, amount)).toBe(expected);
   });
   // E5 (issue #78), decision of record D2 and D9 -- see addZonedBusinessDays.test.ts.
-  it("returns \"\" when value carries a calendar annotation", () => {
-    expect(subtractZonedBusinessDays("2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]", 1)).toBe("");
+  it('returns "" when value carries a calendar annotation', () => {
+    expect(
+      subtractZonedBusinessDays(
+        "2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]",
+        1,
+      ),
+    ).toBe("");
   });
 });

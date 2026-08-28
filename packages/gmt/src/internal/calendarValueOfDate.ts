@@ -15,7 +15,9 @@ import { isCalendarSystem } from "./calendarSystemIds";
  * Part of E5 (issue #78)'s calendar-aware `plain/` gate — see the E5 decisions of record for
  * why calendar-system awareness is confined to `plain/` `PlainDate` values (D1).
  */
-export function calendarSystemOfDateValue(value: string): CalendarSystem | null {
+export function calendarSystemOfDateValue(
+  value: string,
+): CalendarSystem | null {
   const match = calendarDate.exec(value);
   if (!match) {
     return "gregorian";

@@ -8,13 +8,14 @@ hero:
     - text: Install
       link: /install/
       icon: right-arrow
+      variant: primary
     - text: Core Rules
       link: /core-rules/
-      variant: minimal
+      variant: secondary
     - text: View on GitHub
       link: https://github.com/northguild/gmt
       icon: external
-      variant: minimal
+      variant: secondary
 ---
 
 import { Card, CardGrid } from "@astrojs/starlight/components";
@@ -58,15 +59,16 @@ GMT's string-in/string-out API, never `new Date()`.
     No `Date` object anywhere, enforced by three dedicated lint packages.
   </Card>
 
-  <Card title="A full replacement for all four" icon="approve-check">
-    Luxon, date-fns, Moment.js, and `@internationalized/date` don't have parity with each
-    other. GMT covers the combined capabilities of all four, plus what none of them do alone.
-  </Card>
+<Card title="A full replacement for all four" icon="approve-check">
+  Luxon, date-fns, Moment.js, and `@internationalized/date` don't have parity
+  with each other. GMT covers the combined capabilities of all four, plus what
+  none of them do alone.
+</Card>
 
-  <Card title="~15× more CI test executions" icon="rocket">
-    334,020 executions — 16,701 tests × 17 locales × 10 timezones × 2 Node versions —
-    against the four competitors' combined 20,190.
-  </Card>
+<Card title="~15× more CI test executions" icon="rocket">
+  334,020 executions — 16,701 tests × 17 locales × 10 timezones × 2 Node
+  versions — against the four competitors' combined 20,190.
+</Card>
 
   <Card title="Explicit DST disambiguation" icon="setting">
     Control over DST disambiguation on both construction *and* arithmetic — a control none

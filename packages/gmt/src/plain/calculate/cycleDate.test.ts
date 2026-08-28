@@ -19,11 +19,11 @@ describe("cycleDate", () => {
   // the core E6 use case: cycling wraps within the field's own range and does NOT carry into the
   // next larger field the way addDate does (addDate("2024-12-15", { months: 1 }) => "2025-01-15")
   it.each`
-    value           | field      | amount | expected         | label
-    ${"2024-12-15"} | ${"month"} | ${1}   | ${"2024-01-15"}  | ${"December +1 stays in the same year"}
-    ${"2024-01-15"} | ${"month"} | ${-1}  | ${"2024-12-15"}  | ${"January -1 stays in the same year"}
-    ${"2024-12-31"} | ${"day"}   | ${1}   | ${"2024-12-01"}  | ${"last day of month +1 stays in the same month"}
-    ${"2024-12-01"} | ${"day"}   | ${-1}  | ${"2024-12-31"}  | ${"first day of month -1 stays in the same month"}
+    value           | field      | amount | expected        | label
+    ${"2024-12-15"} | ${"month"} | ${1}   | ${"2024-01-15"} | ${"December +1 stays in the same year"}
+    ${"2024-01-15"} | ${"month"} | ${-1}  | ${"2024-12-15"} | ${"January -1 stays in the same year"}
+    ${"2024-12-31"} | ${"day"}   | ${1}   | ${"2024-12-01"} | ${"last day of month +1 stays in the same month"}
+    ${"2024-12-01"} | ${"day"}   | ${-1}  | ${"2024-12-31"} | ${"first day of month -1 stays in the same month"}
   `(
     "wraps at the field boundary ($label): $value cycling $field by $amount -> $expected",
     ({ value, field, amount, expected }) => {
@@ -35,25 +35,23 @@ describe("cycleDate", () => {
     value           | field      | amount | expected        | label
     ${"2024-01-15"} | ${"month"} | ${13}  | ${"2024-02-15"} | ${"amount larger than the field's range (+13 months)"}
     ${"2024-03-15"} | ${"month"} | ${-25} | ${"2024-02-15"} | ${"large negative amount, multiple ranges"}
-  `("$label: $value cycling $field by $amount -> $expected", ({
-    value,
-    field,
-    amount,
-    expected,
-  }) => {
-    expect(cycleDate(value, field, amount)).toBe(expected);
-  });
+  `(
+    "$label: $value cycling $field by $amount -> $expected",
+    ({ value, field, amount, expected }) => {
+      expect(cycleDate(value, field, amount)).toBe(expected);
+    },
+  );
 
   it("returns the value unchanged when amount is 0", () => {
     expect(cycleDate("2024-06-15", "month", 0)).toBe("2024-06-15");
   });
 
   it.each`
-    value           | daysInMonth | expected         | label
-    ${"2024-01-31"} | ${31}       | ${"2024-01-01"}  | ${"31-day month"}
-    ${"2024-04-30"} | ${30}       | ${"2024-04-01"}  | ${"30-day month"}
-    ${"2024-02-29"} | ${29}       | ${"2024-02-01"}  | ${"29-day month (leap Feb)"}
-    ${"2023-02-28"} | ${28}       | ${"2023-02-01"}  | ${"28-day month (non-leap Feb)"}
+    value           | daysInMonth | expected        | label
+    ${"2024-01-31"} | ${31}       | ${"2024-01-01"} | ${"31-day month"}
+    ${"2024-04-30"} | ${30}       | ${"2024-04-01"} | ${"30-day month"}
+    ${"2024-02-29"} | ${29}       | ${"2024-02-01"} | ${"29-day month (leap Feb)"}
+    ${"2023-02-28"} | ${28}       | ${"2023-02-01"} | ${"28-day month (non-leap Feb)"}
   `(
     "wraps day-of-month cycling in a $label: $value +1 day -> $expected",
     ({ value, expected }) => {

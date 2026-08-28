@@ -90,7 +90,6 @@ header {
   border-bottom: 1px solid var(--mg-border);
   color: var(--mg-cyan);
   font-size: 1.3rem;
-  text-transform: uppercase;
   letter-spacing: var(--mg-tracking-wide);
 }
 
@@ -103,7 +102,8 @@ header {
 .sl-markdown-content pre {
   background: var(--mg-void-2);
   border: 1px solid var(--mg-border);
-  border-radius: var(--mg-radius-md);
+  border-radius: var(--mg-radius-lg);
+  corner-shape: scoop;
   position: relative;
 }
 
@@ -133,11 +133,19 @@ header {
 /* ---- Parameter / options tables ---- */
 .sl-markdown-content table {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
+  border-collapse: collapse;
   border: 1px solid var(--mg-border);
-  border-radius: var(--mg-radius-md);
+  border-radius: var(--mg-radius-lg);
+  corner-shape: scoop;
   overflow: hidden;
+}
+
+/* ---- Starlight tabs: remove dividers between tab labels ---- */
+.tablist-wrapper [role="tablist"] {
+  border-bottom: none;
+}
+.tab [role="tab"] {
+  box-shadow: none;
 }
 
 .sl-markdown-content thead {
@@ -148,7 +156,6 @@ header {
   color: var(--mg-cyan);
   font-family: var(--mg-font-display);
   font-weight: 600;
-  text-transform: uppercase;
   letter-spacing: var(--mg-tracking-wide);
   font-size: 0.8rem;
   padding: var(--mg-space-3) var(--mg-space-4);
@@ -208,6 +215,27 @@ header {
   border-bottom-color: var(--mg-cyan);
 }
 
+/* CardGrid wrapper — no border or background */
+.card-grid {
+  background: transparent;
+  border: none;
+}
+
+/* ---- CTA buttons ---- */
+.sl-link-button {
+  border-radius: var(--mg-radius-md);
+  corner-shape: scoop;
+}
+
+.sl-link-button.secondary {
+  border-color: transparent;
+}
+
+.sl-link-button.secondary:hover {
+  background: rgba(128, 128, 128, 0.12);
+  border-color: transparent;
+}
+
 /* ---- Sentinel values (empty string, null, false, []) ---- */
 .sl-markdown-content code:only-child,
 .sl-markdown-content td:first-child code {
@@ -234,18 +262,20 @@ header {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--mg-void);
+  background: var(--mg-void-2);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--mg-void-3);
-  border: 4px solid var(--mg-void);
+  background: var(--mg-void-2);
+  border: 4px solid var(--mg-void-2);
   border-radius: 0.5px;
+  corner-shape: scoop;
 }
 
 ::-webkit-scrollbar-thumb:hover,
 html.is-scrolling ::-webkit-scrollbar-thumb {
-  background: var(--mg-cyan-dim);
+  background: var(--mg-void-3);
+  border-color: var(--mg-void-3);
 }
 
 /* ---- Shiki syntax highlighting (theme-aware) ---- */
@@ -359,8 +389,22 @@ html.is-scrolling ::-webkit-scrollbar-thumb {
 [data-theme="light"] button[class*="cta"],
 [data-theme="light"] button[class*="primary"],
 [data-theme="light"] :is(#starlight__main, main) a.sl-link-button.primary {
-  background-color: #075985 !important;
-  color: #ffffff !important;
+  background: rgba(14, 116, 144, 0.12);
+  border: 1px solid rgba(34, 211, 238, 0.18);
+  color: var(--mg-cyan);
+  corner-shape: scoop;
+}
+
+/* Hero CTA must override hero link color */
+[data-theme="light"] .hero a.sl-link-button.primary {
+  color: var(--mg-cyan) !important;
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  [data-theme="light"] :is(#starlight__main, main) a.sl-link-button.primary {
+    backdrop-filter: blur(var(--mg-blur)) saturate(var(--mg-saturate));
+    -webkit-backdrop-filter: blur(var(--mg-blur)) saturate(var(--mg-saturate));
+  }
 }
 
 /* Landing page links - hero section */
@@ -417,6 +461,13 @@ a[rel="next"] .link-title {
 [data-theme="light"] .comparison-card h3,
 [data-theme="light"] .card h3,
 [data-theme="light"] [class*="card"] h3 {
+  color: var(--mg-void) !important;
+}
+
+/* Comparison card icons in light mode */
+[data-theme="light"] .comparison-card .icon,
+[data-theme="light"] .card .icon,
+[data-theme="light"] [class*="card"] .icon {
   color: var(--mg-cyan) !important;
 }
 
@@ -438,10 +489,6 @@ a[rel="next"] .link-title {
 [data-theme="light"] .hero a,
 [data-theme="light"] .banner a {
   color: var(--mg-cyan) !important;
-}
-
-[data-theme="light"] main a.sl-link-button.primary {
-  color: var(--mg-ice) !important;
 }
 
 /* Reduced motion ---- */

@@ -61,7 +61,11 @@ describe("intervalDivideEquallyDate", () => {
   // (D4). Golden verified directly against @js-temporal/polyfill.
   it("divides in the shared calendar when start and end carry the same tag", () => {
     expect(
-      intervalDivideEquallyDate("5784-01-01[u-ca=hebrew]", "5784-01-11[u-ca=hebrew]", 2),
+      intervalDivideEquallyDate(
+        "5784-01-01[u-ca=hebrew]",
+        "5784-01-11[u-ca=hebrew]",
+        2,
+      ),
     ).toEqual([
       { start: "5784-01-01[u-ca=hebrew]", end: "5784-01-06[u-ca=hebrew]" },
       { start: "5784-01-06[u-ca=hebrew]", end: "5784-01-11[u-ca=hebrew]" },

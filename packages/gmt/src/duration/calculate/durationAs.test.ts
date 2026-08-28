@@ -96,10 +96,10 @@ describe("durationAs", () => {
   // @js-temporal/polyfill: before this fix, the Hebrew-shape string below was silently
   // misread as ISO year 5784 and returned 354, not 385.
   it.each`
-    value    | unit      | relativeTo                        | expected | note
-    ${"P1Y"} | ${"days"} | ${"5784-06-15[u-ca=hebrew]"}       | ${385}   | ${"Hebrew leap year 5784"}
-    ${"P1M"} | ${"days"} | ${"5785-04-15[u-ca=hebrew]"}       | ${29}    | ${"Tevet, a 29-day Hebrew month"}
-    ${"P1M"} | ${"days"} | ${"2024-02-10[u-ca=hebrew]"}       | ${30}    | ${"Temporal's own u-ca shape still works unchanged (ISO digits)"}
+    value    | unit      | relativeTo                   | expected | note
+    ${"P1Y"} | ${"days"} | ${"5784-06-15[u-ca=hebrew]"} | ${385}   | ${"Hebrew leap year 5784"}
+    ${"P1M"} | ${"days"} | ${"5785-04-15[u-ca=hebrew]"} | ${29}    | ${"Tevet, a 29-day Hebrew month"}
+    ${"P1M"} | ${"days"} | ${"2024-02-10[u-ca=hebrew]"} | ${30}    | ${"Temporal's own u-ca shape still works unchanged (ISO digits)"}
   `(
     "totals $value as $expected in $unit relativeTo calendar-annotated $relativeTo ($note)",
     ({ value, unit, relativeTo, expected }) => {

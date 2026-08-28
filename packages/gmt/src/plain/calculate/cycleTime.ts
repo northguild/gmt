@@ -54,7 +54,11 @@ export function cycleTime(
       bounds,
       options?.round ?? false,
     );
-    return setTime(value, { [field]: newValue }, { overflow: options?.overflow });
+    return setTime(
+      value,
+      { [field]: newValue },
+      { overflow: options?.overflow },
+    );
   } catch {
     return "";
   }

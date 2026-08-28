@@ -13,9 +13,9 @@ describe("dateCycleFieldBounds", () => {
   `(
     "returns { min: 1, max: monthsInYear } for month",
     ({ monthsInYear, daysInMonth, expected }) => {
-      expect(dateCycleFieldBounds("month", { monthsInYear, daysInMonth })).toEqual(
-        expected,
-      );
+      expect(
+        dateCycleFieldBounds("month", { monthsInYear, daysInMonth }),
+      ).toEqual(expected);
     },
   );
 

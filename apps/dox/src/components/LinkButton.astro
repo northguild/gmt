@@ -1,0 +1,150 @@
+---
+import Icon from './Icon.astro';
+
+const {
+	class: className,
+	icon,
+	iconPlacement = 'end',
+	variant = 'primary',
+	target,
+	...attrs
+} = Astro.props;
+---
+
+<a class:list={['sl-link-button not-content', variant, className]} {...attrs} {target}>
+	{icon && iconPlacement === 'start' && <Icon name={icon} size="1.5rem" />}
+	<slot />
+	{icon && iconPlacement === 'end' && <Icon name={icon} size="1.5rem" />}
+</a>
+
+<style>
+	@layer starlight.components {
+		.sl-link-button {
+			align-items: center;
+			border: 1px solid transparent;
+			border-radius: 999rem;
+			display: inline-flex;
+			font-size: var(--sl-text-sm);
+			gap: 0.5em;
+			line-height: 1.1875;
+			outline-offset: 0.25rem;
+			padding: 0.4375rem 1.125rem;
+			text-decoration: none;
+		}
+
+		.sl-link-button.primary {
+			/* glass primary — toned down, translucent teal with glow */
+			background: color(from var(--gmt-teal) srgb r g b / 0.15);
+			border: 1px solid color(from var(--gmt-cyan) srgb r g b / 0.35);
+			color: var(--gmt-cyan-bright);
+			box-shadow:
+				0 0 8px color(from var(--gmt-cyan) srgb r g b / 0.1),
+				inset 0 1px 0 color(from var(--gmt-ice) srgb r g b / 0.06);
+			transition:
+				background var(--gmt-duration-fast) var(--gmt-easing),
+				border-color var(--gmt-duration-fast) var(--gmt-easing),
+				box-shadow var(--gmt-duration-fast) var(--gmt-easing),
+				color var(--gmt-duration-fast) var(--gmt-easing);
+		}
+
+		@supports (backdrop-filter: blur(1px)) {
+			.sl-link-button.primary {
+				backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+				-webkit-backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+			}
+		}
+
+		.sl-link-button.primary:hover {
+			background: color(from var(--gmt-teal) srgb r g b / 0.25);
+			border-color: color(from var(--gmt-cyan) srgb r g b / 0.55);
+			color: var(--gmt-cyan);
+			box-shadow:
+				0 0 16px color(from var(--gmt-cyan) srgb r g b / 0.2),
+				inset 0 1px 0 color(from var(--gmt-ice) srgb r g b / 0.1);
+		}
+
+		.sl-link-button.secondary {
+			border-color: inherit;
+			color: var(--sl-color-white);
+		}
+		.sl-link-button.minimal {
+			color: var(--sl-color-white);
+			padding-inline: 0;
+		}
+
+		/* ---- GMT glass button variants ---- */
+		.sl-link-button.cta {
+			/* stained glass wash — subtle teal tint */
+			background: color(from var(--gmt-teal) srgb r g b / 0.12);
+			border: 1px solid color(from var(--gmt-cyan) srgb r g b / 0.35);
+			color: var(--gmt-cyan-bright);
+			box-shadow:
+				0 0 12px color(from var(--gmt-cyan) srgb r g b / 0.15),
+				inset 0 1px 0 color(from var(--gmt-ice) srgb r g b / 0.08);
+			transition:
+				background var(--gmt-duration-fast) var(--gmt-easing),
+				border-color var(--gmt-duration-fast) var(--gmt-easing),
+				box-shadow var(--gmt-duration-fast) var(--gmt-easing),
+				color var(--gmt-duration-fast) var(--gmt-easing);
+		}
+
+		@supports (backdrop-filter: blur(1px)) {
+			.sl-link-button.cta {
+				backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+				-webkit-backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+			}
+		}
+
+		.sl-link-button.cta:hover {
+			background: color(from var(--gmt-teal) srgb r g b / 0.2);
+			border-color: color(from var(--gmt-cyan) srgb r g b / 0.6);
+			color: var(--gmt-cyan);
+			box-shadow:
+				0 0 20px color(from var(--gmt-cyan) srgb r g b / 0.3),
+				inset 0 1px 0 color(from var(--gmt-ice) srgb r g b / 0.12);
+		}
+
+		.sl-link-button.ghost {
+			/* subtle ghost — 0.5px border, transparent fill */
+			background: transparent;
+			border: 0.5px solid color(from var(--gmt-cyan) srgb r g b / 0.25);
+			color: var(--gmt-ice-dim);
+			transition:
+				background var(--gmt-duration-fast) var(--gmt-easing),
+				border-color var(--gmt-duration-fast) var(--gmt-easing),
+				color var(--gmt-duration-fast) var(--gmt-easing);
+		}
+
+		.sl-link-button.ghost:hover {
+			/* hover matches header glass */
+			background: color(from var(--gmt-teal) srgb r g b / 0.12);
+			border-color: color(from var(--gmt-cyan) srgb r g b / 0.4);
+			color: var(--gmt-cyan-bright);
+		}
+
+		@supports (backdrop-filter: blur(1px)) {
+			.sl-link-button.ghost:hover {
+				backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+				-webkit-backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+			}
+		}
+
+		.sl-link-button :global(svg) {
+			flex-shrink: 0;
+		}
+
+		@media (min-width: 50rem) {
+			.sl-link-button {
+				font-size: var(--sl-text-base);
+				padding: 0.9375rem 1.25rem;
+			}
+		}
+
+		:global(.sl-markdown-content) .sl-link-button {
+			margin-inline-end: 1rem;
+		}
+		:global(.sl-markdown-content) .sl-link-button:not(:where(p *)) {
+			margin-block: 1rem;
+		}
+	}
+</style>

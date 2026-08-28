@@ -131,7 +131,10 @@ describe("intervalIntersectionDate", () => {
         "5784-06-20[u-ca=hebrew]",
         "5784-07-01[u-ca=hebrew]",
       ),
-    ).toEqual({ start: "5784-06-20[u-ca=hebrew]", end: "5784-06-25[u-ca=hebrew]" });
+    ).toEqual({
+      start: "5784-06-20[u-ca=hebrew]",
+      end: "5784-06-25[u-ca=hebrew]",
+    });
   });
 
   it("returns null when calendars mismatch across the four arguments", () => {
