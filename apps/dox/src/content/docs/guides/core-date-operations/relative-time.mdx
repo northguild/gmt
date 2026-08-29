@@ -1,0 +1,80 @@
+---
+title: Relative Time
+description: Produce human-friendly relative strings ("yesterday", "in 2 hours") across plain, zoned, unix, and UTC values — with shared options and DST-safe zoned arithmetic.
+sidebar:
+  order: 7
+---
+
+There is one relative formatter per value type. Pick the one matching your input;
+all share the same option shape.
+
+## Picking the right formatter
+
+| Input shape | Formatter | Module |
+| --- | --- | --- |
+| ISO date `"2024-03-15"` | `formatRelativeDate` | `@northguild/gmt` |
+| ISO time `"14:30:45"` | `formatRelativeTime` | `@northguild/gmt` |
+| ISO datetime `"2024-03-15T14:30:45"` | `formatRelativeDateTime` | `@northguild/gmt` |
+| Zoned `"…[America/New_York]"` | `formatRelativeZoned` | `@northguild/gmt/zoned` |
+| Unix epoch (ms or seconds) | `formatRelativeUnix` | `@northguild/gmt/unix` |
+| UTC ISO `"…Z"` | `formatRelativeUtc` | `@northguild/gmt/utc` |
+
+## Examples
+
+```typescript
+import { formatRelativeDate } from "@northguild/gmt";
+import { formatRelativeZoned } from "@northguild/gmt/zoned";
+import { formatRelativeUnix } from "@northguild/gmt/unix";
+import { formatRelativeUtc } from "@northguild/gmt/utc";
+
+const ref = "2024-03-15";
+formatRelativeDate("2024-03-14", "en-US", { reference: ref }); // "yesterday"
+formatRelativeDate("2024-03-12", "en-US", { reference: ref }); // "3 days ago"
+
+formatRelativeZoned(
+  "2024-03-15T10:00:00-04:00[America/New_York]",
+  "en-US",
+  { reference: "2024-03-15T12:00:00-04:00[America/New_York]" },
+);
+// "2 hours ago" — DST-safe via Temporal.ZonedDateTime arithmetic
+
+formatRelativeUnix(1710507600000, "en-US", { reference: 1710511200000 });
+// "1 hour ago" — default epoch unit is milliseconds
+
+formatRelativeUtc("2024-03-15T11:00:00Z", "en-US", { reference: "2024-03-15T12:00:00Z" });
+// "1 hour ago"
+```
+
+## Shared options
+
+All relative formatters accept the same option shape (besides their type-specific
+`reference`):
+
+- `reference` — **required** anchor of the same input shape.
+- `numeric: "auto" | "always"` — default `"auto"`. `"auto"` produces
+  "yesterday"/"tomorrow"; `"always"` forces "1 day ago"/"in 1 day".
+- `style: "long" | "short" | "narrow"` — default `"long"`.
+- `largestUnit` — override the auto-picked unit (e.g. `"week"` to force
+  "3 weeks ago" instead of "last month").
+- `roundingMethod: "floor" | "ceil" | "round"` — default `"round"`. Applies to the
+  signed value, so it respects past vs. future.
+
+## Runtime ICU data
+
+These formatters delegate to the host runtime's `Intl.RelativeTimeFormat`. Output
+depends on the ICU data shipped with the runtime:
+
+- **Full ICU** (official Node binaries, modern browsers): fully localized strings —
+  `formatRelativeDate("2023-03-15", "sv-SE", { reference: "2024-03-15" })` returns
+  `"i fjol"`.
+- **Small/partial ICU** (some repackaged Node builds): falls back to a longer form —
+  the same call may return `"förra året"`.
+
+This is a property of the runtime, not gmt. For consistent non-English output,
+deploy on a full-ICU Node build or polyfill `Intl`.
+
+## See also
+
+- [Formatting](../formatting/) — absolute formatting and the calendar-day `formatCalendar*` variant
+- [`formatRelativeDate` reference](/reference/plain/format/formatRelativeDate)
+- [`formatRelativeZoned` reference](/reference/zoned/format/formatRelativeZoned)

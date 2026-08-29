@@ -1,0 +1,46 @@
+---
+import { PLAYGROUND_SPECS } from "../lib/playground-spec";
+
+interface Props {
+  severity: "critical" | "high" | "medium";
+  title: string;
+  description?: string;
+  wrongCode: string;
+  wrongSpecId?: string;
+  rightCode: string;
+  rightSpecId?: string;
+}
+
+const { severity, title, description, wrongCode, wrongSpecId, rightCode, rightSpecId } = Astro.props;
+
+const wrongSpec = wrongSpecId ? PLAYGROUND_SPECS[wrongSpecId] : undefined;
+const rightSpec = rightSpecId ? PLAYGROUND_SPECS[rightSpecId] : undefined;
+---
+
+<div class="gmt-mistake">
+  <div class="gmt-mistake-header">
+    <span class={`gmt-mistake-badge gmt-mistake-badge--${severity}`}>{severity.toUpperCase()}</span>
+    <h3>{title}</h3>
+  </div>
+
+  {description && <p>{description}</p>}
+
+  <div class="gmt-mistake-pair">
+    <div class="gmt-mistake-side gmt-mistake-side--wrong">
+      <h4>Wrong</h4>
+      <pre class="gmt-mistake-code"><code>{wrongCode}</code></pre>
+      {wrongSpec && <gmt-playground data-spec={JSON.stringify(wrongSpec)} data-module={wrongSpec.module} data-fn={wrongSpec.fn}></gmt-playground>}
+    </div>
+
+    <div class="gmt-mistake-side gmt-mistake-side--right">
+      <h4>Right</h4>
+      <pre class="gmt-mistake-code"><code>{rightCode}</code></pre>
+      {rightSpec && <gmt-playground data-spec={JSON.stringify(rightSpec)} data-module={rightSpec.module} data-fn={rightSpec.fn}></gmt-playground>}
+    </div>
+  </div>
+</div>
+
+<script>
+  import { registerPlayground } from "../lib/playground-register";
+  registerPlayground();
+</script>

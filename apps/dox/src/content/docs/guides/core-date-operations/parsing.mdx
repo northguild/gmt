@@ -1,0 +1,113 @@
+---
+title: Parsing
+description: Extract components from ISO strings and decode fixed interchange grammars (email, HTTP, SQL, RFC 3339) into GMT's own ISO strings.
+sidebar:
+  order: 5
+---
+
+Use these functions when you need to read a single field out of an existing ISO
+string, or when you're decoding a non-ISO producer format into GMT's canonical
+shape.
+
+## Extract a component from an ISO string
+
+```typescript
+import {
+  parseYearFromDate,
+  parseMonthFromDate,
+  parseDayFromDate,
+  parseHourFromTime,
+  parseMinuteFromTime,
+  parseSecondFromTime,
+} from "@northguild/gmt";
+
+parseYearFromDate("2024-03-15"); // 2024
+parseMonthFromDate("2024-03-15"); // 3
+parseDayFromDate("2024-03-15"); // 15
+parseHourFromTime("14:30:45"); // 14
+parseMinuteFromTime("14:30:45"); // 30
+parseSecondFromTime("14:30:45"); // 45
+```
+
+These return **numbers** (sentinel `null`), not strings. Months are 1-indexed
+(matching the Temporal spec), so subtract 1 before using as an array index.
+
+There are `parse*FromDateTime` siblings for datetime strings, plus
+`parseDayOfWeekFromDate` and `parseWeekFromDate`.
+
+## Calendar quantities (derived, not stored)
+
+These compute a derived quantity rather than extracting a stored field, so they
+live in `calculate/`, not `parse/`:
+
+```typescript
+import {
+  getDaysInMonth,
+  getDaysInYear,
+  getDayOfYear,
+  getWeeksInYear,
+  getWeeksInMonth,
+  getWeekOfMonth,
+  getWeekYear,
+  getLocaleWeekYear,
+} from "@northguild/gmt";
+
+getDaysInMonth("2024-02-15"); // 29 (leap year)
+getDayOfYear("2024-03-01"); // 61
+getWeekYear("2024-12-30"); // 2025 — ISO week-numbering year
+getWeeksInMonth("2024-02-15", "en-US"); // 5 — calendar-grid rows
+```
+
+## Parse a fixed producer format against a token pattern
+
+`parseDateWithPattern`/`parseDateTimeWithPattern`/`parseTimeWithPattern` decode a
+known, fixed non-ISO producer format — a CSV column, a legacy API field, a
+partially-typed form value — against a caller-supplied token pattern:
+
+```typescript
+import {
+  parseDateWithPattern,
+  parseDateTimeWithPattern,
+  parseTimeWithPattern,
+} from "@northguild/gmt";
+
+parseDateWithPattern("03/15/2024", "MM/dd/yyyy"); // "2024-03-15"
+parseDateTimeWithPattern("15-Mar-2024 14:30", "dd-MMM-yyyy HH:mm"); // "2024-03-15T14:30:00"
+parseTimeWithPattern("02:30:45 PM", "hh:mm:ss a"); // "14:30:45"
+parseDateWithPattern("02/31/2024", "MM/dd/yyyy"); // "" — shape-valid, not a real date
+```
+
+The regex only proves shape; `Temporal.*.from(..., { overflow: "reject" })` proves
+the value is real. All three return `""` on no match, a malformed pattern, or a
+shape-valid-but-unreal date/time.
+
+## Parse a named machine format (email, HTTP, SQL, RFC 3339)
+
+These four return `""` on invalid input (they produce a whole datetime string, not
+a number), matching the sentinel convention of their `format*` counterparts:
+
+```typescript
+import { parseRfc2822, parseHttp, parseSql, parseRfc3339 } from "@northguild/gmt";
+
+parseRfc2822("Fri, 15 Mar 2024 14:30:00 -0400");
+// "2024-03-15T14:30:00-04:00[-04:00]"
+
+parseHttp("Fri, 15 Mar 2024 14:30:00 GMT");
+// "2024-03-15T14:30:00Z"
+
+parseSql("2024-03-15 14:30:00");
+// "2024-03-15T14:30:00"
+
+parseRfc3339("2024-03-15T14:30:00-04:00");
+// "2024-03-15T14:30:00-04:00[-04:00]"
+```
+
+Each has a `format*` counterpart in the [Formatting](../formatting/) guide.
+
+## See also
+
+- [Formatting](../formatting/) — the inverse: producing strings for display and interchange
+- [Validation](../validation/) — checking a string before parsing
+- [`parseYearFromDate` reference](/reference/plain/parse/parseYearFromDate)
+- [`parseDateWithPattern` reference](/reference/plain/parse/parseDateWithPattern)
+- [`parseRfc2822` reference](/reference/zoned/parse/parseRfc2822)

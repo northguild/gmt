@@ -1,6 +1,13 @@
 import type { APIContext, APIRoute } from "astro";
 import { corpus } from "~/generated/reference/corpus";
 import { renderLlmsTxt, type LlmsSection } from "~/lib/llms";
+import { stripFrontmatter, stripMdx } from "~/lib/page-markdown";
+
+const RAW = import.meta.glob("../content/docs/**/*.{md,mdx}", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
 
 export const GET: APIRoute = ({ site }: APIContext) => {
   const base =
@@ -27,20 +34,83 @@ export const GET: APIRoute = ({ site }: APIContext) => {
     sections.push({ heading: `Reference — ${ns}`, links });
   }
 
-  // Guides section
-  const guideLinks = [
-    {
-      title: "Install",
-      url: `${base}/install.md`,
-      description: "How to install and configure @northguild/gmt",
-    },
-    {
-      title: "Core Rules",
-      url: `${base}/core-rules.md`,
-      description: "The fundamental rules of GMT",
-    },
-  ];
+  // Guides section — every non-index page under content/docs/guides/
+  const guideLinks = Object.entries(RAW)
+    .filter(([path]) => path.includes("/content/docs/guides/"))
+    .filter(([path]) => {
+      const rel = path
+        .replace(/^.*\/content\/docs\//, "")
+        .replace(/\.(md|mdx)$/, "");
+      return rel !== "guides/index";
+    })
+    .map(([path, raw]) => {
+      const rel = path
+        .replace(/^.*\/content\/docs\//, "")
+        .replace(/\.(md|mdx)$/, "");
+      const { data, body } = stripFrontmatter(raw);
+      const md = stripMdx(body, { gmtVersion: "" });
+      const title = data.title ?? rel;
+      const description = data.description ?? md.split("\n")[0] ?? "";
+      return {
+        title,
+        url: `${base}/${rel}.md`,
+        description: String(description).replace(/\s+/g, " ").trim(),
+      };
+    })
+    .sort((a, b) => a.title.localeCompare(b.title));
   sections.push({ heading: "Guides", links: guideLinks });
+
+  // Scenarios section — every non-index page under content/docs/scenarios/
+  const scenarioLinks = Object.entries(RAW)
+    .filter(([path]) => path.includes("/content/docs/scenarios/"))
+    .filter(([path]) => {
+      const rel = path
+        .replace(/^.*\/content\/docs\//, "")
+        .replace(/\.(md|mdx)$/, "");
+      return rel !== "scenarios/index";
+    })
+    .map(([path, raw]) => {
+      const rel = path
+        .replace(/^.*\/content\/docs\//, "")
+        .replace(/\.(md|mdx)$/, "");
+      const { data, body } = stripFrontmatter(raw);
+      const md = stripMdx(body, { gmtVersion: "" });
+      const title = data.title ?? rel;
+      const description = data.description ?? md.split("\n")[0] ?? "";
+      return {
+        title,
+        url: `${base}/${rel}.md`,
+        description: String(description).replace(/\s+/g, " ").trim(),
+      };
+    })
+    .sort((a, b) => a.title.localeCompare(b.title));
+  sections.push({ heading: "Scenarios", links: scenarioLinks });
+
+  // Mistakes section — every non-index page under content/docs/mistakes/
+  const mistakeLinks = Object.entries(RAW)
+    .filter(([path]) => path.includes("/content/docs/mistakes/"))
+    .filter(([path]) => {
+      const rel = path
+        .replace(/^.*\/content\/docs\//, "")
+        .replace(/\.(md|mdx)$/, "");
+      return rel !== "mistakes/index";
+    })
+    .map(([path, raw]) => {
+      const rel = path
+        .replace(/^.*\/content\/docs\//, "")
+        .replace(/\.(md|mdx)$/, "");
+      const { data, body } = stripFrontmatter(raw);
+      const md = stripMdx(body, { gmtVersion: "" });
+      const title = data.title ?? rel;
+      const description = data.description ?? md.split("\n")[0] ?? "";
+      return {
+        title,
+        url: `${base}/${rel}.md`,
+        description: String(description).replace(/\s+/g, " ").trim(),
+      };
+    })
+    .sort((a, b) => a.title.localeCompare(b.title));
+  sections.push({ heading: "Mistakes", links: mistakeLinks });
 
   return new Response(
     renderLlmsTxt({

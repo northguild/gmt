@@ -52,7 +52,7 @@ export function stripFrontmatter(raw: string): {
  * Drops:
  * - `import …` / `export …` lines
  * - Starlight component tags (`<Card>`, `<CardGrid>`, `<Tabs>`, `<TabItem>`,
- *   `<Aside>`, `<Steps>`) — keeps inner text
+ *   `<Aside>`, `<Steps>`, `<Playground>`) — keeps inner text
  *
  * Replaces `{gmtVersion}` with the provided value.
  *
@@ -66,8 +66,11 @@ export function stripMdx(body: string, vars: { gmtVersion?: string }): string {
   md = md.replace(/^\s*import\s.+$/gm, "");
   md = md.replace(/^\s*export\s.+$/gm, "");
 
-  // Remove Starlight component tags (keep inner text)
-  md = md.replace(/<\/?(Card|CardGrid|Tabs|TabItem|Aside|Steps)\b[^>]*>/g, "");
+  // Remove Starlight + playground component tags (keep inner text)
+  md = md.replace(
+    /<\/?(Card|CardGrid|Tabs|TabItem|Aside|Steps|Playground)\b[^>]*>/g,
+    "",
+  );
 
   // Substitute template variables
   if (vars.gmtVersion != null) {

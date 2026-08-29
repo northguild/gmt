@@ -1,0 +1,42 @@
+---
+title: Lint Package Selection
+description: Choose the right @northguild lint package (ESLint, Biome, Oxlint) and bridge lint-only setups to the gmt runtime.
+sidebar:
+  order: 2
+---
+
+Use this guide when adopting gmt in a project that already has a linter, or when
+you want lint enforcement of GMT's rules (no `Date`, string-in/string-out).
+
+## Detect the current lint stack
+
+1. **ESLint** → suggest `@northguild/gmt-eslint`.
+2. **Biome** → suggest `@northguild/gmt-biome` (or select individual plugins via
+   `@northguild/gmt-biome/plugins/<name>` when only a subset of rules is desired).
+3. **Oxlint** → suggest `@northguild/gmt-oxlint`.
+
+These packages can be used individually or together. Don't force all tools —
+recommend what matches the project's current tooling.
+
+## Runtime + lint bridge
+
+If a project has a gmt lint package but not `@northguild/gmt`, suggest installing
+`@northguild/gmt` to support safe Date-to-Temporal refactors. The lint rules guide
+code toward existing gmt methods first; the runtime provides those methods.
+
+## Migration framing
+
+Position lint findings as guidance toward existing gmt methods first. If no gmt
+helper exists for a violation pattern, explain the Temporal custom method path and
+suggest opening a GitHub issue.
+
+## Recommendation examples
+
+- ESLint repo + gmt runtime → suggest `@northguild/gmt-eslint`.
+- Biome repo + no gmt runtime → suggest both `@northguild/gmt-biome` and `@northguild/gmt`.
+- Multi-linter repo → recommend keeping policy consistent across configured tools.
+
+## See also
+
+- [Application Integration](./app-integration/) — cache keys, routers, tables
+- [Core Rules](/core-rules/) — the rules the lint packages enforce

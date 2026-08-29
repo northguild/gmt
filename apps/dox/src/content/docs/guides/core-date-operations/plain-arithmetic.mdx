@@ -1,0 +1,177 @@
+---
+title: Plain Arithmetic
+description: Add, subtract, and diff dates and datetimes in the timezone-free plain namespace — including business days, overflow control, and rounding.
+sidebar:
+  order: 2
+---
+
+Plain arithmetic operates on timezone-free values. Use it when you want calendar
+math that ignores timezones entirely — "add 30 days", "what's the difference in
+hours", "start of this month".
+
+## Add and subtract
+
+```typescript
+import {
+  addDate,
+  addBusinessDays,
+  subtractBusinessDays,
+  subtractTime,
+} from "@northguild/gmt";
+
+addDate("2026-01-01", 90, "day");
+// "2026-04-01" — Temporal normalizes impossible dates (Mar 32 -> Apr 1)
+
+addBusinessDays("2024-03-15", 1);
+// "2024-03-18" — skips the weekend
+
+subtractBusinessDays("2024-03-18", 1);
+// "2024-03-15" — skips the weekend going backward
+
+subtractTime("2024-03-15T14:30:45", { hours: 2 });
+// "2024-03-15T12:30:45"
+```
+
+`addBusinessDays`/`subtractBusinessDays` use a fixed ISO Monday–Friday boundary with
+no locale parameter and no holiday calendar. They match the boundary that
+`isBusinessDay` checks.
+
+## Control out-of-range results with `overflow`
+
+`add*`/`subtract*` accept an optional `overflow` (`"constrain"` (default) | `"reject"`):
+
+```typescript
+import { addDate } from "@northguild/gmt";
+
+addDate("2024-01-31", { months: 1 });
+// "2024-02-29" — constrain clamps to the last valid day
+
+addDate("2024-01-31", { months: 1 }, { overflow: "reject" });
+// "" — Feb 31 doesn't exist and "reject" refuses to clamp it
+```
+
+## Diff (difference between two values)
+
+```typescript
+import { diffDate, diffDateTime } from "@northguild/gmt";
+
+diffDateTime("2024-03-17T12:00:00", "2024-03-17T12:30:00", "minute");
+// 30
+
+diffDate("2024-03-15", "2024-03-20", "day");
+// 5
+```
+
+Need a full multi-unit breakdown (e.g. `"P26D"`) instead of a single-unit number?
+Use the durations bridge functions like `diffDateAsDuration`.
+
+## Round a diff result
+
+`diff*` accept optional `smallestUnit`/`roundingIncrement`/`roundingMode`:
+
+```typescript
+import { diffDate } from "@northguild/gmt";
+
+diffDate("2023-01-01", "2023-01-10", "week", {
+  smallestUnit: "week",
+  roundingMode: "halfExpand",
+});
+// 1
+```
+
+## Start and end of a unit
+
+```typescript
+import { startOfDate, endOfDate } from "@northguild/gmt";
+
+startOfDate("2024-03-15T14:30:45"); // "2024-03-15T00:00:00" — start of day
+endOfDate("2024-03-15T14:30:45"); // "2024-03-15T23:59:59.999999999" — end of day
+
+startOfDate("2024-03-15", "month"); // "2024-03-01"
+endOfDate("2024-03-15", "month"); // "2024-03-31"
+```
+
+## Quarter boundaries
+
+```typescript
+import { startOfQuarterForDate, endOfQuarterForDate } from "@northguild/gmt";
+
+startOfQuarterForDate("2024-03-15"); // "2024-01-01"
+endOfQuarterForDate("2024-03-15"); // "2024-03-31"
+```
+
+## Clamp a date to a range
+
+```typescript
+import { clampDate } from "@northguild/gmt";
+
+clampDate("2024-02-01", "2024-03-01", "2024-03-31");
+// "2024-03-01" — below min
+
+clampDate("2024-05-01", "2024-03-01", "2024-03-31");
+// "2024-03-31" — above max
+```
+
+## Find the nearest date to a target
+
+```typescript
+import { closestDateTo } from "@northguild/gmt";
+
+closestDateTo("2024-03-15", ["2024-03-01", "2024-03-20", "2024-03-18"]);
+// "2024-03-18" — nearest by calendar distance
+```
+
+## Set one or more fields directly
+
+`setDate`/`setDateTime`/`setTime` set fields atomically via `.with()` — the safe
+alternative to composing `add*` calls field-by-field, which resolves each field's
+overflow independently and can silently diverge on multi-field updates:
+
+```typescript
+import { setDate, setDateTime, setTime } from "@northguild/gmt";
+
+setDate("2024-01-31", { month: 2 });
+// "2024-02-29" — constrain clamps to the last valid day
+
+setDate("2024-03-10", { year: 2025 }); // "2025-03-10"
+setDateTime("2024-03-10T12:00:00", { hour: 9 }); // "2024-03-10T09:00:00"
+setTime("12:00:00", { hour: 25 }); // "23:00:00" — constrain clamps
+```
+
+## Cycle a single field (wrap, don't carry)
+
+`cycleDate`/`cycleDateTime`/`cycleTime` adjust one field and **wrap** at that
+field's own min/max instead of carrying into the next larger field — the
+datepicker-segment-editing primitive `add*` can't express:
+
+```typescript
+import { addDate, cycleDate } from "@northguild/gmt";
+
+cycleDate("2024-12-15", "month", 1);
+// "2024-01-15" — stays in the same year
+
+addDate("2024-12-15", { months: 1 });
+// "2025-01-15" — addDate correctly overflows into the next year
+```
+
+## Locale-aware week boundaries
+
+```typescript
+import { getLocaleStartOfWeek, getLocaleEndOfWeek } from "@northguild/gmt";
+
+getLocaleStartOfWeek("2024-02-29", "en-US"); // "2024-02-25" (Sunday)
+getLocaleStartOfWeek("2024-02-29", "fr-FR"); // "2024-02-26" (Monday)
+getLocaleEndOfWeek("2024-02-29", "en-US"); // "2024-03-02" (Saturday)
+```
+
+Unlike `startOfDate(value, "week", { weekStartsOn })`, these derive the week's
+first day from the locale via `Intl.Locale.prototype.weekInfo`.
+
+## See also
+
+- [Durations](../durations/) — ISO 8601 duration strings and the `*AsDuration` bridge
+- [Comparisons](../comparisons/) — ordering, equality, weekend/business-day checks
+- [Zoned Operations](/guides/zoned-date-operations/zoned-operations/) — timezone-aware arithmetic
+- [`addDate` reference](/reference/plain/calculate/addDate)
+- [`diffDate` reference](/reference/plain/calculate/diffDate)
+- [`startOfDate` reference](/reference/plain/calculate/startOfDate)

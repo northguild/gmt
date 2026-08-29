@@ -1,0 +1,99 @@
+---
+title: Duration
+description: Common mistakes when working with durations in GMT.
+---
+
+Durations in GMT can be ISO 8601 strings, unit objects, or normalized arrays.
+Confusing the representations is the most common source of duration bugs.
+
+## Mistakes
+
+import Mistake from "../../../components/Mistake.astro";
+
+<Mistake
+  severity="high"
+  title="Confusing duration strings with unit objects"
+  description="'P1Y2M' and `{ years: 1, months: 2 }` are not interchangeable. Duration strings are ISO 8601 format; unit objects are plain objects with unit keys. Passing the wrong shape to a function produces an empty string or wrong result."
+  wrongCode={`normalizeDuration({ years: 1, months: 2 }); // unit object — works for some functions
+formatDuration("P1Y2M"); // string format — also works, but mixing them in the same pipeline is error-prone`}
+  rightCode={`import { normalizeDuration } from "@northguild/gmt";
+
+// pick one representation and stick with it:
+const d = normalizeDuration("P1Y2M"); // duration string`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Not validating before parsing"
+  description="parseDuration returns an empty string for invalid input. Feeding unvalidated user input straight into duration arithmetic produces silent failures."
+  wrongCode={`const d = parseDuration(userInput); // userInput = "PX" → "" — no error thrown`}
+  rightCode={`import { isValidDuration, parseDuration } from "@northguild/gmt";
+
+if (isValidDuration(userInput)) {
+  const d = parseDuration(userInput);
+}`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Expecting a best-effort answer for calendar units without relativeTo"
+  description="Converting a calendar-unit duration (years, months) to days requires a reference date. Without `relativeTo`, the conversion is ambiguous — different months have different lengths."
+  wrongCode={`diffDateAsDuration("2024-02-01", "2024-03-01", { unit: "days" });
+// 28 or 29 days depending on leap year — but without relativeTo, which month?`}
+  rightCode={`import { diffDateAsDuration } from "@northguild/gmt";
+
+diffDateAsDuration("2024-02-01", "2024-03-01", { unit: "days", relativeTo: "2024-02-01" });
+// 29 days — February 2024 is a leap month`}
+/>
+
+<Mistake
+  severity="high"
+  title="Reading a component with getDurationUnit when you wanted a total"
+  description="getDurationUnit returns one component of a normalized duration (e.g. just the hours). If you need the total duration in a specific unit, use durationAs instead."
+  wrongCode={`const d = normalizeDuration("P1DT2H3M");
+const hours = getDurationUnit(d, "hours"); // 2 — just the hours component, not the total`}
+  rightCode={`import { normalizeDuration, durationAs } from "@northguild/gmt";
+
+const d = normalizeDuration("P1DT2H3M");
+const totalHours = durationAs(d, "hours"); // 26 — full duration converted`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Assuming normalizeDuration's default is always relativeTo-free"
+  description="normalizeDuration converts calendar units (years, months) to days by default, using today's date as the implicit relativeTo. If you want to preserve calendar units, pass `{ relativeTo: null }`."
+  wrongCode={`normalizeDuration("P1M"); // converts to days using today — 30 or 31 depending on the current month`}
+  rightCode={`import { normalizeDuration } from "@northguild/gmt";
+
+normalizeDuration("P1M", { relativeTo: null }); // preserves months — no implicit conversion`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Expecting formatDuration to match native Intl.DurationFormat output exactly"
+  description="GMT's formatDuration produces a human-readable string with a fixed style. Intl.DurationFormat output varies by locale, unit set, and style options. They are not drop-in replacements for each other."
+  wrongCode={`// assuming formatDuration("PT1H30M") matches Intl.DurationFormat`}
+  rightCode={`import { formatDuration } from "@northguild/gmt";
+
+formatDuration("PT1H30M"); // "1 hour 30 minutes" — GMT's stable format`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Passing an array of units to a *AsDuration bridge function"
+  description="durationAs takes a single unit name, not an array. Passing a list of unit names returns an empty string or the conversion for the first element only."
+  wrongCode={`durationAs(d, ["hours", "minutes"]); // wrong — expects a single unit string`}
+  rightCode={`import { durationAs } from "@northguild/gmt";
+
+durationAs(d, "hours"); // correct — single unit`}
+/>
+
+## See also
+
+- [Durations guide](/guides/core-date-operations/durations/)
+- [`isValidDuration` reference](/reference/duration/validate/isValidDuration)
+- [`parseDuration` reference](/reference/duration/parse/parseDuration)
+- [`normalizeDuration` reference](/reference/duration/normalize/normalizeDuration)
+- [`formatDuration` reference](/reference/duration/format/formatDuration)
+- [`durationAs` reference](/reference/duration/calculate/durationAs)
+- [`getDurationUnit` reference](/reference/duration/calculate/getDurationUnit)

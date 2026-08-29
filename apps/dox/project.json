@@ -11,16 +11,21 @@
       "inputs": [
         "{projectRoot}/scripts/generate-version-map.mjs",
         "{projectRoot}/scripts/build-reference.ts",
+        "{projectRoot}/scripts/build-guides.mjs",
+        "{projectRoot}/scripts/build-scenario-index.mjs",
+        "{workspaceRoot}/docs/dst-disambiguation.md",
         "{workspaceRoot}/packages/gmt/src/**/*.ts",
         "{workspaceRoot}/packages/*/package.json"
       ],
       "outputs": [
         "{projectRoot}/src/generated",
-        "{projectRoot}/src/content/docs/reference"
+        "{projectRoot}/src/content/docs/reference",
+        "{projectRoot}/src/content/docs/guides/concepts/dst-disambiguation.md",
+        "{projectRoot}/src/content/docs/scenarios/index.mdx"
       ],
       "options": {
         "cwd": "{projectRoot}",
-        "command": "node ./scripts/generate-version-map.mjs && tsx ./scripts/build-reference.ts",
+        "command": "node ./scripts/generate-version-map.mjs && tsx ./scripts/build-reference.ts && node ./scripts/build-guides.mjs && node ./scripts/build-scenario-index.mjs",
         "forwardAllArgs": false
       }
     },

@@ -1,0 +1,89 @@
+---
+title: Getting the Current Date and Time
+description: Read the current date, time, datetime, or timestamp as ISO strings — plain, zoned, UTC, and Unix.
+sidebar:
+  order: 1
+---
+
+Use these functions when you need "now" in a specific shape. They are the starting
+point for almost every other operation — arithmetic, comparison, formatting.
+
+## Get the current local date or datetime
+
+```typescript
+import { getNow, getToday } from "@northguild/gmt";
+
+getToday(); // "2024-03-15" — current date in the system timezone
+getNow(); // "2024-03-15T14:30:45" — current datetime in the system timezone
+```
+
+Both resolve "now" in the **system timezone**. For deterministic results regardless
+of the host machine's timezone, use the zoned variants with an explicit zone.
+
+## Get the current UTC date or datetime
+
+```typescript
+import { getUtcToday, getUtcNow } from "@northguild/gmt/utc";
+
+getUtcToday(); // "2024-03-15"
+getUtcNow(); // "2024-03-17T14:30:45Z"
+```
+
+## Get the current Unix timestamp
+
+```typescript
+import { getUnixNow, getUnixTimeMs } from "@northguild/gmt/unix";
+
+getUnixNow(); // 1710504645 — seconds since epoch
+getUnixTimeMs(); // 1710504645000 — milliseconds since epoch
+```
+
+`getUnixNow` returns **seconds** (the Unix convention). Use `getUnixTimeMs` when
+you need milliseconds — and be consistent: mixing the two is a common source of
+1000x errors.
+
+## Get the current time in a specific timezone
+
+```typescript
+import { getZonedNow, getZonedToday } from "@northguild/gmt/zoned";
+
+getZonedNow("America/New_York"); // "2024-03-15T10:30:45"
+getZonedToday("Asia/Tokyo"); // "2024-03-16"
+```
+
+## Get the system timezone and the list of all IANA zones
+
+```typescript
+import { getSystemTimeZone, getTimeZones } from "@northguild/gmt/zoned";
+
+getSystemTimeZone(); // "America/New_York"
+getTimeZones(); // ["America/New_York", "Europe/London", ...] — ~422 entries
+```
+
+`getTimeZones()` returns every IANA zone the runtime's ICU data knows about. The
+count varies by runtime.
+
+## Using Temporal directly
+
+When you need the current value as a Temporal object for further manipulation
+(rather than a string), use `Temporal.Now` directly:
+
+```typescript
+import { Temporal } from "@js-temporal/polyfill";
+
+Temporal.Now.instant(); // Temporal.Instant — absolute point in time
+Temporal.Now.plainDateISO(); // Temporal.PlainDate — system timezone
+Temporal.Now.plainDateTimeISO(); // Temporal.PlainDateTime — system timezone
+Temporal.Now.zonedDateTimeISO("America/New_York"); // Temporal.ZonedDateTime
+```
+
+GMT re-exports `Temporal` from `@northguild/gmt` if you don't want to depend on the
+polyfill directly.
+
+## See also
+
+- [Plain Arithmetic](../plain-arithmetic/) — adding, subtracting, and diffing dates
+- [Zoned Operations](/guides/zoned-date-operations/zoned-operations/) — "now" in a specific zone
+- [`getNow` reference](/reference/plain/get/getNow)
+- [`getZonedNow` reference](/reference/zoned/get/getZonedNow)
+- [`getUnixNow` reference](/reference/unix/get/getUnixNow)

@@ -1,0 +1,75 @@
+---
+title: Interval Basics
+description: Validate intervals and ranges, construct them from a point plus a duration, and understand the two API shapes.
+sidebar:
+  order: 1
+---
+
+Intervals are two-point ranges — a `start` and an `end`. GMT provides them across
+plain, zoned, unix, and UTC namespaces. Every function has `Date`, `Time`,
+`DateTime`, `Zoned`, `Unix`, and `Utc` siblings; replace the suffix to match your
+value type.
+
+## Two API shapes
+
+**Interval validators** take positional `(start, end)` args and require `start <= end`:
+
+```typescript
+import { isValidDateInterval } from "@northguild/gmt";
+
+isValidDateInterval("2024-01-01", "2024-12-31"); // true
+isValidDateInterval("2024-12-31", "2024-01-01"); // false — inverted
+```
+
+**Range validators** take an object `{ value1, value2, options? }`:
+
+```typescript
+import { isValidDateRange } from "@northguild/gmt";
+
+isValidDateRange({ value1: "2024-01-01", value2: "2024-12-31" }); // true
+```
+
+Don't confuse the two. Interval validators enforce `start <= end`; range validators
+take an object.
+
+## Construct an interval from a point + duration
+
+`intervalFromDuration*` builds an interval from a single point and an ISO 8601
+duration, anchored at either end — Luxon's `Interval.after`/`Interval.before` as
+one function:
+
+```typescript
+import { intervalFromDurationDate, intervalFromDurationZoned } from "@northguild/gmt";
+
+intervalFromDurationDate("2024-01-01", "P1M", "start");
+// { start: "2024-01-01", end: "2024-02-01" }
+
+intervalFromDurationDate("2024-02-01", "P1M", "end");
+// { start: "2024-01-01", end: "2024-02-01" }
+
+intervalFromDurationZoned("2024-03-09T02:30:00-05:00[America/New_York]", "P1D", "start");
+// { start: "2024-03-09T02:30:00-05:00[America/New_York]", end: "2024-03-10T03:30:00-04:00[America/New_York]" }
+// — spring-forward day is 23 hours long
+```
+
+Calendar units resolve against the point itself — no separate `relativeTo` needed.
+A negative duration that inverts the span returns `null`.
+
+## Return conventions
+
+Every interval function returns a sentinel on invalid input — never throws:
+
+| Family | Returns | Invalid |
+| --- | --- | --- |
+| `isValid*Interval`, `intervalContains*`, `intervalsOverlap*`, `intervalAbuts*`, `intervalEngulfs*` | `boolean` | `false` |
+| `intervalIntersection*`, `intervalUnion*`, `intervalFromDuration*` | `{ start, end } \| null` | `null` |
+| `intervalDifference*`, `intervalXor*`, `splitIntervalByUnit*`, `intervalDivideEqually*`, `intervalSplitAt*`, `mergeIntervals*`, `intervalXorAll*` | `Array<{ start, end }>` | `[]` |
+| `intervalCount*`, `intervalLength*`, `intervalOverlappingDays*` | `number \| null` | `null` |
+
+## See also
+
+- [Containment and Overlap](./containment-and-overlap/) — point-in-interval, overlap, intersection
+- [Set Operations](./set-operations/) — union, difference, xor, engulf, abut
+- [Splitting and Counting](./splitting-and-counting/) — split by unit, count boundaries, measure length
+- [`isValidDateInterval` reference](/reference/plain/interval/validate/isValidDateInterval)
+- [`intervalFromDurationDate` reference](/reference/plain/interval/intervalFromDurationDate)

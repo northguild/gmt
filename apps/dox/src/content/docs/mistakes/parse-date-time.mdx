@@ -1,0 +1,96 @@
+---
+title: Parsing Date and Time
+description: Common mistakes when parsing date and time values with GMT.
+---
+
+GMT's parse functions accept ISO 8601 strings and common wire formats, returning
+plain or zoned components. They never throw — invalid input yields an empty string
+or `null`.
+
+## Mistakes
+
+import Mistake from "../../../components/Mistake.astro";
+
+<Mistake
+  severity="high"
+  title="Not handling null on invalid input"
+  description="parseRfc2822, parseHttp, and parseSql return null for invalid input, not an empty string. Checking for falsy is not enough — null and an empty string are different sentinels with different meanings."
+  wrongCode={`const result = parseRfc2822(invalidInput);
+if (!result) { /* catches null and "" */ } // ambiguous`}
+  rightCode={`import { parseRfc2822 } from "@northguild/gmt/zoned";
+
+const result = parseRfc2822(invalidInput);
+if (result === null) {
+  // specifically invalid Rfc2822
+}`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Using string manipulation instead of parse functions"
+  description="Splitting a date string on '-' and indexing the parts works for ISO 8601 today, but it breaks the moment your input includes a calendar annotation, a different separator, or fractional seconds."
+  wrongCode={`const [y, m, d] = dateStr.split("-"); // fragile — breaks on annotations or edge formats`}
+  rightCode={`import { parseYearFromDate, parseMonthFromDate, parseDayFromDate } from "@northguild/gmt";
+
+const y = parseYearFromDate(dateStr);
+const m = parseMonthFromDate(dateStr);
+const d = parseDayFromDate(dateStr);`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Assuming month is 1-indexed in arithmetic"
+  description="Temporal.PlainMonthDay uses 1-indexed months, but parseMonthFromDate returns 1-12. Adding or subtracting months without normalizing through a date-aware function can produce invalid month values."
+  wrongCode={`const m = parseMonthFromDate("2024-12-15"); // 12
+const next = m + 1; // 13 — not a valid month`}
+  rightCode={`import { addMonths } from "@northguild/gmt";
+
+addMonths("2024-12-15", 1); // "2025-01-15" — handles overflow`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Confusing getWeekOfMonth with parseWeekFromDate"
+  description="getWeekOfMonth tells you which week-of-month a date falls in (1-6). parseWeekFromDate returns the ISO week number (1-53). They answer different questions and produce different numbers for the same input."
+  wrongCode={`const wom = getWeekOfMonth("2024-01-31"); // 5
+// used as if it were an ISO week number`}
+  rightCode={`import { parseWeekFromDate, parseYearFromDate } from "@northguild/gmt";
+
+const isoWeek = parseWeekFromDate("2024-01-31"); // 5
+const weekYear = parseYearFromDate("2024-01-31"); // 2024 — the week-year, not the calendar year`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Week number without week-year is a bug in waiting"
+  description="'Wait until week 35' is ambiguous without a week-year. ISO week 35 of 2024 and week 35 of 2025 are 52 weeks apart. Always pair the week number with its week-year."
+  wrongCode={`const week = parseWeekFromDate(startDate); // 35
+// wait until week 35 — but which year?`}
+  rightCode={`import { parseWeekFromDate, parseYearFromDate } from "@northguild/gmt";
+
+const week = parseWeekFromDate(startDate);
+const weekYear = parseYearFromDate(startDate);
+// wait until week <week> of <weekYear>`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Checking for null on parseRfc2822/parseHttp/parseSql/parseRfc3339"
+  description="These functions return null for invalid input. Checking for a falsy return masks the difference between invalid (null) and valid-but-empty (an empty string). Check for null explicitly."
+  wrongCode={`const r = parseRfc3339(input);
+if (!r) { /* treats null and "" identically */ }`}
+  rightCode={`import { parseRfc3339 } from "@northguild/gmt/zoned";
+
+const r = parseRfc3339(input);
+if (r === null) {
+  // explicitly invalid input
+}`}
+/>
+
+## See also
+
+- [Parsing guide](/guides/core-date-operations/parsing/)
+- [`parseRfc2822` reference](/reference/zoned/parse/parseRfc2822)
+- [`parseRfc3339` reference](/reference/zoned/parse/parseRfc3339)
+- [`parseYearFromDate` reference](/reference/plain/parse/parseYearFromDate)
+- [`parseWeekFromDate` reference](/reference/plain/parse/parseWeekFromDate)

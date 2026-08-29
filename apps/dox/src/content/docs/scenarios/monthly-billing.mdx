@@ -1,0 +1,23 @@
+---
+title: Monthly Billing Without Drift
+description: Charge on the same calendar date every month, not a fixed number of days.
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="Monthly Billing Without Drift"
+  description="A subscription bills on the 31st of each month. What happens in February?"
+  naiveCode={`// The naive approach: add 30 days
+const jan31 = new Date("2024-01-31");
+const feb = new Date(jan31.getTime() + 30 * 24 * 60 * 60 * 1000);
+// feb is 2024-03-02 — billing drifted into March!
+console.log(feb.toISOString().split("T")[0]);`}
+  explanation={`Adding a fixed number of days (30 or 31) ignores the varying length of calendar months. January 31 + 30 days lands on March 2, not February 28/29. \`addMonths\` handles month overflow by clamping to the last valid day of the target month (or rejecting, if you pass \`overflow: "reject"\`).`}
+  gmtCode={`import { addMonths } from "@northguild/gmt";
+
+const jan31 = "2024-01-31";
+const feb = addMonths(jan31, 1);
+// "2024-02-29" — clamped to last day of February in a leap year`}
+  fixedSpecId="addMonths"
+/>

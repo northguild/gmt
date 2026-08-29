@@ -1,0 +1,112 @@
+---
+title: Date Comparison
+description: Common mistakes when comparing dates with GMT.
+---
+
+Comparison functions in GMT are string-in, string-out. They never throw — invalid
+input yields `false`. Knowing what `false` means is half the battle.
+
+## Mistakes
+
+import Mistake from "../../../components/Mistake.astro";
+
+<Mistake
+  severity="high"
+  title="Using string comparison for dates"
+  description="Lexicographic string comparison ('2024-03-01' < '2024-02-15') works for ISO 8601 dates but breaks the moment your input includes timezones, offsets, or calendar annotations. Use isBeforeDate and isAfterDate instead."
+  wrongCode={`"2024-03-01" < "2024-02-15"; // false — string order is not date order for all formats`}
+  rightCode={`import { isBeforeDate } from "@northguild/gmt";
+
+isBeforeDate("2024-02-15", "2024-03-01"); // true — correct date comparison`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Not handling invalid input"
+  description="All comparison functions return false for invalid input. A false result means either 'not the case' or 'invalid input' — you cannot tell which without checking the inputs first."
+  wrongCode={`const r = isBeforeDate(badInput, "2024-03-15");
+// r is false — but was badInput invalid, or is it genuinely not before?`}
+  rightCode={`import { isValidDate, isBeforeDate } from "@northguild/gmt";
+
+if (isValidDate(a) && isValidDate(b)) {
+  isBeforeDate(a, b); // now false means genuinely not before
+}`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Comparing different date formats"
+  description="Comparing a plain date string to a zoned datetime string produces an empty string (false) because the shapes do not match. Both inputs must be the same type."
+  wrongCode={`isBeforeDate("2024-03-15", "2024-03-15T10:00:00-05:00[America/New_York]"); // plain vs zoned — ""`}
+  rightCode={`import { isBeforeDate, convertZonedToPlainDateTime } from "@northguild/gmt";
+
+isBeforeDate("2024-03-15", convertZonedToPlainDateTime("2024-03-15T10:00:00-05:00[America/New_York]"));
+// same shape — correct`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Assuming weekends are always Saturday/Sunday"
+  description="isWeekend follows the locale's weekend definition. In Israel, the weekend is Friday-Saturday. In some Gulf states, it is Friday-Saturday or Saturday-Sunday depending on recent policy changes."
+  wrongCode={`const isWeekend = (d) => {
+  const day = new Date(d).getDay();
+  return day === 0 || day === 6; // Saturday/Sunday only — wrong for many locales`}
+  rightCode={`import { isWeekend } from "@northguild/gmt";
+
+isWeekend("2024-03-15", "en-US"); // false
+isWeekend("2024-03-15", "he-IL"); // true if it's Friday — locale-aware`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Confusing isBusinessDay with isWeekend"
+  description="isBusinessDay returns true for Monday-Friday in the locale. It is the inverse of isWeekend only where the weekend is exactly two days and the work week is five. They are related but not opposites in all locales."
+  wrongCode={`// assuming !isWeekend(d) === isBusinessDay(d)`}
+  rightCode={`import { isWeekend, isBusinessDay } from "@northguild/gmt";
+
+// they are related but independent — check both if you need work-day logic`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Assuming 'same month' ignores the year"
+  description="'Same month' means same month and same year. March 2024 and March 2025 are different months. areDatesEqualBy with `month` compares both the month and the year."
+  wrongCode={`areDatesEqualBy("2024-03-15", "2025-03-15", "month"); // false — different years`}
+  rightCode={`import { areDatesEqualBy } from "@northguild/gmt";
+
+areDatesEqualBy("2024-03-15", "2024-03-20", "month"); // true — same month and year`}
+/>
+
+<Mistake
+  severity="high"
+  title="Assuming isRelativeDay/isThisUnit/isPast/isFuture are timeZone-independent"
+  description="These comparison functions resolve 'today' and 'now' in the system timezone by default. A date that is 'today' in New York is 'tomorrow' in Tokyo. Always pass an explicit timezone when the result must be deterministic."
+  wrongCode={`isPast("2024-03-15"); // depends on the system timezone at runtime`}
+  rightCode={`import { isPast } from "@northguild/gmt";
+
+isPast("2024-03-15", "America/New_York"); // deterministic regardless of host timezone`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Assuming nextWeekday/previousWeekday return the input when it's already on the target day"
+  description="nextWeekday(Friday, 'Friday') returns the *next* Friday, not today. If you need 'the next occurrence, including today', check isThisUnit first."
+  wrongCode={`nextWeekday("2024-03-15", "Friday"); // "2024-03-22" — even though it's already Friday`}
+  rightCode={`import { nextWeekday, isThisUnit } from "@northguild/gmt";
+
+const target = "2024-03-15";
+if (isThisUnit(target, "weekday", "Friday")) {
+  // already Friday — use today or next week
+}`}
+/>
+
+## See also
+
+- [Comparisons guide](/guides/core-date-operations/comparisons/)
+- [`isBeforeDate` reference](/reference/plain/compare/isBeforeDate)
+- [`isAfterDate` reference](/reference/plain/compare/isAfterDate)
+- [`isWeekend` reference](/reference/plain/compare/isWeekend)
+- [`isPast` reference](/reference/plain/compare/isPast)
+- [`isFuture` reference](/reference/plain/compare/isFuture)
+- [`nextWeekday` reference](/reference/plain/calculate/nextWeekday)
+- [`areDatesEqualBy` reference](/reference/plain/compare/areDatesEqualBy)

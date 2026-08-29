@@ -1,0 +1,81 @@
+---
+title: Plain vs Zoned
+description: The two families of Temporal types in GMT — timezone-free and timezone-aware — and why they never mix.
+sidebar:
+  order: 1
+---
+
+GMT's API is built on two families of Temporal types that are **strictly separate**.
+Mixing them is the single most common source of silent bugs, so the library is
+designed to make the boundary impossible to cross by accident.
+
+## The two families
+
+| Family | Types | Namespace | Example |
+| --- | --- | --- | --- |
+| **Plain** | `PlainDate`, `PlainTime`, `PlainDateTime`, `Duration` | `@northguild/gmt/plain` | `"2024-03-17T14:30:00"` |
+| **Zoned** | `ZonedDateTime`, `Instant` | `@northguild/gmt/zoned` | `"2024-03-17T14:30:00-04:00[America/New_York]"` |
+
+- **Plain** values are calendar math without a timezone. `"2024-03-17T14:30:00"` is
+  just numbers on a clock face — it has no instant behind it until you attach a zone.
+- **Zoned** values carry an IANA timezone identifier. `"2024-03-17T14:30:00-04:00[America/New_York]"`
+  is a real, absolute instant. The bracketed zone is part of the value, not metadata.
+
+## Why they never mix
+
+A plain datetime and a zoned datetime answer different questions:
+
+- **Plain**: "What does the clock say?" — useful for arithmetic that should ignore
+  timezones entirely (add 30 days, what's the start of this month).
+- **Zoned**: "When, in absolute time, does this happen?" — useful for scheduling,
+  logging, and anything that must be correct across timezone boundaries.
+
+GMT enforces this at the namespace level. `addDate` operates on plain strings;
+`addZoned` operates on zoned strings. There is no function that silently accepts
+both. If you need to move between them, use an explicit conversion:
+
+```typescript
+import { convertPlainDateTimeToZoned } from "@northguild/gmt/zoned";
+
+// Attach a timezone to a plain value — this is where DST disambiguation matters.
+convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York");
+// "2024-03-10T03:30:00-04:00[America/New_York]" — default "compatible" rounds the
+// nonexistent 2:30 AM forward. See DST Disambiguation for the full picture.
+```
+
+## The other namespaces
+
+Plain and zoned cover most tasks. Two more namespaces handle fixed-point representations:
+
+| Namespace | Type | When to use |
+| --- | --- | --- |
+| `unix` | epoch seconds/milliseconds | Interchange with systems, databases, JSON |
+| `utc` | UTC instants (`"…Z"`) | When you need an absolute instant without a named zone |
+
+```typescript
+import { getUnixNow } from "@northguild/gmt/unix";
+import { getUtcNow } from "@northguild/gmt/utc";
+
+getUnixNow(); // 1710504645 — seconds since epoch
+getUtcNow(); // "2024-03-17T14:30:45Z" — absolute instant, UTC
+```
+
+## The design rules
+
+These follow directly from the two-family split:
+
+1. **No `Date` object.** GMT uses Temporal types exclusively. `Date` is mutable,
+   0-indexed, and silently local — every property GMT was built to replace.
+2. **String-in, string-out.** Public APIs accept ISO 8601 strings and return
+   strings, numbers, booleans, or arrays. No object handles cross the boundary.
+3. **Invalid input returns a sentinel, never throws.** `""` for strings, `null` for
+   numbers, `false` for booleans, `[]` for arrays. Check the sentinel; don't catch.
+4. **Wrap Temporal calls in `try-catch`.** `.from()`, `.add()`, `.since()` throw
+   `RangeError` on bad input — GMT's public functions catch these and return the
+   sentinel.
+
+## See also
+
+- [DST Disambiguation](./dst-disambiguation/) — what happens when a plain time is attached to a zone
+- [Zoned Operations](/guides/zoned-date-operations/zoned-operations/) — working with timezone-aware values
+- [Core Rules](/core-rules/) — the full statement of GMT's contract

@@ -1,0 +1,154 @@
+---
+title: Zoned Operations
+description: Timezone-aware arithmetic, boundaries, DST disambiguation, and offset control — scheduling across timezones correctly.
+sidebar:
+  order: 1
+---
+
+Use these functions when you need timezone-aware operations: "add 30 days in the
+user's zone", "start of this day in America/New_York", "schedule a meeting across
+a DST boundary".
+
+## Current time in a zone
+
+```typescript
+import { getZonedNow, getZonedToday } from "@northguild/gmt/zoned";
+
+getZonedNow("America/New_York"); // "2024-03-15T10:30:45"
+getZonedToday("Asia/Tokyo"); // "2024-03-16"
+```
+
+## Format and validate
+
+```typescript
+import {
+  formatZonedDateTime,
+  formatZonedRange,
+  isValidTimeZone,
+} from "@northguild/gmt/zoned";
+
+formatZonedDateTime("2024-03-15T14:30:45[America/New_York]", "en-US");
+// "3/15/2024, 10:30:45 AM"
+
+isValidTimeZone("America/New_York"); // true
+```
+
+## Convert plain to zoned (DST disambiguation)
+
+Attaching a timezone to a plain value is where DST gaps and overlaps matter:
+
+```typescript
+import { convertPlainDateTimeToZoned } from "@northguild/gmt/zoned";
+
+convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York");
+// "2024-03-10T03:30:00-04:00[America/New_York]" — default "compatible" rounds forward
+
+convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York", {
+  disambiguation: "reject",
+});
+// "" — no such local time exists
+```
+
+`disambiguation` is `"compatible"` (default) | `"earlier"` | `"later"` | `"reject"`.
+See [DST Disambiguation](../concepts/dst-disambiguation/) for the full table.
+
+## Add/subtract a duration
+
+```typescript
+import { addZoned, subtractZoned } from "@northguild/gmt/zoned";
+
+addZoned("2024-03-15T14:30:45[America/New_York]", { days: 1 });
+// "2024-03-16T14:30:45-04:00[America/New_York]"
+```
+
+`disambiguation` only affects **fall-back overlaps** here — it has no effect on
+spring-forward gaps. This is a property of how Temporal's arithmetic works, not a
+GMT limitation.
+
+## Boundaries (start/end of unit, quarter, hours-in-day)
+
+```typescript
+import { startOfZoned, endOfZoned } from "@northguild/gmt/zoned";
+
+startOfZoned("2024-03-15T14:30:45[America/New_York]", "month");
+// "2024-03-01T00:00:00-05:00[America/New_York]"
+
+endOfZoned("2024-03-15T14:30:45[America/New_York]", "hour");
+// "2024-03-15T14:59:59.999999999-04:00[America/New_York]"
+```
+
+These accept `disambiguation` (full gap/overlap control) and `offset`
+(`"prefer" | "use" | "ignore" (default) | "reject"`). **`offset` must stay at its
+default (`"ignore"`) for `disambiguation` to take effect** — Temporal's own default
+(`"prefer"`) keeps the source offset whenever still valid, which silently makes
+`disambiguation` a no-op.
+
+## Set fields directly
+
+`setZoned`/`setUnix`/`setUtc` set fields atomically via `.with()`:
+
+```typescript
+import { setZoned } from "@northguild/gmt/zoned";
+
+setZoned("2024-03-15T14:30:45[America/New_York]", { hour: 9 });
+// "2024-03-15T09:30:45-04:00[America/New_York]"
+
+setZoned(
+  "2024-11-03T01:45:00-05:00[America/New_York]",
+  { minute: 0 },
+  { disambiguation: "reject" },
+);
+// "" — offset defaults to "ignore" so disambiguation actually fires
+```
+
+## Cycle a single field (wrap, don't carry)
+
+```typescript
+import { cycleZoned } from "@northguild/gmt/zoned";
+
+cycleZoned("2024-12-15T09:30:00-06:00[America/Chicago]", "month", 1);
+// "2024-01-15T09:30:00-06:00[America/Chicago]" — wraps, stays in the same year
+
+cycleZoned("2024-03-10T01:30:00-06:00[America/Chicago]", "hour", 1);
+// "2024-03-10T03:30:00-05:00[America/Chicago]" — cycled hour lands in a gap
+```
+
+## Hours in a zoned calendar day
+
+```typescript
+import { getHoursInZonedDay } from "@northguild/gmt/zoned";
+
+getHoursInZonedDay("2024-03-10T12:00:00-04:00[America/New_York]"); // 23 — spring-forward
+getHoursInZonedDay("2024-11-03T12:00:00-05:00[America/New_York]"); // 25 — fall-back
+getHoursInZonedDay("2024-02-29T12:00:00+00:00[UTC]"); // 24 — normal
+```
+
+## Read a zoned value's UTC offset
+
+```typescript
+import { getZonedOffset, getZonedOffsetAs, getTimeZoneOffset } from "@northguild/gmt/zoned";
+
+getZonedOffset("2024-07-15T12:00:00-04:00[America/New_York]"); // "-04:00"
+getZonedOffsetAs("2024-07-15T12:00:00-04:00[America/New_York]", "minutes"); // -240
+getTimeZoneOffset("America/New_York", "2024-07-15T12:00:00Z"); // "-04:00"
+```
+
+## Check whether an instant is in DST
+
+```typescript
+import { isInDaylightSaving } from "@northguild/gmt/zoned";
+
+isInDaylightSaving("2024-07-15T12:00:00-04:00[America/New_York]"); // true
+isInDaylightSaving("2024-01-15T12:00:00-05:00[America/New_York]"); // false
+```
+
+This is a per-instant query — distinct from `hasDaylightSaving(zone)` (zone-level)
+and `getDstTransitions(zone, year)` (enumerates transitions).
+
+## See also
+
+- [DST Disambiguation](../concepts/dst-disambiguation/) — the full disambiguation/offset walkthrough
+- [Conversion](../converting-types/) — converting between plain, zoned, unix, and UTC
+- [`convertPlainDateTimeToZoned` reference](/reference/zoned/convert/convertPlainDateTimeToZoned)
+- [`addZoned` reference](/reference/zoned/calculate/addZoned)
+- [`startOfZoned` reference](/reference/zoned/calculate/startOfZoned)

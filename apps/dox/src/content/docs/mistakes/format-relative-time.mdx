@@ -1,0 +1,64 @@
+---
+title: Formatting Relative Time
+description: Common mistakes when formatting relative time descriptions with GMT.
+---
+
+`formatRelativeDate`, `formatRelativeTime`, and `formatRelativeDateTime` produce
+human-readable descriptions like "3 days ago" or "in 2 hours". They require both
+a value and a reference point.
+
+## Mistakes
+
+import Mistake from "../../../components/Mistake.astro";
+
+<Mistake
+  severity="high"
+  title="Forgetting reference"
+  description="formatRelativeDate and friends require a reference point to compute 'ago' or 'in'. Omitting the reference returns an empty string or an incorrect result."
+  wrongCode={`formatRelativeDate("2024-03-15"); // missing reference — empty or wrong result`}
+  rightCode={`import { formatRelativeDate } from "@northguild/gmt";
+
+formatRelativeDate("2024-03-15", "2024-03-20"); // "5 days ago"`}
+/>
+
+<Mistake
+  severity="high"
+  title="Mismatched input shape between value and reference"
+  description="A plain date and a zoned datetime are different shapes. Passing a plain date as the value and a zoned string as the reference (or vice versa) produces a wrong relative description or an empty string."
+  wrongCode={`formatRelativeDate("2024-03-15", "2024-03-20T10:00:00-05:00[America/New_York]");
+// plain vs zoned mismatch`}
+  rightCode={`import { formatRelativeDate } from "@northguild/gmt";
+
+formatRelativeDate("2024-03-15", "2024-03-20"); // both plain — correct`}
+/>
+
+<Mistake
+  severity="high"
+  title="Hand-rolling diff math with Date"
+  description="Computing '3 days ago' by subtracting 86400000 from Date.now() ignores DST transitions, leap seconds, and timezone boundaries. GMT's formatRelative functions handle all of these."
+  wrongCode={`const diff = Math.floor((Date.now() - new Date(target).getTime()) / 86400000);
+// "3 days" — wrong when a DST gap or leap second is in between`}
+  rightCode={`import { formatRelativeDate } from "@northguild/gmt";
+
+formatRelativeDate(target, new Date().toISOString()); // "3 days ago" — DST-aware`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Picking the wrong formatter for a Unix value"
+  description="formatRelativeUnix is the formatter for Unix timestamps. Passing a Unix value to formatRelativeDate or formatRelativeDateTime returns an empty string because the input shape does not match."
+  wrongCode={`import { formatRelativeDate } from "@northguild/gmt";
+
+formatRelativeDate(1710504645, 1710504645); // epoch seconds passed to plain formatter — ""`}
+  rightCode={`import { formatRelativeUnix } from "@northguild/gmt/unix";
+
+formatRelativeUnix(1710504645, 1710504645); // "just now" — correct Unix formatter`}
+/>
+
+## See also
+
+- [Relative Time guide](/guides/core-date-operations/relative-time/)
+- [`formatRelativeDate` reference](/reference/plain/format/formatRelativeDate)
+- [`formatRelativeTime` reference](/reference/plain/format/formatRelativeTime)
+- [`formatRelativeUnix` reference](/reference/unix/format/formatRelativeUnix)
+- [`formatRelativeZoned` reference](/reference/zoned/format/formatRelativeZoned)

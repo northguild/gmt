@@ -28,8 +28,8 @@ normal repo convention and does need a changeset.
 | 2     | DOX-A2                                      | #131         | Done        |
 | 3     | DOX-A3 (DOX-A3a, DOX-A3b)                   | #132         | Done        |
 | 4     | DOX-A5                                      | #134         | Done        |
-| 5     | DOX-A4 (DOX-A4a, DOX-A4b, DOX-A4c, DOX-A4d) | #133         | Not started |
-| 6     | DOX-B1 (DOX-B1a, DOX-B1b)                   | #135         | Not started |
+| 5     | DOX-A4 (DOX-A4a, DOX-A4b, DOX-A4c, DOX-A4d) | #133         | In Progress |
+| 6     | DOX-B1 (DOX-B1a, DOX-B1b)                   | #135         | In Progress |
 | 7     | DOX-B2 (DOX-B2a, DOX-B2b, DOX-B2c, DOX-B2d) | #136         | Not started |
 | 8     | DOX-D1                                      | #140         | Not started |
 | 9     | DOX-D2                                      | #141         | Not started |

@@ -19,8 +19,7 @@ const pages = Object.entries(RAW).flatMap(([path, raw]) => {
   if (rel === "index") return []; // splash homepage — skip
   const { data, body } = stripFrontmatter(raw);
   const slug = data.slug ?? rel; // reference pages carry explicit slug:
-  const isReference = path.includes("/content/docs/reference/");
-  const md = isReference ? body : stripMdx(body, { gmtVersion });
+  const md = stripMdx(body, { gmtVersion });
   return [
     { slug, markdown: pageToMarkdown({ title: data.title ?? slug, body: md }) },
   ];

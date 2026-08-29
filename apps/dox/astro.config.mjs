@@ -66,7 +66,19 @@ export default defineConfig({
           label: "Start here",
           items: [{ slug: "install" }, { slug: "core-rules" }],
         },
+        {
+          label: "Guides",
+          items: [{ autogenerate: { directory: "guides" } }],
+        },
         { label: "Reference", items: referenceSidebar },
+        {
+          label: "Scenarios",
+          items: [{ autogenerate: { directory: "scenarios" } }],
+        },
+        {
+          label: "Mistakes",
+          items: [{ autogenerate: { directory: "mistakes" } }],
+        },
       ],
       components: {
         ThemeProvider: "./src/components/ThemeProvider.astro",
@@ -82,6 +94,7 @@ export default defineConfig({
         "./src/styles/gmt-shell.css", // typography + layout frame
         "./src/styles/gmt-content.css", // .sl-markdown-content + EC + search
         "./src/styles/gmt-controls.css", // buttons, focus, selection, scrollbar
+        "./src/styles/gmt-playground.css", // live playground island (DOX-B1a)
         "./src/styles/gmt-light.css", // floating [data-theme="light"] overrides
       ],
     }),

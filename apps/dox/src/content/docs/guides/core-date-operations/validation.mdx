@@ -1,0 +1,105 @@
+---
+title: Validation
+description: Validate date/time strings, timezone identifiers, intervals, and ranges before processing — sentinels instead of thrown errors.
+sidebar:
+  order: 8
+---
+
+GMT's public functions never throw on invalid input — they return a sentinel. But
+when you need to **reject** invalid input at a system boundary (a form, an API
+parameter, a config file), use these validators to check first.
+
+## Scalar validation
+
+```typescript
+import { isValidDate, isValidTime, isValidDateTime } from "@northguild/gmt";
+
+isValidDate("2024-03-15"); // true
+isValidDate("2024-02-30"); // false — invalid day
+isValidTime("14:30:45"); // true
+isValidTime("25:00:00"); // false — invalid hour
+isValidDateTime("2024-03-15T14:30:45"); // true
+```
+
+## Timezone and zoned-datetime validation
+
+```typescript
+import { isValidTimeZone, isValidZonedDateTime } from "@northguild/gmt/zoned";
+
+isValidTimeZone("America/New_York"); // true
+isValidTimeZone("Invalid/Zone"); // false
+
+isValidZonedDateTime("2024-03-15T14:30:45[America/New_York]"); // true
+isValidZonedDateTime("2024-02-30T14:30:45[America/New_York]"); // false
+```
+
+## Daylight saving time
+
+```typescript
+import { hasDaylightSaving, getDstTransitions } from "@northguild/gmt/zoned";
+
+hasDaylightSaving("America/New_York"); // true
+hasDaylightSaving("Asia/Tokyo"); // false
+
+getDstTransitions("America/New_York", 2024);
+// [
+//   { instant: "2024-03-10T07:00:00Z", offsetBefore: "-05:00", offsetAfter: "-04:00" },
+//   { instant: "2024-11-03T06:00:00Z", offsetBefore: "-04:00", offsetAfter: "-05:00" }
+// ]
+
+getDstTransitions("Asia/Tokyo", 2024); // [] — no transitions
+```
+
+## Duration-unit validation
+
+```typescript
+import { isValidDateUnit, isValidTimeUnit } from "@northguild/gmt";
+
+isValidDateUnit("day"); // true
+isValidTimeUnit("hour"); // true
+isValidDateUnit("invalid"); // false
+```
+
+## Interval validation (positional args, start ≤ end)
+
+```typescript
+import {
+  isValidDateInterval,
+  isValidTimeInterval,
+  isValidDateTimeInterval,
+} from "@northguild/gmt";
+
+isValidDateInterval("2024-01-01", "2024-12-31"); // true
+isValidDateInterval("2024-12-31", "2024-01-01"); // false — start > end
+isValidTimeInterval("09:00:00", "17:00:00"); // true
+isValidDateTimeInterval("2024-01-01T10:00:00", "2024-12-31T23:59:59"); // true
+```
+
+There are `isValidUtcInterval`, `isValidUnixInterval`, and `isValidZonedInterval`
+siblings. All return `false` on invalid input.
+
+## Range validation (object params)
+
+Range validators take `{ value1, value2, options? }` — a different shape from the
+interval validators above:
+
+```typescript
+import { isValidDateRange, isValidZonedRange } from "@northguild/gmt";
+
+isValidDateRange({ value1: "2024-01-01", value2: "2024-12-31" }); // true
+isValidZonedRange({
+  value1: "2024-01-01T10:00:00+00:00[UTC]",
+  value2: "2024-12-31T23:59:59+00:00[UTC]",
+}); // true
+```
+
+Don't confuse the two: `isValidDateInterval` takes positional `(start, end)` args;
+`isValidDateRange` takes an object `{ value1, value2 }`.
+
+## See also
+
+- [Parsing](../parsing/) — extracting components from validated strings
+- [Intervals](../intervals/) — containment, overlap, and set operations on validated ranges
+- [`isValidDate` reference](/reference/plain/validate/isValidDate)
+- [`isValidTimeZone` reference](/reference/zoned/validate/isValidTimeZone)
+- [`hasDaylightSaving` reference](/reference/zoned/validate/hasDaylightSaving)

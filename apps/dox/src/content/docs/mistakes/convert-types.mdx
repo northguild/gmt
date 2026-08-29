@@ -1,0 +1,87 @@
+---
+title: Type Conversion
+description: Common mistakes when converting between date/time types with GMT.
+---
+
+GMT provides conversion functions between plain, zoned, UTC, Unix, and calendar
+types. The mistakes here cover unit mismatches, annotation handling, and calendar
+semantics.
+
+## Mistakes
+
+import Mistake from "../../../components/Mistake.astro";
+
+<Mistake
+  severity="high"
+  title="Using Date.getTime() for conversion"
+  description="Date.getTime() returns epoch milliseconds. GMT's Unix functions return seconds. Converting through Date.getTime() introduces a 1000× unit error."
+  wrongCode={`const ms = new Date("2024-03-15").getTime(); // 1710460800000 — milliseconds
+const unix = ms; // used as seconds — 1000× too large`}
+  rightCode={`import { convertUtcToUnix } from "@northguild/gmt/unix";
+
+convertUtcToUnix("2024-03-15T00:00:00Z"); // 1710460800 — seconds, correct`}
+/>
+
+<Mistake
+  severity="high"
+  title="Mixing epoch seconds and milliseconds"
+  description="getUnixNow returns seconds. getUnixTimeMs returns milliseconds. Passing seconds to a function expecting milliseconds (or vice versa) produces timestamps that are 1000× off."
+  wrongCode={`const ts = getUnixNow(); // 1710504645 — seconds
+const asMs = ts * 1000; // manual conversion — error-prone`}
+  rightCode={`import { getUnixNow, getUnixTimeMs } from "@northguild/gmt/unix";
+
+getUnixNow(); // 1710504645 — seconds
+getUnixTimeMs(); // 1710504645000 — milliseconds
+// pick the right one for the consumer`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Not handling conversion errors"
+  description="Conversion functions return an empty string for invalid input. A failed conversion silently produces an empty string rather than throwing — check the result."
+  wrongCode={`const result = convertUtcToUnix(badInput); // ""`}
+  rightCode={`import { convertUtcToUnix } from "@northguild/gmt/unix";
+
+const result = convertUtcToUnix(input);
+if (result === "") {
+  // input was invalid
+}`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Assuming a [u-ca=...] string means Temporal's own convention"
+  description="GMT's convertDateToCalendar and convertZonedToCalendar use the [u-ca=...] annotation to select the target calendar. The annotation is a string key, not a Temporal calendar object. Passing it to a Temporal constructor directly will not work."
+  wrongCode={`new Temporal.PlainDate("2024-03-15[u-ca=japanese]"); // invalid — annotation is not part of the ISO string`}
+  rightCode={`import { convertDateToCalendar } from "@northguild/gmt";
+
+convertDateToCalendar("2024-03-15", "japanese"); // "令和6年3月15日" — correct conversion`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Assuming 'japanese''s annotated year is proleptic like every other calendar"
+  description="The Japanese calendar uses era-based years. '令和6年' is not proleptic Gregorian year 2024 — it is era year 6. Do not subtract 2018 to convert."
+  wrongCode={`const jy = parseYearFromDate("2024-03-15[u-ca=japanese]"); // 6 — not 2024`}
+  rightCode={`// Japanese year 6 = Gregorian 2024, but the annotation year is the era year
+convertDateToCalendar("2024-03-15", "japanese"); // "令和6年3月15日"`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Assuming 'ethiopic''s annotated year is a fixed offset"
+  description="The Ethiopic calendar year is approximately 7-8 years behind the Gregorian year, but the offset varies because the calendars have different leap-year rules. Do not use a fixed subtraction."
+  wrongCode={`const ethYear = gregYear - 8; // fixed offset — inaccurate near leap years`}
+  rightCode={`import { convertDateToCalendar } from "@northguild/gmt";
+
+convertDateToCalendar("2024-03-15", "ethiopic"); // correct conversion via GMT`}
+/>
+
+## See also
+
+- [Conversion guide](/guides/conversion/)
+- [`convertUtcToUnix` reference](/reference/unix/convert/convertUtcToUnix)
+- [`convertUnixToUtc` reference](/reference/unix/convert/convertUnixToUtc)
+- [`convertDateToCalendar` reference](/reference/plain/convert/convertDateToCalendar)
+- [`convertZonedToCalendar` reference](/reference/zoned/convert/convertZonedToCalendar)
+- [`getUnixNow` reference](/reference/unix/get/getUnixNow)

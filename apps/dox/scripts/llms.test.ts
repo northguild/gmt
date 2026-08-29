@@ -128,17 +128,31 @@ describe("llms.txt surface", () => {
       sections.push({ heading: `Reference — ${ns}`, links });
     }
 
-    // Add guides (hardcoded in llms.txt.ts)
-    const guideLinks = [
-      {
-        title: "Install",
-        url: "https://gmt-dox.northguild.workers.dev/install.md",
-      },
-      {
-        title: "Core Rules",
-        url: "https://gmt-dox.northguild.workers.dev/core-rules.md",
-      },
-    ];
+    // Build the same sections llms.txt.ts builds — derive guide links from
+    // the same glob so the test validates the source's actual output.
+    const RAW_PAGES = import.meta.glob(
+      "../src/content/docs/**/*.{md,mdx}",
+      { query: "?raw", import: "default", eager: true },
+    ) as Record<string, string>;
+    const guideLinks = Object.entries(RAW_PAGES)
+      .filter(([path]) => path.includes("/content/docs/guides/"))
+      .map(([path, raw]) => {
+        const rel = path
+          .replace(/^.*\/content\/docs\//, "")
+          .replace(/\.(md|mdx)$/, "");
+        if (rel === "guides/index") return null;
+        const { data } = stripFrontmatter(raw);
+        return {
+          title: data.title ?? rel,
+          url: `https://gmt-dox.northguild.workers.dev/${rel}.md`,
+          description: data.title ?? "",
+        };
+      })
+      .filter(
+        (l): l is { title: string; url: string; description: string } =>
+          l != null,
+      )
+      .sort((a, b) => a.title.localeCompare(b.title));
     sections.push({ heading: "Guides", links: guideLinks });
 
     const output = renderLlmsTxt({
@@ -151,8 +165,25 @@ describe("llms.txt surface", () => {
     const linkUrls =
       output.match(/\]\(([^)]+)\)/g)?.map((m) => m.slice(2, -1)) ?? [];
 
-    // Check reference URLs are in manifest
-    const guideAllowList = new Set(["/install.md", "/core-rules.md"]);
+    // Build the guide and mistake allow-lists from the same glob.
+    const guideAllowList = new Set<string>();
+    const mistakeAllowList = new Set<string>();
+    for (const path of Object.keys(RAW_PAGES)) {
+      if (path.includes("/content/docs/guides/")) {
+        const rel = path
+          .replace(/^.*\/content\/docs\//, "")
+          .replace(/\.(md|mdx)$/, "");
+        if (rel === "guides/index") continue;
+        guideAllowList.add(`/${rel}.md`);
+      }
+      if (path.includes("/content/docs/mistakes/")) {
+        const rel = path
+          .replace(/^.*\/content\/docs\//, "")
+          .replace(/\.(md|mdx)$/, "");
+        if (rel === "mistakes/index") continue;
+        mistakeAllowList.add(`/${rel}.md`);
+      }
+    }
     for (const url of linkUrls) {
       if (url.includes("/reference/")) {
         // Strip leading site origin and .md suffix
@@ -160,6 +191,14 @@ describe("llms.txt surface", () => {
           .replace(/^https:\/\/gmt-dox\.northguild\.workers\.dev/, "")
           .replace(/\.md$/, "");
         expect(routes.has(slug), `manifest has ${slug}`).toBe(true);
+      } else if (url.includes("/mistakes/")) {
+        const slug = url.replace(
+          /^https:\/\/gmt-dox\.northguild\.workers\.dev/,
+          "",
+        );
+        expect(mistakeAllowList.has(slug), `mistake allow-list has ${slug}`).toBe(
+          true,
+        );
       } else {
         // Guide URLs checked against allow-list (keep .md for guides)
         const slug = url.replace(

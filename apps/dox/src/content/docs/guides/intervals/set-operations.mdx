@@ -1,0 +1,87 @@
+---
+title: Set Operations
+description: Union, difference, xor, merge, and symmetric-difference over intervals — returning spans or arrays of spans.
+sidebar:
+  order: 3
+---
+
+Use these functions for set-theoretic operations over intervals: combine them,
+subtract one from another, find what's covered by exactly one.
+
+## Union
+
+`intervalUnion*` returns the combined span of two overlapping or adjacent intervals,
+or `null` when they are disjoint with a gap:
+
+```typescript
+import { intervalUnionDate } from "@northguild/gmt";
+
+intervalUnionDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
+// { start: "2024-01-01", end: "2024-12-31" }
+
+intervalUnionDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31");
+// { start: "2024-01-01", end: "2024-12-31" } — adjacent, merged
+
+intervalUnionDate("2024-01-01", "2024-06-30", "2024-07-01", "2024-12-31");
+// null — disjoint with a gap
+```
+
+## Difference
+
+`intervalDifference*` returns the portion(s) of interval A not covered by interval B,
+as an array of `{ start, end }` records:
+
+```typescript
+import { intervalDifferenceDate } from "@northguild/gmt";
+
+intervalDifferenceDate("2024-01-01", "2024-12-31", "2024-06-01", "2024-07-01");
+// [{ start: "2024-01-01", end: "2024-05-31" }, { start: "2024-07-02", end: "2024-12-31" }]
+
+intervalDifferenceDate("2024-01-01", "2024-12-31", "2024-01-01", "2024-12-31");
+// [] — B fully covers A
+```
+
+## Symmetric difference (xor)
+
+`intervalXor*` returns the portions covered by exactly one of the two intervals:
+
+```typescript
+import { intervalXorDate } from "@northguild/gmt";
+
+intervalXorDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
+// [{ start: "2024-01-01", end: "2024-03-31" }, { start: "2024-07-01", end: "2024-12-31" }]
+```
+
+## Merge and XOR a list of intervals
+
+`mergeIntervals*` and `intervalXorAll*` are the list-form generalizations of
+`intervalUnion*` and `intervalXor*`, which are pairwise only:
+
+```typescript
+import { mergeIntervalsDate, intervalXorAllDate } from "@northguild/gmt";
+
+mergeIntervalsDate([
+  { start: "2024-01-01", end: "2024-01-10" },
+  { start: "2024-01-05", end: "2024-01-15" },
+]);
+// [{ start: "2024-01-01", end: "2024-01-15" }]
+
+intervalXorAllDate([
+  { start: "2024-01-01", end: "2024-01-10" },
+  { start: "2024-01-05", end: "2024-01-15" },
+  { start: "2024-01-08", end: "2024-01-20" },
+]);
+// [{ start: "2024-01-01", end: "2024-01-04" }, { start: "2024-01-08", end: "2024-01-10" }, { start: "2024-01-16", end: "2024-01-20" }]
+```
+
+`mergeIntervals*` collapses overlapping or adjacent intervals into the minimum
+non-overlapping set. `intervalXorAll*` returns the set covered by an **odd** number
+of the input intervals — two identical intervals cancel out to `[]`.
+
+## See also
+
+- [Containment and Overlap](./containment-and-overlap/) — intersection, overlap, adjacency
+- [Splitting and Counting](./splitting-and-counting/) — split by unit, count boundaries
+- [`intervalUnionDate` reference](/reference/plain/interval/intervalUnionDate)
+- [`intervalDifferenceDate` reference](/reference/plain/interval/intervalDifferenceDate)
+- [`mergeIntervalsDate` reference](/reference/plain/interval/mergeIntervalsDate)

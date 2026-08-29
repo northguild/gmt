@@ -1,0 +1,411 @@
+/*
+ * GMT Playground — the live widget island (DOX-B1a).
+ *
+ * A single tinted card (no doubled glass). Inputs reuse the search-input
+ * treatment — same bg, border, text color. Sentinel returns render as the
+ * signal-lost state — the one warm color in the system.
+ */
+
+.gmt-playground {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  margin: var(--gmt-space-6) 0;
+  padding: var(--gmt-space-4);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+  background: var(--gmt-glass-tint-subtle);
+  font-family: var(--gmt-font-mono);
+}
+
+.gmt-playground-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-3);
+}
+
+.gmt-playground-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-1);
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.gmt-playground-field--full {
+  flex: 1 1 100%;
+}
+
+.gmt-playground-label {
+  font-size: 0.7rem;
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-playground-input,
+.gmt-playground-select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  font-family: var(--gmt-font-mono);
+  font-size: 0.85rem;
+  color: var(--gmt-ice);
+  background: var(--gmt-fill-subtle);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  transition:
+    background var(--gmt-duration-fast) var(--gmt-easing),
+    border-color var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-playground-input:hover,
+.gmt-playground-select:hover {
+  border-color: var(--gmt-border-strong);
+}
+
+.gmt-playground-input:focus,
+.gmt-playground-select:focus {
+  outline: none;
+  background: var(--gmt-fill-2);
+  border-color: var(--gmt-border-strong);
+}
+
+.gmt-playground-output {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-1);
+  padding: var(--gmt-space-3);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: transparent;
+  border: 1px solid var(--gmt-hairline-faint);
+  min-height: 2.5rem;
+}
+
+.gmt-playground-call {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-1);
+}
+
+.gmt-playground-call-label {
+  font-size: 0.65rem;
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-playground-call-code {
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--gmt-ice);
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: transparent;
+}
+
+.gmt-call-fn {
+  color: #82aaff;
+}
+
+.gmt-call-punct {
+  color: #d6deeb;
+}
+
+.gmt-call-key {
+  color: #c792ea;
+}
+
+.gmt-call-str {
+  color: #ecc48d;
+}
+
+[data-theme="light"] .gmt-call-fn {
+  color: #3b61b0;
+}
+
+[data-theme="light"] .gmt-call-punct {
+  color: #403f53;
+}
+
+[data-theme="light"] .gmt-call-key {
+  color: #8844ae;
+}
+
+[data-theme="light"] .gmt-call-str {
+  color: #984e4d;
+}
+
+.gmt-playground-call .expressive-code pre {
+  background: transparent;
+  border: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.gmt-playground-call [aria-live]:not(:empty) {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 8px);
+  transform: translateY(-50%);
+  z-index: 10;
+  padding: 4px 8px;
+  font-size: 0.7rem;
+  font-family: var(--gmt-font-mono);
+  color: var(--gmt-void);
+  background: var(--gmt-cyan);
+  border-radius: var(--gmt-radius-sm);
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.gmt-playground-output-label {
+  font-size: 0.65rem;
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-playground-result {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+/* Live value — the result the reader is here to watch. Spring glow, no chrome. */
+.gmt-playground-live {
+  color: var(--gmt-spring);
+  text-shadow: 0 0 8px color(from var(--gmt-spring) srgb r g b / 0.4);
+}
+
+/* Sentinel — invalid input. Signal-lost amber, the one warm color in the system. */
+.gmt-playground-sentinel {
+  display: inline-block;
+  padding: var(--gmt-space-1) var(--gmt-space-2);
+  color: var(--gmt-signal);
+  background: var(--gmt-signal-fill);
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  font-size: 0.8rem;
+  text-shadow: 0 0 6px color(from var(--gmt-signal) srgb r g b / 0.3);
+}
+
+/* Light mode — live value darkens to read on a bright field; sentinel stays warm. */
+[data-theme="light"] .gmt-playground-live {
+  color: var(--gmt-spring);
+  text-shadow: none;
+}
+
+[data-theme="light"] .gmt-playground-sentinel {
+  background: var(--gmt-signal-fill);
+  color: var(--gmt-signal);
+}
+
+/* Reduced motion — kill the glow transition, keep the state change instant. */
+@media (prefers-reduced-motion: reduce) {
+  .gmt-playground-input,
+  .gmt-playground-select {
+    transition: none;
+  }
+}
+
+/* ---- Scenario template (DOX-A4b) ---- */
+
+.gmt-scenario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-6);
+  margin: var(--gmt-space-6) 0;
+  padding: var(--gmt-space-4);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+  background: var(--gmt-glass-tint-subtle);
+}
+
+.gmt-scenario-part {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-2);
+}
+
+.gmt-scenario-part h3 {
+  margin: 0;
+  font-size: 0.85rem;
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-cyan-bright);
+}
+
+.gmt-scenario-why {
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  border-left: 2px solid var(--gmt-cyan);
+  background: var(--gmt-fill-subtle);
+  border-radius: var(--gmt-radius-sm);
+}
+
+.gmt-scenario-why p {
+  margin: 0;
+  color: var(--gmt-ice);
+  line-height: 1.6;
+}
+
+.gmt-scenario-code {
+  margin: 0;
+  padding: var(--gmt-space-3);
+  background: var(--gmt-fill-subtle);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--gmt-ice);
+  overflow-x: auto;
+}
+
+/* ---- Mistake component (DOX-A4c) ---- */
+
+.gmt-mistake {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-4);
+  margin: var(--gmt-space-6) 0;
+  padding: var(--gmt-space-4);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+  background: var(--gmt-glass-tint-subtle);
+}
+
+.gmt-mistake-header {
+  display: flex;
+  align-items: center;
+  gap: var(--gmt-space-3);
+  flex-wrap: wrap;
+}
+
+.gmt-mistake-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--gmt-ice);
+}
+
+.gmt-mistake-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: var(--gmt-tracking-wider);
+  text-transform: uppercase;
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  flex-shrink: 0;
+}
+
+.gmt-mistake-badge--critical {
+  color: var(--gmt-void);
+  background: var(--gmt-severity-critical);
+}
+
+.gmt-mistake-badge--high {
+  color: var(--gmt-void);
+  background: var(--gmt-severity-high);
+}
+
+.gmt-mistake-badge--medium {
+  color: var(--gmt-void);
+  background: var(--gmt-severity-medium);
+}
+
+[data-theme="light"] .gmt-mistake-badge--critical {
+  color: var(--gmt-void);
+  background: var(--gmt-severity-critical);
+}
+
+[data-theme="light"] .gmt-mistake-badge--high {
+  color: var(--gmt-void);
+  background: var(--gmt-severity-high);
+}
+
+[data-theme="light"] .gmt-mistake-badge--medium {
+  color: var(--gmt-void);
+  background: var(--gmt-severity-medium);
+}
+
+.gmt-mistake > p {
+  margin: 0;
+  color: var(--gmt-ice);
+  line-height: 1.6;
+}
+
+.gmt-mistake-pair {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--gmt-space-4);
+
+  pre {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 768px) {
+  .gmt-mistake-pair {
+    grid-template-columns: 1fr;
+  }
+}
+
+.gmt-mistake-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-2);
+}
+
+.gmt-mistake-side h4 {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+}
+
+.gmt-mistake-side--wrong h4 {
+  color: var(--gmt-signal);
+}
+
+.gmt-mistake-side--right h4 {
+  color: var(--gmt-spring);
+}
+
+.gmt-mistake-code {
+  margin: 0;
+  padding: var(--gmt-space-3);
+  background: var(--gmt-fill-subtle);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--gmt-ice);
+  overflow-x: auto;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.gmt-mistake-side--wrong .gmt-mistake-code {
+  border-color: var(--gmt-signal-border);
+}
+
+.gmt-mistake-side--right .gmt-mistake-code {
+  border-color: color(from var(--gmt-spring) srgb r g b / 0.35);
+}

@@ -11,7 +11,7 @@
     "time",
     "timezone"
   ],
-  "homepage": "https://github.com/northguild/gmt#readme",
+  "homepage": "https://gmt-dox.northguild.workers.dev",
   "bugs": {
     "url": "https://github.com/northguild/gmt/issues"
   },
@@ -87,7 +87,16 @@
       "types": "./dist/utc/*/index.d.ts",
       "default": "./dist/utc/*/index.js"
     },
-    "./utc/*/*": null
+    "./utc/*/*": null,
+    "./duration": {
+      "types": "./dist/duration/index.d.ts",
+      "default": "./dist/duration/index.js"
+    },
+    "./duration/*": {
+      "types": "./dist/duration/*/index.d.ts",
+      "default": "./dist/duration/*/index.js"
+    },
+    "./duration/*/*": null
   },
   "publishConfig": {
     "access": "public",

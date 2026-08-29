@@ -1,0 +1,83 @@
+---
+title: Date Validation
+description: Common mistakes when validating dates with GMT.
+---
+
+GMT's validation functions return booleans. They never throw — invalid input yields
+`false`. The ambiguity of `false` (invalid vs. genuinely not-the-case) is the core
+mistake.
+
+## Mistakes
+
+import Mistake from "../../../components/Mistake.astro";
+
+<Mistake
+  severity="high"
+  title="Not validating before parsing"
+  description="Feeding an unvalidated user input string into parseYearFromDate or any other parser produces an empty string or null silently. Validate first, then parse."
+  wrongCode={`const year = parseYearFromDate(userInput); // "not-a-date" → ""`}
+  rightCode={`import { isValidDate, parseYearFromDate } from "@northguild/gmt";
+
+if (isValidDate(userInput)) {
+  const year = parseYearFromDate(userInput); // safe — input is known-valid
+}`}
+/>
+
+<Mistake
+  severity="high"
+  title="Not validating timezone before use"
+  description="Passing an invalid IANA timezone to getZonedNow or any zoned function returns an empty string. Always validate the timezone with isValidTimeZone first."
+  wrongCode={`getZonedNow("not-a-zone"); // ""`}
+  rightCode={`import { isValidTimeZone, getZonedNow } from "@northguild/gmt/zoned";
+
+if (isValidTimeZone(tz)) {
+  getZonedNow(tz); // safe
+}`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Using try-catch for validation"
+  description="GMT functions never throw — they return sentinel values. A try-catch block around a GMT call will never fire, giving a false sense of safety."
+  wrongCode={`try {
+  const r = parseRfc3339(input); // never throws
+} catch (e) {
+  // never reached
+}`}
+  rightCode={`import { parseRfc3339 } from "@northguild/gmt/zoned";
+
+const r = parseRfc3339(input);
+if (r === null) {
+  // handle invalid input
+}`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Confusing range validators with interval validators"
+  description="isValidDateRange checks that a date range string has valid bounds. isValidDateInterval validates an interval object (start + end with optional open-ended flags). They are not interchangeable."
+  wrongCode={`isValidDateRange("2024-03-15/2024-03-20"); // valid range string
+// using this to validate an interval object — wrong function`}
+  rightCode={`import { isValidDateRange, isValidDateInterval } from "@northguild/gmt";
+
+isValidDateRange("2024-03-15/2024-03-20"); // range string — correct
+isValidDateInterval({ start: "2024-03-15", end: "2024-03-20" }); // interval object — correct`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Assuming intervals accept reversed bounds"
+  description="isValidDateInterval returns false when start > end. GMT intervals do not auto-normalize reversed bounds — fix the order before validation."
+  wrongCode={`isValidDateInterval({ start: "2024-03-20", end: "2024-03-15" }); // false — start > end`}
+  rightCode={`import { isValidDateInterval } from "@northguild/gmt";
+
+isValidDateInterval({ start: "2024-03-15", end: "2024-03-20" }); // true — correct order`}
+/>
+
+## See also
+
+- [Validation guide](/guides/core-date-operations/validation/)
+- [`isValidDate` reference](/reference/plain/validate/isValidDate)
+- [`isValidDateRange` reference](/reference/plain/validate/isValidDateRange)
+- [`isValidDateInterval` reference](/reference/plain/interval/validate/isValidDateInterval)
+- [`isValidTimeZone` reference](/reference/zoned/validate/isValidTimeZone)

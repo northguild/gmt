@@ -1,0 +1,89 @@
+---
+title: Formatting Date and Time
+description: Common mistakes when formatting date and time values with GMT.
+---
+
+GMT's format functions return locale-sensitive strings. They differ from
+`Intl.DateTimeFormat` in scope, locale handling, and sentinel behavior.
+
+## Mistakes
+
+import Mistake from "../../../components/Mistake.astro";
+
+<Mistake
+  severity="high"
+  title="Using Intl.DateTimeFormat directly"
+  description="Intl.DateTimeFormat does not cover GMT's extended format set (Rfc2822, HTTP, SQL, Rfc3339, relative), and its `formatToParts` output order varies by locale. GMT's format functions are consistent across locales and formats."
+  wrongCode={`const f = new Intl.DateTimeFormat("en-US", { dateStyle: "full" });
+f.format(new Date("2024-03-15")); // "Friday, March 15, 2024" — locale-dependent order`}
+  rightCode={`import { formatDate } from "@northguild/gmt";
+
+formatDate("2024-03-15"); // "Friday, March 15, 2024" — locale-aware, consistent API`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Not handling empty string on invalid input"
+  description="GMT's format functions return an empty string for invalid input. Treating that as a blank format result hides bugs in the input pipeline."
+  wrongCode={`const out = formatDate(badInput);
+// if badInput is "", out is also "" — indistinguishable from a formatting bug`}
+  rightCode={`import { formatDate } from "@northguild/gmt";
+
+const out = formatDate(input);
+if (out === "") {
+  // input was invalid — fix upstream
+}`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Assuming getLocale* throws or returns English for an invalid locale"
+  description="getLocaleMonthNames, getLocaleEraNames, and friends return empty arrays for an unknown locale. They do not throw, and they do not fall back to English."
+  wrongCode={`const months = getLocaleMonthNames("xx-XX"); // [] — not English, not an error`}
+  rightCode={`import { getLocaleMonthNames } from "@northguild/gmt";
+
+const months = getLocaleMonthNames("en-US"); // known locale
+// always validate or default the locale before calling`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Looking for a token-pattern formatter (there isn't one, deliberately)"
+  description="GMT deliberately omits a `format(pattern, value)` function. Token-pattern formatters either silently ignore unknown tokens or produce garbled output on bad input. GMT's dedicated format functions are safer."
+  wrongCode={`// no equivalent of format("{yyyy}-{MM}-{dd}", date)`}
+  rightCode={`import { formatDate } from "@northguild/gmt";
+
+formatDate("2024-03-15"); // "Friday, March 15, 2024" — dedicated function, no tokens`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Reassembling formatToParts output in a fixed order"
+  description="`Intl.DateTimeFormat.formatToParts()` returns parts in locale-specific order. Concatenating them in a hardcoded sequence (e.g. month before day) produces wrong output for `ja-JP`, `zh-CN`, and others."
+  wrongCode={`const parts = new Intl.DateTimeFormat("ja-JP").formatToParts(new Date());
+// parts[0] is the era, parts[1] is the year — hardcoding order breaks other locales`}
+  rightCode={`import { formatDate } from "@northguild/gmt";
+
+formatDate("2024-03-15"); // locale-correct order, no manual assembly`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Confusing formatCalendar with formatRelativeDateTime"
+  description="formatCalendar converts a date to a non-Gregorian calendar string (e.g. Japanese, Hebrew). formatRelativeDateTime produces '3 days ago' / 'in 2 hours'. They have completely different output shapes."
+  wrongCode={`const out = formatCalendar("2024-03-15", "japanese"); // "令和6年3月15日"
+// used where a relative description was wanted`}
+  rightCode={`import { formatRelativeDate } from "@northguild/gmt";
+
+formatRelativeDate("2024-03-15"); // "today" — relative description`}
+/>
+
+## See also
+
+- [Formatting guide](/guides/core-date-operations/formatting/)
+- [`formatDate` reference](/reference/plain/format/formatDate)
+- [`formatRelativeDate` reference](/reference/plain/format/formatRelativeDate)
+- [`formatRelativeDateTime` reference](/reference/plain/format/formatRelativeDateTime)
+- [`getLocaleMonthNames` reference](/reference/plain/locale/getLocaleMonthNames)
+- [`formatRfc3339` reference](/reference/zoned/format/formatRfc3339)
+- [`formatRfc2822` reference](/reference/zoned/format/formatRfc2822)

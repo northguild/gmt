@@ -1,0 +1,58 @@
+---
+import { PLAYGROUND_SPECS } from "../lib/playground-spec";
+
+interface Props {
+  title: string;
+  description?: string;
+  naiveCode: string;
+  brokenSpecId?: string;
+  explanation: string;
+  gmtCode: string;
+  fixedSpecId: string;
+}
+
+const { title, description, naiveCode, brokenSpecId, explanation, gmtCode, fixedSpecId } = Astro.props;
+
+const brokenSpec = brokenSpecId ? PLAYGROUND_SPECS[brokenSpecId] : undefined;
+const fixedSpec = PLAYGROUND_SPECS[fixedSpecId];
+---
+
+<h2>{title}</h2>
+
+{description && <p>{description}</p>}
+
+<div class="gmt-scenario">
+  <div class="gmt-scenario-part">
+    <h3>The naive approach</h3>
+    <pre class="gmt-scenario-code"><code>{naiveCode}</code></pre>
+  </div>
+
+  <div class="gmt-scenario-part">
+    <h3>Watch it break</h3>
+    {brokenSpec ? (
+      <gmt-playground data-spec={JSON.stringify(brokenSpec)} data-module={brokenSpec.module} data-fn={brokenSpec.fn}></gmt-playground>
+    ) : (
+      <p class="gmt-scenario-note">The naive approach silently produces wrong results — there is no GMT equivalent to demonstrate because the failure is <em>not using GMT</em>.</p>
+    )}
+  </div>
+
+  <div class="gmt-scenario-part gmt-scenario-why">
+    <h3>Why</h3>
+    <p>{explanation}</p>
+  </div>
+
+  <div class="gmt-scenario-part">
+    <h3>The gmt approach</h3>
+    <pre class="gmt-scenario-code"><code>{gmtCode}</code></pre>
+  </div>
+
+  <div class="gmt-scenario-part">
+    <h3>Same widget, working</h3>
+    <gmt-playground data-spec={JSON.stringify(fixedSpec)} data-module={fixedSpec.module} data-fn={fixedSpec.fn}></gmt-playground>
+  </div>
+</div>
+
+<script>
+  import { registerPlayground } from "../lib/playground-register";
+  registerPlayground();
+</script>

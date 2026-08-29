@@ -1,0 +1,73 @@
+---
+title: Getting the Current Time
+description: Common mistakes when getting the current time with GMT.
+---
+
+`getNow`, `getToday`, and their zoned/UTC/Unix siblings are the entry point for
+every other operation. These mistakes cover the ways reaching for them goes wrong.
+
+## Mistakes
+
+import Mistake from "../../../components/Mistake.astro";
+
+<Mistake
+  severity="critical"
+  title="Using Date.now() instead of Temporal"
+  description="Date.now() returns epoch milliseconds. GMT functions return ISO strings. They are not interchangeable — 1000× errors are the common result."
+  wrongCode={`const ts = Date.now(); // 1710504645000 — milliseconds, but easy to mistake for seconds`}
+  rightCode={`import { getNow } from "@northguild/gmt";
+
+getNow(); // "2024-03-15T14:30:45" — ISO 8601 string, no unit confusion`}
+/>
+
+<Mistake
+  severity="high"
+  title="Using new Date() for current time"
+  description="new Date() produces a mutable Date object. GMT returns immutable strings. Mixing the two families forces constant round-tripping and hides timezone bugs."
+  wrongCode={`const now = new Date(); // mutable Date object — implicit system timezone`}
+  rightCode={`import { getNow } from "@northguild/gmt";
+
+getNow(); // "2024-03-15T14:30:45" — immutable string`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Not handling empty string on error"
+  description="GMT returns an empty string for invalid input rather than throwing. Treating a falsy return as 'not yet loaded' or skipping the branch silently is a bug."
+  wrongCode={`const now = getNow?.(); // if the call returns "", your check may treat it as undefined`}
+  rightCode={`import { getNow } from "@northguild/gmt";
+
+const now = getNow(); // "" on failure — check explicitly:
+if (now === "") {
+  // handle failure
+}`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Looking for value-taking get* functions here"
+  description="getNow and getToday take no arguments. Passing a timezone or format string throws — the zoned and UTC variants live in their own namespaces."
+  wrongCode={`getNow("America/New_York"); // ERROR: getNow takes no arguments`}
+  rightCode={`import { getZonedNow } from "@northguild/gmt/zoned";
+
+getZonedNow("America/New_York"); // "2024-03-15T10:30:45" — zoned variant`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Bucketing by week number without its week-year"
+  description="A week number (1-53) is not unique without the week-year. Week 1 of 2024 and week 1 of 2025 are different weeks, but the number alone does not tell you which."
+  wrongCode={`const week = parseWeekFromDate("2024-01-01"); // 1 — but which year's week 1?`}
+  rightCode={`import { parseWeekFromDate, parseYearFromDate } from "@northguild/gmt";
+
+const year = parseYearFromDate("2024-01-01"); // 2024
+const week = parseWeekFromDate("2024-01-01"); // 1
+// week 1 of 2024 is unambiguous`}
+/>
+
+## See also
+
+- [Getting the Current Date and Time guide](/guides/core-date-operations/get-current/)
+- [`getNow` reference](/reference/plain/get/getNow)
+- [`getToday` reference](/reference/plain/get/getToday)
+- [`getZonedNow` reference](/reference/zoned/get/getZonedNow)

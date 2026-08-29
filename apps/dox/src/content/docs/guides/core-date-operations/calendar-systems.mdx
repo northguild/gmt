@@ -1,0 +1,80 @@
+---
+title: Calendar Systems
+description: Express a date in a non-Gregorian calendar system (Hebrew, Islamic, Japanese, Buddhist, and more) with calendar-native arithmetic.
+sidebar:
+  order: 9
+---
+
+GMT's `convertDateToCalendar` expresses a date in any of 13 non-Gregorian calendar
+systems, using Temporal's native calendar support — no bundled leap-year tables.
+
+## Convert a date to another calendar
+
+```typescript
+import { convertDateToCalendar } from "@northguild/gmt";
+
+convertDateToCalendar("2024-10-03", "hebrew");
+// "5785-01-01[u-ca=hebrew]" — Rosh Hashanah 5785
+
+convertDateToCalendar("5785-01-01[u-ca=hebrew]", "gregorian");
+// "2024-10-03" — round-trips back
+
+convertDateToCalendar("2024-10-03", "islamic-umalqura");
+// "1446-03-30[u-ca=islamic-umalqura]"
+
+convertDateToCalendar("2024-10-03", "buddhist");
+// "2567-10-03[u-ca=buddhist]"
+```
+
+The annotated string carries the calendar's **own** year/month/day — not the
+ISO/Gregorian digits Temporal's own `[u-ca=...]` convention keeps. A Hebrew year
+like 5785 is visible directly in the string.
+
+`CalendarSystem` is `"gregorian" | "hebrew" | "islamic-civil" | "islamic-tabular" |
+"islamic-umalqura" | "japanese" | "buddhist" | "taiwan" | "persian" | "indian" |
+"ethiopic" | "ethiopic-amete-alem" | "coptic"`.
+
+## Three Islamic variants — not interchangeable
+
+- `"islamic-civil"` — fixed 30-year leap-year cycle, Friday epoch.
+- `"islamic-tabular"` — same arithmetic, Thursday epoch one day earlier.
+- `"islamic-umalqura"` — the Saudi civil calendar, tabulated, not approximated by
+  either fixed variant.
+
+## Japanese and Ethiopic use era-relative years
+
+Temporal's `.year` for `"japanese"` stays proleptic across era changes (a stable
+sort key), so `convertDateToCalendar` uses `.eraYear` + an `;era=` tag instead:
+
+```typescript
+convertDateToCalendar("2024-10-03", "japanese");
+// "0006-10-03[u-ca=japanese;era=reiwa]" — year 6 of Reiwa, not 2024
+```
+
+The Ethiopic family is computed with GMT-owned arithmetic (not Temporal's native
+calendar ids) to route around an ICU-version bug in `@js-temporal/polyfill`.
+
+## Calendar-aware arithmetic
+
+The annotated string feeds directly into `addDate`/`subtractDate`/`diffDate` and
+every `Date`-suffixed `plain/interval/*` function — calendar-unit arithmetic
+resolves in the value's own calendar:
+
+```typescript
+import { addDate, intervalCountDate, convertDateToCalendar } from "@northguild/gmt";
+
+addDate("5784-06-15[u-ca=hebrew]", { months: 1 });
+// "5784-07-15[u-ca=hebrew]" — Adar I -> Adar
+
+intervalCountDate("5784-01-01[u-ca=hebrew]", "5785-01-01[u-ca=hebrew]", "month");
+// 13 — a Hebrew leap year crosses 13 month boundaries, not 12
+```
+
+`utc/` and `unix/` reject a `[u-ca=...]` annotation outright.
+
+## See also
+
+- [Conversion](../converting-types/) — `convertZonedToCalendar` for zoned values
+- [Plain Arithmetic](../plain-arithmetic/) — the `addDate`/`diffDate` functions
+- [Intervals](../intervals/) — calendar-aware interval arithmetic
+- [`convertDateToCalendar` reference](/reference/plain/convert/convertDateToCalendar)

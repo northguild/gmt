@@ -54,6 +54,8 @@ apps/dox/.astro/
 apps/dox/dist/
 apps/dox/src/generated/
 apps/dox/src/content/docs/reference/
+apps/dox/src/content/docs/guides/concepts/dst-disambiguation.md
+apps/dox/src/content/docs/scenarios/index.mdx
 apps/dox/.env
 apps/dox/.wrangler/
 

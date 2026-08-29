@@ -25,6 +25,7 @@ import {
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
+import { PLAYGROUND_SPECS } from "../src/lib/playground-spec.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(__dirname, "..");
@@ -786,6 +787,14 @@ function renderFn(doc: FnDoc, docs: Doc[]): string {
   lines.push(`slug: ${JSON.stringify(slug)}`);
   lines.push(`---`);
   lines.push("");
+
+  if (PLAYGROUND_SPECS[doc.name]) {
+    lines.push(`import Playground from "~/components/Playground.astro";`);
+    lines.push("");
+    lines.push(`<Playground specId=${JSON.stringify(doc.name)} client:visible />`);
+    lines.push("");
+  }
+
   lines.push(`## Signature`);
   lines.push("");
   lines.push("```ts");

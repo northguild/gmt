@@ -1,0 +1,125 @@
+---
+title: Splitting and Counting
+description: Split intervals by duration unit or into equal parts, count calendar-unit boundaries crossed, and measure exact fractional length.
+sidebar:
+  order: 4
+---
+
+Use these functions to tile an interval into sub-intervals, count how many
+calendar-unit boundaries it crosses, or measure its exact length in a given unit.
+
+## Split by duration unit
+
+`splitIntervalByUnit*` splits an interval into sub-intervals of `amount × unit`.
+The final sub-interval is trimmed so its `end` never exceeds the original `end`:
+
+```typescript
+import { splitIntervalByUnitDate } from "@northguild/gmt";
+
+splitIntervalByUnitDate("2024-01-01", "2024-01-10", "day", 2);
+// [
+//   { start: "2024-01-01", end: "2024-01-03" },
+//   { start: "2024-01-03", end: "2024-01-05" },
+//   { start: "2024-01-05", end: "2024-01-07" },
+//   { start: "2024-01-07", end: "2024-01-09" },
+//   { start: "2024-01-09", end: "2024-01-10" } — trimmed
+// ]
+```
+
+All split functions return `[]` on invalid input.
+
+## Split into n equal parts
+
+```typescript
+import { intervalDivideEquallyDate } from "@northguild/gmt";
+
+intervalDivideEquallyDate("2024-01-01", "2024-01-05", 4);
+// [
+//   { start: "2024-01-01", end: "2024-01-02" },
+//   { start: "2024-01-02", end: "2024-01-03" },
+//   { start: "2024-01-03", end: "2024-01-04" },
+//   { start: "2024-01-04", end: "2024-01-05" }
+// ]
+```
+
+`n` must be a positive integer. `PlainDate` rounds internal boundaries to the nearest
+whole day; every other variant is exact (computed from total elapsed nanoseconds).
+
+## Split at arbitrary points
+
+```typescript
+import { intervalSplitAtDate } from "@northguild/gmt";
+
+intervalSplitAtDate("2024-01-01", "2024-01-10", ["2024-01-07", "2024-01-03"]);
+// [
+//   { start: "2024-01-01", end: "2024-01-03" },
+//   { start: "2024-01-03", end: "2024-01-07" },
+//   { start: "2024-01-07", end: "2024-01-10" }
+// ]
+```
+
+Points need not be sorted — they're sorted internally. Points outside `[start, end]`
+or exactly on a boundary are dropped.
+
+## Count unit boundaries crossed
+
+`intervalCount*` returns how many calendar-unit boundaries the half-open interval
+`[start, end)` touches — distinct from `diff*`, which measures exact elapsed duration:
+
+```typescript
+import { intervalCountDate, intervalCountDateTime } from "@northguild/gmt";
+
+intervalCountDateTime("2024-01-01T23:59:00", "2024-01-02T00:01:00", "day");
+// 2 — two minutes long, but two days touched
+
+intervalCountDate("2024-01-01", "2024-01-03", "day"); // 2 (end boundary excluded)
+intervalCountDate("2024-01-15", "2024-03-10", "month"); // 3
+```
+
+A zero-length interval counts `1` when mid-unit and `0` when exactly on a boundary.
+All count functions return `null` on invalid input.
+
+## Exact interval length
+
+`intervalLength*` is `intervalCount*`'s exact-duration counterpart — it answers "how
+long is this interval" as a real, possibly fractional number:
+
+```typescript
+import { intervalLengthDate, intervalLengthDateTime } from "@northguild/gmt";
+
+intervalLengthDateTime("2024-01-01T23:59:00", "2024-01-02T00:01:00", "day");
+// 0.001388888888888889 — the same interval intervalCount* reports as 2
+
+intervalLengthDate("2024-01-01", "2024-01-16", "month");
+// 0.4838709677419355 — 15 of January's 31 days
+```
+
+Calendar units resolve against the interval's own `start`; zoned/unix/utc variants
+are DST-aware.
+
+## Count shared days between two intervals
+
+`intervalOverlappingDays*` is the numeric counterpart to `intervalIntersection*` —
+how many distinct calendar dates the two intervals' closed intersection touches,
+inclusive of both endpoints:
+
+```typescript
+import { intervalOverlappingDaysDate } from "@northguild/gmt";
+
+intervalOverlappingDaysDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
+// 91
+
+intervalOverlappingDaysDate("2024-01-01", "2024-06-30", "2024-07-01", "2024-12-31");
+// 0 — disjoint (a well-defined answer, not invalid input)
+```
+
+Returns `0` for a disjoint pair and `null` on invalid input. There is no `Time`
+variant — `PlainTime` has no calendar, so a day count is undefined for it.
+
+## See also
+
+- [Set Operations](./set-operations/) — union, difference, xor
+- [Interval Basics](./interval-basics/) — validation, construction, return conventions
+- [`splitIntervalByUnitDate` reference](/reference/plain/interval/splitIntervalByUnitDate)
+- [`intervalCountDate` reference](/reference/plain/interval/intervalCountDate)
+- [`intervalLengthDate` reference](/reference/plain/interval/intervalLengthDate)

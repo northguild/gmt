@@ -1,0 +1,79 @@
+---
+title: Containment and Overlap
+description: Test whether a point or interval is contained, whether two intervals overlap, and compute their intersection.
+sidebar:
+  order: 2
+---
+
+Use these functions to answer "is this point in the range?", "does this interval
+fit inside that one?", and "do these two ranges share any time?".
+
+## Point-in-interval (3-arg)
+
+```typescript
+import {
+  intervalContainsDate,
+  intervalContainsTime,
+  intervalContainsDateTime,
+  intervalContainsUtc,
+  intervalContainsUnix,
+  intervalContainsZoned,
+} from "@northguild/gmt";
+
+intervalContainsDate("2024-01-01", "2024-12-31", "2024-06-15"); // true
+intervalContainsTime("09:00:00", "17:00:00", "12:00:00"); // true
+intervalContainsUnix(0, 1700000000, 170000000); // true
+```
+
+## Interval-in-interval (4-arg)
+
+```typescript
+intervalContainsDate("2024-01-01", "2024-12-31", "2024-03-01", "2024-09-01"); // true
+```
+
+`intervalEngulfs*` is identical to the 4-argument `intervalContains*` mode — use
+whichever name reads better at the call site.
+
+## Overlap vs adjacency
+
+`intervalsOverlap*` returns `true` only when intervals share actual time. Adjacent
+intervals (one's end equals the other's start) do **not** overlap:
+
+```typescript
+import { intervalsOverlapDate } from "@northguild/gmt";
+
+intervalsOverlapDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31"); // true
+intervalsOverlapDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31"); // false — adjacent
+```
+
+`intervalAbuts*` is the complementary check — `true` only when intervals touch at
+exactly one boundary with zero gap and zero overlap:
+
+```typescript
+import { intervalAbutsDate } from "@northguild/gmt";
+
+intervalAbutsDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31"); // true
+intervalAbutsDate("2024-01-01", "2024-06-29", "2024-06-30", "2024-12-31"); // false — gap
+```
+
+## Intersection
+
+`intervalIntersection*` returns the overlapping span, or `null` when the intervals
+are disjoint. Adjacent intervals count as overlapping and return a single-point span:
+
+```typescript
+import { intervalIntersectionDate } from "@northguild/gmt";
+
+intervalIntersectionDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
+// { start: "2024-04-01", end: "2024-06-30" }
+
+intervalIntersectionDate("2024-01-01", "2024-06-30", "2024-07-01", "2024-12-31");
+// null — disjoint
+```
+
+## See also
+
+- [Interval Basics](./interval-basics/) — validation, construction, return conventions
+- [Set Operations](./set-operations/) — union, difference, xor
+- [`intervalContainsDate` reference](/reference/plain/interval/intervalContainsDate)
+- [`intervalsOverlapDate` reference](/reference/plain/interval/intervalsOverlapDate)

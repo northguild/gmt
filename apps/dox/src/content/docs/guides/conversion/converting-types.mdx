@@ -1,0 +1,88 @@
+---
+title: Converting Between Types
+description: Convert between plain, zoned, unix, and UTC representations, and express dates in non-Gregorian calendar systems.
+sidebar:
+  order: 1
+---
+
+Use these functions when you need to move between representations: a plain datetime
+to a zoned one, a UTC string to a Unix epoch, a date in a non-Gregorian calendar.
+
+## Plain to zoned (and back)
+
+```typescript
+import { convertPlainDateTimeToZoned, convertZonedToPlainDateTime } from "@northguild/gmt/zoned";
+
+convertPlainDateTimeToZoned("2024-03-15T14:30:45", "America/New_York");
+// "2024-03-15T14:30:45[America/New_York]"
+
+convertZonedToPlainDateTime("2024-03-15T14:30:45[America/New_York]");
+// "2024-03-15T14:30:45"
+```
+
+The plain-to-zoned direction accepts `disambiguation` for DST gap/overlap control —
+see [Zoned Operations](/guides/zoned-date-operations/zoned-operations/).
+
+## UTC and Unix
+
+```typescript
+import { convertUtcToUnix, convertUnixToUtc } from "@northguild/gmt/unix";
+
+convertUtcToUnix("2024-03-15T14:30:45"); // 1710504645 — seconds
+convertUnixToUtc(1710504645); // "2024-03-15T14:30:45"
+
+// Milliseconds variants:
+import { convertUtcToUnixMs, convertUnixMsToUtc } from "@northguild/gmt/unix";
+convertUtcToUnixMs("2024-03-15T14:30:45"); // 1710504645000
+convertUnixMsToUtc(1710504645000); // "2024-03-15T14:30:45"
+```
+
+`convertUtcToUnix` returns **seconds** (the Unix convention). Use the `…Ms` variants
+for milliseconds — and be consistent: mixing the two is a common source of 1000x errors.
+
+## Zoned to UTC and back
+
+```typescript
+import { convertZonedToUtc } from "@northguild/gmt/zoned";
+import { convertUtcToZoned } from "@northguild/gmt/utc";
+
+convertZonedToUtc("2024-03-15T14:30:45[America/New_York]"); // "2024-03-15T19:30:45"
+convertUtcToZoned("2024-03-15T14:30:45", "America/New_York"); // "2024-03-15T10:30:45[America/New_York]"
+```
+
+## Between timezones
+
+```typescript
+import { convertZonedToZoned } from "@northguild/gmt/zoned";
+
+convertZonedToZoned("2024-03-15T14:30:45[America/New_York]", "Europe/London");
+// "2024-03-15T18:30:45[Europe/London]"
+```
+
+## Non-Gregorian calendar systems
+
+```typescript
+import { convertDateToCalendar } from "@northguild/gmt/plain";
+
+convertDateToCalendar("2024-10-03", "hebrew");
+// "5785-01-01[u-ca=hebrew]" — calendar-native year/month/day
+
+convertDateToCalendar("2024-10-03", "japanese");
+// "0006-10-03[u-ca=japanese;era=reiwa]" — era-relative year, not proleptic 2024
+```
+
+The annotated string carries the calendar's **own** digits — not the ISO/Gregorian
+digits Temporal's own `[u-ca=...]` convention keeps. Round-trip through
+`convertDateToCalendar(value, "gregorian")` to get back to a bare ISO string.
+
+For zoned values, use `convertZonedToCalendar` (zoned namespace) — it keeps the
+instant, offset, and IANA zone unchanged. See [Calendar Systems](../core-date-operations/calendar-systems/)
+for the full calendar-aware arithmetic story.
+
+## See also
+
+- [Calendar Systems](../core-date-operations/calendar-systems/) — calendar-aware arithmetic
+- [Zoned Operations](/guides/zoned-date-operations/zoned-operations/) — DST disambiguation on conversion
+- [`convertPlainDateTimeToZoned` reference](/reference/zoned/convert/convertPlainDateTimeToZoned)
+- [`convertUtcToUnix` reference](/reference/unix/convert/convertUtcToUnix)
+- [`convertDateToCalendar` reference](/reference/plain/convert/convertDateToCalendar)

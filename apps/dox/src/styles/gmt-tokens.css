@@ -85,6 +85,10 @@
   --gmt-signal-fill: color(from var(--gmt-signal) srgb r g b / 0.08);
   --gmt-signal-border: color(from var(--gmt-signal) srgb r g b / 0.35);
 
+  --gmt-severity-critical: var(--gmt-cyan);
+  --gmt-severity-high: var(--gmt-teal);
+  --gmt-severity-medium: var(--gmt-ice);
+
   /* Scrollbar — was hard-coded rgba(14,116,144,…) literals. Deep-teal, fixed
      (not palette-derived); the light block re-tints track/thumb to cyan. */
   --gmt-scrollbar-track: rgba(14, 116, 144, 0.08);

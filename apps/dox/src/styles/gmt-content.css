@@ -183,7 +183,7 @@ dialog > .dialog-frame {
   border: 1px solid var(--gmt-hairline);
   border-radius: var(--gmt-radius-lg);
   corner-shape: bevel;
-  overflow: hidden;
+  overflow: auto;
 }
 
 /* Keep first column compact, let last column fill remaining width */
@@ -316,4 +316,3 @@ dialog > .dialog-frame {
   background: transparent;
   border: none;
 }
-

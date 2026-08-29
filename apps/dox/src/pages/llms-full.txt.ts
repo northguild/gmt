@@ -18,11 +18,73 @@ export const GET: APIRoute = ({ site }: APIContext) => {
     site?.toString().replace(/\/$/, "") ??
     "https://gmt-dox.northguild.workers.dev";
 
-  // Build pages array: guides first, then reference sorted by slug
-  const guideSlugs = ["install", "core-rules"];
-  const guidePages = guideSlugs
+  // Build guide pages: every non-index page under content/docs/guides/
+  const guidePages = Object.entries(RAW)
+    .filter(([path]) => path.includes("/content/docs/guides/"))
+    .map(([path, raw]) => {
+      const rel = path
+        .replace(/^.*\/content\/docs\//, "")
+        .replace(/\.(md|mdx)$/, "");
+      if (rel === "guides/index") return null;
+
+      const { data, body } = stripFrontmatter(raw);
+      const md = stripMdx(body, { gmtVersion });
+      const title = data.title ?? rel;
+      return {
+        title,
+        url: `${base}/${rel}.md`,
+        markdown: pageToMarkdown({ title, body: md }),
+      };
+    })
+    .filter((p): p is NonNullable<typeof p> => p != null)
+    .sort((a, b) => a.title.localeCompare(b.title));
+
+  // Scenario pages: every non-index page under content/docs/scenarios/
+  const scenarioPages = Object.entries(RAW)
+    .filter(([path]) => path.includes("/content/docs/scenarios/"))
+    .map(([path, raw]) => {
+      const rel = path
+        .replace(/^.*\/content\/docs\//, "")
+        .replace(/\.(md|mdx)$/, "");
+      if (rel === "scenarios/index") return null;
+
+      const { data, body } = stripFrontmatter(raw);
+      const md = stripMdx(body, { gmtVersion });
+      const title = data.title ?? rel;
+      return {
+        title,
+        url: `${base}/${rel}.md`,
+        markdown: pageToMarkdown({ title, body: md }),
+      };
+    })
+    .filter((p): p is NonNullable<typeof p> => p != null)
+    .sort((a, b) => a.title.localeCompare(b.title));
+
+  // Mistake pages: every non-index page under content/docs/mistakes/
+  const mistakePages = Object.entries(RAW)
+    .filter(([path]) => path.includes("/content/docs/mistakes/"))
+    .map(([path, raw]) => {
+      const rel = path
+        .replace(/^.*\/content\/docs\//, "")
+        .replace(/\.(md|mdx)$/, "");
+      if (rel === "mistakes/index") return null;
+
+      const { data, body } = stripFrontmatter(raw);
+      const md = stripMdx(body, { gmtVersion });
+      const title = data.title ?? rel;
+      return {
+        title,
+        url: `${base}/${rel}.md`,
+        markdown: pageToMarkdown({ title, body: md }),
+      };
+    })
+    .filter((p): p is NonNullable<typeof p> => p != null)
+    .sort((a, b) => a.title.localeCompare(b.title));
+
+  // Start-here pages (install, core-rules)
+  const startSlugs = ["install", "core-rules"];
+  const startPages = startSlugs
     .map((slug) => {
-      // Find the raw content for this guide
       const rawKey = Object.keys(RAW).find((k) => {
         const rel = k
           .replace(/^.*\/content\/docs\//, "")
@@ -53,17 +115,17 @@ export const GET: APIRoute = ({ site }: APIContext) => {
 
       const { data, body } = stripFrontmatter(raw);
       const slug = data.slug ?? rel;
-      // Reference bodies are already clean markdown (generator output)
+      const md = stripMdx(body, { gmtVersion });
       return {
         title: data.title ?? rel,
         url: `${base}/${slug}.md`,
-        markdown: pageToMarkdown({ title: data.title ?? rel, body }),
+        markdown: pageToMarkdown({ title: data.title ?? rel, body: md }),
       };
     })
     .filter((p): p is NonNullable<typeof p> => p != null)
     .sort((a, b) => a.url.localeCompare(b.url));
 
-  const allPages = [...guidePages, ...refPages];
+  const allPages = [...startPages, ...guidePages, ...scenarioPages, ...mistakePages, ...refPages];
 
   return new Response(
     renderLlmsFull({

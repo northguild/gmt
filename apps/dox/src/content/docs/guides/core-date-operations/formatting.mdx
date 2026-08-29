@@ -1,0 +1,143 @@
+---
+title: Formatting
+description: Format date/time values for display with locale support, locale-ordered parts, relative labels, calendar-day labels, and fixed machine formats.
+sidebar:
+  order: 6
+---
+
+Use these functions when you need to render a date, time, or datetime as a string
+for a user, or encode it into a fixed interchange grammar.
+
+## Absolute formatting with locale
+
+```typescript
+import { formatDate, formatTime, formatDateTime } from "@northguild/gmt";
+
+formatDate("2024-03-15", "en-US"); // "3/15/2024"
+formatDate("2024-03-15", "en-GB"); // "15/03/2024"
+formatDate("2024-03-15", "de-DE"); // "15.3.2024"
+
+formatTime("14:30:45"); // "2:30:45 PM"
+formatTime("14:30:45", "en-GB"); // "14:30:45"
+
+formatDateTime("2024-03-15T14:30:45", "en-US"); // "3/15/2024, 2:30:45 PM"
+```
+
+Pass `Intl.DateTimeFormatOptions` for full control:
+
+```typescript
+formatDate("2024-03-15", "en-US", { year: "numeric", month: "long", day: "numeric" });
+// "March 15, 2024"
+```
+
+## Locale-ordered parts instead of a finished string
+
+`formatDateToParts`/`formatDateTimeToParts`/`formatZonedToParts` return the
+locale-ordered `Array<{ type, value }>` behind the string — GMT's substitute for a
+token formatter:
+
+```typescript
+import { formatDateToParts } from "@northguild/gmt";
+
+formatDateToParts("2024-03-15", "en-US");
+// [{ type: "month", value: "3" }, { type: "literal", value: "/" }, ...]
+
+formatDateToParts("2024-03-15", "fr-FR");
+// day comes before month — same locale-order guarantee, as parts
+```
+
+**Iterate the array as returned.** Do not pick out `.find(p => p.type === "month")`
+and reassemble parts into a fixed order — that reintroduces the locale-ordering bug
+`formatToParts` exists to avoid.
+
+## Relative formatting ("yesterday", "in 2 hours")
+
+```typescript
+import {
+  formatRelativeDate,
+  formatRelativeTime,
+  formatRelativeDateTime,
+} from "@northguild/gmt";
+
+const ref = "2024-03-15";
+formatRelativeDate("2024-03-14", "en-US", { reference: ref }); // "yesterday"
+formatRelativeDate("2024-03-18", "en-US", { reference: ref }); // "in 3 days"
+
+formatRelativeTime("11:30:00", "en-US", { reference: "12:00:00" }); // "30 minutes ago"
+formatRelativeDateTime("2024-03-15T10:00:00", "en-US", { reference: "2024-03-15T12:00:00" });
+// "2 hours ago"
+```
+
+`reference` is **required** — the same shape as the value. There are
+`formatRelativeZoned`, `formatRelativeUnix`, and `formatRelativeUtc` siblings for
+their respective value types. See the [Relative Time](../relative-time/) guide for
+the full option set and DST-safe zoned behavior.
+
+## Calendar-day label + time-of-day (Moment's `.calendar()`)
+
+`formatCalendar` renders a day-granularity label plus the time-of-day, joined with
+the locale's own connector (never a hardcoded "at"):
+
+```typescript
+import { formatCalendar, formatCalendarZoned } from "@northguild/gmt";
+
+const ref = "2026-03-15T09:00:00";
+formatCalendar("2026-03-16T14:30:00", "en-US", { reference: ref });
+// "tomorrow at 2:30 PM"
+
+formatCalendar("2026-03-08T14:30:00", "en-US", { reference: ref });
+// "March 8, 2026 at 2:30 PM" — beyond ±6 days, falls back to absolute
+```
+
+Distinct from `formatRelativeDateTime` (which always renders an elapsed-time phrase
+like "in 1 day" and never includes a clock time).
+
+## Standalone locale calendar names (no date value needed)
+
+```typescript
+import {
+  getLocaleEraNames,
+  getLocaleMonthNames,
+  getLocaleWeekdayNames,
+  getLocaleMeridiems,
+} from "@northguild/gmt";
+
+getLocaleEraNames("en-US"); // ["Before Christ", "Anno Domini"]
+getLocaleMonthNames("en-US"); // ["January", "February", ...]
+getLocaleWeekdayNames("en-US"); // ["Sunday", "Monday", ...] (locale-first-day order)
+getLocaleMeridiems("en-US"); // ["AM", "PM"]
+```
+
+These are the GMT equivalent of Luxon's `Info` class. All four return `[]` for an
+invalid BCP 47 locale tag.
+
+## Named machine formats (email, HTTP, SQL, RFC 3339)
+
+Fixed, non-locale-adaptive grammars — none of these take a `locale` argument:
+
+```typescript
+import { formatRfc2822, formatHttp, formatSql, formatRfc3339 } from "@northguild/gmt";
+
+formatRfc2822("2024-03-15T14:30:00-04:00[America/New_York]");
+// "Fri, 15 Mar 2024 14:30:00 -0400"
+
+formatHttp("2024-03-15T14:30:00Z");
+// "Fri, 15 Mar 2024 14:30:00 GMT"
+
+formatSql("2024-03-15T14:30:00");
+// "2024-03-15 14:30:00"
+
+formatRfc3339("2024-03-15T14:30:00-04:00[America/New_York]");
+// "2024-03-15T14:30:00-04:00"
+```
+
+Each has a `parse*` counterpart in the [Parsing](../parsing/) guide.
+
+## See also
+
+- [Relative Time](../relative-time/) — the full relative-formatter option set
+- [Parsing](../parsing/) — decoding strings, including the `parse*` counterparts
+- [Zoned Operations](/guides/zoned-date-operations/zoned-operations/) — `formatZonedDateTime`, `formatZonedRange`
+- [`formatDate` reference](/reference/plain/format/formatDate)
+- [`formatRelativeDate` reference](/reference/plain/format/formatRelativeDate)
+- [`formatRfc2822` reference](/reference/zoned/format/formatRfc2822)

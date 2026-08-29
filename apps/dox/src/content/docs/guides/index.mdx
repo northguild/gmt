@@ -1,0 +1,31 @@
+---
+title: Guides
+description: Task-oriented guides for @northguild/gmt — when to reach for which function, and why.
+sidebar:
+  order: 1
+---
+
+These guides are organized by task, not by namespace. Each one ports the runnable
+patterns from the `gmt` README and skill docs into a single page, then links to the
+[reference](/reference/) for the full signature of every function mentioned.
+
+## How the guides are organized
+
+| Group | What it covers |
+| --- | --- |
+| [Concepts](./concepts/) | Plain vs zoned, DST disambiguation |
+| [Core Date Operations](./core-date-operations/) | Getting the current time, arithmetic, comparison, durations, parsing, formatting, validation, calendar systems |
+| [Zoned Date Operations](./zoned-date-operations/) | Timezone-aware arithmetic, boundaries, DST control |
+| [Conversion](./conversion/) | Between plain/zoned/unix/UTC and calendar systems |
+| [Intervals](./intervals/) | Range math — containment, overlap, set operations, splitting |
+| [Integration](./integration/) | Cache keys, routers, tables, lint config |
+
+## Reading order
+
+If you're new to the library, read these three first — in this order:
+
+1. [Plain vs Zoned](./concepts/plain-vs-zoned/) — the two families of types and why they never mix.
+2. [DST Disambiguation](./concepts/dst-disambiguation/) — why wall-clock time breaks twice a year and how GMT controls it.
+3. [Zoned Operations](./zoned-date-operations/zoned-operations/) — scheduling across timezones, the task that needs both.
+
+After that, jump to whichever group matches the task at hand.

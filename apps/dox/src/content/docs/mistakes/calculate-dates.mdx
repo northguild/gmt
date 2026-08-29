@@ -1,0 +1,76 @@
+---
+title: Date Arithmetic
+description: Common mistakes when performing date arithmetic with GMT.
+---
+
+GMT's arithmetic functions handle month overflow, DST transitions, and calendar
+boundaries correctly. Manual arithmetic almost always misses at least one edge case.
+
+## Mistakes
+
+import Mistake from "../../../components/Mistake.astro";
+
+<Mistake
+  severity="high"
+  title="Using manual date arithmetic"
+  description="Adding days by concatenating strings or manipulating the date parts manually ignores month lengths, leap years, and DST. GMT's add/subtract functions use Temporal arithmetic under the hood."
+  wrongCode={`const next = dateStr.split("-");
+next[2] = String(Number(next[2]) + 1); // "2024-02-31" → "2024-02-32" — invalid`}
+  rightCode={`import { addDays } from "@northguild/gmt";
+
+addDays("2024-02-29", 1); // "2024-03-01" — correct`}
+/>
+
+<Mistake
+  severity="high"
+  title="Not handling month overflow"
+  description="Adding N days to a date near month-end can cross into the next month. Manual arithmetic that assumes 30 or 31 days per month breaks at every boundary."
+  wrongCode={`const [y, m, d] = "2024-01-31".split("-").map(Number);
+const newD = d + 1; // 32 — invalid day`}
+  rightCode={`import { addMonths } from "@northguild/gmt";
+
+addMonths("2024-01-31", 1); // "2024-02-29" — leap-year-aware`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Not handling invalid input"
+  description="Arithmetic functions return an empty string for invalid input. Passing a malformed date silently produces an empty string rather than throwing — check the result if the input comes from an external source."
+  wrongCode={`const result = addDays(userInput, 5);
+// if userInput is "not-a-date", result is "" — easy to miss`}
+  rightCode={`import { addDays } from "@northguild/gmt";
+
+const result = addDays(userInput, 5);
+if (result === "") {
+  // input was invalid
+}`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Not handling leap year"
+  description="February 29 exists only in leap years. Adding or subtracting years across a leap-day boundary without a calendar-aware function produces February 28 or an invalid date."
+  wrongCode={`addYears("2024-02-29", 1); // manual math → "2025-02-29" — invalid`}
+  rightCode={`import { addYears } from "@northguild/gmt";
+
+addYears("2024-02-29", 1); // "2025-02-28" — leap-year-aware`}
+/>
+
+<Mistake
+  severity="high"
+  title="Reaching for cycleDate when calendar arithmetic is wanted (or vice versa)"
+  description="cycleDate adds or subtracts days, months, or years modulo a cycle length — it is not calendar arithmetic. addMonths / addYears / diffDate handle month/year boundaries correctly; cycleDate does not."
+  wrongCode={`cycleDate("2024-01-15", { unit: "month", step: 1 }); // cycles within a 12-month loop, not addMonths`}
+  rightCode={`import { addMonths } from "@northguild/gmt";
+
+addMonths("2024-01-15", 1); // "2024-02-15" — calendar arithmetic`}
+/>
+
+## See also
+
+- [Core Date Operations guide](/guides/core-date-operations/plain-arithmetic/)
+- [`addDays` reference](/reference/plain/calculate/addDays)
+- [`addMonths` reference](/reference/plain/calculate/addMonths)
+- [`addYears` reference](/reference/plain/calculate/addYears)
+- [`cycleDate` reference](/reference/plain/calculate/cycleDate)
+- [`diffDate` reference](/reference/plain/calculate/diffDate)
