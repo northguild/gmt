@@ -1,0 +1,166 @@
+/*
+ * GMT light-mode overrides.
+ *
+ * The `[data-theme="light"]` rules that aren't a simple palette re-tint (those
+ * are token-value swaps in gmt-tokens.css) and don't sit next to a base rule
+ * elsewhere (scrollbar → gmt-controls.css, Pagefind → gmt-content.css,
+ * --ec-codeBg → gmt-glass.css). Loaded last so it always wins its ties.
+ */
+
+/* ---- Light mode UI components ---- */
+/* Search bar - target Starlight's actual search input */
+[data-theme="light"] header input[type="search"],
+[data-theme="light"] header input[type="text"],
+[data-theme="light"] .search input,
+[data-theme="light"] site-search input {
+  background-color: var(--gmt-void);
+  color: var(--gmt-ice);
+  border-color: var(--gmt-hairline);
+}
+
+[data-theme="light"] header input::placeholder,
+[data-theme="light"] .search input::placeholder,
+[data-theme="light"] site-search input::placeholder {
+  color: var(--gmt-ice-dim);
+}
+
+/*
+ * Starlight's search trigger is a button, not an input.
+ *
+ * Dark mode gets a distinct near-void pill (--sl-color-black) that reads as a
+ * recessed field against the glass header. Light mode was flattened to
+ * transparent, so it disappeared into the header. Give the desktop pill a
+ * frosted-white fill + cyan hairline so it sits proud of the tinted header,
+ * the way the dark pill does. (Mobile keeps the transparent icon-button look
+ * from the max-width block above.)
+ */
+@media (min-width: 50rem) {
+  /* Icon, "Search" label and ⌘K hint all in primary blue, both themes
+     (Starlight defaults them to muted gray). */
+  site-search button[data-open-modal] {
+    color: var(--gmt-cyan);
+  }
+
+  site-search button[data-open-modal]:hover {
+    color: var(--gmt-cyan-bright);
+  }
+
+  [data-theme="light"] site-search button[data-open-modal] {
+    background: color(from var(--gmt-void) srgb r g b / 0.6);
+    border-color: color(from var(--gmt-cyan) srgb r g b / 0.3);
+    backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+  }
+
+  [data-theme="light"] site-search button[data-open-modal]:hover {
+    border-color: color(from var(--gmt-cyan) srgb r g b / 0.5);
+  }
+}
+
+site-search button[data-open-modal] {
+  corner-shape: bevel;
+}
+
+/* ⌘K hint in the search trigger — primary blue on the inline-<code> surface,
+   instead of Starlight's muted text on a flat --sl-color-gray-6 chip. */
+site-search button[data-open-modal] > kbd {
+  background: var(--gmt-code-bg);
+  color: var(--gmt-cyan);
+  border: 1px solid var(--gmt-code-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+}
+
+/* Search popup/dialog - comprehensive targeting */
+[data-theme="light"] [role="dialog"],
+[data-theme="light"] site-search dialog {
+  /* background-color: var(--gmt-surface); */
+  color: var(--gmt-ice);
+  border-color: var(--gmt-hairline);
+}
+
+[data-theme="light"] site-search dialog p,
+[data-theme="light"] site-search dialog button {
+  color: var(--gmt-ice);
+}
+
+/* Search unavailable message */
+[data-theme="light"] [role="status"] {
+  color: var(--gmt-ice);
+}
+
+/* Search results and items */
+[data-theme="light"] [role="option"] {
+  color: var(--gmt-ice);
+}
+
+[data-theme="light"] [role="option"][aria-selected="true"] {
+  background-color: var(--gmt-fill-deep);
+  color: var(--gmt-cyan);
+}
+
+/* Main CTA buttons (Install, etc.) — glass effect in light mode */
+[data-theme="light"] :is(#starlight__main, main) a.sl-link-button.primary {
+  background: var(--gmt-fill-strong);
+  border: 1px solid var(--gmt-border);
+  color: var(--gmt-cyan);
+  corner-shape: bevel;
+  backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+}
+
+/* Light mode: links go primary cyan across hero, banner, page header, and main
+   content — Starlight defaults several of these to white / near-black. Sidebar
+   links and code tabs are excluded (their own treatment). */
+[data-theme="light"]
+  :is(.hero, .hero-section, .banner, .page-header, [data-component="page-header"]) a,
+[data-theme="light"]
+  main
+  a:not(.sidebar-pane a):not(#starlight__sidebar a):not([role="tab"]) {
+  color: var(--gmt-cyan);
+}
+
+/* Sidebar link color flips via --gmt-sidebar-link (gmt-tokens.css); the
+   current-page / hover color is --gmt-cyan in both themes already. */
+
+/* Comparison card titles */
+.comparison-card .title,
+.card .title,
+[class*="card"] .title {
+  color: var(--gmt-ice) !important;
+}
+
+/* Comparison card icons — match card border color */
+.comparison-card .icon,
+.card .icon,
+[class*="card"] .icon {
+  color: var(--sl-card-border);
+  overflow: visible;
+  border-radius: 16px;
+  corner-shape: bevel;
+  padding: 8px;
+  transform: scale(1.25);
+}
+
+a[rel="prev"] .link-title,
+a[rel="next"] .link-title {
+  font-size: 20px;
+}
+
+/* Inner-page navigation and content rendered by Starlight components. */
+[data-theme="light"] #starlight__sidebar summary,
+[data-theme="light"] #starlight__sidebar summary .group-label,
+[data-theme="light"] #starlight__sidebar summary .group-label > span {
+  color: var(--gmt-ice);
+}
+
+[data-theme="light"] .starlight-aside__content,
+[data-theme="light"] .starlight-aside__content p {
+  color: var(--gmt-ice);
+}
+
+/* prev/next title color flips via --gmt-pagination-title (gmt-tokens.css). */
+
+/* TOC hover — light mode uses dark text instead of white */
+[data-theme="light"] nav[aria-labelledby="starlight__on-this-page"] a:hover {
+  color: var(--gmt-ice);
+}
+

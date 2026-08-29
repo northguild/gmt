@@ -1,0 +1,78 @@
+/*
+ * GMT shell — Starlight's layout structure.
+ *
+ * Global typography and the page frame: headings, sidebar, header, site title.
+ * The reading surface is in gmt-content.css; buttons / inputs / scrollbars are
+ * in gmt-controls.css; the floating light-mode overrides are in gmt-light.css.
+ */
+
+/* ---- Global typography ---- */
+body {
+  background-color: var(--gmt-void);
+  color: var(--gmt-ice);
+  -webkit-font-smoothing: antialiased;
+}
+
+.sl-markdown-content .sl-heading-wrapper {
+  --sl-anchor-icon-gap: 0.5em;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--gmt-font-display);
+  font-weight: 600;
+  letter-spacing: var(--gmt-tracking-tight);
+  color: var(--gmt-ice);
+}
+
+h1 {
+  font-weight: 700;
+  letter-spacing: var(--gmt-tracking-wide);
+  font-size: 32px;
+}
+
+/* ---- Starlight layout shell ---- */
+.page {
+  background-color: var(--gmt-void);
+}
+
+.sidebar-pane,
+#starlight__sidebar {
+  /* background handled by gmt-glass.css (translucent + backdrop-filter) */
+  border-color: var(--gmt-hairline);
+}
+
+@media (min-width: 50rem) {
+  .sidebar-pane {
+    width: fit-content;
+    min-width: var(--sl-sidebar-width);
+    max-width: 35vw;
+  }
+}
+
+.sidebar-pane a {
+  color: var(--gmt-sidebar-link);
+  border-radius: var(--gmt-radius-sm);
+  transition: color var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.sidebar-pane a[aria-current="page"],
+.sidebar-pane a:hover {
+  color: var(--gmt-cyan);
+  background: var(--gmt-accent-wash);
+}
+
+header {
+  /* background handled by gmt-glass.css (translucent + backdrop-filter) */
+  border-bottom: 1px solid var(--gmt-hairline);
+}
+
+.site-title {
+  font-family: var(--gmt-font-display);
+  letter-spacing: var(--gmt-tracking-tight);
+  font-size: 1.25rem;
+}

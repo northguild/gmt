@@ -1,0 +1,319 @@
+/*
+ * GMT content — the reference-page reading surface.
+ *
+ * Everything inside `.sl-markdown-content`: headings, code, inline code,
+ * tables, behavior bullets, links, tabs — plus Expressive Code frame chrome
+ * and the search modal / Pagefind UI. Layout frame is in gmt-shell.css.
+ */
+
+/* ---- Reference page content ---- */
+.sl-markdown-content {
+  color: var(--gmt-ice);
+}
+
+.sl-markdown-content h2 {
+  margin-top: var(--gmt-space-8);
+  padding-bottom: var(--gmt-space-2);
+  border-bottom: 1px solid var(--gmt-hairline);
+  color: var(--gmt-cyan);
+  font-size: 1.3rem;
+  letter-spacing: var(--gmt-tracking-wide);
+}
+
+.sl-markdown-content h3 {
+  color: var(--gmt-cyan-bright);
+  font-size: 1.05rem;
+}
+
+/* ---- Code blocks ---- */
+.sl-markdown-content pre {
+  /* background handled by gmt-glass.css (translucent + backdrop-filter) */
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  position: relative;
+}
+
+.sl-markdown-content pre code {
+  background: transparent;
+  color: var(--gmt-ice);
+}
+
+/* inline code (--gmt-code-bg / --gmt-code-border flip for light mode) */
+.sl-markdown-content :not(pre) > code {
+  background: var(--gmt-code-bg);
+  color: var(--gmt-cyan-bright);
+  border: 1px solid var(--gmt-code-border);
+  border-radius: var(--gmt-radius-sm);
+  padding: 0.15em 0.4em;
+  font-size: 0.9em;
+}
+
+/* ---- Expressive Code frames ---- */
+/*
+ * Every EC block renders a <figcaption class="header">. For non-terminal
+ * blocks EC hides it when empty, but terminal blocks always show it as a bar
+ * (three dots on a slab) — and we never set frame titles. Collapse that empty
+ * bar and give the code body back the top border + radius it dropped for the
+ * (now absent) header.
+ */
+.expressive-code .frame.is-terminal:not(.has-title) .header {
+  display: none;
+}
+
+.expressive-code .frame.is-terminal:not(.has-title) {
+  --button-spacing: 0.4rem;
+}
+
+.expressive-code .frame.is-terminal:not(.has-title) pre {
+  border-top: 1px solid var(--gmt-border);
+  border-start-start-radius: var(--gmt-radius-lg);
+  border-start-end-radius: var(--gmt-radius-lg);
+}
+
+/* If a title ever IS set, keep the bar but in-palette, not EC's grey slab. */
+.expressive-code .frame.is-terminal .header {
+  background: var(--gmt-fill-2);
+  color: var(--gmt-ice-dim);
+  border-color: var(--gmt-hairline);
+}
+
+/*
+ * EC's frame chrome (--ec-frm-edBg / --ec-frm-trmBg → --code-background) is
+ * --sl-color-gray-6: a near-void slab in dark, a flat #f5f5f5 slab in light.
+ * Either way it hides the frosted-ice wash gmt-glass puts on .sl-markdown-content
+ * pre (EC's `.frame pre` selector out-specifies it). Point --code-background at
+ * the same teal glass tint so the ice treatment actually lands, in both modes.
+ */
+.expressive-code .frame,
+.expressive-code .frame.is-terminal {
+  --code-background: var(--gmt-code-surface);
+}
+
+/* ---- Search modal — blurred glass overlay + panel ---- */
+/*
+ * One tinted layer: the panel (.dialog-frame) carries --gmt-glass-tint. Every
+ * element inside it stays near-transparent (--gmt-glass-tint-subtle or none) so
+ * the ice blue never stacks tint-on-tint. The page-behind frost comes from the
+ * ::backdrop blur alone — the panel itself takes no backdrop-filter (too heavy).
+ */
+
+/* Backdrop: clear glass — faintest ice frost + blur, both themes.
+   Mirrors the .gmt-glass-clear recipe in gmt-glass.css. */
+dialog::backdrop {
+  background: var(--gmt-glass-scrim);
+  backdrop-filter: blur(var(--gmt-blur));
+}
+
+/*
+ * Starlight paints an opaque fill on <dialog> itself and lays every panel
+ * inside .dialog-frame — the Pagefind UI in production, the "search is only
+ * available in production builds" notice in dev. Clear the <dialog> fill and
+ * make .dialog-frame the one glass panel.
+ */
+dialog {
+  background: transparent;
+  border: 0;
+}
+
+dialog > .dialog-frame {
+  background: var(--gmt-glass-tint);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+}
+
+/* Pagefind UI — re-point its surface/text vars at the GMT palette */
+#starlight__search {
+  --pagefind-ui-background: var(--gmt-glass-tint-subtle);
+  --pagefind-ui-border: var(--gmt-hairline);
+  --pagefind-ui-border-width: 1px;
+  --pagefind-ui-radius-md: var(--gmt-radius-md);
+  --pagefind-ui-radius-lg: var(--gmt-radius-lg);
+
+  --pagefind-ui-primary: var(--gmt-ice);
+  --pagefind-ui-text: var(--gmt-ice-dim);
+
+  --pagefind-ui-accent: var(--gmt-cyan);
+  --pagefind-ui-scale: 1;
+}
+
+/* Input: the only inner element with a fill, and it's a whisper — the cyan
+   focus border (Starlight's own :focus rule) is what defines the field. */
+#starlight__search .pagefind-ui__form {
+  background: transparent !important;
+  border: 1px solid var(--gmt-hairline) !important;
+  border-radius: var(--gmt-radius-md);
+}
+
+#starlight__search .pagefind-ui__search-input {
+  background: var(--gmt-glass-tint-subtle);
+  color: var(--gmt-ice) !important;
+}
+
+#starlight__search .pagefind-ui__search-clear {
+  color: var(--gmt-ice-dim);
+}
+
+/* Results: no fill — the panel tint shows through. Selected/hover states come
+   from Starlight's own rules. */
+#starlight__search
+  .pagefind-ui__result-title:not(:where(.pagefind-ui__result-nested *)),
+#starlight__search .pagefind-ui__result-nested,
+#starlight__search .pagefind-ui__result-tags {
+  background: transparent;
+}
+
+/* Light mode — bright #22d3ee teal, so tighten the inner borders a little;
+   the fills already track --gmt-glass-tint* (heavier in the light token). */
+[data-theme="light"] #starlight__search {
+  --pagefind-ui-border: var(--gmt-border-strong);
+}
+
+[data-theme="light"] #starlight__search .pagefind-ui__form {
+  border-color: var(--gmt-border-strong) !important;
+}
+
+/* ---- Parameter / options tables ---- */
+.sl-markdown-content table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+  overflow: hidden;
+}
+
+/* Keep first column compact, let last column fill remaining width */
+.sl-markdown-content th:first-child,
+.sl-markdown-content td:first-child {
+  white-space: nowrap;
+  width: 1%;
+}
+
+/* thead background handled by gmt-glass.css (translucent + backdrop-filter) */
+.sl-markdown-content th {
+  color: var(--gmt-cyan);
+  font-family: var(--gmt-font-display);
+  font-weight: 600;
+  letter-spacing: var(--gmt-tracking-wide);
+  font-size: 0.8rem;
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  border-bottom: 1px solid var(--gmt-hairline);
+  text-align: left;
+}
+
+.sl-markdown-content td {
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  border-bottom: 1px solid var(--gmt-hairline);
+  color: var(--gmt-ice);
+}
+
+.sl-markdown-content tr:last-child td {
+  border-bottom: none;
+}
+
+.sl-markdown-content tr:hover td {
+  background: var(--gmt-accent-wash);
+}
+
+/* ---- Behavior bullets ---- */
+.sl-markdown-content ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.sl-markdown-content ul li {
+  position: relative;
+  padding-left: var(--gmt-space-6);
+  margin-bottom: var(--gmt-space-2);
+}
+
+.sl-markdown-content ul li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.6em;
+  width: 8px;
+  height: 1px;
+  background: var(--gmt-cyan);
+  box-shadow: 0 0 6px var(--gmt-cyan);
+}
+
+/* ---- Links ---- */
+.sl-markdown-content a {
+  color: var(--gmt-cyan);
+  text-decoration: none;
+  border-bottom: 1px solid var(--gmt-teal);
+  transition:
+    color var(--gmt-duration-fast) var(--gmt-easing),
+    border-color var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.sl-markdown-content a:hover {
+  color: var(--gmt-cyan-bright);
+  border-bottom-color: var(--gmt-cyan);
+}
+
+/* ---- Starlight tabs — frosted "ice cube" chips ---- */
+/*
+ * The tab strip is a <ul role="tablist"> that sits inside .sl-markdown-content,
+ * so the behavior-bullet markers, list indent, and link underline above all
+ * leak onto it (the stray dashes before each label). Strip that, then re-skin
+ * each tab as a translucent square chip — inactive faint, active a lit cyan
+ * block with an inner top highlight.
+ */
+.sl-markdown-content [role="tablist"] {
+  gap: var(--gmt-space-2);
+  border-bottom: none;
+  flex-wrap: wrap;
+}
+
+.sl-markdown-content [role="tablist"] li {
+  padding-left: 0;
+  margin-bottom: 0;
+}
+
+.sl-markdown-content [role="tablist"] li::before {
+  display: none;
+}
+
+.sl-markdown-content .tab > [role="tab"] {
+  box-shadow: none;
+  border: 1px solid var(--gmt-border);
+  border-radius: 0;
+  background: var(--gmt-fill-subtle);
+  color: var(--gmt-ice-dim);
+  padding: 0.3rem 1rem;
+  font-weight: 500;
+  backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+  transition:
+    color var(--gmt-duration-fast) var(--gmt-easing),
+    background var(--gmt-duration-fast) var(--gmt-easing),
+    border-color var(--gmt-duration-fast) var(--gmt-easing),
+    box-shadow var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.sl-markdown-content .tab > [role="tab"]:hover {
+  color: var(--gmt-cyan);
+  border-color: var(--gmt-border-strong);
+  background: var(--gmt-fill-strong);
+}
+
+.sl-markdown-content .tab [role="tab"][aria-selected="true"] {
+  color: var(--gmt-cyan);
+  border-color: color(from var(--gmt-cyan) srgb r g b / 0.45);
+  background: color(from var(--gmt-teal) srgb r g b / 0.16);
+  box-shadow:
+    0 0 12px color(from var(--gmt-cyan) srgb r g b / 0.25),
+    inset 0 1px 0 color(from var(--gmt-ice) srgb r g b / 0.18);
+}
+
+/* CardGrid wrapper — no border or background */
+.card-grid {
+  background: transparent;
+  border: none;
+}
+

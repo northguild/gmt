@@ -1,0 +1,47 @@
+---
+import Icon from './Icon.astro';
+
+interface Props {
+	/** Destination URL. Absolute http(s) URLs open in a new tab automatically. */
+	href: string;
+	/** Accessible label, rendered visually hidden — use for icon-only buttons. */
+	label?: string;
+	/** Starlight icon name rendered before the slotted content. */
+	icon?: string;
+	/** Force new-tab behaviour on/off; auto-detected from `href` otherwise. */
+	external?: boolean;
+	/** Extra `rel` tokens; `noopener noreferrer` is appended when external. */
+	rel?: string;
+	class?: string;
+}
+
+const { href, label, icon, external, rel, class: className, ...attrs } = Astro.props;
+
+const isExternal = external ?? /^(https?:)?\/\//.test(href);
+const mergedRel =
+	[rel, isExternal ? 'noopener noreferrer' : null].filter(Boolean).join(' ') || undefined;
+---
+
+<a
+	href={href}
+	class:list={['gmt-icon-button', 'gmt-button-link', className]}
+	target={isExternal ? '_blank' : undefined}
+	rel={mergedRel}
+	{...attrs}
+>
+	{label && <span class="sr-only">{label}</span>}
+	{icon && <Icon name={icon} />}
+	<slot />
+</a>
+
+<style>
+	/*
+	 * Icon/text link styled as a button. Size, chip, and icon color all come from
+	 * `.gmt-icon-button` (gmt-primitives.css); this block only adds what a link
+	 * with slotted text needs.
+	 */
+	.gmt-button-link {
+		gap: 0.4em;
+		text-decoration: none;
+	}
+</style>

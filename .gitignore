@@ -65,3 +65,6 @@ apps/dox/public/llms-full.txt
 
 # Plans
 .github/plans/
+
+# Archives
+context/archives/

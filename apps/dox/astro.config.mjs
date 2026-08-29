@@ -10,17 +10,7 @@ const SITE = "https://gmt-dox.northguild.workers.dev";
 
 export default defineConfig({
   site: SITE,
-  vite: { build: { cssTarget: ["chrome107","edge107","firefox104","safari16"] } },
-  markdown: {
-    shikiConfig: {
-      theme: "github-dark",
-      themes: {
-        light: "github-light",
-        dark: "github-dark",
-      },
-      wrap: false,
-    },
-  },
+  vite: { build: { cssTarget: ["chrome107","edge107","firefox104","safari16"], cssMinify: "esbuild" } },
   integrations: [
     starlight({
       title: "@northguild/gmt",
@@ -81,13 +71,18 @@ export default defineConfig({
       components: {
         ThemeProvider: "./src/components/ThemeProvider.astro",
         ThemeSelect: "./src/components/ThemeSelect.astro",
-        PageTitle: "./src/components/PageTitle.astro",
         Hero: "./src/components/Hero.astro",
+        SocialIcons: "./src/components/SocialIcons.astro",
       },
       customCss: [
-        "./src/styles/gmt-tokens.css",
-        "./src/styles/gmt-glass.css",
-        "./src/styles/gmt-site.css",
+        "./src/styles/gmt-tokens.css", // palette + --gmt-* tokens, @font-face
+        "./src/styles/gmt-theme.css", // --gmt-* mapped onto Starlight's --sl-*
+        "./src/styles/gmt-primitives.css", // reusable .gmt-glass* / .gmt-icon-button
+        "./src/styles/gmt-glass.css", // glass treatment on Starlight elements
+        "./src/styles/gmt-shell.css", // typography + layout frame
+        "./src/styles/gmt-content.css", // .sl-markdown-content + EC + search
+        "./src/styles/gmt-controls.css", // buttons, focus, selection, scrollbar
+        "./src/styles/gmt-light.css", // floating [data-theme="light"] overrides
       ],
     }),
   ],

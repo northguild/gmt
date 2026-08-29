@@ -112,14 +112,22 @@ const {
 			transition:
 				background var(--gmt-duration-fast) var(--gmt-easing),
 				border-color var(--gmt-duration-fast) var(--gmt-easing),
+				box-shadow var(--gmt-duration-fast) var(--gmt-easing),
 				color var(--gmt-duration-fast) var(--gmt-easing);
 		}
 
 		.sl-link-button.ghost:hover {
-			/* hover matches header glass */
-			background: color(from var(--gmt-teal) srgb r g b / 0.12);
-			border-color: color(from var(--gmt-cyan) srgb r g b / 0.4);
+			/*
+			 * Hovered ghost ≈ resting primary: an ice wash (theme-aware — icy in
+			 * dark, a dark tint in light), the primary button's hover glow, and
+			 * primary's *default* border so ghost stays subordinate to primary.
+			 */
+			background: color(from var(--gmt-ice) srgb r g b / 0.1);
+			border: 1px solid color(from var(--gmt-cyan) srgb r g b / 0.35);
 			color: var(--gmt-cyan-bright);
+			box-shadow:
+				0 0 16px color(from var(--gmt-cyan) srgb r g b / 0.2),
+				inset 0 1px 0 color(from var(--gmt-ice) srgb r g b / 0.1);
 		}
 
 		@supports (backdrop-filter: blur(1px)) {

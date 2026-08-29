@@ -1,0 +1,52 @@
+/*
+ * GMT theme map — the GMT palette wired onto Starlight's --sl-* system.
+ *
+ * Every one of Starlight's built-in components (sidebar, headings, code, asides,
+ * search, prev/next) reads these variables, so setting them here themes the
+ * whole site in both modes. Raw values live in gmt-tokens.css; this file only
+ * maps them.
+ *
+ * Light mode: because each --sl-* below points at a --gmt-* token that
+ * gmt-tokens.css re-tints for light, the mapping re-resolves automatically — the
+ * only light overrides needed are the three values that are hard literals, not
+ * palette roles.
+ */
+
+:root {
+  --sl-color-white: var(--gmt-ice);
+  --sl-color-gray-1: var(--gmt-ice);
+  --sl-color-gray-2: var(--gmt-ice-dim);
+  --sl-color-gray-3: #5c7a85;
+  --sl-color-gray-4: #3d5560;
+  --sl-color-gray-5: var(--gmt-surface-2);
+  --sl-color-gray-6: var(--gmt-surface);
+  --sl-color-black: var(--gmt-void);
+  --sl-color-accent: var(--gmt-cyan);
+  --sl-color-accent-high: var(--gmt-cyan-bright);
+  --sl-color-accent-low: var(--gmt-teal);
+  --sl-color-text: var(--gmt-ice);
+  --sl-color-text-accent: var(--gmt-cyan);
+  --sl-color-bg: var(--gmt-void);
+  /* Match the sidebar's ice-glass wash (see gmt-glass.css) — used by the
+     mobile "On this page" bar. */
+  --sl-color-bg-nav: color(from var(--gmt-teal) srgb r g b / 0.08);
+  --sl-color-bg-sidebar: var(--gmt-surface);
+  --sl-color-hairline: var(--gmt-hairline);
+  --sl-color-hairline-shade: rgba(34, 211, 238, 0.08);
+
+  --sl-font: var(--gmt-font-mono);
+  --sl-font-mono: var(--gmt-font-mono);
+}
+
+/*
+ * --sl-color-white / --sl-color-black are semantic ("highest-contrast text" /
+ * "background extreme"), not literal. --gmt-ice and --gmt-void flip with the
+ * theme, so `var(--sl-color-black)` fills (mobile TOC, search dialog, badges…)
+ * track light mode on their own — only the non-derived literals need an
+ * override here.
+ */
+[data-theme="light"] {
+  --sl-color-gray-3: #999999;
+  --sl-color-gray-4: #cccccc;
+  --sl-color-hairline-shade: rgba(8, 145, 178, 0.08);
+}

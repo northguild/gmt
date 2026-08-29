@@ -39,6 +39,58 @@
   --gmt-saturate: 1.6;
   --gmt-brightness: 1.1;
 
+  /*
+   * Ice-glass fill tiers, so surfaces don't stack tint on tint:
+   *   --gmt-glass-tint         the one tinted layer (panels, modal, cards)
+   *   --gmt-glass-tint-subtle  near-transparent, a whisper of ice — for inner
+   *                            elements sitting ON a tinted panel (search
+   *                            results, nested rows, the search input)
+   *   --gmt-glass-scrim        the faintest ice frost, for behind modals — a
+   *                            hair more than -subtle so it seats the panel,
+   *                            but still barely there; the blur does the work
+   * --gmt-teal is muted (#0e7490) in dark and bright (#22d3ee) in light, so
+   * light gets a little more alpha to compensate (see the light block below).
+   */
+  --gmt-glass-tint: color(from var(--gmt-teal) srgb r g b / 0.1);
+  --gmt-glass-tint-subtle: color(from var(--gmt-teal) srgb r g b / 0.035);
+  --gmt-glass-scrim: color(from var(--gmt-teal) srgb r g b / 0.08);
+
+  /*
+   * ---- Glass fill / border / glow scale ----
+   *
+   * Named stand-ins for the teal/cyan `color(from … / <alpha>)` washes that were
+   * previously re-typed inline across every panel rule. Each value is identical
+   * to what it replaced — a rename, not a retune. They track the palette, so
+   * light mode inherits automatically (no `[data-theme="light"]` overrides here).
+   *
+   * NOT the same as --gmt-glass-tint* above: those get extra alpha in light mode
+   * to compensate for the brighter light-mode teal ("light-compensated"); the
+   * --gmt-fill-* scale is raw and matches the old inline calls exactly. Don't
+   * merge the two sets.
+   */
+  --gmt-fill-subtle: color(from var(--gmt-teal) srgb r g b / 0.06);
+  --gmt-fill: color(from var(--gmt-teal) srgb r g b / 0.08);
+  --gmt-fill-2: color(from var(--gmt-teal) srgb r g b / 0.1);
+  --gmt-fill-strong: color(from var(--gmt-teal) srgb r g b / 0.12);
+  --gmt-fill-deep: color(from var(--gmt-teal) srgb r g b / 0.15);
+
+  --gmt-border: color(from var(--gmt-cyan) srgb r g b / 0.18);
+  --gmt-border-strong: color(from var(--gmt-cyan) srgb r g b / 0.35);
+  --gmt-hairline-faint: color(from var(--gmt-cyan) srgb r g b / 0.08);
+
+  --gmt-glow: color(from var(--gmt-cyan) srgb r g b / 0.15);
+  --gmt-highlight: color(from var(--gmt-ice) srgb r g b / 0.08);
+  --gmt-highlight-faint: color(from var(--gmt-ice) srgb r g b / 0.06);
+
+  --gmt-signal-fill: color(from var(--gmt-signal) srgb r g b / 0.08);
+  --gmt-signal-border: color(from var(--gmt-signal) srgb r g b / 0.35);
+
+  /* Scrollbar — was hard-coded rgba(14,116,144,…) literals. Deep-teal, fixed
+     (not palette-derived); the light block re-tints track/thumb to cyan. */
+  --gmt-scrollbar-track: rgba(14, 116, 144, 0.08);
+  --gmt-scrollbar-thumb: rgba(14, 116, 144, 0.08);
+  --gmt-scrollbar-thumb-hover: rgba(14, 116, 144, 0.15);
+
   /* ---- Typography ---- */
   --gmt-font-mono:
     ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
@@ -68,29 +120,19 @@
   --gmt-radius-md: 8px;
   --gmt-radius-lg: 16px;
 
-  /* ---- Starlight variable overrides ---- */
-  --sl-color-white: var(--gmt-ice);
-  --sl-color-gray-1: var(--gmt-ice);
-  --sl-color-gray-2: var(--gmt-ice-dim);
-  --sl-color-gray-3: #5c7a85;
-  --sl-color-gray-4: #3d5560;
-  --sl-color-gray-5: var(--gmt-surface-2);
-  --sl-color-gray-6: var(--gmt-surface);
-  --sl-color-black: var(--gmt-void);
-  --sl-color-accent: var(--gmt-cyan);
-  --sl-color-accent-high: var(--gmt-cyan-bright);
-  --sl-color-accent-low: var(--gmt-teal);
-  --sl-color-text: var(--gmt-ice);
-  --sl-color-text-accent: var(--gmt-cyan);
-  --sl-color-bg: var(--gmt-void);
-  --sl-color-bg-nav: var(--gmt-surface);
-  --sl-color-bg-sidebar: var(--gmt-surface);
-  --sl-color-hairline: var(--gmt-hairline);
-  --sl-color-hairline-shade: rgba(34, 211, 238, 0.08);
+  /* The GMT palette maps onto Starlight's --sl-* system in gmt-theme.css. */
 
-  /* ---- Starlight font knobs ---- */
-  --sl-font: var(--gmt-font-mono);
-  --sl-font-mono: var(--gmt-font-mono);
+  /*
+   * ---- Theme-role tokens ----
+   * These carry a dark→light difference that isn't just a re-tint of a palette
+   * role, so the rules that use them need no `[data-theme="light"]` block —
+   * the value flips here instead. (See the light block at the bottom.)
+   */
+  --gmt-code-surface: var(--gmt-fill); /* <pre> / Expressive Code frame bg */
+  --gmt-code-bg: var(--gmt-surface-2); /* inline <code> + <kbd> fill */
+  --gmt-code-border: var(--gmt-hairline); /* inline <code> + <kbd> border */
+  --gmt-sidebar-link: var(--gmt-ice-dim); /* idle sidebar entry */
+  --gmt-pagination-title: var(--gmt-cyan-bright); /* prev/next page title */
 }
 
 /* ---- Font imports (self-hosted, no CDN) ---- */
@@ -130,23 +172,19 @@
   ); /* sidebar-active / row-hover tint */
   --gmt-selection: rgba(8, 145, 178, 0.3); /* ::selection background */
 
-  /* ---- Starlight color overrides for light mode ---- */
-  --sl-color-white: var(--gmt-void);
-  --sl-color-gray-1: var(--gmt-ice);
-  --sl-color-gray-2: var(--gmt-ice-dim);
-  --sl-color-gray-3: #999999;
-  --sl-color-gray-4: #cccccc;
-  --sl-color-gray-5: var(--gmt-surface-2);
-  --sl-color-gray-6: var(--gmt-surface);
-  --sl-color-black: var(--gmt-ice);
-  --sl-color-accent: var(--gmt-cyan);
-  --sl-color-accent-high: var(--gmt-cyan-bright);
-  --sl-color-accent-low: var(--gmt-teal);
-  --sl-color-text: var(--gmt-ice);
-  --sl-color-text-accent: var(--gmt-cyan);
-  --sl-color-bg: var(--gmt-void);
-  --sl-color-bg-nav: var(--gmt-surface);
-  --sl-color-bg-sidebar: var(--gmt-surface);
-  --sl-color-hairline: var(--gmt-hairline);
-  --sl-color-hairline-shade: rgba(8, 145, 178, 0.08);
+  /* Bright #22d3ee teal here — a little more alpha to match dark's read. */
+  --gmt-glass-tint: color(from var(--gmt-teal) srgb r g b / 0.16);
+  --gmt-glass-tint-subtle: color(from var(--gmt-teal) srgb r g b / 0.045);
+  --gmt-glass-scrim: color(from var(--gmt-teal) srgb r g b / 0.1);
+
+  /* Re-tinting the palette above is enough for the --sl-* mapping too — every
+     --sl-* points at a --gmt-* token (see gmt-theme.css), so it re-resolves on
+     its own. Only the non-derived literals get a light override, in gmt-theme.css. */
+
+  /* ---- Theme-role tokens (light values) ---- */
+  --gmt-code-surface: var(--gmt-fill-subtle);
+  --gmt-code-bg: var(--gmt-fill-subtle);
+  --gmt-code-border: var(--gmt-border);
+  --gmt-sidebar-link: var(--gmt-ice);
+  --gmt-pagination-title: var(--gmt-ice);
 }

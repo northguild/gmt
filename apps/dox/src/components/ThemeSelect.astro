@@ -5,7 +5,7 @@
 <starlight-theme-select>
   <button
     type="button"
-    class="theme-toggle"
+    class="theme-toggle gmt-icon-button"
     aria-label="Toggle color theme"
   >
     <svg
@@ -81,30 +81,5 @@
   customElements.define('starlight-theme-select', StarlightThemeSelect);
 </script>
 
-<style>
-  .theme-toggle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.25rem;
-    background: color(from var(--gmt-teal) srgb r g b / 0.12);
-    border: 1px solid color(from var(--gmt-cyan) srgb r g b / 0.18);
-    border-radius: var(--gmt-radius-sm);
-    color: var(--gmt-ice);
-    cursor: pointer;
-    transition:
-      color var(--gmt-duration-fast) var(--gmt-easing),
-      border-color var(--gmt-duration-fast) var(--gmt-easing);
-    corner-shape: scoop;
-  }
-
-  .theme-toggle:hover {
-    color: var(--gmt-cyan-bright);
-    border-color: color(from var(--gmt-cyan) srgb r g b / 0.35);
-  }
-
-  .theme-icon {
-    width: 1em;
-    height: 1em;
-  }
-</style>
+{/* Size, chip, and icon color come entirely from `.gmt-icon-button`
+   (gmt-primitives.css) — this override adds no styles of its own. */}

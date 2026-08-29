@@ -1,0 +1,211 @@
+/*
+ * GMT controls — interactive chrome.
+ *
+ * CTA buttons, prev/next pagination, the mobile search trigger and hamburger,
+ * keyboard focus, text selection, and the scrollbar. The shared icon-button
+ * look is `.gmt-icon-button` in gmt-primitives.css.
+ */
+
+/* ---- CTA buttons ---- */
+.sl-link-button {
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+}
+
+.sl-link-button.secondary {
+  border-color: transparent;
+  background: transparent;
+}
+
+[data-theme="dark"] .sl-link-button.secondary {
+  color: var(--gmt-cyan-bright);
+}
+
+.sl-link-button.secondary:hover {
+  background: color(from var(--gmt-ice) srgb r g b / 0);
+  border-color: transparent;
+  box-shadow:
+    0 0 6px color(from var(--gmt-cyan) srgb r g b / 0.12),
+    inset 0 1px 0 var(--gmt-highlight-faint);
+}
+
+/* .sl-link-button.ghost:hover — owned by LinkButton.astro (transparent bg +
+   the primary button's box-shadow). */
+
+/* ---- Prev / Next pagination — styled as primary glass buttons ---- */
+/* Starlight's .pagination-links a is in @layer starlight.core; these
+   unlayered rules win. Mirrors .sl-link-button.primary. */
+.pagination-links a {
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-fill-deep);
+  color: var(--gmt-ice-dim);
+  box-shadow:
+    0 0 8px color(from var(--gmt-cyan) srgb r g b / 0.1),
+    inset 0 1px 0 var(--gmt-highlight-faint);
+  transition:
+    background var(--gmt-duration-fast) var(--gmt-easing),
+    border-color var(--gmt-duration-fast) var(--gmt-easing),
+    box-shadow var(--gmt-duration-fast) var(--gmt-easing),
+    color var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .pagination-links a {
+    backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+    -webkit-backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+  }
+}
+
+.pagination-links a:hover {
+  background: color(from var(--gmt-teal) srgb r g b / 0.25);
+  border-color: color(from var(--gmt-cyan) srgb r g b / 0.55);
+  color: var(--gmt-cyan);
+  box-shadow:
+    0 0 16px color(from var(--gmt-cyan) srgb r g b / 0.2),
+    inset 0 1px 0 color(from var(--gmt-ice) srgb r g b / 0.1);
+}
+
+.pagination-links .link-title {
+  color: var(--gmt-pagination-title);
+}
+
+.pagination-links a:hover .link-title {
+  color: var(--gmt-cyan);
+}
+
+/* ---- Icon buttons ---- */
+/* The shared treatment (theme toggle, social links, EC copy button) lives in
+   gmt-primitives.css as `.gmt-icon-button`. The two below carry extra layout
+   (media query / fixed positioning) so they stay here, matching that look. */
+
+/* Mobile search button — match icon buttons, only on small screens */
+@media (max-width: 49.99rem) {
+  site-search button[data-open-modal] {
+    color: var(--gmt-cyan-bright);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--gmt-radius-sm);
+    padding: 0.25rem;
+    height: auto;
+    font-size: inherit;
+    gap: 0;
+  }
+
+  site-search button[data-open-modal]:hover {
+    color: var(--gmt-cyan);
+    background: var(--gmt-fill-strong);
+    border-color: var(--gmt-border);
+    box-shadow: 0 0 8px var(--gmt-glow);
+    backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+  }
+
+  site-search button[data-open-modal] span {
+    display: none;
+  }
+}
+
+/*
+ * Hamburger menu button (mobile) — the `.gmt-icon-button` look (gmt-primitives.css)
+ * inlined, since it also needs fixed positioning and a fixed hit size: transparent
+ * at rest, glass chip on hover / when the menu is open.
+ */
+starlight-menu-button button {
+  position: fixed;
+  top: calc((var(--sl-nav-height) - var(--sl-menu-button-size)) / 2);
+  inset-inline-end: var(--sl-nav-pad-x);
+  z-index: var(--sl-z-index-navbar);
+  width: var(--sl-menu-button-size);
+  height: var(--sl-menu-button-size);
+  padding: 0.5rem;
+  cursor: pointer;
+
+  color: var(--gmt-cyan-bright);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--gmt-radius-sm);
+  box-shadow: none;
+  transition:
+    color var(--gmt-duration-fast) var(--gmt-easing),
+    border-color var(--gmt-duration-fast) var(--gmt-easing),
+    background var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+starlight-menu-button button:hover,
+[aria-expanded="true"] starlight-menu-button button {
+  color: var(--gmt-cyan);
+  background: var(--gmt-fill-strong);
+  border-color: var(--gmt-border);
+  box-shadow: 0 0 8px var(--gmt-glow);
+  backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+}
+
+/* Expressive-code tooltip — ice background */
+.expressive-code {
+  --ec-frm-tooltipSuccessBg: var(--gmt-cyan);
+  --ec-frm-tooltipSuccessFg: var(--gmt-void);
+}
+
+/* ---- Keyboard focus ---- */
+:focus-visible {
+  outline: 2px solid var(--gmt-cyan);
+  outline-offset: 2px;
+  border-radius: var(--gmt-radius-sm);
+}
+
+/* ---- Selection ---- */
+::selection {
+  background: var(--gmt-selection);
+  color: var(--gmt-ice);
+}
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar {
+  width: 20px;
+  height: 20px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--gmt-scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--gmt-scrollbar-thumb);
+  border: 4px solid var(--gmt-scrollbar-thumb);
+  border-radius: 0.5px;
+}
+
+::-webkit-scrollbar-thumb:hover,
+html.is-scrolling ::-webkit-scrollbar-thumb {
+  background: var(--gmt-scrollbar-thumb-hover);
+  border-color: var(--gmt-scrollbar-thumb-hover);
+}
+
+/* Light mode — swap the hard-coded dark-teal wash for the light-mode cyan so
+   the track/thumb read as the same restrained cool tint, not flat grey. */
+[data-theme="light"] ::-webkit-scrollbar-track {
+  background: var(--gmt-hairline-faint);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: color(from var(--gmt-cyan) srgb r g b / 0.22);
+  border-color: var(--gmt-hairline-faint);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover,
+[data-theme="light"] html.is-scrolling ::-webkit-scrollbar-thumb {
+  background: var(--gmt-border-strong);
+  border-color: var(--gmt-border-strong);
+}
+
+/* Reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
