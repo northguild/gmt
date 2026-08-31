@@ -1,5 +1,6 @@
 import { Temporal, Intl as TemporalIntl } from "@js-temporal/polyfill";
 import { normalizeDateTime } from "../../internal";
+import type { DateTimeFormatOptions } from "../../types";
 import { isValidDateTime } from "../validate";
 
 /**
@@ -12,7 +13,7 @@ import { isValidDateTime } from "../validate";
  *
  * @param start ISO PlainDateTime string (range start)
  * @param end ISO PlainDateTime string (range end)
- * @param locale optional locale tag
+ * @param locale optional locale tag (default: runtime default)
  * @param options optional Intl.DateTimeFormatOptions
  * @returns localized range string or "" when invalid
  *
@@ -24,7 +25,7 @@ export function formatDateTimeRange(
   start: string,
   end: string,
   locale?: string,
-  options?: Intl.DateTimeFormatOptions,
+  options?: DateTimeFormatOptions,
 ): string {
   if (!isValidDateTime(start) || !isValidDateTime(end)) {
     return "";

@@ -1,8 +1,8 @@
 # Issue #135–#136 — The widget platform
 
 **Re-audited 2026-08-26 — the import-granularity instruction in this file's original
-`DOX-B1` was wrong and is corrected below; see overview.md §1.** Six stories now fold into
-these two issues, all in Tier 2: `DOX-B1a`/`DOX-B1b` on #135, `DOX-B2a`–`DOX-B2d` on #136.
+`DOX-B1` was wrong and is corrected below; see overview.md §1.** Five stories now fold into
+these two issues, all in Tier 2: `DOX-B1a` on #135, `DOX-B2a`–`DOX-B2d` on #136.
 **No new GitHub issues.** This is the epic's differentiator — every one of 1,860 examples
 becomes runnable, plus three purpose-built inspectors nothing else in this space has.
 
@@ -30,17 +30,16 @@ open until its last sub-story lands.
 
 **GitHub Issue:** #135 — see tracker.md
 
-`DOX-B1` spans two sub-stories, both Tier 2: `DOX-B1a` (the `<Playground>` island) and
-`DOX-B1b` (widget permalinks). The issue stays open until `DOX-B1b` also lands.
+`DOX-B1` is a single story, Tier 2: `DOX-B1a` (the `<PlaygroundLive>` textarea island).
 
-#### DOX-B1a — `<Playground>` island
+#### DOX-B1a — `<PlaygroundLive>` textarea island
 
 **GitHub Issue:** #135 — see tracker.md\_
 
 **Title:**
 
 ```
-DOX-B1a Build the live Playground island running real gmt in the browser
+DOX-B1a Build the live PlaygroundLive textarea island running real gmt in the browser
 ```
 
 **Description:**
@@ -51,8 +50,22 @@ Depends on DOX-A5 (tokens, and specifically the Signal-lost amber).
 
 ## Gap
 DOX-A3a's reference pages show examples as static text. A temporal library is exactly the
-kind of API where reading `startOfZoned(..., { disambiguation: "reject" }) // ""` teaches
-far less than changing `"reject"` to `"earlier"` and watching the output change.
+kind of API where reading `addDate("2024-03-15", { days: 5 }) // "2024-03-20"` teaches
+far less than typing a modified expression and watching the output change.
+
+## Approach: textarea, not input widgets
+Earlier plans specified a complex web component with editable inputs per parameter and
+URL-encoded widget state. The implemented approach is far simpler: a single `<textarea>`
+where the user types any JS expression calling the real library, a run button, and a live
+output. This eliminates:
+- The per-parameter input widget system (enum selects, units selects, array inputs, etc.)
+- The URL state / permalink system (`DOX-B1b`) — there is no state to encode when the
+  textarea content is the only state
+- The `widget-state.ts` serialization layer entirely
+
+The textarea is seeded with a call string from `LIVE_PLAYGROUND_TEMPLATES` (generated
+from the function's first `@example` or synthesized from its param spec), so the user
+starts with a working expression they can modify.
 
 ## Corrected 2026-08-26 — the import instruction below replaces the 2026-08-21 draft's
 The original DOX-B1 instructed "deep-import per function
@@ -69,8 +82,11 @@ bundle. Module barrels do not carry this cost. **Use module-granularity imports
 throughout this story and every widget that follows it.**
 
 ## Scope
-- An interactive component: editable inputs per parameter, live output computed by
-  calling the real function.
+- A `<textarea>` where the user types a JS expression calling the real library, plus a
+  run button and a live output area.
+- The textarea is seeded with a call string from `LIVE_PLAYGROUND_TEMPLATES` — the
+  generator produces one template per function from its first `@example` or synthesizes
+  one from the function's param spec.
 - **Sentinel-aware rendering — this is the point, not a detail.** An invalid-input
   result (`""` / `null` / `false` / `[]`) renders as `⟨ NO SIGNAL — invalid input ⟩` in
   DOX-A5's Signal-lost amber, never as a blank field. A user seeing an empty output box
@@ -86,9 +102,8 @@ throughout this story and every widget that follows it.**
   `customConditions: ["@northguild/source"]`, but matching it means configuring Vite's
   `resolve.conditions`; letting Nx build the package first (DOX-A1's
   `dependsOn: ["^build"]`) is fewer moving parts.
-- Handle option-object parameters, not just positional strings — a playground that only
-  supports `fn(string)` misses most of the interesting surface (`disambiguation`,
-  `offset`, `weekStartsOn`, `fractionalSecondDigits`).
+- The textarea evaluates the expression with `new Function()` — the user can type any
+  valid JS expression that calls the library, not just the seeded template.
 
 ## Before starting
 Read `context/dox/overview.md` §3's Color and Widget chrome sections for the sentinel
@@ -103,58 +118,16 @@ build time to drop the polyfill from widgets entirely.** If it is, this is the l
 free performance win available in the whole epic; verify rather than assume either way.
 
 ## Definition of done
-- A playground on `startOfZoned`'s page recomputes live when `disambiguation` is changed
-  between `"compatible"`, `"earlier"`, `"later"`, and `"reject"`, and correctly shows the
+- A playground on `startOfZoned`'s page starts with a seeded template and recomputes
+  live when the user edits the expression and clicks run, correctly showing the
   `"reject"` case producing the sentinel.
 - An invalid input renders the signal-lost treatment, not a blank field.
 - Output values are produced by the real library — verify by breaking a gmt function
   locally and confirming the playground breaks with it.
 - Lighthouse/devtools confirm the polyfill is not loaded on pages without a playground,
   and confirm no page imports at namespace granularity.
-- Keyboard-operable: every input reachable and editable without a mouse.
-```
-
----
-
-#### DOX-B1b — Widget permalinks
-
-**GitHub Issue:** #135 — see tracker.md\_ (folds into the same issue as `DOX-B1a`; the
-issue stays open until this sub-story also lands)
-
-**Title:**
-
-```
-DOX-B1b Encode every widget's state into the URL
-```
-
-**Description:**
-
-```
-Part of the Dox epic — see `context/dox/index.md`, Tier 2, item DOX-B1b. New in the
-2026-08-26 rewrite.
-Depends on DOX-B1a, DOX-B2a, DOX-B2b, DOX-B2c, and DOX-B2d (every widget this tier ships).
-
-## Gap
-Without this, a widget is a toy — its state resets on reload and cannot be sent to a
-colleague. With it, a widget is exactly as linkable as a reference page, which is the
-entire premise the docs site is built on (overview.md §1: "someone who wants to send a
-colleague the DST rules has nothing to link").
-
-## Scope
-- A shared mechanism, used by every Tier 2 widget, that serializes current widget state
-  (inputs, toggles, selected zone/year, dragged interval positions) into the URL query
-  string or hash, and rehydrates a widget from it on load.
-- Must not fight Astro/Starlight's routing or break the back button.
-
-## Before starting
-Design this as one shared utility consumed by all five widgets rather than five
-independent implementations — divergence here would be expensive to unify later.
-
-## Definition of done
-- Every widget shipped in `DOX-B1a`/`DOX-B2a`–`d` can be configured, copied as a URL,
-  opened in a new tab, and reproduces the exact same state.
-- Back/forward navigation behaves sensibly with widget state changes.
-```
+- Keyboard-operable: the textarea and run button are reachable and operable without a
+  mouse.
 
 ---
 
@@ -173,22 +146,28 @@ format bench). The issue stays open until `DOX-B2d` also lands.
 **Title:**
 
 ```
+
 DOX-B2a Auto-embed playgrounds into every generated @example
+
 ```
 
 **Description:**
 
 ```
+
 Part of the Dox epic — see `context/dox/index.md`, Tier 2, item DOX-B2a.
 Depends on DOX-B1a (the component) and DOX-A3a (the generator).
 
 ## Gap
+
 DOX-B1a gives one component. Wiring it in by hand across 504 pages is not viable, and
 hand-authoring would guarantee drift.
 
 ## Scope
+
 - Extend DOX-A3a's `build-reference.ts` to mark up each `@example` so it renders as a
-  playground seeded with that example's own arguments.
+  `<PlaygroundLive>` textarea seeded with that example's own call string (from
+  `LIVE_PLAYGROUND_TEMPLATES`).
 - This is cheap precisely because DOX-A3a already did the hard part: its parser splits
   each example into `{ call, result, note }`, and the `call` half is exactly the seed
   data this story needs. If DOX-A3a's parse was done properly, this story is small; if
@@ -202,12 +181,14 @@ hand-authoring would guarantee drift.
   example, or hydrate on interaction) and record it.
 
 ## Before starting
+
 Re-read DOX-A3a's emitted `gmt-corpus.json` structure. If the `call` field is a raw
 string rather than parsed arguments, decide here whether to parse it in the generator
 (better — one place, testable) or in the browser (worse — ships a parser to every
 reader).
 
 ## Definition of done
+
 - Examples across all namespaces render as runnable playgrounds with no per-page
   authoring.
 - With JavaScript disabled, every example is still readable as text.
@@ -215,6 +196,7 @@ reader).
   example and confirm it is found.
 - Page weight on a heavy reference page (e.g. `startOfZoned`, five examples) is measured
   and acceptable.
+
 ```
 
 ---
@@ -226,17 +208,21 @@ reader).
 **Title:**
 
 ```
+
 DOX-B2b Build a DST Transition Inspector widget
+
 ```
 
 **Description:**
 
 ```
+
 Part of the Dox epic — see `context/dox/index.md`, Tier 2, item DOX-B2b. New in the
 2026-08-26 rewrite, promoted out of `appendix-parked.md` §2 by explicit user request.
 Depends on DOX-B1a.
 
 ## Gap
+
 `getDstTransitions` is exported, tested, and correct, but nothing on the site
 demonstrates it — or the one genuinely counter-intuitive fact in the entire library:
 `startOfZoned`'s fifth example states in prose that setting `offset: "prefer"` makes
@@ -244,6 +230,7 @@ demonstrates it — or the one genuinely counter-intuitive fact in the entire li
 same-day field reset. Nothing currently shows this happening.
 
 ## Scope
+
 - A widget: pick an IANA zone and a year, call `getDstTransitions(zone, year)`, and
   render the resulting gap or overlap on a scrubbable local-time axis.
 - Toggle `disambiguation` (`"compatible"` / `"earlier"` / `"later"` / `"reject"`) and
@@ -254,17 +241,20 @@ same-day field reset. Nothing currently shows this happening.
 - No model, no key, no server — this runs entirely on the already-exported functions.
 
 ## Before starting
+
 Read `appendix-parked.md` §2, which is where this widget was first identified as
 buildable without any model, and `startOfZoned.ts`'s fifth example for the exact
 behavior to demonstrate.
 
 ## Definition of done
+
 - The widget correctly renders at least one real gap (spring-forward) and one real
   overlap (fall-back) for a zone/year the reader picks.
 - Toggling `offset` from `"ignore"` to `"prefer"` visibly makes a `"reject"`
   `disambiguation` stop firing, demonstrating the inert-disambiguation behavior.
 - Keyboard-operable: zone, year, and both toggles are reachable and operable without a
   mouse; the scrub axis has a non-drag equivalent.
+
 ```
 
 ---
@@ -276,23 +266,28 @@ behavior to demonstrate.
 **Title:**
 
 ```
+
 DOX-B2c Build an interval algebra visualizer over the 109 interval functions
+
 ```
 
 **Description:**
 
 ```
+
 Part of the Dox epic — see `context/dox/index.md`, Tier 2, item DOX-B2c. New in the
 2026-08-26 rewrite.
 Depends on DOX-B1a.
 
 ## Gap
+
 The library implements **109 interval functions** across four namespaces (plain 53,
 zoned 19, unix 19, utc 18) — essentially Allen's interval algebra, fully built — and
 none of it is illustrated anywhere. This is the largest completely undocumented-by-
 example surface in the library.
 
 ## Scope
+
 - A widget: drag two (and optionally more) intervals on a shared timeline.
 - Live-update results from the real functions as the intervals move: intersection,
   union, difference, xor, abuts, engulfs, overlap — pick the initial set from the
@@ -304,15 +299,18 @@ example surface in the library.
   wrong lesson.
 
 ## Before starting
+
 Read the `zoned/interval/` directory in full to choose which subset of the 109
 functions the first version demonstrates — do not attempt all 109 in one widget.
 
 ## Definition of done
+
 - At least intersection, union, difference, and xor are demonstrated live and correctly
   for a dragged pair of intervals.
 - The distinction between "correct empty result" and "invalid input sentinel" is visibly
   different in the widget.
 - Keyboard-operable: interval endpoints have a typed-input equivalent to dragging.
+
 ```
 
 ---
@@ -324,34 +322,44 @@ functions the first version demonstrates — do not attempt all 109 in one widge
 **Title:**
 
 ```
+
 DOX-B2d Build a zone converter, format bench, and regex tester widget
+
 ```
 
 **Description:**
 
 ```
+
 Part of the Dox epic — see `context/dox/index.md`, Tier 2, item DOX-B2d. New in the
 2026-08-26 rewrite.
 Depends on DOX-B1a.
 
 ## Gap
+
 The "try it on my own input" need is otherwise scattered across many individual
 reference pages with no single place to explore zone conversion, formatting, and the
 library's regex surface together.
 
 ## Scope
+
 - A widget combining: zone-to-zone conversion via `convertZonedToZoned`; live
   `formatZonedToParts` output and relative-time formatting with locale switching; and a
   regex tester running input against the 22 exported `regex` consts.
 - Each sub-panel runs the real exported function or const — no reimplementation.
 
 ## Before starting
+
 Read the `regex/` directory's 13 files (7 with `//` line-comment documentation rather
 than JSDoc, per DOX-A3a's finding) to confirm the regex tester covers the full exported
 set, not a sample.
 
 ## Definition of done
+
 - Zone conversion, format/relative-time output, and the regex tester are each
   independently usable and produce output from the real library.
 - All 22 `regex` consts are selectable in the tester.
+
+```
+
 ```

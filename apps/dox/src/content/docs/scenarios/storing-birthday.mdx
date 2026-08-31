@@ -13,10 +13,10 @@ const birthday = new Date("2024-03-15T00:00:00Z");
 // In New York that is March 14 at 8 PM — the wrong local date!
 console.log(birthday.toLocaleString("en-US", { timeZone: "America/New_York" }));`}
   explanation={`A birthday is a *calendar date*, not an instant in time. Storing it as a UTC datetime ties it to a specific moment, which shifts when viewed from a different timezone. GMT's plain date functions (\`PlainDate\`) are timezone-free by design — "2024-03-15" is March 15 everywhere.`}
-  gmtCode={`import { addDays } from "@northguild/gmt";
+  gmtCode={`import { addDate } from "@northguild/gmt";
 
 const birthday = "2024-03-15";
-const nextYear = addDays(birthday, 365);
+const nextYear = addDate(birthday, { days: 365 });
 // "2025-03-15" — same calendar date, no timezone ambiguity`}
-  fixedSpecId="addDays"
+  fixedSpecId="addDate"
 />

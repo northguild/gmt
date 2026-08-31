@@ -55,23 +55,32 @@ GMT's string-in/string-out API, never `new Date()`.
 
 <CardGrid stagger>
   <Card title="100% Temporal, Temporal-first" icon="star">
-    Built directly on the TC39 `Temporal` standard — not a homegrown date/time type system.
+    Built directly on the TC39 `Temporal` standard, not a homegrown date/time type system.
     No `Date` object anywhere, enforced by three dedicated lint packages.
   </Card>
 
-<Card title="A full replacement for all four" icon="approve-check">
-  Luxon, date-fns, Moment.js, and `@internationalized/date` don't have parity
-  with each other. GMT covers the combined capabilities of all four, plus what
-  none of them do alone.
+<Card title="A complete date/time solution" icon="approve-check">
+  Combines all essential date/time capabilities into one library, with features
+  you won’t find elsewhere.
 </Card>
 
 <Card title="~15× more CI test executions" icon="rocket">
   334,020 executions — 16,701 tests × 17 locales × 10 timezones × 2 Node
-  versions — against the four competitors' combined 20,190.
+  versions — against `Luxon`, `date-fns`, `Moment.js`, and
+  `@internationalized/date`’s combined 20,190.
 </Card>
 
-  <Card title="Explicit DST disambiguation" icon="setting">
-    Control over DST disambiguation on both construction *and* arithmetic — a control none
-    of the other four expose.
+<Card title="Explicit DST disambiguation" icon="setting">
+  Control over DST disambiguation on both construction *and* arithmetic — a
+  control none of the other players expose.
+</Card>
+
+  <Card
+    title="Safeguards against invalid inputs"
+    icon="padlock"
+    iconColor="var(--gmt-ice)"
+  >
+    Temporal throws `RangeError` / `TypeError` on invalid data. GMT validates,
+    normalizes, and prevents crashes, so your app stays robust
   </Card>
 </CardGrid>

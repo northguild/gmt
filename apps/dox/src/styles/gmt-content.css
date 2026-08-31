@@ -257,16 +257,8 @@ dialog > .dialog-frame {
   border-bottom-color: var(--gmt-cyan);
 }
 
-/* ---- Starlight tabs — frosted "ice cube" chips ---- */
-/*
- * The tab strip is a <ul role="tablist"> that sits inside .sl-markdown-content,
- * so the behavior-bullet markers, list indent, and link underline above all
- * leak onto it (the stray dashes before each label). Strip that, then re-skin
- * each tab as a translucent square chip — inactive faint, active a lit cyan
- * block with an inner top highlight.
- */
+/* ---- Starlight tabs ---- */
 .sl-markdown-content [role="tablist"] {
-  gap: var(--gmt-space-2);
   border-bottom: none;
   flex-wrap: wrap;
 }
@@ -284,6 +276,9 @@ dialog > .dialog-frame {
   box-shadow: none;
   border: 1px solid var(--gmt-border);
   border-radius: 0;
+  border-top-left-radius: var(--gmt-radius-md);
+  border-top-right-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
   background: var(--gmt-fill-subtle);
   color: var(--gmt-ice-dim);
   padding: 0.3rem 1rem;
@@ -305,10 +300,20 @@ dialog > .dialog-frame {
 .sl-markdown-content .tab [role="tab"][aria-selected="true"] {
   color: var(--gmt-cyan);
   border-color: color(from var(--gmt-cyan) srgb r g b / 0.45);
-  background: color(from var(--gmt-teal) srgb r g b / 0.16);
+  background: var(--gmt-fill-deep);
   box-shadow:
     0 0 12px color(from var(--gmt-cyan) srgb r g b / 0.25),
     inset 0 1px 0 color(from var(--gmt-ice) srgb r g b / 0.18);
+}
+
+.sl-markdown-content [role="tabpanel"] {
+  margin-top: 0;
+}
+
+.sl-markdown-content [role="tabpanel"] .frame.frame.frame pre {
+  border-top-left-radius: 0;
+  border-top-right-radius: 8px;
+  border-bottom-left-radius: 8px;
 }
 
 /* CardGrid wrapper — no border or background */

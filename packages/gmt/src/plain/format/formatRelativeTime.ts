@@ -1,22 +1,13 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { normalizeDateTime, resolveRelativeRounding } from "../../internal";
-import type { RelativeRoundingMethod } from "../../types";
+import type { RelativeTimeFormatOptions } from "../../types";
 import { isValidTime } from "../validate";
 
 // PlainTime has no date component so only sub-day units are meaningful.
 type RelativeUnit = "hour" | "minute" | "second";
 
-export interface FormatRelativeTimeOptions {
-  style?: "long" | "short" | "narrow";
-  numeric?: "always" | "auto";
+export interface FormatRelativeTimeOptions extends RelativeTimeFormatOptions {
   largestUnit?: RelativeUnit;
-  /**
-   * How the computed distance rounds to the display unit: "floor" rounds toward the
-   * earlier boundary, "ceil" toward the later boundary, "round" (default) to the nearest —
-   * matches current behavior when omitted.
-   */
-  roundingMethod?: RelativeRoundingMethod;
-  reference?: string;
 }
 
 const AUTO_UNITS: Array<{ unit: RelativeUnit; maxSeconds: number }> = [

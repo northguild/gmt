@@ -7,8 +7,7 @@
  * the four artifacts cannot drift:
  *   1. src/generated/reference/gmt-corpus.json  — CorpusEntry[]
  *   2. src/generated/reference/route-manifest.ts — ReadonlySet<string>
- *   3. src/generated/reference/widget-seeds.ts  — WidgetSeed[]
- *   4. content/docs/reference MDX            - one page per export + module indexes
+ *   3. content/docs/reference MDX            - one page per export + module indexes
  *
  * Run as: node apps/dox/scripts/build-reference.ts
  * Generated MDX + src/generated/* are gitignored and produced by a prebuild step.
@@ -25,7 +24,9 @@ import {
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
-import { PLAYGROUND_SPECS } from "../src/lib/playground-spec.ts";
+import * as BU from "./build-utils/build-utils";
+import type { LivePlaygroundTemplate } from "../src/lib/playground-spec";
+import type { PlaygroundSpec } from "./build-utils/build-utils";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(__dirname, "..");
@@ -102,7 +103,7 @@ interface ParamDoc {
   description: string;
 }
 
-interface FnDoc {
+export interface FnDoc {
   name: string;
   namespace: string;
   module: string;
@@ -116,9 +117,11 @@ interface FnDoc {
   examples: Example[];
   relatedTypes: string[];
   sourcePath: string;
+  playgroundSpec?: PlaygroundSpec;
+  livePlaygroundTemplate?: LivePlaygroundTemplate;
 }
 
-interface TypeDoc {
+export interface TypeDoc {
   name: string;
   namespace: string;
   module: string;
@@ -130,7 +133,7 @@ interface TypeDoc {
   sourcePath: string;
 }
 
-interface RegexDoc {
+export interface RegexDoc {
   name: string;
   namespace: string;
   module: string;
@@ -328,13 +331,18 @@ function extractOptions(
     for (const prop of props) {
       const propType = checker.getTypeOfSymbolAtLocation(prop, node);
       const typeStr = checker.typeToString(propType);
+      // Match default value from JSDoc: `propName` (default: `value`) or `propName` (default: value)
       const defaultMatch = optionsDoc.match(
-        new RegExp(`${prop.name}\\s*\\([^)]*default\\s+([^)]+)\\)`),
+        new RegExp(
+          "[`']?" +
+            prop.name +
+            "[`']?\\s*\\([^)]*default:\\s*[`']?([^)'`]+)[`']?\\)",
+        ),
       );
       options.push({
         name: prop.name + (prop.flags & ts.SymbolFlags.Optional ? "?" : ""),
         type: typeStr,
-        description: defaultMatch ? defaultMatch[1] : "",
+        description: defaultMatch ? defaultMatch[1].trim() : "",
       });
     }
     break;
@@ -343,10 +351,131 @@ function extractOptions(
 }
 
 // ---------------------------------------------------------------------------
+// Playground spec generation
+// ---------------------------------------------------------------------------
+//
+// Every exported function gets a live playground spec built from the same
+// extraction pass (no hand-maintained list). The heavy lifting lives in
+// `build-utils/build-utils.ts` (pure + unit-tested); this wrapper only adapts
+// an extracted FnDoc into that module's input shape and wires the real
+// TypeScript compiler callbacks.
+
+function buildPlaygroundSpec(
+  checker: ts.TypeChecker,
+  sig: ts.Signature | undefined,
+  node: ts.Node,
+  doc: FnDoc,
+): PlaygroundSpec | undefined {
+  try {
+    const sigParams = sig?.getParameters() ?? [];
+    const returnType = BU.classifyReturnType(checker, sig);
+    return BU.buildPlaygroundSpec(
+      {
+        namespace: doc.namespace,
+        module: doc.module,
+        name: doc.name,
+        params: doc.params.map((p) => ({ name: p.name, type: p.type })),
+        options: doc.options.map((o) => ({ name: o.name })),
+        examples: doc.examples,
+      },
+      {
+        classifyParamType: (name) => {
+          const sp = sigParams.find((s) => s.name === name);
+          const t = sp ? checker.getTypeOfSymbolAtLocation(sp, node) : undefined;
+          return BU.classifyType(checker, t, name);
+        },
+        optionPropertyType: (name) =>
+          BU.optionPropertyType(checker, sig, node, name),
+        classifyType: (t, name) => BU.classifyType(checker, t, name),
+        returnType,
+      },
+    );
+  } catch (e) {
+    console.error("buildPlaygroundSpec error for", doc.name, e);
+    return undefined;
+  }
+}
+
+export function synthesizeTemplate(spec: PlaygroundSpec): string {
+  const args: string[] = [];
+
+  for (const p of spec.params) {
+    switch (p.type) {
+      case "string":
+        args.push(JSON.stringify(p.value));
+        break;
+      case "number":
+        args.push(p.value);
+        break;
+      case "boolean":
+        args.push(p.value === "true" ? "true" : "false");
+        break;
+      case "enum":
+        args.push(JSON.stringify(p.value));
+        break;
+      case "array":
+        args.push(`[${p.value.split(",").map(v => JSON.stringify(v.trim())).join(", ")}]`);
+        break;
+      case "units":
+        args.push(`{ ${p.unitValue}: ${p.value} }`);
+        break;
+    }
+  }
+
+  if (spec.options?.length) {
+    const opts: string[] = [];
+    for (const o of spec.options) {
+      let val: string;
+      switch (o.type) {
+        case "boolean":
+          val = o.value === "true" ? "true" : "false";
+          break;
+        case "number":
+          val = o.value || "0";
+          break;
+        case "enum":
+          val = o.value ? JSON.stringify(o.value) : (o.options?.[0] ? JSON.stringify(o.options[0]) : JSON.stringify(""));
+          break;
+        default:
+          val = o.value ? JSON.stringify(o.value) : JSON.stringify("");
+      }
+      opts.push(`${o.name}: ${val}`);
+    }
+    if (opts.length) args.push(`{ ${opts.join(", ")} }`);
+  }
+
+  return `${spec.fn}(${args.join(", ")})`;
+}
+
+function buildLivePlaygroundTemplate(
+  checker: ts.TypeChecker,
+  sig: ts.Signature | undefined,
+  doc: FnDoc,
+  _node: ts.Node,
+): LivePlaygroundTemplate | undefined {
+  const returnType = BU.classifyReturnType(checker, sig);
+  const module = BU.playgroundModule(doc.namespace, doc.module);
+
+  let template: string | undefined;
+  if (doc.examples.length > 0) {
+    template = doc.examples[0].call;
+  } else if (doc.playgroundSpec) {
+    template = synthesizeTemplate(doc.playgroundSpec);
+  }
+
+  if (!template) return undefined;
+  const allowEmptyArray =
+    doc.playgroundSpec?.allowEmptyArray ??
+    (returnType === "array" &&
+      doc.examples.some((e) => e.result.trim() === "[]"));
+  return { module, fn: doc.name, template, returnType, allowEmptyArray };
+}
+
+// ---------------------------------------------------------------------------
 // Regex example generation
 // ---------------------------------------------------------------------------
 
-function generateRegexExamples(pattern: string, name: string): Example[] {
+export function generateRegexExamples(pattern: string, name: string): Example[] {
   let re: RegExp;
   try {
     re = new RegExp(pattern);
@@ -503,16 +632,16 @@ function extractFromFile(
   return { docs, types };
 }
 
-function extractFunction(
+export function extractFnBody(
   checker: ts.TypeChecker,
-  node: ts.FunctionDeclaration,
+  sig: ts.Signature | undefined,
+  node: ts.Node,
+  name: string,
   ns: string,
   mod: string,
   file: string,
   knownTypes: Set<string>,
-): FnDoc | undefined {
-  const name = node.name!.text;
-  const sig = checker.getSignatureFromDeclaration(node);
+): FnDoc {
   const sigStr = sig ? checker.signatureToString(sig) : "(...)";
   const signature = `${name}${sigStr}`;
 
@@ -523,24 +652,23 @@ function extractFunction(
   const returns = jsDoc?.returns ?? "";
   const examples = jsDoc?.examples ?? [];
 
-  // fill param types from signature
   const sigParams = sig?.getParameters() ?? [];
   for (const p of params) {
-    const sp = sigParams.find((s) => s.name === p.name);
+    const sp =
+      sigParams.find((s) => s.name === p.name) ??
+      sigParams.find((s) => s.name === `${p.name}Input`);
     if (sp) {
       const t = checker.getTypeOfSymbolAtLocation(sp, node);
       p.type = checker.typeToString(t);
     }
   }
 
-  // detect options object param via its TS type
   const options: ParamDoc[] = [];
   if (sig) {
     const optionsDoc =
       jsDoc?.params.find((p) => p.name === "options")?.description ?? "";
     const extracted = extractOptions(checker, sig, node, optionsDoc);
     options.push(...extracted.options);
-    // remove the options param from flat params (JSDoc name may differ from sig name)
     const rm = extracted.removeParam;
     if (rm) {
       let idx = params.findIndex((p) => p.name === rm);
@@ -551,10 +679,9 @@ function extractFunction(
     }
   }
 
-  // related types: known type names appearing in the signature string
   const relatedTypes = [...knownTypes].filter((t) => signature.includes(t));
 
-  return {
+  const doc: FnDoc = {
     name,
     namespace: ns,
     module: mod,
@@ -569,9 +696,25 @@ function extractFunction(
     relatedTypes,
     sourcePath: relative(gmtSrc, file).split("/").join("/"),
   };
+  doc.playgroundSpec = buildPlaygroundSpec(checker, sig, node, doc);
+  doc.livePlaygroundTemplate = buildLivePlaygroundTemplate(checker, sig, doc, node);
+  return doc;
 }
 
-function extractArrowFn(
+export function extractFunction(
+  checker: ts.TypeChecker,
+  node: ts.FunctionDeclaration,
+  ns: string,
+  mod: string,
+  file: string,
+  knownTypes: Set<string>,
+): FnDoc | undefined {
+  const name = node.name!.text;
+  const sig = checker.getSignatureFromDeclaration(node);
+  return extractFnBody(checker, sig, node, name, ns, mod, file, knownTypes);
+}
+
+export function extractArrowFn(
   checker: ts.TypeChecker,
   decl: ts.VariableDeclaration,
   ns: string,
@@ -582,61 +725,10 @@ function extractArrowFn(
   const name = (decl.name as ts.Identifier).text;
   const type = checker.getTypeAtLocation(decl);
   const sig = type.getCallSignatures()[0];
-  const sigStr = sig ? checker.signatureToString(sig) : "(...)";
-  const signature = `${name}${sigStr}`;
-
-  const jsDoc = parseJsDoc(checker, decl);
-  const description = jsDoc?.description ?? "";
-  const behavior = jsDoc?.behavior ?? [];
-  const params = jsDoc?.params ?? [];
-  const returns = jsDoc?.returns ?? "";
-  const examples = jsDoc?.examples ?? [];
-
-  const sigParams = sig?.getParameters() ?? [];
-  for (const p of params) {
-    const sp = sigParams.find((s) => s.name === p.name);
-    if (sp) {
-      const t = checker.getTypeOfSymbolAtLocation(sp, decl);
-      p.type = checker.typeToString(t);
-    }
-  }
-
-  const options: ParamDoc[] = [];
-  if (sig) {
-    const optionsDoc =
-      jsDoc?.params.find((p) => p.name === "options")?.description ?? "";
-    const extracted = extractOptions(checker, sig, decl, optionsDoc);
-    options.push(...extracted.options);
-    const rm = extracted.removeParam;
-    if (rm) {
-      let idx = params.findIndex((p) => p.name === rm);
-      if (idx < 0) idx = params.findIndex((p) => p.name === "options");
-      if (idx < 0)
-        idx = params.findIndex((p) => p.name.toLowerCase().includes("options"));
-      if (idx >= 0) params.splice(idx, 1);
-    }
-  }
-
-  const relatedTypes = [...knownTypes].filter((t) => signature.includes(t));
-
-  return {
-    name,
-    namespace: ns,
-    module: mod,
-    kind: "function",
-    signature,
-    description,
-    behavior,
-    params,
-    options,
-    returns,
-    examples,
-    relatedTypes,
-    sourcePath: relative(gmtSrc, file).split("/").join("/"),
-  };
+  return extractFnBody(checker, sig, decl, name, ns, mod, file, knownTypes);
 }
 
-function extractType(
+export function extractType(
   checker: ts.TypeChecker,
   node: ts.TypeAliasDeclaration,
   ns: string,
@@ -663,7 +755,7 @@ function extractType(
   };
 }
 
-function extractInterface(
+export function extractInterface(
   checker: ts.TypeChecker,
   node: ts.InterfaceDeclaration,
   ns: string,
@@ -704,7 +796,7 @@ function extractInterface(
   };
 }
 
-function extractRegex(
+export function extractRegex(
   _checker: ts.TypeChecker,
   decl: ts.VariableDeclaration,
   ns: string,
@@ -788,13 +880,6 @@ function renderFn(doc: FnDoc, docs: Doc[]): string {
   lines.push(`---`);
   lines.push("");
 
-  if (PLAYGROUND_SPECS[doc.name]) {
-    lines.push(`import Playground from "~/components/Playground.astro";`);
-    lines.push("");
-    lines.push(`<Playground specId=${JSON.stringify(doc.name)} client:visible />`);
-    lines.push("");
-  }
-
   lines.push(`## Signature`);
   lines.push("");
   lines.push("```ts");
@@ -836,7 +921,10 @@ function renderFn(doc: FnDoc, docs: Doc[]): string {
     lines.push(`| Option | Type | Default |`);
     lines.push(`| --- | --- | --- |`);
     for (const o of doc.options) {
-      lines.push(`| \`${o.name}\` | \`${escapeMd(o.type)}\` | — |`);
+      const defaultText = o.description
+        ? `\`${escapeMd(o.description)}\``
+        : "—";
+      lines.push(`| \`${o.name}\` | \`${escapeMd(o.type)}\` | ${defaultText} |`);
     }
     lines.push("");
   }
@@ -871,6 +959,15 @@ function renderFn(doc: FnDoc, docs: Doc[]): string {
       }
     }
     lines.push("```");
+    lines.push("");
+  }
+
+  if (doc.livePlaygroundTemplate) {
+    lines.push(`## Playground`);
+    lines.push("");
+    lines.push(`import PlaygroundLive from "~/components/PlaygroundLive.astro";`);
+    lines.push("");
+    lines.push(`<PlaygroundLive specId=${JSON.stringify(doc.name)} />`);
     lines.push("");
   }
 
@@ -1105,10 +1202,10 @@ function buildSidebar(moduleSymbols: Map<string, SymbolEntry[]>): string {
 
 function main() {
   const outputs = [
-    join(outGen, "gmt-corpus.json"),
-    join(outGen, "route-manifest.ts"),
-    join(outGen, "widget-seeds.ts"),
-    join(outGen, "corpus.ts"),
+      join(outGen, "gmt-corpus.json"),
+      join(outGen, "route-manifest.ts"),
+      join(outGen, "corpus.ts"),
+      join(outGen, "live-playground-templates.ts"),
   ];
   for (const out of outputs) {
     if (!existsSync(out)) {
@@ -1170,6 +1267,7 @@ function runGeneration() {
   const program = ts.createProgram(files, {
     target: ts.ScriptTarget.ESNext,
     module: ts.ModuleKind.ESNext,
+    moduleResolution: ts.ModuleResolutionKind.Bundler,
     allowJs: false,
     skipLibCheck: true,
     noEmit: true,
@@ -1252,12 +1350,7 @@ function runGeneration() {
     module: d.module,
     kind: d.kind,
     signature: d.kind === "function" ? d.signature : "",
-    description:
-      d.kind === "function"
-        ? d.description
-        : d.kind === "type"
-          ? d.description
-          : d.description,
+    description: d.description,
     sourcePath: `packages/gmt/src/${d.sourcePath}`,
   }));
   writeFileSync(
@@ -1277,23 +1370,7 @@ ${routes.map((r) => `  ${JSON.stringify(r)},`).join("\n")}
 `;
   writeFileSync(join(outGen, "route-manifest.ts"), manifestTs);
 
-  // 3. widget seeds
-  const seeds = dedupedDocs
-    .filter((d): d is FnDoc => d.kind === "function")
-    .map((d) => ({
-      route: pageUrl(d.namespace, d.module, d.name),
-      fnName: d.name,
-      examples: d.examples,
-    }));
-  const seedsTs = `// GENERATED FILE — do not edit by hand.
-// Produced by apps/dox/scripts/build-reference.ts (\`nx run dox:generate\`).
-import type { WidgetSeed } from "~/reference-types";
-
-export const widgetSeeds: WidgetSeed[] = ${JSON.stringify(seeds, null, 2)};
-`;
-  writeFileSync(join(outGen, "widget-seeds.ts"), seedsTs);
-
-  // 4. corpus.ts wrapper
+  // 3. corpus.ts wrapper
   const corpusTs = `// GENERATED FILE — do not edit by hand.
 // Produced by apps/dox/scripts/build-reference.ts (\`nx run dox:generate\`).
 import type { CorpusEntry } from "~/reference-types";
@@ -1303,8 +1380,28 @@ export const corpus: CorpusEntry[] = data as CorpusEntry[];
 `;
   writeFileSync(join(outGen, "corpus.ts"), corpusTs);
 
+  // 4. live playground templates — one raw call-string template per function,
+  // for the <PlaygroundLive> textarea editor.
+  const templatesRecord: Record<string, LivePlaygroundTemplate> = {};
+  for (const d of dedupedDocs) {
+    if (d.kind === "function" && d.livePlaygroundTemplate) {
+      templatesRecord[d.name] = d.livePlaygroundTemplate;
+    }
+  }
+  const templatesTs = `// GENERATED FILE — do not edit by hand.
+// Produced by apps/dox/scripts/build-reference.ts (\`nx run dox:generate\`).
+import type { LivePlaygroundTemplate } from "../../lib/playground-spec";
+
+export const LIVE_PLAYGROUND_TEMPLATES: Record<string, LivePlaygroundTemplate> = ${JSON.stringify(
+    templatesRecord,
+    null,
+    2,
+  )};
+`;
+  writeFileSync(join(outGen, "live-playground-templates.ts"), templatesTs);
+
   console.log(
-    `[reference] wrote ${allDocs.length} pages, ${routes.length} routes, ${seeds.length} seeds`,
+    `[reference] wrote ${allDocs.length} pages, ${routes.length} routes, ${Object.keys(templatesRecord).length} live playground templates`,
   );
 }
 

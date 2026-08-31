@@ -65,21 +65,6 @@ describe("reference corpus", () => {
     }
   });
 
-  it("every widget seed references a route in the manifest", async () => {
-    const mod = await import(resolve(outGen, "route-manifest.ts"));
-    const routes = mod.referenceRoutes as Set<string>;
-    const seeds = (
-      (await import(resolve(outGen, "widget-seeds.ts"))) as {
-        widgetSeeds: Array<{ route: string; fnName: string }>;
-      }
-    ).widgetSeeds;
-    expect(seeds.length).toBeGreaterThan(300);
-    for (const seed of seeds) {
-      expect(routes.has(seed.route), `route for ${seed.fnName}`).toBe(true);
-      expect(seed.fnName, `fnName for ${seed.route}`).toBeTruthy();
-    }
-  });
-
   it("every MDX page slug is in the route manifest", async () => {
     if (!mdxExists) return;
     const mod = await import(resolve(outGen, "route-manifest.ts"));

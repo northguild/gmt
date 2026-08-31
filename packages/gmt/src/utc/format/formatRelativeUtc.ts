@@ -3,7 +3,7 @@ import { normalizeDateTime } from "../../internal/normalizeDateTime";
 import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
 import { resolveRelativeRounding } from "../../internal/resolveRelativeRounding";
 import { toInstantFromUtc } from "../../internal/toInstantFromUtc";
-import type { RelativeRoundingMethod } from "../../types";
+import type { RelativeTimeFormatOptions } from "../../types";
 import { isValidUtc } from "../validate";
 
 // Intl.RelativeTimeFormatUnit includes "quarter" which Temporal doesn't support.
@@ -16,16 +16,8 @@ type RelativeUnit =
   | "minute"
   | "second";
 
-export interface FormatRelativeUtcOptions {
-  style?: "long" | "short" | "narrow";
-  numeric?: "always" | "auto";
+export interface FormatRelativeUtcOptions extends RelativeTimeFormatOptions {
   largestUnit?: RelativeUnit;
-  /**
-   * How the computed distance rounds to the display unit: "floor" rounds toward the
-   * earlier boundary, "ceil" toward the later boundary, "round" (default) to the nearest —
-   * matches current behavior when omitted.
-   */
-  roundingMethod?: RelativeRoundingMethod;
   reference?: string;
   timeZone?: string;
 }

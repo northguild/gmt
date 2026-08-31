@@ -25,7 +25,7 @@
     "namespace": "duration",
     "module": "calculate",
     "kind": "function",
-    "signature": "durationAs(value: string, unit: DateTimeDurationUnit, options?: { relativeTo?: DurationRelativeTo; }): number",
+    "signature": "durationAs(value: string, unit: keyof DurationLike, options?: { relativeTo?: DurationRelativeTo; }): number",
     "description": "Express an ISO 8601 duration as a single fractional total in one unit.",
     "sourcePath": "packages/gmt/src/duration/calculate/durationAs.ts"
   },
@@ -45,7 +45,7 @@
     "namespace": "duration",
     "module": "calculate",
     "kind": "function",
-    "signature": "getDurationUnit(value: string, unit: DateTimeDurationUnit): number",
+    "signature": "getDurationUnit(value: string, unit: keyof DurationLike): number",
     "description": "Read a single component out of an ISO 8601 duration string.",
     "sourcePath": "packages/gmt/src/duration/calculate/getDurationUnit.ts"
   },
@@ -115,7 +115,7 @@
     "namespace": "duration",
     "module": "normalize",
     "kind": "function",
-    "signature": "normalizeDuration(value: string, options?: { largestUnit?: Temporal.LargestUnit<Temporal.DateTimeUnit>; smallestUnit?: Temporal.SmallestUnit<Temporal.DateTimeUnit>; roundingIncrement?: number; roundingMode?: Temporal.RoundingMode; relativeTo?: DurationRelativeTo; }): string",
+    "signature": "normalizeDuration(value: string, options?: { largestUnit?: LargestUnit<DateTimeUnit>; smallestUnit?: SmallestUnit<DateTimeUnit>; roundingIncrement?: number; roundingMode?: RoundingMode; relativeTo?: DurationRelativeTo; }): string",
     "description": "Roll an ISO 8601 duration string's small units into larger ones.",
     "sourcePath": "packages/gmt/src/duration/normalize/normalizeDuration.ts"
   },
@@ -125,7 +125,7 @@
     "namespace": "duration",
     "module": "parse",
     "kind": "function",
-    "signature": "parseDuration(value: string, options?: { smallestUnit?: Temporal.ToStringPrecisionOptions; fractionalSecondDigits?: Temporal.ToStringPrecisionOptions; roundingMode?: Temporal.ToStringPrecisionOptions; }): string",
+    "signature": "parseDuration(value: string, options?: { smallestUnit?: SmallestUnit<\"minute\" | \"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\">; fractionalSecondDigits?: 0 | \"auto\" | 1 | 2 | ... 6 more ... | 9; roundingMode?: RoundingMode; }): string",
     "description": "Parse and re-normalize an ISO 8601 duration string.",
     "sourcePath": "packages/gmt/src/duration/parse/parseDuration.ts"
   },
@@ -155,7 +155,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "addDate(value: string, units: Partial<Record<DateDurationUnit, number>>, options?: { overflow?: Overflow; }): string",
+    "signature": "addDate(value: string, units: Partial<Record<\"years\" | \"months\" | \"weeks\" | \"days\", number>>, options?: { overflow?: \"constrain\" | \"reject\"; }): string",
     "description": "Return a PlainDate ISO string with `amount` added according to `units`.",
     "sourcePath": "packages/gmt/src/plain/calculate/addDate.ts"
   },
@@ -165,7 +165,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "addDateTime(value: string, units: Partial<Record<DateTimeDurationUnit, number>>, options?: { overflow?: Overflow; }): string",
+    "signature": "addDateTime(value: string, units: Partial<Record<keyof DurationLike, number>>, options?: { overflow?: \"constrain\" | \"reject\"; }): string",
     "description": "Return a PlainDateTime ISO string with `units` added to `value`.",
     "sourcePath": "packages/gmt/src/plain/calculate/addDateTime.ts"
   },
@@ -175,7 +175,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "addTime(value: string, units: Partial<Record<TimeDurationUnit, number>>, options?: { overflow?: Overflow; }): string",
+    "signature": "addTime(value: string, units: Partial<Record<\"hours\" | \"minutes\" | \"seconds\" | \"milliseconds\" | \"microseconds\" | \"nanoseconds\", number>>, options?: { overflow?: \"constrain\" | \"reject\"; }): string",
     "description": "Return a PlainTime ISO string with `units` added to `value`.",
     "sourcePath": "packages/gmt/src/plain/calculate/addTime.ts"
   },
@@ -205,7 +205,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "cycleDate(value: string, field: DateCycleField, amount: number, options?: { round?: boolean; overflow?: Overflow; }): string",
+    "signature": "cycleDate(value: string, field: DateCycleField, amount: number, options?: { round?: boolean; overflow?: \"constrain\" | \"reject\"; }): string",
     "description": "Return a PlainDate ISO string with `field` cycled by `amount`, wrapping at that field's own",
     "sourcePath": "packages/gmt/src/plain/calculate/cycleDate.ts"
   },
@@ -215,7 +215,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "cycleDateTime(value: string, field: DateTimeCycleField, amount: number, options?: { round?: boolean; overflow?: Overflow; }): string",
+    "signature": "cycleDateTime(value: string, field: DateTimeCycleField, amount: number, options?: { round?: boolean; overflow?: \"constrain\" | \"reject\"; }): string",
     "description": "Return a PlainDateTime ISO string with `field` cycled by `amount`, wrapping at that field's own",
     "sourcePath": "packages/gmt/src/plain/calculate/cycleDateTime.ts"
   },
@@ -225,7 +225,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "cycleTime(value: string, field: TimeCycleField, amount: number, options?: { round?: boolean; overflow?: Overflow; }): string",
+    "signature": "cycleTime(value: string, field: TimeCycleField, amount: number, options?: { round?: boolean; overflow?: \"constrain\" | \"reject\"; }): string",
     "description": "Return a PlainTime ISO string with `field` cycled by `amount`, wrapping at that field's own",
     "sourcePath": "packages/gmt/src/plain/calculate/cycleTime.ts"
   },
@@ -235,7 +235,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "diffDate(date1: string, date2: string, unitArg: any, options?: RoundingOptions<Temporal.DateUnit>): number | Record<DateDurationUnit, number>",
+    "signature": "diffDate(date1: string, date2: string, unitArg: \"years\" | \"months\" | \"weeks\" | \"days\" | (\"years\" | \"months\" | \"weeks\" | \"days\")[], options?: RoundingOptions<DateUnit>): number | Record<...>",
     "description": "Return the difference between two PlainDate values using the provided `unit`.",
     "sourcePath": "packages/gmt/src/plain/calculate/diffDate.ts"
   },
@@ -245,7 +245,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "diffDateAsDuration(date1: string, date2: string, unit: DateDurationUnit, options?: any): string",
+    "signature": "diffDateAsDuration(date1: string, date2: string, unit: \"years\" | \"months\" | \"weeks\" | \"days\", options?: RoundingOptions<DateUnit> & DurationStringOptions): string",
     "description": "Return the difference between two PlainDate values as an ISO 8601 duration string,",
     "sourcePath": "packages/gmt/src/plain/calculate/diffDateAsDuration.ts"
   },
@@ -255,7 +255,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "diffDateTime(dateTime1: string, dateTime2: string, units: any, options?: RoundingOptions<Temporal.DateTimeUnit>): number | Record<DateTimeDurationUnit, number>",
+    "signature": "diffDateTime(dateTime1: string, dateTime2: string, units: keyof DurationLike | (keyof DurationLike)[], options?: RoundingOptions<DateTimeUnit>): number | Record<...>",
     "description": "Return the difference between two PlainDateTime values in the requested unit.",
     "sourcePath": "packages/gmt/src/plain/calculate/diffDateTime.ts"
   },
@@ -265,7 +265,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "diffDateTimeAsDuration(dateTime1: string, dateTime2: string, unit: DateTimeDurationUnit, options?: any): string",
+    "signature": "diffDateTimeAsDuration(dateTime1: string, dateTime2: string, unit: keyof DurationLike, options?: RoundingOptions<DateTimeUnit> & DurationStringOptions): string",
     "description": "Return the difference between two PlainDateTime values as an ISO 8601 duration string,",
     "sourcePath": "packages/gmt/src/plain/calculate/diffDateTimeAsDuration.ts"
   },
@@ -275,7 +275,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "diffTime(time1: string, time2: string, units: any, options?: RoundingOptions<Temporal.TimeUnit>): number | Record<TimeDurationUnit, number>",
+    "signature": "diffTime(time1: string, time2: string, units: \"hours\" | \"minutes\" | \"seconds\" | \"milliseconds\" | \"microseconds\" | \"nanoseconds\" | (\"hours\" | \"minutes\" | \"seconds\" | \"milliseconds\" | \"microseconds\" | \"nanoseconds\")[], options?: RoundingOptions<...>): number | Record<...>",
     "description": "Return the difference between two PlainTime values in the requested unit.",
     "sourcePath": "packages/gmt/src/plain/calculate/diffTime.ts"
   },
@@ -285,7 +285,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "endOfDate(value: string, unit: Temporal.DateUnit, optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; }): string",
+    "signature": "endOfDate(value: string, unit: DateUnit, optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; }): string",
     "description": "Return the end of the specified date `unit` for a given ISO 8601 date string.",
     "sourcePath": "packages/gmt/src/plain/calculate/endOfDate.ts"
   },
@@ -295,7 +295,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "endOfDateTime(value: string, unit: any, optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; fractionalSecondDigits?: FractionalDigit; }): string",
+    "signature": "endOfDateTime(value: string, unit: DateUnit | TimeUnit, optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; fractionalSecondDigits?: FractionalDigit; }): string",
     "description": "Return the end of the specified date-time `unit` for a given ISO 8601 datetime string.",
     "sourcePath": "packages/gmt/src/plain/calculate/endOfDateTime.ts"
   },
@@ -335,7 +335,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "endOfTime(value: string, unit: any, optionsArg?: { fractionalSecondDigits?: FractionalDigit; }): string",
+    "signature": "endOfTime(value: string, unit: EndOfTimeUnit, optionsArg?: { fractionalSecondDigits?: FractionalDigit; }): string",
     "description": "Return the end of the specified time `unit` for a given ISO 8601 time string.",
     "sourcePath": "packages/gmt/src/plain/calculate/endOfTime.ts"
   },
@@ -375,7 +375,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "getLargestDateDurationUnit(units: DateDurationUnit[]): DateDurationUnit",
+    "signature": "getLargestDateDurationUnit(units: (\"years\" | \"months\" | \"weeks\" | \"days\")[]): \"years\" | \"months\" | \"weeks\" | \"days\"",
     "description": "Return the largest DateDurationUnit from the provided array.",
     "sourcePath": "packages/gmt/src/plain/calculate/getLargestDateDurationUnit.ts"
   },
@@ -385,7 +385,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "getLargestDateTimeDurationUnit(units: DateTimeDurationUnit[]): DateTimeDurationUnit",
+    "signature": "getLargestDateTimeDurationUnit(units: (keyof DurationLike)[]): keyof DurationLike",
     "description": "Return the largest DateTimeDurationUnit from the provided array.",
     "sourcePath": "packages/gmt/src/plain/calculate/getLargestDateTimeDurationUnit.ts"
   },
@@ -395,7 +395,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "getLargestTimeDurationUnit(units: TimeDurationUnit[]): TimeDurationUnit",
+    "signature": "getLargestTimeDurationUnit(units: (\"hours\" | \"minutes\" | \"seconds\" | \"milliseconds\" | \"microseconds\" | \"nanoseconds\")[]): \"hours\" | \"minutes\" | \"seconds\" | \"milliseconds\" | \"microseconds\" | \"nanoseconds\"",
     "description": "Return the largest TimeDurationUnit from the provided array.",
     "sourcePath": "packages/gmt/src/plain/calculate/getLargestTimeDurationUnit.ts"
   },
@@ -605,7 +605,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "roundDate(value: string, options: { smallestUnit: DateUnit; roundingIncrement?: number; roundingMode?: Temporal.RoundingMode; }): string",
+    "signature": "roundDate(value: string, options: { smallestUnit: DateUnit; roundingIncrement?: number; roundingMode?: RoundingMode; }): string",
     "description": "Round an ISO 8601 date string to the specified date unit.",
     "sourcePath": "packages/gmt/src/plain/calculate/roundDate.ts"
   },
@@ -615,7 +615,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "roundDateTime(value: string, options: { smallestUnit: DateTimeUnit; roundingIncrement?: number; roundingMode?: Temporal.RoundingMode; }): string",
+    "signature": "roundDateTime(value: string, options: { smallestUnit: DateTimeUnit; roundingIncrement?: number; roundingMode?: RoundingMode; }): string",
     "description": "Round an ISO 8601 datetime string to the specified date-time unit.",
     "sourcePath": "packages/gmt/src/plain/calculate/roundDateTime.ts"
   },
@@ -625,7 +625,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "roundTime(value: string, options: { smallestUnit: Temporal.SmallestUnit<\"hour\">; roundingIncrement?: number; roundingMode?: Temporal.RoundingMode; }): string",
+    "signature": "roundTime(value: string, options: { smallestUnit: SmallestUnit<\"hour\">; roundingIncrement?: number; roundingMode?: RoundingMode; }): string",
     "description": "Round an ISO 8601 time string to the specified time unit.",
     "sourcePath": "packages/gmt/src/plain/calculate/roundTime.ts"
   },
@@ -635,7 +635,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "setDate(value: string, fields: Omit<Temporal.PlainDateLike, \"calendar\">, options?: { overflow?: Overflow; }): string",
+    "signature": "setDate(value: string, fields: Omit<PlainDateLike, \"calendar\">, options?: { overflow?: \"constrain\" | \"reject\"; }): string",
     "description": "Return a PlainDate ISO string with the given `fields` set on `value`.",
     "sourcePath": "packages/gmt/src/plain/calculate/setDate.ts"
   },
@@ -645,7 +645,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "setDateTime(value: string, fields: Omit<Temporal.PlainDateTimeLike, \"calendar\">, options?: { overflow?: Overflow; }): string",
+    "signature": "setDateTime(value: string, fields: Omit<PlainDateTimeLike, \"calendar\">, options?: { overflow?: \"constrain\" | \"reject\"; }): string",
     "description": "Return a PlainDateTime ISO string with the given `fields` set on `value`.",
     "sourcePath": "packages/gmt/src/plain/calculate/setDateTime.ts"
   },
@@ -655,7 +655,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "setTime(value: string, fields: Temporal.PlainTimeLike, options?: { overflow?: Overflow; }): string",
+    "signature": "setTime(value: string, fields: PlainTimeLike, options?: { overflow?: \"constrain\" | \"reject\"; }): string",
     "description": "Return a PlainTime ISO string with the given `fields` set on `value`.",
     "sourcePath": "packages/gmt/src/plain/calculate/setTime.ts"
   },
@@ -695,7 +695,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "startOfDate(value: string, unit: Temporal.DateUnit, optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; }): string",
+    "signature": "startOfDate(value: string, unit: DateUnit, optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; }): string",
     "description": "Return the start of the specified date `unit` for a given ISO 8601 date string.",
     "sourcePath": "packages/gmt/src/plain/calculate/startOfDate.ts"
   },
@@ -705,7 +705,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "startOfDateTime(value: string, unit: any, optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; fractionalSecondDigits?: FractionalDigit; }): string",
+    "signature": "startOfDateTime(value: string, unit: DateUnit | TimeUnit, optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; fractionalSecondDigits?: FractionalDigit; }): string",
     "description": "Return the start of the specified date-time `unit` for a given ISO 8601 datetime string.",
     "sourcePath": "packages/gmt/src/plain/calculate/startOfDateTime.ts"
   },
@@ -745,7 +745,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "startOfTime(value: string, unit: any, optionsArg?: { fractionalSecondDigits?: FractionalDigit; }): string",
+    "signature": "startOfTime(value: string, unit: StartOfTimeUnit, optionsArg?: { fractionalSecondDigits?: FractionalDigit; }): string",
     "description": "Return the start of the specified time `unit` for a given ISO 8601 time string.",
     "sourcePath": "packages/gmt/src/plain/calculate/startOfTime.ts"
   },
@@ -765,7 +765,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "subtractDate(value: string, units: Partial<Record<DateDurationUnit, number>>, options?: { overflow?: Overflow; }): string",
+    "signature": "subtractDate(value: string, units: Partial<Record<\"years\" | \"months\" | \"weeks\" | \"days\", number>>, options?: { overflow?: \"constrain\" | \"reject\"; }): string",
     "description": "Return a PlainDate ISO string with `units` subtracted from `value`.",
     "sourcePath": "packages/gmt/src/plain/calculate/subtractDate.ts"
   },
@@ -775,7 +775,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "subtractDateTime(value: string, units: Partial<Record<DateTimeDurationUnit, number>>, options?: { overflow?: Overflow; }): string",
+    "signature": "subtractDateTime(value: string, units: Partial<Record<keyof DurationLike, number>>, options?: { overflow?: \"constrain\" | \"reject\"; }): string",
     "description": "Return a PlainDateTime ISO string with `units` subtracted from `value`.",
     "sourcePath": "packages/gmt/src/plain/calculate/subtractDateTime.ts"
   },
@@ -785,7 +785,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "subtractTime(value: string, units: Partial<Record<TimeDurationUnit, number>>, options?: { overflow?: Overflow; }): string",
+    "signature": "subtractTime(value: string, units: Partial<Record<\"hours\" | \"minutes\" | \"seconds\" | \"milliseconds\" | \"microseconds\" | \"nanoseconds\", number>>, options?: { overflow?: \"constrain\" | \"reject\"; }): string",
     "description": "Return a PlainTime ISO string with `units` subtracted from `value`.",
     "sourcePath": "packages/gmt/src/plain/calculate/subtractTime.ts"
   },
@@ -865,7 +865,7 @@
     "namespace": "plain",
     "module": "compare",
     "kind": "function",
-    "signature": "areDateTimesEqualBy(value1: string, value2: string, unit: any, optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; fractionalSecondDigits?: FractionalDigit; }): boolean",
+    "signature": "areDateTimesEqualBy(value1: string, value2: string, unit: DateUnit | TimeUnit, optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; fractionalSecondDigits?: FractionalDigit; }): boolean",
     "description": "Compare two ISO datetime strings for equality at a given unit.",
     "sourcePath": "packages/gmt/src/plain/compare/areDateTimesEqualBy.ts"
   },
@@ -885,7 +885,7 @@
     "namespace": "plain",
     "module": "compare",
     "kind": "function",
-    "signature": "areDatesEqualBy(value1: string, value2: string, unit: Temporal.DateUnit, optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; }): boolean",
+    "signature": "areDatesEqualBy(value1: string, value2: string, unit: DateUnit, optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; }): boolean",
     "description": "Compare two ISO date strings for equality at a given calendar unit.",
     "sourcePath": "packages/gmt/src/plain/compare/areDatesEqualBy.ts"
   },
@@ -1035,7 +1035,7 @@
     "namespace": "plain",
     "module": "compare",
     "kind": "function",
-    "signature": "isThisUnit(value: string, unit: Temporal.DateUnit, locale?: string): boolean",
+    "signature": "isThisUnit(value: string, unit: DateUnit, locale?: string): boolean",
     "description": "Return true when `value` falls in the same `unit` as today, per the",
     "sourcePath": "packages/gmt/src/plain/compare/isThisUnit.ts"
   },
@@ -1335,7 +1335,7 @@
     "namespace": "plain",
     "module": "get",
     "kind": "function",
-    "signature": "isValidPlainNowUnit(unit: string): unit is any",
+    "signature": "isValidPlainNowUnit(unit: string): unit is NowUnit",
     "description": "",
     "sourcePath": "packages/gmt/src/plain/get/getNowUnit.ts"
   },
@@ -1345,7 +1345,7 @@
     "namespace": "plain",
     "module": "get",
     "kind": "function",
-    "signature": "getNowUnit(unit: any): string",
+    "signature": "getNowUnit(unit: NowUnit): string",
     "description": "Return the requested current unit value using the system timeZone.",
     "sourcePath": "packages/gmt/src/plain/get/getNowUnit.ts"
   },
@@ -1465,7 +1465,7 @@
     "namespace": "plain",
     "module": "interval",
     "kind": "function",
-    "signature": "startOfUnit(source: Temporal.PlainDateTime, unit: DateTimeUnit): Temporal.PlainDateTime",
+    "signature": "startOfUnit(source: PlainDateTime, unit: DateTimeUnit): PlainDateTime",
     "description": "Return the start of `unit` for a `Temporal.PlainDateTime`, for every DateTimeUnit.",
     "sourcePath": "packages/gmt/src/plain/interval/intervalCountDateTime.ts"
   },
@@ -1585,7 +1585,7 @@
     "namespace": "plain",
     "module": "interval",
     "kind": "function",
-    "signature": "intervalFromDurationDate(value: string, duration: string, anchor: \"start\" | \"end\", options?: { overflow?: Overflow; }): { start: string; end: string; }",
+    "signature": "intervalFromDurationDate(value: string, duration: string, anchor: \"start\" | \"end\", options?: { overflow?: \"constrain\" | \"reject\"; }): { start: string; end: string; }",
     "description": "Construct a date interval from a single point plus an ISO 8601 duration, anchored at either end.",
     "sourcePath": "packages/gmt/src/plain/interval/intervalFromDurationDate.ts"
   },
@@ -1595,7 +1595,7 @@
     "namespace": "plain",
     "module": "interval",
     "kind": "function",
-    "signature": "intervalFromDurationDateTime(value: string, duration: string, anchor: \"start\" | \"end\", options?: { overflow?: Overflow; }): { start: string; end: string; }",
+    "signature": "intervalFromDurationDateTime(value: string, duration: string, anchor: \"start\" | \"end\", options?: { overflow?: \"constrain\" | \"reject\"; }): { start: string; end: string; }",
     "description": "Construct a datetime interval from a single point plus an ISO 8601 duration, anchored at either end.",
     "sourcePath": "packages/gmt/src/plain/interval/intervalFromDurationDateTime.ts"
   },
@@ -1605,7 +1605,7 @@
     "namespace": "plain",
     "module": "interval",
     "kind": "function",
-    "signature": "intervalFromDurationTime(value: string, duration: string, anchor: \"start\" | \"end\", options?: { overflow?: Overflow; }): { start: string; end: string; }",
+    "signature": "intervalFromDurationTime(value: string, duration: string, anchor: \"start\" | \"end\", options?: { overflow?: \"constrain\" | \"reject\"; }): { start: string; end: string; }",
     "description": "Construct a time interval from a single point plus an ISO 8601 duration, anchored at either end.",
     "sourcePath": "packages/gmt/src/plain/interval/intervalFromDurationTime.ts"
   },
@@ -2225,7 +2225,7 @@
     "namespace": "plain",
     "module": "parse",
     "kind": "function",
-    "signature": "parseUnitFromDate(value: string, unit: \"day\" | \"year\" | \"month\" | \"week\" | \"dayOfWeek\", optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; }): string",
+    "signature": "parseUnitFromDate(value: string, unit: \"year\" | \"month\" | \"week\" | \"day\" | \"dayOfWeek\", optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; }): string",
     "description": "Return a specific date unit extracted from a PlainDate string.",
     "sourcePath": "packages/gmt/src/plain/parse/parseUnitFromDate.ts"
   },
@@ -2235,7 +2235,7 @@
     "namespace": "plain",
     "module": "parse",
     "kind": "function",
-    "signature": "parseUnitFromDateTime(value: string, unit: \"day\" | \"hour\" | \"year\" | \"month\" | \"week\" | \"minute\" | \"second\" | \"dayOfWeek\" | \"millisecond\", optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; }): string",
+    "signature": "parseUnitFromDateTime(value: string, unit: \"year\" | \"month\" | \"week\" | \"day\" | \"hour\" | \"minute\" | \"second\" | \"millisecond\" | \"dayOfWeek\", optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; }): string",
     "description": "Return a specific unit extracted from a PlainDateTime string.",
     "sourcePath": "packages/gmt/src/plain/parse/parseUnitFromDateTime.ts"
   },
@@ -2345,7 +2345,7 @@
     "namespace": "plain",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidDateDurationUnit(unit: string): unit is DateDurationUnit",
+    "signature": "isValidDateDurationUnit(unit: string): unit is \"years\" | \"months\" | \"weeks\" | \"days\"",
     "description": "",
     "sourcePath": "packages/gmt/src/plain/validate/isValidDateDurationUnit.ts"
   },
@@ -2395,7 +2395,7 @@
     "namespace": "plain",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidDateTimeDurationUnit(unit: string): unit is DateTimeDurationUnit",
+    "signature": "isValidDateTimeDurationUnit(unit: string): unit is keyof DurationLike",
     "description": "",
     "sourcePath": "packages/gmt/src/plain/validate/isValidDateTimeDurationUnit.ts"
   },
@@ -2465,7 +2465,7 @@
     "namespace": "plain",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidTimeDurationUnit(unit: string): unit is TimeDurationUnit",
+    "signature": "isValidTimeDurationUnit(unit: string): unit is \"hours\" | \"minutes\" | \"seconds\" | \"milliseconds\" | \"microseconds\" | \"nanoseconds\"",
     "description": "",
     "sourcePath": "packages/gmt/src/plain/validate/isValidTimeDurationUnit.ts"
   },
@@ -2496,7 +2496,7 @@
     "module": "calendar-date",
     "kind": "regex",
     "signature": "",
-    "description": "GMT's own calendar-annotated PlainDate string: the calendar-native year/month/day",
+    "description": "true",
     "sourcePath": "packages/gmt/src/regex/calendar-date.ts"
   },
   {
@@ -2506,7 +2506,7 @@
     "module": "calendar-zoned-date-time",
     "kind": "regex",
     "signature": "",
-    "description": "GMT's own calendar-annotated ZonedDateTime string — the zoned sibling of `calendarDate`",
+    "description": "true",
     "sourcePath": "packages/gmt/src/regex/calendar-zoned-date-time.ts"
   },
   {
@@ -2516,7 +2516,7 @@
     "module": "date-time",
     "kind": "regex",
     "signature": "",
-    "description": "ISO 8601 local date-time (extended): <date>T<time>",
+    "description": "true",
     "sourcePath": "packages/gmt/src/regex/date-time.ts"
   },
   {
@@ -2556,7 +2556,7 @@
     "module": "date",
     "kind": "regex",
     "signature": "",
-    "description": "ISO 8601 calendar date (extended): YYYY-MM-DD or ±YYYYYY-MM-DD",
+    "description": "true",
     "sourcePath": "packages/gmt/src/regex/date.ts"
   },
   {
@@ -2566,7 +2566,7 @@
     "module": "http-date",
     "kind": "regex",
     "signature": "",
-    "description": "RFC 7231 §7.1.1.1 IMF-fixdate — the only form GMT's `formatHttp` emits, and",
+    "description": "true",
     "sourcePath": "packages/gmt/src/regex/http-date.ts"
   },
   {
@@ -2576,7 +2576,7 @@
     "module": "leap-second",
     "kind": "regex",
     "signature": "",
-    "description": "ISO 8601 leap second pattern (second = 60)",
+    "description": "true",
     "sourcePath": "packages/gmt/src/regex/leap-second.ts"
   },
   {
@@ -2586,7 +2586,7 @@
     "module": "rfc-2822",
     "kind": "regex",
     "signature": "",
-    "description": "RFC 5322 §3.3 date-time grammar (obsoletes RFC 2822, same date-time shape).",
+    "description": "true",
     "sourcePath": "packages/gmt/src/regex/rfc-2822.ts"
   },
   {
@@ -2596,7 +2596,7 @@
     "module": "rfc-3339",
     "kind": "regex",
     "signature": "",
-    "description": "RFC 3339 §5.6 date-time — the same field grammar as ISO 8601 but with a",
+    "description": "true",
     "sourcePath": "packages/gmt/src/regex/rfc-3339.ts"
   },
   {
@@ -2606,7 +2606,7 @@
     "module": "sql-date-time",
     "kind": "regex",
     "signature": "",
-    "description": "ANSI SQL / ODBC timestamp literal: space-separated (never \"T\"), always",
+    "description": "true",
     "sourcePath": "packages/gmt/src/regex/sql-date-time.ts"
   },
   {
@@ -2616,7 +2616,7 @@
     "module": "time-zone-like",
     "kind": "regex",
     "signature": "",
-    "description": "",
+    "description": "true",
     "sourcePath": "packages/gmt/src/regex/time-zone-like.ts"
   },
   {
@@ -2626,7 +2626,7 @@
     "module": "time",
     "kind": "regex",
     "signature": "",
-    "description": "regex patterns exported for usage",
+    "description": "true",
     "sourcePath": "packages/gmt/src/regex/time.ts"
   },
   {
@@ -2636,7 +2636,7 @@
     "module": "time",
     "kind": "regex",
     "signature": "",
-    "description": "regex patterns exported for usage",
+    "description": "true",
     "sourcePath": "packages/gmt/src/regex/time.ts"
   },
   {
@@ -2646,7 +2646,7 @@
     "module": "time",
     "kind": "regex",
     "signature": "",
-    "description": "regex patterns exported for usage",
+    "description": "true",
     "sourcePath": "packages/gmt/src/regex/time.ts"
   },
   {
@@ -2656,7 +2656,7 @@
     "module": "time",
     "kind": "regex",
     "signature": "",
-    "description": "regex patterns exported for usage",
+    "description": "true",
     "sourcePath": "packages/gmt/src/regex/time.ts"
   },
   {
@@ -2666,7 +2666,7 @@
     "module": "time",
     "kind": "regex",
     "signature": "",
-    "description": "regex patterns exported for usage",
+    "description": "true",
     "sourcePath": "packages/gmt/src/regex/time.ts"
   },
   {
@@ -2676,7 +2676,7 @@
     "module": "time",
     "kind": "regex",
     "signature": "",
-    "description": "regex patterns exported for usage",
+    "description": "true",
     "sourcePath": "packages/gmt/src/regex/time.ts"
   },
   {
@@ -2686,7 +2686,7 @@
     "module": "unix",
     "kind": "regex",
     "signature": "",
-    "description": "",
+    "description": "true",
     "sourcePath": "packages/gmt/src/regex/unix.ts"
   },
   {
@@ -2696,7 +2696,7 @@
     "module": "unix",
     "kind": "regex",
     "signature": "",
-    "description": "",
+    "description": "true",
     "sourcePath": "packages/gmt/src/regex/unix.ts"
   },
   {
@@ -2706,8 +2706,18 @@
     "module": "utc-date-time",
     "kind": "regex",
     "signature": "",
-    "description": "ISO 8601 UTC datetime: <date>T<time>Z with optional fractional seconds",
+    "description": "true",
     "sourcePath": "packages/gmt/src/regex/utc-date-time.ts"
+  },
+  {
+    "url": "/reference/types/calendar-options/CalendarOptions",
+    "name": "CalendarOptions",
+    "namespace": "types",
+    "module": "calendar-options",
+    "kind": "type",
+    "signature": "",
+    "description": "The CalendarOptions type.",
+    "sourcePath": "packages/gmt/src/types/calendar-options.ts"
   },
   {
     "url": "/reference/types/calendar-system/CalendarSystem",
@@ -2780,6 +2790,16 @@
     "sourcePath": "packages/gmt/src/types/date-unit.ts"
   },
   {
+    "url": "/reference/types/datetime-format-options/DateTimeFormatOptions",
+    "name": "DateTimeFormatOptions",
+    "namespace": "types",
+    "module": "datetime-format-options",
+    "kind": "type",
+    "signature": "",
+    "description": "The DateTimeFormatOptions type.",
+    "sourcePath": "packages/gmt/src/types/datetime-format-options.ts"
+  },
+  {
     "url": "/reference/types/disambiguation/Disambiguation",
     "name": "Disambiguation",
     "namespace": "types",
@@ -2850,6 +2870,16 @@
     "sourcePath": "packages/gmt/src/types/relative-rounding-method.ts"
   },
   {
+    "url": "/reference/types/relative-time-options/RelativeTimeFormatOptions",
+    "name": "RelativeTimeFormatOptions",
+    "namespace": "types",
+    "module": "relative-time-options",
+    "kind": "type",
+    "signature": "",
+    "description": "The RelativeTimeFormatOptions type.",
+    "sourcePath": "packages/gmt/src/types/relative-time-options.ts"
+  },
+  {
     "url": "/reference/types/rounding-options/RoundingOptions",
     "name": "RoundingOptions",
     "namespace": "types",
@@ -2895,7 +2925,7 @@
     "namespace": "unix",
     "module": "calculate",
     "kind": "function",
-    "signature": "addUnix(value: number, units: Partial<Record<DateTimeDurationUnit, number>>, options?: { epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; overflow?: Overflow; }): number",
+    "signature": "addUnix(value: number, units: Partial<Record<keyof DurationLike, number>>, options?: { epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; overflow?: \"constrain\" | \"reject\"; }): number",
     "description": "Add a temporal amount to a Unix epoch value and return the resulting epoch.",
     "sourcePath": "packages/gmt/src/unix/calculate/addUnix.ts"
   },
@@ -2905,7 +2935,7 @@
     "namespace": "unix",
     "module": "calculate",
     "kind": "function",
-    "signature": "diffUnix(value1: number, value2: number, units: any, options?: any): number | Record<DateTimeDurationUnit, number>",
+    "signature": "diffUnix(value1: number, value2: number, units: keyof DurationLike | (keyof DurationLike)[], options?: { epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; } & RoundingOptions<...>): number | Record<...>",
     "description": "Return the difference between two Unix timestamps measured in the given unit.",
     "sourcePath": "packages/gmt/src/unix/calculate/diffUnix.ts"
   },
@@ -2915,7 +2945,7 @@
     "namespace": "unix",
     "module": "calculate",
     "kind": "function",
-    "signature": "diffUnixAsDuration(value1: number, value2: number, unit: DateTimeDurationUnit, options?: any): string",
+    "signature": "diffUnixAsDuration(value1: number, value2: number, unit: keyof DurationLike, options?: { epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; } & RoundingOptions<DateTimeUnit> & DurationStringOptions): string",
     "description": "Return the difference between two Unix timestamps as an ISO 8601 duration string,",
     "sourcePath": "packages/gmt/src/unix/calculate/diffUnixAsDuration.ts"
   },
@@ -2925,7 +2955,7 @@
     "namespace": "unix",
     "module": "calculate",
     "kind": "function",
-    "signature": "endOfQuarterForUnix(value: number, options?: { epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; disambiguation?: Disambiguation; offset?: Offset; }): number",
+    "signature": "endOfQuarterForUnix(value: number, options?: { epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; disambiguation?: \"reject\" | \"compatible\" | \"earlier\" | \"later\"; offset?: \"reject\" | \"use\" | \"prefer\" | \"ignore\"; }): number",
     "description": "Return the end of the quarter for a Unix timestamp.",
     "sourcePath": "packages/gmt/src/unix/calculate/endOfQuarterForUnix.ts"
   },
@@ -2935,7 +2965,7 @@
     "namespace": "unix",
     "module": "calculate",
     "kind": "function",
-    "signature": "endOfUnix(value: number, unit: any, options?: { epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; weekStartsOn?: \"monday\" | \"sunday\"; disambiguation?: Disambiguation; offset?: Offset; }): number",
+    "signature": "endOfUnix(value: number, unit: DateUnit | TimeUnit, options?: { epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; weekStartsOn?: \"monday\" | \"sunday\"; disambiguation?: \"reject\" | ... 2 more ... | \"later\"; offset?: \"reject\" | ... 2 more ... | \"ignore\"; }): number",
     "description": "Return the end of the specified unit for a Unix timestamp.",
     "sourcePath": "packages/gmt/src/unix/calculate/endOfUnix.ts"
   },
@@ -2975,7 +3005,7 @@
     "namespace": "unix",
     "module": "calculate",
     "kind": "function",
-    "signature": "roundUnix(value: number, options: { smallestUnit: Temporal.SmallestUnit<\"day\" | \"hour\" | \"minute\" | \"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\">; roundingIncrement?: number; roundingMode?: Temporal.RoundingMode; epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; }): number",
+    "signature": "roundUnix(value: number, options: { smallestUnit: SmallestUnit<\"day\" | \"hour\" | \"minute\" | \"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\">; roundingIncrement?: number; roundingMode?: RoundingMode; epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; }): number",
     "description": "Round a Unix timestamp to the specified unit.",
     "sourcePath": "packages/gmt/src/unix/calculate/roundUnix.ts"
   },
@@ -2985,7 +3015,7 @@
     "namespace": "unix",
     "module": "calculate",
     "kind": "function",
-    "signature": "setUnix(value: number, fields: Omit<Temporal.ZonedDateTimeLike, \"calendar\" | \"timeZone\" | \"offset\">, options?: { epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; overflow?: Overflow; disambiguation?: Disambiguation; offset?: Offset; }): number",
+    "signature": "setUnix(value: number, fields: Omit<ZonedDateTimeLike, \"calendar\" | \"offset\" | \"timeZone\">, options?: { epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; overflow?: \"constrain\" | \"reject\"; disambiguation?: \"reject\" | ... 2 more ... | \"later\"; offset?: \"reject\" | ... 2 more ... | \"ignore\"; }): number",
     "description": "Return a Unix epoch value with the given `fields` set on `value`, interpreted in `timeZone`.",
     "sourcePath": "packages/gmt/src/unix/calculate/setUnix.ts"
   },
@@ -3005,7 +3035,7 @@
     "namespace": "unix",
     "module": "calculate",
     "kind": "function",
-    "signature": "startOfQuarterForUnix(value: number, options?: { epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; disambiguation?: Disambiguation; offset?: Offset; }): number",
+    "signature": "startOfQuarterForUnix(value: number, options?: { epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; disambiguation?: \"reject\" | \"compatible\" | \"earlier\" | \"later\"; offset?: \"reject\" | \"use\" | \"prefer\" | \"ignore\"; }): number",
     "description": "Return the start of the quarter for a Unix timestamp.",
     "sourcePath": "packages/gmt/src/unix/calculate/startOfQuarterForUnix.ts"
   },
@@ -3015,7 +3045,7 @@
     "namespace": "unix",
     "module": "calculate",
     "kind": "function",
-    "signature": "startOfUnix(value: number, unit: any, options?: { epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; weekStartsOn?: \"monday\" | \"sunday\"; disambiguation?: Disambiguation; offset?: Offset; }): number",
+    "signature": "startOfUnix(value: number, unit: DateUnit | TimeUnit, options?: { epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; weekStartsOn?: \"monday\" | \"sunday\"; disambiguation?: \"reject\" | ... 2 more ... | \"later\"; offset?: \"reject\" | ... 2 more ... | \"ignore\"; }): number",
     "description": "Return the start of the specified unit for a Unix timestamp.",
     "sourcePath": "packages/gmt/src/unix/calculate/startOfUnix.ts"
   },
@@ -3025,7 +3055,7 @@
     "namespace": "unix",
     "module": "calculate",
     "kind": "function",
-    "signature": "startOrEndOfUnix(value: number, unit: any, options: { epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; weekStartsOn?: \"monday\" | \"sunday\"; disambiguation?: Disambiguation; offset?: Offset; }, isEnd: boolean): number",
+    "signature": "startOrEndOfUnix(value: number, unit: DateUnit | TimeUnit, options: { epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; weekStartsOn?: \"monday\" | \"sunday\"; disambiguation?: \"reject\" | ... 2 more ... | \"later\"; offset?: \"reject\" | ... 2 more ... | \"ignore\"; }, isEnd: boolean): number",
     "description": "Internal shared implementation for `startOfUnix` / `endOfUnix`.",
     "sourcePath": "packages/gmt/src/unix/calculate/startOrEndOfUnix.ts"
   },
@@ -3035,7 +3065,7 @@
     "namespace": "unix",
     "module": "calculate",
     "kind": "function",
-    "signature": "subtractUnix(value: number, units: Partial<Record<DateTimeDurationUnit, number>>, options?: { epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; overflow?: Overflow; }): number",
+    "signature": "subtractUnix(value: number, units: Partial<Record<keyof DurationLike, number>>, options?: { epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; overflow?: \"constrain\" | \"reject\"; }): number",
     "description": "Subtract a temporal amount from a Unix epoch value and return the resulting epoch.",
     "sourcePath": "packages/gmt/src/unix/calculate/subtractUnix.ts"
   },
@@ -3145,7 +3175,7 @@
     "namespace": "unix",
     "module": "format",
     "kind": "function",
-    "signature": "toInstant(raw: string | number, epochUnit: \"seconds\" | \"milliseconds\"): any",
+    "signature": "toInstant(raw: string | number, epochUnit: \"seconds\" | \"milliseconds\"): Instant",
     "description": "",
     "sourcePath": "packages/gmt/src/unix/format/formatCalendarUnix.ts"
   },
@@ -3315,7 +3345,7 @@
     "namespace": "unix",
     "module": "get",
     "kind": "function",
-    "signature": "isValidUnixNowUnit(unit: string): unit is any",
+    "signature": "isValidUnixNowUnit(unit: string): unit is UnixNowUnit",
     "description": "",
     "sourcePath": "packages/gmt/src/unix/get/getUnixNowUnit.ts"
   },
@@ -3325,7 +3355,7 @@
     "namespace": "unix",
     "module": "get",
     "kind": "function",
-    "signature": "getUnixNowUnit(unit: any): string",
+    "signature": "getUnixNowUnit(unit: UnixNowUnit): string",
     "description": "Return the requested unit value from the current Unix timestamp in UTC.",
     "sourcePath": "packages/gmt/src/unix/get/getUnixNowUnit.ts"
   },
@@ -3415,7 +3445,7 @@
     "namespace": "unix",
     "module": "interval",
     "kind": "function",
-    "signature": "intervalFromDurationUnix(value: string | number, duration: string, anchor: \"start\" | \"end\", options?: { epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; overflow?: Overflow; }): { start: number; end: number; }",
+    "signature": "intervalFromDurationUnix(value: string | number, duration: string, anchor: \"start\" | \"end\", options?: { epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; overflow?: \"constrain\" | \"reject\"; }): { ...; }",
     "description": "Construct a Unix epoch interval from a single point plus an ISO 8601 duration, anchored at either end.",
     "sourcePath": "packages/gmt/src/unix/interval/intervalFromDurationUnix.ts"
   },
@@ -3755,7 +3785,7 @@
     "namespace": "utc",
     "module": "calculate",
     "kind": "function",
-    "signature": "addUtc(value: string, units: Partial<Record<DateTimeDurationUnit, number>>, options?: { overflow?: Overflow; }): string",
+    "signature": "addUtc(value: string, units: Partial<Record<keyof DurationLike, number>>, options?: { overflow?: \"constrain\" | \"reject\"; }): string",
     "description": "Add a temporal amount to a UTC datetime string and return a new UTC Instant string.",
     "sourcePath": "packages/gmt/src/utc/calculate/addUtc.ts"
   },
@@ -3765,7 +3795,7 @@
     "namespace": "utc",
     "module": "calculate",
     "kind": "function",
-    "signature": "diffUtc(value1: string, value2: string, units: any, options?: RoundingOptions<Temporal.DateTimeUnit>): number | Record<DateTimeDurationUnit, number>",
+    "signature": "diffUtc(value1: string, value2: string, units: keyof DurationLike | (keyof DurationLike)[], options?: RoundingOptions<DateTimeUnit>): number | Record<...>",
     "description": "Return the difference between two UTC datetimes measured in the given date-time unit.",
     "sourcePath": "packages/gmt/src/utc/calculate/diffUtc.ts"
   },
@@ -3775,7 +3805,7 @@
     "namespace": "utc",
     "module": "calculate",
     "kind": "function",
-    "signature": "diffUtcAsDuration(value1: string, value2: string, unit: DateTimeDurationUnit, options?: any): string",
+    "signature": "diffUtcAsDuration(value1: string, value2: string, unit: keyof DurationLike, options?: RoundingOptions<DateTimeUnit> & DurationStringOptions): string",
     "description": "Return the difference between two UTC datetimes as an ISO 8601 duration string,",
     "sourcePath": "packages/gmt/src/utc/calculate/diffUtcAsDuration.ts"
   },
@@ -3795,7 +3825,7 @@
     "namespace": "utc",
     "module": "calculate",
     "kind": "function",
-    "signature": "endOfUtc(value: string, unit: any, options?: { weekStartsOn?: \"monday\" | \"sunday\"; fractionalSecondDigits?: FractionalDigit; }): string",
+    "signature": "endOfUtc(value: string, unit: DateUnit | TimeUnit, options?: { weekStartsOn?: \"monday\" | \"sunday\"; fractionalSecondDigits?: FractionalDigit; }): string",
     "description": "Return the end of the specified date-time `unit` for a given UTC datetime string.",
     "sourcePath": "packages/gmt/src/utc/calculate/endOfUtc.ts"
   },
@@ -3835,7 +3865,7 @@
     "namespace": "utc",
     "module": "calculate",
     "kind": "function",
-    "signature": "roundUtc(value: string, options: { smallestUnit: Temporal.SmallestUnit<\"hour\" | \"minute\" | \"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\">; roundingIncrement?: number; roundingMode?: Temporal.RoundingMode; fractionalSecondDigits?: FractionalDigit; }): string",
+    "signature": "roundUtc(value: string, options: { smallestUnit: SmallestUnit<\"hour\" | \"minute\" | \"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\">; roundingIncrement?: number; roundingMode?: RoundingMode; fractionalSecondDigits?: FractionalDigit; }): string",
     "description": "Round a UTC datetime string to the specified unit.",
     "sourcePath": "packages/gmt/src/utc/calculate/roundUtc.ts"
   },
@@ -3845,7 +3875,7 @@
     "namespace": "utc",
     "module": "calculate",
     "kind": "function",
-    "signature": "setUtc(value: string, fields: Omit<Temporal.ZonedDateTimeLike, \"calendar\" | \"timeZone\" | \"offset\">, options?: { overflow?: Overflow; disambiguation?: Disambiguation; offset?: Offset; }): string",
+    "signature": "setUtc(value: string, fields: Omit<ZonedDateTimeLike, \"calendar\" | \"offset\" | \"timeZone\">, options?: { overflow?: \"constrain\" | \"reject\"; disambiguation?: \"reject\" | \"compatible\" | \"earlier\" | \"later\"; offset?: \"reject\" | ... 2 more ... | \"ignore\"; }): string",
     "description": "Return a UTC Instant string with the given `fields` set on `value`.",
     "sourcePath": "packages/gmt/src/utc/calculate/setUtc.ts"
   },
@@ -3875,7 +3905,7 @@
     "namespace": "utc",
     "module": "calculate",
     "kind": "function",
-    "signature": "startOfUtc(value: string, unit: any, options?: { weekStartsOn?: \"monday\" | \"sunday\"; fractionalSecondDigits?: FractionalDigit; }): string",
+    "signature": "startOfUtc(value: string, unit: DateUnit | TimeUnit, options?: { weekStartsOn?: \"monday\" | \"sunday\"; fractionalSecondDigits?: FractionalDigit; }): string",
     "description": "Return the start of the specified date-time `unit` for a given UTC datetime string.",
     "sourcePath": "packages/gmt/src/utc/calculate/startOfUtc.ts"
   },
@@ -3885,7 +3915,7 @@
     "namespace": "utc",
     "module": "calculate",
     "kind": "function",
-    "signature": "startOrEndOfUtc(value: string, unit: any, options: { weekStartsOn?: \"monday\" | \"sunday\"; fractionalSecondDigits?: FractionalDigit; }, isEnd: boolean): string",
+    "signature": "startOrEndOfUtc(value: string, unit: DateUnit | TimeUnit, options: { weekStartsOn?: \"monday\" | \"sunday\"; fractionalSecondDigits?: FractionalDigit; }, isEnd: boolean): string",
     "description": "Internal shared implementation for `startOfUtc` / `endOfUtc`.",
     "sourcePath": "packages/gmt/src/utc/calculate/startOrEndOfUtc.ts"
   },
@@ -3895,7 +3925,7 @@
     "namespace": "utc",
     "module": "calculate",
     "kind": "function",
-    "signature": "subtractUtc(value: string, units: Partial<Record<DateTimeDurationUnit, number>>, options?: { overflow?: Overflow; }): string",
+    "signature": "subtractUtc(value: string, units: Partial<Record<keyof DurationLike, number>>, options?: { overflow?: \"constrain\" | \"reject\"; }): string",
     "description": "Subtract a temporal amount from a UTC datetime string and return a new UTC Instant string.",
     "sourcePath": "packages/gmt/src/utc/calculate/subtractUtc.ts"
   },
@@ -3925,7 +3955,7 @@
     "namespace": "utc",
     "module": "compare",
     "kind": "function",
-    "signature": "areUtcEqualBy(value1: string, value2: string, unit: any, options?: { weekStartsOn?: \"monday\" | \"sunday\"; fractionalSecondDigits?: FractionalDigit; }): boolean",
+    "signature": "areUtcEqualBy(value1: string, value2: string, unit: DateUnit | TimeUnit, options?: { weekStartsOn?: \"monday\" | \"sunday\"; fractionalSecondDigits?: FractionalDigit; }): boolean",
     "description": "Compare two UTC ISO datetime strings for equality at a given unit.",
     "sourcePath": "packages/gmt/src/utc/compare/areUtcEqualBy.ts"
   },
@@ -4175,7 +4205,7 @@
     "namespace": "utc",
     "module": "get",
     "kind": "function",
-    "signature": "isValidUtcNowUnit(unit: string): unit is any",
+    "signature": "isValidUtcNowUnit(unit: string): unit is UtcNowUnit",
     "description": "",
     "sourcePath": "packages/gmt/src/utc/get/getUtcNowUnit.ts"
   },
@@ -4185,7 +4215,7 @@
     "namespace": "utc",
     "module": "get",
     "kind": "function",
-    "signature": "getUtcNowUnit(unit: any): string",
+    "signature": "getUtcNowUnit(unit: UtcNowUnit): string",
     "description": "Return the requested unit value from the current UTC instant.",
     "sourcePath": "packages/gmt/src/utc/get/getUtcNowUnit.ts"
   },
@@ -4275,7 +4305,7 @@
     "namespace": "utc",
     "module": "interval",
     "kind": "function",
-    "signature": "intervalFromDurationUtc(value: string, duration: string, anchor: \"start\" | \"end\", options?: { overflow?: Overflow; }): { start: string; end: string; }",
+    "signature": "intervalFromDurationUtc(value: string, duration: string, anchor: \"start\" | \"end\", options?: { overflow?: \"constrain\" | \"reject\"; }): { start: string; end: string; }",
     "description": "Construct a UTC interval from a single point plus an ISO 8601 duration, anchored at either end.",
     "sourcePath": "packages/gmt/src/utc/interval/intervalFromDurationUtc.ts"
   },
@@ -4575,7 +4605,7 @@
     "namespace": "zoned",
     "module": "calculate",
     "kind": "function",
-    "signature": "addZoned(value: string, units: Partial<Record<DateTimeDurationUnit, number>>, optionsArg?: { disambiguation?: Disambiguation; offset?: Offset; overflow?: Overflow; }): string",
+    "signature": "addZoned(value: string, units: Partial<Record<keyof DurationLike, number>>, optionsArg?: { disambiguation?: \"reject\" | \"compatible\" | \"earlier\" | \"later\"; offset?: \"reject\" | ... 2 more ... | \"ignore\"; overflow?: \"constrain\" | \"reject\"; }): string",
     "description": "Add a temporal amount to a zoned ISO 8601 datetime string and return a zoned ISO 8601 string.",
     "sourcePath": "packages/gmt/src/zoned/calculate/addZoned.ts"
   },
@@ -4615,7 +4645,7 @@
     "namespace": "zoned",
     "module": "calculate",
     "kind": "function",
-    "signature": "cycleZoned(value: string, field: DateTimeCycleField, amount: number, options?: { round?: boolean; overflow?: Overflow; disambiguation?: Disambiguation; offset?: Offset; }): string",
+    "signature": "cycleZoned(value: string, field: DateTimeCycleField, amount: number, options?: { round?: boolean; overflow?: \"constrain\" | \"reject\"; disambiguation?: \"reject\" | \"compatible\" | \"earlier\" | \"later\"; offset?: \"reject\" | ... 2 more ... | \"ignore\"; }): string",
     "description": "Return a ZonedDateTime ISO string with `field` cycled by `amount`, wrapping at that field's own",
     "sourcePath": "packages/gmt/src/zoned/calculate/cycleZoned.ts"
   },
@@ -4625,7 +4655,7 @@
     "namespace": "zoned",
     "module": "calculate",
     "kind": "function",
-    "signature": "diffZoned(value1: string, value2: string, units: any, options?: RoundingOptions<Temporal.DateTimeUnit>): number | Record<DateTimeDurationUnit, number>",
+    "signature": "diffZoned(value1: string, value2: string, units: keyof DurationLike | (keyof DurationLike)[], options?: RoundingOptions<DateTimeUnit>): number | Record<...>",
     "description": "Return the difference between two zoned datetimes measured in the given date-time unit.",
     "sourcePath": "packages/gmt/src/zoned/calculate/diffZoned.ts"
   },
@@ -4635,7 +4665,7 @@
     "namespace": "zoned",
     "module": "calculate",
     "kind": "function",
-    "signature": "diffZonedAsDuration(value1: string, value2: string, unit: DateTimeDurationUnit, options?: any): string",
+    "signature": "diffZonedAsDuration(value1: string, value2: string, unit: keyof DurationLike, options?: RoundingOptions<DateTimeUnit> & DurationStringOptions): string",
     "description": "Return the difference between two zoned datetimes as an ISO 8601 duration string,",
     "sourcePath": "packages/gmt/src/zoned/calculate/diffZonedAsDuration.ts"
   },
@@ -4645,7 +4675,7 @@
     "namespace": "zoned",
     "module": "calculate",
     "kind": "function",
-    "signature": "endOfQuarterForZoned(value: string, optionsArg?: { disambiguation?: Disambiguation; offset?: Offset; fractionalSecondDigits?: FractionalDigit; }): string",
+    "signature": "endOfQuarterForZoned(value: string, optionsArg?: { disambiguation?: \"reject\" | \"compatible\" | \"earlier\" | \"later\"; offset?: \"reject\" | \"use\" | \"prefer\" | \"ignore\"; fractionalSecondDigits?: FractionalDigit; }): string",
     "description": "Return the end of the quarter for a given zoned ISO datetime.",
     "sourcePath": "packages/gmt/src/zoned/calculate/endOfQuarterForZoned.ts"
   },
@@ -4655,7 +4685,7 @@
     "namespace": "zoned",
     "module": "calculate",
     "kind": "function",
-    "signature": "endOfZoned(value: string, unit: any, optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; fractionalSecondDigits?: FractionalDigit; disambiguation?: Disambiguation; offset?: Offset; }): string",
+    "signature": "endOfZoned(value: string, unit: DateUnit | TimeUnit, optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; fractionalSecondDigits?: FractionalDigit; disambiguation?: \"reject\" | ... 2 more ... | \"later\"; offset?: \"reject\" | ... 2 more ... | \"ignore\"; }): string",
     "description": "Return the end of the specified date-time `unit` for a given zoned ISO 8601 datetime string.",
     "sourcePath": "packages/gmt/src/zoned/calculate/endOfZoned.ts"
   },
@@ -4685,7 +4715,7 @@
     "namespace": "zoned",
     "module": "calculate",
     "kind": "function",
-    "signature": "getLocaleZonedEndOfWeek(value: string, locale: string, optionsArg?: { fractionalSecondDigits?: FractionalDigit; disambiguation?: Disambiguation; offset?: Offset; }): string",
+    "signature": "getLocaleZonedEndOfWeek(value: string, locale: string, optionsArg?: { fractionalSecondDigits?: FractionalDigit; disambiguation?: \"reject\" | \"compatible\" | \"earlier\" | \"later\"; offset?: \"reject\" | \"use\" | \"prefer\" | \"ignore\"; }): string",
     "description": "Return the end of the week containing `value`, using `locale`'s first",
     "sourcePath": "packages/gmt/src/zoned/calculate/getLocaleZonedEndOfWeek.ts"
   },
@@ -4695,7 +4725,7 @@
     "namespace": "zoned",
     "module": "calculate",
     "kind": "function",
-    "signature": "getLocaleZonedStartOfWeek(value: string, locale: string, optionsArg?: { fractionalSecondDigits?: FractionalDigit; disambiguation?: Disambiguation; offset?: Offset; }): string",
+    "signature": "getLocaleZonedStartOfWeek(value: string, locale: string, optionsArg?: { fractionalSecondDigits?: FractionalDigit; disambiguation?: \"reject\" | \"compatible\" | \"earlier\" | \"later\"; offset?: \"reject\" | \"use\" | \"prefer\" | \"ignore\"; }): string",
     "description": "Return the start of the week containing `value`, using `locale`'s",
     "sourcePath": "packages/gmt/src/zoned/calculate/getLocaleZonedStartOfWeek.ts"
   },
@@ -4735,7 +4765,7 @@
     "namespace": "zoned",
     "module": "calculate",
     "kind": "function",
-    "signature": "roundZoned(value: string, options: { smallestUnit: Temporal.SmallestUnit<\"day\" | \"hour\" | \"minute\" | \"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\">; roundingIncrement?: number; roundingMode?: Temporal.RoundingMode; }): string",
+    "signature": "roundZoned(value: string, options: { smallestUnit: SmallestUnit<\"day\" | \"hour\" | \"minute\" | \"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\">; roundingIncrement?: number; roundingMode?: RoundingMode; }): string",
     "description": "Round an ISO 8601 zoned datetime string to the specified unit.",
     "sourcePath": "packages/gmt/src/zoned/calculate/roundZoned.ts"
   },
@@ -4745,7 +4775,7 @@
     "namespace": "zoned",
     "module": "calculate",
     "kind": "function",
-    "signature": "setZoned(value: string, fields: Omit<Temporal.ZonedDateTimeLike, \"calendar\" | \"timeZone\" | \"offset\">, options?: { overflow?: Overflow; disambiguation?: Disambiguation; offset?: Offset; }): string",
+    "signature": "setZoned(value: string, fields: Omit<ZonedDateTimeLike, \"calendar\" | \"offset\" | \"timeZone\">, options?: { overflow?: \"constrain\" | \"reject\"; disambiguation?: \"reject\" | \"compatible\" | \"earlier\" | \"later\"; offset?: \"reject\" | ... 2 more ... | \"ignore\"; }): string",
     "description": "Return a zoned ISO 8601 datetime string with the given `fields` set on `value`.",
     "sourcePath": "packages/gmt/src/zoned/calculate/setZoned.ts"
   },
@@ -4765,7 +4795,7 @@
     "namespace": "zoned",
     "module": "calculate",
     "kind": "function",
-    "signature": "startOfQuarterForZoned(value: string, optionsArg?: { disambiguation?: Disambiguation; offset?: Offset; fractionalSecondDigits?: FractionalDigit; }): string",
+    "signature": "startOfQuarterForZoned(value: string, optionsArg?: { disambiguation?: \"reject\" | \"compatible\" | \"earlier\" | \"later\"; offset?: \"reject\" | \"use\" | \"prefer\" | \"ignore\"; fractionalSecondDigits?: FractionalDigit; }): string",
     "description": "Return the start of the quarter for a given zoned ISO datetime.",
     "sourcePath": "packages/gmt/src/zoned/calculate/startOfQuarterForZoned.ts"
   },
@@ -4775,7 +4805,7 @@
     "namespace": "zoned",
     "module": "calculate",
     "kind": "function",
-    "signature": "startOfZoned(value: string, unit: DateTimeUnit, optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; fractionalSecondDigits?: FractionalDigit; disambiguation?: Disambiguation; offset?: Offset; }): string",
+    "signature": "startOfZoned(value: string, unit: DateTimeUnit, optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; fractionalSecondDigits?: FractionalDigit; disambiguation?: \"reject\" | \"compatible\" | \"earlier\" | \"later\"; offset?: \"reject\" | ... 2 more ... | \"ignore\"; }): string",
     "description": "Return the start of the specified date-time `unit` for a given zoned ISO 8601 datetime string.",
     "sourcePath": "packages/gmt/src/zoned/calculate/startOfZoned.ts"
   },
@@ -4785,7 +4815,7 @@
     "namespace": "zoned",
     "module": "calculate",
     "kind": "function",
-    "signature": "subtractZoned(value: string, units: Partial<Record<DateTimeDurationUnit, number>>, optionsArg?: { disambiguation?: Disambiguation; offset?: Offset; overflow?: Overflow; }): string",
+    "signature": "subtractZoned(value: string, units: Partial<Record<keyof DurationLike, number>>, optionsArg?: { disambiguation?: \"reject\" | \"compatible\" | \"earlier\" | \"later\"; offset?: \"reject\" | ... 2 more ... | \"ignore\"; overflow?: \"constrain\" | \"reject\"; }): string",
     "description": "Subtract a temporal amount from a zoned ISO 8601 datetime string and return a zoned ISO 8601 string.",
     "sourcePath": "packages/gmt/src/zoned/calculate/subtractZoned.ts"
   },
@@ -4965,7 +4995,7 @@
     "namespace": "zoned",
     "module": "compare",
     "kind": "function",
-    "signature": "isZonedThisUnit(value: string, unit: Temporal.DateUnit, locale?: string): boolean",
+    "signature": "isZonedThisUnit(value: string, unit: DateUnit, locale?: string): boolean",
     "description": "Return true when `value`'s local calendar day falls in the same `unit` as",
     "sourcePath": "packages/gmt/src/zoned/compare/isZonedThisUnit.ts"
   },
@@ -4985,7 +5015,7 @@
     "namespace": "zoned",
     "module": "convert",
     "kind": "function",
-    "signature": "convertPlainDateTimeToZoned(value: string, timeZone: string, optionsArg?: { smallestUnit?: Temporal.ZonedDateTimeToStringOptions; disambiguation?: Disambiguation; offset?: Offset; }): string",
+    "signature": "convertPlainDateTimeToZoned(value: string, timeZone: string, optionsArg?: { smallestUnit?: SmallestUnit<\"minute\" | \"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\">; disambiguation?: \"reject\" | \"compatible\" | \"earlier\" | \"later\"; offset?: \"reject\" | ... 2 more ... | \"ignore\"; }): string",
     "description": "Attach the specified `timeZone` to a plain datetime string and return a zoned ISO 8601 datetime string.",
     "sourcePath": "packages/gmt/src/zoned/convert/convertPlainDateTimeToZoned.ts"
   },
@@ -5305,7 +5335,7 @@
     "namespace": "zoned",
     "module": "get",
     "kind": "function",
-    "signature": "getZonedNow(ianaTimezone: string, optionsArg?: { smallestUnit?: Temporal.ZonedDateTimeToStringOptions; }): string",
+    "signature": "getZonedNow(ianaTimezone: string, optionsArg?: { smallestUnit?: SmallestUnit<\"minute\" | \"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\">; }): string",
     "description": "Return the current zoned datetime for the specified IANA timeZone.",
     "sourcePath": "packages/gmt/src/zoned/get/getZonedNow.ts"
   },
@@ -5445,7 +5475,7 @@
     "namespace": "zoned",
     "module": "interval",
     "kind": "function",
-    "signature": "intervalFromDurationZoned(value: string, duration: string, anchor: \"start\" | \"end\", options?: { disambiguation?: Disambiguation; offset?: Offset; overflow?: Overflow; }): { start: string; end: string; }",
+    "signature": "intervalFromDurationZoned(value: string, duration: string, anchor: \"start\" | \"end\", options?: { disambiguation?: \"reject\" | \"compatible\" | \"earlier\" | \"later\"; offset?: \"reject\" | \"use\" | \"prefer\" | \"ignore\"; overflow?: \"constrain\" | \"reject\"; }): { ...; }",
     "description": "Construct a zoned interval from a single point plus an ISO 8601 duration, anchored at either end.",
     "sourcePath": "packages/gmt/src/zoned/interval/intervalFromDurationZoned.ts"
   },
@@ -5585,7 +5615,7 @@
     "namespace": "zoned",
     "module": "map",
     "kind": "function",
-    "signature": "mapZonedHoursInDay(anchor: string, optionsArg?: { disambiguation?: Disambiguation; offset?: Offset; }): string[]",
+    "signature": "mapZonedHoursInDay(anchor: string, optionsArg?: { disambiguation?: \"reject\" | \"compatible\" | \"earlier\" | \"later\"; offset?: \"reject\" | \"use\" | \"prefer\" | \"ignore\"; }): string[]",
     "description": "Return an array of zoned datetime strings representing each hour boundary for the 24-hour window starting at midnight of the anchor's local day.",
     "sourcePath": "packages/gmt/src/zoned/map/mapZonedHoursInDay.ts"
   },

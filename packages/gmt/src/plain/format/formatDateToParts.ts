@@ -1,4 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
+import type { DateTimeFormatOptions } from "../../types";
 import { isValidDate } from "../validate";
 
 /**
@@ -16,7 +17,7 @@ import { isValidDate } from "../validate";
  * - Returns `[]` for invalid input.
  *
  * @param value ISO PlainDate string
- * @param locale optional BCP 47 locale identifier
+ * @param locale optional BCP 47 locale identifier (default: runtime default)
  * @param options optional Intl.DateTimeFormatOptions
  * @returns array of `{ type, value }` parts, or `[]` on invalid input
  *
@@ -27,7 +28,7 @@ import { isValidDate } from "../validate";
 export function formatDateToParts(
   value: string,
   locale?: string,
-  options?: Intl.DateTimeFormatOptions,
+  options?: DateTimeFormatOptions,
 ): Array<{ type: string; value: string }> {
   if (!isValidDate(value)) {
     return [];

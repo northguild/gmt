@@ -1,5 +1,6 @@
 ---
-import { PLAYGROUND_SPECS } from "../lib/playground-spec";
+import { Code } from "@astrojs/starlight/components";
+import PlaygroundLive from "./PlaygroundLive.astro";
 
 interface Props {
   severity: "critical" | "high" | "medium";
@@ -9,12 +10,10 @@ interface Props {
   wrongSpecId?: string;
   rightCode: string;
   rightSpecId?: string;
+  disableCopy?: boolean;
 }
 
-const { severity, title, description, wrongCode, wrongSpecId, rightCode, rightSpecId } = Astro.props;
-
-const wrongSpec = wrongSpecId ? PLAYGROUND_SPECS[wrongSpecId] : undefined;
-const rightSpec = rightSpecId ? PLAYGROUND_SPECS[rightSpecId] : undefined;
+const { severity, title, description, wrongCode, wrongSpecId, rightCode, rightSpecId, disableCopy } = Astro.props;
 ---
 
 <div class="gmt-mistake">
@@ -28,19 +27,18 @@ const rightSpec = rightSpecId ? PLAYGROUND_SPECS[rightSpecId] : undefined;
   <div class="gmt-mistake-pair">
     <div class="gmt-mistake-side gmt-mistake-side--wrong">
       <h4>Wrong</h4>
-      <pre class="gmt-mistake-code"><code>{wrongCode}</code></pre>
-      {wrongSpec && <gmt-playground data-spec={JSON.stringify(wrongSpec)} data-module={wrongSpec.module} data-fn={wrongSpec.fn}></gmt-playground>}
+      <Code code={wrongCode} lang="js" class={disableCopy ? "gmt-mistake-code--no-copy" : ""} />
+      {wrongSpecId && (
+        <PlaygroundLive specId={wrongSpecId} />
+      )}
     </div>
 
     <div class="gmt-mistake-side gmt-mistake-side--right">
       <h4>Right</h4>
-      <pre class="gmt-mistake-code"><code>{rightCode}</code></pre>
-      {rightSpec && <gmt-playground data-spec={JSON.stringify(rightSpec)} data-module={rightSpec.module} data-fn={rightSpec.fn}></gmt-playground>}
+      <Code code={rightCode} lang="js" />
+      {rightSpecId && (
+        <PlaygroundLive specId={rightSpecId} />
+      )}
     </div>
   </div>
 </div>
-
-<script>
-  import { registerPlayground } from "../lib/playground-register";
-  registerPlayground();
-</script>

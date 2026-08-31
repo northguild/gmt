@@ -1,6 +1,7 @@
 // @ts-check
 import starlight from "@astrojs/starlight";
 import { defineConfig } from "astro/config";
+import { fileURLToPath } from "node:url";
 import { referenceSidebar } from "./src/generated/reference/sidebar.ts";
 
 // DOX-A2 deploys to Cloudflare Workers' default *.workers.dev subdomain (no
@@ -8,9 +9,18 @@ import { referenceSidebar } from "./src/generated/reference/sidebar.ts";
 // dependency) warns on every build.
 const SITE = "https://gmt-dox.northguild.workers.dev";
 
+const gmtPkg = fileURLToPath(new URL("../../packages/gmt/dist", import.meta.url));
+
 export default defineConfig({
   site: SITE,
-  vite: { build: { cssTarget: ["chrome107","edge107","firefox104","safari16"], cssMinify: "esbuild" } },
+  vite: {
+    build: { cssTarget: ["chrome107","edge107","firefox104","safari16"], cssMinify: "esbuild" },
+    resolve: {
+      alias: {
+        "@northguild/gmt": gmtPkg,
+      },
+    },
+  },
   integrations: [
     starlight({
       title: "@northguild/gmt",
@@ -94,7 +104,8 @@ export default defineConfig({
         "./src/styles/gmt-shell.css", // typography + layout frame
         "./src/styles/gmt-content.css", // .sl-markdown-content + EC + search
         "./src/styles/gmt-controls.css", // buttons, focus, selection, scrollbar
-        "./src/styles/gmt-playground.css", // live playground island (DOX-B1a)
+        "./src/styles/gmt-playground.css", // mistake component styles
+        "./src/styles/gmt-live-playground.css", // textarea editor playground (DOX-B1 POC)
         "./src/styles/gmt-light.css", // floating [data-theme="light"] overrides
       ],
     }),

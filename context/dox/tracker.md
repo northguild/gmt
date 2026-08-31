@@ -1,6 +1,6 @@
 ## GitHub Issues
 
-The 23 sub-stories map onto 13 GitHub issues (#130–#142). Each issue appears
+The 22 sub-stories map onto 13 GitHub issues (#130–#142). Each issue appears
 once below; its `Story` column lists every sub-story that folds into it. Start a
 branch by naming the sub-story ID (e.g. `DOX-A3a`) — the agent resolves it to the
 issue number here and the full spec in `issues/<letter>.md`.
@@ -14,7 +14,7 @@ issue number here and the full spec in `issues/<letter>.md`.
   content work with a different skill profile and does not compete with component work.
 
 **An issue closes when its last sub-story lands, not its first.** Do not close #132 when
-`DOX-A3a` ships — `DOX-A3b` is still open against it in Tier 1. Same for #133 and #135.
+`DOX-A3a` ships — `DOX-A3b` is still open against it in Tier 1. Same for #133.
 
 **No changesets, no publish column.** `apps/dox` is private and is not published to
 npm, so unlike `context/roadmap/`, these stories do not need a `.changeset/*.md` entry —
@@ -28,8 +28,8 @@ normal repo convention and does need a changeset.
 | 2     | DOX-A2                                      | #131         | Done        |
 | 3     | DOX-A3 (DOX-A3a, DOX-A3b)                   | #132         | Done        |
 | 4     | DOX-A5                                      | #134         | Done        |
-| 5     | DOX-A4 (DOX-A4a, DOX-A4b, DOX-A4c, DOX-A4d) | #133         | In Progress |
-| 6     | DOX-B1 (DOX-B1a, DOX-B1b)                   | #135         | In Progress |
+| 5     | DOX-A4 (DOX-A4a, DOX-A4b, DOX-A4c, DOX-A4d) | #133         | Done        |
+| 6     | DOX-B1 (DOX-B1a)                            | #135         | Done        |
 | 7     | DOX-B2 (DOX-B2a, DOX-B2b, DOX-B2c, DOX-B2d) | #136         | Not started |
 | 8     | DOX-D1                                      | #140         | Not started |
 | 9     | DOX-D2                                      | #141         | Not started |

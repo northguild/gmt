@@ -4,8 +4,8 @@ export default defineConfig({
   test: {
     name: "dox",
     globals: true,
-    environment: "node",
     root: ".",
-    include: ["scripts/**/*.test.ts"],
+    include: ["scripts/**/*.test.ts", "src/**/*.test.ts"],
+    environment: "node",
   },
 });

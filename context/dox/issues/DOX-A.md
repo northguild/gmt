@@ -270,21 +270,23 @@ already-accurate documentation into a browsable site.
   page per directory.
 - Sidebar via Starlight's `autogenerate: { directory: 'reference' }` — the `src/` tree
   is already a correct taxonomy (namespace → module → function), so nav is free.
-- The same run emits three further artifacts, making four consumers of one extraction:
-  - `gmt-corpus.json` — the same content as retrieval chunks, each carrying the URL of
-    the page it came from. `DOX-A3b`'s `llms-full.txt` is built from this, and Tier 6's
-    retrieval reads from it if that tier is reached.
-  - A **route manifest** — the set of every URL this run generated. Consumed here by a
-    build-time link check, by `DOX-A3b`'s AI surface, and defensively by `DOX-C3a` if
-    Tier 6 is reached, so a hallucinated citation degrades to plain text instead of a
-    404. This is cheap here because the generator already knows every route it
-    produced; see `context/dox/overview.md` §2 "Citation integrity". Emit it as a typed
-    module (a `ReadonlySet<string>`), not raw JSON, so the client gets type safety for
-    free.
-  - The parsed `{ call, result, note }` triples themselves as widget seed data —
-    `DOX-B2a` embeds a playground into every one seeded from this.
-- Building the site, the corpus, the manifest, and the widget seeds from one extraction
-  is what guarantees they cannot drift.
+- The same run emits two further artifacts, making three consumers of one extraction:
+   - `gmt-corpus.json` — the same content as retrieval chunks, each carrying the URL of
+     the page it came from. `DOX-A3b`'s `llms-full.txt` is built from this, and Tier 6's
+     retrieval reads from it if that tier is reached.
+   - A **route manifest** — the set of every URL this run generated. Consumed here by a
+     build-time link check, by `DOX-A3b`'s AI surface, and defensively by `DOX-C3a` if
+     Tier 6 is reached, so a hallucinated citation degrades to plain text instead of a
+     404. This is cheap here because the generator already knows every route it
+     produced; see `context/dox/overview.md` §2 "Citation integrity". Emit it as a typed
+     module (a `ReadonlySet<string>`), not raw JSON, so the client gets type safety for
+     free.
+ - `LIVE_PLAYGROUND_TEMPLATES` — a raw call-string template per function (e.g.
+   `addDate("2024-03-15", { days: 5 })`) that seeds the `<PlaygroundLive>` textarea.
+   Synthesized from the first `@example` if present, otherwise from the function's
+   `playgroundSpec` param values.
+- Building the site, the corpus, the manifest, and the playground templates from one
+  extraction is what guarantees they cannot drift.
 - Generated MDX is gitignored and produced by a prebuild step wired into the `build`
   target.
 - **Ship a stub for the generated modules.** The corpus and route manifest are

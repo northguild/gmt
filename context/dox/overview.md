@@ -195,25 +195,24 @@ Tier 5 the Worker has no `main` at all: it is assets-only, with
 `not_found_handling: "404-page"`. See "Hosting" below for why this matters more than it
 looks.
 
-**Data flow.** One build step, four consumers. `build-reference.ts` walks
+**Data flow.** One build step, three consumers. `build-reference.ts` walks
 `packages/gmt/src` with the TypeScript compiler API and emits:
 
 - **(a)** one MDX page per exported function into the Starlight content collection;
 - **(b)** `gmt-corpus.json` — the same content as retrieval chunks, each carrying the URL
   of the page it came from;
 - **(c)** a **route manifest** — the set of every URL (a) produced;
-- **(d)** the seed data for widgets — the parsed `{ call, result, note }` triple behind
-  every one of the 1,860 examples.
 
 The site is built from (a). `llms-full.txt` is built from (b), and so is retrieval if
 Tier 6 lands. Every link is validated against (c) — at build time as a link check, and at
 runtime against anything a model emits, so a hallucinated citation renders as plain text
-rather than a 404 (see "Citation integrity" below). Tier 2's auto-embedded playgrounds are
-seeded from (d).
+rather than a 404 (see "Citation integrity" below). Tier 2's auto-embedded playgrounds use
+`LIVE_PLAYGROUND_TEMPLATES` — a raw call-string template per function that seeds the
+textarea with a starting expression.
 
 That shared artifact is the load-bearing idea. The superseded plan built a corpus for a
-model only; here the corpus, the site, the AI surface and the widget seeds are all the
-same extraction, which means they cannot drift.
+model only; here the corpus, the site, the AI surface and the playground templates are all
+the same extraction, which means they cannot drift.
 
 Widgets run the **real** library — `apps/dox` depends on `@northguild/gmt` via
 `workspace:*`, so a playground's output is never simulated and can never drift from
@@ -233,7 +232,7 @@ shipped behavior.
 | **Hosting**        | **Cloudflare Workers static assets.** One deployment serves the site and `/api/*`                                       |
 | **AI surface**     | **`llms.txt` + `llms-full.txt` + per-page raw `.md`** (DOX-A3b), emitted from the same corpus                           |
 | **Scenario layer** | **Real-world task pages** with live proof of failure (DOX-A4b–d), from the 63 graded `SKILL.md` mistakes                |
-| **Widgets**        | **Live on every example**, plus purpose-built DST / interval / converter inspectors. State encodes to the URL           |
+| **Widgets**        | **Live on every example** via a simple textarea island — type a JS expression, run the real library, see the result. No URL state, no permalinks. |
 | **3D**             | **Interactive globe** — click a zone, read live time, offset and DST state. A product feature, not decoration           |
 | Model              | Gemini 2.5 Flash was the 2026-08-21 choice. **Re-open in DOX-C1** — widgets mean tool calls, which changes the calculus |
 | Key custody        | Same-origin Worker. Key never reaches the client                                                                        |
@@ -289,7 +288,7 @@ What was taken from it, and what was deliberately not:
 
 The deepest idea worth restating, because it is the same principle DOX-A3a already runs on:
 **generate, don't maintain — one source of truth, now four consumers** (pages, AI surface,
-widget seeds, retrieval).
+playground templates, retrieval).
 
 ### Citation integrity — a structural guarantee, not a test
 
@@ -584,7 +583,7 @@ intended routing for `apps/dox` changes in `DOX-A1` rather than leaving it accid
 
 ## 5. Work breakdown
 
-**23 units of work across 7 tiers, mapped onto the original 13 GitHub issues — no new
+**22 units of work across 7 tiers, mapped onto the original 13 GitHub issues — no new
 issues are created.** New work enters as a lettered sub-story on the issue it naturally
 belongs to (`DOX-A3a`/`DOX-A3b`, `DOX-B2a`–`DOX-B2d`, …), the same pattern
 `context/roadmap/` already used for `J0a`/`J0b`. Sub-story IDs are for planning
@@ -599,7 +598,7 @@ legibility only; GitHub still tracks work at the issue level.
 | ---- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
 | 0    | `DOX-A1`, `DOX-A2`, `DOX-A3a` — skeleton, Cloudflare deploy, reference generator                                        | **The MVP: a live, searchable docs site**            |
 | 1    | `DOX-A5` tokens, `DOX-A4a` guides, `DOX-A3b` `llms.txt`/raw markdown                                                    | Substance, and an AI-readable surface                |
-| 2    | `DOX-B1a`/`b` playground + permalinks, `DOX-B2a`–`d` auto-embed + DST inspector + interval visualizer + converter bench | **The widget platform** — every example runnable     |
+| 2    | `DOX-B1a` textarea playground, `DOX-B2a`–`d` auto-embed + DST inspector + interval visualizer + converter bench | **The widget platform** — every example runnable     |
 | 3    | `DOX-D1`, `DOX-D2` — glass, borders, chamfer, motion                                                                    | The HUD identity                                     |
 | 4    | `DOX-E1a`/`b` — interactive globe, multi-zone scrubber                                                                  | **The flagship** — a product feature, not a flourish |
 | 5    | `DOX-A4b`–`d` — scenario template, ported pitfalls, mentor index                                                        | The real-world teaching layer                        |
@@ -612,10 +611,10 @@ once `DOX-B1a` exists, since its content-writing skill profile does not compete 
 component work in Tiers 2–4. Each story is independently verifiable; do not start the next
 sub-story on an issue until the current one's Definition of Done passes.
 
-**Four issues now span more than one tier** as a direct consequence of folding 23 units of
-work into 13 issues: `#132` (`DOX-A3`, Tier 0 + 1), `#133` (`DOX-A4`, Tier 1 + 5), `#135`
-and `#136` (`DOX-B1`/`DOX-B2`, both Tier 2 but `DOX-B1b` lands after `DOX-B2a`–`d`). **An
-issue closes when its last sub-story lands, not its first** — see `tracker.md`.
+**Three issues now span more than one tier** as a direct consequence of folding 22 units of
+work into 13 issues: `#132` (`DOX-A3`, Tier 0 + 1), `#133` (`DOX-A4`, Tier 1 + 5), and
+`#136` (`DOX-B2`, Tier 2). **An issue closes when its last sub-story lands, not its
+first** — see `tracker.md`.
 
 Unlike `context/roadmap/`, these stories do **not** publish to npm — `apps/dox` is
 private. No changesets are needed unless a story also modifies `packages/gmt`.
@@ -728,7 +727,7 @@ private. No changesets are needed unless a story also modifies `packages/gmt`.
 - **A Cloudflare account is now a hard dependency for deployment, not only for chat.**
   The Tier 0 MVP cannot ship without one. This was previously a Tier 6-only dependency;
   confirm account access before starting DOX-A1.
-- **Scope honesty.** 13 stories became 23 units of work. Tier 0 is three of them and is
+- **Scope honesty.** 13 stories became 22 units of work. Tier 0 is three of them and is
   genuinely small — a few days, not weeks. Every tier after Tier 1 remains independently
   droppable without losing the docs, which is the property this epic depends on and which
   must be preserved as the tier structure evolves.

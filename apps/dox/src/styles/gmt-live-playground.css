@@ -1,0 +1,176 @@
+/*
+ * GMT Live Playground — textarea editor for Intl format functions (DOX-B1 POC).
+ *
+ * Multi-line call layout:
+ *   method(                      [▶]
+ *     editable args...
+ *   )
+ */
+
+.gmt-live-playground {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  margin: var(--gmt-space-6) 0;
+  padding: var(--gmt-space-4);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+  background: var(--gmt-glass-tint-subtle);
+  font-family: var(--gmt-font-mono);
+}
+
+.gmt-live-playground-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-1);
+}
+
+.gmt-live-playground-label {
+  font-size: 0.65rem;
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-live-playground-call {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 0;
+  /* padding: var(--gmt-space-1) var(--gmt-space-3); */
+  background: var(--gmt-fill-subtle);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  transition:
+    background var(--gmt-duration-fast) var(--gmt-easing),
+    border-color var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-live-playground-call:hover {
+  border-color: var(--gmt-border-strong);
+}
+
+.gmt-live-playground-call:focus-within {
+  background: var(--gmt-fill-2);
+  border-color: var(--gmt-border-strong);
+}
+
+.gmt-live-playground-top-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.gmt-live-playground-fn {
+  font-family: var(--gmt-font-mono);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--gmt-ice);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.gmt-live-playground-paren {
+  font-family: var(--gmt-font-mono);
+  font-size: 0.85rem;
+  line-height: 1.2;
+  color: var(--gmt-ice-dim);
+  user-select: none;
+}
+
+.gmt-live-playground-run {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  color: var(--gmt-void);
+  background: var(--gmt-cyan);
+  border: 1px solid var(--gmt-cyan);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  cursor: pointer;
+  transition:
+    background var(--gmt-duration-fast) var(--gmt-easing),
+    border-color var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-live-playground-run:hover {
+  background: var(--gmt-cyan-bright);
+  border-color: var(--gmt-cyan-bright);
+}
+
+.gmt-live-playground-run:focus {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--gmt-void),
+    0 0 0 4px var(--gmt-cyan);
+}
+
+.gmt-live-playground-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 1.5rem;
+  padding: 0 var(--gmt-space-3);
+  padding-left: calc(var(--gmt-space-3) + 0.85rem);
+  font-family: var(--gmt-font-mono);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--gmt-ice);
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: vertical;
+}
+
+.gmt-live-playground-bottom-row {
+  display: flex;
+  padding: 0;
+  margin: 0;
+}
+
+.gmt-live-playground-result {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.gmt-playground-live {
+  color: var(--gmt-spring);
+  text-shadow: 0 0 8px color(from var(--gmt-spring) srgb r g b / 0.4);
+}
+
+.gmt-playground-sentinel {
+  display: inline-block;
+  padding: var(--gmt-space-1) var(--gmt-space-2);
+  color: var(--gmt-signal);
+  background: var(--gmt-signal-fill);
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  font-size: 0.8rem;
+  text-shadow: 0 0 6px color(from var(--gmt-signal) srgb r g b / 0.3);
+}
+
+[data-theme="light"] .gmt-playground-live {
+  color: var(--gmt-spring);
+  text-shadow: none;
+}
+
+[data-theme="light"] .gmt-playground-sentinel {
+  background: var(--gmt-signal-fill);
+  color: var(--gmt-signal);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gmt-live-playground-call,
+  .gmt-live-playground-textarea,
+  .gmt-live-playground-run {
+    transition: none;
+  }
+}

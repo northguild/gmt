@@ -4,8 +4,13 @@ import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
 import { isValidUtc } from "../../utc/validate";
 
 export interface FormatCalendarUnixOptions {
-  epochUnit?: "milliseconds" | "seconds";
+  style?: "long" | "short" | "narrow";
+  numeric?: "always" | "auto";
+  largestUnit?: "year" | "month" | "week" | "day";
+  roundingMethod?: "expand" | "trunc" | "floor" | "ceil";
+  /** Anchor point for the relative day comparison. Accepts ISO strings or numeric epochs. */
   reference?: string | number;
+  epochUnit?: "milliseconds" | "seconds";
   /**
    * IANA timezone used for both the calendar-day comparison and the
    * rendered clock time. Resolved via `normalizeTimeZone` — `"local"` for

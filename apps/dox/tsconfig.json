@@ -3,7 +3,8 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "~/*": ["src/*"]
+      "~/*": ["src/*"],
+      "@northguild/gmt/*": ["../../packages/gmt/dist/*"]
     }
   },
   "include": [".astro/types.d.ts", "**/*"],

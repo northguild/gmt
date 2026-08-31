@@ -2,10 +2,10 @@ import { Temporal } from "@js-temporal/polyfill";
 import { joinDateTimeConnector, normalizeDateTime } from "../../internal";
 import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
 import { toInstantFromUtc } from "../../internal/toInstantFromUtc";
+import type { CalendarOptions } from "../../types";
 import { isValidUtc } from "../validate";
 
-export interface FormatCalendarUtcOptions {
-  reference?: string;
+export interface FormatCalendarUtcOptions extends CalendarOptions {
   /**
    * IANA timezone used for both the calendar-day comparison and the
    * rendered clock time. Resolved via `normalizeTimeZone` — `"local"` for

@@ -9,16 +9,4 @@ export interface CorpusEntry {
   sourcePath: string;
 }
 
-export interface WidgetExample {
-  call: string;
-  result: string;
-  note?: string;
-}
-
-export interface WidgetSeed {
-  route: string;
-  fnName: string;
-  examples: WidgetExample[];
-}
-
 export type RouteManifest = Set<string>;

@@ -1,9 +1,9 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { joinDateTimeConnector, normalizeDateTime } from "../../internal";
+import type { CalendarOptions } from "../../types";
 import { isValidDateTime } from "../validate";
 
-export interface FormatCalendarOptions {
-  reference?: string;
+export interface FormatCalendarOptions extends CalendarOptions {
   /**
    * `Intl.DateTimeFormatOptions` `timeStyle` for the time-of-day half.
    * "full" is deliberately not offered here: it appends a `timeZoneName`

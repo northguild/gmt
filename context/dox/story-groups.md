@@ -1,6 +1,6 @@
 # Story Group Summaries
 
-**23 units of work across 7 tiers, mapped onto the same 13 GitHub issues (#130–#142) —
+**22 units of work across 7 tiers, mapped onto the same 13 GitHub issues (#130–#142) —
 no new issues are created.** New work enters as a lettered sub-story on the issue it
 naturally belongs to (`DOX-A3a`/`DOX-A3b`, `DOX-B2a`–`DOX-B2d`, …), following the
 `J0a`/`J0b` sub-ID precedent already used in `context/roadmap/`. Each story ships
@@ -105,15 +105,16 @@ against unstyled Starlight first would mean restyling them twice.
 
 ## Tier 2 — The widget platform
 
-Six stories. This is the epic's differentiator: every one of 1,860 examples runs the
+Five stories. This is the epic's differentiator: every one of 1,860 examples runs the
 **real**, shipped library, live, in the browser, with no API key, no server, and no
 model. No competing date-library documentation site does this at this scale.
 
-- **DOX-B1a. `<Playground>` island** — An interactive component that runs the **real**
-  `@northguild/gmt` in the browser: editable inputs, live output, never simulated.
-  Because `apps/dox` depends on the package via `workspace:*`, output can never drift
-  from shipped behavior. Sentinel-aware rendering is the point, not a detail: an
-  invalid-input result (`""` / `null` / `false` / `[]`) renders as
+- **DOX-B1a. `<PlaygroundLive>` textarea island** — A simple interactive component that
+  runs the **real** `@northguild/gmt` in the browser: a textarea where the user types a
+  JS expression (e.g. `addDate("2024-03-15", { days: 5 })`), a run button, and a live
+  output — never simulated. Because `apps/dox` depends on the package via `workspace:*`,
+  output can never drift from shipped behavior. Sentinel-aware rendering is the point, not
+  a detail: an invalid-input result (`""` / `null` / `false` / `[]`) renders as
   `⟨ NO SIGNAL — invalid input ⟩`, not a blank field. A blank box teaches nothing; the
   signal-lost state teaches GMT's sentinel contract. Distinguish it from a legitimately
   empty result (an interval function correctly returning `[]`) — see overview.md §3
@@ -121,9 +122,10 @@ model. No competing date-library documentation site does this at this scale.
   (`@northguild/gmt/plain/calculate`) — **not** per-function, which
   `packages/gmt/package.json`'s `"./plain/*/*": null` forbids, and **not** at namespace
   level, which drags in the 2.98 MB polyfill via the namespace barrels' `export * from
-"@js-temporal/polyfill"`. **Check whether native `Temporal` support is broad enough to
+  "@js-temporal/polyfill"`. **Check whether native `Temporal` support is broad enough to
   drop the polyfill entirely** before committing to its bundle cost — this may already be
-  free.
+  free. The textarea approach means no URL state, no permalink system, no complex input
+  widgets — just type and run.
 - **DOX-B2a. Auto-embed** — Extend `DOX-A3a`'s generator to mark up each `@example` so it
   renders as a runnable playground seeded with that example's own arguments. All 1,860
   examples become interactive with zero per-page authoring. This is the payoff for
@@ -148,10 +150,6 @@ model. No competing date-library documentation site does this at this scale.
   switching, and a regex tester over the 22 exported `regex` consts. Consolidates the
   "try it on my own input" surface that would otherwise be scattered across many
   individual reference pages.
-- **DOX-B1b. Widget permalinks.** New. Every widget from this tier encodes its current
-  state into the URL. Without this, a playground is a toy; with it, a playground is
-  exactly as linkable as a reference page, which is the entire premise the site is built
-  on (see overview.md §1).
 
 ## Tier 3 — HUD identity
 

@@ -19,11 +19,6 @@ export interface FormatRelativeUnixOptions {
   style?: "long" | "short" | "narrow";
   numeric?: "always" | "auto";
   largestUnit?: RelativeUnit;
-  /**
-   * How the computed distance rounds to the display unit: "floor" rounds toward the
-   * earlier boundary, "ceil" toward the later boundary, "round" (default) to the nearest —
-   * matches current behavior when omitted.
-   */
   roundingMethod?: RelativeRoundingMethod;
   epochUnit?: "milliseconds" | "seconds";
   reference?: string | number;

@@ -1,5 +1,5 @@
 ---
-import { PLAYGROUND_SPECS } from "../lib/playground-spec";
+import PlaygroundLive from "./PlaygroundLive.astro";
 
 interface Props {
   title: string;
@@ -12,9 +12,6 @@ interface Props {
 }
 
 const { title, description, naiveCode, brokenSpecId, explanation, gmtCode, fixedSpecId } = Astro.props;
-
-const brokenSpec = brokenSpecId ? PLAYGROUND_SPECS[brokenSpecId] : undefined;
-const fixedSpec = PLAYGROUND_SPECS[fixedSpecId];
 ---
 
 <h2>{title}</h2>
@@ -29,8 +26,8 @@ const fixedSpec = PLAYGROUND_SPECS[fixedSpecId];
 
   <div class="gmt-scenario-part">
     <h3>Watch it break</h3>
-    {brokenSpec ? (
-      <gmt-playground data-spec={JSON.stringify(brokenSpec)} data-module={brokenSpec.module} data-fn={brokenSpec.fn}></gmt-playground>
+    {brokenSpecId ? (
+      <PlaygroundLive specId={brokenSpecId} />
     ) : (
       <p class="gmt-scenario-note">The naive approach silently produces wrong results — there is no GMT equivalent to demonstrate because the failure is <em>not using GMT</em>.</p>
     )}
@@ -48,11 +45,6 @@ const fixedSpec = PLAYGROUND_SPECS[fixedSpecId];
 
   <div class="gmt-scenario-part">
     <h3>Same widget, working</h3>
-    <gmt-playground data-spec={JSON.stringify(fixedSpec)} data-module={fixedSpec.module} data-fn={fixedSpec.fn}></gmt-playground>
+    <PlaygroundLive specId={fixedSpecId} />
   </div>
 </div>
-
-<script>
-  import { registerPlayground } from "../lib/playground-register";
-  registerPlayground();
-</script>
