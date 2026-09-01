@@ -29,7 +29,7 @@
 .sl-markdown-content pre {
   /* background handled by gmt-glass.css (translucent + backdrop-filter) */
   border: 1px solid var(--gmt-hairline);
-  border-radius: var(--gmt-radius-md);
+  border-radius: var(--gmt-radius-lg);
   corner-shape: bevel;
   position: relative;
 }
@@ -312,8 +312,8 @@ dialog > .dialog-frame {
 
 .sl-markdown-content [role="tabpanel"] .frame.frame.frame pre {
   border-top-left-radius: 0;
-  border-top-right-radius: 8px;
-  border-bottom-left-radius: 8px;
+  border-top-right-radius: var(--gmt-radius-lg);
+  border-bottom-left-radius: var(--gmt-radius-lg);
 }
 
 /* CardGrid wrapper — no border or background */

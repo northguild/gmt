@@ -1,0 +1,83 @@
+---
+title: "Why GMT?"
+description: "Data-driven comparison of GMT against legacy date libraries — test volume, API surface, locale coverage, and testing rigor."
+template: splash
+---
+
+import {
+  localeMatrixSvg,
+  namespaceDistributionSvg,
+  testExecutionSvg,
+} from "../../../scripts/render-charts";
+import ChartContainer from "../../components/ChartContainer.astro";
+import TimezoneMap from "../../components/TimezoneMap.astro";
+
+`@northguild/gmt` is not the latest entry in a crowded field — it is a
+fundamentally different bet about what a date/time library should guarantee.
+The pages below make that concrete with data drawn from the library itself.
+
+## CI test execution volume
+
+The most direct measure of testing rigor is how many times the library is
+actually executed in CI. GMT runs its full suite — every function, every
+locale, every timezone — across 17 locales, 10 timezones, and 2 Node
+versions on every PR.
+
+<ChartContainer
+  svg={testExecutionSvg}
+  title="CI executions per library"
+  caption="GMT: 334,020 executions (16,701 tests × 17 locales × 10 timezones × 2 Node). Competitors: 386–11,703 combined."
+  naturalWidth={640}
+/>
+
+That is not a marginal difference. It is three orders of magnitude more
+execution against a surface area that is itself larger.
+
+## API surface by namespace
+
+GMT exposes 504 public functions across six namespaces — `plain`, `zoned`,
+`unix`, `utc`, `duration`, and `regex` — each generated from the same
+TypeScript source and verified by the same test suite.
+
+<ChartContainer
+  svg={namespaceDistributionSvg}
+  title="Public functions by namespace"
+  caption="504 functions total. Every namespace shares the same implementation contract: ISO 8601 strings in, typed values out, no Date object."
+  naturalWidth={640}
+/>
+
+## Timezone coverage
+
+GMT tests against 10 timezones chosen not for geographic spread but for offset coverage — from UTC−11 (Pacific/Niue) to UTC+14 (Pacific/Apia). That 25-hour window means that at any given moment, at least one zone is already living in tomorrow while another is still stuck in yesterday. Date-boundary bugs — off-by-one day, wrong month rollover, DST gaps — only surface when the suite runs across this full offset range. A test that passes at UTC can fail at UTC+14 simply because the calendar date is different.
+
+<TimezoneMap
+  title="CI timezones under test"
+  caption="10 timezones spanning UTC−11 to UTC+14. Hover a dot for the current local time in ISO 8601. Times refresh every second via Temporal."
+/>
+
+## Locale matrix
+
+GMT does not test every locale — there are hundreds, and most differ only in formatting minutiae. Instead it tests a curated matrix of 17 locales chosen to stress the dimensions that actually break date libraries: script direction (LTR/RTL Arabic and Hebrew), character sets (CJK, Cyrillic, Latin), pluralization rules, and ICU data variants. The goal is not exhaustive locale coverage — it is representative coverage of every class of bug that locale-aware code can produce.
+
+<ChartContainer
+  svg={localeMatrixSvg}
+  title="Locale matrix by script family"
+  caption="17 locales across 5 script families. Latin (9), CJK (4), Arabic/Hebrew (2), Cyrillic (1), Turkic (1). Each cell shows the locale code and English name."
+/>
+
+## What this means
+
+| Dimension             | GMT                            | Legacy libraries    |
+| --------------------- | ------------------------------ | ------------------- |
+| **CI executions**     | 334,020                        | 386 – 11,703        |
+| **Locales tested**    | 17 (representative matrix)     | None                |
+| **Timezones tested**  | 10 (UTC−11 to UTC+14)          | None / partial      |
+| **Node versions**     | 22, 24                         | Single LTS          |
+| **Public functions**  | 504                            | 75 – 223            |
+| **Sentinel contract** | `""` / `null` / `false` / `[]` | Throws `RangeError` |
+
+The table is the point. GMT does not add a few convenience methods to an
+existing `Date` wrapper — it replaces the type system entirely with Temporal,
+then rebuilds the ergonomic surface on top of that guarantee. The testing
+volume exists because the contract is non-negotiable: every function, every
+locale, every timezone, every Node version, every PR.

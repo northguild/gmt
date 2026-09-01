@@ -1,0 +1,142 @@
+/*
+ * GMT chart theme — maps TanStack Charts' --ts-chart-* tokens onto the GMT
+ * palette, plus container/layout rules for embedded chart SVGs.
+ *
+ * TanStack Charts uses CSS custom properties for its default color series and
+ * a handful of surface tokens. We override them here so every chart inherits
+ * the site's cyber-blue/green identity without touching the chart definition.
+ */
+
+:root {
+  /* ---- Color series — mapped onto GMT palette ---- */
+  --ts-chart-1: var(--gmt-cyan);
+  --ts-chart-2: var(--gmt-spring);
+  --ts-chart-3: var(--gmt-teal);
+  --ts-chart-4: var(--gmt-ice);
+  --ts-chart-5: var(--gmt-cyan-bright);
+  --ts-chart-6: var(--gmt-teal);
+
+  /* ---- Locale matrix family colors ---- */
+  --gmt-family-latin: #22d3ee;
+  --gmt-family-cjk: #4ade80;
+  --gmt-family-arabic-hebrew: #0e7490;
+  --gmt-family-cyrillic: #cfeaf2;
+  --gmt-family-turkic: #67e8f9;
+
+  /* ---- Surface tokens — keep charts legible over glass ---- */
+  --ts-chart-tooltip-background: var(--gmt-surface);
+  --ts-chart-tooltip-color: var(--gmt-ice);
+  --ts-chart-tooltip-border: var(--gmt-border);
+  --ts-chart-tooltip-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+
+  /* ---- Typography ---- */
+  --ts-chart-font-family: var(--gmt-font-mono);
+}
+
+/* ---- Chart container ---- */
+
+.gmt-chart-container {
+  margin: var(--gmt-space-6) 0;
+}
+
+.gmt-chart-title {
+  font-family: var(--gmt-font-display);
+  font-size: 0.8rem;
+  font-weight: 400;
+  letter-spacing: var(--gmt-tracking-wider);
+  text-transform: uppercase;
+  color: var(--gmt-cyan);
+  margin: 0 0 var(--gmt-space-3) 0;
+}
+
+.gmt-chart-caption {
+  font-family: var(--gmt-font-mono);
+  font-size: 0.75rem;
+  color: var(--gmt-ice-dim);
+  margin: var(--gmt-space-3) 0 0 0;
+  line-height: 1.5;
+}
+
+/* ---- Embedded SVG chart ---- */
+
+.gmt-chart {
+  overflow: hidden;
+}
+
+.gmt-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+}
+
+.gmt-chart--natural svg {
+  width: var(--gmt-chart-natural-width, auto) !important;
+  max-width: 100% !important;
+}
+
+/* Glass bar treatment — semi-transparent fill + subtle stroke + depth */
+.gmt-chart .ts-chart__bar-x rect,
+.gmt-chart .ts-chart__bar-y rect {
+  fill-opacity: 0.35;
+  stroke: var(--gmt-border-strong);
+  stroke-width: 1;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
+}
+
+/* Cell tiles — locale matrix cards */
+.gmt-chart .ts-chart__cell rect {
+  stroke: var(--gmt-border-strong);
+  stroke-width: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+}
+
+/* GMT highlight bar — spring accent with slightly stronger presence */
+.gmt-chart .ts-chart__bar-x rect[fill="var(--gmt-spring)"],
+.gmt-chart .ts-chart__bar-y rect[fill="var(--gmt-spring)"] {
+  fill-opacity: 0.45;
+  stroke: var(--gmt-spring);
+  stroke-opacity: 0.6;
+}
+
+/* Ensure chart text inherits GMT typography */
+.gmt-chart text {
+  font-family: var(--gmt-font-mono);
+  fill: var(--gmt-ice);
+}
+
+.gmt-chart .ts-chart__axis text {
+  font-size: 11px;
+  fill: var(--gmt-ice-dim);
+}
+
+.gmt-chart .ts-chart__axis line,
+.gmt-chart .ts-chart__axis path {
+  stroke: var(--gmt-border);
+}
+
+.gmt-chart .ts-chart__grid line {
+  stroke: var(--gmt-hairline);
+}
+
+.gmt-chart .ts-chart__label {
+  fill: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+}
+
+/* ---- Reduced motion ---- */
+
+@media (prefers-reduced-motion: reduce) {
+  .gmt-chart * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ---- Reduced transparency ---- */
+
+@media (prefers-reduced-transparency: reduce) {
+  .gmt-chart {
+    background: var(--gmt-surface);
+  }
+}

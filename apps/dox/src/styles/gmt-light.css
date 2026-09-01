@@ -111,7 +111,14 @@ site-search button[data-open-modal] > kbd {
    content — Starlight defaults several of these to white / near-black. Sidebar
    links and code tabs are excluded (their own treatment). */
 [data-theme="light"]
-  :is(.hero, .hero-section, .banner, .page-header, [data-component="page-header"]) a,
+  :is(
+    .hero,
+    .hero-section,
+    .banner,
+    .page-header,
+    [data-component="page-header"]
+  )
+  a,
 [data-theme="light"]
   main
   a:not(.sidebar-pane a):not(#starlight__sidebar a):not([role="tab"]) {
@@ -163,4 +170,3 @@ a[rel="next"] .link-title {
 [data-theme="light"] nav[aria-labelledby="starlight__on-this-page"] a:hover {
   color: var(--gmt-ice);
 }
-

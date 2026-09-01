@@ -21,6 +21,8 @@ hero:
 import { Card, CardGrid } from "@astrojs/starlight/components";
 
 import { gmtVersion } from "~/generated/versions";
+import { testExecutionSvg } from "../../../scripts/render-charts";
+import ChartContainer from "../../components/ChartContainer.astro";
 
 Current release: **v{gmtVersion}**
 
@@ -30,7 +32,9 @@ formatting, unix conversions, timezone conversion, and validation.
 
 ## Agent prompt
 
-Paste this into your coding agent before it touches a date or time:
+Paste this into your coding agent before it touches a date or time. It uses
+[TanStack Intent](https://intent.tanstack.com) to load the skill files that ship
+inside each `@northguild/*` npm package — no manual `node_modules` traversal needed:
 
 ```
 You are working with the @northguild/gmt library — a Temporal-first date/time library
@@ -38,20 +42,29 @@ for JavaScript. Install @northguild/gmt (and, if the user wants lint enforcement
 whichever of @northguild/gmt-eslint, @northguild/gmt-oxlint, or @northguild/gmt-biome
 matches their toolchain).
 
-Every one of these packages ships its own skill files. After installing, read them
-before writing any code:
+Run the TanStack Intent CLI once to wire skill guidance into AGENTS.md:
 
-- node_modules/@northguild/gmt/skills/ — API surface, naming conventions, and Temporal
-  patterns, one skill per task (parsing, formatting, comparing, converting, durations,
-  zoned operations, and more). Also read node_modules/@northguild/gmt/skills/_artifacts/.
-- node_modules/@northguild/gmt-eslint/skills/, node_modules/@northguild/gmt-oxlint/skills/,
-  or node_modules/@northguild/gmt-biome/skills/ — whichever linter was installed, covering
-  first-time setup, migrating existing code, and CI enforcement.
+    npx @tanstack/intent@latest install
+
+Whenever a date/time or lint task arises, discover the relevant skill with:
+
+    npx @tanstack/intent@latest list
+
+The agent loads the matching skill with `intent load`. The @northguild/gmt package
+covers the core namespaces (plain, zoned, unix, utc, regex):
+
+    npx @tanstack/intent@latest load @northguild/gmt#format-date-time
+
+The linter packages use the same mechanism — load whichever one was installed:
+
+    npx @tanstack/intent@latest load @northguild/gmt-eslint#first-time-setup
 
 Ask what difficulties the user is having with JavaScript dates — this helps match them
 to the right GMT namespace (plain, zoned, unix, utc, regex). Then generate code using
 GMT's string-in/string-out API, never `new Date()`.
 ```
+
+## Key features
 
 <CardGrid stagger>
   <Card title="100% Temporal, Temporal-first" icon="star">
@@ -82,5 +95,11 @@ GMT's string-in/string-out API, never `new Date()`.
   >
     Temporal throws `RangeError` / `TypeError` on invalid data. GMT validates,
     normalizes, and prevents crashes, so your app stays robust
-  </Card>
+  </Card  >
 </CardGrid>
+
+<ChartContainer
+  svg={testExecutionSvg}
+  title="CI test execution volume"
+  caption="334,020 GMT executions (16,701 tests × 17 locales × 10 timezones × 2 Node) vs. competitors' combined 20,190."
+/>

@@ -73,3 +73,57 @@ You can also import members directly from the package root:
 ```typescript
 import { addDate, getNow, formatRelativeZoned } from "@northguild/gmt";
 ```
+
+## AI Agent Skills
+
+Every `@northguild/*` package ships [TanStack Intent](https://intent.tanstack.com)
+skill files inside the npm tarball — versioned, task-routed guidance that you can
+hand to a coding agent so it works with the right GMT API for each job.
+
+Discover and load them with the Intent CLI:
+
+```bash
+# 1. One-time setup — writes skill-loading guidance into AGENTS.md
+npx @tanstack/intent@latest install
+
+# 2. Discover all available skills from installed packages
+npx @tanstack/intent@latest list
+
+# 3. Load a specific skill into an agent session
+npx @tanstack/intent@latest load @northguild/gmt#format-date-time
+```
+
+The linter packages (`@northguild/gmt-eslint`, `@northguild/gmt-oxlint`,
+`@northguild/gmt-biome`) use the same mechanism. Intent auto-detects your package
+manager and generates the correct runner (`npx` / `pnpm dlx` / `yarn dlx` / `bunx`).
+
+To restrict which skills an agent may load, add an `intent.skills` allowlist to
+your `package.json`:
+
+```json
+{
+  "intent": {
+    "skills": ["@northguild/gmt#format-date-time", "@northguild/gmt#validate-dates"]
+  }
+}
+```
+
+### Consumer-facing skill slugs
+
+| Package | Slug | Description |
+| --- | --- | --- |
+| `@northguild/gmt` | `get-current` | Current date/time/timestamp as ISO strings |
+| `@northguild/gmt` | `parse-date-time` | Extract components from date/time strings; decode RFC 2822/5322, HTTP, SQL, RFC 3339 |
+| `@northguild/gmt` | `format-date-time` | Format date/time for display with locale support |
+| `@northguild/gmt` | `format-relative-time` | Human-friendly relative strings ("yesterday", "in 2 hours") |
+| `@northguild/gmt` | `calculate-dates` | Add/subtract, diff, clamp, business days, locale week boundaries |
+| `@northguild/gmt` | `durations` | ISO 8601 duration parsing, validation, formatting |
+| `@northguild/gmt` | `compare-dates` | Ordering, weekend/business-day checks, locale day-of-week |
+| `@northguild/gmt` | `validate-dates` | String/interval/range validation, DST transitions, interval ops |
+| `@northguild/gmt` | `zoned-date-ops` | Timezone-aware arithmetic, formatting, DST disambiguation |
+| `@northguild/gmt` | `convert-types` | plain↔zoned/unix↔UTC conversion, non-Gregorian calendars |
+| `@northguild/gmt` | `interval-ops` | Range math: containment, overlap, intersection, union, split |
+| `@northguild/gmt` | `app-integration` | Cache keys, router/query integration patterns |
+| `@northguild/gmt-eslint` / `gmt-oxlint` / `gmt-biome` | `first-time-setup` | Install and wire the lint package; verify Date-ban rules active |
+| `@northguild/gmt-eslint` / `gmt-oxlint` / `gmt-biome` | `migration-refactor` | Migrate existing code off `Date` APIs |
+| `@northguild/gmt-eslint` / `gmt-oxlint` / `gmt-biome` | `ci-enforcement` | Set up CI enforcement of lint rules |

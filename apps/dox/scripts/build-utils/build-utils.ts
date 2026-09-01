@@ -10,7 +10,6 @@
  */
 
 import ts from "typescript";
-import type { ParamSpec, ParamType } from "../../src/lib/playground-spec";
 import {
   argToValue,
   parseCallArgs,
@@ -18,6 +17,24 @@ import {
 } from "../../src/lib/playground-parsers";
 
 export type ReturnTypeKind = "string" | "number" | "boolean" | "array";
+
+export type ParamType =
+  | "string"
+  | "number"
+  | "boolean"
+  | "enum"
+  | "units"
+  | "array";
+
+export interface ParamSpec {
+  name: string;
+  label?: string;
+  type: ParamType;
+  value: string;
+  options?: string[];
+  unitValue?: string;
+  arrayType?: "number" | "string";
+}
 
 export interface ClassifiedType {
   type: ParamType;
@@ -35,7 +52,10 @@ export interface PlaygroundSpec {
 }
 
 /** Map a resolved TS type to a `ParamType`. Injected so tests can mock it. */
-export type TypeClassifier = (type: ts.Type | undefined, paramName?: string) => ClassifiedType;
+export type TypeClassifier = (
+  type: ts.Type | undefined,
+  paramName?: string,
+) => ClassifiedType;
 
 /** Resolve a single option property's TS type by name. Injected. */
 export type OptionTypeResolver = (optName: string) => ts.Type | undefined;
@@ -221,7 +241,9 @@ export function classifyType(
     const members = (type as ts.UnionType).types;
 
     // Mixed union: string-literal + number-literal → enum
-    const stringLits = members.filter((m) => m.flags & ts.TypeFlags.StringLiteral);
+    const stringLits = members.filter(
+      (m) => m.flags & ts.TypeFlags.StringLiteral,
+    );
     const numberLits = members.filter((m) => m.flags & ts.TypeFlags.NumberLike);
     if (stringLits.length > 0 && numberLits.length > 0) {
       const allLiterals: string[] = [];
@@ -265,7 +287,10 @@ export function classifyType(
   const typeStr = _checker.typeToString(type);
   if (typeStr.endsWith("[]")) {
     const elemStr = typeStr.slice(0, -2).toLowerCase();
-    return { type: "array", arrayType: elemStr.includes("number") ? "number" : "string" };
+    return {
+      type: "array",
+      arrayType: elemStr.includes("number") ? "number" : "string",
+    };
   }
 
   // Array<T> generic
@@ -277,7 +302,10 @@ export function classifyType(
   ) {
     const elemType = (type as ts.GenericType).typeArguments![0];
     const elemStr = _checker.typeToString(elemType).toLowerCase();
-    return { type: "array", arrayType: elemStr.includes("number") ? "number" : "string" };
+    return {
+      type: "array",
+      arrayType: elemStr.includes("number") ? "number" : "string",
+    };
   }
 
   if (type.flags & ts.TypeFlags.NumberLike) return { type: "number" };
@@ -287,7 +315,7 @@ export function classifyType(
   if (
     _paramName &&
     /timezone|timeZone/i.test(_paramName) &&
-    (type.flags & ts.TypeFlags.StringLike)
+    type.flags & ts.TypeFlags.StringLike
   ) {
     return { type: "enum", options: [...CURATED_TIMEZONES] };
   }
@@ -296,7 +324,7 @@ export function classifyType(
   if (
     _paramName &&
     /^calendar$/i.test(_paramName) &&
-    (type.flags & ts.TypeFlags.StringLike)
+    type.flags & ts.TypeFlags.StringLike
   ) {
     return { type: "enum", options: [...CURATED_CALENDARS] };
   }
@@ -305,7 +333,7 @@ export function classifyType(
   if (
     _paramName &&
     /numberingSystem/i.test(_paramName) &&
-    (type.flags & ts.TypeFlags.StringLike)
+    type.flags & ts.TypeFlags.StringLike
   ) {
     return { type: "enum", options: [...CURATED_NUMBERING_SYSTEMS] };
   }
@@ -316,7 +344,9 @@ export function classifyType(
     if (props.length > 0) {
       const propNames = props
         .map((p) => p.name)
-        .filter((n) => !Object.prototype.hasOwnProperty.call(Object.prototype, n));
+        .filter(
+          (n) => !Object.prototype.hasOwnProperty.call(Object.prototype, n),
+        );
 
       const propNamesSet = new Set(propNames);
       const allDtSet = new Set(ALL_DT_UNITS);
@@ -368,7 +398,9 @@ export function classifyTypeFromString(s: string): ClassifiedType {
   if (/^boolean$/.test(t)) return { type: "boolean" };
   if (t.endsWith("[]")) {
     const elem = t.slice(0, -2).trim();
-    const arrayType = /^(number|Number|bigint)$/.test(elem) ? "number" : "string";
+    const arrayType = /^(number|Number|bigint)$/.test(elem)
+      ? "number"
+      : "string";
     return { type: "array", arrayType };
   }
   if (/^("[^"]*")(?:\s*\|\s*"[^"]*")+$/.test(t)) {
@@ -410,7 +442,9 @@ export function classifyReturnType(
   sig: ts.Signature | undefined,
 ): ReturnTypeKind {
   if (!sig) return "string";
-  return classifyReturnTypeFromString(checker.typeToString(sig.getReturnType()));
+  return classifyReturnTypeFromString(
+    checker.typeToString(sig.getReturnType()),
+  );
 }
 
 /**
@@ -615,7 +649,8 @@ export function buildPlaygroundSpec(
       const unitValue = seedForUnitsParam(input.examples, params.length, info);
       spec.unitValue = unitValue ?? info.options?.[0] ?? "";
     }
-    if (info.type === "array" && info.arrayType) spec.arrayType = info.arrayType;
+    if (info.type === "array" && info.arrayType)
+      spec.arrayType = info.arrayType;
     params.push(spec);
   }
 

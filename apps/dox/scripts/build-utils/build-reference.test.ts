@@ -70,7 +70,14 @@ describe("extractFunction", () => {
     let result: FnDoc | undefined;
     sourceFile.forEachChild((node) => {
       if (ts.isFunctionDeclaration(node) && node.name?.text === "addDays") {
-        result = BR.extractFunction(checker, node, "plain", "calculate", gmtPath("plain/calculate.ts"), new Set());
+        result = BR.extractFunction(
+          checker,
+          node,
+          "plain",
+          "calculate",
+          gmtPath("plain/calculate.ts"),
+          new Set(),
+        );
       }
     });
     expect(result).toBeDefined();
@@ -84,7 +91,11 @@ describe("extractFunction", () => {
     ]);
     expect(result!.returns).toBe("The new date string.");
     expect(result!.examples).toEqual([
-      { call: 'addDays("2024-01-01", 5)', result: '"2024-01-06"', note: undefined },
+      {
+        call: 'addDays("2024-01-01", 5)',
+        result: '"2024-01-06"',
+        note: undefined,
+      },
     ]);
     expect(result!.sourcePath).toBe("plain/calculate.ts");
     expect(result!.signature).toContain("addDays");
@@ -100,8 +111,18 @@ describe("extractFunction", () => {
     const { checker, sourceFile } = compile(src);
     let result: FnDoc | undefined;
     sourceFile.forEachChild((node) => {
-      if (ts.isFunctionDeclaration(node) && node.name?.text === "formatDuration") {
-        result = BR.extractFunction(checker, node, "duration", "format", gmtPath("duration/format.ts"), new Set());
+      if (
+        ts.isFunctionDeclaration(node) &&
+        node.name?.text === "formatDuration"
+      ) {
+        result = BR.extractFunction(
+          checker,
+          node,
+          "duration",
+          "format",
+          gmtPath("duration/format.ts"),
+          new Set(),
+        );
       }
     });
     expect(result).toBeDefined();
@@ -109,7 +130,7 @@ describe("extractFunction", () => {
     expect(result!.playgroundSpec!.module).toBe("duration");
     expect(result!.playgroundSpec!.fn).toBe("formatDuration");
     expect(result!.livePlaygroundTemplate).toBeDefined();
-    expect(result!.livePlaygroundTemplate!.template).toBe('formatDuration()');
+    expect(result!.livePlaygroundTemplate!.template).toBe("formatDuration()");
   });
 });
 
@@ -130,7 +151,14 @@ describe("extractArrowFn", () => {
       if (ts.isVariableStatement(node)) {
         for (const decl of node.declarationList.declarations) {
           if (ts.isIdentifier(decl.name) && decl.name.text === "compareDates") {
-            result = BR.extractArrowFn(checker, decl, "plain", "compare", gmtPath("plain/compare.ts"), new Set());
+            result = BR.extractArrowFn(
+              checker,
+              decl,
+              "plain",
+              "compare",
+              gmtPath("plain/compare.ts"),
+              new Set(),
+            );
           }
         }
       }
@@ -160,8 +188,17 @@ describe("extractType", () => {
     const { checker, sourceFile } = compile(src);
     let result: TypeDoc | undefined;
     sourceFile.forEachChild((node) => {
-      if (ts.isTypeAliasDeclaration(node) && node.name.text === "DurationUnit") {
-        result = BR.extractType(checker, node, "types", "types", gmtPath("types/duration.ts"));
+      if (
+        ts.isTypeAliasDeclaration(node) &&
+        node.name.text === "DurationUnit"
+      ) {
+        result = BR.extractType(
+          checker,
+          node,
+          "types",
+          "types",
+          gmtPath("types/duration.ts"),
+        );
       }
     });
     expect(result).toBeDefined();
@@ -183,7 +220,13 @@ describe("extractType", () => {
     let result: TypeDoc | undefined;
     sourceFile.forEachChild((node) => {
       if (ts.isTypeAliasDeclaration(node) && node.name.text === "Local") {
-        result = BR.extractType(checker, node, "plain", "format", gmtPath("plain/format.ts"));
+        result = BR.extractType(
+          checker,
+          node,
+          "plain",
+          "format",
+          gmtPath("plain/format.ts"),
+        );
       }
     });
     expect(result).toBeDefined();
@@ -208,7 +251,13 @@ describe("extractInterface", () => {
     let result: TypeDoc | undefined;
     sourceFile.forEachChild((node) => {
       if (ts.isInterfaceDeclaration(node) && node.name.text === "DateOptions") {
-        result = BR.extractInterface(checker, node, "types", "types", gmtPath("types/options.ts"));
+        result = BR.extractInterface(
+          checker,
+          node,
+          "types",
+          "types",
+          gmtPath("types/options.ts"),
+        );
       }
     });
     expect(result).toBeDefined();
@@ -237,7 +286,13 @@ describe("extractRegex", () => {
       if (ts.isVariableStatement(node)) {
         for (const decl of node.declarationList.declarations) {
           if (ts.isIdentifier(decl.name) && decl.name.text === "yearRegex") {
-            result = BR.extractRegex(checker, decl, "regex", "regex", gmtPath("regex/dates.ts"));
+            result = BR.extractRegex(
+              checker,
+              decl,
+              "regex",
+              "regex",
+              gmtPath("regex/dates.ts"),
+            );
           }
         }
       }
@@ -259,7 +314,13 @@ describe("extractRegex", () => {
       if (ts.isVariableStatement(node)) {
         for (const decl of node.declarationList.declarations) {
           if (ts.isIdentifier(decl.name) && decl.name.text === "foo") {
-            result = BR.extractRegex(checker, decl, "plain", "validate", gmtPath("plain/validate.ts"));
+            result = BR.extractRegex(
+              checker,
+              decl,
+              "plain",
+              "validate",
+              gmtPath("plain/validate.ts"),
+            );
           }
         }
       }
@@ -312,11 +373,11 @@ describe("synthesizeTemplate", () => {
         { name: "value", type: "string", value: "P1M" },
         { name: "unit", type: "enum", value: "days" },
       ],
-      options: [
-        { name: "relativeTo", type: "string", value: "2024-02-01" },
-      ],
+      options: [{ name: "relativeTo", type: "string", value: "2024-02-01" }],
     });
-    expect(template).toBe('durationAs("P1M", "days", { relativeTo: "2024-02-01" })');
+    expect(template).toBe(
+      'durationAs("P1M", "days", { relativeTo: "2024-02-01" })',
+    );
   });
 
   it("handles array params", () => {
@@ -326,10 +387,16 @@ describe("synthesizeTemplate", () => {
       returnType: "string",
       params: [
         { name: "start", type: "string", value: "2024-01-01" },
-        { name: "unixValues", type: "array", value: "1706659200000,1704067200000" },
+        {
+          name: "unixValues",
+          type: "array",
+          value: "1706659200000,1704067200000",
+        },
       ],
     });
-    expect(template).toBe('maxUnix("2024-01-01", ["1706659200000", "1704067200000"])');
+    expect(template).toBe(
+      'maxUnix("2024-01-01", ["1706659200000", "1704067200000"])',
+    );
   });
 
   it("handles units params", () => {
@@ -355,11 +422,11 @@ describe("synthesizeTemplate", () => {
         { name: "start", type: "string", value: "2024-02-01" },
         { name: "end", type: "string", value: "2024-02-28" },
       ],
-      options: [
-        { name: "inclusiveStart", type: "boolean", value: "false" },
-      ],
+      options: [{ name: "inclusiveStart", type: "boolean", value: "false" }],
     });
-    expect(template).toBe('isBetweenDate("2024-02-29", "2024-02-01", "2024-02-28", { inclusiveStart: false })');
+    expect(template).toBe(
+      'isBetweenDate("2024-02-29", "2024-02-01", "2024-02-28", { inclusiveStart: false })',
+    );
   });
 });
 
@@ -379,12 +446,21 @@ describe("buildLivePlaygroundTemplate integration", () => {
     let doc: FnDoc | undefined;
     sourceFile.forEachChild((node) => {
       if (ts.isFunctionDeclaration(node) && node.name?.text === "addDays") {
-        doc = BR.extractFunction(checker, node, "plain", "calculate", gmtPath("plain/calculate.ts"), new Set());
+        doc = BR.extractFunction(
+          checker,
+          node,
+          "plain",
+          "calculate",
+          gmtPath("plain/calculate.ts"),
+          new Set(),
+        );
       }
     });
     expect(doc).toBeDefined();
     expect(doc!.livePlaygroundTemplate).toBeDefined();
-    expect(doc!.livePlaygroundTemplate!.template).toBe('addDays("2024-01-01", 5)');
+    expect(doc!.livePlaygroundTemplate!.template).toBe(
+      'addDays("2024-01-01", 5)',
+    );
     expect(doc!.livePlaygroundTemplate!.returnType).toBe("string");
   });
 
@@ -399,13 +475,25 @@ describe("buildLivePlaygroundTemplate integration", () => {
     const { checker, sourceFile } = compile(src);
     let doc: FnDoc | undefined;
     sourceFile.forEachChild((node) => {
-      if (ts.isFunctionDeclaration(node) && node.name?.text === "formatDuration") {
-        doc = BR.extractFunction(checker, node, "duration", "format", gmtPath("duration/format.ts"), new Set());
+      if (
+        ts.isFunctionDeclaration(node) &&
+        node.name?.text === "formatDuration"
+      ) {
+        doc = BR.extractFunction(
+          checker,
+          node,
+          "duration",
+          "format",
+          gmtPath("duration/format.ts"),
+          new Set(),
+        );
       }
     });
     expect(doc).toBeDefined();
     expect(doc!.livePlaygroundTemplate).toBeDefined();
-    expect(doc!.livePlaygroundTemplate!.template).toBe('formatDuration("", "")');
+    expect(doc!.livePlaygroundTemplate!.template).toBe(
+      'formatDuration("", "")',
+    );
   });
 
   it("sets allowEmptyArray when examples contain empty array result", () => {
@@ -418,8 +506,18 @@ describe("buildLivePlaygroundTemplate integration", () => {
     const { checker, sourceFile } = compile(src);
     let doc: FnDoc | undefined;
     sourceFile.forEachChild((node) => {
-      if (ts.isFunctionDeclaration(node) && node.name?.text === "mapZonedDatesInRange") {
-        doc = BR.extractFunction(checker, node, "zoned", "map", gmtPath("zoned/map.ts"), new Set());
+      if (
+        ts.isFunctionDeclaration(node) &&
+        node.name?.text === "mapZonedDatesInRange"
+      ) {
+        doc = BR.extractFunction(
+          checker,
+          node,
+          "zoned",
+          "map",
+          gmtPath("zoned/map.ts"),
+          new Set(),
+        );
       }
     });
     expect(doc).toBeDefined();

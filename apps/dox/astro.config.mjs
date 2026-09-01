@@ -9,12 +9,17 @@ import { referenceSidebar } from "./src/generated/reference/sidebar.ts";
 // dependency) warns on every build.
 const SITE = "https://gmt-dox.northguild.workers.dev";
 
-const gmtPkg = fileURLToPath(new URL("../../packages/gmt/dist", import.meta.url));
+const gmtPkg = fileURLToPath(
+  new URL("../../packages/gmt/dist", import.meta.url),
+);
 
 export default defineConfig({
   site: SITE,
   vite: {
-    build: { cssTarget: ["chrome107","edge107","firefox104","safari16"], cssMinify: "esbuild" },
+    build: {
+      cssTarget: ["chrome107", "edge107", "firefox104", "safari16"],
+      cssMinify: "esbuild",
+    },
     resolve: {
       alias: {
         "@northguild/gmt": gmtPkg,
@@ -74,13 +79,17 @@ export default defineConfig({
       sidebar: [
         {
           label: "Start here",
-          items: [{ slug: "install" }, { slug: "core-rules" }],
+          items: [
+            { slug: "install" },
+            { slug: "core-rules" },
+            { slug: "why-gmt" },
+          ],
         },
         {
           label: "Guides",
           items: [{ autogenerate: { directory: "guides" } }],
         },
-        { label: "Reference", items: referenceSidebar },
+        { label: "API Reference", items: referenceSidebar },
         {
           label: "Scenarios",
           items: [{ autogenerate: { directory: "scenarios" } }],
@@ -106,7 +115,10 @@ export default defineConfig({
         "./src/styles/gmt-controls.css", // buttons, focus, selection, scrollbar
         "./src/styles/gmt-playground.css", // mistake component styles
         "./src/styles/gmt-live-playground.css", // textarea editor playground (DOX-B1 POC)
+        "./src/styles/gmt-charts.css", // chart theme variables + container styles
+        "./src/styles/gmt-map.css", // timezone map layout + clock panel
         "./src/styles/gmt-light.css", // floating [data-theme="light"] overrides
+        "./src/styles/dox.css", // live component layout
       ],
     }),
   ],

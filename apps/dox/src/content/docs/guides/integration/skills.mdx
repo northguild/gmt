@@ -1,0 +1,147 @@
+---
+title: AI Agent Skills
+description: Load versioned, task-routed TanStack Intent skill files shipped in the @northguild/* npm packages to guide coding agents.
+sidebar:
+  order: 3
+---
+
+Every `@northguild/*` package ships [TanStack Intent](https://intent.tanstack.com)
+skill files (`SKILL.md`) inside the npm tarball. Each skill is a self-contained,
+versioned bundle of guidance — API surface, naming conventions, and Temporal
+patterns — routed to a specific task. Rather than hand-holding an agent through
+manual `node_modules` traversal, the Intent CLI loads the relevant skill on
+demand so the agent works with the right GMT methods for the job.
+
+## Install (one time)
+
+`intent install` writes a managed skill-loading block into `AGENTS.md` (or
+`CLAUDE.md` / `.cursorrules`) at the root of your project. The block is tagged
+`<!-- intent-skills:start -->` so future `intent` runs can update it in place:
+
+```bash
+npx @tanstack/intent@latest install
+```
+
+Intent auto-detects your package manager and generates the correct runner
+(`npx` / `pnpm dlx` / `yarn dlx` / `bunx`) in the block it writes.
+
+## Discover skills
+
+When a task arises, list every available skill across installed `@northguild/*`
+packages:
+
+```bash
+npx @tanstack/intent@latest list
+```
+
+Sample output:
+
+```
+@northguild/gmt
+  - get-current
+  - parse-date-time
+  - format-date-time
+  ...
+
+@northguild/gmt-eslint
+  - first-time-setup
+  - migration-refactor
+  - ci-enforcement
+```
+
+## Load a skill
+
+Load the skill that matches the task into the agent's context:
+
+```bash
+npx @tanstack/intent@latest load @northguild/gmt#format-date-time
+```
+
+The lint packages use the same `load <package>#<skill>` form:
+
+```bash
+npx @tanstack/intent@latest load @northguild/gmt-eslint#first-time-setup
+npx @tanstack/intent@latest load @northguild/gmt-oxlint#migration-refactor
+npx @tanstack/intent@latest load @northguild/gmt-biome#ci-enforcement
+```
+
+## Map tasks to skills
+
+For projects that want explicit routing, pass `--map` to bind a task keyword to a
+skill so `intent list` highlights the right match automatically:
+
+```bash
+npx @tanstack/intent@latest install --map "formatting=format-date-time" --map "lint=first-time-setup"
+```
+
+## Allowlist skills
+
+To restrict which skills an agent may load, add an `intent.skills` allowlist to
+your `package.json`:
+
+```json
+{
+  "intent": {
+    "skills": ["@northguild/gmt#format-date-time", "@northguild/gmt#validate-dates"]
+  }
+}
+```
+
+## Stale check (optional)
+
+Verify that loaded skills reference non-outdated source docs and regenerate the
+managed block:
+
+```bash
+npx @tanstack/intent@latest stale
+```
+
+## Consumer-facing skills
+
+These are the skills a consumer reaches for day to day. Each links to the dox
+guide that walks through the same task end-to-end.
+
+### `@northguild/gmt`
+
+| Slug | Guide | Description |
+| --- | --- | --- |
+| `get-current` | [Getting the Current Date and Time](/guides/core-date-operations/get-current/) | Current date/time/timestamp as ISO strings |
+| `parse-date-time` | [Parsing](/guides/core-date-operations/parsing/) | Extract components from date/time strings; decode RFC 2822/5322, HTTP, SQL, RFC 3339 |
+| `format-date-time` | [Formatting](/guides/core-date-operations/formatting/) | Format date/time for display with locale support |
+| `format-relative-time` | [Relative Time](/guides/core-date-operations/relative-time/) | Human-friendly relative strings ("yesterday", "in 2 hours") |
+| `calculate-dates` | [Plain Arithmetic](/guides/core-date-operations/plain-arithmetic/) | Add/subtract, diff, clamp, business days, locale week boundaries |
+| `durations` | [Durations](/guides/core-date-operations/durations/) | ISO 8601 duration parsing, validation, formatting |
+| `compare-dates` | [Comparisons](/guides/core-date-operations/comparisons/) | Ordering, weekend/business-day checks, locale day-of-week |
+| `validate-dates` | [Validation](/guides/core-date-operations/validation/) | String/interval/range validation, DST transitions, interval ops |
+| `zoned-date-ops` | [Zoned Operations](/guides/zoned-date-operations/zoned-operations/) | Timezone-aware arithmetic, formatting, DST disambiguation |
+| `convert-types` | [Converting Between Types](/guides/conversion/converting-types/) | plain↔zoned/unix↔UTC conversion, non-Gregorian calendars |
+| `interval-ops` | [Interval Basics](/guides/intervals/interval-basics/) | Range math: containment, overlap, intersection, union, split |
+| `app-integration` | [Application Integration](./app-integration/) | Cache keys, router/query integration patterns |
+
+### `@northguild/gmt-eslint` / `gmt-oxlint` / `gmt-biome`
+
+| Slug | Guide | Description |
+| --- | --- | --- |
+| `first-time-setup` | [Lint Package Selection](/guides/integration/linting/) | Install and wire the lint package; verify Date-ban rules active |
+| `migration-refactor` | — | Migrate existing code off `Date` APIs |
+| `ci-enforcement` | — | Set up CI enforcement of lint rules |
+
+## Maintainer / lifecycle skills
+
+The `@northguild/gmt` package also ships skills intended for contributors, not
+consumers. These are not listed by `intent install` for end users and have no
+corresponding dox guide:
+
+| Slug | Description |
+| --- | --- |
+| `issue-creation` | For reporting issues to maintainers |
+| `pr-contribution` | For contributing PRs |
+| `new-method-implementation` | For contributing new methods |
+| `unit-test-generation` | For writing/updating tests |
+| `api-expansion-workflow` | For handling feature-requests |
+
+## See also
+
+- [Lint Package Selection](./linting/) — choose the right `@northguild` lint package
+- [Application Integration](./app-integration/) — cache keys, routers, tables
+- [Core Rules](/core-rules/) — the contract the skills enforce

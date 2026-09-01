@@ -1,0 +1,67 @@
+---
+interface Props {
+  title?: string;
+  caption?: string;
+}
+
+const { title, caption } = Astro.props;
+---
+
+<div class="gmt-timezone-map">
+  {title && <h3 class="gmt-chart-title">{title}</h3>}
+  <div id="tz-map-host" class="gmt-chart gmt-glass"></div>
+  <div id="tz-clock-panel" class="gmt-clock-panel"></div>
+  {caption && <p class="gmt-chart-caption">{caption}</p>}
+</div>
+
+<script>
+  import { initTimezoneMap } from "../lib/timezone-map";
+  import { TIMEZONES } from "../lib/timezones";
+
+  const host = document.getElementById("tz-map-host");
+  const clockPanel = document.getElementById("tz-clock-panel");
+
+  if (host && clockPanel) {
+    clockPanel.innerHTML = "";
+
+    for (const tz of TIMEZONES) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "gmt-clock-entry";
+      btn.dataset.tzId = tz.id;
+      btn.innerHTML = `
+        <span class="gmt-clock-row1">
+          <span class="gmt-clock-name">${tz.id}</span>
+          <span class="gmt-clock-offset" data-tz-field="offset"></span>
+        </span>
+        <span class="gmt-clock-time" data-tz-field="time"></span>
+      `;
+      clockPanel.appendChild(btn);
+    }
+
+    const setSelected = (id: string | null) => {
+      const buttons = clockPanel.querySelectorAll<HTMLElement>("[data-tz-id]");
+      buttons.forEach((b) => {
+        if (b.dataset.tzId === id) b.classList.add("selected");
+        else b.classList.remove("selected");
+      });
+    };
+
+    initTimezoneMap(host, clockPanel)
+      .then((mapHost) => {
+        clockPanel.addEventListener("click", (event) => {
+          const target = event.target as HTMLElement | null;
+          const btn = target?.closest<HTMLElement>("[data-tz-id]");
+          if (!btn) return;
+          const id = btn.dataset.tzId;
+          if (!id) return;
+          mapHost.focusTimezone(id);
+          setSelected(id);
+        });
+        host.addEventListener("click", () => {
+          setSelected(null);
+        });
+      })
+      .catch(() => {});
+  }
+</script>

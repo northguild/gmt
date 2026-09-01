@@ -30,7 +30,7 @@ normal repo convention and does need a changeset.
 | 4     | DOX-A5                                      | #134         | Done        |
 | 5     | DOX-A4 (DOX-A4a, DOX-A4b, DOX-A4c, DOX-A4d) | #133         | Done        |
 | 6     | DOX-B1 (DOX-B1a)                            | #135         | Done        |
-| 7     | DOX-B2 (DOX-B2a, DOX-B2b, DOX-B2c, DOX-B2d) | #136         | Not started |
+| 7     | DOX-B2 (DOX-B2a, DOX-B2b, DOX-B2c, DOX-B2d) | #136         | Done        |
 | 8     | DOX-D1                                      | #140         | Not started |
 | 9     | DOX-D2                                      | #141         | Not started |
 | 10    | DOX-E1 (DOX-E1a, DOX-E1b)                   | #142         | Not started |

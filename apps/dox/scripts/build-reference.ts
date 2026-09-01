@@ -24,9 +24,9 @@ import {
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
-import * as BU from "./build-utils/build-utils";
 import type { LivePlaygroundTemplate } from "../src/lib/playground-spec";
 import type { PlaygroundSpec } from "./build-utils/build-utils";
+import * as BU from "./build-utils/build-utils";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(__dirname, "..");
@@ -83,9 +83,7 @@ function pageSlug(ns: string, mod: string, name: string): string {
   return `reference/${ns}/${mod}/${name}`;
 }
 
-function importPath(ns: string, mod: string): string {
-  return `@northguild/gmt/${ns}/${mod}`;
-}
+const ROOT = "@northguild/gmt";
 
 // ---------------------------------------------------------------------------
 // Docs
@@ -381,7 +379,9 @@ function buildPlaygroundSpec(
       {
         classifyParamType: (name) => {
           const sp = sigParams.find((s) => s.name === name);
-          const t = sp ? checker.getTypeOfSymbolAtLocation(sp, node) : undefined;
+          const t = sp
+            ? checker.getTypeOfSymbolAtLocation(sp, node)
+            : undefined;
           return BU.classifyType(checker, t, name);
         },
         optionPropertyType: (name) =>
@@ -414,7 +414,12 @@ export function synthesizeTemplate(spec: PlaygroundSpec): string {
         args.push(JSON.stringify(p.value));
         break;
       case "array":
-        args.push(`[${p.value.split(",").map(v => JSON.stringify(v.trim())).join(", ")}]`);
+        args.push(
+          `[${p.value
+            .split(",")
+            .map((v: string) => JSON.stringify(v.trim()))
+            .join(", ")}]`,
+        );
         break;
       case "units":
         args.push(`{ ${p.unitValue}: ${p.value} }`);
@@ -434,7 +439,11 @@ export function synthesizeTemplate(spec: PlaygroundSpec): string {
           val = o.value || "0";
           break;
         case "enum":
-          val = o.value ? JSON.stringify(o.value) : (o.options?.[0] ? JSON.stringify(o.options[0]) : JSON.stringify(""));
+          val = o.value
+            ? JSON.stringify(o.value)
+            : o.options?.[0]
+              ? JSON.stringify(o.options[0])
+              : JSON.stringify("");
           break;
         default:
           val = o.value ? JSON.stringify(o.value) : JSON.stringify("");
@@ -468,14 +477,23 @@ function buildLivePlaygroundTemplate(
     doc.playgroundSpec?.allowEmptyArray ??
     (returnType === "array" &&
       doc.examples.some((e) => e.result.trim() === "[]"));
-  return { module, fn: doc.name, template, returnType, allowEmptyArray };
+  return {
+    module,
+    fn: doc.name,
+    template,
+    returnType,
+    allowEmptyArray,
+  };
 }
 
 // ---------------------------------------------------------------------------
 // Regex example generation
 // ---------------------------------------------------------------------------
 
-export function generateRegexExamples(pattern: string, name: string): Example[] {
+export function generateRegexExamples(
+  pattern: string,
+  name: string,
+): Example[] {
   let re: RegExp;
   try {
     re = new RegExp(pattern);
@@ -697,7 +715,12 @@ export function extractFnBody(
     sourcePath: relative(gmtSrc, file).split("/").join("/"),
   };
   doc.playgroundSpec = buildPlaygroundSpec(checker, sig, node, doc);
-  doc.livePlaygroundTemplate = buildLivePlaygroundTemplate(checker, sig, doc, node);
+  doc.livePlaygroundTemplate = buildLivePlaygroundTemplate(
+    checker,
+    sig,
+    doc,
+    node,
+  );
   return doc;
 }
 
@@ -869,7 +892,6 @@ function buildUsedBy(docs: Doc[]): Map<string, string[]> {
 
 function renderFn(doc: FnDoc, docs: Doc[]): string {
   const slug = pageSlug(doc.namespace, doc.module, doc.name);
-  const ip = importPath(doc.namespace, doc.module);
   const src = `${GH_BASE}/${doc.sourcePath}`;
 
   const lines: string[] = [];
@@ -884,10 +906,6 @@ function renderFn(doc: FnDoc, docs: Doc[]): string {
   lines.push("");
   lines.push("```ts");
   lines.push(doc.signature);
-  lines.push("```");
-  lines.push("");
-  lines.push("```ts");
-  lines.push(`import { ${doc.name} } from "${ip}";`);
   lines.push("```");
   lines.push("");
 
@@ -924,7 +942,9 @@ function renderFn(doc: FnDoc, docs: Doc[]): string {
       const defaultText = o.description
         ? `\`${escapeMd(o.description)}\``
         : "—";
-      lines.push(`| \`${o.name}\` | \`${escapeMd(o.type)}\` | ${defaultText} |`);
+      lines.push(
+        `| \`${o.name}\` | \`${escapeMd(o.type)}\` | ${defaultText} |`,
+      );
     }
     lines.push("");
   }
@@ -947,27 +967,23 @@ function renderFn(doc: FnDoc, docs: Doc[]): string {
   }
 
   if (doc.examples.length) {
+    lines.push(`import PlaygroundLive from "~/components/PlaygroundLive.astro";`);
+    lines.push("");
     lines.push(`## Examples`);
     lines.push("");
+    const ex = doc.examples[0];
     lines.push("```ts");
-    for (const ex of doc.examples) {
-      if (ex.result.includes("\n")) {
-        lines.push(ex.call);
-        lines.push(ex.result);
-      } else {
-        lines.push(ex.call + (ex.result ? ` // ${ex.result}` : ""));
-      }
+    lines.push(`import { ${doc.name} } from "${ROOT}/${doc.namespace}/${doc.module}";`);
+    lines.push("");
+    if (ex.result.includes("\n")) {
+      lines.push(ex.call);
+      lines.push(ex.result);
+    } else {
+      lines.push(ex.call + (ex.result ? ` // ${ex.result}` : ""));
     }
     lines.push("```");
     lines.push("");
-  }
-
-  if (doc.livePlaygroundTemplate) {
-    lines.push(`## Playground`);
-    lines.push("");
-    lines.push(`import PlaygroundLive from "~/components/PlaygroundLive.astro";`);
-    lines.push("");
-    lines.push(`<PlaygroundLive specId=${JSON.stringify(doc.name)} />`);
+    lines.push(`<PlaygroundLive specId="${doc.name}" />`);
     lines.push("");
   }
 
@@ -1011,7 +1027,7 @@ function renderType(doc: TypeDoc, usedBy: Map<string, string[]>): string {
   }
 
   if (doc.isColocated && doc.members.length) {
-    const ip = importPath(doc.namespace, doc.module);
+    const ip = ROOT;
     lines.push("```ts");
     lines.push(`import type { ${doc.name} } from "${ip}";`);
     lines.push("```");
@@ -1053,7 +1069,7 @@ function renderType(doc: TypeDoc, usedBy: Map<string, string[]>): string {
 
 function renderRegex(doc: RegexDoc): string {
   const slug = pageSlug(doc.namespace, doc.module, doc.name);
-  const ip = importPath(doc.namespace, doc.module);
+  const ip = ROOT;
   const src = `${GH_BASE}/${doc.sourcePath}`;
 
   const lines: string[] = [];
@@ -1067,16 +1083,16 @@ function renderRegex(doc: RegexDoc): string {
   lines.push(`const ${doc.name}: RegExp = ${doc.pattern};`);
   lines.push("```");
   lines.push("");
-  lines.push("```ts");
-  lines.push(`import { ${doc.name} } from "${ip}";`);
-  lines.push("```");
-  lines.push("");
   if (doc.description) {
     lines.push(escapeMd(doc.description));
     lines.push("");
   }
   if (doc.examples.length) {
     lines.push(`## Examples`);
+    lines.push("");
+    lines.push("```ts");
+    lines.push(`import { ${doc.name} } from "${ip}";`);
+    lines.push("```");
     lines.push("");
     lines.push("```ts");
     for (const ex of doc.examples) {
@@ -1202,10 +1218,10 @@ function buildSidebar(moduleSymbols: Map<string, SymbolEntry[]>): string {
 
 function main() {
   const outputs = [
-      join(outGen, "gmt-corpus.json"),
-      join(outGen, "route-manifest.ts"),
-      join(outGen, "corpus.ts"),
-      join(outGen, "live-playground-templates.ts"),
+    join(outGen, "gmt-corpus.json"),
+    join(outGen, "route-manifest.ts"),
+    join(outGen, "corpus.ts"),
+    join(outGen, "live-playground-templates.ts"),
   ];
   for (const out of outputs) {
     if (!existsSync(out)) {
@@ -1380,8 +1396,7 @@ export const corpus: CorpusEntry[] = data as CorpusEntry[];
 `;
   writeFileSync(join(outGen, "corpus.ts"), corpusTs);
 
-  // 4. live playground templates — one raw call-string template per function,
-  // for the <PlaygroundLive> textarea editor.
+  // 4. live playground templates — one template per function.
   const templatesRecord: Record<string, LivePlaygroundTemplate> = {};
   for (const d of dedupedDocs) {
     if (d.kind === "function" && d.livePlaygroundTemplate) {

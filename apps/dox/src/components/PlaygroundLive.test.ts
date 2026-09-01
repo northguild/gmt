@@ -3,8 +3,12 @@
 /// <reference types="vitest/jsdom" />
 
 import { describe, expect, it } from "vitest";
-import { evaluateArg, renderResult, sentinelFor } from "../lib/playground-client";
-import { parseCallArgs, argToValue } from "../lib/playground-parsers";
+import {
+  evaluateArg,
+  renderResult,
+  sentinelFor,
+} from "../lib/playground-client";
+import { argToValue, parseCallArgs } from "../lib/playground-parsers";
 
 // ---------------------------------------------------------------------------
 // playground-parsers (shared module)
@@ -16,7 +20,11 @@ describe("playground-parsers", () => {
       expect(parseCallArgs("f(a, b, c)")).toEqual(["a", "b", "c"]);
     });
     it("ignores commas inside brackets and strings", () => {
-      expect(parseCallArgs('f("a,b", "x[y,z]", c)')).toEqual(['"a,b"', '"x[y,z]"', "c"]);
+      expect(parseCallArgs('f("a,b", "x[y,z]", c)')).toEqual([
+        '"a,b"',
+        '"x[y,z]"',
+        "c",
+      ]);
     });
   });
 
@@ -79,7 +87,7 @@ describe("sentinelFor", () => {
   it("returns [] for array when allowEmptyArray is false", () => {
     expect(sentinelFor("array", false)).toEqual([]);
   });
-  it("returns \"\" for array when allowEmptyArray is true", () => {
+  it('returns "" for array when allowEmptyArray is true', () => {
     expect(sentinelFor("array", true)).toBe("");
   });
   it("returns empty string for string", () => {
@@ -132,12 +140,17 @@ describe("run() flow", () => {
     document.body.appendChild(container);
 
     const mockMod = { addDays: (_v: string, _d: number) => "2024-01-06" };
-    const mockModules: Record<string, () => Promise<Record<string, unknown>>> = {
-      "plain/calculate": () => Promise.resolve(mockMod),
-    };
+    const mockModules: Record<string, () => Promise<Record<string, unknown>>> =
+      {
+        "plain/calculate": () => Promise.resolve(mockMod),
+      };
 
-    const textarea = container.querySelector(".gmt-live-playground-textarea") as HTMLTextAreaElement;
-    const outputEl = container.querySelector(".gmt-live-playground-result") as HTMLElement;
+    const textarea = container.querySelector(
+      ".gmt-live-playground-textarea",
+    ) as HTMLTextAreaElement;
+    const outputEl = container.querySelector(
+      ".gmt-live-playground-result",
+    ) as HTMLElement;
 
     const modKey = textarea.dataset.module!;
     const fnName = textarea.dataset.fn!;
@@ -152,10 +165,7 @@ describe("run() flow", () => {
     const result = fn(...args);
 
     const sentinel = sentinelFor(returnType, allowEmptyArray);
-    const isSentinel =
-      result === sentinel &&
-      result !== 0 &&
-      result !== false;
+    const isSentinel = result === sentinel && result !== 0 && result !== false;
     renderResult(outputEl, result, isSentinel);
 
     expect(outputEl.textContent).toBe("2024-01-06");
@@ -177,7 +187,9 @@ describe("run() flow", () => {
     `;
     document.body.appendChild(container);
 
-    const outputEl = container.querySelector(".gmt-live-playground-result") as HTMLElement;
+    const outputEl = container.querySelector(
+      ".gmt-live-playground-result",
+    ) as HTMLElement;
     renderResult(outputEl, "", true);
     expect(outputEl.textContent).toBe("NO SIGNAL");
 

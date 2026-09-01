@@ -18,12 +18,19 @@
   },
   "dependencies": {
     "@astrojs/starlight": "0.41.9",
+    "@js-temporal/polyfill": "^0.5.1",
     "@northguild/gmt": "workspace:*",
-    "astro": "7.2.7"
+    "@tanstack/charts": "^0.16.0",
+    "astro": "7.2.7",
+    "d3-geo": "^3.1.1",
+    "topojson-client": "^3.1.0",
+    "world-atlas": "^2.0.2"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
     "@open-wc/testing": "^5.0.0",
+    "@types/d3-geo": "^3.1.1",
+    "@types/topojson-client": "^3.1.5",
     "jsdom": "^30.0.1",
     "oxlint": "^1.78.0",
     "tsx": "^4.23.0",

@@ -173,7 +173,6 @@ starlight-menu-button button:hover,
 ::-webkit-scrollbar-thumb {
   background: var(--gmt-scrollbar-thumb);
   border: 4px solid var(--gmt-scrollbar-thumb);
-  border-radius: 0.5px;
 }
 
 ::-webkit-scrollbar-thumb:hover,
@@ -197,6 +196,97 @@ html.is-scrolling ::-webkit-scrollbar-thumb {
 [data-theme="light"] html.is-scrolling ::-webkit-scrollbar-thumb {
   background: var(--gmt-border-strong);
   border-color: var(--gmt-border-strong);
+}
+
+/*
+ * Table horizontal scrollbars — round the bottom corners of track + thumb to
+ * seat them inside the table's border-bottom-radius: var(--gmt-radius-lg)
+ * (gmt-content.css:184). Scoped to :horizontal so vertical scrollbars keep the
+ * global radius. corner-shape: bevel can't be applied to ::-webkit-scrollbar-*
+ * pseudo-elements (they accept only a restricted property set), so we match
+ * with border-radius alone.
+ */
+.sl-markdown-content table::-webkit-scrollbar-track:horizontal {
+  border-bottom-left-radius: var(--gmt-radius-lg);
+  border-bottom-right-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+}
+
+.sl-markdown-content table::-webkit-scrollbar-thumb:horizontal {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-bottom-left-radius: var(--gmt-radius-lg);
+  border-bottom-right-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+}
+
+/*
+ * <pre> horizontal scrollbars — round the bottom corners of track + thumb to
+ * seat them inside the code block's border-bottom-radius: var(--gmt-radius-lg)
+ * (gmt-content.css:32). Scoped to :horizontal so vertical scrollbars keep the
+ * global radius. corner-shape: bevel can't be applied to ::-webkit-scrollbar-*
+ * pseudo-elements, so we match with border-radius alone.
+ */
+.sl-markdown-content pre::-webkit-scrollbar-track:horizontal {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-bottom-left-radius: var(--gmt-radius-lg);
+  border-bottom-right-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+}
+.sl-markdown-content pre::-webkit-scrollbar-thumb:horizontal {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-bottom-left-radius: var(--gmt-radius-lg);
+  border-bottom-right-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+}
+
+/*
+ * Left sidebar vertical scrollbar — square on the left (against the content),
+ * rounded on the right (outer edge) with --gmt-radius-lg. Scoped to :vertical
+ * so the horizontal scrollbar (if any) keeps the global radius. corner-shape:
+ * bevel can't be applied to ::-webkit-scrollbar-* pseudo-elements, so we match
+ * with border-radius alone.
+ */
+.sidebar-pane::-webkit-scrollbar-track:vertical,
+#starlight__sidebar::-webkit-scrollbar-track:vertical {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-top-right-radius: var(--gmt-radius-lg);
+  border-bottom-right-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+}
+
+.sidebar-pane::-webkit-scrollbar-thumb:vertical,
+#starlight__sidebar::-webkit-scrollbar-thumb:vertical {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-top-right-radius: var(--gmt-radius-lg);
+  border-bottom-right-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+}
+
+/*
+ * Body (app-level) vertical scrollbar — rounded on the left, square on the right
+ * (toward the content). The opposite of the sidebar's treatment. corner-shape:
+ * bevel can't be applied to ::-webkit-scrollbar-* pseudo-elements, so we match
+ * with border-radius alone.
+ */
+body::-webkit-scrollbar-track:vertical {
+  border-top-right-radius: var(--gmt-radius-lg);
+  border-bottom-right-radius: var(--gmt-radius-lg);
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  corner-shape: bevel;
+}
+
+body::-webkit-scrollbar-thumb:vertical {
+  border-top-right-radius: var(--gmt-radius-lg);
+  border-bottom-right-radius: var(--gmt-radius-lg);
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  corner-shape: bevel;
 }
 
 /* Reduced motion ---- */

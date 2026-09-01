@@ -130,10 +130,11 @@ describe("llms.txt surface", () => {
 
     // Build the same sections llms.txt.ts builds — derive guide links from
     // the same glob so the test validates the source's actual output.
-    const RAW_PAGES = import.meta.glob(
-      "../src/content/docs/**/*.{md,mdx}",
-      { query: "?raw", import: "default", eager: true },
-    ) as Record<string, string>;
+    const RAW_PAGES = import.meta.glob("../src/content/docs/**/*.{md,mdx}", {
+      query: "?raw",
+      import: "default",
+      eager: true,
+    }) as Record<string, string>;
     const guideLinks = Object.entries(RAW_PAGES)
       .filter(([path]) => path.includes("/content/docs/guides/"))
       .map(([path, raw]) => {
@@ -196,9 +197,10 @@ describe("llms.txt surface", () => {
           /^https:\/\/gmt-dox\.northguild\.workers\.dev/,
           "",
         );
-        expect(mistakeAllowList.has(slug), `mistake allow-list has ${slug}`).toBe(
-          true,
-        );
+        expect(
+          mistakeAllowList.has(slug),
+          `mistake allow-list has ${slug}`,
+        ).toBe(true);
       } else {
         // Guide URLs checked against allow-list (keep .md for guides)
         const slug = url.replace(

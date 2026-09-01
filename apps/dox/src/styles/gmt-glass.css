@@ -21,9 +21,9 @@ header {
 .sidebar-pane,
 #starlight__sidebar {
   background: var(--gmt-fill);
-  border-right: 1px solid var(--gmt-border);
   backdrop-filter: blur(var(--gmt-blur));
   -webkit-backdrop-filter: blur(var(--gmt-blur));
+  border-right: none;
 }
 
 /* Mobile "On this page" bar — same ice glass as the sidebar (fill comes from

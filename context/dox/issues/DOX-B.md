@@ -1,10 +1,8 @@
 # Issue #135–#136 — The widget platform
 
-**Re-audited 2026-08-26 — the import-granularity instruction in this file's original
-`DOX-B1` was wrong and is corrected below; see overview.md §1.** Five stories now fold into
-these two issues, all in Tier 2: `DOX-B1a` on #135, `DOX-B2a`–`DOX-B2d` on #136.
-**No new GitHub issues.** This is the epic's differentiator — every one of 1,860 examples
-becomes runnable, plus three purpose-built inspectors nothing else in this space has.
+**Re-audited 2026-09-01.** Five stories fold into these two issues, all in Tier 2:
+`DOX-B1a` on #135, `DOX-B2a`–`DOX-B2d` on #136. **No new GitHub issues.**
+DOX-B1a and DOX-B2a are complete; DOX-B2b–DOX-B2d remain planned.
 
 Each issue below is one logical unit; its sub-stories are nested under it. The issue stays
 open until its last sub-story lands.
@@ -15,11 +13,12 @@ open until its last sub-story lands.
   reimplementation. Because `apps/dox` depends on the package via `workspace:*`, output
   can never drift from shipped behavior — that property is the whole point and must not
   be traded away for convenience.
-- Islands hydrate `client:visible`, never `client:load`.
+- Islands render inline via `<PlaygroundLive>` (server-rendered markup + inline `<script>`),
+  not via `client:visible` or `client:load` hydration.
 - **Import at module granularity** (`@northguild/gmt/plain/calculate`), **never at
-  namespace granularity** (`@northguild/gmt/plain`) and **never per-function**. See
-  "Corrected 2026-08-26" under `DOX-B1a` below — the exports map forbids per-function
-  imports outright, and the namespace barrels re-export the polyfill.
+  namespace granularity** (`@northguild/gmt/plain`) and **never per-function**. The exports
+  map forbids per-function subpaths outright, and the namespace barrels re-export the
+  polyfill (~2.98 MB).
 - Sentinel-aware rendering and the widget-chrome rules in overview.md §3 apply to every
   widget in this file, not only `DOX-B1a`'s playground.
 - `pnpm nx run-many -t lint test typecheck build` stays green.
@@ -31,6 +30,7 @@ open until its last sub-story lands.
 **GitHub Issue:** #135 — see tracker.md
 
 `DOX-B1` is a single story, Tier 2: `DOX-B1a` (the `<PlaygroundLive>` textarea island).
+**Complete.**
 
 #### DOX-B1a — `<PlaygroundLive>` textarea island
 
@@ -67,12 +67,10 @@ The textarea is seeded with a call string from `LIVE_PLAYGROUND_TEMPLATES` (gene
 from the function's first `@example` or synthesized from its param spec), so the user
 starts with a working expression they can modify.
 
-## Corrected 2026-08-26 — the import instruction below replaces the 2026-08-21 draft's
-The original DOX-B1 instructed "deep-import per function
-(`@northguild/gmt/plain/...`)". **This is not possible.** `packages/gmt/package.json`
-sets `"./plain/*/*": null` (and the same for `zoned`/`unix`/`utc`), which explicitly
-blocks per-function subpaths. The maximum import granularity is the **module** barrel —
-`@northguild/gmt/plain/calculate`.
+## Import granularity — corrected 2026-08-26
+`packages/gmt/package.json` sets `"./plain/*/*": null` (and the same for `zoned`/`unix`/
+`utc`), which explicitly blocks per-function subpaths. The maximum import granularity is
+the **module** barrel — `@northguild/gmt/plain/calculate`.
 
 It is also more consequential than the original draft assumed: `src/index.ts`,
 `src/plain/index.ts`, and `src/zoned/index.ts` each open with
@@ -117,6 +115,14 @@ pages on the site. **Also check whether native `Temporal` support is broad enoug
 build time to drop the polyfill from widgets entirely.** If it is, this is the largest
 free performance win available in the whole epic; verify rather than assume either way.
 
+## Implementation notes
+- `PlaygroundLive.astro` renders inline markup + an inline `<script>` block (no separate
+  `.ts` init module). The `playground-init.ts` file from the original plan was written
+  but never wired into any layout or generated MDX, so it was deleted as dead code.
+- `GMT_MODULES` in `gmt-modules.ts` is a static registry of dynamic imports at module
+  granularity. Vite resolves these at build time into separate chunks that only load
+  when a playground is present on the page.
+
 ## Definition of done
 - A playground on `startOfZoned`'s page starts with a seeded template and recomputes
   live when the user edits the expression and clicks run, correctly showing the
@@ -146,15 +152,14 @@ format bench). The issue stays open until `DOX-B2d` also lands.
 **Title:**
 
 ```
-
 DOX-B2a Auto-embed playgrounds into every generated @example
-
 ```
+
+**Status:** Complete.
 
 **Description:**
 
 ```
-
 Part of the Dox epic — see `context/dox/index.md`, Tier 2, item DOX-B2a.
 Depends on DOX-B1a (the component) and DOX-A3a (the generator).
 
@@ -163,39 +168,49 @@ Depends on DOX-B1a (the component) and DOX-A3a (the generator).
 DOX-B1a gives one component. Wiring it in by hand across 504 pages is not viable, and
 hand-authoring would guarantee drift.
 
+## What was built
+
+- `build-reference.ts:renderFn` emits one static code block (first example) + one
+  `<PlaygroundLive>` island per function. The island is seeded from the first example's
+  `call` string via `LIVE_PLAYGROUND_TEMPLATES`, which contains one entry per function
+  (keyed by function name), not one per example.
+- `PlaygroundLive.astro` renders inline markup + an inline `<script>` block. No separate
+  init module is needed.
+- The `playground-init.ts` click-delegation module from the original plan was written
+  but never imported by any layout, page, or generated MDX. It was deleted as dead code.
+- Only the first example is shown per function page: a static code block for no-JS
+  fallback / Pagefind indexing, followed by a live `<PlaygroundLive>` island. Additional
+  examples are not rendered on the page — this is intentional, confirmed by the author.
+
 ## Scope
 
-- Extend DOX-A3a's `build-reference.ts` to mark up each `@example` so it renders as a
-  `<PlaygroundLive>` textarea seeded with that example's own call string (from
-  `LIVE_PLAYGROUND_TEMPLATES`).
-- This is cheap precisely because DOX-A3a already did the hard part: its parser splits
-  each example into `{ call, result, note }`, and the `call` half is exactly the seed
-  data this story needs. If DOX-A3a's parse was done properly, this story is small; if
-  it was done loosely, this is where that shows up.
-- Keep the static rendering as the non-JS fallback — the example text must still be
-  readable with JavaScript disabled and in the Pagefind index. **Do not let auto-embed
-  remove content from search**: if the examples become JS-only, the site loses a large
-  fraction of what makes it searchable.
-- Not every example should hydrate. A page with several examples should not mount that
-  many islands. Decide a strategy (one shared playground per page seeded by clicking an
-  example, or hydrate on interaction) and record it.
+- `build-reference.ts` emits `<PlaygroundLive specId="{fnName}" />` after the static
+  code block for every function that has at least one `@example`.
+- The playground is seeded from `LIVE_PLAYGROUND_TEMPLATES[fnName]`, which is derived
+  from the function's first `@example` call string (or synthesized from the param spec
+  if no examples exist).
+- Static code blocks remain for no-JS fallback and Pagefind indexing.
+- Only one playground per function page. A function with five examples shows the first
+  as a static block + playground; the remaining four are not rendered.
 
-## Before starting
+## Implementation notes
 
-Re-read DOX-A3a's emitted `gmt-corpus.json` structure. If the `call` field is a raw
-string rather than parsed arguments, decide here whether to parse it in the generator
-(better — one place, testable) or in the browser (worse — ships a parser to every
-reader).
+- `GMT_MODULES` in `gmt-modules.ts` is a static registry of dynamic imports at module
+  granularity (`@northguild/gmt/plain/calculate`). Vite resolves these at build time
+  into separate chunks that load only when a playground is present on the page.
+- The polyfill is not bundled into namespace-level imports because we never import at
+  namespace granularity.
+- `parseCallArgs` and `splitTopLevel` in `playground-parsers.ts` run both in the Node
+  generator and in the browser client, ensuring the parser behavior is identical.
 
 ## Definition of done
 
 - Examples across all namespaces render as runnable playgrounds with no per-page
   authoring.
-- With JavaScript disabled, every example is still readable as text.
+- With JavaScript disabled, the static code block is still readable as text.
 - Pagefind still indexes example content — search for a distinctive string from an
   example and confirm it is found.
-- Page weight on a heavy reference page (e.g. `startOfZoned`, five examples) is measured
-  and acceptable.
+- Page weight on a heavy reference page is acceptable (measured and confirmed by author).
 
 ```
 

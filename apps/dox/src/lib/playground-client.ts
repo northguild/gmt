@@ -8,7 +8,7 @@ export function evaluateArg(raw: string): unknown {
   const t = raw.trim();
   if (!t) return "";
   try {
-    return new Function('"use strict"; return (' + t + ');')();
+    return new Function('"use strict"; return (' + t + ");")();
   } catch {
     return undefined;
   }

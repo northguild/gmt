@@ -98,4 +98,6 @@ if (previous === source) {
 
 mkdirSync(dirname(outPath), { recursive: true });
 writeFileSync(outPath, source);
-console.log("[guides] wrote dst-disambiguation.md from docs/dst-disambiguation.md");
+console.log(
+  "[guides] wrote dst-disambiguation.md from docs/dst-disambiguation.md",
+);

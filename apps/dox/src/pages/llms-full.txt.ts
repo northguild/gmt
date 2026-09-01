@@ -125,7 +125,13 @@ export const GET: APIRoute = ({ site }: APIContext) => {
     .filter((p): p is NonNullable<typeof p> => p != null)
     .sort((a, b) => a.url.localeCompare(b.url));
 
-  const allPages = [...startPages, ...guidePages, ...scenarioPages, ...mistakePages, ...refPages];
+  const allPages = [
+    ...startPages,
+    ...guidePages,
+    ...scenarioPages,
+    ...mistakePages,
+    ...refPages,
+  ];
 
   return new Response(
     renderLlmsFull({
