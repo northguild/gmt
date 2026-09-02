@@ -7,6 +7,7 @@ import {
   classifyType,
   classifyTypeFromString,
   CURATED_CALENDARS,
+  CURATED_LOCALES,
   CURATED_NUMBERING_SYSTEMS,
   CURATED_TIMEZONES,
   defaultValue,
@@ -141,18 +142,18 @@ describe("resolveRestParam", () => {
   });
   it("resolves a single optional scalar rest tuple", () => {
     expect(resolveRestParam("[stepDays?: number]")).toEqual([
-      { name: "stepDays", inner: "number" },
+      { name: "stepDays", inner: "number", optional: true },
     ]);
   });
   it("resolves a required single-element tuple", () => {
     expect(resolveRestParam("[rest: string]")).toEqual([
-      { name: "rest", inner: "string" },
+      { name: "rest", inner: "string", optional: false },
     ]);
   });
   it("splits a multi-element rest tuple into one element each", () => {
-    expect(resolveRestParam("[a: string, b: number]")).toEqual([
-      { name: "a", inner: "string" },
-      { name: "b", inner: "number" },
+    expect(resolveRestParam("[a: string, b?: number]")).toEqual([
+      { name: "a", inner: "string", optional: false },
+      { name: "b", inner: "number", optional: true },
     ]);
   });
 });
@@ -497,7 +498,7 @@ describe("buildPlaygroundSpec", () => {
     expect(spec.params).toEqual([
       { name: "startZonedDateTime", type: "string", value: "a[UTC]" },
       { name: "endZonedDateTime", type: "string", value: "b[UTC]" },
-      { name: "stepDays", type: "number", value: "2" },
+      { name: "stepDays", type: "number", value: "2", optional: true },
     ]);
     expect(spec.options).toBeUndefined();
     expect(spec.returnType).toBe("array");
@@ -987,13 +988,25 @@ describe("classifyType (checker-backed — calendar/numberingSystem)", () => {
     });
   });
 
-  it("does not classify unrelated string params as calendar/numberingSystem", () => {
+  it("classifies a locale param as enum with the curated locale matrix", () => {
     const src = `
       function f(locale: string): void {}
     `;
     const { checker, sourceFile } = compile(src);
     const types = paramTypes(checker, sourceFile, "f");
     expect(classifyType(checker, types[0], "locale")).toEqual({
+      type: "enum",
+      options: [...CURATED_LOCALES],
+    });
+  });
+
+  it("does not classify unrelated string params as calendar/locale", () => {
+    const src = `
+      function f(pattern: string): void {}
+    `;
+    const { checker, sourceFile } = compile(src);
+    const types = paramTypes(checker, sourceFile, "f");
+    expect(classifyType(checker, types[0], "pattern")).toEqual({
       type: "string",
     });
   });

@@ -2,18 +2,8 @@ import { Temporal } from "@js-temporal/polyfill";
 import { normalizeDateTime } from "../../internal/normalizeDateTime";
 import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
 import { resolveRelativeRounding } from "../../internal/resolveRelativeRounding";
-import type { RelativeRoundingMethod } from "../../types";
+import type { RelativeRoundingMethod, RelativeUnit } from "../../types";
 import { isValidUtc } from "../../utc/validate";
-
-// Intl.RelativeTimeFormatUnit includes "quarter" which Temporal doesn't support.
-type RelativeUnit =
-  | "year"
-  | "month"
-  | "week"
-  | "day"
-  | "hour"
-  | "minute"
-  | "second";
 
 export interface FormatRelativeUnixOptions {
   style?: "long" | "short" | "narrow";

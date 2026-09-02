@@ -1,0 +1,187 @@
+/*
+ * Interval Algebra Visualizer widget (DOX-B2c).
+ *
+ * Card/section/controls/codeframe/output chrome lives in gmt-widget.css —
+ * this sheet holds only what's specific to intervals: the six-row timeline
+ * (A, B, then a mini result bar per operation), the draggable handles, the
+ * axis, and the per-operation labels.
+ */
+
+/* ---------------------------------------------------------------------------
+ * Timeline — six aligned rows sharing one 0-100% scale
+ * --------------------------------------------------------------------------- */
+
+.gmt-interval-timeline {
+  padding: var(--gmt-space-2) 0;
+}
+
+.gmt-interval-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-2);
+}
+
+.gmt-interval-row {
+  display: flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+}
+
+.gmt-interval-row-label {
+  flex: 0 0 auto;
+  width: 5.5rem;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.7rem;
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+  text-align: right;
+}
+
+.gmt-interval-track {
+  position: relative;
+  flex: 1 1 auto;
+  height: 22px;
+  background: var(--gmt-fill-subtle);
+  border-radius: var(--gmt-radius-sm);
+}
+
+.gmt-interval-axis {
+  display: flex;
+  justify-content: space-between;
+  margin: var(--gmt-space-1) 0 0 calc(5.5rem + var(--gmt-space-2));
+  font-family: var(--gmt-font-mono);
+  font-size: 0.65rem;
+  color: var(--gmt-ice-dim);
+}
+
+/* ---------------------------------------------------------------------------
+ * A / B bars — draggable
+ * --------------------------------------------------------------------------- */
+
+.gmt-interval-bar {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  border-radius: var(--gmt-radius-sm);
+  transition: background var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-interval-bar--a {
+  background: color(from var(--gmt-cyan) srgb r g b / 0.3);
+  border: 1px solid var(--gmt-cyan);
+}
+
+.gmt-interval-bar--b {
+  background: color(from var(--gmt-teal) srgb r g b / 0.35);
+  border: 1px solid var(--gmt-teal);
+}
+
+.gmt-interval-bar--invalid {
+  background: var(--gmt-signal-fill);
+  border-color: var(--gmt-signal-border);
+}
+
+.gmt-interval-handle {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--gmt-void);
+  border: 2px solid currentColor;
+  cursor: grab;
+  touch-action: none;
+  transition:
+    box-shadow var(--gmt-duration-fast) var(--gmt-easing),
+    transform var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-interval-handle:first-child {
+  left: 0;
+}
+
+.gmt-interval-handle:last-child {
+  left: 100%;
+}
+
+.gmt-interval-bar--a .gmt-interval-handle {
+  color: var(--gmt-cyan);
+}
+
+.gmt-interval-bar--b .gmt-interval-handle {
+  color: var(--gmt-teal);
+}
+
+.gmt-interval-handle:active {
+  cursor: grabbing;
+  transform: translate(-50%, -50%) scale(1.15);
+}
+
+.gmt-interval-handle:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--gmt-void),
+    0 0 0 4px currentColor;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gmt-interval-bar,
+  .gmt-interval-handle {
+    transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Result rows — read-only, 0-2 segments per operation, same scale as A/B
+ * --------------------------------------------------------------------------- */
+
+.gmt-interval-track--result {
+  background: transparent;
+  border: 1px dashed var(--gmt-border);
+}
+
+.gmt-interval-op-segment {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  border-radius: var(--gmt-radius-sm);
+}
+
+.gmt-interval-track--intersection .gmt-interval-op-segment {
+  background: color(from var(--gmt-spring) srgb r g b / 0.35);
+  border: 1px solid var(--gmt-spring);
+}
+
+.gmt-interval-track--union .gmt-interval-op-segment {
+  background: color(from var(--gmt-dst-gold) srgb r g b / 0.3);
+  border: 1px solid var(--gmt-dst-gold);
+}
+
+.gmt-interval-track--difference .gmt-interval-op-segment {
+  background: color(from var(--gmt-signal) srgb r g b / 0.3);
+  border: 1px solid var(--gmt-signal);
+}
+
+.gmt-interval-track--xor .gmt-interval-op-segment {
+  background: color(from var(--gmt-dst-purple) srgb r g b / 0.3);
+  border: 1px solid var(--gmt-dst-purple);
+}
+
+/* ---------------------------------------------------------------------------
+ * Step 2 — per-operation code + output
+ * --------------------------------------------------------------------------- */
+
+.gmt-interval-op {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-2);
+}
+
+.gmt-interval-op-label {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--gmt-ice);
+}

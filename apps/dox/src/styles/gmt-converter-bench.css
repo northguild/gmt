@@ -1,0 +1,62 @@
+/*
+ * Converter + format bench + regex tester widget (ConverterBench.astro).
+ *
+ * Card/section/controls/output chrome comes from gmt-widget.css; this sheet
+ * only adds what's specific to this widget: the grouped format-bench results
+ * block and the regex-match chip layout.
+ */
+
+/* ---------------------------------------------------------------------------
+ * Format bench — grouped results block
+ * --------------------------------------------------------------------------- */
+
+.gmt-converter-results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+}
+
+.gmt-converter-result-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-2);
+}
+
+/* ---------------------------------------------------------------------------
+ * Regex tester — match chips
+ * --------------------------------------------------------------------------- */
+
+.gmt-converter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-2);
+}
+
+.gmt-converter-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2em 0.7em;
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.75rem;
+  border: 1px solid var(--gmt-border);
+  background: var(--gmt-fill-subtle);
+  color: var(--gmt-ice-dim);
+  transition:
+    background var(--gmt-duration-fast) var(--gmt-easing),
+    border-color var(--gmt-duration-fast) var(--gmt-easing),
+    color var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-converter-chip--match {
+  color: var(--gmt-spring);
+  background: color(from var(--gmt-spring) srgb r g b / 0.12);
+  border-color: color(from var(--gmt-spring) srgb r g b / 0.35);
+  text-shadow: 0 0 6px color(from var(--gmt-spring) srgb r g b / 0.3);
+}

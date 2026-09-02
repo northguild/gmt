@@ -1,8 +1,8 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidDateTimeUnit } from "../../plain/validate";
-import type { DateTimeUnit } from "../../types";
+import type { UnixNowUnit } from "../../types";
 
-type UnixNowUnit = DateTimeUnit | "dayOfWeek";
+export type { UnixNowUnit };
 
 function isValidUnixNowUnit(unit: string): unit is UnixNowUnit {
   return isValidDateTimeUnit(unit) || ["dayOfWeek"].includes(unit);

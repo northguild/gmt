@@ -80,16 +80,6 @@
     "sourcePath": "packages/gmt/src/duration/compare/compareDurations.ts"
   },
   {
-    "url": "/reference/duration/format/DurationUnit",
-    "name": "DurationUnit",
-    "namespace": "duration",
-    "module": "format",
-    "kind": "type",
-    "signature": "",
-    "description": "The DurationUnit type.",
-    "sourcePath": "packages/gmt/src/duration/format/formatDuration.ts"
-  },
-  {
     "url": "/reference/duration/format/FormatDurationOptions",
     "name": "FormatDurationOptions",
     "namespace": "duration",
@@ -1140,16 +1130,6 @@
     "sourcePath": "packages/gmt/src/plain/format/formatDateToParts.ts"
   },
   {
-    "url": "/reference/plain/format/RelativeUnit",
-    "name": "RelativeUnit",
-    "namespace": "plain",
-    "module": "format",
-    "kind": "type",
-    "signature": "",
-    "description": "No \"hour\"/\"minute\"/\"second\" — PlainDate has no time component.",
-    "sourcePath": "packages/gmt/src/plain/format/formatRelativeDate.ts"
-  },
-  {
     "url": "/reference/plain/format/FormatRelativeDateOptions",
     "name": "FormatRelativeDateOptions",
     "namespace": "plain",
@@ -1318,16 +1298,6 @@
     "signature": "getNow(): string",
     "description": "Return the current local PlainDateTime as an ISO string using the system timeZone.",
     "sourcePath": "packages/gmt/src/plain/get/getNow.ts"
-  },
-  {
-    "url": "/reference/plain/get/NowUnit",
-    "name": "NowUnit",
-    "namespace": "plain",
-    "module": "get",
-    "kind": "type",
-    "signature": "",
-    "description": "The NowUnit type.",
-    "sourcePath": "packages/gmt/src/plain/get/getNowUnit.ts"
   },
   {
     "url": "/reference/plain/get/isValidPlainNowUnit",
@@ -2830,6 +2800,16 @@
     "sourcePath": "packages/gmt/src/types/duration-string-options.ts"
   },
   {
+    "url": "/reference/types/duration-unit/DurationUnit",
+    "name": "DurationUnit",
+    "namespace": "types",
+    "module": "duration-unit",
+    "kind": "type",
+    "signature": "",
+    "description": "The DurationUnit type.",
+    "sourcePath": "packages/gmt/src/types/duration-unit.ts"
+  },
+  {
     "url": "/reference/types/fractional-digit/FractionalDigit",
     "name": "FractionalDigit",
     "namespace": "types",
@@ -2838,6 +2818,16 @@
     "signature": "",
     "description": "used in Temporal with methods like toString({ fractionalSecondDigits: fractionalDigits[unit] })",
     "sourcePath": "packages/gmt/src/types/fractional-digit.ts"
+  },
+  {
+    "url": "/reference/types/now-unit/NowUnit",
+    "name": "NowUnit",
+    "namespace": "types",
+    "module": "now-unit",
+    "kind": "type",
+    "signature": "",
+    "description": "The NowUnit type.",
+    "sourcePath": "packages/gmt/src/types/now-unit.ts"
   },
   {
     "url": "/reference/types/offset/Offset",
@@ -2860,6 +2850,26 @@
     "sourcePath": "packages/gmt/src/types/overflow.ts"
   },
   {
+    "url": "/reference/types/relative-date-time-unit/RelativeDateTimeUnit",
+    "name": "RelativeDateTimeUnit",
+    "namespace": "types",
+    "module": "relative-date-time-unit",
+    "kind": "type",
+    "signature": "",
+    "description": "The RelativeDateTimeUnit type.",
+    "sourcePath": "packages/gmt/src/types/relative-date-time-unit.ts"
+  },
+  {
+    "url": "/reference/types/relative-date-unit/RelativeDateUnit",
+    "name": "RelativeDateUnit",
+    "namespace": "types",
+    "module": "relative-date-unit",
+    "kind": "type",
+    "signature": "",
+    "description": "The RelativeDateUnit type.",
+    "sourcePath": "packages/gmt/src/types/relative-date-unit.ts"
+  },
+  {
     "url": "/reference/types/relative-rounding-method/RelativeRoundingMethod",
     "name": "RelativeRoundingMethod",
     "namespace": "types",
@@ -2878,6 +2888,26 @@
     "signature": "",
     "description": "The RelativeTimeFormatOptions type.",
     "sourcePath": "packages/gmt/src/types/relative-time-options.ts"
+  },
+  {
+    "url": "/reference/types/relative-time-unit/RelativeTimeUnit",
+    "name": "RelativeTimeUnit",
+    "namespace": "types",
+    "module": "relative-time-unit",
+    "kind": "type",
+    "signature": "",
+    "description": "The RelativeTimeUnit type.",
+    "sourcePath": "packages/gmt/src/types/relative-time-unit.ts"
+  },
+  {
+    "url": "/reference/types/relative-unit/RelativeUnit",
+    "name": "RelativeUnit",
+    "namespace": "types",
+    "module": "relative-unit",
+    "kind": "type",
+    "signature": "",
+    "description": "The RelativeUnit type.",
+    "sourcePath": "packages/gmt/src/types/relative-unit.ts"
   },
   {
     "url": "/reference/types/rounding-options/RoundingOptions",
@@ -2918,6 +2948,26 @@
     "signature": "",
     "description": "The TimeUnit type.",
     "sourcePath": "packages/gmt/src/types/time-unit.ts"
+  },
+  {
+    "url": "/reference/types/unix-now-unit/UnixNowUnit",
+    "name": "UnixNowUnit",
+    "namespace": "types",
+    "module": "unix-now-unit",
+    "kind": "type",
+    "signature": "",
+    "description": "The UnixNowUnit type.",
+    "sourcePath": "packages/gmt/src/types/unix-now-unit.ts"
+  },
+  {
+    "url": "/reference/types/utc-now-unit/UtcNowUnit",
+    "name": "UtcNowUnit",
+    "namespace": "types",
+    "module": "utc-now-unit",
+    "kind": "type",
+    "signature": "",
+    "description": "The UtcNowUnit type.",
+    "sourcePath": "packages/gmt/src/types/utc-now-unit.ts"
   },
   {
     "url": "/reference/unix/calculate/addUnix",
@@ -3190,16 +3240,6 @@
     "sourcePath": "packages/gmt/src/unix/format/formatCalendarUnix.ts"
   },
   {
-    "url": "/reference/unix/format/RelativeUnit",
-    "name": "RelativeUnit",
-    "namespace": "unix",
-    "module": "format",
-    "kind": "type",
-    "signature": "",
-    "description": "Intl.RelativeTimeFormatUnit includes \"quarter\" which Temporal doesn't support.",
-    "sourcePath": "packages/gmt/src/unix/format/formatRelativeUnix.ts"
-  },
-  {
     "url": "/reference/unix/format/FormatRelativeUnixOptions",
     "name": "FormatRelativeUnixOptions",
     "namespace": "unix",
@@ -3328,16 +3368,6 @@
     "signature": "getUnixNow(unit?: UnixUnit): number",
     "description": "Return the current Unix timestamp in either seconds or milliseconds.",
     "sourcePath": "packages/gmt/src/unix/get/getUnixNow.ts"
-  },
-  {
-    "url": "/reference/unix/get/UnixNowUnit",
-    "name": "UnixNowUnit",
-    "namespace": "unix",
-    "module": "get",
-    "kind": "type",
-    "signature": "",
-    "description": "The UnixNowUnit type.",
-    "sourcePath": "packages/gmt/src/unix/get/getUnixNowUnit.ts"
   },
   {
     "url": "/reference/unix/get/isValidUnixNowUnit",
@@ -4060,16 +4090,6 @@
     "sourcePath": "packages/gmt/src/utc/format/formatHttp.ts"
   },
   {
-    "url": "/reference/utc/format/RelativeUnit",
-    "name": "RelativeUnit",
-    "namespace": "utc",
-    "module": "format",
-    "kind": "type",
-    "signature": "",
-    "description": "Intl.RelativeTimeFormatUnit includes \"quarter\" which Temporal doesn't support.",
-    "sourcePath": "packages/gmt/src/utc/format/formatRelativeUtc.ts"
-  },
-  {
     "url": "/reference/utc/format/FormatRelativeUtcOptions",
     "name": "FormatRelativeUtcOptions",
     "namespace": "utc",
@@ -4188,16 +4208,6 @@
     "signature": "getUtcNow(): string",
     "description": "Return the current UTC instant as an ISO Instant string.",
     "sourcePath": "packages/gmt/src/utc/get/getUtcNow.ts"
-  },
-  {
-    "url": "/reference/utc/get/UtcNowUnit",
-    "name": "UtcNowUnit",
-    "namespace": "utc",
-    "module": "get",
-    "kind": "type",
-    "signature": "",
-    "description": "The UtcNowUnit type.",
-    "sourcePath": "packages/gmt/src/utc/get/getUtcNowUnit.ts"
   },
   {
     "url": "/reference/utc/get/isValidUtcNowUnit",
@@ -5088,16 +5098,6 @@
     "signature": "formatCalendarZoned(value: string, locale?: string, options?: FormatCalendarZonedOptions): string",
     "description": "Format a zoned date-time as a relative day label plus time-of-day, e.g.",
     "sourcePath": "packages/gmt/src/zoned/format/formatCalendarZoned.ts"
-  },
-  {
-    "url": "/reference/zoned/format/RelativeUnit",
-    "name": "RelativeUnit",
-    "namespace": "zoned",
-    "module": "format",
-    "kind": "type",
-    "signature": "",
-    "description": "Intl.RelativeTimeFormatUnit includes \"quarter\" which Temporal doesn't support.",
-    "sourcePath": "packages/gmt/src/zoned/format/formatRelativeZoned.ts"
   },
   {
     "url": "/reference/zoned/format/FormatRelativeZonedOptions",

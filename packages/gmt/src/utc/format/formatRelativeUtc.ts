@@ -3,18 +3,8 @@ import { normalizeDateTime } from "../../internal/normalizeDateTime";
 import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
 import { resolveRelativeRounding } from "../../internal/resolveRelativeRounding";
 import { toInstantFromUtc } from "../../internal/toInstantFromUtc";
-import type { RelativeTimeFormatOptions } from "../../types";
+import type { RelativeTimeFormatOptions, RelativeUnit } from "../../types";
 import { isValidUtc } from "../validate";
-
-// Intl.RelativeTimeFormatUnit includes "quarter" which Temporal doesn't support.
-type RelativeUnit =
-  | "year"
-  | "month"
-  | "week"
-  | "day"
-  | "hour"
-  | "minute"
-  | "second";
 
 export interface FormatRelativeUtcOptions extends RelativeTimeFormatOptions {
   largestUnit?: RelativeUnit;

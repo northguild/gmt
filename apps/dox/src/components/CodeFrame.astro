@@ -1,0 +1,34 @@
+---
+/**
+ * A syntax-highlighted, copiable code frame for a live/dynamic call line —
+ * the widget equivalent of a static ```ts fence.
+ *
+ * Renders the frame chrome and copy button (styled by gmt-widget.css). The
+ * `<code>` element starts empty; the widget's client script fills it via
+ * renderCallLine() from lib/widget-ui.ts, which also stashes the plain-text
+ * copy target on the button. Reused across DstInspector and IntervalVisualizer
+ * so both stay visually identical and only ever have one copy-button icon /
+ * stacking-context fix to maintain.
+ *
+ * Props:
+ *   id — suffix used for both the <code> (`call-${id}`) and the copy button
+ *        (`copy-${id}`) data-role attributes, so a widget with several code
+ *        frames can address each one.
+ */
+
+interface Props {
+  id: string;
+}
+
+const { id } = Astro.props;
+---
+
+<div class="gmt-codeframe">
+  <button class="gmt-icon-button gmt-codeframe-copy" type="button" title="Copy to clipboard" data-role={`copy-${id}`}>
+    <svg data-role="copy-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+    </svg>
+  </button>
+  <pre class="gmt-codeframe-pre"><code data-role={`call-${id}`}></code></pre>
+</div>

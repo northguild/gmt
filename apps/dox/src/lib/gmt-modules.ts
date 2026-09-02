@@ -62,4 +62,7 @@ export const GMT_MODULES: Record<
   "utc/interval": () => import("@northguild/gmt/utc/interval"),
   "utc/parse": () => import("@northguild/gmt/utc/parse"),
   "utc/validate": () => import("@northguild/gmt/utc/validate"),
+
+  // --- regex ---
+  regex: () => import("@northguild/gmt/regex"),
 };

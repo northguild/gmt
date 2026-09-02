@@ -10,6 +10,43 @@ import {
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 
+const libraryMetadata: Record<string, { tests: number; locales: number; timezones: number; nodeVersions: number }> = {
+  GMT: { tests: 16701, locales: 17, timezones: 10, nodeVersions: 2 },
+  "@intl/date": { tests: 20190, locales: 0, timezones: 0, nodeVersions: 1 },
+  Luxon: { tests: 4888, locales: 0, timezones: 0, nodeVersions: 1 },
+  "date-fns": { tests: 3213, locales: 0, timezones: 0, nodeVersions: 1 },
+  "Moment.js": { tests: 11703, locales: 0, timezones: 0, nodeVersions: 1 },
+};
+
+function addTooltipsToBars(svg: string): string {
+  const barGroupRegex = /<g[^>]*class="ts-chart__bar ts-chart__bar-x"[^>]*>([\s\S]*?)<\/g>/g;
+  return svg.replace(barGroupRegex, (match: string, groupContent: string) => {
+    const rectRegex = /<rect([^>]*)\/>/g;
+    const rects = groupContent.match(rectRegex);
+    if (!rects) return match;
+
+    let result = match;
+    let offset = 0;
+
+    rects.forEach((rect, index) => {
+      const meta = Object.values(libraryMetadata)[index];
+      if (!meta) return;
+
+      const executions = [334020, 386, 4888, 3213, 11703][index];
+      const library = Object.keys(libraryMetadata)[index];
+
+      const title = `${library}: ${executions.toLocaleString()} executions (${meta.tests.toLocaleString()} tests${meta.locales > 0 ? ` × ${meta.locales} locales` : ""}${meta.timezones > 0 ? ` × ${meta.timezones} timezones` : ""} × ${meta.nodeVersions} Node)`;
+
+      const titleElement = `<title>${title}</title>`;
+      const insertPos = result.indexOf(rect, offset) + rect.length;
+      result = result.slice(0, insertPos) + titleElement + result.slice(insertPos);
+      offset = insertPos + titleElement.length;
+    });
+
+    return result;
+  });
+}
+
 export function renderTestExecutionChart(): string {
   const data = [
     { library: "GMT", executions: 334020, highlight: true },
@@ -50,7 +87,7 @@ export function renderTestExecutionChart(): string {
     idPrefix: "test-executions",
   });
   runtime.destroy();
-  return svg;
+  return addTooltipsToBars(svg);
 }
 
 export function renderNamespaceChart(): string {

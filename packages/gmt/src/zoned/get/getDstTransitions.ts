@@ -4,8 +4,24 @@ import { isValidTimeZone } from "../validate";
 const MAX_TRANSITIONS_PER_YEAR = 20;
 
 /**
- * A single DST transition instant, with the UTC offset in effect immediately
- * before and after the change.
+ * A single DST transition instant: the UTC instant of an offset change plus the
+ * offset in effect immediately before and after it.
+ *
+ * @remarks Members:
+ *
+ * | Member | Type | Description |
+ * | --- | --- | --- |
+ * | `instant` | `string` | UTC instant of the offset change, ISO 8601 ending in `Z` (e.g. `2024-03-10T07:00:00Z`). |
+ * | `offsetBefore` | `string` | UTC offset in effect immediately before the transition (e.g. `-05:00`). |
+ * | `offsetAfter` | `string` | UTC offset in effect immediately after the transition (e.g. `-04:00`). |
+ *
+ * @example
+ * import { DstTransition } from "@northguild/gmt/zoned";
+ * const t: DstTransition = {
+ *   instant: "2024-03-10T07:00:00Z",
+ *   offsetBefore: "-05:00",
+ *   offsetAfter: "-04:00",
+ * };
  */
 export interface DstTransition {
   instant: string;

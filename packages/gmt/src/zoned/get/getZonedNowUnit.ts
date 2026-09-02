@@ -2,6 +2,30 @@ import { Temporal } from "@js-temporal/polyfill";
 import { parseWeekFromDate } from "../../plain/parse";
 import { isValidTimeZone } from "../validate";
 
+/**
+ * Units extractable from the current time in a specific IANA timeZone, as
+ * consumed by `getZonedNowUnit`.
+ *
+ * @remarks Members:
+ *
+ * | Member | Description |
+ * | --- | --- |
+ * | `year` | Full calendar year (e.g. `2024`), no padding. |
+ * | `month` | 1–12, zero-padded to 2 digits (e.g. `02`). |
+ * | `week` | Week-of-year from `parseWeekFromDate`, 1–53. |
+ * | `day` | Day of month 1–31, zero-padded (e.g. `15`). |
+ * | `dayOfWeek` | 1 (Mon)–7 (Sun). |
+ * | `hour` | 0–23, zero-padded. |
+ * | `minute` | 0–59, zero-padded. |
+ * | `second` | 0–59, zero-padded. |
+ * | `millisecond` | 0–999, zero-padded to 3. |
+ * | `microsecond` | Sub-millisecond microseconds (0–999999). |
+ * | `nanosecond` | Sub-millisecond nanoseconds (0–999999999). |
+ *
+ * @example
+ * import { ZonedNowUnit } from "@northguild/gmt/zoned";
+ * const u: ZonedNowUnit = "hour";
+ */
 export type ZonedNowUnit =
   | "year"
   | "month"

@@ -1,3 +1,18 @@
+/**
+ * Unit accepted by `epochUnit` in unix-epoch functions. Determines whether a
+ * numeric value is interpreted as milliseconds or seconds.
+ *
+ * @remarks Members:
+ *
+ * | Member | Description |
+ * | --- | --- |
+ * | `seconds` | Value is Unix epoch seconds (e.g. `1700000000`). |
+ * | `milliseconds` | Value is Unix epoch milliseconds (e.g. `1700000000000`). |
+ *
+ * @example
+ * import { isValidUnixUnit } from "@northguild/gmt/unix";
+ * isValidUnixUnit("milliseconds"); // true
+ */
 export type UnixUnit = "seconds" | "milliseconds";
 
 /**

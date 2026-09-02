@@ -1,16 +1,13 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { normalizeDateTime, resolveRelativeRounding } from "../../internal";
-import type { RelativeTimeFormatOptions } from "../../types";
+import type { RelativeDateUnit, RelativeTimeFormatOptions } from "../../types";
 import { isValidDate } from "../validate";
 
-// No "hour"/"minute"/"second" — PlainDate has no time component.
-type RelativeUnit = "year" | "month" | "week" | "day";
-
 export interface FormatRelativeDateOptions extends RelativeTimeFormatOptions {
-  largestUnit?: RelativeUnit;
+  largestUnit?: RelativeDateUnit;
 }
 
-const AUTO_UNITS: Array<{ unit: RelativeUnit; maxDays: number }> = [
+const AUTO_UNITS: Array<{ unit: RelativeDateUnit; maxDays: number }> = [
   { unit: "day", maxDays: 7 },
   { unit: "week", maxDays: 28 },
   { unit: "month", maxDays: 365 },

@@ -1,10 +1,10 @@
 import { Temporal } from "@js-temporal/polyfill";
-import type { DateTimeUnit } from "../../types";
+import type { NowUnit } from "../../types";
 import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
 import { parseWeekFromDate } from "../parse";
 import { isValidDateTimeUnit } from "../validate";
 
-type NowUnit = DateTimeUnit | "dayOfWeek";
+export type { NowUnit };
 
 function isValidPlainNowUnit(unit: string): unit is NowUnit {
   return isValidDateTimeUnit(unit) || ["dayOfWeek"].includes(unit);

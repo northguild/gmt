@@ -1,6 +1,6 @@
 ---
 import { Code } from "@astrojs/starlight/components";
-import PlaygroundLive from "./PlaygroundLive.astro";
+import PlaygroundForm from "./PlaygroundForm.astro";
 
 interface Props {
   severity: "critical" | "high" | "medium";
@@ -29,7 +29,7 @@ const { severity, title, description, wrongCode, wrongSpecId, rightCode, rightSp
       <h4>Wrong</h4>
       <Code code={wrongCode} lang="js" class={disableCopy ? "gmt-mistake-code--no-copy" : ""} />
       {wrongSpecId && (
-        <PlaygroundLive specId={wrongSpecId} />
+        <PlaygroundForm specId={wrongSpecId} />
       )}
     </div>
 
@@ -37,7 +37,7 @@ const { severity, title, description, wrongCode, wrongSpecId, rightCode, rightSp
       <h4>Right</h4>
       <Code code={rightCode} lang="js" />
       {rightSpecId && (
-        <PlaygroundLive specId={rightSpecId} />
+        <PlaygroundForm specId={rightSpecId} />
       )}
     </div>
   </div>

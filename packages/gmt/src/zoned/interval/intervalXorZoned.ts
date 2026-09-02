@@ -11,8 +11,10 @@ import { isValidCalendarZonedDateTime } from "../validate";
  *
  * - Uses `Temporal.Instant.compare` for comparison (via `.toInstant()`).
  * - Returns `[]` when intervals are identical or both invalid.
- * - Returns `[{ start, end }]` when one interval fully contains the other.
- * - Returns `[{ start, end }, { start, end }]` when intervals partially overlap.
+ * - Returns `[{ start, end }]` when the intervals share exactly one boundary — one starts (or
+ *   ends) precisely where the other ends (or starts), so only one remainder piece exists.
+ * - Returns `[{ start, end }, { start, end }]` when intervals partially overlap, and also when
+ *   one interval strictly contains the other (the piece before B and the piece after B).
  * - Returns `[]` if either interval is invalid (`start > end`).
  * - Returns `[]` on invalid input (wrong type, malformed strings, leap seconds).
  * - Accepts GMT calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
@@ -36,8 +38,8 @@ import { isValidCalendarZonedDateTime } from "../validate";
  * @param bEnd ISO 8601 zoned datetime string for the second interval end
  * @returns array of `{ start, end }` records representing the symmetric difference, or `[]` on invalid input
  *
- * @example intervalXorZoned("2024-01-01T09:00:00+00:00[UTC]", "2024-06-30T12:00:00+00:00[UTC]", "2024-04-01T11:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]") // [{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-03-31T17:00:00+00:00[UTC]" }, { start: "2024-06-30T12:00:01+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" }]
- * @example intervalXorZoned("2024-01-01T09:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]", "2024-04-01T11:00:00+00:00[UTC]", "2024-06-30T12:00:00+00:00[UTC]") // [{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-03-31T17:00:00+00:00[UTC]" }, { start: "2024-06-30T12:00:01+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" }]
+ * @example intervalXorZoned("2024-01-01T09:00:00+00:00[UTC]", "2024-06-30T12:00:00+00:00[UTC]", "2024-04-01T11:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]") // partial overlap — [{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-04-01T10:59:59.999999999+00:00[UTC]" }, { start: "2024-06-30T12:00:00.000000001+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" }]
+ * @example intervalXorZoned("2024-01-01T09:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]", "2024-02-01T08:00:00+00:00[UTC]", "2024-03-01T10:00:00+00:00[UTC]") // B strictly inside A — two remainder pieces — [{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-02-01T07:59:59.999999999+00:00[UTC]" }, { start: "2024-03-01T10:00:00.000000001+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" }]
  * @example intervalXorZoned("2024-01-01T09:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]", "2024-01-01T09:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]") // []
  * @example intervalXorZoned("invalid", "2024-06-30T12:00:00+00:00[UTC]", "2024-07-01T13:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]") // []
  */

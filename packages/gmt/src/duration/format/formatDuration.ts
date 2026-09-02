@@ -1,13 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-
-type DurationUnit =
-  | "years"
-  | "months"
-  | "weeks"
-  | "days"
-  | "hours"
-  | "minutes"
-  | "seconds";
+import type { DurationUnit } from "../../types";
 
 const UNIT_TO_INTL: Record<DurationUnit, string> = {
   years: "year",

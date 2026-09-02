@@ -16,7 +16,7 @@ them.
 ## Prior art
 
 A sibling `@northguild/worktree` repo has a working version of the chat portion of this,
-documented in `context/dox/example-sibling-repo-docs.md`. Several of its mechanisms are
+documented in `context/dox/reference/prior-art/worktree-cli-snapshot-2026-08-21.md`. Several of its mechanisms are
 adopted below and attributed inline. Read `context/dox/overview.md` §2 "Reviewed prior
 art" for the full take/reject list before starting any story here — in particular, **do
 not adopt its central idea** (baking the whole corpus into one system prompt with no
@@ -71,7 +71,7 @@ corpus into the Worker bundle. Record this here rather than re-deriving it, and 
 the fetch path and cache behavior work before moving to `DOX-C2`.
 
 ## Why we are not copying the sibling repo's no-retrieval approach
-`example-sibling-repo-docs.md` §5 calls "the AI has no retrieval layer" its single most
+`reference/prior-art/worktree-cli-snapshot-2026-08-21.md` §5 calls "the AI has no retrieval layer" its single most
 important idea — the entire documentation set compiled into a system prompt at build
 time. It is cheap, deterministic, and debuggable, and at their scale it is the right
 call.

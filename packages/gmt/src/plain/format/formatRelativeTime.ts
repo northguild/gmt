@@ -1,16 +1,13 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { normalizeDateTime, resolveRelativeRounding } from "../../internal";
-import type { RelativeTimeFormatOptions } from "../../types";
+import type { RelativeTimeFormatOptions, RelativeTimeUnit } from "../../types";
 import { isValidTime } from "../validate";
 
-// PlainTime has no date component so only sub-day units are meaningful.
-type RelativeUnit = "hour" | "minute" | "second";
-
 export interface FormatRelativeTimeOptions extends RelativeTimeFormatOptions {
-  largestUnit?: RelativeUnit;
+  largestUnit?: RelativeTimeUnit;
 }
 
-const AUTO_UNITS: Array<{ unit: RelativeUnit; maxSeconds: number }> = [
+const AUTO_UNITS: Array<{ unit: RelativeTimeUnit; maxSeconds: number }> = [
   { unit: "second", maxSeconds: 60 },
   { unit: "minute", maxSeconds: 3_600 },
   { unit: "hour", maxSeconds: Infinity },

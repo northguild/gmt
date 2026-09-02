@@ -1,23 +1,16 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { normalizeDateTime, resolveRelativeRounding } from "../../internal";
-import type { RelativeTimeFormatOptions } from "../../types";
+import type {
+  RelativeDateTimeUnit,
+  RelativeTimeFormatOptions,
+} from "../../types";
 import { isValidDateTime } from "../validate";
 
-// Intl.RelativeTimeFormatUnit includes "quarter" which Temporal doesn't support.
-type RelativeUnit =
-  | "year"
-  | "month"
-  | "week"
-  | "day"
-  | "hour"
-  | "minute"
-  | "second";
-
 export interface FormatRelativeDateTimeOptions extends RelativeTimeFormatOptions {
-  largestUnit?: RelativeUnit;
+  largestUnit?: RelativeDateTimeUnit;
 }
 
-const AUTO_UNITS: Array<{ unit: RelativeUnit; maxSeconds: number }> = [
+const AUTO_UNITS: Array<{ unit: RelativeDateTimeUnit; maxSeconds: number }> = [
   { unit: "second", maxSeconds: 60 },
   { unit: "minute", maxSeconds: 3_600 },
   { unit: "hour", maxSeconds: 86_400 },

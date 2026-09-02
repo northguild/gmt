@@ -2,6 +2,30 @@ import { Temporal } from "@js-temporal/polyfill";
 import { getWeekNumber } from "../../plain/calculate/getWeekNumber";
 import { isValidZonedDateTime } from "../validate";
 
+/**
+ * Units supported by `parseUnitFromZoned` when extracting a value from a zoned
+ * ISO string. Includes `timeZone` for reading the zone identifier.
+ *
+ * @remarks Members:
+ *
+ * | Member | Description |
+ * | --- | --- |
+ * | `year` | Full year, no padding (e.g. `2024`). |
+ * | `month` | Zero-padded 2 (e.g. `03`). |
+ * | `week` | Week-of-year, 1–53 (`weekStartsOn`-controlled). |
+ * | `day` | Zero-padded 2. |
+ * | `dayOfWeek` | 1 (Mon)–7 (Sun). |
+ * | `hour` | Zero-padded 2. |
+ * | `minute` | Zero-padded 2. |
+ * | `second` | Zero-padded 2. |
+ * | `millisecond` | Zero-padded 3. |
+ * | `nanosecond` | Zero-padded 3. |
+ * | `timeZone` | IANA timeZone identifier string. |
+ *
+ * @example
+ * import { ZonedParseUnit } from "@northguild/gmt/zoned";
+ * const u: ZonedParseUnit = "month";
+ */
 export type ZonedParseUnit =
   | "year"
   | "month"

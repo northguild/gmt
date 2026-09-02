@@ -67,8 +67,13 @@
       "default": "./dist/regex/index.js"
     },
     "./regex/*": {
-      "types": "./dist/regex/*.d.ts",
-      "default": "./dist/regex/*.js"
+      "types": "./dist/regex/*/index.d.ts",
+      "default": "./dist/regex/*/index.js"
+    },
+    "./regex/*/*": null,
+    "./types": {
+      "types": "./dist/types/index.d.ts",
+      "default": "./dist/types/index.js"
     },
     "./unix": {
       "types": "./dist/unix/index.d.ts",

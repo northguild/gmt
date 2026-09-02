@@ -24,7 +24,11 @@ import {
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
-import type { LivePlaygroundTemplate } from "../src/lib/playground-spec";
+import type {
+  LivePlaygroundTemplate,
+  PlaygroundField,
+} from "../src/lib/playground-spec";
+import { argToValue, parseCallArgs } from "../src/lib/playground-parsers";
 import type { PlaygroundSpec } from "./build-utils/build-utils";
 import * as BU from "./build-utils/build-utils";
 
@@ -372,7 +376,21 @@ function buildPlaygroundSpec(
         namespace: doc.namespace,
         module: doc.module,
         name: doc.name,
-        params: doc.params.map((p) => ({ name: p.name, type: p.type })),
+        params: doc.params.map((p) => {
+          const sp =
+            sigParams.find((s) => s.name === p.name) ??
+            sigParams.find((s) => s.name === `${p.name}Input`);
+          const decl = sp?.valueDeclaration;
+          // `x?:`, `x: T = default`, or `x: T | undefined` — any form the
+          // example may legitimately omit as a trailing arg.
+          const optional =
+            !!decl &&
+            ts.isParameter(decl) &&
+            (decl.questionToken !== undefined ||
+              decl.initializer !== undefined ||
+              !!(sp && sp.flags & ts.SymbolFlags.Optional));
+          return { name: p.name, type: p.type, optional };
+        }),
         options: doc.options.map((o) => ({ name: o.name })),
         examples: doc.examples,
       },
@@ -456,6 +474,198 @@ export function synthesizeTemplate(spec: PlaygroundSpec): string {
   return `${spec.fn}(${args.join(", ")})`;
 }
 
+const QUOTED_ARG = /^(['"])[\s\S]*\1$/;
+const NUMERIC_ARG = /^-?\d+(?:\.\d+)?$/;
+
+interface FieldsResult {
+  fields: PlaygroundField[];
+  optionsSuffix?: string;
+  objectArg?: boolean;
+}
+
+/**
+ * Turn one param + its example arg (`raw`, `undefined` when the example omits an
+ * optional trailing param) into a `PlaygroundField`, or `null` to bail.
+ *
+ * When `raw` is `undefined` the control is seeded empty — the initial call then
+ * reads exactly like the `@example`, and the optional arg is only added once the
+ * reader fills the control in.
+ */
+function fieldForParam(
+  p: PlaygroundSpec["params"][number],
+  raw: string | undefined,
+): PlaygroundField | null {
+  const opt = p.optional ? { optional: true as const } : {};
+  const omitted = raw === undefined;
+
+  if (p.type === "array") {
+    if (raw !== undefined && !raw.startsWith("[")) return null;
+    if (p.intervalShape) {
+      return {
+        name: p.name,
+        kind: "intervals",
+        seed: "",
+        pairs: raw ? BU.parseIntervalArg(raw) : [],
+        ...opt,
+      };
+    }
+    const choices = p.options ?? [];
+    return {
+      name: p.name,
+      kind: "list",
+      seed: "",
+      element: choices.length
+        ? "enum"
+        : p.arrayType === "number"
+          ? "number"
+          : "string",
+      ...(choices.length ? { choices } : {}),
+      items: raw ? BU.parseArrayArg(raw) : [],
+      ...opt,
+    };
+  }
+
+  if (p.type === "units") {
+    const unitKeys = p.options ?? [];
+    if (!unitKeys.length) return null;
+    if (raw !== undefined && !raw.startsWith("{")) return null;
+    return {
+      name: p.name,
+      kind: "units",
+      seed: omitted ? "" : p.value || "0",
+      unitKeys,
+      unitSeed: p.unitValue || unitKeys[0] || "",
+      ...opt,
+    };
+  }
+
+  if (p.type === "enum") {
+    const choices = p.options ?? [];
+    if (!choices.length) return null;
+    if (raw !== undefined && !QUOTED_ARG.test(raw)) return null;
+    const seed = omitted
+      ? ""
+      : p.value && choices.includes(p.value)
+        ? p.value
+        : choices[0];
+    return { name: p.name, kind: "enum", seed, choices, ...opt };
+  }
+
+  if (p.type === "boolean") {
+    if (raw !== undefined && raw !== "true" && raw !== "false") return null;
+    return {
+      name: p.name,
+      kind: "boolean",
+      seed: omitted ? "" : (raw ?? p.value ?? "false"),
+      ...opt,
+    };
+  }
+
+  if (p.type === "number") {
+    if (raw !== undefined && !NUMERIC_ARG.test(raw)) return null;
+    return {
+      name: p.name,
+      kind: "number",
+      seed: omitted ? "" : (raw ?? p.value ?? ""),
+      ...opt,
+    };
+  }
+
+  // string — the catch-all, including `string | number` and types the checker
+  // couldn't narrow. A bare-number example arg is promoted to a number field.
+  if (omitted) return { name: p.name, kind: "string", seed: "", ...opt };
+  if (QUOTED_ARG.test(raw)) {
+    return { name: p.name, kind: "string", seed: p.value, ...opt };
+  }
+  if (NUMERIC_ARG.test(raw)) {
+    return { name: p.name, kind: "number", seed: raw, ...opt };
+  }
+  return null;
+}
+
+/**
+ * Project a `PlaygroundSpec` + its first `@example` into form-control fields for
+ * `<PlaygroundForm>`, or `undefined` when the example can't be modelled — the
+ * reference page then shows just the static code block, no widget.
+ *
+ * Handles four shapes:
+ *  - **positional** — `fn(a, b, c)`; each arg must line up with a param and be a
+ *    literal of the expected shape (quoted string, bare number, `true`/`false`,
+ *    `{ unit: n }`, `[…]`). The example may omit *optional* trailing params.
+ *  - **object arg** — `fn({ value1, value2 })`; fields are the object's keys.
+ *  - **no args** — `fn()`; a Run-button-only form.
+ *  - a trailing options object is carried through verbatim as `optionsSuffix`.
+ *
+ * An arg that isn't a recognisable literal — a call expression, a bare
+ * identifier, a nested object — sends the whole function back to the textarea.
+ */
+export function buildPlaygroundFields(
+  spec: PlaygroundSpec,
+  template: string,
+): FieldsResult | undefined {
+  const rawArgs = parseCallArgs(template).map((a) => a.trim());
+
+  // --- object-arg form: fn({ value1: …, value2: … }) ---
+  if (
+    rawArgs.length === 1 &&
+    rawArgs[0].startsWith("{") &&
+    spec.params.length >= 1 &&
+    !spec.params.some((p) => p.type === "units")
+  ) {
+    const entries = BU.parseObjectArgEntries(rawArgs[0]).filter(
+      ([k]) => k !== "options",
+    );
+    if (!entries.length) return undefined;
+    const fields: PlaygroundField[] = [];
+    for (const [key, val] of entries) {
+      const known = spec.params.find((sp) => sp.name === key);
+      const p = {
+        name: key,
+        type: known?.type ?? ("string" as const),
+        value: argToValue(val),
+        options: known?.options,
+        arrayType: known?.arrayType,
+      };
+      const f = fieldForParam(p, val);
+      if (!f) return undefined;
+      fields.push(f);
+    }
+    return { fields, objectArg: true };
+  }
+
+  // --- no-arg form: fn() → Run button + output only ---
+  if (spec.params.length === 0) {
+    return rawArgs.length === 0 ? { fields: [] } : undefined;
+  }
+
+  // --- positional form ---
+  const hasOptions = !!spec.options?.length;
+  let positional = rawArgs;
+  let optionsSuffix: string | undefined;
+  if (
+    hasOptions &&
+    rawArgs.length === spec.params.length + 1 &&
+    rawArgs[spec.params.length].startsWith("{")
+  ) {
+    optionsSuffix = rawArgs[spec.params.length];
+    positional = rawArgs.slice(0, spec.params.length);
+  }
+
+  if (positional.length > spec.params.length) return undefined; // too many args
+  for (let i = positional.length; i < spec.params.length; i++) {
+    if (!spec.params[i].optional) return undefined; // missing a required param
+  }
+
+  const fields: PlaygroundField[] = [];
+  for (let i = 0; i < spec.params.length; i++) {
+    const f = fieldForParam(spec.params[i], positional[i]);
+    if (!f) return undefined;
+    fields.push(f);
+  }
+
+  return optionsSuffix ? { fields, optionsSuffix } : { fields };
+}
+
 function buildLivePlaygroundTemplate(
   checker: ts.TypeChecker,
   sig: ts.Signature | undefined,
@@ -477,12 +687,26 @@ function buildLivePlaygroundTemplate(
     doc.playgroundSpec?.allowEmptyArray ??
     (returnType === "array" &&
       doc.examples.some((e) => e.result.trim() === "[]"));
+
+  const formFields = doc.playgroundSpec
+    ? buildPlaygroundFields(doc.playgroundSpec, template)
+    : undefined;
+
   return {
     module,
     fn: doc.name,
     template,
     returnType,
     allowEmptyArray,
+    ...(formFields
+      ? {
+          fields: formFields.fields,
+          ...(formFields.optionsSuffix
+            ? { optionsSuffix: formFields.optionsSuffix }
+            : {}),
+          ...(formFields.objectArg ? { objectArg: true } : {}),
+        }
+      : {}),
   };
 }
 
@@ -967,7 +1191,18 @@ function renderFn(doc: FnDoc, docs: Doc[]): string {
   }
 
   if (doc.examples.length) {
-    lines.push(`import PlaygroundLive from "~/components/PlaygroundLive.astro";`);
+    // A function gets the interactive `<PlaygroundForm>` when its first
+    // `@example` survives `buildPlaygroundFields` (`fields` present — an empty
+    // array is valid, a no-arg function). The rare function that doesn't just
+    // shows the static code block above with no widget.
+    const useForm = doc.livePlaygroundTemplate?.fields !== undefined;
+
+    if (useForm) {
+      lines.push(`import PlaygroundForm from "~/components/PlaygroundForm.astro";`);
+    }
+    lines.push(`import DstInspector from "~/components/DstInspector.astro";`);
+    lines.push(`import IntervalVisualizer from "~/components/IntervalVisualizer.astro";`);
+    lines.push(`import ConverterBench from "~/components/ConverterBench.astro";`);
     lines.push("");
     lines.push(`## Examples`);
     lines.push("");
@@ -983,8 +1218,36 @@ function renderFn(doc: FnDoc, docs: Doc[]): string {
     }
     lines.push("```");
     lines.push("");
-    lines.push(`<PlaygroundLive specId="${doc.name}" />`);
-    lines.push("");
+    if (useForm) {
+      lines.push(`<PlaygroundForm specId="${doc.name}" />`);
+      lines.push("");
+    }
+
+    if (doc.name === "getDstTransitions") {
+      lines.push(`### DST Transition Inspector`);
+      lines.push("");
+      lines.push(`<DstInspector />`);
+      lines.push("");
+    }
+
+    if (
+      doc.name === "intervalIntersectionZoned" ||
+      doc.name === "intervalUnionZoned" ||
+      doc.name === "intervalDifferenceZoned" ||
+      doc.name === "intervalXorZoned"
+    ) {
+      lines.push(`### Interval algebra visualizer`);
+      lines.push("");
+      lines.push(`<IntervalVisualizer />`);
+      lines.push("");
+    }
+
+    if (doc.name === "convertZonedToZoned") {
+      lines.push(`### Converter + format bench`);
+      lines.push("");
+      lines.push(`<ConverterBench />`);
+      lines.push("");
+    }
   }
 
   lines.push(`## Source`);

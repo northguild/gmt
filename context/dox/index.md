@@ -2,33 +2,36 @@
 
 This file has been split into a progressive-disclosure directory. Read what you need:
 
-- [overview.md](overview.md) — Context, architecture, verified findings, workspace
-  integration, visual design language, verification, risks
-- [story-groups.md](story-groups.md) — Tier 0–6 story summaries (23 units of work over
-  13 issues; see below)
+- [overview.md](overview.md) — Context, architecture, decisions, hosting, prior-art
+  verdicts, tier table (~18 KB; the entry file)
 - [tracker.md](tracker.md) — Issue/status table, build order
+- [story-groups.md](story-groups.md) — One paragraph per tier, naming the stories and
+  pointing at the issue file
+- [appendix-parked.md](appendix-parked.md) — Researched but deliberately unscheduled
+  work. Read before proposing audio, voice, full-bleed 3D, or a new model choice.
 - [issues/DOX-A.md](issues/DOX-A.md) … [issues/DOX-E.md](issues/DOX-E.md) — Full
   GitHub-issue-ready specs, one file per issue letter, each now covering the issue's
   lettered sub-stories
-- [appendix-parked.md](appendix-parked.md) — Researched but deliberately unscheduled
-  work (audio, voice, the full-bleed reactive scene). No story IDs, not in the
-  sequence — read before proposing any of it, so the findings aren't re-derived.
-- [example-sibling-repo-docs.md](example-sibling-repo-docs.md) — **Reference only, not a
-  target.** How a sibling `@northguild/worktree` repo built its docs site and AI chat.
-  Reviewed 2026-08-21; what was taken from it and what was rejected is recorded in
-  [overview.md](overview.md) §2 "Reviewed prior art". Do not build what it describes —
-  its stack and its no-retrieval design are both deliberate rejections here.
 
-**Re-audited against the repo and npm on 2026-08-26.** The original 13-story plan grew
-into 23 units of work across 7 tiers — **no new GitHub issues were created**; new work
-folds into the existing #130–#142 as lettered sub-stories (`DOX-A3a`/`DOX-A3b`, `DOX-B2a`
-through `DOX-B2d`, and so on), the same pattern `context/roadmap/` used for `J0a`/`J0b`.
-See [tracker.md](tracker.md) for the full mapping.
+**Detailed reference — load only when the story needs it:**
 
-**Dox is a small docs site first and a much larger ambition second.** Tier 0 — three
+- [reference/verified-findings.md](reference/verified-findings.md) — overview §1;
+  verified facts that shaped the plan
+- [reference/visual-design.md](reference/visual-design.md) — overview §3; visual
+  design language. Implementation rules:
+  [reference/design-system.md](reference/design-system.md)
+- [reference/workspace-integration.md](reference/workspace-integration.md) — overview
+  §4; the four easy-to-miss files (only relevant on `DOX-A1`)
+- [reference/verification-and-risks.md](reference/verification-and-risks.md) —
+  overview §6 + §7; epic-level cross-cutting list
+- [reference/findings/speech-synthesis-capture.md](reference/findings/speech-synthesis-capture.md)
+  — the one hard audio finding
+- [reference/rejected-candidates.md](reference/rejected-candidates.md) — the three
+  declined items, so they are not re-proposed
+- [reference/prior-art/worktree-cli-snapshot-2026-08-21.md](reference/prior-art/worktree-cli-snapshot-2026-08-21.md)
+  — the sibling-repo docs write-up, moved from this directory
+
+Dox is a small docs site first and a much larger ambition second. Tier 0 — three
 stories — ships a real, deployed, searchable, linkable documentation site over all 504
-functions. That is the entire MVP. Everything from Tier 1 onward is additive: an
-interactive globe, a live widget on every one of 1,860 examples, a mentor-voiced
-real-world scenario layer, and a chat that answers by mounting real widgets rather than
-printing code blocks. If you are picking up a story, the ordering is the point — see
-[overview.md](overview.md) §1, and §5 for the full tier table.
+functions. That is the entire MVP. Everything from Tier 1 onward is additive. If you
+are picking up a story, see [overview.md](overview.md) §1 and §5 for the tier table.

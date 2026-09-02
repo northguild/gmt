@@ -10,8 +10,8 @@ import { isValidCalendarZonedDateTime } from "../validate";
  * Return the portion(s) of interval A not covered by interval B.
  *
  * - Uses `Temporal.Instant.compare` for comparison (via `.toInstant()`).
- * - Returns `[]` when B fully covers A.
- * - Returns `[{ start, end }]` when B overlaps one edge of A (or equals A).
+ * - Returns `[]` when B fully covers A (this includes B being identical to A).
+ * - Returns `[{ start, end }]` when B overlaps exactly one edge of A.
  * - Returns `[{ start, end }, { start, end }]` when B is fully inside A with gaps on both sides.
  * - Returns `[]` if either interval is invalid (`start > end`).
  * - Returns `[]` on invalid input (wrong type, malformed strings, leap seconds).
@@ -36,7 +36,7 @@ import { isValidCalendarZonedDateTime } from "../validate";
  * @param bEnd ISO 8601 zoned datetime string for the second interval end
  * @returns array of `{ start, end }` records representing A minus B, or `[]` on invalid input
  *
- * @example intervalDifferenceZoned("2024-01-01T09:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]", "2024-06-01T12:00:00+00:00[UTC]", "2024-07-01T13:00:00+00:00[UTC]") // [{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-05-31T17:00:00+00:00[UTC]" }, { start: "2024-07-01T13:00:01+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" }]
+ * @example intervalDifferenceZoned("2024-01-01T09:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]", "2024-06-01T12:00:00+00:00[UTC]", "2024-07-01T13:00:00+00:00[UTC]") // [{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-06-01T11:59:59.999999999+00:00[UTC]" }, { start: "2024-07-01T13:00:00.000000001+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" }]
  * @example intervalDifferenceZoned("2024-01-01T09:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]", "2024-01-01T09:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]") // []
  * @example intervalDifferenceZoned("invalid", "2024-12-31T17:00:00+00:00[UTC]", "2024-06-01T12:00:00+00:00[UTC]", "2024-07-01T13:00:00+00:00[UTC]") // []
  */

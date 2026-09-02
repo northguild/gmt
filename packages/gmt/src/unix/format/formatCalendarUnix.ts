@@ -3,6 +3,27 @@ import { joinDateTimeConnector, normalizeDateTime } from "../../internal";
 import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
 import { isValidUtc } from "../../utc/validate";
 
+/**
+ * Options for `formatCalendarUnix`. Mirrors the option shape of
+ * `formatCalendar` but targets the unix domain, adding `epochUnit`.
+ *
+ * @remarks Members:
+ *
+ * | Member | Type | Default | Description |
+ * | --- | --- | --- | --- |
+ * | `style` | `"long"\|"short"\|"narrow"` | `"long"` | `RelativeTimeFormat` style for the day label. |
+ * | `numeric` | `"always"\|"auto"` | `"auto"` | Numeric formatting of the relative day label. |
+ * | `largestUnit` | `"year"\|"month"\|"week"\|"day"` | auto | Largest unit for the relative diff. |
+ * | `roundingMethod` | `"expand"\|"trunc"\|"floor"\|"ceil"` | — | Rounding for the computed distance. |
+ * | `reference` | `string\|number` | now (UTC) | Anchor epoch/ISO for the "today/tomorrow" comparison. |
+ * | `epochUnit` | `"milliseconds"\|"seconds"` | `"milliseconds"` | Interpretation of numeric `value`/`reference`. |
+ * | `timeZone` | `string` | `"UTC"` | IANA zone for both day-comparison and clock-time rendering. |
+ * | `timeStyle` | `"short"\|"medium"\|"full"` | `"short"` | `Intl` `timeStyle` for the time-of-day portion. |
+ *
+ * @example
+ * import { FormatCalendarUnixOptions } from "@northguild/gmt/unix";
+ * const opts: FormatCalendarUnixOptions = { timeZone: "America/New_York" };
+ */
 export interface FormatCalendarUnixOptions {
   style?: "long" | "short" | "narrow";
   numeric?: "always" | "auto";

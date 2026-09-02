@@ -1,0 +1,418 @@
+---
+/**
+ * Live Playground (form).
+ *
+ * Auto-embedded on every reference page (and used by Scenario.astro /
+ * Mistake.astro). Each argument is a real form control; the call re-evaluates
+ * against the real gmt function on every edit. Renders in the teaching-widget
+ * chrome (.gmt-widget card, .gmt-label / .gmt-select / .gmt-input controls, a
+ * CodeFrame call line) so it sits consistently beside DstInspector /
+ * IntervalVisualizer. Shares its eval helpers with those widgets via
+ * lib/playground-client.ts + lib/widget-ui.ts.
+ *
+ * The generator (`buildPlaygroundFields` in scripts/build-reference.ts) decides
+ * which functions get this and emits `fields` on the template:
+ *   - scalar fields: string / number / boolean / enum / units
+ *   - list fields (repeatable rows): arrays of strings, numbers, or enum values
+ *   - intervals fields (repeatable start/end pairs): `{ start, end }[]`
+ *   - `fields: []` — a no-arg function; just the call line + its live result
+ *   - `objectArg` — `fn({ value1, value2 })`; fields are the object's keys
+ * The result re-evaluates on every edit — there is no Run button. A trailing
+ * options object is shown baked into the call and is not editable.
+ *
+ * Props: specId — key into LIVE_PLAYGROUND_TEMPLATES (generated).
+ */
+
+import { LIVE_PLAYGROUND_TEMPLATES } from "../lib/playground-spec";
+import CodeFrame from "./CodeFrame.astro";
+
+interface Props {
+  specId: string;
+}
+
+const { specId } = Astro.props;
+const template = LIVE_PLAYGROUND_TEMPLATES[specId];
+
+if (!template) {
+  throw new Error(`<PlaygroundForm>: unknown specId "${specId}"`);
+}
+if (!template.fields) {
+  throw new Error(`<PlaygroundForm>: template "${specId}" has no form fields`);
+}
+
+const { module: mod, fn: fnName, returnType, allowEmptyArray, fields } = template;
+const optionsSuffix = template.optionsSuffix ?? "";
+const objectArg = template.objectArg ?? false;
+
+const isBlock = (kind: string) => kind === "list" || kind === "intervals";
+---
+
+<div
+  class="gmt-playground-form gmt-widget"
+  data-module={mod}
+  data-fn={fnName}
+  data-return-type={returnType}
+  data-allow-empty-array={allowEmptyArray ? "true" : ""}
+  data-options-suffix={optionsSuffix}
+  data-object-arg={objectArg ? "true" : ""}
+>
+  <div class="gmt-widget-card">
+    <div class="gmt-widget-section">
+      {
+        fields.length > 0 && (
+          <div class="gmt-pf-fields">
+            {fields.map((field) =>
+              isBlock(field.kind) ? (
+                <div
+                  class="gmt-pf-list"
+                  data-field={field.name}
+                  data-kind={field.kind}
+                  data-element={field.element ?? ""}
+                  data-choices={(field.choices ?? []).join("\n")}
+                >
+                  <span class="gmt-label">
+                    <span>
+                      {field.name}
+                      {field.optional && <span class="gmt-pf-opt"> ?</span>}
+                    </span>
+                  </span>
+                  <div class="gmt-pf-list-rows" data-role="rows">
+                    {field.kind === "intervals"
+                      ? (field.pairs ?? []).map(([start, end]) => (
+                          <div class="gmt-pf-row">
+                            <input class="gmt-input" data-role="start" value={start} placeholder="start" spellcheck="false" />
+                            <input class="gmt-input" data-role="end" value={end} placeholder="end" spellcheck="false" />
+                            <button class="gmt-pf-remove" type="button" data-role="remove" title="Remove" aria-label="Remove">×</button>
+                          </div>
+                        ))
+                      : (field.items ?? []).map((item) =>
+                          field.element === "enum" ? (
+                            <div class="gmt-pf-row">
+                              <select class="gmt-select" data-role="value">
+                                {(field.choices ?? []).map((choice) => (
+                                  <option value={choice} selected={choice === item}>
+                                    {choice}
+                                  </option>
+                                ))}
+                              </select>
+                              <button class="gmt-pf-remove" type="button" data-role="remove" title="Remove" aria-label="Remove">×</button>
+                            </div>
+                          ) : (
+                            <div class="gmt-pf-row">
+                              <input
+                                class="gmt-input"
+                                type={field.element === "number" ? "number" : "text"}
+                                data-role="value"
+                                value={item}
+                                spellcheck="false"
+                              />
+                              <button class="gmt-pf-remove" type="button" data-role="remove" title="Remove" aria-label="Remove">×</button>
+                            </div>
+                          ),
+                        )}
+                  </div>
+                  <button class="gmt-pf-add" type="button" data-role="add">+ add</button>
+                </div>
+              ) : (
+                <label class="gmt-label" data-field={field.name} data-kind={field.kind}>
+                  <span>
+                    {field.name}
+                    {field.optional && <span class="gmt-pf-opt"> ?</span>}
+                  </span>
+
+                  {field.kind === "enum" && (
+                    <select class="gmt-select" data-role="value">
+                      {field.optional && <option value="">—</option>}
+                      {(field.choices ?? []).map((choice) => (
+                        <option value={choice} selected={choice === field.seed}>
+                          {choice}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+
+                  {field.kind === "boolean" && (
+                    <select class="gmt-select" data-role="value">
+                      {["true", "false"].map((choice) => (
+                        <option value={choice} selected={choice === field.seed}>
+                          {choice}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+
+                  {field.kind === "number" && (
+                    <input
+                      class="gmt-input"
+                      type="number"
+                      data-role="value"
+                      value={field.seed}
+                      spellcheck="false"
+                    />
+                  )}
+
+                  {field.kind === "string" && (
+                    <input
+                      class="gmt-input"
+                      data-role="value"
+                      value={field.seed}
+                      spellcheck="false"
+                    />
+                  )}
+
+                  {field.kind === "units" && (
+                    <span class="gmt-playground-form-units">
+                      <input
+                        class="gmt-input"
+                        type="number"
+                        data-role="amount"
+                        value={field.seed}
+                        spellcheck="false"
+                      />
+                      <select class="gmt-select" data-role="unit">
+                        {(field.unitKeys ?? []).map((unit) => (
+                          <option value={unit} selected={unit === field.unitSeed}>
+                            {unit}
+                          </option>
+                        ))}
+                      </select>
+                    </span>
+                  )}
+                </label>
+              ),
+            )}
+          </div>
+        )
+      }
+
+      <CodeFrame id={specId} />
+    </div>
+
+    <div class="gmt-widget-section">
+      <span class="gmt-pf-output-label">output</span>
+      <output
+        class="gmt-widget-output"
+        data-role="result"
+        data-return-type={returnType}
+        data-allow-empty-array={allowEmptyArray ? "true" : ""}>&nbsp;</output>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { GMT_MODULES } from "../lib/gmt-modules";
+  import { evaluateArg, renderResult, sentinelFor } from "../lib/playground-client";
+  import {
+    buildCall,
+    parseCallArgs,
+    type CallField,
+  } from "../lib/playground-parsers";
+  import { codeSpan, escapeHtml, renderCallLine, wireCopyButtons } from "../lib/widget-ui";
+
+  const DEBOUNCE_MS = 150;
+
+  /** Syntax-tint one already-formatted argument for the call line. */
+  function highlightArg(text: string): string {
+    if (/^-?\d+(?:\.\d+)?$/.test(text)) return codeSpan("num", text);
+    if (text.startsWith('"') && text.endsWith('"')) return codeSpan("str", text);
+    if (text === "true" || text === "false") return codeSpan("num", text);
+    return escapeHtml(text);
+  }
+
+  type Kind = CallField["kind"];
+
+  interface FieldControl {
+    read: () => CallField;
+    wire: (rerun: () => void) => void;
+  }
+
+  function makeRow(
+    kind: "list" | "intervals",
+    element: string,
+    choices: string[],
+  ): HTMLElement {
+    const row = document.createElement("div");
+    row.className = "gmt-pf-row";
+    if (kind === "intervals") {
+      for (const role of ["start", "end"]) {
+        const inp = document.createElement("input");
+        inp.className = "gmt-input";
+        inp.dataset.role = role;
+        inp.placeholder = role;
+        inp.spellcheck = false;
+        row.appendChild(inp);
+      }
+    } else if (element === "enum") {
+      const sel = document.createElement("select");
+      sel.className = "gmt-select";
+      sel.dataset.role = "value";
+      for (const c of choices) {
+        const o = document.createElement("option");
+        o.value = c;
+        o.textContent = c;
+        sel.appendChild(o);
+      }
+      row.appendChild(sel);
+    } else {
+      const inp = document.createElement("input");
+      inp.className = "gmt-input";
+      if (element === "number") inp.type = "number";
+      inp.dataset.role = "value";
+      inp.spellcheck = false;
+      row.appendChild(inp);
+    }
+    const rm = document.createElement("button");
+    rm.type = "button";
+    rm.className = "gmt-pf-remove";
+    rm.dataset.role = "remove";
+    rm.title = "Remove";
+    rm.setAttribute("aria-label", "Remove");
+    rm.textContent = "×";
+    row.appendChild(rm);
+    return row;
+  }
+
+  function scalarControl(label: HTMLElement): FieldControl {
+    const name = label.dataset.field ?? "";
+    const kind = (label.dataset.kind ?? "string") as Kind;
+    const optional = !!label.querySelector(".gmt-pf-opt");
+
+    if (kind === "units") {
+      const amount = label.querySelector<HTMLInputElement>('[data-role="amount"]')!;
+      const unit = label.querySelector<HTMLSelectElement>('[data-role="unit"]')!;
+      return {
+        read: () => ({ name, kind, value: amount.value, unit: unit.value, optional }),
+        wire: (rerun) => {
+          amount.addEventListener("input", rerun);
+          unit.addEventListener("change", rerun);
+        },
+      };
+    }
+
+    const el = label.querySelector<HTMLInputElement | HTMLSelectElement>(
+      '[data-role="value"]',
+    )!;
+    return {
+      read: () => ({ name, kind, value: el.value, optional }),
+      wire: (rerun) => {
+        el.addEventListener(el.tagName === "SELECT" ? "change" : "input", rerun);
+      },
+    };
+  }
+
+  function blockControl(block: HTMLElement): FieldControl {
+    const name = block.dataset.field ?? "";
+    const kind = block.dataset.kind as "list" | "intervals";
+    const element = block.dataset.element || "string";
+    const choices = (block.dataset.choices || "").split("\n").filter(Boolean);
+    const optional = !!block.querySelector(".gmt-pf-opt");
+    const rows = block.querySelector<HTMLElement>('[data-role="rows"]')!;
+    const addBtn = block.querySelector<HTMLButtonElement>('[data-role="add"]')!;
+
+    function read(): CallField {
+      const rowEls = [...rows.querySelectorAll<HTMLElement>(".gmt-pf-row")];
+      if (kind === "intervals") {
+        const pairs = rowEls.map((r) => {
+          const s = r.querySelector<HTMLInputElement>('[data-role="start"]')!.value;
+          const e = r.querySelector<HTMLInputElement>('[data-role="end"]')!.value;
+          return [s, e] as [string, string];
+        });
+        return { name, kind, pairs, optional };
+      }
+      const items = rowEls.map(
+        (r) =>
+          r.querySelector<HTMLInputElement | HTMLSelectElement>('[data-role="value"]')!
+            .value,
+      );
+      return { name, kind, items, element: element as CallField["element"], optional };
+    }
+
+    function wire(rerun: () => void) {
+      const wireRow = (row: HTMLElement) => {
+        row.querySelectorAll<HTMLElement>("input,select").forEach((c) => {
+          c.addEventListener(c.tagName === "SELECT" ? "change" : "input", rerun);
+        });
+        row
+          .querySelector('[data-role="remove"]')
+          ?.addEventListener("click", () => {
+            row.remove();
+            rerun();
+          });
+      };
+      rows.querySelectorAll<HTMLElement>(".gmt-pf-row").forEach(wireRow);
+      addBtn.addEventListener("click", () => {
+        const row = makeRow(kind, element, choices);
+        rows.appendChild(row);
+        wireRow(row);
+        rerun();
+      });
+    }
+
+    return { read, wire };
+  }
+
+  async function run(
+    container: HTMLElement,
+    controls: FieldControl[],
+    outputEl: HTMLElement,
+  ): Promise<void> {
+    const modKey = container.dataset.module ?? "";
+    const fnName = container.dataset.fn ?? "";
+    const returnType = container.dataset.returnType ?? "string";
+    const allowEmptyArray = container.dataset.allowEmptyArray === "true";
+    const optionsSuffix = container.dataset.optionsSuffix ?? "";
+    const objectArg = container.dataset.objectArg === "true";
+
+    const fields = controls.map((c) => c.read());
+    const call = buildCall(fnName, fields, { optionsSuffix, objectArg });
+
+    const args = parseCallArgs(call).map((a) => a.trim());
+    renderCallLine(
+      container.querySelector<HTMLElement>('[data-role^="call-"]'),
+      fnName,
+      args.map(highlightArg).join(", "),
+      args.join(", "),
+    );
+
+    try {
+      const mod = await GMT_MODULES[modKey]?.();
+      if (!mod) throw new Error("module not found: " + modKey);
+      const fn = mod[fnName];
+      if (typeof fn !== "function") throw new Error("export not found: " + fnName);
+
+      const result = (fn as (...a: unknown[]) => unknown)(...args.map(evaluateArg));
+
+      const sentinel = sentinelFor(returnType, allowEmptyArray);
+      const isSentinel = result === sentinel && result !== 0 && result !== false;
+      renderResult(outputEl, result as string, isSentinel);
+    } catch {
+      renderResult(outputEl, "", true);
+    }
+  }
+
+  if (typeof window !== "undefined") {
+    document.querySelectorAll<HTMLElement>(".gmt-playground-form").forEach((container) => {
+      const outputEl = container.querySelector<HTMLElement>('[data-role="result"]');
+      if (!outputEl) return;
+
+      // One control per field, in document order = argument order.
+      const controls: FieldControl[] = [
+        ...container.querySelectorAll<HTMLElement>(".gmt-pf-fields > [data-field]"),
+      ].map((node) =>
+        node.classList.contains("gmt-pf-list")
+          ? blockControl(node)
+          : scalarControl(node),
+      );
+
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const rerun = () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => void run(container, controls, outputEl), DEBOUNCE_MS);
+      };
+
+      controls.forEach((c) => c.wire(rerun));
+      wireCopyButtons(container);
+      void run(container, controls, outputEl);
+    });
+  }
+</script>

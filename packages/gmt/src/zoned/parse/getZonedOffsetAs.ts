@@ -5,6 +5,17 @@ const NANOSECONDS_PER_MINUTE = 60_000_000_000;
 
 /**
  * Unit a zoned value's UTC offset can be read as via `getZonedOffsetAs`.
+ *
+ * @remarks Members:
+ *
+ * | Member | Description |
+ * | --- | --- |
+ * | `minutes` | Whole-minute offset (e.g. `-240` for `-04:00`). |
+ * | `nanoseconds` | Raw `offsetNanoseconds` from Temporal (e.g. `-14400000000000`). |
+ *
+ * @example
+ * import { getZonedOffsetAs } from "@northguild/gmt/zoned";
+ * getZonedOffsetAs("2024-07-15T12:00:00-04:00[America/New_York]", "minutes");
  */
 export type ZonedOffsetUnit = "minutes" | "nanoseconds";
 

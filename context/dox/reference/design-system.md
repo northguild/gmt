@@ -1,9 +1,12 @@
 # Dox theme — architecture & maintenance
 
+> Moved 2026-09-02 from `context/dox/design-system.md` to its current location as part
+> of the progressive-disclosure rework. The visual language itself (palette intent,
+> "maximal chrome, disciplined content surface") is now
+> [reference/visual-design.md](visual-design.md) — this file is the *implementation*.
+
 How `apps/dox`'s theme is put together, and the rules for changing it without
-making a mess. The visual language itself (palette intent, "maximal chrome,
-disciplined content surface") is `context/dox/overview.md` §3 — this file is the
-*implementation*.
+making a mess.
 
 ## The stylesheet stack
 

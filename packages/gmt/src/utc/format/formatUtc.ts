@@ -3,6 +3,22 @@ import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
 import { toInstantFromUtc } from "../../internal/toInstantFromUtc";
 import { isValidUtc } from "../validate";
 
+/**
+ * Options for `formatUtc`. Extends `Intl.DateTimeFormatOptions`; only the
+ * added/overridden members are listed below. All `Intl.DateTimeFormatOptions`
+ * (`dateStyle`, `timeStyle`, etc.) apply to the time-of-day portion.
+ *
+ * @remarks Members:
+ *
+ * | Member | Type | Default | Description |
+ * | --- | --- | --- | --- |
+ * | `timeZone` | `string` | `"UTC"` | IANA zone for rendering; invalid/omitted falls back to UTC via `normalizeTimeZone`. |
+ * | `includeTimeZoneName` | `boolean` | `false` | Appends the localized zone name (style via `Intl`) when true. |
+ *
+ * @example
+ * import { FormatUtcOptions } from "@northguild/gmt/utc";
+ * const opts: FormatUtcOptions = { includeTimeZoneName: true };
+ */
 export interface FormatUtcOptions extends Intl.DateTimeFormatOptions {
   timeZone?: string;
   includeTimeZoneName?: boolean;

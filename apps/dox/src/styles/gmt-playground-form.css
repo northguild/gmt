@@ -1,0 +1,131 @@
+/*
+ * GMT Live Playground (form).
+ *
+ * Most of the look is inherited: the card / section / code-frame / output
+ * chrome from gmt-widget.css, the controls from gmt-form-controls.css. Only the
+ * form-playground-specific pieces live here — the field row and the repeatable
+ * list / interval editors. Companion logic: PlaygroundForm.astro, and the
+ * shared helpers in src/lib/playground-*.ts.
+ */
+
+.gmt-playground-form {
+  font-family: var(--gmt-font-mono);
+}
+
+.gmt-pf-output-label {
+  font-size: 0.65rem;
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+/* ---- Field layout ---- */
+
+.gmt-pf-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--gmt-space-3);
+}
+
+/* Free-text scalar params get room; a list/interval editor takes a full row. */
+.gmt-pf-fields > .gmt-label:has(> input[data-role="value"]:not([type="number"])) {
+  flex: 1 1 260px;
+}
+
+.gmt-pf-fields > .gmt-label > input[data-role="value"]:not([type="number"]) {
+  width: 100%;
+  min-width: 0;
+}
+
+.gmt-pf-list {
+  flex: 1 1 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-2);
+}
+
+.gmt-pf-opt {
+  color: var(--gmt-ice-dim);
+}
+
+/* units param — amount input + unit select on one row */
+.gmt-playground-form-units {
+  display: flex;
+  gap: var(--gmt-space-2);
+}
+
+.gmt-playground-form-units .gmt-input[type="number"] {
+  min-width: 64px;
+}
+
+/* ---- Repeatable rows (list / intervals) ---- */
+
+.gmt-pf-list-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-2);
+}
+
+.gmt-pf-row {
+  display: flex;
+  gap: var(--gmt-space-2);
+}
+
+.gmt-pf-row .gmt-input,
+.gmt-pf-row .gmt-select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.gmt-pf-remove {
+  flex: 0 0 auto;
+  width: 32px;
+  font-family: var(--gmt-font-mono);
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--gmt-ice-dim);
+  background: var(--gmt-fill-subtle);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  cursor: pointer;
+  transition:
+    color var(--gmt-duration-fast) var(--gmt-easing),
+    border-color var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-pf-remove:hover {
+  color: var(--gmt-signal);
+  border-color: var(--gmt-signal-border);
+}
+
+.gmt-pf-add {
+  align-self: flex-start;
+  padding: var(--gmt-space-1) var(--gmt-space-3);
+  font-family: var(--gmt-font-mono);
+  font-size: 0.75rem;
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-cyan);
+  background: transparent;
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  cursor: pointer;
+  transition:
+    background var(--gmt-duration-fast) var(--gmt-easing),
+    border-color var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-pf-add:hover {
+  background: var(--gmt-fill-subtle);
+  border-color: var(--gmt-cyan);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gmt-pf-remove,
+  .gmt-pf-add {
+    transition: none;
+  }
+}

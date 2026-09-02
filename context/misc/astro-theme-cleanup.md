@@ -1,7 +1,7 @@
 # Dox theme cleanup — shipped
 
 This refactor is done. The theme architecture and the rules for changing it now
-live in [`context/dox/design-system.md`](../dox/design-system.md).
+live in [`context/dox/reference/design-system.md`](../dox/reference/design-system.md).
 
 Summary of what changed (pure refactor — output stayed byte-identical except one
 intentional fix, the theme-toggle icon color):

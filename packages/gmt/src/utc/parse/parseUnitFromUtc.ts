@@ -2,6 +2,29 @@ import { Temporal } from "@js-temporal/polyfill";
 import { getWeekNumber } from "../../plain/calculate/getWeekNumber";
 import { isValidUtc } from "../validate";
 
+/**
+ * Units supported by `parseUnitFromUtc` when extracting a value from a UTC ISO
+ * string. Excludes `microsecond` and `nanosecond`, which `parseUnitFromUtc`
+ * does not expose.
+ *
+ * @remarks Members:
+ *
+ * | Member | Description |
+ * | --- | --- |
+ * | `year` | Full year, no padding (e.g. `2024`). |
+ * | `month` | Zero-padded 2 (e.g. `03`). |
+ * | `week` | Week-of-year, 1–53 (`weekStartsOn`-controlled). |
+ * | `day` | Zero-padded 2. |
+ * | `dayOfWeek` | 1 (Mon)–7 (Sun). |
+ * | `hour` | Zero-padded 2. |
+ * | `minute` | Zero-padded 2. |
+ * | `second` | Zero-padded 2. |
+ * | `millisecond` | Zero-padded 3. |
+ *
+ * @example
+ * import { UtcUnit } from "@northguild/gmt/utc";
+ * const u: UtcUnit = "month";
+ */
 export type UtcUnit =
   | "year"
   | "month"

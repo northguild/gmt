@@ -1,0 +1,224 @@
+/*
+ * Shared chrome for the teaching widgets (DST Inspector, Interval Visualizer,
+ * Converter Bench).
+ *
+ * These are the generic pieces — card, numbered sections, code frame, syntax
+ * tokens, result output. Anything specific to one widget's subject matter
+ * (DST badges, interval bars) stays in that widget's own sheet, which loads
+ * after this one and can therefore override.
+ *
+ * Companion JS helpers live in src/lib/widget-ui.ts; the code-frame markup is
+ * emitted by src/components/CodeFrame.astro.
+ */
+
+/* ---------------------------------------------------------------------------
+ * Card + sections
+ * --------------------------------------------------------------------------- */
+
+.gmt-widget {
+  margin: var(--gmt-space-6) 0;
+}
+
+.gmt-widget-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-4);
+  padding: var(--gmt-space-4);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+  background: var(--gmt-glass-tint-subtle);
+  backdrop-filter: blur(var(--gmt-blur));
+  -webkit-backdrop-filter: blur(var(--gmt-blur));
+}
+
+.gmt-widget-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+}
+
+.gmt-widget-section + .gmt-widget-section {
+  border-top: 1px solid var(--gmt-border);
+  padding-top: var(--gmt-space-4);
+}
+
+.gmt-widget-card h4 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* ---------------------------------------------------------------------------
+ * Controls
+ * --------------------------------------------------------------------------- */
+
+.gmt-widget-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--gmt-space-3);
+}
+
+/* Width modifiers for the shared .gmt-label / .gmt-select (gmt-form-controls.css) */
+
+.gmt-label-wide {
+  flex: 1 1 220px;
+  min-width: 220px;
+}
+
+.gmt-select-wide {
+  width: 100%;
+  min-width: 220px;
+}
+
+.gmt-label-small {
+  flex: 0 0 auto;
+  min-width: 80px;
+}
+
+/* A caption under a control — plain text, deliberately no box or rule. */
+.gmt-widget-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--gmt-ice-dim);
+}
+
+/* ---------------------------------------------------------------------------
+ * Code frame — a bare <pre> picks up the exact same background, border,
+ * radius, and glass blur every other code fence on the site gets from
+ * .sl-markdown-content pre (gmt-glass.css); nothing to duplicate here beyond
+ * layout. Copy-button treatment (.gmt-icon-button) is shared with the real
+ * Expressive Code copy button (gmt-primitives.css); token colors below are
+ * sampled from this site's actual Shiki output for exact-match highlighting.
+ * --------------------------------------------------------------------------- */
+
+.gmt-codeframe {
+  position: relative;
+}
+
+.gmt-codeframe-pre {
+  margin: 0;
+  padding: var(--gmt-space-3) 2.5rem var(--gmt-space-3) var(--gmt-space-4);
+  overflow-x: auto;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.gmt-codeframe-copy {
+  position: absolute;
+  top: var(--gmt-space-2);
+  right: var(--gmt-space-2);
+  /* .gmt-codeframe-pre gets backdrop-filter from the shared
+     .sl-markdown-content pre rule, which creates its own stacking context —
+     without a z-index here it paints over this button (same DOM-order stacking
+     level) and swallows the click even though the button looks fine. */
+  z-index: 1;
+}
+
+.gmt-codeframe-copy--copied {
+  color: var(--gmt-spring);
+}
+
+.gmt-code-fn {
+  color: #82aaff;
+}
+
+.gmt-code-str {
+  color: #ecc48d;
+}
+
+.gmt-code-num {
+  color: #f78c6c;
+}
+
+[data-theme="light"] .gmt-code-fn {
+  color: #3b61b0;
+}
+
+[data-theme="light"] .gmt-code-str {
+  color: #984e4d;
+}
+
+[data-theme="light"] .gmt-code-num {
+  color: #aa0982;
+}
+
+/* ---------------------------------------------------------------------------
+ * Result output
+ *
+ * Three states, and the difference between the last two is load-bearing
+ * (context/dox/overview.md §3): a live value, an invalid-input sentinel, and a
+ * result that is legitimately empty — the last is a *correct answer* and must
+ * never be dressed as signal-lost.
+ *
+ * The base `.gmt-playground-live` / `.gmt-playground-sentinel` classes below are
+ * toggled by `renderResult()` (src/lib/playground-client.ts) and
+ * `renderWidgetOutput()` (src/lib/widget-ui.ts). They sit above `.gmt-widget-output`
+ * on purpose: the more-specific `.gmt-widget-output.gmt-playground-sentinel` rule
+ * further down wins the box model back.
+ * --------------------------------------------------------------------------- */
+
+.gmt-playground-live {
+  color: var(--gmt-spring);
+  text-shadow: 0 0 8px color(from var(--gmt-spring) srgb r g b / 0.4);
+}
+
+.gmt-playground-sentinel {
+  display: inline-block;
+  padding: var(--gmt-space-1) var(--gmt-space-2);
+  color: var(--gmt-signal);
+  background: var(--gmt-signal-fill);
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  font-size: 0.8rem;
+  text-shadow: 0 0 6px color(from var(--gmt-signal) srgb r g b / 0.3);
+}
+
+[data-theme="light"] .gmt-playground-live {
+  color: var(--gmt-spring);
+  text-shadow: none;
+}
+
+[data-theme="light"] .gmt-playground-sentinel {
+  background: var(--gmt-signal-fill);
+  color: var(--gmt-signal);
+}
+
+.gmt-widget-output {
+  display: block;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  background: var(--gmt-code-surface);
+  border: 1px solid var(--gmt-code-border);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+  min-height: 1.5em;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.gmt-widget-output.gmt-playground-sentinel {
+  color: var(--gmt-signal);
+  background: var(--gmt-signal-fill);
+  border-color: var(--gmt-signal-border);
+  text-shadow: 0 0 6px color(from var(--gmt-signal) srgb r g b / 0.3);
+}
+
+/* A correct, genuinely empty answer — quiet and unglowing, deliberately not
+   the signal-lost treatment above. */
+.gmt-widget-output--empty {
+  color: var(--gmt-ice-dim);
+  font-style: italic;
+  text-shadow: none;
+}
+
+[data-theme="light"] .gmt-widget-card {
+  background: color(from var(--gmt-void) srgb r g b / 0.5);
+}

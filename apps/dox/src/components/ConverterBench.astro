@@ -1,0 +1,255 @@
+---
+/**
+ * Converter + format bench + regex tester widget.
+ *
+ * Three sections sharing the same card/section/controls/output chrome as
+ * DstInspector.astro and IntervalVisualizer.astro (styles/gmt-widget.css):
+ * 1. Zone-to-zone conversion via convertZonedToZoned
+ * 2. formatZonedToParts + formatRelativeZoned with locale switching
+ * 3. Regex tester running input against all 22 exported regex consts
+ */
+
+import { CURATED_TIMEZONES } from "../../scripts/build-utils/build-utils";
+import CodeFrame from "./CodeFrame.astro";
+
+const DEFAULT_VALUE = "2024-03-15T14:30:00.000-04:00[America/New_York]";
+const DEFAULT_SOURCE_ZONE = "America/New_York";
+const DEFAULT_TARGET_ZONE = "Europe/London";
+const DEFAULT_LOCALE = "en-US";
+// Matches packages/gmt/src/test/localeMatrix.ts's MustTestLocales — the
+// 17 locales the library is tested against.
+const LOCALES = [
+  "en-US",
+  "en-GB",
+  "de-DE",
+  "fr-FR",
+  "es-ES",
+  "it-IT",
+  "pt-PT",
+  "sv-SE",
+  "is-IS",
+  "zh-CN",
+  "zh-TW",
+  "ja-JP",
+  "ko-KR",
+  "ar-SA",
+  "he-IL",
+  "ru-RU",
+  "tr-TR",
+];
+---
+
+<div class="gmt-converter gmt-widget">
+  <div class="gmt-widget-card">
+    <div class="gmt-widget-section">
+      <h4>Zone conversion</h4>
+
+      <div class="gmt-widget-controls">
+        <label class="gmt-label gmt-label-wide">
+          <span>Input</span>
+          <input class="gmt-input" data-role="convert-value" type="text" value={DEFAULT_VALUE} spellcheck="false" />
+        </label>
+      </div>
+
+      <div class="gmt-widget-controls">
+        <label class="gmt-label gmt-label-wide">
+          <span>From</span>
+          <select class="gmt-select gmt-select-wide" data-role="convert-source">
+            {CURATED_TIMEZONES.map((z) => (
+              <option value={z} selected={z === DEFAULT_SOURCE_ZONE}>{z}</option>
+            ))}
+          </select>
+        </label>
+        <label class="gmt-label gmt-label-wide">
+          <span>To</span>
+          <select class="gmt-select gmt-select-wide" data-role="convert-target">
+            {CURATED_TIMEZONES.map((z) => (
+              <option value={z} selected={z === DEFAULT_TARGET_ZONE}>{z}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <output class="gmt-widget-output" data-role="convert-result">&nbsp;</output>
+    </div>
+
+    <div class="gmt-widget-section">
+      <h4>Format bench</h4>
+
+      <div class="gmt-widget-controls">
+        <label class="gmt-label gmt-label-wide">
+          <span>Input</span>
+          <input class="gmt-input" data-role="format-value" type="text" value={DEFAULT_VALUE} spellcheck="false" />
+        </label>
+        <label class="gmt-label">
+          <span>Locale</span>
+          <select class="gmt-select" data-role="format-locale">
+            {LOCALES.map((l) => (
+              <option value={l} selected={l === DEFAULT_LOCALE}>{l}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div class="gmt-converter-results">
+        <div class="gmt-converter-result-row">
+          <CodeFrame id="format-parts" />
+          <output class="gmt-widget-output" data-role="format-parts">&nbsp;</output>
+        </div>
+        <div class="gmt-converter-result-row">
+          <CodeFrame id="format-relative" />
+          <output class="gmt-widget-output" data-role="format-relative">&nbsp;</output>
+        </div>
+      </div>
+    </div>
+
+    <div class="gmt-widget-section">
+      <h4>Regex tester</h4>
+
+      <div class="gmt-widget-controls">
+        <label class="gmt-label gmt-label-wide">
+          <span>Input</span>
+          <input class="gmt-input" data-role="regex-input" type="text" value="2024-03-15T14:30:00" spellcheck="false" />
+        </label>
+      </div>
+
+      <div class="gmt-converter-chips" data-role="regex-results"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { GMT_MODULES } from "../lib/gmt-modules";
+  import { renderResult } from "../lib/playground-client";
+  import { codeSpan, renderCallLine, wireCopyButtons } from "../lib/widget-ui";
+
+  interface RegexConst {
+    name: string;
+    pattern: RegExp;
+  }
+
+  interface FormatPart {
+    type: string;
+    value: string;
+  }
+
+  async function loadModules() {
+    const [convMod, fmtMod, regexMod] = await Promise.all([
+      GMT_MODULES["zoned/convert"](),
+      GMT_MODULES["zoned/format"](),
+      GMT_MODULES["regex"](),
+    ]);
+    return {
+      convertZonedToZoned: convMod["convertZonedToZoned"] as (
+        value: string,
+        timeZone: string,
+      ) => string,
+      formatZonedToParts: fmtMod["formatZonedToParts"] as (
+        value: string,
+        locale?: string,
+      ) => FormatPart[],
+      formatRelativeZoned: fmtMod["formatRelativeZoned"] as (
+        value: string,
+        locale?: string,
+      ) => string,
+      regexes: regexMod as Record<string, RegExp>,
+    };
+  }
+
+  function getRegexList(regexes: Record<string, RegExp>): RegexConst[] {
+    const exclude = ["__esModule"];
+    return Object.keys(regexes)
+      .filter((k) => !exclude.includes(k) && regexes[k] instanceof RegExp)
+      .map((k) => ({ name: k, pattern: regexes[k] }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  function renderRegexChips(
+    container: HTMLElement,
+    input: string,
+    regexes: RegexConst[],
+  ): void {
+    container.innerHTML = "";
+    for (const { name, pattern } of regexes) {
+      const match = pattern.test(input);
+      const chip = document.createElement("span");
+      chip.className = `gmt-converter-chip${match ? " gmt-converter-chip--match" : ""}`;
+      chip.title = match ? `${name} — match` : `${name} — no match`;
+      chip.textContent = name;
+      container.appendChild(chip);
+    }
+  }
+
+  async function run(
+    container: HTMLElement,
+    modules: Awaited<ReturnType<typeof loadModules>>,
+  ): Promise<void> {
+    const convertVal = container.querySelector('[data-role="convert-value"]') as HTMLInputElement | null;
+    const convertTarget = container.querySelector('[data-role="convert-target"]') as HTMLSelectElement | null;
+    const convertOut = container.querySelector('[data-role="convert-result"]') as HTMLElement | null;
+
+    if (convertVal && convertTarget && convertOut) {
+      const result = modules.convertZonedToZoned(convertVal.value, convertTarget.value);
+      renderResult(convertOut, result, result === "");
+    }
+
+    const fmtVal = container.querySelector('[data-role="format-value"]') as HTMLInputElement | null;
+    const fmtLocale = container.querySelector('[data-role="format-locale"]') as HTMLSelectElement | null;
+    const partsOut = container.querySelector('[data-role="format-parts"]') as HTMLElement | null;
+    const relOut = container.querySelector('[data-role="format-relative"]') as HTMLElement | null;
+
+    if (fmtVal && fmtLocale) {
+      const locale = fmtLocale.value;
+      const argsHtml = `${codeSpan("str", `"${fmtVal.value}"`)}, ${codeSpan("str", `"${locale}"`)}`;
+      const argsPlain = `"${fmtVal.value}", "${locale}"`;
+
+      if (partsOut) {
+        const parts = modules.formatZonedToParts(fmtVal.value, locale);
+        renderResult(partsOut, parts, parts.length === 0);
+        renderCallLine(
+          container.querySelector('[data-role="call-format-parts"]') as HTMLElement | null,
+          "formatZonedToParts",
+          argsHtml,
+          argsPlain,
+        );
+      }
+      if (relOut) {
+        const rel = modules.formatRelativeZoned(fmtVal.value, locale);
+        renderResult(relOut, rel, rel === "");
+        renderCallLine(
+          container.querySelector('[data-role="call-format-relative"]') as HTMLElement | null,
+          "formatRelativeZoned",
+          argsHtml,
+          argsPlain,
+        );
+      }
+    }
+
+    const regexInput = container.querySelector('[data-role="regex-input"]') as HTMLInputElement | null;
+    const regexResults = container.querySelector('[data-role="regex-results"]') as HTMLElement | null;
+    if (regexInput && regexResults) {
+      const regexList = getRegexList(modules.regexes);
+      renderRegexChips(regexResults, regexInput.value, regexList);
+    }
+  }
+
+  if (typeof window !== "undefined") {
+    document.querySelectorAll(".gmt-converter").forEach(async (container) => {
+      const el = container as HTMLElement;
+      let modules: Awaited<ReturnType<typeof loadModules>> | null = null;
+      try {
+        modules = await loadModules();
+      } catch {
+        return;
+      }
+
+      el.querySelectorAll("select, input").forEach((input) => {
+        input.addEventListener("input", () => run(el, modules!));
+        input.addEventListener("change", () => run(el, modules!));
+      });
+
+      wireCopyButtons(el);
+      run(el, modules);
+    });
+  }
+</script>

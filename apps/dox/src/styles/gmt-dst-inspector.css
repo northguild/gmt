@@ -1,0 +1,228 @@
+/*
+ * DST Transition Inspector widget (DOX-B2b).
+ *
+ * Card/section/controls/codeframe/output chrome lives in gmt-widget.css —
+ * this sheet holds only what's specific to DST: the transition table, the
+ * gap/overlap badges, and the scrubbable ticker.
+ */
+
+/* ---------------------------------------------------------------------------
+ * Transition table
+ * --------------------------------------------------------------------------- */
+
+.gmt-dst-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.gmt-dst-table th {
+  text-align: left;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border-bottom: 2px solid var(--gmt-border);
+  color: var(--gmt-ice-dim);
+  font-weight: 600;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.gmt-dst-table td {
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border-bottom: 1px solid var(--gmt-border);
+  vertical-align: middle;
+}
+
+.gmt-dst-table tbody tr:hover {
+  background: var(--gmt-glass-tint-subtle);
+}
+
+.gmt-dst-table tbody tr[data-type="gap"]:hover {
+  background: color(from var(--gmt-dst-gold) srgb r g b / 0.08);
+}
+
+.gmt-dst-table tbody tr[data-type="overlap"]:hover {
+  background: color(from var(--gmt-dst-purple) srgb r g b / 0.08);
+}
+
+.gmt-dst-arrow--gap {
+  color: var(--gmt-dst-gold);
+}
+
+.gmt-dst-arrow--overlap {
+  color: var(--gmt-dst-purple);
+}
+
+.gmt-dst-mono {
+  font-family: var(--gmt-font-mono);
+  font-size: 0.75rem;
+}
+
+.gmt-dst-empty-cell {
+  text-align: center;
+  color: var(--gmt-ice-dim);
+  font-style: italic;
+  padding: var(--gmt-space-4) !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * Badges
+ * --------------------------------------------------------------------------- */
+
+.gmt-dst-badge {
+  display: inline-block;
+  padding: 0.15em 0.5em;
+  border-radius: var(--gmt-radius-sm);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.gmt-dst-badge-gap {
+  background: color(from var(--gmt-dst-gold) srgb r g b / 0.15);
+  color: var(--gmt-dst-gold);
+  border: 1px solid color(from var(--gmt-dst-gold) srgb r g b / 0.3);
+}
+
+.gmt-dst-badge-overlap {
+  background: color(from var(--gmt-dst-purple) srgb r g b / 0.15);
+  color: var(--gmt-dst-purple);
+  border: 1px solid color(from var(--gmt-dst-purple) srgb r g b / 0.3);
+}
+
+/* ---------------------------------------------------------------------------
+ * Scrubbable ticker — the gap/overlap span on a local-time axis
+ * --------------------------------------------------------------------------- */
+
+.gmt-dst-ticker {
+  position: relative;
+  padding: var(--gmt-space-2) 0;
+}
+
+.gmt-dst-ticker-status {
+  margin-bottom: var(--gmt-space-2);
+  font-family: var(--gmt-font-mono);
+  font-size: 0.7rem;
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-dst-ticker-track {
+  position: relative;
+  height: 40px;
+  margin: 1.4em var(--gmt-space-3) 0;
+  border-bottom: 1px solid var(--gmt-border);
+}
+
+.gmt-dst-ticker-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: var(--gmt-radius-sm);
+}
+
+.gmt-dst-ticker-zone--gap {
+  background: repeating-linear-gradient(
+    45deg,
+    color(from var(--gmt-dst-gold) srgb r g b / 0.18) 0 4px,
+    color(from var(--gmt-dst-gold) srgb r g b / 0.05) 4px 8px
+  );
+  border: 1px solid color(from var(--gmt-dst-gold) srgb r g b / 0.4);
+}
+
+.gmt-dst-ticker-zone--overlap {
+  background: repeating-linear-gradient(
+    45deg,
+    color(from var(--gmt-dst-purple) srgb r g b / 0.18) 0 4px,
+    color(from var(--gmt-dst-purple) srgb r g b / 0.05) 4px 8px
+  );
+  border: 1px solid color(from var(--gmt-dst-purple) srgb r g b / 0.4);
+}
+
+.gmt-dst-ticker-zone-label {
+  position: absolute;
+  top: -1.4em;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.65rem;
+  color: var(--gmt-ice-dim);
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.gmt-dst-ticker-handle {
+  position: absolute;
+  top: 10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: var(--gmt-void);
+  border: 2px solid var(--gmt-cyan);
+  cursor: grab;
+  touch-action: none;
+  transition:
+    border-color var(--gmt-duration-fast) var(--gmt-easing),
+    box-shadow var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-dst-ticker-handle:active {
+  cursor: grabbing;
+}
+
+.gmt-dst-ticker-handle:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--gmt-void),
+    0 0 0 4px var(--gmt-cyan);
+}
+
+.gmt-dst-ticker-handle--gap {
+  border-color: var(--gmt-dst-gold);
+  box-shadow: 0 0 8px color(from var(--gmt-dst-gold) srgb r g b / 0.5);
+}
+
+.gmt-dst-ticker-handle--overlap {
+  border-color: var(--gmt-dst-purple);
+  box-shadow: 0 0 8px color(from var(--gmt-dst-purple) srgb r g b / 0.5);
+}
+
+.gmt-dst-ticker-ticks {
+  position: relative;
+  height: 1.2em;
+  margin: var(--gmt-space-1) var(--gmt-space-3) 0;
+}
+
+.gmt-dst-ticker-tick {
+  position: absolute;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.65rem;
+  color: var(--gmt-ice-dim);
+  transform: translateX(-50%);
+}
+
+.gmt-dst-ticker-empty {
+  margin: 0;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--gmt-ice-dim);
+  background: var(--gmt-fill-deep);
+  border-radius: var(--gmt-radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gmt-dst-ticker-handle {
+    transition: none;
+  }
+}
+
+[data-theme="light"] .gmt-dst-table td,
+[data-theme="light"] .gmt-dst-table th {
+  border-color: var(--gmt-border);
+}
+
+[data-theme="light"] .gmt-dst-table tbody tr:hover {
+  background: color(from var(--gmt-void) srgb r g b / 0.3);
+}

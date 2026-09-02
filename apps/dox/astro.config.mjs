@@ -80,9 +80,9 @@ export default defineConfig({
         {
           label: "Start here",
           items: [
-            { slug: "install" },
-            { slug: "core-rules" },
             { slug: "why-gmt" },
+            { slug: "core-rules" },
+            { slug: "install" },
           ],
         },
         {
@@ -114,7 +114,12 @@ export default defineConfig({
         "./src/styles/gmt-content.css", // .sl-markdown-content + EC + search
         "./src/styles/gmt-controls.css", // buttons, focus, selection, scrollbar
         "./src/styles/gmt-playground.css", // mistake component styles
-        "./src/styles/gmt-live-playground.css", // textarea editor playground (DOX-B1 POC)
+        "./src/styles/gmt-form-controls.css", // shared label/input/select styles
+        "./src/styles/gmt-widget.css", // shared teaching-widget chrome (card/section/codeframe/output)
+        "./src/styles/gmt-dst-inspector.css", // DST Transition Inspector widget (DOX-B2b)
+        "./src/styles/gmt-interval-visualizer.css", // Interval Algebra Visualizer widget (DOX-B2c)
+        "./src/styles/gmt-converter-bench.css", // Converter + format bench + regex tester widget
+        "./src/styles/gmt-playground-form.css", // form-control playground (POC, chore/136)
         "./src/styles/gmt-charts.css", // chart theme variables + container styles
         "./src/styles/gmt-map.css", // timezone map layout + clock panel
         "./src/styles/gmt-light.css", // floating [data-theme="light"] overrides

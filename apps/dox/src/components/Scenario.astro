@@ -1,5 +1,5 @@
 ---
-import PlaygroundLive from "./PlaygroundLive.astro";
+import PlaygroundForm from "./PlaygroundForm.astro";
 
 interface Props {
   title: string;
@@ -27,7 +27,7 @@ const { title, description, naiveCode, brokenSpecId, explanation, gmtCode, fixed
   <div class="gmt-scenario-part">
     <h3>Watch it break</h3>
     {brokenSpecId ? (
-      <PlaygroundLive specId={brokenSpecId} />
+      <PlaygroundForm specId={brokenSpecId} />
     ) : (
       <p class="gmt-scenario-note">The naive approach silently produces wrong results — there is no GMT equivalent to demonstrate because the failure is <em>not using GMT</em>.</p>
     )}
@@ -45,6 +45,6 @@ const { title, description, naiveCode, brokenSpecId, explanation, gmtCode, fixed
 
   <div class="gmt-scenario-part">
     <h3>Same widget, working</h3>
-    <PlaygroundLive specId={fixedSpecId} />
+    <PlaygroundForm specId={fixedSpecId} />
   </div>
 </div>

@@ -1,0 +1,466 @@
+---
+/**
+ * Interval Algebra Visualizer widget (DOX-B2c).
+ *
+ * Drag two intervals' endpoints on a shared 2024 timeline (or type them
+ * directly) and watch intersection, union, difference, and xor update live
+ * from the real zoned/interval functions — plus a mini result bar per
+ * operation on the same timeline scale, so the shape of each answer is
+ * visible, not just the JSON.
+ *
+ * Sentinel-aware: the library returns the same value (null / []) for
+ * "invalid input" and "correctly, nothing overlaps" — this widget
+ * pre-validates each interval with zoned/validate (the same gate the
+ * interval functions use internally) so those two cases render visibly
+ * differently, per context/dox/overview.md §3.
+ *
+ * Shares its card/section/codeframe/output chrome with DstInspector.astro —
+ * see styles/gmt-widget.css, lib/widget-ui.ts, components/CodeFrame.astro.
+ */
+
+import CodeFrame from "./CodeFrame.astro";
+import {
+  INTERVAL_OPERATIONS,
+  RELATIONSHIP_PRESETS,
+} from "../lib/interval-visualizer";
+---
+
+<div class="gmt-interval gmt-widget">
+  <div class="gmt-widget-card">
+    <!-- Step 1 — place two intervals -->
+    <div class="gmt-widget-section">
+      <h4>1. Place two intervals</h4>
+
+      <div class="gmt-widget-controls">
+        <label class="gmt-label gmt-label-wide">
+          <span>Relationship preset</span>
+          <select class="gmt-select gmt-select-wide" data-role="relationship-preset">
+            {RELATIONSHIP_PRESETS.map((p) => (
+              <option value={p.type} selected={p.type === "overlapping"}>{p.label}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <p class="gmt-widget-hint" data-role="preset-description"></p>
+
+      <!-- Six aligned rows on one timeline: A, B, then a mini result bar per operation. -->
+      <div class="gmt-interval-timeline" data-role="timeline">
+        <div class="gmt-interval-rows">
+          <div class="gmt-interval-row">
+            <span class="gmt-interval-row-label">A</span>
+            <div class="gmt-interval-track" data-role="track-a">
+              <div class="gmt-interval-bar gmt-interval-bar--a" data-role="bar-a">
+                <div class="gmt-interval-handle" data-role="handle-a-start" tabindex="0" role="slider" aria-orientation="horizontal" aria-label="Interval A start"></div>
+                <div class="gmt-interval-handle" data-role="handle-a-end" tabindex="0" role="slider" aria-orientation="horizontal" aria-label="Interval A end"></div>
+              </div>
+            </div>
+          </div>
+          <div class="gmt-interval-row">
+            <span class="gmt-interval-row-label">B</span>
+            <div class="gmt-interval-track" data-role="track-b">
+              <div class="gmt-interval-bar gmt-interval-bar--b" data-role="bar-b">
+                <div class="gmt-interval-handle" data-role="handle-b-start" tabindex="0" role="slider" aria-orientation="horizontal" aria-label="Interval B start"></div>
+                <div class="gmt-interval-handle" data-role="handle-b-end" tabindex="0" role="slider" aria-orientation="horizontal" aria-label="Interval B end"></div>
+              </div>
+            </div>
+          </div>
+          {INTERVAL_OPERATIONS.map((op) => (
+            <div class="gmt-interval-row">
+              <span class="gmt-interval-row-label">{op.label}</span>
+              <div
+                class={`gmt-interval-track gmt-interval-track--result gmt-interval-track--${op.id}`}
+                data-role={`op-track-${op.id}`}
+              ></div>
+            </div>
+          ))}
+        </div>
+        <div class="gmt-interval-axis">
+          <span>Jan 2024</span>
+          <span>Jul</span>
+          <span>Dec</span>
+        </div>
+      </div>
+
+      <!-- Typed-input equivalent to dragging (context/dox/overview.md §3). -->
+      <div class="gmt-widget-controls">
+        <label class="gmt-label gmt-label-wide">
+          <span>A start</span>
+          <input class="gmt-input" data-role="a-start" type="text" spellcheck="false" />
+        </label>
+        <label class="gmt-label gmt-label-wide">
+          <span>A end</span>
+          <input class="gmt-input" data-role="a-end" type="text" spellcheck="false" />
+        </label>
+      </div>
+      <div class="gmt-widget-controls">
+        <label class="gmt-label gmt-label-wide">
+          <span>B start</span>
+          <input class="gmt-input" data-role="b-start" type="text" spellcheck="false" />
+        </label>
+        <label class="gmt-label gmt-label-wide">
+          <span>B end</span>
+          <input class="gmt-input" data-role="b-end" type="text" spellcheck="false" />
+        </label>
+      </div>
+
+      <div data-role="relationship-aside"></div>
+    </div>
+
+    <!-- Step 2 — compare the four operations -->
+    <div class="gmt-widget-section">
+      <h4>2. Compare the four operations</h4>
+
+      {INTERVAL_OPERATIONS.map((op) => (
+        <div class="gmt-interval-op">
+          <p class="gmt-interval-op-label">{op.label}</p>
+          <CodeFrame id={op.id} />
+          <output class="gmt-widget-output" data-role={`op-output-${op.id}`}>&nbsp;</output>
+        </div>
+      ))}
+    </div>
+  </div>
+</div>
+
+<script>
+  import {
+    INTERVAL_OPERATIONS,
+    RELATIONSHIP_PRESETS,
+    TIMELINE_END,
+    TIMELINE_START,
+    buildRelationshipPreset,
+    classifyRelationship,
+    formatInterval,
+    formatIntervalList,
+    instantToPercent,
+    percentToInstant,
+    stepInstant,
+    type IntervalOperationId,
+    type ZonedInterval,
+  } from "../lib/interval-visualizer";
+  import { GMT_MODULES } from "../lib/gmt-modules";
+  import { codeSpan, renderAside, renderCallLine, renderWidgetOutput, wireCopyButtons } from "../lib/widget-ui";
+
+  const STEP_DAYS = 1;
+  const BIG_STEP_DAYS = 7;
+
+  type IntervalFn = (
+    aStart: string,
+    aEnd: string,
+    bStart: string,
+    bEnd: string,
+  ) => ZonedInterval | ZonedInterval[] | null;
+
+  async function loadModules() {
+    const [intervalMod, validateMod] = await Promise.all([
+      GMT_MODULES["zoned/interval"](),
+      GMT_MODULES["zoned/validate"](),
+    ]);
+    const fns: Record<IntervalOperationId, IntervalFn> = {} as Record<IntervalOperationId, IntervalFn>;
+    for (const op of INTERVAL_OPERATIONS) {
+      fns[op.id] = intervalMod[op.fnName] as IntervalFn;
+    }
+    return {
+      fns,
+      isValidZonedDateTime: validateMod["isValidZonedDateTime"] as (v: string) => boolean,
+      isValidZonedRange: validateMod["isValidZonedRange"] as (args: {
+        value1: string;
+        value2: string;
+        options?: { allowEqual?: boolean };
+      }) => boolean,
+    };
+  }
+
+  // -----------------------------------------------------------------------
+  // Render helpers
+  // -----------------------------------------------------------------------
+
+  function updateBar(barEl: HTMLElement, startIso: string, endIso: string): void {
+    const left = instantToPercent(startIso);
+    const right = instantToPercent(endIso);
+    if (Number.isNaN(left) || Number.isNaN(right)) {
+      barEl.hidden = true;
+      return;
+    }
+    barEl.hidden = false;
+    barEl.style.left = `${left}%`;
+    barEl.style.width = `${Math.max(0.5, right - left)}%`;
+  }
+
+  function updateHandleAria(handle: HTMLElement | null, iso: string): void {
+    if (!handle) return;
+    const pct = instantToPercent(iso);
+    handle.setAttribute("aria-valuemin", "0");
+    handle.setAttribute("aria-valuemax", "100");
+    handle.setAttribute("aria-valuenow", Number.isNaN(pct) ? "0" : String(Math.round(pct)));
+    handle.setAttribute("aria-valuetext", iso);
+  }
+
+  function renderResultTrack(
+    trackEl: HTMLElement | null,
+    result: ZonedInterval | ZonedInterval[] | null,
+  ): void {
+    if (!trackEl) return;
+    trackEl.innerHTML = "";
+    if (result === null) return;
+    const list = Array.isArray(result) ? result : [result];
+    for (const seg of list) {
+      const left = instantToPercent(seg.start);
+      const right = instantToPercent(seg.end);
+      if (Number.isNaN(left) || Number.isNaN(right)) continue;
+      const span = document.createElement("span");
+      span.className = "gmt-interval-op-segment";
+      span.style.left = `${left}%`;
+      span.style.width = `${Math.max(0.5, right - left)}%`;
+      trackEl.appendChild(span);
+    }
+  }
+
+  function renderRelationshipAside(el: HTMLElement, a: ZonedInterval, b: ZonedInterval): void {
+    const kind = classifyRelationship(a, b);
+    const sentences: Record<typeof kind, string> = {
+      invalid: "One of the intervals is reversed (its start is after its end).",
+      identical: "A and B are exactly the same span — intersection and union both equal A (and B); difference and xor are both empty.",
+      disjoint: "A and B share no time at all — intersection and union are both empty; difference returns all of A; xor returns both A and B.",
+      adjacent: "A ends the instant B starts — they touch but don't overlap. Intersection is a single-instant span; union merges them into one; difference returns all of A; xor returns both.",
+      "a-contains-b": "B sits entirely inside A — intersection and union both equal A's outer bounds (union) or B (intersection); difference returns the two pieces of A on either side of B; xor returns those same two pieces.",
+      "b-contains-a": "A sits entirely inside B — mirror image of \"A contains B\": intersection equals A, union equals B, difference is empty (B fully covers A), xor returns the two pieces of B around A.",
+      overlapping: "A and B partially overlap — intersection is the shared middle; union is the full merged span; difference is A's outer edge; xor is both outer edges.",
+    };
+    renderAside(el, kind === "invalid" ? "caution" : "note", kind === "invalid" ? "Invalid input" : "Note", `<p>${sentences[kind]}</p>`);
+  }
+
+  // -----------------------------------------------------------------------
+  // Widget wiring
+  // -----------------------------------------------------------------------
+
+  function setupWidget(
+    container: HTMLElement,
+    fns: Record<IntervalOperationId, IntervalFn>,
+    isValidZonedDateTime: (v: string) => boolean,
+    isValidZonedRange: (args: { value1: string; value2: string; options?: { allowEqual?: boolean } }) => boolean,
+  ): void {
+    const q = <T extends HTMLElement>(role: string) =>
+      container.querySelector(`[data-role="${role}"]`) as T | null;
+
+    const presetEl = q<HTMLSelectElement>("relationship-preset");
+    const aStartEl = q<HTMLInputElement>("a-start");
+    const aEndEl = q<HTMLInputElement>("a-end");
+    const bStartEl = q<HTMLInputElement>("b-start");
+    const bEndEl = q<HTMLInputElement>("b-end");
+    const barA = q("bar-a");
+    const barB = q("bar-b");
+
+    if (!presetEl || !aStartEl || !aEndEl || !bStartEl || !bEndEl || !barA || !barB) return;
+
+    function isIntervalValid(start: string, end: string): boolean {
+      return (
+        isValidZonedDateTime(start) &&
+        isValidZonedDateTime(end) &&
+        isValidZonedRange({ value1: start, value2: end, options: { allowEqual: true } })
+      );
+    }
+
+    function render(): void {
+      const aStart = aStartEl!.value;
+      const aEnd = aEndEl!.value;
+      const bStart = bStartEl!.value;
+      const bEnd = bEndEl!.value;
+
+      updateBar(barA!, aStart, aEnd);
+      updateBar(barB!, bStart, bEnd);
+      updateHandleAria(q("handle-a-start"), aStart);
+      updateHandleAria(q("handle-a-end"), aEnd);
+      updateHandleAria(q("handle-b-start"), bStart);
+      updateHandleAria(q("handle-b-end"), bEnd);
+
+      const aValid = isIntervalValid(aStart, aEnd);
+      const bValid = isIntervalValid(bStart, bEnd);
+      barA!.classList.toggle("gmt-interval-bar--invalid", !aValid);
+      barB!.classList.toggle("gmt-interval-bar--invalid", !bValid);
+      const bothValid = aValid && bValid;
+
+      const relEl = q("relationship-aside");
+      if (relEl) {
+        if (bothValid) {
+          renderRelationshipAside(relEl, { start: aStart, end: aEnd }, { start: bStart, end: bEnd });
+        } else {
+          renderAside(
+            relEl,
+            "caution",
+            "Invalid input",
+            "<p>One or both intervals fail validation (unparseable, or start after end) — highlighted below. The four operations can't run on invalid input.</p>",
+          );
+        }
+      }
+
+      for (const op of INTERVAL_OPERATIONS) {
+        const trackEl = q(`op-track-${op.id}`);
+        const outputEl = q(`op-output-${op.id}`);
+        const codeEl = q(`call-${op.id}`);
+
+        renderCallLine(
+          codeEl,
+          op.fnName,
+          `${codeSpan("str", `"${aStart}"`)}, ${codeSpan("str", `"${aEnd}"`)}, ${codeSpan("str", `"${bStart}"`)}, ${codeSpan("str", `"${bEnd}"`)}`,
+          `"${aStart}", "${aEnd}", "${bStart}", "${bEnd}"`,
+        );
+
+        if (!bothValid) {
+          renderResultTrack(trackEl, null);
+          if (outputEl) renderWidgetOutput(outputEl, "NO SIGNAL", "sentinel");
+          continue;
+        }
+
+        const result = fns[op.id](aStart, aEnd, bStart, bEnd);
+        renderResultTrack(trackEl, result);
+
+        if (outputEl) {
+          const isEmpty = result === null || (Array.isArray(result) && result.length === 0);
+          if (isEmpty) {
+            renderWidgetOutput(outputEl, op.isArray ? "[] — correctly empty" : "null — correctly empty", "empty");
+          } else if (Array.isArray(result)) {
+            renderWidgetOutput(outputEl, formatIntervalList(result), "live");
+          } else {
+            renderWidgetOutput(outputEl, formatInterval(result), "live");
+          }
+        }
+      }
+    }
+
+    function applyPreset(): void {
+      const { aStart, aEnd, bStart, bEnd } = buildRelationshipPreset(
+        presetEl!.value as (typeof RELATIONSHIP_PRESETS)[number]["type"],
+      );
+      aStartEl!.value = aStart;
+      aEndEl!.value = aEnd;
+      bStartEl!.value = bStart;
+      bEndEl!.value = bEnd;
+
+      const descEl = q("preset-description");
+      if (descEl) {
+        const info = RELATIONSHIP_PRESETS.find((p) => p.type === presetEl!.value);
+        descEl.textContent = info?.description ?? "";
+      }
+
+      render();
+    }
+
+    // ---- Drag (pointer) ----
+
+    const inputByHandle: Record<string, HTMLInputElement> = {
+      "handle-a-start": aStartEl,
+      "handle-a-end": aEndEl,
+      "handle-b-start": bStartEl,
+      "handle-b-end": bEndEl,
+    };
+    const siblingByHandle: Record<string, { input: HTMLInputElement; isEnd: boolean }> = {
+      "handle-a-start": { input: aEndEl, isEnd: true },
+      "handle-a-end": { input: aStartEl, isEnd: false },
+      "handle-b-start": { input: bEndEl, isEnd: true },
+      "handle-b-end": { input: bStartEl, isEnd: false },
+    };
+
+    function clampAgainstSibling(role: string, iso: string): string {
+      const sibling = siblingByHandle[role];
+      const input = inputByHandle[role];
+      if (!sibling || !input) return iso;
+      const siblingPct = instantToPercent(sibling.input.value);
+      const pct = instantToPercent(iso);
+      if (Number.isNaN(siblingPct) || Number.isNaN(pct)) return iso;
+      // A start handle can't pass its own end handle, and vice versa.
+      if (sibling.isEnd && pct > siblingPct) return sibling.input.value;
+      if (!sibling.isEnd && pct < siblingPct) return sibling.input.value;
+      return iso;
+    }
+
+    function setHandleValue(role: string, iso: string): void {
+      const input = inputByHandle[role];
+      if (!input) return;
+      input.value = clampAgainstSibling(role, iso);
+      render();
+    }
+
+    let dragging: string | null = null;
+
+    container.addEventListener("pointerdown", (e) => {
+      const target = (e.target as HTMLElement).closest('[data-role^="handle-"]') as HTMLElement | null;
+      if (!target) return;
+      dragging = target.dataset.role ?? null;
+      target.setPointerCapture((e as PointerEvent).pointerId);
+    });
+
+    container.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      const handle = container.querySelector(`[data-role="${dragging}"]`) as HTMLElement | null;
+      const track = handle?.closest(".gmt-interval-track");
+      if (!track) return;
+      const rect = track.getBoundingClientRect();
+      const pct = (((e as PointerEvent).clientX - rect.left) / rect.width) * 100;
+      setHandleValue(dragging, percentToInstant(pct));
+    });
+
+    const stopDrag = () => {
+      dragging = null;
+    };
+    container.addEventListener("pointerup", stopDrag);
+    container.addEventListener("pointercancel", stopDrag);
+
+    // ---- Keyboard (non-drag equivalent, required by DOX-B2c) ----
+
+    container.addEventListener("keydown", (e) => {
+      const target = (e.target as HTMLElement).closest('[data-role^="handle-"]') as HTMLElement | null;
+      if (!target) return;
+      const role = target.dataset.role;
+      if (!role) return;
+      const input = inputByHandle[role];
+      if (!input) return;
+      const ev = e as KeyboardEvent;
+      const days = ev.shiftKey ? BIG_STEP_DAYS : STEP_DAYS;
+
+      switch (ev.key) {
+        case "ArrowLeft":
+        case "ArrowDown":
+          setHandleValue(role, stepInstant(input.value, -days));
+          ev.preventDefault();
+          break;
+        case "ArrowRight":
+        case "ArrowUp":
+          setHandleValue(role, stepInstant(input.value, days));
+          ev.preventDefault();
+          break;
+        case "Home":
+          setHandleValue(role, TIMELINE_START);
+          ev.preventDefault();
+          break;
+        case "End":
+          setHandleValue(role, TIMELINE_END);
+          ev.preventDefault();
+          break;
+      }
+    });
+
+    // ---- Typed input (the other non-drag equivalent) ----
+
+    [aStartEl, aEndEl, bStartEl, bEndEl].forEach((input) => {
+      input.addEventListener("input", render);
+    });
+
+    presetEl.addEventListener("change", applyPreset);
+
+    wireCopyButtons(container);
+
+    applyPreset();
+  }
+
+  if (typeof window !== "undefined") {
+    document.querySelectorAll(".gmt-interval").forEach(async (container) => {
+      try {
+        const modules = await loadModules();
+        setupWidget(container as HTMLElement, modules.fns, modules.isValidZonedDateTime, modules.isValidZonedRange);
+      } catch {
+        return;
+      }
+    });
+  }
+</script>

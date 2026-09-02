@@ -46,6 +46,38 @@ describe("intervalXorZoned", () => {
     ).toEqual([]);
   });
 
+  it("computes interior boundaries at exactly ±1 nanosecond from the overlap edges — not copied, not rounded to the second", () => {
+    // Regression test for the JSDoc @example drift this guards: the interior
+    // boundaries are re-derived one nanosecond off the overlap region's
+    // edges, never truncated to whole seconds.
+    const result = intervalXorZoned(
+      "2024-01-01T09:00:00+00:00[UTC]",
+      "2024-06-30T12:00:00+00:00[UTC]",
+      "2024-04-01T11:00:00+00:00[UTC]",
+      "2024-12-31T17:00:00+00:00[UTC]",
+    );
+    expect(result).toEqual([
+      { start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-04-01T10:59:59.999999999+00:00[UTC]" },
+      { start: "2024-06-30T12:00:00.000000001+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" },
+    ]);
+  });
+
+  it("returns two remainder pieces (not one) when B is strictly contained inside A", () => {
+    // Regression test for the corrected JSDoc prose — this used to (wrongly)
+    // claim [{ start, end }] for full containment; it's actually two pieces,
+    // same shape as a partial overlap.
+    const result = intervalXorZoned(
+      "2024-01-01T09:00:00+00:00[UTC]",
+      "2024-12-31T17:00:00+00:00[UTC]",
+      "2024-02-01T08:00:00+00:00[UTC]",
+      "2024-03-01T10:00:00+00:00[UTC]",
+    );
+    expect(result).toEqual([
+      { start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-02-01T07:59:59.999999999+00:00[UTC]" },
+      { start: "2024-03-01T10:00:00.000000001+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" },
+    ]);
+  });
+
   it("proves zone-invariance across battleTestTimeZones for overlapping intervals with xor on both sides", () => {
     const aStartInstant = Temporal.Instant.from("2024-01-01T09:00:00Z");
     const aEndInstant = Temporal.Instant.from("2024-06-30T12:00:00Z");

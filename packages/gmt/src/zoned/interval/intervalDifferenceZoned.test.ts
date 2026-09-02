@@ -38,6 +38,22 @@ describe("intervalDifferenceZoned", () => {
     );
   });
 
+  it("computes interior boundaries at exactly ±1 nanosecond from B's edges — not copied from B, not rounded to the second", () => {
+    // Regression test for the JSDoc @example drift this guards: the interior
+    // boundaries are re-derived one nanosecond off B's start/end, never equal
+    // to B's own endpoints and never truncated to whole seconds.
+    const result = intervalDifferenceZoned(
+      "2024-01-01T09:00:00+00:00[UTC]",
+      "2024-12-31T17:00:00+00:00[UTC]",
+      "2024-06-01T12:00:00+00:00[UTC]",
+      "2024-07-01T13:00:00+00:00[UTC]",
+    );
+    expect(result).toEqual([
+      { start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-06-01T11:59:59.999999999+00:00[UTC]" },
+      { start: "2024-07-01T13:00:00.000000001+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" },
+    ]);
+  });
+
   it("proves zone-invariance across battleTestTimeZones for interval difference", () => {
     const aStartInstant = Temporal.Instant.from("2024-01-01T00:00:00Z");
     const aEndInstant = Temporal.Instant.from("2024-06-30T23:59:59Z");

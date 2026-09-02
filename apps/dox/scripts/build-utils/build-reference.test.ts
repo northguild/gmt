@@ -431,6 +431,222 @@ describe("synthesizeTemplate", () => {
 });
 
 // ---------------------------------------------------------------------------
+// buildPlaygroundFields
+// ---------------------------------------------------------------------------
+
+describe("buildPlaygroundFields", () => {
+  it("maps clean positional params to fields", () => {
+    const res = BR.buildPlaygroundFields(
+      {
+        module: "duration",
+        fn: "durationAs",
+        returnType: "number",
+        params: [
+          { name: "value", type: "string", value: "P1DT2H30M" },
+          { name: "unit", type: "enum", value: "hours", options: ["hours", "minutes"] },
+        ],
+        options: [{ name: "relativeTo", type: "string", value: "" }],
+      },
+      'durationAs("P1DT2H30M", "hours")',
+    );
+    expect(res).toEqual({
+      fields: [
+        { name: "value", kind: "string", seed: "P1DT2H30M" },
+        { name: "unit", kind: "enum", seed: "hours", choices: ["hours", "minutes"] },
+      ],
+    });
+  });
+
+  it("promotes a bare-number example arg to a number field", () => {
+    const res = BR.buildPlaygroundFields(
+      {
+        module: "unix",
+        fn: "parseYearFromUnix",
+        returnType: "number",
+        params: [{ name: "value", type: "string", value: "1700000000000" }],
+      },
+      "parseYearFromUnix(1700000000000)",
+    );
+    expect(res?.fields[0]).toEqual({
+      name: "value",
+      kind: "number",
+      seed: "1700000000000",
+    });
+  });
+
+  it("carries a trailing options object through as optionsSuffix", () => {
+    const res = BR.buildPlaygroundFields(
+      {
+        module: "duration",
+        fn: "normalizeDuration",
+        returnType: "string",
+        params: [{ name: "value", type: "string", value: "PT90M" }],
+        options: [{ name: "largestUnit", type: "enum", value: "" }],
+      },
+      'normalizeDuration("PT90M", { largestUnit: "hour" })',
+    );
+    expect(res?.optionsSuffix).toBe('{ largestUnit: "hour" }');
+  });
+
+  it("builds units controls from a { unit: n } example arg", () => {
+    const res = BR.buildPlaygroundFields(
+      {
+        module: "plain",
+        fn: "addDate",
+        returnType: "string",
+        params: [
+          { name: "value", type: "string", value: "2024-03-10" },
+          {
+            name: "duration",
+            type: "units",
+            value: "5",
+            unitValue: "days",
+            options: ["days", "months"],
+          },
+        ],
+      },
+      'addDate("2024-03-10", { days: 5 })',
+    );
+    expect(res?.fields[1]).toMatchObject({ kind: "units", seed: "5", unitSeed: "days" });
+  });
+
+  it("builds a string list field from an array param", () => {
+    const res = BR.buildPlaygroundFields(
+      {
+        module: "plain",
+        fn: "maxDate",
+        returnType: "string",
+        params: [
+          { name: "dates", type: "array", value: "", arrayType: "string" },
+        ],
+      },
+      'maxDate(["2024-03-10", "2024-03-15", "2024-03-12"])',
+    );
+    expect(res?.fields[0]).toMatchObject({
+      name: "dates",
+      kind: "list",
+      element: "string",
+      items: ["2024-03-10", "2024-03-15", "2024-03-12"],
+    });
+  });
+
+  it("builds an intervals field from a { start, end }[] param", () => {
+    const res = BR.buildPlaygroundFields(
+      {
+        module: "plain",
+        fn: "mergeIntervalsDate",
+        returnType: "array",
+        params: [
+          {
+            name: "intervals",
+            type: "array",
+            value: "",
+            arrayType: "string",
+            intervalShape: true,
+          },
+        ],
+      },
+      'mergeIntervalsDate([{ start: "2024-01-01", end: "2024-01-10" }, { start: "2024-01-05", end: "2024-01-15" }])',
+    );
+    expect(res?.fields[0]).toMatchObject({
+      name: "intervals",
+      kind: "intervals",
+      pairs: [
+        ["2024-01-01", "2024-01-10"],
+        ["2024-01-05", "2024-01-15"],
+      ],
+    });
+  });
+
+  it("allows the example to omit an optional trailing param", () => {
+    const res = BR.buildPlaygroundFields(
+      {
+        module: "plain",
+        fn: "getWeekNumber",
+        returnType: "number",
+        params: [
+          { name: "dateStr", type: "string", value: "2024-01-01" },
+          {
+            name: "weekStartsOn",
+            type: "enum",
+            value: "",
+            options: ["monday", "sunday"],
+            optional: true,
+          },
+        ],
+      },
+      'getWeekNumber("2024-01-01")',
+    );
+    expect(res?.fields).toEqual([
+      { name: "dateStr", kind: "string", seed: "2024-01-01" },
+      {
+        name: "weekStartsOn",
+        kind: "enum",
+        seed: "",
+        choices: ["monday", "sunday"],
+        optional: true,
+      },
+    ]);
+  });
+
+  it("still bails on a required missing param or a non-literal arg", () => {
+    const missingRequired = BR.buildPlaygroundFields(
+      {
+        module: "duration",
+        fn: "formatDuration",
+        returnType: "string",
+        params: [
+          { name: "value", type: "string", value: "P1D" },
+          { name: "locale", type: "string", value: "" },
+        ],
+      },
+      'formatDuration("P1D")',
+    );
+    expect(missingRequired).toBeUndefined();
+
+    const callExprArg = BR.buildPlaygroundFields(
+      {
+        module: "plain",
+        fn: "foo",
+        returnType: "string",
+        params: [{ name: "value", type: "string", value: "" }],
+      },
+      "foo(new Date())",
+    );
+    expect(callExprArg).toBeUndefined();
+  });
+
+  it("rebuilds a destructured object-arg call from its keys", () => {
+    const res = BR.buildPlaygroundFields(
+      {
+        module: "plain",
+        fn: "isValidDateRange",
+        returnType: "boolean",
+        params: [
+          { name: "value1", type: "string", value: "" },
+          { name: "value2", type: "string", value: "" },
+          { name: "options", type: "string", value: "" },
+        ],
+      },
+      'isValidDateRange({ value1: "2024-02-28", value2: "2024-02-29" })',
+    );
+    expect(res?.objectArg).toBe(true);
+    expect(res?.fields).toEqual([
+      { name: "value1", kind: "string", seed: "2024-02-28" },
+      { name: "value2", kind: "string", seed: "2024-02-29" },
+    ]);
+  });
+
+  it("returns an empty field list for a no-arg function", () => {
+    const res = BR.buildPlaygroundFields(
+      { module: "unix", fn: "getUnixNow", returnType: "number", params: [] },
+      "getUnixNow()",
+    );
+    expect(res).toEqual({ fields: [] });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // buildLivePlaygroundTemplate integration
 // ---------------------------------------------------------------------------
 

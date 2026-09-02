@@ -18,6 +18,8 @@
   --gmt-teal: #0e7490;
   --gmt-ice: #cfeaf2;
   --gmt-signal: #f5a524;
+  --gmt-dst-gold: #fbbf24;
+  --gmt-dst-purple: #c084fc;
 
   /* ---- Derived tokens ---- */
   --gmt-surface: #061018; /* elevated bg / nav / sidebar (was --mg-void-2) */
@@ -168,6 +170,8 @@
   --gmt-ice: #1a1a1a;
   --gmt-ice-dim: #666666;
   --gmt-signal: #ea580c;
+  --gmt-dst-gold: #d97706;
+  --gmt-dst-purple: #a78bfa;
   --gmt-accent-wash: rgba(
     8,
     145,

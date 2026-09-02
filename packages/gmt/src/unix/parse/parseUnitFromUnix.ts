@@ -8,6 +8,30 @@ import {
   type UnixUnit,
 } from "../validate";
 
+/**
+ * Units extractable from a unix epoch value via `parseUnitFromUnix`. Covers the
+ * full set of date/time units plus sub-millisecond precision.
+ *
+ * @remarks Members:
+ *
+ * | Member | Description |
+ * | --- | --- |
+ * | `year` | Full year, no padding (e.g. `2024`). |
+ * | `month` | Zero-padded 2 (e.g. `03`). |
+ * | `week` | Week-of-year, 1–53 (`weekStartsOn`-controlled). |
+ * | `day` | Zero-padded 2. |
+ * | `dayOfWeek` | 1 (Mon)–7 (Sun). |
+ * | `hour` | Zero-padded 2. |
+ * | `minute` | Zero-padded 2. |
+ * | `second` | Zero-padded 2. |
+ * | `millisecond` | Zero-padded 3. |
+ * | `microsecond` | Zero-padded 3. |
+ * | `nanosecond` | Zero-padded 9. |
+ *
+ * @example
+ * import { PlainNowUnit } from "@northguild/gmt/unix";
+ * const u: PlainNowUnit = "month";
+ */
 export type PlainNowUnit =
   | "year"
   | "month"

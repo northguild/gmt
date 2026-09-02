@@ -4,6 +4,21 @@ import { isValidTimeZone } from "../validate";
 /**
  * Name style for `formatTimeZoneName`, mirroring
  * `Intl.DateTimeFormatOptions`'s `timeZoneName` values.
+ *
+ * @remarks Members:
+ *
+ * | Member | Example (America/New_York) | Description |
+ * | --- | --- | --- |
+ * | `short` | `EST`/`EDT` | Abbreviated zone name; seasonal for DST zones. |
+ * | `long` | `Eastern Standard Time` | Full zone name; seasonal for DST zones. |
+ * | `shortOffset` | `GMT-5` | Short UTC offset; seasonal. |
+ * | `longOffset` | `GMT-05:00` | Zero-padded UTC offset; seasonal. |
+ * | `shortGeneric` | `ET` | Season-independent generic abbreviation. |
+ * | `longGeneric` | `Eastern Time` | Season-independent generic full name. |
+ *
+ * @example
+ * import { TimeZoneNameStyle } from "@northguild/gmt/zoned";
+ * const s: TimeZoneNameStyle = "shortGeneric";
  */
 export type TimeZoneNameStyle =
   | "short"

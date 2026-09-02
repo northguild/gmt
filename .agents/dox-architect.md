@@ -18,18 +18,25 @@ precedent from `context/roadmap/`.
 ## Reading order — progressive disclosure, load only what the story needs
 
 1. `context/dox/index.md` — the map. Always.
-2. `context/dox/overview.md` — context, architecture, verified findings, workspace
-   integration (§4), visual design language (§3), verification (§6), risks (§7).
-3. `context/dox/story-groups.md` — the tier-by-tier narrative summary.
-4. `context/dox/tracker.md` — sub-story → issue number, build order, status.
+2. `context/dox/overview.md` — architecture, decisions, hosting, prior-art verdicts, tier
+   table. Always.
+3. `context/dox/tracker.md` — sub-story → issue number, build order, status. Always.
+4. `context/dox/story-groups.md` — one paragraph per tier, names the stories. Always.
 5. `context/dox/issues/DOX-<letter>.md` — the full GitHub-issue-ready spec for the story.
-6. `context/dox/appendix-parked.md` — **read before proposing audio, voice, or a
-   full-bleed reactive 3D scene.** It records findings that are expensive to re-derive
-   (notably that `speechSynthesis` output cannot be captured by any browser).
+6. `context/dox/reference/visual-design.md` — only on Tier 3 stories (DOX-A5, DOX-D1,
+   DOX-D2). The implementation rules are in `reference/design-system.md`, which
+   `dox-builder` loads on those same stories.
+7. `context/dox/reference/workspace-integration.md` — only on DOX-A1.
+8. `context/dox/reference/verification-and-risks.md` — only on epic-level reviews;
+   per-story DoD is in the issue file.
+9. `context/dox/appendix-parked.md` — only when proposing audio, voice, or a
+   full-bleed reactive 3D scene. It records findings that are expensive to re-derive
+   (notably that `speechSynthesis` output cannot be captured by any browser — see
+   also `reference/findings/speech-synthesis-capture.md`).
 
-`context/dox/example-sibling-repo-docs.md` is **reference only, not a target.** What was
-taken from it and what was rejected is already recorded in overview.md §2 "Reviewed prior
-art". Do not build what it describes.
+`context/dox/reference/prior-art/worktree-cli-snapshot-2026-08-21.md` is **reference
+only, not a target.** What was taken from it and what was rejected is already recorded
+in overview.md §2 "Reviewed prior art". Do not build what it describes.
 
 ## Domain Expertise
 

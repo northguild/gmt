@@ -1,0 +1,51 @@
+/*
+ * GMT shared form controls — labels, inputs, selects.
+ *
+ * Used by all interactive widgets (DST Inspector, Interval Visualizer,
+ * Converter Bench) for uniform styling.
+ */
+
+.gmt-label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-1);
+  margin-top: 0;
+  font-size: 0.7rem;
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-input,
+.gmt-select {
+  font-family: var(--gmt-font-mono);
+  font-size: 0.85rem;
+  height: 32px;
+  padding: var(--gmt-space-1) var(--gmt-space-2);
+  background: var(--gmt-fill-subtle);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  color: var(--gmt-ice);
+  min-width: 140px;
+  box-sizing: border-box;
+  transition:
+    background var(--gmt-duration-fast) var(--gmt-easing),
+    border-color var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-input:focus,
+.gmt-select:focus {
+  outline: none;
+  background: var(--gmt-fill-2);
+  border-color: var(--gmt-border-strong);
+  box-shadow: 0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.2);
+}
+
+.gmt-input[type="number"] {
+  min-width: 70px;
+}
+
+.gmt-label-required {
+  color: var(--gmt-signal);
+  margin-left: 2px;
+}

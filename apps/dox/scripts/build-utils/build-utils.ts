@@ -34,12 +34,17 @@ export interface ParamSpec {
   options?: string[];
   unitValue?: string;
   arrayType?: "number" | "string";
+  /** `x?:` in the signature — the example may legitimately omit it. */
+  optional?: boolean;
+  /** `array` params only: element type is `{ start, end }` interval objects. */
+  intervalShape?: boolean;
 }
 
 export interface ClassifiedType {
   type: ParamType;
   options?: string[];
   arrayType?: "number" | "string";
+  intervalShape?: boolean;
 }
 
 export interface PlaygroundSpec {
@@ -73,7 +78,7 @@ export interface PlaygroundSpecInput {
   namespace: string;
   module: string;
   name: string;
-  params: Array<{ name: string; type: string }>;
+  params: Array<{ name: string; type: string; optional?: boolean }>;
   options: Array<{ name: string }>;
   examples: ExampleLike[];
 }
@@ -156,6 +161,29 @@ export const CURATED_NUMBERING_SYSTEMS = [
   "hant",
   "jpan",
   "kore",
+] as const;
+
+// The 17-locale test matrix from packages/gmt/src/test/localeMatrix.ts
+// (MustTestLocales). Kept in sync by hand — mirrored in
+// src/components/ConverterBench.astro.
+export const CURATED_LOCALES = [
+  "en-US",
+  "en-GB",
+  "de-DE",
+  "fr-FR",
+  "es-ES",
+  "it-IT",
+  "pt-PT",
+  "sv-SE",
+  "is-IS",
+  "zh-CN",
+  "zh-TW",
+  "ja-JP",
+  "ko-KR",
+  "ar-SA",
+  "he-IL",
+  "ru-RU",
+  "tr-TR",
 ] as const;
 
 export const ALL_DT_UNITS = [
@@ -283,25 +311,36 @@ export function classifyType(
     return { type: "string" };
   }
 
-  // Array type (number[], string[])
+  // Array type (number[], string[], ("a" | "b")[], { start, end }[])
   const typeStr = _checker.typeToString(type);
-  if (typeStr.endsWith("[]")) {
-    const elemStr = typeStr.slice(0, -2).toLowerCase();
-    return {
-      type: "array",
-      arrayType: elemStr.includes("number") ? "number" : "string",
-    };
-  }
-
-  // Array<T> generic
-  if (
-    type.symbol &&
+  const isBracketArray = typeStr.endsWith("[]");
+  const isGenericArray =
+    !!type.symbol &&
     type.symbol.name === "Array" &&
-    (type as ts.GenericType).typeArguments &&
-    (type as ts.GenericType).typeArguments!.length > 0
-  ) {
-    const elemType = (type as ts.GenericType).typeArguments![0];
-    const elemStr = _checker.typeToString(elemType).toLowerCase();
+    !!(type as ts.GenericType).typeArguments &&
+    (type as ts.GenericType).typeArguments!.length > 0;
+  if (isBracketArray || isGenericArray) {
+    const elemType = isGenericArray
+      ? (type as ts.GenericType).typeArguments![0]
+      : (type.getNumberIndexType() ?? undefined);
+    const elemStr = (
+      isBracketArray ? typeStr.slice(0, -2) : _checker.typeToString(elemType!)
+    ).toLowerCase();
+
+    // `{ start, end }[]` — interval-object lists
+    if (elemType && elemType.flags & ts.TypeFlags.Object) {
+      const props = new Set(elemType.getProperties().map((p) => p.name));
+      if (props.has("start") && props.has("end") && props.size <= 3) {
+        return { type: "array", arrayType: "string", intervalShape: true };
+      }
+    }
+
+    // `("years" | "months")[]` — string-literal element unions become an enum list
+    const lits = elemType ? extractStringLiteralValues(elemType) : [];
+    if (lits.length > 0) {
+      return { type: "array", arrayType: "string", options: [...new Set(lits)] };
+    }
+
     return {
       type: "array",
       arrayType: elemStr.includes("number") ? "number" : "string",
@@ -336,6 +375,16 @@ export function classifyType(
     type.flags & ts.TypeFlags.StringLike
   ) {
     return { type: "enum", options: [...CURATED_NUMBERING_SYSTEMS] };
+  }
+
+  // Locale detection (name-aware) — a BCP-47 `string` in Intl types; surface the
+  // 17-locale test matrix as a dropdown rather than a free-text field.
+  if (
+    _paramName &&
+    /^locale$/i.test(_paramName) &&
+    type.flags & ts.TypeFlags.StringLike
+  ) {
+    return { type: "enum", options: [...CURATED_LOCALES] };
   }
 
   if (type.flags & ts.TypeFlags.StringLike) return { type: "string" };
@@ -454,14 +503,14 @@ export function classifyReturnType(
  */
 export function resolveRestParam(
   typeStr: string,
-): Array<{ name: string; inner: string }> | null {
+): Array<{ name: string; inner: string; optional?: boolean }> | null {
   const m = typeStr.match(/^\[\s*([\s\S]+?)\s*\]$/);
   if (!m) return null;
   return splitTopLevel(m[1]).map((el) => {
-    const mm = el.trim().match(/^([\w$]+)\s*\??\s*:\s*(.+)$/);
+    const mm = el.trim().match(/^([\w$]+)(\s*\?)?\s*:\s*(.+)$/);
     return mm
-      ? { name: mm[1], inner: mm[2].trim() }
-      : { name: el.trim(), inner: "string" };
+      ? { name: mm[1], inner: mm[3].trim(), optional: mm[2] !== undefined }
+      : { name: el.trim(), inner: "string", optional: true };
   });
 }
 
@@ -495,6 +544,38 @@ export function parseArrayArg(raw: string): string[] {
     const n = Number(unquoted);
     return isNaN(n) ? unquoted : String(n);
   });
+}
+
+/** Parse `[{ start: "a", end: "b" }, …]` into start/end string pairs. */
+export function parseIntervalArg(raw: string): Array<[string, string]> {
+  const t = raw.trim();
+  const inner = t.replace(/^\[|\]$/g, "").trim();
+  if (!inner) return [];
+  const pairs: Array<[string, string]> = [];
+  for (const item of splitTopLevel(inner)) {
+    const s = item.match(/start\s*:\s*("[^"]*"|'[^']*')/);
+    const e = item.match(/end\s*:\s*("[^"]*"|'[^']*')/);
+    pairs.push([s ? argToValue(s[1]) : "", e ? argToValue(e[1]) : ""]);
+  }
+  return pairs;
+}
+
+/**
+ * Split a trailing object-literal arg (`{ value1: "a", value2: "b" }`) into
+ * top-level `key → raw value` entries. Nested objects (an `options: { … }` key)
+ * come back with the brace-wrapped value untouched.
+ */
+export function parseObjectArgEntries(raw: string): Array<[string, string]> {
+  const t = raw.trim();
+  const m = t.match(/^\{\s*([\s\S]*?)\s*\}$/);
+  if (!m || !m[1].trim()) return [];
+  const out: Array<[string, string]> = [];
+  for (const part of splitTopLevel(m[1])) {
+    const colon = part.indexOf(":");
+    if (colon < 0) continue;
+    out.push([part.slice(0, colon).trim(), part.slice(colon + 1).trim()]);
+  }
+  return out;
 }
 
 /** Pull a single property's raw value out of a trailing options object literal. */
@@ -645,12 +726,14 @@ export function buildPlaygroundSpec(
     const value = seedForParam(input.examples, params.length, info);
     const spec: ParamSpec = { name, type: info.type, value };
     if (info.options) spec.options = info.options;
+    if (p.optional || rest?.[0]?.optional) spec.optional = true;
     if (info.type === "units") {
       const unitValue = seedForUnitsParam(input.examples, params.length, info);
       spec.unitValue = unitValue ?? info.options?.[0] ?? "";
     }
     if (info.type === "array" && info.arrayType)
       spec.arrayType = info.arrayType;
+    if (info.type === "array" && info.intervalShape) spec.intervalShape = true;
     params.push(spec);
   }
 
