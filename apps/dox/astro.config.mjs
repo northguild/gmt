@@ -124,6 +124,7 @@ export default defineConfig({
         "./src/styles/gmt-map.css", // timezone map layout + clock panel
         "./src/styles/gmt-light.css", // floating [data-theme="light"] overrides
         "./src/styles/dox.css", // live component layout
+        "./src/styles/gmt-a11y.css", // DOX-D1 prefers-reduced-transparency / -contrast / forced-colors — loaded last
       ],
     }),
   ],

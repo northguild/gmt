@@ -124,6 +124,88 @@ panels, per overview.md §3 "Widget chrome".
   not, reduce the chrome; do not reduce the contrast.
 ```
 
+#### DOX-D1 — as built (2026-09-03)
+
+The issue text above is the original spec, kept verbatim. This is what actually
+shipped on `chore/140-dox-d1-…` and the decisions behind each divergence. Sign-off:
+the branch owner accepted this as the closed state of DOX-D1; the cut items are not
+scheduled follow-ups unless a later story picks them up.
+
+##### Glass panels
+
+- `backdrop-filter` retuned to `blur(24px) saturate(1.4) brightness(0.72)` in dark,
+  `brightness(0.97)` in light — not the spec's literal `0.45`. Over the near-black
+  void the low-alpha tint already carries the contrast floor; `0.45` only muddied the
+  glass. `0.72` is the lightest darkening that still holds body text ≥ 7:1 on real
+  rendered pages (measured 11–16:1). Light mode barely darkens at all — the device is
+  for glass over the dark void, and over white it just dulls. Re-measure if changed;
+  do not raise dark above 1.0. (`--gmt-brightness`, gmt-tokens.css.)
+- Tinted fill, hairline border gradient (`.gmt-glass::before`), 1px inset top
+  highlight (`.gmt-glass::after`) — kept from the pre-DOX-D1 glass layer, unchanged.
+- **L-shaped corner brackets — not applied.** The `.gmt-brackets` primitive still
+  exists but sits on no surface. Cut as visual noise at this size; revisit only if a
+  later pass wants them.
+- **Static SVG grain overlay — skipped** (the spec marks it optional).
+
+##### Animated borders
+
+- The rotating conic `@property --angle` border was built, then **removed.** Its
+  box-shadow/spread rings read unevenly on a wide-short control — a bloom looks huge
+  beside a 32px height and thin beside a 500px width.
+- Replaced with **`gmt-focus-sonar`**: a "sonar ping" on the focused `<input>` /
+  `<select>` — a hard 2px ring hugging the control plus a second ring that pulses
+  outward and fades (`--gmt-motion-sonar-duration: 2s`). Every layer is 0-blur, so
+  the stroke reads identically on every edge regardless of aspect ratio. Still
+  honours the spec's rule — only the active element animates; idle panels keep the
+  static `.gmt-glass::before` gradient — via a different technique.
+  (gmt-form-controls.css; `gmt-motion-border.css` was deleted.)
+
+##### Chamfered corners
+
+- `corner-shape: bevel` + `border-radius` applied across panels and controls.
+- **No `@supports` gate and no `clip-path: polygon()` fallback.** Firefox / Safari
+  degrade to plain `border-radius`. The focus ring is a `box-shadow` that
+  `corner-shape` never clipped in the first place, so it stays fully visible in the
+  degraded path — the "verify focus in both chamfer paths" DoD line has no second
+  path to test.
+
+##### Scrollbars, caret, focus
+
+- Kept the existing chunky bevelled `::-webkit-scrollbar` treatment (deliberate
+  large-target a11y). **`scrollbar-width` / `scrollbar-color` not added** — in
+  Chromium, setting `scrollbar-color` overrides `::-webkit-scrollbar` styling
+  wholesale and regresses the primary look. Firefox keeps its native bar.
+- `caret-color: var(--gmt-caret)` blocky caret on text fields — shipped.
+- `:focus-visible` upgraded to a 2px cyan outline + soft outer glow; the sonar ping
+  is the "animated … inset ring" the spec asks for on controls.
+
+##### Accessibility gates
+
+New `apps/dox/src/styles/gmt-a11y.css`:
+`prefers-reduced-transparency` (blur dropped, near-opaque fill),
+`prefers-contrast: more` (thicker borders, decorative shadows stripped),
+`forced-colors: active` (system palette). `prefers-reduced-motion` is handled by the
+existing global reset in gmt-controls.css, which collapses the sonar ping to its
+still 2px ring.
+
+##### Adjacent fixes made in the same pass
+
+- Pagination pinned to a fixed 2-column grid so a lone prev/next link stays
+  half-width and in a consistent position (gmt-controls.css).
+- Expressive Code copy button restyled to match the playground's copy button — same
+  box, icon, hover chip, and copied-state checkmark (gmt-primitives.css).
+- In-field `::selection` given solid opaque high-contrast colours; the page's
+  translucent cyan selection wash over an already cyan-tinted field was unreadable
+  for low-vision readers (gmt-controls.css).
+
+##### Verification run
+
+- Body-text contrast on real rendered pages — **done**, 11–16:1.
+- Keyboard-only pass (mouse unplugged, before/after, one widget),
+  `prefers-reduced-transparency` / `-motion` / `-contrast` under devtools emulation,
+  and a real Firefox / Safari check — **not run in this pass.** Carried as a
+  follow-up verification task, not a code task.
+
 ---
 
 ### Issue #141 — DOX-D2

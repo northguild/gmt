@@ -25,12 +25,14 @@
   background: var(--gmt-fill-subtle);
   border: 1px solid var(--gmt-border);
   border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
   color: var(--gmt-ice);
   min-width: 140px;
   box-sizing: border-box;
   transition:
     background var(--gmt-duration-fast) var(--gmt-easing),
-    border-color var(--gmt-duration-fast) var(--gmt-easing);
+    border-color var(--gmt-duration-fast) var(--gmt-easing),
+    box-shadow var(--gmt-duration-med) var(--gmt-easing);
 }
 
 .gmt-input:focus,
@@ -38,7 +40,17 @@
   outline: none;
   background: var(--gmt-fill-2);
   border-color: var(--gmt-border-strong);
-  box-shadow: 0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.2);
+  /* Sonar ping: a hard 2px ring hugs the control while a second ring pulses
+     outward and fades (@keyframes gmt-focus-sonar, gmt-primitives.css — shared
+     with the header icon buttons and the CTA / pagination buttons). This
+     box-shadow is the still fallback the animation resolves to under
+     prefers-reduced-motion (the global reset in gmt-controls.css collapses the
+     animation to its first frame). */
+  box-shadow:
+    0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),
+    0 0 0 5px color(from var(--gmt-cyan) srgb r g b / 0.25);
+  animation: gmt-focus-sonar var(--gmt-motion-sonar-duration) var(--gmt-easing)
+    infinite;
 }
 
 .gmt-input[type="number"] {

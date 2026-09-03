@@ -10,7 +10,10 @@ import {
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 
-const libraryMetadata: Record<string, { tests: number; locales: number; timezones: number; nodeVersions: number }> = {
+const libraryMetadata: Record<
+  string,
+  { tests: number; locales: number; timezones: number; nodeVersions: number }
+> = {
   GMT: { tests: 16701, locales: 17, timezones: 10, nodeVersions: 2 },
   "@intl/date": { tests: 20190, locales: 0, timezones: 0, nodeVersions: 1 },
   Luxon: { tests: 4888, locales: 0, timezones: 0, nodeVersions: 1 },
@@ -19,7 +22,8 @@ const libraryMetadata: Record<string, { tests: number; locales: number; timezone
 };
 
 function addTooltipsToBars(svg: string): string {
-  const barGroupRegex = /<g[^>]*class="ts-chart__bar ts-chart__bar-x"[^>]*>([\s\S]*?)<\/g>/g;
+  const barGroupRegex =
+    /<g[^>]*class="ts-chart__bar ts-chart__bar-x"[^>]*>([\s\S]*?)<\/g>/g;
   return svg.replace(barGroupRegex, (match: string, groupContent: string) => {
     const rectRegex = /<rect([^>]*)\/>/g;
     const rects = groupContent.match(rectRegex);
@@ -39,7 +43,8 @@ function addTooltipsToBars(svg: string): string {
 
       const titleElement = `<title>${title}</title>`;
       const insertPos = result.indexOf(rect, offset) + rect.length;
-      result = result.slice(0, insertPos) + titleElement + result.slice(insertPos);
+      result =
+        result.slice(0, insertPos) + titleElement + result.slice(insertPos);
       offset = insertPos + titleElement.length;
     });
 

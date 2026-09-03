@@ -35,11 +35,29 @@
   ); /* sidebar-active / row-hover tint */
   --gmt-selection: rgba(34, 211, 238, 0.3); /* ::selection background */
 
-  /* ---- Glass tokens (blur/saturate/brightness only — fills use relative colors) ---- */
-  --gmt-blur: 16px;
+  /* ---- Glass tokens (blur/saturate/brightness only — fills use relative colors) ----
+   *
+   * overview.md §3 "Panel construction" specifies
+   * `blur(24px) saturate(1.4) brightness(0.45)` — the brightness component is a
+   * *darkening* and is "not optional": it is what creates a stable contrast floor
+   * where glass sits over bright content (code blocks, the future globe). Over the
+   * near-black void page the low-alpha tint already carries the floor, so the value
+   * here is tuned up from the spec's 0.45 to the lightest darkening that still keeps
+   * body text ≥ 7:1 on real rendered pages (DOX-D1 DoD). Re-measure if you change it;
+   * do not raise it back above 1.0.
+   */
+  --gmt-blur: 24px;
   --gmt-blur-heavy: 32px;
-  --gmt-saturate: 1.6;
-  --gmt-brightness: 1.1;
+  --gmt-saturate: 1.4;
+  --gmt-brightness: 0.72;
+
+  /* ---- HUD chrome (DOX-D1) ----
+   * --gmt-caret        blocky terminal caret colour for text controls.
+   * --gmt-motion-sonar-duration   one focus-ring "ping" cycle (pulse + beat) —
+   *                    gmt-form-controls.css .gmt-input:focus / .gmt-select:focus.
+   */
+  --gmt-caret: var(--gmt-cyan);
+  --gmt-motion-sonar-duration: 2s;
 
   /*
    * Ice-glass fill tiers, so surfaces don't stack tint on tint:
@@ -184,6 +202,11 @@
   --gmt-glass-tint: color(from var(--gmt-teal) srgb r g b / 0.16);
   --gmt-glass-tint-subtle: color(from var(--gmt-teal) srgb r g b / 0.045);
   --gmt-glass-scrim: color(from var(--gmt-teal) srgb r g b / 0.1);
+
+  /* The darkening `brightness` is a dark-mode contrast device (glass over the
+     near-black void). Over a white light-mode page it only muddies the glass, so
+     back it almost all the way off — the tint + saturate still read as glass. */
+  --gmt-brightness: 0.97;
 
   /* Re-tinting the palette above is enough for the --sl-* mapping too — every
      --sl-* points at a --gmt-* token (see gmt-theme.css), so it re-resolves on

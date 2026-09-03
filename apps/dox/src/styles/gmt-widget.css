@@ -19,6 +19,10 @@
   margin: var(--gmt-space-6) 0;
 }
 
+/* Single-border card treatment, matching Starlight's cards / asides
+   (gmt-glass.css) — one hairline, bevel, one blur. Deliberately NOT the
+   `.gmt-glass` primitive: its `::before` gradient ring reads as a second border
+   against this one on a panel this size. */
 .gmt-widget-card {
   display: flex;
   flex-direction: column;
@@ -30,6 +34,16 @@
   background: var(--gmt-glass-tint-subtle);
   backdrop-filter: blur(var(--gmt-blur));
   -webkit-backdrop-filter: blur(var(--gmt-blur));
+}
+
+/* The card already blurs — inner code frames and output boxes must not stack
+   another backdrop-filter on top (§3 performance: no glass-in-glass). The tinted
+   fill still carries their contrast floor. */
+.gmt-widget-card .gmt-codeframe-pre,
+.gmt-widget-card pre,
+.gmt-widget-card .gmt-widget-output {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .gmt-widget-section {

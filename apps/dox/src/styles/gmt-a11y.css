@@ -1,0 +1,126 @@
+/*
+ * GMT accessibility gates (DOX-D1) — overview.md §3 / DOX-D.md Definition of Done.
+ *
+ * "Everything gated behind prefers-reduced-motion, prefers-reduced-transparency,
+ * and prefers-contrast." Reduced-motion lives with the rules it stops (the
+ * gmt-controls.css global reset). This sheet owns the other two, plus a minimal
+ * forced-colors pass.
+ *
+ * Loaded LAST so it always wins its ties.
+ */
+
+/* =======================================================================
+ * prefers-reduced-transparency
+ * DoD: "drops to a near-opaque fill with the blur skipped entirely."
+ * ======================================================================= */
+@media (prefers-reduced-transparency: reduce) {
+  .gmt-glass,
+  .gmt-glass-subtle,
+  .gmt-glass-clear,
+  .gmt-glass-heavy,
+  .gmt-widget-card,
+  .gmt-widget-output,
+  .gmt-converter-results,
+  .gmt-mistake,
+  header,
+  .sidebar-pane,
+  #starlight__sidebar,
+  mobile-starlight-toc nav,
+  .sl-markdown-content pre,
+  .sl-markdown-content table,
+  .sl-markdown-content thead,
+  .sl-markdown-content .tab > [role="tab"],
+  .starlight-aside,
+  [class*="card"],
+  .comparison-card,
+  .pagination-links a,
+  [role="dialog"],
+  .search-dialog,
+  .DocSearch-Modal,
+  dialog > .dialog-frame,
+  .gmt-chart {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background-color: var(--gmt-surface);
+  }
+
+  /* Signal-lost asides keep their amber identity, just opaque. */
+  .starlight-aside--caution {
+    background-color: var(--gmt-void);
+  }
+
+  /* The modal scrim: no blur, a solid-enough dim instead of a see-through frost. */
+  dialog::backdrop {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: color(from var(--gmt-void) srgb r g b / 0.92);
+  }
+}
+
+/* =======================================================================
+ * prefers-contrast: more
+ * §3: "Glow is decoration, never a contrast mechanism." Thicken borders,
+ * raise fills, and strip every decorative text-shadow.
+ * ======================================================================= */
+@media (prefers-contrast: more) {
+  :root,
+  [data-theme="light"] {
+    --gmt-border: var(--gmt-border-strong);
+    --gmt-hairline: var(--gmt-border-strong);
+    --gmt-fill: var(--gmt-fill-deep);
+    --gmt-fill-subtle: var(--gmt-fill-strong);
+    --gmt-glass-tint-subtle: var(--gmt-glass-tint);
+  }
+
+  *,
+  *::before,
+  *::after {
+    text-shadow: none !important;
+  }
+
+  /* Live values still need to read as "changed" without their glow — lean on
+     weight + the spring hue, which already clears contrast. */
+  .gmt-playground-live {
+    font-weight: 600;
+  }
+
+  :focus-visible {
+    outline-width: 3px;
+  }
+}
+
+/* =======================================================================
+ * forced-colors (Windows High Contrast) — let the OS palette through and
+ * drop the purely-decorative chrome that would otherwise render as solid
+ * CanvasText blocks.
+ * ======================================================================= */
+@media (forced-colors: active) {
+  .gmt-glass::before,
+  .gmt-glass::after {
+    display: none;
+  }
+
+  .gmt-glass,
+  .gmt-widget-card,
+  .gmt-mistake {
+    background: Canvas;
+    border: 1px solid CanvasText;
+  }
+
+  :focus-visible {
+    outline: 2px solid Highlight;
+  }
+
+  /* The sonar focus rings (gmt-primitives.css / gmt-controls.css) set
+     outline: none and lean on a box-shadow ring — forced-colors drops
+     box-shadow, so restore a real outline on these controls too. */
+  .gmt-icon-button:focus,
+  .expressive-code .copy button:focus,
+  .sl-link-button:focus,
+  .pagination-links a:focus,
+  .sl-markdown-content .tab > [role="tab"]:focus,
+  .gmt-input:focus,
+  .gmt-select:focus {
+    outline: 2px solid Highlight;
+  }
+}

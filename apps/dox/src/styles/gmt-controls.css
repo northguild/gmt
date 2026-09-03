@@ -35,6 +35,40 @@
 /* ---- Prev / Next pagination — styled as primary glass buttons ---- */
 /* Starlight's .pagination-links a is in @layer starlight.core; these
    unlayered rules win. Mirrors .sl-link-button.primary. */
+
+/*
+ * Starlight lays the pagination out with `repeat(auto-fit, minmax(min(18rem,100%),
+ * 1fr))`, so a page with only a prev OR only a next (the first and last page of
+ * every section) stretches that lone link to the full content width and its
+ * position jumps between pages. Pin it to a fixed two-column grid instead — prev
+ * always column 1, next always column 2 — so a lone link stays half-width and in
+ * a consistent place from the first page through the last. Collapses to one
+ * column on narrow viewports.
+ */
+.pagination-links {
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gmt-space-4);
+}
+
+.pagination-links a[rel="prev"] {
+  grid-column: 1;
+}
+
+.pagination-links a[rel="next"] {
+  grid-column: 2;
+}
+
+@media (max-width: 37.5rem) {
+  .pagination-links {
+    grid-template-columns: 1fr;
+  }
+
+  .pagination-links a[rel="prev"],
+  .pagination-links a[rel="next"] {
+    grid-column: auto;
+  }
+}
+
 .pagination-links a {
   border: 1px solid var(--gmt-border-strong);
   border-radius: var(--gmt-radius-md);
@@ -141,22 +175,75 @@ starlight-menu-button button:hover,
   backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
 }
 
-/* Expressive-code tooltip — ice background */
-.expressive-code {
-  --ec-frm-tooltipSuccessBg: var(--gmt-cyan);
-  --ec-frm-tooltipSuccessFg: var(--gmt-void);
-}
+/* Expressive Code's built-in "Copied!" tooltip popover is suppressed in
+   gmt-primitives.css; the EC copy button instead swaps its mask icon to a
+   checkmark and tints spring green, matching the playground's
+   .gmt-codeframe-copy. --ec-frm-tooltipSuccess* are left at EC defaults so
+   any future opt-in still has sensible colors. */
 
-/* ---- Keyboard focus ---- */
+/* ---- Keyboard focus ----
+ *
+ * overview.md §3: "Focus must be more visible than default, never less." A 2px
+ * cyan outline plus a soft outer glow — brighter than the browser default and
+ * unmistakable on prose, sidebar, buttons, and controls.
+ */
 :focus-visible {
   outline: 2px solid var(--gmt-cyan);
   outline-offset: 2px;
   border-radius: var(--gmt-radius-sm);
+  box-shadow: 0 0 0 4px var(--gmt-glow);
+}
+
+/* ---- Sonar focus ring — CTA buttons + prev/next pagination ----
+ * The same focus "ping" the form controls and header icon buttons emit; the
+ * @keyframes and the still fallback it resolves to live in gmt-primitives.css.
+ * These selectors are Starlight-owned so they stay here rather than in the
+ * primitive. Placed after the generic :focus-visible above and the pagination
+ * :hover rules so it wins when a link is both hovered and focused.
+ */
+.sl-link-button:focus,
+.pagination-links a:focus {
+  outline: none;
+  box-shadow:
+    0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),
+    0 0 0 5px color(from var(--gmt-cyan) srgb r g b / 0.25);
+  animation: gmt-focus-sonar var(--gmt-motion-sonar-duration) var(--gmt-easing)
+    infinite;
+}
+
+/* ---- Blocky terminal caret ---- */
+/* overview.md §3 "Controls": a blocky terminal caret on text fields. */
+textarea,
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+[contenteditable],
+.gmt-input {
+  caret-color: var(--gmt-caret);
 }
 
 /* ---- Selection ---- */
 ::selection {
   background: var(--gmt-selection);
+  color: var(--gmt-ice);
+}
+
+/* Editable controls: the page's translucent cyan selection wash lands on top of
+   an already cyan-tinted field, which drops selected text below a readable
+   contrast for low-vision readers. Use a solid, opaque, high-contrast selection
+   inside inputs instead — brand hue, but legible. */
+.gmt-input::selection,
+.gmt-select::selection,
+input::selection,
+textarea::selection {
+  background: var(--gmt-cyan);
+  color: var(--gmt-void);
+}
+
+/* Light mode: --gmt-void is white, so flip selected text to the dark ice value
+   for contrast against the (mid-tone) cyan. */
+[data-theme="light"] .gmt-input::selection,
+[data-theme="light"] .gmt-select::selection,
+[data-theme="light"] input::selection,
+[data-theme="light"] textarea::selection {
   color: var(--gmt-ice);
 }
 

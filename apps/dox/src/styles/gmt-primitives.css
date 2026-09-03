@@ -141,9 +141,9 @@
  * theme toggle and the GitHub link — both add `.gmt-icon-button` in their
  * component markup and render identically: same size, same bevelled chip, icon
  * in the primary accent. The Expressive Code copy button (Starlight-rendered,
- * can't take a class) borrows the same look at its own smaller size. The mobile
- * search trigger and the hamburger reuse this inline in gmt-controls.css, where
- * they also need fixed positioning.
+ * can't take a class) borrows the same look at its own smaller size, including
+ * the bevel radius. The mobile search trigger and the hamburger reuse this
+ * inline in gmt-controls.css, where they also need fixed positioning.
  */
 .gmt-icon-button,
 .expressive-code .copy button {
@@ -151,6 +151,7 @@
   background: transparent;
   border: 1px solid transparent;
   border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
   padding: 0.25rem;
   display: inline-flex;
   align-items: center;
@@ -184,4 +185,105 @@
   border-color: var(--gmt-border);
   box-shadow: 0 0 8px var(--gmt-glow);
   backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+}
+
+/* ---- Expressive Code copy button → unified with the playground copy button ----
+ * Starlight renders its own copy button inside `.expressive-code .copy` with a
+ * fixed DOM — `button > div` (idle bg wash), `button::before` (border ring),
+ * `button::after` (mask-image icon tinted with `--ec-frm-inlBtnFg`). The shared
+ * rule above already lends it `.gmt-codeframe-copy`'s chip, hover, and bevel;
+ * this block finishes the match:
+ *   1. size the box to 38px and the icon to 20px, like `.gmt-codeframe-copy`
+ *      (`.gmt-icon-button` + `.gmt-icon-button svg`)
+ *   2. route the icon colour through `--ec-frm-inlBtnFg` — the shared rule's
+ *      `color` alone does nothing, EC paints the glyph from that var
+ *   3. retire EC's own `div` wash and `::before` ring so only our chip shows
+ *   4. swap EC's glyph for the playground's copy icon, and its "Copied!"
+ *      tooltip for the same checkmark + spring-green tint (`.feedback.show` is
+ *      the only signal EC's JS emits; suppressing the tooltip keeps its dedupe
+ *      check, so the ~1.5s window still matches the playground's resetTimer)
+ * EC keeps its reveal-on-frame-hover behaviour — `opacity` is untouched.
+ */
+.expressive-code .copy button {
+  --ec-frm-inlBtnFg: var(--gmt-cyan);
+  width: 2.375rem;
+  height: 2.375rem;
+  border-radius: var(--gmt-radius-md);
+}
+
+.expressive-code .copy button div,
+.expressive-code .copy button::before {
+  display: none;
+}
+
+.expressive-code .copy button::after {
+  margin: 0;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: 1.25rem;
+  mask-size: 1.25rem;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");
+}
+
+.expressive-code .copy button:hover {
+  --ec-frm-inlBtnFg: var(--gmt-cyan-bright);
+}
+
+.expressive-code .copy .feedback {
+  display: none;
+}
+
+.expressive-code .copy:has(.feedback.show) button {
+  color: var(--gmt-spring);
+  --ec-frm-inlBtnFg: var(--gmt-spring);
+}
+
+.expressive-code .copy:has(.feedback.show) button::after {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+}
+
+/* ---- Sonar focus ring ----
+ * The focus "ping" the form controls emit on :focus (gmt-form-controls.css),
+ * lifted here so every bevelled button and link can share it. A crisp ring is
+ * emitted from the border, races out to ~16px while fading, and is gone by 60%
+ * of the cycle — then a clear beat before the next emit (the jump back to 0% is
+ * the emit). The inner 2px ring is pinned across every frame so it never
+ * flickers. Every layer is 0-blur, so the stroke reads the same thickness on
+ * every edge whatever the control's aspect ratio — a blurred spread does not
+ * (the bloom looks huge beside a 32px-tall control and thin beside a wide one).
+ *
+ * The plain box-shadow in each :focus rule is the still state the animation
+ * resolves to: it is also what the global reduced-motion reset (gmt-controls.css)
+ * leaves once it collapses the animation to its first frame.
+ *
+ * Consumers: .gmt-input / .gmt-select (gmt-form-controls.css), the two header
+ * icon buttons + the Expressive Code copy button (below), the CTA buttons +
+ * prev/next pagination (gmt-controls.css), and the Starlight tab triggers
+ * (gmt-content.css).
+ */
+@keyframes gmt-focus-sonar {
+  0% {
+    box-shadow:
+      0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),
+      0 0 0 3px color(from var(--gmt-cyan) srgb r g b / 0.7);
+  }
+  60%,
+  100% {
+    box-shadow:
+      0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),
+      0 0 0 16px color(from var(--gmt-cyan) srgb r g b / 0);
+  }
+}
+
+.gmt-sonar-focus:focus,
+.gmt-icon-button:focus,
+.expressive-code .copy button:focus {
+  outline: none;
+  box-shadow:
+    0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),
+    0 0 0 5px color(from var(--gmt-cyan) srgb r g b / 0.25);
+  animation: gmt-focus-sonar var(--gmt-motion-sonar-duration) var(--gmt-easing)
+    infinite;
 }

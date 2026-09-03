@@ -306,6 +306,19 @@ dialog > .dialog-frame {
     inset 0 1px 0 color(from var(--gmt-ice) srgb r g b / 0.18);
 }
 
+/* Sonar focus ping — same as the buttons and form controls (@keyframes
+   gmt-focus-sonar + still fallback in gmt-primitives.css). After the :hover and
+   [aria-selected] rules so it wins when the focused tab is also the selected
+   one. The tab only bevels its top corners, so the ring hugs that shape. */
+.sl-markdown-content .tab > [role="tab"]:focus {
+  outline: none;
+  box-shadow:
+    0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),
+    0 0 0 5px color(from var(--gmt-cyan) srgb r g b / 0.25);
+  animation: gmt-focus-sonar var(--gmt-motion-sonar-duration) var(--gmt-easing)
+    infinite;
+}
+
 .sl-markdown-content [role="tabpanel"] {
   margin-top: 0;
 }
