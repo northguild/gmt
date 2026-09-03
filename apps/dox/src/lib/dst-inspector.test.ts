@@ -2,27 +2,27 @@
 
 import { describe, expect, it } from "vitest";
 import {
-    VALUE_PRESETS,
-    buildValuePreset,
-    buildZonedValueFromMinutes,
-    classifyProbeResult,
-    formatMinuteOfDay,
-    getTickerTickStepMinutes,
-    getTickerWindow,
-    isGap,
-    isMinuteInZone,
-    isOverlap,
-    isSentinel,
-    localDateAtTransition,
-    localHourAtTransition,
-    localMinuteOfDayAtTransition,
-    minuteToTickerPercent,
-    parseOffsetMinutes,
-    tickerPercentToMinute,
-    transitionHour,
-    transitionType,
-    type DstTransition,
-    type TickerWindow,
+  VALUE_PRESETS,
+  buildValuePreset,
+  buildZonedValueFromMinutes,
+  classifyProbeResult,
+  formatMinuteOfDay,
+  getTickerTickStepMinutes,
+  getTickerWindow,
+  isGap,
+  isMinuteInZone,
+  isOverlap,
+  isSentinel,
+  localDateAtTransition,
+  localHourAtTransition,
+  localMinuteOfDayAtTransition,
+  minuteToTickerPercent,
+  parseOffsetMinutes,
+  tickerPercentToMinute,
+  transitionHour,
+  transitionType,
+  type DstTransition,
+  type TickerWindow,
 } from "../lib/dst-inspector";
 
 // ---------------------------------------------------------------------------
@@ -163,7 +163,10 @@ describe("localMinuteOfDayAtTransition", () => {
 
   it("returns NaN for an unreadable instant", () => {
     expect(
-      localMinuteOfDayAtTransition({ ...SPRING_FORWARD, instant: "nope" }, ZONE),
+      localMinuteOfDayAtTransition(
+        { ...SPRING_FORWARD, instant: "nope" },
+        ZONE,
+      ),
     ).toBeNaN();
   });
 });
@@ -232,7 +235,9 @@ describe("getTickerWindow", () => {
   });
 
   it("returns null for an unreadable instant", () => {
-    expect(getTickerWindow({ ...SPRING_FORWARD, instant: "nope" }, ZONE)).toBeNull();
+    expect(
+      getTickerWindow({ ...SPRING_FORWARD, instant: "nope" }, ZONE),
+    ).toBeNull();
   });
 });
 
@@ -401,13 +406,19 @@ describe("buildValuePreset", () => {
   it("'overlap' generates the ambiguous hour on the fall-back date", () => {
     // Fall-back transition at 2024-11-03T06:00:00Z = 01:00 local in NY
     // (the hour 01:00-02:00 happens twice — once with -04:00, once with -05:00)
-    const result = buildValuePreset("overlap", ZONE, [SPRING_FORWARD, FALL_BACK]);
+    const result = buildValuePreset("overlap", ZONE, [
+      SPRING_FORWARD,
+      FALL_BACK,
+    ]);
     expect(result).toBe("2024-11-03T01:00:00[America/New_York]");
   });
 
   it("'transition' generates a zoned ISO string from the first transition's UTC instant", () => {
     // 2024-03-10T07:00:00Z in America/New_York = 2024-03-10T03:00:00-04:00
-    const result = buildValuePreset("transition", ZONE, [SPRING_FORWARD, FALL_BACK]);
+    const result = buildValuePreset("transition", ZONE, [
+      SPRING_FORWARD,
+      FALL_BACK,
+    ]);
     expect(result).toBe("2024-03-10T03:00:00-04:00[America/New_York]");
   });
 
@@ -458,15 +469,14 @@ describe("classifyProbeResult", () => {
     // Use probe hour far from any transition so the "prefer makes disambiguation inert"
     // insight path is reached rather than the gap/overlap classification.
     const transitions = [SPRING_FORWARD, FALL_BACK];
-    const classification = classifyProbeResult(
-      "",
-      transitions,
-      23,
-      ZONE,
-      { disambiguation: "reject", offset: "prefer" },
-    );
+    const classification = classifyProbeResult("", transitions, 23, ZONE, {
+      disambiguation: "reject",
+      offset: "prefer",
+    });
     expect(classification.type).toBe("normal");
-    expect(classification.explanation).toContain('offset:"prefer" makes disambiguation inert');
+    expect(classification.explanation).toContain(
+      'offset:"prefer" makes disambiguation inert',
+    );
   });
 
   it("classifies a sentinel with no nearby transition as 'normal'", () => {
@@ -492,7 +502,9 @@ describe("isSentinel", () => {
   });
 
   it("returns false for a valid result", () => {
-    expect(isSentinel("2024-03-10T12:00:00-04:00[America/New_York]")).toBe(false);
+    expect(isSentinel("2024-03-10T12:00:00-04:00[America/New_York]")).toBe(
+      false,
+    );
   });
 });
 
@@ -502,8 +514,16 @@ describe("isSentinel", () => {
 
 describe("DST widget behavior", () => {
   const NY_TRANSITIONS: DstTransition[] = [
-    { instant: "2024-03-10T07:00:00Z", offsetBefore: "-05:00", offsetAfter: "-04:00" },
-    { instant: "2024-11-03T06:00:00Z", offsetBefore: "-04:00", offsetAfter: "-05:00" },
+    {
+      instant: "2024-03-10T07:00:00Z",
+      offsetBefore: "-05:00",
+      offsetAfter: "-04:00",
+    },
+    {
+      instant: "2024-11-03T06:00:00Z",
+      offsetBefore: "-04:00",
+      offsetAfter: "-05:00",
+    },
   ];
 
   it("identifies spring-forward as a gap", () => {

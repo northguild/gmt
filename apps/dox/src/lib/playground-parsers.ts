@@ -111,7 +111,8 @@ export function formatArg(f: CallField): string {
       const items = (f.pairs ?? [])
         .filter(([s, e]) => s.trim() !== "" || e.trim() !== "")
         .map(
-          ([s, e]) => `{ start: ${JSON.stringify(s)}, end: ${JSON.stringify(e)} }`,
+          ([s, e]) =>
+            `{ start: ${JSON.stringify(s)}, end: ${JSON.stringify(e)} }`,
         );
       return `[${items.join(", ")}]`;
     }
@@ -133,7 +134,11 @@ export function buildCall(
   opts: { optionsSuffix?: string; objectArg?: boolean } = {},
 ): string {
   const fs = [...fields];
-  while (fs.length > 0 && fs[fs.length - 1].optional && isEmptyField(fs[fs.length - 1])) {
+  while (
+    fs.length > 0 &&
+    fs[fs.length - 1].optional &&
+    isEmptyField(fs[fs.length - 1])
+  ) {
     fs.pop();
   }
 

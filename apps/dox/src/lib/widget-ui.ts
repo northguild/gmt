@@ -39,7 +39,9 @@ export function renderCallLine(
   codeEl.innerHTML = `${codeSpan("fn", fnName)}(${argsHtml})`;
 
   const frame = codeEl.closest(".gmt-codeframe");
-  const copyBtn = frame?.querySelector('[data-role^="copy-"]') as HTMLButtonElement | null;
+  const copyBtn = frame?.querySelector(
+    '[data-role^="copy-"]',
+  ) as HTMLButtonElement | null;
   if (copyBtn) copyBtn.dataset.copyText = `${fnName}(${argsPlain})`;
 }
 

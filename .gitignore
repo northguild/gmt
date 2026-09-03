@@ -70,3 +70,6 @@ apps/dox/public/llms-full.txt
 
 # Archives
 context/archives/
+
+# Agent plans
+memories/

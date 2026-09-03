@@ -29,7 +29,8 @@
 }
 
 /* Free-text scalar params get room; a list/interval editor takes a full row. */
-.gmt-pf-fields > .gmt-label:has(> input[data-role="value"]:not([type="number"])) {
+.gmt-pf-fields
+  > .gmt-label:has(> input[data-role="value"]:not([type="number"])) {
   flex: 1 1 260px;
 }
 

@@ -1,9 +1,8 @@
 # Dox theme — architecture & maintenance
 
-> Moved 2026-09-02 from `context/dox/design-system.md` to its current location as part
-> of the progressive-disclosure rework. The visual language itself (palette intent,
-> "maximal chrome, disciplined content surface") is now
-> [reference/visual-design.md](visual-design.md) — this file is the *implementation*.
+> The visual language itself (palette intent, "maximal chrome, disciplined content
+> surface") is [reference/visual-design.md](visual-design.md) — this file is the
+> *implementation*.
 
 How `apps/dox`'s theme is put together, and the rules for changing it without
 making a mess.
@@ -12,6 +11,9 @@ making a mess.
 
 The theme is plain CSS custom properties — **no Tailwind, no `@layer`**. It beats
 Starlight's defaults by being unlayered (unlayered always wins over `@layer`).
+**One exception:** `DOX-C0` (#171) scopes Tailwind v4 to the chat island for AI
+Elements. It never touches these sheets, and the rules that keep it contained are in
+"Tailwind in the chat island" below.
 Eight files, loaded in this order via `starlight({ customCss })` in
 `apps/dox/astro.config.mjs`:
 
@@ -25,6 +27,12 @@ Eight files, loaded in this order via `starlight({ customCss })` in
 | 6 | `gmt-content.css` | The reading surface: everything inside `.sl-markdown-content`, Expressive Code frame chrome, the search modal / Pagefind UI. |
 | 7 | `gmt-controls.css` | Interactive chrome: CTA buttons, prev/next pagination, mobile search trigger, hamburger, `:focus-visible`, `::selection`, scrollbar. |
 | 8 | `gmt-light.css` | The `[data-theme="light"]` overrides that are neither a palette re-tint nor adjacent to a base rule. Loaded last so it always wins its ties. |
+| 9 | `gmt-ask.css` | **DOX-C0, #171 — not yet built.** The chat dock/`/dox` chrome and the Streamdown reading surface (`[data-streamdown="…"]`). No Tailwind. |
+
+The `customCss` array in `astro.config.mjs` also carries per-widget and per-feature
+sheets (`gmt-widget.css`, `gmt-dst-inspector.css`, `gmt-map.css`, `gmt-motion.css`, …)
+loaded between #7 and #8. This table describes the **core stack** whose order the
+cascade depends on; consult the config for the full list.
 
 Component-scoped `<style>` blocks stay in their `.astro` files
 (`Hero`, `LinkButton`, `ButtonLink`, `Icon`, `SocialIcons`, `ThemeSelect`) — the
@@ -72,8 +80,51 @@ token* in dark vs light (not just a re-tint), so the rule that uses it needs no
 4. **Respect the file order.** The cascade depends on the `customCss` order above.
    Moving a rule between files can change which of two equal-specificity rules
    wins. If you split or reorder, verify with a screenshot diff (see below).
-5. **Don't introduce `@layer`** into the GMT sheets without a full re-QA — the
-   whole system currently relies on being unlayered.
+5. **Don't introduce `@layer` into the GMT sheets.** The whole system relies on being
+   unlayered, and that is what lets it beat Starlight's defaults. `DOX-C0` (#171) brings
+   Tailwind v4 in for the chat island, and Tailwind emits
+   `@layer theme, base, components, utilities`. That is allowed **only** under the
+   constraints in the next section. The GMT sheets themselves stay unlayered.
+
+## Tailwind in the chat island (DOX-C0, #171)
+
+AI Elements requires Tailwind CSS 4. It is scoped to the chat island and **must not reach
+any other page**. Four constraints make that true; all four are `DOX-C0` DoD items.
+
+1. **Omit Preflight.** Tailwind's reset targets `*`, `html`, `body` and headings and would
+   wreck the docs. Import the layers individually — the documented v4 opt-out:
+
+   ```css
+   @layer theme, base, components, utilities;
+   @import "tailwindcss/theme.css" layer(theme);
+   /* preflight.css deliberately NOT imported */
+   @import "tailwindcss/utilities.css" layer(utilities);
+   ```
+
+2. **Import that sheet from the React island's entry module, never from `customCss`.**
+   Vite then code-splits it into the island's own chunk, so a page that never opens the
+   chat never loads it.
+
+3. **Know which way the cascade falls.** Tailwind utilities are in `@layer utilities`;
+   these sheets are unlayered, and unlayered always wins. **So every GMT rule beats every
+   Tailwind utility.** Only three groups of global element selectors exist in these sheets
+   — the list to re-check rather than re-derive:
+
+   | Selector | File | What it sets |
+   | -------- | ---- | ------------ |
+   | `h1`–`h6` | `gmt-shell.css` | font-family, letter-spacing — hits markdown headings in replies |
+   | `textarea`, `input:not([type=checkbox\|radio\|range])` | `gmt-controls.css` | hits the composer and every AI Elements input |
+   | `body` | `gmt-shell.css` | not applicable inside the panel |
+
+   Ship a scoped `.gmt-ask` reset for the two that apply.
+
+4. **Bridge, don't fork, the palette.** Map shadcn's variables (`--background`,
+   `--foreground`, `--primary`, `--muted`, `--border`, `--ring`, …) onto the `--gmt-*`
+   tokens. Rule 1 still applies: no `[data-theme="light"]` color blocks — add a theme-role
+   token instead.
+
+The Streamdown reading surface needs **no Tailwind at all**: style it in `gmt-ask.css`
+through `[data-streamdown="heading-1"|"link"|"code-block"|"table"|"blockquote"|…]`.
 
 ## Verifying a change is visually safe
 

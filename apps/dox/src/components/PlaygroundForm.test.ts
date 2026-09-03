@@ -25,20 +25,26 @@ describe("formatArg", () => {
     expect(formatArg({ name: "v", kind: "string", value: "P1DT2H30M" })).toBe(
       '"P1DT2H30M"',
     );
-    expect(formatArg({ name: "u", kind: "enum", value: "hours" })).toBe('"hours"');
+    expect(formatArg({ name: "u", kind: "enum", value: "hours" })).toBe(
+      '"hours"',
+    );
   });
   it("passes numbers through, defaulting blank to 0", () => {
     expect(formatArg({ name: "n", kind: "number", value: "42" })).toBe("42");
     expect(formatArg({ name: "n", kind: "number", value: "  " })).toBe("0");
   });
   it("normalises booleans", () => {
-    expect(formatArg({ name: "b", kind: "boolean", value: "true" })).toBe("true");
-    expect(formatArg({ name: "b", kind: "boolean", value: "nope" })).toBe("false");
+    expect(formatArg({ name: "b", kind: "boolean", value: "true" })).toBe(
+      "true",
+    );
+    expect(formatArg({ name: "b", kind: "boolean", value: "nope" })).toBe(
+      "false",
+    );
   });
   it("builds a units object from the amount + unit", () => {
-    expect(formatArg({ name: "d", kind: "units", value: "5", unit: "days" })).toBe(
-      "{ days: 5 }",
-    );
+    expect(
+      formatArg({ name: "d", kind: "units", value: "5", unit: "days" }),
+    ).toBe("{ days: 5 }");
   });
   it("builds a string list, dropping blank rows", () => {
     expect(
@@ -90,7 +96,12 @@ describe("isEmptyField", () => {
       isEmptyField({ name: "a", kind: "list", value: "", items: ["", "  "] }),
     ).toBe(true);
     expect(
-      isEmptyField({ name: "a", kind: "intervals", value: "", pairs: [["", ""]] }),
+      isEmptyField({
+        name: "a",
+        kind: "intervals",
+        value: "",
+        pairs: [["", ""]],
+      }),
     ).toBe(true);
   });
   it("is false once a value is present", () => {
@@ -118,7 +129,9 @@ describe("buildCall", () => {
       { name: "dateStr", kind: "string", value: "2024-01-01" },
       { name: "weekStartsOn", kind: "enum", value: "", optional: true },
     ];
-    expect(buildCall("getWeekNumber", fields)).toBe('getWeekNumber("2024-01-01")');
+    expect(buildCall("getWeekNumber", fields)).toBe(
+      'getWeekNumber("2024-01-01")',
+    );
   });
 
   it("keeps an optional field once it has a value", () => {
@@ -166,9 +179,11 @@ describe("buildCall", () => {
       },
     ]);
     expect(call).toBe('maxDate(["2024-03-10", "2024-03-15"])');
-    expect(parseCallArgs(call).map((a) => a.trim()).map(evaluateArg)).toEqual([
-      ["2024-03-10", "2024-03-15"],
-    ]);
+    expect(
+      parseCallArgs(call)
+        .map((a) => a.trim())
+        .map(evaluateArg),
+    ).toEqual([["2024-03-10", "2024-03-15"]]);
   });
 });
 
@@ -222,11 +237,17 @@ describe("PlaygroundForm run() flow", () => {
     ];
     const call = buildCall("durationAs", fields);
     const mockMod = { durationAs: (_v: string, _u: string) => 26.5 };
-    const args = parseCallArgs(call).map((a) => a.trim()).map(evaluateArg);
+    const args = parseCallArgs(call)
+      .map((a) => a.trim())
+      .map(evaluateArg);
     const result = mockMod.durationAs(...(args as [string, string]));
 
     const outputEl = document.createElement("output");
-    renderResult(outputEl, result as unknown as string, (result as unknown) === sentinelFor("number", false));
+    renderResult(
+      outputEl,
+      result as unknown as string,
+      (result as unknown) === sentinelFor("number", false),
+    );
 
     expect(outputEl.textContent).toBe("26.5");
     expect(outputEl.classList.contains("gmt-playground-live")).toBe(true);

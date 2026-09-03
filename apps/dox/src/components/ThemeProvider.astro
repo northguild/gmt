@@ -1,6 +1,3 @@
----
----
-
 {/* This is intentionally inlined to avoid FOUC. */}
 <script is:inline>
   window.StarlightThemeProvider = (() => {
@@ -30,4 +27,47 @@
       },
     };
   })();
+
+  /* DOX-D2 boot sequence — the shell frame animates in once per session.
+     Gated here (before <body> paints) so a returning reader, or anyone with
+     reduced motion, never sees it and content is never withheld. The CSS
+     (:root.dox-boot header / .sidebar-pane, gmt-motion.css) does the rest. */
+  (() => {
+    try {
+      if (sessionStorage.getItem('dox-booted') === 'true') return;
+      sessionStorage.setItem('dox-booted', 'true');
+    } catch (e) {
+      return;
+    }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const root = document.documentElement;
+    root.classList.add('dox-boot');
+    addEventListener(
+      'load',
+      () => setTimeout(() => root.classList.remove('dox-boot'), 1200),
+      { once: true },
+    );
+  })();
+</script>
+
+{/* Bundled (module) — Astro resolves the import and defers it past DOM parse,
+   so the observer finds its targets. Every navigation is a full load, so a
+   one-time init is all it needs. */}
+<script>
+  import { initRevealPrimitive } from '../lib/reveal-primitive';
+
+  initRevealPrimitive();
+
+  // DOX-D2: a link to the page you're already on still "navigates", and with
+  // @view-transition that flashes the whole document. Neutralise the site
+  // title link when it points at the current path.
+  const title = document.querySelector<HTMLAnchorElement>('a.site-title');
+  if (title) {
+    const dest = new URL(title.href).pathname.replace(/\/$/, '');
+    const here = location.pathname.replace(/\/$/, '');
+    if (dest === here) {
+      title.addEventListener('click', (e) => e.preventDefault());
+      title.setAttribute('aria-disabled', 'true');
+    }
+  }
 </script>

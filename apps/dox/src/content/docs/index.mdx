@@ -3,22 +3,16 @@ title: "@northguild/gmt"
 description: Give Me Temporal. A Temporal-first date and time library with a strict string-in, string-out contract and no Date object anywhere.
 template: splash
 hero:
-  tagline: ISO 8601 strings in. Strings, numbers, booleans, or arrays out. No <code>Date</code>, anywhere.
+  tagline: Give Me Temporal - a Temporal-first date and time library with strict string-in, typed-out contract. No <code>Date</code>, anywhere.
   actions:
-    - text: Install
+    - text: Get Started
       link: /install/
       icon: right-arrow
       variant: primary
-    - text: Why GMT?
-      link: /why-gmt/
-      variant: secondary
-    - text: Core Rules
-      link: /core-rules/
-      variant: secondary
-    - text: On GitHub
-      link: https://github.com/northguild/gmt
-      icon: external
-      variant: secondary
+    - text: Copy GMT prompt
+      link: "#_top"
+      attrs:
+        data-copy-prompt: true
 ---
 
 import { Card, CardGrid } from "@astrojs/starlight/components";
@@ -26,46 +20,13 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
 import { gmtVersion } from "~/generated/versions";
 import { testExecutionSvg } from "../../../scripts/render-charts";
 import ChartContainer from "../../components/ChartContainer.astro";
+import WhyNotDate from "../../components/WhyNotDate.astro";
 
 Current release: **v{gmtVersion}**
 
 `@northguild/gmt` wraps `@js-temporal/polyfill` behind a smaller, more opinionated API
 aimed at the cases application code actually hits: arithmetic, comparison, parsing,
 formatting, unix conversions, timezone conversion, and validation.
-
-## Agent prompt
-
-Paste this into your coding agent before it touches a date or time. It uses
-[TanStack Intent](https://intent.tanstack.com) to load the skill files that ship
-inside each `@northguild/*` npm package — no manual `node_modules` traversal needed:
-
-```
-You are working with the @northguild/gmt library — a Temporal-first date/time library
-for JavaScript. Install @northguild/gmt (and, if the user wants lint enforcement,
-whichever of @northguild/gmt-eslint, @northguild/gmt-oxlint, or @northguild/gmt-biome
-matches their toolchain).
-
-Run the TanStack Intent CLI once to wire skill guidance into AGENTS.md:
-
-    npx @tanstack/intent@latest install
-
-Whenever a date/time or lint task arises, discover the relevant skill with:
-
-    npx @tanstack/intent@latest list
-
-The agent loads the matching skill with `intent load`. The @northguild/gmt package
-covers the core namespaces (plain, zoned, unix, utc, regex):
-
-    npx @tanstack/intent@latest load @northguild/gmt#format-date-time
-
-The linter packages use the same mechanism — load whichever one was installed:
-
-    npx @tanstack/intent@latest load @northguild/gmt-eslint#first-time-setup
-
-Ask what difficulties the user is having with JavaScript dates — this helps match them
-to the right GMT namespace (plain, zoned, unix, utc, regex). Then generate code using
-GMT's string-in/string-out API, never `new Date()`.
-```
 
 ## Key features
 
@@ -101,9 +62,11 @@ GMT's string-in/string-out API, never `new Date()`.
   </Card  >
 </CardGrid>
 
+<WhyNotDate />
+
 <ChartContainer
   svg={testExecutionSvg}
-  title="CI test execution volume"
+  title="@northguild/gmt leaves the others in the dust"
   caption="334,020 GMT executions (16,701 tests × 17 locales × 10 timezones × 2 Node) vs. competitors' combined 20,190."
   naturalWidth={640}
 />

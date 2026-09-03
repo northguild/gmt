@@ -9,7 +9,7 @@ interface Props {
 const { svg, title, caption, naturalWidth } = Astro.props;
 ---
 
-<div class="gmt-chart-container">
+<div class="gmt-chart-container gmt-reveal">
   {title && <h3 class="gmt-chart-title">{title}</h3>}
   <div
     class:list={["gmt-chart gmt-glass", { "gmt-chart--natural": naturalWidth !== undefined }]}

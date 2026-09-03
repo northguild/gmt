@@ -31,7 +31,10 @@ describe("instantToPercent", () => {
   });
 
   it("maps a midyear date to roughly 50%", () => {
-    expect(instantToPercent("2024-07-02T00:00:00+00:00[UTC]")).toBeCloseTo(50, 0);
+    expect(instantToPercent("2024-07-02T00:00:00+00:00[UTC]")).toBeCloseTo(
+      50,
+      0,
+    );
   });
 
   it("clamps values outside the window", () => {
@@ -63,8 +66,12 @@ describe("percentToInstant", () => {
 
 describe("stepInstant", () => {
   it("steps forward and backward by whole days", () => {
-    expect(stepInstant("2024-06-15T00:00:00+00:00[UTC]", 1)).toBe("2024-06-16T00:00:00+00:00[UTC]");
-    expect(stepInstant("2024-06-15T00:00:00+00:00[UTC]", -1)).toBe("2024-06-14T00:00:00+00:00[UTC]");
+    expect(stepInstant("2024-06-15T00:00:00+00:00[UTC]", 1)).toBe(
+      "2024-06-16T00:00:00+00:00[UTC]",
+    );
+    expect(stepInstant("2024-06-15T00:00:00+00:00[UTC]", -1)).toBe(
+      "2024-06-14T00:00:00+00:00[UTC]",
+    );
   });
 
   it("clamps at the timeline end", () => {
@@ -106,15 +113,24 @@ describe("buildRelationshipPreset", () => {
       expect(instantToPercent(aEnd)).not.toBeNaN();
       expect(instantToPercent(bStart)).not.toBeNaN();
       expect(instantToPercent(bEnd)).not.toBeNaN();
-      expect(instantToPercent(aStart)).toBeLessThanOrEqual(instantToPercent(aEnd));
-      expect(instantToPercent(bStart)).toBeLessThanOrEqual(instantToPercent(bEnd));
+      expect(instantToPercent(aStart)).toBeLessThanOrEqual(
+        instantToPercent(aEnd),
+      );
+      expect(instantToPercent(bStart)).toBeLessThanOrEqual(
+        instantToPercent(bEnd),
+      );
     },
   );
 
   it("actually produces the relationship its name promises", () => {
     for (const preset of RELATIONSHIP_PRESETS) {
-      const { aStart, aEnd, bStart, bEnd } = buildRelationshipPreset(preset.type);
-      const kind = classifyRelationship({ start: aStart, end: aEnd }, { start: bStart, end: bEnd });
+      const { aStart, aEnd, bStart, bEnd } = buildRelationshipPreset(
+        preset.type,
+      );
+      const kind = classifyRelationship(
+        { start: aStart, end: aEnd },
+        { start: bStart, end: bEnd },
+      );
       expect(kind).toBe(preset.type);
     }
   });
@@ -125,38 +141,59 @@ describe("buildRelationshipPreset", () => {
 // ---------------------------------------------------------------------------
 
 describe("classifyRelationship", () => {
-  const A: ZonedInterval = { start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-06-30T00:00:00+00:00[UTC]" };
+  const A: ZonedInterval = {
+    start: "2024-01-01T00:00:00+00:00[UTC]",
+    end: "2024-06-30T00:00:00+00:00[UTC]",
+  };
 
   it("classifies identical intervals", () => {
     expect(classifyRelationship(A, { ...A })).toBe("identical");
   });
 
   it("classifies disjoint intervals", () => {
-    const b: ZonedInterval = { start: "2024-08-01T00:00:00+00:00[UTC]", end: "2024-09-01T00:00:00+00:00[UTC]" };
+    const b: ZonedInterval = {
+      start: "2024-08-01T00:00:00+00:00[UTC]",
+      end: "2024-09-01T00:00:00+00:00[UTC]",
+    };
     expect(classifyRelationship(A, b)).toBe("disjoint");
   });
 
   it("classifies adjacent (touching, non-overlapping) intervals both ways", () => {
-    const bAfter: ZonedInterval = { start: A.end, end: "2024-09-01T00:00:00+00:00[UTC]" };
+    const bAfter: ZonedInterval = {
+      start: A.end,
+      end: "2024-09-01T00:00:00+00:00[UTC]",
+    };
     expect(classifyRelationship(A, bAfter)).toBe("adjacent");
 
-    const bBefore: ZonedInterval = { start: "2023-06-01T00:00:00+00:00[UTC]", end: A.start };
+    const bBefore: ZonedInterval = {
+      start: "2023-06-01T00:00:00+00:00[UTC]",
+      end: A.start,
+    };
     expect(classifyRelationship(A, bBefore)).toBe("adjacent");
   });
 
   it("classifies containment in both directions", () => {
-    const bInside: ZonedInterval = { start: "2024-02-01T00:00:00+00:00[UTC]", end: "2024-03-01T00:00:00+00:00[UTC]" };
+    const bInside: ZonedInterval = {
+      start: "2024-02-01T00:00:00+00:00[UTC]",
+      end: "2024-03-01T00:00:00+00:00[UTC]",
+    };
     expect(classifyRelationship(A, bInside)).toBe("a-contains-b");
     expect(classifyRelationship(bInside, A)).toBe("b-contains-a");
   });
 
   it("classifies containment that shares a boundary as containment, not adjacent", () => {
-    const bSharesStart: ZonedInterval = { start: A.start, end: "2024-03-01T00:00:00+00:00[UTC]" };
+    const bSharesStart: ZonedInterval = {
+      start: A.start,
+      end: "2024-03-01T00:00:00+00:00[UTC]",
+    };
     expect(classifyRelationship(A, bSharesStart)).toBe("a-contains-b");
   });
 
   it("classifies partial overlap", () => {
-    const b: ZonedInterval = { start: "2024-04-01T00:00:00+00:00[UTC]", end: "2024-12-31T00:00:00+00:00[UTC]" };
+    const b: ZonedInterval = {
+      start: "2024-04-01T00:00:00+00:00[UTC]",
+      end: "2024-12-31T00:00:00+00:00[UTC]",
+    };
     expect(classifyRelationship(A, b)).toBe("overlapping");
   });
 
@@ -166,7 +203,9 @@ describe("classifyRelationship", () => {
   });
 
   it("classifies unparseable input as invalid", () => {
-    expect(classifyRelationship(A, { start: "garbage", end: "also garbage" })).toBe("invalid");
+    expect(
+      classifyRelationship(A, { start: "garbage", end: "also garbage" }),
+    ).toBe("invalid");
   });
 });
 
@@ -176,12 +215,18 @@ describe("classifyRelationship", () => {
 
 describe("formatInstant", () => {
   it("formats a whole-second instant with no fractional suffix", () => {
-    expect(formatInstant("2024-01-01T00:00:00+00:00[UTC]")).toBe("2024-01-01 00:00:00");
+    expect(formatInstant("2024-01-01T00:00:00+00:00[UTC]")).toBe(
+      "2024-01-01 00:00:00",
+    );
   });
 
   it("formats and trims a nanosecond-precision boundary", () => {
-    expect(formatInstant("2024-06-01T11:59:59.999999999+00:00[UTC]")).toBe("2024-06-01 11:59:59.999999999");
-    expect(formatInstant("2024-07-01T13:00:00.000000001+00:00[UTC]")).toBe("2024-07-01 13:00:00.000000001");
+    expect(formatInstant("2024-06-01T11:59:59.999999999+00:00[UTC]")).toBe(
+      "2024-06-01 11:59:59.999999999",
+    );
+    expect(formatInstant("2024-07-01T13:00:00.000000001+00:00[UTC]")).toBe(
+      "2024-07-01 13:00:00.000000001",
+    );
   });
 
   it("returns the raw input for unparseable strings", () => {
@@ -191,7 +236,10 @@ describe("formatInstant", () => {
 
 describe("formatInterval / formatIntervalList", () => {
   it("formats a single interval as 'start → end'", () => {
-    const v: ZonedInterval = { start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-06-30T00:00:00+00:00[UTC]" };
+    const v: ZonedInterval = {
+      start: "2024-01-01T00:00:00+00:00[UTC]",
+      end: "2024-06-30T00:00:00+00:00[UTC]",
+    };
     expect(formatInterval(v)).toBe("2024-01-01 00:00:00 → 2024-06-30 00:00:00");
   });
 
@@ -201,8 +249,14 @@ describe("formatInterval / formatIntervalList", () => {
 
   it("joins a list of intervals with newlines", () => {
     const list: ZonedInterval[] = [
-      { start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-03-01T00:00:00+00:00[UTC]" },
-      { start: "2024-09-01T00:00:00+00:00[UTC]", end: "2024-12-31T00:00:00+00:00[UTC]" },
+      {
+        start: "2024-01-01T00:00:00+00:00[UTC]",
+        end: "2024-03-01T00:00:00+00:00[UTC]",
+      },
+      {
+        start: "2024-09-01T00:00:00+00:00[UTC]",
+        end: "2024-12-31T00:00:00+00:00[UTC]",
+      },
     ];
     expect(formatIntervalList(list)).toBe(
       "2024-01-01 00:00:00 → 2024-03-01 00:00:00\n2024-09-01 00:00:00 → 2024-12-31 00:00:00",
@@ -220,11 +274,18 @@ describe("formatInterval / formatIntervalList", () => {
 
 describe("INTERVAL_OPERATIONS", () => {
   it("has exactly the 4 operations required by DOX-B2c's Definition of Done", () => {
-    expect(INTERVAL_OPERATIONS.map((o) => o.id)).toEqual(["intersection", "union", "difference", "xor"]);
+    expect(INTERVAL_OPERATIONS.map((o) => o.id)).toEqual([
+      "intersection",
+      "union",
+      "difference",
+      "xor",
+    ]);
   });
 
   it("flags difference and xor as array-returning, intersection and union as not", () => {
-    const byId = Object.fromEntries(INTERVAL_OPERATIONS.map((o) => [o.id, o.isArray]));
+    const byId = Object.fromEntries(
+      INTERVAL_OPERATIONS.map((o) => [o.id, o.isArray]),
+    );
     expect(byId.intersection).toBe(false);
     expect(byId.union).toBe(false);
     expect(byId.difference).toBe(true);

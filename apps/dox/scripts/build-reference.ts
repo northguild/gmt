@@ -1198,17 +1198,25 @@ function renderFn(doc: FnDoc, docs: Doc[]): string {
     const useForm = doc.livePlaygroundTemplate?.fields !== undefined;
 
     if (useForm) {
-      lines.push(`import PlaygroundForm from "~/components/PlaygroundForm.astro";`);
+      lines.push(
+        `import PlaygroundForm from "~/components/PlaygroundForm.astro";`,
+      );
     }
     lines.push(`import DstInspector from "~/components/DstInspector.astro";`);
-    lines.push(`import IntervalVisualizer from "~/components/IntervalVisualizer.astro";`);
-    lines.push(`import ConverterBench from "~/components/ConverterBench.astro";`);
+    lines.push(
+      `import IntervalVisualizer from "~/components/IntervalVisualizer.astro";`,
+    );
+    lines.push(
+      `import ConverterBench from "~/components/ConverterBench.astro";`,
+    );
     lines.push("");
     lines.push(`## Examples`);
     lines.push("");
     const ex = doc.examples[0];
     lines.push("```ts");
-    lines.push(`import { ${doc.name} } from "${ROOT}/${doc.namespace}/${doc.module}";`);
+    lines.push(
+      `import { ${doc.name} } from "${ROOT}/${doc.namespace}/${doc.module}";`,
+    );
     lines.push("");
     if (ex.result.includes("\n")) {
       lines.push(ex.call);

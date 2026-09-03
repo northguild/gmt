@@ -1,17 +1,16 @@
 # Workspace integration — the four easy-to-miss files
 
-> Extracted from `overview.md` §4 on 2026-09-02. **Load only on `DOX-A1`** — every
-> other story consumes the result.
+> **Load only on `DOX-A1`** — every other story consumes the result.
 >
 > See also: [overview.md](../overview.md).
 
-`apps/` does not exist and is not a workspace glob. Confirmed unchanged on 2026-08-26.
+`apps/` does not exist and is not a workspace glob.
 
 1. **`pnpm-workspace.yaml`** — add `- 'apps/*'`
 2. **root `package.json`** — the `"workspaces"` array duplicates the glob; add `apps/*`
    there too
-3. **`oxlint.config.js`** — note the **`.js` extension**; the superseded plan said
-   `oxlint.config.ts`, which does not exist. `files.include` currently lists
+3. **`oxlint.config.js`** — note the **`.js` extension** (`oxlint.config.ts` does not
+   exist). `files.include` currently lists
    `packages/**`, `docs/**`, `context/**`, `scripts/**`; add `apps/**`. Also add
    `apps/dox/dist`, `apps/dox/.astro`, and the generated reference directory to
    `files.ignore` — generated MDX and `.astro` files should not be linted.

@@ -2,6 +2,7 @@
 import Icon from './Icon.astro';
 
 const {
+	as: Tag = 'a',
 	class: className,
 	icon,
 	iconPlacement = 'end',
@@ -11,11 +12,15 @@ const {
 } = Astro.props;
 ---
 
-<a class:list={['sl-link-button not-content', variant, className]} {...attrs} {target}>
+<Tag
+	class:list={['sl-link-button not-content', variant, className]}
+	{...attrs}
+	target={Tag === 'a' ? target : undefined}
+>
 	{icon && iconPlacement === 'start' && <Icon name={icon} size="1.5rem" />}
 	<slot />
 	{icon && iconPlacement === 'end' && <Icon name={icon} size="1.5rem" />}
-</a>
+</Tag>
 
 <style>
 	@layer starlight.components {
@@ -24,12 +29,18 @@ const {
 			border: 1px solid transparent;
 			border-radius: 999rem;
 			display: inline-flex;
+			font: inherit;
 			font-size: var(--sl-text-sm);
 			gap: 0.5em;
 			line-height: 1.1875;
 			outline-offset: 0.25rem;
 			padding: 0.4375rem 1.125rem;
 			text-decoration: none;
+		}
+
+		button.sl-link-button {
+			background: none;
+			cursor: pointer;
 		}
 
 		.sl-link-button.primary {
@@ -105,10 +116,11 @@ const {
 		}
 
 		.sl-link-button.ghost {
-			/* subtle ghost — 0.5px border, transparent fill */
+			/* subtle ghost — 0.5px border, transparent fill, primary's accent text
+			 * color (theme-aware: bright cyan in dark, deep teal in light) */
 			background: transparent;
 			border: 0.5px solid color(from var(--gmt-cyan) srgb r g b / 0.25);
-			color: var(--gmt-ice-dim);
+			color: var(--gmt-cyan-bright);
 			transition:
 				background var(--gmt-duration-fast) var(--gmt-easing),
 				border-color var(--gmt-duration-fast) var(--gmt-easing),

@@ -85,11 +85,11 @@ export default defineConfig({
             { slug: "install" },
           ],
         },
+        { label: "API Reference", items: referenceSidebar },
         {
           label: "Guides",
           items: [{ autogenerate: { directory: "guides" } }],
         },
-        { label: "API Reference", items: referenceSidebar },
         {
           label: "Scenarios",
           items: [{ autogenerate: { directory: "scenarios" } }],
@@ -113,6 +113,7 @@ export default defineConfig({
         "./src/styles/gmt-shell.css", // typography + layout frame
         "./src/styles/gmt-content.css", // .sl-markdown-content + EC + search
         "./src/styles/gmt-controls.css", // buttons, focus, selection, scrollbar
+        "./src/styles/gmt-motion.css", // DOX-D2: boot, reveal, glitch, scanline
         "./src/styles/gmt-playground.css", // mistake component styles
         "./src/styles/gmt-form-controls.css", // shared label/input/select styles
         "./src/styles/gmt-widget.css", // shared teaching-widget chrome (card/section/codeframe/output)

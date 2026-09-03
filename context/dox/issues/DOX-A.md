@@ -1,12 +1,10 @@
 # Issue #130–#134 — Ship the site, its AI surface, and the scenario layer
 
-**Re-audited 2026-08-26; counts and two technical claims corrected from the 2026-08-21
-draft — see overview.md §1 for the full list.** These five issues now carry nine
-sub-stories across three tiers: `DOX-A1`/`DOX-A2`/`DOX-A3a` are Tier 0 (the MVP), `DOX-A5`/
-`DOX-A4a`/`DOX-A3b` are Tier 1, and `DOX-A4b`–`d` are Tier 5 (the real-world scenario
-layer). **No new GitHub issues** — `DOX-A3b` folds into #132 alongside `DOX-A3a`, and
-`DOX-A4b`–`d` fold into #133 alongside `DOX-A4a`. See tracker.md for the full mapping and
-the note on issues that now span more than one tier.
+These five issues carry nine sub-stories across three tiers: `DOX-A1`/`DOX-A2`/`DOX-A3a`
+are Tier 0 (the MVP), `DOX-A5`/`DOX-A4a`/`DOX-A3b` are Tier 1, and `DOX-A4b`–`d` are
+Tier 5 (the real-world scenario layer). `DOX-A3b` folds into #132 alongside `DOX-A3a`,
+and `DOX-A4b`–`d` fold into #133 alongside `DOX-A4a`. See tracker.md for the full mapping
+and the note on issues that span more than one tier.
 
 Each issue below is one logical unit; its sub-stories are nested under it and ordered as
 they should be built. The issue stays open until its last sub-story lands.
@@ -88,8 +86,7 @@ be on an older version that predates Astro 7's `>=22.12.0` floor — `nvm use` f
 
 Re-check that the four integration files have not drifted — read `pnpm-workspace.yaml`,
 root `package.json`, `oxlint.config.js`, and `nx.json` directly rather than trusting
-this issue's snapshot. In particular the superseded plan said `oxlint.config.ts`; that
-file does not exist and never did.
+this issue's snapshot. Note the config is `oxlint.config.js`, not `.ts`.
 
 **Gate — resolve here, not later:** `apps/dox` must NOT extend `tsconfig.base.json`.
 The base config sets `composite: true`, `emitDeclarationOnly: true`, `module: nodenext`,
@@ -111,27 +108,26 @@ an explicit branch — do not leave it accidental.
 - `pnpm nx run-many -t lint typecheck build` is green across the monorepo.
 ```
 
-**Corrections found while implementing (2026-08-26).** Five claims above did not survive
-contact with the repo. Full detail and evidence in `.agents/dox/tier0-infra.md`; that pack
+**Implementation notes.** Detail and evidence in `.agents/dox/tier0-infra.md`; that pack
 is authoritative where it disagrees with this issue.
 
-| Claim above                                           | Reality                                                                                                                                                                                           |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| "`nvm use` first"                                     | The toolchain is **`fnm`**, and `fnm use` alone is a **silent no-op** in a non-interactive shell — it prints success and changes nothing. Use `eval "$(fnm env)" && fnm use && …`                 |
-| Starlight peers on `@astrojs/markdown-remark ^7.2.0`  | That peer is **optional** (`peerDependenciesMeta.optional: true`). Astro 7 ships `@astrojs/markdown-satteri` instead. **Do not declare it**                                                       |
-| Version map in a `prebuild`/`predev` step             | pnpm 10 defaults `enable-pre-post-scripts` to false and there is no `.npmrc`, so those hooks **never fire**. Chained with `&&` and wired to an Nx `generate` target instead                       |
-| `oxlint.config.js` — add `apps/**` to `files.include` | That config is **never loaded** (`.js` is not in oxlint's discovery list), so the edit is inert. Landed anyway to document intent; the real mechanism is an explicit `docs:lint` target           |
-| —                                                     | **New:** `@astrojs/mdx@7.0.8` imports `satteri` without declaring it, and two satteri versions in the tree stop pnpm hoisting it. Fixed with a `packageExtensions` entry in `pnpm-workspace.yaml` |
-
-Also landed beyond the scope above, because the story could not be verified without them:
-an `apps/**` override in `.oxfmtrc.json` (its `overrides` are an allow-list, so `pnpm
-format` skipped the app), and a `docs_changed` output plus an `apps`-aware artifact
-collector in `ci.yml`.
-
-**Decision recorded:** the generated version map is **gitignored, not stubbed** —
-deliberately breaking symmetry with `DOX-A3a`'s committed-stub pattern. A stub would render
-a _wrong_ version badge, which is the exact failure this story exists to prevent, and
-`DOX-A1` ships no tests that would need it to resolve on a clean checkout.
+- The toolchain is **`fnm`**, and `fnm use` alone is a **silent no-op** in a
+  non-interactive shell. Use `eval "$(fnm env)" && fnm use && …`.
+- Starlight's `@astrojs/markdown-remark` peer is **optional**
+  (`peerDependenciesMeta.optional: true`); Astro 7 ships `@astrojs/markdown-satteri`
+  instead. **Do not declare it.** `@astrojs/mdx@7.0.8` imports `satteri` without
+  declaring it, and two satteri versions in the tree stop pnpm hoisting it — fixed with
+  a `packageExtensions` entry in `pnpm-workspace.yaml`.
+- pnpm 10 defaults `enable-pre-post-scripts` to false and there is no `.npmrc`, so
+  `prebuild`/`predev` hooks never fire. The version map is chained with `&&` and wired
+  to an Nx `generate` target instead. It is **gitignored, not stubbed** — a stub would
+  render a wrong version badge, the exact failure this story prevents, and `DOX-A1`
+  ships no tests that need it to resolve on a clean checkout.
+- `oxlint.config.js` is **never loaded** (`.js` is not in oxlint's discovery list), so
+  the `apps/**` `files.include` edit is inert — it is there to document intent; the real
+  mechanism is an explicit `docs:lint` target. An `apps/**` override also lives in
+  `.oxfmtrc.json` (its `overrides` are an allow-list), plus a `docs_changed` output and
+  an `apps`-aware artifact collector in `ci.yml`.
 
 ---
 
@@ -159,22 +155,20 @@ Depends on DOX-A1.
 No deployment pipeline exists. `.github/workflows/` has only `ci.yml` and `publish.yml`;
 nothing deploys anything anywhere.
 
-## Rewritten 2026-08-26: Cloudflare, not GitHub Pages
-The 2026-08-21 draft specified GitHub Pages. Verified on 2026-08-26 that **Pages is not
-enabled on this repo** (`gh api repos/northguild/gmt/pages` returns 404), so there is
-nothing to migrate away from — this rewrite costs nothing.
-
-More importantly, a single Cloudflare Worker is the right target regardless: with an
-`assets` binding it serves the static site today, and once Tier 6 exists it handles
-`/api/*` in the **same** deployment, same-origin, with no CORS allowlist and no second
-pipeline. See `context/dox/overview.md` §2 "Hosting" for the full reasoning. Deploying to
-Cloudflare now, even though nothing needs `/api/*` yet, avoids a second migration later.
+## Cloudflare, not GitHub Pages
+**Pages is not enabled on this repo** (`gh api repos/northguild/gmt/pages` returns 404),
+so there is nothing to migrate away from. A single Cloudflare Worker is the right target
+regardless: with an `assets` binding it serves the static site today, and once Tier 6
+exists it handles `/api/*` in the **same** deployment, same-origin, with no CORS
+allowlist and no second pipeline. See `context/dox/overview.md` §2 "Hosting" for the full
+reasoning. Deploying to Cloudflare now, even though nothing needs `/api/*` yet, avoids a
+second migration later.
 
 ## Why this is story 2 and not story 13
 This is deliberately done before any bulk content. Once it lands, every subsequent
-story is verifiable on a live URL rather than a dev server. The superseded plan put
-deploy last (story F2 of 15), which meant nothing was ever seen in its real environment
-until the very end. Two stories' worth of cost buys the fastest feedback loop available.
+story is verifiable on a live URL rather than a dev server. Deploying last would mean
+nothing is ever seen in its real environment until the end. Two stories' worth of cost
+buys the fastest feedback loop available.
 
 ## Scope
 - `apps/dox/wrangler.jsonc` with an `assets` binding: `directory: "./dist"`,
@@ -192,9 +186,9 @@ until the very end. Two stories' worth of cost buys the fastest feedback loop av
   production build and does not run in dev, so this is the first place it can be tested.
 
 ## Before starting
-Confirm Cloudflare account access and that a project/token can be provisioned. This is
-now a hard dependency for shipping the MVP at all, not merely for the eventual chat —
-see overview.md §7.
+Confirm Cloudflare account access and that a project/token can be provisioned. This is a
+hard dependency for shipping the MVP at all, not merely for the eventual chat — see
+overview.md §7.
 
 ## Definition of done
 - Push to `main` produces a live, reachable site.
@@ -203,30 +197,26 @@ see overview.md §7.
 - The workflow does not run on pull requests from forks with write permissions.
 ```
 
-**Corrections found while implementing (2026-08-26).** Full detail and evidence in
-`.agents/dox/tier0-infra.md`; that pack is authoritative where it disagrees with this
-issue.
+**Implementation notes.** Detail and evidence in `.agents/dox/tier0-infra.md`; that pack
+is authoritative where it disagrees with this issue.
 
-| Claim above                                                 | Reality                                                                                                                                                                                                                         |
-| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `assets` binding: `directory`, `binding: "ASSETS"`, `not_found_handling`, no `main` | Cloudflare's own docs: *"Omit the ASSETS binding if the Worker does not have a main script."* A binding with nothing to consume it is inert. Shipped `wrangler.jsonc` has **no `binding`** — it returns in Tier 6 alongside the `main` script that reads it |
-| (implicit) `nx run docs:build` / project named `docs`        | The Nx project has been named **`dox`** since `DOX-A1`, not `docs`. Every command in the deploy workflow uses `dox`. `dox-tester.md`'s Tier-0 gate still says `docs` — flagged there, not fixed as part of this story         |
-| —                                                             | **New:** adding `wrangler` as a devDependency required a new `pnpm-workspace.yaml` `allowBuilds` entry (`workerd: true`) — `workerd`'s own `package.json` declares a `postinstall` pnpm blocks by default. Lockfile regenerated in the same commit |
+- The shipped `wrangler.jsonc` has **no `binding`** — Cloudflare's docs say to omit the
+  ASSETS binding when the Worker has no main script. It returns in Tier 6 with the
+  `main` script that reads it.
+- The Nx project is named **`dox`**, not `docs`; every command in the deploy workflow
+  uses `dox`.
+- Adding `wrangler` as a devDependency required a `pnpm-workspace.yaml` `allowBuilds`
+  entry (`workerd: true`) — `workerd`'s `package.json` declares a `postinstall` pnpm
+  blocks by default.
+- Worker name `gmt-dox`, on the default `*.workers.dev` subdomain — no custom domain at
+  this tier. Deploy triggers on every push to `main`; the workflow carries no
+  `pull_request` trigger, which is what satisfies the "does not run on PRs from forks"
+  line structurally. `astro.config.mjs`'s placeholder `SITE` constant is left as-is
+  pending provisioning.
 
-**Decisions recorded:** Worker name `gmt-dox`, deployed to the default `*.workers.dev`
-subdomain — no custom domain at this tier. Deploy triggers on every push to `main` (no
-path filtering); the workflow carries no `pull_request` trigger at all, which is the
-mechanism satisfying the "does not run on PRs from forks" line structurally rather than
-via a runtime guard. `astro.config.mjs`'s placeholder `SITE` constant is left as-is
-pending a fast-follow commit once the real `workers.dev` subdomain is confirmed
-post-provisioning.
-
-**Status at end of story:** workflow, `wrangler.jsonc`, and supporting config are built
-and verified everywhere possible without live Cloudflare credentials (cold-cache build,
-`wrangler deploy --dry-run`, YAML/schema validation). `CLOUDFLARE_API_TOKEN` and
-`CLOUDFLARE_ACCOUNT_ID` are not yet provisioned, so the three DoD lines requiring a live
-deployed site remain unverified until the user completes Cloudflare provisioning and a
-push to `main` triggers the first real deploy.
+**Open:** `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are not yet provisioned, so
+the three DoD lines requiring a live deployed site are unverified until the user
+completes Cloudflare provisioning and a push to `main` triggers the first real deploy.
 
 ---
 
@@ -303,11 +293,10 @@ already-accurate documentation into a browsable site.
   generator knows the source path anyway.
 
 ## The real risk in this story — read this before writing the parser
-The 2026-08-21 draft named the `@example` line format as the epic's biggest generator
-risk. **Measured on 2026-08-26 across all 1,860 examples, that risk does not hold up:**
-1,859 match one shape exactly — `@example fnName(args) // result (optional
-parenthetical)`, split on `/\s+\/\/\s/` because `context/jsdoc-standards.md` shows
-padding-aligned results — and zero contain a second ` // `. Exactly one example is
+The `@example` line format is **not** the biggest generator risk. Measured across all
+1,860 examples: 1,859 match one shape exactly — `@example fnName(args) // result
+(optional parenthetical)`, split on `/\s+\/\/\s/` because `context/jsdoc-standards.md`
+shows padding-aligned results — and zero contain a second ` // `. Exactly one example is
 multi-line: `getDstTransitions` (`packages/gmt/src/zoned/get/getDstTransitions.ts:34-39`),
 whose array result continues on following ` * // ` lines. **This parser is roughly
 fifteen lines and one named edge case, not the epic's hardest problem.**
@@ -339,9 +328,8 @@ Handle two named edge cases deliberately, not as afterthoughts:
    parenthetical explanations after the `// result`. Build the parser against that file
    first. If it handles `startOfZoned`, it handles the `@example` line format
    everywhere; the options table is the part that still needs real design work.
-3. Re-verify the counts. 504 functions and 1,860 examples is true as of 2026-08-26, and
-   `context/roadmap/` is now complete through v1.14.0 — but ordinary npm releases
-   continue, so re-derive rather than trust this number.
+3. Re-verify the counts. `context/roadmap/` is complete through v1.14.0, but ordinary
+   npm releases continue, so re-derive from source rather than trusting any number here.
 4. Note the 18 files with no JSDoc block: the 13 `src/regex/*.ts` files (which use `//`
    line comments above each exported `RegExp` instead — they need their own handling,
    not a skip), plus `utc/calculate/startOrEndOfUtc.ts`, `utc/format/formatUtc.ts`,
@@ -353,10 +341,9 @@ Handle two named edge cases deliberately, not as afterthoughts:
 The six `packages/gmt/src/*/README.md` files are flat function-name indexes with no
 signatures and no examples. This generated site fully supersedes them.
 
-Verified 2026-08-26: `packages/gmt/package.json` sets
-`"files": ["dist", "LICENSE", "skills"]`, and the build is plain `tsc`, which does not
-copy `.md` into `dist`. **These READMEs do not ship in the npm tarball** — they exist
-only on GitHub. That makes replacing them with short stubs pointing at the site the
+`packages/gmt/package.json` sets `"files": ["dist", "LICENSE", "skills"]`, and the build
+is plain `tsc`, which does not copy `.md` into `dist`. **These READMEs do not ship in the
+npm tarball** — they exist only on GitHub. That makes replacing them with short stubs pointing at the site the
 low-cost option, since no published consumer reads them.
 
 **Decide deliberately and record the decision here.** Either way, note that
@@ -401,15 +388,14 @@ DOX-A3b Emit llms.txt, llms-full.txt, and per-page raw markdown from the corpus
 **Description:**
 
 ```
-Part of the Dox epic — see `context/dox/index.md`, Tier 1, item DOX-A3b. New in the
-2026-08-26 rewrite.
+Part of the Dox epic — see `context/dox/index.md`, Tier 1, item DOX-A3b.
 Depends on DOX-A3a (the corpus and route manifest) and DOX-A5 (so the "copy as markdown"
 affordance has somewhere to live in the token layer).
 
 ## Gap
-`llms.txt`/`llms-full.txt` are absent from every story in the 2026-08-21 draft. They cost
-roughly a day given DOX-A3a's corpus already exists, and they make every model the reader
-already has open — not only a purpose-built chatbot — answer correctly about GMT. This
+The site has no machine-readable surface. `llms.txt`/`llms-full.txt` cost roughly a day
+given DOX-A3a's corpus already exists, and they make every model the reader already has
+open — not only a purpose-built chatbot — answer correctly about GMT. This
 library already ships `skills/` for agents; a meaningful fraction of its audience is
 machine, and this is the cheapest possible extension of that audience to the docs site.
 
@@ -461,11 +447,10 @@ DOX-A5 Apply gmt palette, typography, and token layer to Starlight
 Part of the Dox epic — see `context/dox/index.md`, Tier 1, item DOX-A5.
 Depends on DOX-A3a (real content to style).
 
-## Moved earlier in the 2026-08-26 rewrite
-The 2026-08-21 draft placed this after DOX-A4 (guides). It now runs **before** DOX-A4a and
-`DOX-A3b`, and before any of Tier 2's widgets. Every widget built in Tier 2 onward is
-styled from these tokens — building them against unstyled Starlight first would mean
-restyling every one of them twice.
+## Ordering
+This runs **before** DOX-A4a and `DOX-A3b`, and before any of Tier 2's widgets. Every
+widget built in Tier 2 onward is styled from these tokens — building them against
+unstyled Starlight first would mean restyling every one of them twice.
 
 ## Gap
 The site works but looks like stock Starlight. This story is the cheap 80% of visual
@@ -497,9 +482,8 @@ content surface" — and note this story is entirely the *content surface* half.
 
 ## Before starting
 Read `context/dox/overview.md` §3, specifically the "Color", "Typography", and "Widget
-chrome" subsections. The last of these did not exist in the 2026-08-21 draft and covers
-the sentinel/live-value rules that Tier 2's widgets depend on this story delivering
-correctly.
+chrome" subsections. "Widget chrome" covers the sentinel/live-value rules that Tier 2's
+widgets depend on this story delivering correctly.
 
 ## Definition of done
 - Body text clears **7:1 contrast**, measured against real rendered pages, not flat
@@ -540,11 +524,9 @@ Part of the Dox epic — see `context/dox/index.md`, Tier 1, item DOX-A4a.
 Depends on DOX-A3a (so guides can link into the reference) and DOX-A5 (tokens to style
 against).
 
-## Split from DOX-A4 in the 2026-08-26 rewrite
-The original DOX-A4 covered guides *and* each SKILL.md's "Common Mistakes" pitfalls in
-one story. They are now separate: this story ports the Core Patterns / Quick Start
-content; `DOX-A4c` in Tier 5 ports the 63 severity-graded mistakes with live proof. Both
-land on issue #133.
+## Scope boundary with DOX-A4c
+This story ports the Core Patterns / Quick Start content; `DOX-A4c` in Tier 5 ports the
+63 severity-graded "Common Mistakes" with live proof. Both land on issue #133.
 
 ## Gap
 DOX-A3a gives the site accuracy — signatures and examples. It does not give it judgment.
@@ -608,8 +590,8 @@ DOX-A4b Build the real-world scenario page template and ship three scenarios
 **Description:**
 
 ```
-Part of the Dox epic — see `context/dox/index.md`, Tier 5, item DOX-A4b. New in the
-2026-08-26 rewrite, added by explicit user request for a mentor/teacher layer.
+Part of the Dox epic — see `context/dox/index.md`, Tier 5, item DOX-A4b. The
+mentor/teacher layer.
 Depends on DOX-B1a (the playground the "live widget" step in each scenario runs).
 
 ## Gap
@@ -660,8 +642,7 @@ DOX-A4c Port severity-graded SKILL.md mistakes into pitfall pages with live proo
 **Description:**
 
 ```
-Part of the Dox epic — see `context/dox/index.md`, Tier 5, item DOX-A4c. New in the
-2026-08-26 rewrite.
+Part of the Dox epic — see `context/dox/index.md`, Tier 5, item DOX-A4c.
 Depends on DOX-A4a (guides to cross-link into) and DOX-B1a (the playground providing live
 proof).
 
@@ -708,15 +689,14 @@ DOX-A4d Build a mentor-voiced scenario index driven by domain_map.yaml
 **Description:**
 
 ```
-Part of the Dox epic — see `context/dox/index.md`, Tier 5, item DOX-A4d. New in the
-2026-08-26 rewrite.
+Part of the Dox epic — see `context/dox/index.md`, Tier 5, item DOX-A4d.
 Depends on DOX-A4b and DOX-A4c (content to index).
 
 ## Gap
 504 functions create a discovery problem that neither Pagefind search nor a sidebar
 alone solves — a reader who does not yet know a function's name cannot search for it.
-`packages/gmt/skills/_artifacts/domain_map.yaml`, reviewed 2026-08-23, is a ready-made
-task→function map built for exactly this problem and is currently unused by the site.
+`packages/gmt/skills/_artifacts/domain_map.yaml` is a ready-made task→function map built
+for exactly this problem and is currently unused by the site.
 
 ## Scope
 - A "start here" index page, driven by `domain_map.yaml`, organized by task ("I have X

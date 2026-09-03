@@ -176,8 +176,7 @@ export function getTickerWindow(
   // A gap's skipped range runs backwards from the post-transition reading; an
   // overlap's repeated range runs forwards from it.
   const width = Math.abs(deltaMinutes);
-  const zoneStartMinutes =
-    deltaMinutes > 0 ? boundary - width : boundary;
+  const zoneStartMinutes = deltaMinutes > 0 ? boundary - width : boundary;
   const zoneEndMinutes = zoneStartMinutes + width;
 
   const clampedStart = Math.max(0, zoneStartMinutes);
@@ -201,7 +200,8 @@ export function isMinuteInZone(
   window: TickerWindow,
 ): boolean {
   return (
-    minuteOfDay >= window.zoneStartMinutes && minuteOfDay < window.zoneEndMinutes
+    minuteOfDay >= window.zoneStartMinutes &&
+    minuteOfDay < window.zoneEndMinutes
   );
 }
 
@@ -394,10 +394,30 @@ export interface ValuePresetInfo {
  * All available value preset definitions.
  */
 export const VALUE_PRESETS: ValuePresetInfo[] = [
-  { type: "normal", label: "Normal time (non-transition)", description: "A regular date/time with no DST transition — always resolves successfully." },
-  { type: "gap", label: "Gap hour (nonexistent)", description: "A local hour that was skipped during spring-forward — requires disambiguation." },
-  { type: "overlap", label: "Overlap hour (ambiguous)", description: "A local hour that occurs twice during fall-back — ambiguous without disambiguation." },
-  { type: "transition", label: "Exact transition instant", description: "The UTC instant of the DST transition itself — edge case for offset handling." },
+  {
+    type: "normal",
+    label: "Normal time (non-transition)",
+    description:
+      "A regular date/time with no DST transition — always resolves successfully.",
+  },
+  {
+    type: "gap",
+    label: "Gap hour (nonexistent)",
+    description:
+      "A local hour that was skipped during spring-forward — requires disambiguation.",
+  },
+  {
+    type: "overlap",
+    label: "Overlap hour (ambiguous)",
+    description:
+      "A local hour that occurs twice during fall-back — ambiguous without disambiguation.",
+  },
+  {
+    type: "transition",
+    label: "Exact transition instant",
+    description:
+      "The UTC instant of the DST transition itself — edge case for offset handling.",
+  },
 ];
 
 /**

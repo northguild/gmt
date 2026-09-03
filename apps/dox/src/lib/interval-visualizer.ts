@@ -53,7 +53,9 @@ export function percentToInstant(percent: number, stepMinutes = 1440): string {
   const stepMs = stepMinutes * 60 * 1000;
   const snappedMs = Math.round(rawMs / stepMs) * stepMs;
   const clampedMs = Math.max(START_MS, Math.min(END_MS, snappedMs));
-  return Temporal.Instant.fromEpochMilliseconds(clampedMs).toZonedDateTimeISO(ZONE).toString();
+  return Temporal.Instant.fromEpochMilliseconds(clampedMs)
+    .toZonedDateTimeISO(ZONE)
+    .toString();
 }
 
 /**
@@ -64,8 +66,13 @@ export function stepInstant(iso: string, deltaDays: number): string {
   try {
     const instant = Temporal.Instant.from(iso);
     const stepped = instant.add({ hours: deltaDays * 24 });
-    const clampedMs = Math.max(START_MS, Math.min(END_MS, stepped.epochMilliseconds));
-    return Temporal.Instant.fromEpochMilliseconds(clampedMs).toZonedDateTimeISO(ZONE).toString();
+    const clampedMs = Math.max(
+      START_MS,
+      Math.min(END_MS, stepped.epochMilliseconds),
+    );
+    return Temporal.Instant.fromEpochMilliseconds(clampedMs)
+      .toZonedDateTimeISO(ZONE)
+      .toString();
   } catch {
     return iso;
   }
@@ -91,11 +98,32 @@ export interface RelationshipPresetInfo {
 }
 
 export const RELATIONSHIP_PRESETS: RelationshipPresetInfo[] = [
-  { type: "overlapping", label: "Partial overlap", description: "A and B overlap in the middle, each extends past the other." },
-  { type: "disjoint", label: "Disjoint (no overlap)", description: "A and B share no time at all." },
-  { type: "a-contains-b", label: "A contains B", description: "B sits entirely inside A." },
-  { type: "identical", label: "Identical intervals", description: "A and B are the exact same span." },
-  { type: "adjacent", label: "Adjacent (touching)", description: "A ends the instant B starts — they share one instant but don't overlap." },
+  {
+    type: "overlapping",
+    label: "Partial overlap",
+    description: "A and B overlap in the middle, each extends past the other.",
+  },
+  {
+    type: "disjoint",
+    label: "Disjoint (no overlap)",
+    description: "A and B share no time at all.",
+  },
+  {
+    type: "a-contains-b",
+    label: "A contains B",
+    description: "B sits entirely inside A.",
+  },
+  {
+    type: "identical",
+    label: "Identical intervals",
+    description: "A and B are the exact same span.",
+  },
+  {
+    type: "adjacent",
+    label: "Adjacent (touching)",
+    description:
+      "A ends the instant B starts — they share one instant but don't overlap.",
+  },
 ];
 
 function isoDate(date: string): string {
@@ -111,15 +139,40 @@ export function buildRelationshipPreset(preset: RelationshipPreset): {
 } {
   switch (preset) {
     case "overlapping":
-      return { aStart: isoDate("2024-01-01"), aEnd: isoDate("2024-06-30"), bStart: isoDate("2024-04-01"), bEnd: isoDate("2024-12-31") };
+      return {
+        aStart: isoDate("2024-01-01"),
+        aEnd: isoDate("2024-06-30"),
+        bStart: isoDate("2024-04-01"),
+        bEnd: isoDate("2024-12-31"),
+      };
     case "disjoint":
-      return { aStart: isoDate("2024-01-01"), aEnd: isoDate("2024-03-01"), bStart: isoDate("2024-06-01"), bEnd: isoDate("2024-09-01") };
+      return {
+        aStart: isoDate("2024-01-01"),
+        aEnd: isoDate("2024-03-01"),
+        bStart: isoDate("2024-06-01"),
+        bEnd: isoDate("2024-09-01"),
+      };
     case "a-contains-b":
-      return { aStart: isoDate("2024-01-01"), aEnd: isoDate("2024-12-31"), bStart: isoDate("2024-04-01"), bEnd: isoDate("2024-06-01") };
+      return {
+        aStart: isoDate("2024-01-01"),
+        aEnd: isoDate("2024-12-31"),
+        bStart: isoDate("2024-04-01"),
+        bEnd: isoDate("2024-06-01"),
+      };
     case "identical":
-      return { aStart: isoDate("2024-01-01"), aEnd: isoDate("2024-12-31"), bStart: isoDate("2024-01-01"), bEnd: isoDate("2024-12-31") };
+      return {
+        aStart: isoDate("2024-01-01"),
+        aEnd: isoDate("2024-12-31"),
+        bStart: isoDate("2024-01-01"),
+        bEnd: isoDate("2024-12-31"),
+      };
     case "adjacent":
-      return { aStart: isoDate("2024-01-01"), aEnd: isoDate("2024-07-01"), bStart: isoDate("2024-07-01"), bEnd: isoDate("2024-12-31") };
+      return {
+        aStart: isoDate("2024-01-01"),
+        aEnd: isoDate("2024-07-01"),
+        bStart: isoDate("2024-07-01"),
+        bEnd: isoDate("2024-12-31"),
+      };
   }
 }
 
@@ -142,8 +195,14 @@ export type RelationshipKind =
  * instants only — never by predicting what a specific interval function
  * would return, so this can't drift the way the library's JSDoc examples did.
  */
-export function classifyRelationship(a: ZonedInterval, b: ZonedInterval): RelationshipKind {
-  let aS: Temporal.Instant, aE: Temporal.Instant, bS: Temporal.Instant, bE: Temporal.Instant;
+export function classifyRelationship(
+  a: ZonedInterval,
+  b: ZonedInterval,
+): RelationshipKind {
+  let aS: Temporal.Instant,
+    aE: Temporal.Instant,
+    bS: Temporal.Instant,
+    bE: Temporal.Instant;
   try {
     aS = Temporal.Instant.from(a.start);
     aE = Temporal.Instant.from(a.end);
@@ -182,7 +241,8 @@ export function formatInstant(iso: string): string {
   try {
     const zdt = Temporal.Instant.from(iso).toZonedDateTimeISO(ZONE);
     const base = `${pad(zdt.year, 4)}-${pad(zdt.month, 2)}-${pad(zdt.day, 2)} ${pad(zdt.hour, 2)}:${pad(zdt.minute, 2)}:${pad(zdt.second, 2)}`;
-    const ns = zdt.millisecond * 1_000_000 + zdt.microsecond * 1_000 + zdt.nanosecond;
+    const ns =
+      zdt.millisecond * 1_000_000 + zdt.microsecond * 1_000 + zdt.nanosecond;
     if (ns === 0) return base;
     const frac = pad(ns, 9).replace(/0+$/, "");
     return `${base}.${frac}`;
@@ -204,7 +264,11 @@ export function formatIntervalList(list: ZonedInterval[]): string {
 // Operation metadata
 // ---------------------------------------------------------------------------
 
-export type IntervalOperationId = "intersection" | "union" | "difference" | "xor";
+export type IntervalOperationId =
+  | "intersection"
+  | "union"
+  | "difference"
+  | "xor";
 
 export interface IntervalOperationInfo {
   id: IntervalOperationId;
@@ -215,8 +279,23 @@ export interface IntervalOperationInfo {
 }
 
 export const INTERVAL_OPERATIONS: IntervalOperationInfo[] = [
-  { id: "intersection", label: "Intersection", fnName: "intervalIntersectionZoned", isArray: false },
+  {
+    id: "intersection",
+    label: "Intersection",
+    fnName: "intervalIntersectionZoned",
+    isArray: false,
+  },
   { id: "union", label: "Union", fnName: "intervalUnionZoned", isArray: false },
-  { id: "difference", label: "Difference (A − B)", fnName: "intervalDifferenceZoned", isArray: true },
-  { id: "xor", label: "Symmetric difference (XOR)", fnName: "intervalXorZoned", isArray: true },
+  {
+    id: "difference",
+    label: "Difference (A − B)",
+    fnName: "intervalDifferenceZoned",
+    isArray: true,
+  },
+  {
+    id: "xor",
+    label: "Symmetric difference (XOR)",
+    fnName: "intervalXorZoned",
+    isArray: true,
+  },
 ];

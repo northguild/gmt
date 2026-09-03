@@ -1,7 +1,6 @@
 # `speechSynthesis` output cannot be captured
 
-> Extracted from `appendix-parked.md` §1 on 2026-09-02. The hard finding from the audio
-> research that is expensive to re-derive.
+> The hard finding from the audio research that is expensive to re-derive.
 
 **No specification in any browser exposes `speechSynthesis` output to the Web Audio
 graph** — see [WebAudio/web-audio-api#1764](https://github.com/WebAudio/web-audio-api/issues/1764)

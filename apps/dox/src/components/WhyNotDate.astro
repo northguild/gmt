@@ -1,0 +1,367 @@
+---
+/**
+ * Landing-page explainer: why `new Date` / `Date` objects are the root cause of
+ * JavaScript date/time bugs, and why the popular alternatives either inherit
+ * that flaw (they use `Date` under the hood) or step off the TC39 standard.
+ *
+ * Static — no hydration. Scoped `<style>` only; every value goes through a
+ * `--gmt-*` token. No `backdrop-filter`, so no transparency/contrast gate is
+ * needed beyond what the tokens already carry.
+ */
+
+interface Fault {
+  input: string;
+  output: string;
+  why: string;
+}
+
+const faults: Fault[] = [
+  {
+    input: 'new Date("2025-01-15")',
+    output: "Tue Jan 14 2025 19:00 GMT−5",
+    why: "A bare date string is UTC midnight. West of Greenwich that is still the previous evening. Add a time and the rule silently flips to local.",
+  },
+  {
+    input: 'new Date("2025-03-30T01:30")',
+    output: "02:30 — no error",
+    why: "01:30 never happened in London that night — the clocks jumped 01:00 → 02:00. Date invents a nearby valid instant instead of telling you.",
+  },
+  {
+    input: "new Date(2025, 3, 1)",
+    output: "April 1, not March 1",
+    why: "Months are 0-indexed. Days are 1-indexed. In the same constructor call.",
+  },
+  {
+    input: "d.setDate(d.getDate() + 1)",
+    output: "mutates d in place",
+    why: "A Date handed to a function can be changed underneath you. There is no read-only Date.",
+  },
+  {
+    input: '"09:00 every Tuesday, Tokyo"',
+    output: "not representable",
+    why: "A Date is a single integer — milliseconds since the epoch. It cannot hold a wall-clock time or a recurring local time.",
+  },
+  {
+    input: "same code, two machines",
+    output: "two different answers",
+    why: "Parsing and formatting use the host timezone. A laptop in Denver and a CI runner in UTC disagree.",
+  },
+];
+
+interface Layer {
+  name: string;
+  detail: string;
+  foundation: string;
+  kind: "date" | "wraps" | "nonstandard" | "standard" | "gmt";
+}
+
+const stack: Layer[] = [
+  {
+    name: "Date",
+    detail: "Epoch milliseconds interpreted through the host timezone. Every fault above lives here.",
+    foundation: "root cause",
+    kind: "date",
+  },
+  {
+    name: "Moment.js",
+    detail: "A wrapper around Date. In legacy maintenance mode since 2020, and mutable like the thing it wraps.",
+    foundation: "built on Date",
+    kind: "wraps",
+  },
+  {
+    name: "Luxon",
+    detail: "A DateTime is a Date plus a zone string. Invalid inputs become an Invalid DateTime you have to remember to check for.",
+    foundation: "built on Date",
+    kind: "wraps",
+  },
+  {
+    name: "date-fns",
+    detail: "Tree-shakeable functions — but every argument and every return value is a Date, so all of its footguns are still yours.",
+    foundation: "built on Date",
+    kind: "wraps",
+  },
+  {
+    name: "@internationalized/date",
+    detail: "Its own CalendarDate / ZonedDateTime types. Fixes the model, but it is Adobe's API — a second migration once Temporal ships.",
+    foundation: "not TC39",
+    kind: "nonstandard",
+  },
+  {
+    name: "Temporal",
+    detail: "The TC39 standard. Separate types for instants, wall-clock times, zoned times, plain dates, and durations. No Date anywhere.",
+    foundation: "TC39 standard",
+    kind: "standard",
+  },
+  {
+    name: "@northguild/gmt",
+    detail: "Temporal underneath, with an ISO 8601 string-in / typed-value-out surface on top. The layer you actually write against.",
+    foundation: "Temporal inside",
+    kind: "gmt",
+  },
+];
+---
+
+<div class="why-date">
+  <section class="why-date-block gmt-reveal" aria-labelledby="why-date-faults-h">
+    <h2 id="why-date-faults-h">
+      The bug is the <code>Date</code> object
+    </h2>
+    <p class="why-date-lede">
+      Almost every date/time bug in a JavaScript codebase traces back to one
+      type. <code>Date</code> conflates an instant with a wall-clock reading,
+      parses two ways depending on the string, and mutates in place.
+    </p>
+
+    <ul class="why-date-grid">
+      {
+        faults.map((f) => (
+          <li class="why-date-fault">
+            <span class="why-date-tag">Fault</span>
+            <div class="why-date-io">
+              <code class="why-date-in">{f.input}</code>
+              <span class="why-date-arrow" aria-hidden="true">
+                →
+              </span>
+              <code class="why-date-out">{f.output}</code>
+            </div>
+            <p class="why-date-why">{f.why}</p>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <section class="why-date-block gmt-reveal" aria-labelledby="why-date-stack-h">
+    <h2 id="why-date-stack-h">
+      The alternatives inherit it,  or deviate from the standard
+    </h2>
+    <p class="why-date-lede">
+      The popular libraries do not replace <code>Date</code>; they decorate it,
+      so the faults come along. The one library that fixes the model does it with
+      a non-standard API you will migrate off. GMT is Temporal — the standard —
+      with the ergonomics added on top.
+    </p>
+
+    <ol class="why-date-layers">
+      {
+        stack.map((l) => (
+          <li class:list={["why-date-layer", `why-date-layer--${l.kind}`]}>
+            <span class="why-date-layer-name">{l.name}</span>
+            <span class="why-date-layer-detail">{l.detail}</span>
+            <span class="why-date-layer-foundation">{l.foundation}</span>
+          </li>
+        ))
+      }
+    </ol>
+  </section>
+</div>
+
+<style>
+  .why-date {
+    margin: var(--gmt-space-12) 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gmt-space-12);
+  }
+
+  .why-date-block {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gmt-space-4);
+  }
+
+  .why-date h2 {
+    margin: 0;
+  }
+
+  .why-date-lede {
+    margin: 0;
+    max-width: 68ch;
+    color: var(--gmt-ice-dim);
+    line-height: 1.6;
+  }
+
+  .why-date code {
+    font-family: var(--gmt-font-mono);
+    font-size: 0.85em;
+    background: var(--gmt-code-bg);
+    border: 1px solid var(--gmt-code-border);
+    border-radius: var(--gmt-radius-sm);
+    corner-shape: bevel;
+    padding: 0.1em 0.35em;
+  }
+
+  /* ---- Fault grid ---- */
+
+  .why-date-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--gmt-space-4);
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  }
+
+  @media (min-width: 60rem) {
+    .why-date-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .why-date-fault {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gmt-space-3);
+    margin: 0;
+    padding: var(--gmt-space-4);
+    background: var(--gmt-fill-subtle);
+    border: 1px solid var(--gmt-signal-border);
+    border-radius: var(--gmt-radius-lg);
+    corner-shape: bevel;
+  }
+
+  /* Suppress the prose-list glowing tick (gmt-content.css
+     `.sl-markdown-content ul li::before`) — these <li> are cards, not bullets. */
+  .why-date-grid li::before {
+    display: none;
+  }
+
+  .why-date-tag {
+    align-self: flex-start;
+    font-family: var(--gmt-font-display);
+    font-size: 0.6rem;
+    letter-spacing: var(--gmt-tracking-wider);
+    text-transform: uppercase;
+    color: var(--gmt-signal);
+  }
+
+  .why-date-io {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--gmt-space-2);
+  }
+
+  .why-date-fault code {
+    background: var(--gmt-surface-2);
+  }
+
+  .why-date-in {
+    color: var(--gmt-ice);
+  }
+
+  .why-date-arrow {
+    color: var(--gmt-signal);
+    font-weight: 700;
+  }
+
+  .why-date-out {
+    color: var(--gmt-signal);
+    font-weight: 600;
+  }
+
+  .why-date-why {
+    margin: 0;
+    color: var(--gmt-ice);
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+
+  /* ---- Foundation stack ---- */
+
+  .why-date-layers {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gmt-space-2);
+  }
+
+  .why-date-layer {
+    display: grid;
+    grid-template-columns: minmax(8rem, 12rem) 1fr auto;
+    gap: var(--gmt-space-3) var(--gmt-space-4);
+    align-items: baseline;
+    padding: var(--gmt-space-3) var(--gmt-space-4);
+    background: var(--gmt-fill-subtle);
+    border: 1px solid var(--gmt-hairline);
+    border-radius: var(--gmt-radius-lg);
+    corner-shape: bevel;
+  }
+
+  .why-date-layer-name {
+    font-family: var(--gmt-font-mono);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--gmt-ice);
+    overflow-wrap: anywhere;
+  }
+
+  .why-date-layer-detail {
+    color: var(--gmt-ice);
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+
+  .why-date-layer-foundation {
+    justify-self: end;
+    font-family: var(--gmt-font-mono);
+    font-size: 0.7rem;
+    letter-spacing: var(--gmt-tracking-wide);
+    text-transform: uppercase;
+    color: var(--gmt-ice-dim);
+    white-space: nowrap;
+  }
+
+  /* Everything that is not the standard shares the fault colour (orange):
+     Date, its wrappers, and @internationalized/date. The wrappers are indented
+     to read as branching off Date. Temporal and GMT are green (the standard
+     path). */
+  .why-date-layer--date,
+  .why-date-layer--wraps,
+  .why-date-layer--nonstandard {
+    border-color: var(--gmt-signal-border);
+  }
+
+  .why-date-layer--date .why-date-layer-name,
+  .why-date-layer--date .why-date-layer-foundation,
+  .why-date-layer--nonstandard .why-date-layer-name,
+  .why-date-layer--nonstandard .why-date-layer-foundation,
+  .why-date-layer--wraps .why-date-layer-foundation {
+    color: var(--gmt-signal);
+  }
+
+  .why-date-layer--wraps,
+  .why-date-layer--gmt {
+    margin-left: var(--gmt-space-6);
+  }
+
+  .why-date-layer--standard,
+  .why-date-layer--gmt {
+    border-color: color(from var(--gmt-spring) srgb r g b / 0.35);
+  }
+
+  .why-date-layer--standard .why-date-layer-name,
+  .why-date-layer--standard .why-date-layer-foundation,
+  .why-date-layer--gmt .why-date-layer-name,
+  .why-date-layer--gmt .why-date-layer-foundation {
+    color: var(--gmt-spring);
+  }
+
+  @media (max-width: 40rem) {
+    .why-date-layer {
+      grid-template-columns: 1fr;
+      gap: var(--gmt-space-1);
+    }
+
+    .why-date-layer-foundation {
+      justify-self: start;
+    }
+
+    .why-date-layer--wraps,
+    .why-date-layer--gmt {
+      margin-left: var(--gmt-space-4);
+    }
+  }
+</style>

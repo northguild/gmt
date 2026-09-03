@@ -35,3 +35,8 @@ Dox is a small docs site first and a much larger ambition second. Tier 0 — thr
 stories — ships a real, deployed, searchable, linkable documentation site over all 504
 functions. That is the entire MVP. Everything from Tier 1 onward is additive. If you
 are picking up a story, see [overview.md](overview.md) §1 and §5 for the tier table.
+
+**Picking up Tier 6?** It is built on [AI Elements](https://elements.ai-sdk.dev/) + the
+AI SDK, with a foundation story `DOX-C0` (issue **#171**) and two chat surfaces — a
+draggable dock on every page **and** a dedicated `/dox` route. Start at
+[issues/DOX-C.md](issues/DOX-C.md).

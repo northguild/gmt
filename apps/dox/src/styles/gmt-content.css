@@ -258,9 +258,19 @@ dialog > .dialog-frame {
 }
 
 /* ---- Starlight tabs ---- */
+/* Starlight puts `overflow-x: auto` on `.tablist-wrapper` (and it cascades to a
+   clipped overflow-y). We wrap the tab row instead of scrolling it, so both the
+   wrapper and the list can be `visible` — which is what lets the focus ping
+   (below) radiate past the tab row instead of being clipped. */
+.sl-markdown-content .tablist-wrapper,
+.sl-markdown-content [role="tablist"] {
+  overflow: visible;
+}
+
 .sl-markdown-content [role="tablist"] {
   border-bottom: none;
   flex-wrap: wrap;
+  padding-top: 2px;
 }
 
 .sl-markdown-content [role="tablist"] li {
@@ -274,6 +284,7 @@ dialog > .dialog-frame {
 
 .sl-markdown-content .tab > [role="tab"] {
   box-shadow: none;
+  position: relative;
   border: 1px solid var(--gmt-border);
   border-radius: 0;
   border-top-left-radius: var(--gmt-radius-md);
@@ -306,16 +317,34 @@ dialog > .dialog-frame {
     inset 0 1px 0 color(from var(--gmt-ice) srgb r g b / 0.18);
 }
 
-/* Sonar focus ping — same as the buttons and form controls (@keyframes
-   gmt-focus-sonar + still fallback in gmt-primitives.css). After the :hover and
-   [aria-selected] rules so it wins when the focused tab is also the selected
-   one. The tab only bevels its top corners, so the ring hugs that shape. */
+/* Sonar focus ping. The tab sits flush on the code panel below it and only
+   bevels its top corners, so a symmetric ring (gmt-focus-sonar) reads wrong at
+   the bottom seam. This variant emits the echo up and out to the sides and
+   pulls it back from the bottom edge. After the :hover / [aria-selected] rules
+   so it wins when the focused tab is also selected. */
+@keyframes gmt-tab-sonar {
+  0% {
+    box-shadow:
+      0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),
+      0 0 0 4px color(from var(--gmt-cyan) srgb r g b / 0.55);
+  }
+  55%,
+  100% {
+    box-shadow:
+      0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),
+      0 -14px 0 12px color(from var(--gmt-cyan) srgb r g b / 0);
+  }
+}
+
 .sl-markdown-content .tab > [role="tab"]:focus {
   outline: none;
+  /* Above the sibling tabs and the panel below, so the ping isn't drawn under
+     their fills. */
+  z-index: 10;
   box-shadow:
     0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),
     0 0 0 5px color(from var(--gmt-cyan) srgb r g b / 0.25);
-  animation: gmt-focus-sonar var(--gmt-motion-sonar-duration) var(--gmt-easing)
+  animation: gmt-tab-sonar var(--gmt-motion-sonar-duration) var(--gmt-easing)
     infinite;
 }
 

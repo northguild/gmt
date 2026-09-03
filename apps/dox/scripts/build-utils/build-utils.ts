@@ -338,7 +338,11 @@ export function classifyType(
     // `("years" | "months")[]` — string-literal element unions become an enum list
     const lits = elemType ? extractStringLiteralValues(elemType) : [];
     if (lits.length > 0) {
-      return { type: "array", arrayType: "string", options: [...new Set(lits)] };
+      return {
+        type: "array",
+        arrayType: "string",
+        options: [...new Set(lits)],
+      };
     }
 
     return {

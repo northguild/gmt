@@ -66,6 +66,22 @@ function isExternal(href: string) {
 					{(actions as Action[]).map(
 						({ attrs: { class: className, ...attrs } = {}, icon, link: href, text, variant }) => {
 							const external = isExternal(href);
+							if (attrs['data-copy-prompt']) {
+								return (
+									<LinkButton
+										as="button"
+										type="button"
+										variant="ghost"
+										icon="copy"
+										class:list={[className]}
+										{...attrs}
+									>
+										<span data-copy-label data-copy-idle={text}>
+											{text}
+										</span>
+									</LinkButton>
+								);
+							}
 							return (
 								<LinkButton
 									{href}
@@ -87,6 +103,37 @@ function isExternal(href: string) {
 		}
 	</div>
 </div>
+
+<script>
+	import { AGENT_PROMPT } from '~/lib/agent-prompt';
+
+	const RESET_MS = 2000;
+
+	function wire() {
+		const buttons = document.querySelectorAll<HTMLElement>('[data-copy-prompt]');
+		for (const btn of buttons) {
+			if (btn.dataset.copyBound === 'true') continue;
+			btn.dataset.copyBound = 'true';
+			btn.addEventListener('click', async () => {
+				const label = btn.querySelector<HTMLElement>('[data-copy-label]');
+				try {
+					await navigator.clipboard.writeText(AGENT_PROMPT);
+					if (label) label.textContent = 'Copied!';
+					btn.classList.add('is-copied');
+				} catch {
+					if (label) label.textContent = 'Copy failed';
+				}
+				window.setTimeout(() => {
+					if (label) label.textContent = label.dataset.copyIdle ?? 'Copy GMT prompt';
+					btn.classList.remove('is-copied');
+				}, RESET_MS);
+			});
+		}
+	}
+
+	wire();
+	document.addEventListener('astro:page-load', wire);
+</script>
 
 <style>
 	@layer starlight.core {

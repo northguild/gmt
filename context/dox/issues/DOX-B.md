@@ -1,8 +1,8 @@
 # Issue #135–#136 — The widget platform
 
-**Re-audited 2026-09-01.** Five stories fold into these two issues, all in Tier 2:
-`DOX-B1a` on #135, `DOX-B2a`–`DOX-B2d` on #136. **No new GitHub issues.**
-DOX-B1a and DOX-B2a are complete; DOX-B2b–DOX-B2d remain planned.
+Five stories fold into these two issues, all in Tier 2: `DOX-B1a` on #135,
+`DOX-B2a`–`DOX-B2d` on #136. `DOX-B1a` and `DOX-B2a` are done; `DOX-B2b`–`DOX-B2d` are
+planned.
 
 Each issue below is one logical unit; its sub-stories are nested under it. The issue stays
 open until its last sub-story lands.
@@ -30,7 +30,7 @@ open until its last sub-story lands.
 **GitHub Issue:** #135 — see tracker.md
 
 `DOX-B1` is a single story, Tier 2: `DOX-B1a` (the `<PlaygroundLive>` textarea island).
-**Complete.**
+**Done.**
 
 #### DOX-B1a — `<PlaygroundLive>` textarea island
 
@@ -54,26 +54,24 @@ kind of API where reading `addDate("2024-03-15", { days: 5 }) // "2024-03-20"` t
 far less than typing a modified expression and watching the output change.
 
 ## Approach: textarea, not input widgets
-Earlier plans specified a complex web component with editable inputs per parameter and
-URL-encoded widget state. The implemented approach is far simpler: a single `<textarea>`
-where the user types any JS expression calling the real library, a run button, and a live
-output. This eliminates:
-- The per-parameter input widget system (enum selects, units selects, array inputs, etc.)
-- The URL state / permalink system (`DOX-B1b`) — there is no state to encode when the
-  textarea content is the only state
-- The `widget-state.ts` serialization layer entirely
+A single `<textarea>` where the user types any JS expression calling the real library, a
+run button, and a live output — not a web component with editable inputs per parameter
+and URL-encoded widget state. This means no per-parameter input widget system (enum
+selects, units selects, array inputs), no URL state / permalink system (there is no
+state to encode when the textarea content is the only state), and no `widget-state.ts`
+serialization layer.
 
 The textarea is seeded with a call string from `LIVE_PLAYGROUND_TEMPLATES` (generated
 from the function's first `@example` or synthesized from its param spec), so the user
 starts with a working expression they can modify.
 
-## Import granularity — corrected 2026-08-26
+## Import granularity
 `packages/gmt/package.json` sets `"./plain/*/*": null` (and the same for `zoned`/`unix`/
 `utc`), which explicitly blocks per-function subpaths. The maximum import granularity is
 the **module** barrel — `@northguild/gmt/plain/calculate`.
 
-It is also more consequential than the original draft assumed: `src/index.ts`,
-`src/plain/index.ts`, and `src/zoned/index.ts` each open with
+It is consequential: `src/index.ts`, `src/plain/index.ts`, and `src/zoned/index.ts` each
+open with
 `export * from "@js-temporal/polyfill"`, so a **namespace**-level import
 (`@northguild/gmt/plain`) pulls the entire polyfill — 2.98 MB unpacked — into the
 bundle. Module barrels do not carry this cost. **Use module-granularity imports
@@ -116,9 +114,8 @@ build time to drop the polyfill from widgets entirely.** If it is, this is the l
 free performance win available in the whole epic; verify rather than assume either way.
 
 ## Implementation notes
-- `PlaygroundLive.astro` renders inline markup + an inline `<script>` block (no separate
-  `.ts` init module). The `playground-init.ts` file from the original plan was written
-  but never wired into any layout or generated MDX, so it was deleted as dead code.
+- `PlaygroundLive.astro` renders inline markup + an inline `<script>` block — no separate
+  `.ts` init module.
 - `GMT_MODULES` in `gmt-modules.ts` is a static registry of dynamic imports at module
   granularity. Vite resolves these at build time into separate chunks that only load
   when a playground is present on the page.
@@ -155,7 +152,7 @@ format bench). The issue stays open until `DOX-B2d` also lands.
 DOX-B2a Auto-embed playgrounds into every generated @example
 ```
 
-**Status:** Complete.
+**Status:** Done.
 
 **Description:**
 
@@ -168,19 +165,17 @@ Depends on DOX-B1a (the component) and DOX-A3a (the generator).
 DOX-B1a gives one component. Wiring it in by hand across 504 pages is not viable, and
 hand-authoring would guarantee drift.
 
-## What was built
+## What shipped
 
 - `build-reference.ts:renderFn` emits one static code block (first example) + one
   `<PlaygroundLive>` island per function. The island is seeded from the first example's
   `call` string via `LIVE_PLAYGROUND_TEMPLATES`, which contains one entry per function
   (keyed by function name), not one per example.
-- `PlaygroundLive.astro` renders inline markup + an inline `<script>` block. No separate
-  init module is needed.
-- The `playground-init.ts` click-delegation module from the original plan was written
-  but never imported by any layout, page, or generated MDX. It was deleted as dead code.
+- `PlaygroundLive.astro` renders inline markup + an inline `<script>` block — no separate
+  init module.
 - Only the first example is shown per function page: a static code block for no-JS
   fallback / Pagefind indexing, followed by a live `<PlaygroundLive>` island. Additional
-  examples are not rendered on the page — this is intentional, confirmed by the author.
+  examples are not rendered — this is intentional.
 
 ## Scope
 
@@ -232,8 +227,7 @@ DOX-B2b Build a DST Transition Inspector widget
 
 ```
 
-Part of the Dox epic — see `context/dox/index.md`, Tier 2, item DOX-B2b. New in the
-2026-08-26 rewrite, promoted out of `appendix-parked.md` §2 by explicit user request.
+Part of the Dox epic — see `context/dox/index.md`, Tier 2, item DOX-B2b.
 Depends on DOX-B1a.
 
 ## Gap
@@ -257,9 +251,8 @@ same-day field reset. Nothing currently shows this happening.
 
 ## Before starting
 
-Read `appendix-parked.md` §2, which is where this widget was first identified as
-buildable without any model, and `startOfZoned.ts`'s fifth example for the exact
-behavior to demonstrate.
+Read `startOfZoned.ts`'s fifth example for the exact behavior to demonstrate. This
+widget runs entirely on already-exported functions — no model needed.
 
 ## Definition of done
 
@@ -290,8 +283,7 @@ DOX-B2c Build an interval algebra visualizer over the 109 interval functions
 
 ```
 
-Part of the Dox epic — see `context/dox/index.md`, Tier 2, item DOX-B2c. New in the
-2026-08-26 rewrite.
+Part of the Dox epic — see `context/dox/index.md`, Tier 2, item DOX-B2c.
 Depends on DOX-B1a.
 
 ## Gap
@@ -346,8 +338,7 @@ DOX-B2d Build a zone converter, format bench, and regex tester widget
 
 ```
 
-Part of the Dox epic — see `context/dox/index.md`, Tier 2, item DOX-B2d. New in the
-2026-08-26 rewrite.
+Part of the Dox epic — see `context/dox/index.md`, Tier 2, item DOX-B2d.
 Depends on DOX-B1a.
 
 ## Gap

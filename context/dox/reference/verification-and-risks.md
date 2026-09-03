@@ -1,9 +1,8 @@
 # Verification and risks — epic-level cross-cutting
 
-> Extracted from `overview.md` §6 + §7 on 2026-09-02. The per-story Definition of Done
-> lives in each `issues/DOX-*.md`; this file is the **cross-cutting** list `dox-architect`
-> checks on epic-level reviews. Load when picking up a story only if the DoD specifically
-> references it.
+> The per-story Definition of Done lives in each `issues/DOX-*.md`; this file is the
+> **cross-cutting** list `dox-architect` checks on epic-level reviews. Load when picking
+> up a story only if the DoD specifically references it.
 >
 > See also: [overview.md](../overview.md) for architecture and the tier table.
 
@@ -37,8 +36,20 @@
   no corpus answer must be **refused, not improvised**. Separately, stub a response
   containing a plausible-but-nonexistent route and confirm it **renders as plain text**
   rather than a broken link — the route manifest makes this a property, not a hope.
-  DOX-C3b additionally requires: a stubbed streamed tool call with a malformed _terminal_
-  JSON object must not crash the client.
+- **Tier 6, `DOX-C0` (#171) — the byte-identical screenshot gate.** Introducing React and
+  Tailwind must change no existing page. Run `design-system.md`'s screenshot diff across
+  landing / a dense reference page / sidebar / search modal / mobile menu, in light and
+  dark, desktop and mobile, with the chat island present but never opened. Any diff is a
+  regression. Also grep the build output to confirm **Tailwind Preflight is absent**, and
+  confirm in the network panel that a reference page loads **no React bundle**.
+- **Tier 6, `DOX-C3b` — tool-call robustness.** The AI SDK parses streamed tool input,
+  so there is no hand-rolled parser to break. Three gates: a tool call with a **valid
+  shape but nonsense arguments** renders an error state rather than crashing; an
+  **unknown tool name** is handled; and an **`output-error` part** is handled. Verify each
+  directly, not by inference.
+- **Tier 6, `DOX-C3a` — both surfaces, not one.** Every chat DoD item is checked on the
+  every-page dock **and** on `/dox`, and `/dox` must render usefully with the DOX-E1 globe
+  absent.
 
 ## Risks
 
@@ -70,10 +81,11 @@
   identifiers, not coordinates. DOX-E1a must vendor tzdata's `zone1970.tab` (public
   domain, ~450 rows) with a provenance note and a refresh reminder — it is not a one-time
   import, tzdata itself releases several times a year.
-- **The globe's rendering approach is not settled.** Three.js + React Three Fiber is the
-  assumed stack, but a globe that must be clickable and keyboard-navigable may be better
-  served by an orthographic-projection canvas or SVG — lighter, and hit-testing and focus
-  order are native rather than invented. DOX-E1a prototypes both before committing.
+- **The globe's rendering approach must be recorded, not inherited.** `d3-geo`,
+  `topojson-client` and `world-atlas` are already `apps/dox` dependencies, and
+  `d3-geo`'s `geoOrthographic` gives a draggable globe with hit-testing and DOM focus
+  order for free. Start from `d3-geo` and only reach for WebGL if it demonstrably cannot
+  do what DOX-E1a asks; record the decision either way.
 - **Widget bundle budget.** Tiers 2 and 5 put an island on nearly every page. Combined with
   the exports-map finding above, this is the epic's main performance risk. Hydrate
   `client:visible`, import at module granularity, and measure a heavy reference page
@@ -92,28 +104,46 @@
   heavier approach. The sibling repo (see "Reviewed prior art") puts the bake-vs-retrieve
   threshold at ~500 KB of docs; we are plausibly past it, but DOX-C1 measures rather than
   assumes.
-- **Corpus staleness (Tier 6).** Because hosting is now a single same-origin Worker (see
-  §2 "Hosting"), the Worker can fetch the corpus from the site it is already serving
+- **Corpus staleness (Tier 6).** Hosting is a single same-origin Worker (see §2
+  "Hosting"), so the Worker can fetch the corpus from the site it is already serving
   rather than baking it into its own bundle — which resolves this risk rather than
   merely mitigating it. If DOX-C1 nonetheless chooses to bake the corpus in, a docs-only
   change leaves the chatbot answering from stale content until the Worker is redeployed,
   and the CI trigger overlap must ship in the same story.
-- **Model choice was made before widgets were central.** Gemini 2.5 Flash was picked for
-  free-tier SSE streaming in the 2026-08-21 draft. DOX-C3b now requires the model to emit
-  streamed tool calls, which changes the calculus toward whichever provider has the
-  better streaming tool-use ergonomics. Re-evaluate in DOX-C1 rather than inheriting the
-  choice, and carry forward the two `appendix-parked.md` §2 findings regardless of which
-  model is chosen: streamed tool-call arguments are partial JSON, invalid by definition
-  until the call completes, and the parser must tolerate a malformed terminal object, not
-  only a truncated one; and the widget registry must be fixed and typed — never `eval`.
+- **Model choice (Tier 6).** Behind the AI SDK the provider is one import and one model
+  string, so this is **not a one-way door** and not a provider filter — any tool-capable
+  provider works. Choose in DOX-C1 on cost, latency and quality. The residual risk is
+  **validation**, not parsing: the AI SDK parses streamed tool input, but a well-formed
+  tool input can still carry nonsense arguments, and the widget registry must be fixed
+  and typed — never `eval`.
+- **A second styling system enters the repo (Tier 6, `DOX-C0`).** Tailwind v4 emits
+  `@layer`; the 20 GMT sheets are unlayered and therefore beat every Tailwind utility.
+  `design-system.md` records the full collision list (`h1`–`h6`, `textarea`/`input`,
+  `body`) and the four constraints — omit Preflight, import from the island entry, ship a
+  `.gmt-ask` reset, bridge shadcn variables onto `--gmt-*`. The gate is the byte-identical
+  screenshot diff. **This is the single riskiest assumption in Tier 6**; if it fails, the
+  fallback is vendoring the 12 components and re-skinning them in GMT CSS, which forfeits
+  the upgrade path.
+- **React ships to a site that has never had it (Tier 6, `DOX-C0`).** The dock is on every
+  page, so a careless `client:load` would put React in every page's critical path.
+  Mitigation is structural: the launcher is a button, the chat core hydrates only on open,
+  and the Tailwind sheet is imported from the island entry so Vite code-splits it. Verified
+  in the network panel, not by reading config.
+- **AI Elements upgrade drift (Tier 6).** Components are copied into the repo, so we own
+  them — which means upstream fixes do not arrive on their own, and local re-theming makes
+  re-running `add` a merge rather than an overwrite. Record which 12 components are
+  installed and at what date. **Never run bare `npx ai-elements@latest`** — it installs all
+  48, including `@xyflow/react` and the coding-agent set.
+- **The Worker gains dependencies (Tier 6, `DOX-C2`).** The Worker bundles `ai` plus a
+  provider. Measure the built bundle against the Workers size limit and record it, rather
+  than assuming it fits.
 - **Astro/Starlight churn.** Both move quickly and Starlight peers on an exact-ish Astro
   major, plus, as of `0.41.9`, a specific `@astrojs/markdown-remark` peer. Pin all three,
   upgrade deliberately, and keep the generator emitting plain MDX so only the site shell
   is coupled to the framework.
-- **A Cloudflare account is now a hard dependency for deployment, not only for chat.**
-  The Tier 0 MVP cannot ship without one. This was previously a Tier 6-only dependency;
-  confirm account access before starting DOX-A1.
-- **Scope honesty.** 13 stories became 22 units of work. Tier 0 is three of them and is
+- **A Cloudflare account is a hard dependency for deployment, not only for chat.** The
+  Tier 0 MVP cannot ship without one; confirm account access before starting DOX-A1.
+- **Scope honesty.** 23 units of work across 14 issues. Tier 0 is three of them and is
   genuinely small — a few days, not weeks. Every tier after Tier 1 remains independently
   droppable without losing the docs, which is the property this epic depends on and which
   must be preserved as the tier structure evolves.

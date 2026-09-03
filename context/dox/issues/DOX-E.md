@@ -1,21 +1,30 @@
 # Issue #142 — The globe
 
-**Rewritten in full on 2026-08-26 by explicit user decision.** The 2026-08-21 draft
-scoped this as a purely decorative, droppable landing-page flourish and told future
-readers not to undo that scoping. **The user has deliberately undone it.** The globe is
-now an interactive product feature — click a zone, read its live state — and a second
-sub-story, `DOX-E1b`, adds a multi-zone time scrubber. Both fold into the same GitHub
-issue, #142. **No new GitHub issues.**
+The globe is an interactive product feature — click a zone, read its live state — with a
+second sub-story, `DOX-E1b`, adding a multi-zone time scrubber. Both fold into GitHub
+issue #142.
 
 `DOX-E1` spans two sub-stories, both Tier 4: `DOX-E1a` (interactive globe) and `DOX-E1b`
 (multi-zone time scrubber). The issue stays open until `DOX-E1b` also lands.
 
+## The globe has two homes
+
+The globe renders on the homepage **and** in the dedicated `/dox` chat route's **widget
+rail**: spinnable, with timezone demarcation and global clocks alongside the chat.
+Consequences:
+
+- **`DOX-E1a` renders on the homepage and `/dox`, nowhere else.**
+- **`DOX-E1b`'s multi-zone clock surface is the `/dox` widget rail.**
+
+**The independence property is binding.** `/dox` must render and be fully usable with
+this issue's stories absent — `DOX-C3a`'s DoD asserts exactly that. The dependency runs
+one way: Tier 6 may _host_ the globe, but must not _require_ it.
+
 ## Definition of done — binding for every story in this file
 
 - Nothing in Tiers 0–3 or Tier 5 depends on either story in this file — deleting this
-  issue's stories must leave the rest of the site fully intact. (This is weaker than the
-  2026-08-21 draft's "the globe is decoration" — it is now a real feature — but the
-  independence property that made it safe to schedule late is preserved.)
+  issue's stories must leave the rest of the site fully intact, and `/dox` (Tier 6) must
+  still render usefully without them.
 - Neither story ever delays content becoming readable.
 - Gated behind `prefers-reduced-motion`, and both degrade cleanly where WebGL is
   unavailable.
@@ -49,18 +58,14 @@ Part of the Dox epic — see `context/dox/index.md`, Tier 4, item DOX-E1a.
 Depends on DOX-A5 (tokens). Independent of Tiers 2, 3, and 6 — it can be built or
 dropped at any point after Tier 0 without affecting them.
 
-## Promoted from decoration to flagship — read this before scoping down
-The 2026-08-21 draft specified this as a wireframe hero with meridian rings, ambient
-rotation, and nothing clickable — deliberately scoped as pure decoration to avoid the
-superseded plan's failure mode of a full-bleed scene that every glass panel had to stay
-legible over. **The user has explicitly asked for more: click a zone, read its live
-local time, UTC offset, and DST state.** This is now a product feature, not a flourish.
+## A product feature, not a flourish — read this before scoping down
+The globe is interactive: click a zone, read its live local time, UTC offset, and DST
+state. It is **not** a wireframe hero with nothing clickable.
 
-The original scoping's actual lesson still holds and is worth preserving: the globe
-lives on the landing page, not behind every panel, so nothing has to stay legible
-through it and there is no combined worst-case frame budget (scene + streaming + border
-animation at once). Making the globe interactive did not reintroduce that risk — it is
-still one canvas on one page. Keep it there.
+One constraint from the original scoping still holds: the globe lives on the landing
+page and the `/dox` rail, not behind every panel, so nothing has to stay legible through
+it and there is no combined worst-case frame budget (scene + streaming + border
+animation at once). It is one canvas per surface. Keep it that way.
 
 ## Gap
 A temporal library's landing page should look like it knows what a timezone is, and a
@@ -73,8 +78,10 @@ admire it.
 - Click (or otherwise select) a zone and read its live local time, UTC offset, and DST
   state, computed from the already-exported `getTimeZones`, `getZonedNow`,
   `getTimeZoneOffset`, `isInDaylightSaving`, and `hasDaylightSaving` — all seven
-  functions this story and `DOX-E1b` need are verified present as of 2026-08-26.
-- Hydrated `client:visible`, **on the homepage only**.
+  functions this story and `DOX-E1b` need are present in the library.
+- Hydrated `client:visible`, **on the homepage and the `/dox` widget rail only**.
+- **Spinnable, not merely clickable.** Drag to rotate, with visible timezone demarcation
+  and live clocks — this is what the `/dox` rail is for.
 - Pause rendering when the tab is hidden.
 - Static fallback under `prefers-reduced-motion` and where WebGL is unavailable.
 - Slow ambient rotation when idle; stops or slows on interaction.
@@ -87,24 +94,45 @@ Vendor tzdata's `zone1970.tab` (public domain, ~450 rows, roughly 30 KB as JSON)
 provenance comment and a refresh reminder: tzdata itself releases several times a year,
 so this is not a one-time import.
 
-**How should it render?** The 2026-08-21 draft assumed Three.js + React Three Fiber
-without discussion. For a globe that must be clickable and keyboard-navigable, that may
-not be the right call — an orthographic-projection `<canvas>` or an SVG globe could be
-lighter and give hit-testing and focus order essentially for free, where a WebGL scene
-requires inventing both. **Prototype both before committing.** The goal is the
-interaction the user asked for, not a specific rendering framework. Check the bundle
-cost of whichever is chosen against the homepage's performance budget.
+**Still open.** `apps/dox/src/lib/timezones.ts` already ships a `TIMEZONES` table of
+`{ id, lat, lng }` — but only **10 curated zones**, built for `TimezoneMap`. That is
+prior art for the shape, not a substitute for the data. Decide whether this story needs
+all ~450 rows or whether a curated set is genuinely better for a globe a reader spins.
 
-## What the interactive version does not change
-Note this is still the one place in the epic where a `@octanejs/three` +
-`@octanejs/drei` island could be reconsidered later, since it is fully isolated on the
-landing page. Do not do so for this story regardless of the rendering-approach decision
-above: `@octanejs/drei` was `0.0.9` as of 2026-08-21 with 43 `octane` releases in
-roughly eight weeks — re-verify the ecosystem's maturity before ever depending on it.
+**How should it render? — largely pre-answered.** Check the repo before prototyping
+anything: `d3-geo`, `topojson-client` and `world-atlas` are **already dependencies** of
+`apps/dox`, and `d3-geo`'s `geoOrthographic` projection gives a draggable, spinnable
+globe with hit-testing and DOM focus order essentially for free — precisely the two
+things a WebGL scene would force us to invent.
+
+There is more prior art than that: `apps/dox/src/lib/timezone-map.ts` already exports
+`initTimezoneMap(host, clockPanel)`, `apps/dox/src/components/TimezoneMap.astro` already
+renders a live clock panel, and `gmt-map.css` already styles it. The globe is plausibly
+an orthographic re-projection of a pipeline that exists and works, not a new rendering
+stack.
+
+**So: start from `d3-geo`, and only reach for WebGL if it demonstrably cannot do what is
+asked.** Record the decision either way. Check the bundle cost of whichever is chosen
+against the homepage's performance budget.
+
+**Reuse `initTimezoneMap`'s signature.** `DOX-C3b` mounts widgets by calling
+`mount(root)`, and a globe that takes its host element as an argument drops into that
+registry with no adapter. A globe wired to `document.getElementById` will need refactoring
+in Tier 6 — do it right the first time.
+
+## Octane
+This is the one place in the epic where a `@octanejs/three` + `@octanejs/drei` island
+could be reconsidered later, since it is fully isolated on the landing page. Do not do so
+for this story regardless of the rendering-approach decision above — the `@octanejs/*`
+adapters are pre-1.0 and moving fast; re-verify the ecosystem's maturity before ever
+depending on it.
 
 ## Definition of done
-- The globe renders on the homepage and nowhere else — verify no globe-rendering bundle
-  is loaded on a reference page.
+- The globe renders on the homepage and in the `/dox` widget rail, and **nowhere else** —
+  verify no globe-rendering bundle is loaded on a reference page.
+- The globe can be spun by dragging, with timezone demarcation visible while it rotates.
+- Its entry point takes a host element (`mount(root)` / `initGlobe(host)`), so `DOX-C3b`
+  can mount it without a refactor.
 - Selecting a zone shows correct live local time, UTC offset, and DST state, verified
   against at least one zone currently observing DST and one that is not.
 - The day/night terminator is positioned correctly for the current instant.
@@ -133,11 +161,10 @@ DOX-E1b Add a multi-zone time scrubber for the meeting-planner use case
 **Description:**
 
 ```
-Part of the Dox epic — see `context/dox/index.md`, Tier 4, item DOX-E1b. New in the
-2026-08-26 rewrite, added by explicit user request alongside the globe's promotion to a
-flagship feature.
-Depends on DOX-E1a (zone selection) and DOX-B1b (permalinks, so a planned meeting time
-can be shared).
+Part of the Dox epic — see `context/dox/index.md`, Tier 4, item DOX-E1b.
+Depends on DOX-E1a (zone selection). Needs a shareable-URL mechanism for a planned
+meeting time; no permalink system exists in the epic, so this story adds a minimal
+query-string encoder for its own state.
 
 ## Gap
 "What time works for people in three different zones" is arguably the single most
@@ -151,13 +178,16 @@ scattered across reference pages.
   `convertZonedToZoned` and `getTimeZoneOffset` under the hood.
 - DST boundaries must visibly "bite" — a zone whose offset changes as the slider crosses
   a transition should show that change, not silently reflow.
-- Reuse `DOX-B1b`'s permalink mechanism so a specific pinned-zones-plus-time
-  configuration can be copied and shared, e.g. to propose a meeting time.
+- Encode a specific pinned-zones-plus-time configuration into the URL so it can be
+  copied and shared, e.g. to propose a meeting time.
 
 ## Before starting
-Decide whether this lives embedded in the same homepage surface as `DOX-E1a`'s globe or
-as its own linked page — a meeting-planning tool may get more use as a directly
-linkable, bookmarkable page than as a homepage feature people have to rediscover.
+The scrubber lives as the **global clocks panel in the `/dox` widget rail**, next to the
+chat and the globe — a directly linkable, bookmarkable surface. The homepage may show a
+reduced version alongside the globe; `/dox` is the full one.
+
+`apps/dox/src/components/TimezoneMap.astro` and `gmt-map.css` already ship a live
+multi-zone clock panel — start from it rather than from scratch.
 
 ## Definition of done
 - At least three pinned zones update in sync as the slider moves.

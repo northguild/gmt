@@ -1,9 +1,14 @@
 ## GitHub Issues
 
-The 22 sub-stories map onto 13 GitHub issues (#130–#142). Each issue appears
-once below; its `Story` column lists every sub-story that folds into it. Start a
-branch by naming the sub-story ID (e.g. `DOX-A3a`) — the agent resolves it to the
+The 23 sub-stories map onto 14 GitHub issues — #130–#142, plus **#171 for `DOX-C0`**. Each
+issue appears once below; its `Story` column lists every sub-story that folds into it.
+Start a branch by naming the sub-story ID (e.g. `DOX-A3a`) — the agent resolves it to the
 issue number here and the full spec in `issues/<letter>.md`.
+
+**#171 (`DOX-C0`) is the one story with its own issue** rather than a sub-story slot: the
+React + Tailwind + AI Elements foundation is infrastructure rather than chat, it touches
+every existing page's build, and it is independently reviewable before any chat behavior
+exists. **It blocks all four other Tier 6 stories.**
 
 `Order` is the sequence to actually build these in. It follows overview.md §5:
 
@@ -14,7 +19,9 @@ issue number here and the full spec in `issues/<letter>.md`.
   content work with a different skill profile and does not compete with component work.
 
 **An issue closes when its last sub-story lands, not its first.** Do not close #132 when
-`DOX-A3a` ships — `DOX-A3b` is still open against it in Tier 1. Same for #133.
+`DOX-A3a` ships — `DOX-A3b` is still open against it in Tier 1. Same for #133. The
+single-story issues (#130, #131, #134, #140, #141, #171, #137, #138) close on their only
+sub-story.
 
 **No changesets, no publish column.** `apps/dox` is private and is not published to
 npm, so unlike `context/roadmap/`, these stories do not need a `.changeset/*.md` entry —
@@ -32,11 +39,12 @@ normal repo convention and does need a changeset.
 | 6     | DOX-B1 (DOX-B1a)                            | #135         | Done        |
 | 7     | DOX-B2 (DOX-B2a, DOX-B2b, DOX-B2c, DOX-B2d) | #136         | Done        |
 | 8     | DOX-D1                                      | #140         | Done        |
-| 9     | DOX-D2                                      | #141         | Not started |
+| 9     | DOX-D2                                      | #141         | Done        |
 | 10    | DOX-E1 (DOX-E1a, DOX-E1b)                   | #142         | Not started |
-| 11    | DOX-C1                                      | #137         | Not started |
-| 12    | DOX-C2                                      | #138         | Not started |
-| 13    | DOX-C3 (DOX-C3a, DOX-C3b)                   | #139         | Not started |
+| 11    | DOX-C0                                      | #171         | Not started |
+| 12    | DOX-C1                                      | #137         | Not started |
+| 13    | DOX-C2                                      | #138         | Not started |
+| 14    | DOX-C3 (DOX-C3a, DOX-C3b)                   | #139         | Not started |
 
 Parked work carries no story ID and never enters this table — see
 [appendix-parked.md](appendix-parked.md).

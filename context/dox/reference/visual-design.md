@@ -1,17 +1,14 @@
 # Visual design language
 
-> Extracted from `overview.md` §3 on 2026-09-02. The language spec is below. The
-> implementation rules (token order, maintenance rules, screenshot-diff gate) live in
-> [reference/design-system.md](design-system.md) — load that when actually styling
-> components.
+> The language spec is below. The implementation rules (token order, maintenance rules,
+> screenshot-diff gate) live in [reference/design-system.md](design-system.md) — load
+> that when actually styling components.
 >
 > See also: [overview.md](../overview.md) for architecture and the tier table.
 
-This section is unchanged in substance from the superseded plan — it was the strongest
-part of it — but it is **demoted from a day-one gate to a Tier 3 input**. DOX-A5, in Tier 1,
-ships the cheap 80% (palette, typography, tokens) as soon as there is real content to
-style; DOX-D1–DOX-D2, in Tier 3, apply the expensive chrome over pages — and, by then,
-widgets — that already work.
+This is a **Tier 3 input**, not a day-one gate. DOX-A5, in Tier 1, ships the cheap 80%
+(palette, typography, tokens) as soon as there is real content to style; DOX-D1–DOX-D2,
+in Tier 3, apply the expensive chrome over pages and widgets that already work.
 
 **Nothing may look like a default HTML control.** No stock `border-radius` buttons, no
 system-chrome scrollbars, no browser-default focus rings, no unstyled `textarea`. The
@@ -156,8 +153,7 @@ Specifics:
 
 ### Widget chrome (Tiers 2–5)
 
-The 2026-08-21 draft's §3 covered panels, borders, controls and motion — everything a
-chat console needs. It did not cover the surfaces this plan now builds on top of them:
+Beyond panels, borders, controls and motion, Tiers 2–5 build surfaces on top of them:
 timelines, scrubbers, draggable interval bars, and a globe. They obey the same split, but
 the line between _housing_ and _content_ falls in a less obvious place.
 
@@ -187,6 +183,37 @@ as hard as any panel.
   operated by dragging is unusable by a meaningful fraction of readers and is invisible as
   a problem during development.
 
+### Overlays and the chat dock (story DOX-C3a)
+
+`DOX-C3a` needs an overlay treatment, because the Ask Dox dock is available on every page
+and AI Elements ships no draggable modal. These rules are the spec; `DOX-C3a` implements
+them.
+
+**It is a panel first.** Compose from `.gmt-glass*` and `.gmt-brackets` — the same glass,
+hairline border, inner highlight and corner brackets as §Panel construction. Do not invent
+a second panel treatment for the dock.
+
+- **One layer of glass, never two.** The dock floats over content that may itself be
+  glass (a sidebar, a widget card). §Performance notes already forbids nested glass; this
+  is where it is most tempting and most expensive. Give the dock an opaque-enough fill that
+  it does not stack blurs, and drop `backdrop-filter` entirely under
+  `prefers-reduced-transparency`.
+- **The launcher is not the chat.** Closed, the dock is a button. It must not hydrate the
+  chat, load Tailwind, or paint a blurred surface until opened.
+- **Drag is never the only affordance** — the same rule as widgets. Provide a keyboard path
+  (dock-position cycling, or a documented equivalent) and remember the position. A panel you
+  can only place with a mouse cannot be placed at all by some readers.
+- **Escape dismisses; focus returns to the launcher.** Focus is trapped while open. The
+  Radix primitives underneath AI Elements give this, but it must be verified, not assumed.
+- **Never cover what it is discussing.** The dock defaults to a corner and is movable
+  precisely so the reader can keep the page visible while reading the answer. It is not a
+  takeover.
+- **Motion on open/close only.** A dock that animates while the reader is reading violates
+  §Motion's "never over text being read". The reveal primitive applies to the chrome
+  appearing, not to the reply text.
+- **`/dox` is a page, not an overlay**, and none of the above applies to it — it gets the
+  ordinary page frame with a chat column and a widget rail.
+
 ### Motion (story DOX-D2)
 
 Boot sequence on first paint. Glitch/RGB-split only on state _transitions_, never idle,
@@ -194,23 +221,27 @@ never over text being read. Scanline sweep confined to panel chrome. Chromatic a
 and bloom belong in the WebGL layer (story DOX-E1a), not as CSS `text-shadow` on copy,
 which destroys readability.
 
-**Typewriter reveal for chat replies is a Tier 6 item, not a Tier 3 one.** DOX-D2 lands
-before the chat exists in this sequence (Tier 3 vs Tier 6), so it ships the general
-mechanism — a debounced, interruptible reveal primitive — and DOX-C3a wires it to streaming
-replies when that tier is reached. DOX-D2 must not block on Tier 6 to close.
+**No typewriter reveal for chat replies.** Two reasons:
+
+- `apps/dox/src/lib/reveal-primitive.ts` is a scroll-triggered `IntersectionObserver`
+  that toggles `.revealed` on `.gmt-reveal`. It takes no text, has no chunk API, and is
+  a module-level singleton, so it cannot be driven per message.
+- Tier 6 renders replies with **Streamdown**, which handles progressive and incomplete
+  markdown itself. A typewriter layer on top would fight it.
+
+**The reveal primitive's scope is panel chrome and mounted widgets** — a dock opening, a
+widget appearing in the `/dox` rail, a section scrolling into view. Do not build a
+text-reveal API, and do not apply reveal motion to reply text. DOX-D2 must not block on
+Tier 6 to close.
 
 All of it gated behind `prefers-reduced-motion`, `prefers-reduced-transparency`, and
 `prefers-contrast`.
 
 ### Performance notes
 
-The superseded plan's largest performance liability was glass panels over a
-continuously-rendering full-bleed WebGL scene, reacting to conversation state. That
-specific failure mode is avoided here for a different reason than in the 2026-08-21 draft:
-the globe is interactive (Tier 4, story DOX-E1a) but still lives on the landing page, not
-behind every glass panel, so nothing in Tier 3's chrome has to stay legible over live
-WebGL. Promoting the globe from decoration to a real feature did not reintroduce that
-budget — it is still one canvas on one page. What remains:
+The globe is interactive (Tier 4, story DOX-E1a) but lives on the landing page and the
+`/dox` widget rail only, not behind every glass panel, so nothing in Tier 3's chrome has
+to stay legible over live WebGL — it is one canvas on one page. What remains:
 
 - Cap blurred surfaces. Each `backdrop-filter` element re-samples what is behind it
   every frame. Avoid nested glass-within-glass.

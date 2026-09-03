@@ -81,8 +81,8 @@ export const GET: APIRoute = ({ site }: APIContext) => {
     .filter((p): p is NonNullable<typeof p> => p != null)
     .sort((a, b) => a.title.localeCompare(b.title));
 
-  // Start-here pages (why-gmt, core-rules, install)
-  const startSlugs = ["why-gmt", "core-rules", "install"];
+  // Start-here pages (install, why-gmt, core-rules)
+  const startSlugs = ["install", "why-gmt", "core-rules"];
   const startPages = startSlugs
     .map((slug) => {
       const rawKey = Object.keys(RAW).find((k) => {

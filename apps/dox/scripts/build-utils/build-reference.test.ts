@@ -443,7 +443,12 @@ describe("buildPlaygroundFields", () => {
         returnType: "number",
         params: [
           { name: "value", type: "string", value: "P1DT2H30M" },
-          { name: "unit", type: "enum", value: "hours", options: ["hours", "minutes"] },
+          {
+            name: "unit",
+            type: "enum",
+            value: "hours",
+            options: ["hours", "minutes"],
+          },
         ],
         options: [{ name: "relativeTo", type: "string", value: "" }],
       },
@@ -452,7 +457,12 @@ describe("buildPlaygroundFields", () => {
     expect(res).toEqual({
       fields: [
         { name: "value", kind: "string", seed: "P1DT2H30M" },
-        { name: "unit", kind: "enum", seed: "hours", choices: ["hours", "minutes"] },
+        {
+          name: "unit",
+          kind: "enum",
+          seed: "hours",
+          choices: ["hours", "minutes"],
+        },
       ],
     });
   });
@@ -507,7 +517,11 @@ describe("buildPlaygroundFields", () => {
       },
       'addDate("2024-03-10", { days: 5 })',
     );
-    expect(res?.fields[1]).toMatchObject({ kind: "units", seed: "5", unitSeed: "days" });
+    expect(res?.fields[1]).toMatchObject({
+      kind: "units",
+      seed: "5",
+      unitSeed: "days",
+    });
   });
 
   it("builds a string list field from an array param", () => {
