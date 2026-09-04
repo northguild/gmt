@@ -30,7 +30,7 @@ Eight files, loaded in this order via `starlight({ customCss })` in
 | 9 | `gmt-ask.css` | **DOX-C0, #171 — not yet built.** The chat dock/`/dox` chrome and the Streamdown reading surface (`[data-streamdown="…"]`). No Tailwind. |
 
 The `customCss` array in `astro.config.mjs` also carries per-widget and per-feature
-sheets (`gmt-widget.css`, `gmt-dst-inspector.css`, `gmt-map.css`, `gmt-motion.css`, …)
+sheets (`gmt-widget.css`, `gmt-dst-inspector.css`, `gmt-map.css`, …)
 loaded between #7 and #8. This table describes the **core stack** whose order the
 cascade depends on; consult the config for the full list.
 

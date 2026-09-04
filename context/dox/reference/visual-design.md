@@ -216,6 +216,15 @@ a second panel treatment for the dock.
 
 ### Motion (story DOX-D2)
 
+> **Reverted in `hotfix/gmt-dox-transitions`.** The shipped DOX-D2 motion (boot
+> sequence, `reveal-primitive.ts`, scanline sweep, and cross-document
+> `@view-transition` morphs) made deployed navigation clunky and flashed the whole
+> page; it only looked smooth against the dev server. All of it was removed —
+> navigation is now plain and instant. Only DOX-D1 chrome and the focus-only tab
+> "sonar" ping remain. See `issues/DOX-D.md` → "DOX-D2 — what shipped". The
+> paragraphs below are the original intent, kept because a later tier may revisit
+> parts of it.
+
 Boot sequence on first paint. Glitch/RGB-split only on state _transitions_, never idle,
 never over text being read. Scanline sweep confined to panel chrome. Chromatic aberration
 and bloom belong in the WebGL layer (story DOX-E1a), not as CSS `text-shadow` on copy,
@@ -223,9 +232,12 @@ which destroys readability.
 
 **No typewriter reveal for chat replies.** Two reasons:
 
-- `apps/dox/src/lib/reveal-primitive.ts` is a scroll-triggered `IntersectionObserver`
-  that toggles `.revealed` on `.gmt-reveal`. It takes no text, has no chunk API, and is
-  a module-level singleton, so it cannot be driven per message.
+- `apps/dox/src/lib/reveal-primitive.ts` (removed in the hotfix; rebuild to this
+  shape if needed) was a scroll-triggered `IntersectionObserver` that toggles
+  `.revealed` on `.gmt-reveal`. It takes no text, has no chunk API, and is
+  a module-level singleton, so it cannot be driven per message. Any rebuild must
+  also leave the target elements visible by default, so a JS stall never hides
+  content — the mistake the hotfix corrected.
 - Tier 6 renders replies with **Streamdown**, which handles progressive and incomplete
   markdown itself. A typewriter layer on top would fight it.
 

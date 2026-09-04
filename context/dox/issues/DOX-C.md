@@ -85,6 +85,8 @@ module-level singleton, so it cannot be instantiated per message; its `debounceT
 declared and cleared but never set. **Streamdown now owns progressive text rendering, so do
 not build a typewriter API.** The primitive is re-scoped to panel chrome and mounted
 widgets — its actual behavior — and the streaming-text wiring is dropped from `DOX-C3a`.
+(`reveal-primitive.ts` was later removed entirely in `hotfix/gmt-dox-transitions`; the
+conclusion is unchanged — do not build a typewriter API for replies.)
 
 **The Tier 2 widgets are not independently mountable.**
 `DstInspector.astro`, `IntervalVisualizer.astro` and `ConverterBench.astro` hydrate via a
@@ -692,11 +694,12 @@ and an empty assistant placeholder; and the incomplete-markdown problem (Streamd
 
 ### Two things this story no longer does
 - **No typewriter reveal on streamed text.** `reference/visual-design.md` promised that
-  `DOX-D2`'s reveal primitive would be wired here. The shipped
-  `apps/dox/src/lib/reveal-primitive.ts` is a scroll `IntersectionObserver` and has no
-  text API, and Streamdown now renders progressively anyway. The primitive has been
-  re-scoped in visual-design.md to panel chrome and mounted widgets. Apply it there —
-  the dock opening, a widget mounting — not to reply text.
+  `DOX-D2`'s reveal primitive would be wired here. That primitive
+  (`apps/dox/src/lib/reveal-primitive.ts`) was a scroll `IntersectionObserver` with no
+  text API, and Streamdown renders progressively anyway; it was then removed outright in
+  `hotfix/gmt-dox-transitions`. Either way there is nothing to wire to reply text — do
+  not build a text-reveal API. If a scroll-reveal for chrome is wanted later, rebuild to
+  the shape in visual-design.md §Motion.
 - **`Sources` and `InlineCitation` are installed but not wired in this story.** Link
   hardening inside the prose is the shipping citation mechanism. This is a recorded
   decision, not an oversight; pick them up later if readers ask for a citation list.

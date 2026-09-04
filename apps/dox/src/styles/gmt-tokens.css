@@ -59,23 +59,6 @@
   --gmt-caret: var(--gmt-cyan);
   --gmt-motion-sonar-duration: 2s;
 
-  /* ---- Motion tokens (DOX-D2) ----
-   * Boot sequence (shell chrome only), scroll-triggered reveal, and the
-   * one-shot scanline sweep — all gated behind prefers-reduced-motion.
-   * Durations only; no colour here. gmt-motion.css owns the keyframes.
-   */
-  --gmt-motion-boot-duration: 460ms; /* one shell element's fade-in */
-  --gmt-motion-boot-stagger: 60ms; /* delay added per shell element */
-  --gmt-motion-boot-easing: cubic-bezier(0.22, 1, 0.36, 1); /* ease-out */
-  --gmt-motion-reveal-duration: 320ms;
-  --gmt-motion-reveal-easing: cubic-bezier(
-    0.22,
-    1,
-    0.36,
-    1
-  ); /* smooth ease-out */
-  --gmt-motion-scanline-duration: 600ms;
-
   /*
    * Ice-glass fill tiers, so surfaces don't stack tint on tint:
    *   --gmt-glass-tint         the one tinted layer (panels, modal, cards)

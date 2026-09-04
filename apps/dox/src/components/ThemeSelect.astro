@@ -48,31 +48,6 @@
     StarlightThemeProvider.updatePickers();
   }
 
-  // DOX-D2: cross-fade the light/dark swap via a view transition. One guarded
-  // call site — `busy` is the debounce the spec asks for, so a double-click
-  // can't stack startViewTransition() calls. Falls back to an instant apply
-  // where the API is missing or motion is reduced.
-  let busy = false;
-  function transitionTheme(theme: string) {
-    const start = (
-      document as Document & {
-        startViewTransition?: (cb: () => void) => { finished: Promise<unknown> };
-      }
-    ).startViewTransition?.bind(document);
-    if (
-      !start ||
-      busy ||
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    ) {
-      applyTheme(theme);
-      return;
-    }
-    busy = true;
-    start(() => applyTheme(theme)).finished.finally(() => {
-      busy = false;
-    });
-  }
-
   class StarlightThemeSelect extends HTMLElement {
     constructor() {
       super();
@@ -83,11 +58,11 @@
           const systemPref = getSystemPref();
           if (stored === 'light' || stored === 'dark') {
             localStorage.removeItem(storageKey);
-            transitionTheme(systemPref);
+            applyTheme(systemPref);
           } else {
             const opposite = systemPref === 'light' ? 'dark' : 'light';
             localStorage.setItem(storageKey, opposite);
-            transitionTheme(opposite);
+            applyTheme(opposite);
           }
         });
       }

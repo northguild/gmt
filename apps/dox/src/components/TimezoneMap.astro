@@ -7,7 +7,7 @@ interface Props {
 const { title, caption } = Astro.props;
 ---
 
-<div class="gmt-timezone-map gmt-reveal">
+<div class="gmt-timezone-map">
   {title && <h3 class="gmt-chart-title">{title}</h3>}
   <div id="tz-map-host" class="gmt-chart gmt-glass"></div>
   <div id="tz-clock-panel" class="gmt-clock-panel"></div>

@@ -266,6 +266,36 @@ DOX-D2 is done. The spec above is retained for context; this section is what act
 shipped and why it diverges. Cut items are not scheduled follow-ups unless a later story
 picks them up.
 
+> **Hotfix `hotfix/gmt-dox-transitions` — most of DOX-D2's motion was reverted.**
+> On the deployed Cloudflare Worker the navigation was clunky and the whole page
+> flashed on every link click; it only looked smooth against the warm dev server.
+> Root cause: `@view-transition { navigation: auto }` (cross-document view
+> transitions) animating `::view-transition-old/new(root)` over a document that is
+> still loading its CSS/fonts. A second regression: `.gmt-reveal` elements started
+> at `opacity: 0` and only appeared once a bundled module ran an
+> `IntersectionObserver`, leaving blank regions on slow prod JS.
+>
+> **Removed:** `gmt-motion.css`, `reveal-primitive.ts` (+ test), the boot
+> sequence (`.dox-boot` gate in `ThemeProvider.astro`), the scanline sweep, the
+> `startViewTransition` theme cross-fade in `ThemeSelect.astro`, the DOX-D2 motion
+> tokens in `gmt-tokens.css`, and the `gmt-reveal` class from all six widgets /
+> landing sections. The same PR's CI failure (an `astro sync` vs `astro build`
+> file-rename race on `node_modules/.astro/data-store.json`, hit when nx runs
+> `typecheck` and `build` concurrently) is fixed by making `dox:build`
+> `dependsOn` `dox:typecheck` in `project.json` — typecheck runs its `astro sync`
+> to completion first, so the two never touch the content-layer store at once.
+>
+> **Kept:** all DOX-D1 chrome, and the focus-only tab "sonar" ping in
+> `gmt-content.css` (`@keyframes gmt-tab-sonar`, rides the DOX-D1
+> `--gmt-motion-sonar-duration` token). Navigation is now plain and instant.
+>
+> If a later tier wants scroll-reveal, rebuild `reveal-primitive.ts` to the shape
+> `reference/visual-design.md` §Motion describes — a scroll `IntersectionObserver`
+> that toggles `.revealed` on `.gmt-reveal`, **no text/chunk API** — and make the
+> elements visible by default so a JS stall never hides content.
+
+The subsections below describe what originally shipped, for history.
+
 ##### Boot sequence
 
 - Pure CSS animation (`@keyframes gmt-boot-in`, `gmt-motion.css`) on **shell chrome
