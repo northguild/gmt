@@ -3,11 +3,28 @@ packages:
   - 'apps/*'
 allowBuilds:
   esbuild: true
-  nx: true
   workerd: true
 overrides:
-  axios@>=1.0.0 <1.15.0: '>=1.15.0'
-  follow-redirects@<=1.15.11: '>=1.16.0'
+  # DoS / info-disclosure advisories in dev- and build-time transitives. None of
+  # these ship in a published @northguild/* tarball (gmt is dist-only; the linter
+  # packages take eslint / typescript-eslint as peers; apps/dox is private). Each
+  # target is a bugfix bump within the major the tree already resolves. Re-run
+  # `pnpm audit` and prune on every @changesets/cli, eslint, typescript-eslint,
+  # tsup, and @astrojs/starlight bump. Advisory refs in the PR description.
+  #
+  # via gmt-eslint -> eslint / @typescript-eslint -> minimatch
+  brace-expansion@<1.1.18: '1.1.18'
+  brace-expansion@>=4.0.0 <5.0.9: '5.0.9'
+  # via gmt-eslint -> eslint
+  '@humanfs/node@<0.16.8': '>=0.16.8'
+  # via root @changesets/cli
+  js-yaml@>=3.0.0 <3.15.1: '^3.15.1'
+  js-yaml@>=4.0.0 <4.3.1: '^4.3.1'
+  # via apps/dox -> @astrojs/starlight -> expressive-code
+  postcss@<8.5.23: '^8.5.23'
+  nanoid@>=3.0.0 <3.3.18: '^3.3.18'
+  # via gmt-oxlint -> tsup
+  esbuild@<0.28.1: '^0.28.1'
 packageExtensions:
   # Upstream bug: @astrojs/mdx@7.0.8's dist/satteri/index.js imports bare
   # `satteri` without declaring it. It resolves by accident under npm/yarn flat

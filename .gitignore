@@ -6,9 +6,6 @@ dist/
 out/
 *.tsbuildinfo
 
-# Nx
-.nx/
-
 # Testing
 coverage/
 .cache/

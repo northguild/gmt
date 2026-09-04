@@ -100,6 +100,7 @@ export default defineConfig({
         },
       ],
       components: {
+        Head: "./src/components/Head.astro",
         ThemeProvider: "./src/components/ThemeProvider.astro",
         ThemeSelect: "./src/components/ThemeSelect.astro",
         Hero: "./src/components/Hero.astro",

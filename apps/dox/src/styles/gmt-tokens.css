@@ -53,11 +53,17 @@
 
   /* ---- HUD chrome (DOX-D1) ----
    * --gmt-caret        blocky terminal caret colour for text controls.
-   * --gmt-motion-sonar-duration   one focus-ring "ping" cycle (pulse + beat) —
+   * --gmt-motion-sonar-duration        one focus-ring "ping" — the ring races
+   *                    out from the border and fades, once, on focus. No loop.
    *                    gmt-form-controls.css .gmt-input:focus / .gmt-select:focus.
+   * --gmt-motion-sonar-loop-duration   one cycle of the LOOPING ping variant
+   *                    (.gmt-sonar-loop) — ping + a beat of stillness before the
+   *                    next emit. Not wired to a control today; kept for a future
+   *                    standing "look here" pulse.
    */
   --gmt-caret: var(--gmt-cyan);
-  --gmt-motion-sonar-duration: 2s;
+  --gmt-motion-sonar-duration: 1.2s;
+  --gmt-motion-sonar-loop-duration: 2s;
 
   /*
    * Ice-glass fill tiers, so surfaces don't stack tint on tint:

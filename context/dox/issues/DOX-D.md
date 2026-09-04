@@ -147,6 +147,12 @@ picks them up.
   honours the spec's rule — only the active element animates; idle panels keep the
   static `.gmt-glass::before` gradient — via a different technique.
   (gmt-form-controls.css; `gmt-motion-border.css` was deleted.)
+  > **Later:** the ping was changed from a permanent loop to a single outward
+  > emit on focus (`animation-iteration-count: 1`), settling on the still ring.
+  > `--gmt-motion-sonar-duration` retuned 2s → 1.2s (the beat between emits is
+  > gone). The looping form is kept as an unused utility, `.gmt-sonar-loop`
+  > (`@keyframes gmt-focus-sonar-loop`, `--gmt-motion-sonar-loop-duration: 2s`),
+  > for a future standing "look here" pulse. gmt-primitives.css.
 
 ##### Chamfered corners
 

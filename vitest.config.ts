@@ -8,7 +8,7 @@ export default defineConfig({
     environment: "node",
     include: ["packages/gmt/src/**/*.test.ts"],
     setupFiles: [
-      path.resolve(__dirname, "packages/gmt/src/test/setupTests.ts"),
+      path.resolve(import.meta.dirname, "packages/gmt/src/test/setupTests.ts"),
     ],
   },
 });

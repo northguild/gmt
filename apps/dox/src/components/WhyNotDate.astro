@@ -57,6 +57,18 @@ interface Layer {
 
 const stack: Layer[] = [
   {
+    name: "Temporal",
+    detail: "The TC39 standard. Separate types for instants, wall-clock times, zoned times, plain dates, and durations. No Date anywhere.",
+    foundation: "TC39 standard",
+    kind: "standard",
+  },
+  {
+    name: "@northguild/gmt",
+    detail: "Temporal underneath, with an ISO 8601 string-in / typed-value-out surface on top. The layer you actually write against.",
+    foundation: "Temporal inside",
+    kind: "gmt",
+  },
+  {
     name: "Date",
     detail: "Epoch milliseconds interpreted through the host timezone. Every fault above lives here.",
     foundation: "root cause",
@@ -85,18 +97,6 @@ const stack: Layer[] = [
     detail: "Its own CalendarDate / ZonedDateTime types. Fixes the model, but it is Adobe's API — a second migration once Temporal ships.",
     foundation: "not TC39",
     kind: "nonstandard",
-  },
-  {
-    name: "Temporal",
-    detail: "The TC39 standard. Separate types for instants, wall-clock times, zoned times, plain dates, and durations. No Date anywhere.",
-    foundation: "TC39 standard",
-    kind: "standard",
-  },
-  {
-    name: "@northguild/gmt",
-    detail: "Temporal underneath, with an ISO 8601 string-in / typed-value-out surface on top. The layer you actually write against.",
-    foundation: "Temporal inside",
-    kind: "gmt",
   },
 ];
 ---

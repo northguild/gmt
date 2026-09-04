@@ -14,7 +14,12 @@ const libraryMetadata: Record<
   string,
   { tests: number; locales: number; timezones: number; nodeVersions: number }
 > = {
-  GMT: { tests: 16701, locales: 17, timezones: 10, nodeVersions: 2 },
+  "@northguild/gmt": {
+    tests: 16701,
+    locales: 17,
+    timezones: 10,
+    nodeVersions: 2,
+  },
   "@intl/date": { tests: 20190, locales: 0, timezones: 0, nodeVersions: 1 },
   Luxon: { tests: 4888, locales: 0, timezones: 0, nodeVersions: 1 },
   "date-fns": { tests: 3213, locales: 0, timezones: 0, nodeVersions: 1 },
@@ -54,7 +59,7 @@ function addTooltipsToBars(svg: string): string {
 
 export function renderTestExecutionChart(): string {
   const data = [
-    { library: "GMT", executions: 334020, highlight: true },
+    { library: "@northguild/gmt", executions: 334020, highlight: true },
     { library: "@intl/date", executions: 386, highlight: false },
     { library: "Luxon", executions: 4888, highlight: false },
     { library: "date-fns", executions: 3213, highlight: false },
@@ -68,15 +73,24 @@ export function renderTestExecutionChart(): string {
         x: "executions",
         yScale: "y",
         xScale: "x",
+        // GMT rides the standard (spring green); every legacy library shares the
+        // fault colour (signal orange) used by the "alternatives inherit it"
+        // diagram above.
         fill: (d) =>
           (d as { highlight?: boolean }).highlight
             ? "var(--gmt-spring)"
-            : "var(--gmt-teal)",
+            : "var(--gmt-signal)",
         fillOpacity: 0.35,
-        stroke: "var(--gmt-border-strong)",
+        stroke: (d) =>
+          (d as { highlight?: boolean }).highlight
+            ? "var(--gmt-border-strong)"
+            : "var(--gmt-signal-border)",
         strokeWidth: 1,
         radius: 2,
         inset: 2,
+        // Cap the bar to an absolute thickness so the wide viewBox doesn't
+        // stretch it — the band scale still centers it on the category tick.
+        maxThickness: 40,
       }),
     ],
     scales: {
@@ -86,7 +100,10 @@ export function renderTestExecutionChart(): string {
   });
 
   const runtime = createChartRuntime();
-  const scene = runtime.render(definition, { width: 640, height: 320 });
+  // Rendered at the same natural width as the locale matrix so the SVG scales
+  // to the full content column: bars stretch horizontally, height and text size
+  // stay put (the chart is not blown up proportionally).
+  const scene = runtime.render(definition, { width: 1200, height: 360 });
   const svg = renderChartSvg(scene, {
     ariaLabel: "CI test execution volume comparison",
     idPrefix: "test-executions",
@@ -118,6 +135,9 @@ export function renderNamespaceChart(): string {
         strokeWidth: 1,
         radius: 2,
         inset: 2,
+        // Match the thickness cap used on the CI executions chart so both
+        // charts read with the same bar weight.
+        maxThickness: 40,
       }),
     ],
     scales: {
@@ -127,13 +147,65 @@ export function renderNamespaceChart(): string {
   });
 
   const runtime = createChartRuntime();
-  const scene = runtime.render(definition, { width: 640, height: 320 });
+  // Same natural width as the other charts — fills the content column without
+  // scaling the bars or labels up (see renderTestExecutionChart).
+  const scene = runtime.render(definition, { width: 1200, height: 360 });
   const svg = renderChartSvg(scene, {
     ariaLabel: "API surface by namespace",
     idPrefix: "namespace-distribution",
   });
   runtime.destroy();
   return svg;
+}
+
+// Family key + base tile opacity. TanStack's static renderer doesn't evaluate
+// mark `states`, so every cell rect comes out with the same flat fill. We give
+// the matrix its heatmap read by post-processing the SVG: each tile gets its own
+// diagonal gradient in its family hue, dimming slightly down each column so the
+// grid looks tiled rather than a single wash of color.
+const localeFamilyStyle: Record<string, { key: string; base: number }> = {
+  Latin: { key: "latin", base: 0.2 },
+  CJK: { key: "cjk", base: 0.2 },
+  "Arabic/Hebrew": { key: "arabic-hebrew", base: 0.32 },
+  Cyrillic: { key: "cyrillic", base: 0.16 },
+  Turkic: { key: "turkic", base: 0.18 },
+};
+
+function styleLocaleMatrixCells(
+  svg: string,
+  cells: readonly { family: string; row: number }[],
+): string {
+  const clamp = (n: number) => Math.max(0.03, Math.round(n * 1000) / 1000);
+  const defs: string[] = [];
+  let index = 0;
+
+  const styled = svg.replace(
+    /<rect data-ts-key="rect-0:[^"]*"[^>]*\/>/g,
+    (rect) => {
+      const cell = cells[index];
+      if (!cell) return rect;
+      const id = `locale-matrix-cell-${index}`;
+      const { key, base } = localeFamilyStyle[cell.family];
+      const top = clamp(base - cell.row * 0.014);
+      const bottom = clamp(top - 0.09);
+      defs.push(
+        `<linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1">` +
+          `<stop offset="0" stop-color="var(--gmt-family-${key})" stop-opacity="${top}"/>` +
+          `<stop offset="1" stop-color="var(--gmt-family-${key})" stop-opacity="${bottom}"/>` +
+          `</linearGradient>`,
+      );
+      index += 1;
+      return rect
+        .replace(/ fill="[^"]*"/, ` fill="url(#${id})"`)
+        .replace(/ fill-opacity="[^"]*"/, "");
+    },
+  );
+
+  if (!defs.length) return styled;
+  return styled.replace(
+    '<g data-ts-key="marks" class="ts-chart__marks">',
+    `<g data-ts-key="marks" class="ts-chart__marks"><defs>${defs.join("")}</defs>`,
+  );
 }
 
 export function renderLocaleMatrixChart(): string {
@@ -308,7 +380,7 @@ export function renderLocaleMatrixChart(): string {
     idPrefix: "locale-matrix",
   });
   runtime.destroy();
-  return svg;
+  return styleLocaleMatrixCells(svg, data);
 }
 
 export const testExecutionSvg = renderTestExecutionChart();

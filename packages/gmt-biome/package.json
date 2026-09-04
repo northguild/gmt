@@ -46,7 +46,7 @@
     "publish:public": "npm publish --access public"
   },
   "devDependencies": {
-    "@tanstack/intent": "^0.3.6"
+    "@tanstack/intent": "^0.3.8"
   },
   "peerDependencies": {
     "@biomejs/biome": ">=2.0.0"

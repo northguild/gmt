@@ -59,7 +59,7 @@ git push
 
 # 3. Build packages that need a build before publish
 #    (gmt-oxlint builds itself automatically via its `prepack` script)
-pnpm exec nx run @northguild/gmt:build
+pnpm --filter @northguild/gmt run build
 
 # 4. Sanity-check package contents before they go out
 for PKG in gmt gmt-biome gmt-eslint gmt-oxlint; do

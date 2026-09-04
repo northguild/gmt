@@ -37,7 +37,8 @@
     "publish:public": "npm publish --access public"
   },
   "devDependencies": {
-    "@tanstack/intent": "^0.3.6"
+    "@tanstack/intent": "^0.3.8",
+    "typescript": "^5.9.3"
   },
   "peerDependencies": {
     "@typescript-eslint/parser": "^8.0.0",

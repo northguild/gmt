@@ -3,18 +3,13 @@ interface Props {
   svg: string;
   title?: string;
   caption?: string;
-  naturalWidth?: number;
 }
 
-const { svg, title, caption, naturalWidth } = Astro.props;
+const { svg, title, caption } = Astro.props;
 ---
 
 <div class="gmt-chart-container">
   {title && <h3 class="gmt-chart-title">{title}</h3>}
-  <div
-    class:list={["gmt-chart gmt-glass", { "gmt-chart--natural": naturalWidth !== undefined }]}
-    style={naturalWidth !== undefined ? `--gmt-chart-natural-width: ${naturalWidth}px` : undefined}
-    set:html={svg}
-  />
+  <div class="gmt-chart gmt-glass" set:html={svg} />
   {caption && <p class="gmt-chart-caption">{caption}</p>}
 </div>

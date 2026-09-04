@@ -45,7 +45,7 @@ jobs:
 
       - name: Build @northguild/gmt
         if: inputs.package == 'gmt'
-        run: pnpm -w exec nx run @northguild/gmt:build
+        run: pnpm --filter @northguild/gmt run build
 
       - name: Build @northguild/gmt-oxlint
         if: inputs.package == 'gmt-oxlint'

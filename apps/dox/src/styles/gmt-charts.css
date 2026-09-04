@@ -70,16 +70,6 @@
   max-width: 100%;
 }
 
-.gmt-chart--natural {
-  display: flex;
-  justify-content: center;
-}
-
-.gmt-chart--natural svg {
-  width: var(--gmt-chart-natural-width, auto) !important;
-  max-width: 100% !important;
-}
-
 /* Glass bar treatment — semi-transparent fill + subtle stroke + depth */
 .gmt-chart .ts-chart__bar-x rect,
 .gmt-chart .ts-chart__bar-y rect {

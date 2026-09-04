@@ -17,7 +17,6 @@ export default defineConfig([
       ignore: [
         "**/node_modules/**",
         "**/dist/**",
-        "**/.nx/**",
         "**/coverage/**",
         "**/*.tsbuildinfo",
         "**/out/**",

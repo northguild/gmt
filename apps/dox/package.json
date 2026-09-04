@@ -5,7 +5,7 @@
   "description": "Documentation site for @northguild/gmt",
   "type": "module",
   "scripts": {
-    "generate": "node ./scripts/generate-version-map.mjs && node ./scripts/ensure-sidebar-order.mjs && tsx ./scripts/build-reference.ts",
+    "generate": "node ./scripts/generate-version-map.mjs && tsx ./scripts/build-reference.ts && node ./scripts/build-guides.mjs && node ./scripts/build-scenario-index.mjs && node ./scripts/ensure-sidebar-order.mjs",
     "predev": "pnpm --filter @northguild/gmt build",
     "dev": "pnpm run generate && astro dev --force",
     "build": "pnpm run generate && astro build",
@@ -39,8 +39,5 @@
   },
   "engines": {
     "node": ">=22.12.0"
-  },
-  "nx": {
-    "includedScripts": []
   }
 }

@@ -25,16 +25,27 @@ jobs:
       gmt_changed: ${{ steps.detect.outputs.gmt_changed }}
       non_gmt_changed: ${{ steps.detect.outputs.non_gmt_changed }}
       dox_changed: ${{ steps.detect.outputs.dox_changed }}
+      base: ${{ steps.detect.outputs.base }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: nrwl/nx-set-shas@v4
-
       - id: detect
         run: |
-          CHANGED=$(git diff --name-only $NX_BASE $NX_HEAD)
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch --no-tags origin "${{ github.base_ref }}"
+            BASE=$(git merge-base "origin/${{ github.base_ref }}" HEAD)
+          else
+            BASE="${{ github.event.before }}"
+            case "$BASE" in
+              0000000000000000000000000000000000000000 | "")
+                BASE=$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD) ;;
+            esac
+          fi
+          HEAD_SHA=$(git rev-parse HEAD)
+          echo "base=$BASE" >> "$GITHUB_OUTPUT"
+          CHANGED=$(git diff --name-only "$BASE" "$HEAD_SHA")
           echo "changed files: $CHANGED"
           if echo "$CHANGED" | grep -q '^packages/gmt/'; then
             echo "gmt_changed=true" >> $GITHUB_OUTPUT
@@ -91,14 +102,13 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Clean stale build artifacts
+        run: find . -name "*.tsbuildinfo" -delete 2>/dev/null || true
+
+      - name: Build, lint, typecheck
         run: |
-          find . -name "*.tsbuildinfo" -delete 2>/dev/null || true
-          rm -rf .nx/cache 2>/dev/null || true
-
-      - uses: nrwl/nx-set-shas@v4
-
-      - name: Run affected tasks
-        run: pnpm -w exec nx affected -t lint typecheck build --base=$NX_BASE --head=$NX_HEAD
+          pnpm -r --if-present run build
+          pnpm -r --if-present run lint
+          pnpm -r --if-present run typecheck
 
   tests:
     name: Tests (Node ${{ matrix.node-version }})
@@ -146,12 +156,12 @@ jobs:
         if: steps.check-non-gmt.outputs.run_tests == 'true'
         run: pnpm install --frozen-lockfile
 
-      - uses: nrwl/nx-set-shas@v4
+      # Mirrors the old `nx affected -t test --exclude=@northguild/gmt,@northguild/gmt-oxlint`.
+      # gmt has its own TZ matrix (gmt-matrix job); gmt-oxlint is excluded as before.
+      # `!root` keeps the root `vitest run` (which globs the gmt suite) out of this job.
+      - name: Run tests (excluding gmt, gmt-oxlint)
         if: steps.check-non-gmt.outputs.run_tests == 'true'
-
-      - name: Run affected tests
-        if: steps.check-non-gmt.outputs.run_tests == 'true'
-        run: pnpm -w exec nx affected -t test --base=$NX_BASE --head=$NX_HEAD --exclude=@northguild/gmt,@northguild/gmt-oxlint --plain
+        run: pnpm --filter='!root' --filter='!@northguild/gmt' --filter='!@northguild/gmt-oxlint' -r --if-present run test
 
       - name: Collect test artifacts
         if: steps.check-non-gmt.outputs.run_tests == 'true' && always()
@@ -224,16 +234,6 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: pnpm
-
-      - name: Cache pnpm store
-        if: steps.check-gmt.outputs.gmt_changed == 'true'
-        uses: actions/cache@v4
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-store-gmt-${{ matrix.node-version }}-${{ matrix.timezone }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-gmt-${{ matrix.node-version }}-
-            ${{ runner.os }}-pnpm-store-
 
       - name: Approve pnpm build scripts
         if: steps.check-gmt.outputs.gmt_changed == 'true'

@@ -8,7 +8,6 @@
       "excludeFiles": [
         "**/node_modules/**",
         "**/dist/**",
-        "**/.nx/**",
         "**/coverage/**",
         "**/*.tsbuildinfo",
         "**/out/**"
@@ -19,7 +18,6 @@
       "excludeFiles": [
         "**/node_modules/**",
         "**/dist/**",
-        "**/.nx/**",
         "**/coverage/**",
         "**/*.tsbuildinfo",
         "**/out/**"
@@ -30,7 +28,6 @@
       "excludeFiles": [
         "**/node_modules/**",
         "**/dist/**",
-        "**/.nx/**",
         "**/coverage/**",
         "**/*.tsbuildinfo",
         "**/out/**"
@@ -41,7 +38,6 @@
       "excludeFiles": [
         "**/node_modules/**",
         "**/dist/**",
-        "**/.nx/**",
         "**/coverage/**",
         "**/*.tsbuildinfo",
         "**/out/**"
@@ -52,7 +48,6 @@
       "excludeFiles": [
         "**/node_modules/**",
         "**/dist/**",
-        "**/.nx/**",
         "**/.astro/**",
         "**/coverage/**",
         "**/*.tsbuildinfo",

@@ -247,9 +247,9 @@
 /* ---- Sonar focus ring ----
  * The focus "ping" the form controls emit on :focus (gmt-form-controls.css),
  * lifted here so every bevelled button and link can share it. A crisp ring is
- * emitted from the border, races out to ~16px while fading, and is gone by 60%
- * of the cycle — then a clear beat before the next emit (the jump back to 0% is
- * the emit). The inner 2px ring is pinned across every frame so it never
+ * emitted from the border and races out to ~16px while fading, once — the
+ * animation runs a single iteration and then resolves to the still ring in the
+ * :focus rule. The inner 2px ring is pinned across every frame so it never
  * flickers. Every layer is 0-blur, so the stroke reads the same thickness on
  * every edge whatever the control's aspect ratio — a blurred spread does not
  * (the bloom looks huge beside a 32px-tall control and thin beside a wide one).
@@ -262,8 +262,27 @@
  * icon buttons + the Expressive Code copy button (below), the CTA buttons +
  * prev/next pagination (gmt-controls.css), and the Starlight tab triggers
  * (gmt-content.css).
+ *
+ * .gmt-sonar-loop below is the same ping on a permanent loop (ping + a beat of
+ * stillness), for a standing "look here" pulse. Nothing uses it yet — it is
+ * kept ready for later.
  */
 @keyframes gmt-focus-sonar {
+  from {
+    box-shadow:
+      0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),
+      0 0 0 3px color(from var(--gmt-cyan) srgb r g b / 0.7);
+  }
+  to {
+    box-shadow:
+      0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),
+      0 0 0 16px color(from var(--gmt-cyan) srgb r g b / 0);
+  }
+}
+
+/* Looping variant: the ping races out by 60% of the cycle, then holds still
+ * (the beat) until the jump back to 0% emits the next one. */
+@keyframes gmt-focus-sonar-loop {
   0% {
     box-shadow:
       0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),
@@ -285,5 +304,13 @@
     0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),
     0 0 0 5px color(from var(--gmt-cyan) srgb r g b / 0.25);
   animation: gmt-focus-sonar var(--gmt-motion-sonar-duration) var(--gmt-easing)
-    infinite;
+    1;
+}
+
+/* Forever-pinging affordance. Not wired to anything today; add the class where
+ * a persistent pulse is wanted (and pair it with the still box-shadow above if
+ * the element should keep a resting ring). */
+.gmt-sonar-loop {
+  animation: gmt-focus-sonar-loop var(--gmt-motion-sonar-loop-duration)
+    var(--gmt-easing) infinite;
 }

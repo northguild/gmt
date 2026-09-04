@@ -323,13 +323,12 @@ dialog > .dialog-frame {
    pulls it back from the bottom edge. After the :hover / [aria-selected] rules
    so it wins when the focused tab is also selected. */
 @keyframes gmt-tab-sonar {
-  0% {
+  from {
     box-shadow:
       0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),
       0 0 0 4px color(from var(--gmt-cyan) srgb r g b / 0.55);
   }
-  55%,
-  100% {
+  to {
     box-shadow:
       0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),
       0 -14px 0 12px color(from var(--gmt-cyan) srgb r g b / 0);
@@ -344,8 +343,7 @@ dialog > .dialog-frame {
   box-shadow:
     0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),
     0 0 0 5px color(from var(--gmt-cyan) srgb r g b / 0.25);
-  animation: gmt-tab-sonar var(--gmt-motion-sonar-duration) var(--gmt-easing)
-    infinite;
+  animation: gmt-tab-sonar var(--gmt-motion-sonar-duration) var(--gmt-easing) 1;
 }
 
 .sl-markdown-content [role="tabpanel"] {
