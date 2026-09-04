@@ -104,6 +104,14 @@ jobs:
       - name: Clean stale build artifacts
         run: find . -name "*.tsbuildinfo" -delete 2>/dev/null || true
 
+      # Lets the `tests` job (which needs a built @northguild/gmt to resolve
+      # its dist-only exports) reuse this build instead of rebuilding gmt itself.
+      - name: Cache @northguild/gmt dist
+        uses: actions/cache@v4
+        with:
+          path: packages/gmt/dist
+          key: gmt-dist-${{ matrix.node-version }}-${{ hashFiles('packages/gmt/src/**', 'packages/gmt/tsconfig*.json', 'packages/gmt/package.json') }}
+
       - name: Build, lint, typecheck
         run: |
           pnpm -r --if-present run build
@@ -155,6 +163,20 @@ jobs:
       - name: Install dependencies
         if: steps.check-non-gmt.outputs.run_tests == 'true'
         run: pnpm install --frozen-lockfile
+
+      # Restores the dist built (and cached) by build-lint for this same
+      # node version/gmt-source hash, so we skip rebuilding it here.
+      - name: Cache @northguild/gmt dist
+        id: cache-gmt-dist
+        if: steps.check-non-gmt.outputs.run_tests == 'true'
+        uses: actions/cache@v4
+        with:
+          path: packages/gmt/dist
+          key: gmt-dist-${{ matrix.node-version }}-${{ hashFiles('packages/gmt/src/**', 'packages/gmt/tsconfig*.json', 'packages/gmt/package.json') }}
+
+      - name: Build @northguild/gmt
+        if: steps.check-non-gmt.outputs.run_tests == 'true' && steps.cache-gmt-dist.outputs.cache-hit != 'true'
+        run: pnpm --filter @northguild/gmt run build
 
       # Mirrors the old `nx affected -t test --exclude=@northguild/gmt,@northguild/gmt-oxlint`.
       # gmt has its own TZ matrix (gmt-matrix job); gmt-oxlint is excluded as before.

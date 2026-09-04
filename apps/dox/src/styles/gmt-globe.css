@@ -1,0 +1,342 @@
+/*
+ * DOX-E1a — interactive globe layout + chrome.
+ *
+ * The globe itself is a <canvas> drawn by src/lib/globe.ts; this sheet owns the
+ * stage box, the zoom controls, the zone search, and the on-globe tooltip.
+ * Reuses .gmt-clock-panel / .gmt-clock-entry from gmt-map.css for the clock list.
+ * Colours are --gmt-* tokens only; corners are bevelled to match the HUD.
+ */
+
+/*
+ * The globe's day/night terminator needs a night tint that stays dark in
+ * every theme. --gmt-void is a background *role* token that flips to white
+ * under [data-theme="light"] (see gmt-tokens.css) — reusing it here made the
+ * night side render lighter than the day side once the light theme shipped.
+ * This is its own token, with its own (bluer, not neutral-grey) light-theme
+ * value below rather than inheriting --gmt-void's.
+ */
+:root {
+  --gmt-globe-night: #03080c;
+  /*
+   * Ocean (sphere) and land fill alpha. The same low wash that reads clearly
+   * against the dark theme's near-black surface fades to almost nothing
+   * against the light theme's pale one — darkened below by strengthening
+   * these, not by changing --gmt-cyan/--gmt-teal themselves.
+   */
+  --gmt-globe-ocean-alpha: 0.07;
+  --gmt-globe-land-alpha: 0.12;
+}
+
+[data-theme="light"] {
+  --gmt-globe-ocean-alpha: 0.2;
+  --gmt-globe-land-alpha: 0.32;
+  /* A near-black night tint reads as flat grey once blended over the light
+     theme's pale sphere — a genuinely blue (not just dark) night instead. */
+  --gmt-globe-night: #123a5c;
+}
+
+.gmt-globe {
+  margin: var(--gmt-space-6) 0;
+}
+
+.gmt-globe-layout {
+  display: grid;
+  gap: var(--gmt-space-4);
+}
+
+@media (min-width: 40rem) {
+  .gmt-globe-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(13rem, 20rem);
+    align-items: start;
+  }
+}
+
+.gmt-globe-stage {
+  position: relative;
+  width: 100%;
+  /* Capped by viewport height too — a wide column must not make the square
+     taller than the fold, which was clipping the globe's bottom half. */
+  max-width: min(44rem, 70vh);
+  margin-inline: auto;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      color(from var(--gmt-cyan) srgb r g b / 0.06),
+      transparent 70%
+    ),
+    var(--gmt-surface);
+  touch-action: none;
+}
+
+.gmt-globe-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  margin-top: 0;
+}
+
+.gmt-globe-canvas:active {
+  cursor: grabbing;
+}
+
+.gmt-globe-canvas:focus-visible {
+  outline: 2px solid var(--gmt-cyan);
+  outline-offset: -2px;
+}
+
+/* Zoom cluster --------------------------------------------------------- */
+.gmt-globe-zoom {
+  position: absolute;
+  right: var(--gmt-space-2);
+  bottom: var(--gmt-space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--gmt-border);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  overflow: hidden;
+}
+
+.gmt-globe-zoom button {
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  border: 0;
+  margin: 0;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--gmt-ice);
+  background: var(--gmt-surface-2);
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.gmt-globe-zoom button:hover,
+.gmt-globe-zoom button:focus-visible {
+  color: var(--gmt-void);
+  background: var(--gmt-cyan);
+  outline: none;
+}
+
+/* On-globe tooltip --------------------------------------------------- */
+.gmt-globe-tooltip {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 0.6rem));
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  min-width: 8rem;
+  background: var(--gmt-surface-2);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  font-family: var(--gmt-font-mono);
+  transition: opacity 0.12s ease;
+  z-index: 2;
+}
+
+.gmt-globe-tooltip.gmt-globe-tooltip-below {
+  transform: translate(-50%, 0.6rem);
+}
+
+.gmt-globe-tooltip-zone {
+  font-size: 0.7rem;
+  color: var(--gmt-ice);
+}
+
+.gmt-globe-tooltip-time {
+  font-size: 0.95rem;
+  color: var(--gmt-spring);
+}
+
+.gmt-globe-tooltip-meta {
+  font-size: 0.65rem;
+  color: var(--gmt-cyan);
+}
+
+/* Zone search ------------------------------------------------------- */
+.gmt-globe-search {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-1);
+  margin-bottom: var(--gmt-space-3);
+  font-family: var(--gmt-font-mono);
+  font-size: 0.72rem;
+  color: var(--gmt-ice);
+}
+
+.gmt-globe-search input {
+  appearance: none;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  font: inherit;
+  color: var(--gmt-ice);
+  background: var(--gmt-fill-subtle);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+}
+
+.gmt-globe-search input:focus-visible {
+  outline: none;
+  border-color: var(--gmt-cyan);
+}
+
+/* Typeahead combobox — shared by the globe's "Find a zone" and the scrubber's
+   "Add a zone". Replaces the native <datalist>, whose popup the browser drew
+   unstyled and off to the side. The listbox sits directly below the input. */
+.gmt-combobox {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-1);
+  font-family: var(--gmt-font-mono);
+  font-size: 0.72rem;
+  color: var(--gmt-ice);
+}
+
+.gmt-combobox input {
+  appearance: none;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  font: inherit;
+  color: var(--gmt-ice);
+  background: var(--gmt-fill-subtle);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+}
+
+.gmt-combobox-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  margin: var(--gmt-space-1) 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: 16rem;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  background: var(--gmt-surface-2);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.gmt-combobox-option {
+  padding: var(--gmt-space-1) var(--gmt-space-3);
+  cursor: pointer;
+  color: var(--gmt-ice);
+}
+
+.gmt-combobox-option[aria-selected="true"],
+.gmt-combobox-option:hover {
+  background: var(--gmt-fill-strong);
+  color: var(--gmt-cyan);
+}
+
+/* Scrollable pinned-zone list (replaces gmt-map.css's 2-row grid, which was
+   sized for TimezoneMap's 10 zones — the globe lists ~300). Virtualized by
+   lib/zone-clock-list.ts: `.gmt-globe-clocks` is only the scroll viewport —
+   its single child is a full-height "sizer" div, inside which rows are
+   absolutely positioned at their measured offset (`transform: translateY`),
+   not laid out by flex/gap. */
+.gmt-globe-clocks {
+  position: relative;
+  /* A fixed height, not max-height: the virtualizer mounts a single empty
+     "sizer" div before its first render pass fills in the real total height,
+     so a max-height (a ceiling on the content's own height, not a floor)
+     would collapse the scroll viewport to ~0px at that instant — exactly
+     when initGlobe's first scrollToIndex('center') reads the viewport size
+     to centre the viewer's own zone. */
+  height: 24rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  padding-right: var(--gmt-space-1);
+}
+
+.gmt-globe-clocks-sizer {
+  position: relative;
+  width: 100%;
+}
+
+.gmt-globe-clocks:focus-visible {
+  outline: 2px solid var(--gmt-cyan);
+  outline-offset: 2px;
+}
+
+/* Same treatment as the left sidebar's scrollbar (gmt-controls.css): square
+   toward the content, rounded on the outer edge. corner-shape can't apply to
+   the scrollbar pseudo-elements, so border-radius does the bevel by hand. */
+.gmt-globe-clocks::-webkit-scrollbar-track:vertical,
+.gmt-combobox-list::-webkit-scrollbar-track:vertical {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-top-right-radius: var(--gmt-radius-lg);
+  border-bottom-right-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+}
+
+.gmt-globe-clocks::-webkit-scrollbar-thumb:vertical,
+.gmt-combobox-list::-webkit-scrollbar-thumb:vertical {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-top-right-radius: var(--gmt-radius-lg);
+  border-bottom-right-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+}
+
+.gmt-globe-clocks .gmt-clock-entry {
+  padding: var(--gmt-space-1) var(--gmt-space-2);
+  gap: 2px;
+}
+
+.gmt-globe-clocks .gmt-clock-time {
+  font-size: 0.72rem;
+}
+
+@media (min-width: 40rem) {
+  .gmt-globe-clocks {
+    height: 30rem;
+  }
+}
+
+.gmt-globe .gmt-signal-lost {
+  color: var(--gmt-signal);
+}
+
+.gmt-globe-caption {
+  margin-top: var(--gmt-space-3);
+  font-size: 0.8rem;
+  color: var(--gmt-ice-dim);
+}
+
+/* Reduced motion: the JS already suppresses ambient spin / inertia / zoom
+   easing; nothing CSS-animated here, but keep the hook explicit. */
+@media (prefers-reduced-motion: reduce) {
+  .gmt-globe-tooltip {
+    transition: none;
+  }
+
+  .gmt-globe-clocks,
+  .gmt-combobox-list {
+    scroll-behavior: auto;
+  }
+}

@@ -13,7 +13,7 @@
     "check": "pnpm run generate && astro sync && astro check",
     "typecheck": "pnpm run check",
     "test": "pnpm run generate && vitest run",
-    "lint": "oxlint astro.config.mjs scripts src",
+    "lint": "oxlint",
     "astro": "astro"
   },
   "dependencies": {
@@ -21,6 +21,7 @@
     "@js-temporal/polyfill": "^0.5.1",
     "@northguild/gmt": "workspace:*",
     "@tanstack/charts": "^0.16.0",
+    "@tanstack/virtual-core": "^3.17.8",
     "astro": "7.2.7",
     "d3-geo": "^3.1.1",
     "topojson-client": "^3.1.0",
@@ -28,6 +29,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
+    "@northguild/gmt-oxlint": "workspace:*",
     "@open-wc/testing": "^5.0.0",
     "@types/d3-geo": "^3.1.1",
     "@types/topojson-client": "^3.1.5",

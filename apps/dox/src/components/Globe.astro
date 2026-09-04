@@ -1,0 +1,124 @@
+---
+/**
+ * DOX-E1a — interactive globe island.
+ *
+ * Renders static chrome (heading, caption, empty stage + clock panel) so the
+ * page is fully readable before any script runs. An IntersectionObserver
+ * lazy-imports `lib/globe.ts` (which pulls d3-geo, world-atlas and the
+ * @js-temporal polyfill) only once the stage scrolls into view.
+ *
+ * Entry point contract: `initGlobe(host, clockPanel)` — the same host-element
+ * signature as `initTimezoneMap`, so DOX-C3b's `showGlobe` registry and the
+ * DOX-C3a widget rail can mount this with no refactor.
+ */
+interface Props {
+  heading?: string;
+  caption?: string;
+}
+const {
+  heading = "Every zone, computed live by @northguild/gmt",
+  caption = "No hardcoded offset tables. No Date object. Every local time, UTC offset, and DST flag on this globe is computed in your browser by GMT's Zoned functions, and recomputed every second. Drag to spin, scroll to zoom, or search a zone to watch it work.",
+} = Astro.props;
+---
+
+<div class="gmt-globe">
+  <h2 class="gmt-chart-title">{heading}</h2>
+  <div class="gmt-globe-layout">
+    <div class="gmt-globe-stage gmt-glass" id="globe-stage">
+      <div class="gmt-globe-zoom" role="group" aria-label="Zoom the globe">
+        <button type="button" data-globe-zoom="in" aria-label="Zoom in">+</button>
+        <button type="button" data-globe-zoom="out" aria-label="Zoom out">−</button>
+        <button type="button" data-globe-zoom="reset" aria-label="Reset zoom">⊙</button>
+      </div>
+    </div>
+    <div>
+      <div class="gmt-globe-search gmt-combobox">
+        <label for="globe-zone-search">Find a zone</label>
+        <input
+          type="search"
+          id="globe-zone-search"
+          placeholder="e.g. Asia/Tokyo"
+          autocomplete="off"
+          data-globe-search
+        />
+      </div>
+      <div
+        class="gmt-globe-clocks"
+        id="globe-clock-panel"
+        role="listbox"
+        aria-label="Pinned zones — select one to focus the globe"
+        tabindex="0"
+      ></div>
+    </div>
+  </div>
+  <p class="gmt-globe-caption">{caption}</p>
+</div>
+
+<script>
+  const stage = document.getElementById("globe-stage");
+  const clockPanel = document.getElementById("globe-clock-panel");
+  const search = document.querySelector<HTMLInputElement>("[data-globe-search]");
+  const zoomButtons =
+    document.querySelectorAll<HTMLButtonElement>("[data-globe-zoom]");
+
+  if (stage && clockPanel) {
+    let started = false;
+
+    const start = async () => {
+      if (started) return;
+      started = true;
+
+      const { initGlobe } = await import("../lib/globe");
+      const host = await initGlobe(stage, clockPanel);
+      const zones = host.getZones();
+
+      // The clock panel itself — every plottable zone, virtualized, kept in
+      // sync with selection and scrolled to the active zone — is built and
+      // owned by initGlobe (see lib/zone-clock-list.ts). Only the search
+      // combobox is wired up here.
+
+      // Typeahead over every plottable zone (custom combobox, not <datalist>).
+      if (search) {
+        const { createZoneCombobox } = await import("../lib/zone-combobox");
+        createZoneCombobox(
+          search,
+          zones.map((z) => z.id),
+          (id) => host.focusZone(id),
+        );
+        // Prefill with the viewer's own zone (initGlobe already selected it).
+        search.value = host.getSelected() ?? "";
+      }
+
+      // Any later selection — clicking a dot or a zone's actual boundary area
+      // on the globe, a clock-panel click, or a search pick — keeps the
+      // search box in sync too.
+      host.onSelect((reading) => {
+        if (search) search.value = reading?.id ?? "";
+      });
+
+      for (const button of zoomButtons) {
+        button.addEventListener("click", () => {
+          const kind = button.dataset.globeZoom;
+          if (kind === "in") host.zoomBy(1.4);
+          else if (kind === "out") host.zoomBy(1 / 1.4);
+          else host.setZoom(1);
+        });
+      }
+    };
+
+    if ("IntersectionObserver" in window) {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((e) => e.isIntersecting)) {
+            observer.disconnect();
+            void start();
+          }
+        },
+        { rootMargin: "200px" },
+      );
+      observer.observe(stage);
+    } else {
+      void start();
+    }
+  }
+</script>

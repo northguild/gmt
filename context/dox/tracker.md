@@ -29,22 +29,22 @@ with one exception: if a story also modifies `packages/gmt` (for example `DOX-A3
 deciding to stub the namespace READMEs, per overview.md §7), that change follows the
 normal repo convention and does need a changeset.
 
-| Order | Story                                       | GitHub Issue | Status      |
-| ----- | ------------------------------------------- | ------------ | ----------- |
-| 1     | DOX-A1                                      | #130         | Done        |
-| 2     | DOX-A2                                      | #131         | Done        |
-| 3     | DOX-A3 (DOX-A3a, DOX-A3b)                   | #132         | Done        |
-| 4     | DOX-A5                                      | #134         | Done        |
-| 5     | DOX-A4 (DOX-A4a, DOX-A4b, DOX-A4c, DOX-A4d) | #133         | Done        |
-| 6     | DOX-B1 (DOX-B1a)                            | #135         | Done        |
-| 7     | DOX-B2 (DOX-B2a, DOX-B2b, DOX-B2c, DOX-B2d) | #136         | Done        |
-| 8     | DOX-D1                                      | #140         | Done        |
-| 9     | DOX-D2                                      | #141         | Done        |
-| 10    | DOX-E1 (DOX-E1a, DOX-E1b)                   | #142         | Not started |
-| 11    | DOX-C0                                      | #171         | Not started |
-| 12    | DOX-C1                                      | #137         | Not started |
-| 13    | DOX-C2                                      | #138         | Not started |
-| 14    | DOX-C3 (DOX-C3a, DOX-C3b)                   | #139         | Not started |
+| Order | Story                                       | GitHub Issue | Status         |
+| ----- | ------------------------------------------- | ------------ | -------------- |
+| 1     | DOX-A1                                      | #130         | Done           |
+| 2     | DOX-A2                                      | #131         | Done           |
+| 3     | DOX-A3 (DOX-A3a, DOX-A3b)                   | #132         | Done           |
+| 4     | DOX-A5                                      | #134         | Done           |
+| 5     | DOX-A4 (DOX-A4a, DOX-A4b, DOX-A4c, DOX-A4d) | #133         | Done           |
+| 6     | DOX-B1 (DOX-B1a)                            | #135         | Done           |
+| 7     | DOX-B2 (DOX-B2a, DOX-B2b, DOX-B2c, DOX-B2d) | #136         | Done           |
+| 8     | DOX-D1                                      | #140         | Done           |
+| 9     | DOX-D2                                      | #141         | Done           |
+| 10    | DOX-E1 (DOX-E1a, DOX-E1b)                   | #142         | Partially Done |
+| 11    | DOX-C0                                      | #171         | Not started    |
+| 12    | DOX-C1                                      | #137         | Not started    |
+| 13    | DOX-C2                                      | #138         | Not started    |
+| 14    | DOX-C3 (DOX-C3a, DOX-C3b)                   | #139         | Not started    |
 
 Parked work carries no story ID and never enters this table — see
 [appendix-parked.md](appendix-parked.md).

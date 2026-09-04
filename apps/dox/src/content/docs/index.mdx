@@ -20,6 +20,7 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
 import { gmtVersion } from "~/generated/versions";
 import { testExecutionSvg } from "../../../scripts/render-charts";
 import ChartContainer from "../../components/ChartContainer.astro";
+import Globe from "../../components/Globe.astro";
 import WhyNotDate from "../../components/WhyNotDate.astro";
 
 Current release: **v{gmtVersion}**
@@ -27,6 +28,8 @@ Current release: **v{gmtVersion}**
 `@northguild/gmt` wraps `@js-temporal/polyfill` behind a smaller, more opinionated API
 aimed at the cases application code actually hits: arithmetic, comparison, parsing,
 formatting, unix conversions, timezone conversion, and validation.
+
+<Globe />
 
 ## Key features
 

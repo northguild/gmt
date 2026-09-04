@@ -91,6 +91,10 @@ export default defineConfig({
           items: [{ autogenerate: { directory: "guides" } }],
         },
         {
+          label: "Tools",
+          items: [{ autogenerate: { directory: "tools" } }],
+        },
+        {
           label: "Scenarios",
           items: [{ autogenerate: { directory: "scenarios" } }],
         },
@@ -123,6 +127,8 @@ export default defineConfig({
         "./src/styles/gmt-playground-form.css", // form-control playground (POC, chore/136)
         "./src/styles/gmt-charts.css", // chart theme variables + container styles
         "./src/styles/gmt-map.css", // timezone map layout + clock panel
+        "./src/styles/gmt-globe.css", // DOX-E1a interactive globe
+        "./src/styles/gmt-scrubber.css", // DOX-E1b multi-zone time scrubber
         "./src/styles/gmt-light.css", // floating [data-theme="light"] overrides
         "./src/styles/dox.css", // live component layout
         "./src/styles/gmt-a11y.css", // DOX-D1 prefers-reduced-transparency / -contrast / forced-colors — loaded last

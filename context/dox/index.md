@@ -26,6 +26,8 @@ This file has been split into a progressive-disclosure directory. Read what you 
   overview §6 + §7; epic-level cross-cutting list
 - [reference/findings/speech-synthesis-capture.md](reference/findings/speech-synthesis-capture.md)
   — the one hard audio finding
+- [reference/findings/globe-rendering-approach.md](reference/findings/globe-rendering-approach.md)
+  — DOX-E1a: why the globe is `d3-geo` SVG/canvas, not WebGL
 - [reference/rejected-candidates.md](reference/rejected-candidates.md) — the three
   declined items, so they are not re-proposed
 - [reference/prior-art/worktree-cli-snapshot-2026-08-21.md](reference/prior-art/worktree-cli-snapshot-2026-08-21.md)
