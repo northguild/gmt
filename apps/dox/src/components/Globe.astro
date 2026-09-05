@@ -14,24 +14,30 @@
 interface Props {
   heading?: string;
   caption?: string;
+  /** Omits the internal heading/caption when embedded in HeroGlobe, whose
+   * own title/tagline already carries that role. */
+  embedded?: boolean;
 }
 const {
   heading = "Every zone, computed live by @northguild/gmt",
   caption = "No hardcoded offset tables. No Date object. Every local time, UTC offset, and DST flag on this globe is computed in your browser by GMT's Zoned functions, and recomputed every second. Drag to spin, scroll to zoom, or search a zone to watch it work.",
+  embedded = false,
 } = Astro.props;
 ---
 
-<div class="gmt-globe">
-  <h2 class="gmt-chart-title">{heading}</h2>
+<div class="gmt-globe" class:list={{ "gmt-globe-embedded": embedded }}>
+  {!embedded && <h2 class="gmt-chart-title">{heading}</h2>}
   <div class="gmt-globe-layout">
-    <div class="gmt-globe-stage gmt-glass" id="globe-stage">
-      <div class="gmt-globe-zoom" role="group" aria-label="Zoom the globe">
-        <button type="button" data-globe-zoom="in" aria-label="Zoom in">+</button>
-        <button type="button" data-globe-zoom="out" aria-label="Zoom out">−</button>
-        <button type="button" data-globe-zoom="reset" aria-label="Reset zoom">⊙</button>
+    <div class="gmt-globe-frame">
+      <div class="gmt-globe-stage gmt-glass" id="globe-stage">
+        <div class="gmt-globe-zoom" role="group" aria-label="Zoom the globe">
+          <button type="button" data-globe-zoom="in" aria-label="Zoom in">+</button>
+          <button type="button" data-globe-zoom="out" aria-label="Zoom out">−</button>
+          <button type="button" data-globe-zoom="reset" aria-label="Reset zoom">⊙</button>
+        </div>
       </div>
     </div>
-    <div>
+    <div class="gmt-globe-side">
       <div class="gmt-globe-search gmt-combobox">
         <label for="globe-zone-search">Find a zone</label>
         <input
@@ -51,7 +57,7 @@ const {
       ></div>
     </div>
   </div>
-  <p class="gmt-globe-caption">{caption}</p>
+  {!embedded && <p class="gmt-globe-caption">{caption}</p>}
 </div>
 
 <script>

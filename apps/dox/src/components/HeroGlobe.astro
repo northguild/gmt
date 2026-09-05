@@ -1,0 +1,63 @@
+---
+/**
+ * Homepage-only merged hero: @northguild/gmt title/tagline/CTAs on the left,
+ * the interactive globe on the right, both filling one full-viewport-height
+ * section. Replaces the separate auto-injected Hero + standalone <Globe />
+ * that used to stack on this page — see Hero.astro's isHome guard, which
+ * skips Starlight's own Hero render on the route this component covers.
+ */
+import Globe from './Globe.astro';
+import HeroCopy from './HeroCopy.astro';
+
+const { data } = Astro.locals.starlightRoute.entry;
+const { title = data.title, tagline, actions = [] } = data.hero || {};
+---
+
+<div class="gmt-herostage gmt-brackets">
+	<div class="gmt-herostage-copy">
+		<HeroCopy data={{ title, tagline, actions }} />
+	</div>
+	<Globe embedded />
+</div>
+
+<style>
+	@layer starlight.core {
+		.gmt-herostage {
+			display: grid;
+			grid-template-columns: 100%;
+			gap: 2rem;
+			padding-block: 1rem;
+		}
+
+		.gmt-herostage-copy {
+			display: flex;
+			align-items: center;
+			padding-left: 1rem;
+		}
+
+		@media (min-width: 80rem) {
+			.gmt-herostage {
+				grid-template-columns: minmax(0, auto) minmax(40rem, 1fr);
+				align-items: stretch;
+				gap: 3rem;
+				/* Fixed height (not min-height): the plan calls for the first
+				   section to cap at one screen, not grow past it. */
+				height: calc(100dvh - var(--sl-nav-height));
+				padding-block: clamp(1rem, 4vh, 3rem);
+			}
+
+			/* min-height: 0 overrides the grid-item default of min-height:
+			   auto, which would otherwise let either column grow past the
+			   fixed row height above to fit its content (the zone list in
+			   particular). */
+			.gmt-herostage > * {
+				min-height: 0;
+			}
+
+			.gmt-herostage-copy {
+				height: 100%;
+				overflow-y: auto;
+			}
+		}
+	}
+</style>

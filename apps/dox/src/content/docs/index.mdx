@@ -18,18 +18,24 @@ hero:
 import { Card, CardGrid } from "@astrojs/starlight/components";
 
 import { gmtVersion } from "~/generated/versions";
-import { testExecutionSvg } from "../../../scripts/render-charts";
-import ChartContainer from "../../components/ChartContainer.astro";
-import Globe from "../../components/Globe.astro";
-import WhyNotDate from "../../components/WhyNotDate.astro";
+import GridSection from "../../components/GridSection.astro";
+import HeroGlobe from "../../components/HeroGlobe.astro";
+import WhyDateAlternatives from "../../components/WhyDateAlternatives.astro";
+import WhyDateBug from "../../components/WhyDateBug.astro";
+
+<HeroGlobe />
 
 Current release: **v{gmtVersion}**
 
 `@northguild/gmt` wraps `@js-temporal/polyfill` behind a smaller, more opinionated API
 aimed at the cases application code actually hits: arithmetic, comparison, parsing,
-formatting, unix conversions, timezone conversion, and validation.
+formatting, unix conversions, timezone conversion, and validation. No hardcoded offset
+tables, no `Date` object — every zone on the globe above is computed live in your
+browser and recomputed every second.
 
-<Globe />
+<div class="gmt-home-grid">
+
+<GridSection>
 
 ## Key features
 
@@ -65,10 +71,18 @@ formatting, unix conversions, timezone conversion, and validation.
   </Card  >
 </CardGrid>
 
-<WhyNotDate />
+</GridSection>
 
-<ChartContainer
-  svg={testExecutionSvg}
-  title="@northguild/gmt leaves the others in the dust"
-  caption="334,020 GMT executions (16,701 tests × 17 locales × 10 timezones × 2 Node) vs. competitors' combined 20,190."
-/>
+<GridSection>
+
+<WhyDateBug />
+
+</GridSection>
+
+<GridSection>
+
+<WhyDateAlternatives />
+
+</GridSection>
+
+</div>

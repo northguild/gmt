@@ -1,0 +1,189 @@
+---
+/**
+ * Homepage grid section: why `new Date` / `Date` objects are the root cause
+ * of JavaScript date/time bugs. Split from the former WhyNotDate.astro so
+ * this and WhyDateAlternatives.astro can sit in separate homepage grid
+ * cells instead of one combined block.
+ *
+ * Static — no hydration. Scoped `<style>` only; every value goes through a
+ * `--gmt-*` token. No `backdrop-filter`, so no transparency/contrast gate is
+ * needed beyond what the tokens already carry.
+ */
+
+interface Fault {
+  input: string;
+  output: string;
+  why: string;
+}
+
+const faults: Fault[] = [
+  {
+    input: 'new Date("2025-01-15")',
+    output: "Tue Jan 14 2025 19:00 GMT−5",
+    why: "A bare date string is UTC midnight. West of Greenwich that is still the previous evening. Add a time and the rule silently flips to local.",
+  },
+  {
+    input: 'new Date("2025-03-30T01:30")',
+    output: "02:30 — no error",
+    why: "01:30 never happened in London that night — the clocks jumped 01:00 → 02:00. Date invents a nearby valid instant instead of telling you.",
+  },
+  {
+    input: "new Date(2025, 3, 1)",
+    output: "April 1, not March 1",
+    why: "Months are 0-indexed. Days are 1-indexed. In the same constructor call.",
+  },
+  {
+    input: "d.setDate(d.getDate() + 1)",
+    output: "mutates d in place",
+    why: "A Date handed to a function can be changed underneath you. There is no read-only Date.",
+  },
+  {
+    input: '"09:00 every Tuesday, Tokyo"',
+    output: "not representable",
+    why: "A Date is a single integer — milliseconds since the epoch. It cannot hold a wall-clock time or a recurring local time.",
+  },
+  {
+    input: "same code, two machines",
+    output: "two different answers",
+    why: "Parsing and formatting use the host timezone. A laptop in Denver and a CI runner in UTC disagree.",
+  },
+];
+---
+
+<section class="why-date-block" aria-labelledby="why-date-faults-h">
+  <h2 id="why-date-faults-h">
+    The bug is the <code>Date</code> object
+  </h2>
+  <p class="why-date-lede">
+    Almost every date/time bug in a JavaScript codebase traces back to one
+    type. <code>Date</code> conflates an instant with a wall-clock reading,
+    parses two ways depending on the string, and mutates in place.
+  </p>
+
+  <ul class="why-date-grid">
+    {
+      faults.map((f) => (
+        <li class="why-date-fault">
+          <span class="why-date-tag">Fault</span>
+          <div class="why-date-io">
+            <code class="why-date-in">{f.input}</code>
+            <span class="why-date-arrow" aria-hidden="true">
+              →
+            </span>
+            <code class="why-date-out">{f.output}</code>
+          </div>
+          <p class="why-date-why">{f.why}</p>
+        </li>
+      ))
+    }
+  </ul>
+</section>
+
+<style>
+  .why-date-block {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gmt-space-4);
+  }
+
+  .why-date-block h2 {
+    margin: 0;
+  }
+
+  .why-date-lede {
+    margin: 0;
+    max-width: 68ch;
+    color: var(--gmt-ice-dim);
+    line-height: 1.6;
+  }
+
+  .why-date-block code {
+    font-family: var(--gmt-font-mono);
+    font-size: 0.85em;
+    background: var(--gmt-code-bg);
+    border: 1px solid var(--gmt-code-border);
+    border-radius: var(--gmt-radius-sm);
+    corner-shape: bevel;
+    padding: 0.1em 0.35em;
+  }
+
+  .why-date-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--gmt-space-4);
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  }
+
+  /* Container query (not @media): this section can be squeezed into one of
+     several columns in the homepage's GridSection grid, at any viewport
+     width — a viewport media query here would force 3 fixed-width columns
+     even when the section itself has no room for them, cramming each fault
+     card below the 14rem minimum the auto-fit rule above already protects.
+     .gmt-grid-section (dox.css) is the named container. */
+  @container gmt-grid-section (min-width: 45rem) {
+    .why-date-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .why-date-fault {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gmt-space-3);
+    margin: 0;
+    padding: var(--gmt-space-4);
+    background: var(--gmt-fill-subtle);
+    border: 1px solid var(--gmt-signal-border);
+    border-radius: var(--gmt-radius-lg);
+    corner-shape: bevel;
+  }
+
+  /* Suppress the prose-list glowing tick (gmt-content.css
+     `.sl-markdown-content ul li::before`) — these <li> are cards, not bullets. */
+  .why-date-grid li::before {
+    display: none;
+  }
+
+  .why-date-tag {
+    align-self: flex-start;
+    font-family: var(--gmt-font-display);
+    font-size: 0.6rem;
+    letter-spacing: var(--gmt-tracking-wider);
+    text-transform: uppercase;
+    color: var(--gmt-signal);
+  }
+
+  .why-date-io {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--gmt-space-2);
+  }
+
+  .why-date-fault code {
+    background: var(--gmt-surface-2);
+  }
+
+  .why-date-in {
+    color: var(--gmt-ice);
+  }
+
+  .why-date-arrow {
+    color: var(--gmt-signal);
+    font-weight: 700;
+  }
+
+  .why-date-out {
+    color: var(--gmt-signal);
+    font-weight: 600;
+  }
+
+  .why-date-why {
+    margin: 0;
+    color: var(--gmt-ice);
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+</style>

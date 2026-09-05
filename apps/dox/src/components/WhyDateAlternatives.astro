@@ -1,0 +1,222 @@
+---
+/**
+ * Homepage grid section: why the popular Date alternatives either inherit
+ * its flaws (they wrap Date under the hood) or step off the TC39 standard.
+ * Split from the former WhyNotDate.astro so this and WhyDateBug.astro can
+ * sit in separate homepage grid cells instead of one combined block.
+ *
+ * Static — no hydration. Scoped `<style>` only; every value goes through a
+ * `--gmt-*` token. No `backdrop-filter`, so no transparency/contrast gate is
+ * needed beyond what the tokens already carry.
+ */
+
+interface Layer {
+  name: string;
+  detail: string;
+  foundation: string;
+  kind: "date" | "wraps" | "nonstandard" | "standard" | "gmt";
+}
+
+const stack: Layer[] = [
+  {
+    name: "Temporal",
+    detail: "The TC39 standard. Separate types for instants, wall-clock times, zoned times, plain dates, and durations. No Date anywhere.",
+    foundation: "TC39 standard",
+    kind: "standard",
+  },
+  {
+    name: "@northguild/gmt",
+    detail: "Temporal underneath, with an ISO 8601 string-in / typed-value-out surface on top. The layer you actually write against.",
+    foundation: "Temporal inside",
+    kind: "gmt",
+  },
+  {
+    name: "Date",
+    detail: "Epoch milliseconds interpreted through the host timezone. Every fault above lives here.",
+    foundation: "root cause",
+    kind: "date",
+  },
+  {
+    name: "Moment.js",
+    detail: "A wrapper around Date. In legacy maintenance mode since 2020, and mutable like the thing it wraps.",
+    foundation: "built on Date",
+    kind: "wraps",
+  },
+  {
+    name: "Luxon",
+    detail: "A DateTime is a Date plus a zone string. Invalid inputs become an Invalid DateTime you have to remember to check for.",
+    foundation: "built on Date",
+    kind: "wraps",
+  },
+  {
+    name: "date-fns",
+    detail: "Tree-shakeable functions — but every argument and every return value is a Date, so all of its footguns are still yours.",
+    foundation: "built on Date",
+    kind: "wraps",
+  },
+  {
+    name: "@internationalized/date",
+    detail: "Its own CalendarDate / ZonedDateTime types. Fixes the model, but it is Adobe's API — a second migration once Temporal ships.",
+    foundation: "not TC39",
+    kind: "nonstandard",
+  },
+];
+---
+
+<section class="why-date-block" aria-labelledby="why-date-stack-h">
+  <h2 id="why-date-stack-h">
+    The alternatives inherit it, or deviate from the standard
+  </h2>
+  <p class="why-date-lede">
+    The popular libraries do not replace <code>Date</code>; they decorate it,
+    so the faults come along. The one library that fixes the model does it with
+    a non-standard API you will migrate off. GMT is Temporal — the standard —
+    with the ergonomics added on top.
+  </p>
+
+  <ol class="why-date-layers">
+    {
+      stack.map((l) => (
+        <li class:list={["why-date-layer", `why-date-layer--${l.kind}`]}>
+          <span class="why-date-layer-name">{l.name}</span>
+          <span class="why-date-layer-detail">{l.detail}</span>
+          <span class="why-date-layer-foundation">{l.foundation}</span>
+        </li>
+      ))
+    }
+  </ol>
+</section>
+
+<style>
+  .why-date-block {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gmt-space-4);
+  }
+
+  .why-date-block h2 {
+    margin: 0;
+  }
+
+  .why-date-lede {
+    margin: 0;
+    max-width: 68ch;
+    color: var(--gmt-ice-dim);
+    line-height: 1.6;
+  }
+
+  .why-date-block code {
+    font-family: var(--gmt-font-mono);
+    font-size: 0.85em;
+    background: var(--gmt-code-bg);
+    border: 1px solid var(--gmt-code-border);
+    border-radius: var(--gmt-radius-sm);
+    corner-shape: bevel;
+    padding: 0.1em 0.35em;
+  }
+
+  .why-date-layers {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gmt-space-2);
+  }
+
+  .why-date-layer {
+    display: grid;
+    grid-template-columns: minmax(8rem, 12rem) 1fr auto;
+    gap: var(--gmt-space-3) var(--gmt-space-4);
+    align-items: baseline;
+    padding: var(--gmt-space-3) var(--gmt-space-4);
+    background: var(--gmt-fill-subtle);
+    border: 1px solid var(--gmt-hairline);
+    border-radius: var(--gmt-radius-lg);
+    corner-shape: bevel;
+  }
+
+  .why-date-layer-name {
+    font-family: var(--gmt-font-mono);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--gmt-signal);
+    overflow-wrap: anywhere;
+  }
+
+  .why-date-layer-detail {
+    color: var(--gmt-ice);
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+
+  .why-date-layer-foundation {
+    justify-self: end;
+    font-family: var(--gmt-font-mono);
+    font-size: 0.7rem;
+    letter-spacing: var(--gmt-tracking-wide);
+    text-transform: uppercase;
+    color: var(--gmt-ice-dim);
+    white-space: nowrap;
+  }
+
+  /* Everything that is not the standard shares the fault colour (orange):
+     Date, its wrappers, and @internationalized/date. The wrappers are indented
+     to read as branching off Date. Temporal and GMT are green (the standard
+     path). */
+  .why-date-layer--date,
+  .why-date-layer--wraps,
+  .why-date-layer--nonstandard {
+    border-color: var(--gmt-signal-border);
+  }
+
+  .why-date-layer--date .why-date-layer-name,
+  .why-date-layer--date .why-date-layer-foundation,
+  .why-date-layer--nonstandard .why-date-layer-name,
+  .why-date-layer--nonstandard .why-date-layer-foundation,
+  .why-date-layer--wraps .why-date-layer-foundation {
+    color: var(--gmt-signal);
+  }
+
+  .why-date-layer--wraps,
+  .why-date-layer--gmt {
+    margin-left: var(--gmt-space-6);
+  }
+
+  .why-date-layer--standard,
+  .why-date-layer--gmt {
+    border-color: color(from var(--gmt-spring) srgb r g b / 0.35);
+  }
+
+  .why-date-layer--standard .why-date-layer-name,
+  .why-date-layer--standard .why-date-layer-foundation,
+  .why-date-layer--gmt .why-date-layer-name,
+  .why-date-layer--gmt .why-date-layer-foundation {
+    color: var(--gmt-spring);
+  }
+
+  /* Container query (not @media): this section can be squeezed into one of
+     several columns in the homepage's GridSection grid at any viewport
+     width, leaving the fixed minmax(8rem,12rem) name + auto foundation
+     columns almost nothing for the 1fr detail column — the text was
+     wrapping one word per line instead of flowing naturally. Stack to a
+     single column whenever the section itself is narrow, not just on a
+     narrow viewport. .gmt-grid-section (dox.css) is the named container;
+     45rem matches the threshold used for the fault grid's own 3-column
+     switch in WhyDateBug.astro. */
+  @container gmt-grid-section (max-width: 45rem) {
+    .why-date-layer {
+      grid-template-columns: 1fr;
+      gap: var(--gmt-space-1);
+    }
+
+    .why-date-layer-foundation {
+      justify-self: start;
+    }
+
+    .why-date-layer--wraps,
+    .why-date-layer--gmt {
+      margin-left: var(--gmt-space-4);
+    }
+  }
+</style>

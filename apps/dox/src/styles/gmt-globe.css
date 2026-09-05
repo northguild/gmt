@@ -37,6 +37,14 @@
 
 .gmt-globe {
   margin: var(--gmt-space-6) 0;
+  /* Named container so .gmt-globe-layout's stage+list breakpoint below can
+     query the globe's own rendered width instead of the viewport's. This
+     matters once the globe is embedded in a hero column: at half the
+     viewport's width, a `@media (min-width: 40rem)` fires long before the
+     globe itself actually has 40rem to work with, cramming the canvas and
+     list together. */
+  container-type: inline-size;
+  container-name: gmt-globe;
 }
 
 .gmt-globe-layout {
@@ -44,11 +52,19 @@
   gap: var(--gmt-space-4);
 }
 
-@media (min-width: 40rem) {
+@container gmt-globe (min-width: 40rem) {
   .gmt-globe-layout {
     grid-template-columns: minmax(0, 1fr) minmax(13rem, 20rem);
     align-items: start;
   }
+}
+
+/* Structural-only wrapper around .gmt-globe-stage — invisible to layout by
+   default (display: contents), so standalone usage is unaffected. Embedded
+   mode turns it into a real sized box below, purely so it can act as a
+   size-containment query context for the stage's cqw/cqh squaring. */
+.gmt-globe-frame {
+  display: contents;
 }
 
 .gmt-globe-stage {
@@ -312,9 +328,132 @@
   font-size: 0.72rem;
 }
 
-@media (min-width: 40rem) {
+@container gmt-globe (min-width: 40rem) {
   .gmt-globe-clocks {
     height: 30rem;
+  }
+}
+
+/* Embedded mode (inside HeroGlobe.astro, homepage only) ---------------
+   The stage and clock list stretch to fill the hero's own height, in place
+   of the standalone widget's fixed rem caps above, but only once the
+   viewport is wide enough (>=1600px) to show the canvas and the zone list
+   side by side without cramming either — below that, the globe forces its
+   normal single-column stack (canvas on top, list below) regardless of how
+   the generic >=40rem *container* condition above would otherwise resolve,
+   since half of even a fairly wide hero crosses that local-width threshold
+   well before the screen is actually wide enough for both. Scoped to
+   .gmt-globe-embedded so the standalone /tools/zoned-earth usage of this
+   same component (still governed by the container query above) is
+   untouched. */
+.gmt-globe-embedded {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+}
+
+/* Drop the glass "card" frame around the stage in the hero — the globe
+   should read as floating directly on the hero background, not boxed in a
+   panel. Only the frame (background/border/backdrop-blur/hairline-gradient
+   edge from .gmt-glass) goes transparent; the sphere/ocean/land rendering
+   inside the canvas itself is untouched. */
+.gmt-globe-embedded .gmt-globe-stage {
+  background: transparent;
+  border-color: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.gmt-globe-embedded .gmt-globe-stage::before,
+.gmt-globe-embedded .gmt-globe-stage::after {
+  display: none;
+}
+
+@media (max-width: 99.9375rem) {
+  /* Higher specificity than the plain .gmt-globe-layout rule above, so this
+     wins regardless of the container query's own state. A real flex column
+     (not just a single-column grid track) so .gmt-globe-side/.gmt-globe-clocks
+     can flex to fill whatever height the square stage leaves behind in the
+     hero's fixed-height column, instead of sitting at a fixed rem height
+     that either leaves dead space or overflows. */
+  .gmt-globe-embedded .gmt-globe-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .gmt-globe-embedded .gmt-globe-stage {
+    flex: 0 0 auto;
+  }
+
+  .gmt-globe-embedded .gmt-globe-side {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 100%;
+    min-height: 0;
+    width: 100%;
+    overflow-y: auto;
+    max-height: 30rem;
+  }
+
+  .gmt-globe-embedded .gmt-globe-clocks {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+  }
+}
+
+@media (min-width: 100rem) {
+  /* min-height: 0 at every link in this chain overrides the flex/grid
+     default of min-height: auto (min-content) — without it, each box grows
+     to fit the ~300-row zone list instead of respecting the hero's fixed
+     viewport height, and .gmt-globe-clocks's own overflow-y: auto never
+     gets a chance to kick in. */
+  .gmt-globe-embedded .gmt-globe-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(13rem, 20rem);
+    flex: 1 1 auto;
+    height: 100%;
+    min-height: 0;
+    align-items: stretch;
+  }
+
+  /* Squaring the stage with plain width/height percentages doesn't work
+     here: the grid cell gives .gmt-globe-stage a definite width AND (via
+     this stretched, definite-height chain) a definite height, so
+     aspect-ratio has no "auto" dimension left to derive — it silently does
+     nothing, and the stage renders as the (non-square) cell rectangle
+     instead of a sphere. Turning .gmt-globe-frame into a sized, contained
+     query context lets the stage size itself to min(cqw, cqh) — the largest
+     square that fits either constraint — with real auto-derived height. */
+  .gmt-globe-embedded .gmt-globe-frame {
+    display: block;
+    container-type: size;
+    container-name: gmt-globe-frame;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .gmt-globe-embedded .gmt-globe-stage {
+    width: min(100cqw, 100cqh);
+    height: min(100cqw, 100cqh);
+    max-width: none;
+    margin-inline: auto;
+  }
+
+  .gmt-globe-embedded .gmt-globe-side {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .gmt-globe-embedded .gmt-globe-clocks {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
   }
 }
 

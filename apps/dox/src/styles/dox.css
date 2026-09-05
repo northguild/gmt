@@ -1,1 +1,80 @@
 /* Misc page-level layout for live components */
+
+/* HUD dashboard layout for sidebar-less pages (/, /why-gmt, and any future
+ * splash-template page) — see memories/dash-hud-plan.md. Starlight caps
+ * sidebar-less pages at --sl-content-width: 67.5rem and centers them, which
+ * reads as too much dead margin at wide viewports for a dashboard feel.
+ *
+ * Overriding the --sl-content-width/--sl-content-pad-x *variables* does not
+ * work here: Starlight's own Page.astro re-declares --sl-content-width on
+ * this exact selector in an unlayered inline <style> in <head>, and its
+ * virtual:starlight/user-css import (which is how our customCss files, this
+ * one included, get bundled) is deliberately the *first* import in that file
+ * "to override cascade layers order" — which in practice means our unlayered
+ * customCss ends up earlier in the bundled stylesheet than Page.astro's own
+ * inline override, so Starlight's redeclaration wins. Targeting the actual
+ * .content-panel/.sl-container elements directly (with !important, since
+ * both rules are otherwise unlayered/equal-specificity and this sidesteps
+ * relying on bundle order) is the reliable fix. */
+html:not([data-has-sidebar]) .sl-container {
+  max-width: none !important;
+}
+
+/* Section grid — see GridSection.astro. Shared by the homepage's below-hero
+ * sections (Key features / the bug is Date / the alternatives, wrapped in
+ * index.mdx as .gmt-home-grid) and /why-gmt's chart sections
+ *
+ * Natural auto-flow columns (repeat(auto-fit, minmax(...))) rather than
+ * fixed 1/2/3-column breakpoints: the browser fits as many columns as the
+ * available width allows, so it doesn't need per-page-width tuning as
+ * section count/content changes, and it degrades to a single column below
+ * ~24rem on its own. 24rem (not a narrower value) is deliberate: it's
+ * roughly the minimum a GridSection needs before its own nested grids
+ * (Starlight's CardGrid, the fault grid in WhyDateBug) have room to be
+ * anything but single-column themselves — see the container queries below. */
+.gmt-home-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
+  gap: var(--gmt-space-8, 3rem);
+}
+
+.gmt-why-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--gmt-space-8, 3rem);
+  padding: var(--gmt-space-8, 3rem);
+  width: 100%;
+}
+
+@media (min-width: 48rem) {
+  .gmt-why-grid {
+    grid-template-columns: repeat(auto-fit, minmax(30vw, 1fr));
+  }
+}
+
+/* Named container so content nested inside a GridSection (Starlight's own
+ * CardGrid in particular) can query the section's actual rendered width
+ * instead of the viewport's. Starlight's .card-grid switches to 2 columns
+ * via a plain `@media (min-width: 50rem)` viewport query with no regard for
+ * its actual container width — fine when it spans the whole page, but once
+ * squeezed into one of several GridSection columns here, that viewport
+ * query still fires at any reasonably wide screen even though the section
+ * itself is far narrower than 50rem, so the second card column overflows
+ * into the neighboring section. Forcing single-column by default and only
+ * opting back into 2 columns once the section itself has room fixes it at
+ * the root (same class of bug, and the same container-query fix, as
+ * .gmt-globe-layout in gmt-globe.css). */
+.gmt-grid-section {
+  container-type: inline-size;
+  container-name: gmt-grid-section;
+}
+
+.gmt-grid-section .card-grid {
+  grid-template-columns: 1fr !important;
+}
+
+@container gmt-grid-section (min-width: 40rem) {
+  .gmt-grid-section .card-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
