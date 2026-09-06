@@ -34,7 +34,11 @@
   "files": [
     "dist",
     "LICENSE",
-    "skills"
+    "README.md",
+    "skills/gmt-basics",
+    "skills/gmt-arithmetic",
+    "skills/gmt-timezone",
+    "skills/gmt-integration"
   ],
   "type": "module",
   "main": "./dist/index.js",
