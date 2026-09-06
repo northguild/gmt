@@ -2,8 +2,8 @@
 name: gmt-integration
 description: >
   Application integration patterns — stable cache keys, router/query params,
-  table-sort keys, and lint package selection (ESLint, Biome, Oxlint). Reads
-  the installed package README.md and lint-package READMEs for API details; this
+  table-sort keys, and lint package selection (ESLint, Biome, Oxlint). Reads the
+  installed package README.md and lint-package READMEs for API details; this
   skill is a routing pointer, not an API dump.
 sources:
   - 'northguild/gmt:README.md'
@@ -11,7 +11,7 @@ sources:
 metadata:
   type: composition
   library: '@northguild/gmt'
-  library_version: '1.14.2'
+  library_version: '1.15.0'
 ---
 
 # GMT Integration

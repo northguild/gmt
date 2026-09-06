@@ -1,0 +1,1130 @@
+{
+  "packages/gmt": {
+    "root": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets": [
+      "packages/gmt/tsconfig.build.json",
+      "@nx/js/typescript"
+    ],
+    "targets.watch-deps": [
+      "packages/gmt/tsconfig.build.json",
+      "@nx/js/typescript"
+    ],
+    "targets.watch-deps.continuous": [
+      "packages/gmt/tsconfig.build.json",
+      "@nx/js/typescript"
+    ],
+    "targets.watch-deps.dependsOn": [
+      "packages/gmt/tsconfig.build.json",
+      "@nx/js/typescript"
+    ],
+    "targets.watch-deps.executor": [
+      "packages/gmt/tsconfig.build.json",
+      "@nx/js/typescript"
+    ],
+    "targets.watch-deps.options": [
+      "packages/gmt/tsconfig.build.json",
+      "@nx/js/typescript"
+    ],
+    "targets.watch-deps.options.command": [
+      "packages/gmt/tsconfig.build.json",
+      "@nx/js/typescript"
+    ],
+    "name": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "tags": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "tags.npm:public": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "tags.npm:date": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "tags.npm:datetime": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "tags.npm:polyfill": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "tags.npm:tanstack-intent": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "tags.npm:temporal": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "tags.npm:time": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "tags.npm:timezone": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.0": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.1": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.2": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.3": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.4": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.5": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.description": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js.packageName": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js.packageVersion": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js.packageExports": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js.packageMain": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js.isInPackageManagerWorkspaces": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build.executor": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build.options": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build.metadata": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build.options.script": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build.metadata.scriptContent": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build.metadata.runCommand": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.typecheck": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.typecheck.executor": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.typecheck.options": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.typecheck.metadata": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.typecheck.options.script": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.typecheck.metadata.scriptContent": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.typecheck.metadata.runCommand": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test.executor": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test.options": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test.metadata": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test.options.script": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test.metadata.scriptContent": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test.metadata.runCommand": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:watch": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:watch.executor": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:watch.options": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:watch.metadata": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:watch.options.script": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:watch.metadata.scriptContent": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:watch.metadata.runCommand": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.lint": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.lint.executor": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.lint.options": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.lint.metadata": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.lint.options.script": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.lint.metadata.scriptContent": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.lint.metadata.runCommand": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.format": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.format.executor": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.format.options": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.format.metadata": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.format.options.script": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.format.metadata.scriptContent": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.format.metadata.runCommand": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.nx-release-publish": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.nx-release-publish.executor": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.nx-release-publish.dependsOn": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.nx-release-publish.options": [
+      "packages/gmt/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build.dependsOn": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.build.outputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.build.cache": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.typecheck.dependsOn": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.typecheck.cache": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.typecheck.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.cache": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.cache": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ]
+  },
+  "packages/gmt-oxlint": {
+    "root": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets": [
+      "packages/gmt-oxlint/tsconfig.json",
+      "@nx/js/typescript"
+    ],
+    "name": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "tags": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "tags.npm:public": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "tags.npm:date": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "tags.npm:eslint-plugin": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "tags.npm:lint": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "tags.npm:oxlint": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "tags.npm:tanstack-intent": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "tags.npm:temporal": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.0": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.1": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.2": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.3": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.4": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.5": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.6": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.7": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.description": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js.packageName": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js.packageVersion": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js.packageExports": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js.packageMain": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js.isInPackageManagerWorkspaces": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build.executor": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build.options": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build.metadata": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build.options.script": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build.metadata.scriptContent": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build.metadata.runCommand": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test.executor": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test.options": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test.metadata": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test.options.script": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test.metadata.scriptContent": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test.metadata.runCommand": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:watch": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:watch.executor": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:watch.options": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:watch.metadata": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:watch.options.script": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:watch.metadata.scriptContent": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:watch.metadata.runCommand": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.typecheck": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.typecheck.executor": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.typecheck.options": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.typecheck.metadata": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.typecheck.options.script": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.typecheck.metadata.scriptContent": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.typecheck.metadata.runCommand": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.prepack": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.prepack.executor": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.prepack.options": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.prepack.metadata": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.prepack.options.script": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.prepack.metadata.scriptContent": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.prepack.metadata.runCommand": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.pack": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.pack.executor": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.pack.options": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.pack.metadata": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.pack.options.script": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.pack.metadata.scriptContent": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.pack.metadata.runCommand": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:dry-run": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:dry-run.executor": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:dry-run.options": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:dry-run.metadata": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:dry-run.options.script": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:dry-run.metadata.scriptContent": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:dry-run.metadata.runCommand": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:public": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:public.executor": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:public.options": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:public.metadata": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:public.options.script": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:public.metadata.scriptContent": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:public.metadata.runCommand": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.nx-release-publish": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.nx-release-publish.executor": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.nx-release-publish.dependsOn": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.nx-release-publish.options": [
+      "packages/gmt-oxlint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.typecheck.dependsOn": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.typecheck.cache": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.typecheck.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.build.dependsOn": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.build.outputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.build.cache": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.cache": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ]
+  },
+  "packages/gmt-biome": {
+    "root": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "name": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "tags": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "tags.npm:public": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "tags.npm:biome": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "tags.npm:biome-plugin": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "tags.npm:date": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "tags.npm:lint": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "tags.npm:tanstack-intent": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "tags.npm:temporal": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.0": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.1": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.2": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.description": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js.packageName": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js.packageVersion": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js.packageExports": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js.isInPackageManagerWorkspaces": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "targets": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.pack": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.pack.executor": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.pack.options": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.pack.metadata": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.pack.options.script": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.pack.metadata.scriptContent": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.pack.metadata.runCommand": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:dry-run": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:dry-run.executor": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:dry-run.options": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:dry-run.metadata": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:dry-run.options.script": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:dry-run.metadata.scriptContent": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:dry-run.metadata.runCommand": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:public": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:public.executor": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:public.options": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:public.metadata": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:public.options.script": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:public.metadata.scriptContent": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:public.metadata.runCommand": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.nx-release-publish": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.nx-release-publish.executor": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.nx-release-publish.dependsOn": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.nx-release-publish.options": [
+      "packages/gmt-biome/package.json",
+      "nx/core/package-json"
+    ]
+  },
+  "packages/gmt-eslint": {
+    "root": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "name": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "tags": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "tags.npm:public": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "tags.npm:tanstack-intent": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.0": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.1": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.2": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.description": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js.packageName": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js.packageVersion": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js.packageExports": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js.packageMain": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js.isInPackageManagerWorkspaces": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.pack": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.pack.executor": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.pack.options": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.pack.metadata": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.pack.options.script": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.pack.metadata.scriptContent": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.pack.metadata.runCommand": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:dry-run": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:dry-run.executor": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:dry-run.options": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:dry-run.metadata": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:dry-run.options.script": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:dry-run.metadata.scriptContent": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:dry-run.metadata.runCommand": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:public": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:public.executor": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:public.options": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:public.metadata": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:public.options.script": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:public.metadata.scriptContent": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.publish:public.metadata.runCommand": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.nx-release-publish": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.nx-release-publish.executor": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.nx-release-publish.dependsOn": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.nx-release-publish.options": [
+      "packages/gmt-eslint/package.json",
+      "nx/core/package-json"
+    ]
+  }
+}

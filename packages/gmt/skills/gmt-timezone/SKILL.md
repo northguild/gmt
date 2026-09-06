@@ -21,7 +21,7 @@ sources:
 metadata:
   type: core
   library: '@northguild/gmt'
-  library_version: '1.14.2'
+  library_version: '1.15.0'
 ---
 
 # GMT Timezone

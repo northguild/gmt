@@ -1,5 +1,18 @@
 # @northguild/gmt
 
+## 1.15.0
+
+### Minor Changes
+
+- a5dbda2: Promote shared unit types to the public API: `RelativeUnit`, `DurationUnit`, `NowUnit`, `UnixNowUnit`, `UtcNowUnit`, `RelativeDateUnit`, `RelativeTimeUnit`, `RelativeDateTimeUnit`, `ZonedParseUnit`, `PlainNowUnit`, `ZonedOffsetUnit`, and `UnixUnit` are now importable from `@northguild/gmt/types` (and from their domain subpaths via the existing barrel re-exports). Add `@example` import lines and Members tables to all type JSDoc.
+
+### Patch Changes
+
+- 7d0b18c: Add JSDoc to `formatUtc` and `formatUnix`, and to internal helpers `startOrEndOfUtc` and `startOrEndOfUnix`. Replace the six namespace `README.md` files with one-line stubs pointing at the docs site reference section.
+- 3dc6edf: Internal type consolidation: extract shared option properties into base types (`CalendarOptions`, `RelativeTimeFormatOptions`, `DateTimeFormatOptions`) to reduce duplication across plain/unix/utc/zoned formatters. Convert all remaining `//` comments in `packages/gmt/src/regex/` to JSDoc style with `@example` blocks, and add missing JSDoc to `time-zone-like.ts` and `unix.ts`.
+- a5dbda2: Fix `@example` values and prose in `intervalDifferenceZoned` and `intervalXorZoned` JSDoc: the documented interior boundaries didn't match what the functions actually compute (they're re-derived at ±1 nanosecond from the overlap edges, never copied or rounded to the second). `intervalXorZoned`'s docs also incorrectly claimed full containment returns a single `{ start, end }` — it returns two. Added regression tests asserting the exact boundary strings so this can't drift silently again.
+- 0f4bfe9: Slim the AI agent skill bundle: replace 13 verbose consumer skill files with 4 lightweight routing pointers (gmt-basics, gmt-arithmetic, gmt-timezone, gmt-integration) and relocate 5 contributor/maintainer skills under a `contributor/` subdirectory that is excluded from the published npm package. The `files` allowlist in package.json and `.npmignore` now prevent consumer installs from receiving contributor skills or `_artifacts/` build output. No TypeScript source or public API changed — the package dist output is identical.
+
 ## 1.14.2
 
 ### Patch Changes
