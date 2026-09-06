@@ -5,7 +5,7 @@ description: >
   context, examples, and details that help maintainers understand and implement
   the requested feature.
 metadata:
-  library_version: 1.14.2
+  library_version: 1.15.0
 ---
 
 # Issue Creation

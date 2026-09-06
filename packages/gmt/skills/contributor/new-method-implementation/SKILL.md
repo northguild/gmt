@@ -5,7 +5,7 @@ description: >
   helpers first, then Temporal only when needed, while preserving string-first
   I/O, plain/zoned separation, and fallback-return rules.
 metadata:
-  library_version: 1.14.2
+  library_version: 1.15.0
 ---
 
 # New Method Implementation

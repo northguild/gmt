@@ -1,10 +1,10 @@
 ---
 name: gmt-basics
 description: >
-  Core date/time basics — get current values, parse components, format for display,
-  format relative time, compare dates, and validate strings/timezones/intervals.
-  Reads the installed package README.md and source JSDoc for API details; this
-  skill is a routing pointer, not an API dump.
+  Core date/time basics — get current values, parse components, format for
+  display, format relative time, compare dates, and validate
+  strings/timezones/intervals. Reads the installed package README.md and source
+  JSDoc for API details; this skill is a routing pointer, not an API dump.
 sources:
   - 'northguild/gmt:README.md'
   - 'northguild/gmt:packages/gmt/src/plain/get/index.ts'
@@ -21,7 +21,7 @@ sources:
 metadata:
   type: core
   library: '@northguild/gmt'
-  library_version: '1.14.2'
+  library_version: '1.15.0'
 ---
 
 # GMT Basics

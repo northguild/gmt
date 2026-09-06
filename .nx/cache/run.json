@@ -1,0 +1,76 @@
+{
+  "run": {
+    "command": "nx run-many -t lint typecheck build --projects=dox --skip-nx-cache",
+    "startTime": "2026-09-03T19:18:16.338Z",
+    "endTime": "2026-09-03T19:18:40.258Z",
+    "inner": false
+  },
+  "tasks": [
+    {
+      "taskId": "dox:lint",
+      "target": "lint",
+      "projectName": "dox",
+      "hash": "13928754775158342716",
+      "startTime": "2026-09-03T19:18:16.380Z",
+      "endTime": "2026-09-03T19:18:16.449Z",
+      "params": "",
+      "cacheStatus": "cache-miss",
+      "status": 0
+    },
+    {
+      "taskId": "dox:generate",
+      "target": "generate",
+      "projectName": "dox",
+      "hash": "6519944180467582613",
+      "startTime": "2026-09-03T19:18:16.380Z",
+      "endTime": "2026-09-03T19:18:17.271Z",
+      "params": "",
+      "cacheStatus": "cache-miss",
+      "status": 0
+    },
+    {
+      "taskId": "@northguild/gmt-oxlint:build",
+      "target": "build",
+      "projectName": "@northguild/gmt-oxlint",
+      "hash": "13339731111177934292",
+      "startTime": "2026-09-03T19:18:16.380Z",
+      "endTime": "2026-09-03T19:18:18.228Z",
+      "params": "",
+      "cacheStatus": "cache-miss",
+      "status": 0
+    },
+    {
+      "taskId": "@northguild/gmt:build",
+      "target": "build",
+      "projectName": "@northguild/gmt",
+      "hash": "12844660464575802640",
+      "startTime": "2026-09-03T19:18:18.232Z",
+      "endTime": "2026-09-03T19:18:20.815Z",
+      "params": "",
+      "cacheStatus": "cache-miss",
+      "status": 0
+    },
+    {
+      "taskId": "dox:build",
+      "target": "build",
+      "projectName": "dox",
+      "hash": "3330468737850107627",
+      "startTime": "2026-09-03T19:18:20.827Z",
+      "endTime": "2026-09-03T19:18:33.177Z",
+      "params": "",
+      "cacheStatus": "cache-miss",
+      "status": 0
+    },
+    {
+      "taskId": "dox:typecheck",
+      "target": "typecheck",
+      "projectName": "dox",
+      "hash": "14093927790275363129",
+      "startTime": "2026-09-03T19:18:33.208Z",
+      "endTime": "2026-09-03T19:18:40.258Z",
+      "params": "",
+      "cacheStatus": "cache-miss",
+      "status": 0
+    }
+  ]
+}
