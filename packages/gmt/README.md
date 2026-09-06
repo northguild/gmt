@@ -1615,6 +1615,29 @@ For the complete API listing, see the namespace documentation on GitHub:
 - [UTC API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/utc) — UTC instant utilities
 - [Regex API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/regex) — composable regex patterns
 
+## AI Agent Skills
+
+`@northguild/gmt` ships four lightweight TanStack Intent skill files
+(`skills/gmt-basics/`, `gmt-arithmetic/`, `gmt-timezone/`,
+`gmt-integration/`). Each is a ~30–60 line routing pointer that carries core
+rules and common pitfalls, then directs the agent to **this README** and the
+source JSDoc for full API signatures and code examples.
+
+| Skill | Task area | Load with |
+| --- | --- | --- |
+| `gmt-basics` | Get current values, parse, format, relative time, compare, validate | `intent load @northguild/gmt#gmt-basics` |
+| `gmt-arithmetic` | Add/subtract, diff, durations, interval range math | `intent load @northguild/gmt#gmt-arithmetic` |
+| `gmt-timezone` | Zoned arithmetic, formatting, DST disambiguation | `intent load @northguild/gmt#gmt-timezone` |
+| `gmt-integration` | Cache keys, router/query params, lint package selection | `intent load @northguild/gmt#gmt-integration` |
+
+Contributor skills (issue-creation, pr-contribution, new-method-implementation,
+unit-test-generation, api-expansion-workflow) live under
+`skills/contributor/` and are excluded from the npm tarball via
+`.npmignore` — load them only when contributing to the library itself.
+
+See the [dox site's Skills guide](https://gmt-dox.northguild.workers.dev/guides/integration/skills/)
+for full install and discovery instructions.
+
 ## Agent Prompt
 
 When working with `@northguild/gmt`, follow these rules:

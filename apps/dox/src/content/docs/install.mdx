@@ -90,7 +90,7 @@ npx @tanstack/intent@latest install
 npx @tanstack/intent@latest list
 
 # 3. Load a specific skill into an agent session
-npx @tanstack/intent@latest load @northguild/gmt#format-date-time
+npx @tanstack/intent@latest load @northguild/gmt#gmt-basics
 ```
 
 The linter packages (`@northguild/gmt-eslint`, `@northguild/gmt-oxlint`,
@@ -103,27 +103,16 @@ your `package.json`:
 ```json
 {
   "intent": {
-    "skills": ["@northguild/gmt#format-date-time", "@northguild/gmt#validate-dates"]
+    "skills": ["@northguild/gmt#gmt-basics", "@northguild/gmt#gmt-timezone"]
   }
 }
 ```
 
 ### Consumer-facing skill slugs
 
-| Package | Slug | Description |
+| Package | Slug | Task area |
 | --- | --- | --- |
-| `@northguild/gmt` | `get-current` | Current date/time/timestamp as ISO strings |
-| `@northguild/gmt` | `parse-date-time` | Extract components from date/time strings; decode RFC 2822/5322, HTTP, SQL, RFC 3339 |
-| `@northguild/gmt` | `format-date-time` | Format date/time for display with locale support |
-| `@northguild/gmt` | `format-relative-time` | Human-friendly relative strings ("yesterday", "in 2 hours") |
-| `@northguild/gmt` | `calculate-dates` | Add/subtract, diff, clamp, business days, locale week boundaries |
-| `@northguild/gmt` | `durations` | ISO 8601 duration parsing, validation, formatting |
-| `@northguild/gmt` | `compare-dates` | Ordering, weekend/business-day checks, locale day-of-week |
-| `@northguild/gmt` | `validate-dates` | String/interval/range validation, DST transitions, interval ops |
-| `@northguild/gmt` | `zoned-date-ops` | Timezone-aware arithmetic, formatting, DST disambiguation |
-| `@northguild/gmt` | `convert-types` | plain↔zoned/unix↔UTC conversion, non-Gregorian calendars |
-| `@northguild/gmt` | `interval-ops` | Range math: containment, overlap, intersection, union, split |
-| `@northguild/gmt` | `app-integration` | Cache keys, router/query integration patterns |
-| `@northguild/gmt-eslint` / `gmt-oxlint` / `gmt-biome` | `first-time-setup` | Install and wire the lint package; verify Date-ban rules active |
-| `@northguild/gmt-eslint` / `gmt-oxlint` / `gmt-biome` | `migration-refactor` | Migrate existing code off `Date` APIs |
-| `@northguild/gmt-eslint` / `gmt-oxlint` / `gmt-biome` | `ci-enforcement` | Set up CI enforcement of lint rules |
+| `@northguild/gmt` | `gmt-basics` | Current date/time, parse, format, relative time, compare, validate |
+| `@northguild/gmt` | `gmt-arithmetic` | Add/subtract, diff, durations, interval range math |
+| `@northguild/gmt` | `gmt-timezone` | Timezone-aware arithmetic, formatting, DST disambiguation |
+| `@northguild/gmt` | `gmt-integration` | Cache keys, router/query params, lint package selection |

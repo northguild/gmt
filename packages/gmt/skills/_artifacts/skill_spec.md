@@ -6,27 +6,25 @@ Temporal-based date and time utilities with timezone support and polyfill integr
 
 | Domain                | Description                                                           | Skills                                                                                         |
 | --------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Core Date Operations  | Basic date/time operations using plain (timezone-free) Temporal types | get-current, parse-date-time, format-date-time, calculate-dates, compare-dates, validate-dates |
-| Zoned Date Operations | IANA timezone-aware date operations                                   | zoned-date-ops                                                                                 |
-| Conversion            | Converting between temporal types, unix time, and UTC                 | convert-types                                                                                  |
-| Integration           | Integrating gmt with application frameworks and linting tools         | app-integration, lint-package-suggestion                                                       |
+| Core Date Operations  | Basic date/time operations — get/parse/format/compare/validate          | gmt-basics                                                                                     |
+| Arithmetic            | Add/subtract, durations, interval range math                            | gmt-arithmetic                                                                                 |
+| Zoned Date Operations | IANA timezone-aware date operations, DST disambiguation               | gmt-timezone                                                                                   |
+| Integration           | Application framework integration, cache keys, lint package selection | gmt-integration                                                                                |
+| Contributor           | Library maintainer workflows — issues, PRs, implementation, testing   | issue-creation, pr-contribution, new-method-implementation, unit-test-generation, api-expansion-workflow |
 
 ## Skill Inventory
 
 | Skill                   | Type        | Domain                | What it covers                                                                                                   | Failure modes |
 | ----------------------- | ----------- | --------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------- |
-| get-current             | core        | Core Date Operations  | getNow, getToday, getSystemTimeZone, getTimeZones, getUnixNow, getUtcNow                                         |               |
-| parse-date-time         | core        | Core Date Operations  | parseYearFromDate, parseMonthFromDate, parseDayFromDate, parseHourFromTime...                                    |               |
-| format-date-time        | core        | Core Date Operations  | formatDate, formatTime, formatDateTime                                                                           |               |
-| calculate-dates         | core        | Core Date Operations  | addDays, addMonths, addYears, subtractTime                                                                       |               |
-| compare-dates           | core        | Core Date Operations  | isAfterDate, isBeforeDate, areDatesEqual, isWeekend, isZonedWeekend, getLocaleDayOfWeek, getLocaleZonedDayOfWeek |               |
-| validate-dates          | core        | Core Date Operations  | isValidDate, isValidTime, isValidDateTime                                                                        |               |
-| zoned-date-ops          | core        | Zoned Date Operations | getZonedNow, formatZonedDateTime, isValidTimezone, convertUtcToZoned...                                          |               |
-| convert-types           | core        | Conversion            | convertPlainToZoned, convertZonedToPlain, convertUtcToUnix...                                                    |               |
-| app-integration         | composition | Integration           | Framework integration, cache keys, router params                                                                 |               |
-| lint-package-suggestion | composition | Integration           | ESLint, Biome, Oxlint package selection                                                                          |               |
-| issue-creation          | lifecycle   | Core Date Operations  | Feature requests, missing methods                                                                                |               |
-| pr-contribution         | lifecycle   | Integration           | PR workflow, tests, contribution                                                                                 |               |
+| gmt-basics              | core        | Core Date Operations  | getNow, getToday, formatDate, formatRelativeDate, isAfterDate, isValidDate, isValidTimeZone, parseDateWithPattern, getLocaleMonthNames |               |
+| gmt-arithmetic          | core        | Arithmetic            | addDate, subtractTime, diffDate, clampDate, closestDateTo, addBusinessDays, duration API, interval math          |               |
+| gmt-timezone            | core        | Zoned Date Operations | getZonedNow, formatZonedDateTime, convertPlainDateTimeToZoned, addZoned, startOfZoned, hasDaylightSaving         |               |
+| gmt-integration         | composition | Integration           | Cache keys, router/query params, table-sort keys, lint package selection                                          |               |
+| issue-creation          | lifecycle   | Contributor           | Feature requests, missing methods, issue templates                                                             |               |
+| pr-contribution         | lifecycle   | Contributor           | PR workflow, tests, contribution guidelines                                                                      |               |
+| new-method-implementation | maintainer | Contributor        | Adding methods to gmt source                                                                                   |               |
+| unit-test-generation    | maintainer | Contributor           | Writing tests for internal code                                                                                |               |
+| api-expansion-workflow  | lifecycle   | Contributor           | Feature request workflow                                                                                       |               |
 
 ## Lifecycle Skills
 
@@ -35,33 +33,36 @@ Temporal-based date and time utilities with timezone support and polyfill integr
 | issue-creation  | Guide consumers to create proper GitHub issues for missing functionality |
 | pr-contribution | Guide consumers to open PRs with improvements                            |
 
-## Existing Skills (Maintainer-focused)
+## Contributor Skills (Maintainer-focused)
+
+These skills live under `skills/contributor/` and are excluded from the npm
+package via `.npmignore` — they are for library maintainers only, not shipped
+consumers.
 
 | Skill                     | Type       | Notes                           |
 | ------------------------- | ---------- | ------------------------------- |
 | new-method-implementation | maintainer | Adding methods to gmt source    |
 | unit-test-generation      | maintainer | Writing tests for internal code |
-| api-expansion-workflow    | maintainer | Feature request workflow        |
+| api-expansion-workflow    | lifecycle  | Feature request workflow        |
+
+## Skill file structure
+
+- **Consumer skills** (shipped in the npm tarball): `skills/gmt-basics/`,
+  `skills/gmt-arithmetic/`, `skills/gmt-timezone/`, `skills/gmt-integration/`
+  — lightweight routing pointers (~30-60 lines each) that point agents to the
+  README and source JSDoc for full API details.
+- **Contributor skills** (excluded from the npm tarball via `.npmignore`):
+  `skills/contributor/<slug>/SKILL.md` — maintainer workflows.
 
 ## Recommended Skill File Structure
 
-- **Core consumer skills:** get-current, parse-date-time, format-date-time, calculate-dates, compare-dates, validate-dates
-- **Timezone skills:** zoned-date-ops, convert-types
-- **Integration skills:** app-integration, lint-package-suggestion
-- **Lifecycle skills:** issue-creation, pr-contribution
-- **Maintainer skills:** new-method-implementation, unit-test-generation (in packages/gmt/skills/)
-
-## Gaps Identified
-
-- Consumer-facing skills for basic operations need to be documented
-- issue-creation and pr-contribution are the priority additions
+- **Consumer skills:** gmt-basics, gmt-arithmetic, gmt-timezone, gmt-integration
+- **Contributor skills:** issue-creation, pr-contribution, new-method-implementation, unit-test-generation, api-expansion-workflow
 
 ## Notes
 
-This is a lightweight domain map derived from existing skills. The library is well-structured with clear separation between plain/zoned/unix/utc operations. Core consumer use cases center on:
-
-1. Getting current date/time
-2. Parsing date components
-3. Formatting for display
-4. Date arithmetic
-5. Timezone handling
+Consumer-facing skills are deliberately slim routing pointers. They carry core
+rules and point agents to `README.md` and source JSDoc for API signatures,
+locale matrices, and code examples. Contributor skills are kept separate and
+excluded from the published tarball so they do not pollute consumer
+`intent list` output.

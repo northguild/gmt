@@ -38,10 +38,10 @@ Sample output:
 
 ```
 @northguild/gmt
-  - get-current
-  - parse-date-time
-  - format-date-time
-  ...
+  - gmt-basics
+  - gmt-arithmetic
+  - gmt-timezone
+  - gmt-integration
 
 @northguild/gmt-eslint
   - first-time-setup
@@ -54,7 +54,7 @@ Sample output:
 Load the skill that matches the task into the agent's context:
 
 ```bash
-npx @tanstack/intent@latest load @northguild/gmt#format-date-time
+npx @tanstack/intent@latest load @northguild/gmt#gmt-basics
 ```
 
 The lint packages use the same `load <package>#<skill>` form:
@@ -71,7 +71,7 @@ For projects that want explicit routing, pass `--map` to bind a task keyword to 
 skill so `intent list` highlights the right match automatically:
 
 ```bash
-npx @tanstack/intent@latest install --map "formatting=format-date-time" --map "lint=first-time-setup"
+npx @tanstack/intent@latest install --map "basics=gmt-basics" --map "arithmetic=gmt-arithmetic" --map "timezone=gmt-timezone" --map "lint=first-time-setup"
 ```
 
 ## Allowlist skills
@@ -82,7 +82,7 @@ your `package.json`:
 ```json
 {
   "intent": {
-    "skills": ["@northguild/gmt#format-date-time", "@northguild/gmt#validate-dates"]
+    "skills": ["@northguild/gmt#gmt-basics", "@northguild/gmt#gmt-timezone"]
   }
 }
 ```
@@ -98,47 +98,54 @@ npx @tanstack/intent@latest stale
 
 ## Consumer-facing skills
 
-These are the skills a consumer reaches for day to day. Each links to the dox
-guide that walks through the same task end-to-end.
+These are the skills a consumer reaches for day to day. Each is a lightweight
+routing pointer (~30–60 lines) that carries the core rules and points the agent
+to the installed package's `README.md` and source JSDoc for full API signatures,
+locale matrices, and code examples — not an API dump:
 
 ### `@northguild/gmt`
 
-| Slug | Guide | Description |
+| Slug | Task area | Points to |
 | --- | --- | --- |
-| `get-current` | [Getting the Current Date and Time](/guides/core-date-operations/get-current/) | Current date/time/timestamp as ISO strings |
-| `parse-date-time` | [Parsing](/guides/core-date-operations/parsing/) | Extract components from date/time strings; decode RFC 2822/5322, HTTP, SQL, RFC 3339 |
-| `format-date-time` | [Formatting](/guides/core-date-operations/formatting/) | Format date/time for display with locale support |
-| `format-relative-time` | [Relative Time](/guides/core-date-operations/relative-time/) | Human-friendly relative strings ("yesterday", "in 2 hours") |
-| `calculate-dates` | [Plain Arithmetic](/guides/core-date-operations/plain-arithmetic/) | Add/subtract, diff, clamp, business days, locale week boundaries |
-| `durations` | [Durations](/guides/core-date-operations/durations/) | ISO 8601 duration parsing, validation, formatting |
-| `compare-dates` | [Comparisons](/guides/core-date-operations/comparisons/) | Ordering, weekend/business-day checks, locale day-of-week |
-| `validate-dates` | [Validation](/guides/core-date-operations/validation/) | String/interval/range validation, DST transitions, interval ops |
-| `zoned-date-ops` | [Zoned Operations](/guides/zoned-date-operations/zoned-operations/) | Timezone-aware arithmetic, formatting, DST disambiguation |
-| `convert-types` | [Converting Between Types](/guides/conversion/converting-types/) | plain↔zoned/unix↔UTC conversion, non-Gregorian calendars |
-| `interval-ops` | [Interval Basics](/guides/intervals/interval-basics/) | Range math: containment, overlap, intersection, union, split |
-| `app-integration` | [Application Integration](./app-integration/) | Cache keys, router/query integration patterns |
+| `gmt-basics` | Current values, parse, format, relative time, compare, validate | `README.md`, `src/plain/`, `src/zoned/` |
+| `gmt-arithmetic` | Add/subtract, diff, durations, interval range math | `README.md`, `src/plain/`, `src/duration/`, `src/plain/interval/` |
+| `gmt-timezone` | Zoned get/format/convert, DST disambiguation | `README.md`, `src/zoned/`, `src/unix/`, `src/utc/` |
+| `gmt-integration` | Cache keys, router/query params, lint package selection | `README.md`, lint package READMEs |
+
+> **Skills are routing pointers, not API documentation.** When a skill is loaded,
+> the agent should read the installed package's `README.md` and the JSDoc of the
+> specific function it intends to call for full signatures, locale matrices, and
+> code examples. The skill files carry the core rules and common pitfalls; the
+> README carries the details.
 
 ### `@northguild/gmt-eslint` / `gmt-oxlint` / `gmt-biome`
 
 | Slug | Guide | Description |
-| --- | --- | --- |
+| --- --- | --- | --- |
 | `first-time-setup` | [Lint Package Selection](/guides/integration/linting/) | Install and wire the lint package; verify Date-ban rules active |
 | `migration-refactor` | — | Migrate existing code off `Date` APIs |
 | `ci-enforcement` | — | Set up CI enforcement of lint rules |
 
-## Maintainer / lifecycle skills
+## Contributor skills
 
-The `@northguild/gmt` package also ships skills intended for contributors, not
-consumers. These are not listed by `intent install` for end users and have no
-corresponding dox guide:
+Skills intended for library maintainers — **not** shipped in the npm tarball
+(excluded via `.npmignore`). These are for contributing to `@northguild/gmt`
+itself:
 
 | Slug | Description |
 | --- | --- |
-| `issue-creation` | For reporting issues to maintainers |
-| `pr-contribution` | For contributing PRs |
-| `new-method-implementation` | For contributing new methods |
-| `unit-test-generation` | For writing/updating tests |
-| `api-expansion-workflow` | For handling feature-requests |
+| `issue-creation` | Create feature requests with proper details for maintainers |
+| `pr-contribution` | Contribute improvements via pull requests |
+| `new-method-implementation` | Implement or extend a gmt API in `packages/gmt/src` |
+| `unit-test-generation` | Write or update gmt unit tests |
+| `api-expansion-workflow` | Handle feature requests for missing gmt functionality |
+
+Load a contributor skill only when the user is contributing to `@northguild/gmt`
+itself:
+
+```bash
+npx @tanstack/intent@latest load @northguild/gmt#issue-creation
+```
 
 ## See also
 
