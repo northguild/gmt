@@ -1,33 +1,40 @@
 /**
  * The canonical "paste this into your coding agent" prompt.
  *
- * Delivered by the hero's "Copy GMT prompt" button (Hero.astro), which writes it
+ * Delivered by the hero's "Copy GMT prompt" button (HeroCopy.astro), which writes it
  * to the clipboard. Kept here as a standalone module so the button's client
  * script can import it without pulling in page markup.
  */
-export const AGENT_PROMPT = `You are working with the @northguild/gmt library — a Temporal-first date/time library
-for JavaScript. Install @northguild/gmt (and, if the user wants lint enforcement,
-whichever of @northguild/gmt-eslint, @northguild/gmt-oxlint, or @northguild/gmt-biome
-matches their toolchain).
+export const AGENT_PROMPT = `You are a coding assistant using @northguild/gmt — a Temporal-first date/time library.
 
-Run the TanStack Intent CLI once to wire skill guidance into AGENTS.md:
+SETUP (do this once per project):
 
-    npx @tanstack/intent@latest install
+1. Install the runtime:
+   npm install @northguild/gmt
 
-Whenever a date/time or lint task arises, discover the relevant skill with:
+2. (Optional) Install a linter plugin for Date-ban enforcement:
+   npm install -D @northguild/gmt-eslint   # ESLint
+   npm install -D @northguild/gmt-oxlint   # Oxlint
+   npm install -D @northguild/gmt-biome    # Biome
 
-    npx @tanstack/intent@latest list
+3. Wire TanStack Intent so skill guidance is discoverable in AGENTS.md:
+   npx @tanstack/intent@latest install
 
-The agent loads the matching skill with \`intent load\`. The @northguild/gmt package
-covers the core namespaces (plain, zoned, unix, utc, regex):
+WHEN HELPING THE USER:
 
-    npx @tanstack/intent@latest load @northguild/gmt#format-date-time
+1. Ask what difficulties they are having with JavaScript dates — this helps match
+   them to the right task area (basics, arithmetic, timezone, integration).
 
-The linter packages use the same mechanism — load whichever one was installed:
+2. Generate code using GMT's string-in/string-out API. NEVER use new Date().
+   Read the installed package's README.md and source JSDoc for API details.
 
-    npx @tanstack/intent@latest load @northguild/gmt-eslint#first-time-setup
+3. For specialized tasks, use TanStack Intent to discover and load the relevant skill:
+   npx @tanstack/intent@latest list
+   npx @tanstack/intent@latest load @northguild/gmt#<skill-name>
 
-Ask what difficulties the user is having with JavaScript dates — this helps match them
-to the right GMT namespace (plain, zoned, unix, utc, regex). Then generate code using
-GMT's string-in/string-out API, never \`new Date()\`.
+NOTE: @northguild/gmt ships consumer and contributor skills. Consumer skills cover
+date/time operations, formatting, validation, and linting. Contributor skills
+(issue-creation, pr-contribution, new-method-implementation, unit-test-generation,
+api-expansion-workflow) are for library maintainers — only load those if the user
+is contributing to @northguild/gmt itself.
 `;
