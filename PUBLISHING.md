@@ -1,20 +1,28 @@
 # Publishing to npm
 
-**Nobody authenticates at npm to make a release, and nothing is published from a
-laptop.** CI publishes every package with a short-lived OIDC credential (npm
-trusted publishing), which also attaches a provenance attestation. There is no
-npm token in this repo.
+Releasing is two merges. Nobody logs into npm, and nothing is published from a
+laptop.
 
-Releasing is two ordinary code reviews:
+1. **Merge a PR that carries a `.changeset/*.md`.** This publishes nothing.
+2. **Merge the "Version Packages" PR** a bot opens for you. This ships.
 
-1. Merge a feature PR that carries a `.changeset/*.md`.
-2. Merge the **"Version Packages"** PR a bot opens for you.
+```
+you merge a PR carrying a changeset
+        │
+        ▼
+a bot opens (or updates) the "Version Packages" PR
+        │        versions bumped, CHANGELOG.md written, CI running on it
+        ▼
+you merge that PR   ◄── the go/no-go
+        │
+        ▼
+CI publishes to npm, pushes tags, creates GitHub Releases, posts to #gmt
+```
 
-The second merge is the go/no-go — it shows the exact versions and the exact
-changelog text, with CI running on it, before anything reaches npm. There is no
-release form and no third step.
+Merging an ordinary feature PR can never publish anything, and never changes a
+version on `main`. Only merging the Version Packages PR does.
 
-Packages (each independently versioned):
+Packages, each independently versioned:
 
 | Package dir           | npm name                 |
 | --------------------- | ------------------------ |
@@ -23,138 +31,93 @@ Packages (each independently versioned):
 | `packages/gmt-eslint` | `@northguild/gmt-eslint` |
 | `packages/gmt-oxlint` | `@northguild/gmt-oxlint` |
 
-Because versions are independent, tags are per-package and always look like
-`@northguild/<pkg>@<version>` (e.g. `@northguild/gmt@1.15.0`) — Changesets' own
-format. There is no repo-wide `vX.Y.Z` tag.
+Tags are per-package — `@northguild/gmt@1.15.0` — because the versions are
+independent. There is no repo-wide `vX.Y.Z` tag.
 
 ---
 
-## The flow
+## If you changed code
 
-`.github/workflows/release.yml` runs on every push to `main` and picks one of
-three modes via `changesets/action/select-mode`:
+Write a changeset. That's your whole part in a release.
 
-```
-feature PR: code + .changeset/*.md
-        │  merge
-        ▼
-  mode: version  ──►  opens/updates the "Version Packages" PR
-        │              (bumps package.json, writes CHANGELOG.md,
-        │               deletes the consumed changeset files)
-        │  merge  ◄── THE GO/NO-GO
-        ▼
-  mode: publish  ──►  build, test, pack, npm publish via OIDC,
-                      push git tags, create GitHub Releases,
-                      announce on Discord
+1. If you changed `packages/gmt/src/`'s public API surface, update the TanStack
+   Intent skills in `packages/gmt/skills/` (via `/tanstack-intent`) in the same
+   branch — see
+   [CONTRIBUTING.md](./CONTRIBUTING.md#agent-skills).
+   They ship inside the tarball, so stale skills would go out on the next
+   publish.
 
-  mode: none     ──►  nothing to release; the run does nothing
-```
-
-`version` fires when pending changesets exist on `main`. `publish` fires when
-they don't, a package's version isn't on npm yet, **and this very push moved a
-version in a `packages/*/package.json`**.
-
-That last clause is the version guard, and it is the reason merging an ordinary
-feature PR can never publish anything. Without it, `publish` mode would also be
-reached by any unrelated commit landing while a package sat bumped-but-
-unpublished on `main` — a docs typo could ship a backlog. With it, publishing is
-welded to the "Version Packages" merge and nothing else. The run's summary says
-which mode it picked and why.
-
-### 1. Record intent (every feature branch)
-
-1. Finish your code changes.
-2. If you changed `packages/gmt/src/`'s public API surface, update the TanStack
-   Intent agent skills in `packages/gmt/skills/` (via the `/tanstack-intent`
-   skill) in the same branch — see
-   [CONTRIBUTING.md](./CONTRIBUTING.md#keeping-agent-skills-current-tanstack-intent).
-   Skills ship inside the published npm package, so stale skills would go out on
-   the next publish.
-3. Record the intended bump:
+2. Record the change:
 
    ```bash
    pnpm run changeset:add
    ```
 
-   Interactive: pick the changed package(s), pick `patch|minor|major`, write the
-   description. That description is the changelog entry and the GitHub Release
-   notes, verbatim — write it for a consumer, not for yourself.
+   Pick the changed package(s), pick `patch|minor|major`, write the description.
 
-4. Commit the generated `.changeset/*.md` with your code and push the PR.
+   **That description ships.** It becomes the `CHANGELOG.md` entry and the
+   GitHub Release notes, word for word — so write it for someone installing the
+   package, not for yourself. `/changelog` will polish it against your diff if
+   you'd rather not write it cold.
 
-`/changelog` will polish a pending changeset against the diff and the existing
-CHANGELOG style if you'd rather not write it cold.
+3. Commit the generated `.changeset/*.md` with your code.
 
-A changeset publishes nothing by itself. It's a markdown file recording what
-changed and the intended bump.
+Never hand-edit a version in `package.json`. The bot owns those.
 
-### 2. Merge the "Version Packages" PR
+## If you're shipping
 
-Once your feature PR lands, the `version` job opens (or updates) a PR titled
-**Version Packages**, authored by `github-actions[bot]`. It contains exactly
-what `pnpm run changeset:version` produces:
+Open the **Version Packages** PR and read it. It contains only what
+`changeset version` produced:
 
-- each affected `package.json` bumped, resolving `patch|minor|major` against
-  that package's own current version;
-- each affected `CHANGELOG.md` with a new section holding your changeset text;
+- each affected `package.json` bumped, `patch|minor|major` resolved against that
+  package's own current version;
+- each affected `CHANGELOG.md` with a new section holding the changeset text;
 - the consumed `.changeset/*.md` files deleted;
-- every TanStack Intent skill's `library_version` re-pinned to the new
-  `@northguild/gmt` version, via `scripts/sync-intent-version.mjs`.
+- every Intent skill's `library_version` re-pinned to the new `@northguild/gmt`
+  version.
 
-Review it like any PR. **Merging it ships those packages.** If you're not ready,
-leave it open — it keeps updating itself as more changesets land.
+Merging it publishes those packages. Not ready? Leave it open — it keeps
+updating itself as more changesets land, so you can let a release accumulate.
 
-### 3. CI publishes
+Everything the PR bumped ships together; there's no per-package pick. To hold a
+package back, hold back its changeset.
 
-On the "Version Packages" commit landing on `main`, the `publish` job:
+## When it goes wrong
 
-- installs and runs `build` + `test` for every package under `packages/`, against
-  the exact tree being packed;
-- packs the tarballs (`changesets/action/pack`);
-- publishes each one with a short-lived OIDC credential, attaching a provenance
-  attestation (`changesets/action/publish`);
-- pushes the `@northguild/<pkg>@<version>` git tags;
-- creates a GitHub Release per tag, notes taken from `CHANGELOG.md`;
-- posts what actually shipped to the `#gmt` Discord channel.
+**The publish run failed.** Fix the cause and re-run the failed job from the
+Actions UI. Nothing needs recreating, and a re-run is safe — already-published
+versions are skipped.
 
-If it fails, fix the cause and **re-run the failed job from the Actions UI**.
-Re-running replays the original push payload, so the version guard still sees
-the bump and lets it through. Nothing needs recreating; the versions are already
-committed, and `changeset publish` skips anything already on the registry.
+**Never run `npm publish` locally to unblock it.** It produces a different,
+unsigned artifact from whatever is in your working tree, and skips the
+provenance attestation.
 
-Do not reach for a local `npm publish` — it produces a different, unsigned
-artifact from whatever happens to be in your working tree.
+**A publish died partway and no run is left to retry.** Actions → Release → Run
+workflow. A manual dispatch is allowed to publish a backlog; an ordinary push
+isn't.
 
-If a publish died partway and you no longer have that run to retry (so `main`
-has versions npm is missing, but no new push is going to move a version), use
-**Actions → Release → Run workflow**. A manual dispatch bypasses the version
-guard deliberately, on the grounds that a human clicked it.
+**Nothing happened when I merged.** Check the run's summary — it says which of
+the three things it decided to do and why.
 
-> **Within one release, everything bumped ships.** Publishing is
-> per-version-PR, not per-package: every version the merged PR moved goes out
-> together. That was already true of `changeset version`, which takes no
-> per-package selector — it consumes all pending changesets at once. To hold a
-> package back, hold back its changeset, or leave the Version Packages PR
-> unmerged.
+**You want a human click between merge and npm.** Add required reviewers to the
+`release` environment (Settings → Environments → `release`). The publish then
+waits for an approval in the Actions UI.
 
-### Want a click between merge and npm?
-
-Add required reviewers to the `release` GitHub Environment (Settings →
-Environments → `release`). The publish job then waits for an approval in the
-Actions UI. That's the gate without the release form.
+> Why the pipeline is shaped this way — the OIDC exchange, the version guard,
+> the pinned action SHAs — is commented in
+> [`.github/workflows/release.yml`](./.github/workflows/release.yml), next to
+> the code it explains.
 
 ---
 
-## One-time setup (maintainers / repo admins)
+## One-time setup (repo admins)
 
-Four things, none of them recurring. Until the first is done **every publish
-fails with a 401**; until the third is done **the Version Packages PR can never
-be merged**. Both failures are silent-ish and confusing, so do these before
-relying on the flow.
+Four things, none recurring. Until #1 is done **every publish fails with a
+401**. Until #3 is done **the Version Packages PR can never be merged**.
 
 ### 1. npm trusted publishing
 
-Configure it once per package, logged in as a member of the `@northguild` org
+Once per package, logged in as a member of the `@northguild` org
 (`npm login --auth-type=web` for passkey/SSO):
 
 ```bash
@@ -167,80 +130,68 @@ for P in gmt gmt-oxlint gmt-biome gmt-eslint; do
 done
 ```
 
-Every `npm trust` call — `list` included — requires its own fresh 2FA browser
-round-trip, so expect four separate authentications, and expect the loop to stop
-and wait each time. There is no way to batch them, and an agent cannot run them
-on your behalf. **This is the last time anyone authenticates at npm for a
-release.**
+Every `npm trust` call — `list` included — needs its own fresh 2FA browser
+round-trip, so expect four separate authentications and expect the loop to stop
+and wait each time. They can't be batched, and an agent can't run them for you.
+**This is the last time anyone authenticates at npm for a release.**
 
 `--file` is the workflow's basename and `--env` must match `environment: release`
-in `release.yml` — npm matches both exactly when validating the OIDC token, so
-renaming either the workflow file or the environment breaks every publish until
-all four entries are re-registered.
-
-Check and manage what's configured with:
+in `release.yml`. npm matches both exactly, so **renaming the workflow file or
+the environment breaks every publish** until all four entries are re-registered.
 
 ```bash
-npm trust list "@northguild/gmt"     # show the current entry
+npm trust list "@northguild/gmt"                  # show the current entry
 npm trust revoke "@northguild/gmt" --id=<trust-id>
 ```
 
-The same settings are on npmjs.com → the package → Settings → Trusted Publisher
-→ GitHub Actions: organization `northguild`, repository `gmt`, workflow
-`release.yml`, environment `release`.
+The same settings live on npmjs.com → the package → Settings → Trusted Publisher
+→ GitHub Actions. Each package allows exactly one entry; a package without one
+fails its publish with a 401 while the others carry on.
 
-All four packages need their own entry, and each package allows only one at a
-time. A package without one fails at its `npm publish` with a 401.
-
-> **Provenance:** trusted publishing generates a provenance attestation for
-> every public package in a public repo — it is not opt-in. npm requires a
-> public `repository` field matching the publishing source to do that, so
-> **every publishable `packages/*/package.json` must keep its `repository`
-> block**, `directory` included. Dropping it breaks that package's release.
+> **Provenance:** trusted publishing attaches a provenance attestation to every
+> public package in a public repo — not opt-in. npm requires a public
+> `repository` field matching the publishing source, so **every publishable
+> `packages/*/package.json` must keep its `repository` block**, `directory`
+> included. Dropping it breaks that package's release.
 > ([npm docs](https://docs.npmjs.com/generating-provenance-statements))
 
-### 2. Let Actions open the version PR
+### 2. Let Actions open PRs
 
 Settings → Actions → General → Workflow permissions → tick **"Allow GitHub
-Actions to create and approve pull requests."** Without it the `version` job
-cannot open the Version Packages PR and the flow stalls at step 2.
+Actions to create and approve pull requests."** Without it the bot can't open
+the Version Packages PR at all.
 
 ### 3. A release-bot GitHub App
 
-`main` is protected by a ruleset requiring **25 status checks**, all from
-`ci.yml`. GitHub deliberately does not start a workflow run for events triggered
-by the built-in `GITHUB_TOKEN` — it is the recursion guard. So a version PR
-opened with `GITHUB_TOKEN` would report *zero* of those 25 checks, forever, and
-nobody but an org admin could merge it. App tokens and PATs do trigger runs.
+`main` requires 25 status checks, and GitHub never starts a workflow run for
+events triggered by the built-in `GITHUB_TOKEN`. So a version PR opened with
+that token would report *zero* of the 25 forever and nobody could merge it. App
+tokens do trigger runs; that's the whole reason the App exists.
 
 Create a GitHub App in the `northguild` org (Settings → Developer settings →
 GitHub Apps → New):
 
-- **Repository permissions:** Contents → Read and write, Pull requests → Read
-  and write. Nothing else.
-- Install it on `northguild/gmt` only.
-- Generate a private key.
+- **Repository permissions:** Contents read/write, Pull requests read/write.
+  Nothing else.
+- Install it on `northguild/gmt` only, and generate a private key.
 
-Then, on the repo: put the App's **App ID** in a *variable* named
-`RELEASE_BOT_APP_ID` (Settings → Secrets and variables → Actions → Variables)
-and the private key in a *secret* named `RELEASE_BOT_PRIVATE_KEY`.
+Then put the App ID in a **variable** named `RELEASE_BOT_APP_ID` and the private
+key in a **secret** named `RELEASE_BOT_PRIVATE_KEY` (Settings → Secrets and
+variables → Actions). `release.yml` fails fast with a readable error if the
+variable is missing, rather than opening an unmergeable PR.
 
-`release.yml` fails fast with a readable error if `RELEASE_BOT_APP_ID` is
-missing, rather than opening a PR nobody can merge.
-
-> A fine-grained PAT with the same two permissions works identically — pass it
-> as `github-token` instead of minting an App token. It's less setup and a
-> worse trade: PATs are long-lived, belong to a person, and expire on their own
-> schedule. App tokens last an hour and belong to the org.
+> A fine-grained PAT with the same two permissions works identically. Less
+> setup, worse trade: PATs are long-lived, belong to a person, and expire on
+> their own schedule.
 
 ### 4. Discord
 
-`DISCORD_WEBHOOK` lives in the `release` environment and points at `#gmt`. If it
-is unset the announcement step is skipped and the publish still succeeds.
+`DISCORD_WEBHOOK` lives in the `release` environment and points at `#gmt`. If
+it's unset the announcement is skipped and the publish still succeeds.
 
-Both secrets belong to the protected `release` environment, not to repo-level
-secrets, so publishing is gated by whatever reviewers that environment requires.
-Restrict who can approve its runs.
+Both secrets belong to the protected `release` environment rather than to
+repo-level secrets, so publishing inherits whatever approval that environment
+requires. Restrict who can approve its runs.
 
 Docs: [npm trusted publishers](https://docs.npmjs.com/trusted-publishers) · [GitHub Environments](https://docs.github.com/en/actions/deployment/targeting-specific-environments/using-environments-for-deployments) · [changesets/action](https://github.com/changesets/action)
 
@@ -248,16 +199,14 @@ Docs: [npm trusted publishers](https://docs.npmjs.com/trusted-publishers) · [Gi
 
 ## Adding a new publishable package
 
-**No CI change is needed.** `release.yml` carries no package list — Changesets
-discovers workspace packages itself and skips private ones. Drop the directory
-in and it's picked up.
+**No CI change is needed** — nothing carries a package list; Changesets
+discovers workspace packages and skips private ones.
 
-Everything that *does* need doing is on the npm side, and none of it fails at
-build or lint time — it fails at `npm publish`, after the version is already
-committed:
+The work is all on the npm side, and none of it fails at build or lint time. It
+fails at `npm publish`, after the version is already committed:
 
-1. **Give the manifest the metadata provenance requires.** `repository` (with
-   `directory`), plus `homepage` and `bugs` to match the other packages:
+1. **`repository`, with `directory`** (plus `homepage` and `bugs`, to match the
+   others). Provenance can't be generated without it:
 
    ```json
    "repository": {
@@ -267,23 +216,23 @@ committed:
    }
    ```
 
-2. **Set `publishConfig`.** Scoped packages are private by default:
+2. **`publishConfig`** — scoped packages are private by default:
 
    ```json
    "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org/" }
    ```
 
-3. **Publish version 1 by hand, locally.** This is the one exception to "nothing
-   is published from a laptop", and it happens once per package, ever: a
-   trusted-publisher configuration attaches to a package that already exists on
-   the registry, so the very first publish cannot come from CI.
+3. **Publish version 1 by hand.** The one exception to "nothing is published
+   from a laptop", once per package ever: a trusted-publisher entry attaches to
+   a package that already exists on the registry, so the first publish can't
+   come from CI.
 
    ```bash
    cd packages/<new-pkg>
    npm publish --access public
    ```
 
-4. **Then configure trust, so every later release is automated:**
+4. **Then configure trust**, so every later release is automated:
 
    ```bash
    npm trust github "@northguild/<new-pkg>" \
@@ -292,10 +241,6 @@ committed:
    ```
 
 5. **Add it to the package table** at the top of this file.
-
-From the next version onward it releases like everything else.
-
----
 
 ## Semver cheat-sheet
 
