@@ -177,7 +177,7 @@ main: "Version Packages" commit
    Publish one draft per package you actually want to ship. Leaving a draft
    unpublished ships nothing; the tag stays put and you can publish it later.
 
-   Or run the **`/release` skill**, which does the same thing from your terminal.
+   Or run the **`/npm-publish` skill**, which does the same thing from your terminal.
    It finds every package tag whose version isn't on npm yet, asks you to pick
    which ones to ship from a list showing each version, then publishes them and
    watches the runs. It publishes the same GitHub Release via `gh`, so the
@@ -298,7 +298,7 @@ git push --follow-tags
 
 **No CI change is needed.** `tag-on-version-change.yml` globs
 `packages/*/package.json` and skips private ones, `publish.yml` derives the
-package from the release tag, and the `/release` skill reads the same glob — none
+package from the release tag, and the `/npm-publish` skill reads the same glob — none
 of them carries a hardcoded package list. Drop the directory in and they pick it
 up.
 
@@ -347,7 +347,7 @@ exist:
 5. **Add it to the package table** at the top of this file.
 
 From the next version onward it releases like everything else: bump, merge, pick
-it in `/release` or publish its draft.
+it in `/npm-publish` or publish its draft.
 
 ---
 

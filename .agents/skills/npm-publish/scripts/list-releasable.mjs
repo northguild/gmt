@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
  * Lists every package tag whose version has not yet reached npm, with the state
- * of its GitHub Release. This is the discovery step of the `/release` skill.
+ * of its GitHub Release. This is the discovery step of the `/npm-publish` skill.
  *
  * "Releasable" is defined against npm, not against GitHub: a tag counts as
  * unreleased iff its version is absent from the registry. Keying off draft
  * releases instead would miss tags whose draft was deleted, tags created by a
  * local `changeset:publish`, and tags from a tagging run that half-failed.
  *
- * Usage: node .agents/skills/release/scripts/list-releasable.mjs [--no-fetch]
+ * Usage: node .agents/skills/npm-publish/scripts/list-releasable.mjs [--no-fetch]
  * Output: JSON array on stdout. Exit 0 even when empty — an empty list is a
  * valid answer ("nothing to release"), not an error.
  */

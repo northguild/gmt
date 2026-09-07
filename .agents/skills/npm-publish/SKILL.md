@@ -1,5 +1,5 @@
 ---
-name: release
+name: npm-publish
 description: Find package tags that haven't reached npm and publish the ones the user picks, through the CI publish pipeline. Use when the user asks to "do the release", "publish the packages", "ship gmt", or "release <package>".
 argument-hint: "[package…]"
 ---
@@ -9,14 +9,20 @@ Ship packages by publishing their **GitHub Release**. That is the event
 the same pipeline as clicking Publish in the GitHub UI — build, test, `npm pack
 --dry-run`, `npm publish` via trusted publishing, Discord announcement.
 
-You never run `npm publish` yourself. CI does, from a clean checkout of the tag.
+**Despite the name, you never run `npm publish` yourself — and running it would
+be a bug, not a shortcut.** CI runs it, from a clean checkout of the tag, with a
+provenance attestation via trusted publishing. A local publish produces a
+different artifact, unsigned, from whatever happens to be in your working tree.
+This skill's job is to trigger that pipeline and watch it, nothing more.
 
 [PUBLISHING.md](../../../PUBLISHING.md) is the source of truth for the release
 flow; if anything here contradicts it, follow PUBLISHING.md and say so.
 
-## This skill does not bump versions
+## What this skill does not do
 
-It only publishes versions that have **already been bumped, merged, and tagged**.
+It does not run `npm publish`. It does not bump versions.
+
+It only releases versions that have **already been bumped, merged, and tagged**.
 It never runs `changeset version`, never edits a `package.json` version, and
 never creates a tag. Those happen on a PR, and tags are created by
 `tag-on-version-change.yml` when that PR lands on `main`.
@@ -33,7 +39,7 @@ publishing a release from inside Actions would publish it and silently run nothi
 ### 1. Find what's releasable
 
 ```bash
-node .agents/skills/release/scripts/list-releasable.mjs
+node .agents/skills/npm-publish/scripts/list-releasable.mjs
 ```
 
 Returns a JSON array of every package tag whose version is **not yet on npm** —
