@@ -131,8 +131,10 @@ Actions UI. That's the gate without the release form.
 
 ## One-time setup (maintainers / repo admins)
 
-Three things, none of them recurring. Until the first is done, **every publish
-fails with a 401** — that is the single most common cause of a red release.
+Four things, none of them recurring. Until the first is done **every publish
+fails with a 401**; until the third is done **the Version Packages PR can never
+be merged**. Both failures are silent-ish and confusing, so do these before
+relying on the flow.
 
 ### 1. npm trusted publishing
 
@@ -187,7 +189,35 @@ Settings → Actions → General → Workflow permissions → tick **"Allow GitH
 Actions to create and approve pull requests."** Without it the `version` job
 cannot open the Version Packages PR and the flow stalls at step 2.
 
-### 3. Discord
+### 3. A release-bot GitHub App
+
+`main` is protected by a ruleset requiring **25 status checks**, all from
+`ci.yml`. GitHub deliberately does not start a workflow run for events triggered
+by the built-in `GITHUB_TOKEN` — it is the recursion guard. So a version PR
+opened with `GITHUB_TOKEN` would report *zero* of those 25 checks, forever, and
+nobody but an org admin could merge it. App tokens and PATs do trigger runs.
+
+Create a GitHub App in the `northguild` org (Settings → Developer settings →
+GitHub Apps → New):
+
+- **Repository permissions:** Contents → Read and write, Pull requests → Read
+  and write. Nothing else.
+- Install it on `northguild/gmt` only.
+- Generate a private key.
+
+Then, on the repo: put the App's **App ID** in a *variable* named
+`RELEASE_BOT_APP_ID` (Settings → Secrets and variables → Actions → Variables)
+and the private key in a *secret* named `RELEASE_BOT_PRIVATE_KEY`.
+
+`release.yml` fails fast with a readable error if `RELEASE_BOT_APP_ID` is
+missing, rather than opening a PR nobody can merge.
+
+> A fine-grained PAT with the same two permissions works identically — pass it
+> as `github-token` instead of minting an App token. It's less setup and a
+> worse trade: PATs are long-lived, belong to a person, and expire on their own
+> schedule. App tokens last an hour and belong to the org.
+
+### 4. Discord
 
 `DISCORD_WEBHOOK` lives in the `release` environment and points at `#gmt`. If it
 is unset the announcement step is skipped and the publish still succeeds.
