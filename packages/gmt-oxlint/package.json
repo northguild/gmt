@@ -61,8 +61,7 @@
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "prepack": "npm run build",
     "pack": "npm pack --dry-run",
-    "publish:dry-run": "npm publish --access public --dry-run",
-    "publish:public": "npm publish --access public"
+    "publish:dry-run": "npm publish --access public --dry-run"
   },
   "devDependencies": {
     "@tanstack/intent": "^0.3.8",

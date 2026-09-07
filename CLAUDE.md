@@ -30,7 +30,6 @@ Reusable slash commands live in `.agents/skills/`. Run them with `/skill-name`.
 | `/pr-desc`         | Generates a full PR title and description from the branch diff              |
 | `/code-review`     | GMT-specific code review guidance and checklist                             |
 | `/tanstack-intent` | Keeps `packages/gmt/skills/` in sync with source changes                    |
-| `/npm-publish`     | Publishes already-tagged versions to npm via the CI publish pipeline       |
 
 ## Repo Layout (quick orientation)
 

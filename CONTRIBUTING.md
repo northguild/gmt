@@ -352,35 +352,30 @@ All Biome rules are in [biome.json](./biome.json) (Grit plugins live in [package
 
 ## Publishing
 
-Pre-alpha. Each package follows semantic versioning and is published independently to npm.
+Pre-alpha. Each package follows semantic versioning and is published
+independently to npm.
 
-Publishing is manual only. We use [Changesets](https://github.com/changesets/changesets) to manage per-package versioning. Nothing publishes automatically — releases are triggered by maintainers.
+**Publishing is automated, and nothing is published from a laptop.** We use
+[Changesets](https://github.com/changesets/changesets) for per-package
+versioning; CI builds, tests and publishes each package from its git tag, with a
+provenance attestation via npm trusted publishing. There is no `NPM_TOKEN` to
+create and no local publish path.
 
-Two supported publish paths:
+What you do as a contributor:
 
-- **Local publish (recommended):** run Changesets locally with your npm credentials (passkey). This gives maintainers direct control and creates git tags when publishing.
-- **GitHub Actions (optional):** run the manual `Publish Package` workflow at `.github/workflows/publish.yml` via Actions → Run workflow. The workflow reads `NPM_TOKEN` from secrets and is gated by the `release` environment.
+- On your feature branch, run `pnpm run changeset:add` to record the change and
+  the desired bump, then commit the generated `.changeset/*.md` alongside your
+  code. Changesets only acts on files in `.changeset/`, so a PR without one
+  bumps nothing.
+- That's all. A bot opens a separate "Version Packages" PR with the bumps and
+  changelog entries; merging that PR is what publishes to npm, pushes the tags,
+  and creates the GitHub Releases.
+- Prefer Changesets over hand-editing a `package.json` version — a manual bump
+  still gets tagged, but it skips the changelog the release notes are built
+  from.
 
-Prerequisites for Actions-based publishing (optional):
-
-1. Create an npm access token with `Publish` permission for the `@northguild` org at https://www.npmjs.com/.
-2. Add it as a repository secret named `NPM_TOKEN` (or add it to the `release` environment) in GitHub (`Settings → Secrets` / `Settings → Environments`).
-
-Basic Changesets workflow:
-
-- On your feature branch, run `pnpm run changeset:add` to record the change and desired bump.
-- Merge the PR. If no `.changeset/*` files were merged, create changesets before versioning — Changesets only acts on files in `.changeset/`.
-- On `main`, run `pnpm run changeset:version` to apply version bumps and update changelogs; commit and push those changes.
-- To publish locally, run `pnpm run changeset:publish` from the repo root — this will publish packages and create package-scoped git tags.
-- If you use the Actions workflow to publish, run the workflow, then run `pnpm exec changeset tag` locally and `git push --follow-tags` to synchronize tags (Actions publish does not create tags).
-
-Notes:
-
-- Prefer using Changesets rather than manually bumping `package.json`; manual bumps can be used but they bypass the Changesets workflow.
-- Verify packages with `npm pack --dry-run` before publishing. For `@northguild/gmt`, run the dry-run after building.
-- The `Publish Package` workflow will build `@northguild/gmt` automatically when publishing that package.
-
-See [PUBLISHING.md](./PUBLISHING.md) for the full, step-by-step guide and examples.
+See [PUBLISHING.md](./PUBLISHING.md) for the full release flow, the one-time
+trusted-publishing setup, and how to add a new publishable package.
 
 CI strategy:
 

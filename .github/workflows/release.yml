@@ -1,0 +1,192 @@
+name: Release
+
+# One workflow, three modes, chosen by `changesets/action/select-mode`:
+#
+#   pending .changeset/*.md on main  -> version : open/update the
+#                                       "Version Packages" PR
+#   that PR merged (versions bumped) -> publish : pack, publish to npm,
+#                                       push tags, cut GitHub Releases
+#   neither                          -> none    : nothing to do
+#
+# Merging the "Version Packages" PR is the go/no-go. It shows the exact versions
+# and the exact CHANGELOG text, with CI on it, before anything reaches npm —
+# so there is no second gate and no release form.
+#
+# Nothing here holds an npm token. The publish job runs with `id-token: write`
+# and npm exchanges that for a short-lived credential (trusted publishing),
+# which also attaches a provenance attestation.
+#
+# ⚠ The `npm trust` entries pin this file's basename (`release.yml`) and the
+# `release` environment. Renaming either breaks every publish with a 401 until
+# all four entries are re-registered — see PUBLISHING.md.
+#
+# The changesets actions are pinned to a commit SHA, not to `@v2`: upstream's
+# `v2` is a *branch* that moves, and this job holds `id-token: write`. Bump the
+# pin deliberately, checking the diff, the way you would any other dependency.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# A release must never be cancelled halfway through, so this queues rather than
+# cancelling in-flight runs the way ci.yml does.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  mode:
+    name: Select mode
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write # select-mode uploads the publish plan as an artifact
+    outputs:
+      mode: ${{ steps.select.outputs.mode }}
+      publish-plan: ${{ steps.select.outputs.publish-plan-artifact-id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm approve-builds --all
+      - run: pnpm install --frozen-lockfile
+
+      - uses: changesets/action/select-mode@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        id: select
+
+  version:
+    name: Version Packages PR
+    needs: mode
+    if: needs.mode.outputs.mode == 'version'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push the changeset-release/main branch
+      pull-requests: write # open / update the PR
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm approve-builds --all
+      - run: pnpm install --frozen-lockfile
+
+      - uses: changesets/action/version@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        with:
+          # Not a bare `changeset version`: this also runs
+          # scripts/sync-intent-version.mjs, which pins every TanStack Intent
+          # skill's `library_version` to the new @northguild/gmt version, so the
+          # skills that ship inside the tarball can never go out stale.
+          script: pnpm run changeset:version
+        env:
+          # @changesets/changelog-github resolves each entry's PR number and
+          # author through the API while writing CHANGELOG.md.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    name: Publish to npm
+    needs: mode
+    if: needs.mode.outputs.mode == 'publish'
+    runs-on: ubuntu-latest
+    # Protected environment: holds DISCORD_WEBHOOK, and is where required
+    # reviewers go if you ever want a human click between merge and npm.
+    environment: release
+    permissions:
+      contents: write # push git tags, create GitHub Releases
+      id-token: write # OIDC -> npm trusted publishing
+      actions: read # read the publish plan artifact from the `mode` job
+    env:
+      # Job-level so the notify step can test whether it is configured at all —
+      # an unset webhook must not fail an otherwise successful publish.
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: "https://registry.npmjs.org"
+          # Deliberately no `cache: pnpm` here, unlike every other job. npm's
+          # release guidance is to never restore a dependency cache in a build
+          # that publishes — a poisoned entry would end up inside the tarball.
+          # This job runs a handful of times a month; a cold install is cheap.
+
+      # Trusted publishing needs npm >= 11.5.1, which is newer than the npm
+      # bundled with Node 24.
+      - name: Ensure an npm with OIDC support
+        run: npm install -g npm@latest
+
+      - run: pnpm approve-builds --all
+      - run: pnpm install --frozen-lockfile
+
+      # Last gate before the tarballs become irreversible. ci.yml already ran
+      # the full Node x timezone matrix on this commit; this re-runs the
+      # publishable packages' own suites against the exact tree being packed.
+      - name: Build
+        run: pnpm --filter "./packages/*" --if-present run build
+
+      - name: Test
+        run: pnpm --filter "./packages/*" --if-present run test
+
+      - uses: changesets/action/pack@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        id: pack
+        with:
+          publish-plan-artifact-id: ${{ needs.mode.outputs.publish-plan }}
+
+      - uses: changesets/action/publish@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        id: publish
+        with:
+          pack-dir-artifact-id: ${{ steps.pack.outputs.pack-dir-artifact-id }}
+          # Changesets' own tag format, `@northguild/<pkg>@<version>` — the same
+          # one every existing tag and GitHub Release already uses.
+          push-git-tags: true
+          create-github-releases: true
+
+      # Posted by curl rather than a third-party action: this job carries
+      # `id-token: write`, so the fewer external actions running in it the
+      # better. Announces only what actually reached npm.
+      - name: Announce on Discord
+        if: steps.publish.outputs.published == 'true' && env.DISCORD_WEBHOOK != ''
+        env:
+          PUBLISHED: ${{ steps.publish.outputs.published-packages }}
+        run: |
+          set -euo pipefail
+          PAYLOAD=$(node -e '
+            const pkgs = JSON.parse(process.env.PUBLISHED);
+            const repo = process.env.GITHUB_REPOSITORY;
+            const content = pkgs
+              .map((p) => {
+                const tag = p.name + "@" + p.version;
+                const url = "https://github.com/" + repo + "/releases/tag/" + encodeURIComponent(tag);
+                return "🚀 `" + tag + "` is live on npm — <" + url + ">";
+              })
+              .join("\n");
+            process.stdout.write(JSON.stringify({ content }));
+          ')
+          curl -fsS -X POST -H "Content-Type: application/json" -d "$PAYLOAD" "$DISCORD_WEBHOOK"

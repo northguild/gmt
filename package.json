@@ -30,12 +30,11 @@
     "test:gmt-oxlint": "vitest run --config packages/gmt-oxlint/vitest.config.ts",
     "changeset": "changeset",
     "changeset:add": "changeset add",
-    "changeset:version": "changeset version && node scripts/sync-intent-version.mjs",
-    "changeset:publish": "changeset publish",
-    "release:publish": "pnpm run validate && pnpm run changeset:publish"
+    "changeset:version": "changeset version && node scripts/sync-intent-version.mjs"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.30.0",
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.2",
     "@fontsource/michroma": "^5.3.0",
     "@tanstack/intent": "^0.3.8",
     "@types/node": "^22.13.10",
