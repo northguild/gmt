@@ -7,7 +7,7 @@ they should be built. The issue stays open until its last sub-story lands.
 
 ## Definition of done — binding for every story in this file
 
-- `pnpm nx run-many -t lint test typecheck build` stays green, **including the 20-cell
+  - `pnpm run validate` stays green, **including the 20-cell
   GMT timezone matrix**. `packages/gmt-otel` must not perturb `packages/gmt`.
 - **Changesets required.** `@northguild/gmt-otel` is published to npm, so every story
   that modifies source needs a `.changeset/*.md` entry.
@@ -92,5 +92,5 @@ No tests exist yet for any gmt-otel function.
 
 ## Verification
 - All tests pass
-- `pnpm nx run gmt-otel:test` covers all exported span functions
+  - `pnpm --filter @northguild/gmt-otel run test` covers all exported span functions
 ```

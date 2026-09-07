@@ -7,7 +7,7 @@ they should be built. The issue stays open until its last sub-story lands.
 
 ## Definition of done — binding for every story in this file
 
-- `pnpm nx run-many -t lint test typecheck build` stays green, **including the 20-cell
+  - `pnpm run validate` stays green, **including the 20-cell
   GMT timezone matrix**. Neither new package perturbs `packages/gmt`.
 - **Changesets required.** Both packages are published to npm, so every story that
   modifies source needs a `.changeset/*.md` entry.
@@ -94,13 +94,13 @@ Both packages need final polish before they can be published to npm.
   - Test that gmt-time builds and passes all tests without OTel installed (zero dependency)
   - Test that gmt-otel builds and passes all tests without OTel installed (optional peer dep)
 - CI wiring:
-  - Verify `pnpm nx run-many -t lint test typecheck build` works for the full workspace
+  - Verify `pnpm run validate` works for the full workspace
   - Ensure changeset workflow works (every story should have a `.changeset/*.md`)
   - Verify npm publish would work (package.json fields, exports, etc.)
 
 ## Verification
 - All tests pass
-- `pnpm nx run-many -t lint test typecheck build` stays green for the full workspace
+- `pnpm run validate` stays green for the full workspace
 - Both READMEs are clear and include working examples
 - Both packages are ready for npm publication
 ```

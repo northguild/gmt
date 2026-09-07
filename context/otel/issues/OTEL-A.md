@@ -7,7 +7,7 @@ they should be built. The issue stays open until its last sub-story lands.
 
 ## Definition of done — binding for every story in this file
 
-- `pnpm nx run-many -t lint test typecheck build` stays green, **including the 20-cell
+  - `pnpm run validate` stays green, **including the 20-cell
   GMT timezone matrix**. `packages/gmt-otel` must not perturb `packages/gmt`.
 - **Changesets required.** `@northguild/gmt-otel` is published to npm, so every story
   that modifies source needs a `.changeset/*.md` entry.
@@ -24,7 +24,7 @@ they should be built. The issue stays open until its last sub-story lands.
 **Title:**
 
 ```
-OTEL-A1 Create packages/gmt-otel workspace package with pnpm/nx/oxlint wiring
+OTEL-A1 Create packages/gmt-otel workspace package with pnpm/oxlint wiring
 ```
 
 **Description:**
@@ -49,9 +49,7 @@ Depends on GMTIME-A1 (gmt-time package skeleton).
 - `tsconfig.json` extending `../../tsconfig.base.json` (standard for workspace packages).
 - `tsconfig.build.json` for the build output.
 - `vitest.config.ts` following the repo pattern.
-- `project.json` — **required.** Nx's `@nx/js/typescript` plugin infers build/typecheck
-  from `tsconfig.build.json`. Declare `build`, `test`, `typecheck`, and `lint` with
-  `dependsOn: ["^build"]` so `@northguild/gmt-time` builds first.
+  - `package.json` scripts — declare `build`, `test`, `typecheck`, and `lint` per the repo's pnpm workspace pattern. The package is discovered by `pnpm -r` automatically via the `packages/*` workspace glob.
 - Add `packages/gmt-otel/dist` to `.gitignore`.
 - Update root `pnpm-workspace.yaml` — add `packages/gmt-otel` if not already in the
   `packages/*` glob (it should be, but verify).
@@ -66,9 +64,9 @@ scripts don't need updating.
 
 ## Verification
 - `pnpm install` succeeds
-- `pnpm nx run gmt-otel:typecheck` runs (even with empty src)
-- `pnpm nx run gmt-otel:build` produces output directory
-- `pnpm nx run-many -t lint test typecheck build` stays green
+  - `pnpm --filter @northguild/gmt-otel run typecheck` runs (even with empty src)
+  - `pnpm --filter @northguild/gmt-otel run build` produces output directory
+  - `pnpm run validate` stays green
 
 ## Decisions
 - OTel API is an **optional peer dependency**. The package must build and pass tests

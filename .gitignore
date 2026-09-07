@@ -27,6 +27,9 @@ coverage/
 Thumbs.db
 .eslintcache
 
+# Nx (not used by this project; junk from stray installs)
+.nx/
+
 # Environment
 .env
 .env.local

@@ -72,7 +72,7 @@ with its own deliverable — no sub-stories, no nesting.
 
 ## Definition of Done — Binding for Every Story
 
-- `pnpm nx run-many -t lint test typecheck build` stays green, **including the 20-cell
+- `pnpm run validate` stays green, **including the 20-cell
   GMT timezone matrix**. Neither new package perturbs `packages/gmt`.
 - **Changesets required.** Both packages are published to npm, so every story that
   modifies source needs a `.changeset/*.md` entry.
