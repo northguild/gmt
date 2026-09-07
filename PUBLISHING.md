@@ -30,19 +30,39 @@ repo-wide `vX.Y.Z` tag, and nothing in either path invents one.
 `publish.yml` requests `id-token: write` and npm exchanges that for a
 short-lived credential, so there is nothing stored to leak or rotate.
 
-Configure it once per package, on npmjs.com → the package → Settings → Trusted
-Publisher → GitHub Actions:
+Configure it once per package. From the CLI, logged in as a member of the
+`@northguild` org (`npm login --auth-type=web` for passkey/SSO):
 
-| Field             | Value          |
-| ----------------- | -------------- |
-| Organization/user | `northguild`   |
-| Repository        | `gmt`          |
-| Workflow filename | `publish.yml`  |
-| Environment       | `release`      |
+```bash
+for P in gmt gmt-oxlint gmt-biome gmt-eslint; do
+  npm trust github "@northguild/$P" \
+    --file publish.yml \
+    --repo northguild/gmt \
+    --env release \
+    --allow-publish
+done
+```
 
-All four packages need their own trusted-publisher entry. A package without one
-fails at the `npm publish` step with an auth error; the other three are
-unaffected, since each release publishes exactly one package.
+`--file` is the workflow's basename and `--env` must match `environment: release`
+in `publish.yml` — both are matched exactly when npm validates the OIDC token, so
+renaming either the workflow file or the environment breaks every publish until
+the trust entries are updated to match.
+
+Check and manage what's configured with:
+
+```bash
+npm trust list "@northguild/gmt"     # show the current entry
+npm trust revoke "@northguild/gmt" --id=<trust-id>
+```
+
+The same settings are available on npmjs.com → the package → Settings → Trusted
+Publisher → GitHub Actions, if you'd rather click: organization `northguild`,
+repository `gmt`, workflow `publish.yml`, environment `release`.
+
+All four packages need their own trusted-publisher entry, and each package
+allows only one at a time. A package without one fails at the `npm publish` step
+with a 401; the other three are unaffected, since each release publishes exactly
+one package.
 
 > **Provenance:** trusted publishing automatically generates a provenance
 > attestation for every public package in a public repo — it is not opt-in. npm

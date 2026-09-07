@@ -51,9 +51,11 @@ Read the npm error code:
   that version is already on npm, so this release was redundant. Nothing changed
   on npm. Delete the stale draft or release so it isn't retried.
 - **`ENEEDAUTH` / 401 / 403** — the package has no trusted-publisher entry, or it
-  doesn't match. Check on npmjs.com that the package's trusted publisher names
-  org `northguild`, repo `gmt`, workflow `publish.yml`, environment `release`.
-  Fix it there and re-run; no code change needed.
+  doesn't match. Check with `npm trust list "$NAME"`; it must name repo
+  `northguild/gmt`, workflow `publish.yml`, environment `release`. Re-create it
+  with `npm trust github "$NAME" --file publish.yml --repo northguild/gmt --env
+  release --allow-publish`, then re-run the job. No code change needed, and the
+  release does not need recreating.
 - **"Provenance generation … repository"** — that package's `package.json` is
   missing its `repository` field (or it doesn't match this repo). Trusted
   publishing always generates provenance, so the field is mandatory. Fix on
