@@ -1,6 +1,6 @@
 {
   "name": "@northguild/gmt-biome",
-  "version": "1.0.8",
+  "version": "1.1.0",
   "private": false,
   "description": "Shared Biome configuration for gmt projects",
   "keywords": [
@@ -18,7 +18,7 @@
   "license": "MIT",
   "contributors": [
     {
-      "name": "Baldur P\u00e1ll H\u00f3lmgeirsson",
+      "name": "Baldur Páll Hólmgeirsson",
       "url": "https://github.com/baldurpan"
     },
     {
