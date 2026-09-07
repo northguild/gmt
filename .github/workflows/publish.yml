@@ -139,7 +139,9 @@ jobs:
         if: env.DISCORD_WEBHOOK != ''
         uses: Ilshidur/action-discord@0.3.2
         with:
+          # Deliberately one line. Discord unfurls the release URL into a card
+          # carrying the changelog, so a "what's new" line and an install
+          # snippet would just restate what the embed already shows. The
+          # dist-tag is named only when it isn't `latest` — otherwise it's noise.
           args: |
-            🚀 `${{ steps.resolve.outputs.name }}@${{ steps.resolve.outputs.version }}` is now live on npm under the `${{ steps.resolve.outputs.dist_tag }}` tag.
-            📦 `pnpm add ${{ steps.resolve.outputs.name }}@${{ steps.resolve.outputs.version }}`
-            📑 **What's New:** ${{ github.event.release.html_url }}
+            🚀 `${{ steps.resolve.outputs.name }}@${{ steps.resolve.outputs.version }}` published to npm${{ steps.resolve.outputs.dist_tag != 'latest' && format(' under the `{0}` tag', steps.resolve.outputs.dist_tag) || '' }} ${{ github.event.release.html_url }}

@@ -152,6 +152,12 @@ main: "Version Packages" commit
    Publish one draft per package you actually want to ship. Leaving a draft
    unpublished ships nothing; the tag stays put and you can publish it later.
 
+   Or run the **`/release` skill**, which does the same thing from your terminal
+   — it preflights each draft (tag on `main`, manifest agreement, version not
+   already on npm), shows you what would ship, asks before publishing, and then
+   watches the run. It publishes the same draft via `gh`, so the pipeline and the
+   approvals are identical; it is not a shortcut past them.
+
 4. **`publish.yml` takes over.** On `release: published` it:
    - checks out the released **tag** (not `main`, so a moved `main` can't leak in);
    - derives the package from the tag name and **fails loudly** if the tag isn't
