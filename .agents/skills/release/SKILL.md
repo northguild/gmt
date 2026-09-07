@@ -1,10 +1,10 @@
 ---
 name: release
-description: Publish pending release drafts to npm through the CI pipeline. Use when the user asks to "do the release", "publish the packages", "ship gmt", or "release <package>".
+description: Find package tags that haven't reached npm and publish the ones the user picks, through the CI publish pipeline. Use when the user asks to "do the release", "publish the packages", "ship gmt", or "release <package>".
 argument-hint: "[package…]"
 ---
 
-Ship packages by publishing their **draft GitHub Release**. That is the event
+Ship packages by publishing their **GitHub Release**. That is the event
 `.github/workflows/publish.yml` listens for, so the release goes through exactly
 the same pipeline as clicking Publish in the GitHub UI — build, test, `npm pack
 --dry-run`, `npm publish` via trusted publishing, Discord announcement.
@@ -14,81 +14,89 @@ You never run `npm publish` yourself. CI does, from a clean checkout of the tag.
 [PUBLISHING.md](../../../PUBLISHING.md) is the source of truth for the release
 flow; if anything here contradicts it, follow PUBLISHING.md and say so.
 
-## Preconditions
+## This skill does not bump versions
 
-Drafts are created automatically by `tag-on-version-change.yml` when a
-"Version Packages" commit lands on `main`. **If there are no drafts, there is
-nothing to release** — the version bump hasn't merged yet. Say that and stop;
-do not create tags or releases by hand to work around it.
+It only publishes versions that have **already been bumped, merged, and tagged**.
+It never runs `changeset version`, never edits a `package.json` version, and
+never creates a tag. Those happen on a PR, and tags are created by
+`tag-on-version-change.yml` when that PR lands on `main`.
 
-This must run from a normal local shell using the user's `gh` auth. An event
+So if nothing is releasable, the answer is "the version bump hasn't merged yet" —
+say that and stop. Do not bump anything to give yourself something to release.
+
+This must also run from a normal local shell using the user's `gh` auth. An event
 triggered by a workflow's `GITHUB_TOKEN` does not start another workflow run, so
-publishing a draft from inside Actions would publish the release and silently
-run nothing.
+publishing a release from inside Actions would publish it and silently run nothing.
 
 ## Steps
 
-### 1. Preflight — never skip
+### 1. Find what's releasable
 
 ```bash
-git fetch --tags --prune origin
-gh release list --json tagName,isDraft,isPrerelease --jq '.[] | select(.isDraft) | .tagName'
+node .agents/skills/release/scripts/list-releasable.mjs
 ```
 
-For each draft tag (`@northguild/<pkg>@<version>`), derive `NAME`, `VERSION`,
-`DIR` and check all four:
+Returns a JSON array of every package tag whose version is **not yet on npm** —
+npm is the source of truth, not the presence of a draft release. Each entry has
+`tag`, `name`, `dir`, `version`, `latestOnNpm`, and a `state`:
 
-| Check | Command | On failure |
+| `state` | Meaning | What to do |
 | --- | --- | --- |
-| Tag exists on the remote | `git rev-parse -q --verify "refs/tags/$TAG"` | Abort — the draft points at nothing. |
-| Tag is on `main` | `git merge-base --is-ancestor "$TAG" origin/main` | Abort — the commit isn't on the release line. |
-| Manifest agrees | `git show "$TAG:packages/$DIR/package.json"` → `.version` equals `$VERSION` | Abort — `publish.yml` will reject it anyway. |
-| Not already on npm | `npm view "$NAME@$VERSION" version` (exit 0 = published) | **Do not publish.** See below. |
+| `draft` | Normal path — `tag-on-version-change.yml` left a draft. | Publish the draft (step 3). |
+| `none` | Tag exists, no release. Draft deleted, or tagged by a local `changeset:publish`. | Create the release, then publish it (step 3). |
+| `published` | **The release already went out and `publish.yml` failed.** | Do **not** create another release. Re-run the failed run — see [references/recovery.md](references/recovery.md). |
 
-The npm check is the important one. A draft whose version is already on npm is
-almost always debris from a manual `changeset:publish` (PUBLISHING.md documents
-this collision). Publishing it fails the run with `EPUBLISHCONFLICT` and posts
-nothing. Report it, and offer to delete the stale draft with
-`gh release delete "$TAG"` — ask first, never delete unprompted.
+Empty array means nothing to release. Say so and stop.
 
-### 2. Show the plan
+### 2. Ask which packages to release
 
-Print one row per draft you intend to publish, and let the user see what they're
-approving:
+Present the releasable entries with `AskUserQuestion`, `multiSelect: true` — one
+option per package, so the user picks by name rather than typing tags:
 
-| Package | Version | On npm now | Ships as | Changelog |
-| --- | --- | --- | --- | --- |
-| `@northguild/gmt` | 1.16.0 | 1.15.0 | `latest` | Promote shared unit types… |
+- **label**: `@northguild/gmt 1.16.0`
+- **description**: what it supersedes and what it ships, e.g.
+  `1.15.0 → 1.16.0 · latest · Promote shared unit types to the public API`
 
-"On npm now" comes from `npm view "$NAME" version`. "Changelog" is the first
-meaningful line of `gh release view "$TAG" --json body --jq .body`.
+Pull the summary line from `gh release view "$TAG" --json body --jq .body` for
+`draft`/`published` entries, or from the top `packages/<dir>/CHANGELOG.md` entry
+for `none`. Say `next` rather than `latest` for anything the user wants shipped
+as a prerelease.
 
-If the user named packages as arguments, filter to those and say which drafts
-you're leaving alone.
+There are four publishable packages and `AskUserQuestion` allows four options, so
+they always fit. If that ever stops being true, list them numbered and ask
+instead of silently dropping any.
 
-### 3. Confirm
+If the user named packages as arguments, still show the picker but preselect
+nothing beyond those, and say which releasable packages you're leaving out.
+**Never skip this question** — it is the release gate. Never infer approval from
+the original request.
 
-**Always ask before publishing, every time.** This is the release gate — the
-user approves the specific list from step 2. Never infer approval from the
-original request, and never publish a draft the user didn't name or see.
+### 3. Publish, one at a time
 
-### 4. Publish
-
-One at a time, checking each before moving on:
+For `state: draft`:
 
 ```bash
 gh release edit "$TAG" --draft=false
 ```
 
-For a prerelease, set the flag in the **same** command — `publish.yml` reads
-`github.event.release.prerelease` off the publish event, so marking it afterwards
-is too late and it will have already gone out under `latest`:
+For `state: none`, create it first from the changelog entry, then publish — mirror
+what `tag-on-version-change.yml` would have done, including `--latest` only for
+`@northguild/gmt`:
+
+```bash
+awk '/^## /{f++} f==1' "packages/$DIR/CHANGELOG.md" | tail -n +2 > "$NOTES"
+gh release create "$TAG" --verify-tag --title "$TAG" --notes-file "$NOTES" --latest=false
+```
+
+For a prerelease, set the flag in the **same** command that publishes —
+`publish.yml` reads `github.event.release.prerelease` off the publish event, so
+marking it afterwards is too late and it will already have gone out as `latest`:
 
 ```bash
 gh release edit "$TAG" --prerelease --draft=false
 ```
 
-### 5. Watch the run
+### 4. Watch each run
 
 ```bash
 gh run list --workflow=publish.yml --event=release --limit 5 \
@@ -96,26 +104,29 @@ gh run list --workflow=publish.yml --event=release --limit 5 \
 gh run watch <databaseId> --exit-status
 ```
 
-The run may sit in `waiting` if the `release` environment requires approval —
-that is expected, not a hang. Tell the user it needs their review and wait.
+A run sitting in `waiting` needs approval on the `release` environment — that is
+expected, not a hang. Tell the user and wait.
 
-### 6. Report
+Finish one package before starting the next, so a failure can't be mistaken for
+another package's.
 
-Per package: published version, dist-tag, run URL, and whether the Discord
-announcement fired. Confirm with `npm view "$NAME@$VERSION" version` rather than
-trusting the workflow's green check alone.
+### 5. Report
 
-If a run failed, see [references/recovery.md](references/recovery.md).
+Per package: version, dist-tag, run URL, and whether the Discord announcement
+fired. Confirm with `npm view "$NAME@$VERSION" version` rather than trusting the
+workflow's green check alone.
+
+On failure, see [references/recovery.md](references/recovery.md).
 
 ## Rules
 
+- Never bump a version, edit a manifest, or create a tag to produce something to
+  release.
 - Never run `npm publish` locally to "unblock" a failed CI publish. The pipeline
   publishes with provenance from a clean tag checkout; a local publish produces a
   different artifact and no attestation.
 - Never delete or re-tag a **published** release, and never use `--force` on a
   release tag. npm versions are immutable; recover forward with a new patch.
-- Never publish a draft whose version already exists on npm.
-- Don't create tags or drafts by hand. That is `tag-on-version-change.yml`'s job,
-  and hand-made ones bypass the version/manifest agreement it guarantees.
-- Publish sequentially, not in a batch. Each package is an independent release
-  and one failing must not obscure the others.
+- Never create a second release for a tag whose release is already `published` —
+  that state means the publish failed, and the fix is a re-run.
+- Deleting a stale draft is fine, but ask first.
