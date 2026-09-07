@@ -294,6 +294,63 @@ git push --follow-tags
 
 ---
 
+## Adding a new publishable package
+
+**No CI change is needed.** `tag-on-version-change.yml` globs
+`packages/*/package.json` and skips private ones, `publish.yml` derives the
+package from the release tag, and the `/release` skill reads the same glob — none
+of them carries a hardcoded package list. Drop the directory in and they pick it
+up.
+
+Everything that *does* need doing is on the npm side, and none of it fails at
+build or lint time — it fails at `npm publish`, after the tag and release already
+exist:
+
+1. **Give the manifest the metadata provenance requires.** `repository` (with
+   `directory`), plus `homepage` and `bugs` to match the other packages:
+
+   ```json
+   "repository": {
+     "type": "git",
+     "url": "https://github.com/northguild/gmt.git",
+     "directory": "packages/<new-pkg>"
+   }
+   ```
+
+   Without `repository`, trusted publishing cannot generate its provenance
+   attestation and the publish fails. See the Provenance note under
+   [One-time setup](#for-the-automated-path-maintainers--repo-admins).
+
+2. **Set `publishConfig`.** Scoped packages are private by default:
+
+   ```json
+   "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org/" }
+   ```
+
+3. **Publish version 1 by hand, locally.** A trusted-publisher configuration
+   attaches to a package that exists on the registry, so the very first publish
+   cannot come from CI:
+
+   ```bash
+   cd packages/<new-pkg>
+   npm publish --access public
+   ```
+
+4. **Then configure trust, so every later release is automated:**
+
+   ```bash
+   npm trust github "@northguild/<new-pkg>" \
+     --file publish.yml --repo northguild/gmt --env release --allow-publish
+   npm trust list "@northguild/<new-pkg>"   # confirm it took
+   ```
+
+5. **Add it to the package table** at the top of this file.
+
+From the next version onward it releases like everything else: bump, merge, pick
+it in `/release` or publish its draft.
+
+---
+
 ## First release (initial `1.0.0`)
 
 Same as the flows above, with one difference: in step 3 of the contributor flow,
