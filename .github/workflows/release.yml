@@ -8,6 +8,10 @@ name: Release
 #                                       push tags, cut GitHub Releases
 #   neither                          -> none    : nothing to do
 #
+# `publish` additionally requires that this very push moved a version in a
+# `packages/*/package.json`. Merging an ordinary feature PR can therefore never
+# publish anything, even while some package is bumped-but-unpublished on main.
+#
 # Merging the "Version Packages" PR is the go/no-go. It shows the exact versions
 # and the exact CHANGELOG text, with CI on it, before anything reaches npm —
 # so there is no second gate and no release form.
@@ -46,6 +50,7 @@ jobs:
     outputs:
       mode: ${{ steps.select.outputs.mode }}
       publish-plan: ${{ steps.select.outputs.publish-plan-artifact-id }}
+      version-changed: ${{ steps.bump.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -65,6 +70,84 @@ jobs:
 
       - uses: changesets/action/select-mode@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         id: select
+
+      # `publish` mode on its own is not enough to ship. select-mode returns it
+      # whenever *any* package version on main is missing from npm — which is
+      # equally true of pre-existing drift, so an unrelated commit (a docs typo,
+      # say) could otherwise publish a backlog nobody asked for. Require that
+      # THIS push actually moved a version, i.e. that it is the "Version
+      # Packages" merge. Publishing is welded to that merge and nothing else.
+      - name: Did this push move a package version?
+        id: bump
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+
+          # A manual dispatch is a deliberate human action, and the documented
+          # way to finish a half-completed publish, so it bypasses the guard.
+          if [ "$EVENT_NAME" != "push" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Manually dispatched — version guard bypassed." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # Re-running a failed job from the Actions UI replays the original
+          # push payload, so `before` survives and a retry still passes.
+          BASE="$BEFORE"
+          if [ -z "$BASE" ]             || [ "$BASE" = "0000000000000000000000000000000000000000" ]             || ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            BASE=$(git rev-parse -q --verify "HEAD^1" || true)
+          fi
+
+          if [ -z "$BASE" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::No usable base commit to diff against, so refusing to publish. Use Run workflow if this really is a release."
+            exit 0
+          fi
+
+          CHANGED=false
+          for MANIFEST in packages/*/package.json; do
+            PKG=$(basename "$(dirname "$MANIFEST")")
+
+            if [ "$(node -p "require('./$MANIFEST').private === true")" = "true" ]; then
+              continue
+            fi
+
+            NOW=$(node -p "require('./$MANIFEST').version")
+            # A package added in this push has no manifest at BASE; the empty
+            # WAS then reads as a change, which is what we want.
+            WAS=$(git show "$BASE:$MANIFEST" 2>/dev/null               | node -e 'let d="";process.stdin.on("data",c=>d+=c);process.stdin.on("end",()=>{try{process.stdout.write(JSON.parse(d).version||"")}catch{}})'               || true)
+
+            if [ "$NOW" != "$WAS" ]; then
+              echo "$PKG: ${WAS:-<new>} -> $NOW"
+              CHANGED=true
+            fi
+          done
+
+          echo "changed=$CHANGED" >> "$GITHUB_OUTPUT"
+
+      - name: Explain the decision
+        env:
+          MODE: ${{ steps.select.outputs.mode }}
+          CHANGED: ${{ steps.bump.outputs.changed }}
+        run: |
+          {
+            echo "## Release mode: \`$MODE\`"
+            echo
+            case "$MODE" in
+              version) echo "Pending changesets — opening or updating the **Version Packages** PR. Nothing is published." ;;
+              none)    echo "No changesets pending and nothing unpublished. Nothing to do." ;;
+              publish)
+                if [ "$CHANGED" = "true" ]; then
+                  echo "A package version moved in this push — publishing."
+                else
+                  echo "⚠️ Some package version on \`main\` is missing from npm, but **this push did not move any version**, so publishing is blocked by the version guard."
+                  echo
+                  echo "That is pre-existing drift, not a release. Merge the Version Packages PR to ship, or use **Run workflow** to publish the backlog deliberately."
+                fi ;;
+            esac
+          } >> "$GITHUB_STEP_SUMMARY"
 
   version:
     name: Version Packages PR
@@ -129,7 +212,9 @@ jobs:
   publish:
     name: Publish to npm
     needs: mode
-    if: needs.mode.outputs.mode == 'publish'
+    # Both conditions, deliberately: the right mode AND a version actually moved
+    # in this push. See the version guard in the `mode` job.
+    if: needs.mode.outputs.mode == 'publish' && needs.mode.outputs.version-changed == 'true'
     runs-on: ubuntu-latest
     # Protected environment: holds DISCORD_WEBHOOK, and is where required
     # reviewers go if you ever want a human click between merge and npm.

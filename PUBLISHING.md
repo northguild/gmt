@@ -51,8 +51,15 @@ feature PR: code + .changeset/*.md
 ```
 
 `version` fires when pending changesets exist on `main`. `publish` fires when
-they don't but a package's version isn't on npm yet. So a push that only
-touches docs resolves to `none` and costs a few seconds.
+they don't, a package's version isn't on npm yet, **and this very push moved a
+version in a `packages/*/package.json`**.
+
+That last clause is the version guard, and it is the reason merging an ordinary
+feature PR can never publish anything. Without it, `publish` mode would also be
+reached by any unrelated commit landing while a package sat bumped-but-
+unpublished on `main` — a docs typo could ship a backlog. With it, publishing is
+welded to the "Version Packages" merge and nothing else. The run's summary says
+which mode it picked and why.
 
 ### 1. Record intent (every feature branch)
 
@@ -110,16 +117,25 @@ On the "Version Packages" commit landing on `main`, the `publish` job:
 - creates a GitHub Release per tag, notes taken from `CHANGELOG.md`;
 - posts what actually shipped to the `#gmt` Discord channel.
 
-If it fails, fix the cause and **re-run the job from the Actions UI**. The
-versions are already committed, so nothing needs recreating — and do not reach
-for a local `npm publish`, which produces a different, unsigned artifact from
-whatever is in your working tree. Re-running is safe: `changeset publish` skips
-any version already on the registry.
+If it fails, fix the cause and **re-run the failed job from the Actions UI**.
+Re-running replays the original push payload, so the version guard still sees
+the bump and lets it through. Nothing needs recreating; the versions are already
+committed, and `changeset publish` skips anything already on the registry.
 
-> **Everything bumped ships.** Publishing is per-version-PR, not per-package: if
-> a package's version moved, it goes out. That's deliberate — a package bumped
-> on `main` but missing from npm is a broken state, not a held-back release. To
-> hold something back, hold back its changeset, not its publish.
+Do not reach for a local `npm publish` — it produces a different, unsigned
+artifact from whatever happens to be in your working tree.
+
+If a publish died partway and you no longer have that run to retry (so `main`
+has versions npm is missing, but no new push is going to move a version), use
+**Actions → Release → Run workflow**. A manual dispatch bypasses the version
+guard deliberately, on the grounds that a human clicked it.
+
+> **Within one release, everything bumped ships.** Publishing is
+> per-version-PR, not per-package: every version the merged PR moved goes out
+> together. That was already true of `changeset version`, which takes no
+> per-package selector — it consumes all pending changesets at once. To hold a
+> package back, hold back its changeset, or leave the Version Packages PR
+> unmerged.
 
 ### Want a click between merge and npm?
 
