@@ -18,7 +18,7 @@
   "license": "MIT",
   "contributors": [
     {
-      "name": "Baldur Páll Hólmgeirsson",
+      "name": "Baldur P\u00e1ll H\u00f3lmgeirsson",
       "url": "https://github.com/baldurpan"
     },
     {
@@ -39,6 +39,7 @@
   ],
   "exports": {
     "./plugins/all.grit": "./plugins/all.grit",
+    "./plugins/no-date-library-imports.grit": "./plugins/no-date-library-imports.grit",
     "./plugins/no-new-date.grit": "./plugins/no-new-date.grit",
     "./plugins/no-date-now.grit": "./plugins/no-date-now.grit",
     "./plugins/no-date-parse.grit": "./plugins/no-date-parse.grit",
