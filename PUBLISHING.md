@@ -43,6 +43,11 @@ for P in gmt gmt-oxlint gmt-biome gmt-eslint; do
 done
 ```
 
+Every `npm trust` call — `list` included — requires its own fresh 2FA browser
+round-trip, so expect four separate authentications, and expect the loop above
+to stop and wait each time. There is no way to batch them, and an agent cannot
+run them on your behalf.
+
 `--file` is the workflow's basename and `--env` must match `environment: release`
 in `publish.yml` — both are matched exactly when npm validates the OIDC token, so
 renaming either the workflow file or the environment breaks every publish until
