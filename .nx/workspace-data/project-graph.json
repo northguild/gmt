@@ -6,17 +6,10 @@
       "data": {
         "root": "packages/gmt-eslint",
         "name": "@northguild/gmt-eslint",
-        "tags": [
-          "npm:public",
-          "npm:tanstack-intent"
-        ],
+        "tags": ["npm:public", "npm:tanstack-intent"],
         "metadata": {
           "targetGroups": {
-            "NPM Scripts": [
-              "pack",
-              "publish:dry-run",
-              "publish:public"
-            ]
+            "NPM Scripts": ["pack", "publish:dry-run", "publish:public"]
           },
           "description": "Shared ESLint configuration for gmt projects",
           "js": {
@@ -68,9 +61,7 @@
           },
           "nx-release-publish": {
             "executor": "@nx/js:release-publish",
-            "dependsOn": [
-              "^nx-release-publish"
-            ],
+            "dependsOn": ["^nx-release-publish"],
             "options": {},
             "configurations": {},
             "parallelism": true
@@ -91,16 +82,12 @@
               "script": "typecheck"
             },
             "metadata": {
-              "technologies": [
-                "typescript"
-              ],
+              "technologies": ["typescript"],
               "description": "Runs type-checking for the project.",
               "help": {
                 "command": "pnpm exec tsc --build --help",
                 "example": {
-                  "args": [
-                    "--force"
-                  ]
+                  "args": ["--force"]
                 }
               },
               "scriptContent": "tsc --project tsconfig.json --noEmit",
@@ -108,9 +95,7 @@
             },
             "configurations": {},
             "parallelism": true,
-            "dependsOn": [
-              "^typecheck"
-            ],
+            "dependsOn": ["^typecheck"],
             "cache": true
           },
           "build": {
@@ -124,12 +109,8 @@
             },
             "configurations": {},
             "parallelism": true,
-            "dependsOn": [
-              "^build"
-            ],
-            "outputs": [
-              "{projectRoot}/dist"
-            ],
+            "dependsOn": ["^build"],
+            "outputs": ["{projectRoot}/dist"],
             "cache": true
           },
           "test": {
@@ -144,10 +125,7 @@
             "configurations": {},
             "parallelism": true,
             "cache": true,
-            "inputs": [
-              "default",
-              "^production"
-            ]
+            "inputs": ["default", "^production"]
           },
           "test:watch": {
             "executor": "nx:run-script",
@@ -211,9 +189,7 @@
           },
           "nx-release-publish": {
             "executor": "@nx/js:release-publish",
-            "dependsOn": [
-              "^nx-release-publish"
-            ],
+            "dependsOn": ["^nx-release-publish"],
             "options": {},
             "configurations": {},
             "parallelism": true
@@ -280,11 +256,7 @@
         ],
         "metadata": {
           "targetGroups": {
-            "NPM Scripts": [
-              "pack",
-              "publish:dry-run",
-              "publish:public"
-            ]
+            "NPM Scripts": ["pack", "publish:dry-run", "publish:public"]
           },
           "description": "Shared Biome configuration for gmt projects",
           "js": {
@@ -340,9 +312,7 @@
           },
           "nx-release-publish": {
             "executor": "@nx/js:release-publish",
-            "dependsOn": [
-              "^nx-release-publish"
-            ],
+            "dependsOn": ["^nx-release-publish"],
             "options": {},
             "configurations": {},
             "parallelism": true
@@ -363,16 +333,12 @@
               "script": "build"
             },
             "metadata": {
-              "technologies": [
-                "typescript"
-              ],
+              "technologies": ["typescript"],
               "description": "Builds the project with `tsc`.",
               "help": {
                 "command": "pnpm exec tsc --build --help",
                 "example": {
-                  "args": [
-                    "--force"
-                  ]
+                  "args": ["--force"]
                 }
               },
               "scriptContent": "rm -rf dist && tsc --project tsconfig.build.json && tsc-alias -p tsconfig.build.json --resolve-full-paths --resolve-full-extension .js",
@@ -380,18 +346,12 @@
             },
             "configurations": {},
             "parallelism": true,
-            "dependsOn": [
-              "^build"
-            ],
-            "outputs": [
-              "{projectRoot}/dist"
-            ],
+            "dependsOn": ["^build"],
+            "outputs": ["{projectRoot}/dist"],
             "cache": true
           },
           "build-deps": {
-            "dependsOn": [
-              "^build"
-            ],
+            "dependsOn": ["^build"],
             "configurations": {},
             "options": {},
             "parallelism": true,
@@ -399,9 +359,7 @@
           },
           "watch-deps": {
             "continuous": true,
-            "dependsOn": [
-              "build-deps"
-            ],
+            "dependsOn": ["build-deps"],
             "executor": "nx:run-commands",
             "options": {
               "command": "pnpm exec nx watch --projects @northguild/gmt --includeDependentProjects -- pnpm exec nx build-deps @northguild/gmt"
@@ -415,16 +373,12 @@
               "script": "typecheck"
             },
             "metadata": {
-              "technologies": [
-                "typescript"
-              ],
+              "technologies": ["typescript"],
               "description": "Runs type-checking for the project.",
               "help": {
                 "command": "pnpm exec tsc --build --help",
                 "example": {
-                  "args": [
-                    "--force"
-                  ]
+                  "args": ["--force"]
                 }
               },
               "scriptContent": "tsc --noEmit",
@@ -432,9 +386,7 @@
             },
             "configurations": {},
             "parallelism": true,
-            "dependsOn": [
-              "^typecheck"
-            ],
+            "dependsOn": ["^typecheck"],
             "cache": true
           },
           "test": {
@@ -449,10 +401,7 @@
             "configurations": {},
             "parallelism": true,
             "cache": true,
-            "inputs": [
-              "default",
-              "^production"
-            ]
+            "inputs": ["default", "^production"]
           },
           "test:watch": {
             "executor": "nx:run-script",
@@ -478,9 +427,7 @@
             "configurations": {},
             "parallelism": true,
             "cache": true,
-            "inputs": [
-              "default"
-            ]
+            "inputs": ["default"]
           },
           "format": {
             "executor": "nx:run-script",
@@ -496,9 +443,7 @@
           },
           "nx-release-publish": {
             "executor": "@nx/js:release-publish",
-            "dependsOn": [
-              "^nx-release-publish"
-            ],
+            "dependsOn": ["^nx-release-publish"],
             "options": {},
             "configurations": {},
             "parallelism": true

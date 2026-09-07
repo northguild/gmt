@@ -592,16 +592,12 @@
         {
           "file": "packages/gmt-oxlint/tsup.config.ts",
           "hash": "10064252867693580995",
-          "deps": [
-            "npm:tsup"
-          ]
+          "deps": ["npm:tsup"]
         },
         {
           "file": "packages/gmt-oxlint/vitest.config.ts",
           "hash": "14020916926160926330",
-          "deps": [
-            "npm:vitest"
-          ]
+          "deps": ["npm:vitest"]
         }
       ],
       "@northguild/gmt-biome": [
@@ -620,10 +616,7 @@
         {
           "file": "packages/gmt-biome/package.json",
           "hash": "9171118546583400258",
-          "deps": [
-            "npm:@biomejs/biome",
-            "npm:@tanstack/intent"
-          ]
+          "deps": ["npm:@biomejs/biome", "npm:@tanstack/intent"]
         },
         {
           "file": "packages/gmt-biome/plugins/all.grit",
@@ -793,9 +786,7 @@
         {
           "file": "packages/gmt/src/duration/calculate/absDuration.ts",
           "hash": "15359853880223754465",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/duration/calculate/addDuration.test.ts",
@@ -804,9 +795,7 @@
         {
           "file": "packages/gmt/src/duration/calculate/addDuration.ts",
           "hash": "9168502611927843899",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/duration/calculate/durationAs.test.ts",
@@ -815,9 +804,7 @@
         {
           "file": "packages/gmt/src/duration/calculate/durationAs.ts",
           "hash": "7643895249705196826",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/duration/calculate/getDurationSign.test.ts",
@@ -826,9 +813,7 @@
         {
           "file": "packages/gmt/src/duration/calculate/getDurationSign.ts",
           "hash": "17734639585023152786",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/duration/calculate/getDurationUnit.test.ts",
@@ -837,9 +822,7 @@
         {
           "file": "packages/gmt/src/duration/calculate/getDurationUnit.ts",
           "hash": "9136777650823719321",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/duration/calculate/index.ts",
@@ -852,9 +835,7 @@
         {
           "file": "packages/gmt/src/duration/calculate/negateDuration.ts",
           "hash": "15783766412504941641",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/duration/calculate/subtractDuration.test.ts",
@@ -863,9 +844,7 @@
         {
           "file": "packages/gmt/src/duration/calculate/subtractDuration.ts",
           "hash": "15757436651338213446",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/duration/compare/compareDurations.test.ts",
@@ -874,9 +853,7 @@
         {
           "file": "packages/gmt/src/duration/compare/compareDurations.ts",
           "hash": "18102357598013499833",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/duration/compare/index.ts",
@@ -889,9 +866,7 @@
         {
           "file": "packages/gmt/src/duration/format/formatDuration.ts",
           "hash": "6214231982184923133",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/duration/format/index.ts",
@@ -912,9 +887,7 @@
         {
           "file": "packages/gmt/src/duration/normalize/normalizeDuration.ts",
           "hash": "3773872772269747759",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/duration/parse/index.ts",
@@ -927,9 +900,7 @@
         {
           "file": "packages/gmt/src/duration/parse/parseDuration.ts",
           "hash": "7213150632813551590",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/duration/validate/index.ts",
@@ -942,51 +913,37 @@
         {
           "file": "packages/gmt/src/duration/validate/isValidDuration.ts",
           "hash": "5152082553807153833",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/index.ts",
           "hash": "9433278760560965310",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/adjustZonedBusinessDays.ts",
           "hash": "3476277968033999891",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/advanceBusinessDays.test.ts",
           "hash": "6253165149643005156",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/advanceBusinessDays.ts",
           "hash": "7380636571995734844",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/advanceToWeekday.test.ts",
           "hash": "4204447006068681665",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/advanceToWeekday.ts",
           "hash": "1407631533395360262",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/calendarDatePairPolicy.test.ts",
@@ -995,23 +952,17 @@
         {
           "file": "packages/gmt/src/internal/calendarDatePairPolicy.ts",
           "hash": "11290351844749687436",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/calendarDateString.test.ts",
           "hash": "2253533160982853750",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/calendarDateString.ts",
           "hash": "297563208959072923",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/calendarSystemIds.test.ts",
@@ -1044,23 +995,17 @@
         {
           "file": "packages/gmt/src/internal/calendarZonedPairPolicy.ts",
           "hash": "8040454639526000976",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/calendarZonedString.test.ts",
           "hash": "8106989034616187647",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/calendarZonedString.ts",
           "hash": "8427913580596586069",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/cycleFieldValue.test.ts",
@@ -1081,44 +1026,32 @@
         {
           "file": "packages/gmt/src/internal/dateTimeUnitHelpers.test.ts",
           "hash": "8504336136383147083",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/dateTimeUnitHelpers.ts",
           "hash": "14410476701464892701",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/dateUnitHelpers.test.ts",
           "hash": "14474653866472074187",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/dateUnitHelpers.ts",
           "hash": "12073283728199719084",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/durationUntilString.test.ts",
           "hash": "752610933026427392",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/durationUntilString.ts",
           "hash": "10275859347932754641",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/englishCalendarNames.ts",
@@ -1127,30 +1060,22 @@
         {
           "file": "packages/gmt/src/internal/ethiopicFamilyCalendar.test.ts",
           "hash": "2608569981820507885",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/ethiopicFamilyCalendar.ts",
           "hash": "5592642186537628967",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/formatDateInCalendar.test.ts",
           "hash": "17589924499901513975",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/formatDateInCalendar.ts",
           "hash": "4720836533054085488",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/getLocaleFirstDayOfWeek.test.ts",
@@ -1171,16 +1096,12 @@
         {
           "file": "packages/gmt/src/internal/getLocaleWeekYearBounds.test.ts",
           "hash": "14231089648895221848",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/getLocaleWeekYearBounds.ts",
           "hash": "18076027881633326996",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/getLocaleWeekendDays.test.ts",
@@ -1205,16 +1126,12 @@
         {
           "file": "packages/gmt/src/internal/intervalCountHelpers.test.ts",
           "hash": "6325848106736176168",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/intervalCountHelpers.ts",
           "hash": "10247863893741404292",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/isValidAmount.test.ts",
@@ -1243,16 +1160,12 @@
         {
           "file": "packages/gmt/src/internal/monthGridWeekRow.test.ts",
           "hash": "106906577775029926",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/monthGridWeekRow.ts",
           "hash": "9207731613424750101",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/normalizeDateTime.test.ts",
@@ -1273,9 +1186,7 @@
         {
           "file": "packages/gmt/src/internal/patternToken.test.ts",
           "hash": "2924573103316040193",
-          "deps": [
-            "npm:vitest"
-          ]
+          "deps": ["npm:vitest"]
         },
         {
           "file": "packages/gmt/src/internal/patternToken.ts",
@@ -1292,9 +1203,7 @@
         {
           "file": "packages/gmt/src/internal/resolveDurationRelativeTo.test.ts",
           "hash": "12411680272922666976",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/internal/resolveDurationRelativeTo.ts",
@@ -1347,9 +1256,7 @@
         {
           "file": "packages/gmt/src/internal/toInstantFromUtc.ts",
           "hash": "10914173867093840791",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/README.md",
@@ -1362,9 +1269,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/addBusinessDays.ts",
           "hash": "3231589115034119378",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/addDate.test.ts",
@@ -1381,9 +1286,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/addDateTime.ts",
           "hash": "10531345879859423230",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/addTime.test.ts",
@@ -1392,9 +1295,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/addTime.ts",
           "hash": "10249272574485885992",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/clampDate.test.ts",
@@ -1403,9 +1304,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/clampDate.ts",
           "hash": "1864216303965590594",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/closestDateTo.test.ts",
@@ -1414,9 +1313,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/closestDateTo.ts",
           "hash": "10180343063170003540",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/cycleDate.test.ts",
@@ -1425,9 +1322,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/cycleDate.ts",
           "hash": "9159357860558710318",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/cycleDateTime.test.ts",
@@ -1436,9 +1331,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/cycleDateTime.ts",
           "hash": "7936918498782206105",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/cycleTime.test.ts",
@@ -1447,9 +1340,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/cycleTime.ts",
           "hash": "5932513589302060429",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/diffDate.test.ts",
@@ -1458,9 +1349,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/diffDate.ts",
           "hash": "14483395481264590459",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/diffDateAsDuration.test.ts",
@@ -1469,9 +1358,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/diffDateAsDuration.ts",
           "hash": "4028661722226679396",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/diffDateTime.test.ts",
@@ -1480,9 +1367,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/diffDateTime.ts",
           "hash": "15417391552775413945",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/diffDateTimeAsDuration.test.ts",
@@ -1491,9 +1376,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/diffDateTimeAsDuration.ts",
           "hash": "3937581713842848402",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/diffTime.test.ts",
@@ -1502,9 +1385,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/diffTime.ts",
           "hash": "9043696541755786290",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/endOfDate.test.ts",
@@ -1513,9 +1394,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/endOfDate.ts",
           "hash": "7835464299239947494",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/endOfDateTime.test.ts",
@@ -1524,9 +1403,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/endOfDateTime.ts",
           "hash": "15717680634687136034",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/endOfQuarterForDate.test.ts",
@@ -1535,9 +1412,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/endOfQuarterForDate.ts",
           "hash": "5417661732738928088",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/endOfQuarterForDateTime.test.ts",
@@ -1546,9 +1421,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/endOfQuarterForDateTime.ts",
           "hash": "10549136121495449403",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/endOfTime.test.ts",
@@ -1557,9 +1430,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/endOfTime.ts",
           "hash": "12711146677898720115",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/getDayOfYear.test.ts",
@@ -1568,9 +1439,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/getDayOfYear.ts",
           "hash": "10098858210492964102",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/getDaysInMonth.test.ts",
@@ -1579,9 +1448,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/getDaysInMonth.ts",
           "hash": "4334856078928224221",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/getDaysInYear.test.ts",
@@ -1590,9 +1457,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/getDaysInYear.ts",
           "hash": "1429224465741031903",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/getLargestDateDurationUnit.test.ts",
@@ -1621,16 +1486,12 @@
         {
           "file": "packages/gmt/src/plain/calculate/getLocaleDayOfWeek.test.ts",
           "hash": "12411023691219942781",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/getLocaleDayOfWeek.ts",
           "hash": "6603317559690362158",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/getLocaleEndOfWeek.test.ts",
@@ -1639,9 +1500,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/getLocaleEndOfWeek.ts",
           "hash": "1632164325488881582",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/getLocaleStartOfWeek.test.ts",
@@ -1650,23 +1509,17 @@
         {
           "file": "packages/gmt/src/plain/calculate/getLocaleStartOfWeek.ts",
           "hash": "17728346407932347186",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/getLocaleWeekYear.test.ts",
           "hash": "4702115450451713239",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/getLocaleWeekYear.ts",
           "hash": "1455284345297016220",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/getQuarterForDate.test.ts",
@@ -1675,9 +1528,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/getQuarterForDate.ts",
           "hash": "14552813038160917970",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/getQuarterForDateTime.test.ts",
@@ -1686,9 +1537,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/getQuarterForDateTime.ts",
           "hash": "3145608259709992065",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/getWeekNumber.test.ts",
@@ -1697,9 +1546,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/getWeekNumber.ts",
           "hash": "6427071941539936584",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/getWeekOfMonth.test.ts",
@@ -1708,9 +1555,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/getWeekOfMonth.ts",
           "hash": "15652604939624135761",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/getWeekYear.test.ts",
@@ -1719,23 +1564,17 @@
         {
           "file": "packages/gmt/src/plain/calculate/getWeekYear.ts",
           "hash": "9322302552593393629",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/getWeeksInLocaleWeekYear.test.ts",
           "hash": "15556844465880545431",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/getWeeksInLocaleWeekYear.ts",
           "hash": "5371566931188104516",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/getWeeksInMonth.test.ts",
@@ -1744,9 +1583,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/getWeeksInMonth.ts",
           "hash": "1508749152063618992",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/getWeeksInYear.test.ts",
@@ -1755,9 +1592,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/getWeeksInYear.ts",
           "hash": "10582016811481470196",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/index.ts",
@@ -1770,9 +1605,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/maxDate.ts",
           "hash": "8212673670588073175",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/maxDateTime.test.ts",
@@ -1781,9 +1614,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/maxDateTime.ts",
           "hash": "8921402077506066806",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/maxTime.test.ts",
@@ -1792,9 +1623,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/maxTime.ts",
           "hash": "5371724053121318132",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/minDate.test.ts",
@@ -1803,9 +1632,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/minDate.ts",
           "hash": "8279025452095811945",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/minDateTime.test.ts",
@@ -1814,9 +1641,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/minDateTime.ts",
           "hash": "15178734458051520339",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/minTime.test.ts",
@@ -1825,9 +1650,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/minTime.ts",
           "hash": "8911111948602135058",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/nextWeekday.test.ts",
@@ -1836,9 +1659,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/nextWeekday.ts",
           "hash": "8885860951517218979",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/previousWeekday.test.ts",
@@ -1847,9 +1668,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/previousWeekday.ts",
           "hash": "11225907308177704855",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/roundDate.test.ts",
@@ -1858,9 +1677,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/roundDate.ts",
           "hash": "8692263012188158015",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/roundDateTime.test.ts",
@@ -1869,9 +1686,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/roundDateTime.ts",
           "hash": "7181784992660146343",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/roundTime.test.ts",
@@ -1880,9 +1695,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/roundTime.ts",
           "hash": "16111519238609874573",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/setDate.test.ts",
@@ -1891,9 +1704,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/setDate.ts",
           "hash": "3055715558657767182",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/setDateTime.test.ts",
@@ -1902,9 +1713,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/setDateTime.ts",
           "hash": "12861369100319645080",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/setTime.test.ts",
@@ -1913,9 +1722,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/setTime.ts",
           "hash": "14962746219957935865",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/sortDateTimes.test.ts",
@@ -1924,9 +1731,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/sortDateTimes.ts",
           "hash": "1547743539735673576",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/sortDates.test.ts",
@@ -1935,9 +1740,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/sortDates.ts",
           "hash": "31572822303193561",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/sortTimes.test.ts",
@@ -1946,9 +1749,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/sortTimes.ts",
           "hash": "17711425618152519543",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/startOfDate.test.ts",
@@ -1957,9 +1758,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/startOfDate.ts",
           "hash": "3270382170035469439",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/startOfDateTime.test.ts",
@@ -1968,9 +1767,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/startOfDateTime.ts",
           "hash": "929596981954278895",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/startOfQuarterForDate.test.ts",
@@ -1979,9 +1776,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/startOfQuarterForDate.ts",
           "hash": "10187658018336146351",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/startOfQuarterForDateTime.test.ts",
@@ -1990,9 +1785,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/startOfQuarterForDateTime.ts",
           "hash": "4084633774879854203",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/startOfTime.test.ts",
@@ -2001,9 +1794,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/startOfTime.ts",
           "hash": "11767091048766623638",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/subtractBusinessDays.test.ts",
@@ -2012,9 +1803,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/subtractBusinessDays.ts",
           "hash": "8723583864059456747",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/subtractDate.test.ts",
@@ -2031,9 +1820,7 @@
         {
           "file": "packages/gmt/src/plain/calculate/subtractDateTime.ts",
           "hash": "17646095433905113437",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/subtractTime.test.ts",
@@ -2042,16 +1829,12 @@
         {
           "file": "packages/gmt/src/plain/calculate/subtractTime.ts",
           "hash": "2440150453316644389",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/calculate/weekOfYear.ts",
           "hash": "3809257872353561073",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/chop/chopDate.test.ts",
@@ -2060,9 +1843,7 @@
         {
           "file": "packages/gmt/src/plain/chop/chopDate.ts",
           "hash": "11499787523779801130",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/chop/chopMilliseconds.test.ts",
@@ -2071,9 +1852,7 @@
         {
           "file": "packages/gmt/src/plain/chop/chopMilliseconds.ts",
           "hash": "17121675180907980898",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/chop/chopSeconds.test.ts",
@@ -2082,9 +1861,7 @@
         {
           "file": "packages/gmt/src/plain/chop/chopSeconds.ts",
           "hash": "11413829471105289707",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/chop/chopTime.test.ts",
@@ -2093,9 +1870,7 @@
         {
           "file": "packages/gmt/src/plain/chop/chopTime.ts",
           "hash": "13719992893637090002",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/chop/index.ts",
@@ -2108,9 +1883,7 @@
         {
           "file": "packages/gmt/src/plain/compare/areDateTimesEqual.ts",
           "hash": "395212399426995646",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/compare/areDateTimesEqualBy.test.ts",
@@ -2119,9 +1892,7 @@
         {
           "file": "packages/gmt/src/plain/compare/areDateTimesEqualBy.ts",
           "hash": "14827455917145415779",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/compare/areDatesEqual.test.ts",
@@ -2130,9 +1901,7 @@
         {
           "file": "packages/gmt/src/plain/compare/areDatesEqual.ts",
           "hash": "5565862106739345649",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/compare/areDatesEqualBy.test.ts",
@@ -2141,9 +1910,7 @@
         {
           "file": "packages/gmt/src/plain/compare/areDatesEqualBy.ts",
           "hash": "9766930347986004637",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/compare/areTimesEqual.test.ts",
@@ -2152,9 +1919,7 @@
         {
           "file": "packages/gmt/src/plain/compare/areTimesEqual.ts",
           "hash": "12557294005655019728",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/compare/index.ts",
@@ -2167,9 +1932,7 @@
         {
           "file": "packages/gmt/src/plain/compare/isAfterDate.ts",
           "hash": "7401397681780247016",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/compare/isAfterDateTime.test.ts",
@@ -2178,9 +1941,7 @@
         {
           "file": "packages/gmt/src/plain/compare/isAfterDateTime.ts",
           "hash": "9878939197303905818",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/compare/isAfterTime.test.ts",
@@ -2189,9 +1950,7 @@
         {
           "file": "packages/gmt/src/plain/compare/isAfterTime.ts",
           "hash": "12023676873086180379",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/compare/isBeforeDate.test.ts",
@@ -2200,9 +1959,7 @@
         {
           "file": "packages/gmt/src/plain/compare/isBeforeDate.ts",
           "hash": "7941918255629792454",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/compare/isBeforeDateTime.test.ts",
@@ -2211,9 +1968,7 @@
         {
           "file": "packages/gmt/src/plain/compare/isBeforeDateTime.ts",
           "hash": "5451919868960807163",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/compare/isBeforeTime.test.ts",
@@ -2222,9 +1977,7 @@
         {
           "file": "packages/gmt/src/plain/compare/isBeforeTime.ts",
           "hash": "982838631482559856",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/compare/isBetweenDate.test.ts",
@@ -2233,9 +1986,7 @@
         {
           "file": "packages/gmt/src/plain/compare/isBetweenDate.ts",
           "hash": "10582670949496118310",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/compare/isBetweenDateTime.test.ts",
@@ -2244,9 +1995,7 @@
         {
           "file": "packages/gmt/src/plain/compare/isBetweenDateTime.ts",
           "hash": "12102142352011064707",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/compare/isBetweenTime.test.ts",
@@ -2255,9 +2004,7 @@
         {
           "file": "packages/gmt/src/plain/compare/isBetweenTime.ts",
           "hash": "13943427509285474377",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/compare/isBusinessDay.test.ts",
@@ -2266,9 +2013,7 @@
         {
           "file": "packages/gmt/src/plain/compare/isBusinessDay.ts",
           "hash": "10917824366591984470",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/compare/isFuture.test.ts",
@@ -2301,9 +2046,7 @@
         {
           "file": "packages/gmt/src/plain/compare/isThisUnit.ts",
           "hash": "15200358529014025070",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/compare/isWeekend.test.ts",
@@ -2312,9 +2055,7 @@
         {
           "file": "packages/gmt/src/plain/compare/isWeekend.ts",
           "hash": "8852752268780110028",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/convert/convertDateToCalendar.test.ts",
@@ -2331,17 +2072,12 @@
         {
           "file": "packages/gmt/src/plain/format/formatCalendar.test.ts",
           "hash": "10661940793139776846",
-          "deps": [
-            "npm:@js-temporal/polyfill",
-            "npm:vitest"
-          ]
+          "deps": ["npm:@js-temporal/polyfill", "npm:vitest"]
         },
         {
           "file": "packages/gmt/src/plain/format/formatCalendar.ts",
           "hash": "6461444218542083488",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/format/formatDate.test.ts",
@@ -2350,9 +2086,7 @@
         {
           "file": "packages/gmt/src/plain/format/formatDate.ts",
           "hash": "12210468605507141953",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/format/formatDateRange.test.ts",
@@ -2361,9 +2095,7 @@
         {
           "file": "packages/gmt/src/plain/format/formatDateRange.ts",
           "hash": "4579961873352935986",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/format/formatDateTime.test.ts",
@@ -2372,9 +2104,7 @@
         {
           "file": "packages/gmt/src/plain/format/formatDateTime.ts",
           "hash": "12072062239190965681",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/format/formatDateTimeRange.test.ts",
@@ -2383,9 +2113,7 @@
         {
           "file": "packages/gmt/src/plain/format/formatDateTimeRange.ts",
           "hash": "7777403561277618291",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/format/formatDateTimeToParts.test.ts",
@@ -2394,9 +2122,7 @@
         {
           "file": "packages/gmt/src/plain/format/formatDateTimeToParts.ts",
           "hash": "15501767402081004092",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/format/formatDateToParts.test.ts",
@@ -2405,51 +2131,37 @@
         {
           "file": "packages/gmt/src/plain/format/formatDateToParts.ts",
           "hash": "11315040758336788204",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/format/formatRelativeDate.test.ts",
           "hash": "5131436583425395777",
-          "deps": [
-            "npm:vitest"
-          ]
+          "deps": ["npm:vitest"]
         },
         {
           "file": "packages/gmt/src/plain/format/formatRelativeDate.ts",
           "hash": "11744481671143128666",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/format/formatRelativeDateTime.test.ts",
           "hash": "14204903990968318864",
-          "deps": [
-            "npm:vitest"
-          ]
+          "deps": ["npm:vitest"]
         },
         {
           "file": "packages/gmt/src/plain/format/formatRelativeDateTime.ts",
           "hash": "1009068577162187598",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/format/formatRelativeTime.test.ts",
           "hash": "9933223708449685419",
-          "deps": [
-            "npm:vitest"
-          ]
+          "deps": ["npm:vitest"]
         },
         {
           "file": "packages/gmt/src/plain/format/formatRelativeTime.ts",
           "hash": "3928445709723222301",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/format/formatSql.test.ts",
@@ -2458,9 +2170,7 @@
         {
           "file": "packages/gmt/src/plain/format/formatSql.ts",
           "hash": "14893434168563014879",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/format/formatTime.test.ts",
@@ -2469,9 +2179,7 @@
         {
           "file": "packages/gmt/src/plain/format/formatTime.ts",
           "hash": "18021251124290412230",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/format/index.ts",
@@ -2484,9 +2192,7 @@
         {
           "file": "packages/gmt/src/plain/get/getDay.ts",
           "hash": "4773825685899452441",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/get/getDayOfWeek.test.ts",
@@ -2495,9 +2201,7 @@
         {
           "file": "packages/gmt/src/plain/get/getDayOfWeek.ts",
           "hash": "6074705651889314008",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/get/getHour.test.ts",
@@ -2506,9 +2210,7 @@
         {
           "file": "packages/gmt/src/plain/get/getHour.ts",
           "hash": "12129006809779329198",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/get/getMicrosecond.test.ts",
@@ -2517,9 +2219,7 @@
         {
           "file": "packages/gmt/src/plain/get/getMicrosecond.ts",
           "hash": "11597533817588027601",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/get/getMillisecond.test.ts",
@@ -2528,9 +2228,7 @@
         {
           "file": "packages/gmt/src/plain/get/getMillisecond.ts",
           "hash": "16844306226230098708",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/get/getMinute.test.ts",
@@ -2539,9 +2237,7 @@
         {
           "file": "packages/gmt/src/plain/get/getMinute.ts",
           "hash": "14251177739213662736",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/get/getMonth.test.ts",
@@ -2550,9 +2246,7 @@
         {
           "file": "packages/gmt/src/plain/get/getMonth.ts",
           "hash": "7798920576628221077",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/get/getNanosecond.test.ts",
@@ -2561,9 +2255,7 @@
         {
           "file": "packages/gmt/src/plain/get/getNanosecond.ts",
           "hash": "1707937784603281500",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/get/getNow.test.ts",
@@ -2572,9 +2264,7 @@
         {
           "file": "packages/gmt/src/plain/get/getNow.ts",
           "hash": "12187239228248031143",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/get/getNowUnit.test.ts",
@@ -2583,9 +2273,7 @@
         {
           "file": "packages/gmt/src/plain/get/getNowUnit.ts",
           "hash": "10206236958080954177",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/get/getSecond.test.ts",
@@ -2594,9 +2282,7 @@
         {
           "file": "packages/gmt/src/plain/get/getSecond.ts",
           "hash": "391353379279528618",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/get/getToday.test.ts",
@@ -2605,9 +2291,7 @@
         {
           "file": "packages/gmt/src/plain/get/getToday.ts",
           "hash": "13679434840033698133",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/get/getWeekOfYear.test.ts",
@@ -2616,9 +2300,7 @@
         {
           "file": "packages/gmt/src/plain/get/getWeekOfYear.ts",
           "hash": "7592745175278448342",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/get/getYear.test.ts",
@@ -2627,9 +2309,7 @@
         {
           "file": "packages/gmt/src/plain/get/getYear.ts",
           "hash": "15188810367731829637",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/get/index.ts",
@@ -2638,9 +2318,7 @@
         {
           "file": "packages/gmt/src/plain/index.ts",
           "hash": "3255427694343958374",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/index.ts",
@@ -2653,9 +2331,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalAbutsDate.ts",
           "hash": "3171084097929199258",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalAbutsDateTime.test.ts",
@@ -2664,9 +2340,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalAbutsDateTime.ts",
           "hash": "13471336131326610050",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalAbutsTime.test.ts",
@@ -2675,9 +2349,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalAbutsTime.ts",
           "hash": "17419132635580992322",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalContainsDate.test.ts",
@@ -2686,9 +2358,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalContainsDate.ts",
           "hash": "14364754963715733303",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalContainsDateTime.test.ts",
@@ -2697,9 +2367,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalContainsDateTime.ts",
           "hash": "5425043843565720425",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalContainsTime.test.ts",
@@ -2708,9 +2376,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalContainsTime.ts",
           "hash": "18067102873819374697",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalCountDate.test.ts",
@@ -2719,9 +2385,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalCountDate.ts",
           "hash": "4857691784304483962",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalCountDateTime.test.ts",
@@ -2730,9 +2394,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalCountDateTime.ts",
           "hash": "8145362503080988445",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalCountTime.test.ts",
@@ -2741,9 +2403,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalCountTime.ts",
           "hash": "7780490619954499551",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalDifferenceDate.test.ts",
@@ -2752,9 +2412,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalDifferenceDate.ts",
           "hash": "10275211024482657664",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalDifferenceDateTime.test.ts",
@@ -2763,9 +2421,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalDifferenceDateTime.ts",
           "hash": "13643034421953081198",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalDifferenceTime.test.ts",
@@ -2774,9 +2430,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalDifferenceTime.ts",
           "hash": "13591735009463084744",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalDivideEquallyDate.test.ts",
@@ -2793,9 +2447,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalDivideEquallyDateTime.ts",
           "hash": "6894532082095148942",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalDivideEquallyTime.test.ts",
@@ -2804,9 +2456,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalDivideEquallyTime.ts",
           "hash": "4229879604713725562",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalEngulfsDate.test.ts",
@@ -2815,9 +2465,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalEngulfsDate.ts",
           "hash": "12816857006612416112",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalEngulfsDateTime.test.ts",
@@ -2826,9 +2474,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalEngulfsDateTime.ts",
           "hash": "3237970328892468333",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalEngulfsTime.test.ts",
@@ -2837,9 +2483,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalEngulfsTime.ts",
           "hash": "8751054580036269019",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalFromDurationDate.test.ts",
@@ -2848,9 +2492,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalFromDurationDate.ts",
           "hash": "10328687802803197999",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalFromDurationDateTime.test.ts",
@@ -2859,9 +2501,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalFromDurationDateTime.ts",
           "hash": "15581285091257985431",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalFromDurationTime.test.ts",
@@ -2870,9 +2510,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalFromDurationTime.ts",
           "hash": "841896015972208724",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalIntersectionDate.test.ts",
@@ -2881,9 +2519,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalIntersectionDate.ts",
           "hash": "8872466057353996678",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalIntersectionDateTime.test.ts",
@@ -2892,9 +2528,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalIntersectionDateTime.ts",
           "hash": "3023708125344421764",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalIntersectionTime.test.ts",
@@ -2903,9 +2537,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalIntersectionTime.ts",
           "hash": "13120472102586150415",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalLengthDate.test.ts",
@@ -2922,9 +2554,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalLengthDateTime.ts",
           "hash": "16783212425024559668",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalLengthTime.test.ts",
@@ -2933,9 +2563,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalLengthTime.ts",
           "hash": "608004895208724495",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalOverlappingDaysDate.test.ts",
@@ -2944,9 +2572,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalOverlappingDaysDate.ts",
           "hash": "15056019148606691878",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalOverlappingDaysDateTime.test.ts",
@@ -2955,9 +2581,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalOverlappingDaysDateTime.ts",
           "hash": "13796825152442168417",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalSplitAtDate.test.ts",
@@ -2966,9 +2590,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalSplitAtDate.ts",
           "hash": "3474801557860322132",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalSplitAtDateTime.test.ts",
@@ -2977,9 +2599,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalSplitAtDateTime.ts",
           "hash": "16042900499703670280",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalSplitAtTime.test.ts",
@@ -2988,9 +2608,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalSplitAtTime.ts",
           "hash": "12242305458946183029",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalUnionDate.test.ts",
@@ -2999,9 +2617,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalUnionDate.ts",
           "hash": "9093182324419103915",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalUnionDateTime.test.ts",
@@ -3010,9 +2626,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalUnionDateTime.ts",
           "hash": "2100160181285750057",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalUnionTime.test.ts",
@@ -3021,9 +2635,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalUnionTime.ts",
           "hash": "9122786410080214551",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalXorAllDate.test.ts",
@@ -3032,9 +2644,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalXorAllDate.ts",
           "hash": "11600724902826502148",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalXorAllDateTime.test.ts",
@@ -3043,9 +2653,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalXorAllDateTime.ts",
           "hash": "9730097493679923698",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalXorAllTime.test.ts",
@@ -3054,9 +2662,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalXorAllTime.ts",
           "hash": "17436475018144089235",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalXorDate.test.ts",
@@ -3065,9 +2671,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalXorDate.ts",
           "hash": "17786541999466280966",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalXorDateTime.test.ts",
@@ -3076,9 +2680,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalXorDateTime.ts",
           "hash": "9822038992957828153",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalXorTime.test.ts",
@@ -3087,9 +2689,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalXorTime.ts",
           "hash": "7733138969176887746",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalsOverlapDate.test.ts",
@@ -3098,9 +2698,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalsOverlapDate.ts",
           "hash": "652590784325820078",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalsOverlapDateTime.test.ts",
@@ -3109,9 +2707,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalsOverlapDateTime.ts",
           "hash": "16638308794029630979",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/intervalsOverlapTime.test.ts",
@@ -3120,9 +2716,7 @@
         {
           "file": "packages/gmt/src/plain/interval/intervalsOverlapTime.ts",
           "hash": "1475761185047526620",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/mergeIntervalsDate.test.ts",
@@ -3131,9 +2725,7 @@
         {
           "file": "packages/gmt/src/plain/interval/mergeIntervalsDate.ts",
           "hash": "10499225016712039349",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/mergeIntervalsDateTime.test.ts",
@@ -3142,9 +2734,7 @@
         {
           "file": "packages/gmt/src/plain/interval/mergeIntervalsDateTime.ts",
           "hash": "5326343952223745343",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/mergeIntervalsTime.test.ts",
@@ -3153,9 +2743,7 @@
         {
           "file": "packages/gmt/src/plain/interval/mergeIntervalsTime.ts",
           "hash": "8316143166237860508",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/splitIntervalByUnitDate.test.ts",
@@ -3164,9 +2752,7 @@
         {
           "file": "packages/gmt/src/plain/interval/splitIntervalByUnitDate.ts",
           "hash": "11714120117677779942",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/splitIntervalByUnitDateTime.test.ts",
@@ -3175,9 +2761,7 @@
         {
           "file": "packages/gmt/src/plain/interval/splitIntervalByUnitDateTime.ts",
           "hash": "2127474192739755101",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/splitIntervalByUnitTime.test.ts",
@@ -3186,9 +2770,7 @@
         {
           "file": "packages/gmt/src/plain/interval/splitIntervalByUnitTime.ts",
           "hash": "12710302243997428617",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/validate/index.ts",
@@ -3201,9 +2783,7 @@
         {
           "file": "packages/gmt/src/plain/interval/validate/isValidDateInterval.ts",
           "hash": "8104621376289258544",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/validate/isValidDateTimeInterval.test.ts",
@@ -3212,9 +2792,7 @@
         {
           "file": "packages/gmt/src/plain/interval/validate/isValidDateTimeInterval.ts",
           "hash": "12773051127752834889",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/interval/validate/isValidTimeInterval.test.ts",
@@ -3223,30 +2801,22 @@
         {
           "file": "packages/gmt/src/plain/interval/validate/isValidTimeInterval.ts",
           "hash": "2734044068804538590",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/locale/getLocaleEraNames.test.ts",
           "hash": "17684380422277658319",
-          "deps": [
-            "npm:vitest"
-          ]
+          "deps": ["npm:vitest"]
         },
         {
           "file": "packages/gmt/src/plain/locale/getLocaleEraNames.ts",
           "hash": "13411521142626086505",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/locale/getLocaleMeridiems.test.ts",
           "hash": "6359551966782332409",
-          "deps": [
-            "npm:vitest"
-          ]
+          "deps": ["npm:vitest"]
         },
         {
           "file": "packages/gmt/src/plain/locale/getLocaleMeridiems.ts",
@@ -3255,30 +2825,22 @@
         {
           "file": "packages/gmt/src/plain/locale/getLocaleMonthNames.test.ts",
           "hash": "11215512396020379173",
-          "deps": [
-            "npm:vitest"
-          ]
+          "deps": ["npm:vitest"]
         },
         {
           "file": "packages/gmt/src/plain/locale/getLocaleMonthNames.ts",
           "hash": "3306372082121554809",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/locale/getLocaleWeekdayNames.test.ts",
           "hash": "5681246486075681273",
-          "deps": [
-            "npm:vitest"
-          ]
+          "deps": ["npm:vitest"]
         },
         {
           "file": "packages/gmt/src/plain/locale/getLocaleWeekdayNames.ts",
           "hash": "13418741959317209607",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/locale/index.ts",
@@ -3295,9 +2857,7 @@
         {
           "file": "packages/gmt/src/plain/map/mapDatesInRange.ts",
           "hash": "9760098756243845235",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/map/mapDaysInMonth.test.ts",
@@ -3306,9 +2866,7 @@
         {
           "file": "packages/gmt/src/plain/map/mapDaysInMonth.ts",
           "hash": "381203072711963956",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/index.ts",
@@ -3317,30 +2875,22 @@
         {
           "file": "packages/gmt/src/plain/parse/parseDateTimeWithPattern.test.ts",
           "hash": "8804598818378993103",
-          "deps": [
-            "npm:vitest"
-          ]
+          "deps": ["npm:vitest"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseDateTimeWithPattern.ts",
           "hash": "10798336552534125556",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseDateWithPattern.test.ts",
           "hash": "10584017231522401770",
-          "deps": [
-            "npm:vitest"
-          ]
+          "deps": ["npm:vitest"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseDateWithPattern.ts",
           "hash": "16526670174423038621",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseDayFromDate.test.ts",
@@ -3349,9 +2899,7 @@
         {
           "file": "packages/gmt/src/plain/parse/parseDayFromDate.ts",
           "hash": "10382803230189380426",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseDayFromDateTime.test.ts",
@@ -3360,9 +2908,7 @@
         {
           "file": "packages/gmt/src/plain/parse/parseDayFromDateTime.ts",
           "hash": "2306628942685417430",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseDayOfWeekFromDate.test.ts",
@@ -3371,9 +2917,7 @@
         {
           "file": "packages/gmt/src/plain/parse/parseDayOfWeekFromDate.ts",
           "hash": "10096102665943601514",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseDayOfWeekFromDateTime.test.ts",
@@ -3382,9 +2926,7 @@
         {
           "file": "packages/gmt/src/plain/parse/parseDayOfWeekFromDateTime.ts",
           "hash": "1442369881590115140",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseHourFromDateTime.test.ts",
@@ -3393,9 +2935,7 @@
         {
           "file": "packages/gmt/src/plain/parse/parseHourFromDateTime.ts",
           "hash": "2476868462425190110",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseHourFromTime.test.ts",
@@ -3404,9 +2944,7 @@
         {
           "file": "packages/gmt/src/plain/parse/parseHourFromTime.ts",
           "hash": "8573907239653272099",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseMicrosecondFromDateTime.test.ts",
@@ -3415,9 +2953,7 @@
         {
           "file": "packages/gmt/src/plain/parse/parseMicrosecondFromDateTime.ts",
           "hash": "6609503152970625999",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseMicrosecondFromTime.test.ts",
@@ -3426,9 +2962,7 @@
         {
           "file": "packages/gmt/src/plain/parse/parseMicrosecondFromTime.ts",
           "hash": "13850524807749291167",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseMillisecondFromDateTime.test.ts",
@@ -3437,9 +2971,7 @@
         {
           "file": "packages/gmt/src/plain/parse/parseMillisecondFromDateTime.ts",
           "hash": "4410133243524573185",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseMillisecondFromTime.test.ts",
@@ -3448,9 +2980,7 @@
         {
           "file": "packages/gmt/src/plain/parse/parseMillisecondFromTime.ts",
           "hash": "7361710555746691623",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseMinuteFromDateTime.test.ts",
@@ -3459,9 +2989,7 @@
         {
           "file": "packages/gmt/src/plain/parse/parseMinuteFromDateTime.ts",
           "hash": "4637873268580844505",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseMinuteFromTime.test.ts",
@@ -3470,9 +2998,7 @@
         {
           "file": "packages/gmt/src/plain/parse/parseMinuteFromTime.ts",
           "hash": "14306187002299583758",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseMonthFromDate.test.ts",
@@ -3481,9 +3007,7 @@
         {
           "file": "packages/gmt/src/plain/parse/parseMonthFromDate.ts",
           "hash": "254930709818451347",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseMonthFromDateTime.test.ts",
@@ -3492,9 +3016,7 @@
         {
           "file": "packages/gmt/src/plain/parse/parseMonthFromDateTime.ts",
           "hash": "14177095419338930246",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseNanosecondFromDateTime.test.ts",
@@ -3503,9 +3025,7 @@
         {
           "file": "packages/gmt/src/plain/parse/parseNanosecondFromDateTime.ts",
           "hash": "11022234329987901820",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseNanosecondFromTime.test.ts",
@@ -3514,9 +3034,7 @@
         {
           "file": "packages/gmt/src/plain/parse/parseNanosecondFromTime.ts",
           "hash": "16186594779237850576",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseSecondFromDateTime.test.ts",
@@ -3525,9 +3043,7 @@
         {
           "file": "packages/gmt/src/plain/parse/parseSecondFromDateTime.ts",
           "hash": "2034452657896552519",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseSecondFromTime.test.ts",
@@ -3536,9 +3052,7 @@
         {
           "file": "packages/gmt/src/plain/parse/parseSecondFromTime.ts",
           "hash": "12496655095321620327",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseSql.test.ts",
@@ -3547,23 +3061,17 @@
         {
           "file": "packages/gmt/src/plain/parse/parseSql.ts",
           "hash": "8441010126071996544",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseTimeWithPattern.test.ts",
           "hash": "10727940277931232456",
-          "deps": [
-            "npm:vitest"
-          ]
+          "deps": ["npm:vitest"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseTimeWithPattern.ts",
           "hash": "3585110219261305488",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseUnitFromDate.test.ts",
@@ -3572,9 +3080,7 @@
         {
           "file": "packages/gmt/src/plain/parse/parseUnitFromDate.ts",
           "hash": "8962481647412300299",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseUnitFromDateTime.test.ts",
@@ -3583,9 +3089,7 @@
         {
           "file": "packages/gmt/src/plain/parse/parseUnitFromDateTime.ts",
           "hash": "10186916681370181856",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseUnitFromTime.test.ts",
@@ -3594,9 +3098,7 @@
         {
           "file": "packages/gmt/src/plain/parse/parseUnitFromTime.ts",
           "hash": "5213696035064094886",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseWeekFromDate.test.ts",
@@ -3621,9 +3123,7 @@
         {
           "file": "packages/gmt/src/plain/parse/parseYearFromDate.ts",
           "hash": "4377396645210663630",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/parse/parseYearFromDateTime.test.ts",
@@ -3632,9 +3132,7 @@
         {
           "file": "packages/gmt/src/plain/parse/parseYearFromDateTime.ts",
           "hash": "3091471131314779766",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/validate/index.ts",
@@ -3655,9 +3153,7 @@
         {
           "file": "packages/gmt/src/plain/validate/isLeapYear.ts",
           "hash": "17022980034694375156",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/validate/isValidCalendarDate.test.ts",
@@ -3674,9 +3170,7 @@
         {
           "file": "packages/gmt/src/plain/validate/isValidDate.ts",
           "hash": "15968524412280177972",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/validate/isValidDateCycleField.test.ts",
@@ -3701,9 +3195,7 @@
         {
           "file": "packages/gmt/src/plain/validate/isValidDateRange.ts",
           "hash": "8260680061901529699",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/validate/isValidDateTime.test.ts",
@@ -3712,9 +3204,7 @@
         {
           "file": "packages/gmt/src/plain/validate/isValidDateTime.ts",
           "hash": "12158959379861819426",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/validate/isValidDateTimeCycleField.test.ts",
@@ -3739,9 +3229,7 @@
         {
           "file": "packages/gmt/src/plain/validate/isValidDateTimeRange.ts",
           "hash": "14635275130810722228",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/validate/isValidDateTimeUnit.test.ts",
@@ -3766,9 +3254,7 @@
         {
           "file": "packages/gmt/src/plain/validate/isValidIsoDateLike.ts",
           "hash": "11656060694477287659",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/validate/isValidTime.test.ts",
@@ -3777,9 +3263,7 @@
         {
           "file": "packages/gmt/src/plain/validate/isValidTime.ts",
           "hash": "17490225990423426005",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/validate/isValidTimeCycleField.test.ts",
@@ -3804,9 +3288,7 @@
         {
           "file": "packages/gmt/src/plain/validate/isValidTimeRange.ts",
           "hash": "3048033912315681067",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/plain/validate/isValidTimeUnit.test.ts",
@@ -3947,96 +3429,62 @@
         {
           "file": "packages/gmt/src/test/mocks/mockTemporalInstantFromThrow.ts",
           "hash": "4350416447390855516",
-          "deps": [
-            "npm:@js-temporal/polyfill",
-            "npm:vitest"
-          ]
+          "deps": ["npm:@js-temporal/polyfill", "npm:vitest"]
         },
         {
           "file": "packages/gmt/src/test/mocks/mockTemporalNowInstantThrow.ts",
           "hash": "12798478450904493651",
-          "deps": [
-            "npm:@js-temporal/polyfill",
-            "npm:vitest"
-          ]
+          "deps": ["npm:@js-temporal/polyfill", "npm:vitest"]
         },
         {
           "file": "packages/gmt/src/test/mocks/mockTemporalNowPlainDateISOThrow.ts",
           "hash": "738750687075881597",
-          "deps": [
-            "npm:@js-temporal/polyfill",
-            "npm:vitest"
-          ]
+          "deps": ["npm:@js-temporal/polyfill", "npm:vitest"]
         },
         {
           "file": "packages/gmt/src/test/mocks/mockTemporalNowPlainDateTimeISOThrow.ts",
           "hash": "3862906553923043163",
-          "deps": [
-            "npm:@js-temporal/polyfill",
-            "npm:vitest"
-          ]
+          "deps": ["npm:@js-temporal/polyfill", "npm:vitest"]
         },
         {
           "file": "packages/gmt/src/test/mocks/mockTemporalNowPlainTimeISOThrow.ts",
           "hash": "10659194207379568129",
-          "deps": [
-            "npm:@js-temporal/polyfill",
-            "npm:vitest"
-          ]
+          "deps": ["npm:@js-temporal/polyfill", "npm:vitest"]
         },
         {
           "file": "packages/gmt/src/test/mocks/mockTemporalNowZonedDateTimeISOThrow.ts",
           "hash": "17001823355945374972",
-          "deps": [
-            "npm:@js-temporal/polyfill",
-            "npm:vitest"
-          ]
+          "deps": ["npm:@js-temporal/polyfill", "npm:vitest"]
         },
         {
           "file": "packages/gmt/src/test/mocks/mockTemporalPlainDateFromThrow.ts",
           "hash": "13335153402230973060",
-          "deps": [
-            "npm:@js-temporal/polyfill",
-            "npm:vitest"
-          ]
+          "deps": ["npm:@js-temporal/polyfill", "npm:vitest"]
         },
         {
           "file": "packages/gmt/src/test/mocks/mockTemporalPlainDateTimeFromThrow.ts",
           "hash": "3372201494920953696",
-          "deps": [
-            "npm:@js-temporal/polyfill",
-            "npm:vitest"
-          ]
+          "deps": ["npm:@js-temporal/polyfill", "npm:vitest"]
         },
         {
           "file": "packages/gmt/src/test/mocks/mockTemporalPlainTimeThrow.ts",
           "hash": "5806241242743469608",
-          "deps": [
-            "npm:@js-temporal/polyfill",
-            "npm:vitest"
-          ]
+          "deps": ["npm:@js-temporal/polyfill", "npm:vitest"]
         },
         {
           "file": "packages/gmt/src/test/mocks/mockTemporalZonedDateTimeFromThrow.ts",
           "hash": "10988139830960873624",
-          "deps": [
-            "npm:@js-temporal/polyfill",
-            "npm:vitest"
-          ]
+          "deps": ["npm:@js-temporal/polyfill", "npm:vitest"]
         },
         {
           "file": "packages/gmt/src/test/setupTests.ts",
           "hash": "10326611577811124068",
-          "deps": [
-            "npm:vitest"
-          ]
+          "deps": ["npm:vitest"]
         },
         {
           "file": "packages/gmt/src/test/timeZoneMatrix.ts",
           "hash": "5971471779080010818",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/types/calendar-system.ts",
@@ -4049,9 +3497,7 @@
         {
           "file": "packages/gmt/src/types/date-duration-unit.ts",
           "hash": "373233805364877626",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/types/date-time-cycle-field.ts",
@@ -4060,44 +3506,32 @@
         {
           "file": "packages/gmt/src/types/date-time-duration-units.ts",
           "hash": "3393122801271414882",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/types/date-time-unit.ts",
           "hash": "16309371620531026376",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/types/date-unit.ts",
           "hash": "12956047977693501280",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/types/disambiguation.ts",
           "hash": "9430745712620457543",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/types/duration-relative-to.ts",
           "hash": "15929474862913449927",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/types/duration-string-options.ts",
           "hash": "16307241777273074338",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/types/fractional-digit.ts",
@@ -4110,16 +3544,12 @@
         {
           "file": "packages/gmt/src/types/offset.ts",
           "hash": "8867324828413561789",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/types/overflow.ts",
           "hash": "51768899091808237",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/types/relative-rounding-method.ts",
@@ -4128,9 +3558,7 @@
         {
           "file": "packages/gmt/src/types/rounding-options.ts",
           "hash": "13568961683963908628",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/types/time-cycle-field.ts",
@@ -4139,16 +3567,12 @@
         {
           "file": "packages/gmt/src/types/time-duration-unit.ts",
           "hash": "17356585654617570315",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/types/time-unit.ts",
           "hash": "2938146032389390754",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/README.md",
@@ -4161,65 +3585,47 @@
         {
           "file": "packages/gmt/src/unix/calculate/addUnix.ts",
           "hash": "10984820933937431751",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/calculate/diffUnix.test.ts",
           "hash": "10354021092524678682",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/calculate/diffUnix.ts",
           "hash": "11026058450647984722",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/calculate/diffUnixAsDuration.test.ts",
           "hash": "16338057863935513698",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/calculate/diffUnixAsDuration.ts",
           "hash": "12885030115071270066",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/calculate/endOfQuarterForUnix.test.ts",
           "hash": "13121013103286577682",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/calculate/endOfQuarterForUnix.ts",
           "hash": "13791595292349835912",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/calculate/endOfUnix.test.ts",
           "hash": "6876214415226279650",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/calculate/endOfUnix.ts",
           "hash": "2544331050612496197",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/calculate/index.ts",
@@ -4228,16 +3634,12 @@
         {
           "file": "packages/gmt/src/unix/calculate/isBetweenUnix.test.ts",
           "hash": "12719509783371069145",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/calculate/isBetweenUnix.ts",
           "hash": "2536264582628093197",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/calculate/maxUnix.test.ts",
@@ -4258,30 +3660,22 @@
         {
           "file": "packages/gmt/src/unix/calculate/roundUnix.test.ts",
           "hash": "3892115005776046012",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/calculate/roundUnix.ts",
           "hash": "7987197288388674594",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/calculate/setUnix.test.ts",
           "hash": "3581587016934177753",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/calculate/setUnix.ts",
           "hash": "4386580372378721344",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/calculate/sortUnix.test.ts",
@@ -4294,16 +3688,12 @@
         {
           "file": "packages/gmt/src/unix/calculate/startOfQuarterForUnix.test.ts",
           "hash": "10245043617428676383",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/calculate/startOfQuarterForUnix.ts",
           "hash": "6002802279964682867",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/calculate/startOfUnix.test.ts",
@@ -4312,30 +3702,22 @@
         {
           "file": "packages/gmt/src/unix/calculate/startOfUnix.ts",
           "hash": "18246961501184685215",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/calculate/startOrEndOfUnix.ts",
           "hash": "1242648210083977420",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/calculate/subtractUnix.test.ts",
           "hash": "4136198161503914674",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/calculate/subtractUnix.ts",
           "hash": "5641242563555175086",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/compare/areUnixEqual.test.ts",
@@ -4344,9 +3726,7 @@
         {
           "file": "packages/gmt/src/unix/compare/areUnixEqual.ts",
           "hash": "2843274433626451296",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/compare/areUnixEqualBy.test.ts",
@@ -4367,9 +3747,7 @@
         {
           "file": "packages/gmt/src/unix/compare/isAfterUnix.ts",
           "hash": "16028109634533998870",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/compare/isBeforeUnix.test.ts",
@@ -4378,9 +3756,7 @@
         {
           "file": "packages/gmt/src/unix/compare/isBeforeUnix.ts",
           "hash": "14217176882693982367",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/convert/convertUnixToPlainDate.test.ts",
@@ -4389,9 +3765,7 @@
         {
           "file": "packages/gmt/src/unix/convert/convertUnixToPlainDate.ts",
           "hash": "6315482349942323553",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/convert/convertUnixToPlainDateTime.test.ts",
@@ -4400,9 +3774,7 @@
         {
           "file": "packages/gmt/src/unix/convert/convertUnixToPlainDateTime.ts",
           "hash": "16571322902575226215",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/convert/convertUnixToPlainTime.test.ts",
@@ -4411,9 +3783,7 @@
         {
           "file": "packages/gmt/src/unix/convert/convertUnixToPlainTime.ts",
           "hash": "636745902864290604",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/convert/convertUnixToUtc.test.ts",
@@ -4422,9 +3792,7 @@
         {
           "file": "packages/gmt/src/unix/convert/convertUnixToUtc.ts",
           "hash": "5527999481331600686",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/convert/convertUnixToZoned.test.ts",
@@ -4433,9 +3801,7 @@
         {
           "file": "packages/gmt/src/unix/convert/convertUnixToZoned.ts",
           "hash": "8660158781177016876",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/convert/index.ts",
@@ -4444,30 +3810,22 @@
         {
           "file": "packages/gmt/src/unix/format/formatCalendarUnix.test.ts",
           "hash": "1917863888886670115",
-          "deps": [
-            "npm:vitest"
-          ]
+          "deps": ["npm:vitest"]
         },
         {
           "file": "packages/gmt/src/unix/format/formatCalendarUnix.ts",
           "hash": "15995456540500718028",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/format/formatRelativeUnix.test.ts",
           "hash": "5566155701690268657",
-          "deps": [
-            "npm:vitest"
-          ]
+          "deps": ["npm:vitest"]
         },
         {
           "file": "packages/gmt/src/unix/format/formatRelativeUnix.ts",
           "hash": "16241778041410019853",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/format/formatUnix.test.ts",
@@ -4476,9 +3834,7 @@
         {
           "file": "packages/gmt/src/unix/format/formatUnix.ts",
           "hash": "6254810080991109568",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/format/index.ts",
@@ -4491,9 +3847,7 @@
         {
           "file": "packages/gmt/src/unix/get/getUnixDay.ts",
           "hash": "4515026587802488655",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/get/getUnixHour.test.ts",
@@ -4502,9 +3856,7 @@
         {
           "file": "packages/gmt/src/unix/get/getUnixHour.ts",
           "hash": "9073569909880160639",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/get/getUnixMicrosecond.test.ts",
@@ -4513,9 +3865,7 @@
         {
           "file": "packages/gmt/src/unix/get/getUnixMicrosecond.ts",
           "hash": "17151979565461678533",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/get/getUnixMillisecond.test.ts",
@@ -4524,9 +3874,7 @@
         {
           "file": "packages/gmt/src/unix/get/getUnixMillisecond.ts",
           "hash": "4109716625865202408",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/get/getUnixMinute.test.ts",
@@ -4535,9 +3883,7 @@
         {
           "file": "packages/gmt/src/unix/get/getUnixMinute.ts",
           "hash": "8205137350254773520",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/get/getUnixMonth.test.ts",
@@ -4546,9 +3892,7 @@
         {
           "file": "packages/gmt/src/unix/get/getUnixMonth.ts",
           "hash": "11006496135947349094",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/get/getUnixNanosecond.test.ts",
@@ -4557,9 +3901,7 @@
         {
           "file": "packages/gmt/src/unix/get/getUnixNanosecond.ts",
           "hash": "15934212562281356660",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/get/getUnixNow.test.ts",
@@ -4568,9 +3910,7 @@
         {
           "file": "packages/gmt/src/unix/get/getUnixNow.ts",
           "hash": "4413615682080896196",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/get/getUnixNowUnit.test.ts",
@@ -4579,9 +3919,7 @@
         {
           "file": "packages/gmt/src/unix/get/getUnixNowUnit.ts",
           "hash": "3894255469460755574",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/get/getUnixSecond.test.ts",
@@ -4590,9 +3928,7 @@
         {
           "file": "packages/gmt/src/unix/get/getUnixSecond.ts",
           "hash": "2156064650225441179",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/get/getUnixYear.test.ts",
@@ -4601,9 +3937,7 @@
         {
           "file": "packages/gmt/src/unix/get/getUnixYear.ts",
           "hash": "1787097377529891108",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/get/index.ts",
@@ -4636,9 +3970,7 @@
         {
           "file": "packages/gmt/src/unix/interval/intervalCountUnix.test.ts",
           "hash": "5623664538585334898",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/interval/intervalCountUnix.ts",
@@ -4671,16 +4003,12 @@
         {
           "file": "packages/gmt/src/unix/interval/intervalFromDurationUnix.test.ts",
           "hash": "16793993977983622138",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/interval/intervalFromDurationUnix.ts",
           "hash": "9512015248808268350",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/interval/intervalIntersectionUnix.test.ts",
@@ -4693,9 +4021,7 @@
         {
           "file": "packages/gmt/src/unix/interval/intervalLengthUnix.test.ts",
           "hash": "5840592324225491403",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/interval/intervalLengthUnix.ts",
@@ -4708,9 +4034,7 @@
         {
           "file": "packages/gmt/src/unix/interval/intervalOverlappingDaysUnix.ts",
           "hash": "6745143111784021023",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/interval/intervalSplitAtUnix.test.ts",
@@ -4763,9 +4087,7 @@
         {
           "file": "packages/gmt/src/unix/interval/resolveUnixIntervalPair.ts",
           "hash": "197147529179615501",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/interval/splitIntervalByUnitUnix.test.ts",
@@ -4774,9 +4096,7 @@
         {
           "file": "packages/gmt/src/unix/interval/splitIntervalByUnitUnix.ts",
           "hash": "4828467824838255083",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/interval/validate/index.ts",
@@ -4801,9 +4121,7 @@
         {
           "file": "packages/gmt/src/unix/parse/parseDateFromUnix.ts",
           "hash": "17775368518098337065",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/parse/parseDayFromUnix.test.ts",
@@ -4820,9 +4138,7 @@
         {
           "file": "packages/gmt/src/unix/parse/parseDayOfWeekFromUnix.ts",
           "hash": "82630881612803484",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/parse/parseHourFromUnix.test.ts",
@@ -4887,9 +4203,7 @@
         {
           "file": "packages/gmt/src/unix/parse/parseTimeFromUnix.ts",
           "hash": "3957800617179155071",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/parse/parseUnitFromUnix.test.ts",
@@ -4898,9 +4212,7 @@
         {
           "file": "packages/gmt/src/unix/parse/parseUnitFromUnix.ts",
           "hash": "9723032036487619704",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/parse/parseWeekFromUnix.test.ts",
@@ -4909,9 +4221,7 @@
         {
           "file": "packages/gmt/src/unix/parse/parseWeekFromUnix.ts",
           "hash": "6484323570054247722",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/unix/parse/parseYearFromUnix.test.ts",
@@ -4968,9 +4278,7 @@
         {
           "file": "packages/gmt/src/utc/calculate/addUtc.ts",
           "hash": "4092643285470473573",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/calculate/diffUtc.test.ts",
@@ -4979,9 +4287,7 @@
         {
           "file": "packages/gmt/src/utc/calculate/diffUtc.ts",
           "hash": "13822435179029139495",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/calculate/diffUtcAsDuration.test.ts",
@@ -4990,9 +4296,7 @@
         {
           "file": "packages/gmt/src/utc/calculate/diffUtcAsDuration.ts",
           "hash": "2978399962935121739",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/calculate/endOfQuarterForUtc.test.ts",
@@ -5001,9 +4305,7 @@
         {
           "file": "packages/gmt/src/utc/calculate/endOfQuarterForUtc.ts",
           "hash": "7379508839492072860",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/calculate/endOfUtc.test.ts",
@@ -5012,9 +4314,7 @@
         {
           "file": "packages/gmt/src/utc/calculate/endOfUtc.ts",
           "hash": "11959256412991908389",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/calculate/index.ts",
@@ -5027,9 +4327,7 @@
         {
           "file": "packages/gmt/src/utc/calculate/isBetweenUtc.ts",
           "hash": "18239662277545104177",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/calculate/maxUtc.test.ts",
@@ -5038,9 +4336,7 @@
         {
           "file": "packages/gmt/src/utc/calculate/maxUtc.ts",
           "hash": "14584964910883496305",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/calculate/minUtc.test.ts",
@@ -5049,9 +4345,7 @@
         {
           "file": "packages/gmt/src/utc/calculate/minUtc.ts",
           "hash": "10059698292489830600",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/calculate/roundUtc.test.ts",
@@ -5060,9 +4354,7 @@
         {
           "file": "packages/gmt/src/utc/calculate/roundUtc.ts",
           "hash": "13677096861794501469",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/calculate/setUtc.test.ts",
@@ -5071,9 +4363,7 @@
         {
           "file": "packages/gmt/src/utc/calculate/setUtc.ts",
           "hash": "1040788490250938384",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/calculate/sortUtc.test.ts",
@@ -5082,9 +4372,7 @@
         {
           "file": "packages/gmt/src/utc/calculate/sortUtc.ts",
           "hash": "2139582802104785782",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/calculate/startOfQuarterForUtc.test.ts",
@@ -5093,9 +4381,7 @@
         {
           "file": "packages/gmt/src/utc/calculate/startOfQuarterForUtc.ts",
           "hash": "15129541105990077046",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/calculate/startOfUtc.test.ts",
@@ -5104,16 +4390,12 @@
         {
           "file": "packages/gmt/src/utc/calculate/startOfUtc.ts",
           "hash": "15724440779292450748",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/calculate/startOrEndOfUtc.ts",
           "hash": "5183711005700968291",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/calculate/subtractUtc.test.ts",
@@ -5122,9 +4404,7 @@
         {
           "file": "packages/gmt/src/utc/calculate/subtractUtc.ts",
           "hash": "7758937196946179179",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/chop/chopUtc.test.ts",
@@ -5145,9 +4425,7 @@
         {
           "file": "packages/gmt/src/utc/compare/areUtcEqual.ts",
           "hash": "17272334246929201515",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/compare/areUtcEqualBy.test.ts",
@@ -5156,9 +4434,7 @@
         {
           "file": "packages/gmt/src/utc/compare/areUtcEqualBy.ts",
           "hash": "10672878312372369118",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/compare/index.ts",
@@ -5171,9 +4447,7 @@
         {
           "file": "packages/gmt/src/utc/compare/isAfterUtc.ts",
           "hash": "3545915327161776029",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/compare/isBeforeUtc.test.ts",
@@ -5182,9 +4456,7 @@
         {
           "file": "packages/gmt/src/utc/compare/isBeforeUtc.ts",
           "hash": "828905590929904377",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/convert/convertUtcToPlainDate.test.ts",
@@ -5193,9 +4465,7 @@
         {
           "file": "packages/gmt/src/utc/convert/convertUtcToPlainDate.ts",
           "hash": "11884407615975222071",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/convert/convertUtcToPlainDateTime.test.ts",
@@ -5204,9 +4474,7 @@
         {
           "file": "packages/gmt/src/utc/convert/convertUtcToPlainDateTime.ts",
           "hash": "17926949307076987534",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/convert/convertUtcToPlainTime.test.ts",
@@ -5215,9 +4483,7 @@
         {
           "file": "packages/gmt/src/utc/convert/convertUtcToPlainTime.ts",
           "hash": "12402217265715422744",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/convert/convertUtcToUnix.test.ts",
@@ -5226,9 +4492,7 @@
         {
           "file": "packages/gmt/src/utc/convert/convertUtcToUnix.ts",
           "hash": "2041109512069091695",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/convert/convertUtcToZoned.test.ts",
@@ -5237,9 +4501,7 @@
         {
           "file": "packages/gmt/src/utc/convert/convertUtcToZoned.ts",
           "hash": "9753246111768362781",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/convert/index.ts",
@@ -5248,44 +4510,32 @@
         {
           "file": "packages/gmt/src/utc/format/formatCalendarUtc.test.ts",
           "hash": "16560918058771474657",
-          "deps": [
-            "npm:vitest"
-          ]
+          "deps": ["npm:vitest"]
         },
         {
           "file": "packages/gmt/src/utc/format/formatCalendarUtc.ts",
           "hash": "5688309030711988111",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/format/formatHttp.test.ts",
           "hash": "14364441539203027525",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/format/formatHttp.ts",
           "hash": "2198257816652809785",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/format/formatRelativeUtc.test.ts",
           "hash": "14588217065386586458",
-          "deps": [
-            "npm:vitest"
-          ]
+          "deps": ["npm:vitest"]
         },
         {
           "file": "packages/gmt/src/utc/format/formatRelativeUtc.ts",
           "hash": "793186137173918643",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/format/formatUtc.test.ts",
@@ -5306,9 +4556,7 @@
         {
           "file": "packages/gmt/src/utc/get/getUtcDay.ts",
           "hash": "5683031895745375268",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/get/getUtcHour.test.ts",
@@ -5317,9 +4565,7 @@
         {
           "file": "packages/gmt/src/utc/get/getUtcHour.ts",
           "hash": "9590838004104410699",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/get/getUtcMicrosecond.test.ts",
@@ -5328,9 +4574,7 @@
         {
           "file": "packages/gmt/src/utc/get/getUtcMicrosecond.ts",
           "hash": "1044310562409440160",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/get/getUtcMillisecond.test.ts",
@@ -5339,9 +4583,7 @@
         {
           "file": "packages/gmt/src/utc/get/getUtcMillisecond.ts",
           "hash": "7827775765244851963",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/get/getUtcMinute.test.ts",
@@ -5350,9 +4592,7 @@
         {
           "file": "packages/gmt/src/utc/get/getUtcMinute.ts",
           "hash": "6493259323169381524",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/get/getUtcMonth.test.ts",
@@ -5361,9 +4601,7 @@
         {
           "file": "packages/gmt/src/utc/get/getUtcMonth.ts",
           "hash": "10686289306719287472",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/get/getUtcNanosecond.test.ts",
@@ -5372,9 +4610,7 @@
         {
           "file": "packages/gmt/src/utc/get/getUtcNanosecond.ts",
           "hash": "6969290089435276258",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/get/getUtcNow.test.ts",
@@ -5383,9 +4619,7 @@
         {
           "file": "packages/gmt/src/utc/get/getUtcNow.ts",
           "hash": "17145460518830510552",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/get/getUtcNowUnit.test.ts",
@@ -5394,9 +4628,7 @@
         {
           "file": "packages/gmt/src/utc/get/getUtcNowUnit.ts",
           "hash": "11591506772676626247",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/get/getUtcSecond.test.ts",
@@ -5405,9 +4637,7 @@
         {
           "file": "packages/gmt/src/utc/get/getUtcSecond.ts",
           "hash": "8718632194262071330",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/get/getUtcYear.test.ts",
@@ -5416,9 +4646,7 @@
         {
           "file": "packages/gmt/src/utc/get/getUtcYear.ts",
           "hash": "11586141664282320529",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/get/index.ts",
@@ -5439,9 +4667,7 @@
         {
           "file": "packages/gmt/src/utc/interval/intervalAbutsUtc.ts",
           "hash": "6828979088551562464",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/interval/intervalContainsUtc.test.ts",
@@ -5450,9 +4676,7 @@
         {
           "file": "packages/gmt/src/utc/interval/intervalContainsUtc.ts",
           "hash": "9578013518794347331",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/interval/intervalCountUtc.test.ts",
@@ -5461,9 +4685,7 @@
         {
           "file": "packages/gmt/src/utc/interval/intervalCountUtc.ts",
           "hash": "9752378121033364965",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/interval/intervalDifferenceUtc.test.ts",
@@ -5472,9 +4694,7 @@
         {
           "file": "packages/gmt/src/utc/interval/intervalDifferenceUtc.ts",
           "hash": "4134541774519308411",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/interval/intervalDivideEquallyUtc.test.ts",
@@ -5483,9 +4703,7 @@
         {
           "file": "packages/gmt/src/utc/interval/intervalDivideEquallyUtc.ts",
           "hash": "13301908380024831740",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/interval/intervalEngulfsUtc.test.ts",
@@ -5494,9 +4712,7 @@
         {
           "file": "packages/gmt/src/utc/interval/intervalEngulfsUtc.ts",
           "hash": "6038939307505865842",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/interval/intervalFromDurationUtc.test.ts",
@@ -5505,9 +4721,7 @@
         {
           "file": "packages/gmt/src/utc/interval/intervalFromDurationUtc.ts",
           "hash": "5266070870946898833",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/interval/intervalIntersectionUtc.test.ts",
@@ -5516,9 +4730,7 @@
         {
           "file": "packages/gmt/src/utc/interval/intervalIntersectionUtc.ts",
           "hash": "16180212817797073097",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/interval/intervalLengthUtc.test.ts",
@@ -5527,9 +4739,7 @@
         {
           "file": "packages/gmt/src/utc/interval/intervalLengthUtc.ts",
           "hash": "2886642279543577890",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/interval/intervalOverlappingDaysUtc.test.ts",
@@ -5538,9 +4748,7 @@
         {
           "file": "packages/gmt/src/utc/interval/intervalOverlappingDaysUtc.ts",
           "hash": "17103753198917602706",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/interval/intervalSplitAtUtc.test.ts",
@@ -5549,9 +4757,7 @@
         {
           "file": "packages/gmt/src/utc/interval/intervalSplitAtUtc.ts",
           "hash": "12050783193059881352",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/interval/intervalUnionUtc.test.ts",
@@ -5560,9 +4766,7 @@
         {
           "file": "packages/gmt/src/utc/interval/intervalUnionUtc.ts",
           "hash": "14461512792488460320",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/interval/intervalXorAllUtc.test.ts",
@@ -5571,9 +4775,7 @@
         {
           "file": "packages/gmt/src/utc/interval/intervalXorAllUtc.ts",
           "hash": "1523140335253326069",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/interval/intervalXorUtc.test.ts",
@@ -5582,9 +4784,7 @@
         {
           "file": "packages/gmt/src/utc/interval/intervalXorUtc.ts",
           "hash": "17952545172965109775",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/interval/intervalsOverlapUtc.test.ts",
@@ -5593,9 +4793,7 @@
         {
           "file": "packages/gmt/src/utc/interval/intervalsOverlapUtc.ts",
           "hash": "8530501248844561658",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/interval/mergeIntervalsUtc.test.ts",
@@ -5604,9 +4802,7 @@
         {
           "file": "packages/gmt/src/utc/interval/mergeIntervalsUtc.ts",
           "hash": "6821448475473688892",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/interval/splitIntervalByUnitUtc.test.ts",
@@ -5615,9 +4811,7 @@
         {
           "file": "packages/gmt/src/utc/interval/splitIntervalByUnitUtc.ts",
           "hash": "5821397145264061794",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/interval/validate/index.ts",
@@ -5630,9 +4824,7 @@
         {
           "file": "packages/gmt/src/utc/interval/validate/isValidUtcInterval.ts",
           "hash": "86511424327063297",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/parse/index.ts",
@@ -5645,9 +4837,7 @@
         {
           "file": "packages/gmt/src/utc/parse/parseDateFromUtc.ts",
           "hash": "16557774811641525855",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/parse/parseDayFromUtc.test.ts",
@@ -5656,9 +4846,7 @@
         {
           "file": "packages/gmt/src/utc/parse/parseDayFromUtc.ts",
           "hash": "15080442266959419814",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/parse/parseDayOfWeekFromUtc.test.ts",
@@ -5667,9 +4855,7 @@
         {
           "file": "packages/gmt/src/utc/parse/parseDayOfWeekFromUtc.ts",
           "hash": "8624610673645785196",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/parse/parseHourFromUtc.test.ts",
@@ -5678,9 +4864,7 @@
         {
           "file": "packages/gmt/src/utc/parse/parseHourFromUtc.ts",
           "hash": "4670832863947182609",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/parse/parseHttp.test.ts",
@@ -5689,9 +4873,7 @@
         {
           "file": "packages/gmt/src/utc/parse/parseHttp.ts",
           "hash": "338917365221147126",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/parse/parseMicrosecondFromUtc.test.ts",
@@ -5700,9 +4882,7 @@
         {
           "file": "packages/gmt/src/utc/parse/parseMicrosecondFromUtc.ts",
           "hash": "849625613240642071",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/parse/parseMillisecondFromUtc.test.ts",
@@ -5711,9 +4891,7 @@
         {
           "file": "packages/gmt/src/utc/parse/parseMillisecondFromUtc.ts",
           "hash": "3203228231592390703",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/parse/parseMinuteFromUtc.test.ts",
@@ -5722,9 +4900,7 @@
         {
           "file": "packages/gmt/src/utc/parse/parseMinuteFromUtc.ts",
           "hash": "8252037732114234072",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/parse/parseMonthFromUtc.test.ts",
@@ -5733,9 +4909,7 @@
         {
           "file": "packages/gmt/src/utc/parse/parseMonthFromUtc.ts",
           "hash": "9605441023943897799",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/parse/parseNanosecondFromUtc.test.ts",
@@ -5744,9 +4918,7 @@
         {
           "file": "packages/gmt/src/utc/parse/parseNanosecondFromUtc.ts",
           "hash": "12478728137537210465",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/parse/parseSecondFromUtc.test.ts",
@@ -5755,9 +4927,7 @@
         {
           "file": "packages/gmt/src/utc/parse/parseSecondFromUtc.ts",
           "hash": "8985296027882891368",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/parse/parseTimeFromUtc.test.ts",
@@ -5766,9 +4936,7 @@
         {
           "file": "packages/gmt/src/utc/parse/parseTimeFromUtc.ts",
           "hash": "6887641852327834034",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/parse/parseUnitFromUtc.test.ts",
@@ -5777,9 +4945,7 @@
         {
           "file": "packages/gmt/src/utc/parse/parseUnitFromUtc.ts",
           "hash": "4230420409072839336",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/parse/parseWeekFromUtc.test.ts",
@@ -5788,9 +4954,7 @@
         {
           "file": "packages/gmt/src/utc/parse/parseWeekFromUtc.ts",
           "hash": "7322702219582791654",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/parse/parseYearFromUtc.test.ts",
@@ -5799,9 +4963,7 @@
         {
           "file": "packages/gmt/src/utc/parse/parseYearFromUtc.ts",
           "hash": "8943203890643095043",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/validate/index.ts",
@@ -5814,9 +4976,7 @@
         {
           "file": "packages/gmt/src/utc/validate/isValidUtc.ts",
           "hash": "14009027711117857396",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/utc/validate/isValidUtcRange.test.ts",
@@ -5825,9 +4985,7 @@
         {
           "file": "packages/gmt/src/utc/validate/isValidUtcRange.ts",
           "hash": "8707844394022502635",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/README.md",
@@ -5836,30 +4994,22 @@
         {
           "file": "packages/gmt/src/zoned/calculate/__scratch.test.ts",
           "hash": "13663344059429252323",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/addZoned.test.ts",
           "hash": "5741080971470880395",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/addZoned.ts",
           "hash": "8065418408980424987",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/addZonedBusinessDays.test.ts",
           "hash": "5610503852837299382",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/addZonedBusinessDays.ts",
@@ -5868,30 +5018,22 @@
         {
           "file": "packages/gmt/src/zoned/calculate/clampZoned.test.ts",
           "hash": "5648648073910101810",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/clampZoned.ts",
           "hash": "18290791200304142844",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/closestZonedTo.test.ts",
           "hash": "1684061464589949829",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/closestZonedTo.ts",
           "hash": "10091967799447264390",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/cycleZoned.test.ts",
@@ -5900,9 +5042,7 @@
         {
           "file": "packages/gmt/src/zoned/calculate/cycleZoned.ts",
           "hash": "9414087118409547556",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/diffZoned.test.ts",
@@ -5911,23 +5051,17 @@
         {
           "file": "packages/gmt/src/zoned/calculate/diffZoned.ts",
           "hash": "18067229040880132218",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/diffZonedAsDuration.test.ts",
           "hash": "4180813401423649659",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/diffZonedAsDuration.ts",
           "hash": "13361506506768011924",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/endOfQuarterForZoned.test.ts",
@@ -5936,9 +5070,7 @@
         {
           "file": "packages/gmt/src/zoned/calculate/endOfQuarterForZoned.ts",
           "hash": "6132138737984655833",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/endOfZoned.test.ts",
@@ -5947,65 +5079,47 @@
         {
           "file": "packages/gmt/src/zoned/calculate/endOfZoned.ts",
           "hash": "6042135505681708444",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/getHoursInZonedDay.test.ts",
           "hash": "9564329774471710088",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/getHoursInZonedDay.ts",
           "hash": "14842391522391039511",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/getLocaleZonedDayOfWeek.test.ts",
           "hash": "14197697959983622830",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/getLocaleZonedDayOfWeek.ts",
           "hash": "4174713135864700168",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/getLocaleZonedEndOfWeek.test.ts",
           "hash": "14727450885323231669",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/getLocaleZonedEndOfWeek.ts",
           "hash": "13307509968392998349",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/getLocaleZonedStartOfWeek.test.ts",
           "hash": "6971139557157644676",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/getLocaleZonedStartOfWeek.ts",
           "hash": "419599687460771684",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/getQuarterForZoned.test.ts",
@@ -6014,9 +5128,7 @@
         {
           "file": "packages/gmt/src/zoned/calculate/getQuarterForZoned.ts",
           "hash": "12970194331063828071",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/index.ts",
@@ -6029,9 +5141,7 @@
         {
           "file": "packages/gmt/src/zoned/calculate/maxZoned.ts",
           "hash": "6673284330607944718",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/minZoned.test.ts",
@@ -6040,23 +5150,17 @@
         {
           "file": "packages/gmt/src/zoned/calculate/minZoned.ts",
           "hash": "16017660059244985233",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/roundZoned.test.ts",
           "hash": "11908633518955521147",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/roundZoned.ts",
           "hash": "1642619147092168862",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/setZoned.test.ts",
@@ -6065,9 +5169,7 @@
         {
           "file": "packages/gmt/src/zoned/calculate/setZoned.ts",
           "hash": "4270656581136797288",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/sortZoned.test.ts",
@@ -6076,9 +5178,7 @@
         {
           "file": "packages/gmt/src/zoned/calculate/sortZoned.ts",
           "hash": "14037050677303108120",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/startOfQuarterForZoned.test.ts",
@@ -6087,9 +5187,7 @@
         {
           "file": "packages/gmt/src/zoned/calculate/startOfQuarterForZoned.ts",
           "hash": "14720630814279328069",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/startOfZoned.test.ts",
@@ -6098,30 +5196,22 @@
         {
           "file": "packages/gmt/src/zoned/calculate/startOfZoned.ts",
           "hash": "8468891582088942365",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/subtractZoned.test.ts",
           "hash": "17012454084932986848",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/subtractZoned.ts",
           "hash": "3411504568896810805",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/subtractZonedBusinessDays.test.ts",
           "hash": "13371606848550531716",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/calculate/subtractZonedBusinessDays.ts",
@@ -6134,9 +5224,7 @@
         {
           "file": "packages/gmt/src/zoned/chop/chopZonedDate.ts",
           "hash": "9073131077243601086",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/chop/chopZonedDateTime.test.ts",
@@ -6145,9 +5233,7 @@
         {
           "file": "packages/gmt/src/zoned/chop/chopZonedDateTime.ts",
           "hash": "14037698859300073421",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/chop/chopZonedMilliseconds.test.ts",
@@ -6156,9 +5242,7 @@
         {
           "file": "packages/gmt/src/zoned/chop/chopZonedMilliseconds.ts",
           "hash": "4341343436773408376",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/chop/chopZonedSeconds.test.ts",
@@ -6167,9 +5251,7 @@
         {
           "file": "packages/gmt/src/zoned/chop/chopZonedSeconds.ts",
           "hash": "17593171769160408878",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/chop/chopZonedTime.test.ts",
@@ -6178,9 +5260,7 @@
         {
           "file": "packages/gmt/src/zoned/chop/chopZonedTime.ts",
           "hash": "10676972883624412465",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/chop/chopZonedTimezone.test.ts",
@@ -6189,9 +5269,7 @@
         {
           "file": "packages/gmt/src/zoned/chop/chopZonedTimezone.ts",
           "hash": "2211338259256570271",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/chop/index.ts",
@@ -6204,9 +5282,7 @@
         {
           "file": "packages/gmt/src/zoned/compare/areZonedEqual.ts",
           "hash": "3306532255276658478",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/compare/areZonedEqualBy.test.ts",
@@ -6215,9 +5291,7 @@
         {
           "file": "packages/gmt/src/zoned/compare/areZonedEqualBy.ts",
           "hash": "9321693510768730012",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/compare/index.ts",
@@ -6226,30 +5300,22 @@
         {
           "file": "packages/gmt/src/zoned/compare/isAfterZoned.test.ts",
           "hash": "16837142304450783014",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/compare/isAfterZoned.ts",
           "hash": "5997264459798589729",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/compare/isBeforeZoned.test.ts",
           "hash": "6026213765732763901",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/compare/isBeforeZoned.ts",
           "hash": "12630350895846882071",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/compare/isBetweenZoned.test.ts",
@@ -6258,107 +5324,77 @@
         {
           "file": "packages/gmt/src/zoned/compare/isBetweenZoned.ts",
           "hash": "783301272268633044",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/compare/isInDaylightSaving.test.ts",
           "hash": "14219412784173330315",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/compare/isInDaylightSaving.ts",
           "hash": "2593558274926575214",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/compare/isZonedBusinessDay.test.ts",
           "hash": "11939094116410070542",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/compare/isZonedBusinessDay.ts",
           "hash": "4368745226989269460",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/compare/isZonedFuture.test.ts",
           "hash": "2167459117300735781",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/compare/isZonedFuture.ts",
           "hash": "2981433372541923607",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/compare/isZonedPast.test.ts",
           "hash": "14925868614209386931",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/compare/isZonedPast.ts",
           "hash": "9131322613581249798",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/compare/isZonedRelativeDay.test.ts",
           "hash": "4103577647080982593",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/compare/isZonedRelativeDay.ts",
           "hash": "2786537169680186787",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/compare/isZonedThisUnit.test.ts",
           "hash": "3270388799449592383",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/compare/isZonedThisUnit.ts",
           "hash": "2470827906198206460",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/compare/isZonedWeekend.test.ts",
           "hash": "3217044150416535821",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/compare/isZonedWeekend.ts",
           "hash": "17502068189266569486",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/convert/convertPlainDateTimeToZoned.test.ts",
@@ -6367,16 +5403,12 @@
         {
           "file": "packages/gmt/src/zoned/convert/convertPlainDateTimeToZoned.ts",
           "hash": "5406534996059053489",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/convert/convertZonedToCalendar.test.ts",
           "hash": "15898941011292026420",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/convert/convertZonedToCalendar.ts",
@@ -6389,9 +5421,7 @@
         {
           "file": "packages/gmt/src/zoned/convert/convertZonedToPlainDateTime.ts",
           "hash": "17692509392701618560",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/convert/convertZonedToUnix.test.ts",
@@ -6400,9 +5430,7 @@
         {
           "file": "packages/gmt/src/zoned/convert/convertZonedToUnix.ts",
           "hash": "16965190526577200469",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/convert/convertZonedToUtc.test.ts",
@@ -6411,9 +5439,7 @@
         {
           "file": "packages/gmt/src/zoned/convert/convertZonedToUtc.ts",
           "hash": "15782027894661095992",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/convert/convertZonedToZoned.test.ts",
@@ -6422,9 +5448,7 @@
         {
           "file": "packages/gmt/src/zoned/convert/convertZonedToZoned.ts",
           "hash": "5489504150234239697",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/convert/index.ts",
@@ -6433,30 +5457,22 @@
         {
           "file": "packages/gmt/src/zoned/format/formatCalendarZoned.test.ts",
           "hash": "3057413985733672181",
-          "deps": [
-            "npm:vitest"
-          ]
+          "deps": ["npm:vitest"]
         },
         {
           "file": "packages/gmt/src/zoned/format/formatCalendarZoned.ts",
           "hash": "11822979988336306754",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/format/formatRelativeZoned.test.ts",
           "hash": "14098159445826214617",
-          "deps": [
-            "npm:vitest"
-          ]
+          "deps": ["npm:vitest"]
         },
         {
           "file": "packages/gmt/src/zoned/format/formatRelativeZoned.ts",
           "hash": "4933836497637451941",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/format/formatRfc2822.test.ts",
@@ -6465,9 +5481,7 @@
         {
           "file": "packages/gmt/src/zoned/format/formatRfc2822.ts",
           "hash": "10826707801451969649",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/format/formatRfc3339.test.ts",
@@ -6476,23 +5490,17 @@
         {
           "file": "packages/gmt/src/zoned/format/formatRfc3339.ts",
           "hash": "12579821519247205302",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/format/formatTimeZoneName.test.ts",
           "hash": "463277577870125803",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/format/formatTimeZoneName.ts",
           "hash": "11291630784456556366",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/format/formatZonedDateTime.test.ts",
@@ -6501,9 +5509,7 @@
         {
           "file": "packages/gmt/src/zoned/format/formatZonedDateTime.ts",
           "hash": "8161437925680547781",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/format/formatZonedRange.test.ts",
@@ -6512,9 +5518,7 @@
         {
           "file": "packages/gmt/src/zoned/format/formatZonedRange.ts",
           "hash": "11270973356381897853",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/format/formatZonedToParts.test.ts",
@@ -6523,9 +5527,7 @@
         {
           "file": "packages/gmt/src/zoned/format/formatZonedToParts.ts",
           "hash": "3550795441341076869",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/format/index.ts",
@@ -6538,9 +5540,7 @@
         {
           "file": "packages/gmt/src/zoned/get/getDstTransitions.ts",
           "hash": "15060884497890034929",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/get/getSystemTimeZone.test.ts",
@@ -6557,9 +5557,7 @@
         {
           "file": "packages/gmt/src/zoned/get/getTimeZoneOffset.ts",
           "hash": "8893584993450910350",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/get/getTimeZones.test.ts",
@@ -6576,9 +5574,7 @@
         {
           "file": "packages/gmt/src/zoned/get/getZonedDay.ts",
           "hash": "3741803337727565209",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/get/getZonedDayOfWeek.test.ts",
@@ -6587,9 +5583,7 @@
         {
           "file": "packages/gmt/src/zoned/get/getZonedDayOfWeek.ts",
           "hash": "4054358200201320643",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/get/getZonedHour.test.ts",
@@ -6598,9 +5592,7 @@
         {
           "file": "packages/gmt/src/zoned/get/getZonedHour.ts",
           "hash": "716561075595574826",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/get/getZonedMicrosecond.test.ts",
@@ -6609,9 +5601,7 @@
         {
           "file": "packages/gmt/src/zoned/get/getZonedMicrosecond.ts",
           "hash": "11928601328165763333",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/get/getZonedMillisecond.test.ts",
@@ -6620,9 +5610,7 @@
         {
           "file": "packages/gmt/src/zoned/get/getZonedMillisecond.ts",
           "hash": "2595331577726358295",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/get/getZonedMinute.test.ts",
@@ -6631,9 +5619,7 @@
         {
           "file": "packages/gmt/src/zoned/get/getZonedMinute.ts",
           "hash": "6456074811938010609",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/get/getZonedMonth.test.ts",
@@ -6642,9 +5628,7 @@
         {
           "file": "packages/gmt/src/zoned/get/getZonedMonth.ts",
           "hash": "10115403598938901474",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/get/getZonedNanosecond.test.ts",
@@ -6653,23 +5637,17 @@
         {
           "file": "packages/gmt/src/zoned/get/getZonedNanosecond.ts",
           "hash": "13994159275497920905",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/get/getZonedNow.test.ts",
           "hash": "13578217864289848026",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/get/getZonedNow.ts",
           "hash": "9568172249215963302",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/get/getZonedNowUnit.test.ts",
@@ -6678,9 +5656,7 @@
         {
           "file": "packages/gmt/src/zoned/get/getZonedNowUnit.ts",
           "hash": "16420671830406793229",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/get/getZonedSecond.test.ts",
@@ -6689,23 +5665,17 @@
         {
           "file": "packages/gmt/src/zoned/get/getZonedSecond.ts",
           "hash": "10089325153692489458",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/get/getZonedToday.test.ts",
           "hash": "4527898274338046935",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/get/getZonedToday.ts",
           "hash": "5126148477585501272",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/get/getZonedWeekOfYear.test.ts",
@@ -6714,9 +5684,7 @@
         {
           "file": "packages/gmt/src/zoned/get/getZonedWeekOfYear.ts",
           "hash": "9905050071215424902",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/get/getZonedYear.test.ts",
@@ -6725,9 +5693,7 @@
         {
           "file": "packages/gmt/src/zoned/get/getZonedYear.ts",
           "hash": "15439504790876057781",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/get/index.ts",
@@ -6736,9 +5702,7 @@
         {
           "file": "packages/gmt/src/zoned/index.ts",
           "hash": "14411590841352801861",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/calendarZonedIntervalPolicy.test.ts",
@@ -6751,65 +5715,47 @@
         {
           "file": "packages/gmt/src/zoned/interval/intervalAbutsZoned.test.ts",
           "hash": "10583981463858966222",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/intervalAbutsZoned.ts",
           "hash": "5155010064493191159",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/intervalContainsZoned.test.ts",
           "hash": "12620148378182605432",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/intervalContainsZoned.ts",
           "hash": "9090539478867738744",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/intervalCountZoned.test.ts",
           "hash": "12217657850235474310",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/intervalCountZoned.ts",
           "hash": "11617707185027838589",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/intervalDifferenceZoned.test.ts",
           "hash": "12104069461189673441",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/intervalDifferenceZoned.ts",
           "hash": "4286320280735830288",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/intervalDivideEquallyZoned.test.ts",
           "hash": "17306613884329103626",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/intervalDivideEquallyZoned.ts",
@@ -6818,51 +5764,37 @@
         {
           "file": "packages/gmt/src/zoned/interval/intervalEngulfsZoned.test.ts",
           "hash": "11277942214919947742",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/intervalEngulfsZoned.ts",
           "hash": "16893593888048072534",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/intervalFromDurationZoned.test.ts",
           "hash": "680377992535957774",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/intervalFromDurationZoned.ts",
           "hash": "4385482839852021104",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/intervalIntersectionZoned.test.ts",
           "hash": "3212912239001625426",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/intervalIntersectionZoned.ts",
           "hash": "8311775403221121620",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/intervalLengthZoned.test.ts",
           "hash": "10331625479388617569",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/intervalLengthZoned.ts",
@@ -6871,72 +5803,52 @@
         {
           "file": "packages/gmt/src/zoned/interval/intervalOverlappingDaysZoned.test.ts",
           "hash": "8131361660404456693",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/intervalOverlappingDaysZoned.ts",
           "hash": "16113823790674690197",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/intervalSplitAtZoned.test.ts",
           "hash": "17574953930204138982",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/intervalSplitAtZoned.ts",
           "hash": "4173028916008515703",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/intervalUnionZoned.test.ts",
           "hash": "13208239403061472914",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/intervalUnionZoned.ts",
           "hash": "4845978524711263597",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/intervalXorAllZoned.test.ts",
           "hash": "8143264873605194538",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/intervalXorAllZoned.ts",
           "hash": "9904966066680258919",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/intervalXorZoned.test.ts",
           "hash": "5182950303278028154",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/intervalXorZoned.ts",
           "hash": "6659127874001174807",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/intervalsOverlapZoned.test.ts",
@@ -6945,37 +5857,27 @@
         {
           "file": "packages/gmt/src/zoned/interval/intervalsOverlapZoned.ts",
           "hash": "237240752498144131",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/mergeIntervalsZoned.test.ts",
           "hash": "4953301606041086463",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/mergeIntervalsZoned.ts",
           "hash": "9695516541021949471",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/splitIntervalByUnitZoned.test.ts",
           "hash": "2147776027471499701",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/splitIntervalByUnitZoned.ts",
           "hash": "10556662432403674131",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/validate/index.ts",
@@ -6988,9 +5890,7 @@
         {
           "file": "packages/gmt/src/zoned/interval/validate/isValidCalendarZonedInterval.ts",
           "hash": "4661905738595088494",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/interval/validate/isValidZonedInterval.test.ts",
@@ -6999,9 +5899,7 @@
         {
           "file": "packages/gmt/src/zoned/interval/validate/isValidZonedInterval.ts",
           "hash": "12724402181358884737",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/map/index.ts",
@@ -7014,9 +5912,7 @@
         {
           "file": "packages/gmt/src/zoned/map/mapZonedDatesInRange.ts",
           "hash": "10611375062705986182",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/map/mapZonedHoursInDay.test.ts",
@@ -7025,23 +5921,17 @@
         {
           "file": "packages/gmt/src/zoned/map/mapZonedHoursInDay.ts",
           "hash": "4063242162763080695",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/parse/getZonedOffset.test.ts",
           "hash": "16544235570621362608",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/parse/getZonedOffset.ts",
           "hash": "13869490807014856383",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/parse/getZonedOffsetAs.test.ts",
@@ -7050,9 +5940,7 @@
         {
           "file": "packages/gmt/src/zoned/parse/getZonedOffsetAs.ts",
           "hash": "2894921550668707629",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/parse/index.ts",
@@ -7065,9 +5953,7 @@
         {
           "file": "packages/gmt/src/zoned/parse/parseDateFromZoned.ts",
           "hash": "10241667221335853697",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/parse/parseDateTimeFromZoned.test.ts",
@@ -7076,9 +5962,7 @@
         {
           "file": "packages/gmt/src/zoned/parse/parseDateTimeFromZoned.ts",
           "hash": "17534193826840960265",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/parse/parseDayFromZoned.test.ts",
@@ -7087,9 +5971,7 @@
         {
           "file": "packages/gmt/src/zoned/parse/parseDayFromZoned.ts",
           "hash": "7929893864652838742",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/parse/parseDayOfWeekFromZoned.test.ts",
@@ -7098,9 +5980,7 @@
         {
           "file": "packages/gmt/src/zoned/parse/parseDayOfWeekFromZoned.ts",
           "hash": "3850268663039498576",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/parse/parseHourFromZoned.test.ts",
@@ -7109,9 +5989,7 @@
         {
           "file": "packages/gmt/src/zoned/parse/parseHourFromZoned.ts",
           "hash": "10250631680209135536",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/parse/parseMicrosecondFromZoned.test.ts",
@@ -7120,9 +5998,7 @@
         {
           "file": "packages/gmt/src/zoned/parse/parseMicrosecondFromZoned.ts",
           "hash": "11267458187066349485",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/parse/parseMillisecondFromZoned.test.ts",
@@ -7131,9 +6007,7 @@
         {
           "file": "packages/gmt/src/zoned/parse/parseMillisecondFromZoned.ts",
           "hash": "12959197375650386539",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/parse/parseMinuteFromZoned.test.ts",
@@ -7142,9 +6016,7 @@
         {
           "file": "packages/gmt/src/zoned/parse/parseMinuteFromZoned.ts",
           "hash": "9273251915201124541",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/parse/parseMonthFromZoned.test.ts",
@@ -7153,9 +6025,7 @@
         {
           "file": "packages/gmt/src/zoned/parse/parseMonthFromZoned.ts",
           "hash": "5772263847517527217",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/parse/parseNanosecondFromZoned.test.ts",
@@ -7164,9 +6034,7 @@
         {
           "file": "packages/gmt/src/zoned/parse/parseNanosecondFromZoned.ts",
           "hash": "16450971774718462622",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/parse/parseRfc2822.test.ts",
@@ -7175,9 +6043,7 @@
         {
           "file": "packages/gmt/src/zoned/parse/parseRfc2822.ts",
           "hash": "13629594195323814533",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/parse/parseRfc3339.test.ts",
@@ -7186,9 +6052,7 @@
         {
           "file": "packages/gmt/src/zoned/parse/parseRfc3339.ts",
           "hash": "306772574255988577",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/parse/parseSecondFromZoned.test.ts",
@@ -7197,9 +6061,7 @@
         {
           "file": "packages/gmt/src/zoned/parse/parseSecondFromZoned.ts",
           "hash": "14945742191241812975",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/parse/parseTimeFromZoned.test.ts",
@@ -7208,9 +6070,7 @@
         {
           "file": "packages/gmt/src/zoned/parse/parseTimeFromZoned.ts",
           "hash": "8653261217304159272",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/parse/parseTimeZoneFromZoned.test.ts",
@@ -7219,9 +6079,7 @@
         {
           "file": "packages/gmt/src/zoned/parse/parseTimeZoneFromZoned.ts",
           "hash": "16971725365267961820",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/parse/parseUnitFromZoned.test.ts",
@@ -7230,9 +6088,7 @@
         {
           "file": "packages/gmt/src/zoned/parse/parseUnitFromZoned.ts",
           "hash": "8231503938175587912",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/parse/parseWeekFromZoned.test.ts",
@@ -7241,9 +6097,7 @@
         {
           "file": "packages/gmt/src/zoned/parse/parseWeekFromZoned.ts",
           "hash": "12967461573405192365",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/parse/parseYearFromZoned.test.ts",
@@ -7252,9 +6106,7 @@
         {
           "file": "packages/gmt/src/zoned/parse/parseYearFromZoned.ts",
           "hash": "16828570533543545410",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/validate/hasDaylightSaving.test.ts",
@@ -7263,9 +6115,7 @@
         {
           "file": "packages/gmt/src/zoned/validate/hasDaylightSaving.ts",
           "hash": "3895006275930118119",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/validate/index.ts",
@@ -7274,9 +6124,7 @@
         {
           "file": "packages/gmt/src/zoned/validate/isValidCalendarZonedDateTime.test.ts",
           "hash": "18016150442363216480",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/validate/isValidCalendarZonedDateTime.ts",
@@ -7289,9 +6137,7 @@
         {
           "file": "packages/gmt/src/zoned/validate/isValidTimeZone.ts",
           "hash": "14132553954202789040",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/validate/isValidZonedDateTime.test.ts",
@@ -7300,9 +6146,7 @@
         {
           "file": "packages/gmt/src/zoned/validate/isValidZonedDateTime.ts",
           "hash": "18096163849801297711",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/src/zoned/validate/isValidZonedRange.test.ts",
@@ -7311,9 +6155,7 @@
         {
           "file": "packages/gmt/src/zoned/validate/isValidZonedRange.ts",
           "hash": "17308641813409464360",
-          "deps": [
-            "npm:@js-temporal/polyfill"
-          ]
+          "deps": ["npm:@js-temporal/polyfill"]
         },
         {
           "file": "packages/gmt/tsconfig.build.json",
@@ -7326,9 +6168,7 @@
         {
           "file": "packages/gmt/vitest.config.ts",
           "hash": "3447246936436789038",
-          "deps": [
-            "npm:vitest"
-          ]
+          "deps": ["npm:vitest"]
         }
       ],
       "@northguild/gmt-eslint": [
@@ -7347,9 +6187,7 @@
         {
           "file": "packages/gmt-eslint/eslint/index.mjs",
           "hash": "16482346547399905484",
-          "deps": [
-            "npm:@typescript-eslint/parser"
-          ]
+          "deps": ["npm:@typescript-eslint/parser"]
         },
         {
           "file": "packages/gmt-eslint/package.json",
