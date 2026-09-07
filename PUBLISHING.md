@@ -1,7 +1,11 @@
 # Publishing to npm
 
-Primary workflow: publish locally from your machine using your npm login/passkey.
-GitHub Actions publishing is optional (see [Alternatives](#alternatives) below).
+There are two paths, and the automated one is the default:
+
+| Path                                        | When to use it                                                                |
+| ------------------------------------------- | ----------------------------------------------------------------------------- |
+| [Automated](#automated-release-the-default) | Every normal release. Merge the version bump, publish a draft release, done.   |
+| [Manual](#manual-release-fallback)          | CI is down, npm auth is broken, or you need to publish something out-of-band.  |
 
 Packages (each independently versioned):
 
@@ -12,19 +16,69 @@ Packages (each independently versioned):
 | `packages/gmt-eslint` | `@northguild/gmt-eslint` |
 | `packages/gmt-oxlint` | `@northguild/gmt-oxlint` |
 
+Because versions are independent, tags are per-package and always look like
+`@northguild/<pkg>@<version>` (e.g. `@northguild/gmt@1.15.0`). There is no
+repo-wide `vX.Y.Z` tag, and nothing in either path invents one.
+
 ---
 
 ## One-time setup
+
+### For the automated path (maintainers / repo admins)
+
+**npm auth — trusted publishing (OIDC).** There is no npm token in this repo.
+`publish.yml` requests `id-token: write` and npm exchanges that for a
+short-lived credential, so there is nothing stored to leak or rotate.
+
+Configure it once per package, on npmjs.com → the package → Settings → Trusted
+Publisher → GitHub Actions:
+
+| Field             | Value          |
+| ----------------- | -------------- |
+| Organization/user | `northguild`   |
+| Repository        | `gmt`          |
+| Workflow filename | `publish.yml`  |
+| Environment       | `release`      |
+
+All four packages need their own trusted-publisher entry. A package without one
+fails at the `npm publish` step with an auth error; the other three are
+unaffected, since each release publishes exactly one package.
+
+> **Provenance:** trusted publishing automatically generates a provenance
+> attestation for every public package in a public repo — it is not opt-in. npm
+> requires a public `repository` field matching the publishing source to do
+> that, so **every publishable `packages/*/package.json` must keep its
+> `repository` block**, `directory` included. Dropping it breaks that package's
+> release. ([npm docs](https://docs.npmjs.com/generating-provenance-statements))
+
+**Discord.** `DISCORD_WEBHOOK` is set in the `release` environment and points at
+the `#gmt` channel. If it is ever unset the announcement step is skipped and the
+publish still succeeds. The old repo-level Discord webhook on `release` events
+has been deleted — it fired the moment a release was published, including on
+releases whose npm publish then failed.
+
+**If you ever need to fall back to a token:** add `NPM_TOKEN` (an npm
+**Automation** token, publish scope only) to the `release` environment.
+`publish.yml` already reads it as `NODE_AUTH_TOKEN` and will use it when OIDC
+isn't available. Never print/echo it in logs, PRs, or forked workflows.
+
+Both secrets belong to the protected `release` GitHub Environment (Settings →
+Environments → `release`), not to repo-level secrets, so publishing is gated by
+whatever reviewers that environment requires. Restrict who can approve its runs.
+
+Docs: [npm trusted publishers](https://docs.npmjs.com/trusted-publishers) · [GitHub Environments](https://docs.github.com/en/actions/deployment/targeting-specific-environments/using-environments-for-deployments)
+
+### For the manual path
 
 - Ensure you're a member of the `@northguild` npm org.
 - Run `npm whoami` to confirm you're logged in locally. If not, `npm login` (or `npm login --auth-type=web` for passkey/SSO).
 - Run `gh auth login` once, for creating GitHub Releases later.
 
-No GitHub secrets are required for local publishing.
-
 ---
 
 ## Contributor flow (every feature branch)
+
+Identical for both paths.
 
 1. Finish your code changes.
 2. If you changed `packages/gmt/src/`'s public API surface, update the TanStack Intent agent skills in `packages/gmt/skills/` (via the `/tanstack-intent` skill) in the same branch — see [CONTRIBUTING.md](./CONTRIBUTING.md#keeping-agent-skills-current-tanstack-intent). Skills ship inside the published npm package, so stale skills would go out immediately on the next publish.
@@ -42,9 +96,88 @@ A changeset is just a markdown file recording what changed and the intended bump
 
 ---
 
-## Maintainer flow (releasing what's on `main`)
+## Automated release (the default)
 
-Run these in order, from repo root.
+Two workflows split the job. Neither one publishes on its own — a human still
+decides when a package ships, by publishing its GitHub Release.
+
+```
+main: "Version Packages" commit
+        │
+        ▼
+  tag-on-version-change.yml   ──►  git tag @northguild/<pkg>@<ver>
+  (push to main touching             + draft GitHub Release, notes from CHANGELOG.md
+   packages/*/package.json)
+        │
+        ▼
+  you publish the draft release  ◄── the "release form" — this is the go/no-go
+        │
+        ▼
+  publish.yml                  ──►  build, test, npm pack --dry-run,
+  (on: release published)            npm publish, Discord announcement
+```
+
+### Steps
+
+1. **Bump versions on a branch and open a PR.**
+
+   ```bash
+   pnpm run changeset status      # see what's pending
+   pnpm run changeset:version     # bump + changelogs + sync Intent skill versions
+   git add .
+   git commit -m "Version Packages"
+   ```
+
+   `changeset:version` runs `changeset version` and then
+   `node scripts/sync-intent-version.mjs`, which syncs all skill `library_version`
+   fields to the new gmt version automatically — no separate step needed.
+
+2. **Merge the PR to `main`.** `tag-on-version-change.yml` fires on any push to
+   `main` that touches a `packages/*/package.json`. For each non-private package
+   whose `version` actually moved, it:
+   - creates and pushes the annotated tag `@northguild/<pkg>@<version>`, and
+   - opens a **draft** GitHub Release for that tag, titled with the tag and with
+     notes taken from that package's newest `CHANGELOG.md` entry. Only
+     `@northguild/gmt` is marked as the repo's "latest" release.
+
+   Packages whose version didn't change are skipped, and a tag that already
+   exists is never recreated — so re-running the workflow is safe. `apps/dox` is
+   private and never tagged.
+
+3. **Review and publish the draft.** Go to
+   [Releases](https://github.com/northguild/gmt/releases), open the draft, check
+   the notes, and hit **Publish release**. Tick *Set as a pre-release* if this
+   should go out under the `next` dist-tag instead of `latest`.
+
+   Publish one draft per package you actually want to ship. Leaving a draft
+   unpublished ships nothing; the tag stays put and you can publish it later.
+
+4. **`publish.yml` takes over.** On `release: published` it:
+   - checks out the released **tag** (not `main`, so a moved `main` can't leak in);
+   - derives the package from the tag name and **fails loudly** if the tag isn't
+     `@northguild/<pkg>@<version>`, if that package dir doesn't exist, or if the
+     version in the tag doesn't match `packages/<pkg>/package.json`;
+   - installs, builds (`--if-present`), and runs that package's own test suite;
+   - prints `npm pack --dry-run` so the tarball contents are in the log;
+   - runs `npm publish --access public --tag latest` (or `next` for a prerelease),
+     which under trusted publishing also attaches a provenance attestation;
+   - posts to the `#gmt` Discord channel with the version and a link to the release.
+
+   If it fails, fix the cause and re-run the job from the Actions UI — the
+   release and tag are already in place, so nothing needs recreating.
+
+### Publishing a tag that already exists
+
+Same thing, minus step 1 and 2: go to Releases → **Draft a new release**, pick the
+existing `@northguild/<pkg>@<version>` tag from the dropdown, write notes, publish.
+`publish.yml` doesn't care how the release was created.
+
+---
+
+## Manual release (fallback)
+
+Publishing from your own machine with your npm login. Run these in order, from
+repo root.
 
 ```bash
 # 1. See what's pending
@@ -74,15 +207,13 @@ pnpm run changeset:publish
 git push --follow-tags
 ```
 
-Step 2's `changeset:version` runs `changeset version` and then
-`node scripts/sync-intent-version.mjs`, which syncs all skill `library_version`
-fields to the new gmt version automatically — no separate step needed.
+> **Note:** step 2 pushes the version bump straight to `main`, which will trigger
+> `tag-on-version-change.yml` and create tags + draft releases for you. That's
+> harmless — `changeset:publish` in step 5 skips tags that already exist. Just
+> **delete the leftover draft releases** afterwards, or you'll have drafts that
+> would re-publish an already-published version if someone opens them later.
 
-Then create GitHub Releases for what you just published — see below.
-
----
-
-## GitHub Releases (after publishing)
+### GitHub Releases after a manual publish
 
 `changeset:publish` creates git tags but not GitHub Releases. This creates one
 release per tag `changeset:publish` just made, in one pass. Run it right after
@@ -110,43 +241,12 @@ Notes:
 - The tag is quoted (`"$TAG"`) since it contains `@` and `/`, which GitHub URL-encodes in the release URL; that's expected.
 - Only `@northguild/gmt` gets `--latest`; every other package gets `--latest=false` automatically.
 - If `HEAD` has moved since publishing (e.g. you made another commit first), fall back to `git tag --sort=-creatordate | head -n <count>` to find the right tags manually.
+- **Publishing these releases will trigger `publish.yml`**, which will try to
+  `npm publish` a version you just published by hand and fail on `EPUBLISHCONFLICT`.
+  That's noisy but harmless. To avoid it, publish via the automated path instead,
+  or create the releases as drafts (`--draft`) and leave them.
 
----
-
-## First release (initial `1.0.0`)
-
-Same as the flows above, with one difference: in step 3 of the contributor flow,
-pick `major` for each package you're taking to `1.0.0`.
-
----
-
-## Alternatives
-
-### Publishing via GitHub Actions instead of locally
-
-Not used in this repo — publishing is done manually/locally. Documented here only
-in case that ever changes.
-
-If you do publish from Actions, use an npm Automation token scoped to publish
-only, stored in a protected GitHub Environment called `release`:
-
-```yaml
-env:
-  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-```
-
-- Never print/echo `NPM_TOKEN` or `NODE_AUTH_TOKEN` in logs, PRs, or forked workflows.
-- Restrict who can approve `release` environment runs.
-- The `publish.yml` workflow runs `npm publish` but does **not** create git tags. After a successful Actions publish, create and push them yourself:
-
-  ```bash
-  pnpm exec changeset tag
-  git push --follow-tags
-  ```
-
-Docs: [npm Automation tokens](https://docs.npmjs.com/creating-and-viewing-authentication-tokens) · [GitHub Environments](https://docs.github.com/en/actions/deployment/targeting-specific-environments/using-environments-for-deployments)
-
-### Manual per-package publish (no Changesets publish step)
+### Single package, no Changesets publish step
 
 ```bash
 cd packages/gmt
@@ -159,6 +259,13 @@ Then create and push tags yourself, since this skips Changesets' auto-tagging:
 pnpm exec changeset tag
 git push --follow-tags
 ```
+
+---
+
+## First release (initial `1.0.0`)
+
+Same as the flows above, with one difference: in step 3 of the contributor flow,
+pick `major` for each package you're taking to `1.0.0`.
 
 ---
 

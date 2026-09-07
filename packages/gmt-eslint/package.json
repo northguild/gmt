@@ -5,6 +5,10 @@
   "keywords": [
     "tanstack-intent"
   ],
+  "homepage": "https://github.com/northguild/gmt#readme",
+  "bugs": {
+    "url": "https://github.com/northguild/gmt/issues"
+  },
   "license": "MIT",
   "contributors": [
     {
@@ -16,6 +20,11 @@
       "url": "https://github.com/craig-o-curtis"
     }
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/northguild/gmt.git",
+    "directory": "packages/gmt-eslint"
+  },
   "files": [
     "eslint",
     "LICENSE",
