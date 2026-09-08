@@ -1,16 +1,12 @@
 # Publishing to npm
 
-Releasing is two merges. Nobody logs into npm, and nothing is published from a
-laptop.
+Nobody logs into npm, and nothing is published from a laptop. Publishing is
+triggered by exactly one thing: **a push to `main` that moves a version in a
+`packages/*/package.json`.**
 
-1. **Merge a PR that carries a `.changeset/*.md`.** This publishes nothing.
-2. **Merge the "Version Packages" PR** a bot opens for you. This ships.
-
-Between them, a bot collects the pending changesets into one PR that bumps the
-versions and writes the `CHANGELOG.md` entries. Merging that PR is the go/no-go:
-CI publishes to npm, pushes tags, creates GitHub Releases, and posts to #gmt.
-
-Merging an ordinary feature PR can never publish anything.
+That only happens when you deliberately make it happen, in a release PR of your
+own. Merging feature PRs — however many, carrying however many changesets —
+never publishes anything.
 
 | Package dir           | npm name                 |
 | --------------------- | ------------------------ |
@@ -24,41 +20,83 @@ Each is versioned independently, so tags are per-package —
 
 ---
 
-## If you changed code
+## The flow
 
-Write a changeset. That's your whole part in a release.
+### 1. As you work: describe each change
 
-1. If you changed `packages/gmt/src/`'s public API surface, update the TanStack
-   Intent skills in `packages/gmt/skills/` (via `/tanstack-intent`) in the same
-   branch — see [CONTRIBUTING.md](./CONTRIBUTING.md#agent-skills). They ship
-   inside the tarball.
+In the branch where you changed something publishable:
 
-2. Record the change:
+```bash
+pnpm run changeset:add
+```
 
-   ```bash
-   pnpm run changeset:add
-   ```
+Pick the changed package(s), pick `patch|minor|major`, write the description.
 
-   Pick the changed package(s), pick `patch|minor|major`, write the description.
+**This writes a markdown file and nothing else.** It does not touch any
+`package.json` and does not bump anything — the bump level you pick is recorded
+as intent, to be applied later. Commit the generated `.changeset/*.md` with your
+code.
 
-   **That description ships.** It becomes the `CHANGELOG.md` entry and the
-   GitHub Release notes, word for word — so write it for someone installing the
-   package, not for yourself. `/changelog` will polish it against your diff.
+**That description ships.** It becomes the `CHANGELOG.md` entry and the GitHub
+Release notes, word for word — so write it for someone installing the package,
+not for yourself. `/changelog` will polish it against your diff.
 
-3. Commit the generated `.changeset/*.md` with your code.
+If you changed `packages/gmt/src/`'s public API surface, also update the
+TanStack Intent skills in `packages/gmt/skills/` (via `/tanstack-intent`) in the
+same branch — see [CONTRIBUTING.md](./CONTRIBUTING.md#agent-skills). They ship
+inside the tarball.
 
-Never hand-edit a version in `package.json`. The bot owns those.
+### 2. Merge as usual. Nothing is published.
 
-## If you're shipping
+Merge that PR, and the next one, and the one after that. Changesets pile up on
+`main` unreleased. The `Release` workflow runs on each push and decides there is
+nothing to do; its summary says so.
 
-Open the **Version Packages** PR and read it — the bumps and the CHANGELOG text
-are what's about to go out. Merging it publishes those packages.
+Stay in this step as long as you like.
 
-Not ready? Leave it open. It keeps updating itself as more changesets land, so
-a release can accumulate.
+### 3. When you want to release: make a release PR
 
-Everything the PR bumped ships together; there's no per-package pick. To hold a
-package back, hold back its changeset.
+Branch from up-to-date `main` and run:
+
+```bash
+pnpm run changeset:version
+```
+
+This is the command that bumps. It consumes every pending `.changeset/*.md`,
+writes the new versions into `package.json`, prepends the `CHANGELOG.md`
+entries, deletes the changeset files it used, and — if `@northguild/gmt` itself
+was bumped — pins the Intent skills' `library_version` to the new version.
+
+It only edits files. Nothing is committed, tagged or published.
+
+Commit the result, open a PR, and read it: **the diff is the release.** Those
+version numbers and that CHANGELOG text are exactly what goes to npm. It is an
+ordinary PR, so the ordinary required checks run on it.
+
+**Merging it publishes.** CI packs the tarballs, publishes to npm with
+provenance, pushes the tags, cuts the GitHub Releases, and posts to #gmt.
+
+Keep the release PR pure — version bumps and changelogs only. If it also adds a
+new changeset, the workflow sees pending changesets and declines to publish.
+
+---
+
+## Notes on step 3
+
+**Everything pending ships together.** `changeset:version` consumes every
+changeset on `main`; there is no per-package pick at release time. To hold a
+package back, don't merge its changeset yet.
+
+**Bumps don't stack.** Versions are computed from the current version plus all
+pending changesets, highest level winning. Three `minor` changesets against
+`1.2.0` give `1.3.0`, not `1.5.0`.
+
+**Never hand-edit a version in `package.json`.** `changeset:version` owns those
+numbers. If one looks wrong, the changeset that produced it was wrong.
+
+**A changeset-less PR still ships.** Its code is on `main`, so it goes out with
+the next release — silently, with no changelog entry and no version attributed
+to it. Fine for CI and docs; a trap for a bug fix.
 
 ## When it goes wrong
 
@@ -69,10 +107,11 @@ Actions UI. A re-run is safe — already-published versions are skipped.
 attestation and ships whatever is in your working tree.
 
 **A publish died and no run is left to retry.** Actions → Release → Run
-workflow.
+workflow. A manual dispatch bypasses the version guard deliberately.
 
 **Nothing happened when I merged.** Check the run's summary — it says what it
-decided to do and why.
+decided and why. If it reports pending changesets, you merged a feature PR, not
+a release PR.
 
 **You want a human click between merge and npm.** Add required reviewers to the
 `release` environment (Settings → Environments → `release`).
@@ -134,16 +173,8 @@ trust entry — all four packages would need re-registering.
 Done once for the repo, and already in place. If a fresh clone of this setup is
 ever needed:
 
-- **npm trusted publishing** for each of the four packages — step 4 above.
-- **Settings → Actions → General → Workflow permissions:** tick "Allow GitHub
-  Actions to create and approve pull requests."
-- **A release-bot GitHub App** in the `northguild` org (Contents read/write,
-  Pull requests read/write, installed on `northguild/gmt` only). Its App ID goes
-  in the repository variable `RELEASE_BOT_APP_ID`, its private key in the
-  repository secret `RELEASE_BOT_PRIVATE_KEY` — repository-level, not in the
-  `release` environment: the job that opens the Version Packages PR runs outside
-  that environment and cannot read environment-scoped values. Without the App
-  the PR opens with no CI and can never be merged.
+- **npm trusted publishing** for each of the four packages — step 4 above. This
+  is the only credential the pipeline needs; there is no npm token anywhere.
 - **`DISCORD_WEBHOOK`** in the `release` environment, pointing at #gmt. Unset
   just skips the announcement.
 

@@ -32,9 +32,10 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
 
 6. **Generate a PR description** — use available PR-description generation tooling. Include the GitHub issue number (from `tracker.md`), a summary of what changed, and validation results.
 
-7. **Stop.** There is no maintainer publish step to run. Once the feature PR
-   merges, `release.yml` opens the "Version Packages" PR by itself, and a human
-   merging that PR is what ships to npm.
+7. **Stop.** There is no publish step to run. Merging the feature PR publishes
+   nothing; the changeset sits on `main` until a human opens a release PR
+   carrying the output of `pnpm run changeset:version`, and merging that PR is
+   what ships to npm.
 
    `pnpm run changeset status` is fine for reporting what's pending. Running
    `changeset version`, `changeset publish`, `npm publish`, or `gh release
@@ -46,6 +47,6 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
 
 ## Notes
 
-- Each story is a single PR with a single changeset entry. Multiple stories' changesets accumulate in `.changeset/` and are consumed together when CI runs `changeset version` to build the "Version Packages" PR.
-- Never run `changeset version` or any publish command. Holding a release back means holding back the changeset, or leaving the "Version Packages" PR unmerged — not skipping a step.
+- Each story is a single PR with a single changeset entry. Multiple stories' changesets accumulate in `.changeset/` and are consumed together when a human runs `changeset version` to build the release PR.
+- Never run `changeset version` or any publish command. That command is a maintainer's deliberate go-ahead for a release, not part of finishing a story. Holding a release back needs no action at all — merged changesets publish nothing on their own.
 - Do not modify implementation files or test files — only release-intent artifacts (changesets, READMEs, skills).

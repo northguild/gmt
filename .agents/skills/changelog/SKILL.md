@@ -32,7 +32,7 @@ See [references/steps.md](references/steps.md) for the full step-by-step (findin
 
 - **Do not change the frontmatter** (`---` block with package names and bump types). Those are set by `pnpm run changeset:add` and are authoritative.
 - **Do not rename the changeset file.** The slug is random but tracked by git.
-- **Do not run `changeset:version`** — nobody runs it by hand; `release.yml` runs it to build the "Version Packages" PR once this branch merges.
+- **Do not run `changeset:version`** — it bumps versions and consumes every pending changeset. It is a maintainer's deliberate release action, run in a release PR of its own. See [PUBLISHING.md](../../../PUBLISHING.md).
 - **Never fabricate function names.** Every export named in the description must exist in `packages/*/src/`. Verify with `grep` if uncertain.
 - **One changeset file per affected package group.** If multiple packages are in the same changeset file, the description must cover all of them, or note which packages are unaffected.
 - **Internal-only changes** (skills, agent config, test infrastructure, README) do not warrant a changeset entry by themselves. If the changeset exists only because of those, flag it for the user.

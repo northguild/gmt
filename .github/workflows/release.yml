@@ -1,20 +1,26 @@
 name: Release
 
-# One workflow, three modes, chosen by `changesets/action/select-mode`:
+# Publishing is triggered by one thing: a push to main that moves a version in a
+# `packages/*/package.json`. That only happens when someone has run
+# `pnpm run changeset:version` in a branch and opened a PR with the result.
 #
-#   pending .changeset/*.md on main  -> version : open/update the
-#                                       "Version Packages" PR
-#   that PR merged (versions bumped) -> publish : pack, publish to npm,
-#                                       push tags, cut GitHub Releases
-#   neither                          -> none    : nothing to do
+#   push moves a version -> publish : pack, publish to npm, push tags,
+#                                     cut GitHub Releases
+#   anything else        -> nothing
 #
-# `publish` additionally requires that this very push moved a version in a
-# `packages/*/package.json`. Merging an ordinary feature PR can therefore never
-# publish anything, even while some package is bumped-but-unpublished on main.
+# So merging changeset-carrying feature PRs accumulates unreleased changes on
+# main indefinitely and publishes nothing. The release is a deliberate, separate
+# PR whose diff is the version bumps and the CHANGELOG text — reviewed as an
+# ordinary PR, with the ordinary required checks, before anything reaches npm.
 #
-# Merging the "Version Packages" PR is the go/no-go. It shows the exact versions
-# and the exact CHANGELOG text, with CI on it, before anything reaches npm —
-# so there is no second gate and no release form.
+# `changesets/action/select-mode` still decides the mode, but its `version` mode
+# is deliberately unimplemented: there is no job for it, so pending changesets
+# on main are a no-op here. We do not open a bot-authored "Version Packages" PR.
+#
+# The mode is not enough on its own. select-mode returns `publish` whenever ANY
+# package version on main is missing from npm — equally true of pre-existing
+# drift — so an unrelated commit could otherwise publish a backlog nobody asked
+# for. The version guard below requires that THIS push moved a version.
 #
 # Nothing here holds an npm token. The publish job runs with `id-token: write`
 # and npm exchanges that for a short-lived credential (trusted publishing),
@@ -75,8 +81,9 @@ jobs:
       # whenever *any* package version on main is missing from npm — which is
       # equally true of pre-existing drift, so an unrelated commit (a docs typo,
       # say) could otherwise publish a backlog nobody asked for. Require that
-      # THIS push actually moved a version, i.e. that it is the "Version
-      # Packages" merge. Publishing is welded to that merge and nothing else.
+      # THIS push actually moved a version, i.e. that it is a release PR carrying
+      # the output of `pnpm run changeset:version`. Publishing is welded to that
+      # and nothing else.
       - name: Did this push move a package version?
         id: bump
         env:
@@ -136,7 +143,7 @@ jobs:
             echo "## Release mode: \`$MODE\`"
             echo
             case "$MODE" in
-              version) echo "Pending changesets — opening or updating the **Version Packages** PR. Nothing is published." ;;
+              version) echo "Changesets are pending on \`main\`, which publishes nothing. They ship when someone runs \`pnpm run changeset:version\` and merges the resulting PR — see PUBLISHING.md." ;;
               none)    echo "No changesets pending and nothing unpublished. Nothing to do." ;;
               publish)
                 if [ "$CHANGED" = "true" ]; then
@@ -144,70 +151,10 @@ jobs:
                 else
                   echo "⚠️ Some package version on \`main\` is missing from npm, but **this push did not move any version**, so publishing is blocked by the version guard."
                   echo
-                  echo "That is pre-existing drift, not a release. Merge the Version Packages PR to ship, or use **Run workflow** to publish the backlog deliberately."
+                  echo "That is pre-existing drift, not a release. Run \`pnpm run changeset:version\` and merge the result to ship, or use **Run workflow** to publish the backlog deliberately."
                 fi ;;
             esac
           } >> "$GITHUB_STEP_SUMMARY"
-
-  version:
-    name: Version Packages PR
-    needs: mode
-    if: needs.mode.outputs.mode == 'version'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write # push the changeset-release/main branch
-      pull-requests: write # open / update the PR
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.32.1
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - run: pnpm approve-builds --all
-      - run: pnpm install --frozen-lockfile
-
-      # The version PR MUST be authored by a GitHub App, not by GITHUB_TOKEN.
-      # Events triggered by GITHUB_TOKEN never start another workflow run, so a
-      # GITHUB_TOKEN-authored PR would sit forever reporting 0 of main's 25
-      # required status checks and could not be merged by anyone but an org
-      # admin. App tokens and PATs do trigger runs. See PUBLISHING.md.
-      - name: Check release-bot credentials
-        env:
-          APP_ID: ${{ vars.RELEASE_BOT_APP_ID }}
-        run: |
-          if [ -z "$APP_ID" ]; then
-            echo "::error::RELEASE_BOT_APP_ID is not set, so the Version Packages PR would open with no CI and could never be merged. See PUBLISHING.md -> One-time setup."
-            exit 1
-          fi
-
-      - uses: actions/create-github-app-token@v3
-        id: app-token
-        with:
-          app-id: ${{ vars.RELEASE_BOT_APP_ID }}
-          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
-
-      - uses: changesets/action/version@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
-        with:
-          # Not a bare `changeset version`: this also runs
-          # scripts/sync-intent-version.mjs, which pins every TanStack Intent
-          # skill's `library_version` to the new @northguild/gmt version, so the
-          # skills that ship inside the tarball can never go out stale.
-          script: pnpm run changeset:version
-          github-token: ${{ steps.app-token.outputs.token }}
-        env:
-          # @changesets/changelog-github resolves each entry's PR number and
-          # author through the API while writing CHANGELOG.md. It must be the
-          # *same* token as the input above — the action errors out if the env
-          # var is set and differs.
-          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
 
   publish:
     name: Publish to npm

@@ -367,9 +367,10 @@ What you do as a contributor:
   the desired bump, then commit the generated `.changeset/*.md` alongside your
   code. Changesets only acts on files in `.changeset/`, so a PR without one
   bumps nothing.
-- That's all. A bot opens a separate "Version Packages" PR with the bumps and
-  changelog entries; merging that PR is what publishes to npm, pushes the tags,
-  and creates the GitHub Releases.
+- That's all. Merging your PR publishes nothing. Changesets accumulate on `main`
+  until a maintainer opens a release PR carrying the output of
+  `pnpm run changeset:version`; merging *that* PR is what publishes to npm,
+  pushes the tags, and creates the GitHub Releases.
 - Prefer Changesets over hand-editing a `package.json` version — a manual bump
   still gets tagged, but it skips the changelog the release notes are built
   from.
