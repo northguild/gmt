@@ -1648,7 +1648,7 @@ function runGeneration() {
   // 2. route manifest
   const routes = corpus.map((c) => c.url).sort();
   const manifestTs = `// GENERATED FILE — do not edit by hand.
-// Produced by apps/dox/scripts/build-reference.ts (\`nx run dox:generate\`).
+// Produced by apps/dox/scripts/build-reference.ts (\`pnpm dox:generate\`).
 import type { RouteManifest } from "~/reference-types";
 
 export const referenceRoutes: RouteManifest = new Set([
@@ -1659,7 +1659,7 @@ ${routes.map((r) => `  ${JSON.stringify(r)},`).join("\n")}
 
   // 3. corpus.ts wrapper
   const corpusTs = `// GENERATED FILE — do not edit by hand.
-// Produced by apps/dox/scripts/build-reference.ts (\`nx run dox:generate\`).
+// Produced by apps/dox/scripts/build-reference.ts (\`pnpm dox:generate\`).
 import type { CorpusEntry } from "~/reference-types";
 import data from "./gmt-corpus.json";
 
@@ -1675,7 +1675,7 @@ export const corpus: CorpusEntry[] = data as CorpusEntry[];
     }
   }
   const templatesTs = `// GENERATED FILE — do not edit by hand.
-// Produced by apps/dox/scripts/build-reference.ts (\`nx run dox:generate\`).
+// Produced by apps/dox/scripts/build-reference.ts (\`pnpm dox:generate\`).
 import type { LivePlaygroundTemplate } from "../../lib/playground-spec";
 
 export const LIVE_PLAYGROUND_TEMPLATES: Record<string, LivePlaygroundTemplate> = ${JSON.stringify(

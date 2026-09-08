@@ -10,7 +10,7 @@
 
 - `pnpm run validate` (root: `pnpm -r --if-present run build && … lint && … typecheck && … test`)
   stays green, **including the existing 20-cell GMT timezone matrix** — Dox must not
-  perturb `packages/gmt`. (nx was removed in commit `9a7063f`.)
+  perturb `packages/gmt`.
 - `pnpm --filter @gmt/dox build` produces a static site; `pnpm --filter @gmt/dox dev` serves it.
 - **The generator spot-check (story DOX-A3a, the highest-leverage test in the epic):**
   compare the generated page for `startOfZoned` against

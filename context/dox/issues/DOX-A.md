@@ -16,7 +16,7 @@ without losing the docs.
 
 ## Definition of done — binding for every story in this file
 
-- `pnpm nx run-many -t lint test typecheck build` stays green, **including the 20-cell
+- `pnpm run validate` stays green, **including the 20-cell
   GMT timezone matrix**. `apps/dox` must not perturb `packages/gmt`.
 - No changeset is needed — `apps/dox` is private and unpublished. The one exception is
   a story that also modifies `packages/gmt` (see `DOX-A3a`'s namespace-README decision),
@@ -36,7 +36,7 @@ without losing the docs.
 **Title:**
 
 ```
-DOX-A1 Create apps/dox (Astro + Starlight) and wire pnpm/nx/oxlint
+DOX-A1 Create apps/dox (Astro + Starlight) and wire pnpm/oxlint
 ```
 
 **Description:**
@@ -65,10 +65,8 @@ has 504 public functions and no documentation site — the only discovery path i
   3. `oxlint.config.js` — **note the `.js` extension**. Add `apps/**` to
      `files.include`; add `apps/dox/dist`, `apps/dox/.astro`, and the generated
      reference directory to `files.ignore`.
-  4. `apps/dox/project.json` — **required.** Nx's `@nx/js/typescript` plugin infers
-     `build`/`typecheck` from the presence of `tsconfig.build.json`, which an Astro app
-     will not have, so Nx will infer nothing. Declare `build`, `dev`, and `typecheck`
-     explicitly with `dependsOn: ["^build"]` so `@northguild/gmt` builds first.
+   4. `apps/dox/package.json` — declare `build`, `dev`, and `typecheck` scripts.
+      The package is discovered by `pnpm -r` automatically via the `packages/*` workspace glob.
 - Add root scripts `docs:dev` and `docs:build`.
 - **Never hardcode a version number in the site.** Generate a version map from
   `packages/*/package.json` in a `prebuild`/`predev` step, so the docs cannot ship a
@@ -85,7 +83,7 @@ be on an older version that predates Astro 7's `>=22.12.0` floor — `nvm use` f
 `DOX-A1` fails on the very first install.
 
 Re-check that the four integration files have not drifted — read `pnpm-workspace.yaml`,
-root `package.json`, `oxlint.config.js`, and `nx.json` directly rather than trusting
+root `package.json`, and `oxlint.config.js` directly rather than trusting
 this issue's snapshot. Note the config is `oxlint.config.js`, not `.ts`.
 
 **Gate — resolve here, not later:** `apps/dox` must NOT extend `tsconfig.base.json`.
@@ -101,11 +99,11 @@ an explicit branch — do not leave it accidental.
 
 ## Definition of done
 - `pnpm install` resolves with `apps/dox` present.
-- `pnpm nx show projects` lists `docs`.
+- `pnpm run validate` is green across the monorepo.
 - `pnpm docs:dev` serves a site with a working landing page and two readable content
   pages — real content from `packages/gmt/README.md`, not lorem ipsum.
 - `pnpm docs:build` produces static output.
-- `pnpm nx run-many -t lint typecheck build` is green across the monorepo.
+- `pnpm run validate` is green across the monorepo.
 ```
 
 **Implementation notes.** Detail and evidence in `.agents/dox/tier0-infra.md`; that pack
@@ -120,7 +118,7 @@ is authoritative where it disagrees with this issue.
   a `packageExtensions` entry in `pnpm-workspace.yaml`.
 - pnpm 10 defaults `enable-pre-post-scripts` to false and there is no `.npmrc`, so
   `prebuild`/`predev` hooks never fire. The version map is chained with `&&` and wired
-  to an Nx `generate` target instead. It is **gitignored, not stubbed** — a stub would
+  to a root `package.json` script instead. It is **gitignored, not stubbed** — a stub would
   render a wrong version badge, the exact failure this story prevents, and `DOX-A1`
   ships no tests that need it to resolve on a clean checkout.
 - `oxlint.config.js` is **never loaded** (`.js` is not in oxlint's discovery list), so
@@ -177,11 +175,9 @@ buys the fastest feedback loop available.
 - A GitHub Actions workflow deploying via `cloudflare/wrangler-action`, matching
   `ci.yml`'s existing conventions rather than introducing an unrelated pattern:
   `pnpm/action-setup@v4` pinned to `10.32.1`, `actions/setup-node@v4` with
-  `cache: pnpm`, `pnpm install --frozen-lockfile`, Nx for the build.
+  `cache: pnpm`, `pnpm install --frozen-lockfile`, `pnpm run validate` for the build.
 - `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as GitHub Actions repo secrets.
-- Build order matters: `@northguild/gmt` must be built before `apps/dox`. DOX-A1's
-  `project.json` `dependsOn: ["^build"]` should handle this — verify it actually does
-  in CI, where the Nx cache is cold.
+- Build order matters: `@northguild/gmt` must be built before `apps/dox`. The workspace `validate` script runs builds in dependency order.
 - Confirm Pagefind search works in the deployed build — it is part of the Starlight
   production build and does not run in dev, so this is the first place it can be tested.
 
@@ -203,7 +199,7 @@ is authoritative where it disagrees with this issue.
 - The shipped `wrangler.jsonc` has **no `binding`** — Cloudflare's docs say to omit the
   ASSETS binding when the Worker has no main script. It returns in Tier 6 with the
   `main` script that reads it.
-- The Nx project is named **`dox`**, not `docs`; every command in the deploy workflow
+- The project is named **`dox`**, not `docs`; every command in the deploy workflow
   uses `dox`.
 - Adding `wrangler` as a devDependency required a `pnpm-workspace.yaml` `allowBuilds`
   entry (`workerd: true`) — `workerd`'s `package.json` declares a `postinstall` pnpm
@@ -364,7 +360,7 @@ them to silently rot.
 - The route manifest is emitted and its contents exactly equal the set of pages actually
   generated — assert this in the same test, since a manifest that drifts from reality is
   worse than none (it would silently suppress valid links or admit dead ones).
-- The generated-module stub is committed and `pnpm nx run docs:test` passes on a clean
+- The generated-module stub is committed and `pnpm run docs:test` passes on a clean
   checkout with no prior build.
 - The corpus-count Vitest test is in place and fails when a function is added without
   re-extraction (verify by temporarily adding one).

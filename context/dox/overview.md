@@ -25,7 +25,6 @@ generator risk. Counts in that file **drift**; `DOX-A3a` re-derives them from so
 ```text
 apps/dox/                  Astro 7 + @astrojs/starlight 0.41 — a real multi-page site
   ├── astro.config.mjs
-  ├── project.json                    explicit Nx targets (see §4.3)
   ├── wrangler.jsonc                  assets binding → dist/; /api/* once C exists
   ├── scripts/build-reference.ts      TS compiler API → generated MDX + corpus + manifest
   ├── worker/                         same deployment — holds the model API key (Tier 6)
@@ -187,7 +186,7 @@ styling components.
 
 See [`reference/workspace-integration.md`](reference/workspace-integration.md). Load
 **only on `DOX-A1`** — every other story consumes the result. Covers
-`pnpm-workspace.yaml`, root `package.json`, `oxlint.config.js`, `apps/dox/project.json`,
+`pnpm-workspace.yaml`, root `package.json`, `oxlint.config.js`, `apps/dox/package.json`,
 and the `tsconfig.base.json` / `customConditions` constraints.
 
 ---

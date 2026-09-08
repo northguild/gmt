@@ -1,6 +1,0 @@
-> node ./scripts/generate-version-map.mjs && tsx ./scripts/build-reference.ts && node ./scripts/build-guides.mjs && node ./scripts/build-scenario-index.mjs
-
-[versions] up to date (@northguild/gmt 1.14.2)
-[reference] outputs up-to-date, skipping
-[guides] up-to-date, skipping
-[scenarios] up-to-date, skipping

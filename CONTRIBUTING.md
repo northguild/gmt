@@ -33,52 +33,42 @@ uv run python -m pytest .agents/skills -q
 
 ```bash
 # Test, build, typecheck
-pnpm -w exec nx run-many -t test
-pnpm -w exec nx run-many -t build
-pnpm -w exec nx run-many -t typecheck
+pnpm -r run test
+pnpm -r run build
+pnpm -r run typecheck
 
 # Code quality
 pnpm run check
 pnpm run lint
 pnpm run format
-
-# Nx utilities
-pnpm -w exec nx graph        # Visual dependency graph
-pnpm -w exec nx sync         # Sync TypeScript project references
 ```
 
-### Nx commands
+### Package-scoped commands
 
 ```bash
 # Run targets for every package
 pnpm run build
-pnpm run test:nx
-pnpm run lint:nx
+pnpm run test
+pnpm run lint
 pnpm run typecheck
 
 # Full local gate before PR
 pnpm run validate
 
 # Only run on projects affected by your branch changes
-pnpm run affected:build
-pnpm run affected:test
-pnpm run affected:lint
-pnpm run affected:typecheck
-
-# Workspace maintenance
-pnpm run graph
-pnpm run sync
-pnpm run sync:check
-pnpm run reset
+pnpm --filter '...[origin/main]' run test
+pnpm --filter '...[origin/main]' run lint
+pnpm --filter '...[origin/main]' run typecheck
+pnpm --filter '...[origin/main]' run build
 ```
 
 Recommended PR flow:
 
 ```bash
-pnpm run affected:lint
-pnpm run affected:test
-pnpm run affected:typecheck
-pnpm run affected:build
+pnpm --filter '...[origin/main]' run lint
+pnpm --filter '...[origin/main]' run test
+pnpm --filter '...[origin/main]' run typecheck
+pnpm --filter '...[origin/main]' run build
 ```
 
 ### Run within a specific package
@@ -140,7 +130,7 @@ pnpm run lint
 │   └── gmt-eslint/             # @northguild/gmt-eslint — Shared ESLint flat config
 │       └── eslint/
 │           └── index.mjs       # Flat config banning Date APIs
-├── northguild/                  # Nx workspace configuration (internal, do not publish)
+├── northguild/                  # Workspace configuration (internal, do not publish)
 ├── biome.json                   # Root Biome config — references gmt-biome plugins directly
 ├── eslint.config.mjs            # Root ESLint config — imports gmt-eslint
 ├── tsconfig.base.json           # Shared TypeScript base config
@@ -332,7 +322,7 @@ export function getDay = (dateStr: string): number | null {
 | [Biome](https://biomejs.dev/)                 | Formatting and linting (+ Grit plugins for Date ban) |
 | [TypeScript](https://www.typescriptlang.org/) | Type safety                                          |
 | [Vitest](https://vitest.dev/)                 | Testing                                              |
-| [Nx](https://nx.dev/)                         | Task orchestration and caching                       |
+| [pnpm](https://pnpm.io/)                      | Package manager and task runner                      |
 
 All Biome rules are in [biome.json](./biome.json) (Grit plugins live in [packages/gmt-biome/plugins/](./packages/gmt-biome/plugins/)).
 
@@ -369,7 +359,7 @@ What you do as a contributor:
   bumps nothing.
 - That's all. Merging your PR publishes nothing. Changesets accumulate on `main`
   until a maintainer opens a release PR carrying the output of
-  `pnpm run changeset:version`; merging *that* PR is what publishes to npm,
+  `pnpm run changeset:version`; merging _that_ PR is what publishes to npm,
   pushes the tags, and creates the GitHub Releases.
 - Prefer Changesets over hand-editing a `package.json` version — a manual bump
   still gets tagged, but it skips the changelog the release notes are built
@@ -380,9 +370,8 @@ trusted-publishing setup, and how to add a new publishable package.
 
 CI strategy:
 
-- Pull requests run `nx affected` targets (`lint`, `test`, `typecheck`, `build`) using `NX_BASE` and `NX_HEAD`.
-- Pushes to `main` run full `nx run-many` across all projects.
-- `defaultBase` is set to `main` in Nx config so local affected commands behave consistently.
+- Pull requests run `pnpm --filter '...[origin/main]'` targets (`lint`, `test`, `typecheck`, `build`).
+- Pushes to `main` run `pnpm run validate` across all projects.
 
 ## Agent prompt
 
