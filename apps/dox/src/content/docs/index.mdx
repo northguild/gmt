@@ -16,6 +16,7 @@ hero:
 ---
 
 import { Card, CardGrid } from "@astrojs/starlight/components";
+import SectionHeading from "../../components/SectionHeading.astro";
 
 import { gmtVersion } from "~/generated/versions";
 import GridSection from "../../components/GridSection.astro";
@@ -37,9 +38,9 @@ browser and recomputed every second.
 
 <GridSection>
 
-## Key features
+<SectionHeading>Key features</SectionHeading>
 
-<CardGrid stagger>
+<CardGrid>
   <Card title="100% Temporal, Temporal-first" icon="star">
     Built directly on the TC39 `Temporal` standard, not a homegrown date/time type system.
     No `Date` object anywhere, enforced by three dedicated lint packages.

@@ -1,4 +1,6 @@
 ---
+import SectionHeading from "./SectionHeading.astro";
+
 /**
  * Homepage grid section: why `new Date` / `Date` objects are the root cause
  * of JavaScript date/time bugs. Split from the former WhyNotDate.astro so
@@ -51,9 +53,7 @@ const faults: Fault[] = [
 ---
 
 <section class="why-date-block" aria-labelledby="why-date-faults-h">
-  <h2 id="why-date-faults-h">
-    The bug is the <code>Date</code> object
-  </h2>
+  <SectionHeading>The bug is the <code>Date</code> object</SectionHeading>
   <p class="why-date-lede">
     Almost every date/time bug in a JavaScript codebase traces back to one
     type. <code>Date</code> conflates an instant with a wall-clock reading,
@@ -86,9 +86,7 @@ const faults: Fault[] = [
     gap: var(--gmt-space-4);
   }
 
-  .why-date-block h2 {
-    margin: 0;
-  }
+
 
   .why-date-lede {
     margin: 0;
