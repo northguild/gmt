@@ -301,11 +301,10 @@ jobs:
                   : null;
                 const where = pre ? " under the \u0060" + pre + "\u0060 tag" : "";
                 // The URL goes out bare on its own line: Discord unfurls it into
-                // the release card that carries the changelog, which is what
-                // "What\u0027s New" is pointing at. Wrapping it in <> kills that.
+                // the release card carrying the changelog, so the card speaks for
+                // itself. Wrapping it in <> would suppress that card.
                 return [
                   "\ud83d\ude80 Version \u0060" + tag + "\u0060 is now live on npm" + where + "!",
-                  "\ud83d\udcd1 **What\u0027s New:**",
                   url,
                 ].join("\n");
               });
