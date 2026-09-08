@@ -1,6 +1,6 @@
 # Linting Packages
 
-GMT publishes three opt-in linting packages that enforce the `Date` API ban at the AST level. All three are independent — consumers install whichever matches their linter. All three ban the same six patterns and point to the same GMT replacements.
+GMT publishes three opt-in linting packages that enforce the `Date` API ban at the AST level. All three are independent — consumers install whichever matches their linter. All three ban the same seven patterns and point to the same GMT replacements.
 
 ## Packages at a Glance
 
@@ -20,6 +20,16 @@ GMT publishes three opt-in linting packages that enforce the `Date` API ban at t
 | `Date.parse(...)`          | `convertZonedToUnix(value)`                                  |
 | `Date.UTC(...)`            | `convertUtcDateTimeToUnix(value, unit)`                      |
 | `date.getTimezoneOffset()` | `getZonedNow(tz)` or zoned helpers                           |
+| Importing `moment`, `moment-timezone`, `dayjs`, `luxon`, `date-fns`, `date-fns-tz`, `spacetime` | `@northguild/gmt` |
+
+The import ban covers every specifier form — default, named, namespace, side-effect,
+type-only, subpaths (`date-fns/format`), `require()`, dynamic `import()`, and
+`export … from` — and targets libraries that wrap or pass native `Date` internally.
+
+`@js-joda/core` is **deliberately allowed**: it has its own value types and touches
+`Date` only at the boundary (reading the clock, host zone lookup, `toDate()` interop),
+so it does not carry the problems this ban targets. Verified against its dist bundle,
+not assumed.
 
 ---
 

@@ -13,5 +13,15 @@ or {
   },
   `$obj.getTimezoneOffset()` where {
     register_diagnostic(span=`getTimezoneOffset`, message="Avoid getTimezoneOffset(). Timezone offsets change throughout the year, so use @northguild/gmt zoned methods instead.", severity="error")
+  },
+  or {
+    `import $_ from $source`,
+    `import * as $_ from $source`,
+    `import $source`,
+    `require($source)`,
+    `import($source)`
+  } where {
+    $source <: r"[\"'](?:moment|dayjs|luxon|date-fns|spacetime)(?:-timezone|-tz)?(?:/.*)?[\"']",
+    register_diagnostic(span=$source, message="Avoid date libraries that wrap native Date (moment, dayjs, luxon, date-fns, spacetime). Use @northguild/gmt instead.", severity="error")
   }
 }

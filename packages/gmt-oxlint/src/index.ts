@@ -1,5 +1,6 @@
 import { noDateGetTimezoneOffsetRule } from "./rules/no-date-getTimezoneOffset";
 import { noDateGlobalRule } from "./rules/no-date-global";
+import { noDateLibraryImportsRule } from "./rules/no-date-library-imports";
 import { noDateNowRule } from "./rules/no-date-now";
 import { noDateParseRule } from "./rules/no-date-parse";
 import { noDateUtcRule } from "./rules/no-date-utc";
@@ -13,6 +14,7 @@ export const recommendedRules = {
   "@northguild/gmt-oxlint/no-date-parse": "error",
   "@northguild/gmt-oxlint/no-date-utc": "error",
   "@northguild/gmt-oxlint/no-date-getTimezoneOffset": "error",
+  "@northguild/gmt-oxlint/no-date-library-imports": "error",
 } as const;
 
 export const recommendedConfig = {
@@ -29,6 +31,7 @@ const plugin: OxlintPlugin = {
     "no-date-parse": noDateParseRule,
     "no-date-utc": noDateUtcRule,
     "no-date-getTimezoneOffset": noDateGetTimezoneOffsetRule,
+    "no-date-library-imports": noDateLibraryImportsRule,
   },
   configs: { recommended: { rules: recommendedRules } },
 };

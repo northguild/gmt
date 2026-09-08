@@ -66,7 +66,7 @@ Adopt the `finalizer` role. Read `context/roadmap/tracker.md` to identify the cu
 3. Update `packages/gmt/README.md` and relevant namespace READMEs.
 4. Generate a conventional commit message (use available commit-message generation tool).
 5. Generate a PR description (use available PR description generation tool).
-6. If the `Publish` column in `tracker.md` indicates a release is due, execute the maintainer flow from `PUBLISHING.md` (version bump, build, dry-run, publish, GitHub releases).
+6. Stop there. Versioning and publishing are both `release.yml`'s job — never run `changeset version`, `changeset publish`, `npm publish`, or `gh release create`. See `PUBLISHING.md`.
 
 ## Small-story optimization
 
