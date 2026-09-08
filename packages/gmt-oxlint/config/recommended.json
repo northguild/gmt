@@ -5,6 +5,7 @@
     "@northguild/gmt-oxlint/no-date-now": "error",
     "@northguild/gmt-oxlint/no-date-parse": "error",
     "@northguild/gmt-oxlint/no-date-utc": "error",
-    "@northguild/gmt-oxlint/no-date-getTimezoneOffset": "error"
+    "@northguild/gmt-oxlint/no-date-getTimezoneOffset": "error",
+    "@northguild/gmt-oxlint/no-date-library-imports": "error"
   }
 }

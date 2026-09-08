@@ -21,6 +21,26 @@ export type ChainExpressionNode = Node & {
 export type CallExpressionNode = Node & {
   type: "CallExpression";
   callee: Node;
+  arguments?: Node[];
+};
+
+export type LiteralNode = Node & { type: "Literal"; value?: unknown };
+
+export type ImportDeclarationNode = Node & {
+  type: "ImportDeclaration";
+  source: LiteralNode;
+};
+
+/** `import("date-fns")` — the specifier can be any expression, not just a literal. */
+export type ImportExpressionNode = Node & {
+  type: "ImportExpression";
+  source: Node;
+};
+
+/** `source` is null for `export { x }` with no `from` clause. */
+export type ExportFromNode = Node & {
+  type: "ExportNamedDeclaration" | "ExportAllDeclaration";
+  source?: LiteralNode | null;
 };
 
 export type NewExpressionNode = Node & { type: "NewExpression"; callee: Node };
@@ -42,6 +62,10 @@ export type RuleListener = {
   Program?: (node: ProgramNode) => void;
   NewExpression?: (node: NewExpressionNode) => void;
   CallExpression?: (node: CallExpressionNode) => void;
+  ImportDeclaration?: (node: ImportDeclarationNode) => void;
+  ImportExpression?: (node: ImportExpressionNode) => void;
+  ExportNamedDeclaration?: (node: ExportFromNode) => void;
+  ExportAllDeclaration?: (node: ExportFromNode) => void;
 };
 
 export type RuleModule = {

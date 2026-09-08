@@ -1,6 +1,6 @@
 {
   "name": "@northguild/gmt-biome",
-  "version": "1.0.7",
+  "version": "1.1.0",
   "private": false,
   "description": "Shared Biome configuration for gmt projects",
   "keywords": [
@@ -11,6 +11,10 @@
     "tanstack-intent",
     "temporal"
   ],
+  "homepage": "https://github.com/northguild/gmt#readme",
+  "bugs": {
+    "url": "https://github.com/northguild/gmt/issues"
+  },
   "license": "MIT",
   "contributors": [
     {
@@ -22,6 +26,11 @@
       "url": "https://github.com/craig-o-curtis"
     }
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/northguild/gmt.git",
+    "directory": "packages/gmt-biome"
+  },
   "files": [
     "plugins/",
     "LICENSE",
@@ -30,6 +39,7 @@
   ],
   "exports": {
     "./plugins/all.grit": "./plugins/all.grit",
+    "./plugins/no-date-library-imports.grit": "./plugins/no-date-library-imports.grit",
     "./plugins/no-new-date.grit": "./plugins/no-new-date.grit",
     "./plugins/no-date-now.grit": "./plugins/no-date-now.grit",
     "./plugins/no-date-parse.grit": "./plugins/no-date-parse.grit",
@@ -42,8 +52,7 @@
   },
   "scripts": {
     "pack": "npm pack --dry-run",
-    "publish:dry-run": "npm publish --access public --dry-run",
-    "publish:public": "npm publish --access public"
+    "publish:dry-run": "npm publish --access public --dry-run"
   },
   "devDependencies": {
     "@tanstack/intent": "^0.3.8"

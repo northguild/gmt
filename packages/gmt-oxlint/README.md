@@ -59,6 +59,7 @@ export default defineConfig({
     "gmt/no-date-parse": "error",
     "gmt/no-date-utc": "error",
     "gmt/no-date-getTimezoneOffset": "error",
+    "gmt/no-date-library-imports": "error",
   },
 });
 ```
@@ -92,7 +93,8 @@ Or explicitly configure each rule. You can use either a string or an array form:
     "@northguild/gmt-oxlint/no-date-now": "error",
     "@northguild/gmt-oxlint/no-date-parse": "error",
     "@northguild/gmt-oxlint/no-date-utc": "error",
-    "@northguild/gmt-oxlint/no-date-getTimezoneOffset": "error"
+    "@northguild/gmt-oxlint/no-date-getTimezoneOffset": "error",
+    "@northguild/gmt-oxlint/no-date-library-imports": "error"
   }
 }
 ```
@@ -109,7 +111,8 @@ Array form also supported:
     "@northguild/gmt-oxlint/no-date-now": ["error"],
     "@northguild/gmt-oxlint/no-date-parse": ["error"],
     "@northguild/gmt-oxlint/no-date-utc": ["error"],
-    "@northguild/gmt-oxlint/no-date-getTimezoneOffset": ["error"]
+    "@northguild/gmt-oxlint/no-date-getTimezoneOffset": ["error"],
+    "@northguild/gmt-oxlint/no-date-library-imports": ["error"]
   }
 }
 ```
@@ -124,6 +127,10 @@ Array form also supported:
 | `Date.parse(...)`          | `no-date-parse`             | Use `convertZonedToUnix(value)`                                                                                       |
 | `Date.UTC(...)`            | `no-date-utc`               | Use `convertUtcDateTimeToUnix('YYYY-MM-DDTHH:mm:ss', 'milliseconds' or 'seconds')`                                    |
 | `date.getTimezoneOffset()` | `no-date-getTimezoneOffset` | Use `getZonedNow(timezone)`, other gmt zoned helpers such as `convertZonedToUnix(value)`, or `Temporal.ZonedDateTime` |
+
+> **`@js-joda/core` is deliberately allowed.** It has its own value types and touches
+> `Date` only at the boundary (reading the clock, host zone lookup, `toDate()` interop),
+> so it does not carry the ambient-timezone and DST problems this ban targets.
 
 ## Why Temporal?
 

@@ -1,0 +1,20 @@
+// Bans date libraries that wrap or pass native `Date` objects internally, which
+// reintroduces the ambient-timezone and DST bugs GMT exists to prevent.
+//
+// `@js-joda/core` is deliberately NOT banned: it has its own value types and
+// touches `Date` only at the boundary (reading the clock, host zone lookup,
+// `toDate()` interop), so it does not carry the problems this rule targets.
+//
+// The regex is anchored to the whole node text, quotes included, hence the
+// leading/trailing character class. Groups must be non-capturing — a capturing
+// group in a Grit regex requires a metavariable binding list.
+or {
+  `import $_ from $source`,
+  `import * as $_ from $source`,
+  `import $source`,
+  `require($source)`,
+  `import($source)`
+} where {
+  $source <: r"[\"'](?:moment|dayjs|luxon|date-fns|spacetime)(?:-timezone|-tz)?(?:/.*)?[\"']",
+  register_diagnostic(span=$source, message="Avoid date libraries that wrap native Date (moment, dayjs, luxon, date-fns, spacetime). Use @northguild/gmt instead.", severity="error")
+}

@@ -72,7 +72,12 @@ Include only the plugins you need:
 | `Date.now()`                | `no-date-now`               | Use `getUnixNow('milliseconds' \| 'seconds')` or `getNow()`                                                           |
 | `Date.parse(...)`           | `no-date-parse`             | Use `convertZonedToUnix(value)`                                                                                       |
 | `Date.UTC(...)`             | `no-date-utc`               | Use `convertUtcDateTimeToUnix('YYYY-MM-DDTHH:mm:ss', 'milliseconds' \| 'seconds')`                                    |
+| Importing moment, moment-timezone, dayjs, luxon, date-fns, date-fns-tz, spacetime | `no-date-library-imports`   | Use `@northguild/gmt`                                                                                                 |
 | `$date.getTimezoneOffset()` | `no-date-getTimezoneOffset` | Use `getZonedNow(timezone)`, other gmt zoned helpers such as `convertZonedToUnix(value)`, or `Temporal.ZonedDateTime` |
+
+> **`@js-joda/core` is deliberately allowed.** It has its own value types and touches
+> `Date` only at the boundary (reading the clock, host zone lookup, `toDate()` interop),
+> so it does not carry the ambient-timezone and DST problems this ban targets.
 
 ## Why Temporal?
 
