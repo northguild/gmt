@@ -276,49 +276,53 @@ jobs:
           push-git-tags: true
           create-github-releases: true
 
-      # Posted by curl rather than a third-party action: this job carries
-      # `id-token: write`, so the fewer external actions running in it the
-      # better.
+      # Build the message first: `published-packages` is JSON, and a release
+      # can carry more than one package, unlike the single-package repos this
+      # notifier is shared with.
+      - name: Compose the announcement
+        if: steps.publish.outputs.published == 'true'
+        env:
+          PUBLISHED: ${{ steps.publish.outputs.published-packages }}
+        run: |
+          set -euo pipefail
+          {
+            echo "DISCORD_MESSAGE<<GMT_DISCORD_EOF"
+            node -e '
+              const pkgs = JSON.parse(process.env.PUBLISHED);
+              const repo = process.env.GITHUB_REPOSITORY;
+              const blocks = pkgs.map((p) => {
+                const tag = p.name + "@" + p.version;
+                const url =
+                  "https://github.com/" + repo + "/releases/tag/" + encodeURIComponent(tag);
+                // Name the dist-tag only when it is not `latest`; Changesets
+                // publishes pre-mode versions under their pre-tag.
+                const pre = p.version.includes("-")
+                  ? p.version.split("-")[1].split(".")[0]
+                  : null;
+                const where = pre ? " under the \u0060" + pre + "\u0060 tag" : "";
+                // The URL goes out bare on its own line: Discord unfurls it into
+                // the release card that carries the changelog, which is what
+                // "What\u0027s New" is pointing at. Wrapping it in <> kills that.
+                return [
+                  "\ud83d\ude80 Version \u0060" + tag + "\u0060 is now live on npm" + where + "!",
+                  "\ud83d\udcd1 **What\u0027s New:**",
+                  url,
+                ].join("\n");
+              });
+              process.stdout.write(blocks.join("\n\n"));
+            '
+            echo
+            echo "GMT_DISCORD_EOF"
+          } >> "$GITHUB_ENV"
+
+      # Pinned to 0.3.2's commit rather than the mutable tag, because this step
+      # runs in the job holding `id-token: write`. Same action, same version.
       #
-      # One message per package, so Discord unfurls each release into its own
-      # card. That card IS the "What's New" — which is why the URL is posted
-      # bare: wrapping it in <> suppresses the embed and defeats the point.
-      #
-      # Never fails the job. By the time this runs the packages are already on
+      # Never fails the job: by the time it runs the packages are already on
       # npm, so a red run would only invite a re-run that cannot help.
       - name: Announce on Discord
         if: steps.publish.outputs.published == 'true' && env.DISCORD_WEBHOOK != ''
         continue-on-error: true
-        env:
-          PUBLISHED: ${{ steps.publish.outputs.published-packages }}
-        run: |
-          set -uo pipefail
-
-          node -e '
-            const pkgs = JSON.parse(process.env.PUBLISHED);
-            const repo = process.env.GITHUB_REPOSITORY;
-            for (const p of pkgs) {
-              const tag = p.name + "@" + p.version;
-              const url =
-                "https://github.com/" + repo + "/releases/tag/" + encodeURIComponent(tag);
-              // Name the dist-tag only when it is not `latest`; Changesets
-              // publishes pre-mode versions under their pre-tag.
-              const pre = p.version.includes("-")
-                ? p.version.split("-")[1].split(".")[0]
-                : null;
-              const where = pre ? " under the \u0060" + pre + "\u0060 tag" : "";
-              const content = [
-                "\ud83d\ude80 Version \u0060" + tag + "\u0060 is now live on npm" + where + "!",
-                "\ud83d\udcd1 **What\u0027s New:**",
-                url,
-              ].join("\n");
-              console.log(JSON.stringify({ content }));
-            }
-          ' > "$RUNNER_TEMP/discord.jsonl"
-
-          while IFS= read -r PAYLOAD; do
-            curl -fsS -X POST -H "Content-Type: application/json" \
-              -d "$PAYLOAD" "$DISCORD_WEBHOOK" \
-              || echo "::warning::Discord announcement failed for one package."
-            sleep 1
-          done < "$RUNNER_TEMP/discord.jsonl"
+        uses: Ilshidur/action-discord@0c4b27844ba47cb1c7bee539c8eead5284ce9fa9 # 0.3.2
+        with:
+          args: ${{ env.DISCORD_MESSAGE }}
