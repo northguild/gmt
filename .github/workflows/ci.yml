@@ -178,7 +178,7 @@ jobs:
         if: steps.check-non-gmt.outputs.run_tests == 'true' && steps.cache-gmt-dist.outputs.cache-hit != 'true'
         run: pnpm --filter @northguild/gmt run build
 
-      # Mirrors the old `nx affected -t test --exclude=@northguild/gmt,@northguild/gmt-oxlint`.
+      # Mirrors the old path-based gating for non-gmt packages.
       # gmt has its own TZ matrix (gmt-matrix job); gmt-oxlint is excluded as before.
       # `!root` keeps the root `vitest run` (which globs the gmt suite) out of this job.
       - name: Run tests (excluding gmt, gmt-oxlint)

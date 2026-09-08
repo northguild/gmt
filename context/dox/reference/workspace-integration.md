@@ -14,11 +14,8 @@
    `packages/**`, `docs/**`, `context/**`, `scripts/**`; add `apps/**`. Also add
    `apps/dox/dist`, `apps/dox/.astro`, and the generated reference directory to
    `files.ignore` — generated MDX and `.astro` files should not be linted.
-4. **`apps/dox/project.json`** — **required, unlike `packages/*`.** Nx infers
-   `build`/`typecheck` from `@nx/js/typescript` keyed on the presence of
-   `tsconfig.build.json`, which an Astro app will not have. Declare `build`, `dev`, and
-   `typecheck` explicitly, with `dependsOn: ["^build"]` so `@northguild/gmt` is built
-   before the docs site consumes it.
+4. **`apps/dox/package.json`** — declare `build`, `dev`, and `typecheck` scripts.
+   The package is discovered by `pnpm -r` automatically via the `packages/*` workspace glob.
 
 Two more constraints:
 
@@ -28,7 +25,7 @@ Two more constraints:
   `astro/tsconfigs/strict` instead.
 - **Import `@northguild/gmt` from its built `dist`, not from source.** The
   `@northguild/source` custom condition exists, but matching it would require
-  configuring Vite's `resolve.conditions`; letting Nx build the package first is fewer
+  configuring Vite's `resolve.conditions`; letting the workspace build the package first is fewer
   moving parts. **Import at module granularity** (`@northguild/gmt/plain/calculate`),
   **never at namespace granularity** (`@northguild/gmt/plain`) and never per-function —
   see §1: the exports map sets `"./plain/*/*": null`, and the namespace barrels re-export

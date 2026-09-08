@@ -28,7 +28,7 @@ Node with this exact incantation, in the same compound command:**
 
 ```bash
 eval "$(fnm env)" && fnm use && pnpm install
-eval "$(fnm env)" && fnm use && pnpm nx run docs:build
+eval "$(fnm env)" && fnm use && pnpm run docs:build
 ```
 
 A bare `pnpm install` in a later call silently reverts to v20 and then fails at the first
@@ -50,13 +50,9 @@ These bind every story. The reference pack does not restate them.
    `emitDeclarationOnly`, `module: nodenext`, and `customConditions:
 ["@northguild/source"]` — all wrong for an Astro app. Extend `astro/tsconfigs/strict`.
 
-3. **Import `@northguild/gmt` from its built `dist`, not from source.** Let Nx build the
-   package first via `dependsOn: ["^build"]`. Do not configure Vite `resolve.conditions`
-   to match the `@northguild/source` condition — more moving parts, no benefit.
+3. **Import `@northguild/gmt` from its built `dist`, not from source.** Let the workspace build the package first via the root `validate` script. Do not configure Vite `resolve.conditions` to match the `@northguild/source` condition — more moving parts, no benefit.
 
-4. **Never perturb `packages/gmt`.** `pnpm nx run-many -t lint test typecheck build` must
-   stay green including the 20-cell timezone matrix. If a story genuinely must touch
-   `packages/gmt`, it needs a changeset — stop and confirm with the architect first.
+4. **Never perturb `packages/gmt`.** `pnpm run validate` must stay green including the 20-cell timezone matrix. If a story genuinely must touch `packages/gmt`, it needs a changeset — stop and confirm with the architect first.
 
 5. **Generated output is gitignored, with a committed stub.** Anything importing a
    generated module must still resolve on a clean checkout with no build — commit an empty
@@ -113,7 +109,7 @@ These bind every story. The reference pack does not restate them.
   message on missing data. Follow its shape rather than inventing a new one.
 - `.github/workflows/ci.yml` is the precedent for any new workflow: `pnpm/action-setup@v4`
   pinned to `10.32.1`, `actions/setup-node@v4` with `cache: pnpm`, `pnpm install
---frozen-lockfile`, Nx for the build.
+  --frozen-lockfile`, `pnpm run validate` for the build.
 - Formatting is `oxfmt` (`.oxfmtrc.json`); linting is `oxlint`. Note both use
   allow-list-shaped config — a new top-level directory is invisible to them until it is
   explicitly added.

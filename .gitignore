@@ -27,6 +27,8 @@ coverage/
 Thumbs.db
 .eslintcache
 
+
+
 # Environment
 .env
 .env.local

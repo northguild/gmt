@@ -286,9 +286,9 @@ picks them up.
 > `startViewTransition` theme cross-fade in `ThemeSelect.astro`, the DOX-D2 motion
 > tokens in `gmt-tokens.css`, and the `gmt-reveal` class from all six widgets /
 > landing sections. The same PR's CI failure (an `astro sync` vs `astro build`
-> file-rename race on `node_modules/.astro/data-store.json`, hit when nx runs
-> `typecheck` and `build` concurrently) is fixed by making `dox:build`
-> `dependsOn` `dox:typecheck` in `project.json` — typecheck runs its `astro sync`
+> file-rename race on `node_modules/.astro/data-store.json`, hit when `typecheck`
+> and `build` run concurrently) is fixed by making `dox:build` depend on
+> `dox:typecheck` in the package `package.json` scripts — typecheck runs its `astro sync`
 > to completion first, so the two never touch the content-layer store at once.
 >
 > **Kept:** all DOX-D1 chrome, and the focus-only tab "sonar" ping in

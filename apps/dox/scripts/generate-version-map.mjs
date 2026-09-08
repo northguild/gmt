@@ -6,12 +6,7 @@
  * apps/dox/src/generated/versions.ts, so that no version number is ever
  * hardcoded in site content and the site cannot ship a stale version badge.
  *
- * Run as: node apps/dox/scripts/generate-version-map.mjs
- *
- * Wired to the `generate` Nx target, which `build`, `dev`, and `typecheck` all
- * depend on. Deliberately NOT wired via an npm `prebuild`/`predev` lifecycle
- * hook: pnpm's `enable-pre-post-scripts` defaults to false and this repo has no
- * .npmrc, so those hooks never fire.
+ * Run as: node apps/dox/scripts/generate-version-map.mjs.
  */
 
 import {
@@ -89,7 +84,7 @@ const body = entries
   .join("\n");
 
 const source = `// GENERATED FILE — do not edit by hand.
-// Produced by apps/dox/scripts/generate-version-map.mjs (\`nx run dox:generate\`).
+// Produced by apps/dox/scripts/generate-version-map.mjs (\`pnpm dox:generate\`).
 export const packageVersions = {
 ${body}
 } as const;
