@@ -147,8 +147,7 @@ in `dox-builder.md`.
   close #132 when `DOX-A3a` ships.
 - **No changesets.** `apps/dox` is private and unpublished. The single exception: a story
   that also modifies `packages/gmt` follows the normal repo convention and does need one.
-- **`apps/dox` must not perturb `packages/gmt`.** `pnpm nx run-many -t lint test typecheck
-build` stays green including the 20-cell GMT timezone matrix.
+- **`apps/dox` must not perturb `packages/gmt`.** `pnpm run validate` stays green including the 20-cell GMT timezone matrix.
 - **No Octane.** No dependency on `octane` or any `@octanejs/*` package, in any tier. It is
   a moving pre-1.0 target with no benefit for a documentation site, and nothing in any tier
   depends on it.

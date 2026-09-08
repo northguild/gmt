@@ -10,8 +10,8 @@
  *
  * Run as: node apps/dox/scripts/build-guides.mjs
  *
- * Wired to the `generate` Nx target. The emitted `.md` is gitignored; the
- * canonical source stays docs/dst-disambiguation.md.
+ * The emitted `.md` is gitignored; the canonical source stays
+ * docs/dst-disambiguation.md.
  */
 
 import {
