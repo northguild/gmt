@@ -21,7 +21,7 @@ open until its last sub-story lands.
   polyfill (~2.98 MB).
 - Sentinel-aware rendering and the widget-chrome rules in overview.md §3 apply to every
   widget in this file, not only `DOX-B1a`'s playground.
-- `pnpm nx run-many -t lint test typecheck build` stays green.
+- `pnpm run validate` stays green.
 
 ---
 
@@ -96,7 +96,7 @@ throughout this story and every widget that follows it.**
 - Import at module granularity per the correction above.
 - Import from the built `dist`, not source. `packages/gmt` sets
   `customConditions: ["@northguild/source"]`, but matching it means configuring Vite's
-  `resolve.conditions`; letting Nx build the package first (DOX-A1's
+  `resolve.conditions`; letting pnpm build the package first (DOX-A1's
   `dependsOn: ["^build"]`) is fewer moving parts.
 - The textarea evaluates the expression with `new Function()` — the user can type any
   valid JS expression that calls the library, not just the seeded template.
@@ -149,7 +149,9 @@ format bench). The issue stays open until `DOX-B2d` also lands.
 **Title:**
 
 ```
+
 DOX-B2a Auto-embed playgrounds into every generated @example
+
 ```
 
 **Status:** Done.
@@ -157,6 +159,7 @@ DOX-B2a Auto-embed playgrounds into every generated @example
 **Description:**
 
 ```
+
 Part of the Dox epic — see `context/dox/index.md`, Tier 2, item DOX-B2a.
 Depends on DOX-B1a (the component) and DOX-A3a (the generator).
 
