@@ -12,6 +12,7 @@ describe("plugin", () => {
     expect(plugin.rules).toHaveProperty("no-date-parse");
     expect(plugin.rules).toHaveProperty("no-date-utc");
     expect(plugin.rules).toHaveProperty("no-date-getTimezoneOffset");
+    expect(plugin.rules).toHaveProperty("no-date-library-imports");
   });
 
   it("has recommended config with all rules", () => {
@@ -21,6 +22,9 @@ describe("plugin", () => {
     const rules = cfg?.rules;
     expect(rules).toBeDefined();
     expect(rules).toHaveProperty("@northguild/gmt-oxlint/no-date-global");
+    expect(rules).toHaveProperty(
+      "@northguild/gmt-oxlint/no-date-library-imports",
+    );
     expect(rules).toHaveProperty("@northguild/gmt-oxlint/no-new-date");
     expect(rules).toHaveProperty("@northguild/gmt-oxlint/no-date-now");
     expect(rules).toHaveProperty("@northguild/gmt-oxlint/no-date-parse");

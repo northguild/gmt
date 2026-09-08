@@ -1,9 +1,12 @@
 # Publishing to npm
 
-Primary workflow: publish locally from your machine using your npm login/passkey.
-GitHub Actions publishing is optional (see [Alternatives](#alternatives) below).
+Nobody logs into npm, and nothing is published from a laptop. Publishing is
+triggered by exactly one thing: **a push to `main` that moves a version in a
+`packages/*/package.json`.**
 
-Packages (each independently versioned):
+That only happens when you deliberately make it happen, in a release PR of your
+own. Merging feature PRs — however many, carrying however many changesets —
+never publishes anything.
 
 | Package dir           | npm name                 |
 | --------------------- | ------------------------ |
@@ -12,158 +15,175 @@ Packages (each independently versioned):
 | `packages/gmt-eslint` | `@northguild/gmt-eslint` |
 | `packages/gmt-oxlint` | `@northguild/gmt-oxlint` |
 
----
-
-## One-time setup
-
-- Ensure you're a member of the `@northguild` npm org.
-- Run `npm whoami` to confirm you're logged in locally. If not, `npm login` (or `npm login --auth-type=web` for passkey/SSO).
-- Run `gh auth login` once, for creating GitHub Releases later.
-
-No GitHub secrets are required for local publishing.
+Each is versioned independently, so tags are per-package —
+`@northguild/gmt@1.15.0`. There is no repo-wide `vX.Y.Z` tag.
 
 ---
 
-## Contributor flow (every feature branch)
+## The flow
 
-1. Finish your code changes.
-2. If you changed `packages/gmt/src/`'s public API surface, update the TanStack Intent agent skills in `packages/gmt/skills/` (via the `/tanstack-intent` skill) in the same branch — see [CONTRIBUTING.md](./CONTRIBUTING.md#keeping-agent-skills-current-tanstack-intent). Skills ship inside the published npm package, so stale skills would go out immediately on the next publish.
-3. Record release intent:
+### 1. As you work: describe each change
 
-   ```bash
-   pnpm run changeset:add
+In the branch where you changed something publishable:
+
+```bash
+pnpm run changeset:add
+```
+
+Pick the changed package(s), pick `patch|minor|major`, write the description.
+
+**This writes a markdown file and nothing else.** It does not touch any
+`package.json` and does not bump anything — the bump level you pick is recorded
+as intent, to be applied later. Commit the generated `.changeset/*.md` with your
+code.
+
+**That description ships.** It becomes the `CHANGELOG.md` entry and the GitHub
+Release notes, word for word — so write it for someone installing the package,
+not for yourself. `/changelog` will polish it against your diff.
+
+If you changed `packages/gmt/src/`'s public API surface, also update the
+TanStack Intent skills in `packages/gmt/skills/` (via `/tanstack-intent`) in the
+same branch — see [CONTRIBUTING.md](./CONTRIBUTING.md#agent-skills). They ship
+inside the tarball.
+
+### 2. Merge as usual. Nothing is published.
+
+Merge that PR, and the next one, and the one after that. Changesets pile up on
+`main` unreleased. The `Release` workflow runs on each push and decides there is
+nothing to do; its summary says so.
+
+Stay in this step as long as you like.
+
+### 3. When you want to release: make a release PR
+
+Branch from up-to-date `main` and run:
+
+```bash
+pnpm run changeset:version
+```
+
+This is the command that bumps. It consumes every pending `.changeset/*.md`,
+writes the new versions into `package.json`, prepends the `CHANGELOG.md`
+entries, deletes the changeset files it used, and — if `@northguild/gmt` itself
+was bumped — pins the Intent skills' `library_version` to the new version.
+
+It only edits files. Nothing is committed, tagged or published.
+
+Commit the result, open a PR, and read it: **the diff is the release.** Those
+version numbers and that CHANGELOG text are exactly what goes to npm. It is an
+ordinary PR, so the ordinary required checks run on it.
+
+**Merging it publishes.** CI packs the tarballs, publishes to npm with
+provenance, pushes the tags, cuts the GitHub Releases, and posts to #gmt.
+
+Keep the release PR pure — version bumps and changelogs only. If it also adds a
+new changeset, the workflow sees pending changesets and declines to publish.
+
+---
+
+## Notes on step 3
+
+**Everything pending ships together.** `changeset:version` consumes every
+changeset on `main`; there is no per-package pick at release time. To hold a
+package back, don't merge its changeset yet.
+
+**Bumps don't stack.** Versions are computed from the current version plus all
+pending changesets, highest level winning. Three `minor` changesets against
+`1.2.0` give `1.3.0`, not `1.5.0`.
+
+**Never hand-edit a version in `package.json`.** `changeset:version` owns those
+numbers. If one looks wrong, the changeset that produced it was wrong.
+
+**A changeset-less PR still ships.** Its code is on `main`, so it goes out with
+the next release — silently, with no changelog entry and no version attributed
+to it. Fine for CI and docs; a trap for a bug fix.
+
+## When it goes wrong
+
+**The publish run failed.** Fix the cause and re-run the failed job from the
+Actions UI. A re-run is safe — already-published versions are skipped.
+
+**Never run `npm publish` locally to unblock it.** It skips the provenance
+attestation and ships whatever is in your working tree.
+
+**A publish died and no run is left to retry.** Actions → Release → Run
+workflow. A manual dispatch bypasses the version guard deliberately.
+
+**Nothing happened when I merged.** Check the run's summary — it says what it
+decided and why. If it reports pending changesets, you merged a feature PR, not
+a release PR.
+
+**You want a human click between merge and npm.** Add required reviewers to the
+`release` environment (Settings → Environments → `release`).
+
+---
+
+## Adding a new publishable package
+
+No CI change is needed — nothing carries a package list. The work is all on the
+npm side, and none of it fails until `npm publish`, after the version is already
+committed.
+
+1. **`repository`, with `directory`** (plus `homepage` and `bugs`, to match the
+   others). Provenance can't be generated without it:
+
+   ```json
+   "repository": {
+     "type": "git",
+     "url": "https://github.com/northguild/gmt.git",
+     "directory": "packages/<new-pkg>"
+   }
    ```
 
-   Interactive: pick the changed package(s), pick `patch|minor|major`, write a one-line summary.
+2. **`publishConfig`** — scoped packages are private by default:
 
-4. Commit the generated `.changeset/*.md` file with your code and push the PR.
+   ```json
+   "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org/" }
+   ```
 
-A changeset is just a markdown file recording what changed and the intended bump — it doesn't publish anything by itself.
+3. **Publish version 1 by hand.** The one exception to "nothing is published
+   from a laptop", once per package ever — trust attaches to a package that
+   already exists on the registry.
 
----
+   ```bash
+   cd packages/<new-pkg>
+   npm publish --access public
+   ```
 
-## Maintainer flow (releasing what's on `main`)
+4. **Grant CI trust**, logged in as a member of the `@northguild` org
+   (`npm login --auth-type=web` for passkey/SSO):
 
-Run these in order, from repo root.
+   ```bash
+   npm trust github "@northguild/<new-pkg>" --file release.yml --repo northguild/gmt --env release --allow-publish
+   npm trust list "@northguild/<new-pkg>"   # confirm it took
+   ```
 
-```bash
-# 1. See what's pending
-pnpm run changeset status
+   Every `npm trust` call — `list` included — needs its own fresh 2FA browser
+   round-trip, so expect to authenticate twice. An agent can't run these for
+   you. Without this step the package's first CI publish fails with a 401 while
+   the others carry on.
 
-# 2. Bump versions, update changelogs, and sync TanStack Intent skill
-#    versions to match the new gmt version — all in one step
-pnpm run changeset:version
-git add .
-git commit -m "Version Packages"
-git push
+5. **Add it to the package table** at the top of this file.
 
-# 3. Build packages that need a build before publish
-#    (gmt-oxlint builds itself automatically via its `prepack` script)
-pnpm --filter @northguild/gmt run build
+Renaming `release.yml` or the `release` environment invalidates every existing
+trust entry — all four packages would need re-registering.
 
-# 4. Sanity-check package contents before they go out
-for PKG in gmt gmt-biome gmt-eslint gmt-oxlint; do
-  echo "== $PKG =="
-  (cd "packages/$PKG" && npm pack --dry-run)
-done
+## One-time setup (admins)
 
-# 5. Publish + tag (Changesets creates one git tag per published package,
-#    e.g. @northguild/<pkg>@<new-version>)
-npm whoami   # confirm you're logged in as the right user
-pnpm run changeset:publish
-git push --follow-tags
-```
+Done once for the repo, and already in place. If a fresh clone of this setup is
+ever needed:
 
-Step 2's `changeset:version` runs `changeset version` and then
-`node scripts/sync-intent-version.mjs`, which syncs all skill `library_version`
-fields to the new gmt version automatically — no separate step needed.
+- **npm trusted publishing** for each of the four packages — step 4 above. This
+  is the only credential the pipeline needs; there is no npm token anywhere.
+- **`DISCORD_WEBHOOK`** in the `release` environment, pointing at #gmt. Unset
+  just skips the announcement.
 
-Then create GitHub Releases for what you just published — see below.
-
----
-
-## GitHub Releases (after publishing)
-
-`changeset:publish` creates git tags but not GitHub Releases. This creates one
-release per tag `changeset:publish` just made, in one pass. Run it right after
-`git push --follow-tags`, in the same shell session — it relies on `HEAD`
-still being the version-bump commit (nothing in steps 3–5 creates a new
-commit, so this holds as long as you haven't done anything else in between):
-
-```bash
-for TAG in $(git tag --points-at HEAD); do
-  PKG=${TAG#@northguild/}   # "@northguild/gmt-oxlint@1.1.2" -> "gmt-oxlint@1.1.2"
-  PKG=${PKG%@*}             # "gmt-oxlint@1.1.2" -> "gmt-oxlint"
-
-  NOTES="/tmp/release-notes-$PKG.md"
-  awk '/^## /{f++} f==1' "packages/$PKG/CHANGELOG.md" | sed '1,2d' > "$NOTES"
-
-  LATEST_FLAG=--latest=false
-  [ "$PKG" = "gmt" ] && LATEST_FLAG=--latest   # only the headline package
-
-  gh release create "$TAG" --title "$TAG" --notes-file "$NOTES" $LATEST_FLAG
-done
-```
-
-Notes:
-
-- The tag is quoted (`"$TAG"`) since it contains `@` and `/`, which GitHub URL-encodes in the release URL; that's expected.
-- Only `@northguild/gmt` gets `--latest`; every other package gets `--latest=false` automatically.
-- If `HEAD` has moved since publishing (e.g. you made another commit first), fall back to `git tag --sort=-creatordate | head -n <count>` to find the right tags manually.
-
----
-
-## First release (initial `1.0.0`)
-
-Same as the flows above, with one difference: in step 3 of the contributor flow,
-pick `major` for each package you're taking to `1.0.0`.
-
----
-
-## Alternatives
-
-### Publishing via GitHub Actions instead of locally
-
-Not used in this repo — publishing is done manually/locally. Documented here only
-in case that ever changes.
-
-If you do publish from Actions, use an npm Automation token scoped to publish
-only, stored in a protected GitHub Environment called `release`:
-
-```yaml
-env:
-  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-```
-
-- Never print/echo `NPM_TOKEN` or `NODE_AUTH_TOKEN` in logs, PRs, or forked workflows.
-- Restrict who can approve `release` environment runs.
-- The `publish.yml` workflow runs `npm publish` but does **not** create git tags. After a successful Actions publish, create and push them yourself:
-
-  ```bash
-  pnpm exec changeset tag
-  git push --follow-tags
-  ```
-
-Docs: [npm Automation tokens](https://docs.npmjs.com/creating-and-viewing-authentication-tokens) · [GitHub Environments](https://docs.github.com/en/actions/deployment/targeting-specific-environments/using-environments-for-deployments)
-
-### Manual per-package publish (no Changesets publish step)
-
-```bash
-cd packages/gmt
-npm publish --access public
-```
-
-Then create and push tags yourself, since this skips Changesets' auto-tagging:
-
-```bash
-pnpm exec changeset tag
-git push --follow-tags
-```
-
----
+Only the publish job enters the `release` environment, so publishing — and
+nothing else — inherits whatever approval that environment requires. Restrict
+who can approve its runs.
 
 ## Semver cheat-sheet
 
 - `patch` — bug fix (`1.0.0 → 1.0.1`)
 - `minor` — new feature, backwards-compatible (`1.0.0 → 1.1.0`)
-- `major` — breaking change or initial stable release (`0.x → 1.0.0`)
+- `major` — breaking change, or an initial stable `1.0.0` release (`0.x → 1.0.0`)
