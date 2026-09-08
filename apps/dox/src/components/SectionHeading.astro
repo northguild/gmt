@@ -1,0 +1,19 @@
+---
+/** Section heading for the homepage grid — consistent styling and bracket alignment
+ * across MDX and component-rendered sections. */
+---
+
+<h2 class="gmt-section-heading">
+  <slot />
+</h2>
+
+<style>
+  .gmt-section-heading {
+    margin: 0;
+    padding-bottom: var(--gmt-space-2);
+    border-bottom: 1px solid var(--gmt-hairline);
+    color: var(--gmt-cyan);
+    font-size: 1.3rem;
+    letter-spacing: var(--gmt-tracking-wide);
+  }
+</style>
