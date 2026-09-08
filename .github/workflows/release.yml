@@ -292,7 +292,13 @@ jobs:
               .map((p) => {
                 const tag = p.name + "@" + p.version;
                 const url = "https://github.com/" + repo + "/releases/tag/" + encodeURIComponent(tag);
-                return "🚀 `" + tag + "` is live on npm — <" + url + ">";
+                // Name the dist-tag only when it is not `latest`, otherwise it
+                // is noise. Changesets publishes pre-mode versions under their
+                // pre-tag, and those are the ones carrying a prerelease
+                // identifier, so the version string is the reliable signal.
+                const pre = p.version.includes("-") ? p.version.split("-")[1].split(".")[0] : null;
+                const where = pre ? " under the `" + pre + "` tag" : "";
+                return "🚀 `" + tag + "` is live on npm" + where + " — <" + url + ">";
               })
               .join("\n");
             process.stdout.write(JSON.stringify({ content }));
