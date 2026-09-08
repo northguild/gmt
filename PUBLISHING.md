@@ -139,14 +139,17 @@ ever needed:
   Actions to create and approve pull requests."
 - **A release-bot GitHub App** in the `northguild` org (Contents read/write,
   Pull requests read/write, installed on `northguild/gmt` only). Its App ID goes
-  in a variable `RELEASE_BOT_APP_ID`, its private key in a secret
-  `RELEASE_BOT_PRIVATE_KEY`. Without it the Version Packages PR opens with no CI
-  and can never be merged.
+  in the repository variable `RELEASE_BOT_APP_ID`, its private key in the
+  repository secret `RELEASE_BOT_PRIVATE_KEY` — repository-level, not in the
+  `release` environment: the job that opens the Version Packages PR runs outside
+  that environment and cannot read environment-scoped values. Without the App
+  the PR opens with no CI and can never be merged.
 - **`DISCORD_WEBHOOK`** in the `release` environment, pointing at #gmt. Unset
   just skips the announcement.
 
-Both secrets live in the protected `release` environment, so publishing inherits
-whatever approval that environment requires. Restrict who can approve its runs.
+Only the publish job enters the `release` environment, so publishing — and
+nothing else — inherits whatever approval that environment requires. Restrict
+who can approve its runs.
 
 ## Semver cheat-sheet
 
