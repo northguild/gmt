@@ -1,4 +1,6 @@
 ---
+import SectionHeading from "./SectionHeading.astro";
+
 /**
  * Homepage grid section: why the popular Date alternatives either inherit
  * its flaws (they wrap Date under the hood) or step off the TC39 standard.
@@ -64,9 +66,7 @@ const stack: Layer[] = [
 ---
 
 <section class="why-date-block" aria-labelledby="why-date-stack-h">
-  <h2 id="why-date-stack-h">
-    The alternatives inherit it, or deviate from the standard
-  </h2>
+  <SectionHeading>The alternatives inherit it, or deviate from the standard</SectionHeading>
   <p class="why-date-lede">
     The popular libraries do not replace <code>Date</code>; they decorate it,
     so the faults come along. The one library that fixes the model does it with
@@ -94,9 +94,7 @@ const stack: Layer[] = [
     gap: var(--gmt-space-4);
   }
 
-  .why-date-block h2 {
-    margin: 0;
-  }
+
 
   .why-date-lede {
     margin: 0;
