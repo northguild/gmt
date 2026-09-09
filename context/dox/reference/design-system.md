@@ -26,13 +26,18 @@ Eight files, loaded in this order via `starlight({ customCss })` in
 | 5 | `gmt-shell.css` | Global typography + the layout frame (`.page`, sidebar, header, site title). |
 | 6 | `gmt-content.css` | The reading surface: everything inside `.sl-markdown-content`, Expressive Code frame chrome, the search modal / Pagefind UI. |
 | 7 | `gmt-controls.css` | Interactive chrome: CTA buttons, prev/next pagination, mobile search trigger, hamburger, `:focus-visible`, `::selection`, scrollbar. |
-| 8 | `gmt-light.css` | The `[data-theme="light"]` overrides that are neither a palette re-tint nor adjacent to a base rule. Loaded last so it always wins its ties. |
+| 8 | `gmt-light.css` | The `[data-theme="light"]` overrides that are neither a palette re-tint nor adjacent to a base rule. **Not actually loaded last** — `dox.css` (live component layout) and `gmt-a11y.css` (`prefers-reduced-transparency`/`-contrast`/`forced-colors`) both load after it in `astro.config.mjs`'s `customCss` array; this table's numbering is source-order, not "wins every tie." |
 | 9 | `gmt-ask.css` | **DOX-C0, #171 — not yet built.** The chat dock/`/dox` chrome and the Streamdown reading surface (`[data-streamdown="…"]`). No Tailwind. |
 
 The `customCss` array in `astro.config.mjs` also carries per-widget and per-feature
-sheets (`gmt-widget.css`, `gmt-dst-inspector.css`, `gmt-map.css`, …)
-loaded between #7 and #8. This table describes the **core stack** whose order the
-cascade depends on; consult the config for the full list.
+sheets (`gmt-widget.css`, `gmt-clock-list.css`, `gmt-map.css`, `gmt-globe.css`,
+`gmt-scrubber.css`, `gmt-dst-inspector.css`, …) loaded between #7 and #8, with
+`gmt-clock-list.css` registered before `gmt-map.css`/`gmt-globe.css`/`gmt-scrubber.css`
+since it's now the shared `.gmt-clock-*` row recipe all three widgets sit on top of.
+This table describes the **core stack** whose order the cascade depends on; consult
+the config for the full list. (`gmt-hero.css` — extracting `HeroGlobe.astro`'s
+`.gmt-herostage*` out of its current `@layer starlight.core` — was scoped for `DOX-E1`
+but not done; still pending, tracked only here, not as a separate issue.)
 
 Component-scoped `<style>` blocks stay in their `.astro` files
 (`Hero`, `LinkButton`, `ButtonLink`, `Icon`, `SocialIcons`, `ThemeSelect`) — the
@@ -128,13 +133,24 @@ through `[data-streamdown="heading-1"|"link"|"code-block"|"table"|"blockquote"|�
 
 ## Verifying a change is visually safe
 
-A Playwright screenshot diff is the gate. From `apps/dox`:
+A Playwright screenshot diff is the gate, via `apps/dox/scripts/visual-snapshot.mjs`
+(added in `DOX-E1`'s part-2 branch). From `apps/dox`, before touching any CSS:
 
 ```sh
-pnpm --filter @gmt/dox build          # then: astro preview --port 4321
-# capture landing / a dense reference page / sidebar / search modal / mobile menu,
-# in light + dark, desktop + mobile; compare byte-for-byte against a pre-change build.
-pnpm --filter @gmt/dox check && pnpm --filter @gmt/dox lint
+pnpm build && pnpm visual:before   # captures .visual/before/<page>-<theme>-<viewport>.png
+# ... make the change ...
+pnpm build && pnpm visual:after    # captures .visual/after/... for the same page/theme/viewport set
+```
+
+Fixed page list: `/` (hero), `/install` (dense reference page, zero islands),
+`/tools/zoned-earth`, `/tools/zone-planner`, one Tier-2/3 teaching-widget page. Both
+`data-theme="dark"`/`"light"`, both desktop (`1440×900`) and mobile (`390×844`)
+viewports. `.visual/` is git-ignored — the baseline lives only in the local working
+tree for the duration of one work session, not committed. Eyeball the before/after
+pairs; a full `playwright test` diff runner isn't needed for this.
+
+```sh
+pnpm check && pnpm lint && pnpm test
 ```
 
 A pure refactor (renames, file moves, role-token swaps) must produce a

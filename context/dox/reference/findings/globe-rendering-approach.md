@@ -3,8 +3,16 @@
 > The spec (`issues/DOX-E.md`, "How should it render?") requires this decision to be
 > **made and recorded, not inherited**. This is the record.
 
-**Decision (2026-09-04): `d3-geo` `geoOrthographic`, rendered as SVG through the existing
-`@tanstack/charts` `geoShape` pipeline. Not WebGL / three.js.**
+**Decision (2026-09-04): `d3-geo` `geoOrthographic`, rendered to a `<canvas>` via
+`geoPath(projection, ctx)`. Not WebGL / three.js.**
+
+> Corrected 2026-09-09 (see
+> [globe-performance.md](globe-performance.md)): the shipped `globe.ts` renders to a
+> canvas-2D context, not SVG, and does not go through `@tanstack/charts`'s `geoShape`
+> pipeline as this record originally said — the "Why d3-geo SVG won" table below still
+> reflects the decision's actual reasoning (weight, keyboard path, WebGL-unavailable
+> fallback), just not the literal SVG-vs-canvas detail; canvas-2D never requests a WebGL
+> context, so the fallback argument holds unchanged.
 
 ## Requirements weighed
 
