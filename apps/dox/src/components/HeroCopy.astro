@@ -101,7 +101,7 @@ function isExternal(href: string) {
 					if (label) label.textContent = 'Copy failed';
 				}
 				window.setTimeout(() => {
-					if (label) label.textContent = label.dataset.copyIdle ?? 'Copy GMT prompt';
+					if (label) label.textContent = label.dataset.copyIdle ?? 'Copy prompt';
 					btn.classList.remove('is-copied');
 				}, RESET_MS);
 			});
@@ -131,6 +131,17 @@ function isExternal(href: string) {
 		}
 
 		h1 {
+			/* This rule is dead weight in practice: HeroGlobe places the hero
+			   inside the page's .sl-markdown-content wrapper (it's rendered as
+			   ordinary MDX body content, not through Starlight's hero-image
+			   slot), so markdown.css's `.sl-markdown-content h1` rule — in the
+			   later-declared `starlight.content` layer — always wins over this
+			   `starlight.core`-layered one regardless of specificity. The real,
+			   effective override lives in gmt-shell.css (unlayered, so it
+			   actually wins), matching the pattern already used there for the
+			   generic `h1` 32px rule. Left here so this component stays
+			   self-consistent with Starlight's own Hero.astro; do not rely on
+			   it actually applying. */
 			font-size: clamp(var(--sl-text-3xl), calc(0.25rem + 5vw), var(--sl-text-6xl));
 			line-height: var(--sl-line-height-headings);
 			font-weight: 600;

@@ -51,7 +51,12 @@
   /* Capped by viewport height too — a wide column must not make the square
      taller than the fold, which was clipping the globe's bottom half. */
   max-width: min(44rem, 70vh);
-  /* margin-inline: auto; */
+  /* Centers the stage once its own max-width caps it below the width of
+     whatever column it's sitting in (the embedded hero's single-column
+     stack, or the standalone widget's own layout cell) — without this, a
+     capped-width flex/grid item lands flush at the cross-start edge (left)
+     instead of splitting the leftover space evenly. */
+  margin-inline: auto;
   aspect-ratio: 1;
   overflow: hidden;
   /* Globe.astro sets both `gmt-globe-stage` and `gmt-glass` on this element,
@@ -458,6 +463,22 @@
   }
 }
 
+@media (min-width: 80rem) and (max-width: 99.9375rem) {
+  /* The 30rem cap above is load-bearing only below .gmt-herostage's own
+     80rem breakpoint, where the hero has no definite height yet. From 80rem
+     on, .gmt-herostage IS a fixed-height row (height: calc(100dvh - nav)),
+     so .gmt-globe-embedded's height: 100% chain is definite all the way
+     down — nothing needs that cap here, and keeping it just left dead space
+     between the zone list and the bottom of the column. Letting
+     .gmt-globe-side (and .gmt-globe-clocks's flex: 1 1 auto inside it, both
+     already set above) grow unbounded now just fills whatever height the
+     square stage leaves behind, same as the >=100rem side-by-side layout
+     already does. */
+  .gmt-globe-embedded .gmt-globe-side {
+    max-height: none;
+  }
+}
+
 @media (min-width: 100rem) {
   /* min-height: 0 at every link in this chain overrides the flex/grid
      default of min-height: auto (min-content) — without it, each box grows
@@ -481,7 +502,14 @@
      query context lets the stage size itself to min(cqw, cqh) — the largest
      square that fits either constraint — with real auto-derived height. */
   .gmt-globe-embedded .gmt-globe-frame {
-    display: block;
+    /* flex, not block: the stage is squared to min(cqw, cqh) below, so
+       whichever axis of this frame is the *longer* one has leftover space
+       the stage doesn't fill. A plain block frame left that space stacked
+       at the bottom-right (block flow's default start-corner); centering
+       both axes here puts the sphere in the middle of the column instead. */
+    display: flex;
+    align-items: center;
+    justify-content: center;
     container-type: size;
     container-name: gmt-globe-frame;
     height: 100%;
@@ -492,7 +520,7 @@
     width: min(100cqw, 100cqh);
     height: min(100cqw, 100cqh);
     max-width: none;
-    /* margin-inline: auto; */
+    flex: none;
   }
 
   .gmt-globe-embedded .gmt-globe-side {

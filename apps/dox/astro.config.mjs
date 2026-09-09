@@ -1,5 +1,7 @@
 // @ts-check
+import react from "@astrojs/react";
 import starlight from "@astrojs/starlight";
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 import { fileURLToPath } from "node:url";
 import { referenceSidebar } from "./src/generated/reference/sidebar.ts";
@@ -16,6 +18,7 @@ const gmtPkg = fileURLToPath(
 export default defineConfig({
   site: SITE,
   vite: {
+    plugins: [tailwindcss()],
     build: {
       cssTarget: ["chrome107", "edge107", "firefox104", "safari16"],
       cssMinify: "esbuild",
@@ -27,6 +30,7 @@ export default defineConfig({
     },
   },
   integrations: [
+    react(),
     starlight({
       title: "@northguild/gmt",
       description:
@@ -105,6 +109,7 @@ export default defineConfig({
       ],
       components: {
         Head: "./src/components/Head.astro",
+        Header: "./src/components/Header.astro",
         ThemeProvider: "./src/components/ThemeProvider.astro",
         ThemeSelect: "./src/components/ThemeSelect.astro",
         Hero: "./src/components/Hero.astro",
@@ -131,6 +136,7 @@ export default defineConfig({
         "./src/styles/gmt-globe.css", // DOX-E1a interactive globe
         "./src/styles/gmt-scrubber.css", // DOX-E1b multi-zone time scrubber
         "./src/styles/gmt-light.css", // floating [data-theme="light"] overrides
+        "./src/styles/gmt-reveal.css", // shared scroll-into-view stagger utility
         "./src/styles/dox.css", // live component layout
         "./src/styles/gmt-a11y.css", // DOX-D1 prefers-reduced-transparency / -contrast / forced-colors — loaded last
       ],

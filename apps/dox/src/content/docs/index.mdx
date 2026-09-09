@@ -9,7 +9,7 @@ hero:
       link: /install/
       icon: right-arrow
       variant: primary
-    - text: Copy GMT prompt
+    - text: Copy prompt
       link: "#_top"
       attrs:
         data-copy-prompt: true
@@ -21,10 +21,12 @@ import SectionHeading from "../../components/SectionHeading.astro";
 import { gmtVersion } from "~/generated/versions";
 import GridSection from "../../components/GridSection.astro";
 import HeroGlobe from "../../components/HeroGlobe.astro";
+import ScrollReveal from "../../components/ScrollReveal.astro";
 import WhyDateAlternatives from "../../components/WhyDateAlternatives.astro";
 import WhyDateBug from "../../components/WhyDateBug.astro";
 
 <HeroGlobe />
+<ScrollReveal />
 
 Current release: **v{gmtVersion}**
 
@@ -40,6 +42,7 @@ browser and recomputed every second.
 
 <SectionHeading>Key features</SectionHeading>
 
+<div data-reveal-group>
 <CardGrid>
   <Card title="100% Temporal, Temporal-first" icon="star">
     Built directly on the TC39 `Temporal` standard, not a homegrown date/time type system.
@@ -71,6 +74,7 @@ browser and recomputed every second.
     normalizes, and prevents crashes, so your app stays robust
   </Card  >
 </CardGrid>
+</div>
 
 </GridSection>
 
