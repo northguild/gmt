@@ -109,6 +109,38 @@ describe("encodeState / decodeState", () => {
 // nextTransition — powers the "jump to a DST boundary" preset
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// The demonstrated permalink linked from zone-planner.mdx and
+// scenarios/recurring-meeting-dst.mdx — pins New York/London/Tokyo, landing
+// 15 minutes before New York's 2026 spring-forward. Keeps the docs' claim
+// honest: if this ever stops decoding to the intended pins/instant, or
+// nextTransition from that instant stops finding the New York boundary, the
+// "drag forward and watch it bite" instructions in both docs would be wrong.
+// ---------------------------------------------------------------------------
+
+describe("the demonstrated DST scenario permalink", () => {
+  const query = "?tz=America/New_York,Europe/London,Asia/Tokyo&t=2026-03-08T06:45:00Z";
+
+  it("decodes to the intended pins and instant", () => {
+    const decoded = decodeState(query);
+    expect(decoded.pinned).toEqual([
+      "America/New_York",
+      "Europe/London",
+      "Asia/Tokyo",
+    ]);
+    expect(decoded.effectiveMs).toBe(ms("2026-03-08T06:45:00Z"));
+  });
+
+  it("finds New York's spring-forward as the next transition from that instant", () => {
+    const decoded = decodeState(query);
+    const result = nextTransition(decoded.pinned ?? [], decoded.effectiveMs ?? 0);
+    expect(result?.zone).toBe("America/New_York");
+    expect(convertUnixToUtc(result?.instantMs ?? 0, "milliseconds")).toBe(
+      "2026-03-08T07:00:00Z",
+    );
+  });
+});
+
 describe("nextTransition", () => {
   it("finds the US spring-forward as the next transition from Jan 2026", () => {
     const from = ms("2026-01-01T00:00:00Z");

@@ -179,9 +179,9 @@ export async function initScrubber(host: HTMLElement): Promise<ScrubberHost> {
   host.innerHTML = `
     <div class="gmt-scrubber-controls">
       <label>Reference time (UTC)
-        <input type="datetime-local" data-role="anchor" step="900" />
+        <input type="datetime-local" class="gmt-field" data-role="anchor" step="900" />
       </label>
-      <button type="button" class="gmt-clock-entry" data-role="dst-preset">
+      <button type="button" class="gmt-button" data-role="dst-preset">
         Jump to a DST transition
       </button>
       <div class="gmt-combobox">
@@ -198,7 +198,7 @@ export async function initScrubber(host: HTMLElement): Promise<ScrubberHost> {
     <p class="gmt-scrubber-readout" data-role="readout" aria-live="polite"></p>
     <div class="gmt-scrubber-rows" data-role="rows"></div>
     <div class="gmt-scrubber-share">
-      <button type="button" class="gmt-clock-entry" data-role="share">Copy shareable link</button>
+      <button type="button" class="gmt-button" data-role="share">Copy shareable link</button>
       <span data-role="share-status" aria-live="polite"></span>
     </div>`;
 

@@ -13,11 +13,18 @@
   font-family: var(--gmt-font-mono);
 }
 
+/* A compact toolbar row — [datetime input] [Jump to a DST transition]
+   [Add a zone] — rather than the previous flex-wrap sprawl (three
+   differently-sized controls wrapping onto their own lines at most widths).
+   `auto` for the two button-ish columns keeps them their natural width;
+   the datetime field and the zone search each get an explicit share of
+   whatever's left, biased toward the field since its content
+   (`YYYY-MM-DDTHH:MM`) is the widest fixed-format value in the row. */
 .gmt-scrubber-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--gmt-space-3);
+  display: grid;
+  grid-template-columns: minmax(12rem, 1.2fr) auto minmax(10rem, 1fr);
+  align-items: end;
+  gap: var(--gmt-space-2);
   margin-bottom: var(--gmt-space-4);
 }
 
@@ -29,22 +36,40 @@
   color: var(--gmt-ice-dim);
 }
 
-.gmt-scrubber input[type="datetime-local"],
-.gmt-scrubber-add input {
-  appearance: none;
-  padding: var(--gmt-space-2) var(--gmt-space-3);
-  font: inherit;
-  font-size: 0.8rem;
-  color: var(--gmt-ice);
-  background: var(--gmt-fill-subtle);
-  border: 1px solid var(--gmt-border);
-  border-radius: var(--gmt-radius-sm);
-  corner-shape: bevel;
+/* The datetime input and "Add a zone" search input both compose .gmt-field
+   (gmt-primitives.css) directly in their markup now — this sheet used to
+   hand-roll the same recipe twice more (once here, keyed off
+   `.gmt-scrubber-add`, which nothing in this widget's markup has ever
+   actually used). */
+
+/* Chromium paints the native calendar-picker-indicator glyph a fixed dark
+   grey that doesn't inherit `color` — legible against a plain white native
+   input, but against .gmt-field's dark bevelled fill (this theme's default)
+   it's nearly invisible. `invert(1)` flips it to a light glyph; light theme
+   needs no help (a dark icon already reads fine against .gmt-field's pale
+   fill there), so this is undone below rather than tuned per-theme. */
+input[data-role="anchor"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
 }
 
-.gmt-scrubber input:focus-visible {
-  outline: none;
-  border-color: var(--gmt-cyan);
+[data-theme="light"] input[data-role="anchor"]::-webkit-calendar-picker-indicator {
+  filter: none;
+}
+
+/* "Jump to a DST transition" and "Copy shareable link" both compose
+   .gmt-button (gmt-primitives.css) — the primitive intentionally carries no
+   sizing (design-system rule: sizing is left to the caller), so this widget
+   supplies its own padding/font-size, matching .gmt-field's own padding for
+   visual rhythm with the datetime/search inputs sitting next to it. These
+   two used to misuse .gmt-clock-entry (a clock-row style, gmt-clock-list.css)
+   as a generic button class — a real bug, not just unstyled cleanup:
+   .gmt-clock-entry's :hover/:focus-visible and `.selected` states are
+   meaningless on a plain action button. */
+.gmt-scrubber-controls .gmt-button,
+.gmt-scrubber-share .gmt-button {
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  font-size: 0.72rem;
+  white-space: nowrap;
 }
 
 .gmt-scrubber-slider {
