@@ -4,7 +4,7 @@ This file has been split into a progressive-disclosure directory. Read what you 
 
 - [overview.md](overview.md) — Context, architecture, decisions, hosting, prior-art
   verdicts, tier table (~18 KB; the entry file)
-- [tracker.md](tracker.md) — Issue/status table, build order
+- [tracker.md](tracker.md) — Issue/status table, build order, `Blocked by` column
 - [story-groups.md](story-groups.md) — One paragraph per tier, naming the stories and
   pointing at the issue file
 - [appendix-parked.md](appendix-parked.md) — Researched but deliberately unscheduled

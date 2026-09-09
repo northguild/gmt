@@ -36,6 +36,8 @@ Classify every incoming request into one of these categories:
 User wants to add a new function, namespace, or capability.
 
 - **Pipeline:** `architect` → `driver` (→ `researcher` if needed → `tdd-dev` → `tester` if needed → `finalizer`)
+- **For an epic story, check `Blocked by` in `context/domination/tracker.md` first**, or
+  run `pnpm deps:ready`. Do not start a story something else is blocking.
 - **Skip `architect`** if the user provides a complete spec/signature directly.
 - **Skip `researcher`** if the Temporal API is well-known and no legacy comparison is needed.
 - **Skip `tester`** for trivial stories (single function, < 50 lines, no locale-awareness).
@@ -125,5 +127,6 @@ Before invoking any specialist, ensure these are available in context:
 - `context/testing-standards/references/index.md` — when tdd-dev or tester is involved
 - `context/jsdoc-standards.md` — when implementation or finalizer is involved
 - `context/project-overview.md` — when researcher or architect is involved
-- `context/roadmap/tracker.md` — when finalizer is involved
+- `context/domination/tracker.md` — when architect or finalizer is involved
+  (`context/roadmap/` was archived on parity and no longer exists)
 - `PUBLISHING.md` — when finalizer's publish flow is involved
