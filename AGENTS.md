@@ -17,6 +17,7 @@ Read these before working in the repo. Each is scoped — load only what you nee
 | [context/roadmap/index.md](./context/roadmap/index.md)                                           | When picking up or reviewing roadmap work                                                         |
 | [context/roadmap/index.md](./context/roadmap/index.md)                                           | Roadmap entry point (redirects to progressive-disclosure directory)                               |
 | [context/dox/index.md](./context/dox/index.md)                                                   | When working on the `apps/dox` documentation site (the Dox epic)                                 |
+| [context/domination/index.md](./context/domination/index.md)                                     | When working on the multi-realm temporal epic (the Domination epic) |
 
 ## Core Rules (Quick Reference)
 

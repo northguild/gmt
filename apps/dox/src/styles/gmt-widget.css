@@ -31,7 +31,7 @@
   border: 1px solid var(--gmt-border);
   border-radius: var(--gmt-radius-lg);
   corner-shape: bevel;
-  background: var(--gmt-glass-tint-subtle);
+  background: var(--gmt-widget-card-bg);
   backdrop-filter: blur(var(--gmt-blur));
   -webkit-backdrop-filter: blur(var(--gmt-blur));
 }
@@ -138,27 +138,15 @@
 }
 
 .gmt-code-fn {
-  color: #82aaff;
+  color: var(--gmt-syntax-fn);
 }
 
 .gmt-code-str {
-  color: #ecc48d;
+  color: var(--gmt-syntax-str);
 }
 
 .gmt-code-num {
-  color: #f78c6c;
-}
-
-[data-theme="light"] .gmt-code-fn {
-  color: #3b61b0;
-}
-
-[data-theme="light"] .gmt-code-str {
-  color: #984e4d;
-}
-
-[data-theme="light"] .gmt-code-num {
-  color: #aa0982;
+  color: var(--gmt-syntax-num);
 }
 
 /* ---------------------------------------------------------------------------
@@ -193,14 +181,10 @@
   text-shadow: 0 0 6px color(from var(--gmt-signal) srgb r g b / 0.3);
 }
 
+/* Genuine effect change, not a color override — the base rule's color/glow
+   already re-resolve correctly in light mode. */
 [data-theme="light"] .gmt-playground-live {
-  color: var(--gmt-spring);
   text-shadow: none;
-}
-
-[data-theme="light"] .gmt-playground-sentinel {
-  background: var(--gmt-signal-fill);
-  color: var(--gmt-signal);
 }
 
 .gmt-widget-output {
@@ -231,8 +215,4 @@
   color: var(--gmt-ice-dim);
   font-style: italic;
   text-shadow: none;
-}
-
-[data-theme="light"] .gmt-widget-card {
-  background: color(from var(--gmt-void) srgb r g b / 0.5);
 }

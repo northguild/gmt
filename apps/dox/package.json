@@ -14,7 +14,9 @@
     "typecheck": "pnpm run check",
     "test": "pnpm run generate && vitest run",
     "lint": "oxlint",
-    "astro": "astro"
+    "astro": "astro",
+    "visual:before": "node scripts/visual-snapshot.mjs before",
+    "visual:after": "node scripts/visual-snapshot.mjs after"
   },
   "dependencies": {
     "@astrojs/starlight": "0.41.9",
@@ -31,6 +33,7 @@
     "@astrojs/check": "^0.9.10",
     "@northguild/gmt-oxlint": "workspace:*",
     "@open-wc/testing": "^5.0.0",
+    "@playwright/test": "^1.63.0",
     "@types/d3-geo": "^3.1.1",
     "@types/topojson-client": "^3.1.5",
     "jsdom": "^30.0.1",

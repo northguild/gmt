@@ -40,11 +40,17 @@ normal repo convention and does need a changeset.
 | 7     | DOX-B2 (DOX-B2a, DOX-B2b, DOX-B2c, DOX-B2d) | #136         | Done           |
 | 8     | DOX-D1                                      | #140         | Done           |
 | 9     | DOX-D2                                      | #141         | Done           |
-| 10    | DOX-E1 (DOX-E1a, DOX-E1b)                   | #142         | Partially Done |
+| 10    | DOX-E1 (DOX-E1a, DOX-E1b)                   | #142         | Done¹          |
 | 11    | DOX-C0                                      | #171         | Not started    |
 | 12    | DOX-C1                                      | #137         | Not started    |
 | 13    | DOX-C2                                      | #138         | Not started    |
 | 14    | DOX-C3 (DOX-C3a, DOX-C3b)                   | #139         | Not started    |
+
+¹ Every DoD item buildable outside Tier 6 is done — see the "Status" notes in
+`issues/DOX-E.md`. The one item that can't close yet is `DOX-E1a` rendering in the
+`/dox` widget rail, which can't exist before Tier 6 (`DOX-C3a`/`DOX-C3b`) builds that
+rail. `initGlobe`/the scrubber's `mount`-shaped entry points are already rail-ready —
+see the pickup note in `issues/DOX-C.md`.
 
 Parked work carries no story ID and never enters this table — see
 [appendix-parked.md](appendix-parked.md).

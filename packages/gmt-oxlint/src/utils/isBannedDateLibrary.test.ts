@@ -1,4 +1,7 @@
-import { BANNED_DATE_LIBRARIES, isBannedDateLibrary } from "./isBannedDateLibrary";
+import {
+  BANNED_DATE_LIBRARIES,
+  isBannedDateLibrary,
+} from "./isBannedDateLibrary";
 
 describe("isBannedDateLibrary", () => {
   it.each([...BANNED_DATE_LIBRARIES])("returns true for %s", (lib) => {

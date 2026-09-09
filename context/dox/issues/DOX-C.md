@@ -839,3 +839,11 @@ one worth building first, which `DOX-B2b` has now done.
 - A mounted widget's state can be copied as a permalink from the chat transcript.
 - A mounted widget is keyboard-operable inside the panel, matching its standalone page.
 ```
+
+**Pickup note (2026-09-09):** `showGlobe`'s two entry points are already rail-ready —
+`initGlobe(host, clockPanel)` (`apps/dox/src/lib/globe.ts`) and `initScrubber(host)`
+(`apps/dox/src/lib/multi-zone-scrubber.ts`) both take a host element and mount into it,
+same shape as `DOX-B2b`/`-c`/`-d`'s widgets. This story's job for `DOX-E1` specifically
+is mounting those two existing entry points into the rail, seeded from tool args — not
+building new globe/scrubber code. See `issues/DOX-E.md`'s Status notes and
+`tracker.md`'s footnote on the `DOX-E1` row.

@@ -150,6 +150,73 @@
   --gmt-radius-md: 8px;
   --gmt-radius-lg: 16px;
 
+  /* ---- Type scale ----
+   * Consolidates the font-sizes widget sheets had been inventing independently
+   * (0.62rem-1.3rem, a dozen near-duplicate values). New widget work should pick
+   * from this scale rather than a fresh literal; existing sheets migrate as they're
+   * touched, not in one sweep — see context/dox/reference/design-system.md.
+   */
+  --gmt-text-2xs: 0.65rem;
+  --gmt-text-xs: 0.7rem;
+  --gmt-text-sm: 0.75rem;
+  --gmt-text-base: 0.8rem;
+  --gmt-text-md: 0.85rem;
+  --gmt-text-lg: 0.95rem;
+  --gmt-text-xl: 1.3rem;
+
+  /* ---- Shadow ---- *
+   * Plain black, not palette-derived (a drop shadow, not a glow) — the two
+   * literal box-shadow values already in use, named. */
+  --gmt-shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --gmt-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+
+  /* ---- Syntax highlight (CodeFrame, gmt-widget.css) ----
+   * Sampled from this site's actual Shiki output for exact-match highlighting
+   * with real code fences. Theme-role tokens (a genuine dark/light hue swap, not
+   * a re-tint), so gmt-widget.css needs no [data-theme="light"] block for them. */
+  --gmt-syntax-fn: #82aaff;
+  --gmt-syntax-str: #ecc48d;
+  --gmt-syntax-num: #f78c6c;
+
+  /* ---- Globe (gmt-globe.css) ----
+   * The day/night terminator needs a night tint that stays dark in every
+   * theme — --gmt-void is a background *role* token that flips to white
+   * under [data-theme="light"], so reusing it here made the night side
+   * render lighter than the day side once the light theme shipped; this is
+   * its own token with its own (bluer, not neutral-grey) light value below.
+   * Ocean (sphere) and land fill alpha: the same low wash that reads clearly
+   * against the dark theme's near-black surface fades to almost nothing
+   * against the light theme's pale one — darkened below by strengthening
+   * these, not by changing --gmt-cyan/--gmt-teal themselves. */
+  --gmt-globe-night: #03080c;
+  /* How opaque the night tint is over the base ocean/land wash beneath it —
+     theme-tunable because the math differs a lot by theme: blending a dark
+     color at a fixed alpha over dark theme's near-black base stays dark
+     regardless, but the same alpha over light theme's pale base lands on a
+     washed-out grey-blue instead of reading as night (see the light value's
+     own comment). */
+  --gmt-globe-night-alpha: 0.5;
+  --gmt-globe-ocean-alpha: 0.05;
+  --gmt-globe-land-alpha: 0.12;
+  /* City-light dots on the night hemisphere only (globe.ts) — a bright,
+     saturated yellow rather than --gmt-dst-gold (tuned instead for badges
+     against a page background, in each theme): the dots need to read
+     clearly against a *canvas-painted* dark navy, not the page, and the
+     same bright value works for that in both themes since night is dark in
+     both. */
+  --gmt-globe-gold: #fde047;
+  /* Day-hemisphere brightening wash (globe.ts's dayGeometry(), painted right
+     after the base ocean fill, before the night overlay). In dark theme, the
+     day side's low oceanAlpha above reads as barely distinguishable from the
+     near-black page behind the (transparent) stage — the night overlay's own
+     dark navy doesn't have much darker to go, so the two hemispheres read as
+     almost the same tone. Cheaper to fix by brightening day than by trying
+     to darken night further: a stronger cyan wash on the day hemisphere
+     only. Light theme barely needs it (day already reads bright against the
+     page), so it's a small top-up there rather than 0 — still visibly a
+     single mechanism in both themes, just tuned. */
+  --gmt-globe-day-alpha: 0.14;
+
   /* The GMT palette maps onto Starlight's --sl-* system in gmt-theme.css. */
 
   /*
@@ -163,6 +230,10 @@
   --gmt-code-border: var(--gmt-hairline); /* inline <code> + <kbd> border */
   --gmt-sidebar-link: var(--gmt-ice-dim); /* idle sidebar entry */
   --gmt-pagination-title: var(--gmt-cyan-bright); /* prev/next page title */
+  /* .gmt-widget-card (gmt-widget.css): dark reuses the teal glass tint, but
+     that reads as almost the same flat pale-blue as the page background in
+     light mode — light gets its own value (a white wash) instead of a re-tint. */
+  --gmt-widget-card-bg: var(--gmt-glass-tint-subtle);
 }
 
 /* ---- Font imports (self-hosted, no CDN) ---- */
@@ -224,4 +295,27 @@
   --gmt-code-border: var(--gmt-border);
   --gmt-sidebar-link: var(--gmt-ice);
   --gmt-pagination-title: var(--gmt-ice);
+
+  /* ---- Syntax highlight (light values) ---- */
+  --gmt-syntax-fn: #3b61b0;
+  --gmt-syntax-str: #984e4d;
+  --gmt-syntax-num: #aa0982;
+
+  --gmt-widget-card-bg: color(from var(--gmt-void) srgb r g b / 0.5);
+
+  /* ---- Globe (light values) ---- */
+  --gmt-globe-ocean-alpha: 0.2;
+  --gmt-globe-land-alpha: 0.32;
+  /* A deep navy, darkened further from an earlier `#123a5c` — at the shared
+     0.5 alpha, that blended with the pale day-side base into a flat,
+     unattractive grey-blue instead of reading as night (0.5 of a mid-navy
+     over a near-white base averages to a *mid-tone*, not a dark one).
+     Darkening the color alone still wasn't enough headroom, so
+     --gmt-globe-night-alpha below is also raised for this theme — the two
+     together are what actually reads as a dark sky now. */
+  --gmt-globe-night: #08182b;
+  --gmt-globe-night-alpha: 0.8;
+  /* Day already reads bright against the light theme's pale page — a small
+     top-up, not the dark-theme fix this token exists for. */
+  --gmt-globe-day-alpha: 0.06;
 }
