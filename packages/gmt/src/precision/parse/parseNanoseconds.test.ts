@@ -1,7 +1,7 @@
-import { nanosecondsFromJson } from "./nanosecondsFromJson";
-import { nanosecondsToJson } from "./nanosecondsToJson";
+import { parseNanoseconds } from "./parseNanoseconds";
+import { formatNanoseconds } from "../format/formatNanoseconds";
 
-describe("nanosecondsFromJson", () => {
+describe("parseNanoseconds", () => {
   it.each`
     value                        | expected
     ${"0"}                       | ${0n}
@@ -12,7 +12,7 @@ describe("nanosecondsFromJson", () => {
     ${"8640000000000000000000"}  | ${8640000000000000000000n}
     ${"-8640000000000000000000"} | ${-8640000000000000000000n}
   `("returns $expected for $value", ({ value, expected }) => {
-    expect(nanosecondsFromJson(value)).toBe(expected);
+    expect(parseNanoseconds(value)).toBe(expected);
   });
 
   it.each`
@@ -22,18 +22,16 @@ describe("nanosecondsFromJson", () => {
     ${-1710072000123456789n}
     ${8640000000000000000000n}
     ${-8640000000000000000000n}
-  `("round-trips $nanoseconds through nanosecondsToJson", ({ nanoseconds }) => {
-    expect(nanosecondsFromJson(nanosecondsToJson(nanoseconds))).toBe(
-      nanoseconds,
-    );
+  `("round-trips $nanoseconds through formatNanoseconds", ({ nanoseconds }) => {
+    expect(parseNanoseconds(formatNanoseconds(nanoseconds))).toBe(nanoseconds);
   });
 
   it("reads a value back out of a JSON payload", () => {
     const payload = JSON.stringify({
-      observedAt: nanosecondsToJson(1710072000123456789n),
+      observedAt: formatNanoseconds(1710072000123456789n),
     });
 
-    expect(nanosecondsFromJson(JSON.parse(payload).observedAt)).toBe(
+    expect(parseNanoseconds(JSON.parse(payload).observedAt)).toBe(
       1710072000123456789n,
     );
   });
@@ -50,11 +48,12 @@ describe("nanosecondsFromJson", () => {
     ${"1_000"}                 | ${"numeric separator"}
     ${"1,000"}                 | ${"thousands separator"}
     ${"1710072000123456789n"}  | ${"bigint literal suffix"}
+    ${'"1710072000123456789"'} | ${"quoted JSON text, not the string value"}
     ${"abc"}                   | ${"not a number"}
     ${""}                      | ${"empty string"}
     ${"-"}                     | ${"sign only"}
   `("returns 0n when $value is invalid ($reason)", ({ value }) => {
-    expect(nanosecondsFromJson(value)).toBe(0n);
+    expect(parseNanoseconds(value)).toBe(0n);
   });
 
   it.each`
@@ -63,12 +62,12 @@ describe("nanosecondsFromJson", () => {
     ${"-8640000000000000000001"}   | ${"before the minimum instant"}
     ${"1000000000000000000000000"} | ${"far beyond the representable range"}
   `("returns 0n when $value is out of range ($reason)", ({ value }) => {
-    expect(nanosecondsFromJson(value)).toBe(0n);
+    expect(parseNanoseconds(value)).toBe(0n);
   });
 
   it("returns 0n for a decimal string far too long to be an instant", () => {
-    expect(nanosecondsFromJson("9".repeat(1000))).toBe(0n);
-    expect(nanosecondsFromJson(`-${"9".repeat(1000)}`)).toBe(0n);
+    expect(parseNanoseconds("9".repeat(1000))).toBe(0n);
+    expect(parseNanoseconds(`-${"9".repeat(1000)}`)).toBe(0n);
   });
 
   it.each`
@@ -81,6 +80,6 @@ describe("nanosecondsFromJson", () => {
     ${[]}
     ${{}}
   `("returns 0n when $value is non-string input", ({ value }) => {
-    expect(nanosecondsFromJson(value as unknown as string)).toBe(0n);
+    expect(parseNanoseconds(value as unknown as string)).toBe(0n);
   });
 });

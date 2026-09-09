@@ -1619,8 +1619,8 @@ millisecond timestamp with three zeroes appended.) The `precision/` namespace wo
 import {
   toNanoseconds,
   fromNanoseconds,
-  nanosecondsToJson,
-  nanosecondsFromJson,
+  formatNanoseconds,
+  parseNanoseconds,
   truncateNanoseconds,
 } from "@northguild/gmt";
 
@@ -1638,10 +1638,10 @@ fromNanoseconds(1710072000123456789n, "America/New_York");
 canonical decimal string:
 
 ```typescript
-JSON.stringify({ observedAt: nanosecondsToJson(1710072000123456789n) });
+JSON.stringify({ observedAt: formatNanoseconds(1710072000123456789n) });
 // '{"observedAt":"1710072000123456789"}'
 
-nanosecondsFromJson("1710072000123456789");
+parseNanoseconds("1710072000123456789");
 // 1710072000123456789n
 ```
 

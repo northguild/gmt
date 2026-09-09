@@ -7,9 +7,12 @@ import {
 const decimalInteger = /^-?(?:0|[1-9][0-9]*)$/;
 
 /**
- * Parse a decimal string produced by `nanosecondsToJson` back to nanoseconds since the
- * Unix epoch.
+ * Parse a decimal string produced by `formatNanoseconds` — typically one field of a JSON
+ * payload — back to nanoseconds since the Unix epoch.
  *
+ * - Takes the string *value*, not JSON text: pass `JSON.parse(payload).observedAt`, not the
+ *   payload itself. A quoted `"\"123\""` is rejected, because the quotes are not part of a
+ *   decimal integer.
  * - Accepts only a canonical decimal integer — an optional `-` then digits with no leading
  *   zeros. Exponents, fractions, hex, separators, a `+` sign and surrounding whitespace are
  *   rejected rather than coerced, so a payload written by another language's serialiser
@@ -22,14 +25,14 @@ const decimalInteger = /^-?(?:0|[1-9][0-9]*)$/;
  * @param value decimal string form of a nanosecond timestamp (e.g. "1710072000123456789")
  * @returns nanoseconds since the Unix epoch as a bigint, or 0n on invalid input
  *
- * @example nanosecondsFromJson("1710072000123456789") // 1710072000123456789n
- * @example nanosecondsFromJson("-1000000000") // -1000000000n
- * @example nanosecondsFromJson("1.5") // 0n
- * @example nanosecondsFromJson("1e18") // 0n
- * @example nanosecondsFromJson("8640000000000000000001") // 0n — outside the instant range
- * @example nanosecondsFromJson(1710072000123456789) // 0n — number, not string
+ * @example parseNanoseconds("1710072000123456789") // 1710072000123456789n
+ * @example parseNanoseconds("-1000000000") // -1000000000n
+ * @example parseNanoseconds("1.5") // 0n
+ * @example parseNanoseconds("1e18") // 0n
+ * @example parseNanoseconds("8640000000000000000001") // 0n — outside the instant range
+ * @example parseNanoseconds(1710072000123456789) // 0n — number, not string
  */
-export function nanosecondsFromJson(value: string): bigint {
+export function parseNanoseconds(value: string): bigint {
   if (typeof value !== "string" || !decimalInteger.test(value)) {
     return 0n;
   }

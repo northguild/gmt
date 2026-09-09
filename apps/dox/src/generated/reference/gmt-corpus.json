@@ -2500,24 +2500,24 @@
     "sourcePath": "packages/gmt/src/precision/convert/toNanoseconds.ts"
   },
   {
-    "url": "/reference/precision/format/nanosecondsFromJson",
-    "name": "nanosecondsFromJson",
+    "url": "/reference/precision/format/formatNanoseconds",
+    "name": "formatNanoseconds",
     "namespace": "precision",
     "module": "format",
     "kind": "function",
-    "signature": "nanosecondsFromJson(value: string): bigint",
-    "description": "Parse a decimal string produced by `nanosecondsToJson` back to nanoseconds since the",
-    "sourcePath": "packages/gmt/src/precision/format/nanosecondsFromJson.ts"
+    "signature": "formatNanoseconds(nanoseconds: bigint): string",
+    "description": "Format nanoseconds since the Unix epoch as a decimal string, for JSON and other",
+    "sourcePath": "packages/gmt/src/precision/format/formatNanoseconds.ts"
   },
   {
-    "url": "/reference/precision/format/nanosecondsToJson",
-    "name": "nanosecondsToJson",
+    "url": "/reference/precision/parse/parseNanoseconds",
+    "name": "parseNanoseconds",
     "namespace": "precision",
-    "module": "format",
+    "module": "parse",
     "kind": "function",
-    "signature": "nanosecondsToJson(nanoseconds: bigint): string",
-    "description": "Serialise nanoseconds since the Unix epoch to a decimal string for transport.",
-    "sourcePath": "packages/gmt/src/precision/format/nanosecondsToJson.ts"
+    "signature": "parseNanoseconds(value: string): bigint",
+    "description": "Parse a decimal string produced by `formatNanoseconds` — typically one field of a JSON",
+    "sourcePath": "packages/gmt/src/precision/parse/parseNanoseconds.ts"
   },
   {
     "url": "/reference/regex/calendar-date/calendarDate",

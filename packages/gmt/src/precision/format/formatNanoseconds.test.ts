@@ -1,6 +1,18 @@
-import { nanosecondsToJson } from "./nanosecondsToJson";
+import { formatNanoseconds } from "./formatNanoseconds";
 
-describe("nanosecondsToJson", () => {
+describe("formatNanoseconds", () => {
+  it("must be embedded in JSON as a string — unquoted it loses precision", () => {
+    const nanoseconds = 1710072000123456789n;
+    const formatted = formatNanoseconds(nanoseconds);
+
+    // Quoted (correct): survives the round-trip exactly.
+    expect(JSON.parse(JSON.stringify({ at: formatted })).at).toBe(formatted);
+
+    // Unquoted, it is a JSON *number*, and JSON.parse routes it through a
+    // double. This is the loss the namespace exists to prevent.
+    expect(JSON.parse(`{"at":${formatted}}`).at).toBe(1710072000123456800);
+  });
+
   it.each`
     nanoseconds                 | expected
     ${0n}                       | ${"0"}
@@ -10,7 +22,7 @@ describe("nanosecondsToJson", () => {
     ${8640000000000000000000n}  | ${"8640000000000000000000"}
     ${-8640000000000000000000n} | ${"-8640000000000000000000"}
   `("returns $expected for $nanoseconds", ({ nanoseconds, expected }) => {
-    expect(nanosecondsToJson(nanoseconds)).toBe(expected);
+    expect(formatNanoseconds(nanoseconds)).toBe(expected);
   });
 
   it("survives JSON.stringify, which throws on a raw bigint", () => {
@@ -19,7 +31,7 @@ describe("nanosecondsToJson", () => {
     );
 
     expect(
-      JSON.stringify({ observedAt: nanosecondsToJson(1710072000123456789n) }),
+      JSON.stringify({ observedAt: formatNanoseconds(1710072000123456789n) }),
     ).toBe('{"observedAt":"1710072000123456789"}');
   });
 
@@ -28,7 +40,7 @@ describe("nanosecondsToJson", () => {
     ${8640000000000000000001n}  | ${"past the maximum instant"}
     ${-8640000000000000000001n} | ${"before the minimum instant"}
   `('returns "" for $nanoseconds ($reason)', ({ nanoseconds }) => {
-    expect(nanosecondsToJson(nanoseconds)).toBe("");
+    expect(formatNanoseconds(nanoseconds)).toBe("");
   });
 
   it.each`
@@ -42,6 +54,6 @@ describe("nanosecondsToJson", () => {
     ${[]}
     ${{}}
   `('returns "" when $nanoseconds is non-bigint input', ({ nanoseconds }) => {
-    expect(nanosecondsToJson(nanoseconds as unknown as bigint)).toBe("");
+    expect(formatNanoseconds(nanoseconds as unknown as bigint)).toBe("");
   });
 });

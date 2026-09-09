@@ -1,2 +1,1 @@
-export * from "./nanosecondsFromJson";
-export * from "./nanosecondsToJson";
+export * from "./formatNanoseconds";

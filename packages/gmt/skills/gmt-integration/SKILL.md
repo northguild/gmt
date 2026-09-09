@@ -45,7 +45,7 @@ which lint package to install for Date-ban enforcement.
 4. **Nanoseconds are `bigint`, never `number`.** A `number` is exact only to
    `2^53 − 1`, which nanoseconds since the epoch passed in April 1970. Use
    `toNanoseconds` / `fromNanoseconds`, cross a JSON boundary with
-   `nanosecondsToJson` / `nanosecondsFromJson` (`JSON.stringify` throws on a raw
+   `formatNanoseconds` / `parseNanoseconds` (`JSON.stringify` throws on a raw
    `bigint`), and call `truncateNanoseconds(ns, "us" | "ms")` before writing to a
    store that holds less than nanoseconds — PostgreSQL `timestamptz` holds
    microseconds — or the read-back value will not equal what was written.
@@ -78,7 +78,7 @@ the pattern.
 - **Table sorting**: use ISO strings as sort keys for consistent ordering.
 - **State management**: canonicalized strings/numbers at boundaries only.
 - **High-precision timestamps**: keep `bigint` nanoseconds internally, send the
-  decimal string from `nanosecondsToJson` over the wire, and truncate to the
+  decimal string from `formatNanoseconds` over the wire, and truncate to the
   target column's precision before persisting.
 
 ## References
