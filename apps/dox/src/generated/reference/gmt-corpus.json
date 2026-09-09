@@ -2460,6 +2460,66 @@
     "sourcePath": "packages/gmt/src/plain/validate/isValidTimeUnit.ts"
   },
   {
+    "url": "/reference/precision/calculate/NanosecondTruncationUnit",
+    "name": "NanosecondTruncationUnit",
+    "namespace": "precision",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The NanosecondTruncationUnit type.",
+    "sourcePath": "packages/gmt/src/precision/calculate/truncateNanoseconds.ts"
+  },
+  {
+    "url": "/reference/precision/calculate/truncateNanoseconds",
+    "name": "truncateNanoseconds",
+    "namespace": "precision",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "truncateNanoseconds(nanoseconds: bigint, unit: NanosecondTruncationUnit): bigint",
+    "description": "Truncate nanoseconds since the Unix epoch to the precision a store can actually hold.",
+    "sourcePath": "packages/gmt/src/precision/calculate/truncateNanoseconds.ts"
+  },
+  {
+    "url": "/reference/precision/convert/fromNanoseconds",
+    "name": "fromNanoseconds",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "function",
+    "signature": "fromNanoseconds(nanoseconds: bigint, timeZone?: string): string",
+    "description": "Convert nanoseconds since the Unix epoch back to an ISO 8601 string.",
+    "sourcePath": "packages/gmt/src/precision/convert/fromNanoseconds.ts"
+  },
+  {
+    "url": "/reference/precision/convert/toNanoseconds",
+    "name": "toNanoseconds",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "function",
+    "signature": "toNanoseconds(isoString: string): bigint",
+    "description": "Convert an ISO 8601 instant string to nanoseconds since the Unix epoch.",
+    "sourcePath": "packages/gmt/src/precision/convert/toNanoseconds.ts"
+  },
+  {
+    "url": "/reference/precision/format/nanosecondsFromJson",
+    "name": "nanosecondsFromJson",
+    "namespace": "precision",
+    "module": "format",
+    "kind": "function",
+    "signature": "nanosecondsFromJson(value: string): bigint",
+    "description": "Parse a decimal string produced by `nanosecondsToJson` back to nanoseconds since the",
+    "sourcePath": "packages/gmt/src/precision/format/nanosecondsFromJson.ts"
+  },
+  {
+    "url": "/reference/precision/format/nanosecondsToJson",
+    "name": "nanosecondsToJson",
+    "namespace": "precision",
+    "module": "format",
+    "kind": "function",
+    "signature": "nanosecondsToJson(nanoseconds: bigint): string",
+    "description": "Serialise nanoseconds since the Unix epoch to a decimal string for transport.",
+    "sourcePath": "packages/gmt/src/precision/format/nanosecondsToJson.ts"
+  },
+  {
     "url": "/reference/regex/calendar-date/calendarDate",
     "name": "calendarDate",
     "namespace": "regex",

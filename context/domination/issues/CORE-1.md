@@ -53,3 +53,46 @@ The original CORE-1 stated both functions "throw `RangeError` on invalid input (
 - `nanosecondsFromJson(nanosecondsToJson(n))` returns `n`
 - Invalid input returns the documented sentinel, never throws
 - `pnpm run validate` stays green
+
+## Outcome (delivered)
+
+Shipped as `packages/gmt/src/precision/` — `convert/toNanoseconds.ts`,
+`convert/fromNanoseconds.ts`, `format/nanosecondsToJson.ts`,
+`format/nanosecondsFromJson.ts`, `calculate/truncateNanoseconds.ts`, plus the namespace
+barrels, `./precision*` package exports and a `precision/README.md` stub. Decisions taken
+while building it, binding on CORE-2 and CORE-3 unless a later story overrides them:
+
+- **`nanosecondsFromJson` got its own file.** The spec listed it inside
+  `format/nanosecondsToJson.ts`; every other public GMT function is one file with one
+  sibling `.test.ts`, and the dox reference generator keys pages off that layout.
+- **One shared domain gate: the representable-instant range.** All five functions accept
+  only epoch nanoseconds within ±8_640_000_000_000_000_000_000n
+  (`internal/epochNanoseconds.ts` — `isValidEpochNanoseconds`, `MIN/MAX_EPOCH_NANOSECONDS`),
+  so anything the namespace accepts is renderable by `fromNanoseconds`. The spec required
+  this only for `nanosecondsFromJson`; applying it uniformly is what makes
+  `nanosecondsFromJson(nanosecondsToJson(n)) === n` total rather than conditional. A span
+  (CORE-2) can exceed this range and needs its own contract, not this one.
+- **`nanosecondsFromJson` accepts only a canonical decimal integer** — optional `-`, digits,
+  no leading zeros, no exponent, hex, separators, `+` sign or whitespace. Coercion is
+  rejected, not silently applied, so another language's serialiser either round-trips
+  exactly or fails loudly.
+- **`toNanoseconds` rejects leap seconds and `[u-ca=...]` calendar annotations**, matching
+  `utc/` and `unix/`. Temporal would clamp `23:59:60` silently; GMT's convention is a
+  sentinel. This is separate from the story's "no leap-second time scales" note.
+- **The leap-second check needed its own regex.** `plain/validate`'s shared `isLeapSecond`
+  matches only an uppercase `T` with extended-format digits — enough for `utc/`, which is
+  already gated to `<date>T<time>Z`. `Temporal.Instant.from` also accepts `t`, a space, and
+  basic format, so `"2016-12-31 23:59:60Z"` and `"20161231T235960Z"` slipped past the shared
+  guard and came back clamped to `:59`. `toNanoseconds` carries a wider module-local pattern;
+  broadening the shared regex would change `isValidDate`/`isValidTime`/`isValidDateTime`/
+  `isValidDateRange`/`isValidIsoDateLike` and `internal/calendarZonedString.ts` too, which is
+  its own story.
+- **`fromNanoseconds` uses the rest-tuple optional-argument convention** (`...timeZoneInput:
+  [timeZone?: string]`), so an explicitly passed `undefined` is invalid input rather than a
+  request for UTC — same as `convertUnixToZoned`'s `unit`.
+- **`0n` is both the epoch and the invalid sentinel.** Documented on every bigint-returning
+  function; callers who must distinguish validate the input first.
+- **No disambiguation policy applies** to `fromNanoseconds`: an instant maps to exactly one
+  wall time per zone, so DST gaps and overlaps cannot arise on this direction.
+- **New shared test mock:** `mockTemporalInstantFromEpochNanosecondsThrow()` in
+  `packages/gmt/src/test/mocks/`.
