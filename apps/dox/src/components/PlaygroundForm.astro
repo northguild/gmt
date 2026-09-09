@@ -12,7 +12,7 @@
  *
  * The generator (`buildPlaygroundFields` in scripts/build-reference.ts) decides
  * which functions get this and emits `fields` on the template:
- *   - scalar fields: string / number / boolean / enum / units
+ *   - scalar fields: string / number / bigint / boolean / enum / units
  *   - list fields (repeatable rows): arrays of strings, numbers, or enum values
  *   - intervals fields (repeatable start/end pairs): `{ start, end }[]`
  *   - `fields: []` — a no-arg function; just the call line + its live result
@@ -151,6 +151,18 @@ const isBlock = (kind: string) => kind === "list" || kind === "intervals";
                     />
                   )}
 
+                  {field.kind === "bigint" && (
+                    <input
+                      class="gmt-input"
+                      type="text"
+                      inputmode="numeric"
+                      pattern="-?[0-9]*"
+                      data-role="value"
+                      value={field.seed}
+                      spellcheck="false"
+                    />
+                  )}
+
                   {field.kind === "string" && (
                     <input
                       class="gmt-input"
@@ -213,7 +225,7 @@ const isBlock = (kind: string) => kind === "list" || kind === "intervals";
 
   /** Syntax-tint one already-formatted argument for the call line. */
   function highlightArg(text: string): string {
-    if (/^-?\d+(?:\.\d+)?$/.test(text)) return codeSpan("num", text);
+    if (/^-?\d+(?:\.\d+)?n?$/.test(text)) return codeSpan("num", text);
     if (text.startsWith('"') && text.endsWith('"')) return codeSpan("str", text);
     if (text === "true" || text === "false") return codeSpan("num", text);
     return escapeHtml(text);

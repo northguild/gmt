@@ -19,6 +19,11 @@ export function sentinelFor(
   allowEmptyArray: boolean,
 ): unknown {
   if (returnType === "number") return null;
+  // gmt's bigint functions signal invalid input with `0n` — but `0n` is also a
+  // legitimate result (`toNanoseconds("1970-01-01T00:00:00Z")`), so it is not
+  // usable as a sentinel. Match `number`, whose zero is guarded for the same
+  // reason: return a value no bigint can equal, and show the result verbatim.
+  if (returnType === "bigint") return null;
   if (returnType === "boolean") return false;
   if (returnType === "array" && !allowEmptyArray) return [];
   return "";
