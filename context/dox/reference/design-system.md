@@ -27,7 +27,13 @@ Eight files, loaded in this order via `starlight({ customCss })` in
 | 6 | `gmt-content.css` | The reading surface: everything inside `.sl-markdown-content`, Expressive Code frame chrome, the search modal / Pagefind UI. |
 | 7 | `gmt-controls.css` | Interactive chrome: CTA buttons, prev/next pagination, mobile search trigger, hamburger, `:focus-visible`, `::selection`, scrollbar. |
 | 8 | `gmt-light.css` | The `[data-theme="light"]` overrides that are neither a palette re-tint nor adjacent to a base rule. **Not actually loaded last** — `dox.css` (live component layout) and `gmt-a11y.css` (`prefers-reduced-transparency`/`-contrast`/`forced-colors`) both load after it in `astro.config.mjs`'s `customCss` array; this table's numbering is source-order, not "wins every tie." |
-| 9 | `gmt-ask.css` | **DOX-C0, #171 — not yet built.** The chat dock/`/dox` chrome and the Streamdown reading surface (`[data-streamdown="…"]`). No Tailwind. |
+
+**`gmt-ask.css` and `gmt-ask-tailwind.css` (DOX-C0, #171 — built) are deliberately
+NOT in `customCss`.** Both are imported from the chat island's entry module
+(`AskDoxProbe.tsx`) instead, so Vite code-splits them into the island's own chunk —
+a page that never opens the chat loads neither. Unlayered rules beat `@layer
+utilities` regardless of import order, so nothing about the cascade is lost by
+keeping them outside this table's numbering.
 
 The `customCss` array in `astro.config.mjs` also carries per-widget and per-feature
 sheets (`gmt-widget.css`, `gmt-clock-list.css`, `gmt-map.css`, `gmt-globe.css`,
@@ -40,9 +46,43 @@ the config for the full list. (`gmt-hero.css` — extracting `HeroGlobe.astro`'s
 but not done; still pending, tracked only here, not as a separate issue.)
 
 Component-scoped `<style>` blocks stay in their `.astro` files
-(`Hero`, `LinkButton`, `ButtonLink`, `Icon`, `SocialIcons`, `ThemeSelect`) — the
-idiomatic Starlight override pattern. They consume the tokens/primitives above;
+(`Hero`, `LinkButton`, `ButtonLink`, `Icon`, `SocialIcons`, `ThemeSelect`, `Header`) —
+the idiomatic Starlight override pattern. They consume the tokens/primitives above;
 they don't redefine them.
+
+## `/dox` and the header link (DOX-C0, #171 — promoted early)
+
+`DOX-C3a`'s spec calls for the `/dox` route and a persistent, every-page entry point
+("Host 1", the draggable dock). Both were promoted into `DOX-C0` at explicit user
+request, ahead of `DOX-C1`/`DOX-C2` landing — with a scope cut recorded here so a
+later reader isn't confused about what actually exists:
+
+- **`apps/dox/src/pages/dox.astro`** is the real, permanent `/dox` route (replacing
+  what was a `/ask-probe` build-verification fixture). It hosts the same static,
+  non-networked `AskDoxProbe` island DOX-C0 built to prove the wiring — hardcoded
+  messages, no `useChat`, no `/api/chat`. `pagefind: false` and `noindex` stay set:
+  there is no real answerable content until `DOX-C1`–`DOX-C3b` land, and the page
+  says so in its own copy.
+- **The every-page entry point is a plain header link, not the draggable dock.**
+  `Header.astro` (a new component override) adds an "Ask Dox" `ButtonLink` into the
+  header's right-hand group, linking to `/dox/`. The full dock — drag, resize,
+  focus trap, `prefers-reduced-motion`, keyboard dock-position cycling — is real,
+  substantial UI work specified in `visual-design.md` §Overlays, and needs a working
+  `/api/chat` behind it to be worth building; faking that now would be worse than a
+  plain link. `DOX-C3a` replaces this link with the actual dock when it lands.
+- **`Header.astro` composes Starlight's own sub-components via
+  `virtual:starlight/components/*`** (`Search`, `SiteTitle`, `SocialIcons`,
+  `ThemeSelect`, `LanguageSelect`) rather than importing
+  `@astrojs/starlight/components/*.astro` directly — the direct-file-import path
+  resolves to Starlight's *defaults*, silently bypassing this repo's own
+  `SocialIcons.astro` and `ThemeSelect.astro` overrides. The virtual module path is
+  config-aware and composes whatever `astro.config.mjs`'s `components` map actually
+  points at, matching how Starlight's own internal `Header.astro` does it.
+  TypeScript has no ambient types for `virtual:starlight/components/*` in a
+  consuming project (only Starlight's own package build sees its
+  `virtual-internal.d.ts`) — `apps/dox/src/virtual-starlight.d.ts` supplies them,
+  mirroring that file's declarations exactly. Re-check this file against
+  `@astrojs/starlight` on every Starlight upgrade.
 
 ## Tokens
 
@@ -91,68 +131,128 @@ token* in dark vs light (not just a re-tint), so the rule that uses it needs no
    `@layer theme, base, components, utilities`. That is allowed **only** under the
    constraints in the next section. The GMT sheets themselves stay unlayered.
 
-## Tailwind in the chat island (DOX-C0, #171)
+## Tailwind in the chat island (DOX-C0, #171 — built)
 
 AI Elements requires Tailwind CSS 4. It is scoped to the chat island and **must not reach
 any other page**. Four constraints make that true; all four are `DOX-C0` DoD items.
 
-1. **Omit Preflight.** Tailwind's reset targets `*`, `html`, `body` and headings and would
-   wreck the docs. Import the layers individually — the documented v4 opt-out:
+1. **Omit Preflight, and disable Tailwind's automatic content scan.** Tailwind's reset
+   targets `*`, `html`, `body` and headings and would wreck the docs. Import the layers
+   individually — the documented v4 opt-out — **and add `source(none)`**: without it,
+   Tailwind scans all of `apps/dox`, including the ~504 generated reference pages, looking
+   for class names to keep, producing a much larger utility sheet than the island needs.
 
    ```css
    @layer theme, base, components, utilities;
    @import "tailwindcss/theme.css" layer(theme);
    /* preflight.css deliberately NOT imported */
-   @import "tailwindcss/utilities.css" layer(utilities);
+   @import "tailwindcss/utilities.css" layer(utilities) source(none);
+
+   @source "../components/ai-elements";
+   @source "../components/ui";
+   @source "../components/ask";
+   @source "../../node_modules/streamdown/dist/*.js";
+   @source "../../node_modules/@streamdown/cjk/dist/*.js";
+   @source "../../node_modules/@streamdown/code/dist/*.js";
+   @source "../../node_modules/@streamdown/math/dist/*.js";
+   @source "../../node_modules/@streamdown/mermaid/dist/*.js";
    ```
 
-2. **Import that sheet from the React island's entry module, never from `customCss`.**
+   The `@source` lines on Streamdown's own `dist/*.js` are required by Streamdown's README
+   — it ships Tailwind utility classes in its compiled output, not just source. List a
+   plugin's `@source` line only if that plugin is actually installed (`message.tsx` imports
+   all four).
+
+2. **Import that sheet from the island's entry module, never from `customCss`.**
    Vite then code-splits it into the island's own chunk, so a page that never opens the
-   chat never loads it.
+   chat never loads it. (`gmt-ask-tailwind.css` and `gmt-ask.css` both live outside this
+   file's stylesheet-stack table for the same reason — see the note there.)
 
 3. **Know which way the cascade falls.** Tailwind utilities are in `@layer utilities`;
    these sheets are unlayered, and unlayered always wins. **So every GMT rule beats every
-   Tailwind utility.** Only three groups of global element selectors exist in these sheets
-   — the list to re-check rather than re-derive:
+   Tailwind utility.** The collision set has **six** groups, not the three originally
+   assumed — verified by a full scan of the 22 sheets on 2026-09-09, this is the list to
+   re-check rather than re-derive:
 
-   | Selector | File | What it sets |
-   | -------- | ---- | ------------ |
-   | `h1`–`h6` | `gmt-shell.css` | font-family, letter-spacing — hits markdown headings in replies |
-   | `textarea`, `input:not([type=checkbox\|radio\|range])` | `gmt-controls.css` | hits the composer and every AI Elements input |
-   | `body` | `gmt-shell.css` | not applicable inside the panel |
+   | Selector | File | What it sets | Why it matters here |
+   | -------- | ---- | ------------ | -------------------- |
+   | `h1`–`h6` | `gmt-shell.css` | font-family, font-weight, letter-spacing, color (h1 also forces font-size) | hits markdown headings in replies |
+   | `textarea`, `input:not([type=checkbox\|radio\|range])`, `[contenteditable]` | `gmt-controls.css` | caret-color | hits the composer and every AI Elements input |
+   | `header` | `gmt-glass.css`, `gmt-shell.css`, `gmt-a11y.css` | `backdrop-filter`, background, border | would nest a second blur inside a future dock header — visual-design.md's "one layer of glass, never two" |
+   | `dialog`, `[role="dialog"]` | `gmt-content.css`, `gmt-glass.css`, `gmt-a11y.css` | background, border, `backdrop-filter` | `[role="dialog"]` matches **every Radix overlay** AI Elements renders |
+   | `::selection`, `input::selection`, `textarea::selection` | `gmt-controls.css` | selection background/color | |
+   | `body` | `gmt-shell.css` | background, color, 2 scrollbar pseudo-selectors | not applicable inside the panel |
 
-   Ship a scoped `.gmt-ask` reset for the two that apply.
+   `gmt-ask.css` ships a scoped `.gmt-ask` reset for all six groups, not just the two the
+   original draft of this section named.
 
 4. **Bridge, don't fork, the palette.** Map shadcn's variables (`--background`,
    `--foreground`, `--primary`, `--muted`, `--border`, `--ring`, …) onto the `--gmt-*`
    tokens. Rule 1 still applies: no `[data-theme="light"]` color blocks — add a theme-role
-   token instead.
+   token instead. `--gmt-danger` (new) backs `--destructive`; `--gmt-signal` (amber) is
+   reserved exclusively for the sentinel "no signal" state and must not be reused for it.
 
-The Streamdown reading surface needs **no Tailwind at all**: style it in `gmt-ask.css`
-through `[data-streamdown="heading-1"|"link"|"code-block"|"table"|"blockquote"|…]`.
+**Correction (2026-09-09): the Streamdown reading surface is NOT Tailwind-free.**
+Streamdown 2.6.0 emits exactly one `[data-streamdown="…"]` attribute
+(`table-wrapper`) — none of the `heading-1` / `link` / `code-block` / … values this
+section originally assumed exist. Streamdown's own components ship Tailwind utility
+classes and need shadcn's CSS variables to render correctly at all (its README says so).
+The actual approach: Tailwind (via the `@source` lines above) provides the structural
+baseline, and unlayered `.gmt-ask-response …` descendant selectors in `gmt-ask.css`
+override it — unlayered beats `@layer utilities` regardless of import order, the same
+idiom `gmt-content.css` already uses over `.sl-markdown-content`. `MessageResponse` is
+given `className="gmt-ask-response"` explicitly at every call site (see
+`AskDoxProbe.tsx`) — that classname, not a `data-streamdown` attribute, is the real
+styling hook, and it's also the hook `DOX-C3a`'s link-hardening `components.a` override
+composes with.
 
 ## Verifying a change is visually safe
 
-A Playwright screenshot diff is the gate, via `apps/dox/scripts/visual-snapshot.mjs`
-(added in `DOX-E1`'s part-2 branch). From `apps/dox`, before touching any CSS:
+`apps/dox/scripts/visual-snapshot.mjs` (added in `DOX-E1`'s part-2 branch; automated in
+`DOX-C0`, #171) is the gate. From `apps/dox`, before touching any CSS:
 
 ```sh
 pnpm build && pnpm visual:before   # captures .visual/before/<page>-<theme>-<viewport>.png
 # ... make the change ...
 pnpm build && pnpm visual:after    # captures .visual/after/... for the same page/theme/viewport set
+pnpm visual:diff                   # asserts before ~= after — exits non-zero over threshold
 ```
 
 Fixed page list: `/` (hero), `/install` (dense reference page, zero islands),
-`/tools/zoned-earth`, `/tools/zone-planner`, one Tier-2/3 teaching-widget page. Both
-`data-theme="dark"`/`"light"`, both desktop (`1440×900`) and mobile (`390×844`)
-viewports. `.visual/` is git-ignored — the baseline lives only in the local working
-tree for the duration of one work session, not committed. Eyeball the before/after
-pairs; a full `playwright test` diff runner isn't needed for this.
+`/tools/zoned-earth`, `/tools/zone-planner`, one Tier-2/3 teaching-widget page — plus
+two interaction states, the **search modal** (desktop) and the **mobile menu**
+(mobile), each captured mid-open. Both `data-theme="dark"`/`"light"`, both desktop
+(`1440×900`) and mobile (`390×844`) viewports — 24 snapshots total.
+
+**`visual:diff` is a perceptual pixel diff (`pixelmatch`), not a byte-identical hash.**
+Byte-identical was tried first and doesn't hold up: any page with
+`backdrop-filter: blur()` (the glass panels, the search modal's dimmed backdrop)
+re-encodes to a different PNG on every single capture even with zero code change,
+confirmed by diffing two runs of an unmodified build — the difference is GPU blur
+dithering noise (sub-visual, but it cascades through PNG compression into a
+wholesale-different file). This is a known class of flakiness for GPU-composited
+blur, which is why every real screenshot-diff tool (Percy, Chromatic, Playwright's
+own `toHaveScreenshot`) compares pixels with a tolerance instead of hashing.
+`MAX_DIFF_PIXEL_RATIO` in the script (0.2%) is tuned to absorb that noise (observed:
+0.000%–0.012% on an unmodified build) while still failing hard on a real regression
+(verified against a deliberately broken `--gmt-void` token: 84%–97% diff on every
+affected page).
+
+Two more sources of run-to-run noise are neutralized before the pixel diff ever runs,
+both in the capture script itself:
+
+- **The globe's live clock text** (`.gmt-clock-time`, `.gmt-globe-tooltip-time` —
+  re-rendered every second) is covered with Playwright's `mask` option on every shot.
+- **The globe's ambient auto-rotation** is stopped by emulating
+  `prefers-reduced-motion: reduce` for every captured page/context — `globe.ts`
+  already checks this media query and skips starting ambient rotation when it
+  matches, so this isn't a workaround, it's using an existing, real code path.
 
 ```sh
 pnpm check && pnpm lint && pnpm test
 ```
 
-A pure refactor (renames, file moves, role-token swaps) must produce a
-**byte-identical** screenshot set. Any diff is a regression unless it's the exact
-change you intended, confined to the region you touched.
+A pure refactor (renames, file moves, role-token swaps) must produce a **near-zero
+pixel diff** on every page not intentionally touched by the change. A diff beyond
+`MAX_DIFF_PIXEL_RATIO` is a regression unless it's the exact, deliberate change —
+in which case update the baseline and say so in the PR, don't loosen the threshold.

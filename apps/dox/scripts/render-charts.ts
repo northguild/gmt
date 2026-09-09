@@ -26,8 +26,7 @@ function addTooltipsToBars(svg: string): string {
       const lib = libraryComparisons[index];
       if (!lib) return;
 
-      const { tests, locales, timezones, nodeVersions, executions } =
-        lib.stats;
+      const { tests, locales, timezones, nodeVersions, executions } = lib.stats;
       const library = lib.chartLabel ?? lib.displayName;
 
       const title = `${library}: ${executions.toLocaleString()} executions (${tests.toLocaleString()} tests${locales > 0 ? ` × ${locales} locales` : ""}${timezones > 0 ? ` × ${timezones} timezones` : ""} × ${nodeVersions} Node)`;

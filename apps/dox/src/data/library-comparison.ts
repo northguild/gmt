@@ -53,7 +53,13 @@ export const libraryComparisons: LibraryComparison[] = [
     id: "@northguild/gmt",
     displayName: "@northguild/gmt",
     isSubject: true,
-    stats: { tests: 16701, locales: 17, timezones: 10, nodeVersions: 2, executions: 334020 },
+    stats: {
+      tests: 16701,
+      locales: 17,
+      timezones: 10,
+      nodeVersions: 2,
+      executions: 334020,
+    },
     sourceNote: "Internal CI measurement.",
   },
   {
@@ -64,7 +70,13 @@ export const libraryComparisons: LibraryComparison[] = [
     foundation: "not TC39",
     detail:
       "Its own CalendarDate / ZonedDateTime types. Fixes the model, but it is Adobe's API — a second migration once Temporal ships.",
-    stats: { tests: 20190, locales: 0, timezones: 0, nodeVersions: 1, executions: 386 },
+    stats: {
+      tests: 20190,
+      locales: 0,
+      timezones: 0,
+      nodeVersions: 1,
+      executions: 386,
+    },
     sourceNote: "Internal CI measurement.",
   },
   {
@@ -74,7 +86,13 @@ export const libraryComparisons: LibraryComparison[] = [
     foundation: "built on Date",
     detail:
       "A DateTime is a Date plus a zone string. Invalid inputs become an Invalid DateTime you have to remember to check for.",
-    stats: { tests: 4888, locales: 0, timezones: 0, nodeVersions: 1, executions: 4888 },
+    stats: {
+      tests: 4888,
+      locales: 0,
+      timezones: 0,
+      nodeVersions: 1,
+      executions: 4888,
+    },
     sourceNote: "Internal CI measurement.",
   },
   {
@@ -85,7 +103,13 @@ export const libraryComparisons: LibraryComparison[] = [
     detail:
       "Tree-shakeable functions — but every argument and every return value is a Date, so all of its footguns are still yours.",
     bannedCompanions: ["date-fns-tz"],
-    stats: { tests: 3213, locales: 0, timezones: 0, nodeVersions: 1, executions: 3213 },
+    stats: {
+      tests: 3213,
+      locales: 0,
+      timezones: 0,
+      nodeVersions: 1,
+      executions: 3213,
+    },
     sourceNote: "Internal CI measurement.",
   },
   {
@@ -96,7 +120,13 @@ export const libraryComparisons: LibraryComparison[] = [
     detail:
       "A wrapper around Date. In legacy maintenance mode since 2020, and mutable like the thing it wraps.",
     bannedCompanions: ["moment-timezone"],
-    stats: { tests: 11703, locales: 0, timezones: 0, nodeVersions: 1, executions: 11703 },
+    stats: {
+      tests: 11703,
+      locales: 0,
+      timezones: 0,
+      nodeVersions: 1,
+      executions: 11703,
+    },
     sourceNote: "Internal CI measurement.",
   },
   {
@@ -145,5 +175,9 @@ export const libraryComparisons: LibraryComparison[] = [
   },
 ];
 
-export const gmtLibraryComparison = libraryComparisons.find((l) => l.isSubject)!;
-export const competitorComparisons = libraryComparisons.filter((l) => !l.isSubject);
+export const gmtLibraryComparison = libraryComparisons.find(
+  (l) => l.isSubject,
+)!;
+export const competitorComparisons = libraryComparisons.filter(
+  (l) => !l.isSubject,
+);

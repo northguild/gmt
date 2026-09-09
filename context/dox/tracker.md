@@ -41,8 +41,8 @@ normal repo convention and does need a changeset.
 | 8     | DOX-D1                                      | #140         | Done           |
 | 9     | DOX-D2                                      | #141         | Done           |
 | 10    | DOX-E1 (DOX-E1a, DOX-E1b)                   | #142         | Done¹          |
-| 11    | DOX-C0                                      | #171         | Not started    |
-| 12    | DOX-C1                                      | #137         | Not started    |
+| 11    | DOX-C0                                      | #171         | Done²          |
+| 12    | DOX-C1                                      | #137         | Done³          |
 | 13    | DOX-C2                                      | #138         | Not started    |
 | 14    | DOX-C3 (DOX-C3a, DOX-C3b)                   | #139         | Not started    |
 
@@ -51,6 +51,19 @@ normal repo convention and does need a changeset.
 `/dox` widget rail, which can't exist before Tier 6 (`DOX-C3a`/`DOX-C3b`) builds that
 rail. `initGlobe`/the scrubber's `mount`-shaped entry points are already rail-ready —
 see the pickup note in `issues/DOX-C.md`.
+
+² Also carries two `DOX-C3a` DoD items promoted early at explicit user request: the
+real `/dox` route (hosting the same static, non-networked probe DOX-C0 built to prove
+the wiring — no `useChat`, no `/api/chat`) and a header link reachable from any page.
+The header link is a plain nav link, **not** `DOX-C3a`'s draggable dock — see
+`issues/DOX-C.md`'s DOX-C0 section and `reference/design-system.md`'s "`/dox` and the
+header link" for what that means `DOX-C3a` still owns.
+
+³ Corrects three of this file's own numbers along the way — 591 functions not 504, a
+missing `examples` field on `CorpusEntry` (added), and a latent generator bug on a
+clean checkout (fixed) — and picks the provider: Vercel AI SDK (not TanStack AI, which
+lacks a Google or Workers AI adapter) + Gemini 2.5 Flash. See `issues/DOX-C.md`'s
+DOX-C1 section for the full measurements and reasoning.
 
 Parked work carries no story ID and never enters this table — see
 [appendix-parked.md](appendix-parked.md).

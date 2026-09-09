@@ -1,0 +1,53 @@
+---
+// The `/dox` route (DOX-C3a's "Host 2", promoted early at explicit user
+// request so Ask Dox is reachable from the start rather than deferred behind
+// the retrieval and Worker stories). Linked from the site header
+// (Header.astro's "Ask Dox" button) so it's reachable from any page.
+//
+// What ships today is the same static, non-networked probe DOX-C0 built to
+// prove the React + Tailwind + AI Elements wiring: hardcoded messages, no
+// `useChat`, no `/api/chat`. There is no retrieval (DOX-C1) or Worker
+// endpoint (DOX-C2) yet, so a real conversation can't happen here — this page
+// is the shell it will happen inside, not the chat itself. `pagefind: false`
+// and `noindex` reflect that: nothing on this page is real searchable
+// content until DOX-C1–DOX-C3b land.
+//
+// Built with `<StarlightPage template: 'splash'>` rather than a plain
+// `src/pages/dox.astro` with no Starlight wrapper — that would skip
+// `customCss` entirely and require re-importing the whole stylesheet stack
+// by hand. `splash` keeps the header/search/theme select but drops the
+// sidebar and table of contents, matching DOX-C3a's spec for this route.
+import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
+import AskDoxProbe from "~/components/ask/AskDoxProbe";
+---
+
+<StarlightPage
+  frontmatter={{
+    title: "Ask Dox",
+    template: "splash",
+    pagefind: false,
+    head: [
+      {
+        tag: "meta",
+        attrs: { name: "robots", content: "noindex" },
+      },
+    ],
+  }}
+>
+  <p class="gmt-dox-status">
+    This is a preview of the Ask Dox chat surface. It doesn't answer
+    questions yet — that lands with <code>DOX-C1</code>–<code>DOX-C3b</code>.
+  </p>
+  <AskDoxProbe client:load />
+</StarlightPage>
+
+<style>
+  @layer starlight.core {
+    .gmt-dox-status {
+      max-width: 42rem;
+      margin: 0 auto var(--gmt-space-4);
+      color: var(--gmt-ice-dim);
+      font-size: var(--gmt-text-sm);
+    }
+  }
+</style>

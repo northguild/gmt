@@ -234,6 +234,11 @@
      that reads as almost the same flat pale-blue as the page background in
      light mode — light gets its own value (a white wash) instead of a re-tint. */
   --gmt-widget-card-bg: var(--gmt-glass-tint-subtle);
+  /* DOX-C0 (#171): shadcn's --destructive needs a genuine error/danger red.
+     --gmt-signal (amber) is reserved exclusively for the "no signal" sentinel
+     state (visual-design.md) and must not be reused here. No role in the six
+     named colors covers this, so it's a new token, not a re-tint. */
+  --gmt-danger: #f87171;
 }
 
 /* ---- Font imports (self-hosted, no CDN) ---- */
@@ -302,6 +307,10 @@
   --gmt-syntax-num: #aa0982;
 
   --gmt-widget-card-bg: color(from var(--gmt-void) srgb r g b / 0.5);
+
+  /* DOX-C0 (#171): a darker, more saturated red reads correctly against the
+     light background — the dark-mode value is tuned for a near-black one. */
+  --gmt-danger: #dc2626;
 
   /* ---- Globe (light values) ---- */
   --gmt-globe-ocean-alpha: 0.2;

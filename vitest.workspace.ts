@@ -23,7 +23,19 @@ export default [
       globals: true,
       environment: "node",
       root: "apps/dox",
-      include: ["scripts/**/*.test.ts"],
+      // DOX-C0 (#171): kept in sync with apps/dox/vitest.config.ts's `include`
+      // — this list had drifted (missing src/**) before this story, which
+      // meant a root-level `vitest run` silently skipped every src/ test.
+      include: [
+        "scripts/**/*.test.ts",
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+      ],
+      resolve: {
+        alias: {
+          "~": path.resolve(import.meta.dirname, "apps/dox/src"),
+        },
+      },
     },
   }),
 ];

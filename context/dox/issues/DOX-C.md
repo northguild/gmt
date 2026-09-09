@@ -163,6 +163,19 @@ is merged and the screenshot gate is green.
 Definition of Done is written to catch it: every existing page must render
 byte-identically afterwards.
 
+**Amended 2026-09-09, at explicit user request: two `DOX-C3a` DoD items — the `/dox`
+route and an every-page entry point — were promoted into this story.** This is a real,
+intentional exception to the paragraph above: every page's header now carries an "Ask
+Dox" link, so the byte-identical claim no longer holds verbatim (the visual gate's
+baseline was re-captured to include it, and `visual:diff` passes against that new
+baseline). What shipped is a plain link to a real `/dox` route hosting the same static,
+non-networked probe DOX-C0 already built — **not** `DOX-C3a`'s draggable dock (drag,
+resize, focus trap, keyboard cycling), which is real UI work that needs a working
+`/api/chat` behind it to be worth building. `DOX-C3a` replaces this link with the actual
+dock; see `reference/design-system.md`'s "`/dox` and the header link" section for the
+implementation notes (in particular, why `Header.astro` must compose Starlight's
+sub-components via `virtual:starlight/components/*`, not direct file imports).
+
 #### DOX-C0 — React + AI Elements foundation
 
 **GitHub Issue:** #171 — see tracker.md\_
@@ -216,6 +229,12 @@ Option (b) is the smaller diff and keeps `npx ai-elements@latest add <name>` wor
 unmodified on every future component. Option (a) keeps one convention in the repo. Do
 not leave both half-done.
 
+**Resolved: option (a), `~/` only.** The premise for preferring (b) was wrong — the
+`shadcn`/`ai-elements` CLI **rewrites every copied file's imports** from
+`components.json`'s `aliases` block on install, so `npx ai-elements@latest add <name>`
+keeps working unmodified either way; (a) needed no manual post-processing. No `@/*` was
+added to `tsconfig.json` or `astro.config.mjs`'s Vite config.
+
 ### Tailwind scoping — the mechanically riskiest part of this story
 **Omit Preflight.** Tailwind's global reset targets `*`, `html`, `body` and headings; it
 must never reach the docs site. Import the layers individually — this is the documented
@@ -232,16 +251,20 @@ it does not load on a page that never opens the chat.
 
 **Know which way the cascade falls.** Tailwind utilities live in `@layer utilities`; the
 GMT sheets are unlayered, and unlayered always beats layered. So **every GMT rule wins
-against every Tailwind utility.** The collision set is small and was grep-verified on
-2026-09-03 — only three groups of global element selectors exist in the GMT sheets:
+against every Tailwind utility.**
 
-    h1–h6                gmt-shell.css      (font-family, letter-spacing)
-    textarea, input      gmt-controls.css   (the composer and every AI Elements input)
-    body                 gmt-shell.css      (not applicable inside the panel)
+**Correction (2026-09-09): the collision set has six groups, not three** — a full scan
+of all 22 sheets (the 2026-09-03 grep only checked a few files) also found `header`
+(whose `backdrop-filter` would nest glass-on-glass inside a future dock), `dialog` /
+`[role="dialog"]` (the latter matches every Radix overlay AI Elements renders), and
+`::selection`. The full table, with what each rule actually sets, lives in
+`reference/design-system.md`'s "Tailwind in the chat island" section — `gmt-ask.css`
+ships the scoped `.gmt-ask` reset for all six.
 
-Ship a scoped `.gmt-ask` reset for the two that apply. Record the list in
-`reference/design-system.md` so it is re-checked on future changes rather than
-re-derived.
+Also missing from the original snippet: `source(none)` on the `@import
+"tailwindcss/utilities.css"` line, plus an explicit `@source` list. Without it Tailwind
+scans all of `apps/dox`, including the ~504 generated reference pages. See
+`design-system.md` for the corrected snippet.
 
 ### Theme bridge
 Map shadcn's CSS variables (`--background`, `--foreground`, `--primary`, `--muted`,
@@ -251,10 +274,17 @@ palette and light/dark for free. **Do not write `[data-theme="light"]` blocks** 
 in `gmt-tokens.css`.
 
 ### Streamdown skin
-Style the reading surface in a new `gmt-ask.css` using `[data-streamdown="…"]`
-selectors — headings, links, inline code, code blocks, tables, blockquotes. **No Tailwind
-touches the reading surface.** Add the file to `customCss` in astro.config.mjs and to
-the stylesheet-stack table in `design-system.md`.
+
+**Correction (2026-09-09): `[data-streamdown="…"]` selectors mostly don't exist.**
+Streamdown 2.6.0 emits exactly one — `table-wrapper` — not `heading-1` / `link` /
+`code-block` / … as originally assumed, and its components need Tailwind's utility
+classes and shadcn's CSS variables to render at all (no Tailwind isn't achievable).
+The actual approach, detailed in `design-system.md`: Tailwind provides the structural
+baseline; unlayered `.gmt-ask-response …` selectors in `gmt-ask.css` override it, keyed
+off a `className="gmt-ask-response"` given explicitly to `MessageResponse` at each call
+site. `gmt-ask.css` is **not** added to `astro.config.mjs`'s `customCss` — it's imported
+from the island's entry module, same as the Tailwind sheet, so a page that never opens
+the chat loads neither.
 
 ### Test wiring
 `apps/dox/vitest.config.ts` is `environment: "node"` with no `setupFiles`, no plugins and
@@ -270,10 +300,14 @@ blocks), 2 (no color literals), 3 (widgets compose primitives) and 4 (respect th
 `customCss` order) all apply to this story, and rule 5 is the one being amended.
 
 ## Definition of done
-- **The byte-identical screenshot gate from `design-system.md` passes** on the landing
+- **The screenshot gate from `design-system.md` passes** (`pnpm visual:diff`, a
+  perceptual pixel diff — see that file for why not byte-identical) on the landing
   page, a dense reference page, the sidebar, the search modal and the mobile menu, in
-  light and dark, desktop and mobile — with the island present but never opened. Any
-  diff is a regression: this story changes no existing page.
+  light and dark, desktop and mobile.
+  **Amended 2026-09-09:** "this story changes no existing page" no longer holds
+  verbatim — the header link promoted from `DOX-C3a` (see above) touches every page's
+  header, intentionally. The baseline was re-captured to include it; `visual:diff`
+  passing against that baseline is what this line now means.
 - Grep the built output to confirm **Tailwind Preflight is absent**.
 - A reference page's initial payload contains **no React bundle** — verify in the network
   panel, not by inspecting the config.
@@ -281,8 +315,8 @@ blocks), 2 (no color literals), 3 (widgets compose primitives) and 4 (respect th
   (`lint test typecheck build`, including the 20-cell GMT timezone matrix) stays green.
 - A trivial AI Elements component renders inside the GMT theme with correct palette in
   both light and dark, with no `[data-theme="light"]` rule added to achieve it.
-- The chosen alias option is implemented consistently — no file imports `@/…` if (a) was
-  chosen, and both tsconfig and Vite resolve it if (b) was.
+- The chosen alias option (`~/`, resolved above) is implemented consistently — no file
+  imports `@/…`.
 ```
 
 ---
@@ -306,6 +340,78 @@ DOX-C1 Build retrieval chunks and lookup over gmt-corpus.json
 ```
 
 **Description:**
+
+**Amended 2026-09-09 — implemented, with three corrections to this file's own numbers:**
+
+1. **591 functions, not 504.** The corpus has grown since this file's estimate; measure
+   from the live `gmt-corpus.json`, not this count, going forward.
+2. **`CorpusEntry` had no `examples` field at all** — `build-reference.ts` parses
+   `@example` JSDoc tags into memory (`Doc.examples`) but the corpus-writing step
+   dropped them before ever reaching `gmt-corpus.json`. Fixed in `build-reference.ts`
+   and `reference-types.ts` (`CorpusEntry.examples: CorpusExample[]`); 519 of 591
+   entries now carry at least one. Also fixed in the same pass: `RouteManifest` is now
+   `ReadonlySet<string>`, matching what the generator's header comment already claimed.
+3. **A latent generator bug, unrelated to this story but found while touching it:**
+   `runGeneration()` wrote `gmt-corpus.json`'s sidebar output before creating `outGen`,
+   which only worked because the directory normally already exists from a prior run —
+   a genuinely clean checkout (`rm -rf src/generated`) hit `ENOENT`. Fixed by moving the
+   `mkdirSync` earlier.
+
+**Retrieval chunks:** `apps/dox/src/lib/retrieval/` — `function-chunks.ts` (one chunk
+per corpus entry: name + signature + description + formatted examples),
+`guide-sources.ts` (loads all 24 guide files via `import.meta.glob`, matching
+`llms.txt.ts`'s existing fix for the same Astro-endpoint-bundling problem — a
+`node:fs` walk relative to `import.meta.dirname` breaks once Astro bundles the calling
+endpoint into `dist/.prerender/chunks/*.mjs`), and `guide-chunks.ts` (one chunk per
+`##` heading, URL-fragmented via `github-slugger` to match Starlight's own anchors).
+Built at `astro build` time into a static asset — `src/pages/retrieval-chunks.json.ts`
+— rather than at Worker runtime, since only Node has `fs`/glob access; the Worker
+fetches it same-origin (`lib/retrieval/fetch-chunks.ts`, Cache-API-based, tested with a
+mock cache rather than Miniflare).
+
+**Retrieval scored 755 chunks** (591 function + 164 guide) at build time, 2026-09-09.
+
+**Search: `lib/retrieval/search.ts`, MiniSearch (BM25).** Two things the naive version
+got wrong, found by actually running the four DoD question types against the real
+corpus rather than assuming BM25 "just works":
+- **Stopword filtering was necessary, not optional.** Without it, "format a date for
+  display" — a real, in-corpus question — matched 489 of 591 chunks, because OR
+  combination means "a"/"for" alone match hundreds of entries. A ~30-word stopword
+  list cut that to low hundreds; combined with the score threshold below, to 15.
+- **A minimum relevance score (8, tuned against real queries) is what makes the
+  honest-refusal DoD line true.** Raw top-N alone can't distinguish a real match from
+  fuzzy/prefix padding. Verified empirically: every DoD question type's best result
+  scored ≥ 10.6; three genuinely unrelated questions ("recommend a pizza restaurant",
+  "translate to French", "javascript sorting algorithm") topped out at 6.0 or returned
+  zero. This threshold is tuned to *this* corpus size and boost/stopword settings, not
+  a universal constant — re-verify if either changes materially.
+- **One finding that changed the test itself, not the code:** "parse a cron expression"
+  (this file's own DOX-C2 refusal-test example) is a *bad* fixture for DOX-C1's
+  chunk-count DoD line — it genuinely surfaces real `parseHttp`/`parseRfc3339`/`parseSql`
+  chunks, which is honest retrieval (the corpus really does have those), not padding.
+  Recognizing "none of these describe cron support" is the LLM's job in DOX-C2's
+  end-to-end test, not retrieval's. DOX-C1's own test uses two questions with zero real
+  keyword overlap instead.
+
+**Provider decision: Vercel AI SDK (unchanged from DOX-C0), Gemini 2.5 Flash via
+`@ai-sdk/google`.** "TanStack AI" (`@tanstack/ai` + `@tanstack/ai-react`) is real and
+well-built — confirmed via its own docs, not assumed — and its `chat()` +
+`toServerSentEventsResponse()` works from a plain `Request`/`Response` handler (a
+Cloudflare Worker example exists), not only inside TanStack Start. It loses on two
+independent grounds: **no `@tanstack/ai-google` and no Workers AI adapter exist**
+(checked npm directly, 2026-09-09) — of this story's three real candidates it covers
+only Anthropic — and adopting it now would mean either dropping AI Elements entirely or
+building an adapter shim, since AI Elements' vendored components (`message.tsx`,
+`prompt-input.tsx`) are typed against the `ai` package's `UIMessage`/`ChatStatus`
+directly. Between the two remaining real options: **Cloudflare Workers AI** (same-origin,
+no key custody) was passed over because DOX-C3b's widget-mounting needs reliable
+structured tool calls, and Workers AI's cheap-tier models are generally weaker at this
+than Gemini 2.5 Flash; **Anthropic** has no free tier and no key already provisioned.
+Gemini 2.5 Flash: strong tool-calling, a free tier, and `NORTHGUILD_GMT_GEMINI_API_KEY`
+already sits in the real deployment's `apps/dox/.env` (absent from this worktree, which
+has no `.env` file at all — confirmed, not assumed).
+
+Original description follows, for the gap this story was built to close:
 
 ```
 Part of the Dox epic — see `context/dox/index.md`, Tier 6, item DOX-C1.
@@ -403,12 +509,44 @@ measure in the Worker and record the numbers in this issue.
 - Retrieval returns sensible chunks for a spread of real questions: a direct lookup
   ("what does formatDate do"), a task ("convert UTC to Tokyo"), a concept ("what happens
   during a DST gap"), and a near-miss ("addBusinessDay" singular).
-- Every chunk carries a URL that resolves.
-- Corpus token measurements are recorded in this issue.
+  **Done 2026-09-09** — all four tested in `lib/retrieval/search.test.ts` against the
+  real 755-chunk corpus, not synthetic fixtures.
+- Every chunk carries a URL that resolves. **Done** — function chunks reuse
+  `CorpusEntry.url` directly; guide chunks reuse the same route-derivation `llms.txt.ts`
+  already relies on, fragmented via `github-slugger` to match Starlight's own anchors.
+- Corpus token measurements are recorded in this issue. **Done, measured 2026-09-09
+  against the real built `retrieval-chunks.json`:**
+
+      755 chunks total (591 function + 164 guide)
+      ~83,750 estimated tokens across the whole corpus (chars/4 heuristic — see
+        lib/retrieval/tokens.ts's docstring for why not an exact provider tokenizer)
+      111 mean tokens/chunk, 2,593 max, 7 min
+      Typical retrieved set (15 chunks, real questions): 1,200-6,400 tokens depending
+        on how many chunks clear the relevance threshold
+
+  For scale: the sibling repo's own arithmetic put "four packages" at 80-150 KB
+  (~20,000-37,500 tokens) as the point baking the corpus into every prompt gets
+  expensive, and real retrieval as worth it "past ~500 KB of docs" (~125,000 tokens).
+  This **single** package's corpus, at ~83,750 tokens, is already past their
+  four-package estimate — retrieval over baking is the correct call, not a
+  precaution.
 - The same-origin corpus-fetch path is implemented and its caching behavior recorded.
-- The provider and model are chosen and recorded, with the reasoning.
+  **Done** — `lib/retrieval/fetch-chunks.ts`, Cache-API-based (`caches.default` in
+  production), tested with a mock `{match, put}` cache rather than Miniflare. Not yet
+  wired into a real Worker (that's `DOX-C2`); this is the tested function `DOX-C2`
+  calls with `caches.default`.
+- The provider and model are chosen and recorded, with the reasoning. **Done** —
+  Vercel AI SDK (unchanged from `DOX-C0`) + Gemini 2.5 Flash via `@ai-sdk/google`; see
+  the "Amended 2026-09-09" note above for the full TanStack AI comparison and the
+  Workers AI / Anthropic tradeoffs.
 - A question with no good match returns few or no chunks rather than 20 bad ones — the
-  refusal path in DOX-C2 depends on this being honest.
+  refusal path in DOX-C2 depends on this being honest. **Done, with one correction to
+  this DoD's own framing**: "parse a cron expression" (this file's DOX-C2 example)
+  turned out to be a bad fixture for *this* line — it genuinely surfaces real
+  `parse*` chunks, which is honest retrieval, not the failure mode this line means.
+  Tested instead with two questions carrying zero real keyword overlap with the
+  corpus; both return under 5 chunks (one returns zero). See `search.ts`'s
+  `MIN_RELEVANCE_SCORE` docstring for the empirical basis.
 ```
 
 ---

@@ -1,0 +1,199 @@
+/*
+ * DOX-C0 (#171) — chat island chrome and reading-surface theme.
+ *
+ * Imported from the island entry module, after gmt-ask-tailwind.css — never
+ * added to `astro.config.mjs`'s `customCss`. Unlayered CSS always beats
+ * `@layer utilities` regardless of import order, so nothing here depends on
+ * that ordering; it's kept this way only so the island's two sheets travel
+ * together. A page that never opens the chat loads neither.
+ *
+ * Two jobs:
+ *   1. Neutralize the GMT sheets' global element selectors inside `.gmt-ask` —
+ *      every one of these six groups beats every Tailwind utility today, and
+ *      would otherwise reach into AI Elements' markup uninvited.
+ *   2. Theme the Streamdown reading surface. Streamdown 2.6.0 does not expose
+ *      the `[data-streamdown="…"]` attributes design-system.md was originally
+ *      written against (verified 2026-09-09 — only `table-wrapper` exists), so
+ *      this themes `.gmt-ask-response` instead: the classname `<MessageResponse
+ *      className="gmt-ask-response">` is given explicitly at every call site
+ *      (see AskDoxProbe.tsx), the same seam DOX-C3a's link-hardening
+ *      `components.a` override already needs.
+ */
+
+/* ---------------------------------------------------------------------- */
+/* 1. Global-selector reset (design-system.md's six-group collision set)   */
+/* ---------------------------------------------------------------------- */
+
+/* gmt-shell.css sets font-family, font-weight, letter-spacing, color on
+   h1–h6, plus font-size on h1 alone — re-set all five inside the island so
+   AI Elements' own heading scale (e.g. inside a mounted widget) isn't
+   silently overridden by the docs' display typography. */
+.gmt-ask :is(h1, h2, h3, h4, h5, h6) {
+  font-family: inherit;
+  font-weight: inherit;
+  letter-spacing: normal;
+  color: inherit;
+  font-size: inherit;
+}
+
+/* gmt-controls.css sets caret-color globally on textarea/input/contenteditable.
+   Harmless on its own, but re-declared here so the island's caret color is an
+   explicit choice, not an inherited side effect. */
+.gmt-ask :is(textarea, input, [contenteditable]) {
+  caret-color: var(--gmt-cyan);
+}
+
+/* gmt-glass.css puts a backdrop-filter on every <header>, which would nest a
+   second blur inside the dock if AI Elements (or a future dock chrome) uses
+   one — visual-design.md §Overlays: "one layer of glass, never two." */
+.gmt-ask header {
+  background: none;
+  border-bottom: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* gmt-glass.css / gmt-content.css style bare `dialog` and `[role="dialog"]`
+   globally — Radix (which every AI Elements primitive sits on) renders
+   overlays as `[role="dialog"]`, so this reset must include the attribute
+   selector, not just the element. */
+.gmt-ask :is(dialog, [role="dialog"]) {
+  background: none;
+  border: none;
+  border-radius: 0;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.gmt-ask ::selection {
+  background: var(--gmt-selection);
+  color: var(--gmt-ice);
+}
+
+/* ---------------------------------------------------------------------- */
+/* 2. Reading surface — .gmt-ask-response (MessageResponse's className)    */
+/* ---------------------------------------------------------------------- */
+
+.gmt-ask-response {
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-base);
+  line-height: 1.6;
+}
+
+.gmt-ask-response :is(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--gmt-font-display);
+  font-weight: 600;
+  letter-spacing: var(--gmt-tracking-tight);
+  color: var(--gmt-ice);
+  margin-top: var(--gmt-space-6);
+  margin-bottom: var(--gmt-space-2);
+}
+
+.gmt-ask-response h1 {
+  color: var(--gmt-cyan);
+  font-size: var(--gmt-text-xl);
+  letter-spacing: var(--gmt-tracking-wide);
+}
+
+.gmt-ask-response h2 {
+  color: var(--gmt-cyan);
+  font-size: var(--gmt-text-lg);
+}
+
+.gmt-ask-response h3 {
+  color: var(--gmt-cyan-bright);
+  font-size: var(--gmt-text-md);
+}
+
+.gmt-ask-response a {
+  color: var(--gmt-cyan);
+  text-decoration: none;
+  border-bottom: 1px solid var(--gmt-teal);
+  transition:
+    color var(--gmt-duration-fast) var(--gmt-easing),
+    border-color var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-ask-response a:hover {
+  color: var(--gmt-cyan-bright);
+  border-bottom-color: var(--gmt-cyan);
+}
+
+.gmt-ask-response :not(pre) > code {
+  background: var(--gmt-code-bg);
+  color: var(--gmt-cyan-bright);
+  border: 1px solid var(--gmt-code-border);
+  border-radius: var(--gmt-radius-sm);
+  padding: 0.15em 0.4em;
+  font-size: 0.9em;
+}
+
+.gmt-ask-response pre {
+  background: var(--gmt-code-surface);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+  padding: var(--gmt-space-4);
+  overflow-x: auto;
+}
+
+.gmt-ask-response pre code {
+  background: transparent;
+  color: var(--gmt-ice);
+  border: none;
+  padding: 0;
+}
+
+.gmt-ask-response blockquote {
+  margin: var(--gmt-space-4) 0;
+  padding: var(--gmt-space-2) var(--gmt-space-4);
+  border-left: 2px solid var(--gmt-border-strong);
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-ask-response :is(ul, ol) {
+  padding-left: var(--gmt-space-6);
+  margin: var(--gmt-space-2) 0;
+}
+
+.gmt-ask-response li {
+  margin-bottom: var(--gmt-space-1);
+}
+
+/* Streamdown wraps every table in `[data-streamdown="table-wrapper"]` — the
+   one `data-streamdown` attribute confirmed to exist (2026-09-09; everything
+   else the original spec assumed does not, see the header comment above).
+   Wide tables scroll inside this wrapper instead of overflowing the panel. */
+.gmt-ask-response [data-streamdown="table-wrapper"] {
+  overflow-x: auto;
+}
+
+.gmt-ask-response table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+}
+
+.gmt-ask-response th {
+  color: var(--gmt-cyan);
+  font-family: var(--gmt-font-display);
+  font-weight: 600;
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wide);
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border-bottom: 1px solid var(--gmt-hairline);
+  text-align: left;
+}
+
+.gmt-ask-response td {
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border-bottom: 1px solid var(--gmt-hairline);
+  color: var(--gmt-ice);
+}
+
+.gmt-ask-response tr:last-child td {
+  border-bottom: none;
+}
