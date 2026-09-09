@@ -69,6 +69,9 @@ export const GMT_MODULES: Record<
   "utc/parse": () => import("@northguild/gmt/utc/parse"),
   "utc/validate": () => import("@northguild/gmt/utc/validate"),
 
+  // --- span ---
+  "span/calculate": () => import("@northguild/gmt/span/calculate"),
+
   // --- regex ---
   regex: () => import("@northguild/gmt/regex"),
 };

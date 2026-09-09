@@ -1,16 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
-import { hasCalendarAnnotation } from "../../internal";
-
-/**
- * A leap second in every shape `Temporal.Instant.from` accepts: `T`, `t` or a space before
- * the time, and extended (`23:59:60`) or basic (`235960`) digits.
- *
- * `plain/validate`'s shared `isLeapSecond` matches only an uppercase `T` with extended-format
- * digits — all that `utc/`'s stricter `<date>T<time>Z` regex gate can ever hand it. This
- * namespace parses the full instant grammar, so it needs the wider pattern; without it
- * `"2016-12-31 23:59:60Z"` would slip through and Temporal would silently clamp it to `:59`.
- */
-const instantLeapSecond = /[Tt ]\d{2}:?\d{2}:?60(?:[.,]\d+)?(?:[-+Zz[])/;
+import { parseInstantNanoseconds } from "../../internal";
 
 /**
  * Convert an ISO 8601 instant string to nanoseconds since the Unix epoch.
@@ -27,7 +15,8 @@ const instantLeapSecond = /[Tt ]\d{2}:?\d{2}:?60(?:[.,]\d+)?(?:[-+Zz[])/;
  * - Returns `bigint`, not `number`: nanoseconds since the epoch passed
  *   `Number.MAX_SAFE_INTEGER` in April 1970, so a `number` cannot hold them.
  * - Returns `0n` on invalid input. `0n` is also the epoch itself — validate the string
- *   first (e.g. `isValidUtc`) when the two must be told apart.
+ *   first (e.g. `isValidUtc`) when the two must be told apart. `spanNs` measures between
+ *   two of these strings without that ambiguity, since it returns `null` instead.
  *
  * @param isoString ISO 8601 instant string (e.g. "2024-03-10T12:00:00.123456789Z")
  * @returns nanoseconds since the Unix epoch as a bigint, or 0n on invalid input
@@ -40,17 +29,5 @@ const instantLeapSecond = /[Tt ]\d{2}:?\d{2}:?60(?:[.,]\d+)?(?:[-+Zz[])/;
  * @example toNanoseconds("invalid") // 0n
  */
 export function toNanoseconds(isoString: string): bigint {
-  if (typeof isoString !== "string") {
-    return 0n;
-  }
-
-  if (instantLeapSecond.test(isoString) || hasCalendarAnnotation(isoString)) {
-    return 0n;
-  }
-
-  try {
-    return Temporal.Instant.from(isoString).epochNanoseconds;
-  } catch {
-    return 0n;
-  }
+  return parseInstantNanoseconds(isoString) ?? 0n;
 }

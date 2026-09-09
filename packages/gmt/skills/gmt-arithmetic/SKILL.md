@@ -2,9 +2,10 @@
 name: gmt-arithmetic
 description: >
   Date arithmetic — add/subtract duration objects, diff values, clamp/closest,
-  ISO 8601 duration strings, and interval range math (contain, overlap, union,
-  split, count boundaries). Reads the installed package README.md and source
-  JSDoc for API details; this skill is a routing pointer, not an API dump.
+  ISO 8601 duration strings, elapsed-versus-wall-clock spans, and interval range
+  math (contain, overlap, union, split, count boundaries). Reads the installed
+  package README.md and source JSDoc for API details; this skill is a routing
+  pointer, not an API dump.
 sources:
   - 'northguild/gmt:README.md'
   - 'northguild/gmt:packages/gmt/src/plain/calculate/index.ts'
@@ -13,6 +14,7 @@ sources:
   - 'northguild/gmt:packages/gmt/src/zoned/interval/index.ts'
   - 'northguild/gmt:packages/gmt/src/unix/interval/index.ts'
   - 'northguild/gmt:packages/gmt/src/utc/interval/index.ts'
+  - 'northguild/gmt:packages/gmt/src/span/calculate/index.ts'
 metadata:
   type: core
   library: '@northguild/gmt'
@@ -34,6 +36,8 @@ and full interval set operations.
   candidate.
 - The user needs range math: "do these overlap?", "merge these", "split this
   into n parts".
+- The user is measuring elapsed time — a profile, a trace span, a sensor
+  interval — and wants milliseconds or nanoseconds rather than a `Duration`.
 
 ## Core rules
 
@@ -45,7 +49,16 @@ and full interval set operations.
 3. **Calendar units need `relativeTo`.** `durationAs`, `normalizeDuration`, and
    `compareDurations` return `null`/`""` for year/month/week arithmetic without
    a `relativeTo` anchor — a month is not a fixed length.
-4. **Read the README.** This skill is a routing pointer. For full option shapes,
+4. **Elapsed time and calendar distance are different questions.** `spanMs` /
+   `spanNs` measure what actually elapsed; `spanWallClock(start, end, "days" |
+   "hours")` measures what the clock face did. Across a DST transition they
+   differ by the size of the shift — a wall-clock day is 23, 24.5 or 25 real
+   hours. Reaching for the wrong one is the most common span bug there is.
+5. **Span sentinels are `NaN` and `null`, not `0`.** `0` and `0n` are valid
+   spans, so `spanMs` returns `NaN` on invalid input (and past
+   `Number.MAX_SAFE_INTEGER` milliseconds — use `spanNs` there), while `spanNs`
+   and `spanWallClock` return `null`.
+6. **Read the README.** This skill is a routing pointer. For full option shapes,
    locale matrices, and code examples, read the installed package's `README.md`
    and the source JSDoc of the function you intend to call.
 
@@ -55,6 +68,7 @@ and full interval set operations.
   `addBusinessDays`, `subtractBusinessDays`, `cycleDate`, `setDate`
 - **Diffs**: `diffDate`, `diffDateTime`, `diffTime` (+ `diffZoned`,
   `diffUnix`, `diffUtc` in their namespaces)
+- **Spans (raw numbers)**: `spanMs`, `spanNs`, `spanWallClock`
 - **Bounds**: `clampDate`, `closestDateTo`, `startOfDate`, `endOfDate`,
   `startOfQuarterForDate`, `getLocaleStartOfWeek`
 - **Durations (ISO 8601)**: `isValidDuration`, `parseDuration`, `addDuration`,
@@ -76,6 +90,7 @@ and full interval set operations.
 - `unix/*` — epoch seconds/milliseconds
 - `utc/*` — UTC instants (`"2024-03-15T14:30:45Z"`)
 - `duration/*` — ISO 8601 duration strings
+- `span/*` — elapsed and wall-clock spans as raw numbers
 
 ## References
 

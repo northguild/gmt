@@ -150,7 +150,7 @@ Specific, sourced claims — not a repeat of the metrics above.
 
 ## Package Layout
 
-The package exports eight top-level namespaces:
+The package exports nine top-level namespaces:
 
 ```typescript
 import {
@@ -158,6 +158,7 @@ import {
   duration,
   plain,
   precision,
+  span,
   zoned,
   unix,
   utc,
@@ -169,6 +170,7 @@ import {
 - `duration`: ISO 8601 duration string parsing, validation, and arithmetic
 - `plain`: timezone-free helpers
 - `precision`: nanosecond (`bigint`) instants, their JSON bridge, and storage truncation
+- `span`: elapsed and wall-clock durations between two timestamps, as raw numbers
 - `zoned`: timezone-aware helpers
 - `unix`: Unix epoch (seconds or milliseconds) helpers
 - `utc`: UTC instant helpers
@@ -1667,6 +1669,62 @@ invalid input, and accepts only values inside the range `Temporal.Instant` can r
 first when the two must be told apart. Leap-second-aware time scales (TAI, GPS) are not
 part of this namespace — these are plain instant conversions.
 
+### Spans
+
+`diffZoned` measures in calendar units and returns a `Duration`. Profiling, tracing and
+telemetry want a raw number, and the `span/` namespace gives one:
+
+```typescript
+import { spanMs, spanNs, spanWallClock } from "@northguild/gmt";
+
+spanMs("2024-03-10T12:00:00Z", "2024-03-10T12:00:01Z");
+// 1000
+
+spanMs("2024-03-10T12:00:00Z", "2024-03-10T12:00:00.123456789Z");
+// 123.456789 — fractional, like performance.now()
+
+spanNs("2024-03-10T12:00:00.123456789Z", "2024-03-10T12:00:00.123456790Z");
+// 1n
+```
+
+Both are signed — `spanMs(b, a)` is exactly `-spanMs(a, b)` — and both measure **exact
+elapsed time**. That is not the same question as calendar distance, and conflating the two
+is the most common span bug there is. A wall-clock day containing a DST transition is 23 or
+25 hours long (24.5 in `Australia/Lord_Howe`), so:
+
+```typescript
+const start = "2024-03-09T12:00:00-05:00[America/New_York]";
+const end = "2024-03-10T12:00:00-04:00[America/New_York]";
+
+spanMs(start, end);
+// 82800000 — 23 hours actually elapsed
+
+spanWallClock(start, end, "hours");
+// 24 — the clock face advanced a full day
+
+spanWallClock(start, end, "days");
+// 1
+```
+
+`spanWallClock` reads each endpoint's own local wall clock — straight off the string, never
+via an instant, so DST disambiguation cannot distort it and a local time that never occurred
+is measured as written. The two endpoints need not share a zone: a flight leaving New York at 23:00 and landing in Berlin at 11:00 the next local day
+is 12 wall-clock hours and 7 elapsed hours. It truncates toward zero, and it is not a count
+of midnights crossed.
+
+Three limits, all deliberate:
+
+- **`0` and `0n` are valid spans**, so invalid input returns `NaN` from `spanMs`, and `null`
+  from `spanNs` and `spanWallClock`.
+- **`spanMs` returns `NaN` past `Number.MAX_SAFE_INTEGER` milliseconds** (±285,000 years,
+  which two instants at opposite ends of `Temporal.Instant`'s range exceed). A
+  sub-millisecond fraction counts toward that ceiling, so what comes back is always a safe
+  integer or below. Use `spanNs` there; its result is a duration, not an instant, and can be
+  twice the epoch-nanosecond range.
+- **Leap seconds are not counted.** UTC repeats a second rather than numbering a 61st one,
+  so a span across one is a second short of the physical elapsed time; against a smeared
+  clock (Google, AWS, Meta) the error is up to a second spread over the smear window.
+
 ## API Surface
 
 For the complete API listing, see the namespace documentation on GitHub:
@@ -1676,6 +1734,7 @@ For the complete API listing, see the namespace documentation on GitHub:
 - [Zoned API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/zoned) — IANA timezone-aware operations
 - [Unix API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/unix) — Unix epoch utilities
 - [Precision API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/precision) — nanosecond instants, JSON transport, storage truncation
+- [Span API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/span) — elapsed and wall-clock durations as raw numbers
 - [UTC API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/utc) — UTC instant utilities
 - [Regex API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/regex) — composable regex patterns
 

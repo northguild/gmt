@@ -2740,6 +2740,46 @@
     "sourcePath": "packages/gmt/src/regex/utc-date-time.ts"
   },
   {
+    "url": "/reference/span/calculate/spanMs",
+    "name": "spanMs",
+    "namespace": "span",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "spanMs(start: string, end: string): number",
+    "description": "Return the exact elapsed milliseconds between two ISO 8601 instant strings.",
+    "sourcePath": "packages/gmt/src/span/calculate/spanMs.ts"
+  },
+  {
+    "url": "/reference/span/calculate/spanNs",
+    "name": "spanNs",
+    "namespace": "span",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "spanNs(start: string, end: string): bigint",
+    "description": "Return the exact elapsed nanoseconds between two ISO 8601 instant strings.",
+    "sourcePath": "packages/gmt/src/span/calculate/spanNs.ts"
+  },
+  {
+    "url": "/reference/span/calculate/WallClockSpanUnit",
+    "name": "WallClockSpanUnit",
+    "namespace": "span",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The WallClockSpanUnit type.",
+    "sourcePath": "packages/gmt/src/span/calculate/spanWallClock.ts"
+  },
+  {
+    "url": "/reference/span/calculate/spanWallClock",
+    "name": "spanWallClock",
+    "namespace": "span",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "spanWallClock(start: string, end: string, unit: WallClockSpanUnit): number",
+    "description": "Return the wall-clock distance between two zoned datetime strings — calendar time, not",
+    "sourcePath": "packages/gmt/src/span/calculate/spanWallClock.ts"
+  },
+  {
     "url": "/reference/types/calendar-options/CalendarOptions",
     "name": "CalendarOptions",
     "namespace": "types",

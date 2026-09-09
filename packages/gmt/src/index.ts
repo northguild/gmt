@@ -3,6 +3,7 @@ export * from "./duration";
 export * from "./plain";
 export * from "./precision";
 export * from "./regex";
+export * from "./span";
 export * from "./types";
 export * from "./unix";
 export * from "./utc";
