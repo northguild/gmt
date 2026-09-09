@@ -15,12 +15,14 @@ const libraryMetadata: Record<
   { tests: number; locales: number; timezones: number; nodeVersions: number }
 > = {
   "@northguild/gmt": {
-    tests: 16701,
+    tests: 17338,
     locales: 17,
     timezones: 10,
     nodeVersions: 2,
   },
-  "@intl/date": { tests: 20190, locales: 0, timezones: 0, nodeVersions: 1 },
+  // 386 is @intl/date's own test count; 20,190 is the four competitors' combined
+  // execution total and was never this library's figure.
+  "@intl/date": { tests: 386, locales: 0, timezones: 0, nodeVersions: 1 },
   Luxon: { tests: 4888, locales: 0, timezones: 0, nodeVersions: 1 },
   "date-fns": { tests: 3213, locales: 0, timezones: 0, nodeVersions: 1 },
   "Moment.js": { tests: 11703, locales: 0, timezones: 0, nodeVersions: 1 },
@@ -41,7 +43,7 @@ function addTooltipsToBars(svg: string): string {
       const meta = Object.values(libraryMetadata)[index];
       if (!meta) return;
 
-      const executions = [334020, 386, 4888, 3213, 11703][index];
+      const executions = [346760, 386, 4888, 3213, 11703][index];
       const library = Object.keys(libraryMetadata)[index];
 
       const title = `${library}: ${executions.toLocaleString()} executions (${meta.tests.toLocaleString()} tests${meta.locales > 0 ? ` × ${meta.locales} locales` : ""}${meta.timezones > 0 ? ` × ${meta.timezones} timezones` : ""} × ${meta.nodeVersions} Node)`;
@@ -59,7 +61,7 @@ function addTooltipsToBars(svg: string): string {
 
 export function renderTestExecutionChart(): string {
   const data = [
-    { library: "@northguild/gmt", executions: 334020, highlight: true },
+    { library: "@northguild/gmt", executions: 346760, highlight: true },
     { library: "@intl/date", executions: 386, highlight: false },
     { library: "Luxon", executions: 4888, highlight: false },
     { library: "date-fns", executions: 3213, highlight: false },
@@ -114,11 +116,13 @@ export function renderTestExecutionChart(): string {
 
 export function renderNamespaceChart(): string {
   const data = [
-    { namespace: "plain", count: 223 },
-    { namespace: "zoned", count: 119 },
-    { namespace: "unix", count: 75 },
-    { namespace: "utc", count: 75 },
+    { namespace: "plain", count: 225 },
+    { namespace: "zoned", count: 122 },
+    { namespace: "unix", count: 78 },
+    { namespace: "utc", count: 76 },
     { namespace: "duration", count: 12 },
+    { namespace: "precision", count: 5 },
+    { namespace: "span", count: 3 },
     { namespace: "regex", count: 22 },
   ];
 

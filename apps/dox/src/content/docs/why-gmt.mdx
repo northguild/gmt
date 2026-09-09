@@ -31,7 +31,7 @@ versions on every PR.
 <ChartContainer
   svg={testExecutionSvg}
   title="CI executions per library"
-  caption="GMT: 334,020 executions (16,701 tests × 17 locales × 10 timezones × 2 Node). Competitors: 386–11,703 combined."
+  caption="GMT: 346,760 executions (17,338 tests × 10 timezones × 2 Node). Competitors: 386–11,703 combined."
 />
 
 That is not a marginal difference. It is three orders of magnitude more
@@ -43,14 +43,15 @@ execution against a surface area that is itself larger.
 
 ## API surface by namespace
 
-GMT exposes 504 public functions across six namespaces — `plain`, `zoned`,
-`unix`, `utc`, `duration`, and `regex` — each generated from the same
-TypeScript source and verified by the same test suite.
+GMT exposes 521 public functions across seven namespaces — `plain`, `zoned`,
+`unix`, `utc`, `duration`, `precision`, and `span` — plus 22 exported regex
+patterns in `regex`, each generated from the same TypeScript source and verified
+by the same test suite.
 
 <ChartContainer
   svg={namespaceDistributionSvg}
   title="Public functions by namespace"
-  caption="504 functions total. Every namespace shares the same implementation contract: ISO 8601 strings in, typed values out, no Date object."
+  caption="521 functions total, plus 22 regex patterns. Every namespace shares the same implementation contract: ISO 8601 strings in, typed values out, no Date object."
 />
 
 </GridSection>
@@ -88,11 +89,11 @@ GMT does not test every locale — there are hundreds, and most differ only in f
 
 | Dimension             | GMT                            | Legacy libraries    |
 | --------------------- | ------------------------------ | ------------------- |
-| **CI executions**     | 334,020                        | 386 – 11,703        |
+| **CI executions**     | 346,760                        | 386 – 11,703        |
 | **Locales tested**    | 17 (representative matrix)     | None                |
 | **Timezones tested**  | 10 (UTC−11 to UTC+14)          | None / partial      |
 | **Node versions**     | 22, 24                         | Single LTS          |
-| **Public functions**  | 504                            | 75 – 223            |
+| **Public functions**  | 521                            | 75 – 223            |
 | **Sentinel contract** | `""` / `null` / `false` / `[]` | Throws `RangeError` |
 
 The table is the point. GMT does not add a few convenience methods to an
