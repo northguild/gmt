@@ -6,8 +6,8 @@ This file is a progressive-disclosure entry point. Read what you need:
   table, risks, and the verified standards list. **The entry file.**
 - [painpoints.md](painpoints.md) — Researched domain evidence per realm, with primary-source
   citations. **Read this before adding or changing any realm function.**
-- [tracker.md](tracker.md) — The 53 stories in build order, dependency graph, and the
-  Definition of Done binding every story.
+- [tracker.md](tracker.md) — The 53 stories in build order, the `Blocked by` column, and
+  the Definition of Done binding every story.
 - [issues/](issues/) — Full specs, one file per story, `CORE-1` through `SPA-53`.
 
 ## Orientation
@@ -33,8 +33,10 @@ timestamp extracted from an identifier that contains none.
 
 ## Picking up a story?
 
-Read [overview.md](overview.md) first, then the realm's section in
-[painpoints.md](painpoints.md), then the issue file. If the issue has a `## Corrections`
+Check the story's `Blocked by` cell in [tracker.md](tracker.md) first. An empty cell means
+it is free to start; a parenthesised entry means you also build that shared primitive. Or run
+`pnpm deps:ready` to list every startable story at once. Then read [overview.md](overview.md),
+the realm's section in [painpoints.md](painpoints.md), and the issue file. If the issue has a `## Corrections`
 section, read it — it records an API that was removed and why, and reintroducing it without a
 primary source is a regression.
 

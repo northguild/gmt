@@ -435,6 +435,56 @@ describe("synthesizeTemplate", () => {
 // ---------------------------------------------------------------------------
 
 describe("buildPlaygroundFields", () => {
+  it("maps bigint params from their `n`-suffixed example literals", () => {
+    // Regression: `NUMERIC_ARG` rejected `1710072000123456789n`, which made
+    // fieldForParam return null and dropped the whole precision namespace's
+    // playgrounds. Seeds carry the digits alone; formatArg re-adds the `n`.
+    const res = BR.buildPlaygroundFields(
+      {
+        module: "precision/calculate",
+        fn: "truncateNanoseconds",
+        returnType: "bigint",
+        params: [
+          { name: "nanoseconds", type: "bigint", value: "1710072000123456789" },
+          {
+            name: "unit",
+            type: "enum",
+            value: "us",
+            options: ["ms", "us", "ns"],
+          },
+        ],
+      },
+      'truncateNanoseconds(1710072000123456789n, "us")',
+    );
+    expect(res).toEqual({
+      fields: [
+        {
+          name: "nanoseconds",
+          kind: "bigint",
+          seed: "1710072000123456789",
+        },
+        { name: "unit", kind: "enum", seed: "us", choices: ["ms", "us", "ns"] },
+      ],
+    });
+  });
+
+  it("accepts a negative bigint literal and a bare integer for a bigint param", () => {
+    const spec = {
+      module: "precision/convert",
+      fn: "fromNanoseconds",
+      returnType: "string" as const,
+      params: [{ name: "nanoseconds", type: "bigint" as const, value: "0" }],
+    };
+    expect(
+      BR.buildPlaygroundFields(spec, "fromNanoseconds(-1000000000n)"),
+    ).toEqual({
+      fields: [{ name: "nanoseconds", kind: "bigint", seed: "-1000000000" }],
+    });
+    expect(BR.buildPlaygroundFields(spec, "fromNanoseconds(0)")).toEqual({
+      fields: [{ name: "nanoseconds", kind: "bigint", seed: "0" }],
+    });
+  });
+
   it("maps clean positional params to fields", () => {
     const res = BR.buildPlaygroundFields(
       {

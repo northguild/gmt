@@ -230,6 +230,8 @@ skills:
       - Use with routers and query params
       - Use with table libraries for sort keys
       - Use with state management
+      - Serialize nanosecond timestamps across a JSON boundary
+      - Truncate nanoseconds to a storage engine's precision
       - Choose ESLint config
       - Choose Biome config
       - Choose Oxlint config

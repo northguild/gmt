@@ -16,11 +16,17 @@ import {
   splitTopLevel,
 } from "../../src/lib/playground-parsers";
 
-export type ReturnTypeKind = "string" | "number" | "boolean" | "array";
+export type ReturnTypeKind =
+  | "string"
+  | "number"
+  | "bigint"
+  | "boolean"
+  | "array";
 
 export type ParamType =
   | "string"
   | "number"
+  | "bigint"
   | "boolean"
   | "enum"
   | "units"
@@ -52,7 +58,7 @@ export interface PlaygroundSpec {
   fn: string;
   params: ParamSpec[];
   options?: ParamSpec[];
-  returnType: "string" | "number" | "boolean" | "array";
+  returnType: ReturnTypeKind;
   allowEmptyArray?: boolean;
 }
 
@@ -351,6 +357,7 @@ export function classifyType(
     };
   }
 
+  if (type.flags & ts.TypeFlags.BigIntLike) return { type: "bigint" };
   if (type.flags & ts.TypeFlags.NumberLike) return { type: "number" };
   if (type.flags & ts.TypeFlags.BooleanLike) return { type: "boolean" };
 
@@ -447,7 +454,8 @@ export function classifyType(
 /** Classify a type from its string form (used for rest-tuple inner types). */
 export function classifyTypeFromString(s: string): ClassifiedType {
   const t = s.trim();
-  if (/^(number|Number|bigint)$/.test(t)) return { type: "number" };
+  if (/^bigint$/.test(t)) return { type: "bigint" };
+  if (/^(number|Number)$/.test(t)) return { type: "number" };
   if (/^boolean$/.test(t)) return { type: "boolean" };
   if (t.endsWith("[]")) {
     const elem = t.slice(0, -2).trim();
@@ -485,6 +493,7 @@ export function classifyTypeFromString(s: string): ClassifiedType {
 export function classifyReturnTypeFromString(rs: string): ReturnTypeKind {
   if (rs.endsWith("[]") || rs.includes("[]")) return "array";
   if (rs.includes("boolean")) return "boolean";
+  if (rs.includes("bigint")) return "bigint";
   if (rs.includes("number")) return "number";
   return "string";
 }
@@ -520,7 +529,7 @@ export function resolveRestParam(
 
 /** Sensible JS-default seed value for a param type. */
 export function defaultValue(kind: ParamType): string {
-  if (kind === "number") return "0";
+  if (kind === "number" || kind === "bigint") return "0";
   if (kind === "boolean") return "false";
   return "";
 }

@@ -59,14 +59,15 @@ If the implementation is non-trivial (multiple edge cases, locale-aware, timezon
 
 ## STEP 4: Story Closure
 
-Adopt the `finalizer` role. Read `context/roadmap/tracker.md` to identify the current story and its `Publish` status. Then:
+Adopt the `finalizer` role. Read `context/domination/tracker.md` to identify the current story. Then:
 
 1. If public API surface changed, update the TanStack Intent agent skills in `packages/gmt/skills/`.
 2. Write a `.changeset/*.md` entry for the story.
 3. Update `packages/gmt/README.md` and relevant namespace READMEs.
 4. Generate a conventional commit message (use available commit-message generation tool).
 5. Generate a PR description (use available PR description generation tool).
-6. Stop there. Versioning and publishing are both `release.yml`'s job — never run `changeset version`, `changeset publish`, `npm publish`, or `gh release create`. See `PUBLISHING.md`.
+6. Flip the story's `Status` to `Done` in `context/domination/tracker.md` and run `pnpm deps:sync`. That is what clears it from every other story's `Blocked by` cell; skip it and the tracker keeps showing work as blocked that is not.
+7. Stop there. Versioning and publishing are both `release.yml`'s job — never run `changeset version`, `changeset publish`, `npm publish`, or `gh release create`. See `PUBLISHING.md`.
 
 ## Small-story optimization
 

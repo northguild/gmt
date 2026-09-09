@@ -55,6 +55,7 @@ export function parseCallArgs(call: string): string[] {
 export type PlaygroundArgKind =
   | "string"
   | "number"
+  | "bigint"
   | "boolean"
   | "enum"
   | "units"
@@ -96,6 +97,14 @@ export function formatArg(f: CallField): string {
   switch (f.kind) {
     case "number":
       return v === "" ? "0" : v;
+    case "bigint": {
+      // The control is free text (a `number` input cannot hold a nanosecond
+      // timestamp without losing precision to the double round-trip), so
+      // anything that is not an integer falls back to `0n` rather than
+      // producing an un-parseable call line.
+      const digits = v.replace(/n$/, "");
+      return /^-?\d+$/.test(digits) ? `${digits}n` : "0n";
+    }
     case "boolean":
       return v === "true" ? "true" : "false";
     case "units":

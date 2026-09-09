@@ -18,6 +18,7 @@
 export type PlaygroundFieldKind =
   | "string"
   | "number"
+  | "bigint"
   | "boolean"
   | "enum"
   | "units"
@@ -29,7 +30,10 @@ export interface PlaygroundField {
   name: string;
   /** Which control to render. */
   kind: PlaygroundFieldKind;
-  /** Initial value (the amount, for `units`). Unused by `list` / `intervals`. */
+  /**
+   * Initial value (the amount, for `units`). Unused by `list` / `intervals`.
+   * For `bigint`, the digits alone — the `n` suffix is re-appended on assembly.
+   */
   seed: string;
   /** `x?:` in the signature — the control is cleared and the arg dropped when empty. */
   optional?: boolean;
@@ -51,7 +55,7 @@ export interface LivePlaygroundTemplate {
   module: string;
   fn: string;
   template: string;
-  returnType: "string" | "number" | "boolean" | "array";
+  returnType: "string" | "number" | "bigint" | "boolean" | "array";
   allowEmptyArray?: boolean;
   /**
    * The form-control schema `<PlaygroundForm>` renders from. Present whenever the

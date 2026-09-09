@@ -23,6 +23,12 @@ export {
   parseCalendarZonedValue,
 } from "./calendarZonedString";
 export { cycleFieldValue } from "./cycleFieldValue";
+export {
+  isValidEpochNanoseconds,
+  MAX_EPOCH_NANOSECOND_DIGITS,
+  MAX_EPOCH_NANOSECONDS,
+  MIN_EPOCH_NANOSECONDS,
+} from "./epochNanoseconds";
 export { dateCycleFieldBounds } from "./dateCycleFieldBounds";
 export { timeCycleFieldBounds } from "./timeCycleFieldBounds";
 export { durationUntilString } from "./durationUntilString";

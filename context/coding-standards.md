@@ -61,7 +61,7 @@ export function addDays(dateStr: string, days: number): string {
 2. Extracted fields are **always** handed to `Temporal.*.from(fields, { overflow: "reject" })` for final construction and validation — a regex match only proves shape, never validity (e.g. `"02/31/2024"` matches `"MM/dd/yyyy"` but is not a real date).
 3. The try-catch and sentinel-return rules above are unchanged.
 
-See `context/roadmap/issues/J.md` Decision 4 for the full rationale. This prohibition stands for every other function in the library.
+See `context/roadmap/issues/J.md` Decision 4 for the full rationale — archived on parity in `9e3b22d`, so read it with `git show 9e3b22d^:context/roadmap/issues/J.md`. This prohibition stands for every other function in the library.
 
 ### Scoped exception: fixed non-ISO grammars in `parseRfc2822`/`parseHttp` (J13)
 

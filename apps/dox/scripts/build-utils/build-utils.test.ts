@@ -117,10 +117,14 @@ describe("classifyTypeFromString", () => {
   it("treats a single string literal as a plain string (not a union)", () => {
     expect(classifyTypeFromString(`"monday"`)).toEqual({ type: "string" });
   });
-  it("classifies number / bigint", () => {
+  it("classifies number", () => {
     expect(classifyTypeFromString("number")).toEqual({ type: "number" });
     expect(classifyTypeFromString("Number")).toEqual({ type: "number" });
-    expect(classifyTypeFromString("bigint")).toEqual({ type: "number" });
+  });
+  it("classifies bigint separately from number", () => {
+    // A bigint arg has to be emitted as `0n`; a `number` field would write a
+    // bare `0` and every precision playground would return its sentinel.
+    expect(classifyTypeFromString("bigint")).toEqual({ type: "bigint" });
   });
   it("classifies boolean", () => {
     expect(classifyTypeFromString("boolean")).toEqual({ type: "boolean" });
@@ -342,6 +346,8 @@ describe("classifyReturnTypeFromString", () => {
     expect(classifyReturnTypeFromString("boolean")).toBe("boolean");
     expect(classifyReturnTypeFromString("number | null")).toBe("number");
     expect(classifyReturnTypeFromString("string | null")).toBe("string");
+    expect(classifyReturnTypeFromString("bigint")).toBe("bigint");
+    expect(classifyReturnTypeFromString("bigint[]")).toBe("array");
   });
 });
 

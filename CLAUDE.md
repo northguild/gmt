@@ -14,10 +14,8 @@ Scoped documentation — load only what the task requires:
 | [context/jsdoc-standards.md](./context/jsdoc-standards.md)                                       | Adding or updating JSDoc                                                |
 | [context/code-review-checklist.md](./context/code-review-checklist.md)                           | Reviewing a PR                                                          |
 | [context/linting-packages.md](./context/linting-packages.md)                                     | Working on gmt-eslint, gmt-oxlint, or gmt-biome                         |
-| [context/roadmap/index.md](./context/roadmap/index.md)                                           | Picking up or reviewing roadmap work                                    |
-| [context/roadmap/index.md](./context/roadmap/index.md)                                           | Roadmap entry point (redirects to progressive-disclosure directory)     |
 | [context/dox/index.md](./context/dox/index.md)                                                   | Working on the `apps/dox` documentation site (the Dox epic)            |
-| [context/domination/index.md](./context/domination/index.md)                                     | Working on the multi-realm temporal epic (the Domination epic) |
+| [context/domination/index.md](./context/domination/index.md)                                     | Picking up any epic story — check `Blocked by` in its tracker first |
 
 ## Available Skills
 

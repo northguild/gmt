@@ -20,7 +20,12 @@ precedent from `context/roadmap/`.
 1. `context/dox/index.md` — the map. Always.
 2. `context/dox/overview.md` — architecture, decisions, hosting, prior-art verdicts, tier
    table. Always.
-3. `context/dox/tracker.md` — sub-story → issue number, build order, status. Always.
+3. `context/dox/tracker.md` — sub-story → issue number, build order, `Blocked by`,
+   status. Always. **Check the story's `Blocked by` cell before planning it.** A
+   non-empty cell means something must land first — say so and propose a different story
+   rather than planning around the gap. `pnpm deps:ready` lists what is startable.
+   The cell is issue-level, so it can look blocked when only a sibling sub-story is; the
+   `Depends on …` line in the sub-story's own description block is the precise answer.
 4. `context/dox/story-groups.md` — one paragraph per tier, names the stories. Always.
 5. `context/dox/issues/DOX-<letter>.md` — the full GitHub-issue-ready spec for the story.
 6. `context/dox/reference/visual-design.md` — only on Tier 3 stories (DOX-A5, DOX-D1,
@@ -112,6 +117,15 @@ a UI nobody can read for ten minutes.
 6. **Close out.** Update the `Status` column in `context/dox/tracker.md`. If the story
    surfaced a decision the epic said to "record" (e.g. `DOX-A3a`'s namespace-README
    decision), write it into the issue file.
+
+   **Then run `pnpm deps:sync`.** Flipping `Status` is what removes the issue from every
+   other row's `Blocked by` cell, and `sync` is what applies it. Skip it and the tracker
+   keeps showing work as blocked that is not. `pnpm deps` fails the build on the drift.
+
+   If the story changed what it consumes, edit the `Depends on …` line in its description
+   block in `issues/<letter>.md` — that line is the source, the tracker column is derived
+   from it. A new sub-story gets one at the same time it gets an ID; omit it only when the
+   story genuinely depends on nothing.
 
 ## Reference packs
 

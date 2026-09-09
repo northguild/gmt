@@ -57,6 +57,15 @@
       "default": "./dist/plain/*/index.js"
     },
     "./plain/*/*": null,
+    "./precision": {
+      "types": "./dist/precision/index.d.ts",
+      "default": "./dist/precision/index.js"
+    },
+    "./precision/*": {
+      "types": "./dist/precision/*/index.d.ts",
+      "default": "./dist/precision/*/index.js"
+    },
+    "./precision/*/*": null,
     "./zoned": {
       "types": "./dist/zoned/index.d.ts",
       "default": "./dist/zoned/index.js"

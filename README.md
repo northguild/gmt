@@ -96,7 +96,7 @@ If you see a Date API in code, replace it with a GMT helper.
 | ----------------------------------- | ----------------------------- | ---------------------------------------------------- |
 | [`@northguild/gmt`](./packages/gmt) | `npm install @northguild/gmt` | Give Me Temporal — string-in/string-out date library |
 
-`@northguild/gmt` currently exports top-level `Temporal`, `duration`, `plain`, `zoned`, `unix`, `utc`, and `regex` namespaces, with direct subpath imports available under `@northguild/gmt/*`.
+`@northguild/gmt` currently exports top-level `Temporal`, `duration`, `plain`, `precision`, `zoned`, `unix`, `utc`, and `regex` namespaces, with direct subpath imports available under `@northguild/gmt/*`.
 
 ### How GMT is tested, vs. the libraries it targets
 

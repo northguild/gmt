@@ -1,3 +1,4 @@
+export { mockTemporalInstantFromEpochNanosecondsThrow } from "./mockTemporalInstantFromEpochNanosecondsThrow";
 export { mockTemporalInstantFromThrow } from "./mockTemporalInstantFromThrow";
 export { mockTemporalNowInstantThrow } from "./mockTemporalNowInstantThrow";
 export { mockTemporalNowPlainDateISOThrow } from "./mockTemporalNowPlainDateISOThrow";

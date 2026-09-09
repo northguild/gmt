@@ -33,6 +33,19 @@ describe("formatArg", () => {
     expect(formatArg({ name: "n", kind: "number", value: "42" })).toBe("42");
     expect(formatArg({ name: "n", kind: "number", value: "  " })).toBe("0");
   });
+  it("re-appends the `n` suffix for bigints", () => {
+    expect(
+      formatArg({ name: "ns", kind: "bigint", value: "1710072000123456789" }),
+    ).toBe("1710072000123456789n");
+    expect(
+      formatArg({ name: "ns", kind: "bigint", value: "-1000000000" }),
+    ).toBe("-1000000000n");
+    // Idempotent, and non-integer input degrades to a callable `0n` rather
+    // than an un-parseable call line.
+    expect(formatArg({ name: "ns", kind: "bigint", value: "42n" })).toBe("42n");
+    expect(formatArg({ name: "ns", kind: "bigint", value: "  " })).toBe("0n");
+    expect(formatArg({ name: "ns", kind: "bigint", value: "1.5" })).toBe("0n");
+  });
   it("normalises booleans", () => {
     expect(formatArg({ name: "b", kind: "boolean", value: "true" })).toBe(
       "true",
@@ -197,6 +210,10 @@ describe("evaluateArg", () => {
     expect(evaluateArg('"hello"')).toBe("hello");
     expect(evaluateArg("[1, 2, 3]")).toEqual([1, 2, 3]);
     expect(evaluateArg("{ days: 5 }")).toEqual({ days: 5 });
+    // BigInt literals must survive full-width — the whole point of the
+    // precision namespace is that these do not fit in a double.
+    expect(evaluateArg("1710072000123456789n")).toBe(1710072000123456789n);
+    expect(evaluateArg("-1000000000n")).toBe(-1000000000n);
   });
   it("returns empty string for blank and undefined for a syntax error", () => {
     expect(evaluateArg("   ")).toBe("");
@@ -212,6 +229,13 @@ describe("sentinelFor", () => {
     expect(sentinelFor("array", true)).toBe("");
     expect(sentinelFor("string", false)).toBe("");
   });
+  it("gives bigint a sentinel no bigint can equal", () => {
+    // `0n` is gmt's invalid-input signal but also a legitimate result
+    // (`toNanoseconds("1970-01-01T00:00:00Z")`), so it must never be flagged.
+    const sentinel = sentinelFor("bigint", false);
+    expect(sentinel).toBeNull();
+    expect((0n as unknown) === sentinel).toBe(false);
+  });
 });
 
 describe("renderResult", () => {
@@ -222,6 +246,8 @@ describe("renderResult", () => {
     expect(el.classList.contains("gmt-playground-live")).toBe(true);
     renderResult(el, [1, 2, 3], false);
     expect(el.textContent).toBe("[1,2,3]");
+    renderResult(el, 1710072000123456789n, false);
+    expect(el.textContent).toBe("1710072000123456789");
   });
 });
 

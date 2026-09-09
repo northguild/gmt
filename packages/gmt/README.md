@@ -150,13 +150,14 @@ Specific, sourced claims — not a repeat of the metrics above.
 
 ## Package Layout
 
-The package exports seven top-level namespaces:
+The package exports eight top-level namespaces:
 
 ```typescript
 import {
   Temporal,
   duration,
   plain,
+  precision,
   zoned,
   unix,
   utc,
@@ -167,6 +168,7 @@ import {
 - `Temporal`: re-exported from `@js-temporal/polyfill`
 - `duration`: ISO 8601 duration string parsing, validation, and arithmetic
 - `plain`: timezone-free helpers
+- `precision`: nanosecond (`bigint`) instants, their JSON bridge, and storage truncation
 - `zoned`: timezone-aware helpers
 - `unix`: Unix epoch (seconds or milliseconds) helpers
 - `utc`: UTC instant helpers
@@ -1604,6 +1606,67 @@ convertUnixToPlainDate(1710685845);
 // "2024-03-17"
 ```
 
+### Nanosecond precision
+
+`convertZonedToUnix` and friends return `number` milliseconds. Systems that record
+telemetry, trades or sensor readings need nanoseconds, and a `number` cannot hold them:
+integers are exact only to `2^53 − 1` ≈ 9.0 × 10^15, and nanoseconds since the epoch
+passed that in April 1970. (`Date.now() * 1e6` is not a nanosecond timestamp — it is a
+millisecond timestamp with three zeroes appended.) The `precision/` namespace works in
+`bigint`:
+
+```typescript
+import {
+  toNanoseconds,
+  fromNanoseconds,
+  formatNanoseconds,
+  parseNanoseconds,
+  truncateNanoseconds,
+} from "@northguild/gmt";
+
+toNanoseconds("2024-03-10T12:00:00.123456789Z");
+// 1710072000123456789n
+
+fromNanoseconds(1710072000123456789n);
+// "2024-03-10T12:00:00.123456789Z"
+
+fromNanoseconds(1710072000123456789n, "America/New_York");
+// "2024-03-10T08:00:00.123456789-04:00[America/New_York]"
+```
+
+`JSON.stringify` throws a `TypeError` on a `bigint`, so the value crosses a wire as a
+canonical decimal string:
+
+```typescript
+JSON.stringify({ observedAt: formatNanoseconds(1710072000123456789n) });
+// '{"observedAt":"1710072000123456789"}'
+
+parseNanoseconds("1710072000123456789");
+// 1710072000123456789n
+```
+
+Most storage engines cannot hold nanoseconds — PostgreSQL `timestamptz` and MySQL
+`DATETIME(6)` hold microseconds — so a naive write-then-read loses the last digits
+silently. Truncate to the target precision first, and the round-trip is exact:
+
+```typescript
+truncateNanoseconds(1710072000123456789n, "us");
+// 1710072000123456000n — safe to write to a microsecond column
+
+truncateNanoseconds(1710072000123456789n, "ms");
+// 1710072000123000000n
+```
+
+Truncation floors toward negative infinity, so pre-1970 values truncate the same way
+post-1970 ones do — `truncateNanoseconds(-1500n, "us")` is `-2000n`, not `-1000n`.
+Rounding toward zero would make the result jump direction either side of the epoch.
+
+Every `precision/` function returns a sentinel (`""` for strings, `0n` for bigints) on
+invalid input, and accepts only values inside the range `Temporal.Instant` can represent
+(±8_640_000_000_000_000_000_000n). `0n` is also the epoch itself, so validate the input
+first when the two must be told apart. Leap-second-aware time scales (TAI, GPS) are not
+part of this namespace — these are plain instant conversions.
+
 ## API Surface
 
 For the complete API listing, see the namespace documentation on GitHub:
@@ -1612,6 +1675,7 @@ For the complete API listing, see the namespace documentation on GitHub:
 - [Plain API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/plain) — timezone-free operations
 - [Zoned API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/zoned) — IANA timezone-aware operations
 - [Unix API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/unix) — Unix epoch utilities
+- [Precision API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/precision) — nanosecond instants, JSON transport, storage truncation
 - [UTC API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/utc) — UTC instant utilities
 - [Regex API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/regex) — composable regex patterns
 

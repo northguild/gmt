@@ -14,10 +14,8 @@ Read these before working in the repo. Each is scoped — load only what you nee
 | [context/jsdoc-standards.md](./context/jsdoc-standards.md)                                       | When adding or updating public function JSDoc                                                     |
 | [context/code-review-checklist.md](./context/code-review-checklist.md)                           | When reviewing a PR                                                                               |
 | [context/linting-packages.md](./context/linting-packages.md)                                     | When working on gmt-eslint, gmt-oxlint, or gmt-biome                                              |
-| [context/roadmap/index.md](./context/roadmap/index.md)                                           | When picking up or reviewing roadmap work                                                         |
-| [context/roadmap/index.md](./context/roadmap/index.md)                                           | Roadmap entry point (redirects to progressive-disclosure directory)                               |
 | [context/dox/index.md](./context/dox/index.md)                                                   | When working on the `apps/dox` documentation site (the Dox epic)                                 |
-| [context/domination/index.md](./context/domination/index.md)                                     | When working on the multi-realm temporal epic (the Domination epic) |
+| [context/domination/index.md](./context/domination/index.md)                                     | When picking up any epic story — check `Blocked by` in its tracker first |
 
 ## Core Rules (Quick Reference)
 
