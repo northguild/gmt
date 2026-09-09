@@ -25,7 +25,11 @@ const {
 } = Astro.props;
 ---
 
-<div class="gmt-globe" class:list={{ "gmt-globe-embedded": embedded }}>
+<div
+  class="gmt-globe"
+  class:list={{ "gmt-globe-embedded": embedded }}
+  data-tools-fullbleed={!embedded ? "" : undefined}
+>
   {!embedded && <h2 class="gmt-chart-title">{heading}</h2>}
   <div class="gmt-globe-layout">
     <div class="gmt-globe-frame">
@@ -43,6 +47,7 @@ const {
         <input
           type="search"
           id="globe-zone-search"
+          class="gmt-field"
           placeholder="e.g. Asia/Tokyo"
           autocomplete="off"
           data-globe-search

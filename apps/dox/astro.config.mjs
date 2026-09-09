@@ -126,7 +126,8 @@ export default defineConfig({
         "./src/styles/gmt-converter-bench.css", // Converter + format bench + regex tester widget
         "./src/styles/gmt-playground-form.css", // form-control playground (POC, chore/136)
         "./src/styles/gmt-charts.css", // chart theme variables + container styles
-        "./src/styles/gmt-map.css", // timezone map layout + clock panel
+        "./src/styles/gmt-clock-list.css", // shared .gmt-clock-* row recipe (map, globe)
+        "./src/styles/gmt-map.css", // timezone map layout
         "./src/styles/gmt-globe.css", // DOX-E1a interactive globe
         "./src/styles/gmt-scrubber.css", // DOX-E1b multi-zone time scrubber
         "./src/styles/gmt-light.css", // floating [data-theme="light"] overrides

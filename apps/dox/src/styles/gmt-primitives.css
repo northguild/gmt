@@ -314,3 +314,73 @@
   animation: gmt-focus-sonar-loop var(--gmt-motion-sonar-loop-duration)
     var(--gmt-easing) infinite;
 }
+
+/* ---- Field ----
+ * Bevelled HUD text input — was independently hand-rolled per widget (the
+ * globe's zone search, the combobox, the scrubber's inputs). Compose
+ * `.gmt-sonar-focus` too for the focus ping (below); this class alone only
+ * carries the resting surface. `appearance: none` per visual-design.md's
+ * "restyle native, never rebuild from divs" — this styles a real <input>. */
+.gmt-field {
+  appearance: none;
+  font: inherit;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  color: var(--gmt-ice);
+  background: var(--gmt-fill-subtle);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+}
+
+.gmt-field:focus-visible {
+  outline: none;
+  border-color: var(--gmt-cyan);
+}
+
+/* ---- Button ----
+ * Small bevelled button — was independently hand-rolled per widget (the
+ * globe's zoom controls, the scrubber's remove button). Sizing (width/height/
+ * padding) is left to the caller; this carries only the shared surface. */
+.gmt-button {
+  appearance: none;
+  font: inherit;
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  color: var(--gmt-ice);
+  background: var(--gmt-fill-subtle);
+  cursor: pointer;
+  transition:
+    color var(--gmt-duration-fast) var(--gmt-easing),
+    background var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-button:hover,
+.gmt-button:focus-visible {
+  color: var(--gmt-cyan);
+  background: var(--gmt-fill-strong);
+}
+
+.gmt-button:focus-visible {
+  outline: 2px solid var(--gmt-cyan);
+  outline-offset: 2px;
+}
+
+/* ---- Popover ----
+ * Tooltip / listbox / calendar-popup surface — was independently hand-rolled
+ * per widget (the globe's on-canvas tooltip, the zone combobox's result
+ * list). Layout (position/inset/transform) is left to the caller; this
+ * carries only the shared surface. */
+.gmt-popover {
+  background: var(--gmt-surface-2);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  box-shadow: var(--gmt-shadow-md);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gmt-button {
+    transition: none;
+  }
+}

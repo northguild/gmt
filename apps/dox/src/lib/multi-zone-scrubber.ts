@@ -186,7 +186,7 @@ export async function initScrubber(host: HTMLElement): Promise<ScrubberHost> {
       </button>
       <div class="gmt-combobox">
         <label for="scrubber-add">Add a zone</label>
-        <input type="search" id="scrubber-add" placeholder="e.g. Australia/Sydney"
+        <input type="search" id="scrubber-add" class="gmt-field" placeholder="e.g. Australia/Sydney"
           autocomplete="off" data-role="add" />
       </div>
     </div>

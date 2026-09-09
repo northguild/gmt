@@ -1,0 +1,96 @@
+/*
+ * GMT clock-list — the shared "zone card in a row" recipe.
+ *
+ * Extracted from gmt-map.css (which originally owned it alongside its
+ * unrelated SVG boundary/tooltip styling — a shared dependency hidden inside
+ * a same-named, unrelated-sounding "map" sheet). Three consumers today:
+ * TimezoneMap.astro (.gmt-clock-panel's 2-row grid, ~10 zones), the globe's
+ * clock list (Globe.astro / lib/zone-clock-list.ts, which virtualizes these
+ * same row classes for ~300 zones instead of using .gmt-clock-panel), and the
+ * multi-zone scrubber's rows (its own bespoke layout — see gmt-scrubber.css).
+ *
+ * Loaded before gmt-map.css / gmt-globe.css / gmt-scrubber.css in
+ * astro.config.mjs — a shared-dependency sheet, not a per-widget one.
+ */
+
+.gmt-clock-panel {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  grid-auto-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-2);
+  margin-top: var(--gmt-space-4);
+}
+
+.gmt-clock-entry {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--gmt-space-1);
+  margin-top: 0;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  background: var(--gmt-fill-subtle);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+/* [aria-selected="true"] — the keyboard-browsed row (zone-clock-list.ts's
+   `activeIndex`, driven by the panel's own aria-activedescendant pattern,
+   not real per-row DOM focus) gets the same highlight as :hover/:focus-visible.
+   Distinct from .selected below: that's the zone actually driving the globe;
+   this is only "where Arrow/Home/End browsing currently is" until Enter/Space
+   commits it. */
+.gmt-clock-entry:hover,
+.gmt-clock-entry:focus-visible,
+.gmt-clock-entry[aria-selected="true"] {
+  border-color: var(--gmt-cyan);
+  background: var(--gmt-fill);
+  outline: none;
+}
+
+.gmt-clock-entry.selected {
+  border-color: var(--gmt-spring);
+  background: var(--gmt-fill);
+  box-shadow: 0 0 0 1px var(--gmt-spring);
+}
+
+.gmt-clock-row1 {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--gmt-space-2);
+  width: 100%;
+}
+
+.gmt-clock-name {
+  font-family: var(--gmt-font-mono);
+  font-size: 0.7rem;
+  color: var(--gmt-ice);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gmt-clock-offset {
+  font-family: var(--gmt-font-mono);
+  font-size: 0.65rem;
+  color: var(--gmt-spring);
+  white-space: nowrap;
+}
+
+.gmt-clock-time {
+  font-family: var(--gmt-font-mono);
+  font-size: 0.8rem;
+  color: var(--gmt-cyan);
+}
