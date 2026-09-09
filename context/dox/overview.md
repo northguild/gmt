@@ -206,7 +206,8 @@ blocks all four other Tier 6 stories.
 
 - [story-groups.md](story-groups.md) — one paragraph per tier, naming the stories and
   pointing at the issue file
-- [tracker.md](tracker.md) — issue/status table, build order, 23 rows over 14 issues
+- [tracker.md](tracker.md) — issue/status table, build order, `Blocked by` column, 23 rows
+  over 14 issues
 - `issues/DOX-A.md` … `issues/DOX-E.md` — full GitHub-issue-ready spec per story
 - [appendix-parked.md](appendix-parked.md) — unscheduled work
 

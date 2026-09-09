@@ -205,7 +205,7 @@ See [painpoints.md](painpoints.md) for the full parked list with reasons.
 ## References
 
 - [painpoints.md](painpoints.md) — researched evidence per realm, with citations
-- [tracker.md](tracker.md) — 53 stories, dependency graph, Definition of Done
+- [tracker.md](tracker.md) — 53 stories, `Blocked by` column, Definition of Done
 - [issues/](issues/) — story specs, `CORE-1` through `SPA-53`
 - `context/misc/spacetime-reference-frames.md` — research on space/satellite time standards
 
