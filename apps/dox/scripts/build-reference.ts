@@ -425,6 +425,9 @@ export function synthesizeTemplate(spec: PlaygroundSpec): string {
       case "number":
         args.push(p.value);
         break;
+      case "bigint":
+        args.push(`${p.value || "0"}n`);
+        break;
       case "boolean":
         args.push(p.value === "true" ? "true" : "false");
         break;
@@ -476,6 +479,8 @@ export function synthesizeTemplate(spec: PlaygroundSpec): string {
 
 const QUOTED_ARG = /^(['"])[\s\S]*\1$/;
 const NUMERIC_ARG = /^-?\d+(?:\.\d+)?$/;
+/** A BigInt literal as written in an `@example` — `0n`, `-1000000000n`. */
+const BIGINT_ARG = /^-?\d+n$/;
 
 interface FieldsResult {
   fields: PlaygroundField[];
@@ -561,6 +566,21 @@ function fieldForParam(
     };
   }
 
+  if (p.type === "bigint") {
+    // An `@example` may write the arg either way — `0n` (correct) or `0` (the
+    // deliberate "number, not bigint" counter-examples). Accept both; the seed
+    // is the digits alone.
+    if (raw !== undefined && !BIGINT_ARG.test(raw) && !/^-?\d+$/.test(raw)) {
+      return null;
+    }
+    return {
+      name: p.name,
+      kind: "bigint",
+      seed: omitted ? "" : (raw ?? p.value ?? "0").replace(/n$/, ""),
+      ...opt,
+    };
+  }
+
   if (p.type === "number") {
     if (raw !== undefined && !NUMERIC_ARG.test(raw)) return null;
     return {
@@ -579,6 +599,9 @@ function fieldForParam(
   }
   if (NUMERIC_ARG.test(raw)) {
     return { name: p.name, kind: "number", seed: raw, ...opt };
+  }
+  if (BIGINT_ARG.test(raw)) {
+    return { name: p.name, kind: "bigint", seed: raw.slice(0, -1), ...opt };
   }
   return null;
 }
@@ -1521,6 +1544,15 @@ function main() {
     const inSkipDir = rel.split("/").some((part) => SKIP_DIRS.includes(part));
     return ext && !skipTest && !inSkipDir;
   });
+
+  // The generator itself is an input: changing how a page is emitted (a new
+  // field kind, say) must invalidate the MDX tree just as changing the gmt
+  // source does, or the edit is silently ignored on an incremental build.
+  allInputs.push(
+    fileURLToPath(import.meta.url),
+    resolve(appRoot, "scripts", "build-utils", "build-utils.ts"),
+    resolve(appRoot, "src", "lib", "playground-parsers.ts"),
+  );
 
   const newestInput = allInputs.reduce((a, b) =>
     statSync(a).mtime > statSync(b).mtime ? a : b,

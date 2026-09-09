@@ -73,6 +73,7 @@ Use the mocks in `packages/gmt/src/test/mocks` to test error-handling paths. Do 
 | `mockTemporalPlainTimeFromThrow()`       | `Temporal.PlainTime.from()`       |
 | `mockTemporalZonedDateTimeFromThrow()`   | `Temporal.ZonedDateTime.from()`   |
 | `mockTemporalInstantFromThrow()`         | `Temporal.Instant.from()`         |
+| `mockTemporalInstantFromEpochNanosecondsThrow()` | `Temporal.Instant.fromEpochNanoseconds()` |
 
 ```ts
 import { mockTemporalPlainDateFromThrow } from "@gmt/test/mocks";

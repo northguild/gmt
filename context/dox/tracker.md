@@ -10,6 +10,19 @@ React + Tailwind + AI Elements foundation is infrastructure rather than chat, it
 every existing page's build, and it is independently reviewable before any chat behavior
 exists. **It blocks all four other Tier 6 stories.**
 
+**`Blocked by` is the column to read before picking work. An empty cell (`—`) means the
+issue is free to start.** Entries drop out as their own row is marked `Done`, so the column
+shrinks as the epic lands.
+
+It is generated, never hand-edited. Each sub-story declares its dependencies in a
+`Depends on …` line in its description block in `issues/<letter>.md`; an issue's cell is the
+union of its sub-stories', mapped back to issue numbers, minus the ones already `Done`. Run
+`pnpm deps:sync` to regenerate and `pnpm deps:ready` to list what is startable.
+
+Because an issue bundles several sub-stories, its cell is coarser than the real graph — an
+issue is shown blocked if _any_ of its sub-stories is. The precise chain is in the issue
+files.
+
 `Order` is the sequence to actually build these in. It follows overview.md §5:
 
 - **Tier 0 is the MVP and is order-locked.** `DOX-A1` → `DOX-A2` → `DOX-A3a` must land in
@@ -29,22 +42,22 @@ with one exception: if a story also modifies `packages/gmt` (for example `DOX-A3
 deciding to stub the namespace READMEs, per overview.md §7), that change follows the
 normal repo convention and does need a changeset.
 
-| Order | Story                                       | GitHub Issue | Status         |
-| ----- | ------------------------------------------- | ------------ | -------------- |
-| 1     | DOX-A1                                      | #130         | Done           |
-| 2     | DOX-A2                                      | #131         | Done           |
-| 3     | DOX-A3 (DOX-A3a, DOX-A3b)                   | #132         | Done           |
-| 4     | DOX-A5                                      | #134         | Done           |
-| 5     | DOX-A4 (DOX-A4a, DOX-A4b, DOX-A4c, DOX-A4d) | #133         | Done           |
-| 6     | DOX-B1 (DOX-B1a)                            | #135         | Done           |
-| 7     | DOX-B2 (DOX-B2a, DOX-B2b, DOX-B2c, DOX-B2d) | #136         | Done           |
-| 8     | DOX-D1                                      | #140         | Done           |
-| 9     | DOX-D2                                      | #141         | Done           |
-| 10    | DOX-E1 (DOX-E1a, DOX-E1b)                   | #142         | Done¹          |
-| 11    | DOX-C0                                      | #171         | Done²          |
-| 12    | DOX-C1                                      | #137         | Done³          |
-| 13    | DOX-C2                                      | #138         | Not started    |
-| 14    | DOX-C3 (DOX-C3a, DOX-C3b)                   | #139         | Not started    |
+| Order | Story                                       | GitHub Issue | Status      |
+| ----- | ------------------------------------------- | ------------ | ----------- |
+| 1     | DOX-A1                                      | #130         | Done        |
+| 2     | DOX-A2                                      | #131         | Done        |
+| 3     | DOX-A3 (DOX-A3a, DOX-A3b)                   | #132         | Done        |
+| 4     | DOX-A5                                      | #134         | Done        |
+| 5     | DOX-A4 (DOX-A4a, DOX-A4b, DOX-A4c, DOX-A4d) | #133         | Done        |
+| 6     | DOX-B1 (DOX-B1a)                            | #135         | Done        |
+| 7     | DOX-B2 (DOX-B2a, DOX-B2b, DOX-B2c, DOX-B2d) | #136         | Done        |
+| 8     | DOX-D1                                      | #140         | Done        |
+| 9     | DOX-D2                                      | #141         | Done        |
+| 10    | DOX-E1 (DOX-E1a, DOX-E1b)                   | #142         | Done¹       |
+| 11    | DOX-C0                                      | #171         | Done²       |
+| 12    | DOX-C1                                      | #137         | Done³       |
+| 13    | DOX-C2                                      | #138         | Not started |
+| 14    | DOX-C3 (DOX-C3a, DOX-C3b)                   | #139         | Not started |
 
 ¹ Every DoD item buildable outside Tier 6 is done — see the "Status" notes in
 `issues/DOX-E.md`. The one item that can't close yet is `DOX-E1a` rendering in the

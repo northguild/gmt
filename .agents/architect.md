@@ -24,11 +24,22 @@ When planning is complete, hand the finished plan to `driver` for execution. In 
 
 ## Process
 
-1. Read the user's request and any referenced plan/story/spec documents.
+1. Read the user's request and any referenced plan/story/spec documents. For an epic
+   story, that is `context/domination/issues/<ID>.md` — and **check the story's
+   `Blocked by` cell in `context/domination/tracker.md` before planning it.** A
+   non-empty cell means something must land first: say so and propose a different
+   story rather than planning around the gap. A `(parenthesised)` entry is not a
+   blocker — it is a shared primitive this story must build as part of its own scope,
+   so fold it into the plan and say so. `pnpm deps:ready` lists what is startable.
 2. Re-verify the gap still exists — check `packages/gmt/src` for existing equivalents (`grep`/`glob`) before proposing a new function.
 3. Reference `context/coding-standards.md`, `context/testing-standards/references/index.md`, `context/jsdoc-standards.md`, and `context/project-overview.md` for conventions.
 4. Expand the one-line story into a full spec: exact signatures, Temporal API calls, sentinel return value, locale matrix if locale-aware, specific edge cases tests must cover.
-5. Sequence deliverables so Story Groups stay un-interleaved for clean publishing (see `context/roadmap/overview.md` suggested sequencing).
+5. Sequence deliverables so story groups stay un-interleaved for clean publishing (see
+   `context/domination/tracker.md` § Build Order).
+6. If planning changes what the story consumes from other stories, edit its
+   `## What gmt provides (do not re-implement)` section in the issue file — that
+   section is the source the tracker's `Blocked by` column is generated from — then run
+   `pnpm deps:sync`.
 
 ## Output
 
