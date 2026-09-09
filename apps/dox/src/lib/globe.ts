@@ -203,6 +203,8 @@ export async function initGlobe(
   tooltip.hidden = true;
   host.appendChild(tooltip);
 
+  const zoomControls = host.querySelector<HTMLElement>(".gmt-globe-zoom");
+
   const context = canvas.getContext("2d");
   if (!context) {
     // Canvas 2D unavailable: leave the clock panel (populated by the caller)
@@ -244,6 +246,32 @@ export async function initGlobe(
   let frameHandle = 0;
   let hovered = false;
   let destroyed = false;
+  let revealed = false;
+
+  /** First-frame reveal: the canvas is drawn fully off-screen (opacity 0,
+   * slightly scaled down) so the initial fade/scale-in transition (see
+   * gmt-globe.css) is the viewer's first sight of it instead of a raw pop-in.
+   * The zoom controls stay hidden until that transition finishes, so they
+   * read as arriving *because* the globe is ready rather than alongside it. */
+  function reveal(): void {
+    if (revealed) return;
+    revealed = true;
+    requestAnimationFrame(() => {
+      canvas.classList.add("gmt-globe-canvas-ready");
+      if (reduceMotion?.matches) {
+        zoomControls?.classList.add("gmt-globe-zoom-ready");
+        return;
+      }
+      canvas.addEventListener(
+        "transitionend",
+        (event) => {
+          if (event.propertyName !== "transform") return;
+          zoomControls?.classList.add("gmt-globe-zoom-ready");
+        },
+        { once: true },
+      );
+    });
+  }
 
   // --- sizing ------------------------------------------------------------
   function measure(): void {
@@ -258,6 +286,7 @@ export async function initGlobe(
     // Leave a small margin so the whole sphere shows at zoom 1.
     baseScale = (Math.min(width, height) / 2) * 0.94;
     render();
+    reveal();
   }
 
   const resizeObserver = new ResizeObserver(measure);

@@ -92,6 +92,19 @@
   width: 100%;
   height: 100%;
   cursor: grab;
+  /* Drawn fully off-screen (the raster itself is already complete — see
+     globe.ts's reveal()) then faded/scaled into place once the first frame
+     is measured, so the globe doesn't just snap into existence. */
+  opacity: 0;
+  transform: scale(0.92);
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.gmt-globe-canvas.gmt-globe-canvas-ready {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .gmt-globe-canvas:active {
@@ -116,6 +129,19 @@
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   overflow: hidden;
+  /* Held back until the globe itself has finished its reveal transition —
+     see globe.ts's reveal() — then popped into place so the controls read
+     as arriving *because* the globe is ready, not alongside it. */
+  opacity: 0;
+  transform: scale(0.8);
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.gmt-globe-zoom.gmt-globe-zoom-ready {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .gmt-globe-zoom button {
@@ -494,9 +520,13 @@
 }
 
 /* Reduced motion: the JS already suppresses ambient spin / inertia / zoom
-   easing; nothing CSS-animated here, but keep the hook explicit. */
+   easing. The canvas/zoom reveal transitions are skipped here too — globe.ts's
+   reveal() detects the same media query and adds both -ready classes on the
+   same frame instead of chaining off a transitionend that would never fire. */
 @media (prefers-reduced-motion: reduce) {
-  .gmt-globe-tooltip {
+  .gmt-globe-tooltip,
+  .gmt-globe-canvas,
+  .gmt-globe-zoom {
     transition: none;
   }
 
