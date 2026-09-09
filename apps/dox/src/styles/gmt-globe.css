@@ -7,33 +7,11 @@
  * Colours are --gmt-* tokens only; corners are bevelled to match the HUD.
  */
 
-/*
- * The globe's day/night terminator needs a night tint that stays dark in
- * every theme. --gmt-void is a background *role* token that flips to white
- * under [data-theme="light"] (see gmt-tokens.css) — reusing it here made the
- * night side render lighter than the day side once the light theme shipped.
- * This is its own token, with its own (bluer, not neutral-grey) light-theme
- * value below rather than inheriting --gmt-void's.
- */
-:root {
-  --gmt-globe-night: #03080c;
-  /*
-   * Ocean (sphere) and land fill alpha. The same low wash that reads clearly
-   * against the dark theme's near-black surface fades to almost nothing
-   * against the light theme's pale one — darkened below by strengthening
-   * these, not by changing --gmt-cyan/--gmt-teal themselves.
-   */
-  --gmt-globe-ocean-alpha: 0.07;
-  --gmt-globe-land-alpha: 0.12;
-}
-
-[data-theme="light"] {
-  --gmt-globe-ocean-alpha: 0.2;
-  --gmt-globe-land-alpha: 0.32;
-  /* A near-black night tint reads as flat grey once blended over the light
-     theme's pale sphere — a genuinely blue (not just dark) night instead. */
-  --gmt-globe-night: #123a5c;
-}
+/* --gmt-globe-night / --gmt-globe-ocean-alpha / --gmt-globe-land-alpha now
+   live in gmt-tokens.css (moved: a widget sheet defining its own tokens,
+   light-mode values included, was the wrong file per design-system.md rule
+   1 — tokens belong in gmt-tokens.css regardless of how few consumers they
+   have today). */
 
 .gmt-globe {
   margin: var(--gmt-space-6) 0;
@@ -73,28 +51,47 @@
   /* Capped by viewport height too — a wide column must not make the square
      taller than the fold, which was clipping the globe's bottom half. */
   max-width: min(44rem, 70vh);
-  margin-inline: auto;
+  /* margin-inline: auto; */
   aspect-ratio: 1;
   overflow: hidden;
-  border: 1px solid var(--gmt-border);
+  /* Globe.astro sets both `gmt-globe-stage` and `gmt-glass` on this element,
+     picking up .gmt-glass's `padding: var(--gmt-space-4)` (gmt-primitives.css)
+     along with the border/tint/blur it actually wants — that inset the canvas
+     (width/height: 100% of the stage's own *content* box) a full space-4 in
+     from the stage's edge on every side instead of letting it fill the stage.
+     Zeroed here, after gmt-primitives.css in the customCss load order, so it
+     wins on equal specificity without needing !important. */
+  padding: 0;
+  /* No visible border/background/blur here (or on ::before/::after below) —
+     the globe should read as floating directly on the page, not boxed in a
+     glass card, on every usage (homepage hero, standalone /tools/zoned-earth
+     alike). `border`/`border-radius`/`corner-shape` stay (just an invisible
+     `transparent` color) so the bevelled `overflow: hidden` clip shape on the
+     canvas itself is unchanged — only the frame chrome goes away. Was
+     previously scoped to `.gmt-globe-embedded .gmt-globe-stage` only (hero);
+     generalized here so the standalone page matches. */
+  border: 1px solid transparent;
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
-  background:
-    radial-gradient(
-      circle at 50% 50%,
-      color(from var(--gmt-cyan) srgb r g b / 0.06),
-      transparent 70%
-    ),
-    var(--gmt-surface);
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   touch-action: none;
+}
+
+.gmt-globe-stage::before,
+.gmt-globe-stage::after {
+  display: none;
 }
 
 .gmt-globe-canvas {
   display: block;
+  /* Fallback size before globe.ts's measure() sets the canvas's own inline
+     width/height (which then takes over, matching the stage's actual pixel
+     box + devicePixelRatio) — not dead, just overridden once JS runs. */
   width: 100%;
   height: 100%;
   cursor: grab;
-  margin-top: 0;
 }
 
 .gmt-globe-canvas:active {
@@ -147,6 +144,11 @@
 }
 
 /* On-globe tooltip --------------------------------------------------- */
+/* Composes .gmt-popover (gmt-primitives.css, class set in globe.ts) for the
+   surface (background/border/radius/shadow) — only this widget's own layout
+   (position/transform/gap/padding) and the one-off --gmt-shadow-sm (a lighter
+   shadow than .gmt-popover's own --gmt-shadow-md, since this floats over the
+   canvas rather than over page content) stay here. */
 .gmt-globe-tooltip {
   position: absolute;
   transform: translate(-50%, calc(-100% - 0.6rem));
@@ -156,11 +158,7 @@
   gap: 2px;
   padding: var(--gmt-space-2) var(--gmt-space-3);
   min-width: 8rem;
-  background: var(--gmt-surface-2);
-  border: 1px solid var(--gmt-border-strong);
-  border-radius: var(--gmt-radius-sm);
-  corner-shape: bevel;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--gmt-shadow-sm);
   font-family: var(--gmt-font-mono);
   transition: opacity 0.12s ease;
   z-index: 2;
@@ -196,21 +194,15 @@
   color: var(--gmt-ice);
 }
 
-.gmt-globe-search input {
-  appearance: none;
-  padding: var(--gmt-space-2) var(--gmt-space-3);
-  font: inherit;
-  color: var(--gmt-ice);
-  background: var(--gmt-fill-subtle);
-  border: 1px solid var(--gmt-border);
-  border-radius: var(--gmt-radius-sm);
-  corner-shape: bevel;
-}
-
-.gmt-globe-search input:focus-visible {
-  outline: none;
-  border-color: var(--gmt-cyan);
-}
+/* The <input> itself composes .gmt-field (gmt-primitives.css, class set
+   directly in Globe.astro/multi-zone-scrubber.ts's markup) for its surface
+   and focus-visible treatment — this used to be two fully-identical
+   hand-rolled copies here (`.gmt-globe-search input` / `.gmt-combobox
+   input`, both matching the same element since Globe.astro's wrapper <div>
+   carries both classes) plus a third, independently hand-rolled copy in the
+   scrubber's own sheet; composing the shared primitive also fixes the
+   scrubber's "Add a zone" input, which had no focus-visible treatment of its
+   own before (just the sitewide generic ring). */
 
 /* Typeahead combobox — shared by the globe's "Find a zone" and the scrubber's
    "Add a zone". Replaces the native <datalist>, whose popup the browser drew
@@ -225,17 +217,8 @@
   color: var(--gmt-ice);
 }
 
-.gmt-combobox input {
-  appearance: none;
-  padding: var(--gmt-space-2) var(--gmt-space-3);
-  font: inherit;
-  color: var(--gmt-ice);
-  background: var(--gmt-fill-subtle);
-  border: 1px solid var(--gmt-border);
-  border-radius: var(--gmt-radius-sm);
-  corner-shape: bevel;
-}
-
+/* Composes .gmt-popover (class set in zone-combobox.ts) for the surface —
+   only this widget's own positioning/scroll/list-reset stay here. */
 .gmt-combobox-list {
   position: absolute;
   top: 100%;
@@ -248,17 +231,38 @@
   max-height: 16rem;
   overflow-y: auto;
   scroll-behavior: smooth;
-  background: var(--gmt-surface-2);
-  border: 1px solid var(--gmt-border-strong);
-  border-radius: var(--gmt-radius-sm);
-  corner-shape: bevel;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
-.gmt-combobox-option {
-  padding: var(--gmt-space-1) var(--gmt-space-3);
+/* This <ul>/<li> (zone-combobox.ts) sits inside .sl-markdown-content, so it
+ * incidentally matches gmt-content.css's `.sl-markdown-content ul li::before`
+ * (and its `ul li` companion) — the small cyan "behavior bullet" dash used
+ * for markdown prose lists. `.sl-markdown-content` is itself a class, so that
+ * selector's real specificity is (0,1,3) counting `ul`/`li`/`::before` — a
+ * single-class `.gmt-combobox-option::before` at (0,1,1) does NOT beat it
+ * (a first attempt at this fix assumed it did and only silently won on the
+ * one property — `transform` — the leaked rule doesn't also set; `top`/`left`
+ * kept losing). Chained on `.gmt-combobox-list` below for (0,2,0)/(0,2,1),
+ * comfortably ahead of (0,1,2)/(0,1,3) — properly redeclaring this row's own
+ * shorter-line-height dash position/padding rather than depending on an
+ * unrelated sheet's selector happening to match. */
+.gmt-combobox-list .gmt-combobox-option {
+  position: relative;
+  padding: var(--gmt-space-1) var(--gmt-space-3) var(--gmt-space-1)
+    var(--gmt-space-6);
   cursor: pointer;
   color: var(--gmt-ice);
+}
+
+.gmt-combobox-list .gmt-combobox-option::before {
+  content: "";
+  position: absolute;
+  left: var(--gmt-space-2);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 1px;
+  background: var(--gmt-cyan);
+  box-shadow: 0 0 6px var(--gmt-cyan);
 }
 
 .gmt-combobox-option[aria-selected="true"],
@@ -286,6 +290,17 @@
   overflow-x: hidden;
   scroll-behavior: smooth;
   padding-right: var(--gmt-space-1);
+  /* Each .gmt-clock-entry is a <button> flush to this box's left edge
+     (width: 100%, zero margin) — a focused one only gets its `outline`
+     suppressed locally (see gmt-clock-list.css), not the global
+     `:focus-visible` box-shadow ring (gmt-controls.css), which still applies
+     since the two rules touch different properties. That 4px ring has nowhere
+     to paint but past this box's left edge, and `overflow-x: hidden` (needed
+     here — without it the vertical scrollbar's reserved gutter opens a
+     spurious horizontal one) then clips it. --gmt-space-2, not
+     --gmt-space-1 like the right side: an exact 4px match to the ring's own
+     spread would still land it right on the clip boundary. */
+  padding-left: var(--gmt-space-2);
 }
 
 .gmt-globe-clocks-sizer {
@@ -354,23 +369,6 @@
   margin: 0;
 }
 
-/* Drop the glass "card" frame around the stage in the hero — the globe
-   should read as floating directly on the hero background, not boxed in a
-   panel. Only the frame (background/border/backdrop-blur/hairline-gradient
-   edge from .gmt-glass) goes transparent; the sphere/ocean/land rendering
-   inside the canvas itself is untouched. */
-.gmt-globe-embedded .gmt-globe-stage {
-  background: transparent;
-  border-color: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-
-.gmt-globe-embedded .gmt-globe-stage::before,
-.gmt-globe-embedded .gmt-globe-stage::after {
-  display: none;
-}
-
 @media (max-width: 99.9375rem) {
   /* Higher specificity than the plain .gmt-globe-layout rule above, so this
      wins regardless of the container query's own state. A real flex column
@@ -389,13 +387,32 @@
     flex: 0 0 auto;
   }
 
+  /* `max-height`, not `overflow-y: auto` — this box still needs a hard height
+     cap: below .gmt-herostage's own 80rem breakpoint, `.gmt-herostage` has no
+     explicit height, so the `height: 100%` chain above (`.gmt-globe-embedded`
+     → `.gmt-globe-layout`) resolves to `auto` at every level, and without a
+     cap here `.gmt-globe-clocks`'s virtualizer sizer div — built to represent
+     all ~300 zones' true total height (tens of thousands of px) even though
+     only a scrolled window of it ever paints — dictates this box's real
+     height instead of being clipped. (Confirmed: removing this cap measured
+     `.gmt-herostage` at 24462px tall, pushing the hero CTAs thousands of
+     pixels below the fold.) `overflow-y: auto` would cap it too, but per the
+     CSS overflow-x/-y interop rule (an ancestor with one axis non-'visible'
+     forces the other axis to 'auto' as well, even if never set), that also
+     silently clips anything painted outside this box on the x-axis —
+     including the global `:focus-visible` ring (gmt-controls.css) on the
+     search input. `max-height` alone still constrains the flex column's used
+     size (so `.gmt-globe-clocks`'s `flex-shrink` has a real budget to shrink
+     into) without adding an overflow value of its own; `.gmt-globe-clocks`
+     below already owns its own `overflow-y: auto; overflow-x: hidden` once
+     shrunk to a definite height, so nothing actually needs to spill past this
+     box's edge in practice. */
   .gmt-globe-embedded .gmt-globe-side {
     display: flex;
     flex-direction: column;
     flex: 1 1 100%;
     min-height: 0;
     width: 100%;
-    overflow-y: auto;
     max-height: 30rem;
   }
 
@@ -403,6 +420,15 @@
     flex: 1 1 auto;
     height: auto;
     min-height: 0;
+  }
+
+  /* The search box sits in the bottom half of a fixed-height hero column —
+     there's rarely enough room below it for the dropdown, so open upward
+     instead of the standalone widget's default below-input placement. */
+  .gmt-globe-embedded .gmt-combobox-list {
+    top: auto;
+    bottom: 100%;
+    margin: 0 0 var(--gmt-space-1);
   }
 }
 
@@ -440,7 +466,7 @@
     width: min(100cqw, 100cqh);
     height: min(100cqw, 100cqh);
     max-width: none;
-    margin-inline: auto;
+    /* margin-inline: auto; */
   }
 
   .gmt-globe-embedded .gmt-globe-side {

@@ -1,5 +1,5 @@
 // GENERATED FILE — do not edit by hand.
-// Produced by apps/dox/scripts/build-reference.ts (`nx run dox:generate`).
+// Produced by apps/dox/scripts/build-reference.ts (`pnpm dox:generate`).
 import type { CorpusEntry } from "~/reference-types";
 import data from "./gmt-corpus.json";
 

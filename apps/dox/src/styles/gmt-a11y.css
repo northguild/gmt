@@ -120,7 +120,14 @@
   .pagination-links a:focus,
   .sl-markdown-content .tab > [role="tab"]:focus,
   .gmt-input:focus,
-  .gmt-select:focus {
+  .gmt-select:focus,
+  .gmt-field:focus-visible,
+  .gmt-button:focus-visible {
     outline: 2px solid Highlight;
+  }
+
+  .gmt-popover {
+    background: Canvas;
+    border: 1px solid CanvasText;
   }
 }

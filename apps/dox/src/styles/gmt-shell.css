@@ -46,11 +46,23 @@ h1 {
   border-color: var(--gmt-hairline);
 }
 
+/* Fixed width, not `fit-content`: `.main-frame`'s `padding-inline-start`
+ * (Starlight, unlayered-beaten-by-nothing here since it's the one reserving
+ * the content's left inset) is set once, from `--sl-sidebar-width` — it does
+ * not track the sidebar's actual rendered width. A `fit-content` sidebar
+ * (what this rule used to be) grows past that fixed inset the moment any nav
+ * label is wide enough — e.g. "Getting Current Date / Time", "Application
+ * Integration" — and the wider sidebar then overlaps the first ~1-2rem of
+ * the content column, which sits underneath it (confirmed: reproduces with
+ * `backdrop-filter` forced off too, so it's a real geometry overlap, not a
+ * blur/compositing artifact). Capping the sidebar to the same width the
+ * content already assumes and letting long labels wrap (Starlight's own
+ * default `.sidebar-pane a` behavior — nothing here forces `nowrap`) is the
+ * one-rule fix that holds regardless of which nav section happens to be
+ * expanded or how long a future label gets. */
 @media (min-width: 50rem) {
   .sidebar-pane {
-    width: fit-content;
-    min-width: var(--sl-sidebar-width);
-    max-width: 35vw;
+    width: var(--sl-sidebar-width);
   }
 }
 

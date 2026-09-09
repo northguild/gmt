@@ -90,20 +90,42 @@ interface Palette {
    * Night must stay dark regardless of which theme the site is in.
    */
   night: string;
+  /**
+   * How opaque the night tint (above) is over the ocean/land wash beneath
+   * it — theme-tunable, not a fixed literal: the same alpha that keeps dark
+   * theme's near-black night dark blends a light-theme night color into a
+   * washed-out mid-tone grey instead, since it's mixing with a pale base.
+   */
+  nightAlpha: number;
   cyan: string;
   spring: string;
   teal: string;
   ice: string;
   signal: string;
   /**
+   * City-light dots — a warm gold, not the cool cyan/ice used for lines and
+   * chrome elsewhere, so the plotted zones read like the amber city lights
+   * in a real Earth-at-night photo rather than generic UI markers.
+   */
+  gold: string;
+  /**
    * Fill alpha for the ocean (sphere) and land washes. The same low alpha
    * that reads clearly against the dark theme's near-black surface washes
    * out to almost nothing against the light theme's pale one, so these are
    * theme-tuned tokens rather than fixed numbers — see `--gmt-globe-*-alpha`
-   * in gmt-globe.css.
+   * in gmt-tokens.css.
    */
   oceanAlpha: number;
   landAlpha: number;
+  /**
+   * Extra brightening wash painted over the day hemisphere only (see
+   * `dayGeometry()`) — in dark theme, the day side's low `oceanAlpha` alone
+   * reads as barely distinguishable from the near-black page behind the
+   * (transparent) stage, so the night/day contrast the terminator exists to
+   * show falls flat. Cheaper to brighten day than to darken night further
+   * (night is already close to the page's own near-black background).
+   */
+  dayAlpha: number;
 }
 
 function readPalette(el: HTMLElement): Palette {
@@ -116,13 +138,16 @@ function readPalette(el: HTMLElement): Palette {
   };
   return {
     night: pick("--gmt-globe-night", "#03080c"),
+    nightAlpha: pickNumber("--gmt-globe-night-alpha", 0.5),
     cyan: pick("--gmt-cyan", "#22d3ee"),
     spring: pick("--gmt-spring", "#4ade80"),
     teal: pick("--gmt-teal", "#0e7490"),
     ice: pick("--gmt-ice", "#cfeaf2"),
     signal: pick("--gmt-signal", "#f5a524"),
+    gold: pick("--gmt-globe-gold", "#fde047"),
     oceanAlpha: pickNumber("--gmt-globe-ocean-alpha", 0.07),
     landAlpha: pickNumber("--gmt-globe-land-alpha", 0.12),
+    dayAlpha: pickNumber("--gmt-globe-day-alpha", 0.22),
   };
 }
 
@@ -174,7 +199,7 @@ export async function initGlobe(
   host.appendChild(canvas);
 
   const tooltip = document.createElement("div");
-  tooltip.className = "gmt-globe-tooltip";
+  tooltip.className = "gmt-globe-tooltip gmt-popover";
   tooltip.hidden = true;
   host.appendChild(tooltip);
 
@@ -239,9 +264,19 @@ export async function initGlobe(
   resizeObserver.observe(host);
 
   // --- rendering -------------------------------------------------------
-  function nightGeometry(): GeoPermissibleObjects {
-    const { lat, lng } = antisolarPoint(getUnixNow());
-    return geoCircle().center([lng, lat]).radius(90)() as GeoPermissibleObjects;
+  function nightGeometry(antisolar: [number, number]): GeoPermissibleObjects {
+    return geoCircle().center(antisolar).radius(90)() as GeoPermissibleObjects;
+  }
+
+  /** The exact geometric complement of nightGeometry() — a 90°-radius circle
+   * centered on the antipode of the antisolar point, i.e. the subsolar point
+   * (where the sun is directly overhead). Used to paint a brightening wash
+   * over just the day hemisphere; see `--gmt-globe-day-alpha`. */
+  function dayGeometry(antisolar: [number, number]): GeoPermissibleObjects {
+    const [lng, lat] = antisolar;
+    return geoCircle()
+      .center([lng + 180, -lat])
+      .radius(90)() as GeoPermissibleObjects;
   }
 
   /** Map an IANA id to the boundary dataset's `tzid` value. */
@@ -285,6 +320,16 @@ export async function initGlobe(
 
     const path = geoPath(projection, ctx);
     const quiet = dragging || inertiaActive;
+    // Computed once per frame (not once per call site) so the day/night
+    // wash, the terminator line, and each dot's night/day classification
+    // below all agree on the exact same instant — `getUnixNow()` ticking
+    // between calls within one frame could otherwise put a dot on the
+    // "wrong" side of its own terminator line, right at the boundary.
+    const antisolarReading = antisolarPoint(getUnixNow());
+    const antisolar: [number, number] = [
+      antisolarReading.lng,
+      antisolarReading.lat,
+    ];
 
     ctx.beginPath();
     path(sphere);
@@ -297,12 +342,27 @@ export async function initGlobe(
     // Day/night terminator: painted right after the sphere base and before
     // the grid/land/highlight/dots, so the night side is a dark backdrop
     // those draw *over* — not a wash that gets painted over them and hides
-    // them. `palette.night` is a fixed dark tone (not `--gmt-void`, which
-    // flips to white in the light theme) so night stays darker than day in
-    // every theme.
+    // them. `palette.night` is its own dark-navy token (not `--gmt-void`,
+    // which flips to white in the light theme); `palette.nightAlpha` is
+    // theme-tuned too, not fixed at 0.5 for both — that alpha keeps dark
+    // theme's already-near-black night dark, but blending the same navy at
+    // 0.5 into light theme's much paler base landed on a washed-out
+    // grey-blue mid-tone instead of reading as night.
+    //
+    // The day hemisphere gets its own brightening wash first — in dark
+    // theme, the base ocean fill above is already tuned low (oceanAlpha) to
+    // read cleanly against the near-black page, which left day and night
+    // barely distinguishable from each other. Brightening day (cheap: it's
+    // just a stronger cyan wash) reads better than trying to darken night
+    // any further against an already near-black backdrop.
     ctx.beginPath();
-    path(nightGeometry());
-    ctx.fillStyle = withAlpha(palette.night, 0.5);
+    path(dayGeometry(antisolar));
+    ctx.fillStyle = withAlpha(palette.cyan, palette.dayAlpha);
+    ctx.fill();
+
+    ctx.beginPath();
+    path(nightGeometry(antisolar));
+    ctx.fillStyle = withAlpha(palette.night, palette.nightAlpha);
     ctx.fill();
 
     ctx.beginPath();
@@ -348,11 +408,22 @@ export async function initGlobe(
       const radius = isSelected ? 4 : zone.primary ? 3 : 2.2;
       ctx.beginPath();
       ctx.arc(point[0], point[1], radius, 0, Math.PI * 2);
+      // Gold only on the night side — real Earth-at-night photos show city
+      // lights because it's dark; the same dot in daylight isn't a "light"
+      // at all, so day-side dots keep the original cyan/ice. `isSelected`
+      // stays spring green regardless of hemisphere — a distinct "currently
+      // focused" signal, not part of the city-lights palette.
+      const inNight =
+        geoDistance([zone.lng, zone.lat], antisolar) <= Math.PI / 2;
       ctx.fillStyle = isSelected
         ? palette.spring
-        : zone.primary
-          ? palette.cyan
-          : withAlpha(palette.ice, 0.55);
+        : inNight
+          ? zone.primary
+            ? palette.gold
+            : withAlpha(palette.gold, 0.55)
+          : zone.primary
+            ? palette.cyan
+            : withAlpha(palette.ice, 0.55);
       ctx.fill();
       if (isSelected) {
         ctx.beginPath();

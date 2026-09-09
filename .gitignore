@@ -61,6 +61,9 @@ apps/dox/.wrangler/
 apps/dox/public/llms.txt
 apps/dox/public/llms-full.txt
 
+# Visual regression snapshots (scripts/visual-snapshot.mjs) — local-only, never committed
+apps/dox/.visual/
+
 # Playwright mcp
 .playwright-mcp/
 

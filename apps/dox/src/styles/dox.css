@@ -20,6 +20,82 @@ html:not([data-has-sidebar]) .sl-container {
   max-width: none !important;
 }
 
+/* Homepage hero — `.gmt-herostage` sizes itself to exactly one screen via
+ * `height: calc(100dvh - var(--sl-nav-height))` (HeroGlobe.astro), but that
+ * formula only accounts for the nav bar above it. Starlight's own
+ * `ContentPanel.astro` wraps every page's content in `.content-panel {
+ * padding: 1.5rem var(--sl-content-pad-x); }` (`@layer starlight.core`) —
+ * 24px of vertical padding the hero calc never subtracts, so the hero's
+ * fixed-height box actually starts 24px lower than the formula assumes and
+ * overflows the same 24px past the bottom of the viewport (confirmed via
+ * getBoundingClientRect at 1366×768: the hero's own box was exactly 704px,
+ * matching the calc, but its top sat at 88px instead of 64px — pushing its
+ * bottom, and the `::after` corner bracket on it, off-screen). `.gmt-herostage`
+ * already owns its own internal breathing room via `padding-block: clamp(1rem,
+ * 4vh, 3rem)`, so Starlight's padding here is pure double-counting for this
+ * one page — zero it instead of trying to thread it through the calc.
+ * `.sl-container`'s rule above needs `!important` (equal-specificity/unlayered
+ * fight against an inline <head> override); this one doesn't — `.content-panel`'s
+ * padding rule is `@layer starlight.core`, so this unlayered declaration wins
+ * on its own. */
+.content-panel:has(.gmt-herostage) {
+  padding-block: 0;
+}
+
+/* /tools/* full-width content pane — DOX-E1 part 2. Unlike the sidebar-less
+ * override above, these pages KEEP the Starlight sidebar (nav consistency),
+ * so `html:not([data-has-sidebar])` doesn't apply — the content column
+ * widens to fill the space right of the sidebar, via a self-declaring marker
+ * (`data-tools-fullbleed` on the widget's own root, set by Globe.astro /
+ * MultiZoneScrubber.astro) rather than a route string, so any future
+ * full-bleed tool opts in the same way.
+ *
+ * On a sidebar+TOC page, `.main-pane` and `.right-sidebar-container` are
+ * flex children of a `display: flex` row (`.main-frame`'s inner wrapper).
+ * Starlight sizes `.main-pane` off `--sl-content-width` via its own `width`
+ * declaration, but that's only ever used as this flex item's *flex-basis*
+ * (`flex-basis: auto` reads the `width` property) — with `flex-grow: 0`
+ * (the unset default; nothing sets it explicitly), the item never grows
+ * past that basis, and whenever the row is tighter than both items'
+ * combined basis, `flex-shrink: 1` (also the default) shrinks it back down
+ * again. Overriding `width` alone (confirmed empirically: it visibly moves
+ * the rendered size, just not to the requested value) still lands short —
+ * the fix is `flex-grow`, so this item claims the row's leftover space
+ * instead of sitting flat at its content-width-derived basis.
+ * `.right-sidebar-container` (the "On this page" TOC) is left alone: it
+ * keeps its own natural width, this only asks `.main-pane` to take
+ * everything else.
+ *
+ * No `!important` or specificity fight needed: nothing else in the cascade
+ * sets `flex-grow` on `.main-pane` (it's the browser's own initial value,
+ * 0, not a Starlight declaration), so an unlayered `flex-grow: 1` here
+ * applies unopposed.
+ *
+ * `.sl-container`'s max-width rule IS `:where()`-wrapped by Starlight
+ * (zero specificity), so `.sl-container:has(...)` alone already outranks
+ * it without any of the above.
+ *
+ * `flex-grow: 1` alone still isn't enough, though: Starlight's own `width`
+ * formulas already partition 100% of the flex row between `.main-pane` and
+ * its sibling `.right-sidebar-container` (the "On this page" TOC) — the TOC
+ * gets a bonus share of any extra viewport width too, so there is no spare
+ * space left for `.main-pane` to grow into. `.gmt-globe`/`.gmt-scrubber-block`
+ * aren't inside `.right-sidebar-container`, so `:has([data-tools-fullbleed])`
+ * can't target it directly — reach it via the flex row's common ancestor
+ * instead and give the TOC back only its own base width, freeing the bonus
+ * share for `.main-pane` to claim. */
+.main-frame:has([data-tools-fullbleed]) .right-sidebar-container {
+  width: var(--sl-sidebar-width);
+}
+
+.main-frame:has([data-tools-fullbleed]) .main-pane {
+  flex-grow: 1;
+}
+
+.sl-container:has([data-tools-fullbleed]) {
+  max-width: none;
+}
+
 /* Section grid — see GridSection.astro. Shared by the homepage's below-hero
  * sections (Key features / the bug is Date / the alternatives, wrapped in
  * index.mdx as .gmt-home-grid) and /why-gmt's chart sections

@@ -1,5 +1,5 @@
 // GENERATED FILE — do not edit by hand.
-// Produced by apps/dox/scripts/build-reference.ts (`nx run dox:generate`).
+// Produced by apps/dox/scripts/build-reference.ts (`pnpm dox:generate`).
 import type { RouteManifest } from "~/reference-types";
 
 export const referenceRoutes: RouteManifest = new Set([

@@ -116,7 +116,11 @@ export function localMinuteOfDayAtTransition(
  * Kept for backwards compatibility; prefer localHourAtTransition for visual positioning.
  */
 export function transitionHour(t: DstTransition): number {
-  return new Date(t.instant).getUTCHours();
+  try {
+    return Temporal.Instant.from(t.instant).toZonedDateTimeISO("UTC").hour;
+  } catch {
+    return NaN;
+  }
 }
 
 /**
@@ -444,10 +448,17 @@ export function buildValuePreset(
   switch (preset) {
     case "normal": {
       // Pick a date 14 days after the first transition's local date
-      const [y, m, d] = firstDate.split("-").map(Number);
-      const nextDate = new Date(Date.UTC(y, m - 1, d + 14));
-      const padded = `${nextDate.getUTCFullYear()}-${String(nextDate.getUTCMonth() + 1).padStart(2, "0")}-${String(nextDate.getUTCDate()).padStart(2, "0")}`;
-      return `${padded}T12:00:00[${zone}]`;
+      const [y, m, d] = firstDate.split("-").map(Number) as [
+        number,
+        number,
+        number,
+      ];
+      const nextDate = Temporal.PlainDate.from({
+        year: y,
+        month: m,
+        day: d,
+      }).add({ days: 14 });
+      return `${nextDate.toString()}T12:00:00[${zone}]`;
     }
 
     case "gap": {

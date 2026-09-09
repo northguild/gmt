@@ -13,7 +13,13 @@ The globe renders on the homepage **and** in the dedicated `/dox` chat route's *
 rail**: spinnable, with timezone demarcation and global clocks alongside the chat.
 Consequences:
 
-- **`DOX-E1a` renders on the homepage and `/dox`, nowhere else.**
+- **`DOX-E1a` renders on the homepage and `/dox`, nowhere else** — this rule forbids the
+  globe as a full-bleed backdrop sitting behind every panel (the original scoping
+  concern: no combined worst-case frame budget of scene + streaming + border animation
+  at once). It does not forbid a dedicated tool page hosting it as the page's actual
+  content: `/tools/zoned-earth` (`DOX-E1a`) and `/tools/zone-planner` (`DOX-E1b`) are
+  sanctioned standalone hosts, verified bundle-isolated from every other page (see
+  `reference/findings/globe-performance.md`).
 - **`DOX-E1b`'s multi-zone clock surface is the `/dox` widget rail.**
 
 **The independence property is binding.** `/dox` must render and be fully usable with
@@ -79,7 +85,9 @@ admire it.
   state, computed from the already-exported `getTimeZones`, `getZonedNow`,
   `getTimeZoneOffset`, `isInDaylightSaving`, and `hasDaylightSaving` — all seven
   functions this story and `DOX-E1b` need are present in the library.
-- Hydrated `client:visible`, **on the homepage and the `/dox` widget rail only**.
+- Hydrated `client:visible`, on the homepage, the `/dox` widget rail (Tier 6, not yet
+  built), and `/tools/zoned-earth` (shipped as this story's standalone host — see the
+  "nowhere else" clarification above).
 - **Spinnable, not merely clickable.** Drag to rotate, with visible timezone demarcation
   and live clocks — this is what the `/dox` rail is for.
 - Pause rendering when the tab is hidden.
@@ -146,6 +154,22 @@ depending on it.
 - Homepage Lighthouse performance is not meaningfully worse than a reference page's.
 ```
 
+**Status (2026-09-09, part-2 branch):** every buildable item above is done.
+Bundle isolation (no globe-rendering chunk on `/install`, statically and at runtime)
+and homepage Lighthouse ("not meaningfully worse") are both measured in
+`reference/findings/globe-performance.md`. Tab-hidden pause is verified there too —
+confirmed the rAF loop _and_ the 1s clock-tick interval both fully stop on
+`visibilitychange`, not just browser-backgrounding throttling. Keyboard a11y (every
+zone selectable via keyboard alone) shipped as a full arrow-navigable
+`role="listbox"`/`aria-activedescendant` pattern plus the existing search combobox as
+a non-visual equivalent — unit-tested (`nextActiveIndex` reducer) and
+Playwright-verified end to end (`ArrowDown` → `Enter` commits the right zone). Day/night
+terminator, zone-selection correctness, `mount(root)`-shaped entry point
+(`initGlobe(host, clockPanel)`), and `prefers-reduced-motion` were already done before
+this branch (Part 1, PR #175) and untouched here. The one open line — rendering in the
+`/dox` widget rail — can't exist before Tier 6 (`DOX-C3a`/`DOX-C3b`); see the deferral
+note on `tracker.md`.
+
 ---
 
 #### DOX-E1b — Multi-zone time scrubber
@@ -196,3 +220,15 @@ multi-zone clock panel — start from it rather than from scratch.
 - The configuration is shareable as a permalink and reproduces exactly on load.
 - Keyboard-operable: the slider has a typed-input or stepped-keyboard equivalent.
 ```
+
+**Status (2026-09-09, part-2 branch):** all four items done, all pre-existing except
+the demonstrated-scenario item, which this branch added: a permalink pinning
+America/New_York, Europe/London, and Asia/Tokyo, landing 15 minutes before New York's
+2026 spring-forward — linked from both `zone-planner.mdx` and
+`scenarios/recurring-meeting-dst.mdx`, backed by tests confirming the permalink decodes
+to the intended pins/instant and that the DST-transition lookup finds the New York
+boundary from there, and confirmed live (dragging the slider forward flips New York's
+offset `-05:00 → -04:00` while the other pinned zones stay unaffected). The scrubber's
+own DoD has no open items; the rail hosting (`/dox` widget rail) is `DOX-E1a`'s open
+line, not this story's — the scrubber's "typed-input... equivalent" is satisfied by the
+restyled native `datetime-local` input, unrelated to the rail question.

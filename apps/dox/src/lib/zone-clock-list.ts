@@ -34,6 +34,44 @@ const OVERSCAN = 8;
 // Mirrors --gmt-space-1 (gmt-tokens.css) — the virtualizer's `gap` is a plain
 // number, it can't read a CSS custom property.
 const ROW_GAP = 4;
+const PAGE_STEP = 10;
+
+/** Stable id for row `index` — computed independent of whether that row is
+ * currently mounted (virtualized rows outside the overscan window don't
+ * exist in the DOM yet), so `aria-activedescendant` can reference it
+ * immediately and let the next render attach a real element with this id. */
+export function zoneOptionId(panelId: string, index: number): string {
+  return `${panelId}-opt-${index}`;
+}
+
+/** Pure keyboard-navigation reducer for the clock list — no DOM, no
+ * virtualizer, easy to unit test in isolation. `count` is the total number
+ * of zones (not just the currently-mounted/visible rows). Returns `current`
+ * unchanged for any key this list doesn't handle. */
+export function nextActiveIndex(
+  key: string,
+  current: number,
+  count: number,
+): number {
+  if (count <= 0) return current;
+  const clamp = (i: number) => Math.min(Math.max(i, 0), count - 1);
+  switch (key) {
+    case "ArrowDown":
+      return clamp(current + 1);
+    case "ArrowUp":
+      return clamp(current - 1);
+    case "PageDown":
+      return clamp(current + PAGE_STEP);
+    case "PageUp":
+      return clamp(current - PAGE_STEP);
+    case "Home":
+      return 0;
+    case "End":
+      return count - 1;
+    default:
+      return current;
+  }
+}
 
 export interface ZoneClockList {
   /** Scroll the zone into view (centred) and mark it selected; null clears. */
@@ -59,6 +97,13 @@ export function mountZoneClockList(
   let hasSelectedOnce = false;
   const rows = new Map<number, HTMLButtonElement>();
 
+  // Keyboard-browsed row, distinct from `selectedId` (the zone actually
+  // driving the globe/URL) — ArrowUp/Down/Home/End/PageUp/PageDown only move
+  // this (a standard "browse, then Enter to commit" listbox), so a user can
+  // arrow through the list without the globe jumping on every keystroke.
+  let activeIndex = 0;
+  const panelId = panel.id || "gmt-globe-clocks";
+
   const virtualizer: Virtualizer<HTMLElement, HTMLButtonElement> =
     new Virtualizer({
       count: ids.length,
@@ -81,6 +126,8 @@ export function mountZoneClockList(
     const row = document.createElement("button");
     row.type = "button";
     row.className = "gmt-clock-entry";
+    row.id = zoneOptionId(panelId, index);
+    row.setAttribute("role", "option");
     row.dataset.index = String(index);
     row.dataset.tzId = id;
     row.style.position = "absolute";
@@ -129,6 +176,7 @@ export function mountZoneClockList(
       row.style.transform = `translateY(${item.start}px)`;
       const id = ids[item.index] as string;
       row.classList.toggle("selected", id === selectedId);
+      row.setAttribute("aria-selected", String(item.index === activeIndex));
       writeReading(row, id);
       instance.measureElement(row);
     }
@@ -141,9 +189,48 @@ export function mountZoneClockList(
     if (row?.dataset.tzId) onPick(row.dataset.tzId);
   });
 
+  // Arrow/Page/Home/End browse `activeIndex` (aria-activedescendant) without
+  // touching the globe; Enter/Space commits the active row via `onPick`, same
+  // as a click. `activeIndex`'s row may not be mounted yet when this runs —
+  // `zoneOptionId` is computed from the index alone, so `aria-activedescendant`
+  // can point at it immediately and the next `renderRows` (triggered by
+  // `scrollToIndex` below) attaches the real element under that id.
+  panel.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      const id = ids[activeIndex];
+      if (id) {
+        event.preventDefault();
+        onPick(id);
+      }
+      return;
+    }
+    const next = nextActiveIndex(event.key, activeIndex, ids.length);
+    if (next === activeIndex) return;
+    event.preventDefault();
+    activeIndex = next;
+    panel.setAttribute("aria-activedescendant", zoneOptionId(panelId, next));
+    // `align: "auto"` is TanStack's "nearest" — scroll the minimum distance
+    // needed to bring the row into view, not always to the center.
+    virtualizer.scrollToIndex(next, { align: "auto", behavior: "auto" });
+    renderRows(virtualizer);
+  });
+
   return {
     select(id: string | null) {
       selectedId = id;
+      if (id !== null) {
+        const index = ids.indexOf(id);
+        // Keep keyboard browsing picking up from wherever the selection last
+        // landed (search, a globe click, this list's own Enter) rather than
+        // wherever an ArrowUp/Down session was left mid-browse.
+        if (index !== -1) {
+          activeIndex = index;
+          panel.setAttribute(
+            "aria-activedescendant",
+            zoneOptionId(panelId, index),
+          );
+        }
+      }
       renderRows(virtualizer);
       if (id === null) return;
       const index = ids.indexOf(id);

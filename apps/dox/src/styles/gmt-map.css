@@ -1,8 +1,10 @@
 /*
- * GMT map styles — layout for the timezone map component and its companion
- * clock panel, plus styling for the GeoJSON boundary polygons rendered
- * inside the SVG. Lives apart from gmt-charts.css so the chart theme stays
- * reusable for non-map charts.
+ * GMT map styles — layout for the timezone map component, plus styling for
+ * the GeoJSON boundary polygons and tooltip rendered inside the SVG. Lives
+ * apart from gmt-charts.css so the chart theme stays reusable for non-map
+ * charts. The shared clock-row classes (.gmt-clock-panel / -entry / -row1 /
+ * -name / -offset / -time) that this component also uses moved to
+ * gmt-clock-list.css — see that file's header.
  */
 
 .gmt-timezone-map {
@@ -11,81 +13,6 @@
 
 .gmt-timezone-map .gmt-chart svg {
   max-width: 100%;
-}
-
-.gmt-clock-panel {
-  display: grid;
-  grid-auto-flow: column;
-  grid-template-rows: repeat(2, minmax(0, 1fr));
-  grid-auto-columns: minmax(0, 1fr);
-  gap: var(--gmt-space-2);
-  margin-top: var(--gmt-space-4);
-}
-
-.gmt-clock-entry {
-  min-width: 0;
-  width: 100%;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--gmt-space-1);
-  margin-top: 0;
-  padding: var(--gmt-space-2) var(--gmt-space-3);
-  background: var(--gmt-fill-subtle);
-  border: 1px solid var(--gmt-border);
-  border-radius: var(--gmt-radius-sm);
-  corner-shape: bevel;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    background 0.15s ease;
-}
-
-.gmt-clock-entry:hover,
-.gmt-clock-entry:focus-visible {
-  border-color: var(--gmt-cyan);
-  background: var(--gmt-fill);
-  outline: none;
-}
-
-.gmt-clock-entry.selected {
-  border-color: var(--gmt-spring);
-  background: var(--gmt-fill);
-  box-shadow: 0 0 0 1px var(--gmt-spring);
-}
-
-.gmt-clock-row1 {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: var(--gmt-space-2);
-  width: 100%;
-}
-
-.gmt-clock-name {
-  font-family: var(--gmt-font-mono);
-  font-size: 0.7rem;
-  color: var(--gmt-ice);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.gmt-clock-offset {
-  font-family: var(--gmt-font-mono);
-  font-size: 0.65rem;
-  color: var(--gmt-spring);
-  white-space: nowrap;
-}
-
-.gmt-clock-time {
-  font-family: var(--gmt-font-mono);
-  font-size: 0.8rem;
-  color: var(--gmt-cyan);
 }
 
 /* Timezone boundary polygons */

@@ -33,7 +33,7 @@ export function createZoneCombobox(
     ? `${input.id}-listbox`
     : `zone-combobox-${Math.random().toString(36).slice(2, 8)}`;
   const list = document.createElement("ul");
-  list.className = "gmt-combobox-list";
+  list.className = "gmt-combobox-list gmt-popover";
   list.id = listId;
   list.setAttribute("role", "listbox");
   list.hidden = true;

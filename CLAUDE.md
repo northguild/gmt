@@ -17,6 +17,7 @@ Scoped documentation — load only what the task requires:
 | [context/roadmap/index.md](./context/roadmap/index.md)                                           | Picking up or reviewing roadmap work                                    |
 | [context/roadmap/index.md](./context/roadmap/index.md)                                           | Roadmap entry point (redirects to progressive-disclosure directory)     |
 | [context/dox/index.md](./context/dox/index.md)                                                   | Working on the `apps/dox` documentation site (the Dox epic)            |
+| [context/domination/index.md](./context/domination/index.md)                                     | Working on the multi-realm temporal epic (the Domination epic) |
 
 ## Available Skills
 
