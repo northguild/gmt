@@ -225,7 +225,10 @@ export function mountZoneClockList(
         // wherever an ArrowUp/Down session was left mid-browse.
         if (index !== -1) {
           activeIndex = index;
-          panel.setAttribute("aria-activedescendant", zoneOptionId(panelId, index));
+          panel.setAttribute(
+            "aria-activedescendant",
+            zoneOptionId(panelId, index),
+          );
         }
       }
       renderRows(virtualizer);

@@ -265,9 +265,7 @@ export async function initGlobe(
 
   // --- rendering -------------------------------------------------------
   function nightGeometry(antisolar: [number, number]): GeoPermissibleObjects {
-    return geoCircle()
-      .center(antisolar)
-      .radius(90)() as GeoPermissibleObjects;
+    return geoCircle().center(antisolar).radius(90)() as GeoPermissibleObjects;
   }
 
   /** The exact geometric complement of nightGeometry() — a 90°-radius circle
@@ -415,7 +413,8 @@ export async function initGlobe(
       // at all, so day-side dots keep the original cyan/ice. `isSelected`
       // stays spring green regardless of hemisphere — a distinct "currently
       // focused" signal, not part of the city-lights palette.
-      const inNight = geoDistance([zone.lng, zone.lat], antisolar) <= Math.PI / 2;
+      const inNight =
+        geoDistance([zone.lng, zone.lat], antisolar) <= Math.PI / 2;
       ctx.fillStyle = isSelected
         ? palette.spring
         : inNight

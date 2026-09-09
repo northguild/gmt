@@ -52,7 +52,8 @@ input[data-role="anchor"]::-webkit-calendar-picker-indicator {
   filter: invert(1);
 }
 
-[data-theme="light"] input[data-role="anchor"]::-webkit-calendar-picker-indicator {
+[data-theme="light"]
+  input[data-role="anchor"]::-webkit-calendar-picker-indicator {
   filter: none;
 }
 

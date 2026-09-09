@@ -78,7 +78,9 @@ async function waitForOurServer(url, timeoutMs = 30_000) {
       );
     } catch (err) {
       if (Date.now() - start > timeoutMs) {
-        throw new Error(`preview server did not come up at ${url}: ${err.message}`);
+        throw new Error(
+          `preview server did not come up at ${url}: ${err.message}`,
+        );
       }
       await new Promise((r) => setTimeout(r, 300));
     }
@@ -91,7 +93,9 @@ async function waitForOurServer(url, timeoutMs = 30_000) {
 // `astro preview stop` for teardown instead (see main()'s `finally`).
 async function stopPreviewDaemon() {
   try {
-    await execFileAsync("pnpm", ["exec", "astro", "preview", "stop"], { cwd: ROOT });
+    await execFileAsync("pnpm", ["exec", "astro", "preview", "stop"], {
+      cwd: ROOT,
+    });
   } catch {
     // "No preview server is running" exits non-zero in some astro versions — fine.
   }
@@ -130,7 +134,9 @@ async function main() {
           const page = await context.newPage();
 
           for (const p of PAGES) {
-            await page.goto(`${BASE_URL}${p.path}`, { waitUntil: "networkidle" });
+            await page.goto(`${BASE_URL}${p.path}`, {
+              waitUntil: "networkidle",
+            });
             // Let ambient globe rotation / any load-time animation settle to a
             // consistent frame before the shot.
             await page.waitForTimeout(300);

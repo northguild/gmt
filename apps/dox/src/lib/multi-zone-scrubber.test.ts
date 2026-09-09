@@ -119,7 +119,8 @@ describe("encodeState / decodeState", () => {
 // ---------------------------------------------------------------------------
 
 describe("the demonstrated DST scenario permalink", () => {
-  const query = "?tz=America/New_York,Europe/London,Asia/Tokyo&t=2026-03-08T06:45:00Z";
+  const query =
+    "?tz=America/New_York,Europe/London,Asia/Tokyo&t=2026-03-08T06:45:00Z";
 
   it("decodes to the intended pins and instant", () => {
     const decoded = decodeState(query);
@@ -133,7 +134,10 @@ describe("the demonstrated DST scenario permalink", () => {
 
   it("finds New York's spring-forward as the next transition from that instant", () => {
     const decoded = decodeState(query);
-    const result = nextTransition(decoded.pinned ?? [], decoded.effectiveMs ?? 0);
+    const result = nextTransition(
+      decoded.pinned ?? [],
+      decoded.effectiveMs ?? 0,
+    );
     expect(result?.zone).toBe("America/New_York");
     expect(convertUnixToUtc(result?.instantMs ?? 0, "milliseconds")).toBe(
       "2026-03-08T07:00:00Z",
