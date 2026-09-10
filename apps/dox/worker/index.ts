@@ -39,11 +39,7 @@ const BRAIN_IDS = BRAINS.map((brain) => brain.id);
 /** `?key=` on any page hands the Worker a candidate dev secret. Verified here,
  * exchanged for a signed HttpOnly cookie, then redirected to a clean URL so the
  * secret never lingers in history, a bookmark, or a referrer header. */
-async function handleDevKey(
-  request: Request,
-  url: URL,
-  env: Env,
-): Promise<Response> {
+async function handleDevKey(url: URL, env: Env): Promise<Response> {
   const candidate = url.searchParams.get("key") ?? "";
   const clean = new URL(url);
   clean.searchParams.delete("key");
@@ -117,7 +113,7 @@ export default {
     const url = new URL(request.url);
 
     if (url.searchParams.has("key")) {
-      return handleDevKey(request, url, env);
+      return handleDevKey(url, env);
     }
 
     if (url.pathname === "/api/brains") {
