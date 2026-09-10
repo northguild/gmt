@@ -58,7 +58,7 @@ normal repo convention and does need a changeset.
 | 12    | DOX-C1                                      | #137         | Done³        |
 | 13    | DOX-C2                                      | #138         | Done⁴        |
 | 14    | DOX-C3 (DOX-C3a, DOX-C3b)                   | #139         | In Progress⁵ |
-| 15    | DOX-C4                                      | #240         | Not started  |
+| 15    | DOX-C4                                      | #240         | Next⁶        |
 
 ¹ Every DoD item buildable outside Tier 6 is done — see the "Status" notes in
 `issues/DOX-E.md`. The last open item was `DOX-E1a` rendering in the `/dox` widget rail,
@@ -166,9 +166,25 @@ have not been re-run against it. Both need a build, which cannot run while the d
 is up. Expect `html-diff` to report exactly that one added attribute and nothing else;
 once it does, `DOX-C3` closes and only `DOX-C4` (#240) remains.
 
-Two smaller things are also outstanding and neither blocks the row: the rewritten tool
-instruction has not been re-measured live (`VISITOR_DAILY_MAX` is 5 and diagnosis spent the
-day's budget), and `DOX_DEV_KEY` is still unset.
+Two smaller things carry forward into `DOX-C4` rather than holding this row: the rewritten
+tool instruction has not been re-measured live (`VISITOR_DAILY_MAX` is 5 and diagnosis
+spent the day's budget), and `DOX_DEV_KEY` is still unset. Both belong there — `DOX-C4`
+changes the provider, so every tool-calling measurement has to be repeated against it
+anyway, and the dev key is what makes those measurements affordable. See `issues/DOX-C.md`'s
+`DOX-C4` section.
+
+The `html-diff` re-run stays here deliberately. It verifies a claim `DOX-C3` makes about
+its own refactor, it is provider-independent, and it costs one build — deferring it would
+close this story on an unverified line, which is the exact thing footnote 5 has been
+avoiding all along.
+
+⁶ Cloudflare Workers AI, for the budget headroom Gemini's per-model daily quota cannot
+give. **Spike first**: the AI SDK's Workers AI adapter has never been exercised, tool
+calling drives all four widgets and its prompt tuning does not transfer across providers,
+and a smaller model may ground worse against a large system prompt. Inherits two
+unfinished measurements from `DOX-C3` — re-running the tool-call probe, and setting
+`DOX_DEV_KEY` so live checks stop competing with readers for the free tier. Full framing
+in [issues/DOX-C.md](issues/DOX-C.md)'s `DOX-C4` section.
 
 Parked work carries no story ID and never enters this table — see
 [appendix-parked.md](appendix-parked.md).

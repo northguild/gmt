@@ -1506,7 +1506,7 @@ rail — and with it `#139` and `#142`. See the pickup note above.
 - **A custom domain.** Launching on `gmt-dox.northguild.workers.dev`; `astro.config.mjs`'s
   `SITE` already matches.
 - **`DOX-C4` (Cloudflare AI).** A separate issue (#240) and explicitly deferred — Gemini
-  first.
+  first. Now the next story; see the section below for what it inherits.
 
 ---
 
@@ -1600,3 +1600,53 @@ tool choice belongs to the model, and the deterministic mounts remain the `/tool
   `buildZonedValueFromMinutes` deliberately omits an offset — adding one fails 4 tests,
   because resolving the ambiguity is precisely what `startOfZoned` exists to demonstrate.
   Three guard tests now pin both invariants.
+
+
+---
+
+## DOX-C4 — Cloudflare Workers AI (#240)
+
+Next story. The motivation is budget: Gemini's free tier is
+`PerDay·PerProject·PerModel`, which is why Dox carries nine brains and a KV ledger to
+fail over between them mid-request. Workers AI is expected to lift that ceiling far
+enough that the whole failover apparatus becomes optional rather than load-bearing.
+
+**Start with a spike, not a migration.** Three things have to be true before any of the
+Gemini path is touched, and none of them is known yet:
+
+1. **The AI SDK's Workers AI adapter behaves like the Google one at the seams Dox
+   actually uses.** `DOX-C1` picked the Vercel AI SDK partly *because* it has a Workers
+   AI adapter where TanStack AI does not — but "has an adapter" was a selection criterion,
+   never an exercised path. The seams that matter: streaming through
+   `toUIMessageStream`, tool calls arriving as `tool-input-available` with parsed input,
+   and `await result.warnings` forcing the upstream call before the UI stream opens, which
+   is the entire mechanism behind in-request failover.
+2. **Tool calling works at all, and works often enough.** This is the sharp one. Dox's
+   four widgets are driven purely by the model choosing to call a tool, and the
+   `Call when` instruction was tuned against Gemini — see "Live verification" above,
+   where a single sentence took the converter bench from firing to not firing. That
+   tuning does not transfer. **The 0/3 converter probe is the carried-forward
+   measurement**, and it has to be re-run per candidate model, not once.
+3. **Retrieval and grounding survive a smaller model.** The system prompt is large:
+   vocabulary, core rules, and up to 15 retrieved chunks. A model with a shorter context
+   or weaker instruction-following may ground worse, hallucinate links the allowlist then
+   strips, or refuse where Gemini answered. The refusal instruction and the link
+   hardening are the two behaviours to spot-check hardest, because both fail *quietly*.
+
+### Carried forward from DOX-C3
+
+- **Re-measure the tool-call instruction.** The `## Available tools` block was rewritten
+  after live probing and the fix was never re-measured — `VISITOR_DAILY_MAX` is 5 and the
+  day's budget went on diagnosis. Re-run the converter probe (3 attempts, 3 brains) on
+  Gemini to confirm the rewrite landed *before* changing provider, so the two variables
+  do not move at once.
+- **`DOX_DEV_KEY` is still unset**, which is what made the budget the binding constraint
+  in the first place. Setting it is the cheapest unblock for every live check this story
+  needs, and it is a prerequisite rather than a nice-to-have here.
+
+### Keep, whatever the provider
+
+The brain-selection UI, the KV ledger and the visitor cap are provider-shaped but not
+provider-specific, and the failover seam (`openFirstWorkingBrain`) is worth keeping even
+against a generous quota — it is also how a model that rejects a tool schema is survived,
+which is a failure mode that gets *more* likely with a new provider, not less.
