@@ -50,7 +50,7 @@ the `customCss` config option.
 | Void               | `#03080C`               | Page base                                            |
 | Glass tint         | `rgba(6, 20, 26, 0.35)` | Panel fill over `backdrop-filter` (DOX-D1)           |
 | Cyan (primary)     | `#22D3EE`               | Borders, active state, primary accent                |
-| Spring (secondary) | `#4ADE80`               | Success, live values, ticking data                   |
+| Spring (secondary) | `#4ADE80`               | Success, live values, ticking data, **the human channel in Dox** |
 | Teal (deep)        | `#0E7490`               | Idle borders, dividers, inactive chrome              |
 | Ice (body)         | `#CFEAF2`               | **Long-form body copy**                              |
 | Signal-lost        | `#F5A524`               | Sentinel returns — the one warm colour in the system |
@@ -71,6 +71,28 @@ just execute.
 
 Body text must clear **7:1**, measured against real rendered pages, not flat swatches.
 Glow is decoration, never a contrast mechanism.
+
+**The Dox mark (DOX-C3a, #139).** The faceted crystal is the product's mark, not chat
+decoration. One geometry module (`src/lib/dox-mark.ts`) and one presentation block
+(`.gmt-dox-mark*`, in `gmt-primitives.css` because the header renders on every page) serve
+both the React chat and the Astro header button — so the thing a reader clicks is literally
+the thing that answers them. It turns clockwise on entrance, keeps turning while Dox works,
+and decelerates to square when the answer arrives; that landing is why the rotation is
+driven by the Web Animations API rather than CSS, which can only snap or freeze. Rotation is
+`rotateZ` under a fixed `rotateX` tilt — `rotateY` has no unambiguous clockwise direction
+and passes edge-on, where the mark disappears.
+
+**Role colours in the Dox transcript (DOX-C3a, #139).** Dox speaks in Cyan, the human in
+Spring. This widens Spring past "success / live values" deliberately: the two speakers need
+to be distinguishable at a glance, and the earlier scheme — a filled cyan hexagon for Dox
+and an outlined one for the human — separated them only by fill weight within one hue,
+which read as a rendering artifact rather than a role. Amber is untouched and still
+reserved exclusively for the sentinel contract.
+
+Neither role colour is hard-coded per element. `.gmt-hive-turn` sets a single
+`--gmt-hive-role`, and the crystal, the card border, the card tint, the label and the
+connector gradient all resolve from it — so recolouring a role, or adding a third one, is
+one declaration.
 
 ### Typography (story DOX-A5)
 
@@ -185,7 +207,7 @@ as hard as any panel.
 
 ### Overlays and the chat dock (story DOX-C3a)
 
-`DOX-C3a` needs an overlay treatment, because the Ask Dox dock is available on every page
+`DOX-C3a` needs an overlay treatment, because the Dox dock is available on every page
 and AI Elements ships no draggable modal. These rules are the spec; `DOX-C3a` implements
 them.
 

@@ -2,8 +2,31 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "gmt-dox",
   "compatibility_date": "2026-08-26",
+  "main": "./worker/index.ts",
+  "rules": [{ "type": "Text", "globs": ["**/*.md"], "fallthrough": true }],
   "assets": {
     "directory": "./dist",
     "not_found_handling": "404-page",
+    "binding": "ASSETS",
   },
+  // Dox's usage ledger — per-brain and per-visitor request counts, bucketed by
+  // Pacific day (see src/lib/pt-day.ts) because Gemini's daily quota resets at
+  // midnight PT.
+  //
+  // KV rather than a Durable Object on purpose: the counter is advisory and is
+  // never the gate. Google's 429 is the gate, and worker/brains.ts fails over
+  // between brains inside a single request without consulting this at all. So
+  // KV's eventual consistency can misprint a badge digit and nothing worse,
+  // while a DO's strong consistency would buy nothing and cost money.
+  //
+  // The binding name must stay `DOX_USAGE` — worker/index.ts's `Env` and
+  // worker/usage.ts both address it by that name, and it is declared optional
+  // there so the Worker still boots if this binding ever goes missing.
+  "kv_namespaces": [
+    {
+      "binding": "DOX_USAGE",
+      "id": "182cbbc1dc5a492e86b943cee5be4a60",
+      "preview_id": "32da5cd03f274cdc9f4b0291b7e8ecfb",
+    },
+  ],
 }

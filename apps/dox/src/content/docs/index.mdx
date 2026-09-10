@@ -5,11 +5,15 @@ template: splash
 hero:
   tagline: Give Me Temporal - a Temporal-first date and time library with strict string-in, typed-out contract. No <code>Date</code>, anywhere.
   actions:
-    - text: Get Started
+    - text: Docs
       link: /install/
       icon: right-arrow
       variant: primary
-    - text: Copy GMT prompt
+    - text: Dox
+      link: /dox/
+      attrs:
+        data-dox-cta: true
+    - text: Copy prompt
       link: "#_top"
       attrs:
         data-copy-prompt: true
@@ -21,10 +25,12 @@ import SectionHeading from "../../components/SectionHeading.astro";
 import { gmtVersion } from "~/generated/versions";
 import GridSection from "../../components/GridSection.astro";
 import HeroGlobe from "../../components/HeroGlobe.astro";
+import ScrollReveal from "../../components/ScrollReveal.astro";
 import WhyDateAlternatives from "../../components/WhyDateAlternatives.astro";
 import WhyDateBug from "../../components/WhyDateBug.astro";
 
 <HeroGlobe />
+<ScrollReveal />
 
 Current release: **v{gmtVersion}**
 
@@ -40,6 +46,7 @@ browser and recomputed every second.
 
 <SectionHeading>Key features</SectionHeading>
 
+<div data-reveal-group>
 <CardGrid>
   <Card title="100% Temporal, Temporal-first" icon="star">
     Built directly on the TC39 `Temporal` standard, not a homegrown date/time type system.
@@ -51,15 +58,21 @@ browser and recomputed every second.
   you won’t find elsewhere.
 </Card>
 
-<Card title="~15× more CI test executions" icon="rocket">
+<Card title="~10× more CI test executions" icon="rocket">
   334,020 executions — 16,701 tests × 17 locales × 10 timezones × 2 Node
-  versions — against `Luxon`, `date-fns`, `Moment.js`, and
-  `@internationalized/date`’s combined 20,190.
+  versions — against `Luxon`, `date-fns`, `Moment.js`, `Day.js`,
+  `Spacetime`, and `@internationalized/date`’s combined 33,396.
 </Card>
 
 <Card title="Explicit DST disambiguation" icon="setting">
   Control over DST disambiguation on both construction *and* arithmetic — a
   control none of the other players expose.
+</Card>
+
+<Card title="No borrowed test oracle" icon="magnifier">
+  Every test in GMT's suite is checked against the Temporal spec itself —
+  the standard, not another library's output. Correctness that doesn't
+  hinge on trusting a wrapper to also be right.
 </Card>
 
   <Card
@@ -71,6 +84,7 @@ browser and recomputed every second.
     normalizes, and prevents crashes, so your app stays robust
   </Card  >
 </CardGrid>
+</div>
 
 </GridSection>
 

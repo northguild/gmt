@@ -49,6 +49,21 @@ const faults: Fault[] = [
     output: "two different answers",
     why: "Parsing and formatting use the host timezone. A laptop in Denver and a CI runner in UTC disagree.",
   },
+  {
+    input: "wrapper.now() / wrapper(dateString)",
+    output: "a native Date, renamed",
+    why: "Most Date-wrapping libraries store a real Date as their internal state and default their clock to it. Every fault above is still reachable — only the syntax changed.",
+  },
+  {
+    input: "DST edge-case coverage",
+    output: "thin, disabled, or failing",
+    why: "DST transitions are the hardest case for a Date-shaped model to get right. It shows: wrapper libraries' own test suites are consistently the ones most likely to under-test, skip, or fail exactly this case.",
+  },
+  {
+    input: "how a wrapper checks itself",
+    output: "against a sibling wrapper, not a spec",
+    why: "With no independent standard to test against, a Date-wrapping library can only grade itself against another one — so a bug shared by the whole family passes every one of their suites.",
+  },
 ];
 ---
 
@@ -60,7 +75,7 @@ const faults: Fault[] = [
     parses two ways depending on the string, and mutates in place.
   </p>
 
-  <ul class="why-date-grid">
+  <ul class="why-date-grid" data-reveal-group>
     {
       faults.map((f) => (
         <li class="why-date-fault">

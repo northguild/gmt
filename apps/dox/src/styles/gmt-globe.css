@@ -51,7 +51,12 @@
   /* Capped by viewport height too — a wide column must not make the square
      taller than the fold, which was clipping the globe's bottom half. */
   max-width: min(44rem, 70vh);
-  /* margin-inline: auto; */
+  /* Centers the stage once its own max-width caps it below the width of
+     whatever column it's sitting in (the embedded hero's single-column
+     stack, or the standalone widget's own layout cell) — without this, a
+     capped-width flex/grid item lands flush at the cross-start edge (left)
+     instead of splitting the leftover space evenly. */
+  margin-inline: auto;
   aspect-ratio: 1;
   overflow: hidden;
   /* Globe.astro sets both `gmt-globe-stage` and `gmt-glass` on this element,
@@ -92,6 +97,19 @@
   width: 100%;
   height: 100%;
   cursor: grab;
+  /* Drawn fully off-screen (the raster itself is already complete — see
+     globe.ts's reveal()) then faded/scaled into place once the first frame
+     is measured, so the globe doesn't just snap into existence. */
+  opacity: 0;
+  transform: scale(0.92);
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.gmt-globe-canvas.gmt-globe-canvas-ready {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .gmt-globe-canvas:active {
@@ -116,6 +134,19 @@
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   overflow: hidden;
+  /* Held back until the globe itself has finished its reveal transition —
+     see globe.ts's reveal() — then popped into place so the controls read
+     as arriving *because* the globe is ready, not alongside it. */
+  opacity: 0;
+  transform: scale(0.8);
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.gmt-globe-zoom.gmt-globe-zoom-ready {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .gmt-globe-zoom button {
@@ -432,6 +463,22 @@
   }
 }
 
+@media (min-width: 80rem) and (max-width: 99.9375rem) {
+  /* The 30rem cap above is load-bearing only below .gmt-herostage's own
+     80rem breakpoint, where the hero has no definite height yet. From 80rem
+     on, .gmt-herostage IS a fixed-height row (height: calc(100dvh - nav)),
+     so .gmt-globe-embedded's height: 100% chain is definite all the way
+     down — nothing needs that cap here, and keeping it just left dead space
+     between the zone list and the bottom of the column. Letting
+     .gmt-globe-side (and .gmt-globe-clocks's flex: 1 1 auto inside it, both
+     already set above) grow unbounded now just fills whatever height the
+     square stage leaves behind, same as the >=100rem side-by-side layout
+     already does. */
+  .gmt-globe-embedded .gmt-globe-side {
+    max-height: none;
+  }
+}
+
 @media (min-width: 100rem) {
   /* min-height: 0 at every link in this chain overrides the flex/grid
      default of min-height: auto (min-content) — without it, each box grows
@@ -455,7 +502,14 @@
      query context lets the stage size itself to min(cqw, cqh) — the largest
      square that fits either constraint — with real auto-derived height. */
   .gmt-globe-embedded .gmt-globe-frame {
-    display: block;
+    /* flex, not block: the stage is squared to min(cqw, cqh) below, so
+       whichever axis of this frame is the *longer* one has leftover space
+       the stage doesn't fill. A plain block frame left that space stacked
+       at the bottom-right (block flow's default start-corner); centering
+       both axes here puts the sphere in the middle of the column instead. */
+    display: flex;
+    align-items: center;
+    justify-content: center;
     container-type: size;
     container-name: gmt-globe-frame;
     height: 100%;
@@ -466,7 +520,7 @@
     width: min(100cqw, 100cqh);
     height: min(100cqw, 100cqh);
     max-width: none;
-    /* margin-inline: auto; */
+    flex: none;
   }
 
   .gmt-globe-embedded .gmt-globe-side {
@@ -494,9 +548,13 @@
 }
 
 /* Reduced motion: the JS already suppresses ambient spin / inertia / zoom
-   easing; nothing CSS-animated here, but keep the hook explicit. */
+   easing. The canvas/zoom reveal transitions are skipped here too — globe.ts's
+   reveal() detects the same media query and adds both -ready classes on the
+   same frame instead of chaining off a transitionend that would never fire. */
 @media (prefers-reduced-motion: reduce) {
-  .gmt-globe-tooltip {
+  .gmt-globe-tooltip,
+  .gmt-globe-canvas,
+  .gmt-globe-zoom {
     transition: none;
   }
 

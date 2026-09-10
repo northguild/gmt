@@ -210,9 +210,14 @@ is authoritative where it disagrees with this issue.
   line structurally. `astro.config.mjs`'s placeholder `SITE` constant is left as-is
   pending provisioning.
 
-**Open:** `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are not yet provisioned, so
-the three DoD lines requiring a live deployed site are unverified until the user
-completes Cloudflare provisioning and a push to `main` triggers the first real deploy.
+**Closed 2026-09-10:** `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are both
+provisioned as repo secrets on `northguild/gmt` (confirmed via `gh secret list`; both
+dated 2026-08-26). The three DoD lines requiring a live deployed site are therefore
+verifiable, and `deploy-dox.yml` publishes on every push to `main`.
+
+**Worth knowing before you merge anything to `main`:** that workflow has no path filter
+and no `workflow_dispatch`, so *any* merge redeploys the docs site, and there is no way
+to trigger a deploy by hand from the Actions UI. Merging to `main` is publishing.
 
 ---
 

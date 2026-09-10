@@ -1,5 +1,6 @@
 ---
 import SectionHeading from "./SectionHeading.astro";
+import { competitorComparisons } from "../data/library-comparison";
 
 /**
  * Homepage grid section: why the popular Date alternatives either inherit
@@ -10,6 +11,13 @@ import SectionHeading from "./SectionHeading.astro";
  * Static — no hydration. Scoped `<style>` only; every value goes through a
  * `--gmt-*` token. No `backdrop-filter`, so no transparency/contrast gate is
  * needed beyond what the tokens already carry.
+ *
+ * Temporal, @northguild/gmt, and Date are structural anchors (the standard,
+ * the layer built on it, and the root cause) rather than comparison data, so
+ * they stay fixed here. Every actual competitor row comes from the shared
+ * apps/dox/src/data/library-comparison.ts module — the same data that drives
+ * the why-gmt CI-execution chart — so a new banned library only needs an
+ * entry there, not a second edit in this file.
  */
 
 interface Layer {
@@ -19,7 +27,7 @@ interface Layer {
   kind: "date" | "wraps" | "nonstandard" | "standard" | "gmt";
 }
 
-const stack: Layer[] = [
+const structuralStack: Layer[] = [
   {
     name: "Temporal",
     detail: "The TC39 standard. Separate types for instants, wall-clock times, zoned times, plain dates, and durations. No Date anywhere.",
@@ -38,30 +46,28 @@ const stack: Layer[] = [
     foundation: "root cause",
     kind: "date",
   },
-  {
-    name: "Moment.js",
-    detail: "A wrapper around Date. In legacy maintenance mode since 2020, and mutable like the thing it wraps.",
-    foundation: "built on Date",
-    kind: "wraps",
-  },
-  {
-    name: "Luxon",
-    detail: "A DateTime is a Date plus a zone string. Invalid inputs become an Invalid DateTime you have to remember to check for.",
-    foundation: "built on Date",
-    kind: "wraps",
-  },
-  {
-    name: "date-fns",
-    detail: "Tree-shakeable functions — but every argument and every return value is a Date, so all of its footguns are still yours.",
-    foundation: "built on Date",
-    kind: "wraps",
-  },
-  {
-    name: "@internationalized/date",
-    detail: "Its own CalendarDate / ZonedDateTime types. Fixes the model, but it is Adobe's API — a second migration once Temporal ships.",
-    foundation: "not TC39",
-    kind: "nonstandard",
-  },
+];
+
+const competitorStack: Layer[] = competitorComparisons
+  .filter((lib) => lib.kind && lib.detail && lib.foundation)
+  .map((lib) => ({
+    name: lib.displayName,
+    detail: lib.bannedCompanions?.length
+      ? `${lib.detail} Our gmt lint packages also ban the companion ${lib.bannedCompanions.join(", ")} package${lib.bannedCompanions.length > 1 ? "s" : ""}.`
+      : lib.detail!,
+    foundation: lib.foundation!,
+    kind: lib.kind!,
+  }));
+
+// "wraps" rows read as branching off Date (see the margin-left rule in the
+// <style> below), so they must follow it; "nonstandard" rows (currently just
+// @internationalized/date) are their own case and read best last.
+const stack: Layer[] = [
+  structuralStack[0],
+  structuralStack[1],
+  structuralStack[2],
+  ...competitorStack.filter((l) => l.kind === "wraps"),
+  ...competitorStack.filter((l) => l.kind === "nonstandard"),
 ];
 ---
 
@@ -69,12 +75,13 @@ const stack: Layer[] = [
   <SectionHeading>The alternatives inherit it, or deviate from the standard</SectionHeading>
   <p class="why-date-lede">
     The popular libraries do not replace <code>Date</code>; they decorate it,
-    so the faults come along. The one library that fixes the model does it with
-    a non-standard API you will migrate off. GMT is Temporal — the standard —
+    so the faults come along — our gmt lint packages ban the Date wrappers
+    below outright. The one library that fixes the model does it with a
+    non-standard API you will migrate off. GMT is Temporal — the standard —
     with the ergonomics added on top.
   </p>
 
-  <ol class="why-date-layers">
+  <ol class="why-date-layers" data-reveal-group>
     {
       stack.map((l) => (
         <li class:list={["why-date-layer", `why-date-layer--${l.kind}`]}>

@@ -1,4 +1,4 @@
-# Issues #171, #137–#139 — Ask Dox (the chatbot that mounts widgets)
+# Issues #171, #137–#139 — Dox (the chatbot that mounts widgets)
 
 **Re-audited 2026-08-26 and escalated, not demoted, by explicit user decision** — the
 chatbot is now Tier 6, the epic's final tier, and its ambition is higher than the
@@ -163,6 +163,19 @@ is merged and the screenshot gate is green.
 Definition of Done is written to catch it: every existing page must render
 byte-identically afterwards.
 
+**Amended 2026-09-09, at explicit user request: two `DOX-C3a` DoD items — the `/dox`
+route and an every-page entry point — were promoted into this story.** This is a real,
+intentional exception to the paragraph above: every page's header now carries an "Ask
+Dox" link, so the byte-identical claim no longer holds verbatim (the visual gate's
+baseline was re-captured to include it, and `visual:diff` passes against that new
+baseline). What shipped is a plain link to a real `/dox` route hosting the same static,
+non-networked probe DOX-C0 already built — **not** `DOX-C3a`'s draggable dock (drag,
+resize, focus trap, keyboard cycling), which is real UI work that needs a working
+`/api/chat` behind it to be worth building. `DOX-C3a` replaces this link with the actual
+dock; see `reference/design-system.md`'s "`/dox` and the header link" section for the
+implementation notes (in particular, why `Header.astro` must compose Starlight's
+sub-components via `virtual:starlight/components/*`, not direct file imports).
+
 #### DOX-C0 — React + AI Elements foundation
 
 **GitHub Issue:** #171 — see tracker.md\_
@@ -216,6 +229,12 @@ Option (b) is the smaller diff and keeps `npx ai-elements@latest add <name>` wor
 unmodified on every future component. Option (a) keeps one convention in the repo. Do
 not leave both half-done.
 
+**Resolved: option (a), `~/` only.** The premise for preferring (b) was wrong — the
+`shadcn`/`ai-elements` CLI **rewrites every copied file's imports** from
+`components.json`'s `aliases` block on install, so `npx ai-elements@latest add <name>`
+keeps working unmodified either way; (a) needed no manual post-processing. No `@/*` was
+added to `tsconfig.json` or `astro.config.mjs`'s Vite config.
+
 ### Tailwind scoping — the mechanically riskiest part of this story
 **Omit Preflight.** Tailwind's global reset targets `*`, `html`, `body` and headings; it
 must never reach the docs site. Import the layers individually — this is the documented
@@ -232,16 +251,20 @@ it does not load on a page that never opens the chat.
 
 **Know which way the cascade falls.** Tailwind utilities live in `@layer utilities`; the
 GMT sheets are unlayered, and unlayered always beats layered. So **every GMT rule wins
-against every Tailwind utility.** The collision set is small and was grep-verified on
-2026-09-03 — only three groups of global element selectors exist in the GMT sheets:
+against every Tailwind utility.**
 
-    h1–h6                gmt-shell.css      (font-family, letter-spacing)
-    textarea, input      gmt-controls.css   (the composer and every AI Elements input)
-    body                 gmt-shell.css      (not applicable inside the panel)
+**Correction (2026-09-09): the collision set has six groups, not three** — a full scan
+of all 22 sheets (the 2026-09-03 grep only checked a few files) also found `header`
+(whose `backdrop-filter` would nest glass-on-glass inside a future dock), `dialog` /
+`[role="dialog"]` (the latter matches every Radix overlay AI Elements renders), and
+`::selection`. The full table, with what each rule actually sets, lives in
+`reference/design-system.md`'s "Tailwind in the chat island" section — `gmt-ask.css`
+ships the scoped `.gmt-ask` reset for all six.
 
-Ship a scoped `.gmt-ask` reset for the two that apply. Record the list in
-`reference/design-system.md` so it is re-checked on future changes rather than
-re-derived.
+Also missing from the original snippet: `source(none)` on the `@import
+"tailwindcss/utilities.css"` line, plus an explicit `@source` list. Without it Tailwind
+scans all of `apps/dox`, including the ~504 generated reference pages. See
+`design-system.md` for the corrected snippet.
 
 ### Theme bridge
 Map shadcn's CSS variables (`--background`, `--foreground`, `--primary`, `--muted`,
@@ -251,10 +274,17 @@ palette and light/dark for free. **Do not write `[data-theme="light"]` blocks** 
 in `gmt-tokens.css`.
 
 ### Streamdown skin
-Style the reading surface in a new `gmt-ask.css` using `[data-streamdown="…"]`
-selectors — headings, links, inline code, code blocks, tables, blockquotes. **No Tailwind
-touches the reading surface.** Add the file to `customCss` in astro.config.mjs and to
-the stylesheet-stack table in `design-system.md`.
+
+**Correction (2026-09-09): `[data-streamdown="…"]` selectors mostly don't exist.**
+Streamdown 2.6.0 emits exactly one — `table-wrapper` — not `heading-1` / `link` /
+`code-block` / … as originally assumed, and its components need Tailwind's utility
+classes and shadcn's CSS variables to render at all (no Tailwind isn't achievable).
+The actual approach, detailed in `design-system.md`: Tailwind provides the structural
+baseline; unlayered `.gmt-ask-response …` selectors in `gmt-ask.css` override it, keyed
+off a `className="gmt-ask-response"` given explicitly to `MessageResponse` at each call
+site. `gmt-ask.css` is **not** added to `astro.config.mjs`'s `customCss` — it's imported
+from the island's entry module, same as the Tailwind sheet, so a page that never opens
+the chat loads neither.
 
 ### Test wiring
 `apps/dox/vitest.config.ts` is `environment: "node"` with no `setupFiles`, no plugins and
@@ -270,10 +300,14 @@ blocks), 2 (no color literals), 3 (widgets compose primitives) and 4 (respect th
 `customCss` order) all apply to this story, and rule 5 is the one being amended.
 
 ## Definition of done
-- **The byte-identical screenshot gate from `design-system.md` passes** on the landing
+- **The screenshot gate from `design-system.md` passes** (`pnpm visual:diff`, a
+  perceptual pixel diff — see that file for why not byte-identical) on the landing
   page, a dense reference page, the sidebar, the search modal and the mobile menu, in
-  light and dark, desktop and mobile — with the island present but never opened. Any
-  diff is a regression: this story changes no existing page.
+  light and dark, desktop and mobile.
+  **Amended 2026-09-09:** "this story changes no existing page" no longer holds
+  verbatim — the header link promoted from `DOX-C3a` (see above) touches every page's
+  header, intentionally. The baseline was re-captured to include it; `visual:diff`
+  passing against that baseline is what this line now means.
 - Grep the built output to confirm **Tailwind Preflight is absent**.
 - A reference page's initial payload contains **no React bundle** — verify in the network
   panel, not by inspecting the config.
@@ -281,8 +315,8 @@ blocks), 2 (no color literals), 3 (widgets compose primitives) and 4 (respect th
   (`lint test typecheck build`, including the 20-cell GMT timezone matrix) stays green.
 - A trivial AI Elements component renders inside the GMT theme with correct palette in
   both light and dark, with no `[data-theme="light"]` rule added to achieve it.
-- The chosen alias option is implemented consistently — no file imports `@/…` if (a) was
-  chosen, and both tsconfig and Vite resolve it if (b) was.
+- The chosen alias option (`~/`, resolved above) is implemented consistently — no file
+  imports `@/…`.
 ```
 
 ---
@@ -306,6 +340,86 @@ DOX-C1 Build retrieval chunks and lookup over gmt-corpus.json
 ```
 
 **Description:**
+
+**Amended 2026-09-09 — implemented, with three corrections to this file's own numbers:**
+
+1. **591 functions, not 504.** The corpus has grown since this file's estimate; measure
+   from the live `gmt-corpus.json`, not this count, going forward.
+2. **`CorpusEntry` had no `examples` field at all** — `build-reference.ts` parses
+   `@example` JSDoc tags into memory (`Doc.examples`) but the corpus-writing step
+   dropped them before ever reaching `gmt-corpus.json`. Fixed in `build-reference.ts`
+   and `reference-types.ts` (`CorpusEntry.examples: CorpusExample[]`); 519 of 591
+   entries now carry at least one. Also fixed in the same pass: `RouteManifest` is now
+   `ReadonlySet<string>`, matching what the generator's header comment already claimed.
+3. **A latent generator bug, unrelated to this story but found while touching it:**
+   `runGeneration()` wrote `gmt-corpus.json`'s sidebar output before creating `outGen`,
+   which only worked because the directory normally already exists from a prior run —
+   a genuinely clean checkout (`rm -rf src/generated`) hit `ENOENT`. Fixed by moving the
+   `mkdirSync` earlier.
+
+**Retrieval chunks:** `apps/dox/src/lib/retrieval/` — `function-chunks.ts` (one chunk
+per corpus entry: name + signature + description + formatted examples),
+`guide-sources.ts` (loads all 24 guide files via `import.meta.glob`, matching
+`llms.txt.ts`'s existing fix for the same Astro-endpoint-bundling problem — a
+`node:fs` walk relative to `import.meta.dirname` breaks once Astro bundles the calling
+endpoint into `dist/.prerender/chunks/*.mjs`), and `guide-chunks.ts` (one chunk per
+`##` heading, URL-fragmented via `github-slugger` to match Starlight's own anchors).
+Built at `astro build` time into a static asset — `src/pages/retrieval-chunks.json.ts`
+— rather than at Worker runtime, since only Node has `fs`/glob access; the Worker
+fetches it same-origin (`lib/retrieval/fetch-chunks.ts`, Cache-API-based, tested with a
+mock cache rather than Miniflare).
+
+**Retrieval scored 755 chunks** (591 function + 164 guide) at build time, 2026-09-09.
+
+**Search: `lib/retrieval/search.ts`, MiniSearch (BM25).** Two things the naive version
+got wrong, found by actually running the four DoD question types against the real
+corpus rather than assuming BM25 "just works":
+
+- **Stopword filtering was necessary, not optional.** Without it, "format a date for
+  display" — a real, in-corpus question — matched 489 of 591 chunks, because OR
+  combination means "a"/"for" alone match hundreds of entries. A ~30-word stopword
+  list cut that to low hundreds; combined with the score threshold below, to 15.
+- **A minimum relevance score (8, tuned against real queries) is what makes the
+  honest-refusal DoD line true.** Raw top-N alone can't distinguish a real match from
+  fuzzy/prefix padding. Verified empirically: every DoD question type's best result
+  scored ≥ 10.6; three genuinely unrelated questions ("recommend a pizza restaurant",
+  "translate to French", "javascript sorting algorithm") topped out at 6.0 or returned
+  zero. This threshold is tuned to _this_ corpus size and boost/stopword settings, not
+  a universal constant — re-verify if either changes materially.
+- **One finding that changed the test itself, not the code:** "parse a cron expression"
+  (this file's own DOX-C2 refusal-test example) is a _bad_:\*\* "parse a cron expression"
+  (this file's own DOX-C2 refusal-test example) is a _bad_ fixture for DOX-C1's
+  chunk-count DoD line — it genuinely surfaces real `parseHttp`/`parseRfc3339`/`parseSql`
+  chunks, which is honest retrieval (the corpus really does have those), not padding.
+  Recognizing "none of these describe cron support" is the LLM's job in DOX-C2's
+  end-to-end test, not retrieval's. DOX-C1's own test uses two questions with zero real
+  keyword overlap instead.
+
+**Provider decision: Vercel AI SDK (unchanged from DOX-C0), Gemini 2.5 Flash via
+`@ai-sdk/google`.** **Corrected under DOX-C2 (2026-09-09): `gemini-2.5-flash` is no
+longer available to new API keys** — a live call during DOX-C2's implementation returned
+"This model models/gemini-2.5-flash is no longer available to new users. Please update
+your code to use models/gemini-3.6-flash." `ALLOWED_MODELS` in
+`src/lib/chat-constants.ts` uses `gemini-3.6-flash`; the reasoning below for choosing the
+Google/Gemini family over TanStack AI, Workers AI, and Anthropic is unaffected by the
+model rename. "TanStack AI" (`@tanstack/ai` + `@tanstack/ai-react`) is real and
+well-built — confirmed via its own docs, not assumed — and its `chat()` +
+`toServerSentEventsResponse()` works from a plain `Request`/`Response` handler (a
+Cloudflare Worker example exists), not only inside TanStack Start. It loses on two
+independent grounds: **no `@tanstack/ai-google` and no Workers AI adapter exist**
+(checked npm directly, 2026-09-09) — of this story's three real candidates it covers
+only Anthropic — and adopting it now would mean either dropping AI Elements entirely or
+building an adapter shim, since AI Elements' vendored components (`message.tsx`,
+`prompt-input.tsx`) are typed against the `ai` package's `UIMessage`/`ChatStatus`
+directly. Between the two remaining real options: **Cloudflare Workers AI** (same-origin,
+no key custody) was passed over because DOX-C3b's widget-mounting needs reliable
+structured tool calls, and Workers AI's cheap-tier models are generally weaker at this
+than Gemini 2.5 Flash; **Anthropic** has no free tier and no key already provisioned.
+Gemini 2.5 Flash: strong tool-calling, a free tier, and `NORTHGUILD_GMT_GEMINI_API_KEY`
+already sits in the real deployment's `apps/dox/.env` (absent from this worktree, which
+has no `.env` file at all — confirmed, not assumed).
+
+Original description follows, for the gap this story was built to close:
 
 ```
 Part of the Dox epic — see `context/dox/index.md`, Tier 6, item DOX-C1.
@@ -403,12 +517,44 @@ measure in the Worker and record the numbers in this issue.
 - Retrieval returns sensible chunks for a spread of real questions: a direct lookup
   ("what does formatDate do"), a task ("convert UTC to Tokyo"), a concept ("what happens
   during a DST gap"), and a near-miss ("addBusinessDay" singular).
-- Every chunk carries a URL that resolves.
-- Corpus token measurements are recorded in this issue.
+  **Done 2026-09-09** — all four tested in `lib/retrieval/search.test.ts` against the
+  real 755-chunk corpus, not synthetic fixtures.
+- Every chunk carries a URL that resolves. **Done** — function chunks reuse
+  `CorpusEntry.url` directly; guide chunks reuse the same route-derivation `llms.txt.ts`
+  already relies on, fragmented via `github-slugger` to match Starlight's own anchors.
+- Corpus token measurements are recorded in this issue. **Done, measured 2026-09-09
+  against the real built `retrieval-chunks.json`:**
+
+      755 chunks total (591 function + 164 guide)
+      ~83,750 estimated tokens across the whole corpus (chars/4 heuristic — see
+        lib/retrieval/tokens.ts's docstring for why not an exact provider tokenizer)
+      111 mean tokens/chunk, 2,593 max, 7 min
+      Typical retrieved set (15 chunks, real questions): 1,200-6,400 tokens depending
+        on how many chunks clear the relevance threshold
+
+  For scale: the sibling repo's own arithmetic put "four packages" at 80-150 KB
+  (~20,000-37,500 tokens) as the point baking the corpus into every prompt gets
+  expensive, and real retrieval as worth it "past ~500 KB of docs" (~125,000 tokens).
+  This **single** package's corpus, at ~83,750 tokens, is already past their
+  four-package estimate — retrieval over baking is the correct call, not a
+  precaution.
 - The same-origin corpus-fetch path is implemented and its caching behavior recorded.
-- The provider and model are chosen and recorded, with the reasoning.
+  **Done** — `lib/retrieval/fetch-chunks.ts`, Cache-API-based (`caches.default` in
+  production), tested with a mock `{match, put}` cache rather than Miniflare. Not yet
+  wired into a real Worker (that's `DOX-C2`); this is the tested function `DOX-C2`
+  calls with `caches.default`.
+- The provider and model are chosen and recorded, with the reasoning. **Done** —
+  Vercel AI SDK (unchanged from `DOX-C0`) + Gemini 2.5 Flash via `@ai-sdk/google`; see
+  the "Amended 2026-09-09" note above for the full TanStack AI comparison and the
+  Workers AI / Anthropic tradeoffs.
 - A question with no good match returns few or no chunks rather than 20 bad ones — the
-  refusal path in DOX-C2 depends on this being honest.
+  refusal path in DOX-C2 depends on this being honest. **Done, with one correction to
+  this DoD's own framing**: "parse a cron expression" (this file's DOX-C2 example)
+  turned out to be a bad fixture for *this* line — it genuinely surfaces real
+  `parse*` chunks, which is honest retrieval, not the failure mode this line means.
+  Tested instead with two questions carrying zero real keyword overlap with the
+  corpus; both return under 5 chunks (one returns zero). See `search.ts`'s
+  `MIN_RELEVANCE_SCORE` docstring for the empirical basis.
 ```
 
 ---
@@ -548,18 +694,43 @@ key up without a manual step, with committed `.example` counterparts. Small, and
 removes a recurring papercut. Note `apps/dox/.env` already holds
 `NORTHGUILD_GMT_GEMINI_API_KEY`.
 
+**Amended 2026-09-09 — implemented.** The bridging script above was **not** built: this
+worktree had no `.env.local` to bridge from (the site's Astro build never needed the
+Gemini key at build time — only the Worker needs it, at runtime), so a script for a
+single env var would have been overhead the story didn't need. Instead: `apps/dox/.dev.vars`
+(gitignored, real key) plus a committed `apps/dox/.dev.vars.example` placeholder — the
+plain Wrangler convention, with nothing to bridge.
+
 ## Definition of done
 - A question with a corpus answer streams a correct, grounded response into `useChat`.
+  **Done** — verified against the real `/api/chat` endpoint via `wrangler dev` and a
+  direct HTTP request (no `useChat` client exists yet; that's `DOX-C3a`). Asking "how do
+  I convert a UTC timestamp to Tokyo time with gmt" streamed a correct answer citing
+  `convertUtcToZoned`/`convertUnixToPlainDateTime` and a real guide link.
 - A question with no corpus answer is **refused**, not improvised. Test with something
   plausible-but-absent (e.g. "how do I parse a cron expression with gmt") rather than
   something obviously off-topic — the plausible case is where grounding actually fails.
-- Every branch of the validation pipeline has a test.
-- Rate limiting is tested including per-IP independence, with a faked clock.
+  **Done** — this exact question, against the real API, returned "The @northguild/gmt
+  documentation does not cover parsing cron expressions." with no invented function.
+- Every branch of the validation pipeline has a test. **Done** —
+  `worker/validation.test.ts`; message-shape validation is delegated to `ai`'s own
+  `safeValidateUIMessages` rather than a hand-guessed zod schema, since `UIMessage` has
+  ~10 part-type variants maintained in lockstep with `useChat`.
+- Rate limiting is tested including per-IP independence, with a faked clock. **Done** —
+  `worker/rate-limit.test.ts`, plus verified live (25 rapid requests: 429 kicked in at
+  request 19 of a 20-request window).
 - **System-prompt assembly is unit-tested** — section order, and the route allowlist
-  matching the retrieved set exactly.
-- Grep the deployed production assets for the key and confirm it is absent.
+  matching the retrieved set exactly. **Done** — `worker/system-prompt.test.ts`.
+- Grep the deployed production assets for the key and confirm it is absent. **Done** —
+  confirmed absent from `dist/`, and confirmed live that no `/api/chat` response
+  (success or error) ever contains it.
 - The built Worker bundle size is measured and recorded against the Workers size limit.
-- Worker tests pass on a clean checkout with no prior build.
+  **Done, measured 2026-09-09**: 354.88 KiB gzip (1959.32 KiB uncompressed) via
+  `wrangler deploy --dry-run`, well under Cloudflare's 3 MB compressed Worker script
+  limit.
+- Worker tests pass on a clean checkout with no prior build. **Done** — the generated
+  corpus/route-manifest modules `worker/*` needs are git-tracked (not merely gitignored
+  as `DOX-C1` initially assumed), so `pnpm test` needs no prior `pnpm run generate`.
 ```
 
 ---
@@ -571,14 +742,14 @@ removes a recurring papercut. Note `apps/dox/.env` already holds
 `DOX-C3` spans two sub-stories, both Tier 6: `DOX-C3a` (the two shells + link hardening)
 and `DOX-C3b` (widget registry). The issue stays open until `DOX-C3b` also lands.
 
-#### DOX-C3a — Chat core, the dock, and the /dox route
+#### DOX-C3a — Chat core and the /dox route
 
 **GitHub Issue:** #139 — see tracker.md\_
 
 **Title:**
 
 ```
-DOX-C3a Add the Ask Dox dock and the /dox route over one shared chat core
+DOX-C3a Add the Dox chat core and the /dox route
 ```
 
 **Description:**
@@ -593,40 +764,51 @@ the globe, but must render usefully without it.
 No chat UI exists through Tier 5. This story is where the epic's original ambition
 lands — on top of a docs site and a widget platform, not instead of either.
 
-## Two surfaces over one core (2026-09-03 rewrite)
+## One surface, not two — AMENDED 2026-09-10, the dock is CUT
 The 2026-08-26 spec said "not a takeover, **not a separate route**, not the homepage."
 **The user has explicitly asked for a dedicated route**, so the middle clause is
 reversed. The rest stands, and is the constraint this story is built against:
 
-> The docs are the product. The dock augments them. No reader is ever forced through the
+> The docs are the product. Dox augments them. No reader is ever forced through the
 > chat to reach an answer, and deleting the chat leaves every page in Tiers 0–5 intact.
 
-Build **one** `<AskDox>` React island and mount it in two hosts.
+**This story originally specified two hosts over one core: an every-page draggable dock
+("Host 1") and the `/dox` route ("Host 2"). Host 1 is cut. Only `/dox` is built.**
 
-### Host 1 — the every-page draggable dock
-- Mounted by overriding Starlight's **`PageFrame`** component (verified overridable in
-  Starlight 0.41.9; it wraps every page, `splash` included). Add it to the `components`
-  map in `astro.config.mjs` alongside the existing `ThemeProvider` / `Hero` /
-  `SocialIcons` overrides.
-- **AI Elements has no draggable modal — the shell is ours.** Build it from the existing
-  `.gmt-glass*` / `.gmt-brackets` primitives in `gmt-primitives.css`; do not introduce a
-  new panel treatment.
-- **`reference/visual-design.md` has no dialog/modal/overlay spec at all.** This story
-  writes one, into that file, before building: drag handle, resize, dock/undock,
-  focus trap, Escape to dismiss, focus return on close, `prefers-reduced-motion`,
-  `prefers-reduced-transparency`, and the existing "no nested glass-within-glass" and
-  "cap blurred surfaces" performance rules.
-- Hydrates `client:idle`. **The chat core itself does not hydrate until the dock is
-  opened** — the launcher is a button, not a chat.
+Three reasons, in order of weight:
 
-### Host 2 — the /dox route
+1. **The every-page entry point already exists and costs nothing.** `DOX-C0` shipped a
+   header link carrying the Dox crystal — a plain `<a>` plus inline SVG, with **no
+   `client:` directive anywhere in `Header.astro` or `DoxMark.astro`**. Every page can
+   reach Dox in one click, with zero JavaScript.
+2. **A dock would break the property `DOX-C0` was built to protect.** That story's DoD
+   requires a reference page's initial payload to contain no React bundle. Today that is
+   true *by construction* — there is no island to hydrate. Overriding `PageFrame` to
+   mount a launcher on all ~650 pages puts React on the critical path everywhere and
+   turns a structural guarantee into a thing that needs policing.
+3. **It would duplicate a surface that is now deliberately different.** `/dox` evolved
+   into a chrome-free, full-bleed app surface (`dox.astro` hides the Starlight header and
+   `<h1>` via `data-dox-shell`). A floating glass panel showing the same transcript is a
+   second, worse version of it.
+
+The cost of the cut, stated honestly: a reader must navigate away from the page they are
+on to ask a question, losing their place. The page-context bias that seeds retrieval
+(`namespace-from-page.ts`) still works — `/dox` receives it from the referrer — but the
+reader's *visual* context does not follow them. If that turns out to matter, the answer
+is probably a slide-over on `/dox`-adjacent routes, not the full drag/resize dock.
+
+**What retires with it:** the `PageFrame` override, the drag/resize/undock shell, the
+dialog-and-overlay spec this story was to write into `reference/visual-design.md`, and
+the four dock-specific DoD lines below.
+
+### The /dox route — the only surface
 - A full-height page at `/dox`, built with `<StarlightPage frontmatter={{ template:
   'splash' }}>` so the header, search and theme select stay consistent while the sidebar
   and table of contents drop away. (A plain `src/pages/dox.astro` would not receive
   Starlight's `customCss` and would have to re-import the whole stylesheet stack.)
 - Left: the chat core. Right: a **widget rail** carrying the Tier 2 widgets and — via
-  `DOX-E1` — the spinnable globe with global clocks. The rail is what makes this route
-  worth having over the dock.
+  `DOX-E1` — the spinnable globe with global clocks. **Deferred to `DOX-C3b`**, which
+  owns the widget-mounting machinery the rail is made of.
 - Hydrates `client:load`.
 - Link it from the site header or sidebar, not from a modal-only entry point.
 
@@ -727,7 +909,8 @@ still stands.
 - **A deliberately induced hallucinated link renders as plain text, not a broken link.**
   Test this directly — stub a response containing `/reference/plain/calculate/notAReal`
   and confirm it degrades. This is the story's most important test.
-- The same answer renders identically in the dock and on `/dox`.
+- ~~The same answer renders identically in the dock and on `/dox`.~~ **Retired with the
+  dock — there is only one surface.**
 - Multiline input works; Enter/Shift+Enter behavior is deliberate and documented.
 - Code blocks in answers are copyable.
 - Stop halts the stream mid-token.
@@ -735,13 +918,28 @@ still stands.
 - A rate-limit response renders as a warning, not a crash, and does not enter history.
 - The retrieval trace shows zero chunks for an out-of-corpus question, and the answer
   refuses.
-- Keyboard-only: open the dock, type, submit, stop, dismiss, and return focus sensibly —
-  all without a mouse. Repeat on `/dox`.
-- The dock is draggable by keyboard as well as pointer, or has a documented keyboard
-  equivalent (e.g. dock-position cycling).
-- **No chat bundle is hydrated on a reference page until the dock is opened** — verify in
-  the network panel.
-- `/dox` renders and is usable with the DOX-E1 globe absent.
+- Keyboard-only on `/dox`: reach the composer, type, submit, stop, and reach the brain
+  selector — all without a mouse. **(The "open the dock … dismiss … return focus"
+  half is retired; there is no dock to open or dismiss.)**
+- ~~The dock is draggable by keyboard as well as pointer.~~ **Retired with the dock.**
+- **No React bundle is hydrated on a reference page at all** — verify in the network
+  panel. Stronger than the original line, which only required it "until the dock is
+  opened": with the dock cut, the header entry point is a plain link and a reference
+  page ships no island whatsoever.
+- `/dox` renders and is usable with the DOX-E1 globe absent. **Trivially met while the
+  widget rail is deferred to `DOX-C3b`; re-check when the rail lands.**
+
+**Added by the 2026-09-10 amendment — the free-tier survival DoD.** None of this was
+foreseen when the story was written; it became mandatory once a live run exhausted
+Gemini's 20-requests-per-day free allowance mid-session:
+
+- An exhausted brain is **invisible to the reader**: the request fails over to another
+  brain before any output is streamed, rather than surfacing an error.
+- A brain the API key cannot reach (404/400) is pruned for the day rather than retried.
+- The usage badge reports **real** numbers from the KV ledger, and they move with real
+  requests and survive a reload.
+- Day boundaries are Pacific, not UTC, and are computed with `@northguild/gmt` — the
+  library this site documents — including across a DST change.
 ```
 
 ---
@@ -753,7 +951,7 @@ still stands.
 **Title:**
 
 ```
-DOX-C3b Let Ask Dox answer by mounting a real Tier 2 widget
+DOX-C3b Let Dox answer by mounting a real Tier 2 widget
 ```
 
 **Description:**
@@ -847,3 +1045,168 @@ same shape as `DOX-B2b`/`-c`/`-d`'s widgets. This story's job for `DOX-E1` speci
 is mounting those two existing entry points into the rail, seeded from tool args — not
 building new globe/scrubber code. See `issues/DOX-E.md`'s Status notes and
 `tracker.md`'s footnote on the `DOX-E1` row.
+
+---
+
+## Remaining work to close Tier 6 — written 2026-09-10, pre-publish
+
+`DOX-C0`, `DOX-C1`, `DOX-C2` and `DOX-C3a` are done. Dox answers from the corpus, cites
+pages that resolve, refuses honestly, and stays inside the free tier by failing over
+between brains inside a single request. **The site is publishable as it stands** — what
+follows is what is left, in the order it should be picked up.
+
+### 0 · Publish (blocking nothing else, do it first)
+
+Merging to `main` **is** publishing: `.github/workflows/deploy-dox.yml` fires on every
+push to `main` with no path filter and no `workflow_dispatch`, and ships Worker + assets
+in one `wrangler deploy`. There is no staging step and no way to trigger a deploy by
+hand.
+
+Pre-merge state, all verified 2026-09-10:
+
+| Gate | Status |
+| --- | --- |
+| `pnpm --filter @gmt/dox test` | 477 passing, 28 files |
+| `check` / `lint` / `oxfmt` | 0 errors, 0 warnings, clean |
+| Worker bundle | 420.28 KiB gzip, against Cloudflare's 3 MB limit |
+| Visual gate, 24 snapshots | all within tolerance; largest 0.069% vs 0.2% |
+| `CLOUDFLARE_API_TOKEN` / `_ACCOUNT_ID` | provisioned (see `DOX-A.md`) |
+| `NORTHGUILD_GMT_GEMINI_API_KEY` (prod) | set via `wrangler secret put` |
+| `DOX_USAGE` KV namespace | created and bound in `wrangler.jsonc` |
+
+Post-deploy smoke test, on the live URL rather than locally:
+
+- `/dox/` loads, the mark lands, the composer accepts input.
+- A real question streams a grounded answer whose citation opens the right page.
+- `/api/brains` counts **move** after that question and survive a reload. This is the
+  one thing that cannot be checked before deploy, because production KV is a different
+  namespace from the preview one.
+- The env badge reads `● live`.
+- `curl -s <url>/dox/ | grep -c GEMINI` → `0`.
+
+### 1 · `DOX_DEV_KEY` (small, unblocks the team)
+
+Never set, so `isDevRequest` always returns false and the dev bypass is inert — the whole
+team is capped at `VISITOR_DAILY_MAX` like any reader. `worker/dev-access.ts` is built and
+has 13 passing tests; it needs only the secret:
+
+```bash
+cd apps/dox && npx wrangler secret put DOX_DEV_KEY   # production
+# then the same value in apps/dox/.dev.vars for local
+```
+
+Then visit `/dox?key=<secret>` once per device. Note what this does **not** buy: exemption
+from the per-visitor cap and manual brain choice, never a larger shared pool. Nothing at
+the application layer can raise a project-wide free-tier ceiling.
+
+### 2 · Brain-list maintenance (recurring, cheap)
+
+`BRAINS` in `src/lib/chat-constants.ts` is the free tier's escape hatch: the quota id is
+`GenerateRequestsPerDayPerProjectPerModel-FreeTier`, so **every additional reachable model
+adds its own 20/day**. Confirmed against the live API on 2026-09-10 — a `429` naming the
+model in its own `quotaDimensions` proves reachability exactly as well as a `200`.
+
+Re-run this whenever answers start getting scarce, and after any Gemini release:
+
+```bash
+cd apps/dox && source .dev.vars
+curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$NORTHGUILD_GMT_GEMINI_API_KEY" \
+  | grep -o '"name": "models/gemini[^"]*"' | sort -u
+```
+
+Three traps found doing this, each of which produced a convincing false negative:
+
+- **`wrangler dev` overwrites `cf-connecting-ip`.** Probing a dozen models in a loop with
+  a different spoofed IP per request does *not* give you a dozen visitors — the runtime
+  sets that header itself, so every probe shares one visitor identity and the run dies at
+  `VISITOR_DAILY_MAX`. The refusals look exactly like model failures. Raise the cap for
+  the duration of the probe (`wrangler dev` hot-reloads on save) and put it back after.
+- **A flapping `wrangler dev` produces false negatives.** `503 Your worker restarted
+  mid-request` reads exactly like a dead model. Two causes seen: building `@gmt/dox`
+  without its `@northguild/gmt` dependency (`pnpm --filter "@gmt/dox..." -r run build`,
+  note the `...`), which leaves esbuild unable to resolve the import and kills the server;
+  and two `wrangler dev` instances fighting over one port. Check `pgrep -cf "wrangler dev"`
+  returns exactly 1 before believing any result.
+- **Read the state, not the response.** `GET /api/brains` reports each brain as `ok`,
+  `spent` or `unavailable`, and that distinction is the whole answer: `spent` is a 429,
+  which *proves the model exists and has a free allowance*, while `unavailable` is a
+  404/400 and means it is not callable at all. A brain that merely fell through to another
+  tells you nothing about which of the two it was.
+
+The 2026-09-10 probe settled the list at **nine brains** (~165 requests/day): eight Flash
+and Flash-Lite models, plus `gemini-3.1-pro-preview`, which answered 429 and is therefore
+real. Three candidates were dropped on a 404/400: `gemini-2.5-flash-lite`, `gemini-2.5-pro`
+and `gemini-2.5-flash` — the last confirming `DOX-C2`'s finding that it is closed to new
+keys. Also excluded: the `-latest` aliases (unknown whether the quota bucket follows the
+alias or its target — a badge that lies is worse than a shorter list) and every non-text
+model. Full reasoning lives in that file's docstring.
+
+**Keep `VISITOR_DAILY_MAX`'s arithmetic in step with the list.** It is currently 5 against
+a pool of ~165/day. The two numbers drift apart silently, and that cap is the only thing
+between one enthusiastic reader and everybody else's day.
+
+### 3 · `DOX-C3b` — the widget registry (the whole of what is left)
+
+This is a story, not a finishing pass, and its own spec understates it. Scoping on
+2026-09-10 found:
+
+**The stated step 1 is the easy part.** All three widget scripts already factor cleanly
+into a container-scoped `setupWidget(container, …)` — they use a local
+`q(role) => container.querySelector(...)` helper, attach listeners only inside their
+container, and their bootstraps already loop `document.querySelectorAll(...).forEach(...)`,
+so they are multi-instance-safe today. Extracting `mount(root)` is close to mechanical.
+
+**The real work is markup provenance, which the spec does not mention.** All three widgets
+are ~100% server-rendered Astro; the scripts build result rows and chips, never controls.
+Every `<select>`, `<input>`, slider handle and `CodeFrame` comes from the `.astro`
+template. So `mount(root)` alone does **not** make them React-mountable — something must
+produce the markup it expects to find. Three options:
+
+1. **Template string inside the mount module** (the `initScrubber` shape). One source of
+   truth, but it converts SSR HTML into client-generated HTML, which breaks this story's
+   own "byte-identical Tier 2 pages" DoD line and loses pre-JS readable markup.
+2. **`mount(root)` requires pre-existing markup**, React renders it as JSX. Tier 2 pages
+   are untouched, but the markup exists twice and drift is silent — a missing `data-role`
+   just makes a control inert, because every lookup is a null-tolerant `q()`.
+3. **A shared `renderTemplate(): string`** used by both — `.astro` does
+   `<Fragment set:html={dstTemplate()} />`, the panel does `root.innerHTML = dstTemplate()`
+   before `mount(root)`. **Recommended:** the only option that keeps SSR *and* one source
+   of truth. Decide this before writing any code; everything else is downstream.
+
+**Four cross-cutting items, roughly two-thirds of the effort:**
+
+- `CURATED_TIMEZONES` lives in `scripts/build-utils/build-utils.ts`, which does
+  `import ts from "typescript"` at the top. It is currently tree-shaken out because only
+  Astro frontmatter reaches it. A client-side template that references it risks dragging
+  the TypeScript compiler into the browser bundle — **extract it (and ConverterBench's
+  `LOCALES`) to a client-safe `src/lib/` module first.**
+- `mount()` must return a `destroy()` handle in the shape of `GlobeHost`/`ScrubberHost`.
+  React StrictMode double-invokes effects, so mount-without-cleanup double-wires
+  `wireCopyButtons` and every control listener on day one.
+- **`apps/dox` has no DOM-test environment.** Existing widget tests are pure logic. The
+  DoD lines about nonsense arguments and keyboard operation need jsdom set up, which is
+  likely larger than the extraction itself.
+- `playground-client.ts`'s `evaluateArg` uses `new Function`. The three widgets never call
+  it, but keep it off `showPlayground`'s path or the "no `eval` anywhere in the registry
+  or its dispatch path" DoD line becomes an argument.
+
+Difficulty, per widget: **ConverterBench easy** (135-line stateless script, no drag, no
+keyboard — do it first as the pattern-setter). **IntervalVisualizer medium** (342 lines,
+cleanest architecture, but six precisely-aligned timeline rows are easy to get subtly
+wrong by hand). **DstInspector medium-hard** (483 lines, pointer-capture drag plus
+keyboard scrubbing, and cross-render scrub state deliberately owned outside `render()` —
+the piece most likely to break silently under a React re-render). It also cannot be
+deferred: the spec's motivating example, *"what happens to 1:30am on November 3rd in New
+York"*, is exactly this widget.
+
+Closing `DOX-C3b` also closes `DOX-E1a`'s last open DoD item — the globe in the `/dox`
+rail — and with it `#139` and `#142`. See the pickup note above.
+
+### Not doing
+
+- **The every-page draggable dock.** Cut; see the `DOX-C3a` amendment above for the
+  reasoning and the honest cost.
+- **A custom domain.** Launching on `gmt-dox.northguild.workers.dev`; `astro.config.mjs`'s
+  `SITE` already matches.
+- **`DOX-C4` (Cloudflare AI).** A separate issue (#240) and explicitly deferred — Gemini
+  first.

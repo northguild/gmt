@@ -243,18 +243,17 @@ dialog > .dialog-frame {
 }
 
 /* ---- Links ---- */
-.sl-markdown-content a {
+.sl-markdown-content a:not(:where(.not-content *)) {
   color: var(--gmt-cyan);
   text-decoration: none;
-  border-bottom: 1px solid var(--gmt-teal);
+
   transition:
     color var(--gmt-duration-fast) var(--gmt-easing),
     border-color var(--gmt-duration-fast) var(--gmt-easing);
 }
 
-.sl-markdown-content a:hover {
+.sl-markdown-content a:not(:where(.not-content *)):hover {
   color: var(--gmt-cyan-bright);
-  border-bottom-color: var(--gmt-cyan);
 }
 
 /* ---- Starlight tabs ---- */

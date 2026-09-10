@@ -29,10 +29,39 @@ h6 {
   color: var(--gmt-ice);
 }
 
-h1 {
+/* :not([data-page-title]) — carved out so the hero title rule below (same
+   specificity family, but unlayered like this one) is the one that actually
+   decides its font-size, rather than this generic 32px landing on it too. */
+h1:not([data-page-title]) {
   font-weight: 700;
   letter-spacing: var(--gmt-tracking-wide);
   font-size: 32px;
+}
+
+/* Homepage hero title ("@northguild/gmt") ------------------------------
+   HeroGlobe places this h1 as ordinary content inside .sl-markdown-content
+   (it isn't wired through Starlight's hero-image slot), so Starlight's own
+   `.sl-markdown-content h1` rule (markdown.css, `@layer starlight.content`)
+   always wins over HeroCopy.astro's own `@layer starlight.core` h1 rule —
+   cascade layers settle disputes by layer order first, so that scoped rule's
+   font-size never actually applied at any width. This file is loaded
+   unlayered, so it wins outright regardless of layer order; the override has
+   to live here for the same reason the h1:not() rule above does.
+
+   Michroma (--gmt-font-display) runs unusually wide per character, and
+   "@northguild/gmt" has no natural break point a browser will use on its
+   own — so instead of relying on word-wrap (which would break the name
+   mid-word) or a single fluid clamp (whose vw term this component's rule
+   never got to prove out), narrow phones get their own fixed, verified-fit
+   size below rather than one formula stretched across every width. */
+h1[data-page-title] {
+  font-size: var(--sl-text-h1);
+}
+
+@media (max-width: 26rem) {
+  h1[data-page-title] {
+    font-size: 1.5rem;
+  }
 }
 
 /* ---- Starlight layout shell ---- */

@@ -1,7 +1,12 @@
 ---
+import type { HTMLAttributes } from 'astro/types';
 import Icon from './Icon.astro';
 
-interface Props {
+// Extends the anchor's own attributes so callers can pass `title`, `data-*`,
+// `aria-*` and the rest — all of which the `...attrs` spread below already
+// forwarded at runtime, but which a closed `Props` interface rejected at
+// type-check time (caught when the header button added a tooltip).
+interface Props extends Omit<HTMLAttributes<'a'>, 'href' | 'rel'> {
 	/** Destination URL. Absolute http(s) URLs open in a new tab automatically. */
 	href: string;
 	/** Accessible label, rendered visually hidden — use for icon-only buttons. */

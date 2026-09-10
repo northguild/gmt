@@ -1654,12 +1654,17 @@ function runGeneration() {
     moduleSymbols.get(key)!.push({ name: doc.name, slug });
   }
 
+  // DOX-C1 (#137): `outGen` must exist before anything writes into it. This
+  // used to run after the sidebar write below, which only worked because
+  // `outGen` normally already exists from a prior run — a genuinely clean
+  // checkout (no `src/generated/` at all) hit ENOENT here.
+  mkdirSync(outGen, { recursive: true });
+
   // Write generated sidebar
   const sidebarMd = buildSidebar(moduleSymbols);
   writeFileSync(join(outGen, "sidebar.ts"), sidebarMd);
 
   // Write artifacts
-  mkdirSync(outGen, { recursive: true });
 
   // 1. corpus
   const corpus = dedupedDocs.map((d) => ({
@@ -1671,6 +1676,11 @@ function runGeneration() {
     signature: d.kind === "function" ? d.signature : "",
     description: d.description,
     sourcePath: `packages/gmt/src/${d.sourcePath}`,
+    // DOX-C1 (#137): retrieval chunks need real examples, not just a
+    // signature + one-line description. `TypeDoc` carries no `examples`
+    // field at all (types have no @example tags); function and regex docs
+    // both do.
+    examples: d.kind === "type" ? [] : d.examples,
   }));
   writeFileSync(
     join(outGen, "gmt-corpus.json"),

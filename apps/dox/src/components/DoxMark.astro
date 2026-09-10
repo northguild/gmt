@@ -1,0 +1,55 @@
+---
+/**
+ * DOX-C3a (#139) — the Dox crystal, Astro side.
+ *
+ * Renders on every page (the header's "Chat with Dox" button), where the chat
+ * island's stylesheet is not loaded — which is why the mark's presentation
+ * lives in `gmt-primitives.css` rather than `gmt-hive.css`. Geometry is shared
+ * with the React copy via `~/lib/dox-mark`, so the two cannot drift.
+ *
+ * `aria-hidden`: every consumer supplies its own accessible name (the header
+ * button labels itself "Chat with Dox"), so the mark must not announce twice.
+ */
+import {
+  MARK_INNER,
+  MARK_OUTER,
+  MARK_SHEEN,
+  MARK_SPOKES,
+  MARK_VIEWBOX,
+} from "~/lib/dox-mark";
+
+interface Props {
+  /** Gradient ids must be unique per document — two marks on one page sharing
+   * an id makes the second silently reuse the first one's stops. */
+  id?: string;
+}
+
+const { id = "header" } = Astro.props;
+const faceId = `gmt-dox-face-${id}`;
+const sheenId = `gmt-dox-sheen-${id}`;
+---
+
+<svg class="gmt-dox-mark" viewBox={MARK_VIEWBOX} focusable="false" aria-hidden="true">
+  <defs>
+    <linearGradient id={faceId} x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="currentColor" stop-opacity="0.55" />
+      <stop offset="55%" stop-color="currentColor" stop-opacity="0.16" />
+      <stop offset="100%" stop-color="currentColor" stop-opacity="0.4" />
+    </linearGradient>
+    <linearGradient id={sheenId} x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0%" stop-color="var(--gmt-ice)" stop-opacity="0.75" />
+      <stop offset="45%" stop-color="var(--gmt-ice)" stop-opacity="0.05" />
+      <stop offset="100%" stop-color="var(--gmt-ice)" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+
+  <polygon points={MARK_OUTER} fill={`url(#${faceId})`} />
+  <polygon points={MARK_OUTER} class="gmt-dox-mark-edge" />
+
+  <g class="gmt-dox-mark-facet">
+    {MARK_SPOKES.map(([x1, y1, x2, y2]) => <line x1={x1} y1={y1} x2={x2} y2={y2} />)}
+  </g>
+
+  <polygon points={MARK_INNER} class="gmt-dox-mark-table" />
+  <polygon points={MARK_SHEEN} fill={`url(#${sheenId})`} />
+</svg>

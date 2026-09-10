@@ -1,7 +1,7 @@
 /**
  * The canonical "paste this into your coding agent" prompt.
  *
- * Delivered by the hero's "Copy GMT prompt" button (HeroCopy.astro), which writes it
+ * Delivered by the hero's "Copy prompt" button (HeroCopy.astro), which writes it
  * to the clipboard. Kept here as a standalone module so the button's client
  * script can import it without pulling in page markup.
  */
