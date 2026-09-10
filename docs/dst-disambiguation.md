@@ -27,16 +27,19 @@ Both scenarios need a tiebreak rule. Temporal (and GMT, which wraps it) offers f
 
 `"compatible"` is the default because it matches what most runtimes and other datetime libraries do out of the box — it's the safe, unsurprising choice if you don't have an opinion. Reach for `"earlier"`/`"later"` when your domain has a specific rule (e.g. "always round DST-gap appointments forward"), and `"reject"` when an ambiguous/nonexistent time should be a hard validation error rather than silently resolved.
 
-## Four DST-related questions, four different functions
+## Five DST-related questions, five different functions
 
-Beyond `disambiguation`/`offset` (this doc's main subject — what to do when _constructing_ a value lands on an ambiguous or nonexistent instant), GMT has three more DST-related functions with easily-confused names. Route by the question you're actually asking:
+Beyond `disambiguation`/`offset` (this doc's main subject — what to do when _constructing_ a value lands on an ambiguous or nonexistent instant), GMT has four more DST-related functions with easily-confused names. Route by the question you're actually asking:
 
 | Your question                                                                   | Function                               | Scope                                                |
 | ------------------------------------------------------------------------------- | -------------------------------------- | ---------------------------------------------------- |
 | Does this zone observe DST at all?                                              | `hasDaylightSaving(timeZone)`          | Zone-level, no instant                               |
 | Where do this zone's transitions fall?                                          | `getDstTransitions(timeZone, year)`    | Enumerates instants                                  |
 | Is _this particular instant_ currently in DST?                                  | `isInDaylightSaving(value)`            | A single zoned value                                 |
+| Is _this particular wall time_ ambiguous or nonexistent?                        | `classifyLocal(local, timeZone)`       | A single plain datetime, asked _before_ construction |
 | What should happen when construction lands on an ambiguous/nonexistent instant? | `disambiguation` / `offset` (this doc) | Orthogonal — a construction-time choice, not a query |
+
+`classifyLocal` is the one to reach for when the right answer is "don't resolve this at all". Every other row on this list either describes a zone or describes a value that has already been built; `classifyLocal` answers the question while you still have the option of refusing. It returns `"unique"`, `"ambiguous"` or `"nonexistent"` — the vocabulary the rest of this doc uses — so a demurrage clock, a medication window or a duty limit can route the case to a human instead of silently accepting one of two instants an hour apart.
 
 `isInDaylightSaving` compares a zoned value's own offset against its timeZone's standard (non-DST) offset for that same year — the smaller of the offsets a Jan 15 and a Jul 15 reference point attain, since DST always shifts a zone's clocks forward relative to its own standard time, in every hemisphere:
 
@@ -64,12 +67,14 @@ isInDaylightSaving("2024-07-15T12:00:00+09:00[Asia/Tokyo]");
 
 | Your situation                                | Function                          | Real control?                  |
 | --------------------------------------------- | --------------------------------- | ------------------------------ |
+| Resolve a plain local time to an **instant**  | `resolveLocal`                    | **Yes, fully.**                |
 | Attach a plain local time + timezone          | `convertPlainDateTimeToZoned`     | **Yes, fully.**                |
 | Add/subtract a duration from a zoned datetime | `addZoned` / `subtractZoned`      | **Overlaps only.**             |
 | Jump to start/end of a boundary               | `startOfZoned` family             | **Yes — if `offset` default.** |
 | Set one or more fields directly               | `setZoned` / `setUnix` / `setUtc` | **Yes — if `offset` default.** |
 | Cycle (wrap) a single field                   | `cycleZoned`                      | **Yes — if `offset` default.** |
 
+- **`resolveLocal`** (`instant/convert/`, Story CORE-4) — same resolution as `convertPlainDateTimeToZoned` and the same full control, but it returns the UTC instant rather than a zoned string, and it is exact: `convertPlainDateTimeToZoned` truncates to milliseconds by default, so a nanosecond wall time survives one and not the other. `resolveLocal` also has no `offset` parameter, because (as below) that parameter is inert on this construction path anyway. Pair it with `classifyLocal` to branch before a policy applies.
 - **`convertPlainDateTimeToZoned`** — every value (`earlier`/`later`/`reject`) changes the result, for both gaps and overlaps.
 - **`addZoned` / `subtractZoned`** — only controls overlaps; has no effect on gaps. See below.
 - **`startOfZoned` family** (`startOfZoned`, `endOfZoned`, `startOfQuarterForZoned`, `endOfQuarterForZoned`, `mapZonedHoursInDay`, and their `unix/` counterparts `startOfUnix`, `endOfUnix`, `startOfQuarterForUnix`, `endOfQuarterForUnix` — Story C3) — fully controllable; these construct a new local time via `.with()`, same mechanism as `convertPlainDateTimeToZoned` — **but see "The `offset` parameter" below**, since `.with()` has an extra option that `.from()` doesn't need to worry about.
@@ -79,7 +84,7 @@ isInDaylightSaving("2024-07-15T12:00:00+09:00[Asia/Tokyo]");
 ### Real-world scenarios
 
 **"A user picks 2:30 AM on March 10th in a signup form, and I need to store it as a real instant."**
-You have a _plain_ local time with no instant behind it yet — use `convertPlainDateTimeToZoned`. That date/time might not exist (spring-forward gap), and `disambiguation` is your only lever to decide what happens: silently round forward (`"compatible"`/`"later"`), silently round back (`"earlier"`), or make it a hard validation error (`"reject"`) so the form can ask the user to pick a different time.
+You have a _plain_ local time with no instant behind it yet — use `resolveLocal` if you want the instant back, or `convertPlainDateTimeToZoned` if you want the zoned string. That date/time might not exist (spring-forward gap), and `disambiguation` is your only lever to decide what happens: silently round forward (`"compatible"`/`"later"`), silently round back (`"earlier"`), or make it a hard validation error (`"reject"`) so the form can ask the user to pick a different time.
 
 **"A subscription renews every 30 days from whenever it started, and I need the next renewal timestamp."**
 You already have a `ZonedDateTime` (the last renewal) and you're moving it forward by a duration — use `addZoned`. Here `disambiguation` only matters if the _arithmetic result itself_ happens to land on an ambiguous fall-back local time (e.g. the 30-day cycle happens to land on `2024-11-03T01:30:00` in `America/New_York`); you can pass `disambiguation: "reject"` to catch that and force a manual decision instead of silently picking `"compatible"`. But if the result instead lands in a _gap_ (nonexistent local time), `disambiguation` won't help — Temporal's arithmetic already resolves gap landings on its own, before `addZoned` ever gets a chance to apply your preference. Don't rely on `reject` to catch a gap-crossing add; it won't throw.

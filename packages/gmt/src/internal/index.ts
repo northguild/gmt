@@ -67,8 +67,10 @@ export {
   formatDateInCalendar,
 } from "./formatDateInCalendar";
 export { hasCalendarAnnotation } from "./hasCalendarAnnotation";
+export { hasKeyValueAnnotation } from "./hasKeyValueAnnotation";
 export { parseInstantNanoseconds } from "./instantNanoseconds";
 export { resolveDurationRelativeTo } from "./resolveDurationRelativeTo";
+export { formatUtcOffset, parseUtcOffsetNanoseconds } from "./utcOffsetString";
 export {
   ENGLISH_MONTH_NAMES,
   ENGLISH_WEEKDAY_NAMES,

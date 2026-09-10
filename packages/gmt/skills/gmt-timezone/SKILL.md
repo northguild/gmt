@@ -2,9 +2,11 @@
 name: gmt-timezone
 description: >
   Timezone-aware operations — get zoned now, format zoned datetimes/ranges,
-  convert between plain↔zoned↔UTC↔Unix, and DST disambiguation control on
-  construction and arithmetic. Reads the installed package README.md and source
-  JSDoc for API details; this skill is a routing pointer, not an API dump.
+  convert between plain↔zoned↔UTC↔Unix, DST disambiguation control on
+  construction and arithmetic, the instant-plus-offset pair, and classifying a
+  zoneless wall time before resolving it. Reads the installed package README.md
+  and source JSDoc for API details; this skill is a routing pointer, not an API
+  dump.
 sources:
   - 'northguild/gmt:README.md'
   - 'northguild/gmt:packages/gmt/src/zoned/get/index.ts'
@@ -18,6 +20,7 @@ sources:
   - 'northguild/gmt:packages/gmt/src/unix/get/index.ts'
   - 'northguild/gmt:packages/gmt/src/utc/get/index.ts'
   - 'northguild/gmt:packages/gmt/src/utc/convert/index.ts'
+  - 'northguild/gmt:packages/gmt/src/instant/convert/index.ts'
 metadata:
   type: core
   library: '@northguild/gmt'
@@ -36,6 +39,8 @@ converting between time zones, or doing arithmetic that must respect DST.
 - The user needs to convert a plain datetime to a zoned instant, or between
   timezones, or between UTC and Unix epochs.
 - The user is adding/subtracting durations across a DST transition.
+- The user has a timestamp that must keep the local offset it happened at, or a
+  local wall time that arrived with no offset at all.
 
 ## Core rules
 
@@ -50,11 +55,22 @@ converting between time zones, or doing arithmetic that must respect DST.
    effect. Passing `offset: "prefer"` keeps the source offset and silently
    disables `disambiguation` — leave it at default unless you need Temporal's
    raw `.with()` semantics.
-4. **Calendar annotations.** GMT's zoned grammar puts `[u-ca=...]` **before**
+4. **Classify a zoneless wall time before resolving it.** `classifyLocal(local,
+   zone)` returns `"unique"` | `"ambiguous"` | `"nonexistent"` so code can branch
+   rather than accept a policy — 01:30 happens twice on a fall-back day and never
+   on a spring-forward one. `resolveLocal(local, zone, { disambiguation })` then
+   returns the instant, exact to the nanosecond, or `""` under `"reject"`. Reach
+   for `convertPlainDateTimeToZoned` instead when you want the zoned string.
+5. **An offset is not a zone.** `-05:00` does not identify `America/New_York`.
+   `toOffsetInstant` splits a timestamp into `{ instant, offset, timeZone? }` —
+   the shape EPCIS 2.0, EDIFACT DTM and DICOM all exchange, because the instant
+   orders events and the offset renders them where they happened, and neither
+   derives from the other. Keep the zone for what is still to be scheduled.
+6. **Calendar annotations.** GMT's zoned grammar puts `[u-ca=...]` **before**
    `[timeZone]` — the reverse of RFC 9557. Only `addZoned`, `subtractZoned`,
    `diffZoned`, and `convertZonedToCalendar` accept it; everything else rejects
    it and returns `""`. Always produce these with `convertZonedToCalendar`.
-5. **Read the README.** This skill is a routing pointer. For the full DST
+7. **Read the README.** This skill is a routing pointer. For the full DST
    disambiguation walkthrough, code examples, and locale ICU notes, read the
    installed package's `README.md` and the source JSDoc.
 
@@ -73,6 +89,8 @@ converting between time zones, or doing arithmetic that must respect DST.
   `setZoned`, `cycleZoned`, `mapZonedHoursInDay`, `getHoursInZonedDay`
 - **Offset/DST reads**: `getZonedOffset`, `getZonedOffsetAs`,
   `getTimeZoneOffset`, `parseTimezoneFromZoned`
+- **Offset-preserving instants**: `toOffsetInstant`, `fromOffsetInstant`
+- **Local-time resolution**: `classifyLocal`, `resolveLocal`
 
 ## References
 

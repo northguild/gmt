@@ -11,3 +11,4 @@ export * from "./time";
 export * from "./time-zone-like";
 export * from "./unix";
 export * from "./utc-date-time";
+export * from "./utc-offset";

@@ -15,8 +15,8 @@ It wraps `@js-temporal/polyfill` behind a smaller, more opinionated API aimed at
 
 - **100% Temporal, Temporal-first.** GMT is built directly on the TC39 `Temporal` standard (via `@js-temporal/polyfill`) — not a custom, homegrown date/time type system like `@internationalized/date`'s own `CalendarDate`/`ZonedDateTime` classes. No `Date` object anywhere, enforced by 3 dedicated lint packages.
 - **A full replacement for any and all of them.** Luxon, date-fns, Moment.js, and react-aria's `@internationalized/date` don't have parity with each other — GMT covers the combined capabilities of all four in one library, plus what none of them do alone.
-- **~15× more CI test executions than all four competitors combined**: 361,714 from 18,592 tests, the library's 18,038 of them run in all 10 timezones × 2 Node versions, vs. their combined 20,190.
-- **~40× more test cases than `@internationalized/date`**: 18,592 vs. 386 — Adobe's own library, run at its own commit.
+- **~15× more CI test executions than all four competitors combined**: 374,820 from 18,741 tests run in all 10 timezones × 2 Node versions, vs. their combined 20,190.
+- **~40× more test cases than `@internationalized/date`**: 18,741 vs. 386 — Adobe's own library, run at its own commit.
 - **The only one of the five that tests systematically across locales in CI at all.** Zero of the four comparison libraries run a locale-test matrix; GMT mandates all 17 locales on every locale-aware function.
 - **The only one that runs its entire suite under a real `TZ` env var across real-world zones.** Luxon and `@internationalized/date` have no CI timezone matrix; date-fns's zone scope is unclear; Moment.js covers 6 zones but not its full suite.
 - **Explicit DST disambiguation control on both construction _and_ arithmetic** — a control none of the others expose.
@@ -92,7 +92,7 @@ GMT's test suite balances **thoroughness** against **maintenance burden** by tes
 - **Non-string input tables** — functions that guard with `typeof x !== "string"` return the same sentinel for `null`, `undefined`, `123`, `true`, `[]`, and `{}`. We test one representative non-string per argument position rather than all six types × N positions. The collapse is safe because all non-string types hit the identical early-return code path.
 - **Redundant permutations** — adjacent/disjoint/reversed interval cases that produce identical results are not duplicated across every function variant. The `plain/`, `zoned/`, `utc/`, and `unix/` families share the same mathematical behavior; each family gets the minimum set of cases needed to prove correctness.
 
-**Result:** 18,592 tests across 620 files that exercise real behavior differences without redundant permutations. They run in CI as 361,714 executions — the library's 18,038 tests × 2 Node versions × 10 timezones, plus 477 in `apps/dox` × 2 Node versions.
+**Result:** 18,741 tests across 585 files that exercise real behavior differences without redundant permutations. They run in CI as 374,820 executions — every one of them × 2 Node versions × 10 timezones.
 
 ## How GMT is tested, vs. the libraries it targets
 
@@ -108,9 +108,9 @@ GMT is measured directly against react-aria's **`@internationalized/date`**, **L
 
 | Metric                          | GMT                                                | `@internationalized/date`      | Luxon                                | date-fns                                  | Moment.js                        |
 | ------------------------------- | -------------------------------------------------- | ------------------------------ | ------------------------------------ | ----------------------------------------- | -------------------------------- |
-| Test files                      | 620                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
-| Individual test cases           | **18,592**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
-| Effective CI test<br>executions | **361,714**<br>(18,038 × 2 Node<br>× 10 timezones,<br>+ 477 × 2 Node) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
+| Test files                      | 585                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
+| Individual test cases           | **18,741**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
+| Effective CI test<br>executions | **374,820**<br>(18,741 × 2 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
 | CI Node.js matrix               | 22, 24                                             | n/a — tests<br>React 16–canary | 20, 22, 24, 25                       | not explicit<br>(`node = "latest"`)       | LTS, LTS-1,<br>latest            |
 | CI timezone matrix              | **10 zones × 2**<br>**Node, full suite**           | none found                     | none found                           | dedicated workflow,<br>zone scope unclear | 6 zones,<br>partial suite only   |
 | Locale test matrix              | **17 locales**,<br>every locale fn                 | none found                     | none found                           | none found                                | none found                       |
@@ -146,16 +146,17 @@ Specific, sourced claims — not a repeat of the metrics above.
 | Only GMT enforces a mandatory<br>17-locale test matrix on every<br>locale-aware function                                                      | No CI-level or systematic<br>locale-matrix testing found<br>in any of the four                                                        |
 | Only GMT exposes explicit DST<br>disambiguation control on both<br>construction _and_ arithmetic                                              | Luxon's docs call this explicitly<br>undefined; `@internationalized/date`<br>only covers construction, not arithmetic                 |
 | Only GMT is Temporal-native with<br>zero `Date` usage, enforced by<br>3 dedicated lint packages                                               | Luxon, date-fns, and Moment.js all<br>still wrap or depend on `Date` internally                                                       |
-| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~15×                                                  | 361,714 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
+| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~15×                                                  | 374,820 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
 
 ## Package Layout
 
-The package exports nine top-level namespaces:
+The package exports ten top-level namespaces:
 
 ```typescript
 import {
   Temporal,
   duration,
+  instant,
   plain,
   precision,
   span,
@@ -168,6 +169,7 @@ import {
 
 - `Temporal`: re-exported from `@js-temporal/polyfill`
 - `duration`: ISO 8601 duration string parsing, validation, and arithmetic
+- `instant`: the instant-plus-offset pair, and explicit resolution of zoneless local wall times
 - `plain`: timezone-free helpers
 - `precision`: nanosecond (`bigint`) instants, their JSON bridge, storage truncation, and foreign epoch bridges
 - `span`: elapsed and wall-clock durations between two timestamps, as raw numbers
@@ -1840,6 +1842,74 @@ Three limits, all deliberate:
   so a span across one is a second short of the physical elapsed time; against a smeared
   clock (Google, AWS, Meta) the error is up to a second spread over the smear window.
 
+### Offset-preserving instants and local resolution
+
+An instant orders events globally; the UTC offset in force where the event happened renders
+it as the human on the ground saw it. Neither derives from the other, which is why GS1 EPCIS
+2.0 requires both fields (`eventTime` plus `eventTimeZoneOffset`), UN/EDIFACT DTM has
+qualifiers `303`/`304` for the pair, and DICOM appends `&ZZXX` to a `DT` value. The `instant/`
+namespace is that pair:
+
+```typescript
+import { fromOffsetInstant, toOffsetInstant } from "@northguild/gmt";
+
+toOffsetInstant("2024-07-15T12:00:00-04:00[America/New_York]");
+// { instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "America/New_York" }
+
+// Most feeds send no zone at all — the offset alone is what happened.
+toOffsetInstant("2024-07-15T12:00:00-04:00");
+// { instant: "2024-07-15T16:00:00Z", offset: "-04:00" }
+
+// A UTC-only feed plus a zone you know from somewhere else.
+toOffsetInstant("2024-07-15T16:00:00Z", "America/New_York");
+// { instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "America/New_York" }
+
+fromOffsetInstant({ instant: "2024-07-15T16:00:00Z", offset: "-04:00" });
+// "2024-07-15T12:00:00-04:00"
+```
+
+**An offset is not a zone.** `-05:00` does not identify `America/New_York` — it is every zone
+sitting at `-05:00` that day, and it says nothing about what that zone will do next spring.
+Store the zone for anything still to be scheduled; store the offset for anything that already
+happened. `timeZone` is optional because most feeds do not send one, and a string whose
+offset contradicts its own bracketed zone returns `null` rather than a guess.
+
+The other half of the namespace is the reverse problem: a wall time that arrives with no
+offset at all ("gate-out 08:00"). Resolving one needs a zone the sender did not send, plus a
+policy for the two days a year the mapping is not one-to-one:
+
+```typescript
+import { classifyLocal, resolveLocal } from "@northguild/gmt";
+
+classifyLocal("2024-11-03T01:30:00", "America/New_York"); // "ambiguous"
+classifyLocal("2024-03-10T02:30:00", "America/New_York"); // "nonexistent"
+classifyLocal("2024-07-15T12:00:00", "America/New_York"); // "unique"
+
+resolveLocal("2024-11-03T01:30:00", "America/New_York");
+// "2024-11-03T05:30:00Z" — the default "compatible" takes the first 01:30
+
+resolveLocal("2024-11-03T01:30:00", "America/New_York", { disambiguation: "later" });
+// "2024-11-03T06:30:00Z" — the same wall clock, an hour of real time later
+
+resolveLocal("2024-11-03T01:30:00", "America/New_York", { disambiguation: "reject" });
+// "" — ambiguous, and not guessed
+```
+
+`classifyLocal` exists so code can branch **before** a policy is applied. A demurrage clock, a
+medication window or a duty limit should refuse an ambiguous wall time, or route it to a
+human — not silently accept whichever of two instants an hour apart a default handed it. See
+[DST Disambiguation](../../docs/dst-disambiguation.md) for the four strategies in full.
+
+Two notes on the boundaries of this namespace:
+
+- **`resolveLocal` returns an instant; `convertPlainDateTimeToZoned` returns a zoned string.**
+  Same underlying resolution, different output and different precision — `resolveLocal` is
+  exact to the nanosecond, while `convertPlainDateTimeToZoned` defaults to milliseconds and
+  also accepts Temporal's `offset` option. Reach for whichever shape you need next.
+- **`offset` is `±HH:MM`, except where it is not.** A handful of zones did not run on a whole
+  minute before 1972 — `Africa/Monrovia` really was `-00:44:30` — and those report
+  `±HH:MM:SS`. Rounding them would put the pair thirty seconds from the event it describes.
+
 ## API Surface
 
 For the complete API listing, see the namespace documentation on GitHub:
@@ -1850,6 +1920,7 @@ For the complete API listing, see the namespace documentation on GitHub:
 - [Unix API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/unix) — Unix epoch utilities
 - [Precision API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/precision) — nanosecond instants, JSON transport, storage truncation, NTP / FILETIME / .NET ticks / Excel / PostgreSQL epoch bridges
 - [Span API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/span) — elapsed and wall-clock durations as raw numbers
+- [Instant API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/instant) — the instant-plus-offset pair, and explicit local-time resolution
 - [UTC API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/utc) — UTC instant utilities
 - [Regex API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/regex) — composable regex patterns
 
