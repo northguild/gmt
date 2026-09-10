@@ -73,7 +73,9 @@ The header link is a plain nav link, **not** `DOX-C3a`'s draggable dock — see
 `issues/DOX-C.md`'s DOX-C0 section and `reference/design-system.md`'s "`/dox` and the
 header link" for what that means `DOX-C3a` still owns.
 
-³ Corrects three of this file's own numbers along the way — 591 functions not 504, a
+³ Corrects three of this file's own numbers along the way — 591 functions not 504
+(itself since grown to 597; the corpus is now 761 chunks and `corpus-summary.test.ts`
+asserts the figure the chat screen shows against the real corpus), a
 missing `examples` field on `CorpusEntry` (added), and a latent generator bug on a
 clean checkout (fixed) — and picks the provider: Vercel AI SDK (not TanStack AI, which
 lacks a Google or Workers AI adapter) + Gemini 2.5 Flash. See `issues/DOX-C.md`'s
@@ -82,8 +84,11 @@ DOX-C2** — see footnote 4.
 
 ⁴ Adds `main`/`worker/index.ts` to the previously assets-only `wrangler.jsonc`, a same-
 origin `/api/chat` behind the DOX-C.md-specified validation pipeline (zod), a per-
-isolate rate limiter, and the seven-section system prompt (persona, linking rules,
-vocabulary, GMT core rules, retrieved chunks, tool placeholder, refusal instruction).
+isolate rate limiter, and the eight-section system prompt (persona, standing order,
+linking rules, vocabulary, GMT core rules, retrieved chunks, tool placeholder,
+refusal instruction — the standing order is the prompt-injection boundary, and was
+missing from this list and from the section-order test until the C1–C3 remediation
+pass).
 Verified end-to-end against the real Gemini API, not just mocked: a grounded question
 streams a correct, cited answer; a plausible-but-absent question ("parse a cron
 expression with gmt") refuses; the key never appears in any response. Worker script
@@ -101,8 +106,9 @@ answers, the visible retrieval trace, link hardening against the route manifest 
 hallucinated path degrades to plain text, never a 404), the idle-timeout stall guard,
 warning-vs-error classification, and one-request-at-a-time enforcement. Plus the
 free-tier survival layer this story did not originally anticipate: Gemini's quota is
-`PerDay·PerProject·PerModel`, so Dox keeps four brains and fails over between them
-_inside a single request_, backed by a KV ledger keyed on Pacific days.
+`PerDay·PerProject·PerModel`, so Dox keeps nine brains (~165 requests/day
+between them) and fails over between them _inside a single request_, backed by
+a KV ledger keyed on Pacific days.
 
 **One DoD reversal, recorded rather than dropped: the every-page draggable dock is cut.**
 `DOX-C3a` specified drag, resize, focus trap and keyboard dock-position cycling. It was

@@ -15,13 +15,20 @@ import "../../styles/gmt-ask.css";
 import "../../styles/gmt-hive.css";
 
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport, type UIMessage } from "ai";
-import { useCallback, useMemo, useRef, useState } from "react";
+import {
+  DefaultChatTransport,
+  getToolName,
+  isToolUIPart,
+  type ToolUIPart,
+  type UIMessage,
+} from "ai";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { StickToBottomContext } from "use-stick-to-bottom";
 
 import { SearchIcon } from "lucide-react";
 
 import { referenceRoutes } from "~/generated/reference/route-manifest";
+import { CORPUS_SUMMARY } from "~/lib/chat-constants";
 import { checkUserText } from "~/lib/chat-sanitize";
 import type { BrainsInfo } from "./use-brains";
 import { untilReset } from "./use-brains";
@@ -49,8 +56,10 @@ import {
 } from "./chat-warning";
 import { HiveHub } from "./hive/HiveHub";
 import { HiveNode } from "./hive/HiveNode";
+import { messageText, sendableHistory } from "~/lib/chat-history";
+import { createLinkComponents } from "./link-components";
 import { RetrievalTrace } from "./RetrievalTrace";
-import { resolveHref } from "./resolve-href";
+import { WidgetReceipt } from "./WidgetReceipt";
 import { useIdleTimeout } from "./use-idle-timeout";
 
 /** Real questions the corpus can actually answer — a blank box tells a reader
@@ -76,15 +85,10 @@ const SHIKI_THEME: [typeof githubLight, typeof githubDark] = [
   githubDark,
 ];
 
-/** Corpus scale, measured in DOX-C1 against the built retrieval index. */
-const CORPUS_SUMMARY =
-  "591 functions · 164 guide sections · 755 chunks indexed";
-
-function messageText(message: UIMessage): string {
-  return message.parts
-    .filter((part) => part.type === "text")
-    .map((part) => ("text" in part ? part.text : ""))
-    .join("");
+/** The tool calls in one assistant turn. Empty for every turn until DOX-C3b's
+ *  tools started being offered — see worker/tools.ts. */
+function widgetCallsOf(message: UIMessage): ToolUIPart[] {
+  return message.parts.filter((part): part is ToolUIPart => isToolUIPart(part));
 }
 
 function retrievalTraceOf(message: UIMessage): RetrievalTraceData | undefined {
@@ -125,12 +129,17 @@ export interface DoxChatProps {
   selectedBrainId?: string | null;
   /** Called after a question is sent, so the host can re-read the counts. */
   onUsed?: () => void;
+  /** DOX-C3b — the host owns the widget rail; this is how a tool call reaches
+   *  it, either automatically when one streams in or when the reader reopens a
+   *  receipt. */
+  onWidget?: (toolCallId: string, toolName: string, input: unknown) => void;
 }
 
 export function DoxChat({
   brains = null,
   selectedBrainId = null,
   onUsed,
+  onWidget,
 }: DoxChatProps = {}) {
   const [warning, setWarning] = useState<ChatWarningState | null>(null);
   /** Every URL retrieved this session. Unioned with the reference manifest to
@@ -151,12 +160,18 @@ export function DoxChat({
     () =>
       new DefaultChatTransport({
         api: "/api/chat",
-        // A function, not a value: re-evaluated per request, so retrieval is
-        // biased by whichever page the reader is on when they ask, and the
-        // brain is whichever is selected *now*.
-        body: () => ({
-          pageContext: window.location.pathname,
-          ...(brainRef.current ? { model: brainRef.current } : {}),
+        /* Assembled per request rather than declared as a static `body`, because
+           the history needs filtering as well as the body needing the current
+           page and brain. `sendableHistory` drops assistant turns that never
+           received a token — see chat-history.ts for why replaying those is
+           worse than it looks. */
+        prepareSendMessagesRequest: ({ messages, body }) => ({
+          body: {
+            ...body,
+            messages: sendableHistory(messages),
+            pageContext: window.location.pathname,
+            ...(brainRef.current ? { model: brainRef.current } : {}),
+          },
         }),
         fetch: chatFetch,
       }),
@@ -193,33 +208,11 @@ export function DoxChat({
     return combined;
   }, [retrievedUrls]);
 
+  /* No `siteOrigin` here on purpose — `createLinkComponents` reads it lazily at
+     link-render time. This memo runs during SSR, where `window` does not
+     exist. */
   const linkComponents = useMemo(
-    () => ({
-      a: ({
-        href,
-        children,
-        ...props
-      }: {
-        href?: string;
-        children?: React.ReactNode;
-      }) => {
-        const resolved = resolveHref(href ?? "", {
-          knownRoutes,
-          siteOrigin: window.location.origin,
-          allowedExternalOrigins: ["https://github.com"],
-        });
-        if (resolved.kind === "link") {
-          return (
-            <a href={resolved.href} {...props}>
-              {children}
-            </a>
-          );
-        }
-        // A hallucinated link degrades to its own text — never a 404.
-        if (resolved.kind === "text") return <>{children}</>;
-        return null;
-      },
-    }),
+    () => createLinkComponents({ knownRoutes }),
     [knownRoutes],
   );
 
@@ -248,9 +241,13 @@ export function DoxChat({
     (brains.visitor.remaining ?? 1) <= 0;
   const outOfBudget = poolSpent || visitorSpent;
 
+  /** Returns whether the message was actually sent. A `false` is what the
+   *  composer needs to keep the reader's text in the box — see the throw in
+   *  `PromptInput`'s `onSubmit` below, and the local modification it relies on
+   *  in `ai-elements/prompt-input.tsx`. */
   const send = useCallback(
-    (text: string) => {
-      if (isBusy || outOfBudget) return;
+    (text: string): boolean => {
+      if (isBusy || outOfBudget) return false;
 
       // Same check the Worker runs, so a reader learns *here* that a paste is
       // too long or that a message is nothing but invisible characters,
@@ -262,7 +259,7 @@ export function DoxChat({
         if (text.trim() !== "") {
           setWarning({ message: checked.reason, retryable: false });
         }
-        return;
+        return false;
       }
 
       setWarning(null);
@@ -272,6 +269,7 @@ export function DoxChat({
       // Advisory numbers, so a slightly late refresh is fine; a missing one
       // would leave a stale badge for the rest of the session.
       window.setTimeout(() => onUsed?.(), 1500);
+      return true;
     },
     [isBusy, onUsed, outOfBudget, sendMessage],
   );
@@ -290,6 +288,42 @@ export function DoxChat({
     },
     [isBusy],
   );
+
+  /** Re-ask the last question the reader actually typed. Only reachable from a
+   *  warning classified `retryable` (see chat-warning.tsx), and it goes through
+   *  `send`, so the busy guard, the budget guard and the length checks all
+   *  still apply — a retry is an ordinary request, not a privileged one. */
+  const retryLastQuestion = useCallback(() => {
+    const lastUser = [...messages].reverse().find((m) => m.role === "user");
+    if (!lastUser) return;
+    const text = messageText(lastUser);
+    if (text.trim() === "") return;
+    setWarning(null);
+    send(text);
+  }, [messages, send]);
+
+  const openWidget = useCallback(
+    (toolCallId: string, toolName: string, input: unknown) => {
+      onWidget?.(toolCallId, toolName, input);
+    },
+    [onWidget],
+  );
+
+  /* Open the rail on its own when a tool call completes, so the reader does not
+     have to click a receipt to see what they asked for. Keyed on the call id so
+     re-renders during streaming do not re-open a rail the reader just closed. */
+  const lastOpenedRef = useRef<string | null>(null);
+  useEffect(() => {
+    const newest = messages[messages.length - 1];
+    if (!newest || newest.role !== "assistant") return;
+    const ready = widgetCallsOf(newest).find(
+      (part) =>
+        part.state === "output-available" || part.state === "input-available",
+    );
+    if (!ready || lastOpenedRef.current === ready.toolCallId) return;
+    lastOpenedRef.current = ready.toolCallId;
+    onWidget?.(ready.toolCallId, getToolName(ready), ready.input);
+  }, [messages, onWidget]);
 
   const isEmpty = messages.length === 0;
 
@@ -355,11 +389,17 @@ export function DoxChat({
                  again on every subsequent question, so a single earlier failure
                  left a card apparently loading for the rest of the session.
                  Only the newest turn can be in progress. */
+              const widgetCalls = widgetCallsOf(message);
+              /* `widgetCalls.length === 0` is the DOX-C3b clause. A turn whose
+                 only content is a tool call has `messageText() === ""` forever,
+                 so without it the crystal would keep spinning under a perfectly
+                 finished answer. */
               const isThinking =
                 role === "assistant" &&
                 status === "streaming" &&
                 index === messages.length - 1 &&
-                messageText(message) === "";
+                messageText(message) === "" &&
+                widgetCalls.length === 0;
 
               return (
                 <div key={message.id} className="contents">
@@ -395,6 +435,20 @@ export function DoxChat({
                           {messageText(message)}
                         </p>
                       )}
+                      {/* After the prose, never interleaved with it. One
+                          `MessageResponse` per turn is deliberate: Gemini emits
+                          text → tool-call → text, and a markdown construct that
+                          straddles that boundary (an unclosed fence, a link
+                          whose `]` and `(` land in different parts) renders
+                          wrong across two Streamdown instances — and the link
+                          hardening only ever sees what each instance parsed. */}
+                      {widgetCalls.map((part) => (
+                        <WidgetReceipt
+                          key={part.toolCallId}
+                          part={part}
+                          onOpen={openWidget}
+                        />
+                      ))}
                     </div>
                   </article>
                 </div>
@@ -419,7 +473,9 @@ export function DoxChat({
             </>
           )}
 
-          {warning && <ChatWarning state={warning} />}
+          {warning && (
+            <ChatWarning state={warning} onRetry={retryLastQuestion} />
+          )}
         </ConversationContent>
         <ConversationScrollButton className="gmt-hive-jump gmt-sonar-focus" />
       </Conversation>
@@ -440,7 +496,14 @@ export function DoxChat({
           <PromptInput
             onSubmit={(message, event) => {
               event.preventDefault();
-              send(message.text ?? "");
+              /* Throwing is PromptInput's documented signal for "this send did
+                 not happen, keep the composer's contents" — it is what its two
+                 "Don't clear on error - user may want to retry" branches catch.
+                 A reader whose paste was refused for being too long can then
+                 trim it and resend, instead of losing it. */
+              if (!send(message.text ?? "")) {
+                throw new Error("send refused");
+              }
             }}
           >
             <PromptInputBody>

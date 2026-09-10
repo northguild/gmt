@@ -6,13 +6,16 @@
  * wayfinding a reader needs — one way back to the docs — plus an environment
  * badge when pointed at a local Worker. Everything else is the conversation.
  *
- * A future widget rail (DOX-C3b) slots in as a sibling of `<DoxChat>`; nothing
- * here assumes a single column.
+ * DOX-C3b adds the widget rail as a sibling of `<DoxChat>` inside
+ * `.gmt-hive-body`. The rail collapses to nothing when empty, so a conversation
+ * with no widget in it lays out exactly as it did before.
  */
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { BrainSelector } from "./BrainSelector";
 import { DoxChat } from "./DoxChat";
 import { useBrains } from "./use-brains";
+import { WidgetRail, type RailWidget } from "./WidgetRail";
+import { resolveWidget } from "./widget-registry";
 
 /** Which Worker this page is talking to.
  *
@@ -42,6 +45,24 @@ export default function DoxPage() {
    * Held here rather than in `DoxChat` because the selector lives in the strip,
    * which is this host's chrome — the dock (phase 2) will supply its own. */
   const [selectedBrainId, setSelectedBrainId] = useState<string | null>(null);
+
+  /* The rail's state lives here rather than in `DoxChat`, for the same reason
+     the brain selector does: it is this host's chrome. One widget at a time. */
+  const [railWidget, setRailWidget] = useState<RailWidget | null>(null);
+
+  const showWidget = useCallback(
+    (toolCallId: string, toolName: string, input: unknown) => {
+      /* The single dispatch point. An unknown tool name or input that fails the
+         schema resolves to a reason, and the rail simply never opens — the
+         receipt in the transcript has already said so. */
+      const resolved = resolveWidget(toolName, input);
+      if (!resolved.ok) return;
+      setRailWidget({ toolCallId, entry: resolved.entry, args: resolved.args });
+    },
+    [],
+  );
+
+  const closeWidget = useCallback(() => setRailWidget(null), []);
 
   return (
     <div className="gmt-ask gmt-hive-shell">
@@ -73,11 +94,15 @@ export default function DoxPage() {
           )}
         </div>
       </header>
-      <DoxChat
-        brains={info}
-        selectedBrainId={selectedBrainId}
-        onUsed={refresh}
-      />
+      <div className="gmt-hive-body">
+        <DoxChat
+          brains={info}
+          selectedBrainId={selectedBrainId}
+          onUsed={refresh}
+          onWidget={showWidget}
+        />
+        <WidgetRail widget={railWidget} onClose={closeWidget} />
+      </div>
     </div>
   );
 }

@@ -14,8 +14,8 @@
  * This list is the free tier's escape hatch. Gemini's quota id is
  * `GenerateRequestsPerDayPerProjectPerModel-FreeTier` — the allowance is per
  * **model**, so every additional brain adds its own daily budget. One model
- * gives ~20 requests/day across all visitors, which is not a product; four
- * gives roughly four times that.
+ * gives ~20 requests/day across all visitors, which is not a product; the nine
+ * below give roughly ~165/day between them (eight at 20, one Pro at 5).
  *
  * **Every id here was probed with a real request on 2026-09-10**, not merely
  * read off the model list. That distinction mattered: the list returns models
@@ -143,3 +143,23 @@ export const RATE_LIMIT_MAX = 20;
 export const RATE_LIMIT_WINDOW_SECONDS = 60;
 
 export const IDLE_TIMEOUT_MS = 30_000;
+
+/**
+ * Corpus scale, as shown to the reader on the empty chat screen.
+ *
+ * Hardcoded rather than derived: the real counts come from
+ * `lib/retrieval/corpus.ts`, which reads the content collection through
+ * `import.meta.glob` and pulls in the whole 536 KB generated corpus — none of
+ * which belongs in the chat island's bundle for the sake of three numbers.
+ *
+ * `corpus-summary.test.ts` asserts these against the real corpus, so the
+ * trade is "hardcoded but cannot silently drift" rather than "hardcoded".
+ * They had already drifted once — the screen claimed 591/755 after the corpus
+ * grew to 597/761.
+ */
+export const CORPUS_FUNCTION_COUNT = 597;
+export const CORPUS_GUIDE_COUNT = 164;
+export const CORPUS_CHUNK_COUNT =
+  CORPUS_FUNCTION_COUNT + CORPUS_GUIDE_COUNT;
+
+export const CORPUS_SUMMARY = `${CORPUS_FUNCTION_COUNT} functions · ${CORPUS_GUIDE_COUNT} guide sections · ${CORPUS_CHUNK_COUNT} chunks indexed`;

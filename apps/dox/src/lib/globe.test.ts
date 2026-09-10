@@ -2,7 +2,7 @@
 
 import { convertUtcToUnix } from "@northguild/gmt";
 import { describe, expect, it } from "vitest";
-import { CURATED_TIMEZONES } from "../../scripts/build-utils/build-utils";
+import { CURATED_TIMEZONES } from "./curated-timezones";
 import {
   antisolarPoint,
   subsolarPoint,

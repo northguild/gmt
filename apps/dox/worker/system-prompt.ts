@@ -1,3 +1,4 @@
+import type { DoxToolName } from "../src/lib/dox-tools";
 import type { RetrievalChunk } from "../src/lib/retrieval/types";
 
 export interface PromptSections {
@@ -10,6 +11,14 @@ export interface PromptSections {
   vocabulary: string;
   /** packages/gmt/README.md's "Core Rules" section, verbatim — see worker/core-rules.ts. */
   coreRules: string;
+  /** DOX-C3b's widget tools. Omitted or empty keeps the "no tools" wording, so
+   *  this stays a pure function with one shape whether or not tools exist. */
+  tools?: {
+    name: DoxToolName;
+    purpose: string;
+    when: string;
+    args: string;
+  }[];
 }
 
 /**
@@ -17,8 +26,9 @@ export interface PromptSections {
  * sections, assembles the system prompt. Order matters (DOX-C.md): persona
  * and scope, then linking rules, then vocabulary (so the model learns GMT's
  * terminology before reading raw signatures), then core rules, then the
- * retrieved chunks themselves, then the (currently empty) tool-registry
- * placeholder DOX-C3b fills in, then an explicit refusal instruction.
+ * retrieved chunks themselves, then the tool registry (DOX-C3b — generated from
+ * `dox-tools.ts` so the prompt and the schemas cannot drift), then an explicit
+ * refusal instruction.
  *
  * ## The injection boundary (DOX-C3a, #139)
  *
@@ -32,24 +42,61 @@ export interface PromptSections {
  *      this string. Nothing a reader types can reach the instruction channel.
  *   2. **The standing order below**, which names user and retrieved text as
  *      data rather than commands. Cheap, and it measurably helps.
- *   3. **There is nothing to steal or trigger.** Dox has no tools, no write
- *      path, no credentials in context, and no memory across requests. Its
- *      whole context is public documentation that ships on this site. The worst
- *      a successful injection achieves is a wrong or off-topic answer — which
- *      is why the effort here goes into grounding and refusal, not into an
- *      arms race of filter patterns.
+ *   3. **There is nothing to steal or trigger.** Dox has no write path, no
+ *      credentials in context, and no memory across requests. Its whole context
+ *      is public documentation that ships on this site. The worst a successful
+ *      injection achieves is a wrong or off-topic answer — which is why the
+ *      effort here goes into grounding and refusal, not into an arms race of
+ *      filter patterns.
+ *
+ *      **Amended by DOX-C3b, which gave Dox tools.** This point used to open
+ *      "Dox has no tools", and that premise is now false, so it is worth being
+ *      explicit about why the conclusion survives. The four widget tools
+ *      (`dox-tools.ts`) are pure, local renderers: no network, no credentials,
+ *      no persistence, and no side effect beyond mounting a component the
+ *      reader can already reach by clicking a link on this site. Their server
+ *      `execute` does no I/O (pinned in `tools.test.ts`), and every input is
+ *      re-validated on the client before anything mounts. An injection that
+ *      successfully forces a tool call achieves: a globe. The reachable harm is
+ *      unchanged.
  *
  * Retrieved chunks are our own corpus, so they are trusted input today. The
  * standing order still names them, because that stops being true the moment
  * anything user-supplied is ever indexed.
  */
 export function assembleSystemPrompt(sections: PromptSections): string {
-  const { routeAllowlist, chunks, vocabulary, coreRules } = sections;
+  const { routeAllowlist, chunks, vocabulary, coreRules, tools } = sections;
 
   const chunksBlock =
     chunks.length > 0
       ? chunks.map((c) => `### ${c.title} (${c.url})\n\n${c.text}`).join("\n\n")
       : "(no chunks retrieved for this question)";
+
+  /* Generated from the registry rather than written by hand, so a tool cannot be
+     added without the model being told it exists.
+
+     The prose-first instruction is load-bearing, not politeness. There is
+     exactly one step (see brains.ts on `stopWhen`), so a turn that returns a
+     function call and no text has no later opportunity to produce any — and a
+     widget that mounts beside silence is a worse answer than the paragraph it
+     replaced. */
+  const toolsBlock =
+    tools && tools.length > 0
+      ? [
+          "You may call at most ONE of these per answer, to show the reader a live, interactive widget beside your text.",
+          "",
+          "**Write your prose answer first, then call the tool.** The widget appears in a separate panel; your text must stand on its own without it. Never reply with only a tool call.",
+          "",
+          "Prefer prose. Call a tool only when seeing the thing beats reading about it.",
+          "",
+          ...tools.map(
+            (tool) =>
+              `- \`${tool.name}\` — ${tool.purpose}\n  Call when ${tool.when}.\n  Arguments: ${tool.args}`,
+          ),
+          "",
+          "Only pass timezone identifiers you have seen in the retrieved context or that the reader named. Never invent one.",
+        ].join("\n")
+      : "(no tools are registered yet)";
 
   const allowlistBlock =
     routeAllowlist.length > 0
@@ -90,7 +137,7 @@ ${chunksBlock}
 
 ## Available tools
 
-(no tools are registered yet)
+${toolsBlock}
 
 ## Refusal instruction
 

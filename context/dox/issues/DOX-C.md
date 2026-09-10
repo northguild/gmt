@@ -935,7 +935,16 @@ Gemini's 20-requests-per-day free allowance mid-session:
 
 - An exhausted brain is **invisible to the reader**: the request fails over to another
   brain before any output is streamed, rather than surfacing an error.
-- A brain the API key cannot reach (404/400) is pruned for the day rather than retried.
+- A brain the API key cannot reach (404/400) is deprioritised for the day rather
+  than retried eagerly. **Amended 2026-09-10 to match the code, which is right and
+  this line was not.** It originally said "pruned". `orderCandidates`
+  (`worker/brains.ts`) deliberately does not prune: a known-bad brain drops to the
+  back of the candidate list and is still tried as a last resort, because the ledger
+  can be stale, absent, or simply wrong about a model Google has since restored, and
+  refusing to answer on a cached opinion is worse than spending one request to find
+  out. The reader-visible property the line was reaching for — an exhausted or
+  unreachable brain never surfaces as an error — is met by the failover, not by
+  pruning.
 - The usage badge reports **real** numbers from the KV ledger, and they move with real
   requests and survive a reload.
 - Day boundaries are Pacific, not UTC, and are computed with `@northguild/gmt` — the
@@ -1045,6 +1054,157 @@ same shape as `DOX-B2b`/`-c`/`-d`'s widgets. This story's job for `DOX-E1` speci
 is mounting those two existing entry points into the rail, seeded from tool args — not
 building new globe/scrubber code. See `issues/DOX-E.md`'s Status notes and
 `tracker.md`'s footnote on the `DOX-E1` row.
+
+---
+
+## C1–C3a remediation pass — 2026-09-10
+
+An audit of `DOX-C1`, `DOX-C2` and `DOX-C3a` against their own Definition of Done
+found the "Done" marks defensible for "code exists, is wired, and works" but not for
+"every DoD bullet has something behind it". Three shipped defects and a set of
+untested branches were closed before starting `DOX-C3b`. Recorded here because
+several of these are corrections to claims *this file* made.
+
+**Three defects, all reader-visible:**
+
+- **A refused send destroyed the reader's text.** `ai-elements/prompt-input.tsx`
+  called `form.reset()` *before* `onSubmit`, so a 5,000-character paste showed
+  "limit 4,000" against an already-empty box, with nothing to trim and retry. The
+  vendored component's own two "Don't clear on error - user may want to retry"
+  branches never applied to text — `clear()` only ever cleared attachments. Reset is
+  now deferred to the success paths (the up-front reset is kept for the async blob
+  race it was actually written for), and `DoxChat`'s `send` returns a boolean so a
+  refusal reaches that contract.
+- **`/api/brains` served per-visitor data under `cache-control: public`.** The body
+  carries `visitor.used`/`remaining`/`unlimited`, keyed on a hashed IP — any shared
+  cache was entitled to hand one reader's counts, including a dev's `unlimited:
+  true`, to another. Now `private, no-store`: the original "keeps ledger reads flat"
+  rationale was an argument for an *edge* cache, which `private` disallows outright,
+  and any browser window at all swallowed the post-send refresh that makes the badge
+  move.
+- **`BrainSelector` was invalid ARIA.** `<ul role="listbox">` wrapping
+  `<li><button role="option">` — a `listbox` may only contain `option`s. No Escape,
+  no outside-click, no arrow keys, no focus return, behind an
+  `aria-haspopup="listbox"` promising all of it. Rebuilt on the already-vendored,
+  previously unused Radix `ui/dropdown-menu.tsx` as a `menuitemradio` group. The
+  keyboard DoD line was previously met only on a literal reading.
+
+**Untested DoD branches, now covered** (477 → 534 tests). Each was verified
+non-vacuous by breaking the implementation and watching it fail:
+
+- `worker/index.ts` had **no tests at all** — both 405 guards, the missing-key 500,
+  the assets passthrough and the `?key=` interception. Testing it needed a Vite
+  plugin mirroring Wrangler's `Text` module rule for `*.md`, which is why the entry
+  point had gone untested; the rest of `worker/` avoids the problem only by never
+  importing it.
+- **Server-side sanitisation was not asserted to happen.** `sanitizeMessage` could
+  have been deleted from `validateChatRequest` with a green suite. Plus the three
+  genuinely untested branches: empty-after-sanitise, the conversation-character cap,
+  and over-long `pageContext`.
+- **"Emits all seven sections in order" omitted `## Standing order`** — the
+  prompt-injection boundary. There are eight sections; the whole injection defence
+  could have been deleted and the only structural test would still have passed.
+- **"The route allowlist matches the retrieved set exactly" did not test that.** It
+  passed both fields from one fixture and asserted only `toContain`. The property
+  only exists where the handler derives one from the other, so the assertion moved
+  to `chat-handler.test.ts` with decoy routes.
+- **`DOX-C3a`'s self-declared most important test had never been written.** The
+  hallucinated-link degradation was covered as a pure function against a two-entry
+  fixture; nothing exercised Markdown → Streamdown → `components.a` → the DOM. The
+  renderer moved to `ask/link-components.tsx` so it can be rendered in a test, and
+  `link-components.test.tsx` runs it against the real route manifest.
+- **Guide chunks — 164 of 761 — were searched by no test.** `search.test.ts` built
+  its corpus from `buildFunctionChunks` alone, so every retrieval-quality claim was
+  a claim about 78% of what the Worker searches. Assembly moved to
+  `lib/retrieval/corpus.ts`, shared with the endpoint that serves it.
+- **`MIN_RELEVANCE_SCORE` re-verified at the real corpus size.** Tuned at 591 chunks,
+  never re-checked at 761 despite its own docstring asking for it. It holds; the
+  fresh per-question measurements are in that docstring, including the off-domain
+  column the refusal path depends on.
+
+**Two pieces of dead code, resolved rather than left:**
+
+- `retryable` was computed on all seven branches of `classifyChatError` and rendered
+  nowhere. It now drives a "Try again" affordance — which also means a reader whose
+  stream died no longer has to retype their question.
+- **History was sent unfiltered.** This file's own `DOX-C3a` scope asked to "filter
+  out empty or still-streaming assistant messages"; it was never implemented, and
+  `DoxChat` documented the resulting failure mode without fixing it. `lib/chat-history.ts`
+  now does it, via `prepareSendMessagesRequest`.
+
+**Corrections to this file and to `tracker.md`:** nine brains, not four; eight prompt
+sections, not seven; 597 functions / 761 chunks, not 591 / 755 — that last one was
+also being *shown to readers* on the empty chat screen, and is now guarded by
+`corpus-summary.test.ts` so it cannot drift silently again. The 404/400 "pruned" DoD
+line was amended to match `orderCandidates`, whose reasoning is better than the
+line's.
+
+**Two things this pass added that the plan did not anticipate:**
+
+- **The visual gate covered one of the three widget pages.** `DOX-C3b`'s
+  "every Tier 2 widget page renders identically after the refactor" was unverifiable
+  for the interval visualizer and the converter bench, which had no visual coverage
+  at all. `PAGES` now carries one page per widget: 24 → 32 snapshots.
+- **`DoxChat.ssr.test.tsx`.** `/dox` is server-rendered before it hydrates, and
+  hoisting a `window.location.origin` lookup out of a link renderer and into a
+  `useMemo` broke the build — caught by neither `astro check` (no rendering) nor any
+  test (all jsdom, where `window` exists), only by `astro build`, at the end. A
+  three-test `node`-environment SSR render now catches that class of bug in about a
+  second.
+
+---
+
+## DOX-C3b progress — step 1 (the rail, end to end)
+
+`DOX-C3b`'s cross-cutting layer is built and green; the three Astro widget
+extractions (steps 2-4) are what remain. Decisions and findings worth carrying:
+
+**Markup provenance: a shared `renderTemplate()`.** Settled before any code, per
+this file's own instruction. One function produces the markup; the `.astro` page
+server-renders it and the rail assigns it to `root.innerHTML` before `mount()`.
+`widget-mount.ts` holds the contract.
+
+**`AbortSignal`, not `destroy()`, is the React StrictMode answer.** Every mount is
+async, so StrictMode's cleanup runs *before the first mount's await settles* —
+`destroy()` would be called on a handle that does not exist yet. Both halves are
+now tested and both were verified to fail when removed: the signal for a mount
+already in flight, and a late-resolving handle for a mount that ignores it.
+
+**The tools carry a trivial `execute`. This was verified, not reasoned.** An
+execute-less tool leaves `assistant[text,tool-call]` with no `tool[tool-result]`
+when replayed through `convertToModelMessages` — a `functionCall` with no
+`functionResponse`, which Gemini rejects on the reader's *second* question, one
+turn downstream of anything visible. `worker/tools.test.ts` pins the SDK
+behaviour so an `ai` upgrade cannot quietly reintroduce it.
+
+**`showGlobe` takes one zone, not a list.** The spec sketched
+`showGlobe({ zones })`, which presumes the globe can pin a set. It cannot:
+`GlobeHost.selectZone` sets *the* selected zone, and the clock panel beside it
+already lists every plottable zone. A `zones` array would have kept only the
+last entry — a tool argument the model believes in and the widget ignores is
+worse than a narrower tool.
+
+**`showPlayground` is cut, deliberately.** It is the only registry entry with any
+reason to approach `playground-client.ts`'s `new Function`, and it would turn
+"no eval anywhere in the dispatch path" from a fact into an argument — for the
+least reader value of the five, since a citation already links to the playground
+page. `widget-registry.test.ts` asserts the property by reading the source of
+every file on the path.
+
+**Code splitting holds.** The chat chunk grew 8 KB; d3-geo, world-atlas and the
+Temporal polyfill stay in a separate 92 KB `globe` chunk, loaded only when a
+widget mounts. The TypeScript compiler is absent from every client chunk, which
+`client-graph.test.ts` now also asserts statically, without a build.
+
+**A real gap in the visual harness, found the hard way.** A baseline and a
+comparison taken ~30 minutes apart diverged by up to 1% on every light-theme page
+carrying a globe, and the failing *set* varied between runs, which reads exactly
+like flake. It was not. The diff image showed a crescent down the globe's
+right-hand limb: the day/night terminator, whose position is computed from the
+current time. No settle delay can fix that — two captures minutes apart are
+*supposed* to differ. The globe canvas is now masked alongside the live clocks,
+and the mask was confirmed to cover 100% of the region that was failing rather
+than merely to turn the number green.
 
 ---
 

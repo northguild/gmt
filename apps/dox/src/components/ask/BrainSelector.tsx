@@ -14,10 +14,38 @@
  * The visitor's own allowance comes first because it is the number they can act
  * on; the shared pool follows because it explains a refusal that their own
  * number would not.
+ *
+ * ## Why Radix and not a hand-rolled popover
+ *
+ * This was originally a `useState` popover rendering `<ul role="listbox">` with
+ * `<li>` wrappers around `role="option"` buttons. That is invalid ARIA — a
+ * `listbox` may only contain `option`s, so the interposed `<li>`s broke the
+ * accessibility tree — and it implemented none of the pattern its own
+ * `aria-haspopup="listbox"` promised: no Escape, no outside-click dismissal, no
+ * arrow-key navigation, no focus return to the trigger. It was Tab-reachable,
+ * which satisfied `DOX-C3a`'s keyboard-only DoD line on a literal reading and
+ * nothing more.
+ *
+ * `ui/dropdown-menu.tsx` was already vendored and unused. Radix gives the whole
+ * pattern — roving focus, typeahead, Escape, outside-click, focus return — and
+ * a *menu* with `menuitemradio` children is the honest role for "pick one of
+ * these", which is what this control does. That primitive being Radix-backed is
+ * the exact reason `DOX-C0` adopted the shadcn registry in the first place.
  */
-import { useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
 import type { BrainsInfo } from "./use-brains";
 import { untilReset } from "./use-brains";
+
+/* Radix's RadioGroup addresses items by string value, and "no explicit pick"
+   has to be one of them. A sentinel that cannot collide with a Gemini model id
+   is cheaper than making the group's value nullable. */
+const AUTOMATIC = "\u0000automatic";
 
 export function BrainSelector({
   info,
@@ -29,8 +57,6 @@ export function BrainSelector({
   selectedId: string | null;
   onSelect: (brainId: string | null) => void;
 }) {
-  const [open, setOpen] = useState(false);
-
   // No data (endpoint missing, Worker restarting, offline) → no badge. The
   // chat stays fully usable; this is ornament plus an escape hatch, not a gate.
   if (!info) return null;
@@ -47,57 +73,52 @@ export function BrainSelector({
 
   return (
     <div className="gmt-hive-brains">
-      <button
-        type="button"
-        className="gmt-hive-brain-badge gmt-sonar-focus"
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        onClick={() => setOpen((wasOpen) => !wasOpen)}
-        title={`Dox resets ${untilReset(info.resetsAt)}`}
-      >
-        <span className="gmt-hive-brain-name">{active?.label ?? "Dox"}</span>
-        <span className="gmt-hive-brain-counts">
-          {info.visitor.unlimited ? (
-            <span className="gmt-hive-brain-dev">dev</span>
-          ) : (
-            <>You {info.visitor.remaining} left</>
-          )}
-          <span aria-hidden="true"> · </span>
-          Dox {poolLeft} today
-        </span>
-      </button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className="gmt-hive-brain-badge gmt-sonar-focus"
+            title={`Dox resets ${untilReset(info.resetsAt)}`}
+          >
+            <span className="gmt-hive-brain-name">
+              {active?.label ?? "Dox"}
+            </span>
+            <span className="gmt-hive-brain-counts">
+              {info.visitor.unlimited ? (
+                <span className="gmt-hive-brain-dev">dev</span>
+              ) : (
+                <>You {info.visitor.remaining} left</>
+              )}
+              <span aria-hidden="true"> · </span>
+              Dox {poolLeft} today
+            </span>
+          </button>
+        </DropdownMenuTrigger>
 
-      {open && (
-        <ul className="gmt-hive-brain-list" role="listbox">
-          <li className="gmt-hive-brain-item">
-            <button
-              type="button"
-              role="option"
-              aria-selected={selectedId === null}
-              className="gmt-hive-brain-option gmt-sonar-focus"
-              onClick={() => {
-                onSelect(null);
-                setOpen(false);
-              }}
+        <DropdownMenuContent align="end" className="gmt-hive-brain-list">
+          <DropdownMenuRadioGroup
+            value={selectedId ?? AUTOMATIC}
+            onValueChange={(value) =>
+              onSelect(value === AUTOMATIC ? null : value)
+            }
+          >
+            <DropdownMenuRadioItem
+              value={AUTOMATIC}
+              className="gmt-hive-brain-option"
             >
-              <span>Automatic</span>
+              <span className="gmt-hive-brain-label">Automatic</span>
               <span className="gmt-hive-brain-meta">whichever has budget</span>
-            </button>
-          </li>
-          {info.brains.map((brain) => (
-            <li key={brain.id} className="gmt-hive-brain-item">
-              <button
-                type="button"
-                role="option"
-                aria-selected={selectedId === brain.id}
-                data-state={brain.state}
-                className="gmt-hive-brain-option gmt-sonar-focus"
-                onClick={() => {
-                  onSelect(brain.id);
-                  setOpen(false);
-                }}
+            </DropdownMenuRadioItem>
+            {info.brains.map((brain) => (
+              <DropdownMenuRadioItem
+                key={brain.id}
+                value={brain.id}
+                /* NOT `data-state` — Radix owns that attribute on a menu item
+                   (`checked`/`unchecked`), and the two meanings collided. */
+                data-brain-state={brain.state}
+                className="gmt-hive-brain-option"
               >
-                <span>{brain.label}</span>
+                <span className="gmt-hive-brain-label">{brain.label}</span>
                 <span className="gmt-hive-brain-meta">
                   {brain.state === "unavailable"
                     ? "not available"
@@ -105,11 +126,11 @@ export function BrainSelector({
                       ? "spent today"
                       : `${brain.remaining} left`}
                 </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 /// <reference types="vitest/globals" />
 
 import {
+  timingSafeEqual,
   devCookieHeader,
   isDevRequest,
   readCookie,
@@ -101,5 +102,32 @@ describe("isDevRequest", () => {
       headers: { cookie: `dox_dev=${token}` },
     });
     expect(await isDevRequest(request, SECRET, NOW)).toBe(true);
+  });
+});
+
+describe("timingSafeEqual", () => {
+  it("accepts identical strings", async () => {
+    await expect(timingSafeEqual("s3cret-value", "s3cret-value")).resolves.toBe(
+      true,
+    );
+  });
+
+  it("rejects a near-miss", async () => {
+    await expect(timingSafeEqual("s3cret-value", "s3cret-valuf")).resolves.toBe(
+      false,
+    );
+  });
+
+  it("rejects strings of different lengths without short-circuiting", async () => {
+    // Hashing first is what makes the length difference invisible to the
+    // comparison loop.
+    await expect(timingSafeEqual("", "s3cret-value")).resolves.toBe(false);
+    await expect(timingSafeEqual("s", "s3cret-value")).resolves.toBe(false);
+  });
+
+  it("treats two empty strings as equal", async () => {
+    // Callers must therefore guard an unset secret themselves, which
+    // handleDevKey does with `env.DOX_DEV_KEY &&`.
+    await expect(timingSafeEqual("", "")).resolves.toBe(true);
   });
 });

@@ -1,4 +1,5 @@
 import { safeValidateUIMessages } from "ai";
+import { buildWorkerTools, type DoxUIMessage } from "./tools";
 import type { UIMessage } from "ai";
 import { z } from "zod";
 import {
@@ -99,7 +100,17 @@ export async function validateChatRequest(
 
   const { messages: rawMessages, model, pageContext } = envelope.data;
 
-  const uiResult = await safeValidateUIMessages({ messages: rawMessages });
+  /* `tools` is what makes tool parts actually validated rather than waved
+     through. Without it the SDK accepts any `tool-*` part with arbitrary JSON
+     as its `input`; with it, an unknown tool name or an input that fails the
+     schema is rejected here, at the edge, as a 400 — which is where DOX-C's
+     "the client is untrusted" line puts it. */
+  const uiResult = await safeValidateUIMessages<DoxUIMessage>({
+    messages: rawMessages,
+    // The same set the handler runs, not the execute-less client copy — so
+    // what passes validation here is exactly what `streamText` will accept.
+    tools: buildWorkerTools(),
+  });
   if (!uiResult.success) {
     return { ok: false, status: 400, error: "malformed message shape" };
   }

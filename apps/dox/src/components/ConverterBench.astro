@@ -9,7 +9,10 @@
  * 3. Regex tester running input against all 22 exported regex consts
  */
 
-import { CURATED_TIMEZONES } from "../../scripts/build-utils/build-utils";
+import {
+  CONVERTER_LOCALES as LOCALES,
+  CURATED_TIMEZONES,
+} from "../lib/curated-timezones";
 import CodeFrame from "./CodeFrame.astro";
 
 const DEFAULT_VALUE = "2024-03-15T14:30:00.000-04:00[America/New_York]";
@@ -17,26 +20,6 @@ const DEFAULT_SOURCE_ZONE = "America/New_York";
 const DEFAULT_TARGET_ZONE = "Europe/London";
 const DEFAULT_LOCALE = "en-US";
 // Matches packages/gmt/src/test/localeMatrix.ts's MustTestLocales — the
-// 17 locales the library is tested against.
-const LOCALES = [
-  "en-US",
-  "en-GB",
-  "de-DE",
-  "fr-FR",
-  "es-ES",
-  "it-IT",
-  "pt-PT",
-  "sv-SE",
-  "is-IS",
-  "zh-CN",
-  "zh-TW",
-  "ja-JP",
-  "ko-KR",
-  "ar-SA",
-  "he-IL",
-  "ru-RU",
-  "tr-TR",
-];
 ---
 
 <div class="gmt-converter gmt-widget">

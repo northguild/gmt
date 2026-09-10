@@ -124,6 +124,119 @@ describe("createChatHandler", () => {
     expect(JSON.stringify(call.prompt)).toContain(SAMPLE_CHUNKS[0].url);
   });
 
+  /* The linking allowlist is the only thing standing between the model and an
+     invented URL, and its value comes entirely from being *small* — see
+     system-prompt.ts's docstring on why 20 routes beat 120. system-prompt.ts
+     renders faithfully whatever it is handed, so the invariant that actually
+     protects the reader ("the allowlist is exactly what retrieval returned")
+     can only be asserted here, where the handler derives one from the other. */
+  it("puts exactly the retrieved routes in the linking allowlist, never the whole manifest", async () => {
+    const model = fakeModel("Use convertZonedToZoned.");
+    const handler = makeHandler({
+      resolveModel: singleBrain(model),
+      // Retrieval sees three pages and returns one. The other two must not
+      // reach the prompt just because they exist in the corpus.
+      fetchChunksImpl: async () => [
+        ...SAMPLE_CHUNKS,
+        {
+          id: "plain/calculate/addPlainDate",
+          kind: "function",
+          url: "/reference/plain/calculate/addPlainDate",
+          namespace: "plain",
+          title: "addPlainDate",
+          text: "addPlainDate(value, duration)",
+        },
+        {
+          id: "duration/format/formatDuration",
+          kind: "function",
+          url: "/reference/duration/format/formatDuration",
+          namespace: "duration",
+          title: "formatDuration",
+          text: "formatDuration(value)",
+        },
+      ],
+      searchChunksImpl: () => SAMPLE_CHUNKS,
+    });
+
+    const response = await handler(
+      chatRequest({ messages: [userMessage("how do I convert between zones")] }),
+    );
+    await response.text();
+
+    const [call] = model.doStreamCalls;
+    const prompt = JSON.stringify(call.prompt);
+    const allowlist = prompt.slice(
+      prompt.indexOf("## Linking rules"),
+      prompt.indexOf("## Vocabulary"),
+    );
+
+    expect(allowlist).toContain(SAMPLE_CHUNKS[0].url);
+    expect(allowlist).not.toContain("/reference/plain/calculate/addPlainDate");
+    expect(allowlist).not.toContain("/reference/duration/format/formatDuration");
+  });
+
+  /* DOX-C3b. These assert the wiring, not the model's judgement: whether Gemini
+     chooses to call a tool is its business, but the tools must actually be on
+     the request and described in the prompt, and all three SDK layers must be
+     handed the same set. */
+  it("offers the widget tools to the model", async () => {
+    const model = fakeModel("Here is a globe.");
+    const handler = makeHandler({
+      resolveModel: singleBrain(model),
+      searchChunksImpl: () => SAMPLE_CHUNKS,
+    });
+
+    const response = await handler(
+      chatRequest({ messages: [userMessage("what time is it in Tokyo")] }),
+    );
+    await response.text();
+
+    const [call] = model.doStreamCalls;
+    const toolNames = (call.tools ?? []).map((t) => t.name).sort();
+    expect(toolNames).toEqual([
+      "showConverterBench",
+      "showDstInspector",
+      "showGlobe",
+      "showIntervalVisualizer",
+    ]);
+  });
+
+  it("describes each tool in the system prompt instead of the old placeholder", async () => {
+    const model = fakeModel("ok");
+    const handler = makeHandler({
+      resolveModel: singleBrain(model),
+      searchChunksImpl: () => SAMPLE_CHUNKS,
+    });
+
+    const response = await handler(
+      chatRequest({ messages: [userMessage("what time is it in Tokyo")] }),
+    );
+    await response.text();
+
+    const prompt = JSON.stringify(model.doStreamCalls[0].prompt);
+    expect(prompt).not.toContain("no tools are registered yet");
+    expect(prompt).toContain("showGlobe");
+    // The prose-first instruction is load-bearing — see system-prompt.ts.
+    expect(prompt).toContain("Write your prose answer first");
+  });
+
+  it("keeps exactly one step, so a tool call cannot trigger a second upstream request", async () => {
+    // Failover is only available before headers are sent. A second step would
+    // happen after, and would also spend a second request from a shared pool.
+    const model = fakeModel("ok");
+    const handler = makeHandler({
+      resolveModel: singleBrain(model),
+      searchChunksImpl: () => SAMPLE_CHUNKS,
+    });
+
+    const response = await handler(
+      chatRequest({ messages: [userMessage("what time is it in Tokyo")] }),
+    );
+    await response.text();
+
+    expect(model.doStreamCalls).toHaveLength(1);
+  });
+
   it("assembles an empty-context prompt (refusal setup) when retrieval finds nothing", async () => {
     const model = fakeModel("The documentation does not cover this.");
     const handler = makeHandler({ resolveModel: singleBrain(model) });
