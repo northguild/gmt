@@ -22,6 +22,7 @@ import type { StickToBottomContext } from "use-stick-to-bottom";
 import { SearchIcon } from "lucide-react";
 
 import { referenceRoutes } from "~/generated/reference/route-manifest";
+import { CORPUS_SUMMARY } from "~/lib/chat-constants";
 import { checkUserText } from "~/lib/chat-sanitize";
 import type { BrainsInfo } from "./use-brains";
 import { untilReset } from "./use-brains";
@@ -49,8 +50,9 @@ import {
 } from "./chat-warning";
 import { HiveHub } from "./hive/HiveHub";
 import { HiveNode } from "./hive/HiveNode";
+import { messageText, sendableHistory } from "~/lib/chat-history";
+import { createLinkComponents } from "./link-components";
 import { RetrievalTrace } from "./RetrievalTrace";
-import { resolveHref } from "./resolve-href";
 import { useIdleTimeout } from "./use-idle-timeout";
 
 /** Real questions the corpus can actually answer — a blank box tells a reader
@@ -75,17 +77,6 @@ const SHIKI_THEME: [typeof githubLight, typeof githubDark] = [
   githubLight,
   githubDark,
 ];
-
-/** Corpus scale, measured in DOX-C1 against the built retrieval index. */
-const CORPUS_SUMMARY =
-  "591 functions · 164 guide sections · 755 chunks indexed";
-
-function messageText(message: UIMessage): string {
-  return message.parts
-    .filter((part) => part.type === "text")
-    .map((part) => ("text" in part ? part.text : ""))
-    .join("");
-}
 
 function retrievalTraceOf(message: UIMessage): RetrievalTraceData | undefined {
   const part = message.parts.find((p) => p.type === RETRIEVAL_PART_TYPE);
@@ -151,12 +142,18 @@ export function DoxChat({
     () =>
       new DefaultChatTransport({
         api: "/api/chat",
-        // A function, not a value: re-evaluated per request, so retrieval is
-        // biased by whichever page the reader is on when they ask, and the
-        // brain is whichever is selected *now*.
-        body: () => ({
-          pageContext: window.location.pathname,
-          ...(brainRef.current ? { model: brainRef.current } : {}),
+        /* Assembled per request rather than declared as a static `body`, because
+           the history needs filtering as well as the body needing the current
+           page and brain. `sendableHistory` drops assistant turns that never
+           received a token — see chat-history.ts for why replaying those is
+           worse than it looks. */
+        prepareSendMessagesRequest: ({ messages, body }) => ({
+          body: {
+            ...body,
+            messages: sendableHistory(messages),
+            pageContext: window.location.pathname,
+            ...(brainRef.current ? { model: brainRef.current } : {}),
+          },
         }),
         fetch: chatFetch,
       }),
@@ -193,33 +190,11 @@ export function DoxChat({
     return combined;
   }, [retrievedUrls]);
 
+  /* No `siteOrigin` here on purpose — `createLinkComponents` reads it lazily at
+     link-render time. This memo runs during SSR, where `window` does not
+     exist. */
   const linkComponents = useMemo(
-    () => ({
-      a: ({
-        href,
-        children,
-        ...props
-      }: {
-        href?: string;
-        children?: React.ReactNode;
-      }) => {
-        const resolved = resolveHref(href ?? "", {
-          knownRoutes,
-          siteOrigin: window.location.origin,
-          allowedExternalOrigins: ["https://github.com"],
-        });
-        if (resolved.kind === "link") {
-          return (
-            <a href={resolved.href} {...props}>
-              {children}
-            </a>
-          );
-        }
-        // A hallucinated link degrades to its own text — never a 404.
-        if (resolved.kind === "text") return <>{children}</>;
-        return null;
-      },
-    }),
+    () => createLinkComponents({ knownRoutes }),
     [knownRoutes],
   );
 
@@ -248,9 +223,13 @@ export function DoxChat({
     (brains.visitor.remaining ?? 1) <= 0;
   const outOfBudget = poolSpent || visitorSpent;
 
+  /** Returns whether the message was actually sent. A `false` is what the
+   *  composer needs to keep the reader's text in the box — see the throw in
+   *  `PromptInput`'s `onSubmit` below, and the local modification it relies on
+   *  in `ai-elements/prompt-input.tsx`. */
   const send = useCallback(
-    (text: string) => {
-      if (isBusy || outOfBudget) return;
+    (text: string): boolean => {
+      if (isBusy || outOfBudget) return false;
 
       // Same check the Worker runs, so a reader learns *here* that a paste is
       // too long or that a message is nothing but invisible characters,
@@ -262,7 +241,7 @@ export function DoxChat({
         if (text.trim() !== "") {
           setWarning({ message: checked.reason, retryable: false });
         }
-        return;
+        return false;
       }
 
       setWarning(null);
@@ -272,6 +251,7 @@ export function DoxChat({
       // Advisory numbers, so a slightly late refresh is fine; a missing one
       // would leave a stale badge for the rest of the session.
       window.setTimeout(() => onUsed?.(), 1500);
+      return true;
     },
     [isBusy, onUsed, outOfBudget, sendMessage],
   );
@@ -290,6 +270,19 @@ export function DoxChat({
     },
     [isBusy],
   );
+
+  /** Re-ask the last question the reader actually typed. Only reachable from a
+   *  warning classified `retryable` (see chat-warning.tsx), and it goes through
+   *  `send`, so the busy guard, the budget guard and the length checks all
+   *  still apply — a retry is an ordinary request, not a privileged one. */
+  const retryLastQuestion = useCallback(() => {
+    const lastUser = [...messages].reverse().find((m) => m.role === "user");
+    if (!lastUser) return;
+    const text = messageText(lastUser);
+    if (text.trim() === "") return;
+    setWarning(null);
+    send(text);
+  }, [messages, send]);
 
   const isEmpty = messages.length === 0;
 
@@ -419,7 +412,9 @@ export function DoxChat({
             </>
           )}
 
-          {warning && <ChatWarning state={warning} />}
+          {warning && (
+            <ChatWarning state={warning} onRetry={retryLastQuestion} />
+          )}
         </ConversationContent>
         <ConversationScrollButton className="gmt-hive-jump gmt-sonar-focus" />
       </Conversation>
@@ -440,7 +435,14 @@ export function DoxChat({
           <PromptInput
             onSubmit={(message, event) => {
               event.preventDefault();
-              send(message.text ?? "");
+              /* Throwing is PromptInput's documented signal for "this send did
+                 not happen, keep the composer's contents" — it is what its two
+                 "Don't clear on error - user may want to retry" branches catch.
+                 A reader whose paste was refused for being too long can then
+                 trim it and resend, instead of losing it. */
+              if (!send(message.text ?? "")) {
+                throw new Error("send refused");
+              }
             }}
           >
             <PromptInputBody>

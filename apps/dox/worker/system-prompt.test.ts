@@ -14,7 +14,7 @@ const CHUNKS: RetrievalChunk[] = [
 ];
 
 describe("assembleSystemPrompt", () => {
-  it("emits all seven sections in order", () => {
+  it("emits all eight sections in order", () => {
     const prompt = assembleSystemPrompt({
       routeAllowlist: CHUNKS.map((c) => c.url),
       chunks: CHUNKS,
@@ -24,6 +24,10 @@ describe("assembleSystemPrompt", () => {
 
     const headings = [
       "## Persona and scope",
+      /* The prompt-injection boundary. It was missing from this list, which
+         meant the whole section could be deleted and this test — the only one
+         that looks at prompt structure — would still pass. */
+      "## Standing order",
       "## Linking rules",
       "## Vocabulary",
       "## Core rules",
@@ -47,17 +51,38 @@ describe("assembleSystemPrompt", () => {
     expect(prompt).toContain("CORE_RULES_MARKER");
   });
 
-  it("the route allowlist matches the retrieved set exactly", () => {
+  /* This assertion used to pass `routeAllowlist` and `chunks` from one fixture
+     and then only check `prompt).toContain(chunk.url)` — which would hold
+     just as well if `assembleSystemPrompt` ignored `routeAllowlist` entirely,
+     or if the caller passed the whole 500-plus entry manifest. The property the
+     prompt's own docstring rests on ("a model shown 20 valid routes
+     hallucinates far less than one shown 120") was asserted nowhere. */
+  it("lists exactly the retrieved routes in the linking rules, and no others", () => {
+    const decoys = [
+      "/reference/plain/calculate/addPlainDate",
+      "/reference/duration/format/formatDuration",
+    ];
     const prompt = assembleSystemPrompt({
       routeAllowlist: CHUNKS.map((c) => c.url),
       chunks: CHUNKS,
       vocabulary: "",
       coreRules: "",
     });
-    for (const chunk of CHUNKS) {
-      expect(prompt).toContain(chunk.url);
-    }
+
+    const allowlistBlock = prompt.slice(
+      prompt.indexOf("## Linking rules"),
+      prompt.indexOf("## Vocabulary"),
+    );
+    const listed = allowlistBlock
+      .split("\n")
+      .filter((line) => line.startsWith("- "))
+      .map((line) => line.slice(2));
+
+    expect(listed).toEqual(CHUNKS.map((c) => c.url));
+    // A route that was not retrieved must not appear anywhere in the prompt.
+    for (const decoy of decoys) expect(prompt).not.toContain(decoy);
   });
+
 
   it("labels the retrieved context with each chunk's URL", () => {
     const prompt = assembleSystemPrompt({

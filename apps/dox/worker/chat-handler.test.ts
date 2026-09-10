@@ -124,6 +124,57 @@ describe("createChatHandler", () => {
     expect(JSON.stringify(call.prompt)).toContain(SAMPLE_CHUNKS[0].url);
   });
 
+  /* The linking allowlist is the only thing standing between the model and an
+     invented URL, and its value comes entirely from being *small* — see
+     system-prompt.ts's docstring on why 20 routes beat 120. system-prompt.ts
+     renders faithfully whatever it is handed, so the invariant that actually
+     protects the reader ("the allowlist is exactly what retrieval returned")
+     can only be asserted here, where the handler derives one from the other. */
+  it("puts exactly the retrieved routes in the linking allowlist, never the whole manifest", async () => {
+    const model = fakeModel("Use convertZonedToZoned.");
+    const handler = makeHandler({
+      resolveModel: singleBrain(model),
+      // Retrieval sees three pages and returns one. The other two must not
+      // reach the prompt just because they exist in the corpus.
+      fetchChunksImpl: async () => [
+        ...SAMPLE_CHUNKS,
+        {
+          id: "plain/calculate/addPlainDate",
+          kind: "function",
+          url: "/reference/plain/calculate/addPlainDate",
+          namespace: "plain",
+          title: "addPlainDate",
+          text: "addPlainDate(value, duration)",
+        },
+        {
+          id: "duration/format/formatDuration",
+          kind: "function",
+          url: "/reference/duration/format/formatDuration",
+          namespace: "duration",
+          title: "formatDuration",
+          text: "formatDuration(value)",
+        },
+      ],
+      searchChunksImpl: () => SAMPLE_CHUNKS,
+    });
+
+    const response = await handler(
+      chatRequest({ messages: [userMessage("how do I convert between zones")] }),
+    );
+    await response.text();
+
+    const [call] = model.doStreamCalls;
+    const prompt = JSON.stringify(call.prompt);
+    const allowlist = prompt.slice(
+      prompt.indexOf("## Linking rules"),
+      prompt.indexOf("## Vocabulary"),
+    );
+
+    expect(allowlist).toContain(SAMPLE_CHUNKS[0].url);
+    expect(allowlist).not.toContain("/reference/plain/calculate/addPlainDate");
+    expect(allowlist).not.toContain("/reference/duration/format/formatDuration");
+  });
+
   it("assembles an empty-context prompt (refusal setup) when retrieval finds nothing", async () => {
     const model = fakeModel("The documentation does not cover this.");
     const handler = makeHandler({ resolveModel: singleBrain(model) });

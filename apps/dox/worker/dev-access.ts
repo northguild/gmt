@@ -61,6 +61,38 @@ export async function signDevToken(
 }
 
 /**
+ * Constant-time string equality.
+ *
+ * Both sides are hashed first, then the fixed-length digests are compared with
+ * a XOR accumulator that always runs to completion. Hashing is what makes this
+ * safe to write by hand: the digests are the same length whatever the inputs,
+ * so the loop's duration carries no information about *where* two values first
+ * differ, and a digest leaks nothing about its preimage.
+ *
+ * This exists because `handleDevKey`'s raw `?key=` comparison was a plain
+ * `===`, defended in a comment on the grounds that "the burst limiter already
+ * caps attempts". It does not: `checkRateLimit` lives in the chat handler, and
+ * `handleDevKey` returns long before anything reaches it. Rather than rewrite
+ * the comment around a weaker argument, make the comparison one that needs no
+ * argument.
+ */
+export async function timingSafeEqual(a: string, b: string): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const [digestA, digestB] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(a)),
+    crypto.subtle.digest("SHA-256", encoder.encode(b)),
+  ]);
+
+  const viewA = new Uint8Array(digestA);
+  const viewB = new Uint8Array(digestB);
+  let difference = 0;
+  for (let i = 0; i < viewA.length; i += 1) {
+    difference |= viewA[i] ^ viewB[i];
+  }
+  return difference === 0;
+}
+
+/**
  * Verify a token.
  *
  * Uses `crypto.subtle.verify` rather than comparing hex strings, so the
