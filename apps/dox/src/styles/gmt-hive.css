@@ -688,6 +688,27 @@
   box-shadow: var(--gmt-shadow-md);
 }
 
+/* This list sits inside Starlight's `.sl-markdown-content` (the whole page
+   slot, not just prose), so the bare `<ul>`/`<li>` here otherwise inherit
+   gmt-content.css's "prose bullet list" treatment: zeroed list padding, a
+   24px text indent sized for paragraph bullets, and a tick aimed at a
+   bullet's cap-height rather than a listbox row's center. `.gmt-hive-brain-*`
+   (two classes) outguns those `.sl-markdown-content ul[ li[::before]]`
+   selectors on specificity, so this wins regardless of stylesheet order. */
+.gmt-hive-brains .gmt-hive-brain-list {
+  padding-left: var(--gmt-space-1);
+}
+
+.gmt-hive-brains .gmt-hive-brain-item {
+  padding-left: 0;
+  margin-bottom: 0;
+}
+
+.gmt-hive-brains .gmt-hive-brain-item::before {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
 .gmt-hive-brain-option {
   display: flex;
   align-items: center;
@@ -699,21 +720,25 @@
   font-size: var(--gmt-text-xs);
   color: var(--gmt-ice);
   background: none;
-  border: 1px solid transparent;
+  border: none;
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   cursor: pointer;
   text-align: start;
 }
 
+/* A row highlight, not a nested panel — reusing the panel's own bg+border
+   recipe here made each option read as a smaller panel stacked inside the
+   dropdown's. `--gmt-accent-wash` is the same flat tint the sidebar's active/
+   hover nav rows use (gmt-shell.css `.sidebar-pane a:hover`) for exactly this:
+   a row state that stays visually distinct from a bordered surface. */
 .gmt-hive-brain-option:hover {
-  background: var(--gmt-fill-strong);
-  border-color: var(--gmt-border);
+  background: var(--gmt-accent-wash);
 }
 
 .gmt-hive-brain-option[aria-selected="true"] {
   color: var(--gmt-cyan);
-  border-color: var(--gmt-border-strong);
+  background: var(--gmt-accent-wash);
 }
 
 .gmt-hive-brain-meta {

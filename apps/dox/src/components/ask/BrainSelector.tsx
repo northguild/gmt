@@ -69,7 +69,7 @@ export function BrainSelector({
 
       {open && (
         <ul className="gmt-hive-brain-list" role="listbox">
-          <li>
+          <li className="gmt-hive-brain-item">
             <button
               type="button"
               role="option"
@@ -85,7 +85,7 @@ export function BrainSelector({
             </button>
           </li>
           {info.brains.map((brain) => (
-            <li key={brain.id}>
+            <li key={brain.id} className="gmt-hive-brain-item">
               <button
                 type="button"
                 role="option"
