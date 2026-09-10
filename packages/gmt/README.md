@@ -15,8 +15,8 @@ It wraps `@js-temporal/polyfill` behind a smaller, more opinionated API aimed at
 
 - **100% Temporal, Temporal-first.** GMT is built directly on the TC39 `Temporal` standard (via `@js-temporal/polyfill`) — not a custom, homegrown date/time type system like `@internationalized/date`'s own `CalendarDate`/`ZonedDateTime` classes. No `Date` object anywhere, enforced by 3 dedicated lint packages.
 - **A full replacement for any and all of them.** Luxon, date-fns, Moment.js, and react-aria's `@internationalized/date` don't have parity with each other — GMT covers the combined capabilities of all four in one library, plus what none of them do alone.
-- **~15× more CI test executions than all four competitors combined**: 347,714 from 17,892 tests, the library's 17,338 of them run in all 10 timezones × 2 Node versions, vs. their combined 20,190.
-- **~40× more test cases than `@internationalized/date`**: 17,892 vs. 386 — Adobe's own library, run at its own commit.
+- **~15× more CI test executions than all four competitors combined**: 350,894 from 18,051 tests, the library's 17,497 of them run in all 10 timezones × 2 Node versions, vs. their combined 20,190.
+- **~40× more test cases than `@internationalized/date`**: 18,051 vs. 386 — Adobe's own library, run at its own commit.
 - **The only one of the five that tests systematically across locales in CI at all.** Zero of the four comparison libraries run a locale-test matrix; GMT mandates all 17 locales on every locale-aware function.
 - **The only one that runs its entire suite under a real `TZ` env var across real-world zones.** Luxon and `@internationalized/date` have no CI timezone matrix; date-fns's zone scope is unclear; Moment.js covers 6 zones but not its full suite.
 - **Explicit DST disambiguation control on both construction _and_ arithmetic** — a control none of the others expose.
@@ -92,7 +92,7 @@ GMT's test suite balances **thoroughness** against **maintenance burden** by tes
 - **Non-string input tables** — functions that guard with `typeof x !== "string"` return the same sentinel for `null`, `undefined`, `123`, `true`, `[]`, and `{}`. We test one representative non-string per argument position rather than all six types × N positions. The collapse is safe because all non-string types hit the identical early-return code path.
 - **Redundant permutations** — adjacent/disjoint/reversed interval cases that produce identical results are not duplicated across every function variant. The `plain/`, `zoned/`, `utc/`, and `unix/` families share the same mathematical behavior; each family gets the minimum set of cases needed to prove correctness.
 
-**Result:** 17,892 tests across 604 files that exercise real behavior differences without redundant permutations. They run in CI as 347,714 executions — the library's 17,338 tests × 2 Node versions × 10 timezones, plus 477 in `apps/dox` × 2 Node versions.
+**Result:** 18,051 tests across 608 files that exercise real behavior differences without redundant permutations. They run in CI as 350,894 executions — the library's 17,497 tests × 2 Node versions × 10 timezones, plus 477 in `apps/dox` × 2 Node versions.
 
 ## How GMT is tested, vs. the libraries it targets
 
@@ -108,9 +108,9 @@ GMT is measured directly against react-aria's **`@internationalized/date`**, **L
 
 | Metric                          | GMT                                                | `@internationalized/date`      | Luxon                                | date-fns                                  | Moment.js                        |
 | ------------------------------- | -------------------------------------------------- | ------------------------------ | ------------------------------------ | ----------------------------------------- | -------------------------------- |
-| Test files                      | 604                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
-| Individual test cases           | **17,892**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
-| Effective CI test<br>executions | **347,714**<br>(17,338 × 2 Node<br>× 10 timezones,<br>+ 477 × 2 Node) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
+| Test files                      | 608                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
+| Individual test cases           | **18,051**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
+| Effective CI test<br>executions | **350,894**<br>(17,497 × 2 Node<br>× 10 timezones,<br>+ 477 × 2 Node) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
 | CI Node.js matrix               | 22, 24                                             | n/a — tests<br>React 16–canary | 20, 22, 24, 25                       | not explicit<br>(`node = "latest"`)       | LTS, LTS-1,<br>latest            |
 | CI timezone matrix              | **10 zones × 2**<br>**Node, full suite**           | none found                     | none found                           | dedicated workflow,<br>zone scope unclear | 6 zones,<br>partial suite only   |
 | Locale test matrix              | **17 locales**,<br>every locale fn                 | none found                     | none found                           | none found                                | none found                       |
@@ -146,7 +146,7 @@ Specific, sourced claims — not a repeat of the metrics above.
 | Only GMT enforces a mandatory<br>17-locale test matrix on every<br>locale-aware function                                                      | No CI-level or systematic<br>locale-matrix testing found<br>in any of the four                                                        |
 | Only GMT exposes explicit DST<br>disambiguation control on both<br>construction _and_ arithmetic                                              | Luxon's docs call this explicitly<br>undefined; `@internationalized/date`<br>only covers construction, not arithmetic                 |
 | Only GMT is Temporal-native with<br>zero `Date` usage, enforced by<br>3 dedicated lint packages                                               | Luxon, date-fns, and Moment.js all<br>still wrap or depend on `Date` internally                                                       |
-| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~15×                                                  | 347,714 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
+| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~15×                                                  | 350,894 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
 
 ## Package Layout
 
@@ -1663,6 +1663,30 @@ Truncation floors toward negative infinity, so pre-1970 values truncate the same
 post-1970 ones do — `truncateNanoseconds(-1500n, "us")` is `-2000n`, not `-1000n`.
 Rounding toward zero would make the result jump direction either side of the epoch.
 
+`0n` is both the epoch and the invalid-input sentinel, so `precision/validate` exists to
+tell them apart. Each predicate accepts exactly what its partner parses:
+
+```typescript
+import {
+  isValidInstant,
+  isValidNanoseconds,
+  isValidNanoPattern,
+} from "@northguild/gmt";
+
+isValidInstant("1970-01-01T00:00:00Z"); // true  — toNanoseconds returns 0n, the epoch
+isValidInstant("garbage"); // false — toNanoseconds returns 0n, the sentinel
+
+isValidNanoPattern("0"); // true  — parseNanoseconds returns 0n, the epoch
+isValidNanoPattern("1e18"); // false
+
+isValidNanoseconds(0n); // true  — in range for truncateNanoseconds / fromNanoseconds
+isValidNanoseconds(0); // false — a number cannot carry a nanosecond timestamp
+```
+
+Reach for `isValidInstant` rather than `isValidUtc`: the latter gates on GMT's stricter
+`<date>T<time>Z` shape and rejects the offsets, bracketed zones, space separators and
+basic-format strings `toNanoseconds` accepts, so validating with it discards valid input.
+
 Every `precision/` function returns a sentinel (`""` for strings, `0n` for bigints) on
 invalid input, and accepts only values inside the range `Temporal.Instant` can represent
 (±8_640_000_000_000_000_000_000n). `0n` is also the epoch itself, so validate the input
@@ -1711,6 +1735,11 @@ via an instant, so DST disambiguation cannot distort it and a local time that ne
 is measured as written. The two endpoints need not share a zone: a flight leaving New York at 23:00 and landing in Berlin at 11:00 the next local day
 is 12 wall-clock hours and 7 elapsed hours. It truncates toward zero, and it is not a count
 of midnights crossed.
+
+`isValidSpan(start, end)` answers "will these two produce a span?" — true exactly when
+`spanMs` and `spanNs` will return a value. It is symmetric, since a reversed pair is a
+negative span rather than an invalid one. `spanWallClock` has a different input grammar and
+is covered by `isValidZonedDateTime`.
 
 Three limits, all deliberate:
 

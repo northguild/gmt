@@ -14,13 +14,11 @@ import { parseInstantNanoseconds } from "../../internal";
  *   in every separator and format variant it accepts, `"20161231 235960Z"` included.
  * - Returns `bigint`, not `number`: nanoseconds since the epoch passed
  *   `Number.MAX_SAFE_INTEGER` in April 1970, so a `number` cannot hold them.
- * - Returns `0n` on invalid input. `0n` is also the epoch itself, and there is currently no
- *   public predicate for this grammar to tell them apart — **do not reach for
- *   `isValidUtc`**, which gates on GMT's stricter `<date>T<time>Z` shape and returns `false`
+ * - Returns `0n` on invalid input. `0n` is also the epoch itself — use `isValidInstant`,
+ *   which accepts exactly this grammar, when the two must be told apart. **Not
+ *   `isValidUtc`**: it gates on GMT's stricter `<date>T<time>Z` shape and returns `false`
  *   for the offsets, bracketed zones, space separators and basic-format strings this
- *   function accepts. Until `precision/` grows a validator, either constrain your input to
- *   `isValidUtc`'s shape before calling, or use `spanNs`, which measures between two of
- *   these strings with no ambiguity at all because it returns `null`.
+ *   function accepts, so validating with it discards valid input.
  *
  * @param isoString ISO 8601 instant string (e.g. "2024-03-10T12:00:00.123456789Z")
  * @returns nanoseconds since the Unix epoch as a bigint, or 0n on invalid input

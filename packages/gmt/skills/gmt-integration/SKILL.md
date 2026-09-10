@@ -12,6 +12,7 @@ sources:
   - 'northguild/gmt:packages/gmt/src/precision/convert/index.ts'
   - 'northguild/gmt:packages/gmt/src/precision/format/index.ts'
   - 'northguild/gmt:packages/gmt/src/precision/calculate/index.ts'
+  - 'northguild/gmt:packages/gmt/src/precision/validate/index.ts'
 metadata:
   type: composition
   library: '@northguild/gmt'

@@ -104,9 +104,9 @@ export function renderNamespaceChart(): string {
     { namespace: "unix", count: 78 },
     { namespace: "utc", count: 76 },
     { namespace: "duration", count: 12 },
-    { namespace: "precision", count: 5 },
-    { namespace: "span", count: 3 },
-    { namespace: "regex", count: 22 },
+    { namespace: "precision", count: 8 },
+    { namespace: "span", count: 4 },
+    { namespace: "regex", count: 24 },
   ];
 
   const definition = defineChart({

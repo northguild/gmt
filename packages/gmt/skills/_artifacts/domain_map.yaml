@@ -148,6 +148,7 @@ skills:
       - spanMs
       - spanNs
       - spanWallClock
+      - isValidSpan
     tasks:
       - Add/subtract dates with overflow control
       - Calculate differences with rounding options
@@ -237,6 +238,7 @@ skills:
       - Use with state management
       - Serialize nanosecond timestamps across a JSON boundary
       - Truncate nanoseconds to a storage engine's precision
+      - Tell a 0n sentinel apart from 0n the epoch with precision/validate
       - Choose ESLint config
       - Choose Biome config
       - Choose Oxlint config

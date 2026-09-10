@@ -38,4 +38,30 @@ spanWallClock(start, end, "hours");
 - **`spanMs` returns `null` past `Number.MAX_SAFE_INTEGER` milliseconds** (±285,000 years, which two instants at opposite ends of `Temporal.Instant`'s range exceed). Use `spanNs` there. A span is a duration, not an instant: it reaches twice the epoch-nanosecond range, so it is not a `fromNanoseconds` input.
 - **Leap seconds are not counted.** UTC repeats a second rather than numbering a 61st one, so a span across one is a second short of the physical elapsed time; against a smeared clock (Google, AWS, Meta) the error is up to a second spread over the smear window. Leap-second-exact spans need a TAI scale, which is not yet shipped.
 
-Importable from the package root or from `@northguild/gmt/span` and `@northguild/gmt/span/calculate`.
+### Validators for both namespaces
+
+`precision/` and `span/` were the only namespaces with no `validate/` module, and in `precision/` that was not cosmetic: `0n` is simultaneously the epoch and the invalid-input sentinel, and there was no public predicate to tell them apart. `toNanoseconds`' own JSDoc suggested `isValidUtc`, which gates on GMT's stricter `<date>T<time>Z` shape and returns `false` for the offsets, bracketed zones, space separators and basic-format strings `toNanoseconds` accepts — so following that advice discarded valid input.
+
+```typescript
+import {
+  isValidInstant,
+  isValidNanoseconds,
+  isValidNanoPattern,
+  isValidSpan,
+} from "@northguild/gmt";
+
+isValidInstant("1970-01-01T00:00:00Z"); // true  — toNanoseconds returns 0n, the epoch
+isValidInstant("garbage"); // false — toNanoseconds returns 0n, the sentinel
+isValidInstant("2024-03-10 12:00:00Z"); // true  — isValidUtc says false
+
+isValidNanoPattern("0"); // true  — parseNanoseconds returns 0n, the epoch
+isValidNanoseconds(0n); // true; isValidNanoseconds(0) is false — a number cannot carry one
+
+isValidSpan("2024-03-10T12:00:00Z", "2024-03-10T12:00:01Z"); // true
+```
+
+Each predicate accepts exactly what its partner parses, and `parseNanoseconds` now defers to `isValidNanoPattern` so the two cannot drift apart. `isValidSpan` is symmetric — a reversed pair is a negative span, not an invalid one — and is true for a pair whose span exceeds `spanMs`'s range, since that is a limit on the result rather than the inputs; `spanNs` still returns the exact `bigint`.
+
+`regex/` gains `instantLeapSecond` (the wider leap-second grammar the full instant parser needs, alongside the existing `leapSecond`) and `nanosecondDecimal`.
+
+Importable from the package root or from `@northguild/gmt/span`, `@northguild/gmt/span/calculate`, `@northguild/gmt/span/validate` and `@northguild/gmt/precision/validate`.

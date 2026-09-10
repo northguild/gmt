@@ -6997,6 +6997,122 @@
     ]
   },
   {
+    "url": "/reference/precision/validate/isValidInstant",
+    "name": "isValidInstant",
+    "namespace": "precision",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidInstant(value: string): boolean",
+    "description": "Validate whether a string is an ISO 8601 instant string the `precision/` namespace accepts.",
+    "sourcePath": "packages/gmt/src/precision/validate/isValidInstant.ts",
+    "examples": [
+      {
+        "call": "isValidInstant(\"2024-03-10T12:00:00Z\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidInstant(\"1970-01-01T00:00:00Z\")",
+        "result": "true — the epoch, where toNanoseconds returns 0n"
+      },
+      {
+        "call": "isValidInstant(\"2024-03-10T12:00:00-05:00[America/New_York]\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidInstant(\"2024-03-10 12:00:00Z\")",
+        "result": "true — isValidUtc says false"
+      },
+      {
+        "call": "isValidInstant(\"2024-03-10T12:00:00\")",
+        "result": "false — no offset designator"
+      },
+      {
+        "call": "isValidInstant(\"2016-12-31T23:59:60Z\")",
+        "result": "false — leap second"
+      },
+      {
+        "call": "isValidInstant(\"invalid\")",
+        "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/validate/isValidNanoPattern",
+    "name": "isValidNanoPattern",
+    "namespace": "precision",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidNanoPattern(value: string): boolean",
+    "description": "Validate whether a string is a nanosecond timestamp `parseNanoseconds` will parse.",
+    "sourcePath": "packages/gmt/src/precision/validate/isValidNanoPattern.ts",
+    "examples": [
+      {
+        "call": "isValidNanoPattern(\"1710072000123456789\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidNanoPattern(\"0\")",
+        "result": "true — the epoch, where parseNanoseconds returns 0n"
+      },
+      {
+        "call": "isValidNanoPattern(\"-1000000000\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidNanoPattern(\"8640000000000000000001\")",
+        "result": "false — outside the instant range"
+      },
+      {
+        "call": "isValidNanoPattern(\"01\")",
+        "result": "false — leading zero"
+      },
+      {
+        "call": "isValidNanoPattern(\"1e18\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidNanoPattern(\"garbage\")",
+        "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/validate/isValidNanoseconds",
+    "name": "isValidNanoseconds",
+    "namespace": "precision",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidNanoseconds(value: unknown): value is bigint",
+    "description": "Validate whether a value is an epoch-nanosecond `bigint` the `precision/` namespace accepts.",
+    "sourcePath": "packages/gmt/src/precision/validate/isValidNanoseconds.ts",
+    "examples": [
+      {
+        "call": "isValidNanoseconds(0n)",
+        "result": "true — the epoch"
+      },
+      {
+        "call": "isValidNanoseconds(1710072000123456789n)",
+        "result": "true"
+      },
+      {
+        "call": "isValidNanoseconds(-1000000000n)",
+        "result": "true"
+      },
+      {
+        "call": "isValidNanoseconds(8640000000000000000001n)",
+        "result": "false — outside the instant range"
+      },
+      {
+        "call": "isValidNanoseconds(0)",
+        "result": "false — number, not bigint"
+      },
+      {
+        "call": "isValidNanoseconds(\"0\")",
+        "result": "false"
+      }
+    ]
+  },
+  {
     "url": "/reference/regex/calendar-date/calendarDate",
     "name": "calendarDate",
     "namespace": "regex",
@@ -7204,6 +7320,54 @@
       },
       {
         "call": "leapSecond.test(\"202\")",
+        "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/regex/leap-second/instantLeapSecond",
+    "name": "instantLeapSecond",
+    "namespace": "regex",
+    "module": "leap-second",
+    "kind": "regex",
+    "signature": "",
+    "description": "true",
+    "sourcePath": "packages/gmt/src/regex/leap-second.ts",
+    "examples": [
+      {
+        "call": "instantLeapSecond.test(\"60\")",
+        "result": "false"
+      },
+      {
+        "call": "instantLeapSecond.test(\"202\")",
+        "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/regex/nanoseconds/nanosecondDecimal",
+    "name": "nanosecondDecimal",
+    "namespace": "regex",
+    "module": "nanoseconds",
+    "kind": "regex",
+    "signature": "",
+    "description": "true",
+    "sourcePath": "packages/gmt/src/regex/nanoseconds.ts",
+    "examples": [
+      {
+        "call": "nanosecondDecimal.test(\"12\")",
+        "result": "true"
+      },
+      {
+        "call": "nanosecondDecimal.test(\"123456789\")",
+        "result": "true"
+      },
+      {
+        "call": "nanosecondDecimal.test(\"2025-13-01\")",
+        "result": "false"
+      },
+      {
+        "call": "nanosecondDecimal.test(\"not-a-match\")",
         "result": "false"
       }
     ]
@@ -7652,6 +7816,46 @@
       {
         "call": "spanWallClock(\"2024-03-01T12:00:00-05:00[America/New_York]\", \"2024-03-02T12:00:00-05:00[America/New_York]\", \"minutes\")",
         "result": "null"
+      }
+    ]
+  },
+  {
+    "url": "/reference/span/validate/isValidSpan",
+    "name": "isValidSpan",
+    "namespace": "span",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidSpan(start: string, end: string): boolean",
+    "description": "Validate whether two ISO 8601 instant strings form a measurable span.",
+    "sourcePath": "packages/gmt/src/span/validate/isValidSpan.ts",
+    "examples": [
+      {
+        "call": "isValidSpan(\"2024-03-10T12:00:00Z\", \"2024-03-10T12:00:01Z\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidSpan(\"2024-03-10T12:00:00Z\", \"2024-03-10T12:00:00Z\")",
+        "result": "true — a zero span is a span"
+      },
+      {
+        "call": "isValidSpan(\"2024-03-10T12:00:01Z\", \"2024-03-10T12:00:00Z\")",
+        "result": "true — spans are signed"
+      },
+      {
+        "call": "isValidSpan(\"2024-03-10T07:00:00-05:00[America/New_York]\", \"2024-03-10T12:00:00Z\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidSpan(\"-271821-04-20T00:00:00Z\", \"+275760-09-13T00:00:00Z\")",
+        "result": "true — but spanMs returns null, use spanNs"
+      },
+      {
+        "call": "isValidSpan(\"2024-03-10T12:00:00Z\", \"invalid\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidSpan(\"2024-03-10T12:00:00[America/New_York]\", \"2024-03-11T12:00:00[America/New_York]\")",
+        "result": "false — no offset designator"
       }
     ]
   },

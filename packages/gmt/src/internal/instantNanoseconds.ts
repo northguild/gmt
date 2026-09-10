@@ -1,16 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { instantLeapSecond } from "../regex/leap-second";
 import { hasCalendarAnnotation } from "./hasCalendarAnnotation";
-
-/**
- * A leap second in every shape `Temporal.Instant.from` accepts: `T`, `t` or a space before
- * the time, and extended (`23:59:60`) or basic (`235960`) digits.
- *
- * `plain/validate`'s shared `isLeapSecond` matches only an uppercase `T` with extended-format
- * digits — all that `utc/`'s stricter `<date>T<time>Z` regex gate can ever hand it. The
- * instant grammar is wider, so it needs this pattern; without it `"2016-12-31 23:59:60Z"`
- * would slip through and Temporal would silently clamp it to `:59`.
- */
-const instantLeapSecond = /[Tt ]\d{2}:?\d{2}:?60(?:[.,]\d+)?(?:[-+Zz[])/;
 
 /**
  * Parse an ISO 8601 instant string to epoch nanoseconds, or `null` when it is not one.

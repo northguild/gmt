@@ -68,7 +68,7 @@ and full interval set operations.
   `addBusinessDays`, `subtractBusinessDays`, `cycleDate`, `setDate`
 - **Diffs**: `diffDate`, `diffDateTime`, `diffTime` (+ `diffZoned`,
   `diffUnix`, `diffUtc` in their namespaces)
-- **Spans (raw numbers)**: `spanMs`, `spanNs`, `spanWallClock`
+- **Spans (raw numbers)**: `spanMs`, `spanNs`, `spanWallClock`, `isValidSpan`
 - **Bounds**: `clampDate`, `closestDateTo`, `startOfDate`, `endOfDate`,
   `startOfQuarterForDate`, `getLocaleStartOfWeek`
 - **Durations (ISO 8601)**: `isValidDuration`, `parseDuration`, `addDuration`,

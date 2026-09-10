@@ -123,6 +123,24 @@ Shipped as `packages/gmt/src/span/` — `calculate/spanMs.ts`, `calculate/spanNs
 - **Leap seconds are documented, not handled**, per the story. A span across one is a
   second short of physical elapsed time. SPA-48's job.
 
+- **`span/validate/isValidSpan` and `precision/validate/` were added on review.** Both
+  namespaces shipped without a `validate/` module, the only two in the library to do so, and
+  in `precision/` that was a real defect rather than a missing convention: `0n` is
+  simultaneously the epoch and the invalid-input sentinel, and `toNanoseconds`' JSDoc
+  pointed callers at `isValidUtc`, which rejects four of the five grammars `toNanoseconds`
+  accepts (offsets, bracketed zones, space separators, basic format) — following it
+  discarded valid input. `isValidInstant`, `isValidNanoseconds` and `isValidNanoPattern`
+  each accept exactly what their partner parses, and `parseNanoseconds` now defers to
+  `isValidNanoPattern` so the two cannot drift. `isValidSpan` was requested despite `null`
+  never colliding with a valid span; it earns its place as the "will this pair measure?"
+  predicate and by documenting that a too-wide span is a limit on the *result*, not the
+  inputs. Raised on #238 by @craig-o-curtis.
+- **The wider leap-second regex moved to `regex/`.** CORE-1 kept it module-local; it sat
+  next to `regex/leap-second.ts`'s narrower `leapSecond` without either knowing about the
+  other, which is the duplication that namespace exists to prevent. `regex/` now exports
+  both, documented as a pair with a note on which gate each belongs behind.
+  Raised on #238 by @craig-o-curtis.
+
 ### Known gap, not introduced here
 
 The dox reference generator builds its TypeScript program with `strict: false`
