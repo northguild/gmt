@@ -742,14 +742,14 @@ plain Wrangler convention, with nothing to bridge.
 `DOX-C3` spans two sub-stories, both Tier 6: `DOX-C3a` (the two shells + link hardening)
 and `DOX-C3b` (widget registry). The issue stays open until `DOX-C3b` also lands.
 
-#### DOX-C3a — Chat core, the dock, and the /dox route
+#### DOX-C3a — Chat core and the /dox route
 
 **GitHub Issue:** #139 — see tracker.md\_
 
 **Title:**
 
 ```
-DOX-C3a Add the Dox dock and the /dox route over one shared chat core
+DOX-C3a Add the Dox chat core and the /dox route
 ```
 
 **Description:**
@@ -764,40 +764,51 @@ the globe, but must render usefully without it.
 No chat UI exists through Tier 5. This story is where the epic's original ambition
 lands — on top of a docs site and a widget platform, not instead of either.
 
-## Two surfaces over one core (2026-09-03 rewrite)
+## One surface, not two — AMENDED 2026-09-10, the dock is CUT
 The 2026-08-26 spec said "not a takeover, **not a separate route**, not the homepage."
 **The user has explicitly asked for a dedicated route**, so the middle clause is
 reversed. The rest stands, and is the constraint this story is built against:
 
-> The docs are the product. The dock augments them. No reader is ever forced through the
+> The docs are the product. Dox augments them. No reader is ever forced through the
 > chat to reach an answer, and deleting the chat leaves every page in Tiers 0–5 intact.
 
-Build **one** `<AskDox>` React island and mount it in two hosts.
+**This story originally specified two hosts over one core: an every-page draggable dock
+("Host 1") and the `/dox` route ("Host 2"). Host 1 is cut. Only `/dox` is built.**
 
-### Host 1 — the every-page draggable dock
-- Mounted by overriding Starlight's **`PageFrame`** component (verified overridable in
-  Starlight 0.41.9; it wraps every page, `splash` included). Add it to the `components`
-  map in `astro.config.mjs` alongside the existing `ThemeProvider` / `Hero` /
-  `SocialIcons` overrides.
-- **AI Elements has no draggable modal — the shell is ours.** Build it from the existing
-  `.gmt-glass*` / `.gmt-brackets` primitives in `gmt-primitives.css`; do not introduce a
-  new panel treatment.
-- **`reference/visual-design.md` has no dialog/modal/overlay spec at all.** This story
-  writes one, into that file, before building: drag handle, resize, dock/undock,
-  focus trap, Escape to dismiss, focus return on close, `prefers-reduced-motion`,
-  `prefers-reduced-transparency`, and the existing "no nested glass-within-glass" and
-  "cap blurred surfaces" performance rules.
-- Hydrates `client:idle`. **The chat core itself does not hydrate until the dock is
-  opened** — the launcher is a button, not a chat.
+Three reasons, in order of weight:
 
-### Host 2 — the /dox route
+1. **The every-page entry point already exists and costs nothing.** `DOX-C0` shipped a
+   header link carrying the Dox crystal — a plain `<a>` plus inline SVG, with **no
+   `client:` directive anywhere in `Header.astro` or `DoxMark.astro`**. Every page can
+   reach Dox in one click, with zero JavaScript.
+2. **A dock would break the property `DOX-C0` was built to protect.** That story's DoD
+   requires a reference page's initial payload to contain no React bundle. Today that is
+   true *by construction* — there is no island to hydrate. Overriding `PageFrame` to
+   mount a launcher on all ~650 pages puts React on the critical path everywhere and
+   turns a structural guarantee into a thing that needs policing.
+3. **It would duplicate a surface that is now deliberately different.** `/dox` evolved
+   into a chrome-free, full-bleed app surface (`dox.astro` hides the Starlight header and
+   `<h1>` via `data-dox-shell`). A floating glass panel showing the same transcript is a
+   second, worse version of it.
+
+The cost of the cut, stated honestly: a reader must navigate away from the page they are
+on to ask a question, losing their place. The page-context bias that seeds retrieval
+(`namespace-from-page.ts`) still works — `/dox` receives it from the referrer — but the
+reader's *visual* context does not follow them. If that turns out to matter, the answer
+is probably a slide-over on `/dox`-adjacent routes, not the full drag/resize dock.
+
+**What retires with it:** the `PageFrame` override, the drag/resize/undock shell, the
+dialog-and-overlay spec this story was to write into `reference/visual-design.md`, and
+the four dock-specific DoD lines below.
+
+### The /dox route — the only surface
 - A full-height page at `/dox`, built with `<StarlightPage frontmatter={{ template:
   'splash' }}>` so the header, search and theme select stay consistent while the sidebar
   and table of contents drop away. (A plain `src/pages/dox.astro` would not receive
   Starlight's `customCss` and would have to re-import the whole stylesheet stack.)
 - Left: the chat core. Right: a **widget rail** carrying the Tier 2 widgets and — via
-  `DOX-E1` — the spinnable globe with global clocks. The rail is what makes this route
-  worth having over the dock.
+  `DOX-E1` — the spinnable globe with global clocks. **Deferred to `DOX-C3b`**, which
+  owns the widget-mounting machinery the rail is made of.
 - Hydrates `client:load`.
 - Link it from the site header or sidebar, not from a modal-only entry point.
 
@@ -898,7 +909,8 @@ still stands.
 - **A deliberately induced hallucinated link renders as plain text, not a broken link.**
   Test this directly — stub a response containing `/reference/plain/calculate/notAReal`
   and confirm it degrades. This is the story's most important test.
-- The same answer renders identically in the dock and on `/dox`.
+- ~~The same answer renders identically in the dock and on `/dox`.~~ **Retired with the
+  dock — there is only one surface.**
 - Multiline input works; Enter/Shift+Enter behavior is deliberate and documented.
 - Code blocks in answers are copyable.
 - Stop halts the stream mid-token.
@@ -906,13 +918,28 @@ still stands.
 - A rate-limit response renders as a warning, not a crash, and does not enter history.
 - The retrieval trace shows zero chunks for an out-of-corpus question, and the answer
   refuses.
-- Keyboard-only: open the dock, type, submit, stop, dismiss, and return focus sensibly —
-  all without a mouse. Repeat on `/dox`.
-- The dock is draggable by keyboard as well as pointer, or has a documented keyboard
-  equivalent (e.g. dock-position cycling).
-- **No chat bundle is hydrated on a reference page until the dock is opened** — verify in
-  the network panel.
-- `/dox` renders and is usable with the DOX-E1 globe absent.
+- Keyboard-only on `/dox`: reach the composer, type, submit, stop, and reach the brain
+  selector — all without a mouse. **(The "open the dock … dismiss … return focus"
+  half is retired; there is no dock to open or dismiss.)**
+- ~~The dock is draggable by keyboard as well as pointer.~~ **Retired with the dock.**
+- **No React bundle is hydrated on a reference page at all** — verify in the network
+  panel. Stronger than the original line, which only required it "until the dock is
+  opened": with the dock cut, the header entry point is a plain link and a reference
+  page ships no island whatsoever.
+- `/dox` renders and is usable with the DOX-E1 globe absent. **Trivially met while the
+  widget rail is deferred to `DOX-C3b`; re-check when the rail lands.**
+
+**Added by the 2026-09-10 amendment — the free-tier survival DoD.** None of this was
+foreseen when the story was written; it became mandatory once a live run exhausted
+Gemini's 20-requests-per-day free allowance mid-session:
+
+- An exhausted brain is **invisible to the reader**: the request fails over to another
+  brain before any output is streamed, rather than surfacing an error.
+- A brain the API key cannot reach (404/400) is pruned for the day rather than retried.
+- The usage badge reports **real** numbers from the KV ledger, and they move with real
+  requests and survive a reload.
+- Day boundaries are Pacific, not UTC, and are computed with `@northguild/gmt` — the
+  library this site documents — including across a DST change.
 ```
 
 ---

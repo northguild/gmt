@@ -68,8 +68,17 @@ export function findBrain(id: string): Brain | undefined {
  * person can change. It exists so one enthusiastic reader cannot drain a pool
  * that is shared by everybody, which on the free tier is a real and easy
  * accident rather than an attack.
+ *
+ * Sized against the shared pool rather than picked for feel. Four brains at 20
+ * requests each is ~80 per day for *everyone*, so a cap of 10 lets eight
+ * readers spend the entire day's budget before a ninth arrives. Five doubles
+ * the number of people who get a turn, and is still more questions than a
+ * typical reader asks in one sitting.
+ *
+ * Retune with real traffic — this is arithmetic against an unknown audience,
+ * not a measured optimum.
  */
-export const VISITOR_DAILY_MAX = 10;
+export const VISITOR_DAILY_MAX = 5;
 
 export const MAX_MESSAGES = 40;
 export const MAX_MESSAGE_LENGTH = 4000;

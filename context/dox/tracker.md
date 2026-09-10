@@ -42,22 +42,23 @@ with one exception: if a story also modifies `packages/gmt` (for example `DOX-A3
 deciding to stub the namespace READMEs, per overview.md §7), that change follows the
 normal repo convention and does need a changeset.
 
-| Order | Story                                       | GitHub Issue | Status      |
-| ----- | ------------------------------------------- | ------------ | ----------- |
-| 1     | DOX-A1                                      | #130         | Done        |
-| 2     | DOX-A2                                      | #131         | Done        |
-| 3     | DOX-A3 (DOX-A3a, DOX-A3b)                   | #132         | Done        |
-| 4     | DOX-A5                                      | #134         | Done        |
-| 5     | DOX-A4 (DOX-A4a, DOX-A4b, DOX-A4c, DOX-A4d) | #133         | Done        |
-| 6     | DOX-B1 (DOX-B1a)                            | #135         | Done        |
-| 7     | DOX-B2 (DOX-B2a, DOX-B2b, DOX-B2c, DOX-B2d) | #136         | Done        |
-| 8     | DOX-D1                                      | #140         | Done        |
-| 9     | DOX-D2                                      | #141         | Done        |
-| 10    | DOX-E1 (DOX-E1a, DOX-E1b)                   | #142         | Done¹       |
-| 11    | DOX-C0                                      | #171         | Done²       |
-| 12    | DOX-C1                                      | #137         | Done³       |
-| 13    | DOX-C2                                      | #138         | Done⁴       |
-| 14    | DOX-C3 (DOX-C3a, DOX-C3b)                   | #139         | Not started |
+| Order | Story                                       | GitHub Issue | Status       |
+| ----- | ------------------------------------------- | ------------ | ------------ |
+| 1     | DOX-A1                                      | #130         | Done         |
+| 2     | DOX-A2                                      | #131         | Done         |
+| 3     | DOX-A3 (DOX-A3a, DOX-A3b)                   | #132         | Done         |
+| 4     | DOX-A5                                      | #134         | Done         |
+| 5     | DOX-A4 (DOX-A4a, DOX-A4b, DOX-A4c, DOX-A4d) | #133         | Done         |
+| 6     | DOX-B1 (DOX-B1a)                            | #135         | Done         |
+| 7     | DOX-B2 (DOX-B2a, DOX-B2b, DOX-B2c, DOX-B2d) | #136         | Done         |
+| 8     | DOX-D1                                      | #140         | Done         |
+| 9     | DOX-D2                                      | #141         | Done         |
+| 10    | DOX-E1 (DOX-E1a, DOX-E1b)                   | #142         | Done¹        |
+| 11    | DOX-C0                                      | #171         | Done²        |
+| 12    | DOX-C1                                      | #137         | Done³        |
+| 13    | DOX-C2                                      | #138         | Done⁴        |
+| 14    | DOX-C3 (DOX-C3a, DOX-C3b)                   | #139         | In Progress⁵ |
+| 15    | DOX-C4                                      | #240         | Not started  |
 
 ¹ Every DoD item buildable outside Tier 6 is done — see the "Status" notes in
 `issues/DOX-E.md`. The one item that can't close yet is `DOX-E1a` rendering in the
@@ -93,6 +94,31 @@ directs callers to `gemini-3.6-flash`, confirmed with a live call, not assumed. 
 (SKILL.md content) deliberately excludes `packages/gmt/skills/contributor/*` — those are
 maintainer-workflow docs, not consumer usage vocabulary, and would risk the model
 picking up "file an issue"-style tone in an end-user answer.
+
+⁵ `DOX-C3a` is **done and deployed**; `DOX-C3b` has not started, which is why the row
+stays In Progress. What shipped: the full chat at `/dox` over `useChat` — streaming
+answers, the visible retrieval trace, link hardening against the route manifest (a
+hallucinated path degrades to plain text, never a 404), the idle-timeout stall guard,
+warning-vs-error classification, and one-request-at-a-time enforcement. Plus the
+free-tier survival layer this story did not originally anticipate: Gemini's quota is
+`PerDay·PerProject·PerModel`, so Dox keeps four brains and fails over between them
+_inside a single request_, backed by a KV ledger keyed on Pacific days.
+
+**One DoD reversal, recorded rather than dropped: the every-page draggable dock is cut.**
+`DOX-C3a` specified drag, resize, focus trap and keyboard dock-position cycling. It was
+never built and should not be. `DOX-C0`'s header link — a plain `<a>` plus inline SVG
+carrying the Dox crystal, **zero JavaScript** — already reaches `/dox` from every page,
+and `/dox` is now a deliberately chrome-free full-bleed surface. A floating dock would
+duplicate that surface, and mounting a React island on every page is precisely what
+would break `DOX-C0`'s "no React bundle on a reference page" property, which is
+currently true by construction. The four dock DoD lines retire with it; the `/dox`
+keyboard pass stays and is met. See `issues/DOX-C.md`'s `DOX-C3a` section.
+
+`DOX-C3b` (the widget registry, and with it `DOX-E1a`'s rail — footnote 1) is the whole
+of what remains. Scoping found it is larger than its spec claims: the three Tier 2
+widgets are ~100% server-rendered Astro, so extracting `mount(root)` does not by itself
+make them React-mountable — the open question is markup provenance, plus `destroy()`
+contracts for React StrictMode and a DOM-test environment `apps/dox` does not yet have.
 
 Parked work carries no story ID and never enters this table — see
 [appendix-parked.md](appendix-parked.md).

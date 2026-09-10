@@ -55,21 +55,32 @@ they don't redefine them.
 `DOX-C3a`'s spec calls for the `/dox` route and a persistent, every-page entry point
 ("Host 1", the draggable dock). Both were promoted into `DOX-C0` at explicit user
 request, ahead of `DOX-C1`/`DOX-C2` landing — with a scope cut recorded here so a
-later reader isn't confused about what actually exists:
+later reader isn't confused about what actually exists.
+
+**Updated 2026-09-10: the dock is now cut permanently, not merely deferred**, and the
+probe has been replaced by the real chat. See `issues/DOX-C.md`'s `DOX-C3a` section for
+the full reasoning; the short version is that the header link already reaches Dox from
+every page with zero JavaScript, and mounting a launcher island on all ~650 pages would
+destroy `DOX-C0`'s "no React on a reference page" property to duplicate a surface that
+already exists.
 
 - **`apps/dox/src/pages/dox.astro`** is the real, permanent `/dox` route (replacing
-  what was a `/ask-probe` build-verification fixture). It hosts the same static,
-  non-networked `AskDoxProbe` island DOX-C0 built to prove the wiring — hardcoded
-  messages, no `useChat`, no `/api/chat`. `pagefind: false` and `noindex` stay set:
-  there is no real answerable content until `DOX-C1`–`DOX-C3b` land, and the page
-  says so in its own copy.
+  what was a `/ask-probe` build-verification fixture). **As of `DOX-C3a` it hosts the
+  real `<DoxPage>` chat** — `useChat` against `/api/chat`, streaming answers, retrieval
+  trace and all; the static `AskDoxProbe` island it originally carried is deleted. The
+  route is also now chrome-free: `data-dox-shell` hides Starlight's header and `<h1>`
+  so the chat is full-bleed. `pagefind: false` and `noindex` stay set — a chat surface
+  has no stable content to index.
 - **The every-page entry point is a plain header link, not the draggable dock.**
   `Header.astro` (a new component override) adds an "Dox" `ButtonLink` into the
   header's right-hand group, linking to `/dox/`. The full dock — drag, resize,
   focus trap, `prefers-reduced-motion`, keyboard dock-position cycling — is real,
   substantial UI work specified in `visual-design.md` §Overlays, and needs a working
   `/api/chat` behind it to be worth building; faking that now would be worse than a
-  plain link. `DOX-C3a` replaces this link with the actual dock when it lands.
+  plain link. **`DOX-C3a` did not replace this link with a dock — it cut the dock and
+  kept the link, which is now the permanent every-page entry point.** The link's content
+  is the Dox crystal itself (`DoxMark.astro`), so the thing you click is the same mark
+  the chat uses for every Dox turn.
 - **`Header.astro` composes Starlight's own sub-components via
   `virtual:starlight/components/*`** (`Search`, `SiteTitle`, `SocialIcons`,
   `ThemeSelect`, `LanguageSelect`) rather than importing
