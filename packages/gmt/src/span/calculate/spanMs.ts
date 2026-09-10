@@ -9,7 +9,7 @@ const NANOSECONDS_PER_MILLISECOND = 1_000_000n;
  * Guarding here rather than on the truncated whole-millisecond part matters: a span of
  * `MAX_SAFE_INTEGER` milliseconds *plus* a fraction passes a whole-millisecond check and
  * then rounds up to 2^53 on recombination, returning an unsafe integer from a function
- * documented to return NaN past the safe range.
+ * documented to return the sentinel past the safe range.
  */
 const MAX_SAFE_NANOSECONDS =
   BigInt(Number.MAX_SAFE_INTEGER) * NANOSECONDS_PER_MILLISECOND;
@@ -31,12 +31,16 @@ const MAX_SAFE_NANOSECONDS =
  *   required, optionally followed by a bracketed IANA zone — a bracket alone is not enough,
  *   which is the one string shape `spanWallClock` accepts and these two do not. The
  *   endpoints need not share a zone; an instant is an instant.
- * - Returns `NaN` on invalid input, not `0` — `0` is the span between an instant and itself.
- * - **Safe range.** Returns `NaN` when the exact span exceeds `Number.MAX_SAFE_INTEGER`
+ * - Returns `null` on invalid input, not `0` — `0` is the span between an instant and itself.
+ *   `null`, not `NaN`, because that is GMT's sentinel for every number-returning function:
+ *   it is the one a caller already checks for, and the only one `strictNullChecks` forces
+ *   them to handle. A `NaN` would type as plain `number` and propagate silently through
+ *   arithmetic. `spanNs` and `spanWallClock` return `null` for the same reason.
+ * - **Safe range.** Returns `null` when the exact span exceeds `Number.MAX_SAFE_INTEGER`
  *   milliseconds (±9_007_199_254_740_991 ms, about ±285,000 years), which two instants at
  *   opposite ends of `Temporal.Instant`'s range do. A sub-millisecond fraction counts
- *   toward that ceiling, so the returned number is always a safe integer or below. Use
- *   `spanNs` past it.
+ *   toward that ceiling, so any number returned is a safe integer or below. Use `spanNs`
+ *   past it — it carries the exact value as a `bigint`.
  *   Sub-millisecond fidelity goes first, long before the ceiling: a double carries the
  *   nanosecond digits exactly only while the span is under 2^53 ns, roughly 104 days.
  * - Leap seconds are not counted. UTC repeats a second rather than numbering a 61st one, so
@@ -46,28 +50,28 @@ const MAX_SAFE_NANOSECONDS =
  *
  * @param start ISO 8601 instant string the span is measured from
  * @param end ISO 8601 instant string the span is measured to
- * @returns exact elapsed milliseconds, negative when start is after end, or NaN on invalid input
+ * @returns exact elapsed milliseconds, negative when start is after end, or null on invalid input
  *
  * @example spanMs("2024-03-10T12:00:00Z", "2024-03-10T12:00:01Z") // 1000
  * @example spanMs("2024-03-10T12:00:01Z", "2024-03-10T12:00:00Z") // -1000
  * @example spanMs("2024-03-10T12:00:00Z", "2024-03-10T12:00:00Z") // 0
  * @example spanMs("2024-03-10T12:00:00Z", "2024-03-10T12:00:00.123456789Z") // 123.456789
  * @example spanMs("2024-03-09T12:00:00-05:00[America/New_York]", "2024-03-10T12:00:00-04:00[America/New_York]") // 82800000 — 23 hours, not 24
- * @example spanMs("-271821-04-20T00:00:00Z", "+275760-09-13T00:00:00Z") // NaN — past the safe integer range, use spanNs
- * @example spanMs("2024-03-10T12:00:00Z", "invalid") // NaN
+ * @example spanMs("-271821-04-20T00:00:00Z", "+275760-09-13T00:00:00Z") // null — past the safe integer range, use spanNs
+ * @example spanMs("2024-03-10T12:00:00Z", "invalid") // null
  */
-export function spanMs(start: string, end: string): number {
+export function spanMs(start: string, end: string): number | null {
   const nanoseconds = spanNs(start, end);
 
   if (nanoseconds === null) {
-    return Number.NaN;
+    return null;
   }
 
   if (
     nanoseconds > MAX_SAFE_NANOSECONDS ||
     nanoseconds < -MAX_SAFE_NANOSECONDS
   ) {
-    return Number.NaN;
+    return null;
   }
 
   // Split rather than dividing the whole bigint through a double: Number(nanoseconds) is

@@ -1714,9 +1714,12 @@ of midnights crossed.
 
 Three limits, all deliberate:
 
-- **`0` and `0n` are valid spans**, so invalid input returns `NaN` from `spanMs`, and `null`
-  from `spanNs` and `spanWallClock`.
-- **`spanMs` returns `NaN` past `Number.MAX_SAFE_INTEGER` milliseconds** (±285,000 years,
+- **`0` and `0n` are valid spans**, so invalid input returns `null` from all three rather
+  than the zero the rest of the library uses for numbers. `null` and not `NaN`: it is the
+  sentinel every other number-returning function in GMT uses, and the only one
+  `strictNullChecks` forces a caller to handle — a `NaN` types as plain `number` and
+  propagates silently through arithmetic.
+- **`spanMs` returns `null` past `Number.MAX_SAFE_INTEGER` milliseconds** (±285,000 years,
   which two instants at opposite ends of `Temporal.Instant`'s range exceed). A
   sub-millisecond fraction counts toward that ceiling, so what comes back is always a safe
   integer or below. Use `spanNs` there; its result is a duration, not an instant, and can be

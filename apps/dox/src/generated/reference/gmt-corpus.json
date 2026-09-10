@@ -7556,11 +7556,11 @@
       },
       {
         "call": "spanMs(\"-271821-04-20T00:00:00Z\", \"+275760-09-13T00:00:00Z\")",
-        "result": "NaN — past the safe integer range, use spanNs"
+        "result": "null — past the safe integer range, use spanNs"
       },
       {
         "call": "spanMs(\"2024-03-10T12:00:00Z\", \"invalid\")",
-        "result": "NaN"
+        "result": "null"
       }
     ]
   },

@@ -54,10 +54,10 @@ and full interval set operations.
    "hours")` measures what the clock face did. Across a DST transition they
    differ by the size of the shift — a wall-clock day is 23, 24.5 or 25 real
    hours. Reaching for the wrong one is the most common span bug there is.
-5. **Span sentinels are `NaN` and `null`, not `0`.** `0` and `0n` are valid
-   spans, so `spanMs` returns `NaN` on invalid input (and past
-   `Number.MAX_SAFE_INTEGER` milliseconds — use `spanNs` there), while `spanNs`
-   and `spanWallClock` return `null`.
+5. **Span sentinels are `null`, not `0`.** `0` and `0n` are valid spans, so all
+   three span functions return `null` on invalid input rather than a zero —
+   `spanMs` also returns it past `Number.MAX_SAFE_INTEGER` milliseconds, where
+   `spanNs` still carries the exact value as a `bigint`.
 6. **Read the README.** This skill is a routing pointer. For full option shapes,
    locale matrices, and code examples, read the installed package's `README.md`
    and the source JSDoc of the function you intend to call.

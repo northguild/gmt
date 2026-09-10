@@ -43,6 +43,22 @@ Shipped as `packages/gmt/src/span/` — `calculate/spanMs.ts`, `calculate/spanNs
 `calculate/spanWallClock.ts`, plus the namespace barrels, `./span*` package exports and a
 `span/README.md` stub. Decisions taken while building it:
 
+- **`spanMs` returns `null`, not the `NaN` the spec asked for — a deliberate deviation.**
+  The `## Scope` line says "invalid input returns `NaN` / `null` respectively", but its own
+  stated reason is that "`0` / `0n` are valid results". That argues for *not zero*; it does
+  not argue for `NaN` over `null`, and `null` is equally distinguishable from `0`. Four
+  things decide it the other way:
+  `context/coding-standards.md` makes `null` the sentinel for every number-returning
+  function in the library, and `diffZoned`, `getHoursInZonedDay`, `durationAs` and
+  `intervalCountDate` all honour it; `number | null` is enforced by `strictNullChecks`
+  while a `NaN` types as plain `number` and gives a caller no signal the call can fail;
+  `spanNs` and `spanWallClock` already return `null`, so `NaN` would have put two
+  conventions in one three-function namespace; and it would have been the only `NaN` return
+  in 521 functions. The one point for `NaN` — that `sum += spanMs(...)` silently treats a
+  failure as a zero-length span under `null`, where `NaN` poisons the total visibly — is
+  answered by that line not compiling under `strict` at all. Raised in review on #238 by
+  @craig-o-curtis; the spec's sentinel table should be read as "not zero", and a later story
+  wanting `NaN` needs an argument the spec does not currently make.
 - **`spanMs` is fractional, not truncated.** A sub-millisecond span is reported as a
   fraction (`123.456789`), following `performance.now()` — the platform's own millisecond
   duration type — rather than flooring a 900 µs profile span to `0`. It is computed as
@@ -51,7 +67,7 @@ Shipped as `packages/gmt/src/span/` — `calculate/spanMs.ts`, `calculate/spanNs
   millisecond part too. Sub-millisecond fidelity still degrades above that; the safe range
   and the escape hatch (`spanNs`) are documented on the function.
 - **The overflow guard is on the whole-millisecond part**, per the story's verification:
-  `NaN` once `|ms| > Number.MAX_SAFE_INTEGER`. The two instants at the ends of
+  the sentinel once `|ms| > Number.MAX_SAFE_INTEGER`. The two instants at the ends of
   `Temporal.Instant`'s range are 1.728 × 10^16 ms apart, so the case is reachable and
   tested, not theoretical.
 - **`spanNs` returns `bigint | null`, not `bigint`.** The `## Scope` signature said
@@ -86,7 +102,7 @@ Shipped as `packages/gmt/src/span/` — `calculate/spanMs.ts`, `calculate/spanNs
 - **`spanMs`'s safe-range guard is on the exact span, not the truncated millisecond part.**
   Guarding the whole-millisecond quotient let `MAX_SAFE_INTEGER` ms *plus* a fraction through,
   and recombination then rounded it up to 2^53 — an unsafe integer out of a function
-  documented to return `NaN` past the safe range. The guard compares nanoseconds against
+  documented to return the sentinel past the safe range. The guard compares nanoseconds against
   `MAX_SAFE_INTEGER × 1_000_000n`, so the returned number is always a safe integer or below.
   Found in review.
 - **`spanWallClock` reads each endpoint's own wall clock**, rather than requiring a shared

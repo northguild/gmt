@@ -75,9 +75,9 @@ describe("spanMs", () => {
     ${earliestInstant}                     | ${"+013606-01-30T08:59:00.991999999Z"} | ${"a sub-millisecond fraction that would round up to 2^53"}
     ${"+013606-01-30T08:59:00.991999999Z"} | ${earliestInstant}                     | ${"the same fraction, negated"}
   `(
-    "returns NaN when the span overflows a safe integer of milliseconds ($reason)",
+    "returns null when the span overflows a safe integer of milliseconds ($reason)",
     ({ start, end }) => {
-      expect(spanMs(start, end)).toBeNaN();
+      expect(spanMs(start, end)).toBeNull();
     },
   );
 
@@ -86,17 +86,19 @@ describe("spanMs", () => {
     // MAX_SAFE_INTEGER ms plus a fraction recombines to 2^53, which is not a safe integer.
     expect(
       spanMs(earliestInstant, "+013606-01-30T08:59:00.991999999Z"),
-    ).toBeNaN();
+    ).toBeNull();
     expect(spanMs(earliestInstant, maxSafeMillisecondEnd)).toBe(
       Number.MAX_SAFE_INTEGER,
     );
     expect(
-      Number.isSafeInteger(spanMs(earliestInstant, maxSafeMillisecondEnd)),
+      Number.isSafeInteger(
+        spanMs(earliestInstant, maxSafeMillisecondEnd) as number,
+      ),
     ).toBe(true);
   });
 
   it("returns an exact value from spanNs where spanMs overflows", () => {
-    expect(spanMs(earliestInstant, "+275760-09-13T00:00:00Z")).toBeNaN();
+    expect(spanMs(earliestInstant, "+275760-09-13T00:00:00Z")).toBeNull();
     expect(spanNs(earliestInstant, "+275760-09-13T00:00:00Z")).toBe(
       17280000000000000000000n,
     );
@@ -107,7 +109,9 @@ describe("spanMs", () => {
     ${"2024-03-10T12:00:00Z"} | ${"2024-09-01T08:17:03.123456789Z"}
     ${"2024-09-01T08:17:03Z"} | ${"2024-03-10T12:00:00Z"}
   `("negates when $start and $end are swapped", ({ start, end }) => {
-    expect(spanMs(end, start)).toBe(-spanMs(start, end));
+    const forward = spanMs(start, end);
+    expect(forward).not.toBeNull();
+    expect(spanMs(end, start)).toBe(-(forward as number));
   });
 
   it.each(sameInstantBattleCases)(
@@ -132,8 +136,8 @@ describe("spanMs", () => {
     ${"+275760-09-13T00:00:00.001Z"}            | ${"2024-03-10T12:00:00Z"}                   | ${"start past the representable range"}
     ${"2024-03-10T12:00:00Z"}                   | ${"-271821-04-19T23:59:59Z"}                | ${"end before the representable range"}
     ${""}                                       | ${"2024-03-10T12:00:00Z"}                   | ${"empty string"}
-  `("returns NaN when the pair is invalid ($reason)", ({ start, end }) => {
-    expect(spanMs(start, end)).toBeNaN();
+  `("returns null when the pair is invalid ($reason)", ({ start, end }) => {
+    expect(spanMs(start, end)).toBeNull();
   });
 
   it.each`
@@ -145,18 +149,18 @@ describe("spanMs", () => {
     ${true}
     ${[]}
     ${{}}
-  `("returns NaN when $value is non-string input", ({ value }) => {
+  `("returns null when $value is non-string input", ({ value }) => {
     expect(
       spanMs(value as unknown as string, "2024-03-10T12:00:00Z"),
-    ).toBeNaN();
+    ).toBeNull();
     expect(
       spanMs("2024-03-10T12:00:00Z", value as unknown as string),
-    ).toBeNaN();
+    ).toBeNull();
   });
 
-  it("returns NaN when Temporal.Instant.from throws", () => {
+  it("returns null when Temporal.Instant.from throws", () => {
     mockTemporalInstantFromThrow();
 
-    expect(spanMs("2024-03-10T12:00:00Z", "2024-03-10T12:00:01Z")).toBeNaN();
+    expect(spanMs("2024-03-10T12:00:00Z", "2024-03-10T12:00:01Z")).toBeNull();
   });
 });
