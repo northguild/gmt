@@ -20,6 +20,7 @@
     "visual:diff": "node scripts/visual-snapshot.mjs diff"
   },
   "dependencies": {
+    "@ai-sdk/google": "^4.0.66",
     "@ai-sdk/react": "4.0.98",
     "@astrojs/react": "6.0.5",
     "@astrojs/starlight": "0.41.9",
@@ -53,9 +54,11 @@
     "tailwind-merge": "3.6.0",
     "topojson-client": "^3.1.0",
     "use-stick-to-bottom": "^1.1.6",
-    "world-atlas": "^2.0.2"
+    "world-atlas": "^2.0.2",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
+    "@ai-sdk/provider": "^4.0.12",
     "@astrojs/check": "^0.9.10",
     "@northguild/gmt-oxlint": "workspace:*",
     "@open-wc/testing": "^5.0.0",

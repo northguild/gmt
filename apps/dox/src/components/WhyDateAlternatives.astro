@@ -53,7 +53,7 @@ const competitorStack: Layer[] = competitorComparisons
   .map((lib) => ({
     name: lib.displayName,
     detail: lib.bannedCompanions?.length
-      ? `${lib.detail} Also bans the companion ${lib.bannedCompanions.join(", ")} package${lib.bannedCompanions.length > 1 ? "s" : ""}.`
+      ? `${lib.detail} Our gmt lint packages also ban the companion ${lib.bannedCompanions.join(", ")} package${lib.bannedCompanions.length > 1 ? "s" : ""}.`
       : lib.detail!,
     foundation: lib.foundation!,
     kind: lib.kind!,
@@ -75,8 +75,9 @@ const stack: Layer[] = [
   <SectionHeading>The alternatives inherit it, or deviate from the standard</SectionHeading>
   <p class="why-date-lede">
     The popular libraries do not replace <code>Date</code>; they decorate it,
-    so the faults come along. The one library that fixes the model does it with
-    a non-standard API you will migrate off. GMT is Temporal — the standard —
+    so the faults come along — our gmt lint packages ban the Date wrappers
+    below outright. The one library that fixes the model does it with a
+    non-standard API you will migrate off. GMT is Temporal — the standard —
     with the ergonomics added on top.
   </p>
 

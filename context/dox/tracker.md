@@ -56,7 +56,7 @@ normal repo convention and does need a changeset.
 | 10    | DOX-E1 (DOX-E1a, DOX-E1b)                   | #142         | Done¹       |
 | 11    | DOX-C0                                      | #171         | Done²       |
 | 12    | DOX-C1                                      | #137         | Done³       |
-| 13    | DOX-C2                                      | #138         | Not started |
+| 13    | DOX-C2                                      | #138         | Done⁴       |
 | 14    | DOX-C3 (DOX-C3a, DOX-C3b)                   | #139         | Not started |
 
 ¹ Every DoD item buildable outside Tier 6 is done — see the "Status" notes in
@@ -76,7 +76,23 @@ header link" for what that means `DOX-C3a` still owns.
 missing `examples` field on `CorpusEntry` (added), and a latent generator bug on a
 clean checkout (fixed) — and picks the provider: Vercel AI SDK (not TanStack AI, which
 lacks a Google or Workers AI adapter) + Gemini 2.5 Flash. See `issues/DOX-C.md`'s
-DOX-C1 section for the full measurements and reasoning.
+DOX-C1 section for the full measurements and reasoning. **Model name corrected under
+DOX-C2** — see footnote 4.
+
+⁴ Adds `main`/`worker/index.ts` to the previously assets-only `wrangler.jsonc`, a same-
+origin `/api/chat` behind the DOX-C.md-specified validation pipeline (zod), a per-
+isolate rate limiter, and the seven-section system prompt (persona, linking rules,
+vocabulary, GMT core rules, retrieved chunks, tool placeholder, refusal instruction).
+Verified end-to-end against the real Gemini API, not just mocked: a grounded question
+streams a correct, cited answer; a plausible-but-absent question ("parse a cron
+expression with gmt") refuses; the key never appears in any response. Worker script
+bundle measured at 354.88 KiB gzip (1959.32 KiB uncompressed) — well under Cloudflare's
+3 MB compressed limit. **Corrects DOX-C1's model choice**: `gemini-2.5-flash` is no
+longer available to new API keys as of this story (2026-09-09) — Google's own error
+directs callers to `gemini-3.6-flash`, confirmed with a live call, not assumed. Vocabulary
+(SKILL.md content) deliberately excludes `packages/gmt/skills/contributor/*` — those are
+maintainer-workflow docs, not consumer usage vocabulary, and would risk the model
+picking up "file an issue"-style tone in an end-user answer.
 
 Parked work carries no story ID and never enters this table — see
 [appendix-parked.md](appendix-parked.md).

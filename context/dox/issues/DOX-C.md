@@ -394,7 +394,13 @@ corpus rather than assuming BM25 "just works":
   keyword overlap instead.
 
 **Provider decision: Vercel AI SDK (unchanged from DOX-C0), Gemini 2.5 Flash via
-`@ai-sdk/google`.** "TanStack AI" (`@tanstack/ai` + `@tanstack/ai-react`) is real and
+`@ai-sdk/google`.** **Corrected under DOX-C2 (2026-09-09): `gemini-2.5-flash` is no
+longer available to new API keys** — a live call during DOX-C2's implementation returned
+"This model models/gemini-2.5-flash is no longer available to new users. Please update
+your code to use models/gemini-3.6-flash." `ALLOWED_MODELS` in
+`src/lib/chat-constants.ts` uses `gemini-3.6-flash`; the reasoning below for choosing the
+Google/Gemini family over TanStack AI, Workers AI, and Anthropic is unaffected by the
+model rename. "TanStack AI" (`@tanstack/ai` + `@tanstack/ai-react`) is real and
 well-built — confirmed via its own docs, not assumed — and its `chat()` +
 `toServerSentEventsResponse()` works from a plain `Request`/`Response` handler (a
 Cloudflare Worker example exists), not only inside TanStack Start. It loses on two
@@ -686,18 +692,43 @@ key up without a manual step, with committed `.example` counterparts. Small, and
 removes a recurring papercut. Note `apps/dox/.env` already holds
 `NORTHGUILD_GMT_GEMINI_API_KEY`.
 
+**Amended 2026-09-09 — implemented.** The bridging script above was **not** built: this
+worktree had no `.env.local` to bridge from (the site's Astro build never needed the
+Gemini key at build time — only the Worker needs it, at runtime), so a script for a
+single env var would have been overhead the story didn't need. Instead: `apps/dox/.dev.vars`
+(gitignored, real key) plus a committed `apps/dox/.dev.vars.example` placeholder — the
+plain Wrangler convention, with nothing to bridge.
+
 ## Definition of done
 - A question with a corpus answer streams a correct, grounded response into `useChat`.
+  **Done** — verified against the real `/api/chat` endpoint via `wrangler dev` and a
+  direct HTTP request (no `useChat` client exists yet; that's `DOX-C3a`). Asking "how do
+  I convert a UTC timestamp to Tokyo time with gmt" streamed a correct answer citing
+  `convertUtcToZoned`/`convertUnixToPlainDateTime` and a real guide link.
 - A question with no corpus answer is **refused**, not improvised. Test with something
   plausible-but-absent (e.g. "how do I parse a cron expression with gmt") rather than
   something obviously off-topic — the plausible case is where grounding actually fails.
-- Every branch of the validation pipeline has a test.
-- Rate limiting is tested including per-IP independence, with a faked clock.
+  **Done** — this exact question, against the real API, returned "The @northguild/gmt
+  documentation does not cover parsing cron expressions." with no invented function.
+- Every branch of the validation pipeline has a test. **Done** —
+  `worker/validation.test.ts`; message-shape validation is delegated to `ai`'s own
+  `safeValidateUIMessages` rather than a hand-guessed zod schema, since `UIMessage` has
+  ~10 part-type variants maintained in lockstep with `useChat`.
+- Rate limiting is tested including per-IP independence, with a faked clock. **Done** —
+  `worker/rate-limit.test.ts`, plus verified live (25 rapid requests: 429 kicked in at
+  request 19 of a 20-request window).
 - **System-prompt assembly is unit-tested** — section order, and the route allowlist
-  matching the retrieved set exactly.
-- Grep the deployed production assets for the key and confirm it is absent.
+  matching the retrieved set exactly. **Done** — `worker/system-prompt.test.ts`.
+- Grep the deployed production assets for the key and confirm it is absent. **Done** —
+  confirmed absent from `dist/`, and confirmed live that no `/api/chat` response
+  (success or error) ever contains it.
 - The built Worker bundle size is measured and recorded against the Workers size limit.
-- Worker tests pass on a clean checkout with no prior build.
+  **Done, measured 2026-09-09**: 354.88 KiB gzip (1959.32 KiB uncompressed) via
+  `wrangler deploy --dry-run`, well under Cloudflare's 3 MB compressed Worker script
+  limit.
+- Worker tests pass on a clean checkout with no prior build. **Done** — the generated
+  corpus/route-manifest modules `worker/*` needs are git-tracked (not merely gitignored
+  as `DOX-C1` initially assumed), so `pnpm test` needs no prior `pnpm run generate`.
 ```
 
 ---

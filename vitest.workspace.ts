@@ -26,10 +26,13 @@ export default [
       // DOX-C0 (#171): kept in sync with apps/dox/vitest.config.ts's `include`
       // — this list had drifted (missing src/**) before this story, which
       // meant a root-level `vitest run` silently skipped every src/ test.
+      // DOX-C2 (#138) added worker/** the same way, deliberately, to avoid
+      // reintroducing that drift for the Worker's own tests.
       include: [
         "scripts/**/*.test.ts",
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
+        "worker/**/*.test.ts",
       ],
       resolve: {
         alias: {

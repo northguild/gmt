@@ -320,6 +320,16 @@ export type MessageResponseProps = ComponentProps<typeof Streamdown>;
 
 const streamdownPlugins = { cjk, code, math, mermaid };
 
+// Dox is a docs-reading surface, not a file manager: readers copy answers,
+// they don't download them. Copy stays on (code/table copy buttons,
+// clipboard only); only the save-to-disk controls are turned off.
+const streamdownControls = {
+  code: { download: false },
+  table: { download: false },
+  mermaid: { download: false },
+  image: { download: false },
+};
+
 export const MessageResponse = memo(
   ({ className, ...props }: MessageResponseProps) => (
     <Streamdown
@@ -328,6 +338,7 @@ export const MessageResponse = memo(
         className,
       )}
       plugins={streamdownPlugins}
+      controls={streamdownControls}
       {...props}
     />
   ),

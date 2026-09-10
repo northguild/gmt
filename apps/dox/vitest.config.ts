@@ -15,7 +15,12 @@ export default defineConfig({
     name: "dox",
     globals: true,
     root: ".",
-    include: ["scripts/**/*.test.ts", "src/**/*.test.ts", "src/**/*.test.tsx"],
+    include: [
+      "scripts/**/*.test.ts",
+      "src/**/*.test.ts",
+      "src/**/*.test.tsx",
+      "worker/**/*.test.ts",
+    ],
     environment: "node",
   },
 });

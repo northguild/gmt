@@ -6813,7 +6813,8 @@
     "kind": "type",
     "signature": "",
     "description": "The NanosecondTruncationUnit type.",
-    "sourcePath": "packages/gmt/src/precision/calculate/truncateNanoseconds.ts"
+    "sourcePath": "packages/gmt/src/precision/calculate/truncateNanoseconds.ts",
+    "examples": []
   },
   {
     "url": "/reference/precision/calculate/truncateNanoseconds",
@@ -6823,7 +6824,33 @@
     "kind": "function",
     "signature": "truncateNanoseconds(nanoseconds: bigint, unit: NanosecondTruncationUnit): bigint",
     "description": "Truncate nanoseconds since the Unix epoch to the precision a store can actually hold.",
-    "sourcePath": "packages/gmt/src/precision/calculate/truncateNanoseconds.ts"
+    "sourcePath": "packages/gmt/src/precision/calculate/truncateNanoseconds.ts",
+    "examples": [
+      {
+        "call": "truncateNanoseconds(1710072000123456789n, \"us\")",
+        "result": "1710072000123456000n"
+      },
+      {
+        "call": "truncateNanoseconds(1710072000123456789n, \"ms\")",
+        "result": "1710072000123000000n"
+      },
+      {
+        "call": "truncateNanoseconds(-1500n, \"us\")",
+        "result": "-2000n"
+      },
+      {
+        "call": "truncateNanoseconds(0n, \"ms\")",
+        "result": "0n"
+      },
+      {
+        "call": "truncateNanoseconds(1710072000123456789n, \"ns\")",
+        "result": "0n"
+      },
+      {
+        "call": "truncateNanoseconds(1710072000123456789, \"us\")",
+        "result": "0n — number, not bigint"
+      }
+    ]
   },
   {
     "url": "/reference/precision/convert/fromNanoseconds",
@@ -6833,7 +6860,37 @@
     "kind": "function",
     "signature": "fromNanoseconds(nanoseconds: bigint, timeZone?: string): string",
     "description": "Convert nanoseconds since the Unix epoch back to an ISO 8601 string.",
-    "sourcePath": "packages/gmt/src/precision/convert/fromNanoseconds.ts"
+    "sourcePath": "packages/gmt/src/precision/convert/fromNanoseconds.ts",
+    "examples": [
+      {
+        "call": "fromNanoseconds(0n)",
+        "result": "\"1970-01-01T00:00:00Z\""
+      },
+      {
+        "call": "fromNanoseconds(1710072000123456789n)",
+        "result": "\"2024-03-10T12:00:00.123456789Z\""
+      },
+      {
+        "call": "fromNanoseconds(1710072000123456789n, \"America/New_York\")",
+        "result": "\"2024-03-10T08:00:00.123456789-04:00[America/New_York]\""
+      },
+      {
+        "call": "fromNanoseconds(-1000000000n)",
+        "result": "\"1969-12-31T23:59:59Z\""
+      },
+      {
+        "call": "fromNanoseconds(0n, \"Not/AZone\")",
+        "result": "\"\""
+      },
+      {
+        "call": "fromNanoseconds(0n, undefined)",
+        "result": "\"\" — an explicit time zone must be valid"
+      },
+      {
+        "call": "fromNanoseconds(1710072000123456789)",
+        "result": "\"\" — number, not bigint"
+      }
+    ]
   },
   {
     "url": "/reference/precision/convert/toNanoseconds",
@@ -6843,7 +6900,33 @@
     "kind": "function",
     "signature": "toNanoseconds(isoString: string): bigint",
     "description": "Convert an ISO 8601 instant string to nanoseconds since the Unix epoch.",
-    "sourcePath": "packages/gmt/src/precision/convert/toNanoseconds.ts"
+    "sourcePath": "packages/gmt/src/precision/convert/toNanoseconds.ts",
+    "examples": [
+      {
+        "call": "toNanoseconds(\"1970-01-01T00:00:00Z\")",
+        "result": "0n"
+      },
+      {
+        "call": "toNanoseconds(\"2024-03-10T12:00:00.123456789Z\")",
+        "result": "1710072000123456789n"
+      },
+      {
+        "call": "toNanoseconds(\"1969-12-31T23:59:59Z\")",
+        "result": "-1000000000n"
+      },
+      {
+        "call": "toNanoseconds(\"2024-03-10T12:00:00-05:00[America/New_York]\")",
+        "result": "1710090000000000000n"
+      },
+      {
+        "call": "toNanoseconds(\"2024-03-10T12:00:00\")",
+        "result": "0n — no offset designator"
+      },
+      {
+        "call": "toNanoseconds(\"invalid\")",
+        "result": "0n"
+      }
+    ]
   },
   {
     "url": "/reference/precision/format/formatNanoseconds",
@@ -6853,7 +6936,29 @@
     "kind": "function",
     "signature": "formatNanoseconds(nanoseconds: bigint): string",
     "description": "Format nanoseconds since the Unix epoch as a decimal string, for JSON and other",
-    "sourcePath": "packages/gmt/src/precision/format/formatNanoseconds.ts"
+    "sourcePath": "packages/gmt/src/precision/format/formatNanoseconds.ts",
+    "examples": [
+      {
+        "call": "formatNanoseconds(1710072000123456789n)",
+        "result": "\"1710072000123456789\""
+      },
+      {
+        "call": "formatNanoseconds(0n)",
+        "result": "\"0\""
+      },
+      {
+        "call": "formatNanoseconds(-1000000000n)",
+        "result": "\"-1000000000\""
+      },
+      {
+        "call": "formatNanoseconds(1710072000123456789)",
+        "result": "\"\" — number, not bigint"
+      },
+      {
+        "call": "formatNanoseconds(8640000000000000000001n)",
+        "result": "\"\" — outside the instant range"
+      }
+    ]
   },
   {
     "url": "/reference/precision/parse/parseNanoseconds",
@@ -6863,7 +6968,33 @@
     "kind": "function",
     "signature": "parseNanoseconds(value: string): bigint",
     "description": "Parse a decimal string produced by `formatNanoseconds` — typically one field of a JSON",
-    "sourcePath": "packages/gmt/src/precision/parse/parseNanoseconds.ts"
+    "sourcePath": "packages/gmt/src/precision/parse/parseNanoseconds.ts",
+    "examples": [
+      {
+        "call": "parseNanoseconds(\"1710072000123456789\")",
+        "result": "1710072000123456789n"
+      },
+      {
+        "call": "parseNanoseconds(\"-1000000000\")",
+        "result": "-1000000000n"
+      },
+      {
+        "call": "parseNanoseconds(\"1.5\")",
+        "result": "0n"
+      },
+      {
+        "call": "parseNanoseconds(\"1e18\")",
+        "result": "0n"
+      },
+      {
+        "call": "parseNanoseconds(\"8640000000000000000001\")",
+        "result": "0n — outside the instant range"
+      },
+      {
+        "call": "parseNanoseconds(1710072000123456789)",
+        "result": "0n — number, not string"
+      }
+    ]
   },
   {
     "url": "/reference/regex/calendar-date/calendarDate",
