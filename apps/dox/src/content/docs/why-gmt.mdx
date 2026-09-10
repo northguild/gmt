@@ -31,7 +31,7 @@ versions on every PR.
 <ChartContainer
   svg={testExecutionSvg}
   title="CI executions per library"
-  caption="GMT: 374,820 library-suite executions (18,741 tests × 10 timezones × 2 Node); 375,774 repo-wide. Competitors: 386–11,703 combined."
+  caption="GMT: 374,820 executions (18,741 tests × 10 timezones × 2 Node). Competitors: 386–11,703 combined."
 />
 
 That is not a marginal difference. It is three orders of magnitude more
@@ -89,7 +89,7 @@ GMT does not test every locale — there are hundreds, and most differ only in f
 
 | Dimension             | GMT                             | Legacy libraries                                                    |
 | --------------------- | -------------------------------- | -------------------------------------------------------------------- |
-| **CI executions**     | 375,774                          | 386 – 12,172                                                          |
+| **CI executions**     | 374,820                          | 386 – 12,172                                                          |
 | **Locales tested**    | 17 × every public function       | 0 – 42 files, tested in isolation from the rest of the API surface   |
 | **Timezones tested**  | 10 × every public function       | 0 – 8 files, tested in isolation (Spacetime disables 4 of its own DST-edge-case files, and 41 of the ones it does run currently fail) |
 | **Node versions**     | 22, 24                           | 1 – 2 (only Spacetime matches GMT's matrix; the rest test a single LTS) |
