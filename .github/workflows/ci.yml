@@ -72,6 +72,52 @@ jobs:
             echo "any_changed=true" >> $GITHUB_OUTPUT
           fi
 
+  consistency:
+    name: Story consistency
+    runs-on: ubuntu-latest
+    needs: determine-affected
+    if: needs.determine-affected.outputs.any_changed == 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Approve pnpm build scripts
+        run: pnpm approve-builds --all
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # `validate` runs these, but only on pushes to main — by which point a drifting
+      # tracker or a missing changeset has already merged. These three are the parts of
+      # it that are cheap enough to also gate every PR.
+      - name: Tracker dependency columns are in sync
+        run: node scripts/deps.mjs check
+
+      # apps/dox's tests import `@northguild/gmt/*` subpaths, which resolve to its `dist`,
+      # so collecting them needs the package built first. `validate` gets this for free by
+      # running the whole build ahead of `stats check`; this job builds just the one package.
+      - name: Build @northguild/gmt
+        run: pnpm --filter @northguild/gmt run build
+
+      - name: Published figures match the repo
+        run: node scripts/stats.mjs check
+
+      - name: A changeset covers every changed package
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --no-tags origin "${{ github.base_ref }}"
+          pnpm exec changeset status --since="origin/${{ github.base_ref }}"
+
   build-lint:
     name: Build & Lint (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest

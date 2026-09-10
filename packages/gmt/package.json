@@ -84,6 +84,15 @@
       "default": "./dist/regex/*/index.js"
     },
     "./regex/*/*": null,
+    "./span": {
+      "types": "./dist/span/index.d.ts",
+      "default": "./dist/span/index.js"
+    },
+    "./span/*": {
+      "types": "./dist/span/*/index.d.ts",
+      "default": "./dist/span/*/index.js"
+    },
+    "./span/*/*": null,
     "./types": {
       "types": "./dist/types/index.d.ts",
       "default": "./dist/types/index.js"

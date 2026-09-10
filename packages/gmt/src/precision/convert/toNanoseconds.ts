@@ -1,16 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
-import { hasCalendarAnnotation } from "../../internal";
-
-/**
- * A leap second in every shape `Temporal.Instant.from` accepts: `T`, `t` or a space before
- * the time, and extended (`23:59:60`) or basic (`235960`) digits.
- *
- * `plain/validate`'s shared `isLeapSecond` matches only an uppercase `T` with extended-format
- * digits — all that `utc/`'s stricter `<date>T<time>Z` regex gate can ever hand it. This
- * namespace parses the full instant grammar, so it needs the wider pattern; without it
- * `"2016-12-31 23:59:60Z"` would slip through and Temporal would silently clamp it to `:59`.
- */
-const instantLeapSecond = /[Tt ]\d{2}:?\d{2}:?60(?:[.,]\d+)?(?:[-+Zz[])/;
+import { parseInstantNanoseconds } from "../../internal";
 
 /**
  * Convert an ISO 8601 instant string to nanoseconds since the Unix epoch.
@@ -26,8 +14,11 @@ const instantLeapSecond = /[Tt ]\d{2}:?\d{2}:?60(?:[.,]\d+)?(?:[-+Zz[])/;
  *   in every separator and format variant it accepts, `"20161231 235960Z"` included.
  * - Returns `bigint`, not `number`: nanoseconds since the epoch passed
  *   `Number.MAX_SAFE_INTEGER` in April 1970, so a `number` cannot hold them.
- * - Returns `0n` on invalid input. `0n` is also the epoch itself — validate the string
- *   first (e.g. `isValidUtc`) when the two must be told apart.
+ * - Returns `0n` on invalid input. `0n` is also the epoch itself — use `isValidInstant`,
+ *   which accepts exactly this grammar, when the two must be told apart. **Not
+ *   `isValidUtc`**: it gates on GMT's stricter `<date>T<time>Z` shape and returns `false`
+ *   for the offsets, bracketed zones, space separators and basic-format strings this
+ *   function accepts, so validating with it discards valid input.
  *
  * @param isoString ISO 8601 instant string (e.g. "2024-03-10T12:00:00.123456789Z")
  * @returns nanoseconds since the Unix epoch as a bigint, or 0n on invalid input
@@ -40,17 +31,5 @@ const instantLeapSecond = /[Tt ]\d{2}:?\d{2}:?60(?:[.,]\d+)?(?:[-+Zz[])/;
  * @example toNanoseconds("invalid") // 0n
  */
 export function toNanoseconds(isoString: string): bigint {
-  if (typeof isoString !== "string") {
-    return 0n;
-  }
-
-  if (instantLeapSecond.test(isoString) || hasCalendarAnnotation(isoString)) {
-    return 0n;
-  }
-
-  try {
-    return Temporal.Instant.from(isoString).epochNanoseconds;
-  } catch {
-    return 0n;
-  }
+  return parseInstantNanoseconds(isoString) ?? 0n;
 }

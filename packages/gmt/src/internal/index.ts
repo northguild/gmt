@@ -37,6 +37,7 @@ export {
   formatDateInCalendar,
 } from "./formatDateInCalendar";
 export { hasCalendarAnnotation } from "./hasCalendarAnnotation";
+export { parseInstantNanoseconds } from "./instantNanoseconds";
 export { resolveDurationRelativeTo } from "./resolveDurationRelativeTo";
 export {
   ENGLISH_MONTH_NAMES,

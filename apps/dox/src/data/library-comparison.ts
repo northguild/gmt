@@ -54,11 +54,17 @@ export const libraryComparisons: LibraryComparison[] = [
     displayName: "@northguild/gmt",
     isSubject: true,
     stats: {
-      tests: 16701,
-      locales: 17,
+      // The library suite only, so the bar compares like with like against the other
+      // entries and the tooltip's product is exact: 17,338 x 10 timezones x 2 Node.
+      // Repo-wide is 17,892 tests / 347,714 executions — apps/dox adds 477 on 2 Node and
+      // packages/gmt-oxlint's 77 run in no CI job at all — which is what the READMEs and
+      // the "What this means" table publish. `locales: 0` because the 17-locale matrix is
+      // inside the test count, not a further multiplier of it.
+      tests: 17497,
+      locales: 0,
       timezones: 10,
       nodeVersions: 2,
-      executions: 334020,
+      executions: 349940,
     },
     sourceNote: "Internal CI measurement.",
   },
@@ -71,7 +77,11 @@ export const libraryComparisons: LibraryComparison[] = [
     detail:
       "Its own CalendarDate / ZonedDateTime types. Fixes the model, but it is Adobe's API — a second migration once Temporal ships.",
     stats: {
-      tests: 20190,
+      // 386, not 20,190: that figure was the four original competitors' *combined*
+      // execution total and was never this library's own test count. Its bar has always
+      // used the correct 386, so only the hover tooltip read wrong ("386 executions
+      // (20,190 tests × 1 Node)"), and executions below tests is impossible on a 1× matrix.
+      tests: 386,
       locales: 0,
       timezones: 0,
       nodeVersions: 1,

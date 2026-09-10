@@ -20,13 +20,35 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
 
 ## Workflow
 
-1. **Read `context/domination/tracker.md`** to identify the current story, its GitHub issue number, and its row. No release decision is yours to make — see step 8.
+1. **Read `context/domination/tracker.md`** to identify the current story, its GitHub issue number, and its row. No release decision is yours to make — see step 9.
 
 2. **If public API surface changed:** update the TanStack Intent agent skills in `packages/gmt/skills/` (new functions, renamed functions, new options, new domain concept). See `PUBLISHING.md` contributor flow step 2.
 
 3. **Write a `.changeset/*.md` entry** for the story — one-line summary, correct bump level (`patch`/`minor`/`major` per `PUBLISHING.md` semver cheat-sheet; every GMT story is additive, so `minor`).
 
-4. **Update `packages/gmt/README.md`** and relevant namespace READMEs to reflect the new API surface.
+   Then prove it exists: `pnpm changeset:status` exits non-zero when a publishable
+   package changed and no changeset covers it. A PR without one bumps nothing and ships
+   nothing, silently — CI runs this on every PR, so a missing entry fails the branch
+   rather than surfacing at release time.
+
+4. **Update the docs surface — all of it, every time.** These four were being done
+   inconsistently, which is how `16,701 tests` and `504 functions` both went two stories
+   stale and the namespace chart shipped without `precision` or `span`:
+
+   1. `packages/gmt/README.md` and the relevant namespace READMEs, for the new API surface.
+   2. `apps/dox/src/lib/gmt-modules.ts` — register any **new module barrel**, or its
+      reference pages render without a live playground.
+   3. Regenerate the reference corpus:
+      `pnpm --filter @northguild/gmt build && pnpm dox:generate`. The generated corpus is
+      committed, and its freshness check is mtime-based — after a merge it can report
+      "outputs up-to-date, skipping" over a corpus it would never have produced, so
+      confirm the new functions actually appear in
+      `apps/dox/src/generated/reference/gmt-corpus.json` rather than trusting the skip.
+   4. `pnpm stats:sync` — rewrites the published test counts, CI execution totals and
+      per-namespace function counts in both READMEs and `apps/dox`. Never type these
+      numbers by hand; `pnpm stats` fails the build when they drift, and reports the two
+      cases it cannot fix itself (a new namespace the api-surface prose does not name, or
+      guarded text that was reworded so a rule no longer matches).
 
 5. **Generate a conventional commit message** — use available commit-message generation tooling. The message should be scoped to the story (e.g. `feat(duration): add formatDuration function`).
 
@@ -39,7 +61,18 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
    `## What gmt provides (do not re-implement)` section first; the column is generated
    from that section.
 
-8. **Stop.** There is no publish step to run. Merging the feature PR publishes
+8. **Verify before handing off.** `pnpm run validate` must exit `0` — it is the epic's
+   Definition of Done, and it runs `deps check`, the full build, `stats check`, lint,
+   typecheck and every test in that order. Do not report a story closed on a partial run.
+   If `deps check` or `stats check` fails, fix it here; both print the command that
+   resolves them, and both exist because a checklist item asking someone to verify a
+   number by eye does not work.
+
+   One trap worth knowing: when a tracker's column layout is wrong, `deps.mjs` now throws
+   naming the file and the expected header. Restore the column — do **not** reach for
+   `pnpm deps:sync` to make the error go away.
+
+9. **Stop.** There is no publish step to run. Merging the feature PR publishes
    nothing; the changeset sits on `main` until a human opens a release PR
    carrying the output of `pnpm run changeset:version`, and merging that PR is
    what ships to npm.

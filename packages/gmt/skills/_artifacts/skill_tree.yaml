@@ -41,7 +41,7 @@ skills:
     domain: core-date-operations
     path: 'skills/gmt-arithmetic/SKILL.md'
     package: 'packages/gmt'
-    description: Add/subtract duration objects, diff values, clamp/closest, ISO 8601 duration strings, and interval range math
+    description: Add/subtract duration objects, diff values, clamp/closest, ISO 8601 duration strings, elapsed-versus-wall-clock spans (spanMs/spanNs/spanWallClock), and interval range math
     sources:
       - 'northguild/gmt:README.md'
       - 'northguild/gmt:packages/gmt/src/plain/calculate/index.ts'
@@ -50,6 +50,7 @@ skills:
       - 'northguild/gmt:packages/gmt/src/zoned/interval/index.ts'
       - 'northguild/gmt:packages/gmt/src/unix/interval/index.ts'
       - 'northguild/gmt:packages/gmt/src/utc/interval/index.ts'
+      - 'northguild/gmt:packages/gmt/src/span/calculate/index.ts'
 
   - name: GMT Timezone
     slug: gmt-timezone

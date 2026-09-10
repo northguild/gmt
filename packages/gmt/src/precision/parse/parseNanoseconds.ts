@@ -1,10 +1,4 @@
-import {
-  isValidEpochNanoseconds,
-  MAX_EPOCH_NANOSECOND_DIGITS,
-} from "../../internal";
-
-/** Canonical decimal integer: optional `-`, then digits with no leading zeros. */
-const decimalInteger = /^-?(?:0|[1-9][0-9]*)$/;
+import { isValidNanoPattern } from "../validate/isValidNanoPattern";
 
 /**
  * Parse a decimal string produced by `formatNanoseconds` — typically one field of a JSON
@@ -19,8 +13,8 @@ const decimalInteger = /^-?(?:0|[1-9][0-9]*)$/;
  *   either reads back exactly or fails loudly.
  * - Rejects values outside the range `Temporal.Instant` can represent
  *   (±8_640_000_000_000_000_000_000n).
- * - Returns `0n` on invalid input. `0n` is also the epoch itself — check the string against
- *   the format above first when the two must be told apart.
+ * - Returns `0n` on invalid input. `0n` is also the epoch itself — `isValidNanoPattern`
+ *   tells the two apart, and accepts exactly what this parses.
  *
  * @param value decimal string form of a nanosecond timestamp (e.g. "1710072000123456789")
  * @returns nanoseconds since the Unix epoch as a bigint, or 0n on invalid input
@@ -33,19 +27,7 @@ const decimalInteger = /^-?(?:0|[1-9][0-9]*)$/;
  * @example parseNanoseconds(1710072000123456789) // 0n — number, not string
  */
 export function parseNanoseconds(value: string): bigint {
-  if (typeof value !== "string" || !decimalInteger.test(value)) {
-    return 0n;
-  }
-
-  // Out of range by inspection once it is longer than MAX_EPOCH_NANOSECONDS, and stopping
-  // here keeps BigInt off an arbitrarily long payload string.
-  const digits = value.startsWith("-") ? value.length - 1 : value.length;
-
-  if (digits > MAX_EPOCH_NANOSECOND_DIGITS) {
-    return 0n;
-  }
-
-  const nanoseconds = BigInt(value);
-
-  return isValidEpochNanoseconds(nanoseconds) ? nanoseconds : 0n;
+  // Shape, length and range all live in the validator, so `isValidNanoPattern(v)` and
+  // "parseNanoseconds(v) is a real value" can never disagree.
+  return isValidNanoPattern(value) ? BigInt(value) : 0n;
 }
