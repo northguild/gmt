@@ -35,6 +35,7 @@
     "test:gmt-oxlint": "vitest run --config packages/gmt-oxlint/vitest.config.ts",
     "changeset": "changeset",
     "changeset:add": "changeset add",
+    "changeset:status": "changeset status --since=origin/main",
     "changeset:version": "changeset version && node scripts/sync-intent-version.mjs"
   },
   "devDependencies": {
