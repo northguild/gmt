@@ -239,6 +239,7 @@ skills:
       - Serialize nanosecond timestamps across a JSON boundary
       - Truncate nanoseconds to a storage engine's precision
       - Tell a 0n sentinel apart from 0n the epoch with precision/validate
+      - Convert between ISO 8601 and a foreign epoch (NTP, FILETIME, .NET ticks, Excel, PostgreSQL)
       - Choose ESLint config
       - Choose Biome config
       - Choose Oxlint config

@@ -2,7 +2,8 @@
 name: gmt-integration
 description: >
   Application integration patterns — stable cache keys, router/query params,
-  table-sort keys, nanosecond timestamps across JSON and storage boundaries, and
+  table-sort keys, nanosecond timestamps across JSON and storage boundaries,
+  foreign epoch bridges (NTP, FILETIME, .NET ticks, Excel, PostgreSQL), and
   lint package selection (ESLint, Biome, Oxlint). Reads the installed package
   README.md and lint-package READMEs for API details; this skill is a routing
   pointer, not an API dump.
@@ -29,6 +30,8 @@ which lint package to install for Date-ban enforcement.
 - The user asks about cache keys, router params, or table-sort keys for dates.
 - The user wants to validate a timezone id before using it as a cache key.
 - The user is moving nanosecond timestamps across a JSON wire or into a database.
+- The user is reading or writing another system's epoch — NTP, Windows `FILETIME`,
+  .NET ticks, an Excel day serial, or PostgreSQL's internal microseconds.
 - The user is picking an ESLint, Biome, or Oxlint plugin to ban `Date` APIs.
 - The user has a lint package but not the gmt runtime (or vice versa).
 
@@ -50,9 +53,18 @@ which lint package to install for Date-ban enforcement.
    `bigint`), and call `truncateNanoseconds(ns, "us" | "ms")` before writing to a
    store that holds less than nanoseconds — PostgreSQL `timestamptz` holds
    microseconds — or the read-back value will not equal what was written.
-5. **Lint packages are toolchain-specific, not mutually exclusive.** Recommend
+5. **Never hand-roll another system's epoch constant.** `precision/convert/` carries
+   the bridges: `toNtpTimestamp` / `fromNtpTimestamp`, `toFileTime` / `fromFileTime`,
+   `toDotNetTicks` / `fromDotNetTicks`, `toExcelSerial` / `fromExcelSerial`,
+   `toPgMicroseconds` / `fromPgMicroseconds`. Two traps they exist to close: an NTP
+   timestamp's seconds field wraps every ~136 years and carries no era, so
+   `fromNtpTimestamp` needs the era passed in; and Excel's serial 60 is the phantom
+   1900-02-29, a date that never existed, so it returns `""` rather than a neighbouring
+   day. Each bridge rejects instants its target format cannot hold instead of returning
+   an out-of-range number.
+6. **Lint packages are toolchain-specific, not mutually exclusive.** Recommend
    only the one matching the project's existing linter; do not force all three.
-6. **Read the READMEs.** This skill is a routing pointer. For full integration
+7. **Read the READMEs.** This skill is a routing pointer. For full integration
    guidance, read the installed package's `README.md` and the matching
    `@northguild/gmt-eslint` / `gmt-oxlint` / `gmt-biome` README.
 
@@ -81,6 +93,9 @@ the pattern.
 - **High-precision timestamps**: keep `bigint` nanoseconds internally, send the
   decimal string from `formatNanoseconds` over the wire, and truncate to the
   target column's precision before persisting.
+- **Foreign epochs at the boundary**: convert on the way in and on the way out with
+  the `precision/convert/` bridges, and keep ISO strings or `bigint` nanoseconds
+  everywhere in between — never carry another system's serial through your own code.
 
 ## References
 

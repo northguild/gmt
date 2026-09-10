@@ -39,7 +39,7 @@ For that, ask the specs: `pnpm deps -- whoneeds CORE-1` lists every story that c
 | -- | ------- | ---------- | ------------------------------------------------------------------- | ------------------------------ | ---------------------------------------------------- | ----------- |
 | 1  | CORE-1  | Core       | `toNanoseconds` + `fromNanoseconds` + JSON bridge + truncation      | —                              | [#182](https://github.com/northguild/gmt/issues/182) | Done        |
 | 2  | CORE-2  | Core       | `spanMs` + `spanNs` + `spanWallClock`                               | —                              | [#183](https://github.com/northguild/gmt/issues/183) | Done        |
-| 3  | CORE-3  | Core       | NTP / FILETIME / .NET ticks / Excel / Postgres epoch bridges        | —                              | [#184](https://github.com/northguild/gmt/issues/184) | Not started |
+| 3  | CORE-3  | Core       | NTP / FILETIME / .NET ticks / Excel / Postgres epoch bridges        | —                              | [#184](https://github.com/northguild/gmt/issues/184) | Done        |
 | 4  | CORE-4  | Core       | `toOffsetInstant` + `resolveLocal` + `classifyLocal`                | —                              | [#185](https://github.com/northguild/gmt/issues/185) | Not started |
 | 5  | CORE-5  | Core       | ISO week + ordinal + fiscal periods + `floorToZone` + `bucketRange` | CORE-4                         | [#186](https://github.com/northguild/gmt/issues/186) | Not started |
 | 6  | CORE-6  | Core       | Interval algebra: intersect, clamp, subtract, merge, split, sum     | CORE-5                         | [#187](https://github.com/northguild/gmt/issues/187) | Not started |

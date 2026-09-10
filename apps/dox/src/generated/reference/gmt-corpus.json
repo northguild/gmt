@@ -6853,6 +6853,138 @@
     ]
   },
   {
+    "url": "/reference/precision/convert/fromDotNetTicks",
+    "name": "fromDotNetTicks",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "function",
+    "signature": "fromDotNetTicks(value: bigint): string",
+    "description": "Convert .NET `DateTime.Ticks` back to an ISO 8601 instant string.",
+    "sourcePath": "packages/gmt/src/precision/convert/fromDotNetTicks.ts",
+    "examples": [
+      {
+        "call": "fromDotNetTicks(0n)",
+        "result": "\"0001-01-01T00:00:00Z\" — DateTime.MinValue"
+      },
+      {
+        "call": "fromDotNetTicks(621355968000000000n)",
+        "result": "\"1970-01-01T00:00:00Z\""
+      },
+      {
+        "call": "fromDotNetTicks(638456708967890000n)",
+        "result": "\"2024-03-10T12:34:56.789Z\""
+      },
+      {
+        "call": "fromDotNetTicks(3155378975999999999n)",
+        "result": "\"9999-12-31T23:59:59.9999999Z\" — DateTime.MaxValue"
+      },
+      {
+        "call": "fromDotNetTicks(-1n)",
+        "result": "\"\" — before DateTime.MinValue"
+      },
+      {
+        "call": "fromDotNetTicks(3155378976000000000n)",
+        "result": "\"\" — past DateTime.MaxValue"
+      },
+      {
+        "call": "fromDotNetTicks(621355968000000000)",
+        "result": "\"\" — number, not bigint"
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/convert/fromExcelSerial",
+    "name": "fromExcelSerial",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "function",
+    "signature": "fromExcelSerial(value: number, options?: { system?: ExcelDateSystem; }): string",
+    "description": "Convert an Excel day serial back to an ISO 8601 instant string.",
+    "sourcePath": "packages/gmt/src/precision/convert/fromExcelSerial.ts",
+    "examples": [
+      {
+        "call": "fromExcelSerial(1)",
+        "result": "\"1900-01-01T00:00:00Z\" — Excel's first serial"
+      },
+      {
+        "call": "fromExcelSerial(25569)",
+        "result": "\"1970-01-01T00:00:00Z\""
+      },
+      {
+        "call": "fromExcelSerial(45361.5)",
+        "result": "\"2024-03-10T12:00:00Z\""
+      },
+      {
+        "call": "fromExcelSerial(59)",
+        "result": "\"1900-02-28T00:00:00Z\""
+      },
+      {
+        "call": "fromExcelSerial(60)",
+        "result": "\"\" — the phantom 1900-02-29, a date that never existed"
+      },
+      {
+        "call": "fromExcelSerial(61)",
+        "result": "\"1900-03-01T00:00:00Z\""
+      },
+      {
+        "call": "fromExcelSerial(60, { system: \"1904\" })",
+        "result": "\"1904-03-01T00:00:00Z\" — no phantom day here"
+      },
+      {
+        "call": "fromExcelSerial(43899.5, { system: \"1904\" })",
+        "result": "\"2024-03-10T12:00:00Z\""
+      },
+      {
+        "call": "fromExcelSerial(0)",
+        "result": "\"\" — Excel's \"January 0, 1900\", not a date"
+      },
+      {
+        "call": "fromExcelSerial(-1)",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/convert/fromFileTime",
+    "name": "fromFileTime",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "function",
+    "signature": "fromFileTime(value: bigint): string",
+    "description": "Convert a Windows `FILETIME` back to an ISO 8601 instant string.",
+    "sourcePath": "packages/gmt/src/precision/convert/fromFileTime.ts",
+    "examples": [
+      {
+        "call": "fromFileTime(0n)",
+        "result": "\"1601-01-01T00:00:00Z\" — the FILETIME epoch"
+      },
+      {
+        "call": "fromFileTime(116444736000000000n)",
+        "result": "\"1970-01-01T00:00:00Z\""
+      },
+      {
+        "call": "fromFileTime(133545476967890000n)",
+        "result": "\"2024-03-10T12:34:56.789Z\""
+      },
+      {
+        "call": "fromFileTime(2650467743999999999n)",
+        "result": "\"9999-12-31T23:59:59.9999999Z\" — .NET's DateTime maximum"
+      },
+      {
+        "call": "fromFileTime(18446744073709551615n)",
+        "result": "\"+060056-05-28T05:36:10.9551615Z\""
+      },
+      {
+        "call": "fromFileTime(-1n)",
+        "result": "\"\" — FILETIME is unsigned"
+      },
+      {
+        "call": "fromFileTime(116444736000000000)",
+        "result": "\"\" — number, not bigint"
+      }
+    ]
+  },
+  {
     "url": "/reference/precision/convert/fromNanoseconds",
     "name": "fromNanoseconds",
     "namespace": "precision",
@@ -6893,6 +7025,229 @@
     ]
   },
   {
+    "url": "/reference/precision/convert/fromNtpTimestamp",
+    "name": "fromNtpTimestamp",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "function",
+    "signature": "fromNtpTimestamp(value: bigint, era?: number): string",
+    "description": "Convert a 64-bit NTP timestamp (RFC 5905) back to an ISO 8601 instant string.",
+    "sourcePath": "packages/gmt/src/precision/convert/fromNtpTimestamp.ts",
+    "examples": [
+      {
+        "call": "fromNtpTimestamp(0n)",
+        "result": "\"1900-01-01T00:00:00Z\" — the NTP epoch"
+      },
+      {
+        "call": "fromNtpTimestamp(9487534653230284800n)",
+        "result": "\"1970-01-01T00:00:00Z\""
+      },
+      {
+        "call": "fromNtpTimestamp(16832246972675778412n)",
+        "result": "\"2024-03-10T12:34:56.789Z\""
+      },
+      {
+        "call": "fromNtpTimestamp(18446744069414584320n)",
+        "result": "\"2036-02-07T06:28:15Z\" — the last second of era 0"
+      },
+      {
+        "call": "fromNtpTimestamp(0n, 1)",
+        "result": "\"2036-02-07T06:28:16Z\" — the same value, one era on"
+      },
+      {
+        "call": "fromNtpTimestamp(0n, -1)",
+        "result": "\"1763-11-24T17:31:44Z\""
+      },
+      {
+        "call": "fromNtpTimestamp(-1n)",
+        "result": "\"\" — the timestamp is unsigned"
+      },
+      {
+        "call": "fromNtpTimestamp(0n, undefined)",
+        "result": "\"\" — an explicit era must be a safe integer"
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/convert/fromPgMicroseconds",
+    "name": "fromPgMicroseconds",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "function",
+    "signature": "fromPgMicroseconds(value: bigint): string",
+    "description": "Convert PostgreSQL's internal `timestamptz` value back to an ISO 8601 instant string.",
+    "sourcePath": "packages/gmt/src/precision/convert/fromPgMicroseconds.ts",
+    "examples": [
+      {
+        "call": "fromPgMicroseconds(0n)",
+        "result": "\"2000-01-01T00:00:00Z\" — the PostgreSQL epoch"
+      },
+      {
+        "call": "fromPgMicroseconds(-946684800000000n)",
+        "result": "\"1970-01-01T00:00:00Z\""
+      },
+      {
+        "call": "fromPgMicroseconds(763389296789000n)",
+        "result": "\"2024-03-10T12:34:56.789Z\""
+      },
+      {
+        "call": "fromPgMicroseconds(763387200123456n)",
+        "result": "\"2024-03-10T12:00:00.123456Z\""
+      },
+      {
+        "call": "fromPgMicroseconds(-211813488000000001n)",
+        "result": "\"\" — one microsecond before PostgreSQL's minimum"
+      },
+      {
+        "call": "fromPgMicroseconds(9223372036854775807n)",
+        "result": "\"\" — int64 maximum, still past Temporal's range"
+      },
+      {
+        "call": "fromPgMicroseconds(763387200123456)",
+        "result": "\"\" — number, not bigint"
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/convert/toDotNetTicks",
+    "name": "toDotNetTicks",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "function",
+    "signature": "toDotNetTicks(isoString: string): bigint",
+    "description": "Convert an ISO 8601 instant string to .NET `DateTime.Ticks`.",
+    "sourcePath": "packages/gmt/src/precision/convert/toDotNetTicks.ts",
+    "examples": [
+      {
+        "call": "toDotNetTicks(\"0001-01-01T00:00:00Z\")",
+        "result": "0n — DateTime.MinValue"
+      },
+      {
+        "call": "toDotNetTicks(\"1970-01-01T00:00:00Z\")",
+        "result": "621355968000000000n"
+      },
+      {
+        "call": "toDotNetTicks(\"2024-03-10T12:34:56.789Z\")",
+        "result": "638456708967890000n"
+      },
+      {
+        "call": "toDotNetTicks(\"2024-03-10T12:00:00.123456789Z\")",
+        "result": "638456688001234567n — floors to 100 ns"
+      },
+      {
+        "call": "toDotNetTicks(\"9999-12-31T23:59:59.9999999Z\")",
+        "result": "3155378975999999999n — DateTime.MaxValue"
+      },
+      {
+        "call": "toDotNetTicks(\"+010000-01-01T00:00:00Z\")",
+        "result": "0n — past DateTime.MaxValue"
+      },
+      {
+        "call": "toDotNetTicks(\"invalid\")",
+        "result": "0n"
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/convert/ExcelDateSystem",
+    "name": "ExcelDateSystem",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "type",
+    "signature": "",
+    "description": "The ExcelDateSystem type.",
+    "sourcePath": "packages/gmt/src/precision/convert/toExcelSerial.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/precision/convert/toExcelSerial",
+    "name": "toExcelSerial",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "function",
+    "signature": "toExcelSerial(isoString: string, options?: { system?: ExcelDateSystem; }): number",
+    "description": "Convert an ISO 8601 instant string to an Excel day serial.",
+    "sourcePath": "packages/gmt/src/precision/convert/toExcelSerial.ts",
+    "examples": [
+      {
+        "call": "toExcelSerial(\"1900-01-01T00:00:00Z\")",
+        "result": "1 — Excel's first serial"
+      },
+      {
+        "call": "toExcelSerial(\"1970-01-01T00:00:00Z\")",
+        "result": "25569"
+      },
+      {
+        "call": "toExcelSerial(\"2024-03-10T12:00:00Z\")",
+        "result": "45361.5"
+      },
+      {
+        "call": "toExcelSerial(\"1900-02-28T00:00:00Z\")",
+        "result": "59 — the next day is 61, not 60"
+      },
+      {
+        "call": "toExcelSerial(\"1900-03-01T00:00:00Z\")",
+        "result": "61 — serial 60 is the phantom 1900-02-29"
+      },
+      {
+        "call": "toExcelSerial(\"2024-03-10T12:00:00Z\", { system: \"1904\" })",
+        "result": "43899.5 — exactly 1462 lower"
+      },
+      {
+        "call": "toExcelSerial(\"1899-12-31T00:00:00Z\")",
+        "result": "null — Excel's \"January 0\", not a date"
+      },
+      {
+        "call": "toExcelSerial(\"9999-12-31T23:59:59.99998Z\")",
+        "result": "null — rounds to 2958466, one past Excel's last serial"
+      },
+      {
+        "call": "toExcelSerial(\"invalid\")",
+        "result": "null"
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/convert/toFileTime",
+    "name": "toFileTime",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "function",
+    "signature": "toFileTime(isoString: string): bigint",
+    "description": "Convert an ISO 8601 instant string to a Windows `FILETIME`.",
+    "sourcePath": "packages/gmt/src/precision/convert/toFileTime.ts",
+    "examples": [
+      {
+        "call": "toFileTime(\"1601-01-01T00:00:00Z\")",
+        "result": "0n — the FILETIME epoch"
+      },
+      {
+        "call": "toFileTime(\"1970-01-01T00:00:00Z\")",
+        "result": "116444736000000000n"
+      },
+      {
+        "call": "toFileTime(\"2024-03-10T12:34:56.789Z\")",
+        "result": "133545476967890000n"
+      },
+      {
+        "call": "toFileTime(\"2024-03-10T12:00:00.123456789Z\")",
+        "result": "133545456001234567n — floors to 100 ns"
+      },
+      {
+        "call": "toFileTime(\"1600-12-31T23:59:59Z\")",
+        "result": "0n — before the FILETIME epoch"
+      },
+      {
+        "call": "toFileTime(\"2024-03-10T12:00:00\")",
+        "result": "0n — no offset designator"
+      },
+      {
+        "call": "toFileTime(\"invalid\")",
+        "result": "0n"
+      }
+    ]
+  },
+  {
     "url": "/reference/precision/convert/toNanoseconds",
     "name": "toNanoseconds",
     "namespace": "precision",
@@ -6924,6 +7279,86 @@
       },
       {
         "call": "toNanoseconds(\"invalid\")",
+        "result": "0n"
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/convert/toNtpTimestamp",
+    "name": "toNtpTimestamp",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "function",
+    "signature": "toNtpTimestamp(isoString: string): bigint",
+    "description": "Convert an ISO 8601 instant string to a 64-bit NTP timestamp (RFC 5905).",
+    "sourcePath": "packages/gmt/src/precision/convert/toNtpTimestamp.ts",
+    "examples": [
+      {
+        "call": "toNtpTimestamp(\"1900-01-01T00:00:00Z\")",
+        "result": "0n — the NTP epoch"
+      },
+      {
+        "call": "toNtpTimestamp(\"1970-01-01T00:00:00Z\")",
+        "result": "9487534653230284800n"
+      },
+      {
+        "call": "toNtpTimestamp(\"2024-03-10T12:00:00Z\")",
+        "result": "16832237967035596800n"
+      },
+      {
+        "call": "toNtpTimestamp(\"2036-02-07T06:28:15Z\")",
+        "result": "18446744069414584320n — the last second of era 0"
+      },
+      {
+        "call": "toNtpTimestamp(\"2036-02-07T06:28:16Z\")",
+        "result": "0n — era 1 begins, and the seconds field wraps"
+      },
+      {
+        "call": "toNtpTimestamp(\"2024-03-10T12:00:00\")",
+        "result": "0n — no offset designator"
+      },
+      {
+        "call": "toNtpTimestamp(\"invalid\")",
+        "result": "0n"
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/convert/toPgMicroseconds",
+    "name": "toPgMicroseconds",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "function",
+    "signature": "toPgMicroseconds(isoString: string): bigint",
+    "description": "Convert an ISO 8601 instant string to PostgreSQL's internal `timestamptz` value.",
+    "sourcePath": "packages/gmt/src/precision/convert/toPgMicroseconds.ts",
+    "examples": [
+      {
+        "call": "toPgMicroseconds(\"2000-01-01T00:00:00Z\")",
+        "result": "0n — the PostgreSQL epoch"
+      },
+      {
+        "call": "toPgMicroseconds(\"1970-01-01T00:00:00Z\")",
+        "result": "-946684800000000n"
+      },
+      {
+        "call": "toPgMicroseconds(\"2024-03-10T12:34:56.789Z\")",
+        "result": "763389296789000n"
+      },
+      {
+        "call": "toPgMicroseconds(\"2024-03-10T12:00:00.123456789Z\")",
+        "result": "763387200123456n — floors to microseconds"
+      },
+      {
+        "call": "toPgMicroseconds(\"-005000-01-01T00:00:00Z\")",
+        "result": "0n — before PostgreSQL's 4713 BC minimum"
+      },
+      {
+        "call": "toPgMicroseconds(\"2024-03-10T12:00:00\")",
+        "result": "0n — no offset designator"
+      },
+      {
+        "call": "toPgMicroseconds(\"invalid\")",
         "result": "0n"
       }
     ]
