@@ -216,6 +216,9 @@
      page), so it's a small top-up there rather than 0 — still visibly a
      single mechanism in both themes, just tuned. */
   --gmt-globe-day-alpha: 0.14;
+  /* Graticule (lat/long grid line) stroke alpha — theme-tuned like the
+     fills above, not a fixed literal in globe.ts's draw call. */
+  --gmt-globe-grid-alpha: 0.18;
 
   /* The GMT palette maps onto Starlight's --sl-* system in gmt-theme.css. */
 
@@ -234,6 +237,11 @@
      that reads as almost the same flat pale-blue as the page background in
      light mode — light gets its own value (a white wash) instead of a re-tint. */
   --gmt-widget-card-bg: var(--gmt-glass-tint-subtle);
+  /* DOX-C0 (#171): shadcn's --destructive needs a genuine error/danger red.
+     --gmt-signal (amber) is reserved exclusively for the "no signal" sentinel
+     state (visual-design.md) and must not be reused here. No role in the six
+     named colors covers this, so it's a new token, not a re-tint. */
+  --gmt-danger: #f87171;
 }
 
 /* ---- Font imports (self-hosted, no CDN) ---- */
@@ -303,6 +311,10 @@
 
   --gmt-widget-card-bg: color(from var(--gmt-void) srgb r g b / 0.5);
 
+  /* DOX-C0 (#171): a darker, more saturated red reads correctly against the
+     light background — the dark-mode value is tuned for a near-black one. */
+  --gmt-danger: #dc2626;
+
   /* ---- Globe (light values) ---- */
   --gmt-globe-ocean-alpha: 0.2;
   --gmt-globe-land-alpha: 0.32;
@@ -318,4 +330,9 @@
   /* Day already reads bright against the light theme's pale page — a small
      top-up, not the dark-theme fix this token exists for. */
   --gmt-globe-day-alpha: 0.06;
+  /* Dark theme's 0.18 all but disappears against this theme's much more
+     opaque night wash (0.8 alpha navy, above) and barely registers on the
+     pale day side either — raised well past the dark-theme value so the
+     grid actually reads on both hemispheres. */
+  --gmt-globe-grid-alpha: 0.45;
 }

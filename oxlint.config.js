@@ -23,6 +23,10 @@ export default defineConfig([
         "apps/dox/.astro/**",
         "apps/dox/src/generated/**",
         "apps/dox/src/content/docs/reference/**",
+        // DOX-C0 (#171): vendored, unmodified shadcn/AI Elements registry
+        // source — reviewed as "copied from upstream", not linted as our own.
+        "apps/dox/src/components/ui/**",
+        "apps/dox/src/components/ai-elements/**",
       ],
     },
     rules: { noUnusedImports: "error", noUnusedVariables: "warn" },

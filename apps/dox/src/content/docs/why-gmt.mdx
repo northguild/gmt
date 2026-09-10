@@ -87,20 +87,24 @@ GMT does not test every locale — there are hundreds, and most differ only in f
 
 ## What this means
 
-| Dimension             | GMT                            | Legacy libraries    |
-| --------------------- | ------------------------------ | ------------------- |
-| **CI executions**     | 346,760                        | 386 – 11,703        |
-| **Locales tested**    | 17 (representative matrix)     | None                |
-| **Timezones tested**  | 10 (UTC−11 to UTC+14)          | None / partial      |
-| **Node versions**     | 22, 24                         | Single LTS          |
-| **Public functions**  | 521                            | 75 – 223            |
-| **Sentinel contract** | `""` / `null` / `false` / `[]` | Throws `RangeError` |
+| Dimension             | GMT                             | Legacy libraries                                                    |
+| --------------------- | -------------------------------- | -------------------------------------------------------------------- |
+| **CI executions**     | 346,760                          | 386 – 12,172                                                          |
+| **Locales tested**    | 17 × every public function       | 0 – 42 files, tested in isolation from the rest of the API surface   |
+| **Timezones tested**  | 10 × every public function       | 0 – 8 files, tested in isolation (Spacetime disables 4 of its own DST-edge-case files, and 41 of the ones it does run currently fail) |
+| **Node versions**     | 22, 24                           | 1 – 2 (only Spacetime matches GMT's matrix; the rest test a single LTS) |
+| **Public functions**  | 521                              | 75 – 223                                                              |
+| **Sentinel contract** | `""` / `null` / `false` / `[]`   | Throws `RangeError`                                                   |
 
 The table is the point. GMT does not add a few convenience methods to an
 existing `Date` wrapper — it replaces the type system entirely with Temporal,
-then rebuilds the ergonomic surface on top of that guarantee. The testing
-volume exists because the contract is non-negotiable: every function, every
-locale, every timezone, every Node version, every PR.
+then rebuilds the ergonomic surface on top of that guarantee. The gap isn't
+that legacy libraries skip locale or timezone testing outright — some, like
+Day.js and Spacetime, ship plenty of it — it's that none of them run that
+coverage against their *entire* API the way GMT's matrix does, and the
+tests that exist aren't always trustworthy: Day.js's own timezone tests
+assert against `moment`'s output as the oracle, and Spacetime's own DST
+tests are currently failing where they haven't been disabled outright.
 
 </GridSection>
 

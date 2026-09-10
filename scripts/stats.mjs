@@ -51,6 +51,7 @@ const READMES = [ROOT_README, PKG_README];
 const DOX_INDEX = "apps/dox/src/content/docs/index.mdx";
 const DOX_WHY = "apps/dox/src/content/docs/why-gmt.mdx";
 const DOX_CHARTS = "apps/dox/scripts/render-charts.ts";
+const DOX_LIBRARIES = "apps/dox/src/data/library-comparison.ts";
 
 /** `regex/` exports patterns, not functions — counted and described separately. */
 const PATTERN_NAMESPACE = "regex";
@@ -292,27 +293,19 @@ function ruleSet(f) {
       values: [n(f.functions), String(f.patterns)],
     },
     {
-      label: "chart — gmt metadata",
-      files: [DOX_CHARTS],
-      find: /(tests: )(\d+)(,\n {4}locales: )(\d+)(,\n {4}timezones: )(\d+)(,\n {4}nodeVersions: )(\d+)/g,
+      // `libraryComparisons`'s first entry is gmt (isSubject). Anchored on the id so it
+      // cannot drift onto a competitor's block, whose figures are external measurements
+      // and are deliberately not derived here.
+      label: "library-comparison — gmt stats",
+      files: [DOX_LIBRARIES],
+      find: /(id: "@northguild\/gmt",[\s\S]*?tests: )(\d+)(,\n {6}locales: )(\d+)(,\n {6}timezones: )(\d+)(,\n {6}nodeVersions: )(\d+)(,\n {6}executions: )(\d+)/g,
       values: [
         String(f.tests),
         String(f.locales),
         String(f.timezones),
         String(f.nodeCount),
+        String(f.executions),
       ],
-    },
-    {
-      label: "chart — executions array",
-      files: [DOX_CHARTS],
-      find: /(const executions = \[)(\d+)/g,
-      values: [String(f.executions)],
-    },
-    {
-      label: "chart — executions datum",
-      files: [DOX_CHARTS],
-      find: /(library: "@northguild\/gmt", executions: )(\d+)/g,
-      values: [String(f.executions)],
     },
   ];
 }

@@ -21,6 +21,11 @@ const SONAR_SELECTOR = [
   ".gmt-input",
   ".gmt-select",
   '.sl-markdown-content .tab > [role="tab"]',
+  // Streamdown's own controls inside the chat island (copy, fullscreen) — they
+  // borrow .gmt-icon-button's look in gmt-primitives.css, so they get the
+  // re-ping too. Copy is the one control on the page a reader plausibly clicks
+  // twice in a row without ever moving focus.
+  ".gmt-ask [data-streamdown] button",
 ].join(",");
 
 function restartPing(el: HTMLElement): void {

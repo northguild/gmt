@@ -1,0 +1,156 @@
+/*
+ * DOX-C0 (#171) — Tailwind v4 entry sheet, scoped to the chat island.
+ *
+ * Imported ONLY from the island entry module (never added to `astro.config.mjs`'s
+ * `customCss`) — Vite then code-splits it into the island's own chunk, so a page
+ * that never opens the chat never loads it. See design-system.md "Tailwind in the
+ * chat island".
+ *
+ * Preflight is deliberately omitted (option 1 below): Tailwind's reset targets
+ * `*`, `html`, `body` and headings and would wreck the docs site outside the
+ * island. Layers are imported individually instead of via the `"tailwindcss"`
+ * shorthand, which is the documented v4 opt-out.
+ */
+
+@layer theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+/* preflight.css deliberately NOT imported. */
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+
+/*
+ * Explicit sources only (`source(none)` above disables Tailwind's automatic
+ * directory scan). Without this, Tailwind would scan all of apps/dox, including
+ * the ~504 generated reference pages, looking for class names to keep.
+ *
+ * Streamdown and its plugins ship pre-built Tailwind utility classes in their
+ * dist output and require these lines verbatim (streamdown's own README) —
+ * only list the plugins actually installed (message.tsx imports all four).
+ */
+@source "../components/ai-elements";
+@source "../components/ui";
+@source "../components/ask";
+@source "../../node_modules/streamdown/dist/*.js";
+@source "../../node_modules/@streamdown/cjk/dist/*.js";
+@source "../../node_modules/@streamdown/code/dist/*.js";
+@source "../../node_modules/@streamdown/math/dist/*.js";
+@source "../../node_modules/@streamdown/mermaid/dist/*.js";
+
+/*
+ * Tailwind's `dark:` variant, re-pointed at the site's theme attribute.
+ *
+ * By default v4 keys `dark:` to `prefers-color-scheme`, i.e. the OS. This site
+ * keys everything to `<html data-theme>`, and Starlight's inlined
+ * ThemeProvider always writes that attribute — resolving its own "auto" from
+ * `prefers-color-scheme` before it does — so the attribute is the complete
+ * source of truth and no media fallback is needed here.
+ *
+ * Left unmapped, the two disagree for any reader whose OS is light and whose
+ * site theme is dark (or vice versa), and every `dark:` utility inside the
+ * island silently picks the wrong branch. Verified 2026-09-10: Streamdown's
+ * `dark:text-[var(--shiki-dark,…)]` kept the github-LIGHT token colours, which
+ * rendered near-black `rgb(36,41,46)` code on the dark code surface. Shiki's
+ * dual-theme output is entirely `dark:`-gated, so this one line is what makes
+ * syntax highlighting legible when the two settings diverge.
+ */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/*
+ * Theme bridge — shadcn's CSS variables mapped onto the existing --gmt-* tokens,
+ * scoped to `.gmt-ask` so nothing leaks outside the island. Every --gmt-* token
+ * already flips value between dark/light in gmt-tokens.css, so this needs no
+ * `[data-theme="light"]` block of its own (design-system.md rule 1) — the chat
+ * inherits the HUD palette and light/dark for free.
+ */
+.gmt-ask {
+  --background: var(--gmt-void);
+  --foreground: var(--gmt-ice);
+
+  /* card/popover/muted are surfaces meant to stand alone (a card behind
+     text, a dropdown over the page, a header bar over a code block's own
+     background) — they need to be opaque. The first pass here mapped them
+     to gmt-primitives.css's translucent "fill"/"glass" tokens (0.035–0.15
+     alpha), which are *designed* to layer on top of an opaque backdrop, not
+     to be one. Composited over each other (e.g. Streamdown's
+     `bg-muted/80` header sitting on its own `bg-background` body) the
+     result reads as a washed-out, barely-there gray rather than a
+     deliberate panel — verified 2026-09-09 against the live page. */
+  --card: var(--gmt-surface);
+  --card-foreground: var(--gmt-ice);
+
+  --popover: var(--gmt-surface-2);
+  --popover-foreground: var(--gmt-ice);
+
+  --primary: var(--gmt-cyan);
+  --primary-foreground: var(--gmt-void);
+
+  --secondary: var(--gmt-teal);
+  --secondary-foreground: var(--gmt-void);
+
+  --muted: var(--gmt-surface);
+  --muted-foreground: var(--gmt-ice-dim);
+
+  /* shadcn's --accent is a hover-surface tint, not the semantic "success"
+     accent — --gmt-accent-wash (already a hover/active tint) is the right
+     read, not --gmt-spring. Translucent is correct here, unlike above: an
+     accent wash sits on top of a control that already has its own opaque
+     background, exactly what --gmt-accent-wash was built for. */
+  --accent: var(--gmt-accent-wash);
+  --accent-foreground: var(--gmt-cyan);
+
+  /* --gmt-signal (amber) is reserved exclusively for the sentinel "no signal"
+     state (visual-design.md) and must not be reused for --destructive. */
+  --destructive: var(--gmt-danger);
+  --destructive-foreground: var(--gmt-void);
+
+  --border: var(--gmt-border);
+  --input: var(--gmt-border);
+  --ring: var(--gmt-cyan);
+
+  /* shadcn's "sidebar" role — floating chrome that sits over content, not
+     structural navigation in our case: Streamdown's code-block copy/download
+     pill (`bg-sidebar`/`border-sidebar`) is the only consumer found
+     2026-09-09. Left undefined before, `bg-sidebar` resolved to nothing —
+     an invisible pill background — which is why those controls looked
+     naked instead of chip-like. */
+  --sidebar: var(--gmt-surface-2);
+  --sidebar-foreground: var(--gmt-ice);
+
+  --radius: var(--gmt-radius-md);
+}
+
+/*
+ * Preflight's button/input/select/textarea normalization, and nothing else
+ * — scoped and re-added in `base` (the same layer Preflight itself would
+ * occupy) rather than skipped outright. Omitting all of Preflight (this
+ * file's own opening comment) is still correct — the rest is a global reset
+ * this site can't afford — but native form controls genuinely need this
+ * much: without it, a raw `<button>`/`<input>` keeps the browser's own UA
+ * chrome (a light gray face, an inset border) instead of the transparent,
+ * inherit-everything baseline every Tailwind-styled component assumes it's
+ * building on. Streamdown's own internal buttons (copy/download/fullscreen
+ * — not vendored, so not ours to add classes to) are exactly this case,
+ * verified 2026-09-09: solid light-gray boxes in the middle of an otherwise
+ * dark panel, in every theme, because nothing had ever stripped their native
+ * appearance. `@layer base` keeps this beneath `utilities`, so any component
+ * that DOES set its own bg/border utility (every shadcn primitive) still
+ * wins — this only fills in for elements that set none.
+ */
+@layer base {
+  .gmt-ask :is(button, input, select, textarea) {
+    margin: 0;
+    padding: 0;
+    border: 0 solid;
+    box-sizing: border-box;
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+    background-color: transparent;
+    border-radius: 0;
+    opacity: 1;
+  }
+
+  .gmt-ask button {
+    appearance: button;
+  }
+}
