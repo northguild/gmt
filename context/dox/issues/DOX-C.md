@@ -1045,3 +1045,168 @@ same shape as `DOX-B2b`/`-c`/`-d`'s widgets. This story's job for `DOX-E1` speci
 is mounting those two existing entry points into the rail, seeded from tool args — not
 building new globe/scrubber code. See `issues/DOX-E.md`'s Status notes and
 `tracker.md`'s footnote on the `DOX-E1` row.
+
+---
+
+## Remaining work to close Tier 6 — written 2026-09-10, pre-publish
+
+`DOX-C0`, `DOX-C1`, `DOX-C2` and `DOX-C3a` are done. Dox answers from the corpus, cites
+pages that resolve, refuses honestly, and stays inside the free tier by failing over
+between brains inside a single request. **The site is publishable as it stands** — what
+follows is what is left, in the order it should be picked up.
+
+### 0 · Publish (blocking nothing else, do it first)
+
+Merging to `main` **is** publishing: `.github/workflows/deploy-dox.yml` fires on every
+push to `main` with no path filter and no `workflow_dispatch`, and ships Worker + assets
+in one `wrangler deploy`. There is no staging step and no way to trigger a deploy by
+hand.
+
+Pre-merge state, all verified 2026-09-10:
+
+| Gate | Status |
+| --- | --- |
+| `pnpm --filter @gmt/dox test` | 477 passing, 28 files |
+| `check` / `lint` / `oxfmt` | 0 errors, 0 warnings, clean |
+| Worker bundle | 420.28 KiB gzip, against Cloudflare's 3 MB limit |
+| Visual gate, 24 snapshots | all within tolerance; largest 0.069% vs 0.2% |
+| `CLOUDFLARE_API_TOKEN` / `_ACCOUNT_ID` | provisioned (see `DOX-A.md`) |
+| `NORTHGUILD_GMT_GEMINI_API_KEY` (prod) | set via `wrangler secret put` |
+| `DOX_USAGE` KV namespace | created and bound in `wrangler.jsonc` |
+
+Post-deploy smoke test, on the live URL rather than locally:
+
+- `/dox/` loads, the mark lands, the composer accepts input.
+- A real question streams a grounded answer whose citation opens the right page.
+- `/api/brains` counts **move** after that question and survive a reload. This is the
+  one thing that cannot be checked before deploy, because production KV is a different
+  namespace from the preview one.
+- The env badge reads `● live`.
+- `curl -s <url>/dox/ | grep -c GEMINI` → `0`.
+
+### 1 · `DOX_DEV_KEY` (small, unblocks the team)
+
+Never set, so `isDevRequest` always returns false and the dev bypass is inert — the whole
+team is capped at `VISITOR_DAILY_MAX` like any reader. `worker/dev-access.ts` is built and
+has 13 passing tests; it needs only the secret:
+
+```bash
+cd apps/dox && npx wrangler secret put DOX_DEV_KEY   # production
+# then the same value in apps/dox/.dev.vars for local
+```
+
+Then visit `/dox?key=<secret>` once per device. Note what this does **not** buy: exemption
+from the per-visitor cap and manual brain choice, never a larger shared pool. Nothing at
+the application layer can raise a project-wide free-tier ceiling.
+
+### 2 · Brain-list maintenance (recurring, cheap)
+
+`BRAINS` in `src/lib/chat-constants.ts` is the free tier's escape hatch: the quota id is
+`GenerateRequestsPerDayPerProjectPerModel-FreeTier`, so **every additional reachable model
+adds its own 20/day**. Confirmed against the live API on 2026-09-10 — a `429` naming the
+model in its own `quotaDimensions` proves reachability exactly as well as a `200`.
+
+Re-run this whenever answers start getting scarce, and after any Gemini release:
+
+```bash
+cd apps/dox && source .dev.vars
+curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$NORTHGUILD_GMT_GEMINI_API_KEY" \
+  | grep -o '"name": "models/gemini[^"]*"' | sort -u
+```
+
+Three traps found doing this, each of which produced a convincing false negative:
+
+- **`wrangler dev` overwrites `cf-connecting-ip`.** Probing a dozen models in a loop with
+  a different spoofed IP per request does *not* give you a dozen visitors — the runtime
+  sets that header itself, so every probe shares one visitor identity and the run dies at
+  `VISITOR_DAILY_MAX`. The refusals look exactly like model failures. Raise the cap for
+  the duration of the probe (`wrangler dev` hot-reloads on save) and put it back after.
+- **A flapping `wrangler dev` produces false negatives.** `503 Your worker restarted
+  mid-request` reads exactly like a dead model. Two causes seen: building `@gmt/dox`
+  without its `@northguild/gmt` dependency (`pnpm --filter "@gmt/dox..." -r run build`,
+  note the `...`), which leaves esbuild unable to resolve the import and kills the server;
+  and two `wrangler dev` instances fighting over one port. Check `pgrep -cf "wrangler dev"`
+  returns exactly 1 before believing any result.
+- **Read the state, not the response.** `GET /api/brains` reports each brain as `ok`,
+  `spent` or `unavailable`, and that distinction is the whole answer: `spent` is a 429,
+  which *proves the model exists and has a free allowance*, while `unavailable` is a
+  404/400 and means it is not callable at all. A brain that merely fell through to another
+  tells you nothing about which of the two it was.
+
+The 2026-09-10 probe settled the list at **nine brains** (~165 requests/day): eight Flash
+and Flash-Lite models, plus `gemini-3.1-pro-preview`, which answered 429 and is therefore
+real. Three candidates were dropped on a 404/400: `gemini-2.5-flash-lite`, `gemini-2.5-pro`
+and `gemini-2.5-flash` — the last confirming `DOX-C2`'s finding that it is closed to new
+keys. Also excluded: the `-latest` aliases (unknown whether the quota bucket follows the
+alias or its target — a badge that lies is worse than a shorter list) and every non-text
+model. Full reasoning lives in that file's docstring.
+
+**Keep `VISITOR_DAILY_MAX`'s arithmetic in step with the list.** It is currently 5 against
+a pool of ~165/day. The two numbers drift apart silently, and that cap is the only thing
+between one enthusiastic reader and everybody else's day.
+
+### 3 · `DOX-C3b` — the widget registry (the whole of what is left)
+
+This is a story, not a finishing pass, and its own spec understates it. Scoping on
+2026-09-10 found:
+
+**The stated step 1 is the easy part.** All three widget scripts already factor cleanly
+into a container-scoped `setupWidget(container, …)` — they use a local
+`q(role) => container.querySelector(...)` helper, attach listeners only inside their
+container, and their bootstraps already loop `document.querySelectorAll(...).forEach(...)`,
+so they are multi-instance-safe today. Extracting `mount(root)` is close to mechanical.
+
+**The real work is markup provenance, which the spec does not mention.** All three widgets
+are ~100% server-rendered Astro; the scripts build result rows and chips, never controls.
+Every `<select>`, `<input>`, slider handle and `CodeFrame` comes from the `.astro`
+template. So `mount(root)` alone does **not** make them React-mountable — something must
+produce the markup it expects to find. Three options:
+
+1. **Template string inside the mount module** (the `initScrubber` shape). One source of
+   truth, but it converts SSR HTML into client-generated HTML, which breaks this story's
+   own "byte-identical Tier 2 pages" DoD line and loses pre-JS readable markup.
+2. **`mount(root)` requires pre-existing markup**, React renders it as JSX. Tier 2 pages
+   are untouched, but the markup exists twice and drift is silent — a missing `data-role`
+   just makes a control inert, because every lookup is a null-tolerant `q()`.
+3. **A shared `renderTemplate(): string`** used by both — `.astro` does
+   `<Fragment set:html={dstTemplate()} />`, the panel does `root.innerHTML = dstTemplate()`
+   before `mount(root)`. **Recommended:** the only option that keeps SSR *and* one source
+   of truth. Decide this before writing any code; everything else is downstream.
+
+**Four cross-cutting items, roughly two-thirds of the effort:**
+
+- `CURATED_TIMEZONES` lives in `scripts/build-utils/build-utils.ts`, which does
+  `import ts from "typescript"` at the top. It is currently tree-shaken out because only
+  Astro frontmatter reaches it. A client-side template that references it risks dragging
+  the TypeScript compiler into the browser bundle — **extract it (and ConverterBench's
+  `LOCALES`) to a client-safe `src/lib/` module first.**
+- `mount()` must return a `destroy()` handle in the shape of `GlobeHost`/`ScrubberHost`.
+  React StrictMode double-invokes effects, so mount-without-cleanup double-wires
+  `wireCopyButtons` and every control listener on day one.
+- **`apps/dox` has no DOM-test environment.** Existing widget tests are pure logic. The
+  DoD lines about nonsense arguments and keyboard operation need jsdom set up, which is
+  likely larger than the extraction itself.
+- `playground-client.ts`'s `evaluateArg` uses `new Function`. The three widgets never call
+  it, but keep it off `showPlayground`'s path or the "no `eval` anywhere in the registry
+  or its dispatch path" DoD line becomes an argument.
+
+Difficulty, per widget: **ConverterBench easy** (135-line stateless script, no drag, no
+keyboard — do it first as the pattern-setter). **IntervalVisualizer medium** (342 lines,
+cleanest architecture, but six precisely-aligned timeline rows are easy to get subtly
+wrong by hand). **DstInspector medium-hard** (483 lines, pointer-capture drag plus
+keyboard scrubbing, and cross-render scrub state deliberately owned outside `render()` —
+the piece most likely to break silently under a React re-render). It also cannot be
+deferred: the spec's motivating example, *"what happens to 1:30am on November 3rd in New
+York"*, is exactly this widget.
+
+Closing `DOX-C3b` also closes `DOX-E1a`'s last open DoD item — the globe in the `/dox`
+rail — and with it `#139` and `#142`. See the pickup note above.
+
+### Not doing
+
+- **The every-page draggable dock.** Cut; see the `DOX-C3a` amendment above for the
+  reasoning and the honest cost.
+- **A custom domain.** Launching on `gmt-dox.northguild.workers.dev`; `astro.config.mjs`'s
+  `SITE` already matches.
+- **`DOX-C4` (Cloudflare AI).** A separate issue (#240) and explicitly deferred — Gemini
+  first.
