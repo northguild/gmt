@@ -5,6 +5,7 @@
  * render identical copy/actions markup, a11y wiring (data-page-title), and
  * clipboard-copy behavior without duplicating the LinkButton mapping logic.
  */
+import DoxMark from './DoxMark.astro';
 import LinkButton from './LinkButton.astro';
 
 // Mirrors Starlight's internal PAGE_TITLE_ID — not exported publicly.
@@ -45,6 +46,23 @@ function isExternal(href: string) {
 			<div class="sl-flex actions">
 				{actions.map(({ attrs: { class: className, ...attrs } = {}, icon, link: href, text, variant }) => {
 					const external = isExternal(href);
+					// The Dox CTA carries the crystal itself rather than a Starlight
+					// icon name — same mark as the header button and the chat, so the
+					// three entry points to Dox are recognisably one thing.
+					if (attrs['data-dox-cta']) {
+						const { 'data-dox-cta': _doxCta, ...rest } = attrs;
+						return (
+							<LinkButton
+								{href}
+								variant="ghost"
+								class:list={['gmt-dox-cta', className]}
+								{...rest}
+							>
+								{text}
+								<DoxMark id="cta" />
+							</LinkButton>
+						);
+					}
 					if (attrs['data-copy-prompt']) {
 						return (
 							<LinkButton

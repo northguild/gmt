@@ -70,6 +70,25 @@
   color: var(--gmt-ice);
 }
 
+/* gmt-ask-tailwind.css deliberately omits Tailwind Preflight (it would wreck
+   the docs site), so the UA's own block margins — `p { margin: 1em 0 }` and
+   friends — survive inside the island. Every AI Elements primitive is built
+   assuming Preflight zeroed them, and the mismatch shows up as vertical
+   misalignment: `TaskTrigger` is `flex items-center` around an icon and a <p>,
+   and flexbox centres the paragraph's *margin box*, so the retrieval trace's
+   magnifier sat off the text's centre line. This was hand-patched twice before
+   (.gmt-hive-warning p, .gmt-hive-user-text) — one reset at the source retires
+   both.
+
+   `.gmt-ask-response` is excluded: that subtree is rendered markdown and owns
+   its own prose rhythm (section 2 below). */
+.gmt-ask
+  :is(p, h1, h2, h3, h4, h5, h6, ul, ol, pre, blockquote, figure, dl, dd):not(
+    :where(.gmt-ask-response, .gmt-ask-response *)
+  ) {
+  margin: 0;
+}
+
 /* ---------------------------------------------------------------------- */
 /* 2. Reading surface — .gmt-ask-response (MessageResponse's className)    */
 /* ---------------------------------------------------------------------- */
@@ -196,4 +215,96 @@
 
 .gmt-ask-response tr:last-child td {
   border-bottom: none;
+}
+
+/* DOX-C3a (#139) — code-block chrome.
+ *
+ * Streamdown renders a code block as TWO nested frames:
+ *
+ *   div[data-streamdown="code-block"]        rounded-xl border bg-sidebar p-2
+ *     div[data-streamdown="code-block-header"]   the language label ("bash")
+ *     div.sticky > [data-streamdown="code-block-actions"]   a bordered pill
+ *     div[data-streamdown="code-block-body"]     rounded-md border bg-background p-4
+ *       pre > code
+ *
+ * The site's own snippet is ONE frame with no language label and a bare copy
+ * glyph floating top-right (.sl-markdown-content pre, gmt-glass.css; the
+ * button treatment is shared in gmt-primitives.css). The first pass at this
+ * fought the symptoms — zeroing the inner padding, collapsing the actions
+ * wrapper to height:0, dragging it up with a negative margin — while leaving
+ * both frames drawn, which is why the geometry still read wrong.
+ *
+ * Collapse frame 1, promote frame 2, float the actions inside it.
+ */
+
+/* Frame 1: structure only. `content-visibility`/`contain-intrinsic-size` are
+   set inline by Streamdown as a long-answer perf hint — untouched here. */
+.gmt-ask-response [data-streamdown="code-block"] {
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  position: relative;
+}
+
+/* The site labels no code fence with its language (gmt-content.css hides
+   Expressive Code's header for exactly this reason), so neither does the chat. */
+.gmt-ask-response [data-streamdown="code-block-header"] {
+  display: none;
+}
+
+/* Frame 2 becomes THE frame — the same surface as a docs code fence.
+ *
+ * `margin: 0` is load-bearing, not tidying: Streamdown passes the *same*
+ * className down to both the outer wrapper and this body, so the body inherits
+ * a 16px top margin of its own. That opened a 16px band inside frame 1 above
+ * frame 2 — and since the copy button is positioned against frame 1, it left
+ * the button floating above the snippet instead of sitting inside it. */
+.gmt-ask-response [data-streamdown="code-block-body"] {
+  margin: 0;
+  background: var(--gmt-code-surface);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+  padding: 0;
+  overflow-x: auto;
+  backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+  -webkit-backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+}
+
+/* One inset, on the <pre> — the body used to pad as well, putting every
+   snippet ~32px in from its own frame. Right padding clears the copy button. */
+.gmt-ask-response [data-streamdown="code-block"] pre {
+  margin: 0;
+  padding: var(--gmt-space-3) 2.75rem var(--gmt-space-3) var(--gmt-space-4);
+  background: none;
+}
+
+/* The actions wrapper stays `sticky` so the button follows a long scroll; it is
+   simply pulled into the frame's top-right inset instead of being collapsed to
+   zero height and dragged up by a negative margin. */
+.gmt-ask-response
+  [data-streamdown="code-block"]
+  > div:has(> [data-streamdown="code-block-actions"]) {
+  position: absolute;
+  top: var(--gmt-space-2);
+  right: var(--gmt-space-2);
+  z-index: 1;
+  margin: 0;
+  height: auto;
+}
+
+/* The pill's own border/background go: the button carries the chrome, exactly
+   as it does for Expressive Code and the widget code frames. */
+.gmt-ask-response [data-streamdown="code-block-actions"] {
+  background: none;
+  border: none;
+  padding: 0;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Streamdown wraps tables in the same sticky action cluster. */
+.gmt-ask-response [data-streamdown="table-wrapper"] {
+  position: relative;
 }

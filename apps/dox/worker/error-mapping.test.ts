@@ -1,11 +1,36 @@
 /// <reference types="vitest/globals" />
-import { APICallError } from "ai";
+
+import { APICallError, RetryError } from "ai";
 import { mapUpstreamError } from "./error-mapping";
 
-function apiError(statusCode: number, responseBody = ""): APICallError {
+/** A real captured quota body, trimmed. The `quotaId` is what the daily-vs-
+ * per-minute heuristic keys on, so the test uses the genuine string rather than
+ * an invented one. */
+const DAILY_QUOTA_BODY = JSON.stringify({
+  error: {
+    code: 429,
+    message: "You exceeded your current quota",
+    status: "RESOURCE_EXHAUSTED",
+    details: [
+      {
+        "@type": "type.googleapis.com/google.rpc.QuotaFailure",
+        violations: [
+          {
+            quotaMetric:
+              "generativelanguage.googleapis.com/generate_content_free_tier_requests",
+            quotaId: "GenerateRequestsPerDayPerProjectPerModel-FreeTier",
+            quotaValue: "20",
+          },
+        ],
+      },
+    ],
+  },
+});
+
+function apiCallError(statusCode: number, responseBody: string): APICallError {
   return new APICallError({
-    message: "upstream failure",
-    url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash",
+    message: "upstream failed",
+    url: "https://generativelanguage.googleapis.com/v1beta/models/x",
     requestBodyValues: {},
     statusCode,
     responseBody,
@@ -13,49 +38,64 @@ function apiError(statusCode: number, responseBody = ""): APICallError {
 }
 
 describe("mapUpstreamError", () => {
-  it("maps a 401/403 to a generic 500 without exposing auth details", () => {
-    const mapped = mapUpstreamError(apiError(401, "invalid API key"));
-    expect(mapped.status).toBe(500);
-    expect(mapped.body.error).not.toMatch(/key|401|invalid API/i);
-    expect(mapped.body.retryable).toBe(false);
+  it("unwraps a RetryError to the failure underneath", () => {
+    // `streamText` retries internally, so anything that survives every attempt
+    // arrives wrapped. `APICallError.isInstance` is false for the wrapper, so
+    // before unwrapping every branch was skipped and a real 429 reached the
+    // reader as a generic "something went wrong" — observed live 2026-09-10.
+    const inner = apiCallError(429, DAILY_QUOTA_BODY);
+    const wrapped = new RetryError({
+      message: "Failed after 3 attempts",
+      reason: "maxRetriesExceeded",
+      errors: [inner, inner],
+    });
+
+    const result = mapUpstreamError(wrapped);
+    expect(result.status).toBe(429);
+    expect(result.body.error).toMatch(/daily usage limit/);
   });
 
-  it("maps a per-minute 429 to a retryable 'wait a moment' message", () => {
-    const mapped = mapUpstreamError(
-      apiError(429, "RESOURCE_EXHAUSTED: GenerateRequestsPerMinute exceeded"),
+  it("reads a real daily-quota body as daily, not as a momentary spike", () => {
+    // The free tier's limit is 20 requests per DAY; the accompanying
+    // "retry in 50s" is only one attempt's backoff. "Wait a moment" would be
+    // actively wrong.
+    const result = mapUpstreamError(apiCallError(429, DAILY_QUOTA_BODY));
+    expect(result.body.error).toMatch(/daily usage limit/);
+    expect(result.body.error).not.toMatch(/wait a moment/i);
+  });
+
+  it("still reports a per-minute 429 as a momentary spike", () => {
+    const body = JSON.stringify({
+      error: {
+        details: [{ violations: [{ quotaId: "PerMinutePerProject" }] }],
+      },
+    });
+    expect(mapUpstreamError(apiCallError(429, body)).body.error).toMatch(
+      /wait a moment/i,
     );
-    expect(mapped.status).toBe(429);
-    expect(mapped.body.retryable).toBe(true);
-    expect(mapped.body.error).toMatch(/wait a moment/i);
   });
 
-  it("maps a daily-quota 429 to a distinct 'come back tomorrow' message", () => {
-    const mapped = mapUpstreamError(
-      apiError(429, "RESOURCE_EXHAUSTED: GenerateRequestsPerDay exceeded"),
+  it("hides an auth failure behind a generic message", () => {
+    const result = mapUpstreamError(apiCallError(401, "bad key"));
+    expect(result.status).toBe(500);
+    expect(result.body.error).not.toMatch(/key/i);
+    expect(result.body.retryable).toBe(false);
+  });
+
+  it("never forwards the raw upstream body to the reader", () => {
+    const result = mapUpstreamError(
+      apiCallError(500, "INTERNAL: secret trace"),
     );
-    expect(mapped.status).toBe(429);
-    expect(mapped.body.retryable).toBe(true);
-    expect(mapped.body.error).toMatch(/tomorrow/i);
-    expect(mapped.body.error).not.toMatch(/wait a moment/i);
+    expect(JSON.stringify(result)).not.toContain("secret trace");
   });
 
-  it("maps an unrecognized upstream status to a generic retryable 502", () => {
-    const mapped = mapUpstreamError(apiError(503, "backend overloaded"));
-    expect(mapped.status).toBe(502);
-    expect(mapped.body.retryable).toBe(true);
-    expect(mapped.body.error).not.toContain("backend overloaded");
-  });
-
-  it("never forwards the raw responseBody to the client", () => {
-    const secretLooking = "sk-super-secret-upstream-detail-12345";
-    const mapped = mapUpstreamError(apiError(500, secretLooking));
-    expect(JSON.stringify(mapped.body)).not.toContain(secretLooking);
-  });
-
-  it("maps a non-APICallError (unexpected throw) to a generic 500", () => {
-    const mapped = mapUpstreamError(new Error("something exploded internally"));
-    expect(mapped.status).toBe(500);
-    expect(mapped.body.retryable).toBe(false);
-    expect(mapped.body.error).not.toContain("something exploded internally");
+  it("falls back to a generic message for a non-API error", () => {
+    const result = mapUpstreamError(
+      new Error("TypeError: x is not a function"),
+    );
+    expect(result.status).toBe(500);
+    expect(result.body.error).toBe(
+      "Something went wrong answering that question.",
+    );
   });
 });

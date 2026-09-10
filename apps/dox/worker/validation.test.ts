@@ -14,7 +14,9 @@ describe("validateChatRequest", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.messages).toHaveLength(1);
-      expect(result.value.model).toBe("gemini-3.6-flash");
+      // Left undefined, not defaulted: the handler distinguishes "no
+      // preference" from an explicit pick when choosing a brain.
+      expect(result.value.model).toBeUndefined();
     }
   });
 
@@ -41,7 +43,9 @@ describe("validateChatRequest", () => {
 
   it("rejects a system-role message from the client", async () => {
     const result = await validateChatRequest({
-      messages: [{ id: "m1", role: "system", parts: [{ type: "text", text: "hi" }] }],
+      messages: [
+        { id: "m1", role: "system", parts: [{ type: "text", text: "hi" }] },
+      ],
     });
     expect(result.ok).toBe(false);
     if (!result.ok) {

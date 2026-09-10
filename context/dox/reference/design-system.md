@@ -2,7 +2,7 @@
 
 > The visual language itself (palette intent, "maximal chrome, disciplined content
 > surface") is [reference/visual-design.md](visual-design.md) — this file is the
-> *implementation*.
+> _implementation_.
 
 How `apps/dox`'s theme is put together, and the rules for changing it without
 making a mess.
@@ -17,16 +17,16 @@ Elements. It never touches these sheets, and the rules that keep it contained ar
 Eight files, loaded in this order via `starlight({ customCss })` in
 `apps/dox/astro.config.mjs`:
 
-| # | File | Owns |
-| - | ---- | ---- |
-| 1 | `gmt-tokens.css` | The palette (6 roles), every `--gmt-*` token, the `@font-face`, and the `[data-theme="light"]` value block. **Custom properties only — no selectors.** |
-| 2 | `gmt-theme.css` | Maps `--gmt-*` onto Starlight's `--sl-*` system (+ a 3-line light override for the non-palette literals). Theming Starlight's built-ins happens here. |
-| 3 | `gmt-primitives.css` | Reusable, Starlight-agnostic recipe classes: `.gmt-glass` / `-subtle` / `-clear` / `-heavy`, `.gmt-brackets`, `.gmt-icon-button`. **Compose from these in widgets.** |
-| 4 | `gmt-glass.css` | The glass treatment applied to Starlight's own elements (header, sidebar, `pre`, tables, asides, cards, search, dialogs). |
-| 5 | `gmt-shell.css` | Global typography + the layout frame (`.page`, sidebar, header, site title). |
-| 6 | `gmt-content.css` | The reading surface: everything inside `.sl-markdown-content`, Expressive Code frame chrome, the search modal / Pagefind UI. |
-| 7 | `gmt-controls.css` | Interactive chrome: CTA buttons, prev/next pagination, mobile search trigger, hamburger, `:focus-visible`, `::selection`, scrollbar. |
-| 8 | `gmt-light.css` | The `[data-theme="light"]` overrides that are neither a palette re-tint nor adjacent to a base rule. **Not actually loaded last** — `dox.css` (live component layout) and `gmt-a11y.css` (`prefers-reduced-transparency`/`-contrast`/`forced-colors`) both load after it in `astro.config.mjs`'s `customCss` array; this table's numbering is source-order, not "wins every tie." |
+| #   | File                 | Owns                                                                                                                                                                                                                                                                                                                                                                              |
+| --- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `gmt-tokens.css`     | The palette (6 roles), every `--gmt-*` token, the `@font-face`, and the `[data-theme="light"]` value block. **Custom properties only — no selectors.**                                                                                                                                                                                                                            |
+| 2   | `gmt-theme.css`      | Maps `--gmt-*` onto Starlight's `--sl-*` system (+ a 3-line light override for the non-palette literals). Theming Starlight's built-ins happens here.                                                                                                                                                                                                                             |
+| 3   | `gmt-primitives.css` | Reusable, Starlight-agnostic recipe classes: `.gmt-glass` / `-subtle` / `-clear` / `-heavy`, `.gmt-brackets`, `.gmt-icon-button`. **Compose from these in widgets.**                                                                                                                                                                                                              |
+| 4   | `gmt-glass.css`      | The glass treatment applied to Starlight's own elements (header, sidebar, `pre`, tables, asides, cards, search, dialogs).                                                                                                                                                                                                                                                         |
+| 5   | `gmt-shell.css`      | Global typography + the layout frame (`.page`, sidebar, header, site title).                                                                                                                                                                                                                                                                                                      |
+| 6   | `gmt-content.css`    | The reading surface: everything inside `.sl-markdown-content`, Expressive Code frame chrome, the search modal / Pagefind UI.                                                                                                                                                                                                                                                      |
+| 7   | `gmt-controls.css`   | Interactive chrome: CTA buttons, prev/next pagination, mobile search trigger, hamburger, `:focus-visible`, `::selection`, scrollbar.                                                                                                                                                                                                                                              |
+| 8   | `gmt-light.css`      | The `[data-theme="light"]` overrides that are neither a palette re-tint nor adjacent to a base rule. **Not actually loaded last** — `dox.css` (live component layout) and `gmt-a11y.css` (`prefers-reduced-transparency`/`-contrast`/`forced-colors`) both load after it in `astro.config.mjs`'s `customCss` array; this table's numbering is source-order, not "wins every tie." |
 
 **`gmt-ask.css` and `gmt-ask-tailwind.css` (DOX-C0, #171 — built) are deliberately
 NOT in `customCss`.** Both are imported from the chat island's entry module
@@ -64,7 +64,7 @@ later reader isn't confused about what actually exists:
   there is no real answerable content until `DOX-C1`–`DOX-C3b` land, and the page
   says so in its own copy.
 - **The every-page entry point is a plain header link, not the draggable dock.**
-  `Header.astro` (a new component override) adds an "Ask Dox" `ButtonLink` into the
+  `Header.astro` (a new component override) adds an "Dox" `ButtonLink` into the
   header's right-hand group, linking to `/dox/`. The full dock — drag, resize,
   focus trap, `prefers-reduced-motion`, keyboard dock-position cycling — is real,
   substantial UI work specified in `visual-design.md` §Overlays, and needs a working
@@ -74,7 +74,7 @@ later reader isn't confused about what actually exists:
   `virtual:starlight/components/*`** (`Search`, `SiteTitle`, `SocialIcons`,
   `ThemeSelect`, `LanguageSelect`) rather than importing
   `@astrojs/starlight/components/*.astro` directly — the direct-file-import path
-  resolves to Starlight's *defaults*, silently bypassing this repo's own
+  resolves to Starlight's _defaults_, silently bypassing this repo's own
   `SocialIcons.astro` and `ThemeSelect.astro` overrides. The virtual module path is
   config-aware and composes whatever `astro.config.mjs`'s `components` map actually
   points at, matching how Starlight's own internal `Header.astro` does it.
@@ -99,12 +99,12 @@ washes, so alphas aren't magic numbers sprinkled through every rule:
 - `--gmt-scrollbar-track` / `-thumb` / `-thumb-hover`
 
 `--gmt-glass-tint` / `-subtle` / `-scrim` are **separate** from `--gmt-fill-*`:
-they get *extra* alpha in light mode to compensate for the brighter light-mode
+they get _extra_ alpha in light mode to compensate for the brighter light-mode
 teal ("light-compensated"). Don't merge the two sets.
 
 **Theme-role tokens** — `--gmt-code-surface`, `--gmt-code-bg`, `--gmt-code-border`,
-`--gmt-sidebar-link`, `--gmt-pagination-title`. Each resolves to a *different
-token* in dark vs light (not just a re-tint), so the rule that uses it needs no
+`--gmt-sidebar-link`, `--gmt-pagination-title`. Each resolves to a _different
+token_ in dark vs light (not just a re-tint), so the rule that uses it needs no
 `[data-theme="light"]` block.
 
 ## Maintenance rules
@@ -131,10 +131,61 @@ token* in dark vs light (not just a re-tint), so the rule that uses it needs no
    `@layer theme, base, components, utilities`. That is allowed **only** under the
    constraints in the next section. The GMT sheets themselves stay unlayered.
 
+## Dox's brains and the free-tier quota (DOX-C3a, #139 — built)
+
+Gemini's free tier allows **20 requests per day**, and the quota id says exactly which
+dimension: `GenerateRequestsPerDay**PerProject**PerModel-FreeTier`. Google's docs confirm
+*"Limits are applied per project rather than per API key, and RPD quotas reset at midnight
+Pacific time."* So the allowance is shared by every visitor — the first ~20 people between
+them would exhaust `/dox` for the day.
+
+**The escape hatch is in that same id: the allowance is per _model_.** `src/lib/chat-constants.ts`
+holds an ordered `BRAINS` list, and Dox moves between them as each one's separate budget runs
+out. Four brains is roughly four times the budget.
+
+Rules that keep this honest:
+
+1. **`dailyLimit` is advisory.** It renders the badge and nothing else. The only real gate is
+   Google's 429 — a wrong number here misprints a digit, it cannot let a request through.
+2. **The chain self-prunes.** A brain that answers 404/400 is marked `unavailable` for the
+   Pacific day and skipped; a 429 marks it `spent`. Both expire at midnight, so a model
+   Google restores comes back on its own. This is not hypothetical: `gemini-2.5-flash` was
+   withdrawn for new keys *mid-story* during DOX-C2. **Never hardcode a model list that
+   assumes availability.**
+3. **The ledger is Workers KV, and eventual consistency is fine** precisely because of rule 1.
+   A Durable Object's strong consistency would buy nothing and is not free.
+4. **`maxRetries: 1` on `streamText`.** The SDK retries a 429 three times with backoff by
+   default, which made sense with one model. With failover it is harmful: a *daily* quota will
+   not refill for hours, so the backoff only delays telling the reader and delays marking the
+   brain so the next request can route elsewhere.
+5. **Day keys are Pacific, computed with `@northguild/gmt`** (`src/lib/pt-day.ts`) — two days a
+   year are 23 and 25 hours long, which is exactly the arithmetic this library exists to get
+   right.
+
+**Nobody gets "unlimited" on the free tier, including the dev team.** The pool is a fixed
+project ceiling. The dev cookie exempts its holder from the *per-visitor* cap only, and the UI
+must never imply otherwise.
+
 ## Tailwind in the chat island (DOX-C0, #171 — built)
 
 AI Elements requires Tailwind CSS 4. It is scoped to the chat island and **must not reach
 any other page**. Four constraints make that true; all four are `DOX-C0` DoD items.
+
+> **Re-point Tailwind's `dark:` variant at `data-theme` (DOX-C3a, #139).** By default v4
+> keys `dark:` to `prefers-color-scheme` — the OS — while this site keys everything to
+> `<html data-theme>`. Starlight's inlined `ThemeProvider` always writes that attribute,
+> resolving its own "auto" from `prefers-color-scheme` first, so the attribute is the
+> complete source of truth and no media fallback is needed:
+>
+> ```css
+> @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+> ```
+>
+> Without it the two disagree for any reader whose OS and site theme differ, and every
+> `dark:` utility inside the island silently picks the wrong branch. This is not
+> hypothetical: Shiki's dual-theme output is entirely `dark:`-gated, so an OS-light /
+> site-dark reader got the github-**light** token colours — near-black `rgb(36,41,46)`
+> code on the dark code surface. One line fixes every such utility at once.
 
 1. **Omit Preflight, and disable Tailwind's automatic content scan.** Tailwind's reset
    targets `*`, `html`, `body` and headings and would wreck the docs. Import the layers
@@ -174,14 +225,14 @@ any other page**. Four constraints make that true; all four are `DOX-C0` DoD ite
    assumed — verified by a full scan of the 22 sheets on 2026-09-09, this is the list to
    re-check rather than re-derive:
 
-   | Selector | File | What it sets | Why it matters here |
-   | -------- | ---- | ------------ | -------------------- |
-   | `h1`–`h6` | `gmt-shell.css` | font-family, font-weight, letter-spacing, color (h1 also forces font-size) | hits markdown headings in replies |
-   | `textarea`, `input:not([type=checkbox\|radio\|range])`, `[contenteditable]` | `gmt-controls.css` | caret-color | hits the composer and every AI Elements input |
-   | `header` | `gmt-glass.css`, `gmt-shell.css`, `gmt-a11y.css` | `backdrop-filter`, background, border | would nest a second blur inside a future dock header — visual-design.md's "one layer of glass, never two" |
-   | `dialog`, `[role="dialog"]` | `gmt-content.css`, `gmt-glass.css`, `gmt-a11y.css` | background, border, `backdrop-filter` | `[role="dialog"]` matches **every Radix overlay** AI Elements renders |
-   | `::selection`, `input::selection`, `textarea::selection` | `gmt-controls.css` | selection background/color | |
-   | `body` | `gmt-shell.css` | background, color, 2 scrollbar pseudo-selectors | not applicable inside the panel |
+   | Selector                                                                    | File                                               | What it sets                                                               | Why it matters here                                                                                       |
+   | --------------------------------------------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+   | `h1`–`h6`                                                                   | `gmt-shell.css`                                    | font-family, font-weight, letter-spacing, color (h1 also forces font-size) | hits markdown headings in replies                                                                         |
+   | `textarea`, `input:not([type=checkbox\|radio\|range])`, `[contenteditable]` | `gmt-controls.css`                                 | caret-color                                                                | hits the composer and every AI Elements input                                                             |
+   | `header`                                                                    | `gmt-glass.css`, `gmt-shell.css`, `gmt-a11y.css`   | `backdrop-filter`, background, border                                      | would nest a second blur inside a future dock header — visual-design.md's "one layer of glass, never two" |
+   | `dialog`, `[role="dialog"]`                                                 | `gmt-content.css`, `gmt-glass.css`, `gmt-a11y.css` | background, border, `backdrop-filter`                                      | `[role="dialog"]` matches **every Radix overlay** AI Elements renders                                     |
+   | `::selection`, `input::selection`, `textarea::selection`                    | `gmt-controls.css`                                 | selection background/color                                                 |                                                                                                           |
+   | `body`                                                                      | `gmt-shell.css`                                    | background, color, 2 scrollbar pseudo-selectors                            | not applicable inside the panel                                                                           |
 
    `gmt-ask.css` ships a scoped `.gmt-ask` reset for all six groups, not just the two the
    original draft of this section named.

@@ -15,10 +15,7 @@ import gmtReadme from "../../../packages/gmt/README.md";
  * silently if the heading itself is ever renamed.
  */
 function extractSection(markdown: string, heading: string): string {
-  const pattern = new RegExp(
-    `^## ${heading}\\n([\\s\\S]*?)(?=\\n## |$)`,
-    "m",
-  );
+  const pattern = new RegExp(`^## ${heading}\\n([\\s\\S]*?)(?=\\n## |$)`, "m");
   const match = pattern.exec(markdown);
   return match ? match[1].trim() : "";
 }

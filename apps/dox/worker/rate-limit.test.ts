@@ -1,6 +1,9 @@
 /// <reference types="vitest/globals" />
 import { checkRateLimit, resetRateLimitState } from "./rate-limit";
-import { RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_SECONDS } from "../src/lib/chat-constants";
+import {
+  RATE_LIMIT_MAX,
+  RATE_LIMIT_WINDOW_SECONDS,
+} from "../src/lib/chat-constants";
 
 describe("checkRateLimit", () => {
   beforeEach(() => resetRateLimitState());

@@ -18,6 +18,20 @@ const gmtPkg = fileURLToPath(
 export default defineConfig({
   site: SITE,
   vite: {
+    server: {
+      // DOX-C3a (#139): `/api/chat` lives in the Cloudflare Worker, which
+      // `astro dev` doesn't run — it only serves the static site, so the chat
+      // 404s here. Proxying that one route to a local `wrangler dev` gives a
+      // single URL with both: hot reload for the UI *and* a real backend.
+      // Everything else is still served by Astro, so this changes nothing for
+      // any other page. `pnpm dev` starts both; see package.json.
+      proxy: {
+        "/api": {
+          target: "http://localhost:8787",
+          changeOrigin: true,
+        },
+      },
+    },
     plugins: [tailwindcss()],
     build: {
       cssTarget: ["chrome107", "edge107", "firefox104", "safari16"],

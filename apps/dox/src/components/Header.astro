@@ -1,5 +1,5 @@
 ---
-// Override of Starlight's Header — adds an "Ask Dox" link into the header's
+// Override of Starlight's Header — adds n "Dox" link into the header's
 // right-hand group, next to the social icons, so the /dox route is reachable
 // from every page (DOX-C0 (#171) extension, at explicit user request — the
 // full draggable dock is DOX-C3a's job and needs DOX-C1/DOX-C2's retrieval
@@ -17,6 +17,7 @@ import SiteTitle from "virtual:starlight/components/SiteTitle";
 import SocialIcons from "virtual:starlight/components/SocialIcons";
 import ThemeSelect from "virtual:starlight/components/ThemeSelect";
 import ButtonLink from "./ButtonLink.astro";
+import DoxMark from "./DoxMark.astro";
 
 const shouldRenderSearch =
   config.pagefind ||
@@ -31,14 +32,25 @@ const shouldRenderSearch =
     {shouldRenderSearch && <Search />}
   </div>
   <div class="sl-hidden md:sl-flex print:hidden right-group">
-    <ButtonLink href="/dox/" icon="comment-alt" class="gmt-ask-dox-link">
-      Ask Dox
-    </ButtonLink>
     <div class="sl-flex social-icons">
+      {/* The Dox crystal itself is the button — same mark the chat uses for
+          every Dox turn and for its empty state, so the thing you click is
+          the thing that answers you. Icon-only: `label` supplies the
+          accessible name, `title` the hover tooltip. Lives in the same
+          flex group as SocialIcons so it shares one gap value instead of
+          stacking `right-group`'s gap on top of `social-icons`' own. */}
+      <ButtonLink
+        href="/dox/"
+        class="gmt-ask-dox-link"
+        label="Chat with Dox"
+        title="Chat with Dox"
+      >
+        <DoxMark id="header" />
+      </ButtonLink>
       <SocialIcons />
+      <ThemeSelect />
+      <LanguageSelect />
     </div>
-    <ThemeSelect />
-    <LanguageSelect />
   </div>
 </div>
 

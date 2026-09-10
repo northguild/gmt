@@ -66,9 +66,7 @@ describe("assembleSystemPrompt", () => {
       vocabulary: "",
       coreRules: "",
     });
-    expect(prompt).toContain(
-      `### convertZonedToZoned (${CHUNKS[0].url})`,
-    );
+    expect(prompt).toContain(`### convertZonedToZoned (${CHUNKS[0].url})`);
   });
 
   it("is honest about an empty retrieval — no chunks, no allowlist entries", () => {

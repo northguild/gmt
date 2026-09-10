@@ -37,6 +37,25 @@
 @source "../../node_modules/@streamdown/mermaid/dist/*.js";
 
 /*
+ * Tailwind's `dark:` variant, re-pointed at the site's theme attribute.
+ *
+ * By default v4 keys `dark:` to `prefers-color-scheme`, i.e. the OS. This site
+ * keys everything to `<html data-theme>`, and Starlight's inlined
+ * ThemeProvider always writes that attribute — resolving its own "auto" from
+ * `prefers-color-scheme` before it does — so the attribute is the complete
+ * source of truth and no media fallback is needed here.
+ *
+ * Left unmapped, the two disagree for any reader whose OS is light and whose
+ * site theme is dark (or vice versa), and every `dark:` utility inside the
+ * island silently picks the wrong branch. Verified 2026-09-10: Streamdown's
+ * `dark:text-[var(--shiki-dark,…)]` kept the github-LIGHT token colours, which
+ * rendered near-black `rgb(36,41,46)` code on the dark code surface. Shiki's
+ * dual-theme output is entirely `dark:`-gated, so this one line is what makes
+ * syntax highlighting legible when the two settings diverge.
+ */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/*
  * Theme bridge — shadcn's CSS variables mapped onto the existing --gmt-* tokens,
  * scoped to `.gmt-ask` so nothing leaks outside the island. Every --gmt-* token
  * already flips value between dark/light in gmt-tokens.css, so this needs no

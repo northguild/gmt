@@ -1,29 +1,30 @@
 ---
-// The `/dox` route (DOX-C3a's "Host 2", promoted early at explicit user
-// request so Ask Dox is reachable from the start rather than deferred behind
-// the retrieval and Worker stories). Linked from the site header
-// (Header.astro's "Ask Dox" button) so it's reachable from any page.
+// The `/dox` route — DOX-C3a's "Host 2", the full-bleed Dox surface.
 //
-// What ships today is the same static, non-networked probe DOX-C0 built to
-// prove the React + Tailwind + AI Elements wiring: hardcoded messages, no
-// `useChat`, no `/api/chat`. There is no retrieval (DOX-C1) or Worker
-// endpoint (DOX-C2) yet, so a real conversation can't happen here — this page
-// is the shell it will happen inside, not the chat itself. `pagefind: false`
-// and `noindex` reflect that: nothing on this page is real searchable
-// content until DOX-C1–DOX-C3b land.
+// Two deliberate reversals of this file's earlier shape, both at explicit user
+// request (recorded in context/dox/issues/DOX-C.md and
+// reference/visual-design.md):
 //
-// Built with `<StarlightPage template: 'splash'>` rather than a plain
-// `src/pages/dox.astro` with no Starlight wrapper — that would skip
-// `customCss` entirely and require re-importing the whole stylesheet stack
-// by hand. `splash` keeps the header/search/theme select but drops the
-// sidebar and table of contents, matching DOX-C3a's spec for this route.
+//  1. No Starlight chrome. The header and the page `<h1>` are hidden, the page
+//     itself never scrolls, and the chat fills the viewport. The spec
+//     originally kept `template: "splash"`'s header "so the header, search and
+//     theme select stay consistent"; the chat is the product on this route, so
+//     that's reversed.
+//  2. The transcript is a hive diagram rather than an ordinary page frame.
+//
+// `<StarlightPage>` is still the wrapper even though none of its chrome is
+// wanted: `customCss` (the whole 25-sheet design system) is injected only by
+// Starlight's own Page.astro, which is reachable only through StarlightPage.
+// Bypassing it would mean re-importing the entire stylesheet stack by hand.
+// So the chrome is removed with CSS rather than by dropping the wrapper.
 import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
-import AskDoxProbe from "~/components/ask/AskDoxProbe";
+import DoxPage from "~/components/ask/DoxPage";
 ---
 
 <StarlightPage
   frontmatter={{
-    title: "Ask Dox",
+    // Kept for <title> and SEO — only the visual <h1> is hidden below.
+    title: "Dox",
     template: "splash",
     pagefind: false,
     head: [
@@ -31,23 +32,89 @@ import AskDoxProbe from "~/components/ask/AskDoxProbe";
         tag: "meta",
         attrs: { name: "robots", content: "noindex" },
       },
+      {
+        // Marks this document as the chrome-free shell, in <head> before
+        // <body> parses, so there's no flash of the header before it's
+        // hidden. Every override below keys off this attribute, which is why
+        // none of them can leak to another page: no other page's <head>
+        // carries this script, so no other <html> ever has the attribute.
+        //
+        // JS-only is acceptable here specifically: the whole page is a
+        // client:load island, so there is no no-JS experience to protect.
+        tag: "script",
+        content:
+          "document.documentElement.setAttribute('data-dox-shell','')",
+      },
     ],
   }}
 >
-  <p class="gmt-dox-status">
-    This is a preview of the Ask Dox chat surface. It doesn't answer
-    questions yet — that lands with <code>DOX-C1</code>–<code>DOX-C3b</code>.
-  </p>
-  <AskDoxProbe client:load />
+  <DoxPage client:load />
 </StarlightPage>
 
-<style>
-  @layer starlight.core {
-    .gmt-dox-status {
-      max-width: 42rem;
-      margin: 0 auto var(--gmt-space-4);
-      color: var(--gmt-ice-dim);
-      font-size: var(--gmt-text-sm);
-    }
+<style is:global>
+  /* Scoped by the attribute above, not by Astro's component scoping, because
+     every selector here targets Starlight-owned markup this file doesn't
+     render itself. */
+
+  /* The page never scrolls; the transcript is the only scroll container. */
+  html[data-dox-shell],
+  html[data-dox-shell] body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /* Defect #1: the site header. `display: none` rather than `visibility:
+     hidden` so it takes no layout space and leaves the tab order. */
+  html[data-dox-shell] .header {
+    display: none;
+  }
+
+  /* Defect #2: Starlight's PageTitle renders <h1 id="_top"> on every page,
+     splash included. The frontmatter title stays (for <title>/SEO); only the
+     visual heading goes. */
+  html[data-dox-shell] #_top {
+    display: none;
+  }
+
+  /* Reclaim the space the fixed header and sidebar were padded against. */
+  html[data-dox-shell] .main-frame {
+    padding-top: 0;
+    padding-inline-start: 0;
+  }
+
+  html[data-dox-shell] .page {
+    min-height: 0;
+    height: 100dvh;
+  }
+
+  html[data-dox-shell] main {
+    padding: 0;
+    height: 100%;
+  }
+
+  /* Starlight's content wrappers cap width and add vertical rhythm meant for
+     prose — both fight a full-bleed app surface. */
+  html[data-dox-shell] .content-panel {
+    padding: 0;
+    border: 0;
+  }
+
+  html[data-dox-shell] .sl-container {
+    max-width: none;
+    margin: 0;
+  }
+
+  html[data-dox-shell] .sl-container > * + * {
+    margin-top: 0;
+  }
+
+  /* Starlight wraps page content in `.sl-markdown-content`, which applies
+     prose rhythm (margins between siblings) to whatever it contains — the chat
+     island included. Those margins are what offset the fixed shell's ancestor
+     box and are meaningless around an app surface. */
+  html[data-dox-shell] .sl-markdown-content > * + *,
+  html[data-dox-shell] .sl-markdown-content {
+    margin-top: 0;
+    margin-block: 0;
   }
 </style>

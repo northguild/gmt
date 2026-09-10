@@ -1,0 +1,937 @@
+/**
+ * DOX-C3a (#139) — the hive: layout and ornament for the Dox transcript.
+ *
+ * Kept separate from `gmt-ask.css`, which owns the *reading surface* (how
+ * markdown inside a reply is typeset). This sheet owns *structure* — the
+ * lattice, the crystal role markers, and the full-bleed shell.
+ *
+ * The dotted filaments that used to run between turns were removed at the
+ * user's request (2026-09-10) — they read as clutter rather than structure. The
+ * alternation alone carries the conversation. `HiveConnector.tsx` went with
+ * them; git history has it if it is ever wanted back. The dock (DOX-C3a phase 2) reuses this sheet as-is.
+ *
+ * Imported from the island entry module, never from `astro.config.mjs`'s
+ * `customCss`, so Vite code-splits it into the chat chunk and a page that
+ * never opens the chat pays nothing for it.
+ *
+ * Unlayered on purpose, same as every other GMT sheet: unlayered rules beat
+ * everything in `@layer utilities`, so these win against Tailwind without
+ * specificity games.
+ */
+
+/* ------------------------------------------------------------------ *
+ * Shell — full viewport, exactly one scrolling region
+ * ------------------------------------------------------------------ */
+
+.gmt-hive-shell {
+  /* Pinned to the viewport rather than sized in flow. Measured: Starlight's
+     content wrappers contribute a 1rem top margin this island can't see, which
+     pushed a `height: 100dvh` shell down 16px and clipped the composer off the
+     bottom edge. Taking it out of flow makes the fit exact and immune to every
+     ancestor's box model — and nothing else renders on this route anyway. */
+  position: fixed;
+  inset: 0;
+  /* Starlight's prose rhythm reaches this element through the island's
+     `display: contents` wrapper (so a `> * + *` reset upstream can't see it),
+     and a margin on a fixed box shrinks it away from its inset edges. */
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--gmt-void);
+  color: var(--gmt-ice);
+  isolation: isolate;
+}
+
+/* The hex lattice. Purely atmospheric, so it's a background on a fixed,
+   non-interactive layer rather than markup — nothing to hide from a screen
+   reader, nothing to hit-test. */
+.gmt-hive-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='96' viewBox='0 0 56 96'%3E%3Cpath d='M28 0 L56 16 L56 48 L28 64 L0 48 L0 16 Z M28 64 L56 80 L56 112 M28 64 L0 80 L0 112' fill='none' stroke='%2300E5FF' stroke-width='1'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 56px 96px;
+}
+
+/* The site already drops every blurred/decorative surface under this query
+   (gmt-a11y.css) — the lattice follows the same rule rather than inventing
+   its own exception. */
+@media (prefers-reduced-transparency: reduce) {
+  .gmt-hive-shell::before {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Top strip — wayfinding only. Deliberately NOT a nav bar.
+ * ------------------------------------------------------------------ */
+
+.gmt-hive-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gmt-space-3);
+  flex: 0 0 auto;
+  padding: var(--gmt-space-3) clamp(var(--gmt-space-3), 3vw, var(--gmt-space-6));
+  border-bottom: 1px solid var(--gmt-hairline);
+  font-size: var(--gmt-text-sm);
+}
+
+.gmt-hive-back {
+  color: var(--gmt-ice-dim);
+  text-decoration: none;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.gmt-hive-back:hover,
+.gmt-hive-back:focus-visible {
+  color: var(--gmt-cyan);
+}
+
+.gmt-hive-strip-end {
+  display: flex;
+  align-items: center;
+  gap: var(--gmt-space-3);
+  color: var(--gmt-ice-dim);
+}
+
+/* "pointed at a local Worker" badge — cheap, and it stops the "why is the AI
+   stale?" confusion when running against wrangler dev. */
+.gmt-hive-env {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-1);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Amber for local, because the site reserves `--gmt-signal` for "this is not
+   the real thing" states and a Worker on your laptop is exactly that. Spring
+   green for the deployed one: the same colour the design system already uses
+   for live, ticking values (visual-design.md §3). */
+.gmt-hive-env[data-env="local"] {
+  color: var(--gmt-signal);
+}
+
+.gmt-hive-env[data-env="live"] {
+  color: var(--gmt-spring);
+}
+
+/* The chat itself: transcript + composer, host-agnostic. Grows to fill
+   whatever the host gives it — the full viewport on /dox, a fixed panel in the
+   dock — which is why the height lives on the shell and not here. */
+.gmt-hive-chat {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* ------------------------------------------------------------------ *
+ * Transcript — the only scroll container, and the query container
+ * ------------------------------------------------------------------ */
+
+/* This class now goes on `<Conversation>` itself, not on a wrapper around it.
+   `Conversation` is `use-stick-to-bottom`, which renders its OWN scroll element
+   inside itself and marks this root `overflow-y: hidden`. With a scrolling
+   wrapper outside it, the page scrolled on an element the library holds no
+   reference to while its own element sat at scrollHeight === clientHeight —
+   so every scrollToBottom() was a silent no-op and the transcript never
+   followed a streaming answer. No `overflow` here: the library sets
+   `overflow: auto` on its inner element at mount. */
+.gmt-hive-scroll {
+  flex: 1 1 auto;
+  min-height: 0; /* without this a flex child refuses to shrink and the page scrolls instead */
+  overscroll-behavior: contain;
+}
+
+/* ---- Scrollbar ----
+ * The app's scrollbar (gmt-controls.css) is a deliberately sharp-cornered slab:
+ * 20px wide, square thumb, a 4px border of the track colour standing in for
+ * inset padding. Those rules are global and unlayered, so the geometry already
+ * reaches this element and only the corners need pinning (`border-radius: 0`,
+ * against a UA/Tailwind default rounding them inside the island).
+ *
+ * The *colour* does need overriding, though. At rest the app's thumb and track
+ * are the same token — the thumb is a ghost until `html.is-scrolling` brightens
+ * it. That class is set by a scroll listener on the page, and on /dox the page
+ * never scrolls (the transcript does), so the thumb here would stay invisible
+ * forever. Resting at the `-hover` value is the same visual result the rest of
+ * the site gives a reader who is actually scrolling.
+ */
+.gmt-hive-scroll > div {
+  scrollbar-color: var(--gmt-scrollbar-thumb-hover) var(--gmt-scrollbar-track);
+}
+
+.gmt-hive-scroll ::-webkit-scrollbar-thumb,
+.gmt-hive-scroll::-webkit-scrollbar-thumb {
+  border-radius: 0;
+  background: var(--gmt-scrollbar-thumb-hover);
+  border-color: var(--gmt-scrollbar-track);
+}
+
+.gmt-hive-scroll ::-webkit-scrollbar-thumb:hover,
+.gmt-hive-scroll::-webkit-scrollbar-thumb:hover {
+  background: color(from var(--gmt-cyan) srgb r g b / 0.3);
+}
+
+.gmt-hive-scroll ::-webkit-scrollbar-track,
+.gmt-hive-scroll::-webkit-scrollbar-track {
+  border-radius: 0;
+}
+
+/* Container queries, not media queries. The same transcript renders full-width
+   on /dox, narrow on a phone, and narrow *inside a small dock on a wide
+   monitor* — only the container's own width distinguishes those, so a viewport
+   query would get the dock case wrong. Matches the existing convention in
+   gmt-globe.css / dox.css. */
+.gmt-hive {
+  container-type: inline-size;
+  container-name: gmt-hive;
+  width: 100%;
+  min-height: 100%;
+  margin: 0 auto;
+  padding: clamp(var(--gmt-space-4), 3vw, var(--gmt-space-8))
+    clamp(var(--gmt-space-3), 3vw, var(--gmt-space-6));
+  display: flex;
+  flex-direction: column;
+}
+
+/* ------------------------------------------------------------------ *
+ * A turn: hex node + content card
+ * ------------------------------------------------------------------ */
+
+/* The whole alternation is `align-self` on a flex column plus `row-reverse` —
+   no grid columns to juggle, and it behaves identically at every width, so
+   there is no second layout to maintain for narrow screens. */
+/* One custom property carries the whole channel. Node fill, card border, card
+   tint and the label all read from `--gmt-hive-role`, so recolouring a role — or
+   adding a third one later — is a single declaration rather than a sweep. */
+.gmt-hive-turn {
+  --gmt-hive-role: var(--gmt-cyan);
+  display: flex;
+  gap: var(--gmt-space-3);
+  align-items: flex-start;
+  width: 100%;
+  max-width: 100%;
+  align-self: flex-start;
+}
+
+/* Spring green for the human. Its documented role is "success / live values"
+   (visual-design.md §3); using it as the human channel widens that, recorded
+   there deliberately. Signal amber stays reserved for sentinel states. */
+.gmt-hive-turn[data-role="user"] {
+  --gmt-hive-role: var(--gmt-spring);
+  align-self: flex-end;
+  /* Node to the right of the card — the human reads from the right side. */
+  flex-direction: row-reverse;
+}
+
+.gmt-hive-node-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gmt-space-1);
+  flex: 0 0 auto;
+}
+
+.gmt-hive-label {
+  font-size: var(--gmt-text-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+/* ---- The crystal ----
+ * Geometry is SVG (hive/HiveGlyph.tsx), not clip-path: facet strokes have to
+ * meet at vertices, and clip-path removes strokes outright — the previous
+ * outlined role marker had to stack two clipped boxes to fake a single border.
+ * SVG also means one vector serves both a 28px transcript marker and a logo.
+ *
+ * This block owns the *stage*. `perspective` on the outer box and
+ * `transform-style: preserve-3d` on the inner one are what make rotateY read as
+ * a solid turning rather than a flat card squashing.
+ */
+.gmt-hive-stage {
+  --hex: clamp(2rem, 3.4cqi, 2.75rem);
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--hex);
+  aspect-ratio: 1 / 0.866;
+  flex: 0 0 auto;
+  perspective: 320px;
+}
+
+.gmt-hive-node {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+  color: var(--gmt-hive-role);
+  transform-style: preserve-3d;
+  /* The resting state, and the only transform CSS owns. Entrance, the working
+     spin, and the landing are all driven by `use-crystal-spin.ts` through the
+     Web Animations API — CSS cannot stop an infinite spin *gracefully* (removing
+     the class snaps to 0deg; pausing freezes it mid-turn), and landing square
+     from wherever the turn happens to be is the whole point. */
+  transform: rotateX(10deg);
+}
+
+/* The mark's own facet/edge/table styling lives in gmt-primitives.css under
+   `.gmt-dox-mark`, because the site header renders the same crystal on all 646
+   pages where this sheet is not loaded. Only the glow is per-role, and so only
+   the glow is here. */
+.gmt-hive-node .gmt-dox-mark {
+  filter: drop-shadow(
+    0 0 6px color(from var(--gmt-hive-role) srgb r g b / 0.5)
+  );
+}
+
+/* The halo is a box-shadow, and the crystal is an SVG with transparent corners
+   — a shadow on it would trace a rectangle. Hence a separate centred layer. */
+.gmt-hive-halo {
+  grid-area: 1 / 1;
+  width: 46%;
+  height: 46%;
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.gmt-hive-stage[data-pending] .gmt-hive-halo {
+  opacity: 1;
+  animation: gmt-hive-halo var(--gmt-motion-sonar-loop-duration)
+    var(--gmt-easing) infinite;
+}
+
+@keyframes gmt-hive-halo {
+  0% {
+    box-shadow: 0 0 0 0 color(from var(--gmt-hive-role) srgb r g b / 0.55);
+  }
+  60%,
+  100% {
+    box-shadow: 0 0 0 18px color(from var(--gmt-hive-role) srgb r g b / 0);
+  }
+}
+
+/* ---- The content card ----
+ * Chamfered glass — the site's existing panel language, not a chat bubble. */
+.gmt-hive-card {
+  flex: 1 1 auto;
+  /* min-width: 0 is load-bearing — without it a flex child refuses to shrink
+     below its content's min-content width, which is exactly how a wide code
+     block blows out the layout instead of scrolling inside its own box. */
+  min-width: 0;
+  background: color(from var(--gmt-hive-role) srgb r g b / 0.05);
+  border: 1px solid color(from var(--gmt-hive-role) srgb r g b / 0.22);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+  padding: var(--gmt-space-4);
+  backdrop-filter: blur(var(--gmt-blur));
+  -webkit-backdrop-filter: blur(var(--gmt-blur));
+}
+
+/* A sheen travelling across the answer card while Dox is working. On the card
+   rather than only on the marker, because the card is where the reader is
+   already looking — the marker alone left the surface itself looking dead.
+   `::after` over `position: relative` so it needs no extra element and cannot
+   affect the card's own layout or scrolling. */
+.gmt-hive-card[data-pending] {
+  position: relative;
+  overflow: hidden;
+}
+
+.gmt-hive-card[data-pending]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    color(from var(--gmt-hive-role) srgb r g b / 0.09) 50%,
+    transparent 65%
+  );
+  background-size: 220% 100%;
+  animation: gmt-hive-sheen 2.2s var(--gmt-easing) infinite;
+}
+
+@keyframes gmt-hive-sheen {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -120% 0;
+  }
+}
+
+.gmt-hive-label {
+  color: color(from var(--gmt-hive-role) srgb r g b / 0.75);
+}
+
+/* ------------------------------------------------------------------ *
+ * Empty state — the hub
+ * ------------------------------------------------------------------ */
+
+.gmt-hive-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gmt-space-4);
+  padding: clamp(var(--gmt-space-6), 8vh, var(--gmt-space-12)) 0;
+  text-align: center;
+  /* Auto block margins centre it in the flex column rather than leaving it
+     stranded at the top of a tall empty transcript. */
+  margin-block: auto;
+}
+
+/* Starter prompts wrap rather than scrolling horizontally: the vendored
+   `Suggestions` wrapper is a horizontal ScrollArea, which silently clipped the
+   last pill at the viewport edge. All of them should be readable at once —
+   they're the clearest signal of what this thing is for. */
+.gmt-hive-starters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--gmt-space-2);
+  max-width: 54rem;
+}
+
+/* The hub is the same crystal at logo scale — one component, so the mark a
+   reader meets on the empty page is literally the mark beside every answer. */
+.gmt-hive-hub {
+  --hex: clamp(4rem, 11cqi, 6rem);
+  --gmt-hive-role: var(--gmt-cyan);
+}
+
+/* Arrival. Deliberately the *globe's* gesture, not a spin: the same fade and
+   scale, the same 0.5s, the same easing as `.gmt-globe-canvas-ready`
+   (gmt-globe.css), so the two landmark visuals on this site enter identically.
+   A logo that spins in reads as a loading indicator, which is the wrong thing
+   to say on an idle page — spinning is reserved for "Dox is working". */
+.gmt-hive-hub .gmt-hive-node {
+  animation: gmt-hive-hub-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes gmt-hive-hub-in {
+  from {
+    opacity: 0;
+    transform: rotateX(10deg) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: rotateX(10deg) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gmt-hive-hub .gmt-hive-node {
+    animation: none;
+  }
+}
+
+.gmt-hive-status {
+  font-size: var(--gmt-text-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-hive-prompt {
+  font-size: clamp(1.1rem, 2.5cqi, 1.5rem);
+  color: var(--gmt-ice);
+  max-width: 40ch;
+  line-height: 1.5;
+}
+
+/* Inline code inside the prompt. `.gmt-ask-response`'s inline-code rule only
+   covers rendered markdown, and this is chrome — so it takes the same tokens
+   directly rather than reaching for that selector. */
+.gmt-hive-prompt code {
+  background: var(--gmt-code-bg);
+  color: var(--gmt-cyan-bright);
+  border: 1px solid var(--gmt-code-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  padding: 0.1em 0.35em;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.85em;
+}
+
+/* The character's own name gets the role colour it speaks in, so "Dox" here
+   and every Dox crystal in the transcript are visibly the same entity. */
+.gmt-hive-name {
+  color: var(--gmt-cyan);
+  border-color: var(--gmt-border-strong);
+}
+
+/* A user turn is plain text, not markdown — it's what the reader typed, so it
+   renders verbatim rather than being parsed as a document. */
+.gmt-hive-user-text {
+  margin: 0;
+  white-space: pre-wrap;
+  /* A long unbroken token (a 60-character function name) must wrap rather than
+     widen the card. */
+  overflow-wrap: anywhere;
+}
+
+/* ---- The waiting turn ----
+ * Rendered between `sendMessage` and the first streamed token. Transcript
+ * shaped on purpose: stick-to-bottom moves to it for free, and the layout does
+ * not jump when the real message replaces it. */
+.gmt-hive-pending {
+  display: flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  color: var(--gmt-ice-dim);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  letter-spacing: 0.06em;
+}
+
+.gmt-hive-pending svg {
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+  color: var(--gmt-hive-role);
+}
+
+/* A filament sweeping the width of the card — the same "scanning" read as the
+   node's pulse, at card scale. */
+.gmt-hive-scanline {
+  display: block;
+  height: 1px;
+  margin-top: var(--gmt-space-3);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--gmt-hive-role, var(--gmt-cyan)),
+    transparent
+  );
+  background-size: 40% 100%;
+  background-repeat: no-repeat;
+  animation: gmt-hive-scan 1.6s var(--gmt-easing) infinite;
+}
+
+@keyframes gmt-hive-scan {
+  from {
+    background-position: -40% 0;
+  }
+  to {
+    background-position: 140% 0;
+  }
+}
+
+/* The site drops every decorative animation under this query (gmt-controls.css
+   does the same for the sonar ping) — the waiting state keeps its meaning
+   without motion. */
+@media (prefers-reduced-motion: reduce) {
+  /* `use-crystal-spin.ts` checks the same query and never starts, so the
+     crystal is not listed here — there is no CSS animation left on it to
+     cancel. */
+  .gmt-hive-stage[data-pending] .gmt-hive-halo,
+  .gmt-hive-scanline,
+  .gmt-hive-card[data-pending]::after {
+    animation: none;
+  }
+
+  /* The waiting state still has to be *visible* without motion: a resting halo
+     and a static bar carry it, exactly as the global reduced-motion reset in
+     gmt-controls.css leaves the sonar ping as a still ring. */
+  .gmt-hive-stage[data-pending] .gmt-hive-halo {
+    box-shadow: 0 0 0 6px color(from var(--gmt-hive-role) srgb r g b / 0.25);
+  }
+
+  .gmt-hive-scanline {
+    background: color(from var(--gmt-hive-role) srgb r g b / 0.35);
+    background-size: auto;
+  }
+}
+
+/* ---- Retrieval trace ---- */
+.gmt-hive-trace {
+  margin-bottom: var(--gmt-space-3);
+  padding-bottom: var(--gmt-space-2);
+  border-bottom: 1px solid var(--gmt-hairline);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+}
+
+/* The trigger is `flex items-center` around an icon and a <p> (task.tsx). The
+   paragraph's UA margin is now zeroed for the whole island (gmt-ask.css), which
+   is what actually pulled the magnifier off the text's centre line; the rest of
+   this is HUD typography. */
+.gmt-hive-trace [data-slot="collapsible-trigger"] > div,
+.gmt-hive-trace > button {
+  gap: var(--gmt-space-2);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: 0.04em;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-hive-trace svg {
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+}
+
+/* Chevron to the end of the row rather than butted against the label. */
+.gmt-hive-trace svg:last-of-type {
+  margin-inline-start: auto;
+}
+
+.gmt-hive-trace p {
+  font-size: inherit;
+}
+
+/* ---- Warnings ----
+ * The site's existing sentinel / "signal lost" language (the amber
+ * --gmt-signal* tokens every widget already uses for a sentinel return), not a
+ * new generic error box: a rate limit or a stalled stream is the same class of
+ * event, and should look like it. */
+.gmt-hive-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gmt-space-2);
+  align-self: stretch;
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  color: var(--gmt-signal);
+  background: var(--gmt-signal-fill);
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  font-size: var(--gmt-text-sm);
+}
+
+.gmt-hive-warning p {
+  margin: 0;
+}
+
+.gmt-hive-warning-marker {
+  flex: 0 0 auto;
+  letter-spacing: 0.08em;
+}
+
+/* ------------------------------------------------------------------ *
+ * Brain badge + selector
+ *
+ * The free tier gives ~20 requests per day per model, shared by every visitor.
+ * That is strange enough that hiding it reads as Dox randomly breaking, so the
+ * numbers are surfaced rather than buried. Built from `.gmt-button`'s surface
+ * and `.gmt-popover`'s (gmt-primitives.css) — no chat-specific invention.
+ * ------------------------------------------------------------------ */
+
+.gmt-hive-brains {
+  position: relative;
+}
+
+.gmt-hive-brain-badge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--gmt-space-2);
+  padding: var(--gmt-space-1) var(--gmt-space-3);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: 0.06em;
+  color: var(--gmt-ice-dim);
+  background: var(--gmt-fill-subtle);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  cursor: pointer;
+  transition:
+    color var(--gmt-duration-fast) var(--gmt-easing),
+    background var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-hive-brain-badge:hover {
+  color: var(--gmt-ice);
+  background: var(--gmt-fill-strong);
+}
+
+.gmt-hive-brain-name {
+  color: var(--gmt-cyan);
+  text-transform: uppercase;
+}
+
+.gmt-hive-brain-counts {
+  white-space: nowrap;
+}
+
+.gmt-hive-brain-dev {
+  color: var(--gmt-spring);
+}
+
+.gmt-hive-brain-list {
+  position: absolute;
+  top: calc(100% + var(--gmt-space-2));
+  right: 0;
+  z-index: 20;
+  min-width: 16rem;
+  margin: 0;
+  padding: var(--gmt-space-1);
+  list-style: none;
+  background: var(--gmt-surface-2);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  box-shadow: var(--gmt-shadow-md);
+}
+
+.gmt-hive-brain-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gmt-space-4);
+  width: 100%;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  cursor: pointer;
+  text-align: start;
+}
+
+.gmt-hive-brain-option:hover {
+  background: var(--gmt-fill-strong);
+  border-color: var(--gmt-border);
+}
+
+.gmt-hive-brain-option[aria-selected="true"] {
+  color: var(--gmt-cyan);
+  border-color: var(--gmt-border-strong);
+}
+
+.gmt-hive-brain-meta {
+  color: var(--gmt-ice-dim);
+}
+
+/* A brain that is out today reads as unavailable rather than merely dimmed —
+   it stays selectable, because picking it simply falls through to one that has
+   budget (see brains.ts) rather than failing. */
+.gmt-hive-brain-option[data-state="spent"],
+.gmt-hive-brain-option[data-state="unavailable"] {
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-hive-brain-option[data-state="spent"] span:first-child,
+.gmt-hive-brain-option[data-state="unavailable"] span:first-child {
+  text-decoration: line-through;
+}
+
+/* ---- Out of budget ----
+ * The site's sentinel language (--gmt-signal*), the same treatment every widget
+ * uses for "no signal". This is not a failure: Dox has spent what a free tier
+ * gives it, and says when it comes back. */
+.gmt-hive-exhausted {
+  display: flex;
+  align-items: baseline;
+  gap: var(--gmt-space-2);
+  margin-bottom: var(--gmt-space-3);
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-signal);
+  background: var(--gmt-signal-fill);
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+}
+
+.gmt-hive-exhausted-marker {
+  flex: 0 0 auto;
+  letter-spacing: 0.08em;
+}
+
+.gmt-hive-dev-note {
+  margin-inline-end: auto;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: 0.06em;
+  color: var(--gmt-spring);
+}
+
+/* ------------------------------------------------------------------ *
+ * Composer — pinned, never scrolls away
+ * ------------------------------------------------------------------ */
+
+/* `--gmt-space-5` does not exist in the token scale (1,2,3,4,6,8,12) — naming
+   it made the whole `clamp()` invalid, so the padding declaration was dropped
+   and the composer sat flush against the viewport edges. */
+.gmt-hive-composer {
+  flex: 0 0 auto;
+  padding: clamp(var(--gmt-space-3), 2vw, var(--gmt-space-6));
+  /* Keep clear of the iOS home indicator. */
+  padding-bottom: max(
+    clamp(var(--gmt-space-3), 2vw, var(--gmt-space-6)),
+    env(safe-area-inset-bottom)
+  );
+}
+
+.gmt-hive-composer-inner {
+  max-width: 64rem;
+  margin: 0 auto;
+}
+
+/* ------------------------------------------------------------------ *
+ * Two-column zigzag — the one container breakpoint.
+ * Below this the layout is a single column.
+ * ------------------------------------------------------------------ */
+
+@container gmt-hive (min-width: 48rem) {
+  /* Capping the turn's width is the entire zigzag: `align-self` already pins
+     Dox left and the human right, so once they stop spanning the full width
+     the two columns and the diagonal gap between them appear on their own. */
+  .gmt-hive-turn {
+    max-width: 62%;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Controls — the site's own button language, not shadcn's defaults.
+ *
+ * Everything below overrides a vendored component from outside it: these
+ * sheets are unlayered and Tailwind's utilities sit in `@layer utilities`, so
+ * an unlayered rule wins without specificity games and without editing
+ * anything under `components/ai-elements` or `components/ui`.
+ * ------------------------------------------------------------------ */
+
+/* The composer panel. `InputGroup` ships `rounded-md border border-input` plus
+   a `ring-[3px] ring-ring/50` focus ring — at full cyan that ring is the
+   near-white box the redesign was meant to remove. Replaced with the site's
+   panel: bevelled, hairline cyan, and the shared sonar ping on focus-within. */
+.gmt-hive-composer [data-slot="input-group"] {
+  background: var(--gmt-glass-tint);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+  box-shadow: none;
+  backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+  -webkit-backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+  transition: border-color var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+/* One focus indicator for the whole composer, on the panel. The still ring is
+   deliberately lighter than the shared `.gmt-sonar-focus` resting state (2px +
+   5px): that value is tuned for a 32px control, and at panel scale it reads as
+   a second, brighter border rather than a focus ring. The ping is the same. */
+.gmt-hive-composer [data-slot="input-group"]:focus-within {
+  border-color: var(--gmt-cyan);
+  box-shadow: 0 0 0 3px color(from var(--gmt-cyan) srgb r g b / 0.18);
+  animation: gmt-focus-sonar var(--gmt-motion-sonar-duration) var(--gmt-easing)
+    1;
+}
+
+/* ...which means the textarea must NOT draw its own. gmt-controls.css puts a
+   global `:focus-visible { outline; box-shadow: 0 0 0 4px }` on everything, and
+   `InputGroup` is `overflow-hidden` — so that ring was clipped to its top and
+   bottom edges and rendered as a stray horizontal line across the composer.
+   Two focus rings on one control is wrong regardless; this removes the inner
+   one and leaves the panel's. */
+.gmt-hive-composer textarea:focus,
+.gmt-hive-composer textarea:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.gmt-hive-composer textarea {
+  font-family: var(--gmt-font-mono);
+  color: var(--gmt-ice);
+}
+
+.gmt-hive-composer textarea::placeholder {
+  color: var(--gmt-ice-dim);
+}
+
+/* The stock footer is `justify-between`, which parks a lone submit button on
+   the LEFT. There are no other controls in this composer, so push it to the
+   end. */
+.gmt-hive-composer-footer {
+  justify-content: flex-end;
+}
+
+/* A bare ghost glyph reads as decoration; a raw `--gmt-cyan` fill (shadcn's
+   `variant="default"` → `bg-primary`) reads as a foreign chip — the site never
+   fills a button with the accent at full strength. This is `.gmt-button`'s
+   surface at a real touch-target size, so it is unmistakably the primary
+   action while still belonging to the page. Doubles as Stop mid-stream —
+   PromptInputSubmit swaps its own icon by status. */
+.gmt-hive-submit {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  background: var(--gmt-fill-strong);
+  color: var(--gmt-cyan);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  transition:
+    color var(--gmt-duration-fast) var(--gmt-easing),
+    background var(--gmt-duration-fast) var(--gmt-easing),
+    box-shadow var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-hive-submit svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.gmt-hive-submit:hover:not(:disabled) {
+  color: var(--gmt-cyan-bright);
+  background: var(--gmt-fill-deep);
+  border-color: var(--gmt-cyan);
+  box-shadow: 0 0 8px var(--gmt-glow);
+}
+
+.gmt-hive-submit:disabled {
+  opacity: 0.4;
+}
+
+/* Starter pills. `Suggestion` hard-codes `rounded-full`, which is foreign to a
+   design system whose every surface is chamfered. */
+.gmt-hive-starter {
+  min-height: 2.75rem;
+  padding-inline: var(--gmt-space-4);
+  color: var(--gmt-ice);
+  background: var(--gmt-fill-subtle);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  box-shadow: none;
+  white-space: normal;
+  text-align: start;
+}
+
+.gmt-hive-starter:hover {
+  color: var(--gmt-cyan);
+  background: var(--gmt-fill-strong);
+  border-color: var(--gmt-border-strong);
+}
+
+/* Jump-to-latest. Dead code until the scroll container was fixed — `isAtBottom`
+   could never be false — so it has never been themed. */
+.gmt-hive-jump {
+  background: var(--gmt-surface-2);
+  color: var(--gmt-cyan);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+}
+
+.gmt-hive-jump:hover {
+  color: var(--gmt-cyan-bright);
+  background: var(--gmt-fill-strong);
+  border-color: var(--gmt-cyan);
+}

@@ -1,4 +1,4 @@
-# Issues #171, #137–#139 — Ask Dox (the chatbot that mounts widgets)
+# Issues #171, #137–#139 — Dox (the chatbot that mounts widgets)
 
 **Re-audited 2026-08-26 and escalated, not demoted, by explicit user decision** — the
 chatbot is now Tier 6, the epic's final tier, and its ambition is higher than the
@@ -374,6 +374,7 @@ mock cache rather than Miniflare).
 **Search: `lib/retrieval/search.ts`, MiniSearch (BM25).** Two things the naive version
 got wrong, found by actually running the four DoD question types against the real
 corpus rather than assuming BM25 "just works":
+
 - **Stopword filtering was necessary, not optional.** Without it, "format a date for
   display" — a real, in-corpus question — matched 489 of 591 chunks, because OR
   combination means "a"/"for" alone match hundreds of entries. A ~30-word stopword
@@ -383,10 +384,11 @@ corpus rather than assuming BM25 "just works":
   fuzzy/prefix padding. Verified empirically: every DoD question type's best result
   scored ≥ 10.6; three genuinely unrelated questions ("recommend a pizza restaurant",
   "translate to French", "javascript sorting algorithm") topped out at 6.0 or returned
-  zero. This threshold is tuned to *this* corpus size and boost/stopword settings, not
+  zero. This threshold is tuned to _this_ corpus size and boost/stopword settings, not
   a universal constant — re-verify if either changes materially.
 - **One finding that changed the test itself, not the code:** "parse a cron expression"
-  (this file's own DOX-C2 refusal-test example) is a *bad* fixture for DOX-C1's
+  (this file's own DOX-C2 refusal-test example) is a _bad_:\*\* "parse a cron expression"
+  (this file's own DOX-C2 refusal-test example) is a _bad_ fixture for DOX-C1's
   chunk-count DoD line — it genuinely surfaces real `parseHttp`/`parseRfc3339`/`parseSql`
   chunks, which is honest retrieval (the corpus really does have those), not padding.
   Recognizing "none of these describe cron support" is the LLM's job in DOX-C2's
@@ -747,7 +749,7 @@ and `DOX-C3b` (widget registry). The issue stays open until `DOX-C3b` also lands
 **Title:**
 
 ```
-DOX-C3a Add the Ask Dox dock and the /dox route over one shared chat core
+DOX-C3a Add the Dox dock and the /dox route over one shared chat core
 ```
 
 **Description:**
@@ -922,7 +924,7 @@ still stands.
 **Title:**
 
 ```
-DOX-C3b Let Ask Dox answer by mounting a real Tier 2 widget
+DOX-C3b Let Dox answer by mounting a real Tier 2 widget
 ```
 
 **Description:**

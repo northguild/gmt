@@ -144,9 +144,16 @@
  * can't take a class) borrows the same look at its own smaller size, including
  * the bevel radius. The mobile search trigger and the hamburger reuse this
  * inline in gmt-controls.css, where they also need fixed positioning.
+ *
+ * Third consumer (DOX-C3a, #139): Streamdown's own controls inside the chat
+ * island — the code-block copy button, the table copy/fullscreen cluster. Same
+ * situation as the Expressive Code button (library-rendered, can't take a
+ * class), so it joins the same rules rather than growing a parallel set in
+ * gmt-ask.css. Scoped to `.gmt-ask`, so it cannot reach outside the island.
  */
 .gmt-icon-button,
-.expressive-code .copy button {
+.expressive-code .copy button,
+.gmt-ask [data-streamdown] button {
   color: var(--gmt-cyan);
   background: transparent;
   border: 1px solid transparent;
@@ -179,7 +186,8 @@
 }
 
 .gmt-icon-button:hover,
-.expressive-code .copy button:hover {
+.expressive-code .copy button:hover,
+.gmt-ask [data-streamdown] button:hover {
   color: var(--gmt-cyan-bright);
   background: var(--gmt-fill-strong);
   border-color: var(--gmt-border);
@@ -204,11 +212,19 @@
  *      check, so the ~1.5s window still matches the playground's resetTimer)
  * EC keeps its reveal-on-frame-hover behaviour — `opacity` is untouched.
  */
-.expressive-code .copy button {
+.expressive-code .copy button,
+.gmt-ask [data-streamdown] button {
   --ec-frm-inlBtnFg: var(--gmt-cyan);
   width: 2.375rem;
   height: 2.375rem;
   border-radius: var(--gmt-radius-md);
+}
+
+/* Streamdown sizes its glyphs with an SVG `size` attribute (14px); match the
+   Expressive Code / widget copy buttons instead. */
+.gmt-ask [data-streamdown] button svg {
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
 .expressive-code .copy button div,
@@ -242,6 +258,94 @@
 .expressive-code .copy:has(.feedback.show) button::after {
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+}
+
+/* ---- The Dox mark ----
+ * The faceted crystal used by the chat (every Dox/You turn, the empty-state
+ * hub) and by the header's "Chat with Dox" button. It lives here rather than
+ * in gmt-hive.css because gmt-hive.css is island-only and the header renders on
+ * all 646 pages. Geometry is shared through `src/lib/dox-mark.ts`; this is the
+ * matching presentation, and the two consumers are `HiveGlyph.tsx` and
+ * `DoxMark.astro`.
+ *
+ * Everything is `currentColor`, so the mark takes the colour of whatever it is
+ * mounted in — `--gmt-hive-role` in a transcript turn, `.gmt-icon-button`'s
+ * cyan in the header. No colour of its own to keep in sync.
+ */
+.gmt-dox-mark {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.gmt-dox-mark-edge {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 4;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.gmt-dox-mark-facet line {
+  stroke: currentColor;
+  stroke-width: 1.5;
+  opacity: 0.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.gmt-dox-mark-table {
+  fill: color(from var(--gmt-ice) srgb r g b / 0.06);
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  opacity: 0.75;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Header button: the mark replaces the old icon+label pair, so it needs a real
+   size of its own — `.gmt-icon-button svg` sizes in `em`, which collapses an
+   `svg` that has no intrinsic box. */
+.gmt-ask-dox-link .gmt-dox-mark {
+  width: 1.4rem;
+  height: 1.4rem;
+  filter: drop-shadow(0 0 4px color(from var(--gmt-cyan) srgb r g b / 0.45));
+  transition: filter var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-ask-dox-link:hover .gmt-dox-mark,
+.gmt-ask-dox-link:focus-visible .gmt-dox-mark {
+  filter: drop-shadow(0 0 7px color(from var(--gmt-cyan) srgb r g b / 0.75));
+}
+
+/* Landing-page CTA: the mark sits after the label, at the size a
+   `.sl-link-button` gives its own icons (LinkButton passes `size="1.5rem"`), so
+   "Dox" reads as a peer of "Docs" rather than a decorated link. */
+.gmt-dox-cta .gmt-dox-mark {
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-inline-start: 2px;
+  filter: drop-shadow(0 0 5px color(from var(--gmt-cyan) srgb r g b / 0.5));
+  transition:
+    filter var(--gmt-duration-fast) var(--gmt-easing),
+    transform var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-dox-cta:hover .gmt-dox-mark,
+.gmt-dox-cta:focus-visible .gmt-dox-mark {
+  filter: drop-shadow(0 0 9px color(from var(--gmt-cyan) srgb r g b / 0.8));
+  transform: scale(1.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gmt-dox-cta .gmt-dox-mark {
+    transition: none;
+  }
+
+  .gmt-dox-cta:hover .gmt-dox-mark,
+  .gmt-dox-cta:focus-visible .gmt-dox-mark {
+    transform: none;
+  }
 }
 
 /* ---- Sonar focus ring ----
@@ -298,7 +402,8 @@
 
 .gmt-sonar-focus:focus,
 .gmt-icon-button:focus,
-.expressive-code .copy button:focus {
+.expressive-code .copy button:focus,
+.gmt-ask [data-streamdown] button:focus {
   outline: none;
   box-shadow:
     0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),

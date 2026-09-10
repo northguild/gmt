@@ -7,7 +7,9 @@
   "scripts": {
     "generate": "node ./scripts/generate-version-map.mjs && tsx ./scripts/build-reference.ts && node ./scripts/build-guides.mjs && node ./scripts/build-scenario-index.mjs && node ./scripts/ensure-sidebar-order.mjs",
     "predev": "pnpm --filter @northguild/gmt build",
-    "dev": "pnpm run generate && astro dev --force",
+    "dev": "pnpm run generate && node ./scripts/dev-all.mjs",
+    "dev:site": "pnpm run generate && astro dev",
+    "dev:chat": "pnpm run build && wrangler dev",
     "build": "pnpm run generate && astro build",
     "preview": "astro preview",
     "check": "pnpm run generate && astro sync && astro check",
