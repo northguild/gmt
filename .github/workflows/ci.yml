@@ -103,6 +103,12 @@ jobs:
       - name: Tracker dependency columns are in sync
         run: node scripts/deps.mjs check
 
+      # apps/dox's tests import `@northguild/gmt/*` subpaths, which resolve to its `dist`,
+      # so collecting them needs the package built first. `validate` gets this for free by
+      # running the whole build ahead of `stats check`; this job builds just the one package.
+      - name: Build @northguild/gmt
+        run: pnpm --filter @northguild/gmt run build
+
       - name: Published figures match the repo
         run: node scripts/stats.mjs check
 
