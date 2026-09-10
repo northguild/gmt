@@ -7532,7 +7532,37 @@
     "kind": "function",
     "signature": "spanMs(start: string, end: string): number",
     "description": "Return the exact elapsed milliseconds between two ISO 8601 instant strings.",
-    "sourcePath": "packages/gmt/src/span/calculate/spanMs.ts"
+    "sourcePath": "packages/gmt/src/span/calculate/spanMs.ts",
+    "examples": [
+      {
+        "call": "spanMs(\"2024-03-10T12:00:00Z\", \"2024-03-10T12:00:01Z\")",
+        "result": "1000"
+      },
+      {
+        "call": "spanMs(\"2024-03-10T12:00:01Z\", \"2024-03-10T12:00:00Z\")",
+        "result": "-1000"
+      },
+      {
+        "call": "spanMs(\"2024-03-10T12:00:00Z\", \"2024-03-10T12:00:00Z\")",
+        "result": "0"
+      },
+      {
+        "call": "spanMs(\"2024-03-10T12:00:00Z\", \"2024-03-10T12:00:00.123456789Z\")",
+        "result": "123.456789"
+      },
+      {
+        "call": "spanMs(\"2024-03-09T12:00:00-05:00[America/New_York]\", \"2024-03-10T12:00:00-04:00[America/New_York]\")",
+        "result": "82800000 — 23 hours, not 24"
+      },
+      {
+        "call": "spanMs(\"-271821-04-20T00:00:00Z\", \"+275760-09-13T00:00:00Z\")",
+        "result": "NaN — past the safe integer range, use spanNs"
+      },
+      {
+        "call": "spanMs(\"2024-03-10T12:00:00Z\", \"invalid\")",
+        "result": "NaN"
+      }
+    ]
   },
   {
     "url": "/reference/span/calculate/spanNs",
@@ -7542,7 +7572,33 @@
     "kind": "function",
     "signature": "spanNs(start: string, end: string): bigint",
     "description": "Return the exact elapsed nanoseconds between two ISO 8601 instant strings.",
-    "sourcePath": "packages/gmt/src/span/calculate/spanNs.ts"
+    "sourcePath": "packages/gmt/src/span/calculate/spanNs.ts",
+    "examples": [
+      {
+        "call": "spanNs(\"2024-03-10T12:00:00Z\", \"2024-03-10T12:00:01Z\")",
+        "result": "1000000000n"
+      },
+      {
+        "call": "spanNs(\"2024-03-10T12:00:01Z\", \"2024-03-10T12:00:00Z\")",
+        "result": "-1000000000n"
+      },
+      {
+        "call": "spanNs(\"2024-03-10T12:00:00Z\", \"2024-03-10T12:00:00Z\")",
+        "result": "0n"
+      },
+      {
+        "call": "spanNs(\"2024-03-10T12:00:00.123456789Z\", \"2024-03-10T12:00:00.123456790Z\")",
+        "result": "1n"
+      },
+      {
+        "call": "spanNs(\"2024-03-10T07:00:00-05:00[America/New_York]\", \"2024-03-10T12:00:00Z\")",
+        "result": "0n — same instant, different zones"
+      },
+      {
+        "call": "spanNs(\"2024-03-10T12:00:00Z\", \"invalid\")",
+        "result": "null"
+      }
+    ]
   },
   {
     "url": "/reference/span/calculate/WallClockSpanUnit",
@@ -7552,7 +7608,8 @@
     "kind": "type",
     "signature": "",
     "description": "The WallClockSpanUnit type.",
-    "sourcePath": "packages/gmt/src/span/calculate/spanWallClock.ts"
+    "sourcePath": "packages/gmt/src/span/calculate/spanWallClock.ts",
+    "examples": []
   },
   {
     "url": "/reference/span/calculate/spanWallClock",
@@ -7562,7 +7619,41 @@
     "kind": "function",
     "signature": "spanWallClock(start: string, end: string, unit: WallClockSpanUnit): number",
     "description": "Return the wall-clock distance between two zoned datetime strings — calendar time, not",
-    "sourcePath": "packages/gmt/src/span/calculate/spanWallClock.ts"
+    "sourcePath": "packages/gmt/src/span/calculate/spanWallClock.ts",
+    "examples": [
+      {
+        "call": "spanWallClock(\"2024-03-09T12:00:00-05:00[America/New_York]\", \"2024-03-10T12:00:00-04:00[America/New_York]\", \"hours\")",
+        "result": "24 — spanMs reports 82800000 (23 hours)"
+      },
+      {
+        "call": "spanWallClock(\"2024-11-02T12:00:00-04:00[America/New_York]\", \"2024-11-03T12:00:00-05:00[America/New_York]\", \"days\")",
+        "result": "1 — spanMs reports 90000000 (25 hours)"
+      },
+      {
+        "call": "spanWallClock(\"2024-03-01T12:00:00-05:00[America/New_York]\", \"2024-03-02T18:00:00-05:00[America/New_York]\", \"days\")",
+        "result": "1 — truncated toward zero"
+      },
+      {
+        "call": "spanWallClock(\"2024-03-02T18:00:00-05:00[America/New_York]\", \"2024-03-01T12:00:00-05:00[America/New_York]\", \"hours\")",
+        "result": "-30"
+      },
+      {
+        "call": "spanWallClock(\"2024-03-10T23:00:00-04:00[America/New_York]\", \"2024-03-11T11:00:00+01:00[Europe/Berlin]\", \"hours\")",
+        "result": "12 — each endpoint's own wall clock"
+      },
+      {
+        "call": "spanWallClock(\"2024-03-10T02:30:00[America/New_York]\", \"2024-03-11T02:30:00[America/New_York]\", \"hours\")",
+        "result": "24 — a wall time that never occurred is measured as written"
+      },
+      {
+        "call": "spanWallClock(\"2024-03-10T12:00:00Z\", \"2024-03-11T12:00:00Z\", \"days\")",
+        "result": "null — no bracketed time zone"
+      },
+      {
+        "call": "spanWallClock(\"2024-03-01T12:00:00-05:00[America/New_York]\", \"2024-03-02T12:00:00-05:00[America/New_York]\", \"minutes\")",
+        "result": "null"
+      }
+    ]
   },
   {
     "url": "/reference/types/calendar-options/CalendarOptions",
