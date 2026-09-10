@@ -97,6 +97,20 @@ const PAGES = [
     slug: "converter-bench",
     path: "/reference/zoned/convert/convertZonedToZoned/",
   },
+  /* The standalone /tools pages for the same three widgets. Covered separately
+     from the reference pages above because they are a different rendering: no
+     surrounding API documentation, their own prose, and — for the permalink
+     targets — the page a reader actually lands on from the chat. */
+  { slug: "tool-dst-inspector", path: "/tools/dst-inspector/" },
+  { slug: "tool-interval-visualizer", path: "/tools/interval-visualizer/" },
+  { slug: "tool-converter-bench", path: "/tools/converter-bench/" },
+  /* Added last, deliberately. Through DOX-C3b this was the page being changed
+     on almost every step, so covering it earlier would have meant a gate that
+     failed by design and got ignored. It is stable now, and it is the only page
+     that renders the chat island at all — the empty state, the composer, the
+     brain badge and the widget rail's collapsed-to-nothing layout are covered
+     by nothing else. */
+  { slug: "dox", path: "/dox/" },
 ];
 
 const THEMES = ["dark", "light"];

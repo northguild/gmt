@@ -30,6 +30,9 @@ This file has been split into a progressive-disclosure directory. Read what you 
   — DOX-E1a: why the globe is `d3-geo` canvas, not WebGL
 - [reference/findings/globe-performance.md](reference/findings/globe-performance.md) —
   DOX-E1a: bundle isolation, tab-hidden pause, and Lighthouse measurements
+- [ui-audit.md](ui-audit.md) — component architecture audit (2026-09-10): the
+  Astro/React boundary, vendored-vs-ours, dead code, and the phased cleanup plan.
+  Read before restructuring anything under `apps/dox/src/components/`.
 - [reference/rejected-candidates.md](reference/rejected-candidates.md) — the three
   declined items, so they are not re-proposed
 - [reference/prior-art/worktree-cli-snapshot-2026-08-21.md](reference/prior-art/worktree-cli-snapshot-2026-08-21.md)

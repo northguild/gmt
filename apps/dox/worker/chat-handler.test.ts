@@ -12,6 +12,7 @@ import {
   type UsageStore,
 } from "./usage";
 import { ptDayKey } from "../src/lib/pt-day";
+import { DOX_TOOL_NAMES, ENABLED_TOOL_NAMES } from "../src/lib/dox-tools";
 import { APICallError } from "ai";
 
 /** The ledger's bucket for "now" — tests assert against real keys rather than
@@ -159,7 +160,9 @@ describe("createChatHandler", () => {
     });
 
     const response = await handler(
-      chatRequest({ messages: [userMessage("how do I convert between zones")] }),
+      chatRequest({
+        messages: [userMessage("how do I convert between zones")],
+      }),
     );
     await response.text();
 
@@ -172,7 +175,9 @@ describe("createChatHandler", () => {
 
     expect(allowlist).toContain(SAMPLE_CHUNKS[0].url);
     expect(allowlist).not.toContain("/reference/plain/calculate/addPlainDate");
-    expect(allowlist).not.toContain("/reference/duration/format/formatDuration");
+    expect(allowlist).not.toContain(
+      "/reference/duration/format/formatDuration",
+    );
   });
 
   /* DOX-C3b. These assert the wiring, not the model's judgement: whether Gemini
@@ -192,13 +197,38 @@ describe("createChatHandler", () => {
     await response.text();
 
     const [call] = model.doStreamCalls;
+    /* Exactly the mountable set, not every tool defined. Offering one whose
+       widget is not registered would have the model promise a widget the panel
+       cannot show — see `ENABLED_TOOL_NAMES`. */
     const toolNames = (call.tools ?? []).map((t) => t.name).sort();
-    expect(toolNames).toEqual([
-      "showConverterBench",
-      "showDstInspector",
-      "showGlobe",
-      "showIntervalVisualizer",
-    ]);
+    expect(toolNames).toEqual([...ENABLED_TOOL_NAMES].sort());
+  });
+
+  it("never offers a tool whose widget cannot be mounted", async () => {
+    const model = fakeModel("ok");
+    const handler = makeHandler({
+      resolveModel: singleBrain(model),
+      searchChunksImpl: () => SAMPLE_CHUNKS,
+    });
+
+    const response = await handler(
+      chatRequest({ messages: [userMessage("what time is it in Tokyo")] }),
+    );
+    await response.text();
+
+    const [call] = model.doStreamCalls;
+    const offered = (call.tools ?? []).map((t) => t.name);
+    const prompt = JSON.stringify(call.prompt);
+    // Derived so this keeps holding as widgets are extracted one by one.
+    const pending = DOX_TOOL_NAMES.filter(
+      (name) => !(ENABLED_TOOL_NAMES as readonly string[]).includes(name),
+    );
+    for (const name of pending) {
+      expect(offered).not.toContain(name);
+      // Nor described in the prompt, which is the other way the model learns
+      // a tool exists.
+      expect(prompt).not.toContain(name);
+    }
   });
 
   it("describes each tool in the system prompt instead of the old placeholder", async () => {

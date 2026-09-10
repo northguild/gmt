@@ -13,11 +13,8 @@
  * (`class:list`, `data-tools-fullbleed`) is fiddly to reproduce as a string, and
  * it sits on the two pages the visual gate cares most about.
  */
-import {
-  onceDestroy,
-  type MountFn,
-  type WidgetHandle,
-} from "./widget-mount";
+import { escapeHtml } from "./widget-ui";
+import { onceDestroy, type MountFn, type WidgetHandle } from "./widget-mount";
 
 export interface GlobeArgs {
   /** The zone to select and centre on. The clock panel beside the globe lists
@@ -25,55 +22,79 @@ export interface GlobeArgs {
   zone?: string;
 }
 
+export interface GlobeTemplateOptions {
+  /** Namespaces the ids below. Two globes in one document — one on the page and
+   *  one in the chat rail — would otherwise collide on `globe-stage`. */
+  idPrefix?: string;
+  heading?: string;
+  caption?: string;
+  /** Drops the heading and caption for a host that supplies its own (HeroGlobe
+   *  on the landing page), and switches the layout class. */
+  embedded?: boolean;
+}
+
+const DEFAULT_HEADING = "Every zone, computed live by @northguild/gmt";
+const DEFAULT_CAPTION =
+  "No hardcoded offset tables. No Date object. Every local time, UTC offset, and DST flag on this globe is computed in your browser by GMT's Zoned functions, and recomputed every second. Drag to spin, scroll to zoom, or search a zone to watch it work.";
+
 /**
- * The globe's chrome, as a string.
+ * The globe's chrome, for both surfaces.
  *
- * `idPrefix` exists because two ids here are load-bearing for accessibility —
- * the search `<label for>` and the clock panel's `aria-label`led listbox — and
- * an id must be unique in a document. The rail passes its own prefix so a globe
- * in the panel cannot collide with one on the page behind it.
+ * This used to render only the rail's copy while `Globe.astro` kept its own
+ * template, and **the two had already drifted**: `mountGlobe` looks up
+ * `[data-role="stage"]`, which the `.astro` markup never had, so mounting the
+ * globe against a page's own markup would have silently produced an inert
+ * widget. Both ids and data-roles are emitted now, and there is one template.
+ *
+ * The conditional attributes are the fiddly part and the reason this
+ * consolidation was left until last: Astro renders `class:list` and an
+ * `undefined` attribute value by omitting them entirely, and this markup sits
+ * on the two pages the visual gate cares most about.
  */
 export function renderGlobeTemplate({
   idPrefix = "globe",
-}: { idPrefix?: string } = {}): string {
+  heading = DEFAULT_HEADING,
+  caption = DEFAULT_CAPTION,
+  embedded = false,
+}: GlobeTemplateOptions = {}): string {
   const stageId = `${idPrefix}-stage`;
   const searchId = `${idPrefix}-zone-search`;
   const clocksId = `${idPrefix}-clock-panel`;
 
-  return `<div class="gmt-globe gmt-globe-embedded">
-  <div class="gmt-globe-layout">
-    <div class="gmt-globe-frame">
-      <div class="gmt-globe-stage gmt-glass" id="${stageId}" data-role="stage">
-        <div class="gmt-globe-zoom" role="group" aria-label="Zoom the globe">
-          <button type="button" data-globe-zoom="in" aria-label="Zoom in">+</button>
-          <button type="button" data-globe-zoom="out" aria-label="Zoom out">−</button>
-          <button type="button" data-globe-zoom="reset" aria-label="Reset zoom">⊙</button>
-        </div>
-      </div>
-    </div>
-    <div class="gmt-globe-side">
-      <div class="gmt-globe-search gmt-combobox">
-        <label for="${searchId}">Find a zone</label>
-        <input
-          type="search"
-          id="${searchId}"
-          class="gmt-field"
-          placeholder="e.g. Asia/Tokyo"
-          autocomplete="off"
-          data-globe-search
-        />
-      </div>
-      <div
-        class="gmt-globe-clocks"
-        id="${clocksId}"
-        data-role="clocks"
-        role="listbox"
-        aria-label="Pinned zones — select one to focus the globe"
-        tabindex="0"
-      ></div>
-    </div>
-  </div>
-</div>`;
+  /* Astro emits `class:list={{ x: cond }}` as a space-joined class list and
+     omits `data-tools-fullbleed={undefined}` altogether. Reproduced literally
+     so the built pages stay byte-identical. */
+  const rootClass = embedded ? "gmt-globe gmt-globe-embedded" : "gmt-globe";
+  const fullbleed = embedded ? "" : " data-tools-fullbleed";
+
+  return (
+    `<div class="${rootClass}"${fullbleed}>` +
+    (embedded
+      ? ""
+      : `<h2 class="gmt-chart-title">${escapeHtml(heading)}</h2>`) +
+    `<div class="gmt-globe-layout">` +
+    `<div class="gmt-globe-frame">` +
+    `<div class="gmt-globe-stage gmt-glass" id="${stageId}" data-role="stage">` +
+    `<div class="gmt-globe-zoom" role="group" aria-label="Zoom the globe">` +
+    `<button type="button" data-globe-zoom="in" aria-label="Zoom in">+</button>` +
+    `<button type="button" data-globe-zoom="out" aria-label="Zoom out">−</button>` +
+    `<button type="button" data-globe-zoom="reset" aria-label="Reset zoom">⊙</button>` +
+    `</div>` +
+    `</div>` +
+    `</div>` +
+    `<div class="gmt-globe-side">` +
+    `<div class="gmt-globe-search gmt-combobox">` +
+    `<label for="${searchId}">Find a zone</label>` +
+    `<input type="search" id="${searchId}" class="gmt-field" placeholder="e.g. Asia/Tokyo" autocomplete="off" data-globe-search>` +
+    `</div>` +
+    `<div class="gmt-globe-clocks" id="${clocksId}" data-role="clocks" role="listbox" aria-label="Pinned zones — select one to focus the globe" tabindex="0"></div>` +
+    `</div>` +
+    `</div>` +
+    (embedded
+      ? ""
+      : `<p class="gmt-globe-caption">${escapeHtml(caption)}</p>`) +
+    `</div>`
+  );
 }
 
 export const mountGlobe: MountFn<GlobeArgs> = async (root, args, signal) => {

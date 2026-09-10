@@ -49,8 +49,10 @@ export function installJsdomShims(): void {
 
   if (!globalThis.requestAnimationFrame) {
     globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) =>
-      setTimeout(() => cb(performance.now()), 0) as unknown as number) as
-      typeof globalThis.requestAnimationFrame;
+      setTimeout(
+        () => cb(performance.now()),
+        0,
+      ) as unknown as number) as typeof globalThis.requestAnimationFrame;
     globalThis.cancelAnimationFrame = ((id: number) =>
       clearTimeout(id)) as typeof globalThis.cancelAnimationFrame;
   }

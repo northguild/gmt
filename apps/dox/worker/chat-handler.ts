@@ -16,7 +16,7 @@ import { getUnixNowMs } from "./clock";
 import { mapUpstreamError } from "./error-mapping";
 import { namespaceFromPageContext } from "./namespace-from-page";
 import { checkRateLimit, clientIdFromRequest } from "./rate-limit";
-import { DOX_TOOL_DOCS } from "../src/lib/dox-tools";
+import { ENABLED_TOOL_DOCS } from "../src/lib/dox-tools";
 import { assembleSystemPrompt } from "./system-prompt";
 import { buildWorkerTools } from "./tools";
 import { validateChatRequest } from "./validation";
@@ -207,7 +207,7 @@ export function createChatHandler(deps: ChatHandlerDeps) {
         chunks: retrieved,
         vocabulary,
         coreRules,
-        tools: DOX_TOOL_DOCS,
+        tools: ENABLED_TOOL_DOCS,
       });
 
       /* `ignoreIncompleteToolCalls` drops a tool part that never reached a

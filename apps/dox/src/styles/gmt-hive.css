@@ -255,6 +255,51 @@
   letter-spacing: 0.08em;
 }
 
+/* ---- Error boundary ----
+ * The last line before a blank page. Sized to sit in either host: centred in
+ * the transcript column, or filling the rail. Uses the same `--gmt-signal`
+ * language as the warning banner, because it is the same kind of news. */
+
+.gmt-hive-boundary {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gmt-space-2);
+  margin: auto;
+  max-width: 32rem;
+  padding: var(--gmt-space-4);
+  color: var(--gmt-signal);
+  background: var(--gmt-signal-fill);
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  font-size: var(--gmt-text-sm);
+}
+
+.gmt-hive-boundary p {
+  margin: 0 0 var(--gmt-space-3);
+}
+
+.gmt-hive-boundary-marker {
+  flex: 0 0 auto;
+  letter-spacing: 0.08em;
+}
+
+.gmt-hive-boundary-reload {
+  padding: var(--gmt-space-1) var(--gmt-space-3);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-signal);
+  background: none;
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  cursor: pointer;
+}
+
+.gmt-hive-boundary-reload:hover {
+  background: var(--gmt-signal-fill);
+}
+
 /* ---- Transcript receipt ----
  * The durable record that Dox showed a widget, and the way back to it once the
  * rail is closed. Reads as a footnote to the answer, not as a second answer. */

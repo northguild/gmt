@@ -86,9 +86,9 @@ describe("the rendered link-hardening path", () => {
     expect(referenceRoutes.has(guide)).toBe(false);
 
     renderAnswer(`Read [the guide](${guide}).`, [guide]);
-    expect(screen.getByRole("link", { name: "the guide" }).getAttribute("href")).toBe(
-      guide,
-    );
+    expect(
+      screen.getByRole("link", { name: "the guide" }).getAttribute("href"),
+    ).toBe(guide);
   });
 
   it("degrades an off-site link to an origin that is not allowlisted", () => {

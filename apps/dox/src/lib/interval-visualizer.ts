@@ -26,6 +26,34 @@ const ZONE = "UTC";
 export const TIMELINE_START = "2024-01-01T00:00:00+00:00[UTC]";
 export const TIMELINE_END = "2024-12-31T23:59:59+00:00[UTC]";
 
+/**
+ * Parse any valid zoned ISO string to an `Instant`.
+ *
+ * `Temporal.Instant.from` is deliberately stricter than this widget needs: an
+ * Instant must be unambiguous, so it requires an offset (or `Z`) and rejects
+ * `2024-10-24T09:00:00[UTC]`. That string is nonetheless a perfectly valid
+ * `ZonedDateTime` — the zone determines the offset — and it is exactly what
+ * `isValidZonedDateTime` accepts.
+ *
+ * The gap between those two facts was a real bug: a reader could type a value
+ * this widget validated as good, watch it pass validation, and then see an
+ * empty timeline and a false "one of the intervals is reversed" message,
+ * because every `Instant.from` behind the scenes had thrown. Going through
+ * `ZonedDateTime` closes it — the zone resolves the offset, and an already
+ * offset-bearing string is unaffected.
+ *
+ * (`isValidZonedDateTime` is not at fault here and was not changed. It answers
+ * "is this a valid ZonedDateTime?", and the answer was correct; this module was
+ * asking a stricter question than it meant to.)
+ */
+function toInstant(iso: string): Temporal.Instant {
+  try {
+    return Temporal.Instant.from(iso);
+  } catch {
+    return Temporal.ZonedDateTime.from(iso).toInstant();
+  }
+}
+
 const START_MS = Temporal.Instant.from(TIMELINE_START).epochMilliseconds;
 const END_MS = Temporal.Instant.from(TIMELINE_END).epochMilliseconds;
 const SPAN_MS = END_MS - START_MS;
@@ -36,7 +64,7 @@ const SPAN_MS = END_MS - START_MS;
  */
 export function instantToPercent(iso: string): number {
   try {
-    const ms = Temporal.Instant.from(iso).epochMilliseconds;
+    const ms = toInstant(iso).epochMilliseconds;
     return Math.max(0, Math.min(100, ((ms - START_MS) / SPAN_MS) * 100));
   } catch {
     return NaN;
@@ -64,7 +92,7 @@ export function percentToInstant(percent: number, stepMinutes = 1440): string {
  */
 export function stepInstant(iso: string, deltaDays: number): string {
   try {
-    const instant = Temporal.Instant.from(iso);
+    const instant = toInstant(iso);
     const stepped = instant.add({ hours: deltaDays * 24 });
     const clampedMs = Math.max(
       START_MS,
@@ -76,6 +104,182 @@ export function stepInstant(iso: string, deltaDays: number): string {
   } catch {
     return iso;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Data-fitted timeline scale
+// ---------------------------------------------------------------------------
+
+/**
+ * The canvas the six rows are drawn on.
+ *
+ * **Why this exists.** The timeline was a fixed calendar-2024 window, and that
+ * is exactly right for the relationship presets: they are authored against it,
+ * and holding the frame of reference still is what makes switching between them
+ * legible — `disjoint` occupying only the left two-thirds is information, not a
+ * layout accident. Refitting per preset would destroy that.
+ *
+ * It is exactly wrong for values that arrive from outside. DOX-C3b let the chat
+ * seed four arbitrary instants, and a three-hour meeting on a one-year axis maps
+ * to a 0.02%-wide bar: every handle lands on the same pixel and the widget looks
+ * broken while being, arithmetically, perfectly correct.
+ *
+ * So the canvas is a value rather than a constant. Presets restore
+ * `FIXED_YEAR_SCALE`; seeded and typed values call `fitTimelineScale`.
+ *
+ * Drag snapping and keyboard stepping derive from the span rather than being
+ * fixed at a day, which is what keeps the fixed-year case byte-identical to the
+ * old constants (366 days / 200 lands on the 1-day rung) while giving a
+ * three-hour canvas a one-minute step instead of an unusable one-day one.
+ */
+export interface TimelineScale {
+  readonly startMs: number;
+  readonly endMs: number;
+  /** Drag snap and single keyboard step. Derived from the span. */
+  readonly snapMinutes: number;
+  toPercent(iso: string): number;
+  fromPercent(percent: number): string;
+  /** Move `iso` by `steps` snap units, clamped to the canvas. */
+  step(iso: string, steps: number): string;
+  /** The three axis labels: start, midpoint, end. */
+  labels(): [string, string, string];
+}
+
+const MINUTE_MS = 60_000;
+const DAY_MS = 86_400_000;
+
+/* Rungs a reader can reason about. Anything finer than a minute is noise at
+   these track widths; anything coarser than a week outruns the presets. */
+const SNAP_LADDER_MINUTES = [1, 5, 15, 30, 60, 180, 360, 720, 1440, 10_080];
+
+const MONTH_NAMES = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+/** Largest ladder rung at or below span/200, so a full drag is ~200 steps. */
+function snapMinutesFor(spanMs: number): number {
+  const target = spanMs / 200 / MINUTE_MS;
+  let chosen = SNAP_LADDER_MINUTES[0]!;
+  for (const rung of SNAP_LADDER_MINUTES) {
+    if (rung <= target) chosen = rung;
+  }
+  return chosen;
+}
+
+/* Granularity follows the span: months across a year, days across a week,
+   clock time within a day. The year case must render "Jan 2024" / "Jul" /
+   "Dec" — those were hard-coded in the template and are pinned by tests. */
+function formatTick(ms: number, spanMs: number, withYear: boolean): string {
+  const zdt = Temporal.Instant.fromEpochMilliseconds(
+    Math.round(ms),
+  ).toZonedDateTimeISO(ZONE);
+  if (spanMs >= 60 * DAY_MS) {
+    const month = MONTH_NAMES[zdt.month - 1]!;
+    return withYear ? `${month} ${zdt.year}` : month;
+  }
+  if (spanMs >= 2 * DAY_MS) {
+    return `${zdt.day} ${MONTH_NAMES[zdt.month - 1]!}`;
+  }
+  const hh = String(zdt.hour).padStart(2, "0");
+  const mm = String(zdt.minute).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+function msToZoned(ms: number): string {
+  return Temporal.Instant.fromEpochMilliseconds(ms)
+    .toZonedDateTimeISO(ZONE)
+    .toString();
+}
+
+export function createTimelineScale(
+  startMs: number,
+  endMs: number,
+): TimelineScale {
+  const spanMs = Math.max(1, endMs - startMs);
+  const snapMinutes = snapMinutesFor(spanMs);
+  const snapMs = snapMinutes * MINUTE_MS;
+  const clamp = (ms: number) => Math.max(startMs, Math.min(endMs, ms));
+
+  return {
+    startMs,
+    endMs,
+    snapMinutes,
+
+    toPercent(iso) {
+      try {
+        const ms = toInstant(iso).epochMilliseconds;
+        return Math.max(0, Math.min(100, ((ms - startMs) / spanMs) * 100));
+      } catch {
+        return NaN;
+      }
+    },
+
+    fromPercent(percent) {
+      const pct = Math.max(0, Math.min(100, percent));
+      const rawMs = startMs + (pct / 100) * spanMs;
+      return msToZoned(clamp(Math.round(rawMs / snapMs) * snapMs));
+    },
+
+    step(iso, steps) {
+      try {
+        const ms = toInstant(iso).epochMilliseconds + steps * snapMs;
+        return msToZoned(clamp(ms));
+      } catch {
+        return iso;
+      }
+    },
+
+    labels() {
+      return [
+        formatTick(startMs, spanMs, true),
+        formatTick(startMs + spanMs / 2, spanMs, false),
+        formatTick(endMs, spanMs, false),
+      ];
+    },
+  };
+}
+
+/** The presets' canvas, and the widget's default. */
+export const FIXED_YEAR_SCALE = createTimelineScale(START_MS, END_MS);
+
+/** Breathing room each side of fitted data, so handles are draggable. */
+const FIT_PADDING = 0.1;
+
+/**
+ * A canvas that comfortably holds `values`, or `null` when there is not enough
+ * parseable input to fit one — in which case the caller keeps the canvas it has
+ * rather than showing an arbitrary one.
+ */
+export function fitTimelineScale(
+  values: readonly string[],
+): TimelineScale | null {
+  const stamps: number[] = [];
+  for (const value of values) {
+    try {
+      stamps.push(toInstant(value).epochMilliseconds);
+    } catch {
+      /* An unparseable field shouldn't stop the others from framing the view. */
+    }
+  }
+  if (stamps.length < 2) return null;
+
+  const min = Math.min(...stamps);
+  const max = Math.max(...stamps);
+  const rawSpan = max - min;
+  // Four identical instants still need a canvas with width.
+  const pad = rawSpan === 0 ? 30 * MINUTE_MS : rawSpan * FIT_PADDING;
+  return createTimelineScale(min - pad, max + pad);
 }
 
 // ---------------------------------------------------------------------------
@@ -204,10 +408,10 @@ export function classifyRelationship(
     bS: Temporal.Instant,
     bE: Temporal.Instant;
   try {
-    aS = Temporal.Instant.from(a.start);
-    aE = Temporal.Instant.from(a.end);
-    bS = Temporal.Instant.from(b.start);
-    bE = Temporal.Instant.from(b.end);
+    aS = toInstant(a.start);
+    aE = toInstant(a.end);
+    bS = toInstant(b.start);
+    bE = toInstant(b.end);
   } catch {
     return "invalid";
   }
@@ -239,7 +443,7 @@ function pad(n: number, width: number): string {
  */
 export function formatInstant(iso: string): string {
   try {
-    const zdt = Temporal.Instant.from(iso).toZonedDateTimeISO(ZONE);
+    const zdt = toInstant(iso).toZonedDateTimeISO(ZONE);
     const base = `${pad(zdt.year, 4)}-${pad(zdt.month, 2)}-${pad(zdt.day, 2)} ${pad(zdt.hour, 2)}:${pad(zdt.minute, 2)}:${pad(zdt.second, 2)}`;
     const ns =
       zdt.millisecond * 1_000_000 + zdt.microsecond * 1_000 + zdt.nanosecond;

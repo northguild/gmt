@@ -1,3 +1,5 @@
+import type { DoxToolName } from "./dox-tools";
+
 /**
  * DOX-C2 (#138) — shared between the Worker (`worker/*`) and, from `DOX-C3a`
  * onward, the client. There is no model-selector UI yet, so "shared" only
@@ -159,7 +161,50 @@ export const IDLE_TIMEOUT_MS = 30_000;
  */
 export const CORPUS_FUNCTION_COUNT = 597;
 export const CORPUS_GUIDE_COUNT = 164;
-export const CORPUS_CHUNK_COUNT =
-  CORPUS_FUNCTION_COUNT + CORPUS_GUIDE_COUNT;
+export const CORPUS_CHUNK_COUNT = CORPUS_FUNCTION_COUNT + CORPUS_GUIDE_COUNT;
 
 export const CORPUS_SUMMARY = `${CORPUS_FUNCTION_COUNT} functions · ${CORPUS_GUIDE_COUNT} guide sections · ${CORPUS_CHUNK_COUNT} chunks indexed`;
+
+/**
+ * The pills on the empty chat screen.
+ *
+ * Two jobs, and the second one is why this is structured data rather than a
+ * list of strings. They have to be **real questions the corpus answers** — a
+ * suggestion that gets refused is worse than no suggestion at all — and they
+ * are the only place a reader discovers that Dox can render live widgets at
+ * all. A reader who never asks a widget-shaped question never learns the
+ * panel exists.
+ *
+ * So there is one per enabled widget, and `chat-starters.test.ts` asserts that
+ * mapping is total: adding a tool to `ENABLED_TOOL_NAMES` without giving it a
+ * starter fails the suite. That is the same parity contract
+ * `widget-registry.test.ts` enforces between the tools and the registry, for
+ * the same reason — a widget nobody can discover may as well not ship.
+ *
+ * **`widget` is intent, not a guarantee.** Tool choice belongs to the model, so
+ * nothing here can force a call; these are phrased to match each tool's
+ * `Call when` line (see `dox-tools.ts`) and to lead with the imperative, which
+ * measurably raises the hit rate. They are not a substitute for the widgets'
+ * own `/tools` pages, which mount deterministically.
+ */
+export const CHAT_STARTERS: readonly {
+  readonly text: string;
+  readonly widget: DoxToolName;
+}[] = [
+  {
+    text: "Show me what time it is in Tokyo right now.",
+    widget: "showGlobe",
+  },
+  {
+    text: "Convert 2:30pm on 15 March 2024 in New York to Tokyo time.",
+    widget: "showConverterBench",
+  },
+  {
+    text: "Show me how a meeting from 9am to 11am overlaps one from 10am to noon on 15 March 2024 in London.",
+    widget: "showIntervalVisualizer",
+  },
+  {
+    text: "What happens to 1:30am on 3 November 2024 in New York?",
+    widget: "showDstInspector",
+  },
+];

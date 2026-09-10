@@ -16,7 +16,9 @@ installJsdomShims();
 describe("ChatWarning", () => {
   it("always shows the message", () => {
     render(
-      <ChatWarning state={{ message: "Dox is unavailable.", retryable: false }} />,
+      <ChatWarning
+        state={{ message: "Dox is unavailable.", retryable: false }}
+      />,
     );
     expect(screen.getByRole("status").textContent).toContain(
       "Dox is unavailable.",
@@ -50,7 +52,9 @@ describe("ChatWarning", () => {
 
   it("shows no button when the caller has nothing to retry", () => {
     render(
-      <ChatWarning state={{ message: "Dox stopped responding.", retryable: true }} />,
+      <ChatWarning
+        state={{ message: "Dox stopped responding.", retryable: true }}
+      />,
     );
     expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
   });

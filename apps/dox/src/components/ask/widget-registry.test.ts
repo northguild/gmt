@@ -10,6 +10,7 @@
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { DOX_TOOL_NAMES, ENABLED_TOOL_NAMES } from "~/lib/dox-tools";
 import {
   isRegisteredWidget,
   resolveWidget,
@@ -26,9 +27,12 @@ describe("resolveWidget", () => {
   });
 
   it("refuses an unknown tool name instead of throwing", () => {
-    // Reachable today, not hypothetical: the model is offered four tools and
-    // only one is registered while the Astro widgets are still being extracted.
-    const result = resolveWidget("showDstInspector", { zone: "UTC", year: 2026 });
+    /* A name that is not a tool at all, rather than one that merely was not
+       registered yet. This previously used `showDstInspector`, which was honest
+       while that widget was pending and became meaningless the moment it
+       landed — a test whose subject can quietly turn into a passing case is
+       worse than no test. */
+    const result = resolveWidget("showTimeMachine", { zone: "UTC" });
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.reason).toContain("doesn't have");
@@ -84,12 +88,52 @@ describe("resolveWidget", () => {
     // throw — it would silently make a control inert.
     const entry = WIDGET_REGISTRY.showGlobe;
     expect(entry).toBeDefined();
-    const html = entry?.renderTemplate("probe") ?? "";
-    for (const role of ['data-role="stage"', 'data-role="clocks"', "data-globe-search", "data-globe-zoom"]) {
+    const html = entry?.renderTemplate("probe", {}) ?? "";
+    for (const role of [
+      'data-role="stage"',
+      'data-role="clocks"',
+      "data-globe-search",
+      "data-globe-zoom",
+    ]) {
       expect(html).toContain(role);
     }
     // The id prefix is what stops a rail globe colliding with one on the page.
     expect(html).toContain('id="probe-stage"');
+  });
+});
+
+/**
+ * The parity contract.
+ *
+ * Dox is offered exactly the tools it can mount. Without this, a tool added to
+ * `dox-tools.ts` without a registry entry reaches a reader as an answer that
+ * promises a widget followed by a chip saying the widget is not in this build —
+ * and nothing in the suite would object.
+ */
+describe("offered tools and mountable widgets are the same set", () => {
+  it("every enabled tool has a registry entry", () => {
+    const registered = Object.keys(WIDGET_REGISTRY).sort();
+    expect([...ENABLED_TOOL_NAMES].sort()).toEqual(registered);
+  });
+
+  it("every registry entry names a real tool", () => {
+    for (const name of Object.keys(WIDGET_REGISTRY)) {
+      expect(DOX_TOOL_NAMES).toContain(name);
+    }
+  });
+
+  it("keeps any not-yet-extracted tool defined but unoffered", () => {
+    /* Derived, not hardcoded: the pending set shrinks by one each time a widget
+       is extracted, and a test that had to be edited on each of those steps
+       would eventually be edited to agree with whatever the code did. Their
+       schemas stay ready so enabling one is a single line; what must not happen
+       is offering one early. */
+    const pending = DOX_TOOL_NAMES.filter(
+      (name) => !(ENABLED_TOOL_NAMES as readonly string[]).includes(name),
+    );
+    for (const name of pending) {
+      expect(isRegisteredWidget(name)).toBe(false);
+    }
   });
 });
 

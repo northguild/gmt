@@ -1,11 +1,15 @@
 /// <reference types="vitest/globals" />
 
+import { Temporal } from "@js-temporal/polyfill";
 import { describe, expect, it } from "vitest";
 import {
   INTERVAL_OPERATIONS,
   RELATIONSHIP_PRESETS,
+  FIXED_YEAR_SCALE,
   TIMELINE_END,
   TIMELINE_START,
+  createTimelineScale,
+  fitTimelineScale,
   buildRelationshipPreset,
   classifyRelationship,
   formatInstant,
@@ -297,5 +301,204 @@ describe("INTERVAL_OPERATIONS", () => {
       expect(op.fnName.startsWith("interval")).toBe(true);
       expect(op.fnName.endsWith("Zoned")).toBe(true);
     }
+  });
+});
+
+/**
+ * A zone-only ZonedDateTime — no offset — is valid, and this module used to
+ * reject it silently.
+ *
+ * `isValidZonedDateTime("2024-03-01T09:00:00[UTC]")` is true: the zone
+ * determines the offset. But `Temporal.Instant.from` requires an unambiguous
+ * offset and throws on it, so every helper here that reached for `Instant.from`
+ * returned NaN or "invalid" for input the widget had just validated as good.
+ * A reader typing that string saw an empty timeline and a false claim that one
+ * of their intervals was reversed.
+ */
+describe("zoned strings without an explicit offset", () => {
+  const NO_OFFSET = "2024-03-01T09:00:00[UTC]";
+  const WITH_OFFSET = "2024-03-01T09:00:00+00:00[UTC]";
+
+  it("places a zone-only value at the same point as its offset-bearing twin", () => {
+    expect(instantToPercent(NO_OFFSET)).toBeCloseTo(
+      instantToPercent(WITH_OFFSET),
+      10,
+    );
+    expect(Number.isNaN(instantToPercent(NO_OFFSET))).toBe(false);
+  });
+
+  it("classifies a relationship built from zone-only values", () => {
+    expect(
+      classifyRelationship(
+        { start: "2024-03-01T09:00:00[UTC]", end: "2024-06-01T09:00:00[UTC]" },
+        { start: "2024-05-01T09:00:00[UTC]", end: "2024-08-01T09:00:00[UTC]" },
+      ),
+    ).toBe("overlapping");
+  });
+
+  it("does not call a forward interval reversed", () => {
+    // The exact false report a reader hit.
+    expect(
+      classifyRelationship(
+        { start: "2024-03-01T09:00:00[UTC]", end: "2024-06-01T11:00:00[UTC]" },
+        {
+          start: "2024-01-01T00:00:00+00:00[UTC]",
+          end: "2024-12-31T00:00:00+00:00[UTC]",
+        },
+      ),
+    ).not.toBe("invalid");
+  });
+
+  it("still reports genuinely reversed intervals as invalid", () => {
+    expect(
+      classifyRelationship(
+        { start: "2024-06-01T09:00:00[UTC]", end: "2024-03-01T09:00:00[UTC]" },
+        {
+          start: "2024-01-01T00:00:00+00:00[UTC]",
+          end: "2024-12-31T00:00:00+00:00[UTC]",
+        },
+      ),
+    ).toBe("invalid");
+  });
+
+  it("still reports unparseable input as invalid", () => {
+    expect(Number.isNaN(instantToPercent("not a date"))).toBe(true);
+    expect(
+      classifyRelationship(
+        { start: "nonsense", end: "also nonsense" },
+        {
+          start: "2024-01-01T00:00:00+00:00[UTC]",
+          end: "2024-12-31T00:00:00+00:00[UTC]",
+        },
+      ),
+    ).toBe("invalid");
+  });
+
+  it("formats and steps a zone-only value", () => {
+    expect(formatInstant(NO_OFFSET)).toBe(formatInstant(WITH_OFFSET));
+    expect(stepInstant(NO_OFFSET, 1)).toBe(stepInstant(WITH_OFFSET, 1));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TimelineScale
+// ---------------------------------------------------------------------------
+
+describe("FIXED_YEAR_SCALE", () => {
+  /* This canvas is what the five relationship presets are composed against, and
+     what the three reference pages render. It has to stay exactly where the old
+     module-level constants put it — a drift of even a fraction of a percent
+     moves every bar on every built page. */
+  it("agrees with the standalone helpers to the last digit", () => {
+    for (const preset of RELATIONSHIP_PRESETS) {
+      const v = buildRelationshipPreset(preset.type);
+      for (const key of ["aStart", "aEnd", "bStart", "bEnd"] as const) {
+        expect(
+          FIXED_YEAR_SCALE.toPercent(v[key]),
+          `${preset.type}.${key}`,
+        ).toBe(instantToPercent(v[key]));
+      }
+    }
+  });
+
+  it("reproduces the axis labels the template ships with", () => {
+    // The template's static markup reads Jan 2024 / Jul / Dec. If this ever
+    // disagrees, the built pages change the moment the axis is rendered.
+    expect(FIXED_YEAR_SCALE.labels()).toEqual(["Jan 2024", "Jul", "Dec"]);
+  });
+
+  it("keeps the one-day step the keyboard and drag paths had before", () => {
+    expect(FIXED_YEAR_SCALE.snapMinutes).toBe(1440);
+    expect(FIXED_YEAR_SCALE.fromPercent(0)).toBe(TIMELINE_START);
+    expect(FIXED_YEAR_SCALE.fromPercent(100)).toBe(TIMELINE_END);
+  });
+});
+
+describe("fitTimelineScale", () => {
+  const MEETINGS = [
+    "2024-03-15T09:00:00+00:00[Europe/London]",
+    "2024-03-15T11:00:00+00:00[Europe/London]",
+    "2024-03-15T10:00:00+00:00[Europe/London]",
+    "2024-03-15T12:00:00+00:00[Europe/London]",
+  ];
+
+  /* The regression this whole abstraction exists for: three hours is 0.02% of a
+     calendar year, so on the fixed canvas all four handles land on one pixel. */
+  it("turns a three-hour span into a readable one, not a sliver", () => {
+    expect(
+      instantToPercent(MEETINGS[1]!) - instantToPercent(MEETINGS[0]!),
+    ).toBeLessThan(0.05);
+
+    const fitted = fitTimelineScale(MEETINGS)!;
+    expect(
+      fitted.toPercent(MEETINGS[1]!) - fitted.toPercent(MEETINGS[0]!),
+    ).toBeGreaterThan(25);
+  });
+
+  it("keeps the whole span on the canvas with room to drag at both ends", () => {
+    const fitted = fitTimelineScale(MEETINGS)!;
+    const pcts = MEETINGS.map((m) => fitted.toPercent(m));
+    expect(Math.min(...pcts)).toBeGreaterThan(0);
+    expect(Math.max(...pcts)).toBeLessThan(100);
+  });
+
+  it("preserves the relationship it is drawing", () => {
+    // A 09-11, B 10-12 partially overlap; the shared middle is 10-11.
+    const f = fitTimelineScale(MEETINGS)!;
+    const [aStart, aEnd, bStart, bEnd] = MEETINGS.map((m) => f.toPercent(m));
+    expect(aStart!).toBeLessThan(bStart!);
+    expect(bStart!).toBeLessThan(aEnd!);
+    expect(aEnd!).toBeLessThan(bEnd!);
+  });
+
+  it("drops to a step a reader can actually scrub with", () => {
+    // One day per arrow press on a three-hour canvas is unusable.
+    expect(fitTimelineScale(MEETINGS)!.snapMinutes).toBe(1);
+  });
+
+  it("labels a sub-day canvas with clock time, not month names", () => {
+    expect(fitTimelineScale(MEETINGS)!.labels()).toEqual([
+      "08:42",
+      "10:30",
+      "12:18",
+    ]);
+  });
+
+  it("returns null when there is too little to fit, so the caller keeps its canvas", () => {
+    expect(fitTimelineScale([])).toBeNull();
+    expect(fitTimelineScale(["nonsense", "also nonsense"])).toBeNull();
+    expect(fitTimelineScale([TIMELINE_START, "nonsense"])).toBeNull();
+  });
+
+  it("still produces a canvas with width when every instant is identical", () => {
+    const fitted = fitTimelineScale([TIMELINE_START, TIMELINE_START])!;
+    expect(fitted.endMs).toBeGreaterThan(fitted.startMs);
+    expect(fitted.toPercent(TIMELINE_START)).toBe(50);
+  });
+
+  it("ignores an unparseable field rather than refusing to fit the rest", () => {
+    const fitted = fitTimelineScale([...MEETINGS.slice(0, 3), "garbage"]);
+    expect(fitted).not.toBeNull();
+    expect(fitted!.toPercent(MEETINGS[0]!)).toBeGreaterThan(0);
+  });
+});
+
+describe("createTimelineScale label granularity", () => {
+  const at = (iso: string) => Temporal.Instant.from(iso).epochMilliseconds;
+
+  it("uses day-and-month across a week", () => {
+    const scale = createTimelineScale(
+      at("2024-03-11T00:00:00Z"),
+      at("2024-03-18T00:00:00Z"),
+    );
+    expect(scale.labels()).toEqual(["11 Mar", "14 Mar", "18 Mar"]);
+  });
+
+  it("uses month names across a quarter", () => {
+    const scale = createTimelineScale(
+      at("2024-01-01T00:00:00Z"),
+      at("2024-06-01T00:00:00Z"),
+    );
+    expect(scale.labels()).toEqual(["Jan 2024", "Mar", "Jun"]);
   });
 });

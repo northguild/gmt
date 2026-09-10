@@ -42,6 +42,7 @@ import { isValidTimeZone } from "@northguild/gmt/zoned/validate";
 import { tool, type InferUITools, type UIDataTypes, type UIMessage } from "ai";
 import {
   DOX_TOOL_DOCS,
+  ENABLED_TOOL_NAMES,
   showConverterBenchInput,
   showDstInspectorInput,
   showGlobeInput,
@@ -71,8 +72,19 @@ function reject(widget: string, note: string) {
  * they close over nothing today, but a tool that ever needs request context
  * should not require restructuring this.
  */
-export function buildWorkerTools() {
-  return {
+/**
+ * @param names Which tools to return. **Production must not pass this** — the
+ *   default is the only correct value, and offering a tool whose widget is not
+ *   registered means the model promises a widget the panel cannot show.
+ *   It exists so tests can exercise a pending tool's `execute` before its widget
+ *   is extracted, which is what makes enabling one genuinely a one-line change.
+ *   `chat-handler.test.ts` asserts the *offered* set equals `ENABLED_TOOL_NAMES`,
+ *   so a stray argument here fails there rather than reaching a reader.
+ */
+export function buildWorkerTools(
+  names: readonly string[] = ENABLED_TOOL_NAMES,
+) {
+  const all = {
     showGlobe: tool({
       description: docFor("showGlobe"),
       inputSchema: showGlobeInput,
@@ -119,6 +131,10 @@ export function buildWorkerTools() {
       },
     }),
   };
+
+  return Object.fromEntries(
+    Object.entries(all).filter(([name]) => names.includes(name)),
+  ) as Partial<typeof all>;
 }
 
 export type DoxTools = ReturnType<typeof buildWorkerTools>;

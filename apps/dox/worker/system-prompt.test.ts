@@ -83,7 +83,6 @@ describe("assembleSystemPrompt", () => {
     for (const decoy of decoys) expect(prompt).not.toContain(decoy);
   });
 
-
   it("labels the retrieved context with each chunk's URL", () => {
     const prompt = assembleSystemPrompt({
       routeAllowlist: CHUNKS.map((c) => c.url),
@@ -103,5 +102,56 @@ describe("assembleSystemPrompt", () => {
     });
     expect(prompt).toContain("no chunks retrieved for this question");
     expect(prompt).toContain("this question retrieved no pages");
+  });
+
+  describe("the tools block's disposition", () => {
+    /* This block was rewritten after live measurement. The original closed with
+       "Prefer prose. Call a tool only when seeing the thing beats reading about
+       it.", and that sentence measurably suppressed calls: a question matching
+       `showConverterBench`'s `Call when` line word for word produced a tool call
+       in 0 of 3 attempts across three brains. The instruction now keys off the
+       `Call when` lines instead of the model's own judgement about whether a
+       widget is warranted. */
+    const withTools = () =>
+      assembleSystemPrompt({
+        routeAllowlist: CHUNKS.map((c) => c.url),
+        chunks: CHUNKS,
+        vocabulary: "VOCAB_MARKER",
+        coreRules: "CORE_RULES_MARKER",
+        tools: [
+          {
+            name: "showConverterBench",
+            purpose: "A converter.",
+            when: "the reader asks to convert a specific time between two zones",
+            args: "value, from, to",
+          },
+        ],
+      });
+
+    it("tells the model to call on a match rather than to prefer prose", () => {
+      const prompt = withTools();
+      expect(prompt).toContain("call that tool");
+      expect(prompt).not.toContain("Prefer prose");
+    });
+
+    it("still forbids a bare tool call with no answer", () => {
+      // The prose-first rule is what stops a widget mounting beside silence;
+      // loosening the call bias must not loosen this.
+      const prompt = withTools();
+      expect(prompt).toContain("Never reply with only a tool call");
+      expect(prompt).toContain("Write your prose answer first");
+    });
+
+    it("still caps a turn at one widget", () => {
+      expect(withTools()).toContain("At most one tool per answer");
+    });
+
+    it("still refuses to invent a zone", () => {
+      expect(withTools()).toContain("Never invent one");
+    });
+
+    it("still says nothing is the default when no line matches", () => {
+      expect(withTools()).toContain("There is no default widget");
+    });
   });
 });

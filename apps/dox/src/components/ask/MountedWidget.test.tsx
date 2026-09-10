@@ -189,7 +189,13 @@ describe("MountedWidget", () => {
       validate: async () =>
         "Mars/Olympus_Mons isn't a time zone this browser knows about.",
     });
-    render(<MountedWidget entry={entry} args={{ zone: "Mars/Olympus_Mons" }} idPrefix="t" />);
+    render(
+      <MountedWidget
+        entry={entry}
+        args={{ zone: "Mars/Olympus_Mons" }}
+        idPrefix="t"
+      />,
+    );
 
     await waitFor(() =>
       expect(screen.getByRole("status").textContent).toContain(
@@ -222,12 +228,20 @@ describe("MountedWidget", () => {
     // dependency on identity would remount the widget on each one.
     const { entry, log } = spyEntry();
     const { rerender } = render(
-      <MountedWidget entry={entry} args={{ zone: "Asia/Tokyo" }} idPrefix="t" />,
+      <MountedWidget
+        entry={entry}
+        args={{ zone: "Asia/Tokyo" }}
+        idPrefix="t"
+      />,
     );
     await waitFor(() => expect(log).toContain("wired"));
 
     rerender(
-      <MountedWidget entry={entry} args={{ zone: "Asia/Tokyo" }} idPrefix="t" />,
+      <MountedWidget
+        entry={entry}
+        args={{ zone: "Asia/Tokyo" }}
+        idPrefix="t"
+      />,
     );
     await act(async () => {
       await Promise.resolve();

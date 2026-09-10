@@ -41,7 +41,7 @@ export function MountedWidget({
     let cancelled = false;
 
     setError(null);
-    root.innerHTML = entry.renderTemplate(idPrefix);
+    root.innerHTML = entry.renderTemplate(idPrefix, args);
 
     void (async () => {
       try {
@@ -96,11 +96,7 @@ export function MountedWidget({
   /* `suppressHydrationWarning` because this subtree is written by `mount()`,
      not by React — the server renders it empty and the client fills it. */
   return (
-    <div
-      className="gmt-hive-widget-host"
-      ref={ref}
-      suppressHydrationWarning
-    />
+    <div className="gmt-hive-widget-host" ref={ref} suppressHydrationWarning />
   );
 }
 

@@ -28,7 +28,7 @@ import type { StickToBottomContext } from "use-stick-to-bottom";
 import { SearchIcon } from "lucide-react";
 
 import { referenceRoutes } from "~/generated/reference/route-manifest";
-import { CORPUS_SUMMARY } from "~/lib/chat-constants";
+import { CHAT_STARTERS, CORPUS_SUMMARY } from "~/lib/chat-constants";
 import { checkUserText } from "~/lib/chat-sanitize";
 import type { BrainsInfo } from "./use-brains";
 import { untilReset } from "./use-brains";
@@ -61,16 +61,6 @@ import { createLinkComponents } from "./link-components";
 import { RetrievalTrace } from "./RetrievalTrace";
 import { WidgetReceipt } from "./WidgetReceipt";
 import { useIdleTimeout } from "./use-idle-timeout";
-
-/** Real questions the corpus can actually answer — a blank box tells a reader
- * nothing about what this is for, and a suggestion that gets refused is worse
- * than no suggestion at all. */
-const STARTERS = [
-  "How do I convert a UTC timestamp to Tokyo time?",
-  "What happens during a DST gap?",
-  "How do I add business days to a date?",
-  "What does gmt return for invalid input?",
-];
 
 /** Streamdown's code plugin defaults to the theme *names* `github-light` /
  * `github-dark`, which its pinned Shiki can't resolve once bundled for the
@@ -362,11 +352,11 @@ export function DoxChat({
                 times, and zones in <code>@northguild/gmt</code>.
               </p>
               <div className="gmt-hive-starters">
-                {STARTERS.map((starter) => (
+                {CHAT_STARTERS.map((starter) => (
                   <Suggestion
-                    key={starter}
+                    key={starter.widget}
                     className="gmt-hive-starter gmt-sonar-focus"
-                    suggestion={starter}
+                    suggestion={starter.text}
                     onClick={send}
                   />
                 ))}

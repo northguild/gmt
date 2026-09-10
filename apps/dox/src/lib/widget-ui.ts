@@ -6,6 +6,12 @@
  * These run in the browser so they must have zero Node/TS-only dependencies.
  */
 
+/* Imported rather than redeclared. These are the same paths `CodeFrame.astro`
+   renders, and they used to be maintained in both files — the button swaps to
+   CHECK_ICON on copy and back again, so a drift between the two would show up
+   as the icon changing shape after the first click. */
+import { CHECK_ICON, COPY_ICON } from "./code-frame";
+
 // ---------------------------------------------------------------------------
 // Syntax-highlighted call lines
 // ---------------------------------------------------------------------------
@@ -13,6 +19,31 @@
 /** Escape text for safe use inside innerHTML. */
 export function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/**
+ * Escape a value for interpolation into an HTML **attribute**.
+ *
+ * `escapeHtml` above is not enough here: it leaves `"` and `'` alone, which is
+ * fine for text content and useless for `value="…"`, where a quote ends the
+ * attribute and everything after it is parsed as markup.
+ *
+ * This matters because of DOX-C3b. Until the widgets were extracted, their
+ * markup was an `.astro` template and **Astro escaped every interpolation for
+ * us**. A hand-written template string does not, and the values now flowing
+ * into these templates are the least trustworthy the widgets have ever seen:
+ * arguments a language model chose, and arguments decoded from a URL a reader
+ * may have been handed by anyone. Escaping at the boundary is the cheap,
+ * total fix; the schemas and the structural checks in `widget-permalink.ts`
+ * are defence in depth on top of it, not instead of it.
+ */
+export function escapeAttr(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 /**
@@ -48,10 +79,6 @@ export function renderCallLine(
 // ---------------------------------------------------------------------------
 // Copy buttons
 // ---------------------------------------------------------------------------
-
-const COPY_ICON =
-  '<rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>';
-const CHECK_ICON = '<polyline points="20 6 9 17 4 12"></polyline>';
 
 /**
  * Wire every `[data-role^="copy-"]` button inside container: on click, copies

@@ -127,7 +127,11 @@ describe("validateChatRequest", () => {
     const result = await validateChatRequest({
       messages: [
         userMessage("first\u200Bquestion", "m1"),
-        { id: "m2", role: "assistant", parts: [{ type: "text", text: "an\u200Banswer" }] },
+        {
+          id: "m2",
+          role: "assistant",
+          parts: [{ type: "text", text: "an\u200Banswer" }],
+        },
         userMessage("second\u200Bquestion", "m3"),
       ],
     });

@@ -14,6 +14,7 @@ import { useCallback, useEffect, useState } from "react";
 import { BrainSelector } from "./BrainSelector";
 import { DoxChat } from "./DoxChat";
 import { useBrains } from "./use-brains";
+import { ChatErrorBoundary } from "./ChatErrorBoundary";
 import { WidgetRail, type RailWidget } from "./WidgetRail";
 import { resolveWidget } from "./widget-registry";
 
@@ -95,13 +96,48 @@ export default function DoxPage() {
         </div>
       </header>
       <div className="gmt-hive-body">
-        <DoxChat
-          brains={info}
-          selectedBrainId={selectedBrainId}
-          onUsed={refresh}
-          onWidget={showWidget}
-        />
-        <WidgetRail widget={railWidget} onClose={closeWidget} />
+        {/* Two boundaries, not one. The transcript is the reader's
+            conversation — a widget that fails to mount must not take it away,
+            and the rail is by far the likelier of the two to break, since it
+            runs third-party rendering code against arguments a model chose. */}
+        <ChatErrorBoundary label="transcript">
+          <DoxChat
+            brains={info}
+            selectedBrainId={selectedBrainId}
+            onUsed={refresh}
+            onWidget={showWidget}
+          />
+        </ChatErrorBoundary>
+        <ChatErrorBoundary
+          label="widget rail"
+          /* No reload offered here: the conversation behind this is intact and
+             reloading would throw it away to fix a panel the reader can simply
+             close. */
+          fallback={(_error, reset) => (
+            <aside className="gmt-hive-rail" aria-label="Widget panel">
+              <div className="gmt-hive-boundary" role="alert">
+                <span className="gmt-hive-boundary-marker" aria-hidden="true">
+                  ⟨ ! ⟩
+                </span>
+                <div>
+                  <p>This widget couldn&rsquo;t be shown.</p>
+                  <button
+                    type="button"
+                    className="gmt-hive-boundary-reload gmt-sonar-focus"
+                    onClick={() => {
+                      reset();
+                      closeWidget();
+                    }}
+                  >
+                    Close the panel
+                  </button>
+                </div>
+              </div>
+            </aside>
+          )}
+        >
+          <WidgetRail widget={railWidget} onClose={closeWidget} />
+        </ChatErrorBoundary>
       </div>
     </div>
   );

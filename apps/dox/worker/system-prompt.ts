@@ -83,11 +83,13 @@ export function assembleSystemPrompt(sections: PromptSections): string {
   const toolsBlock =
     tools && tools.length > 0
       ? [
-          "You may call at most ONE of these per answer, to show the reader a live, interactive widget beside your text.",
+          "Each of these renders a live, interactive widget beside your text.",
           "",
           "**Write your prose answer first, then call the tool.** The widget appears in a separate panel; your text must stand on its own without it. Never reply with only a tool call.",
           "",
-          "Prefer prose. Call a tool only when seeing the thing beats reading about it.",
+          "**When the question matches one of the `Call when` lines below, call that tool.** Those lines describe exactly the questions these widgets exist for, and a reader who asks one is better served seeing the answer than only reading it. At most one tool per answer.",
+          "",
+          "If no `Call when` line matches, answer in prose alone. There is no default widget, and one that does not fit the question is worse than none.",
           "",
           ...tools.map(
             (tool) =>

@@ -34,7 +34,9 @@ export function messageText(message: UIMessage): string {
  * assistant turn with no text is not an answer the model gave — it is the
  * absence of one.
  */
-export function sendableHistory<T extends UIMessage>(messages: readonly T[]): T[] {
+export function sendableHistory<T extends UIMessage>(
+  messages: readonly T[],
+): T[] {
   return messages.filter(
     (message) =>
       message.role !== "assistant" || messageText(message).trim() !== "",

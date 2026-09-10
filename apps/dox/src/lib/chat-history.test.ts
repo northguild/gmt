@@ -14,19 +14,25 @@ const traceOnly = (id: string) =>
   ({
     id,
     role: "assistant",
-    parts: [
-      { type: "data-retrieval", data: { searched: 755, matched: 4 } },
-    ],
+    parts: [{ type: "data-retrieval", data: { searched: 755, matched: 4 } }],
   }) as unknown as UIMessage;
 
 describe("sendableHistory", () => {
   it("keeps a normal exchange intact", () => {
-    const history = [user("m1", "hello"), assistant("m2", "hi"), user("m3", "more")];
+    const history = [
+      user("m1", "hello"),
+      assistant("m2", "hi"),
+      user("m3", "more"),
+    ];
     expect(sendableHistory(history)).toEqual(history);
   });
 
   it("drops an assistant turn that never received a token", () => {
-    const history = [user("m1", "hello"), assistant("m2", ""), user("m3", "again")];
+    const history = [
+      user("m1", "hello"),
+      assistant("m2", ""),
+      user("m3", "again"),
+    ];
     expect(sendableHistory(history).map((m) => m.id)).toEqual(["m1", "m3"]);
   });
 

@@ -128,14 +128,14 @@ export const DOX_TOOL_DOCS: {
     purpose:
       "Two time intervals on a shared timeline, with their intersection, union, difference and XOR.",
     when: "the reader asks how two time ranges relate — overlap, gaps, combining them",
-    args: "aStart, aEnd, bStart, bEnd (ISO date-times)",
+    args: "aStart, aEnd, bStart, bEnd — ISO date-times. Include a zone when the reader named one (2024-11-03T09:00:00-04:00[America/New_York]); a plain 2024-11-03T09:00:00 is fine when they did not, and is read as UTC.",
   },
   {
     name: "showConverterBench",
     purpose:
       "A converter showing one instant across two zones and every supported format.",
     when: "the reader asks to convert a specific time between two zones, or how it formats",
-    args: "value (ISO date-time), from (IANA id), to (IANA id), locale (optional BCP-47 tag)",
+    args: "value (ISO date-time; a plain 2024-03-15T14:30:00 is read as UTC), from (IANA id), to (IANA id), locale (optional BCP-47 tag)",
   },
 ];
 
@@ -164,3 +164,35 @@ export const DOX_TOOLS = {
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
+
+/**
+ * The tools the model is actually offered — which is to say, the ones the
+ * client can actually mount.
+ *
+ * **This is the parity contract, and it exists because the alternative is Dox
+ * lying to the reader.** A tool defined above but absent from the widget
+ * registry is one the model will happily call and the panel cannot show: the
+ * answer promises a DST inspector and the transcript says the widget is not in
+ * this build. Offering only what can be mounted makes that unreachable.
+ *
+ * Every schema above stays defined regardless, so a tool can be added here in
+ * one line as its widget lands. `widget-registry.test.ts` asserts this list and
+ * the registry's keys are the same set, so the two cannot drift — adding a tool
+ * here without registering its widget fails the suite rather than reaching a
+ * reader.
+ *
+ * All four are now enabled, every one backed by a registered widget.
+ */
+export const ENABLED_TOOL_NAMES = [
+  "showGlobe",
+  "showConverterBench",
+  "showIntervalVisualizer",
+  "showDstInspector",
+] as const satisfies readonly DoxToolName[];
+
+export type EnabledToolName = (typeof ENABLED_TOOL_NAMES)[number];
+
+/** Prompt copy for the offered tools only. */
+export const ENABLED_TOOL_DOCS = DOX_TOOL_DOCS.filter((doc) =>
+  (ENABLED_TOOL_NAMES as readonly DoxToolName[]).includes(doc.name),
+);

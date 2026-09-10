@@ -10,9 +10,14 @@
  *    a bug that only shows up on a reader's second question.
  */
 import { convertToModelMessages, type UIMessage } from "ai";
+import { DOX_TOOL_NAMES } from "../src/lib/dox-tools";
 import { buildWorkerTools } from "./tools";
 
-const tools = buildWorkerTools();
+/* Every defined tool, not only the offered ones: a pending tool's `execute` is
+   worth testing before its widget lands, so enabling it is a one-line change
+   rather than a change plus a new test. Production never passes an argument —
+   see `buildWorkerTools`. */
+const tools = buildWorkerTools(DOX_TOOL_NAMES);
 
 /** Invoke a tool's `execute` the way `streamText` does. */
 async function run(name: keyof typeof tools, input: unknown) {
@@ -39,28 +44,36 @@ describe("worker tool execute", () => {
     expect(result.note).toContain("Mars/Olympus_Mons");
   });
 
-
   it("checks both ends of a conversion", async () => {
     expect(
-      (await run("showConverterBench", {
-        value: "2026-11-01T01:30",
-        from: "America/New_York",
-        to: "Asia/Tokyo",
-      })).ok,
+      (
+        await run("showConverterBench", {
+          value: "2026-11-01T01:30",
+          from: "America/New_York",
+          to: "Asia/Tokyo",
+        })
+      ).ok,
     ).toBe(true);
 
     expect(
-      (await run("showConverterBench", {
-        value: "2026-11-01T01:30",
-        from: "America/New_York",
-        to: "Nowhere/Special",
-      })).ok,
+      (
+        await run("showConverterBench", {
+          value: "2026-11-01T01:30",
+          from: "America/New_York",
+          to: "Nowhere/Special",
+        })
+      ).ok,
     ).toBe(false);
   });
 
   it("validates the DST inspector's zone", async () => {
-    expect((await run("showDstInspector", { zone: "America/New_York", year: 2026 })).ok).toBe(true);
-    expect((await run("showDstInspector", { zone: "Fake/Zone", year: 2026 })).ok).toBe(false);
+    expect(
+      (await run("showDstInspector", { zone: "America/New_York", year: 2026 }))
+        .ok,
+    ).toBe(true);
+    expect(
+      (await run("showDstInspector", { zone: "Fake/Zone", year: 2026 })).ok,
+    ).toBe(false);
   });
 
   it("does no I/O and no model call — execute is synchronous work only", () => {
@@ -68,7 +81,16 @@ describe("worker tool execute", () => {
     // ever needs to await something, that claim has to be re-argued.
     for (const name of Object.keys(tools) as (keyof typeof tools)[]) {
       const tool = tools[name] as { execute: (...a: unknown[]) => unknown };
-      const returned = tool.execute({ zone: "UTC", year: 2026, value: "2026-01-01T00:00", from: "UTC", to: "UTC" }, {});
+      const returned = tool.execute(
+        {
+          zone: "UTC",
+          year: 2026,
+          value: "2026-01-01T00:00",
+          from: "UTC",
+          to: "UTC",
+        },
+        {},
+      );
       expect(returned).not.toBeInstanceOf(Promise);
     }
   });
@@ -78,7 +100,11 @@ describe("worker tool execute", () => {
 describe("convertToModelMessages — why the tools carry an execute", () => {
   const assistantTurn = (state: string, extra: Record<string, unknown> = {}) =>
     [
-      { id: "u1", role: "user", parts: [{ type: "text", text: "world clock" }] },
+      {
+        id: "u1",
+        role: "user",
+        parts: [{ type: "text", text: "world clock" }],
+      },
       {
         id: "a1",
         role: "assistant",

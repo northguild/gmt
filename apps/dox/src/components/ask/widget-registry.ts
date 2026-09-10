@@ -37,8 +37,22 @@
  * template is a pure string function with no heavy dependencies, and the rail
  * needs it *before* the mount module has loaded.
  */
+import {
+  renderConverterTemplate,
+  type ConverterArgs,
+} from "~/lib/converter-bench-mount";
 import { renderGlobeTemplate, type GlobeArgs } from "~/lib/globe-mount";
-import { showGlobeInput } from "~/lib/dox-tools";
+import { renderDstTemplate, type DstArgs } from "~/lib/dst-inspector-mount";
+import {
+  renderIntervalTemplate,
+  type IntervalArgs,
+} from "~/lib/interval-visualizer-mount";
+import {
+  showConverterBenchInput,
+  showDstInspectorInput,
+  showGlobeInput,
+  showIntervalVisualizerInput,
+} from "~/lib/dox-tools";
 import type { MountFn } from "~/lib/widget-mount";
 import type { WidgetKind } from "~/lib/widget-permalink";
 
@@ -59,7 +73,7 @@ export interface AnyWidgetEntry {
   parse: (
     input: unknown,
   ) => { ok: true; args: unknown } | { ok: false; reason: string };
-  renderTemplate: (idPrefix: string) => string;
+  renderTemplate: (idPrefix: string, args: unknown) => string;
   load: () => Promise<{ mount: MountFn<never> }>;
   validate?: (args: unknown) => Promise<string | null>;
 }
@@ -69,9 +83,18 @@ export interface WidgetEntry<Args> {
   title: string;
   kind: WidgetKind;
   /** Parses unknown input into `Args`, or reports why it cannot. */
-  parse: (input: unknown) => { ok: true; args: Args } | { ok: false; reason: string };
-  /** Markup for the mount to wire. Pure — no DOM access. */
-  renderTemplate: (idPrefix: string) => string;
+  parse: (
+    input: unknown,
+  ) => { ok: true; args: Args } | { ok: false; reason: string };
+  /**
+   * Markup for the mount to wire. Pure — no DOM access.
+   *
+   * Takes the args so a seeded widget paints seeded on its first frame rather
+   * than rendering defaults and correcting itself a moment later. `idPrefix`
+   * namespaces any `id` the markup needs, so a widget in the rail cannot
+   * collide with the same widget on the page behind it.
+   */
+  renderTemplate: (idPrefix: string, args: Args) => string;
   /** Lazy, with a literal specifier. */
   load: () => Promise<{ mount: MountFn<Args> }>;
   /** Semantic check the schema cannot make. `null` means fine. */
@@ -103,8 +126,13 @@ const globeEntry = defineWidget<GlobeArgs>({
     const result = showGlobeInput.safeParse(input);
     return result.success
       ? { ok: true, args: result.data }
-      : { ok: false, reason: "The widget was asked for with arguments that don't fit." };
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
   },
+  // The globe seeds after mount instead: `focusZone` animates there, which
+  // reads better than snapping to the zone on the first frame.
   renderTemplate: (idPrefix) => renderGlobeTemplate({ idPrefix }),
   load: () =>
     import("~/lib/globe-mount").then((m) => ({ mount: m.mountGlobe })),
@@ -114,14 +142,88 @@ const globeEntry = defineWidget<GlobeArgs>({
 /**
  * A literal object with literal keys. Do not make this dynamic.
  *
- * `showDstInspector`, `showIntervalVisualizer` and `showConverterBench` join it
- * as their Astro widgets are extracted (steps 2-4). Until then those tool names
- * are *known to the model but unregistered here*, which is exactly the "unknown
- * tool name" case the DoD asks to be handled without crashing — so it is a real
- * path, not a hypothetical one.
+ * All four Tier 2 widgets are registered. `ENABLED_TOOL_NAMES` remains the
+ * declaration of what the model is offered, and a test asserts the two sets
+ * are equal — so a fifth tool cannot be offered without a widget to mount. Until then those tool names are known to `dox-tools.ts` but
+ * unregistered here — and `ENABLED_TOOL_NAMES` keeps them from being offered to
+ * the model at all, so Dox can never promise a widget this build cannot show.
  */
+const converterEntry = defineWidget<ConverterArgs>({
+  title: "Converter + format bench",
+  kind: "converter",
+  parse: (input) => {
+    const result = showConverterBenchInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  renderTemplate: (_idPrefix, args) => renderConverterTemplate(args),
+  load: () =>
+    import("~/lib/converter-bench-mount").then((m) => ({
+      mount: m.mountConverterBench,
+    })),
+  /* `ConverterArgs` are all optional — the template falls back to its own
+     defaults — so only the zones actually supplied are checked. */
+  validate: ({ from, to }) =>
+    checkZones([from, to].filter((zone): zone is string => !!zone)),
+});
+
+const intervalEntry = defineWidget<IntervalArgs>({
+  title: "Interval algebra visualizer",
+  kind: "interval",
+  parse: (input) => {
+    const result = showIntervalVisualizerInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  // Seeds after mount rather than in the template: `applyPreset()` runs at the
+  // end of setup and would overwrite anything painted here.
+  renderTemplate: () => renderIntervalTemplate(),
+  load: () =>
+    import("~/lib/interval-visualizer-mount").then((m) => ({
+      mount: m.mountIntervalVisualizer,
+    })),
+  /* No zones to check. The widget pre-validates each interval with the
+     library's own `isValidZonedRange` and renders the invalid case visibly
+     differently from the empty one — see the component docstring — so a
+     nonsense date reaches an explanatory state rather than an error box. */
+});
+
+const dstEntry = defineWidget<DstArgs>({
+  title: "DST transition inspector",
+  kind: "dst",
+  parse: (input) => {
+    const result = showDstInspectorInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template rather than after mount: every argument here is a
+     control value, and `setupWidget` reads those controls on its first render.
+     Writing them afterwards would be a second source of truth for one state. */
+  renderTemplate: (_idPrefix, args) => renderDstTemplate(args),
+  load: () =>
+    import("~/lib/dst-inspector-mount").then((m) => ({
+      mount: m.mountDstInspector,
+    })),
+  validate: ({ zone }) => (zone ? checkZones([zone]) : Promise.resolve(null)),
+});
+
 export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showGlobe: globeEntry,
+  showConverterBench: converterEntry,
+  showIntervalVisualizer: intervalEntry,
+  showDstInspector: dstEntry,
 };
 
 /** Whether a streamed tool part names a widget this build actually has. */

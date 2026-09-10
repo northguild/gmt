@@ -49,7 +49,7 @@ export function WidgetRail({
     const url = new URL(
       encodeWidgetPermalink(
         widget.entry.kind,
-        (state ?? (widget.args as Record<string, unknown>)) ?? {},
+        state ?? (widget.args as Record<string, unknown>) ?? {},
       ),
       window.location.origin,
     ).toString();
