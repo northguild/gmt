@@ -6,12 +6,18 @@
  *   node scripts/stats.mjs sync    rewrite them from the sources of truth
  *   node scripts/stats.mjs show    print what the sources currently say
  *
- * The READMEs and `apps/dox` publish numbers that are claims about this repo — how many
+ * The READMEs and `apps/dox` publish numbers that are claims about the library — how many
  * tests it has, how many CI executions that implies, how many functions each namespace
  * exports. Nothing computed them, so they were hand-maintained and went stale twice: 16,701
  * tests and 504 functions were both two stories out of date, and the "Public functions by
  * namespace" chart was missing `precision` and `span` entirely. This is `deps.mjs` applied
  * to the same class of problem — derive it, compare it, fail the build.
+ *
+ * Every published figure describes `packages/gmt` and nothing else. The repo also holds
+ * `apps/dox`'s and `packages/gmt-oxlint`'s suites, but those test the docs site and a lint
+ * plugin — folding them into a claim about the date library would inflate it with tests
+ * that never touch the shipped API. The comparison tables put GMT beside four other
+ * libraries' own suites, so the subject has to be the library's own suite too.
  *
  * Sources of truth, none of them a hand-typed number:
  *
@@ -59,39 +65,19 @@ const PATTERN_NAMESPACE = "regex";
 // ---------------------------------------------------------------- sources of truth
 
 /**
- * Every test suite in the repo, and the CI matrix each one actually runs under.
+ * The library's own suite — the subject of every published figure.
  *
- * There are three, and they are not equivalent — the executions figure is a weighted sum,
- * not `tests × 20`:
- *
- *   packages/gmt        the `gmt-matrix` job: every Node version × every timezone
- *   apps/dox            the `tests` job, which runs `-r` minus root, gmt and gmt-oxlint,
- *                       so in practice apps/dox alone, on each Node version
- *   packages/gmt-oxlint no job runs it. `tests` filters it out explicitly and `gmt-matrix`
- *                       only runs gmt's config, so its cases count toward the repo total
- *                       but contribute nothing to CI executions. If a job is added, this
- *                       becomes `node` and the published figures follow on the next sync.
- *
- * `apps/dox`'s config sets `root: "."`, so it only resolves its `include` globs when vitest
- * runs from that directory — hence `cwd`.
+ * `packages/gmt` is the only one CI's `gmt-matrix` job runs across the full Node ×
+ * timezone matrix, and the only one whose tests exercise the shipped API. `apps/dox` and
+ * `packages/gmt-oxlint` have suites of their own; they are deliberately not counted here.
  */
-const SUITES = [
-  {
-    name: "packages/gmt",
-    cwd: ".",
-    config: "packages/gmt/vitest.config.ts",
-    matrix: "gmt",
-  },
-  { name: "apps/dox", cwd: "apps/dox", config: null, matrix: "node" },
-  {
-    name: "packages/gmt-oxlint",
-    cwd: ".",
-    config: "packages/gmt-oxlint/vitest.config.ts",
-    matrix: "none",
-  },
-];
+const SUITE = {
+  name: "packages/gmt",
+  cwd: ".",
+  config: VITEST_CONFIG,
+};
 
-/** Collect (never run) one suite. Returns { tests, files }. */
+/** Collect (never run) the suite. Returns { tests, files }. */
 function collect(suite) {
   const args = ["vitest", "list", "--json"];
   if (suite.config) args.push("--config", suite.config);
@@ -109,19 +95,12 @@ function collect(suite) {
 }
 
 /**
- * Collect every suite. Honours GMT_TEST_COUNT/GMT_TEST_FILES as a whole-repo override for
- * a job that has already run them.
+ * The library's test and file counts. Honours GMT_TEST_COUNT/GMT_TEST_FILES as an override
+ * for a job that has already collected them.
  */
 function suiteCounts() {
   const tests = Number(process.env.GMT_TEST_COUNT);
   const files = Number(process.env.GMT_TEST_FILES);
-
-  const suites = SUITES.map((suite) => ({ ...suite, ...collect(suite) }));
-  const counted = {
-    suites,
-    tests: suites.reduce((sum, s) => sum + s.tests, 0),
-    files: suites.reduce((sum, s) => sum + s.files, 0),
-  };
 
   if (
     Number.isInteger(tests) &&
@@ -129,9 +108,9 @@ function suiteCounts() {
     Number.isInteger(files) &&
     files > 0
   ) {
-    return { ...counted, tests, files };
+    return { tests, files };
   }
-  return counted;
+  return collect(SUITE);
 }
 
 /** Public functions per namespace, plus the regex pattern count, from the reference corpus. */
@@ -199,18 +178,6 @@ function figures() {
   const api = apiSurface();
   const { nodes, timezones } = ciMatrix();
 
-  // Weighted by the matrix each suite actually runs under, not tests x 20 across the board.
-  const perSuite = {
-    gmt: nodes.length * timezones,
-    node: nodes.length,
-    none: 0,
-  };
-  const executions = counted.suites.reduce(
-    (sum, suite) => sum + suite.tests * perSuite[suite.matrix],
-    0,
-  );
-  const library = counted.suites.find((suite) => suite.name === "packages/gmt");
-
   return {
     ...counted,
     ...api,
@@ -218,9 +185,9 @@ function figures() {
     nodeCount: nodes.length,
     timezones,
     locales: localeCount(),
-    executions,
-    libraryTests: library.tests,
-    libraryFiles: library.files,
+    // The whole suite runs under every Node version x every timezone, so this is one
+    // product rather than a weighted sum: gmt-matrix has no partial legs.
+    executions: counted.tests * nodes.length * timezones,
   };
 }
 
@@ -240,11 +207,10 @@ function ruleSet(f) {
     {
       label: "headline executions",
       files: READMES,
-      find: /(\*\*: )([\d,]+)( from )([\d,]+)( tests, the library's )([\d,]+)( of them run in all )(\d+)( timezones × )(\d+)( Node versions)/g,
+      find: /(\*\*: )([\d,]+)( from )([\d,]+)( tests run in all )(\d+)( timezones × )(\d+)( Node versions)/g,
       values: [
         n(f.executions),
         n(f.tests),
-        n(f.libraryTests),
         String(f.timezones),
         String(f.nodeCount),
       ],
@@ -270,37 +236,24 @@ function ruleSet(f) {
     {
       label: "comparison table — executions",
       files: READMES,
-      find: /(\| \*\*)([\d,]+)(\*\*<br>\()([\d,]+)( × )(\d+)( Node<br>× )(\d+)( timezones,<br>\+ )([\d,]+)( × )(\d+)( Node\))/g,
+      find: /(\| \*\*)([\d,]+)(\*\*<br>\()([\d,]+)( × )(\d+)( Node<br>× )(\d+)( timezones\))/g,
       values: [
         n(f.executions),
-        n(f.libraryTests),
+        n(f.tests),
         String(f.nodeCount),
         String(f.timezones),
-        n(
-          f.tests -
-            f.libraryTests -
-            f.suites.find((x) => x.matrix === "none").tests,
-        ),
-        String(f.nodeCount),
       ],
     },
     {
       label: "suite-design result line",
-      find: /(\*\*Result:\*\* )([\d,]+)( tests across )([\d,]+)( files[^.]*\. They run in CI as )([\d,]+)( executions — the library's )([\d,]+)( tests × )(\d+)( Node versions × )(\d+)( timezones, plus )([\d,]+)( in `apps\/dox` × )(\d+)( Node versions\.)/g,
       files: READMES,
+      find: /(\*\*Result:\*\* )([\d,]+)( tests across )([\d,]+)( files[^.]*\. They run in CI as )([\d,]+)( executions — every one of them × )(\d+)( Node versions × )(\d+)( timezones\.)/g,
       values: [
         n(f.tests),
         n(f.files),
         n(f.executions),
-        n(f.libraryTests),
         String(f.nodeCount),
         String(f.timezones),
-        n(
-          f.tests -
-            f.libraryTests -
-            f.suites.find((x) => x.matrix === "none").tests,
-        ),
-        String(f.nodeCount),
       ],
     },
     {
@@ -312,11 +265,10 @@ function ruleSet(f) {
     {
       label: "dox landing card",
       files: [DOX_INDEX],
-      find: /( {2})([\d,]+)( executions — )([\d,]+)( tests, the library's )([\d,]+)( of them\n {2}across )(\d+)( timezones × )(\d+)( Node versions)/g,
+      find: /( {2})([\d,]+)( executions — )([\d,]+)( tests across )(\d+)( timezones × )(\d+)( Node)/g,
       values: [
         n(f.executions),
         n(f.tests),
-        n(f.libraryTests),
         String(f.timezones),
         String(f.nodeCount),
       ],
@@ -324,13 +276,12 @@ function ruleSet(f) {
     {
       label: "dox executions chart caption",
       files: [DOX_WHY],
-      find: /(caption="GMT: )([\d,]+)( library-suite executions \()([\d,]+)( tests × )(\d+)( timezones × )(\d+)( Node\); )([\d,]+)( repo-wide)/g,
+      find: /(caption="GMT: )([\d,]+)( executions \()([\d,]+)( tests × )(\d+)( timezones × )(\d+)( Node\))/g,
       values: [
-        n(f.libraryTests * f.nodeCount * f.timezones),
-        n(f.libraryTests),
+        n(f.executions),
+        n(f.tests),
         String(f.timezones),
         String(f.nodeCount),
-        n(f.executions),
       ],
     },
     {
@@ -377,11 +328,11 @@ function ruleSet(f) {
       files: [DOX_LIBRARIES],
       find: /(id: "@northguild\/gmt",[\s\S]*?tests: )(\d+)(,\n {6}locales: )(\d+)(,\n {6}timezones: )(\d+)(,\n {6}nodeVersions: )(\d+)(,\n {6}executions: )(\d+)/g,
       values: [
-        String(f.libraryTests),
+        String(f.tests),
         "0",
         String(f.timezones),
         String(f.nodeCount),
-        String(f.libraryTests * f.nodeCount * f.timezones),
+        String(f.executions),
       ],
     },
   ];
@@ -490,19 +441,8 @@ function evaluate(f) {
 function show() {
   const f = figures();
   console.log(
-    `tests            ${n(f.tests)} across ${n(f.files)} files (whole repo)`,
+    `tests            ${n(f.tests)} across ${n(f.files)} files (${SUITE.name})`,
   );
-  for (const suite of f.suites) {
-    const runs =
-      suite.matrix === "gmt"
-        ? `× ${f.nodeCount} Node × ${f.timezones} timezones`
-        : suite.matrix === "node"
-          ? `× ${f.nodeCount} Node`
-          : "not run by any CI job";
-    console.log(
-      `    ${suite.name.padEnd(20)} ${String(suite.tests).padStart(6)} tests / ${String(suite.files).padStart(3)} files  ${runs}`,
-    );
-  }
   console.log(
     `CI matrix        Node ${f.nodes.join(", ")} × ${f.timezones} timezones = ${n(f.executions)} executions`,
   );

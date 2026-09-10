@@ -106,7 +106,8 @@ export function renderNamespaceChart(): string {
     { namespace: "duration", count: 12 },
     { namespace: "precision", count: 18 },
     { namespace: "span", count: 4 },
-    { namespace: "regex", count: 24 },
+    { namespace: "instant", count: 4 },
+    { namespace: "regex", count: 25 },
   ];
 
   const definition = defineChart({

@@ -186,6 +186,85 @@ export const localRangeBattleCases = battleTestTimeZones.map((timeZone) => ({
   expected: ["2024-02-29", "2024-03-01", "2024-03-02"],
 }));
 
+/** Year the DST-edge fixture scans. Matches the rest of this file's fixtures. */
+const dstEdgeYear = 2024;
+
+/** No IANA zone has ever had more than a handful of offset changes in one year. */
+const maxTransitionsPerYear = 20;
+
+/**
+ * Midpoint wall times of a zone's DST gap and overlap in `dstEdgeYear`, derived from the
+ * zone's own transition table rather than typed out.
+ *
+ * A gap runs from the last wall time in the old offset to the first in the new one, so its
+ * midpoint is a local time that never happened. An overlap runs the other way, so its
+ * midpoint is a local time that happened twice. Half a shift in is deliberate: it lands
+ * inside the window for a 15-, 30- or 60-minute change alike, which hand-picked `02:30` does
+ * not (`Australia/Lord_Howe` shifts 30 minutes at 02:00, `Pacific/Chatham` an hour at 02:45).
+ */
+function dstEdgeWallTimes(timeZone: string): {
+  nonexistent: string | null;
+  ambiguous: string | null;
+} {
+  let cursor = Temporal.ZonedDateTime.from({
+    year: dstEdgeYear,
+    month: 1,
+    day: 1,
+    timeZone,
+  });
+  let nonexistent: string | null = null;
+  let ambiguous: string | null = null;
+
+  for (let i = 0; i < maxTransitionsPerYear; i++) {
+    const next = cursor.getTimeZoneTransition("next");
+    if (!next || next.year > dstEdgeYear) {
+      break;
+    }
+
+    const shift = next.offsetNanoseconds - cursor.offsetNanoseconds;
+    const afterChange = next.toPlainDateTime();
+    // The same instant read in the offset that was in force right up to it.
+    const beforeChange = next
+      .toInstant()
+      .toZonedDateTimeISO("UTC")
+      .add({ nanoseconds: cursor.offsetNanoseconds })
+      .toPlainDateTime();
+
+    if (shift > 0) {
+      nonexistent ??= beforeChange.add({ nanoseconds: shift / 2 }).toString();
+    } else {
+      ambiguous ??= afterChange.add({ nanoseconds: -shift / 2 }).toString();
+    }
+
+    cursor = next;
+  }
+
+  return { nonexistent, ambiguous };
+}
+
+/**
+ * Per battle-test timeZone, one zoneless wall time of each kind: skipped by a spring-forward
+ * gap, repeated by a fall-back overlap, and an ordinary one that is neither.
+ *
+ * `nonexistent`/`ambiguous` are null for the eleven zones in the matrix with no transition in
+ * `dstEdgeYear` (UTC, GMT, `Etc/GMT`, `Asia/Anadyr`, `Europe/Istanbul`, `Asia/Kolkata`,
+ * `Asia/Kathmandu`, `Asia/Shanghai`, `Pacific/Apia`, `Pacific/Niue`, `America/Phoenix`) —
+ * that absence is itself worth asserting, since every wall time in those zones is unique.
+ *
+ * Example rows:
+ * - America/New_York -> nonexistent 2024-03-10T02:30:00, ambiguous 2024-11-03T01:30:00
+ * - Europe/Berlin -> nonexistent 2024-03-31T02:30:00, ambiguous 2024-10-27T02:30:00
+ * - Australia/Lord_Howe -> nonexistent 2024-10-06T02:15:00, ambiguous 2024-04-07T01:45:00
+ * - Pacific/Chatham -> nonexistent 2024-09-29T03:15:00, ambiguous 2024-04-07T03:15:00
+ * - UTC -> nonexistent null, ambiguous null
+ */
+export const localDstEdgeBattleCases = battleTestTimeZones.map((timeZone) => ({
+  timeZone,
+  ...dstEdgeWallTimes(timeZone),
+  // Local noon on the leap day, which no zone in the matrix transitions near.
+  unique: "2024-02-29T12:00:00",
+}));
+
 // Stable fake "now" instant used by now/today related tests.
 // Equivalent to Unix time 1709164800000, which is 2024-02-29T00:00:00Z.
 
