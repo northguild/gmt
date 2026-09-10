@@ -9,22 +9,7 @@ import {
 } from "@tanstack/charts";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
-
-const libraryMetadata: Record<
-  string,
-  { tests: number; locales: number; timezones: number; nodeVersions: number }
-> = {
-  "@northguild/gmt": {
-    tests: 16701,
-    locales: 17,
-    timezones: 10,
-    nodeVersions: 2,
-  },
-  "@intl/date": { tests: 20190, locales: 0, timezones: 0, nodeVersions: 1 },
-  Luxon: { tests: 4888, locales: 0, timezones: 0, nodeVersions: 1 },
-  "date-fns": { tests: 3213, locales: 0, timezones: 0, nodeVersions: 1 },
-  "Moment.js": { tests: 11703, locales: 0, timezones: 0, nodeVersions: 1 },
-};
+import { libraryComparisons } from "../src/data/library-comparison";
 
 function addTooltipsToBars(svg: string): string {
   const barGroupRegex =
@@ -38,13 +23,13 @@ function addTooltipsToBars(svg: string): string {
     let offset = 0;
 
     rects.forEach((rect, index) => {
-      const meta = Object.values(libraryMetadata)[index];
-      if (!meta) return;
+      const lib = libraryComparisons[index];
+      if (!lib) return;
 
-      const executions = [334020, 386, 4888, 3213, 11703][index];
-      const library = Object.keys(libraryMetadata)[index];
+      const { tests, locales, timezones, nodeVersions, executions } = lib.stats;
+      const library = lib.chartLabel ?? lib.displayName;
 
-      const title = `${library}: ${executions.toLocaleString()} executions (${meta.tests.toLocaleString()} tests${meta.locales > 0 ? ` × ${meta.locales} locales` : ""}${meta.timezones > 0 ? ` × ${meta.timezones} timezones` : ""} × ${meta.nodeVersions} Node)`;
+      const title = `${library}: ${executions.toLocaleString()} executions (${tests.toLocaleString()} tests${locales > 0 ? ` × ${locales} locales` : ""}${timezones > 0 ? ` × ${timezones} timezones` : ""} × ${nodeVersions} Node)`;
 
       const titleElement = `<title>${title}</title>`;
       const insertPos = result.indexOf(rect, offset) + rect.length;
@@ -58,13 +43,11 @@ function addTooltipsToBars(svg: string): string {
 }
 
 export function renderTestExecutionChart(): string {
-  const data = [
-    { library: "@northguild/gmt", executions: 334020, highlight: true },
-    { library: "@intl/date", executions: 386, highlight: false },
-    { library: "Luxon", executions: 4888, highlight: false },
-    { library: "date-fns", executions: 3213, highlight: false },
-    { library: "Moment.js", executions: 11703, highlight: false },
-  ];
+  const data = libraryComparisons.map((lib) => ({
+    library: lib.chartLabel ?? lib.displayName,
+    executions: lib.stats.executions,
+    highlight: Boolean(lib.isSubject),
+  }));
 
   const definition = defineChart({
     marks: [
@@ -102,8 +85,10 @@ export function renderTestExecutionChart(): string {
   const runtime = createChartRuntime();
   // Rendered at the same natural width as the locale matrix so the SVG scales
   // to the full content column: bars stretch horizontally, height and text size
-  // stay put (the chart is not blown up proportionally).
-  const scene = runtime.render(definition, { width: 1200, height: 360 });
+  // stay put (the chart is not blown up proportionally). Height bumped from
+  // 360 to 420 (matching the locale matrix) to give the two added bars
+  // (dayjs, spacetime) the same breathing room as the original five.
+  const scene = runtime.render(definition, { width: 1200, height: 420 });
   const svg = renderChartSvg(scene, {
     ariaLabel: "CI test execution volume comparison",
     idPrefix: "test-executions",

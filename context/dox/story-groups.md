@@ -32,7 +32,7 @@ shape and its ordering constraint in one place.
 - **Tier 5 — Real-world scenarios.** `DOX-A4b`–`d` — scenario template, ported pitfalls,
   mentor index. Content-heavy, may run in parallel with Tiers 2–4 once `DOX-B1a` exists
   (different skill profile, no component-build contention). See [issues/DOX-A.md](issues/DOX-A.md).
-- **Tier 6 — Ask Dox (the chatbot that mounts widgets).** `DOX-C0` (#171) lays the
+- **Tier 6 — Dox (the chatbot that mounts widgets).** `DOX-C0` (#171) lays the
   React + Tailwind + AI Elements foundation and **blocks the rest**; then
   `DOX-C1`–`DOX-C3a`/`b` — retrieval, Worker, the two chat shells, widget registry. Built
   on [AI Elements](https://elements.ai-sdk.dev/) + the AI SDK with **two surfaces over one

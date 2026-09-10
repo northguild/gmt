@@ -1,0 +1,77 @@
+/*
+ * Shared scroll-reveal utility — src/lib/scroll-reveal.ts observes any
+ * [data-reveal-group] element and adds .gmt-reveal-in to it once it scrolls
+ * into view. This sheet only owns the *visual* side (hidden state, transition,
+ * per-child stagger); it is inert without that script.
+ *
+ * Scoped entirely behind the data-reveal-group attribute so it can never
+ * leave an unrelated CardGrid (or anything else) permanently invisible on a
+ * page that doesn't also load the observer script.
+ *
+ * Every rule below is doubled: once for a group whose real children are the
+ * staggered items directly (WhyDateBug's <ul>, WhyDateAlternatives' <ol>),
+ * and once for a group wrapping Starlight's <CardGrid> — whose actual cards
+ * are a level deeper, inside its own `.card-grid` box — so the wrapper's
+ * single child (`.card-grid` itself) is skipped rather than fading as an
+ * extra, un-staggered block.
+ */
+
+[data-reveal-group] > *:not(.card-grid),
+[data-reveal-group] > .card-grid > * {
+  opacity: 0;
+  transform: translateY(0.9rem);
+  transition:
+    opacity 0.45s ease,
+    transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-reveal-group].gmt-reveal-in > *:not(.card-grid),
+[data-reveal-group].gmt-reveal-in > .card-grid > * {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger by source order. Capped at 8 — the longest group on the homepage
+   today (WhyDateAlternatives' 7-layer stack) fits; anything past 8 just
+   reveals alongside the 8th instead of extending the cascade further. */
+[data-reveal-group] > *:not(.card-grid):nth-child(1),
+[data-reveal-group] > .card-grid > *:nth-child(1) {
+  transition-delay: 0ms;
+}
+[data-reveal-group] > *:not(.card-grid):nth-child(2),
+[data-reveal-group] > .card-grid > *:nth-child(2) {
+  transition-delay: 70ms;
+}
+[data-reveal-group] > *:not(.card-grid):nth-child(3),
+[data-reveal-group] > .card-grid > *:nth-child(3) {
+  transition-delay: 140ms;
+}
+[data-reveal-group] > *:not(.card-grid):nth-child(4),
+[data-reveal-group] > .card-grid > *:nth-child(4) {
+  transition-delay: 210ms;
+}
+[data-reveal-group] > *:not(.card-grid):nth-child(5),
+[data-reveal-group] > .card-grid > *:nth-child(5) {
+  transition-delay: 280ms;
+}
+[data-reveal-group] > *:not(.card-grid):nth-child(6),
+[data-reveal-group] > .card-grid > *:nth-child(6) {
+  transition-delay: 350ms;
+}
+[data-reveal-group] > *:not(.card-grid):nth-child(7),
+[data-reveal-group] > .card-grid > *:nth-child(7) {
+  transition-delay: 420ms;
+}
+[data-reveal-group] > *:not(.card-grid):nth-child(n + 8),
+[data-reveal-group] > .card-grid > *:nth-child(n + 8) {
+  transition-delay: 490ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal-group] > *:not(.card-grid),
+  [data-reveal-group] > .card-grid > * {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+}

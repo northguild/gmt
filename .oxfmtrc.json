@@ -52,7 +52,9 @@
         "**/coverage/**",
         "**/*.tsbuildinfo",
         "**/out/**",
-        "apps/dox/src/generated/**"
+        "apps/dox/src/generated/**",
+        "apps/dox/src/components/ui/**",
+        "apps/dox/src/components/ai-elements/**"
       ]
     }
   ]
