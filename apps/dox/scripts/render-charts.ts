@@ -99,12 +99,14 @@ export function renderTestExecutionChart(): string {
 
 export function renderNamespaceChart(): string {
   const data = [
-    { namespace: "plain", count: 223 },
-    { namespace: "zoned", count: 119 },
-    { namespace: "unix", count: 75 },
-    { namespace: "utc", count: 75 },
+    { namespace: "plain", count: 225 },
+    { namespace: "zoned", count: 122 },
+    { namespace: "unix", count: 78 },
+    { namespace: "utc", count: 76 },
     { namespace: "duration", count: 12 },
-    { namespace: "regex", count: 22 },
+    { namespace: "precision", count: 8 },
+    { namespace: "span", count: 4 },
+    { namespace: "regex", count: 24 },
   ];
 
   const definition = defineChart({

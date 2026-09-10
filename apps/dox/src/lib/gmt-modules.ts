@@ -32,6 +32,7 @@ export const GMT_MODULES: Record<
   "precision/convert": () => import("@northguild/gmt/precision/convert"),
   "precision/format": () => import("@northguild/gmt/precision/format"),
   "precision/parse": () => import("@northguild/gmt/precision/parse"),
+  "precision/validate": () => import("@northguild/gmt/precision/validate"),
 
   // --- duration ---
   duration: () => import("@northguild/gmt/duration"),
@@ -68,6 +69,10 @@ export const GMT_MODULES: Record<
   "utc/interval": () => import("@northguild/gmt/utc/interval"),
   "utc/parse": () => import("@northguild/gmt/utc/parse"),
   "utc/validate": () => import("@northguild/gmt/utc/validate"),
+
+  // --- span ---
+  "span/calculate": () => import("@northguild/gmt/span/calculate"),
+  "span/validate": () => import("@northguild/gmt/span/validate"),
 
   // --- regex ---
   regex: () => import("@northguild/gmt/regex"),
