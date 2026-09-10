@@ -276,14 +276,18 @@ export async function initGlobe(
         zoomControls?.classList.add("gmt-globe-zoom-ready");
         return;
       }
-      canvas.addEventListener(
-        "transitionend",
-        (event) => {
-          if (event.propertyName !== "transform") return;
-          zoomControls?.classList.add("gmt-globe-zoom-ready");
-        },
-        { once: true },
-      );
+      // Not { once: true }: the canvas transitions both `opacity` and
+      // `transform` at once, firing a separate transitionend for each — often
+      // opacity first. `once` would consume the listener on that first event
+      // and never see the `transform` one it's actually waiting for, leaving
+      // the zoom controls permanently hidden. Detach by hand once the
+      // matching property fires instead.
+      const onCanvasTransitionEnd = (event: TransitionEvent) => {
+        if (event.propertyName !== "transform") return;
+        canvas.removeEventListener("transitionend", onCanvasTransitionEnd);
+        zoomControls?.classList.add("gmt-globe-zoom-ready");
+      };
+      canvas.addEventListener("transitionend", onCanvasTransitionEnd);
     });
   }
 
