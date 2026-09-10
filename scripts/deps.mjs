@@ -142,8 +142,39 @@ function doxIssueDeps(rows) {
   return out;
 }
 
+/**
+ * The column layout each tracker's table must have, as header name -> index.
+ *
+ * Everything below addresses cells by numeric index, so a renamed, reordered or removed
+ * column does not fail — it silently reads and writes the wrong one. That is not
+ * hypothetical: 1c22cb1 dropped `Blocked by` from the dox tracker, which left index 2
+ * pointing at `GitHub Issue`, and `sync` would have rewritten all 15 rows' issue links to
+ * `—` without complaint. Asserting the layout at parse time is what turns that into an
+ * error instead of a diff nobody reads.
+ */
+const DOMINATION_COLUMNS = { Story: 1, "Blocked by": 4 };
+const DOX_COLUMNS = { Story: 1, "Blocked by": 2, "GitHub Issue": 3 };
+
+/**
+ * Fail loudly when a tracker's header row is not the shape the index-based code assumes.
+ */
+function assertColumns(path, cells, expected) {
+  for (const [header, index] of Object.entries(expected)) {
+    if (cells[index] === header) continue;
+    const at = cells.indexOf(header);
+    throw new Error(
+      `${path}: expected column ${index} to be "${header}", found "${cells[index] ?? "nothing"}".\n` +
+        (at === -1
+          ? `  There is no "${header}" column. Restore it — this file addresses columns by ` +
+            `position, so without it every read and write lands on the wrong column.`
+          : `  "${header}" is at column ${at}. Either move it back to ${index} or update ` +
+            `${header === "Story" ? "idColumn" : "the column map"} in scripts/deps.mjs.`),
+    );
+  }
+}
+
 /** Parse a tracker's story table. Returns { lines, rows, headerLine }. */
-function parseTracker(path, { idColumn, depColumn }) {
+function parseTracker(path, { idColumn, depColumn, columns }) {
   const lines = readFileSync(path, "utf8").split("\n");
   const rows = [];
   let headerLine = -1;
@@ -155,6 +186,7 @@ function parseTracker(path, { idColumn, depColumn }) {
       .slice(1, -1)
       .map((c) => c.trim());
     if (cells[0] === "#" || cells[0] === "Order") {
+      if (headerLine === -1) assertColumns(path, cells, columns);
       headerLine = i;
       width = cells.length;
       continue;
@@ -178,8 +210,17 @@ function parseTracker(path, { idColumn, depColumn }) {
 }
 
 const dominationTracker = () =>
-  parseTracker(DOMINATION, { idColumn: 1, depColumn: 4 });
-const doxTracker = () => parseTracker(DOX, { idColumn: 1, depColumn: 2 });
+  parseTracker(DOMINATION, {
+    idColumn: DOMINATION_COLUMNS.Story,
+    depColumn: DOMINATION_COLUMNS["Blocked by"],
+    columns: DOMINATION_COLUMNS,
+  });
+const doxTracker = () =>
+  parseTracker(DOX, {
+    idColumn: DOX_COLUMNS.Story,
+    depColumn: DOX_COLUMNS["Blocked by"],
+    columns: DOX_COLUMNS,
+  });
 
 /**
  * The bare story ID or issue number in a cell entry.

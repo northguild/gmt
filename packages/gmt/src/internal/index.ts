@@ -23,6 +23,36 @@ export {
   parseCalendarZonedValue,
 } from "./calendarZonedString";
 export { cycleFieldValue } from "./cycleFieldValue";
+export { floorDivide } from "./floorDivide";
+export {
+  DOT_NET_TICKS_EPOCH_OFFSET,
+  EXCEL_1900_EPOCH_NANOSECONDS,
+  EXCEL_1900_PHANTOM_END_NANOSECONDS,
+  EXCEL_1900_PRE_PHANTOM_EPOCH_NANOSECONDS,
+  EXCEL_1904_EPOCH_NANOSECONDS,
+  EXCEL_PHANTOM_SERIAL,
+  FILE_TIME_EPOCH_OFFSET_TICKS,
+  MAX_DOT_NET_TICKS,
+  MAX_EXCEL_1900_SERIAL_EXCLUSIVE,
+  MAX_EXCEL_1904_SERIAL_EXCLUSIVE,
+  MAX_FILE_TIME,
+  MILLISECONDS_PER_DAY,
+  MIN_DOT_NET_TICKS,
+  MIN_EXCEL_1900_SERIAL,
+  MIN_EXCEL_1904_SERIAL,
+  MIN_FILE_TIME,
+  MIN_PG_MICROSECONDS,
+  NANOSECONDS_PER_DAY,
+  NANOSECONDS_PER_DAY_NUMBER,
+  NANOSECONDS_PER_MICROSECOND,
+  NANOSECONDS_PER_MILLISECOND,
+  NANOSECONDS_PER_SECOND,
+  NANOSECONDS_PER_TICK,
+  NTP_EPOCH_OFFSET_NANOSECONDS,
+  NTP_ERA_UNITS,
+  NTP_UNITS_PER_SECOND,
+  PG_EPOCH_OFFSET_MICROSECONDS,
+} from "./foreignEpochs";
 export {
   isValidEpochNanoseconds,
   MAX_EPOCH_NANOSECOND_DIGITS,
@@ -37,6 +67,7 @@ export {
   formatDateInCalendar,
 } from "./formatDateInCalendar";
 export { hasCalendarAnnotation } from "./hasCalendarAnnotation";
+export { parseInstantNanoseconds } from "./instantNanoseconds";
 export { resolveDurationRelativeTo } from "./resolveDurationRelativeTo";
 export {
   ENGLISH_MONTH_NAMES,
