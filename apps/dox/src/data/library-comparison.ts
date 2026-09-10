@@ -60,11 +60,11 @@ export const libraryComparisons: LibraryComparison[] = [
       // packages/gmt-oxlint's 77 run in no CI job at all — which is what the READMEs and
       // the "What this means" table publish. `locales: 0` because the 17-locale matrix is
       // inside the test count, not a further multiplier of it.
-      tests: 18038,
+      tests: 18741,
       locales: 0,
       timezones: 10,
       nodeVersions: 2,
-      executions: 360760,
+      executions: 374820,
     },
     sourceNote: "Internal CI measurement.",
   },

@@ -58,7 +58,7 @@ skills:
     domain: zoned-date-operations
     path: 'skills/gmt-timezone/SKILL.md'
     package: 'packages/gmt'
-    description: Timezone-aware operations — get zoned now, format zoned datetimes/ranges, convert between plain/zoned/UTC/Unix, and DST disambiguation control
+    description: Timezone-aware operations — get zoned now, format zoned datetimes/ranges, convert between plain/zoned/UTC/Unix, DST disambiguation control, the instant-plus-offset pair (toOffsetInstant/fromOffsetInstant), and local-time classification/resolution (classifyLocal/resolveLocal)
     sources:
       - 'northguild/gmt:README.md'
       - 'northguild/gmt:packages/gmt/src/zoned/get/index.ts'
@@ -72,6 +72,7 @@ skills:
       - 'northguild/gmt:packages/gmt/src/unix/get/index.ts'
       - 'northguild/gmt:packages/gmt/src/utc/get/index.ts'
       - 'northguild/gmt:packages/gmt/src/utc/convert/index.ts'
+      - 'northguild/gmt:packages/gmt/src/instant/convert/index.ts'
 
   # Consumer-facing composition skills
   - name: GMT Integration

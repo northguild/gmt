@@ -84,6 +84,10 @@ skills:
       - isValidDateInterval
       - hasDaylightSaving
       - getDstTransitions
+      - toOffsetInstant
+      - fromOffsetInstant
+      - classifyLocal
+      - resolveLocal
     tasks:
       - Get current date/time/timestamp as ISO strings
       - Parse individual components from date/time strings
@@ -164,7 +168,7 @@ skills:
   - name: GMT Timezone
     slug: gmt-timezone
     domain: zoned-date-operations
-    description: Work with timezone-aware dates and times; includes formatZonedDateTime, formatZonedRange, formatRelativeZoned, convertPlainDateTimeToZoned with full DST disambiguation control, addZoned/subtractZoned, clampZoned, convertZonedToUtc, convertUtcToZoned, convertDateToCalendar
+    description: Work with timezone-aware dates and times; includes formatZonedDateTime, formatZonedRange, formatRelativeZoned, convertPlainDateTimeToZoned with full DST disambiguation control, addZoned/subtractZoned, clampZoned, convertZonedToUtc, convertUtcToZoned, convertDateToCalendar, toOffsetInstant/fromOffsetInstant, classifyLocal/resolveLocal
     type: core
     packages:
       - '@northguild/gmt'
@@ -220,6 +224,9 @@ skills:
       - Clamp/closest zoned datetime to range/candidates
       - Read zoned value's UTC offset and DST status
       - Cycle (wrap) a single zoned field with disambiguation
+      - Keep an event's original UTC offset alongside its instant
+      - Tell an ambiguous or nonexistent wall time apart before resolving it
+      - Resolve a zoneless local wall time to an instant under a stated policy
 
   - name: GMT Integration
     slug: gmt-integration
