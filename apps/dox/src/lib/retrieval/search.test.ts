@@ -1,15 +1,20 @@
 /// <reference types="vitest/globals" />
-import { corpus } from "~/generated/reference/corpus";
-import { buildFunctionChunks } from "./function-chunks";
+import { buildRetrievalCorpus } from "./corpus";
 import { searchChunks } from "./search";
 import type { RetrievalChunk } from "./types";
 
-// DOX-C1 (#137) DoD: "Retrieval returns sensible chunks for a spread of real
-// questions: a direct lookup, a task, a concept, and a near-miss." Run
-// against the real generated corpus, not a synthetic fixture — the whole
-// point is proving retrieval works on the actual 591-entry corpus, not on
-// data shaped to make it look good.
-const chunks: RetrievalChunk[] = buildFunctionChunks(corpus);
+/* DOX-C1 (#137) DoD: "Retrieval returns sensible chunks for a spread of real
+   questions: a direct lookup, a task, a concept, and a near-miss." Run against
+   the real generated corpus, not a synthetic fixture — the whole point is
+   proving retrieval works on the actual corpus, not on data shaped to make it
+   look good.
+
+   This used to be `buildFunctionChunks(corpus)`, i.e. the reference half only.
+   That made every claim below a claim about 78% of what the Worker actually
+   searches: the 164 guide sections were exercised by nothing, even though the
+   "concept" question this file tests is precisely the kind whose answer lives
+   in a guide rather than in a function's docstring. */
+const chunks: RetrievalChunk[] = buildRetrievalCorpus();
 
 describe("searchChunks — DOX-C1 DoD question spread", () => {
   it("direct lookup: 'what does formatDate do' finds formatDate's own chunk", () => {
@@ -75,6 +80,82 @@ describe("searchChunks — DOX-C1 DoD question spread", () => {
     ]) {
       const results = searchChunks(chunks, q);
       expect(results.length).toBeLessThan(5);
+    }
+  });
+});
+
+/* The guide half of the corpus — 164 of 761 chunks — was searched by no test
+   at all until the fixture above stopped filtering it out. These are the
+   properties that only guides can carry. */
+describe("searchChunks — guide retrieval", () => {
+  it("has guide chunks in the corpus at all", () => {
+    const guides = chunks.filter((c) => c.kind === "guide");
+    expect(guides.length).toBeGreaterThan(100);
+  });
+
+  it("answers a conceptual question largely from guides, not function docstrings", () => {
+    // The DoD's "concept" case. A function's docstring says what it does; a
+    // guide says what happens to you and why — which is what this question
+    // asks. Against the reference half alone this returned 5 chunks and none
+    // of them explained anything.
+    const results = searchChunks(chunks, "what happens during a DST gap", {
+      limit: 20,
+    });
+    expect(results.some((c) => c.kind === "guide")).toBe(true);
+  });
+
+  it("gives a conceptual question strictly more to work with than functions alone", () => {
+    const question = "how do I handle a DST overlap when the clock goes back";
+    const all = searchChunks(chunks, question, { limit: 100 });
+    const functionsOnly = searchChunks(
+      chunks.filter((c) => c.kind === "function"),
+      question,
+      { limit: 100 },
+    );
+    expect(all.length).toBeGreaterThan(functionsOnly.length);
+  });
+
+  it("gives every guide chunk a URL with a resolvable anchor", () => {
+    // Guide chunks are fragmented per `## ` heading via github-slugger, to
+    // match Starlight's own anchor ids. A citation that lands on the page but
+    // not the section is a worse answer, and a malformed one is a 404.
+    const guides = chunks.filter((c) => c.kind === "guide");
+    for (const chunk of guides) {
+      expect(chunk.url.startsWith("/guides/")).toBe(true);
+      const [, fragment] = chunk.url.split("#");
+      if (fragment !== undefined) {
+        expect(fragment).toMatch(/^[a-z0-9][a-z0-9-]*$/);
+      }
+    }
+  });
+});
+
+/* DOX-C1 DoD: "A question with no good match returns few or no chunks rather
+   than 20 bad ones — the refusal path in DOX-C2 depends on this being honest."
+   Previously asserted against the reference half; the guide chunks are prose,
+   which is exactly the material most likely to weakly match anything. */
+describe("searchChunks — the refusal path's honesty", () => {
+  const OFF_DOMAIN = [
+    "recommend a pizza restaurant",
+    "translate to French",
+    "javascript sorting algorithm",
+    "how do I bake sourdough bread",
+    "what is the capital of Peru",
+    "write me a haiku about cats",
+  ];
+
+  for (const question of OFF_DOMAIN) {
+    it(`returns almost nothing for "${question}"`, () => {
+      const results = searchChunks(chunks, question, { limit: 100 });
+      expect(results.length).toBeLessThan(5);
+    });
+  }
+
+  it("does not manufacture a full context out of weak matches", () => {
+    // The specific failure this guards: 15 mediocre chunks look, to the
+    // model, exactly like 15 good ones, and it will improvise from them.
+    for (const question of OFF_DOMAIN) {
+      expect(searchChunks(chunks, question).length).toBeLessThan(5);
     }
   });
 });

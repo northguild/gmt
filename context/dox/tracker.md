@@ -61,10 +61,13 @@ normal repo convention and does need a changeset.
 | 15    | DOX-C4                                      | —          | #240         | Not started  |
 
 ¹ Every DoD item buildable outside Tier 6 is done — see the "Status" notes in
-`issues/DOX-E.md`. The one item that can't close yet is `DOX-E1a` rendering in the
-`/dox` widget rail, which can't exist before Tier 6 (`DOX-C3a`/`DOX-C3b`) builds that
-rail. `initGlobe`/the scrubber's `mount`-shaped entry points are already rail-ready —
-see the pickup note in `issues/DOX-C.md`.
+`issues/DOX-E.md`. The last open item was `DOX-E1a` rendering in the `/dox` widget rail,
+which could not exist before Tier 6 built that rail. **`DOX-C3b` has now built it**: the
+globe is a registered widget (`showGlobe`), and `Globe.astro` and the rail call the same
+`mountGlobe`, so the globe rendering on `/tools/zoned-earth/` exercises the rail's mount
+path — which jsdom cannot, having no canvas. This row closes when #139 does; it is held
+open only by that issue's own last unverified line (footnote 5), not by anything left in
+`DOX-E1`.
 
 ² Also carries two `DOX-C3a` DoD items promoted early at explicit user request: the
 real `/dox` route (hosting the same static, non-networked probe DOX-C0 built to prove
@@ -73,7 +76,9 @@ The header link is a plain nav link, **not** `DOX-C3a`'s draggable dock — see
 `issues/DOX-C.md`'s DOX-C0 section and `reference/design-system.md`'s "`/dox` and the
 header link" for what that means `DOX-C3a` still owns.
 
-³ Corrects three of this file's own numbers along the way — 591 functions not 504, a
+³ Corrects three of this file's own numbers along the way — 591 functions not 504
+(itself since grown to 597; the corpus is now 761 chunks and `corpus-summary.test.ts`
+asserts the figure the chat screen shows against the real corpus), a
 missing `examples` field on `CorpusEntry` (added), and a latent generator bug on a
 clean checkout (fixed) — and picks the provider: Vercel AI SDK (not TanStack AI, which
 lacks a Google or Workers AI adapter) + Gemini 2.5 Flash. See `issues/DOX-C.md`'s
@@ -82,8 +87,11 @@ DOX-C2** — see footnote 4.
 
 ⁴ Adds `main`/`worker/index.ts` to the previously assets-only `wrangler.jsonc`, a same-
 origin `/api/chat` behind the DOX-C.md-specified validation pipeline (zod), a per-
-isolate rate limiter, and the seven-section system prompt (persona, linking rules,
-vocabulary, GMT core rules, retrieved chunks, tool placeholder, refusal instruction).
+isolate rate limiter, and the eight-section system prompt (persona, standing order,
+linking rules, vocabulary, GMT core rules, retrieved chunks, tool placeholder,
+refusal instruction — the standing order is the prompt-injection boundary, and was
+missing from this list and from the section-order test until the C1–C3 remediation
+pass).
 Verified end-to-end against the real Gemini API, not just mocked: a grounded question
 streams a correct, cited answer; a plausible-but-absent question ("parse a cron
 expression with gmt") refuses; the key never appears in any response. Worker script
@@ -95,14 +103,16 @@ directs callers to `gemini-3.6-flash`, confirmed with a live call, not assumed. 
 maintainer-workflow docs, not consumer usage vocabulary, and would risk the model
 picking up "file an issue"-style tone in an end-user answer.
 
-⁵ `DOX-C3a` is **done and deployed**; `DOX-C3b` has not started, which is why the row
-stays In Progress. What shipped: the full chat at `/dox` over `useChat` — streaming
+⁵ `DOX-C3a` is **done and deployed**. `DOX-C3b` is **code-complete with one DoD line
+unverified**, which is why the row is still In Progress rather than Done — see the
+paragraph at the end of this footnote. What `DOX-C3a` shipped: the full chat at `/dox` over `useChat` — streaming
 answers, the visible retrieval trace, link hardening against the route manifest (a
 hallucinated path degrades to plain text, never a 404), the idle-timeout stall guard,
 warning-vs-error classification, and one-request-at-a-time enforcement. Plus the
 free-tier survival layer this story did not originally anticipate: Gemini's quota is
-`PerDay·PerProject·PerModel`, so Dox keeps four brains and fails over between them
-_inside a single request_, backed by a KV ledger keyed on Pacific days.
+`PerDay·PerProject·PerModel`, so Dox keeps nine brains (~165 requests/day
+between them) and fails over between them _inside a single request_, backed by
+a KV ledger keyed on Pacific days.
 
 **One DoD reversal, recorded rather than dropped: the every-page draggable dock is cut.**
 `DOX-C3a` specified drag, resize, focus trap and keyboard dock-position cycling. It was
@@ -114,11 +124,67 @@ would break `DOX-C0`'s "no React bundle on a reference page" property, which is
 currently true by construction. The four dock DoD lines retire with it; the `/dox`
 keyboard pass stays and is met. See `issues/DOX-C.md`'s `DOX-C3a` section.
 
-`DOX-C3b` (the widget registry, and with it `DOX-E1a`'s rail — footnote 1) is the whole
-of what remains. Scoping found it is larger than its spec claims: the three Tier 2
-widgets are ~100% server-rendered Astro, so extracting `mount(root)` does not by itself
-make them React-mountable — the open question is markup provenance, plus `destroy()`
-contracts for React StrictMode and a DOM-test environment `apps/dox` does not yet have.
+**`DOX-C3b` is built.** All four Tier 2 widgets — the globe, the converter bench, the
+interval visualizer and the DST inspector — are extracted into `mount(root)` modules with
+a shared `renderTemplate()`, registered in a typed dispatch table with no dynamic code on
+its path, and offered to the model. Every widget page renders identically after the
+refactor, asserted by a new structural gate (`scripts/html-diff.mjs`) rather than by the
+pixel diff, which cannot see a dropped attribute. The scoping note below was right that
+markup provenance was the real work, and wrong that the scrub state would be the hard
+part: the mount contract puts that DOM outside React entirely, so there is no re-render
+for closure state to be lost across.
+
+Three things landed that the spec did not ask for. **`ENABLED_TOOL_NAMES`** makes the
+offered tools and the mountable widgets provably the same set, because an earlier state
+let Dox promise a widget the panel could not show. **`escapeAttr`** closes an injection
+hole the extraction itself opened — Astro escaped every interpolation and a hand-written
+template string does not, while the values now reaching these templates are chosen by a
+language model or decoded from a URL. And **three `/tools` pages** (DST inspector,
+interval visualizer, converter bench) give the three buried widgets a destination of their
+own; the permalinks now target those instead of a function's reference page.
+
+**That line is now met.** All four widgets have been mounted from a real question to a
+real Gemini brain through `/api/chat` — globe, converter bench, DST inspector and interval
+visualizer — and the error cases were checked too (a question about Mars correctly renders
+no widget at all).
+
+Live testing earned its keep by finding two defects that no unit test could have caught,
+both in the gap between what a model sends and what the widgets were built to receive.
+**The interval visualizer drew every seeded value on a single pixel** — its timeline canvas
+was hard-coded to calendar 2024, and a two-hour meeting is 0.0228% of a year. The canvas is
+now a value: presets keep the fixed year (their composition depends on it), seeded and
+typed values fit their own, with zero measured drift on the reference pages. And **the
+system prompt was suppressing tool calls** — "Prefer prose. Call a tool only when seeing
+the thing beats reading about it" produced 0 tool calls in 3 attempts on a question
+matching a `Call when` line word for word. Both are written up in `issues/DOX-C.md`'s
+"Live verification" section.
+
+**What holds the row at In Progress is now a gate, not a feature.** The axis fix added one
+attribute (`data-role="axis"`) to the interval template, so `html-diff` and `visual:diff`
+— the gates that assert every widget page still renders identically after the extraction —
+have not been re-run against it. Both need a build, which cannot run while the dev server
+is up. Expect `html-diff` to report exactly that one added attribute and nothing else;
+once it does, `DOX-C3` closes and only `DOX-C4` (#240) remains.
+
+Two smaller things carry forward into `DOX-C4` rather than holding this row: the rewritten
+tool instruction has not been re-measured live (`VISITOR_DAILY_MAX` is 5 and diagnosis
+spent the day's budget), and `DOX_DEV_KEY` is still unset. Both belong there — `DOX-C4`
+changes the provider, so every tool-calling measurement has to be repeated against it
+anyway, and the dev key is what makes those measurements affordable. See `issues/DOX-C.md`'s
+`DOX-C4` section.
+
+The `html-diff` re-run stays here deliberately. It verifies a claim `DOX-C3` makes about
+its own refactor, it is provider-independent, and it costs one build — deferring it would
+close this story on an unverified line, which is the exact thing footnote 5 has been
+avoiding all along.
+
+⁶ Cloudflare Workers AI, for the budget headroom Gemini's per-model daily quota cannot
+give. **Spike first**: the AI SDK's Workers AI adapter has never been exercised, tool
+calling drives all four widgets and its prompt tuning does not transfer across providers,
+and a smaller model may ground worse against a large system prompt. Inherits two
+unfinished measurements from `DOX-C3` — re-running the tool-call probe, and setting
+`DOX_DEV_KEY` so live checks stop competing with readers for the free tier. Full framing
+in [issues/DOX-C.md](issues/DOX-C.md)'s `DOX-C4` section.
 
 Parked work carries no story ID and never enters this table — see
 [appendix-parked.md](appendix-parked.md).

@@ -935,7 +935,16 @@ Gemini's 20-requests-per-day free allowance mid-session:
 
 - An exhausted brain is **invisible to the reader**: the request fails over to another
   brain before any output is streamed, rather than surfacing an error.
-- A brain the API key cannot reach (404/400) is pruned for the day rather than retried.
+- A brain the API key cannot reach (404/400) is deprioritised for the day rather
+  than retried eagerly. **Amended 2026-09-10 to match the code, which is right and
+  this line was not.** It originally said "pruned". `orderCandidates`
+  (`worker/brains.ts`) deliberately does not prune: a known-bad brain drops to the
+  back of the candidate list and is still tried as a last resort, because the ledger
+  can be stale, absent, or simply wrong about a model Google has since restored, and
+  refusing to answer on a cached opinion is worse than spending one request to find
+  out. The reader-visible property the line was reaching for — an exhausted or
+  unreachable brain never surfaces as an error — is met by the failover, not by
+  pruning.
 - The usage badge reports **real** numbers from the KV ledger, and they move with real
   requests and survive a reload.
 - Day boundaries are Pacific, not UTC, and are computed with `@northguild/gmt` — the
@@ -1045,6 +1054,294 @@ same shape as `DOX-B2b`/`-c`/`-d`'s widgets. This story's job for `DOX-E1` speci
 is mounting those two existing entry points into the rail, seeded from tool args — not
 building new globe/scrubber code. See `issues/DOX-E.md`'s Status notes and
 `tracker.md`'s footnote on the `DOX-E1` row.
+
+---
+
+## C1–C3a remediation pass — 2026-09-10
+
+An audit of `DOX-C1`, `DOX-C2` and `DOX-C3a` against their own Definition of Done
+found the "Done" marks defensible for "code exists, is wired, and works" but not for
+"every DoD bullet has something behind it". Three shipped defects and a set of
+untested branches were closed before starting `DOX-C3b`. Recorded here because
+several of these are corrections to claims *this file* made.
+
+**Three defects, all reader-visible:**
+
+- **A refused send destroyed the reader's text.** `ai-elements/prompt-input.tsx`
+  called `form.reset()` *before* `onSubmit`, so a 5,000-character paste showed
+  "limit 4,000" against an already-empty box, with nothing to trim and retry. The
+  vendored component's own two "Don't clear on error - user may want to retry"
+  branches never applied to text — `clear()` only ever cleared attachments. Reset is
+  now deferred to the success paths (the up-front reset is kept for the async blob
+  race it was actually written for), and `DoxChat`'s `send` returns a boolean so a
+  refusal reaches that contract.
+- **`/api/brains` served per-visitor data under `cache-control: public`.** The body
+  carries `visitor.used`/`remaining`/`unlimited`, keyed on a hashed IP — any shared
+  cache was entitled to hand one reader's counts, including a dev's `unlimited:
+  true`, to another. Now `private, no-store`: the original "keeps ledger reads flat"
+  rationale was an argument for an *edge* cache, which `private` disallows outright,
+  and any browser window at all swallowed the post-send refresh that makes the badge
+  move.
+- **`BrainSelector` was invalid ARIA.** `<ul role="listbox">` wrapping
+  `<li><button role="option">` — a `listbox` may only contain `option`s. No Escape,
+  no outside-click, no arrow keys, no focus return, behind an
+  `aria-haspopup="listbox"` promising all of it. Rebuilt on the already-vendored,
+  previously unused Radix `ui/dropdown-menu.tsx` as a `menuitemradio` group. The
+  keyboard DoD line was previously met only on a literal reading.
+
+**Untested DoD branches, now covered** (477 → 534 tests). Each was verified
+non-vacuous by breaking the implementation and watching it fail:
+
+- `worker/index.ts` had **no tests at all** — both 405 guards, the missing-key 500,
+  the assets passthrough and the `?key=` interception. Testing it needed a Vite
+  plugin mirroring Wrangler's `Text` module rule for `*.md`, which is why the entry
+  point had gone untested; the rest of `worker/` avoids the problem only by never
+  importing it.
+- **Server-side sanitisation was not asserted to happen.** `sanitizeMessage` could
+  have been deleted from `validateChatRequest` with a green suite. Plus the three
+  genuinely untested branches: empty-after-sanitise, the conversation-character cap,
+  and over-long `pageContext`.
+- **"Emits all seven sections in order" omitted `## Standing order`** — the
+  prompt-injection boundary. There are eight sections; the whole injection defence
+  could have been deleted and the only structural test would still have passed.
+- **"The route allowlist matches the retrieved set exactly" did not test that.** It
+  passed both fields from one fixture and asserted only `toContain`. The property
+  only exists where the handler derives one from the other, so the assertion moved
+  to `chat-handler.test.ts` with decoy routes.
+- **`DOX-C3a`'s self-declared most important test had never been written.** The
+  hallucinated-link degradation was covered as a pure function against a two-entry
+  fixture; nothing exercised Markdown → Streamdown → `components.a` → the DOM. The
+  renderer moved to `ask/link-components.tsx` so it can be rendered in a test, and
+  `link-components.test.tsx` runs it against the real route manifest.
+- **Guide chunks — 164 of 761 — were searched by no test.** `search.test.ts` built
+  its corpus from `buildFunctionChunks` alone, so every retrieval-quality claim was
+  a claim about 78% of what the Worker searches. Assembly moved to
+  `lib/retrieval/corpus.ts`, shared with the endpoint that serves it.
+- **`MIN_RELEVANCE_SCORE` re-verified at the real corpus size.** Tuned at 591 chunks,
+  never re-checked at 761 despite its own docstring asking for it. It holds; the
+  fresh per-question measurements are in that docstring, including the off-domain
+  column the refusal path depends on.
+
+**Two pieces of dead code, resolved rather than left:**
+
+- `retryable` was computed on all seven branches of `classifyChatError` and rendered
+  nowhere. It now drives a "Try again" affordance — which also means a reader whose
+  stream died no longer has to retype their question.
+- **History was sent unfiltered.** This file's own `DOX-C3a` scope asked to "filter
+  out empty or still-streaming assistant messages"; it was never implemented, and
+  `DoxChat` documented the resulting failure mode without fixing it. `lib/chat-history.ts`
+  now does it, via `prepareSendMessagesRequest`.
+
+**Corrections to this file and to `tracker.md`:** nine brains, not four; eight prompt
+sections, not seven; 597 functions / 761 chunks, not 591 / 755 — that last one was
+also being *shown to readers* on the empty chat screen, and is now guarded by
+`corpus-summary.test.ts` so it cannot drift silently again. The 404/400 "pruned" DoD
+line was amended to match `orderCandidates`, whose reasoning is better than the
+line's.
+
+**Two things this pass added that the plan did not anticipate:**
+
+- **The visual gate covered one of the three widget pages.** `DOX-C3b`'s
+  "every Tier 2 widget page renders identically after the refactor" was unverifiable
+  for the interval visualizer and the converter bench, which had no visual coverage
+  at all. `PAGES` now carries one page per widget: 24 → 32 snapshots.
+- **`DoxChat.ssr.test.tsx`.** `/dox` is server-rendered before it hydrates, and
+  hoisting a `window.location.origin` lookup out of a link renderer and into a
+  `useMemo` broke the build — caught by neither `astro check` (no rendering) nor any
+  test (all jsdom, where `window` exists), only by `astro build`, at the end. A
+  three-test `node`-environment SSR render now catches that class of bug in about a
+  second.
+
+---
+
+## DOX-C3b progress — steps 1-4, plus the /tools pages
+
+`DOX-C3b`'s cross-cutting layer is built and green; the three Astro widget
+extractions (steps 2-4) are what remain. Decisions and findings worth carrying:
+
+**Markup provenance: a shared `renderTemplate()`.** Settled before any code, per
+this file's own instruction. One function produces the markup; the `.astro` page
+server-renders it and the rail assigns it to `root.innerHTML` before `mount()`.
+`widget-mount.ts` holds the contract.
+
+**`AbortSignal`, not `destroy()`, is the React StrictMode answer.** Every mount is
+async, so StrictMode's cleanup runs *before the first mount's await settles* —
+`destroy()` would be called on a handle that does not exist yet. Both halves are
+now tested and both were verified to fail when removed: the signal for a mount
+already in flight, and a late-resolving handle for a mount that ignores it.
+
+**The tools carry a trivial `execute`. This was verified, not reasoned.** An
+execute-less tool leaves `assistant[text,tool-call]` with no `tool[tool-result]`
+when replayed through `convertToModelMessages` — a `functionCall` with no
+`functionResponse`, which Gemini rejects on the reader's *second* question, one
+turn downstream of anything visible. `worker/tools.test.ts` pins the SDK
+behaviour so an `ai` upgrade cannot quietly reintroduce it.
+
+**`showGlobe` takes one zone, not a list.** The spec sketched
+`showGlobe({ zones })`, which presumes the globe can pin a set. It cannot:
+`GlobeHost.selectZone` sets *the* selected zone, and the clock panel beside it
+already lists every plottable zone. A `zones` array would have kept only the
+last entry — a tool argument the model believes in and the widget ignores is
+worse than a narrower tool.
+
+**`showPlayground` is cut, deliberately.** It is the only registry entry with any
+reason to approach `playground-client.ts`'s `new Function`, and it would turn
+"no eval anywhere in the dispatch path" from a fact into an argument — for the
+least reader value of the five, since a citation already links to the playground
+page. `widget-registry.test.ts` asserts the property by reading the source of
+every file on the path.
+
+**Code splitting holds.** The chat chunk grew 8 KB; d3-geo, world-atlas and the
+Temporal polyfill stay in a separate 92 KB `globe` chunk, loaded only when a
+widget mounts. The TypeScript compiler is absent from every client chunk, which
+`client-graph.test.ts` now also asserts statically, without a build.
+
+**A real gap in the visual harness, found the hard way.** A baseline and a
+comparison taken ~30 minutes apart diverged by up to 1% on every light-theme page
+carrying a globe, and the failing *set* varied between runs, which reads exactly
+like flake. It was not. The diff image showed a crescent down the globe's
+right-hand limb: the day/night terminator, whose position is computed from the
+current time. No settle delay can fix that — two captures minutes apart are
+*supposed* to differ. The globe canvas is now masked alongside the live clocks,
+and the mask was confirmed to cover 100% of the region that was failing rather
+than merely to turn the number green.
+
+---
+
+### Step 2 — ConverterBench extracted, and the parity guard
+
+**The parity guard came first, and it should have been in the plan.** Step 1
+left the model offered four tools with one registered, so Dox could promise a
+DST inspector and the transcript would answer that the widget is not in this
+build. `ENABLED_TOOL_NAMES` in `dox-tools.ts` is now the single declaration of
+what may be offered; the Worker filters its tool set and its prompt section
+through it, and a test asserts it equals the registry's keys exactly. Enabling a
+tool without registering its widget now fails the suite instead of reaching a
+reader. Every schema stays defined regardless, so each extraction ends in a
+one-line change.
+
+**`CodeFrame` was turned inside out, as designed.** `lib/code-frame.ts` owns the
+markup; `CodeFrame.astro` is a `<Fragment set:html>` over it; every existing
+`<CodeFrame id="…" />` call site is untouched. That also collapsed a real
+duplication rather than relocating one — `widget-ui.ts` held the same copy/check
+SVG paths as string constants, because `wireCopyButtons` swaps between them at
+runtime, so the icon existed twice in two forms.
+
+**`scripts/html-diff.mjs` is the gate that actually tests this refactor.** The
+visual gate is a 0.2%-tolerance pixel diff by deliberate design and cannot see a
+dropped `selected`, a reordered attribute or a missing `data-role` — each of
+which renders identically and makes a control inert, since every lookup in these
+widgets is a null-tolerant `q()`. The new gate compares built markup with
+inter-tag whitespace normalised outside `<pre>`, and masks Vite's
+content-addressed asset hashes (touching a shared module renames every chunk
+that imports it, which is a build artifact, not a change to the page). It was
+verified by deleting the `selected` attribute and watching it fail.
+
+**ConverterBench now renders from `lib/converter-bench-mount.ts`**, and its page
+is structurally identical to before — 135 lines of script and 78 of template
+moved with no change to the built markup. `renderTemplate` takes the args, so a
+seeded widget paints seeded on its first frame instead of flashing defaults; a
+seeded zone outside the curated twenty is appended to the list rather than
+silently falling back to the first option. Twelve jsdom tests drive it end to
+end against the real library — the first DOM-testing pattern in `apps/dox`, and
+the one the two harder widgets follow.
+
+One thing worth carrying: `buildWorkerTools()` takes an optional name list so a
+pending tool's `execute` stays tested before its widget is extracted. Production
+must never pass it, and does not — `chat-handler.test.ts` asserts the offered
+set equals `ENABLED_TOOL_NAMES`, so a stray argument fails there.
+
+Gates after step 2: 604 tests across 40 files, `check`/`lint` clean, 646 pages
+built, all three widget pages structurally identical, all 32 visual snapshots
+within tolerance.
+
+---
+
+### Steps 3-4 — IntervalVisualizer and DstInspector extracted
+
+Both followed the pattern ConverterBench set, and both pages are byte-identical.
+The interval visualizer's six percentage-aligned timeline rows and the DST
+inspector's 483-line script with pointer-capture drag and keyboard scrubbing
+reproduced exactly, verified by `scripts/html-diff.mjs` rather than by eye.
+
+**The scrub state needed no management, and that is worth recording.** This file
+predicted `activeTransition`/`tickerWindow`/`handleMinuteOfDay` living outside
+`render()` would be "the piece most likely to break silently under a React
+re-render". It is not, and not by luck: `MountedWidget` renders an empty host and
+never renders inside it, so there is no React re-render for closure state to be
+lost across. The risk was removed structurally by the mount contract rather than
+managed. There is a test that drags, forces an unrelated re-render mid-drag, and
+confirms the drag survives.
+
+**Two tests passed for the wrong reason and were caught.** The preset-switching
+test asserted on `a-start`, which every preset in `buildRelationshipPreset` sets
+to 2024-01-01 — it would have passed forever whether or not preset switching
+worked. The DST drag test asserted on a coordinate that maps to exactly the
+handle's starting position. Both now assert on values that actually move, and
+the DST one lands inside the gap so it checks the widget's teaching point rather
+than merely that something changed.
+
+### The tool-parity guard
+
+Step 1 left the model offered four tools with one registered, so Dox could
+promise a DST inspector and the transcript would answer that the widget is not in
+this build. `ENABLED_TOOL_NAMES` in `dox-tools.ts` is now the single declaration
+of what may be offered; the Worker filters both its tool set and its prompt
+section through it, and a test asserts it equals the registry's keys exactly.
+Enabling a tool without registering its widget fails the suite instead of
+reaching a reader.
+
+### Standalone /tools pages — added 2026-09-10, outside the original plan
+
+Two of the five interactive widgets were first-class `/tools` pages (the globe
+and the scrubber); the other three were reachable only from inside a specific
+function's reference page. Finding the DST inspector required already knowing
+`getDstTransitions` exists, which is backwards — the inspector is how a reader
+would learn that it exists.
+
+`/tools/dst-inspector/`, `/tools/interval-visualizer/` and
+`/tools/converter-bench/` now exist, each with its own framing rather than
+borrowing context from the surrounding API docs. This was always possible — a
+`/tools` page is frontmatter plus a component import — so the extraction work did
+not unlock it; it was an information-architecture gap, not a technical one.
+
+It does resolve something the permalink design left inconsistent.
+`WIDGET_PAGE_PATHS` sent the globe's permalink to `/tools/zoned-earth/` and the
+other three to reference pages, which resolved but landed a reader who clicked
+"the view I was looking at" on a function's API documentation with the widget
+partway down, reachable only via a heading anchor. All four now target a page
+whose whole subject is the widget, and the anchors are gone because the widget
+*is* the page.
+
+**A security issue found while wiring this up, and introduced by DOX-C3b
+itself.** Until the extraction these widgets were `.astro` templates, and **Astro
+escaped every interpolation**. A hand-written template string does not — and the
+values now flowing into these templates are the least trustworthy the widgets
+have ever seen: chosen by a language model, or decoded from a URL a reader was
+handed by someone else. `escapeHtml` was no help, because it leaves quotes alone
+and every one of these values lands in an HTML attribute. `escapeAttr` was added
+and applied at every interpolation, with tests that fail when it is removed.
+
+`seedFromLocation` reads a `?w=&wa=` permalink on each widget's page bootstrap.
+Its checks are structural rather than a zod parse, deliberately: this entrance
+runs on a documentation page, which must not drag `zod` — and through
+`dox-tools.ts`, the whole `ai` package — into its bundle to read four query
+parameters. The escaping is what makes it safe; the checks stop a nonsense value
+producing a confusing widget.
+
+**`scripts/html-diff.mjs` now reports the widget and the page separately.**
+Adding three sidebar entries changed Starlight's `sl-sidebar-state-persist` hash
+on every page in the site — a real change, correctly detected, and nothing to do
+with the extraction those pages police. The gate now distinguishes "the widget's
+markup changed" (a failure) from "the widget is identical and the page around it
+changed" (review, then re-baseline), instead of leaving that judgement to whoever
+reads the output.
+
+Gates: 657 tests across 44 files, `check`/`lint` clean, 646 pages built, all
+three widget subtrees byte-identical, all 44 visual snapshots within tolerance
+(10 pages, up from 5 before this story). The `/tools/dst-inspector/` permalink
+was driven in a real browser: it seeds zone, year and preset, and the ticker
+lands reading "01:00 — inside the overlap, this local time happens twice".
 
 ---
 
@@ -1209,4 +1506,147 @@ rail — and with it `#139` and `#142`. See the pickup note above.
 - **A custom domain.** Launching on `gmt-dox.northguild.workers.dev`; `astro.config.mjs`'s
   `SITE` already matches.
 - **`DOX-C4` (Cloudflare AI).** A separate issue (#240) and explicitly deferred — Gemini
-  first.
+  first. Now the next story; see the section below for what it inherits.
+
+---
+
+## Live verification — 2026-09-10
+
+The `DOX-C3b` DoD line that footnote 5 held the story open for — *a real question, to a
+real brain, mounting a real widget* — is **met for all four widgets**, against live Gemini
+brains through `/api/chat`. It also surfaced two defects that no unit test could have
+caught, because both live in the gap between what the model sends and what the widgets
+were built to receive.
+
+### 1 · The interval widget drew every seeded value on one pixel
+
+**Symptom.** The widget mounted with correct inputs and correct numeric outputs, and drew
+a flat line. Nudging the relationship preset "fixed" it. The obvious reading — a stale
+render, or seeded values arriving after the first paint — was wrong on both counts, and
+there is no React in this path to re-render at all.
+
+**Cause.** `TIMELINE_START` / `TIMELINE_END` hard-coded the canvas to calendar 2024. A
+two-hour meeting is **0.0228%** of a year, floored to the 0.5% minimum bar width; all four
+handles landed within 0.035% of each other. The render was arithmetically perfect on a
+366-day ruler. The axis labels gave it away — `Jan 2024 · Jul · Dec` above a 9am meeting —
+and the preset toggle never repaired the render, it **replaced the data** with the
+preset's own year-scale values.
+
+**Why the fixed canvas could not simply become a fitted one.** The five relationship
+presets are composed against that canvas, and `disjoint` occupying only the left
+two-thirds is *information*: holding the frame of reference still is what makes switching
+presets comparable. Refitting per preset would destroy the teaching value of the reference
+pages.
+
+So the canvas became a value (`TimelineScale`) rather than a constant. Presets restore
+`FIXED_YEAR_SCALE`; seeded and typed values call `fitTimelineScale`, which pads 10% each
+side so the handles stay draggable. Drag snap and keyboard step derive from the span
+rather than being pinned at a day — which is what keeps the fixed-year case *identical*
+(366 days / 200 lands on the 1-day rung) while giving a three-hour canvas a one-minute
+step instead of an unusable one-day one. Measured drift across all 5 presets × 4 values:
+**0.000000%**.
+
+**A test passed while the bug was present.** `draws the timeline bars` asserted
+`width !== "0%"`; the bug produced `0.5%`. It is now asserted as a *readable* width, and
+verified to fail when only the fit is reverted and the render kept — the true old
+behaviour. This is the third test in this story found to pass for the wrong reason; the
+pattern each time was asserting on a value that survives the defect rather than on the
+one the defect changes.
+
+**Markup impact.** One attribute, `data-role="axis"`, so the labels can follow the canvas.
+The three span texts are unchanged for the fixed year and pinned by a test. **`html-diff`
+and `visual:diff` have not been re-run since** — that is the one gate still owed.
+
+### 2 · The system prompt was suppressing tool calls
+
+Live probing of starter-button candidates, 3 attempts each across three brains:
+
+```
+GLOBE      1/3
+CONVERTER  0/3
+```
+
+Zero for three on a question matching `showConverterBench`'s `Call when` line almost word
+for word. The per-tool copy was not at fault — this line above it was:
+
+> Prefer prose. Call a tool only when seeing the thing beats reading about it.
+
+It made every call a judgement the model kept declining. Rewritten to key off the
+`Call when` lines instead. Every safety property is unchanged and now *individually*
+pinned by `system-prompt.test.ts`: prose-first, never tool-only, one tool per turn, never
+invent a zone, no default widget when nothing matches — plus a test asserting the old
+wording cannot return.
+
+**Not empirically re-measured.** `VISITOR_DAILY_MAX` is 5 and diagnosis spent ~46
+requests; the 0/3 converter probe needs re-running before this is called fixed.
+
+### 3 · Starter buttons became the widget-discovery surface
+
+The four pills on the empty screen are now one per enabled widget, as structured data
+(`CHAT_STARTERS` in `chat-constants.ts`) rather than strings, so `chat-starters.test.ts`
+asserts the mapping is **total**: enabling a fifth tool without adding a pill fails the
+suite. Same parity contract as `ENABLED_TOOL_NAMES` ↔ the registry, for the same reason —
+a widget no reader can discover may as well not ship. `widget` is intent, not a guarantee:
+tool choice belongs to the model, and the deterministic mounts remain the `/tools` pages.
+
+### Also confirmed clean
+
+- **`isValidZonedDateTime` is not at fault** in either the original interval bug or this
+  one. It answers "is this a valid `ZonedDateTime`?" correctly; the widget was asking a
+  stricter question than it meant to (`Instant.from` requires an explicit offset).
+- **The DST inspector has the same shape of hazard and does not have the bug.** Verified
+  three ways: the library's `getDstTransitions` always returns absolute `…Z` instants; a
+  20-combination sweep (5 zones × 4 presets) is clean; and it has no free-text date input.
+  `buildZonedValueFromMinutes` deliberately omits an offset — adding one fails 4 tests,
+  because resolving the ambiguity is precisely what `startOfZoned` exists to demonstrate.
+  Three guard tests now pin both invariants.
+
+
+---
+
+## DOX-C4 — Cloudflare Workers AI (#240)
+
+Next story. The motivation is budget: Gemini's free tier is
+`PerDay·PerProject·PerModel`, which is why Dox carries nine brains and a KV ledger to
+fail over between them mid-request. Workers AI is expected to lift that ceiling far
+enough that the whole failover apparatus becomes optional rather than load-bearing.
+
+**Start with a spike, not a migration.** Three things have to be true before any of the
+Gemini path is touched, and none of them is known yet:
+
+1. **The AI SDK's Workers AI adapter behaves like the Google one at the seams Dox
+   actually uses.** `DOX-C1` picked the Vercel AI SDK partly *because* it has a Workers
+   AI adapter where TanStack AI does not — but "has an adapter" was a selection criterion,
+   never an exercised path. The seams that matter: streaming through
+   `toUIMessageStream`, tool calls arriving as `tool-input-available` with parsed input,
+   and `await result.warnings` forcing the upstream call before the UI stream opens, which
+   is the entire mechanism behind in-request failover.
+2. **Tool calling works at all, and works often enough.** This is the sharp one. Dox's
+   four widgets are driven purely by the model choosing to call a tool, and the
+   `Call when` instruction was tuned against Gemini — see "Live verification" above,
+   where a single sentence took the converter bench from firing to not firing. That
+   tuning does not transfer. **The 0/3 converter probe is the carried-forward
+   measurement**, and it has to be re-run per candidate model, not once.
+3. **Retrieval and grounding survive a smaller model.** The system prompt is large:
+   vocabulary, core rules, and up to 15 retrieved chunks. A model with a shorter context
+   or weaker instruction-following may ground worse, hallucinate links the allowlist then
+   strips, or refuse where Gemini answered. The refusal instruction and the link
+   hardening are the two behaviours to spot-check hardest, because both fail *quietly*.
+
+### Carried forward from DOX-C3
+
+- **Re-measure the tool-call instruction.** The `## Available tools` block was rewritten
+  after live probing and the fix was never re-measured — `VISITOR_DAILY_MAX` is 5 and the
+  day's budget went on diagnosis. Re-run the converter probe (3 attempts, 3 brains) on
+  Gemini to confirm the rewrite landed *before* changing provider, so the two variables
+  do not move at once.
+- **`DOX_DEV_KEY` is still unset**, which is what made the budget the binding constraint
+  in the first place. Setting it is the cheapest unblock for every live check this story
+  needs, and it is a prerequisite rather than a nice-to-have here.
+
+### Keep, whatever the provider
+
+The brain-selection UI, the KV ledger and the visitor cap are provider-shaped but not
+provider-specific, and the failover seam (`openFirstWorkingBrain`) is worth keeping even
+against a generous quota — it is also how a model that rejects a tool schema is survived,
+which is a failure mode that gets *more* likely with a new provider, not less.

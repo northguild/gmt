@@ -1,3 +1,5 @@
+import type { DoxToolName } from "./dox-tools";
+
 /**
  * DOX-C2 (#138) — shared between the Worker (`worker/*`) and, from `DOX-C3a`
  * onward, the client. There is no model-selector UI yet, so "shared" only
@@ -14,8 +16,8 @@
  * This list is the free tier's escape hatch. Gemini's quota id is
  * `GenerateRequestsPerDayPerProjectPerModel-FreeTier` — the allowance is per
  * **model**, so every additional brain adds its own daily budget. One model
- * gives ~20 requests/day across all visitors, which is not a product; four
- * gives roughly four times that.
+ * gives ~20 requests/day across all visitors, which is not a product; the nine
+ * below give roughly ~165/day between them (eight at 20, one Pro at 5).
  *
  * **Every id here was probed with a real request on 2026-09-10**, not merely
  * read off the model list. That distinction mattered: the list returns models
@@ -143,3 +145,81 @@ export const RATE_LIMIT_MAX = 20;
 export const RATE_LIMIT_WINDOW_SECONDS = 60;
 
 export const IDLE_TIMEOUT_MS = 30_000;
+
+/**
+ * Corpus scale, as shown to the reader on the empty chat screen.
+ *
+ * **Generated, not hand-typed** — `scripts/build-corpus-counts.ts` derives these
+ * from the same builders that assemble the Worker's corpus, and `generate` runs
+ * before `test`, `check` and `build`.
+ *
+ * They were hardcoded until 2026-09-11, because deriving them where they are
+ * shown would drag the 536 KB generated corpus into the chat island's bundle
+ * for the sake of three numbers. That trade was right; maintaining them by hand
+ * was not. The guard test fired on three separate merges as the library grew —
+ * 591/755, then 597/761, then 618/782 — each time demanding a manual edit that
+ * no human judgement informed. Re-exported here so every consumer keeps one
+ * import site, and the bundle still carries three integers rather than a corpus.
+ *
+ * `src/generated/` is gitignored, so these are rebuilt rather than committed —
+ * there is no stale file to go out of date. `corpus-summary.test.ts` checks the
+ * generated figures against a freshly built corpus, which guards the one seam
+ * left: the generator discovers guides with `fs`, the corpus with Vite's glob.
+ */
+export {
+  CORPUS_CHUNK_COUNT,
+  CORPUS_FUNCTION_COUNT,
+  CORPUS_GUIDE_COUNT,
+} from "~/generated/corpus-counts";
+
+import {
+  CORPUS_CHUNK_COUNT as CHUNKS,
+  CORPUS_FUNCTION_COUNT as FUNCTIONS,
+  CORPUS_GUIDE_COUNT as GUIDES,
+} from "~/generated/corpus-counts";
+
+export const CORPUS_SUMMARY = `${FUNCTIONS} functions · ${GUIDES} guide sections · ${CHUNKS} chunks indexed`;
+
+/**
+ * The pills on the empty chat screen.
+ *
+ * Two jobs, and the second one is why this is structured data rather than a
+ * list of strings. They have to be **real questions the corpus answers** — a
+ * suggestion that gets refused is worse than no suggestion at all — and they
+ * are the only place a reader discovers that Dox can render live widgets at
+ * all. A reader who never asks a widget-shaped question never learns the
+ * panel exists.
+ *
+ * So there is one per enabled widget, and `chat-starters.test.ts` asserts that
+ * mapping is total: adding a tool to `ENABLED_TOOL_NAMES` without giving it a
+ * starter fails the suite. That is the same parity contract
+ * `widget-registry.test.ts` enforces between the tools and the registry, for
+ * the same reason — a widget nobody can discover may as well not ship.
+ *
+ * **`widget` is intent, not a guarantee.** Tool choice belongs to the model, so
+ * nothing here can force a call; these are phrased to match each tool's
+ * `Call when` line (see `dox-tools.ts`) and to lead with the imperative, which
+ * measurably raises the hit rate. They are not a substitute for the widgets'
+ * own `/tools` pages, which mount deterministically.
+ */
+export const CHAT_STARTERS: readonly {
+  readonly text: string;
+  readonly widget: DoxToolName;
+}[] = [
+  {
+    text: "Show me what time it is in Tokyo right now.",
+    widget: "showGlobe",
+  },
+  {
+    text: "Convert 2:30pm on 15 March 2024 in New York to Tokyo time.",
+    widget: "showConverterBench",
+  },
+  {
+    text: "Show me how a meeting from 9am to 11am overlaps one from 10am to noon on 15 March 2024 in London.",
+    widget: "showIntervalVisualizer",
+  },
+  {
+    text: "What happens to 1:30am on 3 November 2024 in New York?",
+    widget: "showDstInspector",
+  },
+];

@@ -556,3 +556,77 @@ describe("DST widget behavior", () => {
     expect(isSentinel(result)).toBe(false);
   });
 });
+
+/**
+ * Two invariants that keep this module clear of the bug its sibling had.
+ *
+ * `interval-visualizer.ts` used `Temporal.Instant.from` on strings a reader
+ * could type, and `Instant.from` rejects a valid-but-offsetless ZonedDateTime
+ * like `2024-03-01T09:00:00[UTC]` — so input the widget had just validated blew
+ * up behind the scenes and produced an empty timeline plus a false "reversed"
+ * message.
+ *
+ * This module is safe for a structural reason rather than a lucky one, and both
+ * halves of that reason are asserted below, because both are easy to break with
+ * a change that looks like an improvement.
+ */
+describe("what this module hands to Temporal.Instant.from", () => {
+  it("only ever parses library-produced instants, which always carry Z", async () => {
+    /* Every `Instant.from` here takes `DstTransition.instant`, which comes from
+       `getDstTransitions`. If that format ever stops being an absolute UTC
+       instant, these helpers start throwing — so the shape is pinned here
+       rather than assumed. */
+    const { GMT_MODULES } = await import("./gmt-modules");
+    const mod = await GMT_MODULES["zoned/get"]();
+    const getDstTransitions = mod["getDstTransitions"] as (
+      zone: string,
+      year: number,
+    ) => { instant: string }[];
+
+    for (const zone of [
+      "America/New_York",
+      "Australia/Sydney",
+      "Europe/London",
+    ]) {
+      const transitions = getDstTransitions(zone, 2024);
+      expect(transitions.length, zone).toBeGreaterThan(0);
+      for (const t of transitions) {
+        expect(
+          t.instant,
+          `${zone} transition is not an absolute instant`,
+        ).toMatch(/Z$|[+-]\d{2}:\d{2}$/);
+      }
+    }
+  });
+
+  it("builds its probe value WITHOUT an offset, on purpose", () => {
+    /* This looks like an omission and is the opposite. The probe exists to ask
+       what a local wall-clock time means across a transition, and an offset
+       would answer that question before `startOfZoned` gets to — resolving the
+       ambiguity the widget is built to demonstrate. Adding one here would make
+       the gap and overlap presets meaningless.
+
+       It is safe precisely because this value goes to `startOfZoned`, never to
+       `Instant.from`. */
+    const value = buildZonedValueFromMinutes(
+      "America/New_York",
+      "2024-11-03",
+      90,
+    );
+    expect(value).toBe("2024-11-03T01:30:00[America/New_York]");
+    expect(value).not.toMatch(/[+-]\d{2}:\d{2}\[/);
+    expect(value).not.toContain("Z[");
+  });
+
+  it("rejects a malformed local date rather than building a bad probe", () => {
+    expect(
+      buildZonedValueFromMinutes("America/New_York", "not-a-date", 90),
+    ).toBe("");
+    expect(
+      buildZonedValueFromMinutes("America/New_York", "2024-11-03", 1440),
+    ).toBe("");
+    expect(
+      buildZonedValueFromMinutes("America/New_York", "2024-11-03", -1),
+    ).toBe("");
+  });
+});

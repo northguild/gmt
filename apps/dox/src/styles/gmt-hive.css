@@ -137,6 +137,211 @@
 }
 
 /* ------------------------------------------------------------------ *
+ * Body — transcript beside the widget rail (DOX-C3b)
+ *
+ * The shell was a single column; this row sits inside it so the strip stays
+ * full width above both. With no widget mounted `WidgetRail` renders nothing at
+ * all, so this collapses to exactly the previous layout rather than to a
+ * zero-width column that still participates in sizing.
+ * ------------------------------------------------------------------ */
+
+.gmt-hive-body {
+  display: flex;
+  flex-direction: row;
+  flex: 1 1 auto;
+  /* Without this the transcript's own scroll container cannot shrink, and the
+     composer is pushed off the bottom — the same failure the shell documents. */
+  min-height: 0;
+}
+
+.gmt-hive-rail {
+  flex: 0 0 clamp(22rem, 34vw, 34rem);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  border-inline-start: 1px solid var(--gmt-border);
+  background: var(--gmt-surface-1);
+}
+
+/* Below this width a side-by-side split leaves neither half usable, so the rail
+   becomes a bottom sheet. It is already the second child, so DOM order gives
+   the right stacking with no `order` juggling. */
+@media (max-width: 60rem) {
+  .gmt-hive-body {
+    flex-direction: column;
+  }
+
+  .gmt-hive-rail {
+    flex: 0 0 55%;
+    border-inline-start: none;
+    border-block-start: 1px solid var(--gmt-border);
+  }
+}
+
+.gmt-hive-artifact {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  border: none;
+  background: none;
+}
+
+.gmt-hive-artifact-header {
+  gap: var(--gmt-space-3);
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  border-block-end: 1px solid var(--gmt-border);
+}
+
+.gmt-hive-artifact-title {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-hive-artifact-link {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+  background: none;
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  padding: var(--gmt-space-1) var(--gmt-space-2);
+  cursor: pointer;
+}
+
+.gmt-hive-artifact-link:hover {
+  color: var(--gmt-cyan);
+  background: var(--gmt-accent-wash);
+}
+
+.gmt-hive-artifact-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--gmt-space-4);
+}
+
+/* The widget's own stylesheets are already loaded on this route via Starlight's
+   customCss (astro.config.mjs), so a mounted widget arrives fully styled. This
+   only gives it a box to fill. */
+.gmt-hive-widget-host {
+  display: block;
+}
+
+.gmt-hive-widget-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gmt-space-2);
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  color: var(--gmt-signal);
+  background: var(--gmt-signal-fill);
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  font-size: var(--gmt-text-sm);
+}
+
+.gmt-hive-widget-error p {
+  margin: 0;
+}
+
+.gmt-hive-widget-error-marker {
+  flex: 0 0 auto;
+  letter-spacing: 0.08em;
+}
+
+/* ---- Error boundary ----
+ * The last line before a blank page. Sized to sit in either host: centred in
+ * the transcript column, or filling the rail. Uses the same `--gmt-signal`
+ * language as the warning banner, because it is the same kind of news. */
+
+.gmt-hive-boundary {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gmt-space-2);
+  margin: auto;
+  max-width: 32rem;
+  padding: var(--gmt-space-4);
+  color: var(--gmt-signal);
+  background: var(--gmt-signal-fill);
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  font-size: var(--gmt-text-sm);
+}
+
+.gmt-hive-boundary p {
+  margin: 0 0 var(--gmt-space-3);
+}
+
+.gmt-hive-boundary-marker {
+  flex: 0 0 auto;
+  letter-spacing: 0.08em;
+}
+
+.gmt-hive-boundary-reload {
+  padding: var(--gmt-space-1) var(--gmt-space-3);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-signal);
+  background: none;
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  cursor: pointer;
+}
+
+.gmt-hive-boundary-reload:hover {
+  background: var(--gmt-signal-fill);
+}
+
+/* ---- Transcript receipt ----
+ * The durable record that Dox showed a widget, and the way back to it once the
+ * rail is closed. Reads as a footnote to the answer, not as a second answer. */
+
+.gmt-hive-receipt {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-3);
+  margin-block-start: var(--gmt-space-3);
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+}
+
+.gmt-hive-receipt[data-inert] {
+  opacity: 0.75;
+}
+
+.gmt-hive-receipt-name {
+  color: var(--gmt-ice);
+}
+
+.gmt-hive-receipt-open {
+  font: inherit;
+  color: var(--gmt-cyan);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.gmt-hive-receipt-link {
+  color: var(--gmt-ice-dim);
+}
+
+/* ------------------------------------------------------------------ *
  * Transcript — the only scroll container, and the query container
  * ------------------------------------------------------------------ */
 
@@ -397,11 +602,14 @@
 /* Starter prompts wrap rather than scrolling horizontally: the vendored
    `Suggestions` wrapper is a horizontal ScrollArea, which silently clipped the
    last pill at the viewport edge. All of them should be readable at once —
-   they're the clearest signal of what this thing is for. */
+   they're the clearest signal of what this thing is for.
+   `justify-content: center` centered each row independently, so rows of
+   differing length staggered left and right instead of lining up. Left-aligned
+   flow keeps every row starting from the same edge. */
 .gmt-hive-starters {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-start;
   gap: var(--gmt-space-2);
   max-width: 54rem;
 }
@@ -622,6 +830,30 @@
   letter-spacing: 0.08em;
 }
 
+/* Only rendered when the failure is classified retryable — a rate limit or a
+   malformed request gets the banner with no button, because offering a retry
+   that is certain to fail is worse than offering none. Pushed to the trailing
+   edge so the message stays the thing being read; `--gmt-signal` throughout so
+   it reads as part of the warning rather than a primary action competing with
+   the composer. */
+.gmt-hive-warning-retry {
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+  padding: var(--gmt-space-1) var(--gmt-space-3);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-signal);
+  background: none;
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  cursor: pointer;
+}
+
+.gmt-hive-warning-retry:hover {
+  background: var(--gmt-signal-fill);
+}
+
 /* ------------------------------------------------------------------ *
  * Brain badge + selector
  *
@@ -672,41 +904,27 @@
   color: var(--gmt-spring);
 }
 
+/* Placement, stacking and dismissal belong to Radix's portalled menu (see
+   BrainSelector.tsx) — this rule is purely the surface treatment layered over
+   ui/dropdown-menu.tsx's Tailwind chrome. Unlayered GMT rules beat
+   `@layer utilities`, so `bg-popover`/`rounded-md`/`border` lose to these
+   without an `!important`; see the layer note at the top of this file.
+
+   Nothing here positions the panel. Radix writes `position`/`transform` onto
+   its own wrapper via floating-ui, and an `absolute` here would fight it.
+
+   The former `<ul>`/`<li>` prose-bullet overrides are gone with the markup
+   they defended: the menu is now a portalled `[role="menu"]` on `document.body`,
+   so it never inherits `.sl-markdown-content`'s list treatment in the first
+   place. */
 .gmt-hive-brain-list {
-  position: absolute;
-  top: calc(100% + var(--gmt-space-2));
-  right: 0;
-  z-index: 20;
   min-width: 16rem;
-  margin: 0;
   padding: var(--gmt-space-1);
-  list-style: none;
   background: var(--gmt-surface-2);
   border: 1px solid var(--gmt-border-strong);
   border-radius: var(--gmt-radius-md);
   corner-shape: bevel;
   box-shadow: var(--gmt-shadow-md);
-}
-
-/* This list sits inside Starlight's `.sl-markdown-content` (the whole page
-   slot, not just prose), so the bare `<ul>`/`<li>` here otherwise inherit
-   gmt-content.css's "prose bullet list" treatment: zeroed list padding, a
-   24px text indent sized for paragraph bullets, and a tick aimed at a
-   bullet's cap-height rather than a listbox row's center. `.gmt-hive-brain-*`
-   (two classes) outguns those `.sl-markdown-content ul[ li[::before]]`
-   selectors on specificity, so this wins regardless of stylesheet order. */
-.gmt-hive-brains .gmt-hive-brain-list {
-  padding-left: var(--gmt-space-1);
-}
-
-.gmt-hive-brains .gmt-hive-brain-item {
-  padding-left: 0;
-  margin-bottom: 0;
-}
-
-.gmt-hive-brains .gmt-hive-brain-item::before {
-  top: 50%;
-  transform: translateY(-50%);
 }
 
 .gmt-hive-brain-option {
@@ -715,7 +933,10 @@
   justify-content: space-between;
   gap: var(--gmt-space-4);
   width: 100%;
-  padding: var(--gmt-space-2) var(--gmt-space-3);
+  /* The left inset is not decorative: ui/dropdown-menu.tsx absolutely positions
+     the checked-state indicator at `left-2` inside this row, and a `padding`
+     shorthand here would otherwise clobber the `pl-8` it relies on. */
+  padding: var(--gmt-space-2) var(--gmt-space-3) var(--gmt-space-2) 2rem;
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   color: var(--gmt-ice);
@@ -736,7 +957,9 @@
   background: var(--gmt-accent-wash);
 }
 
-.gmt-hive-brain-option[aria-selected="true"] {
+/* Radix's own checked state. The indicator dot carries this too, so selection
+   is not signalled by colour alone. */
+.gmt-hive-brain-option[data-state="checked"] {
   color: var(--gmt-cyan);
   background: var(--gmt-accent-wash);
 }
@@ -748,13 +971,16 @@
 /* A brain that is out today reads as unavailable rather than merely dimmed —
    it stays selectable, because picking it simply falls through to one that has
    budget (see brains.ts) rather than failing. */
-.gmt-hive-brain-option[data-state="spent"],
-.gmt-hive-brain-option[data-state="unavailable"] {
+.gmt-hive-brain-option[data-brain-state="spent"],
+.gmt-hive-brain-option[data-brain-state="unavailable"] {
   color: var(--gmt-ice-dim);
 }
 
-.gmt-hive-brain-option[data-state="spent"] span:first-child,
-.gmt-hive-brain-option[data-state="unavailable"] span:first-child {
+/* Targets the label by class, not `span:first-child`: the row's first child is
+   ui/dropdown-menu.tsx's absolutely-positioned checked indicator, so a
+   positional selector would strike through the dot instead of the model name. */
+.gmt-hive-brain-option[data-brain-state="spent"] .gmt-hive-brain-label,
+.gmt-hive-brain-option[data-brain-state="unavailable"] .gmt-hive-brain-label {
   text-decoration: line-through;
 }
 

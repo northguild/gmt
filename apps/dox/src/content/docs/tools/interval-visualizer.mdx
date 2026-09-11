@@ -1,0 +1,28 @@
+---
+title: Interval Visualizer
+description: Drag two time intervals on a shared timeline and watch their intersection, union, difference and XOR update live.
+---
+
+import IntervalVisualizer from "../../../components/IntervalVisualizer.astro";
+
+Two ranges of time can relate to each other in more ways than they first appear:
+overlapping, disjoint, one containing the other, identical, or merely touching at
+an endpoint. The four interval operations answer different questions about that
+relationship, and the answers are easier to see than to read.
+
+Drag either interval's endpoints, or type them, and every operation recomputes on
+the same timeline scale — so the shape of each answer is visible, not just its
+JSON.
+
+<IntervalVisualizer />
+
+**Worth trying:** switch the preset to **Disjoint**. The intersection returns an
+empty result, which is the correct answer and not an error — this widget renders
+that case differently from invalid input on purpose, because the library returns
+the same sentinel for both.
+
+Reference:
+[`intervalIntersectionZoned`](/reference/zoned/interval/intervalIntersectionZoned/),
+[`intervalUnionZoned`](/reference/zoned/interval/intervalUnionZoned/),
+[`intervalDifferenceZoned`](/reference/zoned/interval/intervalDifferenceZoned/)
+and [`intervalXorZoned`](/reference/zoned/interval/intervalXorZoned/).

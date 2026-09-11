@@ -116,28 +116,14 @@ export function playgroundModule(namespace: string, mod: string): string {
 // Type classification
 // ---------------------------------------------------------------------------
 
-export const CURATED_TIMEZONES = [
-  "UTC",
-  "America/New_York",
-  "America/Chicago",
-  "America/Denver",
-  "America/Los_Angeles",
-  "Europe/London",
-  "Europe/Paris",
-  "Europe/Berlin",
-  "Europe/Moscow",
-  "Asia/Tokyo",
-  "Asia/Shanghai",
-  "Asia/Kolkata",
-  "Asia/Dubai",
-  "Australia/Sydney",
-  "Australia/Adelaide",
-  "Pacific/Auckland",
-  "Pacific/Honolulu",
-  "Africa/Cairo",
-  "Africa/Lagos",
-  "Africa/Johannesburg",
-] as const;
+/* Re-exported, not defined here. This file imports the TypeScript compiler at
+   its top level, so anything defined in it is unreachable from the browser —
+   and `DOX-C3b` needs this list in a client-side widget template. The data now
+   lives in `src/lib/curated-timezones.ts`; the dependency points that way and
+   must not be reversed. */
+import { CURATED_TIMEZONES } from "../../src/lib/curated-timezones";
+
+export { CURATED_TIMEZONES };
 
 export const CURATED_CALENDARS = [
   "gregorian",
