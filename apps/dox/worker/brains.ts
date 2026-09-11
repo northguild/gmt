@@ -27,6 +27,7 @@ import {
   streamText,
   type LanguageModel,
   type ModelMessage,
+  type ToolSet,
 } from "ai";
 import {
   BRAINS,
@@ -188,12 +189,17 @@ export async function openFirstWorkingBrain({
   resolveModel,
   instructions,
   messages,
+  tools,
   onBrainOut,
 }: {
   candidates: readonly Brain[];
   resolveModel: (brainId: string) => LanguageModel;
   instructions: string;
   messages: ModelMessage[];
+  /** DOX-C3b's widget tools. Passed to every attempt, so a brain that rejects
+   *  the tool schema fails at exactly the same seam as one that 429s — before
+   *  anything has been written to the reader. */
+  tools?: ToolSet;
   onBrainOut: (brainId: string, state: Exclude<BrainState, "ok">) => void;
 }): Promise<BrainAttempt | undefined> {
   for (const brain of candidates) {
@@ -207,6 +213,12 @@ export async function openFirstWorkingBrain({
       model: resolveModel(brain.id),
       instructions,
       messages,
+      tools,
+      /* No `stopWhen`. The default is `isStepCount(1)`, which is exactly what
+         is wanted: the tool's `execute` runs inside step 1 and the stream ends.
+         Raising it would add a second upstream call *after* headers are already
+         sent, where failover is no longer available and a failure reaches the
+         reader mid-answer — against a five-questions-per-visitor budget. */
       onError: ({ error }) => {
         providerError = error;
       },

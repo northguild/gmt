@@ -107,13 +107,46 @@ function isLocalhost(): boolean {
   return hostname === "localhost" || hostname === "127.0.0.1";
 }
 
-export function ChatWarning({ state }: { state: ChatWarningState }) {
+/**
+ * `retryable` is the one thing this classification knows that the message text
+ * does not: whether asking again could plausibly work. A rate limit, a
+ * malformed request or a missing dev endpoint will fail identically the second
+ * time; a 5xx, a dropped connection or a mid-stream provider error may not.
+ *
+ * Until this rendered it, the flag was computed on all seven branches and read
+ * nowhere — which also meant a reader whose stream died had to retype their
+ * question to try again.
+ *
+ * `onRetry` is optional and the button only appears when both it and
+ * `state.retryable` are present, so a caller that has nothing to retry (or a
+ * reader who is out of budget) simply gets the banner.
+ */
+export function ChatWarning({
+  state,
+  onRetry,
+}: {
+  state: ChatWarningState;
+  onRetry?: () => void;
+}) {
   return (
-    <div className="gmt-hive-warning" role="status">
+    <div
+      className="gmt-hive-warning"
+      role="status"
+      data-retryable={state.retryable ? "" : undefined}
+    >
       <span className="gmt-hive-warning-marker" aria-hidden="true">
         ⟨ ! ⟩
       </span>
       <p>{state.message}</p>
+      {state.retryable && onRetry && (
+        <button
+          type="button"
+          className="gmt-hive-warning-retry gmt-sonar-focus"
+          onClick={onRetry}
+        >
+          Try again
+        </button>
+      )}
     </div>
   );
 }

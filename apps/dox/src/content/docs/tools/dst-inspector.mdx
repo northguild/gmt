@@ -1,0 +1,26 @@
+---
+title: DST Inspector
+description: Find any timezone's daylight-saving transitions for a given year, then scrub a local wall-clock time across one and watch how each disambiguation option resolves it.
+---
+
+import DstInspector from "../../../components/DstInspector.astro";
+
+Twice a year most timezones skip an hour or repeat one. Inside the skipped hour a
+local time simply does not exist; inside the repeated one it happens twice. Both
+cases are real, both are common, and a date library has to answer for them
+somehow.
+
+Pick a zone and a year to see its transitions, then drag the ticker into a gap or
+an overlap and watch `startOfZoned` resolve the same wall-clock time four
+different ways.
+
+<DstInspector />
+
+**See it in action:** [1:30am on 3 November 2024 in New
+York](/tools/dst-inspector/?w=dst&wa=%7B%22zone%22%3A%22America%2FNew_York%22%2C%22year%22%3A2024%2C%22preset%22%3A%22overlap%22%7D)
+happens twice — scrub across the transition and switch `disambiguation` between
+`earlier`, `later` and `reject` to see which instant each one picks.
+
+Reference: [`getDstTransitions`](/reference/zoned/get/getDstTransitions/) finds
+the transitions; [`startOfZoned`](/reference/zoned/calculate/startOfZoned/) resolves the
+probe.

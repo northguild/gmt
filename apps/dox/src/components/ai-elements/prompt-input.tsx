@@ -853,9 +853,23 @@ export const PromptInput = ({
             return (formData.get("message") as string) || "";
           })();
 
-      // Reset form immediately after capturing text to avoid race condition
-      // where user input during async blob conversion would be lost
-      if (!usingProvider) {
+      /* LOCAL MODIFICATION (GMT) — see also the Streamdown plugin block in
+         message.tsx for the other place we deviate from the registry copy.
+
+         Upstream resets the form here, before `onSubmit` runs, to stop an
+         async blob conversion from racing further typing. But `clear()` below
+         only ever clears *attachments* — the textarea in non-provider mode is
+         uncontrolled and reset by this call alone. So the two "Don't clear on
+         error - user may want to retry" branches below never actually held for
+         text: a rejected send (too long, still streaming, out of budget) wiped
+         what the reader typed and left them nothing to edit.
+
+         So reset up-front only when there is genuine async file work to race
+         with, and otherwise defer to the success paths. The race fix survives
+         for the case it was written for; a refused send now keeps its text. */
+      const hasBlobWork = files.some((item) => item.url?.startsWith("blob:"));
+      const resetTextOnSuccess = !usingProvider && !hasBlobWork;
+      if (!usingProvider && hasBlobWork) {
         form.reset();
       }
 
@@ -882,6 +896,9 @@ export const PromptInput = ({
           try {
             await result;
             clear();
+            if (resetTextOnSuccess) {
+              form.reset();
+            }
             if (usingProvider) {
               controller.textInput.clear();
             }
@@ -891,6 +908,9 @@ export const PromptInput = ({
         } else {
           // Sync function completed without throwing, clear inputs
           clear();
+          if (resetTextOnSuccess) {
+            form.reset();
+          }
           if (usingProvider) {
             controller.textInput.clear();
           }

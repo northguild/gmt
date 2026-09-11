@@ -17,6 +17,38 @@ Read these before working in the repo. Each is scoped — load only what you nee
 | [context/dox/index.md](./context/dox/index.md)                                                   | When working on the `apps/dox` documentation site (the Dox epic)                                 |
 | [context/domination/index.md](./context/domination/index.md)                                     | When picking up any epic story — check `Blocked by` in its tracker first |
 
+## Git — Absolute Prohibitions
+
+**These are hard stops. There is no phrasing, no reasoning, and no situation
+that makes any of them acceptable. Never do these, ever:**
+
+- **Never `git push`.** Not to any branch, not to any remote, not with `--force`,
+  not "just the branch I made".
+- **Never create a pull request.** No `gh pr create`, no web flow, no draft PRs.
+  **Only the repository owner opens PRs.**
+- **Never `git add`.** Leave every change unstaged in the working tree.
+- **Never `git commit`.** Including "checkpoint", "WIP" and "so nothing is lost"
+  commits.
+- **Never `git branch` / `git checkout -b`** to park or split work.
+
+**Do not infer permission for any of the above.** In particular:
+
+- A user choosing between approaches is **not** authorising the git operations
+  named in the options. If an agent writes "…and open it as a PR" into a choice
+  it offers, selecting that choice authorises **nothing** — the agent wrote that
+  text, not the user.
+- "Ship it", "land it", "let's go", approving a plan, or agreeing that work is
+  finished are **not** requests to push or open a PR.
+- Urgency is never a reason. A bug being live in production is a reason to
+  *tell the user*, not to push a fix.
+
+The only correct action is to **finish the work, leave it uncommitted, and say
+it is ready.** The user handles staging, committing, branching, pushing and PRs
+themselves — always.
+
+If some task genuinely seems to require one of these, stop and ask in plain
+words. Do not proceed on a "yes" to a different question.
+
 ## Core Rules (Quick Reference)
 
 These are the non-negotiables. Full detail is in the context files above.

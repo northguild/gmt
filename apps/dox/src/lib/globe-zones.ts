@@ -17,35 +17,13 @@ import { TZ_COORDINATES, type ZoneCoordinate } from "./tz-coordinates";
 
 export type { ZoneCoordinate };
 
-/**
- * Curated spread of offsets and DST behaviours. Kept in step with
- * `scripts/build-utils/build-utils.ts`'s `CURATED_TIMEZONES` (the DST inspector /
- * playground list) by `globe-zones.test.ts` — inlined rather than imported
- * because `build-utils.ts` pulls in the TypeScript compiler, which must never
- * reach a browser bundle.
- */
-const CURATED = [
-  "UTC",
-  "America/New_York",
-  "America/Chicago",
-  "America/Denver",
-  "America/Los_Angeles",
-  "Europe/London",
-  "Europe/Paris",
-  "Europe/Berlin",
-  "Europe/Moscow",
-  "Asia/Tokyo",
-  "Asia/Shanghai",
-  "Asia/Kolkata",
-  "Asia/Dubai",
-  "Australia/Sydney",
-  "Australia/Adelaide",
-  "Pacific/Auckland",
-  "Pacific/Honolulu",
-  "Africa/Cairo",
-  "Africa/Lagos",
-  "Africa/Johannesburg",
-] as const;
+import { CURATED_TIMEZONES as CURATED } from "./curated-timezones";
+
+/* The curated list, imported rather than duplicated. This used to be an inlined
+   copy of `build-utils.ts`'s array, kept in step by a test, because that file
+   pulls in the TypeScript compiler and must never reach a browser bundle. The
+   data has since moved to a client-safe module, so the copy — and the drift it
+   risked — is gone. */
 
 /** Lookup built once from the generated table. */
 export const COORDINATES_BY_ID: ReadonlyMap<string, ZoneCoordinate> = new Map(

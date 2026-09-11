@@ -8,7 +8,12 @@ import { nextPtMidnightMs } from "../src/lib/pt-day";
 import { chooseBrain, remainingFor } from "./brains";
 import { createChatHandler } from "./chat-handler";
 import { CORE_RULES_CONTENT } from "./core-rules";
-import { devCookieHeader, isDevRequest, signDevToken } from "./dev-access";
+import {
+  devCookieHeader,
+  isDevRequest,
+  signDevToken,
+  timingSafeEqual,
+} from "./dev-access";
 import { clientIdFromRequest } from "./rate-limit";
 import { hashVisitor, readUsage, type UsageStore } from "./usage";
 import { VOCABULARY_CONTENT } from "./vocabulary";
@@ -46,13 +51,15 @@ async function handleDevKey(url: URL, env: Env): Promise<Response> {
 
   const headers = new Headers({ location: clean.toString() });
 
-  // A plain comparison, not a constant-time one. That is a deliberate call,
-  // not an oversight: the burst limiter already caps attempts, the secret is
-  // high-entropy rather than guessable character-by-character, and a timing
-  // oracle over a network is not a practical way to recover it. What this
-  // endpoint must never do is *leak* — hence the redirect that strips the key
-  // and the HttpOnly cookie that keeps it out of the page.
-  if (env.DOX_DEV_KEY && candidate === env.DOX_DEV_KEY) {
+  // Constant-time, via `timingSafeEqual`. This was a plain `===`, justified in
+  // a comment by "the burst limiter already caps attempts" — which was simply
+  // untrue: `checkRateLimit` runs inside the chat handler, and this path never
+  // reaches it, so dev-key guessing is not rate limited at all. The comparison
+  // now needs no such argument.
+  //
+  // What this endpoint must never do is *leak* — hence the redirect that
+  // strips the key and the HttpOnly cookie that keeps it out of the page.
+  if (env.DOX_DEV_KEY && (await timingSafeEqual(candidate, env.DOX_DEV_KEY))) {
     const token = await signDevToken(env.DOX_DEV_KEY, Date.now());
     headers.append(
       "set-cookie",
@@ -99,10 +106,26 @@ async function handleBrains(request: Request, env: Env): Promise<Response> {
     },
     {
       headers: {
-        // Short edge cache keeps ledger reads flat as /dox traffic grows, at
-        // the cost of a badge that can be up to a minute stale. The number is
-        // advisory anyway — see usage.ts.
-        "cache-control": "public, max-age=15",
+        /* `private`, never `public`: this body carries `visitor.used`,
+           `visitor.remaining` and `visitor.unlimited`, all keyed on one
+           visitor's hashed IP and dev cookie. Under `public` any shared or CDN
+           cache is entitled to hand one reader's counts — including a dev's
+           `unlimited: true` — to the next reader through it.
+
+           `no-store` rather than a short `max-age` because the original
+           "keep ledger reads flat" rationale does not survive that change:
+           it was an argument for an *edge* cache absorbing shared traffic,
+           and `private` is precisely the instruction not to have one. What
+           is left to cache is one visitor's own browser, and any window at
+           all swallows DoxChat's post-send refresh 1.5s later — leaving the
+           badge motionless after the reader's own question, which is what
+           DOX-C3a's "they move with real requests" line rules out.
+
+           The load this gives up is negligible and worth stating so nobody
+           re-adds the header: this endpoint is fetched once per chat mount
+           plus once per send, against a per-visitor cap of VISITOR_DAILY_MAX,
+           so a visitor costs single-digit KV reads per day. */
+        "cache-control": "private, no-store",
       },
     },
   );

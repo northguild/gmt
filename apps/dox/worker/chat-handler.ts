@@ -16,7 +16,9 @@ import { getUnixNowMs } from "./clock";
 import { mapUpstreamError } from "./error-mapping";
 import { namespaceFromPageContext } from "./namespace-from-page";
 import { checkRateLimit, clientIdFromRequest } from "./rate-limit";
+import { ENABLED_TOOL_DOCS } from "../src/lib/dox-tools";
 import { assembleSystemPrompt } from "./system-prompt";
+import { buildWorkerTools } from "./tools";
 import { validateChatRequest } from "./validation";
 import { chooseBrain, openFirstWorkingBrain, orderCandidates } from "./brains";
 import {
@@ -195,14 +197,29 @@ export function createChatHandler(deps: ChatHandlerDeps) {
         namespace: namespaceFromPageContext(pageContext),
       });
 
+      /* Built per request. `streamText`, `convertToModelMessages` and
+         `toUIMessageStream` must all be handed the *same* set, or a tool part
+         is typed in one layer and opaque in the next. */
+      const tools = buildWorkerTools();
+
       const systemPrompt = assembleSystemPrompt({
         routeAllowlist: retrieved.map((c) => c.url),
         chunks: retrieved,
         vocabulary,
         coreRules,
+        tools: ENABLED_TOOL_DOCS,
       });
 
-      const modelMessages = await convertToModelMessages(messages);
+      /* `ignoreIncompleteToolCalls` drops a tool part that never reached a
+         terminal state, which is what a reader who hits Stop between the
+         tool-call chunk and the tool-result chunk leaves in the transcript.
+         Without it that turn is replayed as a `functionCall` with no matching
+         `functionResponse` — history the provider rejects, one question later.
+         Pinned in `tools.test.ts`. */
+      const modelMessages = await convertToModelMessages(messages, {
+        tools,
+        ignoreIncompleteToolCalls: true,
+      });
 
       // DOX-C3a (#139): the retrieval trace rides the same stream as the
       // answer. `createUIMessageStream` + `writer.merge(toUIMessageStream(...))`
@@ -251,6 +268,7 @@ export function createChatHandler(deps: ChatHandlerDeps) {
         resolveModel,
         instructions: systemPrompt,
         messages: modelMessages,
+        tools,
         onBrainOut: (brainId, state) => {
           if (usage) void markBrain(usage, brainId, state, nowMs);
         },
@@ -287,6 +305,9 @@ export function createChatHandler(deps: ChatHandlerDeps) {
           writer.merge(
             toUIMessageStream({
               stream: attempt.result.stream,
+              // Typed tool parts rather than opaque ones — this is what lets a
+              // `tool-showGlobe` part reach the client with a parsed `input`.
+              tools,
               onError: onStreamError,
             }),
           );

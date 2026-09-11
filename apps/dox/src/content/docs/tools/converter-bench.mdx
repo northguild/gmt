@@ -1,0 +1,22 @@
+---
+title: Converter Bench
+description: Convert an instant between two timezones, format it across seventeen locales, and test any string against every regex the library exports.
+---
+
+import ConverterBench from "../../../components/ConverterBench.astro";
+
+Three benches over one instant: convert it between zones, format it in any locale
+`@northguild/gmt` is tested against, and check which of the library's exported
+regular expressions match a given string.
+
+<ConverterBench />
+
+**Worth trying:** change the locale to `ar-SA` or `ja-JP` and watch the formatted
+parts change shape, not just language — the same instant, ordered the way that
+locale orders dates.
+
+Reference:
+[`convertZonedToZoned`](/reference/zoned/convert/convertZonedToZoned/) does the
+conversion; [`formatZonedToParts`](/reference/zoned/format/formatZonedToParts/)
+and [`formatRelativeZoned`](/reference/zoned/format/formatRelativeZoned/) do the
+formatting.

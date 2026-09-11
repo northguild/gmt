@@ -73,15 +73,44 @@ if (label !== "before" && label !== "after") {
   process.exit(1);
 }
 
-// Page list — see design-system.md's "Verifying a change is visually safe": landing,
-// a dense reference page, the two /tools pages this epic is actively changing, and one
-// teaching-widget page (gmt-widget.css is touched by the Phase 1 cleanup).
+/* Page list — see design-system.md's "Verifying a change is visually safe": landing,
+   a dense reference page, the two /tools pages this epic is actively changing, and one
+   page per teaching widget.
+
+   Widened 2026-09-10 for `DOX-C3b`. The list carried exactly one widget page
+   (`getDstTransitions`, for the DST inspector), which meant `DOX-C3b`'s
+   "every Tier 2 widget page renders identically after the mount(root) refactor"
+   was unverifiable for two of the three widgets it refactors — the interval
+   visualizer and the converter bench had no visual coverage at all. Each entry
+   below is the canonical page hosting one widget. */
 const PAGES = [
   { slug: "home", path: "/" },
   { slug: "install", path: "/install/" },
   { slug: "zoned-earth", path: "/tools/zoned-earth/" },
   { slug: "zone-planner", path: "/tools/zone-planner/" },
   { slug: "dst-inspector", path: "/reference/zoned/get/getDstTransitions/" },
+  {
+    slug: "interval-visualizer",
+    path: "/reference/zoned/interval/intervalIntersectionZoned/",
+  },
+  {
+    slug: "converter-bench",
+    path: "/reference/zoned/convert/convertZonedToZoned/",
+  },
+  /* The standalone /tools pages for the same three widgets. Covered separately
+     from the reference pages above because they are a different rendering: no
+     surrounding API documentation, their own prose, and — for the permalink
+     targets — the page a reader actually lands on from the chat. */
+  { slug: "tool-dst-inspector", path: "/tools/dst-inspector/" },
+  { slug: "tool-interval-visualizer", path: "/tools/interval-visualizer/" },
+  { slug: "tool-converter-bench", path: "/tools/converter-bench/" },
+  /* Added last, deliberately. Through DOX-C3b this was the page being changed
+     on almost every step, so covering it earlier would have meant a gate that
+     failed by design and got ignored. It is stable now, and it is the only page
+     that renders the chat island at all — the empty state, the composer, the
+     brain badge and the widget rail's collapsed-to-nothing layout are covered
+     by nothing else. */
+  { slug: "dox", path: "/dox/" },
 ];
 
 const THEMES = ["dark", "light"];
@@ -98,7 +127,24 @@ const VIEWPORTS = [
 // byte-identical assertion meaningful rather than something that cries wolf
 // on every run. A selector that matches nothing on a given page is a no-op
 // for Playwright's `mask`, so this is safe to apply everywhere.
-const LIVE_CLOCK_SELECTORS = [".gmt-clock-time", ".gmt-globe-tooltip-time"];
+/*
+ * Regions whose content is a function of the wall clock, and therefore differs
+ * between any two captures taken minutes apart. Masked rather than waited out —
+ * no settle delay can make "now" the same twice.
+ *
+ * The globe canvas was added 2026-09-10, after a baseline and a comparison taken
+ * ~30 minutes apart diverged by up to 1% on every light-theme page carrying a
+ * globe. The visible difference was a crescent down the right-hand limb: the
+ * day/night terminator, whose position `globe-terminator.ts` computes from the
+ * current time. It is not flake and it does not settle — it is the widget
+ * working. Its own correctness is covered by `globe.test.ts`; what this harness
+ * is for is catching layout and style regressions around it.
+ */
+const LIVE_CLOCK_SELECTORS = [
+  ".gmt-clock-time",
+  ".gmt-globe-tooltip-time",
+  ".gmt-globe-stage canvas",
+];
 
 // Confirms both that something is listening on PORT and that it's actually serving
 // THIS worktree's build, not a stray daemon left running by another worktree or an

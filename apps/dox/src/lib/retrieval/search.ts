@@ -59,15 +59,36 @@ function processTerm(term: string): string | false {
   return lower;
 }
 
-// Empirically tuned against DOX-C1's four required question types plus
-// three genuinely out-of-domain probes (verified 2026-09-09, corpus size
-// 591 functions + guide sections): every real match — a direct lookup, a
-// task, a concept, and a near-miss — scored at least 10.6 at its best
-// result; three unrelated questions ("recommend a pizza restaurant",
-// "translate to French", "javascript sorting algorithm") topped out at 6.0
-// or scored 0 results. This is a property of *this* corpus's size and the
-// boost/stopword settings above, not a universal constant — re-verify if
-// either changes materially.
+/* Empirically tuned against DOX-C1's four required question types plus
+   genuinely out-of-domain probes. This is a property of *this* corpus's size
+   and the boost/stopword settings above, not a universal constant — re-verify
+   if either changes materially.
+
+   First tuned 2026-09-09 against 591 function chunks. **Re-verified 2026-09-10
+   against the whole 761-chunk corpus** (597 function + 164 guide), which is
+   what the Worker actually searches — the original measurement was taken over
+   the reference half alone, and the corpus has since grown by six functions.
+   The threshold holds unchanged. Chunks clearing it, per question:
+
+     what does formatDate do ........................  8   (2 guide)
+     convert UTC to Tokyo timezone .................. 60  (22 guide)
+     what happens during a DST gap .................. 18  (14 guide)
+     addBusinessDay .................................  2   (0 guide)
+     how do I handle a DST overlap .................. 57  (31 guide)
+
+     recommend a pizza restaurant ...................  1
+     translate to French ............................  0
+     javascript sorting algorithm ...................  0
+     how do I bake sourdough bread ..................  0
+     what is the capital of Peru ....................  0
+     write me a haiku about cats ....................  0
+
+   The out-of-domain column is the one that matters: DOX-C2's refusal path is
+   only honest if a question with no answer retrieves nothing, and a threshold
+   that let 20 weak matches through would manufacture a context to improvise
+   from. Note `processTerm`'s stopword list is doing most of that work — the
+   same probes against an index built without it score an off-domain question
+   like "how do I bake sourdough bread" into the hundreds. */
 const MIN_RELEVANCE_SCORE = 8;
 
 function buildIndex(chunks: RetrievalChunk[]): MiniSearch<RetrievalChunk> {
@@ -94,7 +115,7 @@ function buildIndex(chunks: RetrievalChunk[]): MiniSearch<RetrievalChunk> {
  * DOX-C1 (#137) — keyword/BM25 retrieval over the chunk corpus, with a
  * namespace bias (not a filter) toward the current page's context. Builds a
  * fresh index every call rather than caching one across calls — at this
- * corpus size (591 functions + a few dozen guide sections) that's low
+ * corpus size (597 functions + 164 guide sections) that's low
  * single-digit milliseconds, and it keeps this function pure and easy to
  * test. DOX-C2's Worker should build the index once per isolate instead of
  * once per request — see `fetch-chunks.ts`'s caching note.
