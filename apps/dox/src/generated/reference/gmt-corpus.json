@@ -1,5 +1,257 @@
 [
   {
+    "url": "/reference/calendar/calculate/bucketRange",
+    "name": "bucketRange",
+    "namespace": "calendar",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "bucketRange(start: string, end: string, unit: ZoneBucketUnit, timeZone: string): string[]",
+    "description": "Return the start instant of every `unit` bucket the half-open range `[start, end)` touches,",
+    "sourcePath": "packages/gmt/src/calendar/calculate/bucketRange.ts",
+    "examples": [
+      {
+        "call": "bucketRange(\"2024-06-15T03:00:00Z\", \"2024-06-17T03:00:00Z\", \"day\", \"America/New_York\")",
+        "result": "[\"2024-06-14T04:00:00Z\", \"2024-06-15T04:00:00Z\", \"2024-06-16T04:00:00Z\"]"
+      },
+      {
+        "call": "bucketRange(\"2024-03-09T05:00:00Z\", \"2024-03-12T04:00:00Z\", \"day\", \"America/New_York\")",
+        "result": "[\"2024-03-09T05:00:00Z\", \"2024-03-10T05:00:00Z\", \"2024-03-11T04:00:00Z\"] (the middle day is 23 hours)"
+      },
+      {
+        "call": "bucketRange(\"2024-11-02T04:00:00Z\", \"2024-11-05T05:00:00Z\", \"day\", \"America/New_York\")",
+        "result": "[\"2024-11-02T04:00:00Z\", \"2024-11-03T04:00:00Z\", \"2024-11-04T05:00:00Z\"] (the middle day is 25 hours)"
+      },
+      {
+        "call": "bucketRange(\"2024-11-03T04:00:00Z\", \"2024-11-03T08:00:00Z\", \"hour\", \"America/New_York\")",
+        "result": "[\"2024-11-03T04:00:00Z\", \"2024-11-03T05:00:00Z\", \"2024-11-03T06:00:00Z\", \"2024-11-03T07:00:00Z\"] (the repeated 01:00 is its own bucket)"
+      },
+      {
+        "call": "bucketRange(\"2024-06-14T04:00:00Z\", \"2024-06-14T04:00:00Z\", \"day\", \"America/New_York\")",
+        "result": "[] (zero length, on a boundary)"
+      },
+      {
+        "call": "bucketRange(\"2024-06-16T00:00:00Z\", \"2024-06-15T00:00:00Z\", \"day\", \"UTC\")",
+        "result": "[] (start after end)"
+      },
+      {
+        "call": "bucketRange(\"2024-06-15T03:00:00Z\", \"2024-06-17T03:00:00Z\", \"year\", \"UTC\")",
+        "result": "[] (not a bucketing unit)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/calendar/calculate/floorToZone",
+    "name": "floorToZone",
+    "namespace": "calendar",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "floorToZone(value: string, unit: ZoneBucketUnit, timeZone: string): string",
+    "description": "Floor an instant to the start of the `unit` containing it **in `timeZone`**, and return",
+    "sourcePath": "packages/gmt/src/calendar/calculate/floorToZone.ts",
+    "examples": [
+      {
+        "call": "floorToZone(\"2024-06-15T03:00:00Z\", \"day\", \"America/New_York\")",
+        "result": "\"2024-06-14T04:00:00Z\" (the 14 June local midnight — the instant is already 14 June there)"
+      },
+      {
+        "call": "floorToZone(\"2024-06-15T03:00:00Z\", \"day\", \"UTC\")",
+        "result": "\"2024-06-15T00:00:00Z\" (the same instant, a different local day)"
+      },
+      {
+        "call": "floorToZone(\"2024-06-15T03:00:00Z\", \"hour\", \"Asia/Kathmandu\")",
+        "result": "\"2024-06-15T02:15:00Z\" (a +05:45 zone's hour boundary)"
+      },
+      {
+        "call": "floorToZone(\"2024-06-15T03:00:00Z\", \"week\", \"America/New_York\")",
+        "result": "\"2024-06-10T04:00:00Z\" (the Monday)"
+      },
+      {
+        "call": "floorToZone(\"2024-09-08T10:00:00Z\", \"day\", \"America/Santiago\")",
+        "result": "\"2024-09-08T04:00:00Z\" (local midnight is skipped, so the day starts at 01:00)"
+      },
+      {
+        "call": "floorToZone(\"2024-06-15T03:00:00Z\", \"year\", \"UTC\")",
+        "result": "\"\" (not a bucketing unit)"
+      },
+      {
+        "call": "floorToZone(\"2024-06-15T03:00:00\", \"day\", \"UTC\")",
+        "result": "\"\" (zoneless, so it names no instant)"
+      },
+      {
+        "call": "floorToZone(\"-271821-04-20T00:00:00Z\", \"month\", \"UTC\")",
+        "result": "\"\" (that month began before Temporal's range does)"
+      },
+      {
+        "call": "floorToZone(\"2024-06-15T03:00:00Z\", \"day\", \"Invalid/Zone\")",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/calendar/calculate/getFiscalPeriod",
+    "name": "getFiscalPeriod",
+    "namespace": "calendar",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "getFiscalPeriod(value: string, calendar: FiscalCalendar): { year: number; period: number; week: number; }",
+    "description": "Return the fiscal year, period and week `value` falls in, for a 52/53-week retail calendar.",
+    "sourcePath": "packages/gmt/src/calendar/calculate/getFiscalPeriod.ts",
+    "examples": [
+      {
+        "call": "getFiscalPeriod(\"2024-06-15\", { pattern: \"4-5-4\", yearEndsOn: \"2026-01-31\" })",
+        "result": "{ year: 2024, period: 5, week: 19 }"
+      },
+      {
+        "call": "getFiscalPeriod(\"2024-02-04\", { pattern: \"4-5-4\", yearEndsOn: \"2026-01-31\" })",
+        "result": "{ year: 2024, period: 1, week: 1 } (NRF fiscal 2024 opens)"
+      },
+      {
+        "call": "getFiscalPeriod(\"2024-01-28\", { pattern: \"4-5-4\", yearEndsOn: \"2026-01-31\" })",
+        "result": "{ year: 2023, period: 12, week: 53 } (the 53rd week of NRF fiscal 2023)"
+      },
+      {
+        "call": "getFiscalPeriod(\"2024-03-31\", { pattern: \"4-4-5\", yearEndsOn: \"2026-01-31\" })",
+        "result": "{ year: 2024, period: 3, week: 9 } (the same week, a period later than 4-5-4 puts it)"
+      },
+      {
+        "call": "getFiscalPeriod(\"2024-06-15\", { pattern: \"4-5-5\", yearEndsOn: \"2026-01-31\" })",
+        "result": "null (not one of the three patterns)"
+      },
+      {
+        "call": "getFiscalPeriod(\"2024-06-15T12:00:00Z\", { pattern: \"4-5-4\", yearEndsOn: \"2026-01-31\" })",
+        "result": "null (a moment, not a calendar date)"
+      },
+      {
+        "call": "getFiscalPeriod(\"invalid\", { pattern: \"4-5-4\", yearEndsOn: \"2026-01-31\" })",
+        "result": "null"
+      }
+    ]
+  },
+  {
+    "url": "/reference/calendar/calculate/getIsoWeekDate",
+    "name": "getIsoWeekDate",
+    "namespace": "calendar",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "getIsoWeekDate(value: string): { year: number; week: number; weekday: number; }",
+    "description": "Return the ISO 8601 week date — week-numbering year, week and weekday — for `value`.",
+    "sourcePath": "packages/gmt/src/calendar/calculate/getIsoWeekDate.ts",
+    "examples": [
+      {
+        "call": "getIsoWeekDate(\"2024-06-15\")",
+        "result": "{ year: 2024, week: 24, weekday: 6 }"
+      },
+      {
+        "call": "getIsoWeekDate(\"2027-01-01\")",
+        "result": "{ year: 2026, week: 53, weekday: 5 } (week-year 2026, not 2027)"
+      },
+      {
+        "call": "getIsoWeekDate(\"2024-12-30\")",
+        "result": "{ year: 2025, week: 1, weekday: 1 } (a December date in the next week-year)"
+      },
+      {
+        "call": "getIsoWeekDate(\"2020-12-31\")",
+        "result": "{ year: 2020, week: 53, weekday: 4 } (a 53-week ISO year)"
+      },
+      {
+        "call": "getIsoWeekDate(\"2024-06-15T23:59:59\")",
+        "result": "{ year: 2024, week: 24, weekday: 6 }"
+      },
+      {
+        "call": "getIsoWeekDate(\"2024-06-15T12:00:00Z\")",
+        "result": "null (a moment, not a calendar date)"
+      },
+      {
+        "call": "getIsoWeekDate(\"invalid\")",
+        "result": "null"
+      }
+    ]
+  },
+  {
+    "url": "/reference/calendar/calculate/getOrdinalDate",
+    "name": "getOrdinalDate",
+    "namespace": "calendar",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "getOrdinalDate(value: string): { year: number; dayOfYear: number; }",
+    "description": "Return the ISO 8601 ordinal date — calendar year and day of year — for `value`.",
+    "sourcePath": "packages/gmt/src/calendar/calculate/getOrdinalDate.ts",
+    "examples": [
+      {
+        "call": "getOrdinalDate(\"2024-01-01\")",
+        "result": "{ year: 2024, dayOfYear: 1 }"
+      },
+      {
+        "call": "getOrdinalDate(\"2024-06-15\")",
+        "result": "{ year: 2024, dayOfYear: 167 }"
+      },
+      {
+        "call": "getOrdinalDate(\"2024-12-31\")",
+        "result": "{ year: 2024, dayOfYear: 366 } (leap year)"
+      },
+      {
+        "call": "getOrdinalDate(\"2023-12-31\")",
+        "result": "{ year: 2023, dayOfYear: 365 }"
+      },
+      {
+        "call": "getOrdinalDate(\"2024-03-01\")",
+        "result": "{ year: 2024, dayOfYear: 61 } (after the Feb 29 leap day)"
+      },
+      {
+        "call": "getOrdinalDate(\"2024-06-15T12:00:00Z\")",
+        "result": "null (a moment, not a calendar date)"
+      },
+      {
+        "call": "getOrdinalDate(\"invalid\")",
+        "result": "null"
+      }
+    ]
+  },
+  {
+    "url": "/reference/calendar/calculate/getQuarter",
+    "name": "getQuarter",
+    "namespace": "calendar",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "getQuarter(value: string, optionsArg?: { fiscalYearStartMonth?: number; }): { year: number; quarter: number; }",
+    "description": "Return the quarter `value` falls in, as a year and a quarter number.",
+    "sourcePath": "packages/gmt/src/calendar/calculate/getQuarter.ts",
+    "examples": [
+      {
+        "call": "getQuarter(\"2024-06-15\")",
+        "result": "{ year: 2024, quarter: 2 }"
+      },
+      {
+        "call": "getQuarter(\"2024-10-01\")",
+        "result": "{ year: 2024, quarter: 4 }"
+      },
+      {
+        "call": "getQuarter(\"2024-06-15\", { fiscalYearStartMonth: 1 })",
+        "result": "{ year: 2024, quarter: 2 } (the default, stated)"
+      },
+      {
+        "call": "getQuarter(\"2024-04-01\", { fiscalYearStartMonth: 4 })",
+        "result": "{ year: 2024, quarter: 1 }"
+      },
+      {
+        "call": "getQuarter(\"2024-03-31\", { fiscalYearStartMonth: 4 })",
+        "result": "{ year: 2023, quarter: 4 } (the previous fiscal year)"
+      },
+      {
+        "call": "getQuarter(\"2024-06-15\", { fiscalYearStartMonth: 13 })",
+        "result": "null"
+      },
+      {
+        "call": "getQuarter(\"2024-06-15T12:00:00Z\")",
+        "result": "null (a moment, not a calendar date)"
+      },
+      {
+        "call": "getQuarter(\"invalid\")",
+        "result": "null"
+      }
+    ]
+  },
+  {
     "url": "/reference/duration/calculate/absDuration",
     "name": "absDuration",
     "namespace": "duration",
@@ -6285,7 +6537,7 @@
     "namespace": "plain",
     "module": "parse",
     "kind": "function",
-    "signature": "parseUnitFromDate(value: string, unit: \"year\" | \"month\" | \"week\" | \"day\" | \"dayOfWeek\", optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; }): string",
+    "signature": "parseUnitFromDate(value: string, unit: \"day\" | \"week\" | \"month\" | \"year\" | \"dayOfWeek\", optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; }): string",
     "description": "Return a specific date unit extracted from a PlainDate string.",
     "sourcePath": "packages/gmt/src/plain/parse/parseUnitFromDate.ts",
     "examples": [
@@ -6325,7 +6577,7 @@
     "namespace": "plain",
     "module": "parse",
     "kind": "function",
-    "signature": "parseUnitFromDateTime(value: string, unit: \"year\" | \"month\" | \"week\" | \"day\" | \"hour\" | \"minute\" | \"second\" | \"millisecond\" | \"dayOfWeek\", optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; }): string",
+    "signature": "parseUnitFromDateTime(value: string, unit: \"hour\" | \"day\" | \"week\" | \"month\" | \"year\" | \"minute\" | \"second\" | \"millisecond\" | \"dayOfWeek\", optionsArg?: { weekStartsOn?: \"monday\" | \"sunday\"; }): string",
     "description": "Return a specific unit extracted from a PlainDateTime string.",
     "sourcePath": "packages/gmt/src/plain/parse/parseUnitFromDateTime.ts",
     "examples": [
@@ -8688,6 +8940,28 @@
     "examples": []
   },
   {
+    "url": "/reference/types/fiscal-calendar/FiscalPattern",
+    "name": "FiscalPattern",
+    "namespace": "types",
+    "module": "fiscal-calendar",
+    "kind": "type",
+    "signature": "",
+    "description": "The FiscalPattern type.",
+    "sourcePath": "packages/gmt/src/types/fiscal-calendar.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/fiscal-calendar/FiscalCalendar",
+    "name": "FiscalCalendar",
+    "namespace": "types",
+    "module": "fiscal-calendar",
+    "kind": "type",
+    "signature": "",
+    "description": "The FiscalCalendar type.",
+    "sourcePath": "packages/gmt/src/types/fiscal-calendar.ts",
+    "examples": []
+  },
+  {
     "url": "/reference/types/fractional-digit/FractionalDigit",
     "name": "FractionalDigit",
     "namespace": "types",
@@ -8861,6 +9135,17 @@
     "signature": "",
     "description": "The UtcNowUnit type.",
     "sourcePath": "packages/gmt/src/types/utc-now-unit.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/zone-bucket-unit/ZoneBucketUnit",
+    "name": "ZoneBucketUnit",
+    "namespace": "types",
+    "module": "zone-bucket-unit",
+    "kind": "type",
+    "signature": "",
+    "description": "The ZoneBucketUnit type.",
+    "sourcePath": "packages/gmt/src/types/zone-bucket-unit.ts",
     "examples": []
   },
   {
@@ -9065,7 +9350,7 @@
     "namespace": "unix",
     "module": "calculate",
     "kind": "function",
-    "signature": "roundUnix(value: number, options: { smallestUnit: SmallestUnit<\"day\" | \"hour\" | \"minute\" | \"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\">; roundingIncrement?: number; roundingMode?: RoundingMode; epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; }): number",
+    "signature": "roundUnix(value: number, options: { smallestUnit: SmallestUnit<\"hour\" | \"day\" | \"minute\" | \"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\">; roundingIncrement?: number; roundingMode?: RoundingMode; epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; }): number",
     "description": "Round a Unix timestamp to the specified unit.",
     "sourcePath": "packages/gmt/src/unix/calculate/roundUnix.ts",
     "examples": [
@@ -13204,7 +13489,7 @@
     "namespace": "zoned",
     "module": "calculate",
     "kind": "function",
-    "signature": "roundZoned(value: string, options: { smallestUnit: SmallestUnit<\"day\" | \"hour\" | \"minute\" | \"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\">; roundingIncrement?: number; roundingMode?: RoundingMode; }): string",
+    "signature": "roundZoned(value: string, options: { smallestUnit: SmallestUnit<\"hour\" | \"day\" | \"minute\" | \"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\">; roundingIncrement?: number; roundingMode?: RoundingMode; }): string",
     "description": "Round an ISO 8601 zoned datetime string to the specified unit.",
     "sourcePath": "packages/gmt/src/zoned/calculate/roundZoned.ts",
     "examples": [

@@ -1,12 +1,12 @@
 {
   "suite": "packages/gmt",
-  "tests": 18741,
-  "files": 585,
-  "executions": 374820,
+  "tests": 19363,
+  "files": 594,
+  "executions": 387260,
   "nodes": ["22", "24"],
   "timezones": 10,
   "locales": 17,
-  "functions": 539,
+  "functions": 545,
   "patterns": 25,
   "byNamespace": [
     {
@@ -32,6 +32,10 @@
     {
       "namespace": "duration",
       "count": 12
+    },
+    {
+      "namespace": "calendar",
+      "count": 6
     },
     {
       "namespace": "instant",

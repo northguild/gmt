@@ -20,7 +20,7 @@ skills:
     domain: core-date-operations
     path: 'skills/gmt-basics/SKILL.md'
     package: 'packages/gmt'
-    description: Get current values, parse components, format for display, format relative time, compare dates, and validate strings/timezones/intervals
+    description: Get current values, parse components, read ISO week/ordinal/quarter/fiscal-period identifiers, format for display, format relative time, compare dates, and validate strings/timezones/intervals
     sources:
       - 'northguild/gmt:README.md'
       - 'northguild/gmt:packages/gmt/src/plain/get/index.ts'
@@ -34,6 +34,7 @@ skills:
       - 'northguild/gmt:packages/gmt/src/zoned/validate/index.ts'
       - 'northguild/gmt:packages/gmt/src/unix/get/index.ts'
       - 'northguild/gmt:packages/gmt/src/utc/get/index.ts'
+      - 'northguild/gmt:packages/gmt/src/calendar/calculate/index.ts'
 
   - name: GMT Arithmetic
     slug: gmt-arithmetic
@@ -58,7 +59,7 @@ skills:
     domain: zoned-date-operations
     path: 'skills/gmt-timezone/SKILL.md'
     package: 'packages/gmt'
-    description: Timezone-aware operations — get zoned now, format zoned datetimes/ranges, convert between plain/zoned/UTC/Unix, DST disambiguation control, the instant-plus-offset pair (toOffsetInstant/fromOffsetInstant), and local-time classification/resolution (classifyLocal/resolveLocal)
+    description: Timezone-aware operations — get zoned now, format zoned datetimes/ranges, convert between plain/zoned/UTC/Unix, DST disambiguation control, the instant-plus-offset pair (toOffsetInstant/fromOffsetInstant), local-time classification/resolution (classifyLocal/resolveLocal), and zone-aware boundary flooring and bucketing (floorToZone/bucketRange)
     sources:
       - 'northguild/gmt:README.md'
       - 'northguild/gmt:packages/gmt/src/zoned/get/index.ts'
@@ -73,6 +74,7 @@ skills:
       - 'northguild/gmt:packages/gmt/src/utc/get/index.ts'
       - 'northguild/gmt:packages/gmt/src/utc/convert/index.ts'
       - 'northguild/gmt:packages/gmt/src/instant/convert/index.ts'
+      - 'northguild/gmt:packages/gmt/src/calendar/calculate/index.ts'
 
   # Consumer-facing composition skills
   - name: GMT Integration

@@ -3,10 +3,10 @@ name: gmt-timezone
 description: >
   Timezone-aware operations — get zoned now, format zoned datetimes/ranges,
   convert between plain↔zoned↔UTC↔Unix, DST disambiguation control on
-  construction and arithmetic, the instant-plus-offset pair, and classifying a
-  zoneless wall time before resolving it. Reads the installed package README.md
-  and source JSDoc for API details; this skill is a routing pointer, not an API
-  dump.
+  construction and arithmetic, the instant-plus-offset pair, classifying a
+  zoneless wall time before resolving it, and flooring or bucketing instants on
+  local calendar boundaries. Reads the installed package README.md and source
+  JSDoc for API details; this skill is a routing pointer, not an API dump.
 sources:
   - 'northguild/gmt:README.md'
   - 'northguild/gmt:packages/gmt/src/zoned/get/index.ts'
@@ -21,6 +21,7 @@ sources:
   - 'northguild/gmt:packages/gmt/src/utc/get/index.ts'
   - 'northguild/gmt:packages/gmt/src/utc/convert/index.ts'
   - 'northguild/gmt:packages/gmt/src/instant/convert/index.ts'
+  - 'northguild/gmt:packages/gmt/src/calendar/calculate/index.ts'
 metadata:
   type: core
   library: '@northguild/gmt'
@@ -41,6 +42,8 @@ converting between time zones, or doing arithmetic that must respect DST.
 - The user is adding/subtracting durations across a DST transition.
 - The user has a timestamp that must keep the local offset it happened at, or a
   local wall time that arrived with no offset at all.
+- The user is grouping or aggregating UTC timestamps by local day, hour, week or
+  month — an observability rollup, a chargeable-days count.
 
 ## Core rules
 
@@ -66,11 +69,17 @@ converting between time zones, or doing arithmetic that must respect DST.
    the shape EPCIS 2.0, EDIFACT DTM and DICOM all exchange, because the instant
    orders events and the offset renders them where they happened, and neither
    derives from the other. Keep the zone for what is still to be scheduled.
-6. **Calendar annotations.** GMT's zoned grammar puts `[u-ca=...]` **before**
+6. **Bucket in the zone, not in UTC.** `floorToZone(instant, unit, zone)` and
+   `bucketRange(start, end, unit, zone)` floor on the zone's own calendar
+   boundaries. Flooring a UTC instant to a UTC day and calling it a local day is
+   wrong for most of the world for most of the day. The buckets are deliberately
+   not uniform: a day that springs forward is 23 hours and one that falls back is
+   25, and forcing 24 is what makes a daily aggregate drift.
+7. **Calendar annotations.** GMT's zoned grammar puts `[u-ca=...]` **before**
    `[timeZone]` — the reverse of RFC 9557. Only `addZoned`, `subtractZoned`,
    `diffZoned`, and `convertZonedToCalendar` accept it; everything else rejects
    it and returns `""`. Always produce these with `convertZonedToCalendar`.
-7. **Read the README.** This skill is a routing pointer. For the full DST
+8. **Read the README.** This skill is a routing pointer. For the full DST
    disambiguation walkthrough, code examples, and locale ICU notes, read the
    installed package's `README.md` and the source JSDoc.
 
@@ -91,6 +100,7 @@ converting between time zones, or doing arithmetic that must respect DST.
   `getTimeZoneOffset`, `parseTimezoneFromZoned`
 - **Offset-preserving instants**: `toOffsetInstant`, `fromOffsetInstant`
 - **Local-time resolution**: `classifyLocal`, `resolveLocal`
+- **Zone-aware buckets**: `floorToZone`, `bucketRange`
 
 ## References
 

@@ -15,8 +15,8 @@ It wraps `@js-temporal/polyfill` behind a smaller, more opinionated API aimed at
 
 - **100% Temporal, Temporal-first.** GMT is built directly on the TC39 `Temporal` standard (via `@js-temporal/polyfill`) — not a custom, homegrown date/time type system like `@internationalized/date`'s own `CalendarDate`/`ZonedDateTime` classes. No `Date` object anywhere, enforced by 3 dedicated lint packages.
 - **A full replacement for any and all of them.** Luxon, date-fns, Moment.js, and react-aria's `@internationalized/date` don't have parity with each other — GMT covers the combined capabilities of all four in one library, plus what none of them do alone.
-- **~15× more CI test executions than all four competitors combined**: 374,820 from 18,741 tests run in all 10 timezones × 2 Node versions, vs. their combined 20,190.
-- **~40× more test cases than `@internationalized/date`**: 18,741 vs. 386 — Adobe's own library, run at its own commit.
+- **~15× more CI test executions than all four competitors combined**: 387,260 from 19,363 tests run in all 10 timezones × 2 Node versions, vs. their combined 20,190.
+- **~40× more test cases than `@internationalized/date`**: 19,363 vs. 386 — Adobe's own library, run at its own commit.
 - **The only one of the five that tests systematically across locales in CI at all.** Zero of the four comparison libraries run a locale-test matrix; GMT mandates all 17 locales on every locale-aware function.
 - **The only one that runs its entire suite under a real `TZ` env var across real-world zones.** Luxon and `@internationalized/date` have no CI timezone matrix; date-fns's zone scope is unclear; Moment.js covers 6 zones but not its full suite.
 - **Explicit DST disambiguation control on both construction _and_ arithmetic** — a control none of the others expose.
@@ -92,7 +92,7 @@ GMT's test suite balances **thoroughness** against **maintenance burden** by tes
 - **Non-string input tables** — functions that guard with `typeof x !== "string"` return the same sentinel for `null`, `undefined`, `123`, `true`, `[]`, and `{}`. We test one representative non-string per argument position rather than all six types × N positions. The collapse is safe because all non-string types hit the identical early-return code path.
 - **Redundant permutations** — adjacent/disjoint/reversed interval cases that produce identical results are not duplicated across every function variant. The `plain/`, `zoned/`, `utc/`, and `unix/` families share the same mathematical behavior; each family gets the minimum set of cases needed to prove correctness.
 
-**Result:** 18,741 tests across 585 files that exercise real behavior differences without redundant permutations. They run in CI as 374,820 executions — every one of them × 2 Node versions × 10 timezones.
+**Result:** 19,363 tests across 594 files that exercise real behavior differences without redundant permutations. They run in CI as 387,260 executions — every one of them × 2 Node versions × 10 timezones.
 
 ## How GMT is tested, vs. the libraries it targets
 
@@ -108,9 +108,9 @@ GMT is measured directly against react-aria's **`@internationalized/date`**, **L
 
 | Metric                          | GMT                                                | `@internationalized/date`      | Luxon                                | date-fns                                  | Moment.js                        |
 | ------------------------------- | -------------------------------------------------- | ------------------------------ | ------------------------------------ | ----------------------------------------- | -------------------------------- |
-| Test files                      | 585                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
-| Individual test cases           | **18,741**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
-| Effective CI test<br>executions | **374,820**<br>(18,741 × 2 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
+| Test files                      | 594                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
+| Individual test cases           | **19,363**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
+| Effective CI test<br>executions | **387,260**<br>(19,363 × 2 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
 | CI Node.js matrix               | 22, 24                                             | n/a — tests<br>React 16–canary | 20, 22, 24, 25                       | not explicit<br>(`node = "latest"`)       | LTS, LTS-1,<br>latest            |
 | CI timezone matrix              | **10 zones × 2**<br>**Node, full suite**           | none found                     | none found                           | dedicated workflow,<br>zone scope unclear | 6 zones,<br>partial suite only   |
 | Locale test matrix              | **17 locales**,<br>every locale fn                 | none found                     | none found                           | none found                                | none found                       |
@@ -146,15 +146,16 @@ Specific, sourced claims — not a repeat of the metrics above.
 | Only GMT enforces a mandatory<br>17-locale test matrix on every<br>locale-aware function                                                      | No CI-level or systematic<br>locale-matrix testing found<br>in any of the four                                                        |
 | Only GMT exposes explicit DST<br>disambiguation control on both<br>construction _and_ arithmetic                                              | Luxon's docs call this explicitly<br>undefined; `@internationalized/date`<br>only covers construction, not arithmetic                 |
 | Only GMT is Temporal-native with<br>zero `Date` usage, enforced by<br>3 dedicated lint packages                                               | Luxon, date-fns, and Moment.js all<br>still wrap or depend on `Date` internally                                                       |
-| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~15×                                                  | 374,820 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
+| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~15×                                                  | 387,260 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
 
 ## Package Layout
 
-The package exports ten top-level namespaces:
+The package exports eleven top-level namespaces:
 
 ```typescript
 import {
   Temporal,
+  calendar,
   duration,
   instant,
   plain,
@@ -168,6 +169,7 @@ import {
 ```
 
 - `Temporal`: re-exported from `@js-temporal/polyfill`
+- `calendar`: ISO week and ordinal dates, quarter and fiscal periods, and zone-aware bucketing
 - `duration`: ISO 8601 duration string parsing, validation, and arithmetic
 - `instant`: the instant-plus-offset pair, and explicit resolution of zoneless local wall times
 - `plain`: timezone-free helpers
@@ -1910,6 +1912,68 @@ Two notes on the boundaries of this namespace:
   minute before 1972 — `Africa/Monrovia` really was `-00:44:30` — and those report
   `±HH:MM:SS`. Rounding them would put the pair thirty seconds from the event it describes.
 
+### Calendar boundaries and zone-aware buckets
+
+Two absences with outsized consequences, and they turn out to be the same absence twice: a
+calendar boundary is not a fixed number of hours, and it is not in UTC.
+
+**Week and period identifiers.** Vessel schedules are published by week number and retail runs
+on 52/53-week fiscal calendars. Both come back as whole identifiers, not as fields to combine
+by hand — a week number without its week-numbering year is ambiguous at both ends of a year:
+
+```typescript
+import { getFiscalPeriod, getIsoWeekDate, getOrdinalDate, getQuarter } from "@northguild/gmt";
+
+getIsoWeekDate("2027-01-01"); // { year: 2026, week: 53, weekday: 5 } — week-year 2026, not 2027
+getOrdinalDate("2024-12-31"); // { year: 2024, dayOfYear: 366 }
+getQuarter("2024-03-31", { fiscalYearStartMonth: 4 }); // { year: 2023, quarter: 4 }
+
+// The NRF retail calendar, stated as its published rule: "the Saturday nearest to January 31".
+const nrf = { pattern: "4-5-4", yearEndsOn: "2026-01-31" } as const;
+
+getFiscalPeriod("2024-06-15", nrf); // { year: 2024, period: 5, week: 19 }
+getFiscalPeriod("2024-01-28", nrf); // { year: 2023, period: 12, week: 53 } — a 53-week year
+```
+
+52 × 7 is 364 days, so a 53rd week is inserted every five or six years and lands in the final
+period. `yearEndsOn` states the *rule*, by example — years end on that date's weekday, nearest
+that date's month and day — not one year's end, because GMT bundles no fiscal calendar. There
+is no single correct retail calendar to bundle.
+
+**Zone-aware bucketing.** "Group by day in `America/New_York`" over UTC timestamps is the most
+common observability bug there is, and the same operation decides how many chargeable days a
+container accrued, because free time is counted in terminal-local calendar days:
+
+```typescript
+import { bucketRange, floorToZone } from "@northguild/gmt";
+
+floorToZone("2024-06-15T03:00:00Z", "day", "America/New_York"); // "2024-06-14T04:00:00Z"
+floorToZone("2024-06-15T03:00:00Z", "day", "UTC");              // "2024-06-15T00:00:00Z"
+```
+
+Same instant, different calendar day — 03:00 UTC on 15 June is still 14 June in New York, and
+flooring it to the UTC day is wrong for most of the world for most of the day. The zone is an
+argument because GMT has no ambient one and must not acquire one.
+
+`bucketRange` returns the boundaries spanning a range, and **the buckets are deliberately not
+uniform in length**:
+
+```typescript
+bucketRange("2024-03-09T05:00:00Z", "2024-03-12T04:00:00Z", "day", "America/New_York");
+// ["2024-03-09T05:00:00Z", "2024-03-10T05:00:00Z", "2024-03-11T04:00:00Z"]
+// 24h, then 23h — the middle day springs forward
+
+bucketRange("2024-11-02T04:00:00Z", "2024-11-05T05:00:00Z", "day", "America/New_York");
+// ["2024-11-02T04:00:00Z", "2024-11-03T04:00:00Z", "2024-11-04T05:00:00Z"]
+// 24h, then 25h — the middle day falls back
+```
+
+Forcing 24 hours here is what makes a daily aggregate drift an hour twice a year. The same
+honesty applies to boundaries that do not exist: the calendar day Samoa deleted crossing the
+date line is absent from the list, a local day whose midnight is skipped by a spring-forward
+starts at 01:00, and in a zone that falls back by half an hour (`Australia/Lord_Howe`) the
+local 01:00 hour bucket is genuinely 90 minutes long.
+
 ## API Surface
 
 For the complete API listing, see the namespace documentation on GitHub:
@@ -1920,6 +1984,7 @@ For the complete API listing, see the namespace documentation on GitHub:
 - [Unix API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/unix) — Unix epoch utilities
 - [Precision API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/precision) — nanosecond instants, JSON transport, storage truncation, NTP / FILETIME / .NET ticks / Excel / PostgreSQL epoch bridges
 - [Span API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/span) — elapsed and wall-clock durations as raw numbers
+- [Calendar API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/calendar) — ISO week and ordinal dates, quarter and fiscal periods, zone-aware bucketing
 - [Instant API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/instant) — the instant-plus-offset pair, and explicit local-time resolution
 - [UTC API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/utc) — UTC instant utilities
 - [Regex API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/regex) — composable regex patterns
