@@ -12,6 +12,17 @@ import {
 import ChartContainer from "../../components/ChartContainer.astro";
 import GridSection from "../../components/GridSection.astro";
 import TimezoneMap from "../../components/TimezoneMap.astro";
+import { formatCount, gmtStats, runsPerTest } from "../../data/gmt-stats";
+import {
+  competitorExecutionRange,
+  executionRatio,
+  largestCompetitorSuite,
+} from "../../data/library-comparison";
+
+{/* Every GMT figure on this page comes from gmt-stats.json, written by `pnpm stats:sync` from packages/gmt. Never type one in. */}
+
+export const executionRange = competitorExecutionRange();
+export const largestSuite = largestCompetitorSuite();
 
 `@northguild/gmt` is not the latest entry in a crowded field — it is a
 fundamentally different bet about what a date/time library should guarantee.
@@ -24,10 +35,10 @@ The pages below make that concrete with data drawn from the library itself.
 ## CI test execution volume
 
 The most direct measure of testing rigor is how many times the library is
-actually executed in CI. GMT's suite is 18,741 tests, and its 17-locale
+actually executed in CI. GMT's suite is {formatCount(gmtStats.tests)} tests, and its {gmtStats.locales}-locale
 matrix is built into those tests rather than layered on top. On every PR, CI
-then re-runs the whole suite under 10 timezones and 2 Node versions, so every
-test runs 20 times.
+then re-runs the whole suite under {gmtStats.timezones} timezones and {gmtStats.nodes.length} Node
+versions, so every test runs {runsPerTest} times.
 
 <ChartContainer
   svg={testExecutionSvg}
@@ -37,13 +48,13 @@ test runs 20 times.
     { label: "Suite tests (one run)", segment: "suite" },
     { label: "CI matrix re-runs", segment: "matrix" },
   ]}
-  caption="GMT: 18,741 tests, re-run across 10 timezones × 2 Node versions = 374,820 executions. Competitors: 386–12,172."
+  caption={`GMT: ${formatCount(gmtStats.tests)} tests, re-run across ${gmtStats.timezones} timezones × ${gmtStats.nodes.length} Node versions = ${formatCount(gmtStats.executions)} executions. Competitors: ${formatCount(executionRange.min)}–${formatCount(executionRange.max)}.`}
 />
 
-The split matters. On suite size alone, GMT's 18,741 tests already outnumber
-the largest alternative's (Moment.js, 11,703). The matrix is what turns that
-into 374,820 executions: about 31× the most-executed alternative and nearly
-1,000× the least, against a surface area that is itself larger.
+The split matters. On suite size alone, GMT's {formatCount(gmtStats.tests)} tests already
+outnumber the largest alternative's ({largestSuite.displayName}, {formatCount(largestSuite.stats.tests)}). The matrix
+is what turns that into {formatCount(gmtStats.executions)} executions: about {executionRatio(executionRange.max)}× the most-executed
+alternative and about {formatCount(executionRatio(executionRange.min))}× the least, against a surface area that is itself larger.
 
 </GridSection>
 
@@ -51,8 +62,8 @@ into 374,820 executions: about 31× the most-executed alternative and nearly
 
 ## API surface by namespace
 
-GMT exposes 539 public functions across eight namespaces — `plain`, `zoned`,
-`unix`, `utc`, `duration`, `precision`, `span`, and `instant` — plus 22 exported
+GMT exposes {formatCount(gmtStats.functions)} public functions across {gmtStats.byNamespace.length} namespaces — `plain`, `zoned`,
+`unix`, `utc`, `duration`, `precision`, `span`, and `instant` — plus {gmtStats.patterns} exported
 regex patterns in `regex`, each generated from the same TypeScript source and
 verified by the same test suite.
 
@@ -60,7 +71,7 @@ verified by the same test suite.
   svg={namespaceDistributionSvg}
   chart="namespaces"
   title="Public functions by namespace"
-  caption="539 functions total, plus 25 regex patterns. Every namespace shares the same implementation contract: ISO 8601 strings in, typed values out, no Date object."
+  caption={`${formatCount(gmtStats.functions)} functions total, plus ${gmtStats.patterns} regex patterns. Every namespace shares the same implementation contract: ISO 8601 strings in, typed values out, no Date object.`}
 />
 
 </GridSection>
@@ -69,11 +80,11 @@ verified by the same test suite.
 
 ## Timezone coverage
 
-GMT tests against 10 timezones chosen not for geographic spread but for offset coverage — from UTC−11 (Pacific/Niue) to UTC+14 (Pacific/Apia). That 25-hour window means that at any given moment, at least one zone is already living in tomorrow while another is still stuck in yesterday. Date-boundary bugs — off-by-one day, wrong month rollover, DST gaps — only surface when the suite runs across this full offset range. A test that passes at UTC can fail at UTC+14 simply because the calendar date is different.
+GMT tests against {gmtStats.timezones} timezones chosen not for geographic spread but for offset coverage — from UTC−11 (Pacific/Niue) to UTC+14 (Pacific/Apia). That 25-hour window means that at any given moment, at least one zone is already living in tomorrow while another is still stuck in yesterday. Date-boundary bugs — off-by-one day, wrong month rollover, DST gaps — only surface when the suite runs across this full offset range. A test that passes at UTC can fail at UTC+14 simply because the calendar date is different.
 
 <TimezoneMap
   title="CI timezones under test"
-  caption="10 timezones spanning UTC−11 to UTC+14. Hover a dot for the current local time in ISO 8601. Times refresh every second via Temporal."
+  caption={`${gmtStats.timezones} timezones spanning UTC−11 to UTC+14. Hover a dot for the current local time in ISO 8601. Times refresh every second via Temporal.`}
 />
 
 </GridSection>
@@ -82,12 +93,12 @@ GMT tests against 10 timezones chosen not for geographic spread but for offset c
 
 ## Locale matrix
 
-GMT does not test every locale — there are hundreds, and most differ only in formatting minutiae. Instead it tests a curated matrix of 17 locales chosen to stress the dimensions that actually break date libraries: script direction (LTR/RTL Arabic and Hebrew), character sets (CJK, Cyrillic, Latin), pluralization rules, and ICU data variants. The goal is not exhaustive locale coverage — it is representative coverage of every class of bug that locale-aware code can produce.
+GMT does not test every locale — there are hundreds, and most differ only in formatting minutiae. Instead it tests a curated matrix of {gmtStats.locales} locales chosen to stress the dimensions that actually break date libraries: script direction (LTR/RTL Arabic and Hebrew), character sets (CJK, Cyrillic, Latin), pluralization rules, and ICU data variants. The goal is not exhaustive locale coverage — it is representative coverage of every class of bug that locale-aware code can produce.
 
 <ChartContainer
   svg={localeMatrixSvg}
   title="Locale matrix by script family"
-  caption="17 locales across 5 script families. Latin (9), CJK (4), Arabic/Hebrew (2), Cyrillic (1), Turkic (1). Each cell shows the locale code and English name."
+  caption={`${gmtStats.locales} locales across 5 script families. Latin (9), CJK (4), Arabic/Hebrew (2), Cyrillic (1), Turkic (1). Each cell shows the locale code and English name.`}
 />
 
 </GridSection>
@@ -96,14 +107,14 @@ GMT does not test every locale — there are hundreds, and most differ only in f
 
 ## What this means
 
-| Dimension             | GMT                             | Legacy libraries                                                    |
-| --------------------- | -------------------------------- | -------------------------------------------------------------------- |
-| **CI executions**     | 374,820                          | 386 – 12,172                                                          |
-| **Locales tested**    | 17, built into every test        | 0 – 42 files, tested in isolation from the rest of the API surface   |
-| **Timezones tested**  | 10 × every public function       | 0 – 8 files, tested in isolation (Spacetime disables 4 of its own DST-edge-case files, and 41 of the ones it does run currently fail) |
-| **Node versions**     | 22, 24                           | 1 – 2 (only Spacetime matches GMT's matrix; the rest test a single LTS) |
-| **Public functions**  | 539                              | 75 – 223                                                              |
-| **Sentinel contract** | `""` / `null` / `false` / `[]`   | Throws `RangeError`                                                   |
+| Dimension             | GMT                                              | Legacy libraries                                                    |
+| --------------------- | ------------------------------------------------ | -------------------------------------------------------------------- |
+| **CI executions**     | {formatCount(gmtStats.executions)}               | {formatCount(executionRange.min)} – {formatCount(executionRange.max)} |
+| **Locales tested**    | {gmtStats.locales}, built into every test        | 0 – 42 files, tested in isolation from the rest of the API surface   |
+| **Timezones tested**  | {gmtStats.timezones} × every public function     | 0 – 8 files, tested in isolation (Spacetime disables 4 of its own DST-edge-case files, and 41 of the ones it does run currently fail) |
+| **Node versions**     | {gmtStats.nodes.join(", ")}                      | 1 – 2 (only Spacetime matches GMT's matrix; the rest test a single LTS) |
+| **Public functions**  | {formatCount(gmtStats.functions)}                | 75 – 223                                                              |
+| **Sentinel contract** | `""` / `null` / `false` / `[]`                   | Throws `RangeError`                                                   |
 
 The table is the point. GMT does not add a few convenience methods to an
 existing `Date` wrapper — it replaces the type system entirely with Temporal,

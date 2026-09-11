@@ -13,6 +13,8 @@
  * every other bar.
  */
 
+import { gmtStats } from "./gmt-stats";
+
 export interface LibraryComparisonStats {
   /** Total test cases in one default run of the library's own suite. */
   tests: number;
@@ -55,19 +57,19 @@ export const libraryComparisons: LibraryComparison[] = [
     id: "@northguild/gmt",
     displayName: "@northguild/gmt",
     isSubject: true,
-    matrixLabel: "10 timezones × 2 Node versions",
+    matrixLabel: `${gmtStats.timezones} timezones × ${gmtStats.nodes.length} Node versions`,
     stats: {
-      // The library suite only — packages/gmt, the same subject every other published
-      // figure uses — so the bar compares like with like against the other entries and the
-      // tooltip's product is exact: tests x 10 timezones x 2 Node. apps/dox's and
-      // packages/gmt-oxlint's suites are counted nowhere; they test the docs site and a
-      // lint plugin, not the shipped API. `locales: 0` because the 17-locale matrix is
-      // inside the test count, not a further multiplier of it.
-      tests: 18741,
+      // Derived by scripts/stats.mjs into gmt-stats.json — never typed here. The library
+      // suite only (packages/gmt, the same subject every other published figure uses), so
+      // the bar compares like with like and executions is exactly tests × timezones × Node
+      // versions. apps/dox's and packages/gmt-oxlint's suites are counted nowhere; they test
+      // the docs site and a lint plugin, not the shipped API. `locales: 0` because the
+      // locale matrix is inside the test count, not a further multiplier of it.
+      tests: gmtStats.tests,
       locales: 0,
-      timezones: 10,
-      nodeVersions: 2,
-      executions: 374820,
+      timezones: gmtStats.timezones,
+      nodeVersions: gmtStats.nodes.length,
+      executions: gmtStats.executions,
     },
     sourceNote: "Internal CI measurement.",
   },
@@ -95,18 +97,24 @@ export const libraryComparisons: LibraryComparison[] = [
   {
     id: "luxon",
     displayName: "Luxon",
+    matrixLabel: "4 Node versions",
     kind: "wraps",
     foundation: "built on Date",
     detail:
       "A DateTime is a Date plus a zone string. Invalid inputs become an Invalid DateTime you have to remember to check for.",
     stats: {
-      tests: 4888,
+      // 1,222, not 4,888: 4,888 is the CI execution total, and was typed in as the test
+      // count too — the same figures as the README comparison table.
+      tests: 1222,
       locales: 0,
       timezones: 0,
-      nodeVersions: 1,
+      nodeVersions: 4,
       executions: 4888,
     },
-    sourceNote: "Internal CI measurement.",
+    sourceNote:
+      "Measured 2026-08-22 against moment/luxon@f427515 (3.7.2) by cloning, installing and running `jest`: 1,222 tests. " +
+      "CI (.github/workflows/test.yml) runs `npm run test` on a 4-version Node matrix (20, 22, 24, 25) under one fixed " +
+      "TZ, America/New_York — no timezone matrix: executions = 1,222 × 4 = 4,888.",
   },
   {
     id: "date-fns",
@@ -128,19 +136,26 @@ export const libraryComparisons: LibraryComparison[] = [
   {
     id: "moment",
     displayName: "Moment.js",
+    matrixLabel: "3 Node versions",
     kind: "wraps",
     foundation: "built on Date",
     detail:
       "A wrapper around Date. In legacy maintenance mode since 2020, and mutable like the thing it wraps.",
     bannedCompanions: ["moment-timezone"],
     stats: {
-      tests: 11703,
+      // 3,901, not 11,703: 11,703 is the CI execution total, and was typed in as the test
+      // count too — the same figures as the README comparison table.
+      tests: 3901,
       locales: 0,
       timezones: 0,
-      nodeVersions: 1,
+      nodeVersions: 3,
       executions: 11703,
     },
-    sourceNote: "Internal CI measurement.",
+    sourceNote:
+      "Measured 2026-08-22 against moment/moment@cf524af (2.30.1) by cloning, installing and running " +
+      "`node scripts/test.js`: 3,901 tests, 0 failed on Node 24. CI (.github/workflows/ci.yml) runs `pnpm test` " +
+      "on a 3-version Node matrix (lts/*, lts/-1, latest): executions = 3,901 × 3 = 11,703. " +
+      "timezones.yml re-runs 5 test modules (not the full suite) under 6 zones; those partial runs are not counted.",
   },
   {
     id: "dayjs",
@@ -196,3 +211,29 @@ export const gmtLibraryComparison = libraryComparisons.find(
 export const competitorComparisons = libraryComparisons.filter(
   (l) => !l.isSubject,
 );
+
+/** Fewest and most CI executions among the alternatives. */
+export function competitorExecutionRange(): { min: number; max: number } {
+  const executions = competitorComparisons.map((l) => l.stats.executions);
+  return { min: Math.min(...executions), max: Math.max(...executions) };
+}
+
+/** Every alternative's CI executions, summed. */
+export function combinedCompetitorExecutions(): number {
+  return competitorComparisons.reduce(
+    (sum, l) => sum + l.stats.executions,
+    0,
+  );
+}
+
+/** The alternative whose own suite has the most tests. */
+export function largestCompetitorSuite(): LibraryComparison {
+  return competitorComparisons.reduce((largest, l) =>
+    l.stats.tests > largest.stats.tests ? l : largest,
+  );
+}
+
+/** GMT's CI executions divided by `executions`, rounded to a whole multiple. */
+export function executionRatio(executions: number): number {
+  return Math.round(gmtLibraryComparison.stats.executions / executions);
+}

@@ -2,6 +2,7 @@
 
 import { createChartRuntime, renderChartSvg } from "@tanstack/charts";
 import { describe, expect, it } from "vitest";
+import { formatCount, gmtStats } from "../data/gmt-stats";
 import { libraryComparisons } from "../data/library-comparison";
 import {
   BAR_CHARTS,
@@ -65,13 +66,13 @@ describe("ciExecutionRows", () => {
     expect(
       rowsOf("@northguild/gmt").map((r) => [r.segment, r.value]),
     ).toEqual([
-      ["suite", 18741],
-      ["matrix", 356079],
+      ["suite", gmtStats.tests],
+      ["matrix", gmtStats.executions - gmtStats.tests],
     ]);
   });
 
   it("drops the matrix segment when CI runs the suite once", () => {
-    expect(rowsOf("luxon").map((r) => r.segment)).toEqual(["suite"]);
+    expect(rowsOf("date-fns").map((r) => r.segment)).toEqual(["suite"]);
   });
 
   it("labels bars with the short chart label", () => {
@@ -89,10 +90,16 @@ describe("ciExecutionTooltip", () => {
       title: "@northguild/gmt",
       color: "var(--gmt-spring)",
       rows: [
-        { label: "Suite tests", value: "18,741" },
-        { label: "Matrix re-runs", value: "356,079" },
-        { label: "Matrix", value: "10 timezones × 2 Node versions" },
-        { label: "CI executions", value: "374,820" },
+        { label: "Suite tests", value: formatCount(gmtStats.tests) },
+        {
+          label: "Matrix re-runs",
+          value: formatCount(gmtStats.executions - gmtStats.tests),
+        },
+        {
+          label: "Matrix",
+          value: `${gmtStats.timezones} timezones × ${gmtStats.nodes.length} Node versions`,
+        },
+        { label: "CI executions", value: formatCount(gmtStats.executions) },
       ],
     });
   });
@@ -111,13 +118,22 @@ describe("ciExecutionTooltip", () => {
     });
   });
 
+  it("shows Luxon's Node-matrix re-runs", () => {
+    expect(tooltipOf("luxon").rows).toEqual([
+      { label: "Suite tests", value: "1,222" },
+      { label: "Matrix re-runs", value: "3,666" },
+      { label: "Matrix", value: "4 Node versions" },
+      { label: "CI executions", value: "4,888" },
+    ]);
+  });
+
   it("omits the matrix rows for a single-run library", () => {
-    expect(tooltipOf("luxon")).toEqual({
-      title: "Luxon",
+    expect(tooltipOf("date-fns")).toEqual({
+      title: "date-fns",
       color: "var(--gmt-signal)",
       rows: [
-        { label: "Suite tests", value: "4,888" },
-        { label: "CI executions", value: "4,888" },
+        { label: "Suite tests", value: "3,213" },
+        { label: "CI executions", value: "3,213" },
       ],
     });
   });
@@ -132,22 +148,28 @@ describe("ciExecutionTooltip", () => {
 // ---------------------------------------------------------------------------
 
 describe("namespaceTooltip", () => {
-  it("totals the 539 public functions the prose cites", () => {
-    expect(PUBLIC_FUNCTION_TOTAL).toBe(539);
+  it("totals the namespaces' functions, leaving regex patterns out", () => {
+    const functions = NAMESPACE_COUNTS.filter((r) => r.namespace !== "regex");
+    expect(functions.reduce((sum, r) => sum + r.count, 0)).toBe(
+      PUBLIC_FUNCTION_TOTAL,
+    );
   });
 
   it("shows a namespace's function count and share of the API", () => {
     const plain = NAMESPACE_COUNTS.find((r) => r.namespace === "plain");
-    expect(namespaceTooltip(plain).rows).toEqual([
-      { label: "Public functions", value: "225" },
-      { label: "Share of API", value: "41.7%" },
-    ]);
+    const [count, share] = namespaceTooltip(plain).rows;
+    expect(count).toEqual({
+      label: "Public functions",
+      value: formatCount(plain?.count ?? 0),
+    });
+    expect(share?.label).toBe("Share of API");
+    expect(share?.value).toMatch(/^\d{1,3}(\.\d)?%$/);
   });
 
   it("counts regex as patterns with no share of the function total", () => {
     const regex = NAMESPACE_COUNTS.find((r) => r.namespace === "regex");
     expect(namespaceTooltip(regex).rows).toEqual([
-      { label: "Exported patterns", value: "25" },
+      { label: "Exported patterns", value: formatCount(gmtStats.patterns) },
     ]);
   });
 });

@@ -45,10 +45,13 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
       confirm the new functions actually appear in
       `apps/dox/src/generated/reference/gmt-corpus.json` rather than trusting the skip.
    4. `pnpm stats:sync` — rewrites the published test counts, CI execution totals and
-      per-namespace function counts in both READMEs and `apps/dox`. Never type these
-      numbers by hand; `pnpm stats` fails the build when they drift, and reports the two
-      cases it cannot fix itself (a new namespace the api-surface prose does not name, or
-      guarded text that was reworded so a rule no longer matches).
+      per-namespace function counts in both READMEs, and regenerates
+      `apps/dox/src/data/gmt-stats.json`, which every dox page, chart and comparison
+      renders from. Every figure counts `packages/gmt`'s suite only. Never type these
+      numbers by hand — dox copy imports them from `apps/dox/src/data/gmt-stats.ts`.
+      `pnpm stats` fails the build when they drift, and reports the two cases it cannot
+      fix itself (a new namespace the api-surface prose does not name, or README text
+      that was reworded so a rule no longer matches).
 
 5. **Generate a conventional commit message** — use available commit-message generation tooling. The message should be scoped to the story (e.g. `feat(duration): add formatDuration function`).
 

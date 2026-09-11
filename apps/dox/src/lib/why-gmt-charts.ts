@@ -19,6 +19,7 @@ import type {
   ChartTooltipExtension,
   ChartTooltipRow,
 } from "@tanstack/charts/tooltip";
+import { formatCount, gmtStats } from "../data/gmt-stats";
 import {
   libraryComparisons,
   type LibraryComparison,
@@ -26,7 +27,6 @@ import {
 
 type TooltipOption = Parameters<typeof defineChart>[0]["tooltip"];
 
-const countFormat = new Intl.NumberFormat("en-US");
 const shareFormat = new Intl.NumberFormat("en-US", {
   style: "percent",
   maximumFractionDigits: 1,
@@ -124,19 +124,19 @@ export function ciExecutionTooltip(
   const reruns = executions - tests;
 
   const rows: ChartTooltipRow[] = [
-    { label: "Suite tests", value: countFormat.format(tests) },
+    { label: "Suite tests", value: formatCount(tests) },
   ];
   if (reruns > 0) {
-    rows.push({ label: "Matrix re-runs", value: countFormat.format(reruns) });
+    rows.push({ label: "Matrix re-runs", value: formatCount(reruns) });
   }
   if (comparison.matrixLabel) {
     rows.push({ label: "Matrix", value: comparison.matrixLabel });
   }
-  rows.push({ label: "CI executions", value: countFormat.format(executions) });
+  rows.push({ label: "CI executions", value: formatCount(executions) });
   if (knownFailures) {
     rows.push({
       label: "Known failures",
-      value: countFormat.format(knownFailures),
+      value: formatCount(knownFailures),
     });
   }
 
@@ -189,22 +189,14 @@ export interface NamespaceRow {
   count: number;
 }
 
+/** Functions per namespace, largest first, then `regex`'s patterns — from gmt-stats.json. */
 export const NAMESPACE_COUNTS: readonly NamespaceRow[] = [
-  { namespace: "plain", count: 225 },
-  { namespace: "zoned", count: 122 },
-  { namespace: "unix", count: 78 },
-  { namespace: "utc", count: 76 },
-  { namespace: "duration", count: 12 },
-  { namespace: "precision", count: 18 },
-  { namespace: "span", count: 4 },
-  { namespace: "instant", count: 4 },
-  { namespace: "regex", count: 25 },
+  ...gmtStats.byNamespace,
+  { namespace: "regex", count: gmtStats.patterns },
 ];
 
 /** `regex` exports patterns, not functions, so it sits outside the total. */
-export const PUBLIC_FUNCTION_TOTAL = NAMESPACE_COUNTS.filter(
-  (row) => row.namespace !== "regex",
-).reduce((total, row) => total + row.count, 0);
+export const PUBLIC_FUNCTION_TOTAL = gmtStats.functions;
 
 export function namespaceTooltip(
   row: NamespaceRow | undefined,
@@ -216,7 +208,7 @@ export function namespaceTooltip(
       title: row.namespace,
       color,
       rows: [
-        { label: "Exported patterns", value: countFormat.format(row.count) },
+        { label: "Exported patterns", value: formatCount(row.count) },
       ],
     };
   }
@@ -224,7 +216,7 @@ export function namespaceTooltip(
     title: row.namespace,
     color,
     rows: [
-      { label: "Public functions", value: countFormat.format(row.count) },
+      { label: "Public functions", value: formatCount(row.count) },
       {
         label: "Share of API",
         value: shareFormat.format(row.count / PUBLIC_FUNCTION_TOTAL),
