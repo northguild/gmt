@@ -70,10 +70,11 @@
   max-width: 100%;
 }
 
-/* Glass bar treatment — semi-transparent fill + subtle stroke + depth */
+/* Bars — painted like the locale matrix tiles. The fill is a diagonal gradient
+ * (url(#gmt-bar-*), declared by ChartContainer.astro) that carries its own
+ * opacity, so no fill-opacity here. */
 .gmt-chart .ts-chart__bar-x rect,
 .gmt-chart .ts-chart__bar-y rect {
-  fill-opacity: 0.35;
   stroke: var(--gmt-border-strong);
   stroke-width: 1;
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
@@ -86,12 +87,63 @@
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
 }
 
-/* GMT highlight bar — spring accent with slightly stronger presence */
-.gmt-chart .ts-chart__bar-x rect[fill="var(--gmt-spring)"],
-.gmt-chart .ts-chart__bar-y rect[fill="var(--gmt-spring)"] {
-  fill-opacity: 0.45;
-  stroke: var(--gmt-spring);
-  stroke-opacity: 0.6;
+/* Page-level gradient <defs> for the bars. Zero-size rather than display:none,
+ * which makes some browsers drop the gradients. */
+.gmt-chart-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* ---- Stacked-bar legend ---- */
+
+.gmt-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-2) var(--gmt-space-4);
+  margin: 0 0 var(--gmt-space-3) 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.75rem;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-chart-legend__item {
+  display: flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  margin: 0;
+}
+
+.gmt-chart-legend__swatch {
+  width: 0.9rem;
+  height: 0.6rem;
+  border: 1px solid var(--gmt-border-strong);
+}
+
+/* Same opacities as the bar gradients' top stops */
+.gmt-chart-legend__swatch--suite {
+  background: color-mix(in srgb, var(--gmt-ice) 32%, transparent);
+}
+
+.gmt-chart-legend__swatch--matrix {
+  background: color-mix(in srgb, var(--gmt-ice) 14%, transparent);
+}
+
+/* ---- Hover tooltip ----
+ * The same card as the timezone map's; gmt-map.css layers its row layout on
+ * top. */
+
+.gmt-chart .ts-chart-tooltip {
+  --ts-chart-tooltip-background: var(--gmt-surface-2);
+  --ts-chart-tooltip-color: var(--gmt-ice);
+  --ts-chart-tooltip-border: 1px solid var(--gmt-border-strong);
+  --ts-chart-tooltip-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --ts-chart-tooltip-padding: var(--gmt-space-2) var(--gmt-space-3);
+  font-family: var(--gmt-font-mono);
+  font-size: 0.75rem;
 }
 
 /* Ensure chart text inherits GMT typography */

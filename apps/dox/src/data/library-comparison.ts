@@ -33,6 +33,8 @@ export interface LibraryComparison {
   displayName: string;
   /** Shorter label for the bar chart's y-axis; falls back to displayName. */
   chartLabel?: string;
+  /** How the CI matrix re-runs the suite, for the chart tooltip; omitted when CI runs it once. */
+  matrixLabel?: string;
   /** True only for @northguild/gmt — the highlighted bar in the chart. */
   isSubject?: boolean;
   /** Card styling bucket for WhyDateAlternatives.astro; omitted for @northguild/gmt. */
@@ -53,6 +55,7 @@ export const libraryComparisons: LibraryComparison[] = [
     id: "@northguild/gmt",
     displayName: "@northguild/gmt",
     isSubject: true,
+    matrixLabel: "10 timezones × 2 Node versions",
     stats: {
       // The library suite only — packages/gmt, the same subject every other published
       // figure uses — so the bar compares like with like against the other entries and the
@@ -142,6 +145,7 @@ export const libraryComparisons: LibraryComparison[] = [
   {
     id: "dayjs",
     displayName: "Day.js",
+    matrixLabel: "2 tz files × 4 extra TZ runs",
     kind: "wraps",
     foundation: "built on Date",
     detail:
@@ -163,6 +167,7 @@ export const libraryComparisons: LibraryComparison[] = [
   {
     id: "spacetime",
     displayName: "Spacetime",
+    matrixLabel: "2 Node versions",
     kind: "wraps",
     foundation: "leans on Date",
     detail:

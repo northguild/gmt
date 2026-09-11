@@ -24,18 +24,26 @@ The pages below make that concrete with data drawn from the library itself.
 ## CI test execution volume
 
 The most direct measure of testing rigor is how many times the library is
-actually executed in CI. GMT runs its full suite — every function, every
-locale, every timezone — across 17 locales, 10 timezones, and 2 Node
-versions on every PR.
+actually executed in CI. GMT's suite is 18,741 tests, and its 17-locale
+matrix is built into those tests rather than layered on top. On every PR, CI
+then re-runs the whole suite under 10 timezones and 2 Node versions, so every
+test runs 20 times.
 
 <ChartContainer
   svg={testExecutionSvg}
+  chart="ci-executions"
   title="CI executions per library"
-  caption="GMT: 374,820 executions (18,741 tests × 10 timezones × 2 Node). Competitors: 386–11,703 combined."
+  legend={[
+    { label: "Suite tests (one run)", segment: "suite" },
+    { label: "CI matrix re-runs", segment: "matrix" },
+  ]}
+  caption="GMT: 18,741 tests, re-run across 10 timezones × 2 Node versions = 374,820 executions. Competitors: 386–12,172."
 />
 
-That is not a marginal difference. It is three orders of magnitude more
-execution against a surface area that is itself larger.
+The split matters. On suite size alone, GMT's 18,741 tests already outnumber
+the largest alternative's (Moment.js, 11,703). The matrix is what turns that
+into 374,820 executions: about 31× the most-executed alternative and nearly
+1,000× the least, against a surface area that is itself larger.
 
 </GridSection>
 
@@ -50,6 +58,7 @@ verified by the same test suite.
 
 <ChartContainer
   svg={namespaceDistributionSvg}
+  chart="namespaces"
   title="Public functions by namespace"
   caption="539 functions total, plus 25 regex patterns. Every namespace shares the same implementation contract: ISO 8601 strings in, typed values out, no Date object."
 />
@@ -90,7 +99,7 @@ GMT does not test every locale — there are hundreds, and most differ only in f
 | Dimension             | GMT                             | Legacy libraries                                                    |
 | --------------------- | -------------------------------- | -------------------------------------------------------------------- |
 | **CI executions**     | 374,820                          | 386 – 12,172                                                          |
-| **Locales tested**    | 17 × every public function       | 0 – 42 files, tested in isolation from the rest of the API surface   |
+| **Locales tested**    | 17, built into every test        | 0 – 42 files, tested in isolation from the rest of the API surface   |
 | **Timezones tested**  | 10 × every public function       | 0 – 8 files, tested in isolation (Spacetime disables 4 of its own DST-edge-case files, and 41 of the ones it does run currently fail) |
 | **Node versions**     | 22, 24                           | 1 – 2 (only Spacetime matches GMT's matrix; the rest test a single LTS) |
 | **Public functions**  | 539                              | 75 – 223                                                              |
