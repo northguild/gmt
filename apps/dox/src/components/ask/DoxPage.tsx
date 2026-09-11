@@ -6,13 +6,17 @@
  * wayfinding a reader needs — one way back to the docs — plus an environment
  * badge when pointed at a local Worker. Everything else is the conversation.
  *
+ * The brain selector and the reset clock used to sit in this strip too. They
+ * now live in the composer's control bar inside `DoxChat`, next to Send — the
+ * one action they affect — so the dock (phase 2) gets them without re-wiring.
+ *
  * DOX-C3b adds the widget rail as a sibling of `<DoxChat>` inside
  * `.gmt-hive-body`. The rail collapses to nothing when empty, so a conversation
  * with no widget in it lays out exactly as it did before.
  */
 import { useCallback, useEffect, useState } from "react";
-import { BrainSelector } from "./BrainSelector";
 import { DoxChat } from "./DoxChat";
+import { HeaderClock } from "./HeaderClock";
 import { useBrains } from "./use-brains";
 import { ChatErrorBoundary } from "./ChatErrorBoundary";
 import { WidgetRail, type RailWidget } from "./WidgetRail";
@@ -42,13 +46,9 @@ function useEnvironment(): Environment | null {
 export default function DoxPage() {
   const environment = useEnvironment();
   const { info, refresh } = useBrains();
-  /** The reader's explicit brain choice; null means "whichever has budget".
-   * Held here rather than in `DoxChat` because the selector lives in the strip,
-   * which is this host's chrome — the dock (phase 2) will supply its own. */
-  const [selectedBrainId, setSelectedBrainId] = useState<string | null>(null);
 
-  /* The rail's state lives here rather than in `DoxChat`, for the same reason
-     the brain selector does: it is this host's chrome. One widget at a time. */
+  /* The rail's state lives here rather than in `DoxChat`: it is this host's
+     chrome, and the dock will lay widgets out its own way. One at a time. */
   const [railWidget, setRailWidget] = useState<RailWidget | null>(null);
 
   const showWidget = useCallback(
@@ -72,14 +72,9 @@ export default function DoxPage() {
           ← @northguild/gmt
         </a>
         <div className="gmt-hive-strip-end">
-          <BrainSelector
-            info={info}
-            selectedId={selectedBrainId}
-            onSelect={setSelectedBrainId}
-          />
-          {/* Environment sits last, hard against the edge: it is standing
-              status rather than a control, so it should not push the thing a
-              reader actually clicks away from the corner. */}
+          {/* The reader's local time, in the app's date format. */}
+          <HeaderClock />
+          {/* Standing status rather than a control, so it keeps the corner. */}
           {environment && (
             <span
               className="gmt-hive-env"
@@ -101,12 +96,7 @@ export default function DoxPage() {
             and the rail is by far the likelier of the two to break, since it
             runs third-party rendering code against arguments a model chose. */}
         <ChatErrorBoundary label="transcript">
-          <DoxChat
-            brains={info}
-            selectedBrainId={selectedBrainId}
-            onUsed={refresh}
-            onWidget={showWidget}
-          />
+          <DoxChat brains={info} onUsed={refresh} onWidget={showWidget} />
         </ChatErrorBoundary>
         <ChatErrorBoundary
           label="widget rail"

@@ -24,12 +24,17 @@ import { chooseBrain, openFirstWorkingBrain, orderCandidates } from "./brains";
 import {
   hashVisitor,
   markBrain,
+  providerResets,
   readUsage,
   recordRequest,
   type UsageSnapshot,
   type UsageStore,
 } from "./usage";
-import { BRAINS, VISITOR_DAILY_MAX } from "../src/lib/chat-constants";
+import {
+  BRAINS,
+  VISITOR_DAILY_MAX,
+  type Brain,
+} from "../src/lib/chat-constants";
 import { nextPtMidnightMs } from "../src/lib/pt-day";
 
 export interface ChatHandlerDeps {
@@ -38,6 +43,11 @@ export interface ChatHandlerDeps {
    * moves between them — see `brains.ts`. Tests pass `() => fakeModel(...)`,
    * and can make one brain throw to cover failover. */
   resolveModel: (brainId: string) => LanguageModel;
+  /** The brains this deployment can actually reach, in preference order.
+   * Defaults to every brain; worker/index.ts narrows it to the providers it
+   * has a key or binding for (DOX-C4), so an unconfigured provider is simply
+   * never tried instead of failing a request. */
+  brains?: readonly Brain[];
   /** The KV usage ledger. Optional: when absent (every unit test) the ledger is
    * simply skipped and the first brain is used, so no test needs a KV stub to
    * exercise unrelated behaviour. */
@@ -69,7 +79,32 @@ export interface ChatHandlerDeps {
 }
 
 /**
- * DOX-C2 (#138) — the pipeline from DOX-C.md, in order: method (checked by
+ * Every brain is out. A sentinel state, not a fault: say what happened and when
+ * Dox can answer again, rather than "something went wrong".
+ *
+ * The message names no time zone on purpose. With Gemini on the Pacific clock
+ * and Workers AI on the UTC one (DOX-C4) there is no single honest "midnight"
+ * to name — `resetsAt` carries the soonest refill, and the chat renders that
+ * instant in the reader's own zone.
+ */
+function allowanceSpent(brains: readonly Brain[], nowMs: number): Response {
+  // Every `resetsAt` is `toISOString()` output — same width, always `Z` — so
+  // the lexicographically smallest is also the earliest.
+  const [soonest] = providerResets(brains, nowMs)
+    .map((provider) => provider.resetsAt)
+    .sort();
+  return Response.json(
+    {
+      error: "Dox has used its free allowance for today.",
+      retryable: false,
+      resetsAt: soonest ?? new Date(nextPtMidnightMs(nowMs)).toISOString(),
+    },
+    { status: 429 },
+  );
+}
+
+/**
+ * DOX-C2 (#138) — the request pipeline, in order: method (checked by
  * the caller — see worker/index.ts), rate limit, JSON parse, zod/AI-SDK
  * validation, retrieve, assemble prompt, stream. Every dependency is
  * injected so this is testable with a fake model and no live key, matching
@@ -78,6 +113,7 @@ export interface ChatHandlerDeps {
 export function createChatHandler(deps: ChatHandlerDeps) {
   const {
     resolveModel,
+    brains = BRAINS,
     usage,
     isDev,
     vocabulary,
@@ -139,12 +175,7 @@ export function createChatHandler(deps: ChatHandlerDeps) {
       visitor: 0,
     };
     if (usage) {
-      snapshot = await readUsage(
-        usage,
-        BRAINS.map((brain) => brain.id),
-        visitorHash,
-        nowMs,
-      );
+      snapshot = await readUsage(usage, brains, visitorHash, nowMs);
     }
 
     // A dev is exempt from the per-visitor cap only. Nothing here can grant
@@ -152,7 +183,8 @@ export function createChatHandler(deps: ChatHandlerDeps) {
     if (!dev && snapshot.visitor >= VISITOR_DAILY_MAX) {
       return Response.json(
         {
-          error: `You have used your ${VISITOR_DAILY_MAX} questions for today. Dox resets at midnight Pacific.`,
+          // The visitor cap is Dox's own, and it is always on the Pacific day.
+          error: `You have used your ${VISITOR_DAILY_MAX} questions for today. They reset at midnight Pacific.`,
           retryable: false,
           resetsAt: new Date(nextPtMidnightMs(nowMs)).toISOString(),
         },
@@ -160,21 +192,9 @@ export function createChatHandler(deps: ChatHandlerDeps) {
       );
     }
 
-    const candidateBrains = orderCandidates(snapshot, requestedBrainId);
-    const choice = chooseBrain(snapshot, requestedBrainId);
-    if (!choice.brain) {
-      // Every brain is out. This is a sentinel state, not a fault: say what
-      // happened and when it comes back, rather than "something went wrong".
-      return Response.json(
-        {
-          error:
-            "Dox has used its free allowance for today. It resets at midnight Pacific.",
-          retryable: false,
-          resetsAt: new Date(nextPtMidnightMs(nowMs)).toISOString(),
-        },
-        { status: 429 },
-      );
-    }
+    const candidateBrains = orderCandidates(snapshot, requestedBrainId, brains);
+    const choice = chooseBrain(snapshot, requestedBrainId, brains);
+    if (!choice.brain) return allowanceSpent(brains, nowMs);
 
     try {
       const origin = new URL(request.url).origin;
@@ -270,21 +290,14 @@ export function createChatHandler(deps: ChatHandlerDeps) {
         messages: modelMessages,
         tools,
         onBrainOut: (brainId, state) => {
-          if (usage) void markBrain(usage, brainId, state, nowMs);
+          // `markBrain` expires the mark on the brain's own provider clock —
+          // UTC midnight for Workers AI, Pacific for Gemini.
+          const brain = brains.find((candidate) => candidate.id === brainId);
+          if (usage && brain) void markBrain(usage, brain, state, nowMs);
         },
       });
 
-      if (!attempt) {
-        return Response.json(
-          {
-            error:
-              "Dox has used its free allowance for today. It resets at midnight Pacific.",
-            retryable: false,
-            resetsAt: new Date(nextPtMidnightMs(nowMs)).toISOString(),
-          },
-          { status: 429 },
-        );
-      }
+      if (!attempt) return allowanceSpent(brains, nowMs);
 
       const stream = createUIMessageStream({
         execute: ({ writer }) => {
@@ -308,6 +321,12 @@ export function createChatHandler(deps: ChatHandlerDeps) {
               // Typed tool parts rather than opaque ones — this is what lets a
               // `tool-showGlobe` part reach the client with a parsed `input`.
               tools,
+              // DOX-C4: the Workers AI brains are reasoning models, and the
+              // SDK forwards their thinking by default. DoxChat renders no
+              // reasoning part, so it would be invisible — but it would still
+              // be stored in the transcript and re-sent upstream on every
+              // later turn, billed again as input Neurons each time.
+              sendReasoning: false,
               onError: onStreamError,
             }),
           );
@@ -316,11 +335,11 @@ export function createChatHandler(deps: ChatHandlerDeps) {
       });
 
       // Recorded now rather than on success, because the request has been sent
-      // to Google by the time the stream is consumed and it counts against the
-      // quota whether or not the reader ever reads the answer. Best-effort: a
-      // ledger failure must never fail a chat.
+      // to the provider by the time the stream is consumed and it counts
+      // against the quota whether or not the reader ever reads the answer.
+      // Best-effort: a ledger failure must never fail a chat.
       if (usage) {
-        void recordRequest(usage, attempt.brain.id, visitorHash, nowMs);
+        void recordRequest(usage, attempt.brain, visitorHash, nowMs);
       }
 
       return createUIMessageStreamResponse({ stream });

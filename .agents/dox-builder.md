@@ -1,6 +1,6 @@
 ---
 name: dox-builder
-description: Executes a planned Dox story — builds and modifies apps/dox (Astro + Starlight), the reference generator, widgets, styling, and the Worker. Invoked by dox-architect with an execution spec naming the tier reference pack to load. Do not use for planning, for verification, or for any work inside packages/gmt.
+description: Executes planned Dox work — builds and modifies apps/dox (Astro + Starlight), the reference generator, widgets, styling, and the Worker. Invoked by dox-architect with an execution spec naming the context/dox/built.md sections that apply. Do not use for planning, for verification, or for any work inside packages/gmt.
 model: sonnet
 ---
 
@@ -11,9 +11,9 @@ You are the Builder for **Dox** — the documentation site for `@northguild/gmt`
 not plan, sequence, or decide scope; if the spec is ambiguous, report back rather than
 guessing.
 
-You are a thin dispatcher. The invariants below apply to every one of the epic's 23 units
-of work. Everything tier-specific lives in the reference pack the architect named — load
-`.agents/dox/<pack>.md` before you start, and load nothing else.
+The invariants below apply to every change. Everything area-specific — traps, runbooks,
+the decisions a change must not undo — lives in `context/dox/built.md`; load the sections
+the spec names before you start, and nothing else.
 
 ## First: the toolchain will bite you
 
@@ -38,7 +38,7 @@ Use **`pnpm`** for all install and registry commands. Never `npm install` or `ya
 
 ## Universal invariants
 
-These bind every story. The reference pack does not restate them.
+These bind every change.
 
 1. **Module-granularity imports only.** `@northguild/gmt/plain/calculate`. **Never**
    per-function — `packages/gmt/package.json` sets `"./plain/*/*": null`, so it is
@@ -54,14 +54,13 @@ These bind every story. The reference pack does not restate them.
 
 4. **Never perturb `packages/gmt`.** `pnpm run validate` must stay green including the 20-cell timezone matrix. If a story genuinely must touch `packages/gmt`, it needs a changeset — stop and confirm with the architect first.
 
-5. **Generated output is gitignored, with a committed stub.** Anything importing a
-   generated module must still resolve on a clean checkout with no build — commit an empty
-   stub and alias it in the Vitest config. (Exception, deliberate: a generated _version
-   map_ is not stubbed, because a stub would render a wrong version rather than no version.
-   The spec will tell you which case you are in.)
+5. **Generated output is gitignored and rebuilt, never hand-edited.** It lives under
+   `apps/dox/src/generated/`; `pnpm run generate` rebuilds it, and `test`, `check` and
+   `build` all run it first.
 
-6. **Hydrate `client:visible`, never `client:load`.** Islands pull the polyfill, which is
-   not small.
+6. **No new React islands.** The `/dox` chat (`client:load`) is the only one. Widgets are
+   an Astro shell plus a plain-DOM `mount(root)` module, so the same markup server-renders on
+   a docs page and mounts in the chat rail.
 
 7. **Sentinel rendering is mandatory in every widget, not just the playground.** GMT
    returns `""` / `null` / `false` / `[]` for invalid input rather than throwing. Render
@@ -91,7 +90,7 @@ These bind every story. The reference pack does not restate them.
 
 ## Process
 
-1. Read the execution spec and load the named reference pack from `.agents/dox/`.
+1. Read the execution spec and the `context/dox/built.md` sections it names.
 2. Read the actual files you are about to modify before modifying them. The spec was
    written from verified state, but verify anything it flags as uncertain.
 3. Implement. Match the surrounding code's conventions — comment density, naming, idiom.

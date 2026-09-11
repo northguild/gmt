@@ -36,6 +36,16 @@ function makeEnv(overrides: Record<string, unknown> = {}) {
   return { ASSETS: assetsBinding().binding, ...overrides } as never;
 }
 
+/** A Workers AI binding for routing tests, which never reach a model call. */
+const fakeAI = {
+  run: async () => {
+    throw new Error("routing tests never call the model");
+  },
+};
+
+const idsFor = (provider: string) =>
+  BRAINS.filter((brain) => brain.provider === provider).map((b) => b.id);
+
 function get(path: string, init: RequestInit = {}) {
   return new Request(`https://gmt-dox.example${path}`, {
     headers: { "cf-connecting-ip": "1.2.3.4" },
@@ -45,19 +55,50 @@ function get(path: string, init: RequestInit = {}) {
 
 describe("worker entry — /api/brains", () => {
   it("answers GET with the full brain registry and the visitor's budget", async () => {
-    const response = await worker.fetch(get("/api/brains"), makeEnv());
+    const response = await worker.fetch(
+      get("/api/brains"),
+      makeEnv({ NORTHGUILD_GMT_GEMINI_API_KEY: "test-key", AI: fakeAI }),
+    );
     expect(response.status).toBe(200);
 
     const body = (await response.json()) as {
-      brains: { id: string }[];
-      visitor: { limit: number; remaining: number; unlimited: boolean };
-      resetsAt: string;
+      brains: { id: string; provider: string }[];
+      providers: { id: string; label: string; resetsAt: string }[];
+      visitor: {
+        limit: number;
+        remaining: number;
+        unlimited: boolean;
+        resetsAt: string;
+      };
     };
     expect(body.brains.map((b) => b.id)).toEqual(BRAINS.map((b) => b.id));
+    expect(body.brains.map((b) => b.provider)).toEqual(
+      BRAINS.map((b) => b.provider),
+    );
     expect(body.visitor.limit).toBe(VISITOR_DAILY_MAX);
     // No DOX_DEV_KEY in this env, so the bypass cannot engage.
     expect(body.visitor.unlimited).toBe(false);
-    expect(Number.isNaN(Date.parse(body.resetsAt))).toBe(false);
+    expect(Number.isNaN(Date.parse(body.visitor.resetsAt))).toBe(false);
+    // DOX-C4: each provider refills on its own clock, so each carries its own
+    // reset instant.
+    expect(body.providers.map((p) => p.id)).toEqual(["google", "workers-ai"]);
+    for (const provider of body.providers) {
+      expect(Number.isNaN(Date.parse(provider.resetsAt))).toBe(false);
+    }
+  });
+
+  it("lists only the brains whose provider this deployment has configured", async () => {
+    // DOX-C4: a brain the Worker cannot reach must not appear in the selector.
+    const listed = async (env: Record<string, unknown>) => {
+      const response = await worker.fetch(get("/api/brains"), makeEnv(env));
+      const body = (await response.json()) as { brains: { id: string }[] };
+      return body.brains.map((brain) => brain.id);
+    };
+
+    expect(await listed({ NORTHGUILD_GMT_GEMINI_API_KEY: "test-key" })).toEqual(
+      idsFor("google"),
+    );
+    expect(await listed({ AI: fakeAI })).toEqual(idsFor("workers-ai"));
   });
 
   it("rejects a non-GET with 405 rather than falling through to the assets binding", async () => {
@@ -113,6 +154,21 @@ describe("worker entry — /api/chat", () => {
     expect(body.retryable).toBe(false);
     // A misconfigured deploy must not describe its own configuration.
     expect(body.error).not.toMatch(/key|GEMINI|env/i);
+  });
+
+  it("runs on the Workers AI binding alone, with no Gemini key", async () => {
+    // Past the configuration guard, `{}` fails validation — a 400, not the
+    // "not configured" 500. `caches` is a Workers global Node does not have.
+    vi.stubGlobal("caches", { default: {} });
+    try {
+      const response = await worker.fetch(
+        get("/api/chat", { method: "POST", body: "{}" }),
+        makeEnv({ AI: fakeAI }),
+      );
+      expect(response.status).toBe(400);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

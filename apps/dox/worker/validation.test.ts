@@ -97,7 +97,7 @@ describe("validateChatRequest", () => {
   });
   /* ---- The edge is the boundary, the client is not ----
    *
-   * DOX-C.md's binding DoD line is "validate at the edge, not in the browser."
+   * Dox's binding rule is "validate at the edge, not in the browser."
    * `DoxChat` runs `checkUserText` too, but only so a reader gets an instant
    * message; anything at all can POST to `/api/chat`. Until these tests
    * existed, `sanitizeMessage` could have been deleted from `validateChatRequest`

@@ -16,7 +16,7 @@ import {
 } from "../src/lib/chat-sanitize";
 
 /**
- * DOX-C2 (#138) — the validation pipeline from DOX-C.md, minus the branches
+ * DOX-C2 (#138) — the request validation pipeline, minus the branches
  * that live elsewhere (`method !== POST` and malformed JSON are the caller's
  * job, since they happen before a body object exists to validate).
  *

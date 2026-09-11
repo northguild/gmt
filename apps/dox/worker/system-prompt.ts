@@ -3,8 +3,7 @@ import type { RetrievalChunk } from "../src/lib/retrieval/types";
 
 export interface PromptSections {
   /** Exactly the retrieved chunks' URLs — never the full route manifest.
-   * DOX-C.md: "a model shown 20 valid routes hallucinates far less than
-   * one shown 120." */
+   * A model shown 20 valid routes hallucinates far less than one shown 120. */
   routeAllowlist: string[];
   chunks: RetrievalChunk[];
   /** packages/gmt/skills/*\/SKILL.md content (consumer-facing skills only) — see worker/vocabulary.ts. */
@@ -23,8 +22,8 @@ export interface PromptSections {
 
 /**
  * DOX-C2 (#138) — pure function, no I/O, no model call: given fixed
- * sections, assembles the system prompt. Order matters (DOX-C.md): persona
- * and scope, then linking rules, then vocabulary (so the model learns GMT's
+ * sections, assembles the system prompt. Order matters: persona and scope,
+ * then the standing order, then linking rules, then vocabulary (so the model learns GMT's
  * terminology before reading raw signatures), then core rules, then the
  * retrieved chunks themselves, then the tool registry (DOX-C3b — generated from
  * `dox-tools.ts` so the prompt and the schemas cannot drift), then an explicit

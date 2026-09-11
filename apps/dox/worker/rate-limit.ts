@@ -20,8 +20,8 @@ export interface RateLimitResult {
  * determined attacker spread across Cloudflare's many isolates/colos. If
  * real global limits are needed later, the upgrade paths are Cloudflare
  * WAF/Rate Limiting rules, Turnstile, or a Durable Object — not a bigger
- * Map. Record this caveat wherever this limiter's behavior is described;
- * DOX-C.md's DoD requires the caveat be stated, not just the limiter exist.
+ * Map. State this caveat wherever the limiter is described — calling Dox
+ * "rate limited" without it overclaims.
  */
 const buckets = new Map<string, RateLimitEntry>();
 

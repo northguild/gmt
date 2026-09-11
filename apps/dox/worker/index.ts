@@ -1,7 +1,9 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createWorkersAI } from "workers-ai-provider";
 import {
   BRAINS,
   VISITOR_DAILY_MAX,
+  findBrain,
   type Brain,
 } from "../src/lib/chat-constants";
 import { nextPtMidnightMs } from "../src/lib/pt-day";
@@ -15,7 +17,12 @@ import {
   timingSafeEqual,
 } from "./dev-access";
 import { clientIdFromRequest } from "./rate-limit";
-import { hashVisitor, readUsage, type UsageStore } from "./usage";
+import {
+  hashVisitor,
+  providerResets,
+  readUsage,
+  type UsageStore,
+} from "./usage";
 import { VOCABULARY_CONTENT } from "./vocabulary";
 
 /** Hand-declared rather than pulling in `@cloudflare/workers-types` — this
@@ -25,9 +32,19 @@ interface Fetcher {
   fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
 }
 
+/** The Workers AI binding, hand-declared for the same reason as `Fetcher`.
+ * `workers-ai-provider` types it as `@cloudflare/workers-types`' `Ai`, which
+ * this app does not install; only `run` is ever called, and by the provider. */
+interface WorkersAIBinding {
+  run(model: string, inputs: unknown, options?: unknown): Promise<unknown>;
+}
+
 interface Env {
   ASSETS: Fetcher;
   NORTHGUILD_GMT_GEMINI_API_KEY?: string;
+  /** Workers AI (DOX-C4). Optional: without it the `workers-ai` brains are
+   * simply not offered, and Dox runs on Gemini alone. */
+  AI?: WorkersAIBinding;
   /** Shared secret for the dev bypass. Absent locally until someone sets it in
    * `.dev.vars`; the bypass simply never engages without it. */
   DOX_DEV_KEY?: string;
@@ -39,11 +56,30 @@ interface Env {
 
 declare const caches: { default: Cache };
 
-const BRAIN_IDS = BRAINS.map((brain) => brain.id);
+/**
+ * The brains this deployment can reach: Gemini ones need the key, Workers AI
+ * ones need the binding. Filtering here, rather than letting an unconfigured
+ * brain fail at call time, matters because that failure would not look like a
+ * spent brain — `brainStateFromError` would rethrow it and end the request
+ * instead of failing over.
+ */
+function configuredBrains(env: Env): Brain[] {
+  return BRAINS.filter((brain: Brain) =>
+    brain.provider === "workers-ai"
+      ? Boolean(env.AI)
+      : Boolean(env.NORTHGUILD_GMT_GEMINI_API_KEY),
+  );
+}
 
-/** `?key=` on any page hands the Worker a candidate dev secret. Verified here,
- * exchanged for a signed HttpOnly cookie, then redirected to a clean URL so the
- * secret never lingers in history, a bookmark, or a referrer header. */
+/**
+ * `?key=` on a request that reaches the Worker hands it a candidate dev secret.
+ * Verified here, exchanged for a signed HttpOnly cookie, then redirected to a
+ * clean URL so the secret never lingers in history, a bookmark, or a referrer.
+ *
+ * **Use `/api/brains?key=<secret>`.** A URL that matches a static asset —
+ * `/dox/`, or any page — is served before the Worker runs (`wrangler.jsonc`
+ * has no `run_worker_first`), so `?key=` on a page never gets here.
+ */
 async function handleDevKey(url: URL, env: Env): Promise<Response> {
   const candidate = url.searchParams.get("key") ?? "";
   const clean = new URL(url);
@@ -51,11 +87,8 @@ async function handleDevKey(url: URL, env: Env): Promise<Response> {
 
   const headers = new Headers({ location: clean.toString() });
 
-  // Constant-time, via `timingSafeEqual`. This was a plain `===`, justified in
-  // a comment by "the burst limiter already caps attempts" — which was simply
-  // untrue: `checkRateLimit` runs inside the chat handler, and this path never
-  // reaches it, so dev-key guessing is not rate limited at all. The comparison
-  // now needs no such argument.
+  // Constant-time, via `timingSafeEqual`: this path runs before the chat
+  // handler's burst limiter, so guessing here is not rate limited.
   //
   // What this endpoint must never do is *leak* — hence the redirect that
   // strips the key and the HttpOnly cookie that keeps it out of the page.
@@ -75,22 +108,29 @@ async function handleBrains(request: Request, env: Env): Promise<Response> {
   const nowMs = Date.now();
   const dev = await isDevRequest(request, env.DOX_DEV_KEY, nowMs);
   const visitorHash = await hashVisitor(clientIdFromRequest(request));
+  const brains = configuredBrains(env);
 
   const snapshot = env.DOX_USAGE
-    ? await readUsage(env.DOX_USAGE, BRAIN_IDS, visitorHash, nowMs)
+    ? await readUsage(env.DOX_USAGE, brains, visitorHash, nowMs)
     : { perBrain: {}, states: {}, visitor: 0 };
 
-  const active = chooseBrain(snapshot).brain;
+  const active = chooseBrain(snapshot, undefined, brains).brain;
 
   return Response.json(
     {
-      brains: BRAINS.map((brain: Brain) => ({
+      brains: brains.map((brain: Brain) => ({
         id: brain.id,
         label: brain.label,
+        provider: brain.provider,
         remaining: remainingFor(brain, snapshot),
         limit: brain.dailyLimit,
         state: snapshot.states[brain.id] ?? "ok",
       })),
+      /* One entry per configured provider, each with its own next midnight —
+         Pacific for Gemini, UTC for Workers AI (DOX-C4). There is no single
+         pool-wide reset any more, so the old top-level `resetsAt` is gone;
+         the chat decides which of these (or the visitor's) to show. */
+      providers: providerResets(brains, nowMs),
       activeBrainId: active?.id ?? null,
       visitor: {
         used: snapshot.visitor,
@@ -101,8 +141,9 @@ async function handleBrains(request: Request, env: Env): Promise<Response> {
         // A dev is exempt from the per-visitor cap. NOT from the shared pool —
         // nothing on the free tier can raise that, and the UI says so.
         unlimited: dev,
+        // The visitor cap is Dox's own and always on the Pacific day.
+        resetsAt: new Date(nextPtMidnightMs(nowMs)).toISOString(),
       },
-      resetsAt: new Date(nextPtMidnightMs(nowMs)).toISOString(),
     },
     {
       headers: {
@@ -160,25 +201,46 @@ export default {
       );
     }
 
-    if (!env.NORTHGUILD_GMT_GEMINI_API_KEY) {
-      // Never reachable in production once `wrangler secret put` has been
-      // run once (DOX-C2 step 13/14) — this is the "missing API key → 500"
-      // branch from DOX-C.md's validation pipeline, not a runtime fault.
+    const brains = configuredBrains(env);
+    if (brains.length === 0) {
+      // Neither a Gemini key nor the Workers AI binding: a misconfigured
+      // deploy, not a runtime fault.
       return Response.json(
         { error: "The assistant is not configured.", retryable: false },
         { status: 500 },
       );
     }
 
-    const google = createGoogleGenerativeAI({
-      apiKey: env.NORTHGUILD_GMT_GEMINI_API_KEY,
-    });
+    const google = env.NORTHGUILD_GMT_GEMINI_API_KEY
+      ? createGoogleGenerativeAI({ apiKey: env.NORTHGUILD_GMT_GEMINI_API_KEY })
+      : undefined;
+    const workersAI = env.AI
+      ? createWorkersAI({ binding: env.AI as never })
+      : undefined;
 
     const handleChat = createChatHandler({
       // A factory, not a model: the handler picks a brain from the ledger and
       // resolves it here, which is what lets Dox move between models as their
       // separate daily budgets run out.
-      resolveModel: (brainId) => google(brainId),
+      resolveModel: (brainId) => {
+        const brain = findBrain(brainId);
+        const model = brain?.model ?? brainId;
+        if (brain?.provider === "workers-ai" && workersAI) {
+          return workersAI(
+            model,
+            // `!== undefined`, not truthiness: `null` is a real setting
+            // ("thinking off"), distinct from leaving the model's default.
+            brain.reasoningEffort !== undefined
+              ? { reasoning_effort: brain.reasoningEffort }
+              : {},
+          );
+        }
+        if (brain?.provider === "google" && google) return google(model);
+        // Unreachable while `brains` is `configuredBrains(env)`: the handler
+        // only ever resolves a brain from that list.
+        throw new Error(`brain ${brainId} has no configured provider`);
+      },
+      brains,
       usage: env.DOX_USAGE,
       isDev: (req) => isDevRequest(req, env.DOX_DEV_KEY, Date.now()),
       vocabulary: VOCABULARY_CONTENT,

@@ -69,3 +69,5 @@ Then add one short sentence below the block noting what kind of change this is (
 - **Never guess at intent.** If the diff is ambiguous, say so and offer two candidate messages.
 - **Do not fabricate a conventional-commit prefix** unless the recent log shows the repo uses them.
 - **One message per output.** If the working tree has changes that clearly belong in separate commits, surface that as a note rather than producing multiple messages.
+- **Do not use double quotes.** The devs use these for our commit messages.
+- **DO not say Co-Authored-By.** This is for the devs to add manually.

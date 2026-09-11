@@ -1,12 +1,45 @@
 /// <reference types="vitest/globals" />
 
-import { nextPtMidnightMs, ptDayKey, secondsUntilPtReset } from "./pt-day";
+import {
+  dayKey,
+  nextMidnightMs,
+  nextPtMidnightMs,
+  ptDayKey,
+  secondsUntilMidnight,
+  secondsUntilPtReset,
+} from "./pt-day";
 
 /** 2026-03-08 is the US spring-forward date: Pacific loses an hour at 02:00,
  * making that local day 23 hours long. 2026-11-01 is fall-back, 25 hours. Both
  * are the reason this uses gmt's zoned arithmetic instead of adding 86_400_000. */
 const SPRING_FORWARD_LOCAL_NOON = Date.UTC(2026, 2, 8, 19, 0, 0); // 12:00 PDT
 const FALL_BACK_LOCAL_NOON = Date.UTC(2026, 10, 1, 20, 0, 0); // 12:00 PST
+
+describe("the UTC clock (Workers AI)", () => {
+  const noonPacific = Date.UTC(2026, 5, 15, 19, 0, 0); // 12:00 PDT = 19:00Z
+
+  it("counts to UTC midnight, which is when Workers AI refills — not Pacific", () => {
+    // Five hours to 00:00Z, twelve to Pacific midnight; both carry the same
+    // 300 s margin.
+    expect(secondsUntilMidnight(noonPacific, "UTC")).toBe(5 * 3600 + 300);
+    expect(secondsUntilPtReset(noonPacific)).toBe(12 * 3600 + 300);
+    expect(nextMidnightMs(noonPacific, "UTC")).toBe(Date.UTC(2026, 5, 16));
+  });
+
+  it("is unaffected by a Pacific DST change", () => {
+    // UTC has no DST: noon PDT on spring-forward day is 19:00Z, five hours out.
+    expect(secondsUntilMidnight(SPRING_FORWARD_LOCAL_NOON, "UTC")).toBe(
+      5 * 3600 + 300,
+    );
+  });
+
+  it("buckets by the UTC date, which rolls over hours before the Pacific one", () => {
+    // 2026-06-16T00:30Z is the 16th in UTC but still 17:30 PDT on the 15th.
+    const earlyUtc = Date.UTC(2026, 5, 16, 0, 30, 0);
+    expect(dayKey(earlyUtc, "UTC")).toBe("2026-06-16");
+    expect(ptDayKey(earlyUtc)).toBe("2026-06-15");
+  });
+});
 
 describe("ptDayKey", () => {
   it("buckets by the Pacific calendar date, not the UTC one", () => {

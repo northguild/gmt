@@ -28,6 +28,11 @@ import HeroGlobe from "../../components/HeroGlobe.astro";
 import ScrollReveal from "../../components/ScrollReveal.astro";
 import WhyDateAlternatives from "../../components/WhyDateAlternatives.astro";
 import WhyDateBug from "../../components/WhyDateBug.astro";
+import { formatCount, gmtStats } from "../../data/gmt-stats";
+import {
+  combinedCompetitorExecutions,
+  executionRatio,
+} from "../../data/library-comparison";
 
 <HeroGlobe />
 <ScrollReveal />
@@ -58,10 +63,10 @@ browser and recomputed every second.
   you won’t find elsewhere.
 </Card>
 
-<Card title="~10× more CI test executions" icon="rocket">
-  374,820 executions — 18,741 tests across 10 timezones × 2 Node
+<Card title={`~${executionRatio(combinedCompetitorExecutions())}× more CI test executions`} icon="rocket">
+  {formatCount(gmtStats.executions)} executions — {formatCount(gmtStats.tests)} tests across {gmtStats.timezones} timezones × {gmtStats.nodes.length} Node
   versions — against `Luxon`, `date-fns`, `Moment.js`, `Day.js`,
-  `Spacetime`, and `@internationalized/date`’s combined 33,396.
+  `Spacetime`, and `@internationalized/date`’s combined {formatCount(combinedCompetitorExecutions())}.
 </Card>
 
 <Card title="Explicit DST disambiguation" icon="setting">

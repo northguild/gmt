@@ -89,6 +89,12 @@ importers:
       '@tanstack/charts':
         specifier: ^0.16.0
         version: 0.16.0(lit@3.3.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@tanstack/react-store':
+        specifier: ^0.11.1
+        version: 0.11.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@tanstack/store':
+        specifier: ^0.11.1
+        version: 0.11.1
       '@tanstack/virtual-core':
         specifier: ^3.17.8
         version: 3.17.8
@@ -155,6 +161,9 @@ importers:
       use-stick-to-bottom:
         specifier: ^1.1.6
         version: 1.1.6(react@19.2.8)
+      workers-ai-provider:
+        specifier: ^4.0.0
+        version: 4.0.0(@ai-sdk/google@4.0.66(zod@4.5.4))(@ai-sdk/provider@4.0.12)(ai@7.0.95(zod@4.5.4))
       world-atlas:
         specifier: ^2.0.2
         version: 2.0.2
@@ -3491,6 +3500,15 @@ packages:
   '@tanstack/intent@0.3.8':
     resolution: {integrity: sha512-5KXhk+dPqzVHcETuf0Q6l1jasjFS2BJvG4Vw1dakuHEaQ85kZ3oSsOMROsad5w/DsEsQ9q1F00cQzIrk9jPzsQ==}
     hasBin: true
+
+  '@tanstack/react-store@0.11.1':
+    resolution: {integrity: sha512-HaIGKI3YLmjBYIvy5DFDY23oNaYZIsTZfngey07Uh5iLVJgM3bIGCnZeOFOqzjFld9JHWcaHJnasD/bKoGKwJQ==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  '@tanstack/store@0.11.1':
+    resolution: {integrity: sha512-mzTOBhypOuDJAy/D8n2MfUZ1HFkXnmSETviRyhqEC8LUE7/IZQExOTxMANj3KjTofYTkFNpBY67qaVrT41YccA==}
 
   '@tanstack/virtual-core@3.17.8':
     resolution: {integrity: sha512-BfEvehNpOT75r5Ksc5xW6NZuXujTfb7nlSEyVu4XHG3gdxNg1KqXruWbDewXOUaUYIo4oRbSfkjIajz4MAT8tA==}
@@ -7524,6 +7542,22 @@ packages:
     engines: {node: '>=16'}
     hasBin: true
 
+  workers-ai-provider@4.0.0:
+    resolution: {integrity: sha512-FkhwMP1EP/MKXR8Jv1o7wLVKfTqu0h/PUaEmhZ7gyDiioib5Wsh3oPAKhG+7+SWfU3roTDHaEWlJpkJjpXu+fQ==}
+    peerDependencies:
+      '@ai-sdk/anthropic': ^4.0.0
+      '@ai-sdk/google': ^4.0.0
+      '@ai-sdk/openai': ^4.0.0
+      '@ai-sdk/provider': ^4.0.0
+      ai: ^7.0.0
+    peerDependenciesMeta:
+      '@ai-sdk/anthropic':
+        optional: true
+      '@ai-sdk/google':
+        optional: true
+      '@ai-sdk/openai':
+        optional: true
+
   world-atlas@2.0.2:
     resolution: {integrity: sha512-IXfV0qwlKXpckz1FhwXVwKRjiIhOnWttOskm5CtxMsjgE/MXAYRHWJqgXOpM8IkcPBoXnyTU5lFHcYa5ChG0LQ==}
 
@@ -10416,6 +10450,15 @@ snapshots:
       semver: 7.8.5
       std-env: 4.2.0
       yaml: 2.9.0
+
+  '@tanstack/react-store@0.11.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+    dependencies:
+      '@tanstack/store': 0.11.1
+      react: 19.2.8
+      react-dom: 19.2.8(react@19.2.8)
+      use-sync-external-store: 1.6.0(react@19.2.8)
+
+  '@tanstack/store@0.11.1': {}
 
   '@tanstack/virtual-core@3.17.8': {}
 
@@ -15297,6 +15340,13 @@ snapshots:
       '@cloudflare/workerd-linux-64': 1.20260825.1
       '@cloudflare/workerd-linux-arm64': 1.20260825.1
       '@cloudflare/workerd-windows-64': 1.20260825.1
+
+  workers-ai-provider@4.0.0(@ai-sdk/google@4.0.66(zod@4.5.4))(@ai-sdk/provider@4.0.12)(ai@7.0.95(zod@4.5.4)):
+    dependencies:
+      '@ai-sdk/provider': 4.0.12
+      ai: 7.0.95(zod@4.5.4)
+    optionalDependencies:
+      '@ai-sdk/google': 4.0.66(zod@4.5.4)
 
   world-atlas@2.0.2: {}
 

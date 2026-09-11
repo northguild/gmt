@@ -6,6 +6,10 @@
  * supplies the full-bleed shell, and phase 2's dock will supply its own panel,
  * so the same transcript renders identically in both.
  *
+ * The composer's control bar — the brain selector and the reset clock — does
+ * live here, beside Send, so both hosts get the same controls without either
+ * re-wiring them.
+ *
  * The sheets are imported here rather than added to `astro.config.mjs`'s
  * `customCss` so Vite code-splits them into this island's chunk — a page that
  * never opens the chat downloads neither.
@@ -30,8 +34,13 @@ import { SearchIcon } from "lucide-react";
 import { referenceRoutes } from "~/generated/reference/route-manifest";
 import { CHAT_STARTERS, CORPUS_SUMMARY } from "~/lib/chat-constants";
 import { checkUserText } from "~/lib/chat-sanitize";
+import { pageContextFromReferrer } from "~/lib/page-context";
+import { nextReset } from "~/lib/quota-resets";
+import { findResetFormat } from "~/lib/reset-formats";
+import { BrainSelector } from "./BrainSelector";
+import { ResetClock } from "./ResetClock";
 import type { BrainsInfo } from "./use-brains";
-import { untilReset } from "./use-brains";
+import { useResetClock } from "./use-reset-clock";
 import { RETRIEVAL_PART_TYPE, type RetrievalTraceData } from "~/lib/chat-types";
 import {
   Conversation,
@@ -45,6 +54,7 @@ import {
   PromptInputFooter,
   PromptInputSubmit,
   PromptInputTextarea,
+  PromptInputTools,
 } from "../ai-elements/prompt-input";
 import githubDark from "shiki/dist/themes/github-dark.mjs";
 import githubLight from "shiki/dist/themes/github-light.mjs";
@@ -74,6 +84,10 @@ const SHIKI_THEME: [typeof githubLight, typeof githubDark] = [
   githubLight,
   githubDark,
 ];
+
+/** The out-of-budget banner always speaks in human wording, whatever format the
+ * reader picked for the reset clock. */
+const BANNER_FORMAT = findResetFormat("calendar");
 
 /** The tool calls in one assistant turn. Empty for every turn until DOX-C3b's
  *  tools started being offered — see worker/tools.ts. */
@@ -115,8 +129,6 @@ export interface DoxChatProps {
   /** Today's budget, from `/api/brains`. Null while loading or if the endpoint
    * is unreachable — the chat stays fully usable either way. */
   brains?: BrainsInfo | null;
-  /** The reader's explicit brain pick, or null for "whichever has budget". */
-  selectedBrainId?: string | null;
   /** Called after a question is sent, so the host can re-read the counts. */
   onUsed?: () => void;
   /** DOX-C3b — the host owns the widget rail; this is how a tool call reaches
@@ -127,7 +139,6 @@ export interface DoxChatProps {
 
 export function DoxChat({
   brains = null,
-  selectedBrainId = null,
   onUsed,
   onWidget,
 }: DoxChatProps = {}) {
@@ -138,6 +149,11 @@ export function DoxChat({
   const [retrievedUrls, setRetrievedUrls] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
+
+  /** The reader's explicit brain choice; null means "whichever has budget".
+   * Held here because the selector lives in this composer's control bar. */
+  const [selectedBrainId, setSelectedBrainId] = useState<string | null>(null);
+  const clock = useResetClock();
 
   /* `body` below is re-evaluated per request but the transport itself is built
      once, so it would close over the brain chosen at mount. A ref keeps the
@@ -151,18 +167,26 @@ export function DoxChat({
       new DefaultChatTransport({
         api: "/api/chat",
         /* Assembled per request rather than declared as a static `body`, because
-           the history needs filtering as well as the body needing the current
-           page and brain. `sendableHistory` drops assistant turns that never
-           received a token — see chat-history.ts for why replaying those is
-           worse than it looks. */
-        prepareSendMessagesRequest: ({ messages, body }) => ({
-          body: {
-            ...body,
-            messages: sendableHistory(messages),
-            pageContext: window.location.pathname,
-            ...(brainRef.current ? { model: brainRef.current } : {}),
-          },
-        }),
+           the history needs filtering as well as the body needing the page the
+           reader came from and the brain. `sendableHistory` drops assistant
+           turns that never received a token — see chat-history.ts for why
+           replaying those is worse than it looks. */
+        prepareSendMessagesRequest: ({ messages, body }) => {
+          // The referring page, not `/dox/` itself — that is what retrieval's
+          // namespace bias needs. See page-context.ts.
+          const pageContext = pageContextFromReferrer(
+            document.referrer,
+            window.location.origin,
+          );
+          return {
+            body: {
+              ...body,
+              messages: sendableHistory(messages),
+              ...(pageContext ? { pageContext } : {}),
+              ...(brainRef.current ? { model: brainRef.current } : {}),
+            },
+          };
+        },
         fetch: chatFetch,
       }),
     [],
@@ -230,6 +254,21 @@ export function DoxChat({
     !brains.visitor.unlimited &&
     (brains.visitor.remaining ?? 1) <= 0;
   const outOfBudget = poolSpent || visitorSpent;
+
+  /* When the reader can ask again — the later of their own reset and the
+     soonest provider refill when both are spent (see quota-resets.ts). Empty
+     until the reader's zone is known, and the sentence simply ends earlier. */
+  const comesBack =
+    outOfBudget && brains !== null && clock.ready
+      ? nextReset(brains, selectedBrainId)
+      : undefined;
+  const comesBackAt = comesBack
+    ? BANNER_FORMAT.format(comesBack.resetsAt, {
+        timeZone: clock.zone,
+        locale: clock.locale,
+        now: clock.now,
+      })
+    : "";
 
   /** Returns whether the message was actually sent. A `false` is what the
    *  composer needs to keep the reader's text in the box — see the throw in
@@ -371,7 +410,7 @@ export function DoxChat({
                  turning and the card keeps its sheen — one condition driving
                  both, so the marker and the surface can never disagree about
                  whether anything is happening.
-                 
+
                  `index === messages.length - 1` is load-bearing. An assistant
                  turn that never received any text — stopped before the first
                  token, or killed mid-stream by an error — keeps empty text
@@ -470,7 +509,11 @@ export function DoxChat({
         <ConversationScrollButton className="gmt-hive-jump gmt-sonar-focus" />
       </Conversation>
 
-      <div className="gmt-hive-composer">
+      {/* `not-content` is Starlight's opt-out from its prose flow spacing
+          (`.sl-markdown-content * + *` → margin-top). Without it the control
+          bar sat 16px below the textarea, and every control after the first
+          sat 16px below its neighbour. */}
+      <div className="gmt-hive-composer not-content">
         <div className="gmt-hive-composer-inner">
           {outOfBudget && (
             <p className="gmt-hive-exhausted" role="status">
@@ -479,8 +522,8 @@ export function DoxChat({
               </span>
               {visitorSpent && !poolSpent
                 ? `You have used your ${brains?.visitor.limit} questions for today.`
-                : "Dox has used its free allowance for today."}{" "}
-              Resets {untilReset(brains?.resetsAt)}.
+                : "Dox has used its free allowance for today."}
+              {comesBackAt && ` Back ${comesBackAt}.`}
             </p>
           )}
           <PromptInput
@@ -510,15 +553,25 @@ export function DoxChat({
                 }
               />
             </PromptInputBody>
+            {/* The control bar: settings on the left, the one action on the
+                right, ruled off from the text above so it reads as controls
+                rather than part of the message. The reset clock goes first,
+                hard against the left edge: its readout changes width with every
+                format, and at that edge its popover's anchor never moves. */}
             <PromptInputFooter className="gmt-hive-composer-footer">
-              {brains?.visitor.unlimited && (
-                <span
-                  className="gmt-hive-dev-note"
-                  title="Exempt from the per-visitor cap. The shared daily pool is fixed and cannot be raised on the free tier."
-                >
-                  dev · no personal cap
-                </span>
-              )}
+              <PromptInputTools className="gmt-hive-controls">
+                <ResetClock
+                  info={brains}
+                  selectedBrainId={selectedBrainId}
+                  clock={clock}
+                />
+                <BrainSelector
+                  info={brains}
+                  selectedId={selectedBrainId}
+                  onSelect={setSelectedBrainId}
+                  clock={clock}
+                />
+              </PromptInputTools>
               <PromptInputSubmit
                 status={status}
                 onStop={stop}

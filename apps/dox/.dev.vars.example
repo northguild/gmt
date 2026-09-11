@@ -1,1 +1,9 @@
+# Gemini brains. Leave empty to run Dox on its Workers AI brains alone — those
+# use the `ai` binding in wrangler.jsonc, which needs `wrangler login`, not a key.
 NORTHGUILD_GMT_GEMINI_API_KEY=
+
+# Optional dev bypass: exempts its holder from the per-visitor daily cap (never
+# from the shared pool). Visit /api/brains?key=<value> once per browser to get
+# the dev cookie. A page URL such as /dox?key= does not work — it is served as a
+# static asset and never reaches the Worker.
+DOX_DEV_KEY=

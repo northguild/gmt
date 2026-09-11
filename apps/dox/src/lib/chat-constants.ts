@@ -73,32 +73,178 @@ import type { DoxToolName } from "./dox-tools";
  */
 export const BRAINS = [
   // Full Flash — best answers. Newest first.
-  { id: "gemini-3.8-flash", label: "3.8 Flash", dailyLimit: 20 },
-  { id: "gemini-3.7-flash", label: "3.7 Flash", dailyLimit: 20 },
-  { id: "gemini-3.6-flash", label: "3.6 Flash", dailyLimit: 20 },
-  { id: "gemini-3.5-flash", label: "3.5 Flash", dailyLimit: 20 },
+  {
+    id: "gemini-3.8-flash",
+    label: "3.8 Flash",
+    provider: "google",
+    dailyLimit: 20,
+  },
+  {
+    id: "gemini-3.7-flash",
+    label: "3.7 Flash",
+    provider: "google",
+    dailyLimit: 20,
+  },
+  {
+    id: "gemini-3.6-flash",
+    label: "3.6 Flash",
+    provider: "google",
+    dailyLimit: 20,
+  },
+  {
+    id: "gemini-3.5-flash",
+    label: "3.5 Flash",
+    provider: "google",
+    dailyLimit: 20,
+  },
   // Flash-Lite — faster and cheaper, still comfortably good enough for
   // documentation Q&A over retrieved chunks.
-  { id: "gemini-3.5-flash-lite", label: "3.5 Flash-Lite", dailyLimit: 20 },
-  { id: "gemini-3.1-flash-lite", label: "3.1 Flash-Lite", dailyLimit: 20 },
+  {
+    id: "gemini-3.5-flash-lite",
+    label: "3.5 Flash-Lite",
+    provider: "google",
+    dailyLimit: 20,
+  },
+  {
+    id: "gemini-3.1-flash-lite",
+    label: "3.1 Flash-Lite",
+    provider: "google",
+    dailyLimit: 20,
+  },
   {
     id: "gemini-3.1-flash-lite-preview",
     label: "3.1 Lite Preview",
+    provider: "google",
     dailyLimit: 20,
   },
-  { id: "gemini-3-flash-preview", label: "3 Flash Preview", dailyLimit: 20 },
+  {
+    id: "gemini-3-flash-preview",
+    label: "3 Flash Preview",
+    provider: "google",
+    dailyLimit: 20,
+  },
   // Pro, last resort. Confirmed real (it answered 429, not 404) but its free
   // allowance is far smaller than Flash's, so this limit is a conservative
   // guess. Reaching it means every Flash brain is spent, which is a good day.
-  { id: "gemini-3.1-pro-preview", label: "3.1 Pro Preview", dailyLimit: 5 },
+  {
+    id: "gemini-3.1-pro-preview",
+    label: "3.1 Pro Preview",
+    provider: "google",
+    dailyLimit: 5,
+  },
+  // Workers AI (DOX-C4, #240) — a second, independent free pool, tried only
+  // once every Gemini brain is out or when a reader picks it explicitly. See
+  // WORKERS_AI_DAILY_NEURONS for how its budget differs from Gemini's.
+  //
+  // One brain, chosen by live probe on 2026-09-11 (`scripts/probe-brains.ts`;
+  // results in context/dox/built.md, "Brains and budget") from four
+  // tool-capable candidates that run on the Workers Free plan:
+  //
+  //   - glm-4.7-flash — kept: 4/4 widget calls, refused the absent question,
+  //     ~88 Neurons a question. Slow (6-24 s) and imperfect; a fallback, not
+  //     a Gemini replacement.
+  //   - qwen3-30b-a3b-fp8, llama-4-scout — dropped, and not for the model's
+  //     sake: `workers-ai-provider` 4.0.0 reads text and tool calls from both
+  //     `response` and `choices[0].delta` of the same chunk, so for these two
+  //     every token arrives twice ("ToTo convert convert") and every tool
+  //     call's arguments fail to parse. Where visible, both chose the right
+  //     tool. Re-probe when the provider stops double-emitting.
+  //   - gpt-oss-20b — dropped: 0/4 widget calls; it writes the call's JSON
+  //     arguments as reply text instead, at ~224 Neurons a question.
+  //
+  // `reasoningEffort: null` asks for thinking off. With `low`, glm spent its
+  // whole 2,048-token cap reasoning on one question and answered nothing; with
+  // `null` it did not — though latency did not improve, so whether the model
+  // fully honours it is unverified.
+  //
+  // `maxOutputTokens` is not optional here: Workers AI defaults `max_tokens` to
+  // 256, which truncates a normal Dox answer mid-sentence. Gemini's default is
+  // large enough that its entries leave it unset.
+  {
+    id: "cf-glm-4.7-flash",
+    label: "GLM 4.7 Flash",
+    provider: "workers-ai",
+    model: "@cf/zai-org/glm-4.7-flash",
+    reasoningEffort: null,
+    maxOutputTokens: 2048,
+    // 10,000 Neurons / ~88 measured per question ≈ 113, rounded down.
+    dailyLimit: 100,
+  },
 ] as const satisfies readonly Brain[];
+
+/**
+ * Where a brain runs.
+ *
+ * `google` needs `NORTHGUILD_GMT_GEMINI_API_KEY`; `workers-ai` needs the `AI`
+ * binding in `wrangler.jsonc`. The Worker only offers brains whose provider is
+ * configured, so a missing key or binding shrinks the list rather than failing
+ * a request (see worker/index.ts).
+ */
+export type BrainProvider = "google" | "workers-ai";
+
+/**
+ * What the ledger and the UI need to know about each provider: what to call it,
+ * and whose midnight its daily allowance refills at.
+ *
+ * - **Gemini** resets requests-per-day at midnight Pacific (Google's rate limit
+ *   docs).
+ * - **Workers AI** resets its 10,000-Neuron allocation at 00:00 UTC — see
+ *   `WORKERS_AI_DAILY_NEURONS`.
+ *
+ * The single source for both clocks: `worker/usage.ts` buckets a brain's ledger
+ * keys by this zone's day, `/api/brains` sends each provider's next midnight,
+ * and the chat renders those instants in the reader's own zone.
+ */
+export const BRAIN_PROVIDERS: Readonly<
+  Record<BrainProvider, { label: string; resetTimeZone: string }>
+> = {
+  google: { label: "Gemini", resetTimeZone: "America/Los_Angeles" },
+  "workers-ai": { label: "Workers AI", resetTimeZone: "UTC" },
+};
 
 export interface Brain {
   id: string;
   label: string;
+  provider: BrainProvider;
+  /** The provider's own model id, when it differs from `id`. Workers AI ids
+   * (`@cf/zai-org/glm-4.7-flash`) carry `@` and `/`, which make poor ledger
+   * keys and menu values, so those brains get a short `id` and put the real
+   * name here. Gemini ids are already usable as-is and leave this unset. */
+  model?: string;
+  /** Output cap passed to `streamText`. Unset means the provider's default. */
+  maxOutputTokens?: number;
+  /** Workers AI reasoning budget for models that think before answering.
+   * Thinking tokens are billed as output Neurons and add latency to a reply
+   * the reader never sees. `null` turns thinking off where the model allows
+   * it; unset leaves the model's default. */
+  reasoningEffort?: "low" | "medium" | "high" | null;
   /** Advisory only — used to render "N left", never to refuse a request. */
   dailyLimit: number;
 }
+
+/**
+ * Workers AI's free allocation: **10,000 Neurons per day, per account**, reset
+ * at 00:00 UTC. Verified against Cloudflare's pricing page on 2026-09-11.
+ *
+ * Two properties make this unlike Gemini's allowance, and both shape the code:
+ *
+ * - **It is one pool, not one per model.** Every `workers-ai` brain draws from
+ *   the same 10,000, so an allocation-exhausted error on one means all of them
+ *   are out — `worker/brains.ts` retires the whole provider at once rather than
+ *   spending a doomed request per model to rediscover it.
+ * - **It is metered in Neurons, which scale with tokens, not requests.** Dox's
+ *   system prompt measured 10-16k input tokens a question in the live probe
+ *   (19 KB of SKILL.md vocabulary is the bulk of it), so glm-4.7-flash costs
+ *   ~88 Neurons a question and the larger candidates 220-320. If more than one
+ *   `workers-ai` brain is ever enabled, split `dailyLimit` across them so the
+ *   badge's sum stays near what the pool actually buys, rather than each
+ *   claiming the whole of it.
+ *
+ * On the Workers **Free** plan, exceeding this fails with an error — it cannot
+ * bill. That is the property that keeps Dox 100% free, and it would stop being
+ * true on the Workers Paid plan, where overage is charged per 1,000 Neurons.
+ */
+export const WORKERS_AI_DAILY_NEURONS = 10_000;
 
 export type BrainId = (typeof BRAINS)[number]["id"];
 
@@ -124,10 +270,12 @@ export function findBrain(id: string): Brain | undefined {
  *
  * Sized against the shared pool rather than picked for feel. Eight Flash brains
  * at 20 requests each, plus one smaller Pro one, is ~165 per day for
- * *everyone*, so a cap of 5 lets roughly 33 readers get a full turn before the
- * day is spent. A cap of 10 would halve that to 16, and five questions is
- * already more than a typical reader asks of a documentation bot in one
- * sitting.
+ * *everyone*; the Workers AI pool (DOX-C4) adds ~110 more, from a live probe of
+ * glm-4.7-flash at ~88 Neurons a question. Against ~275 a cap of 5 lets roughly
+ * 55 readers get a full turn before the day is spent. Left at 5 until real
+ * traffic confirms that figure — a cap raised on a twenty-question probe is the
+ * drift this comment warns about. Five questions is already more than a typical
+ * reader asks of a documentation bot in one sitting.
  *
  * Recompute this whenever BRAINS changes — the two numbers drift apart silently
  * otherwise, and the cap is the only thing standing between one reader and
@@ -144,7 +292,16 @@ export const MAX_MESSAGE_LENGTH = 4000;
 export const RATE_LIMIT_MAX = 20;
 export const RATE_LIMIT_WINDOW_SECONDS = 60;
 
+/** Silence allowed between chunks once an answer is streaming. */
 export const IDLE_TIMEOUT_MS = 30_000;
+
+/**
+ * How long the chat waits for the *first* output before calling a request
+ * stalled. Longer than `IDLE_TIMEOUT_MS` because nothing can arrive yet: the
+ * Worker fails over past spent brains before it sends a byte, and the Workers
+ * AI fallback measured 6-24 s to first output.
+ */
+export const FIRST_OUTPUT_TIMEOUT_MS = 90_000;
 
 /**
  * Corpus scale, as shown to the reader on the empty chat screen.

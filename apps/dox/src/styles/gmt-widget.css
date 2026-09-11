@@ -153,7 +153,8 @@
  * Result output
  *
  * Three states, and the difference between the last two is load-bearing
- * (context/dox/overview.md §3): a live value, an invalid-input sentinel, and a
+ * (context/dox/reference/visual-design.md, "Widget chrome"): a live value, an
+ * invalid-input sentinel, and a
  * result that is legitimately empty — the last is a *correct answer* and must
  * never be dressed as signal-lost.
  *

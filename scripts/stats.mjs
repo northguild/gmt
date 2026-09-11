@@ -27,9 +27,11 @@
  *   CI multipliers      `.github/workflows/ci.yml`'s `gmt-matrix` node/timezone matrix
  *   locales             `MustTestLocales` in `packages/gmt/src/test/localeMatrix.ts`
  *
- * A README cannot be generated at render time the way the docs site can — npm and GitHub
- * serve the committed bytes — so the numbers still live in the file. What this removes is
- * the chance of them being *wrong*: `check` runs in `validate`, and `sync` writes them.
+ * The docs site renders its figures: `sync` writes `apps/dox/src/data/gmt-stats.json`, and
+ * every dox page, chart and comparison imports from it, so dox copy holds no GMT number to
+ * rewrite. A README cannot do that — npm and GitHub serve the committed bytes — so its
+ * numbers still live in the file, rewritten by the rules below. What this removes is the
+ * chance of either being *wrong*: `check` runs in `validate`, and `sync` writes them.
  *
  * Two invariants keep the rewriting honest, both learned the hard way:
  *
@@ -44,7 +46,8 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { resolve, sep } from "node:path";
 
 const CORPUS = "apps/dox/src/generated/reference/gmt-corpus.json";
 const WORKFLOW = ".github/workflows/ci.yml";
@@ -54,10 +57,9 @@ const VITEST_CONFIG = "packages/gmt/vitest.config.ts";
 const ROOT_README = "README.md";
 const PKG_README = "packages/gmt/README.md";
 const READMES = [ROOT_README, PKG_README];
-const DOX_INDEX = "apps/dox/src/content/docs/index.mdx";
 const DOX_WHY = "apps/dox/src/content/docs/why-gmt.mdx";
-const DOX_CHARTS = "apps/dox/scripts/render-charts.ts";
-const DOX_LIBRARIES = "apps/dox/src/data/library-comparison.ts";
+/** Every GMT figure apps/dox renders is imported from this file — see statsObject(). */
+const DOX_STATS = "apps/dox/src/data/gmt-stats.json";
 
 /** `regex/` exports patterns, not functions — counted and described separately. */
 const PATTERN_NAMESPACE = "regex";
@@ -88,6 +90,18 @@ function collect(suite) {
     stdio: ["ignore", "pipe", "inherit"],
   });
   const collected = JSON.parse(raw);
+
+  // The config's `include` also carries a bare `src/**/*.test.ts`, which means this package
+  // only when resolved from the repo root. Refuse to publish a count that picked up another
+  // package's or apps/dox's tests.
+  const scope = resolve(suite.name) + sep;
+  const stray = collected.find((t) => !t.file.startsWith(scope));
+  if (stray) {
+    throw new Error(
+      `${suite.config}: collected ${stray.file}, outside ${suite.name} — published figures count ${suite.name}'s tests only`,
+    );
+  }
+
   return {
     tests: collected.length,
     files: new Set(collected.map((t) => t.file)).size,
@@ -191,6 +205,25 @@ function figures() {
   };
 }
 
+/** What apps/dox renders, as written to DOX_STATS. Every GMT figure on the site comes from here. */
+function statsObject(f) {
+  return {
+    suite: SUITE.name,
+    tests: f.tests,
+    files: f.files,
+    executions: f.executions,
+    nodes: f.nodes,
+    timezones: f.timezones,
+    locales: f.locales,
+    functions: f.functions,
+    patterns: f.patterns,
+    byNamespace: f.byNamespace.map(([namespace, count]) => ({
+      namespace,
+      count,
+    })),
+  };
+}
+
 // ---------------------------------------------------------------- rules
 
 const n = (value) => value.toLocaleString("en-US");
@@ -261,79 +294,6 @@ function ruleSet(f) {
       files: READMES,
       find: /(\| )([\d,]+)( vs\. 386 \+ 4,888)/g,
       values: [n(f.executions)],
-    },
-    {
-      label: "dox landing card",
-      files: [DOX_INDEX],
-      find: /( {2})([\d,]+)( executions — )([\d,]+)( tests across )(\d+)( timezones × )(\d+)( Node)/g,
-      values: [
-        n(f.executions),
-        n(f.tests),
-        String(f.timezones),
-        String(f.nodeCount),
-      ],
-    },
-    {
-      label: "dox executions chart caption",
-      files: [DOX_WHY],
-      find: /(caption="GMT: )([\d,]+)( executions \()([\d,]+)( tests × )(\d+)( timezones × )(\d+)( Node\))/g,
-      values: [
-        n(f.executions),
-        n(f.tests),
-        String(f.timezones),
-        String(f.nodeCount),
-      ],
-    },
-    {
-      label: "dox summary — executions",
-      files: [DOX_WHY],
-      find: /(\| \*\*CI executions\*\* +\| )([\d,]+)/g,
-      values: [n(f.executions)],
-    },
-    {
-      label: "dox summary — public functions",
-      files: [DOX_WHY],
-      find: /(\| \*\*Public functions\*\* +\| )([\d,]+)/g,
-      values: [n(f.functions)],
-    },
-    {
-      label: "dox summary — locales",
-      files: [DOX_WHY],
-      find: /(\| \*\*Locales tested\*\* +\| )(\d+)/g,
-      values: [String(f.locales)],
-    },
-    {
-      label: "dox summary — timezones",
-      files: [DOX_WHY],
-      find: /(\| \*\*Timezones tested\*\* +\| )(\d+)/g,
-      values: [String(f.timezones)],
-    },
-    {
-      label: "dox api-surface count",
-      files: [DOX_WHY],
-      find: /(GMT exposes )([\d,]+)( public functions)/g,
-      values: [n(f.functions)],
-    },
-    {
-      label: "dox api-surface caption",
-      files: [DOX_WHY],
-      find: /(caption=")([\d,]+)( functions total, plus )(\d+)( regex patterns)/g,
-      values: [n(f.functions), String(f.patterns)],
-    },
-    {
-      // `libraryComparisons`'s first entry is gmt (isSubject). Anchored on the id so it
-      // cannot drift onto a competitor's block, whose figures are external measurements
-      // and are deliberately not derived here.
-      label: "library-comparison — gmt stats",
-      files: [DOX_LIBRARIES],
-      find: /(id: "@northguild\/gmt",[\s\S]*?tests: )(\d+)(,\n {6}locales: )(\d+)(,\n {6}timezones: )(\d+)(,\n {6}nodeVersions: )(\d+)(,\n {6}executions: )(\d+)/g,
-      values: [
-        String(f.tests),
-        "0",
-        String(f.timezones),
-        String(f.nodeCount),
-        String(f.executions),
-      ],
     },
   ];
 }
@@ -420,17 +380,21 @@ function evaluate(f) {
     }
   }
 
-  // The chart's namespace array is structural, not numeric — same treatment.
-  const charts = edits.get(DOX_CHARTS) ?? readFileSync(DOX_CHARTS, "utf8");
-  const expected = [...f.byNamespace, [PATTERN_NAMESPACE, f.patterns]];
-  for (const [ns, count] of expected) {
-    if (
-      !new RegExp(`\\{ namespace: "${ns}", count: ${count} \\}`).test(charts)
-    ) {
-      problems.push(
-        `${DOX_CHARTS}: namespace chart is missing or wrong for \`${ns}\` (expected count ${count})`,
-      );
-    }
+  // The dox data file is compared by value, not bytes, so reformatting it is not drift.
+  const stats = statsObject(f);
+  const current = existsSync(DOX_STATS)
+    ? JSON.parse(readFileSync(DOX_STATS, "utf8"))
+    : {};
+  const stale = Object.keys(stats).filter(
+    (key) => JSON.stringify(current[key]) !== JSON.stringify(stats[key]),
+  );
+  for (const key of stale) {
+    problems.push(
+      `${DOX_STATS}: ${key} — published ${JSON.stringify(current[key]) ?? "nothing"}, derived ${JSON.stringify(stats[key])}`,
+    );
+  }
+  if (stale.length > 0) {
+    edits.set(DOX_STATS, `${JSON.stringify(stats, null, 2)}\n`);
   }
 
   return { edits, problems };
@@ -460,7 +424,7 @@ function sync() {
   const written = [];
 
   for (const [file, text] of edits) {
-    if (text !== readFileSync(file, "utf8")) {
+    if (!existsSync(file) || text !== readFileSync(file, "utf8")) {
       writeFileSync(file, text);
       written.push(file);
     }

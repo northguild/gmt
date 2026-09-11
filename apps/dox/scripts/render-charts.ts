@@ -1,6 +1,4 @@
 import {
-  barX,
-  barY,
   cell,
   createChartRuntime,
   defineChart,
@@ -8,142 +6,31 @@ import {
   text,
 } from "@tanstack/charts";
 import { scaleBand } from "@tanstack/charts/scales/band";
-import { scaleLinear } from "@tanstack/charts/scales/linear";
-import { libraryComparisons } from "../src/data/library-comparison";
+import { BAR_CHARTS, type BarChartId } from "../src/lib/why-gmt-charts";
 
-function addTooltipsToBars(svg: string): string {
-  const barGroupRegex =
-    /<g[^>]*class="ts-chart__bar ts-chart__bar-x"[^>]*>([\s\S]*?)<\/g>/g;
-  return svg.replace(barGroupRegex, (match: string, groupContent: string) => {
-    const rectRegex = /<rect([^>]*)\/>/g;
-    const rects = groupContent.match(rectRegex);
-    if (!rects) return match;
-
-    let result = match;
-    let offset = 0;
-
-    rects.forEach((rect, index) => {
-      const lib = libraryComparisons[index];
-      if (!lib) return;
-
-      const { tests, locales, timezones, nodeVersions, executions } = lib.stats;
-      const library = lib.chartLabel ?? lib.displayName;
-
-      const title = `${library}: ${executions.toLocaleString()} executions (${tests.toLocaleString()} tests${locales > 0 ? ` × ${locales} locales` : ""}${timezones > 0 ? ` × ${timezones} timezones` : ""} × ${nodeVersions} Node)`;
-
-      const titleElement = `<title>${title}</title>`;
-      const insertPos = result.indexOf(rect, offset) + rect.length;
-      result =
-        result.slice(0, insertPos) + titleElement + result.slice(insertPos);
-      offset = insertPos + titleElement.length;
-    });
-
-    return result;
-  });
-}
-
-export function renderTestExecutionChart(): string {
-  const data = libraryComparisons.map((lib) => ({
-    library: lib.chartLabel ?? lib.displayName,
-    executions: lib.stats.executions,
-    highlight: Boolean(lib.isSubject),
-  }));
-
-  const definition = defineChart({
-    marks: [
-      barX(data, {
-        y: "library",
-        x: "executions",
-        yScale: "y",
-        xScale: "x",
-        // GMT rides the standard (spring green); every legacy library shares the
-        // fault colour (signal orange) used by the "alternatives inherit it"
-        // diagram above.
-        fill: (d) =>
-          (d as { highlight?: boolean }).highlight
-            ? "var(--gmt-spring)"
-            : "var(--gmt-signal)",
-        fillOpacity: 0.35,
-        stroke: (d) =>
-          (d as { highlight?: boolean }).highlight
-            ? "var(--gmt-border-strong)"
-            : "var(--gmt-signal-border)",
-        strokeWidth: 1,
-        radius: 2,
-        inset: 2,
-        // Cap the bar to an absolute thickness so the wide viewBox doesn't
-        // stretch it — the band scale still centers it on the category tick.
-        maxThickness: 40,
-      }),
-    ],
-    scales: {
-      x: { scale: scaleLinear, nice: true, grid: true },
-      y: { scale: scaleBand, padding: 0.2 },
-    },
-  });
-
+// The static SVG is the no-JS fallback; ChartContainer.astro mounts the same
+// definition live on top of it to add the hover tooltip.
+function renderBarChart(id: BarChartId): string {
+  const chart = BAR_CHARTS[id];
   const runtime = createChartRuntime();
-  // Rendered at the same natural width as the locale matrix so the SVG scales
-  // to the full content column: bars stretch horizontally, height and text size
-  // stay put (the chart is not blown up proportionally). Height bumped from
-  // 360 to 420 (matching the locale matrix) to give the two added bars
-  // (dayjs, spacetime) the same breathing room as the original five.
-  const scene = runtime.render(definition, { width: 1200, height: 420 });
-  const svg = renderChartSvg(scene, {
-    ariaLabel: "CI test execution volume comparison",
-    idPrefix: "test-executions",
+  const scene = runtime.render(chart.definition(), {
+    width: chart.width,
+    height: chart.height,
   });
-  runtime.destroy();
-  return addTooltipsToBars(svg);
-}
-
-export function renderNamespaceChart(): string {
-  const data = [
-    { namespace: "plain", count: 225 },
-    { namespace: "zoned", count: 122 },
-    { namespace: "unix", count: 78 },
-    { namespace: "utc", count: 76 },
-    { namespace: "duration", count: 12 },
-    { namespace: "precision", count: 18 },
-    { namespace: "span", count: 4 },
-    { namespace: "instant", count: 4 },
-    { namespace: "regex", count: 25 },
-  ];
-
-  const definition = defineChart({
-    marks: [
-      barY(data, {
-        x: "namespace",
-        y: "count",
-        xScale: "x",
-        yScale: "y",
-        fill: "var(--gmt-cyan)",
-        fillOpacity: 0.35,
-        stroke: "var(--gmt-border-strong)",
-        strokeWidth: 1,
-        radius: 2,
-        inset: 2,
-        // Match the thickness cap used on the CI executions chart so both
-        // charts read with the same bar weight.
-        maxThickness: 40,
-      }),
-    ],
-    scales: {
-      x: { scale: scaleBand, padding: 0.15 },
-      y: { scale: scaleLinear, nice: true, grid: true },
-    },
-  });
-
-  const runtime = createChartRuntime();
-  // Same natural width as the other charts — fills the content column without
-  // scaling the bars or labels up (see renderTestExecutionChart).
-  const scene = runtime.render(definition, { width: 1200, height: 360 });
   const svg = renderChartSvg(scene, {
-    ariaLabel: "API surface by namespace",
-    idPrefix: "namespace-distribution",
+    ariaLabel: chart.ariaLabel,
+    idPrefix: chart.idPrefix,
   });
   runtime.destroy();
   return svg;
+}
+
+export function renderTestExecutionChart(): string {
+  return renderBarChart("ci-executions");
+}
+
+export function renderNamespaceChart(): string {
+  return renderBarChart("namespaces");
 }
 
 // Family key + base tile opacity. TanStack's static renderer doesn't evaluate

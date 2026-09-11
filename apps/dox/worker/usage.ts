@@ -4,7 +4,7 @@
  * ## Why this is advisory, and why that is fine
  *
  * Every number here is a *best guess*, never a gate. The only thing that
- * actually refuses a request is Google's own 429; this ledger exists to
+ * actually refuses a request is the provider's own error; this ledger exists to
  *
  *   1. pick a brain that probably still has budget, instead of burning a
  *      round trip discovering it does not, and
@@ -12,8 +12,18 @@
  *
  * That is what makes Workers KV the right store despite being eventually
  * consistent. A count that lags by one changes a digit in a badge — it cannot
- * let through anything Google would refuse, because Google is still asked. A
- * Durable Object's strong consistency would buy nothing here and is not free.
+ * let through anything a provider would refuse, because the provider is still
+ * asked. A Durable Object's strong consistency would buy nothing here and is
+ * not free.
+ *
+ * ## Whose day?
+ *
+ * A brain's keys are bucketed by *its provider's* day — Pacific for Gemini, UTC
+ * for Workers AI (`BRAIN_PROVIDERS`) — so its count refills and its spent mark
+ * expires when that provider's allowance actually does. Bucketing everything by
+ * the Pacific day left a refilled Workers AI pool reading as used for up to
+ * eight hours, and let a spent mark set after UTC midnight vanish early at the
+ * Pacific rollover. The visitor cap is Dox's own and stays on the Pacific day.
  *
  * ## Every write is best-effort
  *
@@ -29,7 +39,18 @@
  * The ledger only needs to tell two visitors apart for a day; it has no reason
  * to be able to name either of them.
  */
-import { ptDayKey, secondsUntilPtReset } from "../src/lib/pt-day";
+import {
+  BRAIN_PROVIDERS,
+  type Brain,
+  type BrainProvider,
+} from "../src/lib/chat-constants";
+import {
+  dayKey,
+  nextMidnightMs,
+  ptDayKey,
+  secondsUntilMidnight,
+  secondsUntilPtReset,
+} from "../src/lib/pt-day";
 
 /** The subset of KVNamespace this module uses — hand-declared for the same
  * reason `worker/index.ts` hand-declares `Fetcher`: this Worker touches a
@@ -46,6 +67,9 @@ export interface UsageStore {
 /** Why a brain is not currently usable. */
 export type BrainState = "ok" | "spent" | "unavailable";
 
+/** What the ledger needs to know about a brain: which one, and whose clock. */
+export type LedgerBrain = Pick<Brain, "id" | "provider">;
+
 export interface UsageSnapshot {
   /** Requests recorded against each brain today. */
   perBrain: Record<string, number>;
@@ -53,6 +77,26 @@ export interface UsageSnapshot {
   states: Record<string, BrainState>;
   /** Requests this visitor has spent today. */
   visitor: number;
+}
+
+/** When one provider's daily allowance next refills. */
+export interface ProviderReset {
+  id: BrainProvider;
+  label: string;
+  /** ISO instant of the provider's next midnight. */
+  resetsAt: string;
+}
+
+/** The day bucket and key TTL for a brain, on its provider's clock. */
+function brainClock(
+  brain: LedgerBrain,
+  nowMs: number,
+): { day: string; ttl: number } {
+  const { resetTimeZone } = BRAIN_PROVIDERS[brain.provider];
+  return {
+    day: dayKey(nowMs, resetTimeZone),
+    ttl: secondsUntilMidnight(nowMs, resetTimeZone),
+  };
 }
 
 function brainCountKey(day: string, brainId: string): string {
@@ -65,6 +109,27 @@ function brainStateKey(day: string, brainId: string): string {
 
 function visitorKey(day: string, visitorHash: string): string {
   return `visitor:${day}:${visitorHash}`;
+}
+
+/**
+ * Each provider behind `brains`, once, in the order its first brain appears,
+ * with the instant its allowance next refills.
+ *
+ * Only providers that have a brain in the list are included, so a deployment
+ * without a Gemini key never advertises Gemini's reset.
+ */
+export function providerResets(
+  brains: readonly LedgerBrain[],
+  nowMs: number,
+): ProviderReset[] {
+  const providers = [...new Set(brains.map((brain) => brain.provider))];
+  return providers.map((id) => ({
+    id,
+    label: BRAIN_PROVIDERS[id].label,
+    resetsAt: new Date(
+      nextMidnightMs(nowMs, BRAIN_PROVIDERS[id].resetTimeZone),
+    ).toISOString(),
+  }));
 }
 
 /**
@@ -93,16 +158,14 @@ function toCount(raw: string | null): number {
  *
  * Reads are parallel because they are independent, and a rejected read is
  * treated as "no record" — an unreadable ledger should degrade to optimism
- * (try the brain, let Google decide) rather than locking Dox out.
+ * (try the brain, let the provider decide) rather than locking Dox out.
  */
 export async function readUsage(
   store: UsageStore,
-  brainIds: readonly string[],
+  brains: readonly LedgerBrain[],
   visitorHash: string,
   nowMs: number,
 ): Promise<UsageSnapshot> {
-  const day = ptDayKey(nowMs);
-
   const safeGet = async (key: string): Promise<string | null> => {
     try {
       return await store.get(key);
@@ -112,16 +175,26 @@ export async function readUsage(
     }
   };
 
+  const days = brains.map((brain) => brainClock(brain, nowMs).day);
+
   const [counts, states, visitorRaw] = await Promise.all([
-    Promise.all(brainIds.map((id) => safeGet(brainCountKey(day, id)))),
-    Promise.all(brainIds.map((id) => safeGet(brainStateKey(day, id)))),
-    safeGet(visitorKey(day, visitorHash)),
+    Promise.all(
+      brains.map((brain, index) =>
+        safeGet(brainCountKey(days[index], brain.id)),
+      ),
+    ),
+    Promise.all(
+      brains.map((brain, index) =>
+        safeGet(brainStateKey(days[index], brain.id)),
+      ),
+    ),
+    safeGet(visitorKey(ptDayKey(nowMs), visitorHash)),
   ]);
 
   const perBrain: Record<string, number> = {};
   const stateMap: Record<string, BrainState> = {};
 
-  brainIds.forEach((id, index) => {
+  brains.forEach(({ id }, index) => {
     perBrain[id] = toCount(counts[index]);
     const raw = states[index];
     stateMap[id] = raw === "spent" || raw === "unavailable" ? raw : "ok";
@@ -139,21 +212,25 @@ export async function readUsage(
  */
 export async function recordRequest(
   store: UsageStore,
-  brainId: string,
+  brain: LedgerBrain,
   visitorHash: string,
   nowMs: number,
 ): Promise<void> {
-  const day = ptDayKey(nowMs);
-  const ttl = secondsUntilPtReset(nowMs);
+  const { day, ttl } = brainClock(brain, nowMs);
 
-  const bump = async (key: string): Promise<void> => {
+  const bump = async (key: string, expirationTtl: number): Promise<void> => {
     const next = toCount(await store.get(key)) + 1;
-    await store.put(key, String(next), { expirationTtl: ttl });
+    await store.put(key, String(next), { expirationTtl });
   };
 
+  const writes: [key: string, expirationTtl: number][] = [
+    [brainCountKey(day, brain.id), ttl],
+    [visitorKey(ptDayKey(nowMs), visitorHash), secondsUntilPtReset(nowMs)],
+  ];
+
   await Promise.all(
-    [brainCountKey(day, brainId), visitorKey(day, visitorHash)].map((key) =>
-      bump(key).catch((error) => {
+    writes.map(([key, expirationTtl]) =>
+      bump(key, expirationTtl).catch((error) => {
         // Never fail a chat because bookkeeping failed.
         console.error("usage write failed", key, error);
       }),
@@ -162,25 +239,25 @@ export async function recordRequest(
 }
 
 /**
- * Mark a brain as out for the rest of the Pacific day.
+ * Mark a brain as out for the rest of its provider's day.
  *
- * `spent` comes from a 429 (budget gone, will return at midnight);
- * `unavailable` from a 404/400 (the model does not exist for this key at all).
- * Both are day-scoped: a withdrawn model is re-probed tomorrow, which costs one
+ * `spent` comes from an exhausted quota (it returns at the provider's
+ * midnight); `unavailable` from a model this account cannot call at all. Both
+ * are day-scoped: a withdrawn model is re-probed tomorrow, which costs one
  * request and keeps the registry self-healing rather than needing a code change.
  */
 export async function markBrain(
   store: UsageStore,
-  brainId: string,
+  brain: LedgerBrain,
   state: Exclude<BrainState, "ok">,
   nowMs: number,
 ): Promise<void> {
-  const day = ptDayKey(nowMs);
+  const { day, ttl } = brainClock(brain, nowMs);
   try {
-    await store.put(brainStateKey(day, brainId), state, {
-      expirationTtl: secondsUntilPtReset(nowMs),
+    await store.put(brainStateKey(day, brain.id), state, {
+      expirationTtl: ttl,
     });
   } catch (error) {
-    console.error("usage mark failed", brainId, state, error);
+    console.error("usage mark failed", brain.id, state, error);
   }
 }

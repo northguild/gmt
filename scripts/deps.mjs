@@ -16,10 +16,11 @@
  * Dox works the same way, one level down. Its dependency lines are prose inside each
  * sub-story's description block (`Depends on DOX-B1a (the component) and ...`), and its
  * tracker rows are GitHub issues that bundle several sub-stories. So an issue's cell is the
- * union of its sub-stories' dependencies, mapped back to issue numbers.
+ * union of its sub-stories' dependencies, mapped back to issue numbers. Every Dox story is
+ * done and `context/dox/issues/` no longer exists, so today every Dox cell is `—`.
  */
 
-import { readFileSync, writeFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, readdirSync } from "node:fs";
 
 const DOMINATION = "context/domination/tracker.md";
 const DOMINATION_ISSUES = "context/domination/issues";
@@ -72,9 +73,16 @@ function dependsSentence(paragraph) {
   return paragraph.slice(start);
 }
 
-/** Dependencies each dox sub-story declares, keyed by sub-story ID. */
+/**
+ * Dependencies each dox sub-story declares, keyed by sub-story ID.
+ *
+ * The folder is optional: once every Dox story was done its issue specs were folded into
+ * `context/dox/built.md`, so with no issue files there are no declared dependencies and
+ * every `Blocked by` cell is `—`. New Dox work restores a file here with a `Depends on` line.
+ */
 function doxSubDeps() {
   const out = new Map();
+  if (!existsSync(DOX_ISSUES)) return out;
   for (const file of readdirSync(DOX_ISSUES).filter((f) => f.endsWith(".md"))) {
     const lines = readFileSync(`${DOX_ISSUES}/${file}`, "utf8").split("\n");
     let current = null;

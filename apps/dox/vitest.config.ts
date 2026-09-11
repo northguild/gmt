@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { defineConfig, type Plugin } from "vitest/config";
 
 /**
@@ -48,5 +49,12 @@ export default defineConfig({
       "worker/**/*.test.ts",
     ],
     environment: "node",
+    // Blocks every non-loopback connection, so no test can reach Gemini or
+    // Workers AI and spend real budget. Preloaded with `--import` so it is in
+    // place before any test, setup file or dependency loads. Proven live by
+    // src/test/no-network.test.ts.
+    execArgv: [
+      `--import=${pathToFileURL(path.resolve(import.meta.dirname, "src/test/no-network.mjs")).href}`,
+    ],
   },
 });

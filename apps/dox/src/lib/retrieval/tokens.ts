@@ -4,7 +4,7 @@ import type { RetrievalChunk } from "./types";
  * DOX-C1 (#137) — approximate token count via the widely-used "~4 characters
  * per token" heuristic for English text. AI Elements' `context` component
  * (which wraps `tokenlens` for exact, provider-specific counts) is
- * deliberately not installed (this file's header in DOX-C.md), and the
+ * deliberately not installed, and the
  * provider is chosen per-request behind the AI SDK — an exact count would
  * be exact for only one provider's tokenizer anyway. This is a budgeting
  * estimate, not a billing figure; label it as such wherever it's shown.
@@ -22,9 +22,9 @@ export interface CorpusTokenReport {
   guideChunkCount: number;
 }
 
-/** DOX-C1 (#137) DoD: "Corpus token measurements are recorded in this
- * issue." Computed here so the numbers in DOX-C.md can be regenerated
- * rather than hand-copied whenever the corpus changes. */
+/** Corpus token measurements, computed rather than hand-copied so the figures
+ * quoted in `context/dox/built.md` can be regenerated whenever the corpus
+ * changes. */
 export function measureCorpus(chunks: RetrievalChunk[]): CorpusTokenReport {
   const tokenCounts = chunks.map((c) => estimateTokens(c.text));
   const totalTokens = tokenCounts.reduce((sum, n) => sum + n, 0);
