@@ -2,11 +2,11 @@ import { Temporal } from "@js-temporal/polyfill";
 import {
   fiscalPeriodOfWeek,
   fiscalYearOf,
-  isFiscalPattern,
   zonelessCalendarDate,
 } from "../../internal";
 import { isValidDate } from "../../plain/validate";
 import type { FiscalCalendar } from "../../types";
+import { isValidFiscalPattern } from "../validate";
 
 /** Days in a fiscal week. */
 const DAYS_PER_WEEK = 7;
@@ -47,7 +47,9 @@ const DAYS_PER_WEEK = 7;
  * - `value` must be zoneless — an ISO date or datetime, as `isValidIsoDateLike` accepts. See
  *   `getIsoWeekDate` for why a moment is not accepted here.
  * - Returns null on invalid input, including an unrecognised pattern or a `yearEndsOn` that
- *   is not a plain ISO date.
+ *   is not a plain ISO date. Both share the sentinel with a date that cannot be placed, so
+ *   check the calendar with `isValidFiscalPattern` and `isValidDate` first to tell a
+ *   misconfigured calendar apart from an unusable date.
  *
  * @param value zoneless ISO 8601 date or datetime string (e.g. "2024-06-15")
  * @param calendar { pattern: "4-5-4" | "4-4-5" | "5-4-4", yearEndsOn: ISO date stating the rule }
@@ -68,7 +70,9 @@ export function getFiscalPeriod(
   const pattern = calendar?.pattern;
   const yearEndsOn = calendar?.yearEndsOn;
 
-  if (!isFiscalPattern(pattern) || !isValidDate(yearEndsOn)) return null;
+  if (!isValidFiscalPattern(pattern) || !isValidDate(yearEndsOn)) {
+    return null;
+  }
 
   const date = zonelessCalendarDate(value);
   if (!date) return null;

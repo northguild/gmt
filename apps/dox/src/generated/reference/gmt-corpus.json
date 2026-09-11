@@ -252,6 +252,98 @@
     ]
   },
   {
+    "url": "/reference/calendar/validate/isValidFiscalPattern",
+    "name": "isValidFiscalPattern",
+    "namespace": "calendar",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidFiscalPattern(pattern: unknown): pattern is FiscalPattern",
+    "description": "Return true when `pattern` is a valid FiscalPattern.",
+    "sourcePath": "packages/gmt/src/calendar/validate/isValidFiscalPattern.ts",
+    "examples": [
+      {
+        "call": "isValidFiscalPattern(\"4-5-4\")",
+        "result": "true (the NRF retail calendar)"
+      },
+      {
+        "call": "isValidFiscalPattern(\"4-4-5\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidFiscalPattern(\"5-4-4\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidFiscalPattern(\"4-5-5\")",
+        "result": "false (the shape a 53-week year's last quarter takes, not a pattern)"
+      },
+      {
+        "call": "isValidFiscalPattern(\"454\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidFiscalPattern(\"invalid\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidFiscalPattern(454)",
+        "result": "false"
+      },
+      {
+        "call": "isValidFiscalPattern(null)",
+        "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/calendar/validate/isValidZoneBucketUnit",
+    "name": "isValidZoneBucketUnit",
+    "namespace": "calendar",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidZoneBucketUnit(unit: unknown): unit is ZoneBucketUnit",
+    "description": "Return true when `unit` is a valid ZoneBucketUnit.",
+    "sourcePath": "packages/gmt/src/calendar/validate/isValidZoneBucketUnit.ts",
+    "examples": [
+      {
+        "call": "isValidZoneBucketUnit(\"hour\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidZoneBucketUnit(\"day\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidZoneBucketUnit(\"week\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidZoneBucketUnit(\"month\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidZoneBucketUnit(\"year\")",
+        "result": "false (a calendar year is getQuarter's question)"
+      },
+      {
+        "call": "isValidZoneBucketUnit(\"minute\")",
+        "result": "false (a sub-hour boundary needs no zone)"
+      },
+      {
+        "call": "isValidZoneBucketUnit(\"days\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidZoneBucketUnit(1)",
+        "result": "false"
+      },
+      {
+        "call": "isValidZoneBucketUnit(null)",
+        "result": "false"
+      }
+    ]
+  },
+  {
     "url": "/reference/duration/calculate/absDuration",
     "name": "absDuration",
     "namespace": "duration",

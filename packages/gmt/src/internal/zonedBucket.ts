@@ -9,14 +9,6 @@ const DURATION_FIELD_BY_BUCKET_UNIT = {
   month: "months",
 } as const satisfies Record<ZoneBucketUnit, string>;
 
-/** The four units `floorToZone` and `bucketRange` accept. */
-const ZONE_BUCKET_UNITS: readonly ZoneBucketUnit[] = [
-  "hour",
-  "day",
-  "week",
-  "month",
-];
-
 /** Wall-clock fields that a local day, week or month boundary resets. */
 const MIDNIGHT = {
   hour: 0,
@@ -34,11 +26,6 @@ const MIDNIGHT = {
  * local hour, day, week or month.
  */
 const MAX_TRANSITION_WALKBACK = 4;
-
-/** True when `value` is a unit `floorToZone` and `bucketRange` accept. */
-export function isZoneBucketUnit(value: unknown): value is ZoneBucketUnit {
-  return ZONE_BUCKET_UNITS.includes(value as ZoneBucketUnit);
-}
 
 /** Truncate a wall clock to the start of its `unit`. Pure wall-clock arithmetic. */
 function truncateLocal(

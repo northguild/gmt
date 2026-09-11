@@ -1,12 +1,9 @@
 import { Temporal } from "@js-temporal/polyfill";
-import {
-  isZoneBucketUnit,
-  nextZonedBucketStart,
-  zonedUnitStart,
-} from "../../internal";
+import { nextZonedBucketStart, zonedUnitStart } from "../../internal";
 import { isValidInstant } from "../../precision/validate";
 import type { ZoneBucketUnit } from "../../types";
 import { isValidTimeZone } from "../../zoned/validate";
+import { isValidZoneBucketUnit } from "../validate";
 
 /**
  * Buckets a single call will return before giving up.
@@ -34,7 +31,8 @@ const MAX_BUCKETS = 10_000;
  *   returns `[]`.
  * - Both endpoints are read in `timeZone`. Any bracketed zone they carry is ignored, as in
  *   `floorToZone`.
- * - Weeks start on Monday (ISO 8601).
+ * - Weeks start on Monday (ISO 8601). `unit` is the same four-unit set `floorToZone` takes,
+ *   which `isValidZoneBucketUnit` narrows.
  * - A local boundary that does not exist is not invented: the day Samoa deleted crossing the
  *   date line is absent, a local day whose midnight is skipped starts at 01:00, and in a zone
  *   that falls back by half an hour the local 01:00 hour bucket is 90 minutes long.
@@ -67,7 +65,7 @@ export function bucketRange(
   if (
     !isValidInstant(start) ||
     !isValidInstant(end) ||
-    !isZoneBucketUnit(unit) ||
+    !isValidZoneBucketUnit(unit) ||
     !isValidTimeZone(timeZone)
   ) {
     return [];

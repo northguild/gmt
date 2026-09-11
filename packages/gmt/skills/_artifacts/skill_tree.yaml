@@ -35,6 +35,7 @@ skills:
       - 'northguild/gmt:packages/gmt/src/unix/get/index.ts'
       - 'northguild/gmt:packages/gmt/src/utc/get/index.ts'
       - 'northguild/gmt:packages/gmt/src/calendar/calculate/index.ts'
+      - 'northguild/gmt:packages/gmt/src/calendar/validate/index.ts'
 
   - name: GMT Arithmetic
     slug: gmt-arithmetic
@@ -75,6 +76,7 @@ skills:
       - 'northguild/gmt:packages/gmt/src/utc/convert/index.ts'
       - 'northguild/gmt:packages/gmt/src/instant/convert/index.ts'
       - 'northguild/gmt:packages/gmt/src/calendar/calculate/index.ts'
+      - 'northguild/gmt:packages/gmt/src/calendar/validate/index.ts'
 
   # Consumer-facing composition skills
   - name: GMT Integration

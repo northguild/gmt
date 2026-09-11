@@ -20,6 +20,7 @@ sources:
   - 'northguild/gmt:packages/gmt/src/unix/get/index.ts'
   - 'northguild/gmt:packages/gmt/src/utc/get/index.ts'
   - 'northguild/gmt:packages/gmt/src/calendar/calculate/index.ts'
+  - 'northguild/gmt:packages/gmt/src/calendar/validate/index.ts'
 metadata:
   type: core
   library: '@northguild/gmt'
@@ -68,7 +69,7 @@ input before you act on it.
 - **Comparison**: `isAfterDate`, `isBeforeDate`, `areDatesEqual`,
   `areDatesEqualBy`, `isWeekend`, `isBusinessDay`, `nextWeekday`
 - **Validation**: `isValidDate`, `isValidTime`, `isValidTimeZone`,
-  `isValidZonedDateTime`, `isValidDateInterval`
+  `isValidZonedDateTime`, `isValidDateInterval`, `isValidFiscalPattern`
 
 ## Common pitfalls
 

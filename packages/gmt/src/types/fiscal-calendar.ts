@@ -4,6 +4,9 @@
  * - `"4-5-4"` — the NRF retail calendar, the US retail standard.
  * - `"4-4-5"` — the longer month falls at the end of the quarter.
  * - `"5-4-4"` — the longer month falls at the start of the quarter.
+ *
+ * Narrow a candidate — a pattern out of config, an env var or a form — with
+ * `isValidFiscalPattern`.
  */
 export type FiscalPattern = "4-5-4" | "4-4-5" | "5-4-4";
 

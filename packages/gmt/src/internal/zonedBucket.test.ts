@@ -1,32 +1,10 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { battleTestTimeZones } from "../test";
 import { getStartOfZonedUnit } from "./intervalCountHelpers";
-import { isZoneBucketUnit, nextZonedBucketStart } from "./zonedBucket";
+import { nextZonedBucketStart } from "./zonedBucket";
 
 const zonedAt = (instant: string, timeZone: string) =>
   Temporal.Instant.from(instant).toZonedDateTimeISO(timeZone);
-
-describe("isZoneBucketUnit", () => {
-  it.each`
-    value        | expected
-    ${"hour"}    | ${true}
-    ${"day"}     | ${true}
-    ${"week"}    | ${true}
-    ${"month"}   | ${true}
-    ${"minute"}  | ${false}
-    ${"second"}  | ${false}
-    ${"year"}    | ${false}
-    ${"quarter"} | ${false}
-    ${"days"}    | ${false}
-    ${"Day"}     | ${false}
-    ${""}        | ${false}
-    ${undefined} | ${false}
-    ${null}      | ${false}
-    ${1}         | ${false}
-  `("returns $expected for $value", ({ value, expected }) => {
-    expect(isZoneBucketUnit(value)).toBe(expected);
-  });
-});
 
 describe("nextZonedBucketStart", () => {
   it.each`

@@ -3,30 +3,10 @@ import {
   fiscalPeriodOfWeek,
   fiscalYearEndIn,
   fiscalYearOf,
-  isFiscalPattern,
 } from "./fiscalCalendar";
 
 /** "The Saturday nearest to January 31" — the NRF 4-5-4 rule, stated as a date. */
 const nrfAnchor = Temporal.PlainDate.from("2026-01-31");
-
-describe("isFiscalPattern", () => {
-  it.each`
-    value        | expected
-    ${"4-5-4"}   | ${true}
-    ${"4-4-5"}   | ${true}
-    ${"5-4-4"}   | ${true}
-    ${"4-5-5"}   | ${false}
-    ${"454"}     | ${false}
-    ${"4-5-4 "}  | ${false}
-    ${""}        | ${false}
-    ${undefined} | ${false}
-    ${null}      | ${false}
-    ${454}       | ${false}
-    ${["4-5-4"]} | ${false}
-  `("returns $expected for $value", ({ value, expected }) => {
-    expect(isFiscalPattern(value)).toBe(expected);
-  });
-});
 
 describe("fiscalYearEndIn", () => {
   // Every year end the NRF publishes for its 4-5-4 calendar, 2017 through 2028.

@@ -27,7 +27,6 @@ export {
   fiscalPeriodOfWeek,
   fiscalYearEndIn,
   fiscalYearOf,
-  isFiscalPattern,
 } from "./fiscalCalendar";
 export { floorDivide } from "./floorDivide";
 export {
@@ -107,9 +106,5 @@ export { resolveDateTimeUnit } from "./resolveDateTimeUnit";
 export { resolveDurationUnit } from "./resolveDurationUnit";
 export { resolveOverflow } from "./resolveOverflow";
 export { resolveRelativeRounding } from "./resolveRelativeRounding";
-export {
-  isZoneBucketUnit,
-  nextZonedBucketStart,
-  zonedUnitStart,
-} from "./zonedBucket";
+export { nextZonedBucketStart, zonedUnitStart } from "./zonedBucket";
 export { zonelessCalendarDate } from "./zonelessCalendarDate";

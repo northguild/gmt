@@ -92,6 +92,7 @@ skills:
       - getOrdinalDate
       - getQuarter
       - getFiscalPeriod
+      - isValidFiscalPattern
     tasks:
       - Get current date/time/timestamp as ISO strings
       - Parse individual components from date/time strings
@@ -218,6 +219,7 @@ skills:
       - getDstTransitions
       - floorToZone
       - bucketRange
+      - isValidZoneBucketUnit
     tasks:
       - Get current time in a timezone
       - Format datetime in a timezone

@@ -1,8 +1,9 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { isZoneBucketUnit, zonedUnitStart } from "../../internal";
+import { zonedUnitStart } from "../../internal";
 import { isValidInstant } from "../../precision/validate";
 import type { ZoneBucketUnit } from "../../types";
 import { isValidTimeZone } from "../../zoned/validate";
+import { isValidZoneBucketUnit } from "../validate";
 
 /**
  * Floor an instant to the start of the `unit` containing it **in `timeZone`**, and return
@@ -14,7 +15,8 @@ import { isValidTimeZone } from "../../zoned/validate";
  * GMT has no ambient one and must not acquire one.
  *
  * - `unit` is `"hour"`, `"day"`, `"week"` or `"month"`. Weeks start on Monday (ISO 8601),
- *   matching `startOfZoned` and `intervalCountZoned`.
+ *   matching `startOfZoned` and `intervalCountZoned`. `isValidZoneBucketUnit` narrows a
+ *   candidate unit, so a unit out of config can be told apart from a bad instant.
  * - `value` is any instant `isValidInstant` accepts — `Z`, an offset, or a bracketed zone.
  *   Only its instant is read: a bracketed zone in `value` is *not* the zone the boundary is
  *   computed in, `timeZone` is, and the two may differ freely.
@@ -47,7 +49,7 @@ export function floorToZone(
 ): string {
   if (
     !isValidInstant(value) ||
-    !isZoneBucketUnit(unit) ||
+    !isValidZoneBucketUnit(unit) ||
     !isValidTimeZone(timeZone)
   ) {
     return "";

@@ -30,14 +30,6 @@ const YEAR_END_SEARCH_OFFSETS = [-1, 0, 1, 2];
 /** Half the width of the 7-day window a "nearest weekday" year end can land in. */
 const NEAREST_WEEKDAY_RADIUS = 3;
 
-/** The three supported fiscal shapes, in the order the NRF documents them. */
-const FISCAL_PATTERNS: readonly FiscalPattern[] = ["4-5-4", "4-4-5", "5-4-4"];
-
-/** True when `value` is one of the three supported fiscal shapes. */
-export function isFiscalPattern(value: unknown): value is FiscalPattern {
-  return FISCAL_PATTERNS.includes(value as FiscalPattern);
-}
-
 /**
  * Return the fiscal year end falling in calendar year `year`, under the rule `anchor` states.
  *

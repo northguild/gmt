@@ -22,6 +22,7 @@ sources:
   - 'northguild/gmt:packages/gmt/src/utc/convert/index.ts'
   - 'northguild/gmt:packages/gmt/src/instant/convert/index.ts'
   - 'northguild/gmt:packages/gmt/src/calendar/calculate/index.ts'
+  - 'northguild/gmt:packages/gmt/src/calendar/validate/index.ts'
 metadata:
   type: core
   library: '@northguild/gmt'
@@ -100,7 +101,8 @@ converting between time zones, or doing arithmetic that must respect DST.
   `getTimeZoneOffset`, `parseTimezoneFromZoned`
 - **Offset-preserving instants**: `toOffsetInstant`, `fromOffsetInstant`
 - **Local-time resolution**: `classifyLocal`, `resolveLocal`
-- **Zone-aware buckets**: `floorToZone`, `bucketRange`
+- **Zone-aware buckets**: `floorToZone`, `bucketRange`,
+  `isValidZoneBucketUnit`
 
 ## References
 

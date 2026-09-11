@@ -9,6 +9,8 @@ export const referenceRoutes: RouteManifest = new Set([
   "/reference/calendar/calculate/getIsoWeekDate",
   "/reference/calendar/calculate/getOrdinalDate",
   "/reference/calendar/calculate/getQuarter",
+  "/reference/calendar/validate/isValidFiscalPattern",
+  "/reference/calendar/validate/isValidZoneBucketUnit",
   "/reference/duration/calculate/absDuration",
   "/reference/duration/calculate/addDuration",
   "/reference/duration/calculate/durationAs",

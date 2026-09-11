@@ -53,4 +53,4 @@ bucketRange("2024-03-09T05:00:00Z", "2024-03-12T04:00:00Z", "day", "America/New_
   all 418 IANA zones.
 - **`bucketRange` is half-open, `[start, end)`**, so an `end` landing exactly on a boundary does not open that bucket; a zero-length range mid-bucket still returns the one bucket holding it. It returns at most 10,000 boundaries and `[]` past that, since an unbounded hour walk over Temporal's ±273,790-year range would exhaust memory.
 - Weeks start on Monday (ISO 8601) in both `floorToZone` and `bucketRange`, matching `startOfZoned` and `intervalCountZoned`.
-- Also exported: the `FiscalCalendar`, `FiscalPattern` and `ZoneBucketUnit` types.
+- Also exported: the `FiscalCalendar`, `FiscalPattern` and `ZoneBucketUnit` types, and the type guards that narrow the two unions — `isValidFiscalPattern` and `isValidZoneBucketUnit`. Both `getFiscalPeriod` and `floorToZone`/`bucketRange` return their sentinel for an unrecognised pattern or unit, which is the same sentinel a date or instant they cannot use returns; a pattern or unit read from config, an env var or a form is a bare string until one of these narrows it.
