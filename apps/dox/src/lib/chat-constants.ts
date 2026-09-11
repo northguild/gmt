@@ -149,21 +149,36 @@ export const IDLE_TIMEOUT_MS = 30_000;
 /**
  * Corpus scale, as shown to the reader on the empty chat screen.
  *
- * Hardcoded rather than derived: the real counts come from
- * `lib/retrieval/corpus.ts`, which reads the content collection through
- * `import.meta.glob` and pulls in the whole 536 KB generated corpus — none of
- * which belongs in the chat island's bundle for the sake of three numbers.
+ * **Generated, not hand-typed** — `scripts/build-corpus-counts.ts` derives these
+ * from the same builders that assemble the Worker's corpus, and `generate` runs
+ * before `test`, `check` and `build`.
  *
- * `corpus-summary.test.ts` asserts these against the real corpus, so the
- * trade is "hardcoded but cannot silently drift" rather than "hardcoded".
- * They had already drifted once — the screen claimed 591/755 after the corpus
- * grew to 597/761.
+ * They were hardcoded until 2026-09-11, because deriving them where they are
+ * shown would drag the 536 KB generated corpus into the chat island's bundle
+ * for the sake of three numbers. That trade was right; maintaining them by hand
+ * was not. The guard test fired on three separate merges as the library grew —
+ * 591/755, then 597/761, then 618/782 — each time demanding a manual edit that
+ * no human judgement informed. Re-exported here so every consumer keeps one
+ * import site, and the bundle still carries three integers rather than a corpus.
+ *
+ * `src/generated/` is gitignored, so these are rebuilt rather than committed —
+ * there is no stale file to go out of date. `corpus-summary.test.ts` checks the
+ * generated figures against a freshly built corpus, which guards the one seam
+ * left: the generator discovers guides with `fs`, the corpus with Vite's glob.
  */
-export const CORPUS_FUNCTION_COUNT = 597;
-export const CORPUS_GUIDE_COUNT = 164;
-export const CORPUS_CHUNK_COUNT = CORPUS_FUNCTION_COUNT + CORPUS_GUIDE_COUNT;
+export {
+  CORPUS_CHUNK_COUNT,
+  CORPUS_FUNCTION_COUNT,
+  CORPUS_GUIDE_COUNT,
+} from "~/generated/corpus-counts";
 
-export const CORPUS_SUMMARY = `${CORPUS_FUNCTION_COUNT} functions · ${CORPUS_GUIDE_COUNT} guide sections · ${CORPUS_CHUNK_COUNT} chunks indexed`;
+import {
+  CORPUS_CHUNK_COUNT as CHUNKS,
+  CORPUS_FUNCTION_COUNT as FUNCTIONS,
+  CORPUS_GUIDE_COUNT as GUIDES,
+} from "~/generated/corpus-counts";
+
+export const CORPUS_SUMMARY = `${FUNCTIONS} functions · ${GUIDES} guide sections · ${CHUNKS} chunks indexed`;
 
 /**
  * The pills on the empty chat screen.

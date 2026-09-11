@@ -1,5 +1,5 @@
 import GithubSlugger from "github-slugger";
-import type { GuideSource } from "./guide-sources";
+import type { GuideSource } from "./guide-source-parse";
 import type { RetrievalChunk } from "./types";
 
 // A line starting with exactly "## " — guides in this repo use `##` for every

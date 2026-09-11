@@ -4,10 +4,19 @@
  *
  * `CORPUS_SUMMARY` is a hardcoded string in the client bundle — deriving it
  * would drag the 536 KB generated corpus and the content collection into the
- * chat island for the sake of three numbers. This is the guard that makes the
- * hardcoding safe. It exists because the numbers had already gone stale: the
- * screen advertised "591 functions · 755 chunks" against a corpus that had
- * grown to 597 / 761.
+ * chat island for the sake of three numbers.
+ *
+ * The numbers are now **generated** (`scripts/build-corpus-counts.ts`), so this
+ * no longer demands a hand-edit whenever the library grows — which it did on
+ * three separate merges: 591/755, then 597/761, then 618/782.
+ *
+ * What it guards now is the one seam the generator could not remove. The counts
+ * are derived under Node, walking the guides tree with `fs`; the corpus the
+ * Worker and the tests actually search is built under Vite, from
+ * `import.meta.glob`. Both call the same `toGuideSource` and the same
+ * `buildGuideChunks`, so only the *file discovery* differs — and this asserts
+ * the two see the same set. A guide the glob picks up and the walk misses (or
+ * the reverse) would otherwise make the advertised figure quietly wrong.
  */
 import {
   CORPUS_CHUNK_COUNT,
