@@ -4,14 +4,23 @@ import type { LanguageModelV4StreamPart } from "@ai-sdk/provider";
 import { createChatHandler, type ChatHandlerDeps } from "./chat-handler";
 import { resetRateLimitState } from "./rate-limit";
 import type { RetrievalChunk } from "../src/lib/retrieval/types";
-import { BRAINS, VISITOR_DAILY_MAX } from "../src/lib/chat-constants";
+import {
+  BRAINS,
+  VISITOR_DAILY_MAX,
+  type Brain,
+} from "../src/lib/chat-constants";
 import {
   hashVisitor,
   markBrain,
   recordRequest,
   type UsageStore,
 } from "./usage";
-import { ptDayKey } from "../src/lib/pt-day";
+import {
+  dayKey,
+  nextMidnightMs,
+  ptDayKey,
+  secondsUntilMidnight,
+} from "../src/lib/pt-day";
 import { DOX_TOOL_NAMES, ENABLED_TOOL_NAMES } from "../src/lib/dox-tools";
 import { APICallError } from "ai";
 
@@ -427,7 +436,7 @@ describe("brains, budgets and failover", () => {
     // This is the whole point of the feature: one model's daily allowance
     // running out must not take Dox down, because the allowance is per model.
     const usage = fakeUsage();
-    await markBrain(usage, BRAINS[0].id, "spent", Date.now());
+    await markBrain(usage, BRAINS[0], "spent", Date.now());
 
     const { asked, resolveModel } = spyResolver();
     const handler = makeHandler({ resolveModel, usage });
@@ -453,7 +462,7 @@ describe("brains, budgets and failover", () => {
 
   it("falls through rather than refusing when the picked brain is spent", async () => {
     const usage = fakeUsage();
-    await markBrain(usage, BRAINS[2].id, "spent", Date.now());
+    await markBrain(usage, BRAINS[2], "spent", Date.now());
 
     const { asked, resolveModel } = spyResolver();
     const handler = makeHandler({ resolveModel, usage });
@@ -469,13 +478,14 @@ describe("brains, budgets and failover", () => {
   });
 
   it("reports exhaustion as a sentinel state with a reset time, not an error", async () => {
+    const NOW = Date.UTC(2026, 5, 15, 19, 0, 0); // noon Pacific
     const usage = fakeUsage();
     for (const brain of BRAINS) {
-      await markBrain(usage, brain.id, "spent", Date.now());
+      await markBrain(usage, brain, "spent", NOW);
     }
 
     const { resolveModel } = spyResolver();
-    const handler = makeHandler({ resolveModel, usage });
+    const handler = makeHandler({ resolveModel, usage, now: () => NOW });
 
     const response = await handler(
       chatRequest({ messages: [userMessage("what is a DST gap")] }),
@@ -483,9 +493,37 @@ describe("brains, budgets and failover", () => {
     expect(response.status).toBe(429);
 
     const body = (await response.json()) as Record<string, unknown>;
-    expect(String(body.error)).toMatch(/midnight Pacific/);
-    // The reader is told when it comes back, not just that it is gone.
-    expect(typeof body.resetsAt).toBe("string");
+    // The reader is told when it comes back, not just that it is gone — and
+    // with Gemini on Pacific time and Workers AI on UTC (DOX-C4), that is the
+    // soonest refill, UTC midnight here, not "midnight Pacific".
+    expect(body.resetsAt).toBe(
+      new Date(nextMidnightMs(NOW, "UTC")).toISOString(),
+    );
+    expect(String(body.error)).not.toMatch(/Pacific|UTC|midnight/);
+  });
+
+  it("gives Pacific midnight as the soonest refill when only Gemini is configured", async () => {
+    const NOW = Date.UTC(2026, 5, 15, 19, 0, 0);
+    const geminiOnly = BRAINS.filter((brain) => brain.provider === "google");
+    const usage = fakeUsage();
+    for (const brain of geminiOnly) {
+      await markBrain(usage, brain, "spent", NOW);
+    }
+
+    const handler = makeHandler({
+      ...spyResolver(),
+      brains: geminiOnly,
+      usage,
+      now: () => NOW,
+    });
+
+    const response = await handler(
+      chatRequest({ messages: [userMessage("what is a DST gap")] }),
+    );
+    const body = (await response.json()) as Record<string, unknown>;
+    expect(body.resetsAt).toBe(
+      new Date(Date.UTC(2026, 5, 16, 7, 0, 0)).toISOString(),
+    );
   });
 
   it("records a request against the brain and the visitor", async () => {
@@ -506,7 +544,7 @@ describe("brains, budgets and failover", () => {
     const usage = fakeUsage();
     const hash = await hashVisitor("9.9.9.9");
     for (let i = 0; i < VISITOR_DAILY_MAX; i++) {
-      await recordRequest(usage, BRAINS[0].id, hash, Date.now());
+      await recordRequest(usage, BRAINS[0], hash, Date.now());
     }
 
     const { asked, resolveModel } = spyResolver();
@@ -524,7 +562,7 @@ describe("brains, budgets and failover", () => {
     const usage = fakeUsage();
     const hash = await hashVisitor("9.9.9.9");
     for (let i = 0; i < VISITOR_DAILY_MAX * 2; i++) {
-      await recordRequest(usage, BRAINS[0].id, hash, Date.now());
+      await recordRequest(usage, BRAINS[0], hash, Date.now());
     }
 
     const { asked, resolveModel } = spyResolver();
@@ -680,7 +718,8 @@ describe("brains, budgets and failover", () => {
     );
     expect(response.status).toBe(429);
     const body = (await response.json()) as Record<string, unknown>;
-    expect(String(body.error)).toMatch(/midnight Pacific/);
+    expect(String(body.error)).toMatch(/free allowance/);
+    expect(typeof body.resetsAt).toBe("string");
   });
 
   it("does not burn the candidate list on an unrelated failure", async () => {
@@ -762,5 +801,160 @@ describe("brains, budgets and failover", () => {
     );
     expect(response.status).toBe(200);
     expect(asked).toEqual([BRAINS[0].id]);
+  });
+
+  describe("Workers AI brains (DOX-C4)", () => {
+    const NOW = Date.UTC(2026, 5, 15, 19, 0, 0); // noon Pacific
+    const cfBrains = BRAINS.filter((brain) => brain.provider === "workers-ai");
+    const geminiBrain = BRAINS.find((brain) => brain.provider === "google")!;
+    /** Two Workers AI brains, whatever `BRAINS` currently enables — the shared
+     * pool behaviour under test only exists when there is more than one. */
+    const cfPool: Brain[] = [
+      cfBrains[0],
+      { ...cfBrains[0], id: "cf-second", label: "Second · CF" },
+    ];
+
+    function failing(error: unknown) {
+      return new MockLanguageModelV4({
+        doStream: async () => {
+          throw error;
+        },
+      });
+    }
+
+    it("retires every Workers AI brain at once when the shared allocation is gone", async () => {
+      // The 10,000 Neurons are per account. One brain saying so is all of them
+      // saying so; asking the other three would spend three doomed requests.
+      const allocationGone = new APICallError({
+        message:
+          "4006: you have used up your daily free allocation of 10,000 neurons, please upgrade to Cloudflare's Workers Paid plan",
+        url: `workers-ai:binding/run/${cfBrains[0].model}`,
+        requestBodyValues: {},
+      });
+
+      const ttls = new Map<string, number | undefined>();
+      const usage: UsageStore = {
+        async get() {
+          return null;
+        },
+        async put(key, _value, options) {
+          ttls.set(key, options?.expirationTtl);
+        },
+      };
+
+      const asked: string[] = [];
+      const handler = makeHandler({
+        brains: [...cfPool, geminiBrain],
+        usage,
+        now: () => NOW,
+        resolveModel: (brainId) => {
+          asked.push(brainId);
+          return brainId === geminiBrain.id
+            ? fakeModel("Gemini picked it up.")
+            : failing(allocationGone);
+        },
+      });
+
+      const response = await handler(
+        chatRequest({ messages: [userMessage("what is a DST gap")] }),
+      );
+      expect(response.status).toBe(200);
+      expect(await response.text()).toContain("Gemini picked it up.");
+      expect(asked).toEqual([cfBrains[0].id, geminiBrain.id]);
+
+      // Every Workers AI brain is marked — bucketed by the UTC day and expiring
+      // at the UTC midnight its pool refills on.
+      for (const brain of cfPool) {
+        expect(ttls.get(`state:${dayKey(NOW, "UTC")}:${brain.id}`)).toBe(
+          secondsUntilMidnight(NOW, "UTC"),
+        );
+      }
+    });
+
+    it("moves past a capacity 429 without retiring the rest of the pool", async () => {
+      // 3040 is one model briefly out of capacity, not the account's day.
+      const busy = new APICallError({
+        message: "3040: No more data centers to forward the request to",
+        url: `workers-ai:binding/run/${cfBrains[0].model}`,
+        requestBodyValues: {},
+        statusCode: 429,
+        isRetryable: false,
+        data: { workersAIErrorCode: 3040 },
+      });
+
+      const asked: string[] = [];
+      const handler = makeHandler({
+        brains: cfPool,
+        resolveModel: (brainId) => {
+          asked.push(brainId);
+          return brainId === cfPool[0].id
+            ? failing(busy)
+            : fakeModel("The next Workers AI brain answered.");
+        },
+      });
+
+      const response = await handler(
+        chatRequest({ messages: [userMessage("what is a DST gap")] }),
+      );
+      expect(await response.text()).toContain(
+        "The next Workers AI brain answered.",
+      );
+      expect(asked).toEqual([cfPool[0].id, cfPool[1].id]);
+    });
+
+    it("passes the brain's output cap, since Workers AI's default truncates at 256 tokens", async () => {
+      const model = fakeModel("capped");
+      const handler = makeHandler({
+        brains: cfBrains,
+        resolveModel: () => model,
+      });
+
+      await (
+        await handler(
+          chatRequest({ messages: [userMessage("what is a DST gap")] }),
+        )
+      ).text();
+      expect(cfBrains[0].maxOutputTokens).toBeGreaterThan(256);
+      expect(model.doStreamCalls[0].maxOutputTokens).toBe(
+        cfBrains[0].maxOutputTokens,
+      );
+    });
+
+    it("keeps a reasoning model's thinking out of the reader's stream", async () => {
+      // DoxChat renders no reasoning part; forwarded, it would be invisible yet
+      // re-sent upstream — and re-billed — on every later turn.
+      const model = new MockLanguageModelV4({
+        doStream: async () => ({
+          stream: convertArrayToReadableStream<LanguageModelV4StreamPart>([
+            { type: "stream-start", warnings: [] },
+            { type: "reasoning-start", id: "r" },
+            { type: "reasoning-delta", id: "r", delta: "PRIVATE-THINKING" },
+            { type: "reasoning-end", id: "r" },
+            ...textStreamParts("The visible answer.").slice(1),
+          ]),
+        }),
+      });
+      const handler = makeHandler({ resolveModel: () => model });
+
+      const body = await (
+        await handler(
+          chatRequest({ messages: [userMessage("what is a DST gap")] }),
+        )
+      ).text();
+      expect(body).toContain("The visible answer.");
+      expect(body).not.toContain("PRIVATE-THINKING");
+    });
+
+    it("only tries the brains it is given", async () => {
+      const { asked, resolveModel } = spyResolver();
+      const handler = makeHandler({ brains: cfBrains, resolveModel });
+
+      await (
+        await handler(
+          chatRequest({ messages: [userMessage("what is a DST gap")] }),
+        )
+      ).text();
+      expect(asked).toEqual([cfBrains[0].id]);
+    });
   });
 });

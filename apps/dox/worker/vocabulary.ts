@@ -1,7 +1,7 @@
 // DOX-C2 (#138) — "vocabulary" for the system prompt: the consumer-facing
 // packages/gmt/skills/*/SKILL.md content, concatenated so the model learns
-// the library's terminology before reading reference signatures (DOX-C.md's
-// system-prompt ordering).
+// the library's terminology before reading reference signatures (see the
+// section order in worker/system-prompt.ts).
 //
 // Deliberately excludes packages/gmt/skills/contributor/*/SKILL.md (issue
 // creation, PR contribution, new-method implementation, unit-test

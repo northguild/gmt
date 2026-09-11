@@ -19,6 +19,14 @@
  * path, not a race — and when the ledger is unavailable there is no memory
  * between requests at all, so *every* request picks the same exhausted brain.
  * The ledger is an optimisation here, never the mechanism.
+ *
+ * ## Two kinds of allowance (DOX-C4)
+ *
+ * Gemini's allowance is per model, so one brain running out says nothing about
+ * the next. Workers AI's is one pool of Neurons per account, so one `workers-ai`
+ * brain reporting an exhausted allocation means every one of them is out — and
+ * `openFirstWorkingBrain` retires them together instead of spending a doomed
+ * request on each.
  */
 import {
   APICallError,
@@ -33,6 +41,7 @@ import {
   BRAINS,
   DEFAULT_BRAIN_ID,
   type Brain,
+  type BrainProvider,
 } from "../src/lib/chat-constants";
 import type { BrainState, UsageSnapshot } from "./usage";
 
@@ -51,26 +60,30 @@ export interface BrainChoice {
  * rather than refusing. The reader asked for a *better answer*, not for a
  * specific HTTP outcome; failing their request to honour a preference they
  * cannot see the cost of would be pedantic.
+ *
+ * `pool` is the brains this deployment can reach (see worker/index.ts's
+ * `configuredBrains`); a requested brain outside it is treated as no request.
  */
 export function chooseBrain(
   snapshot: UsageSnapshot,
   requestedId?: string,
+  pool: readonly Brain[] = BRAINS,
 ): BrainChoice {
   const isUsable = (brain: Brain): boolean =>
     (snapshot.states[brain.id] ?? "ok") === "ok";
 
   const requested = requestedId
-    ? BRAINS.find((brain) => brain.id === requestedId)
+    ? pool.find((brain) => brain.id === requestedId)
     : undefined;
   if (requested && isUsable(requested))
     return { brain: requested, exhausted: false };
 
-  const preferred = BRAINS.find((brain) => brain.id === DEFAULT_BRAIN_ID);
+  const preferred = pool.find((brain) => brain.id === DEFAULT_BRAIN_ID);
   if (preferred && isUsable(preferred) && !requestedId) {
     return { brain: preferred, exhausted: false };
   }
 
-  const next = BRAINS.find(isUsable);
+  const next = pool.find(isUsable);
   return next ? { brain: next, exhausted: false } : { exhausted: true };
 }
 
@@ -103,7 +116,54 @@ export function brainStateFromError(
   if (error.statusCode === 404 || error.statusCode === 400)
     return "unavailable";
 
+  if (isWorkersAIError(error)) {
+    // An exhausted allocation reported as `4006` arrives with NO status:
+    // `workers-ai-provider` 4.0.0 maps the documented 3036 to 429 (caught
+    // above) but has no entry for 4006. Left unclassified it would rethrow and
+    // end the request instead of failing over.
+    if (isWorkersAIAllocationExhausted(error)) return "spent";
+
+    // A Workers AI 403 is about the model, not a credential — 5018/3041 "not
+    // allowed to access this model", 5035 "requires a Workers Paid plan". A
+    // Gemini 403 stays unclassified, because there it means a bad key.
+    if (error.statusCode === 403) return "unavailable";
+  }
+
   return undefined;
+}
+
+/**
+ * Workers AI's daily-allocation failure, in both shapes it arrives in: code
+ * 3036 (documented; the provider maps it to 429) and code 4006 (undocumented,
+ * unmapped, and widely reported on Cloudflare's community forum as "you have
+ * used up your daily free allocation of 10,000 neurons").
+ */
+const ALLOCATION_EXHAUSTED = /\b(3036|4006)\b|daily free allocation/i;
+
+/**
+ * True when a failure means the account's whole Neuron pool is gone for the
+ * day, rather than one model being briefly unable to answer.
+ *
+ * The distinction is why this is separate from `brainStateFromError`: a 3040
+ * "no more data centers" is also a 429, and retiring every Workers AI brain
+ * for a capacity blip on one would throw away the rest of the day's pool.
+ */
+export function isWorkersAIAllocationExhausted(rawError: unknown): boolean {
+  const error = unwrapModelError(rawError);
+  if (!APICallError.isInstance(error) || !isWorkersAIError(error)) return false;
+
+  const data = error.data as { workersAIErrorCode?: number } | undefined;
+  return (
+    data?.workersAIErrorCode === 3036 ||
+    ALLOCATION_EXHAUSTED.test(error.message)
+  );
+}
+
+/** `workers-ai-provider` stamps binding errors with a `workers-ai:` pseudo-URL
+ * (`normalizeBindingError`), which is the only provider-neutral way to tell
+ * them apart from Google's. */
+function isWorkersAIError(error: APICallError): boolean {
+  return error.url.startsWith("workers-ai:");
 }
 
 /** Remaining requests for the badge. Advisory — see usage.ts. */
@@ -149,18 +209,19 @@ export interface BrainAttempt {
 export function orderCandidates(
   snapshot: UsageSnapshot,
   requestedId?: string,
+  pool: readonly Brain[] = BRAINS,
 ): Brain[] {
   const healthy: Brain[] = [];
   const known0ut: Brain[] = [];
 
   const requested = requestedId
-    ? BRAINS.find((brain) => brain.id === requestedId)
+    ? pool.find((brain) => brain.id === requestedId)
     : undefined;
 
   const isHealthy = (brain: Brain) =>
     (snapshot.states[brain.id] ?? "ok") === "ok";
 
-  for (const brain of BRAINS) {
+  for (const brain of pool) {
     if (brain.id === requested?.id) continue;
     (isHealthy(brain) ? healthy : known0ut).push(brain);
   }
@@ -202,7 +263,17 @@ export async function openFirstWorkingBrain({
   tools?: ToolSet;
   onBrainOut: (brainId: string, state: Exclude<BrainState, "ok">) => void;
 }): Promise<BrainAttempt | undefined> {
+  const exhaustedProviders = new Set<BrainProvider>();
+
   for (const brain of candidates) {
+    // One Workers AI brain reporting an exhausted allocation means all of them
+    // are out: the 10,000 Neurons are per account, not per model. Mark the
+    // rest without spending a doomed request on each.
+    if (exhaustedProviders.has(brain.provider)) {
+      onBrainOut(brain.id, "spent");
+      continue;
+    }
+
     // `await result.warnings` rejects with a bare `NoOutputGeneratedError` that
     // carries NO cause — verified 2026-09-10 — so the provider's actual error
     // is unrecoverable from the rejection alone. `onError` is where the real
@@ -214,6 +285,22 @@ export async function openFirstWorkingBrain({
       instructions,
       messages,
       tools,
+      // Workers AI defaults `max_tokens` to 256, which cuts a Dox answer off
+      // mid-sentence; its brains carry an explicit cap. Unset for Gemini.
+      maxOutputTokens: brain.maxOutputTokens,
+      // One structured line per answered request, so real token counts — and
+      // from them, real Neuron cost — can be read from `wrangler dev` or
+      // Workers Logs instead of estimated. `scripts/probe-brains.ts` parses it.
+      onFinish: ({ usage }) => {
+        console.log(
+          "dox-usage",
+          JSON.stringify({
+            brain: brain.id,
+            inputTokens: usage.inputTokens,
+            outputTokens: usage.outputTokens,
+          }),
+        );
+      },
       /* No `stopWhen`. The default is `isStepCount(1)`, which is exactly what
          is wanted: the tool's `execute` runs inside step 1 and the stream ends.
          Raising it would add a second upstream call *after* headers are already
@@ -247,6 +334,9 @@ export async function openFirstWorkingBrain({
         underlying,
       );
       onBrainOut(brain.id, state);
+      if (isWorkersAIAllocationExhausted(underlying)) {
+        exhaustedProviders.add(brain.provider);
+      }
     }
   }
 

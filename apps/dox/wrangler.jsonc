@@ -29,4 +29,16 @@
       "preview_id": "32da5cd03f274cdc9f4b0291b7e8ecfb",
     },
   ],
+  // DOX-C4 (#240) — Workers AI, Dox's second free brain pool. worker/index.ts
+  // only offers `workers-ai` brains when this binding exists, so removing it
+  // shrinks the brain list rather than breaking the chat.
+  //
+  // `remote: true` is stated rather than implied: AI models never run locally,
+  // so `wrangler dev` spends the account's real 10,000-Neuron daily allocation
+  // exactly as production does.
+  //
+  // Staying on the Workers **Free** plan is what keeps this free — there an
+  // exhausted allocation fails with an error, while on Workers Paid it bills.
+  // See WORKERS_AI_DAILY_NEURONS in src/lib/chat-constants.ts.
+  "ai": { "binding": "AI", "remote": true },
 }

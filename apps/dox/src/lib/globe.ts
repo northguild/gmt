@@ -2,9 +2,8 @@
  * DOX-E1a — the interactive globe.
  *
  * Rendering approach: `d3-geo` `geoOrthographic` drawn to a `<canvas>`. Not
- * WebGL. The decision, the alternatives weighed, and the criteria for
- * revisiting it are recorded in
- * `context/dox/reference/findings/globe-rendering-approach.md`. In short:
+ * WebGL. The decision and the criteria for revisiting it are in
+ * `context/dox/built.md` (Tier 4). In short:
  * SVG/canvas orthographic gives draggable rotation, scroll-wheel zoom,
  * hit-testing and a `prefers-reduced-motion` / no-WebGL story essentially for
  * free, at ~1/5 the JS weight of a three.js scene, and the site's aesthetic is

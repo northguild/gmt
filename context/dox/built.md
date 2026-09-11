@@ -18,8 +18,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   Per-function paths are forbidden by the exports map, and namespace barrels re-export the
   2.98 MB Temporal polyfill.
 - **Counts drift.** Derive them from source and assert them in tests; never hardcode them.
-- **Tests never touch the network, and never spend AI budget.** `src/test/no-network.ts`
-  (a Vitest setup file) blocks every non-loopback connection; fake the model
+- **Tests never touch the network, and never spend AI budget.** `src/test/no-network.mjs`,
+  preloaded into every test worker through Vitest's `execArgv`, blocks every non-loopback
+  connection before any test code loads. Fake the model
   (`MockLanguageModelV4`), the `AI` binding, and `fetch`. Only `pnpm dev`, `pnpm dev:chat`,
   `scripts/probe-brains.ts` and real readers spend quota.
 - **React lives only inside `/dox`.** Every other page is Astro plus plain-DOM modules.

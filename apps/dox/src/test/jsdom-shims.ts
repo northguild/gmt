@@ -47,6 +47,12 @@ export function installJsdomShims(): void {
     };
   }
 
+  /* cmdk (the reset clock's zone search) scrolls its active item into view on
+     every selection change. jsdom has no layout, so the method is missing. */
+  if (!Element.prototype.scrollIntoView) {
+    Element.prototype.scrollIntoView = function () {};
+  }
+
   if (!globalThis.requestAnimationFrame) {
     globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) =>
       setTimeout(
