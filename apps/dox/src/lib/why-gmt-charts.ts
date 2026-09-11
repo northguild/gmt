@@ -207,9 +207,7 @@ export function namespaceTooltip(
     return {
       title: row.namespace,
       color,
-      rows: [
-        { label: "Exported patterns", value: formatCount(row.count) },
-      ],
+      rows: [{ label: "Exported patterns", value: formatCount(row.count) }],
     };
   }
   return {

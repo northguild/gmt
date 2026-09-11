@@ -220,10 +220,7 @@ export function competitorExecutionRange(): { min: number; max: number } {
 
 /** Every alternative's CI executions, summed. */
 export function combinedCompetitorExecutions(): number {
-  return competitorComparisons.reduce(
-    (sum, l) => sum + l.stats.executions,
-    0,
-  );
+  return competitorComparisons.reduce((sum, l) => sum + l.stats.executions, 0);
 }
 
 /** The alternative whose own suite has the most tests. */

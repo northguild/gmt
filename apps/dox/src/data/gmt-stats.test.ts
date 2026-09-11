@@ -39,9 +39,7 @@ describe("claims the why-gmt copy makes", () => {
   });
 
   it("GMT's CI executions exceed every alternative's", () => {
-    expect(gmtStats.executions).toBeGreaterThan(
-      competitorExecutionRange().max,
-    );
+    expect(gmtStats.executions).toBeGreaterThan(competitorExecutionRange().max);
   });
 });
 

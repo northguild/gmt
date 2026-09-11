@@ -63,9 +63,7 @@ describe("ciExecutionRows", () => {
   });
 
   it("gives GMT a suite segment and a matrix segment", () => {
-    expect(
-      rowsOf("@northguild/gmt").map((r) => [r.segment, r.value]),
-    ).toEqual([
+    expect(rowsOf("@northguild/gmt").map((r) => [r.segment, r.value])).toEqual([
       ["suite", gmtStats.tests],
       ["matrix", gmtStats.executions - gmtStats.tests],
     ]);
