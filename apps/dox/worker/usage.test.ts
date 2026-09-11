@@ -1,10 +1,16 @@
 /// <reference types="vitest/globals" />
 
 import { APICallError, RetryError } from "ai";
-import { brainStateFromError, chooseBrain, remainingFor } from "./brains";
+import {
+  brainStateFromError,
+  chooseBrain,
+  isWorkersAIAllocationExhausted,
+  remainingFor,
+} from "./brains";
 import {
   hashVisitor,
   markBrain,
+  providerResets,
   readUsage,
   recordRequest,
   type UsageStore,
@@ -32,6 +38,21 @@ function fakeStore(failOn?: RegExp) {
 }
 
 const ids = BRAINS.map((b) => b.id);
+const geminiBrain = BRAINS.find((brain) => brain.provider === "google")!;
+const workersAIBrain = BRAINS.find((brain) => brain.provider === "workers-ai")!;
+
+/** A binding error as `workers-ai-provider`'s `normalizeBindingError` builds
+ * it: a `workers-ai:` pseudo-URL, the binding's message, and a status only
+ * when the provider recognises the internal code. */
+const workersAIError = (message: string, statusCode?: number, code?: number) =>
+  new APICallError({
+    message,
+    url: "workers-ai:binding/run/@cf/zai-org/glm-4.7-flash",
+    requestBodyValues: {},
+    statusCode,
+    responseBody: message,
+    ...(code === undefined ? {} : { data: { workersAIErrorCode: code } }),
+  });
 
 describe("hashVisitor", () => {
   it("is stable for the same client", async () => {
@@ -50,7 +71,7 @@ describe("hashVisitor", () => {
 
 describe("readUsage / recordRequest", () => {
   it("starts empty", async () => {
-    const snapshot = await readUsage(fakeStore(), ids, "v1", NOW);
+    const snapshot = await readUsage(fakeStore(), BRAINS, "v1", NOW);
     expect(snapshot.visitor).toBe(0);
     expect(snapshot.perBrain[ids[0]]).toBe(0);
     expect(snapshot.states[ids[0]]).toBe("ok");
@@ -58,58 +79,142 @@ describe("readUsage / recordRequest", () => {
 
   it("counts a request against both the brain and the visitor", async () => {
     const store = fakeStore();
-    await recordRequest(store, ids[0], "v1", NOW);
-    await recordRequest(store, ids[0], "v1", NOW);
+    await recordRequest(store, BRAINS[0], "v1", NOW);
+    await recordRequest(store, BRAINS[0], "v1", NOW);
 
-    const snapshot = await readUsage(store, ids, "v1", NOW);
+    const snapshot = await readUsage(store, BRAINS, "v1", NOW);
     expect(snapshot.perBrain[ids[0]]).toBe(2);
     expect(snapshot.visitor).toBe(2);
   });
 
   it("keeps visitors separate", async () => {
     const store = fakeStore();
-    await recordRequest(store, ids[0], "v1", NOW);
-    expect((await readUsage(store, ids, "v2", NOW)).visitor).toBe(0);
+    await recordRequest(store, BRAINS[0], "v1", NOW);
+    expect((await readUsage(store, BRAINS, "v2", NOW)).visitor).toBe(0);
   });
 
-  it("buckets by Pacific day, so a UTC rollover does not reset it", async () => {
+  it("buckets a Gemini brain by Pacific day, so a UTC rollover does not reset it", async () => {
     const store = fakeStore();
     // 23:00 Pacific and 01:00 UTC the next calendar day are the same PT day.
     const latePacific = Date.UTC(2026, 5, 16, 6, 0, 0);
-    await recordRequest(store, ids[0], "v1", latePacific);
+    await recordRequest(store, geminiBrain, "v1", latePacific);
     const stillSameDay = Date.UTC(2026, 5, 16, 6, 30, 0);
-    expect((await readUsage(store, ids, "v1", stillSameDay)).visitor).toBe(1);
+    const snapshot = await readUsage(store, BRAINS, "v1", stillSameDay);
+    expect(snapshot.visitor).toBe(1);
+    expect(snapshot.perBrain[geminiBrain.id]).toBe(1);
   });
 
   it("resets after Pacific midnight", async () => {
     const store = fakeStore();
-    await recordRequest(store, ids[0], "v1", NOW);
+    await recordRequest(store, BRAINS[0], "v1", NOW);
     const tomorrow = NOW + 1000 * 60 * 60 * 24;
-    expect((await readUsage(store, ids, "v1", tomorrow)).visitor).toBe(0);
+    expect((await readUsage(store, BRAINS, "v1", tomorrow)).visitor).toBe(0);
   });
 
   it("never throws when the store is broken", async () => {
     // The promise this module makes: bookkeeping failure must not fail a chat.
     const store = fakeStore(/.*/);
     await expect(
-      recordRequest(store, ids[0], "v1", NOW),
+      recordRequest(store, BRAINS[0], "v1", NOW),
     ).resolves.toBeUndefined();
     await expect(
-      markBrain(store, ids[0], "spent", NOW),
+      markBrain(store, BRAINS[0], "spent", NOW),
     ).resolves.toBeUndefined();
-    const snapshot = await readUsage(store, ids, "v1", NOW);
+    const snapshot = await readUsage(store, BRAINS, "v1", NOW);
     // ...and an unreadable ledger degrades to optimism, not lockout.
     expect(snapshot.states[ids[0]]).toBe("ok");
+  });
+});
+
+describe("each brain on its provider's clock (DOX-C4)", () => {
+  // 16:30 PDT on the 15th — the 15th in both zones.
+  const beforeUtcMidnight = Date.UTC(2026, 5, 15, 23, 30, 0);
+  // 17:30 PDT, still the 15th in Pacific but already the 16th in UTC.
+  const afterUtcMidnight = Date.UTC(2026, 5, 16, 0, 30, 0);
+
+  it("refills a Workers AI count at UTC midnight and a Gemini count at Pacific midnight", async () => {
+    const store = fakeStore();
+    await recordRequest(store, geminiBrain, "v1", beforeUtcMidnight);
+    await recordRequest(store, workersAIBrain, "v1", beforeUtcMidnight);
+
+    const snapshot = await readUsage(store, BRAINS, "v1", afterUtcMidnight);
+    expect(snapshot.perBrain[geminiBrain.id]).toBe(1);
+    // Cloudflare's pool refilled at 00:00Z; the badge must say so.
+    expect(snapshot.perBrain[workersAIBrain.id]).toBe(0);
+    // The visitor cap is Dox's own, and still on the Pacific day.
+    expect(snapshot.visitor).toBe(2);
+  });
+
+  it("keeps a Workers AI spent mark across the Pacific rollover, until UTC midnight", async () => {
+    // Marked at 18:00 PDT on the 15th (01:00Z on the 16th), read at 01:00 PDT
+    // on the 16th (08:00Z, still the 16th in UTC). Bucketed by the Pacific day
+    // this mark vanished at Pacific midnight, sixteen hours too early.
+    const store = fakeStore();
+    const markedAt = Date.UTC(2026, 5, 16, 1, 0, 0);
+    await markBrain(store, workersAIBrain, "spent", markedAt);
+    await markBrain(store, geminiBrain, "spent", markedAt);
+
+    const readAt = Date.UTC(2026, 5, 16, 8, 0, 0);
+    const { states } = await readUsage(store, BRAINS, "v1", readAt);
+    expect(states[workersAIBrain.id]).toBe("spent");
+    expect(states[geminiBrain.id]).toBe("ok");
+  });
+
+  it("expires each mark at its own provider's midnight", async () => {
+    const ttls = new Map<string, number | undefined>();
+    const store: UsageStore = {
+      async get() {
+        return null;
+      },
+      async put(key, _value, options) {
+        ttls.set(key, options?.expirationTtl);
+      },
+    };
+    await markBrain(store, workersAIBrain, "spent", NOW);
+    await markBrain(store, geminiBrain, "spent", NOW);
+
+    // Noon PDT: five hours to 00:00Z, twelve to Pacific midnight, each plus the
+    // 300 s margin.
+    expect(ttls.get(`state:2026-06-15:${workersAIBrain.id}`)).toBe(
+      5 * 3600 + 300,
+    );
+    expect(ttls.get(`state:2026-06-15:${geminiBrain.id}`)).toBe(
+      12 * 3600 + 300,
+    );
+  });
+});
+
+describe("providerResets", () => {
+  it("lists each provider once, in preference order, with its next midnight", () => {
+    expect(providerResets(BRAINS, NOW)).toEqual([
+      {
+        id: "google",
+        label: "Gemini",
+        resetsAt: "2026-06-16T07:00:00.000Z",
+      },
+      {
+        id: "workers-ai",
+        label: "Workers AI",
+        resetsAt: "2026-06-16T00:00:00.000Z",
+      },
+    ]);
+  });
+
+  it("omits a provider with no brain in the list", () => {
+    const geminiOnly = BRAINS.filter((brain) => brain.provider === "google");
+    expect(providerResets(geminiOnly, NOW).map((p) => p.id)).toEqual([
+      "google",
+    ]);
   });
 });
 
 describe("markBrain", () => {
   it("records spent and unavailable separately", async () => {
     const store = fakeStore();
-    await markBrain(store, ids[0], "spent", NOW);
-    await markBrain(store, ids[1], "unavailable", NOW);
+    await markBrain(store, BRAINS[0], "spent", NOW);
+    await markBrain(store, BRAINS[1], "unavailable", NOW);
 
-    const snapshot = await readUsage(store, ids, "v1", NOW);
+    const snapshot = await readUsage(store, BRAINS, "v1", NOW);
     expect(snapshot.states[ids[0]]).toBe("spent");
     expect(snapshot.states[ids[1]]).toBe("unavailable");
     expect(snapshot.states[ids[2]]).toBe("ok");
@@ -119,11 +224,11 @@ describe("markBrain", () => {
     // Day-scoped on purpose: a model Google restores comes back on its own,
     // with no code change and at a cost of one request.
     const store = fakeStore();
-    await markBrain(store, ids[0], "unavailable", NOW);
+    await markBrain(store, BRAINS[0], "unavailable", NOW);
     const tomorrow = NOW + 1000 * 60 * 60 * 24;
-    expect((await readUsage(store, ids, "v1", tomorrow)).states[ids[0]]).toBe(
-      "ok",
-    );
+    expect(
+      (await readUsage(store, BRAINS, "v1", tomorrow)).states[ids[0]],
+    ).toBe("ok");
   });
 });
 
@@ -159,6 +264,15 @@ describe("chooseBrain", () => {
     const result = chooseBrain(snapshot({ [ids[2]]: "spent" }), ids[2]);
     expect(result.exhausted).toBe(false);
     expect(result.brain?.id).not.toBe(ids[2]);
+  });
+
+  it("chooses only from the pool it is given", () => {
+    // A deployment without a Gemini key must never be handed a Gemini brain.
+    const pool = BRAINS.filter((brain) => brain.provider === "workers-ai");
+    expect(chooseBrain(snapshot({}), undefined, pool).brain?.id).toBe(
+      pool[0].id,
+    );
+    expect(chooseBrain(snapshot({}), ids[0], pool).brain?.id).toBe(pool[0].id);
   });
 
   it("reports exhaustion only when every brain is out", () => {
@@ -202,6 +316,87 @@ describe("brainStateFromError", () => {
   it("does not retire a brain for a transient or unrelated failure", () => {
     expect(brainStateFromError(apiError(500))).toBeUndefined();
     expect(brainStateFromError(new Error("boom"))).toBeUndefined();
+  });
+
+  it("reads Workers AI's unmapped 4006 allocation error as spent", () => {
+    // workers-ai-provider 4.0.0 maps 3036 to 429 but has no entry for 4006, so
+    // this arrives with no status. Unclassified, it would end the request
+    // instead of failing over.
+    const error = workersAIError(
+      "4006: you have used up your daily free allocation of 10,000 neurons, please upgrade to Cloudflare's Workers Paid plan",
+    );
+    expect(error.statusCode).toBeUndefined();
+    expect(brainStateFromError(error)).toBe("spent");
+  });
+
+  it("reads a Workers AI 403 as a model this account cannot use", () => {
+    expect(
+      brainStateFromError(
+        workersAIError("5035: This model requires a Workers Paid plan", 403),
+      ),
+    ).toBe("unavailable");
+  });
+
+  it("leaves a Gemini 403 unclassified, because there it means a bad key", () => {
+    expect(brainStateFromError(apiError(403))).toBeUndefined();
+  });
+});
+
+describe("isWorkersAIAllocationExhausted", () => {
+  it("recognises both shapes of the exhausted-allocation error", () => {
+    expect(
+      isWorkersAIAllocationExhausted(
+        workersAIError(
+          "3036: You have used up your daily free allocation of 10,000 neurons.",
+          429,
+          3036,
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      isWorkersAIAllocationExhausted(
+        workersAIError(
+          "4006: you have used up your daily free allocation of 10,000 neurons",
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it("does not treat a capacity 429 as the whole pool being gone", () => {
+    // 3040 is one model briefly out of capacity, not the account's day.
+    expect(
+      isWorkersAIAllocationExhausted(
+        workersAIError(
+          "3040: No more data centers to forward the request to",
+          429,
+          3040,
+        ),
+      ),
+    ).toBe(false);
+  });
+
+  it("never matches a Gemini error, whatever its message says", () => {
+    const gemini = new APICallError({
+      message: "daily free allocation exhausted",
+      url: "https://generativelanguage.googleapis.com/v1beta/models/x",
+      requestBodyValues: {},
+      statusCode: 429,
+    });
+    expect(isWorkersAIAllocationExhausted(gemini)).toBe(false);
+  });
+
+  it("unwraps a RetryError, the shape a retried 3036 arrives in", () => {
+    const quota = workersAIError(
+      "3036: You have used up your daily free allocation of 10,000 neurons.",
+      429,
+      3036,
+    );
+    const wrapped = new RetryError({
+      message: "Failed after 2 attempts",
+      reason: "maxRetriesExceeded",
+      errors: [quota, quota],
+    });
+    expect(isWorkersAIAllocationExhausted(wrapped)).toBe(true);
   });
 });
 

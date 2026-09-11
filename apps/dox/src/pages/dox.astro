@@ -1,15 +1,9 @@
 ---
-// The `/dox` route — DOX-C3a's "Host 2", the full-bleed Dox surface.
-//
-// Two deliberate reversals of this file's earlier shape, both at explicit user
-// request (recorded in context/dox/issues/DOX-C.md and
-// reference/visual-design.md):
+// The `/dox` route — the only chat surface, full-bleed.
 //
 //  1. No Starlight chrome. The header and the page `<h1>` are hidden, the page
-//     itself never scrolls, and the chat fills the viewport. The spec
-//     originally kept `template: "splash"`'s header "so the header, search and
-//     theme select stay consistent"; the chat is the product on this route, so
-//     that's reversed.
+//     itself never scrolls, and the chat fills the viewport — on this route the
+//     chat is the product.
 //  2. The transcript is a hive diagram rather than an ordinary page frame.
 //
 // `<StarlightPage>` is still the wrapper even though none of its chrome is

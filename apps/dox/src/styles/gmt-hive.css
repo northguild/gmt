@@ -98,7 +98,28 @@
   display: flex;
   align-items: center;
   gap: var(--gmt-space-3);
+  min-width: 0;
   color: var(--gmt-ice-dim);
+}
+
+/* The reader's local time, in the app's date format (HeaderClock.tsx). Same
+   mono HUD voice as the environment badge beside it, ruled off from it by a
+   hairline, and in the accent cyan — the site's colour for a live value, the
+   same one the back link and the brain name use. Tabular figures so a ticking
+   value never shifts the badge, and it truncates rather than pushing the back
+   link off a narrow strip — an RFC 9557 string is long. */
+.gmt-hive-now {
+  min-width: 0;
+  padding-inline-end: var(--gmt-space-3);
+  border-inline-end: 1px solid var(--gmt-hairline);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  color: var(--gmt-cyan);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* "pointed at a local Worker" badge — cheap, and it stops the "why is the AI
@@ -863,14 +884,25 @@
  * and `.gmt-popover`'s (gmt-primitives.css) — no chat-specific invention.
  * ------------------------------------------------------------------ */
 
+/* `flex` so the wrapper is exactly the badge's height in the control bar. (The
+   badge once sat 16px low beside the reset clock — that was Starlight's prose
+   spacing, fixed by `not-content` on the bar in DoxChat.tsx, not by this.) */
 .gmt-hive-brains {
   position: relative;
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
 }
 
-.gmt-hive-brain-badge {
+/* The brain badge and the reset clock chip are one family in the composer's
+   control bar: the same quiet surface, so neither competes with Send. */
+.gmt-hive-brain-badge,
+.gmt-hive-clock {
   display: inline-flex;
   align-items: baseline;
   gap: var(--gmt-space-2);
+  min-width: 0;
+  max-width: 100%;
   padding: var(--gmt-space-1) var(--gmt-space-3);
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
@@ -1007,12 +1039,252 @@
   letter-spacing: 0.08em;
 }
 
-.gmt-hive-dev-note {
-  margin-inline-end: auto;
+/* ---- Brain menu groups ----
+ * One heading per provider, because the providers refill on different clocks
+ * (Gemini at midnight Pacific, Workers AI at 00:00 UTC) and each heading says
+ * when, in the reader's zone. */
+.gmt-hive-brain-separator {
+  margin: var(--gmt-space-1) calc(var(--gmt-space-1) * -1);
+  background: var(--gmt-hairline);
+}
+
+.gmt-hive-brain-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 var(--gmt-space-3);
+  padding: var(--gmt-space-2) var(--gmt-space-3) var(--gmt-space-1);
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
-  letter-spacing: 0.06em;
-  color: var(--gmt-spring);
+  font-weight: normal;
+  letter-spacing: 0.08em;
+}
+
+.gmt-hive-brain-group-name {
+  color: var(--gmt-cyan);
+  text-transform: uppercase;
+}
+
+.gmt-hive-brain-group-reset {
+  color: var(--gmt-ice-dim);
+  letter-spacing: 0.04em;
+}
+
+/* ---- Reset clock ----
+ * The chip shares the brain badge's surface (above); the readout truncates so
+ * a long format (an RFC 9557 string) never pushes Send out of the bar. */
+.gmt-hive-clock-glyph {
+  flex: 0 0 auto;
+  color: var(--gmt-cyan);
+}
+
+.gmt-hive-clock-readout {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gmt-hive-clock-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  width: min(24rem, calc(100vw - 2 * var(--gmt-space-3)));
+  padding: var(--gmt-space-3);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+}
+
+.gmt-hive-clock-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-1);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.gmt-hive-clock-heading {
+  margin: 0 0 var(--gmt-space-1);
+  padding: 0;
+  font-size: var(--gmt-text-xs);
+  font-weight: normal;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-hive-clock-zone {
+  margin-inline-start: var(--gmt-space-2);
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--gmt-cyan);
+}
+
+.gmt-hive-clock-resets {
+  display: grid;
+  gap: var(--gmt-space-1);
+  margin: 0;
+}
+
+.gmt-hive-clock-reset {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--gmt-space-3);
+}
+
+.gmt-hive-clock-reset dt {
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
+.gmt-hive-clock-reset dd {
+  margin: 0;
+  text-align: end;
+  overflow-wrap: anywhere;
+}
+
+/* The row the chip is showing. */
+.gmt-hive-clock-reset[data-current] dt,
+.gmt-hive-clock-reset[data-current] dd {
+  color: var(--gmt-cyan);
+}
+
+.gmt-hive-clock-format {
+  display: flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  padding: var(--gmt-space-1) var(--gmt-space-2);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  cursor: pointer;
+}
+
+/* Same flat row wash as the brain options — a row state, not a nested panel. */
+.gmt-hive-clock-format:hover,
+.gmt-hive-clock-format[data-checked] {
+  background: var(--gmt-accent-wash);
+}
+
+.gmt-hive-clock-format[data-checked] .gmt-hive-clock-format-label {
+  color: var(--gmt-cyan);
+}
+
+.gmt-hive-clock-format input {
+  margin: 0;
+  accent-color: var(--gmt-cyan);
+}
+
+.gmt-hive-clock-format-fn {
+  margin-inline-start: auto;
+  padding: 0;
+  font-size: 0.68rem;
+  color: var(--gmt-ice-dim);
+  background: none;
+}
+
+/* The zone search. cmdk ships `bg-popover`, a 36px input row and a 40px input
+   inside it, so the input overflowed its row and was clipped. The box becomes
+   the site's bevelled field, and focus is drawn once, on the box, the same way
+   the composer's panel draws it (`[data-slot="input-group"]:focus-within`). */
+.gmt-hive-clock-zones {
+  color: inherit;
+  background: var(--gmt-fill-subtle);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  transition: border-color var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-hive-clock-zones:focus-within {
+  border-color: var(--gmt-cyan);
+  box-shadow: 0 0 0 3px color(from var(--gmt-cyan) srgb r g b / 0.18);
+  animation: gmt-focus-sonar var(--gmt-motion-sonar-duration) var(--gmt-easing)
+    1;
+}
+
+/* A format the zone cannot change leaves the search inert; say so visually
+   as well as with the disabled input and its placeholder. */
+.gmt-hive-clock-zones:has(input:disabled) {
+  opacity: 0.6;
+}
+
+.gmt-hive-clock-zones [data-slot="command-input-wrapper"] {
+  height: 2.5rem;
+  gap: var(--gmt-space-2);
+  padding-inline: var(--gmt-space-3);
+  border-color: var(--gmt-hairline);
+}
+
+.gmt-hive-clock-zones [data-slot="command-input-wrapper"] svg {
+  color: var(--gmt-cyan);
+  opacity: 0.7;
+}
+
+/* Fills its row instead of overflowing it, and carries no chrome of its own —
+   the box around it is the field. */
+.gmt-hive-clock-zones input[data-slot="command-input"] {
+  height: 100%;
+  padding: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+  background: none;
+  border: 0;
+  border-radius: 0;
+}
+
+/* ...which means the input must NOT draw a ring. The global `:focus-visible`
+   one was clipped by the box's `overflow: hidden` into a cut-off rectangle,
+   and two focus rings on one field is wrong regardless. */
+.gmt-hive-clock-zones input[data-slot="command-input"]:focus,
+.gmt-hive-clock-zones input[data-slot="command-input"]:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.gmt-hive-clock-zones [data-slot="command-list"] {
+  max-height: 9rem;
+}
+
+.gmt-hive-clock-zone-option {
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+}
+
+.gmt-hive-clock-zone-option[data-current] {
+  color: var(--gmt-cyan);
+}
+
+.gmt-hive-clock-zone-option[data-selected="true"] {
+  color: var(--gmt-cyan);
+  background: var(--gmt-accent-wash);
+}
+
+/* The live call. Ruled off like the composer's own control bar, and wraps
+   anywhere: a zoned call is longer than the panel is wide. */
+.gmt-hive-clock-call {
+  display: block;
+  padding-top: var(--gmt-space-2);
+  border-top: 1px solid var(--gmt-hairline);
+  color: var(--gmt-ice-dim);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.gmt-hive-clock-call code {
+  padding: 0;
+  font-size: 0.7rem;
+  color: inherit;
+  background: none;
+}
+
+.gmt-hive-clock-call:hover,
+.gmt-hive-clock-call:focus-visible {
+  color: var(--gmt-cyan);
 }
 
 /* ------------------------------------------------------------------ *
@@ -1107,11 +1379,33 @@
   color: var(--gmt-ice-dim);
 }
 
-/* The stock footer is `justify-between`, which parks a lone submit button on
-   the LEFT. There are no other controls in this composer, so push it to the
-   end. */
+/* The control bar: the reset clock and brain badge hard left, Send hard right,
+   ruled off from the textarea so it reads as a control panel rather than part
+   of the message. */
 .gmt-hive-composer-footer {
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--gmt-space-3);
+  /* Even top and bottom, replacing the stock `py-1.5 pb-3`, so the controls
+     sit centred in their band. */
+  padding-block: var(--gmt-space-2);
+  border-top: 1px solid var(--gmt-hairline);
+  /* An ice layer under the controls, so the bar reads as a panel and never as
+     more of the text field. A faint cyan wash plus a highlight along the rule —
+     the same cyan-at-low-alpha language as the composer's focus ring. */
+  background: linear-gradient(
+    180deg,
+    color(from var(--gmt-cyan) srgb r g b / 0.12),
+    color(from var(--gmt-cyan) srgb r g b / 0.05)
+  );
+  box-shadow: inset 0 1px 0 color(from var(--gmt-cyan) srgb r g b / 0.22);
+}
+
+/* Wraps rather than squeezing Send out at phone width; `min-width: 0` lets the
+   chip and badge truncate instead of overflowing. */
+.gmt-hive-controls {
+  flex-wrap: wrap;
+  gap: var(--gmt-space-2);
 }
 
 /* A bare ghost glyph reads as decoration; a raw `--gmt-cyan` fill (shadcn's

@@ -100,15 +100,21 @@ function buildDefinition(
   boundaries: TimezoneFeature[],
 ) {
   const boundaryMarks = [
+    // Ocean and land are painted like the locale matrix tiles and the bar
+    // charts: gradients declared once in TimezoneMap.astro, referenced by id so
+    // they survive the map's once-a-second re-render. Each country is its own
+    // path, so each gets its own diagonal fade.
     geoShape([sphere], {
       projection,
-      fill: "color(from var(--gmt-cyan) srgb r g b / 0.05)",
+      fill: "url(#gmt-map-ocean)",
       stroke: "none",
     }),
     geoShape(landFeatures, {
       projection,
-      fill: "color(from var(--gmt-cyan) srgb r g b / 0.35)",
-      stroke: "none",
+      fill: "url(#gmt-map-land)",
+      stroke: "var(--gmt-border-strong)",
+      strokeWidth: 0.5,
+      className: "gmt-map-land",
     }),
     ...(boundaries.length > 0
       ? [

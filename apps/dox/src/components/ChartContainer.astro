@@ -1,15 +1,83 @@
 ---
+import { BAR_CHARTS, type BarChartId, type BarSegment } from "../lib/why-gmt-charts";
+
+interface LegendItem {
+  label: string;
+  segment: BarSegment;
+}
+
 interface Props {
   svg: string;
   title?: string;
   caption?: string;
+  /** A bar chart to mount live over the static `svg`, adding the hover tooltip. */
+  chart?: BarChartId;
+  legend?: readonly LegendItem[];
 }
 
-const { svg, title, caption } = Astro.props;
+const { svg, title, caption, chart, legend } = Astro.props;
+const gradients = chart ? BAR_CHARTS[chart].gradients : [];
 ---
 
 <div class="gmt-chart-container">
   {title && <h3 class="gmt-chart-title">{title}</h3>}
-  <div class="gmt-chart gmt-glass" set:html={svg} />
+  {
+    legend && (
+      <ul class="gmt-chart-legend not-content">
+        {legend.map((item) => (
+          <li class="gmt-chart-legend__item">
+            <span
+              class={`gmt-chart-legend__swatch gmt-chart-legend__swatch--${item.segment}`}
+              aria-hidden="true"
+            />
+            {item.label}
+          </li>
+        ))}
+      </ul>
+    )
+  }
+  {
+    gradients.length > 0 && (
+      <svg class="gmt-chart-defs" aria-hidden="true" focusable="false">
+        <defs>
+          {gradients.map((g) => (
+            <linearGradient id={g.id} x1="0" y1="0" x2="1" y2="1">
+              <stop
+                offset="0"
+                style={`stop-color: var(--gmt-${g.hue}); stop-opacity: ${g.top}`}
+              />
+              <stop
+                offset="1"
+                style={`stop-color: var(--gmt-${g.hue}); stop-opacity: ${g.bottom}`}
+              />
+            </linearGradient>
+          ))}
+        </defs>
+      </svg>
+    )
+  }
+  <div class="gmt-chart gmt-glass" data-gmt-chart={chart} set:html={svg} />
   {caption && <p class="gmt-chart-caption">{caption}</p>}
 </div>
+
+<script>
+  import { mountChart } from "@tanstack/charts/dom";
+  import { tooltip } from "@tanstack/charts/tooltip";
+  import { BAR_CHARTS, isBarChartId } from "../lib/why-gmt-charts";
+
+  // mountChart appends to its container rather than replacing it, so the
+  // build-time SVG is cleared first.
+  for (const host of document.querySelectorAll<HTMLElement>("[data-gmt-chart]")) {
+    const id = host.dataset.gmtChart;
+    if (!isBarChartId(id)) continue;
+    const chart = BAR_CHARTS[id];
+    host.replaceChildren();
+    mountChart(host, {
+      definition: chart.definition(tooltip) as unknown as Parameters<
+        typeof mountChart
+      >[1]["definition"],
+      ariaLabel: chart.ariaLabel,
+      aspectRatio: chart.width / chart.height,
+    });
+  }
+</script>

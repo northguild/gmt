@@ -1,0 +1,45 @@
+{
+  "suite": "packages/gmt",
+  "tests": 18741,
+  "files": 585,
+  "executions": 374820,
+  "nodes": ["22", "24"],
+  "timezones": 10,
+  "locales": 17,
+  "functions": 539,
+  "patterns": 25,
+  "byNamespace": [
+    {
+      "namespace": "plain",
+      "count": 225
+    },
+    {
+      "namespace": "zoned",
+      "count": 122
+    },
+    {
+      "namespace": "unix",
+      "count": 78
+    },
+    {
+      "namespace": "utc",
+      "count": 76
+    },
+    {
+      "namespace": "precision",
+      "count": 18
+    },
+    {
+      "namespace": "duration",
+      "count": 12
+    },
+    {
+      "namespace": "instant",
+      "count": 4
+    },
+    {
+      "namespace": "span",
+      "count": 4
+    }
+  ]
+}

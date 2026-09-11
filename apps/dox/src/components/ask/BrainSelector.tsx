@@ -4,9 +4,10 @@
  *
  * ## Why this is in the UI at all
  *
- * The Gemini free tier allows ~20 requests per day **per model, shared by every
- * visitor**. That is a strange enough constraint that hiding it produces a
- * worse experience than showing it: without this badge, Dox simply stops
+ * The free tiers behind Dox are small and **shared by every visitor** — ~20
+ * requests a day per Gemini model, and one 10,000-Neuron pool for every
+ * Workers AI model. That is a strange enough constraint that hiding it produces
+ * a worse experience than showing it: without this badge, Dox simply stops
  * answering partway through a day for reasons the reader cannot see or predict.
  * With it, the limit is legible and the reader can switch to a brain that still
  * has budget.
@@ -14,6 +15,13 @@
  * The visitor's own allowance comes first because it is the number they can act
  * on; the shared pool follows because it explains a refusal that their own
  * number would not.
+ *
+ * ## Where it lives
+ *
+ * In the composer's control bar, beside Send, opening upward. The brains are
+ * grouped by provider because the providers refill on different clocks —
+ * Gemini at midnight Pacific, Workers AI at 00:00 UTC — and each group heading
+ * says when, in the reader's own zone.
  *
  * ## Why Radix and not a hand-rolled popover
  *
@@ -35,27 +43,38 @@
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
+import { findResetFormat } from "~/lib/reset-formats";
 import type { BrainsInfo } from "./use-brains";
-import { untilReset } from "./use-brains";
+import type { ResetClockState } from "./use-reset-clock";
 
 /* Radix's RadioGroup addresses items by string value, and "no explicit pick"
-   has to be one of them. A sentinel that cannot collide with a Gemini model id
-   is cheaper than making the group's value nullable. */
+   has to be one of them. A sentinel that cannot collide with a model id is
+   cheaper than making the group's value nullable. */
 const AUTOMATIC = "\u0000automatic";
+
+/* Group headings always use human wording, whatever format the reader picked
+   for the reset clock — "resets 1781593200000" is a fine demo, a poor label. */
+const HEADING_FORMAT = findResetFormat("calendar");
 
 export function BrainSelector({
   info,
   selectedId,
   onSelect,
+  clock,
 }: {
   info: BrainsInfo | null;
   /** The reader's explicit pick, or null for "whichever has budget". */
   selectedId: string | null;
   onSelect: (brainId: string | null) => void;
+  /** The reader's zone and locale, for each provider's reset. */
+  clock: ResetClockState;
 }) {
   // No data (endpoint missing, Worker restarting, offline) → no badge. The
   // chat stays fully usable; this is ornament plus an escape hatch, not a gate.
@@ -78,14 +97,18 @@ export function BrainSelector({
           <button
             type="button"
             className="gmt-hive-brain-badge gmt-sonar-focus"
-            title={`Dox resets ${untilReset(info.resetsAt)}`}
           >
             <span className="gmt-hive-brain-name">
               {active?.label ?? "Dox"}
             </span>
             <span className="gmt-hive-brain-counts">
               {info.visitor.unlimited ? (
-                <span className="gmt-hive-brain-dev">dev</span>
+                <span
+                  className="gmt-hive-brain-dev"
+                  title="Exempt from the per-visitor cap. The shared daily pool is fixed and cannot be raised on the free tier."
+                >
+                  dev
+                </span>
               ) : (
                 <>You {info.visitor.remaining} left</>
               )}
@@ -95,7 +118,14 @@ export function BrainSelector({
           </button>
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent align="end" className="gmt-hive-brain-list">
+        {/* Upward: the badge sits at the bottom of the viewport. The vendored
+            content already caps its height to the space Radix measures and
+            scrolls past it, so a long brain list never runs off the top. */}
+        <DropdownMenuContent
+          side="top"
+          align="start"
+          className="gmt-hive-brain-list"
+        >
           <DropdownMenuRadioGroup
             value={selectedId ?? AUTOMATIC}
             onValueChange={(value) =>
@@ -109,25 +139,63 @@ export function BrainSelector({
               <span className="gmt-hive-brain-label">Automatic</span>
               <span className="gmt-hive-brain-meta">whichever has budget</span>
             </DropdownMenuRadioItem>
-            {info.brains.map((brain) => (
-              <DropdownMenuRadioItem
-                key={brain.id}
-                value={brain.id}
-                /* NOT `data-state` — Radix owns that attribute on a menu item
-                   (`checked`/`unchecked`), and the two meanings collided. */
-                data-brain-state={brain.state}
-                className="gmt-hive-brain-option"
-              >
-                <span className="gmt-hive-brain-label">{brain.label}</span>
-                <span className="gmt-hive-brain-meta">
-                  {brain.state === "unavailable"
-                    ? "not available"
-                    : brain.state === "spent"
-                      ? "spent today"
-                      : `${brain.remaining} left`}
-                </span>
-              </DropdownMenuRadioItem>
-            ))}
+
+            {info.providers.map((provider) => {
+              const brains = info.brains.filter(
+                (brain) => brain.provider === provider.id,
+              );
+              if (brains.length === 0) return null;
+
+              // Empty until the reader's zone is known — see use-reset-clock.
+              const resets = clock.ready
+                ? HEADING_FORMAT.format(provider.resetsAt, {
+                    timeZone: clock.zone,
+                    locale: clock.locale,
+                    now: clock.now,
+                  })
+                : "";
+
+              return (
+                <DropdownMenuGroup
+                  key={provider.id}
+                  aria-label={provider.label}
+                >
+                  <DropdownMenuSeparator className="gmt-hive-brain-separator" />
+                  <DropdownMenuLabel className="gmt-hive-brain-group">
+                    <span className="gmt-hive-brain-group-name">
+                      {provider.label}
+                    </span>
+                    {resets && (
+                      <span className="gmt-hive-brain-group-reset">
+                        resets {resets}
+                      </span>
+                    )}
+                  </DropdownMenuLabel>
+                  {brains.map((brain) => (
+                    <DropdownMenuRadioItem
+                      key={brain.id}
+                      value={brain.id}
+                      /* NOT `data-state` — Radix owns that attribute on a menu
+                         item (`checked`/`unchecked`), and the two meanings
+                         collided. */
+                      data-brain-state={brain.state}
+                      className="gmt-hive-brain-option"
+                    >
+                      <span className="gmt-hive-brain-label">
+                        {brain.label}
+                      </span>
+                      <span className="gmt-hive-brain-meta">
+                        {brain.state === "unavailable"
+                          ? "not available"
+                          : brain.state === "spent"
+                            ? "spent today"
+                            : `${brain.remaining} left`}
+                      </span>
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuGroup>
+              );
+            })}
           </DropdownMenuRadioGroup>
         </DropdownMenuContent>
       </DropdownMenu>

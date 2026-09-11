@@ -1,10 +1,8 @@
 ---
-// Override of Starlight's Header — adds n "Dox" link into the header's
-// right-hand group, next to the social icons, so the /dox route is reachable
-// from every page (DOX-C0 (#171) extension, at explicit user request — the
-// full draggable dock is DOX-C3a's job and needs DOX-C1/DOX-C2's retrieval
-// and Worker endpoint to be meaningful; this is a plain nav link to a real
-// route, nothing more).
+// Override of Starlight's Header — adds an "Ask Dox" link into the header's
+// right-hand group, next to the social icons, so the /dox chat is reachable
+// from every page. It is a plain nav link with no JavaScript: no page but /dox
+// hydrates React.
 //
 // Structure copied from @astrojs/starlight/components/Header.astro so the
 // existing search/social/theme layout is preserved byte-for-byte; only the

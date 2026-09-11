@@ -125,8 +125,9 @@ export type WidgetOutputState = "live" | "sentinel" | "empty";
 
 /**
  * Render a widget's result output in one of three states. The distinction
- * between "sentinel" and "empty" is load-bearing (context/dox/overview.md
- * §3): a function returning [] because two intervals genuinely don't overlap
+ * between "sentinel" and "empty" is load-bearing
+ * (context/dox/reference/visual-design.md, "Widget chrome"): a function
+ * returning [] because two intervals genuinely don't overlap
  * is a correct answer, not invalid input, and must never look like signal-lost.
  */
 export function renderWidgetOutput(

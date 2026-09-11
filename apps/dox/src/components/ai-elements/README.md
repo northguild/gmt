@@ -14,13 +14,13 @@ Five years of "why is this file here?" is avoidable with a table, so:
 | `prompt-input.tsx` | **wired** | `DoxChat` — the composer. **Locally modified:** `form.reset()` is deferred to the success paths so a refused send keeps the reader's text (see the comment in `handleSubmit`) |
 | `suggestion.tsx` | **wired** | `DoxChat` — the empty-state pills |
 | `task.tsx` | **wired** | `RetrievalTrace` — the collapsible retrieval trace |
-| `artifact.tsx` | not yet wired | **Reserved for `DOX-C3b`**, which mounts a live Tier 2 widget inside it in the `/dox` rail. Do not delete |
-| `tool.tsx` | not yet wired | **Reserved for `DOX-C3b`** — `ToolInput`/`ToolOutput` for a tool-call receipt in the transcript. Do not delete |
-| `sources.tsx` | not wired | Deliberate, recorded in `DOX-C.md`: installed but not wired in `DOX-C3a`. Dox cites inline, in prose, against the route allowlist — a separate sources rail would duplicate that |
+| `artifact.tsx` | **wired** | `WidgetRail` — the panel a mounted widget sits in on `/dox` |
+| `tool.tsx` | not wired | The transcript's tool-call receipt is the purpose-built `WidgetReceipt` chip instead. Candidate for deletion — `context/dox/ui-audit.md` P1 |
+| `sources.tsx` | not wired | Deliberate: Dox cites inline, in prose, against the route allowlist — a separate sources rail would duplicate that |
 | `inline-citation.tsx` | not wired | Same decision as `sources.tsx` |
-| `reasoning.tsx` | not wired | Nothing streams a `reasoning` part today: `worker/brains.ts` calls `streamText` without thinking enabled. It becomes relevant only if a brain with visible reasoning is added to `BRAINS` |
+| `reasoning.tsx` | not wired | Reasoning never reaches the browser: the Worker streams with `sendReasoning: false` (`worker/chat-handler.ts`) |
 | `shimmer.tsx` | not wired | `DoxChat` has its own crystal placeholder derived from `status`, which is the site's own visual language rather than a generic skeleton |
-| `code-block.tsx` | **superseded** | `DOX-C3a`'s "code blocks are copyable" DoD line is met by Streamdown's `code` plugin inside `message.tsx`, which is what actually renders answers. This standalone component renders a code block passed as a prop and has no caller. It is the one file here that is unlikely ever to be wired |
+| `code-block.tsx` | **superseded** | Copyable code blocks come from Streamdown's `code` plugin inside `message.tsx`, which is what actually renders answers. This standalone component renders a code block passed as a prop and has no caller |
 
 ## If you are adding a component
 

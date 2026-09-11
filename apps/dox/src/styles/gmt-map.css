@@ -15,6 +15,13 @@
   max-width: 100%;
 }
 
+/* Land tiles — `className` lands on the land mark's group, so this is one
+ * shadow on the whole land layer rather than one per country path, which
+ * matters because the map re-renders every second. */
+.gmt-timezone-map .gmt-map-land {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+}
+
 /* Timezone boundary polygons */
 .gmt-timezone-polygon {
   transition: opacity 0.15s ease;
