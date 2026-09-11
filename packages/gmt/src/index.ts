@@ -1,5 +1,6 @@
 export * from "@js-temporal/polyfill";
 export * from "./duration";
+export * from "./instant";
 export * from "./plain";
 export * from "./precision";
 export * from "./regex";

@@ -34,6 +34,9 @@ export const GMT_MODULES: Record<
   "precision/parse": () => import("@northguild/gmt/precision/parse"),
   "precision/validate": () => import("@northguild/gmt/precision/validate"),
 
+  // --- instant ---
+  "instant/convert": () => import("@northguild/gmt/instant/convert"),
+
   // --- duration ---
   duration: () => import("@northguild/gmt/duration"),
 

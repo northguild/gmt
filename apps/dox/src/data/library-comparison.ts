@@ -54,17 +54,17 @@ export const libraryComparisons: LibraryComparison[] = [
     displayName: "@northguild/gmt",
     isSubject: true,
     stats: {
-      // The library suite only, so the bar compares like with like against the other
-      // entries and the tooltip's product is exact: 17,338 x 10 timezones x 2 Node.
-      // Repo-wide is 17,892 tests / 347,714 executions — apps/dox adds 477 on 2 Node and
-      // packages/gmt-oxlint's 77 run in no CI job at all — which is what the READMEs and
-      // the "What this means" table publish. `locales: 0` because the 17-locale matrix is
+      // The library suite only — packages/gmt, the same subject every other published
+      // figure uses — so the bar compares like with like against the other entries and the
+      // tooltip's product is exact: tests x 10 timezones x 2 Node. apps/dox's and
+      // packages/gmt-oxlint's suites are counted nowhere; they test the docs site and a
+      // lint plugin, not the shipped API. `locales: 0` because the 17-locale matrix is
       // inside the test count, not a further multiplier of it.
-      tests: 18038,
+      tests: 18741,
       locales: 0,
       timezones: 10,
       nodeVersions: 2,
-      executions: 360760,
+      executions: 374820,
     },
     sourceNote: "Internal CI measurement.",
   },

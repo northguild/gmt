@@ -48,6 +48,15 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./instant": {
+      "types": "./dist/instant/index.d.ts",
+      "default": "./dist/instant/index.js"
+    },
+    "./instant/*": {
+      "types": "./dist/instant/*/index.d.ts",
+      "default": "./dist/instant/*/index.js"
+    },
+    "./instant/*/*": null,
     "./plain": {
       "types": "./dist/plain/index.d.ts",
       "default": "./dist/plain/index.js"
