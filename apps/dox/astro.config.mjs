@@ -56,6 +56,12 @@ export default defineConfig({
           href: "https://github.com/northguild/gmt",
         },
       ],
+      // The Dox crystal, hand-authored in public/favicon.svg. Without this
+      // Starlight falls back to its own default of '/favicon.svg' — a file
+      // that did not exist, so every page in the site was requesting it and
+      // being served the 404 page. The PNG fallbacks, for browsers that
+      // cannot use an SVG icon, are in `head` below.
+      favicon: "/favicon.svg",
       // Preload the self-hosted display font (vendored to `public/fonts/`, see
       // gmt-tokens.css). Without this the browser only discovers the @font-face
       // after the CSS bundle parses, so the site title and every heading
@@ -78,6 +84,29 @@ export default defineConfig({
             rel: "alternate",
             type: "text/plain",
             href: "/llms.txt",
+          },
+        },
+        /* Raster fallbacks for the SVG favicon above, generated from it by
+           `pnpm run favicons`. Starlight sorts its own `rel="shortcut icon"`
+           entry *after* extra icon links precisely so the SVG wins wherever
+           it is supported (see its utils/head.ts), which makes this the
+           fallback rather than the winner. Rendered at the exact size the
+           browser asks for, so falling back never means downscaling. */
+        {
+          tag: "link",
+          attrs: {
+            rel: "icon",
+            type: "image/png",
+            sizes: "32x32",
+            href: "/favicon-32.png",
+          },
+        },
+        {
+          tag: "link",
+          attrs: {
+            rel: "apple-touch-icon",
+            sizes: "180x180",
+            href: "/apple-touch-icon.png",
           },
         },
         {

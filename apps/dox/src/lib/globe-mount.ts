@@ -74,7 +74,17 @@ export function renderGlobeTemplate({
       : `<h2 class="gmt-chart-title">${escapeHtml(heading)}</h2>`) +
     `<div class="gmt-globe-layout">` +
     `<div class="gmt-globe-frame">` +
-    `<div class="gmt-globe-stage gmt-glass" id="${stageId}" data-role="stage">` +
+    /* `not-content` is Starlight's opt-out from its markdown typography
+       (every rule in its style/markdown.css carries
+       `:not(:where(.not-content *))`). Without it the canvas — a sibling of
+       the zoom cluster inside `.sl-markdown-content` — picked up
+       `margin-top: var(--sl-content-gap-y)` (1rem) plus `max-width: 100%`,
+       which pushed the square canvas 16px down inside the square
+       `overflow: hidden` stage and squashed its width. That clipped the
+       bottom of the globe on every viewport whose stage was under ~600px.
+       Scoped to the stage, not `.gmt-globe`: the root's own `<h2>` heading
+       and `<p>` caption *should* keep Starlight's content styling. */
+    `<div class="gmt-globe-stage gmt-glass not-content" id="${stageId}" data-role="stage">` +
     `<div class="gmt-globe-zoom" role="group" aria-label="Zoom the globe">` +
     `<button type="button" data-globe-zoom="in" aria-label="Zoom in">+</button>` +
     `<button type="button" data-globe-zoom="out" aria-label="Zoom out">−</button>` +

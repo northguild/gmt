@@ -264,8 +264,11 @@ export async function initGlobe(
   /** First-frame reveal: the canvas is drawn fully off-screen (opacity 0,
    * slightly scaled down) so the initial fade/scale-in transition (see
    * gmt-globe.css) is the viewer's first sight of it instead of a raw pop-in.
-   * The zoom controls stay hidden until that transition finishes, so they
-   * read as arriving *because* the globe is ready rather than alongside it. */
+   *
+   * The `gmt-globe-zoom-ready` class added at the end does not itself show the
+   * zoom controls — they only fade in on hover/focus (see gmt-globe.css). It
+   * arms them, so they cannot flash into view mid-reveal just because the
+   * pointer was already resting over the stage. */
   function reveal(): void {
     if (revealed) return;
     revealed = true;
@@ -292,9 +295,16 @@ export async function initGlobe(
 
   // --- sizing ------------------------------------------------------------
   function measure(): void {
-    const rect = host.getBoundingClientRect();
-    width = Math.max(1, Math.round(rect.width));
-    height = Math.max(1, Math.round(rect.height));
+    // clientWidth/clientHeight (the padding box), not getBoundingClientRect()
+    // (the border box): the stage keeps a 1px transparent border to hold its
+    // bevelled clip shape, so the rect is 2px larger in each axis than the box
+    // the canvas actually fills. Sizing the canvas from the rect made it
+    // overflow the stage's own `overflow: hidden` clip — and since Starlight's
+    // `max-width: 100%` then clamped the width back, a square raster got
+    // stretched into a non-square box. These are the same integers the
+    // `inset: 0` canvas resolves against, so CSS and JS agree on one box.
+    width = Math.max(1, host.clientWidth);
+    height = Math.max(1, host.clientHeight);
     dpr = Math.min(globalThis.devicePixelRatio || 1, 2);
     canvas.width = width * dpr;
     canvas.height = height * dpr;

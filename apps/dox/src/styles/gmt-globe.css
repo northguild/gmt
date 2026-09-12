@@ -49,7 +49,11 @@
   position: relative;
   width: 100%;
   /* Capped by viewport height too — a wide column must not make the square
-     taller than the fold, which was clipping the globe's bottom half. */
+     taller than the fold. Note this cap was *not* what fixed the globe's
+     clipped bottom (it made it worse on short viewports, by pulling the
+     stage under the ~600px threshold at which a fixed 16px offset ate the
+     sphere's 3% margin); the actual cause was Starlight markdown typography
+     landing on the canvas — see .gmt-globe-canvas below. */
   max-width: min(44rem, 70vh);
   /* Centers the stage once its own max-width caps it below the width of
      whatever column it's sitting in (the embedded hero's single-column
@@ -91,6 +95,25 @@
 
 .gmt-globe-canvas {
   display: block;
+  /* Pinned to the stage's padding box rather than laid out in flow, so that
+     nothing inherited can offset the canvas out of the square box measure()
+     drew for. `inset: 0` and `width/height: 100%` both resolve against that
+     same padding box — which is exactly what measure() reads via
+     clientWidth/clientHeight — so the CSS box and the raster agree.
+
+     This is belt-and-braces with the `not-content` class on the stage (see
+     lib/globe-mount.ts): either alone fixes the bottom-of-globe clipping,
+     but an in-flow canvas is one stray inherited `margin` away from it
+     coming back, and this widget is mounted into three different surfaces
+     (landing hero, /tools/zoned-earth, the chat rail). */
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  /* Starlight's markdown.css gives every canvas `max-width: 100%`, which
+     clamped the inline pixel width measure() set while the inline height
+     stayed put — stretching a square raster. `not-content` already opts out
+     of that rule; this makes the canvas immune wherever it is mounted. */
+  max-width: none;
   /* Fallback size before globe.ts's measure() sets the canvas's own inline
      width/height (which then takes over, matching the stage's actual pixel
      box + devicePixelRatio) — not dead, just overridden once JS runs. */
@@ -134,19 +157,45 @@
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   overflow: hidden;
-  /* Held back until the globe itself has finished its reveal transition —
-     see globe.ts's reveal() — then popped into place so the controls read
-     as arriving *because* the globe is ready, not alongside it. */
+  /* Ambient chrome: hidden at rest so the globe reads as a clean object, and
+     fade-scaled in only on pointer hover or keyboard focus (below).
+     `pointer-events: none` while hidden so an invisible button can never take
+     a stray click. Deliberately `opacity`, not `display`/`visibility`: the
+     buttons stay in the tab order, so a keyboard user can reach them and
+     their focus is what reveals them. */
   opacity: 0;
   transform: scale(0.8);
+  pointer-events: none;
   transition:
     opacity 0.25s ease,
     transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.gmt-globe-zoom.gmt-globe-zoom-ready {
+/* `.gmt-globe-zoom-ready` is added by globe.ts's reveal() once the globe's own
+   entrance transition has finished. It is no longer what shows the controls —
+   it is an arming gate, so they cannot flash in mid-reveal just because the
+   pointer happened to be over the stage already.
+
+   :focus-within on the *stage*, not on the cluster: the canvas itself is
+   focusable, so a keyboard user tabbing onto the globe sees the controls
+   before reaching them, and they stay put while focus moves through all
+   three buttons. */
+.gmt-globe-stage:hover .gmt-globe-zoom.gmt-globe-zoom-ready,
+.gmt-globe-stage:focus-within .gmt-globe-zoom.gmt-globe-zoom-ready {
   opacity: 1;
   transform: scale(1);
+  pointer-events: auto;
+}
+
+/* Touch devices never hover, and tapping the canvas pans the globe rather
+   than focusing it — without this the controls would be unreachable on a
+   phone, so there they are simply always on. */
+@media (hover: none) {
+  .gmt-globe-zoom.gmt-globe-zoom-ready {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
 }
 
 .gmt-globe-zoom button {
