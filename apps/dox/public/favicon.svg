@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="The Dox crystal">
+  <!--
+    Site favicon — the Dox crystal, flattened from src/lib/dox-mark.ts. The
+    polygon points below are MARK_OUTER and MARK_INNER verbatim; the six
+    MARK_SPOKES and the MARK_SHEEN gradient are dropped, because six spokes
+    inside a 16px hexagon are indistinguishable from a smudge. The inner table
+    is filled rather than stroked for the same reason: at this size a solid
+    facet reads, a second concentric outline does not.
+
+    The live mark is not self-contained: every fill and stroke in
+    DoxMark.astro is `currentColor`, inherited from the mount point, and the
+    stroke widths come from `.gmt-dox-mark*` in gmt-primitives.css with
+    `vector-effect: non-scaling-stroke`. A favicon is fetched as its own
+    document and gets no page CSS, so the cyan token values from
+    gmt-tokens.css are hardcoded for both themes here, and the stroke width is
+    baked in as real geometry.
+
+    Keep this comment free of double hyphens: XML forbids them inside a
+    comment, and an invalid favicon does not fail loudly. It silently does not
+    render, and browsers go on showing the icon they already cached.
+
+    The hexagon is 100 x 87; `scale(0.28)` fits it to 28 units wide and 24.4
+    tall, and the translate centres that in the 32-unit box. stroke-width is
+    pre-scale, so 7.14 x 0.28 = 2 units — a line that lands on a whole pixel
+    at 32px and stays a clean hairline at 16px.
+  -->
+  <style>
+    .face  { fill: #0891b2; fill-opacity: 0.14 }
+    .table { fill: #0891b2; fill-opacity: 0.42 }
+    .edge  { fill: none; stroke: #0891b2; stroke-width: 7.14; stroke-linejoin: round }
+
+    @media (prefers-color-scheme: dark) {
+      .face  { fill: #22d3ee; fill-opacity: 0.18 }
+      .table { fill: #22d3ee; fill-opacity: 0.5 }
+      .edge  { stroke: #22d3ee }
+    }
+  </style>
+  <g transform="translate(2 3.8) scale(0.28)">
+    <polygon class="face" points="25,0 75,0 100,43.5 75,87 25,87 0,43.5" />
+    <polygon class="edge" points="25,0 75,0 100,43.5 75,87 25,87 0,43.5" />
+    <polygon class="table" points="37,21.8 63,21.8 76,43.5 63,65.2 37,65.2 24,43.5" />
+  </g>
+</svg>

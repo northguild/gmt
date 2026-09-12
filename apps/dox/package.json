@@ -17,6 +17,7 @@
     "test": "pnpm run generate && vitest run",
     "lint": "oxlint",
     "astro": "astro",
+    "favicons": "node scripts/build-favicons.mjs",
     "visual:before": "node scripts/visual-snapshot.mjs before",
     "visual:after": "node scripts/visual-snapshot.mjs after",
     "visual:diff": "node scripts/visual-snapshot.mjs diff"
