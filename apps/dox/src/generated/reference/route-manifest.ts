@@ -3,6 +3,14 @@
 import type { RouteManifest } from "~/reference-types";
 
 export const referenceRoutes: RouteManifest = new Set([
+  "/reference/calendar/calculate/bucketRange",
+  "/reference/calendar/calculate/floorToZone",
+  "/reference/calendar/calculate/getFiscalPeriod",
+  "/reference/calendar/calculate/getIsoWeekDate",
+  "/reference/calendar/calculate/getOrdinalDate",
+  "/reference/calendar/calculate/getQuarter",
+  "/reference/calendar/validate/isValidFiscalPattern",
+  "/reference/calendar/validate/isValidZoneBucketUnit",
   "/reference/duration/calculate/absDuration",
   "/reference/duration/calculate/addDuration",
   "/reference/duration/calculate/durationAs",
@@ -318,6 +326,8 @@ export const referenceRoutes: RouteManifest = new Set([
   "/reference/types/duration-relative-to/DurationRelativeTo",
   "/reference/types/duration-string-options/DurationStringOptions",
   "/reference/types/duration-unit/DurationUnit",
+  "/reference/types/fiscal-calendar/FiscalCalendar",
+  "/reference/types/fiscal-calendar/FiscalPattern",
   "/reference/types/fractional-digit/FractionalDigit",
   "/reference/types/now-unit/NowUnit",
   "/reference/types/offset/Offset",
@@ -334,6 +344,7 @@ export const referenceRoutes: RouteManifest = new Set([
   "/reference/types/time-unit/TimeUnit",
   "/reference/types/unix-now-unit/UnixNowUnit",
   "/reference/types/utc-now-unit/UtcNowUnit",
+  "/reference/types/zone-bucket-unit/ZoneBucketUnit",
   "/reference/unix/calculate/addUnix",
   "/reference/unix/calculate/diffUnix",
   "/reference/unix/calculate/diffUnixAsDuration",

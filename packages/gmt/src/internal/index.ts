@@ -23,6 +23,11 @@ export {
   parseCalendarZonedValue,
 } from "./calendarZonedString";
 export { cycleFieldValue } from "./cycleFieldValue";
+export {
+  fiscalPeriodOfWeek,
+  fiscalYearEndIn,
+  fiscalYearOf,
+} from "./fiscalCalendar";
 export { floorDivide } from "./floorDivide";
 export {
   DOT_NET_TICKS_EPOCH_OFFSET,
@@ -101,3 +106,5 @@ export { resolveDateTimeUnit } from "./resolveDateTimeUnit";
 export { resolveDurationUnit } from "./resolveDurationUnit";
 export { resolveOverflow } from "./resolveOverflow";
 export { resolveRelativeRounding } from "./resolveRelativeRounding";
+export { nextZonedBucketStart, zonedUnitStart } from "./zonedBucket";
+export { zonelessCalendarDate } from "./zonelessCalendarDate";

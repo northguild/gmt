@@ -48,6 +48,15 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./calendar": {
+      "types": "./dist/calendar/index.d.ts",
+      "default": "./dist/calendar/index.js"
+    },
+    "./calendar/*": {
+      "types": "./dist/calendar/*/index.d.ts",
+      "default": "./dist/calendar/*/index.js"
+    },
+    "./calendar/*/*": null,
     "./instant": {
       "types": "./dist/instant/index.d.ts",
       "default": "./dist/instant/index.js"

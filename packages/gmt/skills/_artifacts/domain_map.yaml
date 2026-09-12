@@ -33,7 +33,7 @@ skills:
   - name: GMT Basics
     slug: gmt-basics
     domain: core-date-operations
-    description: Get current values, parse components, format for display, format relative time, compare dates, and validate strings/timezones/intervals
+    description: Get current values, parse components, read ISO week/ordinal/quarter/fiscal-period identifiers, format for display, format relative time, compare dates, and validate strings/timezones/intervals
     type: core
     packages:
       - '@northguild/gmt'
@@ -88,6 +88,11 @@ skills:
       - fromOffsetInstant
       - classifyLocal
       - resolveLocal
+      - getIsoWeekDate
+      - getOrdinalDate
+      - getQuarter
+      - getFiscalPeriod
+      - isValidFiscalPattern
     tasks:
       - Get current date/time/timestamp as ISO strings
       - Parse individual components from date/time strings
@@ -100,6 +105,9 @@ skills:
       - Check locale-aware weekends and business days
       - Validate date/time strings, timezones, and intervals
       - List DST transitions for a timezone
+      - Read the ISO week date or ordinal date a calendar date falls in
+      - Read the calendar or fiscal quarter a date falls in
+      - Place a date in a 52/53-week retail calendar period (4-5-4, 4-4-5, 5-4-4)
 
   - name: GMT Arithmetic
     slug: gmt-arithmetic
@@ -168,7 +176,7 @@ skills:
   - name: GMT Timezone
     slug: gmt-timezone
     domain: zoned-date-operations
-    description: Work with timezone-aware dates and times; includes formatZonedDateTime, formatZonedRange, formatRelativeZoned, convertPlainDateTimeToZoned with full DST disambiguation control, addZoned/subtractZoned, clampZoned, convertZonedToUtc, convertUtcToZoned, convertDateToCalendar, toOffsetInstant/fromOffsetInstant, classifyLocal/resolveLocal
+    description: Work with timezone-aware dates and times; includes formatZonedDateTime, formatZonedRange, formatRelativeZoned, convertPlainDateTimeToZoned with full DST disambiguation control, addZoned/subtractZoned, clampZoned, convertZonedToUtc, convertUtcToZoned, convertDateToCalendar, toOffsetInstant/fromOffsetInstant, classifyLocal/resolveLocal, floorToZone/bucketRange
     type: core
     packages:
       - '@northguild/gmt'
@@ -209,6 +217,9 @@ skills:
       - isInDaylightSaving
       - hasDaylightSaving
       - getDstTransitions
+      - floorToZone
+      - bucketRange
+      - isValidZoneBucketUnit
     tasks:
       - Get current time in a timezone
       - Format datetime in a timezone
@@ -227,6 +238,8 @@ skills:
       - Keep an event's original UTC offset alongside its instant
       - Tell an ambiguous or nonexistent wall time apart before resolving it
       - Resolve a zoneless local wall time to an instant under a stated policy
+      - Floor an instant to a local hour/day/week/month boundary in a named zone
+      - Bucket a range of instants by local calendar unit, DST-length buckets included
 
   - name: GMT Integration
     slug: gmt-integration
