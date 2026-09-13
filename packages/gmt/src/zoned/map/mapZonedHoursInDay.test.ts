@@ -20,6 +20,58 @@ describe("mapZonedHoursInDay", () => {
     },
   );
 
+  // Skipped local midnight: the day runs from the first instant after the gap to the next day's start.
+  it.each`
+    anchor                                           | expectedLength | expectedFirst                                    | expectedLast
+    ${"2024-09-08T12:00:00-03:00[America/Santiago]"} | ${23}          | ${"2024-09-08T01:00:00-03:00[America/Santiago]"} | ${"2024-09-08T23:00:00-03:00[America/Santiago]"}
+    ${"2024-03-10T12:00:00-04:00[America/Havana]"}   | ${23}          | ${"2024-03-10T01:00:00-04:00[America/Havana]"}   | ${"2024-03-10T23:00:00-04:00[America/Havana]"}
+  `(
+    "returns $expectedLength entries from $expectedFirst to $expectedLast for $anchor, whose midnight is skipped",
+    ({ anchor, expectedLength, expectedFirst, expectedLast }) => {
+      const result = mapZonedHoursInDay(anchor);
+
+      expect(result).toHaveLength(expectedLength);
+      expect(result[0]).toBe(expectedFirst);
+      expect(result.at(-1)).toBe(expectedLast);
+    },
+  );
+
+  // Passing `disambiguation` or `offset` keeps the legacy wall-clock path: midnight resolved with
+  // those options (Santiago's skipped 00:00 moves to 01:00), then 24 wall-clock hours, so the
+  // last entry lands on the next date. Verified on @js-temporal/polyfill@0.5.1.
+  it.each`
+    options                             | expectedLength | expectedFirst                                    | expectedLast
+    ${{ disambiguation: "compatible" }} | ${24}          | ${"2024-09-08T01:00:00-03:00[America/Santiago]"} | ${"2024-09-09T00:00:00-03:00[America/Santiago]"}
+    ${{ offset: "ignore" }}             | ${24}          | ${"2024-09-08T01:00:00-03:00[America/Santiago]"} | ${"2024-09-09T00:00:00-03:00[America/Santiago]"}
+  `(
+    "returns $expectedLength wall-clock entries ending $expectedLast for Santiago's skipped midnight with explicit $options",
+    ({ options, expectedLength, expectedFirst, expectedLast }) => {
+      const result = mapZonedHoursInDay(
+        "2024-09-08T12:00:00-03:00[America/Santiago]",
+        options,
+      );
+
+      expect(result).toHaveLength(expectedLength);
+      expect(result[0]).toBe(expectedFirst);
+      expect(result.at(-1)).toBe(expectedLast);
+    },
+  );
+
+  // Australia/Lord_Howe shifts 30 minutes, so hourly steps across a transition land on :30.
+  it.each`
+    anchor                                              | expectedLength | expectedFirstThree
+    ${"2024-10-06T12:00:00+11:00[Australia/Lord_Howe]"} | ${24}          | ${["2024-10-06T00:00:00+10:30[Australia/Lord_Howe]", "2024-10-06T01:00:00+10:30[Australia/Lord_Howe]", "2024-10-06T02:30:00+11:00[Australia/Lord_Howe]"]}
+    ${"2024-04-07T12:00:00+10:30[Australia/Lord_Howe]"} | ${25}          | ${["2024-04-07T00:00:00+11:00[Australia/Lord_Howe]", "2024-04-07T01:00:00+11:00[Australia/Lord_Howe]", "2024-04-07T01:30:00+10:30[Australia/Lord_Howe]"]}
+  `(
+    "returns $expectedLength entries starting $expectedFirstThree for half-hour-shift anchor $anchor",
+    ({ anchor, expectedLength, expectedFirstThree }) => {
+      const result = mapZonedHoursInDay(anchor);
+
+      expect(result).toHaveLength(expectedLength);
+      expect(result.slice(0, 3)).toEqual(expectedFirstThree);
+    },
+  );
+
   it.each`
     anchor                              | expectedFirstPrefix
     ${"2024-02-29T12:00:00+00:00[UTC]"} | ${"2024-02-29T00:00:00"}
@@ -84,10 +136,11 @@ describe("mapZonedHoursInDay", () => {
   }
 
   // disambiguation: the midnight anchor itself is ambiguous in this historical Brazil zone/date
-  // (2018-11-04's DST-start transition landed exactly on local midnight)
+  // (2018-11-04's DST-start transition landed exactly on local midnight). With no options the day
+  // is the real 23-hour day; passing disambiguation opts into wall-clock midnight + 24h stepping.
   it.each`
     disambiguation  | expectedLength
-    ${undefined}    | ${24}
+    ${undefined}    | ${23}
     ${"compatible"} | ${24}
     ${"earlier"}    | ${23}
     ${"later"}      | ${24}

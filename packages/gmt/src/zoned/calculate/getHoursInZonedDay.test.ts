@@ -53,6 +53,18 @@ describe("getHoursInZonedDay", () => {
     ).toBe(24.5);
   });
 
+  // Zones whose spring-forward gap swallows local midnight: the day starts at 01:00 and is 23h long.
+  it.each`
+    value                                            | expected
+    ${"2024-09-08T12:00:00-03:00[America/Santiago]"} | ${23}
+    ${"2024-03-10T12:00:00-04:00[America/Havana]"}   | ${23}
+  `(
+    "returns $expected for $value, whose local midnight is skipped",
+    ({ value, expected }) => {
+      expect(getHoursInZonedDay(value)).toBe(expected);
+    },
+  );
+
   // Historical rule change: Africa/Casablanca paused DST for Ramadan in 2018,
   // producing three transitions in one year instead of the usual two.
   it.each`
