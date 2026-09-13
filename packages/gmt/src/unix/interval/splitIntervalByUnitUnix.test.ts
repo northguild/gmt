@@ -41,6 +41,63 @@ describe("splitIntervalByUnitUnix", () => {
     },
   );
 
+  // Pacific/Apia deleted 30 December 2011 (UTC-10 → UTC+14). 1325109600000 is
+  // 2011-12-28T12:00:00-10:00; day steps 2 and 3 both resolve to 1325282400000
+  // (2011-12-31T12:00:00+14:00), so step 3 is skipped instead of discarding the whole split.
+  // 1325368800000 is 2012-01-01T12:00:00+14:00. Verified against Temporal.ZonedDateTime.add.
+  it.each`
+    start            | end              | unit     | amount | expected
+    ${1325109600000} | ${1325368800000} | ${"day"} | ${1}   | ${[{ start: 1325109600000, end: 1325196000000 }, { start: 1325196000000, end: 1325282400000 }, { start: 1325282400000, end: 1325368800000 }]}
+  `(
+    "skips the deleted local day when splitting $start to $end by $amount $unit in Pacific/Apia",
+    ({ start, end, unit, amount, expected }) => {
+      const restore = mockSystemTimeZone("Pacific/Apia");
+      try {
+        expect(splitIntervalByUnitUnix(start, end, unit, amount)).toEqual(
+          expected,
+        );
+      } finally {
+        restore();
+      }
+    },
+  );
+
+  // Exact units step from the previous boundary. 3 × 3033333333333333 ns exceeds 2^53 and rounds
+  // to 9100000000000000, so an anchored third boundary would be 9100000000 ms instead of the
+  // exact 9099999999.999999 ms (floored to 9099999999). Verified against Temporal.ZonedDateTime.add
+  // stepping incrementally in UTC.
+  it.each`
+    start | end            | unit            | amount              | expected
+    ${0}  | ${10000000000} | ${"nanosecond"} | ${3033333333333333} | ${[{ start: 0, end: 3033333333 }, { start: 3033333333, end: 6066666666 }, { start: 6066666666, end: 9099999999 }, { start: 9099999999, end: 10000000000 }]}
+  `(
+    "steps $amount $unit boundaries of $start to $end without losing precision past 2^53",
+    ({ start, end, unit, amount, expected }) => {
+      const restore = mockSystemTimeZone("UTC");
+      try {
+        expect(splitIntervalByUnitUnix(start, end, unit, amount)).toEqual(
+          expected,
+        );
+      } finally {
+        restore();
+      }
+    },
+  );
+
+  // Loop bound: steps that never advance past the previous boundary return [] instead of spinning.
+  it.each`
+    unit
+    ${"day"}
+    ${"hour"}
+  `("returns [] when $unit steps stop advancing", ({ unit }) => {
+    vi.spyOn(Temporal.ZonedDateTime.prototype, "add").mockImplementation(
+      function (this: Temporal.ZonedDateTime) {
+        return this;
+      },
+    );
+
+    expect(splitIntervalByUnitUnix(0, 864000000, unit, 1)).toEqual([]);
+  });
+
   // No-progress guard: a step that does not move past the previous boundary returns [] rather
   // than looping forever.
   it("returns [] when a step lands before the previous boundary", () => {

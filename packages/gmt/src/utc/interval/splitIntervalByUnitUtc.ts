@@ -2,16 +2,21 @@ import { Temporal } from "@js-temporal/polyfill";
 import { isLeapSecond } from "../../plain/validate/isLeapSecond";
 import { utcDateTime } from "../../regex/utc-date-time";
 import { isValidUtc } from "../validate/isValidUtc";
-import { resolveDurationUnit } from "../../internal";
+import { resolveDurationUnit, tileByUnit } from "../../internal";
 
 /**
  * Split a UTC interval into sub-intervals of `amount × unit`.
  *
  * - Returns an array of `{ start, end }` records that tile the interval.
  * - The final sub-interval is trimmed so its `end` never exceeds the original `end`.
- * - Each boundary is computed from `start` (`start + k × amount`, as Temporal and Luxon's
- *   `Interval.splitBy` do), not by stepping from the previous boundary, so month-end starts
+ * - Calendar-unit boundaries (years, months, weeks, days) are computed from `start`
+ *   (`start + k × amount`, as Temporal and Luxon's `Interval.splitBy` do), so month-end starts
  *   don't drift: a monthly split from January 31 lands on February 29, March 31, April 30.
+ * - Exact-unit boundaries (hours and smaller) step from the previous boundary. Exact units never
+ *   clamp, and stepping keeps nanosecond precision where `k × amount` would pass
+ *   `Number.MAX_SAFE_INTEGER`.
+ * - A step that resolves to the same instant as the previous boundary is skipped, so no empty
+ *   slice is produced. A step that goes backwards returns `[]`.
  * - Returns `[{ start, end }]` when `start === end` (zero-length interval).
  * - Returns `[]` on invalid input (unparseable start/end, unsupported unit, non-positive amount,
  *   leap-second strings).
@@ -76,35 +81,18 @@ export function splitIntervalByUnitUtc(
       return [{ start: startInstant.toString(), end: endInstant.toString() }];
     }
 
-    const result: Array<{ start: string; end: string }> = [];
+    const slices = tileByUnit(
+      startInstant.toZonedDateTimeISO("UTC"),
+      endInstant.toZonedDateTimeISO("UTC"),
+      Temporal.ZonedDateTime.compare,
+      resolvedUnit,
+      amount,
+    );
 
-    const startZoned = startInstant.toZonedDateTimeISO("UTC");
-
-    for (
-      let step = 1, currentInstant = startInstant;
-      Temporal.Instant.compare(currentInstant, endInstant) < 0;
-      step++
-    ) {
-      const next = startZoned
-        .add({ [resolvedUnit]: amount * step })
-        .toInstant();
-
-      if (Temporal.Instant.compare(next, currentInstant) <= 0) {
-        return [];
-      }
-
-      const sliceEnd =
-        Temporal.Instant.compare(next, endInstant) > 0 ? endInstant : next;
-
-      result.push({
-        start: currentInstant.toString(),
-        end: sliceEnd.toString(),
-      });
-
-      currentInstant = next;
-    }
-
-    return result;
+    return (slices ?? []).map(([sliceStart, sliceEnd]) => ({
+      start: sliceStart.toInstant().toString(),
+      end: sliceEnd.toInstant().toString(),
+    }));
   } catch {
     return [];
   }

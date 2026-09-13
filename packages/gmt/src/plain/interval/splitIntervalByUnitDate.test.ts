@@ -29,6 +29,39 @@ describe("splitIntervalByUnitDate", () => {
     },
   );
 
+  // A calendar step that resolves to the previous boundary is skipped, not treated as a failure.
+  // The stub makes step 2 land on step 1's day.
+  it("skips a day step that repeats the previous boundary", () => {
+    const realAdd = Temporal.PlainDate.prototype.add;
+    vi.spyOn(Temporal.PlainDate.prototype, "add").mockImplementation(function (
+      this: Temporal.PlainDate,
+      ...args: Parameters<Temporal.PlainDate["add"]>
+    ) {
+      const { days } = args[0] as { days: number };
+      return realAdd.call(this, { days: days === 2 ? 1 : days });
+    });
+
+    expect(
+      splitIntervalByUnitDate("2024-01-01", "2024-01-04", "day", 1),
+    ).toEqual([
+      { start: "2024-01-01", end: "2024-01-02" },
+      { start: "2024-01-02", end: "2024-01-04" },
+    ]);
+  });
+
+  // Loop bound: steps that never advance past the previous boundary return [] instead of spinning.
+  it("returns [] when day steps stop advancing", () => {
+    vi.spyOn(Temporal.PlainDate.prototype, "add").mockImplementation(
+      function (this: Temporal.PlainDate) {
+        return this;
+      },
+    );
+
+    expect(
+      splitIntervalByUnitDate("2024-01-01", "2024-01-10", "day", 1),
+    ).toEqual([]);
+  });
+
   // No-progress guard: a step that does not move past the previous boundary returns [] rather
   // than looping forever.
   it("returns [] when a step lands before the previous boundary", () => {

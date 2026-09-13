@@ -30,6 +30,70 @@ describe("splitIntervalByUnitDateTime", () => {
     },
   );
 
+  // A calendar step that resolves to the previous boundary is skipped, not treated as a failure.
+  // The stub makes step 2 land on step 1's day.
+  it("skips a day step that repeats the previous boundary", () => {
+    const realAdd = Temporal.PlainDateTime.prototype.add;
+    vi.spyOn(Temporal.PlainDateTime.prototype, "add").mockImplementation(
+      function (
+        this: Temporal.PlainDateTime,
+        ...args: Parameters<Temporal.PlainDateTime["add"]>
+      ) {
+        const { days } = args[0] as { days: number };
+        return realAdd.call(this, { days: days === 2 ? 1 : days });
+      },
+    );
+
+    expect(
+      splitIntervalByUnitDateTime(
+        "2024-01-01T00:00:00",
+        "2024-01-04T00:00:00",
+        "day",
+        1,
+      ),
+    ).toEqual([
+      { start: "2024-01-01T00:00:00", end: "2024-01-02T00:00:00" },
+      { start: "2024-01-02T00:00:00", end: "2024-01-04T00:00:00" },
+    ]);
+  });
+
+  // Exact units step from the previous boundary. 3 × 3033333333333333 exceeds 2^53 and rounds to
+  // 9100000000000000, so an anchored third boundary would be 07:46:40 instead of 07:46:39.999999999.
+  // Verified against Temporal.PlainDateTime.add stepping incrementally.
+  it.each`
+    start                    | end                      | unit            | amount              | expected
+    ${"1970-01-01T00:00:00"} | ${"1970-04-26T17:46:40"} | ${"nanosecond"} | ${3033333333333333} | ${[{ start: "1970-01-01T00:00:00", end: "1970-02-05T02:35:33.333333333" }, { start: "1970-02-05T02:35:33.333333333", end: "1970-03-12T05:11:06.666666666" }, { start: "1970-03-12T05:11:06.666666666", end: "1970-04-16T07:46:39.999999999" }, { start: "1970-04-16T07:46:39.999999999", end: "1970-04-26T17:46:40" }]}
+  `(
+    "steps $amount $unit boundaries of $start to $end without losing precision past 2^53",
+    ({ start, end, unit, amount, expected }) => {
+      expect(splitIntervalByUnitDateTime(start, end, unit, amount)).toEqual(
+        expected,
+      );
+    },
+  );
+
+  // Loop bound: steps that never advance past the previous boundary return [] instead of spinning.
+  it.each`
+    unit
+    ${"day"}
+    ${"hour"}
+  `("returns [] when $unit steps stop advancing", ({ unit }) => {
+    vi.spyOn(Temporal.PlainDateTime.prototype, "add").mockImplementation(
+      function (this: Temporal.PlainDateTime) {
+        return this;
+      },
+    );
+
+    expect(
+      splitIntervalByUnitDateTime(
+        "2024-01-01T00:00:00",
+        "2024-01-10T00:00:00",
+        unit,
+        1,
+      ),
+    ).toEqual([]);
+  });
+
   // No-progress guard: a step that does not move past the previous boundary returns [] rather
   // than looping forever.
   it("returns [] when a step lands before the previous boundary", () => {

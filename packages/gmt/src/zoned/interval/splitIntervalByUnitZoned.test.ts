@@ -30,6 +30,58 @@ describe("splitIntervalByUnitZoned", () => {
     },
   );
 
+  // Pacific/Apia deleted 30 December 2011 (UTC-10 → UTC+14). Day steps 1 and 2 from 29 December
+  // both resolve to 31 December 12:00, so step 2 is skipped instead of discarding the whole split.
+  // Verified against Temporal.ZonedDateTime.add.
+  it.each`
+    start                                        | end                                          | unit     | amount | expected
+    ${"2011-12-29T12:00:00-10:00[Pacific/Apia]"} | ${"2012-01-01T12:00:00+14:00[Pacific/Apia]"} | ${"day"} | ${1}   | ${[{ start: "2011-12-29T12:00:00-10:00[Pacific/Apia]", end: "2011-12-31T12:00:00+14:00[Pacific/Apia]" }, { start: "2011-12-31T12:00:00+14:00[Pacific/Apia]", end: "2012-01-01T12:00:00+14:00[Pacific/Apia]" }]}
+  `(
+    "skips the deleted local day when splitting $start to $end by $amount $unit",
+    ({ start, end, unit, amount, expected }) => {
+      expect(splitIntervalByUnitZoned(start, end, unit, amount)).toEqual(
+        expected,
+      );
+    },
+  );
+
+  // Exact units step from the previous boundary. 3 × 3033333333333333 exceeds 2^53 and rounds to
+  // 9100000000000000, so an anchored third boundary would be 07:46:40 instead of 07:46:39.999999999.
+  // Verified against Temporal.ZonedDateTime.add stepping incrementally.
+  it.each`
+    start                               | end                                 | unit            | amount              | expected
+    ${"1970-01-01T00:00:00+00:00[UTC]"} | ${"1970-04-26T17:46:40+00:00[UTC]"} | ${"nanosecond"} | ${3033333333333333} | ${[{ start: "1970-01-01T00:00:00+00:00[UTC]", end: "1970-02-05T02:35:33.333333333+00:00[UTC]" }, { start: "1970-02-05T02:35:33.333333333+00:00[UTC]", end: "1970-03-12T05:11:06.666666666+00:00[UTC]" }, { start: "1970-03-12T05:11:06.666666666+00:00[UTC]", end: "1970-04-16T07:46:39.999999999+00:00[UTC]" }, { start: "1970-04-16T07:46:39.999999999+00:00[UTC]", end: "1970-04-26T17:46:40+00:00[UTC]" }]}
+  `(
+    "steps $amount $unit boundaries of $start to $end without losing precision past 2^53",
+    ({ start, end, unit, amount, expected }) => {
+      expect(splitIntervalByUnitZoned(start, end, unit, amount)).toEqual(
+        expected,
+      );
+    },
+  );
+
+  // Loop bound: steps that never advance past the previous boundary return [] instead of spinning.
+  it.each`
+    unit
+    ${"day"}
+    ${"hour"}
+  `("returns [] when $unit steps stop advancing", ({ unit }) => {
+    vi.spyOn(Temporal.ZonedDateTime.prototype, "add").mockImplementation(
+      function (this: Temporal.ZonedDateTime) {
+        return this;
+      },
+    );
+
+    expect(
+      splitIntervalByUnitZoned(
+        "2024-01-01T00:00:00+00:00[UTC]",
+        "2024-01-10T00:00:00+00:00[UTC]",
+        unit,
+        1,
+      ),
+    ).toEqual([]);
+  });
+
   // No-progress guard: a step that does not move past the previous boundary returns [] rather
   // than looping forever.
   it("returns [] when a step lands before the previous boundary", () => {
