@@ -136,16 +136,24 @@ Never compute a zoned start-of-unit by truncating the wall clock and resolving i
 | Zone                  | Transition                                          |
 | --------------------- | --------------------------------------------------- |
 | `Pacific/Chatham`     | 2024-09-29 spring (+45 min offset), 2024-04-07 fall |
-| `Antarctica/Casey`    | 2020-10-03 (three-hour jump)                        |
+| `Antarctica/Casey`    | 2020-10-04 (three-hour jump)                        |
 | `America/New_York`    | 2024-11-03 fall-back                                |
 | `Australia/Lord_Howe` | 30-minute DST                                       |
 | `America/Santiago`    | 2024-09-08 (skipped local midnight)                 |
-| `America/Goose_Bay`   | 2010-11-07 (60-second local midnight hour)          |
+| `America/Havana`      | 2024-11-03 (midnight repeated on the same date)     |
+| `America/Goose_Bay`   | 2010-11-07 (fall-back reopens the previous date)    |
 | `Pacific/Apia`        | 2011-12-30 (deleted day)                            |
 
-### 3. startOf/endOf: the default is the real boundary
+- **When a transition opens a new bucket.** Hours: when the clock lands on an hour boundary or the label jumps — New York's repeated 01:00 is its own hour, so a fall-back day has 25 hour buckets. Day and larger: only when the local label changes — Havana's repeated midnight on 2024-11-03 stays one 25-hour day (matching `hoursInDay`), while Goose_Bay's fall-back into 6 November is its own 59-minute bucket because the date changed.
 
-With no options, `startOf*`/`endOf*` (and the functions built on them: `areZonedEqualBy`, `intervalCount*`, quarter and locale-week variants) return the real boundary: `start ≤ input < next start`, and end = next start − 1 ns. Explicitly passing `disambiguation` or `offset` opts into wall-clock resolution. That path is unchanged for existing callers.
+### 3. Boundary functions take no resolution options (the TC39 pattern)
+
+TC39 splits the API in two ([ZonedDateTime docs](https://tc39.es/proposal-temporal/docs/zoneddatetime.html)): **field-setting** methods (`with`, `from`) take `disambiguation`/`offset`, while **boundary** methods take none — `startOfDay()` has no options and returns the day's earliest real instant, `round()` accepts only rounding options, and `hoursInDay` derives from `startOfDay`. GMT follows the same split.
+
+- Field-setting functions (`setZoned`, `addZoned`, `convertPlainDateTimeToZoned`, `resolveLocal`, …) keep `disambiguation`/`offset`.
+- Boundary functions — `startOf*`/`endOf*`, quarter and locale-week variants, and everything built on them (`areZonedEqualBy`, `areUnixEqualBy`, `intervalCount*`) — **always** return the real boundary: `start ≤ input < next start`, end = next start − 1 ns. Their `disambiguation`/`offset` options are ignored and `@deprecated` (shipped in 1.15.0; removed at the next major). `mapZonedHoursInDay` shares the deprecation. Do not reintroduce an opt-in: any value, including the documented defaults, used to bring the bug back.
+- **Day-length functions follow the TC39 date day.** `getHoursInZonedDay` and `mapZonedHoursInDay` use `startOfDay()`/`hoursInDay`: the day is the input's calendar date, from its earliest instant to the next date's. That equals the walker's day bucket everywhere except a fall-back that re-enters the previous date — America/Goose_Bay, 2010-11-07: an input at `2010-11-06T23:30-04:00` gets 6 November's 24 hours (ending 00:00-03:00 on the 7th, before the input), while `startOfZoned(…, "day")` returns the reopened 59-minute bucket. Documented and pinned by tests; do not "fix" one side to match the other.
+- Equality helpers compare boundary **instants** when both values share a zone, so both passes of a repeated hour are different hours. Across zones `areZonedEqualBy` compares each value's own local unit label (New York 10:00 and Berlin 20:00 on the same date are the same day); `areUnixEqualBy` always resolves in one zone, so it always compares instants.
 
 ### 4. `roundZoned` / `roundUnix` pass TC39 through
 
@@ -153,7 +161,11 @@ They keep `ZonedDateTime.prototype.round` semantics exactly, including its behav
 
 ### 5. Repeated steps are computed from the anchor
 
-Step k of a split or series is `start.add({ [unit]: amount * k })`, never `previous.add(…)`. Compounding clamped results drifts: Jan 31 by month must give Mar 31 and Apr 30, not Mar 29/Apr 29. This matches Temporal and Luxon's `Interval.splitBy`. Keep a no-progress guard (`compare(next, previous) <= 0` → sentinel).
+For **calendar units** (years, months, weeks, days), step k of a split or series is `start.add({ [unit]: amount * k })`, never `previous.add(…)`. Compounding clamped results drifts: Jan 31 by month must give Mar 31 and Apr 30, not Mar 29/Apr 29. This matches Temporal and Luxon's `Interval.splitBy`.
+
+- **Exact time units** (hours and smaller) never clamp, so they step from the previous boundary — `amount * k` would lose precision past 2^53.
+- **A step that lands on the previous boundary is skipped, not fatal.** Anchored steps into a deleted local day (Apia, 2011-12-30) resolve to the same instant; drop that empty slice and continue. Only a step that goes backwards, or a bounded run of non-advancing steps, returns the sentinel.
+- **Caps are per contract.** `bucketRange` caps at 10,000 buckets (it materialises a list); `intervalCount*` caps at 10,000 transitions (it only counts). Counts equal `bucketRange(...).length` only while `bucketRange` is within its cap.
 
 ### 6. Loop exhaustion → sentinel
 

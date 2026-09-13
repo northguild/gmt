@@ -1,15 +1,15 @@
 {
   "suite": "packages/gmt",
-  "tests": 19501,
-  "files": 595,
-  "executions": 390020,
+  "tests": 19611,
+  "files": 596,
+  "executions": 392220,
   "nodes": [
     "22",
     "24"
   ],
   "timezones": 10,
   "locales": 17,
-  "functions": 547,
+  "functions": 548,
   "patterns": 25,
   "byNamespace": [
     {
@@ -18,7 +18,7 @@
     },
     {
       "namespace": "zoned",
-      "count": 122
+      "count": 123
     },
     {
       "namespace": "unix",

@@ -9337,6 +9337,10 @@
       {
         "call": "endOfQuarterForUnix(1285882200000, { timeZone: \"Africa/Cairo\" })",
         "result": "1285883999999 (the second pass of Q3 2010's repeated last hour; the quarter ends after it)"
+      },
+      {
+        "call": "endOfQuarterForUnix(1285882200000, { timeZone: \"Africa/Cairo\", disambiguation: \"compatible\" })",
+        "result": "1285883999999 (the deprecated option is ignored)"
       }
     ]
   },
@@ -9372,11 +9376,7 @@
       },
       {
         "call": "endOfUnix(1730616300000, \"hour\", { timeZone: \"America/New_York\", disambiguation: \"reject\" })",
-        "result": "null (opting in: the wall-clock 1:59:59 is ambiguous between the two passes)"
-      },
-      {
-        "call": "endOfUnix(1730616300000, \"hour\", { timeZone: \"America/New_York\", disambiguation: \"reject\", offset: \"prefer\" })",
-        "result": "1730617199999 (setting offset to \"prefer\" makes disambiguation inert here — the source's -05:00 offset is still valid for 1am, so it's kept and \"reject\" never fires)"
+        "result": "1730617199999 (the deprecated option is ignored)"
       }
     ]
   },
@@ -9557,6 +9557,10 @@
       {
         "call": "startOfQuarterForUnix(-86400000, { timeZone: \"UTC\" })",
         "result": "-7948800000 (1969-12-31 is in Q4, which starts Oct 1)"
+      },
+      {
+        "call": "startOfQuarterForUnix(276046200000, { timeZone: \"Africa/Tunis\", disambiguation: \"later\" })",
+        "result": "276040800000 (the first pass of Q4 1978's repeated first hour; the deprecated option is ignored)"
       }
     ]
   },
@@ -9592,11 +9596,7 @@
       },
       {
         "call": "startOfUnix(1730616300000, \"hour\", { timeZone: \"America/New_York\", disambiguation: \"reject\" })",
-        "result": "null (opting in: the wall-clock 1am is ambiguous between the two passes)"
-      },
-      {
-        "call": "startOfUnix(1730616300000, \"hour\", { timeZone: \"America/New_York\", disambiguation: \"reject\", offset: \"prefer\" })",
-        "result": "1730613600000 (setting offset to \"prefer\" makes disambiguation inert here — the source's -05:00 offset is still valid for 1am, so it's kept and \"reject\" never fires)"
+        "result": "1730613600000 (the deprecated option is ignored)"
       }
     ]
   },
@@ -9606,7 +9606,7 @@
     "namespace": "unix",
     "module": "calculate",
     "kind": "function",
-    "signature": "startOrEndOfUnix(value: number, unit: DateUnit | TimeUnit, options: { epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; weekStartsOn?: \"monday\" | \"sunday\"; disambiguation?: \"compatible\" | ... 2 more ... | \"reject\"; offset?: \"reject\" | ... 2 more ... | \"ignore\"; }, isEnd: boolean): number",
+    "signature": "startOrEndOfUnix(value: number, unit: DateUnit | TimeUnit | \"quarter\", options: { epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; weekStartsOn?: \"monday\" | \"sunday\"; disambiguation?: \"compatible\" | ... 2 more ... | \"reject\"; offset?: \"reject\" | ... 2 more ... | \"ignore\"; }, isEnd: boolean): number",
     "description": "Internal shared implementation for `startOfUnix` / `endOfUnix`.",
     "sourcePath": "packages/gmt/src/unix/calculate/startOrEndOfUnix.ts",
     "examples": []
@@ -13362,6 +13362,10 @@
         "result": "\"2024-03-31T23:59:59.999999999+00:00[UTC]\""
       },
       {
+        "call": "endOfQuarterForZoned(\"2010-09-30T23:30:00+02:00[Africa/Cairo]\", { disambiguation: \"compatible\" })",
+        "result": "\"2010-09-30T23:59:59+02:00[Africa/Cairo]\" (the second pass of Q3's repeated last hour; the deprecated option is ignored)"
+      },
+      {
         "call": "endOfQuarterForZoned(\"invalid\")",
         "result": "\"\""
       }
@@ -13394,16 +13398,12 @@
         "result": "\"2024-11-03T01:59:59-05:00[America/New_York]\" (the second, repeated 1am is its own hour)"
       },
       {
-        "call": "endOfZoned(\"2024-11-03T01:15:00-05:00[America/New_York]\", \"hour\", { disambiguation: \"earlier\" })",
-        "result": "\"2024-11-03T01:59:59-04:00[America/New_York]\" (opting in: the wall-clock 1:59:59 resolved to the first (EDT) pass, before the source)"
+        "call": "endOfZoned(\"2024-11-03T00:30:00-04:00[America/Havana]\", \"day\")",
+        "result": "\"2024-11-03T23:59:59-05:00[America/Havana]\" (midnight repeated on the same date: one 25-hour day)"
       },
       {
         "call": "endOfZoned(\"2024-11-03T01:15:00-05:00[America/New_York]\", \"hour\", { disambiguation: \"reject\" })",
-        "result": "\"\" (opting in: \"reject\" throws because the wall-clock 1:59:59 is ambiguous between the two passes)"
-      },
-      {
-        "call": "endOfZoned(\"2024-11-03T01:15:00-05:00[America/New_York]\", \"hour\", { disambiguation: \"reject\", offset: \"prefer\" })",
-        "result": "\"2024-11-03T01:59:59-05:00[America/New_York]\" (setting offset to \"prefer\" makes disambiguation inert here — the source's -05:00 offset is still valid for 1am, so it's kept and \"reject\" never fires)"
+        "result": "\"2024-11-03T01:59:59-05:00[America/New_York]\" (the deprecated option is ignored)"
       }
     ]
   },
@@ -13494,6 +13494,10 @@
         "result": "\"2024-03-03T23:59:59+00:00[UTC]\" (Sunday)"
       },
       {
+        "call": "getLocaleZonedEndOfWeek(\"2014-02-12T12:00:00-02:00[America/Sao_Paulo]\", \"en-US\", { disambiguation: \"reject\" })",
+        "result": "\"2014-02-15T23:59:59-03:00[America/Sao_Paulo]\" (Saturday's last hour repeats; the week ends on the second pass and the deprecated option is ignored)"
+      },
+      {
         "call": "getLocaleZonedEndOfWeek(\"invalid\", \"en-US\")",
         "result": "\"\""
       },
@@ -13524,6 +13528,10 @@
       {
         "call": "getLocaleZonedStartOfWeek(\"2024-09-11T12:00:00-03:00[America/Santiago]\", \"en-US\")",
         "result": "\"2024-09-08T01:00:00-03:00[America/Santiago]\" (that Sunday's midnight was skipped)"
+      },
+      {
+        "call": "getLocaleZonedStartOfWeek(\"2018-11-07T12:00:00-02:00[America/Sao_Paulo]\", \"en-US\", { disambiguation: \"reject\" })",
+        "result": "\"2018-11-04T01:00:00-02:00[America/Sao_Paulo]\" (the deprecated option is ignored)"
       },
       {
         "call": "getLocaleZonedStartOfWeek(\"invalid\", \"en-US\")",
@@ -13742,6 +13750,10 @@
         "result": "\"2024-01-01T00:00:00.000+00:00[UTC]\""
       },
       {
+        "call": "startOfQuarterForZoned(\"1978-10-01T00:30:00+01:00[Africa/Tunis]\", { disambiguation: \"later\" })",
+        "result": "\"1978-10-01T00:00:00+02:00[Africa/Tunis]\" (the quarter's first real instant; the deprecated option is ignored)"
+      },
+      {
         "call": "startOfQuarterForZoned(\"invalid\")",
         "result": "\"\""
       }
@@ -13774,18 +13786,25 @@
         "result": "\"2024-09-29T03:45:00+13:45[Pacific/Chatham]\" (local 03:00 never happened; the hour began at the jump)"
       },
       {
-        "call": "startOfZoned(\"2024-11-03T01:45:00-05:00[America/New_York]\", \"hour\", { disambiguation: \"earlier\" })",
-        "result": "\"2024-11-03T01:00:00-04:00[America/New_York]\" (opting in: the wall-clock 1am resolved to the first (EDT) pass)"
+        "call": "startOfZoned(\"2024-11-03T00:30:00-05:00[America/Havana]\", \"day\")",
+        "result": "\"2024-11-03T00:00:00-04:00[America/Havana]\" (midnight repeated on the same date: one 25-hour day)"
       },
       {
         "call": "startOfZoned(\"2024-11-03T01:45:00-05:00[America/New_York]\", \"hour\", { disambiguation: \"reject\" })",
-        "result": "\"\" (opting in: \"reject\" throws because the wall-clock 1am is ambiguous between the two passes)"
-      },
-      {
-        "call": "startOfZoned(\"2024-11-03T01:45:00-05:00[America/New_York]\", \"hour\", { disambiguation: \"reject\", offset: \"prefer\" })",
-        "result": "\"2024-11-03T01:00:00-05:00[America/New_York]\" (setting offset to \"prefer\" makes disambiguation inert here — the source's -05:00 offset is still valid for 1am, so it's kept and \"reject\" never fires)"
+        "result": "\"2024-11-03T01:00:00-05:00[America/New_York]\" (the deprecated option is ignored)"
       }
     ]
+  },
+  {
+    "url": "/reference/zoned/calculate/startOrEndOfZoned",
+    "name": "startOrEndOfZoned",
+    "namespace": "zoned",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "startOrEndOfZoned(value: string, unit: DateTimeUnit, options: { weekStartsOn?: \"monday\" | \"sunday\"; fractionalSecondDigits?: FractionalDigit; }, isEnd: boolean): string",
+    "description": "Internal shared implementation for `startOfZoned` / `endOfZoned`.",
+    "sourcePath": "packages/gmt/src/zoned/calculate/startOrEndOfZoned.ts",
+    "examples": []
   },
   {
     "url": "/reference/zoned/calculate/subtractZoned",
@@ -14020,6 +14039,10 @@
       {
         "call": "areZonedEqualBy(\"2024-03-15T23:30:00-04:00[America/New_York]\", \"2024-03-16T04:30:00+00:00[UTC]\", \"day\")",
         "result": "false (same instant, different local calendar day per zone)"
+      },
+      {
+        "call": "areZonedEqualBy(\"2024-11-03T01:30:00-04:00[America/New_York]\", \"2024-11-03T01:30:00-05:00[America/New_York]\", \"hour\")",
+        "result": "false (both read 01:30, but they sit in the two different real 01:00 hours)"
       },
       {
         "call": "areZonedEqualBy(\"invalid\", \"2024-03-15T10:00:00-04:00[America/New_York]\", \"day\")",
@@ -15595,6 +15618,10 @@
         "result": "[{ start: \"2024-01-01T00:00:00+00:00[UTC]\", end: \"2024-01-01T00:00:00+00:00[UTC]\" }]"
       },
       {
+        "call": "splitIntervalByUnitZoned(\"2011-12-29T12:00:00-10:00[Pacific/Apia]\", \"2012-01-01T12:00:00+14:00[Pacific/Apia]\", \"day\", 1)",
+        "result": "[{ start: \"2011-12-29T12:00:00-10:00[Pacific/Apia]\", end: \"2011-12-31T12:00:00+14:00[Pacific/Apia]\" }, { start: \"2011-12-31T12:00:00+14:00[Pacific/Apia]\", end: \"2012-01-01T12:00:00+14:00[Pacific/Apia]\" }]"
+      },
+      {
         "call": "splitIntervalByUnitZoned(\"2024-01-01T00:00:00+00:00[UTC]\", \"2024-01-02T00:00:00+00:00[UTC]\", \"hour\", 0)",
         "result": "[]"
       },
@@ -15702,7 +15729,7 @@
     "namespace": "zoned",
     "module": "map",
     "kind": "function",
-    "signature": "mapZonedHoursInDay(anchor: string, optionsArg?: { disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\"; offset?: \"reject\" | \"use\" | \"prefer\" | \"ignore\"; }): string[]",
+    "signature": "mapZonedHoursInDay(anchor: string, _optionsArg?: { disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\"; offset?: \"reject\" | \"use\" | \"prefer\" | \"ignore\"; }): string[]",
     "description": "Return an array of zoned datetime strings representing each hour boundary of the anchor's local day.",
     "sourcePath": "packages/gmt/src/zoned/map/mapZonedHoursInDay.ts",
     "examples": [
@@ -15712,7 +15739,7 @@
       },
       {
         "call": "mapZonedHoursInDay(\"2024-03-10T12:34:56.789-05:00[America/New_York]\")",
-        "result": "[\"2024-03-10T00:00:00-05:00[America/New_York]\", ...] (skips 2 AM due to DST; unaffected by `disambiguation` since this gap is inside the loop's arithmetic, not the anchor)"
+        "result": "[\"2024-03-10T00:00:00-05:00[America/New_York]\", ...] (23 entries; 2 AM is skipped)"
       },
       {
         "call": "mapZonedHoursInDay(\"2024-09-08T12:00:00-03:00[America/Santiago]\")",
@@ -15720,11 +15747,7 @@
       },
       {
         "call": "mapZonedHoursInDay(\"2018-11-04T12:00:00-02:00[America/Sao_Paulo]\", { disambiguation: \"reject\" })",
-        "result": "[] (midnight itself is the DST transition in this historical Brazil zone/date, so the anchor is ambiguous and \"reject\" throws)"
-      },
-      {
-        "call": "mapZonedHoursInDay(\"2018-11-04T12:00:00-02:00[America/Sao_Paulo]\", { disambiguation: \"reject\", offset: \"prefer\" })",
-        "result": "[] (the source's -02:00 offset is also invalid at midnight here, so even \"prefer\" falls through to disambiguation and \"reject\" still throws — contrast with startOfZoned's Nov 3 America/New_York example, where \"prefer\" IS valid at the target time and suppresses disambiguation)"
+        "result": "[\"2018-11-04T01:00:00-02:00[America/Sao_Paulo]\", ...] (23 entries; midnight is skipped and the deprecated option is ignored)"
       },
       {
         "call": "mapZonedHoursInDay(\"invalid\")",

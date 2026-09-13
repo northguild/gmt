@@ -61,22 +61,25 @@ converting between time zones, or doing arithmetic that must respect DST.
    `"later"` | `"reject"`) for gap/overlap resolution. On `addZoned` it only
    affects fall-back overlaps, **not** spring-forward gaps — use
    `convertPlainDateTimeToZoned` with `"reject"` for gap-safety.
-3. **Boundaries default to the real zone boundary.** With no options,
-   `startOfZoned`, `endOfZoned`, `startOfQuarterForZoned`,
-   `endOfQuarterForZoned`, `getLocaleZonedStartOfWeek`,
-   `getLocaleZonedEndOfWeek` and their `unix/` counterparts (`startOfUnix`,
+3. **Boundaries are always the real zone boundary.** `startOfZoned`,
+   `endOfZoned`, `startOfQuarterForZoned`, `endOfQuarterForZoned`,
+   `getLocaleZonedStartOfWeek`, `getLocaleZonedEndOfWeek` and their `unix/`
+   counterparts (`startOfUnix`,
    `endOfUnix`, …) return the real start and end of the unit that contains the
    input: the start is never after the input, and the end is the last
    nanosecond before the next start. `Pacific/Chatham`'s 03:00 hour on its
    spring-forward begins at 03:45, and New York's repeated 1 a.m. is its own
-   hour. `areZonedEqualBy`/`areUnixEqualBy` compare on these boundaries.
-   Passing `disambiguation` or `offset` opts into Temporal's wall-clock
-   `.with()` resolution instead, which can land after the input in a gap or on
-   the other pass of an overlap — only do that when you want that behaviour.
-4. **The `offset` parameter (opt-in path only).** Once you pass either option,
-   `offset` defaults to `"ignore"` so `disambiguation` takes effect. Passing
-   `offset: "prefer"` keeps the source offset and silently disables
-   `disambiguation`.
+   hour. `areZonedEqualBy`/`areUnixEqualBy` compare these boundary instants, so
+   the two passes of a repeated hour are not equal. A day whose midnight repeats
+   on the same date (America/Havana, 2024-11-03) is one 25-hour day.
+   `getHoursInZonedDay` and `mapZonedHoursInDay` measure the input's calendar
+   date via TC39 `hoursInDay`; that differs from `startOfZoned(…, "day")` only
+   where a fall-back re-enters the previous date (America/Goose_Bay,
+   2010-11-07).
+4. **Do not pass `disambiguation` or `offset` to boundary functions.** They are
+   deprecated and ignored there, matching TC39 `startOfDay()`, which takes no
+   such options. Use them only on functions that set wall-clock fields —
+   `convertPlainDateTimeToZoned`, `resolveLocal`, `addZoned`, `setZoned`.
 5. **Classify a zoneless wall time before resolving it.** `classifyLocal(local,
    zone)` returns `"unique"` | `"ambiguous"` | `"nonexistent"` so code can branch
    rather than accept a policy — 01:30 happens twice on a fall-back day and never

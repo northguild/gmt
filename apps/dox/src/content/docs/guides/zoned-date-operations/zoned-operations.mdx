@@ -77,9 +77,9 @@ endOfZoned("2024-03-15T14:30:45[America/New_York]", "hour");
 // "2024-03-15T14:59:59-04:00[America/New_York]"
 ```
 
-With no options these return the real start and end of the unit that contains the
-input: the start is never after the input, and the end is the last nanosecond before
-the next start — even when the wall-clock boundary was skipped or repeated:
+These always return the real start and end of the unit that contains the input: the
+start is never after the input, and the end is the last nanosecond before the next
+start — even when the wall-clock boundary was skipped or repeated:
 
 ```typescript
 startOfZoned("2024-09-29T03:50:00+13:45[Pacific/Chatham]", "hour");
@@ -89,14 +89,12 @@ startOfZoned("2024-11-03T01:45:00-05:00[America/New_York]", "hour");
 // "2024-11-03T01:00:00-05:00[America/New_York]" — the repeated 1 a.m. is its own hour
 ```
 
-Passing `disambiguation` or `offset` (`"prefer" | "use" | "ignore" | "reject"`) opts
-into Temporal's wall-clock `.with()` resolution instead, which can land after the
-input in a gap or on the other pass of an overlap. Once you opt in, `offset` defaults
-to `"ignore"`, and **it must stay there for `disambiguation` to take effect** —
-Temporal's own default (`"prefer"`) keeps the source offset whenever still valid,
-which silently makes `disambiguation` a no-op. Don't floor with `roundZoned` and
-`roundingMode: "trunc"`: it re-resolves the wall clock the same way. Use
-`floorToZone` or `startOfZoned` with no options.
+Their `disambiguation` and `offset` options are deprecated and ignored: a boundary is a
+real instant, exactly as TC39's `startOfDay()` takes no such options. Resolution
+options belong on functions that set wall-clock fields (`convertPlainDateTimeToZoned`,
+`addZoned`, `setZoned`). Don't floor with `roundZoned` and `roundingMode: "trunc"`:
+it rounds the wall clock and re-resolves it, which can land after the input. Use
+`floorToZone` or `startOfZoned`.
 
 ## Set fields directly
 
