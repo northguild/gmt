@@ -13,6 +13,10 @@ import { isValidZonedDateTime } from "../validate";
  *   same instant can be "the same day" in one zone and a different day in
  *   another, and this function answers per each value's own zone, the way
  *   Luxon's `dt.hasSame(other, unit)` does for zoned `DateTime`s.
+ * - Each value's start-of-unit is its real local bucket (see `startOfZoned`), so a bucket a
+ *   zone transition shortened is still its own unit: in `Pacific/Chatham` on its 2024
+ *   spring-forward, 03:50 and 04:05 are different hours, because the 03:00 hour lasted only
+ *   from 03:45 to 04:00.
  * - `"month"` requires the same month AND year, matching `areDateTimesEqualBy`.
  * - Returns false for an unsupported unit or invalid input.
  *

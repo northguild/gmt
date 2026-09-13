@@ -77,10 +77,12 @@ describe("startOfUnix", () => {
     expect(startOfUnix(1706659200, invalidUnit as never)).toBeNull();
   });
 
-  // disambiguation: fall-back overlap — source sits in the second, repeated 1:45am
+  // disambiguation: fall-back overlap — source sits in the second, repeated 1:45am. With no
+  // disambiguation (the undefined row) the real boundary is returned: the start of the second
+  // pass. An explicit disambiguation opts into wall-clock `.with()`.
   it.each`
     disambiguation  | expected
-    ${undefined}    | ${1730610000000}
+    ${undefined}    | ${1730613600000}
     ${"compatible"} | ${1730610000000}
     ${"earlier"}    | ${1730610000000}
     ${"later"}      | ${1730613600000}
@@ -133,6 +135,55 @@ describe("startOfUnix", () => {
           ? { timeZone: "America/Sao_Paulo" }
           : { timeZone: "America/Sao_Paulo", disambiguation };
       expect(startOfUnix(1541340000000, "day", optionsArg)).toBe(expected);
+    },
+  );
+});
+
+// With neither `disambiguation` nor `offset` passed, the start is the real zone boundary, never
+// after the input. Every expected value verified against `floorToZone` on
+// @js-temporal/polyfill@0.5.1.
+// 1727532300000 is 2024-09-29T03:50:00+13:45[Pacific/Chatham]; 1727532000000 is its 03:45
+// 1712412300000 is 2024-04-07T02:50:00+12:45[Pacific/Chatham]; 1712412000000 is its 02:45
+// 1601742600000 is 2020-10-04T03:30:00+11:00[Antarctica/Casey]; 1601740860000 is its 03:01
+// 1730615400000 is 2024-11-03T01:30:00-05:00[America/New_York]; 1730613600000 is its 01:00
+// 1712416200000 is 2024-04-07T01:40:00+10:30[Australia/Lord_Howe]; 1712412000000 is 01:00+11:00
+// 1725807600000 is 2024-09-08T12:00:00-03:00[America/Santiago]; 1725768000000 is its 01:00
+// 1289104200000 is 2010-11-07T00:30:00-04:00[America/Goose_Bay]; 1289102400000 is its 00:00
+// 1289100600000 is 2010-11-06T23:30:00-04:00[America/Goose_Bay]; 1289098860000 is its 23:01
+// 14303966789 is 1970-06-15T12:34:56.789-00:44:30[Africa/Monrovia]; 14303910000 is its 12:34:00
+// (a UTC-minute truncation would give 14303940000)
+describe("startOfUnix across zone transitions with default options", () => {
+  it.each`
+    value            | unit        | timeZone                 | expected
+    ${1727532300000} | ${"hour"}   | ${"Pacific/Chatham"}     | ${1727532000000}
+    ${1712412300000} | ${"hour"}   | ${"Pacific/Chatham"}     | ${1712412000000}
+    ${1601742600000} | ${"hour"}   | ${"Antarctica/Casey"}    | ${1601740860000}
+    ${1730615400000} | ${"hour"}   | ${"America/New_York"}    | ${1730613600000}
+    ${1712416200000} | ${"hour"}   | ${"Australia/Lord_Howe"} | ${1712412000000}
+    ${1725807600000} | ${"day"}    | ${"America/Santiago"}    | ${1725768000000}
+    ${1289104200000} | ${"day"}    | ${"America/Goose_Bay"}   | ${1289102400000}
+    ${1289100600000} | ${"day"}    | ${"America/Goose_Bay"}   | ${1289098860000}
+    ${14303966789}   | ${"minute"} | ${"Africa/Monrovia"}     | ${14303910000}
+  `(
+    "returns $expected for $value by $unit in $timeZone",
+    ({ value, unit, timeZone, expected }) => {
+      expect(startOfUnix(value, unit, { timeZone })).toBe(expected);
+    },
+  );
+
+  // Goose Bay fell back at 00:01 Sunday into Saturday 23:01, re-opening a Sunday-first week.
+  // The default path starts that week at 23:01 (-04:00); an explicit `disambiguation` keeps the
+  // legacy wall-clock `.with()` result, the previous Sunday's midnight. Verified against the
+  // `internal/zonedBucket.ts` walker (weekStartsOn 7) and Temporal on @js-temporal/polyfill@0.5.1.
+  // 1288494000000 is 2010-10-31T00:00:00-03:00[America/Goose_Bay]
+  it.each`
+    options                                                                                    | expected
+    ${{ timeZone: "America/Goose_Bay", weekStartsOn: "sunday" }}                               | ${1289098860000}
+    ${{ timeZone: "America/Goose_Bay", weekStartsOn: "sunday", disambiguation: "compatible" }} | ${1288494000000}
+  `(
+    "returns $expected for 1289100600000 by week with $options",
+    ({ options, expected }) => {
+      expect(startOfUnix(1289100600000, "week", options)).toBe(expected);
     },
   );
 });

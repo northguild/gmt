@@ -172,3 +172,39 @@ describe("intervalCountUnix", () => {
     expect(intervalCountUnix(0, 86400000, "hour")).toBeNull();
   });
 });
+
+// Transition zones, counted in the (spied) system timeZone. Epochs are the same instants as
+// intervalCountZoned.test.ts's transition table; every expected value verified against
+// `bucketRange(...).length` on @js-temporal/polyfill@0.5.1.
+// 1727532300000 is 2024-09-29T03:50:00+13:45[Pacific/Chatham]
+// 1727533500000 is 2024-09-29T04:10:00+13:45[Pacific/Chatham]
+// 1712408700000 is 2024-04-07T02:50:00+13:45[Pacific/Chatham]
+// 1712412300000 is 2024-04-07T02:50:00+12:45[Pacific/Chatham]
+// 1727522100000 is 2024-09-29T00:00:00+12:45[Pacific/Chatham]
+// 1727608500000 is 2024-09-30T01:00:00+13:45[Pacific/Chatham]
+// 1601740830000 is 2020-10-04T00:00:30+08:00[Antarctica/Casey]
+// 1601742600000 is 2020-10-04T03:30:00+11:00[Antarctica/Casey]
+// 1325196000000 is 2011-12-29T12:00:00-10:00[Pacific/Apia]
+// 1325282400000 is 2011-12-31T12:00:00+14:00[Pacific/Apia]
+// 1289097000000 is 2010-11-06T23:30:00-03:00[America/Goose_Bay]
+// 1289104200000 is 2010-11-07T00:30:00-04:00[America/Goose_Bay]
+describe("intervalCountUnix across zone transitions", () => {
+  it.each`
+    start            | end              | unit      | timeZone               | expected
+    ${1727532300000} | ${1727533500000} | ${"hour"} | ${"Pacific/Chatham"}   | ${2}
+    ${1712408700000} | ${1712412300000} | ${"hour"} | ${"Pacific/Chatham"}   | ${3}
+    ${1727522100000} | ${1727608500000} | ${"hour"} | ${"Pacific/Chatham"}   | ${25}
+    ${1601740830000} | ${1601742600000} | ${"hour"} | ${"Antarctica/Casey"}  | ${2}
+    ${1325196000000} | ${1325282400000} | ${"day"}  | ${"Pacific/Apia"}      | ${2}
+    ${1289097000000} | ${1289104200000} | ${"hour"} | ${"America/Goose_Bay"} | ${4}
+  `(
+    "returns $expected $unit buckets for $start to $end in system timeZone $timeZone",
+    ({ start, end, unit, timeZone, expected }) => {
+      vi.spyOn(getSystemTimeZoneModule, "getSystemTimeZone").mockReturnValue(
+        timeZone,
+      );
+
+      expect(intervalCountUnix(start, end, unit)).toBe(expected);
+    },
+  );
+});

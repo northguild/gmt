@@ -319,4 +319,78 @@ describe("intervalCountZoned with GMT calendar-annotated values", () => {
   `("returns null when the start is $value ($reason)", ({ value }) => {
     expect(intervalCountZoned(value, Y.isoEnd, "day")).toBeNull();
   });
+
+  // The walker keeps the pair's calendar through a DST transition. 2024-03-01..20 in New York
+  // crosses the Hebrew Adar I -> Adar II boundary (Mar 11) and the Mar 10 spring-forward, so it
+  // counts 2 Hebrew months where the same ISO span counts 1; the Hebrew-tagged spring-forward
+  // day still has 23 hour buckets. Verified on @js-temporal/polyfill@0.5.1.
+  it.each`
+    start                                                         | end                                                           | unit       | expected
+    ${"5784-06-21T12:00:00-05:00[u-ca=hebrew][America/New_York]"} | ${"5784-07-10T12:00:00-04:00[u-ca=hebrew][America/New_York]"} | ${"month"} | ${2}
+    ${"2024-03-01T12:00:00-05:00[America/New_York]"}              | ${"2024-03-20T12:00:00-04:00[America/New_York]"}              | ${"month"} | ${1}
+    ${"5784-06-30T00:00:00-05:00[u-ca=hebrew][America/New_York]"} | ${"5784-07-01T00:00:00-04:00[u-ca=hebrew][America/New_York]"} | ${"hour"}  | ${23}
+  `(
+    "returns $expected $unit buckets for $start to $end across the spring-forward",
+    ({ start, end, unit, expected }) => {
+      expect(intervalCountZoned(start, end, unit)).toBe(expected);
+    },
+  );
+});
+
+// A bounded walk that runs out answers with the sentinel, never a partial count. The stub puts a
+// "next" transition every minute ("previous" stays real), so the week-long span needs 10,080
+// transition steps, past the 10,000 the count walks. The 10-hour row proves the stub alone does
+// not produce null.
+describe("intervalCountZoned transition cap", () => {
+  it.each`
+    start                               | end                                 | unit      | expected
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-01T10:00:00+00:00[UTC]"} | ${"hour"} | ${10}
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-08T00:00:00+00:00[UTC]"} | ${"hour"} | ${null}
+  `(
+    "returns $expected for $start to $end by $unit with a transition every minute",
+    ({ start, end, unit, expected }) => {
+      const realGetTimeZoneTransition =
+        Temporal.ZonedDateTime.prototype.getTimeZoneTransition;
+      vi.spyOn(
+        Temporal.ZonedDateTime.prototype,
+        "getTimeZoneTransition",
+      ).mockImplementation(function (
+        this: Temporal.ZonedDateTime,
+        direction: Parameters<
+          Temporal.ZonedDateTime["getTimeZoneTransition"]
+        >[0],
+      ) {
+        return direction === "next"
+          ? this.add({ minutes: 1 })
+          : realGetTimeZoneTransition.call(this, direction);
+      });
+
+      expect(intervalCountZoned(start, end, unit)).toBe(expected);
+    },
+  );
+});
+
+// ---------------------------------------------------------------------------------------------
+// Transition zones. Counts are the number of local buckets the half-open interval touches, as
+// `bucketRange` walks them — a bucket may be shorter than its unit (Chatham's 15-minute 03:00
+// hour, Goose Bay's 60-second 00:00 hour) or missing entirely (Samoa deleted 2011-12-30), so
+// wall-clock truncation and a calendar-unit difference both get these wrong. Every expected
+// value verified against `bucketRange(...).length` on @js-temporal/polyfill@0.5.1.
+// ---------------------------------------------------------------------------------------------
+describe("intervalCountZoned across zone transitions", () => {
+  it.each`
+    start                                               | end                                                 | unit      | expected | description
+    ${"2024-09-29T03:50:00+13:45[Pacific/Chatham]"}     | ${"2024-09-29T04:10:00+13:45[Pacific/Chatham]"}     | ${"hour"} | ${2}     | ${"Chatham spring-forward leaves a 15-minute 03:00 hour"}
+    ${"2024-04-07T02:50:00+13:45[Pacific/Chatham]"}     | ${"2024-04-07T02:50:00+12:45[Pacific/Chatham]"}     | ${"hour"} | ${3}     | ${"Chatham fall-back, first pass to second pass"}
+    ${"2024-09-29T00:00:00+12:45[Pacific/Chatham]"}     | ${"2024-09-30T01:00:00+13:45[Pacific/Chatham]"}     | ${"hour"} | ${25}    | ${"a fixed 24h span over Chatham's spring-forward"}
+    ${"2020-10-04T00:00:30+08:00[Antarctica/Casey]"}    | ${"2020-10-04T03:30:00+11:00[Antarctica/Casey]"}    | ${"hour"} | ${2}     | ${"Casey's three-hour jump at 00:01"}
+    ${"2011-12-29T12:00:00-10:00[Pacific/Apia]"}        | ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}        | ${"day"}  | ${2}     | ${"Samoa deleted 2011-12-30"}
+    ${"2010-11-06T23:30:00-03:00[America/Goose_Bay]"}   | ${"2010-11-07T00:30:00-04:00[America/Goose_Bay]"}   | ${"hour"} | ${4}     | ${"Goose Bay fell back at 00:01, re-entering the previous day"}
+    ${"2024-04-06T14:00:00+11:00[Australia/Lord_Howe]"} | ${"2024-04-07T02:30:00+10:30[Australia/Lord_Howe]"} | ${"hour"} | ${13}    | ${"Lord Howe's 90-minute fall-back hour"}
+  `(
+    "returns $expected $unit buckets for $start to $end ($description)",
+    ({ start, end, unit, expected }) => {
+      expect(intervalCountZoned(start, end, unit)).toBe(expected);
+    },
+  );
 });

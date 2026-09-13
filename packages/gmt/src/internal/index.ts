@@ -90,7 +90,7 @@ export { getLocaleFirstDayOfWeek } from "./getLocaleFirstDayOfWeek";
 export { getLocaleMinimalDaysInFirstWeek } from "./getLocaleMinimalDaysInFirstWeek";
 export { getLocaleWeekYearBounds } from "./getLocaleWeekYearBounds";
 export { getLocaleWeekendDays } from "./getLocaleWeekendDays";
-export { getStartOfZonedUnit, getUnitSpan } from "./intervalCountHelpers";
+export { getUnitSpan } from "./intervalCountHelpers";
 export { isValidAmount } from "./isValidAmount";
 export { joinDateTimeConnector } from "./joinDateTimeConnector";
 export { isValidDayOfWeek } from "./isValidDayOfWeek";
@@ -106,5 +106,12 @@ export { resolveDateTimeUnit } from "./resolveDateTimeUnit";
 export { resolveDurationUnit } from "./resolveDurationUnit";
 export { resolveOverflow } from "./resolveOverflow";
 export { resolveRelativeRounding } from "./resolveRelativeRounding";
-export { nextZonedBucketStart, zonedUnitStart } from "./zonedBucket";
+export {
+  countZonedBuckets,
+  nextZonedBucketStart,
+  type WeekStartDay,
+  zonedUnitEnd,
+  zonedUnitStart,
+} from "./zonedBucket";
+export { zonedQuarterEnd, zonedQuarterStart } from "./zonedQuarter";
 export { zonelessCalendarDate } from "./zonelessCalendarDate";

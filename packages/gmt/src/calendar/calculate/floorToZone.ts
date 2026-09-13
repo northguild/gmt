@@ -57,7 +57,9 @@ export function floorToZone(
 
   try {
     const zoned = Temporal.Instant.from(value).toZonedDateTimeISO(timeZone);
-    return zonedUnitStart(zoned, unit).toInstant().toString();
+    const start = zonedUnitStart(zoned, unit);
+
+    return start ? start.toInstant().toString() : "";
   } catch {
     return "";
   }

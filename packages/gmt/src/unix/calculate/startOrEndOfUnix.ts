@@ -1,4 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { zonedUnitEnd, zonedUnitStart } from "../../internal";
 import { isValidDateTimeUnit } from "../../plain";
 import type { Disambiguation, Offset } from "../../types";
 import { isValidUnixUnit } from "../../unix/validate/isValidUnixUnit";
@@ -13,9 +14,12 @@ import { isValidTimeZone } from "../../zoned/validate";
  * - Supports every Temporal `DateUnit` and `TimeUnit`.
  * - `epochUnit` controls whether the input/output is interpreted as `"milliseconds"` (default) or `"seconds"`.
  * - `timeZone` defaults to the system time zone via `getSystemTimeZone()`.
- * - `disambiguation` and `offset` are forwarded to Temporal's `.with()` for
- *   DST-gap/overlap boundaries; see `startOfUnix`'s JSDoc for the full
- *   semantics — they behave identically here.
+ * - With neither `disambiguation` nor `offset` passed, the boundary is the
+ *   real local bucket from `internal/zonedBucket.ts` — a start never after
+ *   `value`, an end never before it.
+ * - Passing either forwards both to Temporal's `.with()` for DST-gap/overlap
+ *   boundaries instead; see `startOfUnix`'s JSDoc for the full semantics —
+ *   they behave identically here.
  *
  * @param value Unix epoch number
  * @param unit Temporal.DateUnit | Temporal.TimeUnit to snap to
@@ -59,6 +63,22 @@ export function startOrEndOfUnix(
     const instant = Temporal.Instant.fromEpochMilliseconds(epochMs);
 
     const source = instant.toZonedDateTimeISO(timeZone);
+
+    // Neither `disambiguation` nor `offset` passed: the real local bucket, never a re-resolved
+    // wall clock, so a start is never after `value` and an end never before it.
+    if (options.disambiguation === undefined && options.offset === undefined) {
+      const weekStartDay = weekStartsOn === "monday" ? 1 : 7;
+      const boundary = isEnd
+        ? zonedUnitEnd(source, unit, weekStartDay)
+        : zonedUnitStart(source, unit, weekStartDay);
+
+      if (!boundary) return null;
+
+      return epochUnit === "seconds"
+        ? Math.floor(boundary.epochMilliseconds / 1000)
+        : boundary.epochMilliseconds;
+    }
+
     const timeFields = isEnd
       ? {
           hour: 23,

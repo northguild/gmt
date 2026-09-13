@@ -118,3 +118,24 @@ describe("areZonedEqualBy", () => {
     });
   }
 });
+
+// Across zone transitions, two values are equal by `unit` when their real local buckets start
+// on the same local wall-clock label (see `startOfZoned`). Chatham's 15-minute 03:00 hour is a
+// bucket of its own, so 03:50 and 04:05 are different hours even though local 03:00 would
+// otherwise resolve after both. Every start verified against `floorToZone` on
+// @js-temporal/polyfill@0.5.1.
+describe("areZonedEqualBy across zone transitions", () => {
+  it.each`
+    value1                                           | value2                                           | unit      | expected | description
+    ${"2024-09-29T03:50:00+13:45[Pacific/Chatham]"}  | ${"2024-09-29T04:05:00+13:45[Pacific/Chatham]"}  | ${"hour"} | ${false} | ${"the 15-minute 03:00 hour and the 04:00 hour"}
+    ${"2024-09-29T03:46:00+13:45[Pacific/Chatham]"}  | ${"2024-09-29T03:59:00+13:45[Pacific/Chatham]"}  | ${"hour"} | ${true}  | ${"both inside the 15-minute 03:00 hour"}
+    ${"2024-04-07T02:50:00+13:45[Pacific/Chatham]"}  | ${"2024-04-07T02:50:00+12:45[Pacific/Chatham]"}  | ${"hour"} | ${false} | ${"Chatham's 02:00 hour and the 02:45 hour opened by its fall-back"}
+    ${"2020-10-04T00:00:30+08:00[Antarctica/Casey]"} | ${"2020-10-04T03:30:00+11:00[Antarctica/Casey]"} | ${"hour"} | ${false} | ${"Casey's 00:00 hour and the 03:01 hour after its jump"}
+    ${"2024-11-03T01:30:00-04:00[America/New_York]"} | ${"2024-11-03T01:30:00-05:00[America/New_York]"} | ${"hour"} | ${true}  | ${"both passes of New York's repeated hour read 01:00 locally"}
+  `(
+    "returns $expected for $value1 and $value2 by $unit ($description)",
+    ({ value1, value2, unit, expected }) => {
+      expect(areZonedEqualBy(value1, value2, unit)).toBe(expected);
+    },
+  );
+});

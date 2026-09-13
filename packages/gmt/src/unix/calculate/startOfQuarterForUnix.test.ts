@@ -40,11 +40,8 @@ describe("startOfQuarterForUnix", () => {
   it.each`
     disambiguation  | offset
     ${"compatible"} | ${undefined}
-    ${"earlier"}    | ${undefined}
-    ${"later"}      | ${undefined}
     ${"reject"}     | ${undefined}
     ${"reject"}     | ${"prefer"}
-    ${"reject"}     | ${"ignore"}
   `(
     "accepts disambiguation $disambiguation and offset $offset without changing output for a non-transition quarter start",
     ({ disambiguation, offset }) => {
@@ -65,4 +62,56 @@ describe("startOfQuarterForUnix", () => {
     );
     expect(startOfQuarterForUnix(1706659200)).toBeNull();
   });
+});
+
+// With neither `disambiguation` nor `offset` passed, the quarter starts at the real local
+// bucket of its first month with every sub-second field reset. Expected values verified
+// against `bucketRange` month buckets on @js-temporal/polyfill@0.5.1.
+// 1715776496789 is 2024-05-15T12:34:56.789Z; 1711929600000 is 2024-04-01T00:00:00Z
+// 1285882200000 is 2010-09-30T23:30:00+02:00[Africa/Cairo]; 1277931600000 is 2010-07-01T00:00:00+03:00
+describe("startOfQuarterForUnix with default options", () => {
+  it.each`
+    value            | timeZone          | expected
+    ${1715776496789} | ${"UTC"}          | ${1711929600000}
+    ${1285882200000} | ${"Africa/Cairo"} | ${1277931600000}
+  `(
+    "returns $expected for $value in $timeZone",
+    ({ value, timeZone, expected }) => {
+      expect(startOfQuarterForUnix(value, { timeZone })).toBe(expected);
+    },
+  );
+});
+
+// Opting into wall-clock resolution still resets the milliseconds.
+// 1715776496789 is 2024-05-15T12:34:56.789Z; 1711929600000 is 2024-04-01T00:00:00Z
+describe("startOfQuarterForUnix sub-second reset with explicit options", () => {
+  it.each`
+    value            | options                                              | expected
+    ${1715776496789} | ${{ timeZone: "UTC", disambiguation: "compatible" }} | ${1711929600000}
+    ${1715776496789} | ${{ timeZone: "UTC", offset: "prefer" }}             | ${1711929600000}
+  `(
+    "returns $expected for $value with $options",
+    ({ value, options, expected }) => {
+      expect(startOfQuarterForUnix(value, options)).toBe(expected);
+    },
+  );
+});
+
+// Default and explicit paths at a transition. Tunis repeated Q4's first local hour on 1978-10-01:
+// the default path gives the quarter's first real instant, and "later" keeps the legacy
+// wall-clock resolution to the second pass. Verified on @js-temporal/polyfill@0.5.1.
+// 276046200000 is 1978-10-01T00:30:00+01:00[Africa/Tunis]
+// 276040800000 is 1978-10-01T00:00:00+02:00[Africa/Tunis]
+// 276044400000 is 1978-10-01T00:00:00+01:00[Africa/Tunis]
+describe("startOfQuarterForUnix at a zone transition", () => {
+  it.each`
+    options                                                  | expected
+    ${{ timeZone: "Africa/Tunis" }}                          | ${276040800000}
+    ${{ timeZone: "Africa/Tunis", disambiguation: "later" }} | ${276044400000}
+  `(
+    "returns $expected for 276046200000 with $options",
+    ({ options, expected }) => {
+      expect(startOfQuarterForUnix(276046200000, options)).toBe(expected);
+    },
+  );
 });

@@ -101,3 +101,26 @@ describe("areUnixEqualBy", () => {
     ).toBe(true);
   });
 });
+
+// Across zone transitions, two epochs are equal by `unit` when they fall in the same real local
+// bucket (see `startOfUnix`). Every start verified against `floorToZone` on
+// @js-temporal/polyfill@0.5.1.
+// 1727532300000 is 2024-09-29T03:50:00+13:45[Pacific/Chatham]
+// 1727533200000 is 2024-09-29T04:05:00+13:45[Pacific/Chatham]
+// 1727532060000 is 2024-09-29T03:46:00+13:45[Pacific/Chatham]
+// 1727532840000 is 2024-09-29T03:59:00+13:45[Pacific/Chatham]
+// 1712408700000 is 2024-04-07T02:50:00+13:45[Pacific/Chatham]
+// 1712412300000 is 2024-04-07T02:50:00+12:45[Pacific/Chatham]
+describe("areUnixEqualBy across zone transitions", () => {
+  it.each`
+    value1           | value2           | unit      | timeZone             | expected
+    ${1727532300000} | ${1727533200000} | ${"hour"} | ${"Pacific/Chatham"} | ${false}
+    ${1727532060000} | ${1727532840000} | ${"hour"} | ${"Pacific/Chatham"} | ${true}
+    ${1712408700000} | ${1712412300000} | ${"hour"} | ${"Pacific/Chatham"} | ${false}
+  `(
+    "returns $expected for $value1 and $value2 by $unit in $timeZone",
+    ({ value1, value2, unit, timeZone, expected }) => {
+      expect(areUnixEqualBy(value1, value2, unit, { timeZone })).toBe(expected);
+    },
+  );
+});

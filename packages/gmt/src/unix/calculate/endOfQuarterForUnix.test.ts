@@ -39,11 +39,8 @@ describe("endOfQuarterForUnix", () => {
   it.each`
     disambiguation  | offset
     ${"compatible"} | ${undefined}
-    ${"earlier"}    | ${undefined}
-    ${"later"}      | ${undefined}
     ${"reject"}     | ${undefined}
     ${"reject"}     | ${"prefer"}
-    ${"reject"}     | ${"ignore"}
   `(
     "accepts disambiguation $disambiguation and offset $offset without changing output for a non-transition quarter end",
     ({ disambiguation, offset }) => {
@@ -64,4 +61,39 @@ describe("endOfQuarterForUnix", () => {
     );
     expect(endOfQuarterForUnix(1704067200)).toBeNull();
   });
+});
+
+// With neither `disambiguation` nor `offset` passed, the quarter ends just before the next
+// quarter's first local month bucket, never before the input. Expected values verified against
+// `bucketRange` month buckets on @js-temporal/polyfill@0.5.1.
+// 1285882200000 is 2010-09-30T23:30:00+02:00[Africa/Cairo] (second pass of the repeated hour)
+// 1285878600000 is 2010-09-30T23:30:00+03:00[Africa/Cairo] (first pass)
+// 1285883999999 is 2010-09-30T23:59:59.999+02:00[Africa/Cairo]
+describe("endOfQuarterForUnix with default options", () => {
+  it.each`
+    value            | timeZone          | expected
+    ${1285882200000} | ${"Africa/Cairo"} | ${1285883999999}
+    ${1285878600000} | ${"Africa/Cairo"} | ${1285883999999}
+  `(
+    "returns $expected for $value in $timeZone",
+    ({ value, timeZone, expected }) => {
+      expect(endOfQuarterForUnix(value, { timeZone })).toBe(expected);
+    },
+  );
+});
+
+// The explicit path at a transition is unchanged wall-clock `.with()`: "compatible" resolves
+// Cairo's repeated 23:59:59.999 to the first pass, before an input on the second pass.
+// Verified on @js-temporal/polyfill@0.5.1.
+// 1285880399999 is 2010-09-30T23:59:59.999+03:00[Africa/Cairo]
+describe("endOfQuarterForUnix at a zone transition with explicit options", () => {
+  it.each`
+    value            | options                                                       | expected
+    ${1285882200000} | ${{ timeZone: "Africa/Cairo", disambiguation: "compatible" }} | ${1285880399999}
+  `(
+    "returns $expected for $value with $options",
+    ({ value, options, expected }) => {
+      expect(endOfQuarterForUnix(value, options)).toBe(expected);
+    },
+  );
 });

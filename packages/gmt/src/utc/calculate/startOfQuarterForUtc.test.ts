@@ -15,6 +15,18 @@ describe("startOfQuarterForUtc", () => {
   });
 
   it.each`
+    value                               | expected
+    ${"2024-05-15T12:34:56.789Z"}       | ${"2024-04-01T00:00:00Z"}
+    ${"2024-05-15T12:34:56.789123456Z"} | ${"2024-04-01T00:00:00Z"}
+    ${"2024-12-31T23:59:59.999999999Z"} | ${"2024-10-01T00:00:00Z"}
+  `(
+    "resets sub-second fields of $value to return $expected",
+    ({ value, expected }) => {
+      expect(startOfQuarterForUtc(value)).toBe(expected);
+    },
+  );
+
+  it.each`
     invalidValue
     ${"invalid"}
     ${"2024-02-29T12:00:00"}

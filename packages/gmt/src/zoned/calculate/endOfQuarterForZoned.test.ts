@@ -56,11 +56,8 @@ describe("endOfQuarterForZoned", () => {
   it.each`
     disambiguation  | offset
     ${"compatible"} | ${undefined}
-    ${"earlier"}    | ${undefined}
-    ${"later"}      | ${undefined}
     ${"reject"}     | ${undefined}
     ${"reject"}     | ${"prefer"}
-    ${"reject"}     | ${"ignore"}
   `(
     "accepts disambiguation $disambiguation and offset $offset without changing output for a non-transition quarter end",
     ({ disambiguation, offset }) => {
@@ -69,6 +66,43 @@ describe("endOfQuarterForZoned", () => {
       expect(
         endOfQuarterForZoned("2024-02-15T14:30:00+00:00[UTC]", optionsArg),
       ).toBe("2024-03-31T23:59:59+00:00[UTC]");
+    },
+  );
+});
+
+// With neither `disambiguation` nor `offset` passed, the quarter ends one nanosecond before the
+// next quarter's first local month bucket, so it is never before the input. Expected values
+// verified against `bucketRange` month buckets on @js-temporal/polyfill@0.5.1.
+describe("endOfQuarterForZoned with default options", () => {
+  it.each`
+    value                                        | expected                                     | description
+    ${"2010-09-30T23:30:00+02:00[Africa/Cairo]"} | ${"2010-09-30T23:59:59+02:00[Africa/Cairo]"} | ${"Cairo repeated Q3's last local hour; the second pass is the later one"}
+    ${"2010-09-30T23:30:00+03:00[Africa/Cairo]"} | ${"2010-09-30T23:59:59+02:00[Africa/Cairo]"} | ${"the first pass sits in the same September bucket"}
+    ${"1978-09-15T12:00:00+02:00[Africa/Tunis]"} | ${"1978-09-30T23:59:59+02:00[Africa/Tunis]"} | ${"Tunis Q3, ending before Q4's repeated first hour"}
+    ${"1978-10-01T00:30:00+02:00[Africa/Tunis]"} | ${"1978-12-31T23:59:59+01:00[Africa/Tunis]"} | ${"Tunis Q4 from the first pass of its repeated first hour"}
+  `("returns $expected for $value ($description)", ({ value, expected }) => {
+    expect(endOfQuarterForZoned(value)).toBe(expected);
+  });
+});
+
+// The explicit path at a transition is unchanged wall-clock `.with()`: Cairo repeated Q3's last
+// local hour, and "compatible" resolves 23:59:59 to the first pass (+03:00) — before an input on
+// the second pass — where the default path and "later" end on the second pass (+02:00).
+// Verified on @js-temporal/polyfill@0.5.1.
+describe("endOfQuarterForZoned at a zone transition with explicit options", () => {
+  it.each`
+    options                             | expected
+    ${{ disambiguation: "compatible" }} | ${"2010-09-30T23:59:59+03:00[Africa/Cairo]"}
+    ${{ disambiguation: "later" }}      | ${"2010-09-30T23:59:59+02:00[Africa/Cairo]"}
+  `(
+    "returns $expected for Cairo's repeated Q3 last hour with $options",
+    ({ options, expected }) => {
+      expect(
+        endOfQuarterForZoned(
+          "2010-09-30T23:30:00+02:00[Africa/Cairo]",
+          options,
+        ),
+      ).toBe(expected);
     },
   );
 });

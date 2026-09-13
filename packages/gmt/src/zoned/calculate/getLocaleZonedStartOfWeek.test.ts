@@ -206,45 +206,22 @@ describe("getLocaleZonedStartOfWeek", () => {
       ).toBe(expected);
     },
   );
+});
 
-  // Regression guard against offset:"prefer" silently no-opping disambiguation:
-  // every pairing below must produce a genuinely different result (or "" for
-  // "reject"), confirming disambiguation actually fires when offset defaults
-  // to "ignore".
+// With neither `disambiguation` nor `offset` passed, the week is the real local bucket in the
+// value's own zone, so its start is never after the value. Expected values verified against the
+// `internal/zonedBucket.ts` walker, `floorToZone` for the Monday week, and Temporal's
+// `startOfDay()` for Santiago, on @js-temporal/polyfill@0.5.1.
+describe("getLocaleZonedStartOfWeek across zone transitions with default options", () => {
   it.each`
-    disambiguationA | disambiguationB | expectSameResult
-    ${"compatible"} | ${"earlier"}    | ${false}
-    ${"compatible"} | ${"later"}      | ${true}
-    ${"earlier"}    | ${"later"}      | ${false}
-    ${"compatible"} | ${"compatible"} | ${true}
+    value                                             | locale                  | expected                                          | description
+    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${MustTestLocales.enUS} | ${"2010-11-06T23:01:00-04:00[America/Goose_Bay]"} | ${"Goose Bay fell back at 00:01 Sunday into Saturday, re-opening the week before"}
+    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${MustTestLocales.frFR} | ${"2010-11-01T00:00:00-03:00[America/Goose_Bay]"} | ${"a Monday-first week runs straight through the same transition"}
+    ${"2024-09-11T12:00:00-03:00[America/Santiago]"}  | ${MustTestLocales.enUS} | ${"2024-09-08T01:00:00-03:00[America/Santiago]"}  | ${"Santiago skipped that Sunday's midnight"}
   `(
-    "disambiguation $disambiguationA vs $disambiguationB on the spring-forward gap: same result? $expectSameResult",
-    ({ disambiguationA, disambiguationB, expectSameResult }) => {
-      const value = "2018-11-07T12:00:00-02:00[America/Sao_Paulo]";
-      const resultA = getLocaleZonedStartOfWeek(value, MustTestLocales.enUS, {
-        disambiguation: disambiguationA,
-      });
-      const resultB = getLocaleZonedStartOfWeek(value, MustTestLocales.enUS, {
-        disambiguation: disambiguationB,
-      });
-      expect(resultA === resultB).toBe(expectSameResult);
-    },
-  );
-
-  it.each`
-    disambiguation
-    ${"compatible"}
-    ${"earlier"}
-    ${"later"}
-    ${"reject"}
-  `(
-    'disambiguation $disambiguation rejects to "" only for reject',
-    ({ disambiguation }) => {
-      const value = "2018-11-07T12:00:00-02:00[America/Sao_Paulo]";
-      const result = getLocaleZonedStartOfWeek(value, MustTestLocales.enUS, {
-        disambiguation,
-      });
-      expect(result === "").toBe(disambiguation === "reject");
+    "returns $expected for $value in $locale ($description)",
+    ({ value, locale, expected }) => {
+      expect(getLocaleZonedStartOfWeek(value, locale)).toBe(expected);
     },
   );
 });

@@ -1,4 +1,4 @@
-import { getStartOfZonedUnit, getUnitSpan } from "../../internal";
+import { countZonedBuckets } from "../../internal";
 import { resolveUnixIntervalPair } from "./resolveUnixIntervalPair";
 
 /**
@@ -11,6 +11,11 @@ import { resolveUnixIntervalPair } from "./resolveUnixIntervalPair";
  *   unit boundary.
  * - Uses the system timeZone for calendar-unit boundaries (consistent with `addUnix` and
  *   `splitIntervalByUnitUnix`), so day/week/month/year counts are host-dependent.
+ * - Counts the real local buckets `floorToZone`/`bucketRange` walk in that zone: a bucket
+ *   shorter than its unit still counts once (a 15-minute `Pacific/Chatham` hour on its
+ *   spring-forward), and a local day the zone deleted counts not at all
+ *   (`Pacific/Apia`'s 2011-12-30).
+ * - Returns `null` when the span crosses more than 10,000 zone transitions.
  * - Weeks start on Monday (ISO 8601).
  * - Accepts singular or plural units (`"day"` and `"days"` behave identically).
  * - Returns `null` on invalid input (non-finite/non-integer start/end, `start > end`,
@@ -38,15 +43,8 @@ export function intervalCountUnix(
 
   try {
     const { startVal, endVal, resolvedUnit } = resolved;
-    const startOfStart = getStartOfZonedUnit(startVal, resolvedUnit);
-    const startOfEnd = getStartOfZonedUnit(endVal, resolvedUnit);
 
-    const spanned = getUnitSpan(
-      startOfStart.until(startOfEnd, { largestUnit: resolvedUnit }),
-      resolvedUnit,
-    );
-
-    return spanned + (startOfEnd.equals(endVal) ? 0 : 1);
+    return countZonedBuckets(startVal, endVal, resolvedUnit);
   } catch {
     return null;
   }
