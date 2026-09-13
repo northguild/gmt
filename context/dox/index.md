@@ -10,6 +10,8 @@ Every tier is done, the chat included. Load only what the task needs:
   Tailwind in the chat island, the visual gate. Load when styling.
 - [reference/visual-design.md](reference/visual-design.md) — the visual language. Load when
   designing UI.
+- [reference/style-guide.md](reference/style-guide.md) — where a CSS rule goes, class naming,
+  container queries. Load before writing or reviewing component styles.
 - [reference/verification-and-risks.md](reference/verification-and-risks.md) — epic-wide
   checks and live risks. Load for reviews.
 - [ui-audit.md](ui-audit.md) — open component-cleanup items. Load before restructuring

@@ -159,14 +159,18 @@ Highest commercial value and the thinnest coverage in the original plan.
 
 ## Definition of Done — Binding for Every Story
 
-- `pnpm run validate` stays green, including the 20-cell GMT timezone matrix.
-- **Changesets required.** Every story that modifies source needs a `.changeset/*.md` entry.
+- `pnpm run validate` stays green, including the CI timezone matrix (10 zones × Node 22/24 — see README).
+- **Changesets required** per the [changeset rule](../coding-standards.md#changesets): a new
+  API story is `minor`; a fix to shipped behaviour is `patch`; no behaviour change, none.
 - No `Date` object anywhere. All inputs are ISO 8601 strings; outputs are strings, numbers,
-  booleans, bigint, or objects.
-- Wrap all Temporal calls in `try-catch`. Bad input returns sentinels, never throws.
-- Full locale matrix for any locale-aware function (17 locales, `hasFullIcu` ternaries where
-  output differs).
-- Full IANA timezone coverage for timezone-aware functions.
+  booleans, arrays, bigint, or objects.
+- Wrap all Temporal calls in `try-catch`. Bad input returns the sentinel from the
+  [sentinel table](../coding-standards.md#api-contract), never throws.
+- Full locale matrix for any locale-aware function (17 locales; `expectOneOfIcu` /
+  `expectDateTimeEqual` from `src/test/icuVariants.ts` where CLDR wording differs).
+- Timezone-aware functions run across `battleTestTimeZones`, and boundary functions add the
+  probe-zone transition rows — see
+  [§ Calendar & zone semantics](../coding-standards.md#calendar--zone-semantics).
 - JSDoc with `@example` on every public function. Cover valid, invalid, and edge-case inputs.
 
 ### Added for this epic

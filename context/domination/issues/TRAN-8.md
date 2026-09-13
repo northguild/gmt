@@ -35,5 +35,5 @@ All transport modes share three basic operations: adding a duration to a departu
 - `transitTime` across a DST transition adds exact elapsed time, and the local wall time reflects the shift
 - `dwellTime` from 23:00 to 01:00 local returns `calendarDays: 2` with a two-hour duration
 - Invalid duration or timezone returns the sentinel
-- Full IANA timezone coverage
+- `battleTestTimeZones` coverage plus probe-zone transition rows for timezone-aware functions (see `context/coding-standards.md` § Calendar & zone semantics)
 - `pnpm run validate` stays green

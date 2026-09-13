@@ -1,6 +1,6 @@
 ---
 name: update-readme
-description: Diff the current branch against main, identify user-facing API changes, then update the root README, packages/gmt/README.md, and the inner namespace READMEs (packages/gmt/src/{plain,zoned,unix,utc,regex}/README.md) to reflect those changes. Namespace READMEs are now one-line stubs pointing at the docs site; only update them if the reference path changes. Use when the user asks to "update the README", "sync the docs", or after adding, removing, or renaming exported functions.
+description: Diff the current branch against main, identify user-facing API changes, then update the root README, packages/gmt/README.md, and the inner namespace READMEs (packages/gmt/src/{calendar,duration,instant,plain,precision,regex,span,unix,utc,zoned}/README.md) to reflect those changes. Namespace READMEs are now one-line stubs pointing at the docs site; only update them if the reference path changes. Use when the user asks to "update the README", "sync the docs", or after adding, removing, or renaming exported functions.
 argument-hint: "no arguments needed"
 ---
 
@@ -14,7 +14,7 @@ There are four levels of README in this repo:
 
 1. **Root** — `README.md`: monorepo overview, install, package table, project structure tree, contributing commands.
 2. **Package** — `packages/gmt/README.md`: full API overview for `@northguild/gmt`. Includes design philosophy, quick-start examples, and the API surface section.
-3. **Namespace** — `packages/gmt/src/{plain,zoned,unix,utc,regex}/README.md`: one-line stubs pointing at the corresponding docs site section. The full function reference is generated automatically by the docs build — do not maintain function lists here.
+3. **Namespace** — `packages/gmt/src/{calendar,duration,instant,plain,precision,regex,span,unix,utc,zoned}/README.md`: one-line stubs pointing at the corresponding docs site section. The full function reference is generated automatically by the docs build — do not maintain function lists here.
 4. **Sub-package** — `packages/gmt-biome/README.md`, `packages/gmt-eslint/README.md`, `packages/gmt-oxlint/README.md`: each linting package's own docs (usually untouched by API changes).
 
 ## Steps

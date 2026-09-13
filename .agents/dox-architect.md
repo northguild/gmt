@@ -56,7 +56,7 @@ work is scoped against what is already built.
 
 ## Invariants
 
-- `pnpm run validate` stays green, including the 20-cell GMT timezone matrix; `apps/dox`
+- `pnpm run validate` stays green, including the CI timezone matrix (10 zones × Node 22/24 — see README); `apps/dox`
   must not perturb `packages/gmt`.
 - No changesets unless the work also modifies `packages/gmt`.
 - No `octane` or `@octanejs/*` dependency.

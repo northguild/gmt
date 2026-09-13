@@ -47,7 +47,7 @@
       "permission": { "task": { "*": "deny" }, "mcp": "ask" },
     },
     "finalizer": {
-      "description": "Finalizer — story closure, changesets, READMEs, commits",
+      "description": "Finalizer — story closure, changesets, READMEs; drafts commit/PR text for the owner (never commits)",
       "mode": "subagent",
       "prompt": "{file:.agents/finalizer.md}",
       "permission": { "task": { "*": "deny" } },

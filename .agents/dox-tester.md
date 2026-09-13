@@ -35,7 +35,7 @@ correctness lives in build output, rendered pages, keyboard paths and live behav
 
 Prefix commands with `eval "$(fnm env)" && fnm use &&` (Astro 7 needs Node `>=22.12.0`).
 
-- `pnpm run validate` is green across the monorepo, including the 20-cell GMT timezone matrix.
+- `pnpm run validate` is green across the monorepo, including the CI timezone matrix (10 zones × Node 22/24 — see README).
   Check the task list, not only the exit code.
 - `git diff --stat packages/gmt` is empty, or a changeset exists.
 - From `apps/dox`: `pnpm test`, `pnpm check`, `pnpm lint`.
