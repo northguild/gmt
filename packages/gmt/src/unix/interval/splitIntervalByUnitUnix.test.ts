@@ -1,6 +1,58 @@
+import { Temporal } from "@js-temporal/polyfill";
+import { mockSystemTimeZone } from "../../test";
 import { splitIntervalByUnitUnix } from "./splitIntervalByUnitUnix";
 
 describe("splitIntervalByUnitUnix", () => {
+  // Each boundary is start + k × amount (Temporal and Luxon Interval.splitBy), so month ends don't drift.
+  // 2024-01-31T10:00:00Z to 2024-05-15T10:00:00Z, stepped in a UTC system timeZone.
+  it.each`
+    start            | end              | unit       | expected
+    ${1706695200000} | ${1715767200000} | ${"month"} | ${[{ start: 1706695200000, end: 1709200800000 }, { start: 1709200800000, end: 1711879200000 }, { start: 1711879200000, end: 1714471200000 }, { start: 1714471200000, end: 1715767200000 }]}
+  `(
+    "computes every $unit boundary of $start to $end from the start, without month-end drift",
+    ({ start, end, unit, expected }) => {
+      const restore = mockSystemTimeZone("UTC");
+      try {
+        expect(splitIntervalByUnitUnix(start, end, unit, 1)).toEqual(expected);
+      } finally {
+        restore();
+      }
+    },
+  );
+
+  // amount > 1 from a month end, stepped in a UTC system timeZone: step k is start + 3k months.
+  // 1701338400000 is 2023-11-30T10:00:00Z; 1709200800000 is 2024-02-29T10:00:00Z;
+  // 1717063200000 is 2024-05-30T10:00:00Z (compounding from Feb 29 would give May 29);
+  // 1725012000000 is 2024-08-30T10:00:00Z; 1725184800000 is 2024-09-01T10:00:00Z.
+  it.each`
+    start            | end              | unit       | amount | expected
+    ${1701338400000} | ${1725184800000} | ${"month"} | ${3}   | ${[{ start: 1701338400000, end: 1709200800000 }, { start: 1709200800000, end: 1717063200000 }, { start: 1717063200000, end: 1725012000000 }, { start: 1725012000000, end: 1725184800000 }]}
+  `(
+    "computes every $amount $unit boundary of $start to $end from the start",
+    ({ start, end, unit, amount, expected }) => {
+      const restore = mockSystemTimeZone("UTC");
+      try {
+        expect(splitIntervalByUnitUnix(start, end, unit, amount)).toEqual(
+          expected,
+        );
+      } finally {
+        restore();
+      }
+    },
+  );
+
+  // No-progress guard: a step that does not move past the previous boundary returns [] rather
+  // than looping forever.
+  it("returns [] when a step lands before the previous boundary", () => {
+    vi.spyOn(Temporal.ZonedDateTime.prototype, "add").mockImplementation(
+      function (this: Temporal.ZonedDateTime) {
+        return this.subtract({ hours: 1 });
+      },
+    );
+
+    expect(splitIntervalByUnitUnix(0, 36000000, "hour", 1)).toEqual([]);
+  });
+
   const expectedExactDivision = [
     { start: 0, end: 21600000 },
     { start: 21600000, end: 43200000 },

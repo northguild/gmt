@@ -11,6 +11,9 @@ import { isValidCalendarDate } from "../validate";
  *
  * - Returns an array of `{ start, end }` records that tile the interval.
  * - The final sub-interval is trimmed so its `end` never exceeds the original `end`.
+ * - Each boundary is computed from `start` (`start + k × amount`, as Temporal and Luxon's
+ *   `Interval.splitBy` do), not by stepping from the previous boundary, so month-end starts
+ *   don't drift: a monthly split from January 31 lands on February 29, March 31, April 30.
  * - Returns `[{ start, end }]` when `start === end` (zero-length interval).
  * - Returns `[]` on invalid input (unparseable start/end, unsupported unit, non-positive amount,
  *   or a unit that has no effect on `PlainDate`, e.g. `"hours"`).
@@ -85,12 +88,13 @@ export function splitIntervalByUnitDate(
     const result: Array<{ start: string; end: string }> = [];
 
     for (
-      let current = startVal;
+      let step = 1, current = startVal;
       Temporal.PlainDate.compare(current, endVal) < 0;
+      step++
     ) {
-      const next = current.add({ [resolvedUnit]: amount });
+      const next = startVal.add({ [resolvedUnit]: amount * step });
 
-      if (Temporal.PlainDate.compare(next, current) === 0) {
+      if (Temporal.PlainDate.compare(next, current) <= 0) {
         return [];
       }
 

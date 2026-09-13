@@ -11,6 +11,9 @@ import { isValidCalendarZonedDateTime } from "../validate/isValidCalendarZonedDa
  *
  * - Returns an array of `{ start, end }` records that tile the interval.
  * - The final sub-interval is trimmed so its `end` never exceeds the original `end`.
+ * - Each boundary is computed from `start` (`start + k × amount`, as Temporal and Luxon's
+ *   `Interval.splitBy` do), not by stepping from the previous boundary, so month-end starts
+ *   don't drift: a monthly split from January 31 lands on February 29, March 31, April 30.
  * - Returns `[{ start, end }]` when `start === end` (zero-length interval).
  * - Accepts GMT calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
  *   well as bare ISO ones — E7 (issue #152). Stepping by a calendar unit ("1 month") resolves
@@ -83,12 +86,13 @@ export function splitIntervalByUnitZoned(
     const result: Array<{ start: string; end: string }> = [];
 
     for (
-      let current = startVal;
+      let step = 1, current = startVal;
       Temporal.ZonedDateTime.compare(current, endVal) < 0;
+      step++
     ) {
-      const next = current.add({ [resolvedUnit]: amount });
+      const next = startVal.add({ [resolvedUnit]: amount * step });
 
-      if (Temporal.ZonedDateTime.compare(next, current) === 0) {
+      if (Temporal.ZonedDateTime.compare(next, current) <= 0) {
         return [];
       }
 

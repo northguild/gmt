@@ -1,7 +1,52 @@
+import { Temporal } from "@js-temporal/polyfill";
 import { splitIntervalByUnitUtc } from "./splitIntervalByUnitUtc";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 
 describe("splitIntervalByUnitUtc", () => {
+  // Each boundary is start + k × amount (Temporal and Luxon Interval.splitBy), so month ends don't drift.
+  it.each`
+    start                     | end                       | unit       | expected
+    ${"2024-01-31T10:00:00Z"} | ${"2024-05-15T10:00:00Z"} | ${"month"} | ${[{ start: "2024-01-31T10:00:00Z", end: "2024-02-29T10:00:00Z" }, { start: "2024-02-29T10:00:00Z", end: "2024-03-31T10:00:00Z" }, { start: "2024-03-31T10:00:00Z", end: "2024-04-30T10:00:00Z" }, { start: "2024-04-30T10:00:00Z", end: "2024-05-15T10:00:00Z" }]}
+  `(
+    "computes every $unit boundary of $start to $end from the start, without month-end drift",
+    ({ start, end, unit, expected }) => {
+      expect(splitIntervalByUnitUtc(start, end, unit, 1)).toEqual(expected);
+    },
+  );
+
+  // amount > 1 from a month end: step k is start + 3k months (2024-05-30), where stepping from
+  // the clamped Feb 29 would drift to 2024-05-29. Verified against Temporal.ZonedDateTime.add in UTC.
+  it.each`
+    start                     | end                       | unit       | amount | expected
+    ${"2023-11-30T10:00:00Z"} | ${"2024-09-01T10:00:00Z"} | ${"month"} | ${3}   | ${[{ start: "2023-11-30T10:00:00Z", end: "2024-02-29T10:00:00Z" }, { start: "2024-02-29T10:00:00Z", end: "2024-05-30T10:00:00Z" }, { start: "2024-05-30T10:00:00Z", end: "2024-08-30T10:00:00Z" }, { start: "2024-08-30T10:00:00Z", end: "2024-09-01T10:00:00Z" }]}
+  `(
+    "computes every $amount $unit boundary of $start to $end from the start",
+    ({ start, end, unit, amount, expected }) => {
+      expect(splitIntervalByUnitUtc(start, end, unit, amount)).toEqual(
+        expected,
+      );
+    },
+  );
+
+  // No-progress guard: a step that does not move past the previous boundary returns [] rather
+  // than looping forever.
+  it("returns [] when a step lands before the previous boundary", () => {
+    vi.spyOn(Temporal.ZonedDateTime.prototype, "add").mockImplementation(
+      function (this: Temporal.ZonedDateTime) {
+        return this.subtract({ hours: 1 });
+      },
+    );
+
+    expect(
+      splitIntervalByUnitUtc(
+        "2024-01-01T00:00:00Z",
+        "2024-01-01T10:00:00Z",
+        "hour",
+        1,
+      ),
+    ).toEqual([]);
+  });
+
   const expectedExactDivision = [
     { start: "2024-01-01T00:00:00Z", end: "2024-01-01T06:00:00Z" },
     { start: "2024-01-01T06:00:00Z", end: "2024-01-01T12:00:00Z" },

@@ -8,6 +8,9 @@ import { resolveDurationUnit } from "../../internal";
  *
  * - Returns an array of `{ start, end }` records that tile the interval.
  * - The final sub-interval is trimmed so its `end` never exceeds the original `end`.
+ * - Each boundary is computed from `start` (`start + k × amount`, as Temporal and Luxon's
+ *   `Interval.splitBy` do), not by stepping from the previous boundary, so month-end starts
+ *   don't drift: a monthly split from January 31 lands on February 29, March 31, April 30.
  * - Returns `[{ start, end }]` when `start === end` (zero-length interval).
  * - Returns `[]` on invalid input (non-finite/non-integer start/end, unsupported unit,
  *   non-positive amount, or invalid timeZone).
@@ -81,13 +84,17 @@ export function splitIntervalByUnitUnix(
 
     const result: Array<{ start: number; end: number }> = [];
 
-    for (let currentMs = startMs; currentMs < endMs;) {
-      const instant = Temporal.Instant.fromEpochMilliseconds(currentMs);
-      const zoned = instant.toZonedDateTimeISO(timeZone);
-      const next = zoned.add({ [resolvedUnit]: amount }).toInstant();
-      const nextMs = next.epochMilliseconds;
+    const startZoned =
+      Temporal.Instant.fromEpochMilliseconds(startMs).toZonedDateTimeISO(
+        timeZone,
+      );
 
-      if (nextMs === currentMs) {
+    for (let step = 1, currentMs = startMs; currentMs < endMs; step++) {
+      const nextMs = startZoned.add({
+        [resolvedUnit]: amount * step,
+      }).epochMilliseconds;
+
+      if (nextMs <= currentMs) {
         return [];
       }
 
