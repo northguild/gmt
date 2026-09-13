@@ -19,6 +19,7 @@ import {
   minuteToTickerPercent,
   parseOffsetMinutes,
   tickerPercentToMinute,
+  toPlainLocalDateTime,
   transitionHour,
   transitionType,
   type DstTransition,
@@ -355,6 +356,36 @@ describe("buildZonedValueFromMinutes", () => {
 });
 
 // ---------------------------------------------------------------------------
+// toPlainLocalDateTime
+// ---------------------------------------------------------------------------
+
+describe("toPlainLocalDateTime", () => {
+  it("strips a trailing [zone]", () => {
+    expect(toPlainLocalDateTime("2024-03-10T03:15:00[America/New_York]")).toBe(
+      "2024-03-10T03:15:00",
+    );
+  });
+
+  it("strips a trailing offset and [zone]", () => {
+    expect(
+      toPlainLocalDateTime("2024-03-10T03:00:00-04:00[America/New_York]"),
+    ).toBe("2024-03-10T03:00:00");
+  });
+
+  it("strips a trailing Z and [zone]", () => {
+    expect(toPlainLocalDateTime("2024-03-10T03:00:00Z[UTC]")).toBe(
+      "2024-03-10T03:00:00",
+    );
+  });
+
+  it("leaves an already-plain datetime untouched", () => {
+    expect(toPlainLocalDateTime("2024-03-10T03:00:00")).toBe(
+      "2024-03-10T03:00:00",
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
 // VALUE_PRESETS
 // ---------------------------------------------------------------------------
 
@@ -452,31 +483,35 @@ describe("classifyProbeResult", () => {
     expect(classification.explanation).toContain("normal wall-clock time");
   });
 
-  it("classifies a sentinel result with disambiguation=reject as 'overlap'", () => {
+  it("classifies a sentinel result with disambiguation=reject near an overlap as 'overlap'", () => {
     const transitions = [SPRING_FORWARD, FALL_BACK];
     const classification = classifyProbeResult(
       "",
       transitions,
       1, // probe hour = fall-back local hour (ambiguous: 1 AM happens twice)
       ZONE,
-      { disambiguation: "reject", offset: "ignore" },
+      { disambiguation: "reject" },
     );
     expect(classification.type).toBe("overlap");
     expect(classification.explanation).toContain('disambiguation="reject"');
+    expect(classification.explanation).toContain("happens twice");
   });
 
-  it("classifies a sentinel result with offset=prefer+reject as 'normal' with insight", () => {
-    // Use probe hour far from any transition so the "prefer makes disambiguation inert"
-    // insight path is reached rather than the gap/overlap classification.
+  it("classifies a sentinel result with disambiguation=reject near a gap as 'gap'", () => {
+    // Verified against the built polyfill: convertPlainDateTimeToZoned("2024-03-10T02:30:00",
+    // "America/New_York", { disambiguation: "reject" }) returns "" — 02:30 local
+    // is skipped by the spring-forward transition (local hour 3).
     const transitions = [SPRING_FORWARD, FALL_BACK];
-    const classification = classifyProbeResult("", transitions, 23, ZONE, {
-      disambiguation: "reject",
-      offset: "prefer",
-    });
-    expect(classification.type).toBe("normal");
-    expect(classification.explanation).toContain(
-      'offset:"prefer" makes disambiguation inert',
+    const classification = classifyProbeResult(
+      "",
+      transitions,
+      2, // within 1 hour of the spring-forward's local hour (3)
+      ZONE,
+      { disambiguation: "reject" },
     );
+    expect(classification.type).toBe("gap");
+    expect(classification.explanation).toContain('disambiguation="reject"');
+    expect(classification.explanation).toContain("skipped");
   });
 
   it("classifies a sentinel with no nearby transition as 'normal'", () => {
@@ -486,7 +521,7 @@ describe("classifyProbeResult", () => {
       transitions,
       23, // far from any transition
       ZONE,
-      { disambiguation: "reject", offset: "ignore" },
+      { disambiguation: "reject" },
     );
     expect(classification.type).toBe("normal");
   });
@@ -544,14 +579,13 @@ describe("DST widget behavior", () => {
     expect(localHourAtTransition(transition, ZONE)).toBe(1);
   });
 
-  it("detects sentinel for failed startOfZoned (disambiguation: reject + offset: ignore)", () => {
-    // When startOfZoned fails, it returns ""
+  it("detects sentinel for failed convertPlainDateTimeToZoned (disambiguation: reject)", () => {
+    // When convertPlainDateTimeToZoned fails, it returns ""
     const result = "";
     expect(isSentinel(result)).toBe(true);
   });
 
-  it("detects valid result for successful startOfZoned (offset: prefer)", () => {
-    // When offset: "prefer" makes disambiguation inert, startOfZoned succeeds
+  it("detects valid result for successful convertPlainDateTimeToZoned (disambiguation: later)", () => {
     const result = "2024-11-03T01:00:00-05:00[America/New_York]";
     expect(isSentinel(result)).toBe(false);
   });
@@ -602,11 +636,12 @@ describe("what this module hands to Temporal.Instant.from", () => {
   it("builds its probe value WITHOUT an offset, on purpose", () => {
     /* This looks like an omission and is the opposite. The probe exists to ask
        what a local wall-clock time means across a transition, and an offset
-       would answer that question before `startOfZoned` gets to — resolving the
-       ambiguity the widget is built to demonstrate. Adding one here would make
-       the gap and overlap presets meaningless.
+       would answer that question before `convertPlainDateTimeToZoned` gets to —
+       resolving the ambiguity the widget is built to demonstrate. Adding one
+       here would make the gap and overlap presets meaningless.
 
-       It is safe precisely because this value goes to `startOfZoned`, never to
+       It is safe precisely because this value's plain-time projection
+       (`toPlainLocalDateTime`) goes to `convertPlainDateTimeToZoned`, never to
        `Instant.from`. */
     const value = buildZonedValueFromMinutes(
       "America/New_York",
