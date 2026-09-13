@@ -56,6 +56,11 @@ Specify what should happen with invalid inputs:
 - String return: `""` (empty string)
 - Number return: `null`
 - Boolean return: `false`
+- Array return: `[]`
+- Object return (`{ ... } | null`): `null`
+- `bigint` return (precision converters/parsers): `0n`
+
+(Canonical table: `context/coding-standards.md` § API Contract in the gmt repository.)
 
 ### 5. Locale Requirements
 

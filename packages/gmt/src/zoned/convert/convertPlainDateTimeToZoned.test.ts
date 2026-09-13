@@ -2,9 +2,34 @@ import {
   battleTestTimeZones,
   TomorrowTimeZone,
   YesterdayTimeZone,
+  MustTestDstTimeZones,
 } from "../../test";
 import { parseTimeZoneFromZoned } from "../parse";
 import { convertPlainDateTimeToZoned } from "./convertPlainDateTimeToZoned";
+
+// Expected values per battle-test timeZone, verified against @js-temporal/polyfill.
+const attachedOffsetByZone = {
+  UTC: "2024-02-29T14:30:45.000+00:00[UTC]",
+  GMT: "2024-02-29T14:30:45.000+00:00[GMT]",
+  "Etc/GMT": "2024-02-29T14:30:45.000+00:00[Etc/GMT]",
+  "America/Nome": "2024-02-29T14:30:45.000-09:00[America/Nome]",
+  "Asia/Anadyr": "2024-02-29T14:30:45.000+12:00[Asia/Anadyr]",
+  "Europe/Lisbon": "2024-02-29T14:30:45.000+00:00[Europe/Lisbon]",
+  "Europe/Dublin": "2024-02-29T14:30:45.000+00:00[Europe/Dublin]",
+  "Europe/Berlin": "2024-02-29T14:30:45.000+01:00[Europe/Berlin]",
+  "Europe/Helsinki": "2024-02-29T14:30:45.000+02:00[Europe/Helsinki]",
+  "Europe/Istanbul": "2024-02-29T14:30:45.000+03:00[Europe/Istanbul]",
+  "Asia/Kolkata": "2024-02-29T14:30:45.000+05:30[Asia/Kolkata]",
+  "Asia/Kathmandu": "2024-02-29T14:30:45.000+05:45[Asia/Kathmandu]",
+  "Asia/Shanghai": "2024-02-29T14:30:45.000+08:00[Asia/Shanghai]",
+  "Australia/Lord_Howe": "2024-02-29T14:30:45.000+11:00[Australia/Lord_Howe]",
+  "Pacific/Chatham": "2024-02-29T14:30:45.000+13:45[Pacific/Chatham]",
+  "Pacific/Apia": "2024-02-29T14:30:45.000+13:00[Pacific/Apia]",
+  "Pacific/Niue": "2024-02-29T14:30:45.000-11:00[Pacific/Niue]",
+  "America/New_York": "2024-02-29T14:30:45.000-05:00[America/New_York]",
+  "America/Chicago": "2024-02-29T14:30:45.000-06:00[America/Chicago]",
+  "America/Phoenix": "2024-02-29T14:30:45.000-07:00[America/Phoenix]",
+} satisfies Record<keyof typeof MustTestDstTimeZones, string>;
 
 describe("convertPlainDateTimeToZoned", () => {
   it.each`
@@ -49,25 +74,12 @@ describe("convertPlainDateTimeToZoned", () => {
     },
   );
 
-  it.each`
-    timeZone                 | expected
-    ${"UTC"}                 | ${"2024-02-29T14:30:45.000+00:00[UTC]"}
-    ${"GMT"}                 | ${"2024-02-29T14:30:45.000+00:00[GMT]"}
-    ${"Etc/GMT"}             | ${"2024-02-29T14:30:45.000+00:00[Etc/GMT]"}
-    ${"Europe/Lisbon"}       | ${"2024-02-29T14:30:45.000+00:00[Europe/Lisbon]"}
-    ${"Europe/Dublin"}       | ${"2024-02-29T14:30:45.000+00:00[Europe/Dublin]"}
-    ${"Europe/Berlin"}       | ${"2024-02-29T14:30:45.000+01:00[Europe/Berlin]"}
-    ${"Europe/Helsinki"}     | ${"2024-02-29T14:30:45.000+02:00[Europe/Helsinki]"}
-    ${"Europe/Istanbul"}     | ${"2024-02-29T14:30:45.000+03:00[Europe/Istanbul]"}
-    ${"Asia/Kolkata"}        | ${"2024-02-29T14:30:45.000+05:30[Asia/Kolkata]"}
-    ${"Asia/Kathmandu"}      | ${"2024-02-29T14:30:45.000+05:45[Asia/Kathmandu]"}
-    ${"Asia/Shanghai"}       | ${"2024-02-29T14:30:45.000+08:00[Asia/Shanghai]"}
-    ${"Australia/Lord_Howe"} | ${"2024-02-29T14:30:45.000+11:00[Australia/Lord_Howe]"}
-    ${"Pacific/Chatham"}     | ${"2024-02-29T14:30:45.000+13:45[Pacific/Chatham]"}
-    ${"America/New_York"}    | ${"2024-02-29T14:30:45.000-05:00[America/New_York]"}
-    ${"America/Chicago"}     | ${"2024-02-29T14:30:45.000-06:00[America/Chicago]"}
-    ${"America/Phoenix"}     | ${"2024-02-29T14:30:45.000-07:00[America/Phoenix]"}
-  `(
+  it.each(
+    battleTestTimeZones.map((timeZone) => ({
+      timeZone,
+      expected: attachedOffsetByZone[timeZone],
+    })),
+  )(
     "attaches $timeZone offset to the plain datetime 2024-02-29T14:30:45",
     ({ timeZone, expected }: { timeZone: string; expected: string }) => {
       expect(convertPlainDateTimeToZoned("2024-02-29T14:30:45", timeZone)).toBe(

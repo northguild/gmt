@@ -1,4 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { defaultFractionalDigits } from "../../internal";
 import { isValidDateTimeUnit } from "../../plain";
 import type { FractionalDigit } from "../../types";
 import { isValidUtc } from "../validate/isValidUtc";
@@ -158,13 +159,10 @@ export function startOrEndOfUtc(
         return "";
     }
 
-    const precisionMap: Record<string, FractionalDigit> = {
-      millisecond: 3,
-      microsecond: 6,
-      nanosecond: 9,
-    };
-    const fractionalDigits =
-      fractionalSecondDigits ?? (precisionMap[unit] || 0);
+    const fractionalDigits = defaultFractionalDigits(
+      unit,
+      fractionalSecondDigits,
+    );
 
     return result
       .toInstant()

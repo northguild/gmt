@@ -74,14 +74,27 @@ startOfZoned("2024-03-15T14:30:45[America/New_York]", "month");
 // "2024-03-01T00:00:00-05:00[America/New_York]"
 
 endOfZoned("2024-03-15T14:30:45[America/New_York]", "hour");
-// "2024-03-15T14:59:59.999999999-04:00[America/New_York]"
+// "2024-03-15T14:59:59-04:00[America/New_York]"
 ```
 
-These accept `disambiguation` (full gap/overlap control) and `offset`
-(`"prefer" | "use" | "ignore" (default) | "reject"`). **`offset` must stay at its
-default (`"ignore"`) for `disambiguation` to take effect** — Temporal's own default
-(`"prefer"`) keeps the source offset whenever still valid, which silently makes
-`disambiguation` a no-op.
+These always return the real start and end of the unit that contains the input: the
+start is never after the input, and the end is the last nanosecond before the next
+start — even when the wall-clock boundary was skipped or repeated:
+
+```typescript
+startOfZoned("2024-09-29T03:50:00+13:45[Pacific/Chatham]", "hour");
+// "2024-09-29T03:45:00+13:45[Pacific/Chatham]" — local 03:00 never happened; the hour began at the jump
+
+startOfZoned("2024-11-03T01:45:00-05:00[America/New_York]", "hour");
+// "2024-11-03T01:00:00-05:00[America/New_York]" — the repeated 1 a.m. is its own hour
+```
+
+Their `disambiguation` and `offset` options are deprecated and ignored: a boundary is a
+real instant, exactly as TC39's `startOfDay()` takes no such options. Resolution
+options belong on functions that set wall-clock fields (`convertPlainDateTimeToZoned`,
+`addZoned`, `setZoned`). Don't floor with `roundZoned` and `roundingMode: "trunc"`:
+it rounds the wall clock and re-resolves it, which can land after the input. Use
+`floorToZone` or `startOfZoned`.
 
 ## Set fields directly
 
@@ -121,7 +134,10 @@ import { getHoursInZonedDay } from "@northguild/gmt/zoned";
 getHoursInZonedDay("2024-03-10T12:00:00-04:00[America/New_York]"); // 23 — spring-forward
 getHoursInZonedDay("2024-11-03T12:00:00-05:00[America/New_York]"); // 25 — fall-back
 getHoursInZonedDay("2024-02-29T12:00:00+00:00[UTC]"); // 24 — normal
+getHoursInZonedDay("2024-09-08T12:00:00-03:00[America/Santiago]"); // 23 — midnight skipped
 ```
+
+This is Temporal's `hoursInDay`: the span from the day's real start to the next day's.
 
 ## Read a zoned value's UTC offset
 

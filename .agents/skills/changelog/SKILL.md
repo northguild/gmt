@@ -6,7 +6,7 @@ argument-hint: "no arguments needed"
 
 # Update Changeset Description
 
-Improve the pending `.changeset/*.md` file(s) so the description that will land in `CHANGELOG.md` is accurate, concise, and consumer-focused. Run this skill after development is done and **before the PR merges** — once it does, CI runs `changeset version`, which consumes and deletes the changeset files.
+Improve the pending `.changeset/*.md` file(s) so the description that will land in `CHANGELOG.md` is accurate, concise, and consumer-focused. Run this skill after development is done and before the PR merges. Merging publishes nothing: the changeset sits on `main` until a maintainer runs `pnpm run changeset:version` in a separate release PR, which consumes the changeset files into `CHANGELOG.md` (see `.github/workflows/release.yml` and `PUBLISHING.md`). Polish it now, while the diff is fresh.
 
 ## Context
 
@@ -30,7 +30,7 @@ See [references/steps.md](references/steps.md) for the full step-by-step (findin
 
 ## Rules
 
-- **Do not change the frontmatter** (`---` block with package names and bump types). Those are set by `pnpm run changeset:add` and are authoritative.
+- **Do not change the frontmatter** (`---` block with package names and bump types) — but if the bump contradicts the [changeset rule](../../../context/coding-standards.md#changesets) (fix → `patch`, new API → `minor`), flag it to the user.
 - **Do not rename the changeset file.** The slug is random but tracked by git.
 - **Do not run `changeset:version`** — it bumps versions and consumes every pending changeset. It is a maintainer's deliberate release action, run in a release PR of its own. See [PUBLISHING.md](../../../PUBLISHING.md).
 - **Never fabricate function names.** Every export named in the description must exist in `packages/*/src/`. Verify with `grep` if uncertain.

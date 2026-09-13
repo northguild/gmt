@@ -3,6 +3,7 @@ import {
   formatDateInCalendar,
   parseCalendarDatePairForArithmetic,
   resolveDurationUnit,
+  tileByUnit,
 } from "../../internal";
 import { isValidCalendarDate } from "../validate";
 
@@ -11,6 +12,11 @@ import { isValidCalendarDate } from "../validate";
  *
  * - Returns an array of `{ start, end }` records that tile the interval.
  * - The final sub-interval is trimmed so its `end` never exceeds the original `end`.
+ * - Each boundary is computed from `start` (`start + k × amount`, as Temporal and Luxon's
+ *   `Interval.splitBy` do), not by stepping from the previous boundary, so month-end starts
+ *   don't drift: a monthly split from January 31 lands on February 29, March 31, April 30.
+ * - A step that resolves to the same date as the previous boundary is skipped, so no empty
+ *   slice is produced. A step that goes backwards returns `[]`.
  * - Returns `[{ start, end }]` when `start === end` (zero-length interval).
  * - Returns `[]` on invalid input (unparseable start/end, unsupported unit, non-positive amount,
  *   or a unit that has no effect on `PlainDate`, e.g. `"hours"`).
@@ -82,30 +88,18 @@ export function splitIntervalByUnitDate(
       ];
     }
 
-    const result: Array<{ start: string; end: string }> = [];
+    const slices = tileByUnit(
+      startVal,
+      endVal,
+      Temporal.PlainDate.compare,
+      resolvedUnit,
+      amount,
+    );
 
-    for (
-      let current = startVal;
-      Temporal.PlainDate.compare(current, endVal) < 0;
-    ) {
-      const next = current.add({ [resolvedUnit]: amount });
-
-      if (Temporal.PlainDate.compare(next, current) === 0) {
-        return [];
-      }
-
-      const sliceEnd =
-        Temporal.PlainDate.compare(next, endVal) > 0 ? endVal : next;
-
-      result.push({
-        start: formatDateInCalendar(current, calendar),
-        end: formatDateInCalendar(sliceEnd, calendar),
-      });
-
-      current = next;
-    }
-
-    return result;
+    return (slices ?? []).map(([sliceStart, sliceEnd]) => ({
+      start: formatDateInCalendar(sliceStart, calendar),
+      end: formatDateInCalendar(sliceEnd, calendar),
+    }));
   } catch {
     return [];
   }

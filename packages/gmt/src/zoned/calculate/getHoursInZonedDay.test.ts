@@ -53,6 +53,28 @@ describe("getHoursInZonedDay", () => {
     ).toBe(24.5);
   });
 
+  // Zones whose spring-forward gap swallows local midnight: the day starts at 01:00 and is 23h long.
+  it.each`
+    value                                            | expected
+    ${"2024-09-08T12:00:00-03:00[America/Santiago]"} | ${23}
+    ${"2024-03-10T12:00:00-04:00[America/Havana]"}   | ${23}
+  `(
+    "returns $expected for $value, whose local midnight is skipped",
+    ({ value, expected }) => {
+      expect(getHoursInZonedDay(value)).toBe(expected);
+    },
+  );
+
+  // Documented divergence (coding standards § Calendar & zone semantics, rule 3): Goose Bay
+  // fell back at 00:01 on 2010-11-07, re-entering 6 November. An input in that reopened
+  // stretch is in 6 November's TC39 `hoursInDay` (24), while `startOfZoned(…, "day")` puts it
+  // in a 59-minute bucket starting 23:01.
+  it("returns 6 November's 24 hours for an input in Goose Bay's reopened stretch", () => {
+    expect(
+      getHoursInZonedDay("2010-11-06T23:30:00-04:00[America/Goose_Bay]"),
+    ).toBe(24);
+  });
+
   // Historical rule change: Africa/Casablanca paused DST for Ramadan in 2018,
   // producing three transitions in one year instead of the usual two.
   it.each`

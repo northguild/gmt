@@ -1,7 +1,81 @@
+import { Temporal } from "@js-temporal/polyfill";
 import { splitIntervalByUnitDate } from "./splitIntervalByUnitDate";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 
 describe("splitIntervalByUnitDate", () => {
+  // Each boundary is start + k × amount (Temporal and Luxon Interval.splitBy), so month ends don't drift.
+  it.each`
+    start           | end             | unit       | expected
+    ${"2024-01-31"} | ${"2024-05-15"} | ${"month"} | ${[{ start: "2024-01-31", end: "2024-02-29" }, { start: "2024-02-29", end: "2024-03-31" }, { start: "2024-03-31", end: "2024-04-30" }, { start: "2024-04-30", end: "2024-05-15" }]}
+    ${"2024-02-29"} | ${"2028-03-01"} | ${"year"}  | ${[{ start: "2024-02-29", end: "2025-02-28" }, { start: "2025-02-28", end: "2026-02-28" }, { start: "2026-02-28", end: "2027-02-28" }, { start: "2027-02-28", end: "2028-02-29" }, { start: "2028-02-29", end: "2028-03-01" }]}
+  `(
+    "computes every $unit boundary of $start to $end from the start, without month-end drift",
+    ({ start, end, unit, expected }) => {
+      expect(splitIntervalByUnitDate(start, end, unit, 1)).toEqual(expected);
+    },
+  );
+
+  // amount > 1 from a month end: step k is start + 3k months (2024-05-30), where stepping from
+  // the clamped Feb 29 would drift to 2024-05-29. Verified against Temporal.PlainDate.add.
+  it.each`
+    start           | end             | unit       | amount | expected
+    ${"2023-11-30"} | ${"2024-09-01"} | ${"month"} | ${3}   | ${[{ start: "2023-11-30", end: "2024-02-29" }, { start: "2024-02-29", end: "2024-05-30" }, { start: "2024-05-30", end: "2024-08-30" }, { start: "2024-08-30", end: "2024-09-01" }]}
+  `(
+    "computes every $amount $unit boundary of $start to $end from the start",
+    ({ start, end, unit, amount, expected }) => {
+      expect(splitIntervalByUnitDate(start, end, unit, amount)).toEqual(
+        expected,
+      );
+    },
+  );
+
+  // A calendar step that resolves to the previous boundary is skipped, not treated as a failure.
+  // The stub makes step 2 land on step 1's day.
+  it("skips a day step that repeats the previous boundary", () => {
+    const realAdd = Temporal.PlainDate.prototype.add;
+    vi.spyOn(Temporal.PlainDate.prototype, "add").mockImplementation(function (
+      this: Temporal.PlainDate,
+      ...args: Parameters<Temporal.PlainDate["add"]>
+    ) {
+      const { days } = args[0] as { days: number };
+      return realAdd.call(this, { days: days === 2 ? 1 : days });
+    });
+
+    expect(
+      splitIntervalByUnitDate("2024-01-01", "2024-01-04", "day", 1),
+    ).toEqual([
+      { start: "2024-01-01", end: "2024-01-02" },
+      { start: "2024-01-02", end: "2024-01-04" },
+    ]);
+  });
+
+  // Loop bound: steps that never advance past the previous boundary return [] instead of spinning.
+  it("returns [] when day steps stop advancing", () => {
+    vi.spyOn(Temporal.PlainDate.prototype, "add").mockImplementation(
+      function (this: Temporal.PlainDate) {
+        return this;
+      },
+    );
+
+    expect(
+      splitIntervalByUnitDate("2024-01-01", "2024-01-10", "day", 1),
+    ).toEqual([]);
+  });
+
+  // No-progress guard: a step that does not move past the previous boundary returns [] rather
+  // than looping forever.
+  it("returns [] when a step lands before the previous boundary", () => {
+    vi.spyOn(Temporal.PlainDate.prototype, "add").mockImplementation(
+      function (this: Temporal.PlainDate) {
+        return this.subtract({ days: 1 });
+      },
+    );
+
+    expect(
+      splitIntervalByUnitDate("2024-01-01", "2024-01-10", "day", 1),
+    ).toEqual([]);
+  });
+
   const expectedExactDivision = [
     { start: "2024-01-01", end: "2024-01-03" },
     { start: "2024-01-03", end: "2024-01-05" },

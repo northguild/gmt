@@ -94,8 +94,8 @@ it.each`
 ### Error Path Testing
 
 ```typescript
-// ✅ Use pre-built mocks from @gmt/test/mocks
-import { mockTemporalPlainDateFromThrow } from "@gmt/test/mocks";
+// ✅ Use pre-built mocks (relative import — there is no @gmt/test alias)
+import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 
 it("returns empty string when Temporal.PlainDate.from throws", () => {
   mockTemporalPlainDateFromThrow();

@@ -74,8 +74,9 @@ input before you act on it.
 ## Common pitfalls
 
 - `formatRelativeDate` requires a `reference` option — without it, you get `""`.
-- `parseDateWithPattern` returns `""` on shape-valid-but-unreal dates (regex
-  only proves shape; Temporal validates the real value).
+- `parseDateWithPattern`, `parseRfc2822` and `parseHttp` return `""` on
+  shape-valid-but-unreal dates such as 31 February (regex only proves shape;
+  Temporal validates the real value). Parsers reject; only arithmetic clamps.
 - Week numbers are ambiguous across year boundaries — `getIsoWeekDate` returns
   the week-numbering year with the week so the pair can never drift apart, and
   `getWeekYear` reads that year on its own.

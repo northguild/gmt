@@ -44,8 +44,8 @@ which lint package to install for Date-ban enforcement.
    before using it as a cache key or router param — `"Invalid/Zone"` is a sentinel
    failure, not a real zone.
 3. **Pick one canonical Unix unit.** If you mix epoch seconds and milliseconds,
-   convert explicitly with `convertUtcToUnix` / `convertUtcToUnixMs` rather than
-   dividing/multiplying by hand.
+   convert explicitly with `convertUtcToUnix(value)` (milliseconds) /
+   `convertUtcToUnix(value, "seconds")` rather than dividing/multiplying by hand.
 4. **Nanoseconds are `bigint`, never `number`.** A `number` is exact only to
    `2^53 − 1`, which nanoseconds since the epoch passed in April 1970. Use
    `toNanoseconds` / `fromNanoseconds`, cross a JSON boundary with

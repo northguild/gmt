@@ -28,17 +28,17 @@ Follow existing patterns for method names:
 - ForDate/ForDateTime/ForZoned suffixes for type-specific variants (e.g., `getQuarterForDate`, `getQuarterForZoned`)
 - startOf* / endOf* for boundaries (e.g., `startOfQuarterForDate`)
 - isBetween* for range checks (e.g., `isBetweenDate`, `isBetweenZoned`)
-- get* for getters (e.g., `getQuarterForDate`)
+- get* for getters (e.g., `getQuarterForDate`) — a `get*` function that takes a date value still lives in `calculate/`; `get/` holds only current-moment accessors (no argument, or timezone only)
 
 ## Implementation flow
 
 1. Discover existing method
-- Search `packages/gmt/src/plain` and `packages/gmt/src/zoned` for an existing helper.
+- Search every namespace under `packages/gmt/src/` (`calendar`, `duration`, `instant`, `plain`, `precision`, `regex`, `span`, `unix`, `utc`, `zoned`) for an existing helper.
 - If one exists, use it and do not add duplicate API surface.
 
 2. Decide module boundary
-- Put timezone-free logic in `plain/*`.
-- Put timezone-aware logic in `zoned/*`.
+- Put timezone-free logic in `plain/*`, timezone-aware logic in `zoned/*`, and instant/epoch logic in `utc/*`, `unix/*`, `instant/*` or `precision/*` as the input type dictates. Calendar identifiers and zone buckets go in `calendar/*`; elapsed durations in `span/*`.
+- One Temporal type family per function.
 
 3. Build with Temporal
 - Parse using Temporal constructors.
@@ -49,10 +49,15 @@ Follow existing patterns for method names:
 - String return type: return `""` on invalid input.
 - Number return type: return `null` on invalid input.
 - Boolean return type: return `false` on invalid input.
+- Array return type: return `[]` on invalid input.
+- Object return type (`{ ... } | null`): return `null` on invalid input.
+- `bigint` return type (precision converters/parsers): return `0n`; `span/` functions return `null`.
+- Canonical table: `context/coding-standards.md` § API Contract.
+- Calendar arithmetic follows TC39 Temporal (`overflow: "constrain"` clamps Jan 31 + 1 month to Feb 29/28); parsers reject impossible dates.
 
 5. Add tests
 - Add strong unit tests for valid, invalid, and boundary scenarios.
-- Include DST and timezone boundaries for zoned methods.
+- Include DST and timezone boundaries for zoned methods: run `battleTestTimeZones`, and for boundary functions add transition rows (e.g. `Pacific/Chatham`, `America/Santiago`, `Pacific/Apia`). Never compute a zoned start-of-unit by truncating the wall clock and re-resolving it.
 - Use `it.each` template tables for matrixed test cases.
 
 6. Update exports and docs

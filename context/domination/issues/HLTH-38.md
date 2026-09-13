@@ -43,5 +43,5 @@ The same problem applies to any schedule anchored to local time, but here the fa
 - An eight-hourly schedule bounded by a two-day period yields six windows
 - `classifyAdministration` returns `'onTime'` at the tolerance boundary and `'late'` one second beyond
 - Missing `dstPolicy` returns the sentinel
-- Full IANA timezone coverage
+- `battleTestTimeZones` coverage plus probe-zone transition rows for timezone-aware functions (see `context/coding-standards.md` § Calendar & zone semantics)
 - `pnpm run validate` stays green

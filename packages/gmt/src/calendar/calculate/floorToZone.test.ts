@@ -1,121 +1,146 @@
-import { battleTestTimeZones } from "../../test";
+import { battleTestTimeZones, MustTestDstTimeZones } from "../../test";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import { floorToZone } from "./floorToZone";
 
 /** The spec's own example instant: 03:00 UTC on 15 June, which is 14 June in the Americas. */
 const sourceInstant = "2024-06-15T03:00:00Z";
 
+// Expected values per battle-test timeZone, verified against @js-temporal/polyfill.
+const dayFloorByZone = {
+  UTC: "2024-06-15T00:00:00Z",
+  GMT: "2024-06-15T00:00:00Z",
+  "Etc/GMT": "2024-06-15T00:00:00Z",
+  "America/Nome": "2024-06-14T08:00:00Z",
+  "Asia/Anadyr": "2024-06-14T12:00:00Z",
+  "Europe/Lisbon": "2024-06-14T23:00:00Z",
+  "Europe/Dublin": "2024-06-14T23:00:00Z",
+  "Europe/Berlin": "2024-06-14T22:00:00Z",
+  "Europe/Helsinki": "2024-06-14T21:00:00Z",
+  "Europe/Istanbul": "2024-06-14T21:00:00Z",
+  "Asia/Kolkata": "2024-06-14T18:30:00Z",
+  "Asia/Kathmandu": "2024-06-14T18:15:00Z",
+  "Asia/Shanghai": "2024-06-14T16:00:00Z",
+  "Australia/Lord_Howe": "2024-06-14T13:30:00Z",
+  "Pacific/Chatham": "2024-06-14T11:15:00Z",
+  "Pacific/Apia": "2024-06-14T11:00:00Z",
+  "Pacific/Niue": "2024-06-14T11:00:00Z",
+  "America/New_York": "2024-06-14T04:00:00Z",
+  "America/Chicago": "2024-06-14T05:00:00Z",
+  "America/Phoenix": "2024-06-14T07:00:00Z",
+} satisfies Record<keyof typeof MustTestDstTimeZones, string>;
+
+const hourFloorByZone = {
+  UTC: "2024-06-15T03:00:00Z",
+  GMT: "2024-06-15T03:00:00Z",
+  "Etc/GMT": "2024-06-15T03:00:00Z",
+  "America/Nome": "2024-06-15T03:00:00Z",
+  "Asia/Anadyr": "2024-06-15T03:00:00Z",
+  "Europe/Lisbon": "2024-06-15T03:00:00Z",
+  "Europe/Dublin": "2024-06-15T03:00:00Z",
+  "Europe/Berlin": "2024-06-15T03:00:00Z",
+  "Europe/Helsinki": "2024-06-15T03:00:00Z",
+  "Europe/Istanbul": "2024-06-15T03:00:00Z",
+  "Asia/Kolkata": "2024-06-15T02:30:00Z",
+  "Asia/Kathmandu": "2024-06-15T02:15:00Z",
+  "Asia/Shanghai": "2024-06-15T03:00:00Z",
+  "Australia/Lord_Howe": "2024-06-15T02:30:00Z",
+  "Pacific/Chatham": "2024-06-15T02:15:00Z",
+  "Pacific/Apia": "2024-06-15T03:00:00Z",
+  "Pacific/Niue": "2024-06-15T03:00:00Z",
+  "America/New_York": "2024-06-15T03:00:00Z",
+  "America/Chicago": "2024-06-15T03:00:00Z",
+  "America/Phoenix": "2024-06-15T03:00:00Z",
+} satisfies Record<keyof typeof MustTestDstTimeZones, string>;
+
+const weekFloorByZone = {
+  UTC: "2024-06-10T00:00:00Z",
+  GMT: "2024-06-10T00:00:00Z",
+  "Etc/GMT": "2024-06-10T00:00:00Z",
+  "America/Nome": "2024-06-10T08:00:00Z",
+  "Asia/Anadyr": "2024-06-09T12:00:00Z",
+  "Europe/Lisbon": "2024-06-09T23:00:00Z",
+  "Europe/Dublin": "2024-06-09T23:00:00Z",
+  "Europe/Berlin": "2024-06-09T22:00:00Z",
+  "Europe/Helsinki": "2024-06-09T21:00:00Z",
+  "Europe/Istanbul": "2024-06-09T21:00:00Z",
+  "Asia/Kolkata": "2024-06-09T18:30:00Z",
+  "Asia/Kathmandu": "2024-06-09T18:15:00Z",
+  "Asia/Shanghai": "2024-06-09T16:00:00Z",
+  "Australia/Lord_Howe": "2024-06-09T13:30:00Z",
+  "Pacific/Chatham": "2024-06-09T11:15:00Z",
+  "Pacific/Apia": "2024-06-09T11:00:00Z",
+  "Pacific/Niue": "2024-06-10T11:00:00Z",
+  "America/New_York": "2024-06-10T04:00:00Z",
+  "America/Chicago": "2024-06-10T05:00:00Z",
+  "America/Phoenix": "2024-06-10T07:00:00Z",
+} satisfies Record<keyof typeof MustTestDstTimeZones, string>;
+
+const monthFloorByZone = {
+  UTC: "2024-06-01T00:00:00Z",
+  GMT: "2024-06-01T00:00:00Z",
+  "Etc/GMT": "2024-06-01T00:00:00Z",
+  "America/Nome": "2024-06-01T08:00:00Z",
+  "Asia/Anadyr": "2024-05-31T12:00:00Z",
+  "Europe/Lisbon": "2024-05-31T23:00:00Z",
+  "Europe/Dublin": "2024-05-31T23:00:00Z",
+  "Europe/Berlin": "2024-05-31T22:00:00Z",
+  "Europe/Helsinki": "2024-05-31T21:00:00Z",
+  "Europe/Istanbul": "2024-05-31T21:00:00Z",
+  "Asia/Kolkata": "2024-05-31T18:30:00Z",
+  "Asia/Kathmandu": "2024-05-31T18:15:00Z",
+  "Asia/Shanghai": "2024-05-31T16:00:00Z",
+  "Australia/Lord_Howe": "2024-05-31T13:30:00Z",
+  "Pacific/Chatham": "2024-05-31T11:15:00Z",
+  "Pacific/Apia": "2024-05-31T11:00:00Z",
+  "Pacific/Niue": "2024-06-01T11:00:00Z",
+  "America/New_York": "2024-06-01T04:00:00Z",
+  "America/Chicago": "2024-06-01T05:00:00Z",
+  "America/Phoenix": "2024-06-01T07:00:00Z",
+} satisfies Record<keyof typeof MustTestDstTimeZones, string>;
+
 describe("floorToZone", () => {
-  it.each`
-    timeZone                 | expected
-    ${"UTC"}                 | ${"2024-06-15T00:00:00Z"}
-    ${"GMT"}                 | ${"2024-06-15T00:00:00Z"}
-    ${"Etc/GMT"}             | ${"2024-06-15T00:00:00Z"}
-    ${"America/Nome"}        | ${"2024-06-14T08:00:00Z"}
-    ${"Asia/Anadyr"}         | ${"2024-06-14T12:00:00Z"}
-    ${"Europe/Lisbon"}       | ${"2024-06-14T23:00:00Z"}
-    ${"Europe/Dublin"}       | ${"2024-06-14T23:00:00Z"}
-    ${"Europe/Berlin"}       | ${"2024-06-14T22:00:00Z"}
-    ${"Europe/Helsinki"}     | ${"2024-06-14T21:00:00Z"}
-    ${"Europe/Istanbul"}     | ${"2024-06-14T21:00:00Z"}
-    ${"Asia/Kolkata"}        | ${"2024-06-14T18:30:00Z"}
-    ${"Asia/Kathmandu"}      | ${"2024-06-14T18:15:00Z"}
-    ${"Asia/Shanghai"}       | ${"2024-06-14T16:00:00Z"}
-    ${"Australia/Lord_Howe"} | ${"2024-06-14T13:30:00Z"}
-    ${"Pacific/Chatham"}     | ${"2024-06-14T11:15:00Z"}
-    ${"Pacific/Apia"}        | ${"2024-06-14T11:00:00Z"}
-    ${"Pacific/Niue"}        | ${"2024-06-14T11:00:00Z"}
-    ${"America/New_York"}    | ${"2024-06-14T04:00:00Z"}
-    ${"America/Chicago"}     | ${"2024-06-14T05:00:00Z"}
-    ${"America/Phoenix"}     | ${"2024-06-14T07:00:00Z"}
-  `(
+  it.each(
+    battleTestTimeZones.map((timeZone) => ({
+      timeZone,
+      expected: dayFloorByZone[timeZone],
+    })),
+  )(
     "floors 2024-06-15T03:00:00Z to the local day in $timeZone as $expected",
     ({ timeZone, expected }) => {
       expect(floorToZone(sourceInstant, "day", timeZone)).toBe(expected);
     },
   );
 
-  it.each`
-    timeZone                 | expected
-    ${"UTC"}                 | ${"2024-06-15T03:00:00Z"}
-    ${"GMT"}                 | ${"2024-06-15T03:00:00Z"}
-    ${"Etc/GMT"}             | ${"2024-06-15T03:00:00Z"}
-    ${"America/Nome"}        | ${"2024-06-15T03:00:00Z"}
-    ${"Asia/Anadyr"}         | ${"2024-06-15T03:00:00Z"}
-    ${"Europe/Lisbon"}       | ${"2024-06-15T03:00:00Z"}
-    ${"Europe/Dublin"}       | ${"2024-06-15T03:00:00Z"}
-    ${"Europe/Berlin"}       | ${"2024-06-15T03:00:00Z"}
-    ${"Europe/Helsinki"}     | ${"2024-06-15T03:00:00Z"}
-    ${"Europe/Istanbul"}     | ${"2024-06-15T03:00:00Z"}
-    ${"Asia/Kolkata"}        | ${"2024-06-15T02:30:00Z"}
-    ${"Asia/Kathmandu"}      | ${"2024-06-15T02:15:00Z"}
-    ${"Asia/Shanghai"}       | ${"2024-06-15T03:00:00Z"}
-    ${"Australia/Lord_Howe"} | ${"2024-06-15T02:30:00Z"}
-    ${"Pacific/Chatham"}     | ${"2024-06-15T02:15:00Z"}
-    ${"Pacific/Apia"}        | ${"2024-06-15T03:00:00Z"}
-    ${"Pacific/Niue"}        | ${"2024-06-15T03:00:00Z"}
-    ${"America/New_York"}    | ${"2024-06-15T03:00:00Z"}
-    ${"America/Chicago"}     | ${"2024-06-15T03:00:00Z"}
-    ${"America/Phoenix"}     | ${"2024-06-15T03:00:00Z"}
-  `(
+  it.each(
+    battleTestTimeZones.map((timeZone) => ({
+      timeZone,
+      expected: hourFloorByZone[timeZone],
+    })),
+  )(
     "floors 2024-06-15T03:00:00Z to the local hour in $timeZone as $expected",
     ({ timeZone, expected }) => {
       expect(floorToZone(sourceInstant, "hour", timeZone)).toBe(expected);
     },
   );
 
-  it.each`
-    timeZone                 | expected
-    ${"UTC"}                 | ${"2024-06-10T00:00:00Z"}
-    ${"GMT"}                 | ${"2024-06-10T00:00:00Z"}
-    ${"Etc/GMT"}             | ${"2024-06-10T00:00:00Z"}
-    ${"America/Nome"}        | ${"2024-06-10T08:00:00Z"}
-    ${"Asia/Anadyr"}         | ${"2024-06-09T12:00:00Z"}
-    ${"Europe/Lisbon"}       | ${"2024-06-09T23:00:00Z"}
-    ${"Europe/Dublin"}       | ${"2024-06-09T23:00:00Z"}
-    ${"Europe/Berlin"}       | ${"2024-06-09T22:00:00Z"}
-    ${"Europe/Helsinki"}     | ${"2024-06-09T21:00:00Z"}
-    ${"Europe/Istanbul"}     | ${"2024-06-09T21:00:00Z"}
-    ${"Asia/Kolkata"}        | ${"2024-06-09T18:30:00Z"}
-    ${"Asia/Kathmandu"}      | ${"2024-06-09T18:15:00Z"}
-    ${"Asia/Shanghai"}       | ${"2024-06-09T16:00:00Z"}
-    ${"Australia/Lord_Howe"} | ${"2024-06-09T13:30:00Z"}
-    ${"Pacific/Chatham"}     | ${"2024-06-09T11:15:00Z"}
-    ${"Pacific/Apia"}        | ${"2024-06-09T11:00:00Z"}
-    ${"Pacific/Niue"}        | ${"2024-06-10T11:00:00Z"}
-    ${"America/New_York"}    | ${"2024-06-10T04:00:00Z"}
-    ${"America/Chicago"}     | ${"2024-06-10T05:00:00Z"}
-    ${"America/Phoenix"}     | ${"2024-06-10T07:00:00Z"}
-  `(
+  it.each(
+    battleTestTimeZones.map((timeZone) => ({
+      timeZone,
+      expected: weekFloorByZone[timeZone],
+    })),
+  )(
     "floors 2024-06-15T03:00:00Z to the local Monday-start week in $timeZone as $expected",
     ({ timeZone, expected }) => {
       expect(floorToZone(sourceInstant, "week", timeZone)).toBe(expected);
     },
   );
 
-  it.each`
-    timeZone                 | expected
-    ${"UTC"}                 | ${"2024-06-01T00:00:00Z"}
-    ${"GMT"}                 | ${"2024-06-01T00:00:00Z"}
-    ${"Etc/GMT"}             | ${"2024-06-01T00:00:00Z"}
-    ${"America/Nome"}        | ${"2024-06-01T08:00:00Z"}
-    ${"Asia/Anadyr"}         | ${"2024-05-31T12:00:00Z"}
-    ${"Europe/Lisbon"}       | ${"2024-05-31T23:00:00Z"}
-    ${"Europe/Dublin"}       | ${"2024-05-31T23:00:00Z"}
-    ${"Europe/Berlin"}       | ${"2024-05-31T22:00:00Z"}
-    ${"Europe/Helsinki"}     | ${"2024-05-31T21:00:00Z"}
-    ${"Europe/Istanbul"}     | ${"2024-05-31T21:00:00Z"}
-    ${"Asia/Kolkata"}        | ${"2024-05-31T18:30:00Z"}
-    ${"Asia/Kathmandu"}      | ${"2024-05-31T18:15:00Z"}
-    ${"Asia/Shanghai"}       | ${"2024-05-31T16:00:00Z"}
-    ${"Australia/Lord_Howe"} | ${"2024-05-31T13:30:00Z"}
-    ${"Pacific/Chatham"}     | ${"2024-05-31T11:15:00Z"}
-    ${"Pacific/Apia"}        | ${"2024-05-31T11:00:00Z"}
-    ${"Pacific/Niue"}        | ${"2024-06-01T11:00:00Z"}
-    ${"America/New_York"}    | ${"2024-06-01T04:00:00Z"}
-    ${"America/Chicago"}     | ${"2024-06-01T05:00:00Z"}
-    ${"America/Phoenix"}     | ${"2024-06-01T07:00:00Z"}
-  `(
+  it.each(
+    battleTestTimeZones.map((timeZone) => ({
+      timeZone,
+      expected: monthFloorByZone[timeZone],
+    })),
+  )(
     "floors 2024-06-15T03:00:00Z to the local month in $timeZone as $expected",
     ({ timeZone, expected }) => {
       expect(floorToZone(sourceInstant, "month", timeZone)).toBe(expected);

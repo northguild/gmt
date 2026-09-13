@@ -42,6 +42,27 @@ These bite in every realm. They are why Phase 1 grew from 2 stories to 7.
 | `bigint` does not serialise | `JSON.stringify` throws on `bigint`. A `toNanoseconds` returning `bigint` has no round-trip story without one. | CORE-1 |
 | Storage precision truncation | Postgres stores microseconds. Writing nanoseconds and reading back silently breaks round-trip equality. | CORE-1 |
 | Foreign epochs | NTP (1900 epoch, rolls over 2036), Windows FILETIME (100 ns since 1601), .NET ticks, Excel serial, Postgres microseconds-since-2000. Every integration re-derives these. | CORE-3 |
+| Days that do not exist | "One year after 29 February", "one month after 31 January". Libraries disagree silently, and contracts, filings and fiscal calendars depend on the answer. | CORE-5, CORE-6 |
+
+### Non-existent days: the law and the libraries agree on clamping
+
+GMT follows TC39 Temporal's default `overflow: "constrain"` (the last valid day of the month).
+The legal and industry record behind that choice:
+
+- **EU** — [Regulation 1182/71 Art 3(2)(c)](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:31971R1182):
+  a period in months or years ending on a day that does not exist in the final month ends on
+  that month's last day.
+- **UK** — [Companies Act 2006 s390/s391](https://www.legislation.gov.uk/ukpga/2006/46/section/391):
+  accounting reference periods end on the last day of a month, and may vary by up to seven
+  days from it (52/53-week years).
+- **US** — [26 CFR 1.441-2](https://www.law.cornell.edu/cfr/text/26/1.441-2): a 52–53-week
+  taxable year ends on the same weekday nearest (or last in) a given month.
+- **TC39** — [Temporal `PlainDate`](https://tc39.es/proposal-temporal/docs/plaindate.html):
+  `add`/`with` default to `overflow: "constrain"`.
+- **Libraries** — Temporal, Moment, Luxon, dayjs, spacetime and `@internationalized/date` all
+  clamp. date-fns `setYear` is the outlier: it rolls 29 February forward to 1 March.
+
+Decision of record: [coding-standards § Calendar & zone semantics](../coding-standards.md#calendar--zone-semantics).
 
 ---
 

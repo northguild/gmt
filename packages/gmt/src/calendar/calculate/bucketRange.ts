@@ -79,7 +79,10 @@ export function bucketRange(
     if (Temporal.ZonedDateTime.compare(startZoned, endZoned) > 0) return [];
 
     const boundaries: string[] = [];
-    let current = zonedUnitStart(startZoned, unit);
+    const first = zonedUnitStart(startZoned, unit);
+    if (!first) return [];
+
+    let current = first;
 
     for (let i = 0; i < MAX_BUCKETS; i++) {
       if (Temporal.ZonedDateTime.compare(current, endZoned) >= 0) {

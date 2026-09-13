@@ -5,7 +5,7 @@ description: >
   validating Date-ban plugin diagnostics, and preserving existing Biome rules
   with minimal adoption churn.
 metadata:
-  library_version: 1.0.4
+  library_version: 1.1.0
 ---
 
 # First-Time Setup
@@ -45,6 +45,10 @@ Use this skill when a user wants to adopt `@northguild/gmt-biome`.
 3. Verify plugin activation
 - Run a Biome check command and confirm Date API bans are enforced.
 - Ensure diagnostics map to gmt-biome plugin rules.
+- `all.grit` also includes `no-date-library-imports`, which errors on `moment`,
+  `moment-timezone`, `dayjs`, `luxon`, `date-fns`, `date-fns-tz` and `spacetime` imports. In a
+  codebase that still uses them, warn the user before enabling `all.grit`, or list the
+  individual `.grit` files without it and stage it in later (see the CI enforcement skill).
 
 4. Suggest next integration
 - If the project also uses ESLint or Oxlint, suggest `@northguild/gmt-eslint` or `@northguild/gmt-oxlint` as optional, not required.

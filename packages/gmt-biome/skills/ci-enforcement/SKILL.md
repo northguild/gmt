@@ -5,7 +5,7 @@ description: >
   PR and mainline builds, with phased rollout controls to avoid blocking
   unrelated migration progress.
 metadata:
-  library_version: 1.0.4
+  library_version: 1.1.0
 ---
 
 # CI Enforcement
@@ -25,6 +25,9 @@ Use this skill when a team wants automated enforcement of gmt-biome rules.
 - If the repository has many existing violations, propose incremental adoption:
   - start on changed files or selected paths,
   - then expand to full repository enforcement.
+- `no-date-library-imports.grit` usually carries the largest baseline (every `moment` / `dayjs`
+  / `luxon` / `date-fns` / `spacetime` import). Enable it through an `overrides` entry scoped to
+  new paths first, then widen as imports are migrated.
 
 4. Keep output actionable
 - Configure CI so diagnostics are visible and easy to triage.

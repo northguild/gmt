@@ -1,10 +1,14 @@
 # Test Matrix
 
-Canonical test values for GMT tests. Tests may inline these strings or reference the exported constants from `packages/gmt/src/test/localeMatrix.ts` and `packages/gmt/src/test/timeZoneMatrix.ts`.
+Canonical test **values** for GMT tests. Write them inline as literals. The names in the
+"Label" columns are descriptive only — **they are not exported constants**, and nothing in
+`packages/gmt/src/test/` exports them. The fixtures that *are* exported (locales, time zones,
+battle cases) are listed under [Reference Fixtures](#reference-fixtures) and must be imported.
+See [index.md § Canonical Date Fixtures](./index.md#canonical-date-fixtures).
 
 ## Dates (PlainDate)
 
-| Constant | Value |
+| Label | Value |
 |---|---|
 | `dateLeapDay2024Feb29` | `"2024-02-29"` |
 | `dateNonLeapDay2023Feb28` | `"2023-02-28"` |
@@ -15,7 +19,7 @@ Canonical test values for GMT tests. Tests may inline these strings or reference
 
 ## DateTimes (PlainDateTime)
 
-| Constant | Value |
+| Label | Value |
 |---|---|
 | `dateTimeLeapDay2024Feb29StartOfDay` | `"2024-02-29T00:00:00"` |
 | `dateTimeLeapDay2024Feb29Noon` | `"2024-02-29T12:00:00"` |
@@ -28,7 +32,7 @@ Canonical test values for GMT tests. Tests may inline these strings or reference
 
 ## Times (PlainTime)
 
-| Constant | Value |
+| Label | Value |
 |---|---|
 | `timeNoon` | `"12:00:00"` |
 | `timeMidnight` | `"00:00:00"` |
@@ -36,7 +40,7 @@ Canonical test values for GMT tests. Tests may inline these strings or reference
 
 ## Unix Timestamps (Instant)
 
-| Constant | Value |
+| Label | Value |
 |---|---|
 | `unix2024Jan01T000000Ms` | `1704067200000` |
 | `unix2024Jan01T000000Sec` | `1704067200` |
@@ -45,7 +49,7 @@ Canonical test values for GMT tests. Tests may inline these strings or reference
 
 ## UTC Zoned DateTimes
 
-| Constant | Value |
+| Label | Value |
 |---|---|
 | `utcStart2024Jan01StartOfDay` | `"2024-01-01T00:00:00+00:00[UTC]"` |
 | `utcEnd2024Dec31EndOfDay` | `"2024-12-31T23:59:59+00:00[UTC]"` |
@@ -55,12 +59,12 @@ Canonical test values for GMT tests. Tests may inline these strings or reference
 Derive at test time by mapping the unix timestamps over `battleTestTimeZones`:
 
 ```ts
-import { battleTestTimeZones } from "@gmt/test";
+import { battleTestTimeZones } from "../../test"; // relative — there is no @gmt/test alias
 import { Temporal } from "@js-temporal/polyfill";
 
 const zonedStartCases = battleTestTimeZones.map((timeZone) => ({
   timeZone,
-  value: Temporal.Instant.from(unix2024Jan01T000000Ms)
+  value: Temporal.Instant.fromEpochMilliseconds(1704067200000) // unix2024Jan01T000000Ms
     .toZonedDateTimeISO(timeZone)
     .toString(),
 }));
@@ -68,7 +72,7 @@ const zonedStartCases = battleTestTimeZones.map((timeZone) => ({
 
 ## Durations
 
-| Constant | Value |
+| Label | Value |
 |---|---|
 | `durationOneDay` | `"P1D"` |
 | `durationOneHour` | `"PT1H"` |

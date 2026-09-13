@@ -16,10 +16,11 @@
  * so the test enters by the same door a streamed tool call does.
  */
 /// <reference types="vitest/globals" />
-import { act, render, waitFor } from "@testing-library/react";
+import { act, render, within } from "@testing-library/react";
+import type { WidgetHandle } from "~/lib/widget-mount";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { MountedWidget } from "./MountedWidget";
-import { resolveWidget } from "./widget-registry";
+import { type AnyWidgetEntry, resolveWidget } from "./widget-registry";
 
 installJsdomShims();
 
@@ -41,45 +42,135 @@ function stubTrackGeometry(root: ParentNode) {
   }
 }
 
+/**
+ * Render a widget through the panel and resolve once `mount()` has finished.
+ *
+ * `renderTemplate` writes the controls synchronously, but `mount` seeds values and
+ * attaches listeners only after it has loaded gmt — a cold dynamic import that
+ * can take well over a second when the whole workspace's suites run at once.
+ * Polling the DOM for "looks ready" (`waitFor` / `findBy*`, 1s default) raced
+ * that import and made this file flaky. `onHandle` fires exactly when the mount
+ * resolves, so awaiting it removes the race instead of widening the timeout;
+ * after it, every read below is synchronous.
+ */
+async function renderMounted(name: string, rawArgs: unknown, idPrefix: string) {
+  const resolved = resolveWidget(name, rawArgs);
+  expect(resolved.ok).toBe(true);
+  if (!resolved.ok) throw new Error(`unknown widget ${name}`);
+
+  return mountEntry(resolved.entry, resolved.args, idPrefix);
+}
+
+async function mountEntry(
+  entry: AnyWidgetEntry,
+  args: unknown,
+  idPrefix: string,
+) {
+  let resolveHandle!: (handle: WidgetHandle) => void;
+  const mounted = new Promise<WidgetHandle>((resolve) => {
+    resolveHandle = resolve;
+  });
+
+  const { container } = render(
+    <MountedWidget
+      entry={entry}
+      args={args}
+      idPrefix={idPrefix}
+      onHandle={(handle) => {
+        if (handle) resolveHandle(handle);
+      }}
+    />,
+  );
+
+  // If validate() reports a problem or mount() throws, `onHandle` never fires and
+  // MountedWidget renders its error instead. Watch for that element so the helper
+  // rejects at once with the widget's own message rather than hanging until the
+  // Vitest timeout.
+  let observer: MutationObserver | undefined;
+  const failed = new Promise<never>((_resolve, reject) => {
+    const check = () => {
+      const error = container.querySelector(".gmt-hive-widget-error");
+      if (error) {
+        reject(
+          new Error(
+            `widget "${entry.title}" failed to mount: ${error.textContent?.trim() ?? ""}`,
+          ),
+        );
+      }
+    };
+    observer = new MutationObserver(check);
+    observer.observe(container, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+    check();
+  });
+
+  // The race is awaited outside `act`: inside it, React holds MountedWidget's
+  // `setError` in the act queue until the callback settles, so the error element
+  // would never render and the observer could never fire.
+  try {
+    await Promise.race([mounted, failed]);
+  } finally {
+    observer?.disconnect();
+  }
+
+  // Flush whatever the mount scheduled, so every read after this is synchronous.
+  await act(async () => {});
+
+  return { container, view: within(container) };
+}
+
 afterEach(() => {
   document.body.innerHTML = "";
 });
 
+describe("the mount helper", () => {
+  // A widget that cannot be shown must fail the test with its own message, straight away —
+  // not leave the helper waiting for a handle that will never come until Vitest times out.
+  it("rejects with the widget's error text as soon as the panel shows it", async () => {
+    const resolved = resolveWidget("showConverterBench", {
+      value: "2024-03-15T14:30:00.000-04:00[America/New_York]",
+      from: "America/New_York",
+      to: "Europe/London",
+    });
+    if (!resolved.ok) throw new Error("unknown widget showConverterBench");
+
+    const problem = "Mars/Olympus_Mons is not a real time zone.";
+    const failing: AnyWidgetEntry = {
+      ...resolved.entry,
+      validate: () => Promise.resolve(problem),
+    };
+
+    const startedAt = performance.now();
+    await expect(mountEntry(failing, resolved.args, "rail-3")).rejects.toThrow(
+      problem,
+    );
+    expect(performance.now() - startedAt).toBeLessThan(1000);
+  });
+});
+
 describe("a widget mounted in the panel", () => {
   it("is reachable and operable by keyboard, exactly as on its own page", async () => {
-    const resolved = resolveWidget("showIntervalVisualizer", {
-      aStart: "2024-01-01T00:00:00+00:00[UTC]",
-      aEnd: "2024-06-30T00:00:00+00:00[UTC]",
-      bStart: "2024-04-01T00:00:00+00:00[UTC]",
-      bEnd: "2024-12-31T00:00:00+00:00[UTC]",
-    });
-    expect(resolved.ok).toBe(true);
-    if (!resolved.ok) return;
-
-    const { container } = render(
-      <MountedWidget
-        entry={resolved.entry}
-        args={resolved.args}
-        idPrefix="rail-1"
-      />,
+    const { container, view } = await renderMounted(
+      "showIntervalVisualizer",
+      {
+        aStart: "2024-01-01T00:00:00+00:00[UTC]",
+        aEnd: "2024-06-30T00:00:00+00:00[UTC]",
+        bStart: "2024-04-01T00:00:00+00:00[UTC]",
+        bEnd: "2024-12-31T00:00:00+00:00[UTC]",
+      },
+      "rail-1",
     );
-
-    const input = await waitFor(() => {
-      const el = container.querySelector('[data-role="a-start"]');
-      if (!el) throw new Error("widget not mounted yet");
-      return el as HTMLInputElement;
-    });
-    await waitFor(() => expect(input.value).not.toBe(""));
     stubTrackGeometry(container);
 
-    const handle = container.querySelector(
-      '[data-role="handle-a-start"]',
-    ) as HTMLElement;
+    const input = view.getByLabelText("A start") as HTMLInputElement;
+    expect(input.value).not.toBe("");
 
     // Reachable: a real slider, in the tab order, with a name.
-    expect(handle.getAttribute("role")).toBe("slider");
+    const handle = view.getByRole("slider", { name: "Interval A start" });
     expect(handle.getAttribute("tabindex")).toBe("0");
-    expect(handle.getAttribute("aria-label")).toBeTruthy();
 
     handle.focus();
     expect(document.activeElement).toBe(handle);
@@ -102,38 +193,22 @@ describe("a widget mounted in the panel", () => {
   });
 
   it("keeps the converter's controls keyboard-operable in the panel", async () => {
-    const resolved = resolveWidget("showConverterBench", {
-      value: "2024-03-15T14:30:00.000-04:00[America/New_York]",
-      from: "America/New_York",
-      to: "Europe/London",
-    });
-    expect(resolved.ok).toBe(true);
-    if (!resolved.ok) return;
-
-    const { container } = render(
-      <MountedWidget
-        entry={resolved.entry}
-        args={resolved.args}
-        idPrefix="rail-2"
-      />,
+    const { container, view } = await renderMounted(
+      "showConverterBench",
+      {
+        value: "2024-03-15T14:30:00.000-04:00[America/New_York]",
+        from: "America/New_York",
+        to: "Europe/London",
+      },
+      "rail-2",
     );
 
-    /* Waiting for the *element* is not enough: `renderTemplate` writes it
-       synchronously, but `mount` attaches the listeners only after two awaits.
-       Dispatching in that window is lost silently and the test then fails on a
-       timeout that looks like a broken widget. Wait for the first computed
-       result, which is the signal that mounting finished. */
-    const out = await waitFor(() => {
-      const el = container.querySelector('[data-role="convert-result"]');
-      if (!el?.textContent?.includes("[")) {
-        throw new Error("widget has not produced a result yet");
-      }
-      return el as HTMLElement;
-    });
-    const select = container.querySelector(
-      '[data-role="convert-target"]',
-    ) as HTMLSelectElement;
+    const out = container.querySelector(
+      '[data-role="convert-result"]',
+    ) as HTMLElement;
+    expect(out.textContent).toContain("[Europe/London]");
 
+    const select = view.getByLabelText("To") as HTMLSelectElement;
     select.focus();
     expect(document.activeElement).toBe(select);
 
@@ -144,6 +219,6 @@ describe("a widget mounted in the panel", () => {
       select.dispatchEvent(new Event("change", { bubbles: true }));
     });
 
-    await waitFor(() => expect(out.textContent).toContain("Asia/Tokyo"));
+    expect(out.textContent).toContain("Asia/Tokyo");
   });
 });

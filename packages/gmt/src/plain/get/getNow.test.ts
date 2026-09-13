@@ -1,10 +1,39 @@
-import { TomorrowTimeZone, YesterdayTimeZone } from "../../test";
+import {
+  TomorrowTimeZone,
+  YesterdayTimeZone,
+  MustTestDstTimeZones,
+  battleTestTimeZones,
+} from "../../test";
 import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
 import { chopMilliseconds, chopTime, chopUtc } from "../chop";
 import { isAfterDateTime } from "../compare";
 import { isValidDateTime } from "../validate";
 import { getNow } from "./getNow";
 import { getToday } from "./getToday";
+
+// Expected values per battle-test timeZone, verified against @js-temporal/polyfill.
+const plainNowByZone = {
+  UTC: "2024-02-29T00:00:00",
+  GMT: "2024-02-29T00:00:00",
+  "Etc/GMT": "2024-02-29T00:00:00",
+  "America/Nome": "2024-02-28T15:00:00",
+  "Asia/Anadyr": "2024-02-29T12:00:00",
+  "Europe/Lisbon": "2024-02-29T00:00:00",
+  "Europe/Dublin": "2024-02-29T00:00:00",
+  "Europe/Berlin": "2024-02-29T01:00:00",
+  "Europe/Helsinki": "2024-02-29T02:00:00",
+  "Europe/Istanbul": "2024-02-29T03:00:00",
+  "Asia/Kolkata": "2024-02-29T05:30:00",
+  "Asia/Kathmandu": "2024-02-29T05:45:00",
+  "Asia/Shanghai": "2024-02-29T08:00:00",
+  "Australia/Lord_Howe": "2024-02-29T11:00:00",
+  "Pacific/Chatham": "2024-02-29T13:45:00",
+  "Pacific/Apia": "2024-02-29T13:00:00",
+  "Pacific/Niue": "2024-02-28T13:00:00",
+  "America/New_York": "2024-02-28T19:00:00",
+  "America/Chicago": "2024-02-28T18:00:00",
+  "America/Phoenix": "2024-02-28T17:00:00",
+} satisfies Record<keyof typeof MustTestDstTimeZones, string>;
 
 describe("getNow", () => {
   let timeZoneSpy: ReturnType<typeof vi.spyOn>;
@@ -52,25 +81,12 @@ describe("getNow", () => {
   );
 
   // 2024-02-29T00:00:00.000Z in each must-test timeZone: UTC → east → Pacific → Americas
-  it.each`
-    timeZone                 | expected
-    ${"UTC"}                 | ${"2024-02-29T00:00:00"}
-    ${"Etc/GMT"}             | ${"2024-02-29T00:00:00"}
-    ${"GMT"}                 | ${"2024-02-29T00:00:00"}
-    ${"Europe/Lisbon"}       | ${"2024-02-29T00:00:00"}
-    ${"Europe/Dublin"}       | ${"2024-02-29T00:00:00"}
-    ${"Europe/Berlin"}       | ${"2024-02-29T01:00:00"}
-    ${"Europe/Helsinki"}     | ${"2024-02-29T02:00:00"}
-    ${"Europe/Istanbul"}     | ${"2024-02-29T03:00:00"}
-    ${"Asia/Kolkata"}        | ${"2024-02-29T05:30:00"}
-    ${"Asia/Kathmandu"}      | ${"2024-02-29T05:45:00"}
-    ${"Asia/Shanghai"}       | ${"2024-02-29T08:00:00"}
-    ${"Australia/Lord_Howe"} | ${"2024-02-29T11:00:00"}
-    ${"Pacific/Chatham"}     | ${"2024-02-29T13:45:00"}
-    ${"America/New_York"}    | ${"2024-02-28T19:00:00"}
-    ${"America/Chicago"}     | ${"2024-02-28T18:00:00"}
-    ${"America/Phoenix"}     | ${"2024-02-28T17:00:00"}
-  `(
+  it.each(
+    battleTestTimeZones.map((timeZone) => ({
+      timeZone,
+      expected: plainNowByZone[timeZone],
+    })),
+  )(
     "returns $expected for system timeZone $timeZone",
     ({ timeZone, expected }) => {
       timeZoneSpy.mockReturnValue(timeZone);

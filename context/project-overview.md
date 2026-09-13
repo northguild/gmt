@@ -60,7 +60,7 @@ GMT's format functions delegate locale rendering to the host runtime's `Intl` AP
 | MDN: Intl.DateTimeFormat     | https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat     |
 | MDN: Intl.RelativeTimeFormat | https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/RelativeTimeFormat |
 
-**Important:** `Intl` output depends on the ICU data bundled with the runtime. Official Node.js builds from nodejs.org ship full ICU; some repackaged or embedded Node builds ship partial ICU and fall back to English for non-Latin locales. GMT's test suite uses `hasFullIcu` (in `src/test/hasFullIcu.ts`) to detect which environment it's running in and assert the correct expected value for each path.
+**Important:** `Intl` output depends on the ICU data bundled with the runtime. Official Node.js builds from nodejs.org ship full ICU; some repackaged or embedded Node builds ship partial ICU and fall back to English for non-Latin locales. CLDR wording also changes between Node major versions. GMT's tests tolerate verified wording variants with the helpers in `packages/gmt/src/test/icuVariants.ts` (`oneOfIcu`, `expectOneOfIcu`, `expectDateTimeEqual`, `expectOneOfDateTimeIcu`) — see [testing standards](./testing-standards/references/index.md#icucldr-wording-variance-across-node-versions).
 
 ## Comparison Libraries
 

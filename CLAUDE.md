@@ -19,41 +19,50 @@ Full wording: [AGENTS.md](./AGENTS.md) § "Git — Absolute Prohibitions".
 
 ## Context Files
 
-Scoped documentation — load only what the task requires:
+Scoped documentation — load only what the task requires. The index lives in one place:
+[AGENTS.md § Context Files](./AGENTS.md#context-files).
 
-| File                                                                                             | Load when...                                                            |
-| ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
-| [context/project-overview.md](./context/project-overview.md)                                     | Always — what GMT is, Temporal API refs, Date pitfalls, comparison libs |
-| [context/coding-standards.md](./context/coding-standards.md)                                     | Writing or reviewing source code                                        |
-| [context/testing-standards/references/index.md](./context/testing-standards/references/index.md) | Writing or reviewing tests                                              |
-| [context/jsdoc-standards.md](./context/jsdoc-standards.md)                                       | Adding or updating JSDoc                                                |
-| [context/code-review-checklist.md](./context/code-review-checklist.md)                           | Reviewing a PR                                                          |
-| [context/linting-packages.md](./context/linting-packages.md)                                     | Working on gmt-eslint, gmt-oxlint, or gmt-biome                         |
-| [context/dox/index.md](./context/dox/index.md)                                                   | Working on the `apps/dox` documentation site (the Dox epic)            |
-| [context/domination/index.md](./context/domination/index.md)                                     | Picking up any epic story — check `Blocked by` in its tracker first |
+## Agents
+
+The personas in `.agents/*.md` are symlinked into `.claude/agents/` (Claude Code) and
+registered in `kilo.jsonc` (Kilo). Library pipeline: `master` → `driver` → `architect` /
+`researcher` / `tdd-dev` / `tester` / `finalizer`. Dox site: `dox-architect` → `dox-builder` /
+`dox-tester`.
 
 ## Available Skills
 
-Reusable slash commands live in `.agents/skills/`. Run them with `/skill-name`.
+Skills live in `.agents/skills/` and are symlinked into `.claude/skills/`. Run them with
+`/skill-name`.
 
 | Skill              | What it does                                                                |
 | ------------------ | --------------------------------------------------------------------------- |
-| `/update-readme`   | Diffs vs main, updates namespace and package READMEs to reflect changes     |
+| `/update-readme`   | Diffs vs main, updates the root and package READMEs to reflect changes      |
 | `/changelog`       | Rewrites the pending `.changeset/*.md` description to match CHANGELOG style |
-| `/commit-message`  | Generates a ready-to-copy commit message from the current diff (read-only)  |
-| `/pr-desc`         | Generates a full PR title and description from the branch diff              |
-| `/code-review`     | GMT-specific code review guidance and checklist                             |
+| `/commit-message`  | Drafts a ready-to-copy commit message from the current diff (read-only)     |
+| `/pr-desc`         | Drafts a PR title and description from the branch diff (read-only)          |
+| `/code-review`     | GMT-specific review checklist — see note below                              |
 | `/tanstack-intent` | Keeps `packages/gmt/skills/` in sync with source changes                    |
+| `/tdd`             | Vertical-slice red → green reference                                        |
+| `/implement`       | Implement a spec or ticket end to end (leaves changes unstaged)             |
+| `/research`        | Research a question against primary sources into a Markdown file            |
+| `/prototype`       | Throwaway prototype to answer a design question                             |
+| `/handoff`         | Write a handoff note for the next session                                   |
+| `/grill-with-docs` | Interview-style design review that records decisions as docs                |
+
+**`/code-review` name collision.** Claude Code ships a built-in `/code-review`. If the
+built-in wins, load the GMT checklist directly:
+[context/code-review-checklist.md](./context/code-review-checklist.md).
 
 ## Repo Layout (quick orientation)
 
-```
+```text
 packages/
   gmt/          # @northguild/gmt — the main library
   gmt-eslint/   # ESLint flat config plugin
   gmt-oxlint/   # Oxlint JS plugin
   gmt-biome/    # Biome GritQL plugins
-context/        # Agent documentation (scoped — see table above)
-.agents/skills/ # Reusable slash command skills (see table above)
+context/        # Agent documentation (scoped — see AGENTS.md)
+.agents/        # Agent personas (*.md) and skills (skills/)
+.claude/        # Symlinks into .agents/ for Claude Code
 .changeset/     # Pending version bump descriptions
 ```

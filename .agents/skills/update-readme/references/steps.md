@@ -43,7 +43,7 @@ For each affected `packages/gmt/src/<namespace>/README.md`:
 
   See the full reference at [/reference/<slug>](/reference/<slug>).
   ```
-  where `<slug>` is `plain`, `zoned`, `unix`, `utc`, `duration`, or `regex`.
+  where `<slug>` is the namespace directory name (`calendar`, `duration`, `instant`, `plain`, `precision`, `regex`, `span`, `unix`, `utc`, `zoned` — check `ls packages/gmt/src`).
 - Do **not** expand the stub into a function list. The docs generator owns the function index.
 - Only update a namespace README if the reference path slug itself changes (e.g. a namespace rename).
 

@@ -1,9 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import {
-  getStartOfZonedUnit,
-  getUnitSpan,
-  resolveDateTimeUnit,
-} from "../../internal";
+import { countZonedBuckets, resolveDateTimeUnit } from "../../internal";
 import { isValidDateTimeUnit } from "../../plain/validate";
 import { isLeapSecond } from "../../plain/validate/isLeapSecond";
 import { utcDateTime } from "../../regex/utc-date-time";
@@ -75,15 +71,7 @@ export function intervalCountUtc(
       return null;
     }
 
-    const startOfStart = getStartOfZonedUnit(startVal, resolvedUnit);
-    const startOfEnd = getStartOfZonedUnit(endVal, resolvedUnit);
-
-    const spanned = getUnitSpan(
-      startOfStart.until(startOfEnd, { largestUnit: resolvedUnit }),
-      resolvedUnit,
-    );
-
-    return spanned + (startOfEnd.equals(endVal) ? 0 : 1);
+    return countZonedBuckets(startVal, endVal, resolvedUnit);
   } catch {
     return null;
   }

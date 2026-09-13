@@ -7,7 +7,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 ## Rules that bind every change
 
 - **`apps/dox` must not perturb `packages/gmt`.** `pnpm run validate` stays green,
-  including the 20-cell GMT timezone matrix. No changesets unless a change also touches
+  including the CI timezone matrix (10 zones × Node 22/24 — see README). No changesets unless a change also touches
   `packages/gmt`.
 - **Merging to `main` deploys.** `deploy-dox.yml` runs on every push to `main`, with no
   path filter and no manual trigger.
@@ -55,8 +55,11 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **Generator (`A3a`).** `scripts/build-reference.ts` uses the TypeScript compiler API
   (not TypeDoc) and emits one MDX page per exported function plus module index pages,
   `gmt-corpus.json`, a typed route manifest (`ReadonlySet<string>`) and
-  `LIVE_PLAYGROUND_TEMPLATES`. Outputs are gitignored under `src/generated/` and rebuilt by
-  `pnpm run generate`, which runs before `test`, `check` and `build`.
+  `LIVE_PLAYGROUND_TEMPLATES`. Outputs live under `src/generated/` and are rebuilt by
+  `pnpm run generate`, which runs before `test`, `check` and `build`. The directory is in
+  `.gitignore`, but `reference/corpus.ts`, `reference/gmt-corpus.json` and
+  `reference/route-manifest.ts` predate that rule and stay tracked, so regenerating them
+  produces a diff to keep. The MDX reference pages are ignored and untracked.
   - `@example` is one inline line, `fn(args) // result (note)`, split on `/\s+\/\/\s/`. The
     one multi-line example is `getDstTransitions`.
   - `plain/calculate/weekOfYear.ts` is the only file exporting two functions.

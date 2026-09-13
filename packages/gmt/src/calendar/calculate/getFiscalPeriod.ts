@@ -42,6 +42,10 @@ const DAYS_PER_WEEK = 7;
  *   are unaffected. If your rule sits near a year boundary, key on the fiscal year's own start
  *   date — which `yearEndsOn` determines, and which is yours to enumerate — not on `year`.
  *   GMT does not invent a label the inputs do not fix.
+ * - A `yearEndsOn` month-day that does not exist in a year follows Temporal's
+ *   `overflow: "constrain"`: a February 29 rule reads February 28 in common years. A
+ *   "month-end" rule (26 CFR 1.441-2 style) would put a February 28 anchor on February 29 in
+ *   leap years; this does not — state such a rule with a date that exists every year.
  * - Whether a fiscal year has 52 or 53 weeks is derived from the gap between its own two
  *   ends, never assumed from a table.
  * - `value` must be zoneless — an ISO date or datetime, as `isValidIsoDateLike` accepts. See

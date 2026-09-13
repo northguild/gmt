@@ -530,6 +530,7 @@ export const referenceRoutes: RouteManifest = new Set([
   "/reference/zoned/calculate/sortZoned",
   "/reference/zoned/calculate/startOfQuarterForZoned",
   "/reference/zoned/calculate/startOfZoned",
+  "/reference/zoned/calculate/startOrEndOfZoned",
   "/reference/zoned/calculate/subtractZoned",
   "/reference/zoned/calculate/subtractZonedBusinessDays",
   "/reference/zoned/chop/chopZonedDate",

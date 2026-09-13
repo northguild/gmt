@@ -5,12 +5,14 @@ import { isValidUtc } from "../validate";
  * Return the start of the quarter for a given UTC datetime string.
  *
  * - Calculates quarter start month: Q1=1, Q2=4, Q3=7, Q4=10.
+ * - Resets every time field, including milliseconds, microseconds and nanoseconds.
  * - Returns "" for invalid input.
  *
  * @param value ISO UTC datetime string (e.g. "2024-03-15T12:00:00Z")
  * @returns ISO UTC datetime string representing the start of the quarter, or "" on invalid input
  *
  * @example startOfQuarterForUtc("2024-03-15T12:00:00Z") // "2024-01-01T00:00:00Z"
+ * @example startOfQuarterForUtc("2024-05-15T12:34:56.789Z") // "2024-04-01T00:00:00Z"
  * @example startOfQuarterForUtc("invalid") // ""
  */
 export function startOfQuarterForUtc(value: string): string {
@@ -25,7 +27,16 @@ export function startOfQuarterForUtc(value: string): string {
     const quarterStartMonth = Math.floor((month - 1) / 3) * 3 + 1;
 
     const result = zdt
-      .with({ month: quarterStartMonth, day: 1, hour: 0, minute: 0, second: 0 })
+      .with({
+        month: quarterStartMonth,
+        day: 1,
+        hour: 0,
+        minute: 0,
+        second: 0,
+        millisecond: 0,
+        microsecond: 0,
+        nanosecond: 0,
+      })
       .toInstant();
 
     return result.toString();

@@ -52,11 +52,15 @@ These bind every change.
 
 3. **Import `@northguild/gmt` from its built `dist`, not from source.** Let the workspace build the package first via the root `validate` script. Do not configure Vite `resolve.conditions` to match the `@northguild/source` condition — more moving parts, no benefit.
 
-4. **Never perturb `packages/gmt`.** `pnpm run validate` must stay green including the 20-cell timezone matrix. If a story genuinely must touch `packages/gmt`, it needs a changeset — stop and confirm with the architect first.
+4. **Never perturb `packages/gmt`.** `pnpm run validate` must stay green including the CI timezone matrix (10 zones × Node 22/24 — see README). If a story genuinely must touch `packages/gmt`, it needs a changeset — stop and confirm with the architect first.
 
-5. **Generated output is gitignored and rebuilt, never hand-edited.** It lives under
-   `apps/dox/src/generated/`; `pnpm run generate` rebuilds it, and `test`, `check` and
-   `build` all run it first.
+5. **Generated output is rebuilt, never hand-edited.** It lives under
+   `apps/dox/src/generated/` (and the MDX pages under `src/content/docs/reference/`);
+   `pnpm run generate` rebuilds it, and `test`, `check` and `build` all run it first. The
+   directory is in `.gitignore`, but three files predate that rule and are still tracked —
+   `reference/corpus.ts`, `reference/gmt-corpus.json` and `reference/route-manifest.ts` — so
+   regenerating them shows a diff that belongs in the change. The MDX pages are ignored and
+   untracked.
 
 6. **No new React islands.** The `/dox` chat (`client:load`) is the only one. Widgets are
    an Astro shell plus a plain-DOM `mount(root)` module, so the same markup server-renders on

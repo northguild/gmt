@@ -42,16 +42,18 @@ Two absences with outsized consequences.
 ## What gmt provides (do not re-implement)
 
 - `Temporal.PlainDate.weekOfYear` / `yearOfWeek` / `dayOfYear` — the underlying ISO week and ordinal arithmetic
-- `internal/intervalCountHelpers`' `getStartOfZonedUnit` — the zoned truncation `startOfZoned` and `intervalCountZoned` already share, including the DST handling a boundary instant needs
+- ~~`internal/intervalCountHelpers`' `getStartOfZonedUnit`~~ — **superseded.** Its wall-clock truncation is the bug this story found (see `## Outcome`); boundaries come from `internal/zonedBucket.ts`. Do not reuse it.
 - `isValidInstant` from CORE-1's `precision/validate` — the instant grammar `floorToZone` and `bucketRange` accept
 - `isValidIsoDateLike` / `isValidDate` / `isValidTimeZone` — the existing validators the six functions gate on
 
 **No dependency on CORE-4.** The spec named `resolveLocal`, but nothing here resolves a
 zoneless wall time: `floorToZone` and `bucketRange` start from an *instant* and read it into a
 zone with `Temporal.Instant.prototype.toZonedDateTimeISO`, which is the opposite direction.
-Local midnights that do not exist are handled by `getStartOfZonedUnit`'s truncation, not by a
-disambiguation policy. Removed rather than left in place, per the epic's "dependencies are
-declared, not implied" rule — see the `## Outcome` section.
+Local midnights that do not exist are handled by walking the zone's transitions
+(`internal/zonedBucket.ts`), not by a disambiguation policy. (The original plan named
+`getStartOfZonedUnit`'s truncation here; that was superseded.) Removed rather than left in
+place, per the epic's "dependencies are declared, not implied" rule — see the `## Outcome`
+section.
 
 ## Verification
 
@@ -78,7 +80,7 @@ re-derived from this file later.
   exactly the failure the story exists to prevent — but the date it named was off by one.
 - **The three identifier functions do not belong in `calendar/get/`.**
   `context/coding-standards.md` reserves `get/` for current-moment accessors that take no date
-  value, and cites J0b, which relocated `getLocaleDayOfWeek`/`getLocaleStartOfWeek` out of
+  value, and cites J0b, which relocated `getLocaleDayOfWeek`/`getLocaleZonedDayOfWeek` out of
   `get/` for this exact violation. All six functions ship in `calendar/calculate/`, keeping
   the spec's names. The precedent is `plain/calculate/getDayOfYear`, `getQuarterForDate` and
   `getWeekYear` — `get`-prefixed, date-taking, and in `calculate/`.
@@ -197,3 +199,30 @@ updates and the dox registration. Decisions taken while building it:
 - **One transcription bug the tests caught**, exactly the kind the testing standards warn
   about: a hand-copied `bucketRange` golden for Lord Howe's spring-forward dropped its first
   boundary. The expected value was wrong and the implementation was right.
+
+## Follow-up (post-merge)
+
+A post-merge review of this story, and an audit of every gmt function for the same failure
+patterns, closed as follows.
+
+**Accepted**
+
+- `zonedUnitStart` now returns `null` when its transition walk-back runs out, so `floorToZone`
+  returns `""` and `bucketRange` returns `[]`, instead of a plausible partial value.
+- The hand-copied 20-zone tables in `floorToZone.test.ts` and `bucketRange.test.ts` are replaced
+  by `battleTestTimeZones.map(...)` over an object keyed by `MustTestDstTimeZones`.
+- A Feb-29 `yearEndsOn` anchor is documented and tested as TC39 `overflow: "constrain"`
+  (2025's target is Feb 28), written explicitly as `anchor.with({ year }, { overflow: "constrain" })`.
+
+**Rejected**
+
+- Merging the walker into `getStartOfZonedUnit`: truncate-and-re-resolve is the bug, so merging
+  would reintroduce it.
+- `overflow: "reject"` for the fiscal anchor: arithmetic clamps; only parsers reject.
+- Removing validate-then-parse: the double parse is intentional.
+- Caching transitions, and micro-cleanups: no measured need.
+
+**Generalised.** The zone-boundary rule this story found now covers the `startOf*`/`endOf*`
+family, `areZonedEqualBy`, and `intervalCountZoned`/`Unix`/`Utc`, which move onto the walker. The
+rules are recorded in
+[coding-standards § Calendar & zone semantics](../../coding-standards.md#calendar--zone-semantics).

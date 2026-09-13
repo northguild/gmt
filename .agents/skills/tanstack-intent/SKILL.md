@@ -30,7 +30,7 @@ npm view @tanstack/intent version
 grep '"@tanstack/intent"' package.json packages/*/package.json
 ```
 
-If the installed `devDependency` version is behind latest, use context7/`find-docs` against `/tanstack/intent` to confirm what changed (CLI flags, frontmatter schema, new commands) before bumping — don't assume it's purely additive. Bump the version string in all four `package.json` files that declare it (`package.json`, `packages/gmt/package.json`, `packages/gmt-eslint/package.json`, `packages/gmt-biome/package.json`, `packages/gmt-oxlint/package.json`), run `pnpm install`, then run `pnpm exec intent validate packages/gmt/skills` — a schema-migration error here (like the `metadata:` nesting one) is expected and has a one-shot fix: `pnpm exec intent validate packages/gmt/skills --fix`.
+If the installed `devDependency` version is behind latest, use context7/`find-docs` against `/tanstack/intent` to confirm what changed (CLI flags, frontmatter schema, new commands) before bumping — don't assume it's purely additive. Bump the version string in all five `package.json` files that declare it (`package.json`, `packages/gmt/package.json`, `packages/gmt-eslint/package.json`, `packages/gmt-biome/package.json`, `packages/gmt-oxlint/package.json`), run `pnpm install`, then run `pnpm exec intent validate packages/gmt/skills` — a schema-migration error here (like the `metadata:` nesting one) is expected and has a one-shot fix: `pnpm exec intent validate packages/gmt/skills --fix`.
 
 ### 1. Audit what changed
 
@@ -144,7 +144,7 @@ The skill tree is the canonical registry that downstream tooling reads.
 
 ### 7. Update inner package READMEs (when relevant)
 
-If the change affects user-facing formatter behavior or adds a new module-level concept, also update the relevant `packages/gmt/src/<plain|unix|utc|zoned|regex>/README.md` so consumers reading the source-tree docs see it too. Match the existing structure (lists of functions per module).
+If the change affects user-facing formatter behavior or adds a new module-level concept, also update the relevant `packages/gmt/src/<namespace>/README.md` so consumers reading the source-tree docs see it too. Match the existing structure (lists of functions per module).
 
 ### 8. Validate
 

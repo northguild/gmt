@@ -27,8 +27,8 @@ importers:
         specifier: ^5.3.0
         version: 5.3.0
       '@tanstack/intent':
-        specifier: ^0.3.8
-        version: 0.3.8
+        specifier: ^0.4.0
+        version: 0.4.0
       '@types/node':
         specifier: ^22.13.10
         version: 22.19.17
@@ -242,8 +242,8 @@ importers:
         specifier: workspace:*
         version: link:../gmt-oxlint
       '@tanstack/intent':
-        specifier: ^0.3.8
-        version: 0.3.8
+        specifier: ^0.4.0
+        version: 0.4.0
       oxfmt:
         specifier: ^0.62.0
         version: 0.62.0
@@ -258,8 +258,8 @@ importers:
         version: 2.4.11
     devDependencies:
       '@tanstack/intent':
-        specifier: ^0.3.8
-        version: 0.3.8
+        specifier: ^0.4.0
+        version: 0.4.0
 
   packages/gmt-eslint:
     dependencies:
@@ -271,8 +271,8 @@ importers:
         version: 9.39.4(jiti@2.7.0)
     devDependencies:
       '@tanstack/intent':
-        specifier: ^0.3.8
-        version: 0.3.8
+        specifier: ^0.4.0
+        version: 0.4.0
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -280,8 +280,8 @@ importers:
   packages/gmt-oxlint:
     devDependencies:
       '@tanstack/intent':
-        specifier: ^0.3.8
-        version: 0.3.8
+        specifier: ^0.4.0
+        version: 0.4.0
       oxlint:
         specifier: ^1.0.0
         version: 1.59.0
@@ -3497,8 +3497,9 @@ packages:
       vue:
         optional: true
 
-  '@tanstack/intent@0.3.8':
-    resolution: {integrity: sha512-5KXhk+dPqzVHcETuf0Q6l1jasjFS2BJvG4Vw1dakuHEaQ85kZ3oSsOMROsad5w/DsEsQ9q1F00cQzIrk9jPzsQ==}
+  '@tanstack/intent@0.4.0':
+    resolution: {integrity: sha512-tTmNJ3+R/J+g/aTikTya39W6jVLEoLQbow1xm7j/zIbTbSY+91ypZDFaPAe9wzeHmDopsKIJxzuUSi+yJnzS4Q==}
+    engines: {node: '>=20.12.0'}
     hasBin: true
 
   '@tanstack/react-store@0.11.1':
@@ -10443,9 +10444,10 @@ snapshots:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
 
-  '@tanstack/intent@0.3.8':
+  '@tanstack/intent@0.4.0':
     dependencies:
-      cac: 6.7.14
+      '@clack/prompts': 1.7.0
+      cac: 7.0.0
       jsonc-parser: 3.3.1
       semver: 7.8.5
       std-env: 4.2.0

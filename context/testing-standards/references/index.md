@@ -44,6 +44,10 @@ Any test for a function that accepts a `timeZone` (directly, or via a zoned ISO 
 
 If an existing fixture's fixed date doesn't fit the case under test (e.g. testing month-end overflow needs a `day: 31` date, not `localNoonBattleCases`'s leap day), build a small sibling constant the same way — `battleTestTimeZones.map((timeZone) => ({ timeZone, value: Temporal.ZonedDateTime.from({ ...fields, timeZone }).toString() }))` — rather than hand-picking two or three zones. New option coverage on a zoned/unix function is not complete until it has run across this matrix, not just the zone the author happened to reach for first.
 
+**No literal zone tables.** Never hand-copy the battle-test zones into an `it.each` table. When each zone needs its own expected value, key an object by `keyof typeof MustTestDstTimeZones` and map `battleTestTimeZones` over it, so a missing zone fails typecheck. A single-zone row that pins one specific transition is fine.
+
+**Required transition rows for boundary functions.** Any function that computes a zoned unit boundary, a day length, or a floor (`startOf*`/`endOf*`, `floorToZone`, `bucketRange`, `intervalCount*`, `areZonedEqualBy`, `getHoursInZonedDay`, `mapZonedHoursInDay`, …) also carries explicit rows for the probe zones in [coding-standards § Calendar & zone semantics](../../coding-standards.md#calendar--zone-semantics): `Pacific/Chatham`, `Antarctica/Casey`, the `America/New_York` fall-back, `Australia/Lord_Howe`, `America/Santiago` (skipped midnight), `America/Goose_Bay` and `Pacific/Apia` (deleted day). Assert the invariant `start ≤ input < next start` as well as the value.
+
 ## Verify Every Expected Value Against Real Temporal Before Writing It
 
 Never write an `it.each` row's expected value from memory, intuition, or by analogy to a similar case — verify it by actually running the equivalent `@js-temporal/polyfill` call first (`node -e "const { Temporal } = require('@js-temporal/polyfill'); ..."` is enough) and copy the real output into the test. Temporal's rounding, overflow, and DST-resolution semantics are full of behavior that is easy to get subtly wrong by reasoning about it in the abstract — e.g. a 2-calendar-day span that spans a spring-forward transition is 47 real hours, not 48; `smallestUnit` on `Duration.prototype.toString()` only accepts sub-second units even though the same option name accepts hour/minute on `until()`/`since()`; a rounding mode that looks like it should round up may round down because the input isn't actually at the halfway point for the increment in use.
@@ -75,8 +79,10 @@ Use the mocks in `packages/gmt/src/test/mocks` to test error-handling paths. Do 
 | `mockTemporalInstantFromThrow()`         | `Temporal.Instant.from()`         |
 | `mockTemporalInstantFromEpochNanosecondsThrow()` | `Temporal.Instant.fromEpochNanoseconds()` |
 
+There is no `@gmt/test` path alias — import relatively from the test file:
+
 ```ts
-import { mockTemporalPlainDateFromThrow } from "@gmt/test/mocks";
+import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 
 it("returns empty string when Temporal.PlainDate.from throws", () => {
   mockTemporalPlainDateFromThrow();
@@ -149,9 +155,25 @@ For error-path blocks where all inputs produce the same sentinel, the name shoul
 
 ## Canonical Date Fixtures
 
-Reference `context/testing-standards/references/test-matrix.md` for the canonical date/time strings. Tests may use the string values directly or import the exported constants from `packages/gmt/src/test/localeMatrix.ts` and `packages/gmt/src/test/timeZoneMatrix.ts`. Zoned variants for non-UTC zones are derived at test time by mapping `unix2024Jan01T000000Ms` over `battleTestTimeZones` — see `test-matrix.md` for the pattern.
+**The one inline-strings rule:** use the canonical values from [test-matrix.md](./test-matrix.md), written inline as string literals. They are **values, not exported constants** — the names in that file are labels only; nothing exports `dateLeapDay2024Feb29`. Do not invent other ad-hoc dates. What *is* exported and must be imported (never re-typed) is the fixture set in `packages/gmt/src/test/localeMatrix.ts` (`MustTestLocales`, …) and `packages/gmt/src/test/timeZoneMatrix.ts` (`battleTestTimeZones`, `MustTestDstTimeZones`, the `*BattleCases`). Zoned variants for non-UTC zones are derived at test time by mapping `1704067200000` (2024-01-01T00:00Z) over `battleTestTimeZones` — see `test-matrix.md` for the pattern.
 
-A local override is allowed only when the scenario requires a different date (DST transition, leap-second, etc.) — document the override reason in a comment.
+A local override is allowed only when the scenario requires a different date (DST transition, leap-second, month-end clamp, etc.) — document the override reason in a comment.
+
+## Priority Tiers
+
+Test only what applies to the function under test. `tdd-dev` uses these to decide what to write; `tester` uses them to audit.
+
+- **P0 (always):** Happy path with default options. Invalid input → sentinel (one collapsed row). Zero/identity case if the function takes a numeric or array parameter.
+- **P1 (options/params):** Each explicit option value that changes behaviour. Default-vs-explicit-equal case. Option on an input where it has no effect.
+- **P2 (timezone-aware):** `battleTestTimeZones` matrix via `battleTestTimeZones.map(...)`, plus the probe-zone transition rows for boundary functions (see above). Extreme-offset zones (`Pacific/Apia`, `Pacific/Niue`).
+- **P3 (locale-aware):** All 17 locales from `MustTestLocales` with explicit rows. ICU-variant assertions where CLDR wording differs across Node versions.
+- **P4 (calendar/date arithmetic):** Month-end, year-end and leap-day boundaries (clamp per TC39). Negative amounts. Empty/no-op inputs. Repeated steps checked against the anchor (Jan 31 by month → Mar 31, Apr 30).
+
+Rules that keep the permutation count sane:
+
+- **Invalid input = ONE row.** Collapse `null`/`undefined`/`123`/`true`/`[]`/`{}` into a single `"non-string input"` row unless a type has distinct behaviour (say why).
+- **No irrelevant edge cases.** A pure string formatter needs no DST rows; duration addition needs no locale rows. Ask whether the case exercises a real code path in *this* function.
+- **One `it.each` table per category** (see the taxonomy below).
 
 ## Edge-Case Taxonomy
 
@@ -162,7 +184,7 @@ Define the permutation space for every function explicitly:
 - **Boundary units** — month-end, year-end, leap day.
 - **Negative/zero amounts** — zero is the identity case; negative values must round-trip correctly.
 - **Empty/no-op inputs** — zero-length intervals, empty arrays, identity transforms.
-- **Zoned/unix** — full `battleTestTimeZones` matrix via `battleTestTimeZones.map(...)`.
+- **Zoned/unix** — full `battleTestTimeZones` matrix via `battleTestTimeZones.map(...)`, plus probe-zone transition rows for boundary functions.
 - **Locale-aware** — all 17 locales from `MustTestLocales` with explicit rows.
 
 When an `it.each` block covers more than one permutation category (valid + invalid + boundary), split into separate named tables so failures are debuggable.

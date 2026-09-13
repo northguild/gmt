@@ -19,7 +19,7 @@ Produce the following markdown block, ready to copy into the GitHub PR descripti
 
 ---
 
-**Title:** `<type>/<short-imperative-description>` _(e.g. `chore: set up cross-AI code-scanner harness`)_
+**Title:** `<type>(<scope>): <description> (<STORY-ID>, #<issue>)` _(e.g. `feat(domination): calendar boundaries and zone-aware buckets (CORE-5, #186)`)_ — match `git log --oneline -20`
 
 ---
 
@@ -61,9 +61,9 @@ _Low / Medium / High — and a short justification._
 
 ---
 
-## Deployment Notes
+## Release
 
-Any env vars, infra changes, or manual steps needed in staging/production.
+The changeset(s) in `.changeset/` and their bump level, per [coding-standards § Changesets](../../../context/coding-standards.md#changesets). Merging publishes nothing; say so if a reviewer might expect otherwise.
 
 ---
 
@@ -72,19 +72,13 @@ Any env vars, infra changes, or manual steps needed in staging/production.
 - [ ] Each "What Changed" section has a corresponding entry
 - [ ] Type-check passed
 - [ ] No secrets committed
-- [ ] Deployment notes filled in if relevant
+- [ ] Changeset present with the correct bump (or none, for no behaviour change)
 
 ---
 
 ## Delivery
 
-After generating the description, ask the user:
-
-> "Would you like me to save this to a file, or is the code block above enough to copy?"
-
-- If the user says **file** (or didn't specify): write the output to `notes/pr-draft.md` and confirm the path.
-- If the user says **copy** or **code block**: wrap the full description in a plain fenced code block (` ``` ` with no language tag) so it renders as a copyable block in the chat UI.
-- Default to the **code block** if no preference is given.
+Output the full description in a plain fenced code block (no language tag) so it can be copied. Do not write it to a file unless the user asks for one and names the path. Never create the PR yourself — the repository owner opens every PR.
 
 ## Rules
 

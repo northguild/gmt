@@ -29,13 +29,16 @@ Use this skill when writing or updating tests for `packages/gmt/src/*` methods.
 - String-returning method returns `""`.
 - Number-returning method returns `null`.
 - Boolean-returning method returns `false`.
+- Array-returning method returns `[]`.
+- Object-returning method returns `null`.
+- `bigint`-returning precision method returns `0n`; `span/` methods return `null`.
 
  - Tests should assert the strict input contract: only ISO 8601 strings, IANA timezone identifiers, or explicit unix epoch numbers are accepted by public APIs. When inputs are outside these shapes, assert the library's typed fallbacks are returned rather than relying on permissive parsing.
 
 
 3. Boundary path
 - Include leap day and month rollover scenarios.
-- For zoned behavior, include DST or offset-sensitive scenarios.
+- For zoned behavior, map over `battleTestTimeZones` (never a hand-copied zone table) and add explicit transition rows for boundary functions.
 
 4. Locale path
 - For locale-aware APIs, include explicit `MustTestLocales.*` rows.

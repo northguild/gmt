@@ -28,6 +28,21 @@ splitIntervalByUnitDate("2024-01-01", "2024-01-10", "day", 2);
 
 All split functions return `[]` on invalid input.
 
+Each boundary is computed from `start` (`start + k × amount`), never by stepping from
+the previous boundary, so month-end starts don't drift:
+
+```typescript
+splitIntervalByUnitDate("2024-01-31", "2024-05-01", "month", 1);
+// [
+//   { start: "2024-01-31", end: "2024-02-29" },
+//   { start: "2024-02-29", end: "2024-03-31" },
+//   { start: "2024-03-31", end: "2024-04-30" },
+//   { start: "2024-04-30", end: "2024-05-01" } — trimmed
+// ]
+```
+
+A yearly split from February 29 returns to February 29 in leap years.
+
 ## Split into n equal parts
 
 ```typescript

@@ -15,7 +15,7 @@ Use this skill when a user asks for behavior that is not currently covered by gm
 ## Decision flow
 
 1. Check existing APIs first
-- Search `packages/gmt/src/plain` and `packages/gmt/src/zoned`.
+- Search every namespace under `packages/gmt/src/` (`calendar`, `duration`, `instant`, `plain`, `precision`, `regex`, `span`, `unix`, `utc`, `zoned`).
 - If capability exists, use the existing method and do not add new API.
 
  - When evaluating whether to add a new API, enforce the library's strict input/output policy: new public methods must accept explicit shapes (ISO 8601 strings, IANA timezone ids, or numeric unix epochs) and return normalized outputs. If the requested capability implies permissive parsing, recommend implementing a small adapter outside of core gmt instead of widening gmt's surface.
@@ -46,7 +46,7 @@ Encourage users to include:
 ## Test requirements for expansion work
 
 1. Happy-path coverage for core scenarios.
-2. Invalid-input fallback coverage.
+2. Invalid-input fallback coverage (`""` / `null` / `false` / `[]` / `0n` by return type).
 3. Boundary coverage for date/time edges.
 4. Zoned/DST coverage when timezone logic is involved.
 5. Locale matrix coverage when locale options are part of API behavior.

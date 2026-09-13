@@ -5,7 +5,7 @@ description: >
   safe refactors to existing gmt helpers first, then use the Temporal custom-
   method plus issue/PR workflow when helpers are missing.
 metadata:
-  library_version: 1.0.4
+  library_version: 1.1.0
 ---
 
 # Migration Refactor
@@ -33,6 +33,14 @@ Use this skill when Biome flags Date usage and the user asks for code fixes.
 - `new Date(...)` -> parse and transform through relevant gmt plain/zoned helpers.
 - `Date.parse(...)` -> gmt conversion helper where available.
 - `Date.UTC(...)` -> gmt UTC conversion helper where available.
+- `no-date-library-imports.grit` on `moment`, `moment-timezone`, `dayjs`, `luxon`, `date-fns`,
+  `date-fns-tz` or `spacetime` (including subpaths, `require()` and dynamic `import()`) ->
+  replace the call sites with gmt equivalents, then remove the import. Do not route around it
+  with a local re-export — `export … from` is flagged too. `@js-joda/core` is intentionally
+  allowed.
+- When porting library arithmetic, keep Temporal's semantics: a non-existent day clamps
+  (`2024-02-29` + 1 year → `2025-02-28`); date-fns `setYear` rolls to 1 March instead, so
+  flag that behaviour change to the user rather than copying it.
 
 Note: if a consumer has chosen only a subset of plugins (individual plugin `.grit` file entries by path, for example `./node_modules/@northguild/gmt-biome/plugins/<name>.grit`, instead of `all.grit`), the set of diagnostics will be narrower — verify which plugin(s) are enabled before running broad automated refactors.
 

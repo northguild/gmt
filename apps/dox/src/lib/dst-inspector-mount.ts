@@ -43,6 +43,7 @@ import {
   localMinuteOfDayAtTransition,
   minuteToTickerPercent,
   tickerPercentToMinute,
+  toPlainLocalDateTime,
   transitionType,
   type DstTransition,
   type ProbeClassification,
@@ -63,8 +64,6 @@ import {
 const DEFAULT_ZONE = "America/New_York";
 const DEFAULT_YEAR = 2024;
 const DISOPTIONS = ["compatible", "earlier", "later", "reject"] as const;
-const OFFSETOPTIONS = ["prefer", "use", "ignore", "reject"] as const;
-const UNITOPTIONS = ["hour", "day"] as const;
 
 export interface DstArgs {
   zone?: string;
@@ -89,7 +88,6 @@ export function renderDstTemplate(args: DstArgs = {}): string {
   const year = args.year ?? DEFAULT_YEAR;
   const preset = args.preset ?? "gap";
   const dis = args.disambiguation ?? "compatible";
-  const off = args.offset ?? "ignore";
 
   /* A seeded zone outside the curated twenty is appended rather than replacing
      the list, so the reader can still pick anything the page normally offers
@@ -134,14 +132,8 @@ export function renderDstTemplate(args: DstArgs = {}): string {
     `<label class="gmt-label gmt-label-wide"><span>Value preset</span>` +
     `<select class="gmt-select gmt-select-wide" data-role="value-preset">${presetOptions}</select>` +
     `</label>` +
-    `<label class="gmt-label gmt-label-small"><span>Unit</span>` +
-    `<select class="gmt-select" data-role="unit">${options(UNITOPTIONS, "hour")}</select>` +
-    `</label>` +
     `<label class="gmt-label"><span>Disambiguation</span>` +
     `<select class="gmt-select" data-role="disambiguation">${options(DISOPTIONS, dis)}</select>` +
-    `</label>` +
-    `<label class="gmt-label"><span>Offset</span>` +
-    `<select class="gmt-select" data-role="offset">${options(OFFSETOPTIONS, off)}</select>` +
     `</label>` +
     `</div>` +
     `<p class="gmt-widget-hint" data-role="preset-description"></p>` +
@@ -159,7 +151,7 @@ export function renderDstTemplate(args: DstArgs = {}): string {
     `<p class="gmt-dst-ticker-empty" data-role="ticker-empty" hidden>` +
     `This preset targets a single fixed value — nothing to scrub.` +
     `</p>` +
-    codeFrameHtml("startof") +
+    codeFrameHtml("convert") +
     `<output class="gmt-widget-output gmt-playground-live" data-role="probe-result">&nbsp;</output>` +
     `<div data-role="explanation"></div>` +
     `</div>` +
@@ -171,19 +163,19 @@ export function renderDstTemplate(args: DstArgs = {}): string {
 const KEY_STEP_MINUTES = 5;
 
 async function loadModules() {
-  const [getMod, calcMod] = await Promise.all([
+  const [getMod, convertMod] = await Promise.all([
     GMT_MODULES["zoned/get"](),
-    GMT_MODULES["zoned/calculate"](),
+    GMT_MODULES["zoned/convert"](),
   ]);
   return {
     getDstTransitions: getMod["getDstTransitions"] as (
       zone: string,
       year: number,
     ) => DstTransition[],
-    startOfZoned: calcMod["startOfZoned"] as (
+    convertPlainDateTimeToZoned: convertMod["convertPlainDateTimeToZoned"] as (
       value: string,
-      unit: string,
-      options?: { disambiguation?: string; offset?: string },
+      timeZone: string,
+      options?: { disambiguation?: string },
     ) => string,
   };
 }
@@ -361,9 +353,8 @@ function renderProbeResult(
 
 /**
  * A single aside combining the plain-language explanation of the current
- * probe result with, when there's one, the deeper pedagogical point
- * (the gap/overlap span, or the offset:"prefer"-makes-disambiguation-inert
- * gotcha). One box instead of two or three.
+ * probe result with, when there's one, the deeper pedagogical point (the
+ * gap/overlap span). One box instead of two or three.
  */
 function renderExplanationAside(
   el: HTMLElement,
@@ -371,8 +362,6 @@ function renderExplanationAside(
   transitions: DstTransition[],
   presetType: string,
   probeMinute: number | null,
-  dis: string,
-  off: string,
   zone: string,
 ) {
   if (transitions.length === 0) {
@@ -402,14 +391,10 @@ function renderExplanationAside(
           : "The selected value";
 
   let content = `<p>${probeLabel} is ${typeLabel} — ${classification.explanation}</p>`;
-  let type: "note" | "caution" = "note";
-  let title = "Note";
+  const type: "note" | "caution" = "note";
+  const title = "Note";
 
-  if (off === "prefer" && dis === "reject") {
-    type = "caution";
-    title = "Key insight";
-    content += `<p><code>offset: "prefer"</code> makes <code>disambiguation</code> inert — the source offset is nearly always still valid after a same-day field reset, so <code>"reject"</code> never fires. Try <code>disambiguation: "reject"</code> + <code>offset: "ignore"</code> (fails) vs <code>offset: "prefer"</code> (succeeds).</p>`;
-  } else if (presetType === "gap") {
+  if (presetType === "gap") {
     const gapTrans = transitions.find(isGap);
     const win = gapTrans ? getTickerWindow(gapTrans, zone) : null;
     if (gapTrans && win) {
@@ -435,10 +420,10 @@ function renderExplanationAside(
 function setupWidget(
   container: HTMLElement,
   getDstTransitions: (zone: string, year: number) => DstTransition[],
-  startOfZoned: (
+  convertPlainDateTimeToZoned: (
     value: string,
-    unit: string,
-    options?: { disambiguation?: string; offset?: string },
+    timeZone: string,
+    options?: { disambiguation?: string },
   ) => string,
 ): void {
   const q = <T extends HTMLElement>(role: string) =>
@@ -447,9 +432,7 @@ function setupWidget(
   const zoneEl = q<HTMLSelectElement>("zone");
   const yearEl = q<HTMLInputElement>("year");
   const presetEl = q<HTMLSelectElement>("value-preset");
-  const unitEl = q<HTMLSelectElement>("unit");
   const disEl = q<HTMLSelectElement>("disambiguation");
-  const offEl = q<HTMLSelectElement>("offset");
   const tbodyEl = q("transition-body");
   const outputEl = q("probe-result");
   const tickerEl = q("ticker");
@@ -457,8 +440,7 @@ function setupWidget(
   const trackEl = q("ticker-track");
   const handleEl = q("ticker-handle");
 
-  if (!zoneEl || !yearEl || !presetEl || !unitEl || !tbodyEl || !outputEl)
-    return;
+  if (!zoneEl || !yearEl || !presetEl || !tbodyEl || !outputEl) return;
 
   // Scrub state — owned here so a drag isn't reset by an unrelated re-render.
   let activeTransition: DstTransition | null = null;
@@ -470,9 +452,7 @@ function setupWidget(
     const zone = zoneEl!.value;
     const year = parseInt(yearEl!.value, 10);
     const presetType = presetEl!.value;
-    const unit = unitEl!.value;
     const dis = disEl?.value ?? "compatible";
-    const off = offEl?.value ?? "ignore";
 
     const transitions = getDstTransitions(zone, year);
 
@@ -501,8 +481,13 @@ function setupWidget(
         )
       : buildValuePreset(presetType as ValuePreset, zone, transitions);
 
-    const result = value
-      ? startOfZoned(value, unit, { disambiguation: dis, offset: off })
+    // convertPlainDateTimeToZoned resolves the *wall time*, so the [zone] (and
+    // any offset the "transition" preset embeds) is stripped before the call —
+    // an offset would answer the ambiguity `disambiguation` exists to resolve.
+    const plainValue = value ? toPlainLocalDateTime(value) : "";
+
+    const result = plainValue
+      ? convertPlainDateTimeToZoned(plainValue, zone, { disambiguation: dis })
       : "";
 
     if (tickerEl) {
@@ -516,10 +501,10 @@ function setupWidget(
     }
 
     renderCallLine(
-      q("call-startof"),
-      "startOfZoned",
-      `${codeSpan("str", `"${value}"`)}, ${codeSpan("str", `"${unit}"`)}, { disambiguation: ${codeSpan("str", `"${dis}"`)}, offset: ${codeSpan("str", `"${off}"`)} }`,
-      `"${value}", "${unit}", { disambiguation: "${dis}", offset: "${off}" }`,
+      q("call-convert"),
+      "convertPlainDateTimeToZoned",
+      `${codeSpan("str", `"${plainValue}"`)}, ${codeSpan("str", `"${zone}"`)}, { disambiguation: ${codeSpan("str", `"${dis}"`)} }`,
+      `"${plainValue}", "${zone}", { disambiguation: "${dis}" }`,
     );
 
     const probeHour = handleMinuteOfDay !== null ? handleMinuteOfDay / 60 : 0;
@@ -528,10 +513,7 @@ function setupWidget(
       transitions,
       probeHour,
       zone,
-      {
-        disambiguation: dis,
-        offset: off,
-      },
+      { disambiguation: dis },
     );
 
     renderProbeResult(outputEl!, value, result, classification);
@@ -544,8 +526,6 @@ function setupWidget(
         transitions,
         presetType,
         handleMinuteOfDay,
-        dis,
-        off,
         zone,
       );
     }
@@ -589,9 +569,7 @@ function setupWidget(
   zoneEl.addEventListener("change", resetAndRender);
   yearEl.addEventListener("input", resetAndRender);
   presetEl.addEventListener("change", resetAndRender);
-  unitEl.addEventListener("change", render);
   disEl?.addEventListener("change", render);
-  offEl?.addEventListener("change", render);
 
   // Pointer scrubbing
   if (trackEl) {
@@ -705,7 +683,11 @@ export const mountDstInspector: MountFn<DstArgs> = async (
      from `window.location` and Astro's frontmatter has no window. Applying them
      here covers both entrances with one path. */
   applyArgs(root, args);
-  setupWidget(root, modules.getDstTransitions, modules.startOfZoned);
+  setupWidget(
+    root,
+    modules.getDstTransitions,
+    modules.convertPlainDateTimeToZoned,
+  );
 
   return onceDestroy(
     () => {

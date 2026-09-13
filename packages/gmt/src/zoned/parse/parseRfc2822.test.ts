@@ -47,6 +47,18 @@ describe("parseRfc2822", () => {
     expect(parseRfc2822(value)).toBe("");
   });
 
+  it.each`
+    value                                | reason
+    ${"Sat, 31 Feb 2024 14:30:00 -0400"} | ${"February has no 31st"}
+    ${"Wed, 29 Feb 2023 14:30:00 -0400"} | ${"2023 is not a leap year"}
+    ${"Mon, 31 Apr 2024 14:30:00 -0400"} | ${"April has 30 days"}
+  `(
+    "returns '' for impossible date $value ($reason) instead of clamping",
+    ({ value }: { value: string }) => {
+      expect(parseRfc2822(value)).toBe("");
+    },
+  );
+
   it("round-trips through formatRfc2822", () => {
     const original = "Fri, 15 Mar 2024 14:30:00 -0400";
     expect(formatRfc2822(parseRfc2822(original))).toBe(original);

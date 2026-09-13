@@ -36,12 +36,15 @@ const NAMED_ZONE_OFFSETS: Record<string, string> = {
  *   obs-zone letter is unrecognized and rejected.
  * - The resulting offset becomes the zoned string's time zone identifier
  *   (e.g. `-05:00`), since RFC 2822 carries no IANA zone name to recover.
+ * - An impossible calendar date (`31 Feb`, `29 Feb 2023`) returns `""`: a parser never
+ *   invents a date, so fields are validated with `overflow: "reject"`, not clamped.
  *
  * @param value RFC 5322 date-time string (e.g. "Fri, 15 Mar 2024 14:30:00 -0400")
  * @returns zoned ISO 8601 datetime string, or "" on invalid input
  *
  * @example parseRfc2822("Fri, 15 Mar 2024 14:30:00 -0400") // "2024-03-15T14:30:00-04:00[-04:00]"
  * @example parseRfc2822("5 Jan 2024 09:00:00 GMT") // "2024-01-05T09:00:00+00:00[+00:00]"
+ * @example parseRfc2822("Sat, 31 Feb 2024 14:30:00 -0400") // "" (impossible date)
  * @example parseRfc2822("not a date") // ""
  */
 export function parseRfc2822(value: string): string {

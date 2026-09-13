@@ -25,9 +25,7 @@ const REQUIRED_ROLES = [
   "zone",
   "year",
   "value-preset",
-  "unit",
   "disambiguation",
-  "offset",
   "transition-body",
   "probe-result",
   "ticker",
@@ -42,7 +40,7 @@ const REQUIRED_ROLES = [
   "preset-description",
   "explanation",
   "call-getdst",
-  "call-startof",
+  "call-convert",
 ];
 
 function stubTrackGeometry(root: HTMLElement) {
@@ -109,6 +107,8 @@ describe("renderDstTemplate", () => {
       year: 2026,
       preset: "overlap",
       disambiguation: "earlier",
+      // `offset` is accepted-and-ignored (deprecated with boundary functions'
+      // resolution options) — no control reads it any more.
       offset: "reject",
     });
     expect((q(root, "zone") as HTMLSelectElement).value).toBe("Europe/London");
@@ -119,7 +119,7 @@ describe("renderDstTemplate", () => {
     expect((q(root, "disambiguation") as HTMLSelectElement).value).toBe(
       "earlier",
     );
-    expect((q(root, "offset") as HTMLSelectElement).value).toBe("reject");
+    expect(q(root, "offset")).toBeNull();
   });
 
   it("appends a seeded zone the curated list does not contain", () => {
@@ -256,7 +256,7 @@ describe("mountDstInspector", () => {
 
   it("keeps scrub state across an unrelated re-render mid-drag", async () => {
     /* The reason `tickerWindow` and `handleMinuteOfDay` live outside `render()`.
-       Changing `unit` re-renders; a drag in progress must survive it. */
+       Changing `disambiguation` re-renders; a drag in progress must survive it. */
     const { root } = await mount({ preset: "gap" });
     const handle = q(root, "ticker-handle") as HTMLElement;
     const track = q(root, "ticker-track") as HTMLElement;
@@ -273,9 +273,9 @@ describe("mountDstInspector", () => {
       }),
     );
 
-    const unit = q(root, "unit") as HTMLSelectElement;
-    unit.value = "day";
-    unit.dispatchEvent(new Event("change", { bubbles: true }));
+    const dis = q(root, "disambiguation") as HTMLSelectElement;
+    dis.value = "later";
+    dis.dispatchEvent(new Event("change", { bubbles: true }));
 
     // Still dragging: a further move still scrubs.
     const midRender = status.textContent;

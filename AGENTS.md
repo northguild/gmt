@@ -6,16 +6,16 @@
 
 Read these before working in the repo. Each is scoped — load only what you need for the task at hand.
 
-| File                                                                                             | When to read it                                                                                   |
-| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
-| [context/project-overview.md](./context/project-overview.md)                                     | Always — covers what GMT is, why it exists, Temporal API references, and comparison library links |
-| [context/coding-standards.md](./context/coding-standards.md)                                     | When writing or reviewing source code                                                             |
-| [context/testing-standards/references/index.md](./context/testing-standards/references/index.md) | When writing or reviewing tests                                                                   |
-| [context/jsdoc-standards.md](./context/jsdoc-standards.md)                                       | When adding or updating public function JSDoc                                                     |
-| [context/code-review-checklist.md](./context/code-review-checklist.md)                           | When reviewing a PR                                                                               |
-| [context/linting-packages.md](./context/linting-packages.md)                                     | When working on gmt-eslint, gmt-oxlint, or gmt-biome                                              |
-| [context/dox/index.md](./context/dox/index.md)                                                   | When working on the `apps/dox` documentation site (the Dox epic)                                 |
-| [context/domination/index.md](./context/domination/index.md)                                     | When picking up any epic story — check `Blocked by` in its tracker first |
+| File                                                                                             | When to read it                                                                                                                                  |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [context/project-overview.md](./context/project-overview.md)                                     | Always — covers what GMT is, why it exists, Temporal API references, and comparison library links                                                |
+| [context/coding-standards.md](./context/coding-standards.md)                                     | When writing or reviewing source code — API contract and sentinel table, calendar & zone semantics (TC39 clamp, zone boundaries), changeset rule |
+| [context/testing-standards/references/index.md](./context/testing-standards/references/index.md) | When writing or reviewing tests                                                                                                                  |
+| [context/jsdoc-standards.md](./context/jsdoc-standards.md)                                       | When adding or updating public function JSDoc                                                                                                    |
+| [context/code-review-checklist.md](./context/code-review-checklist.md)                           | When reviewing a PR                                                                                                                              |
+| [context/linting-packages.md](./context/linting-packages.md)                                     | When working on gmt-eslint, gmt-oxlint, or gmt-biome                                                                                             |
+| [context/dox/index.md](./context/dox/index.md)                                                   | When working on the `apps/dox` documentation site (the Dox epic)                                                                                 |
+| [context/domination/index.md](./context/domination/index.md)                                     | When picking up any epic story — check `Blocked by` in its tracker first                                                                         |
 
 ## Git — Absolute Prohibitions
 
@@ -54,13 +54,16 @@ words. Do not proceed on a "yes" to a different question.
 These are the non-negotiables. Full detail is in the context files above.
 
 1. **No `Date` object.** Use `@js-temporal/polyfill` exclusively.
-2. **String-in, string-out.** Public APIs accept ISO 8601 strings; return strings, numbers, booleans, or arrays.
-3. **Invalid input returns a sentinel, never throws.** `""` for strings, `null` for numbers, `false` for booleans, `[]` for arrays.
+2. **String-in, string-out.** Public APIs accept ISO 8601 strings; return strings, numbers, booleans, arrays, `bigint`, or plain objects — never Temporal objects.
+3. **Invalid input returns a sentinel, never throws.** `""` for strings, `null` for numbers and objects, `false` for booleans, `[]` for arrays — the full table (bigint, span, exceptions) is [coding-standards § API Contract](./context/coding-standards.md#api-contract).
 4. **Wrap all Temporal calls in `try-catch`.** `.from()`, `.add()`, `.since()`, etc. throw `RangeError` on bad input.
 5. **Keep `plain/` and `zoned/` strictly separate.** Never mix `PlainDateTime` and `ZonedDateTime`.
-6. **Full locale matrix for any locale-aware function.** 17 locales, explicit rows, `hasFullIcu` ternaries where output differs.
+6. **Full locale matrix for any locale-aware function.** 17 locales, explicit rows, `expectOneOfIcu`/`expectDateTimeEqual` (from `packages/gmt/src/test/icuVariants.ts`) where CLDR wording differs.
 7. **Use pre-built mocks for error-path tests.** See `packages/gmt/src/test/mocks`.
 8. **JSDoc with `@example` on every public function.** Cover valid, invalid, and edge-case inputs.
+9. **TC39 Temporal is the calendar authority.** Arithmetic clamps (`overflow: "constrain"`); parsers reject. See [§ Calendar & zone semantics](./context/coding-standards.md#calendar--zone-semantics).
+10. **Never truncate-and-re-resolve a zoned boundary.** Use `internal/zonedBucket.ts` or `startOfDay()`/`hoursInDay`; test against the probe zones. Same section.
+11. **One changeset rule.** Fix → `patch`, no behaviour change → none, new API → `minor`. See [coding-standards § Changesets](./context/coding-standards.md#changesets).
 
 ## Python in Skills
 

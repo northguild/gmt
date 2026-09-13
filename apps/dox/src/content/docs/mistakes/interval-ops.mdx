@@ -47,12 +47,17 @@ a.end = "2024-03-22"; // does not change r`}
 
 <Mistake
   severity="medium"
-  title="Off-by-one on splitIntervalByUnit final slice"
-  description="splitIntervalByUnitDate splits an interval into N equal pieces. The final slice may be shorter than the others if the interval is not evenly divisible. The number of slices is ceiling(duration / unit), not floor."
-  wrongCode={`splitIntervalByUnitDate("2024-03-15/2024-03-20", "day"); // 6 slices
-// assuming all slices are exactly 1 day`}
-  rightCode={`// the last slice is the remainder — 2024-03-19 to 2024-03-20 is 1 day, which matches
-// but for uneven splits, expect a shorter final slice`}
+  title="Expecting splitIntervalByUnit slices to be equal"
+  description="splitIntervalByUnitDate cuts fixed amount × unit steps from the start, so the final slice is whatever remains and can be shorter. The slice count is ceiling(length / step), not floor. If you need N pieces of (near-)equal length, use intervalDivideEquallyDate instead."
+  wrongCode={`splitIntervalByUnitDate("2024-03-15", "2024-03-20", "day", 2);
+// assumes every slice is 2 days — but the result is
+// [{ start: "2024-03-15", end: "2024-03-17" }, { start: "2024-03-17", end: "2024-03-19" },
+//  { start: "2024-03-19", end: "2024-03-20" }] — the last slice is 1 day`}
+  rightCode={`// fixed steps, remainder last: check the final slice's length
+splitIntervalByUnitDate("2024-03-15", "2024-03-20", "day", 2);
+// N near-equal pieces:
+intervalDivideEquallyDate("2024-03-15", "2024-03-20", 2);
+// [{ start: "2024-03-15", end: "2024-03-18" }, { start: "2024-03-18", end: "2024-03-20" }]`}
 />
 
 <Mistake

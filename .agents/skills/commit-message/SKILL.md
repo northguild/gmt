@@ -28,12 +28,12 @@ Read enough of the diff to understand the *nature* of each change — new featur
 git log --oneline -10
 ```
 
-Study the subject-line style: casing, verb tense, prefix conventions (if any), typical length. Match it exactly. This repo uses short imperative subject lines with no conventional-commit prefix (e.g. `Add relative formatters`, not `feat: add relative formatters`).
+Study the subject-line style: casing, verb tense, prefix conventions, typical length. Match it exactly. This repo uses conventional-commit subjects with a scope, a lower-case description, and the story and issue number when there is one — e.g. `feat(domination): calendar boundaries and zone-aware buckets (CORE-5, #186)`, `fix(dox): stop clipping the globe`. Types seen in the log: `feat`, `fix`, `chore`. The PR number suffix (`(#245)`) is added by GitHub on squash-merge; do not invent it.
 
 ### 3. Draft the message
 
 **Subject line rules:**
-- Imperative mood, present tense: "Add X", "Fix Y", "Update Z"
+- `type(scope): description` — imperative or noun phrase, matching the log
 - No trailing period
 - 72 characters or fewer
 - Describes *what* changed, not *why* (the body covers why)
@@ -67,7 +67,7 @@ Then add one short sentence below the block noting what kind of change this is (
 
 - **Never run `git commit`, `git add`, `git push`, or any command that modifies git state.** Read-only git commands only.
 - **Never guess at intent.** If the diff is ambiguous, say so and offer two candidate messages.
-- **Do not fabricate a conventional-commit prefix** unless the recent log shows the repo uses them.
+- **Re-check the prefix convention against `git log`** each time rather than trusting this file.
 - **One message per output.** If the working tree has changes that clearly belong in separate commits, surface that as a note rather than producing multiple messages.
-- **Do not use double quotes.** The devs use these for our commit messages.
-- **DO not say Co-Authored-By.** This is for the devs to add manually.
+- **No double quotes anywhere in the message.** It is pasted into a shell inside double quotes, so a `"` breaks the command. Use backticks for code and names instead.
+- **No `Co-Authored-By` trailer.** The owner authors his own commits.

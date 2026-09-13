@@ -5,7 +5,7 @@ description: >
   gmt-oxlint/* diagnostics, and policy alignment with ESLint/Biome where
   multiple linters are used.
 metadata:
-  library_version: 1.1.2
+  library_version: 1.2.0
 ---
 
 # CI Enforcement
@@ -19,6 +19,9 @@ Use this skill when enabling Oxlint-based Date policy checks in CI.
 
 2. Stage adoption for large repos
 - Start with changed files or specific paths if baseline debt is high.
+- `no-date-library-imports` usually carries the largest baseline (every `moment` / `dayjs` /
+  `luxon` / `date-fns` / `spacetime` import). It is safe to run it as `"warn"` for existing
+  paths while keeping it `"error"` for new ones, then tighten as imports are migrated.
 - Expand to full repository enforcement once baseline is controlled.
 
 3. Keep diagnostics actionable
