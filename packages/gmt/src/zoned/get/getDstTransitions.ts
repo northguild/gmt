@@ -77,7 +77,9 @@ export function getDstTransitions(
 
     const transitions: DstTransition[] = [];
 
-    for (let i = 0; i < MAX_TRANSITIONS_PER_YEAR; i++) {
+    // `<=`: up to MAX in-year transitions are pushed, plus one more lookup to observe the scan
+    // leaving the year.
+    for (let i = 0; i <= MAX_TRANSITIONS_PER_YEAR; i++) {
       const next = cur.getTimeZoneTransition("next");
       if (!next || next.year > year) {
         return transitions;

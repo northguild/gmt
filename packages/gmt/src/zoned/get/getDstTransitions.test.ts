@@ -123,6 +123,33 @@ describe("getDstTransitions", () => {
     },
   );
 
+  // The bound is 20 in-year transitions; the scan needs one more lookup to see it has left the
+  // year, so a year with exactly 20 must still return all 20, not the exhaustion sentinel.
+  it("returns all 20 transitions when a year has exactly the bound", () => {
+    const firstInYear = Temporal.ZonedDateTime.from(
+      "2024-01-01T12:00:00+00:00[UTC]",
+    );
+    const nextYear = Temporal.ZonedDateTime.from(
+      "2025-01-01T12:00:00+00:00[UTC]",
+    );
+    let calls = 0;
+    vi.spyOn(
+      Temporal.ZonedDateTime.prototype,
+      "getTimeZoneTransition",
+    ).mockImplementation(() => {
+      const index = calls++;
+      return index < 20 ? firstInYear.add({ days: index }) : nextYear;
+    });
+
+    const expected = Array.from({ length: 20 }, (_, index) => ({
+      instant: `2024-01-${String(index + 1).padStart(2, "0")}T12:00:00Z`,
+      offsetBefore: "+00:00",
+      offsetAfter: "+00:00",
+    }));
+
+    expect(getDstTransitions("UTC", 2024)).toEqual(expected);
+  });
+
   it("returns [] when the transition scan exhausts its bound without leaving the year", () => {
     const midYear = Temporal.ZonedDateTime.from(
       "2024-06-15T12:00:00-04:00[America/New_York]",
