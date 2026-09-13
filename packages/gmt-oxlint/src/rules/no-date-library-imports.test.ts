@@ -56,12 +56,10 @@ describe("noDateLibraryImportsRule", () => {
 
     it('reports dynamic import("dayjs")', () => {
       const { report, ctx } = makeContext();
-      noDateLibraryImportsRule
-        .create(ctx)
-        .ImportExpression?.({
-          type: "ImportExpression",
-          source: literal("dayjs"),
-        });
+      noDateLibraryImportsRule.create(ctx).ImportExpression?.({
+        type: "ImportExpression",
+        source: literal("dayjs"),
+      });
       expect(report).toHaveBeenCalledOnce();
     });
 
@@ -87,24 +85,20 @@ describe("noDateLibraryImportsRule", () => {
       "does not report import from $specifier ($description)",
       ({ specifier }) => {
         const { report, ctx } = makeContext();
-        noDateLibraryImportsRule
-          .create(ctx)
-          .ImportDeclaration?.({
-            type: "ImportDeclaration",
-            source: literal(specifier),
-          });
+        noDateLibraryImportsRule.create(ctx).ImportDeclaration?.({
+          type: "ImportDeclaration",
+          source: literal(specifier),
+        });
         expect(report).not.toHaveBeenCalled();
       },
     );
 
     it("does not report a local re-export with no source", () => {
       const { report, ctx } = makeContext();
-      noDateLibraryImportsRule
-        .create(ctx)
-        .ExportNamedDeclaration?.({
-          type: "ExportNamedDeclaration",
-          source: null,
-        });
+      noDateLibraryImportsRule.create(ctx).ExportNamedDeclaration?.({
+        type: "ExportNamedDeclaration",
+        source: null,
+      });
       expect(report).not.toHaveBeenCalled();
     });
 

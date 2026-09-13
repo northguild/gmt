@@ -3,10 +3,7 @@
   "tests": 19611,
   "files": 596,
   "executions": 392220,
-  "nodes": [
-    "22",
-    "24"
-  ],
+  "nodes": ["22", "24"],
   "timezones": 10,
   "locales": 17,
   "functions": 548,
