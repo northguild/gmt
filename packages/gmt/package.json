@@ -160,7 +160,7 @@
   },
   "devDependencies": {
     "@northguild/gmt-oxlint": "workspace:*",
-    "@tanstack/intent": "^0.3.8",
+    "@tanstack/intent": "^0.4.0",
     "oxfmt": "^0.62.0",
     "oxlint": "^1.0.0"
   }

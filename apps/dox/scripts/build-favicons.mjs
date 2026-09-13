@@ -109,7 +109,10 @@ try {
 
     await writeFile(
       path.join(publicDir, out),
-      await page.screenshot({ type: "png", omitBackground: background === null }),
+      await page.screenshot({
+        type: "png",
+        omitBackground: background === null,
+      }),
     );
     await page.close();
 
