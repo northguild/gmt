@@ -533,6 +533,20 @@ describe("roundZoned", () => {
     ).toBe("");
   });
 
+  // Pins TC39 ZonedDateTime.round: it rounds the wall clock and re-resolves, so across a
+  // transition a "trunc" result can land after the input or on another local date.
+  it.each`
+    value                                             | smallestUnit | roundingMode | expected
+    ${"2024-09-29T03:50:00+13:45[Pacific/Chatham]"}   | ${"hour"}    | ${"trunc"}   | ${"2024-09-29T04:00:00+13:45[Pacific/Chatham]"}
+    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${"hour"}    | ${"trunc"}   | ${"2010-11-06T23:00:00-03:00[America/Goose_Bay]"}
+    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${"day"}     | ${"trunc"}   | ${"2010-11-07T00:00:00-03:00[America/Goose_Bay]"}
+  `(
+    "follows TC39 round for $value to $smallestUnit with $roundingMode, giving $expected",
+    ({ value, smallestUnit, roundingMode, expected }) => {
+      expect(roundZoned(value, { smallestUnit, roundingMode })).toBe(expected);
+    },
+  );
+
   // different time zones (now covered by battleTestTimeZones loops above)
 
   // negative timestamps (dates before epoch) across all battle-test timeZones

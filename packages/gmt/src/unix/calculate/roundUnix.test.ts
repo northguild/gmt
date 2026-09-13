@@ -164,6 +164,22 @@ describe("roundUnix", () => {
     },
   );
 
+  // Pins TC39 ZonedDateTime.round: it rounds the wall clock and re-resolves, so across a
+  // transition a "trunc" result can land after the input (Chatham) or an hour early (Goose_Bay).
+  it.each`
+    value            | timeZone               | smallestUnit | roundingMode | expected
+    ${1727532300000} | ${"Pacific/Chatham"}   | ${"hour"}    | ${"trunc"}   | ${1727532900000}
+    ${1289100600000} | ${"America/Goose_Bay"} | ${"hour"}    | ${"trunc"}   | ${1289095200000}
+    ${1289100600000} | ${"America/Goose_Bay"} | ${"day"}     | ${"trunc"}   | ${1289098800000}
+  `(
+    "follows TC39 round for $value in $timeZone to $smallestUnit with $roundingMode, giving $expected",
+    ({ value, timeZone, smallestUnit, roundingMode, expected }) => {
+      expect(roundUnix(value, { smallestUnit, roundingMode, timeZone })).toBe(
+        expected,
+      );
+    },
+  );
+
   it("returns null when Temporal.Instant.fromEpochMilliseconds throws", () => {
     vi.spyOn(Temporal.Instant, "fromEpochMilliseconds").mockImplementation(
       () => {

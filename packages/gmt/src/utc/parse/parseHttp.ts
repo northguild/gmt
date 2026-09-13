@@ -17,12 +17,15 @@ import { httpDate } from "../../regex";
  *   numeric offset or named-zone table is accepted.
  * - The day-of-week is not cross-validated against the computed date, the
  *   same deliberate scope limit `parseDateTimeWithPattern`/J11 uses.
+ * - An impossible calendar date (`31 Feb`, `29 Feb 2023`) returns `""`: a parser never
+ *   invents a date, so fields are validated with `overflow: "reject"`, not clamped.
  *
  * @param value RFC 7231 IMF-fixdate string (e.g. "Fri, 15 Mar 2024 14:30:00 GMT")
  * @returns UTC ISO 8601 datetime string, or "" on invalid input
  *
  * @example parseHttp("Fri, 15 Mar 2024 14:30:00 GMT") // "2024-03-15T14:30:00Z"
  * @example parseHttp("Fri, 15 Mar 2024 14:30:00 -0400") // "" (not IMF-fixdate)
+ * @example parseHttp("Sat, 31 Feb 2024 14:30:00 GMT") // "" (impossible date)
  * @example parseHttp("not a date") // ""
  */
 export function parseHttp(value: string): string {

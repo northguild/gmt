@@ -38,12 +38,17 @@ const NEAREST_WEEKDAY_RADIUS = 3;
  * weekday. A year end within three days of January 1 lands in the previous calendar year,
  * which is why callers must track the calendar-year argument rather than read `.year` back
  * off the result.
+ *
+ * - The month-day is moved into `year` with Temporal's `overflow: "constrain"`, so a
+ *   February 29 anchor targets February 28 in a common year before the weekday shift. A
+ *   "month-end" rule (the 26 CFR 1.441-2 style, "the last Saturday of February") would
+ *   instead put a February 28 anchor on February 29 in a leap year; this does not.
  */
 export function fiscalYearEndIn(
   anchor: Temporal.PlainDate,
   year: number,
 ): Temporal.PlainDate {
-  const target = anchor.with({ year });
+  const target = anchor.with({ year }, { overflow: "constrain" });
   const weekdayDelta = anchor.dayOfWeek - target.dayOfWeek;
   // Map the -6..6 weekday delta onto the -3..3 nearest-occurrence shift.
   const shift =
