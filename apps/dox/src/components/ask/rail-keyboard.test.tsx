@@ -20,7 +20,7 @@ import { act, render, within } from "@testing-library/react";
 import type { WidgetHandle } from "~/lib/widget-mount";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { MountedWidget } from "./MountedWidget";
-import { resolveWidget } from "./widget-registry";
+import { type AnyWidgetEntry, resolveWidget } from "./widget-registry";
 
 installJsdomShims();
 
@@ -58,6 +58,14 @@ async function renderMounted(name: string, rawArgs: unknown, idPrefix: string) {
   expect(resolved.ok).toBe(true);
   if (!resolved.ok) throw new Error(`unknown widget ${name}`);
 
+  return mountEntry(resolved.entry, resolved.args, idPrefix);
+}
+
+async function mountEntry(
+  entry: AnyWidgetEntry,
+  args: unknown,
+  idPrefix: string,
+) {
   let resolveHandle!: (handle: WidgetHandle) => void;
   const mounted = new Promise<WidgetHandle>((resolve) => {
     resolveHandle = resolve;
@@ -65,8 +73,8 @@ async function renderMounted(name: string, rawArgs: unknown, idPrefix: string) {
 
   const { container } = render(
     <MountedWidget
-      entry={resolved.entry}
-      args={resolved.args}
+      entry={entry}
+      args={args}
       idPrefix={idPrefix}
       onHandle={(handle) => {
         if (handle) resolveHandle(handle);
@@ -74,15 +82,73 @@ async function renderMounted(name: string, rawArgs: unknown, idPrefix: string) {
     />,
   );
 
-  await act(async () => {
-    await mounted;
+  // If validate() reports a problem or mount() throws, `onHandle` never fires and
+  // MountedWidget renders its error instead. Watch for that element so the helper
+  // rejects at once with the widget's own message rather than hanging until the
+  // Vitest timeout.
+  let observer: MutationObserver | undefined;
+  const failed = new Promise<never>((_resolve, reject) => {
+    const check = () => {
+      const error = container.querySelector(".gmt-hive-widget-error");
+      if (error) {
+        reject(
+          new Error(
+            `widget "${entry.title}" failed to mount: ${error.textContent?.trim() ?? ""}`,
+          ),
+        );
+      }
+    };
+    observer = new MutationObserver(check);
+    observer.observe(container, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+    check();
   });
+
+  // The race is awaited outside `act`: inside it, React holds MountedWidget's
+  // `setError` in the act queue until the callback settles, so the error element
+  // would never render and the observer could never fire.
+  try {
+    await Promise.race([mounted, failed]);
+  } finally {
+    observer?.disconnect();
+  }
+
+  // Flush whatever the mount scheduled, so every read after this is synchronous.
+  await act(async () => {});
 
   return { container, view: within(container) };
 }
 
 afterEach(() => {
   document.body.innerHTML = "";
+});
+
+describe("the mount helper", () => {
+  // A widget that cannot be shown must fail the test with its own message, straight away —
+  // not leave the helper waiting for a handle that will never come until Vitest times out.
+  it("rejects with the widget's error text as soon as the panel shows it", async () => {
+    const resolved = resolveWidget("showConverterBench", {
+      value: "2024-03-15T14:30:00.000-04:00[America/New_York]",
+      from: "America/New_York",
+      to: "Europe/London",
+    });
+    if (!resolved.ok) throw new Error("unknown widget showConverterBench");
+
+    const problem = "Mars/Olympus_Mons is not a real time zone.";
+    const failing: AnyWidgetEntry = {
+      ...resolved.entry,
+      validate: () => Promise.resolve(problem),
+    };
+
+    const startedAt = performance.now();
+    await expect(mountEntry(failing, resolved.args, "rail-3")).rejects.toThrow(
+      problem,
+    );
+    expect(performance.now() - startedAt).toBeLessThan(1000);
+  });
 });
 
 describe("a widget mounted in the panel", () => {
