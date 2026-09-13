@@ -5,7 +5,7 @@ description: >
   helpers, preserving behavior, and guiding the Temporal custom-method path when
   gmt does not yet provide a needed helper.
 metadata:
-  library_version: 1.1.2
+  library_version: 1.2.0
 ---
 
 # Migration Refactor
@@ -35,6 +35,14 @@ Use this skill when Oxlint reports Date API violations and the user asks for fix
 - `Date.parse(...)` -> gmt conversion helper where available.
 - `Date.UTC(...)` -> gmt UTC conversion helper where available.
 - `getTimezoneOffset()` usage -> timezone-aware gmt zoned helpers.
+- `no-date-library-imports` (`moment`, `moment-timezone`, `dayjs`, `luxon`, `date-fns`,
+  `date-fns-tz`, `spacetime`, including subpaths, `require()` and dynamic `import()`) ->
+  replace the call sites with gmt equivalents, then remove the import. Do not silence it by
+  re-exporting through a local module — `export … from` is flagged too. `@js-joda/core` is
+  intentionally allowed.
+- When porting library arithmetic, keep Temporal's semantics: a non-existent day clamps
+  (`2024-02-29` + 1 year → `2025-02-28`); date-fns `setYear` rolls to 1 March instead, so
+  flag that behaviour change to the user rather than copying it.
 
 ## Validation
 
