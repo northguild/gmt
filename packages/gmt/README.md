@@ -15,8 +15,8 @@ It wraps `@js-temporal/polyfill` behind a smaller, more opinionated API aimed at
 
 - **100% Temporal, Temporal-first.** GMT is built directly on the TC39 `Temporal` standard (via `@js-temporal/polyfill`) — not a custom, homegrown date/time type system like `@internationalized/date`'s own `CalendarDate`/`ZonedDateTime` classes. No `Date` object anywhere, enforced by 3 dedicated lint packages.
 - **A full replacement for any and all of them.** Luxon, date-fns, Moment.js, and react-aria's `@internationalized/date` don't have parity with each other — GMT covers the combined capabilities of all four in one library, plus what none of them do alone.
-- **~15× more CI test executions than all four competitors combined**: 387,520 from 19,376 tests run in all 10 timezones × 2 Node versions, vs. their combined 20,190.
-- **~40× more test cases than `@internationalized/date`**: 19,376 vs. 386 — Adobe's own library, run at its own commit.
+- **~15× more CI test executions than all four competitors combined**: 390,020 from 19,501 tests run in all 10 timezones × 2 Node versions, vs. their combined 20,190.
+- **~40× more test cases than `@internationalized/date`**: 19,501 vs. 386 — Adobe's own library, run at its own commit.
 - **The only one of the five that tests systematically across locales in CI at all.** Zero of the four comparison libraries run a locale-test matrix; GMT mandates all 17 locales on every locale-aware function.
 - **The only one that runs its entire suite under a real `TZ` env var across real-world zones.** Luxon and `@internationalized/date` have no CI timezone matrix; date-fns's zone scope is unclear; Moment.js covers 6 zones but not its full suite.
 - **Explicit DST disambiguation control on both construction _and_ arithmetic** — a control none of the others expose.
@@ -92,7 +92,7 @@ GMT's test suite balances **thoroughness** against **maintenance burden** by tes
 - **Non-string input tables** — functions that guard with `typeof x !== "string"` return the same sentinel for `null`, `undefined`, `123`, `true`, `[]`, and `{}`. We test one representative non-string per argument position rather than all six types × N positions. The collapse is safe because all non-string types hit the identical early-return code path.
 - **Redundant permutations** — adjacent/disjoint/reversed interval cases that produce identical results are not duplicated across every function variant. The `plain/`, `zoned/`, `utc/`, and `unix/` families share the same mathematical behavior; each family gets the minimum set of cases needed to prove correctness.
 
-**Result:** 19,376 tests across 596 files that exercise real behavior differences without redundant permutations. They run in CI as 387,520 executions — every one of them × 2 Node versions × 10 timezones.
+**Result:** 19,501 tests across 595 files that exercise real behavior differences without redundant permutations. They run in CI as 390,020 executions — every one of them × 2 Node versions × 10 timezones.
 
 ## How GMT is tested, vs. the libraries it targets
 
@@ -108,9 +108,9 @@ GMT is measured directly against react-aria's **`@internationalized/date`**, **L
 
 | Metric                          | GMT                                                | `@internationalized/date`      | Luxon                                | date-fns                                  | Moment.js                        |
 | ------------------------------- | -------------------------------------------------- | ------------------------------ | ------------------------------------ | ----------------------------------------- | -------------------------------- |
-| Test files                      | 596                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
-| Individual test cases           | **19,376**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
-| Effective CI test<br>executions | **387,520**<br>(19,376 × 2 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
+| Test files                      | 595                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
+| Individual test cases           | **19,501**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
+| Effective CI test<br>executions | **390,020**<br>(19,501 × 2 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
 | CI Node.js matrix               | 22, 24                                             | n/a — tests<br>React 16–canary | 20, 22, 24, 25                       | not explicit<br>(`node = "latest"`)       | LTS, LTS-1,<br>latest            |
 | CI timezone matrix              | **10 zones × 2**<br>**Node, full suite**           | none found                     | none found                           | dedicated workflow,<br>zone scope unclear | 6 zones,<br>partial suite only   |
 | Locale test matrix              | **17 locales**,<br>every locale fn                 | none found                     | none found                           | none found                                | none found                       |
@@ -146,7 +146,7 @@ Specific, sourced claims — not a repeat of the metrics above.
 | Only GMT enforces a mandatory<br>17-locale test matrix on every<br>locale-aware function                                                      | No CI-level or systematic<br>locale-matrix testing found<br>in any of the four                                                        |
 | Only GMT exposes explicit DST<br>disambiguation control on both<br>construction _and_ arithmetic                                              | Luxon's docs call this explicitly<br>undefined; `@internationalized/date`<br>only covers construction, not arithmetic                 |
 | Only GMT is Temporal-native with<br>zero `Date` usage, enforced by<br>3 dedicated lint packages                                               | Luxon, date-fns, and Moment.js all<br>still wrap or depend on `Date` internally                                                       |
-| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~15×                                                  | 387,520 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
+| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~15×                                                  | 390,020 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
 
 ## Package Layout
 
@@ -226,6 +226,9 @@ import { addDate, diffDate } from "@northguild/gmt";
 
 addDate("2024-01-31", { months: 1 }, { overflow: "reject" });
 // "" — Feb 31 doesn't exist and overflow: "reject" refuses to clamp it
+
+addDate("2024-02-29", { years: 1 });
+// "2025-02-28" — "constrain" (the default) clamps to the last valid day, as Temporal does
 
 diffDate("2023-01-01", "2023-01-10", "week", {
   smallestUnit: "week",
@@ -542,7 +545,7 @@ durationAs("P1Y", "days", { relativeTo: "5784-06-15[u-ca=hebrew]" });
 
 `zoned/` has its own calendar-annotated grammar as of E7 (issue #152) — see "Calendar-aware zoned datetimes" below.
 
-Interval functions that only compare or diff absolute instants (`intervalContainsDate`, `intervalsOverlapDate`, `intervalAbutsDate`, `intervalEngulfsDate`, `isValidDateInterval`, `intervalOverlappingDaysDate`) accept endpoints tagged with _different_ calendars, since ordering and day-counting don't depend on which calendar a date is expressed in. Functions that return a date _value_ (`intervalUnionDate`, `intervalIntersectionDate`, `intervalDifferenceDate`, `intervalXorDate`, `intervalXorAllDate`, `mergeIntervalsDate`, `intervalDivideEquallyDate`, `intervalSplitAtDate`) require every argument to share one calendar and return their sentinel (`null`/`[]`) on a mismatch, since there's no principled way to pick which calendar the output should be expressed in. See `context/roadmap/issues/E.md`'s "E5 outcome" section for the full per-function audit, including the negatives ("no change needed, verified why") this scope boundary implies — `*DateTime`/`*Time` variants, `unix/`, and `utc/` were all confirmed unaffected rather than assumed to be.
+Interval functions that only compare or diff absolute instants (`intervalContainsDate`, `intervalsOverlapDate`, `intervalAbutsDate`, `intervalEngulfsDate`, `isValidDateInterval`, `intervalOverlappingDaysDate`) accept endpoints tagged with _different_ calendars, since ordering and day-counting don't depend on which calendar a date is expressed in. Functions that return a date _value_ (`intervalUnionDate`, `intervalIntersectionDate`, `intervalDifferenceDate`, `intervalXorDate`, `intervalXorAllDate`, `mergeIntervalsDate`, `intervalDivideEquallyDate`, `intervalSplitAtDate`) require every argument to share one calendar and return their sentinel (`null`/`[]`) on a mismatch, since there's no principled way to pick which calendar the output should be expressed in. See the archived E roadmap file's "E5 outcome" section (`git show 9e3b22d^:context/roadmap/issues/E.md`) for the full per-function audit, including the negatives ("no change needed, verified why") this scope boundary implies — `*DateTime`/`*Time` variants, `unix/`, and `utc/` were all confirmed unaffected rather than assumed to be.
 
 #### Calendar-aware zoned datetimes
 
@@ -1119,6 +1122,13 @@ splitIntervalByUnitUnix(0, 86400000, "hour", 6);
 
 All split functions return `[]` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-positive amount, unsupported unit, or a unit that has no effect on the target type).
 
+Each boundary is computed from `start` (`start + k × amount`, as Temporal and Luxon's `Interval.splitBy` do), never by stepping from the previous boundary, so month-end starts don't drift. A yearly split from February 29 likewise returns to February 29 in leap years:
+
+```typescript
+splitIntervalByUnitDate("2024-01-31", "2024-05-01", "month", 1);
+// [{ start: "2024-01-31", end: "2024-02-29" }, { start: "2024-02-29", end: "2024-03-31" }, { start: "2024-03-31", end: "2024-04-30" }, { start: "2024-04-30", end: "2024-05-01" }]
+```
+
 `intervalCount*` returns how many calendar-unit boundaries an interval crosses — the number of units the half-open interval `[start, end)` touches. This is distinct from `diff*`, which measures exact elapsed duration: an interval from 23:59 to 00:01 is two minutes long but touches two days:
 
 ```typescript
@@ -1155,6 +1165,8 @@ intervalCountUnix(0, 86400000, "hour");
 ```
 
 Zero-length intervals count `1` when they sit mid-unit and `0` when they sit exactly on a unit boundary — `intervalCountDate("2024-01-15", "2024-01-15", "month")` is `1`, while `intervalCountDate("2024-01-01", "2024-01-01", "month")` is `0`. Weeks start on Monday (ISO 8601), singular and plural units are interchangeable (`"day"` and `"days"`), and `intervalCountUnix` uses the system timeZone for calendar boundaries (consistent with `addUnix`). All count functions return `null` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, unsupported unit, or a unit that has no effect on the target type).
+
+`intervalCountZoned`, `intervalCountUnix` and `intervalCountUtc` count the same local buckets `bucketRange` returns. A bucket shorter than its unit still counts once — a 20-minute range straddling 04:00 on `Pacific/Chatham`'s spring-forward day counts 2 hours, because its 03:00 hour lasts only 15 minutes — and a day the zone deleted counts not at all (`Pacific/Apia`'s 30 December 2011).
 
 `intervalLength*` is `intervalCount*`'s exact-duration counterpart — it answers "how long is this interval" as a real, possibly fractional number, rather than "how many boundaries does it touch":
 
@@ -1282,13 +1294,18 @@ convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York", {
 // "" — no such local time exists
 ```
 
-The `startOfZoned`/`endOfZoned`/`startOfQuarterForZoned`/`endOfQuarterForZoned`/`mapZonedHoursInDay` family (and their `unix/` counterparts) also accept `disambiguation`, plus an `offset` option (`"prefer"` | `"use"` | `"ignore"` (default) | `"reject"`) that controls whether the source's existing UTC offset is kept when computing the new boundary. **`offset` must stay at its default (`"ignore"`) for `disambiguation` to take effect** — Temporal's own default (`"prefer"`) keeps the source offset whenever still valid, which silently makes `disambiguation` a no-op:
+With no options, the `startOfZoned`/`endOfZoned`/`startOfQuarterForZoned`/`endOfQuarterForZoned`/`getLocaleZonedStartOfWeek`/`getLocaleZonedEndOfWeek` family (and their `unix/` counterparts) return the real boundary of the unit that contains the input, in its zone: a start is never after the input and an end never before it, even when the wall-clock boundary was skipped or repeated. `Pacific/Chatham`'s 03:00 hour on its spring-forward starts at 03:45, and `mapZonedHoursInDay` steps from the day's real start to the next day's.
+
+Passing `disambiguation`, or an `offset` option (`"prefer"` | `"use"` | `"ignore"` | `"reject"`), opts into Temporal's wall-clock `.with()` resolution instead, where `offset` controls whether the source's existing UTC offset is kept when computing the new boundary. Once you opt in, **`offset` must stay at its default (`"ignore"`) for `disambiguation` to take effect** — Temporal's own default (`"prefer"`) keeps the source offset whenever still valid, which silently makes `disambiguation` a no-op:
 
 ```typescript
 import { startOfZoned } from "@northguild/gmt";
 
 // 2024-11-03T01:45:00-05:00 is the SECOND, repeated 1am of the fall-back overlap in America/New_York.
 const source = "2024-11-03T01:45:00-05:00[America/New_York]";
+
+startOfZoned(source, "hour");
+// "2024-11-03T01:00:00-05:00[America/New_York]" — no options: the real start of the repeated hour
 
 startOfZoned(source, "hour", { disambiguation: "reject" });
 // "" — offset defaults to "ignore", so disambiguation actually fires and "reject" throws
@@ -1974,6 +1991,12 @@ date line is absent from the list, a local day whose midnight is skipped by a sp
 starts at 01:00, and in a zone that falls back by half an hour (`Australia/Lord_Howe`) the
 local 01:00 hour bucket is genuinely 90 minutes long.
 
+For a zoned or epoch value, `startOfZoned`/`startOfUnix` with no options return the same real
+boundary. Do not floor with `roundZoned`/`roundUnix` and `roundingMode: "trunc"`: they follow
+TC39 `ZonedDateTime.round`, which rounds the wall clock and re-resolves it in the zone, so
+`"2024-09-29T03:50:00+13:45[Pacific/Chatham]"` truncated to the hour gives 04:00 — after the
+input.
+
 A pattern or a bucket unit the namespace does not recognise returns the same sentinel an
 unusable date or instant does, so both unions have a type guard to narrow one that arrived as
 a bare string — from config, an env var, a form:
@@ -2034,7 +2057,7 @@ When working with `@northguild/gmt`, follow these rules:
 3. **Invalid input returns a sentinel, never throws.** `""` for strings, `null` for numbers, `false` for booleans, `[]` for arrays.
 4. **Wrap all Temporal calls in `try-catch`.** `.from()`, `.add()`, `.since()`, etc. throw `RangeError` on bad input.
 5. **Keep `plain/` and `zoned/` strictly separate.** Never mix `PlainDateTime` and `ZonedDateTime`.
-6. **Full locale matrix for any locale-aware function.** 17 locales, explicit rows, `hasFullIcu` ternaries where output differs.
+6. **Full locale matrix for any locale-aware function.** 17 locales, explicit rows, `expectOneOfIcu`/`expectDateTimeEqual` (from `src/test/icuVariants.ts`) where CLDR wording differs.
 7. **Use pre-built mocks for error-path tests.** See `packages/gmt/src/test/mocks`.
 8. **JSDoc with `@example` on every public function.** Cover valid, invalid, and edge-case inputs.
 

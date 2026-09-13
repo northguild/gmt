@@ -70,14 +70,14 @@ isInDaylightSaving("2024-07-15T12:00:00+09:00[Asia/Tokyo]");
 | Resolve a plain local time to an **instant**  | `resolveLocal`                    | **Yes, fully.**                |
 | Attach a plain local time + timezone          | `convertPlainDateTimeToZoned`     | **Yes, fully.**                |
 | Add/subtract a duration from a zoned datetime | `addZoned` / `subtractZoned`      | **Overlaps only.**             |
-| Jump to start/end of a boundary               | `startOfZoned` family             | **Yes — if `offset` default.** |
+| Jump to start/end of a boundary               | `startOfZoned` family             | **Opt-in (see below).**        |
 | Set one or more fields directly               | `setZoned` / `setUnix` / `setUtc` | **Yes — if `offset` default.** |
 | Cycle (wrap) a single field                   | `cycleZoned`                      | **Yes — if `offset` default.** |
 
 - **`resolveLocal`** (`instant/convert/`, Story CORE-4) — same resolution as `convertPlainDateTimeToZoned` and the same full control, but it returns the UTC instant rather than a zoned string, and it is exact: `convertPlainDateTimeToZoned` truncates to milliseconds by default, so a nanosecond wall time survives one and not the other. `resolveLocal` also has no `offset` parameter, because (as below) that parameter is inert on this construction path anyway. Pair it with `classifyLocal` to branch before a policy applies.
 - **`convertPlainDateTimeToZoned`** — every value (`earlier`/`later`/`reject`) changes the result, for both gaps and overlaps.
 - **`addZoned` / `subtractZoned`** — only controls overlaps; has no effect on gaps. See below.
-- **`startOfZoned` family** (`startOfZoned`, `endOfZoned`, `startOfQuarterForZoned`, `endOfQuarterForZoned`, `mapZonedHoursInDay`, and their `unix/` counterparts `startOfUnix`, `endOfUnix`, `startOfQuarterForUnix`, `endOfQuarterForUnix` — Story C3) — fully controllable; these construct a new local time via `.with()`, same mechanism as `convertPlainDateTimeToZoned` — **but see "The `offset` parameter" below**, since `.with()` has an extra option that `.from()` doesn't need to worry about.
+- **`startOfZoned` family** (`startOfZoned`, `endOfZoned`, `startOfQuarterForZoned`, `endOfQuarterForZoned`, `mapZonedHoursInDay`, and their `unix/` counterparts `startOfUnix`, `endOfUnix`, `startOfQuarterForUnix`, `endOfQuarterForUnix` — Story C3) — with no options these return the real boundary of the unit in the zone (a start is never after the input, an end never before it), so there is nothing to disambiguate. Passing `disambiguation` or `offset` opts into constructing the boundary as a wall-clock time via `.with()`, the same mechanism as `convertPlainDateTimeToZoned` — **see "The `offset` parameter" below**, since `.with()` has an extra option that `.from()` doesn't need to worry about.
 - **`setZoned` / `setUnix` / `setUtc`** (Story J1) — also `.with()`-based, same rule as the `startOfZoned` family: leave `offset` at its default (`"ignore"`) for `disambiguation` to take effect. Unlike `startOfZoned`'s fixed reset values (`day: 1`, `hour: 0`, ...), these take **caller-supplied** field values, so they also expose `overflow` — a fixed literal like `day: 1` can never be out of range, but a caller-supplied `day: 31` can be. `setUtc`'s `disambiguation`/`offset` are accepted for signature consistency but are permanently inert: `"UTC"` has no DST transitions.
 - **`cycleZoned`** (Story E6) — same `.with()`-based rule as `setZoned`: leave `offset` at its default (`"ignore"`) for `disambiguation` to take effect. `cycleZoned` computes its target field value with plain, DST-agnostic wrap bounds (e.g. `hour` always wraps `0–23`), then hands it to `setZoned` — so a cycled `hour` that lands in a gap or overlap is resolved by `disambiguation`/`offset` exactly the way any other field-set call is, rather than by deriving DST-aware wrap boundaries directly.
 
@@ -98,7 +98,7 @@ You can get there for overlaps (pass `disambiguation: "reject"` to `addZoned`/`s
 
 ### The `offset` parameter
 
-The `startOfZoned` family (Story C3) constructs its boundary via `Temporal.ZonedDateTime.prototype.with()`, not `.from()`. `.with()` has an option `convertPlainDateTimeToZoned`/`addZoned`/`subtractZoned` never need to think about, because they don't have it: **`offset`**, which controls what happens to the _existing_ offset already attached to the source `ZonedDateTime` when you change some of its fields.
+When you pass `disambiguation` or `offset`, the `startOfZoned` family (Story C3) constructs its boundary via `Temporal.ZonedDateTime.prototype.with()`, not `.from()`. With neither option it returns the real zone boundary and never re-resolves a wall-clock time at all. `.with()` has an option `convertPlainDateTimeToZoned`/`addZoned`/`subtractZoned` never need to think about, because they don't have it: **`offset`**, which controls what happens to the _existing_ offset already attached to the source `ZonedDateTime` when you change some of its fields.
 
 `offset` accepts four values, mirroring Temporal's own `OffsetDisambiguationOptions`:
 
@@ -106,18 +106,21 @@ The `startOfZoned` family (Story C3) constructs its boundary via `Temporal.Zoned
 | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `"prefer"` (Temporal's default)                | Keep the source's offset if it's still valid for the new fields; only fall back to `disambiguation` if it isn't.                                |
 | `"use"`                                        | Always keep the source's offset, even if that produces a different real-world instant than the local time implies.                              |
-| `"ignore"` (**GMT's default for this family**) | Always discard the source's offset and recompute purely from time zone + local time — this is what makes `disambiguation` actually take effect. |
+| `"ignore"` (**GMT's default once you opt in**) | Always discard the source's offset and recompute purely from time zone + local time — this is what makes `disambiguation` actually take effect. |
 | `"reject"`                                     | Throw if the source's offset isn't valid for the new fields, regardless of `disambiguation`.                                                    |
 
 **Why this matters, concretely**: every function in the `startOfZoned` family starts from an already-built `ZonedDateTime` — which already has a valid, resolved offset — and then resets some of its fields (e.g. zeroing the minutes for "start of hour"). For a same-day field reset, the source's offset is _almost always still valid_ for the new fields. With `offset: "prefer"` (Temporal's default), that means the source offset just gets kept — and `disambiguation` is never even consulted, because there was nothing ambiguous to resolve from Temporal's point of view. This was discovered empirically while wiring up `disambiguation` on these functions: passing `disambiguation` alone (matching the pattern used by `convertPlainDateTimeToZoned`) produced byte-identical output across all four values on a real fall-back-overlap case, until `offset: "ignore"` was also passed.
 
-GMT defaults `offset` to `"ignore"` on every function in this family, specifically so that `disambiguation` works the way you'd expect out of the box. You only need to touch `offset` if you deliberately want Temporal's raw `.with()` semantics (e.g. "keep whatever offset this ZonedDateTime already had, even across a boundary jump") — and if you do, know that setting it away from `"ignore"` can make `disambiguation` silently do nothing, exactly like the bug described above.
+Once you opt in, GMT defaults `offset` to `"ignore"` on every function in this family, specifically so that `disambiguation` works the way you'd expect out of the box. You only need to touch `offset` if you deliberately want Temporal's raw `.with()` semantics (e.g. "keep whatever offset this ZonedDateTime already had, even across a boundary jump") — and if you do, know that setting it away from `"ignore"` can make `disambiguation` silently do nothing, exactly like the bug described above.
 
 ```typescript
 import { startOfZoned } from "@northguild/gmt/zoned";
 
 // 2024-11-03T01:45:00-05:00 is the SECOND, repeated 1am of the fall-back overlap in America/New_York.
 const source = "2024-11-03T01:45:00-05:00[America/New_York]";
+
+startOfZoned(source, "hour");
+// "2024-11-03T01:00:00-05:00[America/New_York]" — no options: the real start of the repeated hour
 
 startOfZoned(source, "hour", { disambiguation: "reject" });
 // "" — offset defaults to "ignore", so disambiguation actually fires and "reject" throws

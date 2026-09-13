@@ -9327,12 +9327,16 @@
     "sourcePath": "packages/gmt/src/unix/calculate/endOfQuarterForUnix.ts",
     "examples": [
       {
-        "call": "endOfQuarterForUnix(1706659200000)",
-        "result": "1711977599999"
+        "call": "endOfQuarterForUnix(1706659200000, { timeZone: \"UTC\" })",
+        "result": "1711929599999"
       },
       {
-        "call": "endOfQuarterForUnix(-86400000)",
+        "call": "endOfQuarterForUnix(-86400000, { timeZone: \"UTC\" })",
         "result": "-1 (Q4 1969 ends Dec 31)"
+      },
+      {
+        "call": "endOfQuarterForUnix(1285882200000, { timeZone: \"Africa/Cairo\" })",
+        "result": "1285883999999 (the second pass of Q3 2010's repeated last hour; the quarter ends after it)"
       }
     ]
   },
@@ -9347,24 +9351,28 @@
     "sourcePath": "packages/gmt/src/unix/calculate/endOfUnix.ts",
     "examples": [
       {
-        "call": "endOfUnix(1706659200000, \"year\")",
-        "result": "1735689600000"
+        "call": "endOfUnix(1706659200000, \"year\", { timeZone: \"UTC\" })",
+        "result": "1735689599999"
       },
       {
-        "call": "endOfUnix(1706659200000, \"month\")",
-        "result": "1708012800000"
+        "call": "endOfUnix(1706659200000, \"month\", { timeZone: \"UTC\" })",
+        "result": "1706745599999"
       },
       {
-        "call": "endOfUnix(1706659200, \"day\", { epochUnit: \"seconds\" })",
-        "result": "1706736000"
+        "call": "endOfUnix(1706659200, \"day\", { epochUnit: \"seconds\", timeZone: \"UTC\" })",
+        "result": "1706745599"
       },
       {
-        "call": "endOfUnix(-86400000, \"year\")",
+        "call": "endOfUnix(-86400000, \"year\", { timeZone: \"UTC\" })",
         "result": "-1 (end of 1969)"
       },
       {
+        "call": "endOfUnix(1730616300000, \"hour\", { timeZone: \"America/New_York\" })",
+        "result": "1730617199999 (1730616300000 is the second, repeated 1:45am of the Nov 3 2024 fall-back; its hour ends at the second 1:59:59.999)"
+      },
+      {
         "call": "endOfUnix(1730616300000, \"hour\", { timeZone: \"America/New_York\", disambiguation: \"reject\" })",
-        "result": "null (1730616300000 is the second, repeated 1:45am of the Nov 3 2024 fall-back overlap; end-of-hour is ambiguous)"
+        "result": "null (opting in: the wall-clock 1:59:59 is ambiguous between the two passes)"
       },
       {
         "call": "endOfUnix(1730616300000, \"hour\", { timeZone: \"America/New_York\", disambiguation: \"reject\", offset: \"prefer\" })",
@@ -9463,6 +9471,10 @@
         "result": "-86400000 (start of day for negative timestamp)"
       },
       {
+        "call": "roundUnix(1727532300000, { smallestUnit: \"hour\", roundingMode: \"trunc\", timeZone: \"Pacific/Chatham\" })",
+        "result": "1727532900000 (after the input — TC39 wall-clock rounding)"
+      },
+      {
         "call": "roundUnix(\"invalid\", { smallestUnit: \"hour\" })",
         "result": "null"
       },
@@ -9535,12 +9547,16 @@
     "sourcePath": "packages/gmt/src/unix/calculate/startOfQuarterForUnix.ts",
     "examples": [
       {
-        "call": "startOfQuarterForUnix(1706659200000)",
+        "call": "startOfQuarterForUnix(1706659200000, { timeZone: \"UTC\" })",
         "result": "1704067200000"
       },
       {
-        "call": "startOfQuarterForUnix(-86400000)",
-        "result": "-25598400001 (Q1 1969 starts Jan 1)"
+        "call": "startOfQuarterForUnix(1715776496789, { timeZone: \"UTC\" })",
+        "result": "1711929600000 (2024-05-15T12:34:56.789Z; the milliseconds are reset too)"
+      },
+      {
+        "call": "startOfQuarterForUnix(-86400000, { timeZone: \"UTC\" })",
+        "result": "-7948800000 (1969-12-31 is in Q4, which starts Oct 1)"
       }
     ]
   },
@@ -9555,24 +9571,28 @@
     "sourcePath": "packages/gmt/src/unix/calculate/startOfUnix.ts",
     "examples": [
       {
-        "call": "startOfUnix(1706659200000, \"year\")",
+        "call": "startOfUnix(1706659200000, \"year\", { timeZone: \"UTC\" })",
         "result": "1704067200000"
       },
       {
-        "call": "startOfUnix(1706659200000, \"month\")",
-        "result": "1705353600000"
+        "call": "startOfUnix(1706659200000, \"month\", { timeZone: \"UTC\" })",
+        "result": "1704067200000"
       },
       {
-        "call": "startOfUnix(1706659200, \"day\", { epochUnit: \"seconds\" })",
-        "result": "1706640000"
+        "call": "startOfUnix(1706659200, \"day\", { epochUnit: \"seconds\", timeZone: \"UTC\" })",
+        "result": "1706659200"
       },
       {
-        "call": "startOfUnix(-86400000, \"year\")",
-        "result": "-31536000001 (start of 1969)"
+        "call": "startOfUnix(-86400000, \"year\", { timeZone: \"UTC\" })",
+        "result": "-31536000000 (start of 1969)"
+      },
+      {
+        "call": "startOfUnix(1730616300000, \"hour\", { timeZone: \"America/New_York\" })",
+        "result": "1730613600000 (1730616300000 is the second, repeated 1:45am of the Nov 3 2024 fall-back; its hour starts at the second 1am)"
       },
       {
         "call": "startOfUnix(1730616300000, \"hour\", { timeZone: \"America/New_York\", disambiguation: \"reject\" })",
-        "result": "null (1730616300000 is the second, repeated 1:45am of the Nov 3 2024 fall-back overlap; start-of-hour is ambiguous)"
+        "result": "null (opting in: the wall-clock 1am is ambiguous between the two passes)"
       },
       {
         "call": "startOfUnix(1730616300000, \"hour\", { timeZone: \"America/New_York\", disambiguation: \"reject\", offset: \"prefer\" })",
@@ -11512,6 +11532,10 @@
         "result": "\"2024-01-01T00:00:00Z\""
       },
       {
+        "call": "startOfQuarterForUtc(\"2024-05-15T12:34:56.789Z\")",
+        "result": "\"2024-04-01T00:00:00Z\""
+      },
+      {
         "call": "startOfQuarterForUtc(\"invalid\")",
         "result": "\"\""
       }
@@ -12787,6 +12811,10 @@
         "result": "\"\" (not IMF-fixdate)"
       },
       {
+        "call": "parseHttp(\"Sat, 31 Feb 2024 14:30:00 GMT\")",
+        "result": "\"\" (impossible date)"
+      },
+      {
         "call": "parseHttp(\"not a date\")",
         "result": "\"\""
       }
@@ -13351,6 +13379,10 @@
     "examples": [
       {
         "call": "endOfZoned(\"2024-02-29T12:34:56+00:00[UTC]\", \"month\")",
+        "result": "\"2024-02-29T23:59:59+00:00[UTC]\""
+      },
+      {
+        "call": "endOfZoned(\"2024-02-29T12:34:56+00:00[UTC]\", \"month\", { fractionalSecondDigits: 9 })",
         "result": "\"2024-02-29T23:59:59.999999999+00:00[UTC]\""
       },
       {
@@ -13358,12 +13390,16 @@
         "result": "\"\""
       },
       {
+        "call": "endOfZoned(\"2024-11-03T01:15:00-05:00[America/New_York]\", \"hour\")",
+        "result": "\"2024-11-03T01:59:59-05:00[America/New_York]\" (the second, repeated 1am is its own hour)"
+      },
+      {
         "call": "endOfZoned(\"2024-11-03T01:15:00-05:00[America/New_York]\", \"hour\", { disambiguation: \"earlier\" })",
-        "result": "\"2024-11-03T01:59:59-04:00[America/New_York]\" (source sits in the second, repeated 1am of the fall-back overlap; \"earlier\" resolves end-of-hour to the first (EDT) pass)"
+        "result": "\"2024-11-03T01:59:59-04:00[America/New_York]\" (opting in: the wall-clock 1:59:59 resolved to the first (EDT) pass, before the source)"
       },
       {
         "call": "endOfZoned(\"2024-11-03T01:15:00-05:00[America/New_York]\", \"hour\", { disambiguation: \"reject\" })",
-        "result": "\"\" (same overlap; \"reject\" throws because end-of-hour is ambiguous between the two 1am instants)"
+        "result": "\"\" (opting in: \"reject\" throws because the wall-clock 1:59:59 is ambiguous between the two passes)"
       },
       {
         "call": "endOfZoned(\"2024-11-03T01:15:00-05:00[America/New_York]\", \"hour\", { disambiguation: \"reject\", offset: \"prefer\" })",
@@ -13396,6 +13432,10 @@
       {
         "call": "getHoursInZonedDay(\"2024-10-06T12:00:00+11:00[Australia/Lord_Howe]\")",
         "result": "23.5"
+      },
+      {
+        "call": "getHoursInZonedDay(\"2024-09-08T12:00:00-03:00[America/Santiago]\")",
+        "result": "23 (midnight skipped)"
       },
       {
         "call": "getHoursInZonedDay(\"invalid\")",
@@ -13480,6 +13520,10 @@
       {
         "call": "getLocaleZonedStartOfWeek(\"2024-02-29T12:00:00+00:00[UTC]\", \"fr-FR\")",
         "result": "\"2024-02-26T00:00:00+00:00[UTC]\" (Monday)"
+      },
+      {
+        "call": "getLocaleZonedStartOfWeek(\"2024-09-11T12:00:00-03:00[America/Santiago]\", \"en-US\")",
+        "result": "\"2024-09-08T01:00:00-03:00[America/Santiago]\" (that Sunday's midnight was skipped)"
       },
       {
         "call": "getLocaleZonedStartOfWeek(\"invalid\", \"en-US\")",
@@ -13592,6 +13636,10 @@
       {
         "call": "roundZoned(\"2024-06-15T12:34:56-05:00[America/New_York]\", { smallestUnit: \"minute\", roundingIncrement: 15 })",
         "result": "\"2024-06-15T12:45:00-05:00[America/New_York]\""
+      },
+      {
+        "call": "roundZoned(\"2024-09-29T03:50:00+13:45[Pacific/Chatham]\", { smallestUnit: \"hour\", roundingMode: \"trunc\" })",
+        "result": "\"2024-09-29T04:00:00+13:45[Pacific/Chatham]\" (after the input — TC39 wall-clock rounding)"
       },
       {
         "call": "roundZoned(\"invalid\", { smallestUnit: \"hour\" })",
@@ -13718,12 +13766,20 @@
         "result": "\"\""
       },
       {
+        "call": "startOfZoned(\"2024-11-03T01:45:00-05:00[America/New_York]\", \"hour\")",
+        "result": "\"2024-11-03T01:00:00-05:00[America/New_York]\" (the second, repeated 1am is its own hour)"
+      },
+      {
+        "call": "startOfZoned(\"2024-09-29T03:50:00+13:45[Pacific/Chatham]\", \"hour\")",
+        "result": "\"2024-09-29T03:45:00+13:45[Pacific/Chatham]\" (local 03:00 never happened; the hour began at the jump)"
+      },
+      {
         "call": "startOfZoned(\"2024-11-03T01:45:00-05:00[America/New_York]\", \"hour\", { disambiguation: \"earlier\" })",
-        "result": "\"2024-11-03T01:00:00-04:00[America/New_York]\" (source sits in the second, repeated 1am of the fall-back overlap; \"earlier\" resolves start-of-hour to the first (EDT) pass)"
+        "result": "\"2024-11-03T01:00:00-04:00[America/New_York]\" (opting in: the wall-clock 1am resolved to the first (EDT) pass)"
       },
       {
         "call": "startOfZoned(\"2024-11-03T01:45:00-05:00[America/New_York]\", \"hour\", { disambiguation: \"reject\" })",
-        "result": "\"\" (same overlap; \"reject\" throws because start-of-hour is ambiguous between the two 1am instants)"
+        "result": "\"\" (opting in: \"reject\" throws because the wall-clock 1am is ambiguous between the two passes)"
       },
       {
         "call": "startOfZoned(\"2024-11-03T01:45:00-05:00[America/New_York]\", \"hour\", { disambiguation: \"reject\", offset: \"prefer\" })",
@@ -14693,6 +14749,10 @@
         "result": "// [\n//   { instant: \"2024-03-10T07:00:00Z\", offsetBefore: \"-05:00\", offsetAfter: \"-04:00\" },\n//   { instant: \"2024-11-03T06:00:00Z\", offsetBefore: \"-04:00\", offsetAfter: \"-05:00\" },\n// ]"
       },
       {
+        "call": "getDstTransitions(\"Asia/Singapore\", 1982)",
+        "result": "// [{ instant: \"1981-12-31T16:00:00Z\", offsetBefore: \"+07:30\", offsetAfter: \"+08:00\" }]"
+      },
+      {
         "call": "getDstTransitions(\"Asia/Tokyo\", 2024)",
         "result": "[]"
       },
@@ -15643,7 +15703,7 @@
     "module": "map",
     "kind": "function",
     "signature": "mapZonedHoursInDay(anchor: string, optionsArg?: { disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\"; offset?: \"reject\" | \"use\" | \"prefer\" | \"ignore\"; }): string[]",
-    "description": "Return an array of zoned datetime strings representing each hour boundary for the 24-hour window starting at midnight of the anchor's local day.",
+    "description": "Return an array of zoned datetime strings representing each hour boundary of the anchor's local day.",
     "sourcePath": "packages/gmt/src/zoned/map/mapZonedHoursInDay.ts",
     "examples": [
       {
@@ -15653,6 +15713,10 @@
       {
         "call": "mapZonedHoursInDay(\"2024-03-10T12:34:56.789-05:00[America/New_York]\")",
         "result": "[\"2024-03-10T00:00:00-05:00[America/New_York]\", ...] (skips 2 AM due to DST; unaffected by `disambiguation` since this gap is inside the loop's arithmetic, not the anchor)"
+      },
+      {
+        "call": "mapZonedHoursInDay(\"2024-09-08T12:00:00-03:00[America/Santiago]\")",
+        "result": "[\"2024-09-08T01:00:00-03:00[America/Santiago]\", ..., \"2024-09-08T23:00:00-03:00[America/Santiago]\"] (23 entries; midnight is skipped)"
       },
       {
         "call": "mapZonedHoursInDay(\"2018-11-04T12:00:00-02:00[America/Sao_Paulo]\", { disambiguation: \"reject\" })",
@@ -15962,6 +16026,10 @@
       {
         "call": "parseRfc2822(\"5 Jan 2024 09:00:00 GMT\")",
         "result": "\"2024-01-05T09:00:00+00:00[+00:00]\""
+      },
+      {
+        "call": "parseRfc2822(\"Sat, 31 Feb 2024 14:30:00 -0400\")",
+        "result": "\"\" (impossible date)"
       },
       {
         "call": "parseRfc2822(\"not a date\")",
