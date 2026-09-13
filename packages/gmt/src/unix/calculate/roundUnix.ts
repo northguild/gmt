@@ -9,6 +9,10 @@ import { isValidTimeZone } from "../../zoned/validate";
  * - Converts to ZonedDateTime, rounds, converts back to epoch.
  * - Supports: "day", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond".
  * - Date units ("year", "month", "week") are not supported by the Temporal polyfill's ZonedDateTime.round() — they return null.
+ * - Follows TC39 `ZonedDateTime.round`, which rounds the wall clock and re-resolves it in the
+ *   zone. Across a transition the result can land after the input — in `Pacific/Chatham`,
+ *   1727532300000 (03:50+13:45) truncated to the hour gives 1727532900000, 15 minutes later.
+ *   Use `floorToZone` for a boundary that never exceeds the instant.
  * - Returns null for invalid input.
  *
  * @param value Unix timestamp (number)
@@ -19,6 +23,7 @@ import { isValidTimeZone } from "../../zoned/validate";
  * @example roundUnix(1706659200000, { smallestUnit: "day", epochUnit: "seconds" }) // 1706640000 (start of day in seconds)
  * @example roundUnix(1706659200000, { smallestUnit: "hour", roundingIncrement: 2 }) // 1706662800000 (rounded to nearest 2-hour mark)
  * @example roundUnix(-86400000, { smallestUnit: "day" }) // -86400000 (start of day for negative timestamp)
+ * @example roundUnix(1727532300000, { smallestUnit: "hour", roundingMode: "trunc", timeZone: "Pacific/Chatham" }) // 1727532900000 (after the input — TC39 wall-clock rounding)
  * @example roundUnix("invalid", { smallestUnit: "hour" }) // null
  * @example roundUnix(NaN, { smallestUnit: "hour" }) // null
  */

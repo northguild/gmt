@@ -7,7 +7,7 @@ description: Test-driven development. Use when the user wants to build features 
 
 TDD is the red → green loop. This skill is the reference that makes that loop produce tests worth keeping: what a good test is, where tests go, the anti-patterns, and the rules of the loop. Every section applies on every cycle: consult them before and during the loop, not after.
 
-When exploring the codebase, read `CONTEXT.md` (if it exists) so test names and interface vocabulary match the project's domain language, and respect ADRs in the area you're touching.
+When exploring the codebase, read [AGENTS.md](../../../AGENTS.md) and the [testing standards](../../../context/testing-standards/references/index.md) so test names and fixtures match the project's conventions, and respect the decisions of record in [coding-standards § Calendar & zone semantics](../../../context/coding-standards.md#calendar--zone-semantics).
 
 ## What a good test is
 
@@ -23,7 +23,7 @@ A **seam** is the public boundary you test at: the interface where you observe b
 
 Ask: "What's the public interface, and which seams should we test?"
 
-When the shape of that interface is itself in question (how deep the module is, where the seam belongs, what the interface should expose), call the Skill tool with "codebase-design" for the vocabulary. It is the shared source of the module, interface, depth, seam, adapter, leverage and locality terms, and it is a reference to consult, not a session to run.
+In GMT the seam is almost always the exported function of one namespace (`plain/`, `zoned/`, `calendar/`, …) — test through it, not through `internal/` helpers, unless the helper is itself the unit agreed as the seam.
 
 ## Anti-patterns
 

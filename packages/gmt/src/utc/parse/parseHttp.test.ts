@@ -35,6 +35,18 @@ describe("parseHttp", () => {
     expect(parseHttp(value)).toBe("");
   });
 
+  it.each`
+    value                              | reason
+    ${"Sat, 31 Feb 2024 14:30:00 GMT"} | ${"February has no 31st"}
+    ${"Wed, 29 Feb 2023 14:30:00 GMT"} | ${"2023 is not a leap year"}
+    ${"Mon, 31 Apr 2024 14:30:00 GMT"} | ${"April has 30 days"}
+  `(
+    "returns '' for impossible date $value ($reason) instead of clamping",
+    ({ value }: { value: string }) => {
+      expect(parseHttp(value)).toBe("");
+    },
+  );
+
   it("round-trips through formatHttp", () => {
     const original = "Fri, 15 Mar 2024 14:30:00 GMT";
     expect(formatHttp(parseHttp(original))).toBe(original);

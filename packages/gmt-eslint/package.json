@@ -45,7 +45,7 @@
     "publish:dry-run": "npm publish --access public --dry-run"
   },
   "devDependencies": {
-    "@tanstack/intent": "^0.3.8",
+    "@tanstack/intent": "^0.4.0",
     "typescript": "^5.9.3"
   },
   "peerDependencies": {

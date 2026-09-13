@@ -1,3 +1,4 @@
+import { Temporal } from "@js-temporal/polyfill";
 import { battleTestTimeZones } from "../../test";
 import { getDstTransitions } from ".";
 
@@ -72,30 +73,94 @@ describe("getDstTransitions", () => {
     expect(result[2].offsetAfter).toBe("+01:00");
   });
 
-  it.each`
-    timeZone              | expected
-    ${"UTC"}              | ${0}
-    ${"GMT"}              | ${0}
-    ${"Etc/GMT"}          | ${0}
-    ${"America/Nome"}     | ${2}
-    ${"Asia/Anadyr"}      | ${0}
-    ${"Europe/Lisbon"}    | ${2}
-    ${"Europe/Dublin"}    | ${2}
-    ${"Europe/Berlin"}    | ${2}
-    ${"Europe/Helsinki"}  | ${2}
-    ${"Europe/Istanbul"}  | ${0}
-    ${"Asia/Kolkata"}     | ${0}
-    ${"Asia/Kathmandu"}   | ${0}
-    ${"Asia/Shanghai"}    | ${0}
-    ${"America/New_York"} | ${2}
-    ${"America/Chicago"}  | ${2}
-    ${"America/Phoenix"}  | ${0}
-  `(
+  // Transition count per battle-test zone in 2024, verified against @js-temporal/polyfill.
+  const expectedTransitionsIn2024 = {
+    UTC: 0,
+    GMT: 0,
+    "Etc/GMT": 0,
+    "America/Nome": 2,
+    "Asia/Anadyr": 0,
+    "Europe/Lisbon": 2,
+    "Europe/Dublin": 2,
+    "Europe/Berlin": 2,
+    "Europe/Helsinki": 2,
+    "Europe/Istanbul": 0,
+    "Asia/Kolkata": 0,
+    "Asia/Kathmandu": 0,
+    "Asia/Shanghai": 0,
+    "Australia/Lord_Howe": 2,
+    "Pacific/Chatham": 2,
+    "Pacific/Apia": 0,
+    "Pacific/Niue": 0,
+    "America/New_York": 2,
+    "America/Chicago": 2,
+    "America/Phoenix": 0,
+  } satisfies Record<(typeof battleTestTimeZones)[number], number>;
+
+  it.each(
+    battleTestTimeZones.map((timeZone) => ({
+      timeZone,
+      expected: expectedTransitionsIn2024[timeZone],
+    })),
+  )(
     "returns $expected transitions for battle-test timeZone $timeZone in 2024",
     ({ timeZone, expected }) => {
       expect(getDstTransitions(timeZone, 2024)).toHaveLength(expected);
     },
   );
+
+  // Offset changes landing exactly on local 1 January 00:00 belong to the new year.
+  it.each`
+    timeZone                | year    | expected
+    ${"Asia/Singapore"}     | ${1981} | ${[]}
+    ${"Asia/Singapore"}     | ${1982} | ${[{ instant: "1981-12-31T16:00:00Z", offsetBefore: "+07:30", offsetAfter: "+08:00" }]}
+    ${"Pacific/Kiritimati"} | ${1994} | ${[]}
+    ${"Pacific/Kiritimati"} | ${1995} | ${[{ instant: "1994-12-31T10:00:00Z", offsetBefore: "-10:00", offsetAfter: "+14:00" }]}
+  `(
+    "reports a transition at local January 1 00:00 in $timeZone for $year as $expected",
+    ({ timeZone, year, expected }) => {
+      expect(getDstTransitions(timeZone, year)).toEqual(expected);
+    },
+  );
+
+  // The bound is 20 in-year transitions; the scan needs one more lookup to see it has left the
+  // year, so a year with exactly 20 must still return all 20, not the exhaustion sentinel.
+  it("returns all 20 transitions when a year has exactly the bound", () => {
+    const firstInYear = Temporal.ZonedDateTime.from(
+      "2024-01-01T12:00:00+00:00[UTC]",
+    );
+    const nextYear = Temporal.ZonedDateTime.from(
+      "2025-01-01T12:00:00+00:00[UTC]",
+    );
+    let calls = 0;
+    vi.spyOn(
+      Temporal.ZonedDateTime.prototype,
+      "getTimeZoneTransition",
+    ).mockImplementation(() => {
+      const index = calls++;
+      return index < 20 ? firstInYear.add({ days: index }) : nextYear;
+    });
+
+    const expected = Array.from({ length: 20 }, (_, index) => ({
+      instant: `2024-01-${String(index + 1).padStart(2, "0")}T12:00:00Z`,
+      offsetBefore: "+00:00",
+      offsetAfter: "+00:00",
+    }));
+
+    expect(getDstTransitions("UTC", 2024)).toEqual(expected);
+  });
+
+  it("returns [] when the transition scan exhausts its bound without leaving the year", () => {
+    const midYear = Temporal.ZonedDateTime.from(
+      "2024-06-15T12:00:00-04:00[America/New_York]",
+    );
+    vi.spyOn(
+      Temporal.ZonedDateTime.prototype,
+      "getTimeZoneTransition",
+    ).mockReturnValue(midYear);
+
+    expect(getDstTransitions("America/New_York", 2024)).toEqual([]);
+  });
 
   it("returns transitions with correctly chained offsets for all battle-test timeZones", () => {
     for (const timeZone of battleTestTimeZones) {

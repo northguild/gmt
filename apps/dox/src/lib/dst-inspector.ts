@@ -275,6 +275,21 @@ export function buildZonedValueFromMinutes(
   return `${localDate}T${h}:${m}:00[${zone}]`;
 }
 
+/**
+ * Strip a `[zone]` suffix and any embedded UTC offset from a zoned value
+ * string, leaving the plain local wall-clock time (`YYYY-MM-DDTHH:MM:SS`).
+ *
+ * `convertPlainDateTimeToZoned` takes a *plain* datetime with no offset — it
+ * resolves the wall time itself via `disambiguation`. Handing it a string that
+ * already carries an offset or `[zone]` is not the widget's probe shape (that
+ * belongs to `Temporal.ZonedDateTime.from`), so this always removes both
+ * regardless of which one is present.
+ */
+export function toPlainLocalDateTime(value: string): string {
+  const withoutZone = value.replace(/\[[^\]]*\]$/, "");
+  return withoutZone.replace(/(?:Z|[+-]\d{2}:\d{2})$/, "");
+}
+
 // ---------------------------------------------------------------------------
 // Probe result classification
 // ---------------------------------------------------------------------------
@@ -290,9 +305,11 @@ export interface ProbeClassification {
 }
 
 /**
- * Classify a startOfZoned result to explain what the probe hour experienced.
+ * Classify a `convertPlainDateTimeToZoned` result to explain what the probe
+ * wall time experienced.
  *
- * - If result is sentinel (""): checks whether disambiguation=reject or offset=prefer made it fail.
+ * - If result is sentinel (""): checks whether disambiguation="reject" made it fail
+ *   because the probe wall time is ambiguous (overlap) or nonexistent (gap).
  * - If result is normal: determines whether the probe hour falls in a gap, overlap, or normal time
  *   by comparing the probe hour against each transition's local hour.
  */
@@ -301,12 +318,11 @@ export function classifyProbeResult(
   transitions: DstTransition[],
   probeHour: number,
   zone: string,
-  options?: { disambiguation?: string; offset?: string },
+  options?: { disambiguation?: string },
 ): ProbeClassification {
-  // Sentinel case: startOfZoned returned ""
+  // Sentinel case: convertPlainDateTimeToZoned returned ""
   if (result === "") {
     const dis = options?.disambiguation ?? "compatible";
-    const off = options?.offset ?? "ignore";
 
     // Find the closest transition within 1 hour of the probe hour
     let nearbyTransition: DstTransition | undefined;
@@ -324,20 +340,15 @@ export function classifyProbeResult(
       const overlap = isOverlap(nearbyTransition);
       return {
         type: overlap ? "overlap" : "gap",
-        explanation: `disambiguation="reject" caused the start-of-hour boundary to fail — the probe hour lands in a ${overlap ? "fall-back overlap" : "spring-forward gap"}.`,
-      };
-    }
-
-    if (off === "prefer" && dis === "reject") {
-      return {
-        type: "normal",
-        explanation: `offset:"prefer" makes disambiguation inert — the source offset is still valid after reset, so "reject" never fires. Try offset:"ignore" to see disambiguation take effect.`,
+        explanation: overlap
+          ? `disambiguation="reject" rejected this wall time — it is ambiguous (a fall-back overlap: the same local time happens twice).`
+          : `disambiguation="reject" rejected this wall time — it does not exist (a spring-forward gap: that local time is skipped).`,
       };
     }
 
     return {
       type: "normal",
-      explanation: `startOfZoned returned an empty result for this input.`,
+      explanation: `convertPlainDateTimeToZoned returned an empty result for this input.`,
     };
   }
 

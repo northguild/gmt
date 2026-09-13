@@ -51,5 +51,5 @@ The original FIN-1 hardcoded a five-exchange table with a single `Hours (local)`
 - A holiday returns an empty session list and `marketOpenAt` of `''`
 - `isMarketOpen` with `phases: ['preMarket', 'continuous']` returns `true` before the open
 - Sessions resolve correctly during the spring weeks when US and EU DST are misaligned
-- Full IANA timezone coverage
+- `battleTestTimeZones` coverage plus probe-zone transition rows for timezone-aware functions (see `context/coding-standards.md` § Calendar & zone semantics)
 - `pnpm run validate` stays green

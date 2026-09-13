@@ -3,6 +3,7 @@ import {
   formatZonedInCalendar,
   parseCalendarZonedPairForArithmetic,
   resolveDurationUnit,
+  tileByUnit,
 } from "../../internal";
 import { isValidCalendarZonedDateTime } from "../validate/isValidCalendarZonedDateTime";
 
@@ -11,6 +12,15 @@ import { isValidCalendarZonedDateTime } from "../validate/isValidCalendarZonedDa
  *
  * - Returns an array of `{ start, end }` records that tile the interval.
  * - The final sub-interval is trimmed so its `end` never exceeds the original `end`.
+ * - Calendar-unit boundaries (years, months, weeks, days) are computed from `start`
+ *   (`start + k × amount`, as Temporal and Luxon's `Interval.splitBy` do), so month-end starts
+ *   don't drift: a monthly split from January 31 lands on February 29, March 31, April 30.
+ * - Exact-unit boundaries (hours and smaller) step from the previous boundary. Exact units never
+ *   clamp, and stepping keeps nanosecond precision where `k × amount` would pass
+ *   `Number.MAX_SAFE_INTEGER`.
+ * - A calendar step that resolves to the same instant as the previous boundary (a deleted local
+ *   day, such as 30 December 2011 in `Pacific/Apia`) is skipped, so no empty slice is produced.
+ *   A step that goes backwards returns `[]`.
  * - Returns `[{ start, end }]` when `start === end` (zero-length interval).
  * - Accepts GMT calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
  *   well as bare ISO ones — E7 (issue #152). Stepping by a calendar unit ("1 month") resolves
@@ -30,6 +40,7 @@ import { isValidCalendarZonedDateTime } from "../validate/isValidCalendarZonedDa
  * @example splitIntervalByUnitZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-01-02T00:00:00+00:00[UTC]", "hour", 6) // [{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-01T06:00:00+00:00[UTC]" }, { start: "2024-01-01T06:00:00+00:00[UTC]", end: "2024-01-01T12:00:00+00:00[UTC]" }, { start: "2024-01-01T12:00:00+00:00[UTC]", end: "2024-01-01T18:00:00+00:00[UTC]" }, { start: "2024-01-01T18:00:00+00:00[UTC]", end: "2024-01-02T00:00:00+00:00[UTC]" }]
  * @example splitIntervalByUnitZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-01-01T01:30:00+00:00[UTC]", "hour", 1) // [{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-01T01:00:00+00:00[UTC]" }, { start: "2024-01-01T01:00:00+00:00[UTC]", end: "2024-01-01T01:30:00+00:00[UTC]" }]
  * @example splitIntervalByUnitZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-01-01T00:00:00+00:00[UTC]", "hour", 1) // [{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-01T00:00:00+00:00[UTC]" }]
+ * @example splitIntervalByUnitZoned("2011-12-29T12:00:00-10:00[Pacific/Apia]", "2012-01-01T12:00:00+14:00[Pacific/Apia]", "day", 1) // [{ start: "2011-12-29T12:00:00-10:00[Pacific/Apia]", end: "2011-12-31T12:00:00+14:00[Pacific/Apia]" }, { start: "2011-12-31T12:00:00+14:00[Pacific/Apia]", end: "2012-01-01T12:00:00+14:00[Pacific/Apia]" }]
  * @example splitIntervalByUnitZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-01-02T00:00:00+00:00[UTC]", "hour", 0) // []
  * @example splitIntervalByUnitZoned("invalid", "2024-01-02T00:00:00+00:00[UTC]", "hour", 1) // []
  */
@@ -80,30 +91,18 @@ export function splitIntervalByUnitZoned(
       ];
     }
 
-    const result: Array<{ start: string; end: string }> = [];
+    const slices = tileByUnit(
+      startVal,
+      endVal,
+      Temporal.ZonedDateTime.compare,
+      resolvedUnit,
+      amount,
+    );
 
-    for (
-      let current = startVal;
-      Temporal.ZonedDateTime.compare(current, endVal) < 0;
-    ) {
-      const next = current.add({ [resolvedUnit]: amount });
-
-      if (Temporal.ZonedDateTime.compare(next, current) === 0) {
-        return [];
-      }
-
-      const sliceEnd =
-        Temporal.ZonedDateTime.compare(next, endVal) > 0 ? endVal : next;
-
-      result.push({
-        start: formatZonedInCalendar(current, calendar),
-        end: formatZonedInCalendar(sliceEnd, calendar),
-      });
-
-      current = next;
-    }
-
-    return result;
+    return (slices ?? []).map(([sliceStart, sliceEnd]) => ({
+      start: formatZonedInCalendar(sliceStart, calendar),
+      end: formatZonedInCalendar(sliceEnd, calendar),
+    }));
   } catch {
     return [];
   }

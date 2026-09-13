@@ -26,25 +26,28 @@ export function functionName(...): ... {}
 
 ```ts
 /**
- * Return the latest (maximum) of the given PlainDate values.
+ * Return a PlainDate ISO string with `units` added.
  *
- * - Returns null if the array is empty or contains no valid dates.
- * - Validation is performed on each item in the array.
+ * - Returns "" for invalid inputs.
+ * - `overflow` ("constrain" (default) | "reject") controls out-of-range results; the default
+ *   clamps Jan 31 + 1 month to Feb 29/28 (TC39).
  *
- * @param dates Array of ISO PlainDate strings (e.g. "2024-03-10")
- * @returns The latest date string, or null on invalid input
+ * @param value ISO PlainDate string (e.g. "2024-03-10")
+ * @param units Partial<Record<DateDurationUnit, number>> object specifying units to add
+ * @param options optional: overflow ("constrain" | "reject")
+ * @returns ISO PlainDate string after addition, or "" on invalid input
  *
- * @example maxDate(["2024-03-10", "2024-03-15", "2024-03-12"]) // "2024-03-15"
- * @example maxDate(["invalid", "2024-03-15", "2024-03-12"])    // "2024-03-15"
- * @example maxDate(["invalid", "also invalid"])                 // null
- * @example maxDate([])                                          // null
+ * @example addDate("2024-03-10", { days: 5 }) // "2024-03-15"
+ * @example addDate("invalid", { days: 5 }) // ""
+ * @example addDate("2024-01-31", { months: 1 }) // "2024-02-29"
+ * @example addDate("2024-01-31", { months: 1 }, { overflow: "reject" }) // ""
  */
 ```
 
 ## Key Rules
 
 - **Show permutations**: valid input, invalid input, edge cases (empty array, boundary values).
-- **@returns must name the sentinel**: `or "" on invalid input`, `or null on invalid input`, `or false on invalid input`.
-- **Match the sentinel to the return type**: `""` for strings, `null` for numbers/arrays, `false` for booleans.
+- **@returns must name the sentinel**: `or "" on invalid input`, `or null on invalid input`, `or false on invalid input`, `or [] on invalid input`, `or 0n on invalid input`.
+- **Match the sentinel to the return type** using the single table in [coding-standards § API Contract](./coding-standards.md#api-contract).
 - **Use `@example functionName(args) // result`** — inline comment style, one example per line.
 - Do not write multi-paragraph prose blocks. Keep it tight.

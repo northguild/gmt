@@ -124,15 +124,16 @@ pnpm run lint
 │   │   │   │   └── validate/   # isValidUtc
 │   │   │   ├── regex/          # Composable regex patterns for date/time strings
 │   │   │   └── package.json
-│   ├── gmt-biome/              # @northguild/gmt-biome — Shared Biome config
+│   ├── gmt-biome/              # @northguild/gmt-biome — published Biome config for consumers
 │   │   ├── biome.json          # Consumer-facing config (uses ./plugins/ paths)
 │   │   └── plugins/            # Grit plugins banning Date APIs
-│   └── gmt-eslint/             # @northguild/gmt-eslint — Shared ESLint flat config
-│       └── eslint/
-│           └── index.mjs       # Flat config banning Date APIs
+│   ├── gmt-eslint/             # @northguild/gmt-eslint — published ESLint flat config for consumers
+│   │   └── eslint/
+│   │       └── index.mjs       # Flat config banning Date APIs
+│   └── gmt-oxlint/             # @northguild/gmt-oxlint — Oxlint JS plugin (also lints this repo)
 ├── northguild/                  # Workspace configuration (internal, do not publish)
-├── biome.json                   # Root Biome config — references gmt-biome plugins directly
-├── eslint.config.mjs            # Root ESLint config — imports gmt-eslint
+├── oxlint.config.js             # Root Oxlint config — this repo's linter
+├── .oxfmtrc.json                # Root oxfmt config — this repo's formatter
 ├── tsconfig.base.json           # Shared TypeScript base config
 └── package.json                 # Workspace root
 ```
@@ -157,7 +158,7 @@ Use the pre-built mock functions from `packages/gmt/src/test/mocks` to test erro
 **Usage**:
 
 ```ts
-import { mockTemporalPlainDateFromThrow } from "@gmt/test/mocks";
+import { mockTemporalPlainDateFromThrow } from "../../test/mocks"; // relative — no path alias
 
 it("returns empty string when Temporal.PlainDate.from throws", () => {
   mockTemporalPlainDateFromThrow();
@@ -271,7 +272,7 @@ export function functionName(...): ... {}
 2. **Show permutations**: valid inputs, invalid inputs, edge cases, empty cases
 3. **Include return type in @returns**: `or "" on invalid input`, `or null on invalid input`, `or false on invalid input`
 4. **No Date objects**: Use Temporal or ISO strings only (enforced elsewhere)
-5. **Match return sentinel**: `""` for strings, `null` for numbers, `false` for booleans
+5. **Match return sentinel** using the single [sentinel table](./context/coding-standards.md#api-contract) — `""` strings, `null` numbers and objects, `false` booleans, `[]` arrays, `0n` precision bigints
 
 ### Error handling: Always wrap Temporal methods
 
@@ -282,20 +283,23 @@ Temporal's static methods like `Temporal.PlainDate.from()` throw `RangeError` on
 **Pattern for string returns**:
 
 ```ts
-export const addDays = (dateStr: string, days: number): string => {
+export function addDays(dateStr: string, days: number): string {
+  if (!isValidDate(dateStr)) {
+    return "";
+  }
   try {
     const date = Temporal.PlainDate.from(dateStr);
     return date.add({ days }).toString();
   } catch {
     return "";
   }
-};
+}
 ```
 
 **Pattern for number returns**:
 
 ```ts
-export function getDay = (dateStr: string): number | null {
+export function getDay(dateStr: string): number | null {
   if (!isValidDate(dateStr)) {
     return null;
   }
@@ -305,26 +309,27 @@ export function getDay = (dateStr: string): number | null {
   } catch {
     return null;
   }
-};
+}
 ```
 
 **Key rules**:
 
-- Wrap the **entire block** after Zod validation (if any) that uses Temporal methods
-- Return `""` for string returns, `null` for number returns, `false` for boolean returns
+- Guard with the matching `isValid*` validator first, then wrap the **entire block** that uses Temporal methods (the second parse is intentional — see [coding standards](./context/coding-standards.md))
+- Return the sentinel from the [sentinel table](./context/coding-standards.md#api-contract) (`""` / `null` / `false` / `[]` / `0n`)
 - Never let Temporal exceptions propagate to the caller
 - The catch block should have no arguments (`catch { ... }`) since we don't need the error
 
 ### Tools
 
-| Tool                                          | Purpose                                              |
-| --------------------------------------------- | ---------------------------------------------------- |
-| [Biome](https://biomejs.dev/)                 | Formatting and linting (+ Grit plugins for Date ban) |
-| [TypeScript](https://www.typescriptlang.org/) | Type safety                                          |
-| [Vitest](https://vitest.dev/)                 | Testing                                              |
-| [pnpm](https://pnpm.io/)                      | Package manager and task runner                      |
+| Tool                                               | Purpose                                              |
+| -------------------------------------------------- | ---------------------------------------------------- |
+| [Oxlint](https://oxc.rs/docs/guide/usage/linter)   | Linting (+ the `gmt-oxlint` plugin for the Date ban) |
+| [oxfmt](https://oxc.rs/docs/guide/usage/formatter) | Formatting                                           |
+| [TypeScript](https://www.typescriptlang.org/)      | Type safety                                          |
+| [Vitest](https://vitest.dev/)                      | Testing                                              |
+| [pnpm](https://pnpm.io/)                           | Package manager and task runner                      |
 
-All Biome rules are in [biome.json](./biome.json) (Grit plugins live in [packages/gmt-biome/plugins/](./packages/gmt-biome/plugins/)).
+Lint rules are in [oxlint.config.js](./oxlint.config.js) and formatting in [.oxfmtrc.json](./.oxfmtrc.json). Run `pnpm lint` / `pnpm format:fix`. The Biome and ESLint packages are published for consumers; this repo does not lint itself with them.
 
 ### Development conventions
 
@@ -449,4 +454,4 @@ Always finish with a staleness check:
 pnpm exec intent stale packages/gmt/skills
 ```
 
-See `.agents/skills/tanstack-intent/SKILL.md` for the full step-by-step (deciding new skill vs. extend existing, updating `_artifacts/domain_map.yaml` and `_artifacts/skill_tree.yaml`, etc.), and `context/roadmap/index.md`'s "Instructions for the agent picking up a story" for when this is required as part of a roadmap story.
+See `.agents/skills/tanstack-intent/SKILL.md` for the full step-by-step (deciding new skill vs. extend existing, updating `_artifacts/domain_map.yaml` and `_artifacts/skill_tree.yaml`, etc.), and `.agents/finalizer.md` for when this is required as part of an epic story.

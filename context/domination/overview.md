@@ -47,6 +47,8 @@ realm. [tracker.md](tracker.md) has the 53 stories in build order.
 | Leap seconds                | **Handle correctly** — `SPA-48` owns the IERS table; `MAR-16` and `IOT-31` consume it.                                                                    |
 | Telemetry role              | **Output layer, not a realm** — every realm produces telemetry. GMT provides correct timestamps.                                                          |
 | Invented quantities         | **Forbidden.** If a value cannot be derived from the inputs, the function does not return it.                                                              |
+| Calendar semantics          | **TC39 Temporal is the authority.** Arithmetic clamps a non-existent day (`overflow: "constrain"`); parsers reject. Matches EU, UK and US law and every major library but date-fns. |
+| Zone-aware boundaries       | **Real boundaries, never truncate-and-re-resolve.** `start ≤ input < next start`, via `internal/zonedBucket.ts`; tested on the probe zones. See [coding-standards § Calendar & zone semantics](../coding-standards.md#calendar--zone-semantics). |
 
 ### Why the build order changed
 
@@ -207,7 +209,7 @@ See [painpoints.md](painpoints.md) for the full parked list with reasons.
 - [painpoints.md](painpoints.md) — researched evidence per realm, with citations
 - [tracker.md](tracker.md) — 53 stories, `Blocked by` column, Definition of Done
 - [issues/](issues/) — story specs, `CORE-1` through `SPA-53`
-- `context/misc/spacetime-reference-frames.md` — research on space/satellite time standards
+- [research/spacetime-reference-frames.md](research/spacetime-reference-frames.md) — research on space/satellite time standards
 
 Standards cited by stories in this epic, each verified against a primary source:
 

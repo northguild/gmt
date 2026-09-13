@@ -1,13 +1,21 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { plainDateTime } from "../../regex";
 import { isValidDateTime } from "../validate";
-import { resolveDurationUnit } from "../../internal";
+import { resolveDurationUnit, tileByUnit } from "../../internal";
 
 /**
  * Split a date-time interval into sub-intervals of `amount × unit`.
  *
  * - Returns an array of `{ start, end }` records that tile the interval.
  * - The final sub-interval is trimmed so its `end` never exceeds the original `end`.
+ * - Calendar-unit boundaries (years, months, weeks, days) are computed from `start`
+ *   (`start + k × amount`, as Temporal and Luxon's `Interval.splitBy` do), so month-end starts
+ *   don't drift: a monthly split from January 31 lands on February 29, March 31, April 30.
+ * - Exact-unit boundaries (hours and smaller) step from the previous boundary. Exact units never
+ *   clamp, and stepping keeps nanosecond precision where `k × amount` would pass
+ *   `Number.MAX_SAFE_INTEGER`.
+ * - A step that resolves to the same value as the previous boundary is skipped, so no empty
+ *   slice is produced. A step that goes backwards returns `[]`.
  * - Returns `[{ start, end }]` when `start === end` (zero-length interval).
  * - Returns `[]` on invalid input (unparseable start/end, unsupported unit, non-positive amount).
  *
@@ -67,30 +75,18 @@ export function splitIntervalByUnitDateTime(
       return [{ start: startVal.toString(), end: endVal.toString() }];
     }
 
-    const result: Array<{ start: string; end: string }> = [];
+    const slices = tileByUnit(
+      startVal,
+      endVal,
+      Temporal.PlainDateTime.compare,
+      resolvedUnit,
+      amount,
+    );
 
-    for (
-      let current = startVal;
-      Temporal.PlainDateTime.compare(current, endVal) < 0;
-    ) {
-      const next = current.add({ [resolvedUnit]: amount });
-
-      if (Temporal.PlainDateTime.compare(next, current) === 0) {
-        return [];
-      }
-
-      const sliceEnd =
-        Temporal.PlainDateTime.compare(next, endVal) > 0 ? endVal : next;
-
-      result.push({
-        start: current.toString(),
-        end: sliceEnd.toString(),
-      });
-
-      current = next;
-    }
-
-    return result;
+    return (slices ?? []).map(([sliceStart, sliceEnd]) => ({
+      start: sliceStart.toString(),
+      end: sliceEnd.toString(),
+    }));
   } catch {
     return [];
   }

@@ -5,7 +5,7 @@ description: >
   and mainline pipelines, including staged rollout options for legacy-heavy
   repositories.
 metadata:
-  library_version: 1.0.1
+  library_version: 1.1.0
 ---
 
 # CI Enforcement
@@ -19,6 +19,9 @@ Use this skill when enabling automated policy checks for Date bans with ESLint.
 
 2. Phase adoption when needed
 - For legacy-heavy repos, start with changed paths or selected packages.
+- The date-library import ban usually carries the largest baseline (every `moment` / `dayjs` /
+  `luxon` / `date-fns` / `spacetime` import). Scope it to new paths first via a flat-config
+  `files` override, then widen as imports are migrated.
 - Expand to full repository enforcement after baseline cleanup.
 
 3. Keep diagnostics actionable

@@ -1,4 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { defaultFractionalDigits } from "../../internal";
 import { isValidDateTimeUnit } from "../../plain";
 import type { FractionalDigit } from "../../types";
 import { isValidUtc } from "../validate/isValidUtc";
@@ -65,14 +66,10 @@ export function roundUtc(
       roundingMode,
     });
 
-    // Handle default precision: 0 for > sec, 3 for ms, 6 for µs, 9 for ns
-    const precisionMap: Record<string, FractionalDigit> = {
-      millisecond: 3,
-      microsecond: 6,
-      nanosecond: 9,
-    };
-    const fractionalDigits =
-      fractionalSecondDigits ?? (precisionMap[smallestUnit] || 0);
+    const fractionalDigits = defaultFractionalDigits(
+      smallestUnit,
+      fractionalSecondDigits,
+    );
 
     return result.toString({ fractionalSecondDigits: fractionalDigits });
   } catch {

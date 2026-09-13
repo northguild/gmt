@@ -1,13 +1,22 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { getSystemTimeZone } from "../../zoned/get";
 import { isValidTimeZone } from "../../zoned/validate";
-import { resolveDurationUnit } from "../../internal";
+import { resolveDurationUnit, tileByUnit } from "../../internal";
 
 /**
  * Split a Unix epoch interval into sub-intervals of `amount × unit`.
  *
  * - Returns an array of `{ start, end }` records that tile the interval.
  * - The final sub-interval is trimmed so its `end` never exceeds the original `end`.
+ * - Calendar-unit boundaries (years, months, weeks, days) are computed from `start`
+ *   (`start + k × amount`, as Temporal and Luxon's `Interval.splitBy` do), so month-end starts
+ *   don't drift: a monthly split from January 31 lands on February 29, March 31, April 30.
+ * - Exact-unit boundaries (hours and smaller) step from the previous boundary. Exact units never
+ *   clamp, and stepping keeps nanosecond precision where `k × amount` would pass
+ *   `Number.MAX_SAFE_INTEGER` (boundaries are then floored to milliseconds).
+ * - A calendar step that resolves to the same instant as the previous boundary (a deleted local
+ *   day, such as 30 December 2011 in `Pacific/Apia`) is skipped, so no empty slice is produced.
+ *   A step that goes backwards returns `[]`.
  * - Returns `[{ start, end }]` when `start === end` (zero-length interval).
  * - Returns `[]` on invalid input (non-finite/non-integer start/end, unsupported unit,
  *   non-positive amount, or invalid timeZone).
@@ -79,29 +88,28 @@ export function splitIntervalByUnitUnix(
       return [{ start: startMs, end: endMs }];
     }
 
-    const result: Array<{ start: number; end: number }> = [];
+    const startZoned =
+      Temporal.Instant.fromEpochMilliseconds(startMs).toZonedDateTimeISO(
+        timeZone,
+      );
+    const endZoned =
+      Temporal.Instant.fromEpochMilliseconds(endMs).toZonedDateTimeISO(
+        timeZone,
+      );
 
-    for (let currentMs = startMs; currentMs < endMs;) {
-      const instant = Temporal.Instant.fromEpochMilliseconds(currentMs);
-      const zoned = instant.toZonedDateTimeISO(timeZone);
-      const next = zoned.add({ [resolvedUnit]: amount }).toInstant();
-      const nextMs = next.epochMilliseconds;
+    // Boundaries stay ZonedDateTime (nanosecond) values; only the output is floored to ms.
+    const slices = tileByUnit(
+      startZoned,
+      endZoned,
+      Temporal.ZonedDateTime.compare,
+      resolvedUnit,
+      amount,
+    );
 
-      if (nextMs === currentMs) {
-        return [];
-      }
-
-      const sliceEndMs = nextMs > endMs ? endMs : nextMs;
-
-      result.push({
-        start: currentMs,
-        end: sliceEndMs,
-      });
-
-      currentMs = nextMs;
-    }
-
-    return result;
+    return (slices ?? []).map(([sliceStart, sliceEnd]) => ({
+      start: sliceStart.epochMilliseconds,
+      end: sliceEnd.epochMilliseconds,
+    }));
   } catch {
     return [];
   }

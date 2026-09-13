@@ -4,7 +4,7 @@
 
 ## Checks that apply to any Dox change
 
-- `pnpm run validate` (root) is green, **including the 20-cell GMT timezone matrix** — Dox must
+- `pnpm run validate` (root) is green, **including the CI timezone matrix (10 zones × Node 22/24 — see README)** — Dox must
   not perturb `packages/gmt`. From `apps/dox`: `pnpm test`, `pnpm check`, `pnpm lint`.
 - **Generator:** the generated `startOfZoned` page matches
   `packages/gmt/src/zoned/calculate/startOfZoned.ts` line by line (options table, all five

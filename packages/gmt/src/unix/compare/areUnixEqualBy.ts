@@ -9,6 +9,9 @@ import type { UnixUnit } from "../validate/isValidUnixUnit";
  * - Both values are resolved to the start of `unit` in `options.timeZone`
  *   (default: the system time zone) before comparison, so `"day"` compares
  *   calendar days in that zone, not raw epoch buckets.
+ * - The start of `unit` is the real local bucket (see `startOfUnix`), so two epochs are equal
+ *   only when they fall in the same bucket — including one a zone transition shortened, like
+ *   `Pacific/Chatham`'s 15-minute 03:00 hour on its 2024 spring-forward.
  * - `"month"` requires the same month AND year, matching `areDateTimesEqualBy`.
  * - Returns false for an unsupported unit or invalid input.
  *

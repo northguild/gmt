@@ -46,6 +46,31 @@ describe("fiscalYearEndIn", () => {
     },
   );
 
+  // Temporal "constrain": a Feb-29 anchor targets Feb 28 in common years, then shifts to Thursday.
+  it.each`
+    year    | expected
+    ${2023} | ${"2023-03-02"}
+    ${2024} | ${"2024-02-29"}
+    ${2025} | ${"2025-02-27"}
+    ${2026} | ${"2026-02-26"}
+    ${2027} | ${"2027-02-25"}
+    ${2028} | ${"2028-03-02"}
+  `(
+    "puts the year end of a 2024-02-29 anchor falling in $year on $expected",
+    ({ year, expected }) => {
+      const anchor = Temporal.PlainDate.from("2024-02-29");
+
+      expect(fiscalYearEndIn(anchor, year).toString()).toBe(expected);
+    },
+  );
+
+  it("targets February 28, not a leap-year February 29, for a 2025-02-28 anchor in 2028", () => {
+    // A month-end rule would target 2028-02-29; Temporal keeps the month-day, giving 2028-02-25.
+    const anchor = Temporal.PlainDate.from("2025-02-28");
+
+    expect(fiscalYearEndIn(anchor, 2028).toString()).toBe("2028-02-25");
+  });
+
   it("lands in the previous calendar year when the rule's month-day is early January", () => {
     // 2033-01-01 is a Saturday, so this states "the Saturday nearest to January 1".
     const anchor = Temporal.PlainDate.from("2033-01-01");

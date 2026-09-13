@@ -24,4 +24,7 @@ Flipping the status is what clears the story from every other row's `Blocked by`
 `sync` is what applies it. If the work changed what the story consumes, update its
 `## What gmt provides (do not re-implement)` section first — the column is generated from it.
 
-Commit your work to the current branch.
+Leave every change unstaged in the working tree and report that the work is ready. Never
+`git add`, `git commit`, `git push`, branch, or open a PR — the repository owner does all of
+that (see [AGENTS.md § Git — Absolute Prohibitions](../../../AGENTS.md#git--absolute-prohibitions)).
+If a commit message would help, draft one with `/commit-message`.

@@ -1,7 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import {
-  getStartOfZonedUnit,
-  getUnitSpan,
+  countZonedBuckets,
   parseCalendarZonedPairForArithmetic,
   resolveDateTimeUnit,
 } from "../../internal";
@@ -19,6 +18,13 @@ import { isValidCalendarZonedDateTime } from "../validate/isValidCalendarZonedDa
  * - DST-aware: a local day that springs forward counts 23 hour boundaries and one that falls
  *   back counts 25. A local day whose midnight is skipped entirely starts at 01:00.
  * - A fixed 24-hour span touches 25 local hour boundaries in zones offset by :30/:45.
+ * - Counts the real local buckets `floorToZone`/`bucketRange` walk: a bucket shorter than its
+ *   unit still counts once (`Pacific/Chatham`'s 15-minute 03:00 hour on its spring-forward),
+ *   and a local day the zone deleted counts not at all (`Pacific/Apia`'s 2011-12-30).
+ * - The count equals `bucketRange(...).length` wherever `bucketRange` is within its 10,000-bucket
+ *   cap. Counting has its own, separate cap of 10,000 zone transitions, so it keeps answering past
+ *   `bucketRange`'s: two years by hour counts 17,544 while `bucketRange` returns `[]`.
+ * - Returns `null` when the span crosses more than 10,000 zone transitions.
  * - When `start` and `end` carry different time zones, boundaries are counted in `start`'s zone.
  * - Weeks start on Monday (ISO 8601).
  * - Accepts singular or plural units (`"day"` and `"days"` behave identically).
@@ -69,7 +75,7 @@ export function intervalCountZoned(
   }
 
   try {
-    // The pair is resolved BEFORE either endpoint reaches `getStartOfZonedUnit`. Normalizing only
+    // The pair is resolved BEFORE either endpoint reaches `countZonedBuckets`. Normalizing only
     // one side would leave `startOfStart.until(startOfEnd)` throwing on a mismatched pair
     // (verified), so the D5 policy has to be applied to both operands together, up front.
     const { a: startVal, b: pairedEnd } = parseCalendarZonedPairForArithmetic(
@@ -85,22 +91,9 @@ export function intervalCountZoned(
       return null;
     }
 
-    const startOfStart = getStartOfZonedUnit(startVal, resolvedUnit);
-    const startOfEnd = getStartOfZonedUnit(endVal, resolvedUnit);
-
-    const spanned = getUnitSpan(
-      startOfStart.until(startOfEnd, { largestUnit: resolvedUnit }),
-      resolvedUnit,
-    );
-
-    // `.equals()` here IS calendar-sensitive — it is `ZonedDateTime.prototype.equals`, and
-    // `iso.equals(heb)` is `false` even at the same instant (verified). It is safe only by
-    // construction: `startOfEnd` is derived from `endVal` one line above
-    // (`getStartOfZonedUnit(endVal, resolvedUnit)`), so the two always share `endVal`'s calendar
-    // by definition of how `startOfEnd` is built. A refactor that hoists `endVal` out, or that
-    // sources `startOfEnd` from anywhere but `endVal`, breaks this silently — compare instants
-    // (or re-derive `startOfEnd` from `endVal`) if that ever happens.
-    return spanned + (startOfEnd.equals(endVal) ? 0 : 1);
+    // The walker keeps the pair's calendar, so a Hebrew month or year is counted in Hebrew
+    // months or years, and it compares instants, never calendar-sensitive `.equals()`.
+    return countZonedBuckets(startVal, endVal, resolvedUnit);
   } catch {
     return null;
   }

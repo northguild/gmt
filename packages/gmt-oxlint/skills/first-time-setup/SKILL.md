@@ -5,7 +5,7 @@ description: >
   prefer oxlint.config.ts + recommendedConfig import, and verify gmt-oxlint
   diagnostics while preserving current repository lint behavior.
 metadata:
-  library_version: 1.1.2
+  library_version: 1.2.0
 ---
 
 # First-Time Setup
@@ -30,6 +30,10 @@ Use this skill when a user wants to adopt `@northguild/gmt-oxlint`.
 3. Verify enforcement
 - Run Oxlint and confirm Date API bans are reported.
 - Confirm rule IDs are emitted as `@northguild/gmt-oxlint/*`.
+- The recommended config also enables `no-date-library-imports`, which errors on `moment`,
+  `moment-timezone`, `dayjs`, `luxon`, `date-fns`, `date-fns-tz` and `spacetime` imports.
+  In a codebase that still uses them, warn the user before enabling it, or stage it (see
+  the CI enforcement skill) instead of disabling it.
 
 4. Optional aliasing
 - If the user wants shorter rule IDs, use object-form `jsPlugins` with `name` alias and configure rules under that alias.

@@ -11,6 +11,10 @@ metadata:
 
 Use this skill when you want to contribute code directly to gmt.
 
+> **For human contributors.** AI agents working inside the gmt repository must never run
+> `git add`, `git commit`, `git push`, create a branch, or open a pull request — they leave
+> changes unstaged and report them ready. See `AGENTS.md` § Git — Absolute Prohibitions.
+
 ## Contribution Types
 
 - **New method**: Add a missing date/time operation
@@ -28,11 +32,19 @@ Use this skill when you want to contribute code directly to gmt.
 2. Understand the project structure:
    ```
    packages/gmt/src/
-   ├── plain/       # Timezone-free operations
-   ├── zoned/       # Timezone-aware operations
-   ├── utc/        # UTC operations
+   ├── calendar/   # ISO week/ordinal dates, quarters, fiscal periods, zone buckets
+   ├── duration/   # ISO 8601 durations
+   ├── instant/    # Offset-preserving instants, local-time resolution
+   ├── plain/      # Timezone-free operations
+   ├── precision/  # Nanosecond precision and foreign epochs
+   ├── regex/      # Regex patterns
+   ├── span/       # Elapsed and wall-clock spans
    ├── unix/       # Unix epoch operations
-   └── regex/     # Regex patterns
+   ├── utc/        # UTC operations
+   └── zoned/      # Timezone-aware operations
+
+   Inside a namespace, `get/` holds only current-moment accessors (no date argument). A
+   function that takes a date value goes in `calculate/` (or `parse/`, `format/`, …).
    ```
 
 ## Creating a PR
@@ -46,6 +58,8 @@ pnpm install
 ```
 
 ### 2. Create a Feature Branch
+
+Human contributors only (see the note above).
 
 ```bash
 git checkout -b feature/my-new-method
@@ -63,26 +77,27 @@ Follow the `new-method-implementation` skill guidelines:
 **Example structure:**
 
 ```ts
-// packages/gmt/src/plain/get/getQuarter.ts
+// packages/gmt/src/plain/calculate/getHalfYear.ts
 import { Temporal } from "@js-temporal/polyfill";
-import { PlainDateSchema } from "../types";
+import { isValidDate } from "../validate";
 
 /**
- * Get the ISO quarter (1-4) for a PlainDate.
+ * Get the half-year (1-2) for a PlainDate.
  *
  * @param dateStr ISO 8601 date string (e.g. "2024-03-15")
- * @returns Quarter 1-4, or null on invalid input
+ * @returns Half-year 1-2, or null on invalid input
  *
- * @example getQuarter("2024-03-15") // 1
- * @example getQuarter("2024-05-20") // 2
+ * @example getHalfYear("2024-03-15") // 1
+ * @example getHalfYear("2024-07-01") // 2
+ * @example getHalfYear("invalid") // null
  */
-export function getQuarter(dateStr: string): number | null {
-  if (!PlainDateSchema.safeParse(dateStr).success) {
+export function getHalfYear(dateStr: string): number | null {
+  if (!isValidDate(dateStr)) {
     return null;
   }
   try {
     const date = Temporal.PlainDate.from(dateStr);
-    return Math.ceil(date.month / 3);
+    return date.month <= 6 ? 1 : 2;
   } catch {
     return null;
   }
@@ -94,27 +109,23 @@ export function getQuarter(dateStr: string): number | null {
 Add comprehensive tests:
 
 ```ts
-// packages/gmt/src/plain/get/getQuarter.test.ts
+// packages/gmt/src/plain/calculate/getHalfYear.test.ts
 import { describe, it, expect } from "vitest";
-import { getQuarter } from "./getQuarter";
+import { getHalfYear } from "./getHalfYear";
 
-describe("getQuarter", () => {
+describe("getHalfYear", () => {
   it.each`
-    input       | expected
+    input           | expected
     ${"2024-01-01"} | ${1}
-    ${"2024-03-31"} | ${1}
-    ${"2024-04-01"} | ${2}
-    ${"2024-06-30"} | ${2}
-    ${"2024-07-01"} | ${3}
-    ${"2024-09-30"} | ${3}
-    ${"2024-10-01"} | ${4}
-    ${"2024-12-31"} | ${4}
+    ${"2024-06-30"} | ${1}
+    ${"2024-07-01"} | ${2}
+    ${"2024-12-31"} | ${2}
   `("returns $expected for $input", ({ input, expected }) => {
-    expect(getQuarter(input)).toBe(expected);
+    expect(getHalfYear(input)).toBe(expected);
   });
 
   it("returns null for invalid input", () => {
-    expect(getQuarter("invalid")).toBe(null);
+    expect(getHalfYear("invalid")).toBe(null);
   });
 });
 ```
@@ -133,9 +144,11 @@ pnpm run lint
 
 ### 7. Commit and Push
 
+Human contributors only — AI agents stop at step 6 and report the work ready.
+
 ```bash
 git add .
-git commit -m "feat(plain): add getQuarter function"
+git commit -m "feat(plain): add getHalfYear function"
 git push origin feature/my-new-method
 ```
 
@@ -148,7 +161,7 @@ Use the PR template:
 Brief description of what this adds/fixes
 
 ## Changes
-- Added `getQuarter` to plain/get
+- Added `getHalfYear` to plain/calculate
 
 ## Testing
 - Added unit tests for happy, invalid, and boundary paths
@@ -166,7 +179,7 @@ Brief description of what this adds/fixes
 1. **No Date APIs**: Use Temporal only
 2. **Tests required**: Happy path, invalid path, boundary cases
 3. **Documentation**: JSDoc with @example tags
-4. **Lint passes**: No Biome errors
+4. **Lint passes**: No oxlint errors (`pnpm run lint`)
 
 ## Before Opening
 

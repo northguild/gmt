@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { battleTestTimeZones } from "../../test";
+import { battleTestTimeZones, MustTestDstTimeZones } from "../../test";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import type { ZoneBucketUnit } from "../../types";
 import { bucketRange } from "./bucketRange";
@@ -9,30 +9,137 @@ const rangeStart = "2024-06-15T03:00:00Z";
 const rangeEnd = "2024-06-18T03:00:00Z";
 const units: readonly ZoneBucketUnit[] = ["hour", "day", "week", "month"];
 
+// Expected values per battle-test timeZone, verified against @js-temporal/polyfill.
+const dayBucketsByZone = {
+  UTC: [
+    "2024-06-15T00:00:00Z",
+    "2024-06-16T00:00:00Z",
+    "2024-06-17T00:00:00Z",
+    "2024-06-18T00:00:00Z",
+  ],
+  GMT: [
+    "2024-06-15T00:00:00Z",
+    "2024-06-16T00:00:00Z",
+    "2024-06-17T00:00:00Z",
+    "2024-06-18T00:00:00Z",
+  ],
+  "Etc/GMT": [
+    "2024-06-15T00:00:00Z",
+    "2024-06-16T00:00:00Z",
+    "2024-06-17T00:00:00Z",
+    "2024-06-18T00:00:00Z",
+  ],
+  "America/Nome": [
+    "2024-06-14T08:00:00Z",
+    "2024-06-15T08:00:00Z",
+    "2024-06-16T08:00:00Z",
+    "2024-06-17T08:00:00Z",
+  ],
+  "Asia/Anadyr": [
+    "2024-06-14T12:00:00Z",
+    "2024-06-15T12:00:00Z",
+    "2024-06-16T12:00:00Z",
+    "2024-06-17T12:00:00Z",
+  ],
+  "Europe/Lisbon": [
+    "2024-06-14T23:00:00Z",
+    "2024-06-15T23:00:00Z",
+    "2024-06-16T23:00:00Z",
+    "2024-06-17T23:00:00Z",
+  ],
+  "Europe/Dublin": [
+    "2024-06-14T23:00:00Z",
+    "2024-06-15T23:00:00Z",
+    "2024-06-16T23:00:00Z",
+    "2024-06-17T23:00:00Z",
+  ],
+  "Europe/Berlin": [
+    "2024-06-14T22:00:00Z",
+    "2024-06-15T22:00:00Z",
+    "2024-06-16T22:00:00Z",
+    "2024-06-17T22:00:00Z",
+  ],
+  "Europe/Helsinki": [
+    "2024-06-14T21:00:00Z",
+    "2024-06-15T21:00:00Z",
+    "2024-06-16T21:00:00Z",
+    "2024-06-17T21:00:00Z",
+  ],
+  "Europe/Istanbul": [
+    "2024-06-14T21:00:00Z",
+    "2024-06-15T21:00:00Z",
+    "2024-06-16T21:00:00Z",
+    "2024-06-17T21:00:00Z",
+  ],
+  "Asia/Kolkata": [
+    "2024-06-14T18:30:00Z",
+    "2024-06-15T18:30:00Z",
+    "2024-06-16T18:30:00Z",
+    "2024-06-17T18:30:00Z",
+  ],
+  "Asia/Kathmandu": [
+    "2024-06-14T18:15:00Z",
+    "2024-06-15T18:15:00Z",
+    "2024-06-16T18:15:00Z",
+    "2024-06-17T18:15:00Z",
+  ],
+  "Asia/Shanghai": [
+    "2024-06-14T16:00:00Z",
+    "2024-06-15T16:00:00Z",
+    "2024-06-16T16:00:00Z",
+    "2024-06-17T16:00:00Z",
+  ],
+  "Australia/Lord_Howe": [
+    "2024-06-14T13:30:00Z",
+    "2024-06-15T13:30:00Z",
+    "2024-06-16T13:30:00Z",
+    "2024-06-17T13:30:00Z",
+  ],
+  "Pacific/Chatham": [
+    "2024-06-14T11:15:00Z",
+    "2024-06-15T11:15:00Z",
+    "2024-06-16T11:15:00Z",
+    "2024-06-17T11:15:00Z",
+  ],
+  "Pacific/Apia": [
+    "2024-06-14T11:00:00Z",
+    "2024-06-15T11:00:00Z",
+    "2024-06-16T11:00:00Z",
+    "2024-06-17T11:00:00Z",
+  ],
+  "Pacific/Niue": [
+    "2024-06-14T11:00:00Z",
+    "2024-06-15T11:00:00Z",
+    "2024-06-16T11:00:00Z",
+    "2024-06-17T11:00:00Z",
+  ],
+  "America/New_York": [
+    "2024-06-14T04:00:00Z",
+    "2024-06-15T04:00:00Z",
+    "2024-06-16T04:00:00Z",
+    "2024-06-17T04:00:00Z",
+  ],
+  "America/Chicago": [
+    "2024-06-14T05:00:00Z",
+    "2024-06-15T05:00:00Z",
+    "2024-06-16T05:00:00Z",
+    "2024-06-17T05:00:00Z",
+  ],
+  "America/Phoenix": [
+    "2024-06-14T07:00:00Z",
+    "2024-06-15T07:00:00Z",
+    "2024-06-16T07:00:00Z",
+    "2024-06-17T07:00:00Z",
+  ],
+} satisfies Record<keyof typeof MustTestDstTimeZones, readonly string[]>;
+
 describe("bucketRange", () => {
-  it.each`
-    timeZone                 | expected
-    ${"UTC"}                 | ${["2024-06-15T00:00:00Z", "2024-06-16T00:00:00Z", "2024-06-17T00:00:00Z", "2024-06-18T00:00:00Z"]}
-    ${"GMT"}                 | ${["2024-06-15T00:00:00Z", "2024-06-16T00:00:00Z", "2024-06-17T00:00:00Z", "2024-06-18T00:00:00Z"]}
-    ${"Etc/GMT"}             | ${["2024-06-15T00:00:00Z", "2024-06-16T00:00:00Z", "2024-06-17T00:00:00Z", "2024-06-18T00:00:00Z"]}
-    ${"America/Nome"}        | ${["2024-06-14T08:00:00Z", "2024-06-15T08:00:00Z", "2024-06-16T08:00:00Z", "2024-06-17T08:00:00Z"]}
-    ${"Asia/Anadyr"}         | ${["2024-06-14T12:00:00Z", "2024-06-15T12:00:00Z", "2024-06-16T12:00:00Z", "2024-06-17T12:00:00Z"]}
-    ${"Europe/Lisbon"}       | ${["2024-06-14T23:00:00Z", "2024-06-15T23:00:00Z", "2024-06-16T23:00:00Z", "2024-06-17T23:00:00Z"]}
-    ${"Europe/Dublin"}       | ${["2024-06-14T23:00:00Z", "2024-06-15T23:00:00Z", "2024-06-16T23:00:00Z", "2024-06-17T23:00:00Z"]}
-    ${"Europe/Berlin"}       | ${["2024-06-14T22:00:00Z", "2024-06-15T22:00:00Z", "2024-06-16T22:00:00Z", "2024-06-17T22:00:00Z"]}
-    ${"Europe/Helsinki"}     | ${["2024-06-14T21:00:00Z", "2024-06-15T21:00:00Z", "2024-06-16T21:00:00Z", "2024-06-17T21:00:00Z"]}
-    ${"Europe/Istanbul"}     | ${["2024-06-14T21:00:00Z", "2024-06-15T21:00:00Z", "2024-06-16T21:00:00Z", "2024-06-17T21:00:00Z"]}
-    ${"Asia/Kolkata"}        | ${["2024-06-14T18:30:00Z", "2024-06-15T18:30:00Z", "2024-06-16T18:30:00Z", "2024-06-17T18:30:00Z"]}
-    ${"Asia/Kathmandu"}      | ${["2024-06-14T18:15:00Z", "2024-06-15T18:15:00Z", "2024-06-16T18:15:00Z", "2024-06-17T18:15:00Z"]}
-    ${"Asia/Shanghai"}       | ${["2024-06-14T16:00:00Z", "2024-06-15T16:00:00Z", "2024-06-16T16:00:00Z", "2024-06-17T16:00:00Z"]}
-    ${"Australia/Lord_Howe"} | ${["2024-06-14T13:30:00Z", "2024-06-15T13:30:00Z", "2024-06-16T13:30:00Z", "2024-06-17T13:30:00Z"]}
-    ${"Pacific/Chatham"}     | ${["2024-06-14T11:15:00Z", "2024-06-15T11:15:00Z", "2024-06-16T11:15:00Z", "2024-06-17T11:15:00Z"]}
-    ${"Pacific/Apia"}        | ${["2024-06-14T11:00:00Z", "2024-06-15T11:00:00Z", "2024-06-16T11:00:00Z", "2024-06-17T11:00:00Z"]}
-    ${"Pacific/Niue"}        | ${["2024-06-14T11:00:00Z", "2024-06-15T11:00:00Z", "2024-06-16T11:00:00Z", "2024-06-17T11:00:00Z"]}
-    ${"America/New_York"}    | ${["2024-06-14T04:00:00Z", "2024-06-15T04:00:00Z", "2024-06-16T04:00:00Z", "2024-06-17T04:00:00Z"]}
-    ${"America/Chicago"}     | ${["2024-06-14T05:00:00Z", "2024-06-15T05:00:00Z", "2024-06-16T05:00:00Z", "2024-06-17T05:00:00Z"]}
-    ${"America/Phoenix"}     | ${["2024-06-14T07:00:00Z", "2024-06-15T07:00:00Z", "2024-06-16T07:00:00Z", "2024-06-17T07:00:00Z"]}
-  `(
+  it.each(
+    battleTestTimeZones.map((timeZone) => ({
+      timeZone,
+      expected: dayBucketsByZone[timeZone],
+    })),
+  )(
     "buckets a three-day range by local day in $timeZone as $expected",
     ({ timeZone, expected }) => {
       expect(bucketRange(rangeStart, rangeEnd, "day", timeZone)).toEqual(
@@ -159,6 +266,20 @@ describe("bucketRange", () => {
       expect(bucketRange(start, end, "hour", "Pacific/Chatham")).toEqual(
         expected,
       );
+    },
+  );
+
+  // Havana fell back 01:00 -> 00:00 on 2024-11-03, repeating midnight on the same date. The date
+  // label never changes, so that is one 25-hour day (matching Temporal's `hoursInDay`), not two
+  // buckets. Expected values are Temporal's `startOfDay()` per date on @js-temporal/polyfill@0.5.1.
+  it.each`
+    start                     | end                       | unit      | expected                                                                    | description
+    ${"2024-11-03T03:00:00Z"} | ${"2024-11-04T06:00:00Z"} | ${"day"}  | ${["2024-11-02T04:00:00Z", "2024-11-03T04:00:00Z", "2024-11-04T05:00:00Z"]} | ${"the repeated midnight stays inside one day"}
+    ${"2024-11-03T04:30:00Z"} | ${"2024-11-03T06:30:00Z"} | ${"hour"} | ${["2024-11-03T04:00:00Z", "2024-11-03T05:00:00Z", "2024-11-03T06:00:00Z"]} | ${"the repeated 00:00 is still its own hour"}
+  `(
+    "buckets $start to $end by $unit in America/Havana as $expected ($description)",
+    ({ start, end, unit, expected }) => {
+      expect(bucketRange(start, end, unit, "America/Havana")).toEqual(expected);
     },
   );
 

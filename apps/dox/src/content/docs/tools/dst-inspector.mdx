@@ -11,8 +11,15 @@ cases are real, both are common, and a date library has to answer for them
 somehow.
 
 Pick a zone and a year to see its transitions, then drag the ticker into a gap or
-an overlap and watch `startOfZoned` resolve the same wall-clock time four
-different ways.
+an overlap and watch
+[`convertPlainDateTimeToZoned`](/reference/zoned/convert/convertPlainDateTimeToZoned/)
+resolve the same local wall-clock time four different ways, one per
+`disambiguation` option.
+
+Boundary functions like `startOfZoned` are a different case: they always return
+the real boundary — the earliest instant of the unit — and take no
+disambiguation option at all. Disambiguation only applies to *field-setting*
+functions, which is what resolving a specific probed wall time is.
 
 <DstInspector />
 
@@ -22,5 +29,5 @@ happens twice — scrub across the transition and switch `disambiguation` betwee
 `earlier`, `later` and `reject` to see which instant each one picks.
 
 Reference: [`getDstTransitions`](/reference/zoned/get/getDstTransitions/) finds
-the transitions; [`startOfZoned`](/reference/zoned/calculate/startOfZoned/) resolves the
-probe.
+the transitions; [`convertPlainDateTimeToZoned`](/reference/zoned/convert/convertPlainDateTimeToZoned/)
+resolves the probe.
