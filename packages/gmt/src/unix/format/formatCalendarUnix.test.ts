@@ -3,12 +3,37 @@ import {
   MustTestLocales,
   battleTestTimeZones,
   expectDateTimeEqual,
+  MustTestDstTimeZones,
 } from "../../test";
 import { mockTemporalNowInstantThrow } from "../../test/mocks";
 import { formatCalendarUnix } from "./formatCalendarUnix";
 
 const REF_MS = Date.UTC(2024, 2, 15, 13, 0); // 2024-03-15T09:00:00-04:00[America/New_York]
 const VAL_MS = Date.UTC(2024, 2, 16, 18, 30); // 2024-03-16T14:30:00-04:00[America/New_York]
+
+// Expected values per battle-test timeZone, verified against @js-temporal/polyfill.
+const calendarLabelByZone = {
+  UTC: "tomorrow at 6:30 PM",
+  GMT: "tomorrow at 6:30 PM",
+  "Etc/GMT": "tomorrow at 6:30 PM",
+  "America/Nome": "tomorrow at 10:30 AM",
+  "Asia/Anadyr": "tomorrow at 6:30 AM",
+  "Europe/Lisbon": "tomorrow at 6:30 PM",
+  "Europe/Dublin": "tomorrow at 6:30 PM",
+  "Europe/Berlin": "tomorrow at 7:30 PM",
+  "Europe/Helsinki": "tomorrow at 8:30 PM",
+  "Europe/Istanbul": "tomorrow at 9:30 PM",
+  "Asia/Kolkata": "in 2 days at 12:00 AM",
+  "Asia/Kathmandu": "in 2 days at 12:15 AM",
+  "Asia/Shanghai": "in 2 days at 2:30 AM",
+  "Australia/Lord_Howe": "tomorrow at 5:30 AM",
+  "Pacific/Chatham": "tomorrow at 8:15 AM",
+  "Pacific/Apia": "tomorrow at 7:30 AM",
+  "Pacific/Niue": "tomorrow at 7:30 AM",
+  "America/New_York": "tomorrow at 2:30 PM",
+  "America/Chicago": "tomorrow at 1:30 PM",
+  "America/Phoenix": "tomorrow at 11:30 AM",
+} satisfies Record<keyof typeof MustTestDstTimeZones, string>;
 
 describe("formatCalendarUnix", () => {
   afterEach(() => {
@@ -71,29 +96,12 @@ describe("formatCalendarUnix", () => {
   // an extra day, which the day-label correctly reflects.
   // ---------------------------------------------------------------------------
   describe("battleTestTimeZones", () => {
-    it.each`
-      timeZone                 | expected
-      ${"UTC"}                 | ${"tomorrow at 6:30 PM"}
-      ${"GMT"}                 | ${"tomorrow at 6:30 PM"}
-      ${"Etc/GMT"}             | ${"tomorrow at 6:30 PM"}
-      ${"America/Nome"}        | ${"tomorrow at 10:30 AM"}
-      ${"Asia/Anadyr"}         | ${"tomorrow at 6:30 AM"}
-      ${"Europe/Lisbon"}       | ${"tomorrow at 6:30 PM"}
-      ${"Europe/Dublin"}       | ${"tomorrow at 6:30 PM"}
-      ${"Europe/Berlin"}       | ${"tomorrow at 7:30 PM"}
-      ${"Europe/Helsinki"}     | ${"tomorrow at 8:30 PM"}
-      ${"Europe/Istanbul"}     | ${"tomorrow at 9:30 PM"}
-      ${"Asia/Kolkata"}        | ${"in 2 days at 12:00 AM"}
-      ${"Asia/Kathmandu"}      | ${"in 2 days at 12:15 AM"}
-      ${"Asia/Shanghai"}       | ${"in 2 days at 2:30 AM"}
-      ${"Australia/Lord_Howe"} | ${"tomorrow at 5:30 AM"}
-      ${"Pacific/Chatham"}     | ${"tomorrow at 8:15 AM"}
-      ${"Pacific/Apia"}        | ${"tomorrow at 7:30 AM"}
-      ${"Pacific/Niue"}        | ${"tomorrow at 7:30 AM"}
-      ${"America/New_York"}    | ${"tomorrow at 2:30 PM"}
-      ${"America/Chicago"}     | ${"tomorrow at 1:30 PM"}
-      ${"America/Phoenix"}     | ${"tomorrow at 11:30 AM"}
-    `(
+    it.each(
+      battleTestTimeZones.map((timeZone) => ({
+        timeZone,
+        expected: calendarLabelByZone[timeZone],
+      })),
+    )(
       "formats the fixed instant in $timeZone as $expected",
       ({ timeZone, expected }) => {
         expect(

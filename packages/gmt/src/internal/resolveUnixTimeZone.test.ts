@@ -1,24 +1,13 @@
-import { mockSystemTimeZone } from "../test";
+import { mockSystemTimeZone, battleTestTimeZones } from "../test";
 import { resolveUnixTimeZone } from "./resolveUnixTimeZone";
 
 describe("resolveUnixTimeZone", () => {
-  it.each`
-    timeZone                 | expected
-    ${"UTC"}                 | ${"UTC"}
-    ${"Europe/Lisbon"}       | ${"Europe/Lisbon"}
-    ${"Europe/Dublin"}       | ${"Europe/Dublin"}
-    ${"Europe/Berlin"}       | ${"Europe/Berlin"}
-    ${"Europe/Helsinki"}     | ${"Europe/Helsinki"}
-    ${"Europe/Istanbul"}     | ${"Europe/Istanbul"}
-    ${"Asia/Kolkata"}        | ${"Asia/Kolkata"}
-    ${"Asia/Kathmandu"}      | ${"Asia/Kathmandu"}
-    ${"Asia/Shanghai"}       | ${"Asia/Shanghai"}
-    ${"Australia/Lord_Howe"} | ${"Australia/Lord_Howe"}
-    ${"Pacific/Chatham"}     | ${"Pacific/Chatham"}
-    ${"America/New_York"}    | ${"America/New_York"}
-    ${"America/Chicago"}     | ${"America/Chicago"}
-    ${"America/Phoenix"}     | ${"America/Phoenix"}
-  `(
+  it.each(
+    battleTestTimeZones.map((timeZone) => ({
+      timeZone,
+      expected: timeZone,
+    })),
+  )(
     "returns $expected for valid timeZone $timeZone",
     ({ timeZone, expected }) => {
       expect(resolveUnixTimeZone(timeZone)).toBe(expected);

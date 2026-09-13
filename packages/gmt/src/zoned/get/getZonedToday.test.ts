@@ -4,9 +4,34 @@ import {
   battleTestTimeZones,
   TomorrowTimeZone,
   YesterdayTimeZone,
+  MustTestDstTimeZones,
 } from "../../test";
 import { mockTemporalNowZonedDateTimeISOThrow } from "../../test/mocks";
 import { getZonedToday } from "./getZonedToday";
+
+// Expected values per battle-test timeZone, verified against @js-temporal/polyfill.
+const zonedTodayByZone = {
+  UTC: "2024-02-29",
+  GMT: "2024-02-29",
+  "Etc/GMT": "2024-02-29",
+  "America/Nome": "2024-02-28",
+  "Asia/Anadyr": "2024-02-29",
+  "Europe/Lisbon": "2024-02-29",
+  "Europe/Dublin": "2024-02-29",
+  "Europe/Berlin": "2024-02-29",
+  "Europe/Helsinki": "2024-02-29",
+  "Europe/Istanbul": "2024-02-29",
+  "Asia/Kolkata": "2024-02-29",
+  "Asia/Kathmandu": "2024-02-29",
+  "Asia/Shanghai": "2024-02-29",
+  "Australia/Lord_Howe": "2024-02-29",
+  "Pacific/Chatham": "2024-02-29",
+  "Pacific/Apia": "2024-02-29",
+  "Pacific/Niue": "2024-02-28",
+  "America/New_York": "2024-02-28",
+  "America/Chicago": "2024-02-28",
+  "America/Phoenix": "2024-02-28",
+} satisfies Record<keyof typeof MustTestDstTimeZones, string>;
 
 describe("getZonedToday", () => {
   beforeEach(() => {
@@ -29,27 +54,12 @@ describe("getZonedToday", () => {
     expect(value).toBe(expected);
   });
 
-  it.each`
-    timeZone                 | expected
-    ${"UTC"}                 | ${"2024-02-29"}
-    ${"GMT"}                 | ${"2024-02-29"}
-    ${"Etc/GMT"}             | ${"2024-02-29"}
-    ${"Europe/Lisbon"}       | ${"2024-02-29"}
-    ${"Europe/Dublin"}       | ${"2024-02-29"}
-    ${"Europe/Berlin"}       | ${"2024-02-29"}
-    ${"Europe/Helsinki"}     | ${"2024-02-29"}
-    ${"Europe/Istanbul"}     | ${"2024-02-29"}
-    ${"Asia/Kolkata"}        | ${"2024-02-29"}
-    ${"Asia/Kathmandu"}      | ${"2024-02-29"}
-    ${"Asia/Shanghai"}       | ${"2024-02-29"}
-    ${"Australia/Lord_Howe"} | ${"2024-02-29"}
-    ${"Pacific/Chatham"}     | ${"2024-02-29"}
-    ${TomorrowTimeZone}      | ${"2024-02-29"}
-    ${YesterdayTimeZone}     | ${"2024-02-28"}
-    ${"America/New_York"}    | ${"2024-02-28"}
-    ${"America/Chicago"}     | ${"2024-02-28"}
-    ${"America/Phoenix"}     | ${"2024-02-28"}
-  `(
+  it.each(
+    battleTestTimeZones.map((timeZone) => ({
+      timeZone,
+      expected: zonedTodayByZone[timeZone],
+    })),
+  )(
     "returns an exact ISO date string for valid timeZone $timeZone",
     ({ timeZone, expected }) => {
       const value = getZonedToday(timeZone);
