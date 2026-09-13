@@ -65,6 +65,16 @@ describe("getHoursInZonedDay", () => {
     },
   );
 
+  // Documented divergence (coding standards § Calendar & zone semantics, rule 3): Goose Bay
+  // fell back at 00:01 on 2010-11-07, re-entering 6 November. An input in that reopened
+  // stretch is in 6 November's TC39 `hoursInDay` (24), while `startOfZoned(…, "day")` puts it
+  // in a 59-minute bucket starting 23:01.
+  it("returns 6 November's 24 hours for an input in Goose Bay's reopened stretch", () => {
+    expect(
+      getHoursInZonedDay("2010-11-06T23:30:00-04:00[America/Goose_Bay]"),
+    ).toBe(24);
+  });
+
   // Historical rule change: Africa/Casablanca paused DST for Ramadan in 2018,
   // producing three transitions in one year instead of the usual two.
   it.each`

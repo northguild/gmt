@@ -36,15 +36,17 @@ describe("mapZonedHoursInDay", () => {
     },
   );
 
-  // Passing `disambiguation` or `offset` keeps the legacy wall-clock path: midnight resolved with
-  // those options (Santiago's skipped 00:00 moves to 01:00), then 24 wall-clock hours, so the
-  // last entry lands on the next date. Verified on @js-temporal/polyfill@0.5.1.
+  // Regression: explicit `disambiguation` or `offset` used to run 24 wall-clock hours from the
+  // resolved midnight, spilling onto the next date. Both are deprecated and ignored, so the window
+  // is always the real 23-hour day, `startOfDay()` to the next day's `startOfDay()`. Verified on
+  // @js-temporal/polyfill@0.5.1 (`hoursInDay` is 23).
   it.each`
-    options                             | expectedLength | expectedFirst                                    | expectedLast
-    ${{ disambiguation: "compatible" }} | ${24}          | ${"2024-09-08T01:00:00-03:00[America/Santiago]"} | ${"2024-09-09T00:00:00-03:00[America/Santiago]"}
-    ${{ offset: "ignore" }}             | ${24}          | ${"2024-09-08T01:00:00-03:00[America/Santiago]"} | ${"2024-09-09T00:00:00-03:00[America/Santiago]"}
+    options                                           | expectedLength | expectedFirst                                    | expectedLast
+    ${{ disambiguation: "compatible" }}               | ${23}          | ${"2024-09-08T01:00:00-03:00[America/Santiago]"} | ${"2024-09-08T23:00:00-03:00[America/Santiago]"}
+    ${{ offset: "ignore" }}                           | ${23}          | ${"2024-09-08T01:00:00-03:00[America/Santiago]"} | ${"2024-09-08T23:00:00-03:00[America/Santiago]"}
+    ${{ disambiguation: "reject", offset: "reject" }} | ${23}          | ${"2024-09-08T01:00:00-03:00[America/Santiago]"} | ${"2024-09-08T23:00:00-03:00[America/Santiago]"}
   `(
-    "returns $expectedLength wall-clock entries ending $expectedLast for Santiago's skipped midnight with explicit $options",
+    "returns $expectedLength entries ending $expectedLast for Santiago's skipped midnight with ignored $options",
     ({ options, expectedLength, expectedFirst, expectedLast }) => {
       const result = mapZonedHoursInDay(
         "2024-09-08T12:00:00-03:00[America/Santiago]",
@@ -53,6 +55,32 @@ describe("mapZonedHoursInDay", () => {
 
       expect(result).toHaveLength(expectedLength);
       expect(result[0]).toBe(expectedFirst);
+      expect(result.at(-1)).toBe(expectedLast);
+    },
+  );
+
+  // Repeated local midnight: Havana 2024-11-03 is one 25-hour day (the label never changes);
+  // Goose Bay fell back at 00:01 on 2010-11-07, so that date has two midnights and 25 hours
+  // while 2010-11-06 keeps 24. Matches Temporal's `startOfDay()` and `hoursInDay` on
+  // @js-temporal/polyfill@0.5.1.
+  //
+  // The last row pins a documented divergence (coding standards § Calendar & zone semantics,
+  // rule 3): an anchor at 23:30-04:00 falls in the reopened stretch of 6 November, so
+  // `startOfZoned(…, "day")` returns a 59-minute bucket starting 23:01, while this function
+  // follows TC39's date-labelled day and maps 6 November's 24 hours, ending before the anchor.
+  it.each`
+    anchor                                            | expectedLength | expectedFirstTwo                                                                                    | expectedLast
+    ${"2024-11-03T12:00:00-05:00[America/Havana]"}    | ${25}          | ${["2024-11-03T00:00:00-04:00[America/Havana]", "2024-11-03T00:00:00-05:00[America/Havana]"]}       | ${"2024-11-03T23:00:00-05:00[America/Havana]"}
+    ${"2010-11-07T12:00:00-04:00[America/Goose_Bay]"} | ${25}          | ${["2010-11-07T00:00:00-03:00[America/Goose_Bay]", "2010-11-07T00:00:00-04:00[America/Goose_Bay]"]} | ${"2010-11-07T23:00:00-04:00[America/Goose_Bay]"}
+    ${"2010-11-06T12:00:00-03:00[America/Goose_Bay]"} | ${24}          | ${["2010-11-06T00:00:00-03:00[America/Goose_Bay]", "2010-11-06T01:00:00-03:00[America/Goose_Bay]"]} | ${"2010-11-06T23:00:00-03:00[America/Goose_Bay]"}
+    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${24}          | ${["2010-11-06T00:00:00-03:00[America/Goose_Bay]", "2010-11-06T01:00:00-03:00[America/Goose_Bay]"]} | ${"2010-11-06T23:00:00-03:00[America/Goose_Bay]"}
+  `(
+    "returns $expectedLength entries starting $expectedFirstTwo and ending $expectedLast for repeated-midnight anchor $anchor",
+    ({ anchor, expectedLength, expectedFirstTwo, expectedLast }) => {
+      const result = mapZonedHoursInDay(anchor);
+
+      expect(result).toHaveLength(expectedLength);
+      expect(result.slice(0, 2)).toEqual(expectedFirstTwo);
       expect(result.at(-1)).toBe(expectedLast);
     },
   );
@@ -135,18 +163,18 @@ describe("mapZonedHoursInDay", () => {
     });
   }
 
-  // disambiguation: the midnight anchor itself is ambiguous in this historical Brazil zone/date
-  // (2018-11-04's DST-start transition landed exactly on local midnight). With no options the day
-  // is the real 23-hour day; passing disambiguation opts into wall-clock midnight + 24h stepping.
+  // America/Sao_Paulo skipped local midnight on 2018-11-04, so that day is 23 hours long
+  // (`hoursInDay`). The deprecated `disambiguation` is ignored: every value — "reject" included —
+  // returns the real day. Verified on @js-temporal/polyfill@0.5.1.
   it.each`
     disambiguation  | expectedLength
     ${undefined}    | ${23}
-    ${"compatible"} | ${24}
+    ${"compatible"} | ${23}
     ${"earlier"}    | ${23}
-    ${"later"}      | ${24}
-    ${"reject"}     | ${0}
+    ${"later"}      | ${23}
+    ${"reject"}     | ${23}
   `(
-    "with disambiguation $disambiguation on an anchor whose midnight is ambiguous, returns $expectedLength entries",
+    "returns $expectedLength entries for an anchor whose midnight is skipped with ignored disambiguation $disambiguation",
     ({ disambiguation, expectedLength }) => {
       const optionsArg =
         disambiguation === undefined ? undefined : { disambiguation };
@@ -159,17 +187,16 @@ describe("mapZonedHoursInDay", () => {
     },
   );
 
-  // offset controls whether disambiguation takes effect for the midnight anchor. Unlike
-  // startOfZoned's Nov 3 America/New_York case, the source's -02:00 offset here is ALSO invalid
-  // at midnight, so "prefer" falls through to disambiguation and "reject" still throws — offset
-  // does not universally suppress disambiguation, only when the source offset happens to remain valid
+  // The deprecated `offset` is ignored too, alone or combined with `disambiguation: "reject"`.
   it.each`
     offset       | expectedLength
-    ${undefined} | ${0}
-    ${"ignore"}  | ${0}
-    ${"prefer"}  | ${0}
+    ${undefined} | ${23}
+    ${"ignore"}  | ${23}
+    ${"prefer"}  | ${23}
+    ${"use"}     | ${23}
+    ${"reject"}  | ${23}
   `(
-    "with disambiguation reject and offset $offset, returns $expectedLength entries",
+    "returns $expectedLength entries with disambiguation reject and ignored offset $offset",
     ({ offset, expectedLength }) => {
       const optionsArg =
         offset === undefined

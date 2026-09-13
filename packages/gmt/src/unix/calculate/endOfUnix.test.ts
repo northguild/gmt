@@ -1,6 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { mockSystemTimeZone } from "../../test/timeZoneMatrix";
-import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { endOfUnix } from "./endOfUnix";
 
 describe("endOfUnix", () => {
@@ -62,18 +61,18 @@ describe("endOfUnix", () => {
     expect(endOfUnix(1706659200, invalidUnit as never)).toBeNull();
   });
 
-  // disambiguation: fall-back overlap — source sits in the second, repeated 1:45am. With no
-  // disambiguation (the undefined row) the real boundary is returned: the end of the second
-  // pass. An explicit disambiguation opts into wall-clock `.with()`.
+  // `disambiguation` is deprecated and ignored: the source sits in the second, repeated 1:45am,
+  // and every row — "reject" included — returns the real end of that second pass, never before
+  // the source. Verified against `bucketRange` on @js-temporal/polyfill@0.5.1.
   it.each`
     disambiguation  | expected
     ${undefined}    | ${1730617199999}
-    ${"compatible"} | ${1730613599999}
-    ${"earlier"}    | ${1730613599999}
+    ${"compatible"} | ${1730617199999}
+    ${"earlier"}    | ${1730617199999}
     ${"later"}      | ${1730617199999}
-    ${"reject"}     | ${null}
+    ${"reject"}     | ${1730617199999}
   `(
-    "with disambiguation $disambiguation on a fall-back overlap, returns $expected",
+    "returns the real hour end $expected on a fall-back overlap with ignored disambiguation $disambiguation",
     ({ disambiguation, expected }) => {
       const optionsArg =
         disambiguation === undefined
@@ -83,14 +82,16 @@ describe("endOfUnix", () => {
     },
   );
 
-  // offset controls whether disambiguation takes effect at all
+  // `offset` is deprecated and ignored too, alone or combined with `disambiguation: "reject"`.
   it.each`
     offset       | expected
-    ${undefined} | ${null}
-    ${"ignore"}  | ${null}
+    ${undefined} | ${1730617199999}
+    ${"ignore"}  | ${1730617199999}
     ${"prefer"}  | ${1730617199999}
+    ${"use"}     | ${1730617199999}
+    ${"reject"}  | ${1730617199999}
   `(
-    "with disambiguation reject and offset $offset, returns $expected",
+    "returns the real hour end $expected with disambiguation reject and ignored offset $offset",
     ({ offset, expected }) => {
       const optionsArg =
         offset === undefined
@@ -112,17 +113,9 @@ describe("endOfUnix", () => {
     );
     expect(endOfUnix(1706659200, "day")).toBeNull();
   });
-
-  // Only the explicit wall-clock path measures the month with `Temporal.PlainDate.from`.
-  it("returns null when Temporal.PlainDate.from throws on the explicit disambiguation path", () => {
-    mockTemporalPlainDateFromThrow();
-    expect(
-      endOfUnix(1706659200, "month", { disambiguation: "compatible" }),
-    ).toBeNull();
-  });
 });
 
-// With neither `disambiguation` nor `offset` passed, the end is one millisecond-truncated
+// The end is one millisecond-truncated
 // nanosecond before the next real zone bucket starts, never before the input. Every expected
 // value verified against `floorToZone`/`bucketRange` on @js-temporal/polyfill@0.5.1.
 // 1727532300000 is 2024-09-29T03:50:00+13:45[Pacific/Chatham]
@@ -134,9 +127,18 @@ describe("endOfUnix", () => {
 // 1289104200000 is 2010-11-07T00:30:00-04:00[America/Goose_Bay]
 // 1289100600000 is 2010-11-06T23:30:00-04:00[America/Goose_Bay]
 // 14303966789 is 1970-06-15T12:34:56.789-00:44:30[Africa/Monrovia]; 14303969999 is its 12:34:59.999
+// 1730608200000 / 1730611800000 are both passes of 2024-11-03T00:30[America/Havana];
+// 1730696399999 is 2024-11-03T23:59:59.999-05:00, the end of that one 25-hour day and its week
+// 1730304000000 is 2024-10-30T12:00:00-04:00[America/Havana]
+// 1602777600000 is 2020-10-15T12:00:00-04:00[America/Havana]; 1604203199999 is
+// 2020-10-31T23:59:59.999-04:00, just before 1 November's repeated midnight
 describe("endOfUnix across zone transitions with default options", () => {
   it.each`
     value            | unit        | timeZone                 | expected
+    ${1730608200000} | ${"day"}    | ${"America/Havana"}      | ${1730696399999}
+    ${1730611800000} | ${"day"}    | ${"America/Havana"}      | ${1730696399999}
+    ${1730304000000} | ${"week"}   | ${"America/Havana"}      | ${1730696399999}
+    ${1602777600000} | ${"month"}  | ${"America/Havana"}      | ${1604203199999}
     ${1727532300000} | ${"hour"}   | ${"Pacific/Chatham"}     | ${1727532899999}
     ${1712412300000} | ${"hour"}   | ${"Pacific/Chatham"}     | ${1712412899999}
     ${1601742600000} | ${"hour"}   | ${"Antarctica/Casey"}    | ${1601744399999}
@@ -153,16 +155,14 @@ describe("endOfUnix across zone transitions with default options", () => {
     },
   );
 
-  // Goose Bay fell back at 00:01 Sunday into Saturday 23:01, re-opening a Sunday-first week.
-  // The default path ends it at the second pass's 23:59:59.999 (-04:00); an explicit
-  // `disambiguation` keeps the legacy wall-clock `.with()` result on the first pass (-03:00),
-  // before the input. Verified against the `internal/zonedBucket.ts` walker (weekStartsOn 7) and
-  // Temporal on @js-temporal/polyfill@0.5.1.
-  // 1289098799999 is 2010-11-06T23:59:59.999-03:00[America/Goose_Bay]
+  // Goose Bay fell back at 00:01 Sunday into Saturday 23:01, re-opening a Sunday-first week that
+  // ends at the second pass's 23:59:59.999 (-04:00). An explicit `disambiguation` used to end it
+  // on the first pass (1289098799999, -03:00), before the input; it is now ignored. Verified
+  // against the `internal/zonedBucket.ts` walker (weekStartsOn 7) on @js-temporal/polyfill@0.5.1.
   it.each`
     options                                                                                    | expected
     ${{ timeZone: "America/Goose_Bay", weekStartsOn: "sunday" }}                               | ${1289102399999}
-    ${{ timeZone: "America/Goose_Bay", weekStartsOn: "sunday", disambiguation: "compatible" }} | ${1289098799999}
+    ${{ timeZone: "America/Goose_Bay", weekStartsOn: "sunday", disambiguation: "compatible" }} | ${1289102399999}
   `(
     "returns $expected for 1289100600000 by week with $options",
     ({ options, expected }) => {

@@ -335,6 +335,26 @@ describe("intervalCountZoned with GMT calendar-annotated values", () => {
       expect(intervalCountZoned(start, end, unit)).toBe(expected);
     },
   );
+
+  // A transition the walk-back lands on keeps the pair's calendar. New York's 2024-11-03 fall-back
+  // opens a second 01:00 hour; flooring inside it used to hand back an ISO transition, and mixing
+  // it with a Hebrew bucket start made the count throw and return null. Each Hebrew row matches its
+  // ISO twin (5785-02-01/02 in GMT digits is ISO 2024-11-02/03). Verified on
+  // @js-temporal/polyfill@0.5.1.
+  it.each`
+    start                                                         | end                                                           | unit      | expected
+    ${"5785-02-02T01:30:00-05:00[u-ca=hebrew][America/New_York]"} | ${"5785-02-02T01:45:00-05:00[u-ca=hebrew][America/New_York]"} | ${"hour"} | ${1}
+    ${"2024-11-03T01:30:00-05:00[America/New_York]"}              | ${"2024-11-03T01:45:00-05:00[America/New_York]"}              | ${"hour"} | ${1}
+    ${"5785-02-02T01:30:00-04:00[u-ca=hebrew][America/New_York]"} | ${"5785-02-02T01:30:00-05:00[u-ca=hebrew][America/New_York]"} | ${"hour"} | ${2}
+    ${"2024-11-03T01:30:00-04:00[America/New_York]"}              | ${"2024-11-03T01:30:00-05:00[America/New_York]"}              | ${"hour"} | ${2}
+    ${"5785-02-01T12:00:00-04:00[u-ca=hebrew][America/New_York]"} | ${"5785-02-02T01:30:00-05:00[u-ca=hebrew][America/New_York]"} | ${"day"}  | ${2}
+    ${"2024-11-02T12:00:00-04:00[America/New_York]"}              | ${"2024-11-03T01:30:00-05:00[America/New_York]"}              | ${"day"}  | ${2}
+  `(
+    "returns $expected $unit buckets for $start to $end across the fall-back",
+    ({ start, end, unit, expected }) => {
+      expect(intervalCountZoned(start, end, unit)).toBe(expected);
+    },
+  );
 });
 
 // A bounded walk that runs out answers with the sentinel, never a partial count. The stub puts a
@@ -386,6 +406,9 @@ describe("intervalCountZoned across zone transitions", () => {
     ${"2020-10-04T00:00:30+08:00[Antarctica/Casey]"}    | ${"2020-10-04T03:30:00+11:00[Antarctica/Casey]"}    | ${"hour"} | ${2}     | ${"Casey's three-hour jump at 00:01"}
     ${"2011-12-29T12:00:00-10:00[Pacific/Apia]"}        | ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}        | ${"day"}  | ${2}     | ${"Samoa deleted 2011-12-30"}
     ${"2010-11-06T23:30:00-03:00[America/Goose_Bay]"}   | ${"2010-11-07T00:30:00-04:00[America/Goose_Bay]"}   | ${"hour"} | ${4}     | ${"Goose Bay fell back at 00:01, re-entering the previous day"}
+    ${"2024-11-02T12:00:00-04:00[America/Havana]"}      | ${"2024-11-04T12:00:00-05:00[America/Havana]"}      | ${"day"}  | ${3}     | ${"Havana repeated midnight on the same date, one 25-hour day"}
+    ${"2024-11-03T00:30:00-04:00[America/Havana]"}      | ${"2024-11-03T00:30:00-05:00[America/Havana]"}      | ${"day"}  | ${1}     | ${"both passes of Havana's repeated midnight hour share one day"}
+    ${"2024-11-03T00:00:00-04:00[America/Havana]"}      | ${"2024-11-04T00:00:00-05:00[America/Havana]"}      | ${"hour"} | ${25}    | ${"Havana's 25-hour day still has 25 hour buckets"}
     ${"2024-04-06T14:00:00+11:00[Australia/Lord_Howe]"} | ${"2024-04-07T02:30:00+10:30[Australia/Lord_Howe]"} | ${"hour"} | ${13}    | ${"Lord Howe's 90-minute fall-back hour"}
   `(
     "returns $expected $unit buckets for $start to $end ($description)",

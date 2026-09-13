@@ -33,9 +33,8 @@ describe("endOfQuarterForUnix", () => {
     expect(endOfQuarterForUnix(invalidValue as never)).toBeNull();
   });
 
-  // disambiguation + offset are wired through, though quarter boundaries rarely coincide with a
-  // DST transition in common IANA zones — this verifies the parameters are accepted and don't
-  // change output for the common case
+  // The deprecated `disambiguation`/`offset` are accepted and ignored: an ordinary quarter end is
+  // unchanged by any value, "reject" included.
   it.each`
     disambiguation  | offset
     ${"compatible"} | ${undefined}
@@ -63,7 +62,7 @@ describe("endOfQuarterForUnix", () => {
   });
 });
 
-// With neither `disambiguation` nor `offset` passed, the quarter ends just before the next
+// The quarter ends just before the next
 // quarter's first local month bucket, never before the input. Expected values verified against
 // `bucketRange` month buckets on @js-temporal/polyfill@0.5.1.
 // 1285882200000 is 2010-09-30T23:30:00+02:00[Africa/Cairo] (second pass of the repeated hour)
@@ -71,9 +70,10 @@ describe("endOfQuarterForUnix", () => {
 // 1285883999999 is 2010-09-30T23:59:59.999+02:00[Africa/Cairo]
 describe("endOfQuarterForUnix with default options", () => {
   it.each`
-    value            | timeZone          | expected
-    ${1285882200000} | ${"Africa/Cairo"} | ${1285883999999}
-    ${1285878600000} | ${"Africa/Cairo"} | ${1285883999999}
+    value            | timeZone            | expected
+    ${1285882200000} | ${"Africa/Cairo"}   | ${1285883999999}
+    ${1285878600000} | ${"Africa/Cairo"}   | ${1285883999999}
+    ${1730608200000} | ${"America/Havana"} | ${1735707599999}
   `(
     "returns $expected for $value in $timeZone",
     ({ value, timeZone, expected }) => {
@@ -82,14 +82,15 @@ describe("endOfQuarterForUnix with default options", () => {
   );
 });
 
-// The explicit path at a transition is unchanged wall-clock `.with()`: "compatible" resolves
-// Cairo's repeated 23:59:59.999 to the first pass, before an input on the second pass.
-// Verified on @js-temporal/polyfill@0.5.1.
-// 1285880399999 is 2010-09-30T23:59:59.999+03:00[Africa/Cairo]
-describe("endOfQuarterForUnix at a zone transition with explicit options", () => {
+// Cairo repeated Q3's last local hour. The quarter ends on the second pass whatever the
+// deprecated `disambiguation`/`offset` say — "compatible" used to end it on the first pass
+// (1285880399999, 23:59:59.999+03:00), before the input. Verified on @js-temporal/polyfill@0.5.1.
+// 1285883999999 is 2010-09-30T23:59:59.999+02:00[Africa/Cairo]
+describe("endOfQuarterForUnix at a zone transition with ignored explicit options", () => {
   it.each`
-    value            | options                                                       | expected
-    ${1285882200000} | ${{ timeZone: "Africa/Cairo", disambiguation: "compatible" }} | ${1285880399999}
+    value            | options                                                                     | expected
+    ${1285882200000} | ${{ timeZone: "Africa/Cairo", disambiguation: "compatible" }}               | ${1285883999999}
+    ${1285882200000} | ${{ timeZone: "Africa/Cairo", disambiguation: "reject", offset: "reject" }} | ${1285883999999}
   `(
     "returns $expected for $value with $options",
     ({ value, options, expected }) => {

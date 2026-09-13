@@ -269,6 +269,20 @@ describe("bucketRange", () => {
     },
   );
 
+  // Havana fell back 01:00 -> 00:00 on 2024-11-03, repeating midnight on the same date. The date
+  // label never changes, so that is one 25-hour day (matching Temporal's `hoursInDay`), not two
+  // buckets. Expected values are Temporal's `startOfDay()` per date on @js-temporal/polyfill@0.5.1.
+  it.each`
+    start                     | end                       | unit      | expected                                                                    | description
+    ${"2024-11-03T03:00:00Z"} | ${"2024-11-04T06:00:00Z"} | ${"day"}  | ${["2024-11-02T04:00:00Z", "2024-11-03T04:00:00Z", "2024-11-04T05:00:00Z"]} | ${"the repeated midnight stays inside one day"}
+    ${"2024-11-03T04:30:00Z"} | ${"2024-11-03T06:30:00Z"} | ${"hour"} | ${["2024-11-03T04:00:00Z", "2024-11-03T05:00:00Z", "2024-11-03T06:00:00Z"]} | ${"the repeated 00:00 is still its own hour"}
+  `(
+    "buckets $start to $end by $unit in America/Havana as $expected ($description)",
+    ({ start, end, unit, expected }) => {
+      expect(bucketRange(start, end, unit, "America/Havana")).toEqual(expected);
+    },
+  );
+
   it.each`
     start                     | end                       | timeZone                 | probe                     | description
     ${"2025-04-05T13:00:00Z"} | ${"2025-04-05T16:00:00Z"} | ${"Pacific/Chatham"}     | ${"2025-04-05T14:00:00Z"} | ${"an instant in the repeated quarter-hour of a sub-hour fall-back"}

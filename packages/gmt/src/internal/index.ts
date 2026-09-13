@@ -86,6 +86,7 @@ export {
   formatEthiopicFamilyDate,
   isEthiopicFamilyCalendar,
 } from "./ethiopicFamilyCalendar";
+export { defaultFractionalDigits } from "./defaultFractionalDigits";
 export { getLocaleFirstDayOfWeek } from "./getLocaleFirstDayOfWeek";
 export { getLocaleMinimalDaysInFirstWeek } from "./getLocaleMinimalDaysInFirstWeek";
 export { getLocaleWeekYearBounds } from "./getLocaleWeekYearBounds";
@@ -106,6 +107,7 @@ export { resolveDateTimeUnit } from "./resolveDateTimeUnit";
 export { resolveDurationUnit } from "./resolveDurationUnit";
 export { resolveOverflow } from "./resolveOverflow";
 export { resolveRelativeRounding } from "./resolveRelativeRounding";
+export { tileByUnit } from "./splitStep";
 export {
   countZonedBuckets,
   nextZonedBucketStart,
@@ -113,5 +115,4 @@ export {
   zonedUnitEnd,
   zonedUnitStart,
 } from "./zonedBucket";
-export { zonedQuarterEnd, zonedQuarterStart } from "./zonedQuarter";
 export { zonelessCalendarDate } from "./zonelessCalendarDate";

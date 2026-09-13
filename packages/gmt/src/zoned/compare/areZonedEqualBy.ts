@@ -17,6 +17,10 @@ import { isValidZonedDateTime } from "../validate";
  *   zone transition shortened is still its own unit: in `Pacific/Chatham` on its 2024
  *   spring-forward, 03:50 and 04:05 are different hours, because the 03:00 hour lasted only
  *   from 03:45 to 04:00.
+ * - Two values in the same time zone are equal only when their bucket starts are the same
+ *   instant, as in `areUnixEqualBy`: both passes of New York's repeated 01:00 on its 2024
+ *   fall-back read the same wall clock but are different hours. Values in different zones are
+ *   compared by their buckets' local labels, since their instants never line up.
  * - `"month"` requires the same month AND year, matching `areDateTimesEqualBy`.
  * - Returns false for an unsupported unit or invalid input.
  *
@@ -33,6 +37,7 @@ import { isValidZonedDateTime } from "../validate";
  *
  * @example areZonedEqualBy("2024-03-15T10:00:00-04:00[America/New_York]", "2024-03-15T20:00:00+01:00[Europe/Berlin]", "day") // true (both are local March 15 in their own zone)
  * @example areZonedEqualBy("2024-03-15T23:30:00-04:00[America/New_York]", "2024-03-16T04:30:00+00:00[UTC]", "day") // false (same instant, different local calendar day per zone)
+ * @example areZonedEqualBy("2024-11-03T01:30:00-04:00[America/New_York]", "2024-11-03T01:30:00-05:00[America/New_York]", "hour") // false (both read 01:30, but they sit in the two different real 01:00 hours)
  * @example areZonedEqualBy("invalid", "2024-03-15T10:00:00-04:00[America/New_York]", "day") // false
  */
 export function areZonedEqualBy(
@@ -55,10 +60,22 @@ export function areZonedEqualBy(
 
     if (start1 === "" || start2 === "") return false;
 
-    const local1 = Temporal.ZonedDateTime.from(start1).toPlainDateTime();
-    const local2 = Temporal.ZonedDateTime.from(start2).toPlainDateTime();
+    const zoned1 = Temporal.ZonedDateTime.from(start1);
+    const zoned2 = Temporal.ZonedDateTime.from(start2);
 
-    return Temporal.PlainDateTime.compare(local1, local2) === 0;
+    // Same zone: one real bucket is one instant, so a repeated wall clock is not a match.
+    if (zoned1.timeZoneId === zoned2.timeZoneId) {
+      return (
+        Temporal.Instant.compare(zoned1.toInstant(), zoned2.toInstant()) === 0
+      );
+    }
+
+    return (
+      Temporal.PlainDateTime.compare(
+        zoned1.toPlainDateTime(),
+        zoned2.toPlainDateTime(),
+      ) === 0
+    );
   } catch {
     return false;
   }

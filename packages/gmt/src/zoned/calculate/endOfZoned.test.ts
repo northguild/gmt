@@ -82,23 +82,23 @@ describe("endOfZoned", () => {
     expect(endOfZoned("2024-02-29T12:34:56+00:00[UTC]", invalidUnit)).toBe("");
   });
 
-  // disambiguation: fall-back overlap — source sits in the second, repeated 1am. With no
-  // options (the undefined rows) the real boundary is returned: the end of the second pass,
-  // the hour the source is in. An explicit disambiguation opts into wall-clock `.with()`.
+  // `disambiguation` is deprecated and ignored: a boundary is always the real bucket end. The
+  // source sits in the second, repeated 1am, so every row — "reject" included — ends the hour the
+  // source is in, never before it. Verified against `bucketRange` on @js-temporal/polyfill@0.5.1.
   it.each`
     value                                            | disambiguation  | expected
     ${"2024-11-03T01:45:00-05:00[America/New_York]"} | ${undefined}    | ${"2024-11-03T01:59:59-05:00[America/New_York]"}
-    ${"2024-11-03T01:45:00-05:00[America/New_York]"} | ${"compatible"} | ${"2024-11-03T01:59:59-04:00[America/New_York]"}
-    ${"2024-11-03T01:45:00-05:00[America/New_York]"} | ${"earlier"}    | ${"2024-11-03T01:59:59-04:00[America/New_York]"}
+    ${"2024-11-03T01:45:00-05:00[America/New_York]"} | ${"compatible"} | ${"2024-11-03T01:59:59-05:00[America/New_York]"}
+    ${"2024-11-03T01:45:00-05:00[America/New_York]"} | ${"earlier"}    | ${"2024-11-03T01:59:59-05:00[America/New_York]"}
     ${"2024-11-03T01:45:00-05:00[America/New_York]"} | ${"later"}      | ${"2024-11-03T01:59:59-05:00[America/New_York]"}
-    ${"2024-11-03T01:45:00-05:00[America/New_York]"} | ${"reject"}     | ${""}
+    ${"2024-11-03T01:45:00-05:00[America/New_York]"} | ${"reject"}     | ${"2024-11-03T01:59:59-05:00[America/New_York]"}
     ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}    | ${undefined}    | ${"2024-10-27T02:59:59+01:00[Europe/Berlin]"}
-    ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}    | ${"compatible"} | ${"2024-10-27T02:59:59+02:00[Europe/Berlin]"}
-    ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}    | ${"earlier"}    | ${"2024-10-27T02:59:59+02:00[Europe/Berlin]"}
+    ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}    | ${"compatible"} | ${"2024-10-27T02:59:59+01:00[Europe/Berlin]"}
+    ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}    | ${"earlier"}    | ${"2024-10-27T02:59:59+01:00[Europe/Berlin]"}
     ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}    | ${"later"}      | ${"2024-10-27T02:59:59+01:00[Europe/Berlin]"}
-    ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}    | ${"reject"}     | ${""}
+    ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}    | ${"reject"}     | ${"2024-10-27T02:59:59+01:00[Europe/Berlin]"}
   `(
-    "resolves fall-back overlap $value with disambiguation $disambiguation to $expected for unit hour",
+    "returns the real hour end $expected for fall-back overlap $value with ignored disambiguation $disambiguation",
     ({ value, disambiguation, expected }) => {
       const optionsArg =
         disambiguation === undefined ? undefined : { disambiguation };
@@ -106,14 +106,16 @@ describe("endOfZoned", () => {
     },
   );
 
-  // offset controls whether disambiguation takes effect at all
+  // `offset` is deprecated and ignored too, alone or combined with `disambiguation: "reject"`.
   it.each`
     offset       | expected
-    ${undefined} | ${""}
-    ${"ignore"}  | ${""}
+    ${undefined} | ${"2024-11-03T01:59:59-05:00[America/New_York]"}
+    ${"ignore"}  | ${"2024-11-03T01:59:59-05:00[America/New_York]"}
     ${"prefer"}  | ${"2024-11-03T01:59:59-05:00[America/New_York]"}
+    ${"use"}     | ${"2024-11-03T01:59:59-05:00[America/New_York]"}
+    ${"reject"}  | ${"2024-11-03T01:59:59-05:00[America/New_York]"}
   `(
-    "with disambiguation reject and offset $offset, returns $expected",
+    "returns the real hour end $expected with disambiguation reject and ignored offset $offset",
     ({ offset, expected }) => {
       const optionsArg =
         offset === undefined
@@ -130,7 +132,7 @@ describe("endOfZoned", () => {
   );
 });
 
-// With neither `disambiguation` nor `offset` passed, the end is one nanosecond before the next
+// The end is one nanosecond before the next
 // real zone bucket starts, so it is never before the input. Every expected value verified
 // against `floorToZone`/`bucketRange` on @js-temporal/polyfill@0.5.1.
 describe("endOfZoned across zone transitions with default options", () => {
@@ -144,6 +146,10 @@ describe("endOfZoned across zone transitions with default options", () => {
     ${"2024-09-08T12:00:00-03:00[America/Santiago]"}    | ${"day"}    | ${"2024-09-08T23:59:59-03:00[America/Santiago]"}    | ${"Santiago skipped local midnight"}
     ${"2010-11-07T00:30:00-04:00[America/Goose_Bay]"}   | ${"day"}    | ${"2010-11-07T23:59:59-04:00[America/Goose_Bay]"}   | ${"Goose Bay's second local midnight"}
     ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"}   | ${"day"}    | ${"2010-11-06T23:59:59-04:00[America/Goose_Bay]"}   | ${"Goose Bay fell back at 00:01 into the previous day"}
+    ${"2024-11-03T00:30:00-04:00[America/Havana]"}      | ${"day"}    | ${"2024-11-03T23:59:59-05:00[America/Havana]"}      | ${"Havana repeated midnight on the same date: one 25-hour day (first pass)"}
+    ${"2024-11-03T00:30:00-05:00[America/Havana]"}      | ${"day"}    | ${"2024-11-03T23:59:59-05:00[America/Havana]"}      | ${"Havana repeated midnight on the same date: one 25-hour day (second pass)"}
+    ${"2024-10-30T12:00:00-04:00[America/Havana]"}      | ${"week"}   | ${"2024-11-03T23:59:59-05:00[America/Havana]"}      | ${"Havana's repeated Sunday midnight does not split the week"}
+    ${"2020-10-15T12:00:00-04:00[America/Havana]"}      | ${"month"}  | ${"2020-10-31T23:59:59-04:00[America/Havana]"}      | ${"both passes of Havana's repeated 1 November midnight belong to November"}
     ${"2024-09-29T03:50:00+13:45[Pacific/Chatham]"}     | ${"month"}  | ${"2024-09-30T23:59:59+13:45[Pacific/Chatham]"}     | ${"a month spanning Chatham's spring-forward"}
     ${"1970-06-15T12:34:56.789-00:45[Africa/Monrovia]"} | ${"minute"} | ${"1970-06-15T12:34:59-00:45[Africa/Monrovia]"}     | ${"Monrovia's -00:44:30 offset ends the local minute, not the UTC one"}
   `(
@@ -161,14 +167,14 @@ describe("endOfZoned across zone transitions with default options", () => {
     ).toBe("2024-11-03T01:59:59.999999999-05:00[America/New_York]");
   });
 
-  // Goose Bay fell back at 00:01 Sunday into Saturday 23:01, re-opening a Sunday-first week. The
-  // default path ends it on the second pass (-04:00); an explicit `disambiguation` keeps the
-  // legacy wall-clock `.with()` result on the first pass (-03:00), before the input. Verified
-  // against the `internal/zonedBucket.ts` walker (weekStartsOn 7) on @js-temporal/polyfill@0.5.1.
+  // Goose Bay fell back at 00:01 Sunday into Saturday 23:01, re-opening a Sunday-first week that
+  // ends on the second pass (-04:00). An explicit `disambiguation` used to end it on the first pass
+  // (-03:00), before the input; it is now ignored. Verified against the `internal/zonedBucket.ts`
+  // walker (weekStartsOn 7) on @js-temporal/polyfill@0.5.1.
   it.each`
     options                                                     | expected
     ${{ weekStartsOn: "sunday" }}                               | ${"2010-11-06T23:59:59-04:00[America/Goose_Bay]"}
-    ${{ weekStartsOn: "sunday", disambiguation: "compatible" }} | ${"2010-11-06T23:59:59-03:00[America/Goose_Bay]"}
+    ${{ weekStartsOn: "sunday", disambiguation: "compatible" }} | ${"2010-11-06T23:59:59-04:00[America/Goose_Bay]"}
   `(
     "returns $expected for Goose Bay's re-opened Sunday week with $options",
     ({ options, expected }) => {

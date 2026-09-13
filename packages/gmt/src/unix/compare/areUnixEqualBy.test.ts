@@ -111,12 +111,24 @@ describe("areUnixEqualBy", () => {
 // 1727532840000 is 2024-09-29T03:59:00+13:45[Pacific/Chatham]
 // 1712408700000 is 2024-04-07T02:50:00+13:45[Pacific/Chatham]
 // 1712412300000 is 2024-04-07T02:50:00+12:45[Pacific/Chatham]
+// The New York, Havana and Goose Bay rows are the same instants as the `areZonedEqualBy`
+// transition rows, so both functions agree:
+// 1730611800000 is 2024-11-03T01:30:00-04:00[America/New_York] (and 00:30:00-05:00[America/Havana])
+// 1730615400000 is 2024-11-03T01:30:00-05:00[America/New_York]
+// 1730608200000 is 2024-11-03T00:30:00-04:00[America/Havana]
+// 1289097000000 is 2010-11-06T23:30:00-03:00[America/Goose_Bay]
+// 1289100600000 is 2010-11-06T23:30:00-04:00[America/Goose_Bay]
 describe("areUnixEqualBy across zone transitions", () => {
   it.each`
-    value1           | value2           | unit      | timeZone             | expected
-    ${1727532300000} | ${1727533200000} | ${"hour"} | ${"Pacific/Chatham"} | ${false}
-    ${1727532060000} | ${1727532840000} | ${"hour"} | ${"Pacific/Chatham"} | ${true}
-    ${1712408700000} | ${1712412300000} | ${"hour"} | ${"Pacific/Chatham"} | ${false}
+    value1           | value2           | unit      | timeZone               | expected
+    ${1727532300000} | ${1727533200000} | ${"hour"} | ${"Pacific/Chatham"}   | ${false}
+    ${1727532060000} | ${1727532840000} | ${"hour"} | ${"Pacific/Chatham"}   | ${true}
+    ${1712408700000} | ${1712412300000} | ${"hour"} | ${"Pacific/Chatham"}   | ${false}
+    ${1730611800000} | ${1730615400000} | ${"hour"} | ${"America/New_York"}  | ${false}
+    ${1730611800000} | ${1730615400000} | ${"day"}  | ${"America/New_York"}  | ${true}
+    ${1730608200000} | ${1730611800000} | ${"hour"} | ${"America/Havana"}    | ${false}
+    ${1730608200000} | ${1730611800000} | ${"day"}  | ${"America/Havana"}    | ${true}
+    ${1289097000000} | ${1289100600000} | ${"day"}  | ${"America/Goose_Bay"} | ${false}
   `(
     "returns $expected for $value1 and $value2 by $unit in $timeZone",
     ({ value1, value2, unit, timeZone, expected }) => {

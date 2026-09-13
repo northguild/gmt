@@ -50,9 +50,8 @@ describe("startOfQuarterForZoned", () => {
     },
   );
 
-  // disambiguation + offset are wired through, though quarter starts (Jan1/Apr1/Jul1/Oct1) rarely
-  // coincide with a DST transition in common IANA zones — this verifies the parameters are accepted
-  // and don't change output for the common case (mechanism verification, not a gap/overlap case)
+  // The deprecated `disambiguation`/`offset` are accepted and ignored: an ordinary quarter start
+  // is unchanged by any value, "reject" included.
   it.each`
     disambiguation  | offset
     ${"compatible"} | ${undefined}
@@ -70,8 +69,8 @@ describe("startOfQuarterForZoned", () => {
   );
 });
 
-// With neither `disambiguation` nor `offset` passed, the quarter starts at the real local
-// bucket of its first month, and every wall-clock field below it is reset — including the
+// The quarter starts at the real local bucket of its first month, and every wall-clock field
+// below it is reset — including the
 // milliseconds, microseconds and nanoseconds the input carried. Expected values verified
 // against `bucketRange` month buckets on @js-temporal/polyfill@0.5.1.
 describe("startOfQuarterForZoned with default options", () => {
@@ -94,13 +93,14 @@ describe("startOfQuarterForZoned with default options", () => {
     ${"1978-10-01T00:30:00+01:00[Africa/Tunis]"}      | ${"1978-10-01T00:00:00+02:00[Africa/Tunis]"}      | ${"Tunis repeated Q4's first local hour; the second pass still belongs to Q4's first October bucket"}
     ${"1982-02-15T12:00:00+08:00[Asia/Kuala_Lumpur]"} | ${"1982-01-01T00:00:00+08:00[Asia/Kuala_Lumpur]"} | ${"Kuala Lumpur skipped 23:30 → 00:00 into Q1"}
     ${"2010-09-30T23:30:00+02:00[Africa/Cairo]"}      | ${"2010-07-01T00:00:00+03:00[Africa/Cairo]"}      | ${"Cairo repeated Q3's last local hour"}
+    ${"2024-11-03T00:30:00-05:00[America/Havana]"}    | ${"2024-10-01T00:00:00-04:00[America/Havana]"}    | ${"the second pass of Havana's repeated midnight stays in Q4"}
   `("returns $expected for $value ($description)", ({ value, expected }) => {
     expect(startOfQuarterForZoned(value)).toBe(expected);
   });
 });
 
-// Opting into wall-clock resolution still resets the sub-second fields: the quarter starts at
-// local midnight, not at midnight plus the input's milliseconds.
+// Explicit (ignored) options still reset the sub-second fields: the quarter starts at local
+// midnight, not at midnight plus the input's milliseconds.
 describe("startOfQuarterForZoned sub-second reset with explicit options", () => {
   it.each`
     value                                   | options                                                        | expected
@@ -114,17 +114,17 @@ describe("startOfQuarterForZoned sub-second reset with explicit options", () => 
   );
 });
 
-// The explicit path at a transition is unchanged wall-clock `.with()`: Tunis repeated Q4's first
-// local hour on 1978-10-01, so "later" resolves 00:00 to the second pass (+01:00) where the
-// default path and "compatible" give the quarter's first real instant (+02:00). Verified on
-// @js-temporal/polyfill@0.5.1.
-describe("startOfQuarterForZoned at a zone transition with explicit options", () => {
+// Tunis repeated Q4's first local hour on 1978-10-01. The quarter starts at its first real
+// instant (+02:00), Temporal's `startOfDay()`; the deprecated `disambiguation`/`offset` are
+// ignored, so "later" no longer picks the second pass. Verified on @js-temporal/polyfill@0.5.1.
+describe("startOfQuarterForZoned at a zone transition with ignored explicit options", () => {
   it.each`
-    options                             | expected
-    ${{ disambiguation: "later" }}      | ${"1978-10-01T00:00:00+01:00[Africa/Tunis]"}
-    ${{ disambiguation: "compatible" }} | ${"1978-10-01T00:00:00+02:00[Africa/Tunis]"}
+    options                                           | expected
+    ${{ disambiguation: "later" }}                    | ${"1978-10-01T00:00:00+02:00[Africa/Tunis]"}
+    ${{ disambiguation: "compatible" }}               | ${"1978-10-01T00:00:00+02:00[Africa/Tunis]"}
+    ${{ disambiguation: "reject", offset: "reject" }} | ${"1978-10-01T00:00:00+02:00[Africa/Tunis]"}
   `(
-    "returns $expected for Tunis's repeated Q4 first hour with $options",
+    "returns the real quarter start $expected for Tunis's repeated Q4 first hour with ignored $options",
     ({ options, expected }) => {
       expect(
         startOfQuarterForZoned(

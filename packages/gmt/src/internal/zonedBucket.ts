@@ -1,24 +1,25 @@
 import { Temporal } from "@js-temporal/polyfill";
 import type { DateTimeUnit } from "../types";
+import { DURATION_FIELD_BY_UNIT, getUnitSpan } from "./intervalCountHelpers";
 
 /**
  * ISO day-of-week a week starts on: 1 = Monday .. 7 = Sunday, as `Temporal`'s `dayOfWeek` reads.
  */
 export type WeekStartDay = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
-/** `DateTimeUnit` to the `Temporal.Duration` field that advances by one of it. */
-const DURATION_FIELD_BY_UNIT = {
-  year: "years",
-  month: "months",
-  week: "weeks",
-  day: "days",
-  hour: "hours",
-  minute: "minutes",
-  second: "seconds",
-  millisecond: "milliseconds",
-  microsecond: "microseconds",
-  nanosecond: "nanoseconds",
-} as const satisfies Record<DateTimeUnit, string>;
+/**
+ * Units the walker floors to: every `DateTimeUnit`, plus the calendar `quarter` (three local
+ * months starting January, April, July or October). Internal only — the public unit types stay
+ * unchanged.
+ */
+export type WalkerUnit = DateTimeUnit | "quarter";
+
+/** The `Temporal.Duration` that advances a wall clock by one `unit`. */
+function oneUnit(unit: WalkerUnit): Temporal.DurationLike {
+  return unit === "quarter"
+    ? { months: 3 }
+    : { [DURATION_FIELD_BY_UNIT[unit]]: 1 };
+}
 
 /** Wall-clock fields that a local day, week, month or year boundary resets. */
 const MIDNIGHT = {
@@ -66,10 +67,18 @@ const MAX_TRANSITION_WALKBACK = 8;
  */
 function truncateLocal(
   local: Temporal.PlainDateTime,
-  unit: DateTimeUnit,
+  unit: WalkerUnit,
   weekStartsOn: WeekStartDay,
 ): Temporal.PlainDateTime {
   if (unit === "nanosecond") return local;
+
+  if (unit === "quarter") {
+    return local.with({
+      month: Math.floor((local.month - 1) / 3) * 3 + 1,
+      day: 1,
+      ...MIDNIGHT,
+    });
+  }
 
   if (unit === "week") {
     return local
@@ -83,7 +92,7 @@ function truncateLocal(
 /** The local `unit` label `zoned` carries — what the wall clock read, with no zone opinion. */
 function localUnitLabel(
   zoned: Temporal.ZonedDateTime,
-  unit: DateTimeUnit,
+  unit: WalkerUnit,
   weekStartsOn: WeekStartDay,
 ): string {
   return truncateLocal(zoned.toPlainDateTime(), unit, weekStartsOn).toString();
@@ -108,7 +117,7 @@ function inZoneOf(
  */
 function boundaryInOwnOffset(
   zoned: Temporal.ZonedDateTime,
-  unit: DateTimeUnit,
+  unit: WalkerUnit,
   weekStartsOn: WeekStartDay,
 ): Temporal.ZonedDateTime {
   const local = zoned.toPlainDateTime();
@@ -132,27 +141,42 @@ function transitionAtOrBefore(
   }
 }
 
+/** Units whose buckets are labelled by a local date: a repeated wall time inside one stays one bucket. */
+const DATE_LABELLED_UNITS: ReadonlySet<WalkerUnit> = new Set([
+  "year",
+  "quarter",
+  "month",
+  "week",
+  "day",
+]);
+
 /**
  * True when the local `unit` bucket restarts at `transition` rather than continuing through it.
  *
- * Two ways a bucket can open at a transition, and the difference is exactly what separates
- * New York from Lord Howe on a fall-back morning:
- *
- * - **The clock lands on a unit boundary.** New York goes back to 01:00:00 exactly, so a
- *   second, separate 01:00 hour begins there — which is why a fall-back day has 25 hour
- *   buckets. `Australia/Lord_Howe` goes back to 01:30, mid-hour, so the hour it is already in
- *   simply runs longer: 90 minutes.
- * - **The label changes discontinuously.** `Pacific/Chatham` jumps 02:45 → 03:45, so the
- *   03:00 hour begins at the transition even though the clock does not read 03:00:00; and a
- *   local day whose midnight is skipped begins at 01:00 the same way.
+ * - **The label changes discontinuously** — every unit. `Pacific/Chatham` jumps 02:45 → 03:45,
+ *   so the 03:00 hour begins at the transition even though the clock does not read 03:00:00; a
+ *   local day whose midnight is skipped begins at 01:00 the same way; and `America/Goose_Bay`'s
+ *   2010-11-07 fall-back re-enters 6 November, so that 59-minute stretch is its own day.
+ * - **The clock lands on a unit boundary** — hours and smaller only. New York goes back to
+ *   01:00:00 exactly, so a second, separate 01:00 hour begins there — which is why a fall-back
+ *   day has 25 hour buckets. `Australia/Lord_Howe` goes back to 01:30, mid-hour, so the hour it
+ *   is already in simply runs longer: 90 minutes.
+ * - **Day and larger never reopen on the same label.** `America/Havana` fell back 01:00 → 00:00
+ *   on 2024-11-03: the clock lands on midnight, but the date is still 3 November, so that is one
+ *   25-hour day starting at the first 00:00 — matching Temporal's `startOfDay()` and `hoursInDay`.
  */
 function startsNewBucketAt(
   transition: Temporal.ZonedDateTime,
-  unit: DateTimeUnit,
+  unit: WalkerUnit,
   weekStartsOn: WeekStartDay,
 ): boolean {
   const local = transition.toPlainDateTime();
-  if (truncateLocal(local, unit, weekStartsOn).equals(local)) return true;
+  if (
+    !DATE_LABELLED_UNITS.has(unit) &&
+    truncateLocal(local, unit, weekStartsOn).equals(local)
+  ) {
+    return true;
+  }
 
   try {
     return (
@@ -186,7 +210,7 @@ function startsNewBucketAt(
  * So the boundary is taken in `zoned`'s own offset, then extended back through any transition
  * the bucket runs straight through. See `startsNewBucketAt` for which those are.
  *
- * - Handles every `DateTimeUnit`. Sub-hour units need the same own-offset treatment, because
+ * - Handles every `DateTimeUnit` plus `quarter`. Sub-hour units need the same own-offset treatment, because
  *   historic offsets carry seconds (`Africa/Monrovia` ran at −00:44:30 until 1972).
  * - Weeks start on `weekStartsOn` (ISO day number, Monday by default).
  * - Keeps `zoned`'s calendar, so a non-ISO month or year floors in that calendar.
@@ -196,7 +220,7 @@ function startsNewBucketAt(
  */
 export function zonedUnitStart(
   zoned: Temporal.ZonedDateTime,
-  unit: DateTimeUnit,
+  unit: WalkerUnit,
   weekStartsOn: WeekStartDay = 1,
 ): Temporal.ZonedDateTime | null {
   let start = boundaryInOwnOffset(zoned, unit, weekStartsOn);
@@ -205,7 +229,9 @@ export function zonedUnitStart(
   for (let i = 0; i < MAX_TRANSITION_WALKBACK; i++) {
     const transition = transitionAtOrBefore(cursor);
 
-    if (!transition || Temporal.ZonedDateTime.compare(transition, start) <= 0) {
+    // A transition exactly on `start` is still checked: Havana's second 00:00 is a unit-aligned
+    // own-offset start that the day runs straight through.
+    if (!transition || Temporal.ZonedDateTime.compare(transition, start) < 0) {
       return start;
     }
 
@@ -225,14 +251,12 @@ export function zonedUnitStart(
  */
 function nextBoundaryInOwnOffset(
   zoned: Temporal.ZonedDateTime,
-  unit: DateTimeUnit,
+  unit: WalkerUnit,
   weekStartsOn: WeekStartDay,
 ): Temporal.ZonedDateTime {
   const local = zoned.toPlainDateTime();
   const remaining = local.until(
-    truncateLocal(local, unit, weekStartsOn).add({
-      [DURATION_FIELD_BY_UNIT[unit]]: 1,
-    }),
+    truncateLocal(local, unit, weekStartsOn).add(oneUnit(unit)),
     { largestUnit: "hour" },
   );
 
@@ -248,13 +272,13 @@ function nextBoundaryInOwnOffset(
  * the next boundary in the current offset, or a transition that opens a bucket of its own —
  * and runs through any transition that does not.
  *
- * - Handles every `DateTimeUnit`, weeks starting on `weekStartsOn` (Monday by default).
+ * - Handles every `DateTimeUnit` plus `quarter`, weeks starting on `weekStartsOn` (Monday by default).
  * - Returns null if neither is reachable within `MAX_TRANSITION_WALKBACK` transitions, which
  *   no IANA zone comes close to.
  */
 export function nextZonedBucketStart(
   current: Temporal.ZonedDateTime,
-  unit: DateTimeUnit,
+  unit: WalkerUnit,
   weekStartsOn: WeekStartDay = 1,
 ): Temporal.ZonedDateTime | null {
   let cursor = current;
@@ -292,7 +316,7 @@ export function nextZonedBucketStart(
  */
 export function zonedUnitEnd(
   zoned: Temporal.ZonedDateTime,
-  unit: DateTimeUnit,
+  unit: WalkerUnit,
   weekStartsOn: WeekStartDay = 1,
 ): Temporal.ZonedDateTime | null {
   const start = zonedUnitStart(zoned, unit, weekStartsOn);
@@ -311,17 +335,6 @@ export function zonedUnitEnd(
  * second; a longer walk answers with the sentinel rather than running unbounded.
  */
 const MAX_COUNTED_TRANSITIONS = 10_000;
-
-/** Whole `unit`s between two wall clocks already truncated to `unit`. */
-function unitsBetween(
-  from: Temporal.PlainDateTime,
-  to: Temporal.PlainDateTime,
-  unit: DateTimeUnit,
-): number {
-  return Math.floor(
-    from.until(to, { largestUnit: unit })[DURATION_FIELD_BY_UNIT[unit]],
-  );
-}
 
 /**
  * Count the local `unit` buckets the half-open interval `[start, end)` touches, in `start`'s
@@ -354,6 +367,11 @@ export function countZonedBuckets(
 
   const label = (zoned: Temporal.ZonedDateTime) =>
     truncateLocal(zoned.toPlainDateTime(), unit, weekStartsOn);
+  // Whole `unit`s between two wall clocks already truncated to `unit`.
+  const unitsBetween = (
+    from: Temporal.PlainDateTime,
+    to: Temporal.PlainDateTime,
+  ) => getUnitSpan(from.until(to, { largestUnit: unit }), unit);
   const reachesIntoEndBucket =
     Temporal.ZonedDateTime.compare(startOfEnd, end) === 0 ? 0 : 1;
 
@@ -372,7 +390,7 @@ export function countZonedBuckets(
     ) {
       return (
         spanned +
-        unitsBetween(label(runStart), label(startOfEnd), unit) +
+        unitsBetween(label(runStart), label(startOfEnd)) +
         reachesIntoEndBucket
       );
     }
@@ -382,7 +400,6 @@ export function countZonedBuckets(
         unitsBetween(
           label(runStart),
           label(transition.subtract({ nanoseconds: 1 })),
-          unit,
         ) + 1;
       runStart = transition;
     }

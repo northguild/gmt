@@ -15,6 +15,9 @@ import { resolveUnixIntervalPair } from "./resolveUnixIntervalPair";
  *   shorter than its unit still counts once (a 15-minute `Pacific/Chatham` hour on its
  *   spring-forward), and a local day the zone deleted counts not at all
  *   (`Pacific/Apia`'s 2011-12-30).
+ * - The count equals `bucketRange(...).length` wherever `bucketRange` is within its 10,000-bucket
+ *   cap. Counting has its own, separate cap of 10,000 zone transitions, so it keeps answering past
+ *   `bucketRange`'s: two years by hour counts 17,544 while `bucketRange` returns `[]`.
  * - Returns `null` when the span crosses more than 10,000 zone transitions.
  * - Weeks start on Monday (ISO 8601).
  * - Accepts singular or plural units (`"day"` and `"days"` behave identically).

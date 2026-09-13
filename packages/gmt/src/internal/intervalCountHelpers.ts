@@ -8,7 +8,7 @@ import type { DateTimeDurationUnit, DateTimeUnit } from "../types";
  * - DURATION_FIELD_BY_UNIT.day => "days"
  * - DURATION_FIELD_BY_UNIT.nanosecond => "nanoseconds"
  */
-const DURATION_FIELD_BY_UNIT = {
+export const DURATION_FIELD_BY_UNIT = {
   year: "years",
   month: "months",
   week: "weeks",

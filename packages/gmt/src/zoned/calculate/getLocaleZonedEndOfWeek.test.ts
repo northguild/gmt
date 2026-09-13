@@ -181,16 +181,19 @@ describe("getLocaleZonedEndOfWeek", () => {
     ).toBe("");
   });
 
-  // disambiguation: week-end time-of-day reset lands on a fall-back overlap
-  // (America/Sao_Paulo repeated 23:59:59 on Saturday 2014-02-15).
+  // America/Sao_Paulo repeated 23:00-23:59:59 on Saturday 2014-02-15, the last day of an en-US
+  // week. The week ends on the second pass (-03:00), one nanosecond before Sunday's
+  // `startOfDay()`, and the deprecated `disambiguation`/`offset` are ignored: "compatible" no
+  // longer ends it an hour early, and "reject" no longer yields "". Verified on
+  // @js-temporal/polyfill@0.5.1.
   it.each`
     disambiguation  | offset       | expected
-    ${"compatible"} | ${undefined} | ${"2014-02-15T23:59:59-02:00[America/Sao_Paulo]"}
+    ${"compatible"} | ${undefined} | ${"2014-02-15T23:59:59-03:00[America/Sao_Paulo]"}
     ${"later"}      | ${undefined} | ${"2014-02-15T23:59:59-03:00[America/Sao_Paulo]"}
-    ${"reject"}     | ${undefined} | ${""}
-    ${"reject"}     | ${"prefer"}  | ${"2014-02-15T23:59:59-02:00[America/Sao_Paulo]"}
+    ${"reject"}     | ${undefined} | ${"2014-02-15T23:59:59-03:00[America/Sao_Paulo]"}
+    ${"reject"}     | ${"prefer"}  | ${"2014-02-15T23:59:59-03:00[America/Sao_Paulo]"}
   `(
-    "resolves fall-back week-end overlap with disambiguation $disambiguation and offset $offset to $expected",
+    "returns the real week end $expected across a repeated last hour with ignored disambiguation $disambiguation and offset $offset",
     ({ disambiguation, offset, expected }) => {
       const optionsArg =
         offset === undefined ? { disambiguation } : { disambiguation, offset };
@@ -205,7 +208,7 @@ describe("getLocaleZonedEndOfWeek", () => {
   );
 });
 
-// With neither `disambiguation` nor `offset` passed, the week is the real local bucket in the
+// The week is the real local bucket in the
 // value's own zone, so its end is never before the value. Expected values verified against the
 // `internal/zonedBucket.ts` walker, `bucketRange` for the Monday week, and Temporal's
 // `startOfDay()` for Santiago, on @js-temporal/polyfill@0.5.1.

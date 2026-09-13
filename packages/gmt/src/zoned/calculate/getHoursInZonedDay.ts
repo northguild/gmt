@@ -12,6 +12,10 @@ import { isValidZonedDateTime } from "../validate";
  *   UTC instant, and uses Temporal's `hoursInDay`: the span from that day's
  *   `startOfDay()` to the next day's. A day whose local midnight is skipped
  *   (e.g. `America/Santiago` on 2024-09-08, which starts at 01:00) is 23 hours.
+ * - The day is the input's calendar date, so it can differ from the bucket
+ *   `startOfZoned(…, "day")` returns where a fall-back re-enters the previous
+ *   date: `America/Goose_Bay` at `2010-11-06T23:30:00-04:00` is in 6 November's
+ *   24 hours here, and in a reopened 59-minute day for `startOfZoned`.
  * - Returns null for invalid input.
  *
  * @param value zoned ISO 8601 datetime string
