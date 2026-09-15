@@ -4,6 +4,7 @@ export * from "./date";
 export * from "./date-time";
 export * from "./http-date";
 export * from "./leap-second";
+export * from "./nanoseconds";
 export * from "./rfc-2822";
 export * from "./rfc-3339";
 export * from "./sql-date-time";
