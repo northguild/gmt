@@ -1,8 +1,8 @@
 {
   "suite": "packages/gmt",
-  "tests": 26709,
+  "tests": 26714,
   "files": 633,
-  "executions": 801270,
+  "executions": 801420,
   "nodes": [
     "22",
     "24",
