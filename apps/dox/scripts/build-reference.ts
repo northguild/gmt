@@ -17,6 +17,7 @@ import {
   existsSync,
   mkdirSync,
   readdirSync,
+  readFileSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -61,6 +62,60 @@ function walk(dir: string): string[] {
     }
   }
   return out;
+}
+
+/**
+ * Every declaration a user can import from `@northguild/gmt`.
+ *
+ * A top-level function without `export`, or an export no entry point re-exports, is an
+ * implementation detail: `package.json` `exports` publishes only the root, namespace and
+ * category barrels (deep file paths map to `null`), so nobody can import it. Walking source
+ * files alone published 20 such helpers as reference pages and counted them as public
+ * functions. The entry points come from the `exports` map itself, not a hand-kept list, and
+ * the checker resolves each barrel's re-exports to the declarations they name.
+ */
+function publicDeclarations(
+  program: ts.Program,
+  checker: ts.TypeChecker,
+): ReadonlySet<ts.Node> {
+  const pkg = JSON.parse(
+    readFileSync(resolve(gmtSrc, "..", "package.json"), "utf8"),
+  ) as { exports: Record<string, { default?: string } | null> };
+
+  const entryFiles = new Set<string>();
+  for (const target of Object.values(pkg.exports)) {
+    const dist = target?.default;
+    if (!dist) continue;
+    const src = resolve(
+      gmtSrc,
+      dist.replace(/^\.\/dist\//, "").replace(/\.js$/, ".ts"),
+    );
+    if (!src.includes("*")) {
+      entryFiles.add(src);
+      continue;
+    }
+    const [before, after] = src.split("*");
+    for (const dir of readdirSync(before, { withFileTypes: true })) {
+      if (dir.isDirectory()) entryFiles.add(`${before}${dir.name}${after}`);
+    }
+  }
+
+  const declarations = new Set<ts.Node>();
+  for (const file of entryFiles) {
+    const sourceFile = program.getSourceFile(file);
+    const moduleSymbol = sourceFile && checker.getSymbolAtLocation(sourceFile);
+    if (!moduleSymbol) continue;
+    for (const exported of checker.getExportsOfModule(moduleSymbol)) {
+      const symbol =
+        exported.flags & ts.SymbolFlags.Alias
+          ? checker.getAliasedSymbol(exported)
+          : exported;
+      for (const declaration of symbol.declarations ?? []) {
+        declarations.add(declaration);
+      }
+    }
+  }
+  return declarations;
 }
 
 function namespaceModule(file: string): { namespace: string; module: string } {
@@ -852,25 +907,32 @@ function extractFromFile(
   file: string,
   sourceFile: ts.SourceFile,
   knownTypes: Set<string>,
+  publicDecls: ReadonlySet<ts.Node>,
 ): { docs: Doc[]; types: string[] } {
   const { namespace: ns, module: mod } = namespaceModule(file);
   const docs: Doc[] = [];
   const types: string[] = [];
 
+  // Only declarations importable from a published entry point get a page (see
+  // publicDeclarations); a file-private helper or an unexported sibling is skipped.
   for (const stmt of sourceFile.statements) {
     if (ts.isFunctionDeclaration(stmt) && stmt.name) {
+      if (!publicDecls.has(stmt)) continue;
       const doc = extractFunction(checker, stmt, ns, mod, file, knownTypes);
       if (doc) docs.push(doc);
     } else if (ts.isTypeAliasDeclaration(stmt) && stmt.name) {
+      if (!publicDecls.has(stmt)) continue;
       const name = stmt.name.text;
       types.push(name);
       docs.push(extractType(checker, stmt, ns, mod, file));
     } else if (ts.isInterfaceDeclaration(stmt) && stmt.name) {
+      if (!publicDecls.has(stmt)) continue;
       const name = stmt.name.text;
       types.push(name);
       docs.push(extractInterface(checker, stmt, ns, mod, file));
     } else if (ts.isVariableStatement(stmt)) {
       for (const decl of stmt.declarationList.declarations) {
+        if (!publicDecls.has(decl)) continue;
         if (ts.isIdentifier(decl.name) && decl.initializer) {
           if (isRegexInit(decl.initializer)) {
             const doc = extractRegex(checker, decl, ns, mod, file);
@@ -1593,13 +1655,16 @@ function runGeneration() {
     strict: false,
   });
   const checker = program.getTypeChecker();
+  const publicDecls = publicDeclarations(program, checker);
 
-  // Pass 1: collect known type names
+  // Pass 1: collect known type names — public ones only, so a signature never links to
+  // a type page that is not generated.
   const knownTypes = new Set<string>();
   for (const file of files) {
     const sf = program.getSourceFile(file);
     if (!sf) continue;
     for (const stmt of sf.statements) {
+      if (!publicDecls.has(stmt)) continue;
       if (ts.isTypeAliasDeclaration(stmt) && stmt.name) {
         knownTypes.add(stmt.name.text);
       }
@@ -1614,7 +1679,13 @@ function runGeneration() {
   for (const file of files) {
     const sf = program.getSourceFile(file);
     if (!sf) continue;
-    const { docs } = extractFromFile(checker, file, sf, knownTypes);
+    const { docs } = extractFromFile(
+      checker,
+      file,
+      sf,
+      knownTypes,
+      publicDecls,
+    );
     allDocs.push(...docs);
   }
 

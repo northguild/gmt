@@ -1861,17 +1861,6 @@
     ]
   },
   {
-    "url": "/reference/plain/calculate/EndOfTimeUnit",
-    "name": "EndOfTimeUnit",
-    "namespace": "plain",
-    "module": "calculate",
-    "kind": "type",
-    "signature": "",
-    "description": "The EndOfTimeUnit type.",
-    "sourcePath": "packages/gmt/src/plain/calculate/endOfTime.ts",
-    "examples": []
-  },
-  {
     "url": "/reference/plain/calculate/endOfTime",
     "name": "endOfTime",
     "namespace": "plain",
@@ -2640,17 +2629,6 @@
     ]
   },
   {
-    "url": "/reference/plain/calculate/millisecondsIntoDay",
-    "name": "millisecondsIntoDay",
-    "namespace": "plain",
-    "module": "calculate",
-    "kind": "function",
-    "signature": "millisecondsIntoDay(source: PlainDateTime): number",
-    "description": "Milliseconds (with sub-millisecond fraction) from midnight to `source`'s wall-clock time.",
-    "sourcePath": "packages/gmt/src/plain/calculate/roundDateTime.ts",
-    "examples": []
-  },
-  {
     "url": "/reference/plain/calculate/roundDateTime",
     "name": "roundDateTime",
     "namespace": "plain",
@@ -2969,17 +2947,6 @@
         "result": "\"\""
       }
     ]
-  },
-  {
-    "url": "/reference/plain/calculate/StartOfTimeUnit",
-    "name": "StartOfTimeUnit",
-    "namespace": "plain",
-    "module": "calculate",
-    "kind": "type",
-    "signature": "",
-    "description": "The StartOfTimeUnit type.",
-    "sourcePath": "packages/gmt/src/plain/calculate/startOfTime.ts",
-    "examples": []
   },
   {
     "url": "/reference/plain/calculate/startOfTime",
@@ -4462,17 +4429,6 @@
     ]
   },
   {
-    "url": "/reference/plain/get/isValidPlainNowUnit",
-    "name": "isValidPlainNowUnit",
-    "namespace": "plain",
-    "module": "get",
-    "kind": "function",
-    "signature": "isValidPlainNowUnit(unit: string): unit is NowUnit",
-    "description": "",
-    "sourcePath": "packages/gmt/src/plain/get/getNowUnit.ts",
-    "examples": []
-  },
-  {
     "url": "/reference/plain/get/getNowUnit",
     "name": "getNowUnit",
     "namespace": "plain",
@@ -4805,17 +4761,6 @@
     ]
   },
   {
-    "url": "/reference/plain/interval/startOfUnitIfRepresentable",
-    "name": "startOfUnitIfRepresentable",
-    "namespace": "plain",
-    "module": "interval",
-    "kind": "function",
-    "signature": "startOfUnitIfRepresentable(source: PlainDate, unit: string): PlainDate",
-    "description": "The start of the date `unit` holding `source`, or null when it lies before the representable range.",
-    "sourcePath": "packages/gmt/src/plain/interval/intervalCountDate.ts",
-    "examples": []
-  },
-  {
     "url": "/reference/plain/interval/intervalCountDate",
     "name": "intervalCountDate",
     "namespace": "plain",
@@ -4854,17 +4799,6 @@
         "result": "13 (Hebrew leap year, measured in Hebrew)"
       }
     ]
-  },
-  {
-    "url": "/reference/plain/interval/startOfNextUnit",
-    "name": "startOfNextUnit",
-    "namespace": "plain",
-    "module": "interval",
-    "kind": "function",
-    "signature": "startOfNextUnit(source: PlainDateTime, unit: DateTimeUnit): PlainDateTime",
-    "description": "Return the start of the `unit` after the one holding `source`: step first, truncate after, so",
-    "sourcePath": "packages/gmt/src/plain/interval/intervalCountDateTime.ts",
-    "examples": []
   },
   {
     "url": "/reference/plain/interval/intervalCountDateTime",
@@ -5413,28 +5347,6 @@
         "result": "null"
       }
     ]
-  },
-  {
-    "url": "/reference/plain/interval/daysBetween",
-    "name": "daysBetween",
-    "namespace": "plain",
-    "module": "interval",
-    "kind": "function",
-    "signature": "daysBetween(from: PlainDate, to: PlainDate): number",
-    "description": "",
-    "sourcePath": "packages/gmt/src/plain/interval/intervalLengthDate.ts",
-    "examples": []
-  },
-  {
-    "url": "/reference/plain/interval/calendarLength",
-    "name": "calendarLength",
-    "namespace": "plain",
-    "module": "interval",
-    "kind": "function",
-    "signature": "calendarLength(start: PlainDate, end: PlainDate, unit: CalendarDateUnit): number",
-    "description": "`Duration.total({ unit, relativeTo: start })` of a non-ISO calendar difference, computed as TC39",
-    "sourcePath": "packages/gmt/src/plain/interval/intervalLengthDate.ts",
-    "examples": []
   },
   {
     "url": "/reference/plain/interval/intervalLengthDate",
@@ -7392,17 +7304,6 @@
     "signature": "isValidDateDurationUnit(unit: string): unit is \"years\" | \"months\" | \"weeks\" | \"days\"",
     "description": "",
     "sourcePath": "packages/gmt/src/plain/validate/isValidDateDurationUnit.ts",
-    "examples": []
-  },
-  {
-    "url": "/reference/plain/validate/IsValidDateRangeProps",
-    "name": "IsValidDateRangeProps",
-    "namespace": "plain",
-    "module": "validate",
-    "kind": "type",
-    "signature": "",
-    "description": "The IsValidDateRangeProps type.",
-    "sourcePath": "packages/gmt/src/plain/validate/isValidDateRange.ts",
     "examples": []
   },
   {
@@ -10012,17 +9913,6 @@
     ]
   },
   {
-    "url": "/reference/unix/calculate/startOrEndOfUnix",
-    "name": "startOrEndOfUnix",
-    "namespace": "unix",
-    "module": "calculate",
-    "kind": "function",
-    "signature": "startOrEndOfUnix(value: number, unit: DateUnit | TimeUnit | \"quarter\", options: { epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; weekStartsOn?: \"monday\" | \"sunday\"; disambiguation?: \"compatible\" | ... 2 more ... | \"reject\"; offset?: \"reject\" | ... 2 more ... | \"ignore\"; }, isEnd: boolean): number",
-    "description": "Internal shared implementation for `startOfUnix` / `endOfUnix`.",
-    "sourcePath": "packages/gmt/src/unix/calculate/startOrEndOfUnix.ts",
-    "examples": []
-  },
-  {
     "url": "/reference/unix/calculate/subtractUnix",
     "name": "subtractUnix",
     "namespace": "unix",
@@ -10290,17 +10180,6 @@
     "examples": []
   },
   {
-    "url": "/reference/unix/format/toInstant",
-    "name": "toInstant",
-    "namespace": "unix",
-    "module": "format",
-    "kind": "function",
-    "signature": "toInstant(raw: string | number, epochUnit: \"seconds\" | \"milliseconds\"): Instant",
-    "description": "",
-    "sourcePath": "packages/gmt/src/unix/format/formatCalendarUnix.ts",
-    "examples": []
-  },
-  {
     "url": "/reference/unix/format/formatCalendarUnix",
     "name": "formatCalendarUnix",
     "namespace": "unix",
@@ -10367,17 +10246,6 @@
     "kind": "type",
     "signature": "",
     "description": "The FormatUnixOptions type.",
-    "sourcePath": "packages/gmt/src/unix/format/formatUnix.ts",
-    "examples": []
-  },
-  {
-    "url": "/reference/unix/format/parseEpochMs",
-    "name": "parseEpochMs",
-    "namespace": "unix",
-    "module": "format",
-    "kind": "function",
-    "signature": "parseEpochMs(value: string | number, epochUnit: \"seconds\" | \"milliseconds\"): number",
-    "description": "",
     "sourcePath": "packages/gmt/src/unix/format/formatUnix.ts",
     "examples": []
   },
@@ -10572,17 +10440,6 @@
         "result": "1700000000"
       }
     ]
-  },
-  {
-    "url": "/reference/unix/get/isValidUnixNowUnit",
-    "name": "isValidUnixNowUnit",
-    "namespace": "unix",
-    "module": "get",
-    "kind": "function",
-    "signature": "isValidUnixNowUnit(unit: string): unit is UnixNowUnit",
-    "description": "",
-    "sourcePath": "packages/gmt/src/unix/get/getUnixNowUnit.ts",
-    "examples": []
   },
   {
     "url": "/reference/unix/get/getUnixNowUnit",
@@ -11145,28 +11002,6 @@
     ]
   },
   {
-    "url": "/reference/unix/interval/ResolvedUnixInterval",
-    "name": "ResolvedUnixInterval",
-    "namespace": "unix",
-    "module": "interval",
-    "kind": "type",
-    "signature": "",
-    "description": "The ResolvedUnixInterval type.",
-    "sourcePath": "packages/gmt/src/unix/interval/resolveUnixIntervalPair.ts",
-    "examples": []
-  },
-  {
-    "url": "/reference/unix/interval/resolveUnixIntervalPair",
-    "name": "resolveUnixIntervalPair",
-    "namespace": "unix",
-    "module": "interval",
-    "kind": "function",
-    "signature": "resolveUnixIntervalPair(start: string | number, end: string | number, unit: string): ResolvedUnixInterval",
-    "description": "",
-    "sourcePath": "packages/gmt/src/unix/interval/resolveUnixIntervalPair.ts",
-    "examples": []
-  },
-  {
     "url": "/reference/unix/interval/splitIntervalByUnitUnix",
     "name": "splitIntervalByUnitUnix",
     "namespace": "unix",
@@ -11335,46 +11170,6 @@
       {
         "call": "parseMicrosecondFromUnix(-86400, { epochUnit: \"seconds\" })",
         "result": "\"000\""
-      }
-    ]
-  },
-  {
-    "url": "/reference/unix/parse/parseMillisecondFromUnix",
-    "name": "parseMillisecondFromUnix",
-    "namespace": "unix",
-    "module": "parse",
-    "kind": "function",
-    "signature": "parseMillisecondFromUnix(value: string | number, options?: { epochUnit?: UnixUnit; timeZone?: string; }): string",
-    "description": "Return the millisecond (0-999) from a unix epoch value.",
-    "sourcePath": "packages/gmt/src/unix/parse/parseMillisecondFromUnix.ts",
-    "examples": [
-      {
-        "call": "parseMillisecondFromUnix(1700000000000)",
-        "result": "\"000\""
-      },
-      {
-        "call": "parseMillisecondFromUnix(-86400, { epochUnit: \"seconds\" })",
-        "result": "\"000\""
-      }
-    ]
-  },
-  {
-    "url": "/reference/unix/parse/parseMinuteFromUnix",
-    "name": "parseMinuteFromUnix",
-    "namespace": "unix",
-    "module": "parse",
-    "kind": "function",
-    "signature": "parseMinuteFromUnix(value: string | number, options?: { epochUnit?: UnixUnit; timeZone?: string; }): string",
-    "description": "Return the minute (0-59) from a unix epoch value.",
-    "sourcePath": "packages/gmt/src/unix/parse/parseMinuteFromUnix.ts",
-    "examples": [
-      {
-        "call": "parseMinuteFromUnix(1700000000000)",
-        "result": "\"26\""
-      },
-      {
-        "call": "parseMinuteFromUnix(-86400, { epochUnit: \"seconds\" })",
-        "result": "\"00\""
       }
     ]
   },
@@ -12017,17 +11812,6 @@
     ]
   },
   {
-    "url": "/reference/utc/calculate/startOrEndOfUtc",
-    "name": "startOrEndOfUtc",
-    "namespace": "utc",
-    "module": "calculate",
-    "kind": "function",
-    "signature": "startOrEndOfUtc(value: string, unit: DateUnit | TimeUnit, options: { weekStartsOn?: \"monday\" | \"sunday\"; fractionalSecondDigits?: FractionalDigit; }, isEnd: boolean): string",
-    "description": "Internal shared implementation for `startOfUtc` / `endOfUtc`.",
-    "sourcePath": "packages/gmt/src/utc/calculate/startOrEndOfUtc.ts",
-    "examples": []
-  },
-  {
     "url": "/reference/utc/calculate/subtractUtc",
     "name": "subtractUtc",
     "namespace": "utc",
@@ -12581,17 +12365,6 @@
     ]
   },
   {
-    "url": "/reference/utc/get/isValidUtcNowUnit",
-    "name": "isValidUtcNowUnit",
-    "namespace": "utc",
-    "module": "get",
-    "kind": "function",
-    "signature": "isValidUtcNowUnit(unit: string): unit is UtcNowUnit",
-    "description": "",
-    "sourcePath": "packages/gmt/src/utc/get/getUtcNowUnit.ts",
-    "examples": []
-  },
-  {
     "url": "/reference/utc/get/getUtcNowUnit",
     "name": "getUtcNowUnit",
     "namespace": "utc",
@@ -12750,17 +12523,6 @@
         "result": "null"
       }
     ]
-  },
-  {
-    "url": "/reference/utc/interval/laterInstant",
-    "name": "laterInstant",
-    "namespace": "utc",
-    "module": "interval",
-    "kind": "function",
-    "signature": "laterInstant(left: Instant, right: Instant): Instant",
-    "description": "The later of two instants.",
-    "sourcePath": "packages/gmt/src/utc/interval/intervalDifferenceUtc.ts",
-    "examples": []
   },
   {
     "url": "/reference/utc/interval/intervalDifferenceUtc",
@@ -14262,17 +14024,6 @@
     ]
   },
   {
-    "url": "/reference/zoned/calculate/startOrEndOfZoned",
-    "name": "startOrEndOfZoned",
-    "namespace": "zoned",
-    "module": "calculate",
-    "kind": "function",
-    "signature": "startOrEndOfZoned(value: string, unit: DateTimeUnit, options: { weekStartsOn?: \"monday\" | \"sunday\"; fractionalSecondDigits?: FractionalDigit; }, isEnd: boolean): string",
-    "description": "Internal shared implementation for `startOfZoned` / `endOfZoned`.",
-    "sourcePath": "packages/gmt/src/zoned/calculate/startOrEndOfZoned.ts",
-    "examples": []
-  },
-  {
     "url": "/reference/zoned/calculate/subtractZoned",
     "name": "subtractZoned",
     "namespace": "zoned",
@@ -15511,17 +15262,6 @@
     "examples": []
   },
   {
-    "url": "/reference/zoned/get/isValidZonedNowUnit",
-    "name": "isValidZonedNowUnit",
-    "namespace": "zoned",
-    "module": "get",
-    "kind": "function",
-    "signature": "isValidZonedNowUnit(unit: string): unit is ZonedNowUnit",
-    "description": "",
-    "sourcePath": "packages/gmt/src/zoned/get/getZonedNowUnit.ts",
-    "examples": []
-  },
-  {
     "url": "/reference/zoned/get/getZonedNowUnit",
     "name": "getZonedNowUnit",
     "namespace": "zoned",
@@ -16265,17 +16005,6 @@
     "examples": []
   },
   {
-    "url": "/reference/zoned/parse/isValidZonedOffsetUnit",
-    "name": "isValidZonedOffsetUnit",
-    "namespace": "zoned",
-    "module": "parse",
-    "kind": "function",
-    "signature": "isValidZonedOffsetUnit(unit: unknown): unit is ZonedOffsetUnit",
-    "description": "",
-    "sourcePath": "packages/gmt/src/zoned/parse/getZonedOffsetAs.ts",
-    "examples": []
-  },
-  {
     "url": "/reference/zoned/parse/getZonedOffsetAs",
     "name": "getZonedOffsetAs",
     "namespace": "zoned",
@@ -16626,17 +16355,6 @@
     "kind": "type",
     "signature": "",
     "description": "The ZonedParseUnit type.",
-    "sourcePath": "packages/gmt/src/zoned/parse/parseUnitFromZoned.ts",
-    "examples": []
-  },
-  {
-    "url": "/reference/zoned/parse/isValidZonedUnit",
-    "name": "isValidZonedUnit",
-    "namespace": "zoned",
-    "module": "parse",
-    "kind": "function",
-    "signature": "isValidZonedUnit(unit: string): unit is ZonedParseUnit",
-    "description": "",
     "sourcePath": "packages/gmt/src/zoned/parse/parseUnitFromZoned.ts",
     "examples": []
   },

@@ -1,8 +1,8 @@
 {
   "suite": "packages/gmt",
-  "tests": 26690,
-  "files": 632,
-  "executions": 800700,
+  "tests": 26709,
+  "files": 633,
+  "executions": 801270,
   "nodes": [
     "22",
     "24",
@@ -41,24 +41,24 @@
     "ru-RU",
     "tr-TR"
   ],
-  "functions": 562,
+  "functions": 542,
   "patterns": 25,
   "byNamespace": [
     {
       "namespace": "plain",
-      "count": 229
+      "count": 223
     },
     {
       "namespace": "zoned",
-      "count": 123
-    },
-    {
-      "namespace": "unix",
-      "count": 78
+      "count": 119
     },
     {
       "namespace": "utc",
-      "count": 77
+      "count": 74
+    },
+    {
+      "namespace": "unix",
+      "count": 71
     },
     {
       "namespace": "precision",
