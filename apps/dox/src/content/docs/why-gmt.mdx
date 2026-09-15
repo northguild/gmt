@@ -19,6 +19,7 @@ import {
   competitorPublicApiRange,
   competitorStatRange,
   competitorsByPublicApi,
+  competitorTimeResolutionLabel,
   executionRatio,
   largestCompetitorSuite,
   publicApiTotal,
@@ -168,6 +169,7 @@ Most date bugs hide at the extremes, where ordinary tests never look. GMT tests 
 | **Timezones tested**  | {gmtStats.timezones} × every public function     | {timezoneRange.min} – {timezoneRange.max} files, tested in isolation |
 | **Node versions**     | {gmtStats.nodes.join(", ")}                      | {nodeRange.min} – {nodeRange.max} |
 | **Public functions**  | {formatCount(gmtStats.functions)}                | {publicApiRange.min} – {publicApiRange.max}<sup><a href="#public-api-counts" aria-label="How public functions are counted">*</a></sup> |
+| **Time precision**    | Nanoseconds, exact as `bigint`                   | {competitorTimeResolutionLabel()}                                     |
 | **Sentinel contract** | `""` / `null` / `false` / `[]`                   | Throws `RangeError`                                                   |
 
 <p id="public-api-counts" class="gmt-table-note">

@@ -103,14 +103,16 @@ html:not([data-has-sidebar]) .sl-container {
  * Natural auto-flow columns (repeat(auto-fit, minmax(...))) rather than
  * fixed 1/2/3-column breakpoints: the browser fits as many columns as the
  * available width allows, so it doesn't need per-page-width tuning as
- * section count/content changes, and it degrades to a single column below
- * ~24rem on its own. 24rem (not a narrower value) is deliberate: it's
- * roughly the minimum a GridSection needs before its own nested grids
+ * section count/content changes. 24rem (not a narrower value) is deliberate:
+ * it's roughly the minimum a GridSection needs before its own nested grids
  * (Starlight's CardGrid, the fault grid in WhyDateBug) have room to be
- * anything but single-column themselves — see the container queries below. */
+ * anything but single-column themselves — see the container queries below.
+ * The minimum is `min(24rem, 100%)`, not a bare 24rem: a bare 24rem (384px)
+ * column cannot shrink, so on a phone, whose content column is narrower than
+ * that, every section overflowed the viewport and the page scrolled sideways. */
 .gmt-home-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(24rem, 100%), 1fr));
   gap: var(--gmt-space-8, 3rem);
 }
 

@@ -40,9 +40,20 @@ export interface LibraryComparisonStats {
   publicApi?: { functions: number; methods: number; version: string };
 }
 
+/** The finest time unit a library's public API can represent. */
+export type TimeResolution = "millisecond" | "nanosecond";
+
 export interface LibraryComparison {
   id: string;
   displayName: string;
+  /**
+   * The finest time unit the library's public API represents. Measured from each library's
+   * published TypeScript declarations at its `publicApi` version (2026-09-15): no alternative
+   * declares a microsecond or nanosecond field or unit anywhere, so each stops at the
+   * millisecond, like `Date`. GMT is nanosecond: Temporal counts epoch nanoseconds, and GMT
+   * keeps them exact as `bigint` (the `precision` namespace).
+   */
+  timeResolution: TimeResolution;
   /** Shorter label for the bar chart's y-axis; falls back to displayName. */
   chartLabel?: string;
   /** How the CI matrix re-runs the suite, for the chart tooltip; omitted when CI runs it once. */
@@ -65,6 +76,7 @@ export interface LibraryComparison {
 export const libraryComparisons: LibraryComparison[] = [
   {
     id: "@northguild/gmt",
+    timeResolution: "nanosecond",
     displayName: "@northguild/gmt",
     isSubject: true,
     matrixLabel: `${gmtStats.timezones} timezones × ${gmtStats.nodes.length} Node versions`,
@@ -85,6 +97,7 @@ export const libraryComparisons: LibraryComparison[] = [
   },
   {
     id: "@internationalized/date",
+    timeResolution: "millisecond",
     displayName: "@internationalized/date",
     chartLabel: "@intl/date",
     kind: "nonstandard",
@@ -109,6 +122,7 @@ export const libraryComparisons: LibraryComparison[] = [
   },
   {
     id: "luxon",
+    timeResolution: "millisecond",
     displayName: "Luxon",
     matrixLabel: "4 Node versions",
     kind: "wraps",
@@ -133,6 +147,7 @@ export const libraryComparisons: LibraryComparison[] = [
   },
   {
     id: "date-fns",
+    timeResolution: "millisecond",
     displayName: "date-fns",
     kind: "wraps",
     foundation: "built on Date",
@@ -153,6 +168,7 @@ export const libraryComparisons: LibraryComparison[] = [
   },
   {
     id: "moment",
+    timeResolution: "millisecond",
     displayName: "Moment.js",
     matrixLabel: "3 Node versions",
     kind: "wraps",
@@ -178,6 +194,7 @@ export const libraryComparisons: LibraryComparison[] = [
   },
   {
     id: "dayjs",
+    timeResolution: "millisecond",
     displayName: "Day.js",
     matrixLabel: "2 tz files × 4 extra TZ runs",
     kind: "wraps",
@@ -203,6 +220,7 @@ export const libraryComparisons: LibraryComparison[] = [
   },
   {
     id: "spacetime",
+    timeResolution: "millisecond",
     displayName: "Spacetime",
     matrixLabel: "2 Node versions",
     kind: "wraps",
@@ -267,6 +285,19 @@ export function competitorsByPublicApi(): LibraryComparison[] {
 export function competitorPublicApiRange(): { min: number; max: number } {
   const totals = competitorsByPublicApi().map(publicApiTotal);
   return { min: Math.min(...totals), max: Math.max(...totals) };
+}
+
+/**
+ * The finest time units the alternatives represent, as one table label, e.g. "Milliseconds".
+ * Derived from each entry's `timeResolution`, so page copy never types the claim.
+ */
+export function competitorTimeResolutionLabel(): string {
+  const units = [
+    ...new Set(competitorComparisons.map((l) => l.timeResolution)),
+  ];
+  return units
+    .map((unit) => `${unit.charAt(0).toUpperCase()}${unit.slice(1)}s`)
+    .join(", ");
 }
 
 /** Every alternative's CI executions, summed. */
