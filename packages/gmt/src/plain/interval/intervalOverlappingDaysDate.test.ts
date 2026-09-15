@@ -11,7 +11,7 @@ describe("intervalOverlappingDaysDate", () => {
     ${"2023-02-28"} | ${"2023-03-01"} | ${"2023-02-27"} | ${"2023-03-05"} | ${2}
     ${"2024-12-31"} | ${"2025-01-02"} | ${"2025-01-01"} | ${"2025-01-05"} | ${2}
   `(
-    "returns $expected shared dates for $aStart..$aEnd × $bStart..$bEnd",
+    "returns $expected shared dates for $aStart to $aEnd × $bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalOverlappingDaysDate(aStart, aEnd, bStart, bEnd)).toBe(
         expected,
@@ -25,7 +25,7 @@ describe("intervalOverlappingDaysDate", () => {
     ${"2024-06-30"} | ${"2024-06-30"} | ${"2024-06-30"} | ${"2024-06-30"} | ${1}
     ${"2024-06-30"} | ${"2024-06-30"} | ${"2024-01-01"} | ${"2024-06-30"} | ${1}
   `(
-    "returns $expected for adjacent/identical $aStart..$aEnd × $bStart..$bEnd",
+    "returns $expected for adjacent/identical $aStart to $aEnd × $bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalOverlappingDaysDate(aStart, aEnd, bStart, bEnd)).toBe(
         expected,
@@ -38,7 +38,7 @@ describe("intervalOverlappingDaysDate", () => {
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-07-01"} | ${"2024-12-31"}
     ${"2024-07-01"} | ${"2024-12-31"} | ${"2024-01-01"} | ${"2024-06-30"}
   `(
-    "returns 0 for disjoint $aStart..$aEnd × $bStart..$bEnd",
+    "returns 0 for disjoint $aStart to $aEnd × $bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(intervalOverlappingDaysDate(aStart, aEnd, bStart, bEnd)).toBe(0);
     },
@@ -49,7 +49,7 @@ describe("intervalOverlappingDaysDate", () => {
     ${"2024-06-30"} | ${"2024-01-01"} | ${"2024-04-01"} | ${"2024-12-31"}
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-06-15"} | ${"2024-06-10"}
   `(
-    "returns null for inverted interval $aStart..$aEnd × $bStart..$bEnd",
+    "returns null for inverted interval $aStart to $aEnd × $bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(
         intervalOverlappingDaysDate(aStart, aEnd, bStart, bEnd),

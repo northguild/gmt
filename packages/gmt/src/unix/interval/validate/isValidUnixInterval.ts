@@ -1,10 +1,14 @@
+import { parseUnixEpochValue } from "../../../internal";
+
 /**
- * Return true if `start` and `end` form a valid Unix interval — both finite numbers
+ * Return true if `start` and `end` form a valid Unix interval — both safe-integer epochs
  * and `start <= end`.
  *
- * - Both inputs must be numbers (or numeric strings that coerce to finite numbers).
+ * - Each input must be a safe integer (`Number.isSafeInteger`) or a numeric string that coerces
+ *   to one, exactly as every `unix/interval` function reads its arguments.
+ * - Fractional values, `NaN`, `±Infinity` and anything beyond ±(2^53 − 1) return `false`.
+ * - An empty or whitespace-only string returns `false` rather than reading as epoch 0.
  * - Equal `start === end` is valid.
- * - Non-finite values (NaN, Infinity) return `false`.
  *
  * @param start Unix epoch value (seconds or milliseconds) — interval start
  * @param end Unix epoch value (seconds or milliseconds) — interval end
@@ -12,27 +16,21 @@
  *
  * @example isValidUnixInterval(0, 1700000000) // true
  * @example isValidUnixInterval(1000, 1000) // true
- * @example isValidUnixInterval(1700000000, 0) // false
  * @example isValidUnixInterval("0", "1700000000") // true
+ * @example isValidUnixInterval(1700000000, 0) // false (reversed)
+ * @example isValidUnixInterval(0, 1.5) // false (fractional)
+ * @example isValidUnixInterval("", 1000) // false (empty string is not epoch 0)
  */
 export function isValidUnixInterval(
   start: number | string,
   end: number | string,
 ): boolean {
-  if (typeof start !== "number" && typeof start !== "string") {
+  const startValue = parseUnixEpochValue(start);
+  const endValue = parseUnixEpochValue(end);
+
+  if (startValue === null || endValue === null) {
     return false;
   }
 
-  if (typeof end !== "number" && typeof end !== "string") {
-    return false;
-  }
-
-  const n1 = typeof start === "number" ? start : Number(start);
-  const n2 = typeof end === "number" ? end : Number(end);
-
-  if (!Number.isFinite(n1) || !Number.isFinite(n2)) {
-    return false;
-  }
-
-  return n1 <= n2;
+  return startValue <= endValue;
 }

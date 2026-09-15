@@ -8,7 +8,7 @@ describe("intervalEngulfsTime", () => {
     ${"09:00:00"} | ${"17:00:00"} | ${"09:00:00"} | ${"12:00:00"} | ${true}
     ${"09:00:00"} | ${"17:00:00"} | ${"12:00:00"} | ${"17:00:00"} | ${true}
   `(
-    "returns $expected when B is inside A ($aStart..$aEnd, $bStart..$bEnd)",
+    "returns $expected when B is inside A ($aStart to $aEnd, $bStart to $bEnd)",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalEngulfsTime(aStart, aEnd, bStart, bEnd)).toBe(expected);
     },

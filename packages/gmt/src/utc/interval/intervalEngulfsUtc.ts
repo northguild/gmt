@@ -7,6 +7,7 @@ import { utcDateTime } from "../../regex/utc-date-time";
  * falls within A.
  *
  * - Uses `Temporal.Instant.compare` for comparison.
+ * - Endpoints are inclusive: B may start at A's start and end at A's end.
  * - Equivalent to 4-argument `intervalContainsUtc(aStart, aEnd, bStart, bEnd)`.
  * - Returns `false` if either interval is invalid (`start > end`).
  * - Returns `false` on invalid input (wrong type, malformed strings, leap seconds).

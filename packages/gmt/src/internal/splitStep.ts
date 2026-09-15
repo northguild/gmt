@@ -55,6 +55,8 @@ export function isExactDurationUnit(unit: string): boolean {
  * @param compare the Temporal type's `compare`
  * @param unit plural duration unit
  * @param amount positive number of units per step
+ * @param add how a duration is added to a value (default `value.add(duration)`; the plain date
+ *   caller passes its calendar-correct add)
  * @returns `[sliceStart, sliceEnd]` pairs, or `null` when stepping goes backwards or stalls
  *
  * @example tileByUnit(Temporal.PlainDate.from("2024-01-01"), Temporal.PlainDate.from("2024-01-04"), Temporal.PlainDate.compare, "days", 2) // [[2024-01-01, 2024-01-03], [2024-01-03, 2024-01-04]]
@@ -68,6 +70,8 @@ export function tileByUnit<
   compare: (a: T, b: T) => number,
   unit: string,
   amount: number,
+  add: (value: T, duration: Temporal.DurationLike) => T = (value, duration) =>
+    value.add(duration),
 ): Array<[T, T]> | null {
   const exact = isExactDurationUnit(unit);
   const slices: Array<[T, T]> = [];
@@ -78,8 +82,8 @@ export function tileByUnit<
     step++
   ) {
     const next = exact
-      ? current.add({ [unit]: amount })
-      : start.add({ [unit]: amount * step });
+      ? add(current, { [unit]: amount })
+      : add(start, { [unit]: amount * step });
     const order = compare(next, current);
 
     if (order < 0) {

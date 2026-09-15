@@ -1,4 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { zonedUntil } from "../../internal";
 import {
   isValidUnixEpochPair,
   resolveUnixTimeZone,
@@ -69,7 +70,7 @@ export function diffUnix(
     const zdt1 = instant1.toZonedDateTimeISO(timeZone);
     const zdt2 = instant2.toZonedDateTimeISO(timeZone);
 
-    const duration = zdt1.until(zdt2, {
+    const duration = zonedUntil(zdt1, zdt2, {
       largestUnit: isSingleUnit ? units : getLargestDateTimeDurationUnit(units),
       smallestUnit: options?.smallestUnit,
       roundingIncrement: options?.roundingIncrement,

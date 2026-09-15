@@ -1,5 +1,9 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { resolveOverflow } from "../../internal";
+import {
+  resolveOverflow,
+  withZonedFields,
+  zonedDateTimeFrom,
+} from "../../internal";
 import type { Disambiguation, Offset, Overflow } from "../../types";
 import { isValidZonedDateTime } from "../validate";
 
@@ -54,12 +58,16 @@ export function setZoned(
   const offset = options?.offset ?? "ignore";
 
   try {
-    const zoned = Temporal.ZonedDateTime.from(value);
+    const zoned = zonedDateTimeFrom(value);
     // Temporal.ZonedDateTime.prototype.with() throws on an empty fields object ("no supported
     // properties found") rather than treating it as a no-op, so short-circuit here.
     if (Object.keys(fields).length === 0) return zoned.toString();
 
-    return zoned.with(fields, { overflow, disambiguation, offset }).toString();
+    return withZonedFields(zoned, fields, {
+      overflow,
+      disambiguation,
+      offset,
+    }).toString();
   } catch {
     return "";
   }

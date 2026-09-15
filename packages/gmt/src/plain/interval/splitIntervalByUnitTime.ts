@@ -6,7 +6,8 @@ import { resolveDurationUnit } from "../../internal";
 /**
  * Split a time interval into sub-intervals of `amount × unit`.
  *
- * - Returns an array of `{ start, end }` records that tile the interval.
+ * - Returns an array of `{ start, end }` records that tile the interval, each record's `end`
+ *   equal to the next record's `start`.
  * - The final sub-interval is trimmed so its `end` never exceeds the original `end`.
  * - Returns `[{ start, end }]` when `start === end` (zero-length interval).
  * - Returns `[]` on invalid input (unparseable start/end, unsupported unit, non-positive amount,

@@ -195,4 +195,16 @@ describe("startOfUnix across zone transitions with default options", () => {
       expect(startOfUnix(1289100600000, "week", options)).toBe(expected);
     },
   );
+
+  // 8640000000000000 ms is the last representable instant (+275760-09-13T00:00:00Z). Its Santiago
+  // month starts at +275760-09-01T00:00:00-04:00 = +275760-09-01T04:00:00Z = 8639998977600000 ms.
+  it.each`
+    value               | unit       | timeZone              | expected
+    ${8640000000000000} | ${"month"} | ${"America/Santiago"} | ${8639998977600000}
+  `(
+    "returns $expected for the maximum instant $value by $unit in $timeZone",
+    ({ value, unit, timeZone, expected }) => {
+      expect(startOfUnix(value, unit, { timeZone })).toBe(expected);
+    },
+  );
 });

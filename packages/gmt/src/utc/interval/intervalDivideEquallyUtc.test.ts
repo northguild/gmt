@@ -8,7 +8,7 @@ describe("intervalDivideEquallyUtc", () => {
     ${"2024-01-01T00:00:00Z"} | ${"2024-01-04T00:00:00Z"} | ${1} | ${[{ start: "2024-01-01T00:00:00Z", end: "2024-01-04T00:00:00Z" }]}
     ${"2024-01-01T00:00:00Z"} | ${"2024-01-01T00:00:00Z"} | ${2} | ${[{ start: "2024-01-01T00:00:00Z", end: "2024-01-01T00:00:00Z" }, { start: "2024-01-01T00:00:00Z", end: "2024-01-01T00:00:00Z" }]}
   `(
-    "splits $start..$end into $n parts as $expected",
+    "splits $start to $end into $n parts as $expected",
     ({ start, end, n, expected }) => {
       expect(intervalDivideEquallyUtc(start, end, n)).toEqual(expected);
     },

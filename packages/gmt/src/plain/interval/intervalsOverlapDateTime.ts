@@ -5,7 +5,7 @@ import { plainDateTime } from "../../regex";
  * Return true when intervals `[aStart, aEnd]` and `[bStart, bEnd]` share at least one instant.
  *
  * - Uses `Temporal.PlainDateTime.compare` for comparison.
- * - Adjacent intervals (e.g. `aEnd === bStart`) do NOT overlap — returns `false`.
+ * - Touching intervals (`aEnd` equal to `bStart`) share that endpoint and DO overlap — returns `true`.
  * - Returns `false` if either interval is invalid (`start > end`).
  * - Returns `false` on invalid input (wrong type, malformed strings).
  *
@@ -16,7 +16,8 @@ import { plainDateTime } from "../../regex";
  * @returns true if intervals overlap, or false on invalid input
  *
  * @example intervalsOverlapDateTime("2024-01-01T10:00:00", "2024-06-30T23:59:59", "2024-04-01T00:00:00", "2024-12-31T23:59:59") // true
- * @example intervalsOverlapDateTime("2024-01-01T10:00:00", "2024-06-30T23:59:59", "2024-07-01T00:00:00", "2024-12-31T23:59:59") // false (adjacent)
+ * @example intervalsOverlapDateTime("2024-01-01T10:00:00", "2024-06-30T23:59:59", "2024-07-01T00:00:00", "2024-12-31T23:59:59") // false (disjoint, one-second gap)
+ * @example intervalsOverlapDateTime("2024-01-01T10:00:00", "2024-06-30T23:59:59", "2024-06-30T23:59:59", "2024-12-31T23:59:59") // true (touching)
  * @example intervalsOverlapDateTime("2024-01-01T10:00:00", "2024-06-30T23:59:59", "2024-07-02T00:00:00", "2024-12-31T23:59:59") // false (disjoint)
  * @example intervalsOverlapDateTime("invalid", "2024-06-30T23:59:59", "2024-04-01T00:00:00", "2024-12-31T23:59:59") // false
  */

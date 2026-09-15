@@ -1,4 +1,3 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { getSystemTimeZone } from "../../zoned/get";
 import { convertUnixToZoned } from "../convert";
 import {
@@ -6,6 +5,7 @@ import {
   isValidUnixSeconds,
   type UnixUnit,
 } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Extract the time portion from a unix epoch value.
@@ -43,7 +43,7 @@ export function parseTimeFromUnix(
   if (!zoned) return "";
 
   try {
-    const zdt = Temporal.ZonedDateTime.from(zoned);
+    const zdt = zonedDateTimeFrom(zoned);
     return zdt.toPlainTime().toString();
   } catch {
     return "";

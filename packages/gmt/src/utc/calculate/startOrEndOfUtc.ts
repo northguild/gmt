@@ -11,6 +11,9 @@ import { isValidUtc } from "../validate/isValidUtc";
  *   the requested unit, then converts back to an Instant string.
  * - Supports every Temporal `DateUnit` and `TimeUnit`.
  * - `weekStartsOn` shifts the week boundary: `"monday"` (default) or `"sunday"`.
+ * - Ends are computed forward from `value`, never from the unit's start, so an end is returned
+ *   even when its unit began before the first representable instant (`-271821-04-20T00:00:00Z`).
+ *   A start that lies before that instant returns "".
  * - `fractionalSecondDigits` overrides the default sub-second precision for the
  *   returned Instant string; defaults to 3 for millisecond, 6 for microsecond,
  *   9 for nanosecond, and 0 for all coarser units.
@@ -54,42 +57,35 @@ export function startOrEndOfUtc(
           : source.with({ month: 1, day: 1 }).withPlainTime();
         break;
       case "month":
+        // The end is computed from `value` itself: the month's first day may lie before the range.
         result = isEnd
-          ? source
-              .with({
-                day: Temporal.PlainDate.from({
-                  year: source.year,
-                  month: source.month,
-                  day: 1,
-                }).daysInMonth,
-              })
-              .withPlainTime({
-                hour: 23,
-                minute: 59,
-                second: 59,
-                millisecond: 999,
-                microsecond: 999,
-                nanosecond: 999,
-              })
+          ? source.with({ day: source.daysInMonth }).withPlainTime({
+              hour: 23,
+              minute: 59,
+              second: 59,
+              millisecond: 999,
+              microsecond: 999,
+              nanosecond: 999,
+            })
           : source.with({ day: 1 }).withPlainTime();
         break;
       case "week": {
+        // Days since the week started: Sunday is day 7, so `dayOfWeek % 7` makes it day 0 of a
+        // Sunday-first week. The end steps forward (6 - that) days rather than back to the start,
+        // which may lie before the first representable instant.
         const daysToSubtract =
           weekStartsOn === "monday"
             ? source.dayOfWeek - 1
             : source.dayOfWeek % 7;
         result = isEnd
-          ? source
-              .subtract({ days: daysToSubtract })
-              .add({ days: 6 })
-              .withPlainTime({
-                hour: 23,
-                minute: 59,
-                second: 59,
-                millisecond: 999,
-                microsecond: 999,
-                nanosecond: 999,
-              })
+          ? source.add({ days: 6 - daysToSubtract }).withPlainTime({
+              hour: 23,
+              minute: 59,
+              second: 59,
+              millisecond: 999,
+              microsecond: 999,
+              nanosecond: 999,
+            })
           : source.subtract({ days: daysToSubtract }).withPlainTime();
         break;
       }

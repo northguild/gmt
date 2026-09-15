@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Check whether an IANA timeZone identifier observes daylight saving time.
@@ -18,7 +18,7 @@ import { Temporal } from "@js-temporal/polyfill";
  */
 export function hasDaylightSaving(timeZone: string): boolean {
   try {
-    const zdtJanuary = Temporal.ZonedDateTime.from({
+    const zdtJanuary = zonedDateTimeFrom({
       year: 2024,
       month: 1,
       day: 15,
@@ -28,7 +28,7 @@ export function hasDaylightSaving(timeZone: string): boolean {
       timeZone,
     });
 
-    const zdtJuly = Temporal.ZonedDateTime.from({
+    const zdtJuly = zonedDateTimeFrom({
       year: 2024,
       month: 7,
       day: 15,

@@ -1,5 +1,8 @@
 import type { Temporal } from "@js-temporal/polyfill";
-import { parseCalendarZonedPairForArithmetic } from "../../internal";
+import {
+  parseCalendarZonedPairForArithmetic,
+  zonedUntil,
+} from "../../internal";
 import { getLargestDateTimeDurationUnit } from "../../plain/calculate/getLargestDateTimeDurationUnit";
 import { isValidDateTimeDurationUnit } from "../../plain/validate";
 import type { DateTimeDurationUnit, RoundingOptions } from "../../types";
@@ -68,7 +71,7 @@ export function diffZoned(
     const normalizedZdt1 = a.withTimeZone("UTC");
     const normalizedZdt2 = b.withTimeZone("UTC");
 
-    const duration = normalizedZdt1.until(normalizedZdt2, {
+    const duration = zonedUntil(normalizedZdt1, normalizedZdt2, {
       largestUnit: isSingleUnit ? units : getLargestDateTimeDurationUnit(units),
       smallestUnit: options?.smallestUnit,
       roundingIncrement: options?.roundingIncrement,

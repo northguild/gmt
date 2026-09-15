@@ -125,4 +125,25 @@ describe("roundDate", () => {
     mockTemporalPlainDateFromThrow();
     expect(roundDate("2024-06-15", { smallestUnit: "month" })).toBe("");
   });
+
+  // -271821-04-19 is the first representable PlainDate (a Monday). Its month and year began before
+  // the range, so rounding may only return the next start. April has 30 days, so 04-19 is 18/30 =
+  // 0.6 of the way through its month (halfExpand rounds up); it is 108/365 through its year (rounds
+  // down, to a start that does not exist, so the sentinel). A Monday is its own week start.
+  it.each`
+    value              | unit       | roundingMode    | expected
+    ${"-271821-04-19"} | ${"month"} | ${"halfExpand"} | ${"-271821-05-01"}
+    ${"-271821-04-19"} | ${"month"} | ${"ceil"}       | ${"-271821-05-01"}
+    ${"-271821-04-19"} | ${"month"} | ${"floor"}      | ${""}
+    ${"-271821-04-19"} | ${"year"}  | ${"ceil"}       | ${"-271820-01-01"}
+    ${"-271821-04-19"} | ${"year"}  | ${"halfExpand"} | ${""}
+    ${"-271821-04-19"} | ${"week"}  | ${"halfExpand"} | ${"-271821-04-19"}
+  `(
+    "returns $expected for the first PlainDate $value rounded to $unit with roundingMode $roundingMode",
+    ({ value, unit, roundingMode, expected }) => {
+      expect(roundDate(value, { smallestUnit: unit, roundingMode })).toBe(
+        expected,
+      );
+    },
+  );
 });

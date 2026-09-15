@@ -356,4 +356,20 @@ describe("intervalXorAllZoned", () => {
       ]),
     ).toEqual([]);
   });
+
+  // The last representable instant is +275760-09-13T00:00:00Z, so no boundary may be computed as
+  // `end + 1 ns`. Nested: 06:00..12:00 UTC on 09-12 is covered twice, so the odd runs end at
+  // 06:00 - 1 ns = 05:59:59.999999999 and resume at 12:00 + 1 ns = 12:00:00.000000001.
+  // Sydney row: max is 09-13T10:00+10:00; 04:00..06:00 local is covered twice.
+  it.each`
+    intervals                                                                                                                                                                                                                                   | expected
+    ${[{ start: "+275760-09-12T00:00:00+00:00[UTC]", end: "+275760-09-13T00:00:00+00:00[UTC]" }]}                                                                                                                                               | ${[{ start: "+275760-09-12T00:00:00+00:00[UTC]", end: "+275760-09-13T00:00:00+00:00[UTC]" }]}
+    ${[{ start: "+275760-09-12T00:00:00+00:00[UTC]", end: "+275760-09-13T00:00:00+00:00[UTC]" }, { start: "+275760-09-12T06:00:00+00:00[UTC]", end: "+275760-09-12T12:00:00+00:00[UTC]" }]}                                                     | ${[{ start: "+275760-09-12T00:00:00+00:00[UTC]", end: "+275760-09-12T05:59:59.999999999+00:00[UTC]" }, { start: "+275760-09-12T12:00:00.000000001+00:00[UTC]", end: "+275760-09-13T00:00:00+00:00[UTC]" }]}
+    ${[{ start: "+275760-09-13T00:00:00+10:00[Australia/Sydney]", end: "+275760-09-13T10:00:00+10:00[Australia/Sydney]" }, { start: "+275760-09-13T04:00:00+10:00[Australia/Sydney]", end: "+275760-09-13T06:00:00+10:00[Australia/Sydney]" }]} | ${[{ start: "+275760-09-13T00:00:00+10:00[Australia/Sydney]", end: "+275760-09-13T03:59:59.999999999+10:00[Australia/Sydney]" }, { start: "+275760-09-13T06:00:00.000000001+10:00[Australia/Sydney]", end: "+275760-09-13T10:00:00+10:00[Australia/Sydney]" }]}
+  `(
+    "returns $expected for $intervals (an end at the maximum instant)",
+    ({ intervals, expected }) => {
+      expect(intervalXorAllZoned(intervals)).toEqual(expected);
+    },
+  );
 });

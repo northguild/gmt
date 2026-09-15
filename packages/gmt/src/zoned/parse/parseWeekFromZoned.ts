@@ -1,6 +1,6 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { getWeekNumber } from "../../plain/calculate/getWeekNumber";
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Return the week of the year (1-53) for a given ISO 8601 zoned datetime string.
@@ -27,7 +27,7 @@ export function parseWeekFromZoned(
   const weekStartsOn = optionsArg?.weekStartsOn ?? "monday";
 
   try {
-    const zonedDateTime = Temporal.ZonedDateTime.from(value);
+    const zonedDateTime = zonedDateTimeFrom(value);
     return getWeekNumber(
       `${zonedDateTime.year}-${zonedDateTime.month.toString().padStart(2, "0")}-${zonedDateTime.day.toString().padStart(2, "0")}`,
       weekStartsOn,

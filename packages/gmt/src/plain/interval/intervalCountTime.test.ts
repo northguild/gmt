@@ -11,7 +11,7 @@ describe("intervalCountTime", () => {
     ${"12:00:00"} | ${"12:02:00"} | ${"minute"} | ${2}
     ${"23:59:00"} | ${"23:59:59"} | ${"minute"} | ${1}
   `(
-    "returns $expected $unit boundaries for $start..$end",
+    "returns $expected $unit boundaries for $start to $end",
     ({ start, end, unit, expected }) => {
       expect(intervalCountTime(start, end, unit)).toBe(expected);
     },
@@ -25,7 +25,7 @@ describe("intervalCountTime", () => {
     ${"12:00:00.0000005"}   | ${"12:00:00.0000015"}   | ${"microsecond"} | ${2}
     ${"12:00:00.000000001"} | ${"12:00:00.000000003"} | ${"nanosecond"}  | ${2}
   `(
-    "returns $expected sub-second $unit boundaries for $start..$end",
+    "returns $expected sub-second $unit boundaries for $start to $end",
     ({ start, end, unit, expected }) => {
       expect(intervalCountTime(start, end, unit)).toBe(expected);
     },
@@ -37,7 +37,7 @@ describe("intervalCountTime", () => {
     ${"12:00:00"}   | ${"12:02:00"}   | ${"minutes"} | ${2}
     ${"12:00:00.5"} | ${"12:00:01.5"} | ${"seconds"} | ${2}
   `(
-    "returns $expected for $start..$end with plural unit $unit",
+    "returns $expected for $start to $end with plural unit $unit",
     ({ start, end, unit, expected }) => {
       expect(intervalCountTime(start, end, unit)).toBe(expected);
     },
@@ -50,7 +50,7 @@ describe("intervalCountTime", () => {
     ${"12:00:00"} | ${"12:00:00"} | ${"minute"} | ${0}
     ${"12:00:30"} | ${"12:00:30"} | ${"minute"} | ${1}
   `(
-    "returns $expected for zero-length $start..$end counted in $unit",
+    "returns $expected for zero-length $start to $end counted in $unit",
     ({ start, end, unit, expected }) => {
       expect(intervalCountTime(start, end, unit)).toBe(expected);
     },

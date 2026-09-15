@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Return true when `zoned` is between `start` and `end` (inclusive by default).
@@ -38,9 +39,9 @@ export function isBetweenZoned(
   let endZdt: Temporal.ZonedDateTime;
 
   try {
-    zdt = Temporal.ZonedDateTime.from(zoned);
-    startZdt = Temporal.ZonedDateTime.from(start);
-    endZdt = Temporal.ZonedDateTime.from(end);
+    zdt = zonedDateTimeFrom(zoned);
+    startZdt = zonedDateTimeFrom(start);
+    endZdt = zonedDateTimeFrom(end);
   } catch {
     return false;
   }

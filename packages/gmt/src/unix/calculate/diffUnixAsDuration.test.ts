@@ -182,3 +182,96 @@ describe("diffUnixAsDuration", () => {
     expect(diffUnixAsDuration(1709164800000, 1709170200000, "hours")).toBe("");
   });
 });
+
+// The last representable instant, +275760-09-13T00:00:00Z, in epoch milliseconds (TC39 nsMaxInstant).
+const MAX_MS = 8_640_000_000_000_000;
+const HOUR_MS = 3_600_000;
+const DAY_MS = 24 * HOUR_MS;
+
+describe("diffUnixAsDuration at the maximum instant", () => {
+  // TC39 DifferenceZonedDateTime: 40 days back from the maximum is +275760-08-04 local, one
+  // month to +275760-09-04 and 9 more days to the 13th; the end's wall clock runs past the
+  // maximum in a zone ahead of UTC, but its exact time is in range.
+  it.each`
+    value1                  | value2    | unit        | timeZone                | expected
+    ${MAX_MS - 40 * DAY_MS} | ${MAX_MS} | ${"months"} | ${"Australia/Sydney"}   | ${"P1M9D"}
+    ${MAX_MS - 40 * DAY_MS} | ${MAX_MS} | ${"months"} | ${"Pacific/Kiritimati"} | ${"P1M9D"}
+    ${MAX_MS - DAY_MS}      | ${MAX_MS} | ${"days"}   | ${"Australia/Sydney"}   | ${"P1D"}
+  `(
+    "returns $expected in $unit from $value1 to $value2 in $timeZone",
+    ({ value1, value2, unit, timeZone, expected }) => {
+      expect(diffUnixAsDuration(value1, value2, unit, { timeZone })).toBe(
+        expected,
+      );
+    },
+  );
+
+  // TC39 NudgeToCalendarUnit: rounding to a day looks past the last representable date.
+  it("returns an empty string rounding days to a day from max - 1d to max in Australia/Sydney", () => {
+    expect(
+      diffUnixAsDuration(MAX_MS - DAY_MS, MAX_MS, "days", {
+        timeZone: "Australia/Sydney",
+        smallestUnit: "day",
+      }),
+    ).toBe("");
+  });
+
+  // TC39 NudgeToZonedTime: rounding P3DT5H to an hour resolves a wall clock 19 hours past the
+  // maximum, which GetPossibleEpochNanoseconds rejects in every zone, UTC included.
+  it.each`
+    timeZone
+    ${"UTC"}
+    ${"Europe/London"}
+  `(
+    "returns an empty string rounding to an hour from max - 3d5h to max in $timeZone",
+    ({ timeZone }) => {
+      expect(
+        diffUnixAsDuration(MAX_MS - 3 * DAY_MS - 5 * HOUR_MS, MAX_MS, "days", {
+          timeZone,
+          smallestUnit: "hour",
+        }),
+      ).toBe("");
+    },
+  );
+
+  it.each`
+    timeZone
+    ${"UTC"}
+    ${"Europe/London"}
+  `(
+    "returns P5DT5H rounding to an hour from max - 10d5h to max - 5d in $timeZone",
+    ({ timeZone }) => {
+      expect(
+        diffUnixAsDuration(
+          MAX_MS - 10 * DAY_MS - 5 * HOUR_MS,
+          MAX_MS - 5 * DAY_MS,
+          "days",
+          { timeZone, smallestUnit: "hour" },
+        ),
+      ).toBe("P5DT5H");
+    },
+  );
+});
+
+// The first representable instant, -271821-04-20T00:00:00Z, in epoch milliseconds (TC39 nsMinInstant).
+const MIN_MS = -MAX_MS;
+
+describe("diffUnixAsDuration at the minimum instant", () => {
+  // TC39 DifferenceZonedDateTime: 40 days after the minimum is -271821-05-29 local; back one month
+  // to -271821-04-29 and 10 more days to the 19th, where the minimum's wall clock falls in a zone
+  // behind UTC.
+  it.each`
+    timeZone
+    ${"America/New_York"}
+    ${"Pacific/Honolulu"}
+  `(
+    "returns -P1M10D in months from min + 40d to min in $timeZone",
+    ({ timeZone }) => {
+      expect(
+        diffUnixAsDuration(MIN_MS + 40 * DAY_MS, MIN_MS, "months", {
+          timeZone,
+        }),
+      ).toBe("-P1M10D");
+    },
+  );
+});

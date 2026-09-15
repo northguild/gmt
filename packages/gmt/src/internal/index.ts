@@ -22,6 +22,8 @@ export {
   formatZonedInCalendar,
   parseCalendarZonedValue,
 } from "./calendarZonedString";
+export { closedIntervalsAbut } from "./closedAbuts";
+export { closedXorSweep } from "./closedXorSweep";
 export { cycleFieldValue } from "./cycleFieldValue";
 export {
   fiscalPeriodOfWeek,
@@ -73,7 +75,13 @@ export {
 } from "./formatDateInCalendar";
 export { hasCalendarAnnotation } from "./hasCalendarAnnotation";
 export { hasKeyValueAnnotation } from "./hasKeyValueAnnotation";
+export { formatHourDuration } from "./hourDurationString";
 export { parseInstantNanoseconds } from "./instantNanoseconds";
+export {
+  coalesceIntervalNanoseconds,
+  parseIntervalNanoseconds,
+  parseIntervalNanosecondsList,
+} from "./intervalNanoseconds";
 export { resolveDurationRelativeTo } from "./resolveDurationRelativeTo";
 export { formatUtcOffset, parseUtcOffsetNanoseconds } from "./utcOffsetString";
 export {
@@ -103,10 +111,18 @@ export {
   parseValueWithPattern,
   TIME_PATTERN_FIELDS,
 } from "./patternToken";
+export { plainDateAdd } from "./plainDateAdd";
+export { plainDateUntil } from "./plainDateUntil";
 export { resolveDateTimeUnit } from "./resolveDateTimeUnit";
 export { resolveDurationUnit } from "./resolveDurationUnit";
 export { resolveOverflow } from "./resolveOverflow";
 export { resolveRelativeRounding } from "./resolveRelativeRounding";
+export {
+  parseUnixEpochInterval,
+  parseUnixEpochIntervalList,
+  parseUnixEpochIntervalPair,
+  parseUnixEpochValue,
+} from "./unixEpochValue";
 export { tileByUnit } from "./splitStep";
 export {
   countZonedBuckets,
@@ -115,4 +131,21 @@ export {
   zonedUnitEnd,
   zonedUnitStart,
 } from "./zonedBucket";
+export { zonedDateTimeFrom } from "./zonedWallClock";
+export {
+  durationCompare,
+  durationRound,
+  durationTotal,
+  zonedUntil,
+} from "./zonedWallClockDifference";
+export {
+  addToZoned,
+  plainToZoned,
+  roundZonedDateTime,
+  subtractFromZoned,
+  withZonedFields,
+  zonedHoursInDay,
+  zonedNextTransition,
+  zonedStartOfDay,
+} from "./zonedWallClockOperations";
 export { zonelessCalendarDate } from "./zonelessCalendarDate";

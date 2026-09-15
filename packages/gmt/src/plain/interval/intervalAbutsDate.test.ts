@@ -7,7 +7,7 @@ describe("intervalAbutsDate", () => {
     ${"2024-01-01"} | ${"2024-01-01"} | ${"2023-12-31"} | ${"2023-12-31"} | ${true}
     ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${false}
   `(
-    "returns $expected for zero-length A=$aStart..$aEnd abutting B=$bStart..$bEnd",
+    "returns $expected for zero-length A=$aStart to $aEnd abutting B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalAbutsDate(aStart, aEnd, bStart, bEnd)).toBe(expected);
     },
@@ -20,7 +20,7 @@ describe("intervalAbutsDate", () => {
     ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-02"} | ${"2024-01-02"} | ${true}
     ${"2024-01-02"} | ${"2024-01-02"} | ${"2024-01-01"} | ${"2024-01-01"} | ${true}
   `(
-    "returns $expected when A=$aStart..$aEnd and B=$bStart..$bEnd",
+    "returns $expected when A=$aStart to $aEnd and B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalAbutsDate(aStart, aEnd, bStart, bEnd)).toBe(expected);
     },
@@ -90,4 +90,18 @@ describe("intervalAbutsDate", () => {
       ),
     ).toBe(true);
   });
+
+  // The last representable PlainDate is +275760-09-13. B ends the day before A starts
+  // (09-13 - 1 day = 09-12), so they abut in either order, even though A's end has no next day.
+  it.each`
+    aStart             | aEnd               | bStart             | bEnd               | expected
+    ${"+275760-09-13"} | ${"+275760-09-13"} | ${"+275760-09-10"} | ${"+275760-09-12"} | ${true}
+    ${"+275760-09-10"} | ${"+275760-09-12"} | ${"+275760-09-13"} | ${"+275760-09-13"} | ${true}
+    ${"+275760-09-13"} | ${"+275760-09-13"} | ${"+275760-09-10"} | ${"+275760-09-11"} | ${false}
+  `(
+    "returns $expected when A=[$aStart, $aEnd] and B=[$bStart, $bEnd] (an end at the maximum PlainDate)",
+    ({ aStart, aEnd, bStart, bEnd, expected }) => {
+      expect(intervalAbutsDate(aStart, aEnd, bStart, bEnd)).toBe(expected);
+    },
+  );
 });

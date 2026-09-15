@@ -7,7 +7,7 @@ describe("intervalOverlappingDaysUtc", () => {
     ${"2024-01-01T23:59:00Z"} | ${"2024-01-02T00:01:00Z"} | ${"2024-01-01T23:59:00Z"} | ${"2024-01-02T00:01:00Z"} | ${2}
     ${"2014-01-10T00:00:00Z"} | ${"2014-01-20T00:00:00Z"} | ${"2014-01-17T00:00:00Z"} | ${"2014-01-21T00:00:00Z"} | ${4}
   `(
-    "returns $expected shared dates for $aStart..$aEnd × $bStart..$bEnd",
+    "returns $expected shared dates for $aStart to $aEnd × $bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalOverlappingDaysUtc(aStart, aEnd, bStart, bEnd)).toBe(
         expected,
@@ -52,7 +52,7 @@ describe("intervalOverlappingDaysUtc", () => {
     aStart                    | aEnd                      | bStart                    | bEnd
     ${"2024-12-31T23:59:59Z"} | ${"2024-01-01T00:00:00Z"} | ${"2024-04-01T00:00:00Z"} | ${"2024-12-31T23:59:59Z"}
   `(
-    "returns null for inverted interval $aStart..$aEnd",
+    "returns null for inverted interval $aStart to $aEnd",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(intervalOverlappingDaysUtc(aStart, aEnd, bStart, bEnd)).toBeNull();
     },

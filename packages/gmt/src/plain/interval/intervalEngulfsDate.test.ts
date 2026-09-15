@@ -7,7 +7,7 @@ describe("intervalEngulfsDate", () => {
     ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-02"} | ${"2024-01-02"} | ${false}
     ${"2024-01-01"} | ${"2024-01-10"} | ${"2024-01-01"} | ${"2024-01-01"} | ${true}
   `(
-    "returns $expected for zero-length inner interval $innerStart..$innerEnd inside $outerStart..$outerEnd",
+    "returns $expected for zero-length inner interval $innerStart to $innerEnd inside $outerStart to $outerEnd",
     ({ outerStart, outerEnd, innerStart, innerEnd, expected }) => {
       expect(
         intervalEngulfsDate(outerStart, outerEnd, innerStart, innerEnd),
@@ -22,7 +22,7 @@ describe("intervalEngulfsDate", () => {
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-01-01"} | ${"2024-06-30"} | ${true}
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-06-01"} | ${"2024-12-31"} | ${true}
   `(
-    "returns $expected when B is inside A ($aStart..$aEnd, $bStart..$bEnd)",
+    "returns $expected when B is inside A ($aStart to $aEnd, $bStart to $bEnd)",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalEngulfsDate(aStart, aEnd, bStart, bEnd)).toBe(expected);
     },

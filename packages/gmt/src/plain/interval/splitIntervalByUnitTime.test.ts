@@ -45,7 +45,7 @@ describe("splitIntervalByUnitTime", () => {
     ${"12:00:00"}     | ${"12:00:03"}     | ${"second"}      | ${1}   | ${expectedSecondUnit}
     ${"12:00:00.000"} | ${"12:00:00.003"} | ${"millisecond"} | ${1}   | ${expectedMillisecondUnit}
   `(
-    "returns $expected for $start..$end split by $amount $unit",
+    "returns $expected for $start to $end split by $amount $unit",
     ({ start, end, unit, amount, expected }) => {
       expect(splitIntervalByUnitTime(start, end, unit, amount)).toEqual(
         expected,
@@ -58,7 +58,7 @@ describe("splitIntervalByUnitTime", () => {
     ${"12:00:00"} | ${"12:00:00"} | ${"hour"}   | ${1}   | ${expectedZeroLength}
     ${"12:00:00"} | ${"12:02:00"} | ${"minute"} | ${2}   | ${expectedSingleStep}
   `(
-    "returns $expected for edge-case $start..$end split by $amount $unit",
+    "returns $expected for edge-case $start to $end split by $amount $unit",
     ({ start, end, unit, amount, expected }) => {
       expect(splitIntervalByUnitTime(start, end, unit, amount)).toEqual(
         expected,

@@ -13,6 +13,7 @@ import { isValidCalendarZonedDateTime } from "../validate";
  * - Returns `[]` when B fully covers A (this includes B being identical to A).
  * - Returns `[{ start, end }]` when B overlaps exactly one edge of A.
  * - Returns `[{ start, end }, { start, end }]` when B is fully inside A with gaps on both sides.
+ * - Returns A unchanged when B lies entirely before or after it.
  * - Returns `[]` if either interval is invalid (`start > end`).
  * - Returns `[]` on invalid input (wrong type, malformed strings, leap seconds).
  * - Accepts GMT calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
@@ -103,13 +104,14 @@ export function intervalDifferenceZoned(
       }
     }
 
-    // Right piece: A after B ends
+    // Right piece: A after B ends — starting at A's own start when B lies entirely before A
     if (Temporal.Instant.compare(aE, bE) > 0) {
+      const rightStart =
+        Temporal.Instant.compare(bE, aS) < 0
+          ? aSZdt
+          : bE.add({ nanoseconds: 1 }).toZonedDateTimeISO(aEZdt.timeZoneId);
       result.push({
-        start: formatZonedInCalendar(
-          bE.add({ nanoseconds: 1 }).toZonedDateTimeISO(aEZdt.timeZoneId),
-          calendar,
-        ),
+        start: formatZonedInCalendar(rightStart, calendar),
         end: formatZonedInCalendar(aEZdt, calendar),
       });
     }

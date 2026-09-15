@@ -1,5 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
-import { getLocaleWeekendDays } from "../../internal";
+import { getLocaleWeekendDays, zonedDateTimeFrom } from "../../internal";
 import { isValidZonedDateTime } from "../validate";
 
 /**
@@ -31,7 +30,7 @@ export function isZonedWeekend(value: string, locale: string): boolean {
   if (!weekendDays) return false;
 
   try {
-    const zonedDateTime = Temporal.ZonedDateTime.from(value);
+    const zonedDateTime = zonedDateTimeFrom(value);
     return weekendDays.has(zonedDateTime.dayOfWeek);
   } catch {
     return false;

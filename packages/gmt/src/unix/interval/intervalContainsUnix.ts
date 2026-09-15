@@ -1,3 +1,5 @@
+import { parseUnixEpochInterval, parseUnixEpochValue } from "../../internal";
+
 /**
  * Return true when `pointOrStart` falls within the interval `[intervalStart, intervalEnd]`
  * (3-arg), or when the inner interval `[innerStart, innerEnd]` is fully contained within
@@ -7,7 +9,8 @@
  * - Always-inclusive boundaries: `start <= point <= end`.
  * - Returns `false` if `intervalStart > intervalEnd` (invalid outer interval).
  * - Returns `false` if `innerStart > innerEnd` in 4-arg mode (invalid inner interval).
- * - Returns `false` on invalid input (non-numeric types, non-finite values).
+ * - Returns `false` on invalid input: non-numeric types, empty strings, and values that are not
+ *   safe integers (fractions, `NaN`, `±Infinity`, beyond ±(2^53 − 1)).
  *
  * @param intervalStart Unix epoch value (seconds or milliseconds) — outer interval start
  * @param intervalEnd Unix epoch value (seconds or milliseconds) — outer interval end
@@ -21,6 +24,7 @@
  * @example intervalContainsUnix(0, 1700000000, 170000000, 15000000) // false
  * @example intervalContainsUnix(NaN, 1700000000, 170000000) // false
  * @example intervalContainsUnix("0", "1700000000", "170000000") // true
+ * @example intervalContainsUnix(0, 10, 0.5) // false (fractional epoch)
  */
 export function intervalContainsUnix(
   intervalStart: number | string,
@@ -28,54 +32,18 @@ export function intervalContainsUnix(
   pointOrStart: number | string,
   pointEnd?: number | string,
 ): boolean {
-  if (typeof intervalStart !== "number" && typeof intervalStart !== "string") {
-    return false;
-  }
+  const outer = parseUnixEpochInterval(intervalStart, intervalEnd);
 
-  if (typeof intervalEnd !== "number" && typeof intervalEnd !== "string") {
-    return false;
-  }
-
-  if (typeof pointOrStart !== "number" && typeof pointOrStart !== "string") {
-    return false;
-  }
-
-  if (
-    pointEnd !== undefined &&
-    typeof pointEnd !== "number" &&
-    typeof pointEnd !== "string"
-  ) {
-    return false;
-  }
-
-  const n1 =
-    typeof intervalStart === "number" ? intervalStart : Number(intervalStart);
-  const n2 =
-    typeof intervalEnd === "number" ? intervalEnd : Number(intervalEnd);
-  const n3 =
-    typeof pointOrStart === "number" ? pointOrStart : Number(pointOrStart);
-
-  if (!Number.isFinite(n1) || !Number.isFinite(n2) || !Number.isFinite(n3)) {
-    return false;
-  }
-
-  if (n1 > n2) {
+  if (outer === null) {
     return false;
   }
 
   if (pointEnd === undefined) {
-    return n1 <= n3 && n3 <= n2;
+    const point = parseUnixEpochValue(pointOrStart);
+    return point !== null && outer.start <= point && point <= outer.end;
   }
 
-  const n4 = typeof pointEnd === "number" ? pointEnd : Number(pointEnd);
+  const inner = parseUnixEpochInterval(pointOrStart, pointEnd);
 
-  if (!Number.isFinite(n4)) {
-    return false;
-  }
-
-  if (n3 > n4) {
-    return false;
-  }
-
-  return n1 <= n3 && n4 <= n2;
+  return inner !== null && outer.start <= inner.start && inner.end <= outer.end;
 }

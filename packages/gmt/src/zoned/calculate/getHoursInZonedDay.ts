@@ -1,5 +1,5 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom, zonedHoursInDay } from "../../internal";
 
 /**
  * Return the number of hours in the calendar day a zoned datetime falls on.
@@ -35,7 +35,7 @@ export function getHoursInZonedDay(value: string): number | null {
   }
 
   try {
-    return Temporal.ZonedDateTime.from(value).hoursInDay;
+    return zonedHoursInDay(zonedDateTimeFrom(value));
   } catch {
     return null;
   }

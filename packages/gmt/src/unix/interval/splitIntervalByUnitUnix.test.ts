@@ -141,7 +141,7 @@ describe("splitIntervalByUnitUnix", () => {
     ${0}   | ${864000000}  | ${"day"}  | ${2}   | ${expectedDayUnit}
     ${"0"} | ${"86400000"} | ${"hour"} | ${6}   | ${expectedExactDivision}
   `(
-    "returns $expected for $start..$end split by $amount $unit",
+    "returns $expected for $start to $end split by $amount $unit",
     ({ start, end, unit, amount, expected }) => {
       expect(splitIntervalByUnitUnix(start, end, unit, amount)).toEqual(
         expected,
@@ -154,7 +154,7 @@ describe("splitIntervalByUnitUnix", () => {
     ${0}  | ${0}       | ${"hour"} | ${1}   | ${expectedZeroLength}
     ${0}  | ${3600000} | ${"hour"} | ${2}   | ${expectedSingleStep}
   `(
-    "returns $expected for edge-case $start..$end split by $amount $unit",
+    "returns $expected for edge-case $start to $end split by $amount $unit",
     ({ start, end, unit, amount, expected }) => {
       expect(splitIntervalByUnitUnix(start, end, unit, amount)).toEqual(
         expected,
@@ -163,19 +163,25 @@ describe("splitIntervalByUnitUnix", () => {
   );
 
   it.each`
-    start        | end          | unit         | amount
-    ${NaN}       | ${86400000}  | ${"hour"}    | ${1}
-    ${Infinity}  | ${86400000}  | ${"hour"}    | ${1}
-    ${-Infinity} | ${86400000}  | ${"hour"}    | ${1}
-    ${0}         | ${NaN}       | ${"hour"}    | ${1}
-    ${0}         | ${Infinity}  | ${"hour"}    | ${1}
-    ${0}         | ${-Infinity} | ${"hour"}    | ${1}
-    ${86400000}  | ${0}         | ${"hour"}    | ${1}
-    ${0}         | ${86400000}  | ${"invalid"} | ${1}
-    ${0}         | ${86400000}  | ${""}        | ${1}
-    ${0}         | ${86400000}  | ${"hour"}    | ${0}
-    ${0}         | ${86400000}  | ${"hour"}    | ${-1}
-    ${0}         | ${86400000}  | ${"hour"}    | ${1.5}
+    start         | end          | unit         | amount
+    ${NaN}        | ${86400000}  | ${"hour"}    | ${1}
+    ${Infinity}   | ${86400000}  | ${"hour"}    | ${1}
+    ${-Infinity}  | ${86400000}  | ${"hour"}    | ${1}
+    ${0}          | ${NaN}       | ${"hour"}    | ${1}
+    ${0}          | ${Infinity}  | ${"hour"}    | ${1}
+    ${0}          | ${-Infinity} | ${"hour"}    | ${1}
+    ${86400000}   | ${0}         | ${"hour"}    | ${1}
+    ${0}          | ${86400000}  | ${"invalid"} | ${1}
+    ${0}          | ${86400000}  | ${""}        | ${1}
+    ${0}          | ${86400000}  | ${"hour"}    | ${0}
+    ${0}          | ${86400000}  | ${"hour"}    | ${-1}
+    ${0}          | ${86400000}  | ${"hour"}    | ${1.5}
+    ${""}         | ${86400000}  | ${"hour"}    | ${1}
+    ${0}          | ${""}        | ${"hour"}    | ${1}
+    ${"0"}        | ${"1.5"}     | ${"hour"}    | ${1}
+    ${0}          | ${2 ** 53}   | ${"hour"}    | ${1}
+    ${"   "}      | ${86400000}  | ${"hour"}    | ${1}
+    ${-(2 ** 53)} | ${0}         | ${"hour"}    | ${1}
   `(
     "returns [] for invalid $start, $end, $unit, or $amount",
     ({ start, end, unit, amount }) => {

@@ -443,3 +443,56 @@ describe("formatRelativeUtc", () => {
     });
   });
 });
+
+describe("formatRelativeUtc months and years in the last month of the range", () => {
+  // Reference max - 31d, value max - 5h. TC39 NudgeToCalendarUnit totals 30d 19h over the month from
+  // the reference, 0.9932795698924731 months; in a zone ahead of UTC that month's end wall clock is
+  // past +275760-09-13T00:00 but in range. Floor gives 0 ("this month"), ceil 1 ("next month").
+  it.each`
+    timeZone                | largestUnit | roundingMethod | expected
+    ${"Australia/Sydney"}   | ${"month"}  | ${"floor"}     | ${"this month"}
+    ${"Australia/Sydney"}   | ${"month"}  | ${"ceil"}      | ${"next month"}
+    ${"Pacific/Kiritimati"} | ${"month"}  | ${"floor"}     | ${"this month"}
+    ${"UTC"}                | ${"month"}  | ${"floor"}     | ${"this month"}
+    ${"Australia/Sydney"}   | ${"year"}   | ${"floor"}     | ${""}
+  `(
+    "formats max - 5h against max - 31d in $timeZone by $largestUnit with $roundingMethod as $expected",
+    ({ timeZone, largestUnit, roundingMethod, expected }) => {
+      // A year total's window ends past the maximum, so Temporal throws and the result is "".
+      expect(
+        formatRelativeUtc("+275760-09-12T19:00:00Z", MustTestLocales.enUS, {
+          reference: "+275760-08-13T00:00:00Z",
+          timeZone,
+          largestUnit,
+          roundingMethod,
+        }),
+      ).toBe(expected);
+    },
+  );
+});
+
+describe("formatRelativeUtc months in the first month of the range", () => {
+  // Value local -271821-04-24T20:00 and reference local -271821-05-19T20:00 in zones behind UTC
+  // (New York LMT -04:56:02: 00:56:02Z; Honolulu LMT -10:31:26: 06:31:26Z). TC39
+  // NudgeToCalendarUnit totals -25 days over the month back from the reference, whose end wall
+  // clock, local -271821-04-19T20:00, is on the minimum's local date but in range: -25/30 months.
+  // Floor gives -1 ("last month"), ceil -0 ("this month").
+  it.each`
+    value                        | reference                    | timeZone              | roundingMethod | expected
+    ${"-271821-04-25T00:56:02Z"} | ${"-271821-05-20T00:56:02Z"} | ${"America/New_York"} | ${"floor"}     | ${"last month"}
+    ${"-271821-04-25T00:56:02Z"} | ${"-271821-05-20T00:56:02Z"} | ${"America/New_York"} | ${"ceil"}      | ${"this month"}
+    ${"-271821-04-25T06:31:26Z"} | ${"-271821-05-20T06:31:26Z"} | ${"Pacific/Honolulu"} | ${"floor"}     | ${"last month"}
+  `(
+    "formats $value against $reference in $timeZone with $roundingMethod as $expected",
+    ({ value, reference, timeZone, roundingMethod, expected }) => {
+      expect(
+        formatRelativeUtc(value, MustTestLocales.enUS, {
+          reference,
+          timeZone,
+          largestUnit: "month",
+          roundingMethod,
+        }),
+      ).toBe(expected);
+    },
+  );
+});

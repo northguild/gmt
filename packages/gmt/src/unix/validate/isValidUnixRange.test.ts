@@ -56,6 +56,38 @@ describe("isValidUnixRange", () => {
   );
 
   it.each`
+    value1        | value2     | allowEqual | reason
+    ${0}          | ${1.5}     | ${false}   | ${"fractional value2"}
+    ${0.5}        | ${2}       | ${true}    | ${"fractional value1"}
+    ${"0"}        | ${"1.5"}   | ${false}   | ${"fractional numeric string"}
+    ${0}          | ${2 ** 53} | ${false}   | ${"2^53 is not a safe integer"}
+    ${-(2 ** 53)} | ${0}       | ${true}    | ${"-2^53 is not a safe integer"}
+    ${""}         | ${1000}    | ${false}   | ${"empty string is not epoch 0"}
+    ${0}          | ${"   "}   | ${true}    | ${"whitespace string is not epoch 0"}
+  `(
+    "returns false for a non-safe-integer epoch: $value1, $value2 (allowEqual=$allowEqual, $reason)",
+    ({ value1, value2, allowEqual }) => {
+      expect(
+        isValidUnixRange({ value1, value2, options: { allowEqual } }),
+      ).toBe(false);
+    },
+  );
+
+  it.each`
+    value1                      | value2                     | allowEqual | expected | reason
+    ${-Number.MAX_SAFE_INTEGER} | ${Number.MAX_SAFE_INTEGER} | ${false}   | ${true}  | ${"both safe-integer limits"}
+    ${"-86400"}                 | ${"1e3"}                   | ${false}   | ${true}  | ${"numeric strings coerce to safe integers"}
+    ${""}                       | ${""}                      | ${true}    | ${false} | ${"empty strings are never an equal pair"}
+  `(
+    "returns $expected for epochs $value1, $value2 (allowEqual=$allowEqual, $reason)",
+    ({ value1, value2, allowEqual, expected }) => {
+      expect(
+        isValidUnixRange({ value1, value2, options: { allowEqual } }),
+      ).toBe(expected);
+    },
+  );
+
+  it.each`
     value1       | value2
     ${null}      | ${1000}
     ${undefined} | ${1000}

@@ -135,10 +135,26 @@ describe("isValidZonedDateTime", () => {
     ${"2024-02-10T12:00:00-05:00[America/New_York][u-ca=hebrew]"}
     ${"2024-02-10T12:00:00+00:00[UTC][u-ca=hebrew]"}
     ${"2024-02-10T12:00:00-05:00[America/New_York][u-ca=islamic-civil]"}
+    ${"2024-02-10T12:00:00-05:00[America/New_York][!u-ca=hebrew]"}
+    ${"2024-02-10T12:00:00-05:00[!America/New_York][!u-ca=hebrew]"}
   `(
     "returns false for a zoned datetime with a calendar annotation: $value",
     ({ value }: { value: string }) => {
       expect(isValidZonedDateTime(value)).toBe(false);
     },
   );
+});
+
+describe("isValidZonedDateTime at the range limits", () => {
+  // TC39 accepts every in-range instant even when its wall clock runs past +275760-09-13T00:00.
+  it.each`
+    value                                                         | expected | reason
+    ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"}           | ${true}  | ${"Sydney maximum instant"}
+    ${"+275760-09-13T14:00:00+14:00[Pacific/Kiritimati]"}         | ${true}  | ${"Kiritimati maximum instant"}
+    ${"+275760-09-13T00:00:00.001+10:00[Australia/Sydney]"}       | ${true}  | ${"first wall clock past 00:00Z of the last day"}
+    ${"+275760-09-13T10:00:00.000000001+10:00[Australia/Sydney]"} | ${false} | ${"1ns past the maximum"}
+    ${"+275760-09-13T09:00:00+09:00[Australia/Sydney]"}           | ${false} | ${"wrong offset for Sydney"}
+  `("returns $expected for $value ($reason)", ({ value, expected }) => {
+    expect(isValidZonedDateTime(value)).toBe(expected);
+  });
 });

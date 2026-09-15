@@ -3,6 +3,7 @@ import {
   formatUtcOffset,
   hasKeyValueAnnotation,
   parseInstantNanoseconds,
+  zonedDateTimeFrom,
 } from "../../internal";
 import { utcOffset } from "../../regex";
 import { isValidTimeZone } from "../../zoned/validate";
@@ -108,9 +109,7 @@ export function toOffsetInstant(
     // contradictory string parses fine as an instant. `ZonedDateTime.from` is what checks
     // the two agree, and it runs even when `timeZone` overrides the bracketed zone.
     // `[u-ca=...]` is already rejected upstream, so any remaining bracket is a time zone.
-    const bracketed = value.includes("[")
-      ? Temporal.ZonedDateTime.from(value)
-      : null;
+    const bracketed = value.includes("[") ? zonedDateTimeFrom(value) : null;
 
     // Temporal also accepts a bracketed *offset* time zone (`[-04:00]`), and canonicalises
     // every spelling of one (`[-0400]`, `[+05]`) to `±HH:MM`. That names no place and must

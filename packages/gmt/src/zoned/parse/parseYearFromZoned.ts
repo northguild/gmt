@@ -1,5 +1,5 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Return the year for a given ISO 8601 zoned datetime string.
@@ -19,7 +19,7 @@ export function parseYearFromZoned(value: string): string {
   }
 
   try {
-    const zonedDateTime = Temporal.ZonedDateTime.from(value);
+    const zonedDateTime = zonedDateTimeFrom(value);
     return zonedDateTime.year.toString();
   } catch {
     return "";

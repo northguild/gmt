@@ -86,13 +86,24 @@ describe("isValidZonedInterval", () => {
   // E5 (issue #78), decision of record D2 — see isValidZonedDateTime.test.ts for the full
   // rationale.
   it.each`
-    start                                            | end
-    ${"2024-01-01T10:00:00+00:00[UTC][u-ca=hebrew]"} | ${"2024-12-31T23:59:59+00:00[UTC]"}
-    ${"2024-01-01T10:00:00+00:00[UTC]"}              | ${"2024-12-31T23:59:59+00:00[UTC][u-ca=hebrew]"}
+    start                                             | end
+    ${"2024-01-01T10:00:00+00:00[UTC][u-ca=hebrew]"}  | ${"2024-12-31T23:59:59+00:00[UTC]"}
+    ${"2024-01-01T10:00:00+00:00[UTC]"}               | ${"2024-12-31T23:59:59+00:00[UTC][u-ca=hebrew]"}
+    ${"2024-01-01T10:00:00+00:00[UTC][!u-ca=hebrew]"} | ${"2024-12-31T23:59:59+00:00[UTC]"}
   `(
     "returns false when either endpoint carries a calendar annotation: $start, $end",
     ({ start, end }: { start: string; end: string }) => {
       expect(isValidZonedInterval(start, end)).toBe(false);
     },
   );
+});
+
+describe("isValidZonedInterval at the maximum instant", () => {
+  it.each`
+    start                                               | end                                                   | expected
+    ${"+275760-09-13T09:00:00+10:00[Australia/Sydney]"} | ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"}   | ${true}
+    ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"} | ${"+275760-09-13T14:00:00+14:00[Pacific/Kiritimati]"} | ${true}
+  `("returns $expected for $start to $end", ({ start, end, expected }) => {
+    expect(isValidZonedInterval(start, end)).toBe(expected);
+  });
 });

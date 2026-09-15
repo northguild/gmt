@@ -1,5 +1,5 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Extract the UTC offset from an ISO 8601 zoned datetime string.
@@ -23,7 +23,7 @@ export function getZonedOffset(value: string): string {
   }
 
   try {
-    return Temporal.ZonedDateTime.from(value).offset;
+    return zonedDateTimeFrom(value).offset;
   } catch {
     return "";
   }

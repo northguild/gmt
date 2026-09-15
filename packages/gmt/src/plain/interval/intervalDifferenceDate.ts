@@ -10,9 +10,12 @@ import { isValidCalendarDate } from "../validate";
  * Return the portion(s) of interval A not covered by interval B.
  *
  * - Uses `Temporal.PlainDate.compare` for comparison.
+ * - Endpoints are inclusive, so a returned piece ends one day before, or starts
+ *   one day after, the interval it borders.
  * - Returns `[]` when B fully covers A.
  * - Returns `[{ start, end }]` when B overlaps one edge of A (or equals A).
  * - Returns `[{ start, end }, { start, end }]` when B is fully inside A with gaps on both sides.
+ * - Returns A unchanged when B lies entirely before or after it.
  * - Returns `[]` if either interval is invalid (`start > end`).
  * - Returns `[]` on invalid input (wrong type, malformed strings).
  * - Accepts GMT calendar-annotated PlainDate strings — E5 (issue #78). Since the result is
@@ -30,6 +33,7 @@ import { isValidCalendarDate } from "../validate";
  * @example intervalDifferenceDate("2024-01-01", "2024-12-31", "2024-03-01", "2024-10-31") // [{ start: "2024-01-01", end: "2024-02-29" }, { start: "2024-11-01", end: "2024-12-31" }]
  * @example intervalDifferenceDate("2024-01-01", "2024-12-31", "2024-01-01", "2024-12-31") // []
  * @example intervalDifferenceDate("2024-01-01", "2024-12-31", "2024-06-01", "2024-12-31") // [{ start: "2024-01-01", end: "2024-05-31" }]
+ * @example intervalDifferenceDate("2024-01-05", "2024-01-10", "2024-01-01", "2024-01-02") // [{ start: "2024-01-05", end: "2024-01-10" }] (B entirely before A)
  * @example intervalDifferenceDate("invalid", "2024-12-31", "2024-06-01", "2024-07-01") // []
  */
 export function intervalDifferenceDate(
@@ -99,10 +103,12 @@ export function intervalDifferenceDate(
       }
     }
 
-    // Right piece: A after B ends
+    // Right piece: A after B ends — starting at A's own start when B lies entirely before A
     if (Temporal.PlainDate.compare(aE, bE) > 0) {
+      const rightStart =
+        Temporal.PlainDate.compare(bE, aS) < 0 ? aS : bE.add({ days: 1 });
       result.push({
-        start: formatDateInCalendar(bE.add({ days: 1 }), calendar),
+        start: formatDateInCalendar(rightStart, calendar),
         end: formatDateInCalendar(aE, calendar),
       });
     }

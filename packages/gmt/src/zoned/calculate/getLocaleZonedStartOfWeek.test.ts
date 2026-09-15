@@ -214,10 +214,12 @@ describe("getLocaleZonedStartOfWeek", () => {
 // `startOfDay()` for Santiago, on @js-temporal/polyfill@0.5.1.
 describe("getLocaleZonedStartOfWeek across zone transitions with default options", () => {
   it.each`
-    value                                             | locale                  | expected                                          | description
-    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${MustTestLocales.enUS} | ${"2010-11-06T23:01:00-04:00[America/Goose_Bay]"} | ${"Goose Bay fell back at 00:01 Sunday into Saturday, re-opening the week before"}
-    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${MustTestLocales.frFR} | ${"2010-11-01T00:00:00-03:00[America/Goose_Bay]"} | ${"a Monday-first week runs straight through the same transition"}
-    ${"2024-09-11T12:00:00-03:00[America/Santiago]"}  | ${MustTestLocales.enUS} | ${"2024-09-08T01:00:00-03:00[America/Santiago]"}  | ${"Santiago skipped that Sunday's midnight"}
+    value                                               | locale                  | expected                                            | description
+    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"}   | ${MustTestLocales.enUS} | ${"2010-11-06T23:01:00-04:00[America/Goose_Bay]"}   | ${"Goose Bay fell back at 00:01 Sunday into Saturday, re-opening the week before"}
+    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"}   | ${MustTestLocales.frFR} | ${"2010-11-01T00:00:00-03:00[America/Goose_Bay]"}   | ${"a Monday-first week runs straight through the same transition"}
+    ${"2024-09-11T12:00:00-03:00[America/Santiago]"}    | ${MustTestLocales.enUS} | ${"2024-09-08T01:00:00-03:00[America/Santiago]"}    | ${"Santiago skipped that Sunday's midnight"}
+    ${"+275760-09-12T21:00:00-03:00[America/Santiago]"} | ${MustTestLocales.enUS} | ${"+275760-09-07T01:00:00-03:00[America/Santiago]"} | ${"the maximum instant; its Sunday's midnight was skipped, so the week starts at the transition"}
+    ${"+275760-09-12T21:00:00-03:00[America/Santiago]"} | ${MustTestLocales.frFR} | ${"+275760-09-08T00:00:00-03:00[America/Santiago]"} | ${"the maximum instant; a Monday-first week starts after that transition"}
   `(
     "returns $expected for $value in $locale ($description)",
     ({ value, locale, expected }) => {

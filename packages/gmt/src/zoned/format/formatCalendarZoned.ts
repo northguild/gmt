@@ -1,5 +1,9 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { joinDateTimeConnector, normalizeDateTime } from "../../internal";
+import {
+  joinDateTimeConnector,
+  normalizeDateTime,
+  zonedDateTimeFrom,
+} from "../../internal";
 import { isValidUtc } from "../../utc/validate";
 import { isValidZonedDateTime } from "../validate";
 
@@ -60,7 +64,7 @@ export function formatCalendarZoned(
     return "";
 
   try {
-    const target = Temporal.ZonedDateTime.from(value);
+    const target = zonedDateTimeFrom(value);
     const timeZone = target.timeZoneId;
 
     let reference: Temporal.ZonedDateTime;
@@ -69,7 +73,7 @@ export function formatCalendarZoned(
     } else if (typeof options.reference === "string") {
       reference = isValidUtc(options.reference)
         ? Temporal.Instant.from(options.reference).toZonedDateTimeISO(timeZone)
-        : Temporal.ZonedDateTime.from(options.reference).withTimeZone(timeZone);
+        : zonedDateTimeFrom(options.reference).withTimeZone(timeZone);
     } else {
       reference = Temporal.Instant.fromEpochMilliseconds(
         options.reference,

@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Return the latest (maximum) of the given ZonedDateTime values.
@@ -23,11 +24,11 @@ export function maxZoned(zonedDateTimes: string[]): string | null {
 
   try {
     const max = valid.reduce((currentMax, candidateStr) => {
-      const candidate = Temporal.ZonedDateTime.from(candidateStr);
+      const candidate = zonedDateTimeFrom(candidateStr);
       return Temporal.ZonedDateTime.compare(candidate, currentMax) > 0
         ? candidate
         : currentMax;
-    }, Temporal.ZonedDateTime.from(valid[0]));
+    }, zonedDateTimeFrom(valid[0]));
 
     return max.toString();
   } catch {

@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { isValidAmount, resolveOverflow } from "../../internal";
+import { addToZoned, isValidAmount, resolveOverflow } from "../../internal";
 import { isValidDateTimeDurationUnit } from "../../plain/validate";
 import type { DateTimeDurationUnit, Overflow } from "../../types";
 import { getSystemTimeZone } from "../../zoned/get";
@@ -56,7 +56,7 @@ export function addUnix(
     );
 
     const zdt = instant.toZonedDateTimeISO(timeZone);
-    const result = zdt.add(units, { overflow });
+    const result = addToZoned(zdt, units, { overflow });
     const epoch =
       epochUnit === "seconds"
         ? Math.floor(result.epochMilliseconds / 1000)

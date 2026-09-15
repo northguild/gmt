@@ -11,7 +11,7 @@ describe("intervalIntersectionTime", () => {
     ${"09:00:00"} | ${"17:00:00"} | ${"10:00:00"} | ${"11:00:00"} | ${{ start: "10:00:00", end: "11:00:00" }}
     ${"10:00:00"} | ${"10:00:00"} | ${"10:00:00"} | ${"10:00:00"} | ${{ start: "10:00:00", end: "10:00:00" }}
   `(
-    "returns $expected when intervals $aStart..$aEnd and $bStart..$bEnd overlap",
+    "returns $expected when intervals $aStart to $aEnd and $bStart to $bEnd overlap",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalIntersectionTime(aStart, aEnd, bStart, bEnd)).toEqual(
         expected,

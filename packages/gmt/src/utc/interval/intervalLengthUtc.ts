@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { resolveDateTimeUnit } from "../../internal";
+import { durationTotal, resolveDateTimeUnit, zonedUntil } from "../../internal";
 import { isValidDateTimeUnit } from "../../plain/validate";
 import { isLeapSecond } from "../../plain/validate/isLeapSecond";
 import { isValidUtcInterval } from "./validate";
@@ -52,11 +52,13 @@ export function intervalLengthUtc(
     const startVal = Temporal.Instant.from(start).toZonedDateTimeISO("UTC");
     const endVal = Temporal.Instant.from(end).toZonedDateTimeISO("UTC");
 
-    const duration = startVal.until(endVal, { largestUnit: resolvedUnit });
+    const duration = zonedUntil(startVal, endVal, {
+      largestUnit: resolvedUnit,
+    });
 
     // total() gives the exact elapsed length, unlike intervalCountUtc's boundary-crossing
     // count — 23:59 -> 00:01 is 2 day boundaries via intervalCountUtc but ~0.0014 days here.
-    return duration.total({ unit: resolvedUnit, relativeTo: startVal });
+    return durationTotal(duration, resolvedUnit, startVal);
   } catch {
     return null;
   }

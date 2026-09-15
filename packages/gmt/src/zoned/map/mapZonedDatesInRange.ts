@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Return an array of plain ISO date strings covering the inclusive date range between two zoned datetimes.
@@ -42,8 +43,8 @@ export function mapZonedDatesInRange(
     let start: Temporal.ZonedDateTime;
     let end: Temporal.ZonedDateTime;
     try {
-      start = Temporal.ZonedDateTime.from(startZonedDateTime);
-      end = Temporal.ZonedDateTime.from(endZonedDateTime);
+      start = zonedDateTimeFrom(startZonedDateTime);
+      end = zonedDateTimeFrom(endZonedDateTime);
     } catch {
       return [];
     }

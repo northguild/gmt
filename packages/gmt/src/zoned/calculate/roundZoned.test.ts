@@ -567,3 +567,18 @@ describe("roundZoned", () => {
     });
   }
 });
+
+describe("roundZoned at the maximum instant", () => {
+  // 09:30 halfExpand to the hour is 10:00, the maximum; 0 fractional digits for "hour".
+  it.each`
+    value                                                 | smallestUnit | expected
+    ${"+275760-09-13T09:30:00+10:00[Australia/Sydney]"}   | ${"hour"}    | ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"}
+    ${"+275760-09-13T13:59:30+14:00[Pacific/Kiritimati]"} | ${"minute"}  | ${"+275760-09-13T14:00:00+14:00[Pacific/Kiritimati]"}
+    ${"+275760-09-07T15:00:00-03:00[America/Santiago]"}   | ${"day"}     | ${"+275760-09-08T00:00:00-03:00[America/Santiago]"}
+  `(
+    "rounds $value to the $smallestUnit giving $expected",
+    ({ value, smallestUnit, expected }) => {
+      expect(roundZoned(value, { smallestUnit })).toBe(expected);
+    },
+  );
+});

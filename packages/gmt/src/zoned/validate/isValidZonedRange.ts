@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isLeapSecond } from "../../plain/validate/isLeapSecond";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Return true if `value1` and `value2` form a valid zoned range — both parseable as
@@ -38,8 +39,8 @@ export function isValidZonedRange({
   }
 
   try {
-    const zdt1 = Temporal.ZonedDateTime.from(value1);
-    const zdt2 = Temporal.ZonedDateTime.from(value2);
+    const zdt1 = zonedDateTimeFrom(value1);
+    const zdt2 = zonedDateTimeFrom(value2);
 
     const instant1 = zdt1.toInstant();
     const instant2 = zdt2.toInstant();

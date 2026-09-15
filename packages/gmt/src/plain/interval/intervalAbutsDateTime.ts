@@ -1,12 +1,15 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { closedIntervalsAbut } from "../../internal";
 import { plainDateTime } from "../../regex";
 
 /**
- * Return true when two datetime intervals are exactly adjacent — one's end equals the other's
- * start with zero gap and zero overlap.
+ * Return true when two datetime intervals are exactly adjacent — one's end is one nanosecond
+ * before the other's start, so they share no instant and leave no gap.
  *
  * - Uses `Temporal.PlainDateTime.compare` for comparison.
- * - Returns `true` when `aEnd + 1 nanosecond === bStart` or `bEnd + 1 nanosecond === aStart`.
+ * - Returns `true` when `bStart - 1 nanosecond === aEnd` (with `aEnd < bStart`) or
+ *   `aStart - 1 nanosecond === bEnd` (with `bEnd < aStart`). The step is taken down from the later
+ *   start, so an interval ending at the last representable value still abuts.
  * - Returns `false` when intervals overlap, are disjoint with a gap, or are invalid.
  * - Returns `false` on invalid input (wrong type, malformed strings).
  *
@@ -17,7 +20,7 @@ import { plainDateTime } from "../../regex";
  * @returns true if intervals are exactly adjacent, or false on invalid input
  *
  * @example intervalAbutsDateTime("2024-01-01T09:00:00", "2024-06-30T12:00:00", "2024-06-30T12:00:00.000000001", "2024-12-31T17:00:00") // true
- * @example intervalAbutsDateTime("2024-06-30T12:00:00", "2024-12-31T17:00:00", "2024-01-01T09:00:00", "2024-06-30T12:00:00.000000001") // true
+ * @example intervalAbutsDateTime("2024-06-30T12:00:00.000000001", "2024-12-31T17:00:00", "2024-01-01T09:00:00", "2024-06-30T12:00:00") // true
  * @example intervalAbutsDateTime("2024-01-01T09:00:00", "2024-06-30T12:00:00", "2024-06-30T12:00:01", "2024-12-31T17:00:00") // false (gap)
  * @example intervalAbutsDateTime("2024-01-01T09:00:00", "2024-06-30T13:00:00", "2024-06-30T12:00:00", "2024-12-31T17:00:00") // false (overlap)
  * @example intervalAbutsDateTime("invalid", "2024-06-30T12:00:00", "2024-06-30T12:00:00", "2024-12-31T17:00:00") // false
@@ -60,19 +63,14 @@ export function intervalAbutsDateTime(
       return false;
     }
 
-    // aEnd + 1 nanosecond === bStart
-    const aEndPlusOne = aE.add({ nanoseconds: 1 });
-    if (Temporal.PlainDateTime.compare(aEndPlusOne, bS) === 0) {
-      return true;
-    }
-
-    // bEnd + 1 nanosecond === aStart
-    const bEndPlusOne = bE.add({ nanoseconds: 1 });
-    if (Temporal.PlainDateTime.compare(bEndPlusOne, aS) === 0) {
-      return true;
-    }
-
-    return false;
+    return closedIntervalsAbut(
+      aS,
+      aE,
+      bS,
+      bE,
+      Temporal.PlainDateTime.compare,
+      (value) => value.subtract({ nanoseconds: 1 }),
+    );
   } catch {
     return false;
   }

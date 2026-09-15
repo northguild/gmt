@@ -1,13 +1,16 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { closedIntervalsAbut } from "../../internal";
 import { isLeapSecond } from "../../plain/validate/isLeapSecond";
 import { utcDateTime } from "../../regex/utc-date-time";
 
 /**
- * Return true when two UTC intervals are exactly adjacent — one's end equals the other's
- * start with zero gap and zero overlap.
+ * Return true when two UTC intervals are exactly adjacent — one's end is one nanosecond
+ * before the other's start, so they share no instant and leave no gap.
  *
  * - Uses `Temporal.Instant.compare` for comparison.
- * - Returns `true` when `aEnd + 1 nanosecond === bStart` or `bEnd + 1 nanosecond === aStart`.
+ * - Returns `true` when `bStart - 1 nanosecond === aEnd` (with `aEnd < bStart`) or
+ *   `aStart - 1 nanosecond === bEnd` (with `bEnd < aStart`). The step is taken down from the later
+ *   start, so an interval ending at the last representable instant still abuts.
  * - Returns `false` when intervals overlap, are disjoint with a gap, or are invalid.
  * - Returns `false` on invalid input (wrong type, malformed strings, leap seconds).
  *
@@ -18,7 +21,7 @@ import { utcDateTime } from "../../regex/utc-date-time";
  * @returns true if intervals are exactly adjacent, or false on invalid input
  *
  * @example intervalAbutsUtc("2024-01-01T09:00:00Z", "2024-06-30T12:00:00Z", "2024-06-30T12:00:00.000000001Z", "2024-12-31T17:00:00Z") // true
- * @example intervalAbutsUtc("2024-06-30T12:00:00Z", "2024-12-31T17:00:00Z", "2024-01-01T09:00:00Z", "2024-06-30T12:00:00.000000001Z") // true
+ * @example intervalAbutsUtc("2024-06-30T12:00:00.000000001Z", "2024-12-31T17:00:00Z", "2024-01-01T09:00:00Z", "2024-06-30T12:00:00Z") // true
  * @example intervalAbutsUtc("2024-01-01T09:00:00Z", "2024-06-30T12:00:00Z", "2024-06-30T12:00:01Z", "2024-12-31T17:00:00Z") // false (gap)
  * @example intervalAbutsUtc("2024-01-01T09:00:00Z", "2024-06-30T13:00:00Z", "2024-06-30T12:00:00Z", "2024-12-31T17:00:00Z") // false (overlap)
  * @example intervalAbutsUtc("invalid", "2024-06-30T12:00:00Z", "2024-06-30T12:00:00Z", "2024-12-31T17:00:00Z") // false
@@ -70,19 +73,14 @@ export function intervalAbutsUtc(
       return false;
     }
 
-    // aEnd + 1 nanosecond === bStart
-    const aEndPlusOne = aE.add({ nanoseconds: 1 });
-    if (Temporal.Instant.compare(aEndPlusOne, bS) === 0) {
-      return true;
-    }
-
-    // bEnd + 1 nanosecond === aStart
-    const bEndPlusOne = bE.add({ nanoseconds: 1 });
-    if (Temporal.Instant.compare(bEndPlusOne, aS) === 0) {
-      return true;
-    }
-
-    return false;
+    return closedIntervalsAbut(
+      aS,
+      aE,
+      bS,
+      bE,
+      Temporal.Instant.compare,
+      (value) => value.subtract({ nanoseconds: 1 }),
+    );
   } catch {
     return false;
   }
