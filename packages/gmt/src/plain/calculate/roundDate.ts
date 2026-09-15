@@ -15,6 +15,8 @@ import { isValidDate, isValidDateUnit } from "../validate";
  * - Accepts date units: "year", "month", "week", "day".
  * - Time units ("hour", "minute", etc.) are rejected and return "".
  * - All date units use manual start-of-unit rounding. Weeks start on Monday.
+ * - The rounding grid is anchored at the unit containing `value`, so `"halfEven"` breaks an exact
+ *   tie towards that unit's start (multiple 0, the even one).
  * - The position within the unit is measured towards the next start, so a date in a unit that
  *   began before the first representable date (`-271821-04-19`) still rounds up to the next start.
  *   When it rounds down to that unrepresentable start, the result is "".
@@ -86,8 +88,12 @@ export function roundDate(
         rounded = fraction > 0.5 ? startOfNext : startOfCurrent();
         break;
       case "halfEven":
-        // Simplified: use halfExpand behavior
-        rounded = fraction >= 0.5 ? startOfNext : startOfCurrent();
+        // Half-even breaks an exact tie towards the even multiple of the increment. The grid here
+        // is anchored at the unit containing `source` — `startOfNext` counts the increment from
+        // that unit, not from an absolute epoch — so the current start is multiple 0 and
+        // `startOfNext` is multiple 1. The even multiple at a tie is therefore always the current
+        // start. Above and below the tie it rounds to the nearer start, like every other half mode.
+        rounded = fraction > 0.5 ? startOfNext : startOfCurrent();
         break;
       default:
         rounded = startOfCurrent();

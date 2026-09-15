@@ -30,6 +30,9 @@ function millisecondsIntoDay(source: Temporal.PlainDateTime): number {
  * - Accepts all date and time units: "year", "month", "week", "day", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond".
  * - Time units use Temporal.PlainDateTime.round() directly.
  * - Date units (year, month, week) use manual start-of-unit rounding. Weeks start on Monday.
+ * - For date units the rounding grid is anchored at the unit containing `value`, so `"halfEven"`
+ *   breaks an exact tie towards that unit's start (multiple 0, the even one). Time units round
+ *   through Temporal, which anchors half-even on its own absolute grid.
  * - For date units the position within the unit is measured towards the next start, so a value in
  *   a unit that began before the first representable PlainDateTime
  *   (`-271821-04-19T00:00:00.000000001`) still rounds up to the next start. When it rounds down to
@@ -138,8 +141,12 @@ export function roundDateTime(
         rounded = fraction > 0.5 ? startOfNext : startOfCurrent();
         break;
       case "halfEven":
-        // Simplified: use halfExpand behavior
-        rounded = fraction >= 0.5 ? startOfNext : startOfCurrent();
+        // Half-even breaks an exact tie towards the even multiple of the increment. The grid here
+        // is anchored at the unit containing `source` — `startOfNext` counts the increment from
+        // that unit, not from an absolute epoch — so the current start is multiple 0 and
+        // `startOfNext` is multiple 1. The even multiple at a tie is therefore always the current
+        // start. Above and below the tie it rounds to the nearer start, like every other half mode.
+        rounded = fraction > 0.5 ? startOfNext : startOfCurrent();
         break;
       default:
         rounded = startOfCurrent();

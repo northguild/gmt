@@ -73,7 +73,7 @@ describe("roundDate", () => {
     ${"2024-06-16"} | ${"month"} | ${"halfCeil"}   | ${"2024-07-01"}
     ${"2024-06-16"} | ${"month"} | ${"halfTrunc"}  | ${"2024-06-01"}
     ${"2024-06-16"} | ${"month"} | ${"halfFloor"}  | ${"2024-06-01"}
-    ${"2024-06-16"} | ${"month"} | ${"halfEven"}   | ${"2024-07-01"}
+    ${"2024-06-16"} | ${"month"} | ${"halfEven"}   | ${"2024-06-01"}
   `(
     "returns $expected for half-boundary $value with roundingMode $roundingMode on $unit",
     ({ value, unit, roundingMode, expected }) => {

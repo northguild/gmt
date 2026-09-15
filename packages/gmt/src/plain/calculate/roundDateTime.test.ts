@@ -60,6 +60,22 @@ describe("roundDateTime", () => {
   );
 
   it.each`
+    value                    | unit       | roundingMode    | expected
+    ${"2024-06-16T00:00:00"} | ${"month"} | ${"halfExpand"} | ${"2024-07-01T00:00:00"}
+    ${"2024-06-16T00:00:00"} | ${"month"} | ${"halfCeil"}   | ${"2024-07-01T00:00:00"}
+    ${"2024-06-16T00:00:00"} | ${"month"} | ${"halfTrunc"}  | ${"2024-06-01T00:00:00"}
+    ${"2024-06-16T00:00:00"} | ${"month"} | ${"halfFloor"}  | ${"2024-06-01T00:00:00"}
+    ${"2024-06-16T00:00:00"} | ${"month"} | ${"halfEven"}   | ${"2024-06-01T00:00:00"}
+  `(
+    "returns $expected for half-boundary $value with roundingMode $roundingMode on $unit",
+    ({ value, unit, roundingMode, expected }) => {
+      expect(roundDateTime(value, { smallestUnit: unit, roundingMode })).toBe(
+        expected,
+      );
+    },
+  );
+
+  it.each`
     value                    | unit        | roundingMode | expected
     ${"2024-06-15T12:34:56"} | ${"hour"}   | ${"floor"}   | ${"2024-06-15T12:00:00"}
     ${"2024-06-15T12:34:56"} | ${"hour"}   | ${"ceil"}    | ${"2024-06-15T13:00:00"}
