@@ -242,6 +242,39 @@ const d7Repro: Repro = {
 };
 
 /**
+ * D7, the leap-month end: from the last day of `M05L` (Adar I 30) in leap year 5784 to Adar 29 of
+ * common year 5785, by years. The intermediate `5784-M05L-30 + 1 year` constrains to Adar 29, which
+ * equals the end date, so upstream counts a whole year; `NonISODateSurpasses` compares the
+ * unconstrained day (30 > 29) and gives `P12M29D`. Spec and Chromium: `P12M29D`. Polyfill 0.5.1
+ * returns `P1Y`, and so does a js-temporal main build with `10aeb98` + `0e32ee0`: the `mixedSign`
+ * probe alone would report D7 removable while this row is still wrong
+ * (`context/domination/js-temporal-polyfill-bugs.md` § C, C-D7b).
+ */
+const d7LeapMonthEndRepro: Repro = {
+  defect: "D7",
+  calendar: "hebrew",
+  name: "leapMonthEnd",
+  expected: "P12M29D",
+  run: () =>
+    Temporal.PlainDate.from({
+      calendar: "hebrew",
+      year: 5784,
+      monthCode: "M05L",
+      day: 30,
+    })
+      .until(
+        Temporal.PlainDate.from({
+          calendar: "hebrew",
+          year: 5785,
+          monthCode: "M06",
+          day: 29,
+        }),
+        { largestUnit: "years" },
+      )
+      .toString(),
+};
+
+/**
  * D1 in `Duration` rounding: a calendared `relativeTo` near the maximum reaches the same fields ->
  * ISO probe. Chromium 153: P40D from Hebrew 279517-08-15 is 1 month (M08 has 30 days) and 10 days.
  */
@@ -476,6 +509,7 @@ export const repros: readonly Repro[] = [
   d1RelativeToRepro,
   ...d6Repros,
   d7Repro,
+  d7LeapMonthEndRepro,
   // D2: buddhist read through ICU4C's Julian/Gregorian hybrid. The Intl era/monthCode proposal
   // makes buddhist proleptic with month and day identical to ISO; Chromium 152 agrees.
   readRepro("D2", "buddhist", "1000-01-01", "1543|M01|1"),

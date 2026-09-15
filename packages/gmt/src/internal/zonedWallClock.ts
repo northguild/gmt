@@ -21,10 +21,11 @@ import {
  *    `Intl.DateTimeFormat#format` throws `RangeError: Invalid time value`. The same wrong clamp
  *    at the minimum, plus a `CheckISODaysRange` the spec does not have in the named-zone branch,
  *    rejects `-271821-04-19` wall clocks that resolve to valid instants.
- *    Fixed only at the MAXIMUM on the polyfill's main branch, by 05ce7a3 ("Correctly handle
- *    limits in GetNamedTimeZoneEpochNanoseconds", PR #359), which no published release contains
- *    yet. The MINIMUM is still broken upstream: a 0.5.1 build with 05ce7a3 applied still throws
- *    for every `min.*` probe of the `zoned.A` canary group (`temporalCompat/repros.ts`).
+ *    Fixed at BOTH limits on the polyfill's main branch, and in no published release yet:
+ *    05ce7a3 ("Correctly handle limits in GetNamedTimeZoneEpochNanoseconds", PR #359) fixes the
+ *    maximum, and 95237e0 fixes the minimum. 05ce7a3 alone is not enough: a 0.5.1 build with only
+ *    05ce7a3 applied still throws for every `min.*` probe of the `zoned.A` canary group
+ *    (`temporalCompat/repros.ts`), while a build of main passes all of them.
  * 2. **Start of day in a gap / next transition** (`GetNamedTimeZoneNextTransition`). Its forward
  *    scan returns `null` as soon as a two-week step would pass the maximum, without probing the
  *    remaining days, so `getTimeZoneTransition("next")` misses a transition in the last two weeks
@@ -41,8 +42,9 @@ import {
  * input the polyfill already handles changes behaviour.
  *
  * Remove each fallback once a polyfill release containing the fix is GMT's dependency floor:
- * for defect 1, 05ce7a3 AND a separate upstream fix for the minimum edge (05ce7a3 alone retires
- * nothing, since the `zoned.A` `min.*` probes still fail with it); for defect 2, an upstream fix.
+ * for defect 1, both 05ce7a3 and 95237e0 (05ce7a3 alone retires nothing, since the `zoned.A`
+ * `min.*` probes still fail with it); for defect 2, an upstream fix that does not exist yet (see
+ * `context/domination/js-temporal-polyfill-bugs.md` § B).
  * `pnpm compat` reports when every probe of a group passes.
  * ---------------------------------------------------------------------------------------------
  */

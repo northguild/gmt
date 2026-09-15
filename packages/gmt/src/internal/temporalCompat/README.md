@@ -108,16 +108,16 @@ value. Draft C (calendar fields near the limits) is the `D1` group.
 
 | Defect | Remove when |
 |---|---|
-| D1 | A js-temporal release ports proposal-temporal `a41eb67` (+ `af0cb4b`, + a clamp of the bisection step if it proves reachable) and becomes GMT's floor |
+| D1 | A js-temporal release ports proposal-temporal `a41eb67` + `af0cb4b` **and** the C-D1b patch (`context/domination/js-temporal-polyfill-bugs.md` § C): those two ports alone still leave Hebrew/Persian `until` and Hebrew `relativeTo` throwing near the maximum, in proposal-temporal main too. `D1.fieldsMin hebrew` also needs D3's port. No clamp of the bisection step is needed |
 | D2 | A js-temporal release contains `2bb6ba1` (already on main) |
 | D3 + D4 | **Both** hold: a js-temporal release ports proposal-temporal `0df570c`, **and** GMT's `engines.node` floor bundles an ICU containing `5267bb5778` (ICU-23007) |
 | D5 | A js-temporal release ports proposal-temporal `314b112` |
 | D6 | A js-temporal release contains `10aeb98` (already on main) |
-| D7 | A js-temporal release ports proposal-temporal `0e32ee0` |
-| D8 | A js-temporal release contains `2bb6ba1` |
-| zoned.A | A js-temporal release contains `05ce7a3` **and** a separate fix for the minimum edge. `05ce7a3` fixes only the `max.*` probes: a 0.5.1 build with it applied still throws for every `min.*` probe, so the maximum alone never retires this group |
-| zoned.B | A js-temporal release fixes `GetNamedTimeZoneNextTransition` near the maximum (draft B; not fixed on main) |
-| zoned.D | A js-temporal release validates the `"UTC"` fast path of `GetPossibleEpochNanoseconds` (draft D; not fixed on main) |
+| D7 | A js-temporal release ports proposal-temporal `0e32ee0` **and** C-D7b (part of proposal-temporal `196a3191`; bug doc § C). `0e32ee0` fixes the `mixedSign` probe only: the `leapMonthEnd` probe (`5784-M05L-30` → `5785-M06-29` by years) still returns `P1Y` without C-D7b |
+| D8 | A js-temporal release contains `2bb6ba1` **and** proposal-temporal `977d11e0` + `993e6322`: `2bb6ba1` alone still reads `1872-12-31` as `meiji` 5 |
+| zoned.A | A js-temporal release contains `05ce7a3` (maximum) **and** `95237e0` (minimum), both on main. `05ce7a3` alone fixes only the `max.*` probes: a 0.5.1 build with just that commit still throws for every `min.*` probe |
+| zoned.B | A js-temporal release fixes `GetNamedTimeZoneNextTransition` near the maximum. Not fixed on main; the verified patch is in bug doc § B |
+| zoned.D | A js-temporal release ports proposal-temporal #3205 (`d90d432`), which validates the `"UTC"` fast path of `GetPossibleEpochNanoseconds` (bug doc § D) |
 
 In every case the fix must be in the release that becomes GMT's `@js-temporal/polyfill` floor
 (D4: GMT's `engines.node` floor). Check with `pnpm compat`: a probe passes when

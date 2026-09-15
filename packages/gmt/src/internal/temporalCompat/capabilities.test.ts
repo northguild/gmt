@@ -82,20 +82,23 @@ describe("repros", () => {
   );
 
   // D6: test262 wrapping-at-end-of-month-{hebrew,ethioaa}.js; the others are Chromium 152 grid rows.
-  // D7: Chromium 152 grid, ISO 2024-02-11 + 384 days by years.
+  // D7 mixedSign: Chromium 152 grid, ISO 2024-02-11 + 384 days by years.
+  // D7 leapMonthEnd: Chromium and NonISODateSurpasses (unconstrained day 30 > 29), per
+  // js-temporal-polyfill-bugs.md § C (C-D7b).
   it.each`
-    defect  | calendar              | name           | expected
-    ${"D6"} | ${"buddhist"}         | ${"monthEnd"}  | ${"P30D"}
-    ${"D6"} | ${"japanese"}         | ${"monthEnd"}  | ${"P30D"}
-    ${"D6"} | ${"roc"}              | ${"monthEnd"}  | ${"P30D"}
-    ${"D6"} | ${"persian"}          | ${"monthEnd"}  | ${"P30D"}
-    ${"D6"} | ${"indian"}           | ${"monthEnd"}  | ${"P30D"}
-    ${"D6"} | ${"islamic-civil"}    | ${"monthEnd"}  | ${"P29D"}
-    ${"D6"} | ${"islamic-tbla"}     | ${"monthEnd"}  | ${"P29D"}
-    ${"D6"} | ${"islamic-umalqura"} | ${"monthEnd"}  | ${"P29D"}
-    ${"D6"} | ${"hebrew"}           | ${"monthEnd"}  | ${"P29D"}
-    ${"D6"} | ${"ethioaa"}          | ${"monthEnd"}  | ${"P7D"}
-    ${"D7"} | ${"hebrew"}           | ${"mixedSign"} | ${"P12M29D"}
+    defect  | calendar              | name              | expected
+    ${"D6"} | ${"buddhist"}         | ${"monthEnd"}     | ${"P30D"}
+    ${"D6"} | ${"japanese"}         | ${"monthEnd"}     | ${"P30D"}
+    ${"D6"} | ${"roc"}              | ${"monthEnd"}     | ${"P30D"}
+    ${"D6"} | ${"persian"}          | ${"monthEnd"}     | ${"P30D"}
+    ${"D6"} | ${"indian"}           | ${"monthEnd"}     | ${"P30D"}
+    ${"D6"} | ${"islamic-civil"}    | ${"monthEnd"}     | ${"P29D"}
+    ${"D6"} | ${"islamic-tbla"}     | ${"monthEnd"}     | ${"P29D"}
+    ${"D6"} | ${"islamic-umalqura"} | ${"monthEnd"}     | ${"P29D"}
+    ${"D6"} | ${"hebrew"}           | ${"monthEnd"}     | ${"P29D"}
+    ${"D6"} | ${"ethioaa"}          | ${"monthEnd"}     | ${"P7D"}
+    ${"D7"} | ${"hebrew"}           | ${"mixedSign"}    | ${"P12M29D"}
+    ${"D7"} | ${"hebrew"}           | ${"leapMonthEnd"} | ${"P12M29D"}
   `(
     "$defect $name for $calendar expects $expected",
     ({ defect, calendar, name, expected }) => {
@@ -167,6 +170,7 @@ describe("reproPasses", () => {
     ${"D6"}      | ${"hebrew"}        | ${"monthEnd"}               | ${"P1M"}
     ${"D6"}      | ${"ethioaa"}       | ${"monthEnd"}               | ${"P1M"}
     ${"D7"}      | ${"hebrew"}        | ${"mixedSign"}              | ${"ERR RangeError: mixed-sign values not allowed as duration fields"}
+    ${"D7"}      | ${"hebrew"}        | ${"leapMonthEnd"}           | ${"P1Y"}
     ${"zoned.A"} | ${"iso8601"}       | ${"max.untilSydney"}        | ${"ERR RangeError: Invalid time value"}
     ${"zoned.A"} | ${"iso8601"}       | ${"min.untilNewYork"}       | ${"ERR RangeError: date/time value is outside the supported range"}
     ${"zoned.B"} | ${"iso8601"}       | ${"max.nextTransition"}     | ${"null"}

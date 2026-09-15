@@ -22,10 +22,11 @@ import {
 /*
  * Polyfill-first wrappers for the Temporal operations that resolve a wall clock or a start of day
  * inside `@js-temporal/polyfill` 0.5.1, and so inherit its range-limit defects. See the note at the
- * top of `./zonedWallClock.ts` (defect 1: upstream 05ce7a3 fixes the maximum only, and the minimum
- * is still unfixed upstream; defect 2 is unfixed upstream): each fallback is removed once a
- * polyfill release fixing its defect at BOTH limits is GMT's dependency floor. 05ce7a3 alone never
- * retires the defect-1 fallbacks, because the `zoned.A` canary's `min.*` probes still fail with it.
+ * top of `./zonedWallClock.ts` (defect 1: fixed on upstream main by 05ce7a3 at the maximum and
+ * 95237e0 at the minimum, both unreleased; defect 2 is unfixed upstream): each fallback is removed
+ * once a polyfill release fixing its defect at BOTH limits is GMT's dependency floor. 05ce7a3 alone
+ * never retires the defect-1 fallbacks, because the `zoned.A` canary's `min.*` probes still fail
+ * with it.
  *
  * Every wrapper returns the polyfill's own result whenever it has one, and re-throws the polyfill's
  * own error unless the zone is a named, non-UTC zone and the wall clock being resolved lies within
