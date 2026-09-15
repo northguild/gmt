@@ -73,7 +73,11 @@ function hebrewFields(date: Temporal.PlainDate): CalendarFields {
   if (fixed >= hebrewNewYear(1) || !hebrewCorrectionActive()) {
     return runtimeRead(date, "hebrew");
   }
-  return { ...hebrewFieldsFromFixed(fixed), era: undefined, eraYear: undefined };
+  return {
+    ...hebrewFieldsFromFixed(fixed),
+    era: undefined,
+    eraYear: undefined,
+  };
 }
 
 /** D5: Indian dates before ISO year 1 (see indianArithmetic.ts). */

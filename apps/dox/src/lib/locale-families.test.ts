@@ -12,16 +12,20 @@ import {
 describe("locale-families", () => {
   it("has a family entry for every published locale", () => {
     for (const locale of gmtStats.localeList) {
-      expect(LOCALE_FAMILIES[locale], `missing family for ${locale}`).toBeDefined();
+      expect(
+        LOCALE_FAMILIES[locale],
+        `missing family for ${locale}`,
+      ).toBeDefined();
     }
   });
 
   it("lists no locale that isn't published", () => {
     const published = new Set(gmtStats.localeList);
     for (const locale of Object.keys(LOCALE_FAMILIES)) {
-      expect(published.has(locale), `${locale} is not in gmtStats.localeList`).toBe(
-        true,
-      );
+      expect(
+        published.has(locale),
+        `${locale} is not in gmtStats.localeList`,
+      ).toBe(true);
     }
   });
 

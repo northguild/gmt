@@ -182,10 +182,10 @@ describe("compareDurations relative to the first days of the range", () => {
 // Values: Chromium 153 native `Duration.compare(a, b, { relativeTo: PlainDate })`.
 describe("compareDurations with a non-ISO calendar relativeTo (CORE-6)", () => {
   it.each`
-    one      | two       | relativeTo                        | expected | reason
-    ${"P1M"} | ${"P29D"} | ${"279517-08-01[u-ca=hebrew]"}   | ${1}     | ${"D1: M07 of 279517 has 30 days"}
-    ${"P1M"} | ${"P30D"} | ${"2566-08-31[u-ca=buddhist]"}   | ${0}     | ${"D6: Aug 31 + 1 month is Sep 30, 30 days"}
-    ${"P1M"} | ${"P29D"} | ${"-096239-06-23[u-ca=hebrew]"}  | ${0}     | ${"hebrew year <= 0: M06 has 29 days"}
+    one      | two       | relativeTo                      | expected | reason
+    ${"P1M"} | ${"P29D"} | ${"279517-08-01[u-ca=hebrew]"}  | ${1}     | ${"D1: M07 of 279517 has 30 days"}
+    ${"P1M"} | ${"P30D"} | ${"2566-08-31[u-ca=buddhist]"}  | ${0}     | ${"D6: Aug 31 + 1 month is Sep 30, 30 days"}
+    ${"P1M"} | ${"P29D"} | ${"-096239-06-23[u-ca=hebrew]"} | ${0}     | ${"hebrew year <= 0: M06 has 29 days"}
   `(
     "compares $one with $two relative to $relativeTo as $expected ($reason)",
     ({ one, two, relativeTo, expected }) => {

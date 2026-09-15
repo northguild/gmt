@@ -183,8 +183,7 @@ function localeList() {
   const src = readFileSync(LOCALES, "utf8");
   const block = src.slice(src.indexOf("MustTestLocales"));
   return (
-    block.slice(0, block.indexOf("}")).match(/["'][a-z]{2}-[A-Z]{2}["']/g) ??
-    []
+    block.slice(0, block.indexOf("}")).match(/["'][a-z]{2}-[A-Z]{2}["']/g) ?? []
   ).map((s) => s.slice(1, -1));
 }
 

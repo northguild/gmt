@@ -443,13 +443,13 @@ describe("intervalCountZoned across a transition near the maximum", () => {
 // - buddhist 1543-01-15 (ISO 1000-01-15) to 1543-03-15: proleptic months start on the 1st, so 3.
 describe("intervalCountZoned in non-ISO calendars (CORE-6)", () => {
   it.each`
-    start                                                               | end                                                                 | expected | reason
-    ${"279517-08-05T00:00:00+00:00[u-ca=hebrew][UTC]"}                  | ${"279517-10-08T00:00:00+00:00[u-ca=hebrew][UTC]"}                  | ${3}     | ${"D1 near the maximum"}
-    ${"279517-08-05T00:00:00-04:00[u-ca=hebrew][America/New_York]"}     | ${"279517-10-08T00:00:00-04:00[u-ca=hebrew][America/New_York]"}     | ${3}     | ${"D1 near the maximum in a named zone"}
-    ${"-096239-06-23T00:00:00+00:00[u-ca=hebrew][UTC]"}                 | ${"-096239-08-04T00:00:00+00:00[u-ca=hebrew][UTC]"}                 | ${3}     | ${"hebrew year <= 0"}
-    ${"-096239-06-23T00:00:00-12:00[u-ca=hebrew][Etc/GMT+12]"}          | ${"-096239-08-04T00:00:00-12:00[u-ca=hebrew][Etc/GMT+12]"}          | ${3}     | ${"hebrew year <= 0 behind UTC"}
-    ${"1543-01-15T00:00:00+00:00[u-ca=buddhist][UTC]"}                  | ${"1543-03-15T00:00:00+00:00[u-ca=buddhist][UTC]"}                  | ${3}     | ${"proleptic buddhist"}
-    ${"1543-01-15T00:00:00-04:56:02[u-ca=buddhist][America/New_York]"}  | ${"1543-03-15T00:00:00-04:56:02[u-ca=buddhist][America/New_York]"}  | ${3}     | ${"proleptic buddhist in a named zone"}
+    start                                                              | end                                                                | expected | reason
+    ${"279517-08-05T00:00:00+00:00[u-ca=hebrew][UTC]"}                 | ${"279517-10-08T00:00:00+00:00[u-ca=hebrew][UTC]"}                 | ${3}     | ${"D1 near the maximum"}
+    ${"279517-08-05T00:00:00-04:00[u-ca=hebrew][America/New_York]"}    | ${"279517-10-08T00:00:00-04:00[u-ca=hebrew][America/New_York]"}    | ${3}     | ${"D1 near the maximum in a named zone"}
+    ${"-096239-06-23T00:00:00+00:00[u-ca=hebrew][UTC]"}                | ${"-096239-08-04T00:00:00+00:00[u-ca=hebrew][UTC]"}                | ${3}     | ${"hebrew year <= 0"}
+    ${"-096239-06-23T00:00:00-12:00[u-ca=hebrew][Etc/GMT+12]"}         | ${"-096239-08-04T00:00:00-12:00[u-ca=hebrew][Etc/GMT+12]"}         | ${3}     | ${"hebrew year <= 0 behind UTC"}
+    ${"1543-01-15T00:00:00+00:00[u-ca=buddhist][UTC]"}                 | ${"1543-03-15T00:00:00+00:00[u-ca=buddhist][UTC]"}                 | ${3}     | ${"proleptic buddhist"}
+    ${"1543-01-15T00:00:00-04:56:02[u-ca=buddhist][America/New_York]"} | ${"1543-03-15T00:00:00-04:56:02[u-ca=buddhist][America/New_York]"} | ${3}     | ${"proleptic buddhist in a named zone"}
   `(
     "counts $expected months from $start to $end ($reason)",
     ({ start, end, expected }) => {

@@ -248,21 +248,26 @@ describe("convertZonedToCalendar at the minimum instant behind UTC (CORE-6)", ()
 
   it("converts the offset-less minimum wall clock in America/New_York to hebrew in local mean time", () => {
     expect(
-      convertZonedToCalendar("-271821-04-19T19:03:58[America/New_York]", "hebrew"),
+      convertZonedToCalendar(
+        "-271821-04-19T19:03:58[America/New_York]",
+        "hebrew",
+      ),
     ).toBe("-268058-11-04T19:03:58-04:56:02[u-ca=hebrew][America/New_York]");
   });
 
   it.each`
-    value                                                            | calendar
-    ${"-271821-04-19T12:00:00-12:00[Etc/GMT+12]"}                    | ${"hebrew"}
-    ${"-271821-04-19T12:00:00-12:00[Etc/GMT+12]"}                    | ${"gregorian"}
-    ${"-268058-11-04T12:00:00-12:00[u-ca=hebrew][Etc/GMT+12]"}       | ${"gregorian"}
-    ${"-271821-04-19T19:03:58-04:56:02[America/New_York]"}           | ${"hebrew"}
+    value                                                               | calendar
+    ${"-271821-04-19T12:00:00-12:00[Etc/GMT+12]"}                       | ${"hebrew"}
+    ${"-271821-04-19T12:00:00-12:00[Etc/GMT+12]"}                       | ${"gregorian"}
+    ${"-268058-11-04T12:00:00-12:00[u-ca=hebrew][Etc/GMT+12]"}          | ${"gregorian"}
+    ${"-271821-04-19T19:03:58-04:56:02[America/New_York]"}              | ${"hebrew"}
     ${"-268058-11-04T19:03:58-04:56:02[u-ca=hebrew][America/New_York]"} | ${"gregorian"}
   `(
     'returns "" converting $value to $calendar: its offset makes TC39 check the local date against the day range',
     ({ value, calendar }) => {
-      expect(convertZonedToCalendar(value, calendar as CalendarSystem)).toBe("");
+      expect(convertZonedToCalendar(value, calendar as CalendarSystem)).toBe(
+        "",
+      );
     },
   );
 });

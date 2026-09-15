@@ -65,11 +65,7 @@ export function ethiopicFamilyFieldsFromDate(
   date: Temporal.PlainDate,
   calendar: EthiopicFamilyCalendar,
 ): EthiopicFamilyFields {
-  const {
-    year: ethioaaYear,
-    month,
-    day,
-  } = calendarFieldsOf(date, "ethioaa");
+  const { year: ethioaaYear, month, day } = calendarFieldsOf(date, "ethioaa");
 
   if (calendar === "ethiopic-amete-alem") {
     return { year: ethioaaYear, month, day };

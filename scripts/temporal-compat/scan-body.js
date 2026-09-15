@@ -80,8 +80,13 @@ export function scanBody(T) {
           attempt(() => iso(dc.subtract({ years: 1 }))),
           attempt(() =>
             dir < 0
-              ? dc.until(edge.withCalendar(c), { largestUnit: "months" }).toString()
-              : edge.withCalendar(c).until(dc, { largestUnit: "months" }).toString(),
+              ? dc
+                  .until(edge.withCalendar(c), { largestUnit: "months" })
+                  .toString()
+              : edge
+                  .withCalendar(c)
+                  .until(dc, { largestUnit: "months" })
+                  .toString(),
           ),
           attempt(() =>
             dir < 0

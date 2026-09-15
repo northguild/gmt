@@ -400,8 +400,7 @@ function addWithCalendarCompat(
     zoned.timeZoneId,
     "compatible",
   );
-  const result =
-    intermediate.epochNanoseconds + timeUnitsNanoseconds(duration);
+  const result = intermediate.epochNanoseconds + timeUnitsNanoseconds(duration);
   if (!isValidEpoch(result)) {
     throw new RangeError(
       `${zoned.toString()} + ${duration.toString()} is outside the supported range`,

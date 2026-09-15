@@ -62,7 +62,9 @@ export function indianFieldsFromIso(
     }
     remaining -= length;
   }
-  throw new RangeError(`${isoYear}-${isoMonth}-${isoDay} is past its Saka year`);
+  throw new RangeError(
+    `${isoYear}-${isoMonth}-${isoDay} is past its Saka year`,
+  );
 }
 
 /**

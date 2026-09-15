@@ -174,10 +174,10 @@ describe("diffDate", () => {
   // (q2-grid-chromium152.json): buddhist 2023-08-31 +30 d is P30D, hebrew 2024-02-11 +384 d is
   // P12M29D with largestUnit years.
   it.each`
-    date1                          | date2                          | unit                  | expected                   | reason
-    ${"2566-08-31[u-ca=buddhist]"} | ${"2566-09-30[u-ca=buddhist]"} | ${"months"}           | ${0}                       | ${"D6: 30 days, not a month"}
-    ${"2566-08-31[u-ca=buddhist]"} | ${"2566-09-30[u-ca=buddhist]"} | ${["months", "days"]} | ${{ months: 0, days: 30 }} | ${"D6 record"}
-    ${"5784-06-02[u-ca=hebrew]"}   | ${"5785-06-01[u-ca=hebrew]"}   | ${"years"}            | ${0}                       | ${"D7: not null"}
+    date1                          | date2                          | unit                   | expected                    | reason
+    ${"2566-08-31[u-ca=buddhist]"} | ${"2566-09-30[u-ca=buddhist]"} | ${"months"}            | ${0}                        | ${"D6: 30 days, not a month"}
+    ${"2566-08-31[u-ca=buddhist]"} | ${"2566-09-30[u-ca=buddhist]"} | ${["months", "days"]}  | ${{ months: 0, days: 30 }}  | ${"D6 record"}
+    ${"5784-06-02[u-ca=hebrew]"}   | ${"5785-06-01[u-ca=hebrew]"}   | ${"years"}             | ${0}                        | ${"D7: not null"}
     ${"5784-06-02[u-ca=hebrew]"}   | ${"5785-06-01[u-ca=hebrew]"}   | ${["years", "months"]} | ${{ years: 0, months: 12 }} | ${"D7 record"}
   `(
     "returns $expected for $unit from $date1 to $date2 ($reason)",

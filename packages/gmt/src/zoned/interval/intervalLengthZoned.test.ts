@@ -182,11 +182,11 @@ describe("intervalLengthZoned at the maximum instant", () => {
 // Chromium throws.
 describe("intervalLengthZoned in non-ISO calendars (CORE-6)", () => {
   it.each`
-    start                                                | end                                                  | unit        | expected              | reason
-    ${"2566-08-31T00:00:00+00:00[u-ca=buddhist][UTC]"}   | ${"2566-09-30T00:00:00+00:00[u-ca=buddhist][UTC]"}   | ${"months"} | ${1}                  | ${"D6: the 1-month window ends exactly on the end"}
-    ${"1543-01-31T00:00:00+00:00[u-ca=buddhist][UTC]"}   | ${"1543-02-28T00:00:00+00:00[u-ca=buddhist][UTC]"}   | ${"months"} | ${1}                  | ${"proleptic buddhist: Jan 31 + 1 month is Feb 28 in ISO 1000"}
-    ${"-096239-06-23T00:00:00+00:00[u-ca=hebrew][UTC]"}  | ${"-096239-08-04T00:00:00+00:00[u-ca=hebrew][UTC]"}  | ${"months"} | ${1.3666666666666667} | ${"hebrew year <= 0: 1 month and 11 of M07's 30 days"}
-    ${"279517-08-01T00:00:00+00:00[u-ca=hebrew][UTC]"}   | ${"279517-10-11T00:00:00+00:00[u-ca=hebrew][UTC]"}   | ${"months"} | ${null}               | ${"D1: the third month's window ends past the maximum"}
+    start                                               | end                                                 | unit        | expected              | reason
+    ${"2566-08-31T00:00:00+00:00[u-ca=buddhist][UTC]"}  | ${"2566-09-30T00:00:00+00:00[u-ca=buddhist][UTC]"}  | ${"months"} | ${1}                  | ${"D6: the 1-month window ends exactly on the end"}
+    ${"1543-01-31T00:00:00+00:00[u-ca=buddhist][UTC]"}  | ${"1543-02-28T00:00:00+00:00[u-ca=buddhist][UTC]"}  | ${"months"} | ${1}                  | ${"proleptic buddhist: Jan 31 + 1 month is Feb 28 in ISO 1000"}
+    ${"-096239-06-23T00:00:00+00:00[u-ca=hebrew][UTC]"} | ${"-096239-08-04T00:00:00+00:00[u-ca=hebrew][UTC]"} | ${"months"} | ${1.3666666666666667} | ${"hebrew year <= 0: 1 month and 11 of M07's 30 days"}
+    ${"279517-08-01T00:00:00+00:00[u-ca=hebrew][UTC]"}  | ${"279517-10-11T00:00:00+00:00[u-ca=hebrew][UTC]"}  | ${"months"} | ${null}               | ${"D1: the third month's window ends past the maximum"}
   `(
     "returns $expected $unit from $start to $end ($reason)",
     ({ start, end, unit, expected }) => {

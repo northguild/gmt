@@ -133,8 +133,10 @@ export function calendarDateFromFields(
   }
 
   if ("era" in fields || !needsFieldSearch(calendarId, fields.year)) {
-    throw polyfillError ??
-      new RangeError(`${calendarId} fields do not read back unchanged`);
+    throw (
+      polyfillError ??
+      new RangeError(`${calendarId} fields do not read back unchanged`)
+    );
   }
 
   const iso = isoForFields(calendarId, fields);

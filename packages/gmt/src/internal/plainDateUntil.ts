@@ -9,9 +9,7 @@ import { plainDateUntilWithRounding } from "./zonedWallClockDifference";
 
 /** Plural date units to Temporal's singular spelling; anything else passes through unchanged. */
 function singularDateUnit(unit: string): CalendarDateUnit {
-  return (
-    unit.endsWith("s") ? unit.slice(0, -1) : unit
-  ) as CalendarDateUnit;
+  return (unit.endsWith("s") ? unit.slice(0, -1) : unit) as CalendarDateUnit;
 }
 
 /**

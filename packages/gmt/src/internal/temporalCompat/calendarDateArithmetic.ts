@@ -16,7 +16,12 @@ import { readArithmeticModel } from "./readArithmeticModel";
 export type CalendarDateUnit = "year" | "month" | "week" | "day";
 
 const ISO_CALENDAR = "iso8601";
-const DATE_UNITS: ReadonlySet<string> = new Set(["year", "month", "week", "day"]);
+const DATE_UNITS: ReadonlySet<string> = new Set([
+  "year",
+  "month",
+  "week",
+  "day",
+]);
 /**
  * The owned Hebrew and Indian arithmetic answers whenever an operation's years come within this
  * many years of the corrected range, so that no step of it (a Surpasses candidate overshoots by at

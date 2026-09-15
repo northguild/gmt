@@ -213,10 +213,10 @@ describe("splitIntervalByUnitDate", () => {
   // (D3), so both splits used to return []. Boundaries: Chromium 152 (q2-xscan-chromium152.json),
   // the Hebrew one through the Dershowitz–Reingold oracle; the last boundary is `end` itself.
   it.each`
-    start                                  | end                                    | unit        | expected                                                                                                                                                                                              | reason
+    start                                  | end                                    | unit        | expected                                                                                                                                                                                | reason
     ${"-280804-05-30[u-ca=islamic-civil]"} | ${"-280804-07-30[u-ca=islamic-civil]"} | ${"months"} | ${[{ start: "-280804-05-30[u-ca=islamic-civil]", end: "-280804-06-29[u-ca=islamic-civil]" }, { start: "-280804-06-29[u-ca=islamic-civil]", end: "-280804-07-30[u-ca=islamic-civil]" }]} | ${"D1: +1 month constrains to Jumada I 29 (xscan min[68]); +2 months is Rajab 30 = end"}
-    ${"-000041-05-16[u-ca=hebrew]"}        | ${"-000041-07-16[u-ca=hebrew]"}        | ${"months"} | ${[{ start: "-000041-05-16[u-ca=hebrew]", end: "-000041-06-16[u-ca=hebrew]" }, { start: "-000041-06-16[u-ca=hebrew]", end: "-000041-07-16[u-ca=hebrew]" }]}                                           | ${"D3/D4: Shevat 16 -> Adar 16 -> Nisan 16 (xscan stride k=979)"}
-    ${"-280804-05-07[u-ca=islamic-civil]"} | ${"-280803-05-07[u-ca=islamic-civil]"} | ${"years"}  | ${[{ start: "-280804-05-07[u-ca=islamic-civil]", end: "-280803-05-07[u-ca=islamic-civil]" }]}                                                                                                         | ${"D1: +1 year is end (xscan min[45] +1 year = min[400])"}
+    ${"-000041-05-16[u-ca=hebrew]"}        | ${"-000041-07-16[u-ca=hebrew]"}        | ${"months"} | ${[{ start: "-000041-05-16[u-ca=hebrew]", end: "-000041-06-16[u-ca=hebrew]" }, { start: "-000041-06-16[u-ca=hebrew]", end: "-000041-07-16[u-ca=hebrew]" }]}                             | ${"D3/D4: Shevat 16 -> Adar 16 -> Nisan 16 (xscan stride k=979)"}
+    ${"-280804-05-07[u-ca=islamic-civil]"} | ${"-280803-05-07[u-ca=islamic-civil]"} | ${"years"}  | ${[{ start: "-280804-05-07[u-ca=islamic-civil]", end: "-280803-05-07[u-ca=islamic-civil]" }]}                                                                                           | ${"D1: +1 year is end (xscan min[45] +1 year = min[400])"}
   `(
     "splits $start to $end by 1 $unit ($reason)",
     ({ start, end, unit, expected }) => {

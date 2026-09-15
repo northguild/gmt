@@ -148,10 +148,10 @@ describe("addDate", () => {
   // (q2-xscan-chromium152.json edge rows `[n]`). A result past the maximum must stay "" (TC39
   // ISODateWithinLimits): the workaround never clamps.
   it.each`
-    value                           | units            | expected                         | reason
+    value                            | units            | expected                         | reason
     ${"276302-09-13[u-ca=buddhist]"} | ${{ years: 1 }}  | ${"276303-09-13[u-ca=buddhist]"} | ${"D1-A: lands exactly on the maximum (xscan buddhist max[366])"}
-    ${"279517-09-11[u-ca=hebrew]"}  | ${{ months: 1 }} | ${"279517-10-11[u-ca=hebrew]"}   | ${"lands exactly on the maximum (xscan hebrew max[29])"}
-    ${"279517-09-12[u-ca=hebrew]"}  | ${{ months: 1 }} | ${""}                            | ${"one day past the maximum is a RangeError, not clamped (xscan hebrew max[28] ERR)"}
+    ${"279517-09-11[u-ca=hebrew]"}   | ${{ months: 1 }} | ${"279517-10-11[u-ca=hebrew]"}   | ${"lands exactly on the maximum (xscan hebrew max[29])"}
+    ${"279517-09-12[u-ca=hebrew]"}   | ${{ months: 1 }} | ${""}                            | ${"one day past the maximum is a RangeError, not clamped (xscan hebrew max[28] ERR)"}
   `(
     "returns $expected for $value + $units ($reason)",
     ({ value, units, expected }) => {
@@ -162,15 +162,15 @@ describe("addDate", () => {
   // CORE-6 D1-A windows the polyfill throws in, away from the exact limit (read-model path).
   // Chromium 152 edge rows: result ISO dates are read back from the same scan's rows.
   it.each`
-    value                                    | units            | expected                                 | reason
-    ${"-280804-03-30[u-ca=islamic-civil]"}   | ${{ months: 1 }} | ${"-280804-04-29[u-ca=islamic-civil]"}   | ${"xscan islamic-civil min[9]: Rabi I 30 constrains to the 29-day Rabi II"}
-    ${"-280804-05-30[u-ca=islamic-civil]"}   | ${{ months: 1 }} | ${"-280804-06-29[u-ca=islamic-civil]"}   | ${"xscan islamic-civil min[68]"}
-    ${"-280804-05-30[u-ca=islamic-tabular]"} | ${{ months: 1 }} | ${"-280804-06-29[u-ca=islamic-tabular]"} | ${"xscan islamic-tbla min[67]"}
+    value                                     | units            | expected                                  | reason
+    ${"-280804-03-30[u-ca=islamic-civil]"}    | ${{ months: 1 }} | ${"-280804-04-29[u-ca=islamic-civil]"}    | ${"xscan islamic-civil min[9]: Rabi I 30 constrains to the 29-day Rabi II"}
+    ${"-280804-05-30[u-ca=islamic-civil]"}    | ${{ months: 1 }} | ${"-280804-06-29[u-ca=islamic-civil]"}    | ${"xscan islamic-civil min[68]"}
+    ${"-280804-05-30[u-ca=islamic-tabular]"}  | ${{ months: 1 }} | ${"-280804-06-29[u-ca=islamic-tabular]"}  | ${"xscan islamic-tbla min[67]"}
     ${"-280804-09-30[u-ca=islamic-umalqura]"} | ${{ months: 1 }} | ${"-280804-10-29[u-ca=islamic-umalqura]"} | ${"xscan islamic-umalqura min[186]"}
-    ${"-272442-11-30[u-ca=persian]"}         | ${{ months: 1 }} | ${"-272442-12-29[u-ca=persian]"}         | ${"xscan persian min[327]: into the 29-day Esfand"}
-    ${"279516-09-11[u-ca=hebrew]"}           | ${{ years: 1 }}  | ${"279517-10-11[u-ca=hebrew]"}           | ${"xscan hebrew max[383]: Iyar 11 into leap 279517 is ordinal month 10, the maximum"}
-    ${"279516-09-05[u-ca=hebrew]"}           | ${{ years: 1 }}  | ${"279517-10-05[u-ca=hebrew]"}           | ${"xscan hebrew max[389]"}
-    ${"283582-05-23[u-ca=islamic-umalqura]"} | ${{ years: 1 }}  | ${"283583-05-23[u-ca=islamic-umalqura]"} | ${"xscan islamic-umalqura max[354]: lands on the maximum"}
+    ${"-272442-11-30[u-ca=persian]"}          | ${{ months: 1 }} | ${"-272442-12-29[u-ca=persian]"}          | ${"xscan persian min[327]: into the 29-day Esfand"}
+    ${"279516-09-11[u-ca=hebrew]"}            | ${{ years: 1 }}  | ${"279517-10-11[u-ca=hebrew]"}            | ${"xscan hebrew max[383]: Iyar 11 into leap 279517 is ordinal month 10, the maximum"}
+    ${"279516-09-05[u-ca=hebrew]"}            | ${{ years: 1 }}  | ${"279517-10-05[u-ca=hebrew]"}            | ${"xscan hebrew max[389]"}
+    ${"283582-05-23[u-ca=islamic-umalqura]"}  | ${{ years: 1 }}  | ${"283583-05-23[u-ca=islamic-umalqura]"}  | ${"xscan islamic-umalqura max[354]: lands on the maximum"}
   `(
     "returns $expected for $value + $units ($reason)",
     ({ value, units, expected }) => {

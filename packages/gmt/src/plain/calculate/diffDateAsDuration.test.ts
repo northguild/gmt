@@ -159,48 +159,48 @@ describe("diffDateAsDuration", () => {
   // Expected values: Chromium 152 native Temporal (q2-grid-chromium152.json "grid", and
   // q2-xscan-chromium152.json "xscan max[n]"), test262, or the spec algorithm where named.
   it.each`
-    date1                                          | date2                                          | unit        | expected             | reason
-    ${"2566-08-31[u-ca=buddhist]"}                 | ${"2566-09-30[u-ca=buddhist]"}                 | ${"months"} | ${"P30D"}            | ${"D6: Aug 31 + 1 month is Sep 31, past Sep 30 (grid 2023-08-31 +30 d)"}
-    ${"2566-08-31[u-ca=buddhist]"}                 | ${"2566-09-30[u-ca=buddhist]"}                 | ${"years"}  | ${"P30D"}            | ${"D6 with largestUnit years (grid 2023-08-31 +30 d)"}
-    ${"2566-09-30[u-ca=buddhist]"}                 | ${"2566-08-31[u-ca=buddhist]"}                 | ${"months"} | ${"-P30D"}           | ${"D6 negated: Sep 30 - 1 month is Aug 30, not past Aug 31 (grid reverse column)"}
-    ${"0005-08-31[u-ca=japanese;era=reiwa]"}       | ${"0005-09-30[u-ca=japanese;era=reiwa]"}       | ${"months"} | ${"P30D"}            | ${"D6 japanese (grid 2023-08-31 +30 d)"}
-    ${"0112-08-31[u-ca=taiwan]"}                   | ${"0112-09-30[u-ca=taiwan]"}                   | ${"months"} | ${"P30D"}            | ${"D6 taiwan/roc (grid 2023-08-31 +30 d)"}
-    ${"1446-01-30[u-ca=islamic-civil]"}            | ${"1446-02-29[u-ca=islamic-civil]"}            | ${"months"} | ${"P29D"}            | ${"D6 islamic-civil: Muharram 30 + 1 month is Safar 30, past Safar 29 (29-day Safar)"}
-    ${"1444-11-30[u-ca=islamic-civil]"}            | ${"1444-12-29[u-ca=islamic-civil]"}            | ${"months"} | ${"P29D"}            | ${"D6 islamic-civil (grid 2023-06-19 +29 d)"}
-    ${"1444-11-30[u-ca=islamic-tabular]"}          | ${"1444-12-29[u-ca=islamic-tabular]"}          | ${"months"} | ${"P29D"}            | ${"D6 islamic-tbla (grid 2023-06-18 +29 d)"}
-    ${"1444-12-30[u-ca=islamic-umalqura]"}         | ${"1445-01-29[u-ca=islamic-umalqura]"}         | ${"years"}  | ${"P29D"}            | ${"D6 islamic-umalqura across a year end (grid 2023-07-18 +29 d)"}
-    ${"1402-06-31[u-ca=persian]"}                  | ${"1402-07-30[u-ca=persian]"}                  | ${"months"} | ${"P30D"}            | ${"D6 persian (grid 2023-09-22 +30 d)"}
-    ${"1402-07-30[u-ca=persian]"}                  | ${"1402-06-31[u-ca=persian]"}                  | ${"years"}  | ${"-P30D"}           | ${"D6 persian negated (grid reverse column)"}
-    ${"1945-06-31[u-ca=indian]"}                   | ${"1945-07-30[u-ca=indian]"}                   | ${"months"} | ${"P30D"}            | ${"D6 indian (grid 2023-09-22 +30 d)"}
-    ${"5783-09-30[u-ca=hebrew]"}                   | ${"5783-10-29[u-ca=hebrew]"}                   | ${"months"} | ${"P29D"}            | ${"D6 hebrew Sivan 30 -> Tammuz 29 (grid 2023-06-19 +29 d)"}
-    ${"5783-07-30[u-ca=hebrew]"}                   | ${"5783-08-29[u-ca=hebrew]"}                   | ${"months"} | ${"P29D"}            | ${"D6 hebrew Nisan 30 -> Iyar 29 (test262 wrapping-at-end-of-month-hebrew.js)"}
-    ${"7515-12-07[u-ca=ethiopic-amete-alem]"}      | ${"7515-13-06[u-ca=ethiopic-amete-alem]"}      | ${"months"} | ${"P29D"}            | ${"D6 ethioaa into the 6-day Pagumen (grid 2023-08-13 +29 d)"}
-    ${"7515-11-30[u-ca=ethiopic-amete-alem]"}      | ${"7516-13-05[u-ca=ethiopic-amete-alem]"}      | ${"years"}  | ${"P1Y1M5D"}         | ${"D6: Hamle 30 + 1Y2M is Pagumen 30, past Pagumen 5 (spec NonISODateSurpasses)"}
-    ${"1739-11-30[u-ca=coptic]"}                   | ${"1740-13-05[u-ca=coptic]"}                   | ${"years"}  | ${"P1Y1M5D"}         | ${"D6 coptic: same ISO dates as the ethioaa row (coptic = ethioaa - 5776)"}
-    ${"2015-11-30[u-ca=ethiopic;era=ethiopic]"}    | ${"2016-13-05[u-ca=ethiopic;era=ethiopic]"}    | ${"years"}  | ${"P1Y1M5D"}         | ${"D6 ethiopic: same ISO dates as the ethioaa row (ethiopic era year = ethioaa - 5500)"}
-    ${"5784-06-02[u-ca=hebrew]"}                   | ${"5785-06-01[u-ca=hebrew]"}                   | ${"years"}  | ${"P12M29D"}         | ${"D7: Adar I 2 + 1 year is Adar 2, past Adar 1 (grid 2024-02-11 +384 d)"}
-    ${"5785-06-01[u-ca=hebrew]"}                   | ${"5784-06-02[u-ca=hebrew]"}                   | ${"years"}  | ${"-P1Y29D"}         | ${"D7 negated: Adar 1 - 1 year is Adar I 1, not past Adar I 2 (grid reverse column)"}
-    ${"5784-06-02[u-ca=hebrew]"}                   | ${"5785-06-01[u-ca=hebrew]"}                   | ${"months"} | ${"P12M29D"}         | ${"D7 row with largestUnit months (grid 2024-02-11 +384 d)"}
-    ${"279517-08-01[u-ca=hebrew]"}                 | ${"279517-10-11[u-ca=hebrew]"}                 | ${"months"} | ${"P2M10D"}          | ${"D1-U hebrew up to the maximum (xscan max[69])"}
-    ${"276303-07-01[u-ca=buddhist]"}               | ${"276303-09-13[u-ca=buddhist]"}               | ${"months"} | ${"P2M12D"}          | ${"D1-U buddhist up to the maximum (xscan max[74])"}
-    ${"281247-03-01[u-ca=ethiopic-amete-alem]"}    | ${"281247-05-22[u-ca=ethiopic-amete-alem]"}    | ${"months"} | ${"P2M21D"}          | ${"D1-U ethioaa up to the maximum (xscan max[81])"}
-    ${"283583-03-08[u-ca=islamic-civil]"}          | ${"283583-05-23[u-ca=islamic-civil]"}          | ${"months"} | ${"P2M15D"}          | ${"D1-U islamic-civil up to the maximum (xscan max[74])"}
-    ${"275139-04-31[u-ca=persian]"}                | ${"275139-07-12[u-ca=persian]"}                | ${"months"} | ${"P2M12D"}          | ${"D1-U persian up to the maximum (xscan max[74])"}
-    ${"5785-01-01[u-ca=hebrew]"}                   | ${"279517-10-11[u-ca=hebrew]"}                 | ${"years"}  | ${"P273732Y9M10D"}   | ${"D1-U long span: 279517 is leap, so Tishri + 9 months is ordinal month 10 (spec NonISODateUntil)"}
-    ${"-280804-03-21[u-ca=islamic-civil]"}         | ${"-280804-05-07[u-ca=islamic-civil]"}         | ${"months"} | ${"P1M15D"}          | ${"D1-U from the minimum (xscan islamic-civil min[45])"}
-    ${"-271275-01-13[u-ca=buddhist]"}              | ${"-271274-02-17[u-ca=buddhist]"}              | ${"years"}  | ${"P1Y1M4D"}         | ${"D2 buddhist (stride k=0, +400 d)"}
-    ${"-261967-01-30[u-ca=buddhist]"}              | ${"-261966-03-06[u-ca=buddhist]"}              | ${"years"}  | ${"P1Y1M6D"}         | ${"D2 buddhist month end (stride k=34, +400 d)"}
-    ${"1943-07-25[u-ca=buddhist]"}                 | ${"1944-08-29[u-ca=buddhist]"}                 | ${"years"}  | ${"P1Y1M4D"}         | ${"D2 buddhist ISO 1400 (stride k=998, +400 d)"}
-    ${"-271278-04-19[u-ca=buddhist]"}              | ${"-271277-05-23[u-ca=buddhist]"}              | ${"months"} | ${"P13M4D"}          | ${"D2 buddhist from the minimum (xscan min[400])"}
-    ${"-268055-07-30[u-ca=hebrew]"}                | ${"-268054-09-15[u-ca=hebrew]"}                | ${"years"}  | ${"P1Y15D"}          | ${"D3/D4 hebrew (stride k=0, +400 d)"}
-    ${"-178808-03-15[u-ca=hebrew]"}                | ${"-178807-05-01[u-ca=hebrew]"}                | ${"years"}  | ${"P1Y1M15D"}        | ${"D3/D4 hebrew (stride k=326, +400 d)"}
-    ${"-000041-05-16[u-ca=hebrew]"}                | ${"-000040-07-03[u-ca=hebrew]"}                | ${"years"}  | ${"P1Y1M17D"}        | ${"D3/D4 hebrew (stride k=979, +400 d)"}
-    ${"-266686-06-03[u-ca=hebrew]"}                | ${"-266685-06-18[u-ca=hebrew]"}                | ${"years"}  | ${"P1Y15D"}          | ${"D3/D4 hebrew Adar I start (stride k=5, +400 d)"}
-    ${"-268058-11-04[u-ca=hebrew]"}                | ${"-268057-12-21[u-ca=hebrew]"}                | ${"months"} | ${"P13M17D"}         | ${"D3/D4 hebrew from the minimum (xscan min[400])"}
-    ${"-271897-10-23[u-ca=indian]"}                | ${"-271896-11-28[u-ca=indian]"}                | ${"years"}  | ${"P1Y1M5D"}         | ${"D5 indian (stride k=0, +400 d)"}
-    ${"-090664-12-12[u-ca=indian]"}                | ${"-090662-01-17[u-ca=indian]"}                | ${"years"}  | ${"P1Y1M5D"}         | ${"D5 indian across a Saka year end (stride k=662, +400 d)"}
-    ${"-261767-02-30[u-ca=indian]"}                | ${"-261766-04-02[u-ca=indian]"}                | ${"years"}  | ${"P1Y1M3D"}         | ${"D5 indian (stride k=37, +400 d)"}
-    ${"-271899-01-29[u-ca=indian]"}                | ${"-271898-03-02[u-ca=indian]"}                | ${"months"} | ${"P13M4D"}          | ${"D5 indian from the minimum (xscan min[400])"}
+    date1                                       | date2                                       | unit        | expected           | reason
+    ${"2566-08-31[u-ca=buddhist]"}              | ${"2566-09-30[u-ca=buddhist]"}              | ${"months"} | ${"P30D"}          | ${"D6: Aug 31 + 1 month is Sep 31, past Sep 30 (grid 2023-08-31 +30 d)"}
+    ${"2566-08-31[u-ca=buddhist]"}              | ${"2566-09-30[u-ca=buddhist]"}              | ${"years"}  | ${"P30D"}          | ${"D6 with largestUnit years (grid 2023-08-31 +30 d)"}
+    ${"2566-09-30[u-ca=buddhist]"}              | ${"2566-08-31[u-ca=buddhist]"}              | ${"months"} | ${"-P30D"}         | ${"D6 negated: Sep 30 - 1 month is Aug 30, not past Aug 31 (grid reverse column)"}
+    ${"0005-08-31[u-ca=japanese;era=reiwa]"}    | ${"0005-09-30[u-ca=japanese;era=reiwa]"}    | ${"months"} | ${"P30D"}          | ${"D6 japanese (grid 2023-08-31 +30 d)"}
+    ${"0112-08-31[u-ca=taiwan]"}                | ${"0112-09-30[u-ca=taiwan]"}                | ${"months"} | ${"P30D"}          | ${"D6 taiwan/roc (grid 2023-08-31 +30 d)"}
+    ${"1446-01-30[u-ca=islamic-civil]"}         | ${"1446-02-29[u-ca=islamic-civil]"}         | ${"months"} | ${"P29D"}          | ${"D6 islamic-civil: Muharram 30 + 1 month is Safar 30, past Safar 29 (29-day Safar)"}
+    ${"1444-11-30[u-ca=islamic-civil]"}         | ${"1444-12-29[u-ca=islamic-civil]"}         | ${"months"} | ${"P29D"}          | ${"D6 islamic-civil (grid 2023-06-19 +29 d)"}
+    ${"1444-11-30[u-ca=islamic-tabular]"}       | ${"1444-12-29[u-ca=islamic-tabular]"}       | ${"months"} | ${"P29D"}          | ${"D6 islamic-tbla (grid 2023-06-18 +29 d)"}
+    ${"1444-12-30[u-ca=islamic-umalqura]"}      | ${"1445-01-29[u-ca=islamic-umalqura]"}      | ${"years"}  | ${"P29D"}          | ${"D6 islamic-umalqura across a year end (grid 2023-07-18 +29 d)"}
+    ${"1402-06-31[u-ca=persian]"}               | ${"1402-07-30[u-ca=persian]"}               | ${"months"} | ${"P30D"}          | ${"D6 persian (grid 2023-09-22 +30 d)"}
+    ${"1402-07-30[u-ca=persian]"}               | ${"1402-06-31[u-ca=persian]"}               | ${"years"}  | ${"-P30D"}         | ${"D6 persian negated (grid reverse column)"}
+    ${"1945-06-31[u-ca=indian]"}                | ${"1945-07-30[u-ca=indian]"}                | ${"months"} | ${"P30D"}          | ${"D6 indian (grid 2023-09-22 +30 d)"}
+    ${"5783-09-30[u-ca=hebrew]"}                | ${"5783-10-29[u-ca=hebrew]"}                | ${"months"} | ${"P29D"}          | ${"D6 hebrew Sivan 30 -> Tammuz 29 (grid 2023-06-19 +29 d)"}
+    ${"5783-07-30[u-ca=hebrew]"}                | ${"5783-08-29[u-ca=hebrew]"}                | ${"months"} | ${"P29D"}          | ${"D6 hebrew Nisan 30 -> Iyar 29 (test262 wrapping-at-end-of-month-hebrew.js)"}
+    ${"7515-12-07[u-ca=ethiopic-amete-alem]"}   | ${"7515-13-06[u-ca=ethiopic-amete-alem]"}   | ${"months"} | ${"P29D"}          | ${"D6 ethioaa into the 6-day Pagumen (grid 2023-08-13 +29 d)"}
+    ${"7515-11-30[u-ca=ethiopic-amete-alem]"}   | ${"7516-13-05[u-ca=ethiopic-amete-alem]"}   | ${"years"}  | ${"P1Y1M5D"}       | ${"D6: Hamle 30 + 1Y2M is Pagumen 30, past Pagumen 5 (spec NonISODateSurpasses)"}
+    ${"1739-11-30[u-ca=coptic]"}                | ${"1740-13-05[u-ca=coptic]"}                | ${"years"}  | ${"P1Y1M5D"}       | ${"D6 coptic: same ISO dates as the ethioaa row (coptic = ethioaa - 5776)"}
+    ${"2015-11-30[u-ca=ethiopic;era=ethiopic]"} | ${"2016-13-05[u-ca=ethiopic;era=ethiopic]"} | ${"years"}  | ${"P1Y1M5D"}       | ${"D6 ethiopic: same ISO dates as the ethioaa row (ethiopic era year = ethioaa - 5500)"}
+    ${"5784-06-02[u-ca=hebrew]"}                | ${"5785-06-01[u-ca=hebrew]"}                | ${"years"}  | ${"P12M29D"}       | ${"D7: Adar I 2 + 1 year is Adar 2, past Adar 1 (grid 2024-02-11 +384 d)"}
+    ${"5785-06-01[u-ca=hebrew]"}                | ${"5784-06-02[u-ca=hebrew]"}                | ${"years"}  | ${"-P1Y29D"}       | ${"D7 negated: Adar 1 - 1 year is Adar I 1, not past Adar I 2 (grid reverse column)"}
+    ${"5784-06-02[u-ca=hebrew]"}                | ${"5785-06-01[u-ca=hebrew]"}                | ${"months"} | ${"P12M29D"}       | ${"D7 row with largestUnit months (grid 2024-02-11 +384 d)"}
+    ${"279517-08-01[u-ca=hebrew]"}              | ${"279517-10-11[u-ca=hebrew]"}              | ${"months"} | ${"P2M10D"}        | ${"D1-U hebrew up to the maximum (xscan max[69])"}
+    ${"276303-07-01[u-ca=buddhist]"}            | ${"276303-09-13[u-ca=buddhist]"}            | ${"months"} | ${"P2M12D"}        | ${"D1-U buddhist up to the maximum (xscan max[74])"}
+    ${"281247-03-01[u-ca=ethiopic-amete-alem]"} | ${"281247-05-22[u-ca=ethiopic-amete-alem]"} | ${"months"} | ${"P2M21D"}        | ${"D1-U ethioaa up to the maximum (xscan max[81])"}
+    ${"283583-03-08[u-ca=islamic-civil]"}       | ${"283583-05-23[u-ca=islamic-civil]"}       | ${"months"} | ${"P2M15D"}        | ${"D1-U islamic-civil up to the maximum (xscan max[74])"}
+    ${"275139-04-31[u-ca=persian]"}             | ${"275139-07-12[u-ca=persian]"}             | ${"months"} | ${"P2M12D"}        | ${"D1-U persian up to the maximum (xscan max[74])"}
+    ${"5785-01-01[u-ca=hebrew]"}                | ${"279517-10-11[u-ca=hebrew]"}              | ${"years"}  | ${"P273732Y9M10D"} | ${"D1-U long span: 279517 is leap, so Tishri + 9 months is ordinal month 10 (spec NonISODateUntil)"}
+    ${"-280804-03-21[u-ca=islamic-civil]"}      | ${"-280804-05-07[u-ca=islamic-civil]"}      | ${"months"} | ${"P1M15D"}        | ${"D1-U from the minimum (xscan islamic-civil min[45])"}
+    ${"-271275-01-13[u-ca=buddhist]"}           | ${"-271274-02-17[u-ca=buddhist]"}           | ${"years"}  | ${"P1Y1M4D"}       | ${"D2 buddhist (stride k=0, +400 d)"}
+    ${"-261967-01-30[u-ca=buddhist]"}           | ${"-261966-03-06[u-ca=buddhist]"}           | ${"years"}  | ${"P1Y1M6D"}       | ${"D2 buddhist month end (stride k=34, +400 d)"}
+    ${"1943-07-25[u-ca=buddhist]"}              | ${"1944-08-29[u-ca=buddhist]"}              | ${"years"}  | ${"P1Y1M4D"}       | ${"D2 buddhist ISO 1400 (stride k=998, +400 d)"}
+    ${"-271278-04-19[u-ca=buddhist]"}           | ${"-271277-05-23[u-ca=buddhist]"}           | ${"months"} | ${"P13M4D"}        | ${"D2 buddhist from the minimum (xscan min[400])"}
+    ${"-268055-07-30[u-ca=hebrew]"}             | ${"-268054-09-15[u-ca=hebrew]"}             | ${"years"}  | ${"P1Y15D"}        | ${"D3/D4 hebrew (stride k=0, +400 d)"}
+    ${"-178808-03-15[u-ca=hebrew]"}             | ${"-178807-05-01[u-ca=hebrew]"}             | ${"years"}  | ${"P1Y1M15D"}      | ${"D3/D4 hebrew (stride k=326, +400 d)"}
+    ${"-000041-05-16[u-ca=hebrew]"}             | ${"-000040-07-03[u-ca=hebrew]"}             | ${"years"}  | ${"P1Y1M17D"}      | ${"D3/D4 hebrew (stride k=979, +400 d)"}
+    ${"-266686-06-03[u-ca=hebrew]"}             | ${"-266685-06-18[u-ca=hebrew]"}             | ${"years"}  | ${"P1Y15D"}        | ${"D3/D4 hebrew Adar I start (stride k=5, +400 d)"}
+    ${"-268058-11-04[u-ca=hebrew]"}             | ${"-268057-12-21[u-ca=hebrew]"}             | ${"months"} | ${"P13M17D"}       | ${"D3/D4 hebrew from the minimum (xscan min[400])"}
+    ${"-271897-10-23[u-ca=indian]"}             | ${"-271896-11-28[u-ca=indian]"}             | ${"years"}  | ${"P1Y1M5D"}       | ${"D5 indian (stride k=0, +400 d)"}
+    ${"-090664-12-12[u-ca=indian]"}             | ${"-090662-01-17[u-ca=indian]"}             | ${"years"}  | ${"P1Y1M5D"}       | ${"D5 indian across a Saka year end (stride k=662, +400 d)"}
+    ${"-261767-02-30[u-ca=indian]"}             | ${"-261766-04-02[u-ca=indian]"}             | ${"years"}  | ${"P1Y1M3D"}       | ${"D5 indian (stride k=37, +400 d)"}
+    ${"-271899-01-29[u-ca=indian]"}             | ${"-271898-03-02[u-ca=indian]"}             | ${"months"} | ${"P13M4D"}        | ${"D5 indian from the minimum (xscan min[400])"}
   `(
     "returns $expected for $unit from $date1 to $date2 ($reason)",
     ({ date1, date2, unit, expected }) => {
@@ -497,14 +497,14 @@ describe("diffDateAsDuration", () => {
 // (`PlainDate.withCalendar(c).until(…, { largestUnit, smallestUnit, roundingMode })`).
 describe("diffDateAsDuration with rounding options in non-ISO calendars (CORE-6)", () => {
   it.each`
-    start                          | end                            | unit        | options                                                  | expected     | reason
-    ${"2566-08-31[u-ca=buddhist]"} | ${"2566-09-30[u-ca=buddhist]"} | ${"months"} | ${{ smallestUnit: "days" }}                              | ${"P30D"}    | ${"D6: smallestUnit day with increment 1 does not round"}
-    ${"2566-08-31[u-ca=buddhist]"} | ${"2566-09-30[u-ca=buddhist]"} | ${"months"} | ${{ smallestUnit: "months", roundingMode: "trunc" }}     | ${"P1M"}     | ${"D6 rounded to months: the 1-month window ends exactly on the end date"}
-    ${"5784-06-02[u-ca=hebrew]"}   | ${"5785-06-01[u-ca=hebrew]"}   | ${"years"}  | ${{ smallestUnit: "days" }}                              | ${"P12M29D"} | ${"D7: smallestUnit day with increment 1 does not round"}
-    ${"5784-06-02[u-ca=hebrew]"}   | ${"5785-06-01[u-ca=hebrew]"}   | ${"years"}  | ${{ smallestUnit: "months", roundingMode: "trunc" }}     | ${"P12M"}    | ${"D7 truncated to months"}
+    start                          | end                            | unit        | options                                                   | expected     | reason
+    ${"2566-08-31[u-ca=buddhist]"} | ${"2566-09-30[u-ca=buddhist]"} | ${"months"} | ${{ smallestUnit: "days" }}                               | ${"P30D"}    | ${"D6: smallestUnit day with increment 1 does not round"}
+    ${"2566-08-31[u-ca=buddhist]"} | ${"2566-09-30[u-ca=buddhist]"} | ${"months"} | ${{ smallestUnit: "months", roundingMode: "trunc" }}      | ${"P1M"}     | ${"D6 rounded to months: the 1-month window ends exactly on the end date"}
+    ${"5784-06-02[u-ca=hebrew]"}   | ${"5785-06-01[u-ca=hebrew]"}   | ${"years"}  | ${{ smallestUnit: "days" }}                               | ${"P12M29D"} | ${"D7: smallestUnit day with increment 1 does not round"}
+    ${"5784-06-02[u-ca=hebrew]"}   | ${"5785-06-01[u-ca=hebrew]"}   | ${"years"}  | ${{ smallestUnit: "months", roundingMode: "trunc" }}      | ${"P12M"}    | ${"D7 truncated to months"}
     ${"5784-06-02[u-ca=hebrew]"}   | ${"5785-06-01[u-ca=hebrew]"}   | ${"years"}  | ${{ smallestUnit: "months", roundingMode: "halfExpand" }} | ${"P1Y"}     | ${"D7 half-expanded to months, then bubbled to a year"}
-    ${"279517-08-01[u-ca=hebrew]"} | ${"279517-10-11[u-ca=hebrew]"} | ${"months"} | ${{ smallestUnit: "days" }}                              | ${"P2M10D"}  | ${"D1 up to the maximum"}
-    ${"279517-08-01[u-ca=hebrew]"} | ${"279517-10-11[u-ca=hebrew]"} | ${"months"} | ${{ smallestUnit: "months" }}                            | ${""}        | ${"D1: the 3-month window ends past the maximum, so Temporal throws"}
+    ${"279517-08-01[u-ca=hebrew]"} | ${"279517-10-11[u-ca=hebrew]"} | ${"months"} | ${{ smallestUnit: "days" }}                               | ${"P2M10D"}  | ${"D1 up to the maximum"}
+    ${"279517-08-01[u-ca=hebrew]"} | ${"279517-10-11[u-ca=hebrew]"} | ${"months"} | ${{ smallestUnit: "months" }}                             | ${""}        | ${"D1: the 3-month window ends past the maximum, so Temporal throws"}
   `(
     "returns $expected from $start to $end in $unit with $options ($reason)",
     ({ start, end, unit, options, expected }) => {
@@ -526,10 +526,15 @@ describe("diffDateAsDuration with rounding options in non-ISO calendars (CORE-6)
   //    1 year: P1Y. Chromium 153 agrees.
   it("rounds 5784-06-02 to 5785-06-01 in hebrew to P1Y with smallestUnit month and halfExpand", () => {
     expect(
-      diffDateAsDuration("5784-06-02[u-ca=hebrew]", "5785-06-01[u-ca=hebrew]", "years", {
-        smallestUnit: "months",
-        roundingMode: "halfExpand",
-      }),
+      diffDateAsDuration(
+        "5784-06-02[u-ca=hebrew]",
+        "5785-06-01[u-ca=hebrew]",
+        "years",
+        {
+          smallestUnit: "months",
+          roundingMode: "halfExpand",
+        },
+      ),
     ).toBe("P1Y");
   });
 });

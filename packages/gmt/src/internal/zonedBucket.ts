@@ -115,7 +115,11 @@ function truncateLocalWithCompat(
       local.calendarId,
     );
     const startMonth =
-      unit === "year" ? 1 : unit === "quarter" ? quarterStartMonth(month) : month;
+      unit === "year"
+        ? 1
+        : unit === "quarter"
+          ? quarterStartMonth(month)
+          : month;
     return calendarDateFromFields(
       local.calendarId,
       { year, month: startMonth, day: 1 },

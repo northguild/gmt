@@ -16,7 +16,10 @@ export interface TimezoneInfo {
  * zone must have coordinates here, and this map must not carry a zone the
  * matrix doesn't.
  */
-export const TIMEZONE_COORDINATES: Record<string, { lat: number; lng: number }> = {
+export const TIMEZONE_COORDINATES: Record<
+  string,
+  { lat: number; lng: number }
+> = {
   "Pacific/Niue": { lat: -19.05, lng: -169.92 },
   "America/New_York": { lat: 40.71, lng: -74.01 },
   UTC: { lat: 0, lng: 0 },

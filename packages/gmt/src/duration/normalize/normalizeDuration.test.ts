@@ -220,11 +220,11 @@ describe("normalizeDuration relative to the first days of the range", () => {
 // `Duration.from(d).round({ largestUnit, relativeTo: PlainDate })`.
 describe("normalizeDuration with a non-ISO calendar relativeTo (CORE-6)", () => {
   it.each`
-    duration  | relativeTo                         | expected    | reason
-    ${"P40D"} | ${"279517-08-15[u-ca=hebrew]"}    | ${"P1M10D"} | ${"D1: 1 month then 10 days, just before the maximum"}
-    ${"P30D"} | ${"2566-08-31[u-ca=buddhist]"}    | ${"P30D"}   | ${"D6: Aug 31 + 1 month is Sep 31, past Sep 30"}
-    ${"P40D"} | ${"1543-01-15[u-ca=buddhist]"}    | ${"P1M9D"}  | ${"proleptic buddhist: ISO 1000-01-15 + 1 month is Feb 15"}
-    ${"P40D"} | ${"-096239-06-23[u-ca=hebrew]"}   | ${"P1M11D"} | ${"hebrew year <= 0: M06 has 29 days"}
+    duration  | relativeTo                      | expected    | reason
+    ${"P40D"} | ${"279517-08-15[u-ca=hebrew]"}  | ${"P1M10D"} | ${"D1: 1 month then 10 days, just before the maximum"}
+    ${"P30D"} | ${"2566-08-31[u-ca=buddhist]"}  | ${"P30D"}   | ${"D6: Aug 31 + 1 month is Sep 31, past Sep 30"}
+    ${"P40D"} | ${"1543-01-15[u-ca=buddhist]"}  | ${"P1M9D"}  | ${"proleptic buddhist: ISO 1000-01-15 + 1 month is Feb 15"}
+    ${"P40D"} | ${"-096239-06-23[u-ca=hebrew]"} | ${"P1M11D"} | ${"hebrew year <= 0: M06 has 29 days"}
   `(
     "normalizes $duration to $expected in months relative to $relativeTo ($reason)",
     ({ duration, relativeTo, expected }) => {

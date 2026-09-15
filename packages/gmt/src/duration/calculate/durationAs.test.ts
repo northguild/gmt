@@ -290,15 +290,15 @@ describe("durationAs relative to the first days of the range", () => {
 // where Chromium throws.
 describe("durationAs with a non-ISO calendar relativeTo (CORE-6)", () => {
   it.each`
-    duration  | unit        | relativeTo                        | expected | reason
-    ${"P40D"} | ${"months"} | ${"279517-08-15[u-ca=hebrew]"}   | ${null}  | ${"D1: the 1-month window after the first month passes the maximum"}
-    ${"P1M"}  | ${"days"}   | ${"279517-08-01[u-ca=hebrew]"}   | ${30}    | ${"D1 control: M07 of 279517 has 30 days"}
-    ${"P30D"} | ${"months"} | ${"2566-08-31[u-ca=buddhist]"}   | ${1}     | ${"D6: the window Aug 31 to Sep 30 ends exactly on the target"}
-    ${"P1M"}  | ${"days"}   | ${"1543-02-01[u-ca=buddhist]"}   | ${28}    | ${"proleptic buddhist: ISO 1000 is not a leap year"}
-    ${"P1Y"}  | ${"days"}   | ${"1543-03-01[u-ca=buddhist]"}   | ${365}   | ${"proleptic buddhist: no Feb 29 in ISO 1000"}
-    ${"P1M"}  | ${"days"}   | ${"-096239-06-23[u-ca=hebrew]"}  | ${29}    | ${"hebrew year <= 0: M06 has 29 days"}
-    ${"P1Y"}  | ${"days"}   | ${"-096239-06-23[u-ca=hebrew]"}  | ${355}   | ${"hebrew year <= 0: a 355-day year from M06-23"}
-    ${"P1M"}  | ${"days"}   | ${"0000-01-13[u-ca=hebrew]"}     | ${30}    | ${"hebrew year 0: M01 has 30 days"}
+    duration  | unit        | relativeTo                      | expected | reason
+    ${"P40D"} | ${"months"} | ${"279517-08-15[u-ca=hebrew]"}  | ${null}  | ${"D1: the 1-month window after the first month passes the maximum"}
+    ${"P1M"}  | ${"days"}   | ${"279517-08-01[u-ca=hebrew]"}  | ${30}    | ${"D1 control: M07 of 279517 has 30 days"}
+    ${"P30D"} | ${"months"} | ${"2566-08-31[u-ca=buddhist]"}  | ${1}     | ${"D6: the window Aug 31 to Sep 30 ends exactly on the target"}
+    ${"P1M"}  | ${"days"}   | ${"1543-02-01[u-ca=buddhist]"}  | ${28}    | ${"proleptic buddhist: ISO 1000 is not a leap year"}
+    ${"P1Y"}  | ${"days"}   | ${"1543-03-01[u-ca=buddhist]"}  | ${365}   | ${"proleptic buddhist: no Feb 29 in ISO 1000"}
+    ${"P1M"}  | ${"days"}   | ${"-096239-06-23[u-ca=hebrew]"} | ${29}    | ${"hebrew year <= 0: M06 has 29 days"}
+    ${"P1Y"}  | ${"days"}   | ${"-096239-06-23[u-ca=hebrew]"} | ${355}   | ${"hebrew year <= 0: a 355-day year from M06-23"}
+    ${"P1M"}  | ${"days"}   | ${"0000-01-13[u-ca=hebrew]"}    | ${30}    | ${"hebrew year 0: M01 has 30 days"}
   `(
     "returns $expected for $duration in $unit relative to $relativeTo ($reason)",
     ({ duration, unit, relativeTo, expected }) => {

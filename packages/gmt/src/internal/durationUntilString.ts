@@ -60,16 +60,16 @@ export function durationUntilString(
             options as RoundingOptions<Temporal.DateUnit>,
           )
         : (
-          start as {
-            until(
-              end: Temporal.PlainDate | Temporal.PlainDateTime,
-              opts: Record<string, unknown>,
-            ): Temporal.Duration;
-          }
-        ).until(
-          end as Temporal.PlainDate | Temporal.PlainDateTime,
-          untilOptions,
-        );
+            start as {
+              until(
+                end: Temporal.PlainDate | Temporal.PlainDateTime,
+                opts: Record<string, unknown>,
+              ): Temporal.Duration;
+            }
+          ).until(
+            end as Temporal.PlainDate | Temporal.PlainDateTime,
+            untilOptions,
+          );
 
   return duration.toString({
     smallestUnit: options?.toStringSmallestUnit,

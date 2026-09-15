@@ -93,7 +93,8 @@ const WORKAROUNDS = [
   },
   {
     defects: ["D7"],
-    title: "D7 — Hebrew until by years throws mixed-sign (tc39/proposal-temporal#3159)",
+    title:
+      "D7 — Hebrew until by years throws mixed-sign (tc39/proposal-temporal#3159)",
     trigger: "a js-temporal release ports proposal-temporal 0e32ee0",
     steps: [
       "Delete the D7 repro and the D7 terms in calendarDateArithmetic.ts.",
@@ -192,7 +193,9 @@ function truncate(text, length) {
 async function check(args) {
   if (!requireDist()) return;
   const compat = join(DIST, "internal/temporalCompat");
-  const { repros } = await import(pathToFileURL(join(compat, "repros.js")).href);
+  const { repros } = await import(
+    pathToFileURL(join(compat, "repros.js")).href
+  );
   const { runRepro, reproPasses } = await import(
     pathToFileURL(join(compat, "capabilities.js")).href
   );
@@ -234,13 +237,21 @@ async function check(args) {
     }
     if (allPass) {
       removable.push(workaround);
-      console.log(`  => REMOVABLE: all ${results.length} probes return the spec value. Steps:`);
-      workaround.steps.forEach((step, index) => console.log(`     ${index + 1}. ${step}`));
+      console.log(
+        `  => REMOVABLE: all ${results.length} probes return the spec value. Steps:`,
+      );
+      workaround.steps.forEach((step, index) =>
+        console.log(`     ${index + 1}. ${step}`),
+      );
     } else {
-      console.log(`  => STILL NEEDED: ${results.length - passing} of ${results.length} probes fail`);
+      console.log(
+        `  => STILL NEEDED: ${results.length - passing} of ${results.length} probes fail`,
+      );
       if (
         workaround.defects.includes("zoned.A") &&
-        results.every(({ repro, passes }) => passes || !repro.name.startsWith("max."))
+        results.every(
+          ({ repro, passes }) => passes || !repro.name.startsWith("max."),
+        )
       ) {
         console.log(
           "     Every max.* probe passes but a min.* probe fails: 05ce7a3 alone does not retire this workaround.",
@@ -325,7 +336,13 @@ function isoFromEpochDays(epochDays) {
   const z = epochDays + 719468;
   const era = Math.floor(z / 146097);
   const doe = z - era * 146097;
-  const yoe = Math.floor((doe - Math.floor(doe / 1460) + Math.floor(doe / 36524) - Math.floor(doe / 146096)) / 365);
+  const yoe = Math.floor(
+    (doe -
+      Math.floor(doe / 1460) +
+      Math.floor(doe / 36524) -
+      Math.floor(doe / 146096)) /
+      365,
+  );
   const doy = doe - (365 * yoe + Math.floor(yoe / 4) - Math.floor(yoe / 100));
   const mp = Math.floor((5 * doy + 2) / 153);
   const day = doy - Math.floor((153 * mp + 2) / 5) + 1;
@@ -340,13 +357,16 @@ function isoFromEpochDays(epochDays) {
 
 /** Epoch days of an RFC 9557 ISO date (H. Hinnant's days_from_civil). */
 function epochDaysFromIso(iso) {
-  const [, sign, yearText, monthText, dayText] = /^([+-]?)(\d{4,6})-(\d{2})-(\d{2})/.exec(iso);
+  const [, sign, yearText, monthText, dayText] =
+    /^([+-]?)(\d{4,6})-(\d{2})-(\d{2})/.exec(iso);
   const month = Number(monthText);
   const day = Number(dayText);
-  const year = (sign === "-" ? -1 : 1) * Number(yearText) - (month <= 2 ? 1 : 0);
+  const year =
+    (sign === "-" ? -1 : 1) * Number(yearText) - (month <= 2 ? 1 : 0);
   const era = Math.floor(year / 400);
   const yoe = year - era * 400;
-  const doy = Math.floor((153 * (month > 2 ? month - 3 : month + 9) + 2) / 5) + day - 1;
+  const doy =
+    Math.floor((153 * (month > 2 ? month - 3 : month + 9) + 2) / 5) + day - 1;
   const doe = yoe * 365 + Math.floor(yoe / 4) - Math.floor(yoe / 100) + doy;
   return era * 146097 + doe - 719468;
 }
@@ -378,57 +398,134 @@ function runTwin(native, calendars, dateString, gmt, compare) {
 
   for (const calendar of calendars) {
     const gmtCalendar = GMT_CALENDAR[calendar];
-    if (!gmtCalendar) throw new Error(`scan calendar ${calendar} has no GMT name`);
+    if (!gmtCalendar)
+      throw new Error(`scan calendar ${calendar} has no GMT name`);
 
     for (const [tag, edgeIso, dir] of [
       ["max", xscan.max, -1],
       ["min", xscan.min, 1],
     ]) {
       const edge = dateString(edgeIso, calendar);
-      const far = dateString(addIsoDays(edgeIso, dir * xscan.farDays), calendar);
+      const far = dateString(
+        addIsoDays(edgeIso, dir * xscan.farDays),
+        calendar,
+      );
       xscan.edge[calendar][tag].forEach((row, n) => {
         const iso = addIsoDays(edgeIso, dir * n);
         const at = { scan: `xscan.edge.${tag}`, calendar, row: n, iso };
         if (row.length === 1) {
-          compare({ ...at, op: "read", input: iso, native: "ERR", expected: "" }, () =>
-            gmt.convertDateToCalendar(iso, gmtCalendar),
+          compare(
+            { ...at, op: "read", input: iso, native: "ERR", expected: "" },
+            () => gmt.convertDateToCalendar(iso, gmtCalendar),
           );
           return;
         }
         const date = dateString(iso, calendar);
-        const [, fromFields, addMonth, addYear, subMonth, subYear, untilEdge, untilFar] = row;
-        compare({ ...at, op: "read", input: iso, native: row[0], expected: date ?? "" }, () =>
-          gmt.convertDateToCalendar(iso, gmtCalendar),
+        const [
+          ,
+          fromFields,
+          addMonth,
+          addYear,
+          subMonth,
+          subYear,
+          untilEdge,
+          untilFar,
+        ] = row;
+        compare(
+          {
+            ...at,
+            op: "read",
+            input: iso,
+            native: row[0],
+            expected: date ?? "",
+          },
+          () => gmt.convertDateToCalendar(iso, gmtCalendar),
         );
         if (date === null) return;
-        compare({ ...at, op: "fromFields", input: date, native: fromFields, expected: expectValue(fromFields) }, () =>
-          gmt.convertDateToCalendar(date, "gregorian"),
+        compare(
+          {
+            ...at,
+            op: "fromFields",
+            input: date,
+            native: fromFields,
+            expected: expectValue(fromFields),
+          },
+          () => gmt.convertDateToCalendar(date, "gregorian"),
         );
-        compare({ ...at, op: "isValidCalendarDate", input: date, native: fromFields, expected: String(fromFields !== "ERR") }, () =>
-          String(gmt.isValidCalendarDate(date)),
+        compare(
+          {
+            ...at,
+            op: "isValidCalendarDate",
+            input: date,
+            native: fromFields,
+            expected: String(fromFields !== "ERR"),
+          },
+          () => String(gmt.isValidCalendarDate(date)),
         );
-        compare({ ...at, op: "addMonth", input: date, native: addMonth, expected: expectDate(addMonth, calendar) }, () =>
-          gmt.addDate(date, { months: 1 }),
+        compare(
+          {
+            ...at,
+            op: "addMonth",
+            input: date,
+            native: addMonth,
+            expected: expectDate(addMonth, calendar),
+          },
+          () => gmt.addDate(date, { months: 1 }),
         );
-        compare({ ...at, op: "addYear", input: date, native: addYear, expected: expectDate(addYear, calendar) }, () =>
-          gmt.addDate(date, { years: 1 }),
+        compare(
+          {
+            ...at,
+            op: "addYear",
+            input: date,
+            native: addYear,
+            expected: expectDate(addYear, calendar),
+          },
+          () => gmt.addDate(date, { years: 1 }),
         );
-        compare({ ...at, op: "subtractMonth", input: date, native: subMonth, expected: expectDate(subMonth, calendar) }, () =>
-          gmt.subtractDate(date, { months: 1 }),
+        compare(
+          {
+            ...at,
+            op: "subtractMonth",
+            input: date,
+            native: subMonth,
+            expected: expectDate(subMonth, calendar),
+          },
+          () => gmt.subtractDate(date, { months: 1 }),
         );
-        compare({ ...at, op: "subtractYear", input: date, native: subYear, expected: expectDate(subYear, calendar) }, () =>
-          gmt.subtractDate(date, { years: 1 }),
+        compare(
+          {
+            ...at,
+            op: "subtractYear",
+            input: date,
+            native: subYear,
+            expected: expectDate(subYear, calendar),
+          },
+          () => gmt.subtractDate(date, { years: 1 }),
         );
         if (edge !== null) {
           const [from, to] = dir < 0 ? [date, edge] : [edge, date];
-          compare({ ...at, op: "untilEdgeMonths", input: `${from} → ${to}`, native: untilEdge, expected: expectValue(untilEdge) }, () =>
-            gmt.diffDateAsDuration(from, to, "months"),
+          compare(
+            {
+              ...at,
+              op: "untilEdgeMonths",
+              input: `${from} → ${to}`,
+              native: untilEdge,
+              expected: expectValue(untilEdge),
+            },
+            () => gmt.diffDateAsDuration(from, to, "months"),
           );
         }
         if (far !== null) {
           const [from, to] = dir < 0 ? [far, date] : [date, far];
-          compare({ ...at, op: "untilFarYears", input: `${from} → ${to}`, native: untilFar, expected: expectValue(untilFar) }, () =>
-            gmt.diffDateAsDuration(from, to, "years"),
+          compare(
+            {
+              ...at,
+              op: "untilFarYears",
+              input: `${from} → ${to}`,
+              native: untilFar,
+              expected: expectValue(untilFar),
+            },
+            () => gmt.diffDateAsDuration(from, to, "years"),
           );
         }
       });
@@ -438,29 +535,62 @@ function runTwin(native, calendars, dateString, gmt, compare) {
       const [iso, read, fromFields, addMonth, addYear, untilYears] = row;
       const at = { scan: "xscan.stride", calendar, row: k, iso };
       if (read === "ERR") {
-        compare({ ...at, op: "read", input: iso, native: "ERR", expected: "" }, () =>
-          gmt.convertDateToCalendar(iso, gmtCalendar),
+        compare(
+          { ...at, op: "read", input: iso, native: "ERR", expected: "" },
+          () => gmt.convertDateToCalendar(iso, gmtCalendar),
         );
         return;
       }
       const date = dateString(iso, calendar);
-      compare({ ...at, op: "read", input: iso, native: read, expected: date ?? "" }, () =>
-        gmt.convertDateToCalendar(iso, gmtCalendar),
+      compare(
+        { ...at, op: "read", input: iso, native: read, expected: date ?? "" },
+        () => gmt.convertDateToCalendar(iso, gmtCalendar),
       );
       if (date === null) return;
-      compare({ ...at, op: "fromFields", input: date, native: fromFields, expected: expectValue(fromFields) }, () =>
-        gmt.convertDateToCalendar(date, "gregorian"),
+      compare(
+        {
+          ...at,
+          op: "fromFields",
+          input: date,
+          native: fromFields,
+          expected: expectValue(fromFields),
+        },
+        () => gmt.convertDateToCalendar(date, "gregorian"),
       );
-      compare({ ...at, op: "addMonth", input: date, native: addMonth, expected: expectDate(addMonth, calendar) }, () =>
-        gmt.addDate(date, { months: 1 }),
+      compare(
+        {
+          ...at,
+          op: "addMonth",
+          input: date,
+          native: addMonth,
+          expected: expectDate(addMonth, calendar),
+        },
+        () => gmt.addDate(date, { months: 1 }),
       );
-      compare({ ...at, op: "addYear", input: date, native: addYear, expected: expectDate(addYear, calendar) }, () =>
-        gmt.addDate(date, { years: 1 }),
+      compare(
+        {
+          ...at,
+          op: "addYear",
+          input: date,
+          native: addYear,
+          expected: expectDate(addYear, calendar),
+        },
+        () => gmt.addDate(date, { years: 1 }),
       );
-      const later = dateString(addIsoDays(iso, xscan.strideUntilDays), calendar);
+      const later = dateString(
+        addIsoDays(iso, xscan.strideUntilDays),
+        calendar,
+      );
       if (later !== null) {
-        compare({ ...at, op: "untilYears", input: `${date} → ${later}`, native: untilYears, expected: expectValue(untilYears) }, () =>
-          gmt.diffDateAsDuration(date, later, "years"),
+        compare(
+          {
+            ...at,
+            op: "untilYears",
+            input: `${date} → ${later}`,
+            native: untilYears,
+            expected: expectValue(untilYears),
+          },
+          () => gmt.diffDateAsDuration(date, later, "years"),
         );
       }
     });
@@ -474,31 +604,80 @@ function runTwin(native, calendars, dateString, gmt, compare) {
         const other = dateString(addIsoDays(grid.base, i + offset), calendar);
         if (other === null) return;
         const [months, years, yearsBack] = row.slice(1 + 3 * j, 4 + 3 * j);
-        compare({ ...at, op: `until+${offset}Months`, input: `${date} → ${other}`, native: months, expected: expectValue(months) }, () =>
-          gmt.diffDateAsDuration(date, other, "months"),
+        compare(
+          {
+            ...at,
+            op: `until+${offset}Months`,
+            input: `${date} → ${other}`,
+            native: months,
+            expected: expectValue(months),
+          },
+          () => gmt.diffDateAsDuration(date, other, "months"),
         );
-        compare({ ...at, op: `until+${offset}Years`, input: `${date} → ${other}`, native: years, expected: expectValue(years) }, () =>
-          gmt.diffDateAsDuration(date, other, "years"),
+        compare(
+          {
+            ...at,
+            op: `until+${offset}Years`,
+            input: `${date} → ${other}`,
+            native: years,
+            expected: expectValue(years),
+          },
+          () => gmt.diffDateAsDuration(date, other, "years"),
         );
-        compare({ ...at, op: `until-${offset}Years`, input: `${other} → ${date}`, native: yearsBack, expected: expectValue(yearsBack) }, () =>
-          gmt.diffDateAsDuration(other, date, "years"),
+        compare(
+          {
+            ...at,
+            op: `until-${offset}Years`,
+            input: `${other} → ${date}`,
+            native: yearsBack,
+            expected: expectValue(yearsBack),
+          },
+          () => gmt.diffDateAsDuration(other, date, "years"),
         );
       });
       const tail = 1 + 3 * grid.offsets.length;
-      const [addMonth, addMonthReject, addYear, subtract13] = row.slice(tail).map((value) =>
-        value === "ERR" ? "ERR" : stripAnnotation(value),
+      const [addMonth, addMonthReject, addYear, subtract13] = row
+        .slice(tail)
+        .map((value) => (value === "ERR" ? "ERR" : stripAnnotation(value)));
+      compare(
+        {
+          ...at,
+          op: "addMonth",
+          input: date,
+          native: addMonth,
+          expected: expectDate(addMonth, calendar),
+        },
+        () => gmt.addDate(date, { months: 1 }),
       );
-      compare({ ...at, op: "addMonth", input: date, native: addMonth, expected: expectDate(addMonth, calendar) }, () =>
-        gmt.addDate(date, { months: 1 }),
+      compare(
+        {
+          ...at,
+          op: "addMonthReject",
+          input: date,
+          native: addMonthReject,
+          expected: expectDate(addMonthReject, calendar),
+        },
+        () => gmt.addDate(date, { months: 1 }, { overflow: "reject" }),
       );
-      compare({ ...at, op: "addMonthReject", input: date, native: addMonthReject, expected: expectDate(addMonthReject, calendar) }, () =>
-        gmt.addDate(date, { months: 1 }, { overflow: "reject" }),
+      compare(
+        {
+          ...at,
+          op: "addYear",
+          input: date,
+          native: addYear,
+          expected: expectDate(addYear, calendar),
+        },
+        () => gmt.addDate(date, { years: 1 }),
       );
-      compare({ ...at, op: "addYear", input: date, native: addYear, expected: expectDate(addYear, calendar) }, () =>
-        gmt.addDate(date, { years: 1 }),
-      );
-      compare({ ...at, op: "subtract13Months", input: date, native: subtract13, expected: expectDate(subtract13, calendar) }, () =>
-        gmt.subtractDate(date, { months: 13 }),
+      compare(
+        {
+          ...at,
+          op: "subtract13Months",
+          input: date,
+          native: subtract13,
+          expected: expectDate(subtract13, calendar),
+        },
+        () => gmt.subtractDate(date, { months: 13 }),
       );
     });
   }
@@ -509,7 +688,8 @@ function dateStringFromReads(reads) {
   return (iso, calendar) => {
     if (calendar === "gregory") return iso;
     const read = reads.get(`${iso}|${calendar}`);
-    if (read === undefined) throw new Error(`no native read for ${iso} ${calendar}`);
+    if (read === undefined)
+      throw new Error(`no native read for ${iso} ${calendar}`);
     if (read === "ERR") return null;
     const [year, month, day, era, eraYear] = read.split("|");
     const japanese = calendar === "japanese";
@@ -528,7 +708,9 @@ const INSTALL_HINT =
 
 function loadPlaywright() {
   try {
-    return createRequire(join(ROOT, "apps/dox/package.json"))("@playwright/test");
+    return createRequire(join(ROOT, "apps/dox/package.json"))(
+      "@playwright/test",
+    );
   } catch {
     return null;
   }
@@ -538,34 +720,47 @@ function loadPlaywright() {
 async function runNative(chromePath, calendarsFor) {
   const playwright = loadPlaywright();
   if (!playwright) {
-    fail(2, `@playwright/test is not installed (apps/dox devDependency): run pnpm install. ${INSTALL_HINT}`);
+    fail(
+      2,
+      `@playwright/test is not installed (apps/dox devDependency): run pnpm install. ${INSTALL_HINT}`,
+    );
     return null;
   }
   let browser;
   try {
-    browser = await playwright.chromium.launch(chromePath ? { executablePath: chromePath } : {});
+    browser = await playwright.chromium.launch(
+      chromePath ? { executablePath: chromePath } : {},
+    );
   } catch (error) {
-    fail(2, `Could not launch Chromium: ${String(error.message).split("\n")[0]}\n${INSTALL_HINT}`);
+    fail(
+      2,
+      `Could not launch Chromium: ${String(error.message).split("\n")[0]}\n${INSTALL_HINT}`,
+    );
     return null;
   }
   try {
     const page = await browser.newPage();
     const browserVersion = browser.version();
     if (!(await page.evaluate("typeof Temporal !== 'undefined'"))) {
-      fail(2, `Chromium ${browserVersion} has no native Temporal; use a newer Chromium (--chrome=<path>).`);
+      fail(
+        2,
+        `Chromium ${browserVersion} has no native Temporal; use a newer Chromium (--chrome=<path>).`,
+      );
       return null;
     }
     console.log(`Chromium ${browserVersion}: running the scan…`);
     const scan = JSON.parse(
       await page.evaluate(
-        (source) => JSON.stringify((0, eval)(`(${source})`)(globalThis.Temporal)),
+        (source) =>
+          JSON.stringify((0, eval)(`(${source})`)(globalThis.Temporal)),
         String(scanBody),
       ),
     );
 
     const pairs = new Map();
     const recordingDateString = (iso, calendar) => {
-      if (calendar !== "gregory") pairs.set(`${iso}|${calendar}`, [iso, calendar]);
+      if (calendar !== "gregory")
+        pairs.set(`${iso}|${calendar}`, [iso, calendar]);
       return "";
     };
     const noGmt = new Proxy({}, { get: () => () => "" });
@@ -574,11 +769,17 @@ async function runNative(chromePath, calendarsFor) {
     console.log(`Chromium: reading ${pairList.length} dates…`);
     const values = JSON.parse(
       await page.evaluate(
-        ([source, list]) => JSON.stringify((0, eval)(`(${source})`)(globalThis.Temporal, list)),
+        ([source, list]) =>
+          JSON.stringify((0, eval)(`(${source})`)(globalThis.Temporal, list)),
         [String(readDates), pairList],
       ),
     );
-    const reads = new Map(pairList.map(([iso, calendar], index) => [`${iso}|${calendar}`, values[index]]));
+    const reads = new Map(
+      pairList.map(([iso, calendar], index) => [
+        `${iso}|${calendar}`,
+        values[index],
+      ]),
+    );
     return { scan, reads, browserVersion };
   } finally {
     await browser.close();
@@ -593,14 +794,18 @@ const MAX_STORED_MISMATCHES = 5000;
 
 async function oracle(args) {
   if (!requireDist()) return;
-  const chromePath = args.find((arg) => arg.startsWith("--chrome="))?.slice("--chrome=".length);
+  const chromePath = args
+    .find((arg) => arg.startsWith("--chrome="))
+    ?.slice("--chrome=".length);
   const only = args
     .find((arg) => arg.startsWith("--calendars="))
     ?.slice("--calendars=".length)
     .split(",")
     .filter(Boolean);
   const calendarsFor = (scan) =>
-    only ? scan.calendars.filter((calendar) => only.includes(calendar)) : scan.calendars;
+    only
+      ? scan.calendars.filter((calendar) => only.includes(calendar))
+      : scan.calendars;
 
   console.log(runtimeLine());
   const native = await runNative(chromePath, calendarsFor);
@@ -625,7 +830,11 @@ async function oracle(args) {
       }
       if (actual === row.expected) return;
       const tag = tagFor(row);
-      const mismatch = { ...row, gmt: actual, ...(tag ? { tag: tag.test262 } : {}) };
+      const mismatch = {
+        ...row,
+        gmt: actual,
+        ...(tag ? { tag: tag.test262 } : {}),
+      };
       counts.mismatches++;
       counts[tag ? "tagged" : "untagged"]++;
       const key = `${row.scan} ${row.calendar} ${row.op}${tag ? " [tagged]" : ""}`;
@@ -634,7 +843,9 @@ async function oracle(args) {
       groups.set(key, group);
       if (stored.length < MAX_STORED_MISMATCHES) stored.push(mismatch);
     });
-    console.log(`GMT twin: ${calendar} done in ${((Date.now() - started) / 1000).toFixed(1)} s`);
+    console.log(
+      `GMT twin: ${calendar} done in ${((Date.now() - started) / 1000).toFixed(1)} s`,
+    );
   }
 
   const summary = [
@@ -663,7 +874,11 @@ async function oracle(args) {
         chromium: native.browserVersion,
         calendars,
         counts,
-        groups: [...groups.values()].map(({ key, count, example }) => ({ key, count, example })),
+        groups: [...groups.values()].map(({ key, count, example }) => ({
+          key,
+          count,
+          example,
+        })),
         mismatches: stored,
         mismatchesTruncated: counts.mismatches > stored.length,
       },
@@ -675,9 +890,14 @@ async function oracle(args) {
 
   console.log("");
   console.log(summary);
-  console.log(`Wrote ${relative(ROOT, jsonPath)} and ${relative(ROOT, textPath)}`);
+  console.log(
+    `Wrote ${relative(ROOT, jsonPath)} and ${relative(ROOT, textPath)}`,
+  );
   if (counts.untagged > 0) {
-    fail(1, `${counts.untagged} untagged mismatches: GMT differs from native Temporal (a GMT bug unless test262 disagrees with Chromium; then tag it with its test262 file).`);
+    fail(
+      1,
+      `${counts.untagged} untagged mismatches: GMT differs from native Temporal (a GMT bug unless test262 disagrees with Chromium; then tag it with its test262 file).`,
+    );
   }
 }
 
@@ -689,5 +909,8 @@ if (command === "check") {
 } else if (command === "oracle") {
   await oracle(args);
 } else {
-  fail(2, "Usage: node scripts/temporal-compat.mjs check [--fail-on-removable] | oracle [--chrome=<path>] [--calendars=a,b]");
+  fail(
+    2,
+    "Usage: node scripts/temporal-compat.mjs check [--fail-on-removable] | oracle [--chrome=<path>] [--calendars=a,b]",
+  );
 }

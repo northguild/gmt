@@ -127,15 +127,13 @@ const d1ArithmeticRepros: Repro[] = [
       ["indian", "P2M12D"],
       ["ethioaa", "P2M14D"],
     ] as const
-  ).map(
-    ([calendar, expected]): Repro => ({
-      defect: "D1",
-      calendar,
-      name: "untilNearMax",
-      expected,
-      run: () => monthsUntil(calendar, "+275760-07-01", MAX_ISO),
-    }),
-  ),
+  ).map(([calendar, expected]): Repro => ({
+    defect: "D1",
+    calendar,
+    name: "untilNearMax",
+    expected,
+    run: () => monthsUntil(calendar, "+275760-07-01", MAX_ISO),
+  })),
   {
     defect: "D1",
     calendar: "buddhist",
@@ -180,15 +178,13 @@ const d6Repros: Repro[] = [
       ["islamic-tbla", "2023-06-18", "2023-07-17", "P29D"],
       ["islamic-umalqura", "2023-07-18", "2023-08-16", "P29D"],
     ] as const
-  ).map(
-    ([calendar, from, to, expected]): Repro => ({
-      defect: "D6",
-      calendar,
-      name: "monthEnd",
-      expected,
-      run: () => monthsUntil(calendar, from, to),
-    }),
-  ),
+  ).map(([calendar, from, to, expected]): Repro => ({
+    defect: "D6",
+    calendar,
+    name: "monthEnd",
+    expected,
+    run: () => monthsUntil(calendar, from, to),
+  })),
   ...(
     [
       ["hebrew", 5783, "M07", 30, "M08", 29, "P29D"],
@@ -227,7 +223,12 @@ const d7Repro: Repro = {
   name: "mixedSign",
   expected: "P12M29D",
   run: () =>
-    Temporal.PlainDate.from({ calendar: "hebrew", year: 5784, month: 6, day: 2 })
+    Temporal.PlainDate.from({
+      calendar: "hebrew",
+      year: 5784,
+      month: 6,
+      day: 2,
+    })
       .until(
         Temporal.PlainDate.from({
           calendar: "hebrew",
@@ -314,7 +315,8 @@ function thrownErrorName(run: () => unknown): string {
   }
 }
 
-const SYDNEY_NEAR_MAX = MAX_EPOCH_NANOSECONDS - 3n * NANOSECONDS_PER_DAY - 5n * NANOSECONDS_PER_HOUR;
+const SYDNEY_NEAR_MAX =
+  MAX_EPOCH_NANOSECONDS - 3n * NANOSECONDS_PER_DAY - 5n * NANOSECONDS_PER_HOUR;
 
 /**
  * zoned.A (`internal/zonedWallClock.ts` defect 1): `GetNamedTimeZoneEpochNanoseconds` clamps its
@@ -324,14 +326,22 @@ const SYDNEY_NEAR_MAX = MAX_EPOCH_NANOSECONDS - 3n * NANOSECONDS_PER_DAY - 5n * 
  * (TC39 `DifferenceZonedDateTime`, `InterpretISODateTimeOffset`; upstream-issue draft A).
  */
 const zonedARepros: Repro[] = [
-  zonedRepro("zoned.A", "max.parseSydney", "+275760-09-13T09:00:00+10:00[Australia/Sydney]", () =>
-    Temporal.ZonedDateTime.from("+275760-09-13T09:00:00+10:00[Australia/Sydney]"),
+  zonedRepro(
+    "zoned.A",
+    "max.parseSydney",
+    "+275760-09-13T09:00:00+10:00[Australia/Sydney]",
+    () =>
+      Temporal.ZonedDateTime.from(
+        "+275760-09-13T09:00:00+10:00[Australia/Sydney]",
+      ),
   ),
   zonedRepro("zoned.A", "max.untilSydney", "P1D", () =>
-    zoned(MAX_EPOCH_NANOSECONDS - NANOSECONDS_PER_DAY, "Australia/Sydney").until(
-      zoned(MAX_EPOCH_NANOSECONDS, "Australia/Sydney"),
-      { largestUnit: "day" },
-    ),
+    zoned(
+      MAX_EPOCH_NANOSECONDS - NANOSECONDS_PER_DAY,
+      "Australia/Sydney",
+    ).until(zoned(MAX_EPOCH_NANOSECONDS, "Australia/Sydney"), {
+      largestUnit: "day",
+    }),
   ),
   zonedRepro("zoned.A", "max.sinceSydneyYears", "-P3DT5H", () =>
     zoned(SYDNEY_NEAR_MAX, "Australia/Sydney").since(
@@ -340,10 +350,12 @@ const zonedARepros: Repro[] = [
     ),
   ),
   zonedRepro("zoned.A", "max.untilKiritimati", "P1D", () =>
-    zoned(MAX_EPOCH_NANOSECONDS - NANOSECONDS_PER_DAY, "Pacific/Kiritimati").until(
-      zoned(MAX_EPOCH_NANOSECONDS, "Pacific/Kiritimati"),
-      { largestUnit: "week" },
-    ),
+    zoned(
+      MAX_EPOCH_NANOSECONDS - NANOSECONDS_PER_DAY,
+      "Pacific/Kiritimati",
+    ).until(zoned(MAX_EPOCH_NANOSECONDS, "Pacific/Kiritimati"), {
+      largestUnit: "week",
+    }),
   ),
   zonedRepro("zoned.A", "max.totalSydney", "2.0416666666666665", () =>
     Temporal.Duration.from("PT49H").total({
@@ -356,28 +368,43 @@ const zonedARepros: Repro[] = [
       relativeTo: zoned(SYDNEY_NEAR_MAX, "Australia/Sydney"),
     }),
   ),
-  zonedRepro("zoned.A", "min.parseNewYork", "-271821-04-19T20:00:00-04:56[America/New_York]", () =>
-    Temporal.ZonedDateTime.from("-271821-04-19T20:00:00[America/New_York]"),
+  zonedRepro(
+    "zoned.A",
+    "min.parseNewYork",
+    "-271821-04-19T20:00:00-04:56[America/New_York]",
+    () =>
+      Temporal.ZonedDateTime.from("-271821-04-19T20:00:00[America/New_York]"),
   ),
-  zonedRepro("zoned.A", "min.toZonedDateTimeNewYork", "-271821-04-19T20:00:00-04:56[America/New_York]", () =>
-    Temporal.PlainDateTime.from("-271821-04-19T20:00").toZonedDateTime("America/New_York"),
+  zonedRepro(
+    "zoned.A",
+    "min.toZonedDateTimeNewYork",
+    "-271821-04-19T20:00:00-04:56[America/New_York]",
+    () =>
+      Temporal.PlainDateTime.from("-271821-04-19T20:00").toZonedDateTime(
+        "America/New_York",
+      ),
   ),
   zonedRepro("zoned.A", "min.untilNewYork", "-P1D", () =>
-    zoned(MIN_EPOCH_NANOSECONDS + NANOSECONDS_PER_DAY, "America/New_York").until(
-      zoned(MIN_EPOCH_NANOSECONDS, "America/New_York"),
-      { largestUnit: "day" },
-    ),
+    zoned(
+      MIN_EPOCH_NANOSECONDS + NANOSECONDS_PER_DAY,
+      "America/New_York",
+    ).until(zoned(MIN_EPOCH_NANOSECONDS, "America/New_York"), {
+      largestUnit: "day",
+    }),
   ),
   zonedRepro("zoned.A", "min.untilHonolulu", "-P1D", () =>
-    zoned(MIN_EPOCH_NANOSECONDS + NANOSECONDS_PER_DAY, "Pacific/Honolulu").until(
-      zoned(MIN_EPOCH_NANOSECONDS, "Pacific/Honolulu"),
-      { largestUnit: "day" },
-    ),
+    zoned(
+      MIN_EPOCH_NANOSECONDS + NANOSECONDS_PER_DAY,
+      "Pacific/Honolulu",
+    ).until(zoned(MIN_EPOCH_NANOSECONDS, "Pacific/Honolulu"), {
+      largestUnit: "day",
+    }),
   ),
 ];
 
 /** America/Santiago's last transition before the maximum (-04:00 → -03:00, local midnight skipped). */
-const SANTIAGO_LAST_TRANSITION = "+275760-09-07T01:00:00-03:00[America/Santiago]";
+const SANTIAGO_LAST_TRANSITION =
+  "+275760-09-07T01:00:00-03:00[America/Santiago]";
 
 /**
  * zoned.B (`internal/zonedWallClock.ts` defect 2): `GetNamedTimeZoneNextTransition` returns null
@@ -391,11 +418,22 @@ const zonedBRepros: Repro[] = [
       .toZonedDateTimeISO("America/Santiago")
       .getTimeZoneTransition("next"),
   ),
-  zonedRepro("zoned.B", "max.startOfDaySantiago", SANTIAGO_LAST_TRANSITION, () =>
-    Temporal.PlainDate.from("+275760-09-07").toZonedDateTime("America/Santiago"),
+  zonedRepro(
+    "zoned.B",
+    "max.startOfDaySantiago",
+    SANTIAGO_LAST_TRANSITION,
+    () =>
+      Temporal.PlainDate.from("+275760-09-07").toZonedDateTime(
+        "America/Santiago",
+      ),
   ),
-  zonedRepro("zoned.B", "max.hoursInDaySantiago", "23", () =>
-    Temporal.ZonedDateTime.from("+275760-09-07T12:00[America/Santiago]").hoursInDay,
+  zonedRepro(
+    "zoned.B",
+    "max.hoursInDaySantiago",
+    "23",
+    () =>
+      Temporal.ZonedDateTime.from("+275760-09-07T12:00[America/Santiago]")
+        .hoursInDay,
   ),
 ];
 
@@ -419,7 +457,9 @@ const zonedDRepros: Repro[] = [
       Temporal.Duration.from("PT49H").total({
         unit: "day",
         relativeTo: zoned(
-          MAX_EPOCH_NANOSECONDS - 2n * NANOSECONDS_PER_DAY - NANOSECONDS_PER_HOUR,
+          MAX_EPOCH_NANOSECONDS -
+            2n * NANOSECONDS_PER_DAY -
+            NANOSECONDS_PER_HOUR,
           "UTC",
         ),
       }),
@@ -467,18 +507,16 @@ export const repros: readonly Repro[] = [
       ["1872-12-31", "ce|1872"],
       ["0000-12-31", "bce|1"],
     ] as const
-  ).map(
-    ([iso, expected]): Repro => ({
-      defect: "D8",
-      calendar: "japanese",
-      name: iso,
-      expected,
-      run: () => {
-        const date = Temporal.PlainDate.from(iso).withCalendar("japanese");
-        return `${date.era}|${date.eraYear}`;
-      },
-    }),
-  ),
+  ).map(([iso, expected]): Repro => ({
+    defect: "D8",
+    calendar: "japanese",
+    name: iso,
+    expected,
+    run: () => {
+      const date = Temporal.PlainDate.from(iso).withCalendar("japanese");
+      return `${date.era}|${date.eraYear}`;
+    },
+  })),
 ];
 
 /** The repro with this defect, calendar and name, if any. */

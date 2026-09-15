@@ -291,10 +291,10 @@ describe("intervalFromDurationZoned at the maximum instant", () => {
 // `start.add(duration)` / `end.subtract(duration)` in the calendar.
 describe("intervalFromDurationZoned in non-ISO calendars (CORE-6)", () => {
   it.each`
-    value                                                        | duration | anchor     | expected                                                                                                                                  | reason
-    ${"1543-01-31T00:00:00+00:00[u-ca=buddhist][UTC]"}           | ${"P1M"} | ${"start"} | ${{ start: "1543-01-31T00:00:00+00:00[u-ca=buddhist][UTC]", end: "1543-02-28T00:00:00+00:00[u-ca=buddhist][UTC]" }}                        | ${"proleptic buddhist: ISO 1000 has no Feb 29"}
-    ${"279517-09-10T00:00:00-12:00[u-ca=hebrew][Etc/GMT+12]"}    | ${"P1M"} | ${"start"} | ${{ start: "279517-09-10T00:00:00-12:00[u-ca=hebrew][Etc/GMT+12]", end: "279517-10-10T00:00:00-12:00[u-ca=hebrew][Etc/GMT+12]" }}          | ${"hebrew near the maximum"}
-    ${"-280803-05-07T12:00:00+00:00[u-ca=islamic-civil][UTC]"}   | ${"P1Y"} | ${"end"}   | ${{ start: "-280804-05-07T12:00:00+00:00[u-ca=islamic-civil][UTC]", end: "-280803-05-07T12:00:00+00:00[u-ca=islamic-civil][UTC]" }}      | ${"D1 near the minimum"}
+    value                                                      | duration | anchor     | expected                                                                                                                            | reason
+    ${"1543-01-31T00:00:00+00:00[u-ca=buddhist][UTC]"}         | ${"P1M"} | ${"start"} | ${{ start: "1543-01-31T00:00:00+00:00[u-ca=buddhist][UTC]", end: "1543-02-28T00:00:00+00:00[u-ca=buddhist][UTC]" }}                 | ${"proleptic buddhist: ISO 1000 has no Feb 29"}
+    ${"279517-09-10T00:00:00-12:00[u-ca=hebrew][Etc/GMT+12]"}  | ${"P1M"} | ${"start"} | ${{ start: "279517-09-10T00:00:00-12:00[u-ca=hebrew][Etc/GMT+12]", end: "279517-10-10T00:00:00-12:00[u-ca=hebrew][Etc/GMT+12]" }}   | ${"hebrew near the maximum"}
+    ${"-280803-05-07T12:00:00+00:00[u-ca=islamic-civil][UTC]"} | ${"P1Y"} | ${"end"}   | ${{ start: "-280804-05-07T12:00:00+00:00[u-ca=islamic-civil][UTC]", end: "-280803-05-07T12:00:00+00:00[u-ca=islamic-civil][UTC]" }} | ${"D1 near the minimum"}
   `(
     "builds $expected from $value, $duration and anchor $anchor ($reason)",
     ({ value, duration, anchor, expected }) => {

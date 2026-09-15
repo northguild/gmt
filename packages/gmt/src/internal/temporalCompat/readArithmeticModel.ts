@@ -301,10 +301,7 @@ function daysInMonth(calendarId: string, month: YearMonth): number | null {
 }
 
 /** The month code of `month`, or undefined when no day of it can be read. */
-function monthCodeAt(
-  calendarId: string,
-  month: YearMonth,
-): string | undefined {
+function monthCodeAt(calendarId: string, month: YearMonth): string | undefined {
   const start = monthStart(calendarId, month);
   if (start !== undefined) {
     return calendarFieldsOf(start, calendarId).monthCode;

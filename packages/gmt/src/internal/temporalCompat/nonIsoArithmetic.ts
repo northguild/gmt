@@ -99,9 +99,8 @@ function constrainedMonthCode(calendarId: string, monthCode: string): string {
   if (cached !== undefined) {
     return cached;
   }
-  const modernYear = Temporal.PlainDate.from("2000-01-01").withCalendar(
-    calendarId,
-  ).year;
+  const modernYear =
+    Temporal.PlainDate.from("2000-01-01").withCalendar(calendarId).year;
   for (let offset = 0; offset < LEAP_MONTH_SEARCH_YEARS; offset++) {
     const fields = {
       calendar: calendarId,

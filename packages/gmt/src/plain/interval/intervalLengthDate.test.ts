@@ -81,10 +81,10 @@ describe("intervalLengthDate", () => {
   // NudgeToCalendarUnit: whole units r1 from NonISODateUntil, plus the days from start + r1 to end
   // over the days from start + r1 to start + r1 + 1 (constrained).
   it.each`
-    start                            | end                              | unit       | expected     | reason
-    ${"2566-08-31[u-ca=buddhist]"}   | ${"2566-09-30[u-ca=buddhist]"}   | ${"month"} | ${1}         | ${"D6: until is P30D, but start + 1 month constrains to Sep 30 = end, so progress is 30/30"}
-    ${"5784-06-02[u-ca=hebrew]"}     | ${"5785-06-01[u-ca=hebrew]"}     | ${"year"}  | ${384 / 385} | ${"D7: 384 days of the 385 to Adar 2 5785 (Adar I constrains to Adar)"}
-    ${"279517-07-01[u-ca=hebrew]"}   | ${"279517-09-15[u-ca=hebrew]"}   | ${"month"} | ${2 + 14 / 29} | ${"D1: 2 months, then 14 of Iyar's 29 days, next to the maximum"}
+    start                          | end                            | unit       | expected       | reason
+    ${"2566-08-31[u-ca=buddhist]"} | ${"2566-09-30[u-ca=buddhist]"} | ${"month"} | ${1}           | ${"D6: until is P30D, but start + 1 month constrains to Sep 30 = end, so progress is 30/30"}
+    ${"5784-06-02[u-ca=hebrew]"}   | ${"5785-06-01[u-ca=hebrew]"}   | ${"year"}  | ${384 / 385}   | ${"D7: 384 days of the 385 to Adar 2 5785 (Adar I constrains to Adar)"}
+    ${"279517-07-01[u-ca=hebrew]"} | ${"279517-09-15[u-ca=hebrew]"} | ${"month"} | ${2 + 14 / 29} | ${"D1: 2 months, then 14 of Iyar's 29 days, next to the maximum"}
   `(
     "returns $expected $unit for $start to $end ($reason)",
     ({ start, end, unit, expected }) => {

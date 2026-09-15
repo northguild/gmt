@@ -109,9 +109,9 @@ describe("subtractDate", () => {
   // values: Chromium 152 (q2-xscan-chromium152.json): edge["islamic-civil"].min[400] reads
   // -280803-M05-07 and subtracts a year to ISO -271821-06-03, which min[45] reads as -280804-M05-07.
   it.each`
-    value                                  | units           | expected                               | reason
-    ${"-280803-05-07[u-ca=islamic-civil]"} | ${{ years: 1 }} | ${"-280804-05-07[u-ca=islamic-civil]"} | ${"D1-A: 45 days after the minimum (xscan min[400])"}
-    ${"-280803-03-21[u-ca=islamic-civil]"} | ${{ years: 1 }} | ${"-280804-03-21[u-ca=islamic-civil]"} | ${"D1-A: lands on the minimum (xscan min[355])"}
+    value                                  | units            | expected                               | reason
+    ${"-280803-05-07[u-ca=islamic-civil]"} | ${{ years: 1 }}  | ${"-280804-05-07[u-ca=islamic-civil]"} | ${"D1-A: 45 days after the minimum (xscan min[400])"}
+    ${"-280803-03-21[u-ca=islamic-civil]"} | ${{ years: 1 }}  | ${"-280804-03-21[u-ca=islamic-civil]"} | ${"D1-A: lands on the minimum (xscan min[355])"}
     ${"-280804-05-30[u-ca=islamic-civil]"} | ${{ months: 1 }} | ${"-280804-04-29[u-ca=islamic-civil]"} | ${"D1-A isolated window (xscan min[68])"}
     ${"-272441-01-30[u-ca=persian]"}       | ${{ months: 1 }} | ${"-272442-12-29[u-ca=persian]"}       | ${"D1-A persian (xscan min[386])"}
     ${"-272441-01-30[u-ca=persian]"}       | ${{ years: 1 }}  | ${"-272442-01-30[u-ca=persian]"}       | ${"D1-A persian (xscan min[386])"}

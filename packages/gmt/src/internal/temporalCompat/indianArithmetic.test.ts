@@ -50,12 +50,12 @@ describe("fixedFromIso", () => {
 
 describe("isIsoLeapYear / mod", () => {
   it.each`
-    year      | expected
-    ${2024}   | ${true}
-    ${1900}   | ${false}
-    ${2000}   | ${true}
-    ${0}      | ${true}
-    ${-500}   | ${false}
+    year       | expected
+    ${2024}    | ${true}
+    ${1900}    | ${false}
+    ${2000}    | ${true}
+    ${0}       | ${true}
+    ${-500}    | ${false}
     ${-271820} | ${true}
   `("isIsoLeapYear($year) is $expected", ({ year, expected }) => {
     expect(isIsoLeapYear(year)).toBe(expected);

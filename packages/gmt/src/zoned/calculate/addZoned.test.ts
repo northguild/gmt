@@ -456,14 +456,14 @@ describe("addZoned at the maximum instant", () => {
 // (`PlainDate.withCalendar(c).toZonedDateTime(zone).add(…)`), offsets as Chromium reads them.
 describe("addZoned in non-ISO calendars (CORE-6)", () => {
   it.each`
-    value                                                             | units            | expected                                                          | reason
-    ${"276302-09-13T00:00:00+00:00[u-ca=buddhist][UTC]"}              | ${{ years: 1 }}  | ${"276303-09-13T00:00:00+00:00[u-ca=buddhist][UTC]"}              | ${"D1: lands exactly on the maximum instant"}
-    ${"276302-09-12T00:00:00-04:00[u-ca=buddhist][America/New_York]"} | ${{ years: 1 }}  | ${"276303-09-12T00:00:00-04:00[u-ca=buddhist][America/New_York]"} | ${"D1 near the maximum in a named zone"}
-    ${"276302-09-12T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]"}       | ${{ years: 1 }}  | ${"276303-09-12T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]"}       | ${"D1 near the maximum behind UTC"}
-    ${"279517-09-10T00:00:00+00:00[u-ca=hebrew][UTC]"}                | ${{ months: 1 }} | ${"279517-10-10T00:00:00+00:00[u-ca=hebrew][UTC]"}                | ${"hebrew near the maximum"}
-    ${"279517-09-10T00:00:00-04:00[u-ca=hebrew][America/New_York]"}   | ${{ months: 1 }} | ${"279517-10-10T00:00:00-04:00[u-ca=hebrew][America/New_York]"}   | ${"hebrew near the maximum in a named zone"}
+    value                                                              | units            | expected                                                           | reason
+    ${"276302-09-13T00:00:00+00:00[u-ca=buddhist][UTC]"}               | ${{ years: 1 }}  | ${"276303-09-13T00:00:00+00:00[u-ca=buddhist][UTC]"}               | ${"D1: lands exactly on the maximum instant"}
+    ${"276302-09-12T00:00:00-04:00[u-ca=buddhist][America/New_York]"}  | ${{ years: 1 }}  | ${"276303-09-12T00:00:00-04:00[u-ca=buddhist][America/New_York]"}  | ${"D1 near the maximum in a named zone"}
+    ${"276302-09-12T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]"}        | ${{ years: 1 }}  | ${"276303-09-12T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]"}        | ${"D1 near the maximum behind UTC"}
+    ${"279517-09-10T00:00:00+00:00[u-ca=hebrew][UTC]"}                 | ${{ months: 1 }} | ${"279517-10-10T00:00:00+00:00[u-ca=hebrew][UTC]"}                 | ${"hebrew near the maximum"}
+    ${"279517-09-10T00:00:00-04:00[u-ca=hebrew][America/New_York]"}    | ${{ months: 1 }} | ${"279517-10-10T00:00:00-04:00[u-ca=hebrew][America/New_York]"}    | ${"hebrew near the maximum in a named zone"}
     ${"1543-01-31T00:00:00-04:56:02[u-ca=buddhist][America/New_York]"} | ${{ months: 1 }} | ${"1543-02-28T00:00:00-04:56:02[u-ca=buddhist][America/New_York]"} | ${"proleptic buddhist: ISO 1000 has no Feb 29"}
-    ${"1543-01-31T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]"}         | ${{ months: 1 }} | ${"1543-02-28T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]"}         | ${"proleptic buddhist behind UTC"}
+    ${"1543-01-31T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]"}          | ${{ months: 1 }} | ${"1543-02-28T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]"}          | ${"proleptic buddhist behind UTC"}
   `(
     "adds $units to $value giving $expected ($reason)",
     ({ value, units, expected }) => {
