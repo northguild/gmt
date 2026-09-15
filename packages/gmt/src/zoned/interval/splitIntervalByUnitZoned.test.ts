@@ -174,7 +174,7 @@ describe("splitIntervalByUnitZoned", () => {
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-01T01:30:00+00:00[UTC]"} | ${"hour"} | ${1}   | ${expectedRemainder}
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-10T00:00:00+00:00[UTC]"} | ${"day"}  | ${2}   | ${expectedDayUnit}
   `(
-    "returns $expected for $start..$end split by $amount $unit",
+    "returns $expected for $start to $end split by $amount $unit",
     ({ start, end, unit, amount, expected }) => {
       expect(splitIntervalByUnitZoned(start, end, unit, amount)).toEqual(
         expected,
@@ -187,7 +187,7 @@ describe("splitIntervalByUnitZoned", () => {
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"hour"} | ${1}   | ${expectedZeroLength}
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-01T02:00:00+00:00[UTC]"} | ${"hour"} | ${2}   | ${expectedSingleStep}
   `(
-    "returns $expected for edge-case $start..$end split by $amount $unit",
+    "returns $expected for edge-case $start to $end split by $amount $unit",
     ({ start, end, unit, amount, expected }) => {
       expect(splitIntervalByUnitZoned(start, end, unit, amount)).toEqual(
         expected,
@@ -416,5 +416,73 @@ describe("splitIntervalByUnitZoned with GMT calendar-annotated values", () => {
     ${"5785-13-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"} | ${"month 13 in a non-leap Hebrew year"}
   `("returns [] when the start is $value ($reason)", ({ value }) => {
     expect(splitIntervalByUnitZoned(value, Y.isoEnd, "day", 1)).toEqual([]);
+  });
+});
+
+// CORE-6 S5: calendar-unit boundaries are the calendar's own NonISODateAdd from the start (anchored).
+// Values: Chromium 153 native Temporal `start.add({ months: k })`, read in the calendar.
+describe("splitIntervalByUnitZoned in non-ISO calendars (CORE-6)", () => {
+  it("splits 279517-08-05 to 279517-10-05 in hebrew by month near the maximum (D1)", () => {
+    expect(
+      splitIntervalByUnitZoned(
+        "279517-08-05T00:00:00+00:00[u-ca=hebrew][UTC]",
+        "279517-10-05T00:00:00+00:00[u-ca=hebrew][UTC]",
+        "month",
+        1,
+      ),
+    ).toEqual([
+      {
+        start: "279517-08-05T00:00:00+00:00[u-ca=hebrew][UTC]",
+        end: "279517-09-05T00:00:00+00:00[u-ca=hebrew][UTC]",
+      },
+      {
+        start: "279517-09-05T00:00:00+00:00[u-ca=hebrew][UTC]",
+        end: "279517-10-05T00:00:00+00:00[u-ca=hebrew][UTC]",
+      },
+    ]);
+  });
+
+  it("splits 1543-01-31 to 1543-04-30 in buddhist by month with proleptic month ends (D2)", () => {
+    expect(
+      splitIntervalByUnitZoned(
+        "1543-01-31T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]",
+        "1543-04-30T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]",
+        "month",
+        1,
+      ),
+    ).toEqual([
+      {
+        start: "1543-01-31T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]",
+        end: "1543-02-28T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]",
+      },
+      {
+        start: "1543-02-28T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]",
+        end: "1543-03-31T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]",
+      },
+      {
+        start: "1543-03-31T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]",
+        end: "1543-04-30T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]",
+      },
+    ]);
+  });
+
+  it("splits -096239-06-23 to -096239-08-23 in hebrew by month in a year <= 0 (D3)", () => {
+    expect(
+      splitIntervalByUnitZoned(
+        "-096239-06-23T00:00:00-04:56:02[u-ca=hebrew][America/New_York]",
+        "-096239-08-23T00:00:00-04:56:02[u-ca=hebrew][America/New_York]",
+        "month",
+        1,
+      ),
+    ).toEqual([
+      {
+        start: "-096239-06-23T00:00:00-04:56:02[u-ca=hebrew][America/New_York]",
+        end: "-096239-07-23T00:00:00-04:56:02[u-ca=hebrew][America/New_York]",
+      },
+      {
+        start: "-096239-07-23T00:00:00-04:56:02[u-ca=hebrew][America/New_York]",
+        end: "-096239-08-23T00:00:00-04:56:02[u-ca=hebrew][America/New_York]",
+      },
+    ]);
   });
 });

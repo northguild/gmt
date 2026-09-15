@@ -159,3 +159,78 @@ describe("normalizeDuration", () => {
     expect(normalizeDuration(value as never)).toBe("");
   });
 });
+
+describe("normalizeDuration relative to the last days of the range", () => {
+  // TC39 Duration#round: PT73H from max - 3d5h is 3 local days and 1 hour; the day after the
+  // result starts past +275760-09-13T00:00 local in a zone ahead of UTC, but in range.
+  it.each`
+    relativeTo                                            | expected
+    ${"+275760-09-10T05:00:00+10:00[Australia/Sydney]"}   | ${"P3DT1H"}
+    ${"+275760-09-10T09:00:00+14:00[Pacific/Kiritimati]"} | ${"P3DT1H"}
+  `(
+    "rebalances PT73H to $expected relative to $relativeTo",
+    ({ relativeTo, expected }) => {
+      expect(
+        normalizeDuration("PT73H", { largestUnit: "day", relativeTo }),
+      ).toBe(expected);
+    },
+  );
+
+  // TC39 NudgeToCalendarUnit: rounding to a whole day looks at a day window that ends past the
+  // maximum, so Temporal throws — in UTC as in every other zone.
+  it.each`
+    value      | relativeTo
+    ${"PT73H"} | ${"+275760-09-10T05:00:00+10:00[Australia/Sydney]"}
+    ${"PT49H"} | ${"+275760-09-10T23:00:00+00:00[UTC]"}
+    ${"PT49H"} | ${"+275760-09-10T23:00:00+00:00[+00:00]"}
+    ${"PT49H"} | ${"+275760-09-11T00:00:00+01:00[Europe/London]"}
+  `(
+    "returns an empty string rounding $value to a day relative to $relativeTo",
+    ({ value, relativeTo }) => {
+      expect(
+        normalizeDuration(value, {
+          largestUnit: "day",
+          smallestUnit: "day",
+          relativeTo,
+        }),
+      ).toBe("");
+    },
+  );
+});
+
+describe("normalizeDuration relative to the first days of the range", () => {
+  // TC39 Duration#round: -PT73H back from min + 3d2h is 3 local days and 1 hour; the day before the
+  // result reaches the minimum's local date -271821-04-19 in a zone behind UTC, but in range.
+  it.each`
+    relativeTo
+    ${"-271821-04-22T21:03:58-04:56[America/New_York]"}
+    ${"-271821-04-22T15:28:34-10:31[Pacific/Honolulu]"}
+  `(
+    "rebalances -PT73H to -P3DT1H relative to $relativeTo",
+    ({ relativeTo }) => {
+      expect(
+        normalizeDuration("-PT73H", { largestUnit: "day", relativeTo }),
+      ).toBe("-P3DT1H");
+    },
+  );
+});
+
+// CORE-6 S7: a non-ISO calendar `relativeTo` follows TC39 Duration#round with a plain relativeTo
+// (DifferencePlainDateTimeWithRounding, GetUTCEpochNanoseconds). Values: Chromium 153 native
+// `Duration.from(d).round({ largestUnit, relativeTo: PlainDate })`.
+describe("normalizeDuration with a non-ISO calendar relativeTo (CORE-6)", () => {
+  it.each`
+    duration  | relativeTo                         | expected    | reason
+    ${"P40D"} | ${"279517-08-15[u-ca=hebrew]"}    | ${"P1M10D"} | ${"D1: 1 month then 10 days, just before the maximum"}
+    ${"P30D"} | ${"2566-08-31[u-ca=buddhist]"}    | ${"P30D"}   | ${"D6: Aug 31 + 1 month is Sep 31, past Sep 30"}
+    ${"P40D"} | ${"1543-01-15[u-ca=buddhist]"}    | ${"P1M9D"}  | ${"proleptic buddhist: ISO 1000-01-15 + 1 month is Feb 15"}
+    ${"P40D"} | ${"-096239-06-23[u-ca=hebrew]"}   | ${"P1M11D"} | ${"hebrew year <= 0: M06 has 29 days"}
+  `(
+    "normalizes $duration to $expected in months relative to $relativeTo ($reason)",
+    ({ duration, relativeTo, expected }) => {
+      expect(
+        normalizeDuration(duration, { largestUnit: "months", relativeTo }),
+      ).toBe(expected);
+    },
+  );
+});

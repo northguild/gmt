@@ -4,6 +4,7 @@ import {
   calendarSystemOfDateValue,
   formatDateInCalendar,
   parseCalendarDateValue,
+  plainDateAdd,
   resolveOverflow,
 } from "../../internal";
 import type { Overflow } from "../../types";
@@ -14,8 +15,9 @@ import { isValidCalendarDate } from "../validate";
  *
  * - `anchor: "start"` treats `value` as the interval start and adds `duration` to get the end.
  * - `anchor: "end"` treats `value` as the interval end and subtracts `duration` to get the start.
- * - Uses `Temporal.PlainDate.prototype.add`/`.subtract`, so calendar units (years/months/weeks)
- *   resolve against `value` itself — no separate `relativeTo` is needed, unlike `addDuration`.
+ * - Uses `Temporal.PlainDate.prototype.add`/`.subtract` semantics, so calendar units
+ *   (years/months/weeks) resolve against `value` itself — no separate `relativeTo` is needed,
+ *   unlike `addDuration`. Time units count as whole 24-hour days, as Temporal's do.
  * - A negative `duration` (e.g. `"-P1D"`) can invert the computed span; returns null when that
  *   happens, mirroring `intervalIntersectionDate`'s `start > end` rejection.
  * - `overflow` ("constrain" (default) | "reject") controls out-of-range results, e.g. adding 1 month
@@ -68,10 +70,11 @@ export function intervalFromDurationDate(
     const dur = Temporal.Duration.from(duration);
     const overflow = resolveOverflow(options?.overflow);
 
-    const other =
-      anchor === "start"
-        ? point.add(dur, { overflow })
-        : point.subtract(dur, { overflow });
+    const other = plainDateAdd(
+      point,
+      anchor === "start" ? dur : dur.negated(),
+      overflow,
+    );
 
     const start = anchor === "start" ? point : other;
     const end = anchor === "start" ? other : point;

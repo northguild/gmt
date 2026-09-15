@@ -13,6 +13,9 @@ describe("calendarZonedDateTime regex", () => {
     ${"1446-03-30T14:30:45.123456789+05:45[u-ca=islamic-umalqura][Asia/Kathmandu]"} | ${"1446"} | ${"03"} | ${"30"} | ${"14:30:45.123456789"} | ${"+05:45"}  | ${"islamic-umalqura"}    | ${undefined}  | ${"Asia/Kathmandu"}
     ${"2017-01-23T00:00:00[u-ca=ethiopic;era=ethiopic][Africa/Addis_Ababa]"}        | ${"2017"} | ${"01"} | ${"23"} | ${"00:00:00"}           | ${undefined} | ${"ethiopic"}            | ${"ethiopic"} | ${"Africa/Addis_Ababa"}
     ${"5784-13-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"}                   | ${"5784"} | ${"13"} | ${"15"} | ${"14:30:00"}           | ${"-05:00"}  | ${"hebrew"}              | ${undefined}  | ${"America/New_York"}
+    ${"-000911-01-01T00:00:00+08:00[u-ca=taiwan][Asia/Taipei]"}                     | ${"-000911"} | ${"01"} | ${"01"} | ${"00:00:00"}        | ${"+08:00"}  | ${"taiwan"}              | ${undefined}  | ${"Asia/Taipei"}
+    ${"0501-06-15T12:00:00+09:00[u-ca=japanese;era=bce][Asia/Tokyo]"}               | ${"0501"} | ${"06"} | ${"15"} | ${"12:00:00"}           | ${"+09:00"}  | ${"japanese"}            | ${"bce"}      | ${"Asia/Tokyo"}
+    ${"0501-06-15T12:00:00+09:00[u-ca=japanese;era=japanese-inverse][Asia/Tokyo]"}  | ${"0501"} | ${"06"} | ${"15"} | ${"12:00:00"}           | ${"+09:00"}  | ${"japanese"}            | ${"japanese-inverse"} | ${"Asia/Tokyo"}
   `(
     "captures year $year month $month day $day time $time offset $offset calendar $calendarId era $era zone $timeZone from $value",
     ({ value, year, month, day, time, offset, calendarId, era, timeZone }) => {
@@ -44,6 +47,9 @@ describe("calendarZonedDateTime regex", () => {
     ${"5784-6-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"}            | ${"unpadded month"}
     ${"5784-06-15 14:30:00-05:00[u-ca=hebrew][America/New_York]"}           | ${"space instead of T separator"}
     ${"5784-06-15T14:30:00-05:00[u-ca=hebrew][]"}                           | ${"empty time zone segment"}
+    ${"-000000-01-01T00:00:00+08:00[u-ca=taiwan][Asia/Taipei]"}             | ${"negative zero year"}
+    ${"-0911-01-01T00:00:00+08:00[u-ca=taiwan][Asia/Taipei]"}               | ${"four-digit negative year"}
+    ${"+279517-10-11T00:00:00+00:00[u-ca=hebrew][UTC]"}                     | ${"signed positive year"}
   `("does not match $value ($reason)", ({ value }) => {
     expect(calendarZonedDateTime.test(value)).toBe(false);
   });

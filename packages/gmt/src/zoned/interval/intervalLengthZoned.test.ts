@@ -16,7 +16,7 @@ describe("intervalLengthZoned", () => {
     ${"2024-01-01T00:00:00+00:00[UTC]"}              | ${"2025-01-01T00:00:00+00:00[UTC]"}              | ${"year"}  | ${1}
     ${"2024-02-29T00:00:00+00:00[UTC]"}              | ${"2024-03-01T00:00:00+00:00[UTC]"}              | ${"day"}   | ${1}
   `(
-    "returns $expected $unit for $start..$end",
+    "returns $expected $unit for $start to $end",
     ({ start, end, unit, expected }) => {
       expect(intervalLengthZoned(start, end, unit)).toBeCloseTo(expected, 9);
     },
@@ -27,7 +27,7 @@ describe("intervalLengthZoned", () => {
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"day"}
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"hour"}
   `(
-    "returns 0 for zero-length $start..$end in $unit",
+    "returns 0 for zero-length $start to $end in $unit",
     ({ start, end, unit }) => {
       expect(intervalLengthZoned(start, end, unit)).toBe(0);
     },
@@ -143,4 +143,54 @@ describe("intervalLengthZoned with GMT calendar-annotated values", () => {
   `("returns null when the start is $value ($reason)", ({ value }) => {
     expect(intervalLengthZoned(value, Y.isoEnd, "day")).toBeNull();
   });
+});
+
+describe("intervalLengthZoned at the maximum instant", () => {
+  // Both intervals run from max - 3d5h to max - 1d. TC39 DifferenceZonedDateTime gives P2DT5H, and
+  // NudgeToCalendarUnit totals it over the day from +275760-09-12 to the 13th: 2 + 5/24 days,
+  // although that day's end wall clock is past +275760-09-13T00:00 in a zone ahead of UTC.
+  it.each`
+    start                                                 | end                                                   | unit      | expected
+    ${"+275760-09-10T05:00:00+10:00[Australia/Sydney]"}   | ${"+275760-09-12T10:00:00+10:00[Australia/Sydney]"}   | ${"day"}  | ${2.2083333333333335}
+    ${"+275760-09-10T05:00:00+10:00[Australia/Sydney]"}   | ${"+275760-09-12T10:00:00+10:00[Australia/Sydney]"}   | ${"hour"} | ${53}
+    ${"+275760-09-10T09:00:00+14:00[Pacific/Kiritimati]"} | ${"+275760-09-12T14:00:00+14:00[Pacific/Kiritimati]"} | ${"day"}  | ${2.2083333333333335}
+    ${"+275760-09-05T23:00:00+00:00[UTC]"}                | ${"+275760-09-08T00:00:00+00:00[UTC]"}                | ${"day"}  | ${2.0416666666666665}
+  `(
+    "returns $expected $unit for $start to $end",
+    ({ start, end, unit, expected }) => {
+      expect(intervalLengthZoned(start, end, unit)).toBe(expected);
+    },
+  );
+
+  // TC39 NudgeToCalendarUnit: the day window after the end starts past the maximum, so Temporal
+  // throws — in UTC too, whose exact times GetPossibleEpochNanoseconds validates like +00:00's.
+  it.each`
+    start                                                 | end
+    ${"+275760-09-11T10:00:00+10:00[Australia/Sydney]"}   | ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"}
+    ${"+275760-09-11T14:00:00+14:00[Pacific/Kiritimati]"} | ${"+275760-09-13T14:00:00+14:00[Pacific/Kiritimati]"}
+    ${"+275760-09-10T23:00:00+00:00[UTC]"}                | ${"+275760-09-13T00:00:00+00:00[UTC]"}
+    ${"+275760-09-10T23:00:00+00:00[+00:00]"}             | ${"+275760-09-13T00:00:00+00:00[+00:00]"}
+    ${"+275760-09-11T00:00:00+01:00[Europe/London]"}      | ${"+275760-09-13T01:00:00+01:00[Europe/London]"}
+  `("returns null in days for $start to $end", ({ start, end }) => {
+    expect(intervalLengthZoned(start, end, "day")).toBeNull();
+  });
+});
+
+// CORE-6 S5/S7: the length in a calendar unit is `Duration#total` relative to the start, which
+// follows TC39 DifferenceZonedDateTimeWithTotal in the start's calendar. Values: Chromium 153
+// native `start.until(end, { largestUnit }).total({ unit, relativeTo: start })`; null where
+// Chromium throws.
+describe("intervalLengthZoned in non-ISO calendars (CORE-6)", () => {
+  it.each`
+    start                                                | end                                                  | unit        | expected              | reason
+    ${"2566-08-31T00:00:00+00:00[u-ca=buddhist][UTC]"}   | ${"2566-09-30T00:00:00+00:00[u-ca=buddhist][UTC]"}   | ${"months"} | ${1}                  | ${"D6: the 1-month window ends exactly on the end"}
+    ${"1543-01-31T00:00:00+00:00[u-ca=buddhist][UTC]"}   | ${"1543-02-28T00:00:00+00:00[u-ca=buddhist][UTC]"}   | ${"months"} | ${1}                  | ${"proleptic buddhist: Jan 31 + 1 month is Feb 28 in ISO 1000"}
+    ${"-096239-06-23T00:00:00+00:00[u-ca=hebrew][UTC]"}  | ${"-096239-08-04T00:00:00+00:00[u-ca=hebrew][UTC]"}  | ${"months"} | ${1.3666666666666667} | ${"hebrew year <= 0: 1 month and 11 of M07's 30 days"}
+    ${"279517-08-01T00:00:00+00:00[u-ca=hebrew][UTC]"}   | ${"279517-10-11T00:00:00+00:00[u-ca=hebrew][UTC]"}   | ${"months"} | ${null}               | ${"D1: the third month's window ends past the maximum"}
+  `(
+    "returns $expected $unit from $start to $end ($reason)",
+    ({ start, end, unit, expected }) => {
+      expect(intervalLengthZoned(start, end, unit)).toBe(expected);
+    },
+  );
 });

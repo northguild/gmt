@@ -1,5 +1,7 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@js-temporal/polyfill";
 import type { DurationStringOptions, RoundingOptions } from "../types";
+import { plainDateUntil } from "./plainDateUntil";
+import { zonedUntil } from "./zonedWallClockDifference";
 
 /**
  * Compute the ISO 8601 duration string between two Temporal objects via `.until()` + `.toString()`.
@@ -37,25 +39,37 @@ export function durationUntilString(
   largestUnit: string,
   options?: RoundingOptions<Temporal.DateTimeUnit> & DurationStringOptions,
 ): string {
-  const duration = (
-    start as {
-      until(
-        end:
-          | Temporal.PlainDate
-          | Temporal.PlainDateTime
-          | Temporal.ZonedDateTime,
-        opts: Record<string, unknown>,
-      ): Temporal.Duration;
-    }
-  ).until(
-    end as Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime,
-    {
-      largestUnit,
-      smallestUnit: options?.smallestUnit,
-      roundingIncrement: options?.roundingIncrement,
-      roundingMode: options?.roundingMode,
-    },
-  );
+  const untilOptions = {
+    largestUnit,
+    smallestUnit: options?.smallestUnit,
+    roundingIncrement: options?.roundingIncrement,
+    roundingMode: options?.roundingMode,
+  };
+  const duration =
+    start instanceof Temporal.ZonedDateTime
+      ? zonedUntil(
+          start,
+          end as Temporal.ZonedDateTime,
+          untilOptions as Temporal.DifferenceOptions<Temporal.DateTimeUnit>,
+        )
+      : start instanceof Temporal.PlainDate
+        ? plainDateUntil(
+            start,
+            end as Temporal.PlainDate,
+            largestUnit,
+            options as RoundingOptions<Temporal.DateUnit>,
+          )
+        : (
+          start as {
+            until(
+              end: Temporal.PlainDate | Temporal.PlainDateTime,
+              opts: Record<string, unknown>,
+            ): Temporal.Duration;
+          }
+        ).until(
+          end as Temporal.PlainDate | Temporal.PlainDateTime,
+          untilOptions,
+        );
 
   return duration.toString({
     smallestUnit: options?.toStringSmallestUnit,

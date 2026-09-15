@@ -104,4 +104,24 @@ describe("intervalFromDurationDate", () => {
       end: "5784-07-15[u-ca=hebrew]",
     });
   });
+
+  // CORE-6: the other endpoint goes through the calendar-correct add. Polyfill 0.5.1 throws
+  // `Invalid ISO date` for both edge rows (D1) and "Missing month" for Hebrew year -41 (D3).
+  // Expected values: Chromium 152 (q2-xscan-chromium152.json); the Hebrew result through the
+  // Dershowitz–Reingold oracle, which agrees with every Chromium read of Hebrew years <= 0.
+  it.each`
+    value                                  | duration  | anchor     | start                                  | end                                    | reason
+    ${"276302-09-13[u-ca=buddhist]"}       | ${"P1Y"}  | ${"start"} | ${"276302-09-13[u-ca=buddhist]"}       | ${"276303-09-13[u-ca=buddhist]"}       | ${"D1 at the maximum (xscan max[366])"}
+    ${"-280803-05-07[u-ca=islamic-civil]"} | ${"P1Y"}  | ${"end"}   | ${"-280804-05-07[u-ca=islamic-civil]"} | ${"-280803-05-07[u-ca=islamic-civil]"} | ${"D1 near the minimum (xscan min[400])"}
+    ${"-000041-05-16[u-ca=hebrew]"}        | ${"P1M"}  | ${"start"} | ${"-000041-05-16[u-ca=hebrew]"}        | ${"-000041-06-16[u-ca=hebrew]"}        | ${"D3/D4 (xscan hebrew stride k=979)"}
+    ${"5784-06-02[u-ca=hebrew]"}           | ${"PT48H"} | ${"start"} | ${"5784-06-02[u-ca=hebrew]"}          | ${"5784-06-04[u-ca=hebrew]"}           | ${"48 hours are 2 whole days (TC39 ToDateDurationRecordWithoutTime)"}
+  `(
+    "returns $start to $end for $value with $duration anchored at $anchor ($reason)",
+    ({ value, duration, anchor, start, end }) => {
+      expect(intervalFromDurationDate(value, duration, anchor)).toEqual({
+        start,
+        end,
+      });
+    },
+  );
 });

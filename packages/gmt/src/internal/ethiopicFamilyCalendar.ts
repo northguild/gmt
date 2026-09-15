@@ -1,4 +1,6 @@
-import { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "@js-temporal/polyfill";
+import { formatCalendarYear } from "./formatCalendarYear";
+import { calendarDateFromFields, calendarFieldsOf } from "./temporalCompat";
 
 export type EthiopicFamilyCalendar =
   | "ethiopic"
@@ -63,7 +65,11 @@ export function ethiopicFamilyFieldsFromDate(
   date: Temporal.PlainDate,
   calendar: EthiopicFamilyCalendar,
 ): EthiopicFamilyFields {
-  const { year: ethioaaYear, month, day } = date.withCalendar("ethioaa");
+  const {
+    year: ethioaaYear,
+    month,
+    day,
+  } = calendarFieldsOf(date, "ethioaa");
 
   if (calendar === "ethiopic-amete-alem") {
     return { year: ethioaaYear, month, day };
@@ -126,14 +132,10 @@ export function dateFromEthiopicFamilyFields(
     throw new RangeError(`Unknown ethiopic era: ${fields.era}`);
   }
 
-  return Temporal.PlainDate.from(
-    {
-      year: ethioaaYear,
-      month: fields.month,
-      day: fields.day,
-      calendar: "ethioaa",
-    },
-    { overflow: "reject" },
+  return calendarDateFromFields(
+    "ethioaa",
+    { year: ethioaaYear, month: fields.month, day: fields.day },
+    "reject",
   );
 }
 
@@ -154,14 +156,14 @@ export function ethiopicFamilyDateParts(
   const day = String(fields.day).padStart(2, "0");
 
   if (calendar === "ethiopic") {
-    const eraYear = String(fields.eraYear).padStart(4, "0");
+    const eraYear = formatCalendarYear(fields.eraYear ?? fields.year);
     return {
       date: `${eraYear}-${month}-${day}`,
       annotation: `[u-ca=ethiopic;era=${fields.era}]`,
     };
   }
 
-  const year = String(fields.year).padStart(4, "0");
+  const year = formatCalendarYear(fields.year);
   return {
     date: `${year}-${month}-${day}`,
     annotation: `[u-ca=${calendar}]`,
