@@ -7,7 +7,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 ## Rules that bind every change
 
 - **`apps/dox` must not perturb `packages/gmt`.** `pnpm run validate` stays green,
-  including the CI timezone matrix (10 zones × Node 22/24 — see README). No changesets unless a change also touches
+  including the CI timezone matrix (10 zones × Node 22/24/26 — see README). No changesets unless a change also touches
   `packages/gmt`.
 - **Merging to `main` deploys.** `deploy-dox.yml` runs on every push to `main`, with no
   path filter and no manual trigger.

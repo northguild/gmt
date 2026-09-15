@@ -35,13 +35,15 @@ unstaged and report it ready.
    - **Bug fix:** one slice per reported repro case.
    - **New function:** the happy path first, then one slice per applicable category from the [priority tiers](../context/testing-standards/references/index.md#priority-tiers) (invalid → sentinel, each option, zone matrix and probe transitions, locales, calendar boundaries).
 
-3. **For each slice, in order:**
-   1. **Derive the expected value independently** — run the equivalent `@js-temporal/polyfill` call (`node -e`, or a scratchpad script), or a trusted oracle (`floorToZone`/`bucketRange` for zone boundaries). Never from memory, never by re-running the code under test.
-   2. **Add the row or test.**
-   3. **Run that test file and confirm it fails for the right reason.** Record the red output — for a bug fix this evidence is required in your handoff.
-   4. **Make the minimal change** that turns it green. No speculative code for later slices.
-   5. **Run the file again** (green), plus the sibling tests of anything you touched.
-   6. Move to the next slice. Let what this slice taught you reshape the next one.
+3. **For each slice, in order.** Governing rule: [Know the correct value before writing the assertion](../context/testing-standards/references/index.md#know-the-correct-value-before-writing-the-assertion). You write the function to meet the expectation, never the expectation to meet the function.
+   1. **Decide what SHOULD be returned, before any code runs.** Derive it from the spec, the story's decisions and the governing standard, and be able to say why in one line. When that reason isn't obvious from the inputs, put it in the row name or a comment. A spec table's value counts only once you have re-derived it yourself.
+   2. **Check the arithmetic independently.** Run a plain `@js-temporal/polyfill` computation of the answer (`node -e` or a scratchpad script), or a trusted oracle (`floorToZone`/`bucketRange` for zone boundaries). Never the code under test, never a reference implementation written for this task, never memory.
+   3. **Resolve every disagreement before writing the row.** If the derivation, the polyfill and the spec don't all agree, find which is wrong. If the rule itself looks wrong, stop and escalate. Never pick whichever value will pass.
+   4. **Add the row or test.**
+   5. **Run that test file and confirm it fails for the right reason.** Record the red output — for a bug fix this evidence is required in your handoff.
+   6. **Make the minimal change** that turns it green. No speculative code for later slices. If turning it green seems to require changing the expected value, stop: go back to step 1 and re-derive. Change the expectation only if the derivation itself was wrong, and record why.
+   7. **Run the file again** (green), plus the sibling tests of anything you touched.
+   8. Move to the next slice. Let what this slice taught you reshape the next one.
 
 4. **Finish:** JSDoc with `@example` for valid, invalid and edge inputs ([jsdoc standards](../context/jsdoc-standards.md)); export from the namespace `index.ts`; `pnpm --filter @northguild/gmt typecheck`; the full `pnpm --filter @northguild/gmt test`; the fallow gate below.
 
@@ -94,6 +96,9 @@ Suppression IDs (check with `npx fallow explain <issue-type>`):
 
 - Every slice has recorded red → green evidence.
 - Every `it.each` name embeds its distinguishing variables ([test-name standards](../context/testing-standards/references/index.md#test-name-standards)).
-- Expected values were derived from the polyfill or an oracle, not from the code under test.
+- Every expected value was decided from the rule before the implementation existed, then confirmed with a plain polyfill computation or trusted oracle. None came from the code under test, a reference implementation, or an unverified spec table.
+- No existing behaviour was pinned without first classifying it as intended or defect.
+- **Zero known bugs.** Every defect found, in new or existing code, was fixed in this run: red `it`, fix, green. Nothing was deferred, pinned or documented around. `node scripts/test-markers.mjs check` passes: no `.fails`/`.skip`/`.todo`/`.only`/`xit`, and no "known defect" notes. See [Zero known bugs](../context/testing-standards/references/index.md#zero-known-bugs).
+- The handoff lists every disagreement found (rule vs polyfill vs spec vs implementation) and how each was resolved.
 - Typecheck and the full gmt test suite pass; the fallow gate is clean or every suppression carries a reason.
 - Nothing staged, committed, or pushed.

@@ -48,9 +48,43 @@ If an existing fixture's fixed date doesn't fit the case under test (e.g. testin
 
 **Required transition rows for boundary functions.** Any function that computes a zoned unit boundary, a day length, or a floor (`startOf*`/`endOf*`, `floorToZone`, `bucketRange`, `intervalCount*`, `areZonedEqualBy`, `getHoursInZonedDay`, `mapZonedHoursInDay`, …) also carries explicit rows for the probe zones in [coding-standards § Calendar & zone semantics](../../coding-standards.md#calendar--zone-semantics): `Pacific/Chatham`, `Antarctica/Casey`, the `America/New_York` fall-back, `Australia/Lord_Howe`, `America/Santiago` (skipped midnight), `America/Goose_Bay` and `Pacific/Apia` (deleted day). Assert the invariant `start ≤ input < next start` as well as the value.
 
+## Know the Correct Value Before Writing the Assertion
+
+**A test states what the function SHOULD return. It never records what some code DOES return.** Before writing an expected value, you must be able to say why it is correct, from a source other than the code under test. Code is written to meet the expectation; the expectation is never adjusted to meet the code.
+
+1. **Derive from the rule first.** Work the value out from the spec, the story's decisions, the [coding standards](../../coding-standards.md) and the authoritative standard (TC39 Temporal, ISO 8601, RFC 9557, the relevant RFC or law). Choose inputs whose arithmetic is obvious (whole hours on one UTC day), so the derivation fits on one line. When the value isn't self-evident, put that derivation in the row name or a comment.
+2. **Then check the arithmetic against real Temporal.** This is the independent check below. The polyfill confirms arithmetic and Temporal semantics; it cannot confirm GMT-defined rules (sentinels, half-open boundaries, tie-breaks), because Temporal has no opinion on them.
+3. **A disagreement is a finding, not a value to copy.** When your derivation, the polyfill, a spec table and the implementation don't all agree, stop and find out which one is wrong. Never settle it by pasting whichever output makes the test pass. If the rule itself looks wrong, escalate; do not decide silently.
+4. **Forbidden sources of an expected value:**
+   - output of the function under test, or of a "reference implementation" written for the same task;
+   - a spec table's value you have not re-derived yourself;
+   - an existing test row or JSDoc example taken on trust;
+   - recomputing the value the same way the implementation does (tautological).
+5. **Existing behaviour is not automatically correct.** Before pinning an existing function's current output (for example, ahead of a doc fix or refactor), classify it:
+   - **Intended:** its documented contract says so. Pin it.
+   - **Defect:** it breaks the function's own contract, the coding standards or the governing standard. Do **not** assert the wrong value. Write the correct expectation as a normal `it`. It fails, which is the red step, and you fix the code in the same story. See [Zero known bugs](#zero-known-bugs).
+   - **Unsure:** treat it as a defect.
+6. **Report what you checked.** Handoffs state how each expected value was established (rule derivation, polyfill check) and list every disagreement found, and how it was resolved.
+
+## Zero Known Bugs
+
+**GMT never ships a known bug.** A defect found during a story, in new or existing code and by any agent or review, is fixed in that story, before the work moves on. It is never deferred to a later issue, pinned, skipped or documented around.
+
+- **The only acceptable failing test is the red step of a TDD slice:** a normal `it` with the correct expectation, turned green by fixing the code in the same slice.
+- **Forbidden in any handoff, finished code or PR:** `it.fails`, `it.skip`, `it.todo`, `it.only`, `describe.skip`/`.only`, `xit`/`xdescribe`, `skipIf`/`runIf`, and any "known defect" or "known bug" note. They may appear for a moment while working and must never be left behind.
+- **When you find a bug, widen the search.** Fix the whole class (every function with the same cause), not just the instance that surfaced.
+- **Enforced:** `node scripts/test-markers.mjs check` runs in `pnpm run validate` and fails on any marker or known-defect note. [AGENTS.md Core Rule 12](../../../AGENTS.md#core-rules-quick-reference) states the rule, and `finalizer` refuses to close a story that carries one.
+
+## Never Pass a Path to `vitest list --json`
+
+`npx vitest list --json <file>` does **not** list that file's tests: Vitest 4 treats the argument as the JSON **output** path and overwrites the file with the entire suite listing. It destroyed two test files during CORE-6.
+
+- **To see test names:** run `npx vitest run <file> --reporter=verbose`.
+- **`scripts/stats.mjs` is safe:** it calls `vitest list --json` with no file argument.
+
 ## Verify Every Expected Value Against Real Temporal Before Writing It
 
-Never write an `it.each` row's expected value from memory, intuition, or by analogy to a similar case — verify it by actually running the equivalent `@js-temporal/polyfill` call first (`node -e "const { Temporal } = require('@js-temporal/polyfill'); ..."` is enough) and copy the real output into the test. Temporal's rounding, overflow, and DST-resolution semantics are full of behavior that is easy to get subtly wrong by reasoning about it in the abstract — e.g. a 2-calendar-day span that spans a spring-forward transition is 47 real hours, not 48; `smallestUnit` on `Duration.prototype.toString()` only accepts sub-second units even though the same option name accepts hour/minute on `until()`/`since()`; a rounding mode that looks like it should round up may round down because the input isn't actually at the halfway point for the increment in use.
+Never write an `it.each` row's expected value from memory, intuition, or by analogy to a similar case. Once you have derived it from the rule (above), confirm it by actually running the equivalent `@js-temporal/polyfill` call (`node -e "const { Temporal } = require('@js-temporal/polyfill'); ..."` is enough). The polyfill call must be a plain Temporal computation of the answer, never a call into GMT code. Temporal's rounding, overflow, and DST-resolution semantics are full of behavior that is easy to get subtly wrong by reasoning about it in the abstract — e.g. a 2-calendar-day span that spans a spring-forward transition is 47 real hours, not 48; `smallestUnit` on `Duration.prototype.toString()` only accepts sub-second units even though the same option name accepts hour/minute on `until()`/`since()`; a rounding mode that looks like it should round up may round down because the input isn't actually at the halfway point for the increment in use.
 
 A wrong expected value written this way still makes the test pass today — it just also makes the test worthless, since it will keep passing after the implementation is silently broken. If a test you write this way ever fails unexpectedly, don't assume the production code is wrong before re-deriving the expected value against the real runtime — the test's own expected value is just as likely to be the mistake.
 
@@ -100,7 +134,7 @@ Reference constants by name (e.g. `MustTestLocales.enUS`) — do not iterate a g
 
 ## ICU/CLDR Wording Variance Across Node Versions
 
-CLDR data embedded in Node's ICU build changes between major ICU versions (which track Node major versions). A handful of locale/option combinations render different wording on ICU 77 (Node 20) vs. ICU 78 (Node 22/24) — e.g. pt-PT's day period ("da tarde" → "p.m."), Turkish/Korean long time zone names, Hebrew/Swedish relative-time phrasing. Every Node LTS ships complete locale data; the _wording_ CLDR chose for a given locale/option simply changed between versions.
+CLDR data embedded in Node's ICU build changes between major ICU versions (which track Node major versions). A handful of locale/option combinations render different wording on ICU 77 (Node 20) vs. ICU 78 (Node 22/24/26) — e.g. pt-PT's day period ("da tarde" → "p.m."), Turkish/Korean long time zone names, Hebrew/Swedish relative-time phrasing. Every Node LTS ships complete locale data; the _wording_ CLDR chose for a given locale/option simply changed between versions.
 
 Use `oneOfIcu`/`expectOneOfIcu` (from `src/test/icuVariants.ts`) for any golden verified (against real Node 20/22/24 runs) to differ solely by CLDR wording:
 

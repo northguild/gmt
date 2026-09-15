@@ -34,5 +34,6 @@ In GMT the seam is almost always the exported function of one namespace (`plain/
 ## Rules of the loop
 
 - **Red before green.** Write the failing test first, then only enough code to pass it. Don't anticipate future tests or add speculative features.
+- **Red is never parked.** A failing test is a bug you fix now: never `it.fails`, `.skip` or `.todo` it into the handoff. GMT ships zero known bugs ([testing standards § Zero known bugs](../../../context/testing-standards/references/index.md#zero-known-bugs)).
 - **One slice at a time.** One seam, one test, one minimal implementation per cycle.
 - **Refactoring is not part of the loop.** It belongs to the review stage (see the `code-review` skill), not the red → green implementation cycle.

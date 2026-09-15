@@ -87,6 +87,14 @@ The same three rules extend to `internal/calendarDateString.ts`'s `parseCalendar
 2. Extracted fields are **always** handed to `Temporal.PlainDate.from(fields, { overflow: "reject" })` for final construction and validation — including rejecting unknown calendar identifiers, which Temporal validates on GMT's behalf.
 3. The try-catch and sentinel-return rules above are unchanged.
 
+> **E1 is not a standard, and it is scheduled for replacement.** No standard defines a machine-readable date string with calendar-native digits: RFC 9557's `[u-ca=<id>]` keeps ISO digits, and `;era=` is not RFC 9557 syntax. [CORE-55](./domination/issues/CORE-55.md) replaces E1 with the standard form (ISO date + `[u-ca=<id>]`, exactly `Temporal.PlainDate#toString()`) in 2.0.0. Until then, keep E1 stable and do not extend it. Decision of record: [calendar-standards-decisions.md](./domination/research/calendar-standards-decisions.md) Q1.
+
+**Year and era tokens (CORE-6).** Both regexes (`regex/calendar-date.ts`, `regex/calendar-zoned-date-time.ts`) share these byte-identical groups, and `internal/formatCalendarYear.ts` writes the year:
+
+- **Year: `(\d{4,6}|-(?!0{6})\d{6})`.** A year ≥ 0 is 4 digits, zero-padded, and grows to 5 or 6 unsigned digits only when needed (`0000`, `5785`, `279517`). A negative calendar year is a minus sign plus exactly 6 digits, the form Temporal's `PadISOYear` writes: `convertDateToCalendar("1000-01-01", "taiwan")` is `"-000911-01-01[u-ca=taiwan]"`. `-0911` (too few digits) and `-000000` (negative zero, a Temporal early error) are rejected. Unsigned 5–6 digit years stay accepted, so no shipped positive year changes; a leading `+` is not accepted.
+- **Era: `;era=([a-z]+(?:-[a-z]+)*)`.** Lowercase ASCII words joined by single hyphens (`reiwa`, `ce`, `bce`, `ethioaa`). The regex proves shape only; `Temporal.PlainDate.from` validates the era.
+- **Japanese era codes are the Intl Era and Month Code proposal's.** `ce` for ISO dates up to 1872-12-31, `bce` for ISO years ≤ 0 (era year = 1 − ISO year), and `meiji` from 1873-01-01 starting at era year 6, then `taisho`, `showa`, `heisei`, `reiwa`. `;era=japanese` is a **deprecated input alias** of `ce`, mapped in `internal/calendarDateString.ts` and removed in 2.0.0 (CORE-55). GMT never emits it. `japanese-inverse` is rejected.
+
 **Which namespaces accept this grammar (E5 issue #78, extended by E7 issue #152):**
 
 - **`plain/` `PlainDate`** — `addDate`/`subtractDate`/`diffDate`/`diffDateAsDuration` and the `Date`-suffixed `plain/interval/*` functions, plus `duration/`'s `relativeTo` option (via `internal/resolveDurationRelativeTo.ts`). `plain/` `PlainDateTime`/`PlainTime` functions have no calendar-annotated grammar of their own and simply treat a `PlainDate` annotation as invalid input.
