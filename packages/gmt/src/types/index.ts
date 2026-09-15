@@ -1,3 +1,4 @@
+export * from "./business-calendar";
 export * from "./calendar-options";
 export * from "./calendar-system";
 export * from "./date-cycle-field";
@@ -23,6 +24,7 @@ export * from "./relative-rounding-method";
 export * from "./relative-time-options";
 export * from "./relative-time-unit";
 export * from "./relative-unit";
+export * from "./roll-convention";
 export * from "./rounding-options";
 export * from "./time-cycle-field";
 export * from "./time-duration-unit";

@@ -8,10 +8,10 @@ description: >
   (startOfZoned/endOfZoned/startOfUnix/endOfUnix, never after the input), hours
   in a local day, and flooring or bucketing instants on local calendar
   boundaries (floorToZone/bucketRange) instead of roundZoned, calendar-annotated
-  zoned strings, and zoned values exact at the range limits (Australia/Sydney
-  at the maximum, Etc/GMT+12 at the minimum). Reads the
-  installed package README.md and source JSDoc for API details; this skill is a
-  routing pointer, not an API dump.
+  zoned strings, and zoned values exact at the range limits (Australia/Sydney at
+  the maximum, Etc/GMT+12 at the minimum). Reads the installed package README.md
+  and source JSDoc for API details; this skill is a routing pointer, not an API
+  dump.
 sources:
   - 'northguild/gmt:README.md'
   - 'northguild/gmt:packages/gmt/src/zoned/get/index.ts'
@@ -33,7 +33,7 @@ sources:
 metadata:
   type: core
   library: '@northguild/gmt'
-  library_version: '1.15.0'
+  library_version: '1.16.0'
 ---
 
 # GMT Timezone

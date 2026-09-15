@@ -23,7 +23,7 @@ describe("advanceBusinessDays", () => {
           1,
           target,
         );
-        expect(result.toString()).toBe(expected);
+        expect(result?.toString()).toBe(expected);
       },
     );
 
@@ -43,7 +43,7 @@ describe("advanceBusinessDays", () => {
           1,
           target,
         );
-        expect(result.toString()).toBe(expected);
+        expect(result?.toString()).toBe(expected);
       },
     );
 
@@ -62,7 +62,7 @@ describe("advanceBusinessDays", () => {
           1,
           target,
         );
-        expect(result.toString()).toBe(expected);
+        expect(result?.toString()).toBe(expected);
       },
     );
 
@@ -85,7 +85,7 @@ describe("advanceBusinessDays", () => {
           1,
           target,
         );
-        expect(result.toString()).toBe(expected);
+        expect(result?.toString()).toBe(expected);
       },
     );
   });
@@ -108,7 +108,7 @@ describe("advanceBusinessDays", () => {
           -1,
           target,
         );
-        expect(result.toString()).toBe(expected);
+        expect(result?.toString()).toBe(expected);
       },
     );
 
@@ -128,7 +128,7 @@ describe("advanceBusinessDays", () => {
           -1,
           target,
         );
-        expect(result.toString()).toBe(expected);
+        expect(result?.toString()).toBe(expected);
       },
     );
 
@@ -147,7 +147,7 @@ describe("advanceBusinessDays", () => {
           -1,
           target,
         );
-        expect(result.toString()).toBe(expected);
+        expect(result?.toString()).toBe(expected);
       },
     );
 
@@ -168,7 +168,7 @@ describe("advanceBusinessDays", () => {
           -1,
           target,
         );
-        expect(result.toString()).toBe(expected);
+        expect(result?.toString()).toBe(expected);
       },
     );
   });
@@ -188,7 +188,7 @@ describe("advanceBusinessDays", () => {
           direction,
           target,
         );
-        expect(result.toString()).toBe(expected);
+        expect(result?.toString()).toBe(expected);
       },
     );
 
@@ -204,7 +204,7 @@ describe("advanceBusinessDays", () => {
           direction,
           target,
         );
-        expect(result.year).toBe(expectedYear);
+        expect(result?.year).toBe(expectedYear);
       },
     );
 
@@ -225,7 +225,7 @@ describe("advanceBusinessDays", () => {
           direction,
           target,
         );
-        expect(result.toString()).toBe(expected);
+        expect(result?.toString()).toBe(expected);
       },
     );
 
@@ -246,7 +246,7 @@ describe("advanceBusinessDays", () => {
           direction,
           target,
         );
-        expect(result.toString()).toBe(expected);
+        expect(result?.toString()).toBe(expected);
       },
     );
   });
