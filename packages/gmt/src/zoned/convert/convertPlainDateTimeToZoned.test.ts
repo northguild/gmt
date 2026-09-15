@@ -205,3 +205,18 @@ describe("convertPlainDateTimeToZoned", () => {
     },
   );
 });
+
+describe("convertPlainDateTimeToZoned at the range limits", () => {
+  it.each`
+    value                           | timeZone                | expected
+    ${"+275760-09-13T10:00:00"}     | ${"Australia/Sydney"}   | ${"+275760-09-13T10:00:00.000+10:00[Australia/Sydney]"}
+    ${"+275760-09-13T14:00:00"}     | ${"Pacific/Kiritimati"} | ${"+275760-09-13T14:00:00.000+14:00[Pacific/Kiritimati]"}
+    ${"+275760-09-13T10:00:00.001"} | ${"Australia/Sydney"}   | ${""}
+    ${"-271821-04-19T20:00:00"}     | ${"America/New_York"}   | ${"-271821-04-19T20:00:00.000-04:56[America/New_York]"}
+  `(
+    "converts $value in $timeZone to $expected",
+    ({ value, timeZone, expected }) => {
+      expect(convertPlainDateTimeToZoned(value, timeZone)).toBe(expected);
+    },
+  );
+});

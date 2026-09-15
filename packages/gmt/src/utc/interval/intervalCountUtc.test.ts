@@ -13,7 +13,7 @@ describe("intervalCountUtc", () => {
     ${"2024-02-29T23:59:59Z"}   | ${"2024-03-01T00:00:01Z"}   | ${"day"}    | ${2}
     ${"2024-01-01T00:00:00.5Z"} | ${"2024-01-01T00:00:01.5Z"} | ${"second"} | ${2}
   `(
-    "returns $expected $unit boundaries for $start..$end",
+    "returns $expected $unit boundaries for $start to $end",
     ({ start, end, unit, expected }) => {
       expect(intervalCountUtc(start, end, unit)).toBe(expected);
     },
@@ -25,7 +25,7 @@ describe("intervalCountUtc", () => {
     ${"2024-01-01T10:30:00Z"} | ${"2024-01-01T12:00:00Z"} | ${"hours"}  | ${2}
     ${"2024-01-15T00:00:00Z"} | ${"2024-03-10T00:00:00Z"} | ${"months"} | ${3}
   `(
-    "returns $expected for $start..$end with plural unit $unit",
+    "returns $expected for $start to $end with plural unit $unit",
     ({ start, end, unit, expected }) => {
       expect(intervalCountUtc(start, end, unit)).toBe(expected);
     },
@@ -38,7 +38,7 @@ describe("intervalCountUtc", () => {
     ${"2024-01-01T00:00:00Z"} | ${"2024-01-01T00:00:00Z"} | ${"hour"} | ${0}
     ${"2024-01-01T05:30:00Z"} | ${"2024-01-01T05:30:00Z"} | ${"hour"} | ${1}
   `(
-    "returns $expected for zero-length $start..$end counted in $unit",
+    "returns $expected for zero-length $start to $end counted in $unit",
     ({ start, end, unit, expected }) => {
       expect(intervalCountUtc(start, end, unit)).toBe(expected);
     },

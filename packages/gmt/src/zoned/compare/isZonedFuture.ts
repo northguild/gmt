@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Return true when `value` represents an instant strictly after now.
@@ -24,7 +25,7 @@ export function isZonedFuture(value: string): boolean {
   }
 
   try {
-    const instant = Temporal.ZonedDateTime.from(value).toInstant();
+    const instant = zonedDateTimeFrom(value).toInstant();
     return Temporal.Instant.compare(instant, Temporal.Now.instant()) === 1;
   } catch {
     return false;

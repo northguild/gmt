@@ -171,7 +171,7 @@ it("returns empty string when Temporal.PlainDate.from throws", () => {
 
 `Intl` locale output can vary between Node versions and even between runners on the _same_ Node version, since CLDR data ships embedded in Node's ICU build. Two helpers in `packages/gmt/src/test/icuVariants.ts` handle the known cases — use whichever matches the failure:
 
-**`oneOfIcu` / `expectOneOfIcu`** — for a golden verified to differ solely by CLDR wording between ICU 77 (Node 20) and ICU 78 (Node 22/24), e.g. pt-PT's day period ("da tarde" → "p.m."), Turkish/Korean long time zone names, Hebrew/Swedish relative-time phrasing:
+**`oneOfIcu` / `expectOneOfIcu`** — for a golden verified to differ solely by CLDR wording between ICU 77 (Node 20) and ICU 78 (Node 22/24/26), e.g. pt-PT's day period ("da tarde" → "p.m."), Turkish/Korean long time zone names, Hebrew/Swedish relative-time phrasing:
 
 ```ts
 import { expectOneOfIcu, oneOfIcu } from "../../test";

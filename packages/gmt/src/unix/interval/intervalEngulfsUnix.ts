@@ -1,11 +1,15 @@
+import { parseUnixEpochIntervalPair } from "../../internal";
+
 /**
  * Return true when interval B is fully contained within interval A — every instant of B
  * falls within A.
  *
  * - Compares numeric Unix epoch values directly.
+ * - Endpoints are inclusive: B may start at A's start and end at A's end.
  * - Equivalent to 4-argument `intervalContainsUnix(aStart, aEnd, bStart, bEnd)`.
  * - Returns `false` if either interval is invalid (`start > end`).
- * - Returns `false` on invalid input (non-numeric types, non-finite values).
+ * - Returns `false` on invalid input: non-numeric types, empty strings, and values that are not
+ *   safe integers (fractions, `NaN`, `±Infinity`, beyond ±(2^53 − 1)).
  *
  * @param aStart Unix epoch value (seconds or milliseconds) — outer interval start
  * @param aEnd Unix epoch value (seconds or milliseconds) — outer interval end
@@ -25,36 +29,12 @@ export function intervalEngulfsUnix(
   bStart: number | string,
   bEnd: number | string,
 ): boolean {
-  if (
-    (typeof aStart !== "number" && typeof aStart !== "string") ||
-    (typeof aEnd !== "number" && typeof aEnd !== "string") ||
-    (typeof bStart !== "number" && typeof bStart !== "string") ||
-    (typeof bEnd !== "number" && typeof bEnd !== "string")
-  ) {
-    return false;
-  }
+  const pair = parseUnixEpochIntervalPair(aStart, aEnd, bStart, bEnd);
 
-  const n1 = typeof aStart === "number" ? aStart : Number(aStart);
-  const n2 = typeof aEnd === "number" ? aEnd : Number(aEnd);
-  const n3 = typeof bStart === "number" ? bStart : Number(bStart);
-  const n4 = typeof bEnd === "number" ? bEnd : Number(bEnd);
-
-  if (
-    !Number.isFinite(n1) ||
-    !Number.isFinite(n2) ||
-    !Number.isFinite(n3) ||
-    !Number.isFinite(n4)
-  ) {
-    return false;
-  }
-
-  if (n1 > n2) {
-    return false;
-  }
-
-  if (n3 > n4) {
-    return false;
-  }
-
-  return n1 <= n3 && n4 <= n2;
+  // B's start and end both fall inside A.
+  return (
+    pair !== null &&
+    pair[0].start <= pair[1].start &&
+    pair[1].end <= pair[0].end
+  );
 }

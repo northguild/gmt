@@ -170,6 +170,22 @@ describe("diffDate", () => {
     ).toBe(1);
   });
 
+  // CORE-6 D6/D7: see diffDateAsDuration.test.ts. Chromium 152 native Temporal
+  // (q2-grid-chromium152.json): buddhist 2023-08-31 +30 d is P30D, hebrew 2024-02-11 +384 d is
+  // P12M29D with largestUnit years.
+  it.each`
+    date1                          | date2                          | unit                   | expected                    | reason
+    ${"2566-08-31[u-ca=buddhist]"} | ${"2566-09-30[u-ca=buddhist]"} | ${"months"}            | ${0}                        | ${"D6: 30 days, not a month"}
+    ${"2566-08-31[u-ca=buddhist]"} | ${"2566-09-30[u-ca=buddhist]"} | ${["months", "days"]}  | ${{ months: 0, days: 30 }}  | ${"D6 record"}
+    ${"5784-06-02[u-ca=hebrew]"}   | ${"5785-06-01[u-ca=hebrew]"}   | ${"years"}             | ${0}                        | ${"D7: not null"}
+    ${"5784-06-02[u-ca=hebrew]"}   | ${"5785-06-01[u-ca=hebrew]"}   | ${["years", "months"]} | ${{ years: 0, months: 12 }} | ${"D7 record"}
+  `(
+    "returns $expected for $unit from $date1 to $date2 ($reason)",
+    ({ date1, date2, unit, expected }) => {
+      expect(diffDate(date1, date2, unit)).toEqual(expected);
+    },
+  );
+
   it("falls back to Gregorian when the two endpoints' calendars mismatch", () => {
     expect(
       diffDate("5785-01-01[u-ca=hebrew]", "2024-11-03", "days"), // 5785-01-01 hebrew = 2024-10-03

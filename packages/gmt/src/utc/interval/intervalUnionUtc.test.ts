@@ -11,7 +11,7 @@ describe("intervalUnionUtc", () => {
     ${"2024-01-01T00:00:00Z"} | ${"2024-06-30T23:59:59Z"} | ${"2024-06-29T00:00:00Z"} | ${"2024-06-29T00:00:00Z"} | ${{ start: "2024-01-01T00:00:00Z", end: "2024-06-30T23:59:59Z" }}
     ${"2024-06-30T23:59:59Z"} | ${"2024-06-30T23:59:59Z"} | ${"2024-06-30T23:59:59Z"} | ${"2024-06-30T23:59:59Z"} | ${{ start: "2024-06-30T23:59:59Z", end: "2024-06-30T23:59:59Z" }}
   `(
-    "returns merged interval when $aStart..$aEnd overlaps $bStart..$bEnd",
+    "returns merged interval when $aStart to $aEnd overlaps $bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalUnionUtc(aStart, aEnd, bStart, bEnd)).toEqual(expected);
     },

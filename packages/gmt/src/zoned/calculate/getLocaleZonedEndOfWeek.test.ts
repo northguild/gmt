@@ -6,6 +6,7 @@ import {
 } from "../../test";
 import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
 import { getLocaleZonedEndOfWeek } from "./getLocaleZonedEndOfWeek";
+import { runtimeWeekInfo } from "../../test/runtimeWeekInfo";
 
 // Shared instant for local-week-boundary coverage: 2024-02-03T23:00:00Z is
 // Saturday in UTC, but zones at a positive offset (Europe/Berlin eastward
@@ -132,7 +133,7 @@ describe("getLocaleZonedEndOfWeek", () => {
   );
 
   it("returns the correct end-of-week for is-IS regardless of its CLDR-version-dependent firstDay", () => {
-    const firstDay = new Intl.Locale(MustTestLocales.isIS).weekInfo.firstDay;
+    const firstDay = runtimeWeekInfo(MustTestLocales.isIS).firstDay;
     const expected =
       firstDay === 1
         ? "2024-02-04T23:59:59+00:00[Atlantic/Reykjavik]"
@@ -218,6 +219,8 @@ describe("getLocaleZonedEndOfWeek across zone transitions with default options",
     ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${MustTestLocales.enUS} | ${"2010-11-06T23:59:59-04:00[America/Goose_Bay]"} | ${"Goose Bay fell back at 00:01 Sunday; the re-opened week ends at the second Sunday midnight"}
     ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${MustTestLocales.frFR} | ${"2010-11-07T23:59:59-04:00[America/Goose_Bay]"} | ${"a Monday-first week runs straight through the same transition"}
     ${"2024-09-11T12:00:00-03:00[America/Santiago]"}  | ${MustTestLocales.enUS} | ${"2024-09-14T23:59:59-03:00[America/Santiago]"}  | ${"the week after Santiago's skipped Sunday midnight"}
+    ${"-271821-04-20T12:00:00+00:00[UTC]"}            | ${MustTestLocales.enUS} | ${"-271821-04-24T23:59:59+00:00[UTC]"}            | ${"the first representable instant; its Sunday-first week began before the range but ends on Saturday"}
+    ${"-271821-04-20T12:00:00+00:00[UTC]"}            | ${MustTestLocales.frFR} | ${"-271821-04-25T23:59:59+00:00[UTC]"}            | ${"the first representable instant; its Monday-first week began before the range but ends on Sunday"}
   `(
     "returns $expected for $value in $locale ($description)",
     ({ value, locale, expected }) => {

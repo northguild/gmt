@@ -2,12 +2,13 @@ import { intervalAbutsUtc } from "./intervalAbutsUtc";
 
 describe("intervalAbutsUtc", () => {
   it.each`
-    aStart                    | aEnd                                | bStart                              | bEnd                                | expected
-    ${"2024-01-01T09:00:00Z"} | ${"2024-06-30T12:00:00Z"}           | ${"2024-06-30T12:00:00.000000001Z"} | ${"2024-12-31T17:00:00Z"}           | ${true}
-    ${"2024-06-30T12:00:00Z"} | ${"2024-12-31T17:00:00Z"}           | ${"2024-01-01T09:00:00Z"}           | ${"2024-06-30T12:00:00.000000001Z"} | ${false}
-    ${"2024-01-01T09:00:00Z"} | ${"2024-01-01T09:00:00.000000001Z"} | ${"2024-01-01T09:00:00.000000002Z"} | ${"2024-12-31T17:00:00Z"}           | ${true}
+    aStart                              | aEnd                                | bStart                              | bEnd                                | expected
+    ${"2024-01-01T09:00:00Z"}           | ${"2024-06-30T12:00:00Z"}           | ${"2024-06-30T12:00:00.000000001Z"} | ${"2024-12-31T17:00:00Z"}           | ${true}
+    ${"2024-06-30T12:00:00Z"}           | ${"2024-12-31T17:00:00Z"}           | ${"2024-01-01T09:00:00Z"}           | ${"2024-06-30T12:00:00.000000001Z"} | ${false}
+    ${"2024-01-01T09:00:00Z"}           | ${"2024-01-01T09:00:00.000000001Z"} | ${"2024-01-01T09:00:00.000000002Z"} | ${"2024-12-31T17:00:00Z"}           | ${true}
+    ${"2024-06-30T12:00:00.000000001Z"} | ${"2024-12-31T17:00:00Z"}           | ${"2024-01-01T09:00:00Z"}           | ${"2024-06-30T12:00:00Z"}           | ${true}
   `(
-    "returns $expected when A=$aStart..$aEnd and B=$bStart..$bEnd",
+    "returns $expected when A=$aStart to $aEnd and B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalAbutsUtc(aStart, aEnd, bStart, bEnd)).toBe(expected);
     },
@@ -72,4 +73,19 @@ describe("intervalAbutsUtc", () => {
   `("returns false for leap second input", ({ aStart, aEnd, bStart, bEnd }) => {
     expect(intervalAbutsUtc(aStart, aEnd, bStart, bEnd)).toBe(false);
   });
+
+  // The last representable Instant is +275760-09-13T00:00:00Z. B ends one nanosecond before A
+  // starts (T12:00:00Z - 1 ns = T11:59:59.999999999Z), so they abut in either order, even though
+  // nothing can be added to A's end.
+  it.each`
+    aStart                       | aEnd                                   | bStart                       | bEnd                                   | expected
+    ${"+275760-09-12T12:00:00Z"} | ${"+275760-09-13T00:00:00Z"}           | ${"+275760-09-12T00:00:00Z"} | ${"+275760-09-12T11:59:59.999999999Z"} | ${true}
+    ${"+275760-09-12T00:00:00Z"} | ${"+275760-09-12T11:59:59.999999999Z"} | ${"+275760-09-12T12:00:00Z"} | ${"+275760-09-13T00:00:00Z"}           | ${true}
+    ${"+275760-09-13T00:00:00Z"} | ${"+275760-09-13T00:00:00Z"}           | ${"+275760-09-12T00:00:00Z"} | ${"+275760-09-12T11:59:59.999999999Z"} | ${false}
+  `(
+    "returns $expected when A=[$aStart, $aEnd] and B=[$bStart, $bEnd] (an end at the maximum Instant)",
+    ({ aStart, aEnd, bStart, bEnd, expected }) => {
+      expect(intervalAbutsUtc(aStart, aEnd, bStart, bEnd)).toBe(expected);
+    },
+  );
 });

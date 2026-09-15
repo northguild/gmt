@@ -6,6 +6,8 @@ import { utcDateTime } from "../../regex/utc-date-time";
  * Return the symmetric difference of two UTC intervals — time covered by exactly one interval.
  *
  * - Uses `Temporal.Instant.compare` for comparison.
+ * - Endpoints are inclusive, so a returned piece ends one nanosecond before, or starts
+ *   one nanosecond after, the interval it borders.
  * - Returns `[]` when intervals are identical or both invalid.
  * - Returns `[{ start, end }]` when one interval fully contains the other.
  * - Returns `[{ start, end }, { start, end }]` when intervals partially overlap.
@@ -18,8 +20,8 @@ import { utcDateTime } from "../../regex/utc-date-time";
  * @param bEnd ISO 8601 UTC datetime string for the second interval end
  * @returns array of `{ start, end }` records representing the symmetric difference, or `[]` on invalid input
  *
- * @example intervalXorUtc("2024-01-01T09:00:00Z", "2024-06-30T12:00:00Z", "2024-04-01T11:00:00Z", "2024-12-31T17:00:00Z") // [{ start: "2024-01-01T09:00:00Z", end: "2024-03-31T17:00:00Z" }, { start: "2024-06-30T12:00:01Z", end: "2024-12-31T17:00:00Z" }]
- * @example intervalXorUtc("2024-01-01T09:00:00Z", "2024-12-31T17:00:00Z", "2024-04-01T11:00:00Z", "2024-06-30T12:00:00Z") // [{ start: "2024-01-01T09:00:00Z", end: "2024-03-31T17:00:00Z" }, { start: "2024-06-30T12:00:01Z", end: "2024-12-31T17:00:00Z" }]
+ * @example intervalXorUtc("2024-01-01T09:00:00Z", "2024-06-30T12:00:00Z", "2024-04-01T11:00:00Z", "2024-12-31T17:00:00Z") // [{ start: "2024-01-01T09:00:00Z", end: "2024-04-01T10:59:59.999999999Z" }, { start: "2024-06-30T12:00:00.000000001Z", end: "2024-12-31T17:00:00Z" }]
+ * @example intervalXorUtc("2024-01-01T09:00:00Z", "2024-12-31T17:00:00Z", "2024-04-01T11:00:00Z", "2024-06-30T12:00:00Z") // [{ start: "2024-01-01T09:00:00Z", end: "2024-04-01T10:59:59.999999999Z" }, { start: "2024-06-30T12:00:00.000000001Z", end: "2024-12-31T17:00:00Z" }]
  * @example intervalXorUtc("2024-01-01T09:00:00Z", "2024-12-31T17:00:00Z", "2024-01-01T09:00:00Z", "2024-12-31T17:00:00Z") // []
  * @example intervalXorUtc("invalid", "2024-06-30T12:00:00Z", "2024-07-01T13:00:00Z", "2024-12-31T17:00:00Z") // []
  */

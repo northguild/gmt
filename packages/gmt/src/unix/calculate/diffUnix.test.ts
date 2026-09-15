@@ -144,3 +144,97 @@ describe("diffUnix", () => {
     expect(diffUnix(1709164800000, 1709170200000, "hours")).toBeNull();
   });
 });
+
+// The last representable instant, +275760-09-13T00:00:00Z, in epoch milliseconds (TC39 nsMaxInstant).
+const MAX_MS = 8_640_000_000_000_000;
+const HOUR_MS = 3_600_000;
+const DAY_MS = 24 * HOUR_MS;
+
+describe("diffUnix at the maximum instant", () => {
+  // TC39 DifferenceZonedDateTime: in a zone ahead of UTC the end's wall clock runs past
+  // +275760-09-13T00:00, but its exact time is in range, so the whole days are returned.
+  it.each`
+    value1             | value2    | timeZone                | expected
+    ${MAX_MS - DAY_MS} | ${MAX_MS} | ${"Australia/Sydney"}   | ${1}
+    ${MAX_MS - DAY_MS} | ${MAX_MS} | ${"Pacific/Kiritimati"} | ${1}
+  `(
+    "returns $expected days from $value1 to $value2 in $timeZone",
+    ({ value1, value2, timeZone, expected }) => {
+      expect(diffUnix(value1, value2, "days", { timeZone })).toBe(expected);
+    },
+  );
+
+  // TC39 NudgeToCalendarUnit: rounding to a day looks at the day after the end, which is
+  // past the last representable date, so Temporal throws.
+  it.each`
+    value1             | value2    | timeZone
+    ${MAX_MS - DAY_MS} | ${MAX_MS} | ${"Australia/Sydney"}
+    ${MAX_MS - DAY_MS} | ${MAX_MS} | ${"Pacific/Kiritimati"}
+  `(
+    "returns null rounding days to a day from $value1 to $value2 in $timeZone",
+    ({ value1, value2, timeZone }) => {
+      expect(
+        diffUnix(value1, value2, "days", { timeZone, smallestUnit: "day" }),
+      ).toBeNull();
+    },
+  );
+
+  // TC39 NudgeToZonedTime: rounding P3DT5H to an hour resolves the wall clock one day after
+  // +275760-09-12T19:00, i.e. 19 hours past the maximum, and GetPossibleEpochNanoseconds rejects
+  // it in every zone — UTC included, which resolves exactly like +00:00.
+  it.each`
+    timeZone
+    ${"UTC"}
+    ${"Europe/London"}
+  `(
+    "returns null rounding to an hour from max - 3d5h to max in $timeZone",
+    ({ timeZone }) => {
+      expect(
+        diffUnix(MAX_MS - 3 * DAY_MS - 5 * HOUR_MS, MAX_MS, "days", {
+          timeZone,
+          smallestUnit: "hour",
+        }),
+      ).toBeNull();
+    },
+  );
+
+  // Five days earlier the same rounding stays in range: P5DT5H is 5 whole days in each zone.
+  it.each`
+    timeZone
+    ${"UTC"}
+    ${"Europe/London"}
+  `(
+    "returns 5 rounding to an hour from max - 10d5h to max - 5d in $timeZone",
+    ({ timeZone }) => {
+      expect(
+        diffUnix(
+          MAX_MS - 10 * DAY_MS - 5 * HOUR_MS,
+          MAX_MS - 5 * DAY_MS,
+          "days",
+          {
+            timeZone,
+            smallestUnit: "hour",
+          },
+        ),
+      ).toBe(5);
+    },
+  );
+});
+
+// The first representable instant, -271821-04-20T00:00:00Z, in epoch milliseconds (TC39 nsMinInstant).
+const MIN_MS = -MAX_MS;
+
+describe("diffUnix at the minimum instant", () => {
+  // TC39 DifferenceZonedDateTime: in a zone behind UTC the minimum's wall clock falls on
+  // -271821-04-19, a date whose exact times are in range, so one day back is exactly -1 day.
+  it.each`
+    value1             | value2    | timeZone
+    ${MIN_MS + DAY_MS} | ${MIN_MS} | ${"America/New_York"}
+    ${MIN_MS + DAY_MS} | ${MIN_MS} | ${"Pacific/Honolulu"}
+  `(
+    "returns -1 days from $value1 to $value2 in $timeZone",
+    ({ value1, value2, timeZone }) => {
+      expect(diffUnix(value1, value2, "days", { timeZone })).toBe(-1);
+    },
+  );
+});

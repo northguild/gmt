@@ -1,5 +1,8 @@
 import type { Temporal } from "@js-temporal/polyfill";
-import { parseCalendarDatePairForArithmetic } from "../../internal";
+import {
+  parseCalendarDatePairForArithmetic,
+  plainDateUntil,
+} from "../../internal";
 import type { DateDurationUnit, RoundingOptions } from "../../types";
 import { isValidCalendarDate, isValidDateDurationUnit } from "../validate";
 import { getLargestDateDurationUnit } from "./getLargestDateDurationUnit";
@@ -8,7 +11,9 @@ import { getLargestDateDurationUnit } from "./getLargestDateDurationUnit";
  * Return the difference between two PlainDate values using the provided `unit`.
  *
  * - Returns `null` for invalid inputs (negative diffs are valid).
- * - Uses Temporal.PlainDate.until and extracts the requested unit.
+ * - Uses Temporal's `until` semantics (TC39 CalendarDateUntil; for non-ISO calendars the Intl
+ *   era/monthCode proposal's NonISODateUntil, e.g. Buddhist Aug 31 to Sep 30 is 30 days, not a
+ *   month) and extracts the requested unit.
  * - Accepts GMT calendar-annotated PlainDate strings (as produced by `convertDateToCalendar`) —
  *   E5 (issue #78). When both `date1` and `date2` carry the *same* calendar tag, the difference
  *   is measured in that calendar (a Hebrew leap year is `P12M12D`, not `P1Y`, in month/day
@@ -32,6 +37,7 @@ import { getLargestDateDurationUnit } from "./getLargestDateDurationUnit";
  * @example diffDate("invalid", "2024-03-15", "day") // null
  * @example diffDate("2024-01-01", "2024-01-16", "week", { smallestUnit: "week", roundingMode: "halfExpand" }) // 2
  * @example diffDate("5784-06-15[u-ca=hebrew]", "5784-07-15[u-ca=hebrew]", "months") // 1 (measured in Hebrew, Adar I -> Adar)
+ * @example diffDate("2566-08-31[u-ca=buddhist]", "2566-09-30[u-ca=buddhist]", "months") // 0 (30 days, not a month)
  */
 export function diffDate(
   date1: string,
@@ -52,14 +58,14 @@ export function diffDate(
   try {
     const { a: d1, b: d2 } = parseCalendarDatePairForArithmetic(date1, date2);
 
-    const duration = d1.until(d2, {
-      largestUnit: isSingleUnit
+    const duration = plainDateUntil(
+      d1,
+      d2,
+      isSingleUnit
         ? unitArg
         : getLargestDateDurationUnit(unitArg as DateDurationUnit[]),
-      smallestUnit: options?.smallestUnit,
-      roundingIncrement: options?.roundingIncrement,
-      roundingMode: options?.roundingMode,
-    });
+      options,
+    );
 
     // craft record for units passed
     if (isSingleUnit) {

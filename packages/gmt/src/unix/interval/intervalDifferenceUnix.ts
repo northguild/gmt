@@ -1,12 +1,19 @@
+import { parseUnixEpochIntervalPair } from "../../internal";
+
 /**
  * Return the portion(s) of interval A not covered by interval B.
  *
  * - Compares numeric Unix epoch values directly.
+ * - Endpoints are inclusive, so a returned piece ends one epoch unit before, or starts
+ *   one epoch unit after, the interval it borders.
  * - Returns `[]` when B fully covers A.
  * - Returns `[{ start, end }]` when B overlaps one edge of A (or equals A).
  * - Returns `[{ start, end }, { start, end }]` when B is fully inside A with gaps on both sides.
+ * - Returns A unchanged when B lies entirely before or after it.
  * - Returns `[]` if either interval is invalid (`start > end`).
- * - Returns `[]` on invalid input (non-numeric types, non-finite values).
+ * - Returns `[]` on invalid input: non-numeric types, empty strings, and values that are not safe
+ *   integers (fractions, `NaN`, `±Infinity`, beyond ±(2^53 − 1)), where "one unit before" has no
+ *   meaning.
  *
  * @param aStart Unix epoch value (seconds or milliseconds) — first interval start
  * @param aEnd Unix epoch value (seconds or milliseconds) — first interval end
@@ -14,9 +21,11 @@
  * @param bEnd Unix epoch value (seconds or milliseconds) — second interval end
  * @returns array of `{ start, end }` records representing A minus B, or `[]` on invalid input
  *
- * @example intervalDifferenceUnix(0, 1700000000, 1500000000, 1600000000) // [{ start: 0, end: 1499999999 }]
+ * @example intervalDifferenceUnix(0, 1700000000, 1500000000, 1600000000) // [{ start: 0, end: 1499999999 }, { start: 1600000001, end: 1700000000 }]
  * @example intervalDifferenceUnix(0, 1700000000, 0, 1700000000) // []
  * @example intervalDifferenceUnix(NaN, 1700000000, 1500000000, 1600000000) // []
+ * @example intervalDifferenceUnix(0, 2, 0.5, 1) // [] (fractional epoch)
+ * @example intervalDifferenceUnix(5, 10, 0, 2) // [{ start: 5, end: 10 }] (B entirely before A)
  */
 export function intervalDifferenceUnix(
   aStart: number | string,
@@ -24,51 +33,20 @@ export function intervalDifferenceUnix(
   bStart: number | string,
   bEnd: number | string,
 ): Array<{ start: number; end: number }> {
-  if (
-    (typeof aStart !== "number" && typeof aStart !== "string") ||
-    (typeof aEnd !== "number" && typeof aEnd !== "string") ||
-    (typeof bStart !== "number" && typeof bStart !== "string") ||
-    (typeof bEnd !== "number" && typeof bEnd !== "string")
-  ) {
+  const pair = parseUnixEpochIntervalPair(aStart, aEnd, bStart, bEnd);
+
+  if (pair === null) {
     return [];
   }
 
-  const n1 = typeof aStart === "number" ? aStart : Number(aStart);
-  const n2 = typeof aEnd === "number" ? aEnd : Number(aEnd);
-  const n3 = typeof bStart === "number" ? bStart : Number(bStart);
-  const n4 = typeof bEnd === "number" ? bEnd : Number(bEnd);
+  const [a, b] = pair;
 
-  if (
-    !Number.isFinite(n1) ||
-    !Number.isFinite(n2) ||
-    !Number.isFinite(n3) ||
-    !Number.isFinite(n4)
-  ) {
-    return [];
-  }
+  // The part of A before B starts, and the part after B ends — each clipped to A, so a B lying
+  // entirely before or after A leaves A whole.
+  const pieces = [
+    { start: a.start, end: Math.min(a.end, b.start - 1) },
+    { start: Math.max(a.start, b.end + 1), end: a.end },
+  ];
 
-  if (n1 > n2) {
-    return [];
-  }
-
-  if (n3 > n4) {
-    return [];
-  }
-
-  const result: Array<{ start: number; end: number }> = [];
-
-  // Left piece: A before B starts
-  if (n1 < n3) {
-    const leftEnd = n2 < n3 ? n2 : n3 - 1;
-    if (leftEnd >= n1) {
-      result.push({ start: n1, end: leftEnd });
-    }
-  }
-
-  // Right piece: A after B ends
-  if (n2 > n4) {
-    result.push({ start: n4 + 1, end: n2 });
-  }
-
-  return result;
+  return pieces.filter((piece) => piece.start <= piece.end);
 }

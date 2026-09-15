@@ -211,3 +211,15 @@ describe("mapZonedHoursInDay", () => {
     },
   );
 });
+
+describe("mapZonedHoursInDay at the range limits", () => {
+  it("lists the 23 hours of America/Santiago's 7 Sep 275760, starting at the 01:00 transition", () => {
+    const result = mapZonedHoursInDay(
+      "+275760-09-07T12:00:00-03:00[America/Santiago]",
+    );
+
+    expect(result).toHaveLength(23);
+    expect(result[0]).toBe("+275760-09-07T01:00:00-03:00[America/Santiago]");
+    expect(result[22]).toBe("+275760-09-07T23:00:00-03:00[America/Santiago]");
+  });
+});

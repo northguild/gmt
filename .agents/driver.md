@@ -78,6 +78,10 @@ tracker `Status` + `pnpm deps:sync`, `pnpm run validate`. Draft a commit message
 open the PR. Never run `changeset version`, `changeset publish`, `npm publish` or
 `gh release create` (see `PUBLISHING.md`).
 
+## Zero known bugs
+
+A defect reported by any agent (`tdd-dev`, `tester`, `finalizer`, a review) is a blocker for the story it was found in. Route it to `tdd-dev` and get it fixed before the next pipeline step runs. Never defer it to another story, pin it with `it.fails`, skip it, or document it as known. `finalizer` does not run while one is open. See [AGENTS.md Core Rule 12](../AGENTS.md#core-rules-quick-reference).
+
 ## Blocker escalation
 
 If any step hits a blocker (a design conflict, tests that cannot pass, a changeset that cannot

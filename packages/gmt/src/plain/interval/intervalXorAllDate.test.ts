@@ -116,4 +116,17 @@ describe("intervalXorAllDate", () => {
       ]),
     ).toEqual([]);
   });
+
+  // The last representable PlainDate is +275760-09-13, so no boundary may be computed as
+  // `end + 1 day`. Nested: 09-11..09-12 is covered twice, leaving 09-10 and 09-13 covered once.
+  it.each`
+    intervals                                                                                               | expected
+    ${[{ start: "+275760-09-10", end: "+275760-09-13" }]}                                                   | ${[{ start: "+275760-09-10", end: "+275760-09-13" }]}
+    ${[{ start: "+275760-09-10", end: "+275760-09-13" }, { start: "+275760-09-11", end: "+275760-09-12" }]} | ${[{ start: "+275760-09-10", end: "+275760-09-10" }, { start: "+275760-09-13", end: "+275760-09-13" }]}
+  `(
+    "returns $expected for $intervals (an end at the maximum PlainDate)",
+    ({ intervals, expected }) => {
+      expect(intervalXorAllDate(intervals)).toEqual(expected);
+    },
+  );
 });

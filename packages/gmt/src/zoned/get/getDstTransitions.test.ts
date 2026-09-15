@@ -175,3 +175,21 @@ describe("getDstTransitions", () => {
     }
   });
 });
+
+describe("getDstTransitions in the last representable year", () => {
+  // tzdata Chile rules: "Apr Sun>=2 3:00u" and "Sep Sun>=2 4:00u"; both are Sundays in 275760.
+  it("lists both America/Santiago transitions of 275760, including the one six days before the maximum", () => {
+    expect(getDstTransitions("America/Santiago", 275760)).toEqual([
+      {
+        instant: "+275760-04-06T03:00:00Z",
+        offsetBefore: "-03:00",
+        offsetAfter: "-04:00",
+      },
+      {
+        instant: "+275760-09-07T04:00:00Z",
+        offsetBefore: "-04:00",
+        offsetAfter: "-03:00",
+      },
+    ]);
+  });
+});

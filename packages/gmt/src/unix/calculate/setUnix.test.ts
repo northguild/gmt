@@ -128,3 +128,16 @@ describe("setUnix", () => {
     ).toBeNull();
   });
 });
+
+describe("setUnix at the maximum instant", () => {
+  // 8_639_999_992_800_000 ms is 08:00 in Sydney; hour 9 is 8_639_999_996_400_000.
+  it.each`
+    value                    | fields         | timeZone              | expected
+    ${8_639_999_992_800_000} | ${{ hour: 9 }} | ${"Australia/Sydney"} | ${8_639_999_996_400_000}
+  `(
+    "sets $fields on $value in $timeZone giving $expected",
+    ({ value, fields, timeZone, expected }) => {
+      expect(setUnix(value, fields, { timeZone })).toBe(expected);
+    },
+  );
+});

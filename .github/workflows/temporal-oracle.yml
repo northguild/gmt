@@ -1,0 +1,62 @@
+name: Temporal oracle
+
+# Compares GMT's calendar results against Chromium's native Temporal (CORE-6 spec §6.3) and
+# reports which @js-temporal/polyfill workarounds are still needed. Manual and weekly only:
+# never part of ci.yml, because Node has no native Temporal and "upstream still broken" must
+# never fail CI. A failing run means a GMT result differs from native Temporal on a row that
+# the script's tag list does not explain — a GMT bug to fix.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Mondays 06:17 UTC
+    - cron: "17 6 * * 1"
+
+concurrency:
+  group: temporal-oracle
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  oracle:
+    name: Native Temporal oracle
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Approve pnpm build scripts
+        run: pnpm approve-builds --all
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm --filter @gmt/dox exec playwright install --with-deps chromium
+
+      - name: Build
+        run: pnpm build
+
+      - name: Workaround canary
+        run: pnpm compat
+
+      - name: Native oracle
+        run: pnpm compat:oracle
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: temporal-oracle-${{ github.run_id }}
+          path: artifacts/
+          if-no-files-found: warn

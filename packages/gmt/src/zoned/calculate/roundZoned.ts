@@ -1,5 +1,9 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { defaultFractionalDigits } from "../../internal";
+import {
+  defaultFractionalDigits,
+  roundZonedDateTime,
+  zonedDateTimeFrom,
+} from "../../internal";
 import { isValidZonedDateTime } from "../validate";
 
 /**
@@ -57,8 +61,8 @@ export function roundZoned(
   if (!supportedUnits.includes(smallestUnit)) return "";
 
   try {
-    const source = Temporal.ZonedDateTime.from(value);
-    const result = source.round({
+    const source = zonedDateTimeFrom(value);
+    const result = roundZonedDateTime(source, {
       smallestUnit,
       roundingIncrement,
       roundingMode,

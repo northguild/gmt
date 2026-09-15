@@ -10,6 +10,8 @@ import { isValidCalendarDate } from "../validate";
  * Return the symmetric difference of two date intervals — time covered by exactly one interval.
  *
  * - Uses `Temporal.PlainDate.compare` for comparison.
+ * - Endpoints are inclusive, so a returned piece ends one day before, or starts
+ *   one day after, the interval it borders.
  * - Returns `[]` when intervals are identical or both invalid.
  * - Returns `[{ start, end }]` when one interval fully contains the other.
  * - Returns `[{ start, end }, { start, end }]` when intervals partially overlap (two non-overlapping pieces).

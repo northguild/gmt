@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { hasCalendarAnnotation } from "../../../internal";
+import { hasCalendarAnnotation, zonedDateTimeFrom } from "../../../internal";
 import { isLeapSecond } from "../../../plain/validate/isLeapSecond";
 
 /**
@@ -39,8 +39,8 @@ export function isValidZonedInterval(start: string, end: string): boolean {
   }
 
   try {
-    const startInstant = Temporal.ZonedDateTime.from(start).toInstant();
-    const endInstant = Temporal.ZonedDateTime.from(end).toInstant();
+    const startInstant = zonedDateTimeFrom(start).toInstant();
+    const endInstant = zonedDateTimeFrom(end).toInstant();
 
     return Temporal.Instant.compare(startInstant, endInstant) <= 0;
   } catch {

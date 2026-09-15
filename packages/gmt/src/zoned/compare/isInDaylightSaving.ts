@@ -1,5 +1,5 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Check whether a zoned value's instant falls within daylight saving time.
@@ -31,7 +31,7 @@ export function isInDaylightSaving(value: string): boolean {
   }
 
   try {
-    const zonedDateTime = Temporal.ZonedDateTime.from(value);
+    const zonedDateTime = zonedDateTimeFrom(value);
     const { timeZoneId: timeZone, year } = zonedDateTime;
 
     // Sample the zone's offset 6 months apart, within the same calendar year
@@ -44,7 +44,7 @@ export function isInDaylightSaving(value: string): boolean {
     // fixed reference year, and doesn't attempt to detect a zone whose
     // standard offset itself changed permanently mid-year (rare, and H3
     // shares the same limitation).
-    const januaryOffsetNanoseconds = Temporal.ZonedDateTime.from({
+    const januaryOffsetNanoseconds = zonedDateTimeFrom({
       year,
       month: 1,
       day: 15,
@@ -54,7 +54,7 @@ export function isInDaylightSaving(value: string): boolean {
       timeZone,
     }).offsetNanoseconds;
 
-    const julyOffsetNanoseconds = Temporal.ZonedDateTime.from({
+    const julyOffsetNanoseconds = zonedDateTimeFrom({
       year,
       month: 7,
       day: 15,

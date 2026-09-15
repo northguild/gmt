@@ -6,8 +6,9 @@
  *   5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]
  *   0031-04-30T12:00:00+09:00[u-ca=japanese;era=heisei][Asia/Tokyo]
  *
- * The date half (`(\d{4,6})-(\d{2})-(\d{2})`) and the annotation half
- * (`\[u-ca=([a-z][a-z0-9-]*)(?:;era=([a-z]+))?\]`) are deliberately byte-identical to
+ * The date half (`(\d{4,6}|-(?!0{6})\d{6})-(\d{2})-(\d{2})`: a negative year is a sign plus six
+ * digits, never `-000000`) and the annotation half
+ * (`\[u-ca=([a-z][a-z0-9-]*)(?:;era=([a-z]+(?:-[a-z]+)*))?\]`) are deliberately byte-identical to
  * `calendarDate`'s, so the two grammars cannot drift apart —
  * `calendar-zoned-date-time.test.ts` asserts every `convertDateToCalendar` output splices
  * into this pattern.
@@ -44,4 +45,4 @@
  * @example calendarZonedDateTime.test("2024-03-15T14:30:00Z") // false (no calendar tag)
  */
 export const calendarZonedDateTime: RegExp =
-  /^(\d{4,6})-(\d{2})-(\d{2})T(\d{2}:\d{2}(?::\d{2}(?:[.,]\d{1,9})?)?)((?:[+-]\d{2}:\d{2}(?::\d{2}(?:[.,]\d{1,9})?)?)|[Zz])?\[u-ca=([a-z][a-z0-9-]*)(?:;era=([a-z]+))?\]\[([^[\]]+)\]$/;
+  /^(\d{4,6}|-(?!0{6})\d{6})-(\d{2})-(\d{2})T(\d{2}:\d{2}(?::\d{2}(?:[.,]\d{1,9})?)?)((?:[+-]\d{2}:\d{2}(?::\d{2}(?:[.,]\d{1,9})?)?)|[Zz])?\[u-ca=([a-z][a-z0-9-]*)(?:;era=([a-z]+(?:-[a-z]+)*))?\]\[([^[\]]+)\]$/;

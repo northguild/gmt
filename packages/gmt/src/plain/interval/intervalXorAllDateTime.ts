@@ -1,4 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { closedXorSweep } from "../../internal";
 import { isValidDateTimeInterval } from "./validate";
 
 /**
@@ -6,10 +7,10 @@ import { isValidDateTimeInterval } from "./validate";
  * covered by an odd number of the input intervals.
  *
  * - List-form generalization of `intervalXorDateTime`, which is pairwise only.
- * - Implemented as a coverage sweep: each interval contributes a `+1` at its start and a `-1`
- *   one nanosecond after its end; the result is every maximal run where the running coverage
- *   count is odd. For two intervals this reduces to exactly `intervalXorDateTime`'s pairwise
- *   result.
+ * - Implemented as a closed-interval coverage sweep: each interval opens at its start and closes
+ *   at its end, and the result is every maximal run where the coverage count is odd. No boundary
+ *   is computed past an end, so an interval may end on the last representable value. For two
+ *   overlapping intervals this reduces to exactly `intervalXorDateTime`'s pairwise result.
  * - Order of the input list does not matter; the result is sorted by start.
  * - Returns `[]` for an empty list, and `[]` when every instant is covered an even number of
  *   times (e.g. two identical intervals cancel out).
@@ -42,50 +43,19 @@ export function intervalXorAllDateTime(
   }
 
   try {
-    const events: Array<{ point: Temporal.PlainDateTime; delta: number }> = [];
+    const parsed = intervals.map((interval) => ({
+      start: Temporal.PlainDateTime.from(interval.start),
+      end: Temporal.PlainDateTime.from(interval.end),
+    }));
 
-    for (const interval of intervals) {
-      const start = Temporal.PlainDateTime.from(interval.start);
-      const closesAfter = Temporal.PlainDateTime.from(interval.end).add({
-        nanoseconds: 1,
-      });
-
-      events.push({ point: start, delta: 1 });
-      events.push({ point: closesAfter, delta: -1 });
-    }
-
-    events.sort((a, b) => Temporal.PlainDateTime.compare(a.point, b.point));
-
-    const grouped: Array<{ point: Temporal.PlainDateTime; delta: number }> = [];
-    for (const event of events) {
-      const last = grouped[grouped.length - 1];
-      if (last && last.point.equals(event.point)) {
-        last.delta += event.delta;
-      } else {
-        grouped.push({ point: event.point, delta: event.delta });
-      }
-    }
-
-    const result: Array<{ start: string; end: string }> = [];
-    let coverage = 0;
-    let runStart: Temporal.PlainDateTime | null = null;
-
-    for (const group of grouped) {
-      const previousCoverage = coverage;
-      coverage += group.delta;
-
-      if (previousCoverage % 2 === 0 && coverage % 2 === 1) {
-        runStart = group.point;
-      } else if (previousCoverage % 2 === 1 && coverage % 2 === 0 && runStart) {
-        result.push({
-          start: runStart.toString(),
-          end: group.point.subtract({ nanoseconds: 1 }).toString(),
-        });
-        runStart = null;
-      }
-    }
-
-    return result;
+    return closedXorSweep(parsed, {
+      compare: Temporal.PlainDateTime.compare,
+      stepUp: (value) => value.add({ nanoseconds: 1 }),
+      stepDown: (value) => value.subtract({ nanoseconds: 1 }),
+    }).map(({ start, end }) => ({
+      start: start.toString(),
+      end: end.toString(),
+    }));
   } catch {
     return [];
   }

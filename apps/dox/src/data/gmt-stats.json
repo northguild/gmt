@@ -1,29 +1,64 @@
 {
   "suite": "packages/gmt",
-  "tests": 19611,
-  "files": 596,
-  "executions": 392220,
-  "nodes": ["22", "24"],
+  "tests": 26714,
+  "files": 633,
+  "executions": 801420,
+  "nodes": [
+    "22",
+    "24",
+    "26"
+  ],
   "timezones": 10,
+  "timezoneList": [
+    "Pacific/Niue",
+    "America/New_York",
+    "UTC",
+    "Europe/London",
+    "Asia/Kolkata",
+    "Asia/Kathmandu",
+    "Asia/Shanghai",
+    "Australia/Lord_Howe",
+    "Pacific/Chatham",
+    "Pacific/Apia"
+  ],
   "locales": 17,
-  "functions": 548,
+  "localeList": [
+    "en-US",
+    "en-GB",
+    "de-DE",
+    "fr-FR",
+    "es-ES",
+    "it-IT",
+    "pt-PT",
+    "sv-SE",
+    "is-IS",
+    "zh-CN",
+    "zh-TW",
+    "ja-JP",
+    "ko-KR",
+    "ar-SA",
+    "he-IL",
+    "ru-RU",
+    "tr-TR"
+  ],
+  "functions": 542,
   "patterns": 25,
   "byNamespace": [
     {
       "namespace": "plain",
-      "count": 225
+      "count": 223
     },
     {
       "namespace": "zoned",
-      "count": 123
-    },
-    {
-      "namespace": "unix",
-      "count": 78
+      "count": 119
     },
     {
       "namespace": "utc",
-      "count": 76
+      "count": 74
+    },
+    {
+      "namespace": "unix",
+      "count": 71
     },
     {
       "namespace": "precision",
@@ -32,6 +67,10 @@
     {
       "namespace": "duration",
       "count": 12
+    },
+    {
+      "namespace": "interval",
+      "count": 9
     },
     {
       "namespace": "calendar",

@@ -1,5 +1,5 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate/isValidZonedDateTime";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Extracts the IANA timeZone identifier from an ISO 8601 zoned datetime string.
@@ -17,7 +17,7 @@ export function chopZonedDateTime(value: string): string {
   const validZonedDateTime = isValidZonedDateTime(value);
   if (!validZonedDateTime) return "";
   try {
-    const zonedDateTime = Temporal.ZonedDateTime.from(value);
+    const zonedDateTime = zonedDateTimeFrom(value);
     return zonedDateTime.timeZoneId;
   } catch {
     return "";

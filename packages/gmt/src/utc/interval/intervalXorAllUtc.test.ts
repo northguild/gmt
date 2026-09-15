@@ -97,4 +97,18 @@ describe("intervalXorAllUtc", () => {
       ]),
     ).toEqual([]);
   });
+
+  // The last representable Instant is +275760-09-13T00:00:00Z, so no boundary may be computed as
+  // `end + 1 ns`. Nested: 06:00Z..12:00Z on 09-12 is covered twice, so the odd runs end at
+  // 06:00Z - 1 ns = 05:59:59.999999999Z and resume at 12:00Z + 1 ns = 12:00:00.000000001Z.
+  it.each`
+    intervals                                                                                                                                       | expected
+    ${[{ start: "+275760-09-12T00:00:00Z", end: "+275760-09-13T00:00:00Z" }]}                                                                       | ${[{ start: "+275760-09-12T00:00:00Z", end: "+275760-09-13T00:00:00Z" }]}
+    ${[{ start: "+275760-09-12T00:00:00Z", end: "+275760-09-13T00:00:00Z" }, { start: "+275760-09-12T06:00:00Z", end: "+275760-09-12T12:00:00Z" }]} | ${[{ start: "+275760-09-12T00:00:00Z", end: "+275760-09-12T05:59:59.999999999Z" }, { start: "+275760-09-12T12:00:00.000000001Z", end: "+275760-09-13T00:00:00Z" }]}
+  `(
+    "returns $expected for $intervals (an end at the maximum Instant)",
+    ({ intervals, expected }) => {
+      expect(intervalXorAllUtc(intervals)).toEqual(expected);
+    },
+  );
 });

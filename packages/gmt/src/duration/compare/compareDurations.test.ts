@@ -148,3 +148,48 @@ describe("compareDurations", () => {
     ).not.toThrow();
   });
 });
+
+describe("compareDurations relative to the last days of the range", () => {
+  // TC39 Duration.compare adds both to the anchor (max - 3d5h): P3D and PT73H land 3 local days
+  // and 73 exact hours later, the first an hour sooner. P3D's wall clock is past
+  // +275760-09-13T00:00 local in a zone ahead of UTC, but its exact time is in range.
+  it.each`
+    relativeTo
+    ${"+275760-09-10T05:00:00+10:00[Australia/Sydney]"}
+    ${"+275760-09-10T09:00:00+14:00[Pacific/Kiritimati]"}
+  `("returns -1 for P3D vs PT73H relative to $relativeTo", ({ relativeTo }) => {
+    expect(compareDurations("P3D", "PT73H", { relativeTo })).toBe(-1);
+  });
+});
+
+describe("compareDurations relative to the first days of the range", () => {
+  // TC39 Duration.compare adds both to the anchor (min + 3d2h): -P3D lands 3 local days earlier and
+  // -PT73H 73 exact hours earlier, so -P3D is the later (longer, as a signed value) one. -P3D's
+  // wall clock is on the minimum's local date in a zone behind UTC, but in range.
+  it.each`
+    relativeTo
+    ${"-271821-04-22T21:03:58-04:56[America/New_York]"}
+    ${"-271821-04-22T15:28:34-10:31[Pacific/Honolulu]"}
+  `(
+    "returns 1 for -P3D vs -PT73H relative to $relativeTo",
+    ({ relativeTo }) => {
+      expect(compareDurations("-P3D", "-PT73H", { relativeTo })).toBe(1);
+    },
+  );
+});
+
+// CORE-6 S7: a non-ISO calendar `relativeTo` follows TC39 Duration.compare (DateDurationDays).
+// Values: Chromium 153 native `Duration.compare(a, b, { relativeTo: PlainDate })`.
+describe("compareDurations with a non-ISO calendar relativeTo (CORE-6)", () => {
+  it.each`
+    one      | two       | relativeTo                      | expected | reason
+    ${"P1M"} | ${"P29D"} | ${"279517-08-01[u-ca=hebrew]"}  | ${1}     | ${"D1: M07 of 279517 has 30 days"}
+    ${"P1M"} | ${"P30D"} | ${"2566-08-31[u-ca=buddhist]"}  | ${0}     | ${"D6: Aug 31 + 1 month is Sep 30, 30 days"}
+    ${"P1M"} | ${"P29D"} | ${"-096239-06-23[u-ca=hebrew]"} | ${0}     | ${"hebrew year <= 0: M06 has 29 days"}
+  `(
+    "compares $one with $two relative to $relativeTo as $expected ($reason)",
+    ({ one, two, relativeTo, expected }) => {
+      expect(compareDurations(one, two, { relativeTo })).toBe(expected);
+    },
+  );
+});

@@ -1,6 +1,14 @@
 import { Temporal } from "@js-temporal/polyfill";
 import type { DateTimeUnit } from "../types";
 import { DURATION_FIELD_BY_UNIT, getUnitSpan } from "./intervalCountHelpers";
+import {
+  calendarDateAdd,
+  calendarDateFromFields,
+  calendarDateUntil,
+  calendarFieldsOf,
+  isCalendarArithmeticCompatNeeded,
+} from "./temporalCompat";
+import { zonedNextTransition } from "./zonedWallClockOperations";
 
 /**
  * ISO day-of-week a week starts on: 1 = Monday .. 7 = Sunday, as `Temporal`'s `dayOfWeek` reads.
@@ -71,6 +79,73 @@ function truncateLocal(
   weekStartsOn: WeekStartDay,
 ): Temporal.PlainDateTime {
   if (unit === "nanosecond") return local;
+  if (needsCalendarCompat(local)) {
+    return truncateLocalWithCompat(local, unit, weekStartsOn);
+  }
+  return truncateLocalInOwnCalendar(local, unit, weekStartsOn);
+}
+
+/**
+ * CORE-6: true when `local`'s calendar arithmetic needs the Temporal compat layer in this runtime.
+ * The polyfill's `with`, `add` and `until` are then wrong or throw on its wall clocks (D1–D7), so
+ * the walker builds calendar periods from corrected reads and does everything else in ISO.
+ */
+function needsCalendarCompat(local: Temporal.PlainDateTime): boolean {
+  return (
+    local.calendarId !== "iso8601" &&
+    isCalendarArithmeticCompatNeeded(local.calendarId)
+  );
+}
+
+function isCalendarPeriod(
+  unit: WalkerUnit,
+): unit is "year" | "quarter" | "month" {
+  return unit === "year" || unit === "quarter" || unit === "month";
+}
+
+/** `truncateLocal` for a calendar that needs the compat layer. */
+function truncateLocalWithCompat(
+  local: Temporal.PlainDateTime,
+  unit: WalkerUnit,
+  weekStartsOn: WeekStartDay,
+): Temporal.PlainDateTime {
+  if (isCalendarPeriod(unit)) {
+    const { year, month } = calendarFieldsOf(
+      local.toPlainDate(),
+      local.calendarId,
+    );
+    const startMonth =
+      unit === "year"
+        ? 1
+        : unit === "quarter"
+          ? quarterStartMonth(month)
+          : month;
+    return calendarDateFromFields(
+      local.calendarId,
+      { year, month: startMonth, day: 1 },
+      "reject",
+    ).toPlainDateTime();
+  }
+  // Weeks, days and time units do not depend on the calendar.
+  return truncateLocalInOwnCalendar(
+    local.withCalendar("iso8601"),
+    unit,
+    weekStartsOn,
+  ).withCalendar(local.calendarId);
+}
+
+/** The first month of the quarter holding ordinal `month` (1, 4, 7 or 10). */
+function quarterStartMonth(month: number): number {
+  return Math.floor((month - 1) / 3) * 3 + 1;
+}
+
+/** `truncateLocal` through `local`'s own calendar operations. */
+function truncateLocalInOwnCalendar(
+  local: Temporal.PlainDateTime,
+  unit: WalkerUnit,
+  weekStartsOn: WeekStartDay,
+): Temporal.PlainDateTime {
+  if (unit === "nanosecond") return local;
 
   if (unit === "quarter") {
     return local.with({
@@ -121,24 +196,89 @@ function boundaryInOwnOffset(
   weekStartsOn: WeekStartDay,
 ): Temporal.ZonedDateTime {
   const local = zoned.toPlainDateTime();
-  const elapsed = truncateLocal(local, unit, weekStartsOn).until(local, {
-    largestUnit: "hour",
-  });
+  const elapsed = wallClockUntil(
+    truncateLocal(local, unit, weekStartsOn),
+    local,
+    "hour",
+  );
 
   return inZoneOf(zoned.toInstant().subtract(elapsed), zoned);
 }
 
-/** The most recent zone transition at or before `zoned`, or null if there is none. */
+/**
+ * `from.until(to, { largestUnit })` between two wall clocks in one calendar. Hours and smaller
+ * never depend on the calendar, so a calendar that needs the compat layer measures them in ISO.
+ */
+function wallClockUntil(
+  from: Temporal.PlainDateTime,
+  to: Temporal.PlainDateTime,
+  largestUnit: "hour",
+): Temporal.Duration {
+  return needsCalendarCompat(from)
+    ? from
+        .withCalendar("iso8601")
+        .until(to.withCalendar("iso8601"), { largestUnit })
+    : from.until(to, { largestUnit });
+}
+
+/**
+ * `from.until(to, { largestUnit: unit })` between two wall clocks already truncated to `unit`. A
+ * calendar that needs the compat layer counts years and months with `calendarDateUntil` between
+ * the dates (both clocks sit at midnight on a period start) and every other unit in ISO.
+ */
+function truncatedWallClockUntil(
+  from: Temporal.PlainDateTime,
+  to: Temporal.PlainDateTime,
+  unit: DateTimeUnit,
+): Temporal.Duration {
+  if (!needsCalendarCompat(from)) {
+    return from.until(to, { largestUnit: unit });
+  }
+  if (unit === "year" || unit === "month") {
+    return Temporal.Duration.from(
+      calendarDateUntil(from.toPlainDate(), to.toPlainDate(), unit),
+    );
+  }
+  return from
+    .withCalendar("iso8601")
+    .until(to.withCalendar("iso8601"), { largestUnit: unit });
+}
+
+/**
+ * The most recent zone transition at or before `zoned`, or null if there is none.
+ *
+ * `getTimeZoneTransition("previous")` is strict, so a transition sitting exactly on `zoned` is
+ * missed by asking from `zoned` itself. Asking from a nanosecond later would find it, but throws at
+ * the last representable instant, so this never steps past `zoned`: the first transition after
+ * `zoned - 1 ns` is `zoned` itself exactly when a transition sits on it. At the first
+ * representable instant there is no `zoned - 1 ns`, and nothing earlier, so that check is skipped.
+ */
 function transitionAtOrBefore(
   zoned: Temporal.ZonedDateTime,
 ): Temporal.ZonedDateTime | null {
   try {
-    // `getTimeZoneTransition("previous")` is strict, so a transition sitting exactly on
-    // `zoned` is only found by asking from a nanosecond later.
-    return zoned.add({ nanoseconds: 1 }).getTimeZoneTransition("previous");
+    if (transitionSitsOn(zoned)) {
+      return zoned;
+    }
+
+    return zoned.getTimeZoneTransition("previous");
   } catch {
     return null;
   }
+}
+
+/** True when a zone transition happens exactly at `zoned`'s instant. */
+function transitionSitsOn(zoned: Temporal.ZonedDateTime): boolean {
+  let justBefore: Temporal.ZonedDateTime;
+  try {
+    justBefore = zoned.subtract({ nanoseconds: 1 });
+  } catch {
+    return false;
+  }
+
+  const next = zonedNextTransition(justBefore);
+
+  return next !== null && next.toInstant().equals(zoned.toInstant());
 }
 
 /** Units whose buckets are labelled by a local date: a repeated wall time inside one stays one bucket. */
@@ -255,16 +395,45 @@ function nextBoundaryInOwnOffset(
   weekStartsOn: WeekStartDay,
 ): Temporal.ZonedDateTime {
   const local = zoned.toPlainDateTime();
-  const remaining = local.until(
-    truncateLocal(local, unit, weekStartsOn).add(oneUnit(unit)),
-    { largestUnit: "hour" },
+  // Step first, then truncate: the current unit's start may lie before the representable range,
+  // while the next unit's start does not. Both orders give the same boundary, because a one-unit
+  // step clamps within the next unit (Jan 31 + 1 month = Feb 29, whose month starts on Feb 1).
+  const remaining = wallClockUntil(
+    local,
+    truncateLocal(addOneUnit(local, unit), unit, weekStartsOn),
+    "hour",
   );
 
   return inZoneOf(zoned.toInstant().add(remaining), zoned);
 }
 
 /**
- * Return the start of the bucket following the one starting at `current`.
+ * `local.add(oneUnit(unit))`. For a calendar that needs the compat layer, a calendar period steps
+ * through `calendarDateAdd` (constrained, keeping the time of day) and every other unit in ISO.
+ */
+function addOneUnit(
+  local: Temporal.PlainDateTime,
+  unit: WalkerUnit,
+): Temporal.PlainDateTime {
+  if (!needsCalendarCompat(local)) {
+    return local.add(oneUnit(unit));
+  }
+  if (isCalendarPeriod(unit)) {
+    return calendarDateAdd(
+      local.toPlainDate(),
+      unit === "year" ? { years: 1 } : { months: unit === "quarter" ? 3 : 1 },
+      "constrain",
+    ).toPlainDateTime(local.toPlainTime());
+  }
+  return local
+    .withCalendar("iso8601")
+    .add(oneUnit(unit))
+    .withCalendar(local.calendarId);
+}
+
+/**
+ * Return the start of the bucket following the one containing `current` (which need not be that
+ * bucket's start).
  *
  * Stepping a whole unit and re-flooring is wrong, because a bucket can be shorter than its
  * unit and would be stepped straight over: `Pacific/Chatham`'s 02:45 → 03:45 spring-forward
@@ -285,7 +454,7 @@ export function nextZonedBucketStart(
 
   for (let i = 0; i < MAX_TRANSITION_WALKBACK; i++) {
     const boundary = nextBoundaryInOwnOffset(cursor, unit, weekStartsOn);
-    const transition = cursor.getTimeZoneTransition("next");
+    const transition = zonedNextTransition(cursor);
 
     if (
       !transition ||
@@ -312,17 +481,18 @@ export function nextZonedBucketStart(
  * - Never earlier than `zoned`, because it is measured from the real bucket `zoned` is in —
  *   New York's second 01:00 hour on a fall-back morning ends at 01:59:59.999999999 −05:00, not
  *   at the first pass's.
- * - Returns null if either the bucket start or the next one cannot be found.
+ * - Walks forward from `zoned` itself, never from its bucket's start. No transition between that
+ *   start and `zoned` opens a bucket, so both walks reach the same next start — but the start may
+ *   lie before the first representable instant (the month holding `-271821-04-20T00:00:00Z` began
+ *   on 1 April), while the end does not.
+ * - Returns null if the next bucket start cannot be found.
  */
 export function zonedUnitEnd(
   zoned: Temporal.ZonedDateTime,
   unit: WalkerUnit,
   weekStartsOn: WeekStartDay = 1,
 ): Temporal.ZonedDateTime | null {
-  const start = zonedUnitStart(zoned, unit, weekStartsOn);
-  if (!start) return null;
-
-  const next = nextZonedBucketStart(start, unit, weekStartsOn);
+  const next = nextZonedBucketStart(zoned, unit, weekStartsOn);
   return next ? next.subtract({ nanoseconds: 1 }) : null;
 }
 
@@ -371,7 +541,7 @@ export function countZonedBuckets(
   const unitsBetween = (
     from: Temporal.PlainDateTime,
     to: Temporal.PlainDateTime,
-  ) => getUnitSpan(from.until(to, { largestUnit: unit }), unit);
+  ) => getUnitSpan(truncatedWallClockUntil(from, to, unit), unit);
   const reachesIntoEndBucket =
     Temporal.ZonedDateTime.compare(startOfEnd, end) === 0 ? 0 : 1;
 
@@ -381,8 +551,7 @@ export function countZonedBuckets(
 
   for (let i = 0; i < MAX_COUNTED_TRANSITIONS; i++) {
     const transition =
-      cursor.getTimeZoneTransition("next")?.withCalendar(start.calendarId) ??
-      null;
+      zonedNextTransition(cursor)?.withCalendar(start.calendarId) ?? null;
 
     if (
       !transition ||

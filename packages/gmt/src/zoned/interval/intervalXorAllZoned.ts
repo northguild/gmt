@@ -1,6 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import {
   calendarOfAllZonedValues,
+  closedXorSweep,
   formatZonedInCalendar,
   parseCalendarZonedValue,
 } from "../../internal";
@@ -11,9 +12,10 @@ import { isValidCalendarZonedInterval } from "./validate";
  * covered by an odd number of the input intervals.
  *
  * - List-form generalization of `intervalXorZoned`, which is pairwise only.
- * - Implemented as a coverage sweep over instants: each interval contributes a `+1` at its
- *   start instant and a `-1` one nanosecond after its end instant; the result is every maximal
- *   run where the running coverage count is odd. For two intervals this reduces to exactly
+ * - Implemented as a closed-interval coverage sweep over instants: each interval opens at its
+ *   start instant and closes at its end instant, and the result is every maximal run where the
+ *   coverage count is odd. No boundary is computed past an end, so an interval may end on the last
+ *   representable instant. For two overlapping intervals this reduces to exactly
  *   `intervalXorZoned`'s pairwise result.
  * - Output boundaries carry the time zone of whichever input interval contributed them.
  * - Order of the input list does not matter; the result is sorted by start instant.
@@ -66,71 +68,23 @@ export function intervalXorAllZoned(
   }
 
   try {
-    const events: Array<{
-      instant: Temporal.Instant;
-      boundary: Temporal.ZonedDateTime;
-      delta: number;
-    }> = [];
+    const parsed = intervals.map((interval) => ({
+      start: parseCalendarZonedValue(interval.start),
+      end: parseCalendarZonedValue(interval.end),
+    }));
 
-    for (const interval of intervals) {
-      const startVal = parseCalendarZonedValue(interval.start);
-      const endVal = parseCalendarZonedValue(interval.end);
-      const closesAfter = endVal.toInstant().add({ nanoseconds: 1 });
-
-      events.push({
-        instant: startVal.toInstant(),
-        boundary: startVal,
-        delta: 1,
-      });
-      events.push({
-        instant: closesAfter,
-        boundary: closesAfter.toZonedDateTimeISO(endVal.timeZoneId),
-        delta: -1,
-      });
-    }
-
-    events.sort((a, b) => Temporal.Instant.compare(a.instant, b.instant));
-
-    const grouped: typeof events = [];
-    for (const event of events) {
-      const last = grouped[grouped.length - 1];
-      // Safe: `.equals()` here is `Temporal.Instant.prototype.equals`, and `Instant` carries no
-      // calendar field at all — verified calendar-blind (`heb.toInstant().equals(iso.toInstant())`
-      // is `true` for the same instant, while `ZonedDateTime.prototype.equals` is not). E7
-      // re-audited this site rather than inheriting E5's "structurally unreachable" verdict, which
-      // depended on mixed calendars never reaching `zoned/` at all.
-      if (last && last.instant.equals(event.instant)) {
-        last.delta += event.delta;
-      } else {
-        grouped.push(event);
-      }
-    }
-
-    const result: Array<{ start: string; end: string }> = [];
-    let coverage = 0;
-    let runStart: Temporal.ZonedDateTime | null = null;
-
-    for (const group of grouped) {
-      const previousCoverage = coverage;
-      coverage += group.delta;
-
-      if (previousCoverage % 2 === 0 && coverage % 2 === 1) {
-        runStart = group.boundary;
-      } else if (previousCoverage % 2 === 1 && coverage % 2 === 0 && runStart) {
-        result.push({
-          start: formatZonedInCalendar(runStart, calendar),
-          end: formatZonedInCalendar(
-            group.instant
-              .subtract({ nanoseconds: 1 })
-              .toZonedDateTimeISO(group.boundary.timeZoneId),
-            calendar,
-          ),
-        });
-        runStart = null;
-      }
-    }
-
-    return result;
+    // Grouping and ordering use `Temporal.ZonedDateTime.compare`, which compares epoch
+    // nanoseconds only — calendar- and zone-blind, unlike `ZonedDateTime.prototype.equals`. Each
+    // boundary stays the ZonedDateTime of the input that contributed it (nanosecond steps are exact
+    // time and keep its zone), so it is formatted in that interval's zone.
+    return closedXorSweep(parsed, {
+      compare: Temporal.ZonedDateTime.compare,
+      stepUp: (value) => value.add({ nanoseconds: 1 }),
+      stepDown: (value) => value.subtract({ nanoseconds: 1 }),
+    }).map(({ start, end }) => ({
+      start: formatZonedInCalendar(start, calendar),
+      end: formatZonedInCalendar(end, calendar),
+    }));
   } catch {
     return [];
   }

@@ -1,6 +1,21 @@
 import { intervalXorDate } from "./intervalXorDate";
 
 describe("intervalXorDate", () => {
+  // Closed [start, end]: the shared endpoint is covered twice, so xor excludes it from both pieces,
+  // each stepping one unit in from it. Pieces list A's remainder, then B's.
+  it.each`
+    aStart             | aEnd               | bStart             | bEnd               | expected                                                                                                | reason
+    ${"2024-01-01"}    | ${"2024-06-30"}    | ${"2024-06-30"}    | ${"2024-12-31"}    | ${[{ start: "2024-01-01", end: "2024-06-29" }, { start: "2024-07-01", end: "2024-12-31" }]}             | ${"A ends where B starts"}
+    ${"2024-06-30"}    | ${"2024-12-31"}    | ${"2024-01-01"}    | ${"2024-06-30"}    | ${[{ start: "2024-07-01", end: "2024-12-31" }, { start: "2024-01-01", end: "2024-06-29" }]}             | ${"A starts where B ends"}
+    ${"+275760-09-10"} | ${"+275760-09-12"} | ${"+275760-09-12"} | ${"+275760-09-13"} | ${[{ start: "+275760-09-10", end: "+275760-09-11" }, { start: "+275760-09-13", end: "+275760-09-13" }]} | ${"B ends on the last PlainDate"}
+    ${"-271821-04-19"} | ${"-271821-04-20"} | ${"-271821-04-20"} | ${"-271821-04-21"} | ${[{ start: "-271821-04-19", end: "-271821-04-19" }, { start: "-271821-04-21", end: "-271821-04-21" }]} | ${"A starts on the first PlainDate"}
+  `(
+    "returns $expected for touching A=[$aStart, $aEnd] xor B=[$bStart, $bEnd] ($reason)",
+    ({ aStart, aEnd, bStart, bEnd, expected }) => {
+      expect(intervalXorDate(aStart, aEnd, bStart, bEnd)).toEqual(expected);
+    },
+  );
+
   it.each`
     aStart          | aEnd            | bStart          | bEnd            | expected
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-04-01"} | ${"2024-12-31"} | ${{ result: [{ start: "2024-01-01", end: "2024-03-31" }, { start: "2024-07-01", end: "2024-12-31" }] }}
@@ -8,7 +23,7 @@ describe("intervalXorDate", () => {
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-07-01"} | ${"2024-12-31"} | ${{ result: [{ start: "2024-01-01", end: "2024-06-30" }, { start: "2024-07-01", end: "2024-12-31" }] }}
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-01-01"} | ${"2024-12-31"} | ${{ result: [] }}
   `(
-    "returns $expected when A=$aStart..$aEnd and B=$bStart..$bEnd",
+    "returns $expected when A=$aStart to $aEnd and B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalXorDate(aStart, aEnd, bStart, bEnd)).toEqual(
         expected.result,

@@ -58,7 +58,7 @@ describe("intervalCountZoned", () => {
     ${"2024-01-04T00:00:00+00:00[UTC]"} | ${"2024-01-15T00:00:00+00:00[UTC]"} | ${"week"}  | ${2}
     ${"2024-12-31T23:00:00+00:00[UTC]"} | ${"2025-01-01T01:00:00+00:00[UTC]"} | ${"year"}  | ${2}
   `(
-    "returns $expected $unit boundaries for $start..$end",
+    "returns $expected $unit boundaries for $start to $end",
     ({ start, end, unit, expected }) => {
       expect(intervalCountZoned(start, end, unit)).toBe(expected);
     },
@@ -69,7 +69,7 @@ describe("intervalCountZoned", () => {
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-03T00:00:00+00:00[UTC]"} | ${"days"}  | ${2}
     ${"2024-01-01T10:30:00+00:00[UTC]"} | ${"2024-01-01T12:00:00+00:00[UTC]"} | ${"hours"} | ${2}
   `(
-    "returns $expected for $start..$end with plural unit $unit",
+    "returns $expected for $start to $end with plural unit $unit",
     ({ start, end, unit, expected }) => {
       expect(intervalCountZoned(start, end, unit)).toBe(expected);
     },
@@ -82,7 +82,7 @@ describe("intervalCountZoned", () => {
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"hour"} | ${0}
     ${"2024-01-01T05:30:00+00:00[UTC]"} | ${"2024-01-01T05:30:00+00:00[UTC]"} | ${"hour"} | ${1}
   `(
-    "returns $expected for zero-length $start..$end counted in $unit",
+    "returns $expected for zero-length $start to $end counted in $unit",
     ({ start, end, unit, expected }) => {
       expect(intervalCountZoned(start, end, unit)).toBe(expected);
     },
@@ -97,7 +97,7 @@ describe("intervalCountZoned", () => {
     ${"2024-03-09T12:00:00-05:00[America/New_York]"} | ${"2024-03-11T12:00:00-04:00[America/New_York]"} | ${"day"}  | ${3}
     ${"2024-11-02T12:00:00-04:00[America/New_York]"} | ${"2024-11-04T12:00:00-05:00[America/New_York]"} | ${"day"}  | ${3}
   `(
-    "returns $expected $unit boundaries across a DST transition for $start..$end",
+    "returns $expected $unit boundaries across a DST transition for $start to $end",
     ({ start, end, unit, expected }) => {
       expect(intervalCountZoned(start, end, unit)).toBe(expected);
     },
@@ -110,7 +110,7 @@ describe("intervalCountZoned", () => {
     ${"2024-09-07T12:00:00-04:00[America/Santiago]"} | ${"2024-09-09T12:00:00-03:00[America/Santiago]"} | ${"day"} | ${3}
     ${"2024-09-08T12:00:00-03:00[America/Santiago]"} | ${"2024-09-08T12:00:00-03:00[America/Santiago]"} | ${"day"} | ${1}
   `(
-    "returns $expected $unit boundaries for $start..$end when local midnight is skipped",
+    "returns $expected $unit boundaries for $start to $end when local midnight is skipped",
     ({ start, end, unit, expected }) => {
       expect(intervalCountZoned(start, end, unit)).toBe(expected);
     },
@@ -121,7 +121,7 @@ describe("intervalCountZoned", () => {
     ${"2024-01-01T23:59:00+13:45[Pacific/Chatham]"} | ${"2024-01-02T00:01:00+13:45[Pacific/Chatham]"} | ${"day"} | ${2}
     ${"2024-01-01T23:59:00-11:00[Pacific/Niue]"}    | ${"2024-01-02T00:01:00-11:00[Pacific/Niue]"}    | ${"day"} | ${2}
   `(
-    "returns $expected $unit boundaries at an extreme offset for $start..$end",
+    "returns $expected $unit boundaries at an extreme offset for $start to $end",
     ({ start, end, unit, expected }) => {
       expect(intervalCountZoned(start, end, unit)).toBe(expected);
     },
@@ -134,7 +134,7 @@ describe("intervalCountZoned", () => {
     ${"2024-11-03T01:30:00-04:00[America/New_York]"} | ${"2024-11-03T01:30:00-05:00[America/New_York]"} | ${"hour"} | ${2}
     ${"2024-11-03T01:30:00-04:00[America/New_York]"} | ${"2024-11-03T01:30:00-05:00[America/New_York]"} | ${"day"}  | ${1}
   `(
-    "returns $expected $unit boundaries across the repeated hour for $start..$end",
+    "returns $expected $unit boundaries across the repeated hour for $start to $end",
     ({ start, end, unit, expected }) => {
       expect(intervalCountZoned(start, end, unit)).toBe(expected);
     },
@@ -145,7 +145,7 @@ describe("intervalCountZoned", () => {
     ${"2024-01-01T00:00:00-05:00[America/New_York]"} | ${"2024-01-03T00:00:00+09:00[Asia/Tokyo]"} | ${"day"}  | ${2}
     ${"2024-01-01T00:00:00-05:00[America/New_York]"} | ${"2024-01-01T12:00:00+00:00[UTC]"}        | ${"hour"} | ${7}
   `(
-    "returns $expected $unit boundaries counted in the start zone for $start..$end",
+    "returns $expected $unit boundaries counted in the start zone for $start to $end",
     ({ start, end, unit, expected }) => {
       expect(intervalCountZoned(start, end, unit)).toBe(expected);
     },
@@ -399,21 +399,61 @@ describe("intervalCountZoned transition cap", () => {
 // ---------------------------------------------------------------------------------------------
 describe("intervalCountZoned across zone transitions", () => {
   it.each`
-    start                                               | end                                                 | unit      | expected | description
-    ${"2024-09-29T03:50:00+13:45[Pacific/Chatham]"}     | ${"2024-09-29T04:10:00+13:45[Pacific/Chatham]"}     | ${"hour"} | ${2}     | ${"Chatham spring-forward leaves a 15-minute 03:00 hour"}
-    ${"2024-04-07T02:50:00+13:45[Pacific/Chatham]"}     | ${"2024-04-07T02:50:00+12:45[Pacific/Chatham]"}     | ${"hour"} | ${3}     | ${"Chatham fall-back, first pass to second pass"}
-    ${"2024-09-29T00:00:00+12:45[Pacific/Chatham]"}     | ${"2024-09-30T01:00:00+13:45[Pacific/Chatham]"}     | ${"hour"} | ${25}    | ${"a fixed 24h span over Chatham's spring-forward"}
-    ${"2020-10-04T00:00:30+08:00[Antarctica/Casey]"}    | ${"2020-10-04T03:30:00+11:00[Antarctica/Casey]"}    | ${"hour"} | ${2}     | ${"Casey's three-hour jump at 00:01"}
-    ${"2011-12-29T12:00:00-10:00[Pacific/Apia]"}        | ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}        | ${"day"}  | ${2}     | ${"Samoa deleted 2011-12-30"}
-    ${"2010-11-06T23:30:00-03:00[America/Goose_Bay]"}   | ${"2010-11-07T00:30:00-04:00[America/Goose_Bay]"}   | ${"hour"} | ${4}     | ${"Goose Bay fell back at 00:01, re-entering the previous day"}
-    ${"2024-11-02T12:00:00-04:00[America/Havana]"}      | ${"2024-11-04T12:00:00-05:00[America/Havana]"}      | ${"day"}  | ${3}     | ${"Havana repeated midnight on the same date, one 25-hour day"}
-    ${"2024-11-03T00:30:00-04:00[America/Havana]"}      | ${"2024-11-03T00:30:00-05:00[America/Havana]"}      | ${"day"}  | ${1}     | ${"both passes of Havana's repeated midnight hour share one day"}
-    ${"2024-11-03T00:00:00-04:00[America/Havana]"}      | ${"2024-11-04T00:00:00-05:00[America/Havana]"}      | ${"hour"} | ${25}    | ${"Havana's 25-hour day still has 25 hour buckets"}
-    ${"2024-04-06T14:00:00+11:00[Australia/Lord_Howe]"} | ${"2024-04-07T02:30:00+10:30[Australia/Lord_Howe]"} | ${"hour"} | ${13}    | ${"Lord Howe's 90-minute fall-back hour"}
+    start                                               | end                                                 | unit       | expected | description
+    ${"2024-09-29T03:50:00+13:45[Pacific/Chatham]"}     | ${"2024-09-29T04:10:00+13:45[Pacific/Chatham]"}     | ${"hour"}  | ${2}     | ${"Chatham spring-forward leaves a 15-minute 03:00 hour"}
+    ${"2024-04-07T02:50:00+13:45[Pacific/Chatham]"}     | ${"2024-04-07T02:50:00+12:45[Pacific/Chatham]"}     | ${"hour"}  | ${3}     | ${"Chatham fall-back, first pass to second pass"}
+    ${"2024-09-29T00:00:00+12:45[Pacific/Chatham]"}     | ${"2024-09-30T01:00:00+13:45[Pacific/Chatham]"}     | ${"hour"}  | ${25}    | ${"a fixed 24h span over Chatham's spring-forward"}
+    ${"2020-10-04T00:00:30+08:00[Antarctica/Casey]"}    | ${"2020-10-04T03:30:00+11:00[Antarctica/Casey]"}    | ${"hour"}  | ${2}     | ${"Casey's three-hour jump at 00:01"}
+    ${"2011-12-29T12:00:00-10:00[Pacific/Apia]"}        | ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}        | ${"day"}   | ${2}     | ${"Samoa deleted 2011-12-30"}
+    ${"2010-11-06T23:30:00-03:00[America/Goose_Bay]"}   | ${"2010-11-07T00:30:00-04:00[America/Goose_Bay]"}   | ${"hour"}  | ${4}     | ${"Goose Bay fell back at 00:01, re-entering the previous day"}
+    ${"2024-11-02T12:00:00-04:00[America/Havana]"}      | ${"2024-11-04T12:00:00-05:00[America/Havana]"}      | ${"day"}   | ${3}     | ${"Havana repeated midnight on the same date, one 25-hour day"}
+    ${"2024-11-03T00:30:00-04:00[America/Havana]"}      | ${"2024-11-03T00:30:00-05:00[America/Havana]"}      | ${"day"}   | ${1}     | ${"both passes of Havana's repeated midnight hour share one day"}
+    ${"2024-11-03T00:00:00-04:00[America/Havana]"}      | ${"2024-11-04T00:00:00-05:00[America/Havana]"}      | ${"hour"}  | ${25}    | ${"Havana's 25-hour day still has 25 hour buckets"}
+    ${"2024-04-06T14:00:00+11:00[Australia/Lord_Howe]"} | ${"2024-04-07T02:30:00+10:30[Australia/Lord_Howe]"} | ${"hour"}  | ${13}    | ${"Lord Howe's 90-minute fall-back hour"}
+    ${"+275760-08-15T12:00:00-04:00[America/Santiago]"} | ${"+275760-09-12T21:00:00-03:00[America/Santiago]"} | ${"month"} | ${2}     | ${"August and September, ending at the maximum instant"}
   `(
     "returns $expected $unit buckets for $start to $end ($description)",
     ({ start, end, unit, expected }) => {
       expect(intervalCountZoned(start, end, unit)).toBe(expected);
+    },
+  );
+});
+
+describe("intervalCountZoned across a transition near the maximum", () => {
+  // America/Santiago skips 7 Sep 275760 00:00: [22:00 -04:00, 03:00 -03:00) touches the 22, 23, 01
+  // and 02 hours. Counting wall-clock labels without the transition would also count hour 00.
+  it.each`
+    start                                               | end                                                 | unit      | expected
+    ${"+275760-09-06T22:00:00-04:00[America/Santiago]"} | ${"+275760-09-07T03:00:00-03:00[America/Santiago]"} | ${"hour"} | ${4}
+  `(
+    "counts $expected $unit buckets from $start to $end",
+    ({ start, end, unit, expected }) => {
+      expect(intervalCountZoned(start, end, unit)).toBe(expected);
+    },
+  );
+});
+
+// CORE-6 S5: calendar-unit buckets are the calendar's own months. Each count is the bucket holding
+// the start plus every month start after it and at or before the end, from Chromium 153 native
+// `with({ day: 1 })` / `add({ months })` reads:
+// - hebrew 279517-08-05 (ISO +275760-07-10) to 279517-10-08 (+275760-09-10): months start at
+//   +275760-07-06, +275760-08-05 and +275760-09-03, so 3.
+// - hebrew -096239-06-23 (ISO -100000-01-01) to -096239-08-04 (-100000-02-10): months start at
+//   -100001-12-10, -100000-01-08 and -100000-02-07, so 3.
+// - buddhist 1543-01-15 (ISO 1000-01-15) to 1543-03-15: proleptic months start on the 1st, so 3.
+describe("intervalCountZoned in non-ISO calendars (CORE-6)", () => {
+  it.each`
+    start                                                              | end                                                                | expected | reason
+    ${"279517-08-05T00:00:00+00:00[u-ca=hebrew][UTC]"}                 | ${"279517-10-08T00:00:00+00:00[u-ca=hebrew][UTC]"}                 | ${3}     | ${"D1 near the maximum"}
+    ${"279517-08-05T00:00:00-04:00[u-ca=hebrew][America/New_York]"}    | ${"279517-10-08T00:00:00-04:00[u-ca=hebrew][America/New_York]"}    | ${3}     | ${"D1 near the maximum in a named zone"}
+    ${"-096239-06-23T00:00:00+00:00[u-ca=hebrew][UTC]"}                | ${"-096239-08-04T00:00:00+00:00[u-ca=hebrew][UTC]"}                | ${3}     | ${"hebrew year <= 0"}
+    ${"-096239-06-23T00:00:00-12:00[u-ca=hebrew][Etc/GMT+12]"}         | ${"-096239-08-04T00:00:00-12:00[u-ca=hebrew][Etc/GMT+12]"}         | ${3}     | ${"hebrew year <= 0 behind UTC"}
+    ${"1543-01-15T00:00:00+00:00[u-ca=buddhist][UTC]"}                 | ${"1543-03-15T00:00:00+00:00[u-ca=buddhist][UTC]"}                 | ${3}     | ${"proleptic buddhist"}
+    ${"1543-01-15T00:00:00-04:56:02[u-ca=buddhist][America/New_York]"} | ${"1543-03-15T00:00:00-04:56:02[u-ca=buddhist][America/New_York]"} | ${3}     | ${"proleptic buddhist in a named zone"}
+  `(
+    "counts $expected months from $start to $end ($reason)",
+    ({ start, end, expected }) => {
+      expect(intervalCountZoned(start, end, "month")).toBe(expected);
     },
   );
 });

@@ -1,5 +1,5 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Return true when `value` falls on a Monday–Friday ISO business day in the given timezone.
@@ -26,7 +26,7 @@ export function isZonedBusinessDay(value: string): boolean {
   if (!isValidZonedDateTime(value)) return false;
 
   try {
-    const zoned = Temporal.ZonedDateTime.from(value);
+    const zoned = zonedDateTimeFrom(value);
     return zoned.dayOfWeek >= 1 && zoned.dayOfWeek <= 5;
   } catch {
     return false;

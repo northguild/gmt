@@ -3,6 +3,7 @@ import { normalizeDateTime } from "../../internal/normalizeDateTime";
 import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
 import { resolveRelativeRounding } from "../../internal/resolveRelativeRounding";
 import { toInstantFromUtc } from "../../internal/toInstantFromUtc";
+import { durationTotal } from "../../internal/zonedWallClockDifference";
 import type { RelativeTimeFormatOptions, RelativeUnit } from "../../types";
 import { isValidUtc } from "../validate";
 
@@ -80,7 +81,7 @@ export function formatRelativeUtc(
       // Defer timezone normalization until we know we need it.
       const tz = normalizeTimeZone(options.timeZone);
       amount = resolveRelativeRounding(
-        diff.total({ unit, relativeTo: reference.toZonedDateTimeISO(tz) }),
+        durationTotal(diff, unit, reference.toZonedDateTimeISO(tz)),
         options.roundingMethod,
       );
     }

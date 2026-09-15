@@ -146,7 +146,7 @@ describe("splitIntervalByUnitDateTime", () => {
     ${"2024-01-01T12:00:00"} | ${"2024-01-01T14:30:00"} | ${"hour"} | ${1}   | ${expectedRemainder}
     ${"2024-01-01T12:00:00"} | ${"2024-01-10T12:00:00"} | ${"day"}  | ${2}   | ${expectedDayUnit}
   `(
-    "returns $expected for $start..$end split by $amount $unit",
+    "returns $expected for $start to $end split by $amount $unit",
     ({ start, end, unit, amount, expected }) => {
       expect(splitIntervalByUnitDateTime(start, end, unit, amount)).toEqual(
         expected,
@@ -159,7 +159,7 @@ describe("splitIntervalByUnitDateTime", () => {
     ${"2024-01-01T12:00:00"} | ${"2024-01-01T12:00:00"} | ${"hour"} | ${1}   | ${expectedZeroLength}
     ${"2024-01-01T12:00:00"} | ${"2024-01-01T14:00:00"} | ${"hour"} | ${2}   | ${expectedSingleStep}
   `(
-    "returns $expected for edge-case $start..$end split by $amount $unit",
+    "returns $expected for edge-case $start to $end split by $amount $unit",
     ({ start, end, unit, amount, expected }) => {
       expect(splitIntervalByUnitDateTime(start, end, unit, amount)).toEqual(
         expected,

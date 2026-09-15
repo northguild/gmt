@@ -163,4 +163,28 @@ describe("intervalContainsUnix", () => {
       ).toBe(true);
     },
   );
+
+  // Epoch values are whole units; fractions, unsafe integers and empty strings are invalid input.
+  it.each`
+    intervalStart | intervalEnd | pointOrStart | pointEnd     | description
+    ${0}          | ${10}       | ${0.5}       | ${undefined} | ${"a fractional point"}
+    ${0}          | ${10.5}     | ${1}         | ${undefined} | ${"a fractional end"}
+    ${0}          | ${2 ** 53}  | ${1}         | ${undefined} | ${"an unsafe end"}
+    ${"0"}        | ${"10"}     | ${"1.5"}     | ${undefined} | ${"a fractional numeric string"}
+    ${""}         | ${"10"}     | ${"1"}       | ${undefined} | ${"an empty string, which Number() reads as 0"}
+    ${0}          | ${10}       | ${1}         | ${2.5}       | ${"a fractional inner end"}
+    ${0}          | ${10}       | ${1}         | ${""}        | ${"an empty inner end"}
+  `(
+    "returns false for [$intervalStart, $intervalEnd] containing [$pointOrStart, $pointEnd] ($description)",
+    ({ intervalStart, intervalEnd, pointOrStart, pointEnd }) => {
+      expect(
+        intervalContainsUnix(
+          intervalStart,
+          intervalEnd,
+          pointOrStart,
+          pointEnd,
+        ),
+      ).toBe(false);
+    },
+  );
 });

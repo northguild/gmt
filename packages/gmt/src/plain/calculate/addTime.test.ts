@@ -19,7 +19,7 @@ describe("addTime", () => {
     ${{ minutes: -30 }} | ${"11:30:00"}
     ${{ minutes: -90 }} | ${"10:30:00"}
   `(
-    "returns $expectedTime for $value + $negativeUnits",
+    "returns $expectedTime for 12:00:00 + $negativeUnits",
     ({
       negativeUnits,
       expectedTime,

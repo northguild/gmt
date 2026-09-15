@@ -14,8 +14,12 @@
  * **Derived from the same builders the Worker's corpus uses**, not from a
  * second count:
  *
- *   functions  `buildFunctionChunks` is `corpus.map(...)`, strictly 1:1 with
- *              the generated `gmt-corpus.json`, so its length is the count.
+ *   reference  `buildFunctionChunks` is `corpus.map(...)`, strictly 1:1 with
+ *              the generated `gmt-corpus.json`, so its length is the count. It
+ *              covers functions, types and regex patterns alike.
+ *   functions  only the corpus entries whose `kind` is `"function"` — the figure
+ *              the chat screen labels "functions". Counting every entry there
+ *              advertised 90 types and patterns as functions.
  *   guides     the real `buildGuideChunks`, over the real `toGuideSource`.
  *              Only the file *reading* differs (fs here, `import.meta.glob` in
  *              `guide-sources.ts`), and `corpus-summary.test.ts` re-checks the
@@ -44,9 +48,13 @@ function guideFiles(dir: string): string[] {
   return found;
 }
 
-const functionCount = (
-  JSON.parse(readFileSync(CORPUS_JSON, "utf8")) as unknown[]
-).length;
+const corpusEntries = JSON.parse(readFileSync(CORPUS_JSON, "utf8")) as {
+  kind: string;
+}[];
+/** Reference chunks: one per corpus entry (functions, types and regex patterns). */
+const referenceCount = corpusEntries.length;
+/** What the chat screen calls "functions": only the corpus entries that are functions. */
+const functionCount = corpusEntries.filter((e) => e.kind === "function").length;
 
 const guideCount = buildGuideChunks(
   guideFiles(GUIDES)
@@ -61,8 +69,9 @@ const next = `// GENERATED FILE — do not edit by hand.
 // the chat island cannot derive these where it shows them.
 
 export const CORPUS_FUNCTION_COUNT = ${functionCount};
+export const CORPUS_REFERENCE_COUNT = ${referenceCount};
 export const CORPUS_GUIDE_COUNT = ${guideCount};
-export const CORPUS_CHUNK_COUNT = ${functionCount + guideCount};
+export const CORPUS_CHUNK_COUNT = ${referenceCount + guideCount};
 `;
 
 // Only write on change, so a no-op `generate` leaves the tree clean.
@@ -78,6 +87,6 @@ if (current === next) {
 } else {
   writeFileSync(OUT, next);
   console.log(
-    `[corpus-counts] ${functionCount} functions + ${guideCount} guides = ${functionCount + guideCount}`,
+    `[corpus-counts] ${referenceCount} reference entries (${functionCount} functions) + ${guideCount} guides = ${referenceCount + guideCount}`,
   );
 }

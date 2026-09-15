@@ -1,5 +1,10 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { normalizeDateTime, resolveRelativeRounding } from "../../internal";
+import {
+  durationTotal,
+  normalizeDateTime,
+  resolveRelativeRounding,
+  zonedDateTimeFrom,
+} from "../../internal";
 import type { RelativeRoundingMethod, RelativeUnit } from "../../types";
 import { isValidUtc } from "../../utc/validate";
 import { isValidZonedDateTime } from "../validate";
@@ -69,7 +74,7 @@ export function formatRelativeZoned(
     return "";
 
   try {
-    const valueZDT = Temporal.ZonedDateTime.from(value);
+    const valueZDT = zonedDateTimeFrom(value);
     const valueInstant = valueZDT.toInstant();
 
     let refZDT: Temporal.ZonedDateTime;
@@ -84,7 +89,7 @@ export function formatRelativeZoned(
         ? Temporal.Instant.from(options.reference).toZonedDateTimeISO(
             valueZDT.timeZoneId,
           )
-        : Temporal.ZonedDateTime.from(options.reference);
+        : zonedDateTimeFrom(options.reference);
     } else {
       // Numeric epoch (ms) → place into value's zone.
       refZDT = Temporal.Instant.fromEpochMilliseconds(
@@ -109,7 +114,7 @@ export function formatRelativeZoned(
     } catch {
       // month/year are calendrical and need a relativeTo anchor
       amount = resolveRelativeRounding(
-        diff.total({ unit, relativeTo: refZDT }),
+        durationTotal(diff, unit, refZDT),
         options.roundingMethod,
       );
     }

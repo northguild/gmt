@@ -11,7 +11,7 @@ describe("intervalIntersectionUtc", () => {
     ${"2024-01-01T00:00:00Z"} | ${"2024-06-30T23:59:59Z"} | ${"2024-02-01T00:00:00Z"} | ${"2024-03-01T00:00:00Z"} | ${{ start: "2024-02-01T00:00:00Z", end: "2024-03-01T00:00:00Z" }}
     ${"2024-06-30T23:59:59Z"} | ${"2024-06-30T23:59:59Z"} | ${"2024-06-30T23:59:59Z"} | ${"2024-06-30T23:59:59Z"} | ${{ start: "2024-06-30T23:59:59Z", end: "2024-06-30T23:59:59Z" }}
   `(
-    "returns $expected when intervals $aStart..$aEnd and $bStart..$bEnd overlap",
+    "returns $expected when intervals $aStart to $aEnd and $bStart to $bEnd overlap",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalIntersectionUtc(aStart, aEnd, bStart, bEnd)).toEqual(
         expected,

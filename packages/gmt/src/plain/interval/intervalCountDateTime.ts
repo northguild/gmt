@@ -1,6 +1,9 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { getUnitSpan, resolveDateTimeUnit } from "../../internal";
-import { getStartOfDateTimeUnit } from "../../internal/dateTimeUnitHelpers";
+import {
+  getStartOfDateTimeUnit,
+  getStartOfNextDateTimeUnit,
+} from "../../internal/dateTimeUnitHelpers";
 import { plainDateTime } from "../../regex";
 import type { DateTimeUnit } from "../../types";
 import {
@@ -9,20 +12,53 @@ import {
   isValidDateUnit,
 } from "../validate";
 
+/** One of each time unit, for stepping to the next time-unit bucket. */
+const ONE_TIME_UNIT: Readonly<Record<string, Temporal.DurationLike>> = {
+  hour: { hours: 1 },
+  minute: { minutes: 1 },
+  second: { seconds: 1 },
+  millisecond: { milliseconds: 1 },
+  microsecond: { microseconds: 1 },
+  nanosecond: { nanoseconds: 1 },
+};
+
 /**
- * Return the start of `unit` for a `Temporal.PlainDateTime`, for every DateTimeUnit.
+ * Return the start of `unit` for a `Temporal.PlainDateTime`, for every DateTimeUnit, or null when
+ * it lies before the representable range (the first PlainDateTime is
+ * `-271821-04-19T00:00:00.000000001`, so even that date's midnight does not exist).
  *
  * Date units delegate to the shared helper; time units truncate via `round`.
  */
-function startOfUnit(
+function startOfUnitIfRepresentable(
+  source: Temporal.PlainDateTime,
+  unit: DateTimeUnit,
+): Temporal.PlainDateTime | null {
+  try {
+    if (isValidDateUnit(unit)) {
+      return getStartOfDateTimeUnit(source, unit);
+    }
+
+    return source.round({ smallestUnit: unit, roundingMode: "trunc" });
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Return the start of the `unit` after the one holding `source`: step first, truncate after, so
+ * `source`'s own start is never materialised.
+ */
+function startOfNextUnit(
   source: Temporal.PlainDateTime,
   unit: DateTimeUnit,
 ): Temporal.PlainDateTime {
   if (isValidDateUnit(unit)) {
-    return getStartOfDateTimeUnit(source, unit);
+    return getStartOfNextDateTimeUnit(source, unit);
   }
 
-  return source.round({ smallestUnit: unit, roundingMode: "trunc" });
+  return source
+    .add(ONE_TIME_UNIT[unit] ?? { nanoseconds: 1 })
+    .round({ smallestUnit: unit, roundingMode: "trunc" });
 }
 
 /**
@@ -35,6 +71,9 @@ function startOfUnit(
  * - A zero-length interval counts 1 when it sits mid-unit and 0 when it sits exactly on a
  *   unit boundary.
  * - Weeks start on Monday (ISO 8601).
+ * - A unit that began before the first representable PlainDateTime
+ *   (`-271821-04-19T00:00:00.000000001`) is still counted: whole units are measured from the unit
+ *   after `start`'s, never from `start`'s own start.
  * - Accepts singular or plural units (`"day"` and `"days"` behave identically).
  * - Returns `null` on invalid input (unparseable start/end, `start > end`, unsupported unit).
  *
@@ -85,15 +124,32 @@ export function intervalCountDateTime(
       return null;
     }
 
-    const startOfStart = startOfUnit(startVal, resolvedUnit);
-    const startOfEnd = startOfUnit(endVal, resolvedUnit);
+    const startOfEnd = startOfUnitIfRepresentable(endVal, resolvedUnit);
 
-    const spanned = getUnitSpan(
-      startOfStart.until(startOfEnd, { largestUnit: resolvedUnit }),
-      resolvedUnit,
-    );
+    // `end`'s unit began before the range, so `start` (<= `end`) is in it too, and `end` is not on
+    // a boundary: one bucket.
+    if (startOfEnd === null) {
+      return 1;
+    }
 
-    return spanned + (startOfEnd.equals(endVal) ? 0 : 1);
+    const endBucket = startOfEnd.equals(endVal) ? 0 : 1;
+
+    // `start` is already inside `end`'s unit: no boundary between them.
+    if (Temporal.PlainDateTime.compare(startOfEnd, startVal) <= 0) {
+      return endBucket;
+    }
+
+    // `start`'s unit, plus every whole unit from the next start up to `end`'s unit.
+    const spanned =
+      1 +
+      getUnitSpan(
+        startOfNextUnit(startVal, resolvedUnit).until(startOfEnd, {
+          largestUnit: resolvedUnit,
+        }),
+        resolvedUnit,
+      );
+
+    return spanned + endBucket;
   } catch {
     return null;
   }

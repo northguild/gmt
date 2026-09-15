@@ -129,4 +129,35 @@ describe("diffUtcAsDuration", () => {
       diffUtcAsDuration(canonicalInput, "2024-01-02T00:00:00Z", "days"),
     ).toBe("");
   });
+
+  // TC39 NudgeToZonedTime: rounding P3DT5H to an hour resolves +275760-09-13T19:00 in UTC, 19 hours
+  // past the maximum, which GetPossibleEpochNanoseconds rejects, so Temporal throws.
+  it.each`
+    value1                       | value2                       | expected
+    ${"+275760-09-02T19:00:00Z"} | ${"+275760-09-08T00:00:00Z"} | ${"P5DT5H"}
+    ${"+275760-09-09T19:00:00Z"} | ${"+275760-09-13T00:00:00Z"} | ${""}
+  `(
+    "returns $expected rounded to an hour from $value1 to $value2",
+    ({ value1, value2, expected }) => {
+      expect(
+        diffUtcAsDuration(value1, value2, "days", { smallestUnit: "hour" }),
+      ).toBe(expected);
+    },
+  );
+
+  // The same rounding at the minimum (nsMinInstant is -271821-04-20T00:00:00Z). From min + 2d5h back
+  // to min, NudgeToZonedTime resolves the day window's end, -271821-04-19T05:00 in UTC, 19 hours
+  // before the minimum, so Temporal throws. Five days later the window stays in range.
+  it.each`
+    value1                       | value2                       | expected
+    ${"-271821-04-27T05:00:00Z"} | ${"-271821-04-25T00:00:00Z"} | ${"-P2DT5H"}
+    ${"-271821-04-22T05:00:00Z"} | ${"-271821-04-20T00:00:00Z"} | ${""}
+  `(
+    "returns $expected rounded to an hour from $value1 back to $value2",
+    ({ value1, value2, expected }) => {
+      expect(
+        diffUtcAsDuration(value1, value2, "days", { smallestUnit: "hour" }),
+      ).toBe(expected);
+    },
+  );
 });

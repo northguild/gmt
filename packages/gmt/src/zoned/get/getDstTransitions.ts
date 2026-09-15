@@ -1,5 +1,9 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { isValidTimeZone } from "../validate";
+import {
+  zonedDateTimeFrom,
+  zonedNextTransition,
+  zonedStartOfDay,
+} from "../../internal";
 
 const MAX_TRANSITIONS_PER_YEAR = 20;
 
@@ -71,16 +75,16 @@ export function getDstTransitions(
   try {
     // getTimeZoneTransition("next") is strictly after its receiver, so start 1ns before the
     // year opens to catch a transition landing exactly on local January 1 00:00.
-    let cur = Temporal.ZonedDateTime.from({ year, month: 1, day: 1, timeZone })
-      .startOfDay()
-      .subtract({ nanoseconds: 1 });
+    let cur = zonedStartOfDay(
+      zonedDateTimeFrom({ year, month: 1, day: 1, timeZone }),
+    ).subtract({ nanoseconds: 1 });
 
     const transitions: DstTransition[] = [];
 
     // `<=`: up to MAX in-year transitions are pushed, plus one more lookup to observe the scan
     // leaving the year.
     for (let i = 0; i <= MAX_TRANSITIONS_PER_YEAR; i++) {
-      const next = cur.getTimeZoneTransition("next");
+      const next = zonedNextTransition(cur);
       if (!next || next.year > year) {
         return transitions;
       }

@@ -1,5 +1,5 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate/isValidZonedDateTime";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Returns the local plain datetime (date + time) extracted from a zoned datetime string.
@@ -16,7 +16,7 @@ import { isValidZonedDateTime } from "../validate/isValidZonedDateTime";
 export function chopZonedTimezone(value: string): string {
   if (!isValidZonedDateTime(value)) return "";
   try {
-    return Temporal.ZonedDateTime.from(value).toPlainDateTime().toString();
+    return zonedDateTimeFrom(value).toPlainDateTime().toString();
   } catch {
     return "";
   }

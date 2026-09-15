@@ -114,4 +114,18 @@ describe("intervalIntersectionUnix", () => {
       expected,
     );
   });
+
+  // Epoch values are whole units; fractions, unsafe integers and empty strings are invalid input.
+  it.each`
+    aStart | aEnd       | bStart   | bEnd   | description
+    ${0}   | ${10}      | ${0.5}   | ${1}   | ${"a fractional start"}
+    ${0}   | ${2 ** 53} | ${1}     | ${2}   | ${"an unsafe end"}
+    ${"0"} | ${"10"}    | ${"1.5"} | ${"2"} | ${"a fractional numeric string"}
+    ${""}  | ${"10"}    | ${"1"}   | ${"2"} | ${"an empty string, which Number() reads as 0"}
+  `(
+    "returns null for A=[$aStart, $aEnd] and B=[$bStart, $bEnd] ($description)",
+    ({ aStart, aEnd, bStart, bEnd }) => {
+      expect(intervalIntersectionUnix(aStart, aEnd, bStart, bEnd)).toBeNull();
+    },
+  );
 });

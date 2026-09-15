@@ -1,7 +1,8 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidDuration } from "../../duration/validate";
-import { resolveOverflow } from "../../internal";
+import { addToZoned, resolveOverflow, subtractFromZoned } from "../../internal";
 import { resolveUnixTimeZone } from "../../internal/resolveUnixTimeZone";
+import { parseUnixEpochValue } from "../../internal/unixEpochValue";
 import type { Overflow } from "../../types";
 
 /**
@@ -17,8 +18,9 @@ import type { Overflow } from "../../types";
  *   happens, mirroring `intervalIntersectionUnix`'s `start > end` rejection.
  * - `overflow` ("constrain" (default) | "reject") controls out-of-range results, e.g. adding 1 month
  *   to Jan 31: "constrain" clamps to Feb 29/28, "reject" returns null.
- * - Returns null on invalid input (non-finite/non-integer `value`, invalid `duration`, an `anchor`
- *   other than `"start"`/`"end"`, or an invalid/unavailable timeZone).
+ * - Returns null on invalid input (a `value` that is not a safe integer or numeric string of one —
+ *   fractions, empty strings and values beyond ±(2^53 − 1) are invalid — invalid `duration`, an
+ *   `anchor` other than `"start"`/`"end"`, or an invalid/unavailable timeZone).
  *
  * @param value Unix epoch value (seconds or milliseconds)
  * @param duration ISO 8601 duration string
@@ -42,13 +44,9 @@ export function intervalFromDurationUnix(
     overflow?: Overflow;
   },
 ): { start: number; end: number } | null {
-  if (typeof value !== "number" && typeof value !== "string") {
-    return null;
-  }
+  const valueMs = parseUnixEpochValue(value);
 
-  const valueMs = typeof value === "number" ? value : Number(value);
-
-  if (!Number.isFinite(valueMs) || !Number.isInteger(valueMs)) {
+  if (valueMs === null) {
     return null;
   }
 
@@ -77,8 +75,8 @@ export function intervalFromDurationUnix(
 
     const other =
       anchor === "start"
-        ? point.add(dur, { overflow })
-        : point.subtract(dur, { overflow });
+        ? addToZoned(point, dur, { overflow })
+        : subtractFromZoned(point, dur, { overflow });
 
     const start = anchor === "start" ? point : other;
     const end = anchor === "start" ? other : point;

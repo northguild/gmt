@@ -103,15 +103,27 @@ html:not([data-has-sidebar]) .sl-container {
  * Natural auto-flow columns (repeat(auto-fit, minmax(...))) rather than
  * fixed 1/2/3-column breakpoints: the browser fits as many columns as the
  * available width allows, so it doesn't need per-page-width tuning as
- * section count/content changes, and it degrades to a single column below
- * ~24rem on its own. 24rem (not a narrower value) is deliberate: it's
- * roughly the minimum a GridSection needs before its own nested grids
+ * section count/content changes. 24rem (not a narrower value) is deliberate:
+ * it's roughly the minimum a GridSection needs before its own nested grids
  * (Starlight's CardGrid, the fault grid in WhyDateBug) have room to be
- * anything but single-column themselves — see the container queries below. */
+ * anything but single-column themselves — see the container queries below.
+ * The minimum is `min(24rem, 100%)`, not a bare 24rem: a bare 24rem (384px)
+ * column cannot shrink, so on a phone, whose content column is narrower than
+ * that, every section overflowed the viewport and the page scrolled sideways. */
 .gmt-home-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(24rem, 100%), 1fr));
   gap: var(--gmt-space-8, 3rem);
+}
+
+/* Starlight's Card colours cards by grid position: 1 orange, 3 green, 4 red, 5 blue, and every
+ * other position the default purple. A six-card section therefore repeats purple at cards 2 and
+ * 6, so the sixth card takes the theme's ice colour instead. --gmt-ice flips with the theme (ice
+ * blue in dark, near-black in light), so the icon stays legible in both. Starlight's rules sit
+ * in its components layer, so this unlayered rule wins without !important. */
+.gmt-home-grid .card:nth-child(6n) {
+  --sl-card-border: var(--gmt-ice);
+  --sl-card-bg: color-mix(in srgb, var(--gmt-ice) 12%, transparent);
 }
 
 .gmt-why-grid {
@@ -126,6 +138,56 @@ html:not([data-has-sidebar]) .sl-container {
   .gmt-why-grid {
     grid-template-columns: repeat(auto-fit, minmax(30vw, 1fr));
   }
+}
+
+/* A list of guarantees, one per line, each marked with a spring-green check.
+ * Plain markdown underneath (a <ul>), so screen readers and agents read it as
+ * a normal list; the check is decorative. Used on /why-gmt instead of cards,
+ * which the homepage already uses. */
+.sl-markdown-content .gmt-checklist ul {
+  list-style: none;
+  padding-inline-start: 0;
+  margin-block: var(--gmt-space-3, 0.75rem);
+  display: grid;
+  gap: var(--gmt-space-2, 0.5rem);
+}
+
+.sl-markdown-content .gmt-checklist li {
+  position: relative;
+  margin: 0;
+  padding-inline-start: 1.75rem;
+}
+
+.sl-markdown-content .gmt-checklist li::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0.2em;
+  width: 1.15em;
+  height: 1.15em;
+  background-color: var(--gmt-spring);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+
+@media (forced-colors: active) {
+  .sl-markdown-content .gmt-checklist li::before {
+    background-color: CanvasText;
+  }
+}
+
+/* The footnote under a comparison table, reached from a <sup> link in a cell.
+ * Smaller and muted so it reads as a source note, not body copy; scroll-margin
+ * keeps the target clear of the sticky header when the link is followed.
+ * gray-2, not gray-3: gray-3 fails WCAG AA for 14px text on the page background
+ * (4.39:1 dark, 2.85:1 light); gray-2 is 6.80:1 dark, 5.74:1 light. */
+.sl-markdown-content .gmt-table-note {
+  font-size: var(--sl-text-sm);
+  color: var(--sl-color-gray-2);
+  margin-block-start: var(--gmt-space-2, 0.5rem);
+  scroll-margin-block-start: calc(var(--sl-nav-height, 4rem) + 1rem);
 }
 
 /* Named container so content nested inside a GridSection (Starlight's own

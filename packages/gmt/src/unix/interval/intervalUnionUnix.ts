@@ -1,3 +1,5 @@
+import { parseUnixEpochIntervalPair } from "../../internal";
+
 /**
  * Return the combined span of two Unix epoch intervals, or null when they are disjoint.
  *
@@ -5,7 +7,8 @@
  * - Overlapping intervals return their merged span.
  * - Adjacent intervals (e.g. `aEnd === bStart`) share one instant and ARE merged.
  * - Returns `null` if either interval is invalid (`start > end`).
- * - Returns `null` on invalid input (non-numeric types, non-finite values).
+ * - Returns `null` on invalid input: non-numeric types, empty strings, and values that are not
+ *   safe integers (fractions, `NaN`, `±Infinity`, beyond ±(2^53 − 1)).
  *
  * @param aStart Unix epoch value (seconds or milliseconds) — first interval start
  * @param aEnd Unix epoch value (seconds or milliseconds) — first interval end
@@ -25,50 +28,18 @@ export function intervalUnionUnix(
   bStart: number | string,
   bEnd: number | string,
 ): { start: number; end: number } | null {
-  if (typeof aStart !== "number" && typeof aStart !== "string") {
+  const pair = parseUnixEpochIntervalPair(aStart, aEnd, bStart, bEnd);
+
+  if (pair === null) {
     return null;
   }
 
-  if (typeof aEnd !== "number" && typeof aEnd !== "string") {
+  const [a, b] = pair;
+
+  // Disjoint intervals have no single combined span.
+  if (Math.max(a.start, b.start) > Math.min(a.end, b.end)) {
     return null;
   }
 
-  if (typeof bStart !== "number" && typeof bStart !== "string") {
-    return null;
-  }
-
-  if (typeof bEnd !== "number" && typeof bEnd !== "string") {
-    return null;
-  }
-
-  const a1 = typeof aStart === "number" ? aStart : Number(aStart);
-  const a2 = typeof aEnd === "number" ? aEnd : Number(aEnd);
-  const b1 = typeof bStart === "number" ? bStart : Number(bStart);
-  const b2 = typeof bEnd === "number" ? bEnd : Number(bEnd);
-
-  if (
-    !Number.isFinite(a1) ||
-    !Number.isFinite(a2) ||
-    !Number.isFinite(b1) ||
-    !Number.isFinite(b2)
-  ) {
-    return null;
-  }
-
-  if (a1 > a2) {
-    return null;
-  }
-
-  if (b1 > b2) {
-    return null;
-  }
-
-  if (a2 < b1 || b2 < a1) {
-    return null;
-  }
-
-  return {
-    start: Math.min(a1, b1),
-    end: Math.max(a2, b2),
-  };
+  return { start: Math.min(a.start, b.start), end: Math.max(a.end, b.end) };
 }

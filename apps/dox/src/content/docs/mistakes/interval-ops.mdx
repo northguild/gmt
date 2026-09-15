@@ -3,9 +3,12 @@ title: Interval Operations
 description: Common mistakes when working with date and time intervals in GMT.
 ---
 
-GMT's interval functions cover containment, overlap, set operations, splitting,
-counting, and length. The 10 mistakes here are the ones that have caused the most
-confusion.
+GMT has two families of interval functions. The half-open `interval/` module
+(`intervalsOverlap`, `intersectIntervals`, `subtractIntervals`, `sumIntervals`, …) takes
+`{ start, end }` records of instant strings. The older positional functions in `plain/`,
+`utc/`, `zoned/` and `unix/` take separate strings, and most of them read an interval as
+closed. Most interval bugs come from mixing the two. Every output shown here is what the
+function returns today.
 
 ## Mistakes
 
@@ -13,135 +16,166 @@ import Mistake from "../../../components/Mistake.astro";
 
 <Mistake
   severity="high"
-  title="Confusing intervalsOverlap with intervalAbuts"
-  description="intervalsOverlap returns true when two intervals share any instants. intervalAbuts returns true when they touch at exactly one endpoint without overlapping. Touching is not overlapping."
-  wrongCode={`intervalsOverlapDate("2024-03-15/2024-03-20", "2024-03-20/2024-03-25"); // false — they abut, not overlap`}
-  rightCode={`import { intervalsOverlapDate, intervalAbutsDate } from "@northguild/gmt/interval";
+  title="Assuming touching intervals do not overlap in the positional functions"
+  description="The positional intervalsOverlap* functions are closed [start, end]: a shared endpoint belongs to both intervals, so touching intervals overlap. Only the half-open interval/ module treats them as disjoint."
+  wrongCode={`intervalsOverlapUtc("2024-01-01T09:00:00Z", "2024-01-01T17:00:00Z", "2024-01-01T17:00:00Z", "2024-01-01T18:00:00Z");
+// expected false — actually true`}
+  rightCode={`import { intervalsOverlap } from "@northguild/gmt";
 
-intervalsOverlapDate("2024-03-15/2024-03-20", "2024-03-20/2024-03-25"); // false
-intervalAbutsDate("2024-03-15/2024-03-20", "2024-03-20/2024-03-25"); // true`}
+intervalsOverlap(
+  { start: "2024-01-01T09:00:00Z", end: "2024-01-01T17:00:00Z" },
+  { start: "2024-01-01T17:00:00Z", end: "2024-01-01T18:00:00Z" },
+); // false — half-open, they share no instant`}
 />
 
 <Mistake
   severity="high"
-  title="Assuming intervalEngulfs is new logic"
-  description="intervalEngulfs returns true when the first interval completely contains the second. It is not the same as overlap — A can overlap B without engulfing it."
-  wrongCode={`// assuming overlap implies engulfing`}
-  rightCode={`import { intervalEngulfsDate, intervalsOverlapDate } from "@northguild/gmt/interval";
+  title="Reading intervalAbuts* as a shared endpoint"
+  description="The positional intervalAbuts* functions are true when one interval ends exactly one unit before the other starts — one nanosecond, one day for Date, one epoch unit for Unix. Intervals that share an endpoint already overlap, so they do not abut."
+  wrongCode={`intervalAbutsDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31");
+// expected true — actually false`}
+  rightCode={`intervalAbutsDate("2024-01-01", "2024-06-30", "2024-07-01", "2024-12-31"); // true
 
-intervalsOverlapDate("2024-03-10/2024-03-20", "2024-03-15/2024-03-18"); // true
-intervalEngulfsDate("2024-03-10/2024-03-20", "2024-03-15/2024-03-18"); // true — B is inside A`}
+// Half-open: "abuts" is just a.end === b.start, and those intervals do not overlap
+intervalsOverlap({ start: "…T09:00:00Z", end: "…T17:00:00Z" }, { start: "…T17:00:00Z", end: "…T18:00:00Z" }); // false`}
+/>
+
+<Mistake
+  severity="high"
+  title="Expecting intervalDifference* pieces to meet the removal exactly"
+  description="The closed intervalDifference* and intervalXor* functions step one unit in from each cut, so the pieces end one nanosecond before a removal starts and begin one nanosecond after it ends. Summing those pieces is 2 ns short. subtractIntervals cuts exactly."
+  wrongCode={`intervalDifferenceUtc("2024-01-01T09:00:00Z", "2024-01-01T17:00:00Z", "2024-01-01T12:00:00Z", "2024-01-01T13:00:00Z");
+// [{ start: "2024-01-01T09:00:00Z", end: "2024-01-01T11:59:59.999999999Z" },
+//  { start: "2024-01-01T13:00:00.000000001Z", end: "2024-01-01T17:00:00Z" }]`}
+  rightCode={`import { subtractIntervals, sumIntervals } from "@northguild/gmt";
+
+const worked = subtractIntervals(
+  { start: "2024-01-01T09:00:00Z", end: "2024-01-01T17:00:00Z" },
+  [{ start: "2024-01-01T12:00:00Z", end: "2024-01-01T13:00:00Z" }],
+);
+// [{ start: "…T09:00:00Z", end: "…T12:00:00Z" }, { start: "…T13:00:00Z", end: "…T17:00:00Z" }]
+sumIntervals(worked); // "PT7H"`}
+/>
+
+<Mistake
+  severity="high"
+  title="Passing plain dates or zoneless datetimes to interval/"
+  description="interval/ endpoints are instants: an offset (Z or ±HH:MM) is required. A plain date or a local datetime has no position on the timeline until a zone is named, so every function returns its sentinel for it."
+  wrongCode={`intervalsOverlap({ start: "2024-01-01", end: "2024-01-02" }, { start: "2024-01-01T12:00:00", end: "2024-01-03T00:00:00" });
+// false — both are invalid input, not a real answer`}
+  rightCode={`import { floorToZone, intervalsOverlap } from "@northguild/gmt";
+
+// Build local-day edges as instants first
+const day = {
+  start: floorToZone("2024-01-01T12:00:00Z", "day", "America/New_York"), // "2024-01-01T05:00:00Z"
+  end: floorToZone("2024-01-02T12:00:00Z", "day", "America/New_York"),   // "2024-01-02T05:00:00Z"
+};`}
 />
 
 <Mistake
   severity="medium"
-  title="Mutating intersection/union results"
-  description="intervalIntersection and intervalUnion return new interval objects. The originals are unchanged. Mutating the result does not affect the inputs, but mutating the inputs before calling does."
-  wrongCode={`const a = { start: "2024-03-15", end: "2024-03-20" };
-const b = { start: "2024-03-18", end: "2024-03-25" };
-const r = intervalIntersectionDate(a, b);
-a.end = "2024-03-22"; // does not change r`}
-  rightCode={`const r = intervalIntersectionDate(a, b);
-// r is independent — safe to use after the call`}
+  title="Treating [] from mergeIntervals or subtractIntervals as an error"
+  description="[] is a legitimate result — a fully covered subtraction, or a list of only empty intervals — and it is also the invalid-input sentinel. Check the inputs with isValidInterval when the difference matters."
+  wrongCode={`const left = subtractIntervals(shift, removals);
+if (left.length === 0) throw new Error("bad input"); // wrong when the removals cover the shift`}
+  rightCode={`import { isValidInterval, subtractIntervals } from "@northguild/gmt";
+
+if (!isValidInterval(shift) || !removals.every(isValidInterval)) {
+  // genuinely invalid input
+}
+const left = subtractIntervals(shift, removals); // [] now means fully covered`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Expecting sumIntervals to return days"
+  description="sumIntervals returns covered time with hours as the largest unit — exactly Temporal.Instant.prototype.until with largestUnit hour. An instant has no calendar, so a day is not a fixed length and is never used."
+  wrongCode={`sumIntervals([{ start: "2024-01-01T00:00:00Z", end: "2024-01-03T01:30:00Z" }]);
+// expected "P2DT1H30M"`}
+  rightCode={`sumIntervals([{ start: "2024-01-01T00:00:00Z", end: "2024-01-03T01:30:00Z" }]); // "PT49H30M"
+sumIntervals([{ start: "2024-03-10T05:00:00Z", end: "2024-03-11T04:00:00Z" }]); // "PT23H" — New York's spring-forward day
+sumIntervals([]); // "PT0S"`}
 />
 
 <Mistake
   severity="medium"
   title="Expecting splitIntervalByUnit slices to be equal"
-  description="splitIntervalByUnitDate cuts fixed amount × unit steps from the start, so the final slice is whatever remains and can be shorter. The slice count is ceiling(length / step), not floor. If you need N pieces of (near-)equal length, use intervalDivideEquallyDate instead."
+  description="splitIntervalByUnitDate cuts fixed amount × unit steps from the start, so the final slice is whatever remains and can be shorter. For n pieces of equal length, use intervalDivideEquallyDate."
   wrongCode={`splitIntervalByUnitDate("2024-03-15", "2024-03-20", "day", 2);
-// assumes every slice is 2 days — but the result is
 // [{ start: "2024-03-15", end: "2024-03-17" }, { start: "2024-03-17", end: "2024-03-19" },
 //  { start: "2024-03-19", end: "2024-03-20" }] — the last slice is 1 day`}
-  rightCode={`// fixed steps, remainder last: check the final slice's length
-splitIntervalByUnitDate("2024-03-15", "2024-03-20", "day", 2);
-// N near-equal pieces:
-intervalDivideEquallyDate("2024-03-15", "2024-03-20", 2);
+  rightCode={`intervalDivideEquallyDate("2024-03-15", "2024-03-20", 2);
 // [{ start: "2024-03-15", end: "2024-03-18" }, { start: "2024-03-18", end: "2024-03-20" }]`}
 />
 
 <Mistake
   severity="high"
-  title="Using intervalCount where you meant a duration"
-  description="intervalCountDate returns how many full unit-sized intervals fit inside a range. It is not the duration of the interval. If you need '5 days', use intervalLengthDate or diffDateAsDuration."
-  wrongCode={`intervalCountDate("2024-03-15/2024-03-20", "day"); // 5 — number of full days
-// used as the duration — but duration and count are different concepts`}
-  rightCode={`import { intervalLengthDate, diffDateAsDuration } from "@northguild/gmt";
+  title="Using intervalCount where you meant a length"
+  description="intervalCount* counts the calendar units the half-open interval touches; intervalLength* measures how long it is. They agree only when the interval starts on a unit boundary and is a whole number of units long."
+  wrongCode={`intervalCountDateTime("2024-01-01T23:59:00", "2024-01-02T00:01:00", "day");
+// 2 — used as a duration, but the interval is two minutes long`}
+  rightCode={`import { intervalLengthDateTime } from "@northguild/gmt";
 
-intervalLengthDate("2024-03-15/2024-03-20", "day"); // 5 — duration in days
-diffDateAsDuration("2024-03-15", "2024-03-20"); // duration object`}
+intervalLengthDateTime("2024-01-01T23:59:00", "2024-01-02T00:01:00", "day");
+// 0.001388888888888889`}
 />
 
 <Mistake
   severity="medium"
-  title="Expecting a zero-length interval to count 1"
-  description="An interval where start === end has zero duration. intervalCountDate returns 0 for it, not 1. A zero-length interval is empty, not a single instant."
-  wrongCode={`intervalCountDate("2024-03-15/2024-03-15", "day"); // 0 — not 1`}
-  rightCode={`// a zero-duration interval is empty
-// use a single point representation if you need to express "just this instant"`}
-/>
-
-<Mistake
-  severity="high"
-  title="Assuming intervalFromDurationTime applies a calendar-unit duration"
-  description="intervalFromDurationDate creates an interval from a start date and a duration. Calendar-unit durations (years, months) require a reference point to resolve to days. Without one, the interval length is ambiguous."
-  wrongCode={`intervalFromDurationDate("2024-03-15", "P1M"); // 30 or 31 days depending on implicit reference`}
-  rightCode={`import { intervalFromDurationDate } from "@northguild/gmt/interval";
-
-intervalFromDurationDate("2024-03-15", "P1M", { relativeTo: "2024-03-15" });
-// "2024-03-15/2024-04-15" — resolved using the reference`}
+  title="Expecting a zero-length interval to always count 0 or always count 1"
+  description="intervalCount* counts 1 for a zero-length interval that sits mid-unit and 0 for one exactly on a unit boundary. A PlainDate always sits on a day boundary, so it counts 0 days but 1 month."
+  wrongCode={`intervalCountDate("2024-01-15", "2024-01-15", "day");   // 0
+intervalCountDate("2024-01-15", "2024-01-15", "month"); // 1 — not 0`}
+  rightCode={`intervalCountDate("2024-01-01", "2024-01-01", "month"); // 0 — exactly on a month boundary`}
 />
 
 <Mistake
   severity="medium"
-  title="Forgetting a negative duration can invert the span"
-  description="Subtracting a larger duration than the interval width produces a negative result. intervalFromDurationDate with a negative duration creates an interval where end < start."
-  wrongCode={`intervalFromDurationDate("2024-03-15", "P-10D"); // end before start — invalid interval`}
-  rightCode={`// ensure the duration is positive, or normalize the bounds after construction`}
-/>
+  title="Passing an options object to intervalFromDuration*"
+  description="intervalFromDuration* takes the value, an ISO 8601 duration and an anchor of start or end. Calendar units resolve against the value itself — there is no relativeTo option. A negative duration returns null rather than an inverted interval."
+  wrongCode={`intervalFromDurationDate("2024-03-15", "P1M", { relativeTo: "2024-03-15" });`}
+  rightCode={`import { intervalFromDurationDate } from "@northguild/gmt";
 
-<Mistake
-  severity="high"
-  title="Expecting date-fns's getOverlappingDaysInIntervals number from intervalOverlappingDays*"
-  description="date-fns's getOverlappingDaysInIntervals returns the count of overlapping days. GMT's intervalOverlappingDaysDate returns the overlapping interval object(s). They have different return types and different semantics for edge cases."
-  wrongCode={`// expecting a number like date-fns`}
-  rightCode={`import { intervalOverlappingDaysDate } from "@northguild/gmt/interval";
-
-// returns the overlapping sub-interval, not a day count`}
-/>
-
-<Mistake
-  severity="high"
-  title="Confusing intervalLength with intervalCount"
-  description="intervalLengthDate returns the duration of an interval in a given unit. intervalCountDate returns how many full unit-sized intervals fit inside. They are not the same when the interval is not evenly divisible."
-  wrongCode={`intervalLengthDate("2024-03-15/2024-03-20", "day"); // 5 — the length
-intervalCountDate("2024-03-15/2024-03-20", "day"); // 5 — count of full days
-// these happen to match here, but not for uneven intervals`}
-  rightCode={`// use intervalLengthDate when you need the span
-// use intervalCountDate when you need how many complete units fit`}
+intervalFromDurationDate("2024-03-15", "P1M", "start"); // { start: "2024-03-15", end: "2024-04-15" }
+intervalFromDurationDate("2024-01-31", "P1M", "start"); // { start: "2024-01-31", end: "2024-02-29" }
+intervalFromDurationDate("2024-03-15", "-P10D", "start"); // null`}
 />
 
 <Mistake
   severity="medium"
-  title="Expecting intervalXorAll/mergeIntervals to take flat arguments like their pairwise siblings"
-  description="intervalXorAll and mergeIntervals accept an array of intervals, not individual arguments. Passing two intervals as separate arguments like intervalXorDate produces a type mismatch."
-  wrongCode={`intervalXorDate(a, b); // pairwise — correct for 2 intervals
-intervalXorAll(a, b); // wrong — expects an array`}
-  rightCode={`import { intervalXorAll, mergeIntervalsDate } from "@northguild/gmt/interval";
+  title="Reading intervalOverlappingDays* as a closed intersection object"
+  description="intervalOverlappingDays* returns a number: how many distinct calendar dates the closed intersection touches, counting both endpoints. For the shared span itself, use intervalIntersection* or intersectIntervals."
+  wrongCode={`const shared = intervalOverlappingDaysDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
+shared.start; // undefined — shared is 91`}
+  rightCode={`intervalOverlappingDaysDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31"); // 1 — shared endpoint
+intervalIntersectionDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
+// { start: "2024-04-01", end: "2024-06-30" }`}
+/>
 
-intervalXorAll([a, b, c]); // array of 3+ intervals — correct`}
+<Mistake
+  severity="medium"
+  title="Calling list functions with flat arguments, or without a suffix"
+  description="mergeIntervals*, intervalXorAll* and every interval/ list function take one array of { start, end } records. The positional list functions carry a type suffix — there is no bare intervalXorAll."
+  wrongCode={`intervalXorAll(a, b);`}
+  rightCode={`import { intervalXorAllDate, mergeIntervals } from "@northguild/gmt";
+
+intervalXorAllDate([a, b, c]); // positional, closed, Date values
+mergeIntervals([x, y, z]);     // half-open, instant strings`}
 />
 
 ## See also
 
-- [Intervals guide](/guides/intervals/)
+- [Intervals guide](/guides/intervals/interval-basics/)
+- [`intervalsOverlap` reference](/reference/interval/compare/intervalsOverlap)
+- [`subtractIntervals` reference](/reference/interval/calculate/subtractIntervals)
+- [`sumIntervals` reference](/reference/interval/calculate/sumIntervals)
+- [`isValidInterval` reference](/reference/interval/validate/isValidInterval)
 - [`intervalsOverlapDate` reference](/reference/plain/interval/intervalsOverlapDate)
 - [`intervalAbutsDate` reference](/reference/plain/interval/intervalAbutsDate)
-- [`intervalEngulfsDate` reference](/reference/plain/interval/intervalEngulfsDate)
-- [`intervalIntersectionDate` reference](/reference/plain/interval/intervalIntersectionDate)
-- [`intervalFromDurationDate` reference](/reference/plain/interval/intervalFromDurationDate)
+- [`intervalDifferenceUtc` reference](/reference/utc/interval/intervalDifferenceUtc)
 - [`intervalCountDate` reference](/reference/plain/interval/intervalCountDate)
 - [`intervalLengthDate` reference](/reference/plain/interval/intervalLengthDate)
+- [`intervalFromDurationDate` reference](/reference/plain/interval/intervalFromDurationDate)
+- [`intervalOverlappingDaysDate` reference](/reference/plain/interval/intervalOverlappingDaysDate)
 - [`splitIntervalByUnitDate` reference](/reference/plain/interval/splitIntervalByUnitDate)
-- [`mergeIntervalsDate` reference](/reference/plain/interval/mergeIntervalsDate)
 - [`intervalXorAllDate` reference](/reference/plain/interval/intervalXorAllDate)

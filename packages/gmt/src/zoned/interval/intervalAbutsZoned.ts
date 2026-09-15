@@ -1,13 +1,15 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { parseCalendarZonedValue } from "../../internal";
+import { closedIntervalsAbut, parseCalendarZonedValue } from "../../internal";
 import { isValidCalendarZonedDateTime } from "../validate";
 
 /**
- * Return true when two zoned intervals are exactly adjacent — one's end equals the other's
- * start with zero gap and zero overlap.
+ * Return true when two zoned intervals are exactly adjacent — one's end is one nanosecond
+ * before the other's start, so they share no instant and leave no gap.
  *
  * - Uses `Temporal.Instant.compare` for comparison (via `.toInstant()`).
- * - Returns `true` when `aEnd + 1 nanosecond === bStart` or `bEnd + 1 nanosecond === aStart`.
+ * - Returns `true` when `bStart - 1 nanosecond === aEnd` (with `aEnd < bStart`) or
+ *   `aStart - 1 nanosecond === bEnd` (with `bEnd < aStart`). The step is taken down from the later
+ *   start, so an interval ending at the last representable instant still abuts.
  * - Returns `false` when intervals overlap, are disjoint with a gap, or are invalid.
  * - Returns `false` on invalid input (wrong type, malformed strings, leap seconds).
  * - **Accepts mixed calendar systems** (E7's D4-zoned, issue #152): both bare ISO zoned strings
@@ -26,7 +28,7 @@ import { isValidCalendarZonedDateTime } from "../validate";
  * @returns true if intervals are exactly adjacent, or false on invalid input
  *
  * @example intervalAbutsZoned("2024-01-01T09:00:00+00:00[UTC]", "2024-06-30T12:00:00+00:00[UTC]", "2024-06-30T12:00:00.000000001+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]") // true
- * @example intervalAbutsZoned("2024-06-30T12:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]", "2024-01-01T09:00:00+00:00[UTC]", "2024-06-30T12:00:00.000000001+00:00[UTC]") // true
+ * @example intervalAbutsZoned("2024-06-30T12:00:00.000000001+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]", "2024-01-01T09:00:00+00:00[UTC]", "2024-06-30T12:00:00+00:00[UTC]") // true
  * @example intervalAbutsZoned("2024-01-01T09:00:00+00:00[UTC]", "2024-06-30T12:00:00+00:00[UTC]", "2024-06-30T12:00:01+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]") // false (gap)
  * @example intervalAbutsZoned("2024-01-01T09:00:00+00:00[UTC]", "2024-06-30T13:00:00+00:00[UTC]", "2024-06-30T12:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]") // false (overlap)
  * @example intervalAbutsZoned("invalid", "2024-06-30T12:00:00+00:00[UTC]", "2024-06-30T12:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]") // false
@@ -69,19 +71,14 @@ export function intervalAbutsZoned(
       return false;
     }
 
-    // aEnd + 1 nanosecond === bStart
-    const aEndPlusOne = aE.add({ nanoseconds: 1 });
-    if (Temporal.Instant.compare(aEndPlusOne, bS) === 0) {
-      return true;
-    }
-
-    // bEnd + 1 nanosecond === aStart
-    const bEndPlusOne = bE.add({ nanoseconds: 1 });
-    if (Temporal.Instant.compare(bEndPlusOne, aS) === 0) {
-      return true;
-    }
-
-    return false;
+    return closedIntervalsAbut(
+      aS,
+      aE,
+      bS,
+      bE,
+      Temporal.Instant.compare,
+      (value) => value.subtract({ nanoseconds: 1 }),
+    );
   } catch {
     return false;
   }

@@ -5,9 +5,12 @@ import { plainTime } from "../../regex";
  * Return the portion(s) of interval A not covered by interval B.
  *
  * - Uses `Temporal.PlainTime.compare` for comparison.
+ * - Endpoints are inclusive, so a returned piece ends one nanosecond before, or starts
+ *   one nanosecond after, the interval it borders.
  * - Returns `[]` when B fully covers A.
  * - Returns `[{ start, end }]` when B overlaps one edge of A (or equals A).
  * - Returns `[{ start, end }, { start, end }]` when B is fully inside A with gaps on both sides.
+ * - Returns A unchanged when B lies entirely before or after it.
  * - Returns `[]` if either interval is invalid (`start > end`).
  * - Returns `[]` on invalid input (wrong type, malformed strings).
  *
@@ -17,9 +20,10 @@ import { plainTime } from "../../regex";
  * @param bEnd ISO 8601 time string for the second interval end
  * @returns array of `{ start, end }` records representing A minus B, or `[]` on invalid input
  *
- * @example intervalDifferenceTime("09:00:00", "17:00:00", "12:00:00", "13:00:00") // [{ start: "09:00:00", end: "11:59:59" }, { start: "13:00:01", end: "17:00:00" }]
+ * @example intervalDifferenceTime("09:00:00", "17:00:00", "12:00:00", "13:00:00") // [{ start: "09:00:00", end: "11:59:59.999999999" }, { start: "13:00:00.000000001", end: "17:00:00" }]
  * @example intervalDifferenceTime("09:00:00", "17:00:00", "09:00:00", "17:00:00") // []
- * @example intervalDifferenceTime("09:00:00", "17:00:00", "12:00:00", "17:00:00") // [{ start: "09:00:00", end: "11:59:59" }]
+ * @example intervalDifferenceTime("09:00:00", "17:00:00", "12:00:00", "17:00:00") // [{ start: "09:00:00", end: "11:59:59.999999999" }]
+ * @example intervalDifferenceTime("12:00:00", "17:00:00", "09:00:00", "10:00:00") // [{ start: "12:00:00", end: "17:00:00" }] (B entirely before A)
  * @example intervalDifferenceTime("invalid", "17:00:00", "12:00:00", "13:00:00") // []
  */
 export function intervalDifferenceTime(
@@ -73,12 +77,14 @@ export function intervalDifferenceTime(
       }
     }
 
-    // Right piece: A after B ends
+    // Right piece: A after B ends — starting at A's own start when B lies entirely before A. The
+    // step is only taken when B ends inside A, so it never wraps past 23:59:59.999999999.
     if (Temporal.PlainTime.compare(aE, bE) > 0) {
-      result.push({
-        start: bE.add({ nanoseconds: 1 }).toString(),
-        end: aE.toString(),
-      });
+      const rightStart =
+        Temporal.PlainTime.compare(bE, aS) < 0
+          ? aS
+          : bE.add({ nanoseconds: 1 });
+      result.push({ start: rightStart.toString(), end: aE.toString() });
     }
 
     return result;

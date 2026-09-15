@@ -16,7 +16,7 @@ describe("isValidUnixInterval", () => {
 
   it.each`
     start   | end     | expected
-    ${1000} | ${2000} | ${true}
+    ${1000} | ${1000} | ${true}
   `(
     "returns $expected for equal Unix interval values $start",
     ({ start, end, expected }) => {
@@ -46,6 +46,33 @@ describe("isValidUnixInterval", () => {
   `("returns false for non-finite Unix: $start, $end", ({ start, end }) => {
     expect(isValidUnixInterval(start, end)).toBe(false);
   });
+
+  it.each`
+    start         | end        | reason
+    ${0}          | ${1.5}     | ${"fractional end"}
+    ${0.5}        | ${2}       | ${"fractional start"}
+    ${"0"}        | ${"1.5"}   | ${"fractional numeric string"}
+    ${0}          | ${2 ** 53} | ${"2^53 is not a safe integer"}
+    ${-(2 ** 53)} | ${0}       | ${"-2^53 is not a safe integer"}
+    ${""}         | ${1000}    | ${"empty string is not epoch 0"}
+    ${0}          | ${"   "}   | ${"whitespace string is not epoch 0"}
+  `(
+    "returns false for a non-safe-integer epoch: $start, $end ($reason)",
+    ({ start, end }) => {
+      expect(isValidUnixInterval(start, end)).toBe(false);
+    },
+  );
+
+  it.each`
+    start                       | end                        | reason
+    ${-Number.MAX_SAFE_INTEGER} | ${Number.MAX_SAFE_INTEGER} | ${"both safe-integer limits"}
+    ${"-86400"}                 | ${"1e3"}                   | ${"numeric strings coerce to safe integers"}
+  `(
+    "returns true for safe-integer epochs: $start, $end ($reason)",
+    ({ start, end }) => {
+      expect(isValidUnixInterval(start, end)).toBe(true);
+    },
+  );
 
   it.each`
     start        | end

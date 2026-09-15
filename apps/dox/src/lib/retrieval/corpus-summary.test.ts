@@ -18,10 +18,12 @@
  * the two see the same set. A guide the glob picks up and the walk misses (or
  * the reverse) would otherwise make the advertised figure quietly wrong.
  */
+import { corpus } from "~/generated/reference/corpus";
 import {
   CORPUS_CHUNK_COUNT,
   CORPUS_FUNCTION_COUNT,
   CORPUS_GUIDE_COUNT,
+  CORPUS_REFERENCE_COUNT,
   CORPUS_SUMMARY,
 } from "~/lib/chat-constants";
 import { buildRetrievalCorpus } from "./corpus";
@@ -29,10 +31,19 @@ import { buildRetrievalCorpus } from "./corpus";
 const chunks = buildRetrievalCorpus();
 
 describe("CORPUS_SUMMARY", () => {
-  it("matches the real number of function chunks", () => {
+  // Every reference entry — function, type or regex pattern — becomes one chunk of kind
+  // "function", so the chunk kind is not the figure the screen calls "functions".
+  it("matches the real number of reference chunks", () => {
     expect(chunks.filter((c) => c.kind === "function")).toHaveLength(
+      CORPUS_REFERENCE_COUNT,
+    );
+  });
+
+  it("counts only function entries as functions", () => {
+    expect(corpus.filter((e) => e.kind === "function")).toHaveLength(
       CORPUS_FUNCTION_COUNT,
     );
+    expect(CORPUS_FUNCTION_COUNT).toBeLessThan(CORPUS_REFERENCE_COUNT);
   });
 
   it("matches the real number of guide chunks", () => {

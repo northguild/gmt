@@ -1,9 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { resolveDateTimeUnit } from "../../internal";
-import {
-  isValidUnixEpochPair,
-  resolveUnixTimeZone,
-} from "../../internal/resolveUnixTimeZone";
+import { parseUnixEpochInterval, resolveDateTimeUnit } from "../../internal";
+import { resolveUnixTimeZone } from "../../internal/resolveUnixTimeZone";
 import { isValidDateTimeUnit } from "../../plain/validate";
 
 export interface ResolvedUnixInterval {
@@ -17,20 +14,14 @@ export function resolveUnixIntervalPair(
   end: number | string,
   unit: string,
 ): ResolvedUnixInterval | null {
-  if (typeof start !== "number" && typeof start !== "string") {
+  // Safe integers (or numeric strings of one) only: an empty string is not read as the epoch.
+  const interval = parseUnixEpochInterval(start, end);
+
+  if (interval === null) {
     return null;
   }
 
-  if (typeof end !== "number" && typeof end !== "string") {
-    return null;
-  }
-
-  const startMs = typeof start === "number" ? start : Number(start);
-  const endMs = typeof end === "number" ? end : Number(end);
-
-  if (!isValidUnixEpochPair(startMs, endMs) || startMs > endMs) {
-    return null;
-  }
+  const { start: startMs, end: endMs } = interval;
 
   if (typeof unit !== "string") {
     return null;

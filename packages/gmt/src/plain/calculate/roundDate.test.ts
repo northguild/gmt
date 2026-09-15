@@ -73,7 +73,7 @@ describe("roundDate", () => {
     ${"2024-06-16"} | ${"month"} | ${"halfCeil"}   | ${"2024-07-01"}
     ${"2024-06-16"} | ${"month"} | ${"halfTrunc"}  | ${"2024-06-01"}
     ${"2024-06-16"} | ${"month"} | ${"halfFloor"}  | ${"2024-06-01"}
-    ${"2024-06-16"} | ${"month"} | ${"halfEven"}   | ${"2024-07-01"}
+    ${"2024-06-16"} | ${"month"} | ${"halfEven"}   | ${"2024-06-01"}
   `(
     "returns $expected for half-boundary $value with roundingMode $roundingMode on $unit",
     ({ value, unit, roundingMode, expected }) => {
@@ -125,4 +125,25 @@ describe("roundDate", () => {
     mockTemporalPlainDateFromThrow();
     expect(roundDate("2024-06-15", { smallestUnit: "month" })).toBe("");
   });
+
+  // -271821-04-19 is the first representable PlainDate (a Monday). Its month and year began before
+  // the range, so rounding may only return the next start. April has 30 days, so 04-19 is 18/30 =
+  // 0.6 of the way through its month (halfExpand rounds up); it is 108/365 through its year (rounds
+  // down, to a start that does not exist, so the sentinel). A Monday is its own week start.
+  it.each`
+    value              | unit       | roundingMode    | expected
+    ${"-271821-04-19"} | ${"month"} | ${"halfExpand"} | ${"-271821-05-01"}
+    ${"-271821-04-19"} | ${"month"} | ${"ceil"}       | ${"-271821-05-01"}
+    ${"-271821-04-19"} | ${"month"} | ${"floor"}      | ${""}
+    ${"-271821-04-19"} | ${"year"}  | ${"ceil"}       | ${"-271820-01-01"}
+    ${"-271821-04-19"} | ${"year"}  | ${"halfExpand"} | ${""}
+    ${"-271821-04-19"} | ${"week"}  | ${"halfExpand"} | ${"-271821-04-19"}
+  `(
+    "returns $expected for the first PlainDate $value rounded to $unit with roundingMode $roundingMode",
+    ({ value, unit, roundingMode, expected }) => {
+      expect(roundDate(value, { smallestUnit: unit, roundingMode })).toBe(
+        expected,
+      );
+    },
+  );
 });

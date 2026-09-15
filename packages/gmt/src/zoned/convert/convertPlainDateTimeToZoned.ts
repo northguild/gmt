@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { isValidDateTime } from "../../plain/validate";
 import type { Disambiguation, Offset } from "../../types";
 import { isValidTimeZone } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Attach the specified `timeZone` to a plain datetime string and return a zoned ISO 8601 datetime string.
@@ -43,7 +44,7 @@ export function convertPlainDateTimeToZoned(
   };
 
   try {
-    const zonedDateTime = Temporal.ZonedDateTime.from(`${value}[${timeZone}]`, {
+    const zonedDateTime = zonedDateTimeFrom(`${value}[${timeZone}]`, {
       disambiguation,
       offset,
     });

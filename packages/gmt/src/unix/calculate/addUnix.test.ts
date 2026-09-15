@@ -58,3 +58,17 @@ describe("addUnix", () => {
     },
   );
 });
+
+describe("addUnix at the maximum instant", () => {
+  // 8_640_000_000_000_000 ms is +275760-09-13T00:00:00Z = 10:00 in Sydney; one day earlier is 8_639_999_913_600_000.
+  it.each`
+    value                    | units          | timeZone                | expected
+    ${8_639_999_913_600_000} | ${{ days: 1 }} | ${"Australia/Sydney"}   | ${8_640_000_000_000_000}
+    ${8_639_999_913_600_000} | ${{ days: 1 }} | ${"Pacific/Kiritimati"} | ${8_640_000_000_000_000}
+  `(
+    "adds $units to $value in $timeZone giving $expected",
+    ({ value, units, timeZone, expected }) => {
+      expect(addUnix(value, units, { timeZone })).toBe(expected);
+    },
+  );
+});

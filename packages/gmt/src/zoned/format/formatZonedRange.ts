@@ -1,5 +1,5 @@
 import { Temporal, Intl as TemporalIntl } from "@js-temporal/polyfill";
-import { normalizeDateTime } from "../../internal";
+import { normalizeDateTime, zonedDateTimeFrom } from "../../internal";
 import type { DateTimeFormatOptions } from "../../types";
 import { isValidZonedDateTime } from "../validate";
 
@@ -33,8 +33,8 @@ export function formatZonedRange(
   let zdt1: Temporal.ZonedDateTime;
   let zdt2: Temporal.ZonedDateTime;
   try {
-    zdt1 = Temporal.ZonedDateTime.from(from);
-    zdt2 = Temporal.ZonedDateTime.from(to);
+    zdt1 = zonedDateTimeFrom(from);
+    zdt2 = zonedDateTimeFrom(to);
   } catch {
     return "";
   }

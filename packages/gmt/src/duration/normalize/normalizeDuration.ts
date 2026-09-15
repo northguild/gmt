@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { resolveDurationRelativeTo } from "../../internal";
+import { durationRound, resolveDurationRelativeTo } from "../../internal";
 import type { DurationRelativeTo } from "../../types";
 
 /**
@@ -45,15 +45,13 @@ export function normalizeDuration(
 
   try {
     const duration = Temporal.Duration.from(value);
-    return duration
-      .round({
-        largestUnit: options?.largestUnit ?? "auto",
-        smallestUnit: options?.smallestUnit,
-        roundingIncrement: options?.roundingIncrement,
-        roundingMode: options?.roundingMode,
-        relativeTo: resolveDurationRelativeTo(options?.relativeTo),
-      })
-      .toString();
+    return durationRound(duration, {
+      largestUnit: options?.largestUnit ?? "auto",
+      smallestUnit: options?.smallestUnit,
+      roundingIncrement: options?.roundingIncrement,
+      roundingMode: options?.roundingMode,
+      relativeTo: resolveDurationRelativeTo(options?.relativeTo),
+    }).toString();
   } catch {
     return "";
   }

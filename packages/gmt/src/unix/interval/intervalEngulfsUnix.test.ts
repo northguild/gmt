@@ -9,7 +9,7 @@ describe("intervalEngulfsUnix", () => {
     ${0}    | ${1700000000} | ${1500000000} | ${1700000000} | ${true}
     ${1000} | ${1000}       | ${1000}       | ${1000}       | ${true}
   `(
-    "returns $expected when B is inside A ($aStart..$aEnd, $bStart..$bEnd)",
+    "returns $expected when B is inside A ($aStart to $aEnd, $bStart to $bEnd)",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalEngulfsUnix(aStart, aEnd, bStart, bEnd)).toBe(expected);
     },
@@ -78,6 +78,20 @@ describe("intervalEngulfsUnix", () => {
     "returns $expected for string numeric input",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalEngulfsUnix(aStart, aEnd, bStart, bEnd)).toBe(expected);
+    },
+  );
+
+  // Epoch values are whole units; fractions, unsafe integers and empty strings are invalid input.
+  it.each`
+    aStart | aEnd       | bStart   | bEnd   | description
+    ${0}   | ${10}      | ${0.5}   | ${1}   | ${"a fractional start"}
+    ${0}   | ${2 ** 53} | ${1}     | ${2}   | ${"an unsafe end"}
+    ${"0"} | ${"10"}    | ${"1.5"} | ${"2"} | ${"a fractional numeric string"}
+    ${""}  | ${"10"}    | ${"1"}   | ${"2"} | ${"an empty string, which Number() reads as 0"}
+  `(
+    "returns false for A=[$aStart, $aEnd] engulfing B=[$bStart, $bEnd] ($description)",
+    ({ aStart, aEnd, bStart, bEnd }) => {
+      expect(intervalEngulfsUnix(aStart, aEnd, bStart, bEnd)).toBe(false);
     },
   );
 });

@@ -52,7 +52,7 @@ These bind every change.
 
 3. **Import `@northguild/gmt` from its built `dist`, not from source.** Let the workspace build the package first via the root `validate` script. Do not configure Vite `resolve.conditions` to match the `@northguild/source` condition — more moving parts, no benefit.
 
-4. **Never perturb `packages/gmt`.** `pnpm run validate` must stay green including the CI timezone matrix (10 zones × Node 22/24 — see README). If a story genuinely must touch `packages/gmt`, it needs a changeset — stop and confirm with the architect first.
+4. **Never perturb `packages/gmt`.** `pnpm run validate` must stay green including the CI timezone matrix (10 zones × Node 22/24/26 — see README). If a story genuinely must touch `packages/gmt`, it needs a changeset — stop and confirm with the architect first.
 
 5. **Generated output is rebuilt, never hand-edited.** It lives under
    `apps/dox/src/generated/` (and the MDX pages under `src/content/docs/reference/`);

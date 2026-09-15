@@ -1,4 +1,4 @@
-import { isValidUnixEpochPair } from "../../internal/resolveUnixTimeZone";
+import { parseUnixEpochIntervalList } from "../../internal";
 
 /**
  * Collapse a list of Unix epoch intervals into the minimum set of non-overlapping intervals.
@@ -9,8 +9,8 @@ import { isValidUnixEpochPair } from "../../internal/resolveUnixTimeZone";
  * - Order of the input list does not matter; the result is sorted by start.
  * - Returns `[]` for an empty list.
  * - Returns `[]` when `intervals` is not an array, when any element is not a
- *   `{ start, end }` record of finite numeric (or numeric-string) values, or when any element
- *   has `start > end`.
+ *   `{ start, end }` record of safe-integer (or numeric-string) values — fractions, empty
+ *   strings and values beyond ±(2^53 − 1) are invalid — or when any element has `start > end`.
  *
  * @param intervals array of `{ start, end }` records
  * @returns the minimum set of non-overlapping `{ start, end }` records, sorted by start, or `[]` on invalid input
@@ -25,34 +25,9 @@ export function mergeIntervalsUnix(
     return [];
   }
 
-  if (
-    !intervals.every(
-      (interval) =>
-        interval &&
-        typeof interval === "object" &&
-        (typeof interval.start === "number" ||
-          typeof interval.start === "string") &&
-        (typeof interval.end === "number" || typeof interval.end === "string"),
-    )
-  ) {
-    return [];
-  }
+  const parsed = parseUnixEpochIntervalList(intervals);
 
-  const parsed = intervals.map((interval) => ({
-    start:
-      typeof interval.start === "number"
-        ? interval.start
-        : Number(interval.start),
-    end: typeof interval.end === "number" ? interval.end : Number(interval.end),
-  }));
-
-  if (
-    !parsed.every(
-      (interval) =>
-        isValidUnixEpochPair(interval.start, interval.end) &&
-        interval.start <= interval.end,
-    )
-  ) {
+  if (parsed === null) {
     return [];
   }
 

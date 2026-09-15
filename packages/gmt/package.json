@@ -66,6 +66,15 @@
       "default": "./dist/instant/*/index.js"
     },
     "./instant/*/*": null,
+    "./interval": {
+      "types": "./dist/interval/index.d.ts",
+      "default": "./dist/interval/index.js"
+    },
+    "./interval/*": {
+      "types": "./dist/interval/*/index.d.ts",
+      "default": "./dist/interval/*/index.js"
+    },
+    "./interval/*/*": null,
     "./plain": {
       "types": "./dist/plain/index.d.ts",
       "default": "./dist/plain/index.js"

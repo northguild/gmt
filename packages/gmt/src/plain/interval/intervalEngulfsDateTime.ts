@@ -6,6 +6,7 @@ import { plainDateTime } from "../../regex";
  * falls within A.
  *
  * - Uses `Temporal.PlainDateTime.compare` for comparison.
+ * - Endpoints are inclusive: B may start at A's start and end at A's end.
  * - Equivalent to 4-argument `intervalContainsDateTime(aStart, aEnd, bStart, bEnd)`.
  * - Returns `false` if either interval is invalid (`start > end`).
  * - Returns `false` on invalid input (wrong type, malformed strings).

@@ -135,3 +135,19 @@ describe("startOfQuarterForZoned at a zone transition with ignored explicit opti
     },
   );
 });
+
+// The last representable instant is +275760-09-13T00:00:00Z (Santiago 09-12T21:00-03:00). Q3 starts
+// at local midnight on 1 July, on Santiago's winter offset (-04:00); no transition falls on that day.
+// Sydney's max is +275760-09-13T10:00+10:00; its Q3 also starts on 1 July at +10:00 (standard time).
+describe("startOfQuarterForZoned at the maximum instant in a DST zone", () => {
+  it.each`
+    value                                               | expected
+    ${"+275760-09-12T21:00:00-03:00[America/Santiago]"} | ${"+275760-07-01T00:00:00-04:00[America/Santiago]"}
+    ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"} | ${"+275760-07-01T00:00:00+10:00[Australia/Sydney]"}
+  `(
+    "returns $expected as the quarter start of $value",
+    ({ value, expected }) => {
+      expect(startOfQuarterForZoned(value)).toBe(expected);
+    },
+  );
+});

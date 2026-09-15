@@ -7,9 +7,10 @@ import { hasCalendarAnnotation } from "./hasCalendarAnnotation";
  *
  * The single definition of "an instant string GMT accepts": the full RFC 9557 instant
  * grammar `Temporal.Instant.from` parses, minus leap seconds (which Temporal clamps rather
- * than rejects) and minus `[u-ca=...]` calendar annotations (which `utc/` and `unix/` also
- * reject). Callers layer their own sentinel on top — `toNanoseconds` returns `0n`, `spanNs`
- * returns `null` — so the parse result stays unambiguous here.
+ * than rejects) and minus `[u-ca=...]` calendar annotations, including RFC 9557's critical form
+ * `[!u-ca=...]` (which `utc/` and `unix/` also reject). Callers layer their own sentinel on top —
+ * `toNanoseconds` returns `0n`, `spanNs` returns `null` — so the parse result stays unambiguous
+ * here.
  *
  * @param value candidate ISO 8601 instant string
  * @returns nanoseconds since the Unix epoch, or null when `value` is not a valid instant

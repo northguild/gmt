@@ -1,12 +1,17 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { getSystemTimeZone } from "../../zoned/get";
 import { isValidTimeZone } from "../../zoned/validate";
-import { resolveDurationUnit, tileByUnit } from "../../internal";
+import {
+  parseUnixEpochInterval,
+  resolveDurationUnit,
+  tileByUnit,
+} from "../../internal";
 
 /**
  * Split a Unix epoch interval into sub-intervals of `amount × unit`.
  *
- * - Returns an array of `{ start, end }` records that tile the interval.
+ * - Returns an array of `{ start, end }` records that tile the interval, each record's `end`
+ *   equal to the next record's `start`.
  * - The final sub-interval is trimmed so its `end` never exceeds the original `end`.
  * - Calendar-unit boundaries (years, months, weeks, days) are computed from `start`
  *   (`start + k × amount`, as Temporal and Luxon's `Interval.splitBy` do), so month-end starts
@@ -18,7 +23,8 @@ import { resolveDurationUnit, tileByUnit } from "../../internal";
  *   day, such as 30 December 2011 in `Pacific/Apia`) is skipped, so no empty slice is produced.
  *   A step that goes backwards returns `[]`.
  * - Returns `[{ start, end }]` when `start === end` (zero-length interval).
- * - Returns `[]` on invalid input (non-finite/non-integer start/end, unsupported unit,
+ * - Returns `[]` on invalid input (`start`/`end` that is not a safe integer or numeric string of
+ *   one — fractions, empty strings and values beyond ±(2^53 − 1) are invalid — unsupported unit,
  *   non-positive amount, or invalid timeZone).
  *
  * Uses the system timeZone for calendar-unit arithmetic (consistent with `addUnix`).
@@ -41,28 +47,13 @@ export function splitIntervalByUnitUnix(
   unit: string,
   amount: number,
 ): Array<{ start: number; end: number }> {
-  if (typeof start !== "number" && typeof start !== "string") {
+  const interval = parseUnixEpochInterval(start, end);
+
+  if (interval === null) {
     return [];
   }
 
-  if (typeof end !== "number" && typeof end !== "string") {
-    return [];
-  }
-
-  const startMs = typeof start === "number" ? start : Number(start);
-  const endMs = typeof end === "number" ? end : Number(end);
-
-  if (!Number.isFinite(startMs) || !Number.isInteger(startMs)) {
-    return [];
-  }
-
-  if (!Number.isFinite(endMs) || !Number.isInteger(endMs)) {
-    return [];
-  }
-
-  if (startMs > endMs) {
-    return [];
-  }
+  const { start: startMs, end: endMs } = interval;
 
   if (typeof unit !== "string") {
     return [];

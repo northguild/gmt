@@ -1,4 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { zonedUntil } from "../../internal";
 import { getLargestDateTimeDurationUnit } from "../../plain/calculate/getLargestDateTimeDurationUnit";
 import { isValidDateTimeDurationUnit } from "../../plain/validate";
 import type { DateTimeDurationUnit, RoundingOptions } from "../../types";
@@ -52,7 +53,7 @@ export function diffUtc(
     const zdt1 = instant1.toZonedDateTimeISO("UTC");
     const zdt2 = instant2.toZonedDateTimeISO("UTC");
 
-    const duration = zdt1.until(zdt2, {
+    const duration = zonedUntil(zdt1, zdt2, {
       largestUnit: isSingleUnit ? units : getLargestDateTimeDurationUnit(units),
       smallestUnit: options?.smallestUnit,
       roundingIncrement: options?.roundingIncrement,

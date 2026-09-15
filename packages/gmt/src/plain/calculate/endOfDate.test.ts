@@ -54,4 +54,33 @@ describe("endOfDate", () => {
   `("returns empty string for invalid unit $invalidUnit", ({ invalidUnit }) => {
     expect(endOfDate("2024-02-29", invalidUnit as never)).toBe("");
   });
+
+  // A Sunday starts its own Sunday-first week, which ends the following Saturday (+6 days).
+  it.each`
+    value           | weekStartsOn | expected        | description
+    ${"2024-03-03"} | ${"sunday"}  | ${"2024-03-09"} | ${"a Sunday starts its own Sunday-first week"}
+    ${"2024-03-09"} | ${"sunday"}  | ${"2024-03-09"} | ${"a Saturday ends it"}
+    ${"2024-03-03"} | ${"monday"}  | ${"2024-03-03"} | ${"a Sunday ends a Monday-first week"}
+  `(
+    "returns $expected as the week end of $value with weekStartsOn $weekStartsOn ($description)",
+    ({ value, weekStartsOn, expected }) => {
+      expect(endOfDate(value, "week", { weekStartsOn })).toBe(expected);
+    },
+  );
+
+  // -271821-04-19 is the first representable PlainDate (a Monday). The start of its month, year and
+  // Sunday-first week lies before the range, but every end is representable and must be returned.
+  it.each`
+    value              | unit       | weekStartsOn | expected
+    ${"-271821-04-19"} | ${"day"}   | ${undefined} | ${"-271821-04-19"}
+    ${"-271821-04-19"} | ${"week"}  | ${"monday"}  | ${"-271821-04-25"}
+    ${"-271821-04-19"} | ${"week"}  | ${"sunday"}  | ${"-271821-04-24"}
+    ${"-271821-04-19"} | ${"month"} | ${undefined} | ${"-271821-04-30"}
+    ${"-271821-04-19"} | ${"year"}  | ${undefined} | ${"-271821-12-31"}
+  `(
+    "returns $expected as the $unit end of the first PlainDate $value (weekStartsOn $weekStartsOn)",
+    ({ value, unit, weekStartsOn, expected }) => {
+      expect(endOfDate(value, unit, { weekStartsOn })).toBe(expected);
+    },
+  );
 });

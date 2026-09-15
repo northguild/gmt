@@ -5,6 +5,8 @@ import { plainDateTime } from "../../regex";
  * Return the symmetric difference of two datetime intervals — time covered by exactly one interval.
  *
  * - Uses `Temporal.PlainDateTime.compare` for comparison.
+ * - Endpoints are inclusive, so a returned piece ends one nanosecond before, or starts
+ *   one nanosecond after, the interval it borders.
  * - Returns `[]` when intervals are identical or both invalid.
  * - Returns `[{ start, end }]` when one interval fully contains the other.
  * - Returns `[{ start, end }, { start, end }]` when intervals partially overlap.
@@ -17,8 +19,8 @@ import { plainDateTime } from "../../regex";
  * @param bEnd ISO 8601 datetime string for the second interval end
  * @returns array of `{ start, end }` records representing the symmetric difference, or `[]` on invalid input
  *
- * @example intervalXorDateTime("2024-01-01T09:00:00", "2024-06-30T12:00:00", "2024-04-01T11:00:00", "2024-12-31T17:00:00") // [{ start: "2024-01-01T09:00:00", end: "2024-03-31T17:00:00" }, { start: "2024-06-30T12:00:01", end: "2024-12-31T17:00:00" }]
- * @example intervalXorDateTime("2024-01-01T09:00:00", "2024-12-31T17:00:00", "2024-04-01T11:00:00", "2024-06-30T12:00:00") // [{ start: "2024-01-01T09:00:00", end: "2024-03-31T17:00:00" }, { start: "2024-06-30T12:00:01", end: "2024-12-31T17:00:00" }]
+ * @example intervalXorDateTime("2024-01-01T09:00:00", "2024-06-30T12:00:00", "2024-04-01T11:00:00", "2024-12-31T17:00:00") // [{ start: "2024-01-01T09:00:00", end: "2024-04-01T10:59:59.999999999" }, { start: "2024-06-30T12:00:00.000000001", end: "2024-12-31T17:00:00" }]
+ * @example intervalXorDateTime("2024-01-01T09:00:00", "2024-12-31T17:00:00", "2024-04-01T11:00:00", "2024-06-30T12:00:00") // [{ start: "2024-01-01T09:00:00", end: "2024-04-01T10:59:59.999999999" }, { start: "2024-06-30T12:00:00.000000001", end: "2024-12-31T17:00:00" }]
  * @example intervalXorDateTime("2024-01-01T09:00:00", "2024-12-31T17:00:00", "2024-01-01T09:00:00", "2024-12-31T17:00:00") // []
  * @example intervalXorDateTime("invalid", "2024-06-30T12:00:00", "2024-07-01T13:00:00", "2024-12-31T17:00:00") // []
  */

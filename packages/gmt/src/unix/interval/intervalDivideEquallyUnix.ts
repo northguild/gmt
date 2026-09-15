@@ -1,4 +1,4 @@
-import { isValidUnixEpochPair } from "../../internal/resolveUnixTimeZone";
+import { parseUnixEpochInterval } from "../../internal";
 
 /**
  * Split a Unix epoch interval into `n` equal-length sub-intervals.
@@ -9,8 +9,9 @@ import { isValidUnixEpochPair } from "../../internal/resolveUnixTimeZone";
  *   involved, so the split is exact whenever the total divides evenly by `n`.
  * - `n === 1` returns the original interval unchanged, as a single-element array.
  * - A zero-length interval (`start === end`) returns `n` identical zero-length sub-intervals.
- * - Returns `[]` when `n` is not a positive integer, or on invalid input (non-finite/non-integer
- *   start/end, `start > end`).
+ * - Returns `[]` when `n` is not a positive integer, or on invalid input (`start`/`end` that is
+ *   not a safe integer or numeric string of one — fractions, empty strings and values beyond
+ *   ±(2^53 − 1) are invalid — or `start > end`).
  *
  * @param start Unix epoch value (seconds or milliseconds) — interval start
  * @param end Unix epoch value (seconds or milliseconds) — interval end
@@ -32,20 +33,13 @@ export function intervalDivideEquallyUnix(
     return [];
   }
 
-  if (typeof start !== "number" && typeof start !== "string") {
+  const interval = parseUnixEpochInterval(start, end);
+
+  if (interval === null) {
     return [];
   }
 
-  if (typeof end !== "number" && typeof end !== "string") {
-    return [];
-  }
-
-  const startMs = typeof start === "number" ? start : Number(start);
-  const endMs = typeof end === "number" ? end : Number(end);
-
-  if (!isValidUnixEpochPair(startMs, endMs) || startMs > endMs) {
-    return [];
-  }
+  const { start: startMs, end: endMs } = interval;
 
   if (startMs === endMs) {
     return Array.from({ length: n }, () => ({ start: startMs, end: endMs }));

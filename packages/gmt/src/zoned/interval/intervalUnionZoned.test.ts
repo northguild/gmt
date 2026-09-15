@@ -13,7 +13,7 @@ describe("intervalUnionZoned", () => {
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-06-29T00:00:00+00:00[UTC]"} | ${"2024-06-29T00:00:00+00:00[UTC]"} | ${{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-06-30T23:59:59+00:00[UTC]" }}
     ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${{ start: "2024-06-30T23:59:59+00:00[UTC]", end: "2024-06-30T23:59:59+00:00[UTC]" }}
   `(
-    "returns merged interval when $aStart..$aEnd overlaps $bStart..$bEnd",
+    "returns merged interval when $aStart to $aEnd overlaps $bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalUnionZoned(aStart, aEnd, bStart, bEnd)).toEqual(expected);
     },

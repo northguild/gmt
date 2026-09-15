@@ -10,7 +10,7 @@ describe("intervalsOverlapTime", () => {
     ${"12:00:00"} | ${"12:00:00"} | ${"12:00:00"} | ${"12:00:00"} | ${true}
     ${"09:00:00"} | ${"17:00:00"} | ${"17:00:00"} | ${"17:00:00"} | ${true}
   `(
-    "returns $expected when intervals $aStart..$aEnd and $bStart..$bEnd overlap",
+    "returns $expected when intervals $aStart to $aEnd and $bStart to $bEnd overlap",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalsOverlapTime(aStart, aEnd, bStart, bEnd)).toBe(expected);
     },

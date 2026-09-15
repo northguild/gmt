@@ -169,4 +169,24 @@ describe("endOfUnix across zone transitions with default options", () => {
       expect(endOfUnix(1289100600000, "week", options)).toBe(expected);
     },
   );
+
+  // -8639999956800000 ms is -271821-04-20T12:00:00Z, half a day into the first representable
+  // instant's day (a Tuesday). The start of its month, year and week lies before the range, but
+  // every end is representable. Each end is floor(ns / 1e6) of `next start - 1 ns`, e.g. the UTC
+  // month ends at -271821-04-30T23:59:59.999999999Z = -8639999049600001 ms. New York is on local
+  // mean time (-04:56:02) then, so its month ends at 05-01T04:56:01.999999999Z = -8639999031838001.
+  it.each`
+    value                | unit       | timeZone              | weekStartsOn | expected
+    ${-8639999956800000} | ${"day"}   | ${"UTC"}              | ${"monday"}  | ${-8639999913600001}
+    ${-8639999956800000} | ${"week"}  | ${"UTC"}              | ${"monday"}  | ${-8639999481600001}
+    ${-8639999956800000} | ${"week"}  | ${"UTC"}              | ${"sunday"}  | ${-8639999568000001}
+    ${-8639999956800000} | ${"month"} | ${"UTC"}              | ${"monday"}  | ${-8639999049600001}
+    ${-8639999956800000} | ${"year"}  | ${"UTC"}              | ${"monday"}  | ${-8639977881600001}
+    ${-8639999956800000} | ${"month"} | ${"America/New_York"} | ${"monday"}  | ${-8639999031838001}
+  `(
+    "returns $expected as the $unit end of the first-day value $value in $timeZone (weekStartsOn $weekStartsOn)",
+    ({ value, unit, timeZone, weekStartsOn, expected }) => {
+      expect(endOfUnix(value, unit, { timeZone, weekStartsOn })).toBe(expected);
+    },
+  );
 });

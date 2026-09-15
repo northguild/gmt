@@ -1,6 +1,8 @@
 import {
+  durationTotal,
   parseCalendarZonedPairForArithmetic,
   resolveDateTimeUnit,
+  zonedUntil,
 } from "../../internal";
 import { isValidDateTimeUnit } from "../../plain/validate";
 import { isValidCalendarZonedInterval } from "./validate";
@@ -60,7 +62,9 @@ export function intervalLengthZoned(
       end,
     );
 
-    const duration = startVal.until(endVal, { largestUnit: resolvedUnit });
+    const duration = zonedUntil(startVal, endVal, {
+      largestUnit: resolvedUnit,
+    });
 
     // total() with relativeTo gives the exact, DST-aware elapsed length, unlike
     // intervalCountZoned's boundary-crossing count — a spring-forward day touches 1 day
@@ -70,7 +74,7 @@ export function intervalLengthZoned(
     // `start`. Anchoring to a still-calendar-tagged operand while the duration was measured in
     // ISO does not throw — it returns a plausible-looking WRONG number (verified: 12.586…, sitting
     // between the correct ISO 12.5666… and the correct Hebrew 13), which no sanity check catches.
-    return duration.total({ unit: resolvedUnit, relativeTo: startVal });
+    return durationTotal(duration, resolvedUnit, startVal);
   } catch {
     return null;
   }

@@ -92,4 +92,31 @@ describe("intervalXorAllTime", () => {
       intervalXorAllTime([{ start: "09:00:00", end: "12:00:00" }]),
     ).toEqual([]);
   });
+
+  // PlainTime has no day rollover, so an interval may end on the last nanosecond of the day and no
+  // boundary may be computed as `end + 1 ns` (it would wrap to 00:00:00). Each expected value is the
+  // set of times covered an odd number of times: 23:00 - 1 ns = 22:59:59.999999999 and
+  // 23:30 + 1 ns = 23:30:00.000000001.
+  it.each`
+    intervals                                                                                               | expected
+    ${[{ start: "22:00:00", end: "23:59:59.999999999" }]}                                                   | ${[{ start: "22:00:00", end: "23:59:59.999999999" }]}
+    ${[{ start: "00:00:00", end: "23:59:59.999999999" }]}                                                   | ${[{ start: "00:00:00", end: "23:59:59.999999999" }]}
+    ${[{ start: "22:00:00", end: "23:59:59.999999999" }, { start: "23:00:00", end: "23:30:00" }]}           | ${[{ start: "22:00:00", end: "22:59:59.999999999" }, { start: "23:30:00.000000001", end: "23:59:59.999999999" }]}
+    ${[{ start: "22:00:00", end: "23:59:59.999999999" }, { start: "23:00:00", end: "23:59:59.999999999" }]} | ${[{ start: "22:00:00", end: "22:59:59.999999999" }]}
+  `(
+    "returns $expected for $intervals at the end of the day (no midnight wrap)",
+    ({ intervals, expected }) => {
+      expect(intervalXorAllTime(intervals)).toEqual(expected);
+    },
+  );
+
+  it("returns one maximal run when a run starts one nanosecond after the previous run ends", () => {
+    // 09:00..12:00 and 12:00:00.000000001..15:00 are each covered once with no gap between them.
+    expect(
+      intervalXorAllTime([
+        { start: "09:00:00", end: "12:00:00" },
+        { start: "12:00:00.000000001", end: "15:00:00" },
+      ]),
+    ).toEqual([{ start: "09:00:00", end: "15:00:00" }]);
+  });
 });

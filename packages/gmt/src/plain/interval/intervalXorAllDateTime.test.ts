@@ -96,4 +96,18 @@ describe("intervalXorAllDateTime", () => {
       ]),
     ).toEqual([]);
   });
+
+  // The last representable PlainDateTime is +275760-09-13T23:59:59.999999999, so no boundary may be
+  // computed as `end + 1 ns`. Nested: T06:00..T12:00 is covered twice, so the odd runs end at
+  // T06:00 - 1 ns = T05:59:59.999999999 and resume at T12:00 + 1 ns = T12:00:00.000000001.
+  it.each`
+    intervals                                                                                                                                             | expected
+    ${[{ start: "+275760-09-13T00:00:00", end: "+275760-09-13T23:59:59.999999999" }]}                                                                     | ${[{ start: "+275760-09-13T00:00:00", end: "+275760-09-13T23:59:59.999999999" }]}
+    ${[{ start: "+275760-09-13T00:00:00", end: "+275760-09-13T23:59:59.999999999" }, { start: "+275760-09-13T06:00:00", end: "+275760-09-13T12:00:00" }]} | ${[{ start: "+275760-09-13T00:00:00", end: "+275760-09-13T05:59:59.999999999" }, { start: "+275760-09-13T12:00:00.000000001", end: "+275760-09-13T23:59:59.999999999" }]}
+  `(
+    "returns $expected for $intervals (an end at the maximum PlainDateTime)",
+    ({ intervals, expected }) => {
+      expect(intervalXorAllDateTime(intervals)).toEqual(expected);
+    },
+  );
 });

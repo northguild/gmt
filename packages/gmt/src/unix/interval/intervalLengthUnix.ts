@@ -1,3 +1,4 @@
+import { durationTotal, zonedUntil } from "../../internal";
 import { resolveUnixIntervalPair } from "./resolveUnixIntervalPair";
 
 /**
@@ -34,11 +35,13 @@ export function intervalLengthUnix(
 
   try {
     const { startVal, endVal, resolvedUnit } = resolved;
-    const duration = startVal.until(endVal, { largestUnit: resolvedUnit });
+    const duration = zonedUntil(startVal, endVal, {
+      largestUnit: resolvedUnit,
+    });
 
     // total() gives the exact elapsed length, unlike intervalCountUnix's boundary-crossing
     // count over the same system-timeZone calendar.
-    return duration.total({ unit: resolvedUnit, relativeTo: startVal });
+    return durationTotal(duration, resolvedUnit, startVal);
   } catch {
     return null;
   }

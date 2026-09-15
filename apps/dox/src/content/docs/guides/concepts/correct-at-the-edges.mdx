@@ -1,0 +1,142 @@
+---
+title: Correct at the Edges
+description: >
+  The detailed evidence behind Why GMT's "Correct at the edges" claim — the
+  tests that prove GMT is exact at the boundaries where date libraries
+  usually break.
+sidebar:
+  order: 2
+---
+
+import { formatCount, gmtStats } from "../../../../data/gmt-stats";
+
+This is the detailed evidence behind the summary on
+[Why GMT?](/why-gmt/#correct-at-the-edges). Date bugs hide at the extremes: the
+last nanosecond of a day, the first and last instant a clock can name, a
+daylight-saving change nobody tests because it is hundreds of millennia away.
+GMT tests those edges directly, and each paragraph below links the tests that
+prove it.
+
+## The last nanosecond of a day stays on its day
+
+A `PlainTime` has no date, so in
+[Temporal](https://tc39.es/proposal-temporal/#sec-temporal-plaintime-objects) adding one
+nanosecond to `23:59:59.999999999` wraps to `00:00:00`. When `intervalAbutsTime` and
+`intervalXorAllTime` need "one nanosecond away", they step the later value down instead of the
+earlier one up, so an interval ending on the last nanosecond of the day is never mistaken for
+one that starts at midnight.
+
+Tests: [intervalAbutsTime](https://github.com/northguild/gmt/blob/main/packages/gmt/src/plain/interval/intervalAbutsTime.test.ts) ·
+[intervalXorAllTime](https://github.com/northguild/gmt/blob/main/packages/gmt/src/plain/interval/intervalXorAllTime.test.ts) ·
+[closedAbuts](https://github.com/northguild/gmt/blob/main/packages/gmt/src/internal/closedAbuts.test.ts) ·
+[closedXorSweep](https://github.com/northguild/gmt/blob/main/packages/gmt/src/internal/closedXorSweep.test.ts)
+
+## The first and last instant give exact answers
+
+Temporal represents instants from
+`-271821-04-20T00:00:00Z` to `+275760-09-13T00:00:00Z`, 10<sup>8</sup> days either side of the
+epoch ([TC39 Temporal](https://tc39.es/proposal-temporal/#sec-temporal-isvalidepochnanoseconds)).
+Nothing can be added to the last one, so `intervalAbuts*` and `intervalXorAll*` for `Date`,
+`DateTime`, `Utc` and `Zoned` never step past it. They return the exact answer for intervals
+that end there, in UTC and in New York. At the other end, the first month is partial: its start
+lies before the range, but its end does not. `endOfDate("-271821-04-19", "month")` returns
+`"-271821-04-30"`, and `endOfDateTime`, `endOfUtc`, `endOfZoned` and `endOfUnix` return the
+matching day, week, month and year ends.
+
+Tests: [intervalAbutsUtc](https://github.com/northguild/gmt/blob/main/packages/gmt/src/utc/interval/intervalAbutsUtc.test.ts) ·
+[intervalAbutsZoned](https://github.com/northguild/gmt/blob/main/packages/gmt/src/zoned/interval/intervalAbutsZoned.test.ts) ·
+[intervalXorAllUtc](https://github.com/northguild/gmt/blob/main/packages/gmt/src/utc/interval/intervalXorAllUtc.test.ts) ·
+[intervalXorAllZoned](https://github.com/northguild/gmt/blob/main/packages/gmt/src/zoned/interval/intervalXorAllZoned.test.ts) ·
+[intervalAbutsDate](https://github.com/northguild/gmt/blob/main/packages/gmt/src/plain/interval/intervalAbutsDate.test.ts) ·
+[intervalXorAllDateTime](https://github.com/northguild/gmt/blob/main/packages/gmt/src/plain/interval/intervalXorAllDateTime.test.ts) ·
+[endOfDate](https://github.com/northguild/gmt/blob/main/packages/gmt/src/plain/calculate/endOfDate.test.ts) ·
+[endOfUtc](https://github.com/northguild/gmt/blob/main/packages/gmt/src/utc/calculate/endOfUtc.test.ts) ·
+[endOfZoned](https://github.com/northguild/gmt/blob/main/packages/gmt/src/zoned/calculate/endOfZoned.test.ts) ·
+[endOfUnix](https://github.com/northguild/gmt/blob/main/packages/gmt/src/unix/calculate/endOfUnix.test.ts)
+
+## Daylight-saving rules hold to the end of the range
+
+The last instant falls on 12 September
++275760 in Santiago, a few days after a daylight-saving change on 7 September. `startOfZoned`
+and `floorToZone` start that month at local midnight on the offset then in force, `-04:00`.
+`getLocaleZonedStartOfWeek` starts an `en-US` week at `01:00`, because that Sunday's midnight
+never happened ([TC39 Temporal `startOfDay`](https://tc39.es/proposal-temporal/#sec-temporal.zoneddatetime.prototype.startofday),
+[RFC 9557](https://www.rfc-editor.org/rfc/rfc9557) time-zone annotations).
+`startOfQuarterForZoned`, `startOfUnix`, `intervalCountZoned` and `intervalCountUnix` agree at
+the same instant.
+
+Tests: [startOfZoned](https://github.com/northguild/gmt/blob/main/packages/gmt/src/zoned/calculate/startOfZoned.test.ts) ·
+[floorToZone](https://github.com/northguild/gmt/blob/main/packages/gmt/src/calendar/calculate/floorToZone.test.ts) ·
+[getLocaleZonedStartOfWeek](https://github.com/northguild/gmt/blob/main/packages/gmt/src/zoned/calculate/getLocaleZonedStartOfWeek.test.ts) ·
+[startOfQuarterForZoned](https://github.com/northguild/gmt/blob/main/packages/gmt/src/zoned/calculate/startOfQuarterForZoned.test.ts) ·
+[startOfUnix](https://github.com/northguild/gmt/blob/main/packages/gmt/src/unix/calculate/startOfUnix.test.ts) ·
+[intervalCountZoned](https://github.com/northguild/gmt/blob/main/packages/gmt/src/zoned/interval/intervalCountZoned.test.ts) ·
+[intervalCountUnix](https://github.com/northguild/gmt/blob/main/packages/gmt/src/unix/interval/intervalCountUnix.test.ts)
+
+## Zone conversions are exact at the very end of the representable range, too
+
+In zones ahead
+of UTC — Sydney and Kiritimati among them — GMT returns the spec-correct `ZonedDateTime` for a
+wall-clock value at or near the last representable instant, which the underlying Temporal
+polyfill cannot yet parse that close to the edge. It still rejects a value one nanosecond past
+the maximum, and any offset the spec would reject. The same helper resolves America/Santiago's
+last representable day, which opens with a daylight-saving change, to the instant the
+transition actually allows rather than to a midnight that was skipped.
+[TC39 Temporal](https://tc39.es/proposal-temporal/#sec-temporal-isvalidepochnanoseconds) treats
+a `ZonedDateTime` as valid whenever its epoch nanoseconds lie within the `Instant` range,
+whatever its wall-clock fields read.
+
+Tests: [zonedWallClock](https://github.com/northguild/gmt/blob/main/packages/gmt/src/internal/zonedWallClock.test.ts) ·
+[zonedWallClockOperations](https://github.com/northguild/gmt/blob/main/packages/gmt/src/internal/zonedWallClockOperations.test.ts)
+
+## Spans and totals are exact across the whole range
+
+`spanNs` returns the full distance from
+the first instant to the last as a `bigint`. `sumIntervals` totals covered time exactly past
+2<sup>53</sup> nanoseconds, about 104 days, which is where a JavaScript `number` stops holding
+every nanosecond ([ECMA-262 `Number.MAX_SAFE_INTEGER`](https://tc39.es/ecma262/#sec-number.max_safe_integer)).
+It stays exact up to the whole range, `PT4800000000H`, with hours as the largest unit, as
+`Temporal.Instant.until` allows.
+
+Tests: [spanNs](https://github.com/northguild/gmt/blob/main/packages/gmt/src/span/calculate/spanNs.test.ts) ·
+[sumIntervals](https://github.com/northguild/gmt/blob/main/packages/gmt/src/interval/calculate/sumIntervals.test.ts)
+
+## Unix epochs are whole units
+
+The Unix interval functions that compare, cut or combine
+intervals reject a fractional epoch, or one past `Number.MAX_SAFE_INTEGER`, with their
+documented sentinel. Past that point `2 ** 53 + 1 === 2 ** 53`, so "one unit later" no longer
+exists. The functions stay exact on `Number.MAX_SAFE_INTEGER` itself.
+
+Tests: [intervalAbutsUnix](https://github.com/northguild/gmt/blob/main/packages/gmt/src/unix/interval/intervalAbutsUnix.test.ts) ·
+[intervalXorUnix](https://github.com/northguild/gmt/blob/main/packages/gmt/src/unix/interval/intervalXorUnix.test.ts) ·
+[the rest of `unix/interval`](https://github.com/northguild/gmt/tree/main/packages/gmt/src/unix/interval)
+
+## One documented boundary standard
+
+The `interval/` module is half-open, `[start, end)`: the
+start is inside and the end is not. This is the convention of SQL:2011's application-time
+`PERIOD`, [RFC 5545](https://www.rfc-editor.org/rfc/rfc5545#section-3.8.2.2)'s non-inclusive
+`DTEND`, and [EWD831](https://www.cs.utexas.edu/~EWD/transcriptions/EWD08xx/EWD831.html).
+Touching intervals share no instant, so they do not overlap or intersect. Merging joins them,
+and subtracting one from the other removes nothing. Take an interval apart with
+`subtractIntervals` and put it back with `mergeIntervals` and `intersectIntervals`, and not a
+nanosecond is lost. The older positional functions in `plain/`, `utc/`, `zoned/` and `unix/`
+are closed, `[start, end]`, and [Interval Basics](/guides/intervals/interval-basics/) sets out
+the difference.
+
+Tests: [intervalsOverlap](https://github.com/northguild/gmt/blob/main/packages/gmt/src/interval/compare/intervalsOverlap.test.ts) ·
+[intersectIntervals](https://github.com/northguild/gmt/blob/main/packages/gmt/src/interval/calculate/intersectIntervals.test.ts) ·
+[mergeIntervals](https://github.com/northguild/gmt/blob/main/packages/gmt/src/interval/calculate/mergeIntervals.test.ts) ·
+[subtractIntervals](https://github.com/northguild/gmt/blob/main/packages/gmt/src/interval/calculate/subtractIntervals.test.ts) ·
+[interval algebra round trip](https://github.com/northguild/gmt/blob/main/packages/gmt/src/interval/calculate/intervalAlgebra.test.ts) ·
+[intervalsOverlapZoned (closed)](https://github.com/northguild/gmt/blob/main/packages/gmt/src/zoned/interval/intervalsOverlapZoned.test.ts)
+
+## Zero known bugs
+
+A defect GMT finds is fixed in the same change, together with every
+function that shares its cause. It is never deferred, skipped or written up as a known issue.
+`pnpm run validate` enforces this with
+[`scripts/test-markers.mjs`](https://github.com/northguild/gmt/blob/main/scripts/test-markers.mjs),
+which fails the build on any skipped, focused, to-do or expected-to-fail test, and on any
+known-defect note. None of the {formatCount(gmtStats.tests)} tests is switched off.

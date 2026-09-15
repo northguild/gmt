@@ -173,3 +173,21 @@ describe("parseCalendarZonedValue / formatZonedInCalendar", () => {
     );
   });
 });
+
+describe("parseCalendarZonedValue at the maximum instant", () => {
+  // Temporal.PlainDate.from("+275760-09-13").withCalendar("persian") is year 275139, ordinal month 7,
+  // day 12 (plain polyfill fields, which round-trip to the same ISO date): 10:00 +10:00 that day in
+  // Sydney is the last representable instant.
+  it.each`
+    value                                                            | calendarId   | epochNanoseconds
+    ${"275139-07-12T10:00:00+10:00[u-ca=persian][Australia/Sydney]"} | ${"persian"} | ${8_640_000_000_000_000_000_000n}
+    ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"}              | ${"iso8601"} | ${8_640_000_000_000_000_000_000n}
+  `(
+    "parses $value to the $calendarId instant $epochNanoseconds",
+    ({ value, calendarId, epochNanoseconds }) => {
+      const zoned = parseCalendarZonedValue(value);
+      expect(zoned.epochNanoseconds).toBe(epochNanoseconds);
+      expect(zoned.calendarId).toBe(calendarId);
+    },
+  );
+});

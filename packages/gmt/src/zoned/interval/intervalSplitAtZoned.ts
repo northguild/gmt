@@ -13,11 +13,13 @@ import { isValidCalendarZonedInterval } from "./validate";
  * - `points` need not be sorted — they are sorted internally (by instant) before splitting.
  * - Comparison and boundary placement use the instant each point represents, so points may
  *   carry a different time zone than `start`/`end`.
- * - Points outside `[start, end]` are dropped; they cannot introduce a boundary that isn't
- *   inside the interval.
+ * - Points before `start` or after `end` are dropped; they cannot introduce a boundary that
+ *   isn't inside the interval.
  * - Points on the same instant as `start` or `end` are dropped too — they would only produce a
  *   zero-length sub-interval at the edge.
  * - Duplicate points (same instant) collapse to a single boundary.
+ * - Returns consecutive `{ start, end }` records, each record's `end` equal to the next
+ *   record's `start`.
  * - Returns `[{ start, end }]` (the whole interval, unsplit) when no valid in-range point remains.
  * - Returns `[]` when `points` is not an array, when any element is not a valid ISO
  *   ZonedDateTime string, or on invalid input (unparseable start/end, `start > end`,

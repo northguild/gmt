@@ -1,4 +1,3 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { getSystemTimeZone } from "../../zoned/get";
 import { convertUnixToZoned } from "../convert";
 import {
@@ -6,6 +5,7 @@ import {
   isValidUnixSeconds,
   type UnixUnit,
 } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Return the day of week (1-7) from a unix epoch value.
@@ -43,7 +43,7 @@ export function parseDayOfWeekFromUnix(
   if (!zoned) return null;
 
   try {
-    const zdt = Temporal.ZonedDateTime.from(zoned);
+    const zdt = zonedDateTimeFrom(zoned);
     return zdt.dayOfWeek;
   } catch {
     return null;

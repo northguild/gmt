@@ -47,6 +47,8 @@ describe("isValidCalendarZonedDateTime", () => {
     value                                                                    | reason
     ${"2024-03-10T14:30:00-04:00[America/New_York][u-ca=hebrew]"}            | ${"Temporal's RFC 9557 segment ordering"}
     ${"5784-06-15T14:30:00-05:00[America/New_York][u-ca=hebrew]"}            | ${"GMT digits in RFC 9557 ordering (the ~3760-year misparse hazard)"}
+    ${"5784-01-01T14:30:00-05:00[America/New_York][!u-ca=hebrew]"}           | ${"the same hazard behind an RFC 9557 critical flag, which Temporal honours (-05:00 is New York's real January offset)"}
+    ${"2024-03-10T14:30:00-04:00[!America/New_York][!u-ca=hebrew]"}          | ${"a critical zone and a critical calendar in RFC 9557 ordering"}
     ${"5784-06-15T14:30:00-05:00[u-ca=hebrew]"}                              | ${"no time zone, which is zoned/'s grammar requirement"}
     ${"5784-06-15[u-ca=hebrew]"}                                             | ${"a plain calendar date, which is plain/'s grammar"}
     ${"2024-10-03T14:30:45[u-ca=hebrew]"}                                    | ${"calendar-annotated PlainDateTime, which has no GMT grammar"}
