@@ -28,10 +28,12 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, relative } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { readDates, scanBody } from "./temporal-compat/scan-body.js";
 
-const ROOT = new URL("..", import.meta.url).pathname;
+// fileURLToPath, not `.pathname`: see scripts/test-markers.mjs — a percent-encoded path breaks
+// any checkout whose directory name contains a space.
+const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const GMT_DIR = join(ROOT, "packages/gmt");
 const DIST = join(GMT_DIR, "dist");
 const COMPAT_README = "packages/gmt/src/internal/temporalCompat/README.md";

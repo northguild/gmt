@@ -11,8 +11,11 @@
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = new URL("..", import.meta.url).pathname;
+// fileURLToPath, not `.pathname`: a URL path stays percent-encoded, so a checkout under a path
+// containing a space (or any non-ASCII character) would scan `/my%20repo` and fail with ENOENT.
+const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const SCAN_DIRS = ["packages", "apps"];
 const SKIP_DIRS = new Set([
   "node_modules",
