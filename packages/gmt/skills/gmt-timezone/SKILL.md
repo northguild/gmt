@@ -7,7 +7,9 @@ description: >
   zoneless wall time before resolving it, real zone unit boundaries
   (startOfZoned/endOfZoned/startOfUnix/endOfUnix, never after the input), hours
   in a local day, and flooring or bucketing instants on local calendar
-  boundaries (floorToZone/bucketRange) instead of roundZoned. Reads the
+  boundaries (floorToZone/bucketRange) instead of roundZoned, calendar-annotated
+  zoned strings, and zoned values exact at the range limits (Australia/Sydney
+  at the maximum, Etc/GMT+12 at the minimum). Reads the
   installed package README.md and source JSDoc for API details; this skill is a
   routing pointer, not an API dump.
 sources:
@@ -115,8 +117,20 @@ converting between time zones, or doing arithmetic that must respect DST.
     `[timeZone]` — the reverse of RFC 9557. Only `addZoned`, `subtractZoned`,
     `diffZoned`, `convertZonedToCalendar` and `zoned/interval/*` accept it;
     everything else rejects it and returns `""`. Always produce these with
-    `convertZonedToCalendar`.
-11. **Read the README.** This skill is a routing pointer. For the full DST
+    `convertZonedToCalendar`. The date half follows the plain grammar: a
+    negative year is `-` plus six digits, and Japanese eras are `ce`, `bce`,
+    then `meiji` from 1873 (see the `gmt-arithmetic` skill). `[!u-ca=…]` is
+    rejected everywhere `[u-ca=…]` is.
+11. **Zoned values are exact at the range limits.** In zones ahead of UTC,
+    `isValidZonedDateTime("+275760-09-13T10:00:00+10:00[Australia/Sydney]")`
+    is `true` and one nanosecond later is `false`. Parsing, arithmetic,
+    boundaries, differences and `relativeTo` totals all work there.
+    Daylight-saving rules hold to the end: `America/Santiago`'s
+    `+275760-09-07` is a 23-hour day. At the first instant in a zone behind
+    UTC, an offset-less wall clock (`"-271821-04-19T12:00:00[Etc/GMT+12]"`)
+    resolves. The same string with its `-12:00` offset returns the sentinel,
+    because TC39 checks that local date against the day range.
+12. **Read the README.** This skill is a routing pointer. For the full DST
     disambiguation walkthrough, code examples, and locale ICU notes, read the
     installed package's `README.md` and the source JSDoc.
 

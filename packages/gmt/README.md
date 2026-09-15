@@ -15,8 +15,8 @@ It wraps `@js-temporal/polyfill` behind a smaller, more opinionated API aimed at
 
 - **100% Temporal, Temporal-first.** GMT is built directly on the TC39 `Temporal` standard (via `@js-temporal/polyfill`) — not a custom, homegrown date/time type system like `@internationalized/date`'s own `CalendarDate`/`ZonedDateTime` classes. No `Date` object anywhere, enforced by 3 dedicated lint packages.
 - **A full replacement for any and all of them.** Luxon, date-fns, Moment.js, and react-aria's `@internationalized/date` don't have parity with each other — GMT covers the combined capabilities of all four in one library, plus what none of them do alone.
-- **~15× more CI test executions than all four competitors combined**: 392,220 from 19,611 tests run in all 10 timezones × 2 Node versions, vs. their combined 20,190.
-- **~40× more test cases than `@internationalized/date`**: 19,611 vs. 386 — Adobe's own library, run at its own commit.
+- **~40× more CI test executions than all four competitors combined**: 800,700 from 26,690 tests run in all 10 timezones × 3 Node versions, vs. their combined 20,190.
+- **~69× more test cases than `@internationalized/date`**: 26,690 vs. 386 — Adobe's own library, run at its own commit.
 - **The only one of the five that tests systematically across locales in CI at all.** Zero of the four comparison libraries run a locale-test matrix; GMT mandates all 17 locales on every locale-aware function.
 - **The only one that runs its entire suite under a real `TZ` env var across real-world zones.** Luxon and `@internationalized/date` have no CI timezone matrix; date-fns's zone scope is unclear; Moment.js covers 6 zones but not its full suite.
 - **Explicit DST disambiguation control on both construction _and_ arithmetic** — a control none of the others expose.
@@ -59,7 +59,7 @@ Invalid input fallbacks are consistent across the library:
 
 ## Testing
 
-Every function is exercised across **17 locales** and a full IANA timezone matrix. The CI pipeline runs the complete suite in **20 environments** — 2 Node versions (22, 24) × 10 timezones spanning every UTC offset band from Pacific/Niue (−11:00) to Pacific/Apia (+14:00):
+Every function is exercised across **17 locales** and a full IANA timezone matrix. The CI pipeline runs the complete suite in **30 environments** — 3 Node versions (22, 24, 26) × 10 timezones spanning every UTC offset band from Pacific/Niue (−11:00) to Pacific/Apia (+14:00):
 
 | Timezone            | UTC Offset      |
 | ------------------- | --------------- |
@@ -92,7 +92,7 @@ GMT's test suite balances **thoroughness** against **maintenance burden** by tes
 - **Non-string input tables** — functions that guard with `typeof x !== "string"` return the same sentinel for `null`, `undefined`, `123`, `true`, `[]`, and `{}`. We test one representative non-string per argument position rather than all six types × N positions. The collapse is safe because all non-string types hit the identical early-return code path.
 - **Redundant permutations** — adjacent/disjoint/reversed interval cases that produce identical results are not duplicated across every function variant. The `plain/`, `zoned/`, `utc/`, and `unix/` families share the same mathematical behavior; each family gets the minimum set of cases needed to prove correctness.
 
-**Result:** 19,611 tests across 596 files that exercise real behavior differences without redundant permutations. They run in CI as 392,220 executions — every one of them × 2 Node versions × 10 timezones.
+**Result:** 26,690 tests across 632 files that exercise real behavior differences without redundant permutations. They run in CI as 800,700 executions — every one of them × 3 Node versions × 10 timezones.
 
 ## How GMT is tested, vs. the libraries it targets
 
@@ -108,10 +108,10 @@ GMT is measured directly against react-aria's **`@internationalized/date`**, **L
 
 | Metric                          | GMT                                                | `@internationalized/date`      | Luxon                                | date-fns                                  | Moment.js                        |
 | ------------------------------- | -------------------------------------------------- | ------------------------------ | ------------------------------------ | ----------------------------------------- | -------------------------------- |
-| Test files                      | 596                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
-| Individual test cases           | **19,611**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
-| Effective CI test<br>executions | **392,220**<br>(19,611 × 2 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
-| CI Node.js matrix               | 22, 24                                             | n/a — tests<br>React 16–canary | 20, 22, 24, 25                       | not explicit<br>(`node = "latest"`)       | LTS, LTS-1,<br>latest            |
+| Test files                      | 632                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
+| Individual test cases           | **26,690**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
+| Effective CI test<br>executions | **800,700**<br>(26,690 × 3 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
+| CI Node.js matrix               | 22, 24, 26                                         | n/a — tests<br>React 16–canary | 20, 22, 24, 25                       | not explicit<br>(`node = "latest"`)       | LTS, LTS-1,<br>latest            |
 | CI timezone matrix              | **10 zones × 2**<br>**Node, full suite**           | none found                     | none found                           | dedicated workflow,<br>zone scope unclear | 6 zones,<br>partial suite only   |
 | Locale test matrix              | **17 locales**,<br>every locale fn                 | none found                     | none found                           | none found                                | none found                       |
 | Real-browser CI                 | not yet                                            | yes (Playwright)               | not found                            | yes (Playwright)                          | not found                        |
@@ -142,15 +142,15 @@ Specific, sourced claims — not a repeat of the metrics above.
 
 | Claim                                                                                                                                         | The others                                                                                                                            |
 | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Only GMT runs its **entire** suite in CI<br>under a real `TZ` env var across 10<br>real-world zones × 2 Node versions<br>(20 full-suite runs) | Luxon/`@internationalized/date`: no<br>CI timezone matrix. date-fns: zone<br>scope unclear. Moment.js: 6 zones,<br>partial suite only |
+| Only GMT runs its **entire** suite in CI<br>under a real `TZ` env var across 10<br>real-world zones × 3 Node versions<br>(30 full-suite runs) | Luxon/`@internationalized/date`: no<br>CI timezone matrix. date-fns: zone<br>scope unclear. Moment.js: 6 zones,<br>partial suite only |
 | Only GMT enforces a mandatory<br>17-locale test matrix on every<br>locale-aware function                                                      | No CI-level or systematic<br>locale-matrix testing found<br>in any of the four                                                        |
 | Only GMT exposes explicit DST<br>disambiguation control on both<br>construction _and_ arithmetic                                              | Luxon's docs call this explicitly<br>undefined; `@internationalized/date`<br>only covers construction, not arithmetic                 |
 | Only GMT is Temporal-native with<br>zero `Date` usage, enforced by<br>3 dedicated lint packages                                               | Luxon, date-fns, and Moment.js all<br>still wrap or depend on `Date` internally                                                       |
-| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~15×                                                  | 392,220 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
+| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~40×                                                  | 800,700 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
 
 ## Package Layout
 
-The package exports eleven top-level namespaces:
+The package exports twelve top-level namespaces:
 
 ```typescript
 import {
@@ -158,6 +158,7 @@ import {
   calendar,
   duration,
   instant,
+  interval,
   plain,
   precision,
   span,
@@ -172,6 +173,7 @@ import {
 - `calendar`: ISO week and ordinal dates, quarter and fiscal periods, and zone-aware bucketing
 - `duration`: ISO 8601 duration string parsing, validation, and arithmetic
 - `instant`: the instant-plus-offset pair, and explicit resolution of zoneless local wall times
+- `interval`: half-open `[start, end)` interval algebra over instants — overlap, intersect, clamp, merge, subtract, split, sum
 - `plain`: timezone-free helpers
 - `precision`: nanosecond (`bigint`) instants, their JSON bridge, storage truncation, and foreign epoch bridges
 - `span`: elapsed and wall-clock durations between two timestamps, as raw numbers
@@ -458,7 +460,7 @@ Supported tokens include `yyyy`/`MM`/`dd`/`HH`/`mm`/`ss`/`SSS` for fixed-width f
 
 ### Calendar systems
 
-GMT's `CalendarSystem` type (`"gregorian" | "hebrew" | "islamic-civil" | "islamic-tabular" | "islamic-umalqura" | "japanese" | "buddhist" | "taiwan" | "persian" | "indian" | "ethiopic" | "ethiopic-amete-alem" | "coptic"`, extended by later stories) and `convertDateToCalendar` express a date in a non-Gregorian calendar system, built almost entirely on Temporal's native calendar support — no bundled leap-year tables or ported arithmetic, with one deliberate exception (the Ethiopic family, covered below).
+GMT's `CalendarSystem` type (`"gregorian" | "hebrew" | "islamic-civil" | "islamic-tabular" | "islamic-umalqura" | "japanese" | "buddhist" | "taiwan" | "persian" | "indian" | "ethiopic" | "ethiopic-amete-alem" | "coptic"`, extended by later stories) and `convertDateToCalendar` express a date in a non-Gregorian calendar system, built almost entirely on Temporal's native calendar support — no bundled leap-year tables, with two deliberate exceptions: the Ethiopic family (covered below), and the published Hebrew and Indian arithmetic rules GMT applies only where the runtime's polyfill or ICU gets those calendars wrong (see "Negative years, the far past and the range limits").
 
 ```typescript
 import { convertDateToCalendar } from "@northguild/gmt";
@@ -488,8 +490,8 @@ Three Islamic (Hijri) calendar variants are supported, and they are **not interc
 
 Five era-based solar calendars round out the set. Unlike Hebrew and the Islamic variants, none of these needed new leap-year logic — each is either Gregorian-shaped with a different year numbering layered on top, or a distinct-but-simple solar calendar, so they were materially less work than Hebrew or Islamic:
 
-- `"buddhist"` — Gregorian day/month structure, a fixed `+543` year offset (`convertDateToCalendar("2024-10-03", "buddhist")` → `"2567-10-03[u-ca=buddhist]"`). One continuous era, no reset.
-- `"taiwan"` — Gregorian day/month structure, year numbering reset at 1912 (the Republic of China's founding): `2024` → `"0113-10-03[u-ca=taiwan]"` (`2024 - 1911`). Dates before 1912 count backward through Temporal's inverse era instead of going negative in the way a plain offset would — `convertDateToCalendar("1911-12-31", "taiwan")` is `"0000-12-31[u-ca=taiwan]"`, not `"-0001-12-31"`.
+- `"buddhist"` — Gregorian day/month structure, a fixed `+543` year offset (`convertDateToCalendar("2024-10-03", "buddhist")` → `"2567-10-03[u-ca=buddhist]"`). One continuous era, no reset. It is **proleptic**: the offset applies to every date, with no Julian cutover in 1582, as the Intl Era and Month Code proposal requires — `convertDateToCalendar("1000-01-01", "buddhist")` → `"1543-01-01[u-ca=buddhist]"`, and `"-000544-01-01"` → `"-000001-01-01[u-ca=buddhist]"`.
+- `"taiwan"` — Gregorian day/month structure, year numbering reset at 1912 (the Republic of China's founding): `2024` → `"0113-10-03[u-ca=taiwan]"` (`2024 - 1911`). Dates before 1912 keep counting down through year 0 into negative years — `convertDateToCalendar("1911-12-31", "taiwan")` is `"0000-12-31[u-ca=taiwan]"`, `"1910-06-01"` is `"-000001-06-01[u-ca=taiwan]"`, and `"1000-01-01"` is `"-000911-01-01[u-ca=taiwan]"`.
 - `"persian"` — a genuinely distinct solar calendar (not Gregorian-derived): own month lengths (6 months of 31 days, 5 of 30, a 29/30-day 12th month) and its own 33-year leap-year cycle (a year is leap when `(25 × year + 11) mod 33 < 8`), verified against `@internationalized/date`'s `PersianCalendar.ts` rather than assumed from the offset-only calendars above.
 - `"indian"` — the Indian National Calendar (Saka era, epoch 78 CE). Also not offset-only: its leap-year alignment follows the Gregorian rule rather than an independent cycle — the calendar's first month is 31 days in a Gregorian leap year, 30 otherwise, which is why its Saka-year boundary (`convertDateToCalendar("2024-03-20", "indian")` → `"1945-12-30[u-ca=indian]"`, `convertDateToCalendar("2024-03-21", "indian")` → `"1946-01-01[u-ca=indian]"`) doesn't land on a fixed day-of-year every year.
 - `"japanese"` — era-based: the year resets to `1` at each imperial era change (Meiji, Taishō, Shōwa, Heisei, Reiwa). This is the one calendar where GMT's annotated string carries an era-relative year instead of the calendar's plain native year, and needs its own explanation below.
@@ -507,7 +509,39 @@ convertDateToCalendar("0001-07-30[u-ca=japanese;era=taisho]", "gregorian");
 // "1912-07-30" — round-trips back through the era + eraYear pair
 ```
 
-`@internationalized/date` documents pre-Meiji (before 1868-10-23) dates as unsupported for its Japanese calendar. GMT does not replicate that restriction: since `convertDateToCalendar` is built entirely on Temporal's own calendar support rather than a ported implementation, and Temporal resolves those dates correctly under a synthetic `"japanese"` era (with an ISO-aligned `eraYear`), rejecting them would mean writing new validation solely to reproduce another library's gap rather than an actual GMT limitation. `convertDateToCalendar("1800-01-01", "japanese")` returns `"1800-01-01[u-ca=japanese;era=japanese]"` rather than `""`.
+Era codes follow the [Intl Era and Month Code proposal](https://github.com/tc39/proposal-intl-era-monthcode): dates up to and including 1872-12-31 use the Gregorian eras, `ce` (era year = ISO year) and, for ISO years ≤ 0, `bce` (era year = 1 − ISO year). `meiji` starts on 1873-01-01 at era year 6, followed by `taisho`, `showa`, `heisei` and `reiwa`. Dates before Meiji are supported, not rejected:
+
+```typescript
+convertDateToCalendar("1800-01-01", "japanese");
+// "1800-01-01[u-ca=japanese;era=ce]"
+
+convertDateToCalendar("1873-01-01", "japanese");
+// "0006-01-01[u-ca=japanese;era=meiji]" — the proposal's first Meiji year is 6
+
+convertDateToCalendar("-000500-06-15", "japanese");
+// "0501-06-15[u-ca=japanese;era=bce]"
+```
+
+> **Deprecated input: `;era=japanese`.** Earlier releases emitted `;era=japanese` for pre-Meiji dates. It is still accepted as input, as an alias of `ce`, until the next major version: `convertDateToCalendar("1800-01-01[u-ca=japanese;era=japanese]", "gregorian")` is `"1800-01-01"`. GMT never emits it. `;era=japanese-inverse` is rejected.
+
+#### Negative years, the far past and the range limits
+
+A negative calendar year is written as a minus sign and six digits, the form Temporal's `PadISOYear` writes: `"-000911-01-01[u-ca=taiwan]"`. `-0911` and `-000000` are rejected. A year ≥ 0 keeps four digits, or five or six when it needs them (`"279517-10-11[u-ca=hebrew]"`).
+
+Every supported calendar is proleptic and correct across Temporal's whole date range, `-271821-04-19` to `+275760-09-13`, as the Intl Era and Month Code proposal requires:
+
+```typescript
+convertDateToCalendar("-003761-09-01", "hebrew");
+// "0000-01-13[u-ca=hebrew]" — Hebrew year 0
+
+convertDateToCalendar("-000500-06-15", "indian");
+// "-000578-03-25[u-ca=indian]" — Saka dates before ISO year 1
+
+convertDateToCalendar("+275760-09-13", "hebrew");
+// "279517-10-11[u-ca=hebrew]" — and it reads back: isValidCalendarDate(...) is true
+```
+
+Where the bundled `@js-temporal/polyfill` or the runtime's ICU gets a calendar wrong (Buddhist before 1582, Hebrew years ≤ 0, Indian dates before ISO year 1, dates near either limit), GMT computes the specified answer instead. Each correction probes the runtime once and stays inactive on a runtime that is already right, so the output is identical either way.
 
 Three Ethiopic-family calendars round out the set, all sharing one 13-month structure (12 months of 30 days, plus a short Pagume/Nasie 13th month of 5 days, or 6 in a leap year) but differing in epoch:
 
@@ -534,7 +568,12 @@ intervalCountDate(
 
 diffDate("5784-06-15[u-ca=hebrew]", "5784-07-15[u-ca=hebrew]", "months");
 // 1 — measured in the shared calendar when both endpoints carry the same tag
+
+diffDateAsDuration("2567-08-31[u-ca=buddhist]", "2567-09-30[u-ca=buddhist]", "months");
+// "P30D" — not "P1M": a month counts only once the end reaches the same day of the next month
 ```
+
+Month and year differences follow Temporal's `NonISODateSurpasses` in every calendar, so a span from a month's last day into a shorter month is days, not a month. This matches what the ISO calendar already did (`diffDateAsDuration("2024-08-31", "2024-09-30", "months")` is `"P30D"`), and applies to `diffDate*`, `intervalLength*`, `intervalCount*` and `diffZoned*` alike.
 
 `utc/` and `unix/` reject a `[u-ca=...]` calendar annotation outright, and `duration/`'s `relativeTo` option accepts GMT's calendar-annotated string (not Temporal's own differently-shaped `[u-ca=...]` convention) when a calendar-aware anchor is needed:
 
@@ -695,6 +734,8 @@ diffDateAsDuration("2024-03-10", "2024-04-05", "days");
 
 ### Intervals
 
+> **Two boundary models.** The positional functions in this section (`intervalsOverlapDate`, `intervalDifferenceUtc`, …) mostly treat an interval as **closed** `[start, end]`, so a shared endpoint belongs to both intervals. `intervalCount*` is the exception, and is half-open. For instant arithmetic, use the half-open `interval/` namespace described under [Interval algebra](#interval-algebra). It is the standard every realm story builds on, and the positional functions move to it in the next major version.
+
 Interval and range validators are available in two API shapes — **range validators** (matching `isValidDateRange`'s `{ value1, value2, options? }` object-param shape) and **interval validators** (`(start, end)` positional args, `start <= end` always):
 
 ```typescript
@@ -792,7 +833,7 @@ intervalContainsTime("09:00:00", "17:00:00", "10:00:00", "16:00:00");
 
 All interval containment checks return `false` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
 
-`intervalsOverlap*` checks whether two intervals share any time. Returns `true` when intervals overlap, `false` when they are disjoint or only adjacent (touching at a single instant with no shared time):
+`intervalsOverlap*` checks whether two closed intervals share any instant. Returns `false` when they are disjoint. Intervals that touch (one's end equals the other's start) share that endpoint, so they **do** overlap and return `true`. The half-open `intervalsOverlap` returns `false` for the same pair:
 
 ```typescript
 import {
@@ -808,7 +849,10 @@ intervalsOverlapDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
 // true
 
 intervalsOverlapDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31");
-// false (adjacent, no shared time)
+// true (touching — both contain 2024-06-30)
+
+intervalsOverlapDate("2024-01-01", "2024-06-30", "2024-07-01", "2024-12-31");
+// false (consecutive days, no shared day)
 
 intervalsOverlapUnix(0, 1700000000, 1000000, 2000000);
 // true
@@ -861,7 +905,7 @@ intervalIntersectionDate(
 // null (disjoint)
 
 intervalIntersectionUnix(0, 1700000000, 1000000, 2000000);
-// { start: 1000000, end: 1700000000 }
+// { start: 1000000, end: 2000000 } (B lies inside A)
 
 intervalIntersectionUtc(
   "2024-01-01T00:00:00Z",
@@ -986,8 +1030,10 @@ intervalDifferenceUtc(
   "2024-06-01T00:00:00Z",
   "2024-07-01T00:00:00Z",
 );
-// [{ start: "2024-01-01T00:00:00Z", end: "2024-05-31T23:59:59Z" }, { start: "2024-07-02T00:00:00Z", end: "2024-12-31T23:59:59Z" }]
+// [{ start: "2024-01-01T00:00:00Z", end: "2024-05-31T23:59:59.999999999Z" }, { start: "2024-07-01T00:00:00.000000001Z", end: "2024-12-31T23:59:59Z" }]
 ```
+
+Because the model is closed, each piece stops one unit short of B: one day for `Date`, one nanosecond for the instant and time types, one epoch unit for `Unix`. `subtractIntervals` cuts exactly at B's edges instead.
 
 All difference functions return `[]` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
 
@@ -1018,12 +1064,12 @@ intervalXorUtc(
   "2024-04-01T00:00:00Z",
   "2024-12-31T23:59:59Z",
 );
-// [{ start: "2024-01-01T00:00:00Z", end: "2024-03-31T23:59:59Z" }, { start: "2024-07-01T00:00:00Z", end: "2024-12-31T23:59:59Z" }]
+// [{ start: "2024-01-01T00:00:00Z", end: "2024-03-31T23:59:59.999999999Z" }, { start: "2024-06-30T23:59:59.000000001Z", end: "2024-12-31T23:59:59Z" }]
 ```
 
 All xor functions return `[]` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
 
-`intervalAbuts*` checks whether two intervals are exactly adjacent — one's end equals the other's start with zero gap and zero overlap:
+`intervalAbuts*` checks whether two intervals are exactly adjacent, in either order. Under the closed model, one interval must end exactly one unit before the other starts: one nanosecond for `Utc`, `Zoned`, `DateTime` and `Time`, one day for `Date`, one epoch unit for `Unix`. The two then share no instant and leave no gap. Intervals that share an endpoint already overlap, so they do **not** abut:
 
 ```typescript
 import {
@@ -1035,23 +1081,26 @@ import {
   intervalAbutsZoned,
 } from "@northguild/gmt";
 
-intervalAbutsDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31");
-// true
+intervalAbutsDate("2024-01-01", "2024-06-30", "2024-07-01", "2024-12-31");
+// true (consecutive days)
 
-intervalAbutsDate("2024-01-01", "2024-06-29", "2024-06-30", "2024-12-31");
+intervalAbutsDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31");
+// false (shared endpoint — they overlap)
+
+intervalAbutsDate("2024-01-01", "2024-06-29", "2024-07-01", "2024-12-31");
 // false (one-day gap)
 
 intervalAbutsDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
 // false (overlap)
 
-intervalAbutsUnix(0, 1000000, 1000000, 2000000);
+intervalAbutsUnix(0, 999999, 1000000, 2000000);
 // true
 
 intervalAbutsUtc(
-  "2024-01-01T00:00:00Z",
-  "2024-06-30T23:59:59Z",
-  "2024-06-30T23:59:59Z",
-  "2024-12-31T23:59:59Z",
+  "2024-01-01T09:00:00Z",
+  "2024-01-01T12:00:00Z",
+  "2024-01-01T12:00:00.000000001Z",
+  "2024-01-01T17:00:00Z",
 );
 // true
 ```
@@ -2001,6 +2050,82 @@ isValidZoneBucketUnit("day");  // true
 isValidZoneBucketUnit("year"); // false — the year question is getQuarter's
 ```
 
+### Interval algebra
+
+Four realms need the same operation and none of them could express it: sum the parts of an
+interval that fall inside a set of allowed windows. Laytime counts only the hours a charter
+clause allows, driver hours split a duty period around mandatory rest, demurrage free time
+counts only working days, and a trading window counts only continuous-session time. The
+`interval/` namespace is that one shared primitive, with one boundary rule:
+
+**Half-open `[start, end)`.** An instant `t` is inside when `start ≤ t < end`. That is SQL:2011's
+closed-open `PERIOD`, RFC 5545's non-inclusive `DTEND` and Dijkstra's EWD831. A container gated
+out at exactly 17:00 has not used another day, and two consecutive shifts never double-count the
+instant they meet.
+
+```typescript
+import {
+  clampInterval,
+  intersectIntervals,
+  intervalContains,
+  intervalsOverlap,
+  isValidInterval,
+  mergeIntervals,
+  splitIntervalAt,
+  subtractIntervals,
+  sumIntervals,
+} from "@northguild/gmt";
+
+const shift = { start: "2024-01-01T09:00:00Z", end: "2024-01-01T17:00:00Z" };
+
+intervalContains(shift, "2024-01-01T09:00:00Z"); // true — start is inside
+intervalContains(shift, "2024-01-01T17:00:00Z"); // false — end is not
+
+intervalsOverlap(shift, { start: "2024-01-01T17:00:00Z", end: "2024-01-01T18:00:00Z" });
+// false — touching intervals share no instant
+intersectIntervals(shift, { start: "2024-01-01T12:00:00Z", end: "2024-01-01T18:00:00Z" });
+// { start: "2024-01-01T12:00:00Z", end: "2024-01-01T17:00:00Z" }
+clampInterval({ start: "2024-01-01T08:00:00Z", end: "2024-01-01T12:00:00Z" }, shift);
+// { start: "2024-01-01T09:00:00Z", end: "2024-01-01T12:00:00Z" }
+
+mergeIntervals([
+  { start: "2024-01-01T13:00:00Z", end: "2024-01-01T17:00:00Z" },
+  { start: "2024-01-01T09:00:00Z", end: "2024-01-01T12:00:00Z" },
+  { start: "2024-01-01T12:00:00Z", end: "2024-01-01T13:00:00Z" },
+]);
+// [{ start: "2024-01-01T09:00:00Z", end: "2024-01-01T17:00:00Z" }] — sorted, touching runs joined
+
+const worked = subtractIntervals(shift, [{ start: "2024-01-01T12:00:00Z", end: "2024-01-01T13:00:00Z" }]);
+// [{ start: "2024-01-01T09:00:00Z", end: "2024-01-01T12:00:00Z" },
+//  { start: "2024-01-01T13:00:00Z", end: "2024-01-01T17:00:00Z" }]
+sumIntervals(worked); // "PT7H"
+
+splitIntervalAt(shift, ["2024-01-01T15:00:00Z", "2024-01-01T11:00:00Z"]);
+// [{ start: "…T09:00:00Z", end: "…T11:00:00Z" }, { start: "…T11:00:00Z", end: "…T15:00:00Z" },
+//  { start: "…T15:00:00Z", end: "…T17:00:00Z" }] — pieces share no instant
+
+isValidInterval({ start: "2024-01-01T17:00:00Z", end: "2024-01-01T09:00:00Z" }); // false — inverted
+```
+
+- **Endpoints are instants.** An offset (`Z` or `±HH:MM`) is required and a `[Zone]` annotation is
+  optional. As with a TC39 `Temporal.Instant`, endpoints compare by epoch nanoseconds, so two of
+  them may name different zones. Leap seconds and `[u-ca=…]` are rejected. For local-calendar
+  edges, build them with `floorToZone` or `bucketRange` first.
+- **Outputs are the caller's own strings**, never re-serialised. When two strings spell the same
+  instant, the first argument's spelling wins. No spec covers the tie, so this is a GMT rule.
+- **`start === end` is a valid empty interval.** It contains no instant, overlaps only an interval
+  it lies strictly inside, and adds nothing to a sum. An inverted interval returns the sentinel:
+  `false`, `null`, `[]` or `""`.
+- **`sumIntervals` is covered time.** It returns the length of the union, with overlaps counted
+  once, as an exact duration with hours as the largest unit. That is exactly what TC39
+  `Instant.prototype.until(…, { largestUnit: "hour" })` produces, because an instant has no
+  calendar that says how long a day is. So `PT49H30M` is never written `P2DT1H30M`, a New York
+  spring-forward day is `PT23H`, and `sumIntervals([])` is `"PT0S"`. The sum is exact past
+  2^53 nanoseconds.
+- **`[]` means two things.** From `mergeIntervals`, `subtractIntervals` and `splitIntervalAt` it
+  is both a legitimate result (a fully covered subtraction) and the invalid-input sentinel.
+  `isValidInterval` tells them apart.
+
 ## API Surface
 
 For the complete API listing, see the namespace documentation on GitHub:
@@ -2012,6 +2137,7 @@ For the complete API listing, see the namespace documentation on GitHub:
 - [Precision API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/precision) — nanosecond instants, JSON transport, storage truncation, NTP / FILETIME / .NET ticks / Excel / PostgreSQL epoch bridges
 - [Span API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/span) — elapsed and wall-clock durations as raw numbers
 - [Calendar API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/calendar) — ISO week and ordinal dates, quarter and fiscal periods, zone-aware bucketing
+- [Interval API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/interval) — half-open interval algebra over instants: overlap, intersect, clamp, merge, subtract, split, sum
 - [Instant API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/instant) — the instant-plus-offset pair, and explicit local-time resolution
 - [UTC API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/utc) — UTC instant utilities
 - [Regex API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/regex) — composable regex patterns
