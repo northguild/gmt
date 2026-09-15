@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { MustTestLocales } from "../../test";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { getLocaleDayOfWeek } from "./getLocaleDayOfWeek";
+import { runtimeWeekInfo } from "../../test/runtimeWeekInfo";
 
 describe("getLocaleDayOfWeek", () => {
   // Full week boundary coverage for en-US: compute expected dynamically so
@@ -18,7 +19,7 @@ describe("getLocaleDayOfWeek", () => {
   `(
     "returns $expected for $value in en-US (full week boundary)",
     ({ value, _expected }) => {
-      const firstDay = new Intl.Locale(MustTestLocales.enUS).weekInfo.firstDay;
+      const firstDay = runtimeWeekInfo(MustTestLocales.enUS).firstDay;
       const date = Temporal.PlainDate.from(value);
       const computed = (date.dayOfWeek - firstDay + 7) % 7;
       expect(getLocaleDayOfWeek(value, MustTestLocales.enUS)).toBe(computed);
@@ -38,7 +39,7 @@ describe("getLocaleDayOfWeek", () => {
   `(
     "returns $expected for $value in fr-FR (full week boundary)",
     ({ value, _expected }) => {
-      const firstDay = new Intl.Locale(MustTestLocales.frFR).weekInfo.firstDay;
+      const firstDay = runtimeWeekInfo(MustTestLocales.frFR).firstDay;
       const date = Temporal.PlainDate.from(value);
       const computed = (date.dayOfWeek - firstDay + 7) % 7;
       expect(getLocaleDayOfWeek(value, MustTestLocales.frFR)).toBe(computed);
@@ -58,7 +59,7 @@ describe("getLocaleDayOfWeek", () => {
   `(
     "returns $expected for $value in he-IL (full week boundary)",
     ({ value, _expected }) => {
-      const firstDay = new Intl.Locale(MustTestLocales.heIL).weekInfo.firstDay;
+      const firstDay = runtimeWeekInfo(MustTestLocales.heIL).firstDay;
       const date = Temporal.PlainDate.from(value);
       const computed = (date.dayOfWeek - firstDay + 7) % 7;
       expect(getLocaleDayOfWeek(value, MustTestLocales.heIL)).toBe(computed);
@@ -91,7 +92,7 @@ describe("getLocaleDayOfWeek", () => {
   `(
     "returns the computed locale-relative day-of-week for Monday 2024-02-26 in $locale",
     ({ locale }) => {
-      const firstDay = new Intl.Locale(locale).weekInfo.firstDay;
+      const firstDay = runtimeWeekInfo(locale).firstDay;
       const date = Temporal.PlainDate.from("2024-02-26");
       const expected = (date.dayOfWeek - firstDay + 7) % 7;
       expect(getLocaleDayOfWeek("2024-02-26", locale)).toBe(expected);

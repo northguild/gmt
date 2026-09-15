@@ -19,7 +19,7 @@ describe("subtractTime", () => {
     ${-30}         | ${"12:30:00"}
     ${-90}         | ${"13:30:00"}
   `(
-    "returns $expectedTime for $value - $negativeAmount minutes",
+    "returns $expectedTime for 12:00:00 - $negativeAmount minutes",
     ({ negativeAmount, expectedTime }) => {
       expect(subtractTime("12:00:00", { minutes: negativeAmount })).toBe(
         expectedTime,

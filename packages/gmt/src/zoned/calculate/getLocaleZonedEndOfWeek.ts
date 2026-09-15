@@ -1,7 +1,7 @@
-import { Temporal } from "@js-temporal/polyfill";
 import {
   getLocaleFirstDayOfWeek,
   type WeekStartDay,
+  zonedDateTimeFrom,
   zonedUnitEnd,
 } from "../../internal";
 import type { Disambiguation, FractionalDigit, Offset } from "../../types";
@@ -60,7 +60,7 @@ export function getLocaleZonedEndOfWeek(
 
   try {
     const end = zonedUnitEnd(
-      Temporal.ZonedDateTime.from(value),
+      zonedDateTimeFrom(value),
       "week",
       firstDay as WeekStartDay,
     );

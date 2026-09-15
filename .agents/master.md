@@ -70,7 +70,8 @@ namespace, no locale-awareness), skip `architect` and `tester` and tell the user
    **2 iterations**. After the second pass, report remaining gaps to the user instead of looping.
 5. **Escalate blockers.** Ambiguous spec, design conflict, or tests that cannot pass: stop and
    report to the user with full context.
-6. **Nothing is committed.** The pipeline ends with unstaged changes and drafted commit/PR text
+6. **Zero known bugs.** A defect found at any stage is fixed in the same story before the pipeline moves on. It is never deferred, pinned with `it.fails`, skipped, or documented as known, and `finalizer` refuses to close a story that carries one ([AGENTS.md Core Rule 12](../AGENTS.md#core-rules-quick-reference)).
+7. **Nothing is committed.** The pipeline ends with unstaged changes and drafted commit/PR text
    for the owner.
 
 ## Inline pipeline (single-model chat)

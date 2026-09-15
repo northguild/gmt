@@ -13,6 +13,7 @@ export * from "./duration-string-options";
 export * from "./duration-unit";
 export * from "./fiscal-calendar";
 export * from "./fractional-digit";
+export * from "./interval";
 export * from "./now-unit";
 export * from "./offset";
 export * from "./overflow";

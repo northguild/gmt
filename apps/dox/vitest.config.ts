@@ -53,8 +53,13 @@ export default defineConfig({
     // Workers AI and spend real budget. Preloaded with `--import` so it is in
     // place before any test, setup file or dependency loads. Proven live by
     // src/test/no-network.test.ts.
+    // `--no-experimental-webstorage`: Node 25+ defines its own `localStorage` global, which is
+    // `undefined` without `--localstorage-file` and shadows jsdom's `window.localStorage` in
+    // `@vitest-environment jsdom` files (HeaderClock, ResetClock). Nothing here uses Node's own
+    // storage. The flag is accepted by every Node in the CI matrix (22, 24, 26).
     execArgv: [
       `--import=${pathToFileURL(path.resolve(import.meta.dirname, "src/test/no-network.mjs")).href}`,
+      "--no-experimental-webstorage",
     ],
   },
 });

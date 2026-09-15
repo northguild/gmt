@@ -17,7 +17,11 @@ export interface GmtStats {
   /** Node versions in CI's gmt-matrix. */
   nodes: readonly string[];
   timezones: number;
+  /** IANA zone IDs in CI's gmt-matrix, in declaration order. */
+  timezoneList: readonly string[];
   locales: number;
+  /** BCP-47 locale tags in the mandatory locale matrix, in declaration order. */
+  localeList: readonly string[];
   /** Public functions across every namespace except `regex`. */
   functions: number;
   /** Exported regex patterns. */

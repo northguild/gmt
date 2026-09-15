@@ -1,7 +1,7 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { isValidDateTime } from "../../plain/validate";
 import type { Disambiguation } from "../../types";
 import { isValidTimeZone } from "../../zoned/validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 const DISAMBIGUATIONS: readonly string[] = [
   "compatible",
@@ -61,7 +61,7 @@ export function resolveLocal(
   }
 
   try {
-    return Temporal.ZonedDateTime.from(`${localDateTime}[${timeZone}]`, {
+    return zonedDateTimeFrom(`${localDateTime}[${timeZone}]`, {
       disambiguation,
     })
       .toInstant()

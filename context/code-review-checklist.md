@@ -26,6 +26,7 @@ For every PR, verify all of the following before approving.
 - [ ] `expectOneOfIcu` / `expectDateTimeEqual` / `expectOneOfDateTimeIcu` (from `src/test/icuVariants.ts`) used only for verified CLDR wording variants
 - [ ] Timezone coverage uses `battleTestTimeZones` / `MustTestDstTimeZones` — no hand-copied literal zone tables — plus the probe-zone transition rows for boundary functions (see [testing standards](./testing-standards/references/index.md#zoned-and-unix-functions-must-use-the-battle-test-timezone-fixtures))
 - [ ] Edge cases covered: invalid input, empty arrays, boundary values (leap years, DST transitions, midnight, etc.)
+- [ ] Zero known bugs: no `it.fails` / `.skip` / `.todo` / `.only` / `xit` / `describe.skip`, and no "known defect" note anywhere. A defect found in review blocks the PR until it is fixed ([Core Rule 12](../AGENTS.md#core-rules-quick-reference); `node scripts/test-markers.mjs check`)
 
 ## Documentation
 

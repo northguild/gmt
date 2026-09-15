@@ -235,3 +235,74 @@ describe("durationAs", () => {
     ).not.toThrow();
   });
 });
+
+describe("durationAs relative to the last days of the range", () => {
+  // Both anchors are max - 3d5h. TC39 NudgeToCalendarUnit totals PT49H over the day from
+  // +275760-09-12 local, 2 + 1/24 days; P3D is 72 exact hours. The window's end wall clock is past
+  // +275760-09-13T00:00 in a zone ahead of UTC, but its exact time is in range.
+  it.each`
+    value      | unit       | relativeTo                                            | expected
+    ${"PT49H"} | ${"days"}  | ${"+275760-09-10T05:00:00+10:00[Australia/Sydney]"}   | ${2.0416666666666665}
+    ${"P3D"}   | ${"hours"} | ${"+275760-09-10T05:00:00+10:00[Australia/Sydney]"}   | ${72}
+    ${"PT49H"} | ${"days"}  | ${"+275760-09-10T09:00:00+14:00[Pacific/Kiritimati]"} | ${2.0416666666666665}
+  `(
+    "totals $value as $expected $unit relative to $relativeTo",
+    ({ value, unit, relativeTo, expected }) => {
+      expect(durationAs(value, unit, { relativeTo })).toBe(expected);
+    },
+  );
+
+  // From max - 2d1h the day window ends 23 hours past the maximum, which
+  // GetPossibleEpochNanoseconds rejects in UTC as in every other zone.
+  it.each`
+    relativeTo
+    ${"+275760-09-10T23:00:00+00:00[UTC]"}
+    ${"+275760-09-10T23:00:00+00:00[+00:00]"}
+    ${"+275760-09-11T00:00:00+01:00[Europe/London]"}
+  `(
+    "returns null totalling PT49H in days relative to $relativeTo",
+    ({ relativeTo }) => {
+      expect(durationAs("PT49H", "days", { relativeTo })).toBeNull();
+    },
+  );
+});
+
+describe("durationAs relative to the first days of the range", () => {
+  // Both anchors are min + 3d. TC39 NudgeToCalendarUnit totals -PT49H over the day back to
+  // -271821-04-20 local, -(2 + 1/24) days; that window reaches the minimum's local date
+  // -271821-04-19 in a zone behind UTC, whose exact times are in range.
+  it.each`
+    relativeTo
+    ${"-271821-04-22T19:03:58-04:56[America/New_York]"}
+    ${"-271821-04-22T13:28:34-10:31[Pacific/Honolulu]"}
+  `(
+    "totals -PT49H as -2.0416666666666665 days relative to $relativeTo",
+    ({ relativeTo }) => {
+      expect(durationAs("-PT49H", "days", { relativeTo })).toBe(
+        -2.0416666666666665,
+      );
+    },
+  );
+});
+
+// CORE-6 S7: a non-ISO calendar `relativeTo` follows TC39 Duration#total with a plain relativeTo.
+// Values: Chromium 153 native `Duration.from(d).total({ unit, relativeTo: PlainDate })`; null
+// where Chromium throws.
+describe("durationAs with a non-ISO calendar relativeTo (CORE-6)", () => {
+  it.each`
+    duration  | unit        | relativeTo                      | expected | reason
+    ${"P40D"} | ${"months"} | ${"279517-08-15[u-ca=hebrew]"}  | ${null}  | ${"D1: the 1-month window after the first month passes the maximum"}
+    ${"P1M"}  | ${"days"}   | ${"279517-08-01[u-ca=hebrew]"}  | ${30}    | ${"D1 control: M07 of 279517 has 30 days"}
+    ${"P30D"} | ${"months"} | ${"2566-08-31[u-ca=buddhist]"}  | ${1}     | ${"D6: the window Aug 31 to Sep 30 ends exactly on the target"}
+    ${"P1M"}  | ${"days"}   | ${"1543-02-01[u-ca=buddhist]"}  | ${28}    | ${"proleptic buddhist: ISO 1000 is not a leap year"}
+    ${"P1Y"}  | ${"days"}   | ${"1543-03-01[u-ca=buddhist]"}  | ${365}   | ${"proleptic buddhist: no Feb 29 in ISO 1000"}
+    ${"P1M"}  | ${"days"}   | ${"-096239-06-23[u-ca=hebrew]"} | ${29}    | ${"hebrew year <= 0: M06 has 29 days"}
+    ${"P1Y"}  | ${"days"}   | ${"-096239-06-23[u-ca=hebrew]"} | ${355}   | ${"hebrew year <= 0: a 355-day year from M06-23"}
+    ${"P1M"}  | ${"days"}   | ${"0000-01-13[u-ca=hebrew]"}    | ${30}    | ${"hebrew year 0: M01 has 30 days"}
+  `(
+    "returns $expected for $duration in $unit relative to $relativeTo ($reason)",
+    ({ duration, unit, relativeTo, expected }) => {
+      expect(durationAs(duration, unit, { relativeTo })).toBe(expected);
+    },
+  );
+});

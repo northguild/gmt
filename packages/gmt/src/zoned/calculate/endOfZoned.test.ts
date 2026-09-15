@@ -187,4 +187,34 @@ describe("endOfZoned across zone transitions with default options", () => {
       ).toBe(expected);
     },
   );
+
+  // -271821-04-20T00:00:00Z is the first representable instant (a Tuesday). The start of its month,
+  // year and week lies before the range, but every end is representable and must be returned.
+  it.each`
+    value                                  | unit       | weekStartsOn | expected
+    ${"-271821-04-20T12:00:00+00:00[UTC]"} | ${"day"}   | ${undefined} | ${"-271821-04-20T23:59:59+00:00[UTC]"}
+    ${"-271821-04-20T12:00:00+00:00[UTC]"} | ${"week"}  | ${"monday"}  | ${"-271821-04-25T23:59:59+00:00[UTC]"}
+    ${"-271821-04-20T12:00:00+00:00[UTC]"} | ${"week"}  | ${"sunday"}  | ${"-271821-04-24T23:59:59+00:00[UTC]"}
+    ${"-271821-04-20T12:00:00+00:00[UTC]"} | ${"month"} | ${undefined} | ${"-271821-04-30T23:59:59+00:00[UTC]"}
+    ${"-271821-04-20T12:00:00+00:00[UTC]"} | ${"year"}  | ${undefined} | ${"-271821-12-31T23:59:59+00:00[UTC]"}
+  `(
+    "returns $expected as the $unit end of the first-day value $value (weekStartsOn $weekStartsOn)",
+    ({ value, unit, weekStartsOn, expected }) => {
+      expect(endOfZoned(value, unit, { weekStartsOn })).toBe(expected);
+    },
+  );
+});
+
+describe("endOfZoned at the maximum instant", () => {
+  // fractionalSecondDigits defaults to 0 for "hour", so 09:59:59.999999999 prints as 09:59:59.
+  it.each`
+    value                                                 | unit      | expected
+    ${"+275760-09-13T09:30:00+10:00[Australia/Sydney]"}   | ${"hour"} | ${"+275760-09-13T09:59:59+10:00[Australia/Sydney]"}
+    ${"+275760-09-13T13:30:00+14:00[Pacific/Kiritimati]"} | ${"hour"} | ${"+275760-09-13T13:59:59+14:00[Pacific/Kiritimati]"}
+  `(
+    "returns $expected for the $unit of $value",
+    ({ value, unit, expected }) => {
+      expect(endOfZoned(value, unit)).toBe(expected);
+    },
+  );
 });

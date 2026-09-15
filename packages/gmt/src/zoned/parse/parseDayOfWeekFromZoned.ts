@@ -1,5 +1,5 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Return the day of the week (1-7, Monday-Sunday) from a zoned datetime string.
@@ -20,7 +20,7 @@ export function parseDayOfWeekFromZoned(value: string): number | null {
   }
 
   try {
-    const zonedDateTime = Temporal.ZonedDateTime.from(value);
+    const zonedDateTime = zonedDateTimeFrom(value);
     return zonedDateTime.dayOfWeek;
   } catch {
     return null;

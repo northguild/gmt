@@ -1,42 +1,106 @@
 ---
 title: Interval Basics
-description: Validate intervals and ranges, construct them from a point plus a duration, and understand the two API shapes.
+description: GMT's half-open interval standard, the Interval type, validation, and how the older positional interval functions differ.
 sidebar:
   order: 1
 ---
 
-Intervals are two-point ranges — a `start` and an `end`. GMT provides them across
-plain, zoned, unix, and UTC namespaces. Every function has `Date`, `Time`,
-`DateTime`, `Zoned`, `Unix`, and `Utc` siblings; replace the suffix to match your
-value type.
+An interval is a `start` and an `end`. GMT has two families of interval functions,
+and they do not share a boundary model. Know which one you are calling.
 
-## Two API shapes
+| | `interval/` (the standard) | positional `plain/` `utc/` `zoned/` `unix/` functions |
+| --- | --- | --- |
+| Shape | `Interval` records: `{ start, end }` | positional strings: `(aStart, aEnd, bStart, bEnd)` |
+| Endpoints | instant strings with an offset, any zone | one value type per suffix (`Date`, `Time`, `DateTime`, `Utc`, `Zoned`, `Unix`) |
+| Boundary model | half-open `[start, end)` | closed `[start, end]` for most families; `intervalCount*` is half-open |
+| Touching intervals | do **not** overlap | overlap (the shared endpoint belongs to both) |
+| Output strings | the caller's own strings | re-serialised values |
 
-**Interval validators** take positional `(start, end)` args and require `start <= end`:
+## The half-open standard
+
+An instant `t` is inside `[start, end)` when `start ≤ t < end`. The start belongs to
+the interval, and the end does not. This is the convention of SQL:2011's closed-open
+application-time `PERIOD`, RFC 5545's non-inclusive `DTEND`, and Dijkstra's EWD831.
+Under it, a container that gates out at exactly 17:00 has not used a day of the next
+window, and two consecutive shifts never double-count the instant they meet.
 
 ```typescript
-import { isValidDateInterval } from "@northguild/gmt";
+import { intervalContains, intervalsOverlap } from "@northguild/gmt";
+
+const shift = { start: "2024-01-01T09:00:00Z", end: "2024-01-01T17:00:00Z" };
+
+intervalContains(shift, "2024-01-01T09:00:00Z"); // true — start is inside
+intervalContains(shift, "2024-01-01T17:00:00Z"); // false — end is not
+
+intervalsOverlap(shift, { start: "2024-01-01T17:00:00Z", end: "2024-01-01T18:00:00Z" });
+// false — touching intervals share no instant
+```
+
+## Endpoints are instants
+
+Both endpoints must be instant strings: an offset (`Z` or `±HH:MM`) is required, and a
+bracketed IANA zone is optional. As with a TC39 `Temporal.Instant`, they compare by
+exact time only, so the two endpoints may name different zones. Leap seconds and
+`[u-ca=…]` calendar annotations are rejected.
+
+A plain date or a zoneless datetime has no position on the timeline until you name a
+zone. Resolve it to an instant first. For local-calendar edges such as a local day or a
+trading session, build them with [`floorToZone`](/reference/calendar/calculate/floorToZone)
+or [`bucketRange`](/reference/calendar/calculate/bucketRange).
+
+## Validate with `isValidInterval`
+
+```typescript
+import { isValidInterval } from "@northguild/gmt";
+
+isValidInterval({ start: "2024-01-01T09:00:00Z", end: "2024-01-01T17:00:00Z" }); // true
+isValidInterval({ start: "2024-01-01T09:00:00Z", end: "2024-01-01T09:00:00Z" }); // true — empty
+isValidInterval({ start: "2024-01-01T17:00:00Z", end: "2024-01-01T09:00:00Z" }); // false — inverted
+isValidInterval({ start: "2024-01-01T09:00:00", end: "2024-01-01T17:00:00Z" });  // false — no offset
+```
+
+`start === end` is a valid **empty** interval. It has a position but contains no
+instant. An inverted interval is invalid input, and every function returns its
+sentinel for it rather than swapping the endpoints.
+
+## Return conventions
+
+Nothing in either family throws on bad input.
+
+| `interval/` function | Returns | Invalid input |
+| --- | --- | --- |
+| `isValidInterval`, `intervalsOverlap`, `intervalContains` | `boolean` | `false` |
+| `intersectIntervals`, `clampInterval` | `Interval \| null` | `null` |
+| `mergeIntervals`, `subtractIntervals`, `splitIntervalAt` | `Interval[]` | `[]` |
+| `sumIntervals` | ISO 8601 duration string | `""` |
+
+`[]` is both a legitimate answer (a fully covered subtraction, for example) and the
+array sentinel. When the difference matters, check the inputs with `isValidInterval`.
+
+| Positional family | Returns | Invalid input |
+| --- | --- | --- |
+| `isValid*Interval`, `intervalContains*`, `intervalsOverlap*`, `intervalAbuts*`, `intervalEngulfs*` | `boolean` | `false` |
+| `intervalIntersection*`, `intervalUnion*`, `intervalFromDuration*` | `{ start, end } \| null` | `null` |
+| `intervalDifference*`, `intervalXor*`, `intervalXorAll*`, `mergeIntervals*`, `splitIntervalByUnit*`, `intervalDivideEqually*`, `intervalSplitAt*` | `Array<{ start, end }>` | `[]` |
+| `intervalCount*`, `intervalLength*`, `intervalOverlappingDays*` | `number \| null` | `null` |
+
+## The positional functions
+
+The positional functions predate the standard, and most of them read an interval as closed.
+Their validators take `(start, end)` and require `start <= end`:
+
+```typescript
+import { isValidDateInterval, isValidDateRange } from "@northguild/gmt";
 
 isValidDateInterval("2024-01-01", "2024-12-31"); // true
 isValidDateInterval("2024-12-31", "2024-01-01"); // false — inverted
-```
 
-**Range validators** take an object `{ value1, value2, options? }`:
-
-```typescript
-import { isValidDateRange } from "@northguild/gmt";
-
+// Range validators are a different shape: an object with value1 / value2
 isValidDateRange({ value1: "2024-01-01", value2: "2024-12-31" }); // true
 ```
 
-Don't confuse the two. Interval validators enforce `start <= end`; range validators
-take an object.
-
-## Construct an interval from a point + duration
-
-`intervalFromDuration*` builds an interval from a single point and an ISO 8601
-duration, anchored at either end — Luxon's `Interval.after`/`Interval.before` as
-one function:
+`intervalFromDuration*` builds a positional interval from one point and an ISO 8601
+duration, anchored at either end. Calendar units resolve against the point itself:
 
 ```typescript
 import { intervalFromDurationDate, intervalFromDurationZoned } from "@northguild/gmt";
@@ -49,27 +113,19 @@ intervalFromDurationDate("2024-02-01", "P1M", "end");
 
 intervalFromDurationZoned("2024-03-09T02:30:00-05:00[America/New_York]", "P1D", "start");
 // { start: "2024-03-09T02:30:00-05:00[America/New_York]", end: "2024-03-10T03:30:00-04:00[America/New_York]" }
-// — spring-forward day is 23 hours long
+// — the spring-forward day is 23 hours long
 ```
 
-Calendar units resolve against the point itself — no separate `relativeTo` needed.
-A negative duration that inverts the span returns `null`.
+A negative duration returns `null`.
 
-## Return conventions
-
-Every interval function returns a sentinel on invalid input — never throws:
-
-| Family | Returns | Invalid |
-| --- | --- | --- |
-| `isValid*Interval`, `intervalContains*`, `intervalsOverlap*`, `intervalAbuts*`, `intervalEngulfs*` | `boolean` | `false` |
-| `intervalIntersection*`, `intervalUnion*`, `intervalFromDuration*` | `{ start, end } \| null` | `null` |
-| `intervalDifference*`, `intervalXor*`, `splitIntervalByUnit*`, `intervalDivideEqually*`, `intervalSplitAt*`, `mergeIntervals*`, `intervalXorAll*` | `Array<{ start, end }>` | `[]` |
-| `intervalCount*`, `intervalLength*`, `intervalOverlappingDays*` | `number \| null` | `null` |
+The positional functions will move to the half-open model in the next major version. Until
+then, do not mix the two families in one computation.
 
 ## See also
 
-- [Containment and Overlap](./containment-and-overlap/) — point-in-interval, overlap, intersection
-- [Set Operations](./set-operations/) — union, difference, xor, engulf, abut
-- [Splitting and Counting](./splitting-and-counting/) — split by unit, count boundaries, measure length
+- [Containment and Overlap](./containment-and-overlap/): overlap, containment, intersection, clamping
+- [Set Operations](./set-operations/): merge, subtract, sum covered time, and the positional union, difference and xor
+- [Splitting and Counting](./splitting-and-counting/): split at boundaries, split by unit, count, measure length
+- [`interval` reference](/reference/interval/validate/isValidInterval)
+- [`Interval` type](/reference/types/interval/Interval)
 - [`isValidDateInterval` reference](/reference/plain/interval/validate/isValidDateInterval)
-- [`intervalFromDurationDate` reference](/reference/plain/interval/intervalFromDurationDate)

@@ -3,6 +3,7 @@ import { getLocaleStartOfWeek } from "../../plain/calculate/getLocaleStartOfWeek
 import { areDatesEqualBy } from "../../plain/compare/areDatesEqualBy";
 import { isValidDateUnit } from "../../plain/validate";
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Return true when `value`'s local calendar day falls in the same `unit` as
@@ -40,7 +41,7 @@ export function isZonedThisUnit(
   }
 
   try {
-    const zonedDateTime = Temporal.ZonedDateTime.from(value);
+    const zonedDateTime = zonedDateTimeFrom(value);
     const today = Temporal.Now.zonedDateTimeISO(zonedDateTime.timeZoneId)
       .toPlainDate()
       .toString();

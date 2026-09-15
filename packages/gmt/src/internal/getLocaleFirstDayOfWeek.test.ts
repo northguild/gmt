@@ -1,5 +1,6 @@
 import { MustTestLocales } from "../test";
 import { getLocaleFirstDayOfWeek } from "./getLocaleFirstDayOfWeek";
+import { runtimeWeekInfo } from "../test/runtimeWeekInfo";
 
 describe("getLocaleFirstDayOfWeek", () => {
   it.each`
@@ -28,7 +29,7 @@ describe("getLocaleFirstDayOfWeek", () => {
   // Monday under some, Sunday under others — so this asserts against the
   // runtime's actual weekInfo rather than a hardcoded value.
   it("returns the runtime's own weekInfo.firstDay for is-IS", () => {
-    const expected = new Intl.Locale(MustTestLocales.isIS).weekInfo.firstDay;
+    const expected = runtimeWeekInfo(MustTestLocales.isIS).firstDay;
     expect(getLocaleFirstDayOfWeek(MustTestLocales.isIS)).toBe(expected);
   });
 

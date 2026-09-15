@@ -7,7 +7,7 @@ describe("intervalAbutsUnix", () => {
     ${1500000001} | ${1700000000} | ${0}          | ${1500000000} | ${true}
     ${0}          | ${1000}       | ${1001}       | ${2000}       | ${true}
   `(
-    "returns $expected when A=$aStart..$aEnd and B=$bStart..$bEnd",
+    "returns $expected when A=$aStart to $aEnd and B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalAbutsUnix(aStart, aEnd, bStart, bEnd)).toBe(expected);
     },
@@ -78,4 +78,31 @@ describe("intervalAbutsUnix", () => {
       expect(intervalAbutsUnix(aStart, aEnd, bStart, bEnd)).toBe(expected);
     },
   );
+
+  // Epoch values are whole units. A fraction has no "next unit", and past 2^53 consecutive
+  // integers collapse (2 ** 53 + 1 === 2 ** 53), so neither can be tested for adjacency.
+  it.each`
+    aStart | aEnd       | bStart     | bEnd           | description
+    ${0}   | ${1.5}     | ${2.5}     | ${3}           | ${"fractional ends (1.5 + 1 === 2.5)"}
+    ${0}   | ${1}       | ${0.5}     | ${2}           | ${"a fractional start"}
+    ${0}   | ${2 ** 53} | ${2 ** 53} | ${2 ** 53 + 4} | ${"unsafe integers (2^53 + 1 === 2^53)"}
+    ${"0"} | ${"1.5"}   | ${"2.5"}   | ${"3"}         | ${"fractional numeric strings"}
+    ${""}  | ${"0"}     | ${"1"}     | ${"2"}         | ${"an empty string, which Number() reads as 0"}
+  `(
+    "returns false for A=[$aStart, $aEnd] and B=[$bStart, $bEnd] ($description)",
+    ({ aStart, aEnd, bStart, bEnd }) => {
+      expect(intervalAbutsUnix(aStart, aEnd, bStart, bEnd)).toBe(false);
+    },
+  );
+
+  it("returns true when B ends on the largest safe integer, one unit after A", () => {
+    expect(
+      intervalAbutsUnix(
+        0,
+        Number.MAX_SAFE_INTEGER - 1,
+        Number.MAX_SAFE_INTEGER,
+        Number.MAX_SAFE_INTEGER,
+      ),
+    ).toBe(true);
+  });
 });

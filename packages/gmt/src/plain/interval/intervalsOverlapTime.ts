@@ -5,7 +5,7 @@ import { plainTime } from "../../regex";
  * Return true when intervals `[aStart, aEnd]` and `[bStart, bEnd]` share at least one instant.
  *
  * - Uses `Temporal.PlainTime.compare` for comparison.
- * - Adjacent intervals (e.g. `aEnd === bStart`) do NOT overlap — returns `false`.
+ * - Touching intervals (`aEnd` equal to `bStart`) share that endpoint and DO overlap — returns `true`.
  * - Returns `false` if either interval is invalid (`start > end`).
  * - Returns `false` on invalid input (wrong type, malformed strings).
  *
@@ -16,7 +16,7 @@ import { plainTime } from "../../regex";
  * @returns true if intervals overlap, or false on invalid input
  *
  * @example intervalsOverlapTime("09:00:00", "17:00:00", "12:00:00", "18:00:00") // true
- * @example intervalsOverlapTime("09:00:00", "17:00:00", "17:00:00", "18:00:00") // false (adjacent)
+ * @example intervalsOverlapTime("09:00:00", "17:00:00", "17:00:00", "18:00:00") // true (touching)
  * @example intervalsOverlapTime("09:00:00", "17:00:00", "18:00:00", "20:00:00") // false (disjoint)
  * @example intervalsOverlapTime("09:00:00", "17:00:00", "10:00:00", "11:00:00") // true (contained)
  * @example intervalsOverlapTime("invalid", "17:00:00", "12:00:00", "18:00:00") // false

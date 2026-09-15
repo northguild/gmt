@@ -13,7 +13,7 @@ describe("intervalOverlappingDaysUnix", () => {
     ${0}   | ${2 * D} | ${D}   | ${3 * D} | ${"Pacific/Apia"} | ${2}
     ${0}   | ${2 * D} | ${D}   | ${3 * D} | ${"Pacific/Niue"} | ${2}
   `(
-    "returns $expected for $aStart..$aEnd × $bStart..$bEnd in $timeZone",
+    "returns $expected for $aStart to $aEnd × $bStart to $bEnd in $timeZone",
     ({ aStart, aEnd, bStart, bEnd, timeZone, expected }) => {
       expect(
         intervalOverlappingDaysUnix(aStart, aEnd, bStart, bEnd, { timeZone }),
@@ -96,7 +96,7 @@ describe("intervalOverlappingDaysUnix", () => {
     ${D}   | ${0} | ${2 * D} | ${3 * D}
     ${0}   | ${D} | ${3 * D} | ${2 * D}
   `(
-    "returns null for inverted interval $aStart..$aEnd × $bStart..$bEnd",
+    "returns null for inverted interval $aStart to $aEnd × $bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(
         intervalOverlappingDaysUnix(aStart, aEnd, bStart, bEnd, {
@@ -116,6 +116,13 @@ describe("intervalOverlappingDaysUnix", () => {
     ${1700000000} | ${Infinity}   | ${1000000} | ${2000000}
     ${1700000000} | ${1700000000} | ${NaN}     | ${2000000}
     ${1700000000} | ${1700000000} | ${1000000} | ${NaN}
+    ${""}         | ${1700000000} | ${1000000} | ${2000000}
+    ${"0"}        | ${"1.5"}      | ${1000000} | ${2000000}
+    ${0}          | ${2 ** 53}    | ${1000000} | ${2000000}
+    ${"   "}      | ${1700000000} | ${1000000} | ${2000000}
+    ${0}          | ${1700000000} | ${1.5}     | ${2000000}
+    ${0}          | ${1700000000} | ${""}      | ${2000000}
+    ${0}          | ${1700000000} | ${1000000} | ${2 ** 53}
   `(
     "returns null for non-finite/non-integer: $aStart, $aEnd, $bStart, $bEnd",
     ({ aStart, aEnd, bStart, bEnd }) => {

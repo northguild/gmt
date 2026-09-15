@@ -4,6 +4,32 @@ import { battleTestTimeZones } from "../../test/timeZoneMatrix";
 import { intervalXorZoned } from "./intervalXorZoned";
 
 describe("intervalXorZoned", () => {
+  // Closed [start, end]: the shared endpoint is covered twice, so xor excludes it from both pieces,
+  // each stepping one unit in from it. Pieces list A's remainder, then B's.
+  it.each`
+    aStart                              | aEnd                                | bStart                              | bEnd                                | expected                                                                                                                                                                                        | reason
+    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-06-30T12:00:00+00:00[UTC]"} | ${"2024-06-30T12:00:00+00:00[UTC]"} | ${"2024-12-31T17:00:00+00:00[UTC]"} | ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-06-30T11:59:59.999999999+00:00[UTC]" }, { start: "2024-06-30T12:00:00.000000001+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" }]} | ${"A ends where B starts"}
+    ${"2024-06-30T12:00:00+00:00[UTC]"} | ${"2024-12-31T17:00:00+00:00[UTC]"} | ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-06-30T12:00:00+00:00[UTC]"} | ${[{ start: "2024-06-30T12:00:00.000000001+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" }, { start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-06-30T11:59:59.999999999+00:00[UTC]" }]} | ${"A starts where B ends"}
+  `(
+    "returns $expected for touching A=[$aStart, $aEnd] xor B=[$bStart, $bEnd] ($reason)",
+    ({ aStart, aEnd, bStart, bEnd, expected }) => {
+      expect(intervalXorZoned(aStart, aEnd, bStart, bEnd)).toEqual(expected);
+    },
+  );
+
+  // A shared start or end means the shorter interval is covered entirely, so only the longer
+  // one's remainder is left, stepping one nanosecond past the end of the covered part.
+  it.each`
+    aStart                              | aEnd                                | bStart                              | bEnd                                | expected                                                                                          | reason
+    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-06-30T12:00:00+00:00[UTC]"} | ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-12-31T17:00:00+00:00[UTC]"} | ${[{ start: "2024-06-30T12:00:00.000000001+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" }]} | ${"shared start"}
+    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-12-31T17:00:00+00:00[UTC]"} | ${"2024-06-30T12:00:00+00:00[UTC]"} | ${"2024-12-31T17:00:00+00:00[UTC]"} | ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-06-30T11:59:59.999999999+00:00[UTC]" }]} | ${"shared end"}
+  `(
+    "returns $expected for A=[$aStart, $aEnd] xor B=[$bStart, $bEnd] ($reason)",
+    ({ aStart, aEnd, bStart, bEnd, expected }) => {
+      expect(intervalXorZoned(aStart, aEnd, bStart, bEnd)).toEqual(expected);
+    },
+  );
+
   it.each`
     aStart                              | aEnd                                | bStart                              | bEnd                                | expected
     ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-06-30T12:00:00+00:00[UTC]"} | ${"2024-04-01T11:00:00+00:00[UTC]"} | ${"2024-12-31T17:00:00+00:00[UTC]"} | ${{ count: 2 }}
@@ -171,7 +197,7 @@ describe("intervalXorZoned", () => {
     }
   });
 
-  it("proves zone-invariance across battleTestTimeZones for adjacent intervals (xor is both)", () => {
+  it("proves zone-invariance across battleTestTimeZones for disjoint intervals with a 25-hour gap (xor is both)", () => {
     const aStartInstant = Temporal.Instant.from("2024-01-01T09:00:00Z");
     const aEndInstant = Temporal.Instant.from("2024-06-30T12:00:00Z");
     const bStartInstant = Temporal.Instant.from("2024-07-01T13:00:00Z");
@@ -198,6 +224,38 @@ describe("intervalXorZoned", () => {
       expect(
         Temporal.ZonedDateTime.from(result[1].end).toInstant().toString(),
       ).toBe(bEndInstant.toString());
+    }
+  });
+
+  it("proves zone-invariance across battleTestTimeZones for touching intervals (xor excludes the shared instant from both pieces)", () => {
+    // A ends at the instant B starts. Closed, so that instant is covered by both and every piece
+    // stops 1 ns short of it.
+    const aStartInstant = Temporal.Instant.from("2024-01-01T09:00:00Z");
+    const sharedInstant = Temporal.Instant.from("2024-06-30T12:00:00Z");
+    const bEndInstant = Temporal.Instant.from("2024-12-31T17:00:00Z");
+
+    for (const timeZone of battleTestTimeZones) {
+      const result = intervalXorZoned(
+        aStartInstant.toZonedDateTimeISO(timeZone).toString(),
+        sharedInstant.toZonedDateTimeISO(timeZone).toString(),
+        sharedInstant.toZonedDateTimeISO(timeZone).toString(),
+        bEndInstant.toZonedDateTimeISO(timeZone).toString(),
+      );
+      const instants = result.map(({ start, end }) => [
+        Temporal.ZonedDateTime.from(start).toInstant().toString(),
+        Temporal.ZonedDateTime.from(end).toInstant().toString(),
+      ]);
+
+      expect(instants).toEqual([
+        [
+          aStartInstant.toString(),
+          sharedInstant.subtract({ nanoseconds: 1 }).toString(),
+        ],
+        [
+          sharedInstant.add({ nanoseconds: 1 }).toString(),
+          bEndInstant.toString(),
+        ],
+      ]);
     }
   });
 

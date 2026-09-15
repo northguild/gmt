@@ -1,39 +1,70 @@
 ---
-import { BAR_CHARTS, type BarChartId, type BarSegment } from "../lib/why-gmt-charts";
+import {
+  BAR_CHARTS,
+  type BarChartId,
+  type BarGradient,
+} from "../lib/why-gmt-charts";
 
-interface LegendItem {
+/** One selectable view of a chart, e.g. "One run" vs "CI executions". */
+interface ChartView {
+  id: string;
   label: string;
-  segment: BarSegment;
+  svg: string;
+  chart?: BarChartId;
+  caption?: string;
 }
 
 interface Props {
-  svg: string;
+  /** Single-view charts: the static SVG. Ignored when `views` is given. */
+  svg?: string;
   title?: string;
   caption?: string;
   /** A bar chart to mount live over the static `svg`, adding the hover tooltip. */
   chart?: BarChartId;
-  legend?: readonly LegendItem[];
+  /** Two or more views behind a toggle. The first is shown by default; each keeps its caption. */
+  views?: readonly ChartView[];
+  /** Accessible name for the toggle group. */
+  toggleLabel?: string;
 }
 
-const { svg, title, caption, chart, legend } = Astro.props;
-const gradients = chart ? BAR_CHARTS[chart].gradients : [];
+const { svg, title, caption, chart, views, toggleLabel } = Astro.props;
+
+const panels: readonly ChartView[] =
+  views && views.length > 0
+    ? views
+    : [{ id: "default", label: "", svg: svg ?? "", chart, caption }];
+const hasToggle = panels.length > 1;
+
+// Every view's gradients, once each: a hidden view's live mount still paints with them.
+const gradients: BarGradient[] = [
+  ...new Map(
+    panels
+      .flatMap((panel) => (panel.chart ? BAR_CHARTS[panel.chart].gradients : []))
+      .map((g) => [g.id, g] as const),
+  ).values(),
+];
 ---
 
-<div class="gmt-chart-container">
+<div class="gmt-chart-container" data-gmt-chart-views={hasToggle ? "" : undefined}>
   {title && <h3 class="gmt-chart-title">{title}</h3>}
   {
-    legend && (
-      <ul class="gmt-chart-legend not-content">
-        {legend.map((item) => (
-          <li class="gmt-chart-legend__item">
-            <span
-              class={`gmt-chart-legend__swatch gmt-chart-legend__swatch--${item.segment}`}
-              aria-hidden="true"
-            />
-            {item.label}
-          </li>
+    hasToggle && (
+      <div
+        class="gmt-chart-toggle not-content"
+        role="group"
+        aria-label={toggleLabel ?? "Chart view"}
+      >
+        {panels.map((panel, index) => (
+          <button
+            type="button"
+            class="gmt-chart-toggle__button"
+            data-gmt-chart-view={panel.id}
+            aria-pressed={index === 0 ? "true" : "false"}
+          >
+            {panel.label}
+          </button>
         ))}
-      </ul>
+      </div>
     )
   }
   {
@@ -56,8 +87,22 @@ const gradients = chart ? BAR_CHARTS[chart].gradients : [];
       </svg>
     )
   }
-  <div class="gmt-chart gmt-glass" data-gmt-chart={chart} set:html={svg} />
-  {caption && <p class="gmt-chart-caption">{caption}</p>}
+  {
+    panels.map((panel, index) => (
+      <div
+        class="gmt-chart-view"
+        data-gmt-chart-panel={panel.id}
+        hidden={index === 0 ? undefined : true}
+      >
+        <div
+          class="gmt-chart gmt-glass"
+          data-gmt-chart={panel.chart}
+          set:html={panel.svg}
+        />
+        {panel.caption && <p class="gmt-chart-caption">{panel.caption}</p>}
+      </div>
+    ))
+  }
 </div>
 
 <script>
@@ -65,11 +110,12 @@ const gradients = chart ? BAR_CHARTS[chart].gradients : [];
   import { tooltip } from "@tanstack/charts/tooltip";
   import { BAR_CHARTS, isBarChartId } from "../lib/why-gmt-charts";
 
-  // mountChart appends to its container rather than replacing it, so the
-  // build-time SVG is cleared first.
-  for (const host of document.querySelectorAll<HTMLElement>("[data-gmt-chart]")) {
+  // mountChart appends to its container rather than replacing it, so the build-time SVG is
+  // cleared first. A host inside a hidden view is left as its static SVG until the view is first
+  // shown: mounted at zero width it would lay out wrongly.
+  function mount(host: HTMLElement): void {
     const id = host.dataset.gmtChart;
-    if (!isBarChartId(id)) continue;
+    if (!isBarChartId(id) || host.dataset.gmtChartMounted === "true") return;
     const chart = BAR_CHARTS[id];
     host.replaceChildren();
     mountChart(host, {
@@ -79,5 +125,43 @@ const gradients = chart ? BAR_CHARTS[chart].gradients : [];
       ariaLabel: chart.ariaLabel,
       aspectRatio: chart.width / chart.height,
     });
+    host.dataset.gmtChartMounted = "true";
+  }
+
+  for (const host of document.querySelectorAll<HTMLElement>("[data-gmt-chart]")) {
+    if (!host.closest("[hidden]")) mount(host);
+  }
+
+  for (const container of document.querySelectorAll<HTMLElement>(
+    "[data-gmt-chart-views]",
+  )) {
+    const buttons = container.querySelectorAll<HTMLButtonElement>(
+      "[data-gmt-chart-view]",
+    );
+    const panels = container.querySelectorAll<HTMLElement>(
+      "[data-gmt-chart-panel]",
+    );
+    for (const button of buttons) {
+      button.addEventListener("click", () => {
+        const view = button.dataset.gmtChartView;
+        for (const other of buttons) {
+          other.setAttribute(
+            "aria-pressed",
+            other === button ? "true" : "false",
+          );
+        }
+        for (const panel of panels) {
+          const shown = panel.dataset.gmtChartPanel === view;
+          panel.hidden = !shown;
+          if (shown) {
+            for (const host of panel.querySelectorAll<HTMLElement>(
+              "[data-gmt-chart]",
+            )) {
+              mount(host);
+            }
+          }
+        }
+      });
+    }
   }
 </script>

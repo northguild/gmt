@@ -104,13 +104,20 @@ describe("formatCalendarDate", () => {
     );
   });
 
-  it("tags a pre-Meiji japanese PlainDate with the synthetic 'japanese' era", () => {
-    const date = Temporal.PlainDate.from("1800-01-01").withCalendar("japanese");
-    expect(date.era).toBe("japanese");
-    expect(formatCalendarDate(date)).toBe(
-      "1800-01-01[u-ca=japanese;era=japanese]",
-    );
-  });
+  // CORE-6 D8: the Intl era/monthCode proposal's codes, whatever era name the polyfill reads.
+  it.each`
+    iso                | expected
+    ${"1800-01-01"}    | ${"1800-01-01[u-ca=japanese;era=ce]"}
+    ${"1872-12-31"}    | ${"1872-12-31[u-ca=japanese;era=ce]"}
+    ${"1873-01-01"}    | ${"0006-01-01[u-ca=japanese;era=meiji]"}
+    ${"-000500-06-15"} | ${"0501-06-15[u-ca=japanese;era=bce]"}
+  `(
+    "tags the japanese PlainDate $iso with the proposal era as $expected",
+    ({ iso, expected }: { iso: string; expected: string }) => {
+      const date = Temporal.PlainDate.from(iso).withCalendar("japanese");
+      expect(formatCalendarDate(date)).toBe(expected);
+    },
+  );
 
   // Ethiopic-family dates ("ethiopic" / "ethiopic-amete-alem" / "coptic") never reach this
   // function — they format via formatEthiopicFamilyDate in ethiopicFamilyCalendar.ts

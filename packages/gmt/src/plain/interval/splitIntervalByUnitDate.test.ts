@@ -122,7 +122,7 @@ describe("splitIntervalByUnitDate", () => {
     ${"2024-01-01"} | ${"2024-01-15"} | ${"week"}  | ${1}   | ${expectedWeekUnit}
     ${"2024-01-01"} | ${"2024-03-01"} | ${"month"} | ${1}   | ${expectedMonthUnit}
   `(
-    "returns $expected for $start..$end split by $amount $unit",
+    "returns $expected for $start to $end split by $amount $unit",
     ({ start, end, unit, amount, expected }) => {
       expect(splitIntervalByUnitDate(start, end, unit, amount)).toEqual(
         expected,
@@ -137,7 +137,7 @@ describe("splitIntervalByUnitDate", () => {
     ${"2024-01-01"} | ${"2024-01-03"} | ${"day"}  | ${1}   | ${expectedAmount1}
     ${"2024-01-01"} | ${"2026-01-01"} | ${"year"} | ${1}   | ${expectedYearUnit}
   `(
-    "returns $expected for edge-case $start..$end split by $amount $unit",
+    "returns $expected for edge-case $start to $end split by $amount $unit",
     ({ start, end, unit, amount, expected }) => {
       expect(splitIntervalByUnitDate(start, end, unit, amount)).toEqual(
         expected,
@@ -207,4 +207,20 @@ describe("splitIntervalByUnitDate", () => {
       end: "5784-02-01[u-ca=hebrew]",
     });
   });
+
+  // CORE-6: boundaries step through the calendar-correct add. Polyfill 0.5.1 throws `Invalid ISO
+  // date` stepping a month from islamic-civil min+68 (D1) and "Missing month" from Hebrew year -41
+  // (D3), so both splits used to return []. Boundaries: Chromium 152 (q2-xscan-chromium152.json),
+  // the Hebrew one through the Dershowitz–Reingold oracle; the last boundary is `end` itself.
+  it.each`
+    start                                  | end                                    | unit        | expected                                                                                                                                                                                | reason
+    ${"-280804-05-30[u-ca=islamic-civil]"} | ${"-280804-07-30[u-ca=islamic-civil]"} | ${"months"} | ${[{ start: "-280804-05-30[u-ca=islamic-civil]", end: "-280804-06-29[u-ca=islamic-civil]" }, { start: "-280804-06-29[u-ca=islamic-civil]", end: "-280804-07-30[u-ca=islamic-civil]" }]} | ${"D1: +1 month constrains to Jumada I 29 (xscan min[68]); +2 months is Rajab 30 = end"}
+    ${"-000041-05-16[u-ca=hebrew]"}        | ${"-000041-07-16[u-ca=hebrew]"}        | ${"months"} | ${[{ start: "-000041-05-16[u-ca=hebrew]", end: "-000041-06-16[u-ca=hebrew]" }, { start: "-000041-06-16[u-ca=hebrew]", end: "-000041-07-16[u-ca=hebrew]" }]}                             | ${"D3/D4: Shevat 16 -> Adar 16 -> Nisan 16 (xscan stride k=979)"}
+    ${"-280804-05-07[u-ca=islamic-civil]"} | ${"-280803-05-07[u-ca=islamic-civil]"} | ${"years"}  | ${[{ start: "-280804-05-07[u-ca=islamic-civil]", end: "-280803-05-07[u-ca=islamic-civil]" }]}                                                                                           | ${"D1: +1 year is end (xscan min[45] +1 year = min[400])"}
+  `(
+    "splits $start to $end by 1 $unit ($reason)",
+    ({ start, end, unit, expected }) => {
+      expect(splitIntervalByUnitDate(start, end, unit, 1)).toEqual(expected);
+    },
+  );
 });

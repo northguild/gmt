@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Sort an array of ZonedDateTime values in ascending or descending order.
@@ -27,7 +28,7 @@ export function sortZoned(
   if (!valid.length) return [];
 
   try {
-    const comparables = valid.map((d) => Temporal.ZonedDateTime.from(d));
+    const comparables = valid.map((d) => zonedDateTimeFrom(d));
     comparables.sort(Temporal.ZonedDateTime.compare);
 
     if (order === "desc") {

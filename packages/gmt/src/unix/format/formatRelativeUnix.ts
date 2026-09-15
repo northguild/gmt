@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { normalizeDateTime } from "../../internal/normalizeDateTime";
 import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
 import { resolveRelativeRounding } from "../../internal/resolveRelativeRounding";
+import { durationTotal } from "../../internal/zonedWallClockDifference";
 import type { RelativeRoundingMethod, RelativeUnit } from "../../types";
 import { isValidUtc } from "../../utc/validate";
 
@@ -122,7 +123,7 @@ export function formatRelativeUnix(
       // Defer timezone normalization until we know we need it.
       const tz = normalizeTimeZone(options.timeZone);
       amount = resolveRelativeRounding(
-        diff.total({ unit, relativeTo: reference.toZonedDateTimeISO(tz) }),
+        durationTotal(diff, unit, reference.toZonedDateTimeISO(tz)),
         options.roundingMethod,
       );
     }

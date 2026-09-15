@@ -6,7 +6,7 @@ import { utcDateTime } from "../../regex/utc-date-time";
  * Return true when intervals `[aStart, aEnd]` and `[bStart, bEnd]` share at least one instant.
  *
  * - Uses `Temporal.Instant.compare` for comparison (same instant semantics).
- * - Adjacent intervals (e.g. `aEnd === bStart`) do NOT overlap — returns `false`.
+ * - Touching intervals (`aEnd` equal to `bStart`) share that endpoint and DO overlap — returns `true`.
  * - Returns `false` if either interval is invalid (`start > end`).
  * - Returns `false` on invalid input (wrong type, malformed strings, leap seconds).
  *
@@ -17,7 +17,8 @@ import { utcDateTime } from "../../regex/utc-date-time";
  * @returns true if intervals overlap, or false on invalid input
  *
  * @example intervalsOverlapUtc("2024-01-01T00:00:00Z", "2024-06-30T23:59:59Z", "2024-04-01T00:00:00Z", "2024-12-31T23:59:59Z") // true
- * @example intervalsOverlapUtc("2024-01-01T00:00:00Z", "2024-06-30T23:59:59Z", "2024-07-01T00:00:00Z", "2024-12-31T23:59:59Z") // false (adjacent)
+ * @example intervalsOverlapUtc("2024-01-01T00:00:00Z", "2024-06-30T23:59:59Z", "2024-07-01T00:00:00Z", "2024-12-31T23:59:59Z") // false (disjoint, one-second gap)
+ * @example intervalsOverlapUtc("2024-01-01T00:00:00Z", "2024-06-30T23:59:59Z", "2024-06-30T23:59:59Z", "2024-12-31T23:59:59Z") // true (touching)
  * @example intervalsOverlapUtc("2024-01-01T00:00:00Z", "2024-06-30T23:59:59Z", "2024-07-02T00:00:00Z", "2024-12-31T23:59:59Z") // false (disjoint)
  * @example intervalsOverlapUtc("invalid", "2024-06-30T23:59:59Z", "2024-04-01T00:00:00Z", "2024-12-31T23:59:59Z") // false
  */

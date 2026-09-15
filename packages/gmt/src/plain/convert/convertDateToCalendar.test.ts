@@ -123,6 +123,110 @@ describe("convertDateToCalendar", () => {
     expect(convertDateToCalendar(converted, "gregorian")).toBe("-003760-09-07");
   });
 
+  // CORE-6 D1: the TC39 PlainDate maximum (+275760-09-13) in every calendar, both directions.
+  // Values: test262 intl402/Temporal/PlainDate/from/extreme-dates.js (ordinal months).
+  it.each`
+    calendar                 | expected
+    ${"hebrew"}              | ${"279517-10-11[u-ca=hebrew]"}
+    ${"buddhist"}            | ${"276303-09-13[u-ca=buddhist]"}
+    ${"islamic-civil"}       | ${"283583-05-23[u-ca=islamic-civil]"}
+    ${"islamic-tabular"}     | ${"283583-05-24[u-ca=islamic-tabular]"}
+    ${"islamic-umalqura"}    | ${"283583-05-23[u-ca=islamic-umalqura]"}
+    ${"persian"}             | ${"275139-07-12[u-ca=persian]"}
+    ${"indian"}              | ${"275682-06-22[u-ca=indian]"}
+    ${"japanese"}            | ${"273742-09-13[u-ca=japanese;era=reiwa]"}
+    ${"taiwan"}              | ${"273849-09-13[u-ca=taiwan]"}
+    ${"ethiopic-amete-alem"} | ${"281247-05-22[u-ca=ethiopic-amete-alem]"}
+    ${"coptic"}              | ${"275471-05-22[u-ca=coptic]"}
+    ${"ethiopic"}            | ${"275747-05-22[u-ca=ethiopic;era=ethiopic]"}
+  `(
+    "converts the maximum +275760-09-13 to $calendar as $expected and back",
+    ({ calendar, expected }) => {
+      expect(convertDateToCalendar("+275760-09-13", calendar)).toBe(expected);
+      expect(convertDateToCalendar(expected, "gregorian")).toBe(
+        "+275760-09-13",
+      );
+    },
+  );
+
+  // CORE-6 G1: a negative calendar year is written like Temporal's PadISOYear, a sign plus six
+  // digits (owner decision). Taiwan year = ISO year - 1911 (1000 -> -911, 1868 -> -43); the
+  // islamic-civil and persian rows are Chromium 152 reads (spec §4.2).
+  it.each`
+    iso                | calendar           | expected
+    ${"1000-01-01"}    | ${"taiwan"}        | ${"-000911-01-01[u-ca=taiwan]"}
+    ${"1868-09-07"}    | ${"taiwan"}        | ${"-000043-09-07[u-ca=taiwan]"}
+    ${"1910-12-31"}    | ${"taiwan"}        | ${"-000001-12-31[u-ca=taiwan]"}
+    ${"-000500-06-15"} | ${"islamic-civil"} | ${"-001156-06-19[u-ca=islamic-civil]"}
+    ${"-000500-06-15"} | ${"persian"}       | ${"-001121-03-25[u-ca=persian]"}
+  `(
+    "converts $iso to $calendar with a signed six-digit year as $expected and back",
+    ({ iso, calendar, expected }) => {
+      expect(convertDateToCalendar(iso, calendar)).toBe(expected);
+      expect(convertDateToCalendar(expected, "gregorian")).toBe(iso);
+    },
+  );
+
+  // CORE-6 D1 + G1: the TC39 PlainDate minimum (-271821-04-19), both directions. Values: test262
+  // extreme-dates.js min rows (ethiopic: era "aa", eraYear = the ethioaa year).
+  it.each`
+    calendar                 | expected
+    ${"islamic-civil"}       | ${"-280804-03-21[u-ca=islamic-civil]"}
+    ${"islamic-tabular"}     | ${"-280804-03-22[u-ca=islamic-tabular]"}
+    ${"islamic-umalqura"}    | ${"-280804-03-21[u-ca=islamic-umalqura]"}
+    ${"persian"}             | ${"-272442-01-09[u-ca=persian]"}
+    ${"taiwan"}              | ${"-273732-04-19[u-ca=taiwan]"}
+    ${"ethiopic-amete-alem"} | ${"-266323-03-23[u-ca=ethiopic-amete-alem]"}
+    ${"coptic"}              | ${"-272099-03-23[u-ca=coptic]"}
+    ${"ethiopic"}            | ${"-266323-03-23[u-ca=ethiopic;era=ethioaa]"}
+  `(
+    "converts the minimum -271821-04-19 to $calendar as $expected and back",
+    ({ calendar, expected }) => {
+      expect(convertDateToCalendar("-271821-04-19", calendar)).toBe(expected);
+      expect(convertDateToCalendar(expected, "gregorian")).toBe(
+        "-271821-04-19",
+      );
+    },
+  );
+
+  // CORE-6 D1 windows near the minimum: the last failing day and the control after it
+  // (Chromium 152 reads, spec §4.2).
+  it.each`
+    iso                | calendar             | expected                                 | note
+    ${"-271820-01-19"} | ${"islamic-civil"}   | ${"-280804-12-30[u-ca=islamic-civil]"}   | ${"last day of the 276-day window"}
+    ${"-271820-01-20"} | ${"islamic-civil"}   | ${"-280803-01-01[u-ca=islamic-civil]"}   | ${"control"}
+    ${"-271820-01-18"} | ${"islamic-tabular"} | ${"-280804-12-30[u-ca=islamic-tabular]"} | ${"last day of the 275-day window"}
+    ${"-271820-04-09"} | ${"persian"}         | ${"-272442-12-29[u-ca=persian]"}         | ${"last day of the 357-day window"}
+    ${"-271820-04-10"} | ${"persian"}         | ${"-272441-01-01[u-ca=persian]"}         | ${"control"}
+  `(
+    "converts $iso to $calendar as $expected and back ($note)",
+    ({ iso, calendar, expected }) => {
+      expect(convertDateToCalendar(iso, calendar)).toBe(expected);
+      expect(convertDateToCalendar(expected, "gregorian")).toBe(iso);
+    },
+  );
+
+  // CORE-6 D1 windows near the maximum, where the polyfill's fields -> ISO throws. Each window's
+  // first failing day and the control day just outside it (Chromium 152 reads, spec §4.2).
+  it.each`
+    iso                | calendar              | expected                                 | note
+    ${"+275760-09-08"} | ${"hebrew"}           | ${"279517-10-06[u-ca=hebrew]"}           | ${"first day of the 6-day window"}
+    ${"+275760-09-07"} | ${"hebrew"}           | ${"279517-10-05[u-ca=hebrew]"}           | ${"control"}
+    ${"+275760-05-16"} | ${"hebrew"}           | ${"279517-06-09[u-ca=hebrew]"}           | ${"leap month M05L near the maximum"}
+    ${"+275760-08-13"} | ${"buddhist"}         | ${"276303-08-13[u-ca=buddhist]"}         | ${"first day of the 32-day window"}
+    ${"+275760-08-12"} | ${"buddhist"}         | ${"276303-08-12[u-ca=buddhist]"}         | ${"control"}
+    ${"+275760-09-05"} | ${"islamic-civil"}    | ${"283583-05-15[u-ca=islamic-civil]"}    | ${"first day of the 9-day window"}
+    ${"+275760-09-04"} | ${"islamic-civil"}    | ${"283583-05-14[u-ca=islamic-civil]"}    | ${"control"}
+    ${"+275760-09-05"} | ${"islamic-tabular"}  | ${"283583-05-16[u-ca=islamic-tabular]"}  | ${"window"}
+    ${"+275760-09-05"} | ${"islamic-umalqura"} | ${"283583-05-15[u-ca=islamic-umalqura]"} | ${"window"}
+  `(
+    "converts $iso to $calendar as $expected and back ($note)",
+    ({ iso, calendar, expected }) => {
+      expect(convertDateToCalendar(iso, calendar)).toBe(expected);
+      expect(convertDateToCalendar(expected, "gregorian")).toBe(iso);
+    },
+  );
+
   it.each`
     value           | calendar
     ${"invalid"}    | ${"hebrew"}
@@ -312,22 +416,94 @@ describe("convertDateToCalendar", () => {
     },
   );
 
-  // Dates before the Meiji era (1868-10-23) are a known gap in `@internationalized/date`
-  // (documented as unsupported there), but GMT delegates entirely to Temporal's own
-  // calendar support rather than porting/replicating that limitation — Temporal resolves
-  // pre-Meiji dates under a synthetic "japanese" era with an ISO-aligned eraYear, and GMT
-  // passes that straight through as an intentional extension, not an error case.
-  it("converts a pre-Meiji date under the synthetic 'japanese' era rather than rejecting it", () => {
-    expect(convertDateToCalendar("1800-01-01", "japanese")).toBe(
-      "1800-01-01[u-ca=japanese;era=japanese]",
-    );
-    expect(
-      convertDateToCalendar(
-        "1800-01-01[u-ca=japanese;era=japanese]",
-        "gregorian",
-      ),
-    ).toBe("1800-01-01");
+  // CORE-6 D8 (owner decision): the Intl era/monthCode proposal's era codes. ISO dates up to
+  // 1872-12-31 are `ce` (era year = ISO year), ISO years <= 0 are `bce` (era year = 1 - ISO year),
+  // and `meiji` starts at year 6 on 1873-01-01. Values: the proposal's era table, test262
+  // japanese-pre-meiji.js and extreme-dates.js, Chromium 152.
+  it.each`
+    iso                | expected
+    ${"1800-01-01"}    | ${"1800-01-01[u-ca=japanese;era=ce]"}
+    ${"1868-10-23"}    | ${"1868-10-23[u-ca=japanese;era=ce]"}
+    ${"1872-12-31"}    | ${"1872-12-31[u-ca=japanese;era=ce]"}
+    ${"1873-01-01"}    | ${"0006-01-01[u-ca=japanese;era=meiji]"}
+    ${"0001-01-01"}    | ${"0001-01-01[u-ca=japanese;era=ce]"}
+    ${"0000-12-31"}    | ${"0001-12-31[u-ca=japanese;era=bce]"}
+    ${"-000500-06-15"} | ${"0501-06-15[u-ca=japanese;era=bce]"}
+    ${"-271821-04-19"} | ${"271822-04-19[u-ca=japanese;era=bce]"}
+  `("converts $iso to japanese as $expected and back", ({ iso, expected }) => {
+    expect(convertDateToCalendar(iso, "japanese")).toBe(expected);
+    expect(convertDateToCalendar(expected, "gregorian")).toBe(iso);
   });
+
+  // Era input: `ce`, `bce` and every proposal era parse; `japanese` is GMT's deprecated alias of
+  // `ce` (the era GMT emitted before CORE-6), accepted until the next major.
+  it.each`
+    value                                       | expectedIso
+    ${"1870-01-01[u-ca=japanese;era=ce]"}       | ${"1870-01-01"}
+    ${"0006-01-01[u-ca=japanese;era=meiji]"}    | ${"1873-01-01"}
+    ${"0501-06-15[u-ca=japanese;era=bce]"}      | ${"-000500-06-15"}
+    ${"1800-01-01[u-ca=japanese;era=japanese]"} | ${"1800-01-01"}
+  `(
+    "parses the japanese era input $value as ISO $expectedIso",
+    ({ value, expectedIso }) => {
+      expect(convertDateToCalendar(value, "gregorian")).toBe(expectedIso);
+    },
+  );
+
+  // CORE-6 D2 (owner decision): buddhist is proleptic Gregorian, year = ISO year + 543 with ISO
+  // month and day, for every date. ICU4C's Julian cutover (1582-10-15) must not show through.
+  it.each`
+    iso                | expected                          | note
+    ${"1000-01-01"}    | ${"1543-01-01[u-ca=buddhist]"}    | ${"before the cutover"}
+    ${"1582-10-04"}    | ${"2125-10-04[u-ca=buddhist]"}    | ${"last Julian day in ICU4C"}
+    ${"1582-10-14"}    | ${"2125-10-14[u-ca=buddhist]"}    | ${"a day ICU4C's cutover skips"}
+    ${"1582-10-15"}    | ${"2125-10-15[u-ca=buddhist]"}    | ${"control"}
+    ${"-000500-06-15"} | ${"0043-06-15[u-ca=buddhist]"}    | ${"far past, positive BE year"}
+    ${"-000544-01-01"} | ${"-000001-01-01[u-ca=buddhist]"} | ${"negative BE year"}
+    ${"-271821-04-19"} | ${"-271278-04-19[u-ca=buddhist]"} | ${"minimum (test262)"}
+    ${"-271821-04-20"} | ${"-271278-04-20[u-ca=buddhist]"} | ${"minimum + 1 day"}
+  `(
+    "converts $iso to buddhist as $expected and back ($note)",
+    ({ iso, expected }) => {
+      expect(convertDateToCalendar(iso, "buddhist")).toBe(expected);
+      expect(convertDateToCalendar(expected, "gregorian")).toBe(iso);
+    },
+  );
+
+  // CORE-6 D3 + D4 (owner decision): Hebrew years <= 0. Values: Chromium 152 reads, which the
+  // Dershowitz-Reingold arithmetic agrees with; Node's ICU4C is a day off here. Ordinal months:
+  // year -268058 and -96239 are common, so M11 is month 11 and M06 month 6.
+  it.each`
+    iso                | expected                        | note
+    ${"-003761-09-01"} | ${"0000-01-13[u-ca=hebrew]"}    | ${"year 0"}
+    ${"-100000-01-01"} | ${"-096239-06-23[u-ca=hebrew]"} | ${"common negative year"}
+    ${"-271821-11-05"} | ${"-268057-05-28[u-ca=hebrew]"} | ${"far past"}
+    ${"-271821-04-19"} | ${"-268058-11-04[u-ca=hebrew]"} | ${"minimum (test262)"}
+    ${"-271821-04-20"} | ${"-268058-11-05[u-ca=hebrew]"} | ${"minimum + 1 day"}
+    ${"-001000-01-01"} | ${"2760-05-01[u-ca=hebrew]"}    | ${"positive-year control"}
+  `(
+    "converts $iso to hebrew as $expected and back ($note)",
+    ({ iso, expected }) => {
+      expect(convertDateToCalendar(iso, "hebrew")).toBe(expected);
+      expect(convertDateToCalendar(expected, "gregorian")).toBe(iso);
+    },
+  );
+
+  // CORE-6 D5 (owner decision): Indian dates before ISO year 1. Values: Chromium 152 reads and
+  // test262 extreme-dates.js.
+  it.each`
+    iso                | expected                        | note
+    ${"-000500-06-15"} | ${"-000578-03-25[u-ca=indian]"} | ${"far past"}
+    ${"-271821-04-21"} | ${"-271899-02-01[u-ca=indian]"} | ${"minimum + 2 days, month 2"}
+    ${"-271821-04-19"} | ${"-271899-01-29[u-ca=indian]"} | ${"minimum (test262)"}
+    ${"0001-01-01"}    | ${"-000078-10-11[u-ca=indian]"} | ${"first ISO year 1 date (control)"}
+  `(
+    "converts $iso to indian as $expected and back ($note)",
+    ({ iso, expected }) => {
+      expect(convertDateToCalendar(iso, "indian")).toBe(expected);
+      expect(convertDateToCalendar(expected, "gregorian")).toBe(iso);
+    },
+  );
 
   it("round-trips a japanese date through gregorian and back", () => {
     const converted = convertDateToCalendar("2024-10-03", "japanese");

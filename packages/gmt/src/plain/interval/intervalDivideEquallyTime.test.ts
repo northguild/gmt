@@ -9,7 +9,7 @@ describe("intervalDivideEquallyTime", () => {
     ${"09:00:00"} | ${"17:00:00"} | ${1} | ${[{ start: "09:00:00", end: "17:00:00" }]}
     ${"09:00:00"} | ${"09:00:00"} | ${2} | ${[{ start: "09:00:00", end: "09:00:00" }, { start: "09:00:00", end: "09:00:00" }]}
   `(
-    "splits $start..$end into $n parts as $expected",
+    "splits $start to $end into $n parts as $expected",
     ({ start, end, n, expected }) => {
       expect(intervalDivideEquallyTime(start, end, n)).toEqual(expected);
     },

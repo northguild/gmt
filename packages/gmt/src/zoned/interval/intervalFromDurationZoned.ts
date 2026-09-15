@@ -1,10 +1,13 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidDuration } from "../../duration/validate";
 import {
+  addToZoned,
   calendarSystemOfZonedValue,
   formatZonedInCalendar,
   parseCalendarZonedValue,
   resolveOverflow,
+  subtractFromZoned,
+  zonedDateTimeFrom,
 } from "../../internal";
 import type { Disambiguation, Offset, Overflow } from "../../types";
 import { isValidCalendarZonedDateTime } from "../validate";
@@ -81,8 +84,8 @@ export function intervalFromDurationZoned(
 
     const rawOther =
       anchor === "start"
-        ? point.add(dur, { overflow })
-        : point.subtract(dur, { overflow });
+        ? addToZoned(point, dur, { overflow })
+        : subtractFromZoned(point, dur, { overflow });
 
     // The calendar MUST be stripped before this rebuild string is composed (E7 risk R1) — see
     // `addZoned`'s equivalent comment. A calendared `.toPlainDateTime().toString()` already
@@ -92,7 +95,7 @@ export function intervalFromDurationZoned(
     const other =
       disambiguation === "compatible"
         ? rawOther
-        : Temporal.ZonedDateTime.from(
+        : zonedDateTimeFrom(
             `${rawOther.withCalendar("iso8601").toPlainDateTime().toString()}[${rawOther.timeZoneId}]`,
             { disambiguation, offset },
           ).withCalendar(rawOther.calendarId);

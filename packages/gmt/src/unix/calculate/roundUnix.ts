@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { isValidDateTimeUnit } from "../../plain";
 import { getSystemTimeZone } from "../../zoned/get";
 import { isValidTimeZone } from "../../zoned/validate";
+import { roundZonedDateTime } from "../../internal";
 
 /**
  * Round a Unix timestamp to the specified unit.
@@ -84,7 +85,7 @@ export function roundUnix(
     const instant = Temporal.Instant.fromEpochMilliseconds(epochMs);
     const source = instant.toZonedDateTimeISO(timeZone);
 
-    const result = source.round({
+    const result = roundZonedDateTime(source, {
       smallestUnit,
       roundingIncrement,
       roundingMode,

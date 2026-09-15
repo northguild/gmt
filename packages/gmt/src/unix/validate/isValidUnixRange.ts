@@ -1,10 +1,14 @@
+import { parseUnixEpochValue } from "../../internal";
+
 /**
- * Return true if `value1` and `value2` form a valid Unix range — both finite numbers
- * and `value1 <= value2`.
+ * Return true if `value1` and `value2` form a valid Unix range — both safe-integer epochs
+ * and `value1 < value2` (or `<=` with `allowEqual`).
  *
- * - Both inputs must be numbers (or numeric strings that coerce to finite numbers).
- * - Equal `value1 === value2` is valid when `options.allowEqual` is true.
- * - Non-finite values (NaN, Infinity) return `false`.
+ * - Each input must be a safe integer (`Number.isSafeInteger`) or a numeric string that coerces
+ *   to one, matching how the `unix/` interval functions read epochs.
+ * - Fractional values, `NaN`, `±Infinity` and anything beyond ±(2^53 − 1) return `false`.
+ * - An empty or whitespace-only string returns `false` rather than reading as epoch 0.
+ * - Equal `value1 === value2` is valid only when `options.allowEqual` is true.
  *
  * @param value1 first Unix epoch value (seconds or milliseconds)
  * @param value2 second Unix epoch value (seconds or milliseconds)
@@ -12,8 +16,10 @@
  * @returns boolean indicating whether the Unix range is valid
  *
  * @example isValidUnixRange({ value1: 0, value2: 1700000000 }) // true
- * @example isValidUnixRange({ value1: 1700000000, value2: 0 }) // false
  * @example isValidUnixRange({ value1: 1000, value2: 1000, options: { allowEqual: true } }) // true
+ * @example isValidUnixRange({ value1: 1700000000, value2: 0 }) // false (reversed)
+ * @example isValidUnixRange({ value1: 0, value2: 1.5 }) // false (fractional)
+ * @example isValidUnixRange({ value1: "", value2: 1000 }) // false (empty string is not epoch 0)
  */
 export function isValidUnixRange({
   value1,
@@ -24,24 +30,12 @@ export function isValidUnixRange({
   value2: number | string;
   options?: { allowEqual?: boolean };
 }): boolean {
-  if (typeof value1 !== "number" && typeof value1 !== "string") {
+  const first = parseUnixEpochValue(value1);
+  const second = parseUnixEpochValue(value2);
+
+  if (first === null || second === null) {
     return false;
   }
 
-  if (typeof value2 !== "number" && typeof value2 !== "string") {
-    return false;
-  }
-
-  const n1 = typeof value1 === "number" ? value1 : Number(value1);
-  const n2 = typeof value2 === "number" ? value2 : Number(value2);
-
-  if (!Number.isFinite(n1) || !Number.isFinite(n2)) {
-    return false;
-  }
-
-  if (options?.allowEqual) {
-    return n1 <= n2;
-  }
-
-  return n1 < n2;
+  return options?.allowEqual ? first <= second : first < second;
 }

@@ -7,7 +7,8 @@ import { resolveDurationUnit, tileByUnit } from "../../internal";
 /**
  * Split a UTC interval into sub-intervals of `amount × unit`.
  *
- * - Returns an array of `{ start, end }` records that tile the interval.
+ * - Returns an array of `{ start, end }` records that tile the interval, each record's `end`
+ *   equal to the next record's `start`.
  * - The final sub-interval is trimmed so its `end` never exceeds the original `end`.
  * - Calendar-unit boundaries (years, months, weeks, days) are computed from `start`
  *   (`start + k × amount`, as Temporal and Luxon's `Interval.splitBy` do), so month-end starts

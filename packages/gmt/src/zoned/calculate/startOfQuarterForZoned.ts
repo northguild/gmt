@@ -1,6 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
-
-import { zonedUnitStart } from "../../internal";
+import { zonedDateTimeFrom, zonedUnitStart } from "../../internal";
 import type { Disambiguation, FractionalDigit, Offset } from "../../types";
 import { isValidZonedDateTime } from "../validate";
 
@@ -45,7 +43,7 @@ export function startOfQuarterForZoned(
   const fractionalSecondDigits = optionsArg?.fractionalSecondDigits ?? 0;
 
   try {
-    const start = zonedUnitStart(Temporal.ZonedDateTime.from(value), "quarter");
+    const start = zonedUnitStart(zonedDateTimeFrom(value), "quarter");
     return start ? start.toString({ fractionalSecondDigits }) : "";
   } catch {
     return "";

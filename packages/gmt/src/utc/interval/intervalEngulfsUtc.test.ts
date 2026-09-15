@@ -8,7 +8,7 @@ describe("intervalEngulfsUtc", () => {
     ${"2024-01-01T09:00:00Z"} | ${"2024-12-31T17:00:00Z"} | ${"2024-01-01T09:00:00Z"} | ${"2024-06-30T12:00:00Z"} | ${true}
     ${"2024-01-01T09:00:00Z"} | ${"2024-12-31T17:00:00Z"} | ${"2024-06-01T12:00:00Z"} | ${"2024-12-31T17:00:00Z"} | ${true}
   `(
-    "returns $expected when B is inside A ($aStart..$aEnd, $bStart..$bEnd)",
+    "returns $expected when B is inside A ($aStart to $aEnd, $bStart to $bEnd)",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalEngulfsUtc(aStart, aEnd, bStart, bEnd)).toBe(expected);
     },

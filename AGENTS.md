@@ -64,6 +64,7 @@ These are the non-negotiables. Full detail is in the context files above.
 9. **TC39 Temporal is the calendar authority.** Arithmetic clamps (`overflow: "constrain"`); parsers reject. See [§ Calendar & zone semantics](./context/coding-standards.md#calendar--zone-semantics).
 10. **Never truncate-and-re-resolve a zoned boundary.** Use `internal/zonedBucket.ts` or `startOfDay()`/`hoursInDay`; test against the probe zones. Same section.
 11. **One changeset rule.** Fix → `patch`, no behaviour change → none, new API → `minor`. See [coding-standards § Changesets](./context/coding-standards.md#changesets).
+12. **Zero known bugs.** A defect found is fixed now, in the same story, and its whole class with it. It is never deferred, pinned with `it.fails`, skipped, or documented as known. No disabled, focused or expected-to-fail test ships; `node scripts/test-markers.mjs check` in `validate` enforces it. That script is a backstop, not the definition of this rule: its checks are lexical, so it catches `it.skip` / `it.fails` reliably but cannot see a carried defect worded any other way, and a green check is never on its own evidence that the rule was met. See [testing standards § Zero known bugs](./context/testing-standards/references/index.md#zero-known-bugs).
 
 ## Python in Skills
 

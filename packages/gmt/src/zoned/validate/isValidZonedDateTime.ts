@@ -1,5 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
-import { hasCalendarAnnotation } from "../../internal";
+import { hasCalendarAnnotation, zonedDateTimeFrom } from "../../internal";
 import { isLeapSecond } from "../../plain/validate/isLeapSecond";
 
 /**
@@ -33,7 +32,7 @@ export function isValidZonedDateTime(value: string): boolean {
   }
 
   try {
-    const zonedDateTime = Temporal.ZonedDateTime.from(value);
+    const zonedDateTime = zonedDateTimeFrom(value);
     return zonedDateTime.timeZoneId.length > 0;
   } catch {
     return false;

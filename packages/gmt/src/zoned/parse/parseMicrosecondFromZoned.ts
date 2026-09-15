@@ -1,5 +1,5 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Return the microsecond (0-999) from a zoned datetime string.
@@ -19,7 +19,7 @@ export function parseMicrosecondFromZoned(value: string): string {
   }
 
   try {
-    const zonedDateTime = Temporal.ZonedDateTime.from(value);
+    const zonedDateTime = zonedDateTimeFrom(value);
     return (zonedDateTime.microsecond ?? 0).toString().padStart(3, "0");
   } catch {
     return "";

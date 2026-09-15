@@ -2,12 +2,13 @@ import { intervalAbutsDateTime } from "./intervalAbutsDateTime";
 
 describe("intervalAbutsDateTime", () => {
   it.each`
-    aStart                   | aEnd                               | bStart                             | bEnd                               | expected
-    ${"2024-01-01T09:00:00"} | ${"2024-06-30T12:00:00"}           | ${"2024-06-30T12:00:00.000000001"} | ${"2024-12-31T17:00:00"}           | ${true}
-    ${"2024-06-30T12:00:00"} | ${"2024-12-31T17:00:00"}           | ${"2024-01-01T09:00:00"}           | ${"2024-06-30T12:00:00.000000001"} | ${false}
-    ${"2024-01-01T09:00:00"} | ${"2024-01-01T09:00:00.000000001"} | ${"2024-01-01T09:00:00.000000002"} | ${"2024-12-31T17:00:00"}           | ${true}
+    aStart                             | aEnd                               | bStart                             | bEnd                               | expected
+    ${"2024-01-01T09:00:00"}           | ${"2024-06-30T12:00:00"}           | ${"2024-06-30T12:00:00.000000001"} | ${"2024-12-31T17:00:00"}           | ${true}
+    ${"2024-06-30T12:00:00"}           | ${"2024-12-31T17:00:00"}           | ${"2024-01-01T09:00:00"}           | ${"2024-06-30T12:00:00.000000001"} | ${false}
+    ${"2024-01-01T09:00:00"}           | ${"2024-01-01T09:00:00.000000001"} | ${"2024-01-01T09:00:00.000000002"} | ${"2024-12-31T17:00:00"}           | ${true}
+    ${"2024-06-30T12:00:00.000000001"} | ${"2024-12-31T17:00:00"}           | ${"2024-01-01T09:00:00"}           | ${"2024-06-30T12:00:00"}           | ${true}
   `(
-    "returns $expected when A=$aStart..$aEnd and B=$bStart..$bEnd",
+    "returns $expected when A=$aStart to $aEnd and B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalAbutsDateTime(aStart, aEnd, bStart, bEnd)).toBe(expected);
     },
@@ -62,4 +63,19 @@ describe("intervalAbutsDateTime", () => {
   `("returns false for non-string input", ({ aStart, aEnd, bStart, bEnd }) => {
     expect(intervalAbutsDateTime(aStart, aEnd, bStart, bEnd)).toBe(false);
   });
+
+  // The last representable PlainDateTime is +275760-09-13T23:59:59.999999999. B ends one nanosecond
+  // before A starts (T12:00:00 - 1 ns = T11:59:59.999999999), so they abut in either order, even
+  // though nothing can be added to A's end.
+  it.each`
+    aStart                                | aEnd                                  | bStart                      | bEnd                                  | expected
+    ${"+275760-09-13T12:00:00"}           | ${"+275760-09-13T23:59:59.999999999"} | ${"+275760-09-13T00:00:00"} | ${"+275760-09-13T11:59:59.999999999"} | ${true}
+    ${"+275760-09-13T00:00:00"}           | ${"+275760-09-13T11:59:59.999999999"} | ${"+275760-09-13T12:00:00"} | ${"+275760-09-13T23:59:59.999999999"} | ${true}
+    ${"+275760-09-13T23:59:59.999999999"} | ${"+275760-09-13T23:59:59.999999999"} | ${"+275760-09-13T00:00:00"} | ${"+275760-09-13T11:59:59.999999999"} | ${false}
+  `(
+    "returns $expected when A=[$aStart, $aEnd] and B=[$bStart, $bEnd] (an end at the maximum PlainDateTime)",
+    ({ aStart, aEnd, bStart, bEnd, expected }) => {
+      expect(intervalAbutsDateTime(aStart, aEnd, bStart, bEnd)).toBe(expected);
+    },
+  );
 });

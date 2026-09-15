@@ -1,6 +1,6 @@
-import { Temporal } from "@js-temporal/polyfill";
 import {
   defaultFractionalDigits,
+  zonedDateTimeFrom,
   zonedUnitEnd,
   zonedUnitStart,
 } from "../../internal";
@@ -41,7 +41,7 @@ export function startOrEndOfZoned(
   );
 
   try {
-    const source = Temporal.ZonedDateTime.from(value);
+    const source = zonedDateTimeFrom(value);
     const boundary = isEnd
       ? zonedUnitEnd(source, unit, weekStartDay)
       : zonedUnitStart(source, unit, weekStartDay);

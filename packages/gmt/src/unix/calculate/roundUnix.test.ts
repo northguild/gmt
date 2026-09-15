@@ -189,3 +189,16 @@ describe("roundUnix", () => {
     expect(roundUnix(1706780800000, { smallestUnit: "hour" })).toBeNull();
   });
 });
+
+describe("roundUnix at the maximum instant", () => {
+  // 8_639_999_998_200_000 ms is 09:30 in Sydney; halfExpand to the hour gives 10:00, the maximum.
+  it.each`
+    value                    | smallestUnit | timeZone              | expected
+    ${8_639_999_998_200_000} | ${"hour"}    | ${"Australia/Sydney"} | ${8_640_000_000_000_000}
+  `(
+    "rounds $value to the $smallestUnit in $timeZone giving $expected",
+    ({ value, smallestUnit, timeZone, expected }) => {
+      expect(roundUnix(value, { smallestUnit, timeZone })).toBe(expected);
+    },
+  );
+});

@@ -1,6 +1,6 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { isLeapSecond } from "../../plain/validate/isLeapSecond";
 import { isValidZonedDateTime } from "../validate/isValidZonedDateTime";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Parse a zoned datetime and return the plain local datetime portion as an ISO plain datetime string.
@@ -21,7 +21,7 @@ export const parseDateTimeFromZoned = (value: string): string => {
   }
 
   try {
-    return Temporal.ZonedDateTime.from(value).toPlainDateTime().toString();
+    return zonedDateTimeFrom(value).toPlainDateTime().toString();
   } catch {
     return "";
   }

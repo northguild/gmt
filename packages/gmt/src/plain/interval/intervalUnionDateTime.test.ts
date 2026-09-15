@@ -12,7 +12,7 @@ describe("intervalUnionDateTime", () => {
     ${"2024-06-30T23:59:59"} | ${"2024-06-30T23:59:59"} | ${"2024-06-30T23:59:59"} | ${"2024-06-30T23:59:59"} | ${{ start: "2024-06-30T23:59:59", end: "2024-06-30T23:59:59" }}
     ${"2024-01-01T10:00:00"} | ${"2024-06-30T23:59:59"} | ${"2024-02-01T00:00:00"} | ${"2024-03-01T00:00:00"} | ${{ start: "2024-01-01T10:00:00", end: "2024-06-30T23:59:59" }}
   `(
-    "returns merged interval when $aStart..$aEnd overlaps $bStart..$bEnd",
+    "returns merged interval when $aStart to $aEnd overlaps $bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalUnionDateTime(aStart, aEnd, bStart, bEnd)).toEqual(
         expected,

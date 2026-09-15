@@ -1,6 +1,6 @@
-import { Temporal } from "@js-temporal/polyfill";
 import type { DateTimeFormatOptions } from "../../types";
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Return the locale-formatted parts of a ZonedDateTime.
@@ -40,7 +40,7 @@ export function formatZonedToParts(
     // Intl.DateTimeFormat cannot format a Temporal.ZonedDateTime directly —
     // pass its instant (epochMilliseconds) and its own IANA zone as the
     // formatter's timeZone, mirroring formatTimeZoneName's approach.
-    const zonedDateTime = Temporal.ZonedDateTime.from(value);
+    const zonedDateTime = zonedDateTimeFrom(value);
     const formatter = new Intl.DateTimeFormat(locale, {
       timeZone: zonedDateTime.timeZoneId,
       ...options,

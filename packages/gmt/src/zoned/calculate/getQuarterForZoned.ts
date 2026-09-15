@@ -1,6 +1,5 @@
-import { Temporal } from "@js-temporal/polyfill";
-
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Return the quarter of the year (1-4) for a given zoned ISO datetime.
@@ -22,7 +21,7 @@ export function getQuarterForZoned(value: string): number | null {
   }
 
   try {
-    const zdt = Temporal.ZonedDateTime.from(value);
+    const zdt = zonedDateTimeFrom(value);
     return Math.floor((zdt.month - 1) / 3) + 1;
   } catch {
     return null;

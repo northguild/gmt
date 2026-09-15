@@ -7,7 +7,7 @@ describe("intervalIntersectionDate", () => {
     ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${{ start: "2024-01-01", end: "2024-01-01" }}
     ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-06-15"} | ${"2024-06-15"} | ${null}
   `(
-    "returns $expected for zero-length A=$aStart..$aEnd intersect B=$bStart..$bEnd",
+    "returns $expected for zero-length A=$aStart to $aEnd intersect B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalIntersectionDate(aStart, aEnd, bStart, bEnd)).toEqual(
         expected,
@@ -25,7 +25,7 @@ describe("intervalIntersectionDate", () => {
     ${"2024-06-30"} | ${"2024-06-30"} | ${"2024-06-30"} | ${"2024-06-30"} | ${{ start: "2024-06-30", end: "2024-06-30" }}
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-02-01"} | ${"2024-03-01"} | ${{ start: "2024-02-01", end: "2024-03-01" }}
   `(
-    "returns $expected when intervals $aStart..$aEnd and $bStart..$bEnd overlap",
+    "returns $expected when intervals $aStart to $aEnd and $bStart to $bEnd overlap",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalIntersectionDate(aStart, aEnd, bStart, bEnd)).toEqual(
         expected,

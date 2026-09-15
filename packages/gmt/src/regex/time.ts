@@ -37,7 +37,7 @@ export const second: RegExp = /^[0-5][0-9]$/;
  *
  * @example fractionalSecond.test("123")       // true (milliseconds)
  * @example fractionalSecond.test("123456789") // true (nanoseconds)
- * @example fractionalSecond.test("0")         // false (must be 1–9 digits)
+ * @example fractionalSecond.test("1234567890") // false (more than 9 digits)
  * @example fractionalSecond.test("")          // false (empty)
  */
 export const fractionalSecond: RegExp = /^[0-9]{1,9}$/;
@@ -45,6 +45,10 @@ export const fractionalSecond: RegExp = /^[0-9]{1,9}$/;
 /**
  * Backward-compatible alias for `fractionalSecond`. Prefer `fractionalSecond` for new
  * usage — the pattern matches 1–9 digits of fractional seconds, not just milliseconds.
+ *
+ * @example millisecond.test("123")        // true
+ * @example millisecond.test("123456789")  // true (nanoseconds, despite the name)
+ * @example millisecond.test("1234567890") // false (more than 9 digits)
  */
 export const millisecond: RegExp = fractionalSecond;
 

@@ -35,4 +35,14 @@ describe("mergeIntervalsUnix", () => {
   `("returns [] for invalid intervals $intervals", ({ intervals }) => {
     expect(mergeIntervalsUnix(intervals)).toEqual([]);
   });
+
+  // Epoch values are safe whole units; an empty string is not a numeric string.
+  it.each`
+    intervals                       | description
+    ${[{ start: 0, end: 2 ** 53 }]} | ${"an unsafe end"}
+    ${[{ start: "", end: "5" }]}    | ${"an empty-string start, which Number() reads as 0"}
+    ${[{ start: "0", end: "1.5" }]} | ${"a fractional numeric-string end"}
+  `("returns [] for $intervals ($description)", ({ intervals }) => {
+    expect(mergeIntervalsUnix(intervals)).toEqual([]);
+  });
 });

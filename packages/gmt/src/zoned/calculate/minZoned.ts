@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Return the earliest (minimum) of the given ZonedDateTime values.
@@ -23,11 +24,11 @@ export function minZoned(zonedDateTimes: string[]): string | null {
 
   try {
     const min = valid.reduce((currentMin, candidateStr) => {
-      const candidate = Temporal.ZonedDateTime.from(candidateStr);
+      const candidate = zonedDateTimeFrom(candidateStr);
       return Temporal.ZonedDateTime.compare(candidate, currentMin) < 0
         ? candidate
         : currentMin;
-    }, Temporal.ZonedDateTime.from(valid[0]));
+    }, zonedDateTimeFrom(valid[0]));
 
     return min.toString();
   } catch {

@@ -1,5 +1,5 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate/isValidZonedDateTime";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Returns the zoned datetime string rounded/truncated to second precision.
@@ -16,7 +16,7 @@ import { isValidZonedDateTime } from "../validate/isValidZonedDateTime";
 export function chopZonedMilliseconds(value: string): string {
   if (!isValidZonedDateTime(value)) return "";
   try {
-    return Temporal.ZonedDateTime.from(value).toString({
+    return zonedDateTimeFrom(value).toString({
       smallestUnit: "second",
     });
   } catch {

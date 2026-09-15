@@ -1,5 +1,6 @@
-import { Temporal } from "@js-temporal/polyfill";
 import type { LocaleNameStyle } from "./getLocaleMonthNames";
+// Imported from its module, not the `internal` barrel: `internal/patternToken.ts` imports this file.
+import { zonedDateTimeFrom } from "../../internal/zonedWallClock";
 
 /**
  * Return a locale's Gregorian era names as [BCE-label, CE-label].
@@ -45,7 +46,7 @@ export function getLocaleEraNames(
     });
 
     // Year 1 BC (proleptic Gregorian) — Temporal represents 1 BC as year 0.
-    const bceInstant = Temporal.ZonedDateTime.from({
+    const bceInstant = zonedDateTimeFrom({
       year: 0,
       month: 1,
       day: 1,
@@ -55,7 +56,7 @@ export function getLocaleEraNames(
     }).toInstant();
 
     // Year 1 AD (proleptic Gregorian).
-    const ceInstant = Temporal.ZonedDateTime.from({
+    const ceInstant = zonedDateTimeFrom({
       year: 1,
       month: 1,
       day: 1,

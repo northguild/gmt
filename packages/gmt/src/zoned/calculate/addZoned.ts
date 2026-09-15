@@ -1,10 +1,11 @@
-import { Temporal } from "@js-temporal/polyfill";
 import {
+  addToZoned,
   calendarSystemOfZonedValue,
   formatZonedInCalendar,
   isValidAmount,
   parseCalendarZonedValue,
   resolveOverflow,
+  zonedDateTimeFrom,
 } from "../../internal";
 import { isValidDateTimeDurationUnit } from "../../plain/validate";
 import type {
@@ -87,7 +88,7 @@ export function addZoned(
       return "";
     }
     const zoned = parseCalendarZonedValue(value);
-    const added = zoned.add(units, { overflow });
+    const added = addToZoned(zoned, units, { overflow });
 
     if (disambiguation === "compatible") {
       return formatZonedInCalendar(added, calendar);
@@ -105,7 +106,7 @@ export function addZoned(
       .withCalendar("iso8601")
       .toPlainDateTime()
       .toString();
-    const resolved = Temporal.ZonedDateTime.from(
+    const resolved = zonedDateTimeFrom(
       `${plainDateTime}[${added.timeZoneId}]`,
       { disambiguation, offset },
     ).withCalendar(added.calendarId);

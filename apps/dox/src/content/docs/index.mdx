@@ -39,28 +39,75 @@ import {
 
 Current release: **v{gmtVersion}**
 
-`@northguild/gmt` wraps `@js-temporal/polyfill` behind a smaller, more opinionated API
-aimed at the cases application code actually hits: arithmetic, comparison, parsing,
-formatting, unix conversions, timezone conversion, and validation. No hardcoded offset
-tables, no `Date` object — every zone on the globe above is computed live in your
-browser and recomputed every second.
+`@northguild/gmt` is built on the published standards for dates and times, not on a
+library's own idea of them: [TC39 Temporal](https://tc39.es/proposal-temporal/) for the
+types and arithmetic, [ISO 8601](https://www.iso.org/iso-8601-date-and-time-format.html)
+and [RFC 9557](https://www.rfc-editor.org/rfc/rfc9557) for every string in and out, and
+the IANA Time Zone Database for zones. On top of that sits a smaller, opinionated API for
+what application code actually needs — arithmetic, comparison, parsing, formatting, unix
+conversions, timezone conversion and validation — tested against those standards and exact
+to the nanosecond at the edges of Temporal's range. No hardcoded offset tables, no `Date` object: every zone on
+the globe above is computed live in your browser and recomputed every second.
 
 <div class="gmt-home-grid">
 
 <GridSection>
 
-<SectionHeading>Key features</SectionHeading>
+<SectionHeading>Built on the standards</SectionHeading>
 
 <div data-reveal-group>
 <CardGrid>
-  <Card title="100% Temporal, Temporal-first" icon="star">
-    Built directly on the TC39 `Temporal` standard, not a homegrown date/time type system.
-    No `Date` object anywhere, enforced by three dedicated lint packages.
+  <Card title="TC39 Temporal, not a homegrown type system" icon="star">
+    Built directly on [TC39 Temporal](https://tc39.es/proposal-temporal/), the standard
+    JavaScript date and time API. No `Date` object anywhere, enforced by three dedicated lint
+    packages.
   </Card>
 
-<Card title="A complete date/time solution" icon="approve-check">
-  Combines all essential date/time capabilities into one library, with features
-  you won’t find elsewhere.
+<Card title="Standard strings in, standard strings out" icon="document">
+  Every function takes and returns [ISO 8601](https://www.iso.org/iso-8601-date-and-time-format.html)
+  strings, and every zoned value carries its [RFC 9557](https://www.rfc-editor.org/rfc/rfc9557)
+  time-zone annotation. Formatters emit [RFC 3339](https://www.rfc-editor.org/rfc/rfc3339),
+  [RFC 5322](https://www.rfc-editor.org/rfc/rfc5322) and [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110) HTTP dates.
+</Card>
+
+<Card title="IANA zones, CLDR locales" icon="translate">
+  Time zones are [IANA Time Zone Database](https://www.iana.org/time-zones) identifiers, never
+  hardcoded offsets. Locales are BCP 47 tags, with week rules and wording from the
+  [Unicode CLDR](https://cldr.unicode.org/) data your runtime ships.
+</Card>
+
+<Card title="Explicit DST disambiguation" icon="setting">
+  Wall-clock times in a daylight-saving gap or overlap resolve with Temporal's own
+  `disambiguation` options — `compatible`, `earlier`, `later` or `reject` — on construction
+  *and* arithmetic, a control none of the other libraries expose.
+</Card>
+
+<Card title="World calendars by the proposal" icon="seti:clock">
+  Hebrew, Islamic, Japanese, Buddhist, Persian, Ethiopic and more, with era codes and proleptic
+  dates as the [Intl Era and Month Code proposal](https://github.com/tc39/proposal-intl-era-monthcode)
+  defines them, across Temporal's whole date range.
+</Card>
+
+<Card title="Every standard, in one place" icon="open-book">
+  TC39 and ECMA-402, Temporal, the Intl proposals, ISO 8601, RFC 3339, RFC 9557, the IANA
+  Time Zone Database, BCP 47, CLDR, RFC 5322, RFC 9110 and test262: what each one is, and what
+  GMT uses it for. [Read The Standards](/guides/concepts/standards/).
+</Card>
+</CardGrid>
+</div>
+
+</GridSection>
+
+<GridSection>
+
+<SectionHeading>Tested and precise</SectionHeading>
+
+<div data-reveal-group>
+<CardGrid>
+<Card title="No borrowed test oracle" icon="magnifier">
+  Every test in GMT's suite is checked against the Temporal spec itself —
+  the standard, not another library's output. Correctness that doesn't
+  hinge on trusting a wrapper to also be right.
 </Card>
 
 <Card title={`~${executionRatio(combinedCompetitorExecutions())}× more CI test executions`} icon="rocket">
@@ -69,25 +116,29 @@ browser and recomputed every second.
   `Spacetime`, and `@internationalized/date`’s combined {formatCount(combinedCompetitorExecutions())}.
 </Card>
 
-<Card title="Explicit DST disambiguation" icon="setting">
-  Control over DST disambiguation on both construction *and* arithmetic — a
-  control none of the other players expose.
+<Card title="Correct at the edges" icon="puzzle">
+  A nanosecond before midnight stays on its day, the first and last instants Temporal can
+  represent give exact answers, and daylight-saving rules hold to the end of the range. Each of
+  these is a named test. [See the evidence](/guides/concepts/correct-at-the-edges/).
 </Card>
 
-<Card title="No borrowed test oracle" icon="magnifier">
-  Every test in GMT's suite is checked against the Temporal spec itself —
-  the standard, not another library's output. Correctness that doesn't
-  hinge on trusting a wrapper to also be right.
+<Card title="Safeguards against invalid inputs" icon="padlock">
+  Temporal throws `RangeError` / `TypeError` on invalid data. GMT validates,
+  normalizes, and prevents crashes, so your app stays robust.
 </Card>
 
-  <Card
-    title="Safeguards against invalid inputs"
-    icon="padlock"
-    iconColor="var(--gmt-ice)"
-  >
-    Temporal throws `RangeError` / `TypeError` on invalid data. GMT validates,
-    normalizes, and prevents crashes, so your app stays robust
-  </Card  >
+<Card title="Nanoseconds, not milliseconds" icon="approve-check">
+  Temporal counts time in nanoseconds, and GMT keeps them exact as `bigint`, with a JSON-safe
+  string form and exact converters for .NET ticks, Windows FILETIME, NTP and Postgres
+  microseconds. `Luxon`, `date-fns`, `Moment.js`, `Day.js`, `Spacetime` and
+  `@internationalized/date` all stop at the millisecond.
+  [See `toNanoseconds`](/reference/precision/convert/toNanoseconds).
+</Card>
+
+<Card title="Zero known bugs" icon="list-format">
+  None of the {formatCount(gmtStats.tests)} tests is skipped, focused or marked as expected to
+  fail. A check in CI fails the build if one ever is, so a known bug can't ship switched off.
+</Card>
 </CardGrid>
 </div>
 

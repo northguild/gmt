@@ -1025,6 +1025,298 @@
     ]
   },
   {
+    "url": "/reference/interval/calculate/clampInterval",
+    "name": "clampInterval",
+    "namespace": "interval",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "clampInterval(interval: Interval, bounds: Interval): Interval",
+    "description": "Return the part of `interval` that lies inside `bounds`, or null when none of it does.",
+    "sourcePath": "packages/gmt/src/interval/calculate/clampInterval.ts",
+    "examples": [
+      {
+        "call": "clampInterval({ start: \"2024-01-01T08:00:00Z\", end: \"2024-01-01T12:00:00Z\" }, { start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" })",
+        "result": "{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T12:00:00Z\" }"
+      },
+      {
+        "call": "clampInterval({ start: \"2024-01-01T06:00:00Z\", end: \"2024-01-01T20:00:00Z\" }, { start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" })",
+        "result": "{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }"
+      },
+      {
+        "call": "clampInterval({ start: \"2024-01-01T17:00:00Z\", end: \"2024-01-01T18:00:00Z\" }, { start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" })",
+        "result": "null — touching"
+      },
+      {
+        "call": "clampInterval({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T09:00:00Z\" }, { start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" })",
+        "result": "null — empty, at the edge"
+      },
+      {
+        "call": "clampInterval({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, { start: \"2024-01-01T17:00:00Z\", end: \"2024-01-01T09:00:00Z\" })",
+        "result": "null — inverted bounds"
+      }
+    ]
+  },
+  {
+    "url": "/reference/interval/calculate/intersectIntervals",
+    "name": "intersectIntervals",
+    "namespace": "interval",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "intersectIntervals(a: Interval, b: Interval): Interval",
+    "description": "Return the half-open interval two intervals share, or null when they share no instant.",
+    "sourcePath": "packages/gmt/src/interval/calculate/intersectIntervals.ts",
+    "examples": [
+      {
+        "call": "intersectIntervals({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, { start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T18:00:00Z\" })",
+        "result": "{ start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T17:00:00Z\" }"
+      },
+      {
+        "call": "intersectIntervals({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, { start: \"2024-01-01T17:00:00Z\", end: \"2024-01-01T18:00:00Z\" })",
+        "result": "null — touching"
+      },
+      {
+        "call": "intersectIntervals({ start: \"2024-01-01T04:00:00-05:00\", end: \"2024-01-01T12:00:00-05:00\" }, { start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" })",
+        "result": "{ start: \"2024-01-01T04:00:00-05:00\", end: \"2024-01-01T12:00:00-05:00\" } — same instants, first argument's spelling"
+      },
+      {
+        "call": "intersectIntervals({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T12:00:00Z\" }, { start: \"2024-01-01T13:00:00Z\", end: \"2024-01-01T17:00:00Z\" })",
+        "result": "null — disjoint"
+      },
+      {
+        "call": "intersectIntervals({ start: \"invalid\", end: \"2024-01-01T17:00:00Z\" }, { start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" })",
+        "result": "null"
+      }
+    ]
+  },
+  {
+    "url": "/reference/interval/calculate/mergeIntervals",
+    "name": "mergeIntervals",
+    "namespace": "interval",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "mergeIntervals(intervals: Interval[]): Interval[]",
+    "description": "Collapse a list of half-open intervals into the fewest sorted, non-overlapping intervals.",
+    "sourcePath": "packages/gmt/src/interval/calculate/mergeIntervals.ts",
+    "examples": [
+      {
+        "call": "mergeIntervals([{ start: \"2024-01-01T13:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, { start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T12:00:00Z\" }])",
+        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T12:00:00Z\" }, { start: \"2024-01-01T13:00:00Z\", end: \"2024-01-01T17:00:00Z\" }]"
+      },
+      {
+        "call": "mergeIntervals([{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T12:00:00Z\" }, { start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T17:00:00Z\" }])",
+        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }] — touching"
+      },
+      {
+        "call": "mergeIntervals([{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T10:00:00Z\" }, { start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T12:00:00Z\" }])",
+        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T10:00:00Z\" }] — stranded empty dropped"
+      },
+      {
+        "call": "mergeIntervals([])",
+        "result": "[]"
+      },
+      {
+        "call": "mergeIntervals([{ start: \"2024-01-01T17:00:00Z\", end: \"2024-01-01T09:00:00Z\" }])",
+        "result": "[] — inverted"
+      }
+    ]
+  },
+  {
+    "url": "/reference/interval/calculate/splitIntervalAt",
+    "name": "splitIntervalAt",
+    "namespace": "interval",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "splitIntervalAt(interval: Interval, boundaries: string[]): Interval[]",
+    "description": "Split a half-open interval at instant boundaries into consecutive half-open pieces.",
+    "sourcePath": "packages/gmt/src/interval/calculate/splitIntervalAt.ts",
+    "examples": [
+      {
+        "call": "splitIntervalAt({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, [\"2024-01-01T12:00:00Z\"])",
+        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T12:00:00Z\" }, { start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T17:00:00Z\" }]"
+      },
+      {
+        "call": "splitIntervalAt({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, [\"2024-01-01T15:00:00Z\", \"2024-01-01T11:00:00Z\"])",
+        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T11:00:00Z\" }, { start: \"2024-01-01T11:00:00Z\", end: \"2024-01-01T15:00:00Z\" }, { start: \"2024-01-01T15:00:00Z\", end: \"2024-01-01T17:00:00Z\" }]"
+      },
+      {
+        "call": "splitIntervalAt({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, [\"2024-01-01T09:00:00Z\", \"2024-01-01T18:00:00Z\"])",
+        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }] — edge and outside dropped"
+      },
+      {
+        "call": "splitIntervalAt({ start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T12:00:00Z\" }, [\"2024-01-01T12:00:00Z\"])",
+        "result": "[{ start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T12:00:00Z\" }] — empty interval"
+      },
+      {
+        "call": "splitIntervalAt({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, [\"2024-01-01T12:00:00\"])",
+        "result": "[] — no offset"
+      }
+    ]
+  },
+  {
+    "url": "/reference/interval/calculate/subtractIntervals",
+    "name": "subtractIntervals",
+    "namespace": "interval",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "subtractIntervals(from: Interval, remove: Interval[]): Interval[]",
+    "description": "Return the parts of `from` that no interval in `remove` covers, as sorted half-open intervals.",
+    "sourcePath": "packages/gmt/src/interval/calculate/subtractIntervals.ts",
+    "examples": [
+      {
+        "call": "subtractIntervals({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, [{ start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T13:00:00Z\" }])",
+        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T12:00:00Z\" }, { start: \"2024-01-01T13:00:00Z\", end: \"2024-01-01T17:00:00Z\" }]"
+      },
+      {
+        "call": "subtractIntervals({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, [{ start: \"2024-01-01T17:00:00Z\", end: \"2024-01-01T18:00:00Z\" }])",
+        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }] — touching"
+      },
+      {
+        "call": "subtractIntervals({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, [{ start: \"2024-01-01T08:00:00Z\", end: \"2024-01-01T18:00:00Z\" }])",
+        "result": "[] — fully covered"
+      },
+      {
+        "call": "subtractIntervals({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, [])",
+        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }]"
+      },
+      {
+        "call": "subtractIntervals({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, [{ start: \"2024-01-01T12:00:00Z\", end: \"2016-12-31T23:59:60Z\" }])",
+        "result": "[] — invalid removal"
+      }
+    ]
+  },
+  {
+    "url": "/reference/interval/calculate/sumIntervals",
+    "name": "sumIntervals",
+    "namespace": "interval",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "sumIntervals(intervals: Interval[]): string",
+    "description": "Return the time covered by a list of half-open intervals, as an exact ISO 8601 duration.",
+    "sourcePath": "packages/gmt/src/interval/calculate/sumIntervals.ts",
+    "examples": [
+      {
+        "call": "sumIntervals([{ start: \"2024-01-01T00:00:00Z\", end: \"2024-01-03T01:30:00Z\" }])",
+        "result": "\"PT49H30M\""
+      },
+      {
+        "call": "sumIntervals([{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T13:00:00Z\" }, { start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T17:00:00Z\" }])",
+        "result": "\"PT8H\" — overlap counted once"
+      },
+      {
+        "call": "sumIntervals([{ start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T00:00:01.5Z\" }])",
+        "result": "\"PT1.5S\""
+      },
+      {
+        "call": "sumIntervals([])",
+        "result": "\"PT0S\""
+      },
+      {
+        "call": "sumIntervals([{ start: \"2024-01-01T17:00:00Z\", end: \"2024-01-01T09:00:00Z\" }])",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/interval/compare/intervalContains",
+    "name": "intervalContains",
+    "namespace": "interval",
+    "module": "compare",
+    "kind": "function",
+    "signature": "intervalContains(interval: Interval, isoString: string): boolean",
+    "description": "Return true when an ISO 8601 instant string lies inside a half-open interval.",
+    "sourcePath": "packages/gmt/src/interval/compare/intervalContains.ts",
+    "examples": [
+      {
+        "call": "intervalContains({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, \"2024-01-01T09:00:00Z\")",
+        "result": "true — start is inside"
+      },
+      {
+        "call": "intervalContains({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, \"2024-01-01T17:00:00Z\")",
+        "result": "false — end is not"
+      },
+      {
+        "call": "intervalContains({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, \"2024-01-01T04:00:00-05:00\")",
+        "result": "true — same instant as start"
+      },
+      {
+        "call": "intervalContains({ start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T12:00:00Z\" }, \"2024-01-01T12:00:00Z\")",
+        "result": "false — empty interval"
+      },
+      {
+        "call": "intervalContains({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, \"2024-01-01T12:00:00\")",
+        "result": "false — no offset"
+      }
+    ]
+  },
+  {
+    "url": "/reference/interval/compare/intervalsOverlap",
+    "name": "intervalsOverlap",
+    "namespace": "interval",
+    "module": "compare",
+    "kind": "function",
+    "signature": "intervalsOverlap(a: Interval, b: Interval): boolean",
+    "description": "Return true when two half-open intervals share at least one instant.",
+    "sourcePath": "packages/gmt/src/interval/compare/intervalsOverlap.ts",
+    "examples": [
+      {
+        "call": "intervalsOverlap({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, { start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T18:00:00Z\" })",
+        "result": "true"
+      },
+      {
+        "call": "intervalsOverlap({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, { start: \"2024-01-01T17:00:00Z\", end: \"2024-01-01T18:00:00Z\" })",
+        "result": "false — touching"
+      },
+      {
+        "call": "intervalsOverlap({ start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T12:00:00Z\" }, { start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" })",
+        "result": "true — empty, strictly inside"
+      },
+      {
+        "call": "intervalsOverlap({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T09:00:00Z\" }, { start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" })",
+        "result": "false — empty, at the edge"
+      },
+      {
+        "call": "intervalsOverlap({ start: \"2024-01-01T17:00:00Z\", end: \"2024-01-01T09:00:00Z\" }, { start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" })",
+        "result": "false — inverted"
+      }
+    ]
+  },
+  {
+    "url": "/reference/interval/validate/isValidInterval",
+    "name": "isValidInterval",
+    "namespace": "interval",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidInterval(interval: Interval): boolean",
+    "description": "Validate whether a value is an `Interval` the `interval/` namespace accepts.",
+    "sourcePath": "packages/gmt/src/interval/validate/isValidInterval.ts",
+    "examples": [
+      {
+        "call": "isValidInterval({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" })",
+        "result": "true"
+      },
+      {
+        "call": "isValidInterval({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T09:00:00Z\" })",
+        "result": "true — empty"
+      },
+      {
+        "call": "isValidInterval({ start: \"2024-01-01T10:00:00+01:00\", end: \"2024-01-01T09:30:00Z\" })",
+        "result": "true — 09:00Z to 09:30Z"
+      },
+      {
+        "call": "isValidInterval({ start: \"2024-01-01T17:00:00Z\", end: \"2024-01-01T09:00:00Z\" })",
+        "result": "false — inverted"
+      },
+      {
+        "call": "isValidInterval({ start: \"2024-01-01T09:00:00\", end: \"2024-01-01T17:00:00Z\" })",
+        "result": "false — no offset"
+      },
+      {
+        "call": "isValidInterval({ start: \"2016-12-31T23:59:60Z\", end: \"2017-01-01T00:00:00Z\" })",
+        "result": "false — leap second"
+      }
+    ]
+  },
+  {
     "url": "/reference/plain/calculate/addBusinessDays",
     "name": "addBusinessDays",
     "namespace": "plain",
@@ -1333,6 +1625,10 @@
       {
         "call": "diffDate(\"5784-06-15[u-ca=hebrew]\", \"5784-07-15[u-ca=hebrew]\", \"months\")",
         "result": "1 (measured in Hebrew, Adar I -> Adar)"
+      },
+      {
+        "call": "diffDate(\"2566-08-31[u-ca=buddhist]\", \"2566-09-30[u-ca=buddhist]\", \"months\")",
+        "result": "0 (30 days, not a month)"
       }
     ]
   },
@@ -1369,6 +1665,10 @@
       {
         "call": "diffDateAsDuration(\"5784-06-15[u-ca=hebrew]\", \"5784-07-15[u-ca=hebrew]\", \"months\")",
         "result": "\"P1M\" (measured in Hebrew, Adar I -> Adar)"
+      },
+      {
+        "call": "diffDateAsDuration(\"2566-08-31[u-ca=buddhist]\", \"2566-09-30[u-ca=buddhist]\", \"months\")",
+        "result": "\"P30D\" (Aug 31 + 1 month would pass Sep 30)"
       }
     ]
   },
@@ -1459,6 +1759,14 @@
         "result": "\"2024-02-29\""
       },
       {
+        "call": "endOfDate(\"2024-03-03\", \"week\", { weekStartsOn: \"sunday\" })",
+        "result": "\"2024-03-09\""
+      },
+      {
+        "call": "endOfDate(\"-271821-04-19\", \"month\")",
+        "result": "\"-271821-04-30\" (the month began before the range; its end did not)"
+      },
+      {
         "call": "endOfDate(\"invalid-date\", \"month\")",
         "result": "\"\""
       }
@@ -1476,7 +1784,19 @@
     "examples": [
       {
         "call": "endOfDateTime(\"2024-02-29T12:34:56\", \"month\")",
-        "result": "\"2024-02-29T23:59:59.999999999\""
+        "result": "\"2024-02-29T23:59:59\""
+      },
+      {
+        "call": "endOfDateTime(\"2024-02-29T12:34:56.123456789\", \"second\", { fractionalSecondDigits: 9 })",
+        "result": "\"2024-02-29T12:34:56.999999999\""
+      },
+      {
+        "call": "endOfDateTime(\"2024-03-03T12:00:00\", \"week\", { weekStartsOn: \"sunday\" })",
+        "result": "\"2024-03-09T23:59:59\""
+      },
+      {
+        "call": "endOfDateTime(\"-271821-04-19T12:00:00\", \"month\")",
+        "result": "\"-271821-04-30T23:59:59\" (the month began before the range; its end did not)"
       },
       {
         "call": "endOfDateTime(\"invalid-date\", \"month\")",
@@ -1539,17 +1859,6 @@
         "result": "\"\""
       }
     ]
-  },
-  {
-    "url": "/reference/plain/calculate/EndOfTimeUnit",
-    "name": "EndOfTimeUnit",
-    "namespace": "plain",
-    "module": "calculate",
-    "kind": "type",
-    "signature": "",
-    "description": "The EndOfTimeUnit type.",
-    "sourcePath": "packages/gmt/src/plain/calculate/endOfTime.ts",
-    "examples": []
   },
   {
     "url": "/reference/plain/calculate/endOfTime",
@@ -2295,15 +2604,23 @@
       },
       {
         "call": "roundDate(\"2024-06-15\", { smallestUnit: \"month\" })",
-        "result": "\"2024-07-01\""
+        "result": "\"2024-06-01\" (14 of 30 days in: rounds down)"
+      },
+      {
+        "call": "roundDate(\"2024-06-16\", { smallestUnit: \"month\" })",
+        "result": "\"2024-07-01\" (half way: rounds up)"
       },
       {
         "call": "roundDate(\"2024-06-15\", { smallestUnit: \"week\" })",
-        "result": "\"2024-06-16\""
+        "result": "\"2024-06-17\" (a Saturday: the next Monday is closer)"
       },
       {
         "call": "roundDate(\"2024-06-15\", { smallestUnit: \"day\" })",
         "result": "\"2024-06-15\""
+      },
+      {
+        "call": "roundDate(\"-271821-04-19\", { smallestUnit: \"month\" })",
+        "result": "\"-271821-05-01\" (the month began before the range)"
       },
       {
         "call": "roundDate(\"invalid\", { smallestUnit: \"year\" })",
@@ -2327,7 +2644,15 @@
       },
       {
         "call": "roundDateTime(\"2024-06-15T12:34:56\", { smallestUnit: \"month\" })",
-        "result": "\"2024-07-01T00:00:00\""
+        "result": "\"2024-06-01T00:00:00\" (under half way: rounds down)"
+      },
+      {
+        "call": "roundDateTime(\"2024-06-16T12:34:56\", { smallestUnit: \"month\" })",
+        "result": "\"2024-07-01T00:00:00\" (past half way: rounds up)"
+      },
+      {
+        "call": "roundDateTime(\"-271821-04-19T12:00:00\", { smallestUnit: \"month\" })",
+        "result": "\"-271821-05-01T00:00:00\" (the month began before the range)"
       },
       {
         "call": "roundDateTime(\"2024-06-15T12:34:56\", { smallestUnit: \"day\" })",
@@ -2622,17 +2947,6 @@
         "result": "\"\""
       }
     ]
-  },
-  {
-    "url": "/reference/plain/calculate/StartOfTimeUnit",
-    "name": "StartOfTimeUnit",
-    "namespace": "plain",
-    "module": "calculate",
-    "kind": "type",
-    "signature": "",
-    "description": "The StartOfTimeUnit type.",
-    "sourcePath": "packages/gmt/src/plain/calculate/startOfTime.ts",
-    "examples": []
   },
   {
     "url": "/reference/plain/calculate/startOfTime",
@@ -4115,17 +4429,6 @@
     ]
   },
   {
-    "url": "/reference/plain/get/isValidPlainNowUnit",
-    "name": "isValidPlainNowUnit",
-    "namespace": "plain",
-    "module": "get",
-    "kind": "function",
-    "signature": "isValidPlainNowUnit(unit: string): unit is NowUnit",
-    "description": "",
-    "sourcePath": "packages/gmt/src/plain/get/getNowUnit.ts",
-    "examples": []
-  },
-  {
     "url": "/reference/plain/get/getNowUnit",
     "name": "getNowUnit",
     "namespace": "plain",
@@ -4268,7 +4571,7 @@
     "module": "interval",
     "kind": "function",
     "signature": "intervalAbutsDate(aStart: string, aEnd: string, bStart: string, bEnd: string): boolean",
-    "description": "Return true when two date intervals are exactly adjacent — one's end equals the other's start",
+    "description": "Return true when two date intervals are exactly adjacent — one's end is one day before the",
     "sourcePath": "packages/gmt/src/plain/interval/intervalAbutsDate.ts",
     "examples": [
       {
@@ -4300,7 +4603,7 @@
     "module": "interval",
     "kind": "function",
     "signature": "intervalAbutsDateTime(aStart: string, aEnd: string, bStart: string, bEnd: string): boolean",
-    "description": "Return true when two datetime intervals are exactly adjacent — one's end equals the other's",
+    "description": "Return true when two datetime intervals are exactly adjacent — one's end is one nanosecond",
     "sourcePath": "packages/gmt/src/plain/interval/intervalAbutsDateTime.ts",
     "examples": [
       {
@@ -4308,7 +4611,7 @@
         "result": "true"
       },
       {
-        "call": "intervalAbutsDateTime(\"2024-06-30T12:00:00\", \"2024-12-31T17:00:00\", \"2024-01-01T09:00:00\", \"2024-06-30T12:00:00.000000001\")",
+        "call": "intervalAbutsDateTime(\"2024-06-30T12:00:00.000000001\", \"2024-12-31T17:00:00\", \"2024-01-01T09:00:00\", \"2024-06-30T12:00:00\")",
         "result": "true"
       },
       {
@@ -4332,7 +4635,7 @@
     "module": "interval",
     "kind": "function",
     "signature": "intervalAbutsTime(aStart: string, aEnd: string, bStart: string, bEnd: string): boolean",
-    "description": "Return true when two time intervals are exactly adjacent — one's end equals the other's start",
+    "description": "Return true when two time intervals are exactly adjacent — one's end is one nanosecond",
     "sourcePath": "packages/gmt/src/plain/interval/intervalAbutsTime.ts",
     "examples": [
       {
@@ -4340,7 +4643,7 @@
         "result": "true"
       },
       {
-        "call": "intervalAbutsTime(\"12:00:00\", \"17:00:00\", \"09:00:00\", \"12:00:00\")",
+        "call": "intervalAbutsTime(\"12:00:00.000000001\", \"17:00:00\", \"09:00:00\", \"12:00:00\")",
         "result": "true"
       },
       {
@@ -4350,6 +4653,10 @@
       {
         "call": "intervalAbutsTime(\"09:00:00\", \"13:00:00\", \"12:00:00\", \"17:00:00\")",
         "result": "false (overlap)"
+      },
+      {
+        "call": "intervalAbutsTime(\"22:00:00\", \"23:59:59.999999999\", \"00:00:00\", \"01:00:00\")",
+        "result": "false (no midnight wrap)"
       },
       {
         "call": "intervalAbutsTime(\"invalid\", \"12:00:00\", \"12:00:00\", \"17:00:00\")",
@@ -4494,17 +4801,6 @@
     ]
   },
   {
-    "url": "/reference/plain/interval/startOfUnit",
-    "name": "startOfUnit",
-    "namespace": "plain",
-    "module": "interval",
-    "kind": "function",
-    "signature": "startOfUnit(source: PlainDateTime, unit: DateTimeUnit): PlainDateTime",
-    "description": "Return the start of `unit` for a `Temporal.PlainDateTime`, for every DateTimeUnit.",
-    "sourcePath": "packages/gmt/src/plain/interval/intervalCountDateTime.ts",
-    "examples": []
-  },
-  {
     "url": "/reference/plain/interval/intervalCountDateTime",
     "name": "intervalCountDateTime",
     "namespace": "plain",
@@ -4603,6 +4899,10 @@
         "result": "[{ start: \"2024-01-01\", end: \"2024-05-31\" }]"
       },
       {
+        "call": "intervalDifferenceDate(\"2024-01-05\", \"2024-01-10\", \"2024-01-01\", \"2024-01-02\")",
+        "result": "[{ start: \"2024-01-05\", end: \"2024-01-10\" }] (B entirely before A)"
+      },
+      {
         "call": "intervalDifferenceDate(\"invalid\", \"2024-12-31\", \"2024-06-01\", \"2024-07-01\")",
         "result": "[]"
       }
@@ -4620,7 +4920,7 @@
     "examples": [
       {
         "call": "intervalDifferenceDateTime(\"2024-01-01T09:00:00\", \"2024-12-31T17:00:00\", \"2024-06-01T12:00:00\", \"2024-07-01T13:00:00\")",
-        "result": "[{ start: \"2024-01-01T09:00:00\", end: \"2024-05-31T17:00:00\" }, { start: \"2024-07-01T13:00:01\", end: \"2024-12-31T17:00:00\" }]"
+        "result": "[{ start: \"2024-01-01T09:00:00\", end: \"2024-06-01T11:59:59.999999999\" }, { start: \"2024-07-01T13:00:00.000000001\", end: \"2024-12-31T17:00:00\" }]"
       },
       {
         "call": "intervalDifferenceDateTime(\"2024-01-01T09:00:00\", \"2024-12-31T17:00:00\", \"2024-01-01T09:00:00\", \"2024-12-31T17:00:00\")",
@@ -4644,7 +4944,7 @@
     "examples": [
       {
         "call": "intervalDifferenceTime(\"09:00:00\", \"17:00:00\", \"12:00:00\", \"13:00:00\")",
-        "result": "[{ start: \"09:00:00\", end: \"11:59:59\" }, { start: \"13:00:01\", end: \"17:00:00\" }]"
+        "result": "[{ start: \"09:00:00\", end: \"11:59:59.999999999\" }, { start: \"13:00:00.000000001\", end: \"17:00:00\" }]"
       },
       {
         "call": "intervalDifferenceTime(\"09:00:00\", \"17:00:00\", \"09:00:00\", \"17:00:00\")",
@@ -4652,7 +4952,11 @@
       },
       {
         "call": "intervalDifferenceTime(\"09:00:00\", \"17:00:00\", \"12:00:00\", \"17:00:00\")",
-        "result": "[{ start: \"09:00:00\", end: \"11:59:59\" }]"
+        "result": "[{ start: \"09:00:00\", end: \"11:59:59.999999999\" }]"
+      },
+      {
+        "call": "intervalDifferenceTime(\"12:00:00\", \"17:00:00\", \"09:00:00\", \"10:00:00\")",
+        "result": "[{ start: \"12:00:00\", end: \"17:00:00\" }] (B entirely before A)"
       },
       {
         "call": "intervalDifferenceTime(\"invalid\", \"17:00:00\", \"12:00:00\", \"13:00:00\")",
@@ -5500,11 +5804,11 @@
     "examples": [
       {
         "call": "intervalXorDateTime(\"2024-01-01T09:00:00\", \"2024-06-30T12:00:00\", \"2024-04-01T11:00:00\", \"2024-12-31T17:00:00\")",
-        "result": "[{ start: \"2024-01-01T09:00:00\", end: \"2024-03-31T17:00:00\" }, { start: \"2024-06-30T12:00:01\", end: \"2024-12-31T17:00:00\" }]"
+        "result": "[{ start: \"2024-01-01T09:00:00\", end: \"2024-04-01T10:59:59.999999999\" }, { start: \"2024-06-30T12:00:00.000000001\", end: \"2024-12-31T17:00:00\" }]"
       },
       {
         "call": "intervalXorDateTime(\"2024-01-01T09:00:00\", \"2024-12-31T17:00:00\", \"2024-04-01T11:00:00\", \"2024-06-30T12:00:00\")",
-        "result": "[{ start: \"2024-01-01T09:00:00\", end: \"2024-03-31T17:00:00\" }, { start: \"2024-06-30T12:00:01\", end: \"2024-12-31T17:00:00\" }]"
+        "result": "[{ start: \"2024-01-01T09:00:00\", end: \"2024-04-01T10:59:59.999999999\" }, { start: \"2024-06-30T12:00:00.000000001\", end: \"2024-12-31T17:00:00\" }]"
       },
       {
         "call": "intervalXorDateTime(\"2024-01-01T09:00:00\", \"2024-12-31T17:00:00\", \"2024-01-01T09:00:00\", \"2024-12-31T17:00:00\")",
@@ -5528,11 +5832,11 @@
     "examples": [
       {
         "call": "intervalXorTime(\"09:00:00\", \"12:00:00\", \"11:00:00\", \"17:00:00\")",
-        "result": "[{ start: \"09:00:00\", end: \"10:59:59\" }, { start: \"12:00:01\", end: \"17:00:00\" }]"
+        "result": "[{ start: \"09:00:00\", end: \"10:59:59.999999999\" }, { start: \"12:00:00.000000001\", end: \"17:00:00\" }]"
       },
       {
         "call": "intervalXorTime(\"09:00:00\", \"17:00:00\", \"11:00:00\", \"12:00:00\")",
-        "result": "[{ start: \"09:00:00\", end: \"10:59:59\" }, { start: \"12:00:01\", end: \"17:00:00\" }]"
+        "result": "[{ start: \"09:00:00\", end: \"10:59:59.999999999\" }, { start: \"12:00:00.000000001\", end: \"17:00:00\" }]"
       },
       {
         "call": "intervalXorTime(\"09:00:00\", \"17:00:00\", \"09:00:00\", \"17:00:00\")",
@@ -5564,7 +5868,11 @@
       },
       {
         "call": "intervalsOverlapDate(\"2024-01-01\", \"2024-06-30\", \"2024-07-01\", \"2024-12-31\")",
-        "result": "false (adjacent)"
+        "result": "false (consecutive days, no shared day)"
+      },
+      {
+        "call": "intervalsOverlapDate(\"2024-01-01\", \"2024-06-30\", \"2024-06-30\", \"2024-12-31\")",
+        "result": "true (touching)"
       },
       {
         "call": "intervalsOverlapDate(\"2024-01-01\", \"2024-06-30\", \"2024-07-02\", \"2024-12-31\")",
@@ -5596,7 +5904,11 @@
       },
       {
         "call": "intervalsOverlapDateTime(\"2024-01-01T10:00:00\", \"2024-06-30T23:59:59\", \"2024-07-01T00:00:00\", \"2024-12-31T23:59:59\")",
-        "result": "false (adjacent)"
+        "result": "false (disjoint, one-second gap)"
+      },
+      {
+        "call": "intervalsOverlapDateTime(\"2024-01-01T10:00:00\", \"2024-06-30T23:59:59\", \"2024-06-30T23:59:59\", \"2024-12-31T23:59:59\")",
+        "result": "true (touching)"
       },
       {
         "call": "intervalsOverlapDateTime(\"2024-01-01T10:00:00\", \"2024-06-30T23:59:59\", \"2024-07-02T00:00:00\", \"2024-12-31T23:59:59\")",
@@ -5624,7 +5936,7 @@
       },
       {
         "call": "intervalsOverlapTime(\"09:00:00\", \"17:00:00\", \"17:00:00\", \"18:00:00\")",
-        "result": "false (adjacent)"
+        "result": "true (touching)"
       },
       {
         "call": "intervalsOverlapTime(\"09:00:00\", \"17:00:00\", \"18:00:00\", \"20:00:00\")",
@@ -6995,17 +7307,6 @@
     "examples": []
   },
   {
-    "url": "/reference/plain/validate/IsValidDateRangeProps",
-    "name": "IsValidDateRangeProps",
-    "namespace": "plain",
-    "module": "validate",
-    "kind": "type",
-    "signature": "",
-    "description": "The IsValidDateRangeProps type.",
-    "sourcePath": "packages/gmt/src/plain/validate/isValidDateRange.ts",
-    "examples": []
-  },
-  {
     "url": "/reference/plain/validate/isValidDateRange",
     "name": "isValidDateRange",
     "namespace": "plain",
@@ -8128,16 +8429,28 @@
     "module": "calendar-date",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching GMT's own calendar-annotated PlainDate string: the calendar-native year/month/day (e.g. Hebrew year 5785), tagged with the calendar identifier — not Temporal's own `[u-ca=...]` annotation convention, which keeps the ISO/proleptic- Gregorian digits and only tags the calendar. See `convertDateToCalendar` for the rationale.",
     "sourcePath": "packages/gmt/src/regex/calendar-date.ts",
     "examples": [
       {
-        "call": "calendarDate.test(\"60\")",
-        "result": "false"
+        "call": "calendarDate.test(\"5785-01-01[u-ca=hebrew]\")",
+        "result": "true"
       },
       {
-        "call": "calendarDate.test(\"202\")",
-        "result": "false"
+        "call": "calendarDate.test(\"5785-01-01[u-ca=japanese;era=reiwa]\")",
+        "result": "true"
+      },
+      {
+        "call": "calendarDate.test(\"-000911-01-01[u-ca=taiwan]\")",
+        "result": "true"
+      },
+      {
+        "call": "calendarDate.test(\"-0911-01-01[u-ca=taiwan]\")",
+        "result": "false (negative years use six digits)"
+      },
+      {
+        "call": "calendarDate.test(\"2024-03-15\")",
+        "result": "false (no calendar tag)"
       }
     ]
   },
@@ -8148,16 +8461,20 @@
     "module": "calendar-zoned-date-time",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching GMT's own calendar-annotated ZonedDateTime string — the zoned sibling of `calendarDate` (regex/calendar-date.ts). Shape:",
     "sourcePath": "packages/gmt/src/regex/calendar-zoned-date-time.ts",
     "examples": [
       {
-        "call": "calendarZonedDateTime.test(\"60\")",
-        "result": "false"
+        "call": "calendarZonedDateTime.test(\"5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]\")",
+        "result": "true"
       },
       {
-        "call": "calendarZonedDateTime.test(\"202\")",
-        "result": "false"
+        "call": "calendarZonedDateTime.test(\"0031-04-30T12:00:00+09:00[u-ca=japanese;era=heisei][Asia/Tokyo]\")",
+        "result": "true"
+      },
+      {
+        "call": "calendarZonedDateTime.test(\"2024-03-15T14:30:00Z\")",
+        "result": "false (no calendar tag)"
       }
     ]
   },
@@ -8168,16 +8485,28 @@
     "module": "date-time",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching ISO 8601 local date-time (extended): `<date>T<time>`.",
     "sourcePath": "packages/gmt/src/regex/date-time.ts",
     "examples": [
       {
-        "call": "plainDateTime.test(\"60\")",
-        "result": "false"
+        "call": "plainDateTime.test(\"2024-03-15T14:30:00\")",
+        "result": "true"
       },
       {
-        "call": "plainDateTime.test(\"202\")",
-        "result": "false"
+        "call": "plainDateTime.test(\"2024-03-15T14:30\")",
+        "result": "true (seconds omitted)"
+      },
+      {
+        "call": "plainDateTime.test(\"+000031-04-30T12:00:00.123\")",
+        "result": "true (6-digit year)"
+      },
+      {
+        "call": "plainDateTime.test(\"2024-03-15 14:30:00\")",
+        "result": "false (space separator)"
+      },
+      {
+        "call": "plainDateTime.test(\"2024-03-15T14:30:00Z\")",
+        "result": "false (has timezone)"
       }
     ]
   },
@@ -8188,24 +8517,28 @@
     "module": "date",
     "kind": "regex",
     "signature": "",
-    "description": "",
+    "description": "RegExp matching an ISO 8601 year: 4 digits, or a sign and 6 digits for the expanded years Temporal supports (`-271821` to `+275760`).",
     "sourcePath": "packages/gmt/src/regex/date.ts",
     "examples": [
       {
-        "call": "year.test(\"0000\")",
+        "call": "year.test(\"2024\")",
         "result": "true"
       },
       {
-        "call": "year.test(\"+001234\")",
-        "result": "true"
+        "call": "year.test(\"+275760\")",
+        "result": "true (expanded year)"
       },
       {
-        "call": "year.test(\"60\")",
-        "result": "false"
+        "call": "year.test(\"-271821\")",
+        "result": "true (negative expanded year)"
       },
       {
-        "call": "year.test(\"202\")",
-        "result": "false"
+        "call": "year.test(\"24\")",
+        "result": "false (too few digits)"
+      },
+      {
+        "call": "year.test(\"20245\")",
+        "result": "false (5 digits without a sign)"
       }
     ]
   },
@@ -8216,7 +8549,7 @@
     "module": "date",
     "kind": "regex",
     "signature": "",
-    "description": "",
+    "description": "RegExp matching an ISO 8601 month: `01`–`12`.",
     "sourcePath": "packages/gmt/src/regex/date.ts",
     "examples": [
       {
@@ -8228,12 +8561,12 @@
         "result": "true"
       },
       {
-        "call": "month.test(\"60\")",
-        "result": "false"
+        "call": "month.test(\"13\")",
+        "result": "false (out of range)"
       },
       {
-        "call": "month.test(\"202\")",
-        "result": "false"
+        "call": "month.test(\"1\")",
+        "result": "false (not zero-padded)"
       }
     ]
   },
@@ -8244,7 +8577,7 @@
     "module": "date",
     "kind": "regex",
     "signature": "",
-    "description": "",
+    "description": "RegExp matching an ISO 8601 day of the month: `01`–`31` (shape only; whether the day exists in its month is checked by `Temporal.PlainDate.from` in `parseDate`).",
     "sourcePath": "packages/gmt/src/regex/date.ts",
     "examples": [
       {
@@ -8252,16 +8585,20 @@
         "result": "true"
       },
       {
-        "call": "day.test(\"23\")",
+        "call": "day.test(\"31\")",
         "result": "true"
       },
       {
-        "call": "day.test(\"60\")",
-        "result": "false"
+        "call": "day.test(\"32\")",
+        "result": "false (out of range)"
       },
       {
-        "call": "day.test(\"202\")",
-        "result": "false"
+        "call": "day.test(\"00\")",
+        "result": "false (day zero)"
+      },
+      {
+        "call": "day.test(\"9\")",
+        "result": "false (not zero-padded)"
       }
     ]
   },
@@ -8272,24 +8609,28 @@
     "module": "date",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching ISO 8601 calendar date (extended): `YYYY-MM-DD` or `±YYYYYY-MM-DD`.",
     "sourcePath": "packages/gmt/src/regex/date.ts",
     "examples": [
       {
-        "call": "plainDate.test(\"2025-03-10\")",
+        "call": "plainDate.test(\"2024-03-15\")",
         "result": "true"
       },
       {
-        "call": "plainDate.test(\"-000001-01-01\")",
-        "result": "true"
+        "call": "plainDate.test(\"+000031-04-30\")",
+        "result": "true (6-digit year)"
       },
       {
-        "call": "plainDate.test(\"60\")",
-        "result": "false"
+        "call": "plainDate.test(\"-000031-04-30\")",
+        "result": "true (negative 6-digit year)"
       },
       {
-        "call": "plainDate.test(\"202\")",
-        "result": "false"
+        "call": "plainDate.test(\"2024-3-15\")",
+        "result": "false (unpadded month)"
+      },
+      {
+        "call": "plainDate.test(\"2024-03-00\")",
+        "result": "false (day zero)"
       }
     ]
   },
@@ -8300,16 +8641,24 @@
     "module": "http-date",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching RFC 9110 §5.6.7 IMF-fixdate — the only form GMT's `formatHttp` emits, and the only form `parseHttp` accepts. Day, year, and time-of-day fields are all fixed-width per the grammar (unlike RFC 2822's leniently-sized day); the trailing \"GMT\" literal is mandatory, never a numeric offset. The obsolete RFC 850 and asctime HTTP-date forms are a documented limitation (see `parseHttp`'s JSDoc), not supported here.",
     "sourcePath": "packages/gmt/src/regex/http-date.ts",
     "examples": [
       {
-        "call": "httpDate.test(\"60\")",
-        "result": "false"
+        "call": "httpDate.test(\"Wed, 09 Jun 2021 10:18:14 GMT\")",
+        "result": "true"
       },
       {
-        "call": "httpDate.test(\"202\")",
-        "result": "false"
+        "call": "httpDate.test(\"Jun 09 2021 10:18:14 GMT\")",
+        "result": "false (missing day-of-week)"
+      },
+      {
+        "call": "httpDate.test(\"Wed, 9 Jun 2021 10:18:14 GMT\")",
+        "result": "false (single-digit day)"
+      },
+      {
+        "call": "httpDate.test(\"Wed, 09 Jun 2021 10:18:14 +0000\")",
+        "result": "false (numeric offset)"
       }
     ]
   },
@@ -8320,16 +8669,24 @@
     "module": "leap-second",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp fragment matching an ISO 8601 leap second: `T HH:mm:60[.fff]` followed by a timezone designator (`Z`, numeric offset, or `[` opening a bracketed annotation).",
     "sourcePath": "packages/gmt/src/regex/leap-second.ts",
     "examples": [
       {
-        "call": "leapSecond.test(\"60\")",
-        "result": "false"
+        "call": "leapSecond.test(\"2024-12-31T23:59:60Z\")",
+        "result": "true"
       },
       {
-        "call": "leapSecond.test(\"202\")",
-        "result": "false"
+        "call": "leapSecond.test(\"2024-12-31T23:59:60.123+00:00\")",
+        "result": "true"
+      },
+      {
+        "call": "leapSecond.test(\"2024-12-31T23:59:59Z\")",
+        "result": "false (second = 59)"
+      },
+      {
+        "call": "leapSecond.test(\"2024-12-31T23:59:60\")",
+        "result": "false (no zone designator)"
       }
     ]
   },
@@ -8340,16 +8697,28 @@
     "module": "leap-second",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp fragment matching an ISO 8601 leap second in every shape `Temporal.Instant.from` accepts — the wider sibling of `leapSecond`.",
     "sourcePath": "packages/gmt/src/regex/leap-second.ts",
     "examples": [
       {
-        "call": "instantLeapSecond.test(\"60\")",
-        "result": "false"
+        "call": "instantLeapSecond.test(\"2016-12-31T23:59:60Z\")",
+        "result": "true"
       },
       {
-        "call": "instantLeapSecond.test(\"202\")",
-        "result": "false"
+        "call": "instantLeapSecond.test(\"2016-12-31 23:59:60Z\")",
+        "result": "true (space separator)"
+      },
+      {
+        "call": "instantLeapSecond.test(\"20161231t235960Z\")",
+        "result": "true (basic format)"
+      },
+      {
+        "call": "instantLeapSecond.test(\"2016-12-31T23:59:59Z\")",
+        "result": "false (second = 59)"
+      },
+      {
+        "call": "instantLeapSecond.test(\"2016-12-31T23:59:60\")",
+        "result": "false (no zone designator)"
       }
     ]
   },
@@ -8360,23 +8729,31 @@
     "module": "nanoseconds",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching the canonical decimal form of a nanosecond timestamp — the shape `formatNanoseconds` emits and `parseNanoseconds` accepts.",
     "sourcePath": "packages/gmt/src/regex/nanoseconds.ts",
     "examples": [
       {
-        "call": "nanosecondDecimal.test(\"12\")",
+        "call": "nanosecondDecimal.test(\"1710072000123456789\")",
         "result": "true"
       },
       {
-        "call": "nanosecondDecimal.test(\"123456789\")",
+        "call": "nanosecondDecimal.test(\"-1000000000\")",
         "result": "true"
       },
       {
-        "call": "nanosecondDecimal.test(\"2025-13-01\")",
+        "call": "nanosecondDecimal.test(\"0\")",
+        "result": "true"
+      },
+      {
+        "call": "nanosecondDecimal.test(\"01\")",
+        "result": "false (leading zero)"
+      },
+      {
+        "call": "nanosecondDecimal.test(\"1.5\")",
         "result": "false"
       },
       {
-        "call": "nanosecondDecimal.test(\"not-a-match\")",
+        "call": "nanosecondDecimal.test(\"1e18\")",
         "result": "false"
       }
     ]
@@ -8388,16 +8765,28 @@
     "module": "rfc-2822",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching RFC 5322 §3.3 date-time grammar (obsoletes RFC 2822, same shape). English day/month names are mandated by the spec regardless of locale — see `internal/englishCalendarNames.ts`. Day is `1*2DIGIT` per the formal grammar, so single-digit days are valid on input even though GMT's own formatter always emits the zero-padded 2-digit form. `zone` accepts a numeric offset or one of the obsolete named zones RFC 5322 §4.3 lists (UT/GMT plus the eight North American zones); any other obs-zone letter is unrecognized and treated as invalid rather than guessed at.",
     "sourcePath": "packages/gmt/src/regex/rfc-2822.ts",
     "examples": [
       {
-        "call": "rfc2822DateTime.test(\"60\")",
-        "result": "false"
+        "call": "rfc2822DateTime.test(\"Wed, 09 Jun 2021 10:18:14 GMT\")",
+        "result": "true"
       },
       {
-        "call": "rfc2822DateTime.test(\"202\")",
-        "result": "false"
+        "call": "rfc2822DateTime.test(\"09 Jun 2021 10:18:14 +0000\")",
+        "result": "true (no weekday)"
+      },
+      {
+        "call": "rfc2822DateTime.test(\"9 Jun 2021 10:18:14 PST\")",
+        "result": "true (single-digit day)"
+      },
+      {
+        "call": "rfc2822DateTime.test(\"Wed, 09 Jun 2021 10:18:14 EST\")",
+        "result": "true (named zone)"
+      },
+      {
+        "call": "rfc2822DateTime.test(\"2024-03-15T14:30:00Z\")",
+        "result": "false (ISO shape)"
       }
     ]
   },
@@ -8408,16 +8797,32 @@
     "module": "rfc-3339",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching an RFC 3339 §5.6 date-time: ISO 8601 with a mandatory offset (`Z` or `±HH:MM`).",
     "sourcePath": "packages/gmt/src/regex/rfc-3339.ts",
     "examples": [
       {
-        "call": "rfc3339DateTime.test(\"60\")",
-        "result": "false"
+        "call": "rfc3339DateTime.test(\"2024-03-15T14:30:00-04:00\")",
+        "result": "true"
       },
       {
-        "call": "rfc3339DateTime.test(\"202\")",
-        "result": "false"
+        "call": "rfc3339DateTime.test(\"2024-03-15t14:30:00z\")",
+        "result": "true"
+      },
+      {
+        "call": "rfc3339DateTime.test(\"2024-03-15 14:30:00Z\")",
+        "result": "true (space separator)"
+      },
+      {
+        "call": "rfc3339DateTime.test(\"2024-03-15T14:30:00\")",
+        "result": "false (no offset)"
+      },
+      {
+        "call": "rfc3339DateTime.test(\"2024-03-15T14:30:00+00:00[UTC]\")",
+        "result": "false (bracketed zone)"
+      },
+      {
+        "call": "rfc3339DateTime.test(\"2024-3-15T14:30:00Z\")",
+        "result": "false (unpadded)"
       }
     ]
   },
@@ -8428,16 +8833,28 @@
     "module": "sql-date-time",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching an ANSI SQL / ODBC timestamp literal: `YYYY-MM-DD HH:mm[:ss[.fffffffff]]`.",
     "sourcePath": "packages/gmt/src/regex/sql-date-time.ts",
     "examples": [
       {
-        "call": "sqlDateTime.test(\"60\")",
-        "result": "false"
+        "call": "sqlDateTime.test(\"2024-03-15 14:30:00.123456789\")",
+        "result": "true"
       },
       {
-        "call": "sqlDateTime.test(\"202\")",
-        "result": "false"
+        "call": "sqlDateTime.test(\"2024-03-15 14:30\")",
+        "result": "true (seconds omitted)"
+      },
+      {
+        "call": "sqlDateTime.test(\"2024-03-15T14:30:00\")",
+        "result": "false (T separator)"
+      },
+      {
+        "call": "sqlDateTime.test(\"2024-3-5 14:30:00\")",
+        "result": "false (unpadded)"
+      },
+      {
+        "call": "sqlDateTime.test(\"2024-03-15 14:30:60\")",
+        "result": "false (invalid second)"
       }
     ]
   },
@@ -8448,16 +8865,36 @@
     "module": "time-zone-like",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching a timezone identifier in one of three forms:",
     "sourcePath": "packages/gmt/src/regex/time-zone-like.ts",
     "examples": [
       {
-        "call": "timeZoneLike.test(\"60\")",
-        "result": "false"
+        "call": "timeZoneLike.test(\"UTC\")",
+        "result": "true"
       },
       {
-        "call": "timeZoneLike.test(\"202\")",
-        "result": "false"
+        "call": "timeZoneLike.test(\"GMT\")",
+        "result": "true"
+      },
+      {
+        "call": "timeZoneLike.test(\"America/New_York\")",
+        "result": "true"
+      },
+      {
+        "call": "timeZoneLike.test(\"Asia/Tokyo\")",
+        "result": "true"
+      },
+      {
+        "call": "timeZoneLike.test(\"Custom/Zone\")",
+        "result": "true (permissive)"
+      },
+      {
+        "call": "timeZoneLike.test(\"+05:00\")",
+        "result": "false (numeric offset, not a zone id)"
+      },
+      {
+        "call": "timeZoneLike.test(\"UTC+05:00\")",
+        "result": "false (mixed form)"
       }
     ]
   },
@@ -8468,7 +8905,7 @@
     "module": "time",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching an ISO 8601 hour in extended format: `00`–`23`.",
     "sourcePath": "packages/gmt/src/regex/time.ts",
     "examples": [
       {
@@ -8476,16 +8913,20 @@
         "result": "true"
       },
       {
+        "call": "hour.test(\"12\")",
+        "result": "true"
+      },
+      {
         "call": "hour.test(\"23\")",
         "result": "true"
       },
       {
-        "call": "hour.test(\"60\")",
-        "result": "false"
+        "call": "hour.test(\"24\")",
+        "result": "false (out of range)"
       },
       {
-        "call": "hour.test(\"202\")",
-        "result": "false"
+        "call": "hour.test(\"9\")",
+        "result": "false (not zero-padded)"
       }
     ]
   },
@@ -8496,11 +8937,15 @@
     "module": "time",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching an ISO 8601 minute: `00`–`59`.",
     "sourcePath": "packages/gmt/src/regex/time.ts",
     "examples": [
       {
         "call": "minute.test(\"00\")",
+        "result": "true"
+      },
+      {
+        "call": "minute.test(\"30\")",
         "result": "true"
       },
       {
@@ -8509,11 +8954,7 @@
       },
       {
         "call": "minute.test(\"60\")",
-        "result": "false"
-      },
-      {
-        "call": "minute.test(\"202\")",
-        "result": "false"
+        "result": "false (out of range)"
       }
     ]
   },
@@ -8524,11 +8965,15 @@
     "module": "time",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching an ISO 8601 second: `00`–`59`.",
     "sourcePath": "packages/gmt/src/regex/time.ts",
     "examples": [
       {
         "call": "second.test(\"00\")",
+        "result": "true"
+      },
+      {
+        "call": "second.test(\"30\")",
         "result": "true"
       },
       {
@@ -8537,11 +8982,7 @@
       },
       {
         "call": "second.test(\"60\")",
-        "result": "false"
-      },
-      {
-        "call": "second.test(\"202\")",
-        "result": "false"
+        "result": "false (out of range; leap seconds use a different pattern)"
       }
     ]
   },
@@ -8552,24 +8993,24 @@
     "module": "time",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching 1–9 fractional-second digits (nanosecond precision).",
     "sourcePath": "packages/gmt/src/regex/time.ts",
     "examples": [
       {
-        "call": "fractionalSecond.test(\"00\")",
-        "result": "true"
+        "call": "fractionalSecond.test(\"123\")",
+        "result": "true (milliseconds)"
       },
       {
         "call": "fractionalSecond.test(\"123456789\")",
-        "result": "true"
+        "result": "true (nanoseconds)"
       },
       {
-        "call": "fractionalSecond.test(\"2025-13-01\")",
-        "result": "false"
+        "call": "fractionalSecond.test(\"1234567890\")",
+        "result": "false (more than 9 digits)"
       },
       {
-        "call": "fractionalSecond.test(\"not-a-match\")",
-        "result": "false"
+        "call": "fractionalSecond.test(\"\")",
+        "result": "false (empty)"
       }
     ]
   },
@@ -8580,24 +9021,20 @@
     "module": "time",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "Backward-compatible alias for `fractionalSecond`. Prefer `fractionalSecond` for new usage — the pattern matches 1–9 digits of fractional seconds, not just milliseconds.",
     "sourcePath": "packages/gmt/src/regex/time.ts",
     "examples": [
       {
-        "call": "millisecond.test(\"00\")",
+        "call": "millisecond.test(\"123\")",
         "result": "true"
       },
       {
         "call": "millisecond.test(\"123456789\")",
-        "result": "true"
+        "result": "true (nanoseconds, despite the name)"
       },
       {
-        "call": "millisecond.test(\"2025-13-01\")",
-        "result": "false"
-      },
-      {
-        "call": "millisecond.test(\"not-a-match\")",
-        "result": "false"
+        "call": "millisecond.test(\"1234567890\")",
+        "result": "false (more than 9 digits)"
       }
     ]
   },
@@ -8608,7 +9045,7 @@
     "module": "time",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching ISO 8601 local time (extended): `HH:mm[:ss[.fffffffff]]`.",
     "sourcePath": "packages/gmt/src/regex/time.ts",
     "examples": [
       {
@@ -8616,16 +9053,24 @@
         "result": "true"
       },
       {
-        "call": "plainTime.test(\"14:30:00.123456789\")",
+        "call": "plainTime.test(\"14:30:00\")",
         "result": "true"
       },
       {
-        "call": "plainTime.test(\"60\")",
-        "result": "false"
+        "call": "plainTime.test(\"14:30:00.123\")",
+        "result": "true (fractional seconds)"
       },
       {
-        "call": "plainTime.test(\"202\")",
-        "result": "false"
+        "call": "plainTime.test(\"14:30:00,123\")",
+        "result": "true (comma separator)"
+      },
+      {
+        "call": "plainTime.test(\"24:00:00\")",
+        "result": "false (hour out of range)"
+      },
+      {
+        "call": "plainTime.test(\"14:30:60\")",
+        "result": "false (second out of range)"
       }
     ]
   },
@@ -8636,24 +9081,20 @@
     "module": "unix",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching a Unix timestamp in seconds: exactly 10 digits.",
     "sourcePath": "packages/gmt/src/regex/unix.ts",
     "examples": [
       {
-        "call": "unixSeconds.test(\"1707874200\")",
+        "call": "unixSeconds.test(\"1710511800\")",
         "result": "true"
       },
       {
         "call": "unixSeconds.test(\"0000000000\")",
-        "result": "true"
+        "result": "true (epoch)"
       },
       {
-        "call": "unixSeconds.test(\"60\")",
-        "result": "false"
-      },
-      {
-        "call": "unixSeconds.test(\"202\")",
-        "result": "false"
+        "call": "unixSeconds.test(\"17105118001\")",
+        "result": "false (11 digits)"
       }
     ]
   },
@@ -8664,16 +9105,20 @@
     "module": "unix",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching a Unix timestamp in milliseconds: exactly 13 digits.",
     "sourcePath": "packages/gmt/src/regex/unix.ts",
     "examples": [
       {
-        "call": "unixMilliseconds.test(\"60\")",
-        "result": "false"
+        "call": "unixMilliseconds.test(\"1710511800123\")",
+        "result": "true"
       },
       {
-        "call": "unixMilliseconds.test(\"202\")",
-        "result": "false"
+        "call": "unixMilliseconds.test(\"0000000000000\")",
+        "result": "true (epoch)"
+      },
+      {
+        "call": "unixMilliseconds.test(\"17105118001\")",
+        "result": "false (11 digits)"
       }
     ]
   },
@@ -8684,16 +9129,28 @@
     "module": "utc-date-time",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching ISO 8601 UTC datetime: `<date>T<time>Z` with optional fractional seconds. The timezone designator accepts `Z` or `z` (lowercase is accepted for leniency, though GMT's own formatter always emits uppercase).",
     "sourcePath": "packages/gmt/src/regex/utc-date-time.ts",
     "examples": [
       {
-        "call": "utcDateTime.test(\"60\")",
-        "result": "false"
+        "call": "utcDateTime.test(\"2024-03-15T14:30:00Z\")",
+        "result": "true"
       },
       {
-        "call": "utcDateTime.test(\"202\")",
-        "result": "false"
+        "call": "utcDateTime.test(\"2024-03-15T14:30z\")",
+        "result": "true (lowercase z)"
+      },
+      {
+        "call": "utcDateTime.test(\"2024-03-15T14:30:00.123Z\")",
+        "result": "true (fractional seconds)"
+      },
+      {
+        "call": "utcDateTime.test(\"2024-03-15T14:30:00+00:00\")",
+        "result": "false (numeric offset)"
+      },
+      {
+        "call": "utcDateTime.test(\"2024-03-15T14:30:00\")",
+        "result": "false (no timezone)"
       }
     ]
   },
@@ -8704,16 +9161,32 @@
     "module": "utc-offset",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching an ISO 8601 UTC offset in the extended form GMT's offset-instant pair stores: `±HH:MM`, optionally `±HH:MM:SS`.",
     "sourcePath": "packages/gmt/src/regex/utc-offset.ts",
     "examples": [
       {
-        "call": "utcOffset.test(\"60\")",
-        "result": "false"
+        "call": "utcOffset.test(\"-04:00\")",
+        "result": "true"
       },
       {
-        "call": "utcOffset.test(\"202\")",
-        "result": "false"
+        "call": "utcOffset.test(\"+05:45\")",
+        "result": "true"
+      },
+      {
+        "call": "utcOffset.test(\"-00:44:30\")",
+        "result": "true (Africa/Monrovia before 1972)"
+      },
+      {
+        "call": "utcOffset.test(\"Z\")",
+        "result": "false (a designator, not an offset)"
+      },
+      {
+        "call": "utcOffset.test(\"-0400\")",
+        "result": "false (basic format)"
+      },
+      {
+        "call": "utcOffset.test(\"+24:00\")",
+        "result": "false (out of range)"
       }
     ]
   },
@@ -9062,6 +9535,17 @@
     "signature": "",
     "description": "used in Temporal with methods like toString({ fractionalSecondDigits: fractionalDigits[unit] })",
     "sourcePath": "packages/gmt/src/types/fractional-digit.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/interval/Interval",
+    "name": "Interval",
+    "namespace": "types",
+    "module": "interval",
+    "kind": "type",
+    "signature": "",
+    "description": "The Interval type.",
+    "sourcePath": "packages/gmt/src/types/interval.ts",
     "examples": []
   },
   {
@@ -9601,17 +10085,6 @@
     ]
   },
   {
-    "url": "/reference/unix/calculate/startOrEndOfUnix",
-    "name": "startOrEndOfUnix",
-    "namespace": "unix",
-    "module": "calculate",
-    "kind": "function",
-    "signature": "startOrEndOfUnix(value: number, unit: DateUnit | TimeUnit | \"quarter\", options: { epochUnit?: \"seconds\" | \"milliseconds\"; timeZone?: string; weekStartsOn?: \"monday\" | \"sunday\"; disambiguation?: \"compatible\" | ... 2 more ... | \"reject\"; offset?: \"reject\" | ... 2 more ... | \"ignore\"; }, isEnd: boolean): number",
-    "description": "Internal shared implementation for `startOfUnix` / `endOfUnix`.",
-    "sourcePath": "packages/gmt/src/unix/calculate/startOrEndOfUnix.ts",
-    "examples": []
-  },
-  {
     "url": "/reference/unix/calculate/subtractUnix",
     "name": "subtractUnix",
     "namespace": "unix",
@@ -9879,17 +10352,6 @@
     "examples": []
   },
   {
-    "url": "/reference/unix/format/toInstant",
-    "name": "toInstant",
-    "namespace": "unix",
-    "module": "format",
-    "kind": "function",
-    "signature": "toInstant(raw: string | number, epochUnit: \"seconds\" | \"milliseconds\"): Instant",
-    "description": "",
-    "sourcePath": "packages/gmt/src/unix/format/formatCalendarUnix.ts",
-    "examples": []
-  },
-  {
     "url": "/reference/unix/format/formatCalendarUnix",
     "name": "formatCalendarUnix",
     "namespace": "unix",
@@ -9956,17 +10418,6 @@
     "kind": "type",
     "signature": "",
     "description": "The FormatUnixOptions type.",
-    "sourcePath": "packages/gmt/src/unix/format/formatUnix.ts",
-    "examples": []
-  },
-  {
-    "url": "/reference/unix/format/parseEpochMs",
-    "name": "parseEpochMs",
-    "namespace": "unix",
-    "module": "format",
-    "kind": "function",
-    "signature": "parseEpochMs(value: string | number, epochUnit: \"seconds\" | \"milliseconds\"): number",
-    "description": "",
     "sourcePath": "packages/gmt/src/unix/format/formatUnix.ts",
     "examples": []
   },
@@ -10163,17 +10614,6 @@
     ]
   },
   {
-    "url": "/reference/unix/get/isValidUnixNowUnit",
-    "name": "isValidUnixNowUnit",
-    "namespace": "unix",
-    "module": "get",
-    "kind": "function",
-    "signature": "isValidUnixNowUnit(unit: string): unit is UnixNowUnit",
-    "description": "",
-    "sourcePath": "packages/gmt/src/unix/get/getUnixNowUnit.ts",
-    "examples": []
-  },
-  {
     "url": "/reference/unix/get/getUnixNowUnit",
     "name": "getUnixNowUnit",
     "namespace": "unix",
@@ -10244,7 +10684,7 @@
     "module": "interval",
     "kind": "function",
     "signature": "intervalAbutsUnix(aStart: string | number, aEnd: string | number, bStart: string | number, bEnd: string | number): boolean",
-    "description": "Return true when two Unix intervals are exactly adjacent — one's end equals the other's",
+    "description": "Return true when two Unix intervals are exactly adjacent — one's end is one epoch unit before",
     "sourcePath": "packages/gmt/src/unix/interval/intervalAbutsUnix.ts",
     "examples": [
       {
@@ -10266,6 +10706,10 @@
       {
         "call": "intervalAbutsUnix(NaN, 1500000000, 1500000001, 1700000000)",
         "result": "false"
+      },
+      {
+        "call": "intervalAbutsUnix(0, 1.5, 2.5, 3)",
+        "result": "false (fractional epochs)"
       }
     ]
   },
@@ -10302,6 +10746,10 @@
       {
         "call": "intervalContainsUnix(\"0\", \"1700000000\", \"170000000\")",
         "result": "true"
+      },
+      {
+        "call": "intervalContainsUnix(0, 10, 0.5)",
+        "result": "false (fractional epoch)"
       }
     ]
   },
@@ -10353,7 +10801,7 @@
     "examples": [
       {
         "call": "intervalDifferenceUnix(0, 1700000000, 1500000000, 1600000000)",
-        "result": "[{ start: 0, end: 1499999999 }]"
+        "result": "[{ start: 0, end: 1499999999 }, { start: 1600000001, end: 1700000000 }]"
       },
       {
         "call": "intervalDifferenceUnix(0, 1700000000, 0, 1700000000)",
@@ -10362,6 +10810,14 @@
       {
         "call": "intervalDifferenceUnix(NaN, 1700000000, 1500000000, 1600000000)",
         "result": "[]"
+      },
+      {
+        "call": "intervalDifferenceUnix(0, 2, 0.5, 1)",
+        "result": "[] (fractional epoch)"
+      },
+      {
+        "call": "intervalDifferenceUnix(5, 10, 0, 2)",
+        "result": "[{ start: 5, end: 10 }] (B entirely before A)"
       }
     ]
   },
@@ -10574,6 +11030,10 @@
       {
         "call": "intervalSplitAtUnix(NaN, 100000, [50000])",
         "result": "[]"
+      },
+      {
+        "call": "intervalSplitAtUnix(0, 100000, [50000.5])",
+        "result": "[] (fractional point)"
       }
     ]
   },
@@ -10654,6 +11114,10 @@
       {
         "call": "intervalXorUnix(NaN, 1500000000, 1400000000, 1700000000)",
         "result": "[]"
+      },
+      {
+        "call": "intervalXorUnix(0, 1, 0.5, 2)",
+        "result": "[] (fractional epoch)"
       }
     ]
   },
@@ -10673,7 +11137,7 @@
       },
       {
         "call": "intervalsOverlapUnix(0, 1000000, 1000000, 2000000)",
-        "result": "false (adjacent)"
+        "result": "true (touching)"
       },
       {
         "call": "intervalsOverlapUnix(0, 1000000, 1000001, 2000000)",
@@ -10708,28 +11172,6 @@
         "result": "[]"
       }
     ]
-  },
-  {
-    "url": "/reference/unix/interval/ResolvedUnixInterval",
-    "name": "ResolvedUnixInterval",
-    "namespace": "unix",
-    "module": "interval",
-    "kind": "type",
-    "signature": "",
-    "description": "The ResolvedUnixInterval type.",
-    "sourcePath": "packages/gmt/src/unix/interval/resolveUnixIntervalPair.ts",
-    "examples": []
-  },
-  {
-    "url": "/reference/unix/interval/resolveUnixIntervalPair",
-    "name": "resolveUnixIntervalPair",
-    "namespace": "unix",
-    "module": "interval",
-    "kind": "function",
-    "signature": "resolveUnixIntervalPair(start: string | number, end: string | number, unit: string): ResolvedUnixInterval",
-    "description": "",
-    "sourcePath": "packages/gmt/src/unix/interval/resolveUnixIntervalPair.ts",
-    "examples": []
   },
   {
     "url": "/reference/unix/interval/splitIntervalByUnitUnix",
@@ -10770,7 +11212,7 @@
     "module": "interval",
     "kind": "function",
     "signature": "isValidUnixInterval(start: string | number, end: string | number): boolean",
-    "description": "Return true if `start` and `end` form a valid Unix interval — both finite numbers",
+    "description": "Return true if `start` and `end` form a valid Unix interval — both safe-integer epochs",
     "sourcePath": "packages/gmt/src/unix/interval/validate/isValidUnixInterval.ts",
     "examples": [
       {
@@ -10782,12 +11224,20 @@
         "result": "true"
       },
       {
-        "call": "isValidUnixInterval(1700000000, 0)",
-        "result": "false"
-      },
-      {
         "call": "isValidUnixInterval(\"0\", \"1700000000\")",
         "result": "true"
+      },
+      {
+        "call": "isValidUnixInterval(1700000000, 0)",
+        "result": "false (reversed)"
+      },
+      {
+        "call": "isValidUnixInterval(0, 1.5)",
+        "result": "false (fractional)"
+      },
+      {
+        "call": "isValidUnixInterval(\"\", 1000)",
+        "result": "false (empty string is not epoch 0)"
       }
     ]
   },
@@ -10892,46 +11342,6 @@
       {
         "call": "parseMicrosecondFromUnix(-86400, { epochUnit: \"seconds\" })",
         "result": "\"000\""
-      }
-    ]
-  },
-  {
-    "url": "/reference/unix/parse/parseMillisecondFromUnix",
-    "name": "parseMillisecondFromUnix",
-    "namespace": "unix",
-    "module": "parse",
-    "kind": "function",
-    "signature": "parseMillisecondFromUnix(value: string | number, options?: { epochUnit?: UnixUnit; timeZone?: string; }): string",
-    "description": "Return the millisecond (0-999) from a unix epoch value.",
-    "sourcePath": "packages/gmt/src/unix/parse/parseMillisecondFromUnix.ts",
-    "examples": [
-      {
-        "call": "parseMillisecondFromUnix(1700000000000)",
-        "result": "\"000\""
-      },
-      {
-        "call": "parseMillisecondFromUnix(-86400, { epochUnit: \"seconds\" })",
-        "result": "\"000\""
-      }
-    ]
-  },
-  {
-    "url": "/reference/unix/parse/parseMinuteFromUnix",
-    "name": "parseMinuteFromUnix",
-    "namespace": "unix",
-    "module": "parse",
-    "kind": "function",
-    "signature": "parseMinuteFromUnix(value: string | number, options?: { epochUnit?: UnixUnit; timeZone?: string; }): string",
-    "description": "Return the minute (0-59) from a unix epoch value.",
-    "sourcePath": "packages/gmt/src/unix/parse/parseMinuteFromUnix.ts",
-    "examples": [
-      {
-        "call": "parseMinuteFromUnix(1700000000000)",
-        "result": "\"26\""
-      },
-      {
-        "call": "parseMinuteFromUnix(-86400, { epochUnit: \"seconds\" })",
-        "result": "\"00\""
       }
     ]
   },
@@ -11145,7 +11555,7 @@
     "module": "validate",
     "kind": "function",
     "signature": "isValidUnixRange({ value1, value2, options, }: { value1: string | number; value2: string | number; options?: { allowEqual?: boolean; }; }): boolean",
-    "description": "Return true if `value1` and `value2` form a valid Unix range — both finite numbers",
+    "description": "Return true if `value1` and `value2` form a valid Unix range — both safe-integer epochs",
     "sourcePath": "packages/gmt/src/unix/validate/isValidUnixRange.ts",
     "examples": [
       {
@@ -11153,12 +11563,20 @@
         "result": "true"
       },
       {
-        "call": "isValidUnixRange({ value1: 1700000000, value2: 0 })",
-        "result": "false"
-      },
-      {
         "call": "isValidUnixRange({ value1: 1000, value2: 1000, options: { allowEqual: true } })",
         "result": "true"
+      },
+      {
+        "call": "isValidUnixRange({ value1: 1700000000, value2: 0 })",
+        "result": "false (reversed)"
+      },
+      {
+        "call": "isValidUnixRange({ value1: 0, value2: 1.5 })",
+        "result": "false (fractional)"
+      },
+      {
+        "call": "isValidUnixRange({ value1: \"\", value2: 1000 })",
+        "result": "false (empty string is not epoch 0)"
       }
     ]
   },
@@ -11566,17 +11984,6 @@
     ]
   },
   {
-    "url": "/reference/utc/calculate/startOrEndOfUtc",
-    "name": "startOrEndOfUtc",
-    "namespace": "utc",
-    "module": "calculate",
-    "kind": "function",
-    "signature": "startOrEndOfUtc(value: string, unit: DateUnit | TimeUnit, options: { weekStartsOn?: \"monday\" | \"sunday\"; fractionalSecondDigits?: FractionalDigit; }, isEnd: boolean): string",
-    "description": "Internal shared implementation for `startOfUtc` / `endOfUtc`.",
-    "sourcePath": "packages/gmt/src/utc/calculate/startOrEndOfUtc.ts",
-    "examples": []
-  },
-  {
     "url": "/reference/utc/calculate/subtractUtc",
     "name": "subtractUtc",
     "namespace": "utc",
@@ -11878,7 +12285,7 @@
     "module": "format",
     "kind": "function",
     "signature": "formatHttp(value: string): string",
-    "description": "Format a UTC ISO 8601 datetime string as an RFC 7231 IMF-fixdate — the",
+    "description": "Format a UTC ISO 8601 datetime string as an RFC 9110 IMF-fixdate — the",
     "sourcePath": "packages/gmt/src/utc/format/formatHttp.ts",
     "examples": [
       {
@@ -12130,17 +12537,6 @@
     ]
   },
   {
-    "url": "/reference/utc/get/isValidUtcNowUnit",
-    "name": "isValidUtcNowUnit",
-    "namespace": "utc",
-    "module": "get",
-    "kind": "function",
-    "signature": "isValidUtcNowUnit(unit: string): unit is UtcNowUnit",
-    "description": "",
-    "sourcePath": "packages/gmt/src/utc/get/getUtcNowUnit.ts",
-    "examples": []
-  },
-  {
     "url": "/reference/utc/get/getUtcNowUnit",
     "name": "getUtcNowUnit",
     "namespace": "utc",
@@ -12211,7 +12607,7 @@
     "module": "interval",
     "kind": "function",
     "signature": "intervalAbutsUtc(aStart: string, aEnd: string, bStart: string, bEnd: string): boolean",
-    "description": "Return true when two UTC intervals are exactly adjacent — one's end equals the other's",
+    "description": "Return true when two UTC intervals are exactly adjacent — one's end is one nanosecond",
     "sourcePath": "packages/gmt/src/utc/interval/intervalAbutsUtc.ts",
     "examples": [
       {
@@ -12219,7 +12615,7 @@
         "result": "true"
       },
       {
-        "call": "intervalAbutsUtc(\"2024-06-30T12:00:00Z\", \"2024-12-31T17:00:00Z\", \"2024-01-01T09:00:00Z\", \"2024-06-30T12:00:00.000000001Z\")",
+        "call": "intervalAbutsUtc(\"2024-06-30T12:00:00.000000001Z\", \"2024-12-31T17:00:00Z\", \"2024-01-01T09:00:00Z\", \"2024-06-30T12:00:00Z\")",
         "result": "true"
       },
       {
@@ -12312,7 +12708,7 @@
     "examples": [
       {
         "call": "intervalDifferenceUtc(\"2024-01-01T09:00:00Z\", \"2024-12-31T17:00:00Z\", \"2024-06-01T12:00:00Z\", \"2024-07-01T13:00:00Z\")",
-        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-05-31T17:00:00Z\" }, { start: \"2024-07-01T13:00:01Z\", end: \"2024-12-31T17:00:00Z\" }]"
+        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-06-01T11:59:59.999999999Z\" }, { start: \"2024-07-01T13:00:00.000000001Z\", end: \"2024-12-31T17:00:00Z\" }]"
       },
       {
         "call": "intervalDifferenceUtc(\"2024-01-01T09:00:00Z\", \"2024-12-31T17:00:00Z\", \"2024-01-01T09:00:00Z\", \"2024-12-31T17:00:00Z\")",
@@ -12584,11 +12980,11 @@
     "examples": [
       {
         "call": "intervalXorUtc(\"2024-01-01T09:00:00Z\", \"2024-06-30T12:00:00Z\", \"2024-04-01T11:00:00Z\", \"2024-12-31T17:00:00Z\")",
-        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-03-31T17:00:00Z\" }, { start: \"2024-06-30T12:00:01Z\", end: \"2024-12-31T17:00:00Z\" }]"
+        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-04-01T10:59:59.999999999Z\" }, { start: \"2024-06-30T12:00:00.000000001Z\", end: \"2024-12-31T17:00:00Z\" }]"
       },
       {
         "call": "intervalXorUtc(\"2024-01-01T09:00:00Z\", \"2024-12-31T17:00:00Z\", \"2024-04-01T11:00:00Z\", \"2024-06-30T12:00:00Z\")",
-        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-03-31T17:00:00Z\" }, { start: \"2024-06-30T12:00:01Z\", end: \"2024-12-31T17:00:00Z\" }]"
+        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-04-01T10:59:59.999999999Z\" }, { start: \"2024-06-30T12:00:00.000000001Z\", end: \"2024-12-31T17:00:00Z\" }]"
       },
       {
         "call": "intervalXorUtc(\"2024-01-01T09:00:00Z\", \"2024-12-31T17:00:00Z\", \"2024-01-01T09:00:00Z\", \"2024-12-31T17:00:00Z\")",
@@ -12616,7 +13012,11 @@
       },
       {
         "call": "intervalsOverlapUtc(\"2024-01-01T00:00:00Z\", \"2024-06-30T23:59:59Z\", \"2024-07-01T00:00:00Z\", \"2024-12-31T23:59:59Z\")",
-        "result": "false (adjacent)"
+        "result": "false (disjoint, one-second gap)"
+      },
+      {
+        "call": "intervalsOverlapUtc(\"2024-01-01T00:00:00Z\", \"2024-06-30T23:59:59Z\", \"2024-06-30T23:59:59Z\", \"2024-12-31T23:59:59Z\")",
+        "result": "true (touching)"
       },
       {
         "call": "intervalsOverlapUtc(\"2024-01-01T00:00:00Z\", \"2024-06-30T23:59:59Z\", \"2024-07-02T00:00:00Z\", \"2024-12-31T23:59:59Z\")",
@@ -12799,7 +13199,7 @@
     "module": "parse",
     "kind": "function",
     "signature": "parseHttp(value: string): string",
-    "description": "Parse an RFC 7231 IMF-fixdate string — the fixed grammar HTTP headers like",
+    "description": "Parse an RFC 9110 IMF-fixdate string — the fixed grammar HTTP headers like",
     "sourcePath": "packages/gmt/src/utc/parse/parseHttp.ts",
     "examples": [
       {
@@ -13794,17 +14194,6 @@
         "result": "\"2024-11-03T01:00:00-05:00[America/New_York]\" (the deprecated option is ignored)"
       }
     ]
-  },
-  {
-    "url": "/reference/zoned/calculate/startOrEndOfZoned",
-    "name": "startOrEndOfZoned",
-    "namespace": "zoned",
-    "module": "calculate",
-    "kind": "function",
-    "signature": "startOrEndOfZoned(value: string, unit: DateTimeUnit, options: { weekStartsOn?: \"monday\" | \"sunday\"; fractionalSecondDigits?: FractionalDigit; }, isEnd: boolean): string",
-    "description": "Internal shared implementation for `startOfZoned` / `endOfZoned`.",
-    "sourcePath": "packages/gmt/src/zoned/calculate/startOrEndOfZoned.ts",
-    "examples": []
   },
   {
     "url": "/reference/zoned/calculate/subtractZoned",
@@ -15045,17 +15434,6 @@
     "examples": []
   },
   {
-    "url": "/reference/zoned/get/isValidZonedNowUnit",
-    "name": "isValidZonedNowUnit",
-    "namespace": "zoned",
-    "module": "get",
-    "kind": "function",
-    "signature": "isValidZonedNowUnit(unit: string): unit is ZonedNowUnit",
-    "description": "",
-    "sourcePath": "packages/gmt/src/zoned/get/getZonedNowUnit.ts",
-    "examples": []
-  },
-  {
     "url": "/reference/zoned/get/getZonedNowUnit",
     "name": "getZonedNowUnit",
     "namespace": "zoned",
@@ -15162,7 +15540,7 @@
     "module": "interval",
     "kind": "function",
     "signature": "intervalAbutsZoned(aStart: string, aEnd: string, bStart: string, bEnd: string): boolean",
-    "description": "Return true when two zoned intervals are exactly adjacent — one's end equals the other's",
+    "description": "Return true when two zoned intervals are exactly adjacent — one's end is one nanosecond",
     "sourcePath": "packages/gmt/src/zoned/interval/intervalAbutsZoned.ts",
     "examples": [
       {
@@ -15170,7 +15548,7 @@
         "result": "true"
       },
       {
-        "call": "intervalAbutsZoned(\"2024-06-30T12:00:00+00:00[UTC]\", \"2024-12-31T17:00:00+00:00[UTC]\", \"2024-01-01T09:00:00+00:00[UTC]\", \"2024-06-30T12:00:00.000000001+00:00[UTC]\")",
+        "call": "intervalAbutsZoned(\"2024-06-30T12:00:00.000000001+00:00[UTC]\", \"2024-12-31T17:00:00+00:00[UTC]\", \"2024-01-01T09:00:00+00:00[UTC]\", \"2024-06-30T12:00:00+00:00[UTC]\")",
         "result": "true"
       },
       {
@@ -15567,7 +15945,11 @@
       },
       {
         "call": "intervalsOverlapZoned(\"2024-01-01T00:00:00+00:00[UTC]\", \"2024-06-30T23:59:59+00:00[UTC]\", \"2024-07-01T00:00:00+00:00[UTC]\", \"2024-12-31T23:59:59+00:00[UTC]\")",
-        "result": "false (adjacent)"
+        "result": "false (disjoint, one-second gap)"
+      },
+      {
+        "call": "intervalsOverlapZoned(\"2024-01-01T00:00:00+00:00[UTC]\", \"2024-06-30T23:59:59+00:00[UTC]\", \"2024-06-30T23:59:59+00:00[UTC]\", \"2024-12-31T23:59:59+00:00[UTC]\")",
+        "result": "true (touching)"
       },
       {
         "call": "intervalsOverlapZoned(\"invalid\", \"2024-06-30T23:59:59+00:00[UTC]\", \"2024-04-01T00:00:00+00:00[UTC]\", \"2024-12-31T23:59:59+00:00[UTC]\")",
@@ -15791,17 +16173,6 @@
     "kind": "type",
     "signature": "",
     "description": "The ZonedOffsetUnit type.",
-    "sourcePath": "packages/gmt/src/zoned/parse/getZonedOffsetAs.ts",
-    "examples": []
-  },
-  {
-    "url": "/reference/zoned/parse/isValidZonedOffsetUnit",
-    "name": "isValidZonedOffsetUnit",
-    "namespace": "zoned",
-    "module": "parse",
-    "kind": "function",
-    "signature": "isValidZonedOffsetUnit(unit: unknown): unit is ZonedOffsetUnit",
-    "description": "",
     "sourcePath": "packages/gmt/src/zoned/parse/getZonedOffsetAs.ts",
     "examples": []
   },
@@ -16156,17 +16527,6 @@
     "kind": "type",
     "signature": "",
     "description": "The ZonedParseUnit type.",
-    "sourcePath": "packages/gmt/src/zoned/parse/parseUnitFromZoned.ts",
-    "examples": []
-  },
-  {
-    "url": "/reference/zoned/parse/isValidZonedUnit",
-    "name": "isValidZonedUnit",
-    "namespace": "zoned",
-    "module": "parse",
-    "kind": "function",
-    "signature": "isValidZonedUnit(unit: string): unit is ZonedParseUnit",
-    "description": "",
     "sourcePath": "packages/gmt/src/zoned/parse/parseUnitFromZoned.ts",
     "examples": []
   },

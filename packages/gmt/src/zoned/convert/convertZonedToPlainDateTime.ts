@@ -1,5 +1,5 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate/isValidZonedDateTime";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Convert a zoned ISO 8601 datetime string to a plain datetime string.
@@ -19,7 +19,7 @@ export function convertZonedToPlainDateTime(value: string): string {
   }
 
   try {
-    return Temporal.ZonedDateTime.from(value).toPlainDateTime().toString();
+    return zonedDateTimeFrom(value).toPlainDateTime().toString();
   } catch {
     return "";
   }

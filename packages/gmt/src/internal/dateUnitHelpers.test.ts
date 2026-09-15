@@ -1,5 +1,10 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { addDateUnit, getStartOfDateUnit } from "./dateUnitHelpers";
+import {
+  addDateUnit,
+  getDaysIntoDateUnit,
+  getStartOfDateUnit,
+  getStartOfNextDateUnit,
+} from "./dateUnitHelpers";
 
 describe("getStartOfDateUnit", () => {
   it.each`
@@ -68,4 +73,49 @@ describe("addDateUnit", () => {
     const base = Temporal.PlainDate.from("2024-03-13");
     expect(addDateUnit(base, "week", 52).toString()).toBe("2025-03-12");
   });
+});
+
+// The start of the unit after `source`'s, reached without materialising `source`'s own start.
+describe("getStartOfNextDateUnit", () => {
+  it.each`
+    source             | unit       | expected           | description
+    ${"2024-01-31"}    | ${"month"} | ${"2024-02-01"}    | ${"a month-end steps to the next month, not past it"}
+    ${"2024-12-31"}    | ${"year"}  | ${"2025-01-01"}    | ${"the last day of a year"}
+    ${"2024-03-17"}    | ${"week"}  | ${"2024-03-18"}    | ${"a Sunday's next Monday"}
+    ${"2024-03-11"}    | ${"week"}  | ${"2024-03-18"}    | ${"a Monday's next Monday"}
+    ${"2024-03-13"}    | ${"day"}   | ${"2024-03-14"}    | ${"the next day"}
+    ${"-271821-04-19"} | ${"month"} | ${"-271821-05-01"} | ${"the first PlainDate, whose own month began before the range"}
+    ${"-271821-04-19"} | ${"year"}  | ${"-271820-01-01"} | ${"the first PlainDate, whose own year began before the range"}
+  `(
+    "returns $expected for $source by $unit ($description)",
+    ({ source, unit, expected }) => {
+      const result = getStartOfNextDateUnit(
+        Temporal.PlainDate.from(source),
+        unit,
+      );
+      expect(result.toString()).toBe(expected);
+    },
+  );
+});
+
+// Whole days from the unit's start to `source`, read from the calendar fields: 2024-03-13 is the
+// 73rd day of 2024 and a Wednesday (day 3 of a Monday-first week).
+describe("getDaysIntoDateUnit", () => {
+  it.each`
+    source             | unit       | expected
+    ${"2024-03-13"}    | ${"month"} | ${12}
+    ${"2024-03-13"}    | ${"year"}  | ${72}
+    ${"2024-03-13"}    | ${"week"}  | ${2}
+    ${"2024-03-13"}    | ${"day"}   | ${0}
+    ${"-271821-04-19"} | ${"month"} | ${18}
+    ${"-271821-04-19"} | ${"year"}  | ${108}
+    ${"-271821-04-19"} | ${"week"}  | ${0}
+  `(
+    "returns $expected days into the $unit for $source",
+    ({ source, unit, expected }) => {
+      expect(getDaysIntoDateUnit(Temporal.PlainDate.from(source), unit)).toBe(
+        expected,
+      );
+    },
+  );
 });

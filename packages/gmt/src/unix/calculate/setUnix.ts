@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { resolveOverflow } from "../../internal";
+import { resolveOverflow, withZonedFields } from "../../internal";
 import type { Disambiguation, Offset, Overflow } from "../../types";
 import { getSystemTimeZone } from "../../zoned/get";
 import { isValidTimeZone } from "../../zoned/validate";
@@ -63,7 +63,7 @@ export function setUnix(
     const result =
       Object.keys(fields).length === 0
         ? zoned
-        : zoned.with(fields, { overflow, disambiguation, offset });
+        : withZonedFields(zoned, fields, { overflow, disambiguation, offset });
 
     return epochUnit === "seconds"
       ? Math.floor(result.epochMilliseconds / 1000)

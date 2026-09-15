@@ -1,5 +1,6 @@
 import { MustTestLocales } from "../test";
 import { getLocaleMinimalDaysInFirstWeek } from "./getLocaleMinimalDaysInFirstWeek";
+import { runtimeWeekInfo } from "../test/runtimeWeekInfo";
 
 // `weekInfo.minimalDays` is itself CLDR/ICU-version-dependent — and on
 // some V8 builds (observed on Node 24 / ICU 78) `weekInfo` doesn't expose
@@ -9,7 +10,7 @@ import { getLocaleMinimalDaysInFirstWeek } from "./getLocaleMinimalDaysInFirstWe
 // than hardcoded per-locale numbers, so the test holds across ICU builds
 // without masking an actual regression in the fallback logic itself.
 function expectedMinimalDays(locale: string): number {
-  const weekInfo = new Intl.Locale(locale).weekInfo;
+  const weekInfo = runtimeWeekInfo(locale);
   return typeof weekInfo.minimalDays === "number" ? weekInfo.minimalDays : 4;
 }
 

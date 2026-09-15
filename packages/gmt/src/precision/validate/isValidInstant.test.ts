@@ -35,6 +35,7 @@ describe("isValidInstant", () => {
     ${"2016-12-31 23:59:60Z"}                   | ${"leap second, space separator"}
     ${"20161231T235960Z"}                       | ${"leap second, basic format"}
     ${"2024-03-10T12:00:00-05:00[u-ca=hebrew]"} | ${"calendar annotation"}
+    ${"2024-03-10T12:00:00Z[!u-ca=hebrew]"}     | ${"critical-flag calendar annotation"}
     ${"invalid"}                                | ${"unparseable"}
     ${""}                                       | ${"empty string"}
   `("returns false for $value ($reason)", ({ value }) => {

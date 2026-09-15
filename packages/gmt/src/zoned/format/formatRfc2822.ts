@@ -1,5 +1,8 @@
-import { Temporal } from "@js-temporal/polyfill";
-import { ENGLISH_MONTH_NAMES, ENGLISH_WEEKDAY_NAMES } from "../../internal";
+import {
+  ENGLISH_MONTH_NAMES,
+  ENGLISH_WEEKDAY_NAMES,
+  zonedDateTimeFrom,
+} from "../../internal";
 import { isValidZonedDateTime } from "../validate";
 
 /**
@@ -27,7 +30,7 @@ export function formatRfc2822(value: string): string {
   if (!isValidZonedDateTime(value)) return "";
 
   try {
-    const zdt = Temporal.ZonedDateTime.from(value);
+    const zdt = zonedDateTimeFrom(value);
 
     const weekday = ENGLISH_WEEKDAY_NAMES[zdt.dayOfWeek - 1];
     const day = String(zdt.day).padStart(2, "0");

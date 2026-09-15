@@ -11,8 +11,11 @@ import { isValidCalendarZonedDateTime } from "../validate";
  *
  * - Uses `Temporal.Instant.compare` for comparison (via `.toInstant()`).
  * - Returns `[]` when intervals are identical or both invalid.
- * - Returns `[{ start, end }]` when the intervals share exactly one boundary — one starts (or
- *   ends) precisely where the other ends (or starts), so only one remainder piece exists.
+ * - Returns `[{ start, end }]` when the intervals share a start or share an end: the shorter one is
+ *   covered entirely, so only the longer one's remainder exists.
+ * - Touching intervals (one ends exactly where the other starts) return two pieces: the shared
+ *   instant belongs to both closed intervals, so it is excluded from each piece, which stops one
+ *   nanosecond short of it.
  * - Returns `[{ start, end }, { start, end }]` when intervals partially overlap, and also when
  *   one interval strictly contains the other (the piece before B and the piece after B).
  * - Returns `[]` if either interval is invalid (`start > end`).

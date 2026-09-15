@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Compare two zoned datetime strings for exact local-field equality.
@@ -23,8 +24,8 @@ export function areZonedEqual(value1: string, value2: string): boolean {
   let zonedDateTime1: Temporal.ZonedDateTime;
   let zonedDateTime2: Temporal.ZonedDateTime;
   try {
-    zonedDateTime1 = Temporal.ZonedDateTime.from(value1);
-    zonedDateTime2 = Temporal.ZonedDateTime.from(value2);
+    zonedDateTime1 = zonedDateTimeFrom(value1);
+    zonedDateTime2 = zonedDateTimeFrom(value2);
   } catch {
     return false;
   }

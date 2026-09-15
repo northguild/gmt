@@ -196,3 +196,15 @@ describe("getHoursInZonedDay", () => {
     ).toBeNull();
   });
 });
+
+describe("getHoursInZonedDay at the range limits", () => {
+  // America/Santiago skips 7 Sep 275760 00:00 (-04:00 -> -03:00 at 04:00Z); 8 Sep starts 03:00Z.
+  it.each`
+    value                                               | expected | reason
+    ${"+275760-09-07T12:00:00-03:00[America/Santiago]"} | ${23}    | ${"midnight skipped six days before the maximum"}
+    ${"+275760-09-06T12:00:00-04:00[America/Santiago]"} | ${24}    | ${"the day before the change"}
+    ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"} | ${null}  | ${"the next Sydney day starts past the maximum"}
+  `("returns $expected for $value ($reason)", ({ value, expected }) => {
+    expect(getHoursInZonedDay(value)).toBe(expected);
+  });
+});

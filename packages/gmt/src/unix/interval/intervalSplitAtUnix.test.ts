@@ -68,4 +68,22 @@ describe("intervalSplitAtUnix", () => {
   `("returns [] for invalid points $points", ({ points }) => {
     expect(intervalSplitAtUnix(0, 100000, points)).toEqual([]);
   });
+
+  // Epoch values are whole units: a fractional point would produce pieces such as [0, 50000.5], and
+  // an unsafe or empty value is not a valid epoch even when it would be filtered out of range.
+  it.each`
+    start  | end        | points         | description
+    ${0}   | ${100000}  | ${[50000.5]}   | ${"a fractional point"}
+    ${0}   | ${100000}  | ${["50000.5"]} | ${"a fractional numeric-string point"}
+    ${0}   | ${100000}  | ${[""]}        | ${"an empty-string point, which Number() reads as 0"}
+    ${0}   | ${100000}  | ${[2 ** 53]}   | ${"an unsafe point"}
+    ${0}   | ${2 ** 53} | ${[50000]}     | ${"an unsafe end"}
+    ${""}  | ${100000}  | ${[50000]}     | ${"an empty-string start"}
+    ${"0"} | ${"1.5"}   | ${[1]}         | ${"a fractional numeric-string end"}
+  `(
+    "returns [] for [$start, $end] split at $points ($description)",
+    ({ start, end, points }) => {
+      expect(intervalSplitAtUnix(start, end, points)).toEqual([]);
+    },
+  );
 });

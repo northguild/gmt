@@ -275,3 +275,71 @@ describe("diffZoned with GMT calendar-annotated values", () => {
     ).toBeNull();
   });
 });
+
+describe("diffZoned at the maximum instant", () => {
+  // diffZoned measures in UTC. From max - 3d5h to max, TC39 NudgeToZonedTime rounds P3DT5H to an
+  // hour by resolving +275760-09-13T19:00 in UTC, 19 hours past the maximum, which
+  // GetPossibleEpochNanoseconds rejects, so Temporal throws whatever zone the operands carry.
+  it.each`
+    value1                                              | value2
+    ${"+275760-09-09T19:00:00+00:00[UTC]"}              | ${"+275760-09-13T00:00:00+00:00[UTC]"}
+    ${"+275760-09-09T19:00:00+00:00[+00:00]"}           | ${"+275760-09-13T00:00:00+00:00[+00:00]"}
+    ${"+275760-09-09T20:00:00+01:00[Europe/London]"}    | ${"+275760-09-13T01:00:00+01:00[Europe/London]"}
+    ${"+275760-09-10T05:00:00+10:00[Australia/Sydney]"} | ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"}
+  `(
+    "returns null rounding days to an hour from $value1 to $value2",
+    ({ value1, value2 }) => {
+      expect(
+        diffZoned(value1, value2, "days", { smallestUnit: "hour" }),
+      ).toBeNull();
+    },
+  );
+
+  it("returns 5 rounding days to an hour from max - 10d5h to max - 5d", () => {
+    expect(
+      diffZoned(
+        "+275760-09-02T19:00:00+00:00[UTC]",
+        "+275760-09-08T00:00:00+00:00[UTC]",
+        "days",
+        { smallestUnit: "hour" },
+      ),
+    ).toBe(5);
+  });
+});
+
+describe("diffZoned at the minimum instant", () => {
+  // diffZoned measures in UTC. From min + 2d5h back to min (-271821-04-20T00:00Z), TC39
+  // DifferenceZonedDateTime gives -P2DT5H and NudgeToZonedTime resolves the end of the day window,
+  // -271821-04-19T05:00 in UTC, 19 hours before the minimum, which GetPossibleEpochNanoseconds
+  // rejects in UTC as in +00:00. Five days later the window stays in range: -P2DT5H, -2 days.
+  it.each`
+    value1                                    | value2                                    | expected
+    ${"-271821-04-22T05:00:00+00:00[UTC]"}    | ${"-271821-04-20T00:00:00+00:00[UTC]"}    | ${null}
+    ${"-271821-04-22T05:00:00+00:00[+00:00]"} | ${"-271821-04-20T00:00:00+00:00[+00:00]"} | ${null}
+    ${"-271821-04-27T05:00:00+00:00[UTC]"}    | ${"-271821-04-25T00:00:00+00:00[UTC]"}    | ${-2}
+  `(
+    "returns $expected rounding days to an hour from $value1 back to $value2",
+    ({ value1, value2, expected }) => {
+      expect(diffZoned(value1, value2, "days", { smallestUnit: "hour" })).toBe(
+        expected,
+      );
+    },
+  );
+});
+
+// CORE-6 S5: whole calendar units in a zoned difference follow NonISODateUntil. Chromium 153 gives
+// P30D for the buddhist month end and P12M29D for the Hebrew Adar I 2 -> Adar 1 span, so neither
+// reaches one whole unit.
+describe("diffZoned in non-ISO calendars (CORE-6)", () => {
+  it.each`
+    start                                                           | end                                                             | unit        | expected | reason
+    ${"2566-08-31T00:00:00+00:00[u-ca=buddhist][UTC]"}              | ${"2566-09-30T00:00:00+00:00[u-ca=buddhist][UTC]"}              | ${"months"} | ${0}     | ${"D6: P30D is no whole month"}
+    ${"2566-08-31T00:00:00-04:00[u-ca=buddhist][America/New_York]"} | ${"2566-09-30T00:00:00-04:00[u-ca=buddhist][America/New_York]"} | ${"months"} | ${0}     | ${"D6 in a named zone"}
+    ${"5784-06-02T00:00:00-05:00[u-ca=hebrew][America/New_York]"}   | ${"5785-06-01T00:00:00-05:00[u-ca=hebrew][America/New_York]"}   | ${"years"}  | ${0}     | ${"D7: P12M29D is no whole year"}
+  `(
+    "returns $expected $unit from $start to $end ($reason)",
+    ({ start, end, unit, expected }) => {
+      expect(diffZoned(start, end, unit)).toBe(expected);
+    },
+  );
+});

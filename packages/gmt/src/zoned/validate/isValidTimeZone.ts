@@ -1,5 +1,5 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { timeZoneLike } from "../../regex";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Validate whether a string is a valid IANA timeZone identifier.
@@ -17,7 +17,7 @@ import { timeZoneLike } from "../../regex";
  */
 export function isValidTimeZone(timeZone: string): boolean {
   try {
-    Temporal.ZonedDateTime.from({
+    zonedDateTimeFrom({
       year: 2020,
       month: 2,
       day: 28,

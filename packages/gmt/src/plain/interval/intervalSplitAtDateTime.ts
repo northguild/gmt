@@ -6,12 +6,14 @@ import { isValidDateTimeInterval } from "./validate";
  * Split a datetime interval at arbitrary `points`, producing consecutive sub-intervals.
  *
  * - `points` need not be sorted — they are sorted internally before splitting.
- * - Points outside `[start, end]` are dropped; they cannot introduce a boundary that isn't
- *   inside the interval.
+ * - Points before `start` or after `end` are dropped; they cannot introduce a boundary that
+ *   isn't inside the interval.
  * - Points exactly on `start` or `end` are dropped too — they would only produce a
- *   zero-length sub-interval at the edge, which `divideEqually`'s zero-length case is the
- *   deliberate way to express, not `splitAt`'s.
+ *   zero-length sub-interval at the edge; `intervalDivideEquallyDateTime`'s zero-length case is the
+ *   deliberate way to express one, not `intervalSplitAtDateTime`.
  * - Duplicate points collapse to a single boundary.
+ * - Returns consecutive `{ start, end }` records, each record's `end` equal to the next
+ *   record's `start`.
  * - Returns `[{ start, end }]` (the whole interval, unsplit) when no valid in-range point remains.
  * - Returns `[]` when `points` is not an array, when any element is not a valid ISO
  *   PlainDateTime string, or on invalid input (unparseable start/end, `start > end`).

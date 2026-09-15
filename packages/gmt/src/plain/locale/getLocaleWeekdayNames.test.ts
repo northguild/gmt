@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { MustTestLocales } from "../../test";
 import { getLocaleWeekdayNames } from "./getLocaleWeekdayNames";
+import { runtimeWeekInfo } from "../../test/runtimeWeekInfo";
 
 describe("getLocaleWeekdayNames", () => {
   it.each`
@@ -56,7 +57,7 @@ describe("getLocaleWeekdayNames", () => {
     ];
     const mondayFirstNarrow = ["M", "Þ", "M", "F", "F", "L", "S"];
 
-    const firstDay = new Intl.Locale(MustTestLocales.isIS).weekInfo.firstDay;
+    const firstDay = runtimeWeekInfo(MustTestLocales.isIS).firstDay;
     const rotate = <T>(names: T[]) =>
       firstDay === 1 ? names : [names[6], ...names.slice(0, 6)];
 

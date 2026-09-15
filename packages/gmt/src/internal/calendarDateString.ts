@@ -9,6 +9,21 @@ import {
   dateFromEthiopicFamilyFields,
   isEthiopicFamilyCalendar,
 } from "./ethiopicFamilyCalendar";
+import { formatCalendarYear } from "./formatCalendarYear";
+import { calendarDateFromFields, calendarFieldsOf } from "./temporalCompat";
+
+/**
+ * GMT's `;era=japanese` token, which GMT emitted for pre-Meiji dates before CORE-6, is a
+ * deprecated input alias of the Intl era/monthCode proposal's `ce` (the era GMT now emits for
+ * those dates). Accepted until the next major version.
+ */
+const DEPRECATED_JAPANESE_ERA_ALIAS = "japanese";
+
+function temporalEraOf(calendarId: string, era: string): string {
+  return calendarId === "japanese" && era === DEPRECATED_JAPANESE_ERA_ALIAS
+    ? "ce"
+    : era;
+}
 
 /**
  * Parse a plain ISO PlainDate string or a GMT calendar-annotated PlainDate string
@@ -63,12 +78,14 @@ export function parseCalendarDateValue(value: string): Temporal.PlainDate {
   // `eraYear`, not a proleptic year — Temporal needs `era`+`eraYear` together to resolve
   // it back to the correct date.
   const fields = era
-    ? { era, eraYear: Number(year), month: Number(month), day: Number(day) }
+    ? {
+        era: temporalEraOf(calendarId, era),
+        eraYear: Number(year),
+        month: Number(month),
+        day: Number(day),
+      }
     : { year: Number(year), month: Number(month), day: Number(day) };
-  return Temporal.PlainDate.from(
-    { ...fields, calendar: temporalCalendarId },
-    { overflow: "reject" },
-  );
+  return calendarDateFromFields(temporalCalendarId, fields, "reject");
 }
 
 /**
@@ -113,10 +130,13 @@ export function calendarDateParts(
 
   const calendarId = calendarSystemIdFromTemporal(date.calendarId);
   const isEraBased = calendarId === "japanese";
-  const year = String(isEraBased ? date.eraYear : date.year).padStart(4, "0");
-  const month = String(date.month).padStart(2, "0");
-  const day = String(date.day).padStart(2, "0");
-  const eraSuffix = isEraBased ? `;era=${date.era}` : "";
+  const fields = calendarFieldsOf(date, date.calendarId);
+  const year = formatCalendarYear(
+    isEraBased ? (fields.eraYear ?? fields.year) : fields.year,
+  );
+  const month = String(fields.month).padStart(2, "0");
+  const day = String(fields.day).padStart(2, "0");
+  const eraSuffix = isEraBased ? `;era=${fields.era}` : "";
   return {
     date: `${year}-${month}-${day}`,
     annotation: `[u-ca=${calendarId}${eraSuffix}]`,

@@ -1,6 +1,5 @@
-import { Temporal } from "@js-temporal/polyfill";
-
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Return the candidate zoned datetime nearest to `target` by temporal distance.
@@ -28,7 +27,7 @@ export function closestZonedTo(
   }
 
   try {
-    const t = Temporal.ZonedDateTime.from(target);
+    const t = zonedDateTimeFrom(target);
     const validCandidates = candidates.filter(isValidZonedDateTime);
 
     if (!validCandidates.length) {
@@ -37,7 +36,7 @@ export function closestZonedTo(
 
     const parsed = validCandidates.map((c) => ({
       str: c,
-      date: Temporal.ZonedDateTime.from(c),
+      date: zonedDateTimeFrom(c),
     }));
 
     const closest = parsed.reduce((best, candidate) => {

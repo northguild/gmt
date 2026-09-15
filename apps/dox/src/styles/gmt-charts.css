@@ -96,40 +96,50 @@
   overflow: hidden;
 }
 
-/* ---- Stacked-bar legend ---- */
+/* ---- View toggle ----
+ * Switches a chart between views that share one scale problem, e.g. /why-gmt's
+ * "CI executions" (GMT's matrix dwarfs every other bar) and "One run". Plain
+ * toggle buttons (aria-pressed), so Tab and Enter/Space work with no script of
+ * their own. The pressed state keeps body-colour text for contrast in both
+ * themes. */
 
-.gmt-chart-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--gmt-space-2) var(--gmt-space-4);
+.gmt-chart-toggle {
+  display: inline-flex;
   margin: 0 0 var(--gmt-space-3) 0;
-  padding: 0;
-  list-style: none;
-  font-family: var(--gmt-font-mono);
-  font-size: 0.75rem;
-  color: var(--gmt-ice-dim);
-}
-
-.gmt-chart-legend__item {
-  display: flex;
-  align-items: center;
-  gap: var(--gmt-space-2);
-  margin: 0;
-}
-
-.gmt-chart-legend__swatch {
-  width: 0.9rem;
-  height: 0.6rem;
   border: 1px solid var(--gmt-border-strong);
 }
 
-/* Same opacities as the bar gradients' top stops */
-.gmt-chart-legend__swatch--suite {
-  background: color-mix(in srgb, var(--gmt-ice) 32%, transparent);
+.gmt-chart-toggle__button {
+  font-family: var(--gmt-font-mono);
+  font-size: 0.75rem;
+  padding: var(--gmt-space-1, 0.25rem) var(--gmt-space-3);
+  background: transparent;
+  color: var(--gmt-ice-dim);
+  border: 0;
+  cursor: pointer;
 }
 
-.gmt-chart-legend__swatch--matrix {
-  background: color-mix(in srgb, var(--gmt-ice) 14%, transparent);
+.gmt-chart-toggle__button + .gmt-chart-toggle__button {
+  border-inline-start: 1px solid var(--gmt-border-strong);
+}
+
+.gmt-chart-toggle__button[aria-pressed="true"] {
+  color: var(--gmt-ice);
+  background: color-mix(in srgb, var(--gmt-cyan) 18%, transparent);
+  box-shadow: inset 0 -2px 0 var(--gmt-cyan);
+}
+
+.gmt-chart-toggle__button:focus-visible {
+  outline: 2px solid var(--gmt-cyan);
+  outline-offset: 2px;
+}
+
+@media (forced-colors: active) {
+  .gmt-chart-toggle__button[aria-pressed="true"] {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
 }
 
 /* ---- Hover tooltip ----

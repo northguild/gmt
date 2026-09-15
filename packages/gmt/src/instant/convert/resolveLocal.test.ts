@@ -285,3 +285,17 @@ describe("resolveLocal", () => {
     expect(resolveLocal("2024-11-03T01:30:00", "America/New_York")).toBe("");
   });
 });
+
+describe("resolveLocal at the maximum instant", () => {
+  it.each`
+    localDateTime               | timeZone                | expected
+    ${"+275760-09-13T10:00:00"} | ${"Australia/Sydney"}   | ${"+275760-09-13T00:00:00Z"}
+    ${"+275760-09-13T14:00:00"} | ${"Pacific/Kiritimati"} | ${"+275760-09-13T00:00:00Z"}
+    ${"+275760-09-13T10:00:01"} | ${"Australia/Sydney"}   | ${""}
+  `(
+    "resolves $localDateTime in $timeZone to $expected",
+    ({ localDateTime, timeZone, expected }) => {
+      expect(resolveLocal(localDateTime, timeZone)).toBe(expected);
+    },
+  );
+});

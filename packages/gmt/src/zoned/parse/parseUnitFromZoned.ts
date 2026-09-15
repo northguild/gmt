@@ -1,6 +1,6 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { getWeekNumber } from "../../plain/calculate/getWeekNumber";
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Units supported by `parseUnitFromZoned` when extracting a value from a zoned
@@ -81,7 +81,7 @@ export function parseUnitFromZoned(
   const weekStartsOn = optionsArg?.weekStartsOn ?? "monday";
 
   try {
-    const zonedDateTime = Temporal.ZonedDateTime.from(value);
+    const zonedDateTime = zonedDateTimeFrom(value);
 
     switch (unit) {
       case "year":

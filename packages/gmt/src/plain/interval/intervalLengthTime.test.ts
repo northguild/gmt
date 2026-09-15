@@ -10,7 +10,7 @@ describe("intervalLengthTime", () => {
     ${"12:00:00.500"} | ${"12:00:01.750"} | ${"second"}      | ${1.25}
     ${"12:00:00"}     | ${"12:00:00.001"} | ${"millisecond"} | ${1}
   `(
-    "returns $expected $unit for $start..$end",
+    "returns $expected $unit for $start to $end",
     ({ start, end, unit, expected }) => {
       expect(intervalLengthTime(start, end, unit)).toBeCloseTo(expected, 10);
     },

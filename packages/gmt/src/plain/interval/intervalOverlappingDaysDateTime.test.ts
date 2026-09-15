@@ -8,7 +8,7 @@ describe("intervalOverlappingDaysDateTime", () => {
     ${"2024-01-01T00:00:00"} | ${"2024-01-05T00:00:00"} | ${"2024-01-03T12:00:00"} | ${"2024-01-09T00:00:00"} | ${3}
     ${"2014-01-10T00:00:00"} | ${"2014-01-20T00:00:00"} | ${"2014-01-17T00:00:00"} | ${"2014-01-21T00:00:00"} | ${4}
   `(
-    "returns $expected shared dates for $aStart..$aEnd × $bStart..$bEnd",
+    "returns $expected shared dates for $aStart to $aEnd × $bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalOverlappingDaysDateTime(aStart, aEnd, bStart, bEnd)).toBe(
         expected,
@@ -21,7 +21,7 @@ describe("intervalOverlappingDaysDateTime", () => {
     ${"2024-01-01T12:00:00"} | ${"2024-01-01T12:00:00"} | ${"2024-01-01T12:00:00"} | ${"2024-01-01T12:00:00"} | ${1}
     ${"2024-01-01T00:00:00"} | ${"2024-01-02T00:00:00"} | ${"2024-01-02T00:00:00"} | ${"2024-01-03T00:00:00"} | ${1}
   `(
-    "returns $expected for adjacent/identical $aStart..$aEnd × $bStart..$bEnd",
+    "returns $expected for adjacent/identical $aStart to $aEnd × $bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalOverlappingDaysDateTime(aStart, aEnd, bStart, bEnd)).toBe(
         expected,
@@ -33,7 +33,7 @@ describe("intervalOverlappingDaysDateTime", () => {
     aStart                   | aEnd                     | bStart                       | bEnd
     ${"2024-01-01T00:00:00"} | ${"2024-01-02T00:00:00"} | ${"2024-01-02T00:00:00.001"} | ${"2024-01-03T00:00:00"}
   `(
-    "returns 0 for disjoint $aStart..$aEnd × $bStart..$bEnd",
+    "returns 0 for disjoint $aStart to $aEnd × $bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(intervalOverlappingDaysDateTime(aStart, aEnd, bStart, bEnd)).toBe(
         0,
@@ -46,7 +46,7 @@ describe("intervalOverlappingDaysDateTime", () => {
     ${"2024-06-30T00:00:00"} | ${"2024-01-01T00:00:00"} | ${"2024-04-01T00:00:00"} | ${"2024-12-31T23:59:59"}
     ${"2024-01-01T00:00:00"} | ${"2024-06-30T00:00:00"} | ${"2024-06-15T00:00:00"} | ${"2024-06-10T00:00:00"}
   `(
-    "returns null for inverted interval $aStart..$aEnd × $bStart..$bEnd",
+    "returns null for inverted interval $aStart to $aEnd × $bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(
         intervalOverlappingDaysDateTime(aStart, aEnd, bStart, bEnd),

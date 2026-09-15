@@ -7,7 +7,7 @@ describe("intervalDivideEquallyUnix", () => {
     ${0}   | ${90000000} | ${1} | ${[{ start: 0, end: 90000000 }]}
     ${500} | ${500}      | ${2} | ${[{ start: 500, end: 500 }, { start: 500, end: 500 }]}
   `(
-    "splits $start..$end into $n parts as $expected",
+    "splits $start to $end into $n parts as $expected",
     ({ start, end, n, expected }) => {
       expect(intervalDivideEquallyUnix(start, end, n)).toEqual(expected);
     },
@@ -56,4 +56,17 @@ describe("intervalDivideEquallyUnix", () => {
   `("returns [] for invalid $start, $end", ({ start, end }) => {
     expect(intervalDivideEquallyUnix(start, end, 3)).toEqual([]);
   });
+
+  // Epoch values are safe whole units; an empty string is not a numeric string.
+  it.each`
+    start  | end         | description
+    ${0}   | ${2 ** 53}  | ${"an unsafe end"}
+    ${""}  | ${90000000} | ${"an empty-string start, which Number() reads as 0"}
+    ${"0"} | ${"1.5"}    | ${"a fractional numeric-string end"}
+  `(
+    "returns [] for [$start, $end] divided into 3 ($description)",
+    ({ start, end }) => {
+      expect(intervalDivideEquallyUnix(start, end, 3)).toEqual([]);
+    },
+  );
 });

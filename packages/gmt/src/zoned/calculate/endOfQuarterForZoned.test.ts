@@ -107,3 +107,14 @@ describe("endOfQuarterForZoned at a zone transition with ignored explicit option
     },
   );
 });
+
+// -271821-04-20T00:00:00Z is the first representable instant. Its quarter began on 1 April, before
+// the range, but the quarter's end (30 June) is representable and must be returned.
+describe("endOfQuarterForZoned at the first representable instant", () => {
+  it.each`
+    value                                  | expected
+    ${"-271821-04-20T12:00:00+00:00[UTC]"} | ${"-271821-06-30T23:59:59+00:00[UTC]"}
+  `("returns $expected as the quarter end of $value", ({ value, expected }) => {
+    expect(endOfQuarterForZoned(value)).toBe(expected);
+  });
+});

@@ -1,8 +1,10 @@
+import { Temporal } from "@js-temporal/polyfill";
 import {
   calendarSystemOfDateValue,
   formatDateInCalendar,
   isValidAmount,
   parseCalendarDateValue,
+  plainDateAdd,
   resolveOverflow,
 } from "../../internal";
 import type { DateDurationUnit, Overflow } from "../../types";
@@ -50,9 +52,11 @@ export function subtractDate(
       return "";
     }
     const date = parseCalendarDateValue(value);
-    const result = date.subtract(units, {
-      overflow: resolveOverflow(options?.overflow),
-    });
+    const result = plainDateAdd(
+      date,
+      Temporal.Duration.from(units).negated(),
+      resolveOverflow(options?.overflow),
+    );
     return formatDateInCalendar(result, calendar);
   } catch {
     return "";

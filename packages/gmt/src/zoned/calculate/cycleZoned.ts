@@ -1,8 +1,8 @@
-import { Temporal } from "@js-temporal/polyfill";
 import {
   cycleFieldValue,
   dateCycleFieldBounds,
   timeCycleFieldBounds,
+  zonedDateTimeFrom,
 } from "../../internal";
 import {
   isValidDateCycleField,
@@ -70,7 +70,7 @@ export function cycleZoned(
   }
 
   try {
-    const zoned = Temporal.ZonedDateTime.from(value);
+    const zoned = zonedDateTimeFrom(value);
     const bounds = isValidDateCycleField(field)
       ? dateCycleFieldBounds(field, zoned)
       : timeCycleFieldBounds(field);

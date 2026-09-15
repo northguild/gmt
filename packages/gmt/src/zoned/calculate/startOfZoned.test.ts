@@ -373,3 +373,34 @@ describe("startOfZoned and endOfZoned bucket invariant", () => {
     },
   );
 });
+
+// The last representable instant is +275760-09-13T00:00:00Z. Nothing can be added to it, so the
+// walker must find the zone transition at or before it without stepping past it. Neither local
+// midnight below is a transition day: New York is on EST (-05:00) on 1 January, and Santiago's
+// last transition before the maximum is 7 September, after 1 September (-04:00).
+describe("startOfZoned at the maximum instant in a DST zone", () => {
+  it.each`
+    value                                               | unit       | expected
+    ${"+275760-09-12T20:00:00-04:00[America/New_York]"} | ${"year"}  | ${"+275760-01-01T00:00:00-05:00[America/New_York]"}
+    ${"+275760-09-12T21:00:00-03:00[America/Santiago]"} | ${"month"} | ${"+275760-09-01T00:00:00-04:00[America/Santiago]"}
+  `(
+    "returns $expected as the $unit start of $value",
+    ({ value, unit, expected }) => {
+      expect(startOfZoned(value, unit)).toBe(expected);
+    },
+  );
+});
+
+describe("startOfZoned at the maximum instant", () => {
+  it.each`
+    value                                                 | unit      | expected
+    ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"}   | ${"day"}  | ${"+275760-09-13T00:00:00+10:00[Australia/Sydney]"}
+    ${"+275760-09-13T14:00:00+14:00[Pacific/Kiritimati]"} | ${"hour"} | ${"+275760-09-13T14:00:00+14:00[Pacific/Kiritimati]"}
+    ${"+275760-09-13T09:30:00+10:00[Australia/Sydney]"}   | ${"hour"} | ${"+275760-09-13T09:00:00+10:00[Australia/Sydney]"}
+  `(
+    "returns $expected for the $unit of $value",
+    ({ value, unit, expected }) => {
+      expect(startOfZoned(value, unit)).toBe(expected);
+    },
+  );
+});

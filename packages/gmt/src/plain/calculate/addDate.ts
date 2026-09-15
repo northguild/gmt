@@ -3,6 +3,7 @@ import {
   formatDateInCalendar,
   isValidAmount,
   parseCalendarDateValue,
+  plainDateAdd,
   resolveOverflow,
 } from "../../internal";
 import type { DateDurationUnit, Overflow } from "../../types";
@@ -58,9 +59,11 @@ export function addDate(
       return "";
     }
     const date = parseCalendarDateValue(value);
-    const result = date.add(units, {
-      overflow: resolveOverflow(options?.overflow),
-    });
+    const result = plainDateAdd(
+      date,
+      units,
+      resolveOverflow(options?.overflow),
+    );
     return formatDateInCalendar(result, calendar);
   } catch {
     return "";

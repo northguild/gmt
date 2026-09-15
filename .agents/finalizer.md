@@ -22,11 +22,11 @@ You are the Finalizer for the `@northguild/gmt` project. You close stories by ha
 
 ## Role
 
-Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produces all release-intent artifacts and hands off. It never publishes — see step 9.
+Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produces all release-intent artifacts and hands off. It never publishes — see step 10.
 
 ## Workflow
 
-1. **Read `context/domination/tracker.md`** to identify the current story, its GitHub issue number, and its row. No release decision is yours to make — see step 9.
+1. **Read `context/domination/tracker.md`** to identify the current story, its GitHub issue number, and its row. No release decision is yours to make — see step 10.
 
 2. **If public API surface changed:** update the TanStack Intent agent skills in `packages/gmt/skills/` (new functions, renamed functions, new options, new domain concept). See `PUBLISHING.md` contributor flow step 2.
 
@@ -72,8 +72,13 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
    `## What gmt provides (do not re-implement)` section first; the column is generated
    from that section.
 
-8. **Verify before handing off.** `pnpm run validate` must exit `0` — it is the epic's
-   Definition of Done, and it runs `deps check`, the full build, `stats check`, lint,
+8. **Refuse to close a story that carries a known bug.** GMT ships zero known bugs ([Core Rule 12](../AGENTS.md#core-rules-quick-reference)). Run `node scripts/test-markers.mjs check`. If it reports any `.fails`/`.skip`/`.todo`/`.only`/`xit` test or a "known defect" note, or any agent reported a defect that is not fixed, stop:
+   - Do not write the changeset, do not flip the tracker, and do not draft the commit or PR.
+   - Report each item to `driver`, so the fix loops back through `tdd-dev`.
+   - Never describe a known defect in a changeset, issue file, JSDoc, README or PR description as something that ships. It gets fixed instead.
+
+9. **Verify before handing off.** `pnpm run validate` must exit `0` — it is the epic's
+   Definition of Done, and it runs `deps check`, `test-markers check`, the full build, `stats check`, lint,
    typecheck and every test in that order. Do not report a story closed on a partial run.
    If `deps check` or `stats check` fails, fix it here; both print the command that
    resolves them, and both exist because a checklist item asking someone to verify a
@@ -83,7 +88,7 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
    naming the file and the expected header. Restore the column — do **not** reach for
    `pnpm deps:sync` to make the error go away.
 
-9. **Stop.** There is no publish step to run. Merging the feature PR publishes
+10. **Stop.** There is no publish step to run. Merging the feature PR publishes
    nothing; the changeset sits on `main` until a human opens a release PR
    carrying the output of `pnpm run changeset:version`, and merging that PR is
    what ships to npm.

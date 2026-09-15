@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import {
   formatDateInCalendar,
   parseCalendarDatePairForArithmetic,
+  plainDateAdd,
   resolveDurationUnit,
   tileByUnit,
 } from "../../internal";
@@ -10,7 +11,8 @@ import { isValidCalendarDate } from "../validate";
 /**
  * Split a date interval into sub-intervals of `amount × unit`.
  *
- * - Returns an array of `{ start, end }` records that tile the interval.
+ * - Returns an array of `{ start, end }` records that tile the interval, each record's `end`
+ *   equal to the next record's `start`.
  * - The final sub-interval is trimmed so its `end` never exceeds the original `end`.
  * - Each boundary is computed from `start` (`start + k × amount`, as Temporal and Luxon's
  *   `Interval.splitBy` do), not by stepping from the previous boundary, so month-end starts
@@ -94,6 +96,7 @@ export function splitIntervalByUnitDate(
       Temporal.PlainDate.compare,
       resolvedUnit,
       amount,
+      (value, duration) => plainDateAdd(value, duration, "constrain"),
     );
 
     return (slices ?? []).map(([sliceStart, sliceEnd]) => ({

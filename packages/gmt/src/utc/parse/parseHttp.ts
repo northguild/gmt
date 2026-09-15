@@ -3,13 +3,13 @@ import { ENGLISH_MONTH_NAMES } from "../../internal";
 import { httpDate } from "../../regex";
 
 /**
- * Parse an RFC 7231 IMF-fixdate string — the fixed grammar HTTP headers like
+ * Parse an RFC 9110 IMF-fixdate string — the fixed grammar HTTP headers like
  * `Last-Modified`/`Date`/`Expires` use — into a UTC ISO 8601 datetime string.
  *
  * - **Decoding, not display.** Accepts English weekday/month abbreviations
  *   only, per the fixed grammar (see `formatHttp`'s JSDoc and roadmap
  *   Decision 1).
- * - **IMF-fixdate only.** RFC 7231 also lists two obsolete forms
+ * - **IMF-fixdate only.** RFC 9110 also lists two obsolete forms
  *   (`rfc850-date`, `asctime-date`) that real HTTP servers occasionally
  *   still emit; this is a documented limitation — neither is accepted here.
  * - Day, hour, minute, and second must each be exactly 2 digits and the
@@ -20,7 +20,7 @@ import { httpDate } from "../../regex";
  * - An impossible calendar date (`31 Feb`, `29 Feb 2023`) returns `""`: a parser never
  *   invents a date, so fields are validated with `overflow: "reject"`, not clamped.
  *
- * @param value RFC 7231 IMF-fixdate string (e.g. "Fri, 15 Mar 2024 14:30:00 GMT")
+ * @param value RFC 9110 IMF-fixdate string (e.g. "Fri, 15 Mar 2024 14:30:00 GMT")
  * @returns UTC ISO 8601 datetime string, or "" on invalid input
  *
  * @example parseHttp("Fri, 15 Mar 2024 14:30:00 GMT") // "2024-03-15T14:30:00Z"

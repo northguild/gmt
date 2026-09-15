@@ -60,6 +60,22 @@ describe("roundDateTime", () => {
   );
 
   it.each`
+    value                    | unit       | roundingMode    | expected
+    ${"2024-06-16T00:00:00"} | ${"month"} | ${"halfExpand"} | ${"2024-07-01T00:00:00"}
+    ${"2024-06-16T00:00:00"} | ${"month"} | ${"halfCeil"}   | ${"2024-07-01T00:00:00"}
+    ${"2024-06-16T00:00:00"} | ${"month"} | ${"halfTrunc"}  | ${"2024-06-01T00:00:00"}
+    ${"2024-06-16T00:00:00"} | ${"month"} | ${"halfFloor"}  | ${"2024-06-01T00:00:00"}
+    ${"2024-06-16T00:00:00"} | ${"month"} | ${"halfEven"}   | ${"2024-06-01T00:00:00"}
+  `(
+    "returns $expected for half-boundary $value with roundingMode $roundingMode on $unit",
+    ({ value, unit, roundingMode, expected }) => {
+      expect(roundDateTime(value, { smallestUnit: unit, roundingMode })).toBe(
+        expected,
+      );
+    },
+  );
+
+  it.each`
     value                    | unit        | roundingMode | expected
     ${"2024-06-15T12:34:56"} | ${"hour"}   | ${"floor"}   | ${"2024-06-15T12:00:00"}
     ${"2024-06-15T12:34:56"} | ${"hour"}   | ${"ceil"}    | ${"2024-06-15T13:00:00"}
@@ -175,4 +191,23 @@ describe("roundDateTime", () => {
       "",
     );
   });
+
+  // The first representable PlainDateTime is -271821-04-19T00:00:00.000000001 (a Monday), so the
+  // month, year and even the week holding -271821-04-19T12:00:00 began before the range. Rounding
+  // may only return the next start: 12:00 on 04-19 is 18.5/30 through April (halfExpand rounds up)
+  // and 0.5/7 through its week (rounds down to a start that does not exist, so the sentinel).
+  it.each`
+    value                       | unit       | roundingMode    | expected
+    ${"-271821-04-19T12:00:00"} | ${"month"} | ${"halfExpand"} | ${"-271821-05-01T00:00:00"}
+    ${"-271821-04-19T12:00:00"} | ${"week"}  | ${"ceil"}       | ${"-271821-04-26T00:00:00"}
+    ${"-271821-04-19T12:00:00"} | ${"week"}  | ${"halfExpand"} | ${""}
+    ${"-271821-04-19T12:00:00"} | ${"year"}  | ${"ceil"}       | ${"-271820-01-01T00:00:00"}
+  `(
+    "returns $expected for the first-day value $value rounded to $unit with roundingMode $roundingMode",
+    ({ value, unit, roundingMode, expected }) => {
+      expect(roundDateTime(value, { smallestUnit: unit, roundingMode })).toBe(
+        expected,
+      );
+    },
+  );
 });

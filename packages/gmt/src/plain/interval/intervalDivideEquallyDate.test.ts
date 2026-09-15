@@ -9,7 +9,7 @@ describe("intervalDivideEquallyDate", () => {
     ${"2024-01-01"} | ${"2024-01-10"} | ${4} | ${[{ start: "2024-01-01", end: "2024-01-03" }, { start: "2024-01-03", end: "2024-01-06" }, { start: "2024-01-06", end: "2024-01-08" }, { start: "2024-01-08", end: "2024-01-10" }]}
     ${"2024-01-01"} | ${"2024-01-01"} | ${3} | ${[{ start: "2024-01-01", end: "2024-01-01" }, { start: "2024-01-01", end: "2024-01-01" }, { start: "2024-01-01", end: "2024-01-01" }]}
   `(
-    "splits $start..$end into $n parts as $expected",
+    "splits $start to $end into $n parts as $expected",
     ({ start, end, n, expected }) => {
       expect(intervalDivideEquallyDate(start, end, n)).toEqual(expected);
     },

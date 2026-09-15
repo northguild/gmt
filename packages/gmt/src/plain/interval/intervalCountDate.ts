@@ -4,8 +4,27 @@ import {
   parseCalendarDatePairForArithmetic,
   resolveDateTimeUnit,
 } from "../../internal";
-import { getStartOfDateUnit } from "../../internal/dateUnitHelpers";
+import {
+  getStartOfDateUnit,
+  getStartOfNextDateUnit,
+} from "../../internal/dateUnitHelpers";
+import {
+  type CalendarDateUnit,
+  calendarDateUntil,
+} from "../../internal/temporalCompat";
 import { isValidCalendarDate, isValidDateUnit } from "../validate";
+
+/** The start of the date `unit` holding `source`, or null when it lies before the representable range. */
+function startOfUnitIfRepresentable(
+  source: Temporal.PlainDate,
+  unit: string,
+): Temporal.PlainDate | null {
+  try {
+    return getStartOfDateUnit(source, unit);
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Count how many `unit` boundaries a date interval crosses.
@@ -16,6 +35,8 @@ import { isValidCalendarDate, isValidDateUnit } from "../validate";
  * - A zero-length interval counts 1 when it sits mid-unit and 0 when it sits exactly on a
  *   unit boundary (e.g. `"2024-01-15"` counts 1 month but 0 days).
  * - Weeks start on Monday (ISO 8601).
+ * - A unit that began before the first representable date (`-271821-04-19`) is still counted:
+ *   whole units are measured from the unit after `start`'s, never from `start`'s own start.
  * - Accepts singular or plural units (`"day"` and `"days"` behave identically).
  * - Returns `null` on invalid input (unparseable start/end, `start > end`, unsupported unit,
  *   or a unit that has no effect on `PlainDate`, e.g. `"hours"`).
@@ -70,15 +91,36 @@ export function intervalCountDate(
       return null;
     }
 
-    const startOfStart = getStartOfDateUnit(startVal, resolvedUnit);
-    const startOfEnd = getStartOfDateUnit(endVal, resolvedUnit);
+    const startOfEnd = startOfUnitIfRepresentable(endVal, resolvedUnit);
 
-    const spanned = getUnitSpan(
-      startOfStart.until(startOfEnd, { largestUnit: resolvedUnit }),
-      resolvedUnit,
-    );
+    // `end`'s unit began before the range, so `start` (<= `end`) is in it too, and `end` is not on
+    // a boundary: one bucket.
+    if (startOfEnd === null) {
+      return 1;
+    }
 
-    return spanned + (startOfEnd.equals(endVal) ? 0 : 1);
+    const endBucket = startOfEnd.equals(endVal) ? 0 : 1;
+
+    // `start` is already inside `end`'s unit: no boundary between them.
+    if (Temporal.PlainDate.compare(startOfEnd, startVal) <= 0) {
+      return endBucket;
+    }
+
+    // `start`'s unit, plus every whole unit from the next start up to `end`'s unit.
+    const spanned =
+      1 +
+      getUnitSpan(
+        Temporal.Duration.from(
+          calendarDateUntil(
+            getStartOfNextDateUnit(startVal, resolvedUnit),
+            startOfEnd,
+            resolvedUnit as CalendarDateUnit,
+          ),
+        ),
+        resolvedUnit,
+      );
+
+    return spanned + endBucket;
   } catch {
     return null;
   }

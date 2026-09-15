@@ -98,10 +98,15 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       # `validate` runs these, but only on pushes to main — by which point a drifting
-      # tracker or a missing changeset has already merged. These three are the parts of
-      # it that are cheap enough to also gate every PR.
+      # tracker, a carried bug or a missing changeset has already merged. These four are the
+      # parts of it that are cheap enough to also gate every PR.
       - name: Tracker dependency columns are in sync
         run: node scripts/deps.mjs check
+
+      # GMT ships zero known bugs (AGENTS.md Core Rule 12): no skipped, todo, focused or
+      # expected-to-fail test, and no known-defect note, may merge.
+      - name: No disabled tests or known-defect notes
+        run: node scripts/test-markers.mjs check
 
       # apps/dox's tests import `@northguild/gmt/*` subpaths, which resolve to its `dist`,
       # so collecting them needs the package built first. `validate` gets this for free by
@@ -126,7 +131,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [22, 24]
+        node-version: [22, 24, 26]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -171,7 +176,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [22, 24]
+        node-version: [22, 24, 26]
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
@@ -257,7 +262,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [22, 24]
+        node-version: [22, 24, 26]
         timezone:
           [
             "Pacific/Niue",

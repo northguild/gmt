@@ -1,5 +1,5 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Return the second (0-59) from a zoned datetime string.
@@ -19,7 +19,7 @@ export function parseSecondFromZoned(value: string): string {
   }
 
   try {
-    const zonedDateTime = Temporal.ZonedDateTime.from(value);
+    const zonedDateTime = zonedDateTimeFrom(value);
     return zonedDateTime.second.toString().padStart(2, "0");
   } catch {
     return "";

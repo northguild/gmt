@@ -28,11 +28,32 @@ export interface LibraryComparisonStats {
   executions: number;
   /** Tests that fail on the library's own current default branch, if measured. */
   knownFailures?: number;
+  /**
+   * Public callable API, measured from the library's published TypeScript declarations:
+   * every exported function, plus every public method (static or instance, including
+   * function-typed members) of its exported classes, interfaces and namespaces. A name
+   * counts once per owner, an alias export once, and a method inherited from a base type
+   * only on that base. Not counted: constructors, getters, plain properties,
+   * private/`@internal` members. Absent for @northguild/gmt, whose figure is
+   * `gmtStats.functions` (it exports functions only, so the two rules agree).
+   */
+  publicApi?: { functions: number; methods: number; version: string };
 }
+
+/** The finest time unit a library's public API can represent. */
+export type TimeResolution = "millisecond" | "nanosecond";
 
 export interface LibraryComparison {
   id: string;
   displayName: string;
+  /**
+   * The finest time unit the library's public API represents. Measured from each library's
+   * published TypeScript declarations at its `publicApi` version (2026-09-15): no alternative
+   * declares a microsecond or nanosecond field or unit anywhere, so each stops at the
+   * millisecond, like `Date`. GMT is nanosecond: Temporal counts epoch nanoseconds, and GMT
+   * keeps them exact as `bigint` (the `precision` namespace).
+   */
+  timeResolution: TimeResolution;
   /** Shorter label for the bar chart's y-axis; falls back to displayName. */
   chartLabel?: string;
   /** How the CI matrix re-runs the suite, for the chart tooltip; omitted when CI runs it once. */
@@ -55,6 +76,7 @@ export interface LibraryComparison {
 export const libraryComparisons: LibraryComparison[] = [
   {
     id: "@northguild/gmt",
+    timeResolution: "nanosecond",
     displayName: "@northguild/gmt",
     isSubject: true,
     matrixLabel: `${gmtStats.timezones} timezones × ${gmtStats.nodes.length} Node versions`,
@@ -75,6 +97,7 @@ export const libraryComparisons: LibraryComparison[] = [
   },
   {
     id: "@internationalized/date",
+    timeResolution: "millisecond",
     displayName: "@internationalized/date",
     chartLabel: "@intl/date",
     kind: "nonstandard",
@@ -91,11 +114,15 @@ export const libraryComparisons: LibraryComparison[] = [
       timezones: 0,
       nodeVersions: 1,
       executions: 386,
+      // 12 methods on the Calendar interface are counted once, not again on each of its
+      // 13 implementations.
+      publicApi: { functions: 46, methods: 58, version: "3.12.4" },
     },
     sourceNote: "Internal CI measurement.",
   },
   {
     id: "luxon",
+    timeResolution: "millisecond",
     displayName: "Luxon",
     matrixLabel: "4 Node versions",
     kind: "wraps",
@@ -110,6 +137,8 @@ export const libraryComparisons: LibraryComparison[] = [
       timezones: 0,
       nodeVersions: 4,
       executions: 4888,
+      // Luxon ships no types; counted from @types/luxon 3.7.5, which tracks 3.7.x.
+      publicApi: { functions: 0, methods: 153, version: "3.7.2" },
     },
     sourceNote:
       "Measured 2026-08-22 against moment/luxon@f427515 (3.7.2) by cloning, installing and running `jest`: 1,222 tests. " +
@@ -118,6 +147,7 @@ export const libraryComparisons: LibraryComparison[] = [
   },
   {
     id: "date-fns",
+    timeResolution: "millisecond",
     displayName: "date-fns",
     kind: "wraps",
     foundation: "built on Date",
@@ -130,11 +160,15 @@ export const libraryComparisons: LibraryComparison[] = [
       timezones: 0,
       nodeVersions: 1,
       executions: 3213,
+      // `formatDate` is an alias of `format`, counted once. The 1 method is the
+      // function-typed member of the exported Localize type.
+      publicApi: { functions: 245, methods: 1, version: "4.4.0" },
     },
     sourceNote: "Internal CI measurement.",
   },
   {
     id: "moment",
+    timeResolution: "millisecond",
     displayName: "Moment.js",
     matrixLabel: "3 Node versions",
     kind: "wraps",
@@ -150,6 +184,7 @@ export const libraryComparisons: LibraryComparison[] = [
       timezones: 0,
       nodeVersions: 3,
       executions: 11703,
+      publicApi: { functions: 27, methods: 142, version: "2.30.1" },
     },
     sourceNote:
       "Measured 2026-08-22 against moment/moment@cf524af (2.30.1) by cloning, installing and running " +
@@ -159,6 +194,7 @@ export const libraryComparisons: LibraryComparison[] = [
   },
   {
     id: "dayjs",
+    timeResolution: "millisecond",
     displayName: "Day.js",
     matrixLabel: "2 tz files × 4 extra TZ runs",
     kind: "wraps",
@@ -171,6 +207,9 @@ export const libraryComparisons: LibraryComparison[] = [
       timezones: 6,
       nodeVersions: 1,
       executions: 1034,
+      // Core plus the 37 plugins shipped in the same npm package (as GMT's figure counts its
+      // whole package): core alone is 4 functions + 30 methods.
+      publicApi: { functions: 16, methods: 112, version: "1.11.23" },
     },
     sourceNote:
       "Measured 2026-09-09 against iamkun/dayjs@539c4b9 (`npm test`, single default run: 93 suites / 794 tests). " +
@@ -181,6 +220,7 @@ export const libraryComparisons: LibraryComparison[] = [
   },
   {
     id: "spacetime",
+    timeResolution: "millisecond",
     displayName: "Spacetime",
     matrixLabel: "2 Node versions",
     kind: "wraps",
@@ -194,6 +234,8 @@ export const libraryComparisons: LibraryComparison[] = [
       nodeVersions: 2,
       executions: 12172,
       knownFailures: 41,
+      // 32 of Spacetime's methods are declared as function-typed members, counted as methods.
+      publicApi: { functions: 0, methods: 80, version: "7.13.0" },
     },
     sourceNote:
       "Measured 2026-09-09 against spencermountain/spacetime@2acdc4e (`tape ./test/**/*.test.js`): 6086 tests, 6045 pass, 41 fail " +
@@ -216,6 +258,46 @@ export const competitorComparisons = libraryComparisons.filter(
 export function competitorExecutionRange(): { min: number; max: number } {
   const executions = competitorComparisons.map((l) => l.stats.executions);
   return { min: Math.min(...executions), max: Math.max(...executions) };
+}
+
+/** Fewest and most of one stat among the alternatives — so page copy never types a range. */
+export function competitorStatRange(
+  stat: keyof Omit<LibraryComparisonStats, "knownFailures" | "publicApi">,
+): { min: number; max: number } {
+  const values = competitorComparisons.map((l) => l.stats[stat]);
+  return { min: Math.min(...values), max: Math.max(...values) };
+}
+
+/** A library's public callable API: functions plus methods (see `LibraryComparisonStats.publicApi`). */
+export function publicApiTotal(library: LibraryComparison): number {
+  const api = library.stats.publicApi;
+  return api ? api.functions + api.methods : 0;
+}
+
+/** Alternatives with a measured public API, largest first, for the why-gmt footnote. */
+export function competitorsByPublicApi(): LibraryComparison[] {
+  return competitorComparisons
+    .filter((l) => l.stats.publicApi)
+    .sort((a, b) => publicApiTotal(b) - publicApiTotal(a));
+}
+
+/** Smallest and largest measured public API among the alternatives. */
+export function competitorPublicApiRange(): { min: number; max: number } {
+  const totals = competitorsByPublicApi().map(publicApiTotal);
+  return { min: Math.min(...totals), max: Math.max(...totals) };
+}
+
+/**
+ * The finest time units the alternatives represent, as one table label, e.g. "Milliseconds".
+ * Derived from each entry's `timeResolution`, so page copy never types the claim.
+ */
+export function competitorTimeResolutionLabel(): string {
+  const units = [
+    ...new Set(competitorComparisons.map((l) => l.timeResolution)),
+  ];
+  return units
+    .map((unit) => `${unit.charAt(0).toUpperCase()}${unit.slice(1)}s`)
+    .join(", ");
 }
 
 /** Every alternative's CI executions, summed. */

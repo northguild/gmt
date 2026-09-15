@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { resolveUnixTimeZone } from "../../internal/resolveUnixTimeZone";
+import { parseUnixEpochInterval } from "../../internal";
 
 /**
  * Return how many distinct calendar dates two Unix epoch intervals share, in a given
@@ -13,7 +14,9 @@ import { resolveUnixTimeZone } from "../../internal/resolveUnixTimeZone";
  * - Returns `0` when the intervals do not overlap at all (a well-defined answer, not
  *   invalid input).
  * - Returns `null` if either interval is invalid (`start > end`).
- * - Returns `null` on invalid input (non-finite/non-integer epoch values, invalid timeZone).
+ * - Returns `null` on invalid input (epoch values that are not safe integers or numeric strings of
+ *   one — fractions, empty strings and values beyond ±(2^53 − 1) are invalid — or an invalid
+ *   timeZone).
  * - Diverges from date-fns's `getOverlappingDaysInIntervals`, which rounds up elapsed
  *   24-hour periods instead of counting calendar dates. To reproduce date-fns's number,
  *   compose `intervalIntersectionUnix` with `intervalCountUnix`:
@@ -41,47 +44,15 @@ export function intervalOverlappingDaysUnix(
     timeZone?: string;
   },
 ): number | null {
-  if (typeof aStart !== "number" && typeof aStart !== "string") {
+  const a = parseUnixEpochInterval(aStart, aEnd);
+  const b = parseUnixEpochInterval(bStart, bEnd);
+
+  if (a === null || b === null) {
     return null;
   }
 
-  if (typeof aEnd !== "number" && typeof aEnd !== "string") {
-    return null;
-  }
-
-  if (typeof bStart !== "number" && typeof bStart !== "string") {
-    return null;
-  }
-
-  if (typeof bEnd !== "number" && typeof bEnd !== "string") {
-    return null;
-  }
-
-  const a1 = typeof aStart === "number" ? aStart : Number(aStart);
-  const a2 = typeof aEnd === "number" ? aEnd : Number(aEnd);
-  const b1 = typeof bStart === "number" ? bStart : Number(bStart);
-  const b2 = typeof bEnd === "number" ? bEnd : Number(bEnd);
-
-  if (
-    !Number.isFinite(a1) ||
-    !Number.isInteger(a1) ||
-    !Number.isFinite(a2) ||
-    !Number.isInteger(a2) ||
-    !Number.isFinite(b1) ||
-    !Number.isInteger(b1) ||
-    !Number.isFinite(b2) ||
-    !Number.isInteger(b2)
-  ) {
-    return null;
-  }
-
-  if (a1 > a2) {
-    return null;
-  }
-
-  if (b1 > b2) {
-    return null;
-  }
+  const { start: a1, end: a2 } = a;
+  const { start: b1, end: b2 } = b;
 
   const epochUnit = options?.epochUnit ?? "milliseconds";
   const timeZone = resolveUnixTimeZone(options?.timeZone);

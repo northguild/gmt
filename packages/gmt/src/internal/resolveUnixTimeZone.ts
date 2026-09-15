@@ -17,19 +17,18 @@ export function resolveUnixTimeZone(timeZone?: string): string {
 }
 
 /**
- * Validate that both Unix epoch values are finite integers.
+ * Validate that both Unix epoch values are safe integers.
+ *
+ * - Past ±(2^53 − 1) consecutive integers are no longer distinct doubles (`2 ** 53 + 1 === 2 ** 53`),
+ *   so such values are rejected. Every Temporal instant (±8.64e15 ms) is inside that range.
  *
  * @param value1 first Unix timestamp
  * @param value2 second Unix timestamp
- * @returns true if both values are finite integers
+ * @returns true if both values are safe integers
  * @example isValidUnixEpochPair(1704067200000, 1704153600000) // true
  * @example isValidUnixEpochPair(NaN, 1704153600000) // false
+ * @example isValidUnixEpochPair(2 ** 53, 0) // false
  */
 export function isValidUnixEpochPair(value1: number, value2: number): boolean {
-  return (
-    Number.isFinite(value1) &&
-    Number.isInteger(value1) &&
-    Number.isFinite(value2) &&
-    Number.isInteger(value2)
-  );
+  return Number.isSafeInteger(value1) && Number.isSafeInteger(value2);
 }

@@ -41,7 +41,7 @@ describe("intervalCountUnix", () => {
     ${0}             | ${86400000}      | ${"day"}    | ${1}
     ${0}             | ${3600000}       | ${"minute"} | ${60}
   `(
-    "returns $expected $unit boundaries for $start..$end",
+    "returns $expected $unit boundaries for $start to $end",
     ({ start, end, unit, expected }) => {
       expect(intervalCountUnix(start, end, unit)).toBe(expected);
     },
@@ -52,7 +52,7 @@ describe("intervalCountUnix", () => {
     ${1704067200000} | ${1704240000000} | ${"days"}  | ${2}
     ${1704105000000} | ${1704110400000} | ${"hours"} | ${2}
   `(
-    "returns $expected for $start..$end with plural unit $unit",
+    "returns $expected for $start to $end with plural unit $unit",
     ({ start, end, unit, expected }) => {
       expect(intervalCountUnix(start, end, unit)).toBe(expected);
     },
@@ -63,7 +63,7 @@ describe("intervalCountUnix", () => {
     ${"1704067200000"} | ${"1704240000000"} | ${"day"}  | ${2}
     ${"0"}             | ${"86400000"}      | ${"hour"} | ${24}
   `(
-    "returns $expected for numeric-string input $start..$end counted in $unit",
+    "returns $expected for numeric-string input $start to $end counted in $unit",
     ({ start, end, unit, expected }) => {
       expect(intervalCountUnix(start, end, unit)).toBe(expected);
     },
@@ -76,7 +76,7 @@ describe("intervalCountUnix", () => {
     ${0}             | ${0}             | ${"hour"} | ${0}
     ${1800000}       | ${1800000}       | ${"hour"} | ${1}
   `(
-    "returns $expected for zero-length $start..$end counted in $unit",
+    "returns $expected for zero-length $start to $end counted in $unit",
     ({ start, end, unit, expected }) => {
       expect(intervalCountUnix(start, end, unit)).toBe(expected);
     },
@@ -132,6 +132,12 @@ describe("intervalCountUnix", () => {
     ${0}              | ${86400000} | ${"invalid"}
     ${0}              | ${86400000} | ${""}
     ${0}              | ${86400000} | ${"quarter"}
+    ${""}             | ${86400000} | ${"hour"}
+    ${0}              | ${""}       | ${"hour"}
+    ${"0"}            | ${"1.5"}    | ${"hour"}
+    ${0}              | ${2 ** 53}  | ${"hour"}
+    ${"   "}          | ${86400000} | ${"hour"}
+    ${-(2 ** 53)}     | ${0}        | ${"hour"}
   `(
     "returns null for invalid $start, $end, or $unit",
     ({ start, end, unit }) => {
@@ -188,15 +194,18 @@ describe("intervalCountUnix", () => {
 // 1325282400000 is 2011-12-31T12:00:00+14:00[Pacific/Apia]
 // 1289097000000 is 2010-11-06T23:30:00-03:00[America/Goose_Bay]
 // 1289104200000 is 2010-11-07T00:30:00-04:00[America/Goose_Bay]
+// 8639997552000000 is +275760-08-15T12:00:00-04:00[America/Santiago]
+// 8640000000000000 is +275760-09-12T21:00:00-03:00[America/Santiago], the last representable instant
 describe("intervalCountUnix across zone transitions", () => {
   it.each`
-    start            | end              | unit      | timeZone               | expected
-    ${1727532300000} | ${1727533500000} | ${"hour"} | ${"Pacific/Chatham"}   | ${2}
-    ${1712408700000} | ${1712412300000} | ${"hour"} | ${"Pacific/Chatham"}   | ${3}
-    ${1727522100000} | ${1727608500000} | ${"hour"} | ${"Pacific/Chatham"}   | ${25}
-    ${1601740830000} | ${1601742600000} | ${"hour"} | ${"Antarctica/Casey"}  | ${2}
-    ${1325196000000} | ${1325282400000} | ${"day"}  | ${"Pacific/Apia"}      | ${2}
-    ${1289097000000} | ${1289104200000} | ${"hour"} | ${"America/Goose_Bay"} | ${4}
+    start               | end                 | unit       | timeZone               | expected
+    ${1727532300000}    | ${1727533500000}    | ${"hour"}  | ${"Pacific/Chatham"}   | ${2}
+    ${1712408700000}    | ${1712412300000}    | ${"hour"}  | ${"Pacific/Chatham"}   | ${3}
+    ${1727522100000}    | ${1727608500000}    | ${"hour"}  | ${"Pacific/Chatham"}   | ${25}
+    ${1601740830000}    | ${1601742600000}    | ${"hour"}  | ${"Antarctica/Casey"}  | ${2}
+    ${1325196000000}    | ${1325282400000}    | ${"day"}   | ${"Pacific/Apia"}      | ${2}
+    ${1289097000000}    | ${1289104200000}    | ${"hour"}  | ${"America/Goose_Bay"} | ${4}
+    ${8639997552000000} | ${8640000000000000} | ${"month"} | ${"America/Santiago"}  | ${2}
   `(
     "returns $expected $unit buckets for $start to $end in system timeZone $timeZone",
     ({ start, end, unit, timeZone, expected }) => {

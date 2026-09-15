@@ -26,6 +26,17 @@ describe("intervalAbutsZoned", () => {
     ).toBe(false);
   });
 
+  it("returns true when A=2024-06-30T12:00:00.000000001+00:00[UTC]..2024-12-31T17:00:00+00:00[UTC] and B=2024-01-01T09:00:00+00:00[UTC]..2024-06-30T12:00:00+00:00[UTC]", () => {
+    expect(
+      intervalAbutsZoned(
+        "2024-06-30T12:00:00.000000001+00:00[UTC]",
+        "2024-12-31T17:00:00+00:00[UTC]",
+        "2024-01-01T09:00:00+00:00[UTC]",
+        "2024-06-30T12:00:00+00:00[UTC]",
+      ),
+    ).toBe(true);
+  });
+
   it("returns true when A=2024-06-15T12:00:00+00:00[UTC]..2024-06-15T12:00:00+00:00[UTC] and B=2024-06-15T12:00:00.000000001+00:00[UTC]..2024-06-15T13:00:00+00:00[UTC]", () => {
     expect(
       intervalAbutsZoned(
@@ -223,6 +234,25 @@ describe("intervalAbutsZoned", () => {
       bEnd: string;
     }) => {
       expect(intervalAbutsZoned(aStart, aEnd, bStart, bEnd)).toBe(false);
+    },
+  );
+
+  // The last representable instant is +275760-09-13T00:00:00Z (New York: T20:00:00-04:00 on 09-12).
+  // B ends one nanosecond before A starts (12:00:00Z - 1 ns = 11:59:59.999999999Z), so they abut in
+  // either order, even though nothing can be added to A's end.
+  // Sydney (+10:00 all September) reaches the max at T10:00 on 09-13, in the last hours only a
+  // positive-offset zone has: B ends at 03:59:59.999999999, 1 ns before A starts at 04:00.
+  it.each`
+    aStart                                              | aEnd                                                | bStart                                              | bEnd                                                          | expected
+    ${"+275760-09-12T12:00:00+00:00[UTC]"}              | ${"+275760-09-13T00:00:00+00:00[UTC]"}              | ${"+275760-09-12T00:00:00+00:00[UTC]"}              | ${"+275760-09-12T11:59:59.999999999+00:00[UTC]"}              | ${true}
+    ${"+275760-09-12T00:00:00+00:00[UTC]"}              | ${"+275760-09-12T11:59:59.999999999+00:00[UTC]"}    | ${"+275760-09-12T12:00:00+00:00[UTC]"}              | ${"+275760-09-13T00:00:00+00:00[UTC]"}                        | ${true}
+    ${"+275760-09-12T08:00:00-04:00[America/New_York]"} | ${"+275760-09-12T20:00:00-04:00[America/New_York]"} | ${"+275760-09-11T20:00:00-04:00[America/New_York]"} | ${"+275760-09-12T07:59:59.999999999-04:00[America/New_York]"} | ${true}
+    ${"+275760-09-13T00:00:00+00:00[UTC]"}              | ${"+275760-09-13T00:00:00+00:00[UTC]"}              | ${"+275760-09-12T00:00:00+00:00[UTC]"}              | ${"+275760-09-12T11:59:59.999999999+00:00[UTC]"}              | ${false}
+    ${"+275760-09-13T04:00:00+10:00[Australia/Sydney]"} | ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"} | ${"+275760-09-12T10:00:00+10:00[Australia/Sydney]"} | ${"+275760-09-13T03:59:59.999999999+10:00[Australia/Sydney]"} | ${true}
+  `(
+    "returns $expected when A=[$aStart, $aEnd] and B=[$bStart, $bEnd] (an end at the maximum instant)",
+    ({ aStart, aEnd, bStart, bEnd, expected }) => {
+      expect(intervalAbutsZoned(aStart, aEnd, bStart, bEnd)).toBe(expected);
     },
   );
 });

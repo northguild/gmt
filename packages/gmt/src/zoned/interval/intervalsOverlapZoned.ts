@@ -6,7 +6,7 @@ import { isValidCalendarZonedDateTime } from "../validate";
  * Return true when intervals `[aStart, aEnd]` and `[bStart, bEnd]` share at least one instant.
  *
  * - Uses `Temporal.Instant.compare` for comparison (same instant semantics).
- * - Adjacent intervals (e.g. `aEnd === bStart`) do NOT overlap — returns `false`.
+ * - Touching intervals (`aEnd` equal to `bStart`) share that endpoint and DO overlap — returns `true`.
  * - Returns `false` if either interval is invalid (`start > end`).
  * - Returns `false` on invalid input (wrong type, malformed strings, leap seconds).
  * - **Accepts mixed calendar systems** (E7's D4-zoned, issue #152): both bare ISO zoned strings
@@ -25,7 +25,8 @@ import { isValidCalendarZonedDateTime } from "../validate";
  * @returns true if intervals overlap, or false on invalid input
  *
  * @example intervalsOverlapZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-06-30T23:59:59+00:00[UTC]", "2024-04-01T00:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]") // true
- * @example intervalsOverlapZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-06-30T23:59:59+00:00[UTC]", "2024-07-01T00:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]") // false (adjacent)
+ * @example intervalsOverlapZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-06-30T23:59:59+00:00[UTC]", "2024-07-01T00:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]") // false (disjoint, one-second gap)
+ * @example intervalsOverlapZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-06-30T23:59:59+00:00[UTC]", "2024-06-30T23:59:59+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]") // true (touching)
  * @example intervalsOverlapZoned("invalid", "2024-06-30T23:59:59+00:00[UTC]", "2024-04-01T00:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]") // false
  */
 export function intervalsOverlapZoned(

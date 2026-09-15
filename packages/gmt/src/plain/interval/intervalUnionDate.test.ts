@@ -7,7 +7,7 @@ describe("intervalUnionDate", () => {
     ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${{ start: "2024-01-01", end: "2024-01-01" }}
     ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-06-15"} | ${"2024-06-15"} | ${null}
   `(
-    "returns $expected for zero-length A=$aStart..$aEnd union B=$bStart..$bEnd",
+    "returns $expected for zero-length A=$aStart to $aEnd union B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalUnionDate(aStart, aEnd, bStart, bEnd)).toEqual(expected);
     },
@@ -23,7 +23,7 @@ describe("intervalUnionDate", () => {
     ${"2024-06-30"} | ${"2024-06-30"} | ${"2024-06-30"} | ${"2024-06-30"} | ${{ start: "2024-06-30", end: "2024-06-30" }}
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-02-01"} | ${"2024-03-01"} | ${{ start: "2024-01-01", end: "2024-06-30" }}
   `(
-    "returns merged interval when $aStart..$aEnd overlaps $bStart..$bEnd",
+    "returns merged interval when $aStart to $aEnd overlaps $bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalUnionDate(aStart, aEnd, bStart, bEnd)).toEqual(expected);
     },
@@ -34,7 +34,7 @@ describe("intervalUnionDate", () => {
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-07-01"} | ${"2024-12-31"} | ${null}
     ${"2024-07-01"} | ${"2024-12-31"} | ${"2024-01-01"} | ${"2024-06-30"} | ${null}
   `(
-    "returns null when $aStart..$aEnd is disjoint from $bStart..$bEnd",
+    "returns null when $aStart to $aEnd is disjoint from $bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(intervalUnionDate(aStart, aEnd, bStart, bEnd)).toBeNull();
     },

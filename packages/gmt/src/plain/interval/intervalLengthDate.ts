@@ -1,9 +1,47 @@
+import type { Temporal } from "@js-temporal/polyfill";
 import {
   parseCalendarDatePairForArithmetic,
   resolveDateTimeUnit,
 } from "../../internal";
+import {
+  type CalendarDateUnit,
+  calendarDateAdd,
+  calendarDateUntil,
+} from "../../internal/temporalCompat";
 import { isValidDateUnit } from "../validate";
 import { isValidDateInterval } from "./validate";
+
+const UNIT_FIELD = {
+  year: "years",
+  month: "months",
+  week: "weeks",
+  day: "days",
+} as const;
+
+function daysBetween(from: Temporal.PlainDate, to: Temporal.PlainDate): number {
+  return from
+    .withCalendar("iso8601")
+    .until(to.withCalendar("iso8601"), { largestUnit: "days" }).days;
+}
+
+/**
+ * `Duration.total({ unit, relativeTo: start })` of a non-ISO calendar difference, computed as TC39
+ * `TotalRelativeDuration` → `NudgeToCalendarUnit` does, over the Temporal compat layer's calendar
+ * add and until (CORE-6: the polyfill's own `total` runs its D1/D6/D7-affected arithmetic):
+ * `r1` whole units from `CalendarDateUntil`, plus the days from `start + r1` to `end` over the days
+ * from `start + r1` to `start + (r1 + 1)`, both added with `constrain`. `start <= end`.
+ */
+function calendarLength(
+  start: Temporal.PlainDate,
+  end: Temporal.PlainDate,
+  unit: CalendarDateUnit,
+): number {
+  const field = UNIT_FIELD[unit];
+  const whole = calendarDateUntil(start, end, unit)[field];
+  const lower = calendarDateAdd(start, { [field]: whole }, "constrain");
+  const upper = calendarDateAdd(start, { [field]: whole + 1 }, "constrain");
+  return whole + daysBetween(lower, end) / daysBetween(lower, upper);
+}
 
 /**
  * Return the exact length of a date interval in `unit`, as a real (possibly fractional) number.
@@ -12,9 +50,10 @@ import { isValidDateInterval } from "./validate";
  *   than measuring exact duration — see `intervalCountDate`'s JSDoc for the canonical
  *   11:59pm→12:01am example of the two diverging. `intervalLengthDate` answers "how long is
  *   this interval", `intervalCountDate` answers "how many boundaries does it touch".
- * - Uses `Temporal.Duration.prototype.total`, which resolves calendar units (month, year)
+ * - Uses `Temporal.Duration.prototype.total` semantics, which resolve calendar units (month, year)
  *   against the interval's own start so a partial month is expressed as a true fraction rather
- *   than truncated.
+ *   than truncated (non-ISO calendars follow the same TC39 NudgeToCalendarUnit steps over
+ *   calendar-correct arithmetic).
  * - Returns `0` for a zero-length interval (`start === end`).
  * - Returns `null` on invalid input (unparseable start/end, `start > end`, unsupported unit,
  *   or a unit that has no effect on `PlainDate`, e.g. `"hours"`).
@@ -59,6 +98,10 @@ export function intervalLengthDate(
       start,
       end,
     );
+
+    if (startVal.calendarId !== "iso8601") {
+      return calendarLength(startVal, endVal, resolvedUnit as CalendarDateUnit);
+    }
 
     const duration = startVal.until(endVal, { largestUnit: resolvedUnit });
 

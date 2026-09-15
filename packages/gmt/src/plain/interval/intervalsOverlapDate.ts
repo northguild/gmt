@@ -6,7 +6,7 @@ import { isValidCalendarDate } from "../validate";
  * Return true when intervals `[aStart, aEnd]` and `[bStart, bEnd]` share at least one instant.
  *
  * - Uses `Temporal.PlainDate.compare` for comparison.
- * - Adjacent intervals (e.g. `aEnd === bStart`) do NOT overlap — returns `false`.
+ * - Touching intervals (`aEnd` equal to `bStart`) share that endpoint and DO overlap — returns `true`.
  * - Returns `false` if either interval is invalid (`start > end`).
  * - Returns `false` on invalid input (wrong type, malformed strings).
  * - Accepts GMT calendar-annotated PlainDate strings — E5 (issue #78). Ordering is
@@ -19,7 +19,8 @@ import { isValidCalendarDate } from "../validate";
  * @returns true if intervals overlap, or false on invalid input
  *
  * @example intervalsOverlapDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31") // true
- * @example intervalsOverlapDate("2024-01-01", "2024-06-30", "2024-07-01", "2024-12-31") // false (adjacent)
+ * @example intervalsOverlapDate("2024-01-01", "2024-06-30", "2024-07-01", "2024-12-31") // false (consecutive days, no shared day)
+ * @example intervalsOverlapDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31") // true (touching)
  * @example intervalsOverlapDate("2024-01-01", "2024-06-30", "2024-07-02", "2024-12-31") // false (disjoint)
  * @example intervalsOverlapDate("2024-01-01", "2024-06-30", "2024-02-01", "2024-03-01") // true (partial)
  * @example intervalsOverlapDate("invalid", "2024-06-30", "2024-04-01", "2024-12-31") // false

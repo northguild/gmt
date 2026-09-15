@@ -172,3 +172,17 @@ describe("setZoned", () => {
     ).toBe("");
   });
 });
+
+describe("setZoned at the maximum instant", () => {
+  it.each`
+    value                                               | fields          | expected
+    ${"+275760-09-13T08:00:00+10:00[Australia/Sydney]"} | ${{ hour: 9 }}  | ${"+275760-09-13T09:00:00+10:00[Australia/Sydney]"}
+    ${"+275760-09-12T10:00:00+10:00[Australia/Sydney]"} | ${{ day: 13 }}  | ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"}
+    ${"+275760-09-13T08:00:00+10:00[Australia/Sydney]"} | ${{ hour: 11 }} | ${""}
+  `(
+    "sets $fields on $value giving $expected",
+    ({ value, fields, expected }) => {
+      expect(setZoned(value, fields)).toBe(expected);
+    },
+  );
+});

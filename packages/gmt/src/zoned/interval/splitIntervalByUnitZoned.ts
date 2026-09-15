@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import {
+  addToZoned,
   formatZonedInCalendar,
   parseCalendarZonedPairForArithmetic,
   resolveDurationUnit,
@@ -10,7 +11,8 @@ import { isValidCalendarZonedDateTime } from "../validate/isValidCalendarZonedDa
 /**
  * Split a zoned interval into sub-intervals of `amount × unit`.
  *
- * - Returns an array of `{ start, end }` records that tile the interval.
+ * - Returns an array of `{ start, end }` records that tile the interval, each record's `end`
+ *   equal to the next record's `start`.
  * - The final sub-interval is trimmed so its `end` never exceeds the original `end`.
  * - Calendar-unit boundaries (years, months, weeks, days) are computed from `start`
  *   (`start + k × amount`, as Temporal and Luxon's `Interval.splitBy` do), so month-end starts
@@ -91,12 +93,14 @@ export function splitIntervalByUnitZoned(
       ];
     }
 
+    // `addToZoned` runs calendar units through the Temporal compat layer (CORE-6).
     const slices = tileByUnit(
       startVal,
       endVal,
       Temporal.ZonedDateTime.compare,
       resolvedUnit,
       amount,
+      (value, duration) => addToZoned(value, duration),
     );
 
     return (slices ?? []).map(([sliceStart, sliceEnd]) => ({

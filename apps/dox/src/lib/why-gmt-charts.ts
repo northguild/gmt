@@ -1,5 +1,5 @@
 /**
- * The two bar charts on /why-gmt. Each definition is shared by the build-time
+ * The bar charts on /why-gmt. Each definition is shared by the build-time
  * SVG render (scripts/render-charts.ts — the no-JS fallback) and the live mount
  * in ChartContainer.astro, which adds the hover tooltip.
  *
@@ -13,7 +13,6 @@ import type { ChartDefinition, ChartPoint } from "@tanstack/charts";
 import { barX, barY, defineChart } from "@tanstack/charts";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
-import { stack } from "@tanstack/charts/stack";
 import type {
   ChartTooltipContent,
   ChartTooltipExtension,
@@ -37,8 +36,6 @@ const shareFormat = new Intl.NumberFormat("en-US", {
 // ---------------------------------------------------------------------------
 
 export type BarHue = "spring" | "signal" | "cyan";
-/** `suite` is one run of the tests; `matrix` is the CI re-runs on top of it. */
-export type BarSegment = "suite" | "matrix";
 
 export interface BarGradient {
   id: string;
@@ -47,19 +44,15 @@ export interface BarGradient {
   bottom: number;
 }
 
-// Same recipe as the locale matrix tiles: the bottom stop sits 0.09 under the
-// top. The re-run segment keeps its library's hue at a fainter opacity.
-const SEGMENT_OPACITY: Record<BarSegment, { top: number; bottom: number }> = {
-  suite: { top: 0.32, bottom: 0.23 },
-  matrix: { top: 0.14, bottom: 0.05 },
-};
+// Same recipe as the locale matrix tiles: the bottom stop sits 0.09 under the top.
+const BAR_OPACITY = { top: 0.32, bottom: 0.23 };
 
-export function barGradientId(hue: BarHue, segment: BarSegment): string {
-  return `gmt-bar-${hue}-${segment}`;
+export function barGradientId(hue: BarHue): string {
+  return `gmt-bar-${hue}`;
 }
 
-function barGradient(hue: BarHue, segment: BarSegment): BarGradient {
-  return { id: barGradientId(hue, segment), hue, ...SEGMENT_OPACITY[segment] };
+function barGradient(hue: BarHue): BarGradient {
+  return { id: barGradientId(hue), hue, ...BAR_OPACITY };
 }
 
 function withTooltip(
@@ -82,29 +75,33 @@ function withTooltip(
 
 export interface CiExecutionRow {
   library: string;
-  segment: BarSegment;
   value: number;
   comparison: LibraryComparison;
 }
 
-/**
- * One row per bar segment: the suite's own tests, then the extra executions
- * its CI matrix adds. A library whose CI runs the suite once has no matrix row.
- */
+function ciRow(comparison: LibraryComparison, value: number): CiExecutionRow {
+  return {
+    library: comparison.chartLabel ?? comparison.displayName,
+    value,
+    comparison,
+  };
+}
+
+/** One bar per library: every test execution its CI runs, matrix re-runs included. */
 export function ciExecutionRows(
   comparisons: readonly LibraryComparison[] = libraryComparisons,
 ): CiExecutionRow[] {
-  return comparisons.flatMap((comparison) => {
-    const library = comparison.chartLabel ?? comparison.displayName;
-    const { tests, executions } = comparison.stats;
-    const segments: [BarSegment, number][] = [
-      ["suite", tests],
-      ["matrix", executions - tests],
-    ];
-    return segments
-      .filter(([, value]) => value > 0)
-      .map(([segment, value]) => ({ library, segment, value, comparison }));
-  });
+  return comparisons.map((c) => ciRow(c, c.stats.executions));
+}
+
+/**
+ * One bar per library: a single run of its suite, before any CI matrix. GMT's matrix makes its
+ * CI executions dwarf every other bar, so /why-gmt shows this view first.
+ */
+export function ciSuiteRows(
+  comparisons: readonly LibraryComparison[] = libraryComparisons,
+): CiExecutionRow[] {
+  return comparisons.map((c) => ciRow(c, c.stats.tests));
 }
 
 /**
@@ -148,19 +145,27 @@ export function ciExecutionTooltip(
 }
 
 export function ciExecutionsDefinition(tooltip?: ChartTooltipExtension) {
+  return ciBarsDefinition(ciExecutionRows(), tooltip);
+}
+
+export function ciSuiteDefinition(tooltip?: ChartTooltipExtension) {
+  return ciBarsDefinition(ciSuiteRows(), tooltip);
+}
+
+/** Both CI views share one bar definition, so they differ only in their rows. */
+function ciBarsDefinition(
+  rows: readonly CiExecutionRow[],
+  tooltip?: ChartTooltipExtension,
+) {
   return defineChart({
     marks: [
-      barX(ciExecutionRows(), {
+      barX(rows, {
         y: "library",
         x: "value",
-        z: "segment",
-        layout: stack({ order: ["suite", "matrix"] }),
         yScale: "y",
         xScale: "x",
-        fill: (d) => {
-          const row = d as CiExecutionRow;
-          return `url(#${barGradientId(ciHue(row.comparison), row.segment)})`;
-        },
+        fill: (d) =>
+          `url(#${barGradientId(ciHue((d as CiExecutionRow).comparison))})`,
         stroke: "var(--gmt-border-strong)",
         strokeWidth: 1,
         radius: 0,
@@ -231,7 +236,7 @@ export function namespaceDefinition(tooltip?: ChartTooltipExtension) {
         y: "count",
         xScale: "x",
         yScale: "y",
-        fill: `url(#${barGradientId("cyan", "suite")})`,
+        fill: `url(#${barGradientId("cyan")})`,
         stroke: "var(--gmt-border-strong)",
         strokeWidth: 1,
         radius: 0,
@@ -242,7 +247,14 @@ export function namespaceDefinition(tooltip?: ChartTooltipExtension) {
       }),
     ],
     scales: {
-      x: { scale: scaleBand, padding: 0.15 },
+      x: {
+        scale: scaleBand,
+        padding: 0.15,
+        // Eleven bars share ~45px each in the page's ~524px grid column, and the longer names
+        // (precision, calendar, duration) are wider than that. The axis's default collision
+        // thinning then hid some labels outright, so angle them and keep every one.
+        axis: { tickLabels: { rotate: -40, thin: false } },
+      },
       y: { scale: scaleLinear, nice: true, grid: true },
     },
     ...withTooltip(tooltip, (datum) =>
@@ -255,7 +267,7 @@ export function namespaceDefinition(tooltip?: ChartTooltipExtension) {
 // Registry
 // ---------------------------------------------------------------------------
 
-export type BarChartId = "ci-executions" | "namespaces";
+export type BarChartId = "ci-executions" | "ci-suite" | "namespaces";
 
 export interface BarChart {
   ariaLabel: string;
@@ -277,20 +289,23 @@ export const BAR_CHARTS: Record<BarChartId, BarChart> = {
     idPrefix: "test-executions",
     width: 1200,
     height: 420,
-    gradients: [
-      barGradient("spring", "suite"),
-      barGradient("spring", "matrix"),
-      barGradient("signal", "suite"),
-      barGradient("signal", "matrix"),
-    ],
+    gradients: [barGradient("spring"), barGradient("signal")],
     definition: ciExecutionsDefinition as unknown as BarChart["definition"],
+  },
+  "ci-suite": {
+    ariaLabel: "Test suite size per library, one run",
+    idPrefix: "suite-tests",
+    width: 1200,
+    height: 420,
+    gradients: [barGradient("spring"), barGradient("signal")],
+    definition: ciSuiteDefinition as unknown as BarChart["definition"],
   },
   namespaces: {
     ariaLabel: "API surface by namespace",
     idPrefix: "namespace-distribution",
     width: 1200,
     height: 360,
-    gradients: [barGradient("cyan", "suite")],
+    gradients: [barGradient("cyan")],
     definition: namespaceDefinition as unknown as BarChart["definition"],
   },
 };

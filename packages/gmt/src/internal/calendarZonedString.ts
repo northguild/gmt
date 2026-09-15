@@ -7,6 +7,7 @@ import { temporalCalendarIds } from "./calendarSystemIds";
 import { isEthiopicFamilyCalendar } from "./ethiopicFamilyCalendar";
 import { calendarDateStringParts } from "./formatDateInCalendar";
 import { hasCalendarAnnotation } from "./hasCalendarAnnotation";
+import { zonedDateTimeFrom } from "./zonedWallClock";
 
 /**
  * Parse a bare ISO ZonedDateTime string or a GMT calendar-annotated ZonedDateTime string
@@ -64,7 +65,7 @@ export function parseCalendarZonedValue(
     if (hasCalendarAnnotation(value)) {
       throw new RangeError(`Not a valid GMT ZonedDateTime string: ${value}`);
     }
-    const bare = Temporal.ZonedDateTime.from(value, options);
+    const bare = zonedDateTimeFrom(value, options);
     if (bare.timeZoneId.length === 0) {
       throw new RangeError(`Missing time zone: ${value}`);
     }
@@ -78,7 +79,7 @@ export function parseCalendarZonedValue(
   );
 
   const isoDate = date.withCalendar("iso8601").toString();
-  const zoned = Temporal.ZonedDateTime.from(
+  const zoned = zonedDateTimeFrom(
     `${isoDate}T${time}${offset ?? ""}[${timeZone}]`,
     options,
   );

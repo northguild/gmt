@@ -8,6 +8,8 @@ out/
 
 # Testing
 coverage/
+# Temporal native-oracle reports (scripts/temporal-compat.mjs oracle)
+/artifacts/
 .cache/
 *.lcov
 

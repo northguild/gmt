@@ -35,7 +35,7 @@ describe("intervalLengthUnix", () => {
     ${1704067200000} | ${1709596800000} | ${"month"}  | ${2.129032258064516}
     ${1704067200000} | ${1735689600000} | ${"year"}   | ${1}
   `(
-    "returns $expected $unit for $start..$end in the system timeZone",
+    "returns $expected $unit for $start to $end in the system timeZone",
     ({ start, end, unit, expected }) => {
       expect(intervalLengthUnix(start, end, unit)).toBeCloseTo(expected, 9);
     },
@@ -46,7 +46,7 @@ describe("intervalLengthUnix", () => {
     ${"0"}             | ${"86400000"}      | ${"hour"} | ${24}
     ${"1704067200000"} | ${"1709596800000"} | ${"day"}  | ${64}
   `(
-    "returns $expected for numeric-string input $start..$end in $unit",
+    "returns $expected for numeric-string input $start to $end in $unit",
     ({ start, end, unit, expected }) => {
       expect(intervalLengthUnix(start, end, unit)).toBeCloseTo(expected, 9);
     },
@@ -57,7 +57,7 @@ describe("intervalLengthUnix", () => {
     ${0}        | ${0}        | ${"hour"}
     ${86400000} | ${86400000} | ${"day"}
   `(
-    "returns 0 for zero-length $start..$end in $unit",
+    "returns 0 for zero-length $start to $end in $unit",
     ({ start, end, unit }) => {
       expect(intervalLengthUnix(start, end, unit)).toBe(0);
     },
@@ -107,6 +107,12 @@ describe("intervalLengthUnix", () => {
     ${0}              | ${86400000} | ${"invalid"}
     ${0}              | ${86400000} | ${""}
     ${0}              | ${86400000} | ${"quarter"}
+    ${""}             | ${86400000} | ${"hour"}
+    ${0}              | ${""}       | ${"hour"}
+    ${"0"}            | ${"1.5"}    | ${"hour"}
+    ${0}              | ${2 ** 53}  | ${"hour"}
+    ${"   "}          | ${86400000} | ${"hour"}
+    ${-(2 ** 53)}     | ${0}        | ${"hour"}
   `(
     "returns null for invalid $start, $end, or $unit",
     ({ start, end, unit }) => {
@@ -146,4 +152,83 @@ describe("intervalLengthUnix", () => {
 
     expect(intervalLengthUnix(0, 86400000, "hour")).toBeNull();
   });
+});
+
+// The last representable instant, +275760-09-13T00:00:00Z, in epoch milliseconds (TC39 nsMaxInstant).
+const MAX_MS = 8_640_000_000_000_000;
+const HOUR_MS = 3_600_000;
+const DAY_MS = 24 * HOUR_MS;
+
+describe("intervalLengthUnix at the maximum instant", () => {
+  let timeZoneSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    timeZoneSpy = vi.spyOn(getSystemTimeZoneModule, "getSystemTimeZone");
+  });
+
+  afterEach(() => {
+    timeZoneSpy.mockRestore();
+  });
+
+  // TC39 DifferenceZonedDateTime + NudgeToCalendarUnit: max - 3d5h to max - 1d is P2DT5H, totalled
+  // over the day that ends at max as 2 + 5/24; the zone ahead of UTC puts that day's end wall
+  // clock past +275760-09-13T00:00, but its exact time is in range.
+  it.each`
+    start                                | end                    | timeZone                | expected
+    ${MAX_MS - 3 * DAY_MS - 5 * HOUR_MS} | ${MAX_MS - DAY_MS}     | ${"Australia/Sydney"}   | ${2.2083333333333335}
+    ${MAX_MS - 3 * DAY_MS - 5 * HOUR_MS} | ${MAX_MS - DAY_MS}     | ${"Pacific/Kiritimati"} | ${2.2083333333333335}
+    ${MAX_MS - 7 * DAY_MS - HOUR_MS}     | ${MAX_MS - 5 * DAY_MS} | ${"UTC"}                | ${2.0416666666666665}
+  `(
+    "returns $expected days for $start to $end in system timeZone $timeZone",
+    ({ start, end, timeZone, expected }) => {
+      timeZoneSpy.mockReturnValue(timeZone);
+      expect(intervalLengthUnix(start, end, "day")).toBe(expected);
+    },
+  );
+
+  // TC39 NudgeToCalendarUnit: the day window after the end starts past the maximum, so Temporal
+  // throws — in UTC too, whose exact times GetPossibleEpochNanoseconds validates.
+  it.each`
+    start                            | end       | timeZone
+    ${MAX_MS - 2 * DAY_MS}           | ${MAX_MS} | ${"Australia/Sydney"}
+    ${MAX_MS - 2 * DAY_MS - HOUR_MS} | ${MAX_MS} | ${"UTC"}
+    ${MAX_MS - 2 * DAY_MS - HOUR_MS} | ${MAX_MS} | ${"Europe/London"}
+  `(
+    "returns null in days for $start to $end in system timeZone $timeZone",
+    ({ start, end, timeZone }) => {
+      timeZoneSpy.mockReturnValue(timeZone);
+      expect(intervalLengthUnix(start, end, "day")).toBeNull();
+    },
+  );
+});
+
+// The first representable instant, -271821-04-20T00:00:00Z, in epoch milliseconds (TC39 nsMinInstant).
+const MIN_MS = -MAX_MS;
+
+describe("intervalLengthUnix at the minimum instant", () => {
+  let timeZoneSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    timeZoneSpy = vi.spyOn(getSystemTimeZoneModule, "getSystemTimeZone");
+  });
+
+  afterEach(() => {
+    timeZoneSpy.mockRestore();
+  });
+
+  // In a zone behind UTC the minimum's wall clock is on -271821-04-19 (New York LMT -04:56:02 gives
+  // 19:03:58; Honolulu LMT -10:31:26 gives 13:28:34). TC39 DifferenceZonedDateTime: min to
+  // min + 2d1h is P2DT1H; NudgeToCalendarUnit totals it over the day from min + 2d to min + 3d,
+  // whose wall clocks resolve in range: 2 + 1/24 days.
+  it.each`
+    start     | end                              | timeZone
+    ${MIN_MS} | ${MIN_MS + 2 * DAY_MS + HOUR_MS} | ${"America/New_York"}
+    ${MIN_MS} | ${MIN_MS + 2 * DAY_MS + HOUR_MS} | ${"Pacific/Honolulu"}
+  `(
+    "returns 2.0416666666666665 days for $start to $end in system timeZone $timeZone",
+    ({ start, end, timeZone }) => {
+      timeZoneSpy.mockReturnValue(timeZone);
+      expect(intervalLengthUnix(start, end, "day")).toBe(2.0416666666666665);
+    },
+  );
 });

@@ -50,6 +50,12 @@ The `tdd-dev` ↔ `tester` loop has an iteration cap, defined once in [master.md
 
 - **Does NOT write initial tests for brand-new functions.** That is `tdd-dev`'s job.
 - **Does NOT modify implementation files.** `.test.ts` files only.
+- **Never writes an expected value the implementation happens to return.** Every value you add, or leave standing, must be one you know is correct from the spec, the story's decisions and the governing standard. Confirm it with a plain polyfill computation. See [Know the correct value before writing the assertion](../context/testing-standards/references/index.md#know-the-correct-value-before-writing-the-assertion).
+- **When a correct expectation fails against the implementation, that is a blocking bug, not a row to "fix".** Implementation is off-limits to you, so:
+  - Write the correct expectation as a normal `it` and leave the suite red on purpose.
+  - Report it to `driver` as blocking. `tdd-dev` fixes it before anything else proceeds.
+  - Never use `it.fails`, `it.skip` or `it.todo`, and never weaken or flip the assertion.
+  - GMT ships zero known bugs. See [Zero known bugs](../context/testing-standards/references/index.md#zero-known-bugs).
 
 ## Process
 
@@ -62,5 +68,8 @@ The `tdd-dev` ↔ `tester` loop has an iteration cap, defined once in [master.md
    - **P3:** All 17 locales with explicit rows? ICU variants only where verified?
    - **P4:** Month-end/year-end/leap-day clamp? Negative amounts? Empty/no-op? Repeated steps checked against the anchor?
 4. **Remove useless tests** — code paths that don't exist in the function, permutations with identical output, rows redundant within a table.
-5. **Verify every expected value you question or add** against real `@js-temporal/polyfill` output before writing it.
-6. **Report only tier gaps and bloat removals**, not style nitpicks. For each missing case: the exact row or `it()` block, its verified expected value, and a one-line reason.
+5. **Audit the correctness of expected values, not just coverage.** For each existing row, ask whether it states what the function SHOULD return, derived from the rule, or merely what it currently returns. Spot-check by re-deriving the value from the spec and governing standard, then confirming with a plain `@js-temporal/polyfill` computation. Re-derive every row you add or question the same way before writing it. A row whose value you can't justify is a finding.
+6. **Report tier gaps, bloat removals, wrong expectations and implementation defects**, not style nitpicks. Include:
+   - **Each missing case:** the exact row or `it()` block, its derived and verified expected value, and a one-line reason.
+   - **Each wrong expectation:** the row, the current value, the correct value and its derivation.
+   - **Each defect** (a correct expectation that fails): the plain `it` you added, which is red, marked as **blocking**, for `driver` to route to `tdd-dev` immediately.

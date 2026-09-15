@@ -1,9 +1,9 @@
-import { Temporal } from "@js-temporal/polyfill";
 import {
   isValidUnixUnit,
   type UnixUnit,
 } from "../../unix/validate/isValidUnixUnit";
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Convert an ISO 8601 zoned datetime string to a unix epoch value in milliseconds (default) or seconds.
@@ -31,7 +31,7 @@ export function convertZonedToUnix(
   }
 
   try {
-    const zonedDateTime = Temporal.ZonedDateTime.from(value);
+    const zonedDateTime = zonedDateTimeFrom(value);
     const milliseconds = Number(zonedDateTime.toInstant().epochMilliseconds);
     return resolvedUnit === "seconds"
       ? Math.floor(milliseconds / 1000)

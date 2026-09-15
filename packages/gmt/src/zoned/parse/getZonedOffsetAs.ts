@@ -1,5 +1,5 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 const NANOSECONDS_PER_MINUTE = 60_000_000_000;
 
@@ -56,7 +56,7 @@ export function getZonedOffsetAs(
   }
 
   try {
-    const { offsetNanoseconds } = Temporal.ZonedDateTime.from(value);
+    const { offsetNanoseconds } = zonedDateTimeFrom(value);
     return unit === "nanoseconds"
       ? offsetNanoseconds
       : offsetNanoseconds / NANOSECONDS_PER_MINUTE;

@@ -23,7 +23,7 @@ describe("intervalDivideEquallyZoned", () => {
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-04T00:00:00+00:00[UTC]"} | ${1} | ${[{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-04T00:00:00+00:00[UTC]" }]}
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC]"} | ${2} | ${[{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-01T00:00:00+00:00[UTC]" }, { start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-01T00:00:00+00:00[UTC]" }]}
   `(
-    "splits $start..$end into $n parts as $expected",
+    "splits $start to $end into $n parts as $expected",
     ({ start, end, n, expected }) => {
       expect(intervalDivideEquallyZoned(start, end, n)).toEqual(expected);
     },

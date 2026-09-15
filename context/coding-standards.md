@@ -71,7 +71,7 @@ The full rationale is Decision 4 of the archived J roadmap file, which no longer
 
 ### Scoped exception: fixed non-ISO grammars in `parseRfc2822`/`parseHttp` (J13)
 
-The same three rules extend to `parseRfc2822` (`packages/gmt/src/zoned/parse/`) and `parseHttp` (`packages/gmt/src/utc/parse/`), for the same underlying reason as Decision 4: RFC 5322 and RFC 7231 date-times (`"Fri, 15 Mar 2024 14:30:00 -0400"`, `"Fri, 15 Mar 2024 14:30:00 GMT"`) are not ISO 8601 and Temporal's `.from()` cannot parse them at all — there is no `fromRFC2822`/`fromHTTPDate` equivalent to defer to, at any layer. Unlike `parse*WithPattern`, the grammar here is fixed (a hardcoded regex per format, not built from a caller-supplied pattern), which makes this an even narrower case than Decision 4's, not a broader one:
+The same three rules extend to `parseRfc2822` (`packages/gmt/src/zoned/parse/`) and `parseHttp` (`packages/gmt/src/utc/parse/`), for the same underlying reason as Decision 4: RFC 5322 and RFC 9110 date-times (`"Fri, 15 Mar 2024 14:30:00 -0400"`, `"Fri, 15 Mar 2024 14:30:00 GMT"`) are not ISO 8601 and Temporal's `.from()` cannot parse them at all — there is no `fromRFC2822`/`fromHTTPDate` equivalent to defer to, at any layer. Unlike `parse*WithPattern`, the grammar here is fixed (a hardcoded regex per format, not built from a caller-supplied pattern), which makes this an even narrower case than Decision 4's, not a broader one:
 
 1. The regex encodes the fixed RFC grammar exactly (`regex/rfc-2822.ts`, `regex/http-date.ts`) — never hand-rolled per-call string slicing.
 2. Extracted fields are **always** handed to `Temporal.PlainDateTime.from(fields, { overflow: "reject" })` for final construction and validation.
@@ -86,6 +86,14 @@ The same three rules extend to `internal/calendarDateString.ts`'s `parseCalendar
 1. The regex (`regex/calendar-date.ts`) encodes the fixed grammar exactly — never hand-rolled per-call string slicing.
 2. Extracted fields are **always** handed to `Temporal.PlainDate.from(fields, { overflow: "reject" })` for final construction and validation — including rejecting unknown calendar identifiers, which Temporal validates on GMT's behalf.
 3. The try-catch and sentinel-return rules above are unchanged.
+
+> **E1 is not a standard, and it is scheduled for replacement.** No standard defines a machine-readable date string with calendar-native digits: RFC 9557's `[u-ca=<id>]` keeps ISO digits, and `;era=` is not RFC 9557 syntax. [CORE-55](./domination/issues/CORE-55.md) replaces E1 with the standard form (ISO date + `[u-ca=<id>]`, exactly `Temporal.PlainDate#toString()`) in 2.0.0. Until then, keep E1 stable and do not extend it. Decision of record: [calendar-standards-decisions.md](./domination/research/calendar-standards-decisions.md) Q1.
+
+**Year and era tokens (CORE-6).** Both regexes (`regex/calendar-date.ts`, `regex/calendar-zoned-date-time.ts`) share these byte-identical groups, and `internal/formatCalendarYear.ts` writes the year:
+
+- **Year: `(\d{4,6}|-(?!0{6})\d{6})`.** A year ≥ 0 is 4 digits, zero-padded, and grows to 5 or 6 unsigned digits only when needed (`0000`, `5785`, `279517`). A negative calendar year is a minus sign plus exactly 6 digits, the form Temporal's `PadISOYear` writes: `convertDateToCalendar("1000-01-01", "taiwan")` is `"-000911-01-01[u-ca=taiwan]"`. `-0911` (too few digits) and `-000000` (negative zero, a Temporal early error) are rejected. Unsigned 5–6 digit years stay accepted, so no shipped positive year changes; a leading `+` is not accepted.
+- **Era: `;era=([a-z]+(?:-[a-z]+)*)`.** Lowercase ASCII words joined by single hyphens (`reiwa`, `ce`, `bce`, `ethioaa`). The regex proves shape only; `Temporal.PlainDate.from` validates the era.
+- **Japanese era codes are the Intl Era and Month Code proposal's.** `ce` for ISO dates up to 1872-12-31, `bce` for ISO years ≤ 0 (era year = 1 − ISO year), and `meiji` from 1873-01-01 starting at era year 6, then `taisho`, `showa`, `heisei`, `reiwa`. `;era=japanese` is a **deprecated input alias** of `ce`, mapped in `internal/calendarDateString.ts` and removed in 2.0.0 (CORE-55). GMT never emits it. `japanese-inverse` is rejected.
 
 **Which namespaces accept this grammar (E5 issue #78, extended by E7 issue #152):**
 

@@ -1,5 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
-import { normalizeDateTime } from "../../internal";
+import { normalizeDateTime, zonedDateTimeFrom } from "../../internal";
 import type { DateTimeFormatOptions } from "../../types";
 import { isValidZonedDateTime } from "../validate";
 
@@ -29,7 +28,7 @@ export function formatZonedDateTime(
   }
 
   try {
-    const zonedDateTime = Temporal.ZonedDateTime.from(value);
+    const zonedDateTime = zonedDateTimeFrom(value);
     const out = zonedDateTime.toLocaleString(locale, options);
     return normalizeDateTime(out);
   } catch {

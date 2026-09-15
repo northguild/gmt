@@ -5,6 +5,8 @@ import { plainTime } from "../../regex";
  * Return the symmetric difference of two time intervals — time covered by exactly one interval.
  *
  * - Uses `Temporal.PlainTime.compare` for comparison.
+ * - Endpoints are inclusive, so a returned piece ends one nanosecond before, or starts
+ *   one nanosecond after, the interval it borders.
  * - Returns `[]` when intervals are identical or both invalid.
  * - Returns `[{ start, end }]` when one interval fully contains the other.
  * - Returns `[{ start, end }, { start, end }]` when intervals partially overlap.
@@ -17,8 +19,8 @@ import { plainTime } from "../../regex";
  * @param bEnd ISO 8601 time string for the second interval end
  * @returns array of `{ start, end }` records representing the symmetric difference, or `[]` on invalid input
  *
- * @example intervalXorTime("09:00:00", "12:00:00", "11:00:00", "17:00:00") // [{ start: "09:00:00", end: "10:59:59" }, { start: "12:00:01", end: "17:00:00" }]
- * @example intervalXorTime("09:00:00", "17:00:00", "11:00:00", "12:00:00") // [{ start: "09:00:00", end: "10:59:59" }, { start: "12:00:01", end: "17:00:00" }]
+ * @example intervalXorTime("09:00:00", "12:00:00", "11:00:00", "17:00:00") // [{ start: "09:00:00", end: "10:59:59.999999999" }, { start: "12:00:00.000000001", end: "17:00:00" }]
+ * @example intervalXorTime("09:00:00", "17:00:00", "11:00:00", "12:00:00") // [{ start: "09:00:00", end: "10:59:59.999999999" }, { start: "12:00:00.000000001", end: "17:00:00" }]
  * @example intervalXorTime("09:00:00", "17:00:00", "09:00:00", "17:00:00") // []
  * @example intervalXorTime("09:00:00", "12:00:00", "13:00:00", "17:00:00") // [{ start: "09:00:00", end: "12:00:00" }, { start: "13:00:00", end: "17:00:00" }]
  * @example intervalXorTime("invalid", "12:00:00", "13:00:00", "17:00:00") // []

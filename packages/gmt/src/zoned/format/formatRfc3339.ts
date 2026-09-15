@@ -1,5 +1,5 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Format a zoned ISO 8601 datetime string as strict RFC 3339 — the ISO 8601
@@ -28,7 +28,7 @@ export function formatRfc3339(value: string): string {
   if (!isValidZonedDateTime(value)) return "";
 
   try {
-    return Temporal.ZonedDateTime.from(value).toString({
+    return zonedDateTimeFrom(value).toString({
       timeZoneName: "never",
     });
   } catch {

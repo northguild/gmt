@@ -3,10 +3,10 @@ import { ENGLISH_MONTH_NAMES, ENGLISH_WEEKDAY_NAMES } from "../../internal";
 import { isValidUtc } from "../validate";
 
 /**
- * Format a UTC ISO 8601 datetime string as an RFC 7231 IMF-fixdate — the
+ * Format a UTC ISO 8601 datetime string as an RFC 9110 IMF-fixdate — the
  * fixed grammar HTTP headers like `Last-Modified`/`Date`/`Expires` require.
  *
- * - **Fixed grammar, not a display format.** RFC 7231 mandates English
+ * - **Fixed grammar, not a display format.** RFC 9110 mandates English
  *   weekday/month abbreviations and a literal `GMT` suffix regardless of
  *   caller locale — there is no locale-appropriate alternative ordering to
  *   lose (see roadmap `issues/J.md` Decision 1 / J13).
@@ -17,7 +17,7 @@ import { isValidUtc } from "../validate";
  *   is zero-padded to 4 digits.
  *
  * @param value UTC ISO 8601 datetime string (e.g. "2024-03-15T14:30:00Z")
- * @returns RFC 7231 IMF-fixdate string, or "" on invalid input
+ * @returns RFC 9110 IMF-fixdate string, or "" on invalid input
  *
  * @example formatHttp("2024-03-15T14:30:00Z") // "Fri, 15 Mar 2024 14:30:00 GMT"
  * @example formatHttp("2024-03-15T14:30:00.500Z") // "Fri, 15 Mar 2024 14:30:00 GMT"

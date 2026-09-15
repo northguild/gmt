@@ -98,3 +98,18 @@ describe("endOfQuarterForUnix at a zone transition with ignored explicit options
     },
   );
 });
+
+// -8639999956800000 ms is -271821-04-20T12:00:00Z, in the first representable instant's quarter,
+// which began on 1 April, before the range. Its end, -271821-06-30T23:59:59.999999999Z, is
+// representable: floor(ns / 1e6) = -8639993779200001 ms.
+describe("endOfQuarterForUnix at the first representable instant", () => {
+  it.each`
+    value                | timeZone | expected
+    ${-8639999956800000} | ${"UTC"} | ${-8639993779200001}
+  `(
+    "returns $expected as the quarter end of $value in $timeZone",
+    ({ value, timeZone, expected }) => {
+      expect(endOfQuarterForUnix(value, { timeZone })).toBe(expected);
+    },
+  );
+});

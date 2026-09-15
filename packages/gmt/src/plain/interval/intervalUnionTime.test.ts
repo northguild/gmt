@@ -11,7 +11,7 @@ describe("intervalUnionTime", () => {
     ${"17:00:00"} | ${"17:00:00"} | ${"09:00:00"} | ${"17:00:00"} | ${{ start: "09:00:00", end: "17:00:00" }}
     ${"09:00:00"} | ${"17:00:00"} | ${"10:00:00"} | ${"11:00:00"} | ${{ start: "09:00:00", end: "17:00:00" }}
   `(
-    "returns merged interval when $aStart..$aEnd overlaps $bStart..$bEnd",
+    "returns merged interval when $aStart to $aEnd overlaps $bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalUnionTime(aStart, aEnd, bStart, bEnd)).toEqual(expected);
     },

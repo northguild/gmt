@@ -438,3 +438,48 @@ describe("addZoned with GMT calendar-annotated values", () => {
     },
   );
 });
+
+describe("addZoned at the maximum instant", () => {
+  // TC39 AddZonedDateTime: +1 day moves the wall clock to 09-13T10:00, which resolves to the maximum.
+  it.each`
+    value                                                 | units          | expected
+    ${"+275760-09-12T10:00:00+10:00[Australia/Sydney]"}   | ${{ days: 1 }} | ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"}
+    ${"+275760-09-12T14:00:00+14:00[Pacific/Kiritimati]"} | ${{ days: 1 }} | ${"+275760-09-13T14:00:00+14:00[Pacific/Kiritimati]"}
+    ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"}   | ${{ days: 1 }} | ${""}
+  `("adds $units to $value giving $expected", ({ value, units, expected }) => {
+    expect(addZoned(value, units)).toBe(expected);
+  });
+});
+
+// CORE-6 S5: the calendar part of a zoned add follows the Intl era/monthCode proposal's
+// NonISODateAdd. Values: Chromium 153 native Temporal
+// (`PlainDate.withCalendar(c).toZonedDateTime(zone).add(…)`), offsets as Chromium reads them.
+describe("addZoned in non-ISO calendars (CORE-6)", () => {
+  it.each`
+    value                                                              | units            | expected                                                           | reason
+    ${"276302-09-13T00:00:00+00:00[u-ca=buddhist][UTC]"}               | ${{ years: 1 }}  | ${"276303-09-13T00:00:00+00:00[u-ca=buddhist][UTC]"}               | ${"D1: lands exactly on the maximum instant"}
+    ${"276302-09-12T00:00:00-04:00[u-ca=buddhist][America/New_York]"}  | ${{ years: 1 }}  | ${"276303-09-12T00:00:00-04:00[u-ca=buddhist][America/New_York]"}  | ${"D1 near the maximum in a named zone"}
+    ${"276302-09-12T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]"}        | ${{ years: 1 }}  | ${"276303-09-12T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]"}        | ${"D1 near the maximum behind UTC"}
+    ${"279517-09-10T00:00:00+00:00[u-ca=hebrew][UTC]"}                 | ${{ months: 1 }} | ${"279517-10-10T00:00:00+00:00[u-ca=hebrew][UTC]"}                 | ${"hebrew near the maximum"}
+    ${"279517-09-10T00:00:00-04:00[u-ca=hebrew][America/New_York]"}    | ${{ months: 1 }} | ${"279517-10-10T00:00:00-04:00[u-ca=hebrew][America/New_York]"}    | ${"hebrew near the maximum in a named zone"}
+    ${"1543-01-31T00:00:00-04:56:02[u-ca=buddhist][America/New_York]"} | ${{ months: 1 }} | ${"1543-02-28T00:00:00-04:56:02[u-ca=buddhist][America/New_York]"} | ${"proleptic buddhist: ISO 1000 has no Feb 29"}
+    ${"1543-01-31T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]"}          | ${{ months: 1 }} | ${"1543-02-28T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]"}          | ${"proleptic buddhist behind UTC"}
+  `(
+    "adds $units to $value giving $expected ($reason)",
+    ({ value, units, expected }) => {
+      expect(addZoned(value, units)).toBe(expected);
+    },
+  );
+
+  // Hebrew year <= 0: M06 of -96239 has 29 days (Chromium `daysInMonth`), so M06-23 + 1 month is
+  // M07-23, 29 days later: ISO -100000-01-01 + 29 days = -100000-01-30. The wall clock and its
+  // -04:56:02 local mean time offset are unchanged.
+  it("adds 1 month to -096239-06-23 in hebrew in America/New_York giving -096239-07-23", () => {
+    expect(
+      addZoned(
+        "-096239-06-23T00:00:00-04:56:02[u-ca=hebrew][America/New_York]",
+        { months: 1 },
+      ),
+    ).toBe("-096239-07-23T00:00:00-04:56:02[u-ca=hebrew][America/New_York]");
+  });
+});

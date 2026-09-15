@@ -69,6 +69,7 @@ describe("toNanoseconds", () => {
     ${"2016-12-31T23:59:60+00:00"}                   | ${"leap second with numeric offset"}
     ${"2016-12-31T23:59:60-05:00[America/New_York]"} | ${"leap second in a zoned string"}
     ${"2024-03-10T12:00:00-05:00[u-ca=hebrew]"}      | ${"calendar annotation"}
+    ${"2024-03-10T12:00:00Z[!u-ca=hebrew]"}          | ${"critical-flag calendar annotation"}
     ${"invalid"}                                     | ${"unparseable"}
     ${""}                                            | ${"empty string"}
   `("returns 0n when $value is invalid ($reason)", ({ value }) => {

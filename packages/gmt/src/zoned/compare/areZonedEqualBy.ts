@@ -4,6 +4,7 @@ import { isValidDateTimeUnit } from "../../plain/validate";
 import type { DateTimeUnit } from "../../types";
 import { startOfZoned } from "../calculate/startOfZoned";
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Compare two zoned ISO datetime strings for equality at a given unit.
@@ -60,8 +61,8 @@ export function areZonedEqualBy(
 
     if (start1 === "" || start2 === "") return false;
 
-    const zoned1 = Temporal.ZonedDateTime.from(start1);
-    const zoned2 = Temporal.ZonedDateTime.from(start2);
+    const zoned1 = zonedDateTimeFrom(start1);
+    const zoned2 = zonedDateTimeFrom(start2);
 
     // Same zone: one real bucket is one instant, so a repeated wall clock is not a match.
     if (zoned1.timeZoneId === zoned2.timeZoneId) {

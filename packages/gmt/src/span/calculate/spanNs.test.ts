@@ -72,6 +72,8 @@ describe("spanNs", () => {
     ${"20161231T235960Z"}                       | ${"2017-01-01T00:00:00Z"}                   | ${"leap second, basic format"}
     ${"2024-03-10T12:00:00-05:00[u-ca=hebrew]"} | ${"2024-03-11T12:00:00-04:00"}              | ${"calendar annotation on start"}
     ${"2024-03-10T12:00:00Z"}                   | ${"2024-03-11T12:00:00-05:00[u-ca=hebrew]"} | ${"calendar annotation on end"}
+    ${"2024-03-10T12:00:00Z[!u-ca=hebrew]"}     | ${"2024-03-11T12:00:00Z"}                   | ${"critical-flag calendar annotation on start"}
+    ${"2024-03-10T12:00:00Z"}                   | ${"2024-03-11T12:00:00Z[!u-ca=hebrew]"}     | ${"critical-flag calendar annotation on end"}
     ${"+275760-09-13T00:00:00.001Z"}            | ${"2024-03-10T12:00:00Z"}                   | ${"start past the representable range"}
     ${"2024-03-10T12:00:00Z"}                   | ${"-271821-04-19T23:59:59Z"}                | ${"end before the representable range"}
     ${""}                                       | ${"2024-03-10T12:00:00Z"}                   | ${"empty string"}

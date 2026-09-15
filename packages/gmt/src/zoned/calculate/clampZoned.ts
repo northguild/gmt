@@ -1,6 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Restrict `value` to the range [`min`, `max`] in zoned datetime space.
@@ -31,9 +32,9 @@ export function clampZoned(value: string, min: string, max: string): string {
   }
 
   try {
-    const v = Temporal.ZonedDateTime.from(value);
-    const mn = Temporal.ZonedDateTime.from(min);
-    const mx = Temporal.ZonedDateTime.from(max);
+    const v = zonedDateTimeFrom(value);
+    const mn = zonedDateTimeFrom(min);
+    const mx = zonedDateTimeFrom(max);
 
     if (Temporal.ZonedDateTime.compare(mn, mx) === 1) {
       return "";

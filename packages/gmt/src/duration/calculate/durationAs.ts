@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { resolveDurationRelativeTo } from "../../internal";
+import { durationTotal, resolveDurationRelativeTo } from "../../internal";
 import { isValidDateTimeDurationUnit } from "../../plain/validate";
 import type { DateTimeDurationUnit, DurationRelativeTo } from "../../types";
 import { isValidDuration } from "../validate/isValidDuration";
@@ -48,10 +48,11 @@ export function durationAs(
   }
 
   try {
-    return Temporal.Duration.from(value).total({
+    return durationTotal(
+      Temporal.Duration.from(value),
       unit,
-      relativeTo: resolveDurationRelativeTo(options?.relativeTo),
-    });
+      resolveDurationRelativeTo(options?.relativeTo),
+    );
   } catch {
     return null;
   }

@@ -1,5 +1,5 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Convert an ISO 8601 zoned datetime string to a UTC Instant string (ISO).
@@ -19,7 +19,7 @@ export function convertZonedToUtc(value: string): string {
   }
 
   try {
-    return Temporal.ZonedDateTime.from(value).toInstant().toString();
+    return zonedDateTimeFrom(value).toInstant().toString();
   } catch {
     return "";
   }

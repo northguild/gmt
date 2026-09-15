@@ -1,5 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
-import { getLocaleFirstDayOfWeek } from "../../internal";
+import { getLocaleFirstDayOfWeek, zonedDateTimeFrom } from "../../internal";
 import { isValidZonedDateTime } from "../validate";
 
 /**
@@ -31,7 +30,7 @@ export function getLocaleZonedDayOfWeek(
   if (firstDay === null) return null;
 
   try {
-    const zoned = Temporal.ZonedDateTime.from(value);
+    const zoned = zonedDateTimeFrom(value);
     return (zoned.dayOfWeek - firstDay + 7) % 7;
   } catch {
     return null;

@@ -1,5 +1,5 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { isValidTimeZone, isValidZonedDateTime } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Convert a zoned ISO 8601 datetime string to the same instant in a different `timeZone`.
@@ -20,7 +20,7 @@ export function convertZonedToZoned(value: string, timeZone: string): string {
   }
 
   try {
-    const zonedDateTime = Temporal.ZonedDateTime.from(value);
+    const zonedDateTime = zonedDateTimeFrom(value);
     return zonedDateTime.withTimeZone(timeZone).toString();
   } catch {
     return "";

@@ -1,6 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import type { Disambiguation, Offset } from "../../types";
 import { isValidZonedDateTime } from "../validate";
+import { addToZoned, zonedDateTimeFrom, zonedStartOfDay } from "../../internal";
 
 /**
  * Return an array of zoned datetime strings representing each hour boundary of the anchor's local day.
@@ -40,8 +41,8 @@ export function mapZonedHoursInDay(
   }
 
   try {
-    const start = Temporal.ZonedDateTime.from(anchor).startOfDay();
-    const nextDay = start.add({ days: 1 }).startOfDay();
+    const start = zonedStartOfDay(zonedDateTimeFrom(anchor));
+    const nextDay = zonedStartOfDay(addToZoned(start, { days: 1 }));
 
     const result: string[] = [];
 

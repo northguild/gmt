@@ -81,3 +81,15 @@ describe("subtractUnix", () => {
     expect(subtractUnix(1709251200000, { days: 1 })).toBeNull();
   });
 });
+
+describe("subtractUnix at the maximum instant", () => {
+  it.each`
+    value                    | units           | timeZone              | expected
+    ${8_639_999_913_600_000} | ${{ days: -1 }} | ${"Australia/Sydney"} | ${8_640_000_000_000_000}
+  `(
+    "subtracts $units from $value in $timeZone giving $expected",
+    ({ value, units, timeZone, expected }) => {
+      expect(subtractUnix(value, units, { timeZone })).toBe(expected);
+    },
+  );
+});

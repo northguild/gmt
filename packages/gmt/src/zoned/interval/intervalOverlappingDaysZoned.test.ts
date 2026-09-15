@@ -11,7 +11,7 @@ describe("intervalOverlappingDaysZoned", () => {
     ${"2024-03-30T12:00:00+01:00[Europe/Berlin]"}    | ${"2024-04-01T12:00:00+02:00[Europe/Berlin]"}    | ${3}
     ${"2011-12-29T12:00:00-10:00[Pacific/Apia]"}     | ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}     | ${3}
   `(
-    "returns $expected for self-overlapping $aStart..$aEnd",
+    "returns $expected for self-overlapping $aStart to $aEnd",
     ({ aStart, aEnd, expected }) => {
       expect(intervalOverlappingDaysZoned(aStart, aEnd, aStart, aEnd)).toBe(
         expected,
@@ -72,7 +72,7 @@ describe("intervalOverlappingDaysZoned", () => {
     aStart                              | aEnd                                | bStart                              | bEnd
     ${"2024-12-31T23:59:59+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-04-01T00:00:00+00:00[UTC]"} | ${"2024-12-31T23:59:59+00:00[UTC]"}
   `(
-    "returns null for inverted interval $aStart..$aEnd",
+    "returns null for inverted interval $aStart to $aEnd",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(
         intervalOverlappingDaysZoned(aStart, aEnd, bStart, bEnd),

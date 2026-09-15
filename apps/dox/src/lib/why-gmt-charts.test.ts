@@ -10,6 +10,7 @@ import {
   PUBLIC_FUNCTION_TOTAL,
   ciExecutionRows,
   ciExecutionTooltip,
+  ciSuiteRows,
   isBarChartId,
   namespaceTooltip,
   type BarChartId,
@@ -55,26 +56,38 @@ function tooltipOf(library: string) {
 // ---------------------------------------------------------------------------
 
 describe("ciExecutionRows", () => {
-  it("splits every library's executions into suite plus matrix exactly", () => {
-    for (const comparison of libraryComparisons) {
-      const total = rowsOf(comparison.id).reduce((sum, r) => sum + r.value, 0);
-      expect(total).toBe(comparison.stats.executions);
-    }
+  it("gives every library one bar equal to its total CI executions", () => {
+    expect(ciExecutionRows().map((r) => [r.comparison.id, r.value])).toEqual(
+      libraryComparisons.map((c) => [c.id, c.stats.executions]),
+    );
   });
 
-  it("gives GMT a suite segment and a matrix segment", () => {
-    expect(rowsOf("@northguild/gmt").map((r) => [r.segment, r.value])).toEqual([
-      ["suite", gmtStats.tests],
-      ["matrix", gmtStats.executions - gmtStats.tests],
+  it("gives GMT's bar its executions, not its one-run test count", () => {
+    expect(rowsOf("@northguild/gmt").map((r) => r.value)).toEqual([
+      gmtStats.executions,
     ]);
-  });
-
-  it("drops the matrix segment when CI runs the suite once", () => {
-    expect(rowsOf("date-fns").map((r) => r.segment)).toEqual(["suite"]);
   });
 
   it("labels bars with the short chart label", () => {
     expect(rowsOf("@internationalized/date")[0]?.library).toBe("@intl/date");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ciSuiteRows
+// ---------------------------------------------------------------------------
+
+describe("ciSuiteRows", () => {
+  it("gives every library one bar equal to a single run of its tests", () => {
+    expect(ciSuiteRows().map((r) => [r.comparison.id, r.value])).toEqual(
+      libraryComparisons.map((c) => [c.id, c.stats.tests]),
+    );
+  });
+
+  it("keeps GMT's one-run bar to its test count, not its CI executions", () => {
+    const gmt = ciSuiteRows().find((r) => r.comparison.isSubject);
+    expect(gmt?.value).toBe(gmtStats.tests);
+    expect(gmt?.value).toBeLessThan(gmtStats.executions);
   });
 });
 
@@ -177,15 +190,19 @@ describe("namespaceTooltip", () => {
 // ---------------------------------------------------------------------------
 
 describe("static bar chart render", () => {
-  it("stacks GMT's matrix re-runs directly after its suite", () => {
-    const rects = barRects(renderStatic("ci-executions"));
-    expect(rects).toHaveLength(ciExecutionRows().length);
-
-    const suite = rects.find((r) => r.gradient === "gmt-bar-spring-suite");
-    const matrix = rects.find((r) => r.gradient === "gmt-bar-spring-matrix");
-    expect(suite).toBeDefined();
-    expect(matrix?.x).toBeCloseTo((suite?.x ?? 0) + (suite?.width ?? 0), 1);
-  });
+  it.each(["ci-suite", "ci-executions"] as const)(
+    "draws %s as one unsplit bar per library, GMT in spring and the rest in signal",
+    (id) => {
+      const rects = barRects(renderStatic(id));
+      expect(rects).toHaveLength(libraryComparisons.length);
+      expect(rects.filter((r) => r.gradient === "gmt-bar-spring")).toHaveLength(
+        1,
+      );
+      expect(rects.filter((r) => r.gradient === "gmt-bar-signal")).toHaveLength(
+        libraryComparisons.length - 1,
+      );
+    },
+  );
 
   it("only references gradients its container declares", () => {
     for (const id of Object.keys(BAR_CHARTS) as BarChartId[]) {
@@ -197,9 +214,36 @@ describe("static bar chart render", () => {
   });
 });
 
+describe("namespace chart labels", () => {
+  // /why-gmt lays the chart out in a grid column about 524px wide, where the axis thinned the
+  // labels of precision, interval and calendar away. Every bar must keep its namespace label.
+  it("keeps every namespace label at the page's real chart width", () => {
+    const chart = BAR_CHARTS.namespaces;
+    const width = 524;
+    const runtime = createChartRuntime();
+    const scene = runtime.render(chart.definition(), {
+      width,
+      height: Math.round((width * chart.height) / chart.width),
+    });
+    const svg = renderChartSvg(scene, {
+      ariaLabel: chart.ariaLabel,
+      idPrefix: chart.idPrefix,
+    });
+    runtime.destroy();
+
+    const labels = [...svg.matchAll(/<text[^>]*>([^<]*)<\/text>/g)].map(
+      ([, text]) => text,
+    );
+    for (const { namespace } of NAMESPACE_COUNTS) {
+      expect(labels).toContain(namespace);
+    }
+  });
+});
+
 describe("isBarChartId", () => {
   it("accepts registered charts and rejects everything else", () => {
     expect(isBarChartId("namespaces")).toBe(true);
+    expect(isBarChartId("ci-suite")).toBe(true);
     expect(isBarChartId("locale-matrix")).toBe(false);
     expect(isBarChartId(undefined)).toBe(false);
   });

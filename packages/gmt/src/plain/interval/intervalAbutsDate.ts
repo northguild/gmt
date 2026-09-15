@@ -1,13 +1,15 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { parseCalendarDateValue } from "../../internal";
+import { closedIntervalsAbut, parseCalendarDateValue } from "../../internal";
 import { isValidCalendarDate } from "../validate";
 
 /**
- * Return true when two date intervals are exactly adjacent — one's end equals the other's start
- * with zero gap and zero overlap.
+ * Return true when two date intervals are exactly adjacent — one's end is one day before the
+ * other's start, so they share no date and leave no gap.
  *
  * - Uses `Temporal.PlainDate.compare` for comparison.
- * - Returns `true` when `aEnd + 1 day === bStart` or `bEnd + 1 day === aStart`.
+ * - Returns `true` when `bStart - 1 day === aEnd` (with `aEnd < bStart`) or
+ *   `aStart - 1 day === bEnd` (with `bEnd < aStart`). The step is taken down from the later start,
+ *   so an interval ending on the last representable date (`+275760-09-13`) still abuts.
  * - Returns `false` when intervals overlap, are disjoint with a gap, or are invalid.
  * - Returns `false` on invalid input (wrong type, malformed strings).
  * - Accepts GMT calendar-annotated PlainDate strings (as produced by `convertDateToCalendar`) —
@@ -65,19 +67,14 @@ export function intervalAbutsDate(
       return false;
     }
 
-    // aEnd + 1 day === bStart
-    const aEndPlusOne = aE.add({ days: 1 });
-    if (Temporal.PlainDate.compare(aEndPlusOne, bS) === 0) {
-      return true;
-    }
-
-    // bEnd + 1 day === aStart
-    const bEndPlusOne = bE.add({ days: 1 });
-    if (Temporal.PlainDate.compare(bEndPlusOne, aS) === 0) {
-      return true;
-    }
-
-    return false;
+    return closedIntervalsAbut(
+      aS,
+      aE,
+      bS,
+      bE,
+      Temporal.PlainDate.compare,
+      (value) => value.subtract({ days: 1 }),
+    );
   } catch {
     return false;
   }

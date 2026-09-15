@@ -2,12 +2,13 @@ import { intervalAbutsTime } from "./intervalAbutsTime";
 
 describe("intervalAbutsTime", () => {
   it.each`
-    aStart        | aEnd                    | bStart                  | bEnd                    | expected
-    ${"09:00:00"} | ${"12:00:00"}           | ${"12:00:00.000000001"} | ${"17:00:00"}           | ${true}
-    ${"12:00:00"} | ${"17:00:00"}           | ${"09:00:00"}           | ${"12:00:00.000000001"} | ${false}
-    ${"09:00:00"} | ${"09:00:00.000000001"} | ${"09:00:00.000000002"} | ${"17:00:00"}           | ${true}
+    aStart                  | aEnd                    | bStart                  | bEnd                    | expected
+    ${"09:00:00"}           | ${"12:00:00"}           | ${"12:00:00.000000001"} | ${"17:00:00"}           | ${true}
+    ${"12:00:00"}           | ${"17:00:00"}           | ${"09:00:00"}           | ${"12:00:00.000000001"} | ${false}
+    ${"09:00:00"}           | ${"09:00:00.000000001"} | ${"09:00:00.000000002"} | ${"17:00:00"}           | ${true}
+    ${"12:00:00.000000001"} | ${"17:00:00"}           | ${"09:00:00"}           | ${"12:00:00"}           | ${true}
   `(
-    "returns $expected when A=$aStart..$aEnd and B=$bStart..$bEnd",
+    "returns $expected when A=$aStart to $aEnd and B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalAbutsTime(aStart, aEnd, bStart, bEnd)).toBe(expected);
     },
@@ -62,4 +63,21 @@ describe("intervalAbutsTime", () => {
   `("returns false for non-string input", ({ aStart, aEnd, bStart, bEnd }) => {
     expect(intervalAbutsTime(aStart, aEnd, bStart, bEnd)).toBe(false);
   });
+
+  // PlainTime has no day rollover: `23:59:59.999999999` is the last time, and nothing follows it.
+  // An interval ending there abuts nothing, because no later start exists. The step must never wrap
+  // to midnight, so `00:00:00` is ~22 hours before the end, not one nanosecond after it.
+  it.each`
+    aStart                  | aEnd                    | bStart                  | bEnd                    | expected
+    ${"22:00:00"}           | ${"23:59:59.999999999"} | ${"00:00:00"}           | ${"01:00:00"}           | ${false}
+    ${"00:00:00"}           | ${"01:00:00"}           | ${"22:00:00"}           | ${"23:59:59.999999999"} | ${false}
+    ${"23:59:59.999999999"} | ${"23:59:59.999999999"} | ${"00:00:00"}           | ${"00:00:00"}           | ${false}
+    ${"00:00:00"}           | ${"00:00:00"}           | ${"23:59:59.999999999"} | ${"23:59:59.999999999"} | ${false}
+    ${"12:00:00"}           | ${"23:59:59.999999999"} | ${"00:00:00"}           | ${"11:59:59.999999999"} | ${true}
+  `(
+    "returns $expected when A=[$aStart, $aEnd] and B=[$bStart, $bEnd] at the end of the day (no midnight wrap)",
+    ({ aStart, aEnd, bStart, bEnd, expected }) => {
+      expect(intervalAbutsTime(aStart, aEnd, bStart, bEnd)).toBe(expected);
+    },
+  );
 });

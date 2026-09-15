@@ -54,8 +54,15 @@ export function createLinkComponents({
         allowedExternalOrigins,
       });
       if (resolved.kind === "link") {
+        // An allowlisted off-site link opens in a new tab, so the chat stays open behind it.
+        const external = /^https?:\/\//.test(resolved.href);
         return (
-          <a href={resolved.href} {...props}>
+          <a
+            href={resolved.href}
+            {...props}
+            target={external ? "_blank" : undefined}
+            rel={external ? "noopener noreferrer" : undefined}
+          >
             {children}
           </a>
         );

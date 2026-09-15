@@ -2,13 +2,14 @@ import { Temporal } from "@js-temporal/polyfill";
 import { MustTestLocales } from "../../test";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { getWeeksInLocaleWeekYear } from "./getWeeksInLocaleWeekYear";
+import { runtimeWeekInfo } from "../../test/runtimeWeekInfo";
 
 // Independent reference implementation, driven by the runtime's own
 // weekInfo rather than a hardcoded golden value — see
 // getLocaleWeekYear.test.ts for why `minimalDays` specifically can't be
 // pinned per-locale across ICU builds.
 function referenceWeeksInLocaleWeekYear(value: string, locale: string): number {
-  const weekInfo = new Intl.Locale(locale).weekInfo;
+  const weekInfo = runtimeWeekInfo(locale);
   const firstDay = weekInfo.firstDay;
   const minimalDays =
     typeof weekInfo.minimalDays === "number" ? weekInfo.minimalDays : 4;

@@ -91,6 +91,20 @@ describe("the rendered link-hardening path", () => {
     ).toBe(guide);
   });
 
+  it("opens an allowlisted off-site link in a new tab, and a site link in the same tab", () => {
+    renderAnswer(
+      `See [the source](https://github.com/northguild/gmt) and [convert](${REAL}).`,
+    );
+
+    const github = screen.getByRole("link", { name: "the source" });
+    expect(github.getAttribute("target")).toBe("_blank");
+    expect(github.getAttribute("rel")).toBe("noopener noreferrer");
+
+    const site = screen.getByRole("link", { name: "convert" });
+    expect(site.getAttribute("target")).toBeNull();
+    expect(site.getAttribute("rel")).toBeNull();
+  });
+
   it("degrades an off-site link to an origin that is not allowlisted", () => {
     const { container } = renderAnswer(
       "Try [this tool](https://evil.example.com/gmt).",

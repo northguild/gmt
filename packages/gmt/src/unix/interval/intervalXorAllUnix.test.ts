@@ -90,4 +90,29 @@ describe("intervalXorAllUnix", () => {
   `("returns [] for invalid intervals $intervals", ({ intervals }) => {
     expect(intervalXorAllUnix(intervals)).toEqual([]);
   });
+
+  // Epoch values are safe whole units; an empty string is not a numeric string.
+  it.each`
+    intervals                       | description
+    ${[{ start: 0, end: 2 ** 53 }]} | ${"an unsafe end"}
+    ${[{ start: "", end: "5" }]}    | ${"an empty-string start, which Number() reads as 0"}
+    ${[{ start: "0", end: "1.5" }]} | ${"a fractional numeric-string end"}
+  `("returns [] for $intervals ($description)", ({ intervals }) => {
+    expect(intervalXorAllUnix(intervals)).toEqual([]);
+  });
+
+  // Closed integer intervals: each expected run is the values covered an odd number of times,
+  // merged into maximal runs. The last row ends at Number.MAX_SAFE_INTEGER (2^53 - 1).
+  it.each`
+    intervals                                                                                                   | expected
+    ${[{ start: 0, end: 10 }, { start: 3, end: 5 }]}                                                            | ${[{ start: 0, end: 2 }, { start: 6, end: 10 }]}
+    ${[{ start: 0, end: 5 }, { start: 5, end: 10 }]}                                                            | ${[{ start: 0, end: 4 }, { start: 6, end: 10 }]}
+    ${[{ start: 0, end: 3 }, { start: 4, end: 6 }]}                                                             | ${[{ start: 0, end: 6 }]}
+    ${[{ start: 9007199254740980, end: 9007199254740991 }, { start: 9007199254740985, end: 9007199254740991 }]} | ${[{ start: 9007199254740980, end: 9007199254740984 }]}
+  `(
+    "returns $expected for closed integer intervals $intervals",
+    ({ intervals, expected }) => {
+      expect(intervalXorAllUnix(intervals)).toEqual(expected);
+    },
+  );
 });

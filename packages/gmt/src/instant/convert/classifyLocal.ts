@@ -1,6 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidDateTime } from "../../plain/validate";
 import { isValidTimeZone } from "../../zoned/validate";
+import { plainToZoned } from "../../internal";
 
 /**
  * What a zoneless wall time turns out to be once a zone is attached to it.
@@ -60,12 +61,8 @@ export function classifyLocal(
 
   try {
     const wallClock = Temporal.PlainDateTime.from(localDateTime);
-    const earliest = wallClock.toZonedDateTime(timeZone, {
-      disambiguation: "earlier",
-    });
-    const latest = wallClock.toZonedDateTime(timeZone, {
-      disambiguation: "later",
-    });
+    const earliest = plainToZoned(wallClock, timeZone, "earlier");
+    const latest = plainToZoned(wallClock, timeZone, "later");
 
     if (earliest.epochNanoseconds === latest.epochNanoseconds) {
       return "unique";

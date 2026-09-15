@@ -14,7 +14,7 @@ describe("intervalCountDate", () => {
     ${"2024-01-01"} | ${"2026-01-01"} | ${"year"}  | ${2}
     ${"2024-06-15"} | ${"2025-06-15"} | ${"year"}  | ${2}
   `(
-    "returns $expected $unit boundaries for $start..$end",
+    "returns $expected $unit boundaries for $start to $end",
     ({ start, end, unit, expected }) => {
       expect(intervalCountDate(start, end, unit)).toBe(expected);
     },
@@ -27,7 +27,7 @@ describe("intervalCountDate", () => {
     ${"2024-01-04"} | ${"2024-01-15"} | ${"weeks"}  | ${2}
     ${"2024-01-01"} | ${"2026-01-01"} | ${"years"}  | ${2}
   `(
-    "returns $expected for $start..$end with plural unit $unit",
+    "returns $expected for $start to $end with plural unit $unit",
     ({ start, end, unit, expected }) => {
       expect(intervalCountDate(start, end, unit)).toBe(expected);
     },
@@ -43,7 +43,7 @@ describe("intervalCountDate", () => {
     ${"2024-01-01"} | ${"2024-01-01"} | ${"month"} | ${0}
     ${"2024-01-01"} | ${"2024-01-01"} | ${"year"}  | ${0}
   `(
-    "returns $expected for zero-length $start..$end counted in $unit",
+    "returns $expected for zero-length $start to $end counted in $unit",
     ({ start, end, unit, expected }) => {
       expect(intervalCountDate(start, end, unit)).toBe(expected);
     },
@@ -56,7 +56,23 @@ describe("intervalCountDate", () => {
     ${"2023-12-31"} | ${"2024-01-01"} | ${"day"}  | ${1}
     ${"2024-12-30"} | ${"2025-01-06"} | ${"week"} | ${1}
   `(
-    "returns $expected for boundary case $start..$end counted in $unit",
+    "returns $expected for boundary case $start to $end counted in $unit",
+    ({ start, end, unit, expected }) => {
+      expect(intervalCountDate(start, end, unit)).toBe(expected);
+    },
+  );
+
+  // -271821-04-19 is the first representable PlainDate; its month and year began before the range,
+  // but the buckets it touches can still be counted. April and May: 2. Years -271821 and -271820: 2,
+  // or 1 when the end sits exactly on 1 January -271820.
+  it.each`
+    start              | end                | unit       | expected
+    ${"-271821-04-19"} | ${"-271821-05-10"} | ${"month"} | ${2}
+    ${"-271821-04-19"} | ${"-271821-04-19"} | ${"month"} | ${1}
+    ${"-271821-04-19"} | ${"-271820-02-01"} | ${"year"}  | ${2}
+    ${"-271821-04-19"} | ${"-271820-01-01"} | ${"year"}  | ${1}
+  `(
+    "returns $expected $unit buckets for [$start, $end) starting on the first PlainDate",
     ({ start, end, unit, expected }) => {
       expect(intervalCountDate(start, end, unit)).toBe(expected);
     },
@@ -154,6 +170,21 @@ describe("intervalCountDate", () => {
       ),
     ).toBe(1);
   });
+
+  // CORE-6 D1: the polyfill's calendar arithmetic throws within about a year of the maximum.
+  // Hebrew 279517 is a leap year whose ordinal month 10 (Sivan) holds the maximum, day 11.
+  it.each`
+    start                          | end                            | unit       | expected | reason
+    ${"279517-08-01[u-ca=hebrew]"} | ${"279517-10-11[u-ca=hebrew]"} | ${"month"} | ${3}     | ${"months 8, 9 and 10 up to the maximum"}
+    ${"279517-10-01[u-ca=hebrew]"} | ${"279517-10-11[u-ca=hebrew]"} | ${"month"} | ${1}     | ${"the maximum's own month"}
+    ${"279516-01-01[u-ca=hebrew]"} | ${"279517-10-11[u-ca=hebrew]"} | ${"year"}  | ${2}     | ${"years 279516 and 279517"}
+    ${"1543-01-15[u-ca=buddhist]"} | ${"1543-03-10[u-ca=buddhist]"} | ${"month"} | ${3}     | ${"D2: buddhist months are ISO months (ISO 1000-01-15 to 1000-03-10); polyfill 0.5.1's with({ day: 1 }) lands on ISO 1000-01-06"}
+  `(
+    "counts $expected $unit boundaries from $start to $end ($reason)",
+    ({ start, end, unit, expected }) => {
+      expect(intervalCountDate(start, end, unit)).toBe(expected);
+    },
+  );
 
   it("falls back to Gregorian when start and end carry mismatched calendars", () => {
     // 5785-01-01 hebrew = 2024-10-03 (verified); crosses the Nov 1 boundary -> 2 months.

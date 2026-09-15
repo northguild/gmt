@@ -152,3 +152,16 @@ describe("classifyLocal", () => {
     expect(classifyLocal("2024-11-03T01:30:00", "America/New_York")).toBeNull();
   });
 });
+
+describe("classifyLocal at the maximum instant", () => {
+  it.each`
+    localDateTime               | timeZone                | expected
+    ${"+275760-09-13T10:00:00"} | ${"Australia/Sydney"}   | ${"unique"}
+    ${"+275760-09-13T14:00:00"} | ${"Pacific/Kiritimati"} | ${"unique"}
+  `(
+    "classifies $localDateTime in $timeZone as $expected",
+    ({ localDateTime, timeZone, expected }) => {
+      expect(classifyLocal(localDateTime, timeZone)).toBe(expected);
+    },
+  );
+});

@@ -1,5 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
-import { resolveDurationRelativeTo } from "../../internal";
+import { durationCompare, resolveDurationRelativeTo } from "../../internal";
 import type { DurationRelativeTo } from "../../types";
 import { isValidDuration } from "../validate/isValidDuration";
 
@@ -46,9 +45,11 @@ export function compareDurations(
   }
 
   try {
-    return Temporal.Duration.compare(a, b, {
-      relativeTo: resolveDurationRelativeTo(options?.relativeTo),
-    });
+    return durationCompare(
+      a,
+      b,
+      resolveDurationRelativeTo(options?.relativeTo),
+    );
   } catch {
     return null;
   }

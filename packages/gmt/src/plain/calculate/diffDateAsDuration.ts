@@ -15,7 +15,8 @@ import { isValidCalendarDate, isValidDateDurationUnit } from "../validate";
  * bridging to the `duration` namespace (see `parseDuration`, `normalizeDuration`).
  *
  * - Returns `""` for invalid inputs (negative diffs are valid and render with a leading `-`).
- * - Uses Temporal.PlainDate.until with `largestUnit` set to `unit`, then `.toString()`.
+ * - Uses Temporal's `until` semantics with `largestUnit` set to `unit` (TC39 CalendarDateUntil; for
+ *   non-ISO calendars the Intl era/monthCode proposal's NonISODateUntil), then `.toString()`.
  * - Accepts GMT calendar-annotated PlainDate strings — E5 (issue #78). Same shared-vs-mismatched
  *   calendar rule as `diffDate` (see its JSDoc): measured in the shared calendar when `date1`
  *   and `date2` carry the same tag, Gregorian otherwise.
@@ -42,6 +43,7 @@ import { isValidCalendarDate, isValidDateDurationUnit } from "../validate";
  * @example diffDateAsDuration("invalid", "2024-03-15", "days") // ""
  * @example diffDateAsDuration("2024-01-01", "2024-01-16", "weeks", { smallestUnit: "weeks", roundingMode: "halfExpand" }) // "P2W"
  * @example diffDateAsDuration("5784-06-15[u-ca=hebrew]", "5784-07-15[u-ca=hebrew]", "months") // "P1M" (measured in Hebrew, Adar I -> Adar)
+ * @example diffDateAsDuration("2566-08-31[u-ca=buddhist]", "2566-09-30[u-ca=buddhist]", "months") // "P30D" (Aug 31 + 1 month would pass Sep 30)
  */
 export function diffDateAsDuration(
   date1: string,

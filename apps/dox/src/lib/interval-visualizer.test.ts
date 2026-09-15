@@ -162,7 +162,7 @@ describe("classifyRelationship", () => {
     expect(classifyRelationship(A, b)).toBe("disjoint");
   });
 
-  it("classifies adjacent (touching, non-overlapping) intervals both ways", () => {
+  it("classifies adjacent (touching at a shared instant) intervals both ways", () => {
     const bAfter: ZonedInterval = {
       start: A.end,
       end: "2024-09-01T00:00:00+00:00[UTC]",

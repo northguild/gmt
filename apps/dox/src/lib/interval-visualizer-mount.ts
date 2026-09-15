@@ -244,7 +244,7 @@ function renderRelationshipAside(
     disjoint:
       "A and B share no time at all — intersection and union are both empty; difference returns all of A; xor returns both A and B.",
     adjacent:
-      "A ends the instant B starts — they touch but don't overlap. Intersection is a single-instant span; union merges them into one; difference returns all of A; xor returns both.",
+      "A ends the instant B starts. The *Zoned interval functions are closed [start, end], so that shared instant belongs to both and the intervals overlap: intersection is that single instant, and union merges them into one. Difference returns A without the shared instant, ending one nanosecond before B starts; xor returns A and B, each without it. For touching intervals that do not overlap, use the half-open interval/ module.",
     "a-contains-b":
       "B sits entirely inside A — intersection and union both equal A's outer bounds (union) or B (intersection); difference returns the two pieces of A on either side of B; xor returns those same two pieces.",
     "b-contains-a":

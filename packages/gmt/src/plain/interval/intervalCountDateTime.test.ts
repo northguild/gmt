@@ -15,7 +15,7 @@ describe("intervalCountDateTime", () => {
     ${"2024-01-01T00:00:00"}   | ${"2024-01-01T00:01:00"}   | ${"minute"} | ${1}
     ${"2024-01-01T00:00:00.5"} | ${"2024-01-01T00:00:01.5"} | ${"second"} | ${2}
   `(
-    "returns $expected $unit boundaries for $start..$end",
+    "returns $expected $unit boundaries for $start to $end",
     ({ start, end, unit, expected }) => {
       expect(intervalCountDateTime(start, end, unit)).toBe(expected);
     },
@@ -28,7 +28,7 @@ describe("intervalCountDateTime", () => {
     ${"2024-01-01T00:00:00.000000001"} | ${"2024-01-01T00:00:00.000000003"} | ${"nanosecond"}  | ${2}
     ${"2024-01-01T00:00:00"}           | ${"2025-01-01T00:00:00"}           | ${"nanosecond"}  | ${31622400000000000}
   `(
-    "returns $expected sub-second $unit boundaries for $start..$end",
+    "returns $expected sub-second $unit boundaries for $start to $end",
     ({ start, end, unit, expected }) => {
       expect(intervalCountDateTime(start, end, unit)).toBe(expected);
     },
@@ -41,7 +41,7 @@ describe("intervalCountDateTime", () => {
     ${"2024-01-15T08:00:00"} | ${"2024-03-10T08:00:00"} | ${"months"} | ${3}
     ${"2024-12-31T23:00:00"} | ${"2025-01-01T01:00:00"} | ${"years"}  | ${2}
   `(
-    "returns $expected for $start..$end with plural unit $unit",
+    "returns $expected for $start to $end with plural unit $unit",
     ({ start, end, unit, expected }) => {
       expect(intervalCountDateTime(start, end, unit)).toBe(expected);
     },
@@ -56,7 +56,7 @@ describe("intervalCountDateTime", () => {
     ${"2024-01-01T00:00:00"} | ${"2024-01-01T00:00:00"} | ${"month"} | ${0}
     ${"2024-01-15T08:00:00"} | ${"2024-01-15T08:00:00"} | ${"month"} | ${1}
   `(
-    "returns $expected for zero-length $start..$end counted in $unit",
+    "returns $expected for zero-length $start to $end counted in $unit",
     ({ start, end, unit, expected }) => {
       expect(intervalCountDateTime(start, end, unit)).toBe(expected);
     },
@@ -68,7 +68,38 @@ describe("intervalCountDateTime", () => {
     ${"2024-02-28T12:00:00"} | ${"2024-02-29T12:00:00"} | ${"day"}  | ${2}
     ${"2024-12-31T23:59:59"} | ${"2025-01-01T00:00:00"} | ${"year"} | ${1}
   `(
-    "returns $expected for boundary case $start..$end counted in $unit",
+    "returns $expected for boundary case $start to $end counted in $unit",
+    ({ start, end, unit, expected }) => {
+      expect(intervalCountDateTime(start, end, unit)).toBe(expected);
+    },
+  );
+
+  // The first representable PlainDateTime is -271821-04-19T00:00:00.000000001 (a Monday), so the
+  // day, week, month and year holding T12:00:00 on that date all began before the range. Their
+  // buckets can still be counted: days 19 and 20; weeks of 04-19 and 04-26 (1 when the end sits on
+  // 04-26T00:00, the second week's start); April and May; and a zero-length value mid-day touches 1.
+  it.each`
+    start                       | end                         | unit       | expected
+    ${"-271821-04-19T12:00:00"} | ${"-271821-04-20T12:00:00"} | ${"day"}   | ${2}
+    ${"-271821-04-19T12:00:00"} | ${"-271821-04-19T12:00:00"} | ${"day"}   | ${1}
+    ${"-271821-04-19T12:00:00"} | ${"-271821-04-27T00:00:00"} | ${"week"}  | ${2}
+    ${"-271821-04-19T12:00:00"} | ${"-271821-04-26T00:00:00"} | ${"week"}  | ${1}
+    ${"-271821-04-19T12:00:00"} | ${"-271821-05-10T00:00:00"} | ${"month"} | ${2}
+  `(
+    "returns $expected $unit buckets for [$start, $end) starting on the first representable day",
+    ({ start, end, unit, expected }) => {
+      expect(intervalCountDateTime(start, end, unit)).toBe(expected);
+    },
+  );
+
+  // Even a time unit can begin before the range: the microsecond holding T00:00:00.0000005 on the
+  // first date starts at T00:00:00, which is not representable. It and the next microsecond
+  // [T00:00:00.000001, T00:00:00.000002) are both touched: 2.
+  it.each`
+    start                               | end                                 | unit             | expected
+    ${"-271821-04-19T00:00:00.0000005"} | ${"-271821-04-19T00:00:00.0000015"} | ${"microsecond"} | ${2}
+  `(
+    "returns $expected $unit buckets for [$start, $end) in the first microsecond of the range",
     ({ start, end, unit, expected }) => {
       expect(intervalCountDateTime(start, end, unit)).toBe(expected);
     },

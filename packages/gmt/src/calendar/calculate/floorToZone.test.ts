@@ -321,6 +321,18 @@ describe("floorToZone", () => {
     },
   );
 
+  // Santiago's 1 September +275760 local midnight is on -04:00 (its last transition before the
+  // maximum instant is 7 September), so the month starts at 04:00Z, not 03:00Z.
+  it.each`
+    value                        | unit       | timeZone              | expected
+    ${"+275760-09-13T00:00:00Z"} | ${"month"} | ${"America/Santiago"} | ${"+275760-09-01T04:00:00Z"}
+  `(
+    "floors the maximum instant $value to the $unit in $timeZone as $expected",
+    ({ value, unit, timeZone, expected }) => {
+      expect(floorToZone(value, unit, timeZone)).toBe(expected);
+    },
+  );
+
   it("returns an empty string when Temporal.Instant.from throws", () => {
     mockTemporalInstantFromThrow();
     expect(floorToZone(sourceInstant, "day", "America/New_York")).toBe("");

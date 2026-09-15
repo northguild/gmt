@@ -26,13 +26,18 @@ The answer requires treating a partial date as a range. `2022` means 2022-01-01 
 - **`'indeterminate'` is the point of this story.** Comparing `2022` with `2022-06-15` has no correct boolean answer: June 2022 lies inside the range 2022 denotes. Returning `false`, or coercing both to midnight on the first of the year, produces a confidently wrong clinical answer. Consumers must handle the third case explicitly.
 - **Sorting and comparison are separate functions** because they answer different questions. A UI list needs a total order even where the comparison is indeterminate; a clinical rule must not silently get one. `sortPartialDates` therefore takes an explicit tie-break and documents that its order is for presentation, not inference.
 - Ranges are half-open, consistent with CORE-6. `2022` is `[2022-01-01, 2023-01-01)`.
+- **CORE-6 is instant-only.** Its `Interval` endpoints must be instant strings with an offset, so `{ start: "2022-01-01", end: "2023-01-01" }` is invalid input: `intervalsOverlap` / `intervalContains` / `intersectIntervals` return their sentinel for it. A plain-date or FHIR partial-date range must take one of two routes:
+  - resolve it to instants at the edge, before calling CORE-6; or
+  - give it plain-date handling of its own that applies CORE-6's half-open rules.
+
+  The note below rules out instant conversion for these comparisons. Choose the route when this story is planned, and do not widen CORE-6 to accept plain dates. The same applies to `partialDateRange`'s `Interval | null` return type, which assumes instant endpoints.
 - Partial dates carry no timezone. These are calendar comparisons and must not be routed through instant conversion — see HLTH-36 for why normalising offsets at this precision introduces errors.
 
 ## What gmt provides (do not re-implement)
 
 - `getFHIRPrecision` from HLTH-34 — precision detection
-- `intervalsOverlap` / `intervalContains` / `intersectIntervals` from CORE-6 — range comparison
-- `Interval` from `types/`
+- `intervalsOverlap` / `intervalContains` / `intersectIntervals` from CORE-6 — half-open range comparison for ranges already resolved to instants; they reject plain dates (see Design notes)
+- `Interval` from `types/` — instant endpoints only
 
 ## Verification
 

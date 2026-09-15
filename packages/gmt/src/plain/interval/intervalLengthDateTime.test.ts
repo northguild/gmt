@@ -10,7 +10,7 @@ describe("intervalLengthDateTime", () => {
     ${"2024-01-01T00:00:00"} | ${"2024-01-08T00:00:00"} | ${"week"}   | ${1}
     ${"2024-02-29T00:00:00"} | ${"2024-03-01T00:00:00"} | ${"day"}    | ${1}
   `(
-    "returns $expected $unit for $start..$end",
+    "returns $expected $unit for $start to $end",
     ({ start, end, unit, expected }) => {
       expect(intervalLengthDateTime(start, end, unit)).toBeCloseTo(
         expected,

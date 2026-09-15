@@ -106,6 +106,11 @@ describe("intervalFromDurationUnix", () => {
     ${null}           | ${"P1D"} | ${"start"}
     ${true}           | ${"P1D"} | ${"start"}
     ${[]}             | ${"P1D"} | ${"start"}
+    ${""}             | ${"P1D"} | ${"start"}
+    ${"   "}          | ${"P1D"} | ${"start"}
+    ${"1.5"}          | ${"P1D"} | ${"start"}
+    ${2 ** 53}        | ${"P1D"} | ${"start"}
+    ${-(2 ** 53)}     | ${"P1D"} | ${"start"}
   `("returns null for invalid value $value", ({ value, duration, anchor }) => {
     expect(
       intervalFromDurationUnix(value as never, duration, anchor),
@@ -169,4 +174,18 @@ describe("intervalFromDurationUnix", () => {
       }),
     ).toBeNull();
   });
+});
+
+describe("intervalFromDurationUnix at the maximum instant", () => {
+  it.each`
+    value                    | duration | anchor     | timeZone              | expected
+    ${8_639_999_913_600_000} | ${"P1D"} | ${"start"} | ${"Australia/Sydney"} | ${{ start: 8_639_999_913_600_000, end: 8_640_000_000_000_000 }}
+  `(
+    "builds $duration from $value anchored at $anchor in $timeZone",
+    ({ value, duration, anchor, timeZone, expected }) => {
+      expect(
+        intervalFromDurationUnix(value, duration, anchor, { timeZone }),
+      ).toEqual(expected);
+    },
+  );
 });

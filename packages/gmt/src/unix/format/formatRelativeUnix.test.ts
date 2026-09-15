@@ -527,3 +527,66 @@ describe("formatRelativeUnix", () => {
     });
   });
 });
+
+// The last representable instant, +275760-09-13T00:00:00Z, in epoch milliseconds (TC39 nsMaxInstant).
+const MAX_MS = 8_640_000_000_000_000;
+const HOUR_MS = 3_600_000;
+const DAY_MS = 24 * HOUR_MS;
+
+describe("formatRelativeUnix months and years in the last month of the range", () => {
+  // Reference max - 31d, value max - 5h. TC39 NudgeToCalendarUnit totals 30d 19h over the month from
+  // the reference, 0.9932795698924731 months; in a zone ahead of UTC that month's end wall clock is
+  // past +275760-09-13T00:00 but in range. Floor gives 0 ("this month"), ceil 1 ("next month").
+  it.each`
+    timeZone                | largestUnit | roundingMethod | expected
+    ${"Australia/Sydney"}   | ${"month"}  | ${"floor"}     | ${"this month"}
+    ${"Australia/Sydney"}   | ${"month"}  | ${"ceil"}      | ${"next month"}
+    ${"Pacific/Kiritimati"} | ${"month"}  | ${"floor"}     | ${"this month"}
+    ${"UTC"}                | ${"month"}  | ${"floor"}     | ${"this month"}
+    ${"Australia/Sydney"}   | ${"year"}   | ${"floor"}     | ${""}
+  `(
+    "formats max - 5h against max - 31d in $timeZone by $largestUnit with $roundingMethod as $expected",
+    ({ timeZone, largestUnit, roundingMethod, expected }) => {
+      // A year total's window ends past the maximum, so Temporal throws and the result is "".
+      expect(
+        formatRelativeUnix(MAX_MS - 5 * HOUR_MS, MustTestLocales.enUS, {
+          reference: MAX_MS - 31 * DAY_MS,
+          timeZone,
+          largestUnit,
+          roundingMethod,
+        }),
+      ).toBe(expected);
+    },
+  );
+});
+
+// The first representable instant, -271821-04-20T00:00:00Z, in epoch milliseconds (TC39 nsMinInstant).
+const MIN_MS = -MAX_MS;
+// Local 20:00 on an LMT day: New York -04:56:02 is 00:56:02Z, Honolulu -10:31:26 is 06:31:26Z.
+const NEW_YORK_20H_MS = 56 * 60_000 + 2_000;
+const HONOLULU_20H_MS = 6 * HOUR_MS + 31 * 60_000 + 26_000;
+
+describe("formatRelativeUnix months in the first month of the range", () => {
+  // Value local -271821-04-24T20:00 (min + 5d) and reference local -271821-05-19T20:00 (min + 30d).
+  // TC39 NudgeToCalendarUnit totals -25 days over the month back from the reference, whose end wall
+  // clock, local -271821-04-19T20:00, is on the minimum's local date in a zone behind UTC but in
+  // range: -25/30 months. Floor gives -1 ("last month"), ceil -0 ("this month").
+  it.each`
+    offset             | timeZone              | roundingMethod | expected
+    ${NEW_YORK_20H_MS} | ${"America/New_York"} | ${"floor"}     | ${"last month"}
+    ${NEW_YORK_20H_MS} | ${"America/New_York"} | ${"ceil"}      | ${"this month"}
+    ${HONOLULU_20H_MS} | ${"Pacific/Honolulu"} | ${"floor"}     | ${"last month"}
+  `(
+    "formats min + 5d against min + 30d at local 20:00 in $timeZone with $roundingMethod as $expected",
+    ({ offset, timeZone, roundingMethod, expected }) => {
+      expect(
+        formatRelativeUnix(MIN_MS + 5 * DAY_MS + offset, MustTestLocales.enUS, {
+          reference: MIN_MS + 30 * DAY_MS + offset,
+          timeZone,
+          largestUnit: "month",
+          roundingMethod,
+        }),
+      ).toBe(expected);
+    },
+  );
+});

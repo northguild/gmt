@@ -1,5 +1,9 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { addDateTimeUnit, getStartOfDateTimeUnit } from "./dateTimeUnitHelpers";
+import {
+  addDateTimeUnit,
+  getStartOfDateTimeUnit,
+  getStartOfNextDateTimeUnit,
+} from "./dateTimeUnitHelpers";
 
 describe("getStartOfDateTimeUnit", () => {
   it.each`
@@ -75,4 +79,29 @@ describe("addDateTimeUnit", () => {
       "2024-04-15T23:59:59",
     );
   });
+});
+
+// The start of the date unit after `source`'s, reached without materialising `source`'s own start.
+// 2024-03-15 is a Friday; -271821-04-19 is the first date, a Monday whose T00:00:00 is not itself
+// representable (the first PlainDateTime is T00:00:00.000000001).
+describe("getStartOfNextDateTimeUnit", () => {
+  it.each`
+    source                      | unit       | expected                    | description
+    ${"2024-03-15T14:30:45"}    | ${"year"}  | ${"2025-01-01T00:00:00"}    | ${"the next year"}
+    ${"2024-03-15T14:30:45"}    | ${"month"} | ${"2024-04-01T00:00:00"}    | ${"the next month"}
+    ${"2024-01-31T23:59:59"}    | ${"month"} | ${"2024-02-01T00:00:00"}    | ${"a month-end steps to the next month, not past it"}
+    ${"2024-03-15T14:30:45"}    | ${"week"}  | ${"2024-03-18T00:00:00"}    | ${"a Friday's next Monday"}
+    ${"2024-03-15T14:30:45"}    | ${"day"}   | ${"2024-03-16T00:00:00"}    | ${"the next midnight"}
+    ${"-271821-04-19T12:00:00"} | ${"week"}  | ${"-271821-04-26T00:00:00"} | ${"the first date's own week began before the range"}
+    ${"-271821-04-19T12:00:00"} | ${"day"}   | ${"-271821-04-20T00:00:00"} | ${"the first date's own midnight is not representable"}
+  `(
+    "returns $expected for $source by $unit ($description)",
+    ({ source, unit, expected }) => {
+      const result = getStartOfNextDateTimeUnit(
+        Temporal.PlainDateTime.from(source),
+        unit,
+      );
+      expect(result.toString()).toBe(expected);
+    },
+  );
 });

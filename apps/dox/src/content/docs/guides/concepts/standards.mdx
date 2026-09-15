@@ -1,0 +1,94 @@
+---
+title: The Standards
+description: >
+  A quick guide to the acronyms behind GMT — TC39, Temporal, ISO 8601, the RFCs, IANA, BCP 47,
+  CLDR and test262 — what each one is, and what GMT uses it for.
+sidebar:
+  order: 3
+---
+
+GMT doesn't invent its own rules for dates and times. Each rule comes from a published standard,
+and when a question comes up, GMT follows the standard rather than another library's behaviour.
+This page explains, in a line or two each, what those standards are.
+
+## JavaScript: TC39
+
+**TC39** is Ecma International's Technical Committee 39, the group that designs JavaScript. New
+features move through its staged proposal process before they become part of the language. It
+maintains two specifications:
+
+- **ECMA-262**, the JavaScript language itself.
+- [**ECMA-402**](https://tc39.es/ecma402/), the `Intl` internationalisation API: locale-aware
+  formatting and locale data.
+
+### Temporal
+
+[**Temporal**](https://tc39.es/proposal-temporal/) is TC39's date and time API, designed to
+replace `Date`. It has separate types for plain and zoned values, explicit time zones and
+calendars, and instants counted in nanoseconds.
+
+**GMT** is built on Temporal (through `@js-temporal/polyfill`) and follows its specification for
+every type and every piece of arithmetic.
+
+### Intl proposals
+
+Two TC39 proposals extend `Intl` in ways GMT relies on:
+
+- The [**Intl Era and Month Code proposal**](https://github.com/tc39/proposal-intl-era-monthcode)
+  defines era codes, month codes and proleptic dates for non-Gregorian calendars. **GMT** follows
+  it for Japanese eras, the Buddhist year and dates far in the past.
+- The [**Intl Locale Info proposal**](https://github.com/tc39/proposal-intl-locale-info) exposes a
+  locale's week data. **GMT** reads it to find the first day of the week and the weekend.
+
+## Date and time strings
+
+- [**ISO 8601**](https://www.iso.org/iso-8601-date-and-time-format.html) is the international
+  standard for writing dates and times, e.g. `2024-03-15T14:30:00`. **GMT** takes and returns ISO
+  8601 strings everywhere.
+- [**RFC 3339**](https://www.rfc-editor.org/rfc/rfc3339) is the IETF's internet profile of ISO
+  8601: a stricter subset for timestamps with a UTC offset. **GMT** emits it with `formatRfc3339`.
+- [**RFC 9557**](https://www.rfc-editor.org/rfc/rfc9557) extends RFC 3339 with bracketed
+  annotations, such as a time zone (`[Europe/Paris]`) and the calendar key `u-ca`. **GMT**'s zoned
+  values carry their time zone this way.
+
+## Time zones and locales
+
+- The [**IANA Time Zone Database**](https://www.iana.org/time-zones) is the shared record of every
+  time zone's offsets and daylight-saving history, with identifiers like `America/New_York`.
+  **GMT** uses those identifiers and never hardcodes an offset.
+- [**BCP 47**](https://www.rfc-editor.org/info/bcp47) is the IETF's standard for language tags,
+  like `en-US` or `ar-SA`. **GMT**'s locale arguments are BCP 47 tags.
+- [**Unicode CLDR**](https://cldr.unicode.org/), the Common Locale Data Repository, holds each
+  locale's month names, date formats and week rules. It reaches **GMT** through the runtime's
+  `Intl` data.
+
+## Email and HTTP dates
+
+- [**RFC 5322**](https://www.rfc-editor.org/rfc/rfc5322) is the Internet Message Format. It
+  defines the email `Date:` header and replaced RFC 2822. **GMT** formats and parses it with
+  `formatRfc2822` and `parseRfc2822`.
+- [**RFC 9110**](https://www.rfc-editor.org/rfc/rfc9110) is HTTP Semantics. Its HTTP-date format
+  is used by headers like `Last-Modified`, and it replaced RFC 7231. **GMT** formats and parses it
+  with `formatHttp` and `parseHttp`.
+
+## Conformance: test262
+
+[**test262**](https://github.com/tc39/test262) is TC39's official conformance test suite for
+JavaScript and `Intl`. Browser engines run it to prove they implement the specification
+correctly.
+
+**GMT**'s edge-case tests take their expected values from test262 rows (for example, the earliest
+and latest date in every calendar), rather than from another library's output. See
+[Correct at the Edges](/guides/concepts/correct-at-the-edges/) for the evidence.
+
+## When sources disagree
+
+Specifications, test suites and real engines occasionally disagree. GMT settles each question
+with the most authoritative source available, in this order:
+
+1. The **Temporal** specification.
+2. **ECMA-402** and the **Intl** proposals.
+3. **RFC 9557**, **RFC 3339** and **ISO 8601**.
+4. **CLDR**.
+5. **test262**.
+6. Real engines, such as Chromium's built-in Temporal, used only to corroborate.

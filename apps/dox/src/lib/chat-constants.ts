@@ -327,6 +327,7 @@ export {
   CORPUS_CHUNK_COUNT,
   CORPUS_FUNCTION_COUNT,
   CORPUS_GUIDE_COUNT,
+  CORPUS_REFERENCE_COUNT,
 } from "~/generated/corpus-counts";
 
 import {

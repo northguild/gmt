@@ -1,4 +1,3 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { getWeekNumber } from "../../plain/calculate/getWeekNumber";
 import { getSystemTimeZone } from "../../zoned/get";
 import { convertUnixToZoned } from "../convert";
@@ -7,6 +6,7 @@ import {
   isValidUnixSeconds,
   type UnixUnit,
 } from "../validate";
+import { zonedDateTimeFrom } from "../../internal";
 
 /**
  * Units extractable from a unix epoch value via `parseUnitFromUnix`. Covers the
@@ -93,7 +93,7 @@ export function parseUnitFromUnix(
   const weekStartsOn = options?.weekStartsOn ?? "monday";
 
   try {
-    const zdt = Temporal.ZonedDateTime.from(zoned);
+    const zdt = zonedDateTimeFrom(zoned);
     switch (unit) {
       case "year":
         return zdt.year.toString();

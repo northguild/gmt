@@ -52,11 +52,17 @@ const DAY_PERIOD_PATTERN = new RegExp(
   "g",
 );
 
+// The same ICU (78.3) yields different spaces depending on V8: Node 24 (V8 13.6)
+// emits U+202F NARROW NO-BREAK SPACE where CLDR puts one (en-US "2:30 PM",
+// ru-RU "2024 г."), while Node 26 (V8 14.6) replaces it with a plain U+0020.
+// Both are real engine output, verified on those two runtimes, so the
+// comparison treats them as equal; a different character still fails.
+const NARROW_NO_BREAK_SPACE = / /g;
+
 function canonicalizeDayPeriod(value: string): string {
-  return value.replace(
-    DAY_PERIOD_PATTERN,
-    (match) => DAY_PERIOD_VARIANTS[match] ?? match,
-  );
+  return value
+    .replace(DAY_PERIOD_PATTERN, (match) => DAY_PERIOD_VARIANTS[match] ?? match)
+    .replace(NARROW_NO_BREAK_SPACE, " ");
 }
 
 export function expectDateTimeEqual(actual: string, expected: string): void {

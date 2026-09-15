@@ -9,7 +9,7 @@ describe("intervalsOverlapDateTime", () => {
     ${"2024-01-01T10:00:00"} | ${"2024-06-30T23:59:59"} | ${"2024-06-30T23:59:59"} | ${"2024-12-31T23:59:59"} | ${true}
     ${"2024-06-15T12:00:00"} | ${"2024-06-15T12:00:00"} | ${"2024-06-15T12:00:00"} | ${"2024-06-15T12:00:00"} | ${true}
   `(
-    "returns $expected when intervals $aStart..$aEnd and $bStart..$bEnd overlap",
+    "returns $expected when intervals $aStart to $aEnd and $bStart to $bEnd overlap",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalsOverlapDateTime(aStart, aEnd, bStart, bEnd)).toBe(
         expected,

@@ -58,3 +58,34 @@ export function addDateTimeUnit(
       return date;
   }
 }
+
+/**
+ * Return the start of the date `unit` after the one containing `source`.
+ *
+ * - Steps one unit first and truncates after, so `source`'s own start is never materialised: the
+ *   first representable PlainDateTime is `-271821-04-19T00:00:00.000000001`, so even the day
+ *   holding it began before the range, while the next day's midnight did not.
+ * - Year, month and week step by that unit (weeks start on Monday, like `getStartOfDateTimeUnit`);
+ *   every other unit steps to the next midnight, matching `getStartOfDateTimeUnit`'s day default.
+ * - Does NOT validate the unit — caller ensures it is a DateTimeUnit.
+ *
+ * @param source Temporal.PlainDateTime inside the current unit
+ * @param unit DateTimeUnit to step by
+ * @returns Temporal.PlainDateTime at the start of the next unit
+ *
+ * @example getStartOfNextDateTimeUnit(Temporal.PlainDateTime.from("2024-03-15T14:30:45"), "week") // 2024-03-18T00:00:00
+ * @example getStartOfNextDateTimeUnit(Temporal.PlainDateTime.from("-271821-04-19T12:00:00"), "day") // -271821-04-20T00:00:00
+ */
+export function getStartOfNextDateTimeUnit(
+  source: Temporal.PlainDateTime,
+  unit: string,
+): Temporal.PlainDateTime {
+  switch (unit) {
+    case "year":
+    case "month":
+    case "week":
+      return getStartOfDateTimeUnit(addDateTimeUnit(source, unit, 1), unit);
+    default:
+      return source.add({ days: 1 }).withPlainTime();
+  }
+}

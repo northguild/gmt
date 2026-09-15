@@ -365,3 +365,31 @@ describe("subtractZoned with GMT calendar-annotated values", () => {
     },
   );
 });
+
+describe("subtractZoned at the maximum instant", () => {
+  it.each`
+    value                                               | units           | expected
+    ${"+275760-09-12T10:00:00+10:00[Australia/Sydney]"} | ${{ days: -1 }} | ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"}
+    ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"} | ${{ days: 1 }}  | ${"+275760-09-12T10:00:00+10:00[Australia/Sydney]"}
+  `(
+    "subtracts $units from $value giving $expected",
+    ({ value, units, expected }) => {
+      expect(subtractZoned(value, units)).toBe(expected);
+    },
+  );
+});
+
+// CORE-6 S5: a calendar-unit subtraction near the minimum instant. The polyfill's fields -> ISO
+// conversion probes outside the legacy Date range there (D1). Values: Chromium 153 native Temporal,
+// ISO -271820-05-23T12:00 minus 1 islamic-civil year is -271821-06-03T12:00, read as -280803|M05|7
+// and -280804|M05|7.
+describe("subtractZoned in non-ISO calendars (CORE-6)", () => {
+  it.each`
+    value                                                                      | expected
+    ${"-280803-05-07T12:00:00+00:00[u-ca=islamic-civil][UTC]"}                 | ${"-280804-05-07T12:00:00+00:00[u-ca=islamic-civil][UTC]"}
+    ${"-280803-05-07T12:00:00-04:56:02[u-ca=islamic-civil][America/New_York]"} | ${"-280804-05-07T12:00:00-04:56:02[u-ca=islamic-civil][America/New_York]"}
+    ${"-280803-05-07T12:00:00-12:00[u-ca=islamic-civil][Etc/GMT+12]"}          | ${"-280804-05-07T12:00:00-12:00[u-ca=islamic-civil][Etc/GMT+12]"}
+  `("subtracts 1 year from $value giving $expected", ({ value, expected }) => {
+    expect(subtractZoned(value, { years: 1 })).toBe(expected);
+  });
+});

@@ -1,5 +1,6 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { advanceBusinessDays } from "./advanceBusinessDays";
+import { plainToZoned, zonedWithPlainTime } from "./zonedWallClockOperations";
+import { zonedDateTimeFrom } from "./zonedWallClock";
 
 export function adjustZonedBusinessDays(
   value: string,
@@ -7,12 +8,13 @@ export function adjustZonedBusinessDays(
   absAmount: number,
 ): string {
   try {
-    const zoned = Temporal.ZonedDateTime.from(value);
+    const zoned = zonedDateTimeFrom(value);
     const plainDate = zoned.toPlainDate();
     const resultDate = advanceBusinessDays(plainDate, direction, absAmount);
-    const resultZoned = resultDate
-      .toZonedDateTime(zoned.timeZoneId)
-      .withPlainTime(zoned.toPlainTime());
+    const resultZoned = zonedWithPlainTime(
+      plainToZoned(resultDate, zoned.timeZoneId),
+      zoned.toPlainTime(),
+    );
     return resultZoned.toString();
   } catch {
     return "";
