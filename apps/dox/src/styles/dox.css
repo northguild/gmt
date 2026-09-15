@@ -116,6 +116,16 @@ html:not([data-has-sidebar]) .sl-container {
   gap: var(--gmt-space-8, 3rem);
 }
 
+/* Starlight's Card colours cards by grid position: 1 orange, 3 green, 4 red, 5 blue, and every
+ * other position the default purple. A six-card section therefore repeats purple at cards 2 and
+ * 6, so the sixth card takes the theme's ice colour instead. --gmt-ice flips with the theme (ice
+ * blue in dark, near-black in light), so the icon stays legible in both. Starlight's rules sit
+ * in its components layer, so this unlayered rule wins without !important. */
+.gmt-home-grid .card:nth-child(6n) {
+  --sl-card-border: var(--gmt-ice);
+  --sl-card-bg: color-mix(in srgb, var(--gmt-ice) 12%, transparent);
+}
+
 .gmt-why-grid {
   display: grid;
   grid-template-columns: 1fr;

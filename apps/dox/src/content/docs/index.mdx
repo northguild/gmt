@@ -87,10 +87,14 @@ the globe above is computed live in your browser and recomputed every second.
   dates as the [Intl Era and Month Code proposal](https://github.com/tc39/proposal-intl-era-monthcode)
   defines them, across Temporal's whole date range.
 </Card>
+
+<Card title="Every standard, in one place" icon="open-book">
+  TC39 and ECMA-402, Temporal, the Intl proposals, ISO 8601, RFC 3339, RFC 9557, the IANA
+  Time Zone Database, BCP 47, CLDR, RFC 5322, RFC 9110 and test262: what each one is, and what
+  GMT uses it for. [Read The Standards](/guides/concepts/standards/).
+</Card>
 </CardGrid>
 </div>
-
-[What each of these standards is →](/guides/concepts/standards/)
 
 </GridSection>
 
@@ -118,11 +122,7 @@ the globe above is computed live in your browser and recomputed every second.
   these is a named test. [See the evidence](/guides/concepts/correct-at-the-edges/).
 </Card>
 
-<Card
-  title="Safeguards against invalid inputs"
-  icon="padlock"
-  iconColor="var(--gmt-ice)"
->
+<Card title="Safeguards against invalid inputs" icon="padlock">
   Temporal throws `RangeError` / `TypeError` on invalid data. GMT validates,
   normalizes, and prevents crashes, so your app stays robust.
 </Card>
@@ -133,6 +133,11 @@ the globe above is computed live in your browser and recomputed every second.
   microseconds. `Luxon`, `date-fns`, `Moment.js`, `Day.js`, `Spacetime` and
   `@internationalized/date` all stop at the millisecond.
   [See `toNanoseconds`](/reference/precision/convert/toNanoseconds).
+</Card>
+
+<Card title="Zero known bugs" icon="list-format">
+  None of the {formatCount(gmtStats.tests)} tests is skipped, focused or marked as expected to
+  fail. A check in CI fails the build if one ever is, so a known bug can't ship switched off.
 </Card>
 </CardGrid>
 </div>
