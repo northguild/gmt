@@ -118,7 +118,7 @@ export function getStartOfNextDateUnit(
  * - Accepts a `Temporal.PlainDate` or a `Temporal.PlainDateTime` (only its date matters).
  * - Does NOT validate the unit — caller ensures it is a DateUnit.
  *
- * @param source value with ISO calendar date fields
+ * @param source value with calendar date fields, read in its own calendar
  * @param unit DateUnit to measure within
  * @returns number of whole days since the unit started
  *
