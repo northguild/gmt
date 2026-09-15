@@ -31,6 +31,11 @@ export function renderTestExecutionChart(): string {
   return renderBarChart("ci-executions");
 }
 
+/** One run of each suite, without CI matrix re-runs — the /why-gmt toggle's other view. */
+export function renderSuiteTestChart(): string {
+  return renderBarChart("ci-suite");
+}
+
 export function renderNamespaceChart(): string {
   return renderBarChart("namespaces");
 }
@@ -146,5 +151,6 @@ export function renderLocaleMatrixChart(): string {
 }
 
 export const testExecutionSvg = renderTestExecutionChart();
+export const suiteTestSvg = renderSuiteTestChart();
 export const namespaceDistributionSvg = renderNamespaceChart();
 export const localeMatrixSvg = renderLocaleMatrixChart();

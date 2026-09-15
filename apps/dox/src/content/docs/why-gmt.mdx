@@ -7,6 +7,7 @@ template: splash
 import {
   localeMatrixSvg,
   namespaceDistributionSvg,
+  suiteTestSvg,
   testExecutionSvg,
 } from "../../../scripts/render-charts";
 import ChartContainer from "../../components/ChartContainer.astro";
@@ -34,6 +35,7 @@ export const executionRange = competitorExecutionRange();
 export const localeRange = competitorStatRange("locales");
 export const timezoneRange = competitorStatRange("timezones");
 export const nodeRange = competitorStatRange("nodeVersions");
+export const testRange = competitorStatRange("tests");
 export const publicApiRange = competitorPublicApiRange();
 export const largestSuite = largestCompetitorSuite();
 export const localeFamilyCounts = familyCounts(gmtStats.localeList);
@@ -62,14 +64,24 @@ then re-runs the whole suite under {gmtStats.timezones} timezones and {gmtStats.
 versions, so every test runs {runsPerTest} times.
 
 <ChartContainer
-  svg={testExecutionSvg}
-  chart="ci-executions"
-  title="CI executions per library"
-  legend={[
-    { label: "Suite tests (one run)", segment: "suite" },
-    { label: "CI matrix re-runs", segment: "matrix" },
+  title="Test executions per library"
+  toggleLabel="Chart view"
+  views={[
+    {
+      id: "one-run",
+      label: "One run",
+      chart: "ci-suite",
+      svg: suiteTestSvg,
+      caption: `One run of each suite, before any CI matrix. GMT: ${formatCount(gmtStats.tests)} tests. Competitors: ${formatCount(testRange.min)}–${formatCount(testRange.max)}.`,
+    },
+    {
+      id: "ci",
+      label: "CI executions",
+      chart: "ci-executions",
+      svg: testExecutionSvg,
+      caption: `GMT: ${formatCount(gmtStats.tests)} tests, re-run across ${gmtStats.timezones} timezones × ${gmtStats.nodes.length} Node versions = ${formatCount(gmtStats.executions)} executions. Competitors: ${formatCount(executionRange.min)}–${formatCount(executionRange.max)}.`,
+    },
   ]}
-  caption={`GMT: ${formatCount(gmtStats.tests)} tests, re-run across ${gmtStats.timezones} timezones × ${gmtStats.nodes.length} Node versions = ${formatCount(gmtStats.executions)} executions. Competitors: ${formatCount(executionRange.min)}–${formatCount(executionRange.max)}.`}
 />
 
 The split matters. On suite size alone, GMT's {formatCount(gmtStats.tests)} tests already
