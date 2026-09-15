@@ -128,6 +128,56 @@ html:not([data-has-sidebar]) .sl-container {
   }
 }
 
+/* A list of guarantees, one per line, each marked with a spring-green check.
+ * Plain markdown underneath (a <ul>), so screen readers and agents read it as
+ * a normal list; the check is decorative. Used on /why-gmt instead of cards,
+ * which the homepage already uses. */
+.sl-markdown-content .gmt-checklist ul {
+  list-style: none;
+  padding-inline-start: 0;
+  margin-block: var(--gmt-space-3, 0.75rem);
+  display: grid;
+  gap: var(--gmt-space-2, 0.5rem);
+}
+
+.sl-markdown-content .gmt-checklist li {
+  position: relative;
+  margin: 0;
+  padding-inline-start: 1.75rem;
+}
+
+.sl-markdown-content .gmt-checklist li::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0.2em;
+  width: 1.15em;
+  height: 1.15em;
+  background-color: var(--gmt-spring);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+
+@media (forced-colors: active) {
+  .sl-markdown-content .gmt-checklist li::before {
+    background-color: CanvasText;
+  }
+}
+
+/* The footnote under a comparison table, reached from a <sup> link in a cell.
+ * Smaller and muted so it reads as a source note, not body copy; scroll-margin
+ * keeps the target clear of the sticky header when the link is followed.
+ * gray-2, not gray-3: gray-3 fails WCAG AA for 14px text on the page background
+ * (4.39:1 dark, 2.85:1 light); gray-2 is 6.80:1 dark, 5.74:1 light. */
+.sl-markdown-content .gmt-table-note {
+  font-size: var(--sl-text-sm);
+  color: var(--sl-color-gray-2);
+  margin-block-start: var(--gmt-space-2, 0.5rem);
+  scroll-margin-block-start: calc(var(--sl-nav-height, 4rem) + 1rem);
+}
+
 /* Named container so content nested inside a GridSection (Starlight's own
  * CardGrid in particular) can query the section's actual rendered width
  * instead of the viewport's. Starlight's .card-grid switches to 2 columns

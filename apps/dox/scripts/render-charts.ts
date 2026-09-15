@@ -6,6 +6,8 @@ import {
   text,
 } from "@tanstack/charts";
 import { scaleBand } from "@tanstack/charts/scales/band";
+import { gmtStats } from "../src/data/gmt-stats";
+import { localeMatrixRows } from "../src/lib/locale-families";
 import { BAR_CHARTS, type BarChartId } from "../src/lib/why-gmt-charts";
 
 // The static SVG is the no-JS fallback; ChartContainer.astro mounts the same
@@ -92,127 +94,12 @@ export function renderLocaleMatrixChart(): string {
     Turkic: "var(--gmt-family-turkic)",
   };
 
-  const data = [
-    {
-      family: "Latin",
-      locale: "en-US",
-      name: "English (US)",
-      row: 0,
-      fill: familyVar["Latin"],
-    },
-    {
-      family: "Latin",
-      locale: "en-GB",
-      name: "English (UK)",
-      row: 1,
-      fill: familyVar["Latin"],
-    },
-    {
-      family: "Latin",
-      locale: "de-DE",
-      name: "German",
-      row: 2,
-      fill: familyVar["Latin"],
-    },
-    {
-      family: "Latin",
-      locale: "fr-FR",
-      name: "French",
-      row: 3,
-      fill: familyVar["Latin"],
-    },
-    {
-      family: "Latin",
-      locale: "es-ES",
-      name: "Spanish",
-      row: 4,
-      fill: familyVar["Latin"],
-    },
-    {
-      family: "Latin",
-      locale: "it-IT",
-      name: "Italian",
-      row: 5,
-      fill: familyVar["Latin"],
-    },
-    {
-      family: "Latin",
-      locale: "pt-PT",
-      name: "Portuguese",
-      row: 6,
-      fill: familyVar["Latin"],
-    },
-    {
-      family: "Latin",
-      locale: "sv-SE",
-      name: "Swedish",
-      row: 7,
-      fill: familyVar["Latin"],
-    },
-    {
-      family: "Latin",
-      locale: "is-IS",
-      name: "Icelandic",
-      row: 8,
-      fill: familyVar["Latin"],
-    },
-    {
-      family: "CJK",
-      locale: "zh-CN",
-      name: "Chinese (Simplified)",
-      row: 0,
-      fill: familyVar["CJK"],
-    },
-    {
-      family: "CJK",
-      locale: "zh-TW",
-      name: "Chinese (Traditional)",
-      row: 1,
-      fill: familyVar["CJK"],
-    },
-    {
-      family: "CJK",
-      locale: "ja-JP",
-      name: "Japanese",
-      row: 2,
-      fill: familyVar["CJK"],
-    },
-    {
-      family: "CJK",
-      locale: "ko-KR",
-      name: "Korean",
-      row: 3,
-      fill: familyVar["CJK"],
-    },
-    {
-      family: "Arabic/Hebrew",
-      locale: "ar-SA",
-      name: "Arabic",
-      row: 0,
-      fill: familyVar["Arabic/Hebrew"],
-    },
-    {
-      family: "Arabic/Hebrew",
-      locale: "he-IL",
-      name: "Hebrew",
-      row: 1,
-      fill: familyVar["Arabic/Hebrew"],
-    },
-    {
-      family: "Cyrillic",
-      locale: "ru-RU",
-      name: "Russian",
-      row: 0,
-      fill: familyVar["Cyrillic"],
-    },
-    {
-      family: "Turkic",
-      locale: "tr-TR",
-      name: "Turkish",
-      row: 0,
-      fill: familyVar["Turkic"],
-    },
-  ];
+  // Built from the published locale matrix (gmtStats.localeList), not a typed
+  // literal — locale-families.ts only supplies the family/name presentation.
+  const data = localeMatrixRows(gmtStats.localeList).map((row) => ({
+    ...row,
+    fill: familyVar[row.family],
+  }));
 
   const definition = defineChart({
     marks: [

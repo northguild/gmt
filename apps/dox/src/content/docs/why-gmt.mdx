@@ -15,14 +15,35 @@ import TimezoneMap from "../../components/TimezoneMap.astro";
 import { formatCount, gmtStats, runsPerTest } from "../../data/gmt-stats";
 import {
   competitorExecutionRange,
+  competitorPublicApiRange,
+  competitorStatRange,
+  competitorsByPublicApi,
   executionRatio,
   largestCompetitorSuite,
+  publicApiTotal,
 } from "../../data/library-comparison";
+import { familyCounts, formatFamilyCounts } from "../../lib/locale-families";
+import {
+  formatOffset,
+  zoneOffsetRange,
+} from "../../lib/timezone-offset-range";
 
-{/* Every GMT figure on this page comes from gmt-stats.json, written by `pnpm stats:sync` from packages/gmt. Never type one in. */}
+{/* Every GMT figure on this page comes from gmt-stats.json, written by `pnpm stats:sync` from packages/gmt, and every competitor range from library-comparison.ts. Never type one in. */}
 
 export const executionRange = competitorExecutionRange();
+export const localeRange = competitorStatRange("locales");
+export const timezoneRange = competitorStatRange("timezones");
+export const nodeRange = competitorStatRange("nodeVersions");
+export const publicApiRange = competitorPublicApiRange();
 export const largestSuite = largestCompetitorSuite();
+export const localeFamilyCounts = familyCounts(gmtStats.localeList);
+export const zoneOffsets = zoneOffsetRange(gmtStats.timezoneList);
+export const offsetWindowHours =
+  (zoneOffsets.max.minutes - zoneOffsets.min.minutes) / 60;
+export const namespaceList = new Intl.ListFormat("en-US", {
+  style: "long",
+  type: "conjunction",
+}).format(gmtStats.byNamespace.map((row) => `\`${row.namespace}\``));
 
 `@northguild/gmt` is not the latest entry in a crowded field — it is a
 fundamentally different bet about what a date/time library should guarantee.
@@ -62,8 +83,7 @@ alternative and about {formatCount(executionRatio(executionRange.min))}× the le
 
 ## API surface by namespace
 
-GMT exposes {formatCount(gmtStats.functions)} public functions across {gmtStats.byNamespace.length} namespaces — `plain`, `zoned`,
-`unix`, `utc`, `duration`, `precision`, `span`, `instant`, and `calendar` — plus
+GMT exposes {formatCount(gmtStats.functions)} public functions across {gmtStats.byNamespace.length} namespaces — {namespaceList} — plus
 {gmtStats.patterns} exported regex patterns in `regex`, each generated from the same
 TypeScript source and verified by the same test suite.
 
@@ -80,11 +100,11 @@ TypeScript source and verified by the same test suite.
 
 ## Timezone coverage
 
-GMT tests against {gmtStats.timezones} timezones chosen not for geographic spread but for offset coverage — from UTC−11 (Pacific/Niue) to UTC+14 (Pacific/Apia). That 25-hour window means that at any given moment, at least one zone is already living in tomorrow while another is still stuck in yesterday. Date-boundary bugs — off-by-one day, wrong month rollover, DST gaps — only surface when the suite runs across this full offset range. A test that passes at UTC can fail at UTC+14 simply because the calendar date is different.
+GMT tests against {gmtStats.timezones} timezones chosen not for geographic spread but for offset coverage — from {formatOffset(zoneOffsets.min.minutes)} ({zoneOffsets.min.zoneId}) to {formatOffset(zoneOffsets.max.minutes)} ({zoneOffsets.max.zoneId}). That {offsetWindowHours}-hour window means that at any given moment, at least one zone is already living in tomorrow while another is still stuck in yesterday. Date-boundary bugs — off-by-one day, wrong month rollover, DST gaps — only surface when the suite runs across this full offset range. A test that passes at UTC can fail at UTC+14 simply because the calendar date is different.
 
 <TimezoneMap
   title="CI timezones under test"
-  caption={`${gmtStats.timezones} timezones spanning UTC−11 to UTC+14. Hover a dot for the current local time in ISO 8601. Times refresh every second via Temporal.`}
+  caption={`${gmtStats.timezones} timezones spanning ${formatOffset(zoneOffsets.min.minutes)} to ${formatOffset(zoneOffsets.max.minutes)}. Hover a dot for the current local time in ISO 8601. Times refresh every second via Temporal.`}
 />
 
 </GridSection>
@@ -98,8 +118,30 @@ GMT does not test every locale — there are hundreds, and most differ only in f
 <ChartContainer
   svg={localeMatrixSvg}
   title="Locale matrix by script family"
-  caption={`${gmtStats.locales} locales across 5 script families. Latin (9), CJK (4), Arabic/Hebrew (2), Cyrillic (1), Turkic (1). Each cell shows the locale code and English name.`}
+  caption={`${gmtStats.locales} locales across ${localeFamilyCounts.length} script families. ${formatFamilyCounts(localeFamilyCounts)}. Each cell shows the locale code and English name.`}
 />
+
+</GridSection>
+
+<GridSection>
+
+## Correct at the edges
+
+Most date bugs hide at the extremes, where ordinary tests never look. GMT tests them directly:
+
+<div class="gmt-checklist">
+
+- **Midnight.** A time at the last nanosecond of the day stays on that day.
+- **The ends of time.** The first and last moments a date can represent still give exact answers.
+- **Daylight saving.** Days, weeks and months start at the right moment across clock changes, right to the end of the calendar.
+- **Zones ahead of UTC.** Sydney and Kiritimati work right up to the last moment that can be represented.
+- **Long totals.** Adding up time stays exact to the nanosecond, however large the total.
+- **Touching intervals.** A 9–5 meeting and a 5–6 meeting don't overlap: an interval includes its start, not its end.
+- **Zero known bugs.** None of the {formatCount(gmtStats.tests)} tests is skipped or switched off.
+
+</div>
+
+[See the evidence behind each of these →](/guides/concepts/correct-at-the-edges/)
 
 </GridSection>
 
@@ -110,21 +152,35 @@ GMT does not test every locale — there are hundreds, and most differ only in f
 | Dimension             | GMT                                              | Legacy libraries                                                    |
 | --------------------- | ------------------------------------------------ | -------------------------------------------------------------------- |
 | **CI executions**     | {formatCount(gmtStats.executions)}               | {formatCount(executionRange.min)} – {formatCount(executionRange.max)} |
-| **Locales tested**    | {gmtStats.locales}, built into every test        | 0 – 42 files, tested in isolation from the rest of the API surface   |
-| **Timezones tested**  | {gmtStats.timezones} × every public function     | 0 – 8 files, tested in isolation (Spacetime disables 4 of its own DST-edge-case files, and 41 of the ones it does run currently fail) |
-| **Node versions**     | {gmtStats.nodes.join(", ")}                      | 1 – 2 (only Spacetime matches GMT's matrix; the rest test a single LTS) |
-| **Public functions**  | {formatCount(gmtStats.functions)}                | 75 – 223                                                              |
+| **Locales tested**    | {gmtStats.locales}, built into every test        | {localeRange.min} – {localeRange.max} files, tested in isolation from the rest of the API surface |
+| **Timezones tested**  | {gmtStats.timezones} × every public function     | {timezoneRange.min} – {timezoneRange.max} files, tested in isolation |
+| **Node versions**     | {gmtStats.nodes.join(", ")}                      | {nodeRange.min} – {nodeRange.max} |
+| **Public functions**  | {formatCount(gmtStats.functions)}                | {publicApiRange.min} – {publicApiRange.max}<sup><a href="#public-api-counts" aria-label="How public functions are counted">*</a></sup> |
 | **Sentinel contract** | `""` / `null` / `false` / `[]`                   | Throws `RangeError`                                                   |
 
+<p id="public-api-counts" class="gmt-table-note">
+  <sup>*</sup> Public functions and methods, counted from each library's published
+  TypeScript declarations: every exported function, plus every public method of its
+  exported classes and types. Overloads, aliases and inherited methods count once;
+  constructors, getters and properties do not.{" "}
+  {competitorsByPublicApi()
+    .map(
+      (l) =>
+        `${l.displayName} ${l.stats.publicApi.version}: ${formatCount(publicApiTotal(l))} (${l.stats.publicApi.functions} ${l.stats.publicApi.functions === 1 ? "function" : "functions"}, ${l.stats.publicApi.methods} ${l.stats.publicApi.methods === 1 ? "method" : "methods"})`,
+    )
+    .join("; ")}. GMT exports functions only.
+</p>
+
 The table is the point. GMT does not add a few convenience methods to an
-existing `Date` wrapper — it replaces the type system entirely with Temporal,
-then rebuilds the ergonomic surface on top of that guarantee. The gap isn't
-that legacy libraries skip locale or timezone testing outright — some, like
-Day.js and Spacetime, ship plenty of it — it's that none of them run that
-coverage against their *entire* API the way GMT's matrix does, and the
-tests that exist aren't always trustworthy: Day.js's own timezone tests
-assert against `moment`'s output as the oracle, and Spacetime's own DST
-tests are currently failing where they haven't been disabled outright.
+existing `Date` wrapper — it replaces the type system entirely with
+[TC39 Temporal](https://tc39.es/proposal-temporal/), then rebuilds the
+ergonomic surface on top of that guarantee. Every function takes and returns
+[ISO 8601](https://www.iso.org/iso-8601-date-and-time-format.html) strings,
+every zoned value carries its
+[RFC 9557](https://www.rfc-editor.org/rfc/rfc9557) time-zone annotation, and
+the {gmtStats.locales}-locale, {gmtStats.timezones}-timezone matrix runs
+against the library's *entire* public API on every PR, not a sample of it.
+That is what {formatCount(gmtStats.executions)} CI executions verify.
 
 </GridSection>
 

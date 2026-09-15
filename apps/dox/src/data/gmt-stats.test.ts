@@ -5,6 +5,7 @@ import { formatCount, gmtStats, runsPerTest } from "./gmt-stats";
 import {
   competitorComparisons,
   competitorExecutionRange,
+  competitorStatRange,
   executionRatio,
   largestCompetitorSuite,
 } from "./library-comparison";
@@ -56,6 +57,22 @@ describe("competitor comparisons", () => {
       max: Math.max(...executions),
     });
   });
+
+  // Expected ranges come from each library's measured sourceNote: locales 0 (most) to 42 (Day.js),
+  // tz/DST test files 0 (most) to 8 (Spacetime), Node versions 1 (date-fns, Day.js,
+  // @internationalized/date) to 4 (Luxon). A new or re-measured library that moves a range must
+  // fail here, so the why-gmt table is re-checked rather than silently changing.
+  it.each`
+    stat              | min  | max
+    ${"locales"}      | ${0} | ${42}
+    ${"timezones"}    | ${0} | ${8}
+    ${"nodeVersions"} | ${1} | ${4}
+  `(
+    "spans $stat from $min to $max across the alternatives",
+    ({ stat, min, max }) => {
+      expect(competitorStatRange(stat)).toEqual({ min, max });
+    },
+  );
 
   it("rounds GMT's executions to a whole multiple", () => {
     expect(executionRatio(gmtStats.executions)).toBe(1);

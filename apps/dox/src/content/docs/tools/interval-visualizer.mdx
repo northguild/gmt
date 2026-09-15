@@ -6,9 +6,10 @@ description: Drag two time intervals on a shared timeline and watch their inters
 import IntervalVisualizer from "../../../components/IntervalVisualizer.astro";
 
 Two ranges of time can relate to each other in more ways than they first appear:
-overlapping, disjoint, one containing the other, identical, or merely touching at
-an endpoint. The four interval operations answer different questions about that
-relationship, and the answers are easier to see than to read.
+overlapping, disjoint, one containing the other, identical, or touching at a shared
+endpoint, which the closed functions this widget calls count as overlap. The four
+interval operations answer different questions about that relationship, and the
+answers are easier to see than to read.
 
 Drag either interval's endpoints, or type them, and every operation recomputes on
 the same timeline scale — so the shape of each answer is visible, not just its

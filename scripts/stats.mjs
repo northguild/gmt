@@ -57,7 +57,6 @@ const VITEST_CONFIG = "packages/gmt/vitest.config.ts";
 const ROOT_README = "README.md";
 const PKG_README = "packages/gmt/README.md";
 const READMES = [ROOT_README, PKG_README];
-const DOX_WHY = "apps/dox/src/content/docs/why-gmt.mdx";
 /** Every GMT figure apps/dox renders is imported from this file — see statsObject(). */
 const DOX_STATS = "apps/dox/src/data/gmt-stats.json";
 
@@ -166,31 +165,35 @@ function ciMatrix() {
       `${WORKFLOW}: could not read the gmt-matrix node/timezone matrix`,
     );
   }
+  const timezoneList = (zones.match(/"[^"]+"/g) ?? []).map((s) =>
+    s.slice(1, -1),
+  );
   return {
     nodes: nodes
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean),
-    timezones: (zones.match(/"[^"]+"/g) ?? []).length,
+    timezones: timezoneList.length,
+    timezoneList,
   };
 }
 
-/** Locales in the mandatory matrix. */
-function localeCount() {
+/** Locales in the mandatory matrix, in declaration order. */
+function localeList() {
   const src = readFileSync(LOCALES, "utf8");
   const block = src.slice(src.indexOf("MustTestLocales"));
   return (
-    block
-      .slice(0, block.indexOf("}"))
-      .match(/:\s*["'][a-z]{2}-[A-Z]{2}["']/g) ?? []
-  ).length;
+    block.slice(0, block.indexOf("}")).match(/["'][a-z]{2}-[A-Z]{2}["']/g) ??
+    []
+  ).map((s) => s.slice(1, -1));
 }
 
 /** Everything the docs are allowed to claim, derived. */
 function figures() {
   const counted = suiteCounts();
   const api = apiSurface();
-  const { nodes, timezones } = ciMatrix();
+  const { nodes, timezones, timezoneList } = ciMatrix();
+  const locales = localeList();
 
   return {
     ...counted,
@@ -198,7 +201,9 @@ function figures() {
     nodes,
     nodeCount: nodes.length,
     timezones,
-    locales: localeCount(),
+    timezoneList,
+    locales: locales.length,
+    localeList: locales,
     // The whole suite runs under every Node version x every timezone, so this is one
     // product rather than a weighted sum: gmt-matrix has no partial legs.
     executions: counted.tests * nodes.length * timezones,
@@ -214,7 +219,9 @@ function statsObject(f) {
     executions: f.executions,
     nodes: f.nodes,
     timezones: f.timezones,
+    timezoneList: f.timezoneList,
     locales: f.locales,
+    localeList: f.localeList,
     functions: f.functions,
     patterns: f.patterns,
     byNamespace: f.byNamespace.map(([namespace, count]) => ({
@@ -365,20 +372,10 @@ function evaluate(f) {
     }
   }
 
-  // Prose that names namespaces is reported, never rewritten — adding one needs a sentence,
-  // not a substitution.
-  const why = edits.get(DOX_WHY) ?? readFileSync(DOX_WHY, "utf8");
-  for (const [ns] of f.byNamespace) {
-    const sentence = why.slice(
-      why.indexOf("GMT exposes"),
-      why.indexOf("— plus"),
-    );
-    if (!sentence.includes(`\`${ns}\``)) {
-      problems.push(
-        `${DOX_WHY}: the api-surface sentence does not name the \`${ns}\` namespace`,
-      );
-    }
-  }
+  // The api-surface sentence in DOX_WHY used to be static prose naming each namespace by
+  // hand, so a rule checked it hadn't gone stale. It now builds the list itself from
+  // gmtStats.byNamespace (Intl.ListFormat, at render time in why-gmt.mdx), so every
+  // namespace is named automatically and there's nothing left here to drift.
 
   // The dox data file is compared by value, not bytes, so reformatting it is not drift.
   const stats = statsObject(f);

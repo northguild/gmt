@@ -1025,6 +1025,298 @@
     ]
   },
   {
+    "url": "/reference/interval/calculate/clampInterval",
+    "name": "clampInterval",
+    "namespace": "interval",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "clampInterval(interval: Interval, bounds: Interval): Interval",
+    "description": "Return the part of `interval` that lies inside `bounds`, or null when none of it does.",
+    "sourcePath": "packages/gmt/src/interval/calculate/clampInterval.ts",
+    "examples": [
+      {
+        "call": "clampInterval({ start: \"2024-01-01T08:00:00Z\", end: \"2024-01-01T12:00:00Z\" }, { start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" })",
+        "result": "{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T12:00:00Z\" }"
+      },
+      {
+        "call": "clampInterval({ start: \"2024-01-01T06:00:00Z\", end: \"2024-01-01T20:00:00Z\" }, { start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" })",
+        "result": "{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }"
+      },
+      {
+        "call": "clampInterval({ start: \"2024-01-01T17:00:00Z\", end: \"2024-01-01T18:00:00Z\" }, { start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" })",
+        "result": "null — touching"
+      },
+      {
+        "call": "clampInterval({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T09:00:00Z\" }, { start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" })",
+        "result": "null — empty, at the edge"
+      },
+      {
+        "call": "clampInterval({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, { start: \"2024-01-01T17:00:00Z\", end: \"2024-01-01T09:00:00Z\" })",
+        "result": "null — inverted bounds"
+      }
+    ]
+  },
+  {
+    "url": "/reference/interval/calculate/intersectIntervals",
+    "name": "intersectIntervals",
+    "namespace": "interval",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "intersectIntervals(a: Interval, b: Interval): Interval",
+    "description": "Return the half-open interval two intervals share, or null when they share no instant.",
+    "sourcePath": "packages/gmt/src/interval/calculate/intersectIntervals.ts",
+    "examples": [
+      {
+        "call": "intersectIntervals({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, { start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T18:00:00Z\" })",
+        "result": "{ start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T17:00:00Z\" }"
+      },
+      {
+        "call": "intersectIntervals({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, { start: \"2024-01-01T17:00:00Z\", end: \"2024-01-01T18:00:00Z\" })",
+        "result": "null — touching"
+      },
+      {
+        "call": "intersectIntervals({ start: \"2024-01-01T04:00:00-05:00\", end: \"2024-01-01T12:00:00-05:00\" }, { start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" })",
+        "result": "{ start: \"2024-01-01T04:00:00-05:00\", end: \"2024-01-01T12:00:00-05:00\" } — same instants, first argument's spelling"
+      },
+      {
+        "call": "intersectIntervals({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T12:00:00Z\" }, { start: \"2024-01-01T13:00:00Z\", end: \"2024-01-01T17:00:00Z\" })",
+        "result": "null — disjoint"
+      },
+      {
+        "call": "intersectIntervals({ start: \"invalid\", end: \"2024-01-01T17:00:00Z\" }, { start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" })",
+        "result": "null"
+      }
+    ]
+  },
+  {
+    "url": "/reference/interval/calculate/mergeIntervals",
+    "name": "mergeIntervals",
+    "namespace": "interval",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "mergeIntervals(intervals: Interval[]): Interval[]",
+    "description": "Collapse a list of half-open intervals into the fewest sorted, non-overlapping intervals.",
+    "sourcePath": "packages/gmt/src/interval/calculate/mergeIntervals.ts",
+    "examples": [
+      {
+        "call": "mergeIntervals([{ start: \"2024-01-01T13:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, { start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T12:00:00Z\" }])",
+        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T12:00:00Z\" }, { start: \"2024-01-01T13:00:00Z\", end: \"2024-01-01T17:00:00Z\" }]"
+      },
+      {
+        "call": "mergeIntervals([{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T12:00:00Z\" }, { start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T17:00:00Z\" }])",
+        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }] — touching"
+      },
+      {
+        "call": "mergeIntervals([{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T10:00:00Z\" }, { start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T12:00:00Z\" }])",
+        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T10:00:00Z\" }] — stranded empty dropped"
+      },
+      {
+        "call": "mergeIntervals([])",
+        "result": "[]"
+      },
+      {
+        "call": "mergeIntervals([{ start: \"2024-01-01T17:00:00Z\", end: \"2024-01-01T09:00:00Z\" }])",
+        "result": "[] — inverted"
+      }
+    ]
+  },
+  {
+    "url": "/reference/interval/calculate/splitIntervalAt",
+    "name": "splitIntervalAt",
+    "namespace": "interval",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "splitIntervalAt(interval: Interval, boundaries: string[]): Interval[]",
+    "description": "Split a half-open interval at instant boundaries into consecutive half-open pieces.",
+    "sourcePath": "packages/gmt/src/interval/calculate/splitIntervalAt.ts",
+    "examples": [
+      {
+        "call": "splitIntervalAt({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, [\"2024-01-01T12:00:00Z\"])",
+        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T12:00:00Z\" }, { start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T17:00:00Z\" }]"
+      },
+      {
+        "call": "splitIntervalAt({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, [\"2024-01-01T15:00:00Z\", \"2024-01-01T11:00:00Z\"])",
+        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T11:00:00Z\" }, { start: \"2024-01-01T11:00:00Z\", end: \"2024-01-01T15:00:00Z\" }, { start: \"2024-01-01T15:00:00Z\", end: \"2024-01-01T17:00:00Z\" }]"
+      },
+      {
+        "call": "splitIntervalAt({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, [\"2024-01-01T09:00:00Z\", \"2024-01-01T18:00:00Z\"])",
+        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }] — edge and outside dropped"
+      },
+      {
+        "call": "splitIntervalAt({ start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T12:00:00Z\" }, [\"2024-01-01T12:00:00Z\"])",
+        "result": "[{ start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T12:00:00Z\" }] — empty interval"
+      },
+      {
+        "call": "splitIntervalAt({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, [\"2024-01-01T12:00:00\"])",
+        "result": "[] — no offset"
+      }
+    ]
+  },
+  {
+    "url": "/reference/interval/calculate/subtractIntervals",
+    "name": "subtractIntervals",
+    "namespace": "interval",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "subtractIntervals(from: Interval, remove: Interval[]): Interval[]",
+    "description": "Return the parts of `from` that no interval in `remove` covers, as sorted half-open intervals.",
+    "sourcePath": "packages/gmt/src/interval/calculate/subtractIntervals.ts",
+    "examples": [
+      {
+        "call": "subtractIntervals({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, [{ start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T13:00:00Z\" }])",
+        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T12:00:00Z\" }, { start: \"2024-01-01T13:00:00Z\", end: \"2024-01-01T17:00:00Z\" }]"
+      },
+      {
+        "call": "subtractIntervals({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, [{ start: \"2024-01-01T17:00:00Z\", end: \"2024-01-01T18:00:00Z\" }])",
+        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }] — touching"
+      },
+      {
+        "call": "subtractIntervals({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, [{ start: \"2024-01-01T08:00:00Z\", end: \"2024-01-01T18:00:00Z\" }])",
+        "result": "[] — fully covered"
+      },
+      {
+        "call": "subtractIntervals({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, [])",
+        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }]"
+      },
+      {
+        "call": "subtractIntervals({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, [{ start: \"2024-01-01T12:00:00Z\", end: \"2016-12-31T23:59:60Z\" }])",
+        "result": "[] — invalid removal"
+      }
+    ]
+  },
+  {
+    "url": "/reference/interval/calculate/sumIntervals",
+    "name": "sumIntervals",
+    "namespace": "interval",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "sumIntervals(intervals: Interval[]): string",
+    "description": "Return the time covered by a list of half-open intervals, as an exact ISO 8601 duration.",
+    "sourcePath": "packages/gmt/src/interval/calculate/sumIntervals.ts",
+    "examples": [
+      {
+        "call": "sumIntervals([{ start: \"2024-01-01T00:00:00Z\", end: \"2024-01-03T01:30:00Z\" }])",
+        "result": "\"PT49H30M\""
+      },
+      {
+        "call": "sumIntervals([{ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T13:00:00Z\" }, { start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T17:00:00Z\" }])",
+        "result": "\"PT8H\" — overlap counted once"
+      },
+      {
+        "call": "sumIntervals([{ start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T00:00:01.5Z\" }])",
+        "result": "\"PT1.5S\""
+      },
+      {
+        "call": "sumIntervals([])",
+        "result": "\"PT0S\""
+      },
+      {
+        "call": "sumIntervals([{ start: \"2024-01-01T17:00:00Z\", end: \"2024-01-01T09:00:00Z\" }])",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/interval/compare/intervalContains",
+    "name": "intervalContains",
+    "namespace": "interval",
+    "module": "compare",
+    "kind": "function",
+    "signature": "intervalContains(interval: Interval, isoString: string): boolean",
+    "description": "Return true when an ISO 8601 instant string lies inside a half-open interval.",
+    "sourcePath": "packages/gmt/src/interval/compare/intervalContains.ts",
+    "examples": [
+      {
+        "call": "intervalContains({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, \"2024-01-01T09:00:00Z\")",
+        "result": "true — start is inside"
+      },
+      {
+        "call": "intervalContains({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, \"2024-01-01T17:00:00Z\")",
+        "result": "false — end is not"
+      },
+      {
+        "call": "intervalContains({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, \"2024-01-01T04:00:00-05:00\")",
+        "result": "true — same instant as start"
+      },
+      {
+        "call": "intervalContains({ start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T12:00:00Z\" }, \"2024-01-01T12:00:00Z\")",
+        "result": "false — empty interval"
+      },
+      {
+        "call": "intervalContains({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, \"2024-01-01T12:00:00\")",
+        "result": "false — no offset"
+      }
+    ]
+  },
+  {
+    "url": "/reference/interval/compare/intervalsOverlap",
+    "name": "intervalsOverlap",
+    "namespace": "interval",
+    "module": "compare",
+    "kind": "function",
+    "signature": "intervalsOverlap(a: Interval, b: Interval): boolean",
+    "description": "Return true when two half-open intervals share at least one instant.",
+    "sourcePath": "packages/gmt/src/interval/compare/intervalsOverlap.ts",
+    "examples": [
+      {
+        "call": "intervalsOverlap({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, { start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T18:00:00Z\" })",
+        "result": "true"
+      },
+      {
+        "call": "intervalsOverlap({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" }, { start: \"2024-01-01T17:00:00Z\", end: \"2024-01-01T18:00:00Z\" })",
+        "result": "false — touching"
+      },
+      {
+        "call": "intervalsOverlap({ start: \"2024-01-01T12:00:00Z\", end: \"2024-01-01T12:00:00Z\" }, { start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" })",
+        "result": "true — empty, strictly inside"
+      },
+      {
+        "call": "intervalsOverlap({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T09:00:00Z\" }, { start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" })",
+        "result": "false — empty, at the edge"
+      },
+      {
+        "call": "intervalsOverlap({ start: \"2024-01-01T17:00:00Z\", end: \"2024-01-01T09:00:00Z\" }, { start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" })",
+        "result": "false — inverted"
+      }
+    ]
+  },
+  {
+    "url": "/reference/interval/validate/isValidInterval",
+    "name": "isValidInterval",
+    "namespace": "interval",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidInterval(interval: Interval): boolean",
+    "description": "Validate whether a value is an `Interval` the `interval/` namespace accepts.",
+    "sourcePath": "packages/gmt/src/interval/validate/isValidInterval.ts",
+    "examples": [
+      {
+        "call": "isValidInterval({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T17:00:00Z\" })",
+        "result": "true"
+      },
+      {
+        "call": "isValidInterval({ start: \"2024-01-01T09:00:00Z\", end: \"2024-01-01T09:00:00Z\" })",
+        "result": "true — empty"
+      },
+      {
+        "call": "isValidInterval({ start: \"2024-01-01T10:00:00+01:00\", end: \"2024-01-01T09:30:00Z\" })",
+        "result": "true — 09:00Z to 09:30Z"
+      },
+      {
+        "call": "isValidInterval({ start: \"2024-01-01T17:00:00Z\", end: \"2024-01-01T09:00:00Z\" })",
+        "result": "false — inverted"
+      },
+      {
+        "call": "isValidInterval({ start: \"2024-01-01T09:00:00\", end: \"2024-01-01T17:00:00Z\" })",
+        "result": "false — no offset"
+      },
+      {
+        "call": "isValidInterval({ start: \"2016-12-31T23:59:60Z\", end: \"2017-01-01T00:00:00Z\" })",
+        "result": "false — leap second"
+      }
+    ]
+  },
+  {
     "url": "/reference/plain/calculate/addBusinessDays",
     "name": "addBusinessDays",
     "namespace": "plain",
@@ -1333,6 +1625,10 @@
       {
         "call": "diffDate(\"5784-06-15[u-ca=hebrew]\", \"5784-07-15[u-ca=hebrew]\", \"months\")",
         "result": "1 (measured in Hebrew, Adar I -> Adar)"
+      },
+      {
+        "call": "diffDate(\"2566-08-31[u-ca=buddhist]\", \"2566-09-30[u-ca=buddhist]\", \"months\")",
+        "result": "0 (30 days, not a month)"
       }
     ]
   },
@@ -1369,6 +1665,10 @@
       {
         "call": "diffDateAsDuration(\"5784-06-15[u-ca=hebrew]\", \"5784-07-15[u-ca=hebrew]\", \"months\")",
         "result": "\"P1M\" (measured in Hebrew, Adar I -> Adar)"
+      },
+      {
+        "call": "diffDateAsDuration(\"2566-08-31[u-ca=buddhist]\", \"2566-09-30[u-ca=buddhist]\", \"months\")",
+        "result": "\"P30D\" (Aug 31 + 1 month would pass Sep 30)"
       }
     ]
   },
@@ -1459,6 +1759,14 @@
         "result": "\"2024-02-29\""
       },
       {
+        "call": "endOfDate(\"2024-03-03\", \"week\", { weekStartsOn: \"sunday\" })",
+        "result": "\"2024-03-09\""
+      },
+      {
+        "call": "endOfDate(\"-271821-04-19\", \"month\")",
+        "result": "\"-271821-04-30\" (the month began before the range; its end did not)"
+      },
+      {
         "call": "endOfDate(\"invalid-date\", \"month\")",
         "result": "\"\""
       }
@@ -1476,7 +1784,19 @@
     "examples": [
       {
         "call": "endOfDateTime(\"2024-02-29T12:34:56\", \"month\")",
-        "result": "\"2024-02-29T23:59:59.999999999\""
+        "result": "\"2024-02-29T23:59:59\""
+      },
+      {
+        "call": "endOfDateTime(\"2024-02-29T12:34:56.123456789\", \"second\", { fractionalSecondDigits: 9 })",
+        "result": "\"2024-02-29T12:34:56.999999999\""
+      },
+      {
+        "call": "endOfDateTime(\"2024-03-03T12:00:00\", \"week\", { weekStartsOn: \"sunday\" })",
+        "result": "\"2024-03-09T23:59:59\""
+      },
+      {
+        "call": "endOfDateTime(\"-271821-04-19T12:00:00\", \"month\")",
+        "result": "\"-271821-04-30T23:59:59\" (the month began before the range; its end did not)"
       },
       {
         "call": "endOfDateTime(\"invalid-date\", \"month\")",
@@ -2295,21 +2615,40 @@
       },
       {
         "call": "roundDate(\"2024-06-15\", { smallestUnit: \"month\" })",
-        "result": "\"2024-07-01\""
+        "result": "\"2024-06-01\" (14 of 30 days in: rounds down)"
+      },
+      {
+        "call": "roundDate(\"2024-06-16\", { smallestUnit: \"month\" })",
+        "result": "\"2024-07-01\" (half way: rounds up)"
       },
       {
         "call": "roundDate(\"2024-06-15\", { smallestUnit: \"week\" })",
-        "result": "\"2024-06-16\""
+        "result": "\"2024-06-17\" (a Saturday: the next Monday is closer)"
       },
       {
         "call": "roundDate(\"2024-06-15\", { smallestUnit: \"day\" })",
         "result": "\"2024-06-15\""
       },
       {
+        "call": "roundDate(\"-271821-04-19\", { smallestUnit: \"month\" })",
+        "result": "\"-271821-05-01\" (the month began before the range)"
+      },
+      {
         "call": "roundDate(\"invalid\", { smallestUnit: \"year\" })",
         "result": "\"\""
       }
     ]
+  },
+  {
+    "url": "/reference/plain/calculate/millisecondsIntoDay",
+    "name": "millisecondsIntoDay",
+    "namespace": "plain",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "millisecondsIntoDay(source: PlainDateTime): number",
+    "description": "Milliseconds (with sub-millisecond fraction) from midnight to `source`'s wall-clock time.",
+    "sourcePath": "packages/gmt/src/plain/calculate/roundDateTime.ts",
+    "examples": []
   },
   {
     "url": "/reference/plain/calculate/roundDateTime",
@@ -2327,7 +2666,15 @@
       },
       {
         "call": "roundDateTime(\"2024-06-15T12:34:56\", { smallestUnit: \"month\" })",
-        "result": "\"2024-07-01T00:00:00\""
+        "result": "\"2024-06-01T00:00:00\" (under half way: rounds down)"
+      },
+      {
+        "call": "roundDateTime(\"2024-06-16T12:34:56\", { smallestUnit: \"month\" })",
+        "result": "\"2024-07-01T00:00:00\" (past half way: rounds up)"
+      },
+      {
+        "call": "roundDateTime(\"-271821-04-19T12:00:00\", { smallestUnit: \"month\" })",
+        "result": "\"-271821-05-01T00:00:00\" (the month began before the range)"
       },
       {
         "call": "roundDateTime(\"2024-06-15T12:34:56\", { smallestUnit: \"day\" })",
@@ -4268,7 +4615,7 @@
     "module": "interval",
     "kind": "function",
     "signature": "intervalAbutsDate(aStart: string, aEnd: string, bStart: string, bEnd: string): boolean",
-    "description": "Return true when two date intervals are exactly adjacent — one's end equals the other's start",
+    "description": "Return true when two date intervals are exactly adjacent — one's end is one day before the",
     "sourcePath": "packages/gmt/src/plain/interval/intervalAbutsDate.ts",
     "examples": [
       {
@@ -4300,7 +4647,7 @@
     "module": "interval",
     "kind": "function",
     "signature": "intervalAbutsDateTime(aStart: string, aEnd: string, bStart: string, bEnd: string): boolean",
-    "description": "Return true when two datetime intervals are exactly adjacent — one's end equals the other's",
+    "description": "Return true when two datetime intervals are exactly adjacent — one's end is one nanosecond",
     "sourcePath": "packages/gmt/src/plain/interval/intervalAbutsDateTime.ts",
     "examples": [
       {
@@ -4308,7 +4655,7 @@
         "result": "true"
       },
       {
-        "call": "intervalAbutsDateTime(\"2024-06-30T12:00:00\", \"2024-12-31T17:00:00\", \"2024-01-01T09:00:00\", \"2024-06-30T12:00:00.000000001\")",
+        "call": "intervalAbutsDateTime(\"2024-06-30T12:00:00.000000001\", \"2024-12-31T17:00:00\", \"2024-01-01T09:00:00\", \"2024-06-30T12:00:00\")",
         "result": "true"
       },
       {
@@ -4332,7 +4679,7 @@
     "module": "interval",
     "kind": "function",
     "signature": "intervalAbutsTime(aStart: string, aEnd: string, bStart: string, bEnd: string): boolean",
-    "description": "Return true when two time intervals are exactly adjacent — one's end equals the other's start",
+    "description": "Return true when two time intervals are exactly adjacent — one's end is one nanosecond",
     "sourcePath": "packages/gmt/src/plain/interval/intervalAbutsTime.ts",
     "examples": [
       {
@@ -4340,7 +4687,7 @@
         "result": "true"
       },
       {
-        "call": "intervalAbutsTime(\"12:00:00\", \"17:00:00\", \"09:00:00\", \"12:00:00\")",
+        "call": "intervalAbutsTime(\"12:00:00.000000001\", \"17:00:00\", \"09:00:00\", \"12:00:00\")",
         "result": "true"
       },
       {
@@ -4350,6 +4697,10 @@
       {
         "call": "intervalAbutsTime(\"09:00:00\", \"13:00:00\", \"12:00:00\", \"17:00:00\")",
         "result": "false (overlap)"
+      },
+      {
+        "call": "intervalAbutsTime(\"22:00:00\", \"23:59:59.999999999\", \"00:00:00\", \"01:00:00\")",
+        "result": "false (no midnight wrap)"
       },
       {
         "call": "intervalAbutsTime(\"invalid\", \"12:00:00\", \"12:00:00\", \"17:00:00\")",
@@ -4454,6 +4805,17 @@
     ]
   },
   {
+    "url": "/reference/plain/interval/startOfUnitIfRepresentable",
+    "name": "startOfUnitIfRepresentable",
+    "namespace": "plain",
+    "module": "interval",
+    "kind": "function",
+    "signature": "startOfUnitIfRepresentable(source: PlainDate, unit: string): PlainDate",
+    "description": "The start of the date `unit` holding `source`, or null when it lies before the representable range.",
+    "sourcePath": "packages/gmt/src/plain/interval/intervalCountDate.ts",
+    "examples": []
+  },
+  {
     "url": "/reference/plain/interval/intervalCountDate",
     "name": "intervalCountDate",
     "namespace": "plain",
@@ -4494,13 +4856,13 @@
     ]
   },
   {
-    "url": "/reference/plain/interval/startOfUnit",
-    "name": "startOfUnit",
+    "url": "/reference/plain/interval/startOfNextUnit",
+    "name": "startOfNextUnit",
     "namespace": "plain",
     "module": "interval",
     "kind": "function",
-    "signature": "startOfUnit(source: PlainDateTime, unit: DateTimeUnit): PlainDateTime",
-    "description": "Return the start of `unit` for a `Temporal.PlainDateTime`, for every DateTimeUnit.",
+    "signature": "startOfNextUnit(source: PlainDateTime, unit: DateTimeUnit): PlainDateTime",
+    "description": "Return the start of the `unit` after the one holding `source`: step first, truncate after, so",
     "sourcePath": "packages/gmt/src/plain/interval/intervalCountDateTime.ts",
     "examples": []
   },
@@ -4603,6 +4965,10 @@
         "result": "[{ start: \"2024-01-01\", end: \"2024-05-31\" }]"
       },
       {
+        "call": "intervalDifferenceDate(\"2024-01-05\", \"2024-01-10\", \"2024-01-01\", \"2024-01-02\")",
+        "result": "[{ start: \"2024-01-05\", end: \"2024-01-10\" }] (B entirely before A)"
+      },
+      {
         "call": "intervalDifferenceDate(\"invalid\", \"2024-12-31\", \"2024-06-01\", \"2024-07-01\")",
         "result": "[]"
       }
@@ -4620,7 +4986,7 @@
     "examples": [
       {
         "call": "intervalDifferenceDateTime(\"2024-01-01T09:00:00\", \"2024-12-31T17:00:00\", \"2024-06-01T12:00:00\", \"2024-07-01T13:00:00\")",
-        "result": "[{ start: \"2024-01-01T09:00:00\", end: \"2024-05-31T17:00:00\" }, { start: \"2024-07-01T13:00:01\", end: \"2024-12-31T17:00:00\" }]"
+        "result": "[{ start: \"2024-01-01T09:00:00\", end: \"2024-06-01T11:59:59.999999999\" }, { start: \"2024-07-01T13:00:00.000000001\", end: \"2024-12-31T17:00:00\" }]"
       },
       {
         "call": "intervalDifferenceDateTime(\"2024-01-01T09:00:00\", \"2024-12-31T17:00:00\", \"2024-01-01T09:00:00\", \"2024-12-31T17:00:00\")",
@@ -4644,7 +5010,7 @@
     "examples": [
       {
         "call": "intervalDifferenceTime(\"09:00:00\", \"17:00:00\", \"12:00:00\", \"13:00:00\")",
-        "result": "[{ start: \"09:00:00\", end: \"11:59:59\" }, { start: \"13:00:01\", end: \"17:00:00\" }]"
+        "result": "[{ start: \"09:00:00\", end: \"11:59:59.999999999\" }, { start: \"13:00:00.000000001\", end: \"17:00:00\" }]"
       },
       {
         "call": "intervalDifferenceTime(\"09:00:00\", \"17:00:00\", \"09:00:00\", \"17:00:00\")",
@@ -4652,7 +5018,11 @@
       },
       {
         "call": "intervalDifferenceTime(\"09:00:00\", \"17:00:00\", \"12:00:00\", \"17:00:00\")",
-        "result": "[{ start: \"09:00:00\", end: \"11:59:59\" }]"
+        "result": "[{ start: \"09:00:00\", end: \"11:59:59.999999999\" }]"
+      },
+      {
+        "call": "intervalDifferenceTime(\"12:00:00\", \"17:00:00\", \"09:00:00\", \"10:00:00\")",
+        "result": "[{ start: \"12:00:00\", end: \"17:00:00\" }] (B entirely before A)"
       },
       {
         "call": "intervalDifferenceTime(\"invalid\", \"17:00:00\", \"12:00:00\", \"13:00:00\")",
@@ -5043,6 +5413,28 @@
         "result": "null"
       }
     ]
+  },
+  {
+    "url": "/reference/plain/interval/daysBetween",
+    "name": "daysBetween",
+    "namespace": "plain",
+    "module": "interval",
+    "kind": "function",
+    "signature": "daysBetween(from: PlainDate, to: PlainDate): number",
+    "description": "",
+    "sourcePath": "packages/gmt/src/plain/interval/intervalLengthDate.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/plain/interval/calendarLength",
+    "name": "calendarLength",
+    "namespace": "plain",
+    "module": "interval",
+    "kind": "function",
+    "signature": "calendarLength(start: PlainDate, end: PlainDate, unit: CalendarDateUnit): number",
+    "description": "`Duration.total({ unit, relativeTo: start })` of a non-ISO calendar difference, computed as TC39",
+    "sourcePath": "packages/gmt/src/plain/interval/intervalLengthDate.ts",
+    "examples": []
   },
   {
     "url": "/reference/plain/interval/intervalLengthDate",
@@ -5500,11 +5892,11 @@
     "examples": [
       {
         "call": "intervalXorDateTime(\"2024-01-01T09:00:00\", \"2024-06-30T12:00:00\", \"2024-04-01T11:00:00\", \"2024-12-31T17:00:00\")",
-        "result": "[{ start: \"2024-01-01T09:00:00\", end: \"2024-03-31T17:00:00\" }, { start: \"2024-06-30T12:00:01\", end: \"2024-12-31T17:00:00\" }]"
+        "result": "[{ start: \"2024-01-01T09:00:00\", end: \"2024-04-01T10:59:59.999999999\" }, { start: \"2024-06-30T12:00:00.000000001\", end: \"2024-12-31T17:00:00\" }]"
       },
       {
         "call": "intervalXorDateTime(\"2024-01-01T09:00:00\", \"2024-12-31T17:00:00\", \"2024-04-01T11:00:00\", \"2024-06-30T12:00:00\")",
-        "result": "[{ start: \"2024-01-01T09:00:00\", end: \"2024-03-31T17:00:00\" }, { start: \"2024-06-30T12:00:01\", end: \"2024-12-31T17:00:00\" }]"
+        "result": "[{ start: \"2024-01-01T09:00:00\", end: \"2024-04-01T10:59:59.999999999\" }, { start: \"2024-06-30T12:00:00.000000001\", end: \"2024-12-31T17:00:00\" }]"
       },
       {
         "call": "intervalXorDateTime(\"2024-01-01T09:00:00\", \"2024-12-31T17:00:00\", \"2024-01-01T09:00:00\", \"2024-12-31T17:00:00\")",
@@ -5528,11 +5920,11 @@
     "examples": [
       {
         "call": "intervalXorTime(\"09:00:00\", \"12:00:00\", \"11:00:00\", \"17:00:00\")",
-        "result": "[{ start: \"09:00:00\", end: \"10:59:59\" }, { start: \"12:00:01\", end: \"17:00:00\" }]"
+        "result": "[{ start: \"09:00:00\", end: \"10:59:59.999999999\" }, { start: \"12:00:00.000000001\", end: \"17:00:00\" }]"
       },
       {
         "call": "intervalXorTime(\"09:00:00\", \"17:00:00\", \"11:00:00\", \"12:00:00\")",
-        "result": "[{ start: \"09:00:00\", end: \"10:59:59\" }, { start: \"12:00:01\", end: \"17:00:00\" }]"
+        "result": "[{ start: \"09:00:00\", end: \"10:59:59.999999999\" }, { start: \"12:00:00.000000001\", end: \"17:00:00\" }]"
       },
       {
         "call": "intervalXorTime(\"09:00:00\", \"17:00:00\", \"09:00:00\", \"17:00:00\")",
@@ -5564,7 +5956,11 @@
       },
       {
         "call": "intervalsOverlapDate(\"2024-01-01\", \"2024-06-30\", \"2024-07-01\", \"2024-12-31\")",
-        "result": "false (adjacent)"
+        "result": "false (consecutive days, no shared day)"
+      },
+      {
+        "call": "intervalsOverlapDate(\"2024-01-01\", \"2024-06-30\", \"2024-06-30\", \"2024-12-31\")",
+        "result": "true (touching)"
       },
       {
         "call": "intervalsOverlapDate(\"2024-01-01\", \"2024-06-30\", \"2024-07-02\", \"2024-12-31\")",
@@ -5596,7 +5992,11 @@
       },
       {
         "call": "intervalsOverlapDateTime(\"2024-01-01T10:00:00\", \"2024-06-30T23:59:59\", \"2024-07-01T00:00:00\", \"2024-12-31T23:59:59\")",
-        "result": "false (adjacent)"
+        "result": "false (disjoint, one-second gap)"
+      },
+      {
+        "call": "intervalsOverlapDateTime(\"2024-01-01T10:00:00\", \"2024-06-30T23:59:59\", \"2024-06-30T23:59:59\", \"2024-12-31T23:59:59\")",
+        "result": "true (touching)"
       },
       {
         "call": "intervalsOverlapDateTime(\"2024-01-01T10:00:00\", \"2024-06-30T23:59:59\", \"2024-07-02T00:00:00\", \"2024-12-31T23:59:59\")",
@@ -5624,7 +6024,7 @@
       },
       {
         "call": "intervalsOverlapTime(\"09:00:00\", \"17:00:00\", \"17:00:00\", \"18:00:00\")",
-        "result": "false (adjacent)"
+        "result": "true (touching)"
       },
       {
         "call": "intervalsOverlapTime(\"09:00:00\", \"17:00:00\", \"18:00:00\", \"20:00:00\")",
@@ -9065,6 +9465,17 @@
     "examples": []
   },
   {
+    "url": "/reference/types/interval/Interval",
+    "name": "Interval",
+    "namespace": "types",
+    "module": "interval",
+    "kind": "type",
+    "signature": "",
+    "description": "The Interval type.",
+    "sourcePath": "packages/gmt/src/types/interval.ts",
+    "examples": []
+  },
+  {
     "url": "/reference/types/now-unit/NowUnit",
     "name": "NowUnit",
     "namespace": "types",
@@ -10244,7 +10655,7 @@
     "module": "interval",
     "kind": "function",
     "signature": "intervalAbutsUnix(aStart: string | number, aEnd: string | number, bStart: string | number, bEnd: string | number): boolean",
-    "description": "Return true when two Unix intervals are exactly adjacent — one's end equals the other's",
+    "description": "Return true when two Unix intervals are exactly adjacent — one's end is one epoch unit before",
     "sourcePath": "packages/gmt/src/unix/interval/intervalAbutsUnix.ts",
     "examples": [
       {
@@ -10266,6 +10677,10 @@
       {
         "call": "intervalAbutsUnix(NaN, 1500000000, 1500000001, 1700000000)",
         "result": "false"
+      },
+      {
+        "call": "intervalAbutsUnix(0, 1.5, 2.5, 3)",
+        "result": "false (fractional epochs)"
       }
     ]
   },
@@ -10302,6 +10717,10 @@
       {
         "call": "intervalContainsUnix(\"0\", \"1700000000\", \"170000000\")",
         "result": "true"
+      },
+      {
+        "call": "intervalContainsUnix(0, 10, 0.5)",
+        "result": "false (fractional epoch)"
       }
     ]
   },
@@ -10353,7 +10772,7 @@
     "examples": [
       {
         "call": "intervalDifferenceUnix(0, 1700000000, 1500000000, 1600000000)",
-        "result": "[{ start: 0, end: 1499999999 }]"
+        "result": "[{ start: 0, end: 1499999999 }, { start: 1600000001, end: 1700000000 }]"
       },
       {
         "call": "intervalDifferenceUnix(0, 1700000000, 0, 1700000000)",
@@ -10362,6 +10781,14 @@
       {
         "call": "intervalDifferenceUnix(NaN, 1700000000, 1500000000, 1600000000)",
         "result": "[]"
+      },
+      {
+        "call": "intervalDifferenceUnix(0, 2, 0.5, 1)",
+        "result": "[] (fractional epoch)"
+      },
+      {
+        "call": "intervalDifferenceUnix(5, 10, 0, 2)",
+        "result": "[{ start: 5, end: 10 }] (B entirely before A)"
       }
     ]
   },
@@ -10574,6 +11001,10 @@
       {
         "call": "intervalSplitAtUnix(NaN, 100000, [50000])",
         "result": "[]"
+      },
+      {
+        "call": "intervalSplitAtUnix(0, 100000, [50000.5])",
+        "result": "[] (fractional point)"
       }
     ]
   },
@@ -10654,6 +11085,10 @@
       {
         "call": "intervalXorUnix(NaN, 1500000000, 1400000000, 1700000000)",
         "result": "[]"
+      },
+      {
+        "call": "intervalXorUnix(0, 1, 0.5, 2)",
+        "result": "[] (fractional epoch)"
       }
     ]
   },
@@ -10673,7 +11108,7 @@
       },
       {
         "call": "intervalsOverlapUnix(0, 1000000, 1000000, 2000000)",
-        "result": "false (adjacent)"
+        "result": "true (touching)"
       },
       {
         "call": "intervalsOverlapUnix(0, 1000000, 1000001, 2000000)",
@@ -10770,7 +11205,7 @@
     "module": "interval",
     "kind": "function",
     "signature": "isValidUnixInterval(start: string | number, end: string | number): boolean",
-    "description": "Return true if `start` and `end` form a valid Unix interval — both finite numbers",
+    "description": "Return true if `start` and `end` form a valid Unix interval — both safe-integer epochs",
     "sourcePath": "packages/gmt/src/unix/interval/validate/isValidUnixInterval.ts",
     "examples": [
       {
@@ -10782,12 +11217,20 @@
         "result": "true"
       },
       {
-        "call": "isValidUnixInterval(1700000000, 0)",
-        "result": "false"
-      },
-      {
         "call": "isValidUnixInterval(\"0\", \"1700000000\")",
         "result": "true"
+      },
+      {
+        "call": "isValidUnixInterval(1700000000, 0)",
+        "result": "false (reversed)"
+      },
+      {
+        "call": "isValidUnixInterval(0, 1.5)",
+        "result": "false (fractional)"
+      },
+      {
+        "call": "isValidUnixInterval(\"\", 1000)",
+        "result": "false (empty string is not epoch 0)"
       }
     ]
   },
@@ -11145,7 +11588,7 @@
     "module": "validate",
     "kind": "function",
     "signature": "isValidUnixRange({ value1, value2, options, }: { value1: string | number; value2: string | number; options?: { allowEqual?: boolean; }; }): boolean",
-    "description": "Return true if `value1` and `value2` form a valid Unix range — both finite numbers",
+    "description": "Return true if `value1` and `value2` form a valid Unix range — both safe-integer epochs",
     "sourcePath": "packages/gmt/src/unix/validate/isValidUnixRange.ts",
     "examples": [
       {
@@ -11153,12 +11596,20 @@
         "result": "true"
       },
       {
-        "call": "isValidUnixRange({ value1: 1700000000, value2: 0 })",
-        "result": "false"
-      },
-      {
         "call": "isValidUnixRange({ value1: 1000, value2: 1000, options: { allowEqual: true } })",
         "result": "true"
+      },
+      {
+        "call": "isValidUnixRange({ value1: 1700000000, value2: 0 })",
+        "result": "false (reversed)"
+      },
+      {
+        "call": "isValidUnixRange({ value1: 0, value2: 1.5 })",
+        "result": "false (fractional)"
+      },
+      {
+        "call": "isValidUnixRange({ value1: \"\", value2: 1000 })",
+        "result": "false (empty string is not epoch 0)"
       }
     ]
   },
@@ -12211,7 +12662,7 @@
     "module": "interval",
     "kind": "function",
     "signature": "intervalAbutsUtc(aStart: string, aEnd: string, bStart: string, bEnd: string): boolean",
-    "description": "Return true when two UTC intervals are exactly adjacent — one's end equals the other's",
+    "description": "Return true when two UTC intervals are exactly adjacent — one's end is one nanosecond",
     "sourcePath": "packages/gmt/src/utc/interval/intervalAbutsUtc.ts",
     "examples": [
       {
@@ -12219,7 +12670,7 @@
         "result": "true"
       },
       {
-        "call": "intervalAbutsUtc(\"2024-06-30T12:00:00Z\", \"2024-12-31T17:00:00Z\", \"2024-01-01T09:00:00Z\", \"2024-06-30T12:00:00.000000001Z\")",
+        "call": "intervalAbutsUtc(\"2024-06-30T12:00:00.000000001Z\", \"2024-12-31T17:00:00Z\", \"2024-01-01T09:00:00Z\", \"2024-06-30T12:00:00Z\")",
         "result": "true"
       },
       {
@@ -12301,6 +12752,17 @@
     ]
   },
   {
+    "url": "/reference/utc/interval/laterInstant",
+    "name": "laterInstant",
+    "namespace": "utc",
+    "module": "interval",
+    "kind": "function",
+    "signature": "laterInstant(left: Instant, right: Instant): Instant",
+    "description": "The later of two instants.",
+    "sourcePath": "packages/gmt/src/utc/interval/intervalDifferenceUtc.ts",
+    "examples": []
+  },
+  {
     "url": "/reference/utc/interval/intervalDifferenceUtc",
     "name": "intervalDifferenceUtc",
     "namespace": "utc",
@@ -12312,7 +12774,7 @@
     "examples": [
       {
         "call": "intervalDifferenceUtc(\"2024-01-01T09:00:00Z\", \"2024-12-31T17:00:00Z\", \"2024-06-01T12:00:00Z\", \"2024-07-01T13:00:00Z\")",
-        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-05-31T17:00:00Z\" }, { start: \"2024-07-01T13:00:01Z\", end: \"2024-12-31T17:00:00Z\" }]"
+        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-06-01T11:59:59.999999999Z\" }, { start: \"2024-07-01T13:00:00.000000001Z\", end: \"2024-12-31T17:00:00Z\" }]"
       },
       {
         "call": "intervalDifferenceUtc(\"2024-01-01T09:00:00Z\", \"2024-12-31T17:00:00Z\", \"2024-01-01T09:00:00Z\", \"2024-12-31T17:00:00Z\")",
@@ -12584,11 +13046,11 @@
     "examples": [
       {
         "call": "intervalXorUtc(\"2024-01-01T09:00:00Z\", \"2024-06-30T12:00:00Z\", \"2024-04-01T11:00:00Z\", \"2024-12-31T17:00:00Z\")",
-        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-03-31T17:00:00Z\" }, { start: \"2024-06-30T12:00:01Z\", end: \"2024-12-31T17:00:00Z\" }]"
+        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-04-01T10:59:59.999999999Z\" }, { start: \"2024-06-30T12:00:00.000000001Z\", end: \"2024-12-31T17:00:00Z\" }]"
       },
       {
         "call": "intervalXorUtc(\"2024-01-01T09:00:00Z\", \"2024-12-31T17:00:00Z\", \"2024-04-01T11:00:00Z\", \"2024-06-30T12:00:00Z\")",
-        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-03-31T17:00:00Z\" }, { start: \"2024-06-30T12:00:01Z\", end: \"2024-12-31T17:00:00Z\" }]"
+        "result": "[{ start: \"2024-01-01T09:00:00Z\", end: \"2024-04-01T10:59:59.999999999Z\" }, { start: \"2024-06-30T12:00:00.000000001Z\", end: \"2024-12-31T17:00:00Z\" }]"
       },
       {
         "call": "intervalXorUtc(\"2024-01-01T09:00:00Z\", \"2024-12-31T17:00:00Z\", \"2024-01-01T09:00:00Z\", \"2024-12-31T17:00:00Z\")",
@@ -12616,7 +13078,11 @@
       },
       {
         "call": "intervalsOverlapUtc(\"2024-01-01T00:00:00Z\", \"2024-06-30T23:59:59Z\", \"2024-07-01T00:00:00Z\", \"2024-12-31T23:59:59Z\")",
-        "result": "false (adjacent)"
+        "result": "false (disjoint, one-second gap)"
+      },
+      {
+        "call": "intervalsOverlapUtc(\"2024-01-01T00:00:00Z\", \"2024-06-30T23:59:59Z\", \"2024-06-30T23:59:59Z\", \"2024-12-31T23:59:59Z\")",
+        "result": "true (touching)"
       },
       {
         "call": "intervalsOverlapUtc(\"2024-01-01T00:00:00Z\", \"2024-06-30T23:59:59Z\", \"2024-07-02T00:00:00Z\", \"2024-12-31T23:59:59Z\")",
@@ -15162,7 +15628,7 @@
     "module": "interval",
     "kind": "function",
     "signature": "intervalAbutsZoned(aStart: string, aEnd: string, bStart: string, bEnd: string): boolean",
-    "description": "Return true when two zoned intervals are exactly adjacent — one's end equals the other's",
+    "description": "Return true when two zoned intervals are exactly adjacent — one's end is one nanosecond",
     "sourcePath": "packages/gmt/src/zoned/interval/intervalAbutsZoned.ts",
     "examples": [
       {
@@ -15170,7 +15636,7 @@
         "result": "true"
       },
       {
-        "call": "intervalAbutsZoned(\"2024-06-30T12:00:00+00:00[UTC]\", \"2024-12-31T17:00:00+00:00[UTC]\", \"2024-01-01T09:00:00+00:00[UTC]\", \"2024-06-30T12:00:00.000000001+00:00[UTC]\")",
+        "call": "intervalAbutsZoned(\"2024-06-30T12:00:00.000000001+00:00[UTC]\", \"2024-12-31T17:00:00+00:00[UTC]\", \"2024-01-01T09:00:00+00:00[UTC]\", \"2024-06-30T12:00:00+00:00[UTC]\")",
         "result": "true"
       },
       {
@@ -15567,7 +16033,11 @@
       },
       {
         "call": "intervalsOverlapZoned(\"2024-01-01T00:00:00+00:00[UTC]\", \"2024-06-30T23:59:59+00:00[UTC]\", \"2024-07-01T00:00:00+00:00[UTC]\", \"2024-12-31T23:59:59+00:00[UTC]\")",
-        "result": "false (adjacent)"
+        "result": "false (disjoint, one-second gap)"
+      },
+      {
+        "call": "intervalsOverlapZoned(\"2024-01-01T00:00:00+00:00[UTC]\", \"2024-06-30T23:59:59+00:00[UTC]\", \"2024-06-30T23:59:59+00:00[UTC]\", \"2024-12-31T23:59:59+00:00[UTC]\")",
+        "result": "true (touching)"
       },
       {
         "call": "intervalsOverlapZoned(\"invalid\", \"2024-06-30T23:59:59+00:00[UTC]\", \"2024-04-01T00:00:00+00:00[UTC]\", \"2024-12-31T23:59:59+00:00[UTC]\")",
