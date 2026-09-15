@@ -5,6 +5,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 import { fileURLToPath } from "node:url";
 import { referenceSidebar } from "./src/generated/reference/sidebar.ts";
+import rehypeExternalLinks from "./src/lib/rehype-external-links.ts";
 
 // DOX-A2 deploys to Cloudflare Workers' default *.workers.dev subdomain (no
 // custom domain yet). `site` must be set or @astrojs/sitemap (a Starlight
@@ -17,6 +18,10 @@ const gmtPkg = fileURLToPath(
 
 export default defineConfig({
   site: SITE,
+  markdown: {
+    // External links in Markdown and MDX open in a new tab, like ButtonLink's do.
+    rehypePlugins: [rehypeExternalLinks],
+  },
   vite: {
     server: {
       // DOX-C3a (#139): `/api/chat` lives in the Cloudflare Worker, which
