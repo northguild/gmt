@@ -1,6 +1,7 @@
 import { MustTestLocales } from "../../test";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { getWeeksInMonth } from "./getWeeksInMonth";
+import { runtimeWeekInfo } from "../../test/runtimeWeekInfo";
 
 describe("getWeeksInMonth", () => {
   // The same month spans a different number of week-rows depending on
@@ -48,7 +49,7 @@ describe("getWeeksInMonth", () => {
   );
 
   it("returns the correct week-row count for is-IS regardless of its CLDR-version-dependent firstDay", () => {
-    const firstDay = new Intl.Locale(MustTestLocales.isIS).weekInfo.firstDay;
+    const firstDay = runtimeWeekInfo(MustTestLocales.isIS).firstDay;
     const expected = firstDay === 1 ? 5 : 4;
     expect(getWeeksInMonth("2026-02-15", MustTestLocales.isIS)).toBe(expected);
   });

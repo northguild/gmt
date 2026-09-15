@@ -6,6 +6,7 @@ import {
 } from "../../test";
 import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
 import { getLocaleZonedDayOfWeek } from "./getLocaleZonedDayOfWeek";
+import { runtimeWeekInfo } from "../../test/runtimeWeekInfo";
 
 describe("getLocaleZonedDayOfWeek", () => {
   // Full week boundary coverage for en-US (firstDay 7), fixed at UTC.
@@ -21,7 +22,7 @@ describe("getLocaleZonedDayOfWeek", () => {
   `(
     "returns $expected for $value in en-US (full week boundary)",
     ({ value, _expected }) => {
-      const firstDay = new Intl.Locale(MustTestLocales.enUS).weekInfo.firstDay;
+      const firstDay = runtimeWeekInfo(MustTestLocales.enUS).firstDay;
       const zoned = Temporal.ZonedDateTime.from(value);
       const computed = (zoned.dayOfWeek - firstDay + 7) % 7;
       expect(getLocaleZonedDayOfWeek(value, MustTestLocales.enUS)).toBe(
@@ -43,7 +44,7 @@ describe("getLocaleZonedDayOfWeek", () => {
   `(
     "returns $expected for $value in fr-FR (full week boundary)",
     ({ value, _expected }) => {
-      const firstDay = new Intl.Locale(MustTestLocales.frFR).weekInfo.firstDay;
+      const firstDay = runtimeWeekInfo(MustTestLocales.frFR).firstDay;
       const zoned = Temporal.ZonedDateTime.from(value);
       const computed = (zoned.dayOfWeek - firstDay + 7) % 7;
       expect(getLocaleZonedDayOfWeek(value, MustTestLocales.frFR)).toBe(
@@ -65,7 +66,7 @@ describe("getLocaleZonedDayOfWeek", () => {
   `(
     "returns $expected for $value in he-IL (full week boundary)",
     ({ value, _expected }) => {
-      const firstDay = new Intl.Locale(MustTestLocales.heIL).weekInfo.firstDay;
+      const firstDay = runtimeWeekInfo(MustTestLocales.heIL).firstDay;
       const zoned = Temporal.ZonedDateTime.from(value);
       const computed = (zoned.dayOfWeek - firstDay + 7) % 7;
       expect(getLocaleZonedDayOfWeek(value, MustTestLocales.heIL)).toBe(
@@ -104,7 +105,7 @@ describe("getLocaleZonedDayOfWeek", () => {
         localeZonedDateTimeInputByLocale[
           locale as keyof typeof localeZonedDateTimeInputByLocale
         ];
-      const firstDay = new Intl.Locale(locale).weekInfo.firstDay;
+      const firstDay = runtimeWeekInfo(locale).firstDay;
       const zoned = Temporal.ZonedDateTime.from(value);
       const expected = (zoned.dayOfWeek - firstDay + 7) % 7;
       expect(getLocaleZonedDayOfWeek(value, locale)).toBe(expected);
@@ -121,7 +122,7 @@ describe("getLocaleZonedDayOfWeek", () => {
       const zoned = Temporal.Instant.from(
         "2024-02-26T12:00:00Z",
       ).toZonedDateTimeISO(timeZone);
-      const firstDay = new Intl.Locale(MustTestLocales.enUS).weekInfo.firstDay;
+      const firstDay = runtimeWeekInfo(MustTestLocales.enUS).firstDay;
       const expected = (zoned.dayOfWeek - firstDay + 7) % 7;
       return { timeZone, expected };
     }),

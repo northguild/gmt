@@ -6,6 +6,7 @@ import {
 } from "../../test";
 import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
 import { getLocaleZonedStartOfWeek } from "./getLocaleZonedStartOfWeek";
+import { runtimeWeekInfo } from "../../test/runtimeWeekInfo";
 
 // Shared instant for local-week-boundary coverage: 2024-02-03T23:00:00Z is
 // Saturday in UTC, but zones at a positive offset (Europe/Berlin eastward
@@ -132,7 +133,7 @@ describe("getLocaleZonedStartOfWeek", () => {
   );
 
   it("returns the correct start-of-week for is-IS regardless of its CLDR-version-dependent firstDay", () => {
-    const firstDay = new Intl.Locale(MustTestLocales.isIS).weekInfo.firstDay;
+    const firstDay = runtimeWeekInfo(MustTestLocales.isIS).firstDay;
     const expected =
       firstDay === 1
         ? "2024-01-29T00:00:00+00:00[Atlantic/Reykjavik]"

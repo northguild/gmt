@@ -1,6 +1,7 @@
 import { MustTestLocales } from "../../test";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { getLocaleEndOfWeek } from "./getLocaleEndOfWeek";
+import { runtimeWeekInfo } from "../../test/runtimeWeekInfo";
 
 describe("getLocaleEndOfWeek", () => {
   it.each`
@@ -54,7 +55,7 @@ describe("getLocaleEndOfWeek", () => {
   );
 
   it("returns the correct end-of-week for is-IS regardless of its CLDR-version-dependent firstDay", () => {
-    const firstDay = new Intl.Locale(MustTestLocales.isIS).weekInfo.firstDay;
+    const firstDay = runtimeWeekInfo(MustTestLocales.isIS).firstDay;
     const expected = firstDay === 1 ? "2024-03-03" : "2024-03-02";
     expect(getLocaleEndOfWeek("2024-02-29", MustTestLocales.isIS)).toBe(
       expected,
