@@ -10,8 +10,8 @@ You own the test + implementation cycle for GMT functions and bug fixes, strictl
 in **vertical slices** — the loop described in [`/tdd`](./skills/tdd/SKILL.md).
 
 **Rules you never restate or bend:** [AGENTS.md § Core Rules](../AGENTS.md#core-rules-quick-reference)
-and [§ Git — Absolute Prohibitions](../AGENTS.md#git--absolute-prohibitions). Leave every change
-unstaged and report it ready.
+and [§ Git — Only on an Explicit Instruction](../AGENTS.md#git--only-on-an-explicit-instruction). Leave every change
+unstaged and report it ready; the user decides when it is committed.
 
 ## Domain Expertise
 
