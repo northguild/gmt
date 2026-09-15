@@ -1,4 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { mockTemporalDurationFromThrow } from "../test/mocks";
 import { formatHourDuration } from "./hourDurationString";
 
 describe("formatHourDuration", () => {
@@ -41,9 +42,7 @@ describe("formatHourDuration", () => {
   });
 
   it("returns an empty string when Temporal.Duration.from throws", () => {
-    vi.spyOn(Temporal.Duration, "from").mockImplementation(() => {
-      throw new RangeError("simulated failure");
-    });
+    mockTemporalDurationFromThrow();
 
     expect(formatHourDuration(1n)).toBe("");
   });

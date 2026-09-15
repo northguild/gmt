@@ -1,4 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { mockTemporalDurationFromThrow } from "../../test/mocks";
 import type { Interval } from "../../types";
 import { sumIntervals } from "./sumIntervals";
 
@@ -104,9 +105,7 @@ describe("sumIntervals", () => {
   );
 
   it("returns an empty string when Temporal.Duration.from throws", () => {
-    vi.spyOn(Temporal.Duration, "from").mockImplementation(() => {
-      throw new RangeError("simulated failure");
-    });
+    mockTemporalDurationFromThrow();
 
     expect(sumIntervals([A])).toBe("");
   });
