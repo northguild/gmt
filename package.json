@@ -10,12 +10,15 @@
     "typecheck": "pnpm -r --if-present run typecheck",
     "lint:all": "pnpm -r --if-present run lint",
     "test:all": "pnpm -r --if-present run test",
-    "validate": "node scripts/deps.mjs check && pnpm -r --if-present run build && node scripts/stats.mjs check && pnpm -r --if-present run lint && pnpm -r --if-present run typecheck && pnpm -r --if-present run test",
+    "validate": "node scripts/deps.mjs check && node scripts/test-markers.mjs check && pnpm -r --if-present run build && node scripts/stats.mjs check && pnpm -r --if-present run lint && pnpm -r --if-present run typecheck && pnpm -r --if-present run test",
     "deps": "node scripts/deps.mjs",
     "deps:sync": "node scripts/deps.mjs sync",
     "deps:ready": "node scripts/deps.mjs ready",
     "stats": "node scripts/stats.mjs",
     "stats:sync": "node scripts/stats.mjs sync",
+    "test:markers": "node scripts/test-markers.mjs check",
+    "compat": "node scripts/temporal-compat.mjs check",
+    "compat:oracle": "node scripts/temporal-compat.mjs oracle",
     "dox:dev": "pnpm --filter @gmt/dox dev",
     "dox:build": "pnpm --filter @gmt/dox build",
     "dox:preview": "pnpm --filter @gmt/dox preview",
@@ -51,7 +54,7 @@
     "vitest": "^4.1.0"
   },
   "engines": {
-    "node": ">=22 <25"
+    "node": ">=22 <27"
   },
   "packageManager": "pnpm@10.32.1"
 }
