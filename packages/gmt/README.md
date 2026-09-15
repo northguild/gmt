@@ -1634,7 +1634,7 @@ formatRfc2822("2024-03-15T14:30:00-04:00[America/New_York]");
 parseRfc2822("Fri, 15 Mar 2024 14:30:00 -0400");
 // "2024-03-15T14:30:00-04:00[-04:00]"
 
-// HTTP headers (RFC 7231 IMF-fixdate) — Last-Modified, Date, Expires.
+// HTTP headers (RFC 9110 IMF-fixdate) — Last-Modified, Date, Expires.
 formatHttp("2024-03-15T14:30:00Z");
 // "Fri, 15 Mar 2024 14:30:00 GMT"
 parseHttp("Fri, 15 Mar 2024 14:30:00 GMT");

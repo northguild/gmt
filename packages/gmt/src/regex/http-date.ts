@@ -1,5 +1,5 @@
 /**
- * RegExp matching RFC 7231 §7.1.1.1 IMF-fixdate — the only form GMT's `formatHttp`
+ * RegExp matching RFC 9110 §5.6.7 IMF-fixdate — the only form GMT's `formatHttp`
  * emits, and the only form `parseHttp` accepts. Day, year, and time-of-day fields are
  * all fixed-width per the grammar (unlike RFC 2822's leniently-sized day); the trailing
  * "GMT" literal is mandatory, never a numeric offset. The obsolete RFC 850 and asctime

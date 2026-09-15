@@ -12113,7 +12113,7 @@
     "module": "format",
     "kind": "function",
     "signature": "formatHttp(value: string): string",
-    "description": "Format a UTC ISO 8601 datetime string as an RFC 7231 IMF-fixdate — the",
+    "description": "Format a UTC ISO 8601 datetime string as an RFC 9110 IMF-fixdate — the",
     "sourcePath": "packages/gmt/src/utc/format/formatHttp.ts",
     "examples": [
       {
@@ -13027,7 +13027,7 @@
     "module": "parse",
     "kind": "function",
     "signature": "parseHttp(value: string): string",
-    "description": "Parse an RFC 7231 IMF-fixdate string — the fixed grammar HTTP headers like",
+    "description": "Parse an RFC 9110 IMF-fixdate string — the fixed grammar HTTP headers like",
     "sourcePath": "packages/gmt/src/utc/parse/parseHttp.ts",
     "examples": [
       {
