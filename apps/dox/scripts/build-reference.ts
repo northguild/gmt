@@ -1129,7 +1129,7 @@ export function extractInterface(
 }
 
 export function extractRegex(
-  _checker: ts.TypeChecker,
+  checker: ts.TypeChecker,
   decl: ts.VariableDeclaration,
   ns: string,
   mod: string,
@@ -1157,14 +1157,18 @@ export function extractRegex(
     return undefined;
   }
 
-  // description from leading line comment
-  const sourceText = decl.getSourceFile().getFullText();
-  const leading = sourceText.slice(0, decl.getFullStart());
-  const commentMatch = leading.match(/\/\/\s*(.+)\s*$/m);
-  const description = commentMatch ? commentMatch[1].trim() : "";
+  // Description and examples come from the const's own JSDoc, the same source function pages
+  // use. Only a pattern with no JSDoc falls back to the line comment directly above it, and
+  // only a pattern with no @example falls back to generated examples.
+  const jsDoc = parseJsDoc(checker, decl.name);
+  const description = jsDoc
+    ? regexDescription(checker, decl.name)
+    : (leadingLineComment(decl.parent.parent) ?? "");
 
   const inner = pattern.replace(/^\/|\/$/g, "");
-  const examples = generateRegexExamples(inner, name);
+  const examples = jsDoc?.examples.length
+    ? jsDoc.examples
+    : generateRegexExamples(inner, name);
 
   return {
     name,
@@ -1176,6 +1180,26 @@ export function extractRegex(
     examples,
     sourcePath: relative(gmtSrc, file).split("/").join("/"),
   };
+}
+
+/**
+ * The opening paragraph of a regex const's JSDoc, joined onto one line. Regex JSDoc wraps its
+ * summary over several source lines, so the first line alone would cut the sentence short.
+ */
+function regexDescription(
+  checker: ts.TypeChecker,
+  name: ts.Identifier,
+): string {
+  const symbol = checker.getSymbolAtLocation(name);
+  if (!symbol) return "";
+  const raw = ts.displayPartsToString(symbol.getDocumentationComment(checker));
+  const paragraph: string[] = [];
+  for (const line of raw.split("\n")) {
+    const l = line.trim();
+    if (!l || l.startsWith("- ")) break;
+    paragraph.push(l);
+  }
+  return paragraph.join(" ");
 }
 
 // ---------------------------------------------------------------------------

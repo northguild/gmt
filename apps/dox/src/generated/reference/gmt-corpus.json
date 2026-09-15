@@ -8429,16 +8429,28 @@
     "module": "calendar-date",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching GMT's own calendar-annotated PlainDate string: the calendar-native year/month/day (e.g. Hebrew year 5785), tagged with the calendar identifier — not Temporal's own `[u-ca=...]` annotation convention, which keeps the ISO/proleptic- Gregorian digits and only tags the calendar. See `convertDateToCalendar` for the rationale.",
     "sourcePath": "packages/gmt/src/regex/calendar-date.ts",
     "examples": [
       {
-        "call": "calendarDate.test(\"60\")",
-        "result": "false"
+        "call": "calendarDate.test(\"5785-01-01[u-ca=hebrew]\")",
+        "result": "true"
       },
       {
-        "call": "calendarDate.test(\"202\")",
-        "result": "false"
+        "call": "calendarDate.test(\"5785-01-01[u-ca=japanese;era=reiwa]\")",
+        "result": "true"
+      },
+      {
+        "call": "calendarDate.test(\"-000911-01-01[u-ca=taiwan]\")",
+        "result": "true"
+      },
+      {
+        "call": "calendarDate.test(\"-0911-01-01[u-ca=taiwan]\")",
+        "result": "false (negative years use six digits)"
+      },
+      {
+        "call": "calendarDate.test(\"2024-03-15\")",
+        "result": "false (no calendar tag)"
       }
     ]
   },
@@ -8449,16 +8461,20 @@
     "module": "calendar-zoned-date-time",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching GMT's own calendar-annotated ZonedDateTime string — the zoned sibling of `calendarDate` (regex/calendar-date.ts). Shape:",
     "sourcePath": "packages/gmt/src/regex/calendar-zoned-date-time.ts",
     "examples": [
       {
-        "call": "calendarZonedDateTime.test(\"60\")",
-        "result": "false"
+        "call": "calendarZonedDateTime.test(\"5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]\")",
+        "result": "true"
       },
       {
-        "call": "calendarZonedDateTime.test(\"202\")",
-        "result": "false"
+        "call": "calendarZonedDateTime.test(\"0031-04-30T12:00:00+09:00[u-ca=japanese;era=heisei][Asia/Tokyo]\")",
+        "result": "true"
+      },
+      {
+        "call": "calendarZonedDateTime.test(\"2024-03-15T14:30:00Z\")",
+        "result": "false (no calendar tag)"
       }
     ]
   },
@@ -8469,16 +8485,28 @@
     "module": "date-time",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching ISO 8601 local date-time (extended): `<date>T<time>`.",
     "sourcePath": "packages/gmt/src/regex/date-time.ts",
     "examples": [
       {
-        "call": "plainDateTime.test(\"60\")",
-        "result": "false"
+        "call": "plainDateTime.test(\"2024-03-15T14:30:00\")",
+        "result": "true"
       },
       {
-        "call": "plainDateTime.test(\"202\")",
-        "result": "false"
+        "call": "plainDateTime.test(\"2024-03-15T14:30\")",
+        "result": "true (seconds omitted)"
+      },
+      {
+        "call": "plainDateTime.test(\"+000031-04-30T12:00:00.123\")",
+        "result": "true (6-digit year)"
+      },
+      {
+        "call": "plainDateTime.test(\"2024-03-15 14:30:00\")",
+        "result": "false (space separator)"
+      },
+      {
+        "call": "plainDateTime.test(\"2024-03-15T14:30:00Z\")",
+        "result": "false (has timezone)"
       }
     ]
   },
@@ -8489,24 +8517,28 @@
     "module": "date",
     "kind": "regex",
     "signature": "",
-    "description": "",
+    "description": "RegExp matching an ISO 8601 year: 4 digits, or a sign and 6 digits for the expanded years Temporal supports (`-271821` to `+275760`).",
     "sourcePath": "packages/gmt/src/regex/date.ts",
     "examples": [
       {
-        "call": "year.test(\"0000\")",
+        "call": "year.test(\"2024\")",
         "result": "true"
       },
       {
-        "call": "year.test(\"+001234\")",
-        "result": "true"
+        "call": "year.test(\"+275760\")",
+        "result": "true (expanded year)"
       },
       {
-        "call": "year.test(\"60\")",
-        "result": "false"
+        "call": "year.test(\"-271821\")",
+        "result": "true (negative expanded year)"
       },
       {
-        "call": "year.test(\"202\")",
-        "result": "false"
+        "call": "year.test(\"24\")",
+        "result": "false (too few digits)"
+      },
+      {
+        "call": "year.test(\"20245\")",
+        "result": "false (5 digits without a sign)"
       }
     ]
   },
@@ -8517,7 +8549,7 @@
     "module": "date",
     "kind": "regex",
     "signature": "",
-    "description": "",
+    "description": "RegExp matching an ISO 8601 month: `01`–`12`.",
     "sourcePath": "packages/gmt/src/regex/date.ts",
     "examples": [
       {
@@ -8529,12 +8561,12 @@
         "result": "true"
       },
       {
-        "call": "month.test(\"60\")",
-        "result": "false"
+        "call": "month.test(\"13\")",
+        "result": "false (out of range)"
       },
       {
-        "call": "month.test(\"202\")",
-        "result": "false"
+        "call": "month.test(\"1\")",
+        "result": "false (not zero-padded)"
       }
     ]
   },
@@ -8545,7 +8577,7 @@
     "module": "date",
     "kind": "regex",
     "signature": "",
-    "description": "",
+    "description": "RegExp matching an ISO 8601 day of the month: `01`–`31` (shape only; whether the day exists in its month is checked by `Temporal.PlainDate.from` in `parseDate`).",
     "sourcePath": "packages/gmt/src/regex/date.ts",
     "examples": [
       {
@@ -8553,16 +8585,20 @@
         "result": "true"
       },
       {
-        "call": "day.test(\"23\")",
+        "call": "day.test(\"31\")",
         "result": "true"
       },
       {
-        "call": "day.test(\"60\")",
-        "result": "false"
+        "call": "day.test(\"32\")",
+        "result": "false (out of range)"
       },
       {
-        "call": "day.test(\"202\")",
-        "result": "false"
+        "call": "day.test(\"00\")",
+        "result": "false (day zero)"
+      },
+      {
+        "call": "day.test(\"9\")",
+        "result": "false (not zero-padded)"
       }
     ]
   },
@@ -8573,24 +8609,28 @@
     "module": "date",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching ISO 8601 calendar date (extended): `YYYY-MM-DD` or `±YYYYYY-MM-DD`.",
     "sourcePath": "packages/gmt/src/regex/date.ts",
     "examples": [
       {
-        "call": "plainDate.test(\"2025-03-10\")",
+        "call": "plainDate.test(\"2024-03-15\")",
         "result": "true"
       },
       {
-        "call": "plainDate.test(\"-000001-01-01\")",
-        "result": "true"
+        "call": "plainDate.test(\"+000031-04-30\")",
+        "result": "true (6-digit year)"
       },
       {
-        "call": "plainDate.test(\"60\")",
-        "result": "false"
+        "call": "plainDate.test(\"-000031-04-30\")",
+        "result": "true (negative 6-digit year)"
       },
       {
-        "call": "plainDate.test(\"202\")",
-        "result": "false"
+        "call": "plainDate.test(\"2024-3-15\")",
+        "result": "false (unpadded month)"
+      },
+      {
+        "call": "plainDate.test(\"2024-03-00\")",
+        "result": "false (day zero)"
       }
     ]
   },
@@ -8601,16 +8641,24 @@
     "module": "http-date",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching RFC 9110 §5.6.7 IMF-fixdate — the only form GMT's `formatHttp` emits, and the only form `parseHttp` accepts. Day, year, and time-of-day fields are all fixed-width per the grammar (unlike RFC 2822's leniently-sized day); the trailing \"GMT\" literal is mandatory, never a numeric offset. The obsolete RFC 850 and asctime HTTP-date forms are a documented limitation (see `parseHttp`'s JSDoc), not supported here.",
     "sourcePath": "packages/gmt/src/regex/http-date.ts",
     "examples": [
       {
-        "call": "httpDate.test(\"60\")",
-        "result": "false"
+        "call": "httpDate.test(\"Wed, 09 Jun 2021 10:18:14 GMT\")",
+        "result": "true"
       },
       {
-        "call": "httpDate.test(\"202\")",
-        "result": "false"
+        "call": "httpDate.test(\"Jun 09 2021 10:18:14 GMT\")",
+        "result": "false (missing day-of-week)"
+      },
+      {
+        "call": "httpDate.test(\"Wed, 9 Jun 2021 10:18:14 GMT\")",
+        "result": "false (single-digit day)"
+      },
+      {
+        "call": "httpDate.test(\"Wed, 09 Jun 2021 10:18:14 +0000\")",
+        "result": "false (numeric offset)"
       }
     ]
   },
@@ -8621,16 +8669,24 @@
     "module": "leap-second",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp fragment matching an ISO 8601 leap second: `T HH:mm:60[.fff]` followed by a timezone designator (`Z`, numeric offset, or `[` opening a bracketed annotation).",
     "sourcePath": "packages/gmt/src/regex/leap-second.ts",
     "examples": [
       {
-        "call": "leapSecond.test(\"60\")",
-        "result": "false"
+        "call": "leapSecond.test(\"2024-12-31T23:59:60Z\")",
+        "result": "true"
       },
       {
-        "call": "leapSecond.test(\"202\")",
-        "result": "false"
+        "call": "leapSecond.test(\"2024-12-31T23:59:60.123+00:00\")",
+        "result": "true"
+      },
+      {
+        "call": "leapSecond.test(\"2024-12-31T23:59:59Z\")",
+        "result": "false (second = 59)"
+      },
+      {
+        "call": "leapSecond.test(\"2024-12-31T23:59:60\")",
+        "result": "false (no zone designator)"
       }
     ]
   },
@@ -8641,16 +8697,28 @@
     "module": "leap-second",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp fragment matching an ISO 8601 leap second in every shape `Temporal.Instant.from` accepts — the wider sibling of `leapSecond`.",
     "sourcePath": "packages/gmt/src/regex/leap-second.ts",
     "examples": [
       {
-        "call": "instantLeapSecond.test(\"60\")",
-        "result": "false"
+        "call": "instantLeapSecond.test(\"2016-12-31T23:59:60Z\")",
+        "result": "true"
       },
       {
-        "call": "instantLeapSecond.test(\"202\")",
-        "result": "false"
+        "call": "instantLeapSecond.test(\"2016-12-31 23:59:60Z\")",
+        "result": "true (space separator)"
+      },
+      {
+        "call": "instantLeapSecond.test(\"20161231t235960Z\")",
+        "result": "true (basic format)"
+      },
+      {
+        "call": "instantLeapSecond.test(\"2016-12-31T23:59:59Z\")",
+        "result": "false (second = 59)"
+      },
+      {
+        "call": "instantLeapSecond.test(\"2016-12-31T23:59:60\")",
+        "result": "false (no zone designator)"
       }
     ]
   },
@@ -8661,23 +8729,31 @@
     "module": "nanoseconds",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching the canonical decimal form of a nanosecond timestamp — the shape `formatNanoseconds` emits and `parseNanoseconds` accepts.",
     "sourcePath": "packages/gmt/src/regex/nanoseconds.ts",
     "examples": [
       {
-        "call": "nanosecondDecimal.test(\"12\")",
+        "call": "nanosecondDecimal.test(\"1710072000123456789\")",
         "result": "true"
       },
       {
-        "call": "nanosecondDecimal.test(\"123456789\")",
+        "call": "nanosecondDecimal.test(\"-1000000000\")",
         "result": "true"
       },
       {
-        "call": "nanosecondDecimal.test(\"2025-13-01\")",
+        "call": "nanosecondDecimal.test(\"0\")",
+        "result": "true"
+      },
+      {
+        "call": "nanosecondDecimal.test(\"01\")",
+        "result": "false (leading zero)"
+      },
+      {
+        "call": "nanosecondDecimal.test(\"1.5\")",
         "result": "false"
       },
       {
-        "call": "nanosecondDecimal.test(\"not-a-match\")",
+        "call": "nanosecondDecimal.test(\"1e18\")",
         "result": "false"
       }
     ]
@@ -8689,16 +8765,28 @@
     "module": "rfc-2822",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching RFC 5322 §3.3 date-time grammar (obsoletes RFC 2822, same shape). English day/month names are mandated by the spec regardless of locale — see `internal/englishCalendarNames.ts`. Day is `1*2DIGIT` per the formal grammar, so single-digit days are valid on input even though GMT's own formatter always emits the zero-padded 2-digit form. `zone` accepts a numeric offset or one of the obsolete named zones RFC 5322 §4.3 lists (UT/GMT plus the eight North American zones); any other obs-zone letter is unrecognized and treated as invalid rather than guessed at.",
     "sourcePath": "packages/gmt/src/regex/rfc-2822.ts",
     "examples": [
       {
-        "call": "rfc2822DateTime.test(\"60\")",
-        "result": "false"
+        "call": "rfc2822DateTime.test(\"Wed, 09 Jun 2021 10:18:14 GMT\")",
+        "result": "true"
       },
       {
-        "call": "rfc2822DateTime.test(\"202\")",
-        "result": "false"
+        "call": "rfc2822DateTime.test(\"09 Jun 2021 10:18:14 +0000\")",
+        "result": "true (no weekday)"
+      },
+      {
+        "call": "rfc2822DateTime.test(\"9 Jun 2021 10:18:14 PST\")",
+        "result": "true (single-digit day)"
+      },
+      {
+        "call": "rfc2822DateTime.test(\"Wed, 09 Jun 2021 10:18:14 EST\")",
+        "result": "true (named zone)"
+      },
+      {
+        "call": "rfc2822DateTime.test(\"2024-03-15T14:30:00Z\")",
+        "result": "false (ISO shape)"
       }
     ]
   },
@@ -8709,16 +8797,32 @@
     "module": "rfc-3339",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching an RFC 3339 §5.6 date-time: ISO 8601 with a mandatory offset (`Z` or `±HH:MM`).",
     "sourcePath": "packages/gmt/src/regex/rfc-3339.ts",
     "examples": [
       {
-        "call": "rfc3339DateTime.test(\"60\")",
-        "result": "false"
+        "call": "rfc3339DateTime.test(\"2024-03-15T14:30:00-04:00\")",
+        "result": "true"
       },
       {
-        "call": "rfc3339DateTime.test(\"202\")",
-        "result": "false"
+        "call": "rfc3339DateTime.test(\"2024-03-15t14:30:00z\")",
+        "result": "true"
+      },
+      {
+        "call": "rfc3339DateTime.test(\"2024-03-15 14:30:00Z\")",
+        "result": "true (space separator)"
+      },
+      {
+        "call": "rfc3339DateTime.test(\"2024-03-15T14:30:00\")",
+        "result": "false (no offset)"
+      },
+      {
+        "call": "rfc3339DateTime.test(\"2024-03-15T14:30:00+00:00[UTC]\")",
+        "result": "false (bracketed zone)"
+      },
+      {
+        "call": "rfc3339DateTime.test(\"2024-3-15T14:30:00Z\")",
+        "result": "false (unpadded)"
       }
     ]
   },
@@ -8729,16 +8833,28 @@
     "module": "sql-date-time",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching an ANSI SQL / ODBC timestamp literal: `YYYY-MM-DD HH:mm[:ss[.fffffffff]]`.",
     "sourcePath": "packages/gmt/src/regex/sql-date-time.ts",
     "examples": [
       {
-        "call": "sqlDateTime.test(\"60\")",
-        "result": "false"
+        "call": "sqlDateTime.test(\"2024-03-15 14:30:00.123456789\")",
+        "result": "true"
       },
       {
-        "call": "sqlDateTime.test(\"202\")",
-        "result": "false"
+        "call": "sqlDateTime.test(\"2024-03-15 14:30\")",
+        "result": "true (seconds omitted)"
+      },
+      {
+        "call": "sqlDateTime.test(\"2024-03-15T14:30:00\")",
+        "result": "false (T separator)"
+      },
+      {
+        "call": "sqlDateTime.test(\"2024-3-5 14:30:00\")",
+        "result": "false (unpadded)"
+      },
+      {
+        "call": "sqlDateTime.test(\"2024-03-15 14:30:60\")",
+        "result": "false (invalid second)"
       }
     ]
   },
@@ -8749,16 +8865,36 @@
     "module": "time-zone-like",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching a timezone identifier in one of three forms:",
     "sourcePath": "packages/gmt/src/regex/time-zone-like.ts",
     "examples": [
       {
-        "call": "timeZoneLike.test(\"60\")",
-        "result": "false"
+        "call": "timeZoneLike.test(\"UTC\")",
+        "result": "true"
       },
       {
-        "call": "timeZoneLike.test(\"202\")",
-        "result": "false"
+        "call": "timeZoneLike.test(\"GMT\")",
+        "result": "true"
+      },
+      {
+        "call": "timeZoneLike.test(\"America/New_York\")",
+        "result": "true"
+      },
+      {
+        "call": "timeZoneLike.test(\"Asia/Tokyo\")",
+        "result": "true"
+      },
+      {
+        "call": "timeZoneLike.test(\"Custom/Zone\")",
+        "result": "true (permissive)"
+      },
+      {
+        "call": "timeZoneLike.test(\"+05:00\")",
+        "result": "false (numeric offset, not a zone id)"
+      },
+      {
+        "call": "timeZoneLike.test(\"UTC+05:00\")",
+        "result": "false (mixed form)"
       }
     ]
   },
@@ -8769,7 +8905,7 @@
     "module": "time",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching an ISO 8601 hour in extended format: `00`–`23`.",
     "sourcePath": "packages/gmt/src/regex/time.ts",
     "examples": [
       {
@@ -8777,16 +8913,20 @@
         "result": "true"
       },
       {
+        "call": "hour.test(\"12\")",
+        "result": "true"
+      },
+      {
         "call": "hour.test(\"23\")",
         "result": "true"
       },
       {
-        "call": "hour.test(\"60\")",
-        "result": "false"
+        "call": "hour.test(\"24\")",
+        "result": "false (out of range)"
       },
       {
-        "call": "hour.test(\"202\")",
-        "result": "false"
+        "call": "hour.test(\"9\")",
+        "result": "false (not zero-padded)"
       }
     ]
   },
@@ -8797,11 +8937,15 @@
     "module": "time",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching an ISO 8601 minute: `00`–`59`.",
     "sourcePath": "packages/gmt/src/regex/time.ts",
     "examples": [
       {
         "call": "minute.test(\"00\")",
+        "result": "true"
+      },
+      {
+        "call": "minute.test(\"30\")",
         "result": "true"
       },
       {
@@ -8810,11 +8954,7 @@
       },
       {
         "call": "minute.test(\"60\")",
-        "result": "false"
-      },
-      {
-        "call": "minute.test(\"202\")",
-        "result": "false"
+        "result": "false (out of range)"
       }
     ]
   },
@@ -8825,11 +8965,15 @@
     "module": "time",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching an ISO 8601 second: `00`–`59`.",
     "sourcePath": "packages/gmt/src/regex/time.ts",
     "examples": [
       {
         "call": "second.test(\"00\")",
+        "result": "true"
+      },
+      {
+        "call": "second.test(\"30\")",
         "result": "true"
       },
       {
@@ -8838,11 +8982,7 @@
       },
       {
         "call": "second.test(\"60\")",
-        "result": "false"
-      },
-      {
-        "call": "second.test(\"202\")",
-        "result": "false"
+        "result": "false (out of range; leap seconds use a different pattern)"
       }
     ]
   },
@@ -8853,24 +8993,24 @@
     "module": "time",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching 1–9 fractional-second digits (nanosecond precision).",
     "sourcePath": "packages/gmt/src/regex/time.ts",
     "examples": [
       {
-        "call": "fractionalSecond.test(\"00\")",
-        "result": "true"
+        "call": "fractionalSecond.test(\"123\")",
+        "result": "true (milliseconds)"
       },
       {
         "call": "fractionalSecond.test(\"123456789\")",
-        "result": "true"
+        "result": "true (nanoseconds)"
       },
       {
-        "call": "fractionalSecond.test(\"2025-13-01\")",
-        "result": "false"
+        "call": "fractionalSecond.test(\"1234567890\")",
+        "result": "false (more than 9 digits)"
       },
       {
-        "call": "fractionalSecond.test(\"not-a-match\")",
-        "result": "false"
+        "call": "fractionalSecond.test(\"\")",
+        "result": "false (empty)"
       }
     ]
   },
@@ -8881,24 +9021,20 @@
     "module": "time",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "Backward-compatible alias for `fractionalSecond`. Prefer `fractionalSecond` for new usage — the pattern matches 1–9 digits of fractional seconds, not just milliseconds.",
     "sourcePath": "packages/gmt/src/regex/time.ts",
     "examples": [
       {
-        "call": "millisecond.test(\"00\")",
+        "call": "millisecond.test(\"123\")",
         "result": "true"
       },
       {
         "call": "millisecond.test(\"123456789\")",
-        "result": "true"
+        "result": "true (nanoseconds, despite the name)"
       },
       {
-        "call": "millisecond.test(\"2025-13-01\")",
-        "result": "false"
-      },
-      {
-        "call": "millisecond.test(\"not-a-match\")",
-        "result": "false"
+        "call": "millisecond.test(\"1234567890\")",
+        "result": "false (more than 9 digits)"
       }
     ]
   },
@@ -8909,7 +9045,7 @@
     "module": "time",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching ISO 8601 local time (extended): `HH:mm[:ss[.fffffffff]]`.",
     "sourcePath": "packages/gmt/src/regex/time.ts",
     "examples": [
       {
@@ -8917,16 +9053,24 @@
         "result": "true"
       },
       {
-        "call": "plainTime.test(\"14:30:00.123456789\")",
+        "call": "plainTime.test(\"14:30:00\")",
         "result": "true"
       },
       {
-        "call": "plainTime.test(\"60\")",
-        "result": "false"
+        "call": "plainTime.test(\"14:30:00.123\")",
+        "result": "true (fractional seconds)"
       },
       {
-        "call": "plainTime.test(\"202\")",
-        "result": "false"
+        "call": "plainTime.test(\"14:30:00,123\")",
+        "result": "true (comma separator)"
+      },
+      {
+        "call": "plainTime.test(\"24:00:00\")",
+        "result": "false (hour out of range)"
+      },
+      {
+        "call": "plainTime.test(\"14:30:60\")",
+        "result": "false (second out of range)"
       }
     ]
   },
@@ -8937,24 +9081,20 @@
     "module": "unix",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching a Unix timestamp in seconds: exactly 10 digits.",
     "sourcePath": "packages/gmt/src/regex/unix.ts",
     "examples": [
       {
-        "call": "unixSeconds.test(\"1707874200\")",
+        "call": "unixSeconds.test(\"1710511800\")",
         "result": "true"
       },
       {
         "call": "unixSeconds.test(\"0000000000\")",
-        "result": "true"
+        "result": "true (epoch)"
       },
       {
-        "call": "unixSeconds.test(\"60\")",
-        "result": "false"
-      },
-      {
-        "call": "unixSeconds.test(\"202\")",
-        "result": "false"
+        "call": "unixSeconds.test(\"17105118001\")",
+        "result": "false (11 digits)"
       }
     ]
   },
@@ -8965,16 +9105,20 @@
     "module": "unix",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching a Unix timestamp in milliseconds: exactly 13 digits.",
     "sourcePath": "packages/gmt/src/regex/unix.ts",
     "examples": [
       {
-        "call": "unixMilliseconds.test(\"60\")",
-        "result": "false"
+        "call": "unixMilliseconds.test(\"1710511800123\")",
+        "result": "true"
       },
       {
-        "call": "unixMilliseconds.test(\"202\")",
-        "result": "false"
+        "call": "unixMilliseconds.test(\"0000000000000\")",
+        "result": "true (epoch)"
+      },
+      {
+        "call": "unixMilliseconds.test(\"17105118001\")",
+        "result": "false (11 digits)"
       }
     ]
   },
@@ -8985,16 +9129,28 @@
     "module": "utc-date-time",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching ISO 8601 UTC datetime: `<date>T<time>Z` with optional fractional seconds. The timezone designator accepts `Z` or `z` (lowercase is accepted for leniency, though GMT's own formatter always emits uppercase).",
     "sourcePath": "packages/gmt/src/regex/utc-date-time.ts",
     "examples": [
       {
-        "call": "utcDateTime.test(\"60\")",
-        "result": "false"
+        "call": "utcDateTime.test(\"2024-03-15T14:30:00Z\")",
+        "result": "true"
       },
       {
-        "call": "utcDateTime.test(\"202\")",
-        "result": "false"
+        "call": "utcDateTime.test(\"2024-03-15T14:30z\")",
+        "result": "true (lowercase z)"
+      },
+      {
+        "call": "utcDateTime.test(\"2024-03-15T14:30:00.123Z\")",
+        "result": "true (fractional seconds)"
+      },
+      {
+        "call": "utcDateTime.test(\"2024-03-15T14:30:00+00:00\")",
+        "result": "false (numeric offset)"
+      },
+      {
+        "call": "utcDateTime.test(\"2024-03-15T14:30:00\")",
+        "result": "false (no timezone)"
       }
     ]
   },
@@ -9005,16 +9161,32 @@
     "module": "utc-offset",
     "kind": "regex",
     "signature": "",
-    "description": "true",
+    "description": "RegExp matching an ISO 8601 UTC offset in the extended form GMT's offset-instant pair stores: `±HH:MM`, optionally `±HH:MM:SS`.",
     "sourcePath": "packages/gmt/src/regex/utc-offset.ts",
     "examples": [
       {
-        "call": "utcOffset.test(\"60\")",
-        "result": "false"
+        "call": "utcOffset.test(\"-04:00\")",
+        "result": "true"
       },
       {
-        "call": "utcOffset.test(\"202\")",
-        "result": "false"
+        "call": "utcOffset.test(\"+05:45\")",
+        "result": "true"
+      },
+      {
+        "call": "utcOffset.test(\"-00:44:30\")",
+        "result": "true (Africa/Monrovia before 1972)"
+      },
+      {
+        "call": "utcOffset.test(\"Z\")",
+        "result": "false (a designator, not an offset)"
+      },
+      {
+        "call": "utcOffset.test(\"-0400\")",
+        "result": "false (basic format)"
+      },
+      {
+        "call": "utcOffset.test(\"+24:00\")",
+        "result": "false (out of range)"
       }
     ]
   },

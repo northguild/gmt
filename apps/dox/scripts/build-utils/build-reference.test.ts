@@ -306,6 +306,50 @@ describe("extractRegex", () => {
     expect(result!.examples.length).toBeGreaterThan(0);
   });
 
+  it("reads the description and examples from JSDoc, not a // comment inside it", () => {
+    const src = `
+      /**
+       * RegExp matching a 4-digit year, wrapped
+       * over two lines.
+       *
+       * - A detail that is not part of the summary.
+       *
+       * @example year.test("2021") // true
+       * @example year.test("21")   // false (two digits)
+       */
+      export const year: RegExp = /^\\d{4}$/;
+    `;
+    const { checker, sourceFile } = compile(src);
+    let result: RegexDoc | undefined;
+    sourceFile.forEachChild((node) => {
+      if (ts.isVariableStatement(node)) {
+        for (const decl of node.declarationList.declarations) {
+          if (ts.isIdentifier(decl.name) && decl.name.text === "year") {
+            result = BR.extractRegex(
+              checker,
+              decl,
+              "regex",
+              "year",
+              gmtPath("regex/year.ts"),
+            );
+          }
+        }
+      }
+    });
+    expect(result).toBeDefined();
+    expect(result!.description).toBe(
+      "RegExp matching a 4-digit year, wrapped over two lines.",
+    );
+    expect(result!.examples).toEqual([
+      { call: 'year.test("2021")', result: "true", note: undefined },
+      {
+        call: 'year.test("21")',
+        result: "false (two digits)",
+        note: undefined,
+      },
+    ]);
+  });
+
   it("returns undefined for non-regex namespace", () => {
     const src = `const foo = /^bar$/;`;
     const { checker, sourceFile } = compile(src);
