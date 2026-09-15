@@ -4,8 +4,8 @@ description: >
   Core date/time basics — get current values, parse components, read ISO week,
   ordinal, quarter and fiscal-period identifiers, format for display, format
   relative time, compare dates, and validate strings/timezones/intervals. Reads
-  the installed package README.md and source JSDoc for API details; this skill is
-  a routing pointer, not an API dump.
+  the installed package README.md and source JSDoc for API details; this skill
+  is a routing pointer, not an API dump.
 sources:
   - 'northguild/gmt:README.md'
   - 'northguild/gmt:packages/gmt/src/plain/get/index.ts'
@@ -24,7 +24,7 @@ sources:
 metadata:
   type: core
   library: '@northguild/gmt'
-  library_version: '1.15.0'
+  library_version: '1.16.0'
 ---
 
 # GMT Basics
@@ -87,7 +87,9 @@ input before you act on it.
   one year's end. The NRF 4-5-4 calendar is `"2026-01-31"` — a Saturday on
   January 31, which is "the Saturday nearest to January 31".
 - `isWeekend` is locale-aware via `Intl.Locale.weekInfo`; `isBusinessDay` is
-  fixed ISO Mon–Fri with no locale and no holidays.
+  fixed ISO Mon–Fri with no locale and no holidays **until you pass it a
+  `BusinessCalendar`** — `isBusinessDay(value, { weekend, holidays, timeZone })`
+  states the weekend and holidays itself. See the `gmt-arithmetic` skill.
 
 ## References
 

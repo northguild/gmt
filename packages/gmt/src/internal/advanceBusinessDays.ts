@@ -1,25 +1,23 @@
 import type { Temporal } from "@js-temporal/polyfill";
+import {
+  DEFAULT_BUSINESS_CALENDAR,
+  type ResolvedBusinessCalendar,
+  stepBusinessDates,
+} from "./businessCalendar";
 
-function getStep(date: Temporal.PlainDate, direction: 1 | -1) {
-  return direction === 1 ? date.add({ days: 1 }) : date.subtract({ days: 1 });
-}
-
+/**
+ * Advance `target` business days from `start` in `direction`, skipping `calendar`'s weekend
+ * days and holidays.
+ *
+ * - `calendar` defaults to Saturday–Sunday with no holidays.
+ * - Returns `null` when the walk runs past `MAX_BUSINESS_DAY_STEPS` — a bounded loop that runs
+ *   out returns the sentinel, never a partial value.
+ */
 export function advanceBusinessDays(
   start: Temporal.PlainDate,
   direction: 1 | -1,
   target: number,
-): Temporal.PlainDate {
-  const advance = (
-    date: Temporal.PlainDate,
-    remaining: number,
-  ): Temporal.PlainDate => {
-    if (remaining === 0) return date;
-    const next = getStep(date, direction);
-    if (next.dayOfWeek >= 1 && next.dayOfWeek <= 5) {
-      return advance(next, remaining - 1);
-    }
-    return advance(next, remaining);
-  };
-
-  return advance(start, target);
+  calendar: ResolvedBusinessCalendar = DEFAULT_BUSINESS_CALENDAR,
+): Temporal.PlainDate | null {
+  return stepBusinessDates(start, direction, target, calendar);
 }
