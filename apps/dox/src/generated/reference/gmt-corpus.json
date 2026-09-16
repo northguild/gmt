@@ -30,6 +30,10 @@
         "result": "-3 — reversed"
       },
       {
+        "call": "businessDaysBetween(\"2024-07-06\", \"2024-07-05\", { weekend: [6, 7], holidays: [], timeZone: \"UTC\" })",
+        "result": "0 — addBusinessDays(\"2024-07-06\", -1) is \"2024-07-05\", but Saturday is excluded"
+      },
+      {
         "call": "businessDaysBetween(\"2024-07-01\", \"2024-07-08\", { weekend: [5, 6], holidays: [], timeZone: \"Asia/Riyadh\" })",
         "result": "5 — Friday–Saturday weekend"
       },
@@ -726,12 +730,24 @@
         "result": "23 (spring-forward)"
       },
       {
+        "call": "durationAs(\"P1D\", \"hours\", { relativeTo: \"2024-11-03T01:30[America/New_York]\" })",
+        "result": "25"
+      },
+      {
         "call": "durationAs(\"not a duration\", \"hours\")",
         "result": "null"
       },
       {
         "call": "durationAs(\"P1Y\", \"days\", { relativeTo: \"5784-06-15[u-ca=hebrew]\" })",
         "result": "385 (Hebrew leap year — relativeTo accepts GMT's calendar-annotated PlainDate string, not Temporal's own ISO-digit u-ca convention)"
+      },
+      {
+        "call": "durationAs(\"P1M\", \"days\", { relativeTo: \"2024-02-10[!u-ca=hebrew]\" })",
+        "result": "null (critical flag — not GMT's calendar shape)"
+      },
+      {
+        "call": "durationAs(\"P1M\", \"days\", { relativeTo: convertDateToCalendar(\"2024-02-10\", \"hebrew\") })",
+        "result": "30 (Temporal's ISO-digit reading of the same tag)"
       }
     ]
   },
@@ -914,12 +930,28 @@
         "result": "-1 (spring-forward)"
       },
       {
+        "call": "compareDurations(\"P1Y\", \"P1Y\")",
+        "result": "0"
+      },
+      {
+        "call": "compareDurations(\"P1D\", \"PT24H\", { relativeTo: \"2024-11-03T01:30[America/New_York]\" })",
+        "result": "1"
+      },
+      {
         "call": "compareDurations(\"not a duration\", \"PT1H\")",
         "result": "null"
       },
       {
         "call": "compareDurations(\"P1M\", \"P30D\", { relativeTo: \"5785-04-15[u-ca=hebrew]\" })",
         "result": "-1 (Tevet, a 29-day Hebrew month — relativeTo accepts GMT's calendar-annotated PlainDate string, not Temporal's own ISO-digit u-ca convention)"
+      },
+      {
+        "call": "compareDurations(\"P1M\", \"P30D\", { relativeTo: \"2024-02-10[!u-ca=hebrew]\" })",
+        "result": "null (critical flag — not GMT's calendar shape)"
+      },
+      {
+        "call": "compareDurations(\"P1M\", \"P30D\", { relativeTo: convertDateToCalendar(\"2024-02-10\", \"hebrew\") })",
+        "result": "0 (Temporal's ISO-digit reading of the same tag)"
       }
     ]
   },
@@ -973,6 +1005,18 @@
         "result": "\"1 Tag, 2 Stunden und 30 Minuten\""
       },
       {
+        "call": "formatDuration(\"PT0.000000001S\", \"en-US\")",
+        "result": "\"0.000000001 seconds\""
+      },
+      {
+        "call": "formatDuration(\"PT1.123456789S\", \"en-US\")",
+        "result": "\"1.123456789 seconds\""
+      },
+      {
+        "call": "formatDuration(parseDuration(\"PT1.123456789S\", { smallestUnit: \"millisecond\" }), \"en-US\")",
+        "result": "\"1.123 seconds\""
+      },
+      {
         "call": "formatDuration(\"invalid\")",
         "result": "\"\""
       }
@@ -1005,12 +1049,32 @@
         "result": "\"P1M14D\""
       },
       {
+        "call": "normalizeDuration(\"P1DT25H\")",
+        "result": "\"P2DT1H\""
+      },
+      {
+        "call": "normalizeDuration(\"PT2H\", { smallestUnit: \"minute\", roundingIncrement: 60 })",
+        "result": "\"\""
+      },
+      {
+        "call": "normalizeDuration(\"PT25H\", { largestUnit: \"day\", relativeTo: \"2024-11-03T01:30[America/New_York]\" })",
+        "result": "\"P1D\""
+      },
+      {
         "call": "normalizeDuration(\"invalid\")",
         "result": "\"\""
       },
       {
         "call": "normalizeDuration(\"P400D\", { largestUnit: \"year\", relativeTo: \"5784-06-15[u-ca=hebrew]\" })",
         "result": "\"P1Y15D\" (Hebrew leap year — relativeTo accepts GMT's calendar-annotated PlainDate string, not Temporal's own ISO-digit u-ca convention)"
+      },
+      {
+        "call": "normalizeDuration(\"P45D\", { largestUnit: \"month\", relativeTo: \"2024-02-10[!u-ca=hebrew]\" })",
+        "result": "\"\" (critical flag — not GMT's calendar shape)"
+      },
+      {
+        "call": "normalizeDuration(\"P45D\", { largestUnit: \"month\", relativeTo: convertDateToCalendar(\"2024-02-10\", \"hebrew\") })",
+        "result": "\"P1M15D\" (Temporal's ISO-digit reading of the same tag)"
       }
     ]
   },
@@ -1168,6 +1232,10 @@
         "result": "\"2024-07-15T16:00:00+00:00\""
       },
       {
+        "call": "fromOffsetInstant({ instant: \"2024-07-15T16:00:00Z\", offset: \"-00:00\" })",
+        "result": "\"2024-07-15T16:00:00+00:00\" (RFC 9557's \"offset unknown\" is not kept)"
+      },
+      {
         "call": "fromOffsetInstant({ instant: \"1970-01-01T00:00:00Z\", offset: \"-00:44:30\", timeZone: \"Africa/Monrovia\" })",
         "result": "\"1969-12-31T23:15:30-00:45[Africa/Monrovia]\" — RFC 9557 rounds the written offset; the zone keeps the instant exact"
       },
@@ -1301,6 +1369,22 @@
       {
         "call": "toOffsetInstant(\"2024-07-15T12:00:00\")",
         "result": "null (no offset designator)"
+      },
+      {
+        "call": "toOffsetInstant(\"2024-07-15T16:00:00Z\", \"america/new_york\")",
+        "result": "{ instant: \"2024-07-15T16:00:00Z\", offset: \"-04:00\", timeZone: \"America/New_York\" } — IANA casing"
+      },
+      {
+        "call": "toOffsetInstant(\"2024-07-15T16:00:00Z\", \"Japan\")",
+        "result": "{ instant: \"2024-07-15T16:00:00Z\", offset: \"+09:00\", timeZone: \"Japan\" }"
+      },
+      {
+        "call": "toOffsetInstant(\"2024-07-15T16:00:00-00:00\")",
+        "result": "{ instant: \"2024-07-15T16:00:00Z\", offset: \"+00:00\" } — \"offset unknown\" is not preserved"
+      },
+      {
+        "call": "toOffsetInstant(\"2024-07-15T16:00:00+01:00:00.5\")",
+        "result": "null (fractional-second offset)"
       },
       {
         "call": "toOffsetInstant(\"2024-07-15T16:00:00Z\", \"Invalid/Zone\")",
@@ -1911,15 +1995,15 @@
     "sourcePath": "packages/gmt/src/plain/calculate/diffDate.ts",
     "examples": [
       {
-        "call": "diffDate(\"2024-03-10\", \"2024-03-15\", \"day\")",
+        "call": "diffDate(\"2024-03-10\", \"2024-03-15\", \"days\")",
         "result": "5"
       },
       {
-        "call": "diffDate(\"invalid\", \"2024-03-15\", \"day\")",
+        "call": "diffDate(\"invalid\", \"2024-03-15\", \"days\")",
         "result": "null"
       },
       {
-        "call": "diffDate(\"2024-01-01\", \"2024-01-16\", \"week\", { smallestUnit: \"week\", roundingMode: \"halfExpand\" })",
+        "call": "diffDate(\"2024-01-01\", \"2024-01-16\", \"weeks\", { smallestUnit: \"week\", roundingMode: \"halfExpand\" })",
         "result": "2"
       },
       {
@@ -1983,11 +2067,11 @@
     "sourcePath": "packages/gmt/src/plain/calculate/diffDateTime.ts",
     "examples": [
       {
-        "call": "diffDateTime(\"2024-03-10T12:00:00\", \"2024-03-15T12:00:00\", \"day\")",
+        "call": "diffDateTime(\"2024-03-10T12:00:00\", \"2024-03-15T12:00:00\", \"days\")",
         "result": "5"
       },
       {
-        "call": "diffDateTime(\"invalid\", \"2024-03-15T12:00:00\", \"day\")",
+        "call": "diffDateTime(\"invalid\", \"2024-03-15T12:00:00\", \"days\")",
         "result": "null"
       }
     ]
@@ -2035,11 +2119,11 @@
     "sourcePath": "packages/gmt/src/plain/calculate/diffTime.ts",
     "examples": [
       {
-        "call": "diffTime(\"12:00:00\", \"14:30:00\", \"hour\")",
+        "call": "diffTime(\"12:00:00\", \"14:30:00\", \"hours\")",
         "result": "2"
       },
       {
-        "call": "diffTime(\"invalid\", \"14:30:00\", \"hour\")",
+        "call": "diffTime(\"invalid\", \"14:30:00\", \"hours\")",
         "result": "null"
       }
     ]
@@ -2084,7 +2168,11 @@
     "examples": [
       {
         "call": "endOfDateTime(\"2024-02-29T12:34:56\", \"month\")",
-        "result": "\"2024-02-29T23:59:59\""
+        "result": "\"2024-02-29T23:59:59.999999999\""
+      },
+      {
+        "call": "endOfDateTime(\"2024-02-29T12:34:56\", \"month\", { fractionalSecondDigits: 0 })",
+        "result": "\"2024-02-29T23:59:59\" — the pre-1.16.0 string"
       },
       {
         "call": "endOfDateTime(\"2024-02-29T12:34:56.123456789\", \"second\", { fractionalSecondDigits: 9 })",
@@ -2092,11 +2180,11 @@
       },
       {
         "call": "endOfDateTime(\"2024-03-03T12:00:00\", \"week\", { weekStartsOn: \"sunday\" })",
-        "result": "\"2024-03-09T23:59:59\""
+        "result": "\"2024-03-09T23:59:59.999999999\""
       },
       {
         "call": "endOfDateTime(\"-271821-04-19T12:00:00\", \"month\")",
-        "result": "\"-271821-04-30T23:59:59\" (the month began before the range; its end did not)"
+        "result": "\"-271821-04-30T23:59:59.999999999\" (the month began before the range; its end did not)"
       },
       {
         "call": "endOfDateTime(\"invalid-date\", \"month\")",
@@ -2161,6 +2249,17 @@
     ]
   },
   {
+    "url": "/reference/plain/calculate/EndOfTimeUnit",
+    "name": "EndOfTimeUnit",
+    "namespace": "plain",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The EndOfTimeUnit type.",
+    "sourcePath": "packages/gmt/src/plain/calculate/endOfTime.ts",
+    "examples": []
+  },
+  {
     "url": "/reference/plain/calculate/endOfTime",
     "name": "endOfTime",
     "namespace": "plain",
@@ -2173,6 +2272,10 @@
       {
         "call": "endOfTime(\"12:34:56\", \"hour\")",
         "result": "\"12:59:59.999999999\""
+      },
+      {
+        "call": "endOfTime(\"12:34:56\", \"hour\", { fractionalSecondDigits: 0 })",
+        "result": "\"12:59:59\" — the pre-1.16.0 string"
       },
       {
         "call": "endOfTime(\"invalid\", \"hour\")",
@@ -2379,7 +2482,7 @@
         "result": "null"
       },
       {
-        "call": "getLocaleDayOfWeek(\"2024-02-29\", \"not-a-locale\")",
+        "call": "getLocaleDayOfWeek(\"2024-02-29\", \"not-a-locale-!!\")",
         "result": "null"
       }
     ]
@@ -2407,7 +2510,7 @@
         "result": "\"\""
       },
       {
-        "call": "getLocaleEndOfWeek(\"2024-02-29\", \"not-a-locale\")",
+        "call": "getLocaleEndOfWeek(\"2024-02-29\", \"not-a-locale-!!\")",
         "result": "\"\""
       }
     ]
@@ -2435,7 +2538,7 @@
         "result": "\"\""
       },
       {
-        "call": "getLocaleStartOfWeek(\"2024-02-29\", \"not-a-locale\")",
+        "call": "getLocaleStartOfWeek(\"2024-02-29\", \"not-a-locale-!!\")",
         "result": "\"\""
       }
     ]
@@ -2446,8 +2549,8 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "getLocaleWeekYear(value: string, locale: string): number",
-    "description": "Return the locale-relative week-numbering year `value` belongs to,",
+    "signature": "getLocaleWeekYear(value: string, locale: string, options?: { minimalDays?: number; }): number",
+    "description": "Return the locale-relative week-numbering year `value` belongs to, from `locale`'s first day of",
     "sourcePath": "packages/gmt/src/plain/calculate/getLocaleWeekYear.ts",
     "examples": [
       {
@@ -2455,12 +2558,20 @@
         "result": "2024"
       },
       {
+        "call": "getLocaleWeekYear(\"2022-01-01\", \"en-US\", { minimalDays: 1 })",
+        "result": "2022 — Jan 1 is always in week 1"
+      },
+      {
         "call": "getLocaleWeekYear(\"2022-01-01\", \"en-US\")",
-        "result": "2022 (Jan 1 is always week 1 in en-US)"
+        "result": "2021 — ISO default: the week of Dec 26 holds 1 day of 2022"
       },
       {
         "call": "getLocaleWeekYear(\"2022-01-01\", \"de-DE\")",
-        "result": "2021 (ISO-style: Jan 1, 2022 is a Saturday, in week 52 of 2021)"
+        "result": "2021 — Jan 1, 2022 is a Saturday, in week 52 of 2021"
+      },
+      {
+        "call": "getLocaleWeekYear(\"2022-01-01\", \"en-US\", { minimalDays: 0 })",
+        "result": "null"
       },
       {
         "call": "getLocaleWeekYear(\"invalid\", \"en-US\")",
@@ -2561,6 +2672,14 @@
       {
         "call": "getWeekNumber(\"invalid\")",
         "result": "null"
+      },
+      {
+        "call": "getWeekNumber(\"2024-03-15T10:00\")",
+        "result": "null (a date-time, not a PlainDate)"
+      },
+      {
+        "call": "getWeekNumber(\"2024-03-15T10:00\".slice(0, 10))",
+        "result": "11 (the date part)"
       }
     ]
   },
@@ -2630,8 +2749,8 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "getWeeksInLocaleWeekYear(value: string, locale: string): number",
-    "description": "Return the number of weeks (52 or 53) in the locale week-numbering year",
+    "signature": "getWeeksInLocaleWeekYear(value: string, locale: string, options?: { minimalDays?: number; }): number",
+    "description": "Return the number of weeks (52 or 53) in the locale week-numbering year containing `value`, from",
     "sourcePath": "packages/gmt/src/plain/calculate/getWeeksInLocaleWeekYear.ts",
     "examples": [
       {
@@ -2639,8 +2758,20 @@
         "result": "52"
       },
       {
+        "call": "getWeeksInLocaleWeekYear(\"2022-06-15\", \"en-US\", { minimalDays: 1 })",
+        "result": "53 — Dec 26, 2021 to Jan 1, 2023"
+      },
+      {
+        "call": "getWeeksInLocaleWeekYear(\"2022-06-15\", \"en-US\")",
+        "result": "52 — ISO default: Jan 2, 2022 to Jan 1, 2023"
+      },
+      {
         "call": "getWeeksInLocaleWeekYear(\"2020-06-15\", \"de-DE\")",
         "result": "53"
+      },
+      {
+        "call": "getWeeksInLocaleWeekYear(\"2024-06-15\", \"en-US\", { minimalDays: 8 })",
+        "result": "null"
       },
       {
         "call": "getWeeksInLocaleWeekYear(\"invalid\", \"en-US\")",
@@ -2894,7 +3025,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "roundDate(value: string, options: { smallestUnit: DateUnit; roundingIncrement?: number; roundingMode?: RoundingMode; }): string",
+    "signature": "roundDate(value: string, options: { smallestUnit: SmallestUnit<DateUnit>; roundingIncrement?: number; roundingMode?: RoundingMode; }): string",
     "description": "Round an ISO 8601 date string to the specified date unit.",
     "sourcePath": "packages/gmt/src/plain/calculate/roundDate.ts",
     "examples": [
@@ -2919,8 +3050,20 @@
         "result": "\"2024-06-15\""
       },
       {
+        "call": "roundDate(\"2024-06-15\", { smallestUnit: \"months\" })",
+        "result": "\"2024-06-01\" (plural unit name)"
+      },
+      {
         "call": "roundDate(\"-271821-04-19\", { smallestUnit: \"month\" })",
         "result": "\"-271821-05-01\" (the month began before the range)"
+      },
+      {
+        "call": "roundDate(\"2024-05-20\", { smallestUnit: \"month\", roundingIncrement: 1.5 })",
+        "result": "\"2024-06-01\" (the increment truncates to 1)"
+      },
+      {
+        "call": "roundDate(\"2024-05-20\", { smallestUnit: \"month\", roundingMode: \"bogus\" as never })",
+        "result": "\"\""
       },
       {
         "call": "roundDate(\"invalid\", { smallestUnit: \"year\" })",
@@ -2934,7 +3077,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "roundDateTime(value: string, options: { smallestUnit: DateTimeUnit; roundingIncrement?: number; roundingMode?: RoundingMode; }): string",
+    "signature": "roundDateTime(value: string, options: { smallestUnit: SmallestUnit<DateTimeUnit>; roundingIncrement?: number; roundingMode?: RoundingMode; }): string",
     "description": "Round an ISO 8601 datetime string to the specified date-time unit.",
     "sourcePath": "packages/gmt/src/plain/calculate/roundDateTime.ts",
     "examples": [
@@ -2963,6 +3106,14 @@
         "result": "\"2024-06-15T13:00:00\""
       },
       {
+        "call": "roundDateTime(\"2024-06-15T12:34:56\", { smallestUnit: \"hours\" })",
+        "result": "\"2024-06-15T13:00:00\" (plural unit name)"
+      },
+      {
+        "call": "roundDateTime(\"2024-05-15T12:00:00\", { smallestUnit: \"month\", roundingMode: \"bogus\" as never })",
+        "result": "\"\""
+      },
+      {
         "call": "roundDateTime(\"invalid\", { smallestUnit: \"year\" })",
         "result": "\"\""
       }
@@ -2974,7 +3125,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "roundTime(value: string, options: { smallestUnit: SmallestUnit<\"hour\">; roundingIncrement?: number; roundingMode?: RoundingMode; }): string",
+    "signature": "roundTime(value: string, options: { smallestUnit: SmallestUnit<TimeUnit>; roundingIncrement?: number; roundingMode?: RoundingMode; }): string",
     "description": "Round an ISO 8601 time string to the specified time unit.",
     "sourcePath": "packages/gmt/src/plain/calculate/roundTime.ts",
     "examples": [
@@ -2989,6 +3140,10 @@
       {
         "call": "roundTime(\"12:34:56\", { smallestUnit: \"second\", roundingMode: \"floor\" })",
         "result": "\"12:34:56\""
+      },
+      {
+        "call": "roundTime(\"12:34:56\", { smallestUnit: \"hours\" })",
+        "result": "\"13:00:00\" (plural unit name)"
       },
       {
         "call": "roundTime(\"invalid\", { smallestUnit: \"hour\" })",
@@ -3167,6 +3322,10 @@
         "result": "\"2024-02-01\""
       },
       {
+        "call": "startOfDate(\"2024-02-29\", \"day\")",
+        "result": "\"2024-02-29\""
+      },
+      {
         "call": "startOfDate(\"invalid-date\", \"month\")",
         "result": "\"\""
       }
@@ -3249,6 +3408,17 @@
     ]
   },
   {
+    "url": "/reference/plain/calculate/StartOfTimeUnit",
+    "name": "StartOfTimeUnit",
+    "namespace": "plain",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The StartOfTimeUnit type.",
+    "sourcePath": "packages/gmt/src/plain/calculate/startOfTime.ts",
+    "examples": []
+  },
+  {
     "url": "/reference/plain/calculate/startOfTime",
     "name": "startOfTime",
     "namespace": "plain",
@@ -3323,11 +3493,11 @@
     "sourcePath": "packages/gmt/src/plain/calculate/subtractDate.ts",
     "examples": [
       {
-        "call": "subtractDate(\"2024-03-15\", { day: 5 })",
+        "call": "subtractDate(\"2024-03-15\", { days: 5 })",
         "result": "\"2024-03-10\""
       },
       {
-        "call": "subtractDate(\"invalid\", { day: 5 })",
+        "call": "subtractDate(\"invalid\", { days: 5 })",
         "result": "\"\""
       },
       {
@@ -3577,6 +3747,14 @@
       {
         "call": "areDateTimesEqualBy(\"2023-03-15T10:00:00\", \"2024-03-15T10:00:00\", \"month\")",
         "result": "false (same month, different year)"
+      },
+      {
+        "call": "areDateTimesEqualBy(\"2024-05-15T10:20:30.123\", \"2024-05-15T10:20:30.999\", \"millisecond\", { fractionalSecondDigits: 0 })",
+        "result": "false (different milliseconds)"
+      },
+      {
+        "call": "areDateTimesEqualBy(\"2024-05-15T10:20:30.123\", \"2024-05-15T10:20:30.999\", \"second\")",
+        "result": "true (the old 0-digit result)"
       },
       {
         "call": "areDateTimesEqualBy(\"invalid\", \"2024-03-15T10:00:00\", \"day\")",
@@ -4183,7 +4361,7 @@
         "result": "false"
       },
       {
-        "call": "isWeekend(\"2024-02-03\", \"not-a-locale\")",
+        "call": "isWeekend(\"2024-02-03\", \"not-a-locale-!!\")",
         "result": "false"
       }
     ]
@@ -4323,11 +4501,11 @@
     "examples": [
       {
         "call": "formatDateRange(\"2024-02-03\", \"2024-02-05\", \"en-US\", { dateStyle: \"long\" })",
-        "result": "\"February 3 – 5, 2024\""
+        "result": "\"February 3 - 5, 2024\""
       },
       {
         "call": "formatDateRange(\"2024-02-03\", \"2024-06-10\", \"en-US\", { dateStyle: \"long\" })",
-        "result": "\"February 3 – June 10, 2024\""
+        "result": "\"February 3 - June 10, 2024\""
       },
       {
         "call": "formatDateRange(\"invalid\", \"2024-02-05\", \"en-US\")",
@@ -4347,7 +4525,11 @@
     "examples": [
       {
         "call": "formatDateTime(\"2024-03-15T14:30:00\", \"en-US\", { dateStyle: \"medium\", timeStyle: \"short\" })",
-        "result": "\"Mar 15, 2024 at 2:30 PM\""
+        "result": "\"Mar 15, 2024, 2:30 PM\""
+      },
+      {
+        "call": "formatDateTime(\"2024-03-15T14:30:00\", \"en-US\", { dateStyle: \"long\", timeStyle: \"short\" })",
+        "result": "\"March 15, 2024 at 2:30 PM\""
       },
       {
         "call": "formatDateTime(\"2024-03-15T14:30:00\", \"de-DE\", { dateStyle: \"medium\", timeStyle: \"short\" })",
@@ -4371,11 +4553,11 @@
     "examples": [
       {
         "call": "formatDateTimeRange(\"2024-02-03T09:00:00\", \"2024-02-03T17:00:00\", \"en-US\", { dateStyle: \"long\", timeStyle: \"short\" })",
-        "result": "\"February 3, 2024, 9:00 AM – 5:00 PM\""
+        "result": "\"February 3, 2024, 9:00 AM - 5:00 PM\""
       },
       {
         "call": "formatDateTimeRange(\"2024-02-03T09:00:00\", \"2024-02-10T17:00:00\", \"en-US\", { dateStyle: \"long\", timeStyle: \"short\" })",
-        "result": "\"February 3, 2024 at 9:00 AM – February 10, 2024 at 5:00 PM\""
+        "result": "\"February 3, 2024 at 9:00 AM - February 10, 2024 at 5:00 PM\""
       },
       {
         "call": "formatDateTimeRange(\"invalid\", \"2024-02-03T17:00:00\", \"en-US\")",
@@ -4395,11 +4577,23 @@
     "examples": [
       {
         "call": "formatDateTimeToParts(\"2024-03-15T14:30:00\", \"en-US\")",
-        "result": "[{ type: \"month\", value: \"3\" }, { type: \"literal\", value: \"/\" }, { type: \"day\", value: \"15\" }, { type: \"literal\", value: \"/\" }, { type: \"year\", value: \"2024\" }, { type: \"literal\", value: \",\" }, { type: \"literal\", value: \" \" }, { type: \"hour\", value: \"2\" }, { type: \"literal\", value: \":\" }, { type: \"minute\", value: \"30\" }, { type: \"literal\", value: \" \" }, { type: \"dayPeriod\", value: \"PM\" }]"
+        "result": "[{ type: \"month\", value: \"3\" }, { type: \"literal\", value: \"/\" }, { type: \"day\", value: \"15\" }, { type: \"literal\", value: \"/\" }, { type: \"year\", value: \"2024\" }, { type: \"literal\", value: \", \" }, { type: \"hour\", value: \"2\" }, { type: \"literal\", value: \":\" }, { type: \"minute\", value: \"30\" }, { type: \"literal\", value: \":\" }, { type: \"second\", value: \"00\" }, { type: \"literal\", value: \"\\u202f\" }, { type: \"dayPeriod\", value: \"PM\" }]"
       },
       {
         "call": "formatDateTimeToParts(\"2024-03-15T14:30:00\", \"de-DE\")",
-        "result": "[{ type: \"day\", value: \"15\" }, { type: \"literal\", value: \".\" }, { type: \"month\", value: \"3\" }, { type: \"literal\", value: \".\" }, { type: \"year\", value: \"2024\" }, { type: \"literal\", value: \",\" }, { type: \"literal\", value: \" \" }, { type: \"hour\", value: \"14\" }, { type: \"literal\", value: \":\" }, { type: \"minute\", value: \"30\" }]"
+        "result": "[{ type: \"day\", value: \"15\" }, { type: \"literal\", value: \".\" }, { type: \"month\", value: \"3\" }, { type: \"literal\", value: \".\" }, { type: \"year\", value: \"2024\" }, { type: \"literal\", value: \", \" }, { type: \"hour\", value: \"14\" }, { type: \"literal\", value: \":\" }, { type: \"minute\", value: \"30\" }, { type: \"literal\", value: \":\" }, { type: \"second\", value: \"00\" }]"
+      },
+      {
+        "call": "formatDateTimeToParts(\"2024-03-15T14:30:00\", \"en-US\", { year: \"numeric\", month: \"numeric\", day: \"numeric\" })",
+        "result": "[{ type: \"month\", value: \"3\" }, { type: \"literal\", value: \"/\" }, { type: \"day\", value: \"15\" }, { type: \"literal\", value: \"/\" }, { type: \"year\", value: \"2024\" }] — the pre-1.16.0 default"
+      },
+      {
+        "call": "formatDateTimeToParts(\"2024-02-29T12:00:00\", \"en-US\", { timeStyle: \"long\" })",
+        "result": "[{ type: \"hour\", value: \"12\" }, { type: \"literal\", value: \":\" }, { type: \"minute\", value: \"00\" }, { type: \"literal\", value: \":\" }, { type: \"second\", value: \"00\" }, { type: \"literal\", value: \"\\u202f\" }, { type: \"dayPeriod\", value: \"PM\" }]"
+      },
+      {
+        "call": "formatZonedToParts(\"2024-02-29T12:00:00+00:00[UTC]\", \"en-US\", { timeStyle: \"long\" })",
+        "result": "[{ type: \"hour\", value: \"12\" }, { type: \"literal\", value: \":\" }, { type: \"minute\", value: \"00\" }, { type: \"literal\", value: \":\" }, { type: \"second\", value: \"00\" }, { type: \"literal\", value: \"\\u202f\" }, { type: \"dayPeriod\", value: \"PM\" }, { type: \"literal\", value: \" \" }, { type: \"timeZoneName\", value: \"UTC\" }] — the pre-1.16.0 parts"
       },
       {
         "call": "formatDateTimeToParts(\"invalid\")",
@@ -4424,6 +4618,18 @@
       {
         "call": "formatDateToParts(\"2024-03-15\", \"de-DE\")",
         "result": "[{ type: \"day\", value: \"15\" }, { type: \"literal\", value: \".\" }, { type: \"month\", value: \"3\" }, { type: \"literal\", value: \".\" }, { type: \"year\", value: \"2024\" }]"
+      },
+      {
+        "call": "formatDateToParts(\"2024-02-29\", \"en-US\", { dateStyle: \"full\", timeStyle: \"full\" })",
+        "result": "[{ type: \"weekday\", value: \"Thursday\" }, { type: \"literal\", value: \", \" }, { type: \"month\", value: \"February\" }, { type: \"literal\", value: \" \" }, { type: \"day\", value: \"29\" }, { type: \"literal\", value: \", \" }, { type: \"year\", value: \"2024\" }]"
+      },
+      {
+        "call": "formatDateToParts(\"2024-02-29\", \"en-US\", { timeStyle: \"long\" })",
+        "result": "[] — a PlainDate has no time"
+      },
+      {
+        "call": "formatZonedToParts(\"2024-02-29T00:00:00+00:00[UTC]\", \"en-US\", { timeStyle: \"long\" })",
+        "result": "[{ type: \"hour\", value: \"12\" }, { type: \"literal\", value: \":\" }, { type: \"minute\", value: \"00\" }, { type: \"literal\", value: \":\" }, { type: \"second\", value: \"00\" }, { type: \"literal\", value: \"\\u202f\" }, { type: \"dayPeriod\", value: \"AM\" }, { type: \"literal\", value: \" \" }, { type: \"timeZoneName\", value: \"UTC\" }] — the pre-1.16.0 parts"
       },
       {
         "call": "formatDateToParts(\"invalid\")",
@@ -4457,8 +4663,8 @@
         "result": "\"3 months ago\""
       },
       {
-        "call": "formatRelativeDate(value, \"en-US\", { roundingMethod: \"floor\" })",
-        "result": "rounds toward the earlier boundary"
+        "call": "formatRelativeDate(\"2026-03-01\", \"en-US\", { reference: \"2026-03-11\", largestUnit: \"week\", roundingMethod: \"floor\" })",
+        "result": "\"2 weeks ago\" (−1.43 weeks floors to −2; the default rounds to \"last week\")"
       },
       {
         "call": "formatRelativeDate(\"not-a-date\")",
@@ -4492,8 +4698,8 @@
         "result": "\"in 3 hours\""
       },
       {
-        "call": "formatRelativeDateTime(value, \"en-US\", { roundingMethod: \"floor\" })",
-        "result": "rounds toward the earlier boundary"
+        "call": "formatRelativeDateTime(\"2026-01-15T00:00:00\", \"en-US\", { reference: \"2026-01-15T10:30:00\", roundingMethod: \"floor\" })",
+        "result": "\"11 hours ago\" (−10.5 hours floors to −11; the default rounds to 10)"
       },
       {
         "call": "formatRelativeDateTime(\"not-a-date\")",
@@ -4527,8 +4733,8 @@
         "result": "\"2 hr. ago\""
       },
       {
-        "call": "formatRelativeTime(value, \"en-US\", { roundingMethod: \"floor\" })",
-        "result": "rounds toward the earlier boundary"
+        "call": "formatRelativeTime(\"09:00:00\", \"en-US\", { reference: \"10:30:00\", roundingMethod: \"floor\" })",
+        "result": "\"2 hours ago\" (−1.5 hours floors to −2)"
       },
       {
         "call": "formatRelativeTime(\"not-a-time\")",
@@ -5302,7 +5508,7 @@
     "namespace": "plain",
     "module": "interval",
     "kind": "function",
-    "signature": "intervalDivideEquallyDate(start: string, end: string, n: number): { start: string; end: string; }[]",
+    "signature": "intervalDivideEquallyDate(start: string, end: string, n: number, options?: { maxPieces?: number; }): { start: string; end: string; }[]",
     "description": "Split a date interval into `n` equal-length sub-intervals.",
     "sourcePath": "packages/gmt/src/plain/interval/intervalDivideEquallyDate.ts",
     "examples": [
@@ -5329,6 +5535,14 @@
       {
         "call": "intervalDivideEquallyDate(\"invalid\", \"2024-01-10\", 3)",
         "result": "[]"
+      },
+      {
+        "call": "intervalDivideEquallyDate(\"2024-01-01\", \"2024-01-10\", 3, { maxPieces: 2 })",
+        "result": "[] (3 pieces exceed the limit)"
+      },
+      {
+        "call": "intervalDivideEquallyDate(\"2024-01-01\", \"2024-01-10\", 3, { maxPieces: 3 })",
+        "result": "[{ start: \"2024-01-01\", end: \"2024-01-04\" }, { start: \"2024-01-04\", end: \"2024-01-07\" }, { start: \"2024-01-07\", end: \"2024-01-10\" }]"
       }
     ]
   },
@@ -5338,7 +5552,7 @@
     "namespace": "plain",
     "module": "interval",
     "kind": "function",
-    "signature": "intervalDivideEquallyDateTime(start: string, end: string, n: number): { start: string; end: string; }[]",
+    "signature": "intervalDivideEquallyDateTime(start: string, end: string, n: number, options?: { maxPieces?: number; }): { start: string; end: string; }[]",
     "description": "Split a datetime interval into `n` equal-length sub-intervals.",
     "sourcePath": "packages/gmt/src/plain/interval/intervalDivideEquallyDateTime.ts",
     "examples": [
@@ -5357,6 +5571,14 @@
       {
         "call": "intervalDivideEquallyDateTime(\"invalid\", \"2024-01-04T00:00:00\", 3)",
         "result": "[]"
+      },
+      {
+        "call": "intervalDivideEquallyDateTime(\"2024-01-01T00:00:00\", \"2024-01-04T00:00:00\", 3, { maxPieces: 2 })",
+        "result": "[] (3 pieces exceed the limit)"
+      },
+      {
+        "call": "intervalDivideEquallyDateTime(\"2024-01-01T00:00:00\", \"2024-01-04T00:00:00\", 3, { maxPieces: 3 })",
+        "result": "[{ start: \"2024-01-01T00:00:00\", end: \"2024-01-02T00:00:00\" }, { start: \"2024-01-02T00:00:00\", end: \"2024-01-03T00:00:00\" }, { start: \"2024-01-03T00:00:00\", end: \"2024-01-04T00:00:00\" }]"
       }
     ]
   },
@@ -5366,7 +5588,7 @@
     "namespace": "plain",
     "module": "interval",
     "kind": "function",
-    "signature": "intervalDivideEquallyTime(start: string, end: string, n: number): { start: string; end: string; }[]",
+    "signature": "intervalDivideEquallyTime(start: string, end: string, n: number, options?: { maxPieces?: number; }): { start: string; end: string; }[]",
     "description": "Split a time interval into `n` equal-length sub-intervals.",
     "sourcePath": "packages/gmt/src/plain/interval/intervalDivideEquallyTime.ts",
     "examples": [
@@ -5389,6 +5611,14 @@
       {
         "call": "intervalDivideEquallyTime(\"invalid\", \"17:00:00\", 3)",
         "result": "[]"
+      },
+      {
+        "call": "intervalDivideEquallyTime(\"09:00:00\", \"17:00:00\", 3, { maxPieces: 2 })",
+        "result": "[] (3 pieces exceed the limit)"
+      },
+      {
+        "call": "intervalDivideEquallyTime(\"09:00:00\", \"17:00:00\", 3, { maxPieces: 3 })",
+        "result": "[{ start: \"09:00:00\", end: \"11:40:00\" }, { start: \"11:40:00\", end: \"14:20:00\" }, { start: \"14:20:00\", end: \"17:00:00\" }]"
       }
     ]
   },
@@ -6370,7 +6600,7 @@
     "namespace": "plain",
     "module": "interval",
     "kind": "function",
-    "signature": "splitIntervalByUnitDate(start: string, end: string, unit: string, amount: number): { start: string; end: string; }[]",
+    "signature": "splitIntervalByUnitDate(start: string, end: string, unit: string, amount: number, options?: { maxPieces?: number; }): { start: string; end: string; }[]",
     "description": "Split a date interval into sub-intervals of `amount × unit`.",
     "sourcePath": "packages/gmt/src/plain/interval/splitIntervalByUnitDate.ts",
     "examples": [
@@ -6397,6 +6627,14 @@
       {
         "call": "splitIntervalByUnitDate(\"5784-01-01[u-ca=hebrew]\", \"5785-01-01[u-ca=hebrew]\", \"month\", 1)",
         "result": "13 slices, tiling the Hebrew leap year (including Adar I)"
+      },
+      {
+        "call": "splitIntervalByUnitDate(\"2024-01-01\", \"2024-01-10\", \"day\", 2, { maxPieces: 4 })",
+        "result": "[] (5 slices exceed the limit)"
+      },
+      {
+        "call": "splitIntervalByUnitDate(\"2024-01-01\", \"2024-01-10\", \"day\", 2, { maxPieces: 5 })",
+        "result": "[{ start: \"2024-01-01\", end: \"2024-01-03\" }, { start: \"2024-01-03\", end: \"2024-01-05\" }, { start: \"2024-01-05\", end: \"2024-01-07\" }, { start: \"2024-01-07\", end: \"2024-01-09\" }, { start: \"2024-01-09\", end: \"2024-01-10\" }]"
       }
     ]
   },
@@ -6406,7 +6644,7 @@
     "namespace": "plain",
     "module": "interval",
     "kind": "function",
-    "signature": "splitIntervalByUnitDateTime(start: string, end: string, unit: string, amount: number): { start: string; end: string; }[]",
+    "signature": "splitIntervalByUnitDateTime(start: string, end: string, unit: string, amount: number, options?: { maxPieces?: number; }): { start: string; end: string; }[]",
     "description": "Split a date-time interval into sub-intervals of `amount × unit`.",
     "sourcePath": "packages/gmt/src/plain/interval/splitIntervalByUnitDateTime.ts",
     "examples": [
@@ -6429,6 +6667,14 @@
       {
         "call": "splitIntervalByUnitDateTime(\"invalid\", \"2024-01-01T14:00:00\", \"hour\", 1)",
         "result": "[]"
+      },
+      {
+        "call": "splitIntervalByUnitDateTime(\"2024-01-01T12:00:00\", \"2024-01-01T14:00:00\", \"hour\", 1, { maxPieces: 1 })",
+        "result": "[] (2 slices exceed the limit)"
+      },
+      {
+        "call": "splitIntervalByUnitDateTime(\"2024-01-01T12:00:00\", \"2024-01-01T14:00:00\", \"hour\", 1, { maxPieces: 2 })",
+        "result": "[{ start: \"2024-01-01T12:00:00\", end: \"2024-01-01T13:00:00\" }, { start: \"2024-01-01T13:00:00\", end: \"2024-01-01T14:00:00\" }]"
       }
     ]
   },
@@ -6438,7 +6684,7 @@
     "namespace": "plain",
     "module": "interval",
     "kind": "function",
-    "signature": "splitIntervalByUnitTime(start: string, end: string, unit: string, amount: number): { start: string; end: string; }[]",
+    "signature": "splitIntervalByUnitTime(start: string, end: string, unit: string, amount: number, options?: { maxPieces?: number; }): { start: string; end: string; }[]",
     "description": "Split a time interval into sub-intervals of `amount × unit`.",
     "sourcePath": "packages/gmt/src/plain/interval/splitIntervalByUnitTime.ts",
     "examples": [
@@ -6451,6 +6697,10 @@
         "result": "[{ start: \"12:00:00\", end: \"13:00:00\" }, { start: \"13:00:00\", end: \"14:00:00\" }, { start: \"14:00:00\", end: \"14:30:00\" }]"
       },
       {
+        "call": "splitIntervalByUnitTime(\"20:00:00\", \"23:00:00\", \"hour\", 5)",
+        "result": "[{ start: \"20:00:00\", end: \"23:00:00\" }] (20:00 + 5 hours is past midnight)"
+      },
+      {
         "call": "splitIntervalByUnitTime(\"12:00:00\", \"12:00:00\", \"hour\", 1)",
         "result": "[{ start: \"12:00:00\", end: \"12:00:00\" }]"
       },
@@ -6461,6 +6711,14 @@
       {
         "call": "splitIntervalByUnitTime(\"invalid\", \"14:00:00\", \"hour\", 1)",
         "result": "[]"
+      },
+      {
+        "call": "splitIntervalByUnitTime(\"12:00:00\", \"14:30:00\", \"hour\", 1, { maxPieces: 2 })",
+        "result": "[] (3 slices exceed the limit)"
+      },
+      {
+        "call": "splitIntervalByUnitTime(\"12:00:00\", \"14:30:00\", \"hour\", 1, { maxPieces: 3 })",
+        "result": "[{ start: \"12:00:00\", end: \"13:00:00\" }, { start: \"13:00:00\", end: \"14:00:00\" }, { start: \"14:00:00\", end: \"14:30:00\" }]"
       }
     ]
   },
@@ -6575,7 +6833,7 @@
         "result": "[\"BC\", \"AD\"]"
       },
       {
-        "call": "getLocaleEraNames(\"not-a-locale\")",
+        "call": "getLocaleEraNames(\"not-a-locale-!!\")",
         "result": "[]"
       }
     ]
@@ -6603,7 +6861,7 @@
         "result": "[\"上午\", \"下午\"]"
       },
       {
-        "call": "getLocaleMeridiems(\"not-a-locale\")",
+        "call": "getLocaleMeridiems(\"not-a-locale-!!\")",
         "result": "[]"
       }
     ]
@@ -6642,7 +6900,7 @@
         "result": "[\"J\", \"F\", \"M\", ... \"D\"]"
       },
       {
-        "call": "getLocaleMonthNames(\"not-a-locale\")",
+        "call": "getLocaleMonthNames(\"not-a-locale-!!\")",
         "result": "[]"
       }
     ]
@@ -6670,7 +6928,7 @@
         "result": "[\"Mo\", \"Di\", \"Mi\", ... \"So\"]"
       },
       {
-        "call": "getLocaleWeekdayNames(\"not-a-locale\")",
+        "call": "getLocaleWeekdayNames(\"not-a-locale-!!\")",
         "result": "[]"
       }
     ]
@@ -6681,7 +6939,7 @@
     "namespace": "plain",
     "module": "map",
     "kind": "function",
-    "signature": "mapDatesInRange(startDate: string, endDate: string, stepDays?: number): string[]",
+    "signature": "mapDatesInRange(startDate: string, endDate: string, stepDays?: number, options?: { maxPieces?: number; }): string[]",
     "description": "Return an array of ISO PlainDate strings between `startDate` and `endDate` inclusive.",
     "sourcePath": "packages/gmt/src/plain/map/mapDatesInRange.ts",
     "examples": [
@@ -6708,6 +6966,14 @@
       {
         "call": "mapDatesInRange(\"2024-03-01\", \"2024-03-05\", 0)",
         "result": "[]"
+      },
+      {
+        "call": "mapDatesInRange(\"2024-03-01\", \"2024-03-05\", 1, { maxPieces: 3 })",
+        "result": "[] (more dates than the limit)"
+      },
+      {
+        "call": "mapDatesInRange(\"2024-03-01\", \"2024-03-05\", 1, { maxPieces: 10 })",
+        "result": "[\"2024-03-01\", \"2024-03-02\", \"2024-03-03\", \"2024-03-04\", \"2024-03-05\"]"
       }
     ]
   },
@@ -6943,7 +7209,11 @@
     "examples": [
       {
         "call": "parseMicrosecondFromDateTime(\"2024-03-15T14:30:45.123\")",
-        "result": "\"123\""
+        "result": "\"000\""
+      },
+      {
+        "call": "parseMicrosecondFromDateTime(\"2024-03-15T14:30:45.123456\")",
+        "result": "\"456\""
       },
       {
         "call": "parseMicrosecondFromDateTime(\"2024-03-15T14:30:45.000\")",
@@ -6967,7 +7237,11 @@
     "examples": [
       {
         "call": "parseMicrosecondFromTime(\"12:30:45.123\")",
-        "result": "\"123\""
+        "result": "\"000\""
+      },
+      {
+        "call": "parseMicrosecondFromTime(\"12:30:45.123456\")",
+        "result": "\"456\""
       },
       {
         "call": "parseMicrosecondFromTime(\"12:30:45.000\")",
@@ -7127,7 +7401,11 @@
     "examples": [
       {
         "call": "parseNanosecondFromDateTime(\"2024-03-15T14:30:45.123\")",
-        "result": "\"123\""
+        "result": "\"000\""
+      },
+      {
+        "call": "parseNanosecondFromDateTime(\"2024-03-15T14:30:45.123456789\")",
+        "result": "\"789\""
       },
       {
         "call": "parseNanosecondFromDateTime(\"2024-03-15T14:30:45.000\")",
@@ -7151,7 +7429,11 @@
     "examples": [
       {
         "call": "parseNanosecondFromTime(\"12:30:45.123\")",
-        "result": "\"123\""
+        "result": "\"000\""
+      },
+      {
+        "call": "parseNanosecondFromTime(\"12:30:45.123456789\")",
+        "result": "\"789\""
       },
       {
         "call": "parseNanosecondFromTime(\"12:30:45.000\")",
@@ -7502,8 +7784,20 @@
         "result": "true"
       },
       {
+        "call": "isLeapSecond(\"2024-12-31t23:59:60Z\")",
+        "result": "true (lowercase t)"
+      },
+      {
+        "call": "isLeapSecond(\"20241231 235960Z\")",
+        "result": "true (space separator, basic format)"
+      },
+      {
         "call": "isLeapSecond(\"2024-12-31T23:59:59Z\")",
         "result": "false"
+      },
+      {
+        "call": "/T\\d{2}:\\d{2}:60(?:[.,]\\d+)?[-+Zz[]/.test(\"2024-12-31t23:59:60Z\")",
+        "result": "false (the earlier uppercase-T-only test)"
       }
     ]
   },
@@ -7528,6 +7822,14 @@
       {
         "call": "isLeapYear(\"invalid\")",
         "result": "false"
+      },
+      {
+        "call": "isLeapYear(\"2024-03-15T10:00\")",
+        "result": "false (a date-time, not a PlainDate)"
+      },
+      {
+        "call": "isLeapYear(\"2024-03-15T10:00\".slice(0, 10))",
+        "result": "true (the date part)"
       }
     ]
   },
@@ -7552,6 +7854,14 @@
       {
         "call": "isValidCalendarDate(\"2024-10-03[u-ca=martian]\")",
         "result": "false (unknown calendar identifier)"
+      },
+      {
+        "call": "isValidCalendarDate(\"0113-01-10[u-ca=roc]\")",
+        "result": "false (Temporal's id, not GMT's)"
+      },
+      {
+        "call": "isValidCalendarDate(\"0113-01-10[u-ca=roc]\".replace(\"u-ca=roc\", \"u-ca=taiwan\"))",
+        "result": "true (the GMT id)"
       },
       {
         "call": "isValidCalendarDate(\"invalid\")",
@@ -7656,12 +7966,23 @@
     ]
   },
   {
+    "url": "/reference/plain/validate/IsValidDateRangeProps",
+    "name": "IsValidDateRangeProps",
+    "namespace": "plain",
+    "module": "validate",
+    "kind": "type",
+    "signature": "",
+    "description": "The IsValidDateRangeProps type.",
+    "sourcePath": "packages/gmt/src/plain/validate/isValidDateRange.ts",
+    "examples": []
+  },
+  {
     "url": "/reference/plain/validate/isValidDateRange",
     "name": "isValidDateRange",
     "namespace": "plain",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidDateRange({ value1, value2, options, }: IsValidDateRangeProps): boolean",
+    "signature": "isValidDateRange(props: IsValidDateRangeProps): boolean",
     "description": "Return whether `value1` is before `value2`.",
     "sourcePath": "packages/gmt/src/plain/validate/isValidDateRange.ts",
     "examples": [
@@ -7781,7 +8102,7 @@
     "namespace": "plain",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidDateTimeRange({ value1, value2, options, }: { value1: string; value2: string; options?: { allowEqual?: boolean; }; }): boolean",
+    "signature": "isValidDateTimeRange(props: { value1: string; value2: string; options?: { allowEqual?: boolean; }; }): boolean",
     "description": "Return true if `value1` and `value2` form a valid datetime range — both parseable as",
     "sourcePath": "packages/gmt/src/plain/validate/isValidDateTimeRange.ts",
     "examples": [
@@ -8009,7 +8330,7 @@
     "namespace": "plain",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidTimeRange({ value1, value2, options, }: { value1: string; value2: string; options?: { allowEqual?: boolean; }; }): boolean",
+    "signature": "isValidTimeRange(props: { value1: string; value2: string; options?: { allowEqual?: boolean; }; }): boolean",
     "description": "Return true if `value1` and `value2` form a valid time range — both parseable as",
     "sourcePath": "packages/gmt/src/plain/validate/isValidTimeRange.ts",
     "examples": [
@@ -8229,8 +8550,20 @@
         "result": "\"9999-12-31T23:59:59.9999999Z\" — .NET's DateTime maximum"
       },
       {
+        "call": "fromFileTime(9223372036854775807n)",
+        "result": "\"+030828-09-14T02:48:05.4775807Z\" — 2^63 − 1, the largest accepted"
+      },
+      {
+        "call": "fromFileTime(9223372036854775808n)",
+        "result": "\"\" — 2^63, which FileTimeToSystemTime rejects"
+      },
+      {
         "call": "fromFileTime(18446744073709551615n)",
-        "result": "\"+060056-05-28T05:36:10.9551615Z\""
+        "result": "\"\" — SetFileTime's do-not-modify marker"
+      },
+      {
+        "call": "fromNanoseconds((18446744073709551615n - 116444736000000000n) * 100n)",
+        "result": "\"+060056-05-28T05:36:10.9551615Z\" — raw unsigned decode"
       },
       {
         "call": "fromFileTime(-1n)",
@@ -8294,7 +8627,7 @@
     "examples": [
       {
         "call": "fromNtpTimestamp(0n)",
-        "result": "\"1900-01-01T00:00:00Z\" — the NTP epoch"
+        "result": "\"1900-01-01T00:00:00Z\" — the NTP epoch, and also RFC 5905's unknown or unsynchronized marker"
       },
       {
         "call": "fromNtpTimestamp(9487534653230284800n)",
@@ -8496,6 +8829,14 @@
         "result": "0n — before the FILETIME epoch"
       },
       {
+        "call": "toFileTime(\"+030828-09-14T02:48:05.4775807Z\")",
+        "result": "9223372036854775807n — 2^63 − 1, the largest FILETIME"
+      },
+      {
+        "call": "toFileTime(\"+030828-09-14T02:48:05.4775808Z\")",
+        "result": "0n — 2^63, which FileTimeToSystemTime rejects"
+      },
+      {
         "call": "toFileTime(\"2024-03-10T12:00:00\")",
         "result": "0n — no offset designator"
       },
@@ -8530,6 +8871,10 @@
       {
         "call": "toNanoseconds(\"2024-03-10T12:00:00-05:00[America/New_York]\")",
         "result": "1710090000000000000n"
+      },
+      {
+        "call": "toNanoseconds(\"2024-03-10T12:00:00+05:00[America/New_York]\")",
+        "result": "1710054000000000000n — the offset decides, the zone is ignored"
       },
       {
         "call": "toNanoseconds(\"2024-03-10T12:00:00\")",
@@ -8712,6 +9057,10 @@
         "result": "true"
       },
       {
+        "call": "isValidInstant(\"2024-03-10T12:00:00Z[Not/AZone]\")",
+        "result": "true — the zone annotation is not checked"
+      },
+      {
         "call": "isValidInstant(\"2024-03-10 12:00:00Z\")",
         "result": "true — isValidUtc says false"
       },
@@ -8884,6 +9233,14 @@
         "result": "true (6-digit year)"
       },
       {
+        "call": "plainDateTime.exec(\"2024-03-15T14:30:45\")?.slice(1)",
+        "result": "[\"03\", \"15\", \"14\"] (month, day, hour)"
+      },
+      {
+        "call": "plainDateTime.test(\"-000000-01-01T00:00\")",
+        "result": "false (negative zero year)"
+      },
+      {
         "call": "plainDateTime.test(\"2024-03-15 14:30:00\")",
         "result": "false (space separator)"
       },
@@ -8900,7 +9257,7 @@
     "module": "date",
     "kind": "regex",
     "signature": "",
-    "description": "RegExp matching an ISO 8601 year: 4 digits, or a sign and 6 digits for the expanded years Temporal supports (`-271821` to `+275760`).",
+    "description": "RegExp matching the shape of an ISO 8601 year: 4 digits, or a sign and 6 digits (Temporal's `DateYear`).",
     "sourcePath": "packages/gmt/src/regex/date.ts",
     "examples": [
       {
@@ -8914,6 +9271,14 @@
       {
         "call": "year.test(\"-271821\")",
         "result": "true (negative expanded year)"
+      },
+      {
+        "call": "year.test(\"+999999\")",
+        "result": "true (shape only; outside Temporal's range)"
+      },
+      {
+        "call": "year.test(\"-000000\")",
+        "result": "false (negative zero)"
       },
       {
         "call": "year.test(\"24\")",
@@ -8960,7 +9325,7 @@
     "module": "date",
     "kind": "regex",
     "signature": "",
-    "description": "RegExp matching an ISO 8601 day of the month: `01`–`31` (shape only; whether the day exists in its month is checked by `Temporal.PlainDate.from` in `parseDate`).",
+    "description": "RegExp matching an ISO 8601 day of the month: `01`–`31` (shape only; whether the day exists in its month is checked by `Temporal.PlainDate.from` in `isValidDate`).",
     "sourcePath": "packages/gmt/src/regex/date.ts",
     "examples": [
       {
@@ -9008,6 +9373,14 @@
         "result": "true (negative 6-digit year)"
       },
       {
+        "call": "plainDate.exec(\"2024-03-15\")?.slice(1)",
+        "result": "[\"03\", \"15\"] (month, day)"
+      },
+      {
+        "call": "plainDate.test(\"-000000-01-01\")",
+        "result": "false (negative zero year)"
+      },
+      {
         "call": "plainDate.test(\"2024-3-15\")",
         "result": "false (unpadded month)"
       },
@@ -9024,7 +9397,7 @@
     "module": "http-date",
     "kind": "regex",
     "signature": "",
-    "description": "RegExp matching RFC 9110 §5.6.7 IMF-fixdate — the only form GMT's `formatHttp` emits, and the only form `parseHttp` accepts. Day, year, and time-of-day fields are all fixed-width per the grammar (unlike RFC 2822's leniently-sized day); the trailing \"GMT\" literal is mandatory, never a numeric offset. The obsolete RFC 850 and asctime HTTP-date forms are a documented limitation (see `parseHttp`'s JSDoc), not supported here.",
+    "description": "RegExp matching RFC 9110 §5.6.7 IMF-fixdate — the only form GMT's `formatHttp` emits and the preferred HTTP-date form. Day, year, and time-of-day fields are all fixed-width per the grammar (unlike RFC 5322's leniently-sized day); the trailing \"GMT\" literal is mandatory, never a numeric offset.",
     "sourcePath": "packages/gmt/src/regex/http-date.ts",
     "examples": [
       {
@@ -9042,6 +9415,10 @@
       {
         "call": "httpDate.test(\"Wed, 09 Jun 2021 10:18:14 +0000\")",
         "result": "false (numeric offset)"
+      },
+      {
+        "call": "httpDate.test(\"Wednesday, 09-Jun-21 10:18:14 GMT\")",
+        "result": "false (rfc850-date: parseHttp reads it)"
       }
     ]
   },
@@ -9052,7 +9429,7 @@
     "module": "leap-second",
     "kind": "regex",
     "signature": "",
-    "description": "RegExp fragment matching an ISO 8601 leap second: `T HH:mm:60[.fff]` followed by a timezone designator (`Z`, numeric offset, or `[` opening a bracketed annotation).",
+    "description": "RegExp fragment matching an ISO 8601 leap second (second `60`) in the time of day of a date-time string that carries a designator after it: `Z`/`z`, a numeric offset, or `[` opening a bracketed annotation.",
     "sourcePath": "packages/gmt/src/regex/leap-second.ts",
     "examples": [
       {
@@ -9064,12 +9441,24 @@
         "result": "true"
       },
       {
+        "call": "leapSecond.test(\"2024-12-31t23:59:60+00:00[UTC]\")",
+        "result": "true (lowercase t)"
+      },
+      {
+        "call": "leapSecond.test(\"20241231 235960Z\")",
+        "result": "true (space separator, basic format)"
+      },
+      {
         "call": "leapSecond.test(\"2024-12-31T23:59:59Z\")",
         "result": "false (second = 59)"
       },
       {
         "call": "leapSecond.test(\"2024-12-31T23:59:60\")",
         "result": "false (no zone designator)"
+      },
+      {
+        "call": "leapSecond.test(\"2024-01-01T00:00:00Z[x=T123460Z]\")",
+        "result": "false (inside an annotation value)"
       }
     ]
   },
@@ -9080,7 +9469,7 @@
     "module": "leap-second",
     "kind": "regex",
     "signature": "",
-    "description": "RegExp fragment matching an ISO 8601 leap second in every shape `Temporal.Instant.from` accepts — the wider sibling of `leapSecond`.",
+    "description": "RegExp fragment matching an ISO 8601 leap second in every shape `Temporal.Instant.from` accepts.",
     "sourcePath": "packages/gmt/src/regex/leap-second.ts",
     "examples": [
       {
@@ -9102,6 +9491,10 @@
       {
         "call": "instantLeapSecond.test(\"2016-12-31T23:59:60\")",
         "result": "false (no zone designator)"
+      },
+      {
+        "call": "instantLeapSecond.test(\"2024-01-01T00:00:00Z[x=T123460Z]\")",
+        "result": "false (inside an annotation value)"
       }
     ]
   },
@@ -9148,7 +9541,7 @@
     "module": "rfc-2822",
     "kind": "regex",
     "signature": "",
-    "description": "RegExp matching RFC 5322 §3.3 date-time grammar (obsoletes RFC 2822, same shape). English day/month names are mandated by the spec regardless of locale — see `internal/englishCalendarNames.ts`. Day is `1*2DIGIT` per the formal grammar, so single-digit days are valid on input even though GMT's own formatter always emits the zero-padded 2-digit form. `zone` accepts a numeric offset or one of the obsolete named zones RFC 5322 §4.3 lists (UT/GMT plus the eight North American zones); any other obs-zone letter is unrecognized and treated as invalid rather than guessed at.",
+    "description": "RegExp matching the strict shape of an RFC 5322 §3.3 date-time (obsoletes RFC 2822): the single-space, case-exact form a generator writes. English day/month names are mandated by the spec regardless of locale — see `internal/englishCalendarNames.ts`. Day is `1*2DIGIT` per the formal grammar, so single-digit days are valid even though GMT's own formatter always emits the zero-padded 2-digit form. `zone` accepts a numeric offset or one of the obsolete named zones RFC 5322 §4.3 lists (UT/GMT plus the eight North American zones).",
     "sourcePath": "packages/gmt/src/regex/rfc-2822.ts",
     "examples": [
       {
@@ -9166,6 +9559,10 @@
       {
         "call": "rfc2822DateTime.test(\"Wed, 09 Jun 2021 10:18:14 EST\")",
         "result": "true (named zone)"
+      },
+      {
+        "call": "rfc2822DateTime.test(\"Wed, 09 Jun 2021 10:18:14 -0400 (EDT)\")",
+        "result": "false (comment: valid RFC 5322, parseRfc2822 reads it)"
       },
       {
         "call": "rfc2822DateTime.test(\"2024-03-15T14:30:00Z\")",
@@ -9206,6 +9603,14 @@
       {
         "call": "rfc3339DateTime.test(\"2024-3-15T14:30:00Z\")",
         "result": "false (unpadded)"
+      },
+      {
+        "call": "rfc3339DateTime.test(\"2024-03-15T14:30:00+24:00\")",
+        "result": "false (offset hour out of range)"
+      },
+      {
+        "call": "rfc3339DateTime.test(\"2016-12-31T23:59:60Z\")",
+        "result": "false (leap second; GMT rejects it)"
       }
     ]
   },
@@ -9216,7 +9621,7 @@
     "module": "sql-date-time",
     "kind": "regex",
     "signature": "",
-    "description": "RegExp matching an ANSI SQL / ODBC timestamp literal: `YYYY-MM-DD HH:mm[:ss[.fffffffff]]`.",
+    "description": "RegExp matching a SQL timestamp literal in GMT's accepted shape: `YYYY-MM-DD HH:mm[:ss[.fffffffff]]`.",
     "sourcePath": "packages/gmt/src/regex/sql-date-time.ts",
     "examples": [
       {
@@ -9225,7 +9630,11 @@
       },
       {
         "call": "sqlDateTime.test(\"2024-03-15 14:30\")",
-        "result": "true (seconds omitted)"
+        "result": "true (seconds omitted; SQL-92 requires them)"
+      },
+      {
+        "call": "sqlDateTime.test(\"+002024-03-15 14:30:00\")",
+        "result": "true (expanded year; SQL-92 allows 0001–9999)"
       },
       {
         "call": "sqlDateTime.test(\"2024-03-15T14:30:00\")",
@@ -9237,7 +9646,11 @@
       },
       {
         "call": "sqlDateTime.test(\"2024-03-15 14:30:60\")",
-        "result": "false (invalid second)"
+        "result": "false (leap second; GMT rejects it)"
+      },
+      {
+        "call": "sqlDateTime.test(\"-000000-01-01 00:00:00\")",
+        "result": "false (negative zero year)"
       }
     ]
   },
@@ -9248,7 +9661,7 @@
     "module": "time-zone-like",
     "kind": "regex",
     "signature": "",
-    "description": "RegExp matching a timezone identifier in one of three forms:",
+    "description": "RegExp matching the shape of an IANA time zone name: Temporal's `TimeZoneIANAName` grammar (§14.6.2 Time Zone Identifiers).",
     "sourcePath": "packages/gmt/src/regex/time-zone-like.ts",
     "examples": [
       {
@@ -9256,28 +9669,32 @@
         "result": "true"
       },
       {
-        "call": "timeZoneLike.test(\"GMT\")",
-        "result": "true"
-      },
-      {
         "call": "timeZoneLike.test(\"America/New_York\")",
         "result": "true"
       },
       {
-        "call": "timeZoneLike.test(\"Asia/Tokyo\")",
+        "call": "timeZoneLike.test(\"Japan\")",
+        "result": "true (single-component IANA link)"
+      },
+      {
+        "call": "timeZoneLike.test(\"Etc/GMT+5\")",
         "result": "true"
       },
       {
         "call": "timeZoneLike.test(\"Custom/Zone\")",
-        "result": "true (permissive)"
+        "result": "true (shape only; existence is not checked)"
       },
       {
         "call": "timeZoneLike.test(\"+05:00\")",
-        "result": "false (numeric offset, not a zone id)"
+        "result": "false (an offset identifier, not a zone name)"
+      },
+      {
+        "call": "timeZoneLike.test(\"-foo/bar\")",
+        "result": "false (a name cannot start with - or +)"
       },
       {
         "call": "timeZoneLike.test(\"UTC+05:00\")",
-        "result": "false (mixed form)"
+        "result": "false (\":\" is not a name character)"
       }
     ]
   },
@@ -9348,7 +9765,7 @@
     "module": "time",
     "kind": "regex",
     "signature": "",
-    "description": "RegExp matching an ISO 8601 second: `00`–`59`.",
+    "description": "RegExp matching a second of `00`–`59`.",
     "sourcePath": "packages/gmt/src/regex/time.ts",
     "examples": [
       {
@@ -9365,7 +9782,7 @@
       },
       {
         "call": "second.test(\"60\")",
-        "result": "false (out of range; leap seconds use a different pattern)"
+        "result": "false (a leap second; GMT rejects it, see `leapSecond`)"
       }
     ]
   },
@@ -9452,8 +9869,12 @@
         "result": "false (hour out of range)"
       },
       {
+        "call": "plainTime.exec(\"14:30:45.5\")?.slice(1)",
+        "result": "[\"14\"] (hour)"
+      },
+      {
         "call": "plainTime.test(\"14:30:60\")",
-        "result": "false (second out of range)"
+        "result": "false (leap second; GMT rejects it)"
       }
     ]
   },
@@ -9474,6 +9895,18 @@
       {
         "call": "unixSeconds.test(\"0000000000\")",
         "result": "true (epoch)"
+      },
+      {
+        "call": "unixSeconds.test(\"9999999999\")",
+        "result": "true (2286-11-20T17:46:39Z)"
+      },
+      {
+        "call": "unixSeconds.test(\"999999999\")",
+        "result": "false (unpadded; 2001-09-09T01:46:39Z)"
+      },
+      {
+        "call": "unixSeconds.test(\"-1\")",
+        "result": "false (negative)"
       },
       {
         "call": "unixSeconds.test(\"17105118001\")",
@@ -9498,6 +9931,10 @@
       {
         "call": "unixMilliseconds.test(\"0000000000000\")",
         "result": "true (epoch)"
+      },
+      {
+        "call": "unixMilliseconds.test(\"999999999999\")",
+        "result": "false (unpadded, 12 digits)"
       },
       {
         "call": "unixMilliseconds.test(\"17105118001\")",
@@ -9526,6 +9963,14 @@
       {
         "call": "utcDateTime.test(\"2024-03-15T14:30:00.123Z\")",
         "result": "true (fractional seconds)"
+      },
+      {
+        "call": "utcDateTime.exec(\"2024-03-15T14:30:45.5Z\")?.slice(1)",
+        "result": "[\"03\", \"15\", \"14\"] (month, day, hour)"
+      },
+      {
+        "call": "utcDateTime.test(\"-000000-01-01T00:00Z\")",
+        "result": "false (negative zero year)"
       },
       {
         "call": "utcDateTime.test(\"2024-03-15T14:30:00+00:00\")",
@@ -9604,6 +10049,10 @@
         "result": "82800000 — 23 hours, not 24"
       },
       {
+        "call": "spanMs(\"2024-03-10T12:00:00+05:00[America/New_York]\", \"2024-03-10T12:00:00-04:00[America/New_York]\")",
+        "result": "32400000 — offsets decide, the zone is ignored"
+      },
+      {
         "call": "spanMs(\"-271821-04-20T00:00:00Z\", \"+275760-09-13T00:00:00Z\")",
         "result": "null — past the safe integer range, use spanNs"
       },
@@ -9642,6 +10091,10 @@
       {
         "call": "spanNs(\"2024-03-10T07:00:00-05:00[America/New_York]\", \"2024-03-10T12:00:00Z\")",
         "result": "0n — same instant, different zones"
+      },
+      {
+        "call": "spanNs(\"2024-03-10T12:00:00+05:00[America/New_York]\", \"2024-03-10T12:00:00-04:00[America/New_York]\")",
+        "result": "32400000000000n — offsets decide, the zone is ignored"
       },
       {
         "call": "spanNs(\"2024-03-10T12:00:00Z\", \"invalid\")",
@@ -9729,6 +10182,10 @@
       {
         "call": "isValidSpan(\"2024-03-10T07:00:00-05:00[America/New_York]\", \"2024-03-10T12:00:00Z\")",
         "result": "true"
+      },
+      {
+        "call": "isValidSpan(\"2024-03-10T12:00:00+05:00[America/New_York]\", \"2024-03-10T12:00:00Z[Not/AZone]\")",
+        "result": "true — zone annotations are not checked"
       },
       {
         "call": "isValidSpan(\"-271821-04-20T00:00:00Z\", \"+275760-09-13T00:00:00Z\")",
@@ -10150,6 +10607,10 @@
       {
         "call": "addUnix(-86400000, { days: 1 })",
         "result": "0 (Dec 31 1969 + 1 day = Jan 1 1970)"
+      },
+      {
+        "call": "addUnix(1.5, { days: 1 })",
+        "result": "null (not an integer epoch)"
       }
     ]
   },
@@ -10164,16 +10625,20 @@
     "sourcePath": "packages/gmt/src/unix/calculate/diffUnix.ts",
     "examples": [
       {
-        "call": "diffUnix(1706745600000, 1706659200000, \"day\")",
-        "result": "1"
+        "call": "diffUnix(1706745600000, 1706659200000, \"days\", { timeZone: \"UTC\" })",
+        "result": "-1 (measured from the first value to the second)"
       },
       {
-        "call": "diffUnix(1706745600, 1706659200, \"day\", { epochUnit: \"seconds\" })",
-        "result": "1"
+        "call": "diffUnix(1706745600, 1706659200, \"days\", { epochUnit: \"seconds\", timeZone: \"UTC\" })",
+        "result": "-1"
       },
       {
-        "call": "diffUnix(0, -86400000, \"day\")",
-        "result": "1 (Jan 1 1970 - Dec 31 1969 = 1 day)"
+        "call": "diffUnix(0, -86400000, \"days\", { timeZone: \"UTC\" })",
+        "result": "-1 (1970-01-01 until 1969-12-31 is minus one day)"
+      },
+      {
+        "call": "diffUnix(NaN, 0, \"days\")",
+        "result": "null"
       }
     ]
   },
@@ -10230,6 +10695,10 @@
       {
         "call": "endOfQuarterForUnix(1285882200000, { timeZone: \"Africa/Cairo\", disambiguation: \"compatible\" })",
         "result": "1285883999999 (the deprecated option is ignored)"
+      },
+      {
+        "call": "endOfQuarterForUnix(NaN)",
+        "result": "null"
       }
     ]
   },
@@ -10266,6 +10735,10 @@
       {
         "call": "endOfUnix(1730616300000, \"hour\", { timeZone: \"America/New_York\", disambiguation: \"reject\" })",
         "result": "1730617199999 (the deprecated option is ignored)"
+      },
+      {
+        "call": "endOfUnix(NaN, \"day\")",
+        "result": "null"
       }
     ]
   },
@@ -10310,6 +10783,10 @@
       {
         "call": "maxUnix([])",
         "result": "null"
+      },
+      {
+        "call": "maxUnix([1, 1e20])",
+        "result": "1 (1e20 is outside the instant range)"
       }
     ]
   },
@@ -10330,6 +10807,10 @@
       {
         "call": "minUnix([])",
         "result": "null"
+      },
+      {
+        "call": "minUnix([1.5, 2])",
+        "result": "2 (1.5 is not an integer epoch)"
       }
     ]
   },
@@ -10344,24 +10825,28 @@
     "sourcePath": "packages/gmt/src/unix/calculate/roundUnix.ts",
     "examples": [
       {
-        "call": "roundUnix(1706659200000, { smallestUnit: \"hour\" })",
-        "result": "1706662800000 (rounded up to next hour)"
+        "call": "roundUnix(1706661000000, { smallestUnit: \"hour\", timeZone: \"UTC\" })",
+        "result": "1706662800000 (00:30 is a tie; halfExpand rounds up)"
       },
       {
-        "call": "roundUnix(1706659200000, { smallestUnit: \"day\", epochUnit: \"seconds\" })",
-        "result": "1706640000 (start of day in seconds)"
+        "call": "roundUnix(1706700000, { smallestUnit: \"day\", epochUnit: \"seconds\", timeZone: \"UTC\" })",
+        "result": "1706659200 (11:20 rounds down to the day)"
       },
       {
-        "call": "roundUnix(1706659200000, { smallestUnit: \"hour\", roundingIncrement: 2 })",
-        "result": "1706662800000 (rounded to nearest 2-hour mark)"
+        "call": "roundUnix(1706659200000, { smallestUnit: \"hour\", roundingIncrement: 2, timeZone: \"UTC\" })",
+        "result": "1706659200000 (00:00 is already a 2-hour mark)"
       },
       {
-        "call": "roundUnix(-86400000, { smallestUnit: \"day\" })",
+        "call": "roundUnix(-86400000, { smallestUnit: \"day\", timeZone: \"UTC\" })",
         "result": "-86400000 (start of day for negative timestamp)"
       },
       {
         "call": "roundUnix(1727532300000, { smallestUnit: \"hour\", roundingMode: \"trunc\", timeZone: \"Pacific/Chatham\" })",
         "result": "1727532900000 (after the input — TC39 wall-clock rounding)"
+      },
+      {
+        "call": "roundUnix(1715779905500, { smallestUnit: \"minutes\", timeZone: \"UTC\" })",
+        "result": "1715779920000 (plural unit name; 13:31:45.5 rounds up to 13:32)"
       },
       {
         "call": "roundUnix(\"invalid\", { smallestUnit: \"hour\" })",
@@ -10422,6 +10907,10 @@
       {
         "call": "sortUnix([])",
         "result": "[]"
+      },
+      {
+        "call": "sortUnix([3, 1.5, 1])",
+        "result": "[1, 3] (1.5 is not an integer epoch)"
       }
     ]
   },
@@ -10450,6 +10939,10 @@
       {
         "call": "startOfQuarterForUnix(276046200000, { timeZone: \"Africa/Tunis\", disambiguation: \"later\" })",
         "result": "276040800000 (the first pass of Q4 1978's repeated first hour; the deprecated option is ignored)"
+      },
+      {
+        "call": "startOfQuarterForUnix(NaN)",
+        "result": "null"
       }
     ]
   },
@@ -10486,6 +10979,10 @@
       {
         "call": "startOfUnix(1730616300000, \"hour\", { timeZone: \"America/New_York\", disambiguation: \"reject\" })",
         "result": "1730613600000 (the deprecated option is ignored)"
+      },
+      {
+        "call": "startOfUnix(NaN, \"day\")",
+        "result": "null"
       }
     ]
   },
@@ -10510,6 +11007,10 @@
       {
         "call": "subtractUnix(0, { days: 1 })",
         "result": "-86400000 (Jan 1 1970 - 1 day = Dec 31 1969)"
+      },
+      {
+        "call": "subtractUnix(1.5, { days: 1 })",
+        "result": "null (not an integer epoch)"
       }
     ]
   },
@@ -10533,7 +11034,7 @@
       },
       {
         "call": "areUnixEqual(1706659200, 1706659200000, { epochUnit: \"seconds\" })",
-        "result": "true"
+        "result": "false (epochUnit applies to both values)"
       },
       {
         "call": "areUnixEqual(1706659200, 1706659200000)",
@@ -10636,16 +11137,20 @@
     "sourcePath": "packages/gmt/src/unix/convert/convertUnixToPlainDate.ts",
     "examples": [
       {
-        "call": "convertUnixToPlainDate(1709164800000)",
+        "call": "convertUnixToPlainDate(1709164800000, { timeZone: \"UTC\" })",
         "result": "\"2024-02-29\""
       },
       {
-        "call": "convertUnixToPlainDate(1709164800, { epochUnit: \"seconds\" })",
+        "call": "convertUnixToPlainDate(1709164800, { epochUnit: \"seconds\", timeZone: \"UTC\" })",
         "result": "\"2024-02-29\""
       },
       {
-        "call": "convertUnixToPlainDate(-1)",
+        "call": "convertUnixToPlainDate(-1, { timeZone: \"UTC\" })",
         "result": "\"1969-12-31\""
+      },
+      {
+        "call": "convertUnixToPlainDate(NaN)",
+        "result": "\"\""
       }
     ]
   },
@@ -10660,16 +11165,20 @@
     "sourcePath": "packages/gmt/src/unix/convert/convertUnixToPlainDateTime.ts",
     "examples": [
       {
-        "call": "convertUnixToPlainDateTime(1709164800000)",
+        "call": "convertUnixToPlainDateTime(1709164800000, { timeZone: \"UTC\" })",
         "result": "\"2024-02-29T00:00:00\""
       },
       {
-        "call": "convertUnixToPlainDateTime(1709164800, { epochUnit: \"seconds\" })",
+        "call": "convertUnixToPlainDateTime(1709164800, { epochUnit: \"seconds\", timeZone: \"UTC\" })",
         "result": "\"2024-02-29T00:00:00\""
       },
       {
-        "call": "convertUnixToPlainDateTime(-1)",
+        "call": "convertUnixToPlainDateTime(-1, { timeZone: \"UTC\" })",
         "result": "\"1969-12-31T23:59:59.999\""
+      },
+      {
+        "call": "convertUnixToPlainDateTime(NaN)",
+        "result": "\"\""
       }
     ]
   },
@@ -10684,16 +11193,20 @@
     "sourcePath": "packages/gmt/src/unix/convert/convertUnixToPlainTime.ts",
     "examples": [
       {
-        "call": "convertUnixToPlainTime(1706659200000)",
+        "call": "convertUnixToPlainTime(1706659200000, { timeZone: \"UTC\" })",
         "result": "\"00:00:00\""
       },
       {
-        "call": "convertUnixToPlainTime(1706659200, { epochUnit: \"seconds\" })",
+        "call": "convertUnixToPlainTime(1706659200, { epochUnit: \"seconds\", timeZone: \"UTC\" })",
         "result": "\"00:00:00\""
       },
       {
-        "call": "convertUnixToPlainTime(-1)",
+        "call": "convertUnixToPlainTime(-1, { timeZone: \"UTC\" })",
         "result": "\"23:59:59.999\""
+      },
+      {
+        "call": "convertUnixToPlainTime(NaN)",
+        "result": "\"\""
       }
     ]
   },
@@ -10718,6 +11231,10 @@
       {
         "call": "convertUnixToUtc(-1)",
         "result": "\"1969-12-31T23:59:59.999Z\""
+      },
+      {
+        "call": "convertUnixToUtc(NaN)",
+        "result": "\"\""
       }
     ]
   },
@@ -10733,7 +11250,7 @@
     "examples": [
       {
         "call": "convertUnixToZoned(1709164800000, \"America/New_York\")",
-        "result": "\"2024-02-29T00:00:00-05:00[America/New_York]\""
+        "result": "\"2024-02-28T19:00:00-05:00[America/New_York]\""
       },
       {
         "call": "convertUnixToZoned(1709164800, \"UTC\", \"seconds\")",
@@ -10741,7 +11258,11 @@
       },
       {
         "call": "convertUnixToZoned(-1, \"UTC\")",
-        "result": "\"1969-12-31T23:59:59.999Z[UTC]\""
+        "result": "\"1969-12-31T23:59:59.999+00:00[UTC]\""
+      },
+      {
+        "call": "convertUnixToZoned(NaN, \"UTC\")",
+        "result": "\"\""
       }
     ]
   },
@@ -10771,8 +11292,8 @@
         "result": "day label + time relative to \"now\", or the absolute fallback beyond the ±6-day threshold"
       },
       {
-        "call": "formatCalendarUnix(value, \"en-US\", { reference: 1710685000000 })",
-        "result": "e.g. \"tomorrow at 2:30 PM\""
+        "call": "formatCalendarUnix(1710772200000, \"en-US\", { reference: 1710685000000, timeZone: \"UTC\" })",
+        "result": "\"tomorrow at 2:30 PM\""
       },
       {
         "call": "formatCalendarUnix(\"not-a-number\")",
@@ -10806,8 +11327,8 @@
         "result": "\"3 years ago\""
       },
       {
-        "call": "formatRelativeUnix(value, \"en-US\", { roundingMethod: \"floor\" })",
-        "result": "rounds toward the earlier boundary"
+        "call": "formatRelativeUnix(0, \"en-US\", { reference: 37800000, roundingMethod: \"floor\" })",
+        "result": "\"11 hours ago\" (−10.5 hours floors to −11; the default rounds to 10)"
       },
       {
         "call": "formatRelativeUnix(\"not-a-number\")",
@@ -11174,7 +11695,7 @@
       },
       {
         "call": "intervalCountUnix(1704153540000, 1704153660000, \"day\")",
-        "result": "2 (23:59 to 00:01 UTC)"
+        "result": "2 (on a UTC host: 23:59 to 00:01 crosses midnight)"
       },
       {
         "call": "intervalCountUnix(0, 0, \"hour\")",
@@ -11232,7 +11753,7 @@
     "namespace": "unix",
     "module": "interval",
     "kind": "function",
-    "signature": "intervalDivideEquallyUnix(start: string | number, end: string | number, n: number): { start: number; end: number; }[]",
+    "signature": "intervalDivideEquallyUnix(start: string | number, end: string | number, n: number, options?: { maxPieces?: number; }): { start: number; end: number; }[]",
     "description": "Split a Unix epoch interval into `n` equal-length sub-intervals.",
     "sourcePath": "packages/gmt/src/unix/interval/intervalDivideEquallyUnix.ts",
     "examples": [
@@ -11255,6 +11776,14 @@
       {
         "call": "intervalDivideEquallyUnix(NaN, 90000000, 3)",
         "result": "[]"
+      },
+      {
+        "call": "intervalDivideEquallyUnix(0, 90000000, 3, { maxPieces: 2 })",
+        "result": "[] (3 pieces exceed the limit)"
+      },
+      {
+        "call": "intervalDivideEquallyUnix(0, 90000000, 3, { maxPieces: 3 })",
+        "result": "[{ start: 0, end: 30000000 }, { start: 30000000, end: 60000000 }, { start: 60000000, end: 90000000 }]"
       }
     ]
   },
@@ -11334,7 +11863,7 @@
     "examples": [
       {
         "call": "intervalIntersectionUnix(0, 1700000000, 1000000, 2000000)",
-        "result": "{ start: 1000000, end: 1700000000 }"
+        "result": "{ start: 1000000, end: 2000000 }"
       },
       {
         "call": "intervalIntersectionUnix(0, 1000000, 1000000, 2000000)",
@@ -11350,7 +11879,7 @@
       },
       {
         "call": "intervalIntersectionUnix(\"0\", \"1700000000\", \"1000000\", \"2000000\")",
-        "result": "{ start: 1000000, end: 1700000000 }"
+        "result": "{ start: 1000000, end: 2000000 }"
       }
     ]
   },
@@ -11584,7 +12113,7 @@
     "namespace": "unix",
     "module": "interval",
     "kind": "function",
-    "signature": "splitIntervalByUnitUnix(start: string | number, end: string | number, unit: string, amount: number): { start: number; end: number; }[]",
+    "signature": "splitIntervalByUnitUnix(start: string | number, end: string | number, unit: string, amount: number, options?: { maxPieces?: number; }): { start: number; end: number; }[]",
     "description": "Split a Unix epoch interval into sub-intervals of `amount × unit`.",
     "sourcePath": "packages/gmt/src/unix/interval/splitIntervalByUnitUnix.ts",
     "examples": [
@@ -11607,6 +12136,14 @@
       {
         "call": "splitIntervalByUnitUnix(\"invalid\", 86400000, \"hour\", 1)",
         "result": "[]"
+      },
+      {
+        "call": "splitIntervalByUnitUnix(0, 86400000, \"hour\", 6, { maxPieces: 3 })",
+        "result": "[] (4 slices exceed the limit)"
+      },
+      {
+        "call": "splitIntervalByUnitUnix(0, 86400000, \"hour\", 6, { maxPieces: 4 })",
+        "result": "[{ start: 0, end: 21600000 }, { start: 21600000, end: 43200000 }, { start: 43200000, end: 64800000 }, { start: 64800000, end: 86400000 }]"
       }
     ]
   },
@@ -11657,16 +12194,20 @@
     "sourcePath": "packages/gmt/src/unix/parse/parseDateFromUnix.ts",
     "examples": [
       {
-        "call": "parseDateFromUnix(1700000000000)",
-        "result": "\"2023-11-15\""
+        "call": "parseDateFromUnix(1700000000000, { timeZone: \"UTC\" })",
+        "result": "\"2023-11-14\""
       },
       {
-        "call": "parseDateFromUnix(1700000000, { epochUnit: \"seconds\" })",
-        "result": "\"2023-11-15\""
+        "call": "parseDateFromUnix(1700000000, { epochUnit: \"seconds\", timeZone: \"UTC\" })",
+        "result": "\"2023-11-14\""
       },
       {
-        "call": "parseDateFromUnix(-86400, { epochUnit: \"seconds\" })",
+        "call": "parseDateFromUnix(-86400, { epochUnit: \"seconds\", timeZone: \"UTC\" })",
         "result": "\"1969-12-31\""
+      },
+      {
+        "call": "parseDateFromUnix(1.5)",
+        "result": "\"\" (not an integer epoch)"
       }
     ]
   },
@@ -11681,12 +12222,16 @@
     "sourcePath": "packages/gmt/src/unix/parse/parseDayFromUnix.ts",
     "examples": [
       {
-        "call": "parseDayFromUnix(1700000000000)",
-        "result": "\"15\""
+        "call": "parseDayFromUnix(1700000000000, { timeZone: \"UTC\" })",
+        "result": "\"14\""
       },
       {
-        "call": "parseDayFromUnix(-86400, { epochUnit: \"seconds\" })",
+        "call": "parseDayFromUnix(-86400, { epochUnit: \"seconds\", timeZone: \"UTC\" })",
         "result": "\"31\""
+      },
+      {
+        "call": "parseDayFromUnix(\"\")",
+        "result": "\"\" (a blank string is not epoch 0)"
       }
     ]
   },
@@ -11701,12 +12246,16 @@
     "sourcePath": "packages/gmt/src/unix/parse/parseDayOfWeekFromUnix.ts",
     "examples": [
       {
-        "call": "parseDayOfWeekFromUnix(1704067200000)",
+        "call": "parseDayOfWeekFromUnix(1704067200000, { timeZone: \"UTC\" })",
         "result": "1"
       },
       {
-        "call": "parseDayOfWeekFromUnix(-86400, { epochUnit: \"seconds\" })",
-        "result": "2"
+        "call": "parseDayOfWeekFromUnix(-86400, { epochUnit: \"seconds\", timeZone: \"UTC\" })",
+        "result": "3"
+      },
+      {
+        "call": "parseDayOfWeekFromUnix(\"\")",
+        "result": "null (a blank string is not epoch 0)"
       }
     ]
   },
@@ -11721,12 +12270,16 @@
     "sourcePath": "packages/gmt/src/unix/parse/parseHourFromUnix.ts",
     "examples": [
       {
-        "call": "parseHourFromUnix(1700000000000)",
-        "result": "\"05\""
+        "call": "parseHourFromUnix(1700000000000, { timeZone: \"UTC\" })",
+        "result": "\"22\""
       },
       {
-        "call": "parseHourFromUnix(-86400, { epochUnit: \"seconds\" })",
+        "call": "parseHourFromUnix(-86400, { epochUnit: \"seconds\", timeZone: \"UTC\" })",
         "result": "\"00\""
+      },
+      {
+        "call": "parseHourFromUnix(\"\")",
+        "result": "\"\" (a blank string is not epoch 0)"
       }
     ]
   },
@@ -11747,6 +12300,58 @@
       {
         "call": "parseMicrosecondFromUnix(-86400, { epochUnit: \"seconds\" })",
         "result": "\"000\""
+      },
+      {
+        "call": "parseMicrosecondFromUnix(\"\")",
+        "result": "\"\" (a blank string is not epoch 0)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/unix/parse/parseMillisecondFromUnix",
+    "name": "parseMillisecondFromUnix",
+    "namespace": "unix",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseMillisecondFromUnix(value: string | number, options?: { epochUnit?: UnixUnit; timeZone?: string; }): string",
+    "description": "Return the millisecond (0-999) from a unix epoch value.",
+    "sourcePath": "packages/gmt/src/unix/parse/parseMillisecondFromUnix.ts",
+    "examples": [
+      {
+        "call": "parseMillisecondFromUnix(1700000000000)",
+        "result": "\"000\""
+      },
+      {
+        "call": "parseMillisecondFromUnix(-86400, { epochUnit: \"seconds\" })",
+        "result": "\"000\""
+      },
+      {
+        "call": "parseMillisecondFromUnix(\"\")",
+        "result": "\"\" (a blank string is not epoch 0)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/unix/parse/parseMinuteFromUnix",
+    "name": "parseMinuteFromUnix",
+    "namespace": "unix",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseMinuteFromUnix(value: string | number, options?: { epochUnit?: UnixUnit; timeZone?: string; }): string",
+    "description": "Return the minute (0-59) from a unix epoch value.",
+    "sourcePath": "packages/gmt/src/unix/parse/parseMinuteFromUnix.ts",
+    "examples": [
+      {
+        "call": "parseMinuteFromUnix(1700000000000, { timeZone: \"UTC\" })",
+        "result": "\"13\""
+      },
+      {
+        "call": "parseMinuteFromUnix(-86400, { epochUnit: \"seconds\", timeZone: \"UTC\" })",
+        "result": "\"00\""
+      },
+      {
+        "call": "parseMinuteFromUnix(\"\")",
+        "result": "\"\" (a blank string is not epoch 0)"
       }
     ]
   },
@@ -11761,16 +12366,20 @@
     "sourcePath": "packages/gmt/src/unix/parse/parseMonthFromUnix.ts",
     "examples": [
       {
-        "call": "parseMonthFromUnix(1700000000000)",
-        "result": "\"09\""
+        "call": "parseMonthFromUnix(1700000000000, { timeZone: \"UTC\" })",
+        "result": "\"11\""
       },
       {
-        "call": "parseMonthFromUnix(1704067200000)",
+        "call": "parseMonthFromUnix(1704067200000, { timeZone: \"UTC\" })",
         "result": "\"01\""
       },
       {
         "call": "parseMonthFromUnix(-86400, { epochUnit: \"seconds\" })",
         "result": "\"12\""
+      },
+      {
+        "call": "parseMonthFromUnix(\"\")",
+        "result": "\"\" (a blank string is not epoch 0)"
       }
     ]
   },
@@ -11791,6 +12400,10 @@
       {
         "call": "parseNanosecondFromUnix(-86400, { epochUnit: \"seconds\" })",
         "result": "\"000000000\""
+      },
+      {
+        "call": "parseNanosecondFromUnix(\"\")",
+        "result": "\"\" (a blank string is not epoch 0)"
       }
     ]
   },
@@ -11805,12 +12418,16 @@
     "sourcePath": "packages/gmt/src/unix/parse/parseSecondFromUnix.ts",
     "examples": [
       {
-        "call": "parseSecondFromUnix(1700000000000)",
-        "result": "\"26\""
+        "call": "parseSecondFromUnix(1700000000000, { timeZone: \"UTC\" })",
+        "result": "\"20\""
       },
       {
         "call": "parseSecondFromUnix(-86400, { epochUnit: \"seconds\" })",
         "result": "\"00\""
+      },
+      {
+        "call": "parseSecondFromUnix(\"\")",
+        "result": "\"\" (a blank string is not epoch 0)"
       }
     ]
   },
@@ -11825,16 +12442,20 @@
     "sourcePath": "packages/gmt/src/unix/parse/parseTimeFromUnix.ts",
     "examples": [
       {
-        "call": "parseTimeFromUnix(1700000000000)",
-        "result": "\"04:13:20\""
+        "call": "parseTimeFromUnix(1700000000000, { timeZone: \"UTC\" })",
+        "result": "\"22:13:20\""
       },
       {
-        "call": "parseTimeFromUnix(1700000000, { epochUnit: \"seconds\" })",
-        "result": "\"04:13:20\""
+        "call": "parseTimeFromUnix(1700000000, { epochUnit: \"seconds\", timeZone: \"UTC\" })",
+        "result": "\"22:13:20\""
       },
       {
-        "call": "parseTimeFromUnix(-86400, { epochUnit: \"seconds\" })",
+        "call": "parseTimeFromUnix(-86400, { epochUnit: \"seconds\", timeZone: \"UTC\" })",
         "result": "\"00:00:00\""
+      },
+      {
+        "call": "parseTimeFromUnix(1.5)",
+        "result": "\"\" (not an integer epoch)"
       }
     ]
   },
@@ -11864,20 +12485,24 @@
         "result": "\"2023\""
       },
       {
-        "call": "parseUnitFromUnix(1700000000, \"hour\", { epochUnit: \"seconds\" })",
-        "result": "\"12\""
+        "call": "parseUnitFromUnix(1700000000, \"hour\", { epochUnit: \"seconds\", timeZone: \"UTC\" })",
+        "result": "\"22\""
       },
       {
-        "call": "parseUnitFromUnix(1704067200000, \"week\")",
+        "call": "parseUnitFromUnix(1704067200000, \"week\", { timeZone: \"UTC\" })",
         "result": "\"1\""
       },
       {
-        "call": "parseUnitFromUnix(1704067200000, \"week\", { weekStartsOn: \"sunday\" })",
+        "call": "parseUnitFromUnix(1704067200000, \"week\", { weekStartsOn: \"sunday\", timeZone: \"UTC\" })",
         "result": "\"1\""
       },
       {
-        "call": "parseUnitFromUnix(-86400, { epochUnit: \"seconds\" }, \"year\")",
+        "call": "parseUnitFromUnix(-86400, \"year\", { epochUnit: \"seconds\", timeZone: \"UTC\" })",
         "result": "\"1969\""
+      },
+      {
+        "call": "parseUnitFromUnix(\"\", \"year\")",
+        "result": "\"\" (a blank string is not epoch 0)"
       }
     ]
   },
@@ -11892,16 +12517,20 @@
     "sourcePath": "packages/gmt/src/unix/parse/parseWeekFromUnix.ts",
     "examples": [
       {
-        "call": "parseWeekFromUnix(1704067200000)",
+        "call": "parseWeekFromUnix(1704067200000, { timeZone: \"UTC\" })",
         "result": "1"
       },
       {
-        "call": "parseWeekFromUnix(1704067200000, { weekStartsOn: \"sunday\" })",
+        "call": "parseWeekFromUnix(1704067200000, { weekStartsOn: \"sunday\", timeZone: \"UTC\" })",
         "result": "1"
       },
       {
         "call": "parseWeekFromUnix(-86400, { epochUnit: \"seconds\" })",
         "result": "1"
+      },
+      {
+        "call": "parseWeekFromUnix(\"\")",
+        "result": "null (a blank string is not epoch 0)"
       }
     ]
   },
@@ -11920,12 +12549,16 @@
         "result": "\"2023\""
       },
       {
-        "call": "parseYearFromUnix(1704067200000, { epochUnit: \"milliseconds\" })",
+        "call": "parseYearFromUnix(1704067200000, { epochUnit: \"milliseconds\", timeZone: \"UTC\" })",
         "result": "\"2024\""
       },
       {
         "call": "parseYearFromUnix(-86400, { epochUnit: \"seconds\" })",
         "result": "\"1969\""
+      },
+      {
+        "call": "parseYearFromUnix(\"\")",
+        "result": "\"\" (a blank string is not epoch 0)"
       }
     ]
   },
@@ -11959,7 +12592,7 @@
     "namespace": "unix",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidUnixRange({ value1, value2, options, }: { value1: string | number; value2: string | number; options?: { allowEqual?: boolean; }; }): boolean",
+    "signature": "isValidUnixRange(props: { value1: string | number; value2: string | number; options?: { allowEqual?: boolean; }; }): boolean",
     "description": "Return true if `value1` and `value2` form a valid Unix range — both safe-integer epochs",
     "sourcePath": "packages/gmt/src/unix/validate/isValidUnixRange.ts",
     "examples": [
@@ -12087,15 +12720,15 @@
     "sourcePath": "packages/gmt/src/utc/calculate/diffUtc.ts",
     "examples": [
       {
-        "call": "diffUtc(\"2024-03-10T12:00:00Z\", \"2024-03-11T12:00:00Z\", \"hour\")",
+        "call": "diffUtc(\"2024-03-10T12:00:00Z\", \"2024-03-11T12:00:00Z\", \"hours\")",
         "result": "24"
       },
       {
-        "call": "diffUtc(\"2024-03-10T12:00:00Z\", \"2025-04-10T12:00:00Z\", [\"year\", \"month\"])",
-        "result": "{ year: 1, month: 1 }"
+        "call": "diffUtc(\"2024-03-10T12:00:00Z\", \"2025-04-10T12:00:00Z\", [\"years\", \"months\"])",
+        "result": "{ years: 1, months: 1 }"
       },
       {
-        "call": "diffUtc(\"invalid\", \"2024-03-11T12:00:00Z\", \"hour\")",
+        "call": "diffUtc(\"invalid\", \"2024-03-11T12:00:00Z\", \"hours\")",
         "result": "null"
       }
     ]
@@ -12136,7 +12769,7 @@
     "examples": [
       {
         "call": "endOfQuarterForUtc(\"2024-03-15T12:00:00Z\")",
-        "result": "\"2024-03-31T23:59:59.999Z\""
+        "result": "\"2024-03-31T23:59:59.999999999Z\""
       },
       {
         "call": "endOfQuarterForUtc(\"invalid\")",
@@ -12157,6 +12790,10 @@
       {
         "call": "endOfUtc(\"2024-03-15T14:30:45Z\", \"year\")",
         "result": "\"2024-12-31T23:59:59.999999999Z\""
+      },
+      {
+        "call": "endOfUtc(\"2024-03-15T14:30:45Z\", \"month\", { fractionalSecondDigits: 0 })",
+        "result": "\"2024-03-31T23:59:59Z\" — the pre-1.16.0 string"
       },
       {
         "call": "endOfUtc(\"2024-03-15T14:30:45Z\", \"month\")",
@@ -12264,11 +12901,19 @@
       },
       {
         "call": "roundUtc(\"2024-06-15T12:34:56Z\", { smallestUnit: \"minute\", roundingIncrement: 15 })",
-        "result": "\"2024-06-15T12:45:00Z\""
+        "result": "\"2024-06-15T12:30:00Z\""
       },
       {
         "call": "roundUtc(\"2024-06-15T12:34:56Z\", { smallestUnit: \"second\", roundingMode: \"floor\" })",
         "result": "\"2024-06-15T12:34:56Z\""
+      },
+      {
+        "call": "roundUtc(\"2024-06-15T12:34:56Z\", { smallestUnit: \"hours\" })",
+        "result": "\"2024-06-15T13:00:00Z\" (plural unit name)"
+      },
+      {
+        "call": "roundUtc(\"2024-06-15T12:34:56Z\", { smallestUnit: \"day\" as never })",
+        "result": "\"\" (Instant rounds to time units only)"
       },
       {
         "call": "roundUtc(\"invalid\", { smallestUnit: \"hour\" })",
@@ -12428,7 +13073,7 @@
       },
       {
         "call": "chopUtc(\"2024-03-10T12:00:00\")",
-        "result": "\"2024-03-10T12:00:00\""
+        "result": "\"\" (no Z: not a UTC instant)"
       },
       {
         "call": "chopUtc(\"invalid\")",
@@ -12477,6 +13122,14 @@
       {
         "call": "areUtcEqualBy(\"2024-03-15T23:30:00Z\", \"2024-03-16T00:30:00Z\", \"day\")",
         "result": "false"
+      },
+      {
+        "call": "areUtcEqualBy(\"2024-05-15T10:20:30.123Z\", \"2024-05-15T10:20:30.999Z\", \"millisecond\", { fractionalSecondDigits: 0 })",
+        "result": "false (different milliseconds)"
+      },
+      {
+        "call": "areUtcEqualBy(\"2024-05-15T10:20:30.123Z\", \"2024-05-15T10:20:30.999Z\", \"second\")",
+        "result": "true (the old 0-digit result)"
       },
       {
         "call": "areUtcEqualBy(\"invalid\", \"2024-03-15T02:00:00Z\", \"day\")",
@@ -12674,7 +13327,7 @@
         "result": "\"tomorrow at 2:30 PM\""
       },
       {
-        "call": "formatCalendarUtc(value, \"fr-FR\", { timeZone: \"Europe/Paris\" })",
+        "call": "formatCalendarUtc(\"2026-03-16T13:30:00Z\", \"fr-FR\", { timeZone: \"Europe/Paris\", reference: \"2026-03-15T12:00:00Z\" })",
         "result": "\"demain à 14:30\""
       },
       {
@@ -12700,6 +13353,14 @@
       {
         "call": "formatHttp(\"2024-03-15T14:30:00.500Z\")",
         "result": "\"Fri, 15 Mar 2024 14:30:00 GMT\""
+      },
+      {
+        "call": "formatHttp(\"-000001-06-15T12:00:00Z\")",
+        "result": "\"\""
+      },
+      {
+        "call": "Temporal.Instant.from(\"-000001-06-15T12:00:00Z\").toString()",
+        "result": "\"-000001-06-15T12:00:00Z\""
       },
       {
         "call": "formatHttp(\"invalid\")",
@@ -12733,8 +13394,8 @@
         "result": "\"90 days ago\""
       },
       {
-        "call": "formatRelativeUtc(value, \"en-US\", { roundingMethod: \"floor\" })",
-        "result": "rounds toward the earlier boundary"
+        "call": "formatRelativeUtc(\"2026-01-15T00:00:00Z\", \"en-US\", { reference: \"2026-01-15T10:30:00Z\", roundingMethod: \"floor\" })",
+        "result": "\"11 hours ago\" (−10.5 hours floors to −11; the default rounds to 10)"
       },
       {
         "call": "formatRelativeUtc(\"not-a-date\")",
@@ -13131,7 +13792,7 @@
     "namespace": "utc",
     "module": "interval",
     "kind": "function",
-    "signature": "intervalDivideEquallyUtc(start: string, end: string, n: number): { start: string; end: string; }[]",
+    "signature": "intervalDivideEquallyUtc(start: string, end: string, n: number, options?: { maxPieces?: number; }): { start: string; end: string; }[]",
     "description": "Split a UTC interval into `n` equal-length sub-intervals.",
     "sourcePath": "packages/gmt/src/utc/interval/intervalDivideEquallyUtc.ts",
     "examples": [
@@ -13150,6 +13811,14 @@
       {
         "call": "intervalDivideEquallyUtc(\"invalid\", \"2024-01-04T00:00:00Z\", 3)",
         "result": "[]"
+      },
+      {
+        "call": "intervalDivideEquallyUtc(\"2024-01-01T00:00:00Z\", \"2024-01-04T00:00:00Z\", 3, { maxPieces: 2 })",
+        "result": "[] (3 pieces exceed the limit)"
+      },
+      {
+        "call": "intervalDivideEquallyUtc(\"2024-01-01T00:00:00Z\", \"2024-01-04T00:00:00Z\", 3, { maxPieces: 3 })",
+        "result": "[{ start: \"2024-01-01T00:00:00Z\", end: \"2024-01-02T00:00:00Z\" }, { start: \"2024-01-02T00:00:00Z\", end: \"2024-01-03T00:00:00Z\" }, { start: \"2024-01-03T00:00:00Z\", end: \"2024-01-04T00:00:00Z\" }]"
       }
     ]
   },
@@ -13459,7 +14128,7 @@
     "namespace": "utc",
     "module": "interval",
     "kind": "function",
-    "signature": "splitIntervalByUnitUtc(start: string, end: string, unit: string, amount: number): { start: string; end: string; }[]",
+    "signature": "splitIntervalByUnitUtc(start: string, end: string, unit: string, amount: number, options?: { maxPieces?: number; }): { start: string; end: string; }[]",
     "description": "Split a UTC interval into sub-intervals of `amount × unit`.",
     "sourcePath": "packages/gmt/src/utc/interval/splitIntervalByUnitUtc.ts",
     "examples": [
@@ -13482,6 +14151,14 @@
       {
         "call": "splitIntervalByUnitUtc(\"invalid\", \"2024-01-02T00:00:00Z\", \"hour\", 1)",
         "result": "[]"
+      },
+      {
+        "call": "splitIntervalByUnitUtc(\"2024-01-01T00:00:00Z\", \"2024-01-01T01:30:00Z\", \"hour\", 1, { maxPieces: 1 })",
+        "result": "[] (2 slices exceed the limit)"
+      },
+      {
+        "call": "splitIntervalByUnitUtc(\"2024-01-01T00:00:00Z\", \"2024-01-01T01:30:00Z\", \"hour\", 1, { maxPieces: 2 })",
+        "result": "[{ start: \"2024-01-01T00:00:00Z\", end: \"2024-01-01T01:00:00Z\" }, { start: \"2024-01-01T01:00:00Z\", end: \"2024-01-01T01:30:00Z\" }]"
       }
     ]
   },
@@ -13604,7 +14281,7 @@
     "module": "parse",
     "kind": "function",
     "signature": "parseHttp(value: string): string",
-    "description": "Parse an RFC 9110 IMF-fixdate string — the fixed grammar HTTP headers like",
+    "description": "Parse an RFC 9110 HTTP-date — the fixed grammar HTTP headers like",
     "sourcePath": "packages/gmt/src/utc/parse/parseHttp.ts",
     "examples": [
       {
@@ -13612,8 +14289,24 @@
         "result": "\"2024-03-15T14:30:00Z\""
       },
       {
+        "call": "parseHttp(\"Sunday, 06-Nov-94 08:49:37 GMT\")",
+        "result": "\"1994-11-06T08:49:37Z\" (rfc850-date)"
+      },
+      {
+        "call": "parseHttp(\"Sun Nov  6 08:49:37 1994\")",
+        "result": "\"1994-11-06T08:49:37Z\" (asctime-date)"
+      },
+      {
         "call": "parseHttp(\"Fri, 15 Mar 2024 14:30:00 -0400\")",
-        "result": "\"\" (not IMF-fixdate)"
+        "result": "\"\" (not an HTTP-date)"
+      },
+      {
+        "call": "parseHttp(\"Sat, 15 Mar 2024 14:30:00 GMT\")",
+        "result": "\"\" (15 Mar 2024 was a Friday)"
+      },
+      {
+        "call": "convertZonedToUtc(parseRfc2822(\"15 Mar 2024 14:30:00 GMT\"))",
+        "result": "\"2024-03-15T14:30:00Z\" — the day name removed"
       },
       {
         "call": "parseHttp(\"Sat, 31 Feb 2024 14:30:00 GMT\")",
@@ -13637,7 +14330,11 @@
     "examples": [
       {
         "call": "parseMicrosecondFromUtc(\"2024-03-17T14:30:45.123Z\")",
-        "result": "\"123\""
+        "result": "\"000\""
+      },
+      {
+        "call": "parseMicrosecondFromUtc(\"2024-03-17T14:30:45.123456Z\")",
+        "result": "\"456\""
       },
       {
         "call": "parseMicrosecondFromUtc(\"invalid\")",
@@ -13717,7 +14414,11 @@
     "examples": [
       {
         "call": "parseNanosecondFromUtc(\"2024-03-17T14:30:45.123Z\")",
-        "result": "\"123000000\""
+        "result": "\"000\""
+      },
+      {
+        "call": "parseNanosecondFromUtc(\"2024-03-17T14:30:45.123456789Z\")",
+        "result": "\"789\""
       },
       {
         "call": "parseNanosecondFromUtc(\"invalid\")",
@@ -13882,7 +14583,7 @@
     "namespace": "utc",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidUtcRange({ value1, value2, options, }: { value1: string; value2: string; options?: { allowEqual?: boolean; }; }): boolean",
+    "signature": "isValidUtcRange(props: { value1: string; value2: string; options?: { allowEqual?: boolean; }; }): boolean",
     "description": "Return true if `value1` and `value2` form a valid UTC range — both parseable as",
     "sourcePath": "packages/gmt/src/utc/validate/isValidUtcRange.ts",
     "examples": [
@@ -14152,23 +14853,27 @@
     "examples": [
       {
         "call": "endOfQuarterForZoned(\"2024-02-15T14:30:00+00:00[UTC]\")",
-        "result": "\"2024-03-31T23:59:59+00:00[UTC]\""
-      },
-      {
-        "call": "endOfQuarterForZoned(\"2024-05-10T10:00:00+00:00[UTC]\")",
-        "result": "\"2024-06-30T23:59:59+00:00[UTC]\""
-      },
-      {
-        "call": "endOfQuarterForZoned(\"2024-11-20T08:00:00+00:00[UTC]\")",
-        "result": "\"2024-12-31T23:59:59+00:00[UTC]\""
-      },
-      {
-        "call": "endOfQuarterForZoned(\"2024-02-15T14:30:00+00:00[UTC]\", { fractionalSecondDigits: 9 })",
         "result": "\"2024-03-31T23:59:59.999999999+00:00[UTC]\""
       },
       {
+        "call": "endOfQuarterForZoned(\"2024-02-15T14:30:00+00:00[UTC]\", { fractionalSecondDigits: 0 })",
+        "result": "\"2024-03-31T23:59:59+00:00[UTC]\" — the pre-1.16.0 string"
+      },
+      {
+        "call": "endOfQuarterForZoned(\"2024-05-10T10:00:00+00:00[UTC]\")",
+        "result": "\"2024-06-30T23:59:59.999999999+00:00[UTC]\""
+      },
+      {
+        "call": "endOfQuarterForZoned(\"2024-11-20T08:00:00+00:00[UTC]\")",
+        "result": "\"2024-12-31T23:59:59.999999999+00:00[UTC]\""
+      },
+      {
+        "call": "endOfQuarterForZoned(\"2024-02-15T14:30:00+00:00[UTC]\", { fractionalSecondDigits: 3 })",
+        "result": "\"2024-03-31T23:59:59.999+00:00[UTC]\""
+      },
+      {
         "call": "endOfQuarterForZoned(\"2010-09-30T23:30:00+02:00[Africa/Cairo]\", { disambiguation: \"compatible\" })",
-        "result": "\"2010-09-30T23:59:59+02:00[Africa/Cairo]\" (the second pass of Q3's repeated last hour; the deprecated option is ignored)"
+        "result": "\"2010-09-30T23:59:59.999999999+02:00[Africa/Cairo]\" (the second pass of Q3's repeated last hour; the deprecated option is ignored)"
       },
       {
         "call": "endOfQuarterForZoned(\"invalid\")",
@@ -14188,11 +14893,15 @@
     "examples": [
       {
         "call": "endOfZoned(\"2024-02-29T12:34:56+00:00[UTC]\", \"month\")",
-        "result": "\"2024-02-29T23:59:59+00:00[UTC]\""
+        "result": "\"2024-02-29T23:59:59.999999999+00:00[UTC]\""
       },
       {
-        "call": "endOfZoned(\"2024-02-29T12:34:56+00:00[UTC]\", \"month\", { fractionalSecondDigits: 9 })",
-        "result": "\"2024-02-29T23:59:59.999999999+00:00[UTC]\""
+        "call": "endOfZoned(\"2024-02-29T12:34:56+00:00[UTC]\", \"month\", { fractionalSecondDigits: 0 })",
+        "result": "\"2024-02-29T23:59:59+00:00[UTC]\" — the pre-1.16.0 string"
+      },
+      {
+        "call": "endOfZoned(\"2024-02-29T12:34:56+00:00[UTC]\", \"month\", { fractionalSecondDigits: 3 })",
+        "result": "\"2024-02-29T23:59:59.999+00:00[UTC]\""
       },
       {
         "call": "endOfZoned(\"invalid\", \"month\")",
@@ -14200,15 +14909,15 @@
       },
       {
         "call": "endOfZoned(\"2024-11-03T01:15:00-05:00[America/New_York]\", \"hour\")",
-        "result": "\"2024-11-03T01:59:59-05:00[America/New_York]\" (the second, repeated 1am is its own hour)"
+        "result": "\"2024-11-03T01:59:59.999999999-05:00[America/New_York]\" (the second, repeated 1am is its own hour)"
       },
       {
         "call": "endOfZoned(\"2024-11-03T00:30:00-04:00[America/Havana]\", \"day\")",
-        "result": "\"2024-11-03T23:59:59-05:00[America/Havana]\" (midnight repeated on the same date: one 25-hour day)"
+        "result": "\"2024-11-03T23:59:59.999999999-05:00[America/Havana]\" (midnight repeated on the same date: one 25-hour day)"
       },
       {
         "call": "endOfZoned(\"2024-11-03T01:15:00-05:00[America/New_York]\", \"hour\", { disambiguation: \"reject\" })",
-        "result": "\"2024-11-03T01:59:59-05:00[America/New_York]\" (the deprecated option is ignored)"
+        "result": "\"2024-11-03T01:59:59.999999999-05:00[America/New_York]\" (the deprecated option is ignored)"
       }
     ]
   },
@@ -14275,7 +14984,7 @@
         "result": "null"
       },
       {
-        "call": "getLocaleZonedDayOfWeek(\"2024-02-26T12:00:00+00:00[UTC]\", \"not-a-locale\")",
+        "call": "getLocaleZonedDayOfWeek(\"2024-02-26T12:00:00+00:00[UTC]\", \"not-a-locale-!!\")",
         "result": "null"
       }
     ]
@@ -14292,22 +15001,26 @@
     "examples": [
       {
         "call": "getLocaleZonedEndOfWeek(\"2024-02-29T12:00:00+00:00[UTC]\", \"en-US\")",
-        "result": "\"2024-03-02T23:59:59+00:00[UTC]\" (Saturday)"
+        "result": "\"2024-03-02T23:59:59.999999999+00:00[UTC]\" (Saturday)"
       },
       {
         "call": "getLocaleZonedEndOfWeek(\"2024-02-29T12:00:00+00:00[UTC]\", \"fr-FR\")",
-        "result": "\"2024-03-03T23:59:59+00:00[UTC]\" (Sunday)"
+        "result": "\"2024-03-03T23:59:59.999999999+00:00[UTC]\" (Sunday)"
+      },
+      {
+        "call": "getLocaleZonedEndOfWeek(\"2024-02-29T12:00:00+00:00[UTC]\", \"en-US\", { fractionalSecondDigits: 0 })",
+        "result": "\"2024-03-02T23:59:59+00:00[UTC]\" (the pre-1.16.0 string)"
       },
       {
         "call": "getLocaleZonedEndOfWeek(\"2014-02-12T12:00:00-02:00[America/Sao_Paulo]\", \"en-US\", { disambiguation: \"reject\" })",
-        "result": "\"2014-02-15T23:59:59-03:00[America/Sao_Paulo]\" (Saturday's last hour repeats; the week ends on the second pass and the deprecated option is ignored)"
+        "result": "\"2014-02-15T23:59:59.999999999-03:00[America/Sao_Paulo]\" (Saturday's last hour repeats; the week ends on the second pass and the deprecated option is ignored)"
       },
       {
         "call": "getLocaleZonedEndOfWeek(\"invalid\", \"en-US\")",
         "result": "\"\""
       },
       {
-        "call": "getLocaleZonedEndOfWeek(\"2024-02-29T12:00:00+00:00[UTC]\", \"not-a-locale\")",
+        "call": "getLocaleZonedEndOfWeek(\"2024-02-29T12:00:00+00:00[UTC]\", \"not-a-locale-!!\")",
         "result": "\"\""
       }
     ]
@@ -14343,7 +15056,7 @@
         "result": "\"\""
       },
       {
-        "call": "getLocaleZonedStartOfWeek(\"2024-02-29T12:00:00+00:00[UTC]\", \"not-a-locale\")",
+        "call": "getLocaleZonedStartOfWeek(\"2024-02-29T12:00:00+00:00[UTC]\", \"not-a-locale-!!\")",
         "result": "\"\""
       }
     ]
@@ -14416,7 +15129,7 @@
     "examples": [
       {
         "call": "minZoned([\"2024-03-10T12:00:00[America/New_York]\", \"2024-03-15T12:00:00[America/New_York]\"])",
-        "result": "\"2024-03-10T12:00:00-05:00[America/New_York]\""
+        "result": "\"2024-03-10T12:00:00-04:00[America/New_York]\""
       },
       {
         "call": "minZoned([\"invalid\", \"2024-03-15T12:00:00[America/New_York]\"])",
@@ -14453,6 +15166,10 @@
       {
         "call": "roundZoned(\"2024-09-29T03:50:00+13:45[Pacific/Chatham]\", { smallestUnit: \"hour\", roundingMode: \"trunc\" })",
         "result": "\"2024-09-29T04:00:00+13:45[Pacific/Chatham]\" (after the input — TC39 wall-clock rounding)"
+      },
+      {
+        "call": "roundZoned(\"2024-06-15T12:34:56-04:00[America/New_York]\", { smallestUnit: \"hours\" })",
+        "result": "\"2024-06-15T13:00:00-04:00[America/New_York]\" (plural unit name)"
       },
       {
         "call": "roundZoned(\"invalid\", { smallestUnit: \"hour\" })",
@@ -14875,7 +15592,7 @@
     "sourcePath": "packages/gmt/src/zoned/compare/isBeforeZoned.ts",
     "examples": [
       {
-        "call": "isBeforeZoned(\"2024-03-17T14:30:45-05:00[America/New_York]\", \"2024-03-17T15:30:45-05:00[America/New_York]\")",
+        "call": "isBeforeZoned(\"2024-03-17T14:30:45-04:00[America/New_York]\", \"2024-03-17T15:30:45-04:00[America/New_York]\")",
         "result": "true"
       },
       {
@@ -15095,7 +15812,7 @@
         "result": "false"
       },
       {
-        "call": "isZonedWeekend(\"2024-02-03T10:00:00-05:00[America/New_York]\", \"not-a-locale\")",
+        "call": "isZonedWeekend(\"2024-02-03T10:00:00-05:00[America/New_York]\", \"not-a-locale-!!\")",
         "result": "false"
       }
     ]
@@ -15112,7 +15829,15 @@
     "examples": [
       {
         "call": "convertPlainDateTimeToZoned(\"2024-02-29T14:30:45\", \"America/New_York\")",
-        "result": "\"2024-02-29T14:30:45.123-05:00[America/New_York]\""
+        "result": "\"2024-02-29T14:30:45.000-05:00[America/New_York]\""
+      },
+      {
+        "call": "convertPlainDateTimeToZoned(\"2024-02-29T14:30:45.123456789\", \"UTC\")",
+        "result": "\"2024-02-29T14:30:45.123+00:00[UTC]\""
+      },
+      {
+        "call": "convertPlainDateTimeToZoned(\"2024-02-29T14:30:45.123456789\", \"UTC\", { smallestUnit: \"nanoseconds\" })",
+        "result": "\"2024-02-29T14:30:45.123456789+00:00[UTC]\""
       },
       {
         "call": "convertPlainDateTimeToZoned(\"invalid\", \"America/New_York\")",
@@ -15223,6 +15948,14 @@
         "result": "\"2024-02-29T14:30:45.123\""
       },
       {
+        "call": "convertZonedToPlainDateTime(\"2024-11-03T01:30:00-05:00[America/New_York]\")",
+        "result": "\"2024-11-03T01:30:00\" (the second 01:30, EST)"
+      },
+      {
+        "call": "convertZonedToPlainDateTime(\"2024-11-03T01:30:00-04:00[America/New_York]\")",
+        "result": "\"2024-11-03T01:30:00\" (the first 01:30, EDT)"
+      },
+      {
         "call": "convertZonedToPlainDateTime(\"invalid\")",
         "result": "\"\""
       }
@@ -15240,11 +15973,11 @@
     "examples": [
       {
         "call": "convertZonedToUnix(\"2024-02-29T12:34:56.789+00:00[UTC]\")",
-        "result": "1709200496789"
+        "result": "1709210096789"
       },
       {
         "call": "convertZonedToUnix(\"2024-02-29T12:34:56.789+00:00[UTC]\", \"seconds\")",
-        "result": "1709200496"
+        "result": "1709210096"
       },
       {
         "call": "convertZonedToUnix(\"invalid\")",
@@ -15318,7 +16051,7 @@
         "result": "\"tomorrow at 2:30 PM\""
       },
       {
-        "call": "formatCalendarZoned(value, \"de-DE\")",
+        "call": "formatCalendarZoned(\"2026-03-16T14:30:00+01:00[Europe/Berlin]\", \"de-DE\", { reference: \"2026-03-15T09:00:00+01:00[Europe/Berlin]\" })",
         "result": "\"morgen um 14:30\""
       },
       {
@@ -15353,8 +16086,8 @@
         "result": "\"tomorrow\""
       },
       {
-        "call": "formatRelativeZoned(value, \"en-US\", { roundingMethod: \"floor\" })",
-        "result": "rounds toward the earlier boundary"
+        "call": "formatRelativeZoned(\"2026-01-15T00:00:00+00:00[UTC]\", \"en-US\", { reference: \"2026-01-15T10:30:00+00:00[UTC]\", roundingMethod: \"floor\" })",
+        "result": "\"11 hours ago\" (−10.5 hours floors to −11; the default rounds to 10)"
       },
       {
         "call": "formatRelativeZoned(\"not-a-date\")",
@@ -15381,6 +16114,22 @@
         "result": "\"Fri, 05 Jan 2024 09:00:00 +0000\""
       },
       {
+        "call": "formatRfc2822(\"2024-03-15T14:30:00.999-04:00[America/New_York]\")",
+        "result": "\"Fri, 15 Mar 2024 14:30:00 -0400\""
+      },
+      {
+        "call": "formatRfc2822(\"1969-12-31T23:15:30-00:45[Africa/Monrovia]\")",
+        "result": "\"\" (offset −00:44:30)"
+      },
+      {
+        "call": "formatRfc2822(\"-000001-06-15T12:00:00+00:00[UTC]\")",
+        "result": "\"\""
+      },
+      {
+        "call": "Temporal.ZonedDateTime.from(\"-000001-06-15T12:00:00+00:00[UTC]\").toString()",
+        "result": "\"-000001-06-15T12:00:00+00:00[UTC]\""
+      },
+      {
         "call": "formatRfc2822(\"invalid\")",
         "result": "\"\""
       }
@@ -15403,6 +16152,18 @@
       {
         "call": "formatRfc3339(\"2024-03-15T14:30:00Z[UTC]\")",
         "result": "\"2024-03-15T14:30:00+00:00\""
+      },
+      {
+        "call": "formatRfc3339(\"1969-12-31T23:15:30-00:45[Africa/Monrovia]\")",
+        "result": "\"1970-01-01T00:00:00+00:00\" (offset −00:44:30)"
+      },
+      {
+        "call": "formatRfc3339(\"+010000-01-01T00:00:00+00:00[UTC]\")",
+        "result": "\"\""
+      },
+      {
+        "call": "Temporal.ZonedDateTime.from(\"1969-12-31T23:15:30-00:45[Africa/Monrovia]\").toString({ timeZoneName: \"never\" })",
+        "result": "\"1969-12-31T23:15:30-00:45\" — the pre-1.16.0 output"
       },
       {
         "call": "formatRfc3339(\"invalid\")",
@@ -15480,7 +16241,7 @@
     "examples": [
       {
         "call": "formatZonedDateTime(\"2024-02-29T12:34:56.789+00:00[UTC]\", \"en-US\", { dateStyle: \"long\", timeStyle: \"long\" })",
-        "result": "\"February 29, 2024 at 12:34:56 PM Coordinated Universal Time\""
+        "result": "\"February 29, 2024 at 12:34:56 PM UTC\""
       },
       {
         "call": "formatZonedDateTime(\"2024-02-29T12:34:56.789+00:00[UTC]\", \"en-GB\", { dateStyle: \"short\", timeStyle: \"short\" })",
@@ -15504,11 +16265,11 @@
     "examples": [
       {
         "call": "formatZonedRange(\"2024-02-29T12:00:00.000+00:00[UTC]\", \"2024-02-29T14:00:00.000+00:00[UTC]\", \"en-US\", { dateStyle: \"long\", timeStyle: \"short\" })",
-        "result": "\"February 29, 2024 at 12:00 PM – 2:00 PM Coordinated Universal Time\""
+        "result": "\"February 29, 2024, 12:00 - 2:00 PM\"\""
       },
       {
         "call": "formatZonedRange(\"2024-02-29T12:00:00.000+00:00[UTC]\", \"2024-02-29T14:00:00.000+00:00[UTC]\", \"en-GB\", { dateStyle: \"short\", timeStyle: \"short\" })",
-        "result": "\"29/02/2024, 12:00 – 14:00\""
+        "result": "\"29/02/2024, 12:00-14:00\""
       },
       {
         "call": "formatZonedRange(\"invalid\", \"2024-02-29T14:00:00.000+00:00[UTC]\", \"en-US\")",
@@ -15528,11 +16289,15 @@
     "examples": [
       {
         "call": "formatZonedToParts(\"2024-03-15T14:30:00.000-04:00[America/New_York]\", \"en-US\")",
-        "result": "[{ type: \"month\", value: \"3\" }, { type: \"literal\", value: \"/\" }, { type: \"day\", value: \"15\" }, { type: \"literal\", value: \"/\" }, { type: \"year\", value: \"2024\" }, { type: \"literal\", value: \",\" }, { type: \"literal\", value: \" \" }, { type: \"hour\", value: \"2\" }, { type: \"literal\", value: \":\" }, { type: \"minute\", value: \"30\" }, { type: \"literal\", value: \" \" }, { type: \"dayPeriod\", value: \"PM\" }]"
+        "result": "[{ type: \"month\", value: \"3\" }, { type: \"literal\", value: \"/\" }, { type: \"day\", value: \"15\" }, { type: \"literal\", value: \"/\" }, { type: \"year\", value: \"2024\" }, { type: \"literal\", value: \", \" }, { type: \"hour\", value: \"2\" }, { type: \"literal\", value: \":\" }, { type: \"minute\", value: \"30\" }, { type: \"literal\", value: \":\" }, { type: \"second\", value: \"00\" }, { type: \"literal\", value: \"\\u202f\" }, { type: \"dayPeriod\", value: \"PM\" }, { type: \"literal\", value: \" \" }, { type: \"timeZoneName\", value: \"EDT\" }]"
       },
       {
         "call": "formatZonedToParts(\"2024-03-15T14:30:00.000-04:00[America/New_York]\", \"en-US\", { timeZoneName: \"longOffset\" })",
-        "result": "includes { type: \"timeZoneName\", value: \"GMT-4\" }"
+        "result": "[{ type: \"month\", value: \"3\" }, { type: \"literal\", value: \"/\" }, { type: \"day\", value: \"15\" }, { type: \"literal\", value: \"/\" }, { type: \"year\", value: \"2024\" }, { type: \"literal\", value: \", \" }, { type: \"hour\", value: \"2\" }, { type: \"literal\", value: \":\" }, { type: \"minute\", value: \"30\" }, { type: \"literal\", value: \":\" }, { type: \"second\", value: \"00\" }, { type: \"literal\", value: \"\\u202f\" }, { type: \"dayPeriod\", value: \"PM\" }, { type: \"literal\", value: \" \" }, { type: \"timeZoneName\", value: \"GMT-04:00\" }]"
+      },
+      {
+        "call": "formatZonedToParts(\"2024-03-15T14:30:00.000-04:00[America/New_York]\", \"en-US\", { year: \"numeric\", month: \"numeric\", day: \"numeric\" })",
+        "result": "[{ type: \"month\", value: \"3\" }, { type: \"literal\", value: \"/\" }, { type: \"day\", value: \"15\" }, { type: \"literal\", value: \"/\" }, { type: \"year\", value: \"2024\" }] — the pre-1.16.0 default"
       },
       {
         "call": "formatZonedToParts(\"invalid\", \"en-US\")",
@@ -15624,6 +16389,14 @@
       {
         "call": "getTimeZoneOffset(\"America/New_York\", \"not an instant\")",
         "result": "\"\""
+      },
+      {
+        "call": "getTimeZoneOffset(\"UTC\", \"2016-12-31T23:59:60Z\")",
+        "result": "\"\" (leap second)"
+      },
+      {
+        "call": "getTimeZoneOffset(\"UTC\", \"2016-12-31T23:59:60Z\".replace(\":60\", \":59\"))",
+        "result": "\"+00:00\" (the clamped instant)"
       }
     ]
   },
@@ -16072,7 +16845,7 @@
     "namespace": "zoned",
     "module": "interval",
     "kind": "function",
-    "signature": "intervalDivideEquallyZoned(start: string, end: string, n: number): { start: string; end: string; }[]",
+    "signature": "intervalDivideEquallyZoned(start: string, end: string, n: number, options?: { maxPieces?: number; }): { start: string; end: string; }[]",
     "description": "Split a zoned interval into `n` equal-length sub-intervals.",
     "sourcePath": "packages/gmt/src/zoned/interval/intervalDivideEquallyZoned.ts",
     "examples": [
@@ -16091,6 +16864,14 @@
       {
         "call": "intervalDivideEquallyZoned(\"invalid\", \"2024-01-04T00:00:00+00:00[UTC]\", 3)",
         "result": "[]"
+      },
+      {
+        "call": "intervalDivideEquallyZoned(\"2024-01-01T00:00:00+00:00[UTC]\", \"2024-01-04T00:00:00+00:00[UTC]\", 3, { maxPieces: 2 })",
+        "result": "[] (3 pieces exceed the limit)"
+      },
+      {
+        "call": "intervalDivideEquallyZoned(\"2024-01-01T00:00:00+00:00[UTC]\", \"2024-01-04T00:00:00+00:00[UTC]\", 3, { maxPieces: 3 })",
+        "result": "[{ start: \"2024-01-01T00:00:00+00:00[UTC]\", end: \"2024-01-02T00:00:00+00:00[UTC]\" }, { start: \"2024-01-02T00:00:00+00:00[UTC]\", end: \"2024-01-03T00:00:00+00:00[UTC]\" }, { start: \"2024-01-03T00:00:00+00:00[UTC]\", end: \"2024-01-04T00:00:00+00:00[UTC]\" }]"
       }
     ]
   },
@@ -16388,7 +17169,7 @@
     "namespace": "zoned",
     "module": "interval",
     "kind": "function",
-    "signature": "splitIntervalByUnitZoned(start: string, end: string, unit: string, amount: number): { start: string; end: string; }[]",
+    "signature": "splitIntervalByUnitZoned(start: string, end: string, unit: string, amount: number, options?: { maxPieces?: number; }): { start: string; end: string; }[]",
     "description": "Split a zoned interval into sub-intervals of `amount × unit`.",
     "sourcePath": "packages/gmt/src/zoned/interval/splitIntervalByUnitZoned.ts",
     "examples": [
@@ -16415,6 +17196,14 @@
       {
         "call": "splitIntervalByUnitZoned(\"invalid\", \"2024-01-02T00:00:00+00:00[UTC]\", \"hour\", 1)",
         "result": "[]"
+      },
+      {
+        "call": "splitIntervalByUnitZoned(\"2024-01-01T00:00:00+00:00[UTC]\", \"2024-01-01T01:30:00+00:00[UTC]\", \"hour\", 1, { maxPieces: 1 })",
+        "result": "[] (2 slices exceed the limit)"
+      },
+      {
+        "call": "splitIntervalByUnitZoned(\"2024-01-01T00:00:00+00:00[UTC]\", \"2024-01-01T01:30:00+00:00[UTC]\", \"hour\", 1, { maxPieces: 2 })",
+        "result": "[{ start: \"2024-01-01T00:00:00+00:00[UTC]\", end: \"2024-01-01T01:00:00+00:00[UTC]\" }, { start: \"2024-01-01T01:00:00+00:00[UTC]\", end: \"2024-01-01T01:30:00+00:00[UTC]\" }]"
       }
     ]
   },
@@ -16492,7 +17281,7 @@
     "namespace": "zoned",
     "module": "map",
     "kind": "function",
-    "signature": "mapZonedDatesInRange(startZonedDateTime: string, endZonedDateTime: string, stepDays?: number): string[]",
+    "signature": "mapZonedDatesInRange(startZonedDateTime: string, endZonedDateTime: string, stepDays?: number, options?: { maxPieces?: number; }): string[]",
     "description": "Return an array of plain ISO date strings covering the inclusive date range between two zoned datetimes.",
     "sourcePath": "packages/gmt/src/zoned/map/mapZonedDatesInRange.ts",
     "examples": [
@@ -16507,6 +17296,14 @@
       {
         "call": "mapZonedDatesInRange(\"invalid\", \"2024-03-02T12:00:00+00:00[UTC]\")",
         "result": "[]"
+      },
+      {
+        "call": "mapZonedDatesInRange(\"2024-02-28T12:00:00+00:00[UTC]\", \"2024-03-02T12:00:00+00:00[UTC]\", 1, { maxPieces: 3 })",
+        "result": "[] (more dates than the limit)"
+      },
+      {
+        "call": "mapZonedDatesInRange(\"2024-02-28T12:00:00+00:00[UTC]\", \"2024-03-02T12:00:00+00:00[UTC]\", 1, { maxPieces: 10 })",
+        "result": "[\"2024-02-28\", \"2024-02-29\", \"2024-03-01\", \"2024-03-02\"]"
       }
     ]
   },
@@ -16729,7 +17526,11 @@
     "examples": [
       {
         "call": "parseMicrosecondFromZoned(\"2024-03-15T14:30:45.123+00:00[UTC]\")",
-        "result": "\"123\""
+        "result": "\"000\""
+      },
+      {
+        "call": "parseMicrosecondFromZoned(\"2024-03-15T14:30:45.123456+00:00[UTC]\")",
+        "result": "\"456\""
       },
       {
         "call": "parseMicrosecondFromZoned(\"invalid\")",
@@ -16809,7 +17610,11 @@
     "examples": [
       {
         "call": "parseNanosecondFromZoned(\"2024-03-15T14:30:45.123+00:00[UTC]\")",
-        "result": "\"123\""
+        "result": "\"000\""
+      },
+      {
+        "call": "parseNanosecondFromZoned(\"2024-03-15T14:30:45.123456789+00:00[UTC]\")",
+        "result": "\"789\""
       },
       {
         "call": "parseNanosecondFromZoned(\"invalid\")",
@@ -16834,6 +17639,26 @@
       {
         "call": "parseRfc2822(\"5 Jan 2024 09:00:00 GMT\")",
         "result": "\"2024-01-05T09:00:00+00:00[+00:00]\""
+      },
+      {
+        "call": "parseRfc2822(\"fri,15 Mar 24 14:30 -0400 (EDT)\")",
+        "result": "\"2024-03-15T14:30:00-04:00[-04:00]\" (obsolete 2-digit year, comment)"
+      },
+      {
+        "call": "parseRfc2822(\"Fri, 15 Mar 2024 14:30:00 CEST\")",
+        "result": "\"2024-03-15T14:30:00+00:00[+00:00]\" (unknown zone → -0000)"
+      },
+      {
+        "call": "parseRfc2822(\"Fri, 15 Mar 2024 14:30:00 -0000\")",
+        "result": "\"2024-03-15T14:30:00+00:00[+00:00]\""
+      },
+      {
+        "call": "parseRfc2822(\"Sat, 15 Mar 2024 14:30:00 -0400\")",
+        "result": "\"\" (15 Mar 2024 was a Friday)"
+      },
+      {
+        "call": "parseRfc2822(\"15 Mar 2024 14:30:00 -0400\")",
+        "result": "\"2024-03-15T14:30:00-04:00[-04:00]\" — the weekday removed"
       },
       {
         "call": "parseRfc2822(\"Sat, 31 Feb 2024 14:30:00 -0400\")",
@@ -16861,6 +17686,10 @@
       },
       {
         "call": "parseRfc3339(\"2024-03-15T14:30:00Z\")",
+        "result": "\"2024-03-15T14:30:00+00:00[+00:00]\""
+      },
+      {
+        "call": "parseRfc3339(\"2024-03-15T14:30:00-00:00\")",
         "result": "\"2024-03-15T14:30:00+00:00[+00:00]\""
       },
       {
@@ -17075,6 +17904,14 @@
         "result": "false (leap second)"
       },
       {
+        "call": "isValidCalendarZonedDateTime(\"0113-01-10T12:00:00+08:00[u-ca=roc][Asia/Taipei]\")",
+        "result": "false (Temporal's id, not GMT's)"
+      },
+      {
+        "call": "isValidCalendarZonedDateTime(\"0113-01-10T12:00:00+08:00[u-ca=roc][Asia/Taipei]\".replace(\"u-ca=roc\", \"u-ca=taiwan\"))",
+        "result": "true (the GMT id)"
+      },
+      {
         "call": "isValidCalendarZonedDateTime(\"invalid\")",
         "result": "false"
       }
@@ -17101,6 +17938,22 @@
       {
         "call": "isValidTimeZone(\"Invalid/Timezone\")",
         "result": "false"
+      },
+      {
+        "call": "isValidTimeZone(\"Japan\")",
+        "result": "true (IANA link to Asia/Tokyo)"
+      },
+      {
+        "call": "isValidTimeZone(\"utc\")",
+        "result": "true (case-insensitive)"
+      },
+      {
+        "call": "isValidTimeZone(\"+05:00\")",
+        "result": "false (an offset, not an IANA name)"
+      },
+      {
+        "call": "\"Japan\".includes(\"/\")",
+        "result": "false (the earlier slash-only rule)"
       }
     ]
   },
@@ -17138,7 +17991,7 @@
     "namespace": "zoned",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidZonedRange({ value1, value2, options, }: { value1: string; value2: string; options?: { allowEqual?: boolean; }; }): boolean",
+    "signature": "isValidZonedRange(props: { value1: string; value2: string; options?: { allowEqual?: boolean; }; }): boolean",
     "description": "Return true if `value1` and `value2` form a valid zoned range — both parseable as",
     "sourcePath": "packages/gmt/src/zoned/validate/isValidZonedRange.ts",
     "examples": [
@@ -17153,6 +18006,14 @@
       {
         "call": "isValidZonedRange({ value1: \"2024-06-15T12:00:00-04:00[America/New_York]\", value2: \"2024-06-15T12:00:00-04:00[America/New_York]\", options: { allowEqual: true } })",
         "result": "true"
+      },
+      {
+        "call": "isValidZonedRange({ value1: \"2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]\", value2: \"2024-02-01T00:00:00+00:00[UTC]\" })",
+        "result": "false (calendar annotation)"
+      },
+      {
+        "call": "isValidZonedRange({ value1: \"2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]\".replace(/\\[!?u-ca=[^\\]]*\\]/g, \"\"), value2: \"2024-02-01T00:00:00+00:00[UTC]\" })",
+        "result": "true (annotation removed)"
       }
     ]
   }
