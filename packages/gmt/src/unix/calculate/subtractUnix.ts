@@ -8,6 +8,7 @@ import { isValidDateTimeDurationUnit } from "../../plain/validate";
 import type { DateTimeDurationUnit, Overflow } from "../../types";
 import { getSystemTimeZone } from "../../zoned/get";
 import { isValidTimeZone } from "../../zoned/validate";
+import { isValidUnixUnit } from "../validate/isValidUnixUnit";
 
 /**
  * Subtract a temporal amount from a Unix epoch value and return the resulting epoch.
@@ -27,6 +28,7 @@ import { isValidTimeZone } from "../../zoned/validate";
  * @example subtractUnix(1706745600000, { days: 1 }) // 1706659200000
  * @example subtractUnix(1706745600, { days: 1 }, { epochUnit: "seconds" }) // 1706659200
  * @example subtractUnix(0, { days: 1 }) // -86400000 (Jan 1 1970 - 1 day = Dec 31 1969)
+ * @example subtractUnix(1.5, { days: 1 }) // null (not an integer epoch)
  */
 export function subtractUnix(
   value: number,
@@ -42,9 +44,13 @@ export function subtractUnix(
   const overflow = resolveOverflow(options?.overflow);
 
   if (!timeZone || !isValidTimeZone(timeZone)) return null;
+  if (!isValidUnixUnit(epochUnit)) return null;
 
-  const validUnits = Object.keys(units).every(isValidDateTimeDurationUnit);
-  const validAmounts = Object.values(units).every(isValidAmount);
+  const validUnits =
+    typeof units === "object" &&
+    units !== null &&
+    Object.keys(units).every(isValidDateTimeDurationUnit);
+  const validAmounts = validUnits && Object.values(units).every(isValidAmount);
 
   if (!validUnits || !validAmounts) {
     return null;

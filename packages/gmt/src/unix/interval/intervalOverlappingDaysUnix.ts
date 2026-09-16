@@ -1,6 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { resolveUnixTimeZone } from "../../internal/resolveUnixTimeZone";
 import { parseUnixEpochInterval } from "../../internal";
+import { isValidUnixUnit } from "../validate/isValidUnixUnit";
 
 /**
  * Return how many distinct calendar dates two Unix epoch intervals share, in a given
@@ -57,7 +58,7 @@ export function intervalOverlappingDaysUnix(
   const epochUnit = options?.epochUnit ?? "milliseconds";
   const timeZone = resolveUnixTimeZone(options?.timeZone);
 
-  if (!timeZone) {
+  if (!timeZone || !isValidUnixUnit(epochUnit)) {
     return null;
   }
 

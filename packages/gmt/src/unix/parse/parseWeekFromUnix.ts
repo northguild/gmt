@@ -7,6 +7,7 @@ import {
   type UnixUnit,
 } from "../validate";
 import { zonedDateTimeFrom } from "../../internal";
+import { coerceUnixEpochNumber } from "../../internal/unixEpochValue";
 
 /**
  * Return the week number from a unix epoch value.
@@ -18,9 +19,10 @@ import { zonedDateTimeFrom } from "../../internal";
  * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA), weekStartsOn ("monday" | "sunday")
  * @returns Week number (1-53) or null on invalid input
  *
- * @example parseWeekFromUnix(1704067200000) // 1
- * @example parseWeekFromUnix(1704067200000, { weekStartsOn: "sunday" }) // 1
+ * @example parseWeekFromUnix(1704067200000, { timeZone: "UTC" }) // 1
+ * @example parseWeekFromUnix(1704067200000, { weekStartsOn: "sunday", timeZone: "UTC" }) // 1
  * @example parseWeekFromUnix(-86400, { epochUnit: "seconds" }) // 1
+ * @example parseWeekFromUnix("") // null (a blank string is not epoch 0)
  */
 export function parseWeekFromUnix(
   value: number | string,
@@ -30,7 +32,7 @@ export function parseWeekFromUnix(
     weekStartsOn?: "monday" | "sunday";
   },
 ): number | null {
-  const numValue = typeof value === "string" ? Number(value) : value;
+  const numValue = coerceUnixEpochNumber(value);
   const epochUnit = options?.epochUnit ?? "milliseconds";
 
   if (epochUnit === "seconds") {
@@ -52,10 +54,7 @@ export function parseWeekFromUnix(
 
   try {
     const zdt = zonedDateTimeFrom(zoned);
-    return getWeekNumber(
-      `${zdt.year}-${zdt.month.toString().padStart(2, "0")}-${zdt.day.toString().padStart(2, "0")}`,
-      weekStartsOn,
-    );
+    return getWeekNumber(zdt.toPlainDate().toString(), weekStartsOn);
   } catch {
     return null;
   }

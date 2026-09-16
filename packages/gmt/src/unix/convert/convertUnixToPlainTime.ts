@@ -18,9 +18,10 @@ import {
  * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA)
  * @returns plain time string in "HH:mm:ss" format or "" on invalid input
  *
- * @example convertUnixToPlainTime(1706659200000) // "00:00:00"
- * @example convertUnixToPlainTime(1706659200, { epochUnit: "seconds" }) // "00:00:00"
- * @example convertUnixToPlainTime(-1) // "23:59:59.999"
+ * @example convertUnixToPlainTime(1706659200000, { timeZone: "UTC" }) // "00:00:00"
+ * @example convertUnixToPlainTime(1706659200, { epochUnit: "seconds", timeZone: "UTC" }) // "00:00:00"
+ * @example convertUnixToPlainTime(-1, { timeZone: "UTC" }) // "23:59:59.999"
+ * @example convertUnixToPlainTime(NaN) // ""
  */
 export function convertUnixToPlainTime(
   unix: number,

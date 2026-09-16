@@ -16,8 +16,8 @@ import { parseUnixEpochInterval, parseUnixEpochValue } from "../../internal";
  *   integer (or numeric string of one) — fractions, empty strings and values beyond ±(2^53 − 1)
  *   are invalid even when they would fall outside the interval — or when `start > end`.
  *
- * @param start Unix epoch value (seconds or milliseconds) — interval start
- * @param end Unix epoch value (seconds or milliseconds) — interval end
+ * @param start Unix epoch value, in the one unit all epoch arguments share — interval start
+ * @param end Unix epoch value, in the one unit all epoch arguments share — interval end
  * @param points array of Unix epoch values to split at
  * @returns array of `{ start, end }` records, or `[]` on invalid input
  *

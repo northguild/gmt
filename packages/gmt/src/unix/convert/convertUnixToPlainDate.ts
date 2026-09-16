@@ -18,9 +18,10 @@ import {
  * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA)
  * @returns plain date string in "YYYY-MM-DD" format or "" on invalid input
  *
- * @example convertUnixToPlainDate(1709164800000) // "2024-02-29"
- * @example convertUnixToPlainDate(1709164800, { epochUnit: "seconds" }) // "2024-02-29"
- * @example convertUnixToPlainDate(-1) // "1969-12-31"
+ * @example convertUnixToPlainDate(1709164800000, { timeZone: "UTC" }) // "2024-02-29"
+ * @example convertUnixToPlainDate(1709164800, { epochUnit: "seconds", timeZone: "UTC" }) // "2024-02-29"
+ * @example convertUnixToPlainDate(-1, { timeZone: "UTC" }) // "1969-12-31"
+ * @example convertUnixToPlainDate(NaN) // ""
  */
 
 export function convertUnixToPlainDate(

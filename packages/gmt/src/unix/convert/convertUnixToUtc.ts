@@ -16,6 +16,7 @@ import { isValidUnixUnit, type UnixUnit } from "../validate/isValidUnixUnit";
  * @example convertUnixToUtc(1709164800000) // "2024-02-29T00:00:00Z"
  * @example convertUnixToUtc(1709164800, "seconds") // "2024-02-29T00:00:00Z"
  * @example convertUnixToUtc(-1) // "1969-12-31T23:59:59.999Z"
+ * @example convertUnixToUtc(NaN) // ""
  */
 export function convertUnixToUtc(
   value: number,

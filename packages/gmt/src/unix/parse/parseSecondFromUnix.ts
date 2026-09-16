@@ -11,8 +11,9 @@ import type { UnixUnit } from "../validate";
  * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA)
  * @returns Second (00-59) or "" on invalid input
  *
- * @example parseSecondFromUnix(1700000000000) // "26"
+ * @example parseSecondFromUnix(1700000000000, { timeZone: "UTC" }) // "20"
  * @example parseSecondFromUnix(-86400, { epochUnit: "seconds" }) // "00"
+ * @example parseSecondFromUnix("") // "" (a blank string is not epoch 0)
  */
 export function parseSecondFromUnix(
   value: number | string,

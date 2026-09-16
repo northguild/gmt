@@ -38,7 +38,7 @@ describe("parseYearFromUnix", () => {
     ${1709164800}    | ${"seconds"}      | ${"2024"}
     ${1704067200000} | ${"milliseconds"} | ${"2024"}
   `(
-    "returns $expected for $value with epochUnit $epochUnit",
+    "returns $expected for $value in milliseconds and seconds",
     ({ value, epochUnit, expected }) => {
       expect(
         parseYearFromUnix(value as never, { epochUnit: epochUnit as never }),
@@ -61,5 +61,31 @@ describe("parseYearFromUnix", () => {
     mockTemporalZonedDateTimeFromThrow();
     const result = parseYearFromUnix(epochMs);
     expect(result).toBe("");
+  });
+});
+
+describe("parseYearFromUnix with a blank epoch string", () => {
+  // Number("") and Number("   ") are 0 (ECMA-262 StringToNumber), a coercion artefact: a blank
+  // string holds no epoch value (POSIX XBD 4.19 defines an integer), so it is invalid input.
+  it.each`
+    label                | value
+    ${"empty"}           | ${""}
+    ${"spaces"}          | ${"   "}
+    ${"newline and tab"} | ${"\n\t"}
+    ${"no-break space"}  | ${"\u00a0"}
+  `(
+    'returns "" for a $label string in milliseconds and seconds',
+    ({ value }) => {
+      expect(parseYearFromUnix(value, { timeZone: "UTC" })).toBe("");
+      expect(
+        parseYearFromUnix(value, { epochUnit: "seconds", timeZone: "UTC" }),
+      ).toBe("");
+    },
+  );
+});
+
+describe("parseYearFromUnix invalid-input @example", () => {
+  it('returns "" for parseYearFromUnix("")', () => {
+    expect(parseYearFromUnix("")).toBe("");
   });
 });

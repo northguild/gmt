@@ -1,6 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidAmount } from "../../internal";
-import type { UnixUnit } from "../validate/isValidUnixUnit";
+import { isValidUnixUnit, type UnixUnit } from "../validate/isValidUnixUnit";
 
 /**
  * Return whether `value1` and `value2` represent the same instant.
@@ -15,7 +15,7 @@ import type { UnixUnit } from "../validate/isValidUnixUnit";
  *
  * @example areUnixEqual(1706659200, 1706659200) // true
  * @example areUnixEqual(1706659200, 1704067200) // false
- * @example areUnixEqual(1706659200, 1706659200000, { epochUnit: "seconds" }) // true
+ * @example areUnixEqual(1706659200, 1706659200000, { epochUnit: "seconds" }) // false (epochUnit applies to both values)
  * @example areUnixEqual(1706659200, 1706659200000) // false
  * @example areUnixEqual(-86400000, 0) // false (1969-12-31 is not equal to 1970-01-01)
  */
@@ -25,6 +25,10 @@ export function areUnixEqual(
   options?: { epochUnit?: UnixUnit },
 ): boolean {
   const epochUnit = options?.epochUnit ?? "milliseconds";
+
+  if (!isValidUnixUnit(epochUnit)) {
+    return false;
+  }
 
   if (!isValidAmount(value1) || !isValidAmount(value2)) {
     return false;

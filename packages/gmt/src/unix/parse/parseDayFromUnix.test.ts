@@ -40,7 +40,7 @@ describe("parseDayFromUnix", () => {
     ${battleTestLeapYearUnixSeconds} | ${"seconds"}      | ${"29"}
     ${1704067200000}                 | ${"milliseconds"} | ${"01"}
   `(
-    "returns $expected for $value with epochUnit $epochUnit",
+    "returns $expected for $value in milliseconds and seconds",
     ({ value, epochUnit, expected }) => {
       expect(
         parseDayFromUnix(value as never, { epochUnit: epochUnit as never }),
@@ -63,5 +63,31 @@ describe("parseDayFromUnix", () => {
     mockTemporalZonedDateTimeFromThrow();
     const result = parseDayFromUnix(battleTestLeapYearUnix);
     expect(result).toBe("");
+  });
+});
+
+describe("parseDayFromUnix with a blank epoch string", () => {
+  // Number("") and Number("   ") are 0 (ECMA-262 StringToNumber), a coercion artefact: a blank
+  // string holds no epoch value (POSIX XBD 4.19 defines an integer), so it is invalid input.
+  it.each`
+    label                | value
+    ${"empty"}           | ${""}
+    ${"spaces"}          | ${"   "}
+    ${"newline and tab"} | ${"\n\t"}
+    ${"no-break space"}  | ${"\u00a0"}
+  `(
+    'returns "" for a $label string in milliseconds and seconds',
+    ({ value }) => {
+      expect(parseDayFromUnix(value, { timeZone: "UTC" })).toBe("");
+      expect(
+        parseDayFromUnix(value, { epochUnit: "seconds", timeZone: "UTC" }),
+      ).toBe("");
+    },
+  );
+});
+
+describe("parseDayFromUnix invalid-input @example", () => {
+  it('returns "" for parseDayFromUnix("")', () => {
+    expect(parseDayFromUnix("")).toBe("");
   });
 });

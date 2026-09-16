@@ -1,9 +1,10 @@
-import { isValidAmount } from "../../internal";
+import { isUnixEpochInInstantRange } from "../../internal/unixEpochValue";
 
 /**
  * Return the earliest (minimum) of the given Unix timestamp values.
  *
- * - Filters invalid values before finding minimum.
+ * - Drops values that are not unix epochs first: non-numbers, non-integers, and values outside
+ *   the Temporal instant range (±8.64e15, which contains every seconds and milliseconds epoch).
  * - Returns null if array is empty or has no valid values.
  *
  * @param unixValues Array of Unix timestamps (e.g. 1699531200)
@@ -11,12 +12,14 @@ import { isValidAmount } from "../../internal";
  *
  * @example minUnix([1706659200000, 1704067200000, 1700000000000]) // 1700000000000
  * @example minUnix([]) // null
+ * @example minUnix([1.5, 2]) // 2 (1.5 is not an integer epoch)
  */
 export function minUnix(unixValues: number[]): number | null {
-  if (!unixValues.length) return null;
+  if (!Array.isArray(unixValues) || !unixValues.length) return null;
 
-  const valid = unixValues.filter(isValidAmount);
+  const valid = unixValues.filter(isUnixEpochInInstantRange);
   if (!valid.length) return null;
 
-  return Math.min(...valid);
+  // Pairwise, not `Math.min(...valid)`: spreading a long list overflows the call stack.
+  return valid.reduce((a, b) => Math.min(a, b));
 }

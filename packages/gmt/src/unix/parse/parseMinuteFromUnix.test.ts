@@ -57,3 +57,29 @@ describe("parseMinuteFromUnix", () => {
     expect(result).toBe("");
   });
 });
+
+describe("parseMinuteFromUnix with a blank epoch string", () => {
+  // Number("") and Number("   ") are 0 (ECMA-262 StringToNumber), a coercion artefact: a blank
+  // string holds no epoch value (POSIX XBD 4.19 defines an integer), so it is invalid input.
+  it.each`
+    label                | value
+    ${"empty"}           | ${""}
+    ${"spaces"}          | ${"   "}
+    ${"newline and tab"} | ${"\n\t"}
+    ${"no-break space"}  | ${"\u00a0"}
+  `(
+    'returns "" for a $label string in milliseconds and seconds',
+    ({ value }) => {
+      expect(parseMinuteFromUnix(value, { timeZone: "UTC" })).toBe("");
+      expect(
+        parseMinuteFromUnix(value, { epochUnit: "seconds", timeZone: "UTC" }),
+      ).toBe("");
+    },
+  );
+});
+
+describe("parseMinuteFromUnix invalid-input @example", () => {
+  it('returns "" for parseMinuteFromUnix("")', () => {
+    expect(parseMinuteFromUnix("")).toBe("");
+  });
+});

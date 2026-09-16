@@ -7,6 +7,7 @@ import {
 import { getLargestDateTimeDurationUnit } from "../../plain/calculate/getLargestDateTimeDurationUnit";
 import { isValidDateTimeDurationUnit } from "../../plain/validate";
 import type { DateTimeDurationUnit, RoundingOptions } from "../../types";
+import { isValidUnixUnit } from "../validate/isValidUnixUnit";
 
 /**
  * Return the difference between two Unix timestamps measured in the given unit.
@@ -19,7 +20,7 @@ import type { DateTimeDurationUnit, RoundingOptions } from "../../types";
  * per Temporal's DifferenceOptions — e.g. `{ smallestUnit: "hour", roundingMode: "halfExpand" }`
  * rounds the difference to the nearest hour before extracting the requested unit.
  * - When `units` is an array, `smallestUnit` must not be coarser than the largest unit in the
- *   array (e.g. `["day", "hour"]` with `smallestUnit: "week"`) — this combination is rejected by
+ *   array (e.g. `["days", "hours"]` with `smallestUnit: "week"`) — this combination is rejected by
  *   Temporal and returns null, same as other invalid input.
  *
  * @param value1 first Unix timestamp
@@ -28,9 +29,10 @@ import type { DateTimeDurationUnit, RoundingOptions } from "../../types";
  * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA), smallestUnit, roundingIncrement, roundingMode (Temporal.DifferenceOptions rounding controls)
  * @returns numeric difference in the requested unit, or null on invalid input
  *
- * @example diffUnix(1706745600000, 1706659200000, "day") // 1
- * @example diffUnix(1706745600, 1706659200, "day", { epochUnit: "seconds" }) // 1
- * @example diffUnix(0, -86400000, "day") // 1 (Jan 1 1970 - Dec 31 1969 = 1 day)
+ * @example diffUnix(1706745600000, 1706659200000, "days", { timeZone: "UTC" }) // -1 (measured from the first value to the second)
+ * @example diffUnix(1706745600, 1706659200, "days", { epochUnit: "seconds", timeZone: "UTC" }) // -1
+ * @example diffUnix(0, -86400000, "days", { timeZone: "UTC" }) // -1 (1970-01-01 until 1969-12-31 is minus one day)
+ * @example diffUnix(NaN, 0, "days") // null
  */
 export function diffUnix(
   value1: number,
@@ -44,7 +46,7 @@ export function diffUnix(
   const epochUnit = options?.epochUnit ?? "milliseconds";
   const timeZone = resolveUnixTimeZone(options?.timeZone);
 
-  if (!timeZone) return null;
+  if (!timeZone || !isValidUnixUnit(epochUnit)) return null;
 
   const isSingleUnit = !Array.isArray(units);
   const validUnits = isSingleUnit

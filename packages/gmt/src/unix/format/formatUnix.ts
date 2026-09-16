@@ -1,6 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { normalizeDateTime } from "../../internal/normalizeDateTime";
 import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
+import { parseUnixEpochMilliseconds } from "../../internal/unixEpochInstant";
 import { isValidUnixUnit } from "../validate";
 
 export interface FormatUnixOptions extends Intl.DateTimeFormatOptions {
@@ -10,24 +11,6 @@ export interface FormatUnixOptions extends Intl.DateTimeFormatOptions {
   // included for full/long styles. Defaults to false (matches the original
   // behavior of formatting a wall-clock PlainDateTime).
   includeTimeZoneName?: boolean;
-}
-
-function parseEpochMs(
-  value: string | number,
-  epochUnit: "milliseconds" | "seconds",
-): number | null {
-  let n: number;
-  if (typeof value === "number") {
-    n = value;
-  } else if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!/^-?\d+$/.test(trimmed)) return null;
-    n = Number(trimmed);
-  } else {
-    return null;
-  }
-  if (!Number.isFinite(n)) return null;
-  return epochUnit === "seconds" ? n * 1000 : n;
 }
 
 /**
@@ -63,7 +46,7 @@ export function formatUnix(
 
   if (!isValidUnixUnit(epochUnit)) return "";
 
-  const ms = parseEpochMs(value, epochUnit);
+  const ms = parseUnixEpochMilliseconds(value, epochUnit);
   if (ms === null) return "";
 
   const tz = normalizeTimeZone(timeZone);

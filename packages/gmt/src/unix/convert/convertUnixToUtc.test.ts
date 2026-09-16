@@ -38,3 +38,9 @@ describe("convertUnixToUtc", () => {
     },
   );
 });
+
+describe("convertUnixToUtc invalid-input @example", () => {
+  it('returns "" for convertUnixToUtc(NaN)', () => {
+    expect(convertUnixToUtc(NaN)).toBe("");
+  });
+});

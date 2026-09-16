@@ -10,6 +10,7 @@ import type {
   DurationStringOptions,
   RoundingOptions,
 } from "../../types";
+import { isValidUnixUnit } from "../validate/isValidUnixUnit";
 
 /**
  * Return the difference between two Unix timestamps as an ISO 8601 duration string,
@@ -53,7 +54,7 @@ export function diffUnixAsDuration(
   const epochUnit = options?.epochUnit ?? "milliseconds";
   const timeZone = resolveUnixTimeZone(options?.timeZone);
 
-  if (!timeZone) return "";
+  if (!timeZone || !isValidUnixUnit(epochUnit)) return "";
 
   const validUnit = isValidDateTimeDurationUnit(unit);
 

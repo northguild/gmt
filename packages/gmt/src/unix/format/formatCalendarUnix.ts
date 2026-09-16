@@ -1,20 +1,18 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { joinDateTimeConnector, normalizeDateTime } from "../../internal";
 import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
+import { unixEpochToInstant } from "../../internal/unixEpochInstant";
 import { isValidUtc } from "../../utc/validate";
+import { isValidUnixUnit } from "../validate/isValidUnixUnit";
 
 /**
- * Options for `formatCalendarUnix`. Mirrors the option shape of
- * `formatCalendar` but targets the unix domain, adding `epochUnit`.
+ * Options for `formatCalendarUnix`. Like `formatCalendar`, it takes a `reference` and a `timeStyle`
+ * (here also `"full"`); it adds `epochUnit` and `timeZone` for the unix domain.
  *
  * @remarks Members:
  *
  * | Member | Type | Default | Description |
  * | --- | --- | --- | --- |
- * | `style` | `"long"\|"short"\|"narrow"` | `"long"` | `RelativeTimeFormat` style for the day label. |
- * | `numeric` | `"always"\|"auto"` | `"auto"` | Numeric formatting of the relative day label. |
- * | `largestUnit` | `"year"\|"month"\|"week"\|"day"` | auto | Largest unit for the relative diff. |
- * | `roundingMethod` | `"expand"\|"trunc"\|"floor"\|"ceil"` | — | Rounding for the computed distance. |
  * | `reference` | `string\|number` | now (UTC) | Anchor epoch/ISO for the "today/tomorrow" comparison. |
  * | `epochUnit` | `"milliseconds"\|"seconds"` | `"milliseconds"` | Interpretation of numeric `value`/`reference`. |
  * | `timeZone` | `string` | `"UTC"` | IANA zone for both day-comparison and clock-time rendering. |
@@ -25,10 +23,6 @@ import { isValidUtc } from "../../utc/validate";
  * const opts: FormatCalendarUnixOptions = { timeZone: "America/New_York" };
  */
 export interface FormatCalendarUnixOptions {
-  style?: "long" | "short" | "narrow";
-  numeric?: "always" | "auto";
-  largestUnit?: "year" | "month" | "week" | "day";
-  roundingMethod?: "expand" | "trunc" | "floor" | "ceil";
   /** Anchor point for the relative day comparison. Accepts ISO strings or numeric epochs. */
   reference?: string | number;
   epochUnit?: "milliseconds" | "seconds";
@@ -44,31 +38,6 @@ export interface FormatCalendarUnixOptions {
 
 const ABS_DAY_THRESHOLD = 6;
 
-function toInstant(
-  raw: string | number,
-  epochUnit: "milliseconds" | "seconds",
-): Temporal.Instant | null {
-  let n: number;
-  if (typeof raw === "number") {
-    n = raw;
-  } else if (typeof raw === "string") {
-    const trimmed = raw.trim();
-    // Mirror formatUnix.parseEpochMs: only accept integer-looking strings,
-    // so "" / "not-a-date" / "12.5" don't silently coerce to 0/12.
-    if (!/^-?\d+$/.test(trimmed)) return null;
-    n = Number(trimmed);
-  } else {
-    return null;
-  }
-  if (!Number.isFinite(n)) return null;
-  try {
-    const ms = epochUnit === "seconds" ? n * 1000 : n;
-    return Temporal.Instant.fromEpochMilliseconds(ms);
-  } catch {
-    return null;
-  }
-}
-
 /**
  * Format a unix epoch value as a relative day label plus time-of-day, e.g.
  * "Tomorrow at 2:30 PM" — the unix counterpart of `formatCalendar`. See
@@ -82,7 +51,7 @@ function toInstant(
  * @returns the formatted calendar string, or "" on invalid input
  *
  * @example formatCalendarUnix(1710685845000, "en-US", { epochUnit: "milliseconds", timeZone: "America/New_York" }) // day label + time relative to "now", or the absolute fallback beyond the ±6-day threshold
- * @example formatCalendarUnix(value, "en-US", { reference: 1710685000000 }) // e.g. "tomorrow at 2:30 PM"
+ * @example formatCalendarUnix(1710772200000, "en-US", { reference: 1710685000000, timeZone: "UTC" }) // "tomorrow at 2:30 PM"
  * @example formatCalendarUnix("not-a-number") // ""
  */
 export function formatCalendarUnix(
@@ -90,9 +59,12 @@ export function formatCalendarUnix(
   locale?: string,
   options: FormatCalendarUnixOptions = {},
 ): string {
+  // A default parameter covers only `undefined`; `null` also means "no options".
+  options ??= {};
   const epochUnit = options.epochUnit ?? "milliseconds";
+  if (!isValidUnixUnit(epochUnit)) return "";
 
-  const target = toInstant(value, epochUnit);
+  const target = unixEpochToInstant(value, epochUnit);
   if (target === null) return "";
 
   let reference: Temporal.Instant;
@@ -103,7 +75,7 @@ export function formatCalendarUnix(
       return "";
     }
   } else if (typeof options.reference === "string") {
-    const numericRef = toInstant(options.reference, epochUnit);
+    const numericRef = unixEpochToInstant(options.reference, epochUnit);
     if (numericRef !== null) {
       reference = numericRef;
     } else if (isValidUtc(options.reference)) {
@@ -116,7 +88,7 @@ export function formatCalendarUnix(
       return "";
     }
   } else {
-    const ref = toInstant(options.reference, epochUnit);
+    const ref = unixEpochToInstant(options.reference, epochUnit);
     if (ref === null) return "";
     reference = ref;
   }

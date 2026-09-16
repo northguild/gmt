@@ -10,8 +10,8 @@ import { parseUnixEpochValue } from "../../../internal";
  * - An empty or whitespace-only string returns `false` rather than reading as epoch 0.
  * - Equal `start === end` is valid.
  *
- * @param start Unix epoch value (seconds or milliseconds) — interval start
- * @param end Unix epoch value (seconds or milliseconds) — interval end
+ * @param start Unix epoch value, in the one unit all epoch arguments share — interval start
+ * @param end Unix epoch value, in the one unit all epoch arguments share — interval end
  * @returns true if start and end form a valid Unix interval, or false on invalid input
  *
  * @example isValidUnixInterval(0, 1700000000) // true

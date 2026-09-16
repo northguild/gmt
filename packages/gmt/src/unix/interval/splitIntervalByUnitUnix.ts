@@ -6,6 +6,8 @@ import {
   resolveDurationUnit,
   tileByUnit,
 } from "../../internal";
+import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
+import { minSlicesForSpan } from "../../internal/splitStep";
 
 /**
  * Split a Unix epoch interval into sub-intervals of `amount × unit`.
@@ -25,14 +27,19 @@ import {
  * - Returns `[{ start, end }]` when `start === end` (zero-length interval).
  * - Returns `[]` on invalid input (`start`/`end` that is not a safe integer or numeric string of
  *   one — fractions, empty strings and values beyond ±(2^53 − 1) are invalid — unsupported unit,
- *   non-positive amount, or invalid timeZone).
+ *   or non-positive amount), and when the system time zone cannot be resolved.
  *
- * Uses the system timeZone for calendar-unit arithmetic (consistent with `addUnix`).
+ * Reads `start` and `end` as epoch milliseconds (there is no `epochUnit` option) and uses the
+ * system time zone for calendar-unit arithmetic (there is no `timeZone` option).
+ * - `options.maxPieces` (positive safe integer, default `1_000_000`) bounds the output: a split
+ *   into more slices returns `[]`, decided from the span before stepping where it can be, and
+ *   otherwise as soon as slice `maxPieces + 1` is due. An invalid `maxPieces` also returns `[]`.
  *
- * @param start Unix epoch value (seconds or milliseconds) — interval start
- * @param end Unix epoch value (seconds or milliseconds) — interval end
+ * @param start Unix epoch milliseconds — interval start
+ * @param end Unix epoch milliseconds — interval end
  * @param unit duration unit string — any `DateTimeDurationUnit`
  * @param amount positive number of units per step
+ * @param options optional: `maxPieces` (positive safe integer, default `1_000_000`)
  * @returns array of `{ start, end }` records, or [] on invalid input
  *
  * @example splitIntervalByUnitUnix(0, 86400000, "hour", 6) // [{ start: 0, end: 21600000 }, { start: 21600000, end: 43200000 }, { start: 43200000, end: 64800000 }, { start: 64800000, end: 86400000 }]
@@ -40,12 +47,15 @@ import {
  * @example splitIntervalByUnitUnix(0, 0, "hour", 1) // [{ start: 0, end: 0 }]
  * @example splitIntervalByUnitUnix(0, 86400000, "hour", 0) // []
  * @example splitIntervalByUnitUnix("invalid", 86400000, "hour", 1) // []
+ * @example splitIntervalByUnitUnix(0, 86400000, "hour", 6, { maxPieces: 3 }) // [] (4 slices exceed the limit)
+ * @example splitIntervalByUnitUnix(0, 86400000, "hour", 6, { maxPieces: 4 }) // [{ start: 0, end: 21600000 }, { start: 21600000, end: 43200000 }, { start: 43200000, end: 64800000 }, { start: 64800000, end: 86400000 }]
  */
 export function splitIntervalByUnitUnix(
   start: number | string,
   end: number | string,
   unit: string,
   amount: number,
+  options?: { maxPieces?: number },
 ): Array<{ start: number; end: number }> {
   const interval = parseUnixEpochInterval(start, end);
 
@@ -69,6 +79,12 @@ export function splitIntervalByUnitUnix(
     return [];
   }
 
+  const maxPieces = resolveMaxPieces(options);
+
+  if (maxPieces === null) {
+    return [];
+  }
+
   try {
     const timeZone = getSystemTimeZone();
     if (!timeZone || !isValidTimeZone(timeZone)) {
@@ -88,6 +104,17 @@ export function splitIntervalByUnitUnix(
         timeZone,
       );
 
+    const spanNs = (endMs - startMs) * 1_000_000;
+
+    if (
+      exceedsPieceLimit(
+        minSlicesForSpan(spanNs, resolvedUnit, amount, true),
+        maxPieces,
+      )
+    ) {
+      return [];
+    }
+
     // Boundaries stay ZonedDateTime (nanosecond) values; only the output is floored to ms.
     const slices = tileByUnit(
       startZoned,
@@ -95,6 +122,7 @@ export function splitIntervalByUnitUnix(
       Temporal.ZonedDateTime.compare,
       resolvedUnit,
       amount,
+      maxPieces,
     );
 
     return (slices ?? []).map(([sliceStart, sliceEnd]) => ({

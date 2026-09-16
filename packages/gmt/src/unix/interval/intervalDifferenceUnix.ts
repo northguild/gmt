@@ -15,10 +15,10 @@ import { parseUnixEpochIntervalPair } from "../../internal";
  *   integers (fractions, `NaN`, `±Infinity`, beyond ±(2^53 − 1)), where "one unit before" has no
  *   meaning.
  *
- * @param aStart Unix epoch value (seconds or milliseconds) — first interval start
- * @param aEnd Unix epoch value (seconds or milliseconds) — first interval end
- * @param bStart Unix epoch value (seconds or milliseconds) — second interval start
- * @param bEnd Unix epoch value (seconds or milliseconds) — second interval end
+ * @param aStart Unix epoch value, in the one unit all epoch arguments share — first interval start
+ * @param aEnd Unix epoch value, in the one unit all epoch arguments share — first interval end
+ * @param bStart Unix epoch value, in the one unit all epoch arguments share — second interval start
+ * @param bEnd Unix epoch value, in the one unit all epoch arguments share — second interval end
  * @returns array of `{ start, end }` records representing A minus B, or `[]` on invalid input
  *
  * @example intervalDifferenceUnix(0, 1700000000, 1500000000, 1600000000) // [{ start: 0, end: 1499999999 }, { start: 1600000001, end: 1700000000 }]

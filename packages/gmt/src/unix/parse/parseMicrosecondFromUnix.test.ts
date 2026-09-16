@@ -37,7 +37,7 @@ describe("parseMicrosecondFromUnix", () => {
     ${1709164800}    | ${"seconds"}      | ${"000"}
     ${1704067200000} | ${"milliseconds"} | ${"000"}
   `(
-    "returns $expected for $value with epochUnit $epochUnit",
+    "returns $expected for $value in milliseconds and seconds",
     ({ value, epochUnit, expected }) => {
       expect(
         parseMicrosecondFromUnix(value as never, {
@@ -62,5 +62,34 @@ describe("parseMicrosecondFromUnix", () => {
     mockTemporalZonedDateTimeFromThrow();
     const result = parseMicrosecondFromUnix(battleTestLeapYearUnix);
     expect(result).toBe("");
+  });
+});
+
+describe("parseMicrosecondFromUnix with a blank epoch string", () => {
+  // Number("") and Number("   ") are 0 (ECMA-262 StringToNumber), a coercion artefact: a blank
+  // string holds no epoch value (POSIX XBD 4.19 defines an integer), so it is invalid input.
+  it.each`
+    label                | value
+    ${"empty"}           | ${""}
+    ${"spaces"}          | ${"   "}
+    ${"newline and tab"} | ${"\n\t"}
+    ${"no-break space"}  | ${"\u00a0"}
+  `(
+    'returns "" for a $label string in milliseconds and seconds',
+    ({ value }) => {
+      expect(parseMicrosecondFromUnix(value, { timeZone: "UTC" })).toBe("");
+      expect(
+        parseMicrosecondFromUnix(value, {
+          epochUnit: "seconds",
+          timeZone: "UTC",
+        }),
+      ).toBe("");
+    },
+  );
+});
+
+describe("parseMicrosecondFromUnix invalid-input @example", () => {
+  it('returns "" for parseMicrosecondFromUnix("")', () => {
+    expect(parseMicrosecondFromUnix("")).toBe("");
   });
 });

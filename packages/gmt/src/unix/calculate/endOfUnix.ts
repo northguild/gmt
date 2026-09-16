@@ -1,6 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import type { Disambiguation, Offset } from "../../types";
-import { startOrEndOfUnix } from "./startOrEndOfUnix";
+import { startOrEndOfUnix } from "../../internal/startOrEndOfUnix";
 
 /**
  * Return the end of the specified unit for a Unix timestamp.
@@ -22,6 +22,7 @@ import { startOrEndOfUnix } from "./startOrEndOfUnix";
  * @example endOfUnix(-86400000, "year", { timeZone: "UTC" }) // -1 (end of 1969)
  * @example endOfUnix(1730616300000, "hour", { timeZone: "America/New_York" }) // 1730617199999 (1730616300000 is the second, repeated 1:45am of the Nov 3 2024 fall-back; its hour ends at the second 1:59:59.999)
  * @example endOfUnix(1730616300000, "hour", { timeZone: "America/New_York", disambiguation: "reject" }) // 1730617199999 (the deprecated option is ignored)
+ * @example endOfUnix(NaN, "day") // null
  */
 export function endOfUnix(
   value: number,

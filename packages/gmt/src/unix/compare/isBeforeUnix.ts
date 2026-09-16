@@ -1,6 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidAmount } from "../../internal";
-import type { UnixUnit } from "../validate/isValidUnixUnit";
+import { isValidUnixUnit, type UnixUnit } from "../validate/isValidUnixUnit";
 
 /**
  * Return whether `value1` represents an instant strictly before `value2`.
@@ -25,6 +25,10 @@ export function isBeforeUnix(
   options?: { epochUnit?: UnixUnit },
 ): boolean {
   const epochUnit = options?.epochUnit ?? "milliseconds";
+
+  if (!isValidUnixUnit(epochUnit)) {
+    return false;
+  }
 
   if (!isValidAmount(value1) || !isValidAmount(value2)) {
     return false;

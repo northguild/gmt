@@ -208,3 +208,9 @@ describe("startOfUnix across zone transitions with default options", () => {
     },
   );
 });
+
+describe("startOfUnix invalid-input @example", () => {
+  it('returns null for startOfUnix(NaN, "day")', () => {
+    expect(startOfUnix(NaN, "day")).toBe(null);
+  });
+});

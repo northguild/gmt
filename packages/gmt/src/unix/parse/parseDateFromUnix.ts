@@ -18,9 +18,10 @@ import { zonedDateTimeFrom } from "../../internal";
  * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA)
  * @returns ISO date string (e.g., "2024-03-17") or "" on invalid input
  *
- * @example parseDateFromUnix(1700000000000) // "2023-11-15"
- * @example parseDateFromUnix(1700000000, { epochUnit: "seconds" }) // "2023-11-15"
- * @example parseDateFromUnix(-86400, { epochUnit: "seconds" }) // "1969-12-31"
+ * @example parseDateFromUnix(1700000000000, { timeZone: "UTC" }) // "2023-11-14"
+ * @example parseDateFromUnix(1700000000, { epochUnit: "seconds", timeZone: "UTC" }) // "2023-11-14"
+ * @example parseDateFromUnix(-86400, { epochUnit: "seconds", timeZone: "UTC" }) // "1969-12-31"
+ * @example parseDateFromUnix(1.5) // "" (not an integer epoch)
  */
 export function parseDateFromUnix(
   value: number,

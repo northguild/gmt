@@ -1,5 +1,5 @@
 import { countZonedBuckets } from "../../internal";
-import { resolveUnixIntervalPair } from "./resolveUnixIntervalPair";
+import { resolveUnixIntervalPair } from "../../internal/resolveUnixIntervalPair";
 
 /**
  * Count how many `unit` boundaries a Unix epoch interval crosses.
@@ -9,8 +9,10 @@ import { resolveUnixIntervalPair } from "./resolveUnixIntervalPair";
  * - The end boundary is excluded: midnight to midnight two days later counts 2 days.
  * - A zero-length interval counts 1 when it sits mid-unit and 0 when it sits exactly on a
  *   unit boundary.
- * - Uses the system timeZone for calendar-unit boundaries (consistent with `addUnix` and
- *   `splitIntervalByUnitUnix`), so day/week/month/year counts are host-dependent.
+ * - Reads `start` and `end` as epoch milliseconds; there is no `epochUnit` option.
+ * - Uses the system time zone for calendar-unit boundaries (there is no `timeZone` option,
+ *   consistent with `intervalLengthUnix` and `splitIntervalByUnitUnix`), so day/week/month/year
+ *   counts are host-dependent.
  * - Counts the real local buckets `floorToZone`/`bucketRange` walk in that zone: a bucket
  *   shorter than its unit still counts once (a 15-minute `Pacific/Chatham` hour on its
  *   spring-forward), and a local day the zone deleted counts not at all
@@ -21,16 +23,17 @@ import { resolveUnixIntervalPair } from "./resolveUnixIntervalPair";
  * - Returns `null` when the span crosses more than 10,000 zone transitions.
  * - Weeks start on Monday (ISO 8601).
  * - Accepts singular or plural units (`"day"` and `"days"` behave identically).
- * - Returns `null` on invalid input (non-finite/non-integer start/end, `start > end`,
- *   unsupported unit, or invalid timeZone).
+ * - Returns `null` on invalid input (`start`/`end` that is not a safe integer or numeric string of
+ *   one, or lies outside the Temporal instant range, `start > end`, or an unsupported unit), and
+ *   when the system time zone cannot be resolved.
  *
- * @param start Unix epoch value (seconds or milliseconds) — interval start
- * @param end Unix epoch value (seconds or milliseconds) — interval end
+ * @param start Unix epoch milliseconds — interval start
+ * @param end Unix epoch milliseconds — interval end
  * @param unit unit string — any `DateTimeUnit`
  * @returns number of unit boundaries touched, or null on invalid input
  *
  * @example intervalCountUnix(0, 86400000, "hour") // 24
- * @example intervalCountUnix(1704153540000, 1704153660000, "day") // 2 (23:59 to 00:01 UTC)
+ * @example intervalCountUnix(1704153540000, 1704153660000, "day") // 2 (on a UTC host: 23:59 to 00:01 crosses midnight)
  * @example intervalCountUnix(0, 0, "hour") // 0 (zero-length, on the boundary)
  * @example intervalCountUnix(1800000, 1800000, "hour") // 1 (zero-length, mid-hour)
  * @example intervalCountUnix(86400000, 0, "hour") // null

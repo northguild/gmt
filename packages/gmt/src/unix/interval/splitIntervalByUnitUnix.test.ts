@@ -227,3 +227,170 @@ describe("splitIntervalByUnitUnix", () => {
     },
   );
 });
+
+describe("splitIntervalByUnitUnix maxPieces", () => {
+  // Owner decision A2: maxPieces bounds the number of slices. At or above the slice count the
+  // output is unchanged; one below it returns the sentinel.
+  it.each`
+    maxPieces
+    ${4}
+    ${9}
+  `(
+    "returns 4 slices for 1706695200000 to 1715767200000 by 1 month with maxPieces $maxPieces",
+    ({ maxPieces }) => {
+      const restore = mockSystemTimeZone("UTC");
+      try {
+        expect(
+          splitIntervalByUnitUnix(1706695200000, 1715767200000, "month", 1, {
+            maxPieces,
+          }),
+        ).toEqual([
+          { start: 1706695200000, end: 1709200800000 },
+          { start: 1709200800000, end: 1711879200000 },
+          { start: 1711879200000, end: 1714471200000 },
+          { start: 1714471200000, end: 1715767200000 },
+        ]);
+      } finally {
+        restore();
+      }
+    },
+  );
+
+  it.each`
+    maxPieces
+    ${3}
+    ${1}
+  `(
+    "returns [] for 1706695200000 to 1715767200000 by 1 month (4 slices) over maxPieces $maxPieces",
+    ({ maxPieces }) => {
+      const restore = mockSystemTimeZone("UTC");
+      try {
+        expect(
+          splitIntervalByUnitUnix(1706695200000, 1715767200000, "month", 1, {
+            maxPieces,
+          }).length,
+        ).toBe(0);
+      } finally {
+        restore();
+      }
+    },
+  );
+
+  it.each`
+    maxPieces
+    ${3}
+    ${8}
+  `(
+    "returns 3 slices for 0 to 10800000 by 1 hour with maxPieces $maxPieces",
+    ({ maxPieces }) => {
+      const restore = mockSystemTimeZone("UTC");
+      try {
+        expect(
+          splitIntervalByUnitUnix(0, 10800000, "hour", 1, { maxPieces }),
+        ).toEqual([
+          { start: 0, end: 3600000 },
+          { start: 3600000, end: 7200000 },
+          { start: 7200000, end: 10800000 },
+        ]);
+      } finally {
+        restore();
+      }
+    },
+  );
+
+  it.each`
+    maxPieces
+    ${2}
+    ${1}
+  `(
+    "returns [] for 0 to 10800000 by 1 hour (3 slices) over maxPieces $maxPieces",
+    ({ maxPieces }) => {
+      const restore = mockSystemTimeZone("UTC");
+      try {
+        expect(
+          splitIntervalByUnitUnix(0, 10800000, "hour", 1, { maxPieces }).length,
+        ).toBe(0);
+      } finally {
+        restore();
+      }
+    },
+  );
+
+  // 20 day slices in UTC. The zoned lower bound allows for offset changes and stalled steps, so
+  // this limit is enforced while stepping rather than up front.
+  it.each`
+    maxPieces | expected
+    ${20}     | ${20}
+    ${19}     | ${0}
+  `(
+    "returns $expected slices for 20 days by 1 day with maxPieces $maxPieces",
+    ({ maxPieces, expected }) => {
+      const restore = mockSystemTimeZone("UTC");
+      try {
+        const result = splitIntervalByUnitUnix(0, 1728000000, "day", 1, {
+          maxPieces,
+        });
+        expect(result.length).toBe(expected);
+        if (expected > 0) {
+          expect(result[0]).toEqual({ start: 0, end: 86400000 });
+          expect(result[19]).toEqual({ start: 1641600000, end: 1728000000 });
+        }
+      } finally {
+        restore();
+      }
+    },
+  );
+
+  it("returns one slice for a zero-length interval with maxPieces 1", () => {
+    const restore = mockSystemTimeZone("UTC");
+    try {
+      expect(
+        splitIntervalByUnitUnix(0, 0, "hour", 1, { maxPieces: 1 }),
+      ).toEqual([{ start: 0, end: 0 }]);
+    } finally {
+      restore();
+    }
+  });
+
+  it.each`
+    label                   | options
+    ${"maxPieces 0"}        | ${{ maxPieces: 0 }}
+    ${"maxPieces -1"}       | ${{ maxPieces: -1 }}
+    ${"maxPieces 1.5"}      | ${{ maxPieces: 1.5 }}
+    ${"maxPieces NaN"}      | ${{ maxPieces: Number.NaN }}
+    ${"maxPieces Infinity"} | ${{ maxPieces: Number.POSITIVE_INFINITY }}
+    ${"maxPieces string"}   | ${{ maxPieces: "5" }}
+    ${"null options"}       | ${null}
+    ${"number options"}     | ${5}
+  `("returns [] for invalid $label", ({ options }) => {
+    const restore = mockSystemTimeZone("UTC");
+    try {
+      expect(
+        splitIntervalByUnitUnix(0, 10800000, "hour", 1, options as never)
+          .length,
+      ).toBe(0);
+    } finally {
+      restore();
+    }
+  });
+});
+
+describe("splitIntervalByUnitUnix default piece limit", () => {
+  // Default maxPieces is 1_000_000: a larger split returns the sentinel instead of exhausting the
+  // heap.
+  it.each`
+    start                | end                 | unit             | slices
+    ${0}                 | ${1000001}          | ${"millisecond"} | ${"1_000_001 milliseconds"}
+    ${-8640000000000000} | ${8640000000000000} | ${"day"}         | ${"200_000_000 days"}
+  `(
+    "returns [] for $start to $end by 1 $unit ($slices)",
+    ({ start, end, unit }) => {
+      const restore = mockSystemTimeZone("UTC");
+      try {
+        expect(splitIntervalByUnitUnix(start, end, unit, 1).length).toBe(0);
+      } finally {
+        restore();
+      }
+    },
+  );
+});

@@ -189,3 +189,23 @@ describe("intervalFromDurationUnix at the maximum instant", () => {
     },
   );
 });
+
+describe("intervalFromDurationUnix with an unrecognised epochUnit", () => {
+  // isValidUnixUnit defines the domain ("seconds" | "milliseconds"): any other value is invalid
+  // input and returns the sentinel, never a silent read as milliseconds.
+  it.each`
+    epochUnit
+    ${"second"}
+    ${"SECONDS"}
+    ${"ms"}
+    ${""}
+    ${1000}
+  `("returns null for epochUnit $epochUnit", ({ epochUnit }) => {
+    expect(
+      intervalFromDurationUnix(1_706_659_200, "P1D", "start", {
+        epochUnit: epochUnit as never,
+        timeZone: "UTC",
+      }),
+    ).toBe(null);
+  });
+});

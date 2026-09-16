@@ -13,6 +13,7 @@ import type { UnixUnit } from "../validate";
  *
  * @example parseMicrosecondFromUnix(1700000000000) // "000"
  * @example parseMicrosecondFromUnix(-86400, { epochUnit: "seconds" }) // "000"
+ * @example parseMicrosecondFromUnix("") // "" (a blank string is not epoch 0)
  */
 export function parseMicrosecondFromUnix(
   value: number | string,

@@ -1,4 +1,4 @@
-import { parseUnixEpochValue } from "../../internal";
+import { isObject, parseUnixEpochValue } from "../../internal";
 
 /**
  * Return true if `value1` and `value2` form a valid Unix range — both safe-integer epochs
@@ -21,15 +21,14 @@ import { parseUnixEpochValue } from "../../internal";
  * @example isValidUnixRange({ value1: 0, value2: 1.5 }) // false (fractional)
  * @example isValidUnixRange({ value1: "", value2: 1000 }) // false (empty string is not epoch 0)
  */
-export function isValidUnixRange({
-  value1,
-  value2,
-  options,
-}: {
+export function isValidUnixRange(props: {
   value1: number | string;
   value2: number | string;
   options?: { allowEqual?: boolean };
 }): boolean {
+  if (!isObject(props)) return false;
+  const { value1, value2, options } = props;
+
   const first = parseUnixEpochValue(value1);
   const second = parseUnixEpochValue(value2);
 

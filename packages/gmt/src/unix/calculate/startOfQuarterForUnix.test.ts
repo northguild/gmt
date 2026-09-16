@@ -129,3 +129,9 @@ describe("startOfQuarterForUnix at a zone transition", () => {
     },
   );
 });
+
+describe("startOfQuarterForUnix invalid-input @example", () => {
+  it("returns null for startOfQuarterForUnix(NaN)", () => {
+    expect(startOfQuarterForUnix(NaN)).toBe(null);
+  });
+});

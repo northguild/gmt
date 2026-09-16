@@ -10,10 +10,10 @@ import { parseUnixEpochIntervalPair } from "../../internal";
  * - Returns `null` on invalid input: non-numeric types, empty strings, and values that are not
  *   safe integers (fractions, `NaN`, `±Infinity`, beyond ±(2^53 − 1)).
  *
- * @param aStart Unix epoch value (seconds or milliseconds) — first interval start
- * @param aEnd Unix epoch value (seconds or milliseconds) — first interval end
- * @param bStart Unix epoch value (seconds or milliseconds) — second interval start
- * @param bEnd Unix epoch value (seconds or milliseconds) — second interval end
+ * @param aStart Unix epoch value, in the one unit all epoch arguments share — first interval start
+ * @param aEnd Unix epoch value, in the one unit all epoch arguments share — first interval end
+ * @param bStart Unix epoch value, in the one unit all epoch arguments share — second interval start
+ * @param bEnd Unix epoch value, in the one unit all epoch arguments share — second interval end
  * @returns `{ start, end }` with the merged span, or null on invalid input / disjoint intervals
  *
  * @example intervalUnionUnix(0, 1700000000, 1000000, 2000000) // { start: 0, end: 1700000000 }

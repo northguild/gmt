@@ -190,3 +190,9 @@ describe("endOfUnix across zone transitions with default options", () => {
     },
   );
 });
+
+describe("endOfUnix invalid-input @example", () => {
+  it('returns null for endOfUnix(NaN, "day")', () => {
+    expect(endOfUnix(NaN, "day")).toBe(null);
+  });
+});

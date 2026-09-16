@@ -18,9 +18,10 @@ import { isValidTimeZone } from "../../zoned/validate";
  * @param unit optional unit, "seconds" or "milliseconds"
  * @returns zoned ISO 8601 string or "" on invalid
  *
- * @example convertUnixToZoned(1709164800000, "America/New_York") // "2024-02-29T00:00:00-05:00[America/New_York]"
+ * @example convertUnixToZoned(1709164800000, "America/New_York") // "2024-02-28T19:00:00-05:00[America/New_York]"
  * @example convertUnixToZoned(1709164800, "UTC", "seconds") // "2024-02-29T00:00:00+00:00[UTC]"
- * @example convertUnixToZoned(-1, "UTC") // "1969-12-31T23:59:59.999Z[UTC]"
+ * @example convertUnixToZoned(-1, "UTC") // "1969-12-31T23:59:59.999+00:00[UTC]"
+ * @example convertUnixToZoned(NaN, "UTC") // ""
  */
 export function convertUnixToZoned(
   value: number,

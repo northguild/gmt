@@ -146,3 +146,9 @@ describe("convertUnixToZoned", () => {
     });
   }
 });
+
+describe("convertUnixToZoned invalid-input @example", () => {
+  it('returns "" for convertUnixToZoned(NaN, "UTC")', () => {
+    expect(convertUnixToZoned(NaN, "UTC")).toBe("");
+  });
+});

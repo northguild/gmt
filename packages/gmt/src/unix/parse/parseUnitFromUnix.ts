@@ -7,6 +7,7 @@ import {
   type UnixUnit,
 } from "../validate";
 import { zonedDateTimeFrom } from "../../internal";
+import { coerceUnixEpochNumber } from "../../internal/unixEpochValue";
 
 /**
  * Units extractable from a unix epoch value via `parseUnitFromUnix`. Covers the
@@ -58,10 +59,11 @@ export type PlainNowUnit =
  * @returns extracted unit value as string, or "" on invalid input
  *
  * @example parseUnitFromUnix(1700000000000, "year") // "2023"
- * @example parseUnitFromUnix(1700000000, "hour", { epochUnit: "seconds" }) // "12"
- * @example parseUnitFromUnix(1704067200000, "week") // "1"
- * @example parseUnitFromUnix(1704067200000, "week", { weekStartsOn: "sunday" }) // "1"
- * @example parseUnitFromUnix(-86400, { epochUnit: "seconds" }, "year") // "1969"
+ * @example parseUnitFromUnix(1700000000, "hour", { epochUnit: "seconds", timeZone: "UTC" }) // "22"
+ * @example parseUnitFromUnix(1704067200000, "week", { timeZone: "UTC" }) // "1"
+ * @example parseUnitFromUnix(1704067200000, "week", { weekStartsOn: "sunday", timeZone: "UTC" }) // "1"
+ * @example parseUnitFromUnix(-86400, "year", { epochUnit: "seconds", timeZone: "UTC" }) // "1969"
+ * @example parseUnitFromUnix("", "year") // "" (a blank string is not epoch 0)
  */
 export function parseUnitFromUnix(
   value: number | string,
@@ -72,7 +74,7 @@ export function parseUnitFromUnix(
     weekStartsOn?: "monday" | "sunday";
   },
 ): string {
-  const numValue = typeof value === "string" ? Number(value) : value;
+  const numValue = coerceUnixEpochNumber(value);
   const epochUnit = options?.epochUnit ?? "milliseconds";
 
   if (epochUnit === "seconds") {
@@ -101,10 +103,7 @@ export function parseUnitFromUnix(
         return zdt.month.toString().padStart(2, "0");
       case "week": {
         return (
-          getWeekNumber(
-            `${zdt.year}-${zdt.month.toString().padStart(2, "0")}-${zdt.day.toString().padStart(2, "0")}`,
-            weekStartsOn,
-          ) ?? 0
+          getWeekNumber(zdt.toPlainDate().toString(), weekStartsOn) ?? 0
         ).toString();
       }
       case "day":

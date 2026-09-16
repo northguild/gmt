@@ -1,10 +1,12 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { normalizeDateTime } from "../../internal/normalizeDateTime";
 import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
+import { unixEpochToInstant } from "../../internal/unixEpochInstant";
 import { resolveRelativeRounding } from "../../internal/resolveRelativeRounding";
 import { durationTotal } from "../../internal/zonedWallClockDifference";
 import type { RelativeRoundingMethod, RelativeUnit } from "../../types";
 import { isValidUtc } from "../../utc/validate";
+import { isValidUnixUnit } from "../validate/isValidUnixUnit";
 
 export interface FormatRelativeUnixOptions {
   style?: "long" | "short" | "narrow";
@@ -23,31 +25,6 @@ const AUTO_UNITS: Array<{ unit: RelativeUnit; maxSeconds: number }> = [
   { unit: "day", maxSeconds: Infinity },
 ];
 
-function toInstant(
-  raw: string | number,
-  epochUnit: "milliseconds" | "seconds",
-): Temporal.Instant | null {
-  let n: number;
-  if (typeof raw === "number") {
-    n = raw;
-  } else if (typeof raw === "string") {
-    const trimmed = raw.trim();
-    // Mirror formatUnix.parseEpochMs: only accept integer-looking strings,
-    // so "" / "not-a-date" / "12.5" don't silently coerce to 0/12.
-    if (!/^-?\d+$/.test(trimmed)) return null;
-    n = Number(trimmed);
-  } else {
-    return null;
-  }
-  if (!Number.isFinite(n)) return null;
-  try {
-    const ms = epochUnit === "seconds" ? n * 1000 : n;
-    return Temporal.Instant.fromEpochMilliseconds(ms);
-  } catch {
-    return null;
-  }
-}
-
 /**
  * Format the relative time between a unix epoch value and a reference instant.
  *
@@ -61,7 +38,7 @@ function toInstant(
  * @returns the formatted relative-time string, or "" on invalid input
  *
  * @example formatRelativeUnix(1710685845000, "en-US", { epochUnit: "milliseconds" }) // "3 years ago"
- * @example formatRelativeUnix(value, "en-US", { roundingMethod: "floor" }) // rounds toward the earlier boundary
+ * @example formatRelativeUnix(0, "en-US", { reference: 37800000, roundingMethod: "floor" }) // "11 hours ago" (−10.5 hours floors to −11; the default rounds to 10)
  * @example formatRelativeUnix("not-a-number") // ""
  */
 export function formatRelativeUnix(
@@ -69,9 +46,12 @@ export function formatRelativeUnix(
   locale?: string,
   options: FormatRelativeUnixOptions = {},
 ): string {
+  // A default parameter covers only `undefined`; `null` also means "no options".
+  options ??= {};
   const epochUnit = options.epochUnit ?? "milliseconds";
+  if (!isValidUnixUnit(epochUnit)) return "";
 
-  const target = toInstant(value, epochUnit);
+  const target = unixEpochToInstant(value, epochUnit);
   if (target === null) return "";
 
   let reference: Temporal.Instant;
@@ -85,7 +65,7 @@ export function formatRelativeUnix(
     // String references can be a numeric unix epoch ("1709164800000") OR a
     // UTC ISO string ("2024-02-29T00:00:00Z"). Try the numeric path first to
     // match formatUnix's symmetry, then fall back to UTC.
-    const numericRef = toInstant(options.reference, epochUnit);
+    const numericRef = unixEpochToInstant(options.reference, epochUnit);
     if (numericRef !== null) {
       reference = numericRef;
     } else if (isValidUtc(options.reference)) {
@@ -98,7 +78,7 @@ export function formatRelativeUnix(
       return "";
     }
   } else {
-    const ref = toInstant(options.reference, epochUnit);
+    const ref = unixEpochToInstant(options.reference, epochUnit);
     if (ref === null) return "";
     reference = ref;
   }

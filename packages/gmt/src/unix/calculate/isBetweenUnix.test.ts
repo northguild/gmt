@@ -74,3 +74,23 @@ describe("isBetweenUnix", () => {
     expect(isBetweenUnix(1706659200, 1704067200, 1709155200)).toBe(false);
   });
 });
+
+describe("isBetweenUnix with an unrecognised epochUnit", () => {
+  // isValidUnixUnit defines the domain ("seconds" | "milliseconds"): any other value is invalid
+  // input and returns the sentinel, never a silent read as milliseconds.
+  it.each`
+    epochUnit
+    ${"second"}
+    ${"SECONDS"}
+    ${"ms"}
+    ${""}
+    ${1000}
+  `("returns false for epochUnit $epochUnit", ({ epochUnit }) => {
+    expect(
+      isBetweenUnix(1_706_659_200, 1_706_659_200, 1_706_659_200, {
+        epochUnit: epochUnit as never,
+        timeZone: "UTC",
+      }),
+    ).toBe(false);
+  });
+});

@@ -12,8 +12,8 @@ import { parseUnixEpochInterval, parseUnixEpochValue } from "../../internal";
  * - Returns `false` on invalid input: non-numeric types, empty strings, and values that are not
  *   safe integers (fractions, `NaN`, `±Infinity`, beyond ±(2^53 − 1)).
  *
- * @param intervalStart Unix epoch value (seconds or milliseconds) — outer interval start
- * @param intervalEnd Unix epoch value (seconds or milliseconds) — outer interval end
+ * @param intervalStart Unix epoch value, in the one unit all epoch arguments share — outer interval start
+ * @param intervalEnd Unix epoch value, in the one unit all epoch arguments share — outer interval end
  * @param pointOrStart Unix epoch value for the point (3-arg) or inner start (4-arg)
  * @param pointEnd optional Unix epoch value for the inner interval end (4-arg mode)
  * @returns true if the point or inner interval is contained, or false on invalid input

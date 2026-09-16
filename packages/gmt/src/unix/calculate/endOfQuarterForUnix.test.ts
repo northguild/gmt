@@ -113,3 +113,9 @@ describe("endOfQuarterForUnix at the first representable instant", () => {
     },
   );
 });
+
+describe("endOfQuarterForUnix invalid-input @example", () => {
+  it("returns null for endOfQuarterForUnix(NaN)", () => {
+    expect(endOfQuarterForUnix(NaN)).toBe(null);
+  });
+});

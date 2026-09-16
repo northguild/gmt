@@ -1,6 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { getSystemTimeZone } from "../../zoned/get";
 import { isValidTimeZone } from "../../zoned/validate";
+import { isValidUnixUnit } from "../validate/isValidUnixUnit";
 
 /**
  * Return true when the Unix timestamp is between start and end (inclusive by default).
@@ -36,6 +37,7 @@ export function isBetweenUnix(
   const inclusiveEnd = options?.inclusiveEnd ?? true;
 
   if (!timeZone || !isValidTimeZone(timeZone)) return false;
+  if (!isValidUnixUnit(epochUnit)) return false;
 
   if (
     !Number.isFinite(value) ||

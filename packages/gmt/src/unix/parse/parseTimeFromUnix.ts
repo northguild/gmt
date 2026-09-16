@@ -18,9 +18,10 @@ import { zonedDateTimeFrom } from "../../internal";
  * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA)
  * @returns ISO time string (e.g., "14:30:45") or "" on invalid input
  *
- * @example parseTimeFromUnix(1700000000000) // "04:13:20"
- * @example parseTimeFromUnix(1700000000, { epochUnit: "seconds" }) // "04:13:20"
- * @example parseTimeFromUnix(-86400, { epochUnit: "seconds" }) // "00:00:00"
+ * @example parseTimeFromUnix(1700000000000, { timeZone: "UTC" }) // "22:13:20"
+ * @example parseTimeFromUnix(1700000000, { epochUnit: "seconds", timeZone: "UTC" }) // "22:13:20"
+ * @example parseTimeFromUnix(-86400, { epochUnit: "seconds", timeZone: "UTC" }) // "00:00:00"
+ * @example parseTimeFromUnix(1.5) // "" (not an integer epoch)
  */
 export function parseTimeFromUnix(
   value: number,

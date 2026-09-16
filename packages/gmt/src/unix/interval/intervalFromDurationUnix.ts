@@ -4,6 +4,7 @@ import { addToZoned, resolveOverflow, subtractFromZoned } from "../../internal";
 import { resolveUnixTimeZone } from "../../internal/resolveUnixTimeZone";
 import { parseUnixEpochValue } from "../../internal/unixEpochValue";
 import type { Overflow } from "../../types";
+import { isValidUnixUnit } from "../validate/isValidUnixUnit";
 
 /**
  * Construct a Unix epoch interval from a single point plus an ISO 8601 duration, anchored at either end.
@@ -61,7 +62,7 @@ export function intervalFromDurationUnix(
   const epochUnit = options?.epochUnit ?? "milliseconds";
   const timeZone = resolveUnixTimeZone(options?.timeZone);
 
-  if (!timeZone) {
+  if (!timeZone || !isValidUnixUnit(epochUnit)) {
     return null;
   }
 

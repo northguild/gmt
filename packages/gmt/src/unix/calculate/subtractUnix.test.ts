@@ -93,3 +93,30 @@ describe("subtractUnix at the maximum instant", () => {
     },
   );
 });
+
+describe("subtractUnix with an unrecognised epochUnit", () => {
+  // isValidUnixUnit defines the domain ("seconds" | "milliseconds"): any other value is invalid
+  // input and returns the sentinel, never a silent read as milliseconds.
+  it.each`
+    epochUnit
+    ${"second"}
+    ${"SECONDS"}
+    ${"ms"}
+    ${""}
+    ${1000}
+  `("returns null for epochUnit $epochUnit", ({ epochUnit }) => {
+    expect(
+      subtractUnix(
+        1_706_659_200,
+        { days: 1 },
+        { epochUnit: epochUnit as never, timeZone: "UTC" },
+      ),
+    ).toBe(null);
+  });
+});
+
+describe("subtractUnix invalid-input @example", () => {
+  it("returns null for subtractUnix(1.5, { days: 1 })", () => {
+    expect(subtractUnix(1.5, { days: 1 })).toBe(null);
+  });
+});

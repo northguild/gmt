@@ -12,8 +12,9 @@ import type { UnixUnit } from "../validate";
  * @returns Year (YYYY) or "" on invalid input
  *
  * @example parseYearFromUnix(1700000000000) // "2023"
- * @example parseYearFromUnix(1704067200000, { epochUnit: "milliseconds" }) // "2024"
+ * @example parseYearFromUnix(1704067200000, { epochUnit: "milliseconds", timeZone: "UTC" }) // "2024"
  * @example parseYearFromUnix(-86400, { epochUnit: "seconds" }) // "1969"
+ * @example parseYearFromUnix("") // "" (a blank string is not epoch 0)
  */
 export function parseYearFromUnix(
   value: number | string,

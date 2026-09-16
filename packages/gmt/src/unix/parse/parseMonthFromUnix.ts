@@ -11,9 +11,10 @@ import type { UnixUnit } from "../validate";
  * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA)
  * @returns Month (01-12) or "" on invalid input
  *
- * @example parseMonthFromUnix(1700000000000) // "09"
- * @example parseMonthFromUnix(1704067200000) // "01"
+ * @example parseMonthFromUnix(1700000000000, { timeZone: "UTC" }) // "11"
+ * @example parseMonthFromUnix(1704067200000, { timeZone: "UTC" }) // "01"
  * @example parseMonthFromUnix(-86400, { epochUnit: "seconds" }) // "12"
+ * @example parseMonthFromUnix("") // "" (a blank string is not epoch 0)
  */
 export function parseMonthFromUnix(
   value: number | string,

@@ -3,6 +3,7 @@ import { resolveOverflow, withZonedFields } from "../../internal";
 import type { Disambiguation, Offset, Overflow } from "../../types";
 import { getSystemTimeZone } from "../../zoned/get";
 import { isValidTimeZone } from "../../zoned/validate";
+import { isValidUnixUnit } from "../validate/isValidUnixUnit";
 
 /**
  * Return a Unix epoch value with the given `fields` set on `value`, interpreted in `timeZone`.
@@ -45,6 +46,7 @@ export function setUnix(
   const timeZone = options?.timeZone ?? getSystemTimeZone();
 
   if (!timeZone || !isValidTimeZone(timeZone)) return null;
+  if (!isValidUnixUnit(epochUnit)) return null;
   if (!Number.isFinite(value) || !Number.isInteger(value)) return null;
 
   const overflow = resolveOverflow(options?.overflow);

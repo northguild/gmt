@@ -6,6 +6,7 @@ import {
   type UnixUnit,
 } from "../validate";
 import { zonedDateTimeFrom } from "../../internal";
+import { coerceUnixEpochNumber } from "../../internal/unixEpochValue";
 
 /**
  * Return the day of week (1-7) from a unix epoch value.
@@ -17,14 +18,15 @@ import { zonedDateTimeFrom } from "../../internal";
  * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA)
  * @returns Day of week (1-7) or null on invalid input
  *
- * @example parseDayOfWeekFromUnix(1704067200000) // 1
- * @example parseDayOfWeekFromUnix(-86400, { epochUnit: "seconds" }) // 2
+ * @example parseDayOfWeekFromUnix(1704067200000, { timeZone: "UTC" }) // 1
+ * @example parseDayOfWeekFromUnix(-86400, { epochUnit: "seconds", timeZone: "UTC" }) // 3
+ * @example parseDayOfWeekFromUnix("") // null (a blank string is not epoch 0)
  */
 export function parseDayOfWeekFromUnix(
   value: number | string,
   options?: { epochUnit?: UnixUnit; timeZone?: string },
 ): number | null {
-  const numValue = typeof value === "string" ? Number(value) : value;
+  const numValue = coerceUnixEpochNumber(value);
   const epochUnit = options?.epochUnit ?? "milliseconds";
 
   if (epochUnit === "seconds") {

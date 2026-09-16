@@ -238,3 +238,29 @@ describe("diffUnix at the minimum instant", () => {
     },
   );
 });
+
+describe("diffUnix with an unrecognised epochUnit", () => {
+  // isValidUnixUnit defines the domain ("seconds" | "milliseconds"): any other value is invalid
+  // input and returns the sentinel, never a silent read as milliseconds.
+  it.each`
+    epochUnit
+    ${"second"}
+    ${"SECONDS"}
+    ${"ms"}
+    ${""}
+    ${1000}
+  `("returns null for epochUnit $epochUnit", ({ epochUnit }) => {
+    expect(
+      diffUnix(1_706_659_200, 1_706_659_200, "days", {
+        epochUnit: epochUnit as never,
+        timeZone: "UTC",
+      }),
+    ).toBe(null);
+  });
+});
+
+describe("diffUnix invalid-input @example", () => {
+  it('returns null for diffUnix(NaN, 0, "days")', () => {
+    expect(diffUnix(NaN, 0, "days")).toBe(null);
+  });
+});

@@ -1,4 +1,5 @@
 import { parseUnixEpochInterval } from "../../internal";
+import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 
 /**
  * Split a Unix epoch interval into `n` equal-length sub-intervals.
@@ -12,10 +13,14 @@ import { parseUnixEpochInterval } from "../../internal";
  * - Returns `[]` when `n` is not a positive integer, or on invalid input (`start`/`end` that is
  *   not a safe integer or numeric string of one — fractions, empty strings and values beyond
  *   ±(2^53 − 1) are invalid — or `start > end`).
+ * - `options.maxPieces` (positive safe integer, default `1_000_000`) bounds the output: when `n`
+ *   exceeds it, or exceeds the longest possible array (2^32 - 1), the function returns `[]`
+ *   before building any piece. An invalid `maxPieces` also returns `[]`.
  *
- * @param start Unix epoch value (seconds or milliseconds) — interval start
- * @param end Unix epoch value (seconds or milliseconds) — interval end
+ * @param start Unix epoch value, in the one unit all epoch arguments share — interval start
+ * @param end Unix epoch value, in the one unit all epoch arguments share — interval end
  * @param n number of equal sub-intervals to produce (positive integer)
+ * @param options optional: `maxPieces` (positive safe integer, default `1_000_000`)
  * @returns array of `n` `{ start, end }` records, or `[]` on invalid input
  *
  * @example intervalDivideEquallyUnix(0, 90000000, 3) // [{ start: 0, end: 30000000 }, { start: 30000000, end: 60000000 }, { start: 60000000, end: 90000000 }]
@@ -23,13 +28,22 @@ import { parseUnixEpochInterval } from "../../internal";
  * @example intervalDivideEquallyUnix(0, 90000000, 1) // [{ start: 0, end: 90000000 }]
  * @example intervalDivideEquallyUnix(0, 90000000, 0) // []
  * @example intervalDivideEquallyUnix(NaN, 90000000, 3) // []
+ * @example intervalDivideEquallyUnix(0, 90000000, 3, { maxPieces: 2 }) // [] (3 pieces exceed the limit)
+ * @example intervalDivideEquallyUnix(0, 90000000, 3, { maxPieces: 3 }) // [{ start: 0, end: 30000000 }, { start: 30000000, end: 60000000 }, { start: 60000000, end: 90000000 }]
  */
 export function intervalDivideEquallyUnix(
   start: number | string,
   end: number | string,
   n: number,
+  options?: { maxPieces?: number },
 ): Array<{ start: number; end: number }> {
   if (typeof n !== "number" || !Number.isInteger(n) || n <= 0) {
+    return [];
+  }
+
+  const maxPieces = resolveMaxPieces(options);
+
+  if (maxPieces === null || exceedsPieceLimit(n, maxPieces)) {
     return [];
   }
 

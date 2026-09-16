@@ -590,3 +590,24 @@ describe("formatRelativeUnix months in the first month of the range", () => {
     },
   );
 });
+
+describe("formatRelativeUnix with an unrecognised epochUnit", () => {
+  // isValidUnixUnit defines the domain ("seconds" | "milliseconds"): any other value is invalid
+  // input and returns the sentinel, never a silent read as milliseconds.
+  it.each`
+    epochUnit
+    ${"second"}
+    ${"SECONDS"}
+    ${"ms"}
+    ${""}
+    ${1000}
+  `('returns "" for epochUnit $epochUnit', ({ epochUnit }) => {
+    expect(
+      formatRelativeUnix(1_706_659_200, "en-US", {
+        epochUnit: epochUnit as never,
+        reference: 1_706_659_200,
+        timeZone: "UTC",
+      }),
+    ).toBe("");
+  });
+});

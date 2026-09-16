@@ -52,7 +52,7 @@ describe("parseUnitFromUnix", () => {
     ${1709164800}    | ${"seconds"}      | ${"2024"}
     ${1704067200000} | ${"milliseconds"} | ${"2024"}
   `(
-    "returns $expected for $value with epochUnit $epochUnit",
+    "returns $expected for $value in milliseconds and seconds",
     ({ value, epochUnit, expected }) => {
       expect(
         parseUnitFromUnix(value as never, "year", {
@@ -86,4 +86,61 @@ describe("parseUnitFromUnix", () => {
     const result = parseUnitFromUnix(battleTestLeapYearUnix, "year");
     expect(result).toBe("");
   });
+});
+
+describe("parseUnitFromUnix with a blank epoch string", () => {
+  // Number("") and Number("   ") are 0 (ECMA-262 StringToNumber), a coercion artefact: a blank
+  // string holds no epoch value (POSIX XBD 4.19 defines an integer), so every unit returns "".
+  it.each`
+    unit             | value
+    ${"year"}        | ${""}
+    ${"year"}        | ${" \n\t "}
+    ${"month"}       | ${""}
+    ${"month"}       | ${" \n\t "}
+    ${"week"}        | ${""}
+    ${"week"}        | ${" \n\t "}
+    ${"day"}         | ${""}
+    ${"day"}         | ${" \n\t "}
+    ${"dayOfWeek"}   | ${""}
+    ${"dayOfWeek"}   | ${" \n\t "}
+    ${"hour"}        | ${""}
+    ${"hour"}        | ${" \n\t "}
+    ${"minute"}      | ${""}
+    ${"minute"}      | ${" \n\t "}
+    ${"second"}      | ${""}
+    ${"second"}      | ${" \n\t "}
+    ${"millisecond"} | ${""}
+    ${"millisecond"} | ${" \n\t "}
+    ${"microsecond"} | ${""}
+    ${"microsecond"} | ${" \n\t "}
+    ${"nanosecond"}  | ${""}
+    ${"nanosecond"}  | ${" \n\t "}
+  `('returns "" for $unit from blank string $value', ({ unit, value }) => {
+    expect(parseUnitFromUnix(value, unit, { timeZone: "UTC" })).toBe("");
+  });
+});
+
+describe("parseUnitFromUnix invalid-input @example", () => {
+  it('returns "" for parseUnitFromUnix("", "year")', () => {
+    expect(parseUnitFromUnix("", "year")).toBe("");
+  });
+});
+
+// ISO 8601 week of an expanded or negative year. The Gregorian calendar repeats every 400 years:
+// +010000-01-01 falls on the weekday of 2000-01-01 (Saturday), so it is in week 52 of 9999
+// (like 1999-W52); -000001-01-01 falls on the weekday of 1999-01-01 (Friday), so it is in week 53
+// of -2 (like 1998-W53).
+describe("parseUnitFromUnix week with a year outside 0000-9999", () => {
+  it.each`
+    value              | iso                          | expected
+    ${253402300800000} | ${"+010000-01-01T00:00:00Z"} | ${"52"}
+    ${-62198755200000} | ${"-000001-01-01T00:00:00Z"} | ${"53"}
+  `(
+    "returns ISO week $expected for $value ms ($iso) in UTC",
+    ({ value, expected }) => {
+      expect(parseUnitFromUnix(value, "week", { timeZone: "UTC" })).toBe(
+        expected,
+      );
+    },
+  );
 });

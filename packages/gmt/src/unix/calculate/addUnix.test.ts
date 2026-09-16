@@ -72,3 +72,30 @@ describe("addUnix at the maximum instant", () => {
     },
   );
 });
+
+describe("addUnix with an unrecognised epochUnit", () => {
+  // isValidUnixUnit defines the domain ("seconds" | "milliseconds"): any other value is invalid
+  // input and returns the sentinel, never a silent read as milliseconds.
+  it.each`
+    epochUnit
+    ${"second"}
+    ${"SECONDS"}
+    ${"ms"}
+    ${""}
+    ${1000}
+  `("returns null for epochUnit $epochUnit", ({ epochUnit }) => {
+    expect(
+      addUnix(
+        1_706_659_200,
+        { days: 1 },
+        { epochUnit: epochUnit as never, timeZone: "UTC" },
+      ),
+    ).toBe(null);
+  });
+});
+
+describe("addUnix invalid-input @example", () => {
+  it("returns null for addUnix(1.5, { days: 1 })", () => {
+    expect(addUnix(1.5, { days: 1 })).toBe(null);
+  });
+});

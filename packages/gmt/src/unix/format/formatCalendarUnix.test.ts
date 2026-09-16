@@ -6,7 +6,10 @@ import {
   MustTestDstTimeZones,
 } from "../../test";
 import { mockTemporalNowInstantThrow } from "../../test/mocks";
-import { formatCalendarUnix } from "./formatCalendarUnix";
+import {
+  formatCalendarUnix,
+  type FormatCalendarUnixOptions,
+} from "./formatCalendarUnix";
 
 const REF_MS = Date.UTC(2024, 2, 15, 13, 0); // 2024-03-15T09:00:00-04:00[America/New_York]
 const VAL_MS = Date.UTC(2024, 2, 16, 18, 30); // 2024-03-16T14:30:00-04:00[America/New_York]
@@ -251,5 +254,57 @@ describe("formatCalendarUnix", () => {
       mockTemporalNowInstantThrow();
       expect(formatCalendarUnix(VAL_MS, MustTestLocales.enUS)).toBe("");
     });
+  });
+});
+
+describe("formatCalendarUnix with an unrecognised epochUnit", () => {
+  // isValidUnixUnit defines the domain ("seconds" | "milliseconds"): any other value is invalid
+  // input and returns the sentinel, never a silent read as milliseconds.
+  it.each`
+    epochUnit
+    ${"second"}
+    ${"SECONDS"}
+    ${"ms"}
+    ${""}
+    ${1000}
+  `('returns "" for epochUnit $epochUnit', ({ epochUnit }) => {
+    expect(
+      formatCalendarUnix(1_706_659_200, "en-US", {
+        epochUnit: epochUnit as never,
+        reference: 1_706_659_200,
+        timeZone: "UTC",
+      }),
+    ).toBe("");
+  });
+});
+
+describe("FormatCalendarUnixOptions declares only the options formatCalendarUnix reads", () => {
+  // 1710772200000 is 2024-03-18T14:30Z and 1710685000000 is 2024-03-17T14:16:40Z, one UTC
+  // calendar day apart. style, numeric, largestUnit and roundingMethod were never read, so they
+  // are not members: each is a type error and changes nothing at runtime.
+  it("rejects style, numeric, largestUnit and roundingMethod and still renders tomorrow at 2:30 PM", () => {
+    type Options = FormatCalendarUnixOptions;
+    const base: Options = { reference: 1710685000000, timeZone: "UTC" };
+    // @ts-expect-error style is not a FormatCalendarUnixOptions member
+    const style: Options = { ...base, style: "narrow" };
+    // @ts-expect-error numeric is not a FormatCalendarUnixOptions member
+    const numeric: Options = { ...base, numeric: "always" };
+    // @ts-expect-error largestUnit is not a FormatCalendarUnixOptions member
+    const largest: Options = { ...base, largestUnit: "week" };
+    // @ts-expect-error roundingMethod is not a FormatCalendarUnixOptions member
+    const rounding: Options = { ...base, roundingMethod: "ceil" };
+
+    expect(formatCalendarUnix(1710772200000, "en-US", style)).toBe(
+      "tomorrow at 2:30 PM",
+    );
+    expect(formatCalendarUnix(1710772200000, "en-US", numeric)).toBe(
+      "tomorrow at 2:30 PM",
+    );
+    expect(formatCalendarUnix(1710772200000, "en-US", largest)).toBe(
+      "tomorrow at 2:30 PM",
+    );
+    expect(formatCalendarUnix(1710772200000, "en-US", rounding)).toBe(
+      "tomorrow at 2:30 PM",
+    );
   });
 });

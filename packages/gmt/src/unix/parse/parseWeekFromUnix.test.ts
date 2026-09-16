@@ -36,7 +36,7 @@ describe("parseWeekFromUnix", () => {
     ${1709164800}    | ${"seconds"}      | ${9}
     ${1704067200000} | ${"milliseconds"} | ${1}
   `(
-    "returns $expected for $value with epochUnit $epochUnit",
+    "returns $expected for $value in milliseconds and seconds",
     ({ value, epochUnit, expected }) => {
       expect(
         parseWeekFromUnix(value as never, { epochUnit: epochUnit as never }),
@@ -73,4 +73,47 @@ describe("parseWeekFromUnix", () => {
     const result = parseWeekFromUnix(epochMs);
     expect(result).toBeNull();
   });
+});
+
+describe("parseWeekFromUnix with a blank epoch string", () => {
+  // Number("") and Number("   ") are 0 (ECMA-262 StringToNumber), a coercion artefact: a blank
+  // string holds no epoch value (POSIX XBD 4.19 defines an integer), so it is invalid input.
+  it.each`
+    label                | value
+    ${"empty"}           | ${""}
+    ${"spaces"}          | ${"   "}
+    ${"newline and tab"} | ${"\n\t"}
+    ${"no-break space"}  | ${"\u00a0"}
+  `(
+    "returns null for a $label string in milliseconds and seconds",
+    ({ value }) => {
+      expect(parseWeekFromUnix(value, { timeZone: "UTC" })).toBe(null);
+      expect(
+        parseWeekFromUnix(value, { epochUnit: "seconds", timeZone: "UTC" }),
+      ).toBe(null);
+    },
+  );
+});
+
+describe("parseWeekFromUnix invalid-input @example", () => {
+  it('returns null for parseWeekFromUnix("")', () => {
+    expect(parseWeekFromUnix("")).toBe(null);
+  });
+});
+
+// ISO 8601 week of an expanded or negative year. The Gregorian calendar repeats every 400 years:
+// +010000-01-01 falls on the weekday of 2000-01-01 (Saturday), so it is in week 52 of 9999
+// (like 1999-W52); -000001-01-01 falls on the weekday of 1999-01-01 (Friday), so it is in week 53
+// of -2 (like 1998-W53).
+describe("parseWeekFromUnix with a year outside 0000-9999", () => {
+  it.each`
+    value              | iso                          | expected
+    ${253402300800000} | ${"+010000-01-01T00:00:00Z"} | ${52}
+    ${-62198755200000} | ${"-000001-01-01T00:00:00Z"} | ${53}
+  `(
+    "returns ISO week $expected for $value ms ($iso) in UTC",
+    ({ value, expected }) => {
+      expect(parseWeekFromUnix(value, { timeZone: "UTC" })).toBe(expected);
+    },
+  );
 });

@@ -11,8 +11,9 @@ import type { UnixUnit } from "../validate";
  * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA)
  * @returns Day (01-31) or "" on invalid input
  *
- * @example parseDayFromUnix(1700000000000) // "15"
- * @example parseDayFromUnix(-86400, { epochUnit: "seconds" }) // "31"
+ * @example parseDayFromUnix(1700000000000, { timeZone: "UTC" }) // "14"
+ * @example parseDayFromUnix(-86400, { epochUnit: "seconds", timeZone: "UTC" }) // "31"
+ * @example parseDayFromUnix("") // "" (a blank string is not epoch 0)
  */
 export function parseDayFromUnix(
   value: number | string,

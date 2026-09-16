@@ -3,6 +3,8 @@ export * from "./parseDayFromUnix";
 export * from "./parseDayOfWeekFromUnix";
 export * from "./parseHourFromUnix";
 export * from "./parseMicrosecondFromUnix";
+export * from "./parseMillisecondFromUnix";
+export * from "./parseMinuteFromUnix";
 export * from "./parseMonthFromUnix";
 export * from "./parseNanosecondFromUnix";
 export * from "./parseSecondFromUnix";

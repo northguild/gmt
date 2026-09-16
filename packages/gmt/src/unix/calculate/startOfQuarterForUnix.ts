@@ -1,5 +1,5 @@
 import type { Disambiguation, Offset } from "../../types";
-import { startOrEndOfUnix } from "./startOrEndOfUnix";
+import { startOrEndOfUnix } from "../../internal/startOrEndOfUnix";
 
 /**
  * Return the start of the quarter for a Unix timestamp.
@@ -18,6 +18,7 @@ import { startOrEndOfUnix } from "./startOrEndOfUnix";
  * @example startOfQuarterForUnix(1715776496789, { timeZone: "UTC" }) // 1711929600000 (2024-05-15T12:34:56.789Z; the milliseconds are reset too)
  * @example startOfQuarterForUnix(-86400000, { timeZone: "UTC" }) // -7948800000 (1969-12-31 is in Q4, which starts Oct 1)
  * @example startOfQuarterForUnix(276046200000, { timeZone: "Africa/Tunis", disambiguation: "later" }) // 276040800000 (the first pass of Q4 1978's repeated first hour; the deprecated option is ignored)
+ * @example startOfQuarterForUnix(NaN) // null
  */
 export function startOfQuarterForUnix(
   value: number,

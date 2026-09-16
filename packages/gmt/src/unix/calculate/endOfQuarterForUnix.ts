@@ -1,5 +1,5 @@
 import type { Disambiguation, Offset } from "../../types";
-import { startOrEndOfUnix } from "./startOrEndOfUnix";
+import { startOrEndOfUnix } from "../../internal/startOrEndOfUnix";
 
 /**
  * Return the end of the quarter for a Unix timestamp.
@@ -18,6 +18,7 @@ import { startOrEndOfUnix } from "./startOrEndOfUnix";
  * @example endOfQuarterForUnix(-86400000, { timeZone: "UTC" }) // -1 (Q4 1969 ends Dec 31)
  * @example endOfQuarterForUnix(1285882200000, { timeZone: "Africa/Cairo" }) // 1285883999999 (the second pass of Q3 2010's repeated last hour; the quarter ends after it)
  * @example endOfQuarterForUnix(1285882200000, { timeZone: "Africa/Cairo", disambiguation: "compatible" }) // 1285883999999 (the deprecated option is ignored)
+ * @example endOfQuarterForUnix(NaN) // null
  */
 export function endOfQuarterForUnix(
   value: number,
