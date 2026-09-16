@@ -21,6 +21,7 @@ and [§ Git — Absolute Prohibitions](../AGENTS.md#git--absolute-prohibitions).
 | `researcher` | `.agents/researcher.md` | API docs lookup & legacy library comparisons          |
 | `tdd-dev`    | `.agents/tdd-dev.md`    | Vertical-slice test-first implementation              |
 | `tester`     | `.agents/tester.md`     | Coverage audit & gap expansion                        |
+| `gmt-reviewer` | `.agents/gmt-reviewer.md` | Standards & domain-convention review — read-only, findings to tdd-dev |
 | `finalizer`  | `.agents/finalizer.md`  | Story closure — changesets, READMEs, drafted messages |
 
 ## How delegation works per harness
@@ -36,13 +37,13 @@ and [§ Git — Absolute Prohibitions](../AGENTS.md#git--absolute-prohibitions).
 
 | Category                | Trigger                                                | Pipeline (after master → driver)                                                 | Changeset |
 | ----------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------- | --------- |
-| **A. New feature**      | New function, option, namespace or capability          | `architect` → (`researcher`) → `tdd-dev` → (`tester`) → `finalizer`              | `minor`   |
-| **B. Bug fix**          | Incorrect behaviour or a failing test                  | (`researcher` if a Temporal edge case) → `tdd-dev` → `tester` → `finalizer`      | `patch`   |
+| **A. New feature**      | New function, option, namespace or capability          | `architect` → (`researcher`) → `tdd-dev` → (`tester`) → `gmt-reviewer` → `finalizer` | `minor`   |
+| **B. Bug fix**          | Incorrect behaviour or a failing test                  | (`researcher` if a Temporal edge case) → `tdd-dev` → `tester` → `gmt-reviewer` → `finalizer` | `patch`   |
 | **C. Refactor**         | Restructure or rename internals, no behaviour change   | `tdd-dev` → `tester` → `finalizer` (drafted commit message only)                 | none      |
 | **D. Documentation**    | Docs, READMEs, JSDoc                                   | `finalizer` (documentation steps only)                                           | none      |
 | **E. Research**         | Temporal behaviour, library comparison, design options | `researcher` only — report back, do not implement unless asked                   | —         |
-| **F. Code review**      | Review existing code or a diff                         | the repo `/code-review` skill ([checklist](../context/code-review-checklist.md)) | —         |
-| **G. Direct execution** | Complete spec provided, just implement                 | `tdd-dev` → `finalizer`                                                          | per rule  |
+| **F. Code review**      | Review existing code or a diff                         | `gmt-reviewer`, which applies [the checklist](../context/code-review-checklist.md) first | —         |
+| **G. Direct execution** | Complete spec provided, just implement                 | `tdd-dev` → `gmt-reviewer` → `finalizer`                                         | per rule  |
 
 Changeset levels follow the one [changeset rule](../context/coding-standards.md#changesets).
 
@@ -54,20 +55,25 @@ Notes per category:
 - **B.** Skip `architect` — the bug report scopes the work. `tdd-dev` records the failing repro
   before the fix.
 - **C.** Skip `architect`, `researcher` and `finalizer`'s release steps.
-- **F.** In Claude Code, the built-in `/code-review` may shadow the repo skill; if so, apply the
-  checklist file directly.
+- **F.** In Claude Code, the built-in `/code-review` may shadow the repo skill; `gmt-reviewer`
+  applies [context/code-review-checklist.md](../context/code-review-checklist.md) directly
+  either way, so the shadowing does not change what runs.
 
 **Small-story optimization.** For trivial stories (single function, < 50 lines, no new
 namespace, no locale-awareness), skip `architect` and `tester` and tell the user you did.
+**Never skip `gmt-reviewer`.** Correctness does not scale with story size — a wrong constant is
+the same size as a right one.
 
 ## Orchestration Rules
 
 1. **Load each specialist's persona file** (`.agents/<name>.md`) before invoking it.
 2. **Pass artifacts between agents.** The architect's spec is tdd-dev's input; tdd-dev's output
-   is tester's audit target; tester's gap report is tdd-dev's fix list.
+   is tester's audit target; tester's gap report is tdd-dev's fix list; gmt-reviewer's findings
+   are tdd-dev's fix list.
 3. **Enforce the core rules** at every stage.
-4. **Iteration cap (the only place it is defined):** the `tdd-dev` → `tester` loop runs at most
-   **2 iterations**. After the second pass, report remaining gaps to the user instead of looping.
+4. **Iteration cap (the only place it is defined):** the fix loops — `tdd-dev` → `tester` and
+   `tdd-dev` → `gmt-reviewer` — each run at most **2 iterations**. After the second pass, report
+   remaining gaps to the user instead of looping.
 5. **Escalate blockers.** Ambiguous spec, design conflict, or tests that cannot pass: stop and
    report to the user with full context.
 6. **Zero known bugs.** A defect found at any stage is fixed in the same story before the pipeline moves on. It is never deferred, pinned with `it.fails`, skipped, or documented as known, and `finalizer` refuses to close a story that carries one ([AGENTS.md Core Rule 12](../AGENTS.md#core-rules-quick-reference)).

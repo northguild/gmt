@@ -39,14 +39,17 @@ commit, branch, push or open PRs, and neither does anyone you delegate to.
 1. If the plan needs Temporal API research or a legacy-library comparison → `researcher`.
 2. `tdd-dev` for the vertical-slice test + implementation cycle.
 3. `tester` to audit coverage (feedback loop, capped — see [master.md § Orchestration Rules](./master.md#orchestration-rules)).
+3b. `gmt-reviewer` for the standards and domain-convention pass — read-only, findings loop back
+    to `tdd-dev` (same cap as step 3). Never skipped, including for trivial stories.
 4. `finalizer` to close the story.
 
 For trivial stories (single function, < 50 lines, no new namespace, no locale-awareness), skip
-steps 1 and 3.
+steps 1 and 3. **Never skip step 3b** — correctness does not scale with story size.
 
-**Code review** uses the repo's `/code-review` skill, which applies
-[context/code-review-checklist.md](../context/code-review-checklist.md). Additional test
-engineering goes to `tester`; documentation goes to `finalizer`. There are no other agents.
+**Code review** is [`gmt-reviewer`](./gmt-reviewer.md), which applies
+[context/code-review-checklist.md](../context/code-review-checklist.md) first, then the
+standards-conformance and domain-convention layers nothing else covers. Additional test
+engineering goes to `tester`; documentation goes to `finalizer`.
 
 ## Inline mode
 
@@ -69,6 +72,12 @@ If the work is non-trivial (multiple edge cases, locale-aware, timezone-sensitiv
 feel thin, adopt the [`tester`](./tester.md) role. Do not modify implementation files. If gaps
 are found, return to Step 2 with the targeted list.
 
+### Step 3b — Standards review
+
+Adopt the [`gmt-reviewer`](./gmt-reviewer.md) role. Read-only — do not modify any file. Each
+finding names its source and the oracle that reproduced it. Never skipped. If a blocking
+finding is open, return to Step 2 with the list.
+
 ### Step 4 — Story closure
 
 Adopt the [`finalizer`](./finalizer.md) role and follow its workflow: skills, changeset (per the
@@ -80,7 +89,7 @@ open the PR. Never run `changeset version`, `changeset publish`, `npm publish` o
 
 ## Zero known bugs
 
-A defect reported by any agent (`tdd-dev`, `tester`, `finalizer`, a review) is a blocker for the story it was found in. Route it to `tdd-dev` and get it fixed before the next pipeline step runs. Never defer it to another story, pin it with `it.fails`, skip it, or document it as known. `finalizer` does not run while one is open. See [AGENTS.md Core Rule 12](../AGENTS.md#core-rules-quick-reference).
+A defect reported by any agent (`tdd-dev`, `tester`, `gmt-reviewer`, `finalizer`) is a blocker for the story it was found in. Route it to `tdd-dev` and get it fixed before the next pipeline step runs. Never defer it to another story, pin it with `it.fails`, skip it, or document it as known. `finalizer` does not run while one is open. See [AGENTS.md Core Rule 12](../AGENTS.md#core-rules-quick-reference).
 
 ## Blocker escalation
 

@@ -25,11 +25,11 @@ unstaged and report it ready.
 
 **Testing patterns:** `it.each` template literals (never array syntax, never `forEach`). Pre-built mocks from `packages/gmt/src/test/mocks`. `battleTestTimeZones` / `MustTestDstTimeZones` from `packages/gmt/src/test/timeZoneMatrix.ts` (no literal zone tables). `MustTestLocales` named constants. `expectOneOfIcu` / `expectDateTimeEqual` / `expectOneOfDateTimeIcu` from `src/test/icuVariants.ts`. Canonical values from [test-matrix.md](../context/testing-standards/references/test-matrix.md), written inline — they are values, not exports. Full detail: [testing standards](../context/testing-standards/references/index.md).
 
-**Legacy library awareness:** Luxon, date-fns, Moment.js — enough to compare API design and edge-case handling.
+**Legacy library awareness:** Luxon, date-fns, Moment.js — enough to compare API design and edge-case handling. **Never as authority.** A rule is justified by a specification or standard, never by what a library chose.
 
 ## Workflow — vertical slices
 
-1. **Read** the spec or bug list, the nearest analog in `packages/gmt/src` (for a new `plain/calculate/` function, `plain/calculate/addBusinessDays.ts`), and the standards above. Match file structure, error-handling shape and JSDoc format exactly.
+1. **Read** the spec or bug list, the nearest analog in `packages/gmt/src` (for a new `plain/calculate/` function, `plain/calculate/addBusinessDays.ts`), and the standards above. Match file structure, error-handling shape and JSDoc format exactly. A domain constant (a day count, a threshold, a table value) comes from the spec's [Authority table](../context/reference/AUTHORITY_TABLE.md) — cite the clause in a comment beside the constant, not just in the spec.
 
 2. **List the slices** before writing anything. One slice = one observable behaviour at the function's public seam:
    - **Bug fix:** one slice per reported repro case.
@@ -37,7 +37,7 @@ unstaged and report it ready.
 
 3. **For each slice, in order.** Governing rule: [Know the correct value before writing the assertion](../context/testing-standards/references/index.md#know-the-correct-value-before-writing-the-assertion). You write the function to meet the expectation, never the expectation to meet the function.
    1. **Decide what SHOULD be returned, before any code runs.** Derive it from the spec, the story's decisions and the governing standard, and be able to say why in one line. When that reason isn't obvious from the inputs, put it in the row name or a comment. A spec table's value counts only once you have re-derived it yourself.
-   2. **Check the arithmetic independently.** Run a plain `@js-temporal/polyfill` computation of the answer (`node -e` or a scratchpad script), or a trusted oracle (`floorToZone`/`bucketRange` for zone boundaries). Never the code under test, never a reference implementation written for this task, never memory.
+   2. **Check the arithmetic independently.** A plain `@js-temporal/polyfill` computation (`node -e` or a scratchpad script) is a check, not the answer — its catalogued defects are in [js-temporal-polyfill-bugs.md](../context/domination/js-temporal-polyfill-bugs.md). For the answer, use the spec text, a test262 file, or `pnpm compat:oracle` — see [gmt-reviewer § Oracles you may use](./gmt-reviewer.md) for the full list. Never the code under test; never another GMT function (`floorToZone` and `bucketRange` run on the same `internal/zonedBucket.ts` you may be changing, so using either as an oracle for boundary code is circular); never a reference implementation written for this task; never memory.
    3. **Resolve every disagreement before writing the row.** If the derivation, the polyfill and the spec don't all agree, find which is wrong. If the rule itself looks wrong, stop and escalate. Never pick whichever value will pass.
    4. **Add the row or test.**
    5. **Run that test file and confirm it fails for the right reason.** Record the red output — for a bug fix this evidence is required in your handoff.
@@ -56,6 +56,11 @@ unstaged and report it ready.
 - `Temporal.*.from(value)` inside `try { … } catch { return sentinel }`.
 - Shared logic in `packages/gmt/src/internal/`, exported from `internal/index.ts`.
 - Sentinels per the [sentinel table](../context/coding-standards.md#api-contract).
+- A new workaround for a polyfill or ICU defect follows
+  `packages/gmt/src/internal/temporalCompat/README.md`: a repro in `repros.ts` that imports
+  only the polyfill, a lazy memoised probe in `capabilities.ts`, dormant when the probe passes,
+  computing the spec's answer so removal changes no output, and a removal trigger naming the
+  upstream commit that retires it.
 
 ## Duplication discipline
 
@@ -96,7 +101,7 @@ Suppression IDs (check with `npx fallow explain <issue-type>`):
 
 - Every slice has recorded red → green evidence.
 - Every `it.each` name embeds its distinguishing variables ([test-name standards](../context/testing-standards/references/index.md#test-name-standards)).
-- Every expected value was decided from the rule before the implementation existed, then confirmed with a plain polyfill computation or trusted oracle. None came from the code under test, a reference implementation, or an unverified spec table.
+- Every expected value was decided from the rule before the implementation existed, then checked against an oracle from [gmt-reviewer § Oracles you may use](./gmt-reviewer.md) — the polyfill alone is a check, never the answer. None came from the code under test, another GMT function, a reference implementation, or an unverified spec table.
 - No existing behaviour was pinned without first classifying it as intended or defect.
 - **Zero known bugs.** Every defect found, in new or existing code, was fixed in this run: red `it`, fix, green. Nothing was deferred, pinned or documented around. `node scripts/test-markers.mjs check` passes: no `.fails`/`.skip`/`.todo`/`.only`/`xit`, and no "known defect" notes. See [Zero known bugs](../context/testing-standards/references/index.md#zero-known-bugs).
 - The handoff lists every disagreement found (rule vs polyfill vs spec vs implementation) and how each was resolved.

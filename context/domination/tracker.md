@@ -195,8 +195,9 @@ Highest commercial value and the thinnest coverage in the original plan.
 - **Bundled reference data is opt-in only.** Holiday tables, leap seconds, curfews and FDP
   tables live behind a `…/data` subpath, never on the default import path, and each records
   its source, revision and validity window.
-- **Every local-to-instant conversion states its disambiguation policy** in JSDoc, using
-  `CORE-4`'s vocabulary. Ambiguous and nonexistent wall times are never resolved silently.
+- **Every local-to-instant conversion states its disambiguation policy** in JSDoc, using the
+  vocabulary in [LOCAL_TIME_RESOLUTION.md](../reference/LOCAL_TIME_RESOLUTION.md). Ambiguous
+  and nonexistent wall times are never resolved silently.
 - **Every function implementing a standard cites the clause it implements** in
   `## Design notes` — and the citation must be verifiable. See `RAI-23` for what happens when
   it is not.
@@ -210,6 +211,9 @@ Highest commercial value and the thinnest coverage in the original plan.
 - **No invented quantities.** If a value cannot be derived from the inputs, the function does
   not return it. Estimating processing times, drift from one sample, or limits from no table
   is out of scope by rule, not by omission.
+- **Every behaviour-changing story gets a standards review.** `gmt-reviewer` (read-only) runs
+  after `tdd-dev` and `tester` in categories A, B and G; its report goes in the PR's Validation
+  section; an open blocking finding blocks closure. It is what verifies the citations above.
 
 ---
 
