@@ -443,14 +443,21 @@ function buildPlaygroundSpec(
             sigParams.find((s) => s.name === p.name) ??
             sigParams.find((s) => s.name === `${p.name}Input`);
           const decl = sp?.valueDeclaration;
-          // `x?:`, `x: T = default`, or `x: T | undefined` — any form the
-          // example may legitimately omit as a trailing arg.
+          const last = sigParams.at(-1)?.valueDeclaration;
+          const restTuple =
+            !!last && ts.isParameter(last) && last.dotDotDotToken !== undefined;
+          // `x?:`, `x: T = default`, `x: T | undefined`, a rest parameter, or a
+          // documented element of a trailing rest tuple
+          // (`...input: [stepDays?: number, options?: …]`, which has no symbol of
+          // its own) — any form the example may legitimately omit as a trailing arg.
           const optional =
-            !!decl &&
-            ts.isParameter(decl) &&
-            (decl.questionToken !== undefined ||
-              decl.initializer !== undefined ||
-              !!(sp && sp.flags & ts.SymbolFlags.Optional));
+            (!sp && restTuple) ||
+            (!!decl &&
+              ts.isParameter(decl) &&
+              (decl.questionToken !== undefined ||
+                decl.initializer !== undefined ||
+                decl.dotDotDotToken !== undefined ||
+                !!(sp && sp.flags & ts.SymbolFlags.Optional)));
           return { name: p.name, type: p.type, optional };
         }),
         options: doc.options.map((o) => ({ name: o.name })),
