@@ -23,8 +23,8 @@ import { isValidZonedDateTime } from "../validate";
  * @param options Rounding options: smallestUnit, optional roundingIncrement, roundingMode
  * @returns Rounded ISO 8601 zoned datetime string, or "" on invalid input
  *
- * @example roundZoned("2024-06-15T12:34:56-05:00[America/New_York]", { smallestUnit: "hour" }) // "2024-06-15T13:00:00-05:00[America/New_York]"
- * @example roundZoned("2024-06-15T12:34:56-05:00[America/New_York]", { smallestUnit: "minute", roundingIncrement: 15 }) // "2024-06-15T12:45:00-05:00[America/New_York]"
+ * @example roundZoned("2024-06-15T12:34:56-04:00[America/New_York]", { smallestUnit: "hour" }) // "2024-06-15T13:00:00-04:00[America/New_York]"
+ * @example roundZoned("2024-06-15T12:34:56-04:00[America/New_York]", { smallestUnit: "minute", roundingIncrement: 15 }) // "2024-06-15T12:30:00-04:00[America/New_York]"
  * @example roundZoned("2024-09-29T03:50:00+13:45[Pacific/Chatham]", { smallestUnit: "hour", roundingMode: "trunc" }) // "2024-09-29T04:00:00+13:45[Pacific/Chatham]" (after the input — TC39 wall-clock rounding)
  * @example roundZoned("invalid", { smallestUnit: "hour" }) // ""
  */

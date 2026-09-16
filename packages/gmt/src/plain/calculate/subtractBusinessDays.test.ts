@@ -1,3 +1,4 @@
+import { battleTestTimeZones } from "../../test";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { subtractBusinessDays } from "./subtractBusinessDays";
 
@@ -196,6 +197,21 @@ describe("subtractBusinessDays", () => {
       expect(subtractBusinessDays("2024-07-03", amount)).toBe("");
       expect(subtractBusinessDays("2024-07-03", amount, usIndependence)).toBe(
         "",
+      );
+    },
+  );
+
+  // calendar.timeZone records locality; it never changes the walk for a local date.
+  it.each(battleTestTimeZones.map((timeZone) => ({ timeZone })))(
+    "walks the same way whatever calendar.timeZone says ($timeZone)",
+    ({ timeZone }) => {
+      const calendar = { ...usIndependence, timeZone };
+
+      expect(subtractBusinessDays("2024-07-05", 1, calendar)).toBe(
+        "2024-07-03",
+      );
+      expect(subtractBusinessDays("2024-07-05", -1, calendar)).toBe(
+        "2024-07-08",
       );
     },
   );

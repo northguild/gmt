@@ -1,3 +1,4 @@
+import { battleTestTimeZones } from "../../test";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { rollDate } from "./rollDate";
 
@@ -185,4 +186,24 @@ describe("rollDate", () => {
     mockTemporalPlainDateFromThrow();
     expect(rollDate("2024-05-31", "following", mayEndsClosed)).toBe("");
   });
+
+  // calendar.timeZone records locality; it never changes the roll for a local date. rollDate
+  // is the function most likely to grow a zone-aware branch, so every convention is swept.
+  it.each(battleTestTimeZones.map((timeZone) => ({ timeZone })))(
+    "rolls the same way whatever calendar.timeZone says ($timeZone)",
+    ({ timeZone }) => {
+      const calendar = { ...mayEndsClosed, timeZone };
+
+      expect(rollDate("2024-05-31", "following", calendar)).toBe("2024-06-03");
+      expect(rollDate("2024-05-31", "modifiedFollowing", calendar)).toBe(
+        "2024-05-30",
+      );
+      expect(rollDate("2024-05-31", "preceding", calendar)).toBe("2024-05-30");
+      expect(rollDate("2024-06-01", "modifiedPreceding", calendar)).toBe(
+        "2024-06-03",
+      );
+      expect(rollDate("2024-05-15", "endOfMonth", calendar)).toBe("2024-05-30");
+      expect(rollDate("2024-05-31", "none", calendar)).toBe("2024-05-31");
+    },
+  );
 });

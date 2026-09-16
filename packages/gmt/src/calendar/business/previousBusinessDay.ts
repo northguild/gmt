@@ -1,6 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
-import { parseBusinessCalendar, stepBusinessDates } from "../../internal";
-import { isValidDate } from "../../plain/validate";
+import { neighbourBusinessDayValue } from "../../internal";
 import type { BusinessCalendar } from "../../types";
 
 /**
@@ -35,22 +33,5 @@ export function previousBusinessDay(
   value: string,
   calendar: BusinessCalendar,
 ): string {
-  const resolved = parseBusinessCalendar(calendar);
-
-  if (!isValidDate(value) || resolved === null) {
-    return "";
-  }
-
-  try {
-    const result = stepBusinessDates(
-      Temporal.PlainDate.from(value),
-      -1,
-      1,
-      resolved,
-    );
-
-    return result === null ? "" : result.toString();
-  } catch {
-    return "";
-  }
+  return neighbourBusinessDayValue(value, -1, calendar);
 }

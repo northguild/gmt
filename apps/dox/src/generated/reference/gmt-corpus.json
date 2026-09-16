@@ -7634,9 +7634,26 @@
     "module": "validate",
     "kind": "function",
     "signature": "isValidDateDurationUnit(unit: string): unit is \"years\" | \"months\" | \"weeks\" | \"days\"",
-    "description": "",
+    "description": "Return true when `unit` is a valid DateDurationUnit.",
     "sourcePath": "packages/gmt/src/plain/validate/isValidDateDurationUnit.ts",
-    "examples": []
+    "examples": [
+      {
+        "call": "isValidDateDurationUnit(\"days\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidDateDurationUnit(\"months\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidDateDurationUnit(\"years\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidDateDurationUnit(\"invalid\")",
+        "result": "false"
+      }
+    ]
   },
   {
     "url": "/reference/plain/validate/isValidDateRange",
@@ -7737,9 +7754,26 @@
     "module": "validate",
     "kind": "function",
     "signature": "isValidDateTimeDurationUnit(unit: string): unit is keyof DurationLike",
-    "description": "",
+    "description": "Return true when `unit` is a valid DateTimeDurationUnit.",
     "sourcePath": "packages/gmt/src/plain/validate/isValidDateTimeDurationUnit.ts",
-    "examples": []
+    "examples": [
+      {
+        "call": "isValidDateTimeDurationUnit(\"days\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidDateTimeDurationUnit(\"hours\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidDateTimeDurationUnit(\"minutes\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidDateTimeDurationUnit(\"invalid\")",
+        "result": "false"
+      }
+    ]
   },
   {
     "url": "/reference/plain/validate/isValidDateTimeRange",
@@ -7948,9 +7982,26 @@
     "module": "validate",
     "kind": "function",
     "signature": "isValidTimeDurationUnit(unit: string): unit is \"hours\" | \"minutes\" | \"seconds\" | \"milliseconds\" | \"microseconds\" | \"nanoseconds\"",
-    "description": "",
+    "description": "Return true when `unit` is a valid TimeDurationUnit.",
     "sourcePath": "packages/gmt/src/plain/validate/isValidTimeDurationUnit.ts",
-    "examples": []
+    "examples": [
+      {
+        "call": "isValidTimeDurationUnit(\"hours\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidTimeDurationUnit(\"minutes\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidTimeDurationUnit(\"seconds\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidTimeDurationUnit(\"invalid\")",
+        "result": "false"
+      }
+    ]
   },
   {
     "url": "/reference/plain/validate/isValidTimeRange",
@@ -12678,8 +12729,8 @@
     "sourcePath": "packages/gmt/src/utc/format/formatRelativeUtc.ts",
     "examples": [
       {
-        "call": "formatRelativeUtc(\"2024-03-17T14:30:45+00:00[UTC]\", \"en-US\")",
-        "result": "\"2 years ago\""
+        "call": "formatRelativeUtc(\"2026-01-15T14:30:45Z\", \"en-US\", { reference: \"2026-04-15T14:30:45Z\" })",
+        "result": "\"90 days ago\""
       },
       {
         "call": "formatRelativeUtc(value, \"en-US\", { roundingMethod: \"floor\" })",
@@ -14392,12 +14443,12 @@
     "sourcePath": "packages/gmt/src/zoned/calculate/roundZoned.ts",
     "examples": [
       {
-        "call": "roundZoned(\"2024-06-15T12:34:56-05:00[America/New_York]\", { smallestUnit: \"hour\" })",
-        "result": "\"2024-06-15T13:00:00-05:00[America/New_York]\""
+        "call": "roundZoned(\"2024-06-15T12:34:56-04:00[America/New_York]\", { smallestUnit: \"hour\" })",
+        "result": "\"2024-06-15T13:00:00-04:00[America/New_York]\""
       },
       {
-        "call": "roundZoned(\"2024-06-15T12:34:56-05:00[America/New_York]\", { smallestUnit: \"minute\", roundingIncrement: 15 })",
-        "result": "\"2024-06-15T12:45:00-05:00[America/New_York]\""
+        "call": "roundZoned(\"2024-06-15T12:34:56-04:00[America/New_York]\", { smallestUnit: \"minute\", roundingIncrement: 15 })",
+        "result": "\"2024-06-15T12:30:00-04:00[America/New_York]\""
       },
       {
         "call": "roundZoned(\"2024-09-29T03:50:00+13:45[Pacific/Chatham]\", { smallestUnit: \"hour\", roundingMode: \"trunc\" })",
@@ -16593,9 +16644,18 @@
     "module": "parse",
     "kind": "function",
     "signature": "parseDateTimeFromZoned(value: string): string",
-    "description": "",
+    "description": "Parse a zoned datetime and return the plain local datetime portion as an ISO plain datetime string.",
     "sourcePath": "packages/gmt/src/zoned/parse/parseDateTimeFromZoned.ts",
-    "examples": []
+    "examples": [
+      {
+        "call": "parseDateTimeFromZoned(\"2024-02-29T12:34:56.789+00:00[UTC]\")",
+        "result": "\"2024-02-29T12:34:56.789\""
+      },
+      {
+        "call": "parseDateTimeFromZoned(\"invalid\")",
+        "result": "\"\""
+      }
+    ]
   },
   {
     "url": "/reference/zoned/parse/parseDayFromZoned",

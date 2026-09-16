@@ -13,7 +13,10 @@
  * The generator (`buildPlaygroundFields` in scripts/build-reference.ts) decides
  * which functions get this and emits `fields` on the template:
  *   - scalar fields: string / number / bigint / boolean / enum / units
- *   - list fields (repeatable rows): arrays of strings, numbers, or enum values
+ *   - expr fields: an object or array literal, edited as source and passed
+ *     through verbatim (a BusinessCalendar, an `{ start, end }` interval)
+ *   - list fields (repeatable rows): arrays of strings, numbers, enum values,
+ *     or object literals (`element: "expr"`)
  *   - intervals fields (repeatable start/end pairs): `{ start, end }[]`
  *   - `fields: []` — a no-arg function; just the call line + its live result
  *   - `objectArg` — `fn({ value1, value2 })`; fields are the object's keys
@@ -44,7 +47,9 @@ const { module: mod, fn: fnName, returnType, allowEmptyArray, fields } = templat
 const optionsSuffix = template.optionsSuffix ?? "";
 const objectArg = template.objectArg ?? false;
 
-const isBlock = (kind: string) => kind === "list" || kind === "intervals";
+const isList = (kind: string) => kind === "list" || kind === "intervals";
+/** Controls that need the full row width rather than a label-sized column. */
+const isWide = (kind: string) => isList(kind) || kind === "expr";
 ---
 
 <div
@@ -62,7 +67,7 @@ const isBlock = (kind: string) => kind === "list" || kind === "intervals";
         fields.length > 0 && (
           <div class="gmt-pf-fields">
             {fields.map((field) =>
-              isBlock(field.kind) ? (
+              isList(field.kind) ? (
                 <div
                   class="gmt-pf-list"
                   data-field={field.name}
@@ -100,7 +105,10 @@ const isBlock = (kind: string) => kind === "list" || kind === "intervals";
                           ) : (
                             <div class="gmt-pf-row">
                               <input
-                                class="gmt-input"
+                                class:list={[
+                                  "gmt-input",
+                                  field.element === "expr" && "gmt-pf-expr",
+                                ]}
                                 type={field.element === "number" ? "number" : "text"}
                                 data-role="value"
                                 value={item}
@@ -114,7 +122,11 @@ const isBlock = (kind: string) => kind === "list" || kind === "intervals";
                   <button class="gmt-pf-add" type="button" data-role="add">+ add</button>
                 </div>
               ) : (
-                <label class="gmt-label" data-field={field.name} data-kind={field.kind}>
+                <label
+                  class:list={["gmt-label", isWide(field.kind) && "gmt-pf-wide"]}
+                  data-field={field.name}
+                  data-kind={field.kind}
+                >
                   <span>
                     {field.name}
                     {field.optional && <span class="gmt-pf-opt"> ?</span>}
@@ -169,6 +181,17 @@ const isBlock = (kind: string) => kind === "list" || kind === "intervals";
                       data-role="value"
                       value={field.seed}
                       spellcheck="false"
+                    />
+                  )}
+
+                  {field.kind === "expr" && (
+                    <input
+                      class="gmt-input gmt-pf-expr"
+                      data-role="value"
+                      value={field.seed}
+                      spellcheck="false"
+                      autocapitalize="off"
+                      autocorrect="off"
                     />
                   )}
 
@@ -267,7 +290,8 @@ const isBlock = (kind: string) => kind === "list" || kind === "intervals";
       row.appendChild(sel);
     } else {
       const inp = document.createElement("input");
-      inp.className = "gmt-input";
+      inp.className =
+        element === "expr" ? "gmt-input gmt-pf-expr" : "gmt-input";
       if (element === "number") inp.type = "number";
       inp.dataset.role = "value";
       inp.spellcheck = false;
