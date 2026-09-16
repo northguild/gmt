@@ -13,7 +13,7 @@ import { getLargestTimeDurationUnit } from "./getLargestTimeDurationUnit";
  * per Temporal's DifferenceOptions — e.g. `{ smallestUnit: "minute", roundingMode: "halfExpand" }`
  * rounds the difference to the nearest minute before extracting the requested unit.
  * - When `units` is an array, `smallestUnit` must not be coarser than the largest unit in the
- *   array (e.g. `["minute", "second"]` with `smallestUnit: "hour"`) — this combination is
+ *   array (e.g. `["minutes", "seconds"]` with `smallestUnit: "hour"`) — this combination is
  *   rejected by Temporal and returns null, same as other invalid input.
  *
  * @param time1 ISO PlainTime string for the start
@@ -22,8 +22,8 @@ import { getLargestTimeDurationUnit } from "./getLargestTimeDurationUnit";
  * @param options optional: smallestUnit, roundingIncrement, roundingMode (Temporal.DifferenceOptions rounding controls)
  * @returns numeric difference in the requested unit, or null on invalid input
  *
- * @example diffTime("12:00:00", "14:30:00", "hour") // 2
- * @example diffTime("invalid", "14:30:00", "hour") // null
+ * @example diffTime("12:00:00", "14:30:00", "hours") // 2
+ * @example diffTime("invalid", "14:30:00", "hours") // null
  */
 export function diffTime(
   time1: string,

@@ -13,6 +13,19 @@ describe("startOfDate", () => {
     },
   );
 
+  // A PlainDate is already a whole day, so its day start is the date itself (as endOfDate's end is).
+  it.each`
+    value              | unit     | expected
+    ${"2024-02-29"}    | ${"day"} | ${"2024-02-29"}
+    ${"-271821-04-19"} | ${"day"} | ${"-271821-04-19"}
+    ${"+275760-09-13"} | ${"day"} | ${"+275760-09-13"}
+  `(
+    "returns $expected (the date itself) for value $value and unit $unit",
+    ({ value, unit, expected }) => {
+      expect(startOfDate(value, unit)).toBe(expected);
+    },
+  );
+
   it.each`
     value           | unit      | weekStartsOn | expected
     ${"2024-02-29"} | ${"week"} | ${undefined} | ${"2024-02-26"}

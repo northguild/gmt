@@ -86,6 +86,26 @@ describe("isValidCalendarDate", () => {
     },
   );
 
+  // coding-standards E1 rule 2: the grammar's calendar id is GMT's CalendarSystem, not every id
+  // Temporal knows. Accepting a Temporal-only id here while every re-emitting function rejects it
+  // would make the guard and the bodies disagree.
+  it.each`
+    value                              | gmtId
+    ${"0113-01-10[u-ca=iso8601]"}      | ${"gregorian"}
+    ${"0113-01-10[u-ca=gregory]"}      | ${"gregorian"}
+    ${"0113-01-10[u-ca=roc]"}          | ${"taiwan"}
+    ${"0113-01-10[u-ca=islamic-tbla]"} | ${"islamic-tabular"}
+    ${"0113-01-10[u-ca=islamicc]"}     | ${"islamic-civil"}
+    ${"0113-01-10[u-ca=islamic]"}      | ${"—"}
+    ${"0113-01-10[u-ca=islamic-rgsa]"} | ${"—"}
+    ${"0113-01-10[u-ca=ethioaa]"}      | ${"ethiopic-amete-alem"}
+  `(
+    "returns false for Temporal-only calendar id in $value (GMT id: $gmtId)",
+    ({ value }) => {
+      expect(isValidCalendarDate(value)).toBe(false);
+    },
+  );
+
   // test262 intl402/Temporal/PlainDate/from/extreme-dates.js: the Umm al-Qura table's first and last
   // non-approximated dates, 1300-M01-01 and 1500-M12-30 (era "ah"), read back unchanged.
   it.each`

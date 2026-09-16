@@ -4,6 +4,7 @@ import {
   parseCalendarDateValue,
 } from "../../internal";
 import { isValidDateInterval } from "./validate";
+import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 
 /**
  * Split a date interval into `n` equal-length sub-intervals.
@@ -21,10 +22,14 @@ import { isValidDateInterval } from "./validate";
  *   carry the *same* calendar tag (or both be bare ISO); a mismatch returns `[]` (E5 decision
  *   of record D4). Internal boundaries are computed in whole days (calendar-independent), then
  *   re-formatted in the shared calendar.
+ * - `options.maxPieces` (positive safe integer, default `1_000_000`) bounds the output: when `n`
+ *   exceeds it, or exceeds the longest possible array (2^32 - 1), the function returns `[]`
+ *   before building any piece. An invalid `maxPieces` also returns `[]`.
  *
  * @param start ISO PlainDate string for the interval start, optionally calendar-annotated
  * @param end ISO PlainDate string for the interval end, optionally calendar-annotated
  * @param n number of equal sub-intervals to produce (positive integer)
+ * @param options optional: `maxPieces` (positive safe integer, default `1_000_000`)
  * @returns array of `n` `{ start, end }` records, or `[]` on invalid input / mismatched calendars
  *
  * @example intervalDivideEquallyDate("2024-01-01", "2024-01-05", 4) // [{ start: "2024-01-01", end: "2024-01-02" }, { start: "2024-01-02", end: "2024-01-03" }, { start: "2024-01-03", end: "2024-01-04" }, { start: "2024-01-04", end: "2024-01-05" }]
@@ -33,13 +38,22 @@ import { isValidDateInterval } from "./validate";
  * @example intervalDivideEquallyDate("2024-01-01", "2024-01-01", 3) // [{ start: "2024-01-01", end: "2024-01-01" }, { start: "2024-01-01", end: "2024-01-01" }, { start: "2024-01-01", end: "2024-01-01" }]
  * @example intervalDivideEquallyDate("2024-01-01", "2024-01-10", 0) // []
  * @example intervalDivideEquallyDate("invalid", "2024-01-10", 3) // []
+ * @example intervalDivideEquallyDate("2024-01-01", "2024-01-10", 3, { maxPieces: 2 }) // [] (3 pieces exceed the limit)
+ * @example intervalDivideEquallyDate("2024-01-01", "2024-01-10", 3, { maxPieces: 3 }) // [{ start: "2024-01-01", end: "2024-01-04" }, { start: "2024-01-04", end: "2024-01-07" }, { start: "2024-01-07", end: "2024-01-10" }]
  */
 export function intervalDivideEquallyDate(
   start: string,
   end: string,
   n: number,
+  options?: { maxPieces?: number },
 ): Array<{ start: string; end: string }> {
   if (typeof n !== "number" || !Number.isInteger(n) || n <= 0) {
+    return [];
+  }
+
+  const maxPieces = resolveMaxPieces(options);
+
+  if (maxPieces === null || exceedsPieceLimit(n, maxPieces)) {
     return [];
   }
 

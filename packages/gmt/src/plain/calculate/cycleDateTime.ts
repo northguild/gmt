@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import {
   cycleFieldValue,
   dateCycleFieldBounds,
+  isValidAmount,
   timeCycleFieldBounds,
 } from "../../internal";
 import type { DateTimeCycleField, Overflow } from "../../types";
@@ -30,7 +31,7 @@ import { setDateTime } from "./setDateTime";
  * - `options.round` steps to the *next* multiple of `amount` in the direction of its sign
  *   (ceiling for positive, floor for negative) — not the nearest one. See `cycleDate`/`cycleTime`'s
  *   docs for worked examples.
- * - Returns "" for an invalid `value` or an invalid `field`.
+ * - Returns "" for an invalid `value`, an invalid `field`, or an `amount` that is not a finite number.
  *
  * @param value ISO PlainDateTime string
  * @param field the field to cycle: "year" | "month" | "day" | "hour" | "minute" | "second" | "millisecond" | "microsecond" | "nanosecond"
@@ -51,7 +52,13 @@ export function cycleDateTime(
   amount: number,
   options?: { round?: boolean; overflow?: Overflow },
 ): string {
-  if (!isValidDateTime(value) || !isValidDateTimeCycleField(field)) return "";
+  if (
+    !isValidDateTime(value) ||
+    !isValidDateTimeCycleField(field) ||
+    !isValidAmount(amount)
+  ) {
+    return "";
+  }
 
   try {
     const dateTime = Temporal.PlainDateTime.from(value);

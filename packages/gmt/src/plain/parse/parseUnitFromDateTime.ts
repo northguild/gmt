@@ -52,7 +52,9 @@ export function parseUnitFromDateTime(
       case "day":
         return dateTime.day.toString().padStart(2, "0");
       case "week":
-        return (getWeekNumber(value, weekStartsOn) ?? 0).toString();
+        return (
+          getWeekNumber(dateTime.toPlainDate().toString(), weekStartsOn) ?? 0
+        ).toString();
       case "dayOfWeek":
         return dateTime.dayOfWeek.toString();
       case "hour":

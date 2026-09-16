@@ -24,7 +24,7 @@ import { getLargestDateDurationUnit } from "./getLargestDateDurationUnit";
  * per Temporal's DifferenceOptions — e.g. `{ smallestUnit: "week", roundingMode: "halfExpand" }`
  * rounds the difference to the nearest week before extracting the requested unit.
  * - When `unitArg` is an array, `smallestUnit` must not be coarser than the largest unit in the
- *   array (e.g. `["month", "day"]` with `smallestUnit: "year"`) — this combination is rejected
+ *   array (e.g. `["months", "days"]` with `smallestUnit: "year"`) — this combination is rejected
  *   by Temporal and returns null, same as other invalid input.
  *
  * @param date1 ISO PlainDate string for the start, optionally calendar-annotated
@@ -33,9 +33,9 @@ import { getLargestDateDurationUnit } from "./getLargestDateDurationUnit";
  * @param options optional: smallestUnit, roundingIncrement, roundingMode (Temporal.DifferenceOptions rounding controls)
  * @returns numeric difference in the requested unit, or null on invalid input
  *
- * @example diffDate("2024-03-10", "2024-03-15", "day") // 5
- * @example diffDate("invalid", "2024-03-15", "day") // null
- * @example diffDate("2024-01-01", "2024-01-16", "week", { smallestUnit: "week", roundingMode: "halfExpand" }) // 2
+ * @example diffDate("2024-03-10", "2024-03-15", "days") // 5
+ * @example diffDate("invalid", "2024-03-15", "days") // null
+ * @example diffDate("2024-01-01", "2024-01-16", "weeks", { smallestUnit: "week", roundingMode: "halfExpand" }) // 2
  * @example diffDate("5784-06-15[u-ca=hebrew]", "5784-07-15[u-ca=hebrew]", "months") // 1 (measured in Hebrew, Adar I -> Adar)
  * @example diffDate("2566-08-31[u-ca=buddhist]", "2566-09-30[u-ca=buddhist]", "months") // 0 (30 days, not a month)
  */

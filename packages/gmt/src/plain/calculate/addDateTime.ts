@@ -27,8 +27,11 @@ export function addDateTime(
   options?: { overflow?: Overflow },
 ): string {
   const validDateTime = isValidDateTime(value);
-  const validUnits = Object.keys(units).every(isValidDateTimeDurationUnit);
-  const validAmounts = Object.values(units).every(isValidAmount);
+  const validUnits =
+    typeof units === "object" &&
+    units !== null &&
+    Object.keys(units).every(isValidDateTimeDurationUnit);
+  const validAmounts = validUnits && Object.values(units).every(isValidAmount);
 
   if (!validDateTime || !validUnits || !validAmounts) {
     return "";

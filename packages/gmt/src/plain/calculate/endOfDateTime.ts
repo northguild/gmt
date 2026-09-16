@@ -1,5 +1,4 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { defaultFractionalDigits } from "../../internal";
 import type { FractionalDigit } from "../../types";
 import { isValidDateTime } from "../validate";
 
@@ -22,19 +21,23 @@ const supported = [
  * - A Sunday-first week runs Sunday to Saturday, so a Sunday ends its week six days later.
  * - The end is computed forward from `value`, so it is returned even when the unit began before
  *   the first representable date (`-271821-04-19`).
- * - `fractionalSecondDigits` defaults to 3, 6 or 9 for "millisecond", "microsecond" or
- *   "nanosecond", and 0 otherwise.
+ * - The end is written at nanosecond precision by default, so the string names the end itself; an
+ *   explicit `fractionalSecondDigits` (0, 3, 6 or 9) truncates it, as Temporal's `toString` does.
  * - Returns "" for invalid inputs.
+ * - **Compatibility:** before 1.16.0 the default printed only the digits the unit names — none for
+ *   `second` and coarser, 3 for `millisecond`, 6 for `microsecond` — which wrote a moment earlier
+ *   than the end. Pass that `fractionalSecondDigits` to keep the previous string.
  *
  * @param value ISO 8601 datetime string
  * @param unit Temporal.DateUnit | Temporal.TimeUnit to specify the unit for the end
  * @param optionsArg optional: weekStartsOn ("monday" | "sunday"), fractionalSecondDigits (number)
  * @returns ISO 8601 string representing the end of the specified unit, or "" on invalid input
  *
- * @example endOfDateTime("2024-02-29T12:34:56", "month") // "2024-02-29T23:59:59"
+ * @example endOfDateTime("2024-02-29T12:34:56", "month") // "2024-02-29T23:59:59.999999999"
+ * @example endOfDateTime("2024-02-29T12:34:56", "month", { fractionalSecondDigits: 0 }) // "2024-02-29T23:59:59" — the pre-1.16.0 string
  * @example endOfDateTime("2024-02-29T12:34:56.123456789", "second", { fractionalSecondDigits: 9 }) // "2024-02-29T12:34:56.999999999"
- * @example endOfDateTime("2024-03-03T12:00:00", "week", { weekStartsOn: "sunday" }) // "2024-03-09T23:59:59"
- * @example endOfDateTime("-271821-04-19T12:00:00", "month") // "-271821-04-30T23:59:59" (the month began before the range; its end did not)
+ * @example endOfDateTime("2024-03-03T12:00:00", "week", { weekStartsOn: "sunday" }) // "2024-03-09T23:59:59.999999999"
+ * @example endOfDateTime("-271821-04-19T12:00:00", "month") // "-271821-04-30T23:59:59.999999999" (the month began before the range; its end did not)
  * @example endOfDateTime("invalid-date", "month") // ""
  */
 export function endOfDateTime(
@@ -140,12 +143,11 @@ export function endOfDateTime(
         return "";
     }
 
-    const fractionalDigits = defaultFractionalDigits(
-      unit,
-      fractionalSecondDigits,
-    );
-
-    return result.toString({ fractionalSecondDigits: fractionalDigits });
+    // An end is the next start − 1 ns, so it defaults to nanosecond precision: fewer digits would
+    // print an earlier value than the end (Calendar & zone semantics §3).
+    return result.toString({
+      fractionalSecondDigits: fractionalSecondDigits ?? 9,
+    });
   } catch {
     return "";
   }

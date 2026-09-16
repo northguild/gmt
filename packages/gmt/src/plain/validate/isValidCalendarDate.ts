@@ -7,6 +7,13 @@ import { parseCalendarDateValue } from "../../internal";
  *
  * - Delegates all field-range and calendar-identifier checking to
  *   `Temporal.PlainDate.from` (via `parseCalendarDateValue`).
+ * - The calendar identifier must be one of GMT's `CalendarSystem` ids. Temporal's own ids for
+ *   the same calendars (`iso8601`, `gregory`, `roc`, `islamic-tbla`, `islamicc`, `ethioaa`) and
+ *   ids GMT does not support (`islamic`, `islamic-rgsa`) return false, as every function that
+ *   re-emits a calendar string already did. Compatibility: earlier releases accepted them here;
+ *   use the GMT id, which reads identically (`taiwan` for `roc`, `gregorian` for `gregory` or
+ *   `iso8601`, `islamic-tabular` for `islamic-tbla`, `islamic-civil` for `islamicc`,
+ *   `ethiopic-amete-alem` for `ethioaa`).
  *
  * @param value ISO PlainDate string, optionally calendar-annotated
  * @returns boolean indicating validity
@@ -14,6 +21,8 @@ import { parseCalendarDateValue } from "../../internal";
  * @example isValidCalendarDate("2024-10-03") // true
  * @example isValidCalendarDate("5785-01-01[u-ca=hebrew]") // true
  * @example isValidCalendarDate("2024-10-03[u-ca=martian]") // false (unknown calendar identifier)
+ * @example isValidCalendarDate("0113-01-10[u-ca=roc]") // false (Temporal's id, not GMT's)
+ * @example isValidCalendarDate("0113-01-10[u-ca=roc]".replace("u-ca=roc", "u-ca=taiwan")) // true (the GMT id)
  * @example isValidCalendarDate("invalid") // false
  */
 export function isValidCalendarDate(value: string): boolean {

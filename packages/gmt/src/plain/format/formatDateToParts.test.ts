@@ -106,6 +106,56 @@ describe("formatDateToParts", () => {
     });
   });
 
+  describe("a PlainDate yields only date fields (Temporal ECMA-402 amendments)", () => {
+    // [[TemporalPlainDateFormat]] is null when dateStyle is undefined and
+    // timeStyle is set, and GetDateTimeFormat(~date~, ~date~, ~relevant~)
+    // returns null when only non-date fields are given: both throw a
+    // TypeError, so there is nothing to format. timeZoneName is never
+    // inherited (~relevant~). With dateStyle, AdjustDateTimeStyleFormat keeps
+    // only « weekday, era, year, month, day ».
+    const THURSDAY_FEB_29 = [
+      { type: "weekday", value: "Thursday" },
+      { type: "literal", value: ", " },
+      { type: "month", value: "February" },
+      { type: "literal", value: " " },
+      { type: "day", value: "29" },
+      { type: "literal", value: ", " },
+      { type: "year", value: "2024" },
+    ];
+    const NUMERIC_FEB_29 = [
+      { type: "month", value: "2" },
+      { type: "literal", value: "/" },
+      { type: "day", value: "29" },
+      { type: "literal", value: "/" },
+      { type: "year", value: "2024" },
+    ];
+
+    it.each`
+      description                                         | options                                                                        | expected
+      ${"timeStyle long alone (no PlainDate format)"}     | ${{ timeStyle: "long" }}                                                       | ${[]}
+      ${"timeStyle short alone (no PlainDate format)"}    | ${{ timeStyle: "short" }}                                                      | ${[]}
+      ${"hour alone (only a non-date field)"}             | ${{ hour: "numeric" }}                                                         | ${[]}
+      ${"minute and second alone"}                        | ${{ minute: "2-digit", second: "2-digit" }}                                    | ${[]}
+      ${"dateStyle full + timeStyle full drops the time"} | ${{ dateStyle: "full", timeStyle: "full" }}                                    | ${THURSDAY_FEB_29}
+      ${"date fields + hour drops the hour"}              | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric" }}      | ${NUMERIC_FEB_29}
+      ${"timeZoneName alone is not inherited (defaults)"} | ${{ timeZoneName: "short" }}                                                   | ${NUMERIC_FEB_29}
+      ${"date fields + timeZoneName long"}                | ${{ year: "numeric", month: "numeric", day: "numeric", timeZoneName: "long" }} | ${NUMERIC_FEB_29}
+    `("en-US $description", ({ options, expected }) => {
+      expect(
+        formatDateToParts("2024-02-29", MustTestLocales.enUS, options),
+      ).toEqual(expected);
+    });
+
+    it("dateStyle with an explicit timeZoneName is a TypeError in CreateDateTimeFormat, so []", () => {
+      expect(
+        formatDateToParts("2024-02-29", MustTestLocales.enUS, {
+          dateStyle: "full",
+          timeZoneName: "short",
+        }),
+      ).toEqual([]);
+    });
+  });
+
   describe("invalid input", () => {
     it.each`
       value

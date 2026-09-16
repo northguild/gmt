@@ -6,7 +6,9 @@
  *   `ar-SA` → `["ص", "م"]`.
  * - Uses the host runtime's `Intl` data via `Intl.DateTimeFormat`, so output
  *   depends on the runtime's ICU build.
- * - Returns `[]` if `locale` is not a valid BCP 47 tag.
+ * - Returns `[]` if `locale` is not a well-formed BCP 47 tag (ECMA-402 `IsWellFormedLanguageTag`).
+ *   A well-formed tag with no matching locale data is not an error: it falls back to the host's
+ *   default locale, as ECMA-402 `ResolveLocale` requires.
  *
  * @param locale BCP 47 locale tag (e.g. "en-US", "fr-FR", "ar-SA")
  * @returns 2-element `[AM-label, PM-label]` array, or `[]` on invalid input
@@ -14,7 +16,7 @@
  * @example getLocaleMeridiems("en-US") // ["AM", "PM"]
  * @example getLocaleMeridiems("en-GB") // ["am", "pm"]
  * @example getLocaleMeridiems("zh-CN") // ["上午", "下午"]
- * @example getLocaleMeridiems("not-a-locale") // []
+ * @example getLocaleMeridiems("not-a-locale-!!") // []
  */
 export function getLocaleMeridiems(locale: string): string[] {
   if (typeof locale !== "string") return [];

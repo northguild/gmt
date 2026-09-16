@@ -1,44 +1,60 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { MustTestLocales } from "../../test";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
-import { getWeeksInLocaleWeekYear } from "./getWeeksInLocaleWeekYear";
 import { runtimeWeekInfo } from "../../test/runtimeWeekInfo";
+import { getWeeksInLocaleWeekYear } from "./getWeeksInLocaleWeekYear";
 
-// Independent reference implementation, driven by the runtime's own
-// weekInfo rather than a hardcoded golden value — see
-// getLocaleWeekYear.test.ts for why `minimalDays` specifically can't be
-// pinned per-locale across ICU builds.
-function referenceWeeksInLocaleWeekYear(value: string, locale: string): number {
-  const weekInfo = runtimeWeekInfo(locale);
-  const firstDay = weekInfo.firstDay;
-  const minimalDays =
-    typeof weekInfo.minimalDays === "number" ? weekInfo.minimalDays : 4;
+// Week 1 is the week starting on the locale's first day of week that holds at least `minimalDays`
+// days of January (UTS #35 Part 4, Week Data), so it starts on that weekday on or before January
+// `minimalDays`. `firstDay` is read from the runtime's own week data without importing GMT;
+// `minimalDays` is always passed explicitly, because ECMA-402 no longer exposes it
+// (tc39/proposal-intl-locale-info#86) and GMT defaults it to the ISO value on every runtime.
+function week1Start(
+  year: number,
+  firstDay: number,
+  minimalDays: number,
+): Temporal.PlainDate {
+  const anchor = Temporal.PlainDate.from({ year, month: 1, day: minimalDays });
+  return anchor.subtract({ days: (anchor.dayOfWeek - firstDay + 7) % 7 });
+}
 
-  const week1Start = (year: number): Temporal.PlainDate => {
-    const anchor = Temporal.PlainDate.from({
-      year,
-      month: 1,
-      day: minimalDays,
-    });
-    const offset = (anchor.dayOfWeek - firstDay + 7) % 7;
-    return anchor.subtract({ days: offset });
-  };
-
+function referenceWeekYear(
+  value: string,
+  firstDay: number,
+  minimalDays: number,
+): number {
   const date = Temporal.PlainDate.from(value);
-  let weekYear = date.year;
-  const start = week1Start(weekYear);
-  if (Temporal.PlainDate.compare(date, start) < 0) {
-    weekYear -= 1;
-  } else {
-    const nextStart = week1Start(weekYear + 1);
-    if (Temporal.PlainDate.compare(date, nextStart) >= 0) {
-      weekYear += 1;
-    }
+  if (
+    Temporal.PlainDate.compare(
+      date,
+      week1Start(date.year, firstDay, minimalDays),
+    ) < 0
+  ) {
+    return date.year - 1;
   }
+  if (
+    Temporal.PlainDate.compare(
+      date,
+      week1Start(date.year + 1, firstDay, minimalDays),
+    ) >= 0
+  ) {
+    return date.year + 1;
+  }
+  return date.year;
+}
 
-  const bounds = week1Start(weekYear);
-  const nextBounds = week1Start(weekYear + 1);
-  return bounds.until(nextBounds, { largestUnit: "days" }).days / 7;
+function referenceWeeks(
+  value: string,
+  firstDay: number,
+  minimalDays: number,
+): number {
+  const weekYear = referenceWeekYear(value, firstDay, minimalDays);
+  return (
+    week1Start(weekYear, firstDay, minimalDays).until(
+      week1Start(weekYear + 1, firstDay, minimalDays),
+      { largestUnit: "days" },
+    ).days / 7
+  );
 }
 
 describe("getWeeksInLocaleWeekYear", () => {
@@ -61,24 +77,49 @@ describe("getWeeksInLocaleWeekYear", () => {
     ${MustTestLocales.ruRU}
     ${MustTestLocales.trTR}
   `(
-    "matches the reference computation for 2020-06-15 in $locale",
+    "matches the reference for 2022-06-15 in $locale, under the ISO default and minimalDays 1",
     ({ locale }) => {
-      expect(getWeeksInLocaleWeekYear("2020-06-15", locale)).toBe(
-        referenceWeeksInLocaleWeekYear("2020-06-15", locale),
+      const { firstDay } = runtimeWeekInfo(locale);
+      expect(getWeeksInLocaleWeekYear("2022-06-15", locale)).toBe(
+        referenceWeeks("2022-06-15", firstDay, 4),
       );
+      expect(
+        getWeeksInLocaleWeekYear("2022-06-15", locale, { minimalDays: 1 }),
+      ).toBe(referenceWeeks("2022-06-15", firstDay, 1));
     },
   );
 
-  it("returns 53 for a 53-week locale week-year, agreeing with the ISO rule in de-DE", () => {
-    expect(getWeeksInLocaleWeekYear("2020-06-15", MustTestLocales.deDE)).toBe(
-      53,
-    );
-  });
+  // Derived by hand, en-US weeks starting on Sunday. minimalDays 1: 2022's week 1 starts
+  // 2021-12-26 and 2023's starts 2023-01-01, 371 days. minimalDays 4: 2022-01-02 to 2023-01-01,
+  // 364 days. The undefined row is the cross-runtime pin (Node 22 reports minimalDays 1 for en-US).
+  it.each`
+    value           | locale                  | options               | expected
+    ${"2022-06-15"} | ${MustTestLocales.enUS} | ${undefined}          | ${52}
+    ${"2022-06-15"} | ${MustTestLocales.enUS} | ${{ minimalDays: 1 }} | ${53}
+    ${"2020-06-15"} | ${MustTestLocales.enUS} | ${{ minimalDays: 1 }} | ${52}
+    ${"2020-06-15"} | ${MustTestLocales.enUS} | ${undefined}          | ${53}
+    ${"2020-06-15"} | ${MustTestLocales.deDE} | ${undefined}          | ${53}
+    ${"2024-06-15"} | ${MustTestLocales.deDE} | ${undefined}          | ${52}
+  `(
+    "returns $expected for $value in $locale with $options",
+    ({ value, locale, options, expected }) => {
+      expect(getWeeksInLocaleWeekYear(value, locale, options)).toBe(expected);
+    },
+  );
 
-  it("returns 52 for a common locale week-year", () => {
-    expect(getWeeksInLocaleWeekYear("2024-06-15", MustTestLocales.deDE)).toBe(
-      52,
-    );
+  it.each`
+    minimalDays
+    ${0}
+    ${8}
+    ${1.5}
+    ${Number.NaN}
+    ${"4"}
+  `("returns null for minimalDays $minimalDays", ({ minimalDays }) => {
+    expect(
+      getWeeksInLocaleWeekYear("2024-06-15", MustTestLocales.enUS, {
+        minimalDays,
+      }),
+    ).toBeNull();
   });
 
   it.each`

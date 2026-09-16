@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidDateTimeInterval } from "./validate";
+import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 
 /**
  * Split a datetime interval into `n` equal-length sub-intervals.
@@ -13,23 +14,36 @@ import { isValidDateTimeInterval } from "./validate";
  * - A zero-length interval (`start === end`) returns `n` identical zero-length sub-intervals.
  * - Returns `[]` when `n` is not a positive integer, or on invalid input (unparseable
  *   start/end, `start > end`).
+ * - `options.maxPieces` (positive safe integer, default `1_000_000`) bounds the output: when `n`
+ *   exceeds it, or exceeds the longest possible array (2^32 - 1), the function returns `[]`
+ *   before building any piece. An invalid `maxPieces` also returns `[]`.
  *
  * @param start ISO PlainDateTime string for the interval start
  * @param end ISO PlainDateTime string for the interval end
  * @param n number of equal sub-intervals to produce (positive integer)
+ * @param options optional: `maxPieces` (positive safe integer, default `1_000_000`)
  * @returns array of `n` `{ start, end }` records, or `[]` on invalid input
  *
  * @example intervalDivideEquallyDateTime("2024-01-01T00:00:00", "2024-01-04T00:00:00", 3) // [{ start: "2024-01-01T00:00:00", end: "2024-01-02T00:00:00" }, { start: "2024-01-02T00:00:00", end: "2024-01-03T00:00:00" }, { start: "2024-01-03T00:00:00", end: "2024-01-04T00:00:00" }]
  * @example intervalDivideEquallyDateTime("2024-01-01T00:00:00", "2024-01-04T00:00:00", 1) // [{ start: "2024-01-01T00:00:00", end: "2024-01-04T00:00:00" }]
  * @example intervalDivideEquallyDateTime("2024-01-01T00:00:00", "2024-01-04T00:00:00", 0) // []
  * @example intervalDivideEquallyDateTime("invalid", "2024-01-04T00:00:00", 3) // []
+ * @example intervalDivideEquallyDateTime("2024-01-01T00:00:00", "2024-01-04T00:00:00", 3, { maxPieces: 2 }) // [] (3 pieces exceed the limit)
+ * @example intervalDivideEquallyDateTime("2024-01-01T00:00:00", "2024-01-04T00:00:00", 3, { maxPieces: 3 }) // [{ start: "2024-01-01T00:00:00", end: "2024-01-02T00:00:00" }, { start: "2024-01-02T00:00:00", end: "2024-01-03T00:00:00" }, { start: "2024-01-03T00:00:00", end: "2024-01-04T00:00:00" }]
  */
 export function intervalDivideEquallyDateTime(
   start: string,
   end: string,
   n: number,
+  options?: { maxPieces?: number },
 ): Array<{ start: string; end: string }> {
   if (typeof n !== "number" || !Number.isInteger(n) || n <= 0) {
+    return [];
+  }
+
+  const maxPieces = resolveMaxPieces(options);
+
+  if (maxPieces === null || exceedsPieceLimit(n, maxPieces)) {
     return [];
   }
 

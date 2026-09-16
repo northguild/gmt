@@ -224,3 +224,123 @@ describe("splitIntervalByUnitDate", () => {
     },
   );
 });
+
+describe("splitIntervalByUnitDate maxPieces", () => {
+  // Owner decision A2: maxPieces bounds the number of slices. At or above the slice count the
+  // output is unchanged; one below it returns the sentinel.
+  it.each`
+    maxPieces
+    ${4}
+    ${9}
+  `(
+    "returns 4 slices for 2024-01-31 to 2024-05-15 by 1 month with maxPieces $maxPieces",
+    ({ maxPieces }) => {
+      expect(
+        splitIntervalByUnitDate("2024-01-31", "2024-05-15", "month", 1, {
+          maxPieces,
+        }),
+      ).toEqual([
+        { start: "2024-01-31", end: "2024-02-29" },
+        { start: "2024-02-29", end: "2024-03-31" },
+        { start: "2024-03-31", end: "2024-04-30" },
+        { start: "2024-04-30", end: "2024-05-15" },
+      ]);
+    },
+  );
+
+  it.each`
+    maxPieces
+    ${3}
+    ${1}
+  `(
+    "returns [] for 2024-01-31 to 2024-05-15 by 1 month (4 slices) over maxPieces $maxPieces",
+    ({ maxPieces }) => {
+      expect(
+        splitIntervalByUnitDate("2024-01-31", "2024-05-15", "month", 1, {
+          maxPieces,
+        }).length,
+      ).toBe(0);
+    },
+  );
+
+  it.each`
+    maxPieces
+    ${5}
+    ${10}
+  `(
+    "returns 5 slices for 2024-01-01 to 2024-01-10 by 2 day with maxPieces $maxPieces",
+    ({ maxPieces }) => {
+      expect(
+        splitIntervalByUnitDate("2024-01-01", "2024-01-10", "day", 2, {
+          maxPieces,
+        }),
+      ).toEqual([
+        { start: "2024-01-01", end: "2024-01-03" },
+        { start: "2024-01-03", end: "2024-01-05" },
+        { start: "2024-01-05", end: "2024-01-07" },
+        { start: "2024-01-07", end: "2024-01-09" },
+        { start: "2024-01-09", end: "2024-01-10" },
+      ]);
+    },
+  );
+
+  it.each`
+    maxPieces
+    ${4}
+    ${1}
+  `(
+    "returns [] for 2024-01-01 to 2024-01-10 by 2 day (5 slices) over maxPieces $maxPieces",
+    ({ maxPieces }) => {
+      expect(
+        splitIntervalByUnitDate("2024-01-01", "2024-01-10", "day", 2, {
+          maxPieces,
+        }).length,
+      ).toBe(0);
+    },
+  );
+
+  it("returns one slice for a zero-length interval with maxPieces 1", () => {
+    expect(
+      splitIntervalByUnitDate("2024-01-01", "2024-01-01", "day", 2, {
+        maxPieces: 1,
+      }),
+    ).toEqual([{ start: "2024-01-01", end: "2024-01-01" }]);
+  });
+
+  it.each`
+    label                   | options
+    ${"maxPieces 0"}        | ${{ maxPieces: 0 }}
+    ${"maxPieces -1"}       | ${{ maxPieces: -1 }}
+    ${"maxPieces 1.5"}      | ${{ maxPieces: 1.5 }}
+    ${"maxPieces NaN"}      | ${{ maxPieces: Number.NaN }}
+    ${"maxPieces Infinity"} | ${{ maxPieces: Number.POSITIVE_INFINITY }}
+    ${"maxPieces string"}   | ${{ maxPieces: "5" }}
+    ${"null options"}       | ${null}
+    ${"number options"}     | ${5}
+  `("returns [] for invalid $label", ({ options }) => {
+    expect(
+      splitIntervalByUnitDate(
+        "2024-01-01",
+        "2024-01-10",
+        "day",
+        2,
+        options as never,
+      ).length,
+    ).toBe(0);
+  });
+});
+
+describe("splitIntervalByUnitDate default piece limit", () => {
+  // Default maxPieces is 1_000_000: a larger split returns the sentinel instead of exhausting the
+  // heap.
+  it.each`
+    start              | end                | unit     | slices
+    ${"-271821-04-19"} | ${"+275760-09-13"} | ${"day"} | ${"200_000_001 days"}
+    ${"2024-01-01"}    | ${"4761-11-29"}    | ${"day"} | ${"1_000_001 days (2024-01-01 + 1_000_000 days is 4761-11-28)"}
+  `(
+    "returns [] for $start to $end by 1 $unit ($slices)",
+    ({ start, end, unit }) => {
+      expect(splitIntervalByUnitDate(start, end, unit, 1).length).toBe(0);
+    },
+  );
+});

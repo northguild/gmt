@@ -1,3 +1,4 @@
+import { Temporal } from "@js-temporal/polyfill";
 import { MustTestLocales } from "../../test";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { getLocaleEndOfWeek } from "./getLocaleEndOfWeek";
@@ -89,5 +90,17 @@ describe("getLocaleEndOfWeek", () => {
   it('returns "" when Temporal.PlainDate.from throws', () => {
     mockTemporalPlainDateFromThrow();
     expect(getLocaleEndOfWeek("2024-02-29", MustTestLocales.enUS)).toBe("");
+  });
+
+  // A well-formed tag with no locale data is not invalid input: ECMA-402 `ResolveLocale` falls
+  // back instead of throwing, so the sentinel would be wrong here. Only a malformed tag such as
+  // "not-a-locale-!!" is invalid. The expected value comes from the runtime's own week data.
+  it("falls back for a well-formed tag with no locale data instead of returning the sentinel", () => {
+    const { firstDay } = runtimeWeekInfo("not-a-locale");
+    const date = Temporal.PlainDate.from("2024-02-29");
+    const offset = (date.dayOfWeek - firstDay + 7) % 7;
+    expect(getLocaleEndOfWeek("2024-02-29", "not-a-locale")).toBe(
+      date.subtract({ days: offset }).add({ days: 6 }).toString(),
+    );
   });
 });

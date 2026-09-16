@@ -11,7 +11,8 @@ import { isValidDateTime } from "../validate";
  *   targets the far more common tz-less `DATETIME` column shape. There is no
  *   zoned counterpart in this story.
  * - The only change from GMT's own ISO output is the separator: `T` becomes
- *   a single space. Fractional seconds, when present, are preserved as-is.
+ *   a single space. Fractional seconds are written as Temporal writes them:
+ *   only the digits needed, with trailing zeros dropped (`.500` → `.5`).
  *
  * @param value plain ISO 8601 datetime string (e.g. "2024-03-15T14:30:00")
  * @returns SQL datetime literal, or "" on invalid input

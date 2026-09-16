@@ -27,8 +27,11 @@ export function addTime(
   options?: { overflow?: Overflow },
 ): string {
   const validTime = isValidTime(value);
-  const validUnits = Object.keys(units).every(isValidTimeDurationUnit);
-  const validAmounts = Object.values(units).every(isValidAmount);
+  const validUnits =
+    typeof units === "object" &&
+    units !== null &&
+    Object.keys(units).every(isValidTimeDurationUnit);
+  const validAmounts = validUnits && Object.values(units).every(isValidAmount);
 
   if (!validTime || !validUnits || !validAmounts) {
     return "";

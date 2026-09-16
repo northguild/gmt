@@ -5,14 +5,18 @@ import {
   getStartOfDateUnit,
   getStartOfNextDateUnit,
 } from "../../internal/dateUnitHelpers";
+import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
+import { resolveManualRoundingOptions } from "../../internal/resolveManualRoundingOptions";
 import type { DateUnit } from "../../types";
 import { isValidDate, isValidDateUnit } from "../validate";
+import { isObject } from "../../internal/isObject";
 
 /**
  * Round an ISO 8601 date string to the specified date unit.
  *
  * - Returns "" for invalid inputs.
- * - Accepts date units: "year", "month", "week", "day".
+ * - Accepts date units: "year", "month", "week", "day", each in its singular or plural form
+ *   ("month" or "months"), as Temporal's GetTemporalUnitValuedOption accepts both (§13.17).
  * - Time units ("hour", "minute", etc.) are rejected and return "".
  * - All date units use manual start-of-unit rounding. Weeks start on Monday.
  * - The rounding grid is anchored at the unit containing `value`, so `"halfEven"` breaks an exact
@@ -20,6 +24,9 @@ import { isValidDate, isValidDateUnit } from "../validate";
  * - The position within the unit is measured towards the next start, so a date in a unit that
  *   began before the first representable date (`-271821-04-19`) still rounds up to the next start.
  *   When it rounds down to that unrepresentable start, the result is "".
+ * - `roundingIncrement` and `roundingMode` are read as Temporal reads them: a non-integer increment
+ *   is truncated (`1.5` rounds by 1), an increment below 1 or not finite returns "", and a
+ *   `roundingMode` outside Temporal's nine returns "" (previously it floored silently).
  * - Wraps all Temporal calls in try-catch; returns "" on any error.
  *
  * @param value ISO 8601 date string
@@ -31,18 +38,27 @@ import { isValidDate, isValidDateUnit } from "../validate";
  * @example roundDate("2024-06-16", { smallestUnit: "month" }) // "2024-07-01" (half way: rounds up)
  * @example roundDate("2024-06-15", { smallestUnit: "week" }) // "2024-06-17" (a Saturday: the next Monday is closer)
  * @example roundDate("2024-06-15", { smallestUnit: "day" }) // "2024-06-15"
+ * @example roundDate("2024-06-15", { smallestUnit: "months" }) // "2024-06-01" (plural unit name)
  * @example roundDate("-271821-04-19", { smallestUnit: "month" }) // "-271821-05-01" (the month began before the range)
+ * @example roundDate("2024-05-20", { smallestUnit: "month", roundingIncrement: 1.5 }) // "2024-06-01" (the increment truncates to 1)
+ * @example roundDate("2024-05-20", { smallestUnit: "month", roundingMode: "bogus" as never }) // ""
  * @example roundDate("invalid", { smallestUnit: "year" }) // ""
  */
 export function roundDate(
   value: string,
   options: {
-    smallestUnit: DateUnit;
+    smallestUnit: Temporal.SmallestUnit<DateUnit>;
     roundingIncrement?: number;
     roundingMode?: Temporal.RoundingMode;
   },
 ): string {
-  const { smallestUnit, roundingIncrement, roundingMode } = options;
+  if (!isObject(options)) return "";
+
+  const { roundingIncrement, roundingMode } = options;
+  const smallestUnit: unknown =
+    typeof options.smallestUnit === "string"
+      ? resolveDateTimeUnit(options.smallestUnit)
+      : options.smallestUnit;
 
   if (!isValidDate(value) || !isValidDateUnit(smallestUnit)) return "";
 
@@ -50,8 +66,12 @@ export function roundDate(
     const source = Temporal.PlainDate.from(value);
 
     // Manual rounding for all date units (year, month, week, day)
-    const increment = roundingIncrement ?? 1;
-    if (increment <= 0) return "";
+    const resolved = resolveManualRoundingOptions(
+      roundingIncrement,
+      roundingMode,
+    );
+    if (resolved === null) return "";
+    const { increment, mode } = resolved;
 
     // Measured towards the next start, never from the current one: at the first representable
     // date the current month or year began before the range, and only the next start exists.
@@ -69,7 +89,6 @@ export function roundDate(
       getStartOfDateUnit(source, smallestUnit);
 
     let rounded: Temporal.PlainDate;
-    const mode = roundingMode ?? "halfExpand";
     switch (mode) {
       case "ceil":
       case "expand":
@@ -95,8 +114,6 @@ export function roundDate(
         // start. Above and below the tie it rounds to the nearer start, like every other half mode.
         rounded = fraction > 0.5 ? startOfNext : startOfCurrent();
         break;
-      default:
-        rounded = startOfCurrent();
     }
 
     return rounded.toString();

@@ -18,7 +18,7 @@ export function sortTimes(
   times: string[],
   order: "asc" | "desc" = "asc",
 ): string[] {
-  if (!times.length) return [];
+  if (!Array.isArray(times) || !times.length) return [];
 
   const valid = times.filter(isValidTime);
   if (!valid.length) return [];

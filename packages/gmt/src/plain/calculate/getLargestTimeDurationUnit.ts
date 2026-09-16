@@ -4,7 +4,7 @@ import type { TimeDurationUnit } from "../../types";
  * Return the largest TimeDurationUnit from the provided array.
  *
  * - Returns the largest unit based on Temporal's unit order: hours > minutes > seconds > milliseconds > microseconds > nanoseconds.
- * - Defaults to "seconds" if no valid unit is found in the array.
+ * - Defaults to "seconds" if no valid unit is found in the array, or `units` is not an array.
  *
  * @param units array of TimeDurationUnits to evaluate
  * @returns the largest TimeDurationUnit found in the array, or "seconds" if none are valid
@@ -25,6 +25,7 @@ export function getLargestTimeDurationUnit(
     "microseconds",
     "nanoseconds",
   ];
+  if (!Array.isArray(units)) return "seconds";
   for (const unit of order) {
     if (units.includes(unit)) {
       return unit;

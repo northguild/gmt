@@ -26,7 +26,7 @@ const AUTO_UNITS: Array<{ unit: RelativeTimeUnit; maxSeconds: number }> = [
  * @returns the formatted relative-time string, or "" on invalid input
  *
  * @example formatRelativeTime("14:30:00", "en-US", { style: "short" }) // "2 hr. ago"
- * @example formatRelativeTime(value, "en-US", { roundingMethod: "floor" }) // rounds toward the earlier boundary
+ * @example formatRelativeTime("09:00:00", "en-US", { reference: "10:30:00", roundingMethod: "floor" }) // "2 hours ago" (−1.5 hours floors to −2)
  * @example formatRelativeTime("not-a-time") // ""
  */
 export function formatRelativeTime(
@@ -34,6 +34,8 @@ export function formatRelativeTime(
   locale?: string,
   options: FormatRelativeTimeOptions = {},
 ): string {
+  // A default parameter covers only `undefined`; `null` also means "no options".
+  options ??= {};
   if (!isValidTime(value)) return "";
   if (options.reference !== undefined && !isValidTime(options.reference))
     return "";

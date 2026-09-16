@@ -12,7 +12,9 @@ import { zonedDateTimeFrom } from "../../internal/zonedWallClock";
  * - If a locale has no distinct BCE/CE era names, both array elements
  *   contain the same string — the function never returns a sentinel for
  *   a valid locale, only for invalid input.
- * - Returns `[]` if `locale` is not a valid BCP 47 tag.
+ * - Returns `[]` if `locale` is not a well-formed BCP 47 tag (ECMA-402 `IsWellFormedLanguageTag`).
+ *   A well-formed tag with no matching locale data is not an error: it falls back to the host's
+ *   default locale, as ECMA-402 `ResolveLocale` requires.
  *
  * @param locale BCP 47 locale tag (e.g. "en-US", "fr-FR", "ar-SA")
  * @param style Optional name style: `"long"` (default), `"short"`, or `"narrow"`
@@ -21,7 +23,7 @@ import { zonedDateTimeFrom } from "../../internal/zonedWallClock";
  * @example getLocaleEraNames("en-US") // ["Before Christ", "Anno Domini"]
  * @example getLocaleEraNames("de-DE", "short") // ["v. Chr.", "n. Chr."]
  * @example getLocaleEraNames("ja-JP", "narrow") // ["BC", "AD"]
- * @example getLocaleEraNames("not-a-locale") // []
+ * @example getLocaleEraNames("not-a-locale-!!") // []
  */
 export function getLocaleEraNames(
   locale: string,

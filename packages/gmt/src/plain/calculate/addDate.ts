@@ -46,8 +46,11 @@ export function addDate(
   options?: { overflow?: Overflow },
 ): string {
   const validDate = isValidCalendarDate(value);
-  const validUnits = Object.keys(units).every(isValidDateDurationUnit);
-  const validAmounts = Object.values(units).every(isValidAmount);
+  const validUnits =
+    typeof units === "object" &&
+    units !== null &&
+    Object.keys(units).every(isValidDateDurationUnit);
+  const validAmounts = validUnits && Object.values(units).every(isValidAmount);
 
   if (!validDate || !validUnits || !validAmounts) {
     return "";

@@ -4,7 +4,7 @@ import type { DateDurationUnit } from "../../types";
  * Return the largest DateDurationUnit from the provided array.
  *
  * - Returns the largest unit based on Temporal's unit order: years > months > weeks > days.
- * - Defaults to "days" if no valid unit is found in the array.
+ * - Defaults to "days" if no valid unit is found in the array, or `units` is not an array.
  *
  * @param units array of DateDurationUnits to evaluate
  * @returns the largest DateDurationUnit found in the array, or "days" if none are valid
@@ -19,6 +19,7 @@ export function getLargestDateDurationUnit(
   units: DateDurationUnit[],
 ): DateDurationUnit {
   const order: DateDurationUnit[] = ["years", "months", "weeks", "days"];
+  if (!Array.isArray(units)) return "days";
   for (const unit of order) {
     if (units.includes(unit)) {
       return unit;

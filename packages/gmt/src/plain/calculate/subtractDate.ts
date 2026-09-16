@@ -28,8 +28,8 @@ import { isValidCalendarDate, isValidDateDurationUnit } from "../validate";
  * @param options optional: overflow ("constrain" | "reject")
  * @returns ISO PlainDate string after subtraction, or "" on invalid input
  *
- * @example subtractDate("2024-03-15", { day: 5 }) // "2024-03-10"
- * @example subtractDate("invalid", { day: 5 }) // ""
+ * @example subtractDate("2024-03-15", { days: 5 }) // "2024-03-10"
+ * @example subtractDate("invalid", { days: 5 }) // ""
  * @example subtractDate("2024-03-31", { months: 1 }, { overflow: "reject" }) // ""
  * @example subtractDate("5784-07-15[u-ca=hebrew]", { months: 1 }) // "5784-06-15[u-ca=hebrew]" (Adar -> Adar I)
  */
@@ -39,8 +39,11 @@ export function subtractDate(
   options?: { overflow?: Overflow },
 ): string {
   const validDate = isValidCalendarDate(value);
-  const validUnits = Object.keys(units).every(isValidDateDurationUnit);
-  const validAmounts = Object.values(units).every(isValidAmount);
+  const validUnits =
+    typeof units === "object" &&
+    units !== null &&
+    Object.keys(units).every(isValidDateDurationUnit);
+  const validAmounts = validUnits && Object.values(units).every(isValidAmount);
 
   if (!validDate || !validUnits || !validAmounts) {
     return "";

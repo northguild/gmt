@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { plainTime } from "../../regex";
+import { isObject } from "../../internal/isObject";
 
 /**
  * Return true if `value1` and `value2` form a valid time range — both parseable as
@@ -18,15 +19,14 @@ import { plainTime } from "../../regex";
  * @example isValidTimeRange({ value1: "17:00:00", value2: "09:00:00" }) // false
  * @example isValidTimeRange({ value1: "12:00:00", value2: "12:00:00", options: { allowEqual: true } }) // true
  */
-export function isValidTimeRange({
-  value1,
-  value2,
-  options,
-}: {
+export function isValidTimeRange(props: {
   value1: string;
   value2: string;
   options?: { allowEqual?: boolean };
 }): boolean {
+  if (!isObject(props)) return false;
+  const { value1, value2, options } = props;
+
   if (typeof value1 !== "string" || typeof value2 !== "string") {
     return false;
   }

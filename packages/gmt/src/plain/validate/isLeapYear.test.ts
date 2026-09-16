@@ -28,4 +28,21 @@ describe("isLeapYear", () => {
   `("returns false for invalid date string: $value", ({ value }) => {
     expect(isLeapYear(value)).toBe(false);
   });
+
+  // Validate, then parse (isValidDate): every shape isValidDate rejects is invalid input here,
+  // not something to truncate or read with ISO digits. Each is a leap year (2024) if read loosely.
+  it.each`
+    value                                        | shape
+    ${"2024-03-15T10:00"}                        | ${"PlainDateTime"}
+    ${"2024-03-15T10:00:00+05:30[Asia/Kolkata]"} | ${"zoned datetime"}
+    ${"20240315"}                                | ${"basic format"}
+    ${"2024-12-31T23:59:60"}                     | ${"leap second"}
+    ${"2024-06-15[u-ca=hebrew]"}                 | ${"calendar annotation"}
+    ${"2024-06-15[u-ca=iso8601]"}                | ${"Temporal ISO calendar annotation"}
+  `(
+    "returns false for $value ($shape), which isValidDate rejects",
+    ({ value }) => {
+      expect(isLeapYear(value)).toBe(false);
+    },
+  );
 });

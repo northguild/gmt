@@ -9,13 +9,16 @@ import { isValidDateTime } from "../validate";
  * - Uses Temporal.PlainDateTime.toLocaleString for formatting.
  * - Accepts optional BCP 47 locale and Intl.DateTimeFormatOptions.
  * - Returns "" for invalid input.
+ * - Output is normalized: dash separators become ASCII "-" (unspaced between digits, spaced
+ *   otherwise), and no-break, narrow and thin spaces become U+0020.
  *
  * @param value ISO PlainDateTime string
  * @param locale optional BCP 47 locale identifier (default: runtime default)
  * @param options optional Intl.DateTimeFormatOptions
  * @returns localized date-time string or "" on invalid input
  *
- * @example formatDateTime("2024-03-15T14:30:00", "en-US", { dateStyle: "medium", timeStyle: "short" }) // "Mar 15, 2024 at 2:30 PM"
+ * @example formatDateTime("2024-03-15T14:30:00", "en-US", { dateStyle: "medium", timeStyle: "short" }) // "Mar 15, 2024, 2:30 PM"
+ * @example formatDateTime("2024-03-15T14:30:00", "en-US", { dateStyle: "long", timeStyle: "short" }) // "March 15, 2024 at 2:30 PM"
  * @example formatDateTime("2024-03-15T14:30:00", "de-DE", { dateStyle: "medium", timeStyle: "short" }) // "15.03.2024, 14:30"
  * @example formatDateTime("invalid") // ""
  */

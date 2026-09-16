@@ -181,6 +181,29 @@ describe("formatCalendar", () => {
       },
     );
 
+    // A plain date-time has no zone: Temporal's [[TemporalPlainDateTimeFormat]]
+    // is AdjustDateTimeStyleFormat(…) without timeZoneName, so "long"/"full"
+    // (outside the type, reachable from JS) keep hour, minute and second and
+    // drop the zone — the locale's medium time format.
+    it.each`
+      timeStyle | locale                  | value                    | expected
+      ${"long"} | ${MustTestLocales.enUS} | ${"2024-03-16T14:30:00"} | ${"tomorrow at 2:30:00 PM"}
+      ${"full"} | ${MustTestLocales.enUS} | ${"2024-03-16T14:30:00"} | ${"tomorrow at 2:30:00 PM"}
+      ${"long"} | ${MustTestLocales.enUS} | ${"2024-03-22T14:30:00"} | ${"March 22, 2024 at 2:30:00 PM"}
+      ${"full"} | ${MustTestLocales.enUS} | ${"2024-03-22T14:30:00"} | ${"March 22, 2024 at 2:30:00 PM"}
+      ${"full"} | ${MustTestLocales.zhCN} | ${"2024-03-22T14:30:00"} | ${"2024年3月22日 14:30:00"}
+    `(
+      "timeStyle:$timeStyle for $locale $value prints no zone name: $expected",
+      ({ timeStyle, locale, value, expected }) => {
+        expect(
+          formatCalendar(value, locale, {
+            reference: REF,
+            timeStyle: timeStyle as never,
+          }),
+        ).toBe(expected);
+      },
+    );
+
     it("defaults to 'short' when timeStyle is omitted (matches explicit 'short')", () => {
       const omitted = formatCalendar(
         "2024-03-16T14:30:00",

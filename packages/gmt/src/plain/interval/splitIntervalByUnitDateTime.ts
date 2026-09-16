@@ -2,6 +2,8 @@ import { Temporal } from "@js-temporal/polyfill";
 import { plainDateTime } from "../../regex";
 import { isValidDateTime } from "../validate";
 import { resolveDurationUnit, tileByUnit } from "../../internal";
+import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
+import { minSlicesForSpan } from "../../internal/splitStep";
 
 /**
  * Split a date-time interval into sub-intervals of `amount × unit`.
@@ -19,11 +21,15 @@ import { resolveDurationUnit, tileByUnit } from "../../internal";
  *   slice is produced. A step that goes backwards returns `[]`.
  * - Returns `[{ start, end }]` when `start === end` (zero-length interval).
  * - Returns `[]` on invalid input (unparseable start/end, unsupported unit, non-positive amount).
+ * - `options.maxPieces` (positive safe integer, default `1_000_000`) bounds the output: a split
+ *   into more slices returns `[]`, decided from the span before stepping where it can be, and
+ *   otherwise as soon as slice `maxPieces + 1` is due. An invalid `maxPieces` also returns `[]`.
  *
  * @param start ISO PlainDateTime string for the interval start
  * @param end ISO PlainDateTime string for the interval end
  * @param unit duration unit string — any `DateTimeDurationUnit`
  * @param amount positive number of units per step
+ * @param options optional: `maxPieces` (positive safe integer, default `1_000_000`)
  * @returns array of `{ start, end }` records, or [] on invalid input
  *
  * @example splitIntervalByUnitDateTime("2024-01-01T12:00:00", "2024-01-01T14:00:00", "hour", 1) // [{ start: "2024-01-01T12:00:00", end: "2024-01-01T13:00:00" }, { start: "2024-01-01T13:00:00", end: "2024-01-01T14:00:00" }]
@@ -31,12 +37,15 @@ import { resolveDurationUnit, tileByUnit } from "../../internal";
  * @example splitIntervalByUnitDateTime("2024-01-01T12:00:00", "2024-01-01T12:00:00", "hour", 1) // [{ start: "2024-01-01T12:00:00", end: "2024-01-01T12:00:00" }]
  * @example splitIntervalByUnitDateTime("2024-01-01T12:00:00", "2024-01-01T14:00:00", "hour", 0) // []
  * @example splitIntervalByUnitDateTime("invalid", "2024-01-01T14:00:00", "hour", 1) // []
+ * @example splitIntervalByUnitDateTime("2024-01-01T12:00:00", "2024-01-01T14:00:00", "hour", 1, { maxPieces: 1 }) // [] (2 slices exceed the limit)
+ * @example splitIntervalByUnitDateTime("2024-01-01T12:00:00", "2024-01-01T14:00:00", "hour", 1, { maxPieces: 2 }) // [{ start: "2024-01-01T12:00:00", end: "2024-01-01T13:00:00" }, { start: "2024-01-01T13:00:00", end: "2024-01-01T14:00:00" }]
  */
 export function splitIntervalByUnitDateTime(
   start: string,
   end: string,
   unit: string,
   amount: number,
+  options?: { maxPieces?: number },
 ): Array<{ start: string; end: string }> {
   if (typeof start !== "string" || typeof end !== "string") {
     return [];
@@ -64,6 +73,12 @@ export function splitIntervalByUnitDateTime(
     return [];
   }
 
+  const maxPieces = resolveMaxPieces(options);
+
+  if (maxPieces === null) {
+    return [];
+  }
+
   try {
     const startVal = Temporal.PlainDateTime.from(start);
     const endVal = Temporal.PlainDateTime.from(end);
@@ -76,12 +91,26 @@ export function splitIntervalByUnitDateTime(
       return [{ start: startVal.toString(), end: endVal.toString() }];
     }
 
+    const spanNs = startVal
+      .until(endVal, { largestUnit: "hours" })
+      .total("nanoseconds");
+
+    if (
+      exceedsPieceLimit(
+        minSlicesForSpan(spanNs, resolvedUnit, amount, false),
+        maxPieces,
+      )
+    ) {
+      return [];
+    }
+
     const slices = tileByUnit(
       startVal,
       endVal,
       Temporal.PlainDateTime.compare,
       resolvedUnit,
       amount,
+      maxPieces,
     );
 
     return (slices ?? []).map(([sliceStart, sliceEnd]) => ({

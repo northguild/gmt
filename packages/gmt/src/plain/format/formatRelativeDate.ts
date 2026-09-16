@@ -27,7 +27,7 @@ const AUTO_UNITS: Array<{ unit: RelativeDateUnit; maxDays: number }> = [
  * @returns the formatted relative-time string, or "" on invalid input
  *
  * @example formatRelativeDate("2026-01-15", "en-US", { reference: "2026-04-15" }) // "3 months ago"
- * @example formatRelativeDate(value, "en-US", { roundingMethod: "floor" }) // rounds toward the earlier boundary
+ * @example formatRelativeDate("2026-03-01", "en-US", { reference: "2026-03-11", largestUnit: "week", roundingMethod: "floor" }) // "2 weeks ago" (−1.43 weeks floors to −2; the default rounds to "last week")
  * @example formatRelativeDate("not-a-date") // ""
  */
 export function formatRelativeDate(
@@ -35,6 +35,8 @@ export function formatRelativeDate(
   locale?: string,
   options: FormatRelativeDateOptions = {},
 ): string {
+  // A default parameter covers only `undefined`; `null` also means "no options".
+  options ??= {};
   if (!isValidDate(value)) return "";
   if (options.reference !== undefined && !isValidDate(options.reference))
     return "";

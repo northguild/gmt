@@ -13,7 +13,10 @@ import { isValidDate } from "../validate";
  * - Distinct from `startOfDate(value, "week", { weekStartsOn })`, which
  *   takes an explicit ISO-biased `weekStartsOn` option instead of deriving
  *   it from a locale.
- * - Returns "" if `value` or `locale` is invalid.
+ * - Returns "" if `value` is invalid or `locale` is not a well-formed BCP 47 tag
+ *   (ECMA-402 `IsWellFormedLanguageTag`).
+ *   A well-formed tag with no matching locale data is not an error: it falls back to the host's
+ *   default locale, as ECMA-402 `ResolveLocale` requires.
  *
  * @param value ISO 8601 date string
  * @param locale BCP 47 locale tag (e.g. "en-US", "fr-FR")
@@ -22,7 +25,7 @@ import { isValidDate } from "../validate";
  * @example getLocaleStartOfWeek("2024-02-29", "en-US") // "2024-02-25" (Sunday)
  * @example getLocaleStartOfWeek("2024-02-29", "fr-FR") // "2024-02-26" (Monday)
  * @example getLocaleStartOfWeek("invalid-date", "en-US") // ""
- * @example getLocaleStartOfWeek("2024-02-29", "not-a-locale") // ""
+ * @example getLocaleStartOfWeek("2024-02-29", "not-a-locale-!!") // ""
  */
 export function getLocaleStartOfWeek(value: string, locale: string): string {
   if (!isValidDate(value)) return "";

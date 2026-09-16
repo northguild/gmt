@@ -14,7 +14,9 @@ import type { LocaleNameStyle } from "./getLocaleMonthNames";
  *   is that date's localized weekday name.
  * - Uses the host runtime's `Intl` data via `Temporal.PlainDate`, so output
  *   depends on the runtime's ICU build.
- * - Returns `[]` if `locale` is not a valid BCP 47 tag.
+ * - Returns `[]` if `locale` is not a well-formed BCP 47 tag (ECMA-402 `IsWellFormedLanguageTag`).
+ *   A well-formed tag with no matching locale data is not an error: it falls back to the host's
+ *   default locale, as ECMA-402 `ResolveLocale` requires.
  *
  * @param locale BCP 47 locale tag (e.g. "en-US", "fr-FR", "ar-SA")
  * @param style Optional name style: `"long"` (default), `"short"`, or `"narrow"`
@@ -23,7 +25,7 @@ import type { LocaleNameStyle } from "./getLocaleMonthNames";
  * @example getLocaleWeekdayNames("en-US") // ["Sunday", "Monday", ... "Saturday"]
  * @example getLocaleWeekdayNames("fr-FR") // ["lundi", "mardi", ... "dimanche"]
  * @example getLocaleWeekdayNames("de-DE", "short") // ["Mo", "Di", "Mi", ... "So"]
- * @example getLocaleWeekdayNames("not-a-locale") // []
+ * @example getLocaleWeekdayNames("not-a-locale-!!") // []
  */
 export function getLocaleWeekdayNames(
   locale: string,

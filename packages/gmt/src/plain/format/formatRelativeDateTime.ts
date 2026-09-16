@@ -30,7 +30,7 @@ const AUTO_UNITS: Array<{ unit: RelativeDateTimeUnit; maxSeconds: number }> = [
  * @returns the formatted relative-time string, or "" on invalid input
  *
  * @example formatRelativeDateTime("2026-03-17T09:00:00", "en-GB", { style: "long" }) // "in 3 hours"
- * @example formatRelativeDateTime(value, "en-US", { roundingMethod: "floor" }) // rounds toward the earlier boundary
+ * @example formatRelativeDateTime("2026-01-15T00:00:00", "en-US", { reference: "2026-01-15T10:30:00", roundingMethod: "floor" }) // "11 hours ago" (−10.5 hours floors to −11; the default rounds to 10)
  * @example formatRelativeDateTime("not-a-date") // ""
  */
 export function formatRelativeDateTime(
@@ -38,6 +38,8 @@ export function formatRelativeDateTime(
   locale?: string,
   options: FormatRelativeDateTimeOptions = {},
 ): string {
+  // A default parameter covers only `undefined`; `null` also means "no options".
+  options ??= {};
   if (!isValidDateTime(value)) return "";
   if (options.reference !== undefined && !isValidDateTime(options.reference))
     return "";

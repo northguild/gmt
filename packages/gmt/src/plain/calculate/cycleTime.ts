@@ -1,5 +1,9 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { cycleFieldValue, timeCycleFieldBounds } from "../../internal";
+import {
+  cycleFieldValue,
+  isValidAmount,
+  timeCycleFieldBounds,
+} from "../../internal";
 import type { Overflow, TimeCycleField } from "../../types";
 import { isValidTime, isValidTimeCycleField } from "../validate";
 import { setTime } from "./setTime";
@@ -22,7 +26,7 @@ import { setTime } from "./setTime";
  *   `cycleZoned` but is **inert** here: time fields don't share bounds the way `day` shares a
  *   month with `month`/`year`, so the wrapped value `cycleTime` computes is always already valid —
  *   `setTime`'s `.with()` call never has anything to constrain or reject.
- * - Returns "" for an invalid `value` or an invalid `field`.
+ * - Returns "" for an invalid `value`, an invalid `field`, or an `amount` that is not a finite number.
  *
  * @param value ISO PlainTime string
  * @param field the field to cycle: "hour" | "minute" | "second" | "millisecond" | "microsecond" | "nanosecond"
@@ -43,7 +47,13 @@ export function cycleTime(
   amount: number,
   options?: { round?: boolean; overflow?: Overflow },
 ): string {
-  if (!isValidTime(value) || !isValidTimeCycleField(field)) return "";
+  if (
+    !isValidTime(value) ||
+    !isValidTimeCycleField(field) ||
+    !isValidAmount(amount)
+  ) {
+    return "";
+  }
 
   try {
     const time = Temporal.PlainTime.from(value);

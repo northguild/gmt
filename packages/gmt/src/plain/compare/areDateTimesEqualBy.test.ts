@@ -67,6 +67,25 @@ describe("areDateTimesEqualBy", () => {
     },
   );
 
+  // "Equal by unit" is bucket equality: both floors of `unit` are the same instant. The output
+  // precision `fractionalSecondDigits` only shortens how a boundary prints (Temporal toString
+  // truncates), so it must not merge two different `unit` buckets.
+  it.each`
+    value1                             | value2                             | unit             | fractionalSecondDigits | expected
+    ${"2024-05-15T10:20:30.123"}       | ${"2024-05-15T10:20:30.999"}       | ${"millisecond"} | ${0}                   | ${false}
+    ${"2024-05-15T10:20:30.123456"}    | ${"2024-05-15T10:20:30.123999"}    | ${"microsecond"} | ${3}                   | ${false}
+    ${"2024-05-15T10:20:30.123456789"} | ${"2024-05-15T10:20:30.123456788"} | ${"nanosecond"}  | ${6}                   | ${false}
+    ${"2024-05-15T10:20:30.123456"}    | ${"2024-05-15T10:20:30.123999"}    | ${"millisecond"} | ${0}                   | ${true}
+    ${"2024-05-15T10:20:30.123"}       | ${"2024-05-15T10:20:30.999"}       | ${"second"}      | ${0}                   | ${true}
+  `(
+    "returns $expected for $value1 and $value2 by $unit with fractionalSecondDigits $fractionalSecondDigits",
+    ({ value1, value2, unit, fractionalSecondDigits, expected }) => {
+      expect(
+        areDateTimesEqualBy(value1, value2, unit, { fractionalSecondDigits }),
+      ).toBe(expected);
+    },
+  );
+
   it("returns false for an unsupported unit", () => {
     expect(
       areDateTimesEqualBy(

@@ -10,6 +10,8 @@ import { isValidDateTime } from "../validate";
  * - Uses Temporal.PlainDateTime.from for both endpoints; no timezone is involved.
  * - Locale elides shared fields between `start` and `end` (e.g. same day/month/year).
  * - Returns "" for invalid input on either endpoint.
+ * - Output is normalized: dash separators become ASCII "-" (unspaced between digits, spaced
+ *   otherwise), and no-break, narrow and thin spaces become U+0020.
  *
  * @param start ISO PlainDateTime string (range start)
  * @param end ISO PlainDateTime string (range end)
@@ -17,8 +19,8 @@ import { isValidDateTime } from "../validate";
  * @param options optional Intl.DateTimeFormatOptions
  * @returns localized range string or "" when invalid
  *
- * @example formatDateTimeRange("2024-02-03T09:00:00", "2024-02-03T17:00:00", "en-US", { dateStyle: "long", timeStyle: "short" }) // "February 3, 2024, 9:00 AM – 5:00 PM"
- * @example formatDateTimeRange("2024-02-03T09:00:00", "2024-02-10T17:00:00", "en-US", { dateStyle: "long", timeStyle: "short" }) // "February 3, 2024 at 9:00 AM – February 10, 2024 at 5:00 PM"
+ * @example formatDateTimeRange("2024-02-03T09:00:00", "2024-02-03T17:00:00", "en-US", { dateStyle: "long", timeStyle: "short" }) // "February 3, 2024, 9:00 AM - 5:00 PM"
+ * @example formatDateTimeRange("2024-02-03T09:00:00", "2024-02-10T17:00:00", "en-US", { dateStyle: "long", timeStyle: "short" }) // "February 3, 2024 at 9:00 AM - February 10, 2024 at 5:00 PM"
  * @example formatDateTimeRange("invalid", "2024-02-03T17:00:00", "en-US") // "" (invalid input)
  */
 export function formatDateTimeRange(

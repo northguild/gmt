@@ -1,8 +1,16 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { plainDate } from "../../regex";
 import { isLeapSecond } from "./isLeapSecond";
+import { isObject } from "../../internal/isObject";
 
-interface IsValidDateRangeProps {
+/**
+ * The argument object of `isValidDateRange`.
+ *
+ * @example
+ * import { IsValidDateRangeProps } from "@northguild/gmt/plain";
+ * const range: IsValidDateRangeProps = { value1: "2024-02-28", value2: "2024-02-29" };
+ */
+export interface IsValidDateRangeProps {
   value1: string;
   value2: string;
   options?: { allowEqual?: boolean };
@@ -25,11 +33,10 @@ interface IsValidDateRangeProps {
  * @example isValidDateRange({ value1: "2024-02-29", value2: "2024-02-29" }) // false
  * @example isValidDateRange({ value1: "2024-02-29", value2: "2024-02-29", options: { allowEqual: true } }) // true
  */
-export function isValidDateRange({
-  value1,
-  value2,
-  options,
-}: IsValidDateRangeProps): boolean {
+export function isValidDateRange(props: IsValidDateRangeProps): boolean {
+  if (!isObject(props)) return false;
+  const { value1, value2, options } = props;
+
   if (isLeapSecond(value1) || isLeapSecond(value2)) {
     return false;
   }

@@ -17,7 +17,9 @@ export type LocaleNameStyle = "long" | "short" | "narrow";
  *   locale; partial-ICU runtimes fall back to English).
  * - Restricted to the Gregorian calendar; non-Gregorian calendar variants
  *   are out of scope for this function.
- * - Returns `[]` if `locale` is not a valid BCP 47 tag.
+ * - Returns `[]` if `locale` is not a well-formed BCP 47 tag (ECMA-402 `IsWellFormedLanguageTag`).
+ *   A well-formed tag with no matching locale data is not an error: it falls back to the host's
+ *   default locale, as ECMA-402 `ResolveLocale` requires.
  *
  * @param locale BCP 47 locale tag (e.g. "en-US", "fr-FR", "ar-SA")
  * @param style Optional name style: `"long"` (default), `"short"`, or `"narrow"`
@@ -26,7 +28,7 @@ export type LocaleNameStyle = "long" | "short" | "narrow";
  * @example getLocaleMonthNames("en-US") // ["January", "February", ... "December"]
  * @example getLocaleMonthNames("de-DE", "short") // ["Jan", "Feb", "Mär", ... "Dez"]
  * @example getLocaleMonthNames("fr-FR", "narrow") // ["J", "F", "M", ... "D"]
- * @example getLocaleMonthNames("not-a-locale") // []
+ * @example getLocaleMonthNames("not-a-locale-!!") // []
  */
 export function getLocaleMonthNames(
   locale: string,

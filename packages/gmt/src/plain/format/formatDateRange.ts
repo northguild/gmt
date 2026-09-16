@@ -10,6 +10,8 @@ import { isValidDate } from "../validate";
  * - Uses Temporal.PlainDate.from for both endpoints; no timezone is involved.
  * - Locale elides shared fields between `start` and `end` (e.g. same month/year).
  * - Returns "" for invalid input on either endpoint.
+ * - Output is normalized: dash separators become ASCII "-" (unspaced between digits, spaced
+ *   otherwise), and no-break, narrow and thin spaces become U+0020.
  *
  * @param start ISO PlainDate string (range start)
  * @param end ISO PlainDate string (range end)
@@ -17,8 +19,8 @@ import { isValidDate } from "../validate";
  * @param options optional Intl.DateTimeFormatOptions
  * @returns localized range string or "" when invalid
  *
- * @example formatDateRange("2024-02-03", "2024-02-05", "en-US", { dateStyle: "long" }) // "February 3 – 5, 2024"
- * @example formatDateRange("2024-02-03", "2024-06-10", "en-US", { dateStyle: "long" }) // "February 3 – June 10, 2024"
+ * @example formatDateRange("2024-02-03", "2024-02-05", "en-US", { dateStyle: "long" }) // "February 3 - 5, 2024"
+ * @example formatDateRange("2024-02-03", "2024-06-10", "en-US", { dateStyle: "long" }) // "February 3 - June 10, 2024"
  * @example formatDateRange("invalid", "2024-02-05", "en-US") // "" (invalid input)
  */
 export function formatDateRange(

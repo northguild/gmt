@@ -25,6 +25,7 @@ export function closestDateTo(
 ): string | null {
   if (
     !isValidDate(target) ||
+    !Array.isArray(candidates) ||
     !candidates.length ||
     !candidates.some(isValidDate)
   ) {

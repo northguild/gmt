@@ -1,15 +1,16 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { joinDateTimeConnector, normalizeDateTime } from "../../internal";
+import { plainTimeStyle } from "../../internal/plainFormatOptions";
 import type { CalendarOptions } from "../../types";
 import { isValidDateTime } from "../validate";
 
 export interface FormatCalendarOptions extends CalendarOptions {
   /**
    * `Intl.DateTimeFormatOptions` `timeStyle` for the time-of-day half.
-   * "full" is deliberately not offered here: it appends a `timeZoneName`
-   * (e.g. "Coordinated Universal Time"), and plain values have no real
-   * timezone — the UTC anchor below is an implementation detail, not a
-   * fact about `value`, so surfacing it as a zone name would be a lie.
+   * "long" and "full" are not offered: they differ from "medium" only by a
+   * `timeZoneName`, and a plain value has no zone. Passed anyway (from
+   * untyped code), they format as "medium" — Temporal's PlainDateTime format
+   * drops `timeZoneName` (AdjustDateTimeStyleFormat).
    */
   timeStyle?: "short" | "medium";
 }
@@ -38,6 +39,8 @@ const ABS_DAY_THRESHOLD = 6;
  *   `internal/joinDateTimeConnector.ts`), not hardcoded — this is what lets
  *   `formatCalendar` avoid the i18n objection that excludes a token
  *   formatter (Decision 1 in `context/roadmap/issues/J.md`).
+ * - The time never carries a zone name: a plain value has none. A `timeStyle` of `"long"` or
+ *   `"full"` (outside the type) formats as `"medium"`.
  * - Use `formatCalendar` for user-facing schedules ("Tomorrow at 2:30 PM");
  *   use `formatRelativeDateTime` for elapsed-time displays ("in 1 day").
  *
@@ -55,6 +58,8 @@ export function formatCalendar(
   locale?: string,
   options: FormatCalendarOptions = {},
 ): string {
+  // A default parameter covers only `undefined`; `null` also means "no options".
+  options ??= {};
   if (!isValidDateTime(value)) return "";
   if (options.reference !== undefined && !isValidDateTime(options.reference))
     return "";
@@ -66,7 +71,10 @@ export function formatCalendar(
       : Temporal.Now.plainDateTimeISO();
 
     const diffDays = target.toPlainDate().since(reference.toPlainDate()).days;
-    const timeStyle = options.timeStyle ?? "short";
+    // "long"/"full" are outside the type but reachable from JS; their zone
+    // name would describe the UTC anchor, not the value. Temporal's
+    // PlainDateTime format drops timeZoneName (AdjustDateTimeStyleFormat).
+    const timeStyle = plainTimeStyle(options.timeStyle ?? "short");
 
     // Plain values carry no timezone. UTC is an arbitrary but stable anchor
     // for reusing Intl's part-level formatting — any fixed zone reproduces

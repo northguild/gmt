@@ -2,42 +2,49 @@ import { Temporal } from "@js-temporal/polyfill";
 
 import {
   getLocaleFirstDayOfWeek,
-  getLocaleMinimalDaysInFirstWeek,
   getLocaleWeekYearBounds,
+  resolveMinimalDaysInFirstWeek,
 } from "../../internal";
 import { isValidDate } from "../validate";
 
 /**
- * Return the number of weeks (52 or 53) in the locale week-numbering year
- * containing `value`, using `locale`'s first day of week and
- * minimal-days-in-first-week.
+ * Return the number of weeks (52 or 53) in the locale week-numbering year containing `value`, from
+ * `locale`'s first day of week and a minimal-days-in-first-week rule.
  *
- * - `getWeeksInYear`'s locale-relative counterpart — that function uses
- *   the fixed ISO rule, this one uses `locale`'s week-numbering rule
- *   (via `Intl.Locale.prototype.weekInfo`), and the two can disagree on
- *   the same date.
- * - Computed as the number of calendar days between the locale
- *   week-year's start and the next week-year's start, divided by 7 —
- *   always a whole number, since both bounds fall on the locale's first
- *   day of week.
- * - Returns null if `value` or `locale` is invalid.
+ * - `getWeeksInYear`'s locale-relative counterpart: that function uses the fixed ISO rule, this one
+ *   uses `locale`'s first day of week, and the two can disagree on the same date.
+ * - Computed as the calendar days between this week-year's start and the next one's, divided by 7 —
+ *   always whole, since both starts fall on the locale's first day of week.
+ * - **`minimalDays` defaults to `4`, the ISO 8601 rule, on every runtime.** ECMA-402 does not expose
+ *   a locale's minimal days (tc39/proposal-intl-locale-info#86). CLDR 48's world default is `1`
+ *   (`US` included) and `4` is set for mostly European regions; pass the locale's value when it
+ *   differs. See `getLocaleWeekYear`.
+ * - Returns null if `value` or `locale` is invalid, or if `minimalDays` is not an integer from 1 to 7.
+ * - **Compatibility:** before 1.16.0 the default read the runtime's `minimalDays` where one was
+ *   exposed (Node 22), so a locale such as `en-US` got `1` there and `4` on Node 24 and later. Pass
+ *   `{ minimalDays: 1 }` to keep the Node 22 result for such a locale on every runtime.
  *
  * @param value ISO PlainDate string
  * @param locale BCP 47 locale tag (e.g. "en-US", "fr-FR")
+ * @param options optional: minimalDays (integer 1–7, default 4)
  * @returns 52 or 53, or null on invalid input
  *
  * @example getWeeksInLocaleWeekYear("2024-06-15", "en-US") // 52
+ * @example getWeeksInLocaleWeekYear("2022-06-15", "en-US", { minimalDays: 1 }) // 53 — Dec 26, 2021 to Jan 1, 2023
+ * @example getWeeksInLocaleWeekYear("2022-06-15", "en-US") // 52 — ISO default: Jan 2, 2022 to Jan 1, 2023
  * @example getWeeksInLocaleWeekYear("2020-06-15", "de-DE") // 53
+ * @example getWeeksInLocaleWeekYear("2024-06-15", "en-US", { minimalDays: 8 }) // null
  * @example getWeeksInLocaleWeekYear("invalid", "en-US") // null
  */
 export function getWeeksInLocaleWeekYear(
   value: string,
   locale: string,
+  options?: { minimalDays?: number },
 ): number | null {
   if (!isValidDate(value)) return null;
 
   const firstDay = getLocaleFirstDayOfWeek(locale);
-  const minimalDays = getLocaleMinimalDaysInFirstWeek(locale);
+  const minimalDays = resolveMinimalDaysInFirstWeek(options);
   if (firstDay === null || minimalDays === null) return null;
 
   try {

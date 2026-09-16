@@ -93,4 +93,23 @@ describe("cycleTime", () => {
       expect(cycleTime(invalidValue, "hour", 1)).toBe("");
     },
   );
+
+  // `amount` must be a finite number (isValidAmount); anything else is invalid input, never 0.
+  it.each`
+    amount
+    ${null}
+    ${undefined}
+    ${""}
+    ${"1"}
+    ${[]}
+    ${{}}
+    ${true}
+    ${Number.NaN}
+    ${Number.POSITIVE_INFINITY}
+  `(
+    "returns an empty string for a non-finite-number amount $amount",
+    ({ amount }) => {
+      expect(cycleTime("09:30:00", "hour", amount)).toBe("");
+    },
+  );
 });

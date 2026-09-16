@@ -3,7 +3,14 @@ import { defaultFractionalDigits } from "../../internal";
 import type { FractionalDigit } from "../../types";
 import { isValidTime } from "../validate";
 
-type StartOfTimeUnit = Temporal.TimeUnit | "day";
+/**
+ * Units `startOfTime` accepts: a Temporal time unit, or `"day"` for midnight.
+ *
+ * @example
+ * import { StartOfTimeUnit } from "@northguild/gmt/plain";
+ * const unit: StartOfTimeUnit = "hour";
+ */
+export type StartOfTimeUnit = Temporal.TimeUnit | "day";
 
 const supported: StartOfTimeUnit[] = [
   "day",

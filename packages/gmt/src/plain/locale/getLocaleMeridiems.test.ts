@@ -69,4 +69,11 @@ describe("getLocaleMeridiems", () => {
       expect(getLocaleMeridiems(locale)).toHaveLength(2);
     }
   });
+
+  // A well-formed tag with no locale data is not invalid input: ECMA-402 `ResolveLocale` falls
+  // back to the host's default locale instead of throwing, so the sentinel would be wrong here.
+  // Only the length is asserted, because the labels depend on the host locale.
+  it("falls back for a well-formed tag with no locale data instead of returning []", () => {
+    expect(getLocaleMeridiems("not-a-locale")).toHaveLength(2);
+  });
 });

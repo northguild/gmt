@@ -14,7 +14,7 @@ import { isValidTime } from "../validate";
  * @example minTime([]) // null
  */
 export function minTime(times: string[]): string | null {
-  if (!times.length) return null;
+  if (!Array.isArray(times) || !times.length) return null;
 
   const valid = times.filter(isValidTime);
   if (!valid.length) return null;

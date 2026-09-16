@@ -37,4 +37,21 @@ describe("getWeekNumber", () => {
       expect(getWeekNumber(nonStringInput as never)).toBeNull();
     },
   );
+
+  // Validate, then parse (isValidDate): each of these reads as week 11 or 24 if parsed loosely.
+  it.each`
+    value                                        | shape
+    ${"2024-03-15T10:00"}                        | ${"PlainDateTime"}
+    ${"2024-03-15T10:00:00+05:30[Asia/Kolkata]"} | ${"zoned datetime"}
+    ${"20240315"}                                | ${"basic format"}
+    ${"2024-12-31T23:59:60"}                     | ${"leap second"}
+    ${"2024-06-15[u-ca=hebrew]"}                 | ${"calendar annotation"}
+    ${"2024-06-15[u-ca=iso8601]"}                | ${"Temporal ISO calendar annotation"}
+  `(
+    "returns null for $value ($shape) with either week start, which isValidDate rejects",
+    ({ value }) => {
+      expect(getWeekNumber(value, "monday")).toBeNull();
+      expect(getWeekNumber(value, "sunday")).toBeNull();
+    },
+  );
 });

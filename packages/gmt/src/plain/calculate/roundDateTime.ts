@@ -1,11 +1,16 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { defaultFractionalDigits } from "../../internal";
+import {
+  defaultFractionalDigits,
+  isObject,
+  resolveDateTimeUnit,
+} from "../../internal";
 import {
   addDateTimeUnit,
   getStartOfDateTimeUnit,
   getStartOfNextDateTimeUnit,
 } from "../../internal/dateTimeUnitHelpers";
 import { getDaysIntoDateUnit } from "../../internal/dateUnitHelpers";
+import { resolveManualRoundingOptions } from "../../internal/resolveManualRoundingOptions";
 import type { DateTimeUnit } from "../../types";
 import { isValidDateTime, isValidDateTimeUnit } from "../validate";
 
@@ -28,6 +33,8 @@ function millisecondsIntoDay(source: Temporal.PlainDateTime): number {
  *
  * - Returns "" for invalid inputs.
  * - Accepts all date and time units: "year", "month", "week", "day", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond".
+ * - Each unit is accepted in its singular or plural form ("day" or "days"), as Temporal's
+ *   GetTemporalUnitValuedOption accepts both.
  * - Time units use Temporal.PlainDateTime.round() directly.
  * - Date units (year, month, week) use manual start-of-unit rounding. Weeks start on Monday.
  * - For date units the rounding grid is anchored at the unit containing `value`, so `"halfEven"`
@@ -37,6 +44,10 @@ function millisecondsIntoDay(source: Temporal.PlainDateTime): number {
  *   a unit that began before the first representable PlainDateTime
  *   (`-271821-04-19T00:00:00.000000001`) still rounds up to the next start. When it rounds down to
  *   that unrepresentable start, the result is "".
+ * - `roundingIncrement` and `roundingMode` are read as Temporal reads them for every unit: a
+ *   non-integer increment is truncated (`1.5` rounds by 1), an increment below 1 or not finite
+ *   returns "", and a `roundingMode` outside Temporal's nine returns "" (previously a date unit
+ *   floored silently).
  * - Wraps all Temporal calls in try-catch; returns "" on any error.
  *
  * @param value ISO 8601 datetime string
@@ -49,17 +60,25 @@ function millisecondsIntoDay(source: Temporal.PlainDateTime): number {
  * @example roundDateTime("-271821-04-19T12:00:00", { smallestUnit: "month" }) // "-271821-05-01T00:00:00" (the month began before the range)
  * @example roundDateTime("2024-06-15T12:34:56", { smallestUnit: "day" }) // "2024-06-16T00:00:00"
  * @example roundDateTime("2024-06-15T12:34:56", { smallestUnit: "hour" }) // "2024-06-15T13:00:00"
+ * @example roundDateTime("2024-06-15T12:34:56", { smallestUnit: "hours" }) // "2024-06-15T13:00:00" (plural unit name)
+ * @example roundDateTime("2024-05-15T12:00:00", { smallestUnit: "month", roundingMode: "bogus" as never }) // ""
  * @example roundDateTime("invalid", { smallestUnit: "year" }) // ""
  */
 export function roundDateTime(
   value: string,
   options: {
-    smallestUnit: DateTimeUnit;
+    smallestUnit: Temporal.SmallestUnit<DateTimeUnit>;
     roundingIncrement?: number;
     roundingMode?: Temporal.RoundingMode;
   },
 ): string {
-  const { smallestUnit, roundingIncrement, roundingMode } = options;
+  if (!isObject(options)) return "";
+
+  const { roundingIncrement, roundingMode } = options;
+  const smallestUnit: unknown =
+    typeof options.smallestUnit === "string"
+      ? resolveDateTimeUnit(options.smallestUnit)
+      : options.smallestUnit;
 
   if (!isValidDateTime(value) || !isValidDateTimeUnit(smallestUnit)) return "";
 
@@ -99,8 +118,12 @@ export function roundDateTime(
     }
 
     // Manual rounding for date units (year, month, week)
-    const increment = roundingIncrement ?? 1;
-    if (increment <= 0) return "";
+    const resolved = resolveManualRoundingOptions(
+      roundingIncrement,
+      roundingMode,
+    );
+    if (resolved === null) return "";
+    const { increment, mode } = resolved;
 
     // Measured towards the next start, never from the current one: the first representable
     // PlainDateTime is -271821-04-19T00:00:00.000000001, so the week, month and year holding it
@@ -122,7 +145,6 @@ export function roundDateTime(
       getStartOfDateTimeUnit(source, smallestUnit);
 
     let rounded: Temporal.PlainDateTime;
-    const mode = roundingMode ?? "halfExpand";
     switch (mode) {
       case "ceil":
       case "expand":
@@ -148,8 +170,6 @@ export function roundDateTime(
         // start. Above and below the tie it rounds to the nearer start, like every other half mode.
         rounded = fraction > 0.5 ? startOfNext : startOfCurrent();
         break;
-      default:
-        rounded = startOfCurrent();
     }
 
     return rounded.toString();

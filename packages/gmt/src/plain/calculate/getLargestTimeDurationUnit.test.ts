@@ -10,4 +10,17 @@ describe("getLargestTimeDurationUnit", () => {
   `("returns $expected for units $units", ({ units, expected }) => {
     expect(getLargestTimeDurationUnit(units)).toBe(expected);
   });
+
+  // Not an array: the documented "no valid unit" default, never a throw (a string is not
+  // searched as a substring).
+  it.each`
+    units
+    ${null}
+    ${undefined}
+    ${"minutes"}
+    ${{}}
+    ${0}
+  `("returns seconds for non-array units $units", ({ units }) => {
+    expect(getLargestTimeDurationUnit(units)).toBe("seconds");
+  });
 });

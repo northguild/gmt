@@ -1,11 +1,12 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidDate } from "../validate";
 
-const supported: Temporal.DateUnit[] = ["year", "month", "week"];
+const supported: Temporal.DateUnit[] = ["year", "month", "week", "day"];
 
 /**
  * Return the start of the specified date `unit` for a given ISO 8601 date string.
  *
+ * - `"day"` returns the date itself: a date is already a whole day, as `endOfDate` treats it.
  * - Returns "" for invalid inputs.
  *
  * @param value ISO 8601 date string
@@ -14,6 +15,7 @@ const supported: Temporal.DateUnit[] = ["year", "month", "week"];
  * @returns ISO 8601 string representing the start of the specified unit, or "" on invalid input
  *
  * @example startOfDate("2024-02-29", "month") // "2024-02-01"
+ * @example startOfDate("2024-02-29", "day") // "2024-02-29"
  * @example startOfDate("invalid-date", "month") // ""
  */
 export function startOfDate(
@@ -35,6 +37,9 @@ export function startOfDate(
         break;
       case "month":
         result = source.with({ day: 1 });
+        break;
+      case "day":
+        result = source;
         break;
       case "week": {
         // Week start: compute how many days to subtract to reach Monday.

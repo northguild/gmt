@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidTimeInterval } from "./validate";
+import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 
 /**
  * Split a time interval into `n` equal-length sub-intervals.
@@ -13,10 +14,14 @@ import { isValidTimeInterval } from "./validate";
  * - A zero-length interval (`start === end`) returns `n` identical zero-length sub-intervals.
  * - Returns `[]` when `n` is not a positive integer, or on invalid input (unparseable
  *   start/end, `start > end`).
+ * - `options.maxPieces` (positive safe integer, default `1_000_000`) bounds the output: when `n`
+ *   exceeds it, or exceeds the longest possible array (2^32 - 1), the function returns `[]`
+ *   before building any piece. An invalid `maxPieces` also returns `[]`.
  *
  * @param start ISO PlainTime string for the interval start
  * @param end ISO PlainTime string for the interval end
  * @param n number of equal sub-intervals to produce (positive integer)
+ * @param options optional: `maxPieces` (positive safe integer, default `1_000_000`)
  * @returns array of `n` `{ start, end }` records, or `[]` on invalid input
  *
  * @example intervalDivideEquallyTime("09:00:00", "17:00:00", 4) // [{ start: "09:00:00", end: "11:00:00" }, { start: "11:00:00", end: "13:00:00" }, { start: "13:00:00", end: "15:00:00" }, { start: "15:00:00", end: "17:00:00" }]
@@ -24,13 +29,22 @@ import { isValidTimeInterval } from "./validate";
  * @example intervalDivideEquallyTime("09:00:00", "17:00:00", 1) // [{ start: "09:00:00", end: "17:00:00" }]
  * @example intervalDivideEquallyTime("09:00:00", "17:00:00", 0) // []
  * @example intervalDivideEquallyTime("invalid", "17:00:00", 3) // []
+ * @example intervalDivideEquallyTime("09:00:00", "17:00:00", 3, { maxPieces: 2 }) // [] (3 pieces exceed the limit)
+ * @example intervalDivideEquallyTime("09:00:00", "17:00:00", 3, { maxPieces: 3 }) // [{ start: "09:00:00", end: "11:40:00" }, { start: "11:40:00", end: "14:20:00" }, { start: "14:20:00", end: "17:00:00" }]
  */
 export function intervalDivideEquallyTime(
   start: string,
   end: string,
   n: number,
+  options?: { maxPieces?: number },
 ): Array<{ start: string; end: string }> {
   if (typeof n !== "number" || !Number.isInteger(n) || n <= 0) {
+    return [];
+  }
+
+  const maxPieces = resolveMaxPieces(options);
+
+  if (maxPieces === null || exceedsPieceLimit(n, maxPieces)) {
     return [];
   }
 
