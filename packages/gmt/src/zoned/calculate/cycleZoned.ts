@@ -1,6 +1,7 @@
 import {
   cycleFieldValue,
   dateCycleFieldBounds,
+  isValidAmount,
   timeCycleFieldBounds,
   zonedDateTimeFrom,
 } from "../../internal";
@@ -39,7 +40,7 @@ import { setZoned } from "./setZoned";
  * - `options.round` steps to the *next* multiple of `amount` in the direction of its sign
  *   (ceiling for positive, floor for negative) — not the nearest one. See `cycleDate`/`cycleTime`'s
  *   docs for worked examples.
- * - Returns "" for an invalid `value` or an invalid `field`.
+ * - Returns "" for an invalid `value`, an invalid `field`, or an `amount` that is not a finite number.
  *
  * @param value zoned ISO 8601 datetime string
  * @param field the field to cycle: "year" | "month" | "day" | "hour" | "minute" | "second" | "millisecond" | "microsecond" | "nanosecond"
@@ -65,7 +66,11 @@ export function cycleZoned(
     offset?: Offset;
   },
 ): string {
-  if (!isValidZonedDateTime(value) || !isValidDateTimeCycleField(field)) {
+  if (
+    !isValidZonedDateTime(value) ||
+    !isValidDateTimeCycleField(field) ||
+    !isValidAmount(amount)
+  ) {
     return "";
   }
 

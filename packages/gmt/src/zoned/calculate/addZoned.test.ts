@@ -280,6 +280,19 @@ describe("addZoned", () => {
       addZoned("2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]", { months: 1 }),
     ).toBe("");
   });
+
+  // Temporal's ParseISODateTime clamps a second of 60 to 59 in every spelling its grammar
+  // accepts (DateTimeSeparator SP/T/t, basic TimeSpec); GMT rejects a leap second instead.
+  it.each`
+    value                               | spelling
+    ${"2016-12-31t23:59:60+00:00[UTC]"} | ${"lowercase t separator"}
+    ${"2016-12-31 23:59:60+00:00[UTC]"} | ${"space separator"}
+    ${"2016-12-31T235960+00:00[UTC]"}   | ${"basic HHMMSS time"}
+    ${"20161231T235960Z[UTC]"}          | ${"basic date and time"}
+    ${"20161231 235960.5+00:00[UTC]"}   | ${"basic, space separator, fraction"}
+  `('returns "" for leap-second value $value ($spelling)', ({ value }) => {
+    expect(addZoned(value, { seconds: 1 })).toBe("");
+  });
 });
 
 // ---------------------------------------------------------------------------------------------

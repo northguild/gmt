@@ -16,8 +16,8 @@ import { zonedDateTimeFrom } from "../../internal";
  * @param unit optional: "seconds" | "milliseconds"
  * @returns epoch number or null on invalid
  *
- * @example convertZonedToUnix("2024-02-29T12:34:56.789+00:00[UTC]") // 1709200496789
- * @example convertZonedToUnix("2024-02-29T12:34:56.789+00:00[UTC]", "seconds") // 1709200496
+ * @example convertZonedToUnix("2024-02-29T12:34:56.789+00:00[UTC]") // 1709210096789
+ * @example convertZonedToUnix("2024-02-29T12:34:56.789+00:00[UTC]", "seconds") // 1709210096
  * @example convertZonedToUnix("invalid") // null
  */
 export function convertZonedToUnix(

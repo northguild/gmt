@@ -19,8 +19,8 @@ import { isValidTimeZone } from "../validate";
  * | `minute` | 0–59, zero-padded. |
  * | `second` | 0–59, zero-padded. |
  * | `millisecond` | 0–999, zero-padded to 3. |
- * | `microsecond` | Sub-millisecond microseconds (0–999999). |
- * | `nanosecond` | Sub-millisecond nanoseconds (0–999999999). |
+ * | `microsecond` | Microseconds within the millisecond, 0–999, zero-padded to 3. |
+ * | `nanosecond` | Nanoseconds within the microsecond, 0–999, zero-padded to 3. |
  *
  * @example
  * import { ZonedNowUnit } from "@northguild/gmt/zoned";
@@ -59,7 +59,7 @@ function isValidZonedNowUnit(unit: string): unit is ZonedNowUnit {
  * Return the requested current unit value for the specified IANA timeZone.
  *
  * - Uses Temporal.Now.zonedDateTimeISO to get the current time.
- * - Uses weekOfYear helper for week calculations.
+ * - `week` is the ISO 8601 week number, from `parseWeekFromDate`.
  * - Validation is performed on timezone and unit.
  *
  * @param ianaTimezone IANA timeZone identifier

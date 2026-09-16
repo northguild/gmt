@@ -97,6 +97,24 @@ describe("isValidCalendarZonedDateTime", () => {
     expect(isValidCalendarZonedDateTime(value)).toBe(true);
   });
 
+  // coding-standards E1 rule 2: only GMT CalendarSystem ids, so guard and bodies agree.
+  it.each`
+    value                                                  | gmtId
+    ${"0113-01-10T12:00:00+00:00[u-ca=iso8601][UTC]"}      | ${"gregorian"}
+    ${"0113-01-10T12:00:00+00:00[u-ca=gregory][UTC]"}      | ${"gregorian"}
+    ${"0113-01-10T12:00:00+00:00[u-ca=roc][UTC]"}          | ${"taiwan"}
+    ${"0113-01-10T12:00:00+00:00[u-ca=islamic-tbla][UTC]"} | ${"islamic-tabular"}
+    ${"0113-01-10T12:00:00+00:00[u-ca=islamicc][UTC]"}     | ${"islamic-civil"}
+    ${"0113-01-10T12:00:00+00:00[u-ca=islamic][UTC]"}      | ${"—"}
+    ${"0113-01-10T12:00:00+00:00[u-ca=islamic-rgsa][UTC]"} | ${"—"}
+    ${"0113-01-10T12:00:00+00:00[u-ca=ethioaa][UTC]"}      | ${"ethiopic-amete-alem"}
+  `(
+    "returns false for Temporal-only calendar id in $value (GMT id: $gmtId)",
+    ({ value }) => {
+      expect(isValidCalendarZonedDateTime(value)).toBe(false);
+    },
+  );
+
   it("returns false when Temporal.ZonedDateTime.from throws", () => {
     mockTemporalZonedDateTimeFromThrow();
     expect(isValidCalendarZonedDateTime(BARE)).toBe(false);

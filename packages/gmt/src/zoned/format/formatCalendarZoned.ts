@@ -40,7 +40,7 @@ const ABS_DAY_THRESHOLD = 6;
  * @returns the formatted calendar string, or "" on invalid input
  *
  * @example formatCalendarZoned("2026-03-16T14:30:00-04:00[America/New_York]", "en-US", { reference: "2026-03-15T09:00:00-04:00[America/New_York]" }) // "tomorrow at 2:30 PM"
- * @example formatCalendarZoned(value, "de-DE") // "morgen um 14:30"
+ * @example formatCalendarZoned("2026-03-16T14:30:00+01:00[Europe/Berlin]", "de-DE", { reference: "2026-03-15T09:00:00+01:00[Europe/Berlin]" }) // "morgen um 14:30"
  * @example formatCalendarZoned("not-a-date") // ""
  */
 export function formatCalendarZoned(
@@ -48,6 +48,8 @@ export function formatCalendarZoned(
   locale?: string,
   options: FormatCalendarZonedOptions = {},
 ): string {
+  // A default parameter covers only `undefined`; `null` also means "no options".
+  options ??= {};
   if (!isValidZonedDateTime(value)) return "";
 
   if (

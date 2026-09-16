@@ -126,3 +126,78 @@ describe("mapZonedDatesInRange", () => {
     });
   }
 });
+
+describe("mapZonedDatesInRange maxPieces", () => {
+  // 2024-02-28..2024-03-02 local dates inclusive: 4 dates at step 1, 2 at step 2.
+  it.each`
+    stepDays | maxPieces | expected
+    ${1}     | ${4}      | ${["2024-02-28", "2024-02-29", "2024-03-01", "2024-03-02"]}
+    ${1}     | ${10}     | ${["2024-02-28", "2024-02-29", "2024-03-01", "2024-03-02"]}
+    ${2}     | ${2}      | ${["2024-02-28", "2024-03-01"]}
+  `(
+    "returns $expected for step $stepDays with maxPieces $maxPieces",
+    ({ stepDays, maxPieces, expected }) => {
+      expect(
+        mapZonedDatesInRange(
+          "2024-02-28T12:00:00+00:00[UTC]",
+          "2024-03-02T12:00:00+00:00[UTC]",
+          stepDays,
+          { maxPieces },
+        ),
+      ).toEqual(expected);
+    },
+  );
+
+  // Owner decision A2: more dates than maxPieces returns the sentinel.
+  it.each`
+    stepDays | maxPieces
+    ${1}     | ${3}
+    ${2}     | ${1}
+  `(
+    "returns [] at step $stepDays over maxPieces $maxPieces",
+    ({ stepDays, maxPieces }) => {
+      expect(
+        mapZonedDatesInRange(
+          "2024-02-28T12:00:00+00:00[UTC]",
+          "2024-03-02T12:00:00+00:00[UTC]",
+          stepDays,
+          { maxPieces },
+        ).length,
+      ).toBe(0);
+    },
+  );
+
+  it.each`
+    label                   | options
+    ${"maxPieces 0"}        | ${{ maxPieces: 0 }}
+    ${"maxPieces -1"}       | ${{ maxPieces: -1 }}
+    ${"maxPieces 1.5"}      | ${{ maxPieces: 1.5 }}
+    ${"maxPieces NaN"}      | ${{ maxPieces: Number.NaN }}
+    ${"maxPieces Infinity"} | ${{ maxPieces: Number.POSITIVE_INFINITY }}
+    ${"maxPieces string"}   | ${{ maxPieces: "5" }}
+    ${"null options"}       | ${null}
+    ${"number options"}     | ${5}
+  `("returns [] for invalid $label", ({ options }) => {
+    expect(
+      mapZonedDatesInRange(
+        "2024-02-28T12:00:00+00:00[UTC]",
+        "2024-03-02T12:00:00+00:00[UTC]",
+        1,
+        options as never,
+      ).length,
+    ).toBe(0);
+  });
+});
+
+describe("mapZonedDatesInRange default piece limit", () => {
+  // Default maxPieces is 1_000_000. 2024-01-01 + 1_000_000 days = 4761-11-28 (Temporal
+  // PlainDate.add), so the inclusive range holds 1_000_001 dates.
+  it("returns [] for 1_000_001 local dates in UTC", () => {
+    expect(
+      mapZonedDatesInRange(
+        "2024-01-01T00:00:00+00:00[UTC]",
+        "4761-11-28T00:00:00+00:00[UTC]",
+      ).length,
+    ).toBe(0);
+  });
+});

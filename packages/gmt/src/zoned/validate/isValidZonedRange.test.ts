@@ -62,10 +62,29 @@ describe("isValidZonedRange", () => {
     value1                              | value2                              | expected
     ${"2024-12-31T23:59:60+00:00[UTC]"} | ${"2025-01-01T00:00:00+00:00[UTC]"} | ${false}
     ${"2024-01-01T10:00:00+00:00[UTC]"} | ${"2024-12-31T23:59:60+00:00[UTC]"} | ${false}
+    ${"2016-12-31t23:59:60+00:00[UTC]"} | ${"2017-01-01T00:00:00+00:00[UTC]"} | ${false}
+    ${"2016-12-31 23:59:60+00:00[UTC]"} | ${"2017-01-01T00:00:00+00:00[UTC]"} | ${false}
+    ${"2016-12-31T00:00:00+00:00[UTC]"} | ${"2016-12-31T235960+00:00[UTC]"}   | ${false}
+    ${"2016-12-31T00:00:00+00:00[UTC]"} | ${"20161231T235960Z[UTC]"}          | ${false}
   `(
     "returns $expected for leap-second input: $value1 vs $value2",
     ({ value1, value2, expected }) => {
       expect(isValidZonedRange({ value1, value2 })).toBe(expected);
+    },
+  );
+
+  // E5 decision D2 (isValidZonedDateTime): zoned/ rejects every [u-ca=...] annotation, so a range
+  // validator must not certify an endpoint isValidZonedDateTime refuses.
+  it.each`
+    value1                                            | value2                                                          | reason
+    ${"2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]"}  | ${"2024-02-01T00:00:00+00:00[UTC]"}                             | ${"elective calendar on value1"}
+    ${"2024-01-01T00:00:00+00:00[UTC][!u-ca=hebrew]"} | ${"2024-02-01T00:00:00+00:00[UTC]"}                             | ${"critical calendar on value1"}
+    ${"2024-01-01T00:00:00+00:00[UTC]"}               | ${"2024-02-01T00:00:00+00:00[UTC][u-ca=iso8601][u-ca=gregory]"} | ${"duplicate calendar on value2"}
+    ${"2024-01-01T00:00:00+00:00[UTC]"}               | ${"2024-02-01T00:00:00+00:00[UTC][u-ca=iso8601]"}               | ${"iso8601 calendar on value2"}
+  `(
+    "returns false when an endpoint carries a calendar annotation: $value1, $value2 ($reason)",
+    ({ value1, value2 }) => {
+      expect(isValidZonedRange({ value1, value2 })).toBe(false);
     },
   );
 

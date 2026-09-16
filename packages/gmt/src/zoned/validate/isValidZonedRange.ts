@@ -1,6 +1,10 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isLeapSecond } from "../../plain/validate/isLeapSecond";
-import { zonedDateTimeFrom } from "../../internal";
+import {
+  hasCalendarAnnotation,
+  isObject,
+  zonedDateTimeFrom,
+} from "../../internal";
 
 /**
  * Return true if `value1` and `value2` form a valid zoned range — both parseable as
@@ -11,6 +15,10 @@ import { zonedDateTimeFrom } from "../../internal";
  * - Comparison is done by instant, so intervals spanning DST transitions are compared
  *   by absolute time.
  * - Invalid input, malformed strings, or leap-second strings return `false`.
+ * - A `[u-ca=...]` calendar annotation on either endpoint returns `false`, exactly as
+ *   `isValidZonedDateTime` rejects it (E5 decision D2), so this never certifies a value the rest
+ *   of `zoned/` refuses. Compatibility: earlier releases accepted and ignored the annotation;
+ *   to keep that, remove it first with `value.replace(/\[!?u-ca=[^\]]*\]/g, "")`.
  *
  * @param value1 first ISO ZonedDateTime string
  * @param value2 second ISO ZonedDateTime string
@@ -20,21 +28,27 @@ import { zonedDateTimeFrom } from "../../internal";
  * @example isValidZonedRange({ value1: "2024-01-01T10:00:00+00:00[UTC]", value2: "2024-12-31T23:59:59+00:00[UTC]" }) // true
  * @example isValidZonedRange({ value1: "2024-12-31T23:59:59+00:00[UTC]", value2: "2024-01-01T10:00:00+00:00[UTC]" }) // false
  * @example isValidZonedRange({ value1: "2024-06-15T12:00:00-04:00[America/New_York]", value2: "2024-06-15T12:00:00-04:00[America/New_York]", options: { allowEqual: true } }) // true
+ * @example isValidZonedRange({ value1: "2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]", value2: "2024-02-01T00:00:00+00:00[UTC]" }) // false (calendar annotation)
+ * @example isValidZonedRange({ value1: "2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]".replace(/\[!?u-ca=[^\]]*\]/g, ""), value2: "2024-02-01T00:00:00+00:00[UTC]" }) // true (annotation removed)
  */
-export function isValidZonedRange({
-  value1,
-  value2,
-  options,
-}: {
+export function isValidZonedRange(props: {
   value1: string;
   value2: string;
   options?: { allowEqual?: boolean };
 }): boolean {
+  if (!isObject(props)) return false;
+  const { value1, value2, options } = props;
+
   if (typeof value1 !== "string" || typeof value2 !== "string") {
     return false;
   }
 
-  if (isLeapSecond(value1) || isLeapSecond(value2)) {
+  if (
+    isLeapSecond(value1) ||
+    isLeapSecond(value2) ||
+    hasCalendarAnnotation(value1) ||
+    hasCalendarAnnotation(value2)
+  ) {
     return false;
   }
 

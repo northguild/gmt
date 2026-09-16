@@ -33,6 +33,54 @@ describe("formatRfc2822", () => {
     expect(formatRfc2822(value)).toBe("");
   });
 
+  describe('zone = ("+" / "-") 4DIGIT: whole minutes only (RFC 5322 §3.3)', () => {
+    // Local mean time offsets are not whole minutes, so no ±hhmm exists for
+    // them. Africa/Monrovia was -00:44:30 until 1972 (23:15:30 local is
+    // 1970-01-01T00:00:00Z); Europe/Dublin was -00:25:21 in 1900.
+    it.each`
+      value                                           | reason
+      ${"1969-12-31T23:15:30-00:45[Africa/Monrovia]"} | ${"offset -00:44:30"}
+      ${"1900-06-01T11:34:39-00:25[Europe/Dublin]"}   | ${"offset -00:25:21"}
+    `("returns '' for $value ($reason)", ({ value }: { value: string }) => {
+      expect(formatRfc2822(value)).toBe("");
+    });
+
+    it.each`
+      value                                  | expected
+      ${"2024-01-01T12:00:00-00:30[-00:30]"} | ${"Mon, 01 Jan 2024 12:00:00 -0030"}
+      ${"2024-01-01T12:00:00+00:30[+00:30]"} | ${"Mon, 01 Jan 2024 12:00:00 +0030"}
+    `(
+      "pads a sub-hour offset: $value → $expected",
+      ({ value, expected }: { value: string; expected: string }) => {
+        expect(formatRfc2822(value)).toBe(expected);
+      },
+    );
+  });
+
+  describe("year = 4*DIGIT, unsigned (RFC 5322 §3.3)", () => {
+    // 0000-01-01 and 10000-01-01 are Saturdays: 0001-01-01 is a Monday and
+    // year 0 has 366 days; 8000 years are 20 whole 400-year cycles from
+    // 2000-01-01, a Saturday.
+    it.each`
+      value                                  | expected
+      ${"-000001-06-15T12:00:00+00:00[UTC]"} | ${""}
+      ${"-271821-04-20T00:00:00+00:00[UTC]"} | ${""}
+      ${"0000-01-01T00:00:00+00:00[UTC]"}    | ${"Sat, 01 Jan 0000 00:00:00 +0000"}
+      ${"+010000-01-01T00:00:00+00:00[UTC]"} | ${"Sat, 01 Jan 10000 00:00:00 +0000"}
+    `(
+      "$value → '$expected'",
+      ({ value, expected }: { value: string; expected: string }) => {
+        expect(formatRfc2822(value)).toBe(expected);
+      },
+    );
+  });
+
+  it("drops fractional seconds: second = 2DIGIT has no fraction", () => {
+    expect(formatRfc2822("2024-03-15T14:30:00.999+00:00[UTC]")).toBe(
+      "Fri, 15 Mar 2024 14:30:00 +0000",
+    );
+  });
+
   describe("output is identical across all 17 locales", () => {
     const valueByLocale = localeZonedDateTimeInputByLocale;
 

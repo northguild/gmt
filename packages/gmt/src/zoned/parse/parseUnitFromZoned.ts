@@ -90,10 +90,8 @@ export function parseUnitFromZoned(
         return zonedDateTime.month.toString().padStart(2, "0");
       case "week":
         return (
-          getWeekNumber(
-            `${zonedDateTime.year}-${zonedDateTime.month.toString().padStart(2, "0")}-${zonedDateTime.day.toString().padStart(2, "0")}`,
-            weekStartsOn,
-          ) ?? 0
+          getWeekNumber(zonedDateTime.toPlainDate().toString(), weekStartsOn) ??
+          0
         ).toString();
       case "day":
         return zonedDateTime.day.toString().padStart(2, "0");

@@ -28,10 +28,7 @@ export function parseWeekFromZoned(
 
   try {
     const zonedDateTime = zonedDateTimeFrom(value);
-    return getWeekNumber(
-      `${zonedDateTime.year}-${zonedDateTime.month.toString().padStart(2, "0")}-${zonedDateTime.day.toString().padStart(2, "0")}`,
-      weekStartsOn,
-    );
+    return getWeekNumber(zonedDateTime.toPlainDate().toString(), weekStartsOn);
   } catch {
     return null;
   }

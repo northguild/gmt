@@ -1,26 +1,33 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate";
 import { zonedDateTimeFrom } from "../../internal";
+import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 
 /**
  * Return an array of plain ISO date strings covering the inclusive date range between two zoned datetimes.
  *
  * - Both datetimes must have the same timezone.
  * - Returns [] for invalid inputs, mismatched timezones, start > end, or invalid step.
+ * - `options.maxPieces` (positive safe integer, default `1_000_000`) bounds the output: when the
+ *   range holds more dates than that, it returns `[]` without generating any. An invalid
+ *   `maxPieces` also returns `[]`. Pass `stepDays` explicitly to reach `options`.
  *
  * @param startZonedDateTime start zoned ISO 8601 datetime string
  * @param endZonedDateTime end zoned ISO 8601 datetime string
  * @param stepDays optional positive integer step in days
+ * @param options optional: `maxPieces` (positive safe integer, default `1_000_000`)
  * @returns array of ISO date strings or [] when invalid
  *
  * @example mapZonedDatesInRange("2024-02-28T12:00:00+00:00[UTC]", "2024-03-02T12:00:00+00:00[UTC]") // ["2024-02-28", "2024-02-29", "2024-03-01", "2024-03-02"]
  * @example mapZonedDatesInRange("2024-02-28T12:00:00+00:00[UTC]", "2024-03-02T12:00:00+00:00[UTC]", 2) // ["2024-02-28", "2024-03-01"]
  * @example mapZonedDatesInRange("invalid", "2024-03-02T12:00:00+00:00[UTC]") // []
+ * @example mapZonedDatesInRange("2024-02-28T12:00:00+00:00[UTC]", "2024-03-02T12:00:00+00:00[UTC]", 1, { maxPieces: 3 }) // [] (more dates than the limit)
+ * @example mapZonedDatesInRange("2024-02-28T12:00:00+00:00[UTC]", "2024-03-02T12:00:00+00:00[UTC]", 1, { maxPieces: 10 }) // ["2024-02-28", "2024-02-29", "2024-03-01", "2024-03-02"]
  */
 export function mapZonedDatesInRange(
   startZonedDateTime: string,
   endZonedDateTime: string,
-  ...stepDaysInput: [stepDays?: number]
+  ...stepDaysInput: [stepDays?: number, options?: { maxPieces?: number }]
 ): string[] {
   const resolvedStepDays = stepDaysInput.length === 0 ? 1 : stepDaysInput[0];
 
@@ -29,6 +36,12 @@ export function mapZonedDatesInRange(
     !Number.isInteger(resolvedStepDays) ||
     resolvedStepDays <= 0
   ) {
+    return [];
+  }
+
+  const maxPieces = resolveMaxPieces(stepDaysInput[1]);
+
+  if (maxPieces === null) {
     return [];
   }
 
@@ -57,6 +70,13 @@ export function mapZonedDatesInRange(
     const endDate = end.toPlainDate();
 
     if (Temporal.PlainDate.compare(startDate, endDate) === 1) {
+      return [];
+    }
+
+    const count =
+      Math.floor(startDate.until(endDate).days / resolvedStepDays) + 1;
+
+    if (exceedsPieceLimit(count, maxPieces)) {
       return [];
     }
 

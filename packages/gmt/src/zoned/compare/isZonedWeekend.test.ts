@@ -1,3 +1,4 @@
+import { runtimeWeekInfo } from "../../test/runtimeWeekInfo";
 import { Temporal } from "@js-temporal/polyfill";
 import { battleTestTimeZones, MustTestLocales } from "../../test";
 import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
@@ -192,5 +193,19 @@ describe("isZonedWeekend", () => {
     expect(
       isZonedWeekend("2024-02-03T12:00:00+00:00[UTC]", MustTestLocales.enUS),
     ).toBe(false);
+  });
+
+  // A well-formed tag with no locale data is not invalid input: ECMA-402 `ResolveLocale` falls
+  // back instead of throwing, so the sentinel would be wrong here. Only a malformed tag such as
+  // "not-a-locale-!!" is invalid. The expected value comes from the runtime's own week data.
+  it("falls back for a well-formed tag with no locale data instead of returning the sentinel", () => {
+    const { weekend } = runtimeWeekInfo("not-a-locale");
+    const date = Temporal.PlainDate.from("2024-02-03");
+    expect(
+      isZonedWeekend(
+        "2024-02-03T10:00:00-05:00[America/New_York]",
+        "not-a-locale",
+      ),
+    ).toBe(weekend.includes(date.dayOfWeek));
   });
 });

@@ -16,6 +16,13 @@ import { parseCalendarZonedValue } from "../../internal";
  * - Rejects leap seconds, which `Temporal.ZonedDateTime.from` otherwise clamps to `:59`.
  * - Delegates all field-range, era, calendar-identifier and time-zone checking to Temporal (via
  *   `parseCalendarZonedValue`) — the regex proves shape only.
+ * - The calendar identifier must be one of GMT's `CalendarSystem` ids. Temporal's own ids for
+ *   the same calendars (`iso8601`, `gregory`, `roc`, `islamic-tbla`, `islamicc`, `ethioaa`) and
+ *   ids GMT does not support (`islamic`, `islamic-rgsa`) return false, as every function that
+ *   re-emits a calendar string already did. Compatibility: earlier releases accepted them here;
+ *   use the GMT id, which reads identically (`taiwan` for `roc`, `gregorian` for `gregory` or
+ *   `iso8601`, `islamic-tabular` for `islamic-tbla`, `islamic-civil` for `islamicc`,
+ *   `ethiopic-amete-alem` for `ethioaa`).
  * - Returns false for non-strings or empty strings.
  *
  * @param value candidate zoned datetime string, optionally calendar-annotated
@@ -27,6 +34,8 @@ import { parseCalendarZonedValue } from "../../internal";
  * @example isValidCalendarZonedDateTime("5784-06-15T14:30:00-05:00[America/New_York][u-ca=hebrew]") // false (Temporal's segment ordering)
  * @example isValidCalendarZonedDateTime("5785-13-15T14:30:00-05:00[u-ca=hebrew][America/New_York]") // false (5785 is not a Hebrew leap year, so month 13 does not exist)
  * @example isValidCalendarZonedDateTime("2024-06-30T23:59:60+00:00[UTC]") // false (leap second)
+ * @example isValidCalendarZonedDateTime("0113-01-10T12:00:00+08:00[u-ca=roc][Asia/Taipei]") // false (Temporal's id, not GMT's)
+ * @example isValidCalendarZonedDateTime("0113-01-10T12:00:00+08:00[u-ca=roc][Asia/Taipei]".replace("u-ca=roc", "u-ca=taiwan")) // true (the GMT id)
  * @example isValidCalendarZonedDateTime("invalid") // false
  */
 export function isValidCalendarZonedDateTime(value: string): boolean {

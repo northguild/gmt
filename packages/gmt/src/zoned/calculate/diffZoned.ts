@@ -29,7 +29,7 @@ import { isValidCalendarZonedDateTime } from "../validate";
  * per Temporal's DifferenceOptions — e.g. `{ smallestUnit: "hour", roundingMode: "halfExpand" }`
  * rounds the difference to the nearest hour before extracting the requested unit.
  * - When `units` is an array, `smallestUnit` must not be coarser than the largest unit in the
- *   array (e.g. `["day", "hour"]` with `smallestUnit: "week"`) — this combination is rejected by
+ *   array (e.g. `["days", "hours"]` with `smallestUnit: "week"`) — this combination is rejected by
  *   Temporal and returns null, same as other invalid input.
  *
  * @param value1 zoned ISO 8601 datetime string (start), optionally calendar-annotated

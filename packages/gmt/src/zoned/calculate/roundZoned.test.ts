@@ -508,6 +508,8 @@ describe("roundZoned", () => {
   it.each`
     invalidUnit
     ${"invalid-unit"}
+    ${"hourss"}
+    ${"Days"}
     ${""}
     ${null}
     ${undefined}
@@ -519,12 +521,28 @@ describe("roundZoned", () => {
     ).toBe("");
   });
 
+  // Temporal §13.17 GetTemporalUnitValuedOption: "Both singular and plural unit names are accepted".
+  it.each`
+    value                                                 | unit              | expected
+    ${"2024-06-15T12:34:56-04:00[America/New_York]"}      | ${"days"}         | ${"2024-06-16T00:00:00-04:00[America/New_York]"}
+    ${"2024-06-15T12:34:56-04:00[America/New_York]"}      | ${"hours"}        | ${"2024-06-15T13:00:00-04:00[America/New_York]"}
+    ${"2024-06-15T12:34:56-04:00[America/New_York]"}      | ${"minutes"}      | ${"2024-06-15T12:35:00-04:00[America/New_York]"}
+    ${"2024-06-15T12:34:56.5-04:00[America/New_York]"}    | ${"seconds"}      | ${"2024-06-15T12:34:57-04:00[America/New_York]"}
+    ${"2024-06-15T12:34:56.1234-04:00[America/New_York]"} | ${"milliseconds"} | ${"2024-06-15T12:34:56.123-04:00[America/New_York]"}
+  `(
+    "returns $expected for $value rounded to the plural unit $unit",
+    ({ value, unit, expected }) => {
+      expect(roundZoned(value, { smallestUnit: unit })).toBe(expected);
+    },
+  );
+
   // unsupported date units (year, month, week) return ""
   it.each`
     unit
     ${"year"}
     ${"month"}
     ${"week"}
+    ${"weeks"}
   `("returns empty string for unsupported date unit $unit", ({ unit }) => {
     expect(
       roundZoned("2024-06-15T12:34:56-04:00[America/New_York]", {

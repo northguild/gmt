@@ -49,7 +49,7 @@ const AUTO_UNITS: Array<{ unit: RelativeUnit; maxSeconds: number }> = [
  * @returns the formatted relative-time string, or "" on invalid input
  *
  * @example formatRelativeZoned("2026-03-08T01:00:00-05:00[America/New_York]", "en-US") // "tomorrow"
- * @example formatRelativeZoned(value, "en-US", { roundingMethod: "floor" }) // rounds toward the earlier boundary
+ * @example formatRelativeZoned("2026-01-15T00:00:00+00:00[UTC]", "en-US", { reference: "2026-01-15T10:30:00+00:00[UTC]", roundingMethod: "floor" }) // "11 hours ago" (−10.5 hours floors to −11; the default rounds to 10)
  * @example formatRelativeZoned("not-a-date") // ""
  */
 export function formatRelativeZoned(
@@ -57,6 +57,8 @@ export function formatRelativeZoned(
   locale?: string,
   options: FormatRelativeZonedOptions = {},
 ): string {
+  // A default parameter covers only `undefined`; `null` also means "no options".
+  options ??= {};
   if (!isValidZonedDateTime(value)) return "";
 
   // String reference must be a valid ZonedDateTime or UTC ISO string.

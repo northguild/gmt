@@ -10,6 +10,9 @@ import { zonedDateTimeFrom } from "../../internal";
  * - Combines plain datetime with timezone to create ZonedDateTime.
  * - `disambiguation` controls DST gap/overlap resolution: "compatible" (default, matches Temporal's default), "earlier", "later", or "reject" (throws, resulting in "").
  * - `offset` ("prefer" | "use" | "ignore" (default) | "reject", per Temporal's `OffsetDisambiguationOptions`) is accepted for API consistency with sibling zoned-construction functions (see `startOfZoned`, `endOfZoned`, etc.) but has **no effect here**: `value` is a plain datetime string with no UTC offset embedded, so there is never a stored offset for `offset` to prefer/use/ignore/reject against. `disambiguation` is the only option that affects this function's output.
+ * - **Output is cut to milliseconds by default.** `smallestUnit` defaults to `"milliseconds"`
+ *   (Temporal `toString` rounding mode `"trunc"`), so microseconds and nanoseconds in `value` are
+ *   dropped. Pass `{ smallestUnit: "nanoseconds" }` to keep every digit.
  * - Returns "" for invalid input.
  *
  * @param value plain datetime string (e.g. "2024-02-29T14:30:45")
@@ -17,7 +20,9 @@ import { zonedDateTimeFrom } from "../../internal";
  * @param optionsArg optional: smallestUnit, disambiguation ("compatible" | "earlier" | "later" | "reject"), offset ("prefer" | "use" | "ignore" | "reject" — accepted but inert, see above)
  * @returns zoned ISO 8601 datetime string or "" when invalid
  *
- * @example convertPlainDateTimeToZoned("2024-02-29T14:30:45", "America/New_York") // "2024-02-29T14:30:45.123-05:00[America/New_York]"
+ * @example convertPlainDateTimeToZoned("2024-02-29T14:30:45", "America/New_York") // "2024-02-29T14:30:45.000-05:00[America/New_York]"
+ * @example convertPlainDateTimeToZoned("2024-02-29T14:30:45.123456789", "UTC") // "2024-02-29T14:30:45.123+00:00[UTC]"
+ * @example convertPlainDateTimeToZoned("2024-02-29T14:30:45.123456789", "UTC", { smallestUnit: "nanoseconds" }) // "2024-02-29T14:30:45.123456789+00:00[UTC]"
  * @example convertPlainDateTimeToZoned("invalid", "America/New_York") // ""
  * @example convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York", { disambiguation: "earlier" }) // "2024-03-10T01:30:00.000-05:00[America/New_York]" (spring-forward gap)
  * @example convertPlainDateTimeToZoned("2024-11-03T01:30:00", "America/New_York", { disambiguation: "later" }) // "2024-11-03T01:30:00.000-05:00[America/New_York]" (fall-back overlap)

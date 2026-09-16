@@ -4,7 +4,7 @@ import type {
   FractionalDigit,
   Offset,
 } from "../../types";
-import { startOrEndOfZoned } from "./startOrEndOfZoned";
+import { startOrEndOfZoned } from "../../internal/startOrEndOfZoned";
 
 /**
  * Return the start of the specified date-time `unit` for a given zoned ISO 8601 datetime string.

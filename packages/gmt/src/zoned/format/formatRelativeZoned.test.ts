@@ -417,6 +417,25 @@ describe("formatRelativeZoned", () => {
       ).toBe("");
     });
 
+    // Temporal clamps second 60 to 59 in every spelling; a leap-second reference is invalid.
+    it.each`
+      reference                           | spelling
+      ${"2016-12-31t23:59:60+00:00[UTC]"} | ${"lowercase t separator"}
+      ${"2016-12-31 23:59:60+00:00[UTC]"} | ${"space separator"}
+      ${"20161231T235960Z[UTC]"}          | ${"basic format"}
+    `(
+      "returns '' when string reference $reference is a leap second ($spelling)",
+      ({ reference }) => {
+        expect(
+          formatRelativeZoned(
+            "2017-01-01T00:00:00+00:00[UTC]",
+            MustTestLocales.enUS,
+            { reference },
+          ),
+        ).toBe("");
+      },
+    );
+
     it("returns '' when string reference is an empty string", () => {
       expect(
         formatRelativeZoned(

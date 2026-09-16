@@ -4,6 +4,7 @@ import {
   parseCalendarZonedValue,
 } from "../../internal";
 import { isValidCalendarZonedInterval } from "./validate";
+import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 
 /**
  * Split a zoned interval into `n` equal-length sub-intervals.
@@ -25,23 +26,36 @@ import { isValidCalendarZonedInterval } from "./validate";
  *   unreadable as a set. A mismatch returns `[]`.
  * - Output boundaries are re-derived in the resolved calendar via `formatZonedInCalendar`, never
  *   copied from an input string (E7's D7-zoned).
+ * - `options.maxPieces` (positive safe integer, default `1_000_000`) bounds the output: when `n`
+ *   exceeds it, or exceeds the longest possible array (2^32 - 1), the function returns `[]`
+ *   before building any piece. An invalid `maxPieces` also returns `[]`.
  *
  * @param start ISO 8601 zoned datetime string for the interval start
  * @param end ISO 8601 zoned datetime string for the interval end
  * @param n number of equal sub-intervals to produce (positive integer)
+ * @param options optional: `maxPieces` (positive safe integer, default `1_000_000`)
  * @returns array of `n` `{ start, end }` records, or `[]` on invalid input
  *
  * @example intervalDivideEquallyZoned("2024-03-09T12:00:00-05:00[America/New_York]", "2024-03-11T12:00:00-04:00[America/New_York]", 2) // [{ start: "2024-03-09T12:00:00-05:00[America/New_York]", end: "2024-03-10T12:30:00-04:00[America/New_York]" }, { start: "2024-03-10T12:30:00-04:00[America/New_York]", end: "2024-03-11T12:00:00-04:00[America/New_York]" }] (47 real hours split in half)
  * @example intervalDivideEquallyZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-01-04T00:00:00+00:00[UTC]", 1) // [{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-04T00:00:00+00:00[UTC]" }]
  * @example intervalDivideEquallyZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-01-04T00:00:00+00:00[UTC]", 0) // []
  * @example intervalDivideEquallyZoned("invalid", "2024-01-04T00:00:00+00:00[UTC]", 3) // []
+ * @example intervalDivideEquallyZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-01-04T00:00:00+00:00[UTC]", 3, { maxPieces: 2 }) // [] (3 pieces exceed the limit)
+ * @example intervalDivideEquallyZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-01-04T00:00:00+00:00[UTC]", 3, { maxPieces: 3 }) // [{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-02T00:00:00+00:00[UTC]" }, { start: "2024-01-02T00:00:00+00:00[UTC]", end: "2024-01-03T00:00:00+00:00[UTC]" }, { start: "2024-01-03T00:00:00+00:00[UTC]", end: "2024-01-04T00:00:00+00:00[UTC]" }]
  */
 export function intervalDivideEquallyZoned(
   start: string,
   end: string,
   n: number,
+  options?: { maxPieces?: number },
 ): Array<{ start: string; end: string }> {
   if (typeof n !== "number" || !Number.isInteger(n) || n <= 0) {
+    return [];
+  }
+
+  const maxPieces = resolveMaxPieces(options);
+
+  if (maxPieces === null || exceedsPieceLimit(n, maxPieces)) {
     return [];
   }
 

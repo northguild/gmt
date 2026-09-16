@@ -11,13 +11,13 @@ import { zonedDateTimeFrom } from "../../internal";
  * @param zonedDateTimes Array of ISO ZonedDateTime strings
  * @returns The earliest zoned datetime string, or null on invalid input
  *
- * @example minZoned(["2024-03-10T12:00:00[America/New_York]", "2024-03-15T12:00:00[America/New_York]"]) // "2024-03-10T12:00:00-05:00[America/New_York]"
+ * @example minZoned(["2024-03-10T12:00:00[America/New_York]", "2024-03-15T12:00:00[America/New_York]"]) // "2024-03-10T12:00:00-04:00[America/New_York]"
  * @example minZoned(["invalid", "2024-03-15T12:00:00[America/New_York]"]) // "2024-03-15T12:00:00-04:00[America/New_York]"
  * @example minZoned(["invalid", "also invalid"]) // null
  * @example minZoned([]) // null
  */
 export function minZoned(zonedDateTimes: string[]): string | null {
-  if (!zonedDateTimes.length) return null;
+  if (!Array.isArray(zonedDateTimes) || !zonedDateTimes.length) return null;
 
   const valid = zonedDateTimes.filter(isValidZonedDateTime);
   if (!valid.length) return null;

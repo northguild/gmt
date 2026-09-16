@@ -88,3 +88,17 @@ describe("parseUnitFromZoned", () => {
     expect(result).toBe("");
   });
 });
+
+// ISO 8601 week of an expanded or negative year. The Gregorian calendar repeats every 400 years:
+// +010000-01-01 falls on the weekday of 2000-01-01 (Saturday), so it is in week 52 of 9999
+// (like 1999-W52); -000001-01-01 falls on the weekday of 1999-01-01 (Friday), so it is in week 53
+// of -2 (like 1998-W53).
+describe("parseUnitFromZoned week with a year outside 0000-9999", () => {
+  it.each`
+    value                                  | expected
+    ${"+010000-01-01T00:00:00+00:00[UTC]"} | ${"52"}
+    ${"-000001-01-01T00:00:00+00:00[UTC]"} | ${"53"}
+  `("returns ISO week $expected for $value", ({ value, expected }) => {
+    expect(parseUnitFromZoned(value, "week")).toBe(expected);
+  });
+});

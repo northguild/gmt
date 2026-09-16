@@ -22,7 +22,11 @@ export function closestZonedTo(
   target: string,
   candidates: string[],
 ): string | null {
-  if (!isValidZonedDateTime(target) || !candidates.length) {
+  if (
+    !isValidZonedDateTime(target) ||
+    !Array.isArray(candidates) ||
+    !candidates.length
+  ) {
     return null;
   }
 

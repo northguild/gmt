@@ -9,6 +9,8 @@ import { isValidZonedDateTime } from "../validate";
  * - Both datetimes must have the same timezone.
  * - Uses Temporal.ZonedDateTime.toInstant for formatting.
  * - Returns "" for invalid input or mismatched timezones.
+ * - Output is normalized: dash separators become ASCII "-" (unspaced between digits, spaced
+ *   otherwise), and no-break, narrow and thin spaces become U+0020.
  *
  * @param from zoned ISO 8601 datetime string (range start)
  * @param to zoned ISO 8601 datetime string (range end)
@@ -16,8 +18,8 @@ import { isValidZonedDateTime } from "../validate";
  * @param options optional Intl.DateTimeFormatOptions
  * @returns localized range string or "" when invalid
  *
- * @example formatZonedRange("2024-02-29T12:00:00.000+00:00[UTC]", "2024-02-29T14:00:00.000+00:00[UTC]", "en-US", { dateStyle: "long", timeStyle: "short" }) // "February 29, 2024 at 12:00 PM – 2:00 PM Coordinated Universal Time"
- * @example formatZonedRange("2024-02-29T12:00:00.000+00:00[UTC]", "2024-02-29T14:00:00.000+00:00[UTC]", "en-GB", { dateStyle: "short", timeStyle: "short" }) // "29/02/2024, 12:00 – 14:00"
+ * @example formatZonedRange("2024-02-29T12:00:00.000+00:00[UTC]", "2024-02-29T14:00:00.000+00:00[UTC]", "en-US", { dateStyle: "long", timeStyle: "short" }) // "February 29, 2024, 12:00 - 2:00 PM""
+ * @example formatZonedRange("2024-02-29T12:00:00.000+00:00[UTC]", "2024-02-29T14:00:00.000+00:00[UTC]", "en-GB", { dateStyle: "short", timeStyle: "short" }) // "29/02/2024, 12:00-14:00"
  * @example formatZonedRange("invalid", "2024-02-29T14:00:00.000+00:00[UTC]", "en-US") // "" (invalid input)
  */
 export function formatZonedRange(

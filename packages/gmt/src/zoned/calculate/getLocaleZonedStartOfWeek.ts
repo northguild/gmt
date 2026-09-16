@@ -24,7 +24,10 @@ import { isValidZonedDateTime } from "../validate";
  * - Distinct from `startOfZoned(value, "week", { weekStartsOn })`, which
  *   takes an explicit ISO-biased `weekStartsOn` option instead of deriving
  *   it from a locale.
- * - Returns "" if `value` or `locale` is invalid.
+ * - Returns "" if `value` is invalid or `locale` is not a well-formed BCP 47 tag
+ *   (ECMA-402 `IsWellFormedLanguageTag`).
+ *   A well-formed tag with no matching locale data is not an error: it falls back to the host's
+ *   default locale, as ECMA-402 `ResolveLocale` requires.
  *
  * @param value zoned ISO 8601 datetime string
  * @param locale BCP 47 locale tag (e.g. "en-US", "fr-FR")
@@ -36,7 +39,7 @@ import { isValidZonedDateTime } from "../validate";
  * @example getLocaleZonedStartOfWeek("2024-09-11T12:00:00-03:00[America/Santiago]", "en-US") // "2024-09-08T01:00:00-03:00[America/Santiago]" (that Sunday's midnight was skipped)
  * @example getLocaleZonedStartOfWeek("2018-11-07T12:00:00-02:00[America/Sao_Paulo]", "en-US", { disambiguation: "reject" }) // "2018-11-04T01:00:00-02:00[America/Sao_Paulo]" (the deprecated option is ignored)
  * @example getLocaleZonedStartOfWeek("invalid", "en-US") // ""
- * @example getLocaleZonedStartOfWeek("2024-02-29T12:00:00+00:00[UTC]", "not-a-locale") // ""
+ * @example getLocaleZonedStartOfWeek("2024-02-29T12:00:00+00:00[UTC]", "not-a-locale-!!") // ""
  */
 export function getLocaleZonedStartOfWeek(
   value: string,

@@ -14,7 +14,7 @@ import { isValidZonedDateTime } from "../validate";
  * @param options optional Intl.DateTimeFormatOptions
  * @returns localized string or "" when invalid
  *
- * @example formatZonedDateTime("2024-02-29T12:34:56.789+00:00[UTC]", "en-US", { dateStyle: "long", timeStyle: "long" }) // "February 29, 2024 at 12:34:56 PM Coordinated Universal Time"
+ * @example formatZonedDateTime("2024-02-29T12:34:56.789+00:00[UTC]", "en-US", { dateStyle: "long", timeStyle: "long" }) // "February 29, 2024 at 12:34:56 PM UTC"
  * @example formatZonedDateTime("2024-02-29T12:34:56.789+00:00[UTC]", "en-GB", { dateStyle: "short", timeStyle: "short" }) // "29/02/2024, 12:34"
  * @example formatZonedDateTime("invalid", "en-US") // "" (invalid input)
  */

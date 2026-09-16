@@ -7,6 +7,8 @@ import {
   tileByUnit,
 } from "../../internal";
 import { isValidCalendarZonedDateTime } from "../validate/isValidCalendarZonedDateTime";
+import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
+import { minSlicesForSpan } from "../../internal/splitStep";
 
 /**
  * Split a zoned interval into sub-intervals of `amount × unit`.
@@ -32,11 +34,15 @@ import { isValidCalendarZonedDateTime } from "../validate/isValidCalendarZonedDa
  *   string (E7's D7-zoned).
  * - Returns `[]` on invalid input (unparseable start/end, unsupported unit, non-positive amount,
  *   leap-second strings).
+ * - `options.maxPieces` (positive safe integer, default `1_000_000`) bounds the output: a split
+ *   into more slices returns `[]`, decided from the span before stepping where it can be, and
+ *   otherwise as soon as slice `maxPieces + 1` is due. An invalid `maxPieces` also returns `[]`.
  *
  * @param start ISO 8601 zoned datetime string for the interval start
  * @param end ISO 8601 zoned datetime string for the interval end
  * @param unit duration unit string — any `DateTimeDurationUnit`
  * @param amount positive number of units per step
+ * @param options optional: `maxPieces` (positive safe integer, default `1_000_000`)
  * @returns array of `{ start, end }` records, or [] on invalid input
  *
  * @example splitIntervalByUnitZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-01-02T00:00:00+00:00[UTC]", "hour", 6) // [{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-01T06:00:00+00:00[UTC]" }, { start: "2024-01-01T06:00:00+00:00[UTC]", end: "2024-01-01T12:00:00+00:00[UTC]" }, { start: "2024-01-01T12:00:00+00:00[UTC]", end: "2024-01-01T18:00:00+00:00[UTC]" }, { start: "2024-01-01T18:00:00+00:00[UTC]", end: "2024-01-02T00:00:00+00:00[UTC]" }]
@@ -45,12 +51,15 @@ import { isValidCalendarZonedDateTime } from "../validate/isValidCalendarZonedDa
  * @example splitIntervalByUnitZoned("2011-12-29T12:00:00-10:00[Pacific/Apia]", "2012-01-01T12:00:00+14:00[Pacific/Apia]", "day", 1) // [{ start: "2011-12-29T12:00:00-10:00[Pacific/Apia]", end: "2011-12-31T12:00:00+14:00[Pacific/Apia]" }, { start: "2011-12-31T12:00:00+14:00[Pacific/Apia]", end: "2012-01-01T12:00:00+14:00[Pacific/Apia]" }]
  * @example splitIntervalByUnitZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-01-02T00:00:00+00:00[UTC]", "hour", 0) // []
  * @example splitIntervalByUnitZoned("invalid", "2024-01-02T00:00:00+00:00[UTC]", "hour", 1) // []
+ * @example splitIntervalByUnitZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-01-01T01:30:00+00:00[UTC]", "hour", 1, { maxPieces: 1 }) // [] (2 slices exceed the limit)
+ * @example splitIntervalByUnitZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-01-01T01:30:00+00:00[UTC]", "hour", 1, { maxPieces: 2 }) // [{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-01T01:00:00+00:00[UTC]" }, { start: "2024-01-01T01:00:00+00:00[UTC]", end: "2024-01-01T01:30:00+00:00[UTC]" }]
  */
 export function splitIntervalByUnitZoned(
   start: string,
   end: string,
   unit: string,
   amount: number,
+  options?: { maxPieces?: number },
 ): Array<{ start: string; end: string }> {
   if (
     !isValidCalendarZonedDateTime(start) ||
@@ -73,6 +82,12 @@ export function splitIntervalByUnitZoned(
     return [];
   }
 
+  const maxPieces = resolveMaxPieces(options);
+
+  if (maxPieces === null) {
+    return [];
+  }
+
   try {
     const {
       calendar,
@@ -92,6 +107,16 @@ export function splitIntervalByUnitZoned(
         },
       ];
     }
+    const spanNs = Number(endVal.epochNanoseconds - startVal.epochNanoseconds);
+
+    if (
+      exceedsPieceLimit(
+        minSlicesForSpan(spanNs, resolvedUnit, amount, true),
+        maxPieces,
+      )
+    ) {
+      return [];
+    }
 
     // `addToZoned` runs calendar units through the Temporal compat layer (CORE-6).
     const slices = tileByUnit(
@@ -100,6 +125,7 @@ export function splitIntervalByUnitZoned(
       Temporal.ZonedDateTime.compare,
       resolvedUnit,
       amount,
+      maxPieces,
       (value, duration) => addToZoned(value, duration),
     );
 

@@ -91,6 +91,11 @@ describe("isValidZonedDateTime", () => {
     ${"2024-03-17T14:30:60+05:00[Asia/Kolkata]"}
     ${"2024-03-17T14:30:60-08:00[America/Los_Angeles]"}
     ${"2024-03-17T14:30:60Z[UTC]"}
+    ${"2016-12-31t23:59:60+00:00[UTC]"}
+    ${"2016-12-31 23:59:60+00:00[UTC]"}
+    ${"2016-12-31T235960+00:00[UTC]"}
+    ${"20161231T235960Z[UTC]"}
+    ${"20161231 235960Z[UTC]"}
   `(
     "returns false for leap second with zoned datetime: $value",
     ({ value }: { value: string }) => {
