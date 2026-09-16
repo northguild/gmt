@@ -1,4 +1,5 @@
 import { isBusinessDay } from "../../plain/compare";
+import { battleTestTimeZones } from "../../test";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { mergeCalendars } from "./mergeCalendars";
 
@@ -53,6 +54,20 @@ describe("mergeCalendars", () => {
       holidays: ["2024-01-01", "2024-07-04"],
       timeZone: "UTC",
     });
+  });
+
+  // Ascending means chronological. A bare `.sort()` compares as strings, which sorts the "+"
+  // and "-" of an expanded year below every digit and puts both in the wrong place.
+  it("sorts holidays chronologically across expanded years", () => {
+    expect(
+      mergeCalendars([
+        {
+          weekend: [6, 7],
+          holidays: ["+010000-01-01", "2024-07-04", "-000001-06-01"],
+          timeZone: "UTC",
+        },
+      ])?.holidays,
+    ).toEqual(["-000001-06-01", "2024-07-04", "+010000-01-01"]);
   });
 
   it("returns a normalised copy of a single calendar", () => {
@@ -149,4 +164,24 @@ describe("mergeCalendars", () => {
     mockTemporalPlainDateFromThrow();
     expect(mergeCalendars([unitedStates, unitedKingdom])).toBe(null);
   });
+
+  // The merged calendar takes the first input's timeZone verbatim; nothing else reads it, so
+  // the working days it describes are the same whichever zone that is.
+  it.each(battleTestTimeZones.map((timeZone) => ({ timeZone })))(
+    "merges to the same working days whatever timeZone the inputs name ($timeZone)",
+    ({ timeZone }) => {
+      const merged = mergeCalendars([
+        { ...unitedStates, timeZone },
+        { ...unitedKingdom, timeZone },
+      ]);
+
+      expect(merged).toEqual({
+        weekend: [6, 7],
+        holidays: ["2024-05-06", "2024-07-04"],
+        timeZone,
+      });
+      expect(isBusinessDay("2024-07-04", merged as never)).toBe(false);
+      expect(isBusinessDay("2024-07-03", merged as never)).toBe(true);
+    },
+  );
 });

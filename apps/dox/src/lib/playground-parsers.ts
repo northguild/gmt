@@ -60,15 +60,16 @@ export type PlaygroundArgKind =
   | "enum"
   | "units"
   | "list"
-  | "intervals";
+  | "intervals"
+  | "expr";
 
 export interface CallField {
   name: string;
   kind: PlaygroundArgKind;
   value?: string;
   unit?: string;
-  /** `list` element type — numbers render bare, everything else is quoted. */
-  element?: "string" | "number" | "enum";
+  /** `list` element type — numbers and `expr` render bare, everything else is quoted. */
+  element?: "string" | "number" | "enum" | "expr";
   /** `list` current elements. */
   items?: string[];
   /** `intervals` current `[start, end]` pairs. */
@@ -107,13 +108,19 @@ export function formatArg(f: CallField): string {
     }
     case "boolean":
       return v === "true" ? "true" : "false";
+    case "expr":
+      // Source text, kept verbatim. An empty required field would produce an
+      // un-parseable call, so it becomes an explicit `undefined`.
+      return v === "" ? "undefined" : v;
     case "units":
       return `{ ${f.unit || "days"}: ${v === "" ? "0" : v} }`;
     case "list": {
-      const num = f.element === "number";
+      // `expr` elements are source text (an object literal per row) and go in
+      // verbatim; quoting them would pass the source as a string.
+      const bare = f.element === "number" || f.element === "expr";
       const els = (f.items ?? [])
         .filter((x) => x.trim() !== "")
-        .map((x) => (num ? x.trim() : JSON.stringify(x)));
+        .map((x) => (bare ? x.trim() : JSON.stringify(x)));
       return `[${els.join(", ")}]`;
     }
     case "intervals": {

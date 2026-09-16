@@ -1,3 +1,4 @@
+import { battleTestTimeZones } from "../../test";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { addBusinessDays } from "./addBusinessDays";
 
@@ -208,4 +209,22 @@ describe("addBusinessDays", () => {
       expect(addBusinessDays("2024-07-03", amount, usIndependence)).toBe("");
     },
   );
+
+  // calendar.timeZone records locality; it never changes the walk for a local date.
+  it.each(battleTestTimeZones.map((timeZone) => ({ timeZone })))(
+    "walks the same way whatever calendar.timeZone says ($timeZone)",
+    ({ timeZone }) => {
+      const calendar = { ...usIndependence, timeZone };
+
+      expect(addBusinessDays("2024-07-03", 1, calendar)).toBe("2024-07-05");
+      expect(addBusinessDays("2024-07-03", -1, calendar)).toBe("2024-07-02");
+    },
+  );
+
+  // The bounded walk gives up rather than returning a partial answer: 2024-01-01 plus
+  // 142,858 Mon-Fri days is 2571-08-01, exactly 200,000 calendar days on. One more is over.
+  it("returns an empty string once the walk exceeds the 200,000-day cap", () => {
+    expect(addBusinessDays("2024-01-01", 142_858)).toBe("2571-08-01");
+    expect(addBusinessDays("2024-01-01", 142_859)).toBe("");
+  });
 });

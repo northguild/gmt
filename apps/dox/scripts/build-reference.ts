@@ -219,8 +219,15 @@ function parseJsDoc(
   checker: ts.TypeChecker,
   node: ts.Node,
 ): ParsedJsDoc | undefined {
+  // A function or variable declaration carries its symbol on the name node, not
+  // on the declaration. Missing the variable case cost every arrow-function
+  // export (`export const f = (…) => …`) its whole JSDoc — description,
+  // params and `@example`s alike.
   const symbol = checker.getSymbolAtLocation(
-    ts.isFunctionDeclaration(node) ? (node.name ?? node) : node,
+    (ts.isFunctionDeclaration(node) || ts.isVariableDeclaration(node)) &&
+      node.name
+      ? node.name
+      : node,
   );
   if (!symbol) return undefined;
 
@@ -536,6 +543,12 @@ const QUOTED_ARG = /^(['"])[\s\S]*\1$/;
 const NUMERIC_ARG = /^-?\d+(?:\.\d+)?$/;
 /** A BigInt literal as written in an `@example` — `0n`, `-1000000000n`. */
 const BIGINT_ARG = /^-?\d+n$/;
+/**
+ * An object or array literal — the shapes that get a verbatim `expr` control
+ * rather than a typed one: a `BusinessCalendar`, an `{ start, end }` interval,
+ * a fiscal-pattern object, a nested array.
+ */
+const EXPRESSION_ARG = /^[{[][\s\S]*[}\]]$/;
 
 interface FieldsResult {
   fields: PlaygroundField[];
@@ -570,17 +583,24 @@ function fieldForParam(
       };
     }
     const choices = p.options ?? [];
+    const items = raw ? BU.parseArrayArg(raw) : [];
+    // `parseArrayArg` unquotes each element, so an array of object literals
+    // comes back as source text. Quoting it again would pass the source as a
+    // string — `mergeCalendars([{ weekend: … }])` is the case.
+    const objectElements = items.some((item) => item.trim().startsWith("{"));
     return {
       name: p.name,
       kind: "list",
       seed: "",
       element: choices.length
         ? "enum"
-        : p.arrayType === "number"
-          ? "number"
-          : "string",
+        : objectElements
+          ? "expr"
+          : p.arrayType === "number"
+            ? "number"
+            : "string",
       ...(choices.length ? { choices } : {}),
-      items: raw ? BU.parseArrayArg(raw) : [],
+      items,
       ...opt,
     };
   }
@@ -657,6 +677,12 @@ function fieldForParam(
   }
   if (BIGINT_ARG.test(raw)) {
     return { name: p.name, kind: "bigint", seed: raw.slice(0, -1), ...opt };
+  }
+  // A literal no scalar control models — an object (`{ weekend: [6, 7], … }`) or
+  // a nested array. Before this fell through to `null`, which cost the whole
+  // function its widget; keep the source text in an editable field instead.
+  if (EXPRESSION_ARG.test(raw)) {
+    return { name: p.name, kind: "expr", seed: raw, ...opt };
   }
   return null;
 }

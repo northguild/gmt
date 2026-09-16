@@ -1,11 +1,5 @@
-import { Temporal } from "@js-temporal/polyfill";
-import {
-  isValidAmount,
-  resolveBusinessCalendar,
-  stepBusinessDates,
-} from "../../internal";
+import { stepBusinessDaysValue } from "../../internal";
 import type { BusinessCalendar } from "../../types";
-import { isValidDate } from "../validate";
 
 /**
  * Return a PlainDate ISO string with `amount` working days added to `value`.
@@ -44,33 +38,5 @@ export function addBusinessDays(
   amount: number,
   calendar?: BusinessCalendar,
 ): string {
-  const resolved = resolveBusinessCalendar(calendar);
-
-  if (
-    !isValidDate(value) ||
-    !isValidAmount(amount) ||
-    !Number.isInteger(amount) ||
-    resolved === null
-  ) {
-    return "";
-  }
-
-  if (amount === 0) {
-    return value;
-  }
-
-  try {
-    const date = Temporal.PlainDate.from(value);
-    const direction = amount > 0 ? 1 : -1;
-    const result = stepBusinessDates(
-      date,
-      direction,
-      Math.abs(amount),
-      resolved,
-    );
-
-    return result === null ? "" : result.toString();
-  } catch {
-    return "";
-  }
+  return stepBusinessDaysValue(value, amount, 1, calendar);
 }

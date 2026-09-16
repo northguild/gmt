@@ -81,6 +81,39 @@ describe("formatArg", () => {
       }),
     ).toBe("[1, 2, 3]");
   });
+  it("passes an expr through verbatim, never quoted", () => {
+    // A BusinessCalendar edited in the form is source, not a string — quoting it
+    // would hand gmt the literal text and every call would answer its sentinel.
+    expect(
+      formatArg({
+        name: "calendar",
+        kind: "expr",
+        value: '{ weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "UTC" }',
+      }),
+    ).toBe('{ weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "UTC" }');
+    // A required expr left blank becomes `undefined` rather than an
+    // un-parseable call line.
+    expect(formatArg({ name: "calendar", kind: "expr", value: "  " })).toBe(
+      "undefined",
+    );
+  });
+  it("builds a list of object literals bare", () => {
+    expect(
+      formatArg({
+        name: "calendars",
+        kind: "list",
+        value: "",
+        element: "expr",
+        items: [
+          '{ weekend: [6, 7], holidays: [], timeZone: "UTC" }',
+          "",
+          '{ weekend: [5, 6], holidays: [], timeZone: "Asia/Riyadh" }',
+        ],
+      }),
+    ).toBe(
+      '[{ weekend: [6, 7], holidays: [], timeZone: "UTC" }, { weekend: [5, 6], holidays: [], timeZone: "Asia/Riyadh" }]',
+    );
+  });
   it("builds an intervals list", () => {
     expect(
       formatArg({

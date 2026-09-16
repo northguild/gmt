@@ -1,4 +1,7 @@
-import { advanceBusinessDays } from "./advanceBusinessDays";
+import {
+  DEFAULT_BUSINESS_CALENDAR,
+  stepBusinessDates,
+} from "./businessCalendar";
 import { plainToZoned, zonedWithPlainTime } from "./zonedWallClockOperations";
 import { zonedDateTimeFrom } from "./zonedWallClock";
 
@@ -10,7 +13,12 @@ export function adjustZonedBusinessDays(
   try {
     const zoned = zonedDateTimeFrom(value);
     const plainDate = zoned.toPlainDate();
-    const resultDate = advanceBusinessDays(plainDate, direction, absAmount);
+    const resultDate = stepBusinessDates(
+      plainDate,
+      direction,
+      absAmount,
+      DEFAULT_BUSINESS_CALENDAR,
+    );
 
     if (resultDate === null) {
       return "";

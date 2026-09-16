@@ -1,3 +1,4 @@
+import { Temporal } from "@js-temporal/polyfill";
 import { parseBusinessCalendar } from "../../internal";
 import type { BusinessCalendar } from "../../types";
 
@@ -12,7 +13,8 @@ import type { BusinessCalendar } from "../../types";
  *   currencies' calendars, an intermodal move the origin port's and the destination port's,
  *   and a cross-border rail path both national calendars — one implementation, four consumers.
  * - `weekend` and `holidays` come back sorted ascending and de-duplicated, so the result is
- *   stable whatever order the inputs arrive in.
+ *   stable whatever order the inputs arrive in. Holidays sort chronologically, not
+ *   lexicographically, so an expanded year such as `"+010000-01-01"` lands where it belongs.
  * - `timeZone` is the **first** calendar's. The merged calendar spans localities that may
  *   disagree, and GMT does not invent a zone for it; the field records locality only and no
  *   business-day function reads it.
@@ -59,7 +61,9 @@ export function mergeCalendars(
 
   const merged = {
     weekend: [...weekend].sort((a, b) => a - b),
-    holidays: [...holidays].sort(),
+    // Chronological, not lexicographic: a bare `.sort()` compares as strings, which puts the
+    // "+" and "-" of an expanded year below every digit.
+    holidays: [...holidays].sort((a, b) => Temporal.PlainDate.compare(a, b)),
     timeZone: calendars[0].timeZone,
   };
 

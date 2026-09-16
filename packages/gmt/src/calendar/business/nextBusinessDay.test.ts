@@ -1,4 +1,5 @@
 import { addBusinessDays } from "../../plain/calculate";
+import { battleTestTimeZones } from "../../test";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { nextBusinessDay } from "./nextBusinessDay";
 
@@ -102,4 +103,14 @@ describe("nextBusinessDay", () => {
     mockTemporalPlainDateFromThrow();
     expect(nextBusinessDay("2024-07-03", usIndependence)).toBe("");
   });
+
+  // calendar.timeZone records locality; it never changes the answer for a local date.
+  it.each(battleTestTimeZones.map((timeZone) => ({ timeZone })))(
+    "gives the same answer whatever calendar.timeZone says ($timeZone)",
+    ({ timeZone }) => {
+      expect(
+        nextBusinessDay("2024-07-03", { ...usIndependence, timeZone }),
+      ).toBe("2024-07-05");
+    },
+  );
 });

@@ -32,7 +32,7 @@ const AUTO_UNITS: Array<{ unit: RelativeUnit; maxSeconds: number }> = [
  * @param options optional: { style, numeric, largestUnit, roundingMethod, reference, timeZone }
  * @returns the formatted relative-time string, or "" on invalid input
  *
- * @example formatRelativeUtc("2024-03-17T14:30:45+00:00[UTC]", "en-US") // "2 years ago"
+ * @example formatRelativeUtc("2026-01-15T14:30:45Z", "en-US", { reference: "2026-04-15T14:30:45Z" }) // "90 days ago"
  * @example formatRelativeUtc(value, "en-US", { roundingMethod: "floor" }) // rounds toward the earlier boundary
  * @example formatRelativeUtc("not-a-date") // ""
  */
