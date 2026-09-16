@@ -17,7 +17,7 @@ Temporal-based date and time utilities with timezone support and polyfill integr
 | Skill                   | Type        | Domain                | What it covers                                                                                                   | Failure modes |
 | ----------------------- | ----------- | --------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------- |
 | gmt-basics              | core        | Core Date Operations  | getNow, getToday, formatDate, formatRelativeDate, isAfterDate, isValidDate, isValidTimeZone, parseDateWithPattern, getLocaleMonthNames |               |
-| gmt-arithmetic          | core        | Arithmetic            | addDate, subtractTime, diffDate, clampDate, closestDateTo, addBusinessDays, duration API, interval math          |               |
+| gmt-arithmetic          | core        | Arithmetic            | addDate, subtractTime, diffDate, clampDate, closestDateTo, business calendars (addBusinessDays, rollDate, mergeCalendars), duration API, interval math          |               |
 | gmt-timezone            | core        | Zoned Date Operations | getZonedNow, formatZonedDateTime, convertPlainDateTimeToZoned, addZoned, startOfZoned, hasDaylightSaving         |               |
 | gmt-integration         | composition | Integration           | Cache keys, router/query params, table-sort keys, lint package selection                                          |               |
 | issue-creation          | lifecycle   | Contributor           | Feature requests, missing methods, issue templates                                                             |               |

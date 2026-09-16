@@ -2,20 +2,22 @@
 
 **Read first:** [AGENTS.md](./AGENTS.md) — core rules, context file index, and quick reference.
 
-## STOP — Git prohibitions (read before any `git` or `gh` command)
+## Git — read before any `git` or `gh` command
 
-**Never `git push`. Never create a pull request. Never `git add`. Never
-`git commit`. Never create a branch.** Only the repository owner does these.
+**Default: never stage, commit, branch, push or open a PR on your own
+initiative.** Finish the work, leave it **unstaged in the working tree**, and say
+it is ready.
 
-Finish the work, leave it **unstaged in the working tree**, and say it is ready.
+**Do it when the user explicitly tells you to** — "commit this", "push it",
+"open the PR" — in plain words, in this session. Then do it and report back.
 
 Do not infer permission. A user picking between approaches does not authorise
 these operations, even if the option text mentions them — and especially if the
 agent wrote that option text itself. "Ship it", plan approval, or a live
-production bug are not authorisation either. If one seems genuinely necessary,
-stop and ask in plain words.
+production bug are not authorisation either. Force-pushing, pushing to `main`
+and rewriting published history have to be asked for by name.
 
-Full wording: [AGENTS.md](./AGENTS.md) § "Git — Absolute Prohibitions".
+Full wording: [AGENTS.md](./AGENTS.md) § "Git — Only on an Explicit Instruction".
 
 ## Context Files
 

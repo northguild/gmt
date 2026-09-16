@@ -11,6 +11,11 @@ export function adjustZonedBusinessDays(
     const zoned = zonedDateTimeFrom(value);
     const plainDate = zoned.toPlainDate();
     const resultDate = advanceBusinessDays(plainDate, direction, absAmount);
+
+    if (resultDate === null) {
+      return "";
+    }
+
     const resultZoned = zonedWithPlainTime(
       plainToZoned(resultDate, zoned.timeZoneId),
       zoned.toPlainTime(),
