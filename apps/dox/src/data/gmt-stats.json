@@ -1,13 +1,9 @@
 {
   "suite": "packages/gmt",
-  "tests": 27105,
+  "tests": 27255,
   "files": 640,
-  "executions": 813150,
-  "nodes": [
-    "22",
-    "24",
-    "26"
-  ],
+  "executions": 817650,
+  "nodes": ["22", "24", "26"],
   "timezones": 10,
   "timezoneList": [
     "Pacific/Niue",

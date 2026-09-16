@@ -13,7 +13,10 @@ const ROLL_CONVENTIONS: readonly RollConvention[] = [
  * Return true when `convention` is a `RollConvention` that `rollDate` implements.
  *
  * - Valid conventions are `"following"`, `"modifiedFollowing"`, `"preceding"`,
- *   `"modifiedPreceding"`, `"endOfMonth"` and `"none"`.
+ *   `"modifiedPreceding"`, `"endOfMonth"` and `"none"`. The first four name the conventions
+ *   of [ISDA 2006 Definitions §4.12(a)](https://www.isda.org/book/2006-isda-definitions/);
+ *   `"none"` is Strata's `NO_ADJUST` and `"endOfMonth"` is GMT's own. The camelCase spelling
+ *   is GMT's — no standard fixes the identifiers, only the behaviour.
  * - Matching is exact: case, spacing and abbreviations are not normalised.
  * - Accepts any input type and returns false for non-string values.
  * - `rollDate` returns `""` for a convention it does not recognise — the same sentinel it

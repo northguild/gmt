@@ -15,6 +15,13 @@
  * slice of a textarea. Derived by `scripts/build-reference.ts` from the same
  * `PlaygroundSpec` the textarea template is built from.
  */
+/**
+ * `"expr"` is the fallback for an argument no scalar control models — an object
+ * literal (`{ weekend: [6, 7], … }`), a nested array, anything the example wrote
+ * as source rather than as a plain value. The control holds that source text and
+ * it goes into the call verbatim, so the argument stays editable and live instead
+ * of costing the function its whole widget.
+ */
 export type PlaygroundFieldKind =
   | "string"
   | "number"
@@ -23,7 +30,8 @@ export type PlaygroundFieldKind =
   | "enum"
   | "units"
   | "list"
-  | "intervals";
+  | "intervals"
+  | "expr";
 
 export interface PlaygroundField {
   /** Parameter name from the signature — shown as the control label. */
@@ -44,7 +52,7 @@ export interface PlaygroundField {
   /** Initial unit for `kind: "units"`. */
   unitSeed?: string;
   /** `kind: "list"` — element type; `enum` when `choices` is set. */
-  element?: "string" | "number" | "enum";
+  element?: "string" | "number" | "enum" | "expr";
   /** `kind: "list"` — initial elements. */
   items?: string[];
   /** `kind: "intervals"` — initial `[start, end]` pairs. */
