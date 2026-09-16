@@ -4,16 +4,16 @@ description: >
   Contribute improvements to @northguild/gmt via pull requests, including new
   methods, bug fixes, and documentation updates.
 metadata:
-  library_version: 1.15.0
+  library_version: 1.16.0
 ---
 
 # PR Contribution
 
 Use this skill when you want to contribute code directly to gmt.
 
-> **For human contributors.** AI agents working inside the gmt repository must never run
-> `git add`, `git commit`, `git push`, create a branch, or open a pull request — they leave
-> changes unstaged and report them ready. See `AGENTS.md` § Git — Absolute Prohibitions.
+> **For human contributors.** AI agents working inside the gmt repository do not run
+> `git add`, `git commit`, `git push`, create a branch, or open a pull request unless the user
+> asks them to — by default they leave changes unstaged and report them ready. See `AGENTS.md` § Git — Only on an Explicit Instruction.
 
 ## Contribution Types
 

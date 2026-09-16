@@ -2,19 +2,19 @@
 name: gmt-arithmetic
 description: >
   Date arithmetic — add/subtract duration objects, diff values, clamp/closest,
-  ISO 8601 duration strings, elapsed-versus-wall-clock spans, and interval range
-  math. Covers the half-open [start, end) interval algebra over instants
-  (intervalsOverlap, intervalContains, intersectIntervals, clampInterval,
-  mergeIntervals, subtractIntervals, splitIntervalAt, sumIntervals,
-  isValidInterval, Interval) versus the older closed positional interval*Date /
-  *Utc / *Zoned / *Unix functions, overflow "constrain" month-end and February
-  29 clamping, splitIntervalByUnit* stepping from the anchor without month-end
-  drift, intervalCount* counting the same local buckets as bucketRange,
-  non-ISO calendar strings (signed six-digit negative years, Japanese ce/bce/meiji
-  era codes, proleptic buddhist, P30D not P1M at month ends), and the
-  correct-at-the-edges guarantees at the first and last representable instant.
-  Reads the installed package README.md and source JSDoc for API details; this
-  skill is a routing pointer, not an API dump.
+  ISO 8601 duration strings, elapsed-versus-wall-clock spans, business-day
+  arithmetic and interval range math. Covers the half-open [start, end) interval
+  algebra over instants (intervalsOverlap, intervalContains, intersectIntervals,
+  clampInterval, mergeIntervals, subtractIntervals, splitIntervalAt,
+  sumIntervals, isValidInterval, Interval) versus the older closed positional
+  interval*Date / *Utc / *Zoned / *Unix functions, business calendars
+  (BusinessCalendar, RollConvention, isBusinessDay, addBusinessDays,
+  subtractBusinessDays, businessDaysBetween, nextBusinessDay,
+  previousBusinessDay, rollDate, mergeCalendars), overflow "constrain" month-end
+  clamping, splitIntervalByUnit* stepping from the anchor, intervalCount*
+  matching bucketRange, non-ISO calendar strings, and the correct-at-the-edges
+  guarantees at the first and last representable instant. This skill is a
+  routing pointer, not an API dump.
 sources:
   - 'northguild/gmt:README.md'
   - 'northguild/gmt:packages/gmt/src/plain/calculate/index.ts'
@@ -26,10 +26,13 @@ sources:
   - 'northguild/gmt:packages/gmt/src/unix/interval/index.ts'
   - 'northguild/gmt:packages/gmt/src/utc/interval/index.ts'
   - 'northguild/gmt:packages/gmt/src/span/calculate/index.ts'
+  - 'northguild/gmt:packages/gmt/src/calendar/business/index.ts'
+  - 'northguild/gmt:packages/gmt/src/types/business-calendar.ts'
+  - 'northguild/gmt:packages/gmt/src/types/roll-convention.ts'
 metadata:
   type: core
   library: '@northguild/gmt'
-  library_version: '1.15.0'
+  library_version: '1.16.0'
 ---
 
 # GMT Arithmetic
@@ -144,7 +147,31 @@ and full interval set operations.
     - Near the maximum in `UTC`, a rounded difference or total whose window
       passes the limit returns the sentinel, exactly as `+00:00` does.
     Zoned limits are in the `gmt-timezone` skill.
-12. **Read the README.** This skill is a routing pointer. For full option shapes,
+12. **Business days need a `BusinessCalendar`, and a weekend is never assumed.**
+    `{ weekend: number[], holidays: string[], timeZone: string }` — `weekend` is
+    ISO weekday numbers, because Saturday–Sunday is not universal (much of the
+    Middle East is `[5, 6]`). `isBusinessDay`, `addBusinessDays` and
+    `subtractBusinessDays` take it as an optional trailing argument, defaulting to
+    Monday–Friday with no holidays; `businessDaysBetween`, `nextBusinessDay`,
+    `previousBusinessDay`, `rollDate` and `mergeCalendars` require it. Holidays are
+    caller-supplied — GMT bundles no holiday table on the default import path.
+
+    ```typescript
+    const nyse = { weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "America/New_York" };
+    addBusinessDays("2024-07-03", 1, nyse); // "2024-07-05" — skips the holiday
+    businessDaysBetween("2024-07-01", "2024-07-05", nyse); // 3 — start exclusive, end inclusive
+    rollDate("2024-05-31", "modifiedFollowing", nyse); // backward when forward leaves the month
+    ```
+
+    These are **local-date in, local-date out**: `calendar.timeZone` records the
+    locality and is never read, so reduce an instant with `floorToZone` first.
+    `nextBusinessDay`/`previousBusinessDay` are strictly after/before;
+    `rollDate`'s `following`/`preceding` are on-or-after/on-or-before and leave a
+    working day alone. `mergeCalendars` unions weekends and holidays, so a date
+    survives only if it is a working day in every input, and returns `null` for an
+    empty list. Narrow inputs with `isValidBusinessCalendar` /
+    `isValidRollConvention`.
+13. **Read the README.** This skill is a routing pointer. For full option shapes,
    locale matrices, and code examples, read the installed package's `README.md`
    and the source JSDoc of the function you intend to call.
 
@@ -152,6 +179,9 @@ and full interval set operations.
 
 - **Point arithmetic**: `addDate`, `addDateTime`, `addTime`, `subtractTime`,
   `addBusinessDays`, `subtractBusinessDays`, `cycleDate`, `setDate`
+- **Business calendars**: `isBusinessDay`, `businessDaysBetween`,
+  `nextBusinessDay`, `previousBusinessDay`, `rollDate`, `mergeCalendars`,
+  `isValidBusinessCalendar`, `isValidRollConvention`
 - **Diffs**: `diffDate`, `diffDateTime`, `diffTime` (+ `diffZoned`,
   `diffUnix`, `diffUtc` in their namespaces)
 - **Spans (raw numbers)**: `spanMs`, `spanNs`, `spanWallClock`, `isValidSpan`
