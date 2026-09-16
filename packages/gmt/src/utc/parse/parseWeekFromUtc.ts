@@ -26,7 +26,7 @@ export function parseWeekFromUtc(
   try {
     const instant = Temporal.Instant.from(value);
     const dt = instant.toZonedDateTimeISO("UTC");
-    const dateStr = `${dt.year}-${dt.month.toString().padStart(2, "0")}-${dt.day.toString().padStart(2, "0")}`;
+    const dateStr = dt.toPlainDate().toString();
     return getWeekNumber(dateStr, weekStartsOn);
   } catch {
     return null;

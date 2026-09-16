@@ -31,7 +31,7 @@ const ABS_DAY_THRESHOLD = 6;
  * @returns the formatted calendar string, or "" on invalid input
  *
  * @example formatCalendarUtc("2026-03-16T18:30:00Z", "en-US", { timeZone: "America/New_York", reference: "2026-03-15T13:00:00Z" }) // "tomorrow at 2:30 PM"
- * @example formatCalendarUtc(value, "fr-FR", { timeZone: "Europe/Paris" }) // "demain à 14:30"
+ * @example formatCalendarUtc("2026-03-16T13:30:00Z", "fr-FR", { timeZone: "Europe/Paris", reference: "2026-03-15T12:00:00Z" }) // "demain à 14:30"
  * @example formatCalendarUtc("not-a-date") // ""
  */
 export function formatCalendarUtc(
@@ -39,6 +39,8 @@ export function formatCalendarUtc(
   locale?: string,
   options: FormatCalendarUtcOptions = {},
 ): string {
+  // A default parameter covers only `undefined`; `null` also means "no options".
+  options ??= {};
   if (!isValidUtc(value)) return "";
   if (options.reference !== undefined && !isValidUtc(options.reference))
     return "";

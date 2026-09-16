@@ -3,6 +3,8 @@ import { isLeapSecond } from "../../plain/validate/isLeapSecond";
 import { utcDateTime } from "../../regex/utc-date-time";
 import { isValidUtc } from "../validate/isValidUtc";
 import { resolveDurationUnit, tileByUnit } from "../../internal";
+import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
+import { minSlicesForSpan } from "../../internal/splitStep";
 
 /**
  * Split a UTC interval into sub-intervals of `amount × unit`.
@@ -21,11 +23,15 @@ import { resolveDurationUnit, tileByUnit } from "../../internal";
  * - Returns `[{ start, end }]` when `start === end` (zero-length interval).
  * - Returns `[]` on invalid input (unparseable start/end, unsupported unit, non-positive amount,
  *   leap-second strings).
+ * - `options.maxPieces` (positive safe integer, default `1_000_000`) bounds the output: a split
+ *   into more slices returns `[]`, decided from the span before stepping where it can be, and
+ *   otherwise as soon as slice `maxPieces + 1` is due. An invalid `maxPieces` also returns `[]`.
  *
  * @param start ISO UTC datetime string for the interval start
  * @param end ISO UTC datetime string for the interval end
  * @param unit duration unit string — any `DateTimeDurationUnit`
  * @param amount positive number of units per step
+ * @param options optional: `maxPieces` (positive safe integer, default `1_000_000`)
  * @returns array of `{ start, end }` records, or [] on invalid input
  *
  * @example splitIntervalByUnitUtc("2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z", "hour", 6) // [{ start: "2024-01-01T00:00:00Z", end: "2024-01-01T06:00:00Z" }, { start: "2024-01-01T06:00:00Z", end: "2024-01-01T12:00:00Z" }, { start: "2024-01-01T12:00:00Z", end: "2024-01-01T18:00:00Z" }, { start: "2024-01-01T18:00:00Z", end: "2024-01-02T00:00:00Z" }]
@@ -33,12 +39,15 @@ import { resolveDurationUnit, tileByUnit } from "../../internal";
  * @example splitIntervalByUnitUtc("2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z", "hour", 1) // [{ start: "2024-01-01T00:00:00Z", end: "2024-01-01T00:00:00Z" }]
  * @example splitIntervalByUnitUtc("2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z", "hour", 0) // []
  * @example splitIntervalByUnitUtc("invalid", "2024-01-02T00:00:00Z", "hour", 1) // []
+ * @example splitIntervalByUnitUtc("2024-01-01T00:00:00Z", "2024-01-01T01:30:00Z", "hour", 1, { maxPieces: 1 }) // [] (2 slices exceed the limit)
+ * @example splitIntervalByUnitUtc("2024-01-01T00:00:00Z", "2024-01-01T01:30:00Z", "hour", 1, { maxPieces: 2 }) // [{ start: "2024-01-01T00:00:00Z", end: "2024-01-01T01:00:00Z" }, { start: "2024-01-01T01:00:00Z", end: "2024-01-01T01:30:00Z" }]
  */
 export function splitIntervalByUnitUtc(
   start: string,
   end: string,
   unit: string,
   amount: number,
+  options?: { maxPieces?: number },
 ): Array<{ start: string; end: string }> {
   if (typeof start !== "string" || typeof end !== "string") {
     return [];
@@ -70,6 +79,12 @@ export function splitIntervalByUnitUtc(
     return [];
   }
 
+  const maxPieces = resolveMaxPieces(options);
+
+  if (maxPieces === null) {
+    return [];
+  }
+
   try {
     const startInstant = Temporal.Instant.from(start);
     const endInstant = Temporal.Instant.from(end);
@@ -82,12 +97,26 @@ export function splitIntervalByUnitUtc(
       return [{ start: startInstant.toString(), end: endInstant.toString() }];
     }
 
+    const spanNs = Number(
+      endInstant.epochNanoseconds - startInstant.epochNanoseconds,
+    );
+
+    if (
+      exceedsPieceLimit(
+        minSlicesForSpan(spanNs, resolvedUnit, amount, false),
+        maxPieces,
+      )
+    ) {
+      return [];
+    }
+
     const slices = tileByUnit(
       startInstant.toZonedDateTimeISO("UTC"),
       endInstant.toZonedDateTimeISO("UTC"),
       Temporal.ZonedDateTime.compare,
       resolvedUnit,
       amount,
+      maxPieces,
     );
 
     return (slices ?? []).map(([sliceStart, sliceEnd]) => ({

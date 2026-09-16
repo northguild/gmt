@@ -29,8 +29,11 @@ export function subtractUtc(
   options?: { overflow?: Overflow },
 ): string {
   const validUtc = isValidUtc(value);
-  const validUnits = Object.keys(units).every(isValidDateTimeDurationUnit);
-  const validAmounts = Object.values(units).every(isValidAmount);
+  const validUnits =
+    typeof units === "object" &&
+    units !== null &&
+    Object.keys(units).every(isValidDateTimeDurationUnit);
+  const validAmounts = validUnits && Object.values(units).every(isValidAmount);
 
   if (!validUtc || !validUnits || !validAmounts) {
     return "";

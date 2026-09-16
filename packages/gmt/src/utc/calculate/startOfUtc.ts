@@ -1,6 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import type { FractionalDigit } from "../../types";
-import { startOrEndOfUtc } from "./startOrEndOfUtc";
+import { startOrEndOfUtc } from "../../internal/startOrEndOfUtc";
 
 /**
  * Return the start of the specified date-time `unit` for a given UTC datetime string.

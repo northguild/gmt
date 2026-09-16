@@ -10,7 +10,8 @@ import { isValidUtc } from "../validate";
  * @param value ISO UTC datetime string (e.g., "2024-03-17T14:30:45.123Z")
  * @returns Nanosecond (000-999) or "" on invalid input
  *
- * @example parseNanosecondFromUtc("2024-03-17T14:30:45.123Z") // "123000000"
+ * @example parseNanosecondFromUtc("2024-03-17T14:30:45.123Z") // "000"
+ * @example parseNanosecondFromUtc("2024-03-17T14:30:45.123456789Z") // "789"
  * @example parseNanosecondFromUtc("invalid") // ""
  */
 export function parseNanosecondFromUtc(value: string): string {

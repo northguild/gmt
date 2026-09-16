@@ -10,7 +10,7 @@ import { isValidUtc } from "../validate";
  * @returns UTC datetime string without trailing Z or "" on invalid input
  *
  * @example chopUtc("2024-03-10T12:00:00Z") // "2024-03-10T12:00:00"
- * @example chopUtc("2024-03-10T12:00:00") // "2024-03-10T12:00:00"
+ * @example chopUtc("2024-03-10T12:00:00") // "" (no Z: not a UTC instant)
  * @example chopUtc("invalid") // ""
  */
 export function chopUtc(value: string): string {

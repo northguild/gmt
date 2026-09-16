@@ -11,7 +11,7 @@ import { isValidUtc } from "../validate/isValidUtc";
  * @param value UTC Instant string
  * @returns UTC Instant string for the end of the quarter, or "" on invalid input
  *
- * @example endOfQuarterForUtc("2024-03-15T12:00:00Z") // "2024-03-31T23:59:59.999Z"
+ * @example endOfQuarterForUtc("2024-03-15T12:00:00Z") // "2024-03-31T23:59:59.999999999Z"
  * @example endOfQuarterForUtc("invalid") // ""
  */
 export function endOfQuarterForUtc(value: string): string {

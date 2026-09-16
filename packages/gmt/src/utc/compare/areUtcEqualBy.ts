@@ -13,6 +13,10 @@ import { isValidUtc } from "../validate";
  *   unambiguous).
  * - `"month"` requires the same month AND year, matching `areDateTimesEqualBy`.
  * - Returns false for an unsupported unit or invalid input.
+ * - `fractionalSecondDigits` is ignored (deprecated). It used to shorten both boundaries before
+ *   they were compared, so values in different `unit` buckets could compare equal (".123" and ".999"
+ *   by `"millisecond"` with 0 digits). To keep the old coarser comparison, pass the unit the digits
+ *   stood for instead: 0 digits is `"second"`, 3 is `"millisecond"`, 6 is `"microsecond"`.
  *
  * Mapping from date-fns (Decision 5, `context/roadmap/issues/J.md`):
  * - `isSameDay(a, b)` → `areUtcEqualBy(a, b, "day")`
@@ -22,11 +26,13 @@ import { isValidUtc } from "../validate";
  * @param value1 first UTC ISO datetime string
  * @param value2 second UTC ISO datetime string
  * @param unit Temporal.DateUnit | Temporal.TimeUnit to compare by
- * @param options optional: weekStartsOn ("monday" | "sunday"), fractionalSecondDigits (number)
+ * @param options optional: weekStartsOn ("monday" | "sunday"), fractionalSecondDigits (deprecated, ignored)
  * @returns true if both values share the same start-of-unit boundary, false on an unsupported unit or invalid input
  *
  * @example areUtcEqualBy("2024-03-15T02:00:00Z", "2024-03-15T22:00:00Z", "day") // true
  * @example areUtcEqualBy("2024-03-15T23:30:00Z", "2024-03-16T00:30:00Z", "day") // false
+ * @example areUtcEqualBy("2024-05-15T10:20:30.123Z", "2024-05-15T10:20:30.999Z", "millisecond", { fractionalSecondDigits: 0 }) // false (different milliseconds)
+ * @example areUtcEqualBy("2024-05-15T10:20:30.123Z", "2024-05-15T10:20:30.999Z", "second") // true (the old 0-digit result)
  * @example areUtcEqualBy("invalid", "2024-03-15T02:00:00Z", "day") // false
  */
 export function areUtcEqualBy(
@@ -35,6 +41,9 @@ export function areUtcEqualBy(
   unit: Temporal.DateUnit | Temporal.TimeUnit,
   options?: {
     weekStartsOn?: "monday" | "sunday";
+    /**
+     * @deprecated Ignored. Equality compares the full-precision `unit` boundaries; output digits cannot change which bucket a value is in. Will be removed in the next major.
+     */
     fractionalSecondDigits?: FractionalDigit;
   },
 ): boolean {
@@ -47,8 +56,10 @@ export function areUtcEqualBy(
   }
 
   try {
-    const start1 = startOfUtc(value1, unit, options);
-    const start2 = startOfUtc(value2, unit, options);
+    // Full-precision boundaries: the output digits never take part in the comparison.
+    const boundaryOptions = { weekStartsOn: options?.weekStartsOn };
+    const start1 = startOfUtc(value1, unit, boundaryOptions);
+    const start2 = startOfUtc(value2, unit, boundaryOptions);
 
     if (start1 === "" || start2 === "") return false;
 

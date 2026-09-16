@@ -33,7 +33,7 @@ const AUTO_UNITS: Array<{ unit: RelativeUnit; maxSeconds: number }> = [
  * @returns the formatted relative-time string, or "" on invalid input
  *
  * @example formatRelativeUtc("2026-01-15T14:30:45Z", "en-US", { reference: "2026-04-15T14:30:45Z" }) // "90 days ago"
- * @example formatRelativeUtc(value, "en-US", { roundingMethod: "floor" }) // rounds toward the earlier boundary
+ * @example formatRelativeUtc("2026-01-15T00:00:00Z", "en-US", { reference: "2026-01-15T10:30:00Z", roundingMethod: "floor" }) // "11 hours ago" (−10.5 hours floors to −11; the default rounds to 10)
  * @example formatRelativeUtc("not-a-date") // ""
  */
 export function formatRelativeUtc(
@@ -41,6 +41,8 @@ export function formatRelativeUtc(
   locale?: string,
   options: FormatRelativeUtcOptions = {},
 ): string {
+  // A default parameter covers only `undefined`; `null` also means "no options".
+  options ??= {};
   if (!isValidUtc(value)) return "";
   if (options.reference !== undefined && !isValidUtc(options.reference))
     return "";

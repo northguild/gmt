@@ -75,10 +75,7 @@ export function parseUnitFromUtc(
         return dateTime.month.toString().padStart(2, "0");
       case "week":
         return (
-          getWeekNumber(
-            `${dateTime.year}-${dateTime.month.toString().padStart(2, "0")}-${dateTime.day.toString().padStart(2, "0")}`,
-            weekStartsOn,
-          ) ?? 0
+          getWeekNumber(dateTime.toPlainDate().toString(), weekStartsOn) ?? 0
         ).toString();
       case "day":
         return dateTime.day.toString().padStart(2, "0");

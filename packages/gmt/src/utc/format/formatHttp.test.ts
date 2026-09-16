@@ -39,6 +39,24 @@ describe("formatHttp", () => {
     expect(formatHttp(value)).toBe("");
   });
 
+  describe("year = 4DIGIT (RFC 9110 §5.6.7 IMF-fixdate)", () => {
+    // 0000-01-01 is a Saturday (0001-01-01 is a Monday; year 0 has 366
+    // days); 9999-12-31 is a Friday.
+    it.each`
+      value                        | expected
+      ${"-000001-06-15T12:00:00Z"} | ${""}
+      ${"+010000-01-01T00:00:00Z"} | ${""}
+      ${"+275760-09-13T00:00:00Z"} | ${""}
+      ${"0000-01-01T00:00:00Z"}    | ${"Sat, 01 Jan 0000 00:00:00 GMT"}
+      ${"9999-12-31T23:59:59Z"}    | ${"Fri, 31 Dec 9999 23:59:59 GMT"}
+    `(
+      "$value → '$expected'",
+      ({ value, expected }: { value: string; expected: string }) => {
+        expect(formatHttp(value)).toBe(expected);
+      },
+    );
+  });
+
   describe("output is identical across all 17 locales", () => {
     const valueByLocale = localeZonedDateTimeInputByLocale;
 

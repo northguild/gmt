@@ -1,6 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isLeapSecond } from "../../plain/validate/isLeapSecond";
 import { utcDateTime } from "../../regex/utc-date-time";
+import { isObject } from "../../internal/isObject";
 
 /**
  * Return true if `value1` and `value2` form a valid UTC range — both parseable as
@@ -20,15 +21,14 @@ import { utcDateTime } from "../../regex/utc-date-time";
  * @example isValidUtcRange({ value1: "2024-12-31T23:59:59Z", value2: "2024-01-01T10:00:00Z" }) // false
  * @example isValidUtcRange({ value1: "2024-01-01T10:00:00Z", value2: "2024-01-01T10:00:00Z", options: { allowEqual: true } }) // true
  */
-export function isValidUtcRange({
-  value1,
-  value2,
-  options,
-}: {
+export function isValidUtcRange(props: {
   value1: string;
   value2: string;
   options?: { allowEqual?: boolean };
 }): boolean {
+  if (!isObject(props)) return false;
+  const { value1, value2, options } = props;
+
   if (typeof value1 !== "string" || typeof value2 !== "string") {
     return false;
   }

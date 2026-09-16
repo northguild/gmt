@@ -16,7 +16,7 @@ import { isValidUtc } from "../validate/isValidUtc";
  * per Temporal's DifferenceOptions — e.g. `{ smallestUnit: "hour", roundingMode: "halfExpand" }`
  * rounds the difference to the nearest hour before extracting the requested unit.
  * - When `units` is an array, `smallestUnit` must not be coarser than the largest unit in the
- *   array (e.g. `["day", "hour"]` with `smallestUnit: "week"`) — this combination is rejected by
+ *   array (e.g. `["days", "hours"]` with `smallestUnit: "week"`) — this combination is rejected by
  *   Temporal and returns null, same as other invalid input.
  *
  * @param value1 UTC ISO datetime string (start)
@@ -25,9 +25,9 @@ import { isValidUtc } from "../validate/isValidUtc";
  * @param options optional: smallestUnit, roundingIncrement, roundingMode (Temporal.DifferenceOptions rounding controls)
  * @returns numeric difference in the requested unit, or null on invalid input
  *
- * @example diffUtc("2024-03-10T12:00:00Z", "2024-03-11T12:00:00Z", "hour") // 24
- * @example diffUtc("2024-03-10T12:00:00Z", "2025-04-10T12:00:00Z", ["year", "month"]) // { year: 1, month: 1 }
- * @example diffUtc("invalid", "2024-03-11T12:00:00Z", "hour") // null
+ * @example diffUtc("2024-03-10T12:00:00Z", "2024-03-11T12:00:00Z", "hours") // 24
+ * @example diffUtc("2024-03-10T12:00:00Z", "2025-04-10T12:00:00Z", ["years", "months"]) // { years: 1, months: 1 }
+ * @example diffUtc("invalid", "2024-03-11T12:00:00Z", "hours") // null
  */
 export function diffUtc(
   value1: string,
