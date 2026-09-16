@@ -45,6 +45,18 @@ describe("resolveDurationRelativeTo", () => {
     ).toBe(385);
   });
 
+  it.each`
+    value                                            | reason
+    ${"5784-06-15[!u-ca=hebrew]"}                    | ${"critical flag"}
+    ${"5784-06-15[u-ca=HEBREW]"}                     | ${"upper-case calendar id"}
+    ${"5784-06-15[u-ca=hebrew][foo=bar]"}            | ${"trailing elective annotation"}
+    ${"5784-06-15T00:00:00+00:00[UTC][u-ca=hebrew]"} | ${"zoned, RFC 9557 segment order"}
+    ${"2016-12-31t23:59:60+00:00[UTC]"}              | ${"leap second, lowercase t"}
+    ${"2016-12-31T23:59:60"}                         | ${"leap second, PlainDateTime"}
+  `("throws for $value ($reason)", ({ value }) => {
+    expect(() => resolveDurationRelativeTo(value)).toThrow(RangeError);
+  });
+
   it("throws for a malformed calendar-annotated string", () => {
     expect(() =>
       resolveDurationRelativeTo("5783-14-01[u-ca=hebrew]"),

@@ -28,7 +28,7 @@ declare global {
  *   its week data.
  * - Returns `undefined` when neither form is available. Fields may be missing: Node 24/26 omit
  *   `minimalDays`. Callers apply their own ISO defaults.
- * - Throws `RangeError` (from `Intl.Locale`) if `locale` is not a valid BCP 47 tag; callers turn
+ * - Throws `RangeError` (from `Intl.Locale`) if `locale` is not a well-formed BCP 47 tag; callers turn
  *   that into their sentinel.
  *
  * @example localeWeekInfo("en-US")?.firstDay // 7

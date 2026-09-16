@@ -128,6 +128,9 @@ describe("parseCalendarZonedValue / formatZonedInCalendar", () => {
     ${"5785-13-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"}            | ${"month 13 in a non-leap Hebrew year"}
     ${"5784-06-15T14:30:00+03:00[u-ca=hebrew][America/New_York]"}            | ${"stale offset for the named zone"}
     ${"2024-06-30T23:59:60+00:00[UTC]"}                                      | ${"leap second, which Temporal would otherwise clamp to :59"}
+    ${"2016-12-31t23:59:60+00:00[UTC]"}                                      | ${"leap second, lowercase t separator"}
+    ${"2016-12-31 23:59:60+00:00[UTC]"}                                      | ${"leap second, space separator"}
+    ${"20161231T235960Z[UTC]"}                                               | ${"leap second, basic format"}
     ${"invalid"}                                                             | ${"not a datetime at all"}
   `("throws for $value ($reason)", ({ value }) => {
     expect(() => parseCalendarZonedValue(value)).toThrow();

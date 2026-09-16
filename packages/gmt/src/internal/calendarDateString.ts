@@ -56,6 +56,13 @@ export function parseCalendarDateValue(value: string): Temporal.PlainDate {
   }
 
   const [, year, month, day, calendarId, era] = match;
+  // The grammar's id is GMT's `CalendarSystem`, not every id Temporal knows (coding-standards E1
+  // rule 2). Temporal would accept its own ids (`roc`, `iso8601`, `islamic-tbla`, `ethioaa`, …),
+  // but every function that re-emits a calendar string rejects them, so accepting them here
+  // would let the guard certify strings the bodies refuse.
+  if (!isCalendarSystem(calendarId)) {
+    throw new RangeError(`Unknown GMT calendar identifier: ${calendarId}`);
+  }
   if (isEthiopicFamilyCalendar(calendarId)) {
     return dateFromEthiopicFamilyFields(calendarId, {
       year: era ? undefined : Number(year),
@@ -67,12 +74,8 @@ export function parseCalendarDateValue(value: string): Temporal.PlainDate {
   }
 
   // The regex captures GMT's own calendar identifier (e.g. "islamic-tabular"), which
-  // doesn't always match Temporal's id for the same calendar (e.g. "islamic-tbla") — an
-  // unrecognized id is passed through as-is so Temporal.PlainDate.from rejects it the
-  // same way it rejects any other unknown calendar identifier.
-  const temporalCalendarId = isCalendarSystem(calendarId)
-    ? temporalCalendarIds[calendarId]
-    : calendarId;
+  // doesn't always match Temporal's id for the same calendar (e.g. "islamic-tbla").
+  const temporalCalendarId = temporalCalendarIds[calendarId];
   // A captured `;era=` suffix (only ever present for "japanese", the one remaining calendar
   // whose plain `.year` doesn't reset at an era change) means `year` is an era-relative
   // `eraYear`, not a proleptic year — Temporal needs `era`+`eraYear` together to resolve

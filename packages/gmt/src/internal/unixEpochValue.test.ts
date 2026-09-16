@@ -3,6 +3,8 @@ import {
   parseUnixEpochIntervalList,
   parseUnixEpochIntervalPair,
   parseUnixEpochValue,
+  coerceUnixEpochNumber,
+  isUnixEpochInInstantRange,
 } from "./unixEpochValue";
 
 describe("parseUnixEpochValue", () => {
@@ -94,4 +96,40 @@ describe("parseUnixEpochIntervalList", () => {
       expect(parseUnixEpochIntervalList(intervals)).toEqual(expected);
     },
   );
+});
+
+describe("coerceUnixEpochNumber", () => {
+  // Blank strings become NaN (StringToNumber would give +0); every other input keeps Number().
+  it.each`
+    value           | expected      | description
+    ${1700000000}   | ${1700000000} | ${"a number unchanged"}
+    ${1.5}          | ${1.5}        | ${"a fraction unchanged (validated later)"}
+    ${"1700000000"} | ${1700000000} | ${"a digit string"}
+    ${" 12 "}       | ${12}         | ${"a padded digit string, as Number() reads it"}
+    ${"0x10"}       | ${16}         | ${"a hex string, as Number() reads it"}
+    ${"abc"}        | ${Number.NaN} | ${"a non-numeric string"}
+    ${""}           | ${Number.NaN} | ${"an empty string"}
+    ${"   "}        | ${Number.NaN} | ${"a spaces-only string"}
+    ${"\n\t"}       | ${Number.NaN} | ${"a newline and tab string"}
+    ${" "}          | ${Number.NaN} | ${"a no-break space string"}
+  `("returns $expected for $description ($value)", ({ value, expected }) => {
+    expect(coerceUnixEpochNumber(value)).toBe(expected);
+  });
+});
+
+describe("isUnixEpochInInstantRange", () => {
+  // Integer epochs within ±8.64e15 (Temporal nsMaxInstant / 10^6) name an instant.
+  it.each`
+    value                     | expected | description
+    ${0}                      | ${true}  | ${"the epoch"}
+    ${8_640_000_000_000_000}  | ${true}  | ${"the maximum instant"}
+    ${-8_640_000_000_000_000} | ${true}  | ${"the minimum instant"}
+    ${8_640_000_000_000_001}  | ${false} | ${"one past the maximum instant"}
+    ${-8_640_000_000_000_001} | ${false} | ${"one past the minimum instant"}
+    ${1.5}                    | ${false} | ${"a fraction"}
+    ${NaN}                    | ${false} | ${"NaN"}
+    ${"5"}                    | ${false} | ${"a numeric string"}
+  `("returns $expected for $description ($value)", ({ value, expected }) => {
+    expect(isUnixEpochInInstantRange(value)).toBe(expected);
+  });
 });

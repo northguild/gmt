@@ -1,3 +1,9 @@
+import { MAX_EPOCH_NANOSECONDS } from "./epochNanoseconds";
+import { isValidUnixMilliseconds } from "../unix/validate/isValidUnixMilliseconds";
+
+// TC39 Temporal IsValidEpochNanoseconds bound (nsMaxInstant = 10^8 days) in milliseconds: 8.64e15.
+const MAX_EPOCH_MILLISECONDS = Number(MAX_EPOCH_NANOSECONDS / 1_000_000n);
+
 /**
  * Parse one Unix epoch argument (seconds or milliseconds) into a number, or null when it is not a
  * safe integer.
@@ -39,8 +45,8 @@ export function parseUnixEpochValue(value: unknown): number | null {
  * Parse a Unix epoch interval `[start, end]`, or null when either value is invalid (see
  * `parseUnixEpochValue`) or the interval is reversed (`start > end`).
  *
- * @param start Unix epoch value (seconds or milliseconds) — interval start
- * @param end Unix epoch value (seconds or milliseconds) — interval end
+ * @param start Unix epoch value, in the one unit all epoch arguments share — interval start
+ * @param end Unix epoch value, in the one unit all epoch arguments share — interval end
  * @returns `{ start, end }` as safe integers, or null
  *
  * @example parseUnixEpochInterval(0, "1500000000") // { start: 0, end: 1500000000 }
@@ -122,4 +128,48 @@ export function parseUnixEpochIntervalList(
   }
 
   return parsed;
+}
+
+/**
+ * Coerce the epoch argument of the `unix/parse` field extractors to a number, keeping their
+ * `Number()` grammar except for a blank string.
+ *
+ * - A number is returned unchanged.
+ * - An empty or whitespace-only string becomes `NaN`: ECMA-262 StringToNumber maps it to `+0`,
+ *   which would read a missing value as the epoch.
+ * - Any other string goes through `Number()`, so its acceptance is exactly as before.
+ *
+ * @param value Unix epoch value as a number or numeric string
+ * @returns the coerced number, `NaN` for a blank string
+ *
+ * @example coerceUnixEpochNumber("1700000000") // 1700000000
+ * @example coerceUnixEpochNumber("   ") // NaN
+ */
+export function coerceUnixEpochNumber(value: number | string): number {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  return value.trim() === "" ? Number.NaN : Number(value);
+}
+
+/**
+ * Return true when `value` is a unix epoch number that names a `Temporal.Instant`, for the
+ * aggregators (`sortUnix`, `minUnix`, `maxUnix`) that take no `epochUnit`.
+ *
+ * - Must be an integer number (`isValidUnixMilliseconds`, which `isValidUnixSeconds` matches).
+ * - Must lie within ±8.64e15, the instant range in milliseconds. That range contains the seconds
+ *   range (±8.64e12), so no valid epoch of either unit is dropped.
+ *
+ * @param value candidate epoch value
+ * @returns true when `value` is an in-range integer epoch
+ *
+ * @example isUnixEpochInInstantRange(1700000000000) // true
+ * @example isUnixEpochInInstantRange(1e20) // false
+ */
+export function isUnixEpochInInstantRange(value: unknown): value is number {
+  return (
+    isValidUnixMilliseconds(value) &&
+    Math.abs(value as number) <= MAX_EPOCH_MILLISECONDS
+  );
 }

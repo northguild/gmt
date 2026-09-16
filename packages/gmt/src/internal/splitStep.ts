@@ -45,6 +45,8 @@ export function isExactDurationUnit(unit: string): boolean {
  * - A step equal to the previous boundary is skipped (a deleted local day); more than
  *   `MAX_STALLED_SPLIT_STEPS` in a row returns `null`.
  * - A step that goes backwards returns `null`.
+ * - More than `maxSlices` slices returns `null` as soon as the next one is due, so the work stays
+ *   bounded by the limit (owner decision A2, CORE-8).
  * - The last slice's end is trimmed to `end`. Callers handle `start >= end` before calling.
  *
  * Generic over the value type only — each caller passes its own Temporal type and comparator, so
@@ -55,12 +57,14 @@ export function isExactDurationUnit(unit: string): boolean {
  * @param compare the Temporal type's `compare`
  * @param unit plural duration unit
  * @param amount positive number of units per step
+ * @param maxSlices most slices to build; one more returns `null` before it is built
  * @param add how a duration is added to a value (default `value.add(duration)`; the plain date
  *   caller passes its calendar-correct add)
- * @returns `[sliceStart, sliceEnd]` pairs, or `null` when stepping goes backwards or stalls
+ * @returns `[sliceStart, sliceEnd]` pairs, or `null` when stepping goes backwards, stalls, or
+ *   would build more than `maxSlices`
  *
- * @example tileByUnit(Temporal.PlainDate.from("2024-01-01"), Temporal.PlainDate.from("2024-01-04"), Temporal.PlainDate.compare, "days", 2) // [[2024-01-01, 2024-01-03], [2024-01-03, 2024-01-04]]
- * @example tileByUnit(Temporal.PlainDate.from("2024-01-01"), Temporal.PlainDate.from("2024-01-04"), Temporal.PlainDate.compare, "hours", 1) // null (PlainDate ignores hours, so no step advances)
+ * @example tileByUnit(Temporal.PlainDate.from("2024-01-01"), Temporal.PlainDate.from("2024-01-04"), Temporal.PlainDate.compare, "days", 2, 100) // [[2024-01-01, 2024-01-03], [2024-01-03, 2024-01-04]]
+ * @example tileByUnit(Temporal.PlainDate.from("2024-01-01"), Temporal.PlainDate.from("2024-01-04"), Temporal.PlainDate.compare, "hours", 1, 100) // null (PlainDate ignores hours, so no step advances)
  */
 export function tileByUnit<
   T extends { add(duration: Temporal.DurationLike): T },
@@ -70,6 +74,7 @@ export function tileByUnit<
   compare: (a: T, b: T) => number,
   unit: string,
   amount: number,
+  maxSlices: number,
   add: (value: T, duration: Temporal.DurationLike) => T = (value, duration) =>
     value.add(duration),
 ): Array<[T, T]> | null {
@@ -99,9 +104,96 @@ export function tileByUnit<
     }
 
     stalled = 0;
+
+    if (slices.length === maxSlices) {
+      return null;
+    }
+
     slices.push([current, compare(next, end) > 0 ? end : next]);
     current = next;
   }
 
   return slices;
+}
+
+const NANOSECONDS_PER_DAY = 86_400_000_000_000;
+
+/**
+ * The longest a single unit can be, in nanoseconds.
+ *
+ * Exact units are fixed. A calendar month is at most 31 days in every CLDR calendar, and a
+ * calendar year at most 385 days (a Hebrew or Chinese leap year).
+ */
+const LONGEST_UNIT_NANOSECONDS: Readonly<Record<string, number>> = {
+  nanoseconds: 1,
+  microseconds: 1_000,
+  milliseconds: 1_000_000,
+  seconds: 1_000_000_000,
+  minutes: 60_000_000_000,
+  hours: 3_600_000_000_000,
+  days: NANOSECONDS_PER_DAY,
+  weeks: 7 * NANOSECONDS_PER_DAY,
+  months: 31 * NANOSECONDS_PER_DAY,
+  years: 385 * NANOSECONDS_PER_DAY,
+};
+
+/**
+ * A zoned boundary can sit this far from its wall-clock distance: a UTC offset lies strictly
+ * within ±24 hours (Temporal IsOffsetTimeZoneIdentifier / ECMA-262 time zone offset range), so
+ * two offsets differ by less than 48 hours.
+ */
+const ZONE_OFFSET_SLACK_NANOSECONDS = 2 * NANOSECONDS_PER_DAY;
+
+/**
+ * Guards the floating-point quotient so a lower bound is never rounded above the true count: the
+ * span, the step and their quotient each carry at most half an ulp of rounding error.
+ */
+const QUOTIENT_TOLERANCE = 1 - 8 * Number.EPSILON;
+
+/**
+ * A lower bound on the number of slices `tileByUnit` returns for a span, without stepping.
+ *
+ * - Exact units (hours and smaller) never clamp or stall: the bound is `ceil(span / step)`.
+ * - Calendar units step at most `amount ×` the longest unit, so reaching `end` takes at least
+ *   `ceil(span / longest step)` steps.
+ * - `zoned` values may also shift by an offset change (under 48 hours) and may stall up to
+ *   `MAX_STALLED_SPLIT_STEPS` steps in a row, so only one step in `MAX_STALLED_SPLIT_STEPS + 1`
+ *   is guaranteed to be a slice.
+ * - Callers compare the bound with `maxPieces` to return the sentinel before building a huge split;
+ *   `tileByUnit`'s own `maxSlices` settles counts the bound cannot.
+ *
+ * @param spanNs exact span between start and end, in nanoseconds
+ * @param unit plural duration unit, as returned by `resolveDurationUnit`
+ * @param amount units per step
+ * @param zoned whether the values carry a time zone with offset transitions
+ * @returns a count no greater than the slices `tileByUnit` would build (0 when unknown)
+ *
+ * @example minSlicesForSpan(3 * 3_600_000_000_000, "hours", 1, false) // 3
+ * @example minSlicesForSpan(62 * 86_400_000_000_000, "months", 1, false) // 2
+ */
+export function minSlicesForSpan(
+  spanNs: number,
+  unit: string,
+  amount: number,
+  zoned: boolean,
+): number {
+  const longest = LONGEST_UNIT_NANOSECONDS[unit];
+
+  if (longest === undefined || !(amount > 0)) {
+    return 0;
+  }
+
+  const stepNs = longest * amount;
+
+  if (isExactDurationUnit(unit)) {
+    return Math.ceil((spanNs / stepNs) * QUOTIENT_TOLERANCE);
+  }
+
+  const reach = Math.max(
+    0,
+    spanNs - (zoned ? ZONE_OFFSET_SLACK_NANOSECONDS : 0),
+  );
+  const steps = Math.ceil((reach / stepNs) * QUOTIENT_TOLERANCE);
+
+  return zoned ? Math.floor(steps / (MAX_STALLED_SPLIT_STEPS + 1)) : steps;
 }

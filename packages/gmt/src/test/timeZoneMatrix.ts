@@ -85,6 +85,58 @@ export const validOnlyBattleTestTimeZones = [
   "Asia/Calcutta",
 ] as const;
 
+/**
+ * Every single-component (slash-less) Zone and Link name in IANA tzdb 2026d's `backward` file.
+ * Temporal §14.6.2 requires every IANA Zone and Link name to be accepted, and its
+ * `TimeZoneIANAName` grammar allows a single component (`TZLeadingChar ::: Alpha . _`, with
+ * `TZChar` adding digits, `-` and `+`), so none of these may be refused on shape.
+ */
+export const ianaSingleComponentTimeZones = [
+  "CET",
+  "CST6CDT",
+  "Cuba",
+  "EET",
+  "EST",
+  "EST5EDT",
+  "Egypt",
+  "Eire",
+  "GB",
+  "GB-Eire",
+  "GMT+0",
+  "GMT-0",
+  "GMT0",
+  "Greenwich",
+  "HST",
+  "Hongkong",
+  "Iceland",
+  "Iran",
+  "Israel",
+  "Jamaica",
+  "Japan",
+  "Kwajalein",
+  "Libya",
+  "MET",
+  "MST",
+  "MST7MDT",
+  "NZ",
+  "NZ-CHAT",
+  "Navajo",
+  "PRC",
+  "PST8PDT",
+  "Poland",
+  "Portugal",
+  "ROC",
+  "ROK",
+  "Singapore",
+  "Turkey",
+  "UCT",
+  "UTC",
+  "Universal",
+  "W-SU",
+  "WET",
+  "Zulu",
+] as const;
+
 // Shared modern instant used to prove zone conversions preserve exact instants.
 const battleTestInstant = Temporal.Instant.from("2024-02-29T00:00:00Z");
 // Unix epoch instant used for historical offset behavior coverage.
