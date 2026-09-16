@@ -99,11 +99,59 @@ describe("durationAs", () => {
     value    | unit      | relativeTo                   | expected | note
     ${"P1Y"} | ${"days"} | ${"5784-06-15[u-ca=hebrew]"} | ${385}   | ${"Hebrew leap year 5784"}
     ${"P1M"} | ${"days"} | ${"5785-04-15[u-ca=hebrew]"} | ${29}    | ${"Tevet, a 29-day Hebrew month"}
-    ${"P1M"} | ${"days"} | ${"2024-02-10[u-ca=hebrew]"} | ${30}    | ${"Temporal's own u-ca shape still works unchanged (ISO digits)"}
+    ${"P1M"} | ${"days"} | ${"2024-02-10[u-ca=hebrew]"} | ${30}    | ${"GMT digits: Hebrew year 2024, Heshvan (30 days), not ISO 2024-02-10"}
   `(
     "totals $value as $expected in $unit relativeTo calendar-annotated $relativeTo ($note)",
     ({ value, unit, relativeTo, expected }) => {
       expect(durationAs(value, unit, { relativeTo })).toBe(expected);
+    },
+  );
+
+  // One tag, one date: a `[u-ca=...]` relativeTo that is not GMT's E1 PlainDate shape is not read
+  // with Temporal's ISO digits instead — that would give the same tag two readings. RFC 9557 §3.3:
+  // the critical flag does not change what the tag means; §4.1 suffix values are case-insensitive
+  // ALPHA. Each of these would otherwise total with ISO digits (29, 28 …) rather than null.
+  it.each`
+    relativeTo                                       | reason
+    ${"5784-06-01[!u-ca=hebrew]"}                    | ${"critical flag"}
+    ${"5784-06-01[u-ca=HEBREW]"}                     | ${"upper-case calendar id"}
+    ${"5784-06-01[U-CA=hebrew]"}                     | ${"upper-case key"}
+    ${"5784-06-01[u-ca=hebrew][foo=bar]"}            | ${"trailing elective annotation"}
+    ${"0006-02-01[!u-ca=japanese]"}                  | ${"critical flag, era calendar"}
+    ${"5784-06-01T00:00:00[u-ca=hebrew]"}            | ${"PlainDateTime with a calendar annotation"}
+    ${"5784-06-01T00:00:00+00:00[UTC][u-ca=hebrew]"} | ${"RFC 9557 segment order [zone][u-ca=]"}
+    ${"5784-06-01T00:00:00+00:00[u-ca=hebrew][UTC]"} | ${"GMT E7 segment order [u-ca=][zone]"}
+  `(
+    "returns null when relativeTo $relativeTo carries a calendar annotation that is not GMT's PlainDate shape ($reason)",
+    ({ relativeTo }) => {
+      expect(durationAs("P1M", "days", { relativeTo })).toBeNull();
+    },
+  );
+
+  // Temporal's ParseISODateTime clamps a second of 60 to 59, in every spelling its grammar accepts.
+  it.each`
+    relativeTo                          | reason
+    ${"2016-12-31T23:59:60+00:00[UTC]"} | ${"zoned, uppercase T"}
+    ${"2016-12-31t23:59:60+00:00[UTC]"} | ${"zoned, lowercase t"}
+    ${"2016-12-31 23:59:60+00:00[UTC]"} | ${"zoned, space separator"}
+    ${"20161231T235960Z[UTC]"}          | ${"zoned, basic format"}
+    ${"2016-12-31T23:59:60"}            | ${"PlainDateTime, no designator"}
+    ${"2016-12-31t235960.5"}            | ${"PlainDateTime, basic with fraction"}
+  `(
+    "returns null for a leap-second relativeTo $relativeTo ($reason)",
+    ({ relativeTo }) => {
+      expect(durationAs("PT1H", "seconds", { relativeTo })).toBeNull();
+    },
+  );
+
+  it.each`
+    relativeTo                                      | expected | reason
+    ${"2024-01-01T00:00:00+00:00[UTC][x=T123460Z]"} | ${24}    | ${"an annotation value is not a time of day"}
+    ${"2024-01-01T00:00:00+00:00[UTC][foo=bar]"}    | ${24}    | ${"elective annotation without a calendar"}
+  `(
+    "totals P1D as $expected hours relativeTo $relativeTo ($reason)",
+    ({ relativeTo, expected }) => {
+      expect(durationAs("P1D", "hours", { relativeTo })).toBe(expected);
     },
   );
 
@@ -112,6 +160,21 @@ describe("durationAs", () => {
       durationAs("P1M", "days", { relativeTo: "5783-14-01[u-ca=hebrew]" }),
     ).toBeNull();
   });
+
+  // A zoned relativeTo string resolves with disambiguation "compatible" and offset "reject"
+  // (GetTemporalRelativeToOption): ambiguous 01:30 takes the earlier (EDT) instant, from which
+  // a day is 25 hours; a mismatched offset is rejected.
+  it.each`
+    relativeTo                                       | expected | note
+    ${"2024-11-03T01:30[America/New_York]"}          | ${25}    | ${"ambiguous, compatible takes earlier EDT"}
+    ${"2024-11-03T01:30-05:00[America/New_York]"}    | ${24}    | ${"explicit later EST offset"}
+    ${"2024-03-10T00:00:00-04:00[America/New_York]"} | ${null}  | ${"offset does not match zone, rejected"}
+  `(
+    "totals P1D as $expected hours relativeTo $relativeTo ($note)",
+    ({ relativeTo, expected }) => {
+      expect(durationAs("P1D", "hours", { relativeTo })).toBe(expected);
+    },
+  );
 
   // relativeTo is not inert on day/time units: anchored to a zoned instant it resolves real
   // elapsed time, so a calendar day across a DST transition is not 24 hours.

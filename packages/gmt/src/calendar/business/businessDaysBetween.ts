@@ -48,10 +48,13 @@ function countBusinessDates(
  *
  * - The convention is stated, not inferred: the range is `(start, end]`. Counting from Monday
  *   to Friday of the same week gives 4, not 5 — Monday itself is not counted.
- * - That makes it the exact inverse of `addBusinessDays`: if `end` is `addBusinessDays(start,
- *   n, calendar)`, this returns `n`.
+ * - That makes it the inverse of `addBusinessDays` when `n ≥ 0` or `start` is a business day:
+ *   if `end` is `addBusinessDays(start, n, calendar)`, this returns `n`. From a weekend or
+ *   holiday `start`, a negative `n` counts one closer to zero, because `start` itself is
+ *   excluded and is not a business day.
  * - `end` before `start` returns a negative count, so swapping the arguments negates the
- *   result and `businessDaysBetween(d, d, calendar)` is 0 for any `d`.
+ *   result. An empty range is always `0`, never `-0`, and `businessDaysBetween(d, d, calendar)`
+ *   is 0 for any `d`.
  * - The count is computed, not walked, so there is no range limit: whole weeks contribute one
  *   of each weekday and only the holidays are visited individually.
  * - Both dates and `calendar.holidays` are local dates; `calendar.timeZone` is not read. A
@@ -70,6 +73,7 @@ function countBusinessDates(
  * @example businessDaysBetween("2024-07-01", "2024-07-31", { weekend: [6, 7], holidays: [], timeZone: "UTC" }) // 22 — July's 23 weekdays less the 1st
  * @example businessDaysBetween("2024-07-01", "2024-07-01", { weekend: [6, 7], holidays: [], timeZone: "UTC" }) // 0
  * @example businessDaysBetween("2024-07-05", "2024-07-01", { weekend: [6, 7], holidays: ["2024-07-04"], timeZone: "America/New_York" }) // -3 — reversed
+ * @example businessDaysBetween("2024-07-06", "2024-07-05", { weekend: [6, 7], holidays: [], timeZone: "UTC" }) // 0 — addBusinessDays("2024-07-06", -1) is "2024-07-05", but Saturday is excluded
  * @example businessDaysBetween("2024-07-01", "2024-07-08", { weekend: [5, 6], holidays: [], timeZone: "Asia/Riyadh" }) // 5 — Friday–Saturday weekend
  * @example businessDaysBetween("invalid", "2024-07-05", { weekend: [6, 7], holidays: [], timeZone: "UTC" }) // null
  * @example businessDaysBetween("2024-07-01", "2024-07-05", { weekend: [6, 7], holidays: [], timeZone: "Invalid/Zone" }) // null
@@ -96,7 +100,8 @@ export function businessDaysBetween(
       resolved.holidays,
     );
 
-    return reversed ? -count : count;
+    // `0 - count` rather than `-count`: an empty reversed range must be 0, not -0.
+    return reversed ? 0 - count : count;
   } catch {
     return null;
   }

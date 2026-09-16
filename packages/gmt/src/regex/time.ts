@@ -20,12 +20,15 @@ export const hour: RegExp = /^(0[0-9]|1[0-9]|2[0-3])$/;
 export const minute: RegExp = /^[0-5][0-9]$/;
 
 /**
- * RegExp matching an ISO 8601 second: `00`–`59`.
+ * RegExp matching a second of `00`–`59`.
+ *
+ * - Temporal's `TimeSecond` and RFC 3339's `time-second` both admit `60` (a leap second). GMT
+ *   rejects it by decision, because Temporal would read it as `:59`; `leapSecond` detects one.
  *
  * @example second.test("00") // true
  * @example second.test("30") // true
  * @example second.test("59") // true
- * @example second.test("60") // false (out of range; leap seconds use a different pattern)
+ * @example second.test("60") // false (a leap second; GMT rejects it, see `leapSecond`)
  */
 export const second: RegExp = /^[0-5][0-9]$/;
 
@@ -59,17 +62,20 @@ export const millisecond: RegExp = fractionalSecond;
  * - Minutes and seconds: `00`–`59`, zero-padded.
  * - Seconds are optional; fractional seconds use `.` or `,` followed by 1–9 digits.
  * - No timezone designator — this is a plain/local time only.
+ * - Second `60` does not match: GMT rejects leap seconds (Temporal's `TimeSecond` admits one
+ *   and would read it as `:59`).
  * - Shape-only validation; real field validation is delegated to
- *   `Temporal.PlainTime.from` in `parseTime`.
+ *   `Temporal.PlainTime.from` in `isValidTime`.
  *
- * Capture groups: 1 hour, 2 minute, 3 second (optional), 4 fractional (optional).
+ * Capture groups: 1 hour. The minute, second and fraction are not captured.
  *
  * @example plainTime.test("14:30")              // true
  * @example plainTime.test("14:30:00")           // true
  * @example plainTime.test("14:30:00.123")       // true (fractional seconds)
  * @example plainTime.test("14:30:00,123")       // true (comma separator)
  * @example plainTime.test("24:00:00")           // false (hour out of range)
- * @example plainTime.test("14:30:60")           // false (second out of range)
+ * @example plainTime.exec("14:30:45.5")?.slice(1) // ["14"] (hour)
+ * @example plainTime.test("14:30:60")           // false (leap second; GMT rejects it)
  */
 export const plainTime: RegExp =
   /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9](?::[0-5][0-9](?:[.,][0-9]{1,9})?)?$/;

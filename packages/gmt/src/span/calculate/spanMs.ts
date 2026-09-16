@@ -31,6 +31,9 @@ const MAX_SAFE_NANOSECONDS =
  *   required, optionally followed by a bracketed IANA zone — a bracket alone is not enough,
  *   which is the one string shape `spanWallClock` accepts and these two do not. The
  *   endpoints need not share a zone; an instant is an instant.
+ * - **A bracketed zone annotation is syntactic only.** As in `Temporal.Instant.from`, it is
+ *   ignored: each offset alone fixes its instant, and a zone that does not exist or disagrees
+ *   with the offset is not checked. `spanWallClock`, by contrast, rejects a mismatched offset.
  * - Returns `null` on invalid input, not `0` — `0` is the span between an instant and itself.
  *   `null`, not `NaN`, because that is GMT's sentinel for every number-returning function:
  *   it is the one a caller already checks for, and the only one `strictNullChecks` forces
@@ -57,6 +60,7 @@ const MAX_SAFE_NANOSECONDS =
  * @example spanMs("2024-03-10T12:00:00Z", "2024-03-10T12:00:00Z") // 0
  * @example spanMs("2024-03-10T12:00:00Z", "2024-03-10T12:00:00.123456789Z") // 123.456789
  * @example spanMs("2024-03-09T12:00:00-05:00[America/New_York]", "2024-03-10T12:00:00-04:00[America/New_York]") // 82800000 — 23 hours, not 24
+ * @example spanMs("2024-03-10T12:00:00+05:00[America/New_York]", "2024-03-10T12:00:00-04:00[America/New_York]") // 32400000 — offsets decide, the zone is ignored
  * @example spanMs("-271821-04-20T00:00:00Z", "+275760-09-13T00:00:00Z") // null — past the safe integer range, use spanNs
  * @example spanMs("2024-03-10T12:00:00Z", "invalid") // null
  */

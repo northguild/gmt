@@ -15,6 +15,7 @@ describe("spanNs", () => {
     ${"1970-01-01T00:00:00Z"}                        | ${"1969-12-31T23:59:59Z"}           | ${-1000000000n}
     ${"2024-03-10T12:00:00-05:00"}                   | ${"2024-03-10T12:00:00Z"}           | ${-18000000000000n}
     ${"2024-03-10T07:00:00-05:00[America/New_York]"} | ${"2024-03-10T12:00:00Z"}           | ${0n}
+    ${"2024-01-01T00:00:00Z[x=T123460Z]"}            | ${"2024-01-01T00:00:01Z"}           | ${1000000000n}
   `(
     "returns $expected nanoseconds from $start to $end",
     ({ start, end, expected }) => {
@@ -29,6 +30,21 @@ describe("spanNs", () => {
     // A span is a duration, not an instant: it can exceed MAX_EPOCH_NANOSECONDS.
     expect(span).toBeGreaterThan(8640000000000000000000n);
   });
+
+  // A bracketed zone annotation is syntactic only: Temporal.Instant.from ignores it, and the
+  // offset alone fixes the instant (test262 Temporal/Instant/from/
+  // argument-string-time-zone-annotation.js). A zone that does not exist, or one whose offset
+  // contradicts the string's, is not checked. 12:00+05:00 is 07:00Z; 12:00-04:00 is 16:00Z.
+  it.each`
+    start                                            | end                                              | expected           | reason
+    ${"2024-03-10T12:00:00+05:00[America/New_York]"} | ${"2024-03-10T12:00:00-04:00[America/New_York]"} | ${32400000000000n} | ${"07:00Z to 16:00Z, offsets contradicting the zone on one side"}
+    ${"2024-03-10T12:00:00Z[Not/AZone]"}             | ${"2024-03-10T13:00:00Z"}                        | ${3600000000000n}  | ${"zone that does not exist"}
+  `(
+    "returns $expected from $start to $end, from the offsets alone ($reason)",
+    ({ start, end, expected }) => {
+      expect(spanNs(start, end)).toBe(expected);
+    },
+  );
 
   it.each`
     start                               | end

@@ -27,6 +27,21 @@ describe("spanMs", () => {
     },
   );
 
+  // A bracketed zone annotation is syntactic only: Temporal.Instant.from ignores it, and the
+  // offset alone fixes the instant (test262 Temporal/Instant/from/
+  // argument-string-time-zone-annotation.js). A zone that does not exist, or one whose offset
+  // contradicts the string's, is not checked. 12:00+05:00 is 07:00Z; 12:00-04:00 is 16:00Z.
+  it.each`
+    start                                            | end                                              | expected    | reason
+    ${"2024-03-10T12:00:00+05:00[America/New_York]"} | ${"2024-03-10T12:00:00-04:00[America/New_York]"} | ${32400000} | ${"07:00Z to 16:00Z, offsets contradicting the zone on one side"}
+    ${"2024-03-10T12:00:00Z[Not/AZone]"}             | ${"2024-03-10T13:00:00Z"}                        | ${3600000}  | ${"zone that does not exist"}
+  `(
+    "returns $expected from $start to $end, from the offsets alone ($reason)",
+    ({ start, end, expected }) => {
+      expect(spanMs(start, end)).toBe(expected);
+    },
+  );
+
   it.each`
     start                               | end                                 | expected
     ${"2024-03-10T12:00:00Z"}           | ${"2024-03-10T12:00:00.0005Z"}      | ${0.5}

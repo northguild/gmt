@@ -21,6 +21,24 @@ describe("isValidInstant", () => {
     expect(isValidInstant(value)).toBe(true);
   });
 
+  // A bracketed zone annotation is syntactic only: Temporal.Instant.from ignores it, and the
+  // offset alone fixes the instant (test262 Temporal/Instant/from/
+  // argument-string-time-zone-annotation.js). A zone that does not exist, or one whose offset
+  // contradicts the string's, is not checked. 12:00+05:00 is 07:00Z; 12:00-04:00 is 16:00Z.
+  it.each`
+    value                                            | reason
+    ${"2024-03-10T12:00:00+05:00[America/New_York]"} | ${"offset contradicts the zone"}
+    ${"2024-03-10T12:00:00Z[Not/AZone]"}             | ${"zone that does not exist"}
+    ${"2024-03-10T12:00:00Z[+05:00]"}                | ${"numeric zone annotation"}
+    ${"2024-01-01T00:00:00Z[x=T123460Z]"}            | ${"elective annotation value shaped like a basic leap second (RFC 9557 §4.1 alphanum)"}
+    ${"2024-01-01T00:00:00Z[x=t000060-y]"}           | ${"elective annotation value shaped like a lowercase leap second"}
+  `(
+    "returns true for $value, whose annotation is not checked ($reason)",
+    ({ value }) => {
+      expect(isValidInstant(value)).toBe(true);
+    },
+  );
+
   it.each`
     value                                       | reason
     ${"2024-03-10"}                             | ${"date-only, no offset"}

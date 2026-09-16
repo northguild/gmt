@@ -54,13 +54,24 @@ export interface OffsetInstant {
  * - A bracketed *offset* time zone (Temporal's own `[-04:00]` shape) yields no `timeZone`
  *   field. It names no place, so filling the field with it would claim GMT knows where the
  *   event happened when all it has is the offset it already stores. Every other bracketed
- *   identifier Temporal accepts is kept as written, including the slash-less IANA aliases
- *   (`EST5EDT`, `Zulu`) that the `timeZone` *argument* rejects — an argument is validated
- *   with `isValidTimeZone`, as every zone argument in GMT is, while a bracket is validated
- *   by Temporal as part of the string, as everywhere in `zoned/`.
+ *   identifier Temporal accepts is kept, including the single-component IANA names (`EST5EDT`,
+ *   `Zulu`), in its IANA casing.
  * - `timeZone` names the zone the offset is read in, and is how a UTC-only feed gets a pair
  *   with a local offset. It also overrides a zone bracketed in the string — the instant is
- *   unchanged either way, only the local rendering differs.
+ *   unchanged either way, only the local rendering differs. It is validated with
+ *   `isValidTimeZone`, so any IANA Zone or Link name is accepted, single-component ones
+ *   (`Japan`, `Zulu`, `EST5EDT`) included.
+ * - The returned `timeZone` is the identifier in its IANA casing on every path —
+ *   `"america/new_york"` comes back as `"America/New_York"` — because identifiers match
+ *   case-insensitively (ECMA-402). That is what the bracket path and `fromOffsetInstant` return,
+ *   so `toOffsetInstant(fromOffsetInstant(pair))` returns `pair`. A link name is kept, not
+ *   replaced by its target. Compatibility: earlier releases echoed the argument's casing; pass
+ *   the IANA-cased identifier to get the same string back.
+ * - A `Z` (or RFC 3339 `-00:00`) instant is recorded with offset `+00:00`. RFC 9557 §2.2 reads
+ *   `Z` and `-00:00` as "UTC known, local offset unknown", which differs from an explicit
+ *   `+00:00`; the pair has no spelling for an unknown offset, so that distinction is not kept.
+ * - An offset with fractional seconds (`+01:00:00.5`), which `isValidInstant` accepts, returns
+ *   null: `offset` holds at most `±HH:MM:SS`.
  * - `offset` is `±HH:MM`, except for the handful of zones that did not run on a whole minute
  *   before 1972, where it is `±HH:MM:SS` — `Africa/Monrovia` really was `-00:44:30`, and
  *   rounding it would put the pair 30 seconds from the event it describes. Such a zone's
@@ -83,6 +94,10 @@ export interface OffsetInstant {
  * @example toOffsetInstant("2024-07-15T12:00:00-05:00[America/New_York]") // null (offset contradicts the bracketed zone)
  * @example toOffsetInstant("2024-07-15T12:00:00-04:00[foo=bar]") // null (an annotation GMT cannot vouch for)
  * @example toOffsetInstant("2024-07-15T12:00:00") // null (no offset designator)
+ * @example toOffsetInstant("2024-07-15T16:00:00Z", "america/new_york") // { instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "America/New_York" } — IANA casing
+ * @example toOffsetInstant("2024-07-15T16:00:00Z", "Japan") // { instant: "2024-07-15T16:00:00Z", offset: "+09:00", timeZone: "Japan" }
+ * @example toOffsetInstant("2024-07-15T16:00:00-00:00") // { instant: "2024-07-15T16:00:00Z", offset: "+00:00" } — "offset unknown" is not preserved
+ * @example toOffsetInstant("2024-07-15T16:00:00+01:00:00.5") // null (fractional-second offset)
  * @example toOffsetInstant("2024-07-15T16:00:00Z", "Invalid/Zone") // null
  */
 export function toOffsetInstant(
@@ -114,9 +129,9 @@ export function toOffsetInstant(
     // Temporal also accepts a bracketed *offset* time zone (`[-04:00]`), and canonicalises
     // every spelling of one (`[-0400]`, `[+05]`) to `±HH:MM`. That names no place and must
     // not reach the `timeZone` field, which would then claim GMT knows where the event
-    // happened when all it has is the offset it already stores. The test is deliberately
-    // for an offset rather than `isValidTimeZone`, which additionally rejects the
-    // slash-less IANA aliases (`EST5EDT`, `Zulu`) that `zoned/` accepts inside a string.
+    // happened when all it has is the offset it already stores. The test is for an offset
+    // because that is the one kind of bracketed identifier to drop; Temporal has already
+    // validated every other one as part of the string.
     const bracketedZone =
       bracketed !== null && !utcOffset.test(bracketed.timeZoneId)
         ? bracketed.timeZoneId
@@ -137,10 +152,15 @@ export function toOffsetInstant(
     const resolvedZone = timeZone ?? bracketedZone;
 
     if (resolvedZone !== undefined) {
+      // `timeZoneId` is the identifier in its IANA casing (ECMA-402
+      // GetAvailableNamedTimeZoneIdentifier matches case-insensitively and returns the database's
+      // spelling), which is what the bracket path and `fromOffsetInstant` already return. A link
+      // name stays a link name: `Asia/Calcutta` is not rewritten to `Asia/Kolkata`.
+      const zoned = instant.toZonedDateTimeISO(resolvedZone);
       return {
         instant: instant.toString(),
-        offset: instant.toZonedDateTimeISO(resolvedZone).offset,
-        timeZone: resolvedZone,
+        offset: zoned.offset,
+        timeZone: zoned.timeZoneId,
       };
     }
 

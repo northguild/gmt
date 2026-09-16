@@ -21,6 +21,22 @@ describe("toNanoseconds", () => {
     expect(toNanoseconds(value)).toBe(expected);
   });
 
+  // A bracketed zone annotation is syntactic only: Temporal.Instant.from ignores it, and the
+  // offset alone fixes the instant (test262 Temporal/Instant/from/
+  // argument-string-time-zone-annotation.js). A zone that does not exist, or one whose offset
+  // contradicts the string's, is not checked. 12:00+05:00 is 07:00Z; 12:00-04:00 is 16:00Z.
+  it.each`
+    value                                            | expected                | reason
+    ${"2024-03-10T12:00:00+05:00[America/New_York]"} | ${1710054000000000000n} | ${"offset contradicts the zone"}
+    ${"2024-03-10T12:00:00Z[Not/AZone]"}             | ${1710072000000000000n} | ${"zone that does not exist"}
+    ${"2024-03-10T12:00:00Z[+05:00]"}                | ${1710072000000000000n} | ${"numeric zone annotation"}
+  `(
+    "returns $expected for $value, from the offset alone ($reason)",
+    ({ value, expected }) => {
+      expect(toNanoseconds(value)).toBe(expected);
+    },
+  );
+
   it.each`
     value                            | expected
     ${"+275760-09-13T00:00:00Z"}     | ${8640000000000000000000n}

@@ -12,6 +12,9 @@ import { parseInstantNanoseconds } from "../../internal";
  *
  * - Requires an offset designator (`Z`, `±HH:MM`); a bracketed IANA zone may follow, but a
  *   bracket alone is not enough.
+ * - **A bracketed zone annotation is syntactic only.** As in `Temporal.Instant.from`, it is
+ *   ignored: the offset alone fixes the instant, and a zone that does not exist or disagrees
+ *   with the offset is not checked.
  * - Rejects leap seconds in every separator and format variant, and `[u-ca=...]` calendar
  *   annotations — matching `utc/` and `unix/`.
  * - Returns `false` for non-strings and empty strings.
@@ -22,6 +25,7 @@ import { parseInstantNanoseconds } from "../../internal";
  * @example isValidInstant("2024-03-10T12:00:00Z") // true
  * @example isValidInstant("1970-01-01T00:00:00Z") // true — the epoch, where toNanoseconds returns 0n
  * @example isValidInstant("2024-03-10T12:00:00-05:00[America/New_York]") // true
+ * @example isValidInstant("2024-03-10T12:00:00Z[Not/AZone]") // true — the zone annotation is not checked
  * @example isValidInstant("2024-03-10 12:00:00Z") // true — isValidUtc says false
  * @example isValidInstant("2024-03-10T12:00:00") // false — no offset designator
  * @example isValidInstant("2016-12-31T23:59:60Z") // false — leap second

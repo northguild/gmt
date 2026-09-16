@@ -10,6 +10,7 @@ import {
   mockTemporalPlainDateTimeFromThrow,
   mockTemporalZonedDateTimeFromThrow,
 } from "../../test/mocks";
+import { fromOffsetInstant } from "./fromOffsetInstant";
 import { toOffsetInstant } from "./toOffsetInstant";
 
 /**
@@ -225,16 +226,45 @@ describe("toOffsetInstant", () => {
     },
   );
 
+  // Temporal §14.6.2: every IANA Zone and Link name is a valid zone argument, slash-less or not.
+  // EST5EDT follows US rules (tzdb `backward`), so July is EDT, -04:00; Zulu links to Etc/UTC.
   it.each`
-    timeZone     | description
-    ${"EST5EDT"} | ${"a slash-less IANA zone"}
-    ${"Zulu"}    | ${"a slash-less IANA alias"}
+    timeZone     | expected                                                                      | description
+    ${"EST5EDT"} | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "EST5EDT" }} | ${"a slash-less IANA zone"}
+    ${"Zulu"}    | ${{ instant: "2024-07-15T16:00:00Z", offset: "+00:00", timeZone: "Zulu" }}    | ${"a slash-less IANA alias"}
+    ${"Japan"}   | ${{ instant: "2024-07-15T16:00:00Z", offset: "+09:00", timeZone: "Japan" }}   | ${"a slash-less IANA link to Asia/Tokyo"}
   `(
-    "returns null when the timeZone argument is $timeZone ($description), which isValidTimeZone rejects everywhere in GMT",
-    ({ timeZone }) => {
-      expect(toOffsetInstant("2024-07-15T16:00:00Z", timeZone)).toBeNull();
+    "reads the offset in the timeZone argument $timeZone ($description)",
+    ({ timeZone, expected }) => {
+      expect(toOffsetInstant("2024-07-15T16:00:00Z", timeZone)).toEqual(
+        expected,
+      );
     },
   );
+
+  // ECMA-402 GetAvailableNamedTimeZoneIdentifier: case-insensitive match, IANA casing returned —
+  // the same identifier the bracket path and fromOffsetInstant return, so the round trip holds.
+  it.each`
+    timeZone              | expected
+    ${"america/new_york"} | ${"America/New_York"}
+    ${"AMERICA/NEW_YORK"} | ${"America/New_York"}
+    ${"utc"}              | ${"UTC"}
+    ${"japan"}            | ${"Japan"}
+    ${"asia/calcutta"}    | ${"Asia/Calcutta"}
+  `(
+    "returns the IANA-cased identifier $expected for the timeZone argument $timeZone",
+    ({ timeZone, expected }) => {
+      expect(toOffsetInstant("2024-07-15T16:00:00Z", timeZone)?.timeZone).toBe(
+        expected,
+      );
+    },
+  );
+
+  it("round-trips a pair built with a lower-case zone through fromOffsetInstant", () => {
+    const pair = toOffsetInstant("2024-07-15T16:00:00Z", "america/new_york");
+    expect(pair).not.toBeNull();
+    expect(toOffsetInstant(fromOffsetInstant(pair as never))).toEqual(pair);
+  });
 
   it.each`
     value                                                      | description

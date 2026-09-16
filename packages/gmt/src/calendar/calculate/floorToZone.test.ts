@@ -147,6 +147,14 @@ describe("floorToZone", () => {
     },
   );
 
+  // Temporal §14.6.2: a single-component IANA link is a zone. Singapore links to Asia/Singapore
+  // (+08:00, tzdb `backward`), so 12:00Z is 20:00 local on 1 January, whose midnight is 16:00Z.
+  it("floors in a single-component IANA zone name", () => {
+    expect(floorToZone("2024-01-01T12:00:00Z", "day", "Singapore")).toBe(
+      "2023-12-31T16:00:00Z",
+    );
+  });
+
   it("floors to the local day, not the UTC day, for the same instant", () => {
     expect(floorToZone(sourceInstant, "day", "America/New_York")).toBe(
       "2024-06-14T04:00:00Z",

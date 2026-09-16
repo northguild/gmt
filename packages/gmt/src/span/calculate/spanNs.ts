@@ -15,6 +15,9 @@ import { parseInstantNanoseconds } from "../../internal";
  *   required, optionally followed by a bracketed IANA zone — a bracket alone is not enough,
  *   which is the one string shape `spanWallClock` accepts and these two do not. The
  *   endpoints need not share a zone; an instant is an instant.
+ * - **A bracketed zone annotation is syntactic only.** As in `Temporal.Instant.from`, it is
+ *   ignored: each offset alone fixes its instant, and a zone that does not exist or disagrees
+ *   with the offset is not checked. `spanWallClock`, by contrast, rejects a mismatched offset.
  * - Returns `null` on invalid input, not `0n` — `0n` is the span between an instant and
  *   itself. This is why it does not simply subtract two `toNanoseconds` results, which
  *   return `0n` for both the epoch and a rejected string.
@@ -35,6 +38,7 @@ import { parseInstantNanoseconds } from "../../internal";
  * @example spanNs("2024-03-10T12:00:00Z", "2024-03-10T12:00:00Z") // 0n
  * @example spanNs("2024-03-10T12:00:00.123456789Z", "2024-03-10T12:00:00.123456790Z") // 1n
  * @example spanNs("2024-03-10T07:00:00-05:00[America/New_York]", "2024-03-10T12:00:00Z") // 0n — same instant, different zones
+ * @example spanNs("2024-03-10T12:00:00+05:00[America/New_York]", "2024-03-10T12:00:00-04:00[America/New_York]") // 32400000000000n — offsets decide, the zone is ignored
  * @example spanNs("2024-03-10T12:00:00Z", "invalid") // null
  */
 export function spanNs(start: string, end: string): bigint | null {

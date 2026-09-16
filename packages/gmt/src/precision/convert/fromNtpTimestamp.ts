@@ -26,6 +26,11 @@ import { fromNanoseconds } from "./fromNanoseconds";
  *   boundary. `toNtpTimestamp` cannot produce either value from a nanosecond-precision
  *   instant — its largest era-0 output is `18446744073709551611n` — so this does not affect
  *   the round trip.
+ * - **`0n` is two things on the wire.** RFC 5905 §6 defines the prime epoch as the instant
+ *   "when all bits are zero", and also says "a value of zero is a special case representing
+ *   unknown or unsynchronized time" — for example a reference timestamp sent before the first
+ *   sync. This function decodes `0n` as the era's first instant; a caller reading packet
+ *   fields should test for `0n` first when "unsynchronized" must not become a 1900 date.
  * - Returns "" when the resulting instant is outside the range `Temporal.Instant` can
  *   represent, which a large `era` will reach.
  * - Returns "" on invalid input.
@@ -35,7 +40,7 @@ import { fromNanoseconds } from "./fromNanoseconds";
  *   era 0; passing `undefined` explicitly is invalid input and returns ""
  * @returns ISO 8601 instant string (UTC), or "" on invalid input
  *
- * @example fromNtpTimestamp(0n) // "1900-01-01T00:00:00Z" — the NTP epoch
+ * @example fromNtpTimestamp(0n) // "1900-01-01T00:00:00Z" — the NTP epoch, and also RFC 5905's unknown or unsynchronized marker
  * @example fromNtpTimestamp(9487534653230284800n) // "1970-01-01T00:00:00Z"
  * @example fromNtpTimestamp(16832246972675778412n) // "2024-03-10T12:34:56.789Z"
  * @example fromNtpTimestamp(18446744069414584320n) // "2036-02-07T06:28:15Z" — the last second of era 0

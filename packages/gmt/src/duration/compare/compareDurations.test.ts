@@ -56,6 +56,37 @@ describe("compareDurations", () => {
     },
   );
 
+  // Temporal.Duration.compare returns 0 for field-identical durations before it checks for
+  // calendar units, so no relativeTo is needed; any difference still requires one.
+  it.each`
+    a           | b           | expected
+    ${"P1Y"}    | ${"P1Y"}    | ${0}
+    ${"P1M"}    | ${"P1M"}    | ${0}
+    ${"P1W"}    | ${"P1W"}    | ${0}
+    ${"-P2Y3M"} | ${"-P2Y3M"} | ${0}
+    ${"P1M"}    | ${"P1M1D"}  | ${null}
+  `(
+    "returns $expected comparing calendar durations $a and $b without relativeTo",
+    ({ a, b, expected }) => {
+      expect(compareDurations(a, b)).toBe(expected);
+    },
+  );
+
+  // A zoned relativeTo string resolves with disambiguation "compatible" and offset "reject"
+  // (GetTemporalRelativeToOption): ambiguous 01:30 takes the earlier (EDT) instant, from which
+  // a day is 25 hours; a mismatched offset is rejected even for identical operands.
+  it.each`
+    a        | b          | relativeTo                                       | expected | note
+    ${"P1D"} | ${"PT24H"} | ${"2024-11-03T01:30[America/New_York]"}          | ${1}     | ${"ambiguous, compatible takes earlier EDT"}
+    ${"P1D"} | ${"PT24H"} | ${"2024-11-03T01:30-05:00[America/New_York]"}    | ${0}     | ${"explicit later EST offset"}
+    ${"P1D"} | ${"P1D"}   | ${"2024-03-10T00:00:00-04:00[America/New_York]"} | ${null}  | ${"offset does not match zone, rejected"}
+  `(
+    "returns $expected comparing $a to $b relativeTo $relativeTo ($note)",
+    ({ a, b, relativeTo, expected }) => {
+      expect(compareDurations(a, b, { relativeTo })).toBe(expected);
+    },
+  );
+
   // The anchor does not merely unblock the comparison, it decides it: a month is longer
   // than 30 days from January (31) and shorter from February 2024 (29).
   it.each`
@@ -141,6 +172,21 @@ describe("compareDurations", () => {
   `("returns null when relativeTo $relativeTo is invalid", ({ relativeTo }) => {
     expect(compareDurations("P1M", "P30D", { relativeTo })).toBeNull();
   });
+
+  // Temporal's ParseISODateTime clamps a second of 60 to 59 in every spelling its grammar
+  // accepts (DateTimeSeparator SP/T/t, basic TimeSpec); GMT rejects a leap-second relativeTo instead.
+  it.each`
+    relativeTo                          | spelling
+    ${"2016-12-31T23:59:60+00:00[UTC]"} | ${"zoned, uppercase T"}
+    ${"2016-12-31t23:59:60+00:00[UTC]"} | ${"zoned, lowercase t"}
+    ${"20161231T235960Z[UTC]"}          | ${"zoned, basic format"}
+    ${"2016-12-31 23:59:60"}            | ${"PlainDateTime, space separator"}
+  `(
+    "returns null for a leap-second relativeTo $relativeTo ($spelling)",
+    ({ relativeTo }) => {
+      expect(compareDurations("PT1H", "PT3600S", { relativeTo })).toBeNull();
+    },
+  );
 
   it("never throws on invalid input", () => {
     expect(() =>

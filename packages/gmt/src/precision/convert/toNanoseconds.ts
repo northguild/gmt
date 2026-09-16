@@ -7,6 +7,9 @@ import { parseInstantNanoseconds } from "../../internal";
  *   and offset-less strings are rejected.
  * - Accepts a bracketed IANA time zone annotation; rejects a `[u-ca=...]` calendar
  *   annotation, like `utc/` and `unix/` do.
+ * - **A bracketed zone annotation is syntactic only.** As in `Temporal.Instant.from`, it is
+ *   ignored: the offset alone fixes the instant, and a zone that does not exist or disagrees
+ *   with the offset is not checked.
  * - The string is validated by `Temporal.Instant.from`, so the full RFC 9557 instant
  *   grammar is accepted — including a space in place of the `T` separator. This is wider
  *   than `isValidUtc`, which gates on GMT's stricter `<date>T<time>Z` regex.
@@ -27,6 +30,7 @@ import { parseInstantNanoseconds } from "../../internal";
  * @example toNanoseconds("2024-03-10T12:00:00.123456789Z") // 1710072000123456789n
  * @example toNanoseconds("1969-12-31T23:59:59Z") // -1000000000n
  * @example toNanoseconds("2024-03-10T12:00:00-05:00[America/New_York]") // 1710090000000000000n
+ * @example toNanoseconds("2024-03-10T12:00:00+05:00[America/New_York]") // 1710054000000000000n — the offset decides, the zone is ignored
  * @example toNanoseconds("2024-03-10T12:00:00") // 0n — no offset designator
  * @example toNanoseconds("invalid") // 0n
  */

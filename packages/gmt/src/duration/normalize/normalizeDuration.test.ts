@@ -16,6 +16,19 @@ describe("normalizeDuration", () => {
     },
   );
 
+  // "auto" resolves to the duration's own largest non-zero unit (DefaultTemporalLargestUnit)
+  // and balances up to it, so smaller units are promoted when a larger one is present.
+  it.each`
+    value        | expected
+    ${"P1DT25H"} | ${"P2DT1H"}
+    ${"PT1H90M"} | ${"PT2H30M"}
+  `(
+    "promotes $value to $expected under largestUnit auto, since a larger unit is present",
+    ({ value, expected }) => {
+      expect(normalizeDuration(value)).toBe(expected);
+    },
+  );
+
   it.each`
     value       | largestUnit | expected
     ${"PT90M"}  | ${"hour"}   | ${"PT1H30M"}
@@ -50,16 +63,58 @@ describe("normalizeDuration", () => {
   );
 
   it.each`
-    value      | smallestUnit | roundingIncrement | expected
-    ${"PT45M"} | ${"minute"}  | ${30}             | ${"PT60M"}
-    ${"PT45M"} | ${"minute"}  | ${7}              | ${""}
-    ${"PT45M"} | ${"hour"}    | ${1}              | ${"PT1H"}
-    ${"P10D"}  | ${"day"}     | ${7}              | ${"P7D"}
+    value       | smallestUnit     | roundingIncrement | expected
+    ${"PT45M"}  | ${"minute"}      | ${30}             | ${"PT60M"}
+    ${"PT45M"}  | ${"minute"}      | ${7}              | ${""}
+    ${"PT45M"}  | ${"hour"}        | ${1}              | ${"PT1H"}
+    ${"P10D"}   | ${"day"}         | ${7}              | ${"P7D"}
+    ${"PT2H"}   | ${"minute"}      | ${60}             | ${""}
+    ${"PT48H"}  | ${"hour"}        | ${24}             | ${""}
+    ${"PT1S"}   | ${"millisecond"} | ${1000}           | ${""}
+    ${"PT1.3S"} | ${"millisecond"} | ${500}            | ${"PT1.5S"}
   `(
     "applies roundingIncrement $roundingIncrement to $value with smallestUnit $smallestUnit -> $expected",
     ({ value, smallestUnit, roundingIncrement, expected }) => {
       expect(
         normalizeDuration(value, { smallestUnit, roundingIncrement }),
+      ).toBe(expected);
+    },
+  );
+
+  // Temporal.Duration.prototype.round: a date-unit smallestUnit with roundingIncrement > 1 is
+  // rejected unless largestUnit is that same unit ("auto" resolves to the largest present unit).
+  it.each`
+    value      | smallestUnit | largestUnit  | roundingIncrement | expected
+    ${"P1Y7M"} | ${"month"}   | ${undefined} | ${5}              | ${""}
+    ${"P10D"}  | ${"day"}     | ${"week"}    | ${2}              | ${""}
+    ${"P11D"}  | ${"day"}     | ${"day"}     | ${2}              | ${"P12D"}
+  `(
+    "applies date-unit roundingIncrement $roundingIncrement to $value (smallestUnit $smallestUnit, largestUnit $largestUnit) -> $expected",
+    ({ value, smallestUnit, largestUnit, roundingIncrement, expected }) => {
+      expect(
+        normalizeDuration(value, {
+          smallestUnit,
+          largestUnit,
+          roundingIncrement,
+          relativeTo: "2024-01-31",
+        }),
+      ).toBe(expected);
+    },
+  );
+
+  // A zoned relativeTo string resolves with disambiguation "compatible" and offset "reject"
+  // (GetTemporalRelativeToOption): 01:30 on the New York fall-back day is ambiguous and takes
+  // the earlier (EDT) instant, from which a day is 25 hours; a mismatched offset is rejected.
+  it.each`
+    relativeTo                                       | expected    | note
+    ${"2024-11-03T01:30[America/New_York]"}          | ${"P1D"}    | ${"ambiguous, compatible takes earlier EDT"}
+    ${"2024-11-03T01:30-05:00[America/New_York]"}    | ${"P1DT1H"} | ${"explicit later EST offset"}
+    ${"2024-03-10T00:00:00-04:00[America/New_York]"} | ${""}       | ${"offset does not match zone, rejected"}
+  `(
+    "rebalances PT25H to $expected with largestUnit day relativeTo $relativeTo ($note)",
+    ({ relativeTo, expected }) => {
+      expect(
+        normalizeDuration("PT25H", { largestUnit: "day", relativeTo }),
       ).toBe(expected);
     },
   );
@@ -122,6 +177,23 @@ describe("normalizeDuration", () => {
     "input with a calendar unit requires relativeTo even under default auto: $value with $options -> $expected",
     ({ value, options, expected }) => {
       expect(normalizeDuration(value, options)).toBe(expected);
+    },
+  );
+
+  // Temporal's ParseISODateTime clamps a second of 60 to 59 in every spelling its grammar
+  // accepts (DateTimeSeparator SP/T/t, basic TimeSpec); GMT rejects a leap-second relativeTo instead.
+  it.each`
+    relativeTo                          | spelling
+    ${"2016-12-31T23:59:60+00:00[UTC]"} | ${"zoned, uppercase T"}
+    ${"2016-12-31t23:59:60+00:00[UTC]"} | ${"zoned, lowercase t"}
+    ${"20161231T235960Z[UTC]"}          | ${"zoned, basic format"}
+    ${"2016-12-31 23:59:60"}            | ${"PlainDateTime, space separator"}
+  `(
+    "returns an empty string for a leap-second relativeTo $relativeTo ($spelling)",
+    ({ relativeTo }) => {
+      expect(
+        normalizeDuration("PT90M", { largestUnit: "hour", relativeTo }),
+      ).toBe("");
     },
   );
 

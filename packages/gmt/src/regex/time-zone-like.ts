@@ -1,23 +1,29 @@
 /**
- * RegExp matching a timezone identifier in one of three forms:
+ * RegExp matching the shape of an IANA time zone name: Temporal's `TimeZoneIANAName` grammar
+ * (§14.6.2 Time Zone Identifiers).
  *
- *  1. Literal `UTC` or `GMT`.
- *  2. IANA-style bracketed zone: `Area/Locality` (e.g. `America/New_York`, `Asia/Tokyo`),
- *     with support for arbitrarily deep nesting (`Area/SubArea/Locality`).
- *  3. Any other `[A-Za-z_+-]+(?:/[A-Za-z0-9_+-]+)+` shape — permissive enough to accept
- *     custom or future zone identifiers without rejecting them at the shape layer.
- *
- * This is a SHAPE-ONLY check used by `isValidZonedDateTime` and similar validators.
- * Real timezone validation (existence, IANA database membership) is delegated to
- * `Temporal.Zone.from` in `internal/calendarZonedString.ts`.
+ * - One or more `/`-separated components. Each starts with a letter, `.` or `_`
+ *   (`TZLeadingChar`) and continues with letters, digits, `.`, `_`, `-` or `+` (`TZChar`).
+ * - So single-component names match (`UTC`, `Japan`, `Zulu`, `EST5EDT`, `GMT+0`, `NZ-CHAT`), as
+ *   do `Area/Location` names at any depth (`America/Argentina/Buenos_Aires`, `Etc/GMT+5`). Temporal
+ *   must accept every Zone and Link name in the IANA database, and tzdb's `backward` file has more
+ *   than forty slash-less ones.
+ * - Letter case is not checked: ECMA-402 matches an identifier ASCII-case-insensitively, so `utc`
+ *   and `america/new_york` name the same zones as `UTC` and `America/New_York`.
+ * - A leading `+` or `-` never matches. Temporal also accepts offset time zone identifiers
+ *   (`"+05:00"`), but those are its separate `UTCOffset` grammar, not a zone name, and this pattern
+ *   does not cover them.
+ * - SHAPE ONLY. Whether the name exists is decided by Temporal: its only consumer,
+ *   `isValidTimeZone`, also requires `Temporal.ZonedDateTime.from` to accept the zone.
  *
  * @example timeZoneLike.test("UTC")              // true
- * @example timeZoneLike.test("GMT")              // true
  * @example timeZoneLike.test("America/New_York") // true
- * @example timeZoneLike.test("Asia/Tokyo")       // true
- * @example timeZoneLike.test("Custom/Zone")      // true (permissive)
- * @example timeZoneLike.test("+05:00")           // false (numeric offset, not a zone id)
- * @example timeZoneLike.test("UTC+05:00")        // false (mixed form)
+ * @example timeZoneLike.test("Japan")            // true (single-component IANA link)
+ * @example timeZoneLike.test("Etc/GMT+5")        // true
+ * @example timeZoneLike.test("Custom/Zone")      // true (shape only; existence is not checked)
+ * @example timeZoneLike.test("+05:00")           // false (an offset identifier, not a zone name)
+ * @example timeZoneLike.test("-foo/bar")         // false (a name cannot start with - or +)
+ * @example timeZoneLike.test("UTC+05:00")        // false (":" is not a name character)
  */
 export const timeZoneLike: RegExp =
-  /^(?:UTC|GMT|[A-Za-z_+-]+(?:\/[A-Za-z0-9_+-]+)+)$/;
+  /^[A-Za-z._][A-Za-z0-9._+-]*(?:\/[A-Za-z._][A-Za-z0-9._+-]*)*$/;
