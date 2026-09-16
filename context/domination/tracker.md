@@ -7,10 +7,12 @@
 
 ## Overview
 
-`@northguild/gmt` expands with **53 stories across 10 realms**, built in six phases.
+`@northguild/gmt` expands with **54 stories across 10 realms**, built in six phases.
 
-Story IDs are globally sequential in build order: `CORE-1` through `SPA-53`. Reading the
-table top to bottom is the build order.
+Reading the table top to bottom is the build order, and the `#` column is that order. A story
+ID is a permanent name: it is what every cross-reference, spec filename and GitHub issue uses,
+and it never changes. The two agreed one-to-one until `CORE-8` took slot 8, so below that row
+the `#` no longer matches the number in the ID. Trust the ID, not the `#`.
 
 ### Blocked by
 
@@ -44,54 +46,64 @@ For that, ask the specs: `pnpm deps -- whoneeds CORE-1` lists every story that c
 | 5  | CORE-5  | Core       | ISO week + ordinal + fiscal periods + `floorToZone` + `bucketRange` | —                  | [#186](https://github.com/northguild/gmt/issues/186) | Done        |
 | 6  | CORE-6  | Core       | Interval algebra: intersect, clamp, subtract, merge, split, sum     | —                  | [#187](https://github.com/northguild/gmt/issues/187) | Done        |
 | 7  | CORE-7  | Core       | Business calendars, `mergeCalendars`, roll conventions              | —                  | [#188](https://github.com/northguild/gmt/issues/188) | Done        |
-| 8  | TRAN-8  | Transport  | `transitTime` + `etaAtZone` + `dwellTime`                           | —                  | [#189](https://github.com/northguild/gmt/issues/189) | Not started |
-| 9  | TRAN-9  | Transport  | `scheduleDelivery` + `crossingTime`                                 | TRAN-8             | [#190](https://github.com/northguild/gmt/issues/190) | Not started |
-| 10 | TRAN-10 | Transport  | `cutoffAt` + `cutoffSchedule` + `isPastCutoff`                      | —                  | [#191](https://github.com/northguild/gmt/issues/191) | Not started |
-| 11 | INT-11  | Intermodal | `containerLeg` + `terminalDwell`                                    | TRAN-8, TRAN-9     | [#192](https://github.com/northguild/gmt/issues/192) | Not started |
-| 12 | INT-12  | Intermodal | `freeTimeExpiry` + `chargeableDays` + `demurrageClock`              | INT-11             | [#193](https://github.com/northguild/gmt/issues/193) | Not started |
-| 13 | INT-13  | Intermodal | `filingDeadline` + `filingStatus` (ISF / AMS / ENS)                 | TRAN-10            | [#194](https://github.com/northguild/gmt/issues/194) | Not started |
-| 14 | INT-14  | Intermodal | `bolTimestamp` + `multimodalETA`                                    | TRAN-9, INT-11     | [#195](https://github.com/northguild/gmt/issues/195) | Not started |
-| 15 | INT-15  | Intermodal | EDIFACT DTM + EPCIS 2.0 timestamp interop                           | —                  | [#196](https://github.com/northguild/gmt/issues/196) | Not started |
-| 16 | MAR-16  | Maritime   | `gpsToUtc` + `utcToGps` + GPS week rollover                         | (SPA-48)           | [#197](https://github.com/northguild/gmt/issues/197) | Not started |
-| 17 | MAR-17  | Maritime   | AIS `secondOfUTC` reconstruction + `navTimestamp`                   | —                  | [#198](https://github.com/northguild/gmt/issues/198) | Not started |
-| 18 | MAR-18  | Maritime   | Ship's time, clock retard/advance, date line crossing               | —                  | [#199](https://github.com/northguild/gmt/issues/199) | Not started |
-| 19 | MAR-19  | Maritime   | Laytime, laycan, NOR, SHEX/SHINC/WWD                                | —                  | [#200](https://github.com/northguild/gmt/issues/200) | Not started |
-| 20 | ROAD-20 | Road       | FMCSA hours of service                                              | —                  | [#201](https://github.com/northguild/gmt/issues/201) | Not started |
-| 21 | ROAD-21 | Road       | EU Regulation 561/2006 driver hours                                 | ROAD-20            | [#202](https://github.com/northguild/gmt/issues/202) | Not started |
-| 22 | RAI-22  | Rail       | `railLeg` + `crossBorderSchedule` + timetable year                  | TRAN-8, TRAN-9     | [#203](https://github.com/northguild/gmt/issues/203) | Not started |
-| 23 | RAI-23  | Rail       | `stationDwell` + `shuntingWindow`                                   | TRAN-8             | [#204](https://github.com/northguild/gmt/issues/204) | Not started |
-| 24 | RAI-24  | Rail       | GTFS service day, times beyond 24:00:00                             | —                  | [#205](https://github.com/northguild/gmt/issues/205) | Not started |
-| 25 | AV-25   | Aviation   | `flightLeg` + `dayOffset` + `blockTime` + `airTime`                 | TRAN-8             | [#206](https://github.com/northguild/gmt/issues/206) | Not started |
-| 26 | AV-26   | Aviation   | IATA seasons + SSIM dates + days of operation + MCT                 | —                  | [#207](https://github.com/northguild/gmt/issues/207) | Not started |
-| 27 | AV-27   | Aviation   | Crew FDP tables, acclimatisation, WOCL                              | AV-25              | [#208](https://github.com/northguild/gmt/issues/208) | Not started |
-| 28 | AV-28   | Aviation   | NOTAM / METAR validity + curfews + CTOT slots                       | —                  | [#209](https://github.com/northguild/gmt/issues/209) | Not started |
-| 29 | IOT-29  | IoT        | Monotonic readings                                                  | —                  | [#210](https://github.com/northguild/gmt/issues/210) | Not started |
-| 30 | IOT-30  | IoT        | `clockOffset` + `clockDrift` + `detectClockStep`                    | IOT-29             | [#211](https://github.com/northguild/gmt/issues/211) | Not started |
-| 31 | IOT-31  | IoT        | PTP / TAI device time, `currentUtcOffset`                           | (SPA-46), (SPA-48) | [#212](https://github.com/northguild/gmt/issues/212) | Not started |
-| 32 | IOT-32  | IoT        | `observedAt` vs `receivedAt`, watermarks, late arrival              | IOT-30             | [#213](https://github.com/northguild/gmt/issues/213) | Not started |
-| 33 | HLTH-33 | Healthcare | HL7 v2.x DTM, offset-absent handling                                | —                  | [#214](https://github.com/northguild/gmt/issues/214) | Not started |
-| 34 | HLTH-34 | Healthcare | FHIR `date` / `dateTime` / `instant` precision                      | —                  | [#215](https://github.com/northguild/gmt/issues/215) | Not started |
-| 35 | HLTH-35 | Healthcare | Partial-date range semantics and comparison                         | HLTH-34            | [#216](https://github.com/northguild/gmt/issues/216) | Not started |
-| 36 | HLTH-36 | Healthcare | Clinical, neonatal and gestational age                              | HLTH-35            | [#217](https://github.com/northguild/gmt/issues/217) | Not started |
-| 37 | HLTH-37 | Healthcare | DICOM `DA` / `TM` / `DT`                                            | —                  | [#218](https://github.com/northguild/gmt/issues/218) | Not started |
-| 38 | HLTH-38 | Healthcare | Medication administration windows across DST                        | —                  | [#219](https://github.com/northguild/gmt/issues/219) | Not started |
-| 39 | HLTH-39 | Healthcare | De-identification date shifting                                     | HLTH-36            | [#220](https://github.com/northguild/gmt/issues/220) | Not started |
-| 40 | FIN-40  | Finance    | Market sessions, lunch breaks, half days                            | —                  | [#221](https://github.com/northguild/gmt/issues/221) | Not started |
-| 41 | FIN-41  | Finance    | Exchange and currency calendar data (opt-in subpath)                | FIN-40             | [#222](https://github.com/northguild/gmt/issues/222) | Not started |
-| 42 | FIN-42  | Finance    | Day count conventions                                               | —                  | [#223](https://github.com/northguild/gmt/issues/223) | Not started |
-| 43 | FIN-43  | Finance    | Settlement and FX value dates                                       | —                  | [#224](https://github.com/northguild/gmt/issues/224) | Not started |
-| 44 | FIN-44  | Finance    | Tenors and IMM dates                                                | FIN-43             | [#225](https://github.com/northguild/gmt/issues/225) | Not started |
-| 45 | FIN-45  | Finance    | Continuous / crypto market schedules                                | —                  | [#226](https://github.com/northguild/gmt/issues/226) | Not started |
-| 46 | SPA-46  | Space      | `toTAI` + `toGPS` scale conversion                                  | (SPA-48)           | [#227](https://github.com/northguild/gmt/issues/227) | Not started |
-| 47 | SPA-47  | Space      | `toTT` + `toTDB` + `tdbMinusTt`                                     | SPA-46, SPA-49 ⚠   | [#228](https://github.com/northguild/gmt/issues/228) | Not started |
-| 48 | SPA-48  | Space      | Leap second table and queries                                       | —                  | [#229](https://github.com/northguild/gmt/issues/229) | Not started |
-| 49 | SPA-49  | Space      | Two-part Julian Date + MJD + J2000                                  | SPA-47 ⚠, SPA-48   | [#230](https://github.com/northguild/gmt/issues/230) | Not started |
-| 50 | SPA-50  | Space      | UT1 / DUT1 and sidereal time                                        | SPA-47, SPA-49     | [#231](https://github.com/northguild/gmt/issues/231) | Not started |
-| 51 | SPA-51  | Space      | Mission clocks, TLE epochs, SCLK/SCET                               | MAR-16             | [#232](https://github.com/northguild/gmt/issues/232) | Not started |
-| 52 | SPA-52  | Space      | CCSDS time codes (ASCII A/B, CUC, CDS)                              | SPA-46, SPA-48     | [#233](https://github.com/northguild/gmt/issues/233) | Not started |
-| 53 | SPA-53  | Space      | Mars solar time (MSD, AMT, LMST)                                    | SPA-47, SPA-49     | [#234](https://github.com/northguild/gmt/issues/234) | Not started |
-| 54 | CORE-54 | Core       | Legacy interval functions to half-open `[start, end)` (2.0.0)       | —                  | —                                                    | Not started |
-| 55 | CORE-55 | Core       | Calendar strings to RFC 9557 ISO date + `[u-ca=<id>]` (2.0.0)       | —                  | —                                                    | Not started |
+| 8  | CORE-8  | Core       | Full-API standards review with `gmt-reviewer` (pre-1.16.0)          | —                  | [#251](https://github.com/northguild/gmt/issues/251) | Not started |
+| 9  | TRAN-8  | Transport  | `transitTime` + `etaAtZone` + `dwellTime`                           | —                  | [#189](https://github.com/northguild/gmt/issues/189) | Not started |
+| 10 | TRAN-9  | Transport  | `scheduleDelivery` + `crossingTime`                                 | TRAN-8             | [#190](https://github.com/northguild/gmt/issues/190) | Not started |
+| 11 | TRAN-10 | Transport  | `cutoffAt` + `cutoffSchedule` + `isPastCutoff`                      | —                  | [#191](https://github.com/northguild/gmt/issues/191) | Not started |
+| 12 | INT-11  | Intermodal | `containerLeg` + `terminalDwell`                                    | TRAN-8, TRAN-9     | [#192](https://github.com/northguild/gmt/issues/192) | Not started |
+| 13 | INT-12  | Intermodal | `freeTimeExpiry` + `chargeableDays` + `demurrageClock`              | INT-11             | [#193](https://github.com/northguild/gmt/issues/193) | Not started |
+| 14 | INT-13  | Intermodal | `filingDeadline` + `filingStatus` (ISF / AMS / ENS)                 | TRAN-10            | [#194](https://github.com/northguild/gmt/issues/194) | Not started |
+| 15 | INT-14  | Intermodal | `bolTimestamp` + `multimodalETA`                                    | TRAN-9, INT-11     | [#195](https://github.com/northguild/gmt/issues/195) | Not started |
+| 16 | INT-15  | Intermodal | EDIFACT DTM + EPCIS 2.0 timestamp interop                           | —                  | [#196](https://github.com/northguild/gmt/issues/196) | Not started |
+| 17 | MAR-16  | Maritime   | `gpsToUtc` + `utcToGps` + GPS week rollover                         | (SPA-48)           | [#197](https://github.com/northguild/gmt/issues/197) | Not started |
+| 18 | MAR-17  | Maritime   | AIS `secondOfUTC` reconstruction + `navTimestamp`                   | —                  | [#198](https://github.com/northguild/gmt/issues/198) | Not started |
+| 19 | MAR-18  | Maritime   | Ship's time, clock retard/advance, date line crossing               | —                  | [#199](https://github.com/northguild/gmt/issues/199) | Not started |
+| 20 | MAR-19  | Maritime   | Laytime, laycan, NOR, SHEX/SHINC/WWD                                | —                  | [#200](https://github.com/northguild/gmt/issues/200) | Not started |
+| 21 | ROAD-20 | Road       | FMCSA hours of service                                              | —                  | [#201](https://github.com/northguild/gmt/issues/201) | Not started |
+| 22 | ROAD-21 | Road       | EU Regulation 561/2006 driver hours                                 | ROAD-20            | [#202](https://github.com/northguild/gmt/issues/202) | Not started |
+| 23 | RAI-22  | Rail       | `railLeg` + `crossBorderSchedule` + timetable year                  | TRAN-8, TRAN-9     | [#203](https://github.com/northguild/gmt/issues/203) | Not started |
+| 24 | RAI-23  | Rail       | `stationDwell` + `shuntingWindow`                                   | TRAN-8             | [#204](https://github.com/northguild/gmt/issues/204) | Not started |
+| 25 | RAI-24  | Rail       | GTFS service day, times beyond 24:00:00                             | —                  | [#205](https://github.com/northguild/gmt/issues/205) | Not started |
+| 26 | AV-25   | Aviation   | `flightLeg` + `dayOffset` + `blockTime` + `airTime`                 | TRAN-8             | [#206](https://github.com/northguild/gmt/issues/206) | Not started |
+| 27 | AV-26   | Aviation   | IATA seasons + SSIM dates + days of operation + MCT                 | —                  | [#207](https://github.com/northguild/gmt/issues/207) | Not started |
+| 28 | AV-27   | Aviation   | Crew FDP tables, acclimatisation, WOCL                              | AV-25              | [#208](https://github.com/northguild/gmt/issues/208) | Not started |
+| 29 | AV-28   | Aviation   | NOTAM / METAR validity + curfews + CTOT slots                       | —                  | [#209](https://github.com/northguild/gmt/issues/209) | Not started |
+| 30 | IOT-29  | IoT        | Monotonic readings                                                  | —                  | [#210](https://github.com/northguild/gmt/issues/210) | Not started |
+| 31 | IOT-30  | IoT        | `clockOffset` + `clockDrift` + `detectClockStep`                    | IOT-29             | [#211](https://github.com/northguild/gmt/issues/211) | Not started |
+| 32 | IOT-31  | IoT        | PTP / TAI device time, `currentUtcOffset`                           | (SPA-46), (SPA-48) | [#212](https://github.com/northguild/gmt/issues/212) | Not started |
+| 33 | IOT-32  | IoT        | `observedAt` vs `receivedAt`, watermarks, late arrival              | IOT-30             | [#213](https://github.com/northguild/gmt/issues/213) | Not started |
+| 34 | HLTH-33 | Healthcare | HL7 v2.x DTM, offset-absent handling                                | —                  | [#214](https://github.com/northguild/gmt/issues/214) | Not started |
+| 35 | HLTH-34 | Healthcare | FHIR `date` / `dateTime` / `instant` precision                      | —                  | [#215](https://github.com/northguild/gmt/issues/215) | Not started |
+| 36 | HLTH-35 | Healthcare | Partial-date range semantics and comparison                         | HLTH-34            | [#216](https://github.com/northguild/gmt/issues/216) | Not started |
+| 37 | HLTH-36 | Healthcare | Clinical, neonatal and gestational age                              | HLTH-35            | [#217](https://github.com/northguild/gmt/issues/217) | Not started |
+| 38 | HLTH-37 | Healthcare | DICOM `DA` / `TM` / `DT`                                            | —                  | [#218](https://github.com/northguild/gmt/issues/218) | Not started |
+| 39 | HLTH-38 | Healthcare | Medication administration windows across DST                        | —                  | [#219](https://github.com/northguild/gmt/issues/219) | Not started |
+| 40 | HLTH-39 | Healthcare | De-identification date shifting                                     | HLTH-36            | [#220](https://github.com/northguild/gmt/issues/220) | Not started |
+| 41 | FIN-40  | Finance    | Market sessions, lunch breaks, half days                            | —                  | [#221](https://github.com/northguild/gmt/issues/221) | Not started |
+| 42 | FIN-41  | Finance    | Exchange and currency calendar data (opt-in subpath)                | FIN-40             | [#222](https://github.com/northguild/gmt/issues/222) | Not started |
+| 43 | FIN-42  | Finance    | Day count conventions                                               | —                  | [#223](https://github.com/northguild/gmt/issues/223) | Not started |
+| 44 | FIN-43  | Finance    | Settlement and FX value dates                                       | —                  | [#224](https://github.com/northguild/gmt/issues/224) | Not started |
+| 45 | FIN-44  | Finance    | Tenors and IMM dates                                                | FIN-43             | [#225](https://github.com/northguild/gmt/issues/225) | Not started |
+| 46 | FIN-45  | Finance    | Continuous / crypto market schedules                                | —                  | [#226](https://github.com/northguild/gmt/issues/226) | Not started |
+| 47 | SPA-46  | Space      | `toTAI` + `toGPS` scale conversion                                  | (SPA-48)           | [#227](https://github.com/northguild/gmt/issues/227) | Not started |
+| 48 | SPA-47  | Space      | `toTT` + `toTDB` + `tdbMinusTt`                                     | SPA-46, SPA-49 ⚠   | [#228](https://github.com/northguild/gmt/issues/228) | Not started |
+| 49 | SPA-48  | Space      | Leap second table and queries                                       | —                  | [#229](https://github.com/northguild/gmt/issues/229) | Not started |
+| 50 | SPA-49  | Space      | Two-part Julian Date + MJD + J2000                                  | SPA-47 ⚠, SPA-48   | [#230](https://github.com/northguild/gmt/issues/230) | Not started |
+| 51 | SPA-50  | Space      | UT1 / DUT1 and sidereal time                                        | SPA-47, SPA-49     | [#231](https://github.com/northguild/gmt/issues/231) | Not started |
+| 52 | SPA-51  | Space      | Mission clocks, TLE epochs, SCLK/SCET                               | MAR-16             | [#232](https://github.com/northguild/gmt/issues/232) | Not started |
+| 53 | SPA-52  | Space      | CCSDS time codes (ASCII A/B, CUC, CDS)                              | SPA-46, SPA-48     | [#233](https://github.com/northguild/gmt/issues/233) | Not started |
+| 54 | SPA-53  | Space      | Mars solar time (MSD, AMT, LMST)                                    | SPA-47, SPA-49     | [#234](https://github.com/northguild/gmt/issues/234) | Not started |
+| 55 | CORE-54 | Core       | Legacy interval functions to half-open `[start, end)` (2.0.0)       | —                  | —                                                    | Not started |
+| 56 | CORE-55 | Core       | Calendar strings to RFC 9557 ISO date + `[u-ca=<id>]` (2.0.0)       | —                  | —                                                    | Not started |
+
+**`CORE-8` sits at slot 8, ahead of the realm work.** Unlike `CORE-54` and `CORE-55`, which take
+the next free ID because nothing waits on them, this one gates everything after it: it is the
+standards and consistency pass over the whole public surface before 1.16.0 ships, and a realm
+story built on an API still carrying a cross-namespace defect inherits it. It therefore takes a
+slot in the build order rather than a trailing ID. Inserting it renumbered the `#` column from
+row 8 down; no story ID changed, so every spec filename, cross-reference and GitHub issue still
+resolves. Below row 8 the `#` and the number in the ID no longer match, and the ID is the one
+that means anything.
 
 **`SPA-47` and `SPA-49` name each other.** `SPA-47` needs `toJulianDateParts` from
 `SPA-49` for the TDB correction formula; `SPA-49` needs `toTT` from `SPA-47` to compute JD
@@ -118,8 +130,9 @@ CORE-6's `internal/temporalCompat/` layer.
 
 ### Phase 1 — Core Foundation (required for everything)
 
-Core grew from two stories to seven because the reprioritisation exposed shared dependencies
-that were previously buried inside realms.
+Core grew from two stories to eight because the reprioritisation exposed shared dependencies
+that were previously buried inside realms, and because the surface they built needs one pass
+over it as a whole before anything is built on top.
 
 - **CORE-1, CORE-2, CORE-3** — precision, spans and foreign epoch bridges.
 - **CORE-4** — the instant-plus-offset pair and explicit local-time resolution. Every realm
@@ -127,6 +140,9 @@ that were previously buried inside realms.
 - **CORE-5, CORE-6, CORE-7** — calendar boundaries, interval algebra, business calendars.
   `CORE-7` absorbs what was `FIN-2`; it had to move because logistics now ships before
   finance and needs business-day math.
+- **CORE-8** — the standards and consistency pass over everything the seven above shipped,
+  run with `gmt-reviewer` before 1.16.0. It closes Phase 1: a realm story that starts against
+  an API still carrying a cross-namespace defect inherits it, and inherits it everywhere.
 
 ### Phase 2 — Logistics & Transport (the priority realms)
 
