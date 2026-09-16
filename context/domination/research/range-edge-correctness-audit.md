@@ -171,7 +171,7 @@ GMT imports `@js-temporal/polyfill` everywhere (dependency `^0.5.1`) and never u
 - **Rule:** [AGENTS.md Core Rule 12](../../../AGENTS.md#core-rules-quick-reference) and [testing standards § Zero known bugs](../../testing-standards/references/index.md#zero-known-bugs).
 - **Expected values:** [testing standards § Know the correct value before writing the assertion](../../testing-standards/references/index.md#know-the-correct-value-before-writing-the-assertion). A test states what the function should return, never what it currently returns.
 - **Gate:** `node scripts/test-markers.mjs check`, run by `pnpm run validate`. It fails on `it.fails`, `.skip`, `.todo`, `.only`, `xit`/`xdescribe`, `skipIf`/`runIf`, and "known defect" or "known bug" notes.
-- **Agents:** `tdd-dev` fixes every defect it finds in the same run. `tester` reports defects as blocking and never pins them. `driver` and `master` treat a reported defect as a blocker. `finalizer` refuses to close a story that carries one.
+- **Agents:** `tdd-dev` fixes every defect it finds in the same run. `tester` reports defects as blocking and never pins them. `gmt-reviewer` re-derives expected values from the spec and reports a wrong one as blocking. `driver` and `master` treat a reported defect as a blocker. `finalizer` refuses to close a story that carries one.
 
 ---
 

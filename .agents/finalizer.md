@@ -61,7 +61,7 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
       fix itself (a new namespace the api-surface prose does not name, or README text
       that was reworded so a rule no longer matches).
 
-5. **Draft a commit message for the owner** with `/commit-message` — scoped to the story (e.g. `feat(domination): calendar boundaries and zone-aware buckets (CORE-5, #186)`). Output it; never run `git commit`.
+5. **Draft a commit message for the owner** with `/commit-message` — scoped to the story (e.g. `feat(domination): laytime, laycan and NOR (MAR-19, #200)`). Output it; never run `git commit`.
 
 6. **Draft a PR description for the owner** with `/pr-desc`; never open the PR. Include the GitHub issue number (from `tracker.md`), a summary of what changed, and validation results.
 
@@ -72,7 +72,7 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
    `## What gmt provides (do not re-implement)` section first; the column is generated
    from that section.
 
-8. **Refuse to close a story that carries a known bug.** GMT ships zero known bugs ([Core Rule 12](../AGENTS.md#core-rules-quick-reference)). Run `node scripts/test-markers.mjs check`. If it reports any `.fails`/`.skip`/`.todo`/`.only`/`xit` test or a "known defect" note, or any agent reported a defect that is not fixed, stop:
+8. **Refuse to close a story that carries a known bug.** GMT ships zero known bugs ([Core Rule 12](../AGENTS.md#core-rules-quick-reference)). Run `node scripts/test-markers.mjs check`. If it reports any `.fails`/`.skip`/`.todo`/`.only`/`xit` test or a "known defect" note, or any agent reported a defect that is not fixed, or `gmt-reviewer`'s report is missing for a category A, B or G story, or carries an open blocking finding, stop:
    - Do not write the changeset, do not flip the tracker, and do not draft the commit or PR.
    - Report each item to `driver`, so the fix loops back through `tdd-dev`.
    - Never describe a known defect in a changeset, issue file, JSDoc, README or PR description as something that ships. It gets fixed instead.

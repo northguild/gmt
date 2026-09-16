@@ -28,8 +28,8 @@ Scoped documentation — load only what the task requires. The index lives in on
 
 The personas in `.agents/*.md` are symlinked into `.claude/agents/` (Claude Code) and
 registered in `kilo.jsonc` (Kilo). Library pipeline: `master` → `driver` → `architect` /
-`researcher` / `tdd-dev` / `tester` / `finalizer`. Dox site: `dox-architect` → `dox-builder` /
-`dox-tester`.
+`researcher` / `tdd-dev` / `tester` / `gmt-reviewer` / `finalizer`. Dox site: `dox-architect` →
+`dox-builder` / `dox-tester`.
 
 ## Available Skills
 

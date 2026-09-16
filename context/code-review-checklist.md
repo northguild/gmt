@@ -2,6 +2,9 @@
 
 For every PR, verify all of the following before approving.
 
+This is the mechanical layer. Standards conformance and domain-convention correctness are
+[`gmt-reviewer`](../.agents/gmt-reviewer.md)'s layer; it applies this file first.
+
 ## API Contract
 
 - [ ] No `Date` objects anywhere (search for `Date`, `new Date`, `.getTime()`)
