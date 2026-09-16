@@ -21,19 +21,20 @@ import {
   parseSecondFromTime,
 } from "@northguild/gmt";
 
-parseYearFromDate("2024-03-15"); // 2024
-parseMonthFromDate("2024-03-15"); // 3
-parseDayFromDate("2024-03-15"); // 15
-parseHourFromTime("14:30:45"); // 14
-parseMinuteFromTime("14:30:45"); // 30
-parseSecondFromTime("14:30:45"); // 45
+parseYearFromDate("2024-03-15"); // "2024"
+parseMonthFromDate("2024-03-15"); // "03"
+parseDayFromDate("2024-03-15"); // "15"
+parseHourFromTime("14:30:45"); // "14"
+parseMinuteFromTime("14:30:45"); // "30"
+parseSecondFromTime("14:30:45"); // "45"
 ```
 
-These return **numbers** (sentinel `null`), not strings. Months are 1-indexed
-(matching the Temporal spec), so subtract 1 before using as an array index.
+These return zero-padded **strings** (sentinel `""`), not numbers. Months are
+1-indexed (matching the Temporal spec): `"03"` is March, so convert with `Number` and
+subtract 1 before using it as an array index.
 
 There are `parse*FromDateTime` siblings for datetime strings, plus
-`parseDayOfWeekFromDate` and `parseWeekFromDate`.
+`parseDayOfWeekFromDate` and `parseWeekFromDate`, which return numbers (sentinel `null`).
 
 ## Calendar quantities (derived, not stored)
 

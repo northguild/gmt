@@ -80,6 +80,9 @@ input before you act on it.
 - Week numbers are ambiguous across year boundaries — `getIsoWeekDate` returns
   the week-numbering year with the week so the pair can never drift apart, and
   `getWeekYear` reads that year on its own.
+- `getLocaleWeekYear` and `getWeeksInLocaleWeekYear` use the ISO rule (`minimalDays` 4)
+  unless you pass `{ minimalDays }`: ECMA-402 no longer exposes a locale's value. CLDR's
+  world default is `1` (`en-US` included), so pass `{ minimalDays: 1 }` for those locales.
 - The `calendar/` identifier functions take a **zoneless** date or datetime. An
   instant has no calendar date until you name a zone — floor it with
   `floorToZone` first, or convert it in the zone you mean.
@@ -94,4 +97,4 @@ input before you act on it.
 ## References
 
 - [README — API Surface and Quick Start](README.md)
-- [Full API reference](/reference/plain)
+- [Core date operations guides](/guides/core-date-operations/get-current/)

@@ -68,7 +68,8 @@ formatRelativeDateTime("2024-03-15T10:00:00", "en-US", { reference: "2024-03-15T
 // "2 hours ago"
 ```
 
-`reference` is **required** — the same shape as the value. There are
+`reference` is optional and defaults to now — pass it, in the same shape as the value,
+whenever the output must be deterministic. There are
 `formatRelativeZoned`, `formatRelativeUnix`, and `formatRelativeUtc` siblings for
 their respective value types. See the [Relative Time](../relative-time/) guide for
 the full option set and DST-safe zoned behavior.

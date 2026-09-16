@@ -69,7 +69,9 @@ converting between time zones, or doing arithmetic that must respect DST.
    counterparts (`startOfUnix`,
    `endOfUnix`, …) return the real start and end of the unit that contains the
    input: the start is never after the input, and the end is the last
-   nanosecond before the next start. `Pacific/Chatham`'s 03:00 hour on its
+   nanosecond before the next start, printed at nanosecond precision by default
+   (`"…T23:59:59.999999999…"`); pass `fractionalSecondDigits: 0` for the shorter
+   pre-1.16.0 string. `Pacific/Chatham`'s 03:00 hour on its
    spring-forward begins at 03:45, and New York's repeated 1 a.m. is its own
    hour. `areZonedEqualBy`/`areUnixEqualBy` compare these boundary instants, so
    the two passes of a repeated hour are not equal. A day whose midnight repeats
@@ -160,4 +162,4 @@ converting between time zones, or doing arithmetic that must respect DST.
 ## References
 
 - [README — Timezone and Calendar examples](README.md)
-- [DST Disambiguation guide](https://gmt-dox.northguild.workers.dev/docs/dst-disambiguation/)
+- [DST Disambiguation guide](https://gmt-dox.northguild.workers.dev/guides/concepts/dst-disambiguation/)

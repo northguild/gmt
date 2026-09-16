@@ -17,7 +17,7 @@ import Mistake from "../../../components/Mistake.astro";
   wrongCode={`const ts = Date.now(); // 1710504645000 — milliseconds, but easy to mistake for seconds`}
   rightCode={`import { getNow } from "@northguild/gmt";
 
-getNow(); // "2024-03-15T14:30:45" — ISO 8601 string, no unit confusion`}
+getNow(); // "2024-03-15T14:30:45.123456789" — ISO 8601 string, no unit confusion`}
 />
 
 <Mistake
@@ -27,7 +27,7 @@ getNow(); // "2024-03-15T14:30:45" — ISO 8601 string, no unit confusion`}
   wrongCode={`const now = new Date(); // mutable Date object — implicit system timezone`}
   rightCode={`import { getNow } from "@northguild/gmt";
 
-getNow(); // "2024-03-15T14:30:45" — immutable string`}
+getNow(); // "2024-03-15T14:30:45.123456789" — immutable string`}
 />
 
 <Mistake
@@ -46,11 +46,11 @@ if (now === "") {
 <Mistake
   severity="medium"
   title="Looking for value-taking get* functions here"
-  description="getNow and getToday take no arguments. Passing a timezone or format string throws — the zoned and UTC variants live in their own namespaces."
-  wrongCode={`getNow("America/New_York"); // ERROR: getNow takes no arguments`}
+  description="getNow and getToday take no arguments. TypeScript rejects a timezone or format string, and at runtime it is silently ignored — you get the system timezone's time, not the zone you named. The zoned and UTC variants live in their own namespaces."
+  wrongCode={`getNow("America/New_York"); // type error; at runtime the argument is ignored — system timezone`}
   rightCode={`import { getZonedNow } from "@northguild/gmt/zoned";
 
-getZonedNow("America/New_York"); // "2024-03-15T10:30:45" — zoned variant`}
+getZonedNow("America/New_York"); // "2024-03-15T10:30:45.123-04:00[America/New_York]" — zoned variant`}
 />
 
 <Mistake
@@ -58,11 +58,11 @@ getZonedNow("America/New_York"); // "2024-03-15T10:30:45" — zoned variant`}
   title="Bucketing by week number without its week-year"
   description="A week number (1-53) is not unique without the week-year. Week 1 of 2024 and week 1 of 2025 are different weeks, but the number alone does not tell you which."
   wrongCode={`const week = parseWeekFromDate("2024-01-01"); // 1 — but which year's week 1?`}
-  rightCode={`import { parseWeekFromDate, parseYearFromDate } from "@northguild/gmt";
+  rightCode={`import { getIsoWeekDate } from "@northguild/gmt";
 
-const year = parseYearFromDate("2024-01-01"); // 2024
-const week = parseWeekFromDate("2024-01-01"); // 1
-// week 1 of 2024 is unambiguous`}
+getIsoWeekDate("2024-01-01"); // { year: 2024, week: 1, weekday: 1 }
+getIsoWeekDate("2024-12-30"); // { year: 2025, week: 1, weekday: 1 } — the week-year, not the calendar year
+// bucket by year and week together`}
 />
 
 ## See also
@@ -71,3 +71,4 @@ const week = parseWeekFromDate("2024-01-01"); // 1
 - [`getNow` reference](/reference/plain/get/getNow)
 - [`getToday` reference](/reference/plain/get/getToday)
 - [`getZonedNow` reference](/reference/zoned/get/getZonedNow)
+- [`getIsoWeekDate` reference](/reference/calendar/calculate/getIsoWeekDate)

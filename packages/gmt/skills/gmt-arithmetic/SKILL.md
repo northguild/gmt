@@ -101,7 +101,8 @@ and full interval set operations.
    ```typescript
    const shift = { start: "2024-01-01T09:00:00Z", end: "2024-01-01T17:00:00Z" };
    subtractIntervals(shift, [{ start: "2024-01-01T12:00:00Z", end: "2024-01-01T13:00:00Z" }]);
-   // [{ start: "…T09:00:00Z", end: "…T12:00:00Z" }, { start: "…T13:00:00Z", end: "…T17:00:00Z" }]
+   // [{ start: "2024-01-01T09:00:00Z", end: "2024-01-01T12:00:00Z" },
+   //  { start: "2024-01-01T13:00:00Z", end: "2024-01-01T17:00:00Z" }]
    sumIntervals(/* that result */); // "PT7H" — hours are the largest unit, never days
    ```
 
@@ -218,5 +219,5 @@ and full interval set operations.
 ## References
 
 - [README — Quick Start](README.md)
-- [Interval algebra reference](/reference/interval)
-- [Interval function reference](/reference/plain)
+- [Interval algebra reference](/reference/interval/calculate/intersectIntervals)
+- [Interval guides](/guides/intervals/interval-basics/)

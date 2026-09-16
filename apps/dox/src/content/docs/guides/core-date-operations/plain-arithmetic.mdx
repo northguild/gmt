@@ -16,11 +16,11 @@ import {
   addDate,
   addBusinessDays,
   subtractBusinessDays,
-  subtractTime,
+  subtractDateTime,
 } from "@northguild/gmt";
 
-addDate("2026-01-01", 90, "day");
-// "2026-04-01" — Temporal normalizes impossible dates (Mar 32 -> Apr 1)
+addDate("2026-01-01", { days: 90 });
+// "2026-04-01"
 
 addBusinessDays("2024-03-15", 1);
 // "2024-03-18" — skips the weekend
@@ -28,7 +28,7 @@ addBusinessDays("2024-03-15", 1);
 subtractBusinessDays("2024-03-18", 1);
 // "2024-03-15" — skips the weekend going backward
 
-subtractTime("2024-03-15T14:30:45", { hours: 2 });
+subtractDateTime("2024-03-15T14:30:45", { hours: 2 });
 // "2024-03-15T12:30:45"
 ```
 
@@ -55,10 +55,10 @@ addDate("2024-01-31", { months: 1 }, { overflow: "reject" });
 ```typescript
 import { diffDate, diffDateTime } from "@northguild/gmt";
 
-diffDateTime("2024-03-17T12:00:00", "2024-03-17T12:30:00", "minute");
+diffDateTime("2024-03-17T12:00:00", "2024-03-17T12:30:00", "minutes");
 // 30
 
-diffDate("2024-03-15", "2024-03-20", "day");
+diffDate("2024-03-15", "2024-03-20", "days");
 // 5
 ```
 
@@ -72,7 +72,7 @@ Use the durations bridge functions like `diffDateAsDuration`.
 ```typescript
 import { diffDate } from "@northguild/gmt";
 
-diffDate("2023-01-01", "2023-01-10", "week", {
+diffDate("2023-01-01", "2023-01-10", "weeks", {
   smallestUnit: "week",
   roundingMode: "halfExpand",
 });
@@ -85,7 +85,7 @@ diffDate("2023-01-01", "2023-01-10", "week", {
 import { startOfDate, endOfDate, startOfDateTime, endOfDateTime } from "@northguild/gmt";
 
 startOfDateTime("2024-02-29T12:34:56", "day"); // "2024-02-29T00:00:00" — start of day
-endOfDateTime("2024-02-29T12:34:56", "day"); // "2024-02-29T23:59:59" — end of day
+endOfDateTime("2024-02-29T12:34:56", "day"); // "2024-02-29T23:59:59.999999999" — end of day
 
 startOfDate("2024-03-15", "month"); // "2024-03-01"
 endOfDate("2024-03-15", "month"); // "2024-03-31"

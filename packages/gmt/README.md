@@ -15,8 +15,8 @@ It wraps `@js-temporal/polyfill` behind a smaller, more opinionated API aimed at
 
 - **100% Temporal, Temporal-first.** GMT is built directly on the TC39 `Temporal` standard (via `@js-temporal/polyfill`) — not a custom, homegrown date/time type system like `@internationalized/date`'s own `CalendarDate`/`ZonedDateTime` classes. No `Date` object anywhere, enforced by 3 dedicated lint packages.
 - **A full replacement for any and all of them.** Luxon, date-fns, Moment.js, and react-aria's `@internationalized/date` don't have parity with each other — GMT covers the combined capabilities of all four in one library, plus what none of them do alone.
-- **~40× more CI test executions than all four competitors combined**: 817,650 from 27,255 tests run in all 10 timezones × 3 Node versions, vs. their combined 20,190.
-- **~69× more test cases than `@internationalized/date`**: 27,255 vs. 386 — Adobe's own library, run at its own commit.
+- **~40× more CI test executions than all four competitors combined**: 871,320 from 29,044 tests run in all 10 timezones × 3 Node versions, vs. their combined 20,190.
+- **~69× more test cases than `@internationalized/date`**: 29,044 vs. 386 — Adobe's own library, run at its own commit.
 - **The only one of the five that tests systematically across locales in CI at all.** Zero of the four comparison libraries run a locale-test matrix; GMT mandates all 17 locales on every locale-aware function.
 - **The only one that runs its entire suite under a real `TZ` env var across real-world zones.** Luxon and `@internationalized/date` have no CI timezone matrix; date-fns's zone scope is unclear; Moment.js covers 6 zones but not its full suite.
 - **Explicit DST disambiguation control on both construction _and_ arithmetic** — a control none of the others expose.
@@ -92,7 +92,7 @@ GMT's test suite balances **thoroughness** against **maintenance burden** by tes
 - **Non-string input tables** — functions that guard with `typeof x !== "string"` return the same sentinel for `null`, `undefined`, `123`, `true`, `[]`, and `{}`. We test one representative non-string per argument position rather than all six types × N positions. The collapse is safe because all non-string types hit the identical early-return code path.
 - **Redundant permutations** — adjacent/disjoint/reversed interval cases that produce identical results are not duplicated across every function variant. The `plain/`, `zoned/`, `utc/`, and `unix/` families share the same mathematical behavior; each family gets the minimum set of cases needed to prove correctness.
 
-**Result:** 27,255 tests across 640 files that exercise real behavior differences without redundant permutations. They run in CI as 817,650 executions — every one of them × 3 Node versions × 10 timezones.
+**Result:** 29,044 tests across 644 files that exercise real behavior differences without redundant permutations. They run in CI as 871,320 executions — every one of them × 3 Node versions × 10 timezones.
 
 ## How GMT is tested, vs. the libraries it targets
 
@@ -108,9 +108,9 @@ GMT is measured directly against react-aria's **`@internationalized/date`**, **L
 
 | Metric                          | GMT                                                | `@internationalized/date`      | Luxon                                | date-fns                                  | Moment.js                        |
 | ------------------------------- | -------------------------------------------------- | ------------------------------ | ------------------------------------ | ----------------------------------------- | -------------------------------- |
-| Test files                      | 640                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
-| Individual test cases           | **27,255**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
-| Effective CI test<br>executions | **817,650**<br>(27,255 × 3 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
+| Test files                      | 644                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
+| Individual test cases           | **29,044**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
+| Effective CI test<br>executions | **871,320**<br>(29,044 × 3 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
 | CI Node.js matrix               | 22, 24, 26                                         | n/a — tests<br>React 16–canary | 20, 22, 24, 25                       | not explicit<br>(`node = "latest"`)       | LTS, LTS-1,<br>latest            |
 | CI timezone matrix              | **10 zones × 2**<br>**Node, full suite**           | none found                     | none found                           | dedicated workflow,<br>zone scope unclear | 6 zones,<br>partial suite only   |
 | Locale test matrix              | **17 locales**,<br>every locale fn                 | none found                     | none found                           | none found                                | none found                       |
@@ -146,46 +146,40 @@ Specific, sourced claims — not a repeat of the metrics above.
 | Only GMT enforces a mandatory<br>17-locale test matrix on every<br>locale-aware function                                                      | No CI-level or systematic<br>locale-matrix testing found<br>in any of the four                                                        |
 | Only GMT exposes explicit DST<br>disambiguation control on both<br>construction _and_ arithmetic                                              | Luxon's docs call this explicitly<br>undefined; `@internationalized/date`<br>only covers construction, not arithmetic                 |
 | Only GMT is Temporal-native with<br>zero `Date` usage, enforced by<br>3 dedicated lint packages                                               | Luxon, date-fns, and Moment.js all<br>still wrap or depend on `Date` internally                                                       |
-| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~40×                                                  | 817,650 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
+| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~40×                                                  | 871,320 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
 
 ## Package Layout
 
-The package exports twelve top-level namespaces:
+Every public function, type and regex is a flat named export of the package root, beside
+`Temporal`, `Intl` and `toTemporalInstant` re-exported from `@js-temporal/polyfill`. There are no
+namespace objects: a namespace is a subpath.
 
 ```typescript
-import {
-  Temporal,
-  calendar,
-  duration,
-  instant,
-  interval,
-  plain,
-  precision,
-  span,
-  zoned,
-  unix,
-  utc,
-  regex,
-} from "@northguild/gmt";
+import { addDate, getNow, formatRelativeZoned, Temporal } from "@northguild/gmt";
 ```
 
-- `Temporal`: re-exported from `@js-temporal/polyfill`
-- `calendar`: ISO week and ordinal dates, quarter and fiscal periods, zone-aware bucketing, and business calendars with holiday sets and roll conventions
-- `duration`: ISO 8601 duration string parsing, validation, and arithmetic
-- `instant`: the instant-plus-offset pair, and explicit resolution of zoneless local wall times
-- `interval`: half-open `[start, end)` interval algebra over instants — overlap, intersect, clamp, merge, subtract, split, sum
-- `plain`: timezone-free helpers
-- `precision`: nanosecond (`bigint`) instants, their JSON bridge, storage truncation, and foreign epoch bridges
-- `span`: elapsed and wall-clock durations between two timestamps, as raw numbers
-- `zoned`: timezone-aware helpers
-- `unix`: Unix epoch (seconds or milliseconds) helpers
-- `utc`: UTC instant helpers
-- `regex`: low-level regex building blocks
+The twelve namespace subpaths:
 
-You can also import subpaths directly:
+- `@northguild/gmt/calendar`: ISO week and ordinal dates, quarter and fiscal periods, zone-aware bucketing, and business calendars with holiday sets and roll conventions
+- `@northguild/gmt/duration`: ISO 8601 duration string parsing, validation, and arithmetic
+- `@northguild/gmt/instant`: the instant-plus-offset pair, and explicit resolution of zoneless local wall times
+- `@northguild/gmt/interval`: half-open `[start, end)` interval algebra over instants — overlap, intersect, clamp, merge, subtract, split, sum
+- `@northguild/gmt/plain`: timezone-free helpers
+- `@northguild/gmt/precision`: nanosecond (`bigint`) instants, their JSON bridge, storage truncation, and foreign epoch bridges
+- `@northguild/gmt/span`: elapsed and wall-clock durations between two timestamps, as raw numbers
+- `@northguild/gmt/zoned`: timezone-aware helpers
+- `@northguild/gmt/unix`: Unix epoch (seconds or milliseconds) helpers
+- `@northguild/gmt/utc`: UTC instant helpers
+- `@northguild/gmt/regex`: low-level regex building blocks
+- `@northguild/gmt/types`: the shared option and unit types
+
+Every namespace except `regex` and `types` also exposes its modules as subpaths,
+`@northguild/gmt/<namespace>/<module>`:
 
 ```typescript
-import { addDate, getNow, formatRelativeZoned } from "@northguild/gmt";
+import { getZonedNow } from "@northguild/gmt/zoned";
+import { addDateTime, diffDate } from "@northguild/gmt/plain/calculate";
+import type { BusinessCalendar } from "@northguild/gmt/types";
 ```
 
 ## Quick Start
@@ -202,8 +196,8 @@ import {
   isBeforeDateTime,
 } from "@northguild/gmt";
 
-addDate("2026-01-01", 90, "day");
-// "2026-03-32" is impossible, so Temporal normalizes correctly -> "2026-04-01"
+addDate("2026-01-01", { days: 90 });
+// "2026-04-01"
 
 addBusinessDays("2024-03-15", 1);
 // "2024-03-18" (skips weekend)
@@ -211,7 +205,7 @@ addBusinessDays("2024-03-15", 1);
 subtractBusinessDays("2024-03-18", 1);
 // "2024-03-15" (skips weekend)
 
-diffDateTime("2024-03-17T12:00:00", "2024-03-17T12:30:00", "minute");
+diffDateTime("2024-03-17T12:00:00", "2024-03-17T12:30:00", "minutes");
 // 30
 
 areDatesEqual("2026-03-17", "2026-03-17T09:00:00");
@@ -232,7 +226,7 @@ addDate("2024-01-31", { months: 1 }, { overflow: "reject" });
 addDate("2024-02-29", { years: 1 });
 // "2025-02-28" — "constrain" (the default) clamps to the last valid day, as Temporal does
 
-diffDate("2023-01-01", "2023-01-10", "week", {
+diffDate("2023-01-01", "2023-01-10", "weeks", {
   smallestUnit: "week",
   roundingMode: "halfExpand",
 });
@@ -461,8 +455,8 @@ getLocaleDayOfWeek("2024-02-25", "en-US");
 getLocaleDayOfWeek("2024-02-26", "fr-FR");
 // 0 (Monday = first day of fr-FR week)
 
-getLocaleDayOfWeek("2024-02-24", "he-IL");
-// 0 (Saturday = first day of he-IL week)
+getLocaleDayOfWeek("2024-02-24", "ar-EG");
+// 0 (Saturday = first day of ar-EG week)
 
 getLocaleZonedDayOfWeek("2024-02-25T12:00:00+00:00[UTC]", "en-US");
 // 0
@@ -1394,7 +1388,7 @@ All validators return `false` on invalid input (wrong type, malformed strings, l
 ```typescript
 import { addZoned, formatZonedDateTime } from "@northguild/gmt";
 
-addZoned("2026-03-07T23:00:00-05:00[America/New_York]", 2, "hour");
+addZoned("2026-03-07T23:00:00-05:00[America/New_York]", { hours: 2 });
 // "2026-03-08T01:00:00-05:00[America/New_York]"
 
 formatZonedDateTime("2024-03-17T14:30:45+00:00[UTC]", "en-US", {
@@ -1610,13 +1604,13 @@ formatRelativeDateTime("2026-03-17T09:00:00", "en-GB", {
   style: "long",
   numeric: "always",
 });
-// e.g. "17 March, 2026 at 09:00"
+// e.g. "in 3 hours"
 
 // Zoned relative formatting — reference can be a ZonedDateTime, UTC string, or unix epoch.
 formatRelativeZoned("2026-03-08T01:00:00-05:00[America/New_York]", "en-US");
 // e.g. "tomorrow"
 
-formatRelativeUtc("2024-03-17T14:30:45+00:00[UTC]", "en-US");
+formatRelativeUtc("2024-03-17T14:30:45Z", "en-US");
 // e.g. "2 years ago"
 
 // Unix epoch relative formatting.
@@ -1652,13 +1646,13 @@ formatCalendarZoned("2026-03-16T14:30:00-04:00[America/New_York]", "de-DE", {
 // formatZonedRange (same parameter order and option shape), for a
 // locale-elided range between two timezone-free values.
 formatDateRange("2024-02-03", "2024-02-05", "en-US", { dateStyle: "long" });
-// "February 3 – 5, 2024"
+// "February 3 - 5, 2024"
 
 formatDateTimeRange("2024-02-03T09:00:00", "2024-02-03T17:00:00", "en-US", {
   dateStyle: "long",
   timeStyle: "short",
 });
-// "February 3, 2024, 9:00 AM – 5:00 PM"
+// "February 3, 2024, 9:00 AM - 5:00 PM"
 
 // formatDateToParts / formatDateTimeToParts / formatZonedToParts return the
 // locale-ordered Array<{ type, value }> parts behind the strings above,
@@ -1679,7 +1673,7 @@ formatDateToParts("2024-03-15", "fr-FR");
 formatZonedToParts("2024-03-15T14:30:00-04:00[America/New_York]", "en-US", {
   timeZoneName: "longOffset",
 });
-// includes { type: "timeZoneName", value: "GMT-4" }
+// includes { type: "timeZoneName", value: "GMT-04:00" }
 ```
 
 ### Named machine formats
@@ -1738,7 +1732,7 @@ getUnixNow("milliseconds");
 getUtcNow();
 // "2026-03-18T11:42:33.123Z"
 
-convertUnixToPlainDate(1710685845);
+convertUnixToPlainDate(1710685845000, { timeZone: "UTC" });
 // "2024-03-17"
 ```
 
@@ -2174,8 +2168,9 @@ const worked = subtractIntervals(shift, [{ start: "2024-01-01T12:00:00Z", end: "
 sumIntervals(worked); // "PT7H"
 
 splitIntervalAt(shift, ["2024-01-01T15:00:00Z", "2024-01-01T11:00:00Z"]);
-// [{ start: "…T09:00:00Z", end: "…T11:00:00Z" }, { start: "…T11:00:00Z", end: "…T15:00:00Z" },
-//  { start: "…T15:00:00Z", end: "…T17:00:00Z" }] — pieces share no instant
+// [{ start: "2024-01-01T09:00:00Z", end: "2024-01-01T11:00:00Z" },
+//  { start: "2024-01-01T11:00:00Z", end: "2024-01-01T15:00:00Z" },
+//  { start: "2024-01-01T15:00:00Z", end: "2024-01-01T17:00:00Z" }] — pieces share no instant
 
 isValidInterval({ start: "2024-01-01T17:00:00Z", end: "2024-01-01T09:00:00Z" }); // false — inverted
 ```

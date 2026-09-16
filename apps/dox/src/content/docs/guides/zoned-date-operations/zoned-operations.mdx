@@ -28,7 +28,7 @@ import {
 } from "@northguild/gmt/zoned";
 
 formatZonedDateTime("2024-03-15T14:30:45[America/New_York]", "en-US");
-// "3/15/2024, 10:30:45 AM"
+// "3/15/2024, 2:30:45 PM EDT"
 
 isValidTimeZone("America/New_York"); // true
 ```
@@ -41,7 +41,7 @@ Attaching a timezone to a plain value is where DST gaps and overlaps matter:
 import { convertPlainDateTimeToZoned } from "@northguild/gmt/zoned";
 
 convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York");
-// "2024-03-10T03:30:00-04:00[America/New_York]" — default "compatible" rounds forward
+// "2024-03-10T03:30:00.000-04:00[America/New_York]" — default "compatible" rounds forward
 
 convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York", {
   disambiguation: "reject",
@@ -50,7 +50,7 @@ convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York", {
 ```
 
 `disambiguation` is `"compatible"` (default) | `"earlier"` | `"later"` | `"reject"`.
-See [DST Disambiguation](../concepts/dst-disambiguation/) for the full table.
+See [DST Disambiguation](/guides/concepts/dst-disambiguation/) for the full table.
 
 ## Add/subtract a duration
 
@@ -74,7 +74,7 @@ startOfZoned("2024-03-15T14:30:45[America/New_York]", "month");
 // "2024-03-01T00:00:00-05:00[America/New_York]"
 
 endOfZoned("2024-03-15T14:30:45[America/New_York]", "hour");
-// "2024-03-15T14:59:59-04:00[America/New_York]"
+// "2024-03-15T14:59:59.999999999-04:00[America/New_York]"
 ```
 
 These always return the real start and end of the unit that contains the input: the
@@ -163,8 +163,8 @@ and `getDstTransitions(zone, year)` (enumerates transitions).
 
 ## See also
 
-- [DST Disambiguation](../concepts/dst-disambiguation/) — the full disambiguation/offset walkthrough
-- [Conversion](../converting-types/) — converting between plain, zoned, unix, and UTC
+- [DST Disambiguation](/guides/concepts/dst-disambiguation/) — the full disambiguation/offset walkthrough
+- [Conversion](/guides/conversion/converting-types/) — converting between plain, zoned, unix, and UTC
 - [`convertPlainDateTimeToZoned` reference](/reference/zoned/convert/convertPlainDateTimeToZoned)
 - [`addZoned` reference](/reference/zoned/calculate/addZoned)
 - [`startOfZoned` reference](/reference/zoned/calculate/startOfZoned)

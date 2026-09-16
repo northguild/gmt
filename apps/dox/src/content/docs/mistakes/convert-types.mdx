@@ -14,36 +14,37 @@ import Mistake from "../../../components/Mistake.astro";
 <Mistake
   severity="high"
   title="Using Date.getTime() for conversion"
-  description="Date.getTime() returns epoch milliseconds. GMT's Unix functions return seconds. Converting through Date.getTime() introduces a 1000× unit error."
+  description="Date.getTime() returns epoch milliseconds whatever the consumer expects. Handing that number to an API that expects Unix seconds introduces a 1000× unit error. GMT's conversions name the unit: milliseconds by default, seconds when you pass 'seconds'."
   wrongCode={`const ms = new Date("2024-03-15").getTime(); // 1710460800000 — milliseconds
 const unix = ms; // used as seconds — 1000× too large`}
-  rightCode={`import { convertUtcToUnix } from "@northguild/gmt/unix";
+  rightCode={`import { convertUtcToUnix } from "@northguild/gmt/utc";
 
-convertUtcToUnix("2024-03-15T00:00:00Z"); // 1710460800 — seconds, correct`}
+convertUtcToUnix("2024-03-15T00:00:00Z"); // 1710460800000 — milliseconds (the default)
+convertUtcToUnix("2024-03-15T00:00:00Z", "seconds"); // 1710460800 — seconds, named`}
 />
 
 <Mistake
   severity="high"
   title="Mixing epoch seconds and milliseconds"
-  description="getUnixNow returns seconds. getUnixTimeMs returns milliseconds. Passing seconds to a function expecting milliseconds (or vice versa) produces timestamps that are 1000× off."
-  wrongCode={`const ts = getUnixNow(); // 1710504645 — seconds
+  description="getUnixNow() returns milliseconds; getUnixNow('seconds') returns seconds. Passing seconds to a function expecting milliseconds (or vice versa) produces timestamps that are 1000× off."
+  wrongCode={`const ts = getUnixNow("seconds"); // 1710504645 — seconds
 const asMs = ts * 1000; // manual conversion — error-prone`}
-  rightCode={`import { getUnixNow, getUnixTimeMs } from "@northguild/gmt/unix";
+  rightCode={`import { getUnixNow } from "@northguild/gmt/unix";
 
-getUnixNow(); // 1710504645 — seconds
-getUnixTimeMs(); // 1710504645000 — milliseconds
-// pick the right one for the consumer`}
+getUnixNow(); // 1710504645000 — milliseconds (the default)
+getUnixNow("seconds"); // 1710504645 — seconds
+// ask for the unit the consumer expects`}
 />
 
 <Mistake
   severity="medium"
   title="Not handling conversion errors"
-  description="Conversion functions return an empty string for invalid input. A failed conversion silently produces an empty string rather than throwing — check the result."
-  wrongCode={`const result = convertUtcToUnix(badInput); // ""`}
-  rightCode={`import { convertUtcToUnix } from "@northguild/gmt/unix";
+  description="Conversion functions return a sentinel for invalid input rather than throwing — an empty string from a function that returns a string, null from one that returns a number, such as convertUtcToUnix. A failed conversion is silent — check the result."
+  wrongCode={`const result = convertUtcToUnix(badInput); // null`}
+  rightCode={`import { convertUtcToUnix } from "@northguild/gmt/utc";
 
 const result = convertUtcToUnix(input);
-if (result === "") {
+if (result === null) {
   // input was invalid
 }`}
 />
@@ -51,20 +52,23 @@ if (result === "") {
 <Mistake
   severity="medium"
   title="Assuming a [u-ca=...] string means Temporal's own convention"
-  description="GMT's convertDateToCalendar and convertZonedToCalendar use the [u-ca=...] annotation to select the target calendar. The annotation is a string key, not a Temporal calendar object. Passing it to a Temporal constructor directly will not work."
-  wrongCode={`new Temporal.PlainDate("2024-03-15[u-ca=japanese]"); // invalid — annotation is not part of the ISO string`}
+  description="GMT's convertDateToCalendar and convertZonedToCalendar write the calendar's own year, month and day in front of the [u-ca=...] annotation. Temporal's own serialization keeps the ISO digits there, so Temporal cannot read GMT's string back as the same date. Convert back with GMT instead."
+  wrongCode={`Temporal.PlainDate.from("0006-03-15[u-ca=japanese;era=reiwa]"); // throws RangeError — not Temporal's convention`}
   rightCode={`import { convertDateToCalendar } from "@northguild/gmt";
 
-convertDateToCalendar("2024-03-15", "japanese"); // "令和6年3月15日" — correct conversion`}
+convertDateToCalendar("2024-03-15", "japanese"); // "0006-03-15[u-ca=japanese;era=reiwa]"
+convertDateToCalendar("0006-03-15[u-ca=japanese;era=reiwa]", "gregorian"); // "2024-03-15"`}
 />
 
 <Mistake
   severity="medium"
   title="Assuming 'japanese''s annotated year is proleptic like every other calendar"
-  description="The Japanese calendar uses era-based years. '令和6年' is not proleptic Gregorian year 2024 — it is era year 6. Do not subtract 2018 to convert."
-  wrongCode={`const jy = parseYearFromDate("2024-03-15[u-ca=japanese]"); // 6 — not 2024`}
-  rightCode={`// Japanese year 6 = Gregorian 2024, but the annotation year is the era year
-convertDateToCalendar("2024-03-15", "japanese"); // "令和6年3月15日"`}
+  description="The Japanese calendar uses era-based years. Reiwa 6 is not proleptic Gregorian year 2024 — it is era year 6. Do not add 2018 to convert: that offset is only right inside the Reiwa era."
+  wrongCode={`const jy = convertDateToCalendar("2024-03-15", "japanese").slice(0, 4); // "0006" — the era year
+const gregorianYear = Number(jy) + 2018; // right for Reiwa only`}
+  rightCode={`// The annotated year is the era year; convert back through GMT for the Gregorian date
+convertDateToCalendar("2024-03-15", "japanese"); // "0006-03-15[u-ca=japanese;era=reiwa]"
+convertDateToCalendar("0006-03-15[u-ca=japanese;era=reiwa]", "gregorian"); // "2024-03-15"`}
 />
 
 <Mistake
@@ -74,13 +78,13 @@ convertDateToCalendar("2024-03-15", "japanese"); // "令和6年3月15日"`}
   wrongCode={`const ethYear = gregYear - 8; // fixed offset — inaccurate near leap years`}
   rightCode={`import { convertDateToCalendar } from "@northguild/gmt";
 
-convertDateToCalendar("2024-03-15", "ethiopic"); // correct conversion via GMT`}
+convertDateToCalendar("2024-03-15", "ethiopic"); // "2016-07-06[u-ca=ethiopic;era=ethiopic]"`}
 />
 
 ## See also
 
 - [Conversion guide](/guides/conversion/)
-- [`convertUtcToUnix` reference](/reference/unix/convert/convertUtcToUnix)
+- [`convertUtcToUnix` reference](/reference/utc/convert/convertUtcToUnix)
 - [`convertUnixToUtc` reference](/reference/unix/convert/convertUnixToUtc)
 - [`convertDateToCalendar` reference](/reference/plain/convert/convertDateToCalendar)
 - [`convertZonedToCalendar` reference](/reference/zoned/convert/convertZonedToCalendar)
