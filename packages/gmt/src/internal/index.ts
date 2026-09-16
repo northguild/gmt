@@ -1,4 +1,3 @@
-export { advanceBusinessDays } from "./advanceBusinessDays";
 export { adjustZonedBusinessDays } from "./adjustZonedBusinessDays";
 export { advanceToWeekday } from "./advanceToWeekday";
 export {
@@ -11,6 +10,10 @@ export {
   resolveBusinessCalendar,
   stepBusinessDates,
 } from "./businessCalendar";
+export {
+  neighbourBusinessDayValue,
+  stepBusinessDaysValue,
+} from "./businessDayValues";
 export {
   calendarDateParts,
   type CalendarDateStringParts,

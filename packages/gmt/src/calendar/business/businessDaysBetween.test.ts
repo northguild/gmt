@@ -1,4 +1,5 @@
 import { addBusinessDays } from "../../plain/calculate";
+import { battleTestTimeZones } from "../../test";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { businessDaysBetween } from "./businessDaysBetween";
 
@@ -94,6 +95,10 @@ describe("businessDaysBetween", () => {
     ${5}
     ${7}
     ${23}
+    ${-1}
+    ${-5}
+    ${-7}
+    ${-23}
   `("agrees with addBusinessDays for $amount business days", ({ amount }) => {
     const end = addBusinessDays("2024-07-03", amount, usIndependence);
     expect(businessDaysBetween("2024-07-03", end, usIndependence)).toBe(amount);
@@ -143,4 +148,17 @@ describe("businessDaysBetween", () => {
       businessDaysBetween("2024-07-01", "2024-07-05", usIndependence),
     ).toBe(null);
   });
+
+  // calendar.timeZone records locality; it never changes the count for two local dates.
+  it.each(battleTestTimeZones.map((timeZone) => ({ timeZone })))(
+    "gives the same count whatever calendar.timeZone says ($timeZone)",
+    ({ timeZone }) => {
+      expect(
+        businessDaysBetween("2024-07-01", "2024-07-05", {
+          ...usIndependence,
+          timeZone,
+        }),
+      ).toBe(3);
+    },
+  );
 });

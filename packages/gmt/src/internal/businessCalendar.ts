@@ -140,7 +140,9 @@ export function businessDateFrom(
 ): Temporal.PlainDate | null {
   let current = date;
 
-  for (let step = 0; step <= MAX_BUSINESS_DAY_STEPS; step++) {
+  // `step` counts calendar days moved, exactly as it does in `stepBusinessDates`, so both
+  // walks give up at the same distance — the 200,000 the public JSDoc quotes.
+  for (let step = 0; step < MAX_BUSINESS_DAY_STEPS; step++) {
     if (isBusinessDate(current, calendar)) {
       return current;
     }
@@ -148,7 +150,7 @@ export function businessDateFrom(
     current = current.add({ days: direction });
   }
 
-  return null;
+  return isBusinessDate(current, calendar) ? current : null;
 }
 
 /**

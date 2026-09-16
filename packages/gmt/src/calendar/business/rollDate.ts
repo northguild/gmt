@@ -22,11 +22,15 @@ function modifiedRoll(
 ): Temporal.PlainDate | null {
   const rolled = businessDateFrom(date, direction, calendar);
 
-  if (rolled !== null && sameMonth(rolled, date)) {
-    return rolled;
+  // An exhausted walk is a sentinel, not a "left the month" answer: turning round here would
+  // report the opposite direction's date as though the first walk had succeeded.
+  if (rolled === null) {
+    return null;
   }
 
-  return businessDateFrom(date, direction === 1 ? -1 : 1, calendar);
+  return sameMonth(rolled, date)
+    ? rolled
+    : businessDateFrom(date, direction === 1 ? -1 : 1, calendar);
 }
 
 function rollTo(
@@ -72,16 +76,19 @@ function rollTo(
  * - `following` and `preceding` are **on or after** and **on or before**: they return `value`
  *   itself when it is already a working day. For the strict neighbours use `nextBusinessDay`
  *   and `previousBusinessDay`.
- * - `endOfMonth` always snaps to the last working day on or before the month's final day,
- *   even from mid-month — leaving the month only if that whole month is closed, as a works
- *   shutdown would make it. That is
- *   the primitive tenor arithmetic needs: a forward from a month-end anchor settles on the
- *   last working day of the *target* month, so the caller tests the anchor for month-end and
- *   applies this to the unadjusted target. Applied to a month-end date it agrees with
- *   `modifiedFollowing`.
- * - `modifiedFollowing` paired with the end-of-month rule is the common convention for
- *   interest-rate instruments.
- *   ([FINCAD](https://docs.fincad.com/support/developerfunc/mathref/Daycount.htm))
+ * - `following`, `modifiedFollowing`, `preceding` and `modifiedPreceding` are the conventions
+ *   defined by [ISDA 2006 Definitions §4.12(a)](https://www.isda.org/book/2006-isda-definitions/),
+ *   and match that text; `none` is what
+ *   [OpenGamma Strata](https://strata.opengamma.io/apidocs/com/opengamma/strata/basics/date/BusinessDayConventions.html)
+ *   calls `NO_ADJUST`. No TC39, ECMA or RFC standard governs them.
+ * - `endOfMonth` is **not** an ISDA business-day convention, and not the industry "EOM rule",
+ *   which is a *schedule* rule: hold every date in a schedule to its month's last day once
+ *   the anchor is one. It is GMT's primitive for building that rule. It always snaps to the
+ *   last working day on or before the month's final day, even from mid-month — leaving the
+ *   month only if that whole month is closed, as a works shutdown would make it. A forward
+ *   from a month-end anchor settles on the last working day of the *target* month, so the
+ *   caller tests the anchor for month-end and applies this to the unadjusted target. Applied
+ *   to a month-end date it agrees with `modifiedFollowing`.
  * - `value` and `calendar.holidays` are local dates; `calendar.timeZone` is not read. A caller
  *   holding an instant reduces it to a local date first, with `floorToZone`.
  * - Returns `""` when `value` is not a valid ISO PlainDate, when `convention` is not one GMT
