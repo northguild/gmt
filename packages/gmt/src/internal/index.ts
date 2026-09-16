@@ -2,6 +2,16 @@ export { advanceBusinessDays } from "./advanceBusinessDays";
 export { adjustZonedBusinessDays } from "./adjustZonedBusinessDays";
 export { advanceToWeekday } from "./advanceToWeekday";
 export {
+  businessDateFrom,
+  DEFAULT_BUSINESS_CALENDAR,
+  isBusinessDate,
+  MAX_BUSINESS_DAY_STEPS,
+  parseBusinessCalendar,
+  type ResolvedBusinessCalendar,
+  resolveBusinessCalendar,
+  stepBusinessDates,
+} from "./businessCalendar";
+export {
   calendarDateParts,
   type CalendarDateStringParts,
   formatCalendarDate,

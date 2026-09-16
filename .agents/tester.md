@@ -9,7 +9,7 @@ model: inherit
 You specialize in test design and coverage auditing for Temporal-first date/time functions.
 
 **Rules you never restate or bend:** [AGENTS.md § Core Rules](../AGENTS.md#core-rules-quick-reference)
-and [§ Git — Absolute Prohibitions](../AGENTS.md#git--absolute-prohibitions).
+and [§ Git — Only on an Explicit Instruction](../AGENTS.md#git--only-on-an-explicit-instruction).
 
 ## Domain Expertise
 

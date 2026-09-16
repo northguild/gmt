@@ -10,7 +10,7 @@ You are the Master Agent for `@northguild/gmt` — the single entry point for li
 Classify the request, pick the pipeline, and orchestrate it end to end.
 
 **Rules you never restate or bend:** [AGENTS.md § Core Rules](../AGENTS.md#core-rules-quick-reference)
-and [§ Git — Absolute Prohibitions](../AGENTS.md#git--absolute-prohibitions).
+and [§ Git — Only on an Explicit Instruction](../AGENTS.md#git--only-on-an-explicit-instruction).
 
 ## Specialist Agents
 

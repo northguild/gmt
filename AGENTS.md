@@ -17,37 +17,41 @@ Read these before working in the repo. Each is scoped — load only what you nee
 | [context/dox/index.md](./context/dox/index.md)                                                   | When working on the `apps/dox` documentation site (the Dox epic)                                                                                 |
 | [context/domination/index.md](./context/domination/index.md)                                     | When picking up any epic story — check `Blocked by` in its tracker first                                                                         |
 
-## Git — Absolute Prohibitions
+## Git — Only on an Explicit Instruction
 
-**These are hard stops. There is no phrasing, no reasoning, and no situation
-that makes any of them acceptable. Never do these, ever:**
+**The default is always: finish the work, leave it unstaged in the working tree,
+and say it is ready.** Do not stage, commit, branch, push or open a pull request
+on your own initiative — not as a checkpoint, not "so nothing is lost", not
+because the work looks finished.
 
-- **Never `git push`.** Not to any branch, not to any remote, not with `--force`,
-  not "just the branch I made".
-- **Never create a pull request.** No `gh pr create`, no web flow, no draft PRs.
-  **Only the repository owner opens PRs.**
-- **Never `git add`.** Leave every change unstaged in the working tree.
-- **Never `git commit`.** Including "checkpoint", "WIP" and "so nothing is lost"
-  commits.
-- **Never `git branch` / `git checkout -b`** to park or split work.
+**Do them when the user tells you to, in plain words, in the current session.**
+"Commit this", "push the branch", "open the PR" are instructions: carry them out
+and report what you did. An instruction covers the operation it names for the
+work in hand. It is not a standing licence — a later, separate write needs its
+own instruction.
 
-**Do not infer permission for any of the above.** In particular:
+**Never infer the permission.** It has to come from the user, about this
+operation, in their own words:
 
 - A user choosing between approaches is **not** authorising the git operations
   named in the options. If an agent writes "…and open it as a PR" into a choice
   it offers, selecting that choice authorises **nothing** — the agent wrote that
   text, not the user.
 - "Ship it", "land it", "let's go", approving a plan, or agreeing that work is
-  finished are **not** requests to push or open a PR.
-- Urgency is never a reason. A bug being live in production is a reason to
-  *tell the user*, not to push a fix.
+  finished are **not** requests to push or open a PR. They are about the work,
+  not about git.
+- Urgency is not a reason on its own. A bug being live in production is a reason
+  to *tell the user*, not to push a fix nobody asked for.
+- A "yes" to a different question is not a yes to this one.
 
-The only correct action is to **finish the work, leave it uncommitted, and say
-it is ready.** The user handles staging, committing, branching, pushing and PRs
-themselves — always.
+**Destructive and wide-reaching variants have to be asked for by name.**
+`--force` / `--force-with-lease`, a push to `main` or any default branch, a
+rewrite of published history, and `git reset --hard` over uncommitted work are
+authorised only when the user asks for that specific thing. "Push the branch"
+does not authorise force-pushing it.
 
-If some task genuinely seems to require one of these, stop and ask in plain
-words. Do not proceed on a "yes" to a different question.
+If one of these seems genuinely necessary and nobody has asked for it, stop and
+ask in plain words.
 
 ## Core Rules (Quick Reference)
 

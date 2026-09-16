@@ -1,5 +1,205 @@
 [
   {
+    "url": "/reference/calendar/business/businessDaysBetween",
+    "name": "businessDaysBetween",
+    "namespace": "calendar",
+    "module": "business",
+    "kind": "function",
+    "signature": "businessDaysBetween(start: string, end: string, calendar: BusinessCalendar): number",
+    "description": "Count the working days between two local dates, **excluding `start` and including `end`**.",
+    "sourcePath": "packages/gmt/src/calendar/business/businessDaysBetween.ts",
+    "examples": [
+      {
+        "call": "businessDaysBetween(\"2024-07-01\", \"2024-07-05\", { weekend: [6, 7], holidays: [\"2024-07-04\"], timeZone: \"America/New_York\" })",
+        "result": "3 — Tue, Wed, Fri"
+      },
+      {
+        "call": "businessDaysBetween(\"2024-07-05\", \"2024-07-08\", { weekend: [6, 7], holidays: [], timeZone: \"UTC\" })",
+        "result": "1 — Monday, over the weekend"
+      },
+      {
+        "call": "businessDaysBetween(\"2024-07-01\", \"2024-07-31\", { weekend: [6, 7], holidays: [], timeZone: \"UTC\" })",
+        "result": "22 — July's 23 weekdays less the 1st"
+      },
+      {
+        "call": "businessDaysBetween(\"2024-07-01\", \"2024-07-01\", { weekend: [6, 7], holidays: [], timeZone: \"UTC\" })",
+        "result": "0"
+      },
+      {
+        "call": "businessDaysBetween(\"2024-07-05\", \"2024-07-01\", { weekend: [6, 7], holidays: [\"2024-07-04\"], timeZone: \"America/New_York\" })",
+        "result": "-3 — reversed"
+      },
+      {
+        "call": "businessDaysBetween(\"2024-07-01\", \"2024-07-08\", { weekend: [5, 6], holidays: [], timeZone: \"Asia/Riyadh\" })",
+        "result": "5 — Friday–Saturday weekend"
+      },
+      {
+        "call": "businessDaysBetween(\"invalid\", \"2024-07-05\", { weekend: [6, 7], holidays: [], timeZone: \"UTC\" })",
+        "result": "null"
+      },
+      {
+        "call": "businessDaysBetween(\"2024-07-01\", \"2024-07-05\", { weekend: [6, 7], holidays: [], timeZone: \"Invalid/Zone\" })",
+        "result": "null"
+      }
+    ]
+  },
+  {
+    "url": "/reference/calendar/business/mergeCalendars",
+    "name": "mergeCalendars",
+    "namespace": "calendar",
+    "module": "business",
+    "kind": "function",
+    "signature": "mergeCalendars(calendars: BusinessCalendar[]): BusinessCalendar",
+    "description": "Compose several jurisdictions' calendars into one whose working days are those they all",
+    "sourcePath": "packages/gmt/src/calendar/business/mergeCalendars.ts",
+    "examples": [
+      {
+        "call": "mergeCalendars([{ weekend: [6, 7], holidays: [\"2024-07-04\"], timeZone: \"America/New_York\" }, { weekend: [6, 7], holidays: [\"2024-05-06\"], timeZone: \"Europe/London\" }])",
+        "result": "{ weekend: [6, 7], holidays: [\"2024-05-06\", \"2024-07-04\"], timeZone: \"America/New_York\" }"
+      },
+      {
+        "call": "mergeCalendars([{ weekend: [6, 7], holidays: [], timeZone: \"UTC\" }, { weekend: [5, 6], holidays: [], timeZone: \"Asia/Riyadh\" }])",
+        "result": "{ weekend: [5, 6, 7], holidays: [], timeZone: \"UTC\" } — only Sunday to Thursday survive"
+      },
+      {
+        "call": "mergeCalendars([{ weekend: [6, 7], holidays: [\"2024-07-04\"], timeZone: \"UTC\" }])",
+        "result": "{ weekend: [6, 7], holidays: [\"2024-07-04\"], timeZone: \"UTC\" }"
+      },
+      {
+        "call": "mergeCalendars([])",
+        "result": "null"
+      },
+      {
+        "call": "mergeCalendars([{ weekend: [1, 2, 3, 4], holidays: [], timeZone: \"UTC\" }, { weekend: [5, 6, 7], holidays: [], timeZone: \"UTC\" }])",
+        "result": "null — no working day left"
+      },
+      {
+        "call": "mergeCalendars([{ weekend: [6, 7], holidays: [], timeZone: \"Invalid/Zone\" }])",
+        "result": "null"
+      }
+    ]
+  },
+  {
+    "url": "/reference/calendar/business/nextBusinessDay",
+    "name": "nextBusinessDay",
+    "namespace": "calendar",
+    "module": "business",
+    "kind": "function",
+    "signature": "nextBusinessDay(value: string, calendar: BusinessCalendar): string",
+    "description": "Return the first working day **strictly after** `value`.",
+    "sourcePath": "packages/gmt/src/calendar/business/nextBusinessDay.ts",
+    "examples": [
+      {
+        "call": "nextBusinessDay(\"2024-07-03\", { weekend: [6, 7], holidays: [\"2024-07-04\"], timeZone: \"America/New_York\" })",
+        "result": "\"2024-07-05\" — skips the holiday"
+      },
+      {
+        "call": "nextBusinessDay(\"2024-07-04\", { weekend: [6, 7], holidays: [\"2024-07-04\"], timeZone: \"America/New_York\" })",
+        "result": "\"2024-07-05\" — from the holiday itself"
+      },
+      {
+        "call": "nextBusinessDay(\"2024-07-05\", { weekend: [6, 7], holidays: [], timeZone: \"UTC\" })",
+        "result": "\"2024-07-08\" — Friday over the weekend"
+      },
+      {
+        "call": "nextBusinessDay(\"2024-07-04\", { weekend: [5, 6], holidays: [], timeZone: \"Asia/Riyadh\" })",
+        "result": "\"2024-07-07\" — Friday–Saturday weekend"
+      },
+      {
+        "call": "nextBusinessDay(\"invalid\", { weekend: [6, 7], holidays: [], timeZone: \"UTC\" })",
+        "result": "\"\""
+      },
+      {
+        "call": "nextBusinessDay(\"2024-07-03\", { weekend: [6, 7], holidays: [], timeZone: \"Invalid/Zone\" })",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/calendar/business/previousBusinessDay",
+    "name": "previousBusinessDay",
+    "namespace": "calendar",
+    "module": "business",
+    "kind": "function",
+    "signature": "previousBusinessDay(value: string, calendar: BusinessCalendar): string",
+    "description": "Return the last working day **strictly before** `value`.",
+    "sourcePath": "packages/gmt/src/calendar/business/previousBusinessDay.ts",
+    "examples": [
+      {
+        "call": "previousBusinessDay(\"2024-07-05\", { weekend: [6, 7], holidays: [\"2024-07-04\"], timeZone: \"America/New_York\" })",
+        "result": "\"2024-07-03\" — skips the holiday"
+      },
+      {
+        "call": "previousBusinessDay(\"2024-07-04\", { weekend: [6, 7], holidays: [\"2024-07-04\"], timeZone: \"America/New_York\" })",
+        "result": "\"2024-07-03\" — from the holiday itself"
+      },
+      {
+        "call": "previousBusinessDay(\"2024-07-08\", { weekend: [6, 7], holidays: [], timeZone: \"UTC\" })",
+        "result": "\"2024-07-05\" — Monday back over the weekend"
+      },
+      {
+        "call": "previousBusinessDay(\"2024-07-07\", { weekend: [5, 6], holidays: [], timeZone: \"Asia/Riyadh\" })",
+        "result": "\"2024-07-04\" — Friday–Saturday weekend"
+      },
+      {
+        "call": "previousBusinessDay(\"invalid\", { weekend: [6, 7], holidays: [], timeZone: \"UTC\" })",
+        "result": "\"\""
+      },
+      {
+        "call": "previousBusinessDay(\"2024-07-05\", { weekend: [6, 7], holidays: [], timeZone: \"Invalid/Zone\" })",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/calendar/business/rollDate",
+    "name": "rollDate",
+    "namespace": "calendar",
+    "module": "business",
+    "kind": "function",
+    "signature": "rollDate(value: string, convention: RollConvention, calendar: BusinessCalendar): string",
+    "description": "Move a local date onto a working day according to `convention`.",
+    "sourcePath": "packages/gmt/src/calendar/business/rollDate.ts",
+    "examples": [
+      {
+        "call": "rollDate(\"2024-05-31\", \"following\", { weekend: [6, 7], holidays: [\"2024-05-31\"], timeZone: \"America/New_York\" })",
+        "result": "\"2024-06-03\""
+      },
+      {
+        "call": "rollDate(\"2024-05-31\", \"modifiedFollowing\", { weekend: [6, 7], holidays: [\"2024-05-31\"], timeZone: \"America/New_York\" })",
+        "result": "\"2024-05-30\" — forward would leave May"
+      },
+      {
+        "call": "rollDate(\"2024-06-01\", \"modifiedPreceding\", { weekend: [6, 7], holidays: [\"2024-05-31\"], timeZone: \"America/New_York\" })",
+        "result": "\"2024-06-03\" — backward would leave June"
+      },
+      {
+        "call": "rollDate(\"2024-05-29\", \"following\", { weekend: [6, 7], holidays: [], timeZone: \"UTC\" })",
+        "result": "\"2024-05-29\" — already a working day"
+      },
+      {
+        "call": "rollDate(\"2024-03-15\", \"endOfMonth\", { weekend: [6, 7], holidays: [], timeZone: \"UTC\" })",
+        "result": "\"2024-03-29\" — March ends on a Sunday"
+      },
+      {
+        "call": "rollDate(\"2024-06-01\", \"none\", { weekend: [6, 7], holidays: [], timeZone: \"UTC\" })",
+        "result": "\"2024-06-01\" — a Saturday, unadjusted"
+      },
+      {
+        "call": "rollDate(\"2024-07-05\", \"following\", { weekend: [5, 6], holidays: [], timeZone: \"Asia/Riyadh\" })",
+        "result": "\"2024-07-07\" — Friday–Saturday weekend"
+      },
+      {
+        "call": "rollDate(\"2024-05-31\", \"nearest\", { weekend: [6, 7], holidays: [], timeZone: \"UTC\" })",
+        "result": "\"\" — not a convention GMT implements"
+      },
+      {
+        "call": "rollDate(\"invalid\", \"following\", { weekend: [6, 7], holidays: [], timeZone: \"UTC\" })",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
     "url": "/reference/calendar/calculate/bucketRange",
     "name": "bucketRange",
     "namespace": "calendar",
@@ -252,6 +452,54 @@
     ]
   },
   {
+    "url": "/reference/calendar/validate/isValidBusinessCalendar",
+    "name": "isValidBusinessCalendar",
+    "namespace": "calendar",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidBusinessCalendar(calendar: unknown): calendar is BusinessCalendar",
+    "description": "Return true when `calendar` is a `BusinessCalendar` the business-day functions accept.",
+    "sourcePath": "packages/gmt/src/calendar/validate/isValidBusinessCalendar.ts",
+    "examples": [
+      {
+        "call": "isValidBusinessCalendar({ weekend: [6, 7], holidays: [], timeZone: \"UTC\" })",
+        "result": "true"
+      },
+      {
+        "call": "isValidBusinessCalendar({ weekend: [5, 6], holidays: [\"2024-07-04\"], timeZone: \"Asia/Riyadh\" })",
+        "result": "true — Friday–Saturday"
+      },
+      {
+        "call": "isValidBusinessCalendar({ weekend: [], holidays: [], timeZone: \"UTC\" })",
+        "result": "true — no weekly closure"
+      },
+      {
+        "call": "isValidBusinessCalendar({ weekend: [1, 2, 3, 4, 5, 6, 7], holidays: [], timeZone: \"UTC\" })",
+        "result": "false — no business day left"
+      },
+      {
+        "call": "isValidBusinessCalendar({ weekend: [6, 8], holidays: [], timeZone: \"UTC\" })",
+        "result": "false — 8 is not an ISO weekday"
+      },
+      {
+        "call": "isValidBusinessCalendar({ weekend: [6, 7], holidays: [\"2024-02-30\"], timeZone: \"UTC\" })",
+        "result": "false — that date does not exist"
+      },
+      {
+        "call": "isValidBusinessCalendar({ weekend: [6, 7], holidays: [\"2024-07-04T00:00:00\"], timeZone: \"UTC\" })",
+        "result": "false — a datetime, not a date"
+      },
+      {
+        "call": "isValidBusinessCalendar({ weekend: [6, 7], holidays: [], timeZone: \"Invalid/Zone\" })",
+        "result": "false"
+      },
+      {
+        "call": "isValidBusinessCalendar(null)",
+        "result": "false"
+      }
+    ]
+  },
+  {
     "url": "/reference/calendar/validate/isValidFiscalPattern",
     "name": "isValidFiscalPattern",
     "namespace": "calendar",
@@ -291,6 +539,42 @@
       },
       {
         "call": "isValidFiscalPattern(null)",
+        "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/calendar/validate/isValidRollConvention",
+    "name": "isValidRollConvention",
+    "namespace": "calendar",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidRollConvention(convention: unknown): convention is RollConvention",
+    "description": "Return true when `convention` is a `RollConvention` that `rollDate` implements.",
+    "sourcePath": "packages/gmt/src/calendar/validate/isValidRollConvention.ts",
+    "examples": [
+      {
+        "call": "isValidRollConvention(\"modifiedFollowing\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidRollConvention(\"endOfMonth\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidRollConvention(\"none\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidRollConvention(\"Following\")",
+        "result": "false (case is exact)"
+      },
+      {
+        "call": "isValidRollConvention(\"nearest\")",
+        "result": "false (not implemented)"
+      },
+      {
+        "call": "isValidRollConvention(null)",
         "result": "false"
       }
     ]
@@ -1322,25 +1606,41 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "addBusinessDays(value: string, amount: number): string",
-    "description": "Return a PlainDate ISO string with `amount` business days added to `value`.",
+    "signature": "addBusinessDays(value: string, amount: number, calendar?: BusinessCalendar): string",
+    "description": "Return a PlainDate ISO string with `amount` working days added to `value`.",
     "sourcePath": "packages/gmt/src/plain/calculate/addBusinessDays.ts",
     "examples": [
       {
         "call": "addBusinessDays(\"2024-03-15\", 1)",
-        "result": "\"2024-03-18\""
+        "result": "\"2024-03-18\" (Friday to Monday)"
       },
       {
         "call": "addBusinessDays(\"2024-03-16\", 1)",
-        "result": "\"2024-03-18\""
+        "result": "\"2024-03-18\" (from a Saturday)"
       },
       {
         "call": "addBusinessDays(\"2024-03-15\", 0)",
         "result": "\"2024-03-15\""
       },
       {
+        "call": "addBusinessDays(\"2024-07-03\", 1, { weekend: [6, 7], holidays: [\"2024-07-04\"], timeZone: \"America/New_York\" })",
+        "result": "\"2024-07-05\" (skips the holiday)"
+      },
+      {
+        "call": "addBusinessDays(\"2024-07-03\", -1, { weekend: [6, 7], holidays: [\"2024-07-02\"], timeZone: \"America/New_York\" })",
+        "result": "\"2024-07-01\""
+      },
+      {
+        "call": "addBusinessDays(\"2024-07-04\", 1, { weekend: [5, 6], holidays: [], timeZone: \"Asia/Riyadh\" })",
+        "result": "\"2024-07-07\" (Friday–Saturday weekend)"
+      },
+      {
         "call": "addBusinessDays(\"invalid\", 1)",
         "result": "\"\""
+      },
+      {
+        "call": "addBusinessDays(\"2024-03-15\", 1, { weekend: [6, 7], holidays: [], timeZone: \"Invalid/Zone\" })",
+        "result": "\"\" (bad calendar)"
       }
     ]
   },
@@ -2974,25 +3274,41 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "subtractBusinessDays(value: string, amount: number): string",
-    "description": "Return a PlainDate ISO string with `amount` business days subtracted from `value`.",
+    "signature": "subtractBusinessDays(value: string, amount: number, calendar?: BusinessCalendar): string",
+    "description": "Return a PlainDate ISO string with `amount` working days subtracted from `value`.",
     "sourcePath": "packages/gmt/src/plain/calculate/subtractBusinessDays.ts",
     "examples": [
       {
         "call": "subtractBusinessDays(\"2024-03-18\", 1)",
-        "result": "\"2024-03-15\""
+        "result": "\"2024-03-15\" (Monday back to Friday)"
       },
       {
         "call": "subtractBusinessDays(\"2024-03-17\", 1)",
-        "result": "\"2024-03-15\""
+        "result": "\"2024-03-15\" (from a Sunday)"
       },
       {
         "call": "subtractBusinessDays(\"2024-03-18\", 0)",
         "result": "\"2024-03-18\""
       },
       {
+        "call": "subtractBusinessDays(\"2024-07-05\", 1, { weekend: [6, 7], holidays: [\"2024-07-04\"], timeZone: \"America/New_York\" })",
+        "result": "\"2024-07-03\" (skips the holiday)"
+      },
+      {
+        "call": "subtractBusinessDays(\"2024-07-05\", -1, { weekend: [6, 7], holidays: [], timeZone: \"America/New_York\" })",
+        "result": "\"2024-07-08\""
+      },
+      {
+        "call": "subtractBusinessDays(\"2024-07-07\", 1, { weekend: [5, 6], holidays: [], timeZone: \"Asia/Riyadh\" })",
+        "result": "\"2024-07-04\" (Friday–Saturday weekend)"
+      },
+      {
         "call": "subtractBusinessDays(\"invalid\", 1)",
         "result": "\"\""
+      },
+      {
+        "call": "subtractBusinessDays(\"2024-03-18\", 1, { weekend: [6, 7], holidays: [], timeZone: \"Invalid/Zone\" })",
+        "result": "\"\" (bad calendar)"
       }
     ]
   },
@@ -3682,8 +3998,8 @@
     "namespace": "plain",
     "module": "compare",
     "kind": "function",
-    "signature": "isBusinessDay(value: string): boolean",
-    "description": "Return true when `value` falls on a Monday–Friday ISO business day.",
+    "signature": "isBusinessDay(value: string, calendar?: BusinessCalendar): boolean",
+    "description": "Return true when `value` is a working day in `calendar`.",
     "sourcePath": "packages/gmt/src/plain/compare/isBusinessDay.ts",
     "examples": [
       {
@@ -3695,12 +4011,28 @@
         "result": "false (Saturday)"
       },
       {
-        "call": "isBusinessDay(\"2024-02-04\")",
-        "result": "false (Sunday)"
+        "call": "isBusinessDay(\"2024-07-04\", { weekend: [6, 7], holidays: [\"2024-07-04\"], timeZone: \"America/New_York\" })",
+        "result": "false (holiday)"
+      },
+      {
+        "call": "isBusinessDay(\"2024-07-05\", { weekend: [6, 7], holidays: [\"2024-07-04\"], timeZone: \"America/New_York\" })",
+        "result": "true"
+      },
+      {
+        "call": "isBusinessDay(\"2024-07-07\", { weekend: [5, 6], holidays: [], timeZone: \"Asia/Riyadh\" })",
+        "result": "true (Sunday is a working day there)"
+      },
+      {
+        "call": "isBusinessDay(\"2024-07-05\", { weekend: [5, 6], holidays: [], timeZone: \"Asia/Riyadh\" })",
+        "result": "false (Friday is weekend there)"
       },
       {
         "call": "isBusinessDay(\"invalid\")",
         "result": "false"
+      },
+      {
+        "call": "isBusinessDay(\"2024-02-05\", { weekend: [6, 7], holidays: [], timeZone: \"Invalid/Zone\" })",
+        "result": "false (bad calendar)"
       }
     ]
   },
@@ -9362,6 +9694,17 @@
     ]
   },
   {
+    "url": "/reference/types/business-calendar/BusinessCalendar",
+    "name": "BusinessCalendar",
+    "namespace": "types",
+    "module": "business-calendar",
+    "kind": "type",
+    "signature": "",
+    "description": "The BusinessCalendar type.",
+    "sourcePath": "packages/gmt/src/types/business-calendar.ts",
+    "examples": []
+  },
+  {
     "url": "/reference/types/calendar-options/CalendarOptions",
     "name": "CalendarOptions",
     "namespace": "types",
@@ -9645,6 +9988,17 @@
     "signature": "",
     "description": "The RelativeUnit type.",
     "sourcePath": "packages/gmt/src/types/relative-unit.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/roll-convention/RollConvention",
+    "name": "RollConvention",
+    "namespace": "types",
+    "module": "roll-convention",
+    "kind": "type",
+    "signature": "",
+    "description": "The RollConvention type.",
+    "sourcePath": "packages/gmt/src/types/roll-convention.ts",
     "examples": []
   },
   {

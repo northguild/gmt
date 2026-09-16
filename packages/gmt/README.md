@@ -15,8 +15,8 @@ It wraps `@js-temporal/polyfill` behind a smaller, more opinionated API aimed at
 
 - **100% Temporal, Temporal-first.** GMT is built directly on the TC39 `Temporal` standard (via `@js-temporal/polyfill`) — not a custom, homegrown date/time type system like `@internationalized/date`'s own `CalendarDate`/`ZonedDateTime` classes. No `Date` object anywhere, enforced by 3 dedicated lint packages.
 - **A full replacement for any and all of them.** Luxon, date-fns, Moment.js, and react-aria's `@internationalized/date` don't have parity with each other — GMT covers the combined capabilities of all four in one library, plus what none of them do alone.
-- **~40× more CI test executions than all four competitors combined**: 801,420 from 26,714 tests run in all 10 timezones × 3 Node versions, vs. their combined 20,190.
-- **~69× more test cases than `@internationalized/date`**: 26,714 vs. 386 — Adobe's own library, run at its own commit.
+- **~40× more CI test executions than all four competitors combined**: 813,150 from 27,105 tests run in all 10 timezones × 3 Node versions, vs. their combined 20,190.
+- **~69× more test cases than `@internationalized/date`**: 27,105 vs. 386 — Adobe's own library, run at its own commit.
 - **The only one of the five that tests systematically across locales in CI at all.** Zero of the four comparison libraries run a locale-test matrix; GMT mandates all 17 locales on every locale-aware function.
 - **The only one that runs its entire suite under a real `TZ` env var across real-world zones.** Luxon and `@internationalized/date` have no CI timezone matrix; date-fns's zone scope is unclear; Moment.js covers 6 zones but not its full suite.
 - **Explicit DST disambiguation control on both construction _and_ arithmetic** — a control none of the others expose.
@@ -92,7 +92,7 @@ GMT's test suite balances **thoroughness** against **maintenance burden** by tes
 - **Non-string input tables** — functions that guard with `typeof x !== "string"` return the same sentinel for `null`, `undefined`, `123`, `true`, `[]`, and `{}`. We test one representative non-string per argument position rather than all six types × N positions. The collapse is safe because all non-string types hit the identical early-return code path.
 - **Redundant permutations** — adjacent/disjoint/reversed interval cases that produce identical results are not duplicated across every function variant. The `plain/`, `zoned/`, `utc/`, and `unix/` families share the same mathematical behavior; each family gets the minimum set of cases needed to prove correctness.
 
-**Result:** 26,714 tests across 633 files that exercise real behavior differences without redundant permutations. They run in CI as 801,420 executions — every one of them × 3 Node versions × 10 timezones.
+**Result:** 27,105 tests across 640 files that exercise real behavior differences without redundant permutations. They run in CI as 813,150 executions — every one of them × 3 Node versions × 10 timezones.
 
 ## How GMT is tested, vs. the libraries it targets
 
@@ -108,9 +108,9 @@ GMT is measured directly against react-aria's **`@internationalized/date`**, **L
 
 | Metric                          | GMT                                                | `@internationalized/date`      | Luxon                                | date-fns                                  | Moment.js                        |
 | ------------------------------- | -------------------------------------------------- | ------------------------------ | ------------------------------------ | ----------------------------------------- | -------------------------------- |
-| Test files                      | 633                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
-| Individual test cases           | **26,714**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
-| Effective CI test<br>executions | **801,420**<br>(26,714 × 3 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
+| Test files                      | 640                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
+| Individual test cases           | **27,105**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
+| Effective CI test<br>executions | **813,150**<br>(27,105 × 3 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
 | CI Node.js matrix               | 22, 24, 26                                         | n/a — tests<br>React 16–canary | 20, 22, 24, 25                       | not explicit<br>(`node = "latest"`)       | LTS, LTS-1,<br>latest            |
 | CI timezone matrix              | **10 zones × 2**<br>**Node, full suite**           | none found                     | none found                           | dedicated workflow,<br>zone scope unclear | 6 zones,<br>partial suite only   |
 | Locale test matrix              | **17 locales**,<br>every locale fn                 | none found                     | none found                           | none found                                | none found                       |
@@ -129,7 +129,7 @@ GMT has **full functional parity** with all four comparison libraries, capabilit
 | Interval/range math<br>(contains, overlap, union,<br>intersection, split, set ops)           | ✅ Done                      | Luxon `Interval`,<br>date-fns `areIntervalsOverlapping`                  |
 | DST disambiguation control<br>on construction _and_ arithmetic                               | ✅ Done — **differentiator** | None of the others expose<br>this on arithmetic                          |
 | Locale-aware calendar helpers<br>(weekend, week start/end, day-of-week)                      | ✅ Done                      | `@internationalized/date`                                                |
-| Business-day arithmetic,<br>clamp/closest, time rounding                                     | ✅ Done                      | `temporal-kit`                                                           |
+| Business-day arithmetic with<br>holiday calendars and roll conventions,<br>clamp/closest, time rounding    | ✅ Done                      | `temporal-kit` (arithmetic only)                                         |
 | Interval rounding-out<br>(boundary count, from-duration)                                     | ✅ Done                      | Luxon                                                                    |
 | Locale calendar metadata<br>(names, `hasDST`)                                                | ✅ Done                      | Luxon `Info`                                                             |
 | Overlap-day count, relative<br>rounding, DST transitions, hours-in-day                       | ✅ Done                      | date-fns, `@internationalized/date`                                      |
@@ -146,7 +146,7 @@ Specific, sourced claims — not a repeat of the metrics above.
 | Only GMT enforces a mandatory<br>17-locale test matrix on every<br>locale-aware function                                                      | No CI-level or systematic<br>locale-matrix testing found<br>in any of the four                                                        |
 | Only GMT exposes explicit DST<br>disambiguation control on both<br>construction _and_ arithmetic                                              | Luxon's docs call this explicitly<br>undefined; `@internationalized/date`<br>only covers construction, not arithmetic                 |
 | Only GMT is Temporal-native with<br>zero `Date` usage, enforced by<br>3 dedicated lint packages                                               | Luxon, date-fns, and Moment.js all<br>still wrap or depend on `Date` internally                                                       |
-| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~40×                                                  | 801,420 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
+| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~40×                                                  | 813,150 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
 
 ## Package Layout
 
@@ -170,7 +170,7 @@ import {
 ```
 
 - `Temporal`: re-exported from `@js-temporal/polyfill`
-- `calendar`: ISO week and ordinal dates, quarter and fiscal periods, and zone-aware bucketing
+- `calendar`: ISO week and ordinal dates, quarter and fiscal periods, zone-aware bucketing, and business calendars with holiday sets and roll conventions
 - `duration`: ISO 8601 duration string parsing, validation, and arithmetic
 - `instant`: the instant-plus-offset pair, and explicit resolution of zoneless local wall times
 - `interval`: half-open `[start, end)` interval algebra over instants — overlap, intersect, clamp, merge, subtract, split, sum
@@ -292,7 +292,7 @@ isZonedWeekend("2024-02-04T10:00:00+02:00[Asia/Jerusalem]", "he-IL");
 // false (Sunday isn't part of he-IL's weekend)
 ```
 
-`isBusinessDay` returns true for fixed ISO Monday–Friday business days (Mon=1 … Fri=5), locale-agnostic and with no holiday calendar. It's the complement to locale-aware `isWeekend` and matches the boundary that `addBusinessDays`/`subtractBusinessDays` use:
+`isBusinessDay` is the complement to locale-aware `isWeekend`, and shares its weekend rule with `addBusinessDays`/`subtractBusinessDays`. Called with one argument it uses fixed ISO Monday–Friday business days (Mon=1 … Fri=5), locale-agnostic and with no holidays; pass a `BusinessCalendar` to state the weekend and holidays yourself:
 
 ```typescript
 import { isBusinessDay } from "@northguild/gmt";
@@ -302,7 +302,80 @@ isBusinessDay("2024-02-05");
 
 isBusinessDay("2024-02-10");
 // false (Saturday)
+
+isBusinessDay("2024-07-04", {
+  weekend: [6, 7],
+  holidays: ["2024-07-04"],
+  timeZone: "America/New_York",
+});
+// false (a holiday, though it's a Thursday)
 ```
+
+### Business calendars and roll conventions
+
+A `BusinessCalendar` is `{ weekend: number[], holidays: string[], timeZone: string }`. The weekend is explicit ISO weekday numbers because Saturday–Sunday is not universal — much of the Middle East is Friday–Saturday, and some markets keep a one-day weekend. Holidays are yours to supply: GMT bundles no holiday table on the default import path, because holiday data is jurisdictional and changes annually, sometimes with days of notice. `timeZone` records which locality the calendar describes; the business-day functions take and return local dates and never read it, so a caller holding an instant reduces it with `floorToZone` first.
+
+`isBusinessDay`, `addBusinessDays` and `subtractBusinessDays` all take a calendar as an optional trailing argument. The rest of the family requires one — there is no default weekend to fall back on:
+
+```typescript
+import {
+  businessDaysBetween,
+  nextBusinessDay,
+  previousBusinessDay,
+  rollDate,
+  mergeCalendars,
+  isValidBusinessCalendar,
+} from "@northguild/gmt";
+
+const nyse = {
+  weekend: [6, 7],
+  holidays: ["2024-05-31", "2024-07-04"],
+  timeZone: "America/New_York",
+};
+
+businessDaysBetween("2024-07-01", "2024-07-05", nyse);
+// 3 — start exclusive, end inclusive, and 4 July is a holiday
+
+nextBusinessDay("2024-07-03", nyse);
+// "2024-07-05" — strictly after, skipping the holiday
+
+previousBusinessDay("2024-07-05", nyse);
+// "2024-07-03"
+```
+
+`rollDate` moves a date onto a working day by an explicit convention — `following`, `modifiedFollowing`, `preceding`, `modifiedPreceding`, `endOfMonth` or `none`. `following` and `preceding` are on-or-after and on-or-before, so they leave a working day alone; `nextBusinessDay`/`previousBusinessDay` are the strict neighbours:
+
+```typescript
+rollDate("2024-05-31", "following", nyse);
+// "2024-06-03" — forward past the weekend
+
+rollDate("2024-05-31", "modifiedFollowing", nyse);
+// "2024-05-30" — backward instead, because forward leaves May
+
+rollDate("2024-03-15", "endOfMonth", nyse);
+// "2024-03-29" — March's last working day; March ends on a Sunday
+
+rollDate("2024-06-01", "none", nyse);
+// "2024-06-01" — unadjusted, Saturday or not
+```
+
+`mergeCalendars` composes jurisdictions: weekend rules and holidays union, so a date survives only if it is a working day in **every** input. That is the two-currency intersection FX settlement needs, and the two-port one an intermodal move needs:
+
+```typescript
+const london = { weekend: [6, 7], holidays: ["2024-05-06"], timeZone: "Europe/London" };
+
+const both = mergeCalendars([nyse, london]);
+// { weekend: [6, 7], holidays: ["2024-05-06", "2024-05-31", "2024-07-04"], timeZone: "America/New_York" }
+// timeZone is the first calendar's; the merged set spans localities that may disagree
+
+isBusinessDay("2024-05-06", both);
+// false — a UK holiday closes the merged calendar too
+
+mergeCalendars([]);
+// null
+```
+
+`isValidBusinessCalendar` and `isValidRollConvention` narrow a candidate, so a misconfigured calendar or contract term can be told apart from bad date input when a function returns its sentinel.
 
 `isRelativeDay`/`isThisUnit`/`isPast`/`isFuture` are now-relative predicates — `isRelativeDay` subsumes `isToday`/`isYesterday`/`isTomorrow`, `isThisUnit` subsumes `isThisWeek`/`isThisMonth`/`isThisYear`. They compare against `getToday()`, so they depend on the **system clock and system timeZone**; the zoned variants (`isZonedRelativeDay`, `isZonedThisUnit`, `isZonedPast`, `isZonedFuture`) resolve "today"/"now" in the value's own timeZone instead, for deterministic results regardless of the host machine's timeZone:
 

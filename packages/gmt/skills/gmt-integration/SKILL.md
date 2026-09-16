@@ -3,8 +3,8 @@ name: gmt-integration
 description: >
   Application integration patterns — stable cache keys, router/query params,
   table-sort keys, nanosecond timestamps across JSON and storage boundaries,
-  foreign epoch bridges (NTP, FILETIME, .NET ticks, Excel, PostgreSQL), and
-  lint package selection (ESLint, Biome, Oxlint). Reads the installed package
+  foreign epoch bridges (NTP, FILETIME, .NET ticks, Excel, PostgreSQL), and lint
+  package selection (ESLint, Biome, Oxlint). Reads the installed package
   README.md and lint-package READMEs for API details; this skill is a routing
   pointer, not an API dump.
 sources:
@@ -17,7 +17,7 @@ sources:
 metadata:
   type: composition
   library: '@northguild/gmt'
-  library_version: '1.15.0'
+  library_version: '1.16.0'
 ---
 
 # GMT Integration

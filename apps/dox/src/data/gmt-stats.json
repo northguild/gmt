@@ -1,8 +1,8 @@
 {
   "suite": "packages/gmt",
-  "tests": 26714,
-  "files": 633,
-  "executions": 801420,
+  "tests": 27105,
+  "files": 640,
+  "executions": 813150,
   "nodes": [
     "22",
     "24",
@@ -41,7 +41,7 @@
     "ru-RU",
     "tr-TR"
   ],
-  "functions": 542,
+  "functions": 549,
   "patterns": 25,
   "byNamespace": [
     {
@@ -65,16 +65,16 @@
       "count": 18
     },
     {
+      "namespace": "calendar",
+      "count": 15
+    },
+    {
       "namespace": "duration",
       "count": 12
     },
     {
       "namespace": "interval",
       "count": 9
-    },
-    {
-      "namespace": "calendar",
-      "count": 8
     },
     {
       "namespace": "instant",
