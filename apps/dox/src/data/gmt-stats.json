@@ -3,11 +3,7 @@
   "tests": 33189,
   "files": 657,
   "executions": 995670,
-  "nodes": [
-    "22",
-    "24",
-    "26"
-  ],
+  "nodes": ["22", "24", "26"],
   "timezones": 10,
   "timezoneList": [
     "Pacific/Niue",
