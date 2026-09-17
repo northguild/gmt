@@ -9,7 +9,7 @@ git log --oneline main..HEAD
 git diff main...HEAD --stat
 ```
 
-Then read the changeset(s) in `.changeset/*.md` (skip `README.md` inside `.changeset/`). The changeset describes the user-visible change and the version bump type (`patch` / `minor` / `major`).
+Then read the changeset(s) in `.changeset/*.md` (skip `README.md` inside `.changeset/`). The changeset describes the user-visible change and the version bump type (`patch` / `minor`; a breaking change is `minor` with a **Breaking changes** section).
 
 Build a working list of:
 
