@@ -12,7 +12,7 @@ Three `@example` lines asserted results the functions do not return:
 
 ```ts
 // formatRelativeUtc: the old example had no `reference`, so its output moved with the clock
-formatRelativeUtc("2026-01-15T14:30:45Z", "en-US", { reference: "2026-04-15T14:30:45Z" }); // "90 days ago"
+formatRelativeUtc("2026-01-15T14:30:45Z", "en-US", { reference: "2026-04-15T14:30:45Z" }); // "3 months ago"
 
 // roundZoned: New York is -04:00 in June, not -05:00, and 12:34:56 rounds down to 12:30
 roundZoned("2024-06-15T12:34:56-04:00[America/New_York]", { smallestUnit: "minute", roundingIncrement: 15 }); // "2024-06-15T12:30:00-04:00[America/New_York]"

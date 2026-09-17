@@ -45,7 +45,7 @@ formatDuration(parseDuration("PT1.123456789S", { smallestUnit: "millisecond" }),
 ```typescript
 import { addDate } from "@northguild/gmt/plain";
 
-addDate("1402-10-25[u-ca=persian]", { months: 3000000 }); // "251402-10-25[u-ca=persian]"
+addDate("2024-01-15[u-ca=persian]", { months: 3000000 }); // "+252023-12-27[u-ca=persian]"
 ```
 
 **Smaller corrections.**

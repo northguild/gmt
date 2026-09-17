@@ -9,7 +9,7 @@ GMT's contract is that invalid input returns `""`, `null`, `false` or `[]` and n
 - `addDate`, `subtractDate` and the other `add*`/`subtract*` functions, given a `null` duration
 - `roundDate`, `roundTime` and the other `round*` functions, with no options
 - `min*`, `max*`, `sort*`, `closestDateTo` and `closestZonedTo`, given something that is not an array
-- `getLargestDateDurationUnit`, `getLargestDateTimeDurationUnit` and `getLargestTimeDurationUnit`, given `null` or a non-array, which now return their default unit as they do for other invalid input
+- `getLargestDateDurationUnit`, `getLargestDateTimeDurationUnit` and `getLargestTimeDurationUnit`, given `null` or a non-array, which now return `""`
 - the ten `formatRelative*` and `formatCalendar*` functions, given `options = null`
 - the six `isValid*Range` validators, given `null` or `undefined`
 
@@ -22,7 +22,7 @@ minDate("2024-01-01"); // null
 isValidDateRange(null); // false
 ```
 
-`options = null` in the relative and calendar formatters now means no options, as `formatUnix` already read it.
+`options = null` in the relative and calendar formatters returns `""`, since Temporal's `GetOptionsObject` rejects it. This release applies the same rule to every function that takes an options object.
 
 **`cycle*` amounts.** `cycleDate`, `cycleDateTime`, `cycleTime` and `cycleZoned` read `null`, `""`, `[]` and `true` as an amount of `0` and returned the value unchanged. They now return `""`.
 

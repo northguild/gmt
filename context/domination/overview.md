@@ -117,9 +117,9 @@ packages/gmt-otel/ (DELETE — too niche)
 
 Each realm follows the existing three-level convention
 (`src/<realm>/<category>/<functionName>.ts`), one exported function per file, colocated
-`.test.ts`, `index.ts` barrels at every level. Each new realm needs a hand-written three-entry
-block in `packages/gmt/package.json` `exports` (`"./realm"`, `"./realm/*"`,
-`"./realm/*/*": null`).
+`.test.ts`, `index.ts` barrels at every level. Each new realm needs hand-written entries
+block in `packages/gmt/package.json` `exports` (`"./realm"` plus one explicit `"./realm/<category>"`
+entry per category barrel, mirrored in `typesVersions`).
 
 ---
 

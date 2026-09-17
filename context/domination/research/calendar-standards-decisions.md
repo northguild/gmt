@@ -165,8 +165,8 @@
 
 ## Owner decisions (2026-09-14)
 
-1. **Q1: adopt the standard form,** an ISO date plus `[u-ca=<id>]`. It is a breaking change to every shipped calendar string, so it ships as its own major-version story, not in CORE-6.
-2. **Q2: emit the proposal era codes** (`ce`, `bce`, `meiji` from 1873 at year 6, …). `japanese` stays accepted as a deprecated input alias until the next major.
+1. **Q1: adopt the standard form,** an ISO date plus `[u-ca=<id>]`. It is a breaking change to every shipped calendar string, so it ships as its own story, not in CORE-6. (Delivered with CORE-8 in 1.16.0 after the owner ruled out a major release on 2026-09-17.)
+2. **Q2: emit the proposal era codes** (`ce`, `bce`, `meiji` from 1873 at year 6, …). (Superseded 2026-09-17: 1.16.0 removed `;era=` from the grammar, and the `japanese` alias with it.)
 3. **Q4: the standard wins over the future-proofing rule.** GMT implements the published Hebrew and Indian arithmetic rules in its compat layer. They stay dormant unless the runtime is wrong, and are removed once Node's ICU and the polyfill are fixed.
 
 ## Owner decisions that were required

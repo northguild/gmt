@@ -1,5 +1,5 @@
 ---
-"@northguild/gmt": patch
+"@northguild/gmt": minor
 ---
 
 Validate `unix/` epoch arguments and read rounding and comparison options the way Temporal reads them (Story CORE-8).
@@ -18,7 +18,7 @@ parseYearFromUnix("   "); // ""
 sortUnix([3, 1.5, 1e20, 2]); // [2, 3]
 ```
 
-`FormatCalendarUnixOptions` marks `style`, `numeric`, `largestUnit` and `roundingMethod` as deprecated. `formatCalendarUnix` never read them, and still ignores them, so its output is unchanged and existing calls still type-check. Drop them from your calls; they will be removed in the next major.
+`FormatCalendarUnixOptions` no longer declares `style`, `numeric`, `largestUnit` or `roundingMethod`. `formatCalendarUnix` never read them, so its output is unchanged; see **Breaking changes** below.
 
 **Rounding options follow Temporal.**
 
@@ -35,15 +35,15 @@ roundDate("2024-05-20", { smallestUnit: "month", roundingMode: "bogus" as never 
 startOfDate("2024-02-29", "day"); // "2024-02-29"
 ```
 
-**`areUtcEqualBy` and `areDateTimesEqualBy` compare the buckets you name.** With `fractionalSecondDigits`, they compared the printed strings, so two different milliseconds printed with 0 digits looked equal. They now compare the start of each `unit` bucket and ignore that option, which is deprecated.
+**`areUtcEqualBy` and `areDateTimesEqualBy` compare the buckets you name.** With `fractionalSecondDigits`, they compared the printed strings, so two different milliseconds printed with 0 digits looked equal. They now compare the start of each `unit` bucket, and the option is removed.
 
 ```typescript
 import { areUtcEqualBy } from "@northguild/gmt/utc";
 
-areUtcEqualBy("2024-05-15T10:20:30.123Z", "2024-05-15T10:20:30.999Z", "millisecond", { fractionalSecondDigits: 0 }); // false
+areUtcEqualBy("2024-05-15T10:20:30.123Z", "2024-05-15T10:20:30.999Z", "millisecond"); // false
 ```
 
-Compatibility: pass the coarser unit the digits stood for.
+To compare at the precision the digits stood for, pass that coarser unit.
 
 ```typescript
 areUtcEqualBy("2024-05-15T10:20:30.123Z", "2024-05-15T10:20:30.999Z", "second"); // true
@@ -62,3 +62,11 @@ Compatibility: pass `{ fractionalSecondDigits: 0 }` to keep the whole-second str
 ```typescript
 getLocaleZonedEndOfWeek("2024-03-13T10:00:00-04:00[America/New_York]", "en-US", { fractionalSecondDigits: 0 }); // "2024-03-16T23:59:59-04:00[America/New_York]"
 ```
+
+### Breaking changes
+
+| 1.15 | 1.16 |
+| --- | --- |
+| `formatCalendarUnix(v, locale, { reference, style, numeric, largestUnit, roundingMethod })` | `formatCalendarUnix(v, locale, { reference })`: the four members had no effect |
+| `areUtcEqualBy(a, b, "millisecond", { fractionalSecondDigits: 0 })` | `areUtcEqualBy(a, b, "second")` |
+| `areDateTimesEqualBy(a, b, "millisecond", { fractionalSecondDigits: 0 })` | `areDateTimesEqualBy(a, b, "second")` |

@@ -4,13 +4,16 @@
 
 Follow Temporal's zoned arithmetic and difference algorithms across DST changes (Story CORE-8).
 
-**`addZoned`, `subtractZoned` and `intervalFromDurationZoned` keep exact time exact.** TC39 Temporal §6.5.5 AddZonedDateTime adds a duration's date part on the wall clock and its time part in exact time. With a `disambiguation` other than `"compatible"`, these functions re-resolved the final wall-clock time. Adding 10 minutes in a repeated hour could then land 50 minutes earlier. `disambiguation` now applies only to the wall-clock time the date part lands on, when a fall-back repeats that time. A time-only duration ignores it.
+**`addZoned`, `subtractZoned` and `intervalFromDurationZoned` keep exact time exact.** TC39 Temporal §6.5.5 AddZonedDateTime adds a duration's date part on the wall clock and its time part in exact time. With a `disambiguation` other than `"compatible"`, these functions re-resolved the final wall-clock time. Adding 10 minutes in a repeated hour could then land 50 minutes earlier. `disambiguation` now applies only to the wall-clock time the date part lands on: when a fall-back repeats that time, and when a spring-forward skips it. A date step into a skipped hour used to move forward whatever `disambiguation` said. A time-only duration ignores it.
 
 ```typescript
 import { addZoned, setZoned } from "@northguild/gmt/zoned";
 
 addZoned("2024-11-03T01:30:00-05:00[America/New_York]", { minutes: 10 }, { disambiguation: "earlier" });
 // "2024-11-03T01:40:00-05:00[America/New_York]"
+addZoned("2024-03-09T02:30:00-05:00[America/New_York]", { days: 1 }, { disambiguation: "earlier" });
+// "2024-03-10T01:30:00-05:00[America/New_York]"
+addZoned("2024-03-09T02:30:00-05:00[America/New_York]", { days: 1 }, { disambiguation: "reject" }); // ""
 ```
 
 Compatibility: to get the earlier value, re-resolve the result's wall-clock time with `setZoned`.
