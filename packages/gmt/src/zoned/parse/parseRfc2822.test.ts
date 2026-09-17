@@ -58,9 +58,9 @@ describe("parseRfc2822", () => {
     });
 
     it("accepts an obsolete quoted-pair NUL inside a comment (obs-qp, RFC 5322 §4.1)", () => {
-      expect(
-        parseRfc2822("Fri, 15 Mar 2024 14:30:00 -0400 (\\\u0000)"),
-      ).toBe(FRI_15_MAR);
+      expect(parseRfc2822("Fri, 15 Mar 2024 14:30:00 -0400 (\\\u0000)")).toBe(
+        FRI_15_MAR,
+      );
     });
 
     it("accepts a 5-digit year (year = 4*DIGIT) and round-trips formatRfc2822's own output", () => {
