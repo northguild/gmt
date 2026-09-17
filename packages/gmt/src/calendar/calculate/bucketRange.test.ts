@@ -357,7 +357,6 @@ describe("bucketRange", () => {
     unit         | description
     ${"minute"}  | ${"a unit below hour"}
     ${"year"}    | ${"a unit above month"}
-    ${"days"}    | ${"a plural spelling"}
     ${""}        | ${"an empty string"}
     ${undefined} | ${"absent"}
     ${null}      | ${"null"}
@@ -500,4 +499,21 @@ describe("bucketRange over the cap without walking it", () => {
       expect(run.calls[0]?.ms).toBeLessThan(1_000);
     },
   );
+
+  // Temporal §13.17 GetTemporalUnitValuedOption: a plural unit name is the same unit as its singular.
+  // New York local days (-04:00 in June) start at 04:00Z.
+  it("returns the New York day buckets for the plural unit days", () => {
+    expect(
+      bucketRange(
+        "2024-06-15T03:00:00Z",
+        "2024-06-17T03:00:00Z",
+        "days",
+        "America/New_York",
+      ),
+    ).toEqual([
+      "2024-06-14T04:00:00Z",
+      "2024-06-15T04:00:00Z",
+      "2024-06-16T04:00:00Z",
+    ]);
+  });
 });

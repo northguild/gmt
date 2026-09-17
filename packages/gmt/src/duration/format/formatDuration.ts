@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import type { DurationUnit } from "../../types";
+import { isOptionsArgument } from "../../internal/isObject";
 
 const UNIT_TO_INTL: Record<DurationUnit, string> = {
   years: "year",
@@ -80,7 +81,7 @@ export interface FormatDurationOptions {
  * - Returns "" for invalid input: non-string value or invalid duration string.
  *
  * @param value ISO 8601 duration string
- * @param locale BCP 47 locale tag, passed to Intl.NumberFormat/Intl.ListFormat; system default if omitted
+ * @param locale BCP 47 locale tag, passed to Intl.NumberFormat/Intl.ListFormat; system default if omitted, or a preference list of tags (ECMA-402)
  * @param options optional: { style: "long" | "short" | "narrow" (default "long"), zero: boolean (default false) }
  * @returns human-readable rendering of the duration, or "" on invalid input
  *
@@ -95,12 +96,17 @@ export interface FormatDurationOptions {
  * @example formatDuration("PT1.123456789S", "en-US") // "1.123456789 seconds"
  * @example formatDuration(parseDuration("PT1.123456789S", { smallestUnit: "millisecond" }), "en-US") // "1.123 seconds"
  * @example formatDuration("invalid") // ""
+ * @example formatDuration("P1DT2H30M", ["es-ES", "en-US"]) // "1 día, 2 horas y 30 minutos"
  */
 export function formatDuration(
   value: string,
-  locale?: string,
+  locale?: string | string[],
   options: FormatDurationOptions = {},
 ): string {
+  if (!isOptionsArgument(options)) {
+    return "";
+  }
+
   if (typeof value !== "string") {
     return "";
   }

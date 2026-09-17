@@ -110,7 +110,6 @@ describe("fromNtpTimestamp", () => {
     ${"0"}                      | ${"string"}
     ${0n}                       | ${"bigint"}
     ${null}                     | ${"null"}
-    ${undefined}                | ${"explicitly passed undefined"}
   `('returns "" when era $era is invalid ($reason)', ({ era }) => {
     expect(fromNtpTimestamp(0n, era as unknown as number)).toBe("");
   });
@@ -128,6 +127,18 @@ describe("fromNtpTimestamp", () => {
   `('returns "" when $value is non-bigint input', ({ value }) => {
     expect(fromNtpTimestamp(value as unknown as bigint)).toBe("");
   });
+
+  // TC39 treats an explicit undefined argument as absent, so `undefined` is era 0, as omitted.
+  it.each`
+    value                   | expected
+    ${0n}                   | ${"1900-01-01T00:00:00Z"}
+    ${9487534653230284800n} | ${"1970-01-01T00:00:00Z"}
+  `(
+    "returns $expected for $value with an explicit undefined era",
+    ({ value, expected }) => {
+      expect(fromNtpTimestamp(value, undefined)).toBe(expected);
+    },
+  );
 
   it('returns "" when Temporal.Instant.fromEpochNanoseconds throws', () => {
     mockTemporalInstantFromEpochNanosecondsThrow();

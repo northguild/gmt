@@ -90,16 +90,21 @@ describe("durationAs", () => {
     },
   );
 
-  // E5 (issue #78): relativeTo accepts a GMT calendar-annotated PlainDate string ("5784-06-
-  // 15[u-ca=hebrew]" — calendar-native digits, as convertDateToCalendar produces), not
-  // Temporal's own ISO-digit u-ca convention. Regression goldens verified directly against
-  // @js-temporal/polyfill: before this fix, the Hebrew-shape string below was silently
-  // misread as ISO year 5784 and returned 354, not 385.
+  // relativeTo accepts an RFC 9557 calendar-annotated string (ISO digits, as convertDateToCalendar
+  // and convertZonedToCalendar write it). Expected: native Temporal, Chromium 153.0.8010.12.
   it.each`
-    value    | unit      | relativeTo                   | expected | note
-    ${"P1Y"} | ${"days"} | ${"5784-06-15[u-ca=hebrew]"} | ${385}   | ${"Hebrew leap year 5784"}
-    ${"P1M"} | ${"days"} | ${"5785-04-15[u-ca=hebrew]"} | ${29}    | ${"Tevet, a 29-day Hebrew month"}
-    ${"P1M"} | ${"days"} | ${"2024-02-10[u-ca=hebrew]"} | ${30}    | ${"GMT digits: Hebrew year 2024, Heshvan (30 days), not ISO 2024-02-10"}
+    value    | unit       | relativeTo                                                    | expected | note
+    ${"P1Y"} | ${"days"}  | ${"2024-02-24[u-ca=hebrew]"}                                  | ${385}   | ${"Hebrew leap year 5784"}
+    ${"P1M"} | ${"days"}  | ${"2025-01-15[u-ca=hebrew]"}                                  | ${29}    | ${"Tevet, a 29-day Hebrew month"}
+    ${"P1M"} | ${"days"}  | ${"-001737-10-16[u-ca=hebrew]"}                               | ${30}    | ${"ISO -1737-10-16 is Heshvan 2024 (30 days)"}
+    ${"P1M"} | ${"days"}  | ${"2024-02-10[!u-ca=hebrew]"}                                 | ${30}    | ${"critical flag"}
+    ${"P1M"} | ${"days"}  | ${"5784-06-01[u-ca=HEBREW]"}                                  | ${29}    | ${"upper-case calendar id; ISO year 5784"}
+    ${"P1M"} | ${"days"}  | ${"0006-02-01[!u-ca=japanese]"}                               | ${28}    | ${"critical flag, era calendar; ISO year 6 is not leap"}
+    ${"P1M"} | ${"days"}  | ${"2024-02-10[u-ca=coptic]"}                                  | ${30}    | ${"coptic computes in ethioaa"}
+    ${"P1M"} | ${"days"}  | ${"2024-02-10T00:00:00+00:00[UTC][u-ca=hebrew]"}              | ${30}    | ${"zoned, RFC 9557 order"}
+    ${"P1D"} | ${"hours"} | ${"2024-03-10T00:00:00-05:00[America/New_York][u-ca=hebrew]"} | ${23}    | ${"zoned calendar string keeps the spring-forward day"}
+    ${"P1M"} | ${"days"}  | ${"2024-02-10[u-ca=hebrew][foo=bar]"}                         | ${30}    | ${"elective unknown annotation ignored"}
+    ${"P1M"} | ${"days"}  | ${"5784-06-01T00:00:00[u-ca=hebrew]"}                         | ${29}    | ${"PlainDateTime string: Temporal reads its date"}
   `(
     "totals $value as $expected in $unit relativeTo calendar-annotated $relativeTo ($note)",
     ({ value, unit, relativeTo, expected }) => {
@@ -107,22 +112,22 @@ describe("durationAs", () => {
     },
   );
 
-  // One tag, one date: a `[u-ca=...]` relativeTo that is not GMT's E1 PlainDate shape is not read
-  // with Temporal's ISO digits instead — that would give the same tag two readings. RFC 9557 §3.3:
-  // the critical flag does not change what the tag means; §4.1 suffix values are case-insensitive
-  // ALPHA. Each of these would otherwise total with ISO digits (29, 28 …) rather than null.
+  // A calendar-annotated relativeTo follows Temporal's ISO grammar and must name a supported
+  // calendar. Native Temporal (Chromium 153) throws for every row but the unsupported calendar,
+  // which GMT does not support.
   it.each`
     relativeTo                                       | reason
-    ${"5784-06-01[!u-ca=hebrew]"}                    | ${"critical flag"}
-    ${"5784-06-01[u-ca=HEBREW]"}                     | ${"upper-case calendar id"}
     ${"5784-06-01[U-CA=hebrew]"}                     | ${"upper-case key"}
-    ${"5784-06-01[u-ca=hebrew][foo=bar]"}            | ${"trailing elective annotation"}
-    ${"0006-02-01[!u-ca=japanese]"}                  | ${"critical flag, era calendar"}
-    ${"5784-06-01T00:00:00[u-ca=hebrew]"}            | ${"PlainDateTime with a calendar annotation"}
-    ${"5784-06-01T00:00:00+00:00[UTC][u-ca=hebrew]"} | ${"RFC 9557 segment order [zone][u-ca=]"}
-    ${"5784-06-01T00:00:00+00:00[u-ca=hebrew][UTC]"} | ${"GMT E7 segment order [u-ca=][zone]"}
+    ${"2024-02-10[!foo=bar][u-ca=hebrew]"}           | ${"unknown critical annotation"}
+    ${"2024-02-10[u-ca=hebrew][!u-ca=roc]"}          | ${"critical second calendar annotation"}
+    ${"2024-02-10T00:00:00Z[u-ca=hebrew]"}           | ${"UTC designator without a time zone annotation"}
+    ${"2024-02-10T00:00:00+00:00[u-ca=hebrew][UTC]"} | ${"calendar before zone (not RFC 9557)"}
+    ${"2024-02-10[u-ca=chinese]"}                    | ${"calendar GMT does not support"}
+    ${"0006-02-01[u-ca=japanese;era=reiwa]"}         | ${"';era=' is not RFC 9557 syntax"}
+    ${"2024-02-10[UTC][u-ca=hebrew]"}                | ${"date-only zoned string (strict extended shape)"}
+    ${"20240210[u-ca=hebrew]"}                       | ${"basic date (strict extended shape)"}
   `(
-    "returns null when relativeTo $relativeTo carries a calendar annotation that is not GMT's PlainDate shape ($reason)",
+    "returns null when relativeTo $relativeTo is rejected ($reason)",
     ({ relativeTo }) => {
       expect(durationAs("P1M", "days", { relativeTo })).toBeNull();
     },
@@ -157,7 +162,7 @@ describe("durationAs", () => {
 
   it("returns null when a calendar-annotated relativeTo is malformed", () => {
     expect(
-      durationAs("P1M", "days", { relativeTo: "5783-14-01[u-ca=hebrew]" }),
+      durationAs("P1M", "days", { relativeTo: "2024-14-01[u-ca=hebrew]" }),
     ).toBeNull();
   });
 
@@ -263,8 +268,7 @@ describe("durationAs", () => {
   it.each`
     unit
     ${"fortnights"}
-    ${"hour"}
-    ${"day"}
+    ${"fortnight"}
     ${""}
     ${null}
     ${undefined}
@@ -354,18 +358,35 @@ describe("durationAs relative to the first days of the range", () => {
 describe("durationAs with a non-ISO calendar relativeTo (CORE-6)", () => {
   it.each`
     duration  | unit        | relativeTo                      | expected | reason
-    ${"P40D"} | ${"months"} | ${"279517-08-15[u-ca=hebrew]"}  | ${null}  | ${"D1: the 1-month window after the first month passes the maximum"}
-    ${"P1M"}  | ${"days"}   | ${"279517-08-01[u-ca=hebrew]"}  | ${30}    | ${"D1 control: M07 of 279517 has 30 days"}
-    ${"P30D"} | ${"months"} | ${"2566-08-31[u-ca=buddhist]"}  | ${1}     | ${"D6: the window Aug 31 to Sep 30 ends exactly on the target"}
-    ${"P1M"}  | ${"days"}   | ${"1543-02-01[u-ca=buddhist]"}  | ${28}    | ${"proleptic buddhist: ISO 1000 is not a leap year"}
-    ${"P1Y"}  | ${"days"}   | ${"1543-03-01[u-ca=buddhist]"}  | ${365}   | ${"proleptic buddhist: no Feb 29 in ISO 1000"}
-    ${"P1M"}  | ${"days"}   | ${"-096239-06-23[u-ca=hebrew]"} | ${29}    | ${"hebrew year <= 0: M06 has 29 days"}
-    ${"P1Y"}  | ${"days"}   | ${"-096239-06-23[u-ca=hebrew]"} | ${355}   | ${"hebrew year <= 0: a 355-day year from M06-23"}
-    ${"P1M"}  | ${"days"}   | ${"0000-01-13[u-ca=hebrew]"}    | ${30}    | ${"hebrew year 0: M01 has 30 days"}
+    ${"P40D"} | ${"months"} | ${"+275760-07-20[u-ca=hebrew]"} | ${null}  | ${"D1: the 1-month window after the first month passes the maximum"}
+    ${"P1M"}  | ${"days"}   | ${"+275760-07-06[u-ca=hebrew]"} | ${30}    | ${"D1 control: M07 of 279517 has 30 days"}
+    ${"P30D"} | ${"months"} | ${"2023-08-31[u-ca=buddhist]"}  | ${1}     | ${"D6: the window Aug 31 to Sep 30 ends exactly on the target"}
+    ${"P30D"} | ${"months"} | ${"2023-08-31[u-ca=gregory]"}   | ${1}     | ${"D6 gregory (Chromium 153)"}
+    ${"P1M"}  | ${"days"}   | ${"1000-02-01[u-ca=buddhist]"}  | ${28}    | ${"proleptic buddhist: ISO 1000 is not a leap year"}
+    ${"P1Y"}  | ${"days"}   | ${"1000-03-01[u-ca=buddhist]"}  | ${365}   | ${"proleptic buddhist: no Feb 29 in ISO 1000"}
+    ${"P1M"}  | ${"days"}   | ${"-100000-01-01[u-ca=hebrew]"} | ${29}    | ${"hebrew year <= 0: M06 has 29 days"}
+    ${"P1Y"}  | ${"days"}   | ${"-100000-01-01[u-ca=hebrew]"} | ${355}   | ${"hebrew year <= 0: a 355-day year from M06-23"}
+    ${"P1M"}  | ${"days"}   | ${"-003761-09-01[u-ca=hebrew]"} | ${30}    | ${"hebrew year 0: M01 has 30 days"}
   `(
     "returns $expected for $duration in $unit relative to $relativeTo ($reason)",
     ({ duration, unit, relativeTo, expected }) => {
       expect(durationAs(duration, unit, { relativeTo })).toBe(expected);
+    },
+  );
+
+  // Temporal §13.17 GetTemporalUnitValuedOption: a singular unit name is the same unit as its plural.
+  // P1DT2H30M is 26.5 hours: 1590 minutes, 95400 seconds, 26.5 / 24 days.
+  it.each`
+    unit             | expected
+    ${"day"}         | ${26.5 / 24}
+    ${"hour"}        | ${26.5}
+    ${"minute"}      | ${1590}
+    ${"second"}      | ${95400}
+    ${"millisecond"} | ${95400000}
+  `(
+    "totals P1DT2H30M as $expected in singular unit $unit",
+    ({ unit, expected }) => {
+      expect(durationAs("P1DT2H30M", unit)).toBe(expected);
     },
   );
 });

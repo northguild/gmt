@@ -127,7 +127,7 @@ describe("subtractIntervals", () => {
     ${{ start: "2024-01-01T17:00:00Z", end: "2024-01-01T09:00:00Z" }}                 | ${"inverted"}
     ${{ start: "2024-01-01T09:30:00Z", end: "2024-01-01T10:00:00+01:00" }}            | ${"inverted by instant, ascending as text"}
     ${{ start: "2016-12-31T23:59:60Z", end: "2017-01-01T00:00:00Z" }}                 | ${"leap second"}
-    ${{ start: "2024-01-01T09:00:00Z[u-ca=iso8601]", end: "2024-01-01T17:00:00Z" }}   | ${"calendar annotation"}
+    ${{ start: "2024-01-01T09:00:00Z[!foo=bar]", end: "2024-01-01T17:00:00Z" }}       | ${"unknown critical annotation"}
     ${{ start: "2024-01-01T09:00:00", end: "2024-01-01T17:00:00Z" }}                  | ${"zoneless"}
     ${{ start: "2024-01-01T09:00:00[UTC]", end: "2024-01-01T17:00:00Z" }}             | ${"bracket-only zone"}
     ${{ start: "2024-01-01", end: "2024-01-01T17:00:00Z" }}                           | ${"date only"}
@@ -135,5 +135,31 @@ describe("subtractIntervals", () => {
   `("returns [] when from or any removal is invalid ($reason)", ({ bad }) => {
     expect(subtractIntervals(bad, [])).toEqual([]);
     expect(subtractIntervals(A, [bad])).toEqual([]);
+  });
+
+  // Temporal.Instant.from ignores a calendar annotation (critical or not) and an elective unknown
+  // annotation (proposal-temporal ParseTemporalInstantString; RFC 9557 §3.3), so these endpoints
+  // are the unannotated instants. GMT echoes the caller's text (CORE-6), annotation included.
+  it("subtracts annotated intervals by instant and keeps the annotated texts", () => {
+    expect(
+      subtractIntervals(
+        {
+          start: "2024-01-01T09:00:00Z[u-ca=iso8601]",
+          end: "2024-01-01T17:00:00Z[foo=bar]",
+        },
+        [
+          {
+            start: "2024-01-01T12:00:00Z[!u-ca=hebrew]",
+            end: "2024-01-01T13:00:00Z",
+          },
+        ],
+      ),
+    ).toEqual([
+      {
+        start: "2024-01-01T09:00:00Z[u-ca=iso8601]",
+        end: "2024-01-01T12:00:00Z[!u-ca=hebrew]",
+      },
+      { start: "2024-01-01T13:00:00Z", end: "2024-01-01T17:00:00Z[foo=bar]" },
+    ]);
   });
 });

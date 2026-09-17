@@ -1,4 +1,4 @@
-import { neighbourBusinessDayValue } from "../../internal";
+import { neighbourBusinessDayValue } from "../../internal/businessDayValues";
 import type { BusinessCalendar } from "../../types";
 
 /**

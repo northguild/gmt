@@ -11,8 +11,8 @@ import type { Interval } from "../../types";
  *   else — not at an edge, not another empty interval at the same instant (GMT rule: an empty
  *   interval covers no time, so only a strictly interior position is shared).
  * - Compares instants: endpoints may name different zones.
- * - The closed `intervalsOverlapUtc`, `intervalsOverlapZoned`, `intervalsOverlapDate` (…) return
- *   `true` for touching intervals; this is the half-open standard.
+ * - The positional `intervalsOverlapUtc`, `intervalsOverlapZoned`, `intervalsOverlapDate` (…)
+ *   follow the same half-open rule, so touching intervals do not overlap there either.
  * - For zone-aligned windows (a local day, a trading session), build the endpoints with
  *   `floorToZone` first.
  * - Returns `false` on invalid input — either interval not an `Interval`, or inverted.

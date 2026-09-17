@@ -1,4 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Parse and re-normalize an ISO 8601 duration string.
@@ -26,6 +27,10 @@ export function parseDuration(
     roundingMode?: Temporal.ToStringPrecisionOptions["roundingMode"];
   },
 ): string {
+  if (!isOptionsArgument(options)) {
+    return "";
+  }
+
   if (typeof value !== "string") {
     return "";
   }

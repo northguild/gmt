@@ -3,7 +3,7 @@ import {
   businessDateFrom,
   parseBusinessCalendar,
   type ResolvedBusinessCalendar,
-} from "../../internal";
+} from "../../internal/businessCalendar";
 import { isValidDate } from "../../plain/validate";
 import type { BusinessCalendar, RollConvention } from "../../types";
 import { isValidRollConvention } from "../validate";

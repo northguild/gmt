@@ -14,6 +14,10 @@
  * Capture groups: 1 month, 2 day, 3 hour. The year, minute, second and fraction are not
  * captured.
  *
+ * The written form only, with no RFC 9557 annotation. `isValidDateTime` reads more: it matches this
+ * against the part before the first `[` and lets Temporal read the annotations
+ * (`"…[u-ca=iso8601]"`, an elective `"…[foo=bar]"`).
+ *
  * @example plainDateTime.test("2024-03-15T14:30:00")       // true
  * @example plainDateTime.test("2024-03-15T14:30")          // true (seconds omitted)
  * @example plainDateTime.test("+000031-04-30T12:00:00.123") // true (6-digit year)

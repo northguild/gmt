@@ -1,4 +1,5 @@
 import { zonelessCalendarDate } from "../../internal";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /** Months in a quarter. */
 const MONTHS_PER_QUARTER = 3;
@@ -40,6 +41,10 @@ export function getQuarter(
   value: string,
   optionsArg?: { fiscalYearStartMonth?: number },
 ): { year: number; quarter: number } | null {
+  if (!isOptionsArgument(optionsArg)) {
+    return null;
+  }
+
   const fiscalYearStartMonth = optionsArg?.fiscalYearStartMonth ?? 1;
 
   if (

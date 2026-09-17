@@ -27,7 +27,8 @@ const MAX_SAFE_NANOSECONDS =
  *   reports the hours that actually elapsed. `spanWallClock` answers the calendar question;
  *   conflating the two is the most common span bug there is.
  * - Accepts anything `toNanoseconds` does: the full RFC 9557 instant grammar, no leap
- *   seconds, no `[u-ca=...]` calendar annotation. An offset designator (`Z`, `±HH:MM`) is
+ *   seconds; calendar and elective annotations are ignored, as `Temporal.Instant.from` ignores
+ *   them. An offset designator (`Z`, `±HH:MM`) is
  *   required, optionally followed by a bracketed IANA zone — a bracket alone is not enough,
  *   which is the one string shape `spanWallClock` accepts and these two do not. The
  *   endpoints need not share a zone; an instant is an instant.

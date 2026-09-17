@@ -77,22 +77,18 @@ describe("spanNs", () => {
   );
 
   it.each`
-    start                                       | end                                         | reason
-    ${"invalid"}                                | ${"2024-03-10T12:00:00Z"}                   | ${"unparseable start"}
-    ${"2024-03-10T12:00:00Z"}                   | ${"invalid"}                                | ${"unparseable end"}
-    ${"2024-03-10"}                             | ${"2024-03-11"}                             | ${"date-only, no offset"}
-    ${"2024-03-10T12:00:00"}                    | ${"2024-03-11T12:00:00"}                    | ${"no offset designator"}
-    ${"2024-03-10T12:00:00[America/New_York]"}  | ${"2024-03-11T12:00:00[America/New_York]"}  | ${"bracketed zone but no offset designator"}
-    ${"2016-12-31T23:59:60Z"}                   | ${"2017-01-01T00:00:00Z"}                   | ${"leap second start"}
-    ${"2016-12-31 23:59:60Z"}                   | ${"2017-01-01T00:00:00Z"}                   | ${"leap second, space separator"}
-    ${"20161231T235960Z"}                       | ${"2017-01-01T00:00:00Z"}                   | ${"leap second, basic format"}
-    ${"2024-03-10T12:00:00-05:00[u-ca=hebrew]"} | ${"2024-03-11T12:00:00-04:00"}              | ${"calendar annotation on start"}
-    ${"2024-03-10T12:00:00Z"}                   | ${"2024-03-11T12:00:00-05:00[u-ca=hebrew]"} | ${"calendar annotation on end"}
-    ${"2024-03-10T12:00:00Z[!u-ca=hebrew]"}     | ${"2024-03-11T12:00:00Z"}                   | ${"critical-flag calendar annotation on start"}
-    ${"2024-03-10T12:00:00Z"}                   | ${"2024-03-11T12:00:00Z[!u-ca=hebrew]"}     | ${"critical-flag calendar annotation on end"}
-    ${"+275760-09-13T00:00:00.001Z"}            | ${"2024-03-10T12:00:00Z"}                   | ${"start past the representable range"}
-    ${"2024-03-10T12:00:00Z"}                   | ${"-271821-04-19T23:59:59Z"}                | ${"end before the representable range"}
-    ${""}                                       | ${"2024-03-10T12:00:00Z"}                   | ${"empty string"}
+    start                                      | end                                        | reason
+    ${"invalid"}                               | ${"2024-03-10T12:00:00Z"}                  | ${"unparseable start"}
+    ${"2024-03-10T12:00:00Z"}                  | ${"invalid"}                               | ${"unparseable end"}
+    ${"2024-03-10"}                            | ${"2024-03-11"}                            | ${"date-only, no offset"}
+    ${"2024-03-10T12:00:00"}                   | ${"2024-03-11T12:00:00"}                   | ${"no offset designator"}
+    ${"2024-03-10T12:00:00[America/New_York]"} | ${"2024-03-11T12:00:00[America/New_York]"} | ${"bracketed zone but no offset designator"}
+    ${"2016-12-31T23:59:60Z"}                  | ${"2017-01-01T00:00:00Z"}                  | ${"leap second start"}
+    ${"2016-12-31 23:59:60Z"}                  | ${"2017-01-01T00:00:00Z"}                  | ${"leap second, space separator"}
+    ${"20161231T235960Z"}                      | ${"2017-01-01T00:00:00Z"}                  | ${"leap second, basic format"}
+    ${"+275760-09-13T00:00:00.001Z"}           | ${"2024-03-10T12:00:00Z"}                  | ${"start past the representable range"}
+    ${"2024-03-10T12:00:00Z"}                  | ${"-271821-04-19T23:59:59Z"}               | ${"end before the representable range"}
+    ${""}                                      | ${"2024-03-10T12:00:00Z"}                  | ${"empty string"}
   `("returns null when the pair is invalid ($reason)", ({ start, end }) => {
     expect(spanNs(start, end)).toBeNull();
   });
@@ -120,4 +116,21 @@ describe("spanNs", () => {
 
     expect(spanNs("2024-03-10T12:00:00Z", "2024-03-10T12:00:01Z")).toBeNull();
   });
+
+  // Temporal.Instant.from reads RFC 9557 annotations and ignores a time zone, calendar or elective
+  // annotation (an instant has no calendar; proposal-temporal `ParseTemporalInstantString`), and
+  // rejects an unknown critical one. Native Temporal (Chromium 153) agrees.
+  it.each`
+    start                                       | end                                         | expected
+    ${"2024-03-10T12:00:00-05:00[u-ca=hebrew]"} | ${"2024-03-11T12:00:00-04:00"}              | ${82_800_000_000_000n}
+    ${"2024-03-10T12:00:00Z"}                   | ${"2024-03-11T12:00:00-05:00[u-ca=hebrew]"} | ${104_400_000_000_000n}
+    ${"2024-03-10T12:00:00Z[!u-ca=hebrew]"}     | ${"2024-03-11T12:00:00Z"}                   | ${86_400_000_000_000n}
+    ${"2024-03-10T12:00:00Z[foo=bar]"}          | ${"2024-03-11T12:00:00Z"}                   | ${86_400_000_000_000n}
+    ${"2024-03-10T12:00:00Z[!foo=bar]"}         | ${"2024-03-11T12:00:00Z"}                   | ${null}
+  `(
+    "reads the annotations of $start and $end as Temporal does → $expected",
+    ({ start, end, expected }) => {
+      expect(spanNs(start, end)).toBe(expected);
+    },
+  );
 });

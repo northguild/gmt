@@ -197,16 +197,15 @@ describe("resolveLocal", () => {
   );
 
   it.each`
-    localDateTime                              | description
-    ${"2024-11-03T01:30:00-04:00"}             | ${"carries an offset"}
-    ${"2024-11-03T01:30:00Z"}                  | ${"carries a UTC designator"}
-    ${"2024-11-03T01:30:00[America/New_York]"} | ${"carries a bracketed zone"}
-    ${"2024-11-03 01:30:00"}                   | ${"uses a space separator"}
-    ${"2024-11-03"}                            | ${"is a date with no time"}
-    ${"2024-02-30T01:30:00"}                   | ${"is not a real date"}
-    ${"2024-12-31T23:59:60"}                   | ${"is a leap second"}
-    ${"invalid"}                               | ${"is not a datetime at all"}
-    ${""}                                      | ${"is empty"}
+    localDateTime                  | description
+    ${"2024-11-03T01:30:00-04:00"} | ${"carries an offset"}
+    ${"2024-11-03T01:30:00Z"}      | ${"carries a UTC designator"}
+    ${"2024-11-03 01:30:00"}       | ${"uses a space separator"}
+    ${"2024-11-03"}                | ${"is a date with no time"}
+    ${"2024-02-30T01:30:00"}       | ${"is not a real date"}
+    ${"2024-12-31T23:59:60"}       | ${"is a leap second"}
+    ${"invalid"}                   | ${"is not a datetime at all"}
+    ${""}                          | ${"is empty"}
   `('returns "" when localDateTime $description', ({ localDateTime }) => {
     expect(resolveLocal(localDateTime, "America/New_York")).toBe("");
   });
@@ -214,7 +213,6 @@ describe("resolveLocal", () => {
   it.each`
     timeZone          | description
     ${"Invalid/Zone"} | ${"is not an IANA identifier"}
-    ${"-05:00"}       | ${"is an offset, not a zone"}
     ${""}             | ${"is empty"}
   `('returns "" when timeZone $description', ({ timeZone }) => {
     expect(resolveLocal("2024-11-03T01:30:00", timeZone)).toBe("");
@@ -296,6 +294,37 @@ describe("resolveLocal at the maximum instant", () => {
     "resolves $localDateTime in $timeZone to $expected",
     ({ localDateTime, timeZone, expected }) => {
       expect(resolveLocal(localDateTime, timeZone)).toBe(expected);
+    },
+  );
+
+  // Temporal's ISO grammar reads an elective annotation (`[foo=bar]`) and `[u-ca=iso8601]` and ignores
+  // them (RFC 9557 §3.3; native Temporal agrees), so the result is the unannotated input's.
+  it.each`
+    localDateTime                              | expected
+    ${"2024-07-15T12:00:00[foo=bar]"}          | ${"2024-07-15T16:00:00Z"}
+    ${"2024-07-15T12:00:00[u-ca=iso8601]"}     | ${"2024-07-15T16:00:00Z"}
+    ${"2024-07-15T12:00:00[Asia/Tokyo]"}       | ${"2024-07-15T16:00:00Z"}
+    ${"2024-11-03T01:30:00[America/New_York]"} | ${"2024-11-03T05:30:00Z"}
+    ${"2024-07-15T12:00:00[!foo=bar]"}         | ${""}
+  `(
+    "reads the annotations of $localDateTime as Temporal.PlainDateTime.from does → $expected",
+    ({ localDateTime, expected }) => {
+      expect(resolveLocal(localDateTime, "America/New_York")).toBe(expected);
+    },
+  );
+
+  // Temporal's `TimeZoneIdentifier ::: UTCOffset[~SubMinutePrecision] | TimeZoneIANAName`
+  // (proposal-temporal spec/abstractops.html): `±HH`, `±HHMM` or `±HH:MM`, hour 00–23, no seconds.
+  // Native Temporal and Intl.DateTimeFormat (Chromium 153) accept and reject the same rows.
+  it.each`
+    timeZone    | expected
+    ${"-05:00"} | ${"2024-11-03T06:30:00Z"}
+    ${"+0530"}  | ${"2024-11-02T20:00:00Z"}
+    ${"+24:00"} | ${""}
+  `(
+    "resolves 2024-11-03T01:30:00 in the offset zone $timeZone → $expected",
+    ({ timeZone, expected }) => {
+      expect(resolveLocal("2024-11-03T01:30:00", timeZone)).toBe(expected);
     },
   );
 });

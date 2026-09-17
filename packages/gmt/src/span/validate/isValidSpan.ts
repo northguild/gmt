@@ -7,8 +7,9 @@ import { parseInstantNanoseconds } from "../../internal";
  * endpoints both parse, so there is an elapsed time between them.
  *
  * - Accepts what `toNanoseconds` does on both sides: an offset designator is required,
- *   optionally followed by a bracketed IANA zone; no leap seconds, no `[u-ca=...]`
- *   calendar annotations. The two endpoints need not share a zone.
+ *   optionally followed by a bracketed IANA zone; no leap seconds. Calendar and elective
+ *   annotations are ignored, as `Temporal.Instant.from` ignores them. The two endpoints need not
+ *   share a zone.
  * - **A bracketed zone annotation is syntactic only.** As in `Temporal.Instant.from`, it is
  *   ignored: each offset alone fixes its instant, and a zone that does not exist or disagrees
  *   with the offset is not checked.

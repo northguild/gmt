@@ -11,7 +11,6 @@ describe("isValidSpan", () => {
     ${"2024-03-10T12:00:00Z"}                        | ${"2024-03-10T12:00:00Z"}    | ${"a zero span is a span"}
     ${"2024-03-10T12:00:01Z"}                        | ${"2024-03-10T12:00:00Z"}    | ${"reversed — spans are signed, not invalid"}
     ${"2024-03-10T07:00:00-05:00[America/New_York]"} | ${"2024-03-10T12:00:00Z"}    | ${"mixed zone and offset forms"}
-    ${"2024-03-10 12:00:00Z"}                        | ${"20240310T130000Z"}        | ${"space separator and basic format"}
     ${"-271821-04-20T00:00:00Z"}                     | ${"+275760-09-13T00:00:00Z"} | ${"the full representable range"}
   `("returns true for $start to $end ($reason)", ({ start, end }) => {
     expect(isValidSpan(start, end)).toBe(true);
@@ -33,16 +32,17 @@ describe("isValidSpan", () => {
   );
 
   it.each`
-    start                                       | end                                        | reason
-    ${"invalid"}                                | ${"2024-03-10T12:00:00Z"}                  | ${"unparseable start"}
-    ${"2024-03-10T12:00:00Z"}                   | ${"invalid"}                               | ${"unparseable end"}
-    ${"2024-03-10T12:00:00"}                    | ${"2024-03-11T12:00:00"}                   | ${"no offset designator"}
-    ${"2024-03-10T12:00:00[America/New_York]"}  | ${"2024-03-11T12:00:00[America/New_York]"} | ${"bracketed zone but no offset designator"}
-    ${"2024-03-10"}                             | ${"2024-03-11"}                            | ${"date-only"}
-    ${"2016-12-31T23:59:60Z"}                   | ${"2017-01-01T00:00:00Z"}                  | ${"leap second"}
-    ${"2024-03-10T12:00:00-05:00[u-ca=hebrew]"} | ${"2024-03-11T12:00:00-04:00"}             | ${"calendar annotation"}
-    ${"+275760-09-13T00:00:00.001Z"}            | ${"2024-03-10T12:00:00Z"}                  | ${"past the representable range"}
-    ${""}                                       | ${"2024-03-10T12:00:00Z"}                  | ${"empty string"}
+    start                                      | end                                        | reason
+    ${"invalid"}                               | ${"2024-03-10T12:00:00Z"}                  | ${"unparseable start"}
+    ${"2024-03-10T12:00:00Z"}                  | ${"invalid"}                               | ${"unparseable end"}
+    ${"2024-03-10T12:00:00"}                   | ${"2024-03-11T12:00:00"}                   | ${"no offset designator"}
+    ${"2024-03-10T12:00:00[America/New_York]"} | ${"2024-03-11T12:00:00[America/New_York]"} | ${"bracketed zone but no offset designator"}
+    ${"2024-03-10"}                            | ${"2024-03-11"}                            | ${"date-only"}
+    ${"2016-12-31T23:59:60Z"}                  | ${"2017-01-01T00:00:00Z"}                  | ${"leap second"}
+    ${"+275760-09-13T00:00:00.001Z"}           | ${"2024-03-10T12:00:00Z"}                  | ${"past the representable range"}
+    ${""}                                      | ${"2024-03-10T12:00:00Z"}                  | ${"empty string"}
+    ${"2024-03-10 12:00:00Z"}                  | ${"2024-03-10T13:00:00Z"}                  | ${"space separator (strict extended shape)"}
+    ${"2024-03-10T12:00:00Z"}                  | ${"20240310T130000Z"}                      | ${"basic format (strict extended shape)"}
   `("returns false for $start to $end ($reason)", ({ start, end }) => {
     expect(isValidSpan(start, end)).toBe(false);
   });
@@ -112,4 +112,19 @@ describe("isValidSpan", () => {
     expect(isValidSpan(start, end)).toBe(false);
     expect(spanWallClock(start, end, "hours")).toBe(24);
   });
+
+  // Temporal.Instant.from reads RFC 9557 annotations and ignores a time zone, calendar or elective
+  // annotation (an instant has no calendar; proposal-temporal `ParseTemporalInstantString`), and
+  // rejects an unknown critical one. Native Temporal (Chromium 153) agrees.
+  it.each`
+    start                                       | end                                 | expected
+    ${"2024-03-10T12:00:00-05:00[u-ca=hebrew]"} | ${"2024-03-11T12:00:00-04:00"}      | ${true}
+    ${"2024-03-10T12:00:00Z"}                   | ${"2024-03-11T12:00:00Z[foo=bar]"}  | ${true}
+    ${"2024-03-10T12:00:00Z"}                   | ${"2024-03-11T12:00:00Z[!foo=bar]"} | ${false}
+  `(
+    "reads the annotations of $start and $end as Temporal does → $expected",
+    ({ start, end, expected }) => {
+      expect(isValidSpan(start, end)).toBe(expected);
+    },
+  );
 });

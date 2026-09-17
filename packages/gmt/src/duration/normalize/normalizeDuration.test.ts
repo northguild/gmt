@@ -155,15 +155,13 @@ describe("normalizeDuration", () => {
     },
   );
 
-  // E5 (issue #78): relativeTo accepts a GMT calendar-annotated PlainDate string, not
-  // Temporal's own ISO-digit u-ca convention. Regression golden verified directly against
-  // @js-temporal/polyfill: before this fix, relativeTo below rebalanced to "P1Y3D" (misread
-  // as ISO year 5784), not "P1Y15D".
-  it("rebalances relative to a GMT calendar-annotated PlainDate string (Hebrew leap year)", () => {
+  // relativeTo accepts an RFC 9557 calendar-annotated PlainDate string (ISO digits). Expected:
+  // native Temporal, Chromium 153.0.8010.12.
+  it("rebalances relative to an RFC 9557 calendar-annotated PlainDate string (Hebrew leap year)", () => {
     expect(
       normalizeDuration("P400D", {
         largestUnit: "year",
-        relativeTo: "5784-06-15[u-ca=hebrew]",
+        relativeTo: "2024-02-24[u-ca=hebrew]",
       }),
     ).toBe("P1Y15D");
   });
@@ -293,10 +291,10 @@ describe("normalizeDuration relative to the first days of the range", () => {
 describe("normalizeDuration with a non-ISO calendar relativeTo (CORE-6)", () => {
   it.each`
     duration  | relativeTo                      | expected    | reason
-    ${"P40D"} | ${"279517-08-15[u-ca=hebrew]"}  | ${"P1M10D"} | ${"D1: 1 month then 10 days, just before the maximum"}
-    ${"P30D"} | ${"2566-08-31[u-ca=buddhist]"}  | ${"P30D"}   | ${"D6: Aug 31 + 1 month is Sep 31, past Sep 30"}
-    ${"P40D"} | ${"1543-01-15[u-ca=buddhist]"}  | ${"P1M9D"}  | ${"proleptic buddhist: ISO 1000-01-15 + 1 month is Feb 15"}
-    ${"P40D"} | ${"-096239-06-23[u-ca=hebrew]"} | ${"P1M11D"} | ${"hebrew year <= 0: M06 has 29 days"}
+    ${"P40D"} | ${"+275760-07-20[u-ca=hebrew]"} | ${"P1M10D"} | ${"D1: 1 month then 10 days, just before the maximum"}
+    ${"P30D"} | ${"2023-08-31[u-ca=buddhist]"}  | ${"P30D"}   | ${"D6: Aug 31 + 1 month is Sep 31, past Sep 30"}
+    ${"P40D"} | ${"1000-01-15[u-ca=buddhist]"}  | ${"P1M9D"}  | ${"proleptic buddhist: ISO 1000-01-15 + 1 month is Feb 15"}
+    ${"P40D"} | ${"-100000-01-01[u-ca=hebrew]"} | ${"P1M11D"} | ${"hebrew year <= 0: M06 has 29 days"}
   `(
     "normalizes $duration to $expected in months relative to $relativeTo ($reason)",
     ({ duration, relativeTo, expected }) => {

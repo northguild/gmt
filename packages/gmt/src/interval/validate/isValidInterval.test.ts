@@ -19,13 +19,16 @@ describe("isValidInterval", () => {
   // 09:30Z; Temporal.Instant.from uses the offset and ignores a bracketed zone (TC39), so
   // 10:00+01:00[America/New_York] is 09:00Z too. The range limits are Temporal's ±10^8 days.
   it.each`
-    start                                            | end                          | reason
-    ${"2024-01-01T09:00:00Z"}                        | ${"2024-01-01T17:00:00Z"}    | ${"ascending"}
-    ${"2024-01-01T09:00:00Z"}                        | ${"2024-01-01T09:00:00Z"}    | ${"empty"}
-    ${"2024-01-01T04:00:00-05:00"}                   | ${"2024-01-01T09:00:00Z"}    | ${"same instant, different spelling"}
-    ${"2024-01-01T10:00:00+01:00"}                   | ${"2024-01-01T09:30:00Z"}    | ${"descending as text, ascending as instants"}
-    ${"-271821-04-20T00:00:00Z"}                     | ${"+275760-09-13T00:00:00Z"} | ${"full Instant range"}
-    ${"2024-01-01T10:00:00+01:00[America/New_York]"} | ${"2024-01-01T09:00:00Z"}    | ${"offset disagrees with zone; Instant.from uses the offset"}
+    start                                            | end                                     | reason
+    ${"2024-01-01T09:00:00Z"}                        | ${"2024-01-01T17:00:00Z"}               | ${"ascending"}
+    ${"2024-01-01T09:00:00Z"}                        | ${"2024-01-01T09:00:00Z"}               | ${"empty"}
+    ${"2024-01-01T04:00:00-05:00"}                   | ${"2024-01-01T09:00:00Z"}               | ${"same instant, different spelling"}
+    ${"2024-01-01T10:00:00+01:00"}                   | ${"2024-01-01T09:30:00Z"}               | ${"descending as text, ascending as instants"}
+    ${"-271821-04-20T00:00:00Z"}                     | ${"+275760-09-13T00:00:00Z"}            | ${"full Instant range"}
+    ${"2024-01-01T10:00:00+01:00[America/New_York]"} | ${"2024-01-01T09:00:00Z"}               | ${"offset disagrees with zone; Instant.from uses the offset"}
+    ${"2024-01-01T09:00:00Z[u-ca=iso8601]"}          | ${"2024-01-01T17:00:00Z"}               | ${"calendar annotation, ignored by Instant.from"}
+    ${"2024-01-01T09:00:00Z"}                        | ${"2024-01-01T17:00:00Z[!u-ca=hebrew]"} | ${"critical calendar annotation, ignored by Instant.from"}
+    ${"2024-01-01T09:00:00Z[foo=bar]"}               | ${"2024-01-01T17:00:00Z"}               | ${"elective unknown annotation, ignored"}
   `(
     "returns true for { start: $start, end: $end } ($reason)",
     ({ start, end }) => {
@@ -60,8 +63,7 @@ describe("isValidInterval", () => {
     ${{ start: "2024-01-01T17:00:00Z", end: "2024-01-01T09:00:00Z" }}                 | ${"inverted"}
     ${{ start: "2024-01-01T09:30:00Z", end: "2024-01-01T10:00:00+01:00" }}            | ${"inverted by instant, ascending as text"}
     ${{ start: "2016-12-31T23:59:60Z", end: "2017-01-01T00:00:00Z" }}                 | ${"leap second"}
-    ${{ start: "2024-01-01T09:00:00Z[u-ca=iso8601]", end: "2024-01-01T17:00:00Z" }}   | ${"calendar annotation"}
-    ${{ start: "2024-01-01T09:00:00Z", end: "2024-01-01T17:00:00Z[!u-ca=hebrew]" }}   | ${"critical-flag calendar annotation"}
+    ${{ start: "2024-01-01T09:00:00Z[!foo=bar]", end: "2024-01-01T17:00:00Z" }}       | ${"unknown critical annotation"}
     ${{ start: "2024-01-01T09:00:00", end: "2024-01-01T17:00:00Z" }}                  | ${"zoneless"}
     ${{ start: "2024-01-01T09:00:00[UTC]", end: "2024-01-01T17:00:00Z" }}             | ${"bracket-only zone"}
     ${{ start: "2024-01-01", end: "2024-01-01T17:00:00Z" }}                           | ${"date only"}

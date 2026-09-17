@@ -8,8 +8,8 @@ import type { Interval } from "../../types";
  * - An empty interval strictly inside the other is returned as the intersection.
  * - Endpoints are the caller's own strings, never re-serialised. When `a` and `b` spell the same
  *   instant differently, `a`'s spelling is used (GMT rule: the first argument wins ties).
- * - The closed `intervalIntersectionUtc` (…) returns a one-instant span for touching intervals;
- *   this is the half-open standard.
+ * - The positional `intervalIntersectionUtc` (…) follow the same half-open rule and return
+ *   re-serialised endpoints instead of echoing the caller's strings.
  * - Returns `null` on invalid input — either interval not an `Interval`, or inverted.
  *
  * @param a `{ start, end }` record of ISO 8601 instant strings; its strings win ties

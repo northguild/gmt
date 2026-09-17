@@ -260,7 +260,6 @@ describe("floorToZone", () => {
     ${"second"}  | ${"the same"}
     ${"year"}    | ${"a unit above month, which getQuarter and getFiscalPeriod answer"}
     ${"quarter"} | ${"not a Temporal unit at all"}
-    ${"days"}    | ${"a plural spelling"}
     ${"Day"}     | ${"a capitalised spelling"}
     ${""}        | ${"an empty string"}
     ${undefined} | ${"absent"}
@@ -287,15 +286,29 @@ describe("floorToZone", () => {
     },
   );
 
+  // isValidInstant reads annotations as Temporal.Instant.from does: a calendar or elective
+  // annotation is ignored (an instant has no calendar) and an unknown critical one is rejected.
+  // 03:00Z is 23:00 EDT on 14 June, whose day began at 04:00Z.
   it.each`
-    value                                  | description
-    ${"2024-06-15T03:00:00"}               | ${"a zoneless datetime, which names no instant"}
-    ${"2024-06-15"}                        | ${"a date"}
-    ${"invalid"}                           | ${"an unparseable string"}
-    ${""}                                  | ${"an empty string"}
-    ${"2016-12-31T23:59:60Z"}              | ${"a leap second"}
-    ${"2024-02-30T00:00:00Z"}              | ${"a date that does not exist"}
-    ${"2024-06-15T03:00:00Z[u-ca=hebrew]"} | ${"a calendar annotation"}
+    value                                  | expected
+    ${"2024-06-15T03:00:00Z[u-ca=hebrew]"} | ${"2024-06-14T04:00:00Z"}
+    ${"2024-06-15T03:00:00Z[foo=bar]"}     | ${"2024-06-14T04:00:00Z"}
+    ${"2024-06-15T03:00:00Z[!foo=bar]"}    | ${""}
+  `(
+    "reads the annotations of $value as Temporal does → $expected",
+    ({ value, expected }) => {
+      expect(floorToZone(value, "day", "America/New_York")).toBe(expected);
+    },
+  );
+
+  it.each`
+    value                     | description
+    ${"2024-06-15T03:00:00"}  | ${"a zoneless datetime, which names no instant"}
+    ${"2024-06-15"}           | ${"a date"}
+    ${"invalid"}              | ${"an unparseable string"}
+    ${""}                     | ${"an empty string"}
+    ${"2016-12-31T23:59:60Z"} | ${"a leap second"}
+    ${"2024-02-30T00:00:00Z"} | ${"a date that does not exist"}
   `("returns an empty string when $value is $description", ({ value }) => {
     expect(floorToZone(value, "day", "America/New_York")).toBe("");
   });
@@ -344,5 +357,20 @@ describe("floorToZone", () => {
   it("returns an empty string when Temporal.Instant.from throws", () => {
     mockTemporalInstantFromThrow();
     expect(floorToZone(sourceInstant, "day", "America/New_York")).toBe("");
+  });
+
+  // Temporal §13.17 GetTemporalUnitValuedOption: a plural unit name is the same unit as its singular.
+  // 2024-05-15T10:20:30.123Z is Wednesday 12:20:30 in Berlin (+02:00): its local hour, day, Monday week and month
+  // start at 10:00Z, 2024-05-14T22:00Z, 2024-05-12T22:00Z and 2024-04-30T22:00Z.
+  it.each`
+    unit        | expected
+    ${"hours"}  | ${"2024-05-15T10:00:00Z"}
+    ${"days"}   | ${"2024-05-14T22:00:00Z"}
+    ${"weeks"}  | ${"2024-05-12T22:00:00Z"}
+    ${"months"} | ${"2024-04-30T22:00:00Z"}
+  `("returns $expected for plural unit $unit", ({ unit, expected }) => {
+    expect(floorToZone("2024-05-15T10:20:30.123Z", unit, "Europe/Berlin")).toBe(
+      expected,
+    );
   });
 });

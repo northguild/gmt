@@ -106,14 +106,13 @@ describe("compareDurations", () => {
     },
   );
 
-  // E5 (issue #78): relativeTo accepts a GMT calendar-annotated PlainDate string, not
-  // Temporal's own ISO-digit u-ca convention. Regression golden verified directly against
-  // @js-temporal/polyfill: before this fix, the Hebrew-shape relativeTo below compared 0
-  // (misread as ISO year 5785), not -1.
+  // relativeTo accepts an RFC 9557 calendar-annotated PlainDate string (ISO digits). Expected:
+  // native Temporal, Chromium 153.0.8010.12.
   it.each`
-    a        | b         | relativeTo                   | expected | note
-    ${"P1M"} | ${"P30D"} | ${"5785-04-15[u-ca=hebrew]"} | ${-1}    | ${"Tevet, a 29-day Hebrew month"}
-    ${"P1M"} | ${"P30D"} | ${"5784-06-15[u-ca=hebrew]"} | ${0}     | ${"Adar I, a 30-day Hebrew month"}
+    a        | b         | relativeTo                    | expected | note
+    ${"P1M"} | ${"P30D"} | ${"2025-01-15[u-ca=hebrew]"}  | ${-1}    | ${"Tevet, a 29-day Hebrew month"}
+    ${"P1M"} | ${"P30D"} | ${"2024-02-24[u-ca=hebrew]"}  | ${0}     | ${"Adar I, a 30-day Hebrew month"}
+    ${"P1M"} | ${"P30D"} | ${"2024-02-10[!u-ca=hebrew]"} | ${0}     | ${"critical flag: 1 Adar I 5784, 30 days"}
   `(
     "returns $expected comparing $a to $b relativeTo calendar-annotated $relativeTo ($note)",
     ({ a, b, relativeTo, expected }) => {
@@ -229,9 +228,9 @@ describe("compareDurations relative to the first days of the range", () => {
 describe("compareDurations with a non-ISO calendar relativeTo (CORE-6)", () => {
   it.each`
     one      | two       | relativeTo                      | expected | reason
-    ${"P1M"} | ${"P29D"} | ${"279517-08-01[u-ca=hebrew]"}  | ${1}     | ${"D1: M07 of 279517 has 30 days"}
-    ${"P1M"} | ${"P30D"} | ${"2566-08-31[u-ca=buddhist]"}  | ${0}     | ${"D6: Aug 31 + 1 month is Sep 30, 30 days"}
-    ${"P1M"} | ${"P29D"} | ${"-096239-06-23[u-ca=hebrew]"} | ${0}     | ${"hebrew year <= 0: M06 has 29 days"}
+    ${"P1M"} | ${"P29D"} | ${"+275760-07-06[u-ca=hebrew]"} | ${1}     | ${"D1: M07 of 279517 has 30 days"}
+    ${"P1M"} | ${"P30D"} | ${"2023-08-31[u-ca=buddhist]"}  | ${0}     | ${"D6: Aug 31 + 1 month is Sep 30, 30 days"}
+    ${"P1M"} | ${"P29D"} | ${"-100000-01-01[u-ca=hebrew]"} | ${0}     | ${"hebrew year <= 0: M06 has 29 days"}
   `(
     "compares $one with $two relative to $relativeTo as $expected ($reason)",
     ({ one, two, relativeTo, expected }) => {

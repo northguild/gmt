@@ -140,4 +140,15 @@ describe("formatDuration", () => {
   `("returns an empty string for non-string input $value", ({ value }) => {
     expect(formatDuration(value as never)).toBe("");
   });
+
+  // ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale data
+  // is used, and a malformed tag anywhere in the list is invalid input. Expected strings from native
+  // Intl with the same list.
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"1 jour, 2 heures et 30 minutes"}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
+  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+    expect(formatDuration("P1DT2H30M", locale)).toBe(expected);
+  });
 });

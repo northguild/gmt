@@ -1,7 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import {
   formatUtcOffset,
-  hasKeyValueAnnotation,
   parseInstantNanoseconds,
   parseUtcOffsetNanoseconds,
 } from "../../internal";
@@ -61,11 +60,7 @@ export function fromOffsetInstant(value: OffsetInstant): string {
   const epochNanoseconds = parseInstantNanoseconds(value.instant);
   const offsetNanoseconds = parseUtcOffsetNanoseconds(value.offset);
 
-  if (
-    epochNanoseconds === null ||
-    offsetNanoseconds === null ||
-    hasKeyValueAnnotation(value.instant)
-  ) {
+  if (epochNanoseconds === null || offsetNanoseconds === null) {
     return "";
   }
 

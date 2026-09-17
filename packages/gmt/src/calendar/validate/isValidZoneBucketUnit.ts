@@ -1,9 +1,12 @@
+import type { Temporal } from "@js-temporal/polyfill";
+import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import type { ZoneBucketUnit } from "../../types";
 
 /**
  * Return true when `unit` is a valid ZoneBucketUnit.
  *
- * - Valid units are: "hour", "day", "week", "month".
+ * - Valid units are: "hour", "day", "week", "month", singular or plural (`"days"`), as Temporal
+ *   §13.17 names a unit either way and `floorToZone`/`bucketRange` accept both.
  * - Accepts any input type and returns false for non-string values.
  * - Uses type assertion to narrow the type.
  * - Narrower than `isValidDateTimeUnit` on purpose: these are the boundaries a calendar in a
@@ -22,16 +25,23 @@ import type { ZoneBucketUnit } from "../../types";
  * @example isValidZoneBucketUnit("month") // true
  * @example isValidZoneBucketUnit("year") // false (a calendar year is getQuarter's question)
  * @example isValidZoneBucketUnit("minute") // false (a sub-hour boundary needs no zone)
- * @example isValidZoneBucketUnit("days") // false
+ * @example isValidZoneBucketUnit("days") // true (plural name)
+ * @example isValidZoneBucketUnit("years") // false
  * @example isValidZoneBucketUnit(1) // false
  * @example isValidZoneBucketUnit(null) // false
  */
-export function isValidZoneBucketUnit(unit: unknown): unit is ZoneBucketUnit {
+export function isValidZoneBucketUnit(
+  unit: unknown,
+): unit is Temporal.SmallestUnit<ZoneBucketUnit> {
   if (typeof unit !== "string") {
     return false;
   }
 
+  const singular = resolveDateTimeUnit(unit);
   return (
-    unit === "hour" || unit === "day" || unit === "week" || unit === "month"
+    singular === "hour" ||
+    singular === "day" ||
+    singular === "week" ||
+    singular === "month"
   );
 }

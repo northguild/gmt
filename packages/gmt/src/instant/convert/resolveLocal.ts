@@ -1,7 +1,8 @@
 import { isValidDateTime } from "../../plain/validate";
 import type { Disambiguation } from "../../types";
 import { isValidTimeZone } from "../../zoned/validate";
-import { zonedDateTimeFrom } from "../../internal";
+import { isoStringBody, zonedDateTimeFrom } from "../../internal";
+import { isOptionsArgument } from "../../internal/isObject";
 
 const DISAMBIGUATIONS: readonly string[] = [
   "compatible",
@@ -24,11 +25,11 @@ const DISAMBIGUATIONS: readonly string[] = [
  *   case you are in before a policy is applied.
  * - Returns a UTC instant, exactly — no rounding, so a nanosecond wall time survives. Pass it
  *   to `toOffsetInstant` for the offset pair, or reach for `convertPlainDateTimeToZoned` when
- *   what you want is the bracketed zoned string (it defaults to millisecond precision and
- *   also accepts Temporal's `offset` option, inert as it is there).
- * - `localDateTime` must be zoneless: `<date>T<time>`, as `isValidDateTime` accepts. An
- *   offset or a bracketed zone means the wall time already resolved, and passing one here
- *   would silently discard it.
+ *   what you want is the bracketed zoned string (it defaults to millisecond precision).
+ * - `localDateTime` is a PlainDateTime string, as `isValidDateTime` accepts: `<date>T<time>`
+ *   with no offset (an offset means the wall time already resolved). Its RFC 9557 annotations
+ *   are read as `Temporal.PlainDateTime.from` reads them, so a time zone annotation
+ *   (`[America/New_York]`) is ignored and `timeZone` alone resolves the wall time.
  * - Returns `""` on invalid input.
  *
  * @param localDateTime zoneless ISO 8601 local datetime string (e.g. "2024-11-03T01:30:00")
@@ -43,6 +44,7 @@ const DISAMBIGUATIONS: readonly string[] = [
  * @example resolveLocal("2024-03-10T02:30:00", "America/New_York") // "2024-03-10T07:30:00Z" (nonexistent; "compatible" takes the later)
  * @example resolveLocal("2024-03-10T02:30:00", "America/New_York", { disambiguation: "earlier" }) // "2024-03-10T06:30:00Z"
  * @example resolveLocal("2024-07-15T12:00:00-04:00", "America/New_York") // "" (not a zoneless wall time)
+ * @example resolveLocal("2024-07-15T12:00:00[foo=bar]", "America/New_York") // "2024-07-15T16:00:00Z" (elective annotation ignored)
  * @example resolveLocal("2024-07-15T12:00:00", "Invalid/Zone") // ""
  */
 export function resolveLocal(
@@ -50,6 +52,10 @@ export function resolveLocal(
   timeZone: string,
   optionsArg?: { disambiguation?: Disambiguation },
 ): string {
+  if (!isOptionsArgument(optionsArg)) {
+    return "";
+  }
+
   const disambiguation = optionsArg?.disambiguation ?? "compatible";
 
   if (
@@ -61,7 +67,7 @@ export function resolveLocal(
   }
 
   try {
-    return zonedDateTimeFrom(`${localDateTime}[${timeZone}]`, {
+    return zonedDateTimeFrom(`${isoStringBody(localDateTime)}[${timeZone}]`, {
       disambiguation,
     })
       .toInstant()

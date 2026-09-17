@@ -8,6 +8,7 @@ import { isValidInstant } from "../../precision/validate";
 import type { ZoneBucketUnit } from "../../types";
 import { isValidTimeZone } from "../../zoned/validate";
 import { isValidZoneBucketUnit } from "../validate";
+import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 
 /**
  * Buckets a single call will return before giving up.
@@ -115,7 +116,7 @@ function nextBucketStartWithinRange(
  * - Both endpoints are read in `timeZone`. Any bracketed zone they carry is ignored, as in
  *   `floorToZone`.
  * - Weeks start on Monday (ISO 8601). `unit` is the same four-unit set `floorToZone` takes,
- *   which `isValidZoneBucketUnit` narrows.
+ *   singular or plural, which `isValidZoneBucketUnit` narrows.
  * - A local boundary that does not exist is not invented: the day Samoa deleted crossing the
  *   date line is absent, a local day whose midnight is skipped starts at 01:00, and in a zone
  *   that falls back by half an hour the local 01:00 hour bucket is 90 minutes long.
@@ -129,7 +130,7 @@ function nextBucketStartWithinRange(
  *
  * @param start ISO 8601 instant string for the range start (inclusive)
  * @param end ISO 8601 instant string for the range end (exclusive)
- * @param unit bucket unit ("hour" | "day" | "week" | "month")
+ * @param unit bucket unit ("hour" | "day" | "week" | "month", or its plural)
  * @param timeZone IANA timeZone identifier the buckets are computed in
  * @returns array of UTC instant strings ending in "Z", or [] on invalid input
  *
@@ -140,18 +141,22 @@ function nextBucketStartWithinRange(
  * @example bucketRange("2024-06-14T04:00:00Z", "2024-06-14T04:00:00Z", "day", "America/New_York") // [] (zero length, on a boundary)
  * @example bucketRange("+275760-09-12T23:00:00Z", "+275760-09-13T00:00:00Z", "day", "America/New_York") // ["+275760-09-12T04:00:00Z"] (the next day would start past the last instant; this one is still returned)
  * @example bucketRange("2024-06-16T00:00:00Z", "2024-06-15T00:00:00Z", "day", "UTC") // [] (start after end)
+ * @example bucketRange("2024-06-15T03:00:00Z", "2024-06-17T03:00:00Z", "days", "America/New_York") // ["2024-06-14T04:00:00Z", "2024-06-15T04:00:00Z", "2024-06-16T04:00:00Z"] (plural unit name)
  * @example bucketRange("2024-06-15T03:00:00Z", "2024-06-17T03:00:00Z", "year", "UTC") // [] (not a bucketing unit)
  */
 export function bucketRange(
   start: string,
   end: string,
-  unit: ZoneBucketUnit,
+  unit: Temporal.SmallestUnit<ZoneBucketUnit>,
   timeZone: string,
 ): string[] {
+  // The singular name; the guard below rejects anything outside the four units.
+  const resolvedUnit = resolveDateTimeUnit(unit) as ZoneBucketUnit;
+
   if (
     !isValidInstant(start) ||
     !isValidInstant(end) ||
-    !isValidZoneBucketUnit(unit) ||
+    !isValidZoneBucketUnit(resolvedUnit) ||
     !isValidTimeZone(timeZone)
   ) {
     return [];
@@ -163,10 +168,11 @@ export function bucketRange(
     const endZoned = Temporal.Instant.from(end).toZonedDateTimeISO(timeZone);
 
     if (Temporal.ZonedDateTime.compare(startZoned, endZoned) > 0) return [];
-    if (certainlyExceedsBucketCap(startZoned, endZoned, unit)) return [];
+    if (certainlyExceedsBucketCap(startZoned, endZoned, resolvedUnit))
+      return [];
 
     const boundaries: string[] = [];
-    const first = zonedUnitStart(startZoned, unit);
+    const first = zonedUnitStart(startZoned, resolvedUnit);
     if (!first) return [];
 
     let current = first;
@@ -178,7 +184,7 @@ export function bucketRange(
 
       boundaries.push(current.toInstant().toString());
 
-      const next = nextBucketStartWithinRange(current, unit);
+      const next = nextBucketStartWithinRange(current, resolvedUnit);
       // Past the last representable instant, so after `end`: every touched bucket is collected.
       if (next === undefined) return boundaries;
       if (!next) return [];
