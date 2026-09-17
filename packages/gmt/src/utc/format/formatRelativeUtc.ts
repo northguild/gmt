@@ -23,9 +23,12 @@ const AUTO_UNITS: Array<{ unit: RelativeUnit; maxSeconds: number }> = [
 /**
  * Format the relative time between a UTC ISO string and a reference instant.
  *
- * - Auto-picks the display unit (second through year) based on the distance, unless
- *   `largestUnit` forces one.
+ * - Auto-picks the display unit (second through day) based on the distance, unless
+ *   `largestUnit` forces one — week, month and year are never auto-picked, so a 3-year distance
+ *   reads "1,096 days ago" unless `largestUnit: "year"` is passed.
  * - `roundingMethod` controls how the distance rounds to the display unit.
+ * - `timeZone` anchors a forced calendar unit (`largestUnit` week, month or year). Omitted or
+ *   invalid, it is `"UTC"`; pass `"local"` for the system time zone.
  *
  * @param value UTC ISO string to format
  * @param locale optional: BCP 47 locale tag

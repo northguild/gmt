@@ -1,3 +1,4 @@
+import { mockSystemTimeZone } from "../../test";
 import { Temporal } from "@js-temporal/polyfill";
 import { battleTestTimeZones } from "../../test/timeZoneMatrix";
 import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
@@ -214,6 +215,29 @@ describe("intervalCountUnix across zone transitions", () => {
       );
 
       expect(intervalCountUnix(start, end, unit)).toBe(expected);
+    },
+  );
+
+  // -271821-04-20T00:00:00Z is Temporal's minimum instant and a Tuesday. The week (from Monday
+  // 04-19), month and year holding it began before it, but the interval still touches exactly that
+  // one bucket — and one more once it reaches the next bucket start (04-26, 05-01, -271820-01-01).
+  // -8640000000000000 is -271821-04-20T00:00:00Z; -8639999996400000 is one hour later;
+  // -8639999395200000 is -271821-04-27T00:00:00Z.
+  it.each`
+    end                  | unit       | expected
+    ${-8639999996400000} | ${"week"}  | ${1}
+    ${-8639999996400000} | ${"month"} | ${1}
+    ${-8639999996400000} | ${"year"}  | ${1}
+    ${-8639999395200000} | ${"week"}  | ${2}
+  `(
+    "counts $expected $unit buckets from the minimum instant to $end in a UTC system timeZone",
+    ({ end, unit, expected }) => {
+      const restore = mockSystemTimeZone("UTC");
+      try {
+        expect(intervalCountUnix(-8640000000000000, end, unit)).toBe(expected);
+      } finally {
+        restore();
+      }
     },
   );
 });

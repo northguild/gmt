@@ -9,9 +9,11 @@ import { startOrEndOfUnix } from "../../internal/startOrEndOfUnix";
  * - Returns the last millisecond before the next local quarter starts in `timeZone` (see `floorToZone`), so the result is never before `value`: a quarter whose last local hour repeats (`Africa/Cairo`, 2010-09-30) ends with the second pass.
  * - `disambiguation` and `offset` are deprecated and ignored: a boundary is always a real instant, as TC39's `startOfDay()` takes neither.
  * - Returns null for invalid input.
+ * - An omitted `timeZone` means the system time zone (`getSystemTimeZone()`), so the result
+ *   depends on the host; pass `timeZone` for a host-independent result.
  *
  * @param value Unix timestamp (number)
- * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA), disambiguation and offset (deprecated, ignored)
+ * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA; omitted means the system time zone), disambiguation and offset (deprecated, ignored)
  * @returns Unix epoch number representing the end of the quarter, or null on invalid input
  *
  * @example endOfQuarterForUnix(1706659200000, { timeZone: "UTC" }) // 1711929599999

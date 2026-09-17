@@ -207,4 +207,21 @@ describe("intervalOverlappingDaysUnix with an unrecognised epochUnit", () => {
       ),
     ).toBe(null);
   });
+
+  // Distinct local dates of the instants in the closed span (tzdb): Goose_Bay fell back at 00:01 on
+  // 2010-11-07 into 2010-11-06 (1289098860000 = the transition), and Apia deleted 2011-12-30.
+  it.each`
+    aStart           | aEnd             | timeZone               | expected
+    ${1289098830000} | ${1289100600000} | ${"America/Goose_Bay"} | ${2}
+    ${1289098740000} | ${1289100600000} | ${"America/Goose_Bay"} | ${2}
+    ${1325235600000} | ${1325242800000} | ${"Pacific/Apia"}      | ${2}
+    ${1712458800000} | ${1712458800000} | ${"America/Santiago"}  | ${1}
+  `(
+    "returns $expected local dates for the self-overlap $aStart to $aEnd in $timeZone",
+    ({ aStart, aEnd, timeZone, expected }) => {
+      expect(
+        intervalOverlappingDaysUnix(aStart, aEnd, aStart, aEnd, { timeZone }),
+      ).toBe(expected);
+    },
+  );
 });

@@ -15,7 +15,7 @@ import { coerceUnixEpochNumber } from "../../internal/unixEpochValue";
  * - Returns null for invalid input.
  *
  * @param value unix epoch in milliseconds or seconds (number or string)
- * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA)
+ * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA; omitted means the system (host) time zone)
  * @returns Day of week (1-7) or null on invalid input
  *
  * @example parseDayOfWeekFromUnix(1704067200000, { timeZone: "UTC" }) // 1

@@ -17,12 +17,29 @@ import { isValidUnixUnit } from "../validate/isValidUnixUnit";
  * | `epochUnit` | `"milliseconds"\|"seconds"` | `"milliseconds"` | Interpretation of numeric `value`/`reference`. |
  * | `timeZone` | `string` | `"UTC"` | IANA zone for both day-comparison and clock-time rendering. |
  * | `timeStyle` | `"short"\|"medium"\|"full"` | `"short"` | `Intl` `timeStyle` for the time-of-day portion. |
+ * | `style`, `numeric`, `largestUnit`, `roundingMethod` | — | — | Deprecated and ignored: the function never read them. Kept so existing calls still type-check; removed in the next major. |
  *
  * @example
  * import { FormatCalendarUnixOptions } from "@northguild/gmt/unix";
  * const opts: FormatCalendarUnixOptions = { timeZone: "America/New_York" };
  */
 export interface FormatCalendarUnixOptions {
+  /**
+   * @deprecated Ignored. `formatCalendarUnix` never read it; the day label always uses the long style. Will be removed in the next major.
+   */
+  style?: "long" | "short" | "narrow";
+  /**
+   * @deprecated Ignored. `formatCalendarUnix` never read it; the day label always uses `numeric: "auto"`. Will be removed in the next major.
+   */
+  numeric?: "always" | "auto";
+  /**
+   * @deprecated Ignored. `formatCalendarUnix` never read it. Will be removed in the next major.
+   */
+  largestUnit?: "year" | "month" | "week" | "day";
+  /**
+   * @deprecated Ignored. `formatCalendarUnix` never read it. Will be removed in the next major.
+   */
+  roundingMethod?: "expand" | "trunc" | "floor" | "ceil";
   /** Anchor point for the relative day comparison. Accepts ISO strings or numeric epochs. */
   reference?: string | number;
   epochUnit?: "milliseconds" | "seconds";

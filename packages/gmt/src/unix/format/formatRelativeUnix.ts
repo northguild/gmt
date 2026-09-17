@@ -28,16 +28,20 @@ const AUTO_UNITS: Array<{ unit: RelativeUnit; maxSeconds: number }> = [
 /**
  * Format the relative time between a unix epoch value and a reference instant.
  *
- * - Auto-picks the display unit (second through year) based on the distance, unless
- *   `largestUnit` forces one.
+ * - Auto-picks the display unit (second through day) based on the distance, unless
+ *   `largestUnit` forces one — week, month and year are never auto-picked, so a 3-year distance
+ *   reads "1,096 days ago" unless `largestUnit: "year"` is passed.
  * - `roundingMethod` controls how the distance rounds to the display unit.
+ * - `timeZone` anchors a forced calendar unit (`largestUnit` week, month or year). Omitted, it is
+ *   `"UTC"` — not the system time zone, unlike the other `unix/` functions that take a `timeZone`.
  *
  * @param value unix epoch (string or number, per `epochUnit`) to format
  * @param locale optional: BCP 47 locale tag
  * @param options optional: { style, numeric, largestUnit, roundingMethod, epochUnit, reference, timeZone }
  * @returns the formatted relative-time string, or "" on invalid input
  *
- * @example formatRelativeUnix(1710685845000, "en-US", { epochUnit: "milliseconds" }) // "3 years ago"
+ * @example formatRelativeUnix(1710685845000, "en-US", { epochUnit: "milliseconds", reference: 1805358645000 }) // "1,096 days ago" (day is the largest auto-picked unit)
+ * @example formatRelativeUnix(1710685845000, "en-US", { epochUnit: "milliseconds", reference: 1805358645000, largestUnit: "year" }) // "3 years ago"
  * @example formatRelativeUnix(0, "en-US", { reference: 37800000, roundingMethod: "floor" }) // "11 hours ago" (−10.5 hours floors to −11; the default rounds to 10)
  * @example formatRelativeUnix("not-a-number") // ""
  */

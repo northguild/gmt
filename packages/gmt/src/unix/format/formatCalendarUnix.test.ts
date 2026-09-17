@@ -278,32 +278,37 @@ describe("formatCalendarUnix with an unrecognised epochUnit", () => {
   });
 });
 
-describe("FormatCalendarUnixOptions declares only the options formatCalendarUnix reads", () => {
+describe("FormatCalendarUnixOptions keeps its four never-read options as deprecated and ignored", () => {
   // 1710772200000 is 2024-03-18T14:30Z and 1710685000000 is 2024-03-17T14:16:40Z, one UTC
-  // calendar day apart. style, numeric, largestUnit and roundingMethod were never read, so they
-  // are not members: each is a type error and changes nothing at runtime.
-  it("rejects style, numeric, largestUnit and roundingMethod and still renders tomorrow at 2:30 PM", () => {
-    type Options = FormatCalendarUnixOptions;
-    const base: Options = { reference: 1710685000000, timeZone: "UTC" };
-    // @ts-expect-error style is not a FormatCalendarUnixOptions member
-    const style: Options = { ...base, style: "narrow" };
-    // @ts-expect-error numeric is not a FormatCalendarUnixOptions member
-    const numeric: Options = { ...base, numeric: "always" };
-    // @ts-expect-error largestUnit is not a FormatCalendarUnixOptions member
-    const largest: Options = { ...base, largestUnit: "week" };
-    // @ts-expect-error roundingMethod is not a FormatCalendarUnixOptions member
-    const rounding: Options = { ...base, roundingMethod: "ceil" };
+  // calendar day apart. style, numeric, largestUnit and roundingMethod were never read. They stay
+  // declared (deprecated) so 1.15.0 callers still type-check, and they change nothing at runtime.
+  it.each`
+    extra
+    ${{ style: "narrow" }}
+    ${{ numeric: "always" }}
+    ${{ largestUnit: "week" }}
+    ${{ roundingMethod: "ceil" }}
+  `("type-checks and ignores $extra", ({ extra }) => {
+    const options: FormatCalendarUnixOptions = {
+      reference: 1710685000000,
+      timeZone: "UTC",
+      ...(extra as Partial<FormatCalendarUnixOptions>),
+    };
+    expect(formatCalendarUnix(1710772200000, "en-US", options)).toBe(
+      "tomorrow at 2:30 PM",
+    );
+  });
 
-    expect(formatCalendarUnix(1710772200000, "en-US", style)).toBe(
-      "tomorrow at 2:30 PM",
-    );
-    expect(formatCalendarUnix(1710772200000, "en-US", numeric)).toBe(
-      "tomorrow at 2:30 PM",
-    );
-    expect(formatCalendarUnix(1710772200000, "en-US", largest)).toBe(
-      "tomorrow at 2:30 PM",
-    );
-    expect(formatCalendarUnix(1710772200000, "en-US", rounding)).toBe(
+  it("accepts every deprecated member in one object literal", () => {
+    const options: FormatCalendarUnixOptions = {
+      reference: 1710685000000,
+      timeZone: "UTC",
+      style: "narrow",
+      numeric: "always",
+      largestUnit: "week",
+      roundingMethod: "ceil",
+    };
+    expect(formatCalendarUnix(1710772200000, "en-US", options)).toBe(
       "tomorrow at 2:30 PM",
     );
   });

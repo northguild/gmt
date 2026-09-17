@@ -18,6 +18,10 @@ import { isValidUtc } from "../validate/isValidUtc";
  * - When `units` is an array, `smallestUnit` must not be coarser than the largest unit in the
  *   array (e.g. `["days", "hours"]` with `smallestUnit: "week"`) — this combination is rejected by
  *   Temporal and returns null, same as other invalid input.
+ * - With an array of units, the largest listed unit is Temporal's `largestUnit` and only the listed
+ *   units are returned. Amounts in units between the listed ones are computed and not returned —
+ *   they are not carried into a smaller listed unit. For example, `["years", "days"]` over
+ *   1 year 59 days returns `{ years: 1, days: 0 }` (the 2 months are dropped).
  *
  * @param value1 UTC ISO datetime string (start)
  * @param value2 UTC ISO datetime string (end)
@@ -28,6 +32,7 @@ import { isValidUtc } from "../validate/isValidUtc";
  * @example diffUtc("2024-03-10T12:00:00Z", "2024-03-11T12:00:00Z", "hours") // 24
  * @example diffUtc("2024-03-10T12:00:00Z", "2025-04-10T12:00:00Z", ["years", "months"]) // { years: 1, months: 1 }
  * @example diffUtc("invalid", "2024-03-11T12:00:00Z", "hours") // null
+ * @example diffUtc("2024-01-01T00:00:00Z", "2025-03-01T00:00:00Z", ["years", "days"]) // { years: 1, days: 0 } (P1Y2M; the months are not returned)
  */
 export function diffUtc(
   value1: string,

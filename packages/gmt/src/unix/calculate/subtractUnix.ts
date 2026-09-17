@@ -22,7 +22,7 @@ import { isValidUnixUnit } from "../validate/isValidUnixUnit";
  *
  * @param value Unix timestamp (number)
  * @param units Partial<Record<DateTimeDurationUnit, number>> object specifying units to subtract
- * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA), overflow ("constrain" | "reject")
+ * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA; omitted means the system (host) time zone), overflow ("constrain" | "reject")
  * @returns Unix epoch number after subtraction, or null on invalid input
  *
  * @example subtractUnix(1706745600000, { days: 1 }) // 1706659200000

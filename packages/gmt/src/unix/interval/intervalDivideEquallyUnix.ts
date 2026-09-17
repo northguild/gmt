@@ -1,4 +1,5 @@
 import { parseUnixEpochInterval } from "../../internal";
+import { divisionBoundary } from "../../internal/divisionBoundary";
 import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 
 /**
@@ -6,8 +7,10 @@ import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
  *
  * - Returns an array of `n` `{ start, end }` records that tile the original interval, each
  *   record's `end` equal to the next record's `start`.
- * - Boundaries are computed as plain numeric arithmetic on the epoch values — no timeZone is
- *   involved, so the split is exact whenever the total divides evenly by `n`.
+ * - Each boundary is `start + round((end - start) · i / n)` in integer milliseconds, taken in
+ *   `bigint` so no product past 2^53 loses a millisecond: the split is exact whenever the total
+ *   divides evenly by `n`, and within half a millisecond of the exact cut otherwise (an exact
+ *   half rounds up). No time zone is involved.
  * - `n === 1` returns the original interval unchanged, as a single-element array.
  * - A zero-length interval (`start === end`) returns `n` identical zero-length sub-intervals.
  * - Returns `[]` when `n` is not a positive integer, or on invalid input (`start`/`end` that is
@@ -59,11 +62,12 @@ export function intervalDivideEquallyUnix(
     return Array.from({ length: n }, () => ({ start: startMs, end: endMs }));
   }
 
-  const totalMs = endMs - startMs;
+  // Integer milliseconds in bigint: a span near ±8.64e15 times `i` passes 2^53.
+  const totalMs = BigInt(endMs) - BigInt(startMs);
 
   const boundaries: number[] = [startMs];
   for (let i = 1; i < n; i++) {
-    boundaries.push(startMs + Math.round((totalMs * i) / n));
+    boundaries.push(Number(BigInt(startMs) + divisionBoundary(totalMs, i, n)));
   }
   boundaries.push(endMs);
 

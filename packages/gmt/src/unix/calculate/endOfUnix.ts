@@ -10,10 +10,12 @@ import { startOrEndOfUnix } from "../../internal/startOrEndOfUnix";
  * - Returns the last millisecond of the real local `unit` containing `value` in `timeZone` — just before the next bucket `floorToZone` would return — so the result is never before `value`: the second pass of a repeated fall-back hour ends at its own 1:59:59.999.
  * - `disambiguation` and `offset` are deprecated and ignored: a boundary is always a real instant, as TC39's `startOfDay()` takes neither.
  * - Returns null for invalid input.
+ * - An omitted `timeZone` means the system time zone (`getSystemTimeZone()`), so the result
+ *   depends on the host; pass `timeZone` for a host-independent result.
  *
  * @param value Unix timestamp (number)
  * @param unit Temporal.DateUnit | Temporal.TimeUnit to specify the end
- * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA), weekStartsOn ("monday" | "sunday"), disambiguation and offset (deprecated, ignored)
+ * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA; omitted means the system time zone), weekStartsOn ("monday" | "sunday"), disambiguation and offset (deprecated, ignored)
  * @returns Unix epoch number representing the end of the unit, or null on invalid input
  *
  * @example endOfUnix(1706659200000, "year", { timeZone: "UTC" }) // 1735689599999

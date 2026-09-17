@@ -393,4 +393,26 @@ describe("splitIntervalByUnitUnix default piece limit", () => {
       }
     },
   );
+
+  // A step past Temporal's maximum (instant +275760-09-13T00:00:00Z; PlainDateTime
+  // +275760-09-13T23:59:59.999999999; PlainDate +275760-09-13) lands after the representable `end`,
+  // so the last piece is trimmed to `end` rather than discarding the split.
+  // 8639999996400000 is +275760-09-12T23:00:00Z; 8639999956800000 is +275760-09-12T12:00:00Z.
+  it.each`
+    start               | unit      | amount
+    ${8639999996400000} | ${"hour"} | ${2}
+    ${8639999956800000} | ${"day"}  | ${1}
+  `(
+    "returns one piece from $start to the maximum instant by $amount $unit in a UTC system timeZone",
+    ({ start, unit, amount }) => {
+      const restore = mockSystemTimeZone("UTC");
+      try {
+        expect(
+          splitIntervalByUnitUnix(start, 8640000000000000, unit, amount),
+        ).toEqual([{ start, end: 8640000000000000 }]);
+      } finally {
+        restore();
+      }
+    },
+  );
 });

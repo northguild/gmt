@@ -22,17 +22,24 @@ import { isValidUnixUnit } from "../validate/isValidUnixUnit";
  * - When `units` is an array, `smallestUnit` must not be coarser than the largest unit in the
  *   array (e.g. `["days", "hours"]` with `smallestUnit: "week"`) — this combination is rejected by
  *   Temporal and returns null, same as other invalid input.
+ * - With an array of units, the largest listed unit is Temporal's `largestUnit` and only the listed
+ *   units are returned. Amounts in units between the listed ones are computed and not returned —
+ *   they are not carried into a smaller listed unit. For example, `["years", "days"]` over
+ *   1 year 59 days returns `{ years: 1, days: 0 }` (the 2 months are dropped).
+ * - An omitted `timeZone` means the system time zone (`getSystemTimeZone()`), so the result
+ *   depends on the host; pass `timeZone` for a host-independent result.
  *
  * @param value1 first Unix timestamp
  * @param value2 second Unix timestamp
  * @param units DateTimeDurationUnit | DateTimeDurationUnit[] to measure the difference
- * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA), smallestUnit, roundingIncrement, roundingMode (Temporal.DifferenceOptions rounding controls)
+ * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA; omitted means the system time zone), smallestUnit, roundingIncrement, roundingMode (Temporal.DifferenceOptions rounding controls)
  * @returns numeric difference in the requested unit, or null on invalid input
  *
  * @example diffUnix(1706745600000, 1706659200000, "days", { timeZone: "UTC" }) // -1 (measured from the first value to the second)
  * @example diffUnix(1706745600, 1706659200, "days", { epochUnit: "seconds", timeZone: "UTC" }) // -1
  * @example diffUnix(0, -86400000, "days", { timeZone: "UTC" }) // -1 (1970-01-01 until 1969-12-31 is minus one day)
  * @example diffUnix(NaN, 0, "days") // null
+ * @example diffUnix(1704067200000, 1740787200000, ["years", "days"], { timeZone: "UTC" }) // { years: 1, days: 0 } (P1Y2M; the months are not returned)
  */
 export function diffUnix(
   value1: number,

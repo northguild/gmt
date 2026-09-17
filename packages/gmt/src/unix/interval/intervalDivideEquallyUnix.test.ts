@@ -23,6 +23,22 @@ describe("intervalDivideEquallyUnix", () => {
     ]);
   });
 
+  // Past 2^53 the float product (end - start) · i loses whole milliseconds. Each boundary is
+  // start + round((end - start) · i / n) in integer milliseconds: the span is 17,279,999,999,096,463
+  // ms, so boundary 5 is start + round(86,399,999,995,482,315 / 6) = start + 14,399,999,999,247,053
+  // (an exact .5 rounds up, as Math.round does). Values from BigInt arithmetic, not GMT.
+  it("splits a span wider than 2^53 milliseconds exactly", () => {
+    const cuts = [
+      -8639999999333903, -5759999999484492, -2879999999635082, 214329,
+      2880000000063739, 5759999999913150, 8639999999762560,
+    ];
+    expect(
+      intervalDivideEquallyUnix(-8639999999333903, 8639999999762560, 6),
+    ).toEqual(
+      cuts.slice(0, -1).map((cut, i) => ({ start: cut, end: cuts[i + 1] })),
+    );
+  });
+
   it("accepts start/end as numeric strings", () => {
     expect(intervalDivideEquallyUnix("0", "90000000", 3)).toEqual([
       { start: 0, end: 30000000 },

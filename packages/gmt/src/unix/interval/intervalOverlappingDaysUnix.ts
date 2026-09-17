@@ -1,6 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { resolveUnixTimeZone } from "../../internal/resolveUnixTimeZone";
-import { parseUnixEpochInterval } from "../../internal";
+import { countZonedLocalDates, parseUnixEpochInterval } from "../../internal";
 import { isValidUnixUnit } from "../validate/isValidUnixUnit";
 
 /**
@@ -11,6 +11,14 @@ import { isValidUnixUnit } from "../validate/isValidUnixUnit";
  *   `[max(aStart, bStart), min(aEnd, bEnd)]` — inclusive of both endpoints.
  * - Uses the system timeZone by default (consistent with `addUnix` and
  *   `intervalCountUnix`), so day counts are host-dependent unless `timeZone` is given.
+ * - Each instant in the intersection contributes its own local date in `timeZone`, and each date
+ *   counts once. A date the zone deleted is not counted (`Pacific/Apia` skipped 2011-12-30), and a
+ *   fall-back into the previous date does not lose that date (`America/Goose_Bay`, 2010-11-07).
+ * - Returns `null` when the intersection crosses more than 10,000 zone transitions (the same cap
+ *   as `intervalCountZoned`).
+ * - Compatibility: before 1.16.0 the count was the calendar difference of the two endpoint dates
+ *   plus one. To get that number for overlapping intervals, with `start`/`end` the intersection:
+ *   `diffDate(convertUnixToPlainDate(start, { timeZone }), convertUnixToPlainDate(end, { timeZone }), "days") + 1`.
  * - Adjacent intervals (e.g. `aEnd === bStart`) share one date and count as `1`.
  * - Returns `0` when the intervals do not overlap at all (a well-defined answer, not
  *   invalid input).
@@ -33,6 +41,8 @@ import { isValidUnixUnit } from "../validate/isValidUnixUnit";
  * @example intervalOverlappingDaysUnix(0, 172800000, 86400000, 259200000, { timeZone: "UTC" }) // 2
  * @example intervalOverlappingDaysUnix(0, 86400000, 86400000, 172800000, { timeZone: "UTC" }) // 1 (adjacent)
  * @example intervalOverlappingDaysUnix(0, 86400000, 172800000, 259200000, { timeZone: "UTC" }) // 0 (disjoint)
+ * @example intervalOverlappingDaysUnix(1289098830000, 1289100600000, 1289098830000, 1289100600000, { timeZone: "America/Goose_Bay" }) // 2 (the clock fell back into 2010-11-06)
+ * @example diffDate(convertUnixToPlainDate(1289098830000, { timeZone: "America/Goose_Bay" }), convertUnixToPlainDate(1289100600000, { timeZone: "America/Goose_Bay" }), "days") + 1 // 0 (pre-1.16.0 count)
  * @example intervalOverlappingDaysUnix(NaN, 172800000, 86400000, 259200000, { timeZone: "UTC" }) // null
  */
 export function intervalOverlappingDaysUnix(
@@ -73,14 +83,14 @@ export function intervalOverlappingDaysUnix(
     const start = Math.max(a1, b1);
     const end = Math.min(a2, b2);
 
-    const startDate = Temporal.Instant.fromEpochMilliseconds(toMs(start))
-      .toZonedDateTimeISO(timeZone)
-      .toPlainDate();
-    const endDate = Temporal.Instant.fromEpochMilliseconds(toMs(end))
-      .toZonedDateTimeISO(timeZone)
-      .toPlainDate();
-
-    return startDate.until(endDate, { largestUnit: "day" }).days + 1;
+    return countZonedLocalDates(
+      Temporal.Instant.fromEpochMilliseconds(toMs(start)).toZonedDateTimeISO(
+        timeZone,
+      ),
+      Temporal.Instant.fromEpochMilliseconds(toMs(end)).toZonedDateTimeISO(
+        timeZone,
+      ),
+    );
   } catch {
     return null;
   }

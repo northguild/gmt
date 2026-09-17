@@ -1,5 +1,9 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { nextZonedBucketStart, zonedUnitStart } from "../../internal";
+import {
+  nextZonedBucketStart,
+  zonedNextTransition,
+  zonedUnitStart,
+} from "../../internal";
 import { isValidInstant } from "../../precision/validate";
 import type { ZoneBucketUnit } from "../../types";
 import { isValidTimeZone } from "../../zoned/validate";
@@ -13,6 +17,85 @@ import { isValidZoneBucketUnit } from "../validate";
  * months — past anything a caller renders or aggregates in one pass.
  */
 const MAX_BUCKETS = 10_000;
+
+const NANOSECONDS_PER_HOUR = 3_600_000_000_000n;
+
+/**
+ * The longest wall-clock stretch of each unit. Any wall-clock interval this long holds a unit
+ * start: an hour holds an hour start, 24 hours a midnight, 7 days a Monday, 31 days a first of
+ * the month.
+ */
+const LONGEST_UNIT_NANOSECONDS: Readonly<Record<ZoneBucketUnit, bigint>> = {
+  hour: NANOSECONDS_PER_HOUR,
+  day: 24n * NANOSECONDS_PER_HOUR,
+  week: 168n * NANOSECONDS_PER_HOUR,
+  month: 744n * NANOSECONDS_PER_HOUR,
+};
+
+/** Offset transitions read before the pre-count gives up and leaves the answer to the walk. */
+const MAX_PRECOUNT_TRANSITIONS = 4_096;
+
+/**
+ * True when `[start, end)` certainly touches more than `MAX_BUCKETS` buckets, decided from the span
+ * instead of stepping bucket by bucket (which costs milliseconds a step in some zones).
+ *
+ * Over a prefix of the range, the local wall clock runs continuously between offset transitions.
+ * Those stretches cover at least the prefix's length less every backward offset change, in at most
+ * one stretch more than there are transitions, and each stretch of wall clock holds at least
+ * `floor(length / LONGEST_UNIT_NANOSECONDS)` distinct unit starts, each the start of its own
+ * bucket before `end`. The count subtracts two per stretch for the partial units at its ends.
+ * `false` means "not certain": the walk decides, exactly as before.
+ */
+function certainlyExceedsBucketCap(
+  startZoned: Temporal.ZonedDateTime,
+  endZoned: Temporal.ZonedDateTime,
+  unit: ZoneBucketUnit,
+): boolean {
+  const unitNs = LONGEST_UNIT_NANOSECONDS[unit];
+  const startNs = startZoned.epochNanoseconds;
+  const prefixEndNs = [
+    endZoned.epochNanoseconds,
+    startNs + 2n * BigInt(MAX_BUCKETS + 1) * unitNs,
+  ].reduce((a, b) => (a < b ? a : b));
+  if (prefixEndNs - startNs <= BigInt(MAX_BUCKETS) * unitNs) {
+    return false;
+  }
+  let backwardNs = 0n;
+  let transitions = 0;
+  try {
+    for (
+      let current = startZoned, next = zonedNextTransition(current);
+      next !== null && next.epochNanoseconds < prefixEndNs;
+      current = next, next = zonedNextTransition(current)
+    ) {
+      if (++transitions > MAX_PRECOUNT_TRANSITIONS) {
+        return false;
+      }
+      const shift = BigInt(current.offsetNanoseconds - next.offsetNanoseconds);
+      backwardNs += shift > 0n ? shift : 0n;
+    }
+  } catch {
+    return false;
+  }
+  const wallStarts = (prefixEndNs - startNs - backwardNs) / unitNs;
+  return wallStarts - 2n * BigInt(transitions + 1) > BigInt(MAX_BUCKETS);
+}
+
+/**
+ * The bucket start after `current`: `undefined` when it lies past Temporal's last representable
+ * instant, null when the stepper cannot find it.
+ */
+function nextBucketStartWithinRange(
+  current: Temporal.ZonedDateTime,
+  unit: ZoneBucketUnit,
+): Temporal.ZonedDateTime | null | undefined {
+  try {
+    return nextZonedBucketStart(current, unit);
+  } catch (error) {
+    if (error instanceof RangeError) return undefined;
+    throw error;
+  }
+}
 
 /**
  * Return the start instant of every `unit` bucket the half-open range `[start, end)` touches,
@@ -36,6 +119,8 @@ const MAX_BUCKETS = 10_000;
  * - A local boundary that does not exist is not invented: the day Samoa deleted crossing the
  *   date line is absent, a local day whose midnight is skipped starts at 01:00, and in a zone
  *   that falls back by half an hour the local 01:00 hour bucket is 90 minutes long.
+ * - A bucket is returned when its start is representable, even if the bucket after it would
+ *   start past Temporal's last instant (`+275760-09-13T00:00:00Z`).
  * - Returns `[]` on invalid input, when `start` is after `end`, when the range would need more
  *   than 10,000 buckets, when a boundary in it is not representable (see `floorToZone`), and
  *   if a zone ever presented more transitions inside one bucket than the stepper walks — no
@@ -53,6 +138,7 @@ const MAX_BUCKETS = 10_000;
  * @example bucketRange("2024-11-02T04:00:00Z", "2024-11-05T05:00:00Z", "day", "America/New_York") // ["2024-11-02T04:00:00Z", "2024-11-03T04:00:00Z", "2024-11-04T05:00:00Z"] (the middle day is 25 hours)
  * @example bucketRange("2024-11-03T04:00:00Z", "2024-11-03T08:00:00Z", "hour", "America/New_York") // ["2024-11-03T04:00:00Z", "2024-11-03T05:00:00Z", "2024-11-03T06:00:00Z", "2024-11-03T07:00:00Z"] (the repeated 01:00 is its own bucket)
  * @example bucketRange("2024-06-14T04:00:00Z", "2024-06-14T04:00:00Z", "day", "America/New_York") // [] (zero length, on a boundary)
+ * @example bucketRange("+275760-09-12T23:00:00Z", "+275760-09-13T00:00:00Z", "day", "America/New_York") // ["+275760-09-12T04:00:00Z"] (the next day would start past the last instant; this one is still returned)
  * @example bucketRange("2024-06-16T00:00:00Z", "2024-06-15T00:00:00Z", "day", "UTC") // [] (start after end)
  * @example bucketRange("2024-06-15T03:00:00Z", "2024-06-17T03:00:00Z", "year", "UTC") // [] (not a bucketing unit)
  */
@@ -77,6 +163,7 @@ export function bucketRange(
     const endZoned = Temporal.Instant.from(end).toZonedDateTimeISO(timeZone);
 
     if (Temporal.ZonedDateTime.compare(startZoned, endZoned) > 0) return [];
+    if (certainlyExceedsBucketCap(startZoned, endZoned, unit)) return [];
 
     const boundaries: string[] = [];
     const first = zonedUnitStart(startZoned, unit);
@@ -91,7 +178,9 @@ export function bucketRange(
 
       boundaries.push(current.toInstant().toString());
 
-      const next = nextZonedBucketStart(current, unit);
+      const next = nextBucketStartWithinRange(current, unit);
+      // Past the last representable instant, so after `end`: every touched bucket is collected.
+      if (next === undefined) return boundaries;
       if (!next) return [];
 
       current = next;

@@ -99,4 +99,25 @@ describe("formatUtc", () => {
       expect(formatUtc(invalidValue as never)).toBe("");
     },
   );
+
+  // The plain path formats the wall clock as a PlainDateTime (GetDateTimeFormat
+  // ~any~, ~all~, ~relevant~); includeTimeZoneName formats it as a
+  // ZonedDateTime (~any~, ~zoned-date-time~, ~all~). Requested widths are kept,
+  // `era` alone gets the defaults, and `timeZoneName` on the plain path is not
+  // inherited. Expected values: native Intl.DateTimeFormat with the adjusted
+  // options.
+  it.each`
+    locale                   | options                                                                                        | expected                                  | reason
+    ${"ja-JP-u-ca-japanese"} | ${{ year: "numeric", month: "long" }}                                                          | ${"令和6年2月"}                           | ${"requested long month kept"}
+    ${"ja-JP-u-ca-japanese"} | ${{ year: "numeric", month: "long", timeZone: "America/New_York", includeTimeZoneName: true }} | ${"令和6年2月"}                           | ${"requested long month kept, zoned path"}
+    ${"en-US"}               | ${{ dateStyle: "short", timeStyle: "full" }}                                                   | ${"2/3/24, 2:30:45 PM"}                   | ${"short date width kept, zone field removed"}
+    ${"en-US"}               | ${{ era: "long" }}                                                                             | ${"2/3/2024 Anno Domini, 2:30:45 PM"}     | ${"era alone gets the date and time defaults"}
+    ${"en-US"}               | ${{ era: "long", includeTimeZoneName: true }}                                                  | ${"2/3/2024 Anno Domini, 2:30:45 PM UTC"} | ${"era alone gets the zoned defaults"}
+    ${"en-US"}               | ${{ timeZoneName: "short" }}                                                                   | ${"2/3/2024, 2:30:45 PM"}                 | ${"timeZoneName is not inherited on the plain path"}
+  `(
+    "formats 2024-02-03T14:30:45Z in $locale with $options to $expected ($reason)",
+    ({ locale, options, expected }) => {
+      expect(formatUtc("2024-02-03T14:30:45Z", locale, options)).toBe(expected);
+    },
+  );
 });

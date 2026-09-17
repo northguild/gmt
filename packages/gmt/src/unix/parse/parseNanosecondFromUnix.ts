@@ -8,7 +8,7 @@ import type { UnixUnit } from "../validate";
  * - Returns "" for invalid input.
  *
  * @param value unix epoch in milliseconds or seconds (number or string)
- * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA)
+ * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA; omitted means the system (host) time zone)
  * @returns Nanosecond field (0-999), zero-padded to 9 digits ("000000000"), or "" on invalid input
  *
  * @example parseNanosecondFromUnix(1700000000000) // "000000000"

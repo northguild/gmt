@@ -356,4 +356,21 @@ describe("splitIntervalByUnitUtc default piece limit", () => {
       expect(splitIntervalByUnitUtc(start, end, unit, 1).length).toBe(0);
     },
   );
+
+  // A step past Temporal's maximum (instant +275760-09-13T00:00:00Z; PlainDateTime
+  // +275760-09-13T23:59:59.999999999; PlainDate +275760-09-13) lands after the representable `end`,
+  // so the last piece is trimmed to `end` rather than discarding the split.
+  it.each`
+    start                        | unit       | amount
+    ${"+275760-09-12T23:00:00Z"} | ${"hour"}  | ${2}
+    ${"+275760-09-12T12:00:00Z"} | ${"day"}   | ${1}
+    ${"+275760-09-01T00:00:00Z"} | ${"month"} | ${1}
+  `(
+    "returns one piece from $start to the maximum instant by $amount $unit",
+    ({ start, unit, amount }) => {
+      expect(
+        splitIntervalByUnitUtc(start, "+275760-09-13T00:00:00Z", unit, amount),
+      ).toEqual([{ start, end: "+275760-09-13T00:00:00Z" }]);
+    },
+  );
 });

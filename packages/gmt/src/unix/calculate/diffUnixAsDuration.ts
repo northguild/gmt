@@ -29,11 +29,13 @@ import { isValidUnixUnit } from "../validate/isValidUnixUnit";
  * (mirroring `parseDuration`'s options) — kept separate from the `.until()` rounding options
  * above because both option sets have colliding `smallestUnit`/`roundingMode` keys with
  * different Temporal types.
+ * - An omitted `timeZone` means the system time zone (`getSystemTimeZone()`), so the result
+ *   depends on the host; pass `timeZone` for a host-independent result.
  *
  * @param value1 first Unix timestamp
  * @param value2 second Unix timestamp
  * @param unit DateTimeDurationUnit to use as the duration's largestUnit
- * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA), smallestUnit, roundingIncrement, roundingMode (.until() rounding); toStringSmallestUnit, fractionalSecondDigits, toStringRoundingMode (.toString() precision)
+ * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA; omitted means the system time zone), smallestUnit, roundingIncrement, roundingMode (.until() rounding); toStringSmallestUnit, fractionalSecondDigits, toStringRoundingMode (.toString() precision)
  * @returns ISO 8601 duration string, or "" on invalid input
  *
  * @example diffUnixAsDuration(1706659200000, 1706745600000, "days") // "P1D"

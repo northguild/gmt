@@ -34,6 +34,26 @@ describe("intervalDivideEquallyUtc", () => {
     ]);
   });
 
+  // Spans past 2^53 ns (about 104 days) must still split exactly: each boundary is
+  // start + round((end - start) · i / n) in integer nanoseconds. 2024-01-01 to 2024-12-31 is 365
+  // days, so 365 d + 3 ns splits into 121 d 16 h + 1 ns steps (May 1 16:00, Aug 31 08:00). The full
+  // span from 2024 to the last Instant divides by 3 exactly. Values from BigInt epoch-nanosecond
+  // arithmetic with Temporal.Instant.fromEpochNanoseconds, not GMT.
+  it.each`
+    start                        | end                                 | n    | boundaries
+    ${"2024-01-01T00:00:00Z"}    | ${"2024-12-31T00:00:00.000000003Z"} | ${3} | ${["2024-05-01T16:00:00.000000001Z", "2024-08-31T08:00:00.000000002Z"]}
+    ${"2024-01-01T00:00:00Z"}    | ${"+275760-09-13T00:00:00Z"}        | ${3} | ${["+093269-07-26T00:00:00Z", "+184515-02-19T00:00:00Z"]}
+    ${"-271821-04-20T00:00:00Z"} | ${"+275760-09-13T00:00:00Z"}        | ${2} | ${["1970-01-01T00:00:00Z"]}
+  `(
+    "splits $start to $end into $n exact pieces at $boundaries",
+    ({ start, end, n, boundaries }) => {
+      const cuts = [start, ...boundaries, end];
+      expect(intervalDivideEquallyUtc(start, end, n)).toEqual(
+        cuts.slice(0, -1).map((cut, i) => ({ start: cut, end: cuts[i + 1] })),
+      );
+    },
+  );
+
   it.each`
     n
     ${0}

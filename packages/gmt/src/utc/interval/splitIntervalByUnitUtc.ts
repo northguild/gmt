@@ -41,6 +41,7 @@ import { minSlicesForSpan } from "../../internal/splitStep";
  * @example splitIntervalByUnitUtc("invalid", "2024-01-02T00:00:00Z", "hour", 1) // []
  * @example splitIntervalByUnitUtc("2024-01-01T00:00:00Z", "2024-01-01T01:30:00Z", "hour", 1, { maxPieces: 1 }) // [] (2 slices exceed the limit)
  * @example splitIntervalByUnitUtc("2024-01-01T00:00:00Z", "2024-01-01T01:30:00Z", "hour", 1, { maxPieces: 2 }) // [{ start: "2024-01-01T00:00:00Z", end: "2024-01-01T01:00:00Z" }, { start: "2024-01-01T01:00:00Z", end: "2024-01-01T01:30:00Z" }]
+ * @example splitIntervalByUnitUtc("+275760-09-12T23:00:00Z", "+275760-09-13T00:00:00Z", "hour", 2) // [{ start: "+275760-09-12T23:00:00Z", end: "+275760-09-13T00:00:00Z" }] (the step past the last instant is trimmed to `end`)
  */
 export function splitIntervalByUnitUtc(
   start: string,

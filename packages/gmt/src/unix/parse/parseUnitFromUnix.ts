@@ -19,7 +19,7 @@ import { coerceUnixEpochNumber } from "../../internal/unixEpochValue";
  * | --- | --- |
  * | `year` | Full year, no padding (e.g. `2024`). |
  * | `month` | Zero-padded 2 (e.g. `03`). |
- * | `week` | Week-of-year, 1–53 (`weekStartsOn`-controlled). |
+ * | `week` | Week-of-year, 1–53 for `weekStartsOn: "monday"` (ISO), 1–54 for `"sunday"`. |
  * | `day` | Zero-padded 2. |
  * | `dayOfWeek` | 1 (Mon)–7 (Sun). |
  * | `hour` | Zero-padded 2. |
@@ -55,7 +55,7 @@ export type PlainNowUnit =
  *
  * @param value unix epoch in milliseconds or seconds (number or string)
  * @param unit unit to extract (e.g. "year", "month", "hour")
- * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA), weekStartsOn ("monday" | "sunday")
+ * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA; omitted means the system (host) time zone), weekStartsOn ("monday" | "sunday")
  * @returns extracted unit value as string, or "" on invalid input
  *
  * @example parseUnitFromUnix(1700000000000, "year") // "2023"

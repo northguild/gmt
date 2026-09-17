@@ -39,7 +39,7 @@ function isZonedRoundingUnit(unit: unknown): unit is "day" | Temporal.TimeUnit {
  * - Returns null for invalid input.
  *
  * @param value Unix timestamp (number)
- * @param options Rounding options: smallestUnit, optional roundingIncrement, roundingMode, epochUnit, timeZone
+ * @param options Rounding options: smallestUnit, optional roundingIncrement, roundingMode, epochUnit, timeZone (IANA; omitted means the system (host) time zone)
  * @returns Rounded Unix epoch number, or null on invalid input
  *
  * @example roundUnix(1706661000000, { smallestUnit: "hour", timeZone: "UTC" }) // 1706662800000 (00:30 is a tie; halfExpand rounds up)

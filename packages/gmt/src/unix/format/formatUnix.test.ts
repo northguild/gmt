@@ -221,4 +221,21 @@ describe("formatUnix", () => {
       ).toBe("");
     });
   });
+
+  // The plain path formats the wall clock as a PlainDateTime (GetDateTimeFormat
+  // ~any~, ~all~, ~relevant~); includeTimeZoneName formats it as a
+  // ZonedDateTime (~any~, ~zoned-date-time~, ~all~). Expected values: native
+  // Intl.DateTimeFormat with the adjusted options.
+  it.each`
+    value         | locale                   | options                                                             | expected                                  | reason
+    ${1706970645} | ${"ja-JP-u-ca-japanese"} | ${{ epochUnit: "seconds", year: "numeric", month: "long" }}         | ${"令和6年2月"}                           | ${"requested long month kept"}
+    ${1706970645} | ${"en-US"}               | ${{ epochUnit: "seconds", era: "long" }}                            | ${"2/3/2024 Anno Domini, 2:30:45 PM"}     | ${"era alone gets the date and time defaults"}
+    ${1706970645} | ${"en-US"}               | ${{ epochUnit: "seconds", era: "long", includeTimeZoneName: true }} | ${"2/3/2024 Anno Domini, 2:30:45 PM UTC"} | ${"era alone gets the zoned defaults"}
+    ${0}          | ${"en-US"}               | ${{ timeZoneName: "short" }}                                        | ${"1/1/1970, 12:00:00 AM"}                | ${"timeZoneName is not inherited on the plain path"}
+  `(
+    "formats $value in $locale with $options to $expected ($reason)",
+    ({ value, locale, options, expected }) => {
+      expect(formatUnix(value, locale, options)).toBe(expected);
+    },
+  );
 });

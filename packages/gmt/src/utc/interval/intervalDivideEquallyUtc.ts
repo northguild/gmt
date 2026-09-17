@@ -1,6 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isLeapSecond } from "../../plain/validate/isLeapSecond";
 import { isValidUtcInterval } from "./validate";
+import { divisionBoundary } from "../../internal/divisionBoundary";
 import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 
 /**
@@ -8,8 +9,10 @@ import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
  *
  * - Returns an array of `n` `{ start, end }` records that tile the original interval, each
  *   record's `end` equal to the next record's `start`.
- * - Boundaries are computed from the total elapsed nanoseconds (via `Duration.prototype.total`
- *   with `relativeTo` set to `start`) — no DST is involved, since UTC has no time zone offset.
+ * - Each boundary is `start + round((end - start) · i / n)` in integer epoch nanoseconds, so the
+ *   split is exact whenever the span divides evenly by `n` and within half a nanosecond of the
+ *   exact cut otherwise, at any span length (no double arithmetic) — no DST is involved, since
+ *   UTC has no time zone offset.
  * - `n === 1` returns the original interval unchanged, as a single-element array.
  * - A zero-length interval (`start === end`) returns `n` identical zero-length sub-intervals.
  * - Returns `[]` when `n` is not a positive integer, or on invalid input (unparseable
@@ -66,14 +69,15 @@ export function intervalDivideEquallyUtc(
       }));
     }
 
-    const totalNs = startVal
-      .until(endVal, { largestUnit: "nanosecond" })
-      .total("nanosecond");
+    const startNs = startVal.epochNanoseconds;
+    const totalNs = endVal.epochNanoseconds - startNs;
 
     const boundaries: Temporal.Instant[] = [startVal];
     for (let i = 1; i < n; i++) {
       boundaries.push(
-        startVal.add({ nanoseconds: Math.round((totalNs * i) / n) }),
+        Temporal.Instant.fromEpochNanoseconds(
+          startNs + divisionBoundary(totalNs, i, n),
+        ),
       );
     }
     boundaries.push(endVal);
