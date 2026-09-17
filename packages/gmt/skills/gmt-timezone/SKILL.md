@@ -60,9 +60,14 @@ converting between time zones, or doing arithmetic that must respect DST.
    is correct; bare `"-05:00"` loses the zone and can't observe DST rules.
 2. **DST disambiguation.** `convertPlainDateTimeToZoned`, `addZoned` and
    `setZoned` accept `disambiguation` (`"compatible"` | `"earlier"` |
-   `"later"` | `"reject"`) for gap/overlap resolution. On `addZoned` it only
-   affects fall-back overlaps, **not** spring-forward gaps — use
-   `convertPlainDateTimeToZoned` with `"reject"` for gap-safety.
+   `"later"` | `"reject"`) for gap/overlap resolution. On `addZoned`,
+   `subtractZoned` and `intervalFromDurationZoned` it follows TC39
+   AddZonedDateTime: the date part (years to days) moves the wall clock, the
+   time part (hours and smaller) is added in exact time, and `disambiguation`
+   applies only where the date part lands in a fall-back overlap. A time-only
+   duration ignores it, so `+ { minutes: 10 }` is always 10 real minutes. It
+   never affects spring-forward gaps — use `convertPlainDateTimeToZoned` with
+   `"reject"` for gap-safety.
 3. **Boundaries are always the real zone boundary.** `startOfZoned`,
    `endOfZoned`, `startOfQuarterForZoned`, `endOfQuarterForZoned`,
    `getLocaleZonedStartOfWeek`, `getLocaleZonedEndOfWeek` and their `unix/`
@@ -117,8 +122,12 @@ converting between time zones, or doing arithmetic that must respect DST.
    local day.
 10. **Calendar annotations.** GMT's zoned grammar puts `[u-ca=...]` **before**
     `[timeZone]` — the reverse of RFC 9557. Only `addZoned`, `subtractZoned`,
-    `diffZoned`, `convertZonedToCalendar` and `zoned/interval/*` accept it;
-    everything else rejects it and returns `""`. Always produce these with
+    `diffZoned`, `diffZonedAsDuration`, `convertZonedToCalendar`,
+    `isValidCalendarZonedDateTime` and `zoned/interval/*` (including
+    `isValidCalendarZonedInterval`) accept it; everything else rejects it and
+    returns its invalid-input sentinel — `""` for a string result, `null` for a
+    number, `[]` for a list, and `false` for a validator or predicate such as
+    `isValidZonedDateTime` or `isBeforeZoned`. Always produce these with
     `convertZonedToCalendar`. The date half follows the plain grammar: a
     negative year is `-` plus six digits, and Japanese eras are `ce`, `bce`,
     then `meiji` from 1873 (see the `gmt-arithmetic` skill). `[!u-ca=…]` is
@@ -132,7 +141,28 @@ converting between time zones, or doing arithmetic that must respect DST.
     UTC, an offset-less wall clock (`"-271821-04-19T12:00:00[Etc/GMT+12]"`)
     resolves. The same string with its `-12:00` offset returns the sentinel,
     because TC39 checks that local date against the day range.
-12. **Read the README.** This skill is a routing pointer. For the full DST
+12. **Zoned differences count calendar units on the wall clock.** `diffZoned`,
+    `diffZonedAsDuration` and `intervalLengthZoned` follow TC39
+    DifferenceZonedDateTime: days, weeks, months and years are counted on the
+    zone's wall clock (noon to noon across a 23-hour day is `1` day), and hours
+    and smaller are exact time. Two values in different zones have no shared
+    wall clock, so a calendar unit returns `null`/`""`; hours still work.
+    Convert both ends to one zone with `convertZonedToZoned` first, or diff the
+    UTC instants with `diffUtc` if UTC days are what you mean.
+    `intervalOverlappingDaysZoned`/`intervalOverlappingDaysUnix` count the
+    distinct local dates the overlap touches: a deleted day is not counted, and a
+    fall-back into the previous date counts that date.
+13. **Zone names and leap seconds.** Every IANA name is a zone, including
+    single-component links (`Japan`, `Zulu`, `EST5EDT`), in any case.
+    `toOffsetInstant` returns IANA casing (`"america/new_york"` gives
+    `"America/New_York"`). `:60` is invalid in every spelling (`T`, `t`, space,
+    basic format) and every zoned function returns its sentinel for it rather
+    than reading `:59`.
+14. **A zoned value formats in its own zone.** `formatZonedDateTime`,
+    `formatZonedRange` and `formatZonedToParts` return `""`/`[]` for a
+    `timeZone` option. To show an instant in another zone, use
+    `formatUtc(convertZonedToUtc(value), locale, { timeZone })`.
+15. **Read the README.** This skill is a routing pointer. For the full DST
     disambiguation walkthrough, code examples, and locale ICU notes, read the
     installed package's `README.md` and the source JSDoc.
 

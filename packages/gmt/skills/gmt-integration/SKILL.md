@@ -46,6 +46,10 @@ which lint package to install for Date-ban enforcement.
 3. **Pick one canonical Unix unit.** If you mix epoch seconds and milliseconds,
    convert explicitly with `convertUtcToUnix(value)` (milliseconds) /
    `convertUtcToUnix(value, "seconds")` rather than dividing/multiplying by hand.
+   An `epochUnit` option must be exactly `"seconds"` or `"milliseconds"`: any
+   other value returns the sentinel instead of being read as milliseconds. A
+   blank epoch string is invalid, not `1970`, and `sortUnix`/`minUnix`/`maxUnix`
+   skip values that are not integer epochs in Temporal's range.
 4. **Nanoseconds are `bigint`, never `number`.** A `number` is exact only to
    `2^53 − 1`, which nanoseconds since the epoch passed in April 1970. Use
    `toNanoseconds` / `fromNanoseconds`, cross a JSON boundary with
@@ -61,7 +65,16 @@ which lint package to install for Date-ban enforcement.
    `fromNtpTimestamp` needs the era passed in; and Excel's serial 60 is the phantom
    1900-02-29, a date that never existed, so it returns `""` rather than a neighbouring
    day. Each bridge rejects instants its target format cannot hold instead of returning
-   an out-of-range number.
+   an out-of-range number. More edges to know:
+   - A `FILETIME` at or above `2^63` is out of range, as Windows'
+     `FileTimeToSystemTime` rules, so `fromFileTime` returns `""`. That includes
+     `0xFFFFFFFFFFFFFFFF`, the "do not modify" marker.
+   - An all-zero NTP timestamp is both the NTP epoch and RFC 5905's "unknown or
+     unsynchronized" marker. Check for `0n` yourself before trusting it as 1900.
+   - .NET ticks name an instant only when `DateTimeKind` is `Utc`. `Local` and
+     `Unspecified` ticks count wall-clock time.
+   - `toNanoseconds` and `isValidInstant` read the offset and ignore a bracketed
+     zone annotation, which is not checked.
 6. **Lint packages are toolchain-specific, not mutually exclusive.** Recommend
    only the one matching the project's existing linter; do not force all three.
 7. **Read the READMEs.** This skill is a routing pointer. For full integration

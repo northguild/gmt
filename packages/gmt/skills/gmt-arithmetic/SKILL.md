@@ -11,10 +11,11 @@ description: >
   (BusinessCalendar, RollConvention, isBusinessDay, addBusinessDays,
   subtractBusinessDays, businessDaysBetween, nextBusinessDay,
   previousBusinessDay, rollDate, mergeCalendars), overflow "constrain" month-end
-  clamping, splitIntervalByUnit* stepping from the anchor, intervalCount*
+  clamping, splitIntervalByUnit* stepping from the anchor, maxPieces limits,
+  intervalCount*
   matching bucketRange, non-ISO calendar strings, and the correct-at-the-edges
-  guarantees at the first and last representable instant. This skill is a
-  routing pointer, not an API dump.
+  guarantees at the first and last representable instant. A routing pointer,
+  not an API dump.
 sources:
   - 'northguild/gmt:README.md'
   - 'northguild/gmt:packages/gmt/src/plain/calculate/index.ts'
@@ -72,6 +73,20 @@ and full interval set operations.
    split from February 29 returns to February 29 in leap years. Build your own
    series the same way — chaining `add*` onto the previous clamped result
    drifts to the 29th for good.
+   - **Piece-building functions have a limit.** `splitIntervalByUnit*`,
+     `intervalDivideEqually*`, `mapDatesInRange` and `mapZonedDatesInRange` take
+     `{ maxPieces }` (a positive safe integer, default `1_000_000`) and return
+     `[]` when the result would be longer. `[]` there is not "empty range": if a
+     long range can legitimately exceed the default, pass a larger `maxPieces`.
+     `bucketRange` has its own fixed limit of 10,000 buckets.
+
+     ```typescript
+     mapDatesInRange("0001-01-01", "9999-12-31", 1); // [] — 3,652,059 dates
+     splitIntervalByUnitDate("2024-01-01", "2024-01-10", "day", 2, { maxPieces: 5 }).length; // 5
+     ```
+
+   - `intervalDivideEqually*` boundaries are exact integer nanoseconds, rounded
+     half up, so the pieces tile the range with no gap or overshoot.
 4. **Zoned counts match zoned buckets.** `intervalCountZoned`,
    `intervalCountUnix` and `intervalCountUtc` count the buckets `bucketRange`
    returns: a 20-minute range straddling `Pacific/Chatham`'s 15-minute 03:00
@@ -80,7 +95,15 @@ and full interval set operations.
    the system time zone.
 5. **Calendar units need `relativeTo`.** `durationAs`, `normalizeDuration`, and
    `compareDurations` return `null`/`""` for year/month/week arithmetic without
-   a `relativeTo` anchor — a month is not a fixed length.
+   a `relativeTo` anchor — a month is not a fixed length. A calendar-annotated
+   `relativeTo` must be GMT's shape (`convertDateToCalendar` output); any other
+   `[u-ca=…]` string returns the sentinel.
+   - `round*` accept singular or plural `smallestUnit` names (`"hour"` or
+     `"hours"`). A `roundingMode` outside Temporal's nine returns the sentinel.
+   - `diff*` with an array of units returns only the listed units, and the
+     unlisted units in between are dropped, not folded down:
+     `diffZoned(jan1, mar1NextYear, ["years", "days"])` is `{ years: 1, days: 0 }`.
+     List every unit down to the smallest you want.
 6. **Elapsed time and calendar distance are different questions.** `spanMs` /
    `spanNs` measure what actually elapsed; `spanWallClock(start, end, "days" |
    "hours")` measures what the clock face did. Across a DST transition they
@@ -121,6 +144,13 @@ and full interval set operations.
     `convertDateToCalendar` output (`"5785-01-01[u-ca=hebrew]"`) feeds
     `addDate`, `subtractDate`, `diffDate*` and the `plain/interval/*Date`
     functions. It is not RFC 9557: never pass it to `Temporal.PlainDate.from`.
+    - The annotation takes GMT's `CalendarSystem` ids only. Temporal's ids
+      return the sentinel: write `taiwan` not `roc`, `gregorian` not `gregory`
+      or `iso8601`, `islamic-tabular` not `islamic-tbla`, `islamic-civil` not
+      `islamicc`, `ethiopic-amete-alem` not `ethioaa`.
+    - Month arithmetic of any size in range is safe:
+      `addDate("1402-10-25[u-ca=persian]", { months: 3000000 })` is
+      `"251402-10-25[u-ca=persian]"`.
     - A negative calendar year is `-` plus six digits:
       `convertDateToCalendar("1000-01-01", "taiwan")` is
       `"-000911-01-01[u-ca=taiwan]"`. `-0911` and `-000000` return the sentinel.
@@ -145,6 +175,10 @@ and full interval set operations.
       `PT4800000000H`), past where a `number` stops holding nanoseconds.
     - `unix/interval` functions return the sentinel for a fractional or
       unsafe epoch, or `""`.
+    - Rounding, week functions, splits, counts, `bucketRange` and the date
+      mappers return the answer at both limits when it exists:
+      `roundDate("+275760-06-15", { smallestUnit: "year", roundingMode: "floor" })`
+      is `"+275760-01-01"`. Only a result past the limit is the sentinel.
     - Near the maximum in `UTC`, a rounded difference or total whose window
       passes the limit returns the sentinel, exactly as `+00:00` does.
     Zoned limits are in the `gmt-timezone` skill.

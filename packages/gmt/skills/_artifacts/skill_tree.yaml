@@ -10,7 +10,7 @@ library:
 generated_from:
   domain_map: 'skills/_artifacts/domain_map.yaml'
   skill_spec: 'skills/_artifacts/skill_spec.md'
-generated_at: '2026-09-15'
+generated_at: '2026-09-17'
 
 skills:
   # Consumer-facing core skills
@@ -43,7 +43,7 @@ skills:
     domain: core-date-operations
     path: 'skills/gmt-arithmetic/SKILL.md'
     package: 'packages/gmt'
-    description: Add/subtract duration objects, diff values, clamp/closest, ISO 8601 duration strings, elapsed-versus-wall-clock spans (spanMs/spanNs/spanWallClock), business-day arithmetic against a BusinessCalendar (isBusinessDay/addBusinessDays/subtractBusinessDays/businessDaysBetween/nextBusinessDay/previousBusinessDay/rollDate/mergeCalendars with the six RollConvention values), half-open [start, end) interval algebra over instants (intervalsOverlap/intervalContains/intersectIntervals/clampInterval/mergeIntervals/subtractIntervals/splitIntervalAt/sumIntervals/isValidInterval) versus the closed positional interval functions, and interval range math — overflow "constrain" month-end and February 29 clamping, splitIntervalByUnit* stepping from the anchor without drift, intervalCount* counting the same local buckets as bucketRange, non-ISO calendar strings (signed six-digit negative years, Japanese ce/bce/meiji era codes with ;era=japanese a deprecated input alias, proleptic buddhist, P30D not P1M at month ends), and correct-at-the-edges guarantees at the first and last representable instant
+    description: Add/subtract duration objects, diff values, clamp/closest, ISO 8601 duration strings, elapsed-versus-wall-clock spans (spanMs/spanNs/spanWallClock), business-day arithmetic against a BusinessCalendar (isBusinessDay/addBusinessDays/subtractBusinessDays/businessDaysBetween/nextBusinessDay/previousBusinessDay/rollDate/mergeCalendars with the six RollConvention values), half-open [start, end) interval algebra over instants (intervalsOverlap/intervalContains/intersectIntervals/clampInterval/mergeIntervals/subtractIntervals/splitIntervalAt/sumIntervals/isValidInterval) versus the closed positional interval functions, and interval range math — overflow "constrain" month-end and February 29 clamping, splitIntervalByUnit* stepping from the anchor without drift, the maxPieces output limit (default 1,000,000, [] above it) on splitIntervalByUnit*/intervalDivideEqually*/mapDatesInRange/mapZonedDatesInRange, exact intervalDivideEqually* boundaries, intervalCount* counting the same local buckets as bucketRange, non-ISO calendar strings (signed six-digit negative years, Japanese ce/bce/meiji era codes with ;era=japanese a deprecated input alias, proleptic buddhist, P30D not P1M at month ends), and correct-at-the-edges guarantees at the first and last representable instant
     sources:
       - 'northguild/gmt:README.md'
       - 'northguild/gmt:packages/gmt/src/plain/calculate/index.ts'

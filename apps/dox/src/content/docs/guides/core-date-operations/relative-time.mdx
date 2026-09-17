@@ -55,7 +55,11 @@ All relative formatters accept the same option shape (besides their type-specifi
   "yesterday"/"tomorrow"; `"always"` forces "1 day ago"/"in 1 day".
 - `style: "long" | "short" | "narrow"` — default `"long"`.
 - `largestUnit` — override the auto-picked unit (e.g. `"week"` to force
-  "3 weeks ago" instead of "last month").
+  "3 weeks ago" instead of "last month"). `formatRelativeDate` auto-picks day
+  through year; `formatRelativeTime` second through hour; `formatRelativeDateTime`,
+  `formatRelativeZoned`, `formatRelativeUnix` and `formatRelativeUtc` second through
+  day, so a 3-year distance reads "1,096 days ago" unless you pass
+  `largestUnit: "year"`.
 - `roundingMethod: "floor" | "ceil" | "round"` — default `"round"`. Applies to the
   signed value, so it respects past vs. future.
 
