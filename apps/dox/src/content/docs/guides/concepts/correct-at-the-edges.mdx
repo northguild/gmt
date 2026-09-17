@@ -21,24 +21,23 @@ prove it.
 
 A `PlainTime` has no date, so in
 [Temporal](https://tc39.es/proposal-temporal/#sec-temporal-plaintime-objects) adding one
-nanosecond to `23:59:59.999999999` wraps to `00:00:00`. When `intervalAbutsTime` and
-`intervalXorAllTime` need "one nanosecond away", they step the later value down instead of the
-earlier one up, so an interval ending on the last nanosecond of the day is never mistaken for
-one that starts at midnight.
+nanosecond to `23:59:59.999999999` wraps to `00:00:00`. `intervalAbutsTime` and
+`intervalXorAllTime` compare the endpoints they are given and never step one nanosecond from
+them, so an interval ending on the last nanosecond of the day is never mistaken for one that
+starts at midnight.
 
 Tests: [intervalAbutsTime](https://github.com/northguild/gmt/blob/main/packages/gmt/src/plain/interval/intervalAbutsTime.test.ts) ·
 [intervalXorAllTime](https://github.com/northguild/gmt/blob/main/packages/gmt/src/plain/interval/intervalXorAllTime.test.ts) ·
-[closedAbuts](https://github.com/northguild/gmt/blob/main/packages/gmt/src/internal/closedAbuts.test.ts) ·
-[closedXorSweep](https://github.com/northguild/gmt/blob/main/packages/gmt/src/internal/closedXorSweep.test.ts)
+[halfOpenIntervals](https://github.com/northguild/gmt/blob/main/packages/gmt/src/internal/halfOpenIntervals.test.ts)
 
 ## The first and last instant give exact answers
 
 Temporal represents instants from
 `-271821-04-20T00:00:00Z` to `+275760-09-13T00:00:00Z`, 10<sup>8</sup> days either side of the
 epoch ([TC39 Temporal](https://tc39.es/proposal-temporal/#sec-temporal-isvalidepochnanoseconds)).
-Nothing can be added to the last one, so `intervalAbuts*` and `intervalXorAll*` for `Date`,
-`DateTime`, `Utc` and `Zoned` never step past it. They return the exact answer for intervals
-that end there, in UTC and in New York. At the other end, the first month is partial: its start
+Nothing can be added to the last one, and `intervalAbuts*` and `intervalXorAll*` for `Date`,
+`DateTime`, `Utc` and `Zoned` never compute a boundary past it. They return the exact answer
+for intervals that end there, in UTC and in New York. At the other end, the first month is partial: its start
 lies before the range, but its end does not. `endOfDate("-271821-04-19", "month")` returns
 `"-271821-04-30"`, and `endOfDateTime`, `endOfUtc`, `endOfZoned` and `endOfUnix` return the
 matching day, week, month and year ends.
@@ -105,8 +104,8 @@ Tests: [spanNs](https://github.com/northguild/gmt/blob/main/packages/gmt/src/spa
 
 The Unix interval functions that compare, cut or combine
 intervals reject a fractional epoch, or one past `Number.MAX_SAFE_INTEGER`, with their
-documented sentinel. Past that point `2 ** 53 + 1 === 2 ** 53`, so "one unit later" no longer
-exists. The functions stay exact on `Number.MAX_SAFE_INTEGER` itself.
+documented sentinel. Past that point `2 ** 53 + 1 === 2 ** 53`, so consecutive epoch values
+can no longer be told apart. The functions stay exact on `Number.MAX_SAFE_INTEGER` itself.
 
 Tests: [intervalAbutsUnix](https://github.com/northguild/gmt/blob/main/packages/gmt/src/unix/interval/intervalAbutsUnix.test.ts) ·
 [intervalXorUnix](https://github.com/northguild/gmt/blob/main/packages/gmt/src/unix/interval/intervalXorUnix.test.ts) ·
@@ -114,23 +113,23 @@ Tests: [intervalAbutsUnix](https://github.com/northguild/gmt/blob/main/packages/
 
 ## One documented boundary standard
 
-The `interval/` module is half-open, `[start, end)`: the
+Every interval function is half-open, `[start, end)`: the
 start is inside and the end is not. This is the convention of SQL:2011's application-time
 `PERIOD`, [RFC 5545](https://www.rfc-editor.org/rfc/rfc5545#section-3.8.2.2)'s non-inclusive
 `DTEND`, and [EWD831](https://www.cs.utexas.edu/~EWD/transcriptions/EWD08xx/EWD831.html).
 Touching intervals share no instant, so they do not overlap or intersect. Merging joins them,
 and subtracting one from the other removes nothing. Take an interval apart with
 `subtractIntervals` and put it back with `mergeIntervals` and `intersectIntervals`, and not a
-nanosecond is lost. The older positional functions in `plain/`, `utc/`, `zoned/` and `unix/`
-are closed, `[start, end]`, and [Interval Basics](/guides/intervals/interval-basics/) sets out
-the difference.
+nanosecond is lost. The positional functions in `plain/`, `utc/`, `zoned/` and `unix/` follow
+the same rule, and the instant-typed ones are property-tested against `interval/` at every
+boundary; [Interval Basics](/guides/intervals/interval-basics/) compares the two families.
 
 Tests: [intervalsOverlap](https://github.com/northguild/gmt/blob/main/packages/gmt/src/interval/compare/intervalsOverlap.test.ts) ·
 [intersectIntervals](https://github.com/northguild/gmt/blob/main/packages/gmt/src/interval/calculate/intersectIntervals.test.ts) ·
 [mergeIntervals](https://github.com/northguild/gmt/blob/main/packages/gmt/src/interval/calculate/mergeIntervals.test.ts) ·
 [subtractIntervals](https://github.com/northguild/gmt/blob/main/packages/gmt/src/interval/calculate/subtractIntervals.test.ts) ·
 [interval algebra round trip](https://github.com/northguild/gmt/blob/main/packages/gmt/src/interval/calculate/intervalAlgebra.test.ts) ·
-[intervalsOverlapZoned (closed)](https://github.com/northguild/gmt/blob/main/packages/gmt/src/zoned/interval/intervalsOverlapZoned.test.ts)
+[positional UTC against interval/](https://github.com/northguild/gmt/blob/main/packages/gmt/src/utc/interval/intervalAlgebraUtc.test.ts)
 
 ## Zero known bugs
 

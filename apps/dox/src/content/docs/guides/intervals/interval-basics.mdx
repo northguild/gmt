@@ -1,19 +1,19 @@
 ---
 title: Interval Basics
-description: GMT's half-open interval standard, the Interval type, validation, and how the older positional interval functions differ.
+description: GMT's half-open interval standard, the Interval type, validation, and the positional interval functions that follow the same rule.
 sidebar:
   order: 1
 ---
 
-An interval is a `start` and an `end`. GMT has two families of interval functions,
-and they do not share a boundary model. Know which one you are calling.
+An interval is a `start` and an `end`. GMT has two families of interval functions. They
+differ in shape and value types, and share one boundary model: half-open `[start, end)`.
 
 | | `interval/` (the standard) | positional `plain/` `utc/` `zoned/` `unix/` functions |
 | --- | --- | --- |
 | Shape | `Interval` records: `{ start, end }` | positional strings: `(aStart, aEnd, bStart, bEnd)` |
 | Endpoints | instant strings with an offset, any zone | one value type per suffix (`Date`, `Time`, `DateTime`, `Utc`, `Zoned`, `Unix`) |
-| Boundary model | half-open `[start, end)` | closed `[start, end]` for most families; `intervalCount*` is half-open |
-| Touching intervals | do **not** overlap | overlap (the shared endpoint belongs to both) |
+| Boundary model | half-open `[start, end)` | half-open `[start, end)` |
+| Touching intervals | do **not** overlap | do **not** overlap; they abut |
 | Output strings | the caller's own strings | re-serialised values |
 
 ## The half-open standard
@@ -40,8 +40,9 @@ intervalsOverlap(shift, { start: "2024-01-01T17:00:00Z", end: "2024-01-01T18:00:
 
 Both endpoints must be instant strings: an offset (`Z` or `±HH:MM`) is required, and a
 bracketed IANA zone is optional. As with a TC39 `Temporal.Instant`, they compare by
-exact time only, so the two endpoints may name different zones. Leap seconds and
-`[u-ca=…]` calendar annotations are rejected.
+exact time only, so the two endpoints may name different zones. Leap seconds are
+rejected, and a `[u-ca=…]` calendar annotation is ignored, as `Temporal.Instant.from`
+ignores it.
 
 A plain date or a zoneless datetime has no position on the timeline until you name a
 zone. Resolve it to an instant first. For local-calendar edges such as a local day or a
@@ -86,8 +87,10 @@ array sentinel. When the difference matters, check the inputs with `isValidInter
 
 ## The positional functions
 
-The positional functions predate the standard, and most of them read an interval as closed.
-Their validators take `(start, end)` and require `start <= end`:
+The positional functions read an interval as half-open too (since 1.16.0; most families were
+closed before). For a `Date` interval, `end` is the first day after the period:
+`["2024-01-01", "2024-07-01")` is the first half of 2024. Their validators take `(start, end)`
+and require `start <= end`:
 
 ```typescript
 import { isValidDateInterval, isValidDateRange } from "@northguild/gmt";
@@ -118,8 +121,10 @@ intervalFromDurationZoned("2024-03-09T02:30:00-05:00[America/New_York]", "P1D", 
 
 A negative duration returns `null`.
 
-The positional functions will move to the half-open model in the next major version. Until
-then, do not mix the two families in one computation.
+Both families agree at every boundary, so a positional result and an `interval/` result can
+be combined. For instant-typed values, `intervalsOverlapUtc`, `intervalIntersectionUtc`,
+`mergeIntervalsUtc`, `intervalUnionUtc` and `intervalDifferenceUtc` call the `interval/`
+functions directly.
 
 ## See also
 

@@ -38,10 +38,10 @@ instant, in UTC unless you pass `{ timeZone }`.
 import { getUnixNow } from "@northguild/gmt/unix";
 
 getUnixNow(); // 1710527445123 — milliseconds since epoch
-getUnixNow("seconds"); // 1710527445 — seconds since epoch
+getUnixNow({ epochUnit: "seconds" }); // 1710527445 — seconds since epoch
 ```
 
-`getUnixNow` returns **milliseconds** unless you pass `"seconds"`. Name the unit the
+`getUnixNow` returns **milliseconds** unless you pass `{ epochUnit: "seconds" }`. Name the unit the
 consumer expects — and be consistent: mixing the two is a common source of
 1000x errors.
 

@@ -34,13 +34,12 @@ interval. To split at local midnights or local hours, get the boundaries from
 
 ## The positional split functions
 
-`intervalSplitAt*`, `splitIntervalByUnit*` and `intervalDivideEqually*` also return pieces
-that share their endpoints. The rest of their family reads intervals as closed, which
-makes each shared endpoint belong to both neighbours. The pieces cover the interval
-without gaps, but they do not partition it.
+`intervalSplitAt*`, `splitIntervalByUnit*` and `intervalDivideEqually*` return pieces in
+which each `end` is the next piece's `start`. Under `[start, end)` the pieces share no
+instant, so they partition the interval exactly as `splitIntervalAt` does.
 
 `intervalSplitAt*` cuts at arbitrary points. They are sorted internally, and points
-outside `[start, end]` or exactly on an edge are dropped:
+outside the interval or exactly on an edge are dropped:
 
 ```typescript
 import { intervalSplitAtDate } from "@northguild/gmt";
@@ -98,9 +97,11 @@ intervalDivideEquallyDate("2024-01-01", "2024-01-05", 4);
 // ]
 ```
 
-`n` must be a positive integer. `PlainDate` rounds internal boundaries to the nearest whole
-day, and every other variant is exact, computed from total elapsed nanoseconds. All split
-functions return `[]` on invalid input.
+`n` must be a positive integer. Each internal boundary is `start + round((end − start) · i / n)`,
+an exact half rounding up, so the split is exact when the span divides evenly by `n` and within
+half a unit of the exact cut otherwise. The unit is a whole day for `PlainDate`, a nanosecond for
+the other string variants, and the arguments' own epoch unit for `intervalDivideEquallyUnix`. All
+split functions return `[]` on invalid input.
 
 ## Count unit boundaries crossed
 
@@ -118,10 +119,10 @@ intervalCountDate("2024-01-01", "2024-01-03", "day"); // 2 — the end is exclud
 intervalCountDate("2024-01-15", "2024-03-10", "month"); // 3
 ```
 
-A zero-length interval counts `1` when it sits mid-unit and `0` when it sits exactly on a
-unit boundary. So `intervalCountDate("2024-01-15", "2024-01-15", "month")` is `1`, and
-`intervalCountDate("2024-01-15", "2024-01-15", "day")` is `0`, because a `PlainDate` always
-sits on a day boundary. All count functions return `null` on invalid input.
+A zero-length interval counts `0` in every unit: the empty `[start, start)` holds no instant, so
+it touches no unit. `intervalCountDate("2024-01-15", "2024-01-15", "month")` is `0`, the same
+answer `intervalOverlappingDays*` gives for an empty intersection. All count functions return
+`null` on invalid input.
 
 ## Exact interval length
 
@@ -144,20 +145,17 @@ ISO duration, use [`sumIntervals`](/reference/interval/calculate/sumIntervals).
 
 ## Count shared days between two intervals
 
-`intervalOverlappingDays*` returns a number: how many distinct calendar dates the two
-intervals' closed intersection touches, counting both endpoints:
+`intervalOverlappingDays*` returns a number: how many distinct calendar dates hold at least
+one instant of the two intervals' half-open intersection:
 
 ```typescript
 import { intervalOverlappingDaysDate } from "@northguild/gmt";
 
-intervalOverlappingDaysDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
-// 91
+intervalOverlappingDaysDate("2024-01-01", "2024-07-01", "2024-04-01", "2025-01-01");
+// 91 — 1 April through 30 June
 
-intervalOverlappingDaysDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31");
-// 1 — a shared endpoint shares that date
-
-intervalOverlappingDaysDate("2024-01-01", "2024-06-30", "2024-07-01", "2024-12-31");
-// 0 — disjoint (a well-defined answer, not invalid input)
+intervalOverlappingDaysDate("2024-01-01", "2024-07-01", "2024-07-01", "2025-01-01");
+// 0 — touching intervals share no date (a well-defined answer, not invalid input)
 ```
 
 It returns `null` on invalid input. There is no `Time` variant, because `PlainTime` has no

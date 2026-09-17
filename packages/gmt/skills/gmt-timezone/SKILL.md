@@ -64,10 +64,10 @@ converting between time zones, or doing arithmetic that must respect DST.
    `subtractZoned` and `intervalFromDurationZoned` it follows TC39
    AddZonedDateTime: the date part (years to days) moves the wall clock, the
    time part (hours and smaller) is added in exact time, and `disambiguation`
-   applies only where the date part lands in a fall-back overlap. A time-only
-   duration ignores it, so `+ { minutes: 10 }` is always 10 real minutes. It
-   never affects spring-forward gaps — use `convertPlainDateTimeToZoned` with
-   `"reject"` for gap-safety.
+   resolves the wall clock the date part lands on, in a spring-forward gap or
+   a fall-back overlap: `"compatible"`/`"later"` move a gap landing forward,
+   `"earlier"` back, `"reject"` returns the sentinel. A time-only duration
+   ignores it, so `+ { minutes: 10 }` is always 10 real minutes.
 3. **Boundaries are always the real zone boundary.** `startOfZoned`,
    `endOfZoned`, `startOfQuarterForZoned`, `endOfQuarterForZoned`,
    `getLocaleZonedStartOfWeek`, `getLocaleZonedEndOfWeek` and their `unix/`
@@ -85,9 +85,9 @@ converting between time zones, or doing arithmetic that must respect DST.
    date via TC39 `hoursInDay`; that differs from `startOfZoned(…, "day")` only
    where a fall-back re-enters the previous date (America/Goose_Bay,
    2010-11-07).
-4. **Do not pass `disambiguation` or `offset` to boundary functions.** They are
-   deprecated and ignored there, matching TC39 `startOfDay()`, which takes no
-   such options. Use them only on functions that set wall-clock fields —
+4. **Boundary functions take no `disambiguation` or `offset`.** They match
+   TC39 `startOfDay()`, which takes no such options. Resolution options belong on
+   functions that set wall-clock fields —
    `convertPlainDateTimeToZoned`, `resolveLocal`, `addZoned`, `setZoned`.
 5. **Classify a zoneless wall time before resolving it.** `classifyLocal(local,
    zone)` returns `"unique"` | `"ambiguous"` | `"nonexistent"` so code can branch
@@ -120,18 +120,20 @@ converting between time zones, or doing arithmetic that must respect DST.
    `Australia/Lord_Howe`, and 23 on a day whose midnight is skipped
    (`America/Santiago`, 2024-09-08). `mapZonedHoursInDay` stops at the next
    local day.
-10. **Calendar annotations.** GMT's zoned grammar puts `[u-ca=...]` **before**
-    `[timeZone]` — the reverse of RFC 9557. Only `addZoned`, `subtractZoned`,
+10. **Calendar annotations.** A calendar-annotated zoned string is RFC 9557,
+    `Temporal.ZonedDateTime#toString()`: ISO digits, then `[timeZone]`, then
+    `[u-ca=<id>]` (`"2024-10-03T14:30:45-04:00[America/New_York][u-ca=hebrew]"`).
+    A calendar annotation before the zone is rejected. Only `addZoned`, `subtractZoned`,
     `diffZoned`, `diffZonedAsDuration`, `convertZonedToCalendar`,
     `isValidCalendarZonedDateTime` and `zoned/interval/*` (including
     `isValidCalendarZonedInterval`) accept it; everything else rejects it and
     returns its invalid-input sentinel — `""` for a string result, `null` for a
     number, `[]` for a list, and `false` for a validator or predicate such as
     `isValidZonedDateTime` or `isBeforeZoned`. Always produce these with
-    `convertZonedToCalendar`. The date half follows the plain grammar: a
-    negative year is `-` plus six digits, and Japanese eras are `ce`, `bce`,
-    then `meiji` from 1873 (see the `gmt-arithmetic` skill). `[!u-ca=…]` is
-    rejected everywhere `[u-ca=…]` is.
+    `convertZonedToCalendar`. Calendar ids are the canonical Temporal ids (see
+    the `gmt-arithmetic` skill), and `[!u-ca=…]` is accepted wherever
+    `[u-ca=…]` is. Differences between values naming different calendars
+    return the sentinel for every unit, hours included.
 11. **Zoned values are exact at the range limits.** In zones ahead of UTC,
     `isValidZonedDateTime("+275760-09-13T10:00:00+10:00[Australia/Sydney]")`
     is `true` and one nanosecond later is `false`. Parsing, arithmetic,

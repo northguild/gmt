@@ -38,7 +38,9 @@ no locale parameter and no holiday calendar. They match the boundary that
 
 ## Control out-of-range results with `overflow`
 
-`add*`/`subtract*` accept an optional `overflow` (`"constrain"` (default) | `"reject"`):
+`add*`/`subtract*` accept an optional `overflow` (`"constrain"` (default) | `"reject"`).
+`addTime`/`subtractTime` are the exception: they take no options argument, because a
+clock time wraps around midnight, as Temporal's `PlainTime#add` does. `addDate` shows both modes:
 
 ```typescript
 import { addDate } from "@northguild/gmt";

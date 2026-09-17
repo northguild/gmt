@@ -33,11 +33,11 @@ convertUtcToUnix("2024-03-15T14:30:45Z"); // 1710513045000 — milliseconds
 convertUnixToUtc(1710513045000); // "2024-03-15T14:30:45Z"
 
 // Seconds: pass the unit explicitly, in both directions
-convertUtcToUnix("2024-03-15T14:30:45Z", "seconds"); // 1710513045
-convertUnixToUtc(1710513045, "seconds"); // "2024-03-15T14:30:45Z"
+convertUtcToUnix("2024-03-15T14:30:45Z", { epochUnit: "seconds" }); // 1710513045
+convertUnixToUtc(1710513045, { epochUnit: "seconds" }); // "2024-03-15T14:30:45Z"
 ```
 
-Both directions default to **milliseconds** and take an optional `"seconds"` unit — there
+Both directions default to **milliseconds** and take an optional `{ epochUnit: "seconds" }` — there
 are no separate `…Ms` functions. Name the unit whenever you store or send a value, and be
 consistent: mixing the two is a common source of 1000x errors.
 
@@ -66,15 +66,16 @@ convertZonedToZoned("2024-03-15T14:30:45[America/New_York]", "Europe/London");
 import { convertDateToCalendar } from "@northguild/gmt/plain";
 
 convertDateToCalendar("2024-10-03", "hebrew");
-// "5785-01-01[u-ca=hebrew]" — calendar-native year/month/day
+// "2024-10-03[u-ca=hebrew]"
 
 convertDateToCalendar("2024-10-03", "japanese");
-// "0006-10-03[u-ca=japanese;era=reiwa]" — era-relative year, not proleptic 2024
+// "2024-10-03[u-ca=japanese]"
 ```
 
-The annotated string carries the calendar's **own** digits — not the ISO/Gregorian
-digits Temporal's own `[u-ca=...]` convention keeps. Round-trip through
-`convertDateToCalendar(value, "gregorian")` to get back to a bare ISO string.
+The string is the RFC 9557 form `Temporal.PlainDate.prototype.toString()` writes: the ISO
+digits, then a `[u-ca=<id>]` annotation naming the calendar. Calendar fields such as the
+Hebrew year or the Japanese era are read values, never string content. Convert with
+`convertDateToCalendar(value, "iso8601")` to get back to a bare ISO string.
 
 For zoned values, use `convertZonedToCalendar` (zoned namespace) — it keeps the
 instant, offset, and IANA zone unchanged. See [Calendar Systems](/guides/core-date-operations/calendar-systems/)

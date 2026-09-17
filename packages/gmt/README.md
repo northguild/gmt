@@ -15,8 +15,8 @@ It wraps `@js-temporal/polyfill` behind a smaller, more opinionated API aimed at
 
 - **100% Temporal, Temporal-first.** GMT is built directly on the TC39 `Temporal` standard (via `@js-temporal/polyfill`) — not a custom, homegrown date/time type system like `@internationalized/date`'s own `CalendarDate`/`ZonedDateTime` classes. No `Date` object anywhere, enforced by 3 dedicated lint packages.
 - **A full replacement for any and all of them.** Luxon, date-fns, Moment.js, and react-aria's `@internationalized/date` don't have parity with each other — GMT covers the combined capabilities of all four in one library, plus what none of them do alone.
-- **~40× more CI test executions than all four competitors combined**: 880,350 from 29,345 tests run in all 10 timezones × 3 Node versions, vs. their combined 20,190.
-- **~69× more test cases than `@internationalized/date`**: 29,345 vs. 386 — Adobe's own library, run at its own commit.
+- **~40× more CI test executions than all four competitors combined**: 995,670 from 33,189 tests run in all 10 timezones × 3 Node versions, vs. their combined 20,190.
+- **~69× more test cases than `@internationalized/date`**: 33,189 vs. 386 — Adobe's own library, run at its own commit.
 - **The only one of the five that tests systematically across locales in CI at all.** Zero of the four comparison libraries run a locale-test matrix; GMT mandates all 17 locales on every locale-aware function.
 - **The only one that runs its entire suite under a real `TZ` env var across real-world zones.** Luxon and `@internationalized/date` have no CI timezone matrix; date-fns's zone scope is unclear; Moment.js covers 6 zones but not its full suite.
 - **Explicit DST disambiguation control on both construction _and_ arithmetic** — a control none of the others expose.
@@ -92,7 +92,7 @@ GMT's test suite balances **thoroughness** against **maintenance burden** by tes
 - **Non-string input tables** — functions that guard with `typeof x !== "string"` return the same sentinel for `null`, `undefined`, `123`, `true`, `[]`, and `{}`. We test one representative non-string per argument position rather than all six types × N positions. The collapse is safe because all non-string types hit the identical early-return code path.
 - **Redundant permutations** — adjacent/disjoint/reversed interval cases that produce identical results are not duplicated across every function variant. The `plain/`, `zoned/`, `utc/`, and `unix/` families share the same mathematical behavior; each family gets the minimum set of cases needed to prove correctness.
 
-**Result:** 29,345 tests across 648 files that exercise real behavior differences without redundant permutations. They run in CI as 880,350 executions — every one of them × 3 Node versions × 10 timezones.
+**Result:** 33,189 tests across 657 files that exercise real behavior differences without redundant permutations. They run in CI as 995,670 executions — every one of them × 3 Node versions × 10 timezones.
 
 ## How GMT is tested, vs. the libraries it targets
 
@@ -108,11 +108,11 @@ GMT is measured directly against react-aria's **`@internationalized/date`**, **L
 
 | Metric                          | GMT                                                | `@internationalized/date`      | Luxon                                | date-fns                                  | Moment.js                        |
 | ------------------------------- | -------------------------------------------------- | ------------------------------ | ------------------------------------ | ----------------------------------------- | -------------------------------- |
-| Test files                      | 648                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
-| Individual test cases           | **29,345**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
-| Effective CI test<br>executions | **880,350**<br>(29,345 × 3 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
+| Test files                      | 657                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
+| Individual test cases           | **33,189**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
+| Effective CI test<br>executions | **995,670**<br>(33,189 × 3 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
 | CI Node.js matrix               | 22, 24, 26                                         | n/a — tests<br>React 16–canary | 20, 22, 24, 25                       | not explicit<br>(`node = "latest"`)       | LTS, LTS-1,<br>latest            |
-| CI timezone matrix              | **10 zones × 2**<br>**Node, full suite**           | none found                     | none found                           | dedicated workflow,<br>zone scope unclear | 6 zones,<br>partial suite only   |
+| CI timezone matrix              | **10 zones × 3**<br>**Node, full suite**           | none found                     | none found                           | dedicated workflow,<br>zone scope unclear | 6 zones,<br>partial suite only   |
 | Locale test matrix              | **17 locales**,<br>every locale fn                 | none found                     | none found                           | none found                                | none found                       |
 | Real-browser CI                 | not yet                                            | yes (Playwright)               | not found                            | yes (Playwright)                          | not found                        |
 | Maintenance                     | active                                             | active                         | active                               | active                                    | **maintenance<br>mode**          |
@@ -146,7 +146,7 @@ Specific, sourced claims — not a repeat of the metrics above.
 | Only GMT enforces a mandatory<br>17-locale test matrix on every<br>locale-aware function                                                      | No CI-level or systematic<br>locale-matrix testing found<br>in any of the four                                                        |
 | Only GMT exposes explicit DST<br>disambiguation control on both<br>construction _and_ arithmetic                                              | Luxon's docs call this explicitly<br>undefined; `@internationalized/date`<br>only covers construction, not arithmetic                 |
 | Only GMT is Temporal-native with<br>zero `Date` usage, enforced by<br>3 dedicated lint packages                                               | Luxon, date-fns, and Moment.js all<br>still wrap or depend on `Date` internally                                                       |
-| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~40×                                                  | 880,350 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
+| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~40×                                                  | 995,670 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
 
 ## Package Layout
 
@@ -172,6 +172,8 @@ The twelve namespace subpaths:
 - `@northguild/gmt/utc`: UTC instant helpers
 - `@northguild/gmt/regex`: low-level regex building blocks
 - `@northguild/gmt/types`: the shared option and unit types
+
+Every namespace subpath except `types` also re-exports `Temporal`, `Intl` and `toTemporalInstant`, so `import { Temporal, addZoned } from "@northguild/gmt/zoned"` needs no second import.
 
 Every namespace except `regex` and `types` also exposes its modules as subpaths,
 `@northguild/gmt/<namespace>/<module>`:
@@ -215,7 +217,7 @@ isBeforeDateTime("2026-03-17T09:00:00", "2026-03-17T10:00:00");
 // true
 ```
 
-`add*`/`subtract*` accept an optional `overflow` (`"constrain"` (default) | `"reject"`) to control out-of-range results (e.g. adding a month to Jan 31), and `diff*` accept optional `smallestUnit`/`roundingIncrement`/`roundingMode` to round the computed difference:
+`add*`/`subtract*` accept an optional `overflow` (`"constrain"` (default) | `"reject"`) to control out-of-range results (e.g. adding a month to Jan 31) — except `addTime`/`subtractTime`, which take no options argument because a clock time wraps (`addTime("23:00:00", { hours: 2 })` is `"01:00:00"`), as Temporal's `PlainTime#add` does — and `diff*` accept optional `smallestUnit`/`roundingIncrement`/`roundingMode` to round the computed difference:
 
 ```typescript
 import { addDate, diffDate } from "@northguild/gmt";
@@ -244,14 +246,20 @@ setDate("2024-01-31", { month: 2 });
 setZoned(
   "2024-11-03T01:45:00-05:00[America/New_York]",
   { minute: 0 },
-  {
-    disambiguation: "reject",
-  },
+  { disambiguation: "reject" },
 );
-// "" — offset defaults to "ignore" so disambiguation actually fires on this fall-back overlap
+// "2024-11-03T01:00:00-05:00[America/New_York]" — offset defaults to "prefer", as Temporal's
+// ZonedDateTime#with does: the source's -05:00 is still valid, so it is kept
+
+setZoned(
+  "2024-11-03T01:45:00-05:00[America/New_York]",
+  { minute: 0 },
+  { disambiguation: "reject", offset: "ignore" },
+);
+// "" — offset "ignore" re-resolves the repeated 01:00, and "reject" fires on the fall-back overlap
 ```
 
-`setZoned`/`setUnix`/`setUtc` also accept `disambiguation` and `offset` for DST gap/overlap control — see [DST Disambiguation](../../docs/dst-disambiguation.md).
+`setZoned`/`setUnix` also accept `disambiguation` and `offset` for DST gap/overlap control (`setUtc` takes only `overflow`: a UTC wall clock is never ambiguous) — see [DST Disambiguation](../../docs/dst-disambiguation.md).
 
 `cycleDate`/`cycleDateTime`/`cycleTime`/`cycleZoned` adjust a single field and **wrap** at that field's own min/max instead of carrying into the next larger field — the datepicker-segment-editing primitive `add*` can't express, since overflowing into the next field is exactly what `add*` is for:
 
@@ -269,7 +277,7 @@ cycleZoned("2024-03-10T01:30:00-06:00[America/Chicago]", "hour", 1);
 // gap; disambiguation ("compatible" by default) resolves it the same way setZoned does
 ```
 
-`cycleZoned` also accepts `disambiguation` and `offset` (default `offset: "ignore"`) for the same DST gap/overlap control as `setZoned` — see [DST Disambiguation](../../docs/dst-disambiguation.md). `options.round` on any of the four steps to the next multiple of `amount` rather than rounding to the nearest one, matching `@internationalized/date`'s `CycleOptions.round`.
+`cycleZoned` also accepts `disambiguation` and `offset` (default `offset: "prefer"`) for the same DST gap/overlap control as `setZoned` — see [DST Disambiguation](../../docs/dst-disambiguation.md). `options.round` on any of the four steps to the next multiple of `amount` rather than rounding to the nearest one, matching `@internationalized/date`'s `CycleOptions.round`.
 
 `isWeekend`/`isZonedWeekend` check locale-specific weekend days (via `Intl.Locale`'s `weekInfo`) rather than assuming Saturday/Sunday:
 
@@ -527,190 +535,127 @@ Supported tokens include `yyyy`/`MM`/`dd`/`HH`/`mm`/`ss`/`SSS` for fixed-width f
 
 ### Calendar systems
 
-GMT's `CalendarSystem` type (`"gregorian" | "hebrew" | "islamic-civil" | "islamic-tabular" | "islamic-umalqura" | "japanese" | "buddhist" | "taiwan" | "persian" | "indian" | "ethiopic" | "ethiopic-amete-alem" | "coptic"`, extended by later stories) and `convertDateToCalendar` express a date in a non-Gregorian calendar system, built almost entirely on Temporal's native calendar support — no bundled leap-year tables, with two deliberate exceptions: the Ethiopic family (covered below), and the published Hebrew and Indian arithmetic rules GMT applies only where the runtime's polyfill or ICU gets those calendars wrong (see "Negative years, the far past and the range limits").
+`convertDateToCalendar` expresses a date in another calendar system. GMT writes the standard form, exactly what `Temporal.PlainDate.prototype.toString()` writes: the ISO 8601 date, then an RFC 9557 `[u-ca=<id>]` annotation naming the calendar. The digits stay ISO. The annotation says which calendar the date is presented and computed in (RFC 9557 §3.3), so the string means the same date to GMT, to Temporal and to any other RFC 9557 parser.
 
 ```typescript
 import { convertDateToCalendar } from "@northguild/gmt";
 
 convertDateToCalendar("2024-10-03", "hebrew");
-// "5785-01-01[u-ca=hebrew]" — Rosh Hashanah 5785
+// "2024-10-03[u-ca=hebrew]" — Rosh Hashanah 5785, written as its ISO date
 
-convertDateToCalendar("5785-01-01[u-ca=hebrew]", "gregorian");
-// "2024-10-03" — round-trips back
+convertDateToCalendar("2024-10-03[u-ca=hebrew]", "iso8601");
+// "2024-10-03" — iso8601 writes no annotation
 
-convertDateToCalendar("2024-10-03", "islamic-umalqura");
-// "1446-03-30[u-ca=islamic-umalqura]" — Saudi Umm al-Qura calendar
+convertDateToCalendar("2024-10-03", "gregory");
+// "2024-10-03[u-ca=gregory]" — gregory is its own calendar, so it is annotated
 
 convertDateToCalendar("invalid", "hebrew");
 // ""
 ```
 
-The output string shape is the key design decision here, and it deliberately **diverges from Temporal's own** `[u-ca=...]` convention. Temporal's `Temporal.PlainDate.prototype.toString()` always keeps the ISO/proleptic-Gregorian year-month-day digits and only tags the calendar (`"2024-10-03[u-ca=hebrew]"` — still literally October 3rd's Gregorian digits). That hides the calendar's own fields behind calendar-aware accessors, which GMT's string-only contract has no place for. GMT's annotated string instead carries the **calendar-native** year/month/day — Hebrew year 5785, not 2024 — so the calendar-system concept is visible directly in the string, not just in an object property. A plain, unannotated ISO string is always treated as (and always produced for) the `"gregorian"` calendar, so every existing GMT function keeps working unchanged.
+`CalendarSystem` is `"iso8601" | "gregory" | "hebrew" | "islamic-civil" | "islamic-tbla" | "islamic-umalqura" | "japanese" | "buddhist" | "roc" | "persian" | "indian" | "ethiopic" | "ethioaa" | "coptic"`: the canonical BCP 47 / CLDR `calendar.xml` ids Temporal uses, in the annotation and as function arguments. An alias or another letter case is canonicalized the way Temporal's `withCalendar` does it (`"ethiopic-amete-alem"` writes `[u-ca=ethioaa]`, `[u-ca=HEBREW]` reads as `hebrew`), and the canonical id is always written. `gregorian`, `taiwan` and `islamic-tabular` are not calendar ids, so they return the sentinel. `chinese`, `dangi`, `islamic` and `islamic-rgsa` are not supported.
 
-Hebrew years can run 12 or 13 months (7 leap years per 19-year Metonic cycle insert a 13th month, Adar I, before the regular Adar); `convertDateToCalendar` resolves this the same way Temporal does internally, via ordinal month numbers (`1`-`13`) rather than fixed month names, so no month-counting logic lives in GMT itself.
+Every calendar-accepting function reads annotations the way `Temporal.PlainDate.from` / `Temporal.ZonedDateTime.from` read them. The critical flag is accepted and not written back (`"2024-10-03[!u-ca=hebrew]"` converts to `"2024-10-03[u-ca=hebrew]"`), and an unknown critical annotation is rejected. `;era=` is not RFC 9557 syntax and is rejected. A year is four digits, or a sign and six (`"+275760-09-13[u-ca=hebrew]"`), across Temporal's whole range, `-271821-04-19` to `+275760-09-13`.
 
-Three Islamic (Hijri) calendar variants are supported, and they are **not interchangeable** — each resolves the same Gregorian date to different calendar-native digits:
-
-- `"islamic-civil"` — a fixed 30-year leap-year cycle, Friday epoch (`1 AH = 622-07-19`).
-- `"islamic-tabular"` — the same style of fixed arithmetic cycle, but a Thursday epoch one day earlier (`1 AH = 622-07-18`); maps to Temporal's `"islamic-tbla"` calendar id internally, though GMT's own string annotation always reads `[u-ca=islamic-tabular]`.
-- `"islamic-umalqura"` — the Saudi civil calendar, based on Umm al-Qura University's own published tables rather than a fixed arithmetic rule. This is **not** approximated by the tabular variant's math — `convertDateToCalendar("2020-02-24", "islamic-umalqura")` returns `"1441-06-30[u-ca=islamic-umalqura]"` while the same input under `"islamic-tabular"` returns `"1441-07-01[u-ca=islamic-tabular]"`, a genuine one-day divergence, not a rounding difference.
-
-Five era-based solar calendars round out the set. Unlike Hebrew and the Islamic variants, none of these needed new leap-year logic — each is either Gregorian-shaped with a different year numbering layered on top, or a distinct-but-simple solar calendar, so they were materially less work than Hebrew or Islamic:
-
-- `"buddhist"` — Gregorian day/month structure, a fixed `+543` year offset (`convertDateToCalendar("2024-10-03", "buddhist")` → `"2567-10-03[u-ca=buddhist]"`). One continuous era, no reset. It is **proleptic**: the offset applies to every date, with no Julian cutover in 1582, as the Intl Era and Month Code proposal requires — `convertDateToCalendar("1000-01-01", "buddhist")` → `"1543-01-01[u-ca=buddhist]"`, and `"-000544-01-01"` → `"-000001-01-01[u-ca=buddhist]"`.
-- `"taiwan"` — Gregorian day/month structure, year numbering reset at 1912 (the Republic of China's founding): `2024` → `"0113-10-03[u-ca=taiwan]"` (`2024 - 1911`). Dates before 1912 keep counting down through year 0 into negative years — `convertDateToCalendar("1911-12-31", "taiwan")` is `"0000-12-31[u-ca=taiwan]"`, `"1910-06-01"` is `"-000001-06-01[u-ca=taiwan]"`, and `"1000-01-01"` is `"-000911-01-01[u-ca=taiwan]"`.
-- `"persian"` — a genuinely distinct solar calendar (not Gregorian-derived): own month lengths (6 months of 31 days, 5 of 30, a 29/30-day 12th month) and its own 33-year leap-year cycle (a year is leap when `(25 × year + 11) mod 33 < 8`), verified against `@internationalized/date`'s `PersianCalendar.ts` rather than assumed from the offset-only calendars above.
-- `"indian"` — the Indian National Calendar (Saka era, epoch 78 CE). Also not offset-only: its leap-year alignment follows the Gregorian rule rather than an independent cycle — the calendar's first month is 31 days in a Gregorian leap year, 30 otherwise, which is why its Saka-year boundary (`convertDateToCalendar("2024-03-20", "indian")` → `"1945-12-30[u-ca=indian]"`, `convertDateToCalendar("2024-03-21", "indian")` → `"1946-01-01[u-ca=indian]"`) doesn't land on a fixed day-of-year every year.
-- `"japanese"` — era-based: the year resets to `1` at each imperial era change (Meiji, Taishō, Shōwa, Heisei, Reiwa). This is the one calendar where GMT's annotated string carries an era-relative year instead of the calendar's plain native year, and needs its own explanation below.
-
-**Why `"japanese"` gets a different string shape.** Every other supported calendar's plain `year` field is exactly what belongs in GMT's annotated string — Hebrew year 5785, Taiwan year 113, and so on are each already the single number that identifies the year. Japanese is the exception: Temporal's `.year` for the `"japanese"` calendar stays **proleptic** across era changes (it doesn't reset — `1912-07-30`, the first day of Taishō, still reports `.year === 1912`, not `1`), because Temporal's `.year` is designed to be a stable sort key, not a display value. Using it directly would silently contradict the calendar's entire reason for existing. So `convertDateToCalendar` uses Temporal's `.eraYear` (the field that _does_ reset) paired with the era name, tagged onto the annotation as `;era=<name>`:
+**Calendar fields are read values, never string content.** The Hebrew year 5785, the Japanese era `reiwa` and year 6, and the Umm al-Qura day number are all properties of the date, so GMT never puts them in a string. No standard defines a machine-readable date string with calendar-native digits, and such a string would be ambiguous: `5785-01-01[u-ca=hebrew]` is also a valid RFC 9557 string for ISO year 5785. When you need a field for display, format the date with `Intl.DateTimeFormat` and its `calendar` option, or read it from Temporal, which every GMT entry point re-exports:
 
 ```typescript
-convertDateToCalendar("2024-10-03", "japanese");
-// "0006-10-03[u-ca=japanese;era=reiwa]" — year 6 of the Reiwa era, not the proleptic 2024
+import { Temporal } from "@northguild/gmt";
 
-convertDateToCalendar("1912-07-30", "japanese");
-// "0001-07-30[u-ca=japanese;era=taisho]" — the first day of Taishō reads year 1
-
-convertDateToCalendar("0001-07-30[u-ca=japanese;era=taisho]", "gregorian");
-// "1912-07-30" — round-trips back through the era + eraYear pair
+Temporal.PlainDate.from("2024-10-03[u-ca=hebrew]").year; // 5785
+Temporal.PlainDate.from("2024-10-03[u-ca=japanese]").eraYear; // 6
 ```
 
-Era codes follow the [Intl Era and Month Code proposal](https://github.com/tc39/proposal-intl-era-monthcode): dates up to and including 1872-12-31 use the Gregorian eras, `ce` (era year = ISO year) and, for ISO years ≤ 0, `bce` (era year = 1 − ISO year). `meiji` starts on 1873-01-01 at era year 6, followed by `taisho`, `showa`, `heisei` and `reiwa`. Dates before Meiji are supported, not rejected:
+The three Islamic variants are different calendars, not spellings of one. On ISO 2020-02-24, `islamic-civil` (Friday epoch) reads day 29 of month 6 of 1441, `islamic-tbla` (the same arithmetic cycle with a Thursday epoch) reads day 1 of month 7, and `islamic-umalqura` (the Saudi civil calendar, from Umm al-Qura University's published tables) reads day 30 of month 6. Month arithmetic follows each calendar's own months, so the same `+1 month` lands on different ISO dates:
 
 ```typescript
-convertDateToCalendar("1800-01-01", "japanese");
-// "1800-01-01[u-ca=japanese;era=ce]"
+import { addDate } from "@northguild/gmt";
 
-convertDateToCalendar("1873-01-01", "japanese");
-// "0006-01-01[u-ca=japanese;era=meiji]" — the proposal's first Meiji year is 6
+addDate("2020-02-24[u-ca=islamic-umalqura]", { months: 1 });
+// "2020-03-24[u-ca=islamic-umalqura]"
 
-convertDateToCalendar("-000500-06-15", "japanese");
-// "0501-06-15[u-ca=japanese;era=bce]"
+addDate("2020-02-24[u-ca=islamic-tbla]", { months: 1 });
+// "2020-03-25[u-ca=islamic-tbla]"
 ```
 
-> **Deprecated input: `;era=japanese`.** Earlier releases emitted `;era=japanese` for pre-Meiji dates. It is still accepted as input, as an alias of `ce`, until the next major version: `convertDateToCalendar("1800-01-01[u-ca=japanese;era=japanese]", "gregorian")` is `"1800-01-01"`. GMT never emits it. `;era=japanese-inverse` is rejected.
-
-#### Negative years, the far past and the range limits
-
-A negative calendar year is written as a minus sign and six digits, the form Temporal's `PadISOYear` writes: `"-000911-01-01[u-ca=taiwan]"`. `-0911` and `-000000` are rejected. A year ≥ 0 keeps four digits, or five or six when it needs them (`"279517-10-11[u-ca=hebrew]"`).
-
-Every supported calendar is proleptic and correct across Temporal's whole date range, `-271821-04-19` to `+275760-09-13`, as the Intl Era and Month Code proposal requires:
-
-```typescript
-convertDateToCalendar("-003761-09-01", "hebrew");
-// "0000-01-13[u-ca=hebrew]" — Hebrew year 0
-
-convertDateToCalendar("-000500-06-15", "indian");
-// "-000578-03-25[u-ca=indian]" — Saka dates before ISO year 1
-
-convertDateToCalendar("+275760-09-13", "hebrew");
-// "279517-10-11[u-ca=hebrew]" — and it reads back: isValidCalendarDate(...) is true
-```
-
-Where the bundled `@js-temporal/polyfill` or the runtime's ICU gets a calendar wrong (Buddhist before 1582, Hebrew years ≤ 0, Indian dates before ISO year 1, dates near either limit), GMT computes the specified answer instead. Each correction probes the runtime once and stays inactive on a runtime that is already right, so the output is identical either way.
-
-Three Ethiopic-family calendars round out the set, all sharing one 13-month structure (12 months of 30 days, plus a short Pagume/Nasie 13th month of 5 days, or 6 in a leap year) but differing in epoch:
-
-- `"ethiopic"` — the modern Ethiopian calendar, era-based like `"japanese"`: it resets to the Amete Mihret ("Year of Mercy"/Incarnation) era at its own epoch (~AD 8), so `convertDateToCalendar("2024-10-03", "ethiopic")` returns `"2017-01-23[u-ca=ethiopic;era=ethiopic]"` — year 2017, not a 5-digit proleptic number. Dates before that epoch resolve under the Amete Alem ("Year of the World") era instead: `convertDateToCalendar("0001-01-01", "ethiopic")` → `"5493-05-08[u-ca=ethiopic;era=ethioaa]"`.
-- `"ethiopic-amete-alem"` — the same calendar, but always counted continuously from the Amete Alem epoch (~5493 BCE), never resetting: `convertDateToCalendar("2024-10-03", "ethiopic-amete-alem")` → `"7517-01-23[u-ca=ethiopic-amete-alem]"`.
-- `"coptic"` — the Coptic Orthodox calendar: same 13-month structure, its own epoch (the Diocletian/Martyrs era, AD 284): `convertDateToCalendar("2024-10-03", "coptic")` → `"1741-01-23[u-ca=coptic]"`.
-
-**Why this family isn't built on Temporal's native `"ethiopic"`/`"coptic"` calendar ids, unlike every other calendar above.** `@js-temporal/polyfill`'s implementation of these two calendars resolves year/era by formatting the date through `Intl.DateTimeFormat` and matching the result against a hardcoded era-name table — unlike calendars with a fixed year-offset from ISO (Buddhist, Taiwan, and Ethiopic Amete Alem, which the polyfill computes with pure arithmetic and never touches `Intl` for). CLDR's era-name output for these two calendars changed between ICU versions: under ICU ≥ 78 (the version Node 22 and 24 both bundle — this is an ICU-version boundary, not a Node-major one), every read _or_ write of Temporal's `"ethiopic"`/`"coptic"` calendar ids throws a `RangeError` (`Era am (ISO year …) was not matched by any era`) — confirmed directly, not a hypothetical. `"ethiopic-amete-alem"` (Temporal's `"ethioaa"` id) is unaffected, since it has no era at all and is resolved with pure arithmetic. GMT routes around the bug rather than inheriting it: month/day are identical across all three calendars (they share one annual cycle), so `convertDateToCalendar` reads/writes them via the safe `"ethioaa"` calendar and computes each calendar's own displayed year (+ era, for `"ethiopic"`) with GMT-owned arithmetic — ported from the same `EthiopicHelper`/`CopticHelper` epoch constants `@js-temporal/polyfill` itself uses internally, just evaluated in GMT's code instead of through the ICU-dependent path. See `internal/ethiopicFamilyCalendar.ts` for the implementation.
+`ethiopic` and `coptic` compute in `ethioaa`. The three share months, days and arithmetic and differ only by a constant year offset, and `@js-temporal/polyfill` 0.5.1 throws reading `ethiopic` and `coptic` fields under ICU 78 or later (`Temporal.PlainDate.from("2024-10-03[u-ca=ethiopic]").year` throws there). GMT's results are the same either way, and only the written id differs. Where the polyfill or the runtime's ICU computes a calendar wrongly (Buddhist before 1582, Hebrew years ≤ 0, Indian dates before ISO year 1, dates near either range limit), GMT's arithmetic computes the specified answer instead. Each correction probes the runtime once and stays inactive where the runtime is already right.
 
 #### Calendar-aware interval and duration arithmetic
 
-`convertDateToCalendar`'s output feeds directly back into `addDate`/`subtractDate`/`diffDate`/`diffDateAsDuration` and every `Date`-suffixed `plain/interval/*` function (`intervalContainsDate`, `intervalCountDate`, `splitIntervalByUnitDate`, and the rest) — calendar-unit arithmetic ("add 1 month") resolves in the value's own calendar rather than being rejected or silently treated as Gregorian:
+A calendar-annotated date feeds `addDate`/`subtractDate`/`diffDate`/`diffDateAsDuration` and every `Date`-suffixed `plain/interval/*` function (`intervalContainsDate`, `intervalCountDate`, `splitIntervalByUnitDate`, and the rest). Calendar units ("add 1 month") resolve in the value's own calendar:
 
 ```typescript
-addDate("5784-06-15[u-ca=hebrew]", { months: 1 });
-// "5784-07-15[u-ca=hebrew]" — Adar I (a leap-only 30-day month) -> Adar
+import { addDate, diffDate, diffDateAsDuration, durationAs, intervalCountDate } from "@northguild/gmt";
 
-intervalCountDate(
-  "5784-01-01[u-ca=hebrew]",
-  "5785-01-01[u-ca=hebrew]",
-  "month",
-);
-// 13 — a Hebrew leap year crosses 13 month boundaries, not 12 (ISO's answer for the same span)
+addDate("2024-02-24[u-ca=hebrew]", { months: 1 });
+// "2024-03-25[u-ca=hebrew]" — 15 Adar I 5784 to 15 Adar II; addDate("2024-02-24", { months: 1 }) is "2024-03-24"
 
-diffDate("5784-06-15[u-ca=hebrew]", "5784-07-15[u-ca=hebrew]", "months");
-// 1 — measured in the shared calendar when both endpoints carry the same tag
+intervalCountDate("2023-09-16[u-ca=hebrew]", "2024-10-03[u-ca=hebrew]", "month");
+// 13 — Hebrew leap year 5784 has 13 months; the same ISO span touches 14 ISO months
 
-diffDateAsDuration("2567-08-31[u-ca=buddhist]", "2567-09-30[u-ca=buddhist]", "months");
+diffDate("2024-03-11[u-ca=hebrew]", "2024-04-10[u-ca=hebrew]", "months");
+// 1 — 1 Adar II to 2 Nisan; the bare ISO dates are 0 whole months apart
+
+diffDateAsDuration("2024-08-31[u-ca=buddhist]", "2024-09-30[u-ca=buddhist]", "months");
 // "P30D" — not "P1M": a month counts only once the end reaches the same day of the next month
+
+durationAs("P1Y", "days", { relativeTo: "2023-09-16[u-ca=hebrew]" });
+// 383 — Hebrew leap year 5784; relativeTo "2023-09-16" gives 366
 ```
 
-Month and year differences follow Temporal's `NonISODateSurpasses` in every calendar, so a span from a month's last day into a shorter month is days, not a month. This matches what the ISO calendar already did (`diffDateAsDuration("2024-08-31", "2024-09-30", "months")` is `"P30D"`), and applies to `diffDate*`, `intervalLength*`, `intervalCount*` and `diffZoned*` alike.
+Month and year differences follow Temporal's `NonISODateSurpasses` in every calendar, so a span from a month's last day into a shorter month is days, not a month. This matches the ISO calendar (`diffDateAsDuration("2024-08-31", "2024-09-30", "months")` is `"P30D"`), and applies to `diffDate*`, `intervalLength*`, `intervalCount*` and `diffZoned*` alike.
 
-`utc/` and `unix/` reject a `[u-ca=...]` calendar annotation outright, and `duration/`'s `relativeTo` option accepts GMT's calendar-annotated string (not Temporal's own differently-shaped `[u-ca=...]` convention) when a calendar-aware anchor is needed:
+`utc/` reads a UTC string as `Temporal.Instant.from` does, so a `[u-ca=...]` annotation is ignored there: `isValidUtc("2024-01-01T00:00:00Z[u-ca=hebrew]")` is `true`. `duration/`'s `relativeTo` reads a calendar-annotated string as Temporal's `ParseTemporalRelativeToString` does: zoned when it carries a time zone annotation, otherwise a date.
+
+Two values that name different calendars follow Temporal's `CalendarEquals`. A bare ISO string names `iso8601`.
+
+- **Differences return the sentinel** on a mismatch, as Temporal's `until` throws: `diffDate`, `diffDateAsDuration`, `intervalCountDate`, `intervalLengthDate`, `splitIntervalByUnitDate` and `intervalOverlappingDaysDate`.
+- **Ordering accepts mixed calendars**, as `Temporal.PlainDate.compare` has no calendar check: `intervalContainsDate`, `intervalsOverlapDate`, `intervalAbutsDate`, `intervalEngulfsDate` and `isValidDateInterval`.
+- **Functions that return a date value** (`intervalUnionDate`, `intervalIntersectionDate`, `intervalDifferenceDate`, `intervalXorDate`, `intervalXorAllDate`, `mergeIntervalsDate`, `intervalDivideEquallyDate`, `intervalSplitAtDate`) require one shared calendar and return `null`/`[]` on a mismatch, because no calendar can be chosen for the output.
 
 ```typescript
-durationAs("P1Y", "days", { relativeTo: "5784-06-15[u-ca=hebrew]" });
-// 385 — a Hebrew leap year, not the 366 a Gregorian P1Y would total
+intervalCountDate("2023-09-16[u-ca=hebrew]", "2024-10-03", "month");
+// null — hebrew and iso8601
+
+intervalContainsDate("2023-09-16[u-ca=hebrew]", "2024-10-03", "2024-01-01[u-ca=roc]");
+// true — ordering compares the ISO dates
 ```
-
-`zoned/` has its own calendar-annotated grammar as of E7 (issue #152) — see "Calendar-aware zoned datetimes" below.
-
-Interval functions that only compare or diff absolute instants (`intervalContainsDate`, `intervalsOverlapDate`, `intervalAbutsDate`, `intervalEngulfsDate`, `isValidDateInterval`, `intervalOverlappingDaysDate`) accept endpoints tagged with _different_ calendars, since ordering and day-counting don't depend on which calendar a date is expressed in. Functions that return a date _value_ (`intervalUnionDate`, `intervalIntersectionDate`, `intervalDifferenceDate`, `intervalXorDate`, `intervalXorAllDate`, `mergeIntervalsDate`, `intervalDivideEquallyDate`, `intervalSplitAtDate`) require every argument to share one calendar and return their sentinel (`null`/`[]`) on a mismatch, since there's no principled way to pick which calendar the output should be expressed in. See the archived E roadmap file's "E5 outcome" section (`git show 9e3b22d^:context/roadmap/issues/E.md`) for the full per-function audit, including the negatives ("no change needed, verified why") this scope boundary implies — `*DateTime`/`*Time` variants, `unix/`, and `utc/` were all confirmed unaffected rather than assumed to be.
 
 #### Calendar-aware zoned datetimes
 
-A calendar-annotated `ZonedDateTime` string adds a time, a UTC offset and an IANA zone to the
-plain grammar above:
+A calendar-annotated `ZonedDateTime` string is the RFC 9557 form `Temporal.ZonedDateTime.prototype.toString()` writes: the time zone annotation first, then the calendar (RFC 9557 §4.1):
 
 ```
-<calendar-native-date>T<time><offset>[u-ca=<id>[;era=<era>]][<timeZone>]
+<date>T<time><offset>[<timeZone>][u-ca=<id>]
 
-5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]
-0031-04-30T12:00:00+09:00[u-ca=japanese;era=heisei][Asia/Tokyo]
-7517-12-30T00:30:00-04:00[u-ca=ethiopic-amete-alem][America/Santiago]
+2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]
+2019-04-30T12:00:00+09:00[Asia/Tokyo][u-ca=japanese]
 ```
 
-`convertZonedToCalendar` produces it, and `isValidCalendarZonedDateTime` validates it:
+`convertZonedToCalendar` produces it, and `isValidCalendarZonedDateTime` validates it. A calendar annotation before the zone is not RFC 9557 and returns the sentinel:
 
 ```typescript
-convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "hebrew");
-// "5785-01-01T14:30:45-04:00[u-ca=hebrew][America/New_York]"
+import { addZoned, convertZonedToCalendar } from "@northguild/gmt";
 
-addZoned("5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]", {
-  months: 1,
-});
-// "5784-07-15T14:30:00-04:00[u-ca=hebrew][America/New_York]"
-// Adar I -> Adar AND EST -> EDT, resolved in one call. No ordering of a plain/ calendar
+convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "hebrew");
+// "2024-10-03T14:30:45-04:00[America/New_York][u-ca=hebrew]"
+
+convertZonedToCalendar("2024-10-03T14:30:45-04:00[u-ca=hebrew][America/New_York]", "iso8601");
+// "" — the calendar annotation must follow the zone
+
+addZoned("2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]", { months: 1 });
+// "2024-03-25T14:30:00-04:00[America/New_York][u-ca=hebrew]"
+// Adar I -> Adar II AND EST -> EDT, resolved in one call. No ordering of a plain/ calendar
 // operation and a zoned/ conversion produces this: do the calendar step first and DST is
 // applied to an already-resolved wall time; do the zoned step first and there is no calendar
 // left to step in.
-
-addZoned("0031-04-30T12:00:00+09:00[u-ca=japanese;era=heisei][Asia/Tokyo]", {
-  days: 1,
-});
-// "0001-05-01T12:00:00+09:00[u-ca=japanese;era=reiwa][Asia/Tokyo]" — era re-derived, never copied
 ```
 
-> **The `[u-ca=...]` segment comes BEFORE `[timeZone]` — the reverse of RFC 9557.** This is
-> deliberate. GMT's digits are calendar-native (Hebrew year 5784, not ISO year 5784), so the
-> string is never valid RFC 9557 to begin with, and the `;era=` suffix is not valid RFC 9557 at
-> any ordering. Writing it in RFC order is actively dangerous:
-> `Temporal.ZonedDateTime.from("5784-01-01T14:30:00-05:00[America/New_York][u-ca=hebrew]")`
-> _succeeds_, silently reading 5784 as an ISO year — a ~3760-year misparse with no error. GMT's
-> ordering makes that shape uniformly rejected instead.
+Scope: `addZoned`, `subtractZoned`, `diffZoned`, `diffZonedAsDuration`, `convertZonedToCalendar`, and the `zoned/interval/*` family. Everything else in `zoned/`, and `isValidZonedDateTime`, accepts `[u-ca=iso8601]` and rejects any other calendar, so a function that has not opted in fails closed rather than silently answering in the wrong calendar. `addZonedBusinessDays`/`subtractZonedBusinessDays` stay out by design: day-of-week is ISO-fixed in every supported calendar, so a tag would change nothing while implying it might.
 
-Scope: `addZoned`, `subtractZoned`, `diffZoned`, `diffZonedAsDuration`, `convertZonedToCalendar`,
-and the `zoned/interval/*` family. Everything else in `zoned/` still rejects the annotation —
-`isValidZonedDateTime` is unchanged, so a function that has not opted in fails closed rather than
-silently answering in the wrong calendar. `addZonedBusinessDays`/`subtractZonedBusinessDays` stay
-out by design: day-of-week is ISO-fixed in every supported calendar, so a tag would change nothing
-while implying it might.
+Mixed-calendar endpoints follow the same rules as `plain/`. Ordering functions (`intervalContainsZoned`, `intervalsOverlapZoned`, `intervalAbutsZoned`, `intervalEngulfsZoned`, `isValidCalendarZonedInterval`) accept them. The value-returning set operations require one shared calendar. Differences (`diffZoned`, `diffZonedAsDuration`, `intervalCountZoned`, `intervalLengthZoned`, `splitIntervalByUnitZoned`, `intervalOverlappingDaysZoned`) return their sentinel on a mismatch for every unit, including hours, as `Temporal.ZonedDateTime.prototype.until` throws across calendars.
 
-Mixed-calendar endpoints follow the same split as `plain/`: ordering functions
-(`intervalContainsZoned`, `intervalsOverlapZoned`, `intervalAbutsZoned`, `intervalEngulfsZoned`,
-`intervalOverlappingDaysZoned`, `isValidCalendarZonedInterval`) accept them; the eight
-value-returning set operations require one shared calendar and return their sentinel on a
-mismatch. Measurement functions (`diffZoned`, `diffZonedAsDuration`, `intervalCountZoned`,
-`intervalLengthZoned`, `splitIntervalByUnitZoned`) measure in the endpoints' shared calendar when
-both tags match and fall back to Gregorian otherwise — mandatory here rather than merely
-convenient, because `Temporal.ZonedDateTime.prototype.until` throws across mismatched calendars
-for _every_ unit, including pure time units like hours.
+**Migrating strings written before 1.16.0.** Earlier releases wrote the calendar's own year, month and day (`"5785-01-01[u-ca=hebrew]"` for ISO 2024-10-03), a `;era=` suffix, the zoned calendar annotation before the zone, and the ids `gregorian`, `taiwan`, `islamic-tabular` and `ethiopic-amete-alem` (now `iso8601`, `roc`, `islamic-tbla` and `ethioaa`). No converter exists: most old strings are also valid RFC 9557 strings for a different ISO date, and the two readings cannot be told apart. `convertDateToCalendar("5785-01-01[u-ca=hebrew]", "iso8601")` returns `"5785-01-01"`. Regenerate each stored value from its ISO date with `convertDateToCalendar` or `convertZonedToCalendar`.
 
 ### Durations
 
@@ -801,7 +746,7 @@ diffDateAsDuration("2024-03-10", "2024-04-05", "days");
 
 ### Intervals
 
-> **Two boundary models.** The positional functions in this section (`intervalsOverlapDate`, `intervalDifferenceUtc`, …) mostly treat an interval as **closed** `[start, end]`, so a shared endpoint belongs to both intervals. `intervalCount*` is the exception, and is half-open. For instant arithmetic, use the half-open `interval/` namespace described under [Interval algebra](#interval-algebra). It is the standard every realm story builds on, and the positional functions move to it in the next major version.
+> **One boundary model.** Every interval function in this section (`intervalsOverlapDate`, `intervalDifferenceUtc`, …) reads an interval as half-open, `[start, end)`: `start` is inside and `end` is not, as in the `interval/` namespace described under [Interval algebra](#interval-algebra) (SQL:2011 closed-open `PERIOD`, RFC 5545's non-inclusive `DTEND`, EWD831). Touching intervals share no instant, so they abut rather than overlap, and no function steps an endpoint by one unit. For a `Date` interval that means `end` is the first day **after** the period: pass `"2024-07-01"`, not `"2024-06-30"`, for the first half of 2024 (`addDate(lastDay, { days: 1 })`). Before 1.16.0 most positional families read intervals as closed `[start, end]`.
 
 Interval and range validators are available in two API shapes — **range validators** (matching `isValidDateRange`'s `{ value1, value2, options? }` object-param shape) and **interval validators** (`(start, end)` positional args, `start <= end` always):
 
@@ -853,8 +798,8 @@ isValidZonedRange({
 
 Interval containment checks (`intervalContains*`) test whether a point or inner interval falls within an outer interval. Each supports two modes via an optional fourth argument:
 
-- 3-arg: `intervalContains(start, end, point)` — true when `start <= point <= end`
-- 4-arg: `intervalContains(start, end, innerStart, innerEnd)` — true when the inner interval is fully contained
+- 3-arg: `intervalContains(start, end, point)` — true when `start <= point < end`
+- 4-arg: `intervalContains(start, end, innerStart, innerEnd)` — true when the inner interval lies within the outer one and overlaps it, so an inner interval may share the outer `end`, but an empty inner interval at `end` is not contained
 
 ```typescript
 import {
@@ -869,6 +814,9 @@ import {
 // Point-in-interval (3-arg)
 intervalContainsDate("2024-01-01", "2024-12-31", "2024-06-15");
 // true
+
+intervalContainsDate("2024-01-01", "2024-12-31", "2024-12-31");
+// false (the end is excluded)
 
 intervalContainsTime("09:00:00", "17:00:00", "12:00:00");
 // true
@@ -900,7 +848,7 @@ intervalContainsTime("09:00:00", "17:00:00", "10:00:00", "16:00:00");
 
 All interval containment checks return `false` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
 
-`intervalsOverlap*` checks whether two closed intervals share any instant. Returns `false` when they are disjoint. Intervals that touch (one's end equals the other's start) share that endpoint, so they **do** overlap and return `true`. The half-open `intervalsOverlap` returns `false` for the same pair:
+`intervalsOverlap*` checks whether two intervals share any instant. Returns `false` when they are disjoint. Intervals that touch (one's end equals the other's start) share no instant, so they do **not** overlap, exactly as `intervalsOverlap` in `interval/`:
 
 ```typescript
 import {
@@ -916,26 +864,23 @@ intervalsOverlapDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
 // true
 
 intervalsOverlapDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31");
-// true (touching — both contain 2024-06-30)
-
-intervalsOverlapDate("2024-01-01", "2024-06-30", "2024-07-01", "2024-12-31");
-// false (consecutive days, no shared day)
+// false (touching — 2024-06-30 is outside the first interval)
 
 intervalsOverlapUnix(0, 1700000000, 1000000, 2000000);
 // true
 
 intervalsOverlapUtc(
-  "2024-01-01T00:00:00Z",
-  "2024-06-30T23:59:59Z",
-  "2024-04-01T00:00:00Z",
-  "2024-12-31T23:59:59Z",
+  "2024-01-01T09:00:00Z",
+  "2024-01-01T17:00:00Z",
+  "2024-01-01T17:00:00Z",
+  "2024-01-01T18:00:00Z",
 );
-// true
+// false (touching at 17:00)
 ```
 
 All overlap checks return `false` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
 
-`intervalIntersection*` returns the overlapping span of two intervals, or `null` when they do not overlap. Adjacent intervals (sharing one instant) count as overlapping and return a single-point span:
+`intervalIntersection*` returns the overlapping span of two intervals, or `null` when they do not overlap. Touching intervals share no instant, so their intersection is `null`:
 
 ```typescript
 import {
@@ -949,43 +894,35 @@ import {
 
 intervalIntersectionDate(
   "2024-01-01",
-  "2024-06-30",
-  "2024-04-01",
-  "2024-12-31",
-);
-// { start: "2024-04-01", end: "2024-06-30" }
-
-intervalIntersectionDate(
-  "2024-01-01",
-  "2024-06-30",
-  "2024-06-30",
-  "2024-12-31",
-);
-// { start: "2024-06-30", end: "2024-06-30" } (adjacent, shares one instant)
-
-intervalIntersectionDate(
-  "2024-01-01",
-  "2024-06-30",
   "2024-07-01",
-  "2024-12-31",
+  "2024-04-01",
+  "2025-01-01",
 );
-// null (disjoint)
+// { start: "2024-04-01", end: "2024-07-01" }
+
+intervalIntersectionDate(
+  "2024-01-01",
+  "2024-07-01",
+  "2024-07-01",
+  "2025-01-01",
+);
+// null (touching, no shared day)
 
 intervalIntersectionUnix(0, 1700000000, 1000000, 2000000);
 // { start: 1000000, end: 2000000 } (B lies inside A)
 
 intervalIntersectionUtc(
   "2024-01-01T00:00:00Z",
-  "2024-06-30T23:59:59Z",
+  "2024-07-01T00:00:00Z",
   "2024-04-01T00:00:00Z",
-  "2024-12-31T23:59:59Z",
+  "2025-01-01T00:00:00Z",
 );
-// { start: "2024-04-01T00:00:00Z", end: "2024-06-30T23:59:59Z" }
+// { start: "2024-04-01T00:00:00Z", end: "2024-07-01T00:00:00Z" }
 ```
 
 All intersection functions return `null` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
 
-`intervalOverlappingDays*` returns how many distinct calendar dates two intervals share — the numeric counterpart to `intervalIntersection*`'s span. Counting is inclusive of both endpoints of the closed intersection `[max(aStart, bStart), min(aEnd, bEnd)]`, so `intervalOverlappingDaysDate("2024-01-01", "2024-01-01", "2024-01-01", "2024-01-01")` is `1`, not `0`. There is no `Time` variant — `PlainTime` has no calendar, so a day count is undefined for it:
+`intervalOverlappingDays*` returns how many distinct calendar dates two intervals share — the numeric counterpart to `intervalIntersection*`'s span. It counts the calendar dates that hold at least one instant of the half-open intersection `[max(aStart, bStart), min(aEnd, bEnd))`, so an empty intersection counts `0`: `intervalOverlappingDaysDate("2024-01-01", "2024-01-02", "2024-01-01", "2024-01-02")` is `1`, and touching intervals are `0`. There is no `Time` variant — `PlainTime` has no calendar, so a day count is undefined for it:
 
 ```typescript
 import {
@@ -998,44 +935,42 @@ import {
 
 intervalOverlappingDaysDate(
   "2024-01-01",
-  "2024-06-30",
-  "2024-04-01",
-  "2024-12-31",
-);
-// 91
-
-intervalOverlappingDaysDate(
-  "2024-01-01",
-  "2024-06-30",
-  "2024-06-30",
-  "2024-12-31",
-);
-// 1 (adjacent, shares one date)
-
-intervalOverlappingDaysDate(
-  "2024-01-01",
-  "2024-06-30",
   "2024-07-01",
-  "2024-12-31",
+  "2024-04-01",
+  "2025-01-01",
 );
-// 0 (disjoint)
+// 91 (2024-04-01 through 2024-06-30)
 
-intervalOverlappingDaysUnix(0, 172800000, 86400000, 259200000, {
-  timeZone: "UTC",
-});
-// 2
+intervalOverlappingDaysDate(
+  "2024-01-01",
+  "2024-07-01",
+  "2024-07-01",
+  "2025-01-01",
+);
+// 0 (touching, no shared date)
+
+intervalOverlappingDaysUtc(
+  "2024-01-17T12:00:00Z",
+  "2024-01-19T00:00:00Z",
+  "2024-01-10T00:00:00Z",
+  "2024-01-18T06:00:00Z",
+);
+// 2 (18 hours of overlap touch 17 and 18 January)
+
+intervalOverlappingDaysUnix(0, 172800000, 86400000, 259200000);
+// 1 (the intersection [86400000, 172800000) is 1970-01-02 in UTC)
 ```
 
-Returns `0` when the intervals do not overlap (a well-defined answer, not invalid input) and `null` on invalid input, including an inverted interval (`start > end`). `intervalOverlappingDaysZoned` and `intervalOverlappingDaysUnix` count days in `aStart`'s time zone (`intervalOverlappingDaysUnix` defaults to the system time zone, overridable via `{ timeZone }`) — the same rule `intervalCountZoned`/`intervalCountUnix` use — so `intervalOverlappingDaysZoned` is **not commutative** when the two intervals carry different zones: swapping the arguments can change the answer. Both count the distinct local dates the overlap touches, so a date the zone skipped (`Pacific/Apia`, 2011-12-30) is not counted, and a fall-back that sends the clock back into the previous date counts that date too.
+Returns `0` when the intervals do not overlap (a well-defined answer, not invalid input) and `null` on invalid input, including an inverted interval (`start > end`). `intervalOverlappingDaysZoned` and `intervalOverlappingDaysUnix` count days in `aStart`'s time zone (`intervalOverlappingDaysUnix` defaults to UTC; pass `{ timeZone }`, or `"local"` for the system zone) — the same rule `intervalCountZoned`/`intervalCountUnix` use — so `intervalOverlappingDaysZoned` is **not commutative** when the two intervals carry different zones: swapping the arguments can change the answer. Both count the distinct local dates the overlap touches, so a date the zone skipped (`Pacific/Apia`, 2011-12-30) is not counted, and a fall-back that sends the clock back into the previous date counts that date too.
 
-This deliberately diverges from date-fns's `getOverlappingDaysInIntervals`, which rounds up elapsed 24-hour periods instead of counting calendar dates — its own doc example (`Jan 10–20` vs `Jan 17–21`) returns `3` there and `4` here. To reproduce date-fns's number, compose `intervalIntersection*` with `intervalCount*`:
+It counts calendar dates, not elapsed days: the 18-hour overlap above touches two dates. For the elapsed length of the overlap, compose `intervalIntersection*` with `intervalLength*`:
 
 ```typescript
-const span = intervalIntersectionDate(aStart, aEnd, bStart, bEnd);
-span ? intervalCountDate(span.start, span.end, "day") : 0; // date-fns semantics
+const span = intervalIntersectionUtc(aStart, aEnd, bStart, bEnd);
+span ? intervalLengthUtc(span.start, span.end, "day") : 0; // 0.75 for the overlap above
 ```
 
-`intervalUnion*` returns the combined span of two overlapping or adjacent intervals, or `null` when they are disjoint with a gap. Adjacent intervals (sharing one instant) count as mergeable:
+`intervalUnion*` returns the combined span of two overlapping or touching intervals, or `null` when a gap separates them. Touching intervals (one's end equals the other's start) join:
 
 ```typescript
 import {
@@ -1047,25 +982,25 @@ import {
   intervalUnionZoned,
 } from "@northguild/gmt";
 
-intervalUnionDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
-// { start: "2024-01-01", end: "2024-12-31" }
+intervalUnionDate("2024-01-01", "2024-07-01", "2024-04-01", "2025-01-01");
+// { start: "2024-01-01", end: "2025-01-01" }
 
-intervalUnionDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31");
-// { start: "2024-01-01", end: "2024-12-31" } (adjacent, merged)
+intervalUnionDate("2024-01-01", "2024-07-01", "2024-07-01", "2025-01-01");
+// { start: "2024-01-01", end: "2025-01-01" } (touching, joined)
 
 intervalUnionDate("2024-01-01", "2024-06-30", "2024-07-01", "2024-12-31");
-// null (disjoint with a gap)
+// null (2024-06-30 lies in neither interval)
 
 intervalUnionUnix(0, 1700000000, 1000000, 2000000);
 // { start: 0, end: 1700000000 }
 
 intervalUnionUtc(
   "2024-01-01T00:00:00Z",
-  "2024-06-30T23:59:59Z",
+  "2024-07-01T00:00:00Z",
   "2024-04-01T00:00:00Z",
-  "2024-12-31T23:59:59Z",
+  "2025-01-01T00:00:00Z",
 );
-// { start: "2024-01-01T00:00:00Z", end: "2024-12-31T23:59:59Z" }
+// { start: "2024-01-01T00:00:00Z", end: "2025-01-01T00:00:00Z" }
 ```
 
 All union functions return `null` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
@@ -1083,24 +1018,24 @@ import {
 } from "@northguild/gmt";
 
 intervalDifferenceDate("2024-01-01", "2024-12-31", "2024-06-01", "2024-07-01");
-// [{ start: "2024-01-01", end: "2024-05-31" }, { start: "2024-07-02", end: "2024-12-31" }]
+// [{ start: "2024-01-01", end: "2024-06-01" }, { start: "2024-07-01", end: "2024-12-31" }]
 
 intervalDifferenceDate("2024-01-01", "2024-12-31", "2024-01-01", "2024-12-31");
 // [] (B fully covers A)
 
 intervalDifferenceUnix(0, 1700000000, 1000000, 2000000);
-// [{ start: 0, end: 999999 }, { start: 2000001, end: 1700000000 }]
+// [{ start: 0, end: 1000000 }, { start: 2000000, end: 1700000000 }]
 
 intervalDifferenceUtc(
-  "2024-01-01T00:00:00Z",
-  "2024-12-31T23:59:59Z",
-  "2024-06-01T00:00:00Z",
-  "2024-07-01T00:00:00Z",
+  "2024-01-01T09:00:00Z",
+  "2024-01-01T17:00:00Z",
+  "2024-01-01T12:00:00Z",
+  "2024-01-01T13:00:00Z",
 );
-// [{ start: "2024-01-01T00:00:00Z", end: "2024-05-31T23:59:59.999999999Z" }, { start: "2024-07-01T00:00:00.000000001Z", end: "2024-12-31T23:59:59Z" }]
+// [{ start: "2024-01-01T09:00:00Z", end: "2024-01-01T12:00:00Z" }, { start: "2024-01-01T13:00:00Z", end: "2024-01-01T17:00:00Z" }]
 ```
 
-Because the model is closed, each piece stops one unit short of B: one day for `Date`, one nanosecond for the instant and time types, one epoch unit for `Unix`. `subtractIntervals` cuts exactly at B's edges instead.
+Each piece ends exactly where B starts and resumes exactly where B ends, with no one-unit step, so the pieces and B together cover A once. `intervalDifferenceUtc` returns the same pieces as `subtractIntervals`.
 
 All difference functions return `[]` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
 
@@ -1116,27 +1051,27 @@ import {
   intervalXorZoned,
 } from "@northguild/gmt";
 
-intervalXorDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
-// [{ start: "2024-01-01", end: "2024-03-31" }, { start: "2024-07-01", end: "2024-12-31" }]
+intervalXorDate("2024-01-01", "2024-07-01", "2024-04-01", "2025-01-01");
+// [{ start: "2024-01-01", end: "2024-04-01" }, { start: "2024-07-01", end: "2025-01-01" }]
 
-intervalXorDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31");
-// [{ start: "2024-01-01", end: "2024-06-29" }, { start: "2024-07-01", end: "2024-12-31" }] (adjacent)
+intervalXorDate("2024-01-01", "2024-07-01", "2024-07-01", "2025-01-01");
+// [{ start: "2024-01-01", end: "2025-01-01" }] (touching intervals share no date, so the runs join)
 
 intervalXorUnix(0, 1700000000, 1000000, 2000000);
-// [{ start: 0, end: 999999 }, { start: 2000001, end: 1700000000 }]
+// [{ start: 0, end: 1000000 }, { start: 2000000, end: 1700000000 }]
 
 intervalXorUtc(
-  "2024-01-01T00:00:00Z",
-  "2024-06-30T23:59:59Z",
-  "2024-04-01T00:00:00Z",
-  "2024-12-31T23:59:59Z",
+  "2024-01-01T09:00:00Z",
+  "2024-01-01T13:00:00Z",
+  "2024-01-01T12:00:00Z",
+  "2024-01-01T17:00:00Z",
 );
-// [{ start: "2024-01-01T00:00:00Z", end: "2024-03-31T23:59:59.999999999Z" }, { start: "2024-06-30T23:59:59.000000001Z", end: "2024-12-31T23:59:59Z" }]
+// [{ start: "2024-01-01T09:00:00Z", end: "2024-01-01T12:00:00Z" }, { start: "2024-01-01T13:00:00Z", end: "2024-01-01T17:00:00Z" }]
 ```
 
 All xor functions return `[]` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
 
-`intervalAbuts*` checks whether two intervals are exactly adjacent, in either order. Under the closed model, one interval must end exactly one unit before the other starts: one nanosecond for `Utc`, `Zoned`, `DateTime` and `Time`, one day for `Date`, one epoch unit for `Unix`. The two then share no instant and leave no gap. Intervals that share an endpoint already overlap, so they do **not** abut:
+`intervalAbuts*` checks whether two intervals are exactly adjacent, in either order: one interval's `end` equals the other's `start` (Allen's "meets"). The two then share no instant and leave no gap. Intervals separated by any gap, even one nanosecond or one epoch unit, do not abut, and an empty interval abuts nothing:
 
 ```typescript
 import {
@@ -1148,19 +1083,16 @@ import {
   intervalAbutsZoned,
 } from "@northguild/gmt";
 
+intervalAbutsDate("2024-01-01", "2024-07-01", "2024-07-01", "2025-01-01");
+// true (the first interval ends where the second starts)
+
 intervalAbutsDate("2024-01-01", "2024-06-30", "2024-07-01", "2024-12-31");
-// true (consecutive days)
+// false (2024-06-30 lies in neither interval)
 
-intervalAbutsDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31");
-// false (shared endpoint — they overlap)
-
-intervalAbutsDate("2024-01-01", "2024-06-29", "2024-07-01", "2024-12-31");
-// false (one-day gap)
-
-intervalAbutsDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
+intervalAbutsDate("2024-01-01", "2024-07-01", "2024-04-01", "2025-01-01");
 // false (overlap)
 
-intervalAbutsUnix(0, 999999, 1000000, 2000000);
+intervalAbutsUnix(0, 1000000, 1000000, 2000000);
 // true
 
 intervalAbutsUtc(
@@ -1169,12 +1101,12 @@ intervalAbutsUtc(
   "2024-01-01T12:00:00.000000001Z",
   "2024-01-01T17:00:00Z",
 );
-// true
+// false (1 ns apart)
 ```
 
 All abuts checks return `false` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
 
-`intervalEngulfs*` checks whether interval B is fully contained within interval A — every instant of B falls within A. Equivalent to the 4-argument `intervalContains*` mode:
+`intervalEngulfs*` checks whether interval B lies within interval A and overlaps it — B may share A's `start` or `end`, but an empty B at A's `end` is not engulfed. Equivalent to the 4-argument `intervalContains*` mode:
 
 ```typescript
 import {
@@ -1236,7 +1168,7 @@ splitIntervalByUnitUnix(0, 86400000, "hour", 6);
 // [{ start: 0, end: 21600000 }, { start: 21600000, end: 43200000 }, { start: 43200000, end: 64800000 }, { start: 64800000, end: 86400000 }]
 ```
 
-All split functions return `[]` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-positive amount, unsupported unit, or a unit that has no effect on the target type).
+All split functions return `[]` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-positive amount, unsupported unit, or a unit that has no effect on the target type). A zero-length interval returns itself as the one piece (`[{ start, end }]`) for a supported unit, and `[]` for an unsupported one: `splitIntervalByUnitDate("2024-01-01", "2024-01-01", "hour", 1)` is `[]`.
 
 `splitIntervalByUnit*`, `intervalDivideEqually*`, `mapDatesInRange` and `mapZonedDatesInRange` build one array element per piece, so each takes an optional `{ maxPieces }` (a positive safe integer, default `1_000_000`) and returns `[]` when the result would be longer. A split stops as soon as the piece past the limit is due, so a huge range answers in bounded time instead of exhausting the heap. Pass a larger `maxPieces` when a long range legitimately needs it:
 
@@ -1292,7 +1224,7 @@ intervalCountUnix(0, 86400000, "hour");
 // 24
 ```
 
-Zero-length intervals count `1` when they sit mid-unit and `0` when they sit exactly on a unit boundary — `intervalCountDate("2024-01-15", "2024-01-15", "month")` is `1`, while `intervalCountDate("2024-01-01", "2024-01-01", "month")` is `0`. Weeks start on Monday (ISO 8601), singular and plural units are interchangeable (`"day"` and `"days"`), and `intervalCountUnix` uses the system timeZone for calendar boundaries (consistent with `addUnix`). All count functions return `null` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, unsupported unit, or a unit that has no effect on the target type).
+A zero-length interval counts `0` in every unit — the empty `[start, start)` holds no instant, so `intervalCountDate("2024-01-15", "2024-01-15", "month")` is `0`. Weeks start on Monday (ISO 8601), singular and plural units are interchangeable (`"day"` and `"days"`), and `intervalCountUnix` counts calendar boundaries in `options.timeZone`, UTC by default (`"local"` for the system zone), like `addUnix`. All count functions return `null` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, unsupported unit, or a unit that has no effect on the target type).
 
 `intervalCountZoned`, `intervalCountUnix` and `intervalCountUtc` count the same local buckets `bucketRange` returns. A bucket shorter than its unit still counts once — a 20-minute range straddling 04:00 on `Pacific/Chatham`'s spring-forward day counts 2 hours, because its 03:00 hour lasts only 15 minutes — and a day the zone deleted counts not at all (`Pacific/Apia`'s 30 December 2011).
 
@@ -1322,7 +1254,7 @@ intervalLengthZoned(
 // 23 (spring-forward local day is 23 real hours)
 ```
 
-`intervalLength*` uses `Temporal.Duration.prototype.total`, so calendar units (month, year) resolve against the interval's own `start` rather than truncating, and zoned/unix/utc variants are DST-aware the same way `intervalCount*` is. Returns `0` for a zero-length interval, and `null` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, unsupported unit).
+`intervalLength*` uses `Temporal.Duration.prototype.total`, so calendar units (month, year) resolve against the interval's own `start` rather than truncating, and zoned/unix/utc variants are DST-aware the same way `intervalCount*` is. Returns `0` for a zero-length interval, and `null` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, unsupported unit). `intervalLengthUnix` and `splitIntervalByUnitUnix` take `{ epochUnit, timeZone }` like `intervalCountUnix` (milliseconds and UTC by default): `intervalLengthUnix(0, 86400, "day", { epochUnit: "seconds" })` is `1`.
 
 `intervalDivideEqually*` splits an interval into `n` equal-length sub-intervals, and `intervalSplitAt*` splits an interval at arbitrary points instead of by count:
 
@@ -1339,7 +1271,7 @@ intervalSplitAtDate("2024-01-01", "2024-01-10", ["2024-01-07", "2024-01-03"]);
 // [{ start: "2024-01-01", end: "2024-01-03" }, { start: "2024-01-03", end: "2024-01-07" }, { start: "2024-01-07", end: "2024-01-10" }]
 ```
 
-`n` must be a positive integer (`[]` otherwise), and `n` above `maxPieces` also returns `[]`; `n === 1` returns the original interval unchanged, and a zero-length interval returns `n` identical zero-length sub-intervals. Non-fractional types (`PlainDate`) round internal boundaries to the nearest whole unit; every other variant is exact, computed by integer division of the total elapsed nanoseconds and rounded half up, so the pieces tile the range with no gap or overshoot (`intervalDivideEquallyZoned` splits DST-crossing intervals by real elapsed time, not local clock time). `intervalSplitAt*` sorts its `points` internally — they need not be pre-sorted — and drops points outside `[start, end]` or exactly on a boundary, since those cannot introduce a new sub-interval; an empty or all-dropped `points` array returns `[{ start, end }]` unsplit.
+`n` must be a positive integer (`[]` otherwise), and `n` above `maxPieces` also returns `[]`; `n === 1` returns the original interval unchanged, and a zero-length interval returns `n` identical zero-length sub-intervals. Each internal boundary is `start + round((end − start) · i / n)`, an exact half rounding up — in whole days for `PlainDate`, nanoseconds for the other string variants and the arguments' own epoch unit for `intervalDivideEquallyUnix` — so the split is exact when the span divides evenly by `n`, within half a unit otherwise, and the pieces tile the range with no gap or overshoot (`intervalDivideEquallyZoned` splits DST-crossing intervals by real elapsed time, not local clock time). `intervalSplitAt*` sorts its `points` internally — they need not be pre-sorted — and drops points outside the interval or exactly on `start` or `end`, since those cannot introduce a new sub-interval. Each piece's `end` is the next piece's `start`, so under `[start, end)` the pieces partition the interval; an empty or all-dropped `points` array returns `[{ start, end }]` unsplit.
 
 `mergeIntervals*` and `intervalXorAll*` are the list-form generalizations of `intervalUnion*` and `intervalXor*`, which are pairwise only — each takes a single array of `{ start, end }` records instead of two flat intervals:
 
@@ -1357,10 +1289,10 @@ intervalXorAllDate([
   { start: "2024-01-05", end: "2024-01-15" },
   { start: "2024-01-08", end: "2024-01-20" },
 ]);
-// [{ start: "2024-01-01", end: "2024-01-04" }, { start: "2024-01-08", end: "2024-01-10" }, { start: "2024-01-16", end: "2024-01-20" }]
+// [{ start: "2024-01-01", end: "2024-01-05" }, { start: "2024-01-08", end: "2024-01-10" }, { start: "2024-01-15", end: "2024-01-20" }]
 ```
 
-`mergeIntervals*` collapses overlapping or adjacent intervals (shared endpoint) into the minimum non-overlapping set. `intervalXorAll*` returns the set covered by an odd number of the input intervals — for exactly two intervals the result is identical to the pairwise `intervalXor*`, and two identical intervals cancel out to `[]`. All four return `[]` for an empty list or on invalid input.
+`mergeIntervals*` collapses overlapping or touching intervals (one's end equals the next one's start) into the minimum sorted set that does not overlap. `intervalXorAll*` returns the maximal runs covered by an odd number of the input intervals, sorted by start — for exactly two intervals the result is identical to the pairwise `intervalXor*`, and two identical intervals cancel out to `[]`. All four return `[]` for an empty list or on invalid input.
 
 `intervalFromDuration*` constructs an interval from a single point plus an ISO 8601 duration, anchored at either end — Luxon's `Interval.after`/`Interval.before` as one function with an `anchor` param instead of two:
 
@@ -1391,7 +1323,7 @@ intervalFromDurationTime("12:00:00", "P1D", "start");
 // null (PlainTime has no calendar — a date-unit duration needs a relativeTo it can't supply)
 ```
 
-Calendar units (years/months/weeks) resolve against `value` itself, so no separate `relativeTo` is needed — except for `intervalFromDurationTime`, which returns `null` for a `duration` with a nonzero years/months/weeks/days component, since `PlainTime` has no calendar to resolve it against. `intervalFromDurationZoned` accepts the same `disambiguation`/`offset`/`overflow` options as `addZoned`; `intervalFromDurationUnix` accepts `addUnix`'s `epochUnit`/`timeZone`/`overflow` options. A negative `duration` that inverts the computed span, or an `overflow: "reject"` result, returns `null` — same sentinel as any other invalid input.
+Calendar units (years/months/weeks) resolve against `value` itself, so no separate `relativeTo` is needed — except for `intervalFromDurationTime`, which returns `null` for a `duration` with a nonzero years/months/weeks/days component, since `PlainTime` has no calendar to resolve it against. `intervalFromDurationZoned` accepts the same `disambiguation`/`overflow` options as `addZoned`; `intervalFromDurationUnix` accepts `addUnix`'s `epochUnit`/`timeZone`/`overflow` options; `intervalFromDurationTime` takes no options argument, like `addTime`. A negative `duration` that inverts the computed span, or an `overflow: "reject"` result, returns `null` — same sentinel as any other invalid input.
 
 All validators return `false` on invalid input (wrong type, malformed strings, leap seconds, mixed kinds for plain interval validators, non-finite values for Unix).
 
@@ -1432,11 +1364,11 @@ startOfZoned("2024-11-03T01:45:00-05:00[America/New_York]", "hour");
 // "2024-11-03T01:00:00-05:00[America/New_York]" — the real start of the repeated hour
 ```
 
-These boundary functions follow TC39's `startOfDay()`, which takes no resolution options: their `disambiguation` and `offset` options are **deprecated and ignored** (as they are on `mapZonedHoursInDay`), and will be removed in the next major version. Resolution options belong on functions that set wall-clock fields. `getHoursInZonedDay` and `mapZonedHoursInDay` measure the input's calendar date exactly as TC39's `hoursInDay` does, which differs from `startOfZoned(…, "day")` only where a fall-back re-enters the previous date (America/Goose_Bay, 2010-11-07).
+These boundary functions follow TC39's `startOfDay()`, which takes no resolution options: they take no `disambiguation` or `offset` options, and neither does `mapZonedHoursInDay`. Resolution options belong on functions that set wall-clock fields. `getHoursInZonedDay` and `mapZonedHoursInDay` measure the input's calendar date exactly as TC39's `hoursInDay` does, which differs from `startOfZoned(…, "day")` only where a fall-back re-enters the previous date (America/Goose_Bay, 2010-11-07).
 
 `convertPlainDateTimeToZoned` and `addZoned`/`subtractZoned` also accept `offset` for API consistency, but it's permanently inert on both — their construction path never has a stored offset for it to act on.
 
-`addZoned`, `subtractZoned` and `intervalFromDurationZoned` follow TC39's AddZonedDateTime: the date part of the duration (years to days) moves the wall clock, and the time part (hours and smaller) is added in exact time. `disambiguation` applies only where the date part lands in a fall-back overlap, so adding 10 minutes is always 10 real minutes. `diffZoned`, `diffZonedAsDuration` and `intervalLengthZoned` follow DifferenceZonedDateTime: days, weeks, months and years are counted on the zone's wall clock, and hours and smaller in exact time. Two values in different zones share no wall clock, so a calendar unit returns the sentinel; convert one end with `convertZonedToZoned` first:
+`addZoned`, `subtractZoned` and `intervalFromDurationZoned` follow TC39's AddZonedDateTime: the date part of the duration (years to days) moves the wall clock, and the time part (hours and smaller) is added in exact time. `disambiguation` resolves the wall clock the date part lands on — in a spring-forward gap `"compatible"` and `"later"` move it forward, `"earlier"` back, and `"reject"` returns the sentinel; in a fall-back overlap it picks the occurrence — and never re-resolves the time part, so adding 10 minutes is always 10 real minutes. Before 1.16.0 a gap landing always moved forward. `diffZoned`, `diffZonedAsDuration` and `intervalLengthZoned` follow DifferenceZonedDateTime: days, weeks, months and years are counted on the zone's wall clock, and hours and smaller in exact time. Two values in different zones share no wall clock, so a calendar unit returns the sentinel; convert one end with `convertZonedToZoned` first:
 
 ```typescript
 import { diffZoned } from "@northguild/gmt";
@@ -1634,23 +1566,24 @@ formatRelativeDateTime("2026-03-17T09:00:00", "en-GB", {
 formatRelativeZoned("2026-03-08T01:00:00-05:00[America/New_York]", "en-US");
 // e.g. "tomorrow"
 
-// Auto-picked units stop at day ("second through day"); pass largestUnit for years.
+// Auto-picked units run from second through year, with formatRelativeDate's thresholds;
+// pass largestUnit to cap them.
 formatRelativeUtc("2024-03-17T14:30:45Z", "en-US", {
   reference: "2026-03-17T14:30:45Z",
-});
-// "730 days ago"
-formatRelativeUtc("2024-03-17T14:30:45Z", "en-US", {
-  reference: "2026-03-17T14:30:45Z",
-  largestUnit: "year",
 });
 // "2 years ago"
+formatRelativeUtc("2024-03-17T14:30:45Z", "en-US", {
+  reference: "2026-03-17T14:30:45Z",
+  largestUnit: "day",
+});
+// "730 days ago"
 
 // Unix epoch relative formatting.
 formatRelativeUnix(1710685845000, "en-US", {
   epochUnit: "milliseconds",
   reference: 1805358645000,
 });
-// "1,096 days ago"
+// "3 years ago"
 
 // roundingMethod ("floor" | "ceil" | "round", default "round") controls how the
 // computed distance rounds to the display unit — every formatRelative* function accepts it.
@@ -1757,6 +1690,8 @@ formatSql("2024-03-15T14:30:00");
 // "2024-03-15 14:30:00"
 parseSql("2024-03-15 14:30:00");
 // "2024-03-15T14:30:00"
+parseSql("2024-03-15 14:30");
+// "" — the SQL literal grammar requires seconds, and a year of 0001–9999
 
 // Strict RFC 3339 — strips the bracketed IANA zone GMT's own zoned strings
 // carry, which RFC 3339 does not permit.
@@ -1766,15 +1701,15 @@ parseRfc3339("2024-03-15T14:30:00-04:00");
 // "2024-03-15T14:30:00-04:00[-04:00]"
 ```
 
-The formatters return `""` for a value their grammar cannot express, such as a year outside `0000`–`9999` for RFC 3339 and HTTP-date, rather than writing a string no conforming parser accepts. Use Temporal's own `toString()` when you need any year.
+The formatters return `""` for a value their grammar cannot express, such as a year outside `0000`–`9999` for RFC 3339 and HTTP-date or outside `0001`–`9999` for SQL, rather than writing a string no conforming parser accepts. Use Temporal's own `toString()` when you need any year.
 
 ### Unix and UTC helpers
 
 ```typescript
 import { getUnixNow, getUtcNow, convertUnixToPlainDate } from "@northguild/gmt";
 
-getUnixNow("milliseconds");
-// 1710685845000
+getUnixNow();
+// 1710685845000 (milliseconds; getUnixNow({ epochUnit: "seconds" }) is 1710685845)
 
 getUtcNow();
 // "2026-03-18T11:42:33.123Z"
@@ -2161,6 +2096,7 @@ import { isValidFiscalPattern, isValidZoneBucketUnit } from "@northguild/gmt";
 isValidFiscalPattern("4-5-4"); // true  — the NRF retail calendar
 isValidFiscalPattern("4-5-5"); // false — the shape a 53-week year's last quarter takes
 isValidZoneBucketUnit("day");  // true
+isValidZoneBucketUnit("days"); // true  — singular or plural, as floorToZone accepts
 isValidZoneBucketUnit("year"); // false — the year question is getQuarter's
 ```
 
@@ -2224,7 +2160,7 @@ isValidInterval({ start: "2024-01-01T17:00:00Z", end: "2024-01-01T09:00:00Z" });
 
 - **Endpoints are instants.** An offset (`Z` or `±HH:MM`) is required and a `[Zone]` annotation is
   optional. As with a TC39 `Temporal.Instant`, endpoints compare by epoch nanoseconds, so two of
-  them may name different zones. Leap seconds and `[u-ca=…]` are rejected. For local-calendar
+  them may name different zones. Leap seconds are rejected, and a `[u-ca=…]` annotation is ignored, as `Temporal.Instant.from` ignores it. For local-calendar
   edges, build them with `floorToZone` or `bucketRange` first.
 - **Outputs are the caller's own strings**, never re-serialised. When two strings spell the same
   instant, the first argument's spelling wins. No spec covers the tie, so this is a GMT rule.

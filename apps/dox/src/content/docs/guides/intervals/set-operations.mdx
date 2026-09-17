@@ -1,6 +1,6 @@
 ---
 title: Set Operations
-description: Merge interval lists, subtract windows, and sum covered time with the half-open interval/ module — plus the positional union, difference and xor functions and how their boundaries differ.
+description: Merge interval lists, subtract windows, and sum covered time with the half-open interval/ module — plus the positional union, difference and xor functions, which follow the same half-open rule.
 sidebar:
   order: 3
 ---
@@ -83,10 +83,9 @@ sumIntervals(subtractIntervals(shift, breaks)); // "PT7H" — worked time
 
 ## The positional functions
 
-The older pairwise `intervalUnion*`, `intervalDifference*` and `intervalXor*`, and the list
-forms `mergeIntervals*` and `intervalXorAll*`, use the closed model. A shared endpoint
-counts as overlap. Wherever a cut would otherwise leave a shared endpoint, the difference
-and xor functions step one unit in from it:
+The pairwise `intervalUnion*`, `intervalDifference*` and `intervalXor*`, and the list forms
+`mergeIntervals*` and `intervalXorAll*`, are half-open too. Touching intervals join, and
+every cut lands exactly on an input's own `start` or `end`, with no one-unit step:
 
 ```typescript
 import {
@@ -98,20 +97,20 @@ import {
   mergeIntervalsDate,
 } from "@northguild/gmt";
 
-intervalUnionDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31");
-// { start: "2024-01-01", end: "2024-12-31" } — a shared endpoint merges
+intervalUnionDate("2024-01-01", "2024-07-01", "2024-07-01", "2025-01-01");
+// { start: "2024-01-01", end: "2025-01-01" } — touching intervals join
 intervalUnionDate("2024-01-01", "2024-06-30", "2024-07-01", "2024-12-31");
-// null — consecutive dates do not
+// null — 30 June lies in neither interval
 
 intervalDifferenceDate("2024-01-01", "2024-12-31", "2024-06-01", "2024-07-01");
-// [{ start: "2024-01-01", end: "2024-05-31" }, { start: "2024-07-02", end: "2024-12-31" }]
+// [{ start: "2024-01-01", end: "2024-06-01" }, { start: "2024-07-01", end: "2024-12-31" }]
 
 intervalDifferenceUtc("2024-01-01T09:00:00Z", "2024-01-01T17:00:00Z", "2024-01-01T12:00:00Z", "2024-01-01T13:00:00Z");
-// [{ start: "2024-01-01T09:00:00Z", end: "2024-01-01T11:59:59.999999999Z" },
-//  { start: "2024-01-01T13:00:00.000000001Z", end: "2024-01-01T17:00:00Z" }]
+// [{ start: "2024-01-01T09:00:00Z", end: "2024-01-01T12:00:00Z" },
+//  { start: "2024-01-01T13:00:00Z", end: "2024-01-01T17:00:00Z" }]
 
-intervalXorDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
-// [{ start: "2024-01-01", end: "2024-03-31" }, { start: "2024-07-01", end: "2024-12-31" }]
+intervalXorDate("2024-01-01", "2024-07-01", "2024-04-01", "2025-01-01");
+// [{ start: "2024-01-01", end: "2024-04-01" }, { start: "2024-07-01", end: "2025-01-01" }]
 
 mergeIntervalsDate([
   { start: "2024-01-01", end: "2024-01-10" },
@@ -124,14 +123,13 @@ intervalXorAllDate([
   { start: "2024-01-05", end: "2024-01-15" },
   { start: "2024-01-08", end: "2024-01-20" },
 ]);
-// [{ start: "2024-01-01", end: "2024-01-04" }, { start: "2024-01-08", end: "2024-01-10" }, { start: "2024-01-16", end: "2024-01-20" }]
+// [{ start: "2024-01-01", end: "2024-01-05" }, { start: "2024-01-08", end: "2024-01-10" }, { start: "2024-01-15", end: "2024-01-20" }]
 ```
 
-`intervalXorAll*` returns the time covered by an odd number of the inputs, so two identical
-intervals cancel to `[]`. Compare `intervalDifferenceUtc` above with `subtractIntervals` on
-the same shift. The positional pieces end one nanosecond before the lunch break and start one
-nanosecond after it. The half-open pieces meet the break exactly, and together with it they
-cover the shift with nothing counted twice.
+`intervalXorAll*` returns the maximal runs covered by an odd number of the inputs, sorted by
+start, so two identical intervals cancel to `[]`. `intervalDifferenceUtc` above returns the
+same pieces as `subtractIntervals` on the same shift: they meet the lunch break exactly, and
+together with it they cover the shift with nothing counted twice.
 
 ## See also
 

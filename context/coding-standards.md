@@ -16,6 +16,11 @@
 | `bigint` (`precision/` converters and parsers) | `0n`     | `toNanoseconds`, `parseNanoseconds`, `toPgMicroseconds` |
 | `span/` functions (any numeric type)           | `null`   | `spanMs`, `spanNs` (`bigint \| null`), `spanWallClock`  |
 
+- **Arguments follow TC39's option-reading rules** (1.16.0):
+  - An explicit `undefined` positional argument is the same as omitting it (`GetOption`).
+  - An options argument must be omitted, `undefined` or an object. `null`, a string or a number returns the sentinel (`GetOptionsObject`). The `Intl.DateTimeFormat`-backed formatters follow ECMA-402's `CoerceOptionsToObject` instead: `null` returns `""`, and a string or number means the defaults.
+  - A locale is `string | string[]` everywhere (`CanonicalizeLocaleList`). An invalid tag returns the sentinel. `[]` means the default locale where the locale is optional, and returns the sentinel where it is required (`getLocaleMonthNames([])` is `[]`).
+  - Unit names are accepted singular or plural (`"day"` and `"days"`), as Temporal §13.17 does.
 - **One documented exception:** the `min*`/`max*` aggregators (`minDate`, `maxZoned`, …) return `string | null`, with `null` meaning "no valid item". Do not copy that shape into new string functions.
 
 - **`get/` namespaces hold current-moment accessors only** — no argument, or timezone only, reporting a value for _now_ (e.g. `getDay()`, `getZonedDay(timeZone)`). Any function taking a date value belongs in `calculate/` (or `parse/`, `compare/`, `format/` as its verb dictates) — see J0b, which relocated `getLocaleDayOfWeek`/`getLocaleZonedDayOfWeek` out of `get/` for violating this.
@@ -79,33 +84,93 @@ The same three rules extend to `parseRfc2822` (`packages/gmt/src/zoned/parse/`) 
 
 `parseSql` and `parseRfc3339` are **not** part of this exception — both validate shape with a regex and then hand the whole string to `Temporal.*.from(string)` directly (which strictly validates the calendar date on its own), never extracting or constructing a field property bag by hand. This prohibition stands for every other function in the library.
 
-### Scoped exception: GMT's calendar-annotated date string in `convertDateToCalendar` (E1)
+### Calendar-annotated strings are RFC 9557 (E1, E7)
 
-The same three rules extend to `internal/calendarDateString.ts`'s `parseCalendarDateValue`, used by `convertDateToCalendar` (`packages/gmt/src/plain/convert/`). GMT's calendar-annotated PlainDate string (`"5785-01-01[u-ca=hebrew]"`) is a fixed, GMT-invented grammar — deliberately diverging from Temporal's own `[u-ca=...]` string convention (which keeps ISO/proleptic-Gregorian digits and only tags the calendar) so the calendar's native year/month/day are visible in the string itself, per the story's design rationale:
+A calendar string is the RFC 9557 form Temporal writes: the ISO 8601 date (or zoned datetime),
+then a `[u-ca=<id>]` annotation. The digits are always ISO; the annotation names the calendar the
+date is presented in (RFC 9557 §3.3). Output is exactly `Temporal.PlainDate#toString()` /
+`Temporal.ZonedDateTime#toString()` with `calendarName: "auto"`: no annotation for `iso8601`,
+`[u-ca=<id>]` for every other calendar, `gregory` included. Eras, calendar years and month codes
+are read values, never string content. Decision of record:
+[calendar-standards-decisions.md](./domination/research/calendar-standards-decisions.md) Q1 and
+[CORE-8 § Phase 2](./domination/issues/CORE-8.md#rfc-9557-calendar-strings-decisions-of-record),
+which records the native Temporal evidence for each rule below.
 
-1. The regex (`regex/calendar-date.ts`) encodes the fixed grammar exactly — never hand-rolled per-call string slicing.
-2. Extracted fields are **always** handed to `Temporal.PlainDate.from(fields, { overflow: "reject" })` for final construction and validation — including rejecting unknown calendar identifiers, which Temporal validates on GMT's behalf.
-3. The try-catch and sentinel-return rules above are unchanged.
+- **`plain/` `PlainDate`** — `regex/calendar-date.ts`: `<date>[u-ca=<id>]`. Year is Temporal's
+  `DateYear` (four digits, or a sign and six; `-000000` rejected). Parsed by
+  `internal/calendarDateString.ts` (GMT's strict date or date-time shape before the first `[`, then
+  `Temporal.PlainDate.from` on the whole string), written by
+  `internal/formatDateInCalendar.ts`.
+- **`zoned/`** — `regex/calendar-zoned-date-time.ts`: `<date>T<time><offset>[<timeZone>][u-ca=<id>]`,
+  the calendar annotation after the zone (RFC 9557 §4.1). Parsed by `internal/calendarZonedString.ts`
+  (GMT's strict `zonedDateTimeBody` shape before the first `[`, then the whole string goes to
+  `zonedDateTimeFrom`), written by `formatZonedInCalendar`.
+- **The annotation.** A `u-ca` annotation, lower-case key, optionally critical (`[!u-ca=…]`). The
+  id goes to Temporal's `CanonicalizeCalendar` (`internal/calendarSystemIds.ts`
+  `canonicalCalendarSystem`), which folds case and CLDR aliases (`islamicc` → `islamic-civil`,
+  `ethiopic-amete-alem` → `ethioaa`), and must be a `CalendarSystem`.
+- **Other annotations follow Temporal's ISO grammar** (`ParseISODateTime`), read by
+  `Temporal.PlainDate.from` / `Temporal.ZonedDateTime.from` in the shared parse helpers. A time zone
+  annotation on a date and elective unknown annotations (`[foo=bar]`) are ignored, and the first
+  `u-ca` names the calendar. An unknown critical annotation, a second `u-ca` when either is
+  critical, a calendar before the zone and `;era=` are rejected.
+- **A plain calendar date-time is read as its date**, as `Temporal.PlainDate.from` reads it
+  (decision of 2026-09-17; replaces E5 / issue #78's date-only rule).
+  `"2024-10-03T14:30[u-ca=hebrew]"` is 2024-10-03 in Hebrew, and a bare date-time is its ISO date:
+  the time is dropped. The part before the first `[` must match GMT's strict `plainDate` or
+  `plainDateTime` shape, as `isValidDate`/`isValidDateTime` require, before Temporal reads the
+  annotations (`internal/calendarDateString.ts`): basic format, a space or lower-case `t`
+  separator, a UTC offset or designator, and a leap second (second `60`) are rejected, although
+  `Temporal.PlainDate.from` reads all but the designator. Output is always the date
+  (`Temporal.PlainDate#toString()`).
+- **The same strict extended shape gates every zoned, UTC, instant and `relativeTo` string**
+  (`internal/isoStringBody.ts`): before the first `[`, a zoned string is `zonedDateTimeBody`
+  (`<date>T<time>`, then nothing, `Z` or `±HH:MM[:SS[.fraction]]`), an instant `instantBody` (the
+  `Z` or offset required), a UTC string `utcDateTime` (upper-case `Z`), and a `relativeTo` the
+  zoned shape when it has a time zone annotation, otherwise `plainDate`/`plainDateTime`; basic
+  format, a space or lower-case `t` separator, a lower-case `z`, an hour-only time or offset and a
+  zoned date without a time are rejected although Temporal reads them.
+- **A plain time is a bare `HH:MM[:SS[.fraction]]`** (`plainTime`): a leading time designator
+  (`"T14:30"`, `"t14:30"`) is rejected, although `Temporal.PlainTime.from` reads it. The `T`
+  designator belongs to date-time strings, where it separates the date from the time; GMT's strict
+  extended-body rule takes the time on its own without it.
+- **Calendar ids** are the canonical CLDR `bcp47/calendar.xml` / Temporal ids, in strings and as
+  function arguments: `iso8601`, `gregory`, `hebrew`, `islamic-civil`, `islamic-tbla`,
+  `islamic-umalqura`, `japanese`, `buddhist`, `roc`, `persian`, `indian`, `ethiopic`, `ethioaa`,
+  `coptic` (the Intl Era and Month Code proposal's `table-calendar-types` without `chinese` and
+  `dangi`, which GMT does not support; `islamic` and `islamic-rgsa` are not supported either).
+  `gregorian`, `taiwan` and `islamic-tabular` are not calendar ids and return the sentinel. The
+  alias table is Temporal's, asked of the polyfill, never a GMT copy.
+- **No converter from the pre-1.16.0 calendar-native-digit strings.** No standard defines them, and
+  most are also valid RFC 9557 strings, so the two readings cannot be told apart. Do not add
+  heuristic detection; a stored old string is regenerated from its ISO date.
+- **`ethiopic` and `coptic` compute in `ethioaa`** (`computationCalendarId`): polyfill 0.5.1 cannot
+  read their fields under ICU ≥ 78, and the three share months, days and arithmetic, differing by a
+  constant year. A parsed value therefore carries `ethioaa`; code that writes a string back takes the
+  calendar from `calendarSystemOfDateValue` / `calendarSystemOfZonedValue`, never from `calendarId`.
+- **Where it is accepted.** `plain/`: `isValidCalendarDate` and the functions gated on it
+  (`convertDateToCalendar`, `addDate`, `subtractDate`, `diffDate`, `diffDateAsDuration`, the
+  `Date`-suffixed `plain/interval/*`), plus `duration/`'s `relativeTo` (`internal/resolveDurationRelativeTo.ts`,
+  which also accepts the zoned form). `zoned/`: `isValidCalendarZonedDateTime` /
+  `isValidCalendarZonedInterval` and the functions gated on them (`convertZonedToCalendar`,
+  `addZoned`, `subtractZoned`, `diffZoned`, `diffZonedAsDuration`, `zoned/interval/*`). Every other
+  `zoned/` function, and `isValidZonedDateTime`, reads annotations as `Temporal.ZonedDateTime.from`
+  does (an elective one is ignored, an unknown critical one is rejected) and accepts `[u-ca=iso8601]`,
+  but rejects any other calendar, so a validator never certifies a string its own namespace refuses.
+  `utc/` and the `Interval` endpoints are instants and read every annotation as
+  `Temporal.Instant.from` does: a calendar annotation (`[u-ca=hebrew]`) is ignored.
+- **Different calendars follow Temporal's `CalendarEquals`.** A difference between two values that
+  name different calendars returns the sentinel (`diff*`, `intervalCount*`, `intervalLength*`,
+  `splitIntervalByUnit*`, `intervalOverlappingDays*`; `internal/calendarDatePairPolicy.ts`,
+  `calendarZonedPairPolicy.ts`), as Temporal's `until` throws. Ordering (`compare`) has no calendar
+  check, so the ordering-only interval functions accept mixed calendars; value-returning interval
+  set operations reject the mismatch (D4). A bare ISO string names `iso8601`. This rule
+  (2026-09-17) replaces E5/E7 decision D5, which measured mixed calendars in ISO.
 
-> **E1 is not a standard, and it is scheduled for replacement.** No standard defines a machine-readable date string with calendar-native digits: RFC 9557's `[u-ca=<id>]` keeps ISO digits, and `;era=` is not RFC 9557 syntax. [CORE-55](./domination/issues/CORE-55.md) replaces E1 with the standard form (ISO date + `[u-ca=<id>]`, exactly `Temporal.PlainDate#toString()`) in 2.0.0. Until then, keep E1 stable and do not extend it. Decision of record: [calendar-standards-decisions.md](./domination/research/calendar-standards-decisions.md) Q1.
+Every Temporal call keeps the try-catch and sentinel rules above. This is not a manual-parsing
+exception: the regex restricts the shape and Temporal parses the string itself.
 
-**Year and era tokens (CORE-6).** Both regexes (`regex/calendar-date.ts`, `regex/calendar-zoned-date-time.ts`) share these byte-identical groups, and `internal/formatCalendarYear.ts` writes the year:
-
-- **Year: `(\d{4,6}|-(?!0{6})\d{6})`.** A year ≥ 0 is 4 digits, zero-padded, and grows to 5 or 6 unsigned digits only when needed (`0000`, `5785`, `279517`). A negative calendar year is a minus sign plus exactly 6 digits, the form Temporal's `PadISOYear` writes: `convertDateToCalendar("1000-01-01", "taiwan")` is `"-000911-01-01[u-ca=taiwan]"`. `-0911` (too few digits) and `-000000` (negative zero, a Temporal early error) are rejected. Unsigned 5–6 digit years stay accepted, so no shipped positive year changes; a leading `+` is not accepted.
-- **Era: `;era=([a-z]+(?:-[a-z]+)*)`.** Lowercase ASCII words joined by single hyphens (`reiwa`, `ce`, `bce`, `ethioaa`). The regex proves shape only; `Temporal.PlainDate.from` validates the era.
-- **Japanese era codes are the Intl Era and Month Code proposal's.** `ce` for ISO dates up to 1872-12-31, `bce` for ISO years ≤ 0 (era year = 1 − ISO year), and `meiji` from 1873-01-01 starting at era year 6, then `taisho`, `showa`, `heisei`, `reiwa`. `;era=japanese` is a **deprecated input alias** of `ce`, mapped in `internal/calendarDateString.ts` and removed in 2.0.0 (CORE-55). GMT never emits it. `japanese-inverse` is rejected.
-
-**Which namespaces accept this grammar (E5 issue #78, extended by E7 issue #152):**
-
-- **`plain/` `PlainDate`** — `addDate`/`subtractDate`/`diffDate`/`diffDateAsDuration` and the `Date`-suffixed `plain/interval/*` functions, plus `duration/`'s `relativeTo` option (via `internal/resolveDurationRelativeTo.ts`). `plain/` `PlainDateTime`/`PlainTime` functions have no calendar-annotated grammar of their own and simply treat a `PlainDate` annotation as invalid input.
-- **`zoned/`, the ~18 calendar-aware functions** — E7 added a _separate_ GMT-native zoned grammar, `<date>T<time><offset>[u-ca=<id>[;era=<era>]][<timeZone>]` (`regex/calendar-zoned-date-time.ts`, parsed/formatted by `internal/calendarZonedString.ts`). The same three rules above apply to it: the regex encodes the fixed grammar, the extracted date half is handed to `Temporal.PlainDate.from(fields, { overflow: "reject" })` via the _existing_ `parseCalendarDateValue`, and the recomposed ISO string is handed to `Temporal.ZonedDateTime.from` for zone/offset/DST validation. In scope: `addZoned`, `subtractZoned`, `diffZoned`, `diffZonedAsDuration`, `convertZonedToCalendar`, and `zoned/interval/*`. These gate on the parallel `isValidCalendarZonedDateTime`/`isValidCalendarZonedInterval`.
-- **`zoned/`, everything else (~72 functions), plus `utc/` and `unix/`** — reject the annotation outright (`internal/hasCalendarAnnotation.ts`, and `isValidZonedDateTime`/`isValidZonedInterval`, which E7 deliberately did NOT loosen). `zoned/` rejected it wholesale only between E5 and E7; before E5, `isValidZonedDateTime` had no gate and silently accepted Temporal's _own_ shape (see the archived E roadmap file's E5 outcome, decision D2, and E7's reversal of that verdict for the in-scope subset — `git show 9e3b22d^:context/roadmap/issues/E.md`).
-
-**Segment ordering in the zoned grammar is `[u-ca=...]` before `[timeZone]` — the reverse of RFC 9557 — and is not re-openable.** GMT's digits are calendar-native, so the string is never valid RFC 9557 regardless; the `;era=` suffix is not valid RFC 9557 at any ordering; and the RFC-legal ordering is the dangerous one, because `Temporal.ZonedDateTime.from("5784-01-01T14:30:00-05:00[America/New_York][u-ca=hebrew]")` succeeds and silently reads a Hebrew year as an ISO year. See `regex/calendar-zoned-date-time.ts`.
-
-Do not extend the grammar to a new namespace (e.g. `PlainDateTime`, `utc/`) without a new roadmap story — see E5's decision D1 and E7's explicit "not in scope" list.
-
-This prohibition stands for every other function in the library.
+Do not extend the calendar grammar to a new namespace (e.g. `PlainDateTime`, `utc/`) without a new roadmap story — see E5's decision D1 and E7's explicit "not in scope" list.
 
 ## Loop Style
 
@@ -158,8 +223,8 @@ Never compute a zoned start-of-unit by truncating the wall clock and resolving i
 
 TC39 splits the API in two ([ZonedDateTime docs](https://tc39.es/proposal-temporal/docs/zoneddatetime.html)): **field-setting** methods (`with`, `from`) take `disambiguation`/`offset`, while **boundary** methods take none — `startOfDay()` has no options and returns the day's earliest real instant, `round()` accepts only rounding options, and `hoursInDay` derives from `startOfDay`. GMT follows the same split.
 
-- Field-setting functions (`setZoned`, `addZoned`, `convertPlainDateTimeToZoned`, `resolveLocal`, …) keep `disambiguation`/`offset`.
-- Boundary functions — `startOf*`/`endOf*`, quarter and locale-week variants, and everything built on them (`areZonedEqualBy`, `areUnixEqualBy`, `intervalCount*`) — **always** return the real boundary: `start ≤ input < next start`, end = next start − 1 ns. Their `disambiguation`/`offset` options are ignored and `@deprecated` (shipped in 1.15.0; removed at the next major). `mapZonedHoursInDay` shares the deprecation. Do not reintroduce an opt-in: any value, including the documented defaults, used to bring the bug back.
+- Field-setting functions keep their resolution options: `setZoned`/`setUnix`/`cycleZoned` take `disambiguation` and `offset` (default `"prefer"`, as `ZonedDateTime#with`); `addZoned`/`subtractZoned`, `intervalFromDurationZoned`, `convertPlainDateTimeToZoned` and `resolveLocal` take `disambiguation` only, because they resolve a plain date-time that has no offset (`PlainDateTime#toZonedDateTime` reads only `disambiguation`). An option a function cannot act on is not accepted "for consistency"; it is left off the signature.
+- Boundary functions — `startOf*`/`endOf*`, quarter and locale-week variants, and everything built on them (`areZonedEqualBy`, `areUnixEqualBy`, `intervalCount*`) — **always** return the real boundary: `start ≤ input < next start`, end = next start − 1 ns. They take no `disambiguation`/`offset` options, and neither does `mapZonedHoursInDay` (the ignored options were removed in 1.16.0). Do not reintroduce an opt-in: any value, including the documented defaults, used to bring the bug back.
 - **Day-length functions follow the TC39 date day.** `getHoursInZonedDay` and `mapZonedHoursInDay` use `startOfDay()`/`hoursInDay`: the day is the input's calendar date, from its earliest instant to the next date's. That equals the walker's day bucket everywhere except a fall-back that re-enters the previous date — America/Goose_Bay, 2010-11-07: an input at `2010-11-06T23:30-04:00` gets 6 November's 24 hours (ending 00:00-03:00 on the 7th, before the input), while `startOfZoned(…, "day")` returns the reopened 59-minute bucket. Documented and pinned by tests; do not "fix" one side to match the other.
 - Equality helpers compare boundary **instants** when both values share a zone, so both passes of a repeated hour are different hours. Across zones `areZonedEqualBy` compares each value's own local unit label (New York 10:00 and Berlin 20:00 on the same date are the same day); `areUnixEqualBy` always resolves in one zone, so it always compares instants.
 
@@ -183,16 +248,56 @@ See [§ Loop Style](#loop-style).
 
 See [§ Always Wrap Temporal Calls](#always-wrap-temporal-calls-in-try-catch).
 
+### 8. Intervals are half-open `[start, end)`
+
+An instant, date or time `t` is inside an interval when `start ≤ t < end`: SQL:2011's closed-open
+application-time `PERIOD` (ISO/IEC 9075-2:2011), RFC 5545 §3.6.1's non-inclusive `DTEND` and
+EWD831. This holds for `interval/` and for every positional `plain|utc|zoned|unix/interval`
+function (all since 1.16.0). Tie-breaks and empty-interval edges follow the
+[CORE-6 spec](./domination/specs/CORE-6-spec.md) §3; the rules below derive the relations that
+spec has no function for.
+
+- **No one-unit steps.** Pieces end and start exactly at a cut: no nanosecond, day or `epochUnit`
+  step in `intervalDifference*`/`intervalXor*`, and no one-unit gap in `intervalAbuts*`.
+- **Instant-typed variants delegate.** After its UTC-string gate, a `Utc` variant calls the
+  `interval/` function with the same relation (`intervalsOverlap`, `intervalContains`,
+  `intersectIntervals`, `mergeIntervals`, `subtractIntervals`). Relations with no `interval/`
+  function, and the `Date`/`DateTime`/`Time` variants, use `internal/halfOpenIntervals.ts`.
+- **Outputs are re-serialised** in the type's canonical spelling (`toString()`, or
+  `formatDateInCalendar`). `interval/`'s echo-the-caller's-string rule applies to caller-owned
+  `Interval` records only.
+- **Empty intervals** (`start === end`) hold no instant:
+  - *contains / engulfs:* `inner ⊆ outer` and the two overlap, so an empty `inner` counts only
+    strictly inside `outer` (`[end, end)` is not contained, as the point `end` is not);
+  - *union:* the single run of `mergeIntervals([a, b])`, else `null`; a stranded empty interval is
+    ignored, and two empty intervals give `null`;
+  - *abuts:* Allen's "meets", one non-empty interval's `end` equal to the other non-empty
+    interval's `start`; an empty interval abuts nothing;
+  - *XOR:* the maximal runs covered an odd number of times, sorted by start; touching pieces join;
+  - *overlapping days:* the calendar days holding at least one instant of the non-empty
+    intersection, so an empty intersection counts `0`;
+  - *count:* a zero-length interval touches no unit and counts `0`.
+- **Tiling functions partition.** `intervalSplitAt*`, `splitIntervalByUnit*` and
+  `intervalDivideEqually*` give each piece's `end` as the next piece's `start`; the pieces share no
+  instant. JSDoc never describes a shared endpoint as belonging to both pieces.
+- **A `Date` interval excludes its `end` day.** "The last day of the period" is passed as the next
+  day: `addDate(end, { days: 1 })`.
+
 ## Changesets
 
 The one rule; other docs link here.
 
-| Change                                                         | Changeset                     |
-| -------------------------------------------------------------- | ----------------------------- |
-| Bug fix, including a behaviour correction to shipped API       | `patch`                       |
-| Refactor, docs, tests or agent config with no behaviour change | none                          |
-| New public API (function, option, namespace)                   | `minor`                       |
-| Breaking change                                                | `major` — ask the owner first |
+| Change                                                         | Changeset                                              |
+| -------------------------------------------------------------- | ------------------------------------------------------ |
+| Bug fix, including a behaviour correction to shipped API       | `patch`                                                |
+| Refactor, docs, tests or agent config with no behaviour change | none                                                   |
+| New public API (function, option, namespace)                   | `minor`                                                |
+| Breaking change (removed option, changed output or signature)  | `minor`, with a **Breaking changes** migration section |
+
+`major` is never used. GMT's users are internal, so a breaking change ships in the next minor
+release (owner decision, 2026-09-17). Fix to the standard: no compatibility shim, no deprecation
+period, and no "removed in a later version" wording. The changeset's **Breaking changes** section
+names every affected function and shows each old call or output next to its replacement.
 
 Every epic story so far adds API, so its changeset is `minor`. A fix to an earlier story is still `patch`. Run `pnpm changeset:status` to prove coverage. See `PUBLISHING.md` for the release flow.
 

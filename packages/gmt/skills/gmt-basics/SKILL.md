@@ -75,7 +75,8 @@ input before you act on it.
 
 ## Common pitfalls
 
-- `formatRelativeDate` requires a `reference` option — without it, you get `""`.
+- `formatRelative*` measure from now when `reference` is omitted, so the output
+  changes from day to day. Pass `reference` whenever the result must be deterministic.
 - `parseDateWithPattern`, `parseRfc2822` and `parseHttp` return `""` on
   shape-valid-but-unreal dates such as 31 February (regex only proves shape;
   Temporal validates the real value). Parsers reject; only arithmetic clamps.
@@ -99,8 +100,8 @@ input before you act on it.
 - Leap seconds (`:60`) are invalid in every spelling (`T`, `t`, space, basic
   format). `isLeapSecond` tells you one is there. Validators return `false`.
 - `isValidTimeZone` accepts every IANA name, including single-component links
-  such as `Japan`, `Zulu` and `EST5EDT`, and ignores case. It rejects offset
-  strings such as `"+05:00"`.
+  such as `Japan`, `Zulu` and `EST5EDT`, and ignores case. It also accepts
+  offset zone ids such as `"+05:00"`, as Temporal does.
 - `isLeapYear` and `getWeekNumber` take a `PlainDate` only: a date-time returns
   `false`/`null`. Pass `value.slice(0, 10)` for a date-time's date.
 - Week numbers are ambiguous across year boundaries — `getIsoWeekDate` returns

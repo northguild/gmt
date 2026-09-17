@@ -98,6 +98,8 @@ parseHttp("Fri, 15 Mar 2024 14:30:00 GMT");
 
 parseSql("2024-03-15 14:30:00");
 // "2024-03-15T14:30:00"
+parseSql("2024-03-15 14:30");
+// "" — the SQL literal grammar requires seconds, and a year of 0001–9999
 
 parseRfc3339("2024-03-15T14:30:00-04:00");
 // "2024-03-15T14:30:00-04:00[-04:00]"

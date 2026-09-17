@@ -6,14 +6,14 @@ description: >
   arithmetic and interval range math. Covers the half-open [start, end) interval
   algebra over instants (intervalsOverlap, intervalContains, intersectIntervals,
   clampInterval, mergeIntervals, subtractIntervals, splitIntervalAt,
-  sumIntervals, isValidInterval, Interval) versus the older closed positional
-  interval*Date / *Utc / *Zoned / *Unix functions, business calendars
+  sumIntervals, isValidInterval, Interval) and the positional
+  interval*Date / *Utc / *Zoned / *Unix functions on the same rule, business calendars
   (BusinessCalendar, RollConvention, isBusinessDay, addBusinessDays,
   subtractBusinessDays, businessDaysBetween, nextBusinessDay,
   previousBusinessDay, rollDate, mergeCalendars), overflow "constrain" month-end
   clamping, splitIntervalByUnit* stepping from the anchor, maxPieces limits,
   intervalCount*
-  matching bucketRange, non-ISO calendar strings, and the correct-at-the-edges
+  matching bucketRange, RFC 9557 calendar strings, and the correct-at-the-edges
   guarantees at the first and last representable instant. A routing pointer,
   not an API dump.
 sources:
@@ -64,6 +64,8 @@ and full interval set operations.
    Temporal's default: January 31 plus one month is February 29, and
    `addDate("2024-02-29", { years: 1 })` is `"2025-02-28"`. Pass
    `{ overflow: "reject" }` to get the `""` sentinel instead of a clamp.
+   `addTime`/`subtractTime`/`intervalFromDurationTime` take no options: a clock
+   time wraps (`addTime("23:00:00", { hours: 2 })` is `"01:00:00"`).
    `parse*` functions never clamp — `31 February` returns the sentinel.
 3. **Repeated steps come from the anchor.** `splitIntervalByUnit*` computes
    boundary k as `start + k × amount`, never by stepping from the previous
@@ -85,25 +87,27 @@ and full interval set operations.
      splitIntervalByUnitDate("2024-01-01", "2024-01-10", "day", 2, { maxPieces: 5 }).length; // 5
      ```
 
-   - `intervalDivideEqually*` boundaries are exact integer nanoseconds, rounded
-     half up, so the pieces tile the range with no gap or overshoot.
+   - `intervalDivideEqually*` boundaries are integers, rounded half up — exact
+     nanoseconds, or the epoch arguments' own unit for `intervalDivideEquallyUnix`
+     (`intervalDivideEquallyUnix(0, 100, 3)` cuts at 33 and 67) — so the pieces
+     tile the range with no gap or overshoot.
 4. **Zoned counts match zoned buckets.** `intervalCountZoned`,
    `intervalCountUnix` and `intervalCountUtc` count the buckets `bucketRange`
    returns: a 20-minute range straddling `Pacific/Chatham`'s 15-minute 03:00
    hour on its spring-forward counts 2 hours, and a range over `Pacific/Apia`'s
-   deleted 30 December 2011 does not count that day. `intervalCountUnix` uses
-   the system time zone.
+   deleted 30 December 2011 does not count that day. `intervalCountUnix` counts
+   in `options.timeZone`, UTC by default (`"local"` for the system zone).
 5. **Calendar units need `relativeTo`.** `durationAs`, `normalizeDuration`, and
    `compareDurations` return `null`/`""` for year/month/week arithmetic without
    a `relativeTo` anchor — a month is not a fixed length. A calendar-annotated
-   `relativeTo` must be GMT's shape (`convertDateToCalendar` output); any other
-   `[u-ca=…]` string returns the sentinel.
+   `relativeTo` is read as Temporal reads it: zoned when it has a time zone
+   annotation, otherwise a date, and its calendar must be a `CalendarSystem`.
    - `round*` accept singular or plural `smallestUnit` names (`"hour"` or
      `"hours"`). A `roundingMode` outside Temporal's nine returns the sentinel.
-   - `diff*` with an array of units returns only the listed units, and the
-     unlisted units in between are dropped, not folded down:
-     `diffZoned(jan1, mar1NextYear, ["years", "days"])` is `{ years: 1, days: 0 }`.
-     List every unit down to the smallest you want.
+   - `diff*` with an array of units returns only the listed units, and each
+     unlisted unit in between folds into the next smaller listed one:
+     `diffDate("2024-01-01", "2025-03-15", ["years", "days"])` is
+     `{ years: 1, days: 73 }` (January to mid-March becomes days).
 6. **Elapsed time and calendar distance are different questions.** `spanMs` /
    `spanNs` measure what actually elapsed; `spanWallClock(start, end, "days" |
    "hours")` measures what the clock face did. Across a DST transition they
@@ -134,39 +138,43 @@ and full interval set operations.
    `isValidInterval`. Plain dates, zoneless datetimes and inverted intervals
    return the sentinel — build local edges with `floorToZone` first.
 9. **The positional `interval*Date|Time|DateTime|Utc|Zoned|Unix` functions are
-   mostly closed `[start, end]`.** `intervalsOverlapUtc` is `true` for touching
-   intervals and `intervalContainsUtc` includes `end`; `intervalAbuts*` means a
-   one-unit gap (`intervalAbutsDate("2024-01-01", "2024-06-30", "2024-07-01", …)`
-   is `true`, a shared endpoint is `false`); `intervalDifference*`/`intervalXor*`
-   step one unit in from each cut (`…T11:59:59.999999999Z`). `intervalCount*`
-   is half-open. Do not mix the two models in one computation.
-10. **Calendar-annotated dates carry calendar-native digits.**
-    `convertDateToCalendar` output (`"5785-01-01[u-ca=hebrew]"`) feeds
-    `addDate`, `subtractDate`, `diffDate*` and the `plain/interval/*Date`
-    functions. It is not RFC 9557: never pass it to `Temporal.PlainDate.from`.
-    - The annotation takes GMT's `CalendarSystem` ids only. Temporal's ids
-      return the sentinel: write `taiwan` not `roc`, `gregorian` not `gregory`
-      or `iso8601`, `islamic-tabular` not `islamic-tbla`, `islamic-civil` not
-      `islamicc`, `ethiopic-amete-alem` not `ethioaa`.
+   half-open `[start, end)` too.** `intervalsOverlapUtc` is `false` for touching
+   intervals and `intervalContainsUtc` excludes `end`; `intervalAbuts*` means
+   one interval's `end` equals the other's `start`
+   (`intervalAbutsDate("2024-01-01", "2024-07-01", "2024-07-01", …)` is `true`);
+   `intervalDifference*`/`intervalXor*` cut exactly at the other interval's
+   edges, with no one-unit step. A `Date` interval's `end` is the first day
+   after the period: pass `addDate(lastDay, { days: 1 })`, never the last day.
+10. **Calendar strings are RFC 9557: ISO digits plus `[u-ca=<id>]`.**
+    `convertDateToCalendar("2024-10-03", "hebrew")` is
+    `"2024-10-03[u-ca=hebrew]"`, exactly `Temporal.PlainDate#toString()`. It
+    feeds `addDate`, `subtractDate`, `diffDate*` and the `plain/interval/*Date`
+    functions, and `Temporal.PlainDate.from` reads it as the same date.
+    - Ids are the canonical BCP 47 / Temporal ids, in strings and arguments:
+      `iso8601`, `gregory`, `hebrew`, `islamic-civil`, `islamic-tbla`,
+      `islamic-umalqura`, `japanese`, `buddhist`, `roc`, `persian`, `indian`,
+      `ethiopic`, `ethioaa`, `coptic`. `gregorian`, `taiwan` and
+      `islamic-tabular` return the sentinel; aliases Temporal accepts
+      (`ethiopic-amete-alem`) are canonicalized. `iso8601` writes no annotation.
+    - Never put calendar fields (a Hebrew year, a Japanese era) in the string,
+      and never slice them out of it: read them from Temporal
+      (`Temporal.PlainDate.from(s).eraYear`). `;era=` is rejected.
+    - A string written before 1.16.0 (`"5785-01-01[u-ca=hebrew]"`) reads as ISO
+      year 5785 with no error: regenerate stored values from their ISO dates.
+    - Values naming different calendars: differences (`diffDate*`,
+      `intervalCount*`, `intervalLength*`, `splitIntervalByUnit*`,
+      `intervalOverlappingDays*`) return the sentinel; ordering accepts them.
     - Month arithmetic of any size in range is safe:
-      `addDate("1402-10-25[u-ca=persian]", { months: 3000000 })` is
-      `"251402-10-25[u-ca=persian]"`.
-    - A negative calendar year is `-` plus six digits:
-      `convertDateToCalendar("1000-01-01", "taiwan")` is
-      `"-000911-01-01[u-ca=taiwan]"`. `-0911` and `-000000` return the sentinel.
-    - Japanese eras are the Intl Era and Month Code proposal's: `ce` up to
-      1872-12-31, `bce` for ISO years ≤ 0, `meiji` from 1873-01-01 at era year
-      6. Never write `;era=japanese` (a deprecated input alias of `ce`) or
-      `;era=japanese-inverse` (rejected).
-    - Buddhist is ISO year + 543 for every date, with no 1582 cutover.
+      `addDate("2024-01-15[u-ca=persian]", { months: 3000000 })` is
+      `"+252023-12-27[u-ca=persian]"`.
     - A month counts only once the end date reaches the same day of the next
-      month: `diffDateAsDuration("2567-08-31[u-ca=buddhist]",
-      "2567-09-30[u-ca=buddhist]", "months")` is `"P30D"`, not `"P1M"`.
+      month: `diffDateAsDuration("2024-08-31[u-ca=buddhist]",
+      "2024-09-30[u-ca=buddhist]", "months")` is `"P30D"`, not `"P1M"`.
 11. **Correct at the edges — rely on it, do not work around it.** Temporal's
     instant range is `-271821-04-20T00:00:00Z` to `+275760-09-13T00:00:00Z`,
     and GMT returns the TC39 answer up to both ends:
-    - `PlainTime`'s last nanosecond stays on its day, and nothing steps past the
-      last instant (`intervalAbuts*`, `intervalXorAll*`).
+    - `PlainTime`'s last nanosecond stays on its day, and no interval boundary
+      is computed past the last instant (`intervalAbuts*`, `intervalXorAll*`).
     - The earliest month has an end: `endOfDate("-271821-04-19", "month")` is
       `"-271821-04-30"`.
     - Every supported calendar parses and does arithmetic at both limits.
@@ -233,7 +241,7 @@ and full interval set operations.
   `intervalsOverlap`, `intervalContains`, `intersectIntervals`,
   `clampInterval`, `mergeIntervals`, `subtractIntervals`, `splitIntervalAt`,
   `sumIntervals`, type `Interval`
-- **Positional intervals (closed unless stated)**: `isValidDateInterval`,
+- **Positional intervals (half-open)**: `isValidDateInterval`,
   `intervalContainsDate`, `intervalsOverlapDate`, `intervalIntersectionDate`,
   `intervalUnionDate`, `intervalDifferenceDate`, `intervalXorDate`,
   `intervalFromDurationDate`, `splitIntervalByUnitDate`, `intervalCountDate`,
