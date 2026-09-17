@@ -36,8 +36,8 @@ pnpm add @northguild/gmt
 
 GMT enforces a strict input/output contract to keep behavior predictable and auditable:
 
-- **Explicit inputs only**: Public APIs accept clearly defined shapes — ISO 8601 date/time strings, IANA timezone identifiers, or numeric Unix epoch values (explicitly seconds or milliseconds). We do not attempt to parse arbitrary or ambiguous date formats.
-- **Predictable outputs**: Helpers return normalized values (ISO strings, numbers, booleans, or arrays). Invalid input yields typed fallbacks (`""`, `null`, or `false`) instead of throwing.
+- **Explicit inputs only**: Public APIs accept clearly defined shapes — ISO 8601 date/time strings, IANA timezone identifiers, or Unix epochs as safe integers or digit strings, in seconds or milliseconds (`{ epochUnit }`). We do not attempt to parse arbitrary or ambiguous date formats.
+- **Predictable outputs**: Helpers return normalized values (ISO strings, numbers, booleans, or arrays). Invalid input yields typed fallbacks (`""`, `null`, `false` or `[]`) instead of throwing.
 - **No fuzzy parsing**: Avoid "throw everything at the wall" patterns found in permissive libraries. If you need permissive parsing, perform it outside of `@northguild/gmt` and then canonicalize to the strict shapes before calling into gmt.
 - **Developer comfort with standards**: The library's goal is to make developers comfortable and deliberate with ISO 8601, IANA timezones, UTC instants, and Unix epochs by keeping APIs small and explicit.
 
@@ -279,7 +279,7 @@ cycleZoned("2024-03-10T01:30:00-06:00[America/Chicago]", "hour", 1);
 
 `cycleZoned` also accepts `disambiguation` and `offset` (default `offset: "prefer"`) for the same DST gap/overlap control as `setZoned` — see [DST Disambiguation](../../docs/dst-disambiguation.md). `options.round` on any of the four steps to the next multiple of `amount` rather than rounding to the nearest one, matching `@internationalized/date`'s `CycleOptions.round`.
 
-`isWeekend`/`isZonedWeekend` check locale-specific weekend days (via `Intl.Locale`'s `weekInfo`) rather than assuming Saturday/Sunday:
+`isWeekend`/`isZonedWeekend` check locale-specific weekend days (via `Intl.Locale#getWeekInfo()`, falling back to `weekInfo`) rather than assuming Saturday/Sunday:
 
 ```typescript
 import { isWeekend, isZonedWeekend } from "@northguild/gmt";
@@ -846,7 +846,7 @@ intervalContainsTime("09:00:00", "17:00:00", "10:00:00", "16:00:00");
 // true
 ```
 
-All interval containment checks return `false` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
+All interval containment checks return `false` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, or an epoch outside the `unix/` grammar: not a safe integer or a digit string).
 
 `intervalsOverlap*` checks whether two intervals share any instant. Returns `false` when they are disjoint. Intervals that touch (one's end equals the other's start) share no instant, so they do **not** overlap, exactly as `intervalsOverlap` in `interval/`:
 
@@ -878,7 +878,7 @@ intervalsOverlapUtc(
 // false (touching at 17:00)
 ```
 
-All overlap checks return `false` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
+All overlap checks return `false` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, or an epoch outside the `unix/` grammar: not a safe integer or a digit string).
 
 `intervalIntersection*` returns the overlapping span of two intervals, or `null` when they do not overlap. Touching intervals share no instant, so their intersection is `null`:
 
@@ -920,7 +920,7 @@ intervalIntersectionUtc(
 // { start: "2024-04-01T00:00:00Z", end: "2024-07-01T00:00:00Z" }
 ```
 
-All intersection functions return `null` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
+All intersection functions return `null` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, or an epoch outside the `unix/` grammar: not a safe integer or a digit string).
 
 `intervalOverlappingDays*` returns how many distinct calendar dates two intervals share — the numeric counterpart to `intervalIntersection*`'s span. It counts the calendar dates that hold at least one instant of the half-open intersection `[max(aStart, bStart), min(aEnd, bEnd))`, so an empty intersection counts `0`: `intervalOverlappingDaysDate("2024-01-01", "2024-01-02", "2024-01-01", "2024-01-02")` is `1`, and touching intervals are `0`. There is no `Time` variant — `PlainTime` has no calendar, so a day count is undefined for it:
 
@@ -1003,7 +1003,7 @@ intervalUnionUtc(
 // { start: "2024-01-01T00:00:00Z", end: "2025-01-01T00:00:00Z" }
 ```
 
-All union functions return `null` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
+All union functions return `null` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, or an epoch outside the `unix/` grammar: not a safe integer or a digit string).
 
 `intervalDifference*` returns the portion(s) of interval A not covered by interval B, as an array of `{ start, end }` records:
 
@@ -1037,7 +1037,7 @@ intervalDifferenceUtc(
 
 Each piece ends exactly where B starts and resumes exactly where B ends, with no one-unit step, so the pieces and B together cover A once. `intervalDifferenceUtc` returns the same pieces as `subtractIntervals`.
 
-All difference functions return `[]` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
+All difference functions return `[]` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, or an epoch outside the `unix/` grammar: not a safe integer or a digit string).
 
 `intervalXor*` returns the symmetric difference of two intervals — the portions covered by exactly one of them, not both — as an array of `{ start, end }` records:
 
@@ -1069,7 +1069,7 @@ intervalXorUtc(
 // [{ start: "2024-01-01T09:00:00Z", end: "2024-01-01T12:00:00Z" }, { start: "2024-01-01T13:00:00Z", end: "2024-01-01T17:00:00Z" }]
 ```
 
-All xor functions return `[]` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
+All xor functions return `[]` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, or an epoch outside the `unix/` grammar: not a safe integer or a digit string).
 
 `intervalAbuts*` checks whether two intervals are exactly adjacent, in either order: one interval's `end` equals the other's `start` (Allen's "meets"). The two then share no instant and leave no gap. Intervals separated by any gap, even one nanosecond or one epoch unit, do not abut, and an empty interval abuts nothing:
 
@@ -1104,7 +1104,7 @@ intervalAbutsUtc(
 // false (1 ns apart)
 ```
 
-All abuts checks return `false` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
+All abuts checks return `false` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, or an epoch outside the `unix/` grammar: not a safe integer or a digit string).
 
 `intervalEngulfs*` checks whether interval B lies within interval A and overlaps it — B may share A's `start` or `end`, but an empty B at A's `end` is not engulfed. Equivalent to the 4-argument `intervalContains*` mode:
 
@@ -1139,7 +1139,7 @@ intervalEngulfsUtc(
 // true
 ```
 
-All engulfs checks return `false` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, non-finite values for Unix).
+All engulfs checks return `false` on invalid input (wrong type, malformed strings, leap seconds, inverted intervals, or an epoch outside the `unix/` grammar: not a safe integer or a digit string).
 
 `splitIntervalByUnit*` splits an interval into sub-intervals of `amount × unit`, returning an array of `{ start, end }` records. The final sub-interval is trimmed so its `end` never exceeds the original `end`:
 
@@ -1325,7 +1325,7 @@ intervalFromDurationTime("12:00:00", "P1D", "start");
 
 Calendar units (years/months/weeks) resolve against `value` itself, so no separate `relativeTo` is needed — except for `intervalFromDurationTime`, which returns `null` for a `duration` with a nonzero years/months/weeks/days component, since `PlainTime` has no calendar to resolve it against. `intervalFromDurationZoned` accepts the same `disambiguation`/`overflow` options as `addZoned`; `intervalFromDurationUnix` accepts `addUnix`'s `epochUnit`/`timeZone`/`overflow` options; `intervalFromDurationTime` takes no options argument, like `addTime`. A negative `duration` that inverts the computed span, or an `overflow: "reject"` result, returns `null` — same sentinel as any other invalid input.
 
-All validators return `false` on invalid input (wrong type, malformed strings, leap seconds, mixed kinds for plain interval validators, non-finite values for Unix).
+All validators return `false` on invalid input (wrong type, malformed strings, leap seconds, mixed kinds for plain interval validators, or an epoch outside the `unix/` grammar: not a safe integer or a digit string).
 
 ### Zoned operations
 
@@ -1366,7 +1366,7 @@ startOfZoned("2024-11-03T01:45:00-05:00[America/New_York]", "hour");
 
 These boundary functions follow TC39's `startOfDay()`, which takes no resolution options: they take no `disambiguation` or `offset` options, and neither does `mapZonedHoursInDay`. Resolution options belong on functions that set wall-clock fields. `getHoursInZonedDay` and `mapZonedHoursInDay` measure the input's calendar date exactly as TC39's `hoursInDay` does, which differs from `startOfZoned(…, "day")` only where a fall-back re-enters the previous date (America/Goose_Bay, 2010-11-07).
 
-`convertPlainDateTimeToZoned` and `addZoned`/`subtractZoned` also accept `offset` for API consistency, but it's permanently inert on both — their construction path never has a stored offset for it to act on.
+`convertPlainDateTimeToZoned`, `addZoned`, `subtractZoned` and `intervalFromDurationZoned` take no `offset` option: they resolve a plain date-time that has no UTC offset for it to act on.
 
 `addZoned`, `subtractZoned` and `intervalFromDurationZoned` follow TC39's AddZonedDateTime: the date part of the duration (years to days) moves the wall clock, and the time part (hours and smaller) is added in exact time. `disambiguation` resolves the wall clock the date part lands on — in a spring-forward gap `"compatible"` and `"later"` move it forward, `"earlier"` back, and `"reject"` returns the sentinel; in a fall-back overlap it picks the occurrence — and never re-resolves the time part, so adding 10 minutes is always 10 real minutes. Before 1.16.0 a gap landing always moved forward. `diffZoned`, `diffZonedAsDuration` and `intervalLengthZoned` follow DifferenceZonedDateTime: days, weeks, months and years are counted on the zone's wall clock, and hours and smaller in exact time. Two values in different zones share no wall clock, so a calendar unit returns the sentinel; convert one end with `convertZonedToZoned` first:
 
@@ -1519,7 +1519,7 @@ closestZonedTo("2024-03-15T12:00:00[America/New_York]", [
 // "2024-03-18T00:00:00-04:00[America/New_York]"
 ```
 
-See [`docs/dst-disambiguation.md`](../../docs/dst-disambiguation.md) for the full explanation, including why `overflow` was deliberately left off the public API.
+See [`docs/dst-disambiguation.md`](../../docs/dst-disambiguation.md) for the full explanation, including where `overflow` is and is not exposed.
 
 ### Formatting
 
@@ -1794,8 +1794,8 @@ isValidNanoseconds(0); // false — a number cannot carry a nanosecond timestamp
 ```
 
 Reach for `isValidInstant` rather than `isValidUtc`: the latter gates on GMT's stricter
-`<date>T<time>Z` shape and rejects the offsets, bracketed zones, space separators and
-basic-format strings `toNanoseconds` accepts, so validating with it discards valid input.
+`<date>T<time>Z` shape and rejects the offsets and bracketed zones `toNanoseconds`
+accepts, so validating with it discards valid input.
 
 Every `precision/` function returns a sentinel (`""` for strings, `0n` for bigints) on
 invalid input, and accepts only values inside the range `Temporal.Instant` can represent
@@ -2012,8 +2012,8 @@ Two notes on the boundaries of this namespace:
 
 - **`resolveLocal` returns an instant; `convertPlainDateTimeToZoned` returns a zoned string.**
   Same underlying resolution, different output and different precision — `resolveLocal` is
-  exact to the nanosecond, while `convertPlainDateTimeToZoned` defaults to milliseconds and
-  also accepts Temporal's `offset` option. Reach for whichever shape you need next.
+  exact to the nanosecond, while `convertPlainDateTimeToZoned` defaults to milliseconds.
+  Neither takes an `offset` option. Reach for whichever shape you need next.
 - **`offset` is `±HH:MM`, except where it is not.** A handful of zones did not run on a whole
   minute before 1972 — `Africa/Monrovia` really was `-00:44:30` — and those report
   `±HH:MM:SS`. Rounding them would put the pair thirty seconds from the event it describes.
@@ -2187,7 +2187,7 @@ For the complete API listing, see the namespace documentation on GitHub:
 - [Unix API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/unix) — Unix epoch utilities
 - [Precision API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/precision) — nanosecond instants, JSON transport, storage truncation, NTP / FILETIME / .NET ticks / Excel / PostgreSQL epoch bridges
 - [Span API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/span) — elapsed and wall-clock durations as raw numbers
-- [Calendar API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/calendar) — ISO week and ordinal dates, quarter and fiscal periods, zone-aware bucketing
+- [Calendar API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/calendar) — ISO week and ordinal dates, quarter and fiscal periods, zone-aware bucketing, and business calendars with holiday sets and roll conventions
 - [Interval API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/interval) — half-open interval algebra over instants: overlap, intersect, clamp, merge, subtract, split, sum
 - [Instant API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/instant) — the instant-plus-offset pair, and explicit local-time resolution
 - [UTC API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/utc) — UTC instant utilities
