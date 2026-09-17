@@ -33,7 +33,7 @@ import { isValidDateTime } from "../validate";
  *   as a `timeZoneName` part. `formatZonedToParts` on the value at UTC returns those parts.
  *
  * @param value ISO PlainDateTime string
- * @param locale optional BCP 47 locale identifier (default: runtime default)
+ * @param locale optional BCP 47 locale identifier (default: runtime default), or a preference list of tags (ECMA-402)
  * @param options optional Intl.DateTimeFormatOptions
  * @returns array of `{ type, value }` parts, or `[]` on invalid input
  *
@@ -43,10 +43,11 @@ import { isValidDateTime } from "../validate";
  * @example formatDateTimeToParts("2024-02-29T12:00:00", "en-US", { timeStyle: "long" }) // [{ type: "hour", value: "12" }, { type: "literal", value: ":" }, { type: "minute", value: "00" }, { type: "literal", value: ":" }, { type: "second", value: "00" }, { type: "literal", value: "\u202f" }, { type: "dayPeriod", value: "PM" }]
  * @example formatZonedToParts("2024-02-29T12:00:00+00:00[UTC]", "en-US", { timeStyle: "long" }) // [{ type: "hour", value: "12" }, { type: "literal", value: ":" }, { type: "minute", value: "00" }, { type: "literal", value: ":" }, { type: "second", value: "00" }, { type: "literal", value: "\u202f" }, { type: "dayPeriod", value: "PM" }, { type: "literal", value: " " }, { type: "timeZoneName", value: "UTC" }] — the pre-1.16.0 parts
  * @example formatDateTimeToParts("invalid") // []
+ * @example formatDateTimeToParts("2024-02-03T14:30:45", ["fr-FR", "en-US"], { dateStyle: "medium", timeStyle: "short" }) // parts of "3 févr. 2024, 14:30"
  */
 export function formatDateTimeToParts(
   value: string,
-  locale?: string,
+  locale?: string | string[],
   options?: DateTimeFormatOptions,
 ): Array<{ type: string; value: string }> {
   if (!isValidDateTime(value)) {

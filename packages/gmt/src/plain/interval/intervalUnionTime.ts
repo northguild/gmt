@@ -1,12 +1,18 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
-import { plainTime } from "../../regex";
+import { halfOpenUnion } from "../../internal";
+import { isValidTime } from "../validate";
 
 /**
  * Return the combined span of two time intervals, or null when they are disjoint.
  *
  * - Uses `Temporal.PlainTime.compare` for comparison.
- * - Overlapping intervals return their merged span.
- * - Adjacent intervals (e.g. `aEnd === bStart`) share one instant and ARE merged.
+ * - Half-open: an interval holds every `t` with `start <= t < end`. The union is returned only
+ *   when it is one non-empty interval — the single run CORE-6's `mergeIntervals` would give.
+ * - Overlapping intervals, and touching intervals (`aEnd === bStart`), return their combined span.
+ * - Intervals with any gap between them return `null`, even a one-unit gap.
+ * - An empty interval (`start === end`) is the empty set: it adds nothing, so the union is the
+ *   other interval. Two empty intervals have no non-empty union and return `null`.
  * - Returns `null` if either interval is invalid (`start > end`).
  * - Returns `null` on invalid input (wrong type, malformed strings).
  *
@@ -17,7 +23,7 @@ import { plainTime } from "../../regex";
  * @returns `{ start, end }` with the merged span, or null on invalid input / disjoint intervals
  *
  * @example intervalUnionTime("09:00:00", "17:00:00", "12:00:00", "18:00:00") // { start: "09:00:00", end: "18:00:00" }
- * @example intervalUnionTime("09:00:00", "17:00:00", "17:00:00", "18:00:00") // { start: "09:00:00", end: "18:00:00" }
+ * @example intervalUnionTime("09:00:00", "17:00:00", "17:00:00", "18:00:00") // { start: "09:00:00", end: "18:00:00" } (touching)
  * @example intervalUnionTime("09:00:00", "17:00:00", "18:00:00", "20:00:00") // null
  * @example intervalUnionTime("invalid", "17:00:00", "12:00:00", "18:00:00") // null
  */
@@ -37,10 +43,10 @@ export function intervalUnionTime(
   }
 
   if (
-    !plainTime.test(aStart) ||
-    !plainTime.test(aEnd) ||
-    !plainTime.test(bStart) ||
-    !plainTime.test(bEnd)
+    !isValidTime(aStart) ||
+    !isValidTime(aEnd) ||
+    !isValidTime(bStart) ||
+    !isValidTime(bEnd)
   ) {
     return null;
   }
@@ -59,15 +65,17 @@ export function intervalUnionTime(
       return null;
     }
 
-    if (
-      Temporal.PlainTime.compare(aE, bS) < 0 ||
-      Temporal.PlainTime.compare(bE, aS) < 0
-    ) {
+    const union = halfOpenUnion(
+      { start: aS, end: aE },
+      { start: bS, end: bE },
+      Temporal.PlainTime.compare,
+    );
+
+    if (union === null) {
       return null;
     }
 
-    const start = Temporal.PlainTime.compare(aS, bS) <= 0 ? aS : bS;
-    const end = Temporal.PlainTime.compare(aE, bE) >= 0 ? aE : bE;
+    const { start, end } = union;
 
     return { start: start.toString(), end: end.toString() };
   } catch {

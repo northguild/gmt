@@ -49,7 +49,6 @@ describe("endOfTime", () => {
   it.each`
     invalidUnit
     ${"invalid-unit"}
-    ${"hours"}
     ${"minutez"}
     ${""}
     ${null}
@@ -88,6 +87,23 @@ describe("endOfTime for an input inside the unit's final second", () => {
         ),
       ).toBe(true);
       expect(Temporal.PlainTime.compare(end, value)).toBeGreaterThanOrEqual(0);
+    },
+  );
+
+  // Temporal §13.17 GetTemporalUnitValuedOption: a plural unit name is the same unit as its singular.
+  it.each`
+    unit              | expected
+    ${"days"}         | ${"23:59:59.999999999"}
+    ${"hours"}        | ${"13:59:59.999999999"}
+    ${"minutes"}      | ${"13:45:59.999999999"}
+    ${"seconds"}      | ${"13:45:30.999999999"}
+    ${"milliseconds"} | ${"13:45:30.123999999"}
+    ${"microseconds"} | ${"13:45:30.123456999"}
+    ${"nanoseconds"}  | ${"13:45:30.123456789"}
+  `(
+    "returns $expected for plural unit $unit on 13:45:30.123456789",
+    ({ unit, expected }) => {
+      expect(endOfTime("13:45:30.123456789", unit)).toBe(expected);
     },
   );
 });

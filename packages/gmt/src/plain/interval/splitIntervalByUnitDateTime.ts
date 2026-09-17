@@ -1,6 +1,6 @@
+// fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "@js-temporal/polyfill";
-import { plainDateTime } from "../../regex";
-import { isValidDateTime } from "../validate";
+import { isValidDateTime, isValidDateTimeDurationUnit } from "../validate";
 import { resolveDurationUnit, tileByUnit } from "../../internal";
 import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 import { minSlicesForSpan } from "../../internal/splitStep";
@@ -10,6 +10,9 @@ import { minSlicesForSpan } from "../../internal/splitStep";
  *
  * - Returns an array of `{ start, end }` records that tile the interval, each record's `end`
  *   equal to the next record's `start`.
+ * - Every piece is half-open `[start, end)`: a boundary belongs only to the piece that starts
+ *   there, so the pieces share no value and together cover the interval exactly once (the rule
+ *   CORE-6's `splitIntervalAt` uses).
  * - The final sub-interval is trimmed so its `end` never exceeds the original `end`.
  * - Calendar-unit boundaries (years, months, weeks, days) are computed from `start`
  *   (`start + k × amount`, as Temporal and Luxon's `Interval.splitBy` do), so month-end starts
@@ -51,10 +54,6 @@ export function splitIntervalByUnitDateTime(
     return [];
   }
 
-  if (!plainDateTime.test(start) || !plainDateTime.test(end)) {
-    return [];
-  }
-
   if (!isValidDateTime(start) || !isValidDateTime(end)) {
     return [];
   }
@@ -65,7 +64,8 @@ export function splitIntervalByUnitDateTime(
 
   const resolvedUnit = resolveDurationUnit(unit);
 
-  if (!resolvedUnit) {
+  // An unknown unit is invalid whatever the span, a zero-length one included.
+  if (!isValidDateTimeDurationUnit(resolvedUnit)) {
     return [];
   }
 

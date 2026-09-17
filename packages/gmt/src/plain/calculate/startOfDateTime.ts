@@ -1,39 +1,57 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
 import { defaultFractionalDigits } from "../../internal";
+import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
+import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
 import type { FractionalDigit } from "../../types";
 import { isValidDateTime, isValidDateTimeUnit } from "../validate";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return the start of the specified date-time `unit` for a given ISO 8601 datetime string.
  *
+ * - `unit` accepts the singular or plural name (`"month"` or `"months"`), as Temporal does.
+ * - `weekStartsOn` other than `"monday"` or `"sunday"` returns "".
  * - Returns "" for invalid inputs.
  *
  * @param value ISO 8601 datetime string
- * @param unit Temporal.DateUnit|Temporal.TimeUnit to specify the unit for the start
+ * @param unit date or time unit, singular or plural, to specify the unit for the start
  * @param optionsArg optional: weekStartsOn ("monday" | "sunday"), fractionalSecondDigits (number)
  * @returns ISO 8601 string representing the start of the specified unit, or "" on invalid input
  *
  * @example startOfDateTime("2024-02-29T12:34:56", "month") // "2024-02-01T00:00:00"
+ * @example startOfDateTime("2024-02-29T12:34:56.789", "milliseconds") // "2024-02-29T12:34:56.789"
  * @example startOfDateTime("invalid-datetime", "month") // ""
  */
 export function startOfDateTime(
   value: string,
-  unit: Temporal.DateUnit | Temporal.TimeUnit,
+  unit: Temporal.SmallestUnit<Temporal.DateTimeUnit>,
   optionsArg?: {
     weekStartsOn?: "monday" | "sunday";
     fractionalSecondDigits?: FractionalDigit;
   },
 ): string {
-  const weekStartsOn = optionsArg?.weekStartsOn ?? "monday";
+  if (!isOptionsArgument(optionsArg)) {
+    return "";
+  }
+
+  const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
   const fractionalSecondDigits = optionsArg?.fractionalSecondDigits;
 
-  if (!isValidDateTime(value) || !isValidDateTimeUnit(unit)) return "";
+  const resolvedUnit = resolveDateTimeUnit(unit);
+
+  if (
+    weekStartsOn === null ||
+    !isValidDateTime(value) ||
+    !isValidDateTimeUnit(resolvedUnit)
+  )
+    return "";
 
   try {
     const source = Temporal.PlainDateTime.from(value);
     let result: Temporal.PlainDateTime;
 
-    switch (unit) {
+    switch (resolvedUnit) {
       case "year":
         result = source.with({ month: 1, day: 1 }).withPlainTime();
         break;
@@ -85,7 +103,7 @@ export function startOfDateTime(
     }
 
     const fractionalDigits = defaultFractionalDigits(
-      unit,
+      resolvedUnit,
       fractionalSecondDigits,
     );
 

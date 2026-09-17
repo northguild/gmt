@@ -61,4 +61,17 @@ describe("areDatesEqual", () => {
       expect(areDatesEqual(value1, invalidValue2 as never)).toBe(false);
     },
   );
+
+  // Temporal's ISO grammar reads an elective annotation (`[foo=bar]`) and `[u-ca=iso8601]` and ignores
+  // them (RFC 9557 §3.3; native Temporal agrees), so the result is the unannotated input's.
+  it.each`
+    value1                       | value2                                 | expected
+    ${"2024-02-29[foo=bar]"}     | ${"2024-02-29T12:34:56[u-ca=iso8601]"} | ${true}
+    ${"2024-02-29[u-ca=hebrew]"} | ${"2024-02-29"}                        | ${false}
+  `(
+    "reads the annotations of $value1 and $value2 as Temporal does → $expected",
+    ({ value1, value2, expected }) => {
+      expect(areDatesEqual(value1, value2)).toBe(expected);
+    },
+  );
 });

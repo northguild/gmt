@@ -18,19 +18,17 @@ describe("intervalFromDurationTime", () => {
     },
   );
 
-  it.each`
-    value         | duration  | anchor     | options
-    ${"12:00:00"} | ${"PT1H"} | ${"start"} | ${undefined}
-    ${"12:00:00"} | ${"PT1H"} | ${"start"} | ${{ overflow: "constrain" }}
-    ${"12:00:00"} | ${"PT1H"} | ${"start"} | ${{ overflow: "reject" }}
-  `(
-    "overflow $options has no observable effect for $value + $duration",
-    ({ value, duration, anchor, options }) => {
-      expect(
-        intervalFromDurationTime(value, duration, anchor, options),
-      ).toEqual({ start: "12:00:00", end: "13:00:00" });
-    },
-  );
+  // The options argument (only `overflow`) was removed in 1.16.0: Temporal `PlainTime#add` and
+  // `#subtract` take no options. Passing one is a type error, and a JavaScript caller's stray
+  // argument changes nothing.
+  it("treats the removed options argument as a type error and ignores it at runtime", () => {
+    expect(
+      // @ts-expect-error -- the `overflow` options argument was removed in 1.16.0
+      intervalFromDurationTime("12:00:00", "PT1H", "start", {
+        overflow: "reject",
+      }),
+    ).toEqual({ start: "12:00:00", end: "13:00:00" });
+  });
 
   it.each`
     value         | duration | anchor

@@ -60,22 +60,22 @@ import { DATE_PATTERN_FIELDS, parseValueWithPattern } from "../../internal";
  *
  * @param value The string to decode (e.g. "03/15/2024")
  * @param pattern The token pattern describing `value`'s shape (e.g. "MM/dd/yyyy")
- * @param locale Optional BCP 47 locale for name-based tokens (default "en-US")
+ * @param locale Optional BCP 47 locale tag, or a preference list of tags, for name-based tokens (default "en-US")
  * @returns ISO `PlainDate` string, or "" on no match, malformed pattern, or invalid input
  *
  * @example parseDateWithPattern("03/15/2024", "MM/dd/yyyy") // "2024-03-15"
  * @example parseDateWithPattern("15-Mar-2024", "dd-MMM-yyyy") // "2024-03-15"
  * @example parseDateWithPattern("02/31/2024", "MM/dd/yyyy") // "" (shape-valid, not a real date)
  * @example parseDateWithPattern("14:30", "HH:mm") // "" (time token in a date-only pattern)
+ * @example parseDateWithPattern("19 mai 2024", "d MMMM yyyy", ["fr-FR", "en-US"]) // "2024-05-19"
  */
 export function parseDateWithPattern(
   value: string,
   pattern: string,
-  locale?: string,
+  locale?: string | string[],
 ): string {
   if (typeof value !== "string") return "";
   if (typeof pattern !== "string") return "";
-  if (locale !== undefined && typeof locale !== "string") return "";
 
   const fields = parseValueWithPattern(
     value,

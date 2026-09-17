@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { resolveOverflow } from "../../internal";
 import type { Overflow } from "../../types";
 import { isValidDateTime } from "../validate";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return a PlainDateTime ISO string with the given `fields` set on `value`.
@@ -34,6 +35,10 @@ export function setDateTime(
   fields: Omit<Temporal.PlainDateTimeLike, "calendar">,
   options?: { overflow?: Overflow },
 ): string {
+  if (!isOptionsArgument(options)) {
+    return "";
+  }
+
   if (!isValidDateTime(value)) return "";
 
   try {

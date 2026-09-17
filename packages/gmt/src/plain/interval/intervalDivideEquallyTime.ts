@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidTimeInterval } from "./validate";
 import { divisionBoundary } from "../../internal/divisionBoundary";
@@ -8,6 +9,9 @@ import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
  *
  * - Returns an array of `n` `{ start, end }` records that tile the original interval, each
  *   record's `end` equal to the next record's `start`.
+ * - Every piece is half-open `[start, end)`: a boundary belongs only to the piece that starts
+ *   there, so the pieces share no value and together cover the interval exactly once (the rule
+ *   CORE-6's `splitIntervalAt` uses).
  * - Time units are fixed-length, so each boundary is `start + round((end - start) · i / n)` in
  *   integer nanoseconds, computed in `bigint`: the split is exact whenever the total divides
  *   evenly by `n`, and within half a nanosecond of the exact cut otherwise (an exact half rounds

@@ -89,4 +89,16 @@ describe("getLocaleEraNames", () => {
   it("falls back for a well-formed tag with no locale data instead of returning []", () => {
     expect(getLocaleEraNames("not-a-locale")).toHaveLength(2);
   });
+
+  // ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale
+  // data is read (en-US weeks start on Sunday, fr-FR on Monday, ar-EG weekends are Friday and
+  // Saturday: Intl.Locale#getWeekInfo), and a malformed tag anywhere in the list is invalid input.
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${["avant Jésus-Christ", "après Jésus-Christ"]}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${[]}
+    ${[42]}                                         | ${[]}
+  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+    expect(getLocaleEraNames(locale)).toEqual(expected);
+  });
 });

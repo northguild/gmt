@@ -62,19 +62,19 @@ describe("intervalDivideEquallyDate", () => {
   it("divides in the shared calendar when start and end carry the same tag", () => {
     expect(
       intervalDivideEquallyDate(
-        "5784-01-01[u-ca=hebrew]",
-        "5784-01-11[u-ca=hebrew]",
+        "2023-09-16[u-ca=hebrew]",
+        "2023-09-26[u-ca=hebrew]",
         2,
       ),
     ).toEqual([
-      { start: "5784-01-01[u-ca=hebrew]", end: "5784-01-06[u-ca=hebrew]" },
-      { start: "5784-01-06[u-ca=hebrew]", end: "5784-01-11[u-ca=hebrew]" },
+      { start: "2023-09-16[u-ca=hebrew]", end: "2023-09-21[u-ca=hebrew]" },
+      { start: "2023-09-21[u-ca=hebrew]", end: "2023-09-26[u-ca=hebrew]" },
     ]);
   });
 
   it("returns [] when start and end carry mismatched calendar tags", () => {
     expect(
-      intervalDivideEquallyDate("5784-01-01[u-ca=hebrew]", "2024-01-11", 2),
+      intervalDivideEquallyDate("2023-09-16[u-ca=hebrew]", "2024-01-11", 2),
     ).toEqual([]);
   });
 });

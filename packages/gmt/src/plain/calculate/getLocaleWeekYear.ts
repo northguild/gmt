@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
 
 import {
@@ -6,6 +7,7 @@ import {
   resolveMinimalDaysInFirstWeek,
 } from "../../internal";
 import { isValidDate } from "../validate";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return the locale-relative week-numbering year `value` belongs to, from `locale`'s first day of
@@ -29,7 +31,7 @@ import { isValidDate } from "../validate";
  *   `{ minimalDays: 1 }` to keep the Node 22 result for such a locale on every runtime.
  *
  * @param value ISO PlainDate string
- * @param locale BCP 47 locale tag (e.g. "en-US", "fr-FR")
+ * @param locale BCP 47 locale tag (e.g. "en-US", "fr-FR"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns null
  * @param options optional: minimalDays (integer 1–7, default 4)
  * @returns locale-relative week-numbering year, or null on invalid input
  *
@@ -40,12 +42,17 @@ import { isValidDate } from "../validate";
  * @example getLocaleWeekYear("2022-01-01", "en-US", { minimalDays: 0 }) // null
  * @example getLocaleWeekYear("+275760-09-13", "en-US") // 275760 (the last PlainDate; the next week 1 lies past the range)
  * @example getLocaleWeekYear("invalid", "en-US") // null
+ * @example getLocaleWeekYear("2024-12-29", ["en-US", "fr-FR"]) // 2025
  */
 export function getLocaleWeekYear(
   value: string,
-  locale: string,
+  locale: string | string[],
   options?: { minimalDays?: number },
 ): number | null {
+  if (!isOptionsArgument(options)) {
+    return null;
+  }
+
   if (!isValidDate(value)) return null;
 
   const firstDay = getLocaleFirstDayOfWeek(locale);

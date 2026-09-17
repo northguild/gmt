@@ -116,4 +116,60 @@ describe("isThisUnit", () => {
     mockTemporalNowZonedDateTimeISOThrow();
     expect(isThisUnit("2024-02-29", "day")).toBe(false);
   });
+
+  // Temporal §13.17 GetTemporalUnitValuedOption: a plural unit name is the same unit as its singular.
+  // Today is 2024-02-29, a Thursday; its ISO week runs Monday 2024-02-26 to Sunday 2024-03-03.
+  it.each`
+    value           | unit        | expected
+    ${"2024-02-29"} | ${"days"}   | ${true}
+    ${"2024-02-28"} | ${"days"}   | ${false}
+    ${"2024-02-26"} | ${"weeks"}  | ${true}
+    ${"2024-02-25"} | ${"weeks"}  | ${false}
+    ${"2024-02-01"} | ${"months"} | ${true}
+    ${"2024-01-31"} | ${"months"} | ${false}
+    ${"2024-01-01"} | ${"years"}  | ${true}
+    ${"2023-12-31"} | ${"years"}  | ${false}
+  `(
+    "returns $expected for $value by plural unit $unit",
+    ({ value, unit, expected }) => {
+      expect(isThisUnit(`${value}`, unit)).toBe(expected);
+    },
+  );
+
+  // The locale is validated for every unit, not only "week": a malformed tag is invalid input.
+  it.each`
+    unit       | locale
+    ${"day"}   | ${"not-a-locale-!!"}
+    ${"day"}   | ${[MustTestLocales.frFR, "not a locale!!"]}
+    ${"day"}   | ${42}
+    ${"week"}  | ${"not-a-locale-!!"}
+    ${"week"}  | ${[MustTestLocales.frFR, "not a locale!!"]}
+    ${"week"}  | ${42}
+    ${"month"} | ${"not-a-locale-!!"}
+    ${"month"} | ${[MustTestLocales.frFR, "not a locale!!"]}
+    ${"month"} | ${42}
+    ${"year"}  | ${"not-a-locale-!!"}
+    ${"year"}  | ${[MustTestLocales.frFR, "not a locale!!"]}
+    ${"year"}  | ${42}
+  `(
+    "returns false for unit $unit with invalid locale $locale",
+    ({ unit, locale }) => {
+      expect(isThisUnit("2024-02-29", unit, locale)).toBe(false);
+    },
+  );
+
+  // ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale
+  // data is read (en-US weeks start on Sunday, fr-FR on Monday, ar-EG weekends are Friday and
+  // Saturday: Intl.Locale#getWeekInfo), and a malformed tag anywhere in the list is invalid input.
+  // Sunday 2024-02-25 shares today's en-US (Sunday-first) week but not its fr-FR (Monday-first) week.
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.enUS, MustTestLocales.frFR]} | ${true}
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${false}
+  `(
+    "returns $expected for Sunday 2024-02-25 by week with locale list $locale",
+    ({ locale, expected }) => {
+      expect(isThisUnit("2024-02-25", "week", locale)).toBe(expected);
+    },
+  );
 });

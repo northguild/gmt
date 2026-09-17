@@ -1,28 +1,34 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { plainDateTime } from "../../regex";
+import { halfOpenContainsPoint, halfOpenContainsSpan } from "../../internal";
+import { isValidDateTime } from "../validate";
 
 /**
- * Return true when `pointOrStart` falls within the interval `[intervalStart, intervalEnd]`
- * (3-arg), or when the inner interval `[innerStart, innerEnd]` is fully contained within
- * the outer interval `[intervalStart, intervalEnd]` (4-arg).
+ * Return true when `pointOrStart` lies in the half-open interval `[intervalStart, intervalEnd)`
+ * (3-arg), or when the inner interval `[innerStart, innerEnd)` lies within it (4-arg).
  *
+ * - Half-open: an interval holds every moment `t` with `start <= t < end`, so `intervalEnd` itself is
+ *   outside (the rule CORE-6's `intervalContains` uses). An empty interval (`start === end`)
+ *   contains no point.
+ * - 4-arg: the inner interval must start at or after `intervalStart`, end at or before
+ *   `intervalEnd`, and overlap the outer interval. An empty inner interval therefore counts only
+ *   strictly inside, never at an edge (CORE-6's `clampInterval` clamps it away there).
  * - Uses `Temporal.PlainDateTime.compare` for comparison.
- * - Always-inclusive boundaries: `start <= point <= end`.
  * - Returns `false` if `intervalStart > intervalEnd` (invalid outer interval).
  * - Returns `false` if `innerStart > innerEnd` in 4-arg mode (invalid inner interval).
- * - Returns `false` on invalid input (wrong type, malformed strings, leap seconds).
+ * - Returns `false` on invalid input (wrong type, malformed strings).
  *
  * @param intervalStart ISO 8601 datetime string for the outer interval start
- * @param intervalEnd ISO 8601 datetime string for the outer interval end
+ * @param intervalEnd ISO 8601 datetime string for the outer interval end (excluded)
  * @param pointOrStart ISO 8601 datetime string for the point (3-arg) or inner start (4-arg)
  * @param pointEnd optional ISO 8601 datetime string for the inner interval end (4-arg mode)
  * @returns true if the point or inner interval is contained, or false on invalid input
  *
- * @example intervalContainsDateTime("2024-01-01T10:00:00", "2024-12-31T23:59:59", "2024-06-15T12:00:00") // true
- * @example intervalContainsDateTime("2024-01-01T10:00:00", "2024-12-31T23:59:59", "2024-06-15T12:00:00", "2024-07-15T12:00:00") // true
- * @example intervalContainsDateTime("2024-12-31T23:59:59", "2024-01-01T10:00:00", "2024-06-15T12:00:00") // false
- * @example intervalContainsDateTime("2024-01-01T10:00:00", "2024-12-31T23:59:59", "2024-06-15T12:00:00", "2024-06-10T12:00:00") // false
- * @example intervalContainsDateTime("invalid", "2024-12-31T23:59:59", "2024-06-15T12:00:00") // false
+ * @example intervalContainsDateTime("2024-01-01T09:00:00", "2024-01-01T17:00:00", "2024-01-01T12:00:00") // true
+ * @example intervalContainsDateTime("2024-01-01T09:00:00", "2024-01-01T17:00:00", "2024-01-01T16:59:59.999999999") // true (last value before the end)
+ * @example intervalContainsDateTime("2024-01-01T09:00:00", "2024-01-01T17:00:00", "2024-01-01T17:00:00") // false (end is excluded)
+ * @example intervalContainsDateTime("2024-01-01T09:00:00", "2024-01-01T17:00:00", "2024-01-01T12:00:00", "2024-01-01T17:00:00") // true (inner shares the end)
+ * @example intervalContainsDateTime("2024-01-01T09:00:00", "2024-01-01T17:00:00", "2024-01-01T17:00:00", "2024-01-01T17:00:00") // false (empty interval at the edge)
+ * @example intervalContainsDateTime("2024-01-01T17:00:00", "2024-01-01T09:00:00", "2024-01-01T12:00:00") // false (reversed interval)
  */
 export function intervalContainsDateTime(
   intervalStart: string,
@@ -40,10 +46,10 @@ export function intervalContainsDateTime(
   }
 
   if (
-    !plainDateTime.test(intervalStart) ||
-    !plainDateTime.test(intervalEnd) ||
-    !plainDateTime.test(pointOrStart) ||
-    (pointEnd !== undefined && !plainDateTime.test(pointEnd))
+    !isValidDateTime(intervalStart) ||
+    !isValidDateTime(intervalEnd) ||
+    !isValidDateTime(pointOrStart) ||
+    (pointEnd !== undefined && !isValidDateTime(pointEnd))
   ) {
     return false;
   }
@@ -58,9 +64,10 @@ export function intervalContainsDateTime(
     }
 
     if (pointEnd === undefined) {
-      return (
-        Temporal.PlainDateTime.compare(s, p) <= 0 &&
-        Temporal.PlainDateTime.compare(p, e) <= 0
+      return halfOpenContainsPoint(
+        { start: s, end: e },
+        p,
+        Temporal.PlainDateTime.compare,
       );
     }
 
@@ -70,9 +77,10 @@ export function intervalContainsDateTime(
       return false;
     }
 
-    return (
-      Temporal.PlainDateTime.compare(s, p) <= 0 &&
-      Temporal.PlainDateTime.compare(pe, e) <= 0
+    return halfOpenContainsSpan(
+      { start: s, end: e },
+      { start: p, end: pe },
+      Temporal.PlainDateTime.compare,
     );
   } catch {
     return false;

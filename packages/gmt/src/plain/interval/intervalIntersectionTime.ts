@@ -1,11 +1,18 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
-import { plainTime } from "../../regex";
+import { halfOpenIntersection } from "../../internal";
+import { isValidTime } from "../validate";
 
 /**
  * Return the overlapping span of two time intervals, or null when they do not overlap.
  *
  * - Uses `Temporal.PlainTime.compare` for comparison.
- * - Adjacent intervals (e.g. `aEnd === bStart`) share one instant and DO overlap.
+ * - Half-open: an interval holds every `t` with `start <= t < end`. The intersection is
+ *   `[max(aStart, bStart), min(aEnd, bEnd))` when `aStart < bEnd && bStart < aEnd` (CORE-6's
+ *   `intersectIntervals`), otherwise `null`.
+ * - Touching intervals (`aEnd === bStart`) share no clock time and return `null`.
+ * - An empty interval (`start === end`) intersects only an interval it lies strictly inside, and
+ *   then returns itself.
  * - Returns `null` if either interval is invalid (`start > end`).
  * - Returns `null` on invalid input (wrong type, malformed strings).
  *
@@ -16,8 +23,7 @@ import { plainTime } from "../../regex";
  * @returns `{ start, end }` with the overlapping span, or null on invalid input / no overlap
  *
  * @example intervalIntersectionTime("09:00:00", "17:00:00", "12:00:00", "18:00:00") // { start: "12:00:00", end: "17:00:00" }
- * @example intervalIntersectionTime("09:00:00", "17:00:00", "17:00:00", "18:00:00") // { start: "17:00:00", end: "17:00:00" }
- * @example intervalIntersectionTime("09:00:00", "17:00:00", "18:00:00", "20:00:00") // null
+ * @example intervalIntersectionTime("09:00:00", "17:00:00", "17:00:00", "18:00:00") // null (touching)
  * @example intervalIntersectionTime("09:00:00", "17:00:00", "10:00:00", "11:00:00") // { start: "10:00:00", end: "11:00:00" }
  * @example intervalIntersectionTime("invalid", "17:00:00", "12:00:00", "18:00:00") // null
  */
@@ -37,10 +43,10 @@ export function intervalIntersectionTime(
   }
 
   if (
-    !plainTime.test(aStart) ||
-    !plainTime.test(aEnd) ||
-    !plainTime.test(bStart) ||
-    !plainTime.test(bEnd)
+    !isValidTime(aStart) ||
+    !isValidTime(aEnd) ||
+    !isValidTime(bStart) ||
+    !isValidTime(bEnd)
   ) {
     return null;
   }
@@ -59,15 +65,17 @@ export function intervalIntersectionTime(
       return null;
     }
 
-    if (
-      Temporal.PlainTime.compare(aE, bS) < 0 ||
-      Temporal.PlainTime.compare(bE, aS) < 0
-    ) {
+    const shared = halfOpenIntersection(
+      { start: aS, end: aE },
+      { start: bS, end: bE },
+      Temporal.PlainTime.compare,
+    );
+
+    if (shared === null) {
       return null;
     }
 
-    const start = Temporal.PlainTime.compare(aS, bS) >= 0 ? aS : bS;
-    const end = Temporal.PlainTime.compare(aE, bE) <= 0 ? aE : bE;
+    const { start, end } = shared;
 
     return { start: start.toString(), end: end.toString() };
   } catch {

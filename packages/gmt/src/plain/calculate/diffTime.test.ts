@@ -58,10 +58,6 @@ describe("diffTime", () => {
     ${""}
     ${null}
     ${undefined}
-    ${"hour"}
-    ${"minute"}
-    ${"second"}
-    ${"day"}
     ${"week"}
   `("returns null for invalid unit $invalidUnit", ({ invalidUnit }) => {
     expect(diffTime("12:00:00", "13:00:00", [invalidUnit] as never)).toBeNull();
@@ -147,5 +143,59 @@ describe("diffTime", () => {
         smallestUnit: "hours",
       }),
     ).toBeNull();
+  });
+
+  // Temporal §13.17 GetTemporalUnitValuedOption: a singular unit name is the same unit as its plural.
+  // 10:00 to 11:30 is 1 hour 30 minutes: 90 minutes, 5400 seconds.
+  it.each`
+    unit                  | expected
+    ${"hour"}             | ${1}
+    ${"minute"}           | ${90}
+    ${"second"}           | ${5400}
+    ${["hour", "minute"]} | ${{ hours: 1, minutes: 30 }}
+  `(
+    "returns $expected for singular unit $unit from 10:00 to 11:30",
+    ({ unit, expected }) => {
+      expect(diffTime("10:00:00", "11:30:00", unit)).toEqual(expected);
+    },
+  );
+});
+
+// Plan #16: a units array returns the whole difference. The amount of each unlisted unit between
+// two listed units is carried into the next smaller listed unit; units smaller than the smallest
+// listed unit are dropped (truncated), as for a single unit. Values from native Temporal
+// (Chromium 153): 10:00:00 until 11:30:15 is PT1H30M15S, and PT30M15S totals 1815 seconds;
+// 23:59:10 until 23:59:59 rounded to the minute (halfExpand) is PT1M, which runs past midnight.
+describe("diffTime units array carries unlisted units", () => {
+  it.each`
+    time1         | time2           | units                   | options                                                   | expected
+    ${"10:00:00"} | ${"11:30:15"}   | ${["hours", "seconds"]} | ${undefined}                                              | ${{ hours: 1, seconds: 1815 }}
+    ${"10:00:00"} | ${"11:30:15"}   | ${["seconds", "hours"]} | ${undefined}                                              | ${{ seconds: 1815, hours: 1 }}
+    ${"11:30:15"} | ${"10:00:00"}   | ${["hours", "seconds"]} | ${undefined}                                              | ${{ hours: -1, seconds: -1815 }}
+    ${"00:00:00"} | ${"01:45:30.5"} | ${["hour", "second"]}   | ${undefined}                                              | ${{ hours: 1, seconds: 2730 }}
+    ${"10:00:00"} | ${"11:30:45"}   | ${["hours", "seconds"]} | ${{ smallestUnit: "minute", roundingMode: "halfExpand" }} | ${{ hours: 1, seconds: 1860 }}
+    ${"23:59:10"} | ${"23:59:59"}   | ${["hours", "seconds"]} | ${{ smallestUnit: "minute", roundingMode: "halfExpand" }} | ${{ hours: 0, seconds: 60 }}
+    ${"10:00:00"} | ${"11:30:15"}   | ${["hours", "minutes"]} | ${undefined}                                              | ${{ hours: 1, minutes: 30 }}
+  `(
+    "returns $expected for $units from $time1 to $time2 with options $options",
+    ({ time1, time2, units, options, expected }) => {
+      expect(diffTime(time1, time2, units, options)).toEqual(expected);
+    },
+  );
+});
+
+// Temporal GetOptionsObject: an options argument that is not an object or undefined throws
+// TypeError (native Chromium 153: `until(other, null)`, `"x"`, `5` and `true` all throw), so each is
+// invalid input. Omitted options measure normally (PT1H).
+describe("diffTime with a non-object options argument", () => {
+  it.each`
+    options      | expected
+    ${null}      | ${null}
+    ${"x"}       | ${null}
+    ${5}         | ${null}
+    ${true}      | ${null}
+    ${undefined} | ${1}
+  `("returns $expected for options $options", ({ options, expected }) => {
+    expect(diffTime("01:00:00", "02:00:00", "hours", options)).toBe(expected);
   });
 });

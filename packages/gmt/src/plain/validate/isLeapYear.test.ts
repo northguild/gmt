@@ -38,11 +38,24 @@ describe("isLeapYear", () => {
     ${"20240315"}                                | ${"basic format"}
     ${"2024-12-31T23:59:60"}                     | ${"leap second"}
     ${"2024-06-15[u-ca=hebrew]"}                 | ${"calendar annotation"}
-    ${"2024-06-15[u-ca=iso8601]"}                | ${"Temporal ISO calendar annotation"}
   `(
     "returns false for $value ($shape), which isValidDate rejects",
     ({ value }) => {
       expect(isLeapYear(value)).toBe(false);
+    },
+  );
+
+  // isValidDate reads annotations as Temporal.PlainDate.from does (RFC 9557 §3.3): `[u-ca=iso8601]`
+  // names the ISO calendar and an elective annotation is ignored, so 2024 is a leap year.
+  it.each`
+    value                         | expected
+    ${"2024-06-15[u-ca=iso8601]"} | ${true}
+    ${"2024-06-15[foo=bar]"}      | ${true}
+    ${"2024-06-15[!foo=bar]"}     | ${false}
+  `(
+    "reads the annotations of $value as Temporal does → $expected",
+    ({ value, expected }) => {
+      expect(isLeapYear(value)).toBe(expected);
     },
   );
 });

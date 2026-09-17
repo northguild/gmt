@@ -174,4 +174,19 @@ describe("getWeeksInLocaleWeekYear", () => {
       getWeeksInLocaleWeekYear("2024-06-15", MustTestLocales.enUS),
     ).toBeNull();
   });
+
+  // ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale
+  // data is read (en-US weeks start on Sunday, fr-FR on Monday, ar-EG weekends are Friday and
+  // Saturday: Intl.Locale#getWeekInfo), and a malformed tag anywhere in the list is invalid input.
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.enUS, MustTestLocales.frFR]} | ${53}
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${52}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${null}
+  `(
+    "returns $expected for Sunday 2024-12-29 (en-US week-year 2025 runs 2024-12-29 to 2026-01-03, 371 days) with locale list $locale",
+    ({ locale, expected }) => {
+      expect(getWeeksInLocaleWeekYear("2024-12-29", locale)).toBe(expected);
+    },
+  );
 });

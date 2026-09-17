@@ -21,7 +21,7 @@ import { isValidDate } from "../validate";
  *
  * @param start ISO PlainDate string (range start)
  * @param end ISO PlainDate string (range end)
- * @param locale optional locale tag (default: runtime default)
+ * @param locale optional locale tag (default: runtime default), or a preference list of tags (ECMA-402)
  * @param options optional Intl.DateTimeFormatOptions
  * @returns localized range string or "" when invalid
  *
@@ -29,11 +29,12 @@ import { isValidDate } from "../validate";
  * @example formatDateRange("2024-02-03", "2024-06-10", "en-US", { dateStyle: "long" }) // "February 3 - June 10, 2024"
  * @example formatDateRange("2024-02-03", "2024-02-05", "en-US", { timeZoneName: "short" }) // "2/3/2024 - 2/5/2024"
  * @example formatDateRange("invalid", "2024-02-05", "en-US") // "" (invalid input)
+ * @example formatDateRange("2024-02-03", "2024-02-05", ["fr-FR", "en-US"], { dateStyle: "long" }) // "3-5 février 2024" (GMT writes range dashes as ASCII hyphens)
  */
 export function formatDateRange(
   start: string,
   end: string,
-  locale?: string,
+  locale?: string | string[],
   options?: DateTimeFormatOptions,
 ): string {
   if (!isValidDate(start) || !isValidDate(end)) {

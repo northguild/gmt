@@ -142,4 +142,51 @@ describe("endOfDateTime for an input inside the unit's final second", () => {
       );
     },
   );
+
+  // Temporal §13.17 GetTemporalUnitValuedOption: a plural unit name is the same unit as its singular.
+  it.each`
+    unit              | expected
+    ${"years"}        | ${"2024-12-31T23:59:59.999999999"}
+    ${"months"}       | ${"2024-02-29T23:59:59.999999999"}
+    ${"weeks"}        | ${"2024-03-03T23:59:59.999999999"}
+    ${"days"}         | ${"2024-02-29T23:59:59.999999999"}
+    ${"hours"}        | ${"2024-02-29T13:59:59.999999999"}
+    ${"minutes"}      | ${"2024-02-29T13:45:59.999999999"}
+    ${"seconds"}      | ${"2024-02-29T13:45:30.999999999"}
+    ${"milliseconds"} | ${"2024-02-29T13:45:30.123999999"}
+    ${"microseconds"} | ${"2024-02-29T13:45:30.123456999"}
+    ${"nanoseconds"}  | ${"2024-02-29T13:45:30.123456789"}
+  `(
+    "returns $expected for plural unit $unit on 2024-02-29T13:45:30.123456789",
+    ({ unit, expected }) => {
+      expect(endOfDateTime("2024-02-29T13:45:30.123456789", unit)).toBe(
+        expected,
+      );
+    },
+  );
+
+  // weekStartsOn only names "monday" or "sunday"; any other value is invalid input, for every unit
+  // (Temporal GetOption rejects a value outside its allowed list; undefined means the default).
+  it.each`
+    unit      | weekStartsOn
+    ${"week"} | ${"tuesday"}
+    ${"week"} | ${"Monday"}
+    ${"week"} | ${""}
+    ${"week"} | ${null}
+    ${"week"} | ${1}
+    ${"week"} | ${true}
+    ${"day"}  | ${"tuesday"}
+    ${"day"}  | ${"Monday"}
+    ${"day"}  | ${""}
+    ${"day"}  | ${null}
+    ${"day"}  | ${1}
+    ${"day"}  | ${true}
+  `(
+    "returns an empty string for unit $unit with invalid weekStartsOn $weekStartsOn",
+    ({ unit, weekStartsOn }) => {
+      expect(endOfDateTime("2024-02-29T13:45:30", unit, { weekStartsOn })).toBe(
+        "",
+      );
+    },
+  );
 });

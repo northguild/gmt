@@ -103,4 +103,19 @@ describe("getLocaleEndOfWeek", () => {
       date.subtract({ days: offset }).add({ days: 6 }).toString(),
     );
   });
+
+  // ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale
+  // data is read (en-US weeks start on Sunday, fr-FR on Monday, ar-EG weekends are Friday and
+  // Saturday: Intl.Locale#getWeekInfo), and a malformed tag anywhere in the list is invalid input.
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.enUS, MustTestLocales.frFR]} | ${"2024-05-18"}
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"2024-05-19"}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
+  `(
+    "returns $expected for 2024-05-15 with locale list $locale",
+    ({ locale, expected }) => {
+      expect(getLocaleEndOfWeek("2024-05-15", locale)).toBe(expected);
+    },
+  );
 });

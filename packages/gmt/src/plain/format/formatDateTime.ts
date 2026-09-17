@@ -20,7 +20,7 @@ import { isValidDateTime } from "../validate";
  *   otherwise), and no-break, narrow and thin spaces become U+0020.
  *
  * @param value ISO PlainDateTime string
- * @param locale optional BCP 47 locale identifier (default: runtime default)
+ * @param locale optional BCP 47 locale identifier (default: runtime default), or a preference list of tags (ECMA-402)
  * @param options optional Intl.DateTimeFormatOptions
  * @returns localized date-time string or "" on invalid input
  *
@@ -32,10 +32,11 @@ import { isValidDateTime } from "../validate";
  * @example formatDateTime("2024-02-03T14:30:45", "en-US", { era: "long" }) // "2/3/2024 Anno Domini, 2:30:45 PM"
  * @example formatDateTime("2024-02-03T14:30:45", "en-US", { era: "long", year: "numeric", month: "numeric", day: "numeric" }) // "2/3/2024 Anno Domini" — the pre-1.16.0 text
  * @example formatDateTime("invalid") // ""
+ * @example formatDateTime("2024-02-03T14:30:45", ["fr-FR", "en-US"], { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) // "03/02/2024 14:30"
  */
 export function formatDateTime(
   value: string,
-  locale?: string,
+  locale?: string | string[],
   options?: DateTimeFormatOptions,
 ): string {
   if (!isValidDateTime(value)) {

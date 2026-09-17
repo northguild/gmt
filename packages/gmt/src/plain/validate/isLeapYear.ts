@@ -6,7 +6,8 @@ import { isValidDate } from "./isValidDate";
  *
  * - A leap year is divisible by 4, except for century years which must be divisible by 400.
  * - Returns false for invalid input strings, including every shape `isValidDate` rejects: a
- *   date-time, zoned, basic-format, leap-second or `[u-ca=...]`-annotated string.
+ *   date-time, zoned, basic-format or leap-second string, or a non-ISO calendar annotation. The
+ *   annotations Temporal ignores are accepted (`"2024-06-15[u-ca=iso8601]"` → true).
  * - Compatibility: earlier releases read those shapes loosely (`"2024-03-15T10:00"` → `true`).
  *   Pass the date part alone, or use `Temporal.PlainDate.from(value).inLeapYear`.
  *

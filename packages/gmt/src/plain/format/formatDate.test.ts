@@ -421,4 +421,38 @@ describe("formatDate", () => {
     const result = formatDate("2024-02-29");
     expect(result).toBe("");
   });
+
+  // ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale data
+  // is used, and a malformed tag anywhere in the list is invalid input. Expected strings from native
+  // Intl with the same list.
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"03/02/2024"}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
+  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+    expect(
+      formatDate("2024-02-03", locale, {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }),
+    ).toBe(expected);
+  });
+});
+
+// Plan #14: ECMA-402 CoerceOptionsToObject throws TypeError for null options and wraps any other
+// primitive with ToObject, which carries no formatting fields, so a string or number formats with
+// the defaults. Expected strings from native Chromium 153 (`toLocaleString("en-US", 1)` and
+// `new Intl.DateTimeFormat("en-US", null)`, which throws).
+describe("formatDate with primitive options", () => {
+  it.each`
+    options   | expected
+    ${null}   | ${""}
+    ${"long"} | ${"2/3/2024"}
+    ${1}      | ${"2/3/2024"}
+  `("returns $expected for options $options", ({ options, expected }) => {
+    expect(
+      formatDate("2024-02-03", MustTestLocales.enUS, options as never),
+    ).toBe(expected);
+  });
 });

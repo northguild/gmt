@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
 import { getLocaleFirstDayOfWeek } from "../../internal";
 import { isValidDate } from "../validate";
@@ -19,15 +20,19 @@ import { isValidDate } from "../validate";
  *   default locale, as ECMA-402 `ResolveLocale` requires.
  *
  * @param value ISO 8601 date string
- * @param locale BCP 47 locale tag (e.g. "en-US", "fr-FR")
+ * @param locale BCP 47 locale tag (e.g. "en-US", "fr-FR"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns ""
  * @returns ISO 8601 date string for the start of `value`'s locale-relative week, or "" on invalid input
  *
  * @example getLocaleStartOfWeek("2024-02-29", "en-US") // "2024-02-25" (Sunday)
  * @example getLocaleStartOfWeek("2024-02-29", "fr-FR") // "2024-02-26" (Monday)
  * @example getLocaleStartOfWeek("invalid-date", "en-US") // ""
  * @example getLocaleStartOfWeek("2024-02-29", "not-a-locale-!!") // ""
+ * @example getLocaleStartOfWeek("2024-05-15", ["en-US", "fr-FR"]) // "2024-05-12" (en-US, the first listed locale, starts weeks on Sunday)
  */
-export function getLocaleStartOfWeek(value: string, locale: string): string {
+export function getLocaleStartOfWeek(
+  value: string,
+  locale: string | string[],
+): string {
   if (!isValidDate(value)) return "";
 
   const firstDay = getLocaleFirstDayOfWeek(locale);

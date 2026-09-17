@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { plainTime } from "../../../regex";
+import { isValidTime } from "../../validate";
 
 /**
  * Return true if `start` and `end` form a valid time interval — both parseable as
@@ -8,6 +8,9 @@ import { plainTime } from "../../../regex";
  * - Both inputs must be ISO 8601 time strings (e.g. `"14:30:00"`).
  * - Equal `start === end` is valid.
  * - Invalid input, malformed strings, or leap-second strings return `false`.
+ * - Each endpoint must satisfy `isValidTime`, so annotations are read as Temporal reads them: a time
+ *   zone annotation (`[Europe/Paris]`), `[u-ca=iso8601]` and an elective annotation (`[foo=bar]`) are
+ *   ignored; an unknown critical annotation (`[!foo=bar]`) is rejected.
  *
  * @param start ISO 8601 time string (interval start)
  * @param end ISO 8601 time string (interval end)
@@ -17,38 +20,25 @@ import { plainTime } from "../../../regex";
  * @example isValidTimeInterval("12:00:00", "12:00:00") // true
  * @example isValidTimeInterval("17:00:00", "09:00:00") // false
  * @example isValidTimeInterval("invalid", "12:00:00") // false
+ * @example isValidTimeInterval("09:00:00[u-ca=iso8601]", "17:00:00[foo=bar]") // true (annotations ignored)
+ * @example isValidTimeInterval("09:00:00[!foo=bar]", "17:00:00") // false (unknown critical annotation)
  */
 export function isValidTimeInterval(start: string, end: string): boolean {
   if (typeof start !== "string" || typeof end !== "string") {
     return false;
   }
 
-  if (!plainTime.test(start) || !plainTime.test(end)) {
+  if (!isValidTime(start) || !isValidTime(end)) {
     return false;
   }
 
   try {
-    const t1 = Temporal.PlainTime.from(start);
-    const t2 = Temporal.PlainTime.from(end);
-
-    const isLessThan =
-      t1.hour < t2.hour ||
-      (t1.hour === t2.hour && t1.minute < t2.minute) ||
-      (t1.hour === t2.hour &&
-        t1.minute === t2.minute &&
-        t1.second < t2.second) ||
-      (t1.hour === t2.hour &&
-        t1.minute === t2.minute &&
-        t1.second === t2.second &&
-        t1.millisecond < t2.millisecond);
-
-    const isEqual =
-      t1.hour === t2.hour &&
-      t1.minute === t2.minute &&
-      t1.second === t2.second &&
-      t1.millisecond === t2.millisecond;
-
-    return isLessThan || isEqual;
+    return (
+      Temporal.PlainTime.compare(
+        Temporal.PlainTime.from(start),
+        Temporal.PlainTime.from(end),
+      ) <= 0
+    );
   } catch {
     return false;
   }

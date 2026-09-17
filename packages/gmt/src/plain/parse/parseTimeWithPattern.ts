@@ -49,22 +49,22 @@ import { parseValueWithPattern, TIME_PATTERN_FIELDS } from "../../internal";
  *
  * @param value The string to decode (e.g. "02:30:45 PM")
  * @param pattern The token pattern describing `value`'s shape (e.g. "hh:mm:ss a")
- * @param locale Optional BCP 47 locale for the meridiem token (default "en-US")
+ * @param locale Optional BCP 47 locale tag, or a preference list of tags, for the meridiem token (default "en-US")
  * @returns ISO `PlainTime` string, or "" on no match, malformed pattern, or invalid input
  *
  * @example parseTimeWithPattern("14:30:45", "HH:mm:ss") // "14:30:45"
  * @example parseTimeWithPattern("02:30:45 PM", "hh:mm:ss a") // "14:30:45"
  * @example parseTimeWithPattern("25:00", "HH:mm") // "" (shape-valid, not a real time)
  * @example parseTimeWithPattern("2024-03-15", "yyyy-MM-dd") // "" (date token in a time-only pattern)
+ * @example parseTimeWithPattern("午後 10:20", "a h:mm", ["ja-JP", "en-US"]) // "22:20:00"
  */
 export function parseTimeWithPattern(
   value: string,
   pattern: string,
-  locale?: string,
+  locale?: string | string[],
 ): string {
   if (typeof value !== "string") return "";
   if (typeof pattern !== "string") return "";
-  if (locale !== undefined && typeof locale !== "string") return "";
 
   const fields = parseValueWithPattern(
     value,

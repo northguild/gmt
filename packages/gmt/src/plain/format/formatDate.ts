@@ -19,7 +19,7 @@ import { isValidDate } from "../validate";
  *   text, and pass only `dateStyle` to keep the styled text.
  *
  * @param value ISO PlainDate string
- * @param locale optional BCP 47 locale identifier (default: runtime default)
+ * @param locale optional BCP 47 locale identifier (default: runtime default), or a preference list of tags (ECMA-402)
  * @param options optional Intl.DateTimeFormatOptions
  * @returns localized date string or "" on invalid input
  *
@@ -31,10 +31,11 @@ import { isValidDate } from "../validate";
  * @example formatDate("2024-02-03", "en-US", { dateStyle: "short", timeStyle: "short" }) // "" — a PlainDate has no time
  * @example formatDate("2024-02-03", "en-US", { dateStyle: "short" }) // "2/3/24" — the pre-1.16.0 text
  * @example formatDate("invalid") // ""
+ * @example formatDate("2024-02-03", ["fr-FR", "en-US"], { year: "numeric", month: "2-digit", day: "2-digit" }) // "03/02/2024" (the first listed locale)
  */
 export function formatDate(
   value: string,
-  locale?: string,
+  locale?: string | string[],
   options?: DateTimeFormatOptions,
 ): string {
   if (!isValidDate(value)) {

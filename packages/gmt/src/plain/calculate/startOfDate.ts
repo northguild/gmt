@@ -1,5 +1,9 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
+import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
+import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
 import { isValidDate } from "../validate";
+import { isOptionsArgument } from "../../internal/isObject";
 
 const supported: Temporal.DateUnit[] = ["year", "month", "week", "day"];
 
@@ -7,31 +11,44 @@ const supported: Temporal.DateUnit[] = ["year", "month", "week", "day"];
  * Return the start of the specified date `unit` for a given ISO 8601 date string.
  *
  * - `"day"` returns the date itself: a date is already a whole day, as `endOfDate` treats it.
+ * - `unit` accepts the singular or plural name (`"month"` or `"months"`), as Temporal does.
+ * - `weekStartsOn` other than `"monday"` or `"sunday"` returns "".
  * - Returns "" for invalid inputs.
  *
  * @param value ISO 8601 date string
- * @param unit Temporal.DateUnit to specify the unit for the start
+ * @param unit date unit, singular or plural, to specify the unit for the start
  * @param optionsArg optional: weekStartsOn ("monday" | "sunday")
  * @returns ISO 8601 string representing the start of the specified unit, or "" on invalid input
  *
  * @example startOfDate("2024-02-29", "month") // "2024-02-01"
  * @example startOfDate("2024-02-29", "day") // "2024-02-29"
+ * @example startOfDate("2024-02-29", "months") // "2024-02-01"
  * @example startOfDate("invalid-date", "month") // ""
  */
 export function startOfDate(
   value: string,
-  unit: Temporal.DateUnit,
+  unit: Temporal.SmallestUnit<Temporal.DateUnit>,
   optionsArg?: { weekStartsOn?: "monday" | "sunday" },
 ): string {
-  const weekStartsOn = optionsArg?.weekStartsOn ?? "monday";
+  if (!isOptionsArgument(optionsArg)) {
+    return "";
+  }
 
-  if (!isValidDate(value) || !supported.includes(unit)) return "";
+  const resolvedUnit = resolveDateTimeUnit(unit);
+  const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
+
+  if (
+    weekStartsOn === null ||
+    !isValidDate(value) ||
+    !supported.includes(resolvedUnit as Temporal.DateUnit)
+  )
+    return "";
 
   try {
     const source = Temporal.PlainDate.from(value);
     let result: Temporal.PlainDate;
 
-    switch (unit) {
+    switch (resolvedUnit) {
       case "year":
         result = source.with({ month: 1, day: 1 });
         break;

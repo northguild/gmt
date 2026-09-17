@@ -41,7 +41,6 @@ describe("mapDatesInRange", () => {
     ${"2024-03-01"} | ${"2024-03-03"} | ${1.5}
     ${"2024-03-01"} | ${"2024-03-03"} | ${NaN}
     ${"2024-03-01"} | ${"2024-03-03"} | ${null}
-    ${"2024-03-01"} | ${"2024-03-03"} | ${undefined}
   `(
     "returns an empty array for invalid stepDays $invalidStep",
     ({ startDate, endDate, invalidStep }) => {
@@ -162,4 +161,17 @@ describe("mapDatesInRange default piece limit", () => {
       expect(mapDatesInRange(startDate, endDate, stepDays)).toEqual(expected);
     },
   );
+
+  // An explicit undefined argument is the omitted argument (TC39 GetOption treats undefined as absent),
+  // so stepDays undefined is the default step of 1 day and still reaches options.
+  it("uses the default step for an explicit undefined stepDays", () => {
+    expect(mapDatesInRange("2024-03-01", "2024-03-03", undefined)).toEqual([
+      "2024-03-01",
+      "2024-03-02",
+      "2024-03-03",
+    ]);
+    expect(
+      mapDatesInRange("2024-03-01", "2024-03-03", undefined, { maxPieces: 2 }),
+    ).toEqual([]);
+  });
 });

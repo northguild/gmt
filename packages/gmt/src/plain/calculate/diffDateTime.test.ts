@@ -67,11 +67,6 @@ describe("diffDateTime", () => {
     ${""}
     ${null}
     ${undefined}
-    ${"hour"}
-    ${"day"}
-    ${"month"}
-    ${"year"}
-    ${"second"}
   `("returns null for invalid unit $invalidUnit", ({ invalidUnit }) => {
     expect(
       diffDateTime("2024-01-01T00:00:00", "2024-01-02T00:00:00", [
@@ -185,5 +180,68 @@ describe("diffDateTime", () => {
         { smallestUnit: "hours" },
       ),
     ).toBeNull();
+  });
+
+  // Temporal §13.17 GetTemporalUnitValuedOption: a singular unit name is the same unit as its plural.
+  // One week apart: 7 days, 168 hours.
+  it.each`
+    unit               | expected
+    ${"week"}          | ${1}
+    ${"day"}           | ${7}
+    ${"hour"}          | ${168}
+    ${["week", "day"]} | ${{ weeks: 1, days: 0 }}
+  `(
+    "returns $expected for singular unit $unit from 2024-01-01T00:00:00 to 2024-01-08T00:00:00",
+    ({ unit, expected }) => {
+      expect(
+        diffDateTime("2024-01-01T00:00:00", "2024-01-08T00:00:00", unit),
+      ).toEqual(expected);
+    },
+  );
+});
+
+// Plan #16: a units array returns the whole difference; unlisted units between listed ones are
+// carried into the next smaller listed unit. Values from native Temporal (Chromium 153):
+// 2024-01-01T00:00 until 2025-03-01T12:30 is P1Y2MT12H30M, and 2025-01-01T00:00 until
+// 2025-03-01T12:30 is 1428 hours (59 days x 24 + 12); 2024-01-01T00:00 until 2024-01-03T02:30 is
+// P2DT2H30M (150 minutes). Temporal fills weeks only when largestUnit is weeks: 2024-01-01T00:00
+// until 2024-03-20T05:00 is P2M19DT5H, and 2024-03-01T00:00 until 2024-03-20T05:00 is P2W5DT5H
+// (125 hours after the weeks).
+describe("diffDateTime units array carries unlisted units", () => {
+  it.each`
+    dateTime1                | dateTime2                | units                           | expected
+    ${"2024-01-01T00:00:00"} | ${"2025-03-01T12:30:00"} | ${["years", "hours"]}           | ${{ years: 1, hours: 1428 }}
+    ${"2024-01-01T00:00:00"} | ${"2024-01-03T02:30:00"} | ${["days", "minutes"]}          | ${{ days: 2, minutes: 150 }}
+    ${"2024-01-03T02:30:00"} | ${"2024-01-01T00:00:00"} | ${["days", "minutes"]}          | ${{ days: -2, minutes: -150 }}
+    ${"2024-01-01T00:00:00"} | ${"2024-01-03T02:30:00"} | ${["days", "hours"]}            | ${{ days: 2, hours: 2 }}
+    ${"2024-01-01T00:00:00"} | ${"2024-03-20T05:00:00"} | ${["months", "weeks", "hours"]} | ${{ months: 2, weeks: 2, hours: 125 }}
+  `(
+    "returns $expected for $units from $dateTime1 to $dateTime2",
+    ({ dateTime1, dateTime2, units, expected }) => {
+      expect(diffDateTime(dateTime1, dateTime2, units)).toEqual(expected);
+    },
+  );
+});
+
+// Temporal GetOptionsObject: an options argument that is not an object or undefined throws
+// TypeError (native Chromium 153: `until(other, null)`, `"x"`, `5` and `true` all throw), so each is
+// invalid input. Omitted options measure normally (P31D).
+describe("diffDateTime with a non-object options argument", () => {
+  it.each`
+    options      | expected
+    ${null}      | ${null}
+    ${"x"}       | ${null}
+    ${5}         | ${null}
+    ${true}      | ${null}
+    ${undefined} | ${31}
+  `("returns $expected for options $options", ({ options, expected }) => {
+    expect(
+      diffDateTime(
+        "2024-01-01T00:00:00",
+        "2024-02-01T00:00:00",
+        "days",
+        options,
+      ),
+    ).toBe(expected);
   });
 });

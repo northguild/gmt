@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
 
 import { getLocaleFirstDayOfWeek, monthGridWeekRow } from "../../internal";
@@ -17,7 +18,7 @@ import { isValidDate } from "../validate";
  * - Returns null if `value` or `locale` is invalid.
  *
  * @param value ISO PlainDate string
- * @param locale BCP 47 locale tag (e.g. "en-US", "fr-FR")
+ * @param locale BCP 47 locale tag (e.g. "en-US", "fr-FR"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns null
  * @returns number of week-rows the month spans (4-6), or null on invalid input
  *
  * @example getWeeksInMonth("2024-02-15", "en-US") // 5
@@ -25,8 +26,12 @@ import { isValidDate } from "../validate";
  * @example getWeeksInMonth("2026-02-15", "en-GB") // 5
  * @example getWeeksInMonth("-271821-04-19", "en-US") // 5 (the first representable month; its 1st lies before the range)
  * @example getWeeksInMonth("invalid", "en-US") // null
+ * @example getWeeksInMonth("2024-06-15", ["en-US", "fr-FR"]) // 6
  */
-export function getWeeksInMonth(value: string, locale: string): number | null {
+export function getWeeksInMonth(
+  value: string,
+  locale: string | string[],
+): number | null {
   if (!isValidDate(value)) return null;
 
   const firstDay = getLocaleFirstDayOfWeek(locale);

@@ -65,26 +65,41 @@ describe("intervalLengthDate", () => {
     mockTemporalPlainDateFromThrow();
     expect(intervalLengthDate("2024-01-01", "2024-01-10", "day")).toBeNull();
   });
-  // E5 (issue #78): same shared-calendar-or-fallback rule as intervalCountDate (D5). Golden
-  // verified directly against @js-temporal/polyfill.
+  // E5 (issue #78): same calendar rule as intervalCountDate. Golden verified directly against
+  // @js-temporal/polyfill.
   it("measures length in the shared calendar when start and end carry the same tag", () => {
     expect(
       intervalLengthDate(
-        "5784-06-15[u-ca=hebrew]",
-        "5784-07-15[u-ca=hebrew]",
+        "2024-02-24[u-ca=hebrew]",
+        "2024-03-25[u-ca=hebrew]",
         "months",
       ),
     ).toBe(1);
   });
 
+  // Different calendars return null, as TC39 CalendarEquals makes until throw (native
+  // Chromium 153: "Mismatched calendars." for each pair).
+  it.each`
+    start                          | end                           | reason
+    ${"2024-10-03[u-ca=hebrew]"}   | ${"2024-11-03"}               | ${"hebrew and bare ISO"}
+    ${"2024-10-03"}                | ${"2024-11-02[u-ca=gregory]"} | ${"iso8601 and gregory"}
+    ${"2024-10-03[u-ca=ethiopic]"} | ${"2024-11-02[u-ca=ethioaa]"} | ${"ethiopic and ethioaa"}
+  `(
+    "returns null from $start to $end ($reason: different calendars)",
+    ({ start, end }) => {
+      expect(intervalLengthDate(start, end, "months")).toBeNull();
+      expect(intervalLengthDate(start, end, "days")).toBeNull();
+    },
+  );
+
   // CORE-6: Duration.total({ unit, relativeTo: start }) of the calendar difference, per TC39
   // NudgeToCalendarUnit: whole units r1 from NonISODateUntil, plus the days from start + r1 to end
   // over the days from start + r1 to start + r1 + 1 (constrained).
   it.each`
-    start                          | end                            | unit       | expected       | reason
-    ${"2566-08-31[u-ca=buddhist]"} | ${"2566-09-30[u-ca=buddhist]"} | ${"month"} | ${1}           | ${"D6: until is P30D, but start + 1 month constrains to Sep 30 = end, so progress is 30/30"}
-    ${"5784-06-02[u-ca=hebrew]"}   | ${"5785-06-01[u-ca=hebrew]"}   | ${"year"}  | ${384 / 385}   | ${"D7: 384 days of the 385 to Adar 2 5785 (Adar I constrains to Adar)"}
-    ${"279517-07-01[u-ca=hebrew]"} | ${"279517-09-15[u-ca=hebrew]"} | ${"month"} | ${2 + 14 / 29} | ${"D1: 2 months, then 14 of Iyar's 29 days, next to the maximum"}
+    start                           | end                             | unit       | expected       | reason
+    ${"2023-08-31[u-ca=buddhist]"}  | ${"2023-09-30[u-ca=buddhist]"}  | ${"month"} | ${1}           | ${"D6: until is P30D, but start + 1 month constrains to Sep 30 = end, so progress is 30/30"}
+    ${"2024-02-11[u-ca=hebrew]"}    | ${"2025-03-01[u-ca=hebrew]"}    | ${"year"}  | ${384 / 385}   | ${"D7: 384 days of the 385 to Adar 2 5785 (Adar I constrains to Adar)"}
+    ${"+275760-06-07[u-ca=hebrew]"} | ${"+275760-08-19[u-ca=hebrew]"} | ${"month"} | ${2 + 14 / 29} | ${"D1: 2 months, then 14 of Iyar's 29 days, next to the maximum"}
   `(
     "returns $expected $unit for $start to $end ($reason)",
     ({ start, end, unit, expected }) => {

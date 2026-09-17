@@ -1,6 +1,8 @@
+// fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "@js-temporal/polyfill";
 
 import { isValidTime } from "../validate";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return true when `time` is between `start` and `end` (inclusive by default).
@@ -32,6 +34,10 @@ export function isBetweenTime(
   end: string,
   options?: { inclusiveStart?: boolean; inclusiveEnd?: boolean },
 ): boolean {
+  if (!isOptionsArgument(options)) {
+    return false;
+  }
+
   const inclusiveStart = options?.inclusiveStart ?? true;
   const inclusiveEnd = options?.inclusiveEnd ?? true;
 

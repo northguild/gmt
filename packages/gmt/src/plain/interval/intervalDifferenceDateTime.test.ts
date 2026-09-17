@@ -1,14 +1,15 @@
 import { intervalDifferenceDateTime } from "./intervalDifferenceDateTime";
 
 describe("intervalDifferenceDateTime", () => {
-  // Closed [start, end]: the shared endpoint belongs to both intervals, so A minus B loses it and the
-  // remaining piece stops (or starts) one unit short of it.
+  // Half-open [start, end): the shared endpoint belongs to neither interval, so touching B removes
+  // nothing and every piece ends exactly where B starts or starts exactly where B ends
+  // (CORE-6 §3 subtractIntervals). No piece is ever stepped by one unit.
   it.each`
-    aStart                   | aEnd                     | bStart                   | bEnd                     | expected                                                                    | reason
-    ${"2024-01-01T09:00:00"} | ${"2024-06-30T12:00:00"} | ${"2024-06-30T12:00:00"} | ${"2024-12-31T17:00:00"} | ${[{ start: "2024-01-01T09:00:00", end: "2024-06-30T11:59:59.999999999" }]} | ${"A ends where B starts"}
-    ${"2024-06-30T12:00:00"} | ${"2024-12-31T17:00:00"} | ${"2024-01-01T09:00:00"} | ${"2024-06-30T12:00:00"} | ${[{ start: "2024-06-30T12:00:00.000000001", end: "2024-12-31T17:00:00" }]} | ${"A starts where B ends"}
+    aStart                   | aEnd                     | bStart                   | bEnd                     | expected                                                          | reason
+    ${"2024-01-01T09:00:00"} | ${"2024-06-30T12:00:00"} | ${"2024-06-30T12:00:00"} | ${"2024-12-31T17:00:00"} | ${[{ start: "2024-01-01T09:00:00", end: "2024-06-30T12:00:00" }]} | ${"A ends where B starts"}
+    ${"2024-06-30T12:00:00"} | ${"2024-12-31T17:00:00"} | ${"2024-01-01T09:00:00"} | ${"2024-06-30T12:00:00"} | ${[{ start: "2024-06-30T12:00:00", end: "2024-12-31T17:00:00" }]} | ${"A starts where B ends"}
   `(
-    "returns $expected for touching A=[$aStart, $aEnd] minus B=[$bStart, $bEnd] ($reason)",
+    "returns $expected for touching A=[$aStart, $aEnd) minus B=[$bStart, $bEnd) ($reason)",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalDifferenceDateTime(aStart, aEnd, bStart, bEnd)).toEqual(
         expected,
@@ -17,11 +18,13 @@ describe("intervalDifferenceDateTime", () => {
   );
 
   it.each`
-    aStart                   | aEnd                     | bStart                   | bEnd                     | expected
-    ${"2024-01-01T09:00:00"} | ${"2024-12-31T17:00:00"} | ${"2024-06-01T12:00:00"} | ${"2024-07-01T13:00:00"} | ${{ result: [{ start: "2024-01-01T09:00:00", end: "2024-06-01T11:59:59.999999999" }, { start: "2024-07-01T13:00:00.000000001", end: "2024-12-31T17:00:00" }] }}
-    ${"2024-01-01T09:00:00"} | ${"2024-12-31T17:00:00"} | ${"2024-01-01T09:00:00"} | ${"2024-12-31T17:00:00"} | ${{ result: [] }}
-    ${"2024-01-01T09:00:00"} | ${"2024-12-31T17:00:00"} | ${"2024-06-01T12:00:00"} | ${"2024-12-31T17:00:00"} | ${{ result: [{ start: "2024-01-01T09:00:00", end: "2024-06-01T11:59:59.999999999" }] }}
-    ${"2024-01-01T09:00:00"} | ${"2024-12-31T17:00:00"} | ${"2024-01-01T09:00:00"} | ${"2024-06-30T12:00:00"} | ${{ result: [{ start: "2024-06-30T12:00:00.000000001", end: "2024-12-31T17:00:00" }] }}
+    aStart                   | aEnd                     | bStart                   | bEnd                               | expected
+    ${"2024-01-01T09:00:00"} | ${"2024-12-31T17:00:00"} | ${"2024-06-01T12:00:00"} | ${"2024-07-01T13:00:00"}           | ${{ result: [{ start: "2024-01-01T09:00:00", end: "2024-06-01T12:00:00" }, { start: "2024-07-01T13:00:00", end: "2024-12-31T17:00:00" }] }}
+    ${"2024-01-01T09:00:00"} | ${"2024-12-31T17:00:00"} | ${"2024-01-01T09:00:00"} | ${"2024-12-31T17:00:00"}           | ${{ result: [] }}
+    ${"2024-01-01T09:00:00"} | ${"2024-12-31T17:00:00"} | ${"2024-06-01T12:00:00"} | ${"2024-06-01T12:00:00"}           | ${{ result: [{ start: "2024-01-01T09:00:00", end: "2024-12-31T17:00:00" }] }}
+    ${"2024-01-01T09:00:00"} | ${"2024-01-01T17:00:00"} | ${"2024-01-01T12:00:00"} | ${"2024-01-01T12:00:00.000000001"} | ${{ result: [{ start: "2024-01-01T09:00:00", end: "2024-01-01T12:00:00" }, { start: "2024-01-01T12:00:00.000000001", end: "2024-01-01T17:00:00" }] }}
+    ${"2024-01-01T09:00:00"} | ${"2024-12-31T17:00:00"} | ${"2024-06-01T12:00:00"} | ${"2024-12-31T17:00:00"}           | ${{ result: [{ start: "2024-01-01T09:00:00", end: "2024-06-01T12:00:00" }] }}
+    ${"2024-01-01T09:00:00"} | ${"2024-12-31T17:00:00"} | ${"2024-01-01T09:00:00"} | ${"2024-06-30T12:00:00"}           | ${{ result: [{ start: "2024-06-30T12:00:00", end: "2024-12-31T17:00:00" }] }}
   `(
     "returns $expected when A=$aStart to $aEnd and B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
@@ -32,12 +35,12 @@ describe("intervalDifferenceDateTime", () => {
   );
 
   // B entirely before A removes nothing from A: the remaining piece is A itself, never a piece that
-  // starts one nanosecond after B ends, inside the gap between them.
+  // starts where B ends, inside the gap between them.
   it.each`
     aStart                   | aEnd                     | bStart                   | bEnd                     | expected
     ${"2024-06-01T12:00:00"} | ${"2024-06-30T12:00:00"} | ${"2024-01-01T09:00:00"} | ${"2024-01-31T09:00:00"} | ${[{ start: "2024-06-01T12:00:00", end: "2024-06-30T12:00:00" }]}
   `(
-    "returns $expected for A=[$aStart, $aEnd] minus B=[$bStart, $bEnd] entirely before A",
+    "returns $expected for A=[$aStart, $aEnd) minus B=[$bStart, $bEnd) entirely before A",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalDifferenceDateTime(aStart, aEnd, bStart, bEnd)).toEqual(
         expected,

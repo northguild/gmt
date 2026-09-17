@@ -18,7 +18,7 @@ import { isValidTime } from "../validate";
  *   `timeStyle` to keep the styled text.
  *
  * @param value ISO PlainTime string
- * @param locale optional BCP 47 locale identifier
+ * @param locale optional BCP 47 locale identifier, or a preference list of tags (ECMA-402)
  * @param options optional Intl.DateTimeFormatOptions
  * @returns localized time string or "" on invalid input
  *
@@ -28,10 +28,11 @@ import { isValidTime } from "../validate";
  * @example formatTime("14:30:45", "en-US", { dateStyle: "short", timeStyle: "short" }) // "" — a PlainTime has no date
  * @example formatTime("14:30:45", "en-US", { timeStyle: "short" }) // "2:30 PM" — the pre-1.16.0 text
  * @example formatTime("invalid") // ""
+ * @example formatTime("14:30:45", ["fr-FR", "en-US"], { hour: "2-digit", minute: "2-digit" }) // "14:30"
  */
 export function formatTime(
   value: string,
-  locale?: string,
+  locale?: string | string[],
   options?: DateTimeFormatOptions,
 ): string {
   if (!isValidTime(value)) {

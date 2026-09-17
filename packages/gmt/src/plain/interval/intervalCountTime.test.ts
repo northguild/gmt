@@ -46,11 +46,11 @@ describe("intervalCountTime", () => {
   it.each`
     start         | end           | unit        | expected
     ${"12:00:00"} | ${"12:00:00"} | ${"hour"}   | ${0}
-    ${"12:30:00"} | ${"12:30:00"} | ${"hour"}   | ${1}
+    ${"12:30:00"} | ${"12:30:00"} | ${"hour"}   | ${0}
     ${"12:00:00"} | ${"12:00:00"} | ${"minute"} | ${0}
-    ${"12:00:30"} | ${"12:00:30"} | ${"minute"} | ${1}
+    ${"12:00:30"} | ${"12:00:30"} | ${"minute"} | ${0}
   `(
-    "returns $expected for zero-length $start to $end counted in $unit",
+    "returns $expected for zero-length $start to $end counted in $unit (an empty interval holds no instant)",
     ({ start, end, unit, expected }) => {
       expect(intervalCountTime(start, end, unit)).toBe(expected);
     },
@@ -118,7 +118,7 @@ describe("intervalCountTime", () => {
   // the same reason).
   it("returns null for a calendar-annotated PlainDate string (PlainTime has no calendar)", () => {
     expect(
-      intervalCountTime("5784-06-15[u-ca=hebrew]", "14:00:00", "hour"),
+      intervalCountTime("2024-02-24[u-ca=hebrew]", "14:00:00", "hour"),
     ).toBeNull();
   });
 });

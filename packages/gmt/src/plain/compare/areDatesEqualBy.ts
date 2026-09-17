@@ -1,10 +1,13 @@
 import { Temporal } from "@js-temporal/polyfill";
 
+import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
+import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
 import { startOfDate } from "../calculate/startOfDate";
 import { isValidDate } from "../validate";
 import { areDatesEqual } from "./areDatesEqual";
+import { isOptionsArgument } from "../../internal/isObject";
 
-const supported: Temporal.DateUnit[] = ["year", "month", "week", "day"];
+const supported: readonly string[] = ["year", "month", "week", "day"];
 
 /**
  * Compare two ISO date strings for equality at a given calendar unit.
@@ -19,6 +22,8 @@ const supported: Temporal.DateUnit[] = ["year", "month", "week", "day"];
  *   function accepts PlainDate strings only (`areDatesEqualBy` with those inputs and `"day"` is
  *   `false`).
  * - `"year"`, `"month"`, `"week"` are computed via `startOfDate`.
+ * - `unit` accepts the singular or plural name (`"day"` or `"days"`), as Temporal does.
+ * - `weekStartsOn` other than `"monday"` or `"sunday"` returns false.
  * - Returns false for an unsupported unit or invalid input.
  *
  * Mapping from date-fns (Decision 5, `context/roadmap/issues/J.md`):
@@ -29,11 +34,13 @@ const supported: Temporal.DateUnit[] = ["year", "month", "week", "day"];
  *
  * @param value1 first ISO date string
  * @param value2 second ISO date string
- * @param unit Temporal.DateUnit to compare by ("year" | "month" | "week" | "day")
+ * @param unit date unit to compare by ("year" | "month" | "week" | "day", or its plural)
  * @param optionsArg optional: weekStartsOn ("monday" | "sunday")
  * @returns true if both dates share the same start-of-unit boundary, false on an unsupported unit or invalid input
  *
  * @example areDatesEqualBy("2024-03-15", "2024-03-20", "month") // true
+ * @example areDatesEqualBy("2024-03-15", "2024-03-20", "months") // true
+ * @example areDatesEqualBy("2024-03-15", "2024-03-20", "week", { weekStartsOn: "tuesday" }) // false (invalid weekStartsOn)
  * @example areDatesEqualBy("2023-03-15", "2024-03-15", "month") // false (same month, different year)
  * @example areDatesEqualBy("2024-03-15", "2024-03-16", "day") // false
  * @example areDatesEqualBy("2024-03-15", "2024-03-15", "hour" as never) // false (unsupported unit)
@@ -42,25 +49,37 @@ const supported: Temporal.DateUnit[] = ["year", "month", "week", "day"];
 export function areDatesEqualBy(
   value1: string,
   value2: string,
-  unit: Temporal.DateUnit,
+  unit: Temporal.SmallestUnit<Temporal.DateUnit>,
   optionsArg?: { weekStartsOn?: "monday" | "sunday" },
 ): boolean {
+  if (!isOptionsArgument(optionsArg)) {
+    return false;
+  }
+
+  const resolvedUnit = resolveDateTimeUnit(unit);
+  const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
+
   if (
     !isValidDate(value1) ||
     !isValidDate(value2) ||
-    !supported.includes(unit)
+    !supported.includes(resolvedUnit) ||
+    weekStartsOn === null
   ) {
     return false;
   }
 
   // "day" has no coarser boundary to reset, so this is just direct equality.
-  if (unit === "day") {
+  if (resolvedUnit === "day") {
     return areDatesEqual(value1, value2);
   }
 
   try {
-    const start1 = startOfDate(value1, unit, optionsArg);
-    const start2 = startOfDate(value2, unit, optionsArg);
+    const start1 = startOfDate(value1, resolvedUnit as Temporal.DateUnit, {
+      weekStartsOn,
+    });
+    const start2 = startOfDate(value2, resolvedUnit as Temporal.DateUnit, {
+      weekStartsOn,
+    });
 
     return start1 !== "" && start1 === start2;
   } catch {

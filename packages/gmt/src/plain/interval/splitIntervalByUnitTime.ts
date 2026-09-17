@@ -1,6 +1,6 @@
+// fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "@js-temporal/polyfill";
-import { plainTime } from "../../regex";
-import { isValidTime } from "../validate";
+import { isValidTime, isValidTimeDurationUnit } from "../validate";
 import { resolveDurationUnit } from "../../internal";
 import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 import {
@@ -13,6 +13,9 @@ import {
  *
  * - Returns an array of `{ start, end }` records that tile the interval, each record's `end`
  *   equal to the next record's `start`.
+ * - Every piece is half-open `[start, end)`: a boundary belongs only to the piece that starts
+ *   there, so the pieces share no value and together cover the interval exactly once (the rule
+ *   CORE-6's `splitIntervalAt` uses).
  * - The final sub-interval is trimmed so its `end` never exceeds the original `end`.
  * - Boundaries lie on the one day between `start` and `end`: `PlainTime` arithmetic wraps at
  *   midnight, but a step that reaches or passes midnight is past `end`, so that slice is trimmed
@@ -51,10 +54,6 @@ export function splitIntervalByUnitTime(
     return [];
   }
 
-  if (!plainTime.test(start) || !plainTime.test(end)) {
-    return [];
-  }
-
   if (!isValidTime(start) || !isValidTime(end)) {
     return [];
   }
@@ -65,7 +64,8 @@ export function splitIntervalByUnitTime(
 
   const resolvedUnit = resolveDurationUnit(unit);
 
-  if (!resolvedUnit) {
+  // An unknown unit is invalid whatever the span, a zero-length one included.
+  if (!isValidTimeDurationUnit(resolvedUnit)) {
     return [];
   }
 

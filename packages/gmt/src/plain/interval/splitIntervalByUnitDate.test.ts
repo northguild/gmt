@@ -191,22 +191,36 @@ describe("splitIntervalByUnitDate", () => {
     ).toEqual([]);
   });
   // E5 (issue #78): when start and end share a calendar tag, stepping (and each slice's
-  // boundaries) happens in that calendar (D5) -- a Hebrew leap year splits into 13 month-
-  // slices, not 12. Each boundary's tag is re-derived from the stepped date, never copied.
-  // Goldens verified directly against @js-temporal/polyfill.
+  // boundaries) happens in that calendar -- a Hebrew leap year splits into 13 month-slices, not
+  // 12. Each boundary's tag is re-derived from the stepped date, never copied. Different
+  // calendars return [] (TC39 CalendarEquals). Goldens verified directly against
+  // @js-temporal/polyfill.
   it("splits a Hebrew leap year into 13 month-slices, not 12 (ISO's answer for the same span)", () => {
     const slices = splitIntervalByUnitDate(
-      "5784-01-01[u-ca=hebrew]",
-      "5785-01-01[u-ca=hebrew]",
+      "2023-09-16[u-ca=hebrew]",
+      "2024-10-03[u-ca=hebrew]",
       "month",
       1,
     );
     expect(slices).toHaveLength(13);
     expect(slices[0]).toEqual({
-      start: "5784-01-01[u-ca=hebrew]",
-      end: "5784-02-01[u-ca=hebrew]",
+      start: "2023-09-16[u-ca=hebrew]",
+      end: "2023-10-16[u-ca=hebrew]",
     });
   });
+
+  // Native Temporal (Chromium 153) until throws "Mismatched calendars." for each pair.
+  it.each`
+    start                          | end                           | reason
+    ${"2024-10-03[u-ca=hebrew]"}   | ${"2024-11-03"}               | ${"hebrew and bare ISO"}
+    ${"2024-10-03"}                | ${"2024-11-02[u-ca=gregory]"} | ${"iso8601 and gregory"}
+    ${"2024-10-03[u-ca=ethiopic]"} | ${"2024-11-02[u-ca=ethioaa]"} | ${"ethiopic and ethioaa"}
+  `(
+    "returns [] from $start to $end ($reason: different calendars)",
+    ({ start, end }) => {
+      expect(splitIntervalByUnitDate(start, end, "day", 7)).toEqual([]);
+    },
+  );
 
   // CORE-6: boundaries step through the calendar-correct add. Polyfill 0.5.1 throws `Invalid ISO
   // date` stepping a month from islamic-civil min+68 (D1) and "Missing month" from Hebrew year -41
@@ -214,9 +228,9 @@ describe("splitIntervalByUnitDate", () => {
   // the Hebrew one through the Dershowitz–Reingold oracle; the last boundary is `end` itself.
   it.each`
     start                                  | end                                    | unit        | expected                                                                                                                                                                                | reason
-    ${"-280804-05-30[u-ca=islamic-civil]"} | ${"-280804-07-30[u-ca=islamic-civil]"} | ${"months"} | ${[{ start: "-280804-05-30[u-ca=islamic-civil]", end: "-280804-06-29[u-ca=islamic-civil]" }, { start: "-280804-06-29[u-ca=islamic-civil]", end: "-280804-07-30[u-ca=islamic-civil]" }]} | ${"D1: +1 month constrains to Jumada I 29 (xscan min[68]); +2 months is Rajab 30 = end"}
-    ${"-000041-05-16[u-ca=hebrew]"}        | ${"-000041-07-16[u-ca=hebrew]"}        | ${"months"} | ${[{ start: "-000041-05-16[u-ca=hebrew]", end: "-000041-06-16[u-ca=hebrew]" }, { start: "-000041-06-16[u-ca=hebrew]", end: "-000041-07-16[u-ca=hebrew]" }]}                             | ${"D3/D4: Shevat 16 -> Adar 16 -> Nisan 16 (xscan stride k=979)"}
-    ${"-280804-05-07[u-ca=islamic-civil]"} | ${"-280803-05-07[u-ca=islamic-civil]"} | ${"years"}  | ${[{ start: "-280804-05-07[u-ca=islamic-civil]", end: "-280803-05-07[u-ca=islamic-civil]" }]}                                                                                           | ${"D1: +1 year is end (xscan min[45] +1 year = min[400])"}
+    ${"-271821-06-26[u-ca=islamic-civil]"} | ${"-271821-08-24[u-ca=islamic-civil]"} | ${"months"} | ${[{ start: "-271821-06-26[u-ca=islamic-civil]", end: "-271821-07-25[u-ca=islamic-civil]" }, { start: "-271821-07-25[u-ca=islamic-civil]", end: "-271821-08-24[u-ca=islamic-civil]" }]} | ${"D1: +1 month constrains to Jumada I 29 (xscan min[68]); +2 months is Rajab 30 = end"}
+    ${"-003801-01-03[u-ca=hebrew]"}        | ${"-003801-03-03[u-ca=hebrew]"}        | ${"months"} | ${[{ start: "-003801-01-03[u-ca=hebrew]", end: "-003801-02-02[u-ca=hebrew]" }, { start: "-003801-02-02[u-ca=hebrew]", end: "-003801-03-03[u-ca=hebrew]" }]}                             | ${"D3/D4: Shevat 16 -> Adar 16 -> Nisan 16 (xscan stride k=979)"}
+    ${"-271821-06-03[u-ca=islamic-civil]"} | ${"-271820-05-23[u-ca=islamic-civil]"} | ${"years"}  | ${[{ start: "-271821-06-03[u-ca=islamic-civil]", end: "-271820-05-23[u-ca=islamic-civil]" }]}                                                                                           | ${"D1: +1 year is end (xscan min[45] +1 year = min[400])"}
   `(
     "splits $start to $end by 1 $unit ($reason)",
     ({ start, end, unit, expected }) => {
@@ -360,4 +374,21 @@ describe("splitIntervalByUnitDate default piece limit", () => {
       ]);
     },
   );
+});
+
+// An unknown unit or a time unit (PlainDate has none) is invalid input whatever the span: a non-empty interval already returns
+// [] for it, so a zero-length interval must too, rather than the one zero-length slice a valid
+// unit gives.
+describe("splitIntervalByUnitDate rejects an invalid unit on a zero-length interval", () => {
+  it.each`
+    unit
+    ${"invalid"}
+    ${"fortnight"}
+    ${"hours"}
+    ${"hour"}
+  `("returns [] for unit $unit", ({ unit }) => {
+    expect(
+      splitIntervalByUnitDate("2024-01-01", "2024-01-01", unit, 1),
+    ).toEqual([]);
+  });
 });

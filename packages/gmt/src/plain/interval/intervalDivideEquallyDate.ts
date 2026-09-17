@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import {
   calendarOfAllDateValues,
   formatDateInCalendar,
@@ -12,6 +13,9 @@ import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
  *
  * - Returns an array of `n` `{ start, end }` records that tile the original interval, each
  *   record's `end` equal to the next record's `start`.
+ * - Every piece is half-open `[start, end)`: a boundary belongs only to the piece that starts
+ *   there, so the pieces share no value and together cover the interval exactly once (the rule
+ *   CORE-6's `splitIntervalAt` uses).
  * - `PlainDate` has no fractional-day representation, so each internal boundary is rounded to
  *   the nearest whole day (`round(totalDays · i / n)`, computed exactly in `bigint`, an exact half
  *   rounding up) — when `totalDays` isn't evenly divisible by `n`, the resulting sub-intervals
@@ -20,7 +24,7 @@ import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
  * - A zero-length interval (`start === end`) returns `n` identical zero-length sub-intervals.
  * - Returns `[]` when `n` is not a positive integer, or on invalid input (unparseable
  *   start/end, `start > end`).
- * - Accepts GMT calendar-annotated PlainDate strings — E5 (issue #78). `start` and `end` must
+ * - Accepts RFC 9557 calendar-annotated PlainDate strings — E5 (issue #78). `start` and `end` must
  *   carry the *same* calendar tag (or both be bare ISO); a mismatch returns `[]` (E5 decision
  *   of record D4). Internal boundaries are computed in whole days (calendar-independent), then
  *   re-formatted in the shared calendar.

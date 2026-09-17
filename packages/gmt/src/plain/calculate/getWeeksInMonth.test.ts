@@ -99,4 +99,19 @@ describe("getWeeksInMonth", () => {
     mockTemporalPlainDateFromThrow();
     expect(getWeeksInMonth("2026-02-15", MustTestLocales.enUS)).toBeNull();
   });
+
+  // ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale
+  // data is read (en-US weeks start on Sunday, fr-FR on Monday, ar-EG weekends are Friday and
+  // Saturday: Intl.Locale#getWeekInfo), and a malformed tag anywhere in the list is invalid input.
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.enUS, MustTestLocales.frFR]} | ${6}
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${5}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${null}
+  `(
+    "returns $expected for June 2024 (1 June a Saturday, 30 June a Sunday) with locale list $locale",
+    ({ locale, expected }) => {
+      expect(getWeeksInMonth("2024-06-15", locale)).toBe(expected);
+    },
+  );
 });

@@ -80,22 +80,22 @@ import {
  *
  * @param value The string to decode (e.g. "03/15/2024 14:30:00")
  * @param pattern The token pattern describing `value`'s shape (e.g. "MM/dd/yyyy HH:mm:ss")
- * @param locale Optional BCP 47 locale for name-based tokens (default "en-US")
+ * @param locale Optional BCP 47 locale tag, or a preference list of tags, for name-based tokens (default "en-US")
  * @returns ISO `PlainDateTime` string, or "" on no match, malformed pattern, or invalid input
  *
  * @example parseDateTimeWithPattern("03/15/2024 14:30:00", "MM/dd/yyyy HH:mm:ss") // "2024-03-15T14:30:00"
  * @example parseDateTimeWithPattern("15-Mar-2024 02:30 PM", "dd-MMM-yyyy hh:mm a") // "2024-03-15T14:30:00"
  * @example parseDateTimeWithPattern("02/31/2024 14:30:00", "MM/dd/yyyy HH:mm:ss") // "" (shape-valid, not a real date)
  * @example parseDateTimeWithPattern("not a date", "MM/dd/yyyy HH:mm:ss") // ""
+ * @example parseDateTimeWithPattern("19 mai 2024 10:20", "d MMMM yyyy HH:mm", ["fr-FR", "en-US"]) // "2024-05-19T10:20:00"
  */
 export function parseDateTimeWithPattern(
   value: string,
   pattern: string,
-  locale?: string,
+  locale?: string | string[],
 ): string {
   if (typeof value !== "string") return "";
   if (typeof pattern !== "string") return "";
-  if (locale !== undefined && typeof locale !== "string") return "";
 
   const fields = parseValueWithPattern(
     value,

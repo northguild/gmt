@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "@js-temporal/polyfill";
 import {
   defaultFractionalDigits,
@@ -27,6 +28,119 @@ function millisecondsIntoDay(source: Temporal.PlainDateTime): number {
     source.microsecond / 1_000 +
     source.nanosecond / 1_000_000
   );
+}
+
+/** Temporal.PlainDateTime.round() in this polyfill supports day and time units. */
+const TIME_UNITS: readonly string[] = [
+  "day",
+  "hour",
+  "minute",
+  "second",
+  "millisecond",
+  "microsecond",
+  "nanosecond",
+];
+
+type RoundableTimeUnit = Temporal.SmallestUnit<
+  | "day"
+  | "hour"
+  | "minute"
+  | "second"
+  | "millisecond"
+  | "microsecond"
+  | "nanosecond"
+>;
+
+/** Round a day or time unit through Temporal.PlainDateTime.round(). Throws on invalid options. */
+function roundTimeUnit(
+  source: Temporal.PlainDateTime,
+  smallestUnit: RoundableTimeUnit,
+  roundingIncrement: number | undefined,
+  roundingMode: Temporal.RoundingMode | undefined,
+): string {
+  const result = source.round({
+    smallestUnit,
+    roundingIncrement,
+    roundingMode,
+  });
+
+  const fractionalDigits = defaultFractionalDigits(smallestUnit);
+
+  return result.toString({ fractionalSecondDigits: fractionalDigits });
+}
+
+/** Rounds up at or past the half-way point. */
+const upAtHalf = (_elapsedMs: number, fraction: () => number): boolean =>
+  fraction() >= 0.5;
+
+/** Rounds up only past the half-way point. */
+const upPastHalf = (_elapsedMs: number, fraction: () => number): boolean =>
+  fraction() > 0.5;
+
+/**
+ * Whether a date unit rounds up to the next start, per rounding mode.
+ *
+ * `fraction` is the position within the unit, computed lazily because only the half modes need it.
+ */
+const ROUNDS_UP_TO_NEXT_START: Readonly<
+  Record<
+    Temporal.RoundingMode,
+    (elapsedMs: number, fraction: () => number) => boolean
+  >
+> = {
+  ceil: (elapsedMs) => elapsedMs > 0,
+  expand: (elapsedMs) => elapsedMs > 0,
+  floor: () => false,
+  trunc: () => false,
+  halfExpand: upAtHalf,
+  halfCeil: upAtHalf,
+  halfTrunc: upPastHalf,
+  halfFloor: upPastHalf,
+  // Half-even breaks an exact tie towards the even multiple of the increment. The grid here is
+  // anchored at the unit containing `source` — `startOfNext` counts the increment from that unit,
+  // not from an absolute epoch — so the current start is multiple 0 and `startOfNext` is multiple
+  // 1. The even multiple at a tie is therefore always the current start. Above and below the tie it
+  // rounds to the nearer start, like every other half mode.
+  halfEven: upPastHalf,
+};
+
+/** Manually round to a date unit (year, month, week). Throws when a needed start is out of range. */
+function roundDateUnit(
+  source: Temporal.PlainDateTime,
+  smallestUnit: DateTimeUnit,
+  increment: number,
+  mode: Temporal.RoundingMode,
+): string {
+  // Measured towards the next start, never from the current one: the first representable
+  // PlainDateTime is -271821-04-19T00:00:00.000000001, so the week, month and year holding it
+  // began before the range, and only the next start exists. A PlainDateTime has no DST, so a day
+  // is always 86,400,000 ms. Each start is built only when the mode needs it, and the unit's
+  // length is measured on a value in the same place of its 400-year cycle when the next start lies
+  // after the last representable value, where the current start may still be the answer.
+  const elapsedMs =
+    getDaysIntoDateUnit(source, smallestUnit) * MILLISECONDS_PER_DAY +
+    millisecondsIntoDay(source);
+  const startOfNextFrom = (
+    from: Temporal.PlainDateTime,
+  ): Temporal.PlainDateTime =>
+    addDateTimeUnit(
+      getStartOfNextDateTimeUnit(from, smallestUnit),
+      smallestUnit,
+      increment - 1,
+    );
+  const fraction = (): number =>
+    elapsedMs /
+    (elapsedMs +
+      measureNearRangeEnd(source, (from) =>
+        from.until(startOfNextFrom(from)).total("milliseconds"),
+      ));
+
+  // getStartOfDateTimeUnit throws (so the caller returns "") when the start lies outside the range.
+  const rounded = ROUNDS_UP_TO_NEXT_START[mode](elapsedMs, fraction)
+    ? startOfNextFrom(source)
+    : getStartOfDateTimeUnit(source, smallestUnit);
+
+  return rounded.toString();
 }
 
 /**
@@ -89,36 +203,13 @@ export function roundDateTime(
   try {
     const source = Temporal.PlainDateTime.from(value);
 
-    // PlainDateTime.round() in this polyfill supports day and time units
-    const timeUnits: readonly string[] = [
-      "day",
-      "hour",
-      "minute",
-      "second",
-      "millisecond",
-      "microsecond",
-      "nanosecond",
-    ];
-
-    if (timeUnits.includes(smallestUnit)) {
-      const timeUnit = smallestUnit as Temporal.SmallestUnit<
-        | "day"
-        | "hour"
-        | "minute"
-        | "second"
-        | "millisecond"
-        | "microsecond"
-        | "nanosecond"
-      >;
-      const result = source.round({
-        smallestUnit: timeUnit,
+    if (TIME_UNITS.includes(smallestUnit)) {
+      return roundTimeUnit(
+        source,
+        smallestUnit as RoundableTimeUnit,
         roundingIncrement,
         roundingMode,
-      });
-
-      const fractionalDigits = defaultFractionalDigits(smallestUnit);
-
-      return result.toString({ fractionalSecondDigits: fractionalDigits });
+      );
     }
 
     // Manual rounding for date units (year, month, week)
@@ -127,65 +218,13 @@ export function roundDateTime(
       roundingMode,
     );
     if (resolved === null) return "";
-    const { increment, mode } = resolved;
 
-    // Measured towards the next start, never from the current one: the first representable
-    // PlainDateTime is -271821-04-19T00:00:00.000000001, so the week, month and year holding it
-    // began before the range, and only the next start exists. A PlainDateTime has no DST, so a day
-    // is always 86,400,000 ms. Each start is built only when the mode needs it, and the unit's
-    // length is measured on a value in the same place of its 400-year cycle when the next start lies
-    // after the last representable value, where the current start may still be the answer.
-    const elapsedMs =
-      getDaysIntoDateUnit(source, smallestUnit) * MILLISECONDS_PER_DAY +
-      millisecondsIntoDay(source);
-    const startOfNextFrom = (
-      from: Temporal.PlainDateTime,
-    ): Temporal.PlainDateTime =>
-      addDateTimeUnit(
-        getStartOfNextDateTimeUnit(from, smallestUnit),
-        smallestUnit,
-        increment - 1,
-      );
-    const startOfNext = (): Temporal.PlainDateTime => startOfNextFrom(source);
-    // Throws (so returns "") when the start lies outside the range.
-    const startOfCurrent = (): Temporal.PlainDateTime =>
-      getStartOfDateTimeUnit(source, smallestUnit);
-    const fraction = (): number =>
-      elapsedMs /
-      (elapsedMs +
-        measureNearRangeEnd(source, (from) =>
-          from.until(startOfNextFrom(from)).total("milliseconds"),
-        ));
-
-    let rounded: Temporal.PlainDateTime;
-    switch (mode) {
-      case "ceil":
-      case "expand":
-        rounded = elapsedMs > 0 ? startOfNext() : startOfCurrent();
-        break;
-      case "floor":
-      case "trunc":
-        rounded = startOfCurrent();
-        break;
-      case "halfExpand":
-      case "halfCeil":
-        rounded = fraction() >= 0.5 ? startOfNext() : startOfCurrent();
-        break;
-      case "halfTrunc":
-      case "halfFloor":
-        rounded = fraction() > 0.5 ? startOfNext() : startOfCurrent();
-        break;
-      case "halfEven":
-        // Half-even breaks an exact tie towards the even multiple of the increment. The grid here
-        // is anchored at the unit containing `source` — `startOfNext` counts the increment from
-        // that unit, not from an absolute epoch — so the current start is multiple 0 and
-        // `startOfNext` is multiple 1. The even multiple at a tie is therefore always the current
-        // start. Above and below the tie it rounds to the nearer start, like every other half mode.
-        rounded = fraction() > 0.5 ? startOfNext() : startOfCurrent();
-        break;
-    }
-
-    return rounded.toString();
+    return roundDateUnit(
+      source,
+      smallestUnit,
+      resolved.increment,
+      resolved.mode,
+    );
   } catch {
     return "";
   }

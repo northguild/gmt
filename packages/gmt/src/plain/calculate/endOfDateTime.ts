@@ -1,6 +1,10 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
+import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
+import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
 import type { FractionalDigit } from "../../types";
 import { isValidDateTime } from "../validate";
+import { isOptionsArgument } from "../../internal/isObject";
 
 const supported = [
   "year",
@@ -23,13 +27,15 @@ const supported = [
  *   the first representable date (`-271821-04-19`).
  * - The end is written at nanosecond precision by default, so the string names the end itself; an
  *   explicit `fractionalSecondDigits` (0, 3, 6 or 9) truncates it, as Temporal's `toString` does.
+ * - `unit` accepts the singular or plural name (`"month"` or `"months"`), as Temporal does.
+ * - `weekStartsOn` other than `"monday"` or `"sunday"` returns "".
  * - Returns "" for invalid inputs.
  * - **Compatibility:** before 1.16.0 the default printed only the digits the unit names — none for
  *   `second` and coarser, 3 for `millisecond`, 6 for `microsecond` — which wrote a moment earlier
  *   than the end. Pass that `fractionalSecondDigits` to keep the previous string.
  *
  * @param value ISO 8601 datetime string
- * @param unit Temporal.DateUnit | Temporal.TimeUnit to specify the unit for the end
+ * @param unit date or time unit, singular or plural, to specify the unit for the end
  * @param optionsArg optional: weekStartsOn ("monday" | "sunday"), fractionalSecondDigits (number)
  * @returns ISO 8601 string representing the end of the specified unit, or "" on invalid input
  *
@@ -38,26 +44,38 @@ const supported = [
  * @example endOfDateTime("2024-02-29T12:34:56.123456789", "second", { fractionalSecondDigits: 9 }) // "2024-02-29T12:34:56.999999999"
  * @example endOfDateTime("2024-03-03T12:00:00", "week", { weekStartsOn: "sunday" }) // "2024-03-09T23:59:59.999999999"
  * @example endOfDateTime("-271821-04-19T12:00:00", "month") // "-271821-04-30T23:59:59.999999999" (the month began before the range; its end did not)
+ * @example endOfDateTime("2024-02-29T12:34:56", "hours") // "2024-02-29T12:59:59.999999999"
  * @example endOfDateTime("invalid-date", "month") // ""
  */
 export function endOfDateTime(
   value: string,
-  unit: Temporal.DateUnit | Temporal.TimeUnit,
+  unit: Temporal.SmallestUnit<Temporal.DateTimeUnit>,
   optionsArg?: {
     weekStartsOn?: "monday" | "sunday";
     fractionalSecondDigits?: FractionalDigit;
   },
 ): string {
-  const weekStartsOn = optionsArg?.weekStartsOn ?? "monday";
+  if (!isOptionsArgument(optionsArg)) {
+    return "";
+  }
+
+  const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
   const fractionalSecondDigits = optionsArg?.fractionalSecondDigits;
 
-  if (!isValidDateTime(value) || !supported.includes(unit)) return "";
+  const resolvedUnit = resolveDateTimeUnit(unit);
+
+  if (
+    weekStartsOn === null ||
+    !isValidDateTime(value) ||
+    !supported.includes(resolvedUnit)
+  )
+    return "";
 
   try {
     const source = Temporal.PlainDateTime.from(value);
     let result: Temporal.PlainDateTime;
 
-    switch (unit) {
+    switch (resolvedUnit) {
       case "year":
         result = source.with({ month: 12, day: 31 }).withPlainTime({
           hour: 23,

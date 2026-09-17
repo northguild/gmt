@@ -12,6 +12,7 @@ import {
   isValidDateTimeCycleField,
 } from "../validate";
 import { setDateTime } from "./setDateTime";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return a PlainDateTime ISO string with `field` cycled by `amount`, wrapping at that field's own
@@ -52,6 +53,10 @@ export function cycleDateTime(
   amount: number,
   options?: { round?: boolean; overflow?: Overflow },
 ): string {
+  if (!isOptionsArgument(options)) {
+    return "";
+  }
+
   if (
     !isValidDateTime(value) ||
     !isValidDateTimeCycleField(field) ||

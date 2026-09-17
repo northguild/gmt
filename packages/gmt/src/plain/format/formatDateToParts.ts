@@ -26,7 +26,7 @@ import { isValidDate } from "../validate";
  *   into the parts. `formatZonedToParts` on the date at midnight UTC returns those parts.
  *
  * @param value ISO PlainDate string
- * @param locale optional BCP 47 locale identifier (default: runtime default)
+ * @param locale optional BCP 47 locale identifier (default: runtime default), or a preference list of tags (ECMA-402)
  * @param options optional Intl.DateTimeFormatOptions
  * @returns array of `{ type, value }` parts, or `[]` on invalid input
  *
@@ -36,10 +36,11 @@ import { isValidDate } from "../validate";
  * @example formatDateToParts("2024-02-29", "en-US", { timeStyle: "long" }) // [] — a PlainDate has no time
  * @example formatZonedToParts("2024-02-29T00:00:00+00:00[UTC]", "en-US", { timeStyle: "long" }) // [{ type: "hour", value: "12" }, { type: "literal", value: ":" }, { type: "minute", value: "00" }, { type: "literal", value: ":" }, { type: "second", value: "00" }, { type: "literal", value: "\u202f" }, { type: "dayPeriod", value: "AM" }, { type: "literal", value: " " }, { type: "timeZoneName", value: "UTC" }] — the pre-1.16.0 parts
  * @example formatDateToParts("invalid") // []
+ * @example formatDateToParts("2024-02-03", ["fr-FR", "en-US"]) // [{ type: "day", value: "03" }, { type: "literal", value: "/" }, …]
  */
 export function formatDateToParts(
   value: string,
-  locale?: string,
+  locale?: string | string[],
   options?: DateTimeFormatOptions,
 ): Array<{ type: string; value: string }> {
   if (!isValidDate(value)) {

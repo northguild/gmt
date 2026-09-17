@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { resolveOverflow } from "../../internal";
 import type { Overflow } from "../../types";
 import { isValidTime } from "../validate";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return a PlainTime ISO string with the given `fields` set on `value`.
@@ -15,7 +16,7 @@ import { isValidTime } from "../validate";
  *
  * `overflow` ("constrain" (default) | "reject") controls out-of-range field values, e.g.
  * `hour: 25`: "constrain" clamps to 23, "reject" throws (resulting in ""). Unlike `addTime`
- * (where `overflow` is inert because addition always wraps around the clock), `overflow` has
+ * (which takes no `overflow`, because addition always wraps around the clock), `overflow` has
  * a real effect here because `.with()` assigns fixed field values rather than adding a delta.
  *
  * @param value ISO PlainTime string
@@ -34,6 +35,10 @@ export function setTime(
   fields: Temporal.PlainTimeLike,
   options?: { overflow?: Overflow },
 ): string {
+  if (!isOptionsArgument(options)) {
+    return "";
+  }
+
   if (!isValidTime(value)) return "";
 
   try {

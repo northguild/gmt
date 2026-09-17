@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "@js-temporal/polyfill";
 import { joinDateTimeConnector, normalizeDateTime } from "../../internal";
 import { plainTimeStyle } from "../../internal/plainFormatOptions";
@@ -43,23 +44,28 @@ const ABS_DAY_THRESHOLD = 6;
  *   `"full"` (outside the type) formats as `"medium"`.
  * - Use `formatCalendar` for user-facing schedules ("Tomorrow at 2:30 PM");
  *   use `formatRelativeDateTime` for elapsed-time displays ("in 1 day").
+ * - `options` must be an object or omitted: `null` or any other primitive returns `""`, as
+ *   Temporal's GetOptionsObject rejects it.
  *
  * @param value ISO PlainDateTime string to format
- * @param locale optional: BCP 47 locale tag
+ * @param locale optional: BCP 47 locale tag, or a preference list of tags (ECMA-402)
  * @param options optional: { reference, timeStyle }
  * @returns the formatted calendar string, or "" on invalid input
  *
  * @example formatCalendar("2026-03-16T14:30:00", "en-US", { reference: "2026-03-15T09:00:00" }) // "tomorrow at 2:30 PM"
  * @example formatCalendar("2026-03-08T14:30:00", "en-US", { reference: "2026-03-15T09:00:00" }) // "March 8, 2026 at 2:30 PM" (7 days out — beyond the threshold, absolute fallback)
  * @example formatCalendar("not-a-date") // ""
+ * @example formatCalendar("2024-03-16T14:30:00", ["fr-FR", "en-US"], { reference: "2024-03-15T09:00:00" }) // "demain à 14:30"
+ * @example formatCalendar("2024-03-12T10:00:00", "en-US", null as never) // "" (null options)
  */
 export function formatCalendar(
   value: string,
-  locale?: string,
+  locale?: string | string[],
   options: FormatCalendarOptions = {},
 ): string {
-  // A default parameter covers only `undefined`; `null` also means "no options".
-  options ??= {};
+  // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
+  // invalid input.
+  if (options === null || typeof options !== "object") return "";
   if (!isValidDateTime(value)) return "";
   if (options.reference !== undefined && !isValidDateTime(options.reference))
     return "";

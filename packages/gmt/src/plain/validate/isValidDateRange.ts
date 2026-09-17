@@ -1,7 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { plainDate } from "../../regex";
-import { isLeapSecond } from "./isLeapSecond";
-import { isObject } from "../../internal/isObject";
+import { isValidDate } from "./isValidDate";
+import { isObject, isOptionsArgument } from "../../internal/isObject";
 
 /**
  * The argument object of `isValidDateRange`.
@@ -19,7 +18,8 @@ export interface IsValidDateRangeProps {
 /**
  * Return whether `value1` is before `value2`.
  *
- * - Validates both dates using regex and Temporal.PlainDate.from().
+ * - Validates both dates with `isValidDate`, so each endpoint's RFC 9557 annotations are read as
+ *   `Temporal.PlainDate.from` reads them (an elective `[foo=bar]` or `[u-ca=iso8601]` is ignored).
  * - Rejects leap seconds in either date.
  * - When `options.allowEqual` is true, equality is considered valid as well.
  *
@@ -36,12 +36,9 @@ export interface IsValidDateRangeProps {
 export function isValidDateRange(props: IsValidDateRangeProps): boolean {
   if (!isObject(props)) return false;
   const { value1, value2, options } = props;
+  if (!isOptionsArgument(options)) return false;
 
-  if (isLeapSecond(value1) || isLeapSecond(value2)) {
-    return false;
-  }
-
-  if (!plainDate.test(value1) || !plainDate.test(value2)) {
+  if (!isValidDate(value1) || !isValidDate(value2)) {
     return false;
   }
 

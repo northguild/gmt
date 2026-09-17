@@ -22,7 +22,7 @@ import { isValidDateTime } from "../validate";
  *
  * @param start ISO PlainDateTime string (range start)
  * @param end ISO PlainDateTime string (range end)
- * @param locale optional locale tag (default: runtime default)
+ * @param locale optional locale tag (default: runtime default), or a preference list of tags (ECMA-402)
  * @param options optional Intl.DateTimeFormatOptions
  * @returns localized range string or "" when invalid
  *
@@ -32,11 +32,12 @@ import { isValidDateTime } from "../validate";
  * @example formatDateTimeRange("2024-02-03T09:00:00", "2024-02-03T17:00:00", "zh-CN", { year: "numeric", month: "numeric" }) // "2024/2" — the pre-1.16.0 text
  * @example formatDateTimeRange("2024-02-03T09:00:00", "2024-02-03T17:00:00", "en-US", { era: "long" }) // "2/3/2024 Anno Domini, 9:00:00 AM - 5:00:00 PM"
  * @example formatDateTimeRange("invalid", "2024-02-03T17:00:00", "en-US") // "" (invalid input)
+ * @example formatDateTimeRange("2024-02-03T14:30:45", "2024-02-03T16:46:15", ["fr-FR", "en-US"], { hour: "numeric", minute: "numeric" }) // "14:30 - 16:46"
  */
 export function formatDateTimeRange(
   start: string,
   end: string,
-  locale?: string,
+  locale?: string | string[],
   options?: DateTimeFormatOptions,
 ): string {
   if (!isValidDateTime(start) || !isValidDateTime(end)) {

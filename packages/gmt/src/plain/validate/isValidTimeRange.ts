@@ -1,12 +1,15 @@
+// fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "@js-temporal/polyfill";
-import { plainTime } from "../../regex";
-import { isObject } from "../../internal/isObject";
+import { isValidTime } from "./isValidTime";
+import { isObject, isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return true if `value1` and `value2` form a valid time range — both parseable as
  * ISO PlainTime strings and `value1 <= value2`.
  *
- * - Both inputs must be ISO 8601 time strings (e.g. `"14:30:00"`).
+ * - Both inputs must be ISO 8601 time strings (e.g. `"14:30:00"`), as `isValidTime` accepts,
+ *   annotations included.
+ * - Ordered by `Temporal.PlainTime.compare`, to the nanosecond.
  * - Equal `value1 === value2` is valid when `options.allowEqual` is true.
  * - Invalid input, malformed strings, or leap-second strings return `false`.
  *
@@ -26,12 +29,13 @@ export function isValidTimeRange(props: {
 }): boolean {
   if (!isObject(props)) return false;
   const { value1, value2, options } = props;
+  if (!isOptionsArgument(options)) return false;
 
   if (typeof value1 !== "string" || typeof value2 !== "string") {
     return false;
   }
 
-  if (!plainTime.test(value1) || !plainTime.test(value2)) {
+  if (!isValidTime(value1) || !isValidTime(value2)) {
     return false;
   }
 
@@ -39,28 +43,13 @@ export function isValidTimeRange(props: {
     const time1 = Temporal.PlainTime.from(value1);
     const time2 = Temporal.PlainTime.from(value2);
 
-    const isLessThan =
-      time1.hour < time2.hour ||
-      (time1.hour === time2.hour && time1.minute < time2.minute) ||
-      (time1.hour === time2.hour &&
-        time1.minute === time2.minute &&
-        time1.second < time2.second) ||
-      (time1.hour === time2.hour &&
-        time1.minute === time2.minute &&
-        time1.second === time2.second &&
-        time1.millisecond < time2.millisecond);
-
-    const isEqual =
-      time1.hour === time2.hour &&
-      time1.minute === time2.minute &&
-      time1.second === time2.second &&
-      time1.millisecond === time2.millisecond;
+    const cmp = Temporal.PlainTime.compare(time1, time2);
 
     if (options?.allowEqual) {
-      return isLessThan || isEqual;
+      return cmp <= 0;
     }
 
-    return isLessThan;
+    return cmp < 0;
   } catch {
     return false;
   }
