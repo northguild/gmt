@@ -10,6 +10,7 @@ import {
   getStartOfNextDateTimeUnit,
 } from "../../internal/dateTimeUnitHelpers";
 import { getDaysIntoDateUnit } from "../../internal/dateUnitHelpers";
+import { measureNearRangeEnd } from "../../internal/measureNearRangeEnd";
 import { resolveManualRoundingOptions } from "../../internal/resolveManualRoundingOptions";
 import type { DateTimeUnit } from "../../types";
 import { isValidDateTime, isValidDateTimeUnit } from "../validate";
@@ -44,6 +45,8 @@ function millisecondsIntoDay(source: Temporal.PlainDateTime): number {
  *   a unit that began before the first representable PlainDateTime
  *   (`-271821-04-19T00:00:00.000000001`) still rounds up to the next start. When it rounds down to
  *   that unrepresentable start, the result is "".
+ * - In the last representable year (`+275760`) a value that rounds down to a date unit still
+ *   returns that unit's start; only rounding up past `+275760-09-13T23:59:59.999999999` returns "".
  * - `roundingIncrement` and `roundingMode` are read as Temporal reads them for every unit: a
  *   non-integer increment is truncated (`1.5` rounds by 1), an increment below 1 or not finite
  *   returns "", and a `roundingMode` outside Temporal's nine returns "" (previously a date unit
@@ -58,6 +61,7 @@ function millisecondsIntoDay(source: Temporal.PlainDateTime): number {
  * @example roundDateTime("2024-06-15T12:34:56", { smallestUnit: "month" }) // "2024-06-01T00:00:00" (under half way: rounds down)
  * @example roundDateTime("2024-06-16T12:34:56", { smallestUnit: "month" }) // "2024-07-01T00:00:00" (past half way: rounds up)
  * @example roundDateTime("-271821-04-19T12:00:00", { smallestUnit: "month" }) // "-271821-05-01T00:00:00" (the month began before the range)
+ * @example roundDateTime("+275760-06-15T00:00:00", { smallestUnit: "year", roundingMode: "floor" }) // "+275760-01-01T00:00:00" (the next year is past the range)
  * @example roundDateTime("2024-06-15T12:34:56", { smallestUnit: "day" }) // "2024-06-16T00:00:00"
  * @example roundDateTime("2024-06-15T12:34:56", { smallestUnit: "hour" }) // "2024-06-15T13:00:00"
  * @example roundDateTime("2024-06-15T12:34:56", { smallestUnit: "hours" }) // "2024-06-15T13:00:00" (plural unit name)
@@ -128,27 +132,36 @@ export function roundDateTime(
     // Measured towards the next start, never from the current one: the first representable
     // PlainDateTime is -271821-04-19T00:00:00.000000001, so the week, month and year holding it
     // began before the range, and only the next start exists. A PlainDateTime has no DST, so a day
-    // is always 86,400,000 ms.
-    const startOfNext = addDateTimeUnit(
-      getStartOfNextDateTimeUnit(source, smallestUnit),
-      smallestUnit,
-      increment - 1,
-    );
+    // is always 86,400,000 ms. Each start is built only when the mode needs it, and the unit's
+    // length is measured on a value in the same place of its 400-year cycle when the next start lies
+    // after the last representable value, where the current start may still be the answer.
     const elapsedMs =
       getDaysIntoDateUnit(source, smallestUnit) * MILLISECONDS_PER_DAY +
       millisecondsIntoDay(source);
-    const totalMs = elapsedMs + source.until(startOfNext).total("milliseconds");
-    const fraction = elapsedMs / totalMs;
-
-    // Only built when chosen; throws (so returns "") when it lies before the range.
+    const startOfNextFrom = (
+      from: Temporal.PlainDateTime,
+    ): Temporal.PlainDateTime =>
+      addDateTimeUnit(
+        getStartOfNextDateTimeUnit(from, smallestUnit),
+        smallestUnit,
+        increment - 1,
+      );
+    const startOfNext = (): Temporal.PlainDateTime => startOfNextFrom(source);
+    // Throws (so returns "") when the start lies outside the range.
     const startOfCurrent = (): Temporal.PlainDateTime =>
       getStartOfDateTimeUnit(source, smallestUnit);
+    const fraction = (): number =>
+      elapsedMs /
+      (elapsedMs +
+        measureNearRangeEnd(source, (from) =>
+          from.until(startOfNextFrom(from)).total("milliseconds"),
+        ));
 
     let rounded: Temporal.PlainDateTime;
     switch (mode) {
       case "ceil":
       case "expand":
-        rounded = elapsedMs > 0 ? startOfNext : startOfCurrent();
+        rounded = elapsedMs > 0 ? startOfNext() : startOfCurrent();
         break;
       case "floor":
       case "trunc":
@@ -156,11 +169,11 @@ export function roundDateTime(
         break;
       case "halfExpand":
       case "halfCeil":
-        rounded = fraction >= 0.5 ? startOfNext : startOfCurrent();
+        rounded = fraction() >= 0.5 ? startOfNext() : startOfCurrent();
         break;
       case "halfTrunc":
       case "halfFloor":
-        rounded = fraction > 0.5 ? startOfNext : startOfCurrent();
+        rounded = fraction() > 0.5 ? startOfNext() : startOfCurrent();
         break;
       case "halfEven":
         // Half-even breaks an exact tie towards the even multiple of the increment. The grid here
@@ -168,7 +181,7 @@ export function roundDateTime(
         // that unit, not from an absolute epoch — so the current start is multiple 0 and
         // `startOfNext` is multiple 1. The even multiple at a tie is therefore always the current
         // start. Above and below the tie it rounds to the nearer start, like every other half mode.
-        rounded = fraction > 0.5 ? startOfNext : startOfCurrent();
+        rounded = fraction() > 0.5 ? startOfNext() : startOfCurrent();
         break;
     }
 

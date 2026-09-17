@@ -1,14 +1,21 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { normalizeDateTime } from "../../internal";
+import { plainTimeFormatOptions } from "../../internal/plainFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
 import { isValidTime } from "../validate";
 
 /**
  * Return a localized string for a PlainTime ISO input using Intl options.
  *
- * - Uses Temporal.PlainTime.toLocaleString for formatting.
+ * - Formats as Temporal's ECMA-402 PlainTime format (`PlainTime#toLocaleString`) does, through
+ *   the runtime's `Intl.DateTimeFormat`. `era` and `timeZoneName` are ignored, so alone they get
+ *   the hour, minute and second defaults.
  * - Accepts optional BCP 47 locale and Intl.DateTimeFormatOptions.
- * - Returns "" for invalid input.
+ * - Returns "" for invalid input, for a `dateStyle` (with or without `timeStyle`) and for only
+ *   date fields, where `PlainTime#toLocaleString` throws a TypeError.
+ * - **Compatibility:** before 1.16.0 `era` or `timeZoneName` alone returned `""`, `era` beside a
+ *   time field added the era name, and a `dateStyle` beside `timeStyle` was ignored. Pass only
+ *   `timeStyle` to keep the styled text.
  *
  * @param value ISO PlainTime string
  * @param locale optional BCP 47 locale identifier
@@ -17,6 +24,9 @@ import { isValidTime } from "../validate";
  *
  * @example formatTime("14:30:00", "en-US", { timeStyle: "short" }) // "2:30 PM"
  * @example formatTime("14:30:00", "de-DE", { timeStyle: "short" }) // "14:30"
+ * @example formatTime("14:30:45", "en-US", { era: "long" }) // "2:30:45 PM"
+ * @example formatTime("14:30:45", "en-US", { dateStyle: "short", timeStyle: "short" }) // "" — a PlainTime has no date
+ * @example formatTime("14:30:45", "en-US", { timeStyle: "short" }) // "2:30 PM" — the pre-1.16.0 text
  * @example formatTime("invalid") // ""
  */
 export function formatTime(
@@ -29,8 +39,22 @@ export function formatTime(
   }
 
   try {
-    const out = Temporal.PlainTime.from(value).toLocaleString(locale, options);
-    return normalizeDateTime(out);
+    // The runtime's Intl.DateTimeFormat formats the time at the UTC anchor on
+    // 1970-01-01 with the options Temporal's PlainTime format resolves to
+    // (CreateDateTimeFormat ~time~, ~time~). Constructing with the caller's
+    // options first surfaces the TypeError or RangeError Intl.DateTimeFormat
+    // raises for invalid ones.
+    new Intl.DateTimeFormat(locale, options);
+    const resolved = plainTimeFormatOptions(options ?? {});
+    if (resolved === null) {
+      return "";
+    }
+    const epochMilliseconds = Temporal.PlainDate.from("1970-01-01")
+      .toPlainDateTime(Temporal.PlainTime.from(value))
+      .toZonedDateTime("UTC").epochMilliseconds;
+    return normalizeDateTime(
+      new Intl.DateTimeFormat(locale, resolved).format(epochMilliseconds),
+    );
   } catch {
     return "";
   }

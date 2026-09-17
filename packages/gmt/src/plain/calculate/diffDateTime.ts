@@ -15,6 +15,10 @@ import { getLargestDateTimeDurationUnit } from "./getLargestDateTimeDurationUnit
  * - When `units` is an array, `smallestUnit` must not be coarser than the largest unit in the
  *   array (e.g. `["days", "hours"]` with `smallestUnit: "week"`) — this combination is rejected by
  *   Temporal and returns null, same as other invalid input.
+ * - With an array of units, the largest listed unit is Temporal's `largestUnit` and only the listed
+ *   units are returned. Amounts in units between the listed ones are computed and not returned —
+ *   they are not carried into a smaller listed unit. For example, `["years", "days"]` over
+ *   1 year 59 days returns `{ years: 1, days: 0 }` (the 2 months are dropped).
  *
  * @param dateTime1 ISO PlainDateTime string for the start
  * @param dateTime2 ISO PlainDateTime string for the end
@@ -24,6 +28,7 @@ import { getLargestDateTimeDurationUnit } from "./getLargestDateTimeDurationUnit
  *
  * @example diffDateTime("2024-03-10T12:00:00", "2024-03-15T12:00:00", "days") // 5
  * @example diffDateTime("invalid", "2024-03-15T12:00:00", "days") // null
+ * @example diffDateTime("2024-01-01T00:00:00", "2025-03-01T00:00:00", ["years", "days"]) // { years: 1, days: 0 } (P1Y2M; the months are not returned)
  */
 export function diffDateTime(
   dateTime1: string,

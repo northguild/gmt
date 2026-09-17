@@ -6,16 +6,19 @@ import { isValidDateTime } from "../validate";
  * Return the week number for a given ISO 8601 datetime string.
  *
  * - By default uses ISO weeks (Monday-based).
+ * - `weekStartsOn: "sunday"` numbers weeks within the calendar year (1–54, no week-year rollover),
+ *   while `"monday"` is the ISO 8601 week of the week-year (1–53) — see `getWeekNumber`.
  * - Returns null for invalid input.
  *
  * @param value ISO 8601 datetime string
  * @param optionsArg optional: weekStartsOn ("monday" | "sunday") for week calculations
- * @returns Week number (1-53) or null on invalid input
+ * @returns Week number (1-53 for "monday", 1-54 for "sunday") or null on invalid input
  *
  * @example parseWeekFromDateTime("2024-01-01T12:00:00") // 1
  * @example parseWeekFromDateTime("2024-01-08T00:00:00") // 2
  * @example parseWeekFromDateTime("2024-01-01T00:00:00", { weekStartsOn: "sunday" }) // 1
  * @example parseWeekFromDateTime("invalid") // null
+ * @example parseWeekFromDateTime("2024-12-31T12:00:00", { weekStartsOn: "sunday" }) // 53 (no week-year rollover)
  */
 export function parseWeekFromDateTime(
   value: string,

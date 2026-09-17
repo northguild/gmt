@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidTimeInterval } from "./validate";
+import { divisionBoundary } from "../../internal/divisionBoundary";
 import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 
 /**
@@ -7,9 +8,10 @@ import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
  *
  * - Returns an array of `n` `{ start, end }` records that tile the original interval, each
  *   record's `end` equal to the next record's `start`.
- * - Time units are fixed-length, so boundaries are computed to nanosecond precision — the split
- *   is exact whenever the total nanoseconds divides evenly by `n`, and off by at most one
- *   nanosecond otherwise.
+ * - Time units are fixed-length, so each boundary is `start + round((end - start) · i / n)` in
+ *   integer nanoseconds, computed in `bigint`: the split is exact whenever the total divides
+ *   evenly by `n`, and within half a nanosecond of the exact cut otherwise (an exact half rounds
+ *   up).
  * - `n === 1` returns the original interval unchanged, as a single-element array.
  * - A zero-length interval (`start === end`) returns `n` identical zero-length sub-intervals.
  * - Returns `[]` when `n` is not a positive integer, or on invalid input (unparseable
@@ -63,14 +65,17 @@ export function intervalDivideEquallyTime(
       }));
     }
 
-    const totalNs = startVal
-      .until(endVal, { largestUnit: "nanosecond" })
-      .total("nanosecond");
+    // Under a day of nanoseconds (< 2^53), so the total itself is exact; the quotient is not.
+    const totalNs = BigInt(
+      startVal.until(endVal, { largestUnit: "nanosecond" }).total("nanosecond"),
+    );
 
     const boundaries: Temporal.PlainTime[] = [startVal];
     for (let i = 1; i < n; i++) {
       boundaries.push(
-        startVal.add({ nanoseconds: Math.round((totalNs * i) / n) }),
+        startVal.add({
+          nanoseconds: Number(divisionBoundary(totalNs, i, n)),
+        }),
       );
     }
     boundaries.push(endVal);

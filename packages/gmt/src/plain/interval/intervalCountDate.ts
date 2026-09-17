@@ -44,6 +44,8 @@ function startOfUnitIfRepresentable(
  *   carry the *same* calendar tag, boundaries are counted in that calendar (a Hebrew leap year
  *   crosses 13 month boundaries, not 12 — see the roadmap's E5 decisions of record, D5). When
  *   they carry different tags (or either is bare ISO), counting falls back to Gregorian.
+ * - Compatibility: since 1.16.0 a calendar annotation must be a GMT `CalendarSystem` id
+ *   (`[u-ca=gregory]` is now invalid input); use the GMT id — see `isValidCalendarDate`.
  *
  * @param start ISO PlainDate string for the interval start, optionally calendar-annotated
  * @param end ISO PlainDate string for the interval end, optionally calendar-annotated

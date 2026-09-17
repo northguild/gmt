@@ -1,15 +1,19 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidDateTimeInterval } from "./validate";
+import { divisionBoundary } from "../../internal/divisionBoundary";
 import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
+
+const NANOSECONDS_PER_DAY = 86_400_000_000_000n;
 
 /**
  * Split a datetime interval into `n` equal-length sub-intervals.
  *
  * - Returns an array of `n` `{ start, end }` records that tile the original interval, each
  *   record's `end` equal to the next record's `start`.
- * - Boundaries are computed from the total elapsed nanoseconds (via `Duration.prototype.total`
- *   with `relativeTo` set to `start`), so the split is exact whenever the total divides evenly
- *   by `n`, and off by at most one nanosecond otherwise.
+ * - Each boundary is `start + round((end - start) · i / n)` in integer nanoseconds, computed in
+ *   `bigint`: the split is exact whenever the total divides evenly by `n`, and within half a
+ *   nanosecond of the exact cut otherwise (an exact half rounds up), at any span length — the
+ *   whole PlainDateTime range included.
  * - `n === 1` returns the original interval unchanged, as a single-element array.
  * - A zero-length interval (`start === end`) returns `n` identical zero-length sub-intervals.
  * - Returns `[]` when `n` is not a positive integer, or on invalid input (unparseable
@@ -62,14 +66,26 @@ export function intervalDivideEquallyDateTime(
       }));
     }
 
-    const totalNs = startVal
-      .until(endVal, { largestUnit: "nanosecond" })
-      .total({ unit: "nanosecond", relativeTo: startVal });
+    // A PlainDateTime has no DST, so every day is 86,400 s. The span is read in whole fields
+    // (days, then time below a day), each an exact integer, and summed in bigint.
+    const span = startVal.until(endVal, { largestUnit: "day" });
+    const totalNs =
+      BigInt(span.days) * NANOSECONDS_PER_DAY +
+      BigInt(span.hours) * 3_600_000_000_000n +
+      BigInt(span.minutes) * 60_000_000_000n +
+      BigInt(span.seconds) * 1_000_000_000n +
+      BigInt(span.milliseconds) * 1_000_000n +
+      BigInt(span.microseconds) * 1_000n +
+      BigInt(span.nanoseconds);
 
     const boundaries: Temporal.PlainDateTime[] = [startVal];
     for (let i = 1; i < n; i++) {
+      const offsetNs = divisionBoundary(totalNs, i, n);
       boundaries.push(
-        startVal.add({ nanoseconds: Math.round((totalNs * i) / n) }),
+        startVal.add({
+          days: Number(offsetNs / NANOSECONDS_PER_DAY),
+          nanoseconds: Number(offsetNs % NANOSECONDS_PER_DAY),
+        }),
       );
     }
     boundaries.push(endVal);

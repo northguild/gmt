@@ -38,6 +38,7 @@ import { isValidDate } from "../validate";
  * @example getLocaleWeekYear("2022-01-01", "en-US") // 2021 — ISO default: the week of Dec 26 holds 1 day of 2022
  * @example getLocaleWeekYear("2022-01-01", "de-DE") // 2021 — Jan 1, 2022 is a Saturday, in week 52 of 2021
  * @example getLocaleWeekYear("2022-01-01", "en-US", { minimalDays: 0 }) // null
+ * @example getLocaleWeekYear("+275760-09-13", "en-US") // 275760 (the last PlainDate; the next week 1 lies past the range)
  * @example getLocaleWeekYear("invalid", "en-US") // null
  */
 export function getLocaleWeekYear(

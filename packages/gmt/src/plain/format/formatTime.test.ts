@@ -161,6 +161,8 @@ describe("formatTime", () => {
     },
   );
 
+  // pt-PT 12-hour day period — CLDR changed the wording from "da tarde"
+  // (ICU 77 / Node 22.16–22.22) to "p.m." (ICU 78 / Node 22.23+, 24, 26).
   it("formats valid time 14:30:45 for pt-PT with 12-hour day period (CLDR wording varies by ICU version)", () => {
     expectOneOfIcu(
       formatTime("14:30:45", MustTestLocales.ptPT, {
@@ -403,6 +405,31 @@ describe("formatTime", () => {
   `("formats edge case time $value", ({ value, locale, options }) => {
     expect(formatTime(value, locale, options)).not.toBe("");
   });
+
+  // Temporal ECMA-402 PlainTime format (CreateDateTimeFormat ~time~, ~time~;
+  // GetDateTimeFormat inherit ~relevant~): `era` and `timeZoneName` are not
+  // inherited, so the hour/minute/second defaults apply (test262
+  // intl402/Temporal/PlainTime/prototype/toLocaleString/era.js), and a
+  // `dateStyle` is a TypeError (…/datestyle-and-timestyle.js). Expected
+  // values: native Intl.DateTimeFormat at UTC with the adjusted options.
+  it.each`
+    options                                       | expected        | reason
+    ${{ era: "long" }}                            | ${"2:30:45 PM"} | ${"era is not inherited, defaults apply"}
+    ${{ timeZoneName: "long" }}                   | ${"2:30:45 PM"} | ${"timeZoneName is not inherited, defaults apply"}
+    ${{ hour: "numeric", era: "long" }}           | ${"2 PM"}       | ${"era dropped beside a time field"}
+    ${{ dateStyle: "short", timeStyle: "short" }} | ${""}           | ${"dateStyle on a PlainTime is a TypeError"}
+    ${{ dateStyle: "short" }}                     | ${""}           | ${"dateStyle on a PlainTime is a TypeError"}
+    ${{ timeStyle: "short" }}                     | ${"2:30 PM"}    | ${"only the style that applies gives the pre-1.16.0 text"}
+    ${{ timeStyle: "full" }}                      | ${"2:30:45 PM"} | ${"zone field removed from the full time style"}
+    ${{ year: "numeric" }}                        | ${""}           | ${"only date fields: no PlainTime format"}
+  `(
+    "formats 14:30:45.123 in en-US with $options to $expected ($reason)",
+    ({ options, expected }) => {
+      expect(formatTime("14:30:45.123", MustTestLocales.enUS, options)).toBe(
+        expected,
+      );
+    },
+  );
 
   it.each`
     invalidValue

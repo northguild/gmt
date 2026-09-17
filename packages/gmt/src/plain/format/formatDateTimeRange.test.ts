@@ -68,8 +68,8 @@ describe("formatDateTimeRange", () => {
     },
   );
 
-  // sv-SE long/long — ICU 77 (Node 20) renders the digit-adjacent en dash
-  // with no surrounding space; ICU 78 (Node 22/24) inserts a space around
+  // sv-SE long/long — ICU 77 (Node 22.16–22.22) renders the digit-adjacent en dash
+  // with no surrounding space; ICU 78 (Node 22.23+, 24, 26) inserts a space around
   // it. Same CLDR range-separator spacing revision as formatDateRange's
   // en-GB/sv-SE cases.
   it("formats a valid datetime range for sv-SE with dateStyle/timeStyle long as one of the known ICU variants", () => {
@@ -144,6 +144,33 @@ describe("formatDateTimeRange", () => {
       expect(
         formatDateTimeRange(start as never, end, MustTestLocales.enUS),
       ).toBe("");
+    },
+  );
+
+  // Temporal ECMA-402 PlainDateTime format (GetDateTimeFormat ~any~, ~all~,
+  // inherit ~relevant~): requested widths are kept, `era` alone still gets the
+  // date and time defaults, and `timeZoneName` is not inherited. Expected
+  // values: native Intl.DateTimeFormat#formatRange at UTC with the adjusted
+  // options.
+  it.each`
+    locale                  | options                                                               | expected                                           | reason
+    ${MustTestLocales.zhCN} | ${{ year: "numeric", month: "long" }}                                 | ${"2024年2月"}                                     | ${"requested long month kept"}
+    ${MustTestLocales.zhCN} | ${{ year: "numeric", month: "numeric" }}                              | ${"2024/2"}                                        | ${"numeric fields give the pre-1.16.0 text"}
+    ${MustTestLocales.enUS} | ${{ era: "long" }}                                                    | ${"2/3/2024 Anno Domini, 9:00:00 AM - 5:30:00 PM"} | ${"era alone gets the date and time defaults"}
+    ${MustTestLocales.enUS} | ${{ era: "long", year: "numeric", month: "numeric", day: "numeric" }} | ${"2/3/2024 Anno Domini"}                          | ${"date fields give the pre-1.16.0 era text"}
+    ${MustTestLocales.enUS} | ${{ timeZoneName: "short" }}                                          | ${"2/3/2024, 9:00:00 AM - 5:30:00 PM"}             | ${"timeZoneName is not inherited, defaults apply"}
+    ${MustTestLocales.enUS} | ${{ dateStyle: "short", timeStyle: "full" }}                          | ${"2/3/24, 9:00:00 AM - 5:30:00 PM"}               | ${"short date width kept, zone field removed"}
+  `(
+    "formats 2024-02-03T09:00 to 2024-02-03T17:30 in $locale with $options to $expected ($reason)",
+    ({ locale, options, expected }) => {
+      expect(
+        formatDateTimeRange(
+          "2024-02-03T09:00",
+          "2024-02-03T17:30",
+          locale,
+          options,
+        ),
+      ).toBe(expected);
     },
   );
 });

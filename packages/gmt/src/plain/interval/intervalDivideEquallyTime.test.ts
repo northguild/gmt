@@ -26,6 +26,19 @@ describe("intervalDivideEquallyTime", () => {
     ]);
   });
 
+  // The quotient must be rounded exactly, not after a double division: 86,399,999,999,999 ns · 63
+  // / 65 = 83,741,538,461,537.49, whose nearest double is .5, so a float quotient rounds it up.
+  // Boundary 63 is 83,741,538,461,537 ns = 23:15:41.538461537 (BigInt arithmetic, not GMT).
+  it("rounds boundary 63 of 65 over the whole day from the exact quotient", () => {
+    const pieces = intervalDivideEquallyTime(
+      "00:00:00",
+      "23:59:59.999999999",
+      65,
+    );
+    expect(pieces[63].start).toBe("23:15:41.538461537");
+    expect(pieces[62].end).toBe("23:15:41.538461537");
+  });
+
   it.each`
     n
     ${0}

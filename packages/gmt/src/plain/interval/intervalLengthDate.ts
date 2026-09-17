@@ -61,6 +61,8 @@ function calendarLength(
  *   carry the *same* calendar tag, the length is measured in that calendar; otherwise (or if
  *   either is bare ISO) it falls back to Gregorian — same shared-calendar rule as
  *   `intervalCountDate` (E5 decision of record D5).
+ * - Compatibility: since 1.16.0 a calendar annotation must be a GMT `CalendarSystem` id
+ *   (`[u-ca=gregory]` is now invalid input); use the GMT id — see `isValidCalendarDate`.
  *
  * @param start ISO PlainDate string for the interval start, optionally calendar-annotated
  * @param end ISO PlainDate string for the interval end, optionally calendar-annotated

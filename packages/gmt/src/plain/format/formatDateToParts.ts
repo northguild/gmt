@@ -17,8 +17,10 @@ import { isValidDate } from "../validate";
  *   order reintroduces exactly the bug `formatToParts` exists to avoid.
  * - A PlainDate has no time or zone, so no `hour`/`minute`/`second`/`dayPeriod`/`timeZoneName`
  *   part is ever returned, following Temporal's ECMA-402 PlainDate format: `timeStyle` without
- *   `dateStyle`, or only time fields, yields `[]` (as `formatDate` yields `""`); with `dateStyle`
- *   the `timeStyle` is dropped; `timeZoneName` is ignored.
+ *   `dateStyle`, or only time fields, yields `[]` (as `formatDate` yields `""`); `timeZoneName` is
+ *   ignored. With both `dateStyle` and `timeStyle` the parts keep the date style and drop the
+ *   `timeStyle` (the `Intl.DateTimeFormat` entry point, required ~any~), whereas the text sibling
+ *   `formatDate` returns `""` (`PlainDate#toLocaleString`, required ~date~, is a TypeError).
  * - Returns `[]` for invalid input.
  * - **Compatibility:** before 1.16.0 time options leaked a UTC midnight and a `"UTC"` zone name
  *   into the parts. `formatZonedToParts` on the date at midnight UTC returns those parts.

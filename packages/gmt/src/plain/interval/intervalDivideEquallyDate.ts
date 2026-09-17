@@ -4,6 +4,7 @@ import {
   parseCalendarDateValue,
 } from "../../internal";
 import { isValidDateInterval } from "./validate";
+import { divisionBoundary } from "../../internal/divisionBoundary";
 import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 
 /**
@@ -12,8 +13,9 @@ import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
  * - Returns an array of `n` `{ start, end }` records that tile the original interval, each
  *   record's `end` equal to the next record's `start`.
  * - `PlainDate` has no fractional-day representation, so each internal boundary is rounded to
- *   the nearest whole day — when `totalDays` isn't evenly divisible by `n`, the resulting
- *   sub-intervals differ by at most one day rather than being mathematically exact.
+ *   the nearest whole day (`round(totalDays · i / n)`, computed exactly in `bigint`, an exact half
+ *   rounding up) — when `totalDays` isn't evenly divisible by `n`, the resulting sub-intervals
+ *   differ by at most one day rather than being mathematically exact.
  * - `n === 1` returns the original interval unchanged, as a single-element array.
  * - A zero-length interval (`start === end`) returns `n` identical zero-length sub-intervals.
  * - Returns `[]` when `n` is not a positive integer, or on invalid input (unparseable
@@ -77,11 +79,15 @@ export function intervalDivideEquallyDate(
       }));
     }
 
-    const totalDays = startVal.until(endVal, { largestUnit: "day" }).days;
+    const totalDays = BigInt(
+      startVal.until(endVal, { largestUnit: "day" }).days,
+    );
 
     const boundaries = [startVal];
     for (let i = 1; i < n; i++) {
-      boundaries.push(startVal.add({ days: Math.round((totalDays * i) / n) }));
+      boundaries.push(
+        startVal.add({ days: Number(divisionBoundary(totalDays, i, n)) }),
+      );
     }
     boundaries.push(endVal);
 

@@ -26,6 +26,7 @@ import { isValidDate } from "../validate";
  * @example getWeekOfMonth("2024-02-29", "en-US") // 5
  * @example getWeekOfMonth("2026-02-01", "en-US") // 1
  * @example getWeekOfMonth("2026-02-01", "en-GB") // 1
+ * @example getWeekOfMonth("-271821-04-30", "en-US") // 5 (the first representable month; its 1st lies before the range)
  * @example getWeekOfMonth("invalid", "en-US") // null
  */
 export function getWeekOfMonth(value: string, locale: string): number | null {
@@ -36,8 +37,10 @@ export function getWeekOfMonth(value: string, locale: string): number | null {
 
   try {
     const date = Temporal.PlainDate.from(value);
-    const firstOfMonth = date.with({ day: 1 });
-    return monthGridWeekRow(firstOfMonth, firstDay, date.day);
+    // The 1st's weekday, counted back from the date rather than built with `with({ day: 1 })`:
+    // the 1st of the first representable month (April -271821) lies before the range.
+    const dayOfWeek = ((((date.dayOfWeek - date.day) % 7) + 7) % 7) + 1;
+    return monthGridWeekRow({ dayOfWeek }, firstDay, date.day);
   } catch {
     return null;
   }

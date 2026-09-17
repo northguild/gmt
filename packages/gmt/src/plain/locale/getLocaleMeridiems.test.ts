@@ -8,46 +8,58 @@ import {
 import { getLocaleMeridiems } from "./getLocaleMeridiems";
 
 // es-ES's AM/PM markers use a space between "a."/"p." and "m." whose
-// exact character varies by ICU version: a regular space, U+00A0
-// (no-break space, ICU 77/Node 20-22), and U+202F (narrow no-break
-// space, ICU 78/Node 24+) have all been observed. Spelled out with
+// exact character varies by runtime: U+202F (narrow no-break space, ICU 78
+// on Node 24), a regular space (ICU 78 on Node 26, whose V8 replaces U+202F —
+// see `test/icuVariants.ts`), and U+00A0 (no-break space, ICU 77 / Node
+// 22.16–22.22, from the original golden, not re-run here). Spelled out with
 // explicit escapes (rather than literal invisible characters) so the
 // distinction survives editors/diffs that normalize whitespace.
 const esAm = ["a. m.", "a.\u00a0m.", "a.\u202fm."];
 const esPm = ["p. m.", "p.\u00a0m.", "p.\u202fm."];
 
 describe("getLocaleMeridiems", () => {
+  // One label per locale on every supported runtime. CJK labels go through
+  // `expectDateTimeEqual`, which tolerates the ASCII "AM"/"PM" some CI ICU
+  // builds render (see `test/icuVariants.ts`).
+  it.each`
+    locale                  | am        | pm
+    ${MustTestLocales.enUS} | ${"AM"}   | ${"PM"}
+    ${MustTestLocales.enGB} | ${"am"}   | ${"pm"}
+    ${MustTestLocales.deDE} | ${"AM"}   | ${"PM"}
+    ${MustTestLocales.frFR} | ${"AM"}   | ${"PM"}
+    ${MustTestLocales.itIT} | ${"AM"}   | ${"PM"}
+    ${MustTestLocales.svSE} | ${"fm"}   | ${"em"}
+    ${MustTestLocales.isIS} | ${"f.h."} | ${"e.h."}
+    ${MustTestLocales.zhCN} | ${"上午"} | ${"下午"}
+    ${MustTestLocales.zhTW} | ${"上午"} | ${"下午"}
+    ${MustTestLocales.jaJP} | ${"午前"} | ${"午後"}
+    ${MustTestLocales.koKR} | ${"오전"} | ${"오후"}
+    ${MustTestLocales.arSA} | ${"ص"}    | ${"م"}
+    ${MustTestLocales.heIL} | ${"AM"}   | ${"PM"}
+    ${MustTestLocales.ruRU} | ${"AM"}   | ${"PM"}
+    ${MustTestLocales.trTR} | ${"ÖÖ"}   | ${"ÖS"}
+  `("returns [$am, $pm] for $locale", ({ locale, am, pm }) => {
+    const [actualAm, actualPm] = getLocaleMeridiems(locale);
+    expectDateTimeEqual(actualAm, am);
+    expectDateTimeEqual(actualPm, pm);
+  });
+
+  // Labels whose wording or spacing differs between runtimes: es-ES spacing
+  // (see `esAm`/`esPm` above) and pt-PT, where CLDR changed "da manhã"/"da
+  // tarde" (ICU 77 / Node 22.16–22.22) to "a.m."/"p.m." (ICU 78 / Node
+  // 22.23+, 24, 26).
   it.each`
     locale                  | am                              | pm
-    ${MustTestLocales.enUS} | ${oneOfIcu("AM")}               | ${oneOfIcu("PM")}
-    ${MustTestLocales.enGB} | ${oneOfIcu("am")}               | ${oneOfIcu("pm")}
-    ${MustTestLocales.deDE} | ${oneOfIcu("AM")}               | ${oneOfIcu("PM")}
-    ${MustTestLocales.frFR} | ${oneOfIcu("AM")}               | ${oneOfIcu("PM")}
     ${MustTestLocales.esES} | ${oneOfIcu(...esAm)}            | ${oneOfIcu(...esPm)}
-    ${MustTestLocales.itIT} | ${oneOfIcu("AM")}               | ${oneOfIcu("PM")}
     ${MustTestLocales.ptPT} | ${oneOfIcu("a.m.", "da manhã")} | ${oneOfIcu("p.m.", "da tarde")}
-    ${MustTestLocales.svSE} | ${oneOfIcu("fm")}               | ${oneOfIcu("em")}
-    ${MustTestLocales.isIS} | ${oneOfIcu("f.h.")}             | ${oneOfIcu("e.h.")}
-    ${MustTestLocales.zhCN} | ${oneOfIcu("上午")}             | ${oneOfIcu("下午")}
-    ${MustTestLocales.zhTW} | ${oneOfIcu("上午")}             | ${oneOfIcu("下午")}
-    ${MustTestLocales.jaJP} | ${oneOfIcu("午前")}             | ${oneOfIcu("午後")}
-    ${MustTestLocales.koKR} | ${oneOfIcu("오전")}             | ${oneOfIcu("오후")}
-    ${MustTestLocales.arSA} | ${oneOfIcu("ص")}                | ${oneOfIcu("م")}
-    ${MustTestLocales.heIL} | ${oneOfIcu("AM")}               | ${oneOfIcu("PM")}
-    ${MustTestLocales.ruRU} | ${oneOfIcu("AM")}               | ${oneOfIcu("PM")}
-    ${MustTestLocales.trTR} | ${oneOfIcu("ÖÖ")}               | ${oneOfIcu("ÖS")}
-  `("returns [AM-label, PM-label] for $locale", ({ locale, am, pm }) => {
-    const [actualAm, actualPm] = getLocaleMeridiems(locale);
-    // CJK locales (ko-KR/ja-JP/zh-CN/zh-TW) render the day-period marker as
-    // either the native word or ASCII "AM"/"PM" depending on the runtime's
-    // ICU data; pt-PT's wording ("da manhã"/"da tarde" -> "a.m."/"p.m.")
-    // and es-ES's inter-word space character also vary between ICU 77
-    // (Node 20) and ICU 78 (Node 22+) — see `test/icuVariants.ts`.
-    // `expectOneOfDateTimeIcu` tolerates all of these without masking an
-    // actual regression.
-    expectOneOfDateTimeIcu(actualAm, am);
-    expectOneOfDateTimeIcu(actualPm, pm);
-  });
+  `(
+    "returns [AM-label, PM-label] for $locale as one of the known ICU variants",
+    ({ locale, am, pm }) => {
+      const [actualAm, actualPm] = getLocaleMeridiems(locale);
+      expectOneOfDateTimeIcu(actualAm, am);
+      expectOneOfDateTimeIcu(actualPm, pm);
+    },
+  );
 
   it("varies by locale", () => {
     expect(getLocaleMeridiems(MustTestLocales.enUS)).toEqual(["AM", "PM"]);

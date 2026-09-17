@@ -252,7 +252,7 @@ describe("formatRelativeDate", () => {
   );
 
   // sv-SE "last year" — CLDR changed the idiom from "i fjol" (ICU 77 /
-  // Node 20) to "förra året" (ICU 78 / Node 22/24).
+  // Node 22.16–22.22) to "förra året" (ICU 78 / Node 22.23+, 24, 26).
   it("formats 2023-03-15 for sv-SE with default options as one of the known ICU variants", () => {
     expectOneOfIcu(
       formatRelativeDate("2023-03-15", MustTestLocales.svSE, {
@@ -430,7 +430,7 @@ describe("formatRelativeDate", () => {
 
   // he-IL dual-form month pluralization — CLDR started appending the
   // numeral in parentheses to the dual form ("חודשיים") starting ICU 78
-  // (Node 22/24); ICU 77 (Node 20) omits it.
+  // (Node 22.23+, 24, 26); ICU 77 (Node 22.16–22.22) omits it.
   it.each`
     value           | options               | expectedVariants
     ${"2024-01-15"} | ${{ reference: REF }} | ${oneOfIcu("לפני חודשיים", "לפני חודשיים (2)")}

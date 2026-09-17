@@ -192,6 +192,42 @@ describe("roundDate", () => {
       );
     },
   );
+
+  // +275760-09-13 is the last representable PlainDate (a Saturday, day 257 of the leap year 275760).
+  // The next week, month and year start after it, so a mode that picks the current start still has
+  // a value: 06-15 is 166/366 through its year (under half), 09-10 is 9/30 through September and a
+  // Wednesday 2/7 through its week, 09-13 is 12/30 through September but 5/7 through its week (over
+  // half, so up to 09-15, which does not exist). Increment 2 spans Sep+Oct (61 days) or 275760+275761
+  // (366+365 days), both still under half. ceil past the last date is the sentinel.
+  it.each`
+    value              | unit       | roundingMode    | increment | expected
+    ${"+275760-06-15"} | ${"year"}  | ${"floor"}      | ${1}      | ${"+275760-01-01"}
+    ${"+275760-06-15"} | ${"year"}  | ${"trunc"}      | ${1}      | ${"+275760-01-01"}
+    ${"+275760-06-15"} | ${"year"}  | ${"halfExpand"} | ${1}      | ${"+275760-01-01"}
+    ${"+275760-06-15"} | ${"year"}  | ${"halfExpand"} | ${2}      | ${"+275760-01-01"}
+    ${"+275760-01-01"} | ${"year"}  | ${"halfExpand"} | ${1}      | ${"+275760-01-01"}
+    ${"+275760-06-15"} | ${"year"}  | ${"ceil"}       | ${1}      | ${""}
+    ${"+275760-09-13"} | ${"year"}  | ${"halfExpand"} | ${1}      | ${""}
+    ${"+275760-09-10"} | ${"month"} | ${"floor"}      | ${1}      | ${"+275760-09-01"}
+    ${"+275760-09-13"} | ${"month"} | ${"halfExpand"} | ${1}      | ${"+275760-09-01"}
+    ${"+275760-09-13"} | ${"month"} | ${"halfEven"}   | ${2}      | ${"+275760-09-01"}
+    ${"+275760-09-10"} | ${"month"} | ${"ceil"}       | ${1}      | ${""}
+    ${"+275760-09-13"} | ${"week"}  | ${"floor"}      | ${1}      | ${"+275760-09-08"}
+    ${"+275760-09-10"} | ${"week"}  | ${"halfExpand"} | ${1}      | ${"+275760-09-08"}
+    ${"+275760-09-13"} | ${"week"}  | ${"halfExpand"} | ${1}      | ${""}
+    ${"+275760-09-13"} | ${"week"}  | ${"ceil"}       | ${1}      | ${""}
+  `(
+    "returns $expected for the last-year PlainDate $value rounded to $unit (increment $increment) with roundingMode $roundingMode",
+    ({ value, unit, roundingMode, increment, expected }) => {
+      expect(
+        roundDate(value, {
+          smallestUnit: unit,
+          roundingMode,
+          roundingIncrement: increment,
+        }),
+      ).toBe(expected);
+    },
+  );
 });
 
 describe("roundDate with a plural smallestUnit", () => {

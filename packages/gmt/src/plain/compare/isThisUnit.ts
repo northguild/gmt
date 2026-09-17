@@ -19,7 +19,9 @@ import { areDatesEqualBy } from "./areDatesEqualBy";
  *   system timeZone**. A caller needing determinism should use
  *   `isZonedThisUnit` with an explicit timeZone, or compare against an
  *   explicit reference with `areDatesEqualBy`.
- * - Returns false for an unsupported unit, invalid input, or an invalid locale.
+ * - Returns false for an unsupported unit or invalid input. The locale is read only for
+ *   `"week"`, so an invalid locale returns false for `"week"` and is ignored for `"day"`,
+ *   `"month"` and `"year"`.
  *
  * Mapping from date-fns (Decision 5, `context/roadmap/issues/J.md`):
  * - `isThisWeek(value, options)` → `isThisUnit(value, "week", locale)`
@@ -36,6 +38,8 @@ import { areDatesEqualBy } from "./areDatesEqualBy";
  * @example isThisUnit("2024-02-26", "week", "fr-FR") // true, if today is 2024-03-01 (same fr-FR Monday-start week)
  * @example isThisUnit("2024-03-15", "hour" as never) // false (unsupported unit)
  * @example isThisUnit("invalid", "month") // false
+ * @example isThisUnit("2024-03-15", "week", "not-a-locale-!!") // false (invalid locale)
+ * @example isThisUnit("2024-03-15", "day", "not-a-locale-!!") // true, if today is 2024-03-15 (the locale is not read for "day")
  */
 export function isThisUnit(
   value: string,

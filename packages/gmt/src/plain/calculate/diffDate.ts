@@ -26,6 +26,12 @@ import { getLargestDateDurationUnit } from "./getLargestDateDurationUnit";
  * - When `unitArg` is an array, `smallestUnit` must not be coarser than the largest unit in the
  *   array (e.g. `["months", "days"]` with `smallestUnit: "year"`) — this combination is rejected
  *   by Temporal and returns null, same as other invalid input.
+ * - With an array of units, the largest listed unit is Temporal's `largestUnit` and only the listed
+ *   units are returned. Amounts in units between the listed ones are computed and not returned —
+ *   they are not carried into a smaller listed unit. For example, `["years", "days"]` over
+ *   1 year 59 days returns `{ years: 1, days: 0 }` (the 2 months are dropped).
+ * - Compatibility: since 1.16.0 a calendar annotation must be a GMT `CalendarSystem` id
+ *   (`[u-ca=gregory]` is now invalid input); use the GMT id — see `isValidCalendarDate`.
  *
  * @param date1 ISO PlainDate string for the start, optionally calendar-annotated
  * @param date2 ISO PlainDate string for the end, optionally calendar-annotated
@@ -38,6 +44,7 @@ import { getLargestDateDurationUnit } from "./getLargestDateDurationUnit";
  * @example diffDate("2024-01-01", "2024-01-16", "weeks", { smallestUnit: "week", roundingMode: "halfExpand" }) // 2
  * @example diffDate("5784-06-15[u-ca=hebrew]", "5784-07-15[u-ca=hebrew]", "months") // 1 (measured in Hebrew, Adar I -> Adar)
  * @example diffDate("2566-08-31[u-ca=buddhist]", "2566-09-30[u-ca=buddhist]", "months") // 0 (30 days, not a month)
+ * @example diffDate("2024-01-01", "2025-03-01", ["years", "days"]) // { years: 1, days: 0 } (P1Y2M; the months are not returned)
  */
 export function diffDate(
   date1: string,

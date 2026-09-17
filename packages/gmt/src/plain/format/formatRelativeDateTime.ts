@@ -20,8 +20,9 @@ const AUTO_UNITS: Array<{ unit: RelativeDateTimeUnit; maxSeconds: number }> = [
 /**
  * Format the relative time between a plain date-time and a reference date-time.
  *
- * - Auto-picks the display unit (second through year) based on the distance, unless
- *   `largestUnit` forces one.
+ * - Auto-picks the display unit (second through day) based on the distance, unless
+ *   `largestUnit` forces one — week, month and year are never auto-picked, so a 3-year distance
+ *   reads "1,096 days ago" unless `largestUnit: "year"` is passed.
  * - `roundingMethod` controls how the distance rounds to the display unit.
  *
  * @param value ISO date-time string to format

@@ -14,7 +14,10 @@ const supported: Temporal.DateUnit[] = ["year", "month", "week", "day"];
  *   NOT equal by month, matching date-fns's `isSameMonth` and Luxon's
  *   `dt.hasSame(other, "month")`. This is a common point of confusion for
  *   callers expecting a bare "same month-of-year" comparison.
- * - `"day"` is equivalent to `areDatesEqual`.
+ * - `"day"` matches `areDatesEqual` for PlainDate inputs only: `areDatesEqual` also accepts
+ *   PlainDateTime strings (`areDatesEqual("2024-01-01", "2024-01-01T10:00")` is `true`), while this
+ *   function accepts PlainDate strings only (`areDatesEqualBy` with those inputs and `"day"` is
+ *   `false`).
  * - `"year"`, `"month"`, `"week"` are computed via `startOfDate`.
  * - Returns false for an unsupported unit or invalid input.
  *

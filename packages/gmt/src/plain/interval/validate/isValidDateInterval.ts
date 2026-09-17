@@ -11,6 +11,8 @@ import { isValidCalendarDate } from "../../validate";
  * - Invalid input, malformed strings, or leap-second strings return `false`.
  * - Accepts GMT calendar-annotated PlainDate strings — E5 (issue #78). Ordering is
  *   calendar-independent, so `start`/`end` may carry different or no calendar tags (D4).
+ * - Compatibility: since 1.16.0 a calendar annotation must be a GMT `CalendarSystem` id
+ *   (`[u-ca=gregory]` is now invalid input); use the GMT id — see `isValidCalendarDate`.
  *
  * @param start ISO 8601 date string (interval start), optionally calendar-annotated
  * @param end ISO 8601 date string (interval end), optionally calendar-annotated

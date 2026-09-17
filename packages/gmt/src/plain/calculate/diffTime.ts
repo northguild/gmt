@@ -15,6 +15,10 @@ import { getLargestTimeDurationUnit } from "./getLargestTimeDurationUnit";
  * - When `units` is an array, `smallestUnit` must not be coarser than the largest unit in the
  *   array (e.g. `["minutes", "seconds"]` with `smallestUnit: "hour"`) — this combination is
  *   rejected by Temporal and returns null, same as other invalid input.
+ * - With an array of units, the largest listed unit is Temporal's `largestUnit` and only the listed
+ *   units are returned. Amounts in units between the listed ones are computed and not returned —
+ *   they are not carried into a smaller listed unit. For example, `["hours", "seconds"]` over
+ *   1 hour 30 minutes 15 seconds returns `{ hours: 1, seconds: 15 }` (the 30 minutes are dropped).
  *
  * @param time1 ISO PlainTime string for the start
  * @param time2 ISO PlainTime string for the end
@@ -24,6 +28,7 @@ import { getLargestTimeDurationUnit } from "./getLargestTimeDurationUnit";
  *
  * @example diffTime("12:00:00", "14:30:00", "hours") // 2
  * @example diffTime("invalid", "14:30:00", "hours") // null
+ * @example diffTime("10:00:00", "11:30:15", ["hours", "seconds"]) // { hours: 1, seconds: 15 } (PT1H30M15S; the minutes are not returned)
  */
 export function diffTime(
   time1: string,

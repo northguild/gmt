@@ -1,12 +1,19 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { normalizeDateTime } from "../../internal";
+import { plainDateTimeFormatOptions } from "../../internal/plainFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
 import { isValidDateTime } from "../validate";
 
 /**
  * Return a localized string for a PlainDateTime ISO input using Intl options.
  *
- * - Uses Temporal.PlainDateTime.toLocaleString for formatting.
+ * - Formats as Temporal's ECMA-402 PlainDateTime format (`PlainDateTime#toLocaleString`) does,
+ *   through the runtime's `Intl.DateTimeFormat`: the requested fields and style widths are kept,
+ *   `era` alone still gets the date and time defaults, and `timeZoneName` is ignored.
+ * - **Compatibility:** before 1.16.0 some locales and calendars lost a requested width, a
+ *   `long`/`full` `timeStyle` replaced the `dateStyle` width (`{ dateStyle: "short", timeStyle:
+ *   "full" }` gave `"2/3/2024, 2:30:45 PM"`), `era` alone dropped the time, and `timeZoneName`
+ *   alone returned `""`. Pass the fields the old text showed to keep it.
  * - Accepts optional BCP 47 locale and Intl.DateTimeFormatOptions.
  * - Returns "" for invalid input.
  * - Output is normalized: dash separators become ASCII "-" (unspaced between digits, spaced
@@ -20,6 +27,10 @@ import { isValidDateTime } from "../validate";
  * @example formatDateTime("2024-03-15T14:30:00", "en-US", { dateStyle: "medium", timeStyle: "short" }) // "Mar 15, 2024, 2:30 PM"
  * @example formatDateTime("2024-03-15T14:30:00", "en-US", { dateStyle: "long", timeStyle: "short" }) // "March 15, 2024 at 2:30 PM"
  * @example formatDateTime("2024-03-15T14:30:00", "de-DE", { dateStyle: "medium", timeStyle: "short" }) // "15.03.2024, 14:30"
+ * @example formatDateTime("2024-02-03T14:30:45", "en-US", { dateStyle: "short", timeStyle: "full" }) // "2/3/24, 2:30:45 PM"
+ * @example formatDateTime("2024-02-03T14:30:45", "en-US", { year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }) // "2/3/2024, 2:30:45 PM" — the pre-1.16.0 text
+ * @example formatDateTime("2024-02-03T14:30:45", "en-US", { era: "long" }) // "2/3/2024 Anno Domini, 2:30:45 PM"
+ * @example formatDateTime("2024-02-03T14:30:45", "en-US", { era: "long", year: "numeric", month: "numeric", day: "numeric" }) // "2/3/2024 Anno Domini" — the pre-1.16.0 text
  * @example formatDateTime("invalid") // ""
  */
 export function formatDateTime(
@@ -32,11 +43,23 @@ export function formatDateTime(
   }
 
   try {
-    const out = Temporal.PlainDateTime.from(value).toLocaleString(
-      locale,
-      options,
+    // The runtime's Intl.DateTimeFormat formats the value's instant at the UTC
+    // anchor with the options Temporal's PlainDateTime format resolves to
+    // (GetDateTimeFormat ~any~, ~all~, ~relevant~), so the requested fields
+    // and style widths are kept. Constructing with the caller's options first
+    // surfaces the TypeError or RangeError Intl.DateTimeFormat raises for
+    // invalid ones.
+    new Intl.DateTimeFormat(locale, options);
+    const epochMilliseconds =
+      Temporal.PlainDateTime.from(value).toZonedDateTime(
+        "UTC",
+      ).epochMilliseconds;
+    return normalizeDateTime(
+      new Intl.DateTimeFormat(
+        locale,
+        plainDateTimeFormatOptions(options ?? {}),
+      ).format(epochMilliseconds),
     );
-    return normalizeDateTime(out);
   } catch {
     return "";
   }

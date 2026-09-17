@@ -16,6 +16,8 @@ import { isValidCalendarDate } from "../validate";
  *   E5 (issue #78). Comparison is by calendar-independent ordering (`Temporal.PlainDate.compare`
  *   ignores calendar), so the four endpoints may carry different or no calendar tags — E5
  *   decision of record D4 (ordering-only functions accept mixed calendars).
+ * - Compatibility: since 1.16.0 a calendar annotation must be a GMT `CalendarSystem` id
+ *   (`[u-ca=gregory]` is now invalid input); use the GMT id — see `isValidCalendarDate`.
  *
  * @param aStart ISO 8601 date string for the first interval start, optionally calendar-annotated
  * @param aEnd ISO 8601 date string for the first interval end, optionally calendar-annotated

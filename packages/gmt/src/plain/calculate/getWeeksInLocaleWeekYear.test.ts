@@ -146,6 +146,28 @@ describe("getWeeksInLocaleWeekYear", () => {
     expect(getWeeksInLocaleWeekYear("2024-06-15", locale)).toBeNull();
   });
 
+  // Range edges, from proleptic Gregorian day arithmetic (days-from-civil), not GMT. Week-year
+  // +275760 under a Sunday-first, minimalDays 4 rule runs from epoch day 99,999,742 to 100,000,113:
+  // 371 days, 53 weeks, though its end lies past the last PlainDate. Week-year -271820 (reached from
+  // -271821-12-31 with minimalDays 1) starts on that Sunday and spans 53 weeks.
+  it.each`
+    value              | locale                  | minimalDays | expected
+    ${"-271821-04-19"} | ${MustTestLocales.enUS} | ${4}        | ${52}
+    ${"-271821-06-01"} | ${MustTestLocales.deDE} | ${4}        | ${52}
+    ${"-271821-12-31"} | ${MustTestLocales.enUS} | ${1}        | ${53}
+    ${"+275760-01-01"} | ${MustTestLocales.enUS} | ${4}        | ${53}
+    ${"+275760-09-13"} | ${MustTestLocales.enUS} | ${4}        | ${53}
+    ${"+275760-06-01"} | ${MustTestLocales.enUS} | ${1}        | ${52}
+    ${"+275760-09-13"} | ${MustTestLocales.deDE} | ${4}        | ${52}
+  `(
+    "returns $expected weeks for the range-edge date $value in $locale with minimalDays $minimalDays",
+    ({ value, locale, minimalDays, expected }) => {
+      expect(getWeeksInLocaleWeekYear(value, locale, { minimalDays })).toBe(
+        expected,
+      );
+    },
+  );
+
   it("returns null when Temporal.PlainDate.from throws", () => {
     mockTemporalPlainDateFromThrow();
     expect(

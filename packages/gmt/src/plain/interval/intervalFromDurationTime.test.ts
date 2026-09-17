@@ -58,9 +58,49 @@ describe("intervalFromDurationTime", () => {
   );
 
   it.each`
-    value         | duration   | anchor
-    ${"12:30:00"} | ${"-PT1H"} | ${"start"}
-    ${"12:30:00"} | ${"-PT1H"} | ${"end"}
+    value                   | duration                   | anchor     | expected
+    ${"00:00:00"}           | ${"PT23H59M59.999999999S"} | ${"start"} | ${{ start: "00:00:00", end: "23:59:59.999999999" }}
+    ${"23:59:59.999999999"} | ${"PT23H59M59.999999999S"} | ${"end"}   | ${{ start: "00:00:00", end: "23:59:59.999999999" }}
+    ${"00:00:00"}           | ${"PT86399.999999999S"}    | ${"start"} | ${{ start: "00:00:00", end: "23:59:59.999999999" }}
+    ${"12:00:00"}           | ${"PT0.000000001S"}        | ${"end"}   | ${{ start: "11:59:59.999999999", end: "12:00:00" }}
+  `(
+    "returns $expected for $value with $duration anchored at $anchor (last representable nanosecond of the day, no wrap)",
+    ({ value, duration, anchor, expected }) => {
+      expect(intervalFromDurationTime(value, duration, anchor)).toEqual(
+        expected,
+      );
+    },
+  );
+
+  // A span of 24 h or more always reaches the next (or previous) day, so PlainTime cannot hold
+  // it — even when the wrapped clock time lands later in the day (Temporal PlainTime.add wraps
+  // modulo 24 h).
+  it.each`
+    value         | duration               | anchor
+    ${"10:00:00"} | ${"PT24H"}             | ${"start"}
+    ${"00:00:00"} | ${"PT24H"}             | ${"start"}
+    ${"00:00:00"} | ${"PT25H"}             | ${"start"}
+    ${"10:00:00"} | ${"PT48H30M"}          | ${"end"}
+    ${"23:59:59"} | ${"PT24H"}             | ${"end"}
+    ${"00:00:00"} | ${"PT1440M"}           | ${"start"}
+    ${"00:00:00"} | ${"PT86400S"}          | ${"start"}
+    ${"00:00:00"} | ${"PT86400000000000S"} | ${"start"}
+    ${"23:00:00"} | ${"PT1H"}              | ${"start"}
+    ${"00:00:00"} | ${"PT0.000000001S"}    | ${"end"}
+  `(
+    "returns null when $duration anchored at $anchor from $value leaves the day",
+    ({ value, duration, anchor }) => {
+      expect(intervalFromDurationTime(value, duration, anchor)).toBeNull();
+    },
+  );
+
+  it.each`
+    value         | duration    | anchor
+    ${"12:30:00"} | ${"-PT1H"}  | ${"start"}
+    ${"12:30:00"} | ${"-PT1H"}  | ${"end"}
+    ${"12:00:00"} | ${"-PT23H"} | ${"start"}
+    ${"12:00:00"} | ${"-PT23H"} | ${"end"}
+    ${"00:00:00"} | ${"-PT24H"} | ${"start"}
   `(
     "returns null when negative duration $duration anchored at $anchor inverts the span from $value",
     ({ value, duration, anchor }) => {

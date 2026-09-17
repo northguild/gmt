@@ -136,6 +136,26 @@ describe("getLocaleWeekYear", () => {
     expect(getLocaleWeekYear("2024-06-15", locale)).toBeNull();
   });
 
+  // Range edges, from proleptic Gregorian day arithmetic (days-from-civil), not GMT: week 1 of
+  // -271821 starts before the range and week 1 of +275761 after it, yet the dates between still
+  // have a week-year. -271821-12-31 is a Sunday, so with minimalDays 1 its Sunday-first week holds
+  // January 1 of -271820 and belongs to that week-year.
+  it.each`
+    value              | locale                  | minimalDays | expected
+    ${"-271821-04-19"} | ${MustTestLocales.enUS} | ${4}        | ${-271821}
+    ${"-271821-06-01"} | ${MustTestLocales.deDE} | ${4}        | ${-271821}
+    ${"-271821-12-31"} | ${MustTestLocales.enUS} | ${4}        | ${-271821}
+    ${"-271821-12-31"} | ${MustTestLocales.enUS} | ${1}        | ${-271820}
+    ${"+275760-01-01"} | ${MustTestLocales.enUS} | ${4}        | ${275760}
+    ${"+275760-06-01"} | ${MustTestLocales.enUS} | ${1}        | ${275760}
+    ${"+275760-09-13"} | ${MustTestLocales.deDE} | ${4}        | ${275760}
+  `(
+    "returns week-year $expected for the range-edge date $value in $locale with minimalDays $minimalDays",
+    ({ value, locale, minimalDays, expected }) => {
+      expect(getLocaleWeekYear(value, locale, { minimalDays })).toBe(expected);
+    },
+  );
+
   it("returns null when Temporal.PlainDate.from throws", () => {
     mockTemporalPlainDateFromThrow();
     expect(getLocaleWeekYear("2024-06-15", MustTestLocales.enUS)).toBeNull();

@@ -31,6 +31,9 @@ import { isValidCalendarDate, isValidDateDurationUnit } from "../validate";
  * `parseDuration`'s options) — kept separate from the `.until()` rounding options above because
  * both option sets have colliding `smallestUnit`/`roundingMode` keys with different Temporal types.
  *
+ * - Compatibility: since 1.16.0 a calendar annotation must be a GMT `CalendarSystem` id
+ *   (`[u-ca=gregory]` is now invalid input); use the GMT id — see `isValidCalendarDate`.
+ *
  * @param date1 ISO PlainDate string for the start, optionally calendar-annotated
  * @param date2 ISO PlainDate string for the end, optionally calendar-annotated
  * @param unit DateDurationUnit to use as the duration's largestUnit

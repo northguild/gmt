@@ -14,7 +14,8 @@ import { isValidDate } from "../validate";
  * - `getWeeksInYear`'s locale-relative counterpart: that function uses the fixed ISO rule, this one
  *   uses `locale`'s first day of week, and the two can disagree on the same date.
  * - Computed as the calendar days between this week-year's start and the next one's, divided by 7 —
- *   always whole, since both starts fall on the locale's first day of week.
+ *   always whole, since both starts fall on the locale's first day of week. Counted by day
+ *   arithmetic, so a start outside the representable range still counts.
  * - **`minimalDays` defaults to `4`, the ISO 8601 rule, on every runtime.** ECMA-402 does not expose
  *   a locale's minimal days (tc39/proposal-intl-locale-info#86). CLDR 48's world default is `1`
  *   (`US` included) and `4` is set for mostly European regions; pass the locale's value when it
@@ -34,6 +35,7 @@ import { isValidDate } from "../validate";
  * @example getWeeksInLocaleWeekYear("2022-06-15", "en-US") // 52 — ISO default: Jan 2, 2022 to Jan 1, 2023
  * @example getWeeksInLocaleWeekYear("2020-06-15", "de-DE") // 53
  * @example getWeeksInLocaleWeekYear("2024-06-15", "en-US", { minimalDays: 8 }) // null
+ * @example getWeeksInLocaleWeekYear("+275760-09-13", "en-US") // 53 (its end, the week 1 of +275761, lies past the range)
  * @example getWeeksInLocaleWeekYear("invalid", "en-US") // null
  */
 export function getWeeksInLocaleWeekYear(
@@ -49,9 +51,12 @@ export function getWeeksInLocaleWeekYear(
 
   try {
     const date = Temporal.PlainDate.from(value);
-    const { start, end } = getLocaleWeekYearBounds(date, firstDay, minimalDays);
-    const days = start.until(end, { largestUnit: "days" }).days;
-    return days / 7;
+    const { startOffsetDays, endOffsetDays } = getLocaleWeekYearBounds(
+      date,
+      firstDay,
+      minimalDays,
+    );
+    return (endOffsetDays - startOffsetDays) / 7;
   } catch {
     return null;
   }

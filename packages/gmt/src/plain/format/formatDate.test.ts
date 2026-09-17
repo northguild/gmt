@@ -206,8 +206,8 @@ describe("formatDate", () => {
     ${"2024-02-03"} | ${{ dateStyle: "long" }}                                 | ${"2024年2月3日"}
     ${"2024-02-03"} | ${{ dateStyle: "medium" }}                               | ${"2024年2月3日"}
     ${"2024-02-03"} | ${{ dateStyle: "short" }}                                | ${"2024/2/3"}
-    ${"2024-02-03"} | ${{ year: "numeric", month: "long", day: "numeric" }}    | ${"2024/2/3"}
-    ${"2024-02-03"} | ${{ year: "numeric", month: "short", day: "numeric" }}   | ${"2024/2/3"}
+    ${"2024-02-03"} | ${{ year: "numeric", month: "long", day: "numeric" }}    | ${"2024年2月3日"}
+    ${"2024-02-03"} | ${{ year: "numeric", month: "short", day: "numeric" }}   | ${"2024年2月3日"}
     ${"2024-02-03"} | ${{ year: "numeric", month: "2-digit", day: "2-digit" }} | ${"2024/02/03"}
     ${"2024-02-03"} | ${{ year: "numeric", month: "numeric", day: "numeric" }} | ${"2024/2/3"}
     ${"2024-02-03"} | ${{ year: "2-digit", month: "numeric", day: "numeric" }} | ${"24/2/3"}
@@ -228,8 +228,8 @@ describe("formatDate", () => {
     ${"2024-02-03"} | ${{ dateStyle: "long" }}                                 | ${"2024年2月3日"}
     ${"2024-02-03"} | ${{ dateStyle: "medium" }}                               | ${"2024年2月3日"}
     ${"2024-02-03"} | ${{ dateStyle: "short" }}                                | ${"2024/2/3"}
-    ${"2024-02-03"} | ${{ year: "numeric", month: "long", day: "numeric" }}    | ${"2024/2/3"}
-    ${"2024-02-03"} | ${{ year: "numeric", month: "short", day: "numeric" }}   | ${"2024/2/3"}
+    ${"2024-02-03"} | ${{ year: "numeric", month: "long", day: "numeric" }}    | ${"2024年2月3日"}
+    ${"2024-02-03"} | ${{ year: "numeric", month: "short", day: "numeric" }}   | ${"2024年2月3日"}
     ${"2024-02-03"} | ${{ year: "numeric", month: "2-digit", day: "2-digit" }} | ${"2024/02/03"}
     ${"2024-02-03"} | ${{ year: "numeric", month: "numeric", day: "numeric" }} | ${"2024/2/3"}
     ${"2024-02-03"} | ${{ year: "2-digit", month: "numeric", day: "numeric" }} | ${"24/2/3"}
@@ -250,8 +250,8 @@ describe("formatDate", () => {
     ${"2024-02-03"} | ${{ dateStyle: "long" }}                                 | ${"2024年2月3日"}
     ${"2024-02-03"} | ${{ dateStyle: "medium" }}                               | ${"2024/02/03"}
     ${"2024-02-03"} | ${{ dateStyle: "short" }}                                | ${"2024/02/03"}
-    ${"2024-02-03"} | ${{ year: "numeric", month: "long", day: "numeric" }}    | ${"2024/2/3"}
-    ${"2024-02-03"} | ${{ year: "numeric", month: "short", day: "numeric" }}   | ${"2024/2/3"}
+    ${"2024-02-03"} | ${{ year: "numeric", month: "long", day: "numeric" }}    | ${"2024年2月3日"}
+    ${"2024-02-03"} | ${{ year: "numeric", month: "short", day: "numeric" }}   | ${"2024年2月3日"}
     ${"2024-02-03"} | ${{ year: "numeric", month: "2-digit", day: "2-digit" }} | ${"2024/02/03"}
     ${"2024-02-03"} | ${{ year: "numeric", month: "numeric", day: "numeric" }} | ${"2024/2/3"}
     ${"2024-02-03"} | ${{ year: "2-digit", month: "numeric", day: "numeric" }} | ${"24/2/3"}
@@ -372,6 +372,31 @@ describe("formatDate", () => {
       expect(formatDate(value, MustTestLocales.trTR, options)).toEqual(
         expected,
       );
+    },
+  );
+
+  // Temporal ECMA-402 PlainDate format (CreateDateTimeFormat ~date~, ~date~;
+  // GetDateTimeFormat inherit ~relevant~): the requested fields and widths are
+  // kept, `timeZoneName` is not inherited, and a `timeStyle` is a TypeError.
+  // Expected values: native Intl.DateTimeFormat at UTC with the adjusted options.
+  it.each`
+    locale                   | options                                                | expected                         | reason
+    ${"ja-JP-u-ca-japanese"} | ${{ year: "numeric", month: "long" }}                  | ${"令和6年2月"}                  | ${"requested long month kept"}
+    ${"ja-JP-u-ca-japanese"} | ${{ year: "numeric", month: "numeric" }}               | ${"R6/2"}                        | ${"numeric fields give the pre-1.16.0 text"}
+    ${"ja-JP"}               | ${{ month: "long", day: "numeric" }}                   | ${"2月3日"}                      | ${"requested long month kept"}
+    ${"ja-JP-u-ca-japanese"} | ${{ year: "2-digit", month: "short", day: "numeric" }} | ${"令和6年2月3日"}               | ${"requested short month kept"}
+    ${"en-US-u-ca-chinese"}  | ${{ year: "numeric", month: "long" }}                  | ${"Twelfth Month 2023(gui-mao)"} | ${"year kept with long month"}
+    ${"ko-KR-u-ca-hebrew"}   | ${{ year: "numeric", month: "long" }}                  | ${"AM 5784년 5월"}               | ${"requested long month kept"}
+    ${"en-US"}               | ${{ era: "long" }}                                     | ${"2/3/2024 Anno Domini"}        | ${"era alone gets the date defaults"}
+    ${"en-US"}               | ${{ timeZoneName: "long" }}                            | ${"2/3/2024"}                    | ${"timeZoneName is not inherited, defaults apply"}
+    ${"en-US"}               | ${{ dateStyle: "short", timeStyle: "short" }}          | ${""}                            | ${"timeStyle on a PlainDate is a TypeError"}
+    ${"en-US"}               | ${{ timeStyle: "short" }}                              | ${""}                            | ${"timeStyle on a PlainDate is a TypeError"}
+    ${"en-US"}               | ${{ dateStyle: "short" }}                              | ${"2/3/24"}                      | ${"only the style that applies gives the pre-1.16.0 text"}
+    ${"en-US"}               | ${{ hour: "numeric" }}                                 | ${""}                            | ${"only time fields: no PlainDate format"}
+  `(
+    "formats 2024-02-03 in $locale with $options to $expected ($reason)",
+    ({ locale, options, expected }) => {
+      expect(formatDate("2024-02-03", locale, options)).toBe(expected);
     },
   );
 

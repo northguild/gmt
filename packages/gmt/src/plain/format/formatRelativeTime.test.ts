@@ -404,7 +404,7 @@ describe("formatRelativeTime", () => {
 
   // he-IL dual-form hour pluralization — CLDR started appending the
   // numeral in parentheses to the dual form ("שעתיים") starting ICU 78
-  // (Node 22/24); ICU 77 (Node 20) omits it.
+  // (Node 22.23+, 24, 26); ICU 77 (Node 22.16–22.22) omits it.
   it.each`
     value         | options               | expectedVariants
     ${"10:00:00"} | ${{ reference: REF }} | ${oneOfIcu("לפני שעתיים", "לפני שעתיים (2)")}

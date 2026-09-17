@@ -55,9 +55,9 @@ describe("formatDateRange", () => {
     },
   );
 
-  // en-GB long and sv-SE short — ICU 77 (Node 20) renders the digit-adjacent
+  // en-GB long and sv-SE short — ICU 77 (Node 22.16–22.22) renders the digit-adjacent
   // en dash with no surrounding space ("3-5"/"...03-05"); ICU 78 (Node
-  // 22/24) inserts a space around it ("3 - 5"/"...03 - 05"). Both are the
+  // 22.23+, 24, 26) inserts a space around it ("3 - 5"/"...03 - 05"). Both are the
   // same range, just a CLDR range-separator spacing revision.
   it("formats a valid date range for en-GB with dateStyle long as one of the known ICU variants", () => {
     const { start, end } = rangeByLocale[MustTestLocales.enGB];
@@ -117,6 +117,24 @@ describe("formatDateRange", () => {
     ({ start, end }) => {
       expect(formatDateRange(start as never, end, MustTestLocales.enUS)).toBe(
         "",
+      );
+    },
+  );
+
+  // Temporal ECMA-402 PlainDate format (GetDateTimeFormat ~date~, ~date~,
+  // inherit ~relevant~): `timeZoneName` is not inherited and the defaults
+  // apply; a `timeStyle` alone leaves no PlainDate format (TypeError).
+  // Expected values: native Intl.DateTimeFormat#formatRange at UTC with the
+  // adjusted options.
+  it.each`
+    locale                  | options                      | expected                    | reason
+    ${MustTestLocales.jaJP} | ${{ timeZoneName: "short" }} | ${"2024/02/03～2024/03/05"} | ${"timeZoneName is not inherited, defaults apply"}
+    ${MustTestLocales.enUS} | ${{ timeStyle: "short" }}    | ${""}                       | ${"timeStyle alone: no PlainDate format"}
+  `(
+    "formats 2024-02-03 to 2024-03-05 in $locale with $options to $expected ($reason)",
+    ({ locale, options, expected }) => {
+      expect(formatDateRange("2024-02-03", "2024-03-05", locale, options)).toBe(
+        expected,
       );
     },
   );

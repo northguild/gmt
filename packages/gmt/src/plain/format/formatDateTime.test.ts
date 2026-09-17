@@ -118,7 +118,7 @@ describe("formatDateTime", () => {
   );
 
   // es-ES dateStyle:"long" — CLDR changed the date/time connector from a
-  // comma (ICU 77 / Node 20) to " a las " (ICU 78 / Node 22/24).
+  // comma (ICU 77 / Node 22.16–22.22) to " a las " (ICU 78 / Node 22.23+, 24, 26).
   it.each`
     options                                                                                                      | expectedVariants
     ${{ dateStyle: "long", timeStyle: "long" }}                                                                  | ${oneOfIcu("3 de febrero de 2024, 14:30:45", "3 de febrero de 2024 a las 14:30:45")}
@@ -177,7 +177,7 @@ describe("formatDateTime", () => {
   );
 
   // pt-PT 12-hour day period — CLDR changed the wording from "da tarde"
-  // (ICU 77 / Node 20) to "p.m." (ICU 78 / Node 22/24).
+  // (ICU 77 / Node 22.16–22.22) to "p.m." (ICU 78 / Node 22.23+, 24, 26).
   it("formats valid datetime 2024-02-03T14:30:45 for pt-PT with 12-hour day period as one of the known ICU variants", () => {
     expectOneOfIcu(
       formatDateTime("2024-02-03T14:30:45", MustTestLocales.ptPT, {
@@ -244,8 +244,8 @@ describe("formatDateTime", () => {
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"2024年2月3日 14:30:45"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"2024年2月3日 14:30:45"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"2024/2/3 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"2024/2/3 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"2024/2/3 14:30"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"2024年2月3日 14:30:45"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"2024年2月3日 14:30"}
     ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2024/02/03 14:30:45"}
     ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2024/02/03 14:30"}
     ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2024/02/03 下午02:30:45"}
@@ -266,8 +266,8 @@ describe("formatDateTime", () => {
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"2024年2月3日 下午2:30:45"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"2024年2月3日 下午2:30:45"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"2024/2/3 下午2:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"2024/2/3 下午2:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"2024/2/3 下午2:30"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"2024年2月3日 下午2:30:45"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"2024年2月3日 下午2:30"}
     ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2024/02/03 下午02:30:45"}
     ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2024/02/03 下午02:30"}
     ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2024/02/03 下午02:30:45"}
@@ -283,7 +283,7 @@ describe("formatDateTime", () => {
   );
 
   // zh-TW dateStyle:"full" — CLDR changed the weekday/time spacing
-  // between ICU 77 (Node 20) and ICU 78 (Node 22/24).
+  // between ICU 77 (Node 22.16–22.22) and ICU 78 (Node 22.23+, 24, 26).
   it("formats valid datetime 2024-02-03T14:30:45 for zh-TW with dateStyle/timeStyle full as one of the known ICU variants", () => {
     expectOneOfDateTimeIcu(
       formatDateTime("2024-02-03T14:30:45", MustTestLocales.zhTW, {
@@ -304,8 +304,8 @@ describe("formatDateTime", () => {
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"2024年2月3日 14:30:45"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"2024/02/03 14:30:45"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"2024/02/03 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"2024/2/3 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"2024/2/3 14:30"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"2024年2月3日 14:30:45"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"2024年2月3日 14:30"}
     ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2024/02/03 14:30:45"}
     ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2024/02/03 14:30"}
     ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2024/02/03 午後02:30:45"}
@@ -437,6 +437,28 @@ describe("formatDateTime", () => {
   `("formats edge case datetime $value", ({ value, locale, options }) => {
     expect(formatDateTime(value, locale, options)).not.toBe("");
   });
+
+  // Temporal ECMA-402 PlainDateTime format (GetDateTimeFormat ~any~, ~all~,
+  // inherit ~relevant~; AdjustDateTimeStyleFormat for styles): the requested
+  // fields and style widths are kept, `era` alone still gets the date and time
+  // defaults, and `timeZoneName` is not inherited. Expected values: native
+  // Intl.DateTimeFormat at UTC with the adjusted options.
+  it.each`
+    locale                   | options                                                                                   | expected                              | reason
+    ${"en-US"}               | ${{ dateStyle: "short", timeStyle: "full" }}                                              | ${"2/3/24, 2:30:45 PM"}               | ${"short date width kept, zone field removed"}
+    ${"de-DE"}               | ${{ dateStyle: "medium", timeStyle: "long" }}                                             | ${"03.02.2024, 14:30:45"}             | ${"medium date width kept, zone field removed"}
+    ${"ja-JP-u-ca-japanese"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric" }} | ${"令和6年2月3日 14:30"}              | ${"requested long month kept"}
+    ${"en-US"}               | ${{ era: "long" }}                                                                        | ${"2/3/2024 Anno Domini, 2:30:45 PM"} | ${"era alone gets the date and time defaults"}
+    ${"en-US"}               | ${{ era: "long", year: "numeric", month: "numeric", day: "numeric" }}                     | ${"2/3/2024 Anno Domini"}             | ${"date fields give the pre-1.16.0 era text"}
+    ${"en-US"}               | ${{ timeZoneName: "long" }}                                                               | ${"2/3/2024, 2:30:45 PM"}             | ${"timeZoneName is not inherited, defaults apply"}
+  `(
+    "formats 2024-02-03T14:30:45 in $locale with $options to $expected ($reason)",
+    ({ locale, options, expected }) => {
+      expect(formatDateTime("2024-02-03T14:30:45", locale, options)).toBe(
+        expected,
+      );
+    },
+  );
 
   it.each`
     invalidValue

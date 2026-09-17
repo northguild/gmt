@@ -343,4 +343,21 @@ describe("splitIntervalByUnitDate default piece limit", () => {
       expect(splitIntervalByUnitDate(start, end, unit, 1).length).toBe(0);
     },
   );
+
+  // A step past Temporal's maximum (instant +275760-09-13T00:00:00Z; PlainDateTime
+  // +275760-09-13T23:59:59.999999999; PlainDate +275760-09-13) lands after the representable `end`,
+  // so the last piece is trimmed to `end` rather than discarding the split.
+  it.each`
+    start              | end                | unit       | amount
+    ${"+275760-09-01"} | ${"+275760-09-13"} | ${"month"} | ${1}
+    ${"+275760-09-10"} | ${"+275760-09-13"} | ${"week"}  | ${1}
+    ${"+275760-09-12"} | ${"+275760-09-13"} | ${"day"}   | ${2}
+  `(
+    "returns one piece from $start to $end by $amount $unit at the date limit",
+    ({ start, end, unit, amount }) => {
+      expect(splitIntervalByUnitDate(start, end, unit, amount)).toEqual([
+        { start, end },
+      ]);
+    },
+  );
 });

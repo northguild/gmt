@@ -277,4 +277,29 @@ describe("roundDateTime", () => {
       );
     },
   );
+
+  // The last representable PlainDateTime is +275760-09-13T23:59:59.999999999 (a Saturday). The next
+  // week, month and year start after it, so a mode that picks the current start still has a value:
+  // 06-15T00:00 is 166/366 through the leap year 275760, 09-10T12:00 is 9.5/30 through September and
+  // 2.5/7 through its week, and the last instant is just under 13/30 through September. ceil past the
+  // range is the sentinel.
+  it.each`
+    value                                 | unit       | roundingMode    | expected
+    ${"+275760-06-15T00:00:00"}           | ${"year"}  | ${"floor"}      | ${"+275760-01-01T00:00:00"}
+    ${"+275760-06-15T00:00:00"}           | ${"year"}  | ${"halfExpand"} | ${"+275760-01-01T00:00:00"}
+    ${"+275760-06-15T00:00:00"}           | ${"year"}  | ${"ceil"}       | ${""}
+    ${"+275760-09-10T12:00:00"}           | ${"month"} | ${"floor"}      | ${"+275760-09-01T00:00:00"}
+    ${"+275760-09-13T23:59:59.999999999"} | ${"month"} | ${"halfExpand"} | ${"+275760-09-01T00:00:00"}
+    ${"+275760-09-10T12:00:00"}           | ${"month"} | ${"ceil"}       | ${""}
+    ${"+275760-09-10T12:00:00"}           | ${"week"}  | ${"halfExpand"} | ${"+275760-09-08T00:00:00"}
+    ${"+275760-09-13T23:59:59.999999999"} | ${"week"}  | ${"trunc"}      | ${"+275760-09-08T00:00:00"}
+    ${"+275760-09-13T23:59:59.999999999"} | ${"week"}  | ${"halfExpand"} | ${""}
+  `(
+    "returns $expected for the last-year value $value rounded to $unit with roundingMode $roundingMode",
+    ({ value, unit, roundingMode, expected }) => {
+      expect(roundDateTime(value, { smallestUnit: unit, roundingMode })).toBe(
+        expected,
+      );
+    },
+  );
 });

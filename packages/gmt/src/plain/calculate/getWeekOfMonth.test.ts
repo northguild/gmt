@@ -91,6 +91,26 @@ describe("getWeekOfMonth", () => {
     expect(getWeekOfMonth("2024-02-18", locale)).toBeNull();
   });
 
+  // Range edges, from proleptic Gregorian day arithmetic (days-from-civil), not GMT. -271821-04-19,
+  // the first PlainDate, is a Monday, so April 1 of that year (before the range) was a Thursday:
+  // 4 leading days in a Sunday-first grid, 3 in a Monday-first one. +275760-09-13, the last, is a
+  // Saturday, so September 1 was a Monday.
+  it.each`
+    value              | locale                  | expected
+    ${"-271821-04-19"} | ${MustTestLocales.enUS} | ${4}
+    ${"-271821-04-30"} | ${MustTestLocales.enUS} | ${5}
+    ${"-271821-04-19"} | ${MustTestLocales.deDE} | ${4}
+    ${"-271821-04-30"} | ${MustTestLocales.deDE} | ${5}
+    ${"+275760-09-01"} | ${MustTestLocales.enUS} | ${1}
+    ${"+275760-09-13"} | ${MustTestLocales.enUS} | ${2}
+    ${"+275760-09-13"} | ${MustTestLocales.deDE} | ${2}
+  `(
+    "returns week $expected for the range-edge date $value in $locale",
+    ({ value, locale, expected }) => {
+      expect(getWeekOfMonth(value, locale)).toBe(expected);
+    },
+  );
+
   it("returns null when Temporal.PlainDate.from throws", () => {
     mockTemporalPlainDateFromThrow();
     expect(getWeekOfMonth("2024-02-18", MustTestLocales.enUS)).toBeNull();

@@ -9,10 +9,13 @@ import { parseCalendarDateValue } from "../../internal";
  *   `Temporal.PlainDate.from` (via `parseCalendarDateValue`).
  * - The calendar identifier must be one of GMT's `CalendarSystem` ids. Temporal's own ids for
  *   the same calendars (`iso8601`, `gregory`, `roc`, `islamic-tbla`, `islamicc`, `ethioaa`) and
- *   ids GMT does not support (`islamic`, `islamic-rgsa`) return false, as every function that
- *   re-emits a calendar string already did. Compatibility: earlier releases accepted them here;
- *   use the GMT id, which reads identically (`taiwan` for `roc`, `gregorian` for `gregory` or
- *   `iso8601`, `islamic-tabular` for `islamic-tbla`, `islamic-civil` for `islamicc`,
+ *   ids GMT does not support (`islamic`, `islamic-rgsa`) return false. Since 1.16.0 every
+ *   function that accepts a calendar-annotated string accepts only GMT `CalendarSystem` ids and
+ *   returns its invalid-input sentinel for any other. Compatibility: earlier releases accepted
+ *   Temporal's ids here and in several of those functions
+ *   (`convertDateToCalendar("0113-10-03[u-ca=roc]", "hebrew")` returned
+ *   `"5785-01-01[u-ca=hebrew]"`; it now returns `""`); use the GMT id, which reads
+ *   identically (`taiwan` for `roc`, `gregorian` for `gregory` or `iso8601`, `islamic-tabular` for `islamic-tbla`, `islamic-civil` for `islamicc`,
  *   `ethiopic-amete-alem` for `ethioaa`).
  *
  * @param value ISO PlainDate string, optionally calendar-annotated

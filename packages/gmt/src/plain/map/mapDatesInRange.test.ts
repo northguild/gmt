@@ -147,4 +147,19 @@ describe("mapDatesInRange default piece limit", () => {
       expect(mapDatesInRange(startDate, endDate, stepDays).length).toBe(0);
     },
   );
+
+  // Temporal ISODateWithinLimits: +275760-09-13 is a valid PlainDate, so a range ending there yields
+  // its dates; the cursor stepping past the limit after the last in-range date ends the walk.
+  it.each`
+    startDate          | endDate            | stepDays | expected
+    ${"+275760-09-11"} | ${"+275760-09-13"} | ${1}     | ${["+275760-09-11", "+275760-09-12", "+275760-09-13"]}
+    ${"+275760-09-13"} | ${"+275760-09-13"} | ${1}     | ${["+275760-09-13"]}
+    ${"+275760-09-10"} | ${"+275760-09-13"} | ${2}     | ${["+275760-09-10", "+275760-09-12"]}
+    ${"2024-01-01"}    | ${"2024-01-02"}    | ${1e15}  | ${["2024-01-01"]}
+  `(
+    "returns $expected from $startDate to $endDate every $stepDays days at the date limit",
+    ({ startDate, endDate, stepDays, expected }) => {
+      expect(mapDatesInRange(startDate, endDate, stepDays)).toEqual(expected);
+    },
+  );
 });

@@ -20,6 +20,7 @@ import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
  *
  * @example mapDatesInRange("2024-03-01", "2024-03-05") // ["2024-03-01", "2024-03-02", "2024-03-03", "2024-03-04", "2024-03-05"]
  * @example mapDatesInRange("2024-03-01", "2024-03-05", 2) // ["2024-03-01", "2024-03-03", "2024-03-05"]
+ * @example mapDatesInRange("+275760-09-11", "+275760-09-13") // ["+275760-09-11", "+275760-09-12", "+275760-09-13"] (a range ending on the last representable date)
  * @example mapDatesInRange("2024-03-05", "2024-03-01") // []
  * @example mapDatesInRange("invalid", "2024-03-05") // []
  * @example mapDatesInRange("2024-03-01", "invalid") // []
@@ -65,13 +66,12 @@ export function mapDatesInRange(
       return [];
     }
 
+    // Each date is anchored at the start (start + k·step) and only the `count` in-range dates are
+    // built, so no step past the end is taken — a range ending on Temporal's date limit keeps its
+    // dates instead of throwing on the step after the last one.
     const result: string[] = [];
-    for (
-      let current = start;
-      Temporal.PlainDate.compare(current, end) <= 0;
-      current = current.add({ days: resolvedStepDays })
-    ) {
-      result.push(current.toString());
+    for (let index = 0; index < count; index++) {
+      result.push(start.add({ days: index * resolvedStepDays }).toString());
     }
 
     return result;

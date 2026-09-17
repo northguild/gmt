@@ -21,6 +21,8 @@ import { isValidCalendarDate } from "../validate";
  * - Accepts GMT calendar-annotated PlainDate strings — E5 (issue #78). A day is a day in every
  *   supported calendar, so this returns the same count whether or not the endpoints are
  *   calendar-tagged, and arguments may carry different or no tags (D4).
+ * - Compatibility: since 1.16.0 a calendar annotation must be a GMT `CalendarSystem` id
+ *   (`[u-ca=gregory]` is now invalid input); use the GMT id — see `isValidCalendarDate`.
  *
  * @param aStart ISO 8601 date string for the first interval start, optionally calendar-annotated
  * @param aEnd ISO 8601 date string for the first interval end, optionally calendar-annotated
