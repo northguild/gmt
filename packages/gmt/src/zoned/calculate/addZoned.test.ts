@@ -4,10 +4,7 @@ import {
   calendarZonedFixtures,
   localNoonBattleCases,
 } from "../../test";
-import {
-  mockTemporalPlainDateFromThrow,
-  mockTemporalZonedDateTimeFromThrow,
-} from "../../test/mocks";
+import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
 import { convertZonedToCalendar } from "../convert";
 import { parseTimeZoneFromZoned } from "../parse";
 import { addZoned } from "./addZoned";
@@ -143,17 +140,21 @@ describe("addZoned", () => {
 
   // disambiguation: fall-back overlap (result of + 1 day lands on an ambiguous local time)
   it.each`
-    value                                            | disambiguation  | expected
-    ${"2024-11-02T01:30:00-04:00[America/New_York]"} | ${undefined}    | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
-    ${"2024-11-02T01:30:00-04:00[America/New_York]"} | ${"compatible"} | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
-    ${"2024-11-02T01:30:00-04:00[America/New_York]"} | ${"earlier"}    | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
-    ${"2024-11-02T01:30:00-04:00[America/New_York]"} | ${"later"}      | ${"2024-11-03T01:30:00-05:00[America/New_York]"}
-    ${"2024-11-02T01:30:00-04:00[America/New_York]"} | ${"reject"}     | ${""}
-    ${"2024-10-26T02:30:00+02:00[Europe/Berlin]"}    | ${undefined}    | ${"2024-10-27T02:30:00+02:00[Europe/Berlin]"}
-    ${"2024-10-26T02:30:00+02:00[Europe/Berlin]"}    | ${"compatible"} | ${"2024-10-27T02:30:00+02:00[Europe/Berlin]"}
-    ${"2024-10-26T02:30:00+02:00[Europe/Berlin]"}    | ${"earlier"}    | ${"2024-10-27T02:30:00+02:00[Europe/Berlin]"}
-    ${"2024-10-26T02:30:00+02:00[Europe/Berlin]"}    | ${"later"}      | ${"2024-10-27T02:30:00+01:00[Europe/Berlin]"}
-    ${"2024-10-26T02:30:00+02:00[Europe/Berlin]"}    | ${"reject"}     | ${""}
+    value                                               | disambiguation  | expected
+    ${"2024-11-02T01:30:00-04:00[America/New_York]"}    | ${undefined}    | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
+    ${"2024-11-02T01:30:00-04:00[America/New_York]"}    | ${"compatible"} | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
+    ${"2024-11-02T01:30:00-04:00[America/New_York]"}    | ${"earlier"}    | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
+    ${"2024-11-02T01:30:00-04:00[America/New_York]"}    | ${"later"}      | ${"2024-11-03T01:30:00-05:00[America/New_York]"}
+    ${"2024-11-02T01:30:00-04:00[America/New_York]"}    | ${"reject"}     | ${""}
+    ${"2024-10-26T02:30:00+02:00[Europe/Berlin]"}       | ${undefined}    | ${"2024-10-27T02:30:00+02:00[Europe/Berlin]"}
+    ${"2024-10-26T02:30:00+02:00[Europe/Berlin]"}       | ${"compatible"} | ${"2024-10-27T02:30:00+02:00[Europe/Berlin]"}
+    ${"2024-10-26T02:30:00+02:00[Europe/Berlin]"}       | ${"earlier"}    | ${"2024-10-27T02:30:00+02:00[Europe/Berlin]"}
+    ${"2024-10-26T02:30:00+02:00[Europe/Berlin]"}       | ${"later"}      | ${"2024-10-27T02:30:00+01:00[Europe/Berlin]"}
+    ${"2024-10-26T02:30:00+02:00[Europe/Berlin]"}       | ${"reject"}     | ${""}
+    ${"2024-04-06T01:45:00+11:00[Australia/Lord_Howe]"} | ${"compatible"} | ${"2024-04-07T01:45:00+11:00[Australia/Lord_Howe]"}
+    ${"2024-04-06T01:45:00+11:00[Australia/Lord_Howe]"} | ${"earlier"}    | ${"2024-04-07T01:45:00+11:00[Australia/Lord_Howe]"}
+    ${"2024-04-06T01:45:00+11:00[Australia/Lord_Howe]"} | ${"later"}      | ${"2024-04-07T01:45:00+10:30[Australia/Lord_Howe]"}
+    ${"2024-04-06T01:45:00+11:00[Australia/Lord_Howe]"} | ${"reject"}     | ${""}
   `(
     "resolves fall-back overlap for $value + 1 day with disambiguation $disambiguation to $expected",
     ({ value, disambiguation, expected }) => {
@@ -163,22 +164,32 @@ describe("addZoned", () => {
     },
   );
 
-  // disambiguation: spring-forward gap (result of + 1 day lands on a nonexistent local time,
-  // but Temporal's arithmetic already advances past it, so disambiguation has no effect)
+  // disambiguation: spring-forward gap. Temporal §6.5.5 AddZonedDateTime resolves the intermediate
+  // wall clock (date added, time kept) with GetEpochNanosecondsFor(timeZone, dateTime,
+  // disambiguation), and DisambiguatePossibleEpochNanoseconds shifts a gap landing by the gap
+  // length: "earlier" backward, "compatible"/"later" forward, "reject" throws (the sentinel).
   it.each`
-    value                                            | disambiguation  | expected
-    ${"2024-03-09T02:30:00-05:00[America/New_York]"} | ${undefined}    | ${"2024-03-10T03:30:00-04:00[America/New_York]"}
-    ${"2024-03-09T02:30:00-05:00[America/New_York]"} | ${"compatible"} | ${"2024-03-10T03:30:00-04:00[America/New_York]"}
-    ${"2024-03-09T02:30:00-05:00[America/New_York]"} | ${"earlier"}    | ${"2024-03-10T03:30:00-04:00[America/New_York]"}
-    ${"2024-03-09T02:30:00-05:00[America/New_York]"} | ${"later"}      | ${"2024-03-10T03:30:00-04:00[America/New_York]"}
-    ${"2024-03-09T02:30:00-05:00[America/New_York]"} | ${"reject"}     | ${"2024-03-10T03:30:00-04:00[America/New_York]"}
-    ${"2024-03-30T02:30:00+01:00[Europe/Berlin]"}    | ${undefined}    | ${"2024-03-31T03:30:00+02:00[Europe/Berlin]"}
-    ${"2024-03-30T02:30:00+01:00[Europe/Berlin]"}    | ${"compatible"} | ${"2024-03-31T03:30:00+02:00[Europe/Berlin]"}
-    ${"2024-03-30T02:30:00+01:00[Europe/Berlin]"}    | ${"earlier"}    | ${"2024-03-31T03:30:00+02:00[Europe/Berlin]"}
-    ${"2024-03-30T02:30:00+01:00[Europe/Berlin]"}    | ${"later"}      | ${"2024-03-31T03:30:00+02:00[Europe/Berlin]"}
-    ${"2024-03-30T02:30:00+01:00[Europe/Berlin]"}    | ${"reject"}     | ${"2024-03-31T03:30:00+02:00[Europe/Berlin]"}
+    value                                               | disambiguation  | expected
+    ${"2024-03-09T02:30:00-05:00[America/New_York]"}    | ${undefined}    | ${"2024-03-10T03:30:00-04:00[America/New_York]"}
+    ${"2024-03-09T02:30:00-05:00[America/New_York]"}    | ${"compatible"} | ${"2024-03-10T03:30:00-04:00[America/New_York]"}
+    ${"2024-03-09T02:30:00-05:00[America/New_York]"}    | ${"earlier"}    | ${"2024-03-10T01:30:00-05:00[America/New_York]"}
+    ${"2024-03-09T02:30:00-05:00[America/New_York]"}    | ${"later"}      | ${"2024-03-10T03:30:00-04:00[America/New_York]"}
+    ${"2024-03-09T02:30:00-05:00[America/New_York]"}    | ${"reject"}     | ${""}
+    ${"2024-03-30T02:30:00+01:00[Europe/Berlin]"}       | ${undefined}    | ${"2024-03-31T03:30:00+02:00[Europe/Berlin]"}
+    ${"2024-03-30T02:30:00+01:00[Europe/Berlin]"}       | ${"compatible"} | ${"2024-03-31T03:30:00+02:00[Europe/Berlin]"}
+    ${"2024-03-30T02:30:00+01:00[Europe/Berlin]"}       | ${"earlier"}    | ${"2024-03-31T01:30:00+01:00[Europe/Berlin]"}
+    ${"2024-03-30T02:30:00+01:00[Europe/Berlin]"}       | ${"later"}      | ${"2024-03-31T03:30:00+02:00[Europe/Berlin]"}
+    ${"2024-03-30T02:30:00+01:00[Europe/Berlin]"}       | ${"reject"}     | ${""}
+    ${"2024-10-05T02:15:00+10:30[Australia/Lord_Howe]"} | ${"compatible"} | ${"2024-10-06T02:45:00+11:00[Australia/Lord_Howe]"}
+    ${"2024-10-05T02:15:00+10:30[Australia/Lord_Howe]"} | ${"earlier"}    | ${"2024-10-06T01:45:00+10:30[Australia/Lord_Howe]"}
+    ${"2024-10-05T02:15:00+10:30[Australia/Lord_Howe]"} | ${"later"}      | ${"2024-10-06T02:45:00+11:00[Australia/Lord_Howe]"}
+    ${"2024-10-05T02:15:00+10:30[Australia/Lord_Howe]"} | ${"reject"}     | ${""}
+    ${"2011-12-29T12:00:00-10:00[Pacific/Apia]"}        | ${"compatible"} | ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}
+    ${"2011-12-29T12:00:00-10:00[Pacific/Apia]"}        | ${"earlier"}    | ${"2011-12-29T12:00:00-10:00[Pacific/Apia]"}
+    ${"2011-12-29T12:00:00-10:00[Pacific/Apia]"}        | ${"later"}      | ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}
+    ${"2011-12-29T12:00:00-10:00[Pacific/Apia]"}        | ${"reject"}     | ${""}
   `(
-    "spring-forward gap for $value + 1 day is unaffected by disambiguation $disambiguation, returns $expected",
+    "resolves the spring-forward gap for $value + 1 day with disambiguation $disambiguation to $expected",
     ({ value, disambiguation, expected }) => {
       const optionsArg =
         disambiguation === undefined ? undefined : { disambiguation };
@@ -198,6 +209,9 @@ describe("addZoned", () => {
     ${"2024-11-02T00:30:00-04:00[America/New_York]"} | ${{ days: 1, hours: 1 }}    | ${"later"}     | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
     ${"2024-11-02T01:30:00-04:00[America/New_York]"} | ${{ days: 1, minutes: 10 }} | ${"later"}     | ${"2024-11-03T01:40:00-05:00[America/New_York]"}
     ${"2024-11-02T01:30:00-04:00[America/New_York]"} | ${{ days: 1, minutes: 10 }} | ${"reject"}    | ${""}
+    ${"2024-03-09T02:30:00-05:00[America/New_York]"} | ${{ days: 1, minutes: 10 }} | ${"earlier"}   | ${"2024-03-10T01:40:00-05:00[America/New_York]"}
+    ${"2024-03-09T02:30:00-05:00[America/New_York]"} | ${{ days: 1, minutes: 10 }} | ${"later"}     | ${"2024-03-10T03:40:00-04:00[America/New_York]"}
+    ${"2024-03-09T02:30:00-05:00[America/New_York]"} | ${{ days: 1, minutes: 10 }} | ${"reject"}    | ${""}
   `(
     "adds the time portion of $units to $value in exact time with disambiguation $disambiguation, returns $expected",
     ({ value, units, disambiguation, expected }) => {
@@ -215,32 +229,20 @@ describe("addZoned", () => {
     ).toBe("");
   });
 
-  // offset is accepted but inert: the internal rebuild step reconstructs from a plain datetime
-  // string with no offset embedded, so every offset value produces identical output
-  it.each`
-    offset
-    ${undefined}
-    ${"prefer"}
-    ${"use"}
-    ${"ignore"}
-    ${"reject"}
-  `(
-    "produces identical output regardless of offset $offset (inert on this function)",
-    ({ offset }) => {
-      const value = "2024-11-02T01:30:00-04:00[America/New_York]";
-      const withoutOffset = addZoned(
-        value,
+  // `offset` was removed in 1.16.0: the result's wall clock is resolved from a plain date-time,
+  // which has no UTC offset for it to act on (Temporal PlainDateTime#toZonedDateTime reads only
+  // `disambiguation`). Passing it is a type error, and a JavaScript caller's stray property changes
+  // nothing.
+  it("treats the removed offset option as a type error and ignores it at runtime", () => {
+    expect(
+      addZoned(
+        "2024-11-02T01:30:00-04:00[America/New_York]",
         { days: 1 },
-        { disambiguation: "later" },
-      );
-      const withOffset = addZoned(
-        value,
-        { days: 1 },
-        { disambiguation: "later", offset },
-      );
-      expect(withOffset).toBe(withoutOffset);
-    },
-  );
+        // @ts-expect-error -- `offset` was removed in 1.16.0
+        { disambiguation: "later", offset: "reject" },
+      ),
+    ).toBe("2024-11-03T01:30:00-05:00[America/New_York]");
+  });
 
   for (const { timeZone, value } of localJan31NoonBattleCases) {
     it(`clamps out-of-range results with the default overflow (constrain) across battle-test timeZone ${timeZone}`, () => {
@@ -300,14 +302,12 @@ describe("addZoned", () => {
       ),
     ).toBe("2024-02-29T12:00:00-05:00[America/New_York]");
   });
-  // E5 (issue #78), decision of record D2 -- zoned/ rejects any [u-ca=...] calendar
-  // annotation outright (previously accepted it by accident and did genuinely calendar-aware
-  // but undocumented, untested arithmetic -- verified directly against @js-temporal/polyfill
-  // during E5 research). See isValidZonedDateTime.test.ts for the full rationale.
-  it('returns "" when value carries a calendar annotation', () => {
+  // Temporal's own RFC 9557 string is GMT's calendar grammar. ISO 2024-01-01 is 20 Tevet
+  // 5784; + 1 Hebrew month is 20 Shevat, ISO 2024-01-30. Expected: native Temporal (Chromium 153).
+  it("adds a Hebrew month to Temporal's own calendar-annotated string", () => {
     expect(
       addZoned("2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]", { months: 1 }),
-    ).toBe("");
+    ).toBe("2024-01-30T00:00:00+00:00[UTC][u-ca=hebrew]");
   });
 
   // Temporal's ParseISODateTime clamps a second of 60 to 59 in every spelling its grammar
@@ -364,10 +364,10 @@ describe("addZoned with GMT calendar-annotated values", () => {
   // DoD-4: era transition AND a DST fold in one call, across all four disambiguation values.
   it.each`
     disambiguation  | expected
-    ${undefined}    | ${"0001-05-05T02:30:00+01:00[u-ca=japanese;era=reiwa][Africa/Casablanca]"}
-    ${"compatible"} | ${"0001-05-05T02:30:00+01:00[u-ca=japanese;era=reiwa][Africa/Casablanca]"}
-    ${"earlier"}    | ${"0001-05-05T02:30:00+01:00[u-ca=japanese;era=reiwa][Africa/Casablanca]"}
-    ${"later"}      | ${"0001-05-05T02:30:00+00:00[u-ca=japanese;era=reiwa][Africa/Casablanca]"}
+    ${undefined}    | ${"2019-05-05T02:30:00+01:00[Africa/Casablanca][u-ca=japanese]"}
+    ${"compatible"} | ${"2019-05-05T02:30:00+01:00[Africa/Casablanca][u-ca=japanese]"}
+    ${"earlier"}    | ${"2019-05-05T02:30:00+01:00[Africa/Casablanca][u-ca=japanese]"}
+    ${"later"}      | ${"2019-05-05T02:30:00+00:00[Africa/Casablanca][u-ca=japanese]"}
     ${"reject"}     | ${""}
   `(
     "resolves the Heisei->Reiwa Casablanca fold to $expected with disambiguation $disambiguation",
@@ -382,10 +382,8 @@ describe("addZoned with GMT calendar-annotated values", () => {
     },
   );
 
-  // R1 regression: before E7 both non-"compatible" branches rebuilt through
-  // `${zdt.toPlainDateTime()}[${tz}]`, which emits Temporal's forbidden segment ordering the
-  // moment the value carries a calendar. Without the `.withCalendar("iso8601")` strip this row
-  // returns "" instead of the resolved value.
+  // R1 regression (E7): a non-"compatible" disambiguation on a calendar-tagged value resolves
+  // instead of returning the sentinel.
   it("resolves a non-compatible disambiguation on a calendar-tagged value instead of returning the sentinel", () => {
     expect(
       addZoned(
@@ -402,57 +400,37 @@ describe("addZoned with GMT calendar-annotated values", () => {
     );
   });
 
-  // DoD-7 gap half: disambiguation has NO effect on a spring-forward gap landing, because
-  // Temporal's arithmetic advances past the gap before disambiguation is evaluated. A calendar
-  // tag does not change that.
+  // DoD-7 gap half: the intermediate wall clock (Hebrew date + 1 day, 02:30) lands in the Jerusalem
+  // spring-forward gap and resolves with the caller's disambiguation (Temporal §6.5.5
+  // AddZonedDateTime). A calendar tag does not change that.
   it.each`
-    disambiguation
-    ${"compatible"}
-    ${"earlier"}
-    ${"later"}
-    ${"reject"}
+    disambiguation  | expected
+    ${"compatible"} | ${G.afterGap}
+    ${"earlier"}    | ${"2024-03-29T01:30:00+02:00[Asia/Jerusalem][u-ca=hebrew]"}
+    ${"later"}      | ${G.afterGap}
+    ${"reject"}     | ${""}
   `(
-    "returns the same post-gap value for the Jerusalem gap with disambiguation $disambiguation",
-    ({ disambiguation }) => {
+    "resolves the Jerusalem gap to $expected with disambiguation $disambiguation",
+    ({ disambiguation, expected }) => {
       expect(addZoned(G.beforeGap, { days: 1 }, { disambiguation })).toBe(
-        G.afterGap,
-      );
-    },
-  );
-
-  // `offset` is documented as inert on this function; a calendar tag does not change that either.
-  it.each`
-    offset
-    ${"prefer"}
-    ${"use"}
-    ${"ignore"}
-    ${"reject"}
-  `(
-    "returns the same value for offset $offset on a calendar-tagged input",
-    ({ offset }) => {
-      expect(addZoned(H.adarI15NewYork, { months: 1 }, { offset })).toBe(
-        H.adar15NewYork,
+        expected,
       );
     },
   );
 
   it.each`
-    value                                                          | reason
-    ${"5784-06-15T14:30:00-05:00[America/New_York][u-ca=hebrew]"}  | ${"GMT digits in Temporal's segment ordering"}
-    ${"5785-13-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"}  | ${"month 13 in a non-leap Hebrew year"}
-    ${"5784-06-15T14:30:00-05:00[u-ca=martian][America/New_York]"} | ${"unknown calendar identifier"}
-    ${"5784-06-15[u-ca=hebrew]"}                                   | ${"a plain calendar date, not a zoned value"}
+    value                                                                | reason
+    ${"2024-02-24T14:30:00-05:00[u-ca=hebrew][America/New_York]"}        | ${"calendar before zone (not RFC 9557)"}
+    ${"2019-04-30T12:00:00+09:00[Asia/Tokyo][u-ca=japanese;era=heisei]"} | ${"';era=' is not RFC 9557 syntax"}
+    ${"5784-06-15T14:30:00-05:00[America/New_York][u-ca=hebrew]"}        | ${"-05:00 is not New York's offset on ISO 5784-06-15 (EDT)"}
+    ${"2024-02-24T14:30:00-05:00[America/New_York][u-ca=martian]"}       | ${"unknown calendar identifier"}
+    ${"2024-02-24[u-ca=hebrew]"}                                         | ${"a plain calendar date, not a zoned value"}
   `('returns "" for $value ($reason)', ({ value }) => {
     expect(addZoned(value, { months: 1 })).toBe("");
   });
 
   it('returns "" when Temporal.ZonedDateTime.from throws for a calendar-tagged value', () => {
     mockTemporalZonedDateTimeFromThrow();
-    expect(addZoned(H.adarI15NewYork, { months: 1 })).toBe("");
-  });
-
-  it('returns "" when Temporal.PlainDate.from throws while decomposing the date half', () => {
-    mockTemporalPlainDateFromThrow();
     expect(addZoned(H.adarI15NewYork, { months: 1 })).toBe("");
   });
 
@@ -472,11 +450,8 @@ describe("addZoned with GMT calendar-annotated values", () => {
       const result = addZoned(value, { months: 1 });
 
       expect(result).not.toBe("");
-      expect(result).toContain("[u-ca=hebrew]");
-      expect(result).toContain(`[${timeZone}]`);
-      expect(result.indexOf("[u-ca=")).toBeLessThan(
-        result.indexOf(`[${timeZone}]`),
-      );
+      // RFC 9557 §4.1: the zone annotation, then the calendar annotation.
+      expect(result.endsWith(`[${timeZone}][u-ca=hebrew]`)).toBe(true);
     },
   );
 });
@@ -495,17 +470,18 @@ describe("addZoned at the maximum instant", () => {
 
 // CORE-6 S5: the calendar part of a zoned add follows the Intl era/monthCode proposal's
 // NonISODateAdd. Values: Chromium 153 native Temporal
-// (`PlainDate.withCalendar(c).toZonedDateTime(zone).add(…)`), offsets as Chromium reads them.
+// (`PlainDate.withCalendar(c).toZonedDateTime(zone).add(…)`), offsets as Chromium writes them
+// (TemporalZonedDateTimeToString rounds a local mean time offset to the minute).
 describe("addZoned in non-ISO calendars (CORE-6)", () => {
   it.each`
     value                                                              | units            | expected                                                           | reason
-    ${"276302-09-13T00:00:00+00:00[u-ca=buddhist][UTC]"}               | ${{ years: 1 }}  | ${"276303-09-13T00:00:00+00:00[u-ca=buddhist][UTC]"}               | ${"D1: lands exactly on the maximum instant"}
-    ${"276302-09-12T00:00:00-04:00[u-ca=buddhist][America/New_York]"}  | ${{ years: 1 }}  | ${"276303-09-12T00:00:00-04:00[u-ca=buddhist][America/New_York]"}  | ${"D1 near the maximum in a named zone"}
-    ${"276302-09-12T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]"}        | ${{ years: 1 }}  | ${"276303-09-12T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]"}        | ${"D1 near the maximum behind UTC"}
-    ${"279517-09-10T00:00:00+00:00[u-ca=hebrew][UTC]"}                 | ${{ months: 1 }} | ${"279517-10-10T00:00:00+00:00[u-ca=hebrew][UTC]"}                 | ${"hebrew near the maximum"}
-    ${"279517-09-10T00:00:00-04:00[u-ca=hebrew][America/New_York]"}    | ${{ months: 1 }} | ${"279517-10-10T00:00:00-04:00[u-ca=hebrew][America/New_York]"}    | ${"hebrew near the maximum in a named zone"}
-    ${"1543-01-31T00:00:00-04:56:02[u-ca=buddhist][America/New_York]"} | ${{ months: 1 }} | ${"1543-02-28T00:00:00-04:56:02[u-ca=buddhist][America/New_York]"} | ${"proleptic buddhist: ISO 1000 has no Feb 29"}
-    ${"1543-01-31T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]"}          | ${{ months: 1 }} | ${"1543-02-28T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]"}          | ${"proleptic buddhist behind UTC"}
+    ${"+275759-09-13T00:00:00+00:00[UTC][u-ca=buddhist]"}              | ${{ years: 1 }}  | ${"+275760-09-13T00:00:00+00:00[UTC][u-ca=buddhist]"}              | ${"D1: lands exactly on the maximum instant"}
+    ${"+275759-09-12T00:00:00-04:00[America/New_York][u-ca=buddhist]"} | ${{ years: 1 }}  | ${"+275760-09-12T00:00:00-04:00[America/New_York][u-ca=buddhist]"} | ${"D1 near the maximum in a named zone"}
+    ${"+275759-09-12T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]"}       | ${{ years: 1 }}  | ${"+275760-09-12T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]"}       | ${"D1 near the maximum behind UTC"}
+    ${"+275760-08-14T00:00:00+00:00[UTC][u-ca=hebrew]"}                | ${{ months: 1 }} | ${"+275760-09-12T00:00:00+00:00[UTC][u-ca=hebrew]"}                | ${"hebrew near the maximum"}
+    ${"+275760-08-14T00:00:00-04:00[America/New_York][u-ca=hebrew]"}   | ${{ months: 1 }} | ${"+275760-09-12T00:00:00-04:00[America/New_York][u-ca=hebrew]"}   | ${"hebrew near the maximum in a named zone"}
+    ${"1000-01-31T00:00:00-04:56:02[America/New_York][u-ca=buddhist]"} | ${{ months: 1 }} | ${"1000-02-28T00:00:00-04:56[America/New_York][u-ca=buddhist]"}    | ${"proleptic buddhist: ISO 1000 has no Feb 29"}
+    ${"1000-01-31T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]"}          | ${{ months: 1 }} | ${"1000-02-28T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]"}          | ${"proleptic buddhist behind UTC"}
   `(
     "adds $units to $value giving $expected ($reason)",
     ({ value, units, expected }) => {
@@ -515,13 +491,13 @@ describe("addZoned in non-ISO calendars (CORE-6)", () => {
 
   // Hebrew year <= 0: M06 of -96239 has 29 days (Chromium `daysInMonth`), so M06-23 + 1 month is
   // M07-23, 29 days later: ISO -100000-01-01 + 29 days = -100000-01-30. The wall clock and its
-  // -04:56:02 local mean time offset are unchanged.
+  // -04:56:02 local mean time offset are unchanged; Temporal writes that offset rounded to -04:56.
   it("adds 1 month to -096239-06-23 in hebrew in America/New_York giving -096239-07-23", () => {
     expect(
       addZoned(
-        "-096239-06-23T00:00:00-04:56:02[u-ca=hebrew][America/New_York]",
+        "-100000-01-01T00:00:00-04:56:02[America/New_York][u-ca=hebrew]",
         { months: 1 },
       ),
-    ).toBe("-096239-07-23T00:00:00-04:56:02[u-ca=hebrew][America/New_York]");
+    ).toBe("-100000-01-30T00:00:00-04:56[America/New_York][u-ca=hebrew]");
   });
 });

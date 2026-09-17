@@ -75,6 +75,23 @@ describe("getTimeZoneOffset", () => {
     },
   );
 
+  // Strict-shape rule (see coding-standards): an instant string is ISO 8601 extended format before its first `[`.
+  // Polyfill 0.5.1 reads each of these as 2024-07-15T16:00Z, where New York is at -04:00.
+  it.each`
+    instant                       | spelling
+    ${"2024-07-15T16:00:00z"}     | ${"lower-case z"}
+    ${"2024-07-15t16:00:00Z"}     | ${"lower-case t separator"}
+    ${"2024-07-15 16:00:00Z"}     | ${"space separator"}
+    ${"20240715T160000Z"}         | ${"basic format"}
+    ${"2024-07-15T12:00:00-0400"} | ${"basic offset"}
+    ${"2024-07-15T12:00:00-04"}   | ${"hour-only offset"}
+  `(
+    "returns '' for non-extended instant $instant ($spelling)",
+    ({ instant }) => {
+      expect(getTimeZoneOffset("America/New_York", instant)).toBe("");
+    },
+  );
+
   it("still reads an instant whose elective annotation value looks like a leap second", () => {
     expect(
       getTimeZoneOffset("Asia/Tokyo", "2024-01-01T00:00:00Z[x=T123460Z]"),

@@ -139,9 +139,9 @@ describe("intervalDivideEquallyZoned", () => {
       ).toBe(midInstant.toString());
     }
   });
-  // E5 (issue #78), decision of record D2 — see isValidZonedDateTime.test.ts for the full
-  // rationale: zoned/ rejects any [u-ca=...] calendar annotation outright.
-  it("returns [] when start carries a calendar annotation", () => {
+  // The arguments name different calendars (hebrew and a bare iso8601 string), so the
+  // result is the sentinel (there is no single output calendar).
+  it("returns [] when start and end name different calendars", () => {
     expect(
       intervalDivideEquallyZoned(
         "2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]",

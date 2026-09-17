@@ -4,6 +4,27 @@ import { battleTestTimeZones } from "../../test/timeZoneMatrix";
 import { intervalSplitAtZoned } from "./intervalSplitAtZoned";
 
 describe("intervalSplitAtZoned", () => {
+  // Half-open, coding-standards § 8 (A = 2024-01-01T09:00Z, B = 12:00Z, D = 17:00Z): the same output as before,
+  // now read as half-open pieces that partition [A, D) — B belongs only to [B, D).
+  it("splits [A, D) at B into [A, B) and [B, D)", () => {
+    expect(
+      intervalSplitAtZoned(
+        "2024-01-01T09:00:00+00:00[UTC]",
+        "2024-01-01T17:00:00+00:00[UTC]",
+        ["2024-01-01T12:00:00+00:00[UTC]"],
+      ),
+    ).toEqual([
+      {
+        start: "2024-01-01T09:00:00+00:00[UTC]",
+        end: "2024-01-01T12:00:00+00:00[UTC]",
+      },
+      {
+        start: "2024-01-01T12:00:00+00:00[UTC]",
+        end: "2024-01-01T17:00:00+00:00[UTC]",
+      },
+    ]);
+  });
+
   it("splits at a single in-range point", () => {
     expect(
       intervalSplitAtZoned(
@@ -242,9 +263,9 @@ describe("intervalSplitAtZoned", () => {
       { start: laterFold, end },
     ]);
   });
-  // E5 (issue #78), decision of record D2 — see isValidZonedDateTime.test.ts for the full
-  // rationale: zoned/ rejects any [u-ca=...] calendar annotation outright.
-  it("returns [] when start carries a calendar annotation", () => {
+  // The arguments name different calendars (hebrew and a bare iso8601 string), so the
+  // result is the sentinel (there is no single output calendar).
+  it("returns [] when start and end name different calendars", () => {
     expect(
       intervalSplitAtZoned(
         "2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]",

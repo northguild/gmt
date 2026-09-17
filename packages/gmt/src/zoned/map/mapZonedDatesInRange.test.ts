@@ -47,7 +47,6 @@ describe("mapZonedDatesInRange", () => {
     ${"2024-03-01T10:00:00-05:00[America/New_York]"} | ${"2024-03-03T10:00:00-05:00[America/New_York]"} | ${-1}
     ${"2024-03-01T10:00:00-05:00[America/New_York]"} | ${"2024-03-03T10:00:00-05:00[America/New_York]"} | ${1.5}
     ${"2024-03-01T10:00:00-05:00[America/New_York]"} | ${"2024-03-03T10:00:00-05:00[America/New_York]"} | ${null}
-    ${"2024-03-01T10:00:00-05:00[America/New_York]"} | ${"2024-03-03T10:00:00-05:00[America/New_York]"} | ${undefined}
   `(
     "returns an empty array for invalid stepDays $invalidStep",
     ({ start, end, invalidStep }) => {
@@ -214,4 +213,19 @@ describe("mapZonedDatesInRange default piece limit", () => {
       expect(mapZonedDatesInRange(start, end, stepDays)).toEqual(expected);
     },
   );
+
+  // An explicit undefined argument is the omitted argument (TC39 GetOption treats undefined as absent),
+  // so stepDays undefined is the default step of 1 day and still reaches options.
+  it("uses the default step for an explicit undefined stepDays", () => {
+    const start = "2024-03-01T10:00:00-05:00[America/New_York]";
+    const end = "2024-03-03T10:00:00-05:00[America/New_York]";
+    expect(mapZonedDatesInRange(start, end, undefined)).toEqual([
+      "2024-03-01",
+      "2024-03-02",
+      "2024-03-03",
+    ]);
+    expect(
+      mapZonedDatesInRange(start, end, undefined, { maxPieces: 2 }),
+    ).toEqual([]);
+  });
 });

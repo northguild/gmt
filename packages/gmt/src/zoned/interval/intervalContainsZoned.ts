@@ -1,27 +1,36 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { parseCalendarZonedValue } from "../../internal";
+import {
+  halfOpenContainsPoint,
+  halfOpenContainsSpan,
+  parseCalendarZonedValue,
+} from "../../internal";
 import { isValidCalendarZonedDateTime } from "../validate";
 
 /**
- * Return true when `pointOrStart` falls within the interval `[intervalStart, intervalEnd]`
- * (3-arg), or when the inner interval `[innerStart, innerEnd]` is fully contained within
- * the outer interval `[intervalStart, intervalEnd]` (4-arg).
+ * Return true when `pointOrStart` falls within the half-open interval
+ * `[intervalStart, intervalEnd)` (3-arg), or when the inner interval `[innerStart, innerEnd)` lies
+ * within the outer interval `[intervalStart, intervalEnd)` (4-arg).
  *
  * - Uses `Temporal.Instant.compare` for comparison (same instant semantics).
- * - Always-inclusive boundaries: `start <= point <= end`.
+ * - Point mode: `start <= point < end`, the same rule as `intervalContains`. The `end` is
+ *   excluded, so a point at `end`'s instant returns `false`, and an empty interval (`start` and
+ *   `end` the same instant) contains no point.
+ * - Interval mode: the intervals overlap and `start <= innerStart` and `innerEnd <= end`. An inner
+ *   interval may share the outer `end`. An empty inner interval counts only strictly inside the
+ *   outer interval, the same edge rule as `clampInterval`, and an empty outer interval contains
+ *   nothing.
  * - Returns `false` if `intervalStart > intervalEnd` (invalid outer interval).
  * - Returns `false` if `innerStart > innerEnd` in 4-arg mode (invalid inner interval).
  * - Returns `false` on invalid input (wrong type, malformed strings, leap seconds).
  * - **Accepts mixed calendar systems** (E7's D4-zoned, issue #152): both bare ISO zoned strings
- *   and GMT calendar-annotated ones (`"5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"`),
+ *   and RFC 9557 calendar-annotated ones (`"2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]"`),
  *   and the endpoints need not agree on a calendar. Ordering is calendar-independent — verified
  *   that `Temporal.Instant` carries no calendar field at all and that
  *   `Instant.compare`/`ZonedDateTime.compare` both return `0` for the same instant expressed in
  *   hebrew, islamic-civil, japanese and iso8601.
- * - Still rejects Temporal's own `[timeZone][u-ca=...]` RFC 9557 ordering, which reads GMT's
- *   calendar-native digits as ISO digits — see `regex/calendar-zoned-date-time.ts`.
- * - Compatibility: since 1.16.0 a calendar annotation must be a GMT `CalendarSystem` id
- *   (`[u-ca=gregory]` is now invalid input); use the GMT id — see `isValidCalendarZonedDateTime`.
+ * - Rejects a calendar annotation before the time zone annotation, which is not RFC 9557.
+ * - Compatibility: since 1.16.0 calendar strings are RFC 9557 (ISO digits, the `[u-ca=<id>]`
+ *   annotation after the zone, canonical calendar ids); see `isValidCalendarZonedDateTime`.
  *
  * @param intervalStart ISO 8601 zoned datetime string for the outer interval start
  * @param intervalEnd ISO 8601 zoned datetime string for the outer interval end
@@ -31,6 +40,8 @@ import { isValidCalendarZonedDateTime } from "../validate";
  *
  * @example intervalContainsZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]", "2024-06-15T12:00:00+00:00[UTC]") // true
  * @example intervalContainsZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]", "2024-06-15T12:00:00+00:00[UTC]", "2024-07-15T12:00:00+00:00[UTC]") // true
+ * @example intervalContainsZoned("2024-01-01T09:00:00+00:00[UTC]", "2024-01-01T12:00:00+00:00[UTC]", "2024-01-01T12:00:00+00:00[UTC]") // false (the end is excluded)
+ * @example intervalContainsZoned("2024-01-01T09:00:00+00:00[UTC]", "2024-01-01T17:00:00+00:00[UTC]", "2024-01-01T12:00:00+00:00[UTC]", "2024-01-01T17:00:00+00:00[UTC]") // true (the inner interval shares the end)
  * @example intervalContainsZoned("2024-12-31T23:59:59+00:00[UTC]", "2024-01-01T00:00:00+00:00[UTC]", "2024-06-15T12:00:00+00:00[UTC]") // false
  * @example intervalContainsZoned("invalid", "2024-12-31T23:59:59+00:00[UTC]", "2024-06-15T12:00:00+00:00[UTC]") // false
  */
@@ -42,8 +53,8 @@ export function intervalContainsZoned(
 ): boolean {
   // One gate per endpoint: `isValidCalendarZonedDateTime` already covers non-strings, empty
   // strings, leap seconds (which Temporal would otherwise silently clamp to :59), unknown zones
-  // and Temporal's forbidden segment ordering — and, unlike `isValidZonedDateTime`, accepts GMT's
-  // calendar-annotated grammar. `pointEnd` is optional, so it is only checked when supplied.
+  // and a calendar annotation before the zone — and, unlike `isValidZonedDateTime`, accepts
+  // RFC 9557 calendar annotations. `pointEnd` is optional, so it is only checked when supplied.
   if (
     !isValidCalendarZonedDateTime(intervalStart) ||
     !isValidCalendarZonedDateTime(intervalEnd) ||
@@ -66,10 +77,13 @@ export function intervalContainsZoned(
       return false;
     }
 
+    const outer = { start: startInstant, end: endInstant };
+
     if (pointEnd === undefined) {
-      return (
-        Temporal.Instant.compare(startInstant, pointInstant) <= 0 &&
-        Temporal.Instant.compare(pointInstant, endInstant) <= 0
+      return halfOpenContainsPoint(
+        outer,
+        pointInstant,
+        Temporal.Instant.compare,
       );
     }
 
@@ -80,9 +94,10 @@ export function intervalContainsZoned(
       return false;
     }
 
-    return (
-      Temporal.Instant.compare(startInstant, pointInstant) <= 0 &&
-      Temporal.Instant.compare(endPointInstant, endInstant) <= 0
+    return halfOpenContainsSpan(
+      outer,
+      { start: pointInstant, end: endPointInstant },
+      Temporal.Instant.compare,
     );
   } catch {
     return false;

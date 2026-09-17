@@ -3,11 +3,11 @@ import { parseCalendarZonedValue } from "../../../internal";
 
 /**
  * Return true if `start` and `end` form a valid GMT zoned interval — both parseable as bare ISO
- * or GMT calendar-annotated ZonedDateTime strings, and the instant at `start` is <= the instant
+ * or RFC 9557 calendar-annotated ZonedDateTime strings, and the instant at `start` is <= the instant
  * at `end`.
  *
- * - Parallel to `isValidZonedInterval`, which is deliberately left unchanged and still rejects
- *   every `[u-ca=...]` annotation (E7, issue #152). Only the calendar-aware `zoned/interval/*`
+ * - Parallel to `isValidZonedInterval`, which accepts only ISO-calendar endpoints and rejects
+ *   every non-ISO `[u-ca=...]` annotation (E7, issue #152). Only the calendar-aware `zoned/interval/*`
  *   functions gate on this one.
  * - **Mixed calendars are accepted** (E7's D4-zoned, matching E5's D4): ordering is
  *   calendar-independent. Verified against `@js-temporal/polyfill@0.5.1` —
@@ -17,20 +17,21 @@ import { parseCalendarZonedValue } from "../../../internal";
  * - Equal `start === end` is valid.
  * - Comparison is done by instant, so intervals spanning DST transitions are compared by
  *   absolute time.
- * - Rejects Temporal's `[timeZone][u-ca=...]` ordering, leap seconds, non-strings, and any
- *   unparseable endpoint.
- * - Compatibility: since 1.16.0 a calendar annotation must be a GMT `CalendarSystem` id
- *   (`[u-ca=gregory]` is now invalid input); use the GMT id — see `isValidCalendarZonedDateTime`.
+ * - Rejects a calendar annotation before the zone (not RFC 9557), leap seconds, non-strings, and
+ *   any unparseable endpoint.
+ * - Compatibility: since 1.16.0 calendar strings are RFC 9557 (ISO digits, the `[u-ca=<id>]`
+ *   annotation after the zone, canonical calendar ids); see `isValidCalendarZonedDateTime`.
  *
- * @param start ISO or GMT calendar-annotated ZonedDateTime string (interval start)
- * @param end ISO or GMT calendar-annotated ZonedDateTime string (interval end)
+ * @param start ISO or RFC 9557 calendar-annotated ZonedDateTime string (interval start)
+ * @param end ISO or RFC 9557 calendar-annotated ZonedDateTime string (interval end)
  * @returns true if start and end form a valid zoned interval, or false on invalid input
  *
  * @example isValidCalendarZonedInterval("2024-01-01T10:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]") // true
- * @example isValidCalendarZonedInterval("5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]", "5784-07-15T14:30:00-04:00[u-ca=hebrew][America/New_York]") // true
- * @example isValidCalendarZonedInterval("5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]", "1445-09-15T14:30:00-04:00[u-ca=islamic-civil][America/New_York]") // true (mixed calendars accepted)
+ * @example isValidCalendarZonedInterval("2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]", "2024-03-25T14:30:00-04:00[America/New_York][u-ca=hebrew]") // true
+ * @example isValidCalendarZonedInterval("2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]", "2024-03-25T14:30:00-04:00[America/New_York][u-ca=islamic-civil]") // true (mixed calendars accepted)
  * @example isValidCalendarZonedInterval("2024-12-31T23:59:59+00:00[UTC]", "2024-01-01T10:00:00+00:00[UTC]") // false (start after end)
- * @example isValidCalendarZonedInterval("2024-01-01T10:00:00+00:00[UTC][u-ca=hebrew]", "2024-12-31T23:59:59+00:00[UTC]") // false (Temporal's segment ordering)
+ * @example isValidCalendarZonedInterval("2024-01-01T10:00:00+00:00[UTC][u-ca=hebrew]", "2024-12-31T23:59:59+00:00[UTC]") // true (RFC 9557; mixed calendars accepted)
+ * @example isValidCalendarZonedInterval("2024-01-01T10:00:00+00:00[u-ca=hebrew][UTC]", "2024-12-31T23:59:59+00:00[UTC]") // false (calendar before the zone)
  * @example isValidCalendarZonedInterval("invalid", "2024-12-31T23:59:59+00:00[UTC]") // false
  */
 export function isValidCalendarZonedInterval(

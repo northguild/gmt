@@ -51,23 +51,25 @@ describe("endOfQuarterForZoned", () => {
     },
   );
 
-  // The deprecated `disambiguation`/`offset` are accepted and ignored: an ordinary quarter end is
-  // unchanged by any value, "reject" included.
-  it.each`
-    disambiguation  | offset
-    ${"compatible"} | ${undefined}
-    ${"reject"}     | ${undefined}
-    ${"reject"}     | ${"prefer"}
-  `(
-    "accepts disambiguation $disambiguation and offset $offset without changing output for a non-transition quarter end",
-    ({ disambiguation, offset }) => {
-      const optionsArg =
-        offset === undefined ? { disambiguation } : { disambiguation, offset };
-      expect(
-        endOfQuarterForZoned("2024-02-15T14:30:00+00:00[UTC]", optionsArg),
-      ).toBe("2024-03-31T23:59:59.999999999+00:00[UTC]");
-    },
-  );
+  // `disambiguation` and `offset` were removed in 1.16.0: they were ignored, because a quarter
+  // boundary is always a real instant and TC39's `startOfDay()` takes neither. Passing one is a type error, and a
+  // JavaScript caller's stray property changes nothing.
+  it("treats the removed disambiguation option as a type error and ignores it at runtime", () => {
+    expect(
+      endOfQuarterForZoned("2024-02-15T14:30:00+00:00[UTC]", {
+        // @ts-expect-error -- `disambiguation` was removed in 1.16.0
+        disambiguation: "reject",
+      }),
+    ).toBe("2024-03-31T23:59:59.999999999+00:00[UTC]");
+  });
+  it("treats the removed offset option as a type error and ignores it at runtime", () => {
+    expect(
+      endOfQuarterForZoned("2024-02-15T14:30:00+00:00[UTC]", {
+        // @ts-expect-error -- `offset` was removed in 1.16.0
+        offset: "reject",
+      }),
+    ).toBe("2024-03-31T23:59:59.999999999+00:00[UTC]");
+  });
 });
 
 // The quarter ends one nanosecond before the next quarter's first local day starts, written at
@@ -84,29 +86,6 @@ describe("endOfQuarterForZoned with default options", () => {
   `("returns $expected for $value ($description)", ({ value, expected }) => {
     expect(endOfQuarterForZoned(value)).toBe(expected);
   });
-});
-
-// Cairo repeated Q3's last local hour on 2010-09-30. The quarter ends on the second pass
-// (+02:00), one nanosecond before Q4's `startOfDay()`; the deprecated `disambiguation`/`offset`
-// are ignored, so "compatible" no longer ends it on the first pass, before the input. Checked with
-// `startOfDay().subtract({ nanoseconds: 1 })` on @js-temporal/polyfill@0.5.1.
-describe("endOfQuarterForZoned at a zone transition with ignored explicit options", () => {
-  it.each`
-    options                                           | expected
-    ${{ disambiguation: "compatible" }}               | ${"2010-09-30T23:59:59.999999999+02:00[Africa/Cairo]"}
-    ${{ disambiguation: "later" }}                    | ${"2010-09-30T23:59:59.999999999+02:00[Africa/Cairo]"}
-    ${{ disambiguation: "reject", offset: "reject" }} | ${"2010-09-30T23:59:59.999999999+02:00[Africa/Cairo]"}
-  `(
-    "returns the real quarter end $expected for Cairo's repeated Q3 last hour with ignored $options",
-    ({ options, expected }) => {
-      expect(
-        endOfQuarterForZoned(
-          "2010-09-30T23:30:00+02:00[Africa/Cairo]",
-          options,
-        ),
-      ).toBe(expected);
-    },
-  );
 });
 
 // -271821-04-20T00:00:00Z is the first representable instant. Its quarter began on 1 April, before

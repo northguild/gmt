@@ -19,9 +19,11 @@ import { isValidZonedDateTime } from "../validate";
  *   the japanese calendar and `month: "long"` gave `"R6/2"`) and `era` alone dropped the time and
  *   zone name. Pass the fields the old text showed to keep it. To render in another zone, use
  *   `formatUtc` with its `timeZone` option.
+ * - `options` null returns `""`, as ECMA-402's CoerceOptionsToObject rejects it (a string or number
+ *   options value formats with the defaults, as `Intl.DateTimeFormat` does).
  *
  * @param value zoned ISO 8601 datetime string
- * @param locale optional locale tag (e.g. "en-US")
+ * @param locale optional locale tag (e.g. "en-US"), or a preference list of tags (ECMA-402)
  * @param options optional Intl.DateTimeFormatOptions
  * @returns localized string or "" when invalid
  *
@@ -34,12 +36,18 @@ import { isValidZonedDateTime } from "../validate";
  * @example formatZonedDateTime("2024-02-03T14:30:45-05:00[America/New_York]", "en-US", { timeZone: "Asia/Tokyo" }) // "" — a ZonedDateTime keeps its own zone
  * @example formatUtc("2024-02-03T19:30:45Z", "en-US", { timeZone: "Asia/Tokyo", includeTimeZoneName: true }) // "2/4/2024, 4:30:45 AM GMT+9" — the same instant in another zone
  * @example formatZonedDateTime("invalid", "en-US") // "" (invalid input)
+ * @example formatZonedDateTime("2024-02-03T14:30:45+01:00[Europe/Paris]", ["fr-FR", "en-US"], { dateStyle: "short", timeStyle: "short" }) // "03/02/2024 14:30"
+ * @example formatZonedDateTime("2024-02-03T14:30:00-05:00[America/New_York]", "en-US", null as never) // "" (null options, as ECMA-402 rejects them)
  */
 export function formatZonedDateTime(
   value: string,
-  locale?: string,
+  locale?: string | string[],
   options?: DateTimeFormatOptions,
 ): string {
+  // ECMA-402 CoerceOptionsToObject: null options throw TypeError, so they are invalid input.
+  if (options === null) {
+    return "";
+  }
   if (!isValidZonedDateTime(value)) {
     return "";
   }

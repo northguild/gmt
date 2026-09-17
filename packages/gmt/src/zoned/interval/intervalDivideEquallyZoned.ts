@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "@js-temporal/polyfill";
 import {
   calendarOfAllZonedValues,
@@ -11,16 +12,18 @@ import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 /**
  * Split a zoned interval into `n` equal-length sub-intervals.
  *
- * - Returns an array of `n` `{ start, end }` records that tile the original interval, each
- *   record's `end` equal to the next record's `start`.
+ * - Returns an array of `n` half-open `[start, end)` records that tile the original interval: each
+ *   record's `end` is the next record's `start` and belongs only to that next record, so the
+ *   pieces share no instant and together cover `[start, end)` exactly once.
  * - Each boundary is `start + round((end - start) · i / n)` in integer epoch nanoseconds (real
  *   elapsed time, exact at any span length), so a spring-forward day split in half lands exactly
  *   on the DST transition's real midpoint rather than the local-clock midpoint.
  * - `n === 1` returns the original interval unchanged, as a single-element array.
- * - A zero-length interval (`start === end`) returns `n` identical zero-length sub-intervals.
+ * - A zero-length interval (`start === end`) returns `n` identical zero-length sub-intervals, each
+ *   an empty `[start, start)` that holds no instant.
  * - Returns `[]` when `n` is not a positive integer, or on invalid input (unparseable
  *   start/end, `start > end`, leap-second strings).
- * - Accepts GMT calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
+ * - Accepts RFC 9557 calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
  *   well as bare ISO ones — E7 (issue #152) — but **rejects a mismatched pair**: `start` and `end`
  *   must name the same calendar system (E7's D4-zoned), since the synthesized boundaries are
  *   values the caller reads back as datetimes and an array of differently-tagged records would be

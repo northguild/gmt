@@ -14,8 +14,12 @@ describe("intervalOverlappingDaysZoned", () => {
     ${"2010-11-07T00:00:30-03:00[America/Goose_Bay]"} | ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${2}
     ${"2010-11-06T23:59:00-03:00[America/Goose_Bay]"} | ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${2}
     ${"2024-04-06T12:00:00-03:00[America/Santiago]"}  | ${"2024-04-07T12:00:00-04:00[America/Santiago]"}  | ${2}
+    ${"2024-01-01T00:00:00+00:00[UTC]"}               | ${"2024-01-02T00:00:00+00:00[UTC]"}               | ${1}
+    ${"2024-01-01T12:00:00+00:00[UTC]"}               | ${"2024-01-01T12:00:00+00:00[UTC]"}               | ${0}
   `(
-    // Distinct local dates of the instants in the closed span (tzdb): Apia deleted 2011-12-30, and
+    // Distinct local dates of the instants in the half-open span [start, end) (tzdb): the end is
+    // excluded, so [01-01T00:00, 01-02T00:00) UTC touches one date and an empty span none. Apia
+    // deleted 2011-12-30, and
     // Goose_Bay (2010, at 00:01) fell back into the previous date; Santiago (2024, 24:00 -> 23:00)
     // repeats an hour of the same date.
     "returns $expected for self-overlapping $aStart to $aEnd",
@@ -28,7 +32,7 @@ describe("intervalOverlappingDaysZoned", () => {
 
   it("counts days in aStart's zone, so swapping a/b can change the answer (non-commutative)", () => {
     const nyStart = "2024-01-01T00:00:00-05:00[America/New_York]";
-    const nyEnd = "2024-01-03T00:00:00-05:00[America/New_York]";
+    const nyEnd = "2024-01-03T01:00:00-05:00[America/New_York]";
     const tokyoStart = "2024-01-02T00:00:00+09:00[Asia/Tokyo]";
     const tokyoEnd = "2024-01-05T00:00:00+09:00[Asia/Tokyo]";
 
@@ -39,6 +43,19 @@ describe("intervalOverlappingDaysZoned", () => {
       intervalOverlappingDaysZoned(tokyoStart, tokyoEnd, nyStart, nyEnd),
     ).toBe(2);
   });
+
+  // An empty interval strictly inside the other overlaps it, but the intersection is that empty
+  // span [12:00, 12:00), which holds no instant and so no date (CORE-6 empty-interval rule).
+  it.each`
+    aStart                              | aEnd                                | bStart                              | bEnd
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-03T00:00:00+00:00[UTC]"} | ${"2024-01-02T12:00:00+00:00[UTC]"} | ${"2024-01-02T12:00:00+00:00[UTC]"}
+    ${"2024-01-02T12:00:00+00:00[UTC]"} | ${"2024-01-02T12:00:00+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-03T00:00:00+00:00[UTC]"}
+  `(
+    "returns 0 when the intersection of [$aStart, $aEnd) and [$bStart, $bEnd) is an empty interval inside the other",
+    ({ aStart, aEnd, bStart, bEnd }) => {
+      expect(intervalOverlappingDaysZoned(aStart, aEnd, bStart, bEnd)).toBe(0);
+    },
+  );
 
   it("returns 0 for disjoint UTC intervals", () => {
     expect(
@@ -51,15 +68,29 @@ describe("intervalOverlappingDaysZoned", () => {
     ).toBe(0);
   });
 
-  it("returns 1 for adjacent intervals sharing one instant", () => {
+  // Half-open (coding-standards § 8): touching intervals share no instant, so the intersection is
+  // empty and no date is shared.
+  it.each`
+    aStart                              | aEnd                                | bStart                                           | bEnd
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-02T00:00:00+00:00[UTC]"} | ${"2024-01-02T00:00:00+00:00[UTC]"}              | ${"2024-01-03T00:00:00+00:00[UTC]"}
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"}              | ${"2024-12-31T23:59:59+00:00[UTC]"}
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-02T00:00:00+00:00[UTC]"} | ${"2024-01-01T19:00:00-05:00[America/New_York]"} | ${"2024-01-03T00:00:00+00:00[UTC]"}
+  `(
+    "returns 0 for touching intervals [$aStart, $aEnd) and [$bStart, $bEnd)",
+    ({ aStart, aEnd, bStart, bEnd }) => {
+      expect(intervalOverlappingDaysZoned(aStart, aEnd, bStart, bEnd)).toBe(0);
+    },
+  );
+
+  it("counts the date of the instant one nanosecond before an exclusive end at midnight", () => {
     expect(
       intervalOverlappingDaysZoned(
         "2024-01-01T00:00:00+00:00[UTC]",
-        "2024-06-30T23:59:59+00:00[UTC]",
-        "2024-06-30T23:59:59+00:00[UTC]",
-        "2024-12-31T23:59:59+00:00[UTC]",
+        "2024-01-03T00:00:00+00:00[UTC]",
+        "2024-01-01T12:00:00+00:00[UTC]",
+        "2024-01-02T00:00:00.000000001+00:00[UTC]",
       ),
-    ).toBe(1);
+    ).toBe(2);
   });
 
   it.each`
@@ -138,26 +169,33 @@ describe("intervalOverlappingDaysZoned", () => {
     ).toBeNull();
   });
 
-  it("proves zone-invariance across battleTestTimeZones for self-overlapping instants", () => {
+  it("counts the same instants per zone across battleTestTimeZones for self-overlapping instants", () => {
+    // [2024-01-01T00:00Z, 2024-01-03T00:00Z) is 48 hours. Where the zone's offset is zero it starts at
+    // local midnight and touches 2 dates; any other offset starts mid-day and touches 3 (no battle
+    // zone changes offset on 2024-01-01..03).
     const startInstant = Temporal.Instant.from("2024-01-01T00:00:00Z");
     const endInstant = Temporal.Instant.from("2024-01-03T00:00:00Z");
 
     for (const timeZone of battleTestTimeZones) {
-      const start = startInstant.toZonedDateTimeISO(timeZone).toString();
+      const startZdt = startInstant.toZonedDateTimeISO(timeZone);
+      const start = startZdt.toString();
       const end = endInstant.toZonedDateTimeISO(timeZone).toString();
+      const expected = startZdt.offsetNanoseconds === 0 ? 2 : 3;
 
-      expect(intervalOverlappingDaysZoned(start, end, start, end)).toBe(3);
+      expect(intervalOverlappingDaysZoned(start, end, start, end)).toBe(
+        expected,
+      );
     }
   });
 
-  // E5 (issue #78), decision of record D2 — see isValidZonedDateTime.test.ts for the full
-  // rationale: zoned/ rejects any [u-ca=...] calendar annotation outright.
+  // The arguments name different calendars (hebrew and a bare iso8601 string), so the
+  // result is the sentinel (the day count is a difference, and TC39 CalendarEquals makes until throw).
   it.each`
     aStart                                           | aEnd                                | bStart                                           | bEnd
     ${"2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC]"}              | ${"2024-06-30T23:59:59+00:00[UTC]"}
     ${"2024-01-01T00:00:00+00:00[UTC]"}              | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]"} | ${"2024-06-30T23:59:59+00:00[UTC]"}
   `(
-    "returns null when an argument carries a calendar annotation: $aStart, $aEnd, $bStart, $bEnd",
+    "returns null for mixed calendars: $aStart, $aEnd, $bStart, $bEnd",
     ({
       aStart,
       aEnd,

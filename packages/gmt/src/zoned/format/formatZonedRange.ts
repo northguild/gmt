@@ -20,10 +20,12 @@ import { isValidZonedDateTime } from "../validate";
  *   showed to keep it, and drop the `timeZone` option to keep the endpoints' zone.
  * - Output is normalized: dash separators become ASCII "-" (unspaced between digits, spaced
  *   otherwise), and no-break, narrow and thin spaces become U+0020.
+ * - `options` null returns `""`, as ECMA-402's CoerceOptionsToObject rejects it (a string or number
+ *   options value formats with the defaults, as `Intl.DateTimeFormat` does).
  *
  * @param from zoned ISO 8601 datetime string (range start)
  * @param to zoned ISO 8601 datetime string (range end)
- * @param locale optional locale tag
+ * @param locale optional locale tag, or a preference list of tags (ECMA-402)
  * @param options optional Intl.DateTimeFormatOptions
  * @returns localized range string or "" when invalid
  *
@@ -34,13 +36,19 @@ import { isValidZonedDateTime } from "../validate";
  * @example formatZonedRange("2024-02-29T10:00:00-05:00[America/New_York]", "2024-02-29T12:00:00-05:00[America/New_York]", "en-US", { hour: "numeric", timeZone: "UTC" }) // "" — a ZonedDateTime keeps its own zone
  * @example formatZonedRange("2024-02-29T10:00:00-05:00[America/New_York]", "2024-02-29T12:00:00-05:00[America/New_York]", "en-US", { hour: "numeric", minute: "numeric", timeZoneName: "short" }) // "10:00 AM - 12:00 PM EST" — the pre-1.16.0 text
  * @example formatZonedRange("invalid", "2024-02-29T14:00:00.000+00:00[UTC]", "en-US") // "" (invalid input)
+ * @example formatZonedRange("2024-02-03T14:30:45+01:00[Europe/Paris]", "2024-02-03T16:46:15+01:00[Europe/Paris]", ["fr-FR", "en-US"], { dateStyle: "short", timeStyle: "short" }) // "03/02/2024, 14:30 - 16:46"
+ * @example formatZonedRange("2024-02-03T14:30:00-05:00[America/New_York]", "2024-02-05T17:00:00-05:00[America/New_York]", "en-US", null as never) // "" (null options, as ECMA-402 rejects them)
  */
 export function formatZonedRange(
   from: string,
   to: string,
-  locale?: string,
+  locale?: string | string[],
   options?: DateTimeFormatOptions,
 ): string {
+  // ECMA-402 CoerceOptionsToObject: null options throw TypeError, so they are invalid input.
+  if (options === null) {
+    return "";
+  }
   if (!isValidZonedDateTime(from) || !isValidZonedDateTime(to)) {
     return "";
   }

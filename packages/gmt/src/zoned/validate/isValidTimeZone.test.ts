@@ -42,15 +42,35 @@ describe("isValidTimeZone", () => {
 
   it.each`
     timeZone      | reason
-    ${"+05:00"}   | ${"an offset identifier, not an IANA name"}
-    ${"-05:00"}   | ${"a negative offset identifier"}
-    ${"+0530"}    | ${"a basic-format offset identifier"}
     ${"-foo/bar"} | ${"a leading - is outside TimeZoneIANAName"}
     ${"America"}  | ${"shape-legal, but not a zone"}
     ${"UTC+1"}    | ${"shape-legal, but not a zone"}
   `("returns false for $timeZone ($reason)", ({ timeZone }) => {
     expect(isValidTimeZone(timeZone)).toBe(false);
   });
+
+  // Temporal's `TimeZoneIdentifier ::: UTCOffset[~SubMinutePrecision] | TimeZoneIANAName`
+  // (proposal-temporal spec/abstractops.html): `±HH`, `±HHMM` or `±HH:MM`, hour 00–23, no seconds.
+  // Native Temporal and Intl.DateTimeFormat (Chromium 153) accept and reject the same rows.
+  it.each`
+    timeZone         | expected | reason
+    ${"+05:00"}      | ${true}  | ${"extended offset identifier"}
+    ${"-05:00"}      | ${true}  | ${"negative offset identifier"}
+    ${"+0530"}       | ${true}  | ${"basic offset identifier"}
+    ${"+05"}         | ${true}  | ${"hour-only offset identifier"}
+    ${"-00:00"}      | ${true}  | ${"negative zero"}
+    ${"+23:59"}      | ${true}  | ${"largest offset"}
+    ${"+24:00"}      | ${false} | ${"hour 24"}
+    ${"+05:00:00"}   | ${false} | ${"seconds"}
+    ${"+5:00"}       | ${false} | ${"one hour digit"}
+    ${"05:00"}       | ${false} | ${"no sign"}
+    ${"\u221205:00"} | ${false} | ${"U+2212 minus sign"}
+  `(
+    "returns $expected for the offset identifier $timeZone ($reason)",
+    ({ timeZone, expected }) => {
+      expect(isValidTimeZone(timeZone)).toBe(expected);
+    },
+  );
 
   // The silent wrong value N5 found: a rejected single-component zone made the UTC formatter fall
   // back to UTC wall time. Expected value from the runtime's own Intl, never from GMT.

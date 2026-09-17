@@ -83,55 +83,39 @@ describe("endOfZoned", () => {
     expect(endOfZoned("2024-02-29T12:34:56+00:00[UTC]", invalidUnit)).toBe("");
   });
 
-  // `disambiguation` is deprecated and ignored: a boundary is always the real bucket end. The
-  // source sits in the second, repeated 1am, so every row — "reject" included — ends the hour the
-  // source is in, never before it. Each end is the next hour's start (02:00 -05:00, 03:00 +01:00)
-  // minus 1 ns, checked with `ZonedDateTime.subtract` on @js-temporal/polyfill@0.5.1.
+  // A boundary is always the real bucket end. The source sits in the second, repeated 1am, so the
+  // hour ends at the next hour's start (02:00 -05:00, 03:00 +01:00) minus 1 ns, checked with
+  // `ZonedDateTime.subtract` on @js-temporal/polyfill@0.5.1.
   it.each`
-    value                                            | disambiguation  | expected
-    ${"2024-11-03T01:45:00-05:00[America/New_York]"} | ${undefined}    | ${"2024-11-03T01:59:59.999999999-05:00[America/New_York]"}
-    ${"2024-11-03T01:45:00-05:00[America/New_York]"} | ${"compatible"} | ${"2024-11-03T01:59:59.999999999-05:00[America/New_York]"}
-    ${"2024-11-03T01:45:00-05:00[America/New_York]"} | ${"earlier"}    | ${"2024-11-03T01:59:59.999999999-05:00[America/New_York]"}
-    ${"2024-11-03T01:45:00-05:00[America/New_York]"} | ${"later"}      | ${"2024-11-03T01:59:59.999999999-05:00[America/New_York]"}
-    ${"2024-11-03T01:45:00-05:00[America/New_York]"} | ${"reject"}     | ${"2024-11-03T01:59:59.999999999-05:00[America/New_York]"}
-    ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}    | ${undefined}    | ${"2024-10-27T02:59:59.999999999+01:00[Europe/Berlin]"}
-    ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}    | ${"compatible"} | ${"2024-10-27T02:59:59.999999999+01:00[Europe/Berlin]"}
-    ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}    | ${"earlier"}    | ${"2024-10-27T02:59:59.999999999+01:00[Europe/Berlin]"}
-    ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}    | ${"later"}      | ${"2024-10-27T02:59:59.999999999+01:00[Europe/Berlin]"}
-    ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}    | ${"reject"}     | ${"2024-10-27T02:59:59.999999999+01:00[Europe/Berlin]"}
+    value                                            | expected
+    ${"2024-11-03T01:45:00-05:00[America/New_York]"} | ${"2024-11-03T01:59:59.999999999-05:00[America/New_York]"}
+    ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}    | ${"2024-10-27T02:59:59.999999999+01:00[Europe/Berlin]"}
   `(
-    "returns the real hour end $expected for fall-back overlap $value with ignored disambiguation $disambiguation",
-    ({ value, disambiguation, expected }) => {
-      const optionsArg =
-        disambiguation === undefined ? undefined : { disambiguation };
-      expect(endOfZoned(value, "hour", optionsArg)).toBe(expected);
+    "returns the real hour end $expected for fall-back overlap $value",
+    ({ value, expected }) => {
+      expect(endOfZoned(value, "hour")).toBe(expected);
     },
   );
 
-  // `offset` is deprecated and ignored too, alone or combined with `disambiguation: "reject"`.
-  it.each`
-    offset       | expected
-    ${undefined} | ${"2024-11-03T01:59:59.999999999-05:00[America/New_York]"}
-    ${"ignore"}  | ${"2024-11-03T01:59:59.999999999-05:00[America/New_York]"}
-    ${"prefer"}  | ${"2024-11-03T01:59:59.999999999-05:00[America/New_York]"}
-    ${"use"}     | ${"2024-11-03T01:59:59.999999999-05:00[America/New_York]"}
-    ${"reject"}  | ${"2024-11-03T01:59:59.999999999-05:00[America/New_York]"}
-  `(
-    "returns the real hour end $expected with disambiguation reject and ignored offset $offset",
-    ({ offset, expected }) => {
-      const optionsArg =
-        offset === undefined
-          ? { disambiguation: "reject" as const }
-          : { disambiguation: "reject" as const, offset };
-      expect(
-        endOfZoned(
-          "2024-11-03T01:15:00-05:00[America/New_York]",
-          "hour",
-          optionsArg,
-        ),
-      ).toBe(expected);
-    },
-  );
+  // `disambiguation` and `offset` were removed in 1.16.0: they were ignored, because a boundary is
+  // always a real instant and TC39's `startOfDay()` takes neither. Passing one is a type error, and a
+  // JavaScript caller's stray property changes nothing.
+  it("treats the removed disambiguation option as a type error and ignores it at runtime", () => {
+    expect(
+      endOfZoned("2024-11-03T01:15:00-05:00[America/New_York]", "hour", {
+        // @ts-expect-error -- `disambiguation` was removed in 1.16.0
+        disambiguation: "reject",
+      }),
+    ).toBe("2024-11-03T01:59:59.999999999-05:00[America/New_York]");
+  });
+  it("treats the removed offset option as a type error and ignores it at runtime", () => {
+    expect(
+      endOfZoned("2024-11-03T01:15:00-05:00[America/New_York]", "hour", {
+        // @ts-expect-error -- `offset` was removed in 1.16.0
+        offset: "reject",
+      }),
+    ).toBe("2024-11-03T01:59:59.999999999-05:00[America/New_York]");
+  });
 });
 
 // The end is one nanosecond before the next real zone bucket starts, written at nanosecond
@@ -171,13 +155,11 @@ describe("endOfZoned across zone transitions with default options", () => {
   });
 
   // Goose Bay fell back at 00:01 Sunday into Saturday 23:01, re-opening a Sunday-first week that
-  // ends on the second pass (-04:00). An explicit `disambiguation` used to end it on the first pass
-  // (-03:00), before the input; it is now ignored. The end is the second midnight
-  // (2010-11-07T00:00:00-04:00) minus 1 ns, checked on @js-temporal/polyfill@0.5.1.
+  // ends on the second pass (-04:00). The end is the second midnight (2010-11-07T00:00:00-04:00)
+  // minus 1 ns, checked on @js-temporal/polyfill@0.5.1.
   it.each`
-    options                                                     | expected
-    ${{ weekStartsOn: "sunday" }}                               | ${"2010-11-06T23:59:59.999999999-04:00[America/Goose_Bay]"}
-    ${{ weekStartsOn: "sunday", disambiguation: "compatible" }} | ${"2010-11-06T23:59:59.999999999-04:00[America/Goose_Bay]"}
+    options                       | expected
+    ${{ weekStartsOn: "sunday" }} | ${"2010-11-06T23:59:59.999999999-04:00[America/Goose_Bay]"}
   `(
     "returns $expected for Goose Bay's re-opened Sunday week with $options",
     ({ options, expected }) => {
@@ -256,6 +238,55 @@ describe("endOfZoned for an input inside the unit's final second", () => {
         0,
       );
       expect(Temporal.ZonedDateTime.compare(value, next)).toBe(-1);
+    },
+  );
+
+  // Temporal §13.17 GetTemporalUnitValuedOption: a plural unit name is the same unit as its singular.
+  it.each`
+    unit              | expected
+    ${"years"}        | ${"2024-12-31T23:59:59.999999999+01:00[Europe/Berlin]"}
+    ${"months"}       | ${"2024-02-29T23:59:59.999999999+01:00[Europe/Berlin]"}
+    ${"weeks"}        | ${"2024-03-03T23:59:59.999999999+01:00[Europe/Berlin]"}
+    ${"days"}         | ${"2024-02-29T23:59:59.999999999+01:00[Europe/Berlin]"}
+    ${"hours"}        | ${"2024-02-29T13:59:59.999999999+01:00[Europe/Berlin]"}
+    ${"minutes"}      | ${"2024-02-29T13:45:59.999999999+01:00[Europe/Berlin]"}
+    ${"seconds"}      | ${"2024-02-29T13:45:30.999999999+01:00[Europe/Berlin]"}
+    ${"milliseconds"} | ${"2024-02-29T13:45:30.123999999+01:00[Europe/Berlin]"}
+    ${"microseconds"} | ${"2024-02-29T13:45:30.123456999+01:00[Europe/Berlin]"}
+    ${"nanoseconds"}  | ${"2024-02-29T13:45:30.123456789+01:00[Europe/Berlin]"}
+  `(
+    "returns $expected for plural unit $unit on 2024-02-29T13:45:30.123456789+01:00[Europe/Berlin]",
+    ({ unit, expected }) => {
+      expect(
+        endOfZoned("2024-02-29T13:45:30.123456789+01:00[Europe/Berlin]", unit),
+      ).toBe(expected);
+    },
+  );
+
+  // weekStartsOn only names "monday" or "sunday"; any other value is invalid input, for every unit
+  // (Temporal GetOption rejects a value outside its allowed list; undefined means the default).
+  it.each`
+    unit      | weekStartsOn
+    ${"week"} | ${"tuesday"}
+    ${"week"} | ${"Monday"}
+    ${"week"} | ${""}
+    ${"week"} | ${null}
+    ${"week"} | ${1}
+    ${"week"} | ${true}
+    ${"day"}  | ${"tuesday"}
+    ${"day"}  | ${"Monday"}
+    ${"day"}  | ${""}
+    ${"day"}  | ${null}
+    ${"day"}  | ${1}
+    ${"day"}  | ${true}
+  `(
+    "returns an empty string for unit $unit with invalid weekStartsOn $weekStartsOn",
+    ({ unit, weekStartsOn }) => {
+      expect(
+        endOfZoned("2024-02-29T13:45:30.123456789+01:00[Europe/Berlin]", unit, {
+          weekStartsOn,
+        }),
+      ).toBe("");
     },
   );
 });

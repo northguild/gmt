@@ -237,7 +237,10 @@ describe("diffZonedDateTime", () => {
     ).toBeNull();
   });
   // E5 (issue #78), decision of record D2 -- see addZoned.test.ts for the full rationale.
-  it("returns null when value1 carries a calendar annotation", () => {
+  // Temporal's own RFC 9557 string is GMT's calendar grammar. The two endpoints name
+  // different calendars (hebrew, iso8601), so the result is null, as native Temporal (Chromium
+  // 153) until throws "Mismatched calendars." (TC39 DifferenceTemporalZonedDateTime).
+  it("returns null for a calendar-annotated string against a bare one (different calendars)", () => {
     expect(
       diffZoned(
         "2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]",
@@ -249,14 +252,14 @@ describe("diffZonedDateTime", () => {
 });
 
 // ---------------------------------------------------------------------------------------------
-// E7 (issue #152), D5-zoned — measure in the endpoints' shared calendar, fall back to
-// Gregorian/ISO on mismatch or bare input. Every expected value produced by running
-// @js-temporal/polyfill@0.5.1.
+// E7 (issue #152) — measure in the endpoints' shared calendar. Different calendars (a
+// bare string names iso8601) return null, as TC39 DifferenceTemporalZonedDateTime throws for
+// every largestUnit (native Chromium 153: "Mismatched calendars." in hours and months).
 // ---------------------------------------------------------------------------------------------
-describe("diffZoned with GMT calendar-annotated values", () => {
+describe("diffZoned with RFC 9557 calendar-annotated values", () => {
   const Y = calendarZonedFixtures.hebrewLeapYearSpan;
   const ISLAMIC_END =
-    "1446-03-30T00:00:00-04:00[u-ca=islamic-tabular][America/New_York]";
+    "2024-10-03T00:00:00-04:00[America/New_York][u-ca=islamic-tbla]";
 
   it("measures a Hebrew leap year as 13 months where the ISO control measures 12", () => {
     expect(
@@ -265,17 +268,16 @@ describe("diffZoned with GMT calendar-annotated values", () => {
     expect(diffZoned(Y.isoStart, Y.isoEnd, "months")).toBe(12);
   });
 
-  // The fallback is what makes a purely time-unit question answerable across calendars at all:
-  // ZonedDateTime.until throws for EVERY largestUnit when the calendars differ.
-  it("falls back to Gregorian for mismatched tags instead of returning null", () => {
-    expect(diffZoned(Y.tishri1_5784NewYork, ISLAMIC_END, "hours")).toBe(9192);
+  // ZonedDateTime.until throws for EVERY largestUnit when the calendars differ, hours included.
+  it("returns null for mismatched tags even in hours", () => {
+    expect(diffZoned(Y.tishri1_5784NewYork, ISLAMIC_END, "hours")).toBeNull();
     expect(diffZoned(Y.isoStart, Y.isoEnd, "hours")).toBe(9192);
   });
 
   it.each`
     label                       | start                    | end                      | expected
-    ${"mismatched tags"}        | ${Y.tishri1_5784NewYork} | ${ISLAMIC_END}           | ${12}
-    ${"tagged start, bare end"} | ${Y.tishri1_5784NewYork} | ${Y.isoEnd}              | ${12}
+    ${"mismatched tags"}        | ${Y.tishri1_5784NewYork} | ${ISLAMIC_END}           | ${null}
+    ${"tagged start, bare end"} | ${Y.tishri1_5784NewYork} | ${Y.isoEnd}              | ${null}
     ${"both bare"}              | ${Y.isoStart}            | ${Y.isoEnd}              | ${12}
     ${"both hebrew"}            | ${Y.tishri1_5784NewYork} | ${Y.tishri1_5785NewYork} | ${13}
   `("returns $expected months for $label", ({ start, end, expected }) => {
@@ -284,8 +286,9 @@ describe("diffZoned with GMT calendar-annotated values", () => {
 
   it.each`
     value                                                         | reason
-    ${"5784-01-01T00:00:00-04:00[America/New_York][u-ca=hebrew]"} | ${"GMT digits in Temporal's segment ordering"}
-    ${"5785-13-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"} | ${"month 13 in a non-leap Hebrew year"}
+    ${"5784-01-01T00:00:00-04:00[America/New_York][u-ca=hebrew]"} | ${"-04:00 is not New York's offset on ISO 5784-01-01 (EST)"}
+    ${"2023-09-16T00:00:00-04:00[u-ca=hebrew][America/New_York]"} | ${"calendar before zone (not RFC 9557)"}
+    ${"2024-13-15T14:30:00-05:00[America/New_York][u-ca=hebrew]"} | ${"ISO month 13 (the digits are ISO)"}
   `("returns null when the start is $value ($reason)", ({ value }) => {
     expect(diffZoned(value, Y.isoEnd, "days")).toBeNull();
   });
@@ -355,13 +358,92 @@ describe("diffZoned at the minimum instant", () => {
 describe("diffZoned in non-ISO calendars (CORE-6)", () => {
   it.each`
     start                                                           | end                                                             | unit        | expected | reason
-    ${"2566-08-31T00:00:00+00:00[u-ca=buddhist][UTC]"}              | ${"2566-09-30T00:00:00+00:00[u-ca=buddhist][UTC]"}              | ${"months"} | ${0}     | ${"D6: P30D is no whole month"}
-    ${"2566-08-31T00:00:00-04:00[u-ca=buddhist][America/New_York]"} | ${"2566-09-30T00:00:00-04:00[u-ca=buddhist][America/New_York]"} | ${"months"} | ${0}     | ${"D6 in a named zone"}
-    ${"5784-06-02T00:00:00-05:00[u-ca=hebrew][America/New_York]"}   | ${"5785-06-01T00:00:00-05:00[u-ca=hebrew][America/New_York]"}   | ${"years"}  | ${0}     | ${"D7: P12M29D is no whole year"}
+    ${"2023-08-31T00:00:00+00:00[UTC][u-ca=buddhist]"}              | ${"2023-09-30T00:00:00+00:00[UTC][u-ca=buddhist]"}              | ${"months"} | ${0}     | ${"D6: P30D is no whole month"}
+    ${"2023-08-31T00:00:00-04:00[America/New_York][u-ca=buddhist]"} | ${"2023-09-30T00:00:00-04:00[America/New_York][u-ca=buddhist]"} | ${"months"} | ${0}     | ${"D6 in a named zone"}
+    ${"2024-02-11T00:00:00-05:00[America/New_York][u-ca=hebrew]"}   | ${"2025-03-01T00:00:00-05:00[America/New_York][u-ca=hebrew]"}   | ${"years"}  | ${0}     | ${"D7: P12M29D is no whole year"}
   `(
     "returns $expected $unit from $start to $end ($reason)",
     ({ start, end, unit, expected }) => {
       expect(diffZoned(start, end, unit)).toBe(expected);
     },
   );
+
+  // An empty units list names no largest unit (getLargestDateTimeDurationUnit returns ""), so there
+  // is nothing to measure: invalid input.
+  it("returns null for an empty units list", () => {
+    expect(
+      diffZoned(
+        "2024-01-01T00:00:00+00:00[UTC]",
+        "2024-01-08T00:00:00+00:00[UTC]",
+        [],
+      ),
+    ).toBeNull();
+  });
+});
+
+// Plan #16: a units array returns the whole difference; unlisted units between listed ones are
+// carried into the next smaller listed unit, from the start moved by the larger listed amounts on
+// the zone's wall clock. Values from native Temporal (Chromium 153):
+// - UTC 2024-01-01 until 2025-03-01 is P1Y2M; 2025-01-01 to 2025-03-01 is 59 days.
+// - New York 2024-02-09T12:00-05:00 until 2024-03-11T12:00-04:00 is P1M2D; + P1M is
+//   2024-03-09T12:00-05:00, which is 47 hours before the end (2024-03-10 is a 23-hour day).
+// - New York 2024-01-01T00:00-05:00 until 2024-03-20T00:00-04:00 is P2M19D; Temporal fills weeks
+//   only for largestUnit weeks, and 2024-03-01 until 2024-03-20 is P2W5D, the 5 days (after the
+//   23-hour 2024-03-10) being 120 hours.
+describe("diffZoned units array carries unlisted units", () => {
+  it.each`
+    value1                                           | value2                                           | units                           | expected
+    ${"2024-01-01T00:00:00+00:00[UTC]"}              | ${"2025-03-01T00:00:00+00:00[UTC]"}              | ${["years", "days"]}            | ${{ years: 1, days: 59 }}
+    ${"2024-02-09T12:00:00-05:00[America/New_York]"} | ${"2024-03-11T12:00:00-04:00[America/New_York]"} | ${["months", "hours"]}          | ${{ months: 1, hours: 47 }}
+    ${"2024-03-11T12:00:00-04:00[America/New_York]"} | ${"2024-02-09T12:00:00-05:00[America/New_York]"} | ${["months", "days"]}           | ${{ months: -1, days: -2 }}
+    ${"2024-01-01T00:00:00-05:00[America/New_York]"} | ${"2024-03-20T00:00:00-04:00[America/New_York]"} | ${["months", "weeks", "hours"]} | ${{ months: 2, weeks: 2, hours: 120 }}
+  `(
+    "returns $expected for $units from $value1 to $value2",
+    ({ value1, value2, units, expected }) => {
+      expect(diffZoned(value1, value2, units)).toEqual(expected);
+    },
+  );
+});
+
+// Temporal GetOptionsObject: an options argument that is not an object or undefined throws
+// TypeError (native Chromium 153: `until(other, null)`, `"x"`, `5` and `true` all throw), so each is
+// invalid input. Omitted options measure normally (PT49H).
+describe("diffZoned with a non-object options argument", () => {
+  it.each`
+    options      | expected
+    ${null}      | ${null}
+    ${"x"}       | ${null}
+    ${5}         | ${null}
+    ${true}      | ${null}
+    ${undefined} | ${49}
+  `("returns $expected for options $options", ({ options, expected }) => {
+    expect(
+      diffZoned(
+        "2024-02-28T14:30:00+00:00[UTC]",
+        "2024-03-01T15:30:00+00:00[UTC]",
+        "hours",
+        options,
+      ),
+    ).toBe(expected);
+  });
+});
+
+// Temporal §13.17: singular and plural unit names are the same unit, and record keys are the plural
+// names. Native Chromium 153: 2024-02-28T14:30:00+00:00[UTC] until 2024-03-01T15:30:00+00:00[UTC] with largestUnit "day" is P2DT1H.
+describe("diffZoned with singular unit names", () => {
+  it.each`
+    units              | expected
+    ${"day"}           | ${2}
+    ${"days"}          | ${2}
+    ${"hour"}          | ${49}
+    ${["day", "hour"]} | ${{ days: 2, hours: 1 }}
+  `("returns $expected for units $units", ({ units, expected }) => {
+    expect(
+      diffZoned(
+        "2024-02-28T14:30:00+00:00[UTC]",
+        "2024-03-01T15:30:00+00:00[UTC]",
+        units,
+      ),
+    ).toEqual(expected);
+  });
 });

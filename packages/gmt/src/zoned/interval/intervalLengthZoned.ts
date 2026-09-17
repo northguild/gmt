@@ -23,17 +23,16 @@ import { isValidCalendarZonedInterval } from "./validate";
  *   Temporal's `until` throws, because day lengths differ between zones.
  * - Compatibility: before 1.16.0 a calendar unit across two zones returned a number. To measure
  *   such a pair, convert both ends to one zone first with `convertZonedToZoned`.
- * - Accepts GMT calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
+ * - Accepts RFC 9557 calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
  *   well as bare ISO ones — E7 (issue #152). When BOTH endpoints carry the same calendar tag the
- *   measurement is made in that calendar; when the tags mismatch, or either endpoint is bare ISO,
- *   it falls back to Gregorian/ISO rather than returning the sentinel (E7's D5-zoned). The
- *   fallback is mandatory, not a convenience: `ZonedDateTime.prototype.until` throws across
- *   mismatched calendars for EVERY `largestUnit` — verified, including `"hour"` and
- *   `"nanosecond"`.
+ *   measurement is made in that calendar. When they name different calendars (a bare ISO string
+ *   names `iso8601`) the result is `null` in every unit, `"hour"` included, as
+ *   `ZonedDateTime.prototype.until` throws when TC39 `CalendarEquals` is false (before 1.16.0 it
+ *   was measured in ISO).
  * - Returns `null` on invalid input (unparseable start/end, `start > end`, unsupported unit,
  *   leap-second strings).
- * - Compatibility: since 1.16.0 a calendar annotation must be a GMT `CalendarSystem` id
- *   (`[u-ca=gregory]` is now invalid input); use the GMT id — see `isValidCalendarZonedDateTime`.
+ * - Compatibility: since 1.16.0 calendar strings are RFC 9557 (ISO digits, the `[u-ca=<id>]`
+ *   annotation after the zone, canonical calendar ids); see `isValidCalendarZonedDateTime`.
  *
  * @param start ISO 8601 zoned datetime string for the interval start
  * @param end ISO 8601 zoned datetime string for the interval end

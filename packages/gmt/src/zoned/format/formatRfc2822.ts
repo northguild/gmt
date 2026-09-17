@@ -1,8 +1,5 @@
-import {
-  ENGLISH_MONTH_NAMES,
-  ENGLISH_WEEKDAY_NAMES,
-  zonedDateTimeFrom,
-} from "../../internal";
+import { zonedDateTimeFrom } from "../../internal";
+import { englishDateTimeStem } from "../../internal/englishCalendarNames";
 import { isValidZonedDateTime } from "../validate";
 
 const NANOSECONDS_PER_MINUTE = 60_000_000_000;
@@ -52,21 +49,13 @@ export function formatRfc2822(value: string): string {
     // year = 4*DIGIT: unsigned, so no negative (BCE) year.
     if (zdt.year < 0) return "";
 
-    const weekday = ENGLISH_WEEKDAY_NAMES[zdt.dayOfWeek - 1];
-    const day = String(zdt.day).padStart(2, "0");
-    const month = ENGLISH_MONTH_NAMES[zdt.month - 1];
-    const year = String(zdt.year).padStart(4, "0");
-    const hour = String(zdt.hour).padStart(2, "0");
-    const minute = String(zdt.minute).padStart(2, "0");
-    const second = String(zdt.second).padStart(2, "0");
-
     const totalOffsetMinutes = zdt.offsetNanoseconds / NANOSECONDS_PER_MINUTE;
     const sign = totalOffsetMinutes < 0 ? "-" : "+";
     const absMinutes = Math.abs(totalOffsetMinutes);
     const offsetHH = String(Math.trunc(absMinutes / 60)).padStart(2, "0");
     const offsetMM = String(absMinutes % 60).padStart(2, "0");
 
-    return `${weekday}, ${day} ${month} ${year} ${hour}:${minute}:${second} ${sign}${offsetHH}${offsetMM}`;
+    return `${englishDateTimeStem(zdt)} ${sign}${offsetHH}${offsetMM}`;
   } catch {
     return "";
   }

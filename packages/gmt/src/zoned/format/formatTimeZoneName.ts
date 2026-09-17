@@ -1,5 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { resolveRequiredLocale } from "../../internal/resolveLocale";
 import { isValidTimeZone } from "../validate";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Name style for `formatTimeZoneName`, mirroring
@@ -51,7 +53,7 @@ export interface FormatTimeZoneNameOptions {
  * - Returns "" for an invalid timeZone or locale.
  *
  * @param timeZone IANA timeZone identifier
- * @param locale BCP 47 locale tag (e.g. "en-US")
+ * @param locale BCP 47 locale tag (e.g. "en-US"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns ""
  * @param options optional: { style } name style, default "long"
  * @returns localized zone name, or "" on invalid input
  *
@@ -61,25 +63,27 @@ export interface FormatTimeZoneNameOptions {
  * @example formatTimeZoneName("Asia/Tokyo", "ja-JP", { style: "longGeneric" }) // "日本標準時"
  * @example formatTimeZoneName("Invalid/Zone", "en-US") // ""
  * @example formatTimeZoneName("America/New_York", "!!!") // ""
+ * @example formatTimeZoneName("Europe/Berlin", ["fr-FR", "en-US"], { style: "longGeneric" }) // "heure d’Europe centrale"
  */
 export function formatTimeZoneName(
   timeZone: string,
-  locale: string,
+  locale: string | string[],
   options?: FormatTimeZoneNameOptions,
 ): string {
+  if (!isOptionsArgument(options)) {
+    return "";
+  }
+
   if (!isValidTimeZone(timeZone)) {
     return "";
   }
 
-  try {
-    new Intl.Locale(locale);
-  } catch {
-    return "";
-  }
+  const resolvedLocale = resolveRequiredLocale(locale);
+  if (resolvedLocale === null) return "";
 
   try {
     const style = options?.style ?? "long";
-    const formatter = new Intl.DateTimeFormat(locale, {
+    const formatter = new Intl.DateTimeFormat(resolvedLocale, {
       timeZone,
       timeZoneName: style,
       hour: "numeric",

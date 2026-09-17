@@ -17,7 +17,7 @@ import { isValidZonedDateTime } from "../validate";
  *   default locale, as ECMA-402 `ResolveLocale` requires.
  *
  * @param value ISO ZonedDateTime string
- * @param locale BCP 47 locale tag (e.g. "en-US", "he-IL")
+ * @param locale BCP 47 locale tag (e.g. "en-US", "he-IL"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns false
  * @returns true if `value`'s local day is a weekend day in `locale`, false on invalid input
  *
  * @example isZonedWeekend("2024-02-03T10:00:00-05:00[America/New_York]", "en-US") // true (Saturday)
@@ -25,8 +25,12 @@ import { isValidZonedDateTime } from "../validate";
  * @example isZonedWeekend("2024-02-04T10:00:00+02:00[Asia/Jerusalem]", "he-IL") // false (Sunday)
  * @example isZonedWeekend("invalid", "en-US") // false
  * @example isZonedWeekend("2024-02-03T10:00:00-05:00[America/New_York]", "not-a-locale-!!") // false
+ * @example isZonedWeekend("2024-05-17T12:00:00+02:00[Europe/Berlin]", ["ar-EG", "fr-FR"]) // true
  */
-export function isZonedWeekend(value: string, locale: string): boolean {
+export function isZonedWeekend(
+  value: string,
+  locale: string | string[],
+): boolean {
   if (!isValidZonedDateTime(value)) return false;
 
   const weekendDays = getLocaleWeekendDays(locale);

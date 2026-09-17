@@ -101,4 +101,30 @@ describe("getZonedNowUnit", () => {
     const result = getZonedNowUnit("America/New_York", "year");
     expect(result).toBe("");
   });
+
+  // Temporal §13.17 GetTemporalUnitValuedOption: a plural unit name is the same unit as its singular.
+  // The clock is 2024-02-29T00:00:00Z, a Thursday in ISO week 9.
+  it.each`
+    unit              | expected
+    ${"years"}        | ${"2024"}
+    ${"months"}       | ${"02"}
+    ${"weeks"}        | ${"9"}
+    ${"days"}         | ${"29"}
+    ${"hours"}        | ${"00"}
+    ${"minutes"}      | ${"00"}
+    ${"seconds"}      | ${"00"}
+    ${"milliseconds"} | ${"000"}
+  `("returns $expected for plural unit $unit in UTC", ({ unit, expected }) => {
+    expect(getZonedNowUnit("UTC", unit)).toBe(expected);
+  });
+
+  // Sub-millisecond digits come from the host's high-resolution clock, not the faked one, so only
+  // their three-digit shape is fixed.
+  it.each`
+    unit
+    ${"microseconds"}
+    ${"nanoseconds"}
+  `("returns three digits for plural unit $unit", ({ unit }) => {
+    expect(getZonedNowUnit("UTC", unit)).toMatch(/^\d{3}$/);
+  });
 });

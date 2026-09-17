@@ -61,12 +61,14 @@ describe("intervalFromDurationZoned", () => {
 
   // disambiguation: fall-back overlap (span end lands on an ambiguous local time)
   it.each`
-    value                                            | disambiguation  | expectedEnd
-    ${"2024-11-02T01:30:00-04:00[America/New_York]"} | ${undefined}    | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
-    ${"2024-11-02T01:30:00-04:00[America/New_York]"} | ${"compatible"} | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
-    ${"2024-11-02T01:30:00-04:00[America/New_York]"} | ${"earlier"}    | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
-    ${"2024-11-02T01:30:00-04:00[America/New_York]"} | ${"later"}      | ${"2024-11-03T01:30:00-05:00[America/New_York]"}
-    ${"2024-11-02T01:30:00-04:00[America/New_York]"} | ${"reject"}     | ${null}
+    value                                               | disambiguation  | expectedEnd
+    ${"2024-11-02T01:30:00-04:00[America/New_York]"}    | ${undefined}    | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
+    ${"2024-11-02T01:30:00-04:00[America/New_York]"}    | ${"compatible"} | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
+    ${"2024-11-02T01:30:00-04:00[America/New_York]"}    | ${"earlier"}    | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
+    ${"2024-11-02T01:30:00-04:00[America/New_York]"}    | ${"later"}      | ${"2024-11-03T01:30:00-05:00[America/New_York]"}
+    ${"2024-11-02T01:30:00-04:00[America/New_York]"}    | ${"reject"}     | ${null}
+    ${"2024-04-06T01:45:00+11:00[Australia/Lord_Howe]"} | ${"earlier"}    | ${"2024-04-07T01:45:00+11:00[Australia/Lord_Howe]"}
+    ${"2024-04-06T01:45:00+11:00[Australia/Lord_Howe]"} | ${"later"}      | ${"2024-04-07T01:45:00+10:30[Australia/Lord_Howe]"}
   `(
     "resolves fall-back overlap for $value + P1D with disambiguation $disambiguation to $expectedEnd",
     ({ value, disambiguation, expectedEnd }) => {
@@ -99,50 +101,58 @@ describe("intervalFromDurationZoned", () => {
     },
   );
 
-  // spring-forward gap: disambiguation has no effect, arithmetic already advances past it
+  // spring-forward gap: Temporal §6.5.5 AddZonedDateTime resolves the computed endpoint's
+  // intermediate wall clock (date moved, time kept) with the caller's disambiguation — "earlier"
+  // shifts back by the gap length, "compatible"/"later" forward, "reject" gives null. Anchor "end"
+  // subtracts the duration. Apia's 2011-12-30 was skipped whole (a 24-hour gap), so "compatible"
+  // from the end anchor lands on the anchor itself: an empty interval.
   it.each`
-    value                                            | disambiguation
-    ${"2024-03-09T02:30:00-05:00[America/New_York]"} | ${undefined}
-    ${"2024-03-09T02:30:00-05:00[America/New_York]"} | ${"compatible"}
-    ${"2024-03-09T02:30:00-05:00[America/New_York]"} | ${"earlier"}
-    ${"2024-03-09T02:30:00-05:00[America/New_York]"} | ${"later"}
-    ${"2024-03-09T02:30:00-05:00[America/New_York]"} | ${"reject"}
+    value                                               | anchor     | disambiguation  | expected
+    ${"2024-03-09T02:30:00-05:00[America/New_York]"}    | ${"start"} | ${undefined}    | ${{ start: "2024-03-09T02:30:00-05:00[America/New_York]", end: "2024-03-10T03:30:00-04:00[America/New_York]" }}
+    ${"2024-03-09T02:30:00-05:00[America/New_York]"}    | ${"start"} | ${"compatible"} | ${{ start: "2024-03-09T02:30:00-05:00[America/New_York]", end: "2024-03-10T03:30:00-04:00[America/New_York]" }}
+    ${"2024-03-09T02:30:00-05:00[America/New_York]"}    | ${"start"} | ${"earlier"}    | ${{ start: "2024-03-09T02:30:00-05:00[America/New_York]", end: "2024-03-10T01:30:00-05:00[America/New_York]" }}
+    ${"2024-03-09T02:30:00-05:00[America/New_York]"}    | ${"start"} | ${"later"}      | ${{ start: "2024-03-09T02:30:00-05:00[America/New_York]", end: "2024-03-10T03:30:00-04:00[America/New_York]" }}
+    ${"2024-03-09T02:30:00-05:00[America/New_York]"}    | ${"start"} | ${"reject"}     | ${null}
+    ${"2024-03-11T02:30:00-04:00[America/New_York]"}    | ${"end"}   | ${"compatible"} | ${{ start: "2024-03-10T03:30:00-04:00[America/New_York]", end: "2024-03-11T02:30:00-04:00[America/New_York]" }}
+    ${"2024-03-11T02:30:00-04:00[America/New_York]"}    | ${"end"}   | ${"earlier"}    | ${{ start: "2024-03-10T01:30:00-05:00[America/New_York]", end: "2024-03-11T02:30:00-04:00[America/New_York]" }}
+    ${"2024-03-11T02:30:00-04:00[America/New_York]"}    | ${"end"}   | ${"later"}      | ${{ start: "2024-03-10T03:30:00-04:00[America/New_York]", end: "2024-03-11T02:30:00-04:00[America/New_York]" }}
+    ${"2024-03-11T02:30:00-04:00[America/New_York]"}    | ${"end"}   | ${"reject"}     | ${null}
+    ${"2024-10-05T02:15:00+10:30[Australia/Lord_Howe]"} | ${"start"} | ${"earlier"}    | ${{ start: "2024-10-05T02:15:00+10:30[Australia/Lord_Howe]", end: "2024-10-06T01:45:00+10:30[Australia/Lord_Howe]" }}
+    ${"2024-10-05T02:15:00+10:30[Australia/Lord_Howe]"} | ${"start"} | ${"later"}      | ${{ start: "2024-10-05T02:15:00+10:30[Australia/Lord_Howe]", end: "2024-10-06T02:45:00+11:00[Australia/Lord_Howe]" }}
+    ${"2024-10-05T02:15:00+10:30[Australia/Lord_Howe]"} | ${"start"} | ${"reject"}     | ${null}
+    ${"2011-12-29T12:00:00-10:00[Pacific/Apia]"}        | ${"start"} | ${"earlier"}    | ${{ start: "2011-12-29T12:00:00-10:00[Pacific/Apia]", end: "2011-12-29T12:00:00-10:00[Pacific/Apia]" }}
+    ${"2011-12-29T12:00:00-10:00[Pacific/Apia]"}        | ${"start"} | ${"later"}      | ${{ start: "2011-12-29T12:00:00-10:00[Pacific/Apia]", end: "2011-12-31T12:00:00+14:00[Pacific/Apia]" }}
+    ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}        | ${"end"}   | ${"compatible"} | ${{ start: "2011-12-31T12:00:00+14:00[Pacific/Apia]", end: "2011-12-31T12:00:00+14:00[Pacific/Apia]" }}
+    ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}        | ${"end"}   | ${"earlier"}    | ${{ start: "2011-12-29T12:00:00-10:00[Pacific/Apia]", end: "2011-12-31T12:00:00+14:00[Pacific/Apia]" }}
+    ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}        | ${"end"}   | ${"reject"}     | ${null}
   `(
-    "spring-forward gap for $value + P1D is unaffected by disambiguation $disambiguation",
-    ({ value, disambiguation }) => {
+    "builds $expected for the spring-forward gap from $value + P1D anchored at $anchor with disambiguation $disambiguation",
+    ({ value, anchor, disambiguation, expected }) => {
       const options =
         disambiguation === undefined ? undefined : { disambiguation };
-      expect(intervalFromDurationZoned(value, "P1D", "start", options)).toEqual(
-        {
-          start: value,
-          end: "2024-03-10T03:30:00-04:00[America/New_York]",
-        },
+      expect(intervalFromDurationZoned(value, "P1D", anchor, options)).toEqual(
+        expected,
       );
     },
   );
 
-  // offset is accepted but inert: the disambiguation rebuild has no stored offset to act on
-  it.each`
-    offset
-    ${undefined}
-    ${"prefer"}
-    ${"use"}
-    ${"ignore"}
-    ${"reject"}
-  `(
-    "produces identical output regardless of offset $offset (inert on this function)",
-    ({ offset }) => {
-      const value = "2024-11-02T01:30:00-04:00[America/New_York]";
-      const withoutOffset = intervalFromDurationZoned(value, "P1D", "start", {
-        disambiguation: "later",
-      });
-      const withOffset = intervalFromDurationZoned(value, "P1D", "start", {
-        disambiguation: "later",
-        offset,
-      });
-      expect(withOffset).toEqual(withoutOffset);
-    },
-  );
+  // `offset` was removed in 1.16.0: the end's wall clock is resolved from a plain date-time, which
+  // has no UTC offset for it to act on. Passing it is a type error, and a JavaScript caller's stray
+  // property changes nothing.
+  it("treats the removed offset option as a type error and ignores it at runtime", () => {
+    expect(
+      intervalFromDurationZoned(
+        "2024-11-02T01:30:00-04:00[America/New_York]",
+        "P1D",
+        "start",
+        // @ts-expect-error -- `offset` was removed in 1.16.0
+        { disambiguation: "later", offset: "reject" },
+      ),
+    ).toEqual({
+      start: "2024-11-02T01:30:00-04:00[America/New_York]",
+      end: "2024-11-03T01:30:00-05:00[America/New_York]",
+    });
+  });
 
   it.each`
     value                               | duration   | anchor
@@ -207,17 +217,25 @@ describe("intervalFromDurationZoned", () => {
       ),
     ).toBeNull();
   });
-  // E5 (issue #78), decision of record D2 — see isValidZonedDateTime.test.ts for the full
-  // rationale: zoned/ rejects any [u-ca=...] calendar annotation outright.
-  it("returns null when value carries a calendar annotation", () => {
-    expect(
-      intervalFromDurationZoned(
-        "2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]",
-        "P1M",
-        "start",
-      ),
-    ).toBeNull();
-  });
+  // An RFC 9557 calendar-annotated value is valid, and the span is built in its calendar.
+  // Native Temporal (Chromium 153): 2024-01-01T00:00Z[UTC][u-ca=hebrew] + P1M is
+  // 2024-01-30T00:00Z (20 Tevet 5784 to 20 Shevat), and - P1M is 2023-12-03T00:00Z.
+  it.each`
+    anchor     | expected
+    ${"start"} | ${{ start: "2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]", end: "2024-01-30T00:00:00+00:00[UTC][u-ca=hebrew]" }}
+    ${"end"}   | ${{ start: "2023-12-03T00:00:00+00:00[UTC][u-ca=hebrew]", end: "2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]" }}
+  `(
+    "returns $expected for a hebrew-annotated value with P1M anchored at $anchor",
+    ({ anchor, expected }) => {
+      expect(
+        intervalFromDurationZoned(
+          "2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]",
+          "P1M",
+          anchor,
+        ),
+      ).toEqual(expected);
+    },
+  );
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -258,9 +276,9 @@ describe("intervalFromDurationZoned with GMT calendar-annotated values", () => {
   // value carries a calendar — every non-"compatible" disambiguation would return null.
   it.each`
     disambiguation  | expected
-    ${"compatible"} | ${"0001-05-05T02:30:00+01:00[u-ca=japanese;era=reiwa][Africa/Casablanca]"}
-    ${"earlier"}    | ${"0001-05-05T02:30:00+01:00[u-ca=japanese;era=reiwa][Africa/Casablanca]"}
-    ${"later"}      | ${"0001-05-05T02:30:00+00:00[u-ca=japanese;era=reiwa][Africa/Casablanca]"}
+    ${"compatible"} | ${"2019-05-05T02:30:00+01:00[Africa/Casablanca][u-ca=japanese]"}
+    ${"earlier"}    | ${"2019-05-05T02:30:00+01:00[Africa/Casablanca][u-ca=japanese]"}
+    ${"later"}      | ${"2019-05-05T02:30:00+00:00[Africa/Casablanca][u-ca=japanese]"}
   `(
     "resolves the Casablanca fold to $expected with disambiguation $disambiguation",
     ({ disambiguation, expected }) => {
@@ -282,8 +300,8 @@ describe("intervalFromDurationZoned with GMT calendar-annotated values", () => {
 
   it.each`
     value                                                         | reason
-    ${"5784-06-15T14:30:00-05:00[America/New_York][u-ca=hebrew]"} | ${"GMT digits in Temporal's segment ordering"}
-    ${"5785-13-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"} | ${"month 13 in a non-leap Hebrew year"}
+    ${"5784-06-15T14:30:00-05:00[America/New_York][u-ca=hebrew]"} | ${"-05:00 is not New York's offset on ISO 5784-06-15"}
+    ${"2024-13-15T14:30:00-05:00[America/New_York][u-ca=hebrew]"} | ${"ISO month 13 (the digits are ISO)"}
   `("returns null for $value ($reason)", ({ value }) => {
     expect(intervalFromDurationZoned(value, "P1D", "start")).toBeNull();
   });
@@ -309,9 +327,9 @@ describe("intervalFromDurationZoned at the maximum instant", () => {
 describe("intervalFromDurationZoned in non-ISO calendars (CORE-6)", () => {
   it.each`
     value                                                      | duration | anchor     | expected                                                                                                                            | reason
-    ${"1543-01-31T00:00:00+00:00[u-ca=buddhist][UTC]"}         | ${"P1M"} | ${"start"} | ${{ start: "1543-01-31T00:00:00+00:00[u-ca=buddhist][UTC]", end: "1543-02-28T00:00:00+00:00[u-ca=buddhist][UTC]" }}                 | ${"proleptic buddhist: ISO 1000 has no Feb 29"}
-    ${"279517-09-10T00:00:00-12:00[u-ca=hebrew][Etc/GMT+12]"}  | ${"P1M"} | ${"start"} | ${{ start: "279517-09-10T00:00:00-12:00[u-ca=hebrew][Etc/GMT+12]", end: "279517-10-10T00:00:00-12:00[u-ca=hebrew][Etc/GMT+12]" }}   | ${"hebrew near the maximum"}
-    ${"-280803-05-07T12:00:00+00:00[u-ca=islamic-civil][UTC]"} | ${"P1Y"} | ${"end"}   | ${{ start: "-280804-05-07T12:00:00+00:00[u-ca=islamic-civil][UTC]", end: "-280803-05-07T12:00:00+00:00[u-ca=islamic-civil][UTC]" }} | ${"D1 near the minimum"}
+    ${"1000-01-31T00:00:00+00:00[UTC][u-ca=buddhist]"}         | ${"P1M"} | ${"start"} | ${{ start: "1000-01-31T00:00:00+00:00[UTC][u-ca=buddhist]", end: "1000-02-28T00:00:00+00:00[UTC][u-ca=buddhist]" }}                 | ${"proleptic buddhist: ISO 1000 has no Feb 29"}
+    ${"+275760-08-14T00:00:00-12:00[Etc/GMT+12][u-ca=hebrew]"} | ${"P1M"} | ${"start"} | ${{ start: "+275760-08-14T00:00:00-12:00[Etc/GMT+12][u-ca=hebrew]", end: "+275760-09-12T00:00:00-12:00[Etc/GMT+12][u-ca=hebrew]" }} | ${"hebrew near the maximum"}
+    ${"-271820-05-23T12:00:00+00:00[UTC][u-ca=islamic-civil]"} | ${"P1Y"} | ${"end"}   | ${{ start: "-271821-06-03T12:00:00+00:00[UTC][u-ca=islamic-civil]", end: "-271820-05-23T12:00:00+00:00[UTC][u-ca=islamic-civil]" }} | ${"D1 near the minimum"}
   `(
     "builds $expected from $value, $duration and anchor $anchor ($reason)",
     ({ value, duration, anchor, expected }) => {

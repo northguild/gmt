@@ -17,6 +17,7 @@ import type {
 } from "../../types";
 import { isValidZonedDateTime } from "../validate";
 import { setZoned } from "./setZoned";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return a ZonedDateTime ISO string with `field` cycled by `amount`, wrapping at that field's own
@@ -32,11 +33,12 @@ import { setZoned } from "./setZoned";
  *   whatever DST edge case results (the wrapped local time landing in a gap or an overlap) exactly
  *   the way it resolves any other field-set call. This is deliberately simpler than deriving
  *   DST-aware wrap boundaries directly.
- * - `disambiguation` defaults to `"compatible"` and `offset` defaults to `"ignore"` (not
- *   Temporal's own `"prefer"` default) — the same C3 precedent as `setZoned`/`startOfZoned`: with
- *   `"prefer"`, the source's still-valid offset is kept and `disambiguation` is silently never
- *   consulted. Leave `offset` at its default unless you specifically need Temporal's raw `.with()`
- *   semantics.
+ * - `disambiguation` defaults to `"compatible"` and `offset` defaults to `"prefer"`, as Temporal's
+ *   `ZonedDateTime#with` does: when the source's offset is still valid for the cycled wall time
+ *   (a repeated fall-back hour), it is kept and `disambiguation` is not consulted. Pass
+ *   `offset: "ignore"` to resolve the cycled wall time through `disambiguation` instead.
+ * - **Compatibility:** before 1.16.0 `offset` defaulted to `"ignore"`. Pass `{ offset: "ignore" }`
+ *   to keep that resolution.
  * - `options.round` steps to the *next* multiple of `amount` in the direction of its sign
  *   (ceiling for positive, floor for negative) — not the nearest one. See `cycleDate`/`cycleTime`'s
  *   docs for worked examples.
@@ -45,13 +47,15 @@ import { setZoned } from "./setZoned";
  * @param value zoned ISO 8601 datetime string
  * @param field the field to cycle: "year" | "month" | "day" | "hour" | "minute" | "second" | "millisecond" | "microsecond" | "nanosecond"
  * @param amount signed amount to cycle by
- * @param options optional: round (boolean, default false), overflow ("constrain" | "reject"), disambiguation ("compatible" | "earlier" | "later" | "reject"), offset ("prefer" | "use" | "ignore" | "reject", default "ignore")
+ * @param options optional: round (boolean, default false), overflow ("constrain" | "reject"), disambiguation ("compatible" | "earlier" | "later" | "reject"), offset ("prefer" | "use" | "ignore" | "reject", default "prefer")
  * @returns zoned ISO 8601 string with `field` cycled, or "" on invalid input
  *
  * @example cycleZoned("2024-06-15T09:30:00-05:00[America/Chicago]", "hour", 1) // "2024-06-15T10:30:00-05:00[America/Chicago]"
  * @example cycleZoned("2024-12-15T09:30:00-06:00[America/Chicago]", "month", 1) // "2024-01-15T09:30:00-06:00[America/Chicago]" (wraps, stays in the same year)
  * @example cycleZoned("2024-03-10T01:30:00-06:00[America/Chicago]", "hour", 1) // "2024-03-10T03:30:00-05:00[America/Chicago]" (cycled hour lands in a spring-forward gap; "compatible" skips forward)
  * @example cycleZoned("2024-03-10T01:30:00-06:00[America/Chicago]", "hour", 1, { disambiguation: "reject" }) // "" (same gap; "reject" throws)
+ * @example cycleZoned("2024-11-03T00:30:00-05:00[America/Chicago]", "hour", 1, { disambiguation: "reject" }) // "2024-11-03T01:30:00-05:00[America/Chicago]" (repeated hour; offset "prefer" keeps -05:00)
+ * @example cycleZoned("2024-11-03T00:30:00-05:00[America/Chicago]", "hour", 1, { disambiguation: "reject", offset: "ignore" }) // ""
  * @example cycleZoned("2024-06-15T09:30:00-05:00[America/Chicago]", "week", 1) // "" ("week" is not a cyclable field)
  * @example cycleZoned("invalid", "hour", 1) // ""
  */
@@ -66,6 +70,10 @@ export function cycleZoned(
     offset?: Offset;
   },
 ): string {
+  if (!isOptionsArgument(options)) {
+    return "";
+  }
+
   if (
     !isValidZonedDateTime(value) ||
     !isValidDateTimeCycleField(field) ||

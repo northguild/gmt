@@ -14,7 +14,7 @@ import { isValidZonedDateTime } from "../validate";
  *   default locale, as ECMA-402 `ResolveLocale` requires.
  *
  * @param value zoned ISO 8601 datetime string
- * @param locale BCP 47 locale tag (e.g. "en-US", "fr-FR")
+ * @param locale BCP 47 locale tag (e.g. "en-US", "fr-FR"), or a preference list of tags (ECMA-402; the first with locale data is read). Required: omitted, or an empty list (which ECMA-402 would resolve to the host default), returns null
  * @returns locale-relative day-of-week index (0–6) or null on invalid input
  *
  * @example getLocaleZonedDayOfWeek("2024-02-25T12:00:00+00:00[UTC]", "en-US") // 0 (Sunday)
@@ -22,10 +22,11 @@ import { isValidZonedDateTime } from "../validate";
  * @example getLocaleZonedDayOfWeek("2024-02-26T12:00:00+00:00[UTC]", "fr-FR") // 0 (Monday)
  * @example getLocaleZonedDayOfWeek("invalid-zoned", "en-US") // null
  * @example getLocaleZonedDayOfWeek("2024-02-26T12:00:00+00:00[UTC]", "not-a-locale-!!") // null
+ * @example getLocaleZonedDayOfWeek("2024-05-15T12:00:00+02:00[Europe/Berlin]", ["fr-FR", "en-US"]) // 2
  */
 export function getLocaleZonedDayOfWeek(
   value: string,
-  locale: string,
+  locale: string | string[],
 ): number | null {
   if (!isValidZonedDateTime(value)) return null;
 

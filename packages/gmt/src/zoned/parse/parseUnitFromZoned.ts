@@ -1,10 +1,15 @@
+import type { Temporal } from "@js-temporal/polyfill";
 import { getWeekNumber } from "../../plain/calculate/getWeekNumber";
 import { isValidZonedDateTime } from "../validate";
 import { zonedDateTimeFrom } from "../../internal";
+import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
+import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Units supported by `parseUnitFromZoned` when extracting a value from a zoned
- * ISO string. Includes `timeZone` for reading the zone identifier.
+ * ISO string. Includes `timeZone` for reading the zone identifier. Each Temporal unit is also
+ * accepted in its plural form (`"months"`), as Temporal accepts.
  *
  * @remarks Members:
  *
@@ -19,7 +24,8 @@ import { zonedDateTimeFrom } from "../../internal";
  * | `minute` | Zero-padded 2. |
  * | `second` | Zero-padded 2. |
  * | `millisecond` | Zero-padded 3. |
- * | `nanosecond` | Zero-padded 3. |
+ * | `microsecond` | Zero-padded 3 (Temporal's 0–999 field). |
+ * | `nanosecond` | Zero-padded 3 (Temporal's 0–999 field). |
  * | `timeZone` | IANA timeZone identifier string. |
  *
  * @example
@@ -27,19 +33,22 @@ import { zonedDateTimeFrom } from "../../internal";
  * const u: ZonedParseUnit = "month";
  */
 export type ZonedParseUnit =
-  | "year"
-  | "month"
-  | "week"
-  | "day"
+  | Temporal.SmallestUnit<
+      | "year"
+      | "month"
+      | "week"
+      | "day"
+      | "hour"
+      | "minute"
+      | "second"
+      | "millisecond"
+      | "microsecond"
+      | "nanosecond"
+    >
   | "dayOfWeek"
-  | "hour"
-  | "minute"
-  | "second"
-  | "millisecond"
-  | "nanosecond"
   | "timeZone";
 
-function isValidZonedUnit(unit: string): unit is ZonedParseUnit {
+function isValidZonedUnit(unit: string): boolean {
   return [
     "year",
     "month",
@@ -50,6 +59,7 @@ function isValidZonedUnit(unit: string): unit is ZonedParseUnit {
     "minute",
     "second",
     "millisecond",
+    "microsecond",
     "nanosecond",
     "timeZone",
   ].includes(unit);
@@ -58,16 +68,22 @@ function isValidZonedUnit(unit: string): unit is ZonedParseUnit {
 /**
  * Return the requested unit value from an ISO 8601 zoned datetime string.
  *
- * - Valid units: "year", "month", "week", "day", "dayOfWeek", "hour", "minute", "second", "millisecond", "nanosecond", "timeZone".
+ * - Valid units: "year", "month", "week", "day", "dayOfWeek", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond", "timeZone".
  * - Uses Temporal.ZonedDateTime.from to parse.
+ * - `unit` accepts the singular or plural name of a Temporal unit (`"hour"` or `"hours"`), as Temporal
+ *   does; `"dayOfWeek"` has no plural.
+ * - `weekStartsOn: "sunday"` numbers weeks by UTS #35 (week 1 holds 1 January, so late-December
+ *   days can be week 1); any value other than `"monday"` or `"sunday"` returns "".
  * - Returns "" for invalid input.
  *
  * @param value zoned ISO 8601 datetime string
  * @param unit unit to extract
- * @param options optional settings (e.g. weekStartsOn for week calculations)
+ * @param optionsArg optional settings (e.g. weekStartsOn for week calculations); a non-object value (such as `null`) is invalid
  * @returns string representation of the requested unit or "" when invalid
  *
  * @example parseUnitFromZoned("2024-02-29T12:34:56.789+00:00[UTC]", "year") // "2024"
+ * @example parseUnitFromZoned("2024-02-29T12:34:56.789+00:00[UTC]", "milliseconds") // "789"
+ * @example parseUnitFromZoned("2024-12-31T12:00:00+00:00[UTC]", "week", { weekStartsOn: "sunday" }) // "1"
  * @example parseUnitFromZoned("invalid", "year") // ""
  */
 export function parseUnitFromZoned(
@@ -75,15 +91,25 @@ export function parseUnitFromZoned(
   unit: ZonedParseUnit,
   optionsArg?: { weekStartsOn?: "monday" | "sunday" },
 ): string {
-  if (!isValidZonedDateTime(value) || !isValidZonedUnit(unit)) {
+  // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
+  if (!isOptionsArgument(optionsArg)) {
     return "";
   }
-  const weekStartsOn = optionsArg?.weekStartsOn ?? "monday";
+  const resolvedUnit = resolveDateTimeUnit(unit);
+  const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
+
+  if (
+    !isValidZonedDateTime(value) ||
+    !isValidZonedUnit(resolvedUnit) ||
+    weekStartsOn === null
+  ) {
+    return "";
+  }
 
   try {
     const zonedDateTime = zonedDateTimeFrom(value);
 
-    switch (unit) {
+    switch (resolvedUnit) {
       case "year":
         return zonedDateTime.year.toString();
       case "month":
@@ -105,6 +131,8 @@ export function parseUnitFromZoned(
         return zonedDateTime.second.toString().padStart(2, "0");
       case "millisecond":
         return zonedDateTime.millisecond.toString().padStart(3, "0");
+      case "microsecond":
+        return zonedDateTime.microsecond.toString().padStart(3, "0");
       case "nanosecond":
         return zonedDateTime.nanosecond.toString().padStart(3, "0");
       case "timeZone":

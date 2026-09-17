@@ -326,9 +326,9 @@ describe("splitIntervalByUnitZoned", () => {
       expect(result[0].end).toBe(end);
     }
   });
-  // E5 (issue #78), decision of record D2 — see isValidZonedDateTime.test.ts for the full
-  // rationale: zoned/ rejects any [u-ca=...] calendar annotation outright.
-  it("returns [] when start carries a calendar annotation", () => {
+  // The arguments name different calendars (hebrew and a bare iso8601 string), so the
+  // result is the sentinel (TC39 CalendarEquals makes until throw).
+  it("returns [] when start and end name different calendars", () => {
     expect(
       splitIntervalByUnitZoned(
         "2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]",
@@ -347,7 +347,7 @@ describe("splitIntervalByUnitZoned", () => {
 describe("splitIntervalByUnitZoned with GMT calendar-annotated values", () => {
   const Y = calendarZonedFixtures.hebrewLeapYearSpan;
   const ISLAMIC_END =
-    "1446-03-30T00:00:00-04:00[u-ca=islamic-tabular][America/New_York]";
+    "2024-10-03T00:00:00-04:00[America/New_York][u-ca=islamic-tbla]";
 
   it("splits a Hebrew leap year into 13 month-slices, tagging every boundary", () => {
     const slices = splitIntervalByUnitZoned(
@@ -361,8 +361,8 @@ describe("splitIntervalByUnitZoned with GMT calendar-annotated values", () => {
     for (const slice of slices) {
       expect(slice.start).toContain("[u-ca=hebrew]");
       expect(slice.end).toContain("[u-ca=hebrew]");
-      expect(slice.start.indexOf("[u-ca=")).toBeLessThan(
-        slice.start.indexOf("[America/New_York]"),
+      expect(slice.start.indexOf("[America/New_York]")).toBeLessThan(
+        slice.start.indexOf("[u-ca="),
       );
     }
     expect(slices[0].start).toBe(Y.tishri1_5784NewYork);
@@ -370,50 +370,41 @@ describe("splitIntervalByUnitZoned with GMT calendar-annotated values", () => {
   });
 
   it("steps a sub-day unit inside the resolved calendar", () => {
-    const dayStart = "5784-04-20T00:00:00-05:00[u-ca=hebrew][America/New_York]";
-    const dayEnd = "5784-04-21T00:00:00-05:00[u-ca=hebrew][America/New_York]";
+    const dayStart = "2024-01-01T00:00:00-05:00[America/New_York][u-ca=hebrew]";
+    const dayEnd = "2024-01-02T00:00:00-05:00[America/New_York][u-ca=hebrew]";
 
     expect(splitIntervalByUnitZoned(dayStart, dayEnd, "hour", 6)).toEqual([
       {
         start: dayStart,
-        end: "5784-04-20T06:00:00-05:00[u-ca=hebrew][America/New_York]",
+        end: "2024-01-01T06:00:00-05:00[America/New_York][u-ca=hebrew]",
       },
       {
-        start: "5784-04-20T06:00:00-05:00[u-ca=hebrew][America/New_York]",
-        end: "5784-04-20T12:00:00-05:00[u-ca=hebrew][America/New_York]",
+        start: "2024-01-01T06:00:00-05:00[America/New_York][u-ca=hebrew]",
+        end: "2024-01-01T12:00:00-05:00[America/New_York][u-ca=hebrew]",
       },
       {
-        start: "5784-04-20T12:00:00-05:00[u-ca=hebrew][America/New_York]",
-        end: "5784-04-20T18:00:00-05:00[u-ca=hebrew][America/New_York]",
+        start: "2024-01-01T12:00:00-05:00[America/New_York][u-ca=hebrew]",
+        end: "2024-01-01T18:00:00-05:00[America/New_York][u-ca=hebrew]",
       },
       {
-        start: "5784-04-20T18:00:00-05:00[u-ca=hebrew][America/New_York]",
+        start: "2024-01-01T18:00:00-05:00[America/New_York][u-ca=hebrew]",
         end: dayEnd,
       },
     ]);
   });
 
-  // D5 fallback: a mismatched pair steps in Gregorian rather than returning the sentinel, and the
-  // boundaries come back as bare ISO because "gregorian" is the resolved calendar.
-  it("falls back to Gregorian month-stepping for a mismatched pair", () => {
-    const slices = splitIntervalByUnitZoned(
-      Y.tishri1_5784NewYork,
-      ISLAMIC_END,
-      "month",
-      1,
-    );
-
-    expect(slices).toHaveLength(13);
-    for (const slice of slices) {
-      expect(slice.start).not.toContain("[u-ca=");
-      expect(slice.end).not.toContain("[u-ca=");
-    }
+  // TC39 CalendarEquals — a pair naming different calendars returns [] (native Chromium
+  // 153 until: "Mismatched calendars.").
+  it("returns [] for a pair naming different calendars", () => {
+    expect(
+      splitIntervalByUnitZoned(Y.tishri1_5784NewYork, ISLAMIC_END, "month", 1),
+    ).toEqual([]);
   });
 
   it.each`
     value                                                         | reason
-    ${"5784-01-01T00:00:00-04:00[America/New_York][u-ca=hebrew]"} | ${"GMT digits in Temporal's segment ordering"}
-    ${"5785-13-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"} | ${"month 13 in a non-leap Hebrew year"}
+    ${"5784-01-01T00:00:00-04:00[America/New_York][u-ca=hebrew]"} | ${"-04:00 is not New York's offset on ISO 5784-01-01"}
+    ${"2024-13-15T14:30:00-05:00[America/New_York][u-ca=hebrew]"} | ${"ISO month 13 (the digits are ISO)"}
   `("returns [] when the start is $value ($reason)", ({ value }) => {
     expect(splitIntervalByUnitZoned(value, Y.isoEnd, "day", 1)).toEqual([]);
   });
@@ -422,66 +413,68 @@ describe("splitIntervalByUnitZoned with GMT calendar-annotated values", () => {
 // CORE-6 S5: calendar-unit boundaries are the calendar's own NonISODateAdd from the start (anchored).
 // Values: Chromium 153 native Temporal `start.add({ months: k })`, read in the calendar.
 describe("splitIntervalByUnitZoned in non-ISO calendars (CORE-6)", () => {
-  it("splits 279517-08-05 to 279517-10-05 in hebrew by month near the maximum (D1)", () => {
+  it("splits +275760-07-10 to +275760-09-07 in hebrew by month near the maximum (D1)", () => {
     expect(
       splitIntervalByUnitZoned(
-        "279517-08-05T00:00:00+00:00[u-ca=hebrew][UTC]",
-        "279517-10-05T00:00:00+00:00[u-ca=hebrew][UTC]",
+        "+275760-07-10T00:00:00+00:00[UTC][u-ca=hebrew]",
+        "+275760-09-07T00:00:00+00:00[UTC][u-ca=hebrew]",
         "month",
         1,
       ),
     ).toEqual([
       {
-        start: "279517-08-05T00:00:00+00:00[u-ca=hebrew][UTC]",
-        end: "279517-09-05T00:00:00+00:00[u-ca=hebrew][UTC]",
+        start: "+275760-07-10T00:00:00+00:00[UTC][u-ca=hebrew]",
+        end: "+275760-08-09T00:00:00+00:00[UTC][u-ca=hebrew]",
       },
       {
-        start: "279517-09-05T00:00:00+00:00[u-ca=hebrew][UTC]",
-        end: "279517-10-05T00:00:00+00:00[u-ca=hebrew][UTC]",
+        start: "+275760-08-09T00:00:00+00:00[UTC][u-ca=hebrew]",
+        end: "+275760-09-07T00:00:00+00:00[UTC][u-ca=hebrew]",
       },
     ]);
   });
 
-  it("splits 1543-01-31 to 1543-04-30 in buddhist by month with proleptic month ends (D2)", () => {
+  it("splits 1000-01-31 to 1000-04-30 in buddhist by month with proleptic month ends (D2)", () => {
     expect(
       splitIntervalByUnitZoned(
-        "1543-01-31T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]",
-        "1543-04-30T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]",
+        "1000-01-31T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]",
+        "1000-04-30T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]",
         "month",
         1,
       ),
     ).toEqual([
       {
-        start: "1543-01-31T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]",
-        end: "1543-02-28T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]",
+        start: "1000-01-31T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]",
+        end: "1000-02-28T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]",
       },
       {
-        start: "1543-02-28T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]",
-        end: "1543-03-31T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]",
+        start: "1000-02-28T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]",
+        end: "1000-03-31T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]",
       },
       {
-        start: "1543-03-31T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]",
-        end: "1543-04-30T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]",
+        start: "1000-03-31T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]",
+        end: "1000-04-30T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]",
       },
     ]);
   });
 
-  it("splits -096239-06-23 to -096239-08-23 in hebrew by month in a year <= 0 (D3)", () => {
+  // The offset is written by FormatDateTimeUTCOffsetRounded, so local mean time -04:56:02 is
+  // written -04:56 (native Chromium 153 agrees).
+  it("splits -100000-01-01 to -100000-02-29 in hebrew by month in a year <= 0 (D3)", () => {
     expect(
       splitIntervalByUnitZoned(
-        "-096239-06-23T00:00:00-04:56:02[u-ca=hebrew][America/New_York]",
-        "-096239-08-23T00:00:00-04:56:02[u-ca=hebrew][America/New_York]",
+        "-100000-01-01T00:00:00-04:56:02[America/New_York][u-ca=hebrew]",
+        "-100000-02-29T00:00:00-04:56:02[America/New_York][u-ca=hebrew]",
         "month",
         1,
       ),
     ).toEqual([
       {
-        start: "-096239-06-23T00:00:00-04:56:02[u-ca=hebrew][America/New_York]",
-        end: "-096239-07-23T00:00:00-04:56:02[u-ca=hebrew][America/New_York]",
+        start: "-100000-01-01T00:00:00-04:56[America/New_York][u-ca=hebrew]",
+        end: "-100000-01-30T00:00:00-04:56[America/New_York][u-ca=hebrew]",
       },
       {
-        start: "-096239-07-23T00:00:00-04:56:02[u-ca=hebrew][America/New_York]",
-        end: "-096239-08-23T00:00:00-04:56:02[u-ca=hebrew][America/New_York]",
+        start: "-100000-01-30T00:00:00-04:56[America/New_York][u-ca=hebrew]",
+        end: "-100000-02-29T00:00:00-04:56[America/New_York][u-ca=hebrew]",
       },
     ]);
   });
@@ -700,4 +693,24 @@ describe("splitIntervalByUnitZoned default piece limit", () => {
       ]);
     },
   );
+});
+
+// An unknown unit is invalid input whatever the span: a non-empty interval already returns
+// [] for it, so a zero-length interval must too, rather than the one zero-length slice a valid
+// unit gives.
+describe("splitIntervalByUnitZoned rejects an invalid unit on a zero-length interval", () => {
+  it.each`
+    unit
+    ${"invalid"}
+    ${"fortnight"}
+  `("returns [] for unit $unit", ({ unit }) => {
+    expect(
+      splitIntervalByUnitZoned(
+        "2024-01-01T00:00:00+00:00[UTC]",
+        "2024-01-01T00:00:00+00:00[UTC]",
+        unit,
+        1,
+      ),
+    ).toEqual([]);
+  });
 });

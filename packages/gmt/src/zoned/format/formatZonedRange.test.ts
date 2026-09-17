@@ -354,4 +354,37 @@ describe("formatZonedRange", () => {
       ).toBe(expected);
     },
   );
+
+  // ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale data
+  // is used, and a malformed tag anywhere in the list is invalid input. Expected strings from native
+  // Intl with the same list.
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"03/02/2024, 14:30 – 16:46"}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
+  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+    expect(
+      formatZonedRange(
+        "2024-02-03T14:30:45+01:00[Europe/Paris]",
+        "2024-02-03T16:46:15+01:00[Europe/Paris]",
+        locale,
+        { dateStyle: "short", timeStyle: "short" },
+      ),
+    ).toBe(normalizeDateTime(expected));
+  });
+});
+
+// Plan #14: ECMA-402 CoerceOptionsToObject throws TypeError for null options (native Chromium 153
+// `new Intl.DateTimeFormat("en-US", null)`), so null is invalid input.
+describe("formatZonedRange with null options", () => {
+  it("returns an empty string for options null", () => {
+    expect(
+      formatZonedRange(
+        "2024-02-03T14:30:00-05:00[America/New_York]",
+        "2024-02-05T17:00:00-05:00[America/New_York]",
+        MustTestLocales.enUS,
+        null as never,
+      ),
+    ).toBe("");
+  });
 });

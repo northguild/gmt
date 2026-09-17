@@ -531,4 +531,61 @@ describe("formatRelativeZoned months in the first month of the range", () => {
       ).toBe(expected);
     },
   );
+
+  // ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale data
+  // is used, and a malformed tag anywhere in the list is invalid input. Expected strings from native
+  // Intl with the same list.
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"il y a 30 minutes"}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
+  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+    expect(
+      formatRelativeZoned("2024-02-28T23:30:00+00:00[UTC]", locale, {
+        reference: "2024-02-29T00:00:00+00:00[UTC]",
+      }),
+    ).toBe(expected);
+  });
+
+  // Beyond a day, the unit is auto-picked with formatRelativeDate's thresholds: day under 7 days, week under
+  // 28, month under 365, year beyond. Totals are rounded (default "round"); labels from native
+  // Intl.RelativeTimeFormat("en-US", { numeric: "auto" }).
+  it.each`
+    value                               | expected          | reason
+    ${"2024-02-26T00:00:00+00:00[UTC]"} | ${"3 days ago"}   | ${"3 days: day"}
+    ${"2024-02-22T00:00:00+00:00[UTC]"} | ${"last week"}    | ${"7 days: week"}
+    ${"2024-02-15T00:00:00+00:00[UTC]"} | ${"2 weeks ago"}  | ${"14 days: week"}
+    ${"2023-12-29T00:00:00+00:00[UTC]"} | ${"2 months ago"} | ${"62 days: month, 29 December to 29 February"}
+    ${"2025-02-28T00:00:00+00:00[UTC]"} | ${"next year"}    | ${"365 days: year, 29 February 2024 + 1 year constrains to 28 February"}
+    ${"2021-03-01T00:00:00+00:00[UTC]"} | ${"3 years ago"}  | ${"1095 days: year"}
+  `(
+    "formats $value against 2024-02-29T00:00Z as $expected ($reason)",
+    ({ value, expected }) => {
+      expect(
+        formatRelativeZoned(value, "en-US", {
+          reference: "2024-02-29T00:00:00+00:00[UTC]",
+        }),
+      ).toBe(expected);
+    },
+  );
+});
+
+// Plan #14: options must be an object or omitted, as Temporal's GetOptionsObject requires (native
+// Chromium 153 `Temporal.PlainDate.from("2024-02-03", null)`, `"x"` and `1` all throw TypeError), so
+// null and every other non-object is invalid input.
+describe("formatRelativeZoned with non-object options", () => {
+  it.each`
+    options
+    ${null}
+    ${"long"}
+    ${1}
+  `("returns an empty string for options $options", ({ options }) => {
+    expect(
+      formatRelativeZoned(
+        "2024-03-12T10:00:00-04:00[America/New_York]",
+        MustTestLocales.enUS,
+        options as never,
+      ),
+    ).toBe("");
+  });
 });

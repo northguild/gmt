@@ -44,6 +44,18 @@ describe("mergeIntervalsZoned", () => {
     ]);
   });
 
+  // Half-open [start, end), as in `mergeIntervals`: touching intervals join, and an empty interval
+  // adds no instants — it is absorbed when it touches a run and dropped otherwise.
+  it.each`
+    intervals                                                                                                                                                                                             | expected                                                                                                                                                                              | reason
+    ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-01-01T12:00:00+00:00[UTC]" }, { start: "2024-01-01T12:00:00.000000001+00:00[UTC]", end: "2024-01-01T17:00:00+00:00[UTC]" }]}                 | ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-01-01T12:00:00+00:00[UTC]" }, { start: "2024-01-01T12:00:00.000000001+00:00[UTC]", end: "2024-01-01T17:00:00+00:00[UTC]" }]} | ${"a one-nanosecond gap keeps two runs"}
+    ${[{ start: "2024-01-01T12:00:00+00:00[UTC]", end: "2024-01-01T12:00:00+00:00[UTC]" }]}                                                                                                               | ${[]}                                                                                                                                                                                 | ${"a lone empty interval is dropped"}
+    ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-01-01T12:00:00+00:00[UTC]" }, { start: "2024-01-01T17:00:00+00:00[UTC]", end: "2024-01-01T17:00:00+00:00[UTC]" }]}                           | ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-01-01T12:00:00+00:00[UTC]" }]}                                                                                               | ${"an empty interval apart from every run is dropped"}
+    ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-01-01T12:00:00+00:00[UTC]" }, { start: "2024-01-01T07:00:00-05:00[America/New_York]", end: "2024-01-01T07:00:00-05:00[America/New_York]" }]} | ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-01-01T12:00:00+00:00[UTC]" }]}                                                                                               | ${"an empty interval at a run's end is absorbed, keeping the run's end"}
+  `("merges $intervals into $expected ($reason)", ({ intervals, expected }) => {
+    expect(mergeIntervalsZoned(intervals)).toEqual(expected);
+  });
+
   it("returns [] for an empty list", () => {
     expect(mergeIntervalsZoned([])).toEqual([]);
   });
@@ -178,9 +190,9 @@ describe("mergeIntervalsZoned", () => {
       },
     ]);
   });
-  // E5 (issue #78), decision of record D2 — see isValidZonedDateTime.test.ts for the full
-  // rationale: zoned/ rejects any [u-ca=...] calendar annotation outright.
-  it("returns [] when any interval endpoint carries a calendar annotation", () => {
+  // The arguments name different calendars (hebrew and a bare iso8601 string), so the
+  // result is the sentinel (there is no single output calendar).
+  it("returns [] when the interval endpoints name different calendars", () => {
     expect(
       mergeIntervalsZoned([
         {

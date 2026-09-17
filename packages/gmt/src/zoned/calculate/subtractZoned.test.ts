@@ -145,17 +145,21 @@ describe("subtractZoned", () => {
 
   // disambiguation: fall-back overlap (result of - 1 day lands on an ambiguous local time)
   it.each`
-    value                                            | disambiguation  | expected
-    ${"2024-11-04T01:30:00-05:00[America/New_York]"} | ${undefined}    | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
-    ${"2024-11-04T01:30:00-05:00[America/New_York]"} | ${"compatible"} | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
-    ${"2024-11-04T01:30:00-05:00[America/New_York]"} | ${"earlier"}    | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
-    ${"2024-11-04T01:30:00-05:00[America/New_York]"} | ${"later"}      | ${"2024-11-03T01:30:00-05:00[America/New_York]"}
-    ${"2024-11-04T01:30:00-05:00[America/New_York]"} | ${"reject"}     | ${""}
-    ${"2024-10-28T02:30:00+01:00[Europe/Berlin]"}    | ${undefined}    | ${"2024-10-27T02:30:00+02:00[Europe/Berlin]"}
-    ${"2024-10-28T02:30:00+01:00[Europe/Berlin]"}    | ${"compatible"} | ${"2024-10-27T02:30:00+02:00[Europe/Berlin]"}
-    ${"2024-10-28T02:30:00+01:00[Europe/Berlin]"}    | ${"earlier"}    | ${"2024-10-27T02:30:00+02:00[Europe/Berlin]"}
-    ${"2024-10-28T02:30:00+01:00[Europe/Berlin]"}    | ${"later"}      | ${"2024-10-27T02:30:00+01:00[Europe/Berlin]"}
-    ${"2024-10-28T02:30:00+01:00[Europe/Berlin]"}    | ${"reject"}     | ${""}
+    value                                               | disambiguation  | expected
+    ${"2024-11-04T01:30:00-05:00[America/New_York]"}    | ${undefined}    | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
+    ${"2024-11-04T01:30:00-05:00[America/New_York]"}    | ${"compatible"} | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
+    ${"2024-11-04T01:30:00-05:00[America/New_York]"}    | ${"earlier"}    | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
+    ${"2024-11-04T01:30:00-05:00[America/New_York]"}    | ${"later"}      | ${"2024-11-03T01:30:00-05:00[America/New_York]"}
+    ${"2024-11-04T01:30:00-05:00[America/New_York]"}    | ${"reject"}     | ${""}
+    ${"2024-10-28T02:30:00+01:00[Europe/Berlin]"}       | ${undefined}    | ${"2024-10-27T02:30:00+02:00[Europe/Berlin]"}
+    ${"2024-10-28T02:30:00+01:00[Europe/Berlin]"}       | ${"compatible"} | ${"2024-10-27T02:30:00+02:00[Europe/Berlin]"}
+    ${"2024-10-28T02:30:00+01:00[Europe/Berlin]"}       | ${"earlier"}    | ${"2024-10-27T02:30:00+02:00[Europe/Berlin]"}
+    ${"2024-10-28T02:30:00+01:00[Europe/Berlin]"}       | ${"later"}      | ${"2024-10-27T02:30:00+01:00[Europe/Berlin]"}
+    ${"2024-10-28T02:30:00+01:00[Europe/Berlin]"}       | ${"reject"}     | ${""}
+    ${"2024-04-08T01:45:00+10:30[Australia/Lord_Howe]"} | ${"compatible"} | ${"2024-04-07T01:45:00+11:00[Australia/Lord_Howe]"}
+    ${"2024-04-08T01:45:00+10:30[Australia/Lord_Howe]"} | ${"earlier"}    | ${"2024-04-07T01:45:00+11:00[Australia/Lord_Howe]"}
+    ${"2024-04-08T01:45:00+10:30[Australia/Lord_Howe]"} | ${"later"}      | ${"2024-04-07T01:45:00+10:30[Australia/Lord_Howe]"}
+    ${"2024-04-08T01:45:00+10:30[Australia/Lord_Howe]"} | ${"reject"}     | ${""}
   `(
     "resolves fall-back overlap for $value - 1 day with disambiguation $disambiguation to $expected",
     ({ value, disambiguation, expected }) => {
@@ -174,6 +178,9 @@ describe("subtractZoned", () => {
     ${"2024-11-04T02:30:00-05:00[America/New_York]"} | ${{ days: 1, hours: 1 }}    | ${"earlier"}   | ${"2024-11-03T01:30:00-05:00[America/New_York]"}
     ${"2024-11-04T01:40:00-05:00[America/New_York]"} | ${{ days: 1, minutes: 10 }} | ${"later"}     | ${"2024-11-03T01:30:00-05:00[America/New_York]"}
     ${"2024-11-04T01:40:00-05:00[America/New_York]"} | ${{ days: 1, minutes: 10 }} | ${"reject"}    | ${""}
+    ${"2024-03-11T02:40:00-04:00[America/New_York]"} | ${{ days: 1, minutes: 10 }} | ${"earlier"}   | ${"2024-03-10T01:30:00-05:00[America/New_York]"}
+    ${"2024-03-11T02:40:00-04:00[America/New_York]"} | ${{ days: 1, minutes: 10 }} | ${"later"}     | ${"2024-03-10T03:30:00-04:00[America/New_York]"}
+    ${"2024-03-11T02:40:00-04:00[America/New_York]"} | ${{ days: 1, minutes: 10 }} | ${"reject"}    | ${""}
   `(
     "subtracts the time portion of $units from $value in exact time with disambiguation $disambiguation, returns $expected",
     ({ value, units, disambiguation, expected }) => {
@@ -181,22 +188,33 @@ describe("subtractZoned", () => {
     },
   );
 
-  // disambiguation: spring-forward gap (result of - 1 day lands on a nonexistent local time,
-  // but Temporal's arithmetic already advances past it, so disambiguation has no effect)
+  // disambiguation: spring-forward gap. Temporal §6.5.5 AddZonedDateTime (subtraction adds the
+  // negated duration) resolves the intermediate wall clock (date moved, time kept) with
+  // GetEpochNanosecondsFor(timeZone, dateTime, disambiguation); DisambiguatePossibleEpochNanoseconds
+  // shifts a gap landing by the gap length: "earlier" backward, "compatible"/"later" forward,
+  // "reject" throws (the sentinel).
   it.each`
-    value                                            | disambiguation  | expected
-    ${"2024-03-11T02:30:00-04:00[America/New_York]"} | ${undefined}    | ${"2024-03-10T03:30:00-04:00[America/New_York]"}
-    ${"2024-03-11T02:30:00-04:00[America/New_York]"} | ${"compatible"} | ${"2024-03-10T03:30:00-04:00[America/New_York]"}
-    ${"2024-03-11T02:30:00-04:00[America/New_York]"} | ${"earlier"}    | ${"2024-03-10T03:30:00-04:00[America/New_York]"}
-    ${"2024-03-11T02:30:00-04:00[America/New_York]"} | ${"later"}      | ${"2024-03-10T03:30:00-04:00[America/New_York]"}
-    ${"2024-03-11T02:30:00-04:00[America/New_York]"} | ${"reject"}     | ${"2024-03-10T03:30:00-04:00[America/New_York]"}
-    ${"2024-04-01T02:30:00+02:00[Europe/Berlin]"}    | ${undefined}    | ${"2024-03-31T03:30:00+02:00[Europe/Berlin]"}
-    ${"2024-04-01T02:30:00+02:00[Europe/Berlin]"}    | ${"compatible"} | ${"2024-03-31T03:30:00+02:00[Europe/Berlin]"}
-    ${"2024-04-01T02:30:00+02:00[Europe/Berlin]"}    | ${"earlier"}    | ${"2024-03-31T03:30:00+02:00[Europe/Berlin]"}
-    ${"2024-04-01T02:30:00+02:00[Europe/Berlin]"}    | ${"later"}      | ${"2024-03-31T03:30:00+02:00[Europe/Berlin]"}
-    ${"2024-04-01T02:30:00+02:00[Europe/Berlin]"}    | ${"reject"}     | ${"2024-03-31T03:30:00+02:00[Europe/Berlin]"}
+    value                                               | disambiguation  | expected
+    ${"2024-03-11T02:30:00-04:00[America/New_York]"}    | ${undefined}    | ${"2024-03-10T03:30:00-04:00[America/New_York]"}
+    ${"2024-03-11T02:30:00-04:00[America/New_York]"}    | ${"compatible"} | ${"2024-03-10T03:30:00-04:00[America/New_York]"}
+    ${"2024-03-11T02:30:00-04:00[America/New_York]"}    | ${"earlier"}    | ${"2024-03-10T01:30:00-05:00[America/New_York]"}
+    ${"2024-03-11T02:30:00-04:00[America/New_York]"}    | ${"later"}      | ${"2024-03-10T03:30:00-04:00[America/New_York]"}
+    ${"2024-03-11T02:30:00-04:00[America/New_York]"}    | ${"reject"}     | ${""}
+    ${"2024-04-01T02:30:00+02:00[Europe/Berlin]"}       | ${undefined}    | ${"2024-03-31T03:30:00+02:00[Europe/Berlin]"}
+    ${"2024-04-01T02:30:00+02:00[Europe/Berlin]"}       | ${"compatible"} | ${"2024-03-31T03:30:00+02:00[Europe/Berlin]"}
+    ${"2024-04-01T02:30:00+02:00[Europe/Berlin]"}       | ${"earlier"}    | ${"2024-03-31T01:30:00+01:00[Europe/Berlin]"}
+    ${"2024-04-01T02:30:00+02:00[Europe/Berlin]"}       | ${"later"}      | ${"2024-03-31T03:30:00+02:00[Europe/Berlin]"}
+    ${"2024-04-01T02:30:00+02:00[Europe/Berlin]"}       | ${"reject"}     | ${""}
+    ${"2024-10-07T02:15:00+11:00[Australia/Lord_Howe]"} | ${"compatible"} | ${"2024-10-06T02:45:00+11:00[Australia/Lord_Howe]"}
+    ${"2024-10-07T02:15:00+11:00[Australia/Lord_Howe]"} | ${"earlier"}    | ${"2024-10-06T01:45:00+10:30[Australia/Lord_Howe]"}
+    ${"2024-10-07T02:15:00+11:00[Australia/Lord_Howe]"} | ${"later"}      | ${"2024-10-06T02:45:00+11:00[Australia/Lord_Howe]"}
+    ${"2024-10-07T02:15:00+11:00[Australia/Lord_Howe]"} | ${"reject"}     | ${""}
+    ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}        | ${"compatible"} | ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}
+    ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}        | ${"earlier"}    | ${"2011-12-29T12:00:00-10:00[Pacific/Apia]"}
+    ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}        | ${"later"}      | ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}
+    ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}        | ${"reject"}     | ${""}
   `(
-    "spring-forward gap for $value - 1 day is unaffected by disambiguation $disambiguation, returns $expected",
+    "resolves the spring-forward gap for $value - 1 day with disambiguation $disambiguation to $expected",
     ({ value, disambiguation, expected }) => {
       const optionsArg =
         disambiguation === undefined ? undefined : { disambiguation };
@@ -204,32 +222,20 @@ describe("subtractZoned", () => {
     },
   );
 
-  // offset is accepted but inert: the internal rebuild step reconstructs from a plain datetime
-  // string with no offset embedded, so every offset value produces identical output
-  it.each`
-    offset
-    ${undefined}
-    ${"prefer"}
-    ${"use"}
-    ${"ignore"}
-    ${"reject"}
-  `(
-    "produces identical output regardless of offset $offset (inert on this function)",
-    ({ offset }) => {
-      const value = "2024-11-04T01:30:00-05:00[America/New_York]";
-      const withoutOffset = subtractZoned(
-        value,
+  // `offset` was removed in 1.16.0: the result's wall clock is resolved from a plain date-time,
+  // which has no UTC offset for it to act on (Temporal PlainDateTime#toZonedDateTime reads only
+  // `disambiguation`). Passing it is a type error, and a JavaScript caller's stray property changes
+  // nothing.
+  it("treats the removed offset option as a type error and ignores it at runtime", () => {
+    expect(
+      subtractZoned(
+        "2024-11-04T01:30:00-05:00[America/New_York]",
         { days: 1 },
-        { disambiguation: "later" },
-      );
-      const withOffset = subtractZoned(
-        value,
-        { days: 1 },
-        { disambiguation: "later", offset },
-      );
-      expect(withOffset).toBe(withoutOffset);
-    },
-  );
+        // @ts-expect-error -- `offset` was removed in 1.16.0
+        { disambiguation: "later", offset: "reject" },
+      ),
+    ).toBe("2024-11-03T01:30:00-05:00[America/New_York]");
+  });
 
   for (const { timeZone, value } of localMar31NoonBattleCases) {
     it(`clamps out-of-range results with the default overflow (constrain) across battle-test timeZone ${timeZone}`, () => {
@@ -292,20 +298,22 @@ describe("subtractZoned", () => {
     ).toBe("2024-02-29T12:00:00-05:00[America/New_York]");
   });
   // E5 (issue #78), decision of record D2 -- see addZoned.test.ts for the full rationale.
-  it('returns "" when value carries a calendar annotation', () => {
+  // Temporal's own RFC 9557 string is GMT's calendar grammar. ISO 2024-01-01 is 20 Tevet
+  // 5784; - 1 Hebrew month is 20 Kislev, ISO 2023-12-03. Expected: native Temporal (Chromium 153).
+  it("subtracts a Hebrew month from Temporal's own calendar-annotated string", () => {
     expect(
       subtractZoned("2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]", {
         months: 1,
       }),
-    ).toBe("");
+    ).toBe("2023-12-03T00:00:00+00:00[UTC][u-ca=hebrew]");
   });
 });
 
 // ---------------------------------------------------------------------------------------------
-// E7 (issue #152) — GMT calendar-annotated zoned strings. Every expected value below was produced
-// by running @js-temporal/polyfill@0.5.1, never hand-written.
+// E7 (issue #152) — calendar-annotated zoned strings, RFC 9557 since 1.16.0. Every expected value
+// is native Temporal (Chromium 153), never hand-written.
 // ---------------------------------------------------------------------------------------------
-describe("subtractZoned with GMT calendar-annotated values", () => {
+describe("subtractZoned with RFC 9557 calendar-annotated values", () => {
   const H = calendarZonedFixtures.hebrewLeapMonth;
   const J = calendarZonedFixtures.japaneseEraFold;
 
@@ -348,9 +356,9 @@ describe("subtractZoned with GMT calendar-annotated values", () => {
 
   it.each`
     value                                                         | reason
-    ${"5784-07-15T14:30:00-04:00[America/New_York][u-ca=hebrew]"} | ${"GMT digits in Temporal's segment ordering"}
-    ${"5785-13-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"} | ${"month 13 in a non-leap Hebrew year"}
-    ${"5784-07-15[u-ca=hebrew]"}                                  | ${"a plain calendar date, not a zoned value"}
+    ${"2024-03-25T14:30:00-04:00[u-ca=hebrew][America/New_York]"} | ${"calendar before zone (not RFC 9557)"}
+    ${"2024-13-15T14:30:00-05:00[America/New_York][u-ca=hebrew]"} | ${"ISO month 13 (the digits are ISO)"}
+    ${"2024-03-25[u-ca=hebrew]"}                                  | ${"a plain calendar date, not a zoned value"}
   `('returns "" for $value ($reason)', ({ value }) => {
     expect(subtractZoned(value, { months: 1 })).toBe("");
   });
@@ -402,9 +410,9 @@ describe("subtractZoned at the maximum instant", () => {
 describe("subtractZoned in non-ISO calendars (CORE-6)", () => {
   it.each`
     value                                                                      | expected
-    ${"-280803-05-07T12:00:00+00:00[u-ca=islamic-civil][UTC]"}                 | ${"-280804-05-07T12:00:00+00:00[u-ca=islamic-civil][UTC]"}
-    ${"-280803-05-07T12:00:00-04:56:02[u-ca=islamic-civil][America/New_York]"} | ${"-280804-05-07T12:00:00-04:56:02[u-ca=islamic-civil][America/New_York]"}
-    ${"-280803-05-07T12:00:00-12:00[u-ca=islamic-civil][Etc/GMT+12]"}          | ${"-280804-05-07T12:00:00-12:00[u-ca=islamic-civil][Etc/GMT+12]"}
+    ${"-271820-05-23T12:00:00+00:00[UTC][u-ca=islamic-civil]"}                 | ${"-271821-06-03T12:00:00+00:00[UTC][u-ca=islamic-civil]"}
+    ${"-271820-05-23T12:00:00-04:56:02[America/New_York][u-ca=islamic-civil]"} | ${"-271821-06-03T12:00:00-04:56[America/New_York][u-ca=islamic-civil]"}
+    ${"-271820-05-23T12:00:00-12:00[Etc/GMT+12][u-ca=islamic-civil]"}          | ${"-271821-06-03T12:00:00-12:00[Etc/GMT+12][u-ca=islamic-civil]"}
   `("subtracts 1 year from $value giving $expected", ({ value, expected }) => {
     expect(subtractZoned(value, { years: 1 })).toBe(expected);
   });

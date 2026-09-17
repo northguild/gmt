@@ -31,9 +31,11 @@ import { instantFormatOptions } from "../../internal/instantFormatOptions";
  *   no time zone name. Pass `{ year: "numeric", month: "numeric", day: "numeric" }` to keep that output.
  *   Before 1.16.0 a `timeZone` option re-rendered the instant in that zone; `formatUtc` with its
  *   `timeZone` option gives that text.
+ * - `options` null returns `[]`, as ECMA-402's CoerceOptionsToObject rejects it (a string or number
+ *   options value formats with the defaults, as `Intl.DateTimeFormat` does).
  *
  * @param value zoned ISO 8601 datetime string
- * @param locale optional locale tag (e.g. "en-US")
+ * @param locale optional locale tag (e.g. "en-US"), or a preference list of tags (ECMA-402)
  * @param options optional Intl.DateTimeFormatOptions
  * @returns array of `{ type, value }` parts, or `[]` on invalid input
  *
@@ -42,12 +44,18 @@ import { instantFormatOptions } from "../../internal/instantFormatOptions";
  * @example formatZonedToParts("2024-03-15T14:30:00.000-04:00[America/New_York]", "en-US", { year: "numeric", month: "numeric", day: "numeric" }) // [{ type: "month", value: "3" }, { type: "literal", value: "/" }, { type: "day", value: "15" }, { type: "literal", value: "/" }, { type: "year", value: "2024" }] — the pre-1.16.0 default
  * @example formatZonedToParts("2024-03-15T14:30:00.000-04:00[America/New_York]", "en-US", { timeZone: "Asia/Tokyo" }) // [] — a ZonedDateTime keeps its own zone
  * @example formatZonedToParts("invalid", "en-US") // []
+ * @example formatZonedToParts("2024-02-03T14:30:45+01:00[Europe/Paris]", ["fr-FR", "en-US"], { dateStyle: "medium", timeStyle: "short" }) // parts of "3 févr. 2024, 14:30"
+ * @example formatZonedToParts("2024-02-03T14:30:00-05:00[America/New_York]", "en-US", null as never) // [] (null options, as ECMA-402 rejects them)
  */
 export function formatZonedToParts(
   value: string,
-  locale?: string,
+  locale?: string | string[],
   options?: DateTimeFormatOptions,
 ): Array<{ type: string; value: string }> {
+  // ECMA-402 CoerceOptionsToObject: null options throw TypeError, so they are invalid input.
+  if (options === null) {
+    return [];
+  }
   if (!isValidZonedDateTime(value)) {
     return [];
   }

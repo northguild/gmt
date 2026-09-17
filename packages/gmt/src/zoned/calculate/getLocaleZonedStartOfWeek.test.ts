@@ -184,29 +184,43 @@ describe("getLocaleZonedStartOfWeek", () => {
 
   // A Sunday-first locale's week in America/Sao_Paulo starts on 2018-11-04, whose midnight is a
   // gap (00:00 -> 01:00). The week starts at that Sunday's first real instant — Temporal's
-  // `startOfDay()` — and the deprecated `disambiguation`/`offset` are ignored: "earlier" no longer
-  // lands on Saturday, and "reject" no longer yields "". Verified on @js-temporal/polyfill@0.5.1.
-  it.each`
-    disambiguation  | offset       | expected
-    ${"compatible"} | ${undefined} | ${"2018-11-04T01:00:00-02:00[America/Sao_Paulo]"}
-    ${"earlier"}    | ${undefined} | ${"2018-11-04T01:00:00-02:00[America/Sao_Paulo]"}
-    ${"later"}      | ${undefined} | ${"2018-11-04T01:00:00-02:00[America/Sao_Paulo]"}
-    ${"reject"}     | ${undefined} | ${"2018-11-04T01:00:00-02:00[America/Sao_Paulo]"}
-    ${"reject"}     | ${"prefer"}  | ${"2018-11-04T01:00:00-02:00[America/Sao_Paulo]"}
-  `(
-    "returns the real week start $expected across a midnight gap with ignored disambiguation $disambiguation and offset $offset",
-    ({ disambiguation, offset, expected }) => {
-      const optionsArg =
-        offset === undefined ? { disambiguation } : { disambiguation, offset };
-      expect(
-        getLocaleZonedStartOfWeek(
-          "2018-11-07T12:00:00-02:00[America/Sao_Paulo]",
-          MustTestLocales.enUS,
-          optionsArg,
-        ),
-      ).toBe(expected);
-    },
-  );
+  // `startOfDay()`. Verified on @js-temporal/polyfill@0.5.1.
+  it("returns the real week start across a midnight gap", () => {
+    expect(
+      getLocaleZonedStartOfWeek(
+        "2018-11-07T12:00:00-02:00[America/Sao_Paulo]",
+        MustTestLocales.enUS,
+      ),
+    ).toBe("2018-11-04T01:00:00-02:00[America/Sao_Paulo]");
+  });
+
+  // `disambiguation` and `offset` were removed in 1.16.0: they were ignored, because a boundary is
+  // always a real instant and TC39's `startOfDay()` takes neither. Passing one is a type error, and a
+  // JavaScript caller's stray property changes nothing.
+  it("treats the removed disambiguation option as a type error and ignores it at runtime", () => {
+    expect(
+      getLocaleZonedStartOfWeek(
+        "2018-11-07T12:00:00-02:00[America/Sao_Paulo]",
+        MustTestLocales.enUS,
+        {
+          // @ts-expect-error -- `disambiguation` was removed in 1.16.0
+          disambiguation: "reject",
+        },
+      ),
+    ).toBe("2018-11-04T01:00:00-02:00[America/Sao_Paulo]");
+  });
+  it("treats the removed offset option as a type error and ignores it at runtime", () => {
+    expect(
+      getLocaleZonedStartOfWeek(
+        "2018-11-07T12:00:00-02:00[America/Sao_Paulo]",
+        MustTestLocales.enUS,
+        {
+          // @ts-expect-error -- `offset` was removed in 1.16.0
+          offset: "reject",
+        },
+      ),
+    ).toBe("2018-11-04T01:00:00-02:00[America/Sao_Paulo]");
+  });
 });
 
 // The week is the real local bucket in the
@@ -242,4 +256,24 @@ describe("getLocaleZonedStartOfWeek across zone transitions with default options
       ).slice(0, 10),
     ).toBe(date.subtract({ days: offset }).toString());
   });
+
+  // ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale
+  // data is read (en-US weeks start on Sunday, fr-FR on Monday, ar-EG weekends are Friday and
+  // Saturday: Intl.Locale#getWeekInfo), and a malformed tag anywhere in the list is invalid input.
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.enUS, MustTestLocales.frFR]} | ${"2024-05-12T00:00:00+02:00[Europe/Berlin]"}
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"2024-05-13T00:00:00+02:00[Europe/Berlin]"}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
+  `(
+    "returns $expected for 2024-05-15T12:00 Berlin with locale list $locale",
+    ({ locale, expected }) => {
+      expect(
+        getLocaleZonedStartOfWeek(
+          "2024-05-15T12:00:00+02:00[Europe/Berlin]",
+          locale,
+        ),
+      ).toBe(expected);
+    },
+  );
 });

@@ -1,4 +1,5 @@
-import { adjustZonedBusinessDays, isValidAmount } from "../../internal";
+import { isValidAmount } from "../../internal";
+import { adjustZonedBusinessDays } from "../../internal/adjustZonedBusinessDays";
 import { isValidZonedDateTime } from "../validate";
 
 /**
@@ -29,7 +30,7 @@ export function subtractZonedBusinessDays(
   }
 
   if (amount === 0) {
-    return value;
+    return adjustZonedBusinessDays(value, 1, 0);
   }
 
   return adjustZonedBusinessDays(value, -1, Math.abs(amount));

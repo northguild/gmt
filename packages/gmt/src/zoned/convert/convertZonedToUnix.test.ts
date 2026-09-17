@@ -12,10 +12,14 @@ describe("convertZonedToUnix", () => {
 
   it("supports milliseconds and seconds units", () => {
     expect(
-      convertZonedToUnix("1970-01-01T00:00:00+00:00[UTC]", "milliseconds"),
+      convertZonedToUnix("1970-01-01T00:00:00+00:00[UTC]", {
+        epochUnit: "milliseconds",
+      }),
     ).toBe(0);
     expect(
-      convertZonedToUnix("1970-01-01T00:00:00+00:00[UTC]", "seconds"),
+      convertZonedToUnix("1970-01-01T00:00:00+00:00[UTC]", {
+        epochUnit: "seconds",
+      }),
     ).toBe(0);
   });
 
@@ -81,18 +85,43 @@ describe("convertZonedToUnix", () => {
     },
   );
 
+  // 2024-02-29T10:00:00.5+01:00 is 09:00:00.5Z: 1709197200500 ms, second 1709197200 (floor).
+  it.each`
+    options                         | expected
+    ${undefined}                    | ${1709197200500}
+    ${{ epochUnit: undefined }}     | ${1709197200500}
+    ${{ epochUnit: "millisecond" }} | ${1709197200500}
+    ${{ epochUnit: "second" }}      | ${1709197200}
+  `("returns $expected with options $options", ({ options, expected }) => {
+    expect(
+      convertZonedToUnix("2024-02-29T10:00:00.5+01:00[Europe/Paris]", options),
+    ).toBe(expected);
+  });
+
+  // The unit is an options object; a legacy positional unit string (or null) is not an options
+  // object (Temporal GetOptionsObject throws TypeError), so it is the sentinel.
+  it.each`
+    options
+    ${"seconds"}
+    ${"milliseconds"}
+    ${null}
+    ${1000}
+  `("returns null for non-object options $options", ({ options }) => {
+    expect(
+      convertZonedToUnix("2024-02-29T09:00:00+00:00[UTC]", options as never),
+    ).toBeNull();
+  });
+
   it.each`
     invalidUnit
     ${"minutes"}
     ${""}
     ${null}
-    ${undefined}
   `("returns null for invalid unit $invalidUnit", ({ invalidUnit }) => {
     expect(
-      convertZonedToUnix(
-        "2024-02-29T09:00:00+00:00[UTC]",
-        invalidUnit as never,
-      ),
+      convertZonedToUnix("2024-02-29T09:00:00+00:00[UTC]", {
+        epochUnit: invalidUnit as never,
+      }),
     ).toBeNull();
   });
 
@@ -103,8 +132,12 @@ describe("convertZonedToUnix", () => {
     unixSeconds,
   } of sameInstantBattleCases) {
     it(`returns consistent unix values for battle-test timeZone ${timeZone}`, () => {
-      expect(convertZonedToUnix(value, "milliseconds")).toBe(unixMilliseconds);
-      expect(convertZonedToUnix(value, "seconds")).toBe(unixSeconds);
+      expect(convertZonedToUnix(value, { epochUnit: "milliseconds" })).toBe(
+        unixMilliseconds,
+      );
+      expect(convertZonedToUnix(value, { epochUnit: "seconds" })).toBe(
+        unixSeconds,
+      );
     });
   }
 
@@ -115,8 +148,12 @@ describe("convertZonedToUnix", () => {
     unixSeconds,
   } of unixEpochBattleCases) {
     it(`returns historical unix values for battle-test timeZone ${timeZone}`, () => {
-      expect(convertZonedToUnix(value, "milliseconds")).toBe(unixMilliseconds);
-      expect(convertZonedToUnix(value, "seconds")).toBe(unixSeconds);
+      expect(convertZonedToUnix(value, { epochUnit: "milliseconds" })).toBe(
+        unixMilliseconds,
+      );
+      expect(convertZonedToUnix(value, { epochUnit: "seconds" })).toBe(
+        unixSeconds,
+      );
     });
   }
 });
