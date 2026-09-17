@@ -46,7 +46,7 @@ For that, ask the specs: `pnpm deps -- whoneeds CORE-1` lists every story that c
 | 5  | CORE-5  | Core       | ISO week + ordinal + fiscal periods + `floorToZone` + `bucketRange` | —                  | [#186](https://github.com/northguild/gmt/issues/186) | Done        |
 | 6  | CORE-6  | Core       | Interval algebra: intersect, clamp, subtract, merge, split, sum     | —                  | [#187](https://github.com/northguild/gmt/issues/187) | Done        |
 | 7  | CORE-7  | Core       | Business calendars, `mergeCalendars`, roll conventions              | —                  | [#188](https://github.com/northguild/gmt/issues/188) | Done        |
-| 8  | CORE-8  | Core       | Full-API standards review with `gmt-reviewer` (pre-1.16.0)          | —                  | [#251](https://github.com/northguild/gmt/issues/251) | Not started |
+| 8  | CORE-8  | Core       | Full-API standards review with `gmt-reviewer` (pre-1.16.0)          | —                  | [#251](https://github.com/northguild/gmt/issues/251) | Done        |
 | 9  | TRAN-8  | Transport  | `transitTime` + `etaAtZone` + `dwellTime`                           | —                  | [#189](https://github.com/northguild/gmt/issues/189) | Not started |
 | 10 | TRAN-9  | Transport  | `scheduleDelivery` + `crossingTime`                                 | TRAN-8             | [#190](https://github.com/northguild/gmt/issues/190) | Not started |
 | 11 | TRAN-10 | Transport  | `cutoffAt` + `cutoffSchedule` + `isPastCutoff`                      | —                  | [#191](https://github.com/northguild/gmt/issues/191) | Not started |

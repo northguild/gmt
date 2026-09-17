@@ -13,7 +13,7 @@ endOfUtc("2024-03-15T14:30:45Z", "month", { fractionalSecondDigits: 0 }); // "20
 
 To keep the previous string, pass the digits the unit names: `0` for `second` and coarser, `3` for `millisecond`, `6` for `microsecond`. For `endOfQuarterForZoned`, always pass `0`.
 
-**`formatDateTimeToParts` and `formatZonedToParts` dropped the time.** Called with no field options, they returned only the date parts. For a date-time value, ECMA-402's `GetDateTimeFormat`, as amended by Temporal, defaults year, month, day, hour, minute and second to `"numeric"`, and adds a short time zone name for a zoned value. They now do the same. A caller's `timeZone` option is honoured as before.
+**`formatDateTimeToParts` and `formatZonedToParts` dropped the time.** Called with no field options, they returned only the date parts. For a date-time value, ECMA-402's `GetDateTimeFormat`, as amended by Temporal, defaults year, month, day, hour, minute and second to `"numeric"`, and adds a short time zone name for a zoned value. They now do the same.
 
 ```typescript
 formatZonedToParts("2024-03-15T14:30:00.000-04:00[America/New_York]", "en-US");
