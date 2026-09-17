@@ -60,6 +60,26 @@ const READMES = [ROOT_README, PKG_README];
 /** Every GMT figure apps/dox renders is imported from this file — see statsObject(). */
 const DOX_STATS = "apps/dox/src/data/gmt-stats.json";
 
+/**
+ * `JSON.stringify(…, 2)` laid out the way oxfmt lays it out (`printWidth` 80): an array of
+ * primitives that fits on its line is written inline. Writing plain `JSON.stringify` output
+ * left `validate` green and the CI format check red after every `sync` that changed a figure.
+ */
+function formatStatsJson(stats) {
+  const text = JSON.stringify(stats, null, 2).replace(
+    /^( *)("[^"\n]+": )\[\n((?: *(?:"[^"\n]*"|[-\d.]+|true|false|null),?\n)+) *\]/gm,
+    (whole, indent, key, body) => {
+      const items = body
+        .split("\n")
+        .filter(Boolean)
+        .map((line) => line.trim().replace(/,$/, ""));
+      const inline = `${indent}${key}[${items.join(", ")}]`;
+      return inline.length + 1 <= 80 ? inline : whole;
+    },
+  );
+  return `${text}\n`;
+}
+
 /** `regex/` exports patterns, not functions — counted and described separately. */
 const PATTERN_NAMESPACE = "regex";
 
@@ -390,7 +410,7 @@ function evaluate(f) {
     );
   }
   if (stale.length > 0) {
-    edits.set(DOX_STATS, `${JSON.stringify(stats, null, 2)}\n`);
+    edits.set(DOX_STATS, formatStatsJson(stats));
   }
 
   return { edits, problems };

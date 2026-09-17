@@ -1,6 +1,6 @@
 {
   "suite": "packages/gmt",
-  "tests": 33189,
+  "tests": 1,
   "files": 657,
   "executions": 995670,
   "nodes": ["22", "24", "26"],
