@@ -20,8 +20,16 @@ export type DefectId = "D1" | "D2" | "D3" | "D4" | "D5" | "D6" | "D7" | "D8";
  */
 export type ZonedDefectId = "zoned.A" | "zoned.B" | "zoned.D";
 
+/**
+ * D9: non-ISO months added and counted one month at a time (`largeMonthSpan.ts`). Canary-only: no
+ * capability probe gates it, because a probe large enough to show the cost would be the abort
+ * itself, and timing is not deterministic. The workaround runs only for amounts of at least
+ * `LARGE_MONTH_SPAN` months and computes the spec's answer, so it changes no output either way.
+ */
+export type BoundedWorkDefectId = "D9";
+
 export interface Repro {
-  defect: DefectId | ZonedDefectId;
+  defect: DefectId | ZonedDefectId | BoundedWorkDefectId;
   /** Temporal calendar id the repro exercises. */
   calendar: string;
   /** Short name, unique per defect and calendar. */
@@ -500,7 +508,88 @@ const zonedDRepros: Repro[] = [
   ),
 ];
 
+/** More `Intl.DateTimeFormat#formatToParts` reads than this for 1,200 months is per-month work. */
+const D9_INTL_READ_LIMIT = 100;
+const D9_MONTHS = 1_200;
+
+/**
+ * `run()`'s output, or a note of how many `Intl.DateTimeFormat#formatToParts` calls it made when
+ * that is more than `D9_INTL_READ_LIMIT`. Polyfill 0.5.1 reads the calendar through that method
+ * once or more per month stepped; bounded arithmetic reads a handful of dates, or none.
+ */
+function withBoundedIntlReads(run: () => string): string {
+  const prototype = Intl.DateTimeFormat.prototype;
+  const original = prototype.formatToParts;
+  let reads = 0;
+  prototype.formatToParts = function formatToParts(
+    this: Intl.DateTimeFormat,
+    date?: Date | number,
+  ) {
+    reads++;
+    return original.call(this, date);
+  };
+  try {
+    const output = run();
+    return reads <= D9_INTL_READ_LIMIT
+      ? output
+      : `${reads} Intl reads for ${D9_MONTHS} months`;
+  } finally {
+    prototype.formatToParts = original;
+  }
+}
+
+/**
+ * D9: 1,200 months from month M03 day 5. Persian has 12 months in every year (Intl era/monthCode
+ * proposal §4.1.4 Table 3), so they are 100 years. Hebrew: the Dershowitz–Reingold month count
+ * `floor((235y − 234) / 19)` puts month 1,200 after 5784-M03 at 5881 ordinal 3, a common year, so
+ * `M03`.
+ */
+const d9Repros: readonly Repro[] = (
+  [
+    ["persian", 1402, "1502|M03|5"],
+    ["hebrew", 5784, "5881|M03|5"],
+  ] as const
+).flatMap(([calendar, year, expected]): Repro[] => {
+  const start = () =>
+    Temporal.PlainDate.from({ calendar, year, month: 3, day: 5 });
+  const [endYear] = expected.split("|").map(Number);
+  return [
+    {
+      defect: "D9",
+      calendar,
+      name: "addMonths",
+      expected,
+      run: () =>
+        withBoundedIntlReads(() => {
+          const date = start().add({ months: D9_MONTHS });
+          return `${date.year}|${date.monthCode}|${date.day}`;
+        }),
+    },
+    {
+      defect: "D9",
+      calendar,
+      name: "untilMonths",
+      expected: `P${D9_MONTHS}M`,
+      run: () =>
+        withBoundedIntlReads(() =>
+          start()
+            .until(
+              Temporal.PlainDate.from({
+                calendar,
+                year: endYear ?? Number.NaN,
+                monthCode: "M03",
+                day: 5,
+              }),
+              { largestUnit: "months" },
+            )
+            .toString(),
+        ),
+    },
+  ];
+});
+
 export const repros: readonly Repro[] = [
+  ...d9Repros,
   ...zonedARepros,
   ...zonedBRepros,
   ...zonedDRepros,
@@ -555,7 +644,7 @@ export const repros: readonly Repro[] = [
 
 /** The repro with this defect, calendar and name, if any. */
 export function findRepro(
-  defect: DefectId | ZonedDefectId,
+  defect: DefectId | ZonedDefectId | BoundedWorkDefectId,
   calendar: string,
   name: string,
 ): Repro | undefined {

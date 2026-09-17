@@ -134,6 +134,22 @@ describe("repros", () => {
     },
   );
 
+  // D9: 1,200 months from M03 day 5. Persian: 12 months in every year (Intl era/monthCode proposal
+  // §4.1.4 Table 3), so 100 years. Hebrew: the Dershowitz–Reingold count floor((235y − 234) / 19)
+  // lands on 5881 ordinal 3, a common year.
+  it.each`
+    calendar     | name             | expected
+    ${"persian"} | ${"addMonths"}   | ${"1502|M03|5"}
+    ${"persian"} | ${"untilMonths"} | ${"P1200M"}
+    ${"hebrew"}  | ${"addMonths"}   | ${"5881|M03|5"}
+    ${"hebrew"}  | ${"untilMonths"} | ${"P1200M"}
+  `(
+    "D9 $name for $calendar expects $expected",
+    ({ calendar, name, expected }) => {
+      expect(findRepro("D9", calendar, name)?.expected).toBe(expected);
+    },
+  );
+
   it("keeps a minimum-edge zoned.A probe, which polyfill 05ce7a3 alone does not fix", () => {
     const zonedA = repros.filter((repro) => repro.defect === "zoned.A");
     expect(zonedA.some((repro) => repro.name.startsWith("min."))).toBe(true);
@@ -177,10 +193,12 @@ describe("reproPasses", () => {
     ${"zoned.B"} | ${"iso8601"}       | ${"max.hoursInDaySantiago"} | ${"ERR TypeError: Cannot read properties of null (reading 'sign')"}
     ${"zoned.D"} | ${"iso8601"}       | ${"max.untilUtcRounded"}    | ${"returned P3DT5H"}
     ${"zoned.D"} | ${"iso8601"}       | ${"max.totalUtc"}           | ${"returned 2.0416666666666665"}
+    ${"D9"}      | ${"persian"}       | ${"addMonths"}              | ${"1328 Intl reads for 1200 months"}
+    ${"D9"}      | ${"hebrew"}        | ${"untilMonths"}            | ${"1518 Intl reads for 1200 months"}
   `(
     "reads the recorded 0.5.1 output $recorded for $defect $name ($calendar) as the defect",
     ({ defect, calendar, name, recorded }) => {
-      const repro = findRepro(defect as DefectId, calendar, name);
+      const repro = findRepro(defect, calendar, name);
       expect(repro).toBeDefined();
       expect(reproPasses(repro!, recorded)).toBe(false);
       expect(reproPasses(repro!, repro!.expected)).toBe(true);

@@ -40,6 +40,7 @@ Design: `context/domination/specs/CORE-6-calendar-correctness-spec.md`. Owner de
 | **D6** | `until` re-constrains the day while counting months, so Aug 31 → Sep 30 is `P1M` where the spec's `NonISODateSurpasses` gives `P30D`. Every non-ISO calendar, at ordinary dates. | `calendarDateArithmetic.ts`: the polyfill's `until` is kept only when `isNonIsoDateUntilResult` proves it is the spec's; otherwise `nonIsoDateUntil` | Every non-ISO `until` by years or months while the probe fails |
 | **D7** | `until` by years from a leap-year Hebrew `M05L` date throws "mixed-sign" (tc39/proposal-temporal#3159). | same as D6 | same as D6 |
 | **D8** | Pre-proposal era codes: `japanese` instead of `ce`, `japanese-inverse` instead of `bce`, and `meiji` 1–5 for 1868–1872, which the proposal counts as `ce`. | `calendarFields.ts` (`japaneseFields`) remaps reads; `calendarDateFromFields.ts` rejects `japanese-inverse` input | Every japanese read while the probe fails |
+| **D9** | Non-ISO months are added (`addMonthsCalendar`) and counted (`until` by months) one month at a time, caching each step, so a few million in-range months is a fatal heap OOM (persian `1402-10-25` + 3,000,000 months aborts at 256 MB in about 3 s). Years and reads are O(1). Every non-ISO calendar. | `largeMonthSpan.ts`, called from `readArithmeticModel.ts` (`addMonths`, `monthsBetween`); `calendarDateArithmetic.ts` sends such adds and month differences to the spec algorithms | Amounts of at least `LARGE_MONTH_SPAN` (1,200) months, or years that far apart. Canary-only: no capability probe |
 
 Parse path: `calendarDateFromFields` asks the polyfill first. It keeps the result when the fields
 read back unchanged through `calendarFieldsOf`. Otherwise, inside a D1 window or a corrected read
@@ -49,13 +50,19 @@ Arithmetic path (`calendarDateAdd`, `calendarDateUntil`): `iso8601` is the polyf
 are ISO day arithmetic. In a corrected range the spec algorithms run over ISO (buddhist) or the owned
 Hebrew and Indian models. Otherwise the polyfill answers first: an add is kept unless it throws near a
 limit (D1); an until is kept unless it throws or, while D6/D7 are present, is not the spec's result.
+An add of 1,200 months or more, and an until by months across 100 years or more, skip the polyfill
+and run the spec algorithm (D9).
 The spec algorithms (`NonISODateAdd`, `ConstrainMonthCode`, `NonISODateSurpasses`, `NonISODateUntil`)
 live in `nonIsoArithmetic.ts`, over an integer model:
 
 - `readArithmeticModel.ts` answers from reads, `calendarDateFromFields` and the polyfill's own month
   arithmetic between day-1 dates (never constrained, so correct wherever it does not throw), stepping
   month by month through the field search next to a limit. It owns no calendar rule: the leap month a
-  missing `M05L` constrains to is read from the polyfill at a modern year.
+  missing `M05L` constrains to is read from the polyfill at a modern year. Over 1,200 months or more
+  it jumps whole years through `largeMonthSpan.ts` (D9): `years × monthsInYear` for calendars without
+  leap month codes (proposal §4.1.4 Table 3), and for `hebrew` the day span between year starts over
+  a mean month length measured from Temporal's own reads, accepted only within a third of a month of
+  a whole count.
 - `hebrewArithmeticModel` and `indianArithmeticModel` answer from the owned arithmetic.
 
 Whole operations (CORE-6 slices S5–S7). A wrong calendar `until` (D6) is returned, not thrown, so
@@ -84,7 +91,8 @@ Not a workaround: `;era=japanese` is GMT's own deprecated input alias of `ce`. I
 
 ## Canary and native oracle
 
-`repros.ts` also carries the zoned range-limit repros of `internal/zonedWallClock*` (`zoned.A`,
+`repros.ts` also carries the canary-only `D9` repros, which count `Intl.DateTimeFormat#formatToParts`
+calls instead of running an amount large enough to abort, and the zoned range-limit repros of `internal/zonedWallClock*` (`zoned.A`,
 `zoned.B`, `zoned.D`, upstream issue drafts A, B and D). They are canary-only: no capability probe
 gates those fallbacks, which already run only when the polyfill throws or returns an unchecked UTC
 value. Draft C (calendar fields near the limits) is the `D1` group.
@@ -115,6 +123,7 @@ value. Draft C (calendar fields near the limits) is the `D1` group.
 | D6 | A js-temporal release contains `10aeb98` (already on main) |
 | D7 | A js-temporal release ports proposal-temporal `0e32ee0` **and** C-D7b (part of proposal-temporal `196a3191`; bug doc § C). `0e32ee0` fixes the `mixedSign` probe only: the `leapMonthEnd` probe (`5784-M05L-30` → `5785-M06-29` by years) still returns `P1Y` without C-D7b |
 | D8 | A js-temporal release contains `2bb6ba1` **and** proposal-temporal `977d11e0` + `993e6322`: `2bb6ba1` alone still reads `1872-12-31` as `meiji` 5 |
+| D9 | A js-temporal release adds and differences non-ISO months in bounded work: each `D9` probe reads at most 100 `Intl.DateTimeFormat` dates for 1,200 months |
 | zoned.A | A js-temporal release contains `05ce7a3` (maximum) **and** `95237e0` (minimum), both on main. `05ce7a3` alone fixes only the `max.*` probes: a 0.5.1 build with just that commit still throws for every `min.*` probe |
 | zoned.B | A js-temporal release fixes `GetNamedTimeZoneNextTransition` near the maximum. Not fixed on main; the verified patch is in bug doc § B |
 | zoned.D | A js-temporal release ports proposal-temporal #3205 (`d90d432`), which validates the `"UTC"` fast path of `GetPossibleEpochNanoseconds` (bug doc § D) |
@@ -157,7 +166,11 @@ In every case the fix must be in the release that becomes GMT's `@js-temporal/po
    fallbacks; zoned.B: the defect-2 transition fallback; zoned.D: `checkUtcValidity` and its call
    in `runAtRangeLimit`), then delete that group's repros and its group in
    `scripts/temporal-compat.mjs`. Run `internal/zonedWallClock*` tests: no expected value changes.
-9. **After every step:** run the calendar test files (`plain/convert`, `zoned/convert`,
+9. **D9:** delete `largeMonthSpan.ts`, its two calls in `readArithmeticModel.ts` (`addMonths`,
+   `monthsBetween`), the two D9 branches in `calendarDateArithmetic.ts`, and the `D9` repros with
+   `withBoundedIntlReads`. Keep `largeMonthArithmetic.test.ts`: its rows are spec values that must
+   still pass in bounded time.
+10. **After every step:** run the calendar test files (`plain/convert`, `zoned/convert`,
    `plain/validate/isValidCalendarDate`, `plain/calculate/{addDate,subtractDate,diffDate,diffDateAsDuration}`,
    `plain/interval/{intervalLengthDate,intervalCountDate,intervalFromDurationDate,splitIntervalByUnitDate}`,
    `zoned/calculate/{addZoned,subtractZoned,diffZoned,diffZonedAsDuration}`,

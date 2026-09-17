@@ -148,15 +148,18 @@ export {
   zonedUnitEnd,
   zonedUnitStart,
 } from "./zonedBucket";
+export { countZonedLocalDates } from "./zonedLocalDates";
 export { zonedDateTimeFrom } from "./zonedWallClock";
 export {
   durationCompare,
   durationRound,
   durationTotal,
+  isCalendarDifferenceAcrossZones,
   zonedUntil,
 } from "./zonedWallClockDifference";
 export {
   addToZoned,
+  addToZonedDisambiguated,
   plainToZoned,
   roundZonedDateTime,
   subtractFromZoned,

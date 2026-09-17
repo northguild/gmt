@@ -5,8 +5,9 @@ const calendarAnnotation = /\[!?u-ca=/;
  * Return true when `value` carries a `[u-ca=...]` calendar annotation — either GMT's own
  * native-digit shape or Temporal's own ISO-digit RFC 9557 shape.
  *
- * RFC 9557 §3.1 lets any suffix annotation carry a critical flag, and Temporal honours it for the
- * calendar key: `Temporal.ZonedDateTime.from("5784-01-01T14:30:00-05:00[America/New_York][!u-ca=hebrew]")`
+ * RFC 9557 lets any suffix annotation carry a critical flag (§3.3; `critical-flag` in the §4.1
+ * ABNF), and Temporal honours it for the calendar key:
+ * `Temporal.ZonedDateTime.from("5784-01-01T14:30:00-05:00[America/New_York][!u-ca=hebrew]")`
  * succeeds in the Hebrew calendar, reading ISO year 5784 as Hebrew year 9544. The flag only makes
  * the annotation harder to ignore, so `[!u-ca=...]` is detected exactly like `[u-ca=...]`. A
  * critical time-zone annotation (`[!America/New_York]`) carries no key and does not match.

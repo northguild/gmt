@@ -113,6 +113,18 @@ const WORKAROUNDS = [
     ],
   },
   {
+    defects: ["D9"],
+    title:
+      "D9 — non-ISO months added and counted one month at a time (heap OOM for in-range amounts; temporalCompat/largeMonthSpan.ts)",
+    trigger:
+      "a js-temporal release adds and differences non-ISO months in bounded work: each D9 probe reads at most 100 Intl dates for 1,200 months",
+    steps: [
+      "Delete largeMonthSpan.ts, its two calls in readArithmeticModel.ts (addMonths, monthsBetween), the two D9 branches in calendarDateArithmetic.ts, and the D9 repros with withBoundedIntlReads in repros.ts.",
+      "Keep largeMonthArithmetic.test.ts: its rows are spec values and must still pass, in bounded time, on the fixed polyfill.",
+      `Full wording: ${COMPAT_README} § Removal steps 9.`,
+    ],
+  },
+  {
     defects: ["zoned.A"],
     title:
       "zoned.A — wall clock → exact time at the range limits (zonedWallClock.ts defect 1, zonedWallClockDifference.ts defect 1)",

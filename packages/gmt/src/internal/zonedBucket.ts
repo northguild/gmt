@@ -408,6 +408,23 @@ function nextBoundaryInOwnOffset(
 }
 
 /**
+ * `nextBoundaryInOwnOffset`, or null when that boundary lies past Temporal's last representable
+ * instant — a transition before it may still open a representable bucket.
+ */
+function nextBoundaryWithinRange(
+  zoned: Temporal.ZonedDateTime,
+  unit: WalkerUnit,
+  weekStartsOn: WeekStartDay,
+): Temporal.ZonedDateTime | null {
+  try {
+    return nextBoundaryInOwnOffset(zoned, unit, weekStartsOn);
+  } catch (error) {
+    if (error instanceof RangeError) return null;
+    throw error;
+  }
+}
+
+/**
  * `local.add(oneUnit(unit))`. For a calendar that needs the compat layer, a calendar period steps
  * through `calendarDateAdd` (constrained, keeping the time of day) and every other unit in ISO.
  */
@@ -444,6 +461,7 @@ function addOneUnit(
  * - Handles every `DateTimeUnit` plus `quarter`, weeks starting on `weekStartsOn` (Monday by default).
  * - Returns null if neither is reachable within `MAX_TRANSITION_WALKBACK` transitions, which
  *   no IANA zone comes close to.
+ * - Throws a RangeError when the next bucket starts after the last representable instant.
  */
 export function nextZonedBucketStart(
   current: Temporal.ZonedDateTime,
@@ -453,13 +471,19 @@ export function nextZonedBucketStart(
   let cursor = current;
 
   for (let i = 0; i < MAX_TRANSITION_WALKBACK; i++) {
-    const boundary = nextBoundaryInOwnOffset(cursor, unit, weekStartsOn);
+    const boundary = nextBoundaryWithinRange(cursor, unit, weekStartsOn);
     const transition = zonedNextTransition(cursor);
 
     if (
       !transition ||
-      Temporal.ZonedDateTime.compare(transition, boundary) > 0
+      (boundary !== null &&
+        Temporal.ZonedDateTime.compare(transition, boundary) > 0)
     ) {
+      if (boundary === null) {
+        throw new RangeError(
+          "the next bucket starts after the last representable instant",
+        );
+      }
       return boundary;
     }
 
@@ -507,6 +531,25 @@ export function zonedUnitEnd(
 const MAX_COUNTED_TRANSITIONS = 10_000;
 
 /**
+ * `countZonedBuckets` when `start`'s bucket began before the first representable instant (the
+ * week, month or year holding `-271821-04-20T00:00:00Z`). `start` is then inside that bucket, not
+ * on its start, so the span touches it once, plus every bucket from the next start on.
+ */
+function countFromBucketBeforeRange(
+  start: Temporal.ZonedDateTime,
+  end: Temporal.ZonedDateTime,
+  unit: DateTimeUnit,
+  weekStartsOn: WeekStartDay,
+): number | null {
+  const next = nextZonedBucketStart(start, unit, weekStartsOn);
+  if (!next) return null;
+  if (Temporal.ZonedDateTime.compare(next, end) >= 0) return 1;
+
+  const rest = countZonedBuckets(next, end, unit, weekStartsOn);
+  return rest === null ? null : rest + 1;
+}
+
+/**
  * Count the local `unit` buckets the half-open interval `[start, end)` touches, in `start`'s
  * zone and calendar. `end` must already be expressed in both.
  *
@@ -521,6 +564,8 @@ const MAX_COUNTED_TRANSITIONS = 10_000;
  * - A transition that does not open a bucket (see `startsNewBucketAt`) leaves the label
  *   running on, so it changes nothing and is stepped over.
  * - A transition that does open one closes the run before it and counts the new bucket.
+ * - A `start` whose bucket began before the first representable instant still counts that
+ *   bucket once.
  * - Returns null if either endpoint's bucket cannot be found, or the span crosses more than
  *   `MAX_COUNTED_TRANSITIONS` transitions.
  */
@@ -530,7 +575,13 @@ export function countZonedBuckets(
   unit: DateTimeUnit,
   weekStartsOn: WeekStartDay = 1,
 ): number | null {
-  const startOfStart = zonedUnitStart(start, unit, weekStartsOn);
+  let startOfStart: Temporal.ZonedDateTime | null;
+  try {
+    startOfStart = zonedUnitStart(start, unit, weekStartsOn);
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    return countFromBucketBeforeRange(start, end, unit, weekStartsOn);
+  }
   const startOfEnd = zonedUnitStart(end, unit, weekStartsOn);
 
   if (!startOfStart || !startOfEnd) return null;

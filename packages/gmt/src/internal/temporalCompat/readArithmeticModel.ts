@@ -6,6 +6,12 @@ import {
   floorDateForFieldsBetween,
   isLastRepresentableDate,
 } from "./fieldSearch";
+import {
+  addManyMonths,
+  countManyMonths,
+  isLargeMonthSpan,
+  isLargeYearSpan,
+} from "./largeMonthSpan";
 import type { ArithmeticModel, YearMonth } from "./nonIsoArithmetic";
 
 /*
@@ -168,6 +174,16 @@ function addMonths(
   if (months === 0) {
     return start;
   }
+  if (isLargeMonthSpan(months)) {
+    // D9: jump whole years instead of the polyfill's month-by-month loop.
+    return addManyMonths(
+      calendarId,
+      start,
+      months,
+      (from, count) => addMonths(calendarId, from, count),
+      (from, to) => monthsBetween(calendarId, from, to),
+    );
+  }
   const jumped = polyfillAddMonths(calendarId, start, months);
   if (jumped !== undefined) {
     return jumped;
@@ -225,6 +241,12 @@ function monthsBetween(
   const sign = Math.sign(compareYearMonths(to, from));
   if (sign === 0) {
     return 0;
+  }
+  if (isLargeYearSpan(from.year, to.year)) {
+    // D9: count whole years instead of the polyfill's month-by-month loop.
+    return countManyMonths(calendarId, from, to, (one, two) =>
+      monthsBetween(calendarId, one, two),
+    );
   }
   const direct = polyfillMonthsBetween(calendarId, from, to);
   if (direct !== undefined) {

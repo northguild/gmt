@@ -1,8 +1,9 @@
 import type { Temporal } from "@js-temporal/polyfill";
-import { hasReadCorrection } from "./calendarFields";
+import { calendarFieldsOf, hasReadCorrection } from "./calendarFields";
 import { isDefectPresent } from "./capabilities";
 import { hebrewArithmeticModel } from "./hebrewArithmetic";
 import { indianArithmeticModel } from "./indianArithmetic";
+import { isLargeMonthSpan, isLargeYearSpan } from "./largeMonthSpan";
 import {
   type ArithmeticModel,
   type ArithmeticOverflow,
@@ -85,6 +86,21 @@ function verifiedPolyfillUntil(
   largestUnit: "year" | "month",
 ): DateDurationFields {
   const calendarId = one.calendarId;
+  if (
+    largestUnit === "month" &&
+    isLargeYearSpan(
+      calendarFieldsOf(one, calendarId).year,
+      calendarFieldsOf(two, calendarId).year,
+    )
+  ) {
+    // D9: the polyfill counts months one at a time; the spec loops count whole years instead.
+    return nonIsoDateUntil(
+      readArithmeticModel(calendarId),
+      one,
+      two,
+      largestUnit,
+    );
+  }
   let result: DateDurationFields;
   try {
     result = fieldsOf(one.until(two, { largestUnit }));
@@ -123,6 +139,8 @@ function verifiedPolyfillUntil(
  * - D1: a polyfill RangeError near a range limit is answered by the spec loops.
  * - D2/D3/D4/D5: in a corrected range the spec loops run over ISO (buddhist) or the owned Hebrew
  *   and Indian arithmetic.
+ * - D9: months counted across `LARGE_MONTH_SPAN` months or more run the spec loops, whose month
+ *   counts are bounded.
  */
 export function calendarDateUntil(
   one: Temporal.PlainDate,
@@ -169,6 +187,7 @@ export function calendarDateUntil(
  * - D1: a polyfill RangeError near a range limit is answered by the spec algorithm.
  * - D2/D3/D4/D5: in a corrected range the spec algorithm runs over ISO (buddhist) or the owned
  *   Hebrew and Indian arithmetic.
+ * - D9: `LARGE_MONTH_SPAN` months or more run the spec algorithm, whose month jumps are bounded.
  *
  * @returns a PlainDate in `date`'s calendar; throws RangeError out of range or on `reject`
  */
@@ -209,6 +228,15 @@ export function calendarDateAdd(
     ) {
       return result.withCalendar(calendarId);
     }
+  }
+  if (isLargeMonthSpan(fields.months)) {
+    // D9: the polyfill adds months one at a time; the spec algorithm jumps whole years instead.
+    return nonIsoDateAdd(
+      readArithmeticModel(calendarId),
+      date,
+      fields,
+      overflow,
+    ).withCalendar(calendarId);
   }
   try {
     return date.add(fields, { overflow });

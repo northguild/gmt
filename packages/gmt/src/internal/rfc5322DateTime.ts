@@ -37,14 +37,6 @@ const NAMED_ZONE_OFFSETS: Readonly<Record<string, string>> = {
 // §4.1), which folding removes, so any other NUL makes the input invalid and
 // every NUL left after folding is a folded comment.
 const COMMENT = "\u0000";
-// An even run of backslashes (quoted-pairs of "\\") leaves the NUL unescaped.
-const UNESCAPED_NUL = new RegExp(`(?:^|[^\\\\])(?:\\\\\\\\)*${COMMENT}`);
-
-// comment = "(" *([FWS] ccontent) [FWS] ")", ccontent = ctext / quoted-pair
-// / comment. Matches an innermost comment: no unescaped parenthesis inside
-// (a NUL inside is an already folded nested comment).
-const INNERMOST_COMMENT = /\((?:[^()\\]|\\[\s\S])*\)/g;
-
 // The receiver grammar: RFC 5322 §3.3 plus the §4.3 obsolete forms, after
 // every comment has become COMMENT. `C` is one unit of CFWS (WSP, a folded
 // line, or a comment); ABNF literals are case-insensitive (RFC 5234 §2.3).
@@ -64,15 +56,62 @@ const RECEIVER_DATE_TIME = new RegExp(
     `(?:(?<=[ \\t])([+-]\\d{4})|([A-Za-z]+))${C}$`,
 );
 
+// comment = "(" *([FWS] ccontent) [FWS] ")", ccontent = ctext / quoted-pair
+// / comment, quoted-pair = "\" (VCHAR / WSP) / obs-qp (RFC 5322 §3.2.2 for
+// comment and ccontent, §3.2.1 for quoted-pair, §4.1 for obs-qp). One
+// left-to-right pass with a depth counter replaces each outermost
+// comment by COMMENT, so the work is linear in the input at any nesting depth.
+// A backslash escapes the character after it inside a comment; outside one
+// it is literal (and the receiver grammar rejects it). Returns null for an
+// unbalanced parenthesis, and for a NUL after an even run of backslashes (not
+// an obs-qp, so not allowed anywhere).
 function foldComments(value: string): string | null {
-  if (UNESCAPED_NUL.test(value)) return null;
-  let folded = value;
-  let previous;
-  do {
-    previous = folded;
-    folded = folded.replace(INNERMOST_COMMENT, COMMENT);
-  } while (folded !== previous);
+  if (hasUnquotedNul(value)) return null;
+  let folded = "";
+  let index = 0;
+  while (index < value.length) {
+    const char = value[index];
+    // A ")" with no comment open.
+    if (char === ")") return null;
+    if (char === "(") {
+      index = commentEnd(value, index);
+      if (index < 0) return null;
+      folded += COMMENT;
+    } else {
+      folded += char;
+      index += 1;
+    }
+  }
   return folded;
+}
+
+// Index just after the ")" that closes the comment opened at `start`, or -1
+// when it never closes. A backslash quotes the character after it.
+function commentEnd(value: string, start: number): number {
+  let depth = 0;
+  for (let index = start; index < value.length; index++) {
+    const char = value[index];
+    if (char === "\\") {
+      index += 1;
+    } else if (char === "(") {
+      depth += 1;
+    } else if (char === ")") {
+      depth -= 1;
+      if (depth === 0) return index + 1;
+    }
+  }
+  return -1;
+}
+
+// True when a NUL follows an even run of backslashes (none included), so it
+// is not an obs-qp.
+function hasUnquotedNul(value: string): boolean {
+  let backslashRun = 0;
+  for (const char of value) {
+    if (char === COMMENT && backslashRun % 2 === 0) return true;
+    backslashRun = char === "\\" ? backslashRun + 1 : 0;
+  }
+  return false;
 }
 
 // RFC 5322 §4.3: a 2-digit year 00–49 adds 2000, 50–99 adds 1900; a 3-digit

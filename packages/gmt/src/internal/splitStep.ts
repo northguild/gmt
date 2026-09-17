@@ -1,4 +1,4 @@
-import type { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@js-temporal/polyfill";
 
 const EXACT_DURATION_UNITS: ReadonlySet<string> = new Set([
   "hours",
@@ -36,6 +36,39 @@ export function isExactDurationUnit(unit: string): boolean {
 }
 
 /**
+ * `add(value, duration)`, or null when a valid duration throws a RangeError — the result lies past
+ * Temporal's representable range. An invalid duration (a fraction, an out-of-range amount) rethrows.
+ */
+function stepWithinRange<T>(
+  add: (value: T, duration: Temporal.DurationLike) => T,
+  value: T,
+  duration: Temporal.DurationLike,
+): T | null {
+  try {
+    return add(value, duration);
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    Temporal.Duration.from(duration);
+    return null;
+  }
+}
+
+/**
+ * The split when a step lands past Temporal's last representable value, so after `end` (which is
+ * representable): the remaining span is the last slice, unless that would exceed `maxSlices`.
+ */
+function closedAtRangeLimit<T>(
+  slices: Array<[T, T]>,
+  current: T,
+  end: T,
+  maxSlices: number,
+): Array<[T, T]> | null {
+  if (slices.length === maxSlices) return null;
+  slices.push([current, end]);
+  return slices;
+}
+
+/**
  * Tile `[start, end)` into `amount × unit` steps for one Temporal type.
  *
  * - Calendar units are anchored: boundary k is `start.add({ [unit]: amount × k })`, so month-end
@@ -48,6 +81,8 @@ export function isExactDurationUnit(unit: string): boolean {
  * - More than `maxSlices` slices returns `null` as soon as the next one is due, so the work stays
  *   bounded by the limit (owner decision A2, CORE-8).
  * - The last slice's end is trimmed to `end`. Callers handle `start >= end` before calling.
+ * - A step that throws a RangeError (it lands past Temporal's last representable value, so after
+ *   `end`) closes the split with a last slice ending at `end`.
  *
  * Generic over the value type only — each caller passes its own Temporal type and comparator, so
  * plain, zoned and instant values are never mixed.
@@ -78,7 +113,13 @@ export function tileByUnit<
   add: (value: T, duration: Temporal.DurationLike) => T = (value, duration) =>
     value.add(duration),
 ): Array<[T, T]> | null {
-  const exact = isExactDurationUnit(unit);
+  // Exact units step from the previous boundary; calendar units stay anchored to `start`.
+  const stepAfter: (current: T, step: number) => T | null = isExactDurationUnit(
+    unit,
+  )
+    ? (current) => stepWithinRange(add, current, { [unit]: amount })
+    : (_current, step) =>
+        stepWithinRange(add, start, { [unit]: amount * step });
   const slices: Array<[T, T]> = [];
 
   for (
@@ -86,29 +127,25 @@ export function tileByUnit<
     compare(current, end) < 0;
     step++
   ) {
-    const next = exact
-      ? add(current, { [unit]: amount })
-      : add(start, { [unit]: amount * step });
-    const order = compare(next, current);
+    const next = stepAfter(current, step);
 
-    if (order < 0) {
-      return null;
+    if (next === null) {
+      return closedAtRangeLimit(slices, current, end, maxSlices);
     }
+
+    const order = compare(next, current);
 
     if (order === 0) {
       stalled++;
-      if (stalled > MAX_STALLED_SPLIT_STEPS) {
-        return null;
-      }
+      if (stalled > MAX_STALLED_SPLIT_STEPS) return null;
       continue;
     }
 
-    stalled = 0;
-
-    if (slices.length === maxSlices) {
+    if (order < 0 || slices.length === maxSlices) {
       return null;
     }
 
+    stalled = 0;
     slices.push([current, compare(next, end) > 0 ? end : next]);
     current = next;
   }

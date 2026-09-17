@@ -1,5 +1,5 @@
 // Option resolution for formatting a zoneless Temporal value (PlainDate,
-// PlainDateTime) through the runtime's `Intl.DateTimeFormat`, which only
+// PlainDateTime, PlainTime) through the runtime's `Intl.DateTimeFormat`, which only
 // formats instants. The rules are the Temporal proposal's ECMA-402
 // amendments (CreateDateTimeFormat, GetDateTimeFormat with inherit
 // ~relevant~, AdjustDateTimeStyleFormat); the formatter is then anchored at
@@ -103,6 +103,34 @@ export function plainDateFormatOptions(options: Options): Options | null {
     month: "numeric",
     day: "numeric",
   };
+}
+
+/**
+ * Resolve caller options into runtime `Intl.DateTimeFormat` options that
+ * format a PlainTime: time fields only, never a date, era or zone field.
+ *
+ * - Returns `null` where Temporal throws a TypeError: a `dateStyle`
+ *   (CreateDateTimeFormat with required ~time~), or only non-time fields
+ *   (GetDateTimeFormat returns null).
+ * - `era` and `timeZoneName` are not inherited (GetDateTimeFormat ~relevant~),
+ *   so with no time field hour, minute and second default to `"numeric"`.
+ * - A `long`/`full` `timeStyle` is mapped through {@link plainTimeStyle}.
+ *
+ * @param options caller's `Intl.DateTimeFormatOptions`
+ * @returns runtime options anchored at UTC, or `null` when no format exists
+ */
+export function plainTimeFormatOptions(options: Options): Options | null {
+  const base = formatterOptions(options);
+  if (options.dateStyle !== undefined) return null;
+  if (options.timeStyle !== undefined) {
+    return { ...base, timeStyle: plainTimeStyle(options.timeStyle) };
+  }
+  const timeFields = pickFields(options, TIME_FIELDS);
+  if (Object.keys(timeFields).length > 0) {
+    return { ...base, ...timeFields };
+  }
+  if (DATE_FIELDS.some((key) => options[key] !== undefined)) return null;
+  return { ...base, hour: "numeric", minute: "numeric", second: "numeric" };
 }
 
 /**

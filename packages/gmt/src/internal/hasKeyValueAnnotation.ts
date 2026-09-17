@@ -9,7 +9,7 @@ const keyValueAnnotation = /\[[^\]]*=/;
  * `=` and does not match.
  *
  * Reach for this where an annotation GMT cannot vouch for must be refused rather than
- * ignored. `Temporal` silently drops an unknown non-critical annotation, per RFC 9557 §3.2,
+ * ignored. `Temporal` silently drops an unknown non-critical annotation, per RFC 9557 §3.3 (elective suffix tags),
  * which is the right default for a parser and the wrong one for a library whose contract is
  * that it never guesses: an event tagged `[x-provenance=estimated]` is not the same fact as
  * one without it, and GMT has no way to know that it is not.

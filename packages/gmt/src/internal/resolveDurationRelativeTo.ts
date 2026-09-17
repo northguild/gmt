@@ -30,8 +30,10 @@ const relativeToLeapSecond =
  * throws rather than falling through to Temporal's ISO-digit reading: a critical flag
  * (`[!u-ca=hebrew]`), an upper-case key or id, a trailing annotation after it, a
  * `PlainDateTime` or zoned string in either segment order. RFC 9557 §3.3's critical flag does
- * not change what a tag means, and §4.1's suffix values are case-insensitive, so reading any of
- * these with different digits from GMT's own shape would give the same tag two dates.
+ * not change what a tag means. RFC 9557 §3.1 makes suffix values case-sensitive unless otherwise
+ * specified, but Temporal's CanonicalizeCalendar (§12.1.1) matches the ASCII-lowercase of the
+ * calendar id, so `[u-ca=HEBREW]` names the Hebrew calendar too. Reading any of these with
+ * different digits from GMT's own shape would give the same tag two dates.
  *
  * A leap second (second `60`) throws too, in every spelling Temporal's grammar accepts — `T`,
  * `t` or space separator, extended or basic digits, with or without a designator. Temporal's

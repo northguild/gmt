@@ -223,12 +223,17 @@ function readsClock(entry) {
 const toJs = (src) =>
   src.replace(/\s+as\s+(never|const|unknown|any|string|number|boolean)\b/g, "");
 
-/** Strip the aside a documented result may carry: `3 — Tue, Wed, Fri`, `null (a moment …)`. */
+/** A trailing parenthetical aside after a literal: `"…Z" (the local midnight — already 14 June)`. */
+const TRAILING_ASIDE = /([\]}"'\w])\s*\([^()]*\)\s*$/;
+/**
+ * Strip the aside a documented result may carry: `3 — Tue, Wed, Fri`, `null (a moment …)`. The
+ * trailing `(…)` goes first, so an em dash inside it does not cut the literal short.
+ */
 function literalOf(result) {
-  let r = (result ?? "").trim();
+  let r = (result ?? "").trim().replace(TRAILING_ASIDE, "$1").trim();
   const dash = r.indexOf(" — ");
   if (dash !== -1) r = r.slice(0, dash).trim();
-  return r.replace(/([\]}"'\w])\s*\([^()]*\)\s*$/, "$1").trim();
+  return r.replace(TRAILING_ASIDE, "$1").trim();
 }
 
 function arity(call) {
@@ -254,10 +259,13 @@ function arity(call) {
  * pins `reference:` or the documented result is the `""`/`null` of an invalid input.
  */
 function callReadsClock(entry, call, result) {
-  const sentinel = ['""', "null"].includes(literalOf(result));
+  // An invalid input returns its sentinel before any clock read, so check that first. A call with
+  // no argument has no input to be invalid: its sentinel documents a runtime failure instead.
+  if (arity(call) > 0 && ['""', "null"].includes(literalOf(result)))
+    return false;
   return (
     (entry.module === "get" && arity(call) <= 1) ||
-    (readsClock(entry) && !sentinel && !PINS_REFERENCE.test(call))
+    (readsClock(entry) && !PINS_REFERENCE.test(call))
   );
 }
 
@@ -671,11 +679,7 @@ function judgeDocumentedResults(file, text) {
         read.some((n) => {
           if (clocked.has(n)) return true;
           const nested = functionEntries.get(imported.get(n));
-          return (
-            n !== callee &&
-            nested !== undefined &&
-            readsClock(nested)
-          );
+          return n !== callee && nested !== undefined && readsClock(nested);
         });
 
       if (result !== undefined) {
