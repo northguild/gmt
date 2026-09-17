@@ -98,7 +98,7 @@ describe("RESET_FORMATS", () => {
       'convertUtcToZoned(resetsAt, "Asia/Tokyo")',
     );
     expect(findResetFormat("unix-s").call(tokyo)).toBe(
-      'convertUtcToUnix(resetsAt, "seconds")',
+      'convertUtcToUnix(resetsAt, { epochUnit: "seconds" })',
     );
   });
 

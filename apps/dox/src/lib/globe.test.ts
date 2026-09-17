@@ -18,7 +18,7 @@ import { TZ_COORDINATES } from "./tz-coordinates";
 
 /** UTC instant string -> epoch ms, for the terminator maths. */
 function ms(utc: string): number {
-  const value = convertUtcToUnix(utc, "milliseconds");
+  const value = convertUtcToUnix(utc, { epochUnit: "milliseconds" });
   if (value === null) throw new Error(`bad instant: ${utc}`);
   return value;
 }

@@ -247,6 +247,17 @@ function extractStringLiteralValues(type: ts.Type, depth = 0): string[] {
 }
 
 /**
+ * `type` without `null` and `undefined`. The reference program runs with `strictNullChecks`, so
+ * an optional parameter or property reads `T | undefined`; the playground classifies `T`. A
+ * checker without `getNonNullableType` (a test double) returns the type unchanged.
+ */
+function nonNullable(checker: ts.TypeChecker, type: ts.Type): ts.Type {
+  return typeof checker?.getNonNullableType === "function"
+    ? checker.getNonNullableType(type)
+    : type;
+}
+
+/**
  * Classify a TS type into a `ParamType`, resolving string-literal unions into
  * enums with their option lists.
  */
@@ -256,6 +267,7 @@ export function classifyType(
   _paramName?: string,
 ): ClassifiedType {
   if (!type) return { type: "string" };
+  type = nonNullable(_checker, type);
 
   if (type.flags & ts.TypeFlags.Union) {
     const members = (type as ts.UnionType).types;
@@ -409,7 +421,10 @@ export function classifyType(
         for (const p of props) {
           const decl = p.declarations?.[0] as ts.Node | undefined;
           if (decl) {
-            const pt = _checker.getTypeOfSymbolAtLocation(p, decl);
+            const pt = nonNullable(
+              _checker,
+              _checker.getTypeOfSymbolAtLocation(p, decl),
+            );
             if (!(pt.flags & ts.TypeFlags.NumberLike)) {
               allNumber = false;
               break;
@@ -688,7 +703,7 @@ export function optionPropertyType(
   if (!sig) return undefined;
   for (const sp of sig.getParameters()) {
     if (!sp.name.toLowerCase().includes("options")) continue;
-    const t = checker.getTypeOfSymbolAtLocation(sp, node);
+    const t = nonNullable(checker, checker.getTypeOfSymbolAtLocation(sp, node));
     const prop = t.getProperty(optName) ?? t.getProperty(`${optName}?`);
     if (prop) return checker.getTypeOfSymbolAtLocation(prop, node);
   }

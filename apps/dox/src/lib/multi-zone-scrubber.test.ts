@@ -11,7 +11,7 @@ import { offsetAt, readZoneAt, readZoneNow } from "./zone-clock";
 
 /** UTC instant string -> epoch ms. */
 function ms(utc: string): number {
-  const value = convertUtcToUnix(utc, "milliseconds");
+  const value = convertUtcToUnix(utc, { epochUnit: "milliseconds" });
   if (value === null) throw new Error(`bad instant: ${utc}`);
   return value;
 }
@@ -139,9 +139,9 @@ describe("the demonstrated DST scenario permalink", () => {
       decoded.effectiveMs ?? 0,
     );
     expect(result?.zone).toBe("America/New_York");
-    expect(convertUnixToUtc(result?.instantMs ?? 0, "milliseconds")).toBe(
-      "2026-03-08T07:00:00Z",
-    );
+    expect(
+      convertUnixToUtc(result?.instantMs ?? 0, { epochUnit: "milliseconds" }),
+    ).toBe("2026-03-08T07:00:00Z");
   });
 });
 
@@ -150,9 +150,9 @@ describe("nextTransition", () => {
     const from = ms("2026-01-01T00:00:00Z");
     const result = nextTransition(["America/New_York", "Asia/Tokyo"], from);
     expect(result?.zone).toBe("America/New_York");
-    expect(convertUnixToUtc(result?.instantMs ?? 0, "milliseconds")).toBe(
-      "2026-03-08T07:00:00Z",
-    );
+    expect(
+      convertUnixToUtc(result?.instantMs ?? 0, { epochUnit: "milliseconds" }),
+    ).toBe("2026-03-08T07:00:00Z");
   });
 
   it("returns null when no pinned zone observes DST", () => {

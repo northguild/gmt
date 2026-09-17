@@ -82,7 +82,7 @@ interface ScrubberState {
 
 /** Epoch-ms -> `YYYY-MM-DDTHH:MM:SSZ`. All time maths goes through `@northguild/gmt`. */
 function toUtc(effectiveMs: number): string {
-  return convertUnixToUtc(effectiveMs, "milliseconds").replace(
+  return convertUnixToUtc(effectiveMs, { epochUnit: "milliseconds" }).replace(
     /\.\d{3}Z$/,
     "Z",
   );
@@ -90,7 +90,7 @@ function toUtc(effectiveMs: number): string {
 
 /** Epoch-ms, or `null` if the instant string is invalid. */
 function fromUtc(utc: string): number | null {
-  return convertUtcToUnix(utc, "milliseconds");
+  return convertUtcToUnix(utc, { epochUnit: "milliseconds" });
 }
 
 /** `?tz=a,b,c&t=<iso>` — the epic's first URL-state mechanism, minimal by design. */
@@ -167,7 +167,7 @@ export async function initScrubber(host: HTMLElement): Promise<ScrubberHost> {
   const parsed = decodeState(globalThis.location?.search ?? "");
   const state: ScrubberState = {
     pinned: parsed.pinned ?? defaultPins(),
-    anchorMs: roundToStep(parsed.effectiveMs ?? getUnixNow()),
+    anchorMs: roundToStep(parsed.effectiveMs ?? getUnixNow() ?? 0),
     offsetMin: 0,
   };
 
