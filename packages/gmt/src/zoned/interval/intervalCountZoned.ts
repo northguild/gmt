@@ -37,6 +37,8 @@ import { isValidCalendarZonedDateTime } from "../validate/isValidCalendarZonedDa
  *   `"nanosecond"`.
  * - Returns `null` on invalid input (unparseable start/end, `start > end`, unsupported unit,
  *   leap-second strings).
+ * - Compatibility: since 1.16.0 a calendar annotation must be a GMT `CalendarSystem` id
+ *   (`[u-ca=gregory]` is now invalid input); use the GMT id — see `isValidCalendarZonedDateTime`.
  *
  * @param start ISO 8601 zoned datetime string for the interval start
  * @param end ISO 8601 zoned datetime string for the interval end
@@ -51,6 +53,7 @@ import { isValidCalendarZonedDateTime } from "../validate/isValidCalendarZonedDa
  * @example intervalCountZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-01-01T00:00:00+00:00[UTC]", "day") // 0 (zero-length, on the boundary)
  * @example intervalCountZoned("5784-01-01T00:00:00-04:00[u-ca=hebrew][America/New_York]", "5785-01-01T00:00:00-04:00[u-ca=hebrew][America/New_York]", "month") // 13 (Hebrew leap year; the ISO equivalent is 14)
  * @example intervalCountZoned("invalid", "2024-01-02T00:00:00+00:00[UTC]", "day") // null
+ * @example intervalCountZoned("-271821-04-20T00:00:00+00:00[UTC]", "-271821-04-20T01:00:00+00:00[UTC]", "week") // 1 (the week began before the first instant, but is still touched)
  */
 export function intervalCountZoned(
   start: string,

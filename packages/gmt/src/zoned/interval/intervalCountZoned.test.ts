@@ -456,4 +456,24 @@ describe("intervalCountZoned in non-ISO calendars (CORE-6)", () => {
       expect(intervalCountZoned(start, end, "month")).toBe(expected);
     },
   );
+
+  // -271821-04-20T00:00:00Z is Temporal's minimum instant and a Tuesday. The week (from Monday
+  // 04-19), month and year holding it began before it, but the interval still touches exactly that
+  // one bucket — and one more once it reaches the next bucket start (04-26, 05-01, -271820-01-01).
+  it.each`
+    end                                    | unit       | expected
+    ${"-271821-04-20T01:00:00+00:00[UTC]"} | ${"week"}  | ${1}
+    ${"-271821-04-20T01:00:00+00:00[UTC]"} | ${"month"} | ${1}
+    ${"-271821-04-20T01:00:00+00:00[UTC]"} | ${"year"}  | ${1}
+    ${"-271821-04-27T00:00:00+00:00[UTC]"} | ${"week"}  | ${2}
+    ${"-271821-05-02T00:00:00+00:00[UTC]"} | ${"month"} | ${2}
+    ${"-271821-04-20T00:00:00+00:00[UTC]"} | ${"week"}  | ${1}
+  `(
+    "counts $expected $unit buckets from the minimum instant to $end",
+    ({ end, unit, expected }) => {
+      expect(
+        intervalCountZoned("-271821-04-20T00:00:00+00:00[UTC]", end, unit),
+      ).toBe(expected);
+    },
+  );
 });

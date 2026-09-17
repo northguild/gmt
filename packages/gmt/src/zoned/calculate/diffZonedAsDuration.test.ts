@@ -28,15 +28,30 @@ describe("diffZonedAsDuration", () => {
     },
   );
 
-  it("supports multi timeZone diffs", () => {
-    expect(
-      diffZonedAsDuration(
-        "2028-01-01T00:00:00+00:00[UTC]",
-        "2028-01-02T13:00:00+13:00[Pacific/Apia]",
-        "days",
-      ),
-    ).toBe("P1D");
-  });
+  // Temporal DifferenceTemporalZonedDateTime: a calendar largestUnit across two time zones throws.
+  it.each`
+    value1                              | value2                                       | unit        | expected
+    ${"2028-01-01T00:00:00+00:00[UTC]"} | ${"2028-01-02T13:00:00+13:00[Pacific/Apia]"} | ${"days"}   | ${""}
+    ${"2028-01-01T00:00:00+00:00[UTC]"} | ${"2028-01-02T13:00:00+13:00[Pacific/Apia]"} | ${"months"} | ${""}
+    ${"2028-01-01T00:00:00+00:00[UTC]"} | ${"2028-01-02T13:00:00+13:00[Pacific/Apia]"} | ${"hours"}  | ${"PT24H"}
+  `(
+    "returns $expected for $unit from $value1 to $value2 across time zones",
+    ({ value1, value2, unit, expected }) => {
+      expect(diffZonedAsDuration(value1, value2, unit)).toBe(expected);
+    },
+  );
+
+  // Temporal §6.5.6 DifferenceZonedDateTime: calendar units on the zone's wall clock.
+  it.each`
+    value1                                           | value2                                           | unit        | expected
+    ${"2024-03-09T12:00:00-05:00[America/New_York]"} | ${"2024-03-10T12:00:00-04:00[America/New_York]"} | ${"days"}   | ${"P1D"}
+    ${"2024-01-31T23:30:00-05:00[America/New_York]"} | ${"2024-02-29T23:30:00-05:00[America/New_York]"} | ${"months"} | ${"P29D"}
+  `(
+    "returns $expected for $unit from $value1 to $value2 on the local wall clock",
+    ({ value1, value2, unit, expected }) => {
+      expect(diffZonedAsDuration(value1, value2, unit)).toBe(expected);
+    },
+  );
 
   it("rounds a span crossing the America/New_York spring-forward DST gap to the real 47-hour elapsed time", () => {
     expect(
@@ -45,7 +60,7 @@ describe("diffZonedAsDuration", () => {
         "2024-03-11T12:00:00-04:00[America/New_York]",
         "days",
       ),
-    ).toBe("P1DT23H");
+    ).toBe("P2D");
     expect(
       diffZonedAsDuration(
         "2024-03-09T12:00:00-05:00[America/New_York]",
@@ -122,7 +137,7 @@ describe("diffZonedAsDuration", () => {
     ).toBe("PT100M");
   });
 
-  it("rounds the same 90-minute instant span to 2 hours regardless of timeZone (UTC-normalized before rounding)", () => {
+  it("rounds the same 90-minute instant span to 2 hours regardless of timeZone (exact time before rounding)", () => {
     expect(
       diffZonedAsDuration(
         "2028-01-01T13:00:00+13:00[Pacific/Apia]",

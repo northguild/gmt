@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { parseCalendarZonedValue } from "../../internal";
+import { countZonedLocalDates, parseCalendarZonedValue } from "../../internal";
 import { isValidCalendarZonedDateTime } from "../validate";
 
 /**
@@ -12,9 +12,16 @@ import { isValidCalendarZonedDateTime } from "../validate";
  *   Temporal refuses to compute day-granularity differences directly across two zones, since
  *   day length varies with DST/offset changes. As a result this function is NOT commutative:
  *   swapping the two intervals can change the answer when their zones differ.
- * - Zones whose calendar skips a date entirely (e.g. `Pacific/Apia`'s 2011 dateline change)
- *   still count the skipped date — this matches `intervalCountZoned`'s calendar-arithmetic
- *   rule, so the two functions never disagree about what a day is.
+ * - Each instant in the intersection contributes its own local date, and each date counts once.
+ *   A date the zone deleted is not counted, because no instant has it (`Pacific/Apia` skipped
+ *   2011-12-30). A fall-back that sends the clock back into the previous date does not lose that
+ *   date (`America/Goose_Bay` fell back at 00:01 on 2010-11-07 into 2010-11-06).
+ * - Returns `null` when the intersection crosses more than 10,000 zone transitions (the same cap
+ *   as `intervalCountZoned`).
+ * - Compatibility: before 1.16.0 the count was the calendar difference of the two endpoint dates
+ *   plus one, which counts a deleted date and can be 0 or 1 across a fall-back into the previous
+ *   date. To get that number, with `start`/`end` the intersection endpoints in `aStart`'s zone:
+ *   `diffDate(parseDateFromZoned(start), parseDateFromZoned(end), "days") + 1`.
  * - Adjacent intervals (e.g. `aEnd === bStart`) share one date and count as `1`.
  * - Returns `0` when the intervals do not overlap at all (a well-defined answer, not
  *   invalid input).
@@ -32,6 +39,8 @@ import { isValidCalendarZonedDateTime } from "../validate";
  *   24-hour periods instead of counting calendar dates. To reproduce date-fns's number,
  *   compose `intervalIntersectionZoned` with `intervalCountZoned`:
  *   `const span = intervalIntersectionZoned(aStart, aEnd, bStart, bEnd); span ? intervalCountZoned(span.start, span.end, "day") : 0;`
+ * - Compatibility: since 1.16.0 a calendar annotation must be a GMT `CalendarSystem` id
+ *   (`[u-ca=gregory]` is now invalid input); use the GMT id — see `isValidCalendarZonedDateTime`.
  *
  * @param aStart ISO 8601 zoned datetime string for the first interval start
  * @param aEnd ISO 8601 zoned datetime string for the first interval end
@@ -41,6 +50,9 @@ import { isValidCalendarZonedDateTime } from "../validate";
  *
  * @example intervalOverlappingDaysZoned("2024-03-09T12:00:00-05:00[America/New_York]", "2024-03-11T12:00:00-04:00[America/New_York]", "2024-03-09T12:00:00-05:00[America/New_York]", "2024-03-11T12:00:00-04:00[America/New_York]") // 3 (spring-forward, 47 real hours)
  * @example intervalOverlappingDaysZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-01-02T00:00:00+00:00[UTC]", "2024-01-03T00:00:00+00:00[UTC]", "2024-01-04T00:00:00+00:00[UTC]") // 0 (disjoint)
+ * @example intervalOverlappingDaysZoned("2011-12-29T23:00:00-10:00[Pacific/Apia]", "2011-12-31T01:00:00+14:00[Pacific/Apia]", "2011-12-29T23:00:00-10:00[Pacific/Apia]", "2011-12-31T01:00:00+14:00[Pacific/Apia]") // 2 (2011-12-30 was deleted)
+ * @example intervalOverlappingDaysZoned("2010-11-07T00:00:30-03:00[America/Goose_Bay]", "2010-11-06T23:30:00-04:00[America/Goose_Bay]", "2010-11-07T00:00:30-03:00[America/Goose_Bay]", "2010-11-06T23:30:00-04:00[America/Goose_Bay]") // 2 (the clock fell back into 2010-11-06)
+ * @example diffDate(parseDateFromZoned("2010-11-07T00:00:30-03:00[America/Goose_Bay]"), parseDateFromZoned("2010-11-06T23:30:00-04:00[America/Goose_Bay]"), "days") + 1 // 0 (pre-1.16.0 count)
  * @example intervalOverlappingDaysZoned("invalid", "2024-06-30T23:59:59+00:00[UTC]", "2024-04-01T00:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]") // null
  */
 export function intervalOverlappingDaysZoned(
@@ -87,17 +99,7 @@ export function intervalOverlappingDaysZoned(
 
     const start = Temporal.ZonedDateTime.compare(aS, bS) >= 0 ? aS : bS;
     const end = Temporal.ZonedDateTime.compare(aE, bE) <= 0 ? aE : bE;
-    // Both operands are normalized to iso8601 immediately before `.until()`. `.compare` above is
-    // calendar-independent, but `PlainDate.prototype.until` is NOT — it throws
-    // `RangeError: cannot compute difference between dates of hebrew and iso8601 calendars`
-    // whenever the two endpoints came from different calendars, which this function explicitly
-    // accepts (E7's D4-zoned). Counting distinct calendar DATES is a Gregorian/ISO question
-    // regardless of how either endpoint was tagged, so normalizing is the right answer, not just
-    // the safe one. Exactly the same hazard `intervalOverlappingDaysDate` hit in E5 (finding 2).
-    const startDate = start.toPlainDate().withCalendar("iso8601");
-    const endDate = end.toPlainDate().withCalendar("iso8601");
-
-    return startDate.until(endDate, { largestUnit: "day" }).days + 1;
+    return countZonedLocalDates(start, end);
   } catch {
     return null;
   }

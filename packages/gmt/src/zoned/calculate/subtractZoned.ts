@@ -1,11 +1,10 @@
 import {
+  addToZonedDisambiguated,
   calendarSystemOfZonedValue,
   formatZonedInCalendar,
   isValidAmount,
   parseCalendarZonedValue,
   resolveOverflow,
-  subtractFromZoned,
-  zonedDateTimeFrom,
 } from "../../internal";
 import { isValidDateTimeDurationUnit } from "../../plain/validate";
 import type {
@@ -28,11 +27,18 @@ import { isValidCalendarZonedDateTime } from "../validate";
  *   zone, in one operation. The calendar tag, the era, the wall time and the UTC offset are all
  *   re-derived from the result, never copied from the input. A bare ISO string is unaffected —
  *   always treated as, and always returns, `"gregorian"`.
- * - `disambiguation` controls DST resolution ONLY when the arithmetic result lands on an ambiguous
- *   local time from a fall-back (DST-end) overlap: "compatible" (default), "earlier", "later", or
- *   "reject" (throws, resulting in ""). Has no effect when the result lands in a spring-forward
- *   (DST-start) gap — Temporal's arithmetic always resolves gap landings unambiguously (by advancing
- *   past the gap) before disambiguation is ever evaluated.
+ * - Follows Temporal's AddZonedDateTime: the date portion of the duration (years, months, weeks,
+ *   days) moves the wall-clock date, then the time portion (hours and smaller) is subtracted in exact
+ *   time. `disambiguation` ("compatible" (default), "earlier", "later", or "reject" (returns
+ *   "")) applies ONLY to the intermediate wall-clock date-time after the date portion, when
+ *   that lands on an ambiguous local time from a fall-back (DST-end) overlap. It never re-resolves
+ *   the exact-time result, so a time-only duration ignores it. Has no effect when the date step
+ *   lands in a spring-forward (DST-start) gap — the gap landing is always advanced past.
+ * - Compatibility: before 1.16.0 a non-"compatible" `disambiguation` re-resolved the final wall
+ *   clock (so `- { minutes: 10 }` from `2024-11-03T01:30:00-05:00[America/New_York]` with
+ *   "earlier" returned `01:20:00-04:00`, 70 minutes before the input in exact time, instead of
+ *   `01:20:00-05:00`). To get that value, re-resolve the result's wall clock:
+ *   `setZoned(result, { hour, minute, second }, { disambiguation, offset: "ignore" })`.
  * - `offset` ("prefer" | "use" | "ignore" (default) | "reject") is accepted for API consistency with
  *   sibling zoned-construction functions (see `startOfZoned`, `endOfZoned`, etc.) but has **no effect
  *   here**: the internal rebuild step reconstructs from a plain datetime string with no UTC offset
@@ -52,6 +58,8 @@ import { isValidCalendarZonedDateTime } from "../validate";
  * @example subtractZoned("2024-11-04T01:30:00-05:00[America/New_York]", { days: 1 }, { disambiguation: "later" }) // "2024-11-03T01:30:00-05:00[America/New_York]" (fall-back overlap resolved; default "compatible" would return the -04:00 instant instead)
  * @example subtractZoned("2024-11-04T01:30:00-05:00[America/New_York]", { days: 1 }, { disambiguation: "reject" }) // "" (fall-back overlap rejected)
  * @example subtractZoned("2024-03-11T03:30:00-04:00[America/New_York]", { days: 1 }, { disambiguation: "reject" }) // "2024-03-10T03:30:00-04:00[America/New_York]" (spring-forward gap — disambiguation has no effect, arithmetic already advanced past it, so "reject" does not throw here)
+ * @example subtractZoned("2024-11-03T01:50:00-05:00[America/New_York]", { minutes: 10 }, { disambiguation: "earlier" }) // "2024-11-03T01:40:00-05:00[America/New_York]" (exact time — disambiguation never re-resolves it)
+ * @example setZoned(subtractZoned("2024-11-03T01:50:00-05:00[America/New_York]", { minutes: 10 }), { hour: 1, minute: 40, second: 0 }, { disambiguation: "earlier", offset: "ignore" }) // "2024-11-03T01:40:00-04:00[America/New_York]" (pre-1.16.0 result)
  * @example subtractZoned("2024-03-31T12:00:00-04:00[America/New_York]", { months: 1 }, { overflow: "reject" }) // ""
  * @example subtractZoned("5784-07-15T14:30:00-04:00[u-ca=hebrew][America/New_York]", { months: 1 }) // "5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]" (Adar -> Adar I, EDT -> EST in one call)
  * @example subtractZoned("0001-05-01T12:00:00+09:00[u-ca=japanese;era=reiwa][Asia/Tokyo]", { days: 1 }) // "0031-04-30T12:00:00+09:00[u-ca=japanese;era=heisei][Asia/Tokyo]" (era re-derived, not copied)
@@ -87,27 +95,12 @@ export function subtractZoned(
       return "";
     }
     const zoned = parseCalendarZonedValue(value);
-    const subtracted = subtractFromZoned(zoned, units, { overflow });
-
-    if (disambiguation === "compatible") {
-      return formatZonedInCalendar(subtracted, calendar);
-    }
-
-    // The calendar MUST be stripped before this rebuild string is composed (E7 risk R1) — see
-    // `addZoned`'s equivalent comment for the full reasoning. In short: a calendared
-    // `.toPlainDateTime().toString()` already carries Temporal's own `[u-ca=...]` annotation, so
-    // appending `[${timeZoneId}]` produces GMT's forbidden segment ordering and
-    // `Temporal.ZonedDateTime.from` rejects it, silently degrading every non-"compatible"
-    // disambiguation to "".
-    const plainDateTime = subtracted
-      .withCalendar("iso8601")
-      .toPlainDateTime()
-      .toString();
-    const resolved = zonedDateTimeFrom(
-      `${plainDateTime}[${subtracted.timeZoneId}]`,
-      { disambiguation, offset },
-    ).withCalendar(subtracted.calendarId);
-    return formatZonedInCalendar(resolved, calendar);
+    const subtracted = addToZonedDisambiguated(zoned, units, -1, {
+      overflow,
+      disambiguation,
+      offset,
+    });
+    return formatZonedInCalendar(subtracted, calendar);
   } catch {
     return "";
   }

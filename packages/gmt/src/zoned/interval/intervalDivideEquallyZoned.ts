@@ -1,9 +1,11 @@
+import { Temporal } from "@js-temporal/polyfill";
 import {
   calendarOfAllZonedValues,
   formatZonedInCalendar,
   parseCalendarZonedValue,
 } from "../../internal";
 import { isValidCalendarZonedInterval } from "./validate";
+import { divisionBoundary } from "../../internal/divisionBoundary";
 import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 
 /**
@@ -11,10 +13,9 @@ import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
  *
  * - Returns an array of `n` `{ start, end }` records that tile the original interval, each
  *   record's `end` equal to the next record's `start`.
- * - Boundaries are computed from the total elapsed real time (nanoseconds, via
- *   `Duration.prototype.total` with `relativeTo` set to `start`), so a spring-forward day split
- *   in half lands exactly on the DST transition's real midpoint rather than the local-clock
- *   midpoint.
+ * - Each boundary is `start + round((end - start) · i / n)` in integer epoch nanoseconds (real
+ *   elapsed time, exact at any span length), so a spring-forward day split in half lands exactly
+ *   on the DST transition's real midpoint rather than the local-clock midpoint.
  * - `n === 1` returns the original interval unchanged, as a single-element array.
  * - A zero-length interval (`start === end`) returns `n` identical zero-length sub-intervals.
  * - Returns `[]` when `n` is not a positive integer, or on invalid input (unparseable
@@ -85,14 +86,17 @@ export function intervalDivideEquallyZoned(
       }));
     }
 
-    const totalNs = startVal
-      .until(endVal, { largestUnit: "nanosecond" })
-      .total({ unit: "nanosecond", relativeTo: startVal });
+    const startNs = startVal.epochNanoseconds;
+    const totalNs = endVal.epochNanoseconds - startNs;
 
     const boundaries: Array<typeof startVal> = [startVal];
     for (let i = 1; i < n; i++) {
       boundaries.push(
-        startVal.add({ nanoseconds: Math.round((totalNs * i) / n) }),
+        new Temporal.ZonedDateTime(
+          startNs + divisionBoundary(totalNs, i, n),
+          startVal.timeZoneId,
+          startVal.calendarId,
+        ),
       );
     }
     boundaries.push(endVal);

@@ -53,20 +53,26 @@ describe("formatZonedRange", () => {
     },
   );
 
-  it("forces formatting to use endpoint timeZone even when options.timeZone is provided", () => {
-    const from = "2024-02-29T10:00:00-05:00[America/New_York]";
-    const to = "2024-02-29T12:00:00-05:00[America/New_York]";
-    const options = {
-      hour: "numeric",
-      minute: "numeric",
-      timeZoneName: "short",
-      timeZone: "UTC",
-    } satisfies Intl.DateTimeFormatOptions;
-
-    expect(formatZonedRange(from, to, "en-US", options)).toBe(
-      "10:00 AM - 12:00 PM EST",
-    );
-  });
+  // A ZonedDateTime is formatted in its own zone; a `timeZone` option is a
+  // TypeError in Temporal (CreateDateTimeFormat with toLocaleStringTimeZone),
+  // so it returns the sentinel rather than being silently overridden.
+  it.each`
+    options                                                                           | expected                     | reason
+    ${{ hour: "numeric", minute: "numeric", timeZoneName: "short", timeZone: "UTC" }} | ${""}                        | ${"a timeZone option is rejected"}
+    ${{ hour: "numeric", minute: "numeric", timeZoneName: "short" }}                  | ${"10:00 AM - 12:00 PM EST"} | ${"without it the endpoints' zone applies"}
+  `(
+    "formats a New York range with $options to $expected ($reason)",
+    ({ options, expected }) => {
+      expect(
+        formatZonedRange(
+          "2024-02-29T10:00:00-05:00[America/New_York]",
+          "2024-02-29T12:00:00-05:00[America/New_York]",
+          "en-US",
+          options,
+        ),
+      ).toBe(expected);
+    },
+  );
 
   // en-GB
   it.each`
@@ -188,7 +194,7 @@ describe("formatZonedRange", () => {
   );
 
   // is-IS long/long GMT offset display — CLDR changed the UTC time zone
-  // name from "GMT" (ICU 77 / Node 20) to "GMT+0" (ICU 78 / Node 22/24).
+  // name from "GMT" (ICU 77 / Node 22.16–22.22) to "GMT+0" (ICU 78 / Node 22.23+, 24, 26).
   it("formats valid zoned datetime range for is-IS with dateStyle/timeStyle long as one of the known ICU variants", () => {
     expectOneOfIcu(
       formatZonedRange(
@@ -323,6 +329,29 @@ describe("formatZonedRange", () => {
       expect(formatZonedRange(from, to, MustTestLocales.trTR, options)).toBe(
         normalizeDateTime(expected),
       );
+    },
+  );
+
+  // Temporal ECMA-402 Instant format (GetDateTimeFormat ~any~, ~all~, ~all~)
+  // in the endpoints' own zone: requested widths are kept and `era` alone
+  // still gets the date and time defaults. Expected values: native
+  // Intl.DateTimeFormat#formatRange in America/New_York with the adjusted
+  // options.
+  it.each`
+    locale                  | options                               | expected                                           | reason
+    ${MustTestLocales.zhCN} | ${{ year: "numeric", month: "long" }} | ${"2024年2月"}                                     | ${"requested long month kept"}
+    ${MustTestLocales.enUS} | ${{ era: "long" }}                    | ${"2/3/2024 Anno Domini, 2:30:45 PM - 3:30:45 PM"} | ${"era alone gets the date and time defaults"}
+  `(
+    "formats 14:30:45 to 15:30:45 in America/New_York in $locale with $options to $expected ($reason)",
+    ({ locale, options, expected }) => {
+      expect(
+        formatZonedRange(
+          "2024-02-03T14:30:45-05:00[America/New_York]",
+          "2024-02-03T15:30:45-05:00[America/New_York]",
+          locale,
+          options,
+        ),
+      ).toBe(expected);
     },
   );
 });

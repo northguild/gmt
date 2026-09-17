@@ -15,6 +15,9 @@ function mockNow(instant: Temporal.Instant): () => void {
 
 describe("formatTimeZoneName", () => {
   describe("season-independent styles (shortGeneric/longGeneric)", () => {
+    // ja-JP longGeneric: "米国東部時間" is ICU 78 (Node 22.23+, 24, 26; checked on
+    // ICU 78.3); "アメリカ東部時間" is the ICU 77 (Node 22.16–22.22) wording from
+    // the original golden, not re-run here.
     it.each`
       locale                  | shortGeneric             | longGeneric
       ${MustTestLocales.enUS} | ${"ET"}                  | ${"Eastern Time"}

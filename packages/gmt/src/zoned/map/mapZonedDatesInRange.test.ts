@@ -200,4 +200,18 @@ describe("mapZonedDatesInRange default piece limit", () => {
       ).length,
     ).toBe(0);
   });
+
+  // Temporal: the maximum instant +275760-09-13T00:00Z is valid, so its local date is in range; the
+  // cursor stepping past the date limit after it ends the walk instead of discarding the result.
+  it.each`
+    start                                  | end                                    | stepDays | expected
+    ${"+275760-09-12T00:00:00+00:00[UTC]"} | ${"+275760-09-13T00:00:00+00:00[UTC]"} | ${1}     | ${["+275760-09-12", "+275760-09-13"]}
+    ${"+275760-09-13T00:00:00+00:00[UTC]"} | ${"+275760-09-13T00:00:00+00:00[UTC]"} | ${1}     | ${["+275760-09-13"]}
+    ${"2024-01-01T00:00:00+00:00[UTC]"}    | ${"2024-01-02T00:00:00+00:00[UTC]"}    | ${1e15}  | ${["2024-01-01"]}
+  `(
+    "returns $expected from $start to $end every $stepDays days at the date limit",
+    ({ start, end, stepDays, expected }) => {
+      expect(mapZonedDatesInRange(start, end, stepDays)).toEqual(expected);
+    },
+  );
 });

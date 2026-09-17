@@ -19,6 +19,8 @@ import { parseCalendarZonedValue } from "../../../internal";
  *   absolute time.
  * - Rejects Temporal's `[timeZone][u-ca=...]` ordering, leap seconds, non-strings, and any
  *   unparseable endpoint.
+ * - Compatibility: since 1.16.0 a calendar annotation must be a GMT `CalendarSystem` id
+ *   (`[u-ca=gregory]` is now invalid input); use the GMT id — see `isValidCalendarZonedDateTime`.
  *
  * @param start ISO or GMT calendar-annotated ZonedDateTime string (interval start)
  * @param end ISO or GMT calendar-annotated ZonedDateTime string (interval end)

@@ -680,4 +680,24 @@ describe("splitIntervalByUnitZoned default piece limit", () => {
       expect(splitIntervalByUnitZoned(start, end, unit, 1).length).toBe(0);
     },
   );
+
+  // A step past Temporal's maximum (instant +275760-09-13T00:00:00Z; PlainDateTime
+  // +275760-09-13T23:59:59.999999999; PlainDate +275760-09-13) lands after the representable `end`,
+  // so the last piece is trimmed to `end` rather than discarding the split.
+  it.each`
+    start                                               | unit      | amount
+    ${"+275760-09-12T23:00:00+00:00[UTC]"}              | ${"hour"} | ${2}
+    ${"+275760-09-12T12:00:00+00:00[UTC]"}              | ${"day"}  | ${1}
+    ${"+275760-09-12T08:00:00-04:00[America/New_York]"} | ${"day"}  | ${1}
+  `(
+    "returns one piece from $start to the maximum instant by $amount $unit",
+    ({ start, unit, amount }) => {
+      const end = start.endsWith("[UTC]")
+        ? "+275760-09-13T00:00:00+00:00[UTC]"
+        : "+275760-09-12T20:00:00-04:00[America/New_York]";
+      expect(splitIntervalByUnitZoned(start, end, unit, amount)).toEqual([
+        { start, end },
+      ]);
+    },
+  );
 });

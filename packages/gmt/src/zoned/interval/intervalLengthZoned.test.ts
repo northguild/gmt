@@ -2,6 +2,7 @@ import { calendarZonedFixtures } from "../../test";
 import { Temporal } from "@js-temporal/polyfill";
 import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
 import { battleTestTimeZones } from "../../test/timeZoneMatrix";
+import { convertZonedToZoned } from "../convert/convertZonedToZoned";
 import { intervalLengthZoned } from "./intervalLengthZoned";
 
 describe("intervalLengthZoned", () => {
@@ -93,6 +94,43 @@ describe("intervalLengthZoned", () => {
 // E7 (issue #152), D5-zoned. Every expected value produced by running
 // @js-temporal/polyfill@0.5.1 — see the R2 note below for why that matters more here than usual.
 // ---------------------------------------------------------------------------------------------
+// Temporal DifferenceTemporalZonedDateTime: a largestUnit of day or larger across two zones that are
+// not TimeZoneEquals throws RangeError ("day lengths can vary between time zones"), so the calendar
+// units are null; time units measure exact elapsed time. New York 2024-01-01T00:00-05:00 is 05:00Z
+// and Paris 2024-01-03T00:00+01:00 is 2024-01-02T23:00Z: 42 hours apart.
+describe("intervalLengthZoned across two time zones", () => {
+  it.each`
+    start                                            | end                                          | unit        | expected | why
+    ${"2024-01-01T00:00:00-05:00[America/New_York]"} | ${"2024-01-03T00:00:00+01:00[Europe/Paris]"} | ${"hour"}   | ${42}    | ${"time unit: exact elapsed time"}
+    ${"2024-01-01T00:00:00-05:00[America/New_York]"} | ${"2024-01-03T00:00:00+01:00[Europe/Paris]"} | ${"minute"} | ${2520}  | ${"time unit: exact elapsed time"}
+    ${"2024-01-01T00:00:00-05:00[America/New_York]"} | ${"2024-01-03T00:00:00+01:00[Europe/Paris]"} | ${"day"}    | ${null}  | ${"calendar unit across zones"}
+    ${"2024-01-01T00:00:00-05:00[America/New_York]"} | ${"2024-01-03T00:00:00+01:00[Europe/Paris]"} | ${"week"}   | ${null}  | ${"calendar unit across zones"}
+    ${"2024-01-01T00:00:00-05:00[America/New_York]"} | ${"2024-01-03T00:00:00+01:00[Europe/Paris]"} | ${"month"}  | ${null}  | ${"calendar unit across zones"}
+    ${"2024-01-01T00:00:00-05:00[America/New_York]"} | ${"2024-01-03T00:00:00+01:00[Europe/Paris]"} | ${"years"}  | ${null}  | ${"calendar unit (plural) across zones"}
+    ${"2024-01-01T00:00:00+00:00[UTC]"}              | ${"2024-01-03T00:00:00+00:00[Etc/UTC]"}      | ${"day"}    | ${2}     | ${"UTC and Etc/UTC are TimeZoneEquals"}
+    ${"2024-01-01T00:00:00+05:30[Asia/Calcutta]"}    | ${"2024-01-03T00:00:00+05:30[Asia/Kolkata]"} | ${"day"}    | ${2}     | ${"Asia/Calcutta links to Asia/Kolkata"}
+  `(
+    "$start → $end in $unit is $expected ($why)",
+    ({ start, end, unit, expected }) => {
+      expect(intervalLengthZoned(start, end, unit)).toBe(expected);
+    },
+  );
+
+  it("measures calendar units once both ends are in one zone (the compatibility path)", () => {
+    // Paris 2024-01-03T00:00+01:00 is New York 2024-01-02T18:00-05:00: 42 hours, 1.75 days.
+    expect(
+      intervalLengthZoned(
+        "2024-01-01T00:00:00-05:00[America/New_York]",
+        convertZonedToZoned(
+          "2024-01-03T00:00:00+01:00[Europe/Paris]",
+          "America/New_York",
+        ),
+        "day",
+      ),
+    ).toBe(1.75);
+  });
+});
+
 describe("intervalLengthZoned with GMT calendar-annotated values", () => {
   const Y = calendarZonedFixtures.hebrewLeapYearSpan;
   const ISLAMIC_END =

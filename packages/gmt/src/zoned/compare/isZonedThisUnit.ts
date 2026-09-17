@@ -19,7 +19,9 @@ import { zonedDateTimeFrom } from "../../internal";
  *   varies by locale. When `unit` is `"week"` and `locale` is given, the
  *   comparison uses `getLocaleStartOfWeek` instead of the ISO Monday-start
  *   default `areDatesEqualBy` otherwise uses.
- * - Returns false for an unsupported unit, invalid input, or an invalid locale.
+ * - Returns false for an unsupported unit or invalid input. The locale is read only for
+ *   `"week"`, so an invalid locale returns false for `"week"` and is ignored for `"day"`,
+ *   `"month"` and `"year"`.
  *
  * @param value ISO ZonedDateTime string
  * @param unit Temporal.DateUnit to compare by ("year" | "month" | "week" | "day")
@@ -30,6 +32,8 @@ import { zonedDateTimeFrom } from "../../internal";
  * @example isZonedThisUnit("2024-02-26T10:00:00+01:00[Europe/Paris]", "week", "fr-FR") // true, if today is 2024-03-01 in Europe/Paris (same fr-FR Monday-start week)
  * @example isZonedThisUnit("2024-03-15T10:00:00-04:00[America/New_York]", "hour" as never) // false (unsupported unit)
  * @example isZonedThisUnit("invalid", "month") // false
+ * @example isZonedThisUnit("2024-03-15T10:00:00-04:00[America/New_York]", "week", "not-a-locale-!!") // false (invalid locale)
+ * @example isZonedThisUnit("2024-03-15T10:00:00-04:00[America/New_York]", "day", "not-a-locale-!!") // true, if today is 2024-03-15 in America/New_York (the locale is not read for "day")
  */
 export function isZonedThisUnit(
   value: string,

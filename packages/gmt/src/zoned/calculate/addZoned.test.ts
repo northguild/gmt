@@ -186,6 +186,35 @@ describe("addZoned", () => {
     },
   );
 
+  // Temporal §6.5.5 AddZonedDateTime: the time portion is added in exact time, so disambiguation
+  // never re-resolves an instant reached by exact-time arithmetic. With a date portion, it
+  // applies only to the intermediate wall-clock date-time (date added, time kept).
+  it.each`
+    value                                            | units                       | disambiguation | expected
+    ${"2024-11-03T01:30:00-05:00[America/New_York]"} | ${{ minutes: 10 }}          | ${"earlier"}   | ${"2024-11-03T01:40:00-05:00[America/New_York]"}
+    ${"2024-11-03T00:30:00-04:00[America/New_York]"} | ${{ hours: 1 }}             | ${"later"}     | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
+    ${"2024-11-03T00:30:00-04:00[America/New_York]"} | ${{ hours: 1 }}             | ${"reject"}    | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
+    ${"2024-11-02T01:30:00-04:00[America/New_York]"} | ${{ hours: 24 }}            | ${"later"}     | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
+    ${"2024-11-02T00:30:00-04:00[America/New_York]"} | ${{ days: 1, hours: 1 }}    | ${"later"}     | ${"2024-11-03T01:30:00-04:00[America/New_York]"}
+    ${"2024-11-02T01:30:00-04:00[America/New_York]"} | ${{ days: 1, minutes: 10 }} | ${"later"}     | ${"2024-11-03T01:40:00-05:00[America/New_York]"}
+    ${"2024-11-02T01:30:00-04:00[America/New_York]"} | ${{ days: 1, minutes: 10 }} | ${"reject"}    | ${""}
+  `(
+    "adds the time portion of $units to $value in exact time with disambiguation $disambiguation, returns $expected",
+    ({ value, units, disambiguation, expected }) => {
+      expect(addZoned(value, units, { disambiguation })).toBe(expected);
+    },
+  );
+
+  it("returns the sentinel for an unknown disambiguation even when the duration is time-only", () => {
+    expect(
+      addZoned(
+        "2024-11-03T01:30:00-05:00[America/New_York]",
+        { minutes: 10 },
+        { disambiguation: "bogus" as never },
+      ),
+    ).toBe("");
+  });
+
   // offset is accepted but inert: the internal rebuild step reconstructs from a plain datetime
   // string with no offset embedded, so every offset value produces identical output
   it.each`

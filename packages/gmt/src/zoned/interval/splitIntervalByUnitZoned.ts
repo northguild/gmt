@@ -37,6 +37,8 @@ import { minSlicesForSpan } from "../../internal/splitStep";
  * - `options.maxPieces` (positive safe integer, default `1_000_000`) bounds the output: a split
  *   into more slices returns `[]`, decided from the span before stepping where it can be, and
  *   otherwise as soon as slice `maxPieces + 1` is due. An invalid `maxPieces` also returns `[]`.
+ * - Compatibility: since 1.16.0 a calendar annotation must be a GMT `CalendarSystem` id
+ *   (`[u-ca=gregory]` is now invalid input); use the GMT id — see `isValidCalendarZonedDateTime`.
  *
  * @param start ISO 8601 zoned datetime string for the interval start
  * @param end ISO 8601 zoned datetime string for the interval end

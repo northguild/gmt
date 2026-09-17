@@ -17,6 +17,9 @@ describe("parseWeekFromZoned", () => {
     value                               | weekStartsOn | expected
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"monday"}  | ${1}
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"sunday"}  | ${1}
+    ${"2024-12-31T12:00:00+00:00[UTC]"} | ${"monday"}  | ${1}
+    ${"2024-12-31T12:00:00+00:00[UTC]"} | ${"sunday"}  | ${53}
+    ${"2000-12-31T12:00:00+00:00[UTC]"} | ${"sunday"}  | ${54}
   `(
     "returns $expected for $value with weekStartsOn $weekStartsOn",
     ({ value, weekStartsOn, expected }) => {

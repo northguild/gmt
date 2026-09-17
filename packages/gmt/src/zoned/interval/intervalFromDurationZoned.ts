@@ -1,13 +1,11 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidDuration } from "../../duration/validate";
 import {
-  addToZoned,
+  addToZonedDisambiguated,
   calendarSystemOfZonedValue,
   formatZonedInCalendar,
   parseCalendarZonedValue,
   resolveOverflow,
-  subtractFromZoned,
-  zonedDateTimeFrom,
 } from "../../internal";
 import type { Disambiguation, Offset, Overflow } from "../../types";
 import { isValidCalendarZonedDateTime } from "../validate";
@@ -19,10 +17,17 @@ import { isValidCalendarZonedDateTime } from "../validate";
  * - `anchor: "end"` treats `value` as the interval end and subtracts `duration` to get the start.
  * - Uses `Temporal.ZonedDateTime.prototype.add`/`.subtract`, so calendar units (years/months/weeks)
  *   resolve against `value` itself — no separate `relativeTo` is needed.
- * - `disambiguation` controls DST resolution ONLY when the arithmetic result lands on an ambiguous
- *   local time from a fall-back (DST-end) overlap: "compatible" (default), "earlier", "later", or
- *   "reject" (returns null). Mirrors `addZoned`'s exact semantics — has no effect on a spring-forward
- *   (DST-start) gap landing, which Temporal's arithmetic always resolves before disambiguation runs.
+ * - Follows Temporal's AddZonedDateTime: the date portion of the duration (years, months, weeks,
+ *   days) moves the wall-clock date, then the time portion (hours and smaller) is added (subtracted
+ *   for `anchor: "end"`) in exact time. `disambiguation` ("compatible" (default), "earlier", "later", or "reject" (returns
+ *   null)) applies ONLY to the intermediate wall-clock date-time after the date portion, when
+ *   that lands on an ambiguous local time from a fall-back (DST-end) overlap. It never re-resolves
+ *   the exact-time result, so a time-only duration ignores it. Has no effect when the date step
+ *   lands in a spring-forward (DST-start) gap — the gap landing is always advanced past.
+ * - Compatibility: before 1.16.0 a non-"compatible" `disambiguation` re-resolved the final wall
+ *   clock (so `+ { minutes: 10 }` from `01:30-05:00` with "earlier" returned `01:40-04:00`, 50
+ *   minutes earlier in exact time). To get that value, re-resolve the result's wall clock:
+ *   `setZoned(result, { hour, minute, second }, { disambiguation, offset: "ignore" })`.
  * - `offset` is accepted for API consistency with `addZoned` but has **no effect here** for the same
  *   reason documented there: the disambiguation rebuild has no stored offset to prefer/use/ignore/reject.
  * - A negative `duration` (e.g. `"-P1D"`) can invert the computed span; returns null when that
@@ -45,6 +50,8 @@ import { isValidCalendarZonedDateTime } from "../validate";
  * @example intervalFromDurationZoned("2024-01-01T00:00:00+00:00[UTC]", "P1D", "start") // { start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-02T00:00:00+00:00[UTC]" }
  * @example intervalFromDurationZoned("2024-01-02T00:00:00+00:00[UTC]", "P1D", "end") // { start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-02T00:00:00+00:00[UTC]" }
  * @example intervalFromDurationZoned("2024-11-02T01:30:00-04:00[America/New_York]", "P1D", "start", { disambiguation: "later" }) // { start: "2024-11-02T01:30:00-04:00[America/New_York]", end: "2024-11-03T01:30:00-05:00[America/New_York]" } (fall-back overlap resolved; default "compatible" would return the -04:00 instant instead)
+ * @example intervalFromDurationZoned("2024-11-03T00:30:00-04:00[America/New_York]", "PT1H", "start", { disambiguation: "later" }) // { start: "2024-11-03T00:30:00-04:00[America/New_York]", end: "2024-11-03T01:30:00-04:00[America/New_York]" } (exact time — disambiguation never re-resolves it)
+ * @example setZoned(intervalFromDurationZoned("2024-11-03T00:30:00-04:00[America/New_York]", "PT1H", "start")?.end ?? "", { hour: 1, minute: 30, second: 0 }, { disambiguation: "later", offset: "ignore" }) // "2024-11-03T01:30:00-05:00[America/New_York]" (pre-1.16.0 end)
  * @example intervalFromDurationZoned("2024-01-31T12:00:00-05:00[America/New_York]", "P1M", "start", { overflow: "reject" }) // null
  * @example intervalFromDurationZoned("invalid", "P1D", "start") // null
  */
@@ -82,23 +89,12 @@ export function intervalFromDurationZoned(
     const point = parseCalendarZonedValue(value);
     const dur = Temporal.Duration.from(duration);
 
-    const rawOther =
-      anchor === "start"
-        ? addToZoned(point, dur, { overflow })
-        : subtractFromZoned(point, dur, { overflow });
-
-    // The calendar MUST be stripped before this rebuild string is composed (E7 risk R1) — see
-    // `addZoned`'s equivalent comment. A calendared `.toPlainDateTime().toString()` already
-    // carries Temporal's own `[u-ca=...]` annotation, so appending `[${timeZoneId}]` produces
-    // GMT's forbidden segment ordering and `Temporal.ZonedDateTime.from` rejects it, silently
-    // degrading every non-"compatible" disambiguation to null.
-    const other =
-      disambiguation === "compatible"
-        ? rawOther
-        : zonedDateTimeFrom(
-            `${rawOther.withCalendar("iso8601").toPlainDateTime().toString()}[${rawOther.timeZoneId}]`,
-            { disambiguation, offset },
-          ).withCalendar(rawOther.calendarId);
+    const other = addToZonedDisambiguated(
+      point,
+      dur,
+      anchor === "start" ? 1 : -1,
+      { overflow, disambiguation, offset },
+    );
 
     const start = anchor === "start" ? point : other;
     const end = anchor === "start" ? other : point;

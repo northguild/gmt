@@ -232,6 +232,29 @@ describe("formatZonedToParts", () => {
     );
   });
 
+  describe("timeZone option", () => {
+    // A ZonedDateTime is formatted in its own zone: Temporal's toLocaleString
+    // throws a TypeError for a timeZone option (CreateDateTimeFormat with
+    // toLocaleStringTimeZone; test262 intl402/Temporal/ZonedDateTime/
+    // prototype/toLocaleString/options-timeZone.js), so the parts are [].
+    it.each`
+      timeZone
+      ${"Asia/Tokyo"}
+      ${"America/New_York"}
+    `(
+      "returns [] when a timeZone option $timeZone is passed",
+      ({ timeZone }) => {
+        expect(
+          formatZonedToParts(
+            "2024-02-03T14:30:45-05:00[America/New_York]",
+            MustTestLocales.enUS,
+            { timeZone },
+          ),
+        ).toEqual([]);
+      },
+    );
+  });
+
   describe("invalid input", () => {
     it.each`
       value

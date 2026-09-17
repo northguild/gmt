@@ -82,6 +82,23 @@ describe("intervalFromDurationZoned", () => {
     },
   );
 
+  // Temporal §6.5.5 AddZonedDateTime: a time-only duration is exact time, so disambiguation never
+  // re-resolves the computed endpoint.
+  it.each`
+    value                                            | duration   | anchor     | disambiguation | expected
+    ${"2024-11-03T00:30:00-04:00[America/New_York]"} | ${"PT1H"}  | ${"start"} | ${"later"}     | ${{ start: "2024-11-03T00:30:00-04:00[America/New_York]", end: "2024-11-03T01:30:00-04:00[America/New_York]" }}
+    ${"2024-11-03T00:30:00-04:00[America/New_York]"} | ${"PT1H"}  | ${"start"} | ${"reject"}    | ${{ start: "2024-11-03T00:30:00-04:00[America/New_York]", end: "2024-11-03T01:30:00-04:00[America/New_York]" }}
+    ${"2024-11-03T01:30:00-05:00[America/New_York]"} | ${"PT10M"} | ${"start"} | ${"earlier"}   | ${{ start: "2024-11-03T01:30:00-05:00[America/New_York]", end: "2024-11-03T01:40:00-05:00[America/New_York]" }}
+    ${"2024-11-03T01:40:00-05:00[America/New_York]"} | ${"PT10M"} | ${"end"}   | ${"earlier"}   | ${{ start: "2024-11-03T01:30:00-05:00[America/New_York]", end: "2024-11-03T01:40:00-05:00[America/New_York]" }}
+  `(
+    "builds $expected from $value, $duration anchored at $anchor with disambiguation $disambiguation in exact time",
+    ({ value, duration, anchor, disambiguation, expected }) => {
+      expect(
+        intervalFromDurationZoned(value, duration, anchor, { disambiguation }),
+      ).toEqual(expected);
+    },
+  );
+
   // spring-forward gap: disambiguation has no effect, arithmetic already advances past it
   it.each`
     value                                            | disambiguation

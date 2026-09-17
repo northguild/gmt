@@ -38,19 +38,42 @@ describe("diffZonedDateTime", () => {
     },
   );
 
+  // Temporal DifferenceTemporalZonedDateTime: a calendar largestUnit (days and larger) across two
+  // different time zones throws ("day lengths can vary between time zones") -> null; time units are
+  // exact time, so every pair below is 24 hours apart.
   it.each`
-    value1                                       | value2
-    ${"2028-01-01T00:00:00+00:00[UTC]"}          | ${"2028-01-02T00:00:00+00:00[UTC]"}
-    ${"2028-01-01T00:00:00+00:00[UTC]"}          | ${"2028-01-02T13:00:00+13:00[Pacific/Apia]"}
-    ${"2028-01-01T13:00:00+13:00[Pacific/Apia]"} | ${"2028-01-02T00:00:00+00:00[UTC]"}
-    ${"2028-01-01T00:00:00+00:00[UTC]"}          | ${"2028-01-01T13:00:00-11:00[Pacific/Niue]"}
-    ${"2027-12-31T13:00:00-11:00[Pacific/Niue]"} | ${"2028-01-02T00:00:00+00:00[UTC]"}
-    ${"2028-01-01T13:00:00+13:00[Pacific/Apia]"} | ${"2028-01-01T13:00:00-11:00[Pacific/Niue]"}
-    ${"2027-12-31T13:00:00-11:00[Pacific/Niue]"} | ${"2028-01-02T13:00:00+13:00[Pacific/Apia]"}
+    value1                                           | value2                                       | units                 | expected
+    ${"2028-01-01T00:00:00+00:00[UTC]"}              | ${"2028-01-02T00:00:00+00:00[UTC]"}          | ${["days"]}           | ${{ days: 1 }}
+    ${"2028-01-01T00:00:00+00:00[UTC]"}              | ${"2028-01-02T13:00:00+13:00[Pacific/Apia]"} | ${["days"]}           | ${null}
+    ${"2028-01-01T00:00:00+00:00[UTC]"}              | ${"2028-01-02T13:00:00+13:00[Pacific/Apia]"} | ${["hours"]}          | ${{ hours: 24 }}
+    ${"2028-01-01T13:00:00+13:00[Pacific/Apia]"}     | ${"2028-01-02T00:00:00+00:00[UTC]"}          | ${["days"]}           | ${null}
+    ${"2028-01-01T13:00:00+13:00[Pacific/Apia]"}     | ${"2028-01-02T00:00:00+00:00[UTC]"}          | ${["hours"]}          | ${{ hours: 24 }}
+    ${"2028-01-01T00:00:00+00:00[UTC]"}              | ${"2028-01-01T13:00:00-11:00[Pacific/Niue]"} | ${["weeks"]}          | ${null}
+    ${"2027-12-31T13:00:00-11:00[Pacific/Niue]"}     | ${"2028-01-02T00:00:00+00:00[UTC]"}          | ${["minutes"]}        | ${{ minutes: 1440 }}
+    ${"2028-01-01T13:00:00+13:00[Pacific/Apia]"}     | ${"2028-01-01T13:00:00-11:00[Pacific/Niue]"} | ${["months"]}         | ${null}
+    ${"2027-12-31T13:00:00-11:00[Pacific/Niue]"}     | ${"2028-01-02T13:00:00+13:00[Pacific/Apia]"} | ${["years", "hours"]} | ${null}
+    ${"2027-12-31T13:00:00-11:00[Pacific/Niue]"}     | ${"2028-01-02T13:00:00+13:00[Pacific/Apia]"} | ${["hours"]}          | ${{ hours: 24 }}
+    ${"2024-01-01T00:00:00-05:00[America/New_York]"} | ${"2024-01-03T00:00:00+01:00[Europe/Paris]"} | ${"days"}             | ${null}
+    ${"2024-01-01T00:00:00+00:00[UTC]"}              | ${"2024-01-03T00:00:00+00:00[Etc/UTC]"}      | ${"days"}             | ${2}
+    ${"2024-01-01T00:00:00+05:30[Asia/Calcutta]"}    | ${"2024-01-03T00:00:00+05:30[Asia/Kolkata]"} | ${"days"}             | ${2}
   `(
-    "supports multi timeZone diffs for $value1 and $value2, expecting 1 day difference",
-    ({ value1, value2 }) => {
-      expect(diffZoned(value1, value2, ["days"])).toEqual({ days: 1 });
+    "returns $expected for $units from $value1 to $value2 (calendar units need one time zone)",
+    ({ value1, value2, units, expected }) => {
+      expect(diffZoned(value1, value2, units)).toEqual(expected);
+    },
+  );
+
+  // Temporal §6.5.6 DifferenceZonedDateTime: calendar units are measured on the zone's own wall
+  // clock, so a DST day still counts as one day and a month from the 31st follows the local date.
+  it.each`
+    value1                                           | value2                                           | units                 | expected
+    ${"2024-03-09T12:00:00-05:00[America/New_York]"} | ${"2024-03-10T12:00:00-04:00[America/New_York]"} | ${"days"}             | ${1}
+    ${"2024-03-09T12:00:00-05:00[America/New_York]"} | ${"2024-03-11T12:00:00-04:00[America/New_York]"} | ${"days"}             | ${2}
+    ${"2024-01-31T23:30:00-05:00[America/New_York]"} | ${"2024-02-29T23:30:00-05:00[America/New_York]"} | ${["months", "days"]} | ${{ months: 0, days: 29 }}
+  `(
+    "returns $expected for $units from $value1 to $value2 on the local wall clock",
+    ({ value1, value2, units, expected }) => {
+      expect(diffZoned(value1, value2, units)).toEqual(expected);
     },
   );
 
@@ -119,7 +142,7 @@ describe("diffZonedDateTime", () => {
     ${"2028-01-01T13:00:00+13:00[Pacific/Apia]"} | ${"2028-01-01T14:30:00+13:00[Pacific/Apia]"} | ${"Pacific/Apia"}
     ${"2027-12-31T13:00:00-11:00[Pacific/Niue]"} | ${"2027-12-31T14:30:00-11:00[Pacific/Niue]"} | ${"Pacific/Niue"}
   `(
-    "rounds the same 90-minute instant span to 2 hours regardless of timeZone $timeZone (UTC-normalized before rounding)",
+    "rounds the same 90-minute instant span to 2 hours regardless of timeZone $timeZone (exact time before rounding)",
     ({ value1, value2 }) => {
       expect(
         diffZoned(value1, value2, "hours", {
@@ -142,13 +165,12 @@ describe("diffZonedDateTime", () => {
     ).toBe(47);
   });
 
-  it("rounds that same DST-crossing span to 2 days with smallestUnit day", () => {
+  it("counts that same DST-crossing span as 2 days without any rounding (wall-clock days)", () => {
     expect(
       diffZoned(
         "2024-03-09T12:00:00-05:00[America/New_York]",
         "2024-03-11T12:00:00-04:00[America/New_York]",
         "days",
-        { smallestUnit: "days", roundingMode: "halfExpand" },
       ),
     ).toBe(2);
   });

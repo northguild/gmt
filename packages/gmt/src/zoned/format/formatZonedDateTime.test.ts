@@ -124,7 +124,7 @@ describe("formatZonedDateTime", () => {
   );
 
   // es-ES dateStyle:"long" — CLDR changed the date/time connector from a
-  // comma (ICU 77 / Node 20) to " a las " (ICU 78 / Node 22/24).
+  // comma (ICU 77 / Node 22.16–22.22) to " a las " (ICU 78 / Node 22.23+, 24, 26).
   it.each`
     options                                                                                                      | expectedVariants
     ${{ dateStyle: "long", timeStyle: "long" }}                                                                  | ${oneOfIcu(normalizeDateTime("3 de febrero de 2024, 14:30:45 CET"), normalizeDateTime("3 de febrero de 2024 a las 14:30:45 CET"))}
@@ -187,7 +187,7 @@ describe("formatZonedDateTime", () => {
   );
 
   // pt-PT 12-hour day period — CLDR changed the wording from "da tarde"
-  // (ICU 77 / Node 20) to "p.m." (ICU 78 / Node 22/24).
+  // (ICU 77 / Node 22.16–22.22) to "p.m." (ICU 78 / Node 22.23+, 24, 26).
   it("formats valid zoned datetime for pt-PT with 12-hour day period as one of the known ICU variants", () => {
     expectOneOfIcu(
       formatZonedDateTime(
@@ -254,7 +254,7 @@ describe("formatZonedDateTime", () => {
   );
 
   // is-IS long/long GMT offset display — CLDR changed the UTC time zone
-  // name from "GMT" (ICU 77 / Node 20) to "GMT+0" (ICU 78 / Node 22/24).
+  // name from "GMT" (ICU 77 / Node 22.16–22.22) to "GMT+0" (ICU 78 / Node 22.23+, 24, 26).
   it("formats valid zoned datetime for is-IS with dateStyle/timeStyle long as one of the known ICU variants", () => {
     expectOneOfIcu(
       formatZonedDateTime(
@@ -276,8 +276,8 @@ describe("formatZonedDateTime", () => {
     ${valueByLocale[MustTestLocales.zhCN]} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"2024年2月3日 GMT+8 14:30:45"}
     ${valueByLocale[MustTestLocales.zhCN]} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"2024年2月3日 14:30:45"}
     ${valueByLocale[MustTestLocales.zhCN]} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"2024/2/3 14:30"}
-    ${valueByLocale[MustTestLocales.zhCN]} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"2024/2/3 14:30:45"}
-    ${valueByLocale[MustTestLocales.zhCN]} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"2024/2/3 14:30"}
+    ${valueByLocale[MustTestLocales.zhCN]} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"2024年2月3日 14:30:45"}
+    ${valueByLocale[MustTestLocales.zhCN]} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"2024年2月3日 14:30"}
     ${valueByLocale[MustTestLocales.zhCN]} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2024/02/03 14:30:45"}
     ${valueByLocale[MustTestLocales.zhCN]} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2024/02/03 14:30"}
     ${valueByLocale[MustTestLocales.zhCN]} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2024/02/03 下午02:30:45"}
@@ -299,8 +299,8 @@ describe("formatZonedDateTime", () => {
     ${valueByLocale[MustTestLocales.zhTW]} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"2024年2月3日 下午2:30:45 [GMT+8]"}
     ${valueByLocale[MustTestLocales.zhTW]} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"2024年2月3日 下午2:30:45"}
     ${valueByLocale[MustTestLocales.zhTW]} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"2024/2/3 下午2:30"}
-    ${valueByLocale[MustTestLocales.zhTW]} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"2024/2/3 下午2:30:45"}
-    ${valueByLocale[MustTestLocales.zhTW]} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"2024/2/3 下午2:30"}
+    ${valueByLocale[MustTestLocales.zhTW]} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"2024年2月3日 下午2:30:45"}
+    ${valueByLocale[MustTestLocales.zhTW]} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"2024年2月3日 下午2:30"}
     ${valueByLocale[MustTestLocales.zhTW]} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2024/02/03 下午02:30:45"}
     ${valueByLocale[MustTestLocales.zhTW]} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2024/02/03 下午02:30"}
     ${valueByLocale[MustTestLocales.zhTW]} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2024/02/03 下午02:30:45"}
@@ -322,8 +322,8 @@ describe("formatZonedDateTime", () => {
     ${valueByLocale[MustTestLocales.jaJP]} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"2024年2月3日 14:30:45 JST"}
     ${valueByLocale[MustTestLocales.jaJP]} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"2024/02/03 14:30:45"}
     ${valueByLocale[MustTestLocales.jaJP]} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"2024/02/03 14:30"}
-    ${valueByLocale[MustTestLocales.jaJP]} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"2024/2/3 14:30:45"}
-    ${valueByLocale[MustTestLocales.jaJP]} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"2024/2/3 14:30"}
+    ${valueByLocale[MustTestLocales.jaJP]} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"2024年2月3日 14:30:45"}
+    ${valueByLocale[MustTestLocales.jaJP]} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"2024年2月3日 14:30"}
     ${valueByLocale[MustTestLocales.jaJP]} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2024/02/03 14:30:45"}
     ${valueByLocale[MustTestLocales.jaJP]} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2024/02/03 14:30"}
     ${valueByLocale[MustTestLocales.jaJP]} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2024/02/03 午後02:30:45"}
@@ -361,8 +361,8 @@ describe("formatZonedDateTime", () => {
   );
 
   // ko-KR dateStyle:"full" long time zone name — CLDR shortened the
-  // South Korea Standard Time name from "대한민국 표준시" (ICU 77 / Node 20)
-  // to "한국 표준시" (ICU 78 / Node 22/24).
+  // South Korea Standard Time name from "대한민국 표준시" (ICU 77 / Node 22.16–22.22)
+  // to "한국 표준시" (ICU 78 / Node 22.23+, 24, 26).
   it("formats valid zoned datetime for ko-KR with dateStyle/timeStyle full as one of the known ICU variants", () => {
     expectOneOfDateTimeIcu(
       formatZonedDateTime(
@@ -469,8 +469,8 @@ describe("formatZonedDateTime", () => {
   );
 
   // tr-TR dateStyle:"full" long time zone name — CLDR changed the offset
-  // display "GMT+03:00" (ICU 77 / Node 20) to the named zone
-  // "Türkiye Standart Saati" (ICU 78 / Node 22/24).
+  // display "GMT+03:00" (ICU 77 / Node 22.16–22.22) to the named zone
+  // "Türkiye Standart Saati" (ICU 78 / Node 22.23+, 24, 26).
   it("formats valid zoned datetime for tr-TR with dateStyle/timeStyle full as one of the known ICU variants", () => {
     expectOneOfIcu(
       formatZonedDateTime(
@@ -516,4 +516,28 @@ describe("formatZonedDateTime", () => {
       expect(formatZonedDateTime(value, locale)).not.toBe("");
     });
   }
+
+  // Temporal ECMA-402 ZonedDateTime format (GetDateTimeFormat ~any~,
+  // ~zoned-date-time~, ~all~): the requested fields and widths are kept, `era`
+  // alone still gets the date, time and short zone-name defaults, and a
+  // `timeZone` option is a TypeError. Expected values: native
+  // Intl.DateTimeFormat in America/New_York with the adjusted options.
+  it.each`
+    locale                   | options                               | expected                                  | reason
+    ${"ja-JP-u-ca-japanese"} | ${{ year: "numeric", month: "long" }} | ${"令和6年2月"}                           | ${"requested long month kept"}
+    ${"ko-KR-u-ca-hebrew"}   | ${{ year: "numeric", month: "long" }} | ${"AM 5784년 5월"}                        | ${"requested long month kept"}
+    ${"en-US"}               | ${{ era: "long" }}                    | ${"2/3/2024 Anno Domini, 2:30:45 PM EST"} | ${"era alone gets the zoned defaults"}
+    ${"en-US"}               | ${{ timeZone: "Asia/Tokyo" }}         | ${""}                                     | ${"a timeZone option is a TypeError"}
+  `(
+    "formats 2024-02-03T14:30:45-05:00[America/New_York] in $locale with $options to $expected ($reason)",
+    ({ locale, options, expected }) => {
+      expect(
+        formatZonedDateTime(
+          "2024-02-03T14:30:45-05:00[America/New_York]",
+          locale,
+          options,
+        ),
+      ).toBe(expected);
+    },
+  );
 });

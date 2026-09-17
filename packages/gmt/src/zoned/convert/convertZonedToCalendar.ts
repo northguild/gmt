@@ -31,6 +31,9 @@ import { isValidCalendarZonedDateTime } from "../validate";
  * "japanese" and "ethiopic" are the two calendars tagged with an era instead of a plain native
  * year — see the README's calendar-systems section for why.
  *
+ * - Compatibility: since 1.16.0 a calendar annotation must be a GMT `CalendarSystem` id
+ *   (`[u-ca=gregory]` is now invalid input); use the GMT id — see `isValidCalendarZonedDateTime`.
+ *
  * @param value ISO zoned datetime string, optionally calendar-annotated
  * @param calendar target calendar system ("gregorian" | "hebrew" | "islamic-civil" |
  *   "islamic-tabular" | "islamic-umalqura" | "japanese" | "buddhist" | "taiwan" |

@@ -18,6 +18,7 @@ import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
  * @param options optional: `maxPieces` (positive safe integer, default `1_000_000`)
  * @returns array of ISO date strings or [] when invalid
  *
+ * @example mapZonedDatesInRange("+275760-09-12T00:00:00+00:00[UTC]", "+275760-09-13T00:00:00+00:00[UTC]") // ["+275760-09-12", "+275760-09-13"] (a range ending on the maximum instant)
  * @example mapZonedDatesInRange("2024-02-28T12:00:00+00:00[UTC]", "2024-03-02T12:00:00+00:00[UTC]") // ["2024-02-28", "2024-02-29", "2024-03-01", "2024-03-02"]
  * @example mapZonedDatesInRange("2024-02-28T12:00:00+00:00[UTC]", "2024-03-02T12:00:00+00:00[UTC]", 2) // ["2024-02-28", "2024-03-01"]
  * @example mapZonedDatesInRange("invalid", "2024-03-02T12:00:00+00:00[UTC]") // []
@@ -80,13 +81,12 @@ export function mapZonedDatesInRange(
       return [];
     }
 
+    // Each date is anchored at the start (start + k·step) and only the `count` in-range dates are
+    // built, so no step past the end is taken — a range ending on Temporal's date limit keeps its
+    // dates instead of throwing on the step after the last one.
     const result: string[] = [];
-    for (
-      let current = startDate;
-      Temporal.PlainDate.compare(current, endDate) <= 0;
-      current = current.add({ days: resolvedStepDays })
-    ) {
-      result.push(current.toString());
+    for (let index = 0; index < count; index++) {
+      result.push(startDate.add({ days: index * resolvedStepDays }).toString());
     }
 
     return result;

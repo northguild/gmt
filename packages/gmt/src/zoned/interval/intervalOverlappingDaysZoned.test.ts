@@ -5,12 +5,19 @@ import { battleTestTimeZones } from "../../test/timeZoneMatrix";
 
 describe("intervalOverlappingDaysZoned", () => {
   it.each`
-    aStart                                           | aEnd                                             | expected
-    ${"2024-03-09T12:00:00-05:00[America/New_York]"} | ${"2024-03-11T12:00:00-04:00[America/New_York]"} | ${3}
-    ${"2024-11-02T12:00:00-04:00[America/New_York]"} | ${"2024-11-04T12:00:00-05:00[America/New_York]"} | ${3}
-    ${"2024-03-30T12:00:00+01:00[Europe/Berlin]"}    | ${"2024-04-01T12:00:00+02:00[Europe/Berlin]"}    | ${3}
-    ${"2011-12-29T12:00:00-10:00[Pacific/Apia]"}     | ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}     | ${3}
+    aStart                                            | aEnd                                              | expected
+    ${"2024-03-09T12:00:00-05:00[America/New_York]"}  | ${"2024-03-11T12:00:00-04:00[America/New_York]"}  | ${3}
+    ${"2024-11-02T12:00:00-04:00[America/New_York]"}  | ${"2024-11-04T12:00:00-05:00[America/New_York]"}  | ${3}
+    ${"2024-03-30T12:00:00+01:00[Europe/Berlin]"}     | ${"2024-04-01T12:00:00+02:00[Europe/Berlin]"}     | ${3}
+    ${"2011-12-29T12:00:00-10:00[Pacific/Apia]"}      | ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}      | ${2}
+    ${"2011-12-29T23:00:00-10:00[Pacific/Apia]"}      | ${"2011-12-31T01:00:00+14:00[Pacific/Apia]"}      | ${2}
+    ${"2010-11-07T00:00:30-03:00[America/Goose_Bay]"} | ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${2}
+    ${"2010-11-06T23:59:00-03:00[America/Goose_Bay]"} | ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${2}
+    ${"2024-04-06T12:00:00-03:00[America/Santiago]"}  | ${"2024-04-07T12:00:00-04:00[America/Santiago]"}  | ${2}
   `(
+    // Distinct local dates of the instants in the closed span (tzdb): Apia deleted 2011-12-30, and
+    // Goose_Bay (2010, at 00:01) fell back into the previous date; Santiago (2024, 24:00 -> 23:00)
+    // repeats an hour of the same date.
     "returns $expected for self-overlapping $aStart to $aEnd",
     ({ aStart, aEnd, expected }) => {
       expect(intervalOverlappingDaysZoned(aStart, aEnd, aStart, aEnd)).toBe(
@@ -167,4 +174,10 @@ describe("intervalOverlappingDaysZoned", () => {
       ).toBeNull();
     },
   );
+
+  it("returns null when the intersection crosses more than 10,000 zone transitions (America/New_York, 1970 to 7000)", () => {
+    const start = "1970-01-01T00:00:00-05:00[America/New_York]";
+    const end = "7000-01-01T00:00:00-05:00[America/New_York]";
+    expect(intervalOverlappingDaysZoned(start, end, start, end)).toBeNull();
+  });
 });

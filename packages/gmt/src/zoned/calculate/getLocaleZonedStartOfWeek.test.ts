@@ -97,9 +97,9 @@ describe("getLocaleZonedStartOfWeek", () => {
   // One representative Saturday check per must-test locale, using the shared
   // locale-zoned fixture (2024-02-03, a Saturday, per timeZone/offset).
   // is-IS is intentionally excluded from this static table: its weekInfo.firstDay
-  // is CLDR-version-dependent (Monday on ICU 77 / Node 20, Sunday on ICU 78 /
-  // Node 24), unlike every other locale here, which is stable across the
-  // Node 20/22/24 range this package supports. Asserted dynamically below instead.
+  // is CLDR-version-dependent (Monday on ICU 77, which is Node 22.16–22.22; Sunday on ICU 78,
+  // which is Node 20.20+, 22.23+, 24 and 26), unlike every other locale here, which is stable
+  // across the Node versions this package supports. Asserted dynamically below instead.
   it.each`
     locale                  | expected
     ${MustTestLocales.enUS} | ${"2024-01-28T00:00:00-05:00[America/New_York]"}

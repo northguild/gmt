@@ -165,6 +165,22 @@ describe("subtractZoned", () => {
     },
   );
 
+  // Temporal §6.5.5 AddZonedDateTime (subtraction adds the negated duration): the time portion is
+  // subtracted in exact time; disambiguation applies only to the intermediate date-time.
+  it.each`
+    value                                            | units                       | disambiguation | expected
+    ${"2024-11-03T01:50:00-05:00[America/New_York]"} | ${{ minutes: 10 }}          | ${"earlier"}   | ${"2024-11-03T01:40:00-05:00[America/New_York]"}
+    ${"2024-11-03T02:30:00-05:00[America/New_York]"} | ${{ hours: 1 }}             | ${"reject"}    | ${"2024-11-03T01:30:00-05:00[America/New_York]"}
+    ${"2024-11-04T02:30:00-05:00[America/New_York]"} | ${{ days: 1, hours: 1 }}    | ${"earlier"}   | ${"2024-11-03T01:30:00-05:00[America/New_York]"}
+    ${"2024-11-04T01:40:00-05:00[America/New_York]"} | ${{ days: 1, minutes: 10 }} | ${"later"}     | ${"2024-11-03T01:30:00-05:00[America/New_York]"}
+    ${"2024-11-04T01:40:00-05:00[America/New_York]"} | ${{ days: 1, minutes: 10 }} | ${"reject"}    | ${""}
+  `(
+    "subtracts the time portion of $units from $value in exact time with disambiguation $disambiguation, returns $expected",
+    ({ value, units, disambiguation, expected }) => {
+      expect(subtractZoned(value, units, { disambiguation })).toBe(expected);
+    },
+  );
+
   // disambiguation: spring-forward gap (result of - 1 day lands on a nonexistent local time,
   // but Temporal's arithmetic already advances past it, so disambiguation has no effect)
   it.each`

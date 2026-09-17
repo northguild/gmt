@@ -17,6 +17,8 @@ import { isValidCalendarZonedDateTime } from "../validate";
  *   hebrew, islamic-civil, japanese and iso8601.
  * - Still rejects Temporal's own `[timeZone][u-ca=...]` RFC 9557 ordering, which reads GMT's
  *   calendar-native digits as ISO digits — see `regex/calendar-zoned-date-time.ts`.
+ * - Compatibility: since 1.16.0 a calendar annotation must be a GMT `CalendarSystem` id
+ *   (`[u-ca=gregory]` is now invalid input); use the GMT id — see `isValidCalendarZonedDateTime`.
  *
  * @param aStart ISO 8601 zoned datetime string for the first interval start
  * @param aEnd ISO 8601 zoned datetime string for the first interval end

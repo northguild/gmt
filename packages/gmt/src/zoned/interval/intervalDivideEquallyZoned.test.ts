@@ -55,6 +55,33 @@ describe("intervalDivideEquallyZoned", () => {
     ]);
   });
 
+  // Spans past 2^53 ns (about 104 days) must still split exactly: each boundary is
+  // start + round((end - start) · i / n) in integer epoch nanoseconds. 365 d + 3 ns splits into
+  // 121 d 16 h + 1 ns steps: 2024-05-01T16:00:00.000000001Z and 2024-08-31T08:00:00.000000002Z, read
+  // at Tokyo's fixed +09:00. Values from BigInt epoch-nanosecond arithmetic, not GMT.
+  it("splits a span longer than 2^53 nanoseconds exactly", () => {
+    expect(
+      intervalDivideEquallyZoned(
+        "2024-01-01T09:00:00+09:00[Asia/Tokyo]",
+        "2024-12-31T09:00:00.000000003+09:00[Asia/Tokyo]",
+        3,
+      ),
+    ).toEqual([
+      {
+        start: "2024-01-01T09:00:00+09:00[Asia/Tokyo]",
+        end: "2024-05-02T01:00:00.000000001+09:00[Asia/Tokyo]",
+      },
+      {
+        start: "2024-05-02T01:00:00.000000001+09:00[Asia/Tokyo]",
+        end: "2024-08-31T17:00:00.000000002+09:00[Asia/Tokyo]",
+      },
+      {
+        start: "2024-08-31T17:00:00.000000002+09:00[Asia/Tokyo]",
+        end: "2024-12-31T09:00:00.000000003+09:00[Asia/Tokyo]",
+      },
+    ]);
+  });
+
   it.each`
     n
     ${0}
