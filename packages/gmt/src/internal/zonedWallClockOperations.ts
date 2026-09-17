@@ -17,7 +17,6 @@ import {
   startOfDayEpochNanoseconds,
   timeZoneIdOf,
   utcOffsetStringNanoseconds,
-  zonedDateTimeFrom,
 } from "./zonedWallClock";
 
 /*
@@ -367,11 +366,45 @@ function addAtEdge(
 }
 
 /**
- * TC39 `AddZonedDateTime` with the calendar part through the Temporal compat layer (CORE-6 S5), or
- * null when `zoned`'s calendar needs no compat or the duration has no calendar units.
- *
- * `CalendarDateAdd` runs in `calendarDateAdd`; the wall clock it lands on resolves with
- * `~compatible~` through GMT's own `plainToZoned`; the time units are then exact time.
+ * TC39 §6.5.5 `AddZonedDateTime` for a signed duration with calendar units: `CalendarDateAdd` runs
+ * in `calendarDateAdd` (the Temporal compat layer, CORE-6 S5); the intermediate wall clock (added
+ * date, original time) resolves with `GetEpochNanosecondsFor(timeZone, dateTime, disambiguation)`
+ * through GMT's own `plainToZoned`, so a gap or an overlap landing honours `disambiguation`; the
+ * time units are then added in exact time and never re-resolved.
+ */
+function addDateThenTime(
+  zoned: Temporal.ZonedDateTime,
+  duration: Temporal.Duration,
+  overflow: Overflow,
+  disambiguation: Disambiguation,
+): Temporal.ZonedDateTime {
+  // Validates `overflow` exactly as ZonedDateTime#add does.
+  OVERFLOW_PROBE.add({ days: 0 }, { overflow });
+
+  const wall = zoned.toPlainDateTime();
+  const { years, months, weeks, days } = duration;
+  const date = calendarDateAdd(
+    wall.toPlainDate(),
+    { years, months, weeks, days },
+    overflow ?? "constrain",
+  );
+  const intermediate = plainToZoned(
+    date.toPlainDateTime(wall.toPlainTime()),
+    zoned.timeZoneId,
+    disambiguation,
+  );
+  const result = intermediate.epochNanoseconds + timeUnitsNanoseconds(duration);
+  if (!isValidEpoch(result)) {
+    throw new RangeError(
+      `${zoned.toString()} + ${duration.toString()} is outside the supported range`,
+    );
+  }
+  return inZoneOf(result, zoned);
+}
+
+/**
+ * `AddZonedDateTime` through the Temporal compat layer, or null when `zoned`'s calendar needs no
+ * compat or the duration has no calendar units.
  */
 function addWithCalendarCompat(
   zoned: Temporal.ZonedDateTime,
@@ -387,28 +420,7 @@ function addWithCalendarCompat(
   if (!hasDateUnits(duration)) {
     return null;
   }
-  // Validates `overflow` exactly as ZonedDateTime#add does.
-  OVERFLOW_PROBE.add({ days: 0 }, { overflow });
-
-  const wall = zoned.toPlainDateTime();
-  const { years, months, weeks, days } = duration;
-  const date = calendarDateAdd(
-    wall.toPlainDate(),
-    { years, months, weeks, days },
-    overflow ?? "constrain",
-  );
-  const intermediate = plainToZoned(
-    date.toPlainDateTime(wall.toPlainTime()),
-    zoned.timeZoneId,
-    "compatible",
-  );
-  const result = intermediate.epochNanoseconds + timeUnitsNanoseconds(duration);
-  if (!isValidEpoch(result)) {
-    throw new RangeError(
-      `${zoned.toString()} + ${duration.toString()} is outside the supported range`,
-    );
-  }
-  return inZoneOf(result, zoned);
+  return addDateThenTime(zoned, duration, overflow, "compatible");
 }
 
 /**
@@ -475,21 +487,22 @@ export function subtractFromZoned(
 
 /**
  * `addToZoned` / `subtractFromZoned` with a caller-chosen `disambiguation` for the intermediate
- * wall-clock date-time — TC39 Temporal §6.5.5 AddZonedDateTime with the "compatible" resolution of
- * step 4 replaced by `disambiguation`.
+ * wall-clock date-time — TC39 Temporal §6.5.5 AddZonedDateTime with the "compatible" argument of
+ * its `GetEpochNanosecondsFor` step replaced by `disambiguation`.
  *
- * - The date portion (years, months, weeks, days) is added to the wall-clock date; that
- *   intermediate date-time is resolved with `disambiguation` when it is ambiguous (a fall-back
- *   overlap). A gap landing keeps Temporal's forward resolution, so `disambiguation` has no effect
- *   there (GMT's documented contract).
+ * - The date portion (years, months, weeks, days) is added to the wall-clock date, keeping the
+ *   wall-clock time. That intermediate date-time is resolved with `disambiguation` whenever it is
+ *   not a single instant: in a fall-back overlap "earlier"/"compatible" take the earlier instant and
+ *   "later" the later one; in a spring-forward gap "earlier" shifts it back by the gap length and
+ *   "later"/"compatible" forward (DisambiguatePossibleEpochNanoseconds); "reject" throws for both.
  * - The time portion is then added in exact time and is never re-resolved.
  * - With no date portion, the whole duration is exact time and `disambiguation` never applies.
  *
  * @param zoned the starting value
  * @param duration the duration to add or subtract
  * @param sign 1 to add, -1 to subtract
- * @param options Temporal `overflow` for the calendar part, `disambiguation` and (inert) `offset`
- * @returns the result; throws where TC39 Temporal throws, or when "reject" meets an overlap
+ * @param options Temporal `overflow` for the calendar part and `disambiguation`
+ * @returns the result; throws where TC39 Temporal throws, or when "reject" meets a gap or overlap
  */
 export function addToZonedDisambiguated(
   zoned: Temporal.ZonedDateTime,
@@ -498,36 +511,23 @@ export function addToZonedDisambiguated(
   options: {
     overflow?: Overflow;
     disambiguation: Disambiguation;
-    offset?: Offset;
   },
 ): Temporal.ZonedDateTime {
-  const step = sign === 1 ? addToZoned : subtractFromZoned;
-  const { overflow, disambiguation, offset } = options;
+  const { overflow, disambiguation } = options;
   // Validates `disambiguation` even when no wall clock is resolved below.
   DISAMBIGUATION_PROBE.toZonedDateTime("UTC", { disambiguation });
   const parsed = Temporal.Duration.from(duration);
-  const { years, months, weeks, days } = parsed;
-  const hasDatePortion =
-    years !== 0 || months !== 0 || weeks !== 0 || days !== 0;
 
-  if (disambiguation === "compatible" || !hasDatePortion) {
+  if (disambiguation === "compatible" || !hasDateUnits(parsed)) {
+    const step = sign === 1 ? addToZoned : subtractFromZoned;
     return step(zoned, parsed, { overflow });
   }
 
-  const dated = step(zoned, { years, months, weeks, days }, { overflow });
-  // The calendar MUST be stripped before this rebuild string is composed (E7 risk R1): a
-  // calendared `.toPlainDateTime().toString()` carries Temporal's own `[u-ca=...]` annotation, so
-  // appending `[${timeZoneId}]` would produce an ordering `Temporal.ZonedDateTime.from` rejects.
-  const wallClock = dated.withCalendar("iso8601").toPlainDateTime().toString();
-  const intermediate = zonedDateTimeFrom(`${wallClock}[${dated.timeZoneId}]`, {
+  return addDateThenTime(
+    zoned,
+    sign === 1 ? parsed : parsed.negated(),
+    overflow,
     disambiguation,
-    offset,
-  }).withCalendar(dated.calendarId);
-
-  return step(
-    intermediate,
-    parsed.with({ years: 0, months: 0, weeks: 0, days: 0 }),
-    { overflow },
   );
 }
 

@@ -41,8 +41,223 @@
     "skills/gmt-integration"
   ],
   "type": "module",
+  "sideEffects": false,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "calendar": [
+        "./dist/calendar/index.d.ts"
+      ],
+      "calendar/business": [
+        "./dist/calendar/business/index.d.ts"
+      ],
+      "calendar/calculate": [
+        "./dist/calendar/calculate/index.d.ts"
+      ],
+      "calendar/validate": [
+        "./dist/calendar/validate/index.d.ts"
+      ],
+      "duration": [
+        "./dist/duration/index.d.ts"
+      ],
+      "duration/calculate": [
+        "./dist/duration/calculate/index.d.ts"
+      ],
+      "duration/compare": [
+        "./dist/duration/compare/index.d.ts"
+      ],
+      "duration/format": [
+        "./dist/duration/format/index.d.ts"
+      ],
+      "duration/normalize": [
+        "./dist/duration/normalize/index.d.ts"
+      ],
+      "duration/parse": [
+        "./dist/duration/parse/index.d.ts"
+      ],
+      "duration/validate": [
+        "./dist/duration/validate/index.d.ts"
+      ],
+      "instant": [
+        "./dist/instant/index.d.ts"
+      ],
+      "instant/convert": [
+        "./dist/instant/convert/index.d.ts"
+      ],
+      "interval": [
+        "./dist/interval/index.d.ts"
+      ],
+      "interval/calculate": [
+        "./dist/interval/calculate/index.d.ts"
+      ],
+      "interval/compare": [
+        "./dist/interval/compare/index.d.ts"
+      ],
+      "interval/validate": [
+        "./dist/interval/validate/index.d.ts"
+      ],
+      "plain": [
+        "./dist/plain/index.d.ts"
+      ],
+      "plain/calculate": [
+        "./dist/plain/calculate/index.d.ts"
+      ],
+      "plain/chop": [
+        "./dist/plain/chop/index.d.ts"
+      ],
+      "plain/compare": [
+        "./dist/plain/compare/index.d.ts"
+      ],
+      "plain/convert": [
+        "./dist/plain/convert/index.d.ts"
+      ],
+      "plain/format": [
+        "./dist/plain/format/index.d.ts"
+      ],
+      "plain/get": [
+        "./dist/plain/get/index.d.ts"
+      ],
+      "plain/interval": [
+        "./dist/plain/interval/index.d.ts"
+      ],
+      "plain/locale": [
+        "./dist/plain/locale/index.d.ts"
+      ],
+      "plain/map": [
+        "./dist/plain/map/index.d.ts"
+      ],
+      "plain/parse": [
+        "./dist/plain/parse/index.d.ts"
+      ],
+      "plain/validate": [
+        "./dist/plain/validate/index.d.ts"
+      ],
+      "precision": [
+        "./dist/precision/index.d.ts"
+      ],
+      "precision/calculate": [
+        "./dist/precision/calculate/index.d.ts"
+      ],
+      "precision/convert": [
+        "./dist/precision/convert/index.d.ts"
+      ],
+      "precision/format": [
+        "./dist/precision/format/index.d.ts"
+      ],
+      "precision/parse": [
+        "./dist/precision/parse/index.d.ts"
+      ],
+      "precision/validate": [
+        "./dist/precision/validate/index.d.ts"
+      ],
+      "regex": [
+        "./dist/regex/index.d.ts"
+      ],
+      "span": [
+        "./dist/span/index.d.ts"
+      ],
+      "span/calculate": [
+        "./dist/span/calculate/index.d.ts"
+      ],
+      "span/validate": [
+        "./dist/span/validate/index.d.ts"
+      ],
+      "types": [
+        "./dist/types/index.d.ts"
+      ],
+      "unix": [
+        "./dist/unix/index.d.ts"
+      ],
+      "unix/calculate": [
+        "./dist/unix/calculate/index.d.ts"
+      ],
+      "unix/compare": [
+        "./dist/unix/compare/index.d.ts"
+      ],
+      "unix/convert": [
+        "./dist/unix/convert/index.d.ts"
+      ],
+      "unix/format": [
+        "./dist/unix/format/index.d.ts"
+      ],
+      "unix/get": [
+        "./dist/unix/get/index.d.ts"
+      ],
+      "unix/interval": [
+        "./dist/unix/interval/index.d.ts"
+      ],
+      "unix/parse": [
+        "./dist/unix/parse/index.d.ts"
+      ],
+      "unix/validate": [
+        "./dist/unix/validate/index.d.ts"
+      ],
+      "utc": [
+        "./dist/utc/index.d.ts"
+      ],
+      "utc/calculate": [
+        "./dist/utc/calculate/index.d.ts"
+      ],
+      "utc/chop": [
+        "./dist/utc/chop/index.d.ts"
+      ],
+      "utc/compare": [
+        "./dist/utc/compare/index.d.ts"
+      ],
+      "utc/convert": [
+        "./dist/utc/convert/index.d.ts"
+      ],
+      "utc/format": [
+        "./dist/utc/format/index.d.ts"
+      ],
+      "utc/get": [
+        "./dist/utc/get/index.d.ts"
+      ],
+      "utc/interval": [
+        "./dist/utc/interval/index.d.ts"
+      ],
+      "utc/parse": [
+        "./dist/utc/parse/index.d.ts"
+      ],
+      "utc/validate": [
+        "./dist/utc/validate/index.d.ts"
+      ],
+      "zoned": [
+        "./dist/zoned/index.d.ts"
+      ],
+      "zoned/calculate": [
+        "./dist/zoned/calculate/index.d.ts"
+      ],
+      "zoned/chop": [
+        "./dist/zoned/chop/index.d.ts"
+      ],
+      "zoned/compare": [
+        "./dist/zoned/compare/index.d.ts"
+      ],
+      "zoned/convert": [
+        "./dist/zoned/convert/index.d.ts"
+      ],
+      "zoned/format": [
+        "./dist/zoned/format/index.d.ts"
+      ],
+      "zoned/get": [
+        "./dist/zoned/get/index.d.ts"
+      ],
+      "zoned/interval": [
+        "./dist/zoned/interval/index.d.ts"
+      ],
+      "zoned/map": [
+        "./dist/zoned/map/index.d.ts"
+      ],
+      "zoned/parse": [
+        "./dist/zoned/parse/index.d.ts"
+      ],
+      "zoned/validate": [
+        "./dist/zoned/validate/index.d.ts"
+      ]
+    }
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -52,74 +267,158 @@
       "types": "./dist/calendar/index.d.ts",
       "default": "./dist/calendar/index.js"
     },
-    "./calendar/*": {
-      "types": "./dist/calendar/*/index.d.ts",
-      "default": "./dist/calendar/*/index.js"
+    "./calendar/business": {
+      "types": "./dist/calendar/business/index.d.ts",
+      "default": "./dist/calendar/business/index.js"
     },
-    "./calendar/*/*": null,
+    "./calendar/calculate": {
+      "types": "./dist/calendar/calculate/index.d.ts",
+      "default": "./dist/calendar/calculate/index.js"
+    },
+    "./calendar/validate": {
+      "types": "./dist/calendar/validate/index.d.ts",
+      "default": "./dist/calendar/validate/index.js"
+    },
+    "./duration": {
+      "types": "./dist/duration/index.d.ts",
+      "default": "./dist/duration/index.js"
+    },
+    "./duration/calculate": {
+      "types": "./dist/duration/calculate/index.d.ts",
+      "default": "./dist/duration/calculate/index.js"
+    },
+    "./duration/compare": {
+      "types": "./dist/duration/compare/index.d.ts",
+      "default": "./dist/duration/compare/index.js"
+    },
+    "./duration/format": {
+      "types": "./dist/duration/format/index.d.ts",
+      "default": "./dist/duration/format/index.js"
+    },
+    "./duration/normalize": {
+      "types": "./dist/duration/normalize/index.d.ts",
+      "default": "./dist/duration/normalize/index.js"
+    },
+    "./duration/parse": {
+      "types": "./dist/duration/parse/index.d.ts",
+      "default": "./dist/duration/parse/index.js"
+    },
+    "./duration/validate": {
+      "types": "./dist/duration/validate/index.d.ts",
+      "default": "./dist/duration/validate/index.js"
+    },
     "./instant": {
       "types": "./dist/instant/index.d.ts",
       "default": "./dist/instant/index.js"
     },
-    "./instant/*": {
-      "types": "./dist/instant/*/index.d.ts",
-      "default": "./dist/instant/*/index.js"
+    "./instant/convert": {
+      "types": "./dist/instant/convert/index.d.ts",
+      "default": "./dist/instant/convert/index.js"
     },
-    "./instant/*/*": null,
     "./interval": {
       "types": "./dist/interval/index.d.ts",
       "default": "./dist/interval/index.js"
     },
-    "./interval/*": {
-      "types": "./dist/interval/*/index.d.ts",
-      "default": "./dist/interval/*/index.js"
+    "./interval/calculate": {
+      "types": "./dist/interval/calculate/index.d.ts",
+      "default": "./dist/interval/calculate/index.js"
     },
-    "./interval/*/*": null,
+    "./interval/compare": {
+      "types": "./dist/interval/compare/index.d.ts",
+      "default": "./dist/interval/compare/index.js"
+    },
+    "./interval/validate": {
+      "types": "./dist/interval/validate/index.d.ts",
+      "default": "./dist/interval/validate/index.js"
+    },
     "./plain": {
       "types": "./dist/plain/index.d.ts",
       "default": "./dist/plain/index.js"
     },
-    "./plain/*": {
-      "types": "./dist/plain/*/index.d.ts",
-      "default": "./dist/plain/*/index.js"
+    "./plain/calculate": {
+      "types": "./dist/plain/calculate/index.d.ts",
+      "default": "./dist/plain/calculate/index.js"
     },
-    "./plain/*/*": null,
+    "./plain/chop": {
+      "types": "./dist/plain/chop/index.d.ts",
+      "default": "./dist/plain/chop/index.js"
+    },
+    "./plain/compare": {
+      "types": "./dist/plain/compare/index.d.ts",
+      "default": "./dist/plain/compare/index.js"
+    },
+    "./plain/convert": {
+      "types": "./dist/plain/convert/index.d.ts",
+      "default": "./dist/plain/convert/index.js"
+    },
+    "./plain/format": {
+      "types": "./dist/plain/format/index.d.ts",
+      "default": "./dist/plain/format/index.js"
+    },
+    "./plain/get": {
+      "types": "./dist/plain/get/index.d.ts",
+      "default": "./dist/plain/get/index.js"
+    },
+    "./plain/interval": {
+      "types": "./dist/plain/interval/index.d.ts",
+      "default": "./dist/plain/interval/index.js"
+    },
+    "./plain/locale": {
+      "types": "./dist/plain/locale/index.d.ts",
+      "default": "./dist/plain/locale/index.js"
+    },
+    "./plain/map": {
+      "types": "./dist/plain/map/index.d.ts",
+      "default": "./dist/plain/map/index.js"
+    },
+    "./plain/parse": {
+      "types": "./dist/plain/parse/index.d.ts",
+      "default": "./dist/plain/parse/index.js"
+    },
+    "./plain/validate": {
+      "types": "./dist/plain/validate/index.d.ts",
+      "default": "./dist/plain/validate/index.js"
+    },
     "./precision": {
       "types": "./dist/precision/index.d.ts",
       "default": "./dist/precision/index.js"
     },
-    "./precision/*": {
-      "types": "./dist/precision/*/index.d.ts",
-      "default": "./dist/precision/*/index.js"
+    "./precision/calculate": {
+      "types": "./dist/precision/calculate/index.d.ts",
+      "default": "./dist/precision/calculate/index.js"
     },
-    "./precision/*/*": null,
-    "./zoned": {
-      "types": "./dist/zoned/index.d.ts",
-      "default": "./dist/zoned/index.js"
+    "./precision/convert": {
+      "types": "./dist/precision/convert/index.d.ts",
+      "default": "./dist/precision/convert/index.js"
     },
-    "./zoned/*": {
-      "types": "./dist/zoned/*/index.d.ts",
-      "default": "./dist/zoned/*/index.js"
+    "./precision/format": {
+      "types": "./dist/precision/format/index.d.ts",
+      "default": "./dist/precision/format/index.js"
     },
-    "./zoned/*/*": null,
+    "./precision/parse": {
+      "types": "./dist/precision/parse/index.d.ts",
+      "default": "./dist/precision/parse/index.js"
+    },
+    "./precision/validate": {
+      "types": "./dist/precision/validate/index.d.ts",
+      "default": "./dist/precision/validate/index.js"
+    },
     "./regex": {
       "types": "./dist/regex/index.d.ts",
       "default": "./dist/regex/index.js"
     },
-    "./regex/*": {
-      "types": "./dist/regex/*/index.d.ts",
-      "default": "./dist/regex/*/index.js"
-    },
-    "./regex/*/*": null,
     "./span": {
       "types": "./dist/span/index.d.ts",
       "default": "./dist/span/index.js"
     },
-    "./span/*": {
-      "types": "./dist/span/*/index.d.ts",
-      "default": "./dist/span/*/index.js"
+    "./span/calculate": {
+      "types": "./dist/span/calculate/index.d.ts",
+      "default": "./dist/span/calculate/index.js"
     },
-    "./span/*/*": null,
+    "./span/validate": {
+      "types": "./dist/span/validate/index.d.ts",
+      "default": "./dist/span/validate/index.js"
+    },
     "./types": {
       "types": "./dist/types/index.d.ts",
       "default": "./dist/types/index.js"
@@ -128,29 +427,122 @@
       "types": "./dist/unix/index.d.ts",
       "default": "./dist/unix/index.js"
     },
-    "./unix/*": {
-      "types": "./dist/unix/*/index.d.ts",
-      "default": "./dist/unix/*/index.js"
+    "./unix/calculate": {
+      "types": "./dist/unix/calculate/index.d.ts",
+      "default": "./dist/unix/calculate/index.js"
     },
-    "./unix/*/*": null,
+    "./unix/compare": {
+      "types": "./dist/unix/compare/index.d.ts",
+      "default": "./dist/unix/compare/index.js"
+    },
+    "./unix/convert": {
+      "types": "./dist/unix/convert/index.d.ts",
+      "default": "./dist/unix/convert/index.js"
+    },
+    "./unix/format": {
+      "types": "./dist/unix/format/index.d.ts",
+      "default": "./dist/unix/format/index.js"
+    },
+    "./unix/get": {
+      "types": "./dist/unix/get/index.d.ts",
+      "default": "./dist/unix/get/index.js"
+    },
+    "./unix/interval": {
+      "types": "./dist/unix/interval/index.d.ts",
+      "default": "./dist/unix/interval/index.js"
+    },
+    "./unix/parse": {
+      "types": "./dist/unix/parse/index.d.ts",
+      "default": "./dist/unix/parse/index.js"
+    },
+    "./unix/validate": {
+      "types": "./dist/unix/validate/index.d.ts",
+      "default": "./dist/unix/validate/index.js"
+    },
     "./utc": {
       "types": "./dist/utc/index.d.ts",
       "default": "./dist/utc/index.js"
     },
-    "./utc/*": {
-      "types": "./dist/utc/*/index.d.ts",
-      "default": "./dist/utc/*/index.js"
+    "./utc/calculate": {
+      "types": "./dist/utc/calculate/index.d.ts",
+      "default": "./dist/utc/calculate/index.js"
     },
-    "./utc/*/*": null,
-    "./duration": {
-      "types": "./dist/duration/index.d.ts",
-      "default": "./dist/duration/index.js"
+    "./utc/chop": {
+      "types": "./dist/utc/chop/index.d.ts",
+      "default": "./dist/utc/chop/index.js"
     },
-    "./duration/*": {
-      "types": "./dist/duration/*/index.d.ts",
-      "default": "./dist/duration/*/index.js"
+    "./utc/compare": {
+      "types": "./dist/utc/compare/index.d.ts",
+      "default": "./dist/utc/compare/index.js"
     },
-    "./duration/*/*": null
+    "./utc/convert": {
+      "types": "./dist/utc/convert/index.d.ts",
+      "default": "./dist/utc/convert/index.js"
+    },
+    "./utc/format": {
+      "types": "./dist/utc/format/index.d.ts",
+      "default": "./dist/utc/format/index.js"
+    },
+    "./utc/get": {
+      "types": "./dist/utc/get/index.d.ts",
+      "default": "./dist/utc/get/index.js"
+    },
+    "./utc/interval": {
+      "types": "./dist/utc/interval/index.d.ts",
+      "default": "./dist/utc/interval/index.js"
+    },
+    "./utc/parse": {
+      "types": "./dist/utc/parse/index.d.ts",
+      "default": "./dist/utc/parse/index.js"
+    },
+    "./utc/validate": {
+      "types": "./dist/utc/validate/index.d.ts",
+      "default": "./dist/utc/validate/index.js"
+    },
+    "./zoned": {
+      "types": "./dist/zoned/index.d.ts",
+      "default": "./dist/zoned/index.js"
+    },
+    "./zoned/calculate": {
+      "types": "./dist/zoned/calculate/index.d.ts",
+      "default": "./dist/zoned/calculate/index.js"
+    },
+    "./zoned/chop": {
+      "types": "./dist/zoned/chop/index.d.ts",
+      "default": "./dist/zoned/chop/index.js"
+    },
+    "./zoned/compare": {
+      "types": "./dist/zoned/compare/index.d.ts",
+      "default": "./dist/zoned/compare/index.js"
+    },
+    "./zoned/convert": {
+      "types": "./dist/zoned/convert/index.d.ts",
+      "default": "./dist/zoned/convert/index.js"
+    },
+    "./zoned/format": {
+      "types": "./dist/zoned/format/index.d.ts",
+      "default": "./dist/zoned/format/index.js"
+    },
+    "./zoned/get": {
+      "types": "./dist/zoned/get/index.d.ts",
+      "default": "./dist/zoned/get/index.js"
+    },
+    "./zoned/interval": {
+      "types": "./dist/zoned/interval/index.d.ts",
+      "default": "./dist/zoned/interval/index.js"
+    },
+    "./zoned/map": {
+      "types": "./dist/zoned/map/index.d.ts",
+      "default": "./dist/zoned/map/index.js"
+    },
+    "./zoned/parse": {
+      "types": "./dist/zoned/parse/index.d.ts",
+      "default": "./dist/zoned/parse/index.js"
+    },
+    "./zoned/validate": {
+      "types": "./dist/zoned/validate/index.d.ts",
+      "default": "./dist/zoned/validate/index.js"
+    }
   },
   "publishConfig": {
     "access": "public",
@@ -172,5 +564,8 @@
     "@tanstack/intent": "^0.4.0",
     "oxfmt": "^0.62.0",
     "oxlint": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=22.16.0"
   }
 }

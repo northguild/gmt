@@ -179,6 +179,31 @@ export function calendarDateUntil(
 }
 
 /**
+ * The owned (Hebrew, Indian) model's sum, when `date`'s calendar has an active owned model and
+ * either end reaches the corrected range; otherwise undefined, and the polyfill answers.
+ */
+function ownedDateAdd(
+  date: Temporal.PlainDate,
+  fields: DateDurationFields,
+  overflow: ArithmeticOverflow,
+): Temporal.PlainDate | undefined {
+  const calendarId = date.calendarId;
+  const owned = activeOwnedModel(calendarId);
+  if (owned === undefined) {
+    return undefined;
+  }
+  // Owned arithmetic is the spec's for every year, so its RangeErrors stand; its result is kept
+  // when either end reaches the corrected range, and the polyfill answers elsewhere.
+  const result = nonIsoDateAdd(owned, date, fields, overflow);
+  return reachesCorrectedRange(calendarId, [
+    owned.fields(date).year,
+    owned.fields(result).year,
+  ])
+    ? result.withCalendar(calendarId)
+    : undefined;
+}
+
+/**
  * `date.add(duration, { overflow })`, made correct where `@js-temporal/polyfill` is not (TC39
  * `CalendarDateAdd`, Intl era/monthCode proposal `NonISODateAdd`).
  *
@@ -215,19 +240,9 @@ export function calendarDateAdd(
       .add(fields, { overflow })
       .withCalendar(calendarId);
   }
-  const owned = activeOwnedModel(calendarId);
-  if (owned !== undefined) {
-    // Owned arithmetic is the spec's for every year, so its RangeErrors stand; its result is kept
-    // when either end reaches the corrected range, and the polyfill answers elsewhere.
-    const result = nonIsoDateAdd(owned, date, fields, overflow);
-    if (
-      reachesCorrectedRange(calendarId, [
-        owned.fields(date).year,
-        owned.fields(result).year,
-      ])
-    ) {
-      return result.withCalendar(calendarId);
-    }
+  const ownedResult = ownedDateAdd(date, fields, overflow);
+  if (ownedResult !== undefined) {
+    return ownedResult;
   }
   if (isLargeMonthSpan(fields.months)) {
     // D9: the polyfill adds months one at a time; the spec algorithm jumps whole years instead.

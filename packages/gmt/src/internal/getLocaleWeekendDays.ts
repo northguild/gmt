@@ -1,4 +1,5 @@
 import { localeWeekInfo } from "./localeWeekInfo";
+import type { LocalesArgument } from "./resolveLocale";
 
 /**
  * Resolve the set of ISO day-of-week numbers (1 = Monday .. 7 = Sunday)
@@ -11,7 +12,9 @@ import { localeWeekInfo } from "./localeWeekInfo";
  * - Falls back to Saturday/Sunday (`[6, 7]`) if the runtime exposes no week
  *   data or none for the given locale.
  */
-export function getLocaleWeekendDays(locale: string): Set<number> | null {
+export function getLocaleWeekendDays(
+  locale: LocalesArgument,
+): Set<number> | null {
   try {
     const weekInfo = localeWeekInfo(locale);
     if (!weekInfo || !Array.isArray(weekInfo.weekend)) {

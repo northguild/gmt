@@ -1,3 +1,5 @@
+import { type LocalesArgument, resolveRequiredLocale } from "./resolveLocale";
+
 // TypeScript's lib.es2024.intl.d.ts (as of TS 5.9) declares neither form of the Intl Locale
 // Info proposal's week data. Augment the ambient type once, here, rather than widening every
 // call site with `as unknown as`.
@@ -35,9 +37,12 @@ declare global {
  * @example localeWeekInfo("ar-SA")?.weekend // [5, 6]
  */
 export function localeWeekInfo(
-  locale: string,
+  locale: LocalesArgument,
 ): Partial<LocaleWeekInfo> | undefined {
-  const intlLocale = new Intl.Locale(locale);
+  const resolved = resolveRequiredLocale(locale);
+  if (resolved === null) throw new RangeError("Invalid locale");
+
+  const intlLocale = new Intl.Locale(resolved);
   if (typeof intlLocale.getWeekInfo === "function") {
     return intlLocale.getWeekInfo();
   }

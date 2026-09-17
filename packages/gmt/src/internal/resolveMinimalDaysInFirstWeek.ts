@@ -1,7 +1,7 @@
 /**
  * The ISO 8601 minimal-days value: week 1 is the first week with at least 4 days in January.
  */
-export const ISO_MINIMAL_DAYS_IN_FIRST_WEEK = 4;
+const ISO_MINIMAL_DAYS_IN_FIRST_WEEK = 4;
 
 /**
  * Resolve the minimal-days-in-first-week rule for the locale week-year functions.

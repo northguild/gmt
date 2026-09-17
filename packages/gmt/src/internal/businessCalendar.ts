@@ -1,7 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { isValidDate } from "../plain/validate";
+import { isValidDate } from "../plain/validate/isValidDate";
 import type { BusinessCalendar } from "../types";
-import { isValidTimeZone } from "../zoned/validate";
+import { isValidTimeZone } from "../zoned/validate/isValidTimeZone";
 
 const ISO_WEEKDAYS = 7;
 

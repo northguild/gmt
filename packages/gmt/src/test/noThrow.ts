@@ -177,6 +177,7 @@ type Signature = {
   declared: DeclaredReturn;
   arity: number;
   required: boolean[];
+  names: string[];
 };
 
 /** Whether the function body starts at `rest[end]`: a `{` after a complete type, or `=>`. */
@@ -219,6 +220,7 @@ function readSignature(entry: CorpusEntry): Signature {
       (param) =>
         !/^\w+\?/.test(param) && splitTopLevel(param, "=").length === 1,
     ),
+    names: params.map((param) => /^\w+/.exec(param)?.[0] ?? ""),
   };
 }
 
@@ -228,6 +230,11 @@ function readSignature(entry: CorpusEntry): Signature {
  * object and array literals share this realm's prototypes.
  */
 function baselineArgs(entry: CorpusEntry): unknown[] | null {
+  return exampleArgLists(entry)[0] ?? null;
+}
+
+/** Argument lists of every evaluable corpus example for `entry`, the longest first. */
+function exampleArgLists(entry: CorpusEntry): unknown[][] {
   const scope = { ...(gmt as unknown as Record<string, unknown>) };
   const names = Object.keys(scope).filter((name) =>
     /^[A-Za-z_$][\w$]*$/.test(name),
@@ -249,8 +256,7 @@ function baselineArgs(entry: CorpusEntry): unknown[] | null {
     }
     if (captured) candidates.push(captured);
   }
-  candidates.sort((a, b) => b.length - a.length);
-  return candidates[0] ?? null;
+  return candidates.sort((a, b) => b.length - a.length);
 }
 
 function isFiniteNumber(value: unknown): boolean {
@@ -313,6 +319,65 @@ export function noThrowCases(namespace: string): NoThrowCase[] {
         calls: garbageCalls(baseline, arity, required),
       };
     });
+}
+
+/**
+ * A public function that takes an options bag, with a valid baseline call and the position of its
+ * `options` parameter — the input of the options-object contract test (./optionsObject.test.ts).
+ */
+export type OptionsCase = {
+  name: string;
+  fn: (...args: unknown[]) => unknown;
+  baseline: unknown[];
+  position: number;
+  sentinel: unknown;
+  readsClock: boolean;
+};
+
+/** Every public function with a parameter named `options` (or `optionsArg`), across all namespaces. */
+export function optionsCases(): OptionsCase[] {
+  const exports = gmt as unknown as Record<string, unknown>;
+  const seen = new Set<string>();
+  const cases: OptionsCase[] = [];
+  for (const entry of loadCorpus()) {
+    if (seen.has(entry.name)) continue;
+    seen.add(entry.name);
+    const { declared, names } = readSignature(entry);
+    const position = names.findIndex((name) => /^options(Arg)?$/.test(name));
+    if (position < 0) continue;
+    const sentinel = sentinelOf(declared);
+    const fn = exports[entry.name] as (...args: unknown[]) => unknown;
+    const valid = (args: unknown[]) => {
+      try {
+        return !isDeepStrictEqual(fn(...args), sentinel.value);
+      } catch {
+        return false;
+      }
+    };
+    const withoutOptions = (args: unknown[]) =>
+      args.slice(0, position).concat(undefined);
+    // The longest example that is valid both as written and with its options omitted, so a
+    // sentinel for bad options is caused by the options alone; failing that (options required),
+    // the longest valid example.
+    const examples = exampleArgLists(entry);
+    const baseline =
+      examples.find((args) => valid(args) && valid(withoutOptions(args))) ??
+      examples.find(valid);
+    if (!sentinel.known || !baseline) {
+      throw new Error(
+        `optionsCases: no sentinel or baseline for ${entry.name}`,
+      );
+    }
+    cases.push({
+      name: entry.name,
+      fn,
+      baseline,
+      position,
+      sentinel: sentinel.value,
+      readsClock: entry.module === "get",
+    });
+  }
+  return cases;
 }
 
 /** Names of every exported function, so a function missing from the corpus is caught. */

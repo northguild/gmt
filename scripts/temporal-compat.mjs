@@ -323,26 +323,32 @@ function tagFor(mismatch) {
 // oracle: GMT string conventions
 // ---------------------------------------------------------------------------------------------
 
-/** Temporal calendar id in the scan → GMT's public CalendarSystem name. */
+/**
+ * Temporal calendar id in the scan → GMT's public CalendarSystem name. Since 1.16.0 GMT's ids are
+ * Temporal's canonical ids, so this is the identity; it stays as the list of calendars GMT supports.
+ */
 const GMT_CALENDAR = {
   buddhist: "buddhist",
   hebrew: "hebrew",
   "islamic-civil": "islamic-civil",
-  "islamic-tbla": "islamic-tabular",
+  "islamic-tbla": "islamic-tbla",
   "islamic-umalqura": "islamic-umalqura",
   persian: "persian",
   indian: "indian",
-  ethioaa: "ethiopic-amete-alem",
+  ethioaa: "ethioaa",
   japanese: "japanese",
-  roc: "taiwan",
-  gregory: "gregorian",
+  roc: "roc",
+  gregory: "gregory",
 };
 
-/** GMT's calendar year digits (coding-standards E1 with PadISOYear signs). */
-function calendarYear(year) {
-  return year < 0
-    ? `-${String(-year).padStart(6, "0")}`
-    : String(year).padStart(4, "0");
+/**
+ * GMT's calendar string for an ISO date (coding-standards "Calendar-annotated strings are
+ * RFC 9557"): exactly native `Temporal.PlainDate.from(iso).withCalendar(calendar).toString()`.
+ */
+function annotatedDate(iso, calendar) {
+  return calendar === "iso8601"
+    ? iso
+    : `${iso}[u-ca=${GMT_CALENDAR[calendar]}]`;
 }
 
 /** An RFC 9557 ISO date for epoch days (proleptic Gregorian, H. Hinnant's civil_from_days). */
@@ -414,6 +420,41 @@ function runTwin(native, calendars, dateString, gmt, compare) {
     const gmtCalendar = GMT_CALENDAR[calendar];
     if (!gmtCalendar)
       throw new Error(`scan calendar ${calendar} has no GMT name`);
+    /** GMT's read of an ISO date into `calendar`, against the native read (`"ERR"` when it failed). */
+    const compareRead = (at, iso, native) =>
+      compare(
+        {
+          ...at,
+          op: "read",
+          input: iso,
+          native,
+          expected: annotatedDate(iso, calendar),
+        },
+        () => gmt.convertDateToCalendar(iso, gmtCalendar),
+      );
+    /** GMT's one-month and one-year additions to `date`, against the native ones. */
+    const compareAdds = (at, date, addMonth, addYear) => {
+      compare(
+        {
+          ...at,
+          op: "addMonth",
+          input: date,
+          native: addMonth,
+          expected: expectDate(addMonth, calendar),
+        },
+        () => gmt.addDate(date, { months: 1 }),
+      );
+      compare(
+        {
+          ...at,
+          op: "addYear",
+          input: date,
+          native: addYear,
+          expected: expectDate(addYear, calendar),
+        },
+        () => gmt.addDate(date, { years: 1 }),
+      );
+    };
 
     for (const [tag, edgeIso, dir] of [
       ["max", xscan.max, -1],
@@ -428,10 +469,7 @@ function runTwin(native, calendars, dateString, gmt, compare) {
         const iso = addIsoDays(edgeIso, dir * n);
         const at = { scan: `xscan.edge.${tag}`, calendar, row: n, iso };
         if (row.length === 1) {
-          compare(
-            { ...at, op: "read", input: iso, native: "ERR", expected: "" },
-            () => gmt.convertDateToCalendar(iso, gmtCalendar),
-          );
+          compareRead(at, iso, "ERR");
           return;
         }
         const date = dateString(iso, calendar);
@@ -445,16 +483,7 @@ function runTwin(native, calendars, dateString, gmt, compare) {
           untilEdge,
           untilFar,
         ] = row;
-        compare(
-          {
-            ...at,
-            op: "read",
-            input: iso,
-            native: row[0],
-            expected: date ?? "",
-          },
-          () => gmt.convertDateToCalendar(iso, gmtCalendar),
-        );
+        compareRead(at, iso, row[0]);
         if (date === null) return;
         compare(
           {
@@ -464,7 +493,7 @@ function runTwin(native, calendars, dateString, gmt, compare) {
             native: fromFields,
             expected: expectValue(fromFields),
           },
-          () => gmt.convertDateToCalendar(date, "gregorian"),
+          () => gmt.convertDateToCalendar(date, "iso8601"),
         );
         compare(
           {
@@ -476,26 +505,7 @@ function runTwin(native, calendars, dateString, gmt, compare) {
           },
           () => String(gmt.isValidCalendarDate(date)),
         );
-        compare(
-          {
-            ...at,
-            op: "addMonth",
-            input: date,
-            native: addMonth,
-            expected: expectDate(addMonth, calendar),
-          },
-          () => gmt.addDate(date, { months: 1 }),
-        );
-        compare(
-          {
-            ...at,
-            op: "addYear",
-            input: date,
-            native: addYear,
-            expected: expectDate(addYear, calendar),
-          },
-          () => gmt.addDate(date, { years: 1 }),
-        );
+        compareAdds(at, date, addMonth, addYear);
         compare(
           {
             ...at,
@@ -549,17 +559,11 @@ function runTwin(native, calendars, dateString, gmt, compare) {
       const [iso, read, fromFields, addMonth, addYear, untilYears] = row;
       const at = { scan: "xscan.stride", calendar, row: k, iso };
       if (read === "ERR") {
-        compare(
-          { ...at, op: "read", input: iso, native: "ERR", expected: "" },
-          () => gmt.convertDateToCalendar(iso, gmtCalendar),
-        );
+        compareRead(at, iso, "ERR");
         return;
       }
       const date = dateString(iso, calendar);
-      compare(
-        { ...at, op: "read", input: iso, native: read, expected: date ?? "" },
-        () => gmt.convertDateToCalendar(iso, gmtCalendar),
-      );
+      compareRead(at, iso, read);
       if (date === null) return;
       compare(
         {
@@ -569,28 +573,9 @@ function runTwin(native, calendars, dateString, gmt, compare) {
           native: fromFields,
           expected: expectValue(fromFields),
         },
-        () => gmt.convertDateToCalendar(date, "gregorian"),
+        () => gmt.convertDateToCalendar(date, "iso8601"),
       );
-      compare(
-        {
-          ...at,
-          op: "addMonth",
-          input: date,
-          native: addMonth,
-          expected: expectDate(addMonth, calendar),
-        },
-        () => gmt.addDate(date, { months: 1 }),
-      );
-      compare(
-        {
-          ...at,
-          op: "addYear",
-          input: date,
-          native: addYear,
-          expected: expectDate(addYear, calendar),
-        },
-        () => gmt.addDate(date, { years: 1 }),
-      );
+      compareAdds(at, date, addMonth, addYear);
       const later = dateString(
         addIsoDays(iso, xscan.strideUntilDays),
         calendar,
@@ -697,19 +682,18 @@ function runTwin(native, calendars, dateString, gmt, compare) {
   }
 }
 
-/** Builds `dateString` over native reads: `year|month|day|era|eraYear` per `iso|calendar`. */
+/**
+ * Builds `dateString` over native reads (`year|month|day|era|eraYear` per `iso|calendar`): the
+ * RFC 9557 string for the date, or null when Chromium cannot read it in that calendar, so the ops
+ * that start from it are skipped.
+ */
 function dateStringFromReads(reads) {
   return (iso, calendar) => {
-    if (calendar === "gregory") return iso;
     const read = reads.get(`${iso}|${calendar}`);
     if (read === undefined)
       throw new Error(`no native read for ${iso} ${calendar}`);
     if (read === "ERR") return null;
-    const [year, month, day, era, eraYear] = read.split("|");
-    const japanese = calendar === "japanese";
-    const yearText = calendarYear(Number(japanese ? eraYear : year));
-    const suffix = japanese ? `;era=${era}` : "";
-    return `${yearText}-${month.padStart(2, "0")}-${day.padStart(2, "0")}[u-ca=${GMT_CALENDAR[calendar]}${suffix}]`;
+    return annotatedDate(iso, calendar);
   };
 }
 
@@ -773,8 +757,7 @@ async function runNative(chromePath, calendarsFor) {
 
     const pairs = new Map();
     const recordingDateString = (iso, calendar) => {
-      if (calendar !== "gregory")
-        pairs.set(`${iso}|${calendar}`, [iso, calendar]);
+      pairs.set(`${iso}|${calendar}`, [iso, calendar]);
       return "";
     };
     const noGmt = new Proxy({}, { get: () => () => "" });

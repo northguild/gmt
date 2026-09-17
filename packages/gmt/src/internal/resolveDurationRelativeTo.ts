@@ -1,57 +1,71 @@
-import { calendarDate } from "../regex";
+import { plainDate } from "../regex/date";
+import { plainDateTime } from "../regex/date-time";
 import type { DurationRelativeTo } from "../types";
-import { parseCalendarDateValue } from "./calendarDateString";
+import {
+  parseCalendarDateValue,
+  temporalStringLeapSecond,
+} from "./calendarDateString";
+import { parseCalendarZonedValue } from "./calendarZonedString";
+import { hasZonedDateTimeShape, isoStringBody } from "./isoStringBody";
 
-/** A calendar annotation in any spelling: critical flag or not, any letter case. */
+/**
+ * A calendar annotation in any spelling: critical flag or not, any letter case. An upper-case key
+ * is not Temporal syntax, so it is parsed here and throws rather than reaching Temporal later.
+ */
 const anyCalendarAnnotation = /\[!?u-ca=/i;
 
 /**
- * Second `60` in the time of day, before any `[`: `T`, `t` or space separator, extended or basic
- * digits. Unlike `regex/leap-second.ts`, no designator is required, because a `relativeTo` may be
- * a `PlainDateTime` string, which Temporal clamps just the same.
+ * A time zone annotation: the first bracketed annotation has no `=` (RFC 9557 §4.1; Temporal's
+ * `TimeZoneAnnotation` precedes every other annotation). This only picks the branch; Temporal
+ * parses the string.
  */
-const relativeToLeapSecond =
-  /^[^[]*?[Tt ]\d{2}:?\d{2}:?60(?:[.,]\d+)?(?:[-+Zz[]|$)/;
+const timeZoneAnnotation = /^[^[]*\[!?[^=\]]*\]/;
 
 /**
- * Resolve a `DurationRelativeTo` value for `Temporal.Duration`'s `relativeTo` option, converting
- * a GMT calendar-annotated PlainDate string (`"5784-06-15[u-ca=hebrew]"`, as produced by
- * `convertDateToCalendar`) into the `Temporal.PlainDate` it actually names before handing it to
- * Temporal.
+ * GMT's strict written shape for a `relativeTo` string: a string with a time zone annotation is
+ * zoned (Temporal's `ParseTemporalRelativeToString` branch) and must be `zonedDateTimeBody`; any
+ * other is a date or date-time.
+ */
+function hasRelativeToShape(value: string): boolean {
+  if (timeZoneAnnotation.test(value)) {
+    return hasZonedDateTimeShape(value);
+  }
+  const body = isoStringBody(value);
+  return plainDate.test(body) || plainDateTime.test(body);
+}
+
+/**
+ * Resolve a `DurationRelativeTo` value for `Temporal.Duration`'s `relativeTo` option.
  *
- * Without this, Temporal's own `relativeTo` string parsing reads GMT's native-digit shape as if
- * it were Temporal's ISO-digit `[u-ca=...]` convention instead (see
- * `context/coding-standards.md`'s E1 scoped-exception note on the two conventions), silently
- * resolving to the wrong date with no error — e.g. `relativeTo: "5784-06-15[u-ca=hebrew]"`
- * previously returned the day count for Gregorian year 5784, not the Hebrew date it names. Found
- * and fixed as part of E5 (issue #78).
+ * - Every string is ISO 8601 extended format before its first `[`: with a
+ *   time zone annotation, the strict zoned shape (`zonedDateTimeBody`: `<date>T<time>`, then
+ *   nothing, `Z` or `±HH:MM[:SS[.fraction]]`); otherwise GMT's strict date (`plainDate`) or
+ *   date-time (`plainDateTime`). Basic format (`"20241003"`), a space or lower-case `t` separator,
+ *   a lower-case `z`, an hour-only time or offset, a UTC offset without a time zone annotation
+ *   and a zoned date without a time throw, although Temporal's `ParseTemporalRelativeToString`
+ *   reads them.
+ * - A string with a `u-ca` annotation is read as Temporal's `ParseTemporalRelativeToString` reads
+ *   it: with a time zone annotation it is a ZonedDateTime (`"2024-02-24T00:00:00-05:00[America/New_York][u-ca=hebrew]"`,
+ *   `parseCalendarZonedValue`), otherwise a PlainDate (`"2024-02-24[u-ca=hebrew]"`, or a date-time
+ *   whose time Temporal drops, `parseCalendarDateValue`). Annotations follow Temporal's
+ *   grammar: elective unknown ones are ignored, the first `u-ca` wins, and an unknown critical
+ *   annotation, a critical duplicate calendar, a calendar before the zone and `;era=` throw. The
+ *   calendar must be a `CalendarSystem`, and `"ethiopic"`/`"coptic"` compute in `"ethioaa"`,
+ *   which polyfill 0.5.1 can read. The digits are ISO, so this is the date Temporal itself would
+ *   read.
+ * - A leap second (second `60`) throws, in every spelling Temporal's grammar accepts — `T`, `t`
+ *   or space separator, extended or basic digits, with or without a designator. Temporal's
+ *   ParseISODateTime would otherwise clamp it to `:59`.
+ * - Every other `relativeTo` (a strict extended string without a calendar annotation, or a `PlainDate`/`PlainDateTime`/
+ *   `ZonedDateTime` object or `-Like`) passes through unchanged.
  *
- * One tag means one date, so a string carrying a calendar annotation in any other spelling
- * throws rather than falling through to Temporal's ISO-digit reading: a critical flag
- * (`[!u-ca=hebrew]`), an upper-case key or id, a trailing annotation after it, a
- * `PlainDateTime` or zoned string in either segment order. RFC 9557 §3.3's critical flag does
- * not change what a tag means. RFC 9557 §3.1 makes suffix values case-sensitive unless otherwise
- * specified, but Temporal's CanonicalizeCalendar (§12.1.1) matches the ASCII-lowercase of the
- * calendar id, so `[u-ca=HEBREW]` names the Hebrew calendar too. Reading any of these with
- * different digits from GMT's own shape would give the same tag two dates.
+ * A PlainDate string resolves to a `Temporal.PlainDateTime` (midnight, same calendar) only because
+ * the polyfill's TypeScript declaration and GMT's `DurationRelativeTo` type list `PlainDateTime`,
+ * not `PlainDate`. Temporal's `GetTemporalRelativeToOption` converts a `PlainDateTime` with
+ * `CreateTemporalDate` and drops the time, so the result is identical.
  *
- * A leap second (second `60`) throws too, in every spelling Temporal's grammar accepts — `T`,
- * `t` or space separator, extended or basic digits, with or without a designator. Temporal's
- * ParseISODateTime would otherwise clamp it to `:59`.
- *
- * Every other `relativeTo` (an unannotated ISO string, or a `PlainDate`/`PlainDateTime`/
- * `ZonedDateTime` object or `-Like`) passes through unchanged. A Temporal object is how a caller
- * supplies a calendar in Temporal's own convention.
- *
- * Returns a `Temporal.PlainDateTime` (midnight, same calendar) only because the polyfill's
- * TypeScript declaration and GMT's `DurationRelativeTo` type list `PlainDateTime`, not
- * `PlainDate`. Temporal itself resolves every zoneless `relativeTo` to a `PlainDate`: its
- * `GetTemporalRelativeToOption` converts a `PlainDateTime` with `CreateTemporalDate` and drops
- * the time, so passing a `PlainDate` gives the identical result.
- *
- * Throws if the calendar-annotated string is malformed. Callers already wrap the Temporal call
- * consuming this in `try { ... } catch { return sentinel }` per GMT's contract, so this composes
- * directly into that same block rather than needing its own try/catch.
+ * Throws on invalid input. Callers already wrap the Temporal call consuming this in
+ * `try { ... } catch { return sentinel }` per GMT's contract.
  */
 export function resolveDurationRelativeTo(
   relativeTo: DurationRelativeTo | undefined,
@@ -59,14 +73,19 @@ export function resolveDurationRelativeTo(
   if (typeof relativeTo !== "string") {
     return relativeTo;
   }
-  if (relativeToLeapSecond.test(relativeTo)) {
+  if (temporalStringLeapSecond.test(relativeTo)) {
     throw new RangeError(`Leap seconds are not supported: ${relativeTo}`);
   }
-  if (calendarDate.test(relativeTo)) {
-    return parseCalendarDateValue(relativeTo).toPlainDateTime();
+  if (!hasRelativeToShape(relativeTo)) {
+    throw new RangeError(
+      `Not an extended ISO 8601 date, date-time or zoned date-time: ${relativeTo}`,
+    );
   }
-  if (anyCalendarAnnotation.test(relativeTo)) {
-    throw new RangeError(`Not a GMT calendar PlainDate string: ${relativeTo}`);
+  if (!anyCalendarAnnotation.test(relativeTo)) {
+    return relativeTo;
   }
-  return relativeTo;
+  if (timeZoneAnnotation.test(relativeTo)) {
+    return parseCalendarZonedValue(relativeTo);
+  }
+  return parseCalendarDateValue(relativeTo).toPlainDateTime();
 }

@@ -81,13 +81,15 @@ describe("repros", () => {
     },
   );
 
-  // D6: test262 wrapping-at-end-of-month-{hebrew,ethioaa}.js; the others are Chromium 152 grid rows.
+  // D6: test262 wrapping-at-end-of-month-{hebrew,ethioaa}.js; the others are Chromium 152 grid rows,
+  // and gregory is Chromium 153 (gregory joined CalendarSystem in CORE-8).
   // D7 mixedSign: Chromium 152 grid, ISO 2024-02-11 + 384 days by years.
   // D7 leapMonthEnd: Chromium and NonISODateSurpasses (unconstrained day 30 > 29), per
   // js-temporal-polyfill-bugs.md § C (C-D7b).
   it.each`
     defect  | calendar              | name              | expected
     ${"D6"} | ${"buddhist"}         | ${"monthEnd"}     | ${"P30D"}
+    ${"D6"} | ${"gregory"}          | ${"monthEnd"}     | ${"P30D"}
     ${"D6"} | ${"japanese"}         | ${"monthEnd"}     | ${"P30D"}
     ${"D6"} | ${"roc"}              | ${"monthEnd"}     | ${"P30D"}
     ${"D6"} | ${"persian"}          | ${"monthEnd"}     | ${"P30D"}
@@ -230,7 +232,7 @@ describe("isCalendarArithmeticCompatNeeded", () => {
   it.each`
     calendar     | reason
     ${"iso8601"} | ${"iso8601 never takes the compat layer"}
-    ${"gregory"} | ${"a calendar id with no repro has no defect to work around"}
+    ${"chinese"} | ${"a calendar id with no repro has no defect to work around"}
   `("returns false for $calendar ($reason)", ({ calendar }) => {
     expect(isCalendarArithmeticCompatNeeded(calendar)).toBe(false);
   });

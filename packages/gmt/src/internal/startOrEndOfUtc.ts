@@ -1,5 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { defaultFractionalDigits } from "./defaultFractionalDigits";
+import { resolveDateTimeUnit } from "./resolveDateTimeUnit";
+import { resolveWeekStartsOn } from "./resolveWeekStartsOn";
 import { isValidDateTimeUnit } from "../plain";
 import type { FractionalDigit } from "../types";
 import { isValidUtc } from "../utc/validate/isValidUtc";
@@ -27,24 +29,30 @@ import { isValidUtc } from "../utc/validate/isValidUtc";
  */
 export function startOrEndOfUtc(
   value: string,
-  unit: Temporal.DateUnit | Temporal.TimeUnit,
+  unit: Temporal.SmallestUnit<Temporal.DateTimeUnit>,
   options: {
     weekStartsOn?: "monday" | "sunday";
     fractionalSecondDigits?: FractionalDigit;
   },
   isEnd: boolean,
 ): string {
-  const weekStartsOn = options.weekStartsOn ?? "monday";
+  const weekStartsOn = resolveWeekStartsOn(options.weekStartsOn);
+  const resolvedUnit = resolveDateTimeUnit(unit);
   const fractionalSecondDigits = options.fractionalSecondDigits;
 
-  if (!isValidUtc(value) || !isValidDateTimeUnit(unit)) return "";
+  if (
+    !isValidUtc(value) ||
+    !isValidDateTimeUnit(resolvedUnit) ||
+    weekStartsOn === null
+  )
+    return "";
 
   try {
     const instant = Temporal.Instant.from(value);
     const source = instant.toZonedDateTimeISO("UTC");
     let result: Temporal.ZonedDateTime;
 
-    switch (unit) {
+    switch (resolvedUnit) {
       case "year":
         result = isEnd
           ? source.with({ month: 12, day: 31 }).withPlainTime({
@@ -160,7 +168,7 @@ export function startOrEndOfUtc(
     // print an earlier instant than the end (Calendar & zone semantics §3).
     const fractionalDigits = isEnd
       ? (fractionalSecondDigits ?? 9)
-      : defaultFractionalDigits(unit, fractionalSecondDigits);
+      : defaultFractionalDigits(resolvedUnit, fractionalSecondDigits);
 
     return result
       .toInstant()

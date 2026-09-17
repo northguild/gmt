@@ -42,9 +42,11 @@ Design: `context/domination/specs/CORE-6-calendar-correctness-spec.md`. Owner de
 | **D8** | Pre-proposal era codes: `japanese` instead of `ce`, `japanese-inverse` instead of `bce`, and `meiji` 1–5 for 1868–1872, which the proposal counts as `ce`. | `calendarFields.ts` (`japaneseFields`) remaps reads; `calendarDateFromFields.ts` rejects `japanese-inverse` input | Every japanese read while the probe fails |
 | **D9** | Non-ISO months are added (`addMonthsCalendar`) and counted (`until` by months) one month at a time, caching each step, so a few million in-range months is a fatal heap OOM (persian `1402-10-25` + 3,000,000 months aborts at 256 MB in about 3 s). Years and reads are O(1). Every non-ISO calendar. | `largeMonthSpan.ts`, called from `readArithmeticModel.ts` (`addMonths`, `monthsBetween`); `calendarDateArithmetic.ts` sends such adds and month differences to the spec algorithms | Amounts of at least `LARGE_MONTH_SPAN` (1,200) months, or years that far apart. Canary-only: no capability probe |
 
-Parse path: `calendarDateFromFields` asks the polyfill first. It keeps the result when the fields
+Fields → ISO (`calendarDateFromFields`): asks the polyfill first. It keeps the result when the fields
 read back unchanged through `calendarFieldsOf`. Otherwise, inside a D1 window or a corrected read
-range, the field search answers over the corrected reads.
+range, the field search answers over the corrected reads. Since 1.16.0 (CORE-8) GMT's calendar strings are
+RFC 9557 (ISO digits), so string parsing no longer builds a date from calendar fields; only the
+arithmetic model below does.
 
 Arithmetic path (`calendarDateAdd`, `calendarDateUntil`): `iso8601` is the polyfill. Weeks and days
 are ISO day arithmetic. In a corrected range the spec algorithms run over ISO (buddhist) or the owned
@@ -85,9 +87,6 @@ Calculations*, ch. 8) and the Indian national calendar rule (Calendar Reform Com
 *Explanatory Supplement to the Astronomical Almanac*). Both are cited in their files. Buddhist
 arithmetic as ISO arithmetic follows from the proposal's statement that buddhist months and days are
 identical to ISO 8601.
-
-Not a workaround: `;era=japanese` is GMT's own deprecated input alias of `ce`. It is mapped in
-`internal/calendarDateString.ts`, stays until the next major, and does not depend on the polyfill.
 
 ## Canary and native oracle
 

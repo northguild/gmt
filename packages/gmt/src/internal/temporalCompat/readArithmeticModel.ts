@@ -188,8 +188,18 @@ function addMonths(
   if (jumped !== undefined) {
     return jumped;
   }
-  // Near a limit: leave a month that begins before the range, jump to a month start short of the
-  // limit, and step the rest.
+  return addMonthsNearLimit(calendarId, start, months);
+}
+
+/**
+ * Near a limit: leave a month that begins before the range, jump to a month start short of the
+ * limit, and step the rest.
+ */
+function addMonthsNearLimit(
+  calendarId: string,
+  start: YearMonth,
+  months: number,
+): YearMonth | null {
   const sign = Math.sign(months);
   let origin: YearMonth | null = start;
   let remaining = months;
@@ -252,8 +262,19 @@ function monthsBetween(
   if (direct !== undefined) {
     return direct;
   }
-  // Near a limit: count the months at each end one at a time, and let the polyfill count between
-  // the month starts left in the middle.
+  return monthsBetweenNearLimit(calendarId, from, to, sign);
+}
+
+/**
+ * Near a limit: count the months at each end one at a time, and let the polyfill count between
+ * the month starts left in the middle.
+ */
+function monthsBetweenNearLimit(
+  calendarId: string,
+  from: YearMonth,
+  to: YearMonth,
+  sign: number,
+): number {
   let low = from;
   let high = to;
   let count = 0;

@@ -172,12 +172,15 @@ const d1ArithmeticRepros: Repro[] = [
  * D6: `until` re-constrains the day while counting months. The spec's NonISODateSurpasses compares
  * the un-constrained day, so a month-end start does not reach a shorter month's end. Hebrew and
  * ethioaa are test262 `wrapping-at-end-of-month-{hebrew,ethioaa}.js`; the rest are Chromium 152
- * (q2-grid-chromium152.json, the first D6 row of each calendar).
+ * (q2-grid-chromium152.json, the first D6 row of each calendar), and gregory is Chromium 153
+ * (added to `CalendarSystem` in CORE-8; gregory months and days are ISO's, and ISO's own
+ * `ISODateSurpasses` gives the same P30D).
  */
 const d6Repros: Repro[] = [
   ...(
     [
       ["buddhist", "2023-08-31", "2023-09-30", "P30D"],
+      ["gregory", "2023-08-31", "2023-09-30", "P30D"],
       ["japanese", "2023-08-31", "2023-09-30", "P30D"],
       ["roc", "2023-08-31", "2023-09-30", "P30D"],
       ["persian", "2023-09-22", "2023-10-22", "P30D"],

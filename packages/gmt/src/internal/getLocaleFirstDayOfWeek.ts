@@ -1,4 +1,5 @@
 import { localeWeekInfo } from "./localeWeekInfo";
+import type { LocalesArgument } from "./resolveLocale";
 
 /**
  * Resolve the ISO day-of-week number (1 = Monday .. 7 = Sunday) that a
@@ -12,7 +13,9 @@ import { localeWeekInfo } from "./localeWeekInfo";
  *   `startOfDate`/`startOfZoned`) if the runtime exposes no week data or
  *   none for the given locale.
  */
-export function getLocaleFirstDayOfWeek(locale: string): number | null {
+export function getLocaleFirstDayOfWeek(
+  locale: LocalesArgument,
+): number | null {
   try {
     const weekInfo = localeWeekInfo(locale);
     if (!weekInfo || typeof weekInfo.firstDay !== "number") {

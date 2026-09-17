@@ -489,17 +489,24 @@ function codeBlocks(text) {
   return blocks;
 }
 
-/** The end of the statement starting at `start`: a `;`, `//` or newline outside brackets and strings. */
-function statementEnd(src, start) {
-  let depth = 0;
+/** Each `[index, character]` of `text` from `from` that lies outside a string literal. */
+function* unquoted(text, from) {
   let quote = null;
-  for (let i = start; i < src.length; i++) {
-    const c = src[i];
+  for (let i = from; i < text.length; i++) {
+    const c = text[i];
     if (quote) {
       if (c === "\\") i++;
       else if (c === quote) quote = null;
     } else if (c === '"' || c === "'" || c === "`") quote = c;
-    else if ("([{".includes(c)) depth++;
+    else yield [i, c];
+  }
+}
+
+/** The end of the statement starting at `start`: a `;`, `//` or newline outside brackets and strings. */
+function statementEnd(src, start) {
+  let depth = 0;
+  for (const [i, c] of unquoted(src, start)) {
+    if ("([{".includes(c)) depth++;
     else if (")]}".includes(c)) depth--;
     else if (
       depth <= 0 &&
@@ -513,14 +520,8 @@ function statementEnd(src, start) {
 /** Whether `expr` is exactly one call: the bracket its first `(` opens closes at its last character. */
 function isOneCall(expr) {
   let depth = 0;
-  let quote = null;
-  for (let i = expr.indexOf("("); i < expr.length; i++) {
-    const c = expr[i];
-    if (quote) {
-      if (c === "\\") i++;
-      else if (c === quote) quote = null;
-    } else if (c === '"' || c === "'" || c === "`") quote = c;
-    else if ("([{".includes(c)) depth++;
+  for (const [i, c] of unquoted(expr, expr.indexOf("("))) {
+    if ("([{".includes(c)) depth++;
     else if (")]}".includes(c) && --depth === 0) return i === expr.length - 1;
   }
   return false;
@@ -529,14 +530,8 @@ function isOneCall(expr) {
 /** Whether `text` leaves a bracket open, outside strings. */
 function bracketsOpen(text) {
   let depth = 0;
-  let quote = null;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (quote) {
-      if (c === "\\") i++;
-      else if (c === quote) quote = null;
-    } else if (c === '"' || c === "'" || c === "`") quote = c;
-    else if ("([{".includes(c)) depth++;
+  for (const [, c] of unquoted(text, 0)) {
+    if ("([{".includes(c)) depth++;
     else if (")]}".includes(c)) depth--;
   }
   return depth > 0;
@@ -575,133 +570,196 @@ const docResults = {
   checked: 0,
 };
 
+/** Local name → exported name, for the value bindings a code block imports. */
+function blockImports(src) {
+  const imported = new Map();
+  for (const m of src.matchAll(BLOCK_IMPORT)) {
+    if (m[1]) continue;
+    for (const binding of m[2].split(",")) {
+      const parts = binding.trim().split(/\s+/);
+      if (parts[0] === "" || parts[0] === "type") continue;
+      const local = parts[1] === "as" ? parts[2] : parts[0];
+      if (Object.hasOwn(gmt, parts[0])) imported.set(local, parts[0]);
+    }
+  }
+  return imported;
+}
+
+/** The index of the end of the line holding `from`. */
+function lineEndIn(src, from) {
+  const n = src.indexOf("\n", from);
+  return n === -1 ? src.length : n;
+}
+
+/**
+ * A result may continue over further comment lines while its brackets are open. Each line may
+ * carry its own ` — aside`; the asides move behind the joined literal. When the brackets never
+ * close, the result and position come back unchanged.
+ */
+function joinContinuedResult(src, result, pos) {
+  const asides = [];
+  const unaside = (text) => {
+    const dash = text.indexOf(" — ");
+    if (dash === -1) return text;
+    asides.push(text.slice(dash + 3).trim());
+    return text.slice(0, dash);
+  };
+  let body = unaside(result);
+  let next = pos;
+  let more;
+  while (
+    bracketsOpen(body) &&
+    (more = src.slice(next, lineEndIn(src, next)).match(/^\s*\/\/\s*(.*)$/))
+  ) {
+    body += ` ${unaside(more[1])}`;
+    next = lineEndIn(src, next) + 1;
+  }
+  if (bracketsOpen(body)) return { result, pos };
+  return {
+    result: asides.length > 0 ? `${body} — ${asides.join("; ")}` : body,
+    pos: next,
+  };
+}
+
+/**
+ * The `// result` documented for a statement ending at `end` — on its own line, else on the next
+ * comment line — and the position to resume at. `skip` when code follows the statement.
+ */
+function documentedResult(src, end) {
+  const stop = lineEndIn(src, end);
+  const tail = src.slice(end, stop).match(/^\s*;?\s*(?:\/\/\s*(.*))?$/);
+  let pos = stop + 1;
+  if (!tail) return { skip: true, pos };
+  let result = tail[1];
+  if (result === undefined) {
+    const next = src.slice(pos, lineEndIn(src, pos)).match(/^\s*\/\/\s*(.*)$/);
+    if (next) {
+      result = next[1];
+      pos = lineEndIn(src, pos) + 1;
+    }
+  }
+  if (result !== undefined && bracketsOpen(literalOf(result))) {
+    return { skip: false, ...joinContinuedResult(src, result, pos) };
+  }
+  return { skip: false, result, pos };
+}
+
+/** Evaluate `js` into the block scope as `binding`; a throw leaves the name unbound. */
+function bindValue(block, binding, js, clock) {
+  try {
+    block.scope[binding] = evaluate(js, block.scope);
+    if (clock) block.clocked.add(binding);
+  } catch {
+    // not a literal after all, or a throwing call (reported when it documents a result)
+  }
+}
+
+/** Whether a call's value depends on the clock: its own function, or a name it reads. */
+function statementReadsClock(block, { callee, expr, result }, read) {
+  const entry = functionEntries.get(block.imported.get(callee));
+  return (
+    (entry !== undefined && callReadsClock(entry, expr, result)) ||
+    read.some((n) => {
+      if (block.clocked.has(n)) return true;
+      const nested = functionEntries.get(block.imported.get(n));
+      return n !== callee && nested !== undefined && readsClock(nested);
+    })
+  );
+}
+
+/** Judge, or record as skipped, one call's documented result. */
+function recordDocumentedResult(file, block, stmt, unbound, clock) {
+  const { exprStart, expr, result } = stmt;
+  const where = `${file}:${block.lineAt(exprStart)}`;
+  const call = expr.replace(/\s*\n\s*/g, " ");
+  const aside = result.trim().slice(literalOf(result).length);
+  if (unbound.length > 0) {
+    docResults.skipped.unbound.push({ where, call, result });
+  } else if (!clock && /\bICU\b/.test(aside)) {
+    docResults.skipped.icu.push({ where, call, result });
+  } else {
+    judgeExample(docResults, {
+      where,
+      call,
+      result,
+      clock,
+      scope: block.scope,
+    });
+  }
+}
+
+/** Bind or judge one statement of a code block. */
+function judgeStatement(file, block, stmt) {
+  const { binding, callee, expr, result } = stmt;
+  const js = toJs(expr);
+  const read = namesRead(js);
+  const unbound = read.filter((n) => !Object.hasOwn(block.scope, n));
+  const isCall =
+    callee !== undefined && block.imported.has(callee) && isOneCall(expr);
+
+  if (!isCall) {
+    // A literal built from earlier bindings binds its name; nothing else does.
+    if (binding && callee === undefined && unbound.length === 0) {
+      bindValue(
+        block,
+        binding,
+        js,
+        read.some((n) => block.clocked.has(n)),
+      );
+    }
+    return;
+  }
+
+  const clock = statementReadsClock(block, stmt, read);
+  if (result !== undefined) {
+    recordDocumentedResult(file, block, stmt, unbound, clock);
+  }
+  if (binding && unbound.length === 0) {
+    bindValue(block, binding, js, clock);
+  }
+}
+
 /** Judge every qualifying `call // result` in one documentation file. */
 function judgeDocumentedResults(file, text) {
-  for (const block of codeBlocks(text)) {
-    const { src } = block;
-    /** Local name → exported name, for the value bindings this block imports. */
-    const imported = new Map();
-    for (const m of src.matchAll(BLOCK_IMPORT)) {
-      if (m[1]) continue;
-      for (const binding of m[2].split(",")) {
-        const parts = binding.trim().split(/\s+/);
-        if (parts[0] === "" || parts[0] === "type") continue;
-        const local = parts[1] === "as" ? parts[2] : parts[0];
-        if (Object.hasOwn(gmt, parts[0])) imported.set(local, parts[0]);
-      }
-    }
+  for (const codeBlock of codeBlocks(text)) {
+    const { src } = codeBlock;
+    const imported = blockImports(src);
     if (imported.size === 0) continue;
-    const scope = Object.fromEntries(
-      [...imported].map(([local, name]) => [local, gmt[name]]),
-    );
-    /** Bindings whose value came from the clock. */
-    const clocked = new Set();
-    const lineAt = (index) =>
-      block.line + src.slice(0, index).split("\n").length - 1;
+    const block = {
+      imported,
+      scope: Object.fromEntries(
+        [...imported].map(([local, name]) => [local, gmt[name]]),
+      ),
+      /** Bindings whose value came from the clock. */
+      clocked: new Set(),
+      lineAt: (index) =>
+        codeBlock.line + src.slice(0, index).split("\n").length - 1,
+    };
 
     let pos = 0;
     while (pos < src.length) {
-      const lineEnd = (from) => {
-        const n = src.indexOf("\n", from);
-        return n === -1 ? src.length : n;
-      };
-      const head = src.slice(pos, lineEnd(pos)).match(HEAD);
+      const head = src.slice(pos, lineEndIn(src, pos)).match(HEAD);
       const binding = head[1];
       const exprStart = pos + head[0].length;
       const callee = src
         .slice(exprStart)
         .match(/^([A-Za-z_$][\w$]*)\s*\(/)?.[1];
       if (!binding && !imported.has(callee)) {
-        pos = lineEnd(pos) + 1;
+        pos = lineEndIn(src, pos) + 1;
         continue;
       }
       const end = statementEnd(src, exprStart);
       const expr = src.slice(exprStart, end).trim();
-      const stop = lineEnd(end);
-      const tail = src.slice(end, stop).match(/^\s*;?\s*(?:\/\/\s*(.*))?$/);
-      pos = stop + 1;
-      if (!tail) continue;
-      let result = tail[1];
-      if (result === undefined) {
-        const next = src.slice(pos, lineEnd(pos)).match(/^\s*\/\/\s*(.*)$/);
-        if (next) {
-          result = next[1];
-          pos = lineEnd(pos) + 1;
-        }
-      }
-      // A result may continue over further comment lines while its brackets are open. Each line
-      // may carry its own ` — aside`; the asides move behind the joined literal.
-      if (result !== undefined && bracketsOpen(literalOf(result))) {
-        const asides = [];
-        const unaside = (text) => {
-          const dash = text.indexOf(" — ");
-          if (dash === -1) return text;
-          asides.push(text.slice(dash + 3).trim());
-          return text.slice(0, dash);
-        };
-        let body = unaside(result);
-        let next = pos;
-        let more;
-        while (
-          bracketsOpen(body) &&
-          (more = src.slice(next, lineEnd(next)).match(/^\s*\/\/\s*(.*)$/))
-        ) {
-          body += ` ${unaside(more[1])}`;
-          next = lineEnd(next) + 1;
-        }
-        if (!bracketsOpen(body)) {
-          result = asides.length > 0 ? `${body} — ${asides.join("; ")}` : body;
-          pos = next;
-        }
-      }
-      const js = toJs(expr);
-      const read = namesRead(js);
-      const unbound = read.filter((n) => !Object.hasOwn(scope, n));
-      const isCall =
-        callee !== undefined && imported.has(callee) && isOneCall(expr);
-
-      if (!isCall) {
-        // A literal built from earlier bindings binds its name; nothing else does.
-        if (binding && callee === undefined && unbound.length === 0) {
-          try {
-            scope[binding] = evaluate(js, scope);
-            if (read.some((n) => clocked.has(n))) clocked.add(binding);
-          } catch {
-            // not a literal after all
-          }
-        }
-        continue;
-      }
-
-      const entry = functionEntries.get(imported.get(callee));
-      const clock =
-        (entry !== undefined && callReadsClock(entry, expr, result)) ||
-        read.some((n) => {
-          if (clocked.has(n)) return true;
-          const nested = functionEntries.get(imported.get(n));
-          return n !== callee && nested !== undefined && readsClock(nested);
-        });
-
-      if (result !== undefined) {
-        const where = `${file}:${lineAt(exprStart)}`;
-        const call = expr.replace(/\s*\n\s*/g, " ");
-        const aside = result.trim().slice(literalOf(result).length);
-        if (unbound.length > 0) {
-          docResults.skipped.unbound.push({ where, call, result });
-        } else if (!clock && /\bICU\b/.test(aside)) {
-          docResults.skipped.icu.push({ where, call, result });
-        } else {
-          judgeExample(docResults, { where, call, result, clock, scope });
-        }
-      }
-      if (binding && unbound.length === 0) {
-        try {
-          scope[binding] = evaluate(js, scope);
-          if (clock) clocked.add(binding);
-        } catch {
-          // a throwing call is reported above when it documents a result
-        }
-      }
+      const documented = documentedResult(src, end);
+      pos = documented.pos;
+      if (documented.skip) continue;
+      judgeStatement(file, block, {
+        binding,
+        callee,
+        expr,
+        exprStart,
+        result: documented.result,
+      });
     }
   }
 }
@@ -753,13 +811,8 @@ const siteSections = new Set(
 
 const siteLinks = [];
 let siteLinksChecked = 0;
-/** Check every internal site link in one documentation file. */
-function checkSiteLinks(file, text) {
-  const lineOf = (index) => text.slice(0, index).split("\n").length;
-  const pageUrl = file.startsWith(`${DOX_CONTENT}/`)
-    ? `${pageRoute(file.slice(DOX_CONTENT.length + 1), text).replace(/\/$/, "")}/`
-    : null;
-  /** Start index → [link as written, root-relative path]. */
+/** Start index → [link as written, root-relative path], for every internal site link in a file. */
+function siteLinksIn(file, text) {
   const found = new Map();
   for (const m of text.matchAll(
     /https:\/\/gmt-dox\.northguild\.workers\.dev(\/[^\s)"'`<>\]}]*)?/g,
@@ -769,18 +822,30 @@ function checkSiteLinks(file, text) {
     /(?<=[(\s"'`=<[{])\/([\w.~-]+)[^\s)"'`<>\]}]*/g,
   ))
     if (siteSections.has(m[1])) found.set(m.index, [m[0], m[0]]);
-  if (pageUrl !== null) {
-    for (const m of text.matchAll(
-      /\]\(([^)\s]+)(?:\s+"[^"]*")?\)|\bhref=["']([^"']+)["']/g,
-    )) {
-      const target = m[1] ?? m[2];
-      if (/^(?:[a-z][\w+.-]*:|#|\/\/|\{)/i.test(target)) continue;
-      const index = m.index + m[0].indexOf(target);
-      if (found.has(index)) continue;
-      found.set(index, [target, new URL(target, `${SITE}${pageUrl}`).pathname]);
-    }
+  if (file.startsWith(`${DOX_CONTENT}/`)) {
+    const pageUrl = `${pageRoute(file.slice(DOX_CONTENT.length + 1), text).replace(/\/$/, "")}/`;
+    addPageRelativeLinks(found, text, pageUrl);
   }
-  for (const [index, [written, path]] of found) {
+  return found;
+}
+
+/** Add a content page's relative Markdown and `href` links, resolved against its own URL. */
+function addPageRelativeLinks(found, text, pageUrl) {
+  for (const m of text.matchAll(
+    /\]\(([^)\s]+)(?:\s+"[^"]*")?\)|\bhref=["']([^"']+)["']/g,
+  )) {
+    const target = m[1] ?? m[2];
+    if (/^(?:[a-z][\w+.-]*:|#|\/\/|\{)/i.test(target)) continue;
+    const index = m.index + m[0].indexOf(target);
+    if (found.has(index)) continue;
+    found.set(index, [target, new URL(target, `${SITE}${pageUrl}`).pathname]);
+  }
+}
+
+/** Check every internal site link in one documentation file. */
+function checkSiteLinks(file, text) {
+  const lineOf = (index) => text.slice(0, index).split("\n").length;
+  for (const [index, [written, path]] of siteLinksIn(file, text)) {
     const route = decodeURI(path.replace(/[?#].*$/, "")).replace(
       /(.)\/+$/,
       "$1",

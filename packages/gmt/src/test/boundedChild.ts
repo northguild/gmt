@@ -75,7 +75,7 @@ export interface BoundedRun {
  * Evaluates each expression (a JavaScript expression calling public functions as `gmt.<name>`,
  * loaded from their source files) in one child process, in order.
  *
- * @param expressions e.g. `gmt.addDate("1402-10-25[u-ca=persian]", { months: 3000000 })`
+ * @param expressions e.g. `gmt.addDate("2024-01-15[u-ca=persian]", { months: 3000000 })`
  * @param options `timeoutMs` for the whole child (default 20 s), `heapMb` old-space limit (default 256)
  */
 export function runInBoundedChild(

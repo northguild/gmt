@@ -95,7 +95,7 @@ export function instantFormatOptions(
  */
 export function formatWallClockOrZoned(
   zonedDateTime: Temporal.ZonedDateTime,
-  locale: string | undefined,
+  locale: string | string[] | undefined,
   options: Options,
   includeTimeZoneName: boolean,
 ): string {

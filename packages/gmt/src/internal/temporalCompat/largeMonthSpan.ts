@@ -35,7 +35,7 @@ import type { YearMonth } from "./nonIsoArithmetic";
  */
 
 /** Month amounts from here on take the year jumps; below it the polyfill costs about 10 ms. */
-export const LARGE_MONTH_SPAN = 1_200;
+const LARGE_MONTH_SPAN = 1_200;
 
 /** Intl era/monthCode proposal §4.1.4 Table 3: the calendars with leap month codes (`MxxL`). */
 const LEAP_MONTH_CALENDARS: ReadonlySet<string> = new Set([
