@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { formatWallClockOrZoned } from "../../internal/instantFormatOptions";
 import { normalizeDateTime } from "../../internal/normalizeDateTime";
 import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
@@ -13,7 +14,7 @@ import { isValidUtc } from "../validate";
  *
  * | Member | Type | Default | Description |
  * | --- | --- | --- | --- |
- * | `timeZone` | `string` | `"UTC"` | IANA zone for rendering; invalid/omitted falls back to UTC via `normalizeTimeZone`. |
+ * | `timeZone` | `string` | `"UTC"` | IANA zone for rendering; omitted is UTC, `"local"` is the system zone, and an unknown zone makes `formatUtc` return `""`. |
  * | `includeTimeZoneName` | `boolean` | `false` | Appends the localized zone name (style via `Intl`) when true. |
  *
  * @example
@@ -39,9 +40,10 @@ export interface FormatUtcOptions extends Intl.DateTimeFormatOptions {
  *   the japanese calendar and `month: "long"` gave `"R6/2"`), a `long`/`full` `timeStyle` replaced
  *   the `dateStyle` width, `era` alone dropped the time, and `timeZoneName` alone without
  *   `includeTimeZoneName` returned `""`. Pass the fields the old text showed to keep it.
+ * - `options` null returns `""`, as ECMA-402's CoerceOptionsToObject rejects it.
  *
  * @param value UTC ISO string to format
- * @param locale optional: BCP 47 locale tag
+ * @param locale optional: BCP 47 locale tag, or a preference list of tags (ECMA-402)
  * @param options optional: { timeZone, includeTimeZoneName }
  * @returns the formatted date/time string, or "" on invalid input
  *
@@ -53,13 +55,18 @@ export interface FormatUtcOptions extends Intl.DateTimeFormatOptions {
  * @example formatUtc("2024-02-03T14:30:45Z", "en-US", { era: "long" }) // "2/3/2024 Anno Domini, 2:30:45 PM"
  * @example formatUtc("2024-02-03T14:30:45Z", "en-US", { era: "long", year: "numeric", month: "numeric", day: "numeric" }) // "2/3/2024 Anno Domini" — the pre-1.16.0 text
  * @example formatUtc("2024-02-03T14:30:45Z", "en-US", { timeZoneName: "short" }) // "2/3/2024, 2:30:45 PM"
+ * @example formatUtc("2024-02-03T14:30:45Z", "en-US", { timeZone: "Europe/Londn" }) // "" (unknown zone)
+ * @example formatUtc("2024-02-03T14:30:45Z", "en-US", null as never) // "" (null options, as ECMA-402 rejects them)
  * @example formatUtc("not-a-date") // ""
+ * @example formatUtc("2024-02-03T14:30:45Z", ["fr-FR", "en-US"], { dateStyle: "long" }) // "3 février 2024"
  */
 export function formatUtc(
   value: string,
-  locale?: string,
+  locale?: string | string[],
   options?: FormatUtcOptions,
 ): string {
+  // ECMA-402 CoerceOptionsToObject: undefined is defaults; null is a TypeError.
+  if (options === null) return "";
   if (!isValidUtc(value)) return "";
 
   const {
@@ -71,8 +78,11 @@ export function formatUtc(
   const instant = toInstantFromUtc(value);
   if (instant === null) return "";
 
+  // ECMA-402 throws RangeError for an unknown zone: the sentinel, never a silent UTC.
+  const tz = normalizeTimeZone(timeZone);
+  if (!tz) return "";
+
   try {
-    const tz = normalizeTimeZone(timeZone);
     const zdt = instant.toZonedDateTimeISO(tz);
     return normalizeDateTime(
       formatWallClockOrZoned(zdt, locale, intlOptions, includeTimeZoneName),

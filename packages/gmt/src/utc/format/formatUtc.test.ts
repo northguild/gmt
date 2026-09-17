@@ -53,13 +53,28 @@ describe("formatUtc", () => {
     spy.mockRestore();
   });
 
-  it("falls back to UTC when an invalid timezone is provided", () => {
+  // ECMA-402 and Temporal throw RangeError for an unknown zone, so a typo is the sentinel, never UTC.
+  it.each`
+    timeZone
+    ${"Invalid/Zone"}
+    ${"Europe/Londn"}
+    ${""}
+    ${null}
+  `("returns '' for invalid timeZone $timeZone", ({ timeZone }) => {
     expect(
       formatUtc("2024-02-03T14:30:45Z", MustTestLocales.enUS, {
         dateStyle: "long",
         timeStyle: "long",
-        // invalid value
-        timeZone: "Invalid/Zone",
+        timeZone,
+      }),
+    ).toEqual("");
+  });
+
+  it("formats in UTC when timeZone is omitted", () => {
+    expect(
+      formatUtc("2024-02-03T14:30:45Z", MustTestLocales.enUS, {
+        dateStyle: "long",
+        timeStyle: "long",
       }),
     ).toEqual("February 3, 2024 at 2:30:45 PM");
   });
@@ -120,4 +135,31 @@ describe("formatUtc", () => {
       expect(formatUtc("2024-02-03T14:30:45Z", locale, options)).toBe(expected);
     },
   );
+});
+
+// ECMA-402 CoerceOptionsToObject throws TypeError for null options (`new Intl.DateTimeFormat("en",
+// null)`), so null is invalid input; undefined is the defaults.
+describe("formatUtc with null options", () => {
+  it("returns an empty string for 2024-02-03T14:30:45Z with options null", () => {
+    expect(
+      formatUtc("2024-02-03T14:30:45Z", MustTestLocales.enUS, null as never),
+    ).toBe("");
+  });
+});
+
+// ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale data
+// is used, and a malformed tag anywhere in the list is invalid input. Expected strings from native
+// Intl with the same list (Chromium 153).
+describe("formatUtc with a locale list", () => {
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"3 février 2024"}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
+  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+    expect(
+      formatUtc("2024-02-03T14:30:45Z", locale as string[], {
+        dateStyle: "long",
+      }),
+    ).toBe(expected);
+  });
 });

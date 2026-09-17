@@ -1,6 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidTimeZone } from "../../zoned";
 import { isValidUtc } from "../validate";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Extract the time portion from a UTC datetime string.
@@ -21,6 +22,10 @@ export function parseTimeFromUtc(
   value: string,
   options?: { timeZone?: string },
 ): string {
+  if (!isOptionsArgument(options)) {
+    return "";
+  }
+
   if (!isValidUtc(value)) {
     return "";
   }

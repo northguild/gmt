@@ -117,4 +117,20 @@ describe("isValidUtcRange", () => {
       }),
     ).toBe(false);
   });
+
+  // Each endpoint is read as the single-value validator reads it (RFC 9557 §3.3, Temporal
+  // `ParseISODateTime`): elective and `[u-ca=iso8601]` annotations are ignored, an unknown critical
+  // one is rejected. Native Temporal agrees.
+  it.each`
+    value1                             | value2                              | expected
+    ${"2024-03-10T12:00Z[foo=bar]"}    | ${"2024-03-10T13:00Z[u-ca=hebrew]"} | ${true}
+    ${"2024-03-10T12:00Z[Asia/Tokyo]"} | ${"2024-03-10T13:00Z"}              | ${true}
+    ${"2024-03-10T12:00Z[!foo=bar]"}   | ${"2024-03-10T13:00Z"}              | ${false}
+    ${"2016-12-31T23:59:60Z[foo=bar]"} | ${"2017-01-01T00:00Z"}              | ${false}
+  `(
+    "reads the annotations of $value1 and $value2 → $expected",
+    ({ value1, value2, expected }) => {
+      expect(isValidUtcRange({ value1, value2 })).toBe(expected);
+    },
+  );
 });

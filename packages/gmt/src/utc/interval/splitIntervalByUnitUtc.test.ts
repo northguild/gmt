@@ -374,3 +374,23 @@ describe("splitIntervalByUnitUtc default piece limit", () => {
     },
   );
 });
+
+// An unknown unit is invalid input whatever the span: a non-empty interval already returns
+// [] for it, so a zero-length interval must too, rather than the one zero-length slice a valid
+// unit gives.
+describe("splitIntervalByUnitUtc rejects an invalid unit on a zero-length interval", () => {
+  it.each`
+    unit
+    ${"invalid"}
+    ${"fortnight"}
+  `("returns [] for unit $unit", ({ unit }) => {
+    expect(
+      splitIntervalByUnitUtc(
+        "2024-01-01T00:00:00Z",
+        "2024-01-01T00:00:00Z",
+        unit,
+        1,
+      ),
+    ).toEqual([]);
+  });
+});

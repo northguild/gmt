@@ -1,8 +1,10 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidAmount, resolveOverflow } from "../../internal";
 import { isValidDateTimeDurationUnit } from "../../plain/validate";
 import type { DateTimeDurationUnit, Overflow } from "../../types";
 import { isValidUtc } from "../validate";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Subtract a temporal amount from a UTC datetime string and return a new UTC Instant string.
@@ -28,6 +30,10 @@ export function subtractUtc(
   units: Partial<Record<DateTimeDurationUnit, number>>,
   options?: { overflow?: Overflow },
 ): string {
+  if (!isOptionsArgument(options)) {
+    return "";
+  }
+
   const validUtc = isValidUtc(value);
   const validUnits =
     typeof units === "object" &&

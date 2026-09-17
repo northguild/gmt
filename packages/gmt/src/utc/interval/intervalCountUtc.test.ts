@@ -34,11 +34,11 @@ describe("intervalCountUtc", () => {
   it.each`
     start                     | end                       | unit      | expected
     ${"2024-01-01T00:00:00Z"} | ${"2024-01-01T00:00:00Z"} | ${"day"}  | ${0}
-    ${"2024-01-01T05:00:00Z"} | ${"2024-01-01T05:00:00Z"} | ${"day"}  | ${1}
+    ${"2024-01-01T05:00:00Z"} | ${"2024-01-01T05:00:00Z"} | ${"day"}  | ${0}
     ${"2024-01-01T00:00:00Z"} | ${"2024-01-01T00:00:00Z"} | ${"hour"} | ${0}
-    ${"2024-01-01T05:30:00Z"} | ${"2024-01-01T05:30:00Z"} | ${"hour"} | ${1}
+    ${"2024-01-01T05:30:00Z"} | ${"2024-01-01T05:30:00Z"} | ${"hour"} | ${0}
   `(
-    "returns $expected for zero-length $start to $end counted in $unit",
+    "returns $expected for zero-length $start to $end counted in $unit (an empty interval holds no instant)",
     ({ start, end, unit, expected }) => {
       expect(intervalCountUtc(start, end, unit)).toBe(expected);
     },

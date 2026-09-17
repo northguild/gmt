@@ -1,8 +1,10 @@
+// fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidDuration } from "../../duration/validate";
 import { resolveOverflow } from "../../internal";
 import type { Overflow } from "../../types";
 import { isValidUtc } from "../validate/isValidUtc";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Construct a UTC interval from a single point plus an ISO 8601 duration, anchored at either end.
@@ -38,6 +40,10 @@ export function intervalFromDurationUtc(
   anchor: "start" | "end",
   options?: { overflow?: Overflow },
 ): { start: string; end: string } | null {
+  if (!isOptionsArgument(options)) {
+    return null;
+  }
+
   if (typeof value !== "string" || !isValidUtc(value)) {
     return null;
   }

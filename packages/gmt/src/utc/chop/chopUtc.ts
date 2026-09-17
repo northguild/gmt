@@ -1,9 +1,11 @@
+import { isoStringBody } from "../../internal/isoStringBody";
 import { isValidUtc } from "../validate";
 
 /**
  * Return the UTC datetime string with a trailing Z removed if present.
  *
- * - Uses regex to remove trailing "z" or "Z".
+ * - Removes the trailing "Z"; a lower-case "z" is not a GMT UTC string (`isValidUtc`), so it returns "".
+ * - Drops the RFC 9557 annotations `Temporal.Instant.from` ignores (`[foo=bar]`, `[Europe/Paris]`).
  * - Returns "" for invalid input.
  *
  * @param value UTC datetime string (ISO 8601)
@@ -11,13 +13,15 @@ import { isValidUtc } from "../validate";
  *
  * @example chopUtc("2024-03-10T12:00:00Z") // "2024-03-10T12:00:00"
  * @example chopUtc("2024-03-10T12:00:00") // "" (no Z: not a UTC instant)
+ * @example chopUtc("2024-03-10T12:00:00z") // "" (lower-case z)
  * @example chopUtc("invalid") // ""
+ * @example chopUtc("2024-03-10T12:00:00Z[foo=bar]") // "2024-03-10T12:00:00"
  */
 export function chopUtc(value: string): string {
   if (!isValidUtc(value)) {
     return "";
   }
 
-  // only shaves off z or Z at the end of the string, if it exists
-  return value.replace(/z$/i, "");
+  // only shaves off the Z at the end of the string, if it exists
+  return isoStringBody(value).replace(/Z$/, "");
 }

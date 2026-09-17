@@ -1,16 +1,17 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
-import { closedIntervalsAbut } from "../../internal";
-import { isLeapSecond } from "../../plain/validate/isLeapSecond";
-import { utcDateTime } from "../../regex/utc-date-time";
+import { halfOpenAbuts } from "../../internal";
+import { isValidUtc } from "../validate";
 
 /**
- * Return true when two UTC intervals are exactly adjacent — one's end is one nanosecond
- * before the other's start, so they share no instant and leave no gap.
+ * Return true when two half-open UTC intervals `[aStart, aEnd)` and `[bStart, bEnd)` are exactly
+ * adjacent — one ends where the other starts, so they share nothing and leave no gap.
  *
+ * - Half-open: an interval holds every `t` with `start <= t < end`, so an interval's `end` is the
+ *   first value after it. Returns `true` when `aEnd === bStart` or `bEnd === aStart` (Allen's
+ *   "meets"). There is no one-nanosecond step: a one-nanosecond gap is a gap.
+ * - An empty interval (`start === end`) abuts nothing.
  * - Uses `Temporal.Instant.compare` for comparison.
- * - Returns `true` when `bStart - 1 nanosecond === aEnd` (with `aEnd < bStart`) or
- *   `aStart - 1 nanosecond === bEnd` (with `bEnd < aStart`). The step is taken down from the later
- *   start, so an interval ending at the last representable instant still abuts.
  * - Returns `false` when intervals overlap, are disjoint with a gap, or are invalid.
  * - Returns `false` on invalid input (wrong type, malformed strings, leap seconds).
  *
@@ -20,10 +21,10 @@ import { utcDateTime } from "../../regex/utc-date-time";
  * @param bEnd ISO 8601 UTC datetime string for the second interval end
  * @returns true if intervals are exactly adjacent, or false on invalid input
  *
- * @example intervalAbutsUtc("2024-01-01T09:00:00Z", "2024-06-30T12:00:00Z", "2024-06-30T12:00:00.000000001Z", "2024-12-31T17:00:00Z") // true
- * @example intervalAbutsUtc("2024-06-30T12:00:00.000000001Z", "2024-12-31T17:00:00Z", "2024-01-01T09:00:00Z", "2024-06-30T12:00:00Z") // true
- * @example intervalAbutsUtc("2024-01-01T09:00:00Z", "2024-06-30T12:00:00Z", "2024-06-30T12:00:01Z", "2024-12-31T17:00:00Z") // false (gap)
- * @example intervalAbutsUtc("2024-01-01T09:00:00Z", "2024-06-30T13:00:00Z", "2024-06-30T12:00:00Z", "2024-12-31T17:00:00Z") // false (overlap)
+ * @example intervalAbutsUtc("2024-01-01T09:00:00Z", "2024-01-01T12:00:00Z", "2024-01-01T12:00:00Z", "2024-01-01T17:00:00Z") // true
+ * @example intervalAbutsUtc("2024-01-01T12:00:00Z", "2024-01-01T17:00:00Z", "2024-01-01T09:00:00Z", "2024-01-01T12:00:00Z") // true
+ * @example intervalAbutsUtc("2024-01-01T09:00:00Z", "2024-01-01T12:00:00Z", "2024-01-01T12:00:00.000000001Z", "2024-01-01T17:00:00Z") // false (1 ns gap)
+ * @example intervalAbutsUtc("2024-01-01T09:00:00Z", "2024-01-01T13:00:00Z", "2024-01-01T12:00:00Z", "2024-01-01T17:00:00Z") // false (overlap)
  * @example intervalAbutsUtc("invalid", "2024-06-30T12:00:00Z", "2024-06-30T12:00:00Z", "2024-12-31T17:00:00Z") // false
  */
 export function intervalAbutsUtc(
@@ -42,19 +43,10 @@ export function intervalAbutsUtc(
   }
 
   if (
-    !utcDateTime.test(aStart) ||
-    !utcDateTime.test(aEnd) ||
-    !utcDateTime.test(bStart) ||
-    !utcDateTime.test(bEnd)
-  ) {
-    return false;
-  }
-
-  if (
-    isLeapSecond(aStart) ||
-    isLeapSecond(aEnd) ||
-    isLeapSecond(bStart) ||
-    isLeapSecond(bEnd)
+    !isValidUtc(aStart) ||
+    !isValidUtc(aEnd) ||
+    !isValidUtc(bStart) ||
+    !isValidUtc(bEnd)
   ) {
     return false;
   }
@@ -73,13 +65,10 @@ export function intervalAbutsUtc(
       return false;
     }
 
-    return closedIntervalsAbut(
-      aS,
-      aE,
-      bS,
-      bE,
+    return halfOpenAbuts(
+      { start: aS, end: aE },
+      { start: bS, end: bE },
       Temporal.Instant.compare,
-      (value) => value.subtract({ nanoseconds: 1 }),
     );
   } catch {
     return false;

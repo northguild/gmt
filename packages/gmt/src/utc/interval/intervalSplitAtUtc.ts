@@ -1,7 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { isLeapSecond } from "../../plain/validate/isLeapSecond";
-import { utcDateTime } from "../../regex/utc-date-time";
 import { isValidUtcInterval } from "./validate";
+import { isValidUtc } from "../validate";
 
 /**
  * Split a UTC interval at arbitrary `points`, producing consecutive sub-intervals.
@@ -14,6 +13,9 @@ import { isValidUtcInterval } from "./validate";
  * - Duplicate points collapse to a single boundary.
  * - Returns consecutive `{ start, end }` records, each record's `end` equal to the next
  *   record's `start`.
+ * - Every piece is half-open `[start, end)`: a boundary belongs only to the piece that starts
+ *   there, so the pieces share no value and together cover the interval exactly once (the rule
+ *   CORE-6's `splitIntervalAt` uses).
  * - Returns `[{ start, end }]` (the whole interval, unsplit) when no valid in-range point remains.
  * - Returns `[]` when `points` is not an array, when any element is not a valid ISO UTC
  *   datetime string, or on invalid input (unparseable start/end, `start > end`, leap-second
@@ -37,21 +39,12 @@ export function intervalSplitAtUtc(
     return [];
   }
 
-  if (isLeapSecond(start) || isLeapSecond(end)) {
-    return [];
-  }
-
   if (!isValidUtcInterval(start, end)) {
     return [];
   }
 
   if (
-    !points.every(
-      (point) =>
-        typeof point === "string" &&
-        utcDateTime.test(point) &&
-        !isLeapSecond(point),
-    )
+    !points.every((point) => typeof point === "string" && isValidUtc(point))
   ) {
     return [];
   }

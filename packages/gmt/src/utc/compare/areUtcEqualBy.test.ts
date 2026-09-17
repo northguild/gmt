@@ -50,24 +50,37 @@ describe("areUtcEqualBy", () => {
     },
   );
 
-  // "Equal by unit" is bucket equality: both floors of `unit` are the same instant. The output
-  // precision `fractionalSecondDigits` only shortens how a boundary prints (Temporal toString
-  // truncates), so it must not merge two different `unit` buckets.
+  // "Equal by unit" is bucket equality: both floors of `unit` are the same instant.
   it.each`
-    value1                              | value2                              | unit             | fractionalSecondDigits | expected
-    ${"2024-05-15T10:20:30.123Z"}       | ${"2024-05-15T10:20:30.999Z"}       | ${"millisecond"} | ${0}                   | ${false}
-    ${"2024-05-15T10:20:30.123456Z"}    | ${"2024-05-15T10:20:30.123999Z"}    | ${"microsecond"} | ${3}                   | ${false}
-    ${"2024-05-15T10:20:30.123456789Z"} | ${"2024-05-15T10:20:30.123456788Z"} | ${"nanosecond"}  | ${6}                   | ${false}
-    ${"2024-05-15T10:20:30.123456Z"}    | ${"2024-05-15T10:20:30.123999Z"}    | ${"millisecond"} | ${0}                   | ${true}
-    ${"2024-05-15T10:20:30.123Z"}       | ${"2024-05-15T10:20:30.999Z"}       | ${"second"}      | ${0}                   | ${true}
+    value1                              | value2                              | unit             | expected
+    ${"2024-05-15T10:20:30.123Z"}       | ${"2024-05-15T10:20:30.999Z"}       | ${"millisecond"} | ${false}
+    ${"2024-05-15T10:20:30.123456Z"}    | ${"2024-05-15T10:20:30.123999Z"}    | ${"microsecond"} | ${false}
+    ${"2024-05-15T10:20:30.123456789Z"} | ${"2024-05-15T10:20:30.123456788Z"} | ${"nanosecond"}  | ${false}
+    ${"2024-05-15T10:20:30.123456Z"}    | ${"2024-05-15T10:20:30.123999Z"}    | ${"millisecond"} | ${true}
+    ${"2024-05-15T10:20:30.123Z"}       | ${"2024-05-15T10:20:30.999Z"}       | ${"second"}      | ${true}
   `(
-    "returns $expected for $value1 and $value2 by $unit with fractionalSecondDigits $fractionalSecondDigits",
-    ({ value1, value2, unit, fractionalSecondDigits, expected }) => {
-      expect(
-        areUtcEqualBy(value1, value2, unit, { fractionalSecondDigits }),
-      ).toBe(expected);
+    "returns $expected for $value1 and $value2 by $unit",
+    ({ value1, value2, unit, expected }) => {
+      expect(areUtcEqualBy(value1, value2, unit)).toBe(expected);
     },
   );
+
+  // `fractionalSecondDigits` was removed in 1.16.0: it was ignored, because equality compares
+  // buckets, not printed strings. Passing it is a type error, and a JavaScript caller's stray
+  // property changes nothing — two milliseconds that print alike at 0 digits still differ.
+  it("treats the removed fractionalSecondDigits option as a type error and ignores it at runtime", () => {
+    expect(
+      areUtcEqualBy(
+        "2024-05-15T10:20:30.123Z",
+        "2024-05-15T10:20:30.999Z",
+        "millisecond",
+        {
+          // @ts-expect-error -- `fractionalSecondDigits` was removed in 1.16.0
+          fractionalSecondDigits: 0,
+        },
+      ),
+    ).toBe(false);
+  });
 
   it("returns false for an unsupported unit", () => {
     expect(
@@ -94,6 +107,63 @@ describe("areUtcEqualBy", () => {
       expect(areUtcEqualBy(value1 as never, value2 as never, "month")).toBe(
         false,
       );
+    },
+  );
+
+  // Temporal §13.17 GetTemporalUnitValuedOption: a plural unit name is the same unit as its singular.
+  it.each`
+    unit              | value1                              | value2                              | expected
+    ${"years"}        | ${"2024-01-01T12:00:00Z"}           | ${"2024-12-31T12:00:00Z"}           | ${true}
+    ${"years"}        | ${"2024-12-31T12:00:00Z"}           | ${"2025-01-01T12:00:00Z"}           | ${false}
+    ${"months"}       | ${"2024-02-01T12:00:00Z"}           | ${"2024-02-29T12:00:00Z"}           | ${true}
+    ${"months"}       | ${"2024-02-29T12:00:00Z"}           | ${"2024-03-01T12:00:00Z"}           | ${false}
+    ${"weeks"}        | ${"2024-02-26T12:00:00Z"}           | ${"2024-03-03T12:00:00Z"}           | ${true}
+    ${"weeks"}        | ${"2024-03-03T12:00:00Z"}           | ${"2024-03-04T12:00:00Z"}           | ${false}
+    ${"days"}         | ${"2024-02-29T12:00:00Z"}           | ${"2024-02-29T12:00:00Z"}           | ${true}
+    ${"days"}         | ${"2024-02-29T12:00:00Z"}           | ${"2024-03-01T12:00:00Z"}           | ${false}
+    ${"hours"}        | ${"2024-02-29T13:00:00Z"}           | ${"2024-02-29T13:59:59.999999999Z"} | ${true}
+    ${"hours"}        | ${"2024-02-29T13:59:59.999999999Z"} | ${"2024-02-29T14:00:00Z"}           | ${false}
+    ${"minutes"}      | ${"2024-02-29T13:45:00Z"}           | ${"2024-02-29T13:45:59.999999999Z"} | ${true}
+    ${"minutes"}      | ${"2024-02-29T13:45:59.999999999Z"} | ${"2024-02-29T13:46:00Z"}           | ${false}
+    ${"seconds"}      | ${"2024-02-29T13:45:30Z"}           | ${"2024-02-29T13:45:30.999999999Z"} | ${true}
+    ${"seconds"}      | ${"2024-02-29T13:45:30.999999999Z"} | ${"2024-02-29T13:45:31Z"}           | ${false}
+    ${"milliseconds"} | ${"2024-02-29T13:45:30.123Z"}       | ${"2024-02-29T13:45:30.123999999Z"} | ${true}
+    ${"milliseconds"} | ${"2024-02-29T13:45:30.123999999Z"} | ${"2024-02-29T13:45:30.124Z"}       | ${false}
+    ${"microseconds"} | ${"2024-02-29T13:45:30.123456Z"}    | ${"2024-02-29T13:45:30.123456999Z"} | ${true}
+    ${"microseconds"} | ${"2024-02-29T13:45:30.123456999Z"} | ${"2024-02-29T13:45:30.123457Z"}    | ${false}
+    ${"nanoseconds"}  | ${"2024-02-29T13:45:30.123456789Z"} | ${"2024-02-29T13:45:30.123456789Z"} | ${true}
+    ${"nanoseconds"}  | ${"2024-02-29T13:45:30.123456789Z"} | ${"2024-02-29T13:45:30.12345679Z"}  | ${false}
+  `(
+    "returns $expected for $value1 and $value2 by plural unit $unit",
+    ({ unit, value1, value2, expected }) => {
+      expect(areUtcEqualBy(value1, value2, unit)).toBe(expected);
+    },
+  );
+
+  // weekStartsOn only names "monday" or "sunday"; any other value is invalid input, for every unit
+  // (Temporal GetOption rejects a value outside its allowed list; undefined means the default).
+  it.each`
+    unit      | weekStartsOn
+    ${"week"} | ${"tuesday"}
+    ${"week"} | ${"Monday"}
+    ${"week"} | ${""}
+    ${"week"} | ${null}
+    ${"week"} | ${1}
+    ${"week"} | ${true}
+    ${"day"}  | ${"tuesday"}
+    ${"day"}  | ${"Monday"}
+    ${"day"}  | ${""}
+    ${"day"}  | ${null}
+    ${"day"}  | ${1}
+    ${"day"}  | ${true}
+  `(
+    "returns false by unit $unit with invalid weekStartsOn $weekStartsOn",
+    ({ unit, weekStartsOn }) => {
+      expect(
+        areUtcEqualBy("2024-02-29T13:45:30Z", "2024-02-29T13:45:30Z", unit, {
+          weekStartsOn,
+        }),
+      ).toBe(false);
     },
   );
 });

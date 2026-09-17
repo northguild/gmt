@@ -339,13 +339,19 @@ describe("formatRelativeUtc", () => {
       },
     );
 
-    it("falls back to UTC for an invalid timeZone (still returns relative string)", () => {
+    // ECMA-402 and Temporal throw RangeError for an unknown zone, so a typo is the sentinel, never UTC.
+    it.each`
+      timeZone
+      ${"Invalid/Zone"}
+      ${""}
+      ${null}
+    `("returns '' for invalid timeZone $timeZone", ({ timeZone }) => {
       expect(
         formatRelativeUtc(value, MustTestLocales.enUS, {
           reference: REF,
-          timeZone: "Invalid/Zone",
+          timeZone,
         }),
-      ).toBe("30 minutes ago");
+      ).toBe("");
     });
 
     it("uses getSystemTimeZone() when timeZone is 'local'", () => {
@@ -429,6 +435,22 @@ describe("formatRelativeUtc", () => {
         }),
       ).toBe("");
     });
+
+    // Temporal GetOptionsObject throws TypeError for null (and any non-object), so it is invalid.
+    it.each`
+      options
+      ${null}
+      ${"UTC"}
+      ${1}
+    `("returns '' for options $options", ({ options }) => {
+      expect(
+        formatRelativeUtc(
+          "2024-03-15T12:00:00Z",
+          MustTestLocales.enUS,
+          options as never,
+        ),
+      ).toBe("");
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -495,4 +517,49 @@ describe("formatRelativeUtc months in the first month of the range", () => {
       ).toBe(expected);
     },
   );
+});
+
+// Beyond a day, the unit is auto-picked with formatRelativeDate's thresholds: day under 7 days,
+// week under 28, month under 365, year beyond. Totals are rounded (default "round") against the
+// reference in UTC; labels from native Temporal + Intl.RelativeTimeFormat("en-US", { numeric:
+// "auto" }) in Chromium 153.
+describe("formatRelativeUtc auto-picks week, month and year", () => {
+  it.each`
+    value                     | expected           | reason
+    ${"2024-02-26T00:00:00Z"} | ${"3 days ago"}    | ${"3 days: day"}
+    ${"2024-02-23T00:00:01Z"} | ${"6 days ago"}    | ${"just under 7 days: day"}
+    ${"2024-02-22T00:00:00Z"} | ${"last week"}     | ${"7 days: week"}
+    ${"2024-02-15T00:00:00Z"} | ${"2 weeks ago"}   | ${"14 days: week"}
+    ${"2024-02-01T00:00:01Z"} | ${"4 weeks ago"}   | ${"just under 28 days: week"}
+    ${"2023-12-29T00:00:00Z"} | ${"2 months ago"}  | ${"62 days: month, 29 December to 29 February"}
+    ${"2023-03-01T00:00:01Z"} | ${"12 months ago"} | ${"just under 365 days: month, 11.97 rounds to 12"}
+    ${"2025-02-28T00:00:00Z"} | ${"next year"}     | ${"365 days: year, 29 February 2024 + 1 year constrains to 28 February"}
+    ${"2021-03-01T00:00:00Z"} | ${"3 years ago"}   | ${"1095 days: year"}
+  `(
+    "formats $value against 2024-02-29T00:00:00Z as $expected ($reason)",
+    ({ value, expected }) => {
+      expect(
+        formatRelativeUtc(value, "en-US", {
+          reference: "2024-02-29T00:00:00Z",
+        }),
+      ).toBe(expected);
+    },
+  );
+});
+
+// ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale data
+// is used, and a malformed tag anywhere in the list is invalid input. Expected strings from native
+// Intl with the same list (Chromium 153).
+describe("formatRelativeUtc with a locale list", () => {
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"il y a 30 minutes"}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
+  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+    expect(
+      formatRelativeUtc("2024-03-15T11:30:00Z", locale as string[], {
+        reference: REF,
+      }),
+    ).toBe(expected);
+  });
 });

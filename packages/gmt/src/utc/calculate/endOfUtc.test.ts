@@ -126,4 +126,49 @@ describe("endOfUtc for an input inside the unit's final second", () => {
       expect(Temporal.Instant.compare(end, value)).toBeGreaterThanOrEqual(0);
     },
   );
+
+  // Temporal §13.17 GetTemporalUnitValuedOption: a plural unit name is the same unit as its singular.
+  it.each`
+    unit              | expected
+    ${"years"}        | ${"2024-12-31T23:59:59.999999999Z"}
+    ${"months"}       | ${"2024-02-29T23:59:59.999999999Z"}
+    ${"weeks"}        | ${"2024-03-03T23:59:59.999999999Z"}
+    ${"days"}         | ${"2024-02-29T23:59:59.999999999Z"}
+    ${"hours"}        | ${"2024-02-29T13:59:59.999999999Z"}
+    ${"minutes"}      | ${"2024-02-29T13:45:59.999999999Z"}
+    ${"seconds"}      | ${"2024-02-29T13:45:30.999999999Z"}
+    ${"milliseconds"} | ${"2024-02-29T13:45:30.123999999Z"}
+    ${"microseconds"} | ${"2024-02-29T13:45:30.123456999Z"}
+    ${"nanoseconds"}  | ${"2024-02-29T13:45:30.123456789Z"}
+  `(
+    "returns $expected for plural unit $unit on 2024-02-29T13:45:30.123456789Z",
+    ({ unit, expected }) => {
+      expect(endOfUtc("2024-02-29T13:45:30.123456789Z", unit)).toBe(expected);
+    },
+  );
+
+  // weekStartsOn only names "monday" or "sunday"; any other value is invalid input, for every unit
+  // (Temporal GetOption rejects a value outside its allowed list; undefined means the default).
+  it.each`
+    unit      | weekStartsOn
+    ${"week"} | ${"tuesday"}
+    ${"week"} | ${"Monday"}
+    ${"week"} | ${""}
+    ${"week"} | ${null}
+    ${"week"} | ${1}
+    ${"week"} | ${true}
+    ${"day"}  | ${"tuesday"}
+    ${"day"}  | ${"Monday"}
+    ${"day"}  | ${""}
+    ${"day"}  | ${null}
+    ${"day"}  | ${1}
+    ${"day"}  | ${true}
+  `(
+    "returns an empty string for unit $unit with invalid weekStartsOn $weekStartsOn",
+    ({ unit, weekStartsOn }) => {
+      expect(
+        endOfUtc("2024-02-29T13:45:30.123456789Z", unit, { weekStartsOn }),
+      ).toBe("");
+    },
+  );
 });

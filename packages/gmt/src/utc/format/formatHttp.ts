@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { ENGLISH_MONTH_NAMES, ENGLISH_WEEKDAY_NAMES } from "../../internal";
+import { englishDateTimeStem } from "../../internal/englishCalendarNames";
 import { isValidUtc } from "../validate";
 
 /**
@@ -37,15 +37,7 @@ export function formatHttp(value: string): string {
     // IMF-fixdate year = 4DIGIT (RFC 9110 §5.6.7).
     if (zdt.year < 0 || zdt.year > 9999) return "";
 
-    const weekday = ENGLISH_WEEKDAY_NAMES[zdt.dayOfWeek - 1];
-    const day = String(zdt.day).padStart(2, "0");
-    const month = ENGLISH_MONTH_NAMES[zdt.month - 1];
-    const year = String(zdt.year).padStart(4, "0");
-    const hour = String(zdt.hour).padStart(2, "0");
-    const minute = String(zdt.minute).padStart(2, "0");
-    const second = String(zdt.second).padStart(2, "0");
-
-    return `${weekday}, ${day} ${month} ${year} ${hour}:${minute}:${second} GMT`;
+    return `${englishDateTimeStem(zdt)} GMT`;
   } catch {
     return "";
   }

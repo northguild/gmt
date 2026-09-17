@@ -1,4 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
 import { durationUntilString } from "../../internal";
 import { isValidDateTimeDurationUnit } from "../../plain/validate";
 import type {
@@ -7,6 +8,7 @@ import type {
   RoundingOptions,
 } from "../../types";
 import { isValidUtc } from "../validate/isValidUtc";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return the difference between two UTC datetimes as an ISO 8601 duration string,
@@ -29,7 +31,7 @@ import { isValidUtc } from "../validate/isValidUtc";
  * @param value1 UTC ISO datetime string (start)
  * @param value2 UTC ISO datetime string (end)
  * @param unit DateTimeDurationUnit to use as the duration's largestUnit
- * @param options optional: smallestUnit, roundingIncrement, roundingMode (.until() rounding); toStringSmallestUnit, fractionalSecondDigits, toStringRoundingMode (.toString() precision)
+ * @param options optional: smallestUnit, roundingIncrement, roundingMode (.until() rounding); toStringSmallestUnit, fractionalSecondDigits, toStringRoundingMode (.toString() precision); a non-object value (such as `null`) is invalid
  * @returns ISO 8601 duration string, or "" on invalid input
  *
  * @example diffUtcAsDuration("2024-03-10T12:00:00Z", "2024-03-11T12:00:00Z", "hours") // "PT24H"
@@ -39,12 +41,17 @@ import { isValidUtc } from "../validate/isValidUtc";
 export function diffUtcAsDuration(
   value1: string,
   value2: string,
-  unit: DateTimeDurationUnit,
+  unit: DateTimeDurationUnit | Temporal.DateTimeUnit,
   options?: RoundingOptions<Temporal.DateTimeUnit> & DurationStringOptions,
 ): string {
+  // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
+  if (!isOptionsArgument(options)) {
+    return "";
+  }
   const validUtc1 = isValidUtc(value1);
   const validUtc2 = isValidUtc(value2);
-  const validUnit = isValidDateTimeDurationUnit(unit);
+  const resolvedUnit = resolveDurationUnit(unit);
+  const validUnit = isValidDateTimeDurationUnit(resolvedUnit);
 
   if (!validUtc1 || !validUtc2 || !validUnit) {
     return "";
@@ -57,7 +64,7 @@ export function diffUtcAsDuration(
     const zdt1 = instant1.toZonedDateTimeISO("UTC");
     const zdt2 = instant2.toZonedDateTimeISO("UTC");
 
-    return durationUntilString(zdt1, zdt2, unit, options);
+    return durationUntilString(zdt1, zdt2, resolvedUnit, options);
   } catch {
     return "";
   }
