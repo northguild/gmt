@@ -1,11 +1,15 @@
-import { parseUnixEpochIntervalPair } from "../../internal";
+import { halfOpenUnion, parseUnixEpochIntervalPair } from "../../internal";
 
 /**
- * Return the combined span of two Unix epoch intervals, or null when they are disjoint.
+ * Return the combined span of two half-open Unix epoch intervals `[start, end)`, or null when
+ * their union is not one non-empty span.
  *
  * - Compares numeric Unix epoch values directly.
- * - Overlapping intervals return their merged span.
- * - Adjacent intervals (e.g. `aEnd === bStart`) share one instant and ARE merged.
+ * - The result is the single run `mergeIntervalsUnix([a, b])` produces, the same rule as
+ *   `mergeIntervals`. Overlapping intervals return their merged span.
+ * - Touching intervals (e.g. `aEnd === bStart`) leave no gap between them and ARE merged.
+ * - An empty interval (`start === end`) holds no instant, so it never changes the result: with a
+ *   non-empty interval the answer is that interval, and two empty intervals give `null`.
  * - Returns `null` if either interval is invalid (`start > end`).
  * - Returns `null` on invalid input: non-numeric types, empty strings, and values that are not
  *   safe integers (fractions, `NaN`, `±Infinity`, beyond ±(2^53 − 1)).
@@ -17,7 +21,8 @@ import { parseUnixEpochIntervalPair } from "../../internal";
  * @returns `{ start, end }` with the merged span, or null on invalid input / disjoint intervals
  *
  * @example intervalUnionUnix(0, 1700000000, 1000000, 2000000) // { start: 0, end: 1700000000 }
- * @example intervalUnionUnix(0, 1000000, 1000000, 2000000) // { start: 0, end: 2000000 }
+ * @example intervalUnionUnix(0, 1000000, 1000000, 2000000) // { start: 0, end: 2000000 } (touching)
+ * @example intervalUnionUnix(0, 1000000, 3000000, 3000000) // { start: 0, end: 1000000 } (an empty interval adds nothing)
  * @example intervalUnionUnix(0, 1000000, 1000001, 2000000) // null
  * @example intervalUnionUnix(NaN, 1700000000, 1000000, 2000000) // null
  * @example intervalUnionUnix("0", "1700000000", "1000000", "2000000") // { start: 0, end: 1700000000 }
@@ -34,12 +39,6 @@ export function intervalUnionUnix(
     return null;
   }
 
-  const [a, b] = pair;
-
-  // Disjoint intervals have no single combined span.
-  if (Math.max(a.start, b.start) > Math.min(a.end, b.end)) {
-    return null;
-  }
-
-  return { start: Math.min(a.start, b.start), end: Math.max(a.end, b.end) };
+  // One merged run, or null when a gap (or no instant at all) leaves no single span.
+  return halfOpenUnion(pair[0], pair[1], (left, right) => left - right);
 }

@@ -73,26 +73,26 @@ describe("intervalCountUnix", () => {
   it.each`
     start            | end              | unit      | expected
     ${1704067200000} | ${1704067200000} | ${"day"}  | ${0}
-    ${1704085200000} | ${1704085200000} | ${"day"}  | ${1}
+    ${1704085200000} | ${1704085200000} | ${"day"}  | ${0}
     ${0}             | ${0}             | ${"hour"} | ${0}
-    ${1800000}       | ${1800000}       | ${"hour"} | ${1}
+    ${1800000}       | ${1800000}       | ${"hour"} | ${0}
   `(
-    "returns $expected for zero-length $start to $end counted in $unit",
+    "returns $expected for zero-length $start to $end counted in $unit (an empty interval holds no instant)",
     ({ start, end, unit, expected }) => {
       expect(intervalCountUnix(start, end, unit)).toBe(expected);
     },
   );
 
   it("returns 23 hour boundaries for the spring-forward local day in America/New_York", () => {
-    timeZoneSpy.mockReturnValue("America/New_York");
-
-    expect(intervalCountUnix(1710046800000, 1710129600000, "hour")).toBe(23);
+    expect(
+      intervalCountUnix(1710046800000, 1710129600000, "hour", {
+        timeZone: "America/New_York",
+      }),
+    ).toBe(23);
   });
 
-  it("counts calendar units in the system timeZone for every battleTestTimeZone", () => {
+  it("counts calendar units in the timeZone option for every battleTestTimeZone", () => {
     for (const timeZone of battleTestTimeZones) {
-      timeZoneSpy.mockReturnValue(timeZone);
-
       const start = Temporal.ZonedDateTime.from({
         year: 2024,
         month: 6,
@@ -109,11 +109,11 @@ describe("intervalCountUnix", () => {
       }).epochMilliseconds;
 
       expect(
-        intervalCountUnix(start, end, "hour"),
+        intervalCountUnix(start, end, "hour", { timeZone }),
         `hour count in ${timeZone}`,
       ).toBe(24);
       expect(
-        intervalCountUnix(start, end, "day"),
+        intervalCountUnix(start, end, "day", { timeZone }),
         `day count in ${timeZone}`,
       ).toBe(1);
     }
@@ -173,14 +173,16 @@ describe("intervalCountUnix", () => {
     },
   );
 
-  it("returns null when the system timeZone is unavailable", () => {
+  it("returns null for timeZone local when the system timeZone is unavailable", () => {
     timeZoneSpy.mockReturnValue("");
 
-    expect(intervalCountUnix(0, 86400000, "hour")).toBeNull();
+    expect(
+      intervalCountUnix(0, 86400000, "hour", { timeZone: "local" }),
+    ).toBeNull();
   });
 });
 
-// Transition zones, counted in the (spied) system timeZone. Epochs are the same instants as
+// Transition zones, counted in the timeZone option. Epochs are the same instants as
 // intervalCountZoned.test.ts's transition table; every expected value verified against
 // `bucketRange(...).length` on @js-temporal/polyfill@0.5.1.
 // 1727532300000 is 2024-09-29T03:50:00+13:45[Pacific/Chatham]
@@ -208,13 +210,9 @@ describe("intervalCountUnix across zone transitions", () => {
     ${1289097000000}    | ${1289104200000}    | ${"hour"}  | ${"America/Goose_Bay"} | ${4}
     ${8639997552000000} | ${8640000000000000} | ${"month"} | ${"America/Santiago"}  | ${2}
   `(
-    "returns $expected $unit buckets for $start to $end in system timeZone $timeZone",
+    "returns $expected $unit buckets for $start to $end in timeZone $timeZone",
     ({ start, end, unit, timeZone, expected }) => {
-      vi.spyOn(getSystemTimeZoneModule, "getSystemTimeZone").mockReturnValue(
-        timeZone,
-      );
-
-      expect(intervalCountUnix(start, end, unit)).toBe(expected);
+      expect(intervalCountUnix(start, end, unit, { timeZone })).toBe(expected);
     },
   );
 
@@ -238,6 +236,25 @@ describe("intervalCountUnix across zone transitions", () => {
       } finally {
         restore();
       }
+    },
+  );
+});
+
+describe("intervalCountUnix epochUnit and timeZone options", () => {
+  // 1704151800000–1704155400000 is 2024-01-01T23:30Z–2024-01-02T00:30Z: it crosses UTC midnight,
+  // but is 08:30–09:30 on 2024-01-02 in Asia/Tokyo.
+  it.each`
+    start            | end              | unit      | options                                             | expected
+    ${1704151800000} | ${1704155400000} | ${"day"}  | ${undefined}                                        | ${2}
+    ${1704151800000} | ${1704155400000} | ${"day"}  | ${{ timeZone: "Asia/Tokyo" }}                       | ${1}
+    ${1704151800}    | ${1704155400}    | ${"days"} | ${{ epochUnit: "seconds", timeZone: "Asia/Tokyo" }} | ${1}
+    ${"1704151800"}  | ${"1704155400"}  | ${"day"}  | ${{ epochUnit: "second" }}                          | ${2}
+    ${1704151800000} | ${1704155400000} | ${"day"}  | ${{ timeZone: "Asia/Tokio" }}                       | ${null}
+    ${1704151800000} | ${1704155400000} | ${"day"}  | ${{ epochUnit: "minutes" }}                         | ${null}
+  `(
+    "returns $expected for [$start, $end) in $unit with options $options",
+    ({ start, end, unit, options, expected }) => {
+      expect(intervalCountUnix(start, end, unit, options)).toBe(expected);
     },
   );
 });

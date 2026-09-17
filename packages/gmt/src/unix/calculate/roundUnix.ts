@@ -1,13 +1,17 @@
-import { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "@js-temporal/polyfill";
 import { isValidDateTimeUnit } from "../../plain";
-import { getSystemTimeZone } from "../../zoned/get";
-import { isValidTimeZone } from "../../zoned/validate";
 import {
   isObject,
   resolveDateTimeUnit,
   roundZonedDateTime,
 } from "../../internal";
-import { isValidUnixUnit } from "../validate/isValidUnixUnit";
+import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
+import {
+  resolveUnixEpochUnit,
+  toUnixEpoch,
+  unixEpochToInstant,
+} from "../../internal/unixEpochValue";
+import type { UnixUnit } from "../validate/isValidUnixUnit";
 
 const ZONED_ROUNDING_UNITS: readonly unknown[] = [
   "day",
@@ -36,10 +40,13 @@ function isZonedRoundingUnit(unit: unknown): unit is "day" | Temporal.TimeUnit {
  *   zone. Across a transition the result can land after the input — in `Pacific/Chatham`,
  *   1727532300000 (03:50+13:45) truncated to the hour gives 1727532900000, 15 minutes later.
  *   Use `floorToZone` for a boundary that never exceeds the instant.
+ * - `value` is a safe integer or a digit string (`"1706661000000"`); anything else returns null.
+ * - An omitted `timeZone` is UTC; pass `"local"` for the system time zone. An unknown zone returns
+ *   null.
  * - Returns null for invalid input.
  *
- * @param value Unix timestamp (number)
- * @param options Rounding options: smallestUnit, optional roundingIncrement, roundingMode, epochUnit, timeZone (IANA; omitted means the system (host) time zone)
+ * @param value Unix epoch: a safe integer, or a string of optionally negative ASCII digits
+ * @param options Rounding options: smallestUnit, optional roundingIncrement, roundingMode, epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds"), timeZone (IANA, or "local" for the system zone; default "UTC")
  * @returns Rounded Unix epoch number, or null on invalid input
  *
  * @example roundUnix(1706661000000, { smallestUnit: "hour", timeZone: "UTC" }) // 1706662800000 (00:30 is a tie; halfExpand rounds up)
@@ -48,11 +55,12 @@ function isZonedRoundingUnit(unit: unknown): unit is "day" | Temporal.TimeUnit {
  * @example roundUnix(-86400000, { smallestUnit: "day", timeZone: "UTC" }) // -86400000 (start of day for negative timestamp)
  * @example roundUnix(1727532300000, { smallestUnit: "hour", roundingMode: "trunc", timeZone: "Pacific/Chatham" }) // 1727532900000 (after the input — TC39 wall-clock rounding)
  * @example roundUnix(1715779905500, { smallestUnit: "minutes", timeZone: "UTC" }) // 1715779920000 (plural unit name; 13:31:45.5 rounds up to 13:32)
+ * @example roundUnix("1706700000", { smallestUnit: "day", epochUnit: "second" }) // 1706659200 (digit string, singular epochUnit, UTC by default)
  * @example roundUnix("invalid", { smallestUnit: "hour" }) // null
  * @example roundUnix(NaN, { smallestUnit: "hour" }) // null
  */
 export function roundUnix(
-  value: number,
+  value: number | string,
   options: {
     smallestUnit: Temporal.SmallestUnit<
       | "day"
@@ -65,33 +73,21 @@ export function roundUnix(
     >;
     roundingIncrement?: number;
     roundingMode?: Temporal.RoundingMode;
-    epochUnit?: "seconds" | "milliseconds";
+    epochUnit?: UnixUnit;
     timeZone?: string;
   },
 ): number | null {
   if (!isObject(options)) return null;
 
-  const {
-    roundingIncrement,
-    roundingMode,
-    epochUnit = "milliseconds",
-    timeZone = getSystemTimeZone(),
-  } = options;
+  const { roundingIncrement, roundingMode } = options;
+  const epochUnit = resolveUnixEpochUnit(options.epochUnit);
+  const timeZone = normalizeTimeZone(options.timeZone);
   const smallestUnit: unknown =
     typeof options.smallestUnit === "string"
       ? resolveDateTimeUnit(options.smallestUnit)
       : options.smallestUnit;
 
-  if (
-    !timeZone ||
-    !isValidUnixUnit(epochUnit) ||
-    !isValidDateTimeUnit(smallestUnit) ||
-    !isValidTimeZone(timeZone)
-  ) {
-    return null;
-  }
-
-  if (!Number.isFinite(value) || !Number.isInteger(value)) {
+  if (!timeZone || epochUnit === null || !isValidDateTimeUnit(smallestUnit)) {
     return null;
   }
 
@@ -100,19 +96,20 @@ export function roundUnix(
     return null;
   }
 
-  try {
-    let epochMs = epochUnit === "seconds" ? value * 1000 : value;
-    const instant = Temporal.Instant.fromEpochMilliseconds(epochMs);
-    const source = instant.toZonedDateTimeISO(timeZone);
+  const instant = unixEpochToInstant(value, epochUnit);
 
-    const result = roundZonedDateTime(source, {
+  if (instant === null) {
+    return null;
+  }
+
+  try {
+    const result = roundZonedDateTime(instant.toZonedDateTimeISO(timeZone), {
       smallestUnit,
       roundingIncrement,
       roundingMode,
     });
 
-    epochMs = result.epochMilliseconds;
-    return epochUnit === "seconds" ? Math.floor(epochMs / 1000) : epochMs;
+    return toUnixEpoch(result, epochUnit);
   } catch {
     return null;
   }

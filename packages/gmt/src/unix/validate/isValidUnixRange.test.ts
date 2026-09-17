@@ -76,7 +76,10 @@ describe("isValidUnixRange", () => {
   it.each`
     value1                      | value2                     | allowEqual | expected | reason
     ${-Number.MAX_SAFE_INTEGER} | ${Number.MAX_SAFE_INTEGER} | ${false}   | ${true}  | ${"both safe-integer limits"}
-    ${"-86400"}                 | ${"1e3"}                   | ${false}   | ${true}  | ${"numeric strings coerce to safe integers"}
+    ${"-86400"}                 | ${"1000"}                  | ${false}   | ${true}  | ${"digit strings read as epochs"}
+    ${"-86400"}                 | ${"1e3"}                   | ${false}   | ${false} | ${"exponent notation is not an epoch"}
+    ${" 1"}                     | ${"2"}                     | ${false}   | ${false} | ${"a padded string is not an epoch"}
+    ${"+1"}                     | ${"2"}                     | ${false}   | ${false} | ${"a plus sign is not an epoch"}
     ${""}                       | ${""}                      | ${true}    | ${false} | ${"empty strings are never an equal pair"}
   `(
     "returns $expected for epochs $value1, $value2 (allowEqual=$allowEqual, $reason)",

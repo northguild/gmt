@@ -33,24 +33,28 @@ describe("endOfQuarterForUnix", () => {
     expect(endOfQuarterForUnix(invalidValue as never)).toBeNull();
   });
 
-  // The deprecated `disambiguation`/`offset` are accepted and ignored: an ordinary quarter end is
-  // unchanged by any value, "reject" included.
-  it.each`
-    disambiguation  | offset
-    ${"compatible"} | ${undefined}
-    ${"reject"}     | ${undefined}
-    ${"reject"}     | ${"prefer"}
-  `(
-    "accepts disambiguation $disambiguation and offset $offset without changing output for a non-transition quarter end",
-    ({ disambiguation, offset }) => {
-      const base = { epochUnit: "seconds" as const, timeZone: "UTC" };
-      const optionsArg =
-        offset === undefined
-          ? { ...base, disambiguation }
-          : { ...base, disambiguation, offset };
-      expect(endOfQuarterForUnix(1704067200, optionsArg)).toBe(1711929599);
-    },
-  );
+  // `disambiguation` and `offset` were removed in 1.16.0: a boundary is always a real instant, as
+  // TC39's `startOfDay()` takes neither. Passing one is a type error and changes nothing at runtime.
+  it("treats the removed disambiguation option as a type error and ignores it at runtime", () => {
+    expect(
+      endOfQuarterForUnix(1704067200, {
+        epochUnit: "seconds",
+        timeZone: "UTC",
+        // @ts-expect-error -- `disambiguation` was removed in 1.16.0
+        disambiguation: "reject",
+      }),
+    ).toBe(1711929599);
+  });
+  it("treats the removed offset option as a type error and ignores it at runtime", () => {
+    expect(
+      endOfQuarterForUnix(1704067200, {
+        epochUnit: "seconds",
+        timeZone: "UTC",
+        // @ts-expect-error -- `offset` was removed in 1.16.0
+        offset: "prefer",
+      }),
+    ).toBe(1711929599);
+  });
 
   it("returns null when Temporal.Instant.fromEpochMilliseconds throws", () => {
     vi.spyOn(Temporal.Instant, "fromEpochMilliseconds").mockImplementation(
@@ -82,15 +86,14 @@ describe("endOfQuarterForUnix with default options", () => {
   );
 });
 
-// Cairo repeated Q3's last local hour. The quarter ends on the second pass whatever the
-// deprecated `disambiguation`/`offset` say — "compatible" used to end it on the first pass
+// Cairo repeated Q3's last local hour. The quarter ends on the second pass — the removed
+// `disambiguation: "compatible"` used to end it on the first pass
 // (1285880399999, 23:59:59.999+03:00), before the input. Verified on @js-temporal/polyfill@0.5.1.
 // 1285883999999 is 2010-09-30T23:59:59.999+02:00[Africa/Cairo]
-describe("endOfQuarterForUnix at a zone transition with ignored explicit options", () => {
+describe("endOfQuarterForUnix at a zone transition", () => {
   it.each`
-    value            | options                                                                     | expected
-    ${1285882200000} | ${{ timeZone: "Africa/Cairo", disambiguation: "compatible" }}               | ${1285883999999}
-    ${1285882200000} | ${{ timeZone: "Africa/Cairo", disambiguation: "reject", offset: "reject" }} | ${1285883999999}
+    value            | options                         | expected
+    ${1285882200000} | ${{ timeZone: "Africa/Cairo" }} | ${1285883999999}
   `(
     "returns $expected for $value with $options",
     ({ value, options, expected }) => {

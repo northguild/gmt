@@ -1,16 +1,18 @@
-import { Temporal } from "@js-temporal/polyfill";
-import { durationUntilString } from "../../internal";
+import type { Temporal } from "@js-temporal/polyfill";
+import { durationUntilString, resolveDurationUnit } from "../../internal";
+import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
 import {
-  isValidUnixEpochPair,
-  resolveUnixTimeZone,
-} from "../../internal/resolveUnixTimeZone";
+  resolveUnixEpochUnit,
+  unixEpochToInstant,
+} from "../../internal/unixEpochValue";
 import { isValidDateTimeDurationUnit } from "../../plain/validate";
 import type {
   DateTimeDurationUnit,
   DurationStringOptions,
   RoundingOptions,
 } from "../../types";
-import { isValidUnixUnit } from "../validate/isValidUnixUnit";
+import type { UnixUnit } from "../validate/isValidUnixUnit";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return the difference between two Unix timestamps as an ISO 8601 duration string,
@@ -29,57 +31,63 @@ import { isValidUnixUnit } from "../validate/isValidUnixUnit";
  * (mirroring `parseDuration`'s options) — kept separate from the `.until()` rounding options
  * above because both option sets have colliding `smallestUnit`/`roundingMode` keys with
  * different Temporal types.
- * - An omitted `timeZone` means the system time zone (`getSystemTimeZone()`), so the result
- *   depends on the host; pass `timeZone` for a host-independent result.
+ * - Each value is a safe integer or a digit string (`"1706659200000"`); anything else is invalid.
+ * - An omitted `timeZone` is UTC; pass `"local"` for the system time zone. An unknown zone is
+ *   invalid.
+ * - Unit names may be singular or plural (`"day"` or `"days"`), as in Temporal.
  *
- * @param value1 first Unix timestamp
- * @param value2 second Unix timestamp
+ * @param value1 first Unix epoch: a safe integer, or a string of optionally negative ASCII digits
+ * @param value2 second Unix epoch, in the same form and unit
  * @param unit DateTimeDurationUnit to use as the duration's largestUnit
- * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA; omitted means the system time zone), smallestUnit, roundingIncrement, roundingMode (.until() rounding); toStringSmallestUnit, fractionalSecondDigits, toStringRoundingMode (.toString() precision)
+ * @param options optional: epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds"), timeZone (IANA, or "local" for the system zone; default "UTC"), smallestUnit, roundingIncrement, roundingMode (.until() rounding); toStringSmallestUnit, fractionalSecondDigits, toStringRoundingMode (.toString() precision); a non-object value (such as `null`) is invalid
  * @returns ISO 8601 duration string, or "" on invalid input
  *
  * @example diffUnixAsDuration(1706659200000, 1706745600000, "days") // "P1D"
  * @example diffUnixAsDuration(1706745600000, 1706659200000, "days") // "-P1D"
  * @example diffUnixAsDuration(1706659200, 1706745600, "days", { epochUnit: "seconds" }) // "P1D"
+ * @example diffUnixAsDuration("0", "90000000", "day") // "P1DT1H" (digit strings, singular unit, UTC by default)
  * @example diffUnixAsDuration(NaN, 1706745600000, "days") // ""
  */
 export function diffUnixAsDuration(
-  value1: number,
-  value2: number,
-  unit: DateTimeDurationUnit,
+  value1: number | string,
+  value2: number | string,
+  unit: DateTimeDurationUnit | Temporal.DateTimeUnit,
   options?: {
-    epochUnit?: "seconds" | "milliseconds";
+    epochUnit?: UnixUnit;
     timeZone?: string;
   } & RoundingOptions<Temporal.DateTimeUnit> &
     DurationStringOptions,
 ): string {
-  const epochUnit = options?.epochUnit ?? "milliseconds";
-  const timeZone = resolveUnixTimeZone(options?.timeZone);
+  // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
+  if (!isOptionsArgument(options)) {
+    return "";
+  }
+  const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
+  const timeZone = normalizeTimeZone(options?.timeZone);
 
-  if (!timeZone || !isValidUnixUnit(epochUnit)) return "";
+  if (!timeZone || epochUnit === null) return "";
 
-  const validUnit = isValidDateTimeDurationUnit(unit);
+  const largestUnit =
+    typeof unit === "string" ? resolveDurationUnit(unit) : unit;
 
-  if (!validUnit) {
+  if (!isValidDateTimeDurationUnit(largestUnit)) {
     return "";
   }
 
-  if (!isValidUnixEpochPair(value1, value2)) {
+  const instant1 = unixEpochToInstant(value1, epochUnit);
+  const instant2 = unixEpochToInstant(value2, epochUnit);
+
+  if (instant1 === null || instant2 === null) {
     return "";
   }
 
   try {
-    const instant1 = Temporal.Instant.fromEpochMilliseconds(
-      epochUnit === "seconds" ? value1 * 1000 : value1,
+    return durationUntilString(
+      instant1.toZonedDateTimeISO(timeZone),
+      instant2.toZonedDateTimeISO(timeZone),
+      largestUnit,
+      options,
     );
-    const instant2 = Temporal.Instant.fromEpochMilliseconds(
-      epochUnit === "seconds" ? value2 * 1000 : value2,
-    );
-
-    const zdt1 = instant1.toZonedDateTimeISO(timeZone);
-    const zdt2 = instant2.toZonedDateTimeISO(timeZone);
-
-    return durationUntilString(zdt1, zdt2, unit, options);
   } catch {
     return "";
   }

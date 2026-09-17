@@ -277,11 +277,11 @@ describe("diffUnixAsDuration at the minimum instant", () => {
 });
 
 describe("diffUnixAsDuration with an unrecognised epochUnit", () => {
-  // isValidUnixUnit defines the domain ("seconds" | "milliseconds"): any other value is invalid
+  // isValidUnixUnit defines the domain ("seconds" | "milliseconds", singular or plural): any other value is invalid
   // input and returns the sentinel, never a silent read as milliseconds.
   it.each`
     epochUnit
-    ${"second"}
+    ${"nanoseconds"}
     ${"SECONDS"}
     ${"ms"}
     ${""}
@@ -293,5 +293,37 @@ describe("diffUnixAsDuration with an unrecognised epochUnit", () => {
         timeZone: "UTC",
       }),
     ).toBe("");
+  });
+});
+
+describe("diffUnixAsDuration unit names", () => {
+  // Temporal §13.17: largestUnit "day" and "days" are the same unit. 90000000 ms is P1DT1H in UTC.
+  it.each`
+    unit      | expected
+    ${"day"}  | ${"P1DT1H"}
+    ${"days"} | ${"P1DT1H"}
+  `(
+    "returns $expected for 0 to 90000000 in unit $unit",
+    ({ unit, expected }) => {
+      expect(diffUnixAsDuration(0, 90000000, unit, { timeZone: "UTC" })).toBe(
+        expected,
+      );
+    },
+  );
+});
+
+// Temporal GetOptionsObject: an options argument that is not an object or undefined throws
+// TypeError (native Chromium 153: `until(other, null)`, `"x"`, `5` and `true` all throw), so each is
+// invalid input. Omitted options measure normally (PT25H).
+describe("diffUnixAsDuration with a non-object options argument", () => {
+  it.each`
+    options      | expected
+    ${null}      | ${""}
+    ${"x"}       | ${""}
+    ${5}         | ${""}
+    ${true}      | ${""}
+    ${undefined} | ${"PT25H"}
+  `("returns $expected for options $options", ({ options, expected }) => {
+    expect(diffUnixAsDuration(0, 90000000, "hours", options)).toBe(expected);
   });
 });

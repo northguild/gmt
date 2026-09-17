@@ -433,11 +433,43 @@ describe("formatRelativeUnix", () => {
       },
     );
 
-    it("falls back to UTC for an invalid timeZone (still returns relative string)", () => {
+    // ECMA-402 and Temporal throw RangeError for an unknown zone, so a typo is the sentinel, never UTC.
+    it.each`
+      timeZone
+      ${"Invalid/Zone"}
+      ${""}
+      ${null}
+    `("returns '' for invalid timeZone $timeZone", ({ timeZone }) => {
       expect(
         formatRelativeUnix(value, MustTestLocales.enUS, {
           reference: REF_MS,
-          timeZone: "Invalid/Zone",
+          timeZone,
+        }),
+      ).toBe("");
+    });
+
+    // Temporal GetOptionsObject throws TypeError for null (and any non-object), so it is invalid.
+    it.each`
+      options
+      ${null}
+      ${"UTC"}
+      ${1}
+    `("returns '' for options $options", ({ options }) => {
+      expect(
+        formatRelativeUnix(value, MustTestLocales.enUS, options as never),
+      ).toBe("");
+    });
+
+    // Temporal §13.17: a plural unit name is the singular unit.
+    it.each`
+      largestUnit
+      ${"minute"}
+      ${"minutes"}
+    `("formats with largestUnit $largestUnit", ({ largestUnit }) => {
+      expect(
+        formatRelativeUnix(value, MustTestLocales.enUS, {
+          reference: REF_MS,
+          largestUnit,
         }),
       ).toBe("30 minutes ago");
     });
@@ -592,11 +624,11 @@ describe("formatRelativeUnix months in the first month of the range", () => {
 });
 
 describe("formatRelativeUnix with an unrecognised epochUnit", () => {
-  // isValidUnixUnit defines the domain ("seconds" | "milliseconds"): any other value is invalid
+  // isValidUnixUnit defines the domain ("seconds" | "milliseconds", singular or plural): any other value is invalid
   // input and returns the sentinel, never a silent read as milliseconds.
   it.each`
     epochUnit
-    ${"second"}
+    ${"nanoseconds"}
     ${"SECONDS"}
     ${"ms"}
     ${""}
@@ -609,5 +641,48 @@ describe("formatRelativeUnix with an unrecognised epochUnit", () => {
         timeZone: "UTC",
       }),
     ).toBe("");
+  });
+});
+
+// Beyond a day, the unit is auto-picked with formatRelativeDate's thresholds: day under 7 days,
+// week under 28, month under 365, year beyond. Totals are rounded (default "round") against the
+// reference in UTC; labels from native Temporal + Intl.RelativeTimeFormat("en-US", { numeric:
+// "auto" }) in Chromium 153. The reference 1709164800000 is 2024-02-29T00:00:00Z.
+describe("formatRelativeUnix auto-picks week, month and year", () => {
+  it.each`
+    value            | expected           | reason
+    ${1708905600000} | ${"3 days ago"}    | ${"2024-02-26, 3 days: day"}
+    ${1708646401000} | ${"6 days ago"}    | ${"2024-02-23T00:00:01Z, just under 7 days: day"}
+    ${1708560000000} | ${"last week"}     | ${"2024-02-22, 7 days: week"}
+    ${1707955200000} | ${"2 weeks ago"}   | ${"2024-02-15, 14 days: week"}
+    ${1706745601000} | ${"4 weeks ago"}   | ${"2024-02-01T00:00:01Z, just under 28 days: week"}
+    ${1703808000000} | ${"2 months ago"}  | ${"2023-12-29, 62 days: month"}
+    ${1677628801000} | ${"12 months ago"} | ${"2023-03-01T00:00:01Z, just under 365 days: month, 11.97 rounds to 12"}
+    ${1740700800000} | ${"next year"}     | ${"2025-02-28, 365 days: year"}
+    ${1614556800000} | ${"3 years ago"}   | ${"2021-03-01, 1095 days: year"}
+  `(
+    "formats $value against 1709164800000 as $expected ($reason)",
+    ({ value, expected }) => {
+      expect(
+        formatRelativeUnix(value, "en-US", { reference: 1709164800000 }),
+      ).toBe(expected);
+    },
+  );
+});
+
+// ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale data
+// is used, and a malformed tag anywhere in the list is invalid input. Expected strings from native
+// Intl with the same list (Chromium 153).
+describe("formatRelativeUnix with a locale list", () => {
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"il y a 30 minutes"}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
+  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+    expect(
+      formatRelativeUnix(REF_MS - 1_800_000, locale as string[], {
+        reference: REF_MS,
+      }),
+    ).toBe(expected);
   });
 });

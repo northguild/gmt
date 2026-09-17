@@ -9,8 +9,9 @@ import { parseUnixEpochInterval, parseUnixEpochValue } from "../../internal";
  * - Points exactly on `start` or `end` are dropped too — they would only produce a
  *   zero-length sub-interval at the edge.
  * - Duplicate points collapse to a single boundary.
- * - Returns consecutive `{ start, end }` records, each record's `end` equal to the next
- *   record's `start`.
+ * - Returns consecutive half-open `[start, end)` records, the same tiling as `splitIntervalAt`:
+ *   each record's `end` is the next record's `start` and belongs only to that next record, so the
+ *   pieces share no value and together cover `[start, end)` exactly once.
  * - Returns `[{ start, end }]` (the whole interval, unsplit) when no valid in-range point remains.
  * - Returns `[]` when `points` is not an array, or when `start`, `end` or any point is not a safe
  *   integer (or numeric string of one) — fractions, empty strings and values beyond ±(2^53 − 1)

@@ -1,17 +1,23 @@
 import { Temporal } from "@js-temporal/polyfill";
+import {
+  isoWeekOfYear,
+  zonedNowUnitValue,
+} from "../../internal/zonedNowUnitValue";
+import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { isValidDateTimeUnit } from "../../plain/validate";
 import type { UnixNowUnit } from "../../types";
 
 export type { UnixNowUnit };
 
 function isValidUnixNowUnit(unit: string): unit is UnixNowUnit {
-  return isValidDateTimeUnit(unit) || ["dayOfWeek"].includes(unit);
+  return isValidDateTimeUnit(unit) || unit === "dayOfWeek";
 }
 
 /**
  * Return the requested unit value from the current Unix timestamp in UTC.
  *
- * - Valid units: "year", "month", "week", "day", "dayOfWeek", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond".
+ * - Valid units: "year", "month", "week", "day", "dayOfWeek", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond". Temporal units may also be plural ("hours").
+ * - `microsecond` and `nanosecond` are Temporal's 0–999 fields, zero-padded to 3 digits.
  * - Uses Temporal.Now.instant() converted to UTC zoned date time.
  * - Returns "" on invalid unit or failure.
  *
@@ -20,46 +26,19 @@ function isValidUnixNowUnit(unit: string): unit is UnixNowUnit {
  *
  * @example getUnixNowUnit("year") // "2024"
  * @example getUnixNowUnit("month") // "02"
+ * @example getUnixNowUnit("months") // "02" (plural unit)
  * @example getUnixNowUnit("invalid") // ""
  */
-export function getUnixNowUnit(unit: UnixNowUnit): string {
-  if (!isValidUnixNowUnit(String(unit ?? ""))) return "";
+export function getUnixNowUnit(
+  unit: UnixNowUnit | Temporal.PluralUnit<Temporal.DateTimeUnit>,
+): string {
+  const resolved = typeof unit === "string" ? resolveDateTimeUnit(unit) : "";
+
+  if (!isValidUnixNowUnit(resolved)) return "";
 
   try {
     const now = Temporal.Now.instant().toZonedDateTimeISO("UTC");
-    const plainDateTime = now.toPlainDateTime();
-    const plainDate = Temporal.PlainDate.from({
-      year: plainDateTime.year,
-      month: plainDateTime.month,
-      day: plainDateTime.day,
-    });
-
-    switch (unit) {
-      case "year":
-        return plainDateTime.year.toString();
-      case "month":
-        return plainDateTime.month.toString().padStart(2, "0");
-      case "week":
-        return (plainDate.weekOfYear ?? 0).toString();
-      case "day":
-        return plainDateTime.day.toString().padStart(2, "0");
-      case "dayOfWeek":
-        return now.dayOfWeek.toString();
-      case "hour":
-        return plainDateTime.hour.toString().padStart(2, "0");
-      case "minute":
-        return plainDateTime.minute.toString().padStart(2, "0");
-      case "second":
-        return plainDateTime.second.toString().padStart(2, "0");
-      case "millisecond":
-        return plainDateTime.millisecond.toString().padStart(3, "0");
-      case "microsecond":
-        return (plainDateTime.microsecond ?? 0).toString().padStart(3, "0");
-      case "nanosecond":
-        return (plainDateTime.nanosecond ?? 0).toString().padStart(3, "0");
-      default:
-        return "";
-    }
+    return zonedNowUnitValue(now, resolved, isoWeekOfYear);
   } catch {
     return "";
   }

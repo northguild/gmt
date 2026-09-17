@@ -210,13 +210,31 @@ describe("formatCalendarUnix", () => {
       ).toBe("tomorrow at 6:30 PM");
     });
 
-    it("defaults timeZone to UTC for an invalid timeZone string", () => {
+    // ECMA-402 and Temporal throw RangeError for an unknown zone, so a typo is the sentinel, never UTC.
+    it.each`
+      timeZone
+      ${"Not/AZone"}
+      ${""}
+      ${null}
+    `("returns '' for invalid timeZone $timeZone", ({ timeZone }) => {
       expect(
         formatCalendarUnix(VAL_MS, MustTestLocales.enUS, {
           reference: REF_MS,
-          timeZone: "Not/AZone",
+          timeZone,
         }),
-      ).toBe("tomorrow at 6:30 PM");
+      ).toBe("");
+    });
+
+    // Temporal GetOptionsObject throws TypeError for null (and any non-object), so it is invalid.
+    it.each`
+      options
+      ${null}
+      ${"UTC"}
+      ${1}
+    `("returns '' for options $options", ({ options }) => {
+      expect(
+        formatCalendarUnix(VAL_MS, MustTestLocales.enUS, options as never),
+      ).toBe("");
     });
   });
 
@@ -258,11 +276,11 @@ describe("formatCalendarUnix", () => {
 });
 
 describe("formatCalendarUnix with an unrecognised epochUnit", () => {
-  // isValidUnixUnit defines the domain ("seconds" | "milliseconds"): any other value is invalid
+  // isValidUnixUnit defines the domain ("seconds" | "milliseconds", singular or plural): any other value is invalid
   // input and returns the sentinel, never a silent read as milliseconds.
   it.each`
     epochUnit
-    ${"second"}
+    ${"nanoseconds"}
     ${"SECONDS"}
     ${"ms"}
     ${""}
@@ -278,38 +296,47 @@ describe("formatCalendarUnix with an unrecognised epochUnit", () => {
   });
 });
 
-describe("FormatCalendarUnixOptions keeps its four never-read options as deprecated and ignored", () => {
-  // 1710772200000 is 2024-03-18T14:30Z and 1710685000000 is 2024-03-17T14:16:40Z, one UTC
-  // calendar day apart. style, numeric, largestUnit and roundingMethod were never read. They stay
-  // declared (deprecated) so 1.15.0 callers still type-check, and they change nothing at runtime.
-  it.each`
-    extra
-    ${{ style: "narrow" }}
-    ${{ numeric: "always" }}
-    ${{ largestUnit: "week" }}
-    ${{ roundingMethod: "ceil" }}
-  `("type-checks and ignores $extra", ({ extra }) => {
+describe("FormatCalendarUnixOptions has no never-read members", () => {
+  // style, numeric, largestUnit and roundingMethod were never read and are removed in 1.16.0;
+  // a calendar label has no relative-time unit to choose or round.
+  it("rejects style, numeric, largestUnit and roundingMethod at compile time", () => {
     const options: FormatCalendarUnixOptions = {
       reference: 1710685000000,
       timeZone: "UTC",
-      ...(extra as Partial<FormatCalendarUnixOptions>),
-    };
-    expect(formatCalendarUnix(1710772200000, "en-US", options)).toBe(
-      "tomorrow at 2:30 PM",
-    );
-  });
-
-  it("accepts every deprecated member in one object literal", () => {
-    const options: FormatCalendarUnixOptions = {
-      reference: 1710685000000,
-      timeZone: "UTC",
+      // @ts-expect-error -- `style` was removed in 1.16.0
       style: "narrow",
+    };
+    const numeric: FormatCalendarUnixOptions = {
+      // @ts-expect-error -- `numeric` was removed in 1.16.0
       numeric: "always",
+    };
+    const largestUnit: FormatCalendarUnixOptions = {
+      // @ts-expect-error -- `largestUnit` was removed in 1.16.0
       largestUnit: "week",
+    };
+    const roundingMethod: FormatCalendarUnixOptions = {
+      // @ts-expect-error -- `roundingMethod` was removed in 1.16.0
       roundingMethod: "ceil",
     };
+    // 1710772200000 is 2024-03-18T14:30Z, one UTC calendar day after the reference.
     expect(formatCalendarUnix(1710772200000, "en-US", options)).toBe(
       "tomorrow at 2:30 PM",
     );
+    expect([numeric, largestUnit, roundingMethod]).toHaveLength(3);
+  });
+});
+
+// ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale data
+// is used, and a malformed tag anywhere in the list is invalid input. Expected strings from native
+// Intl with the same list (Chromium 153).
+describe("formatCalendarUnix with a locale list", () => {
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"demain à 18:30"}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
+  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+    expect(
+      formatCalendarUnix(VAL_MS, locale as string[], { reference: REF_MS }),
+    ).toBe(expected);
   });
 });

@@ -4,10 +4,11 @@ import { parseUnixEpochValue } from "../../../internal";
  * Return true if `start` and `end` form a valid Unix interval — both safe-integer epochs
  * and `start <= end`.
  *
- * - Each input must be a safe integer (`Number.isSafeInteger`) or a numeric string that coerces
- *   to one, exactly as every `unix/interval` function reads its arguments.
+ * - Each input must be a safe integer (`Number.isSafeInteger`) or a string of optionally negative
+ *   ASCII digits naming one — the epoch grammar every `unix/` function shares.
  * - Fractional values, `NaN`, `±Infinity` and anything beyond ±(2^53 − 1) return `false`.
- * - An empty or whitespace-only string returns `false` rather than reading as epoch 0.
+ * - Strings with whitespace, `+`, a decimal point, an exponent or hex digits return `false`, and an
+ *   empty string is not epoch 0.
  * - Equal `start === end` is valid.
  *
  * @param start Unix epoch value, in the one unit all epoch arguments share — interval start
@@ -20,6 +21,7 @@ import { parseUnixEpochValue } from "../../../internal";
  * @example isValidUnixInterval(1700000000, 0) // false (reversed)
  * @example isValidUnixInterval(0, 1.5) // false (fractional)
  * @example isValidUnixInterval("", 1000) // false (empty string is not epoch 0)
+ * @example isValidUnixInterval("0", " 1000") // false (a padded string is not an epoch)
  */
 export function isValidUnixInterval(
   start: number | string,

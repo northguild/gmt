@@ -3,7 +3,7 @@ import {
   battleTestLeapYearUnixSeconds,
   MustTestDstTimeZones,
 } from "../../test";
-import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
+import { mockTemporalInstantFromEpochMillisecondsThrow } from "../../test/mocks";
 import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
 import { parseDateFromUnix } from "./parseDateFromUnix";
 
@@ -99,7 +99,7 @@ describe("parseDateFromUnix", () => {
   );
 
   it("returns empty string on failure", () => {
-    mockTemporalZonedDateTimeFromThrow();
+    mockTemporalInstantFromEpochMillisecondsThrow();
     const result = parseDateFromUnix(battleTestLeapYearUnix);
     expect(result).toBe("");
   });

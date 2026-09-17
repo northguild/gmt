@@ -37,7 +37,9 @@ describe("maxUnix drops values that are not unix epochs", () => {
     ${[1, 8_640_000_000_000_000]} | ${8_640_000_000_000_000} | ${"the maximum instant is inclusive"}
     ${[1, 2.5]}                   | ${1}                     | ${"a fraction is not an epoch"}
     ${[1, Infinity]}              | ${1}                     | ${"Infinity is not an epoch"}
-    ${[1, "5"]}                   | ${1}                     | ${"a string is not a number epoch"}
+    ${[1, "5"]}                   | ${5}                     | ${"a digit string is an epoch, returned as a number"}
+    ${[1, " 5"]}                  | ${1}                     | ${"a padded string is not an epoch"}
+    ${[1, "5e0"]}                 | ${1}                     | ${"exponent notation is not an epoch"}
     ${[1.5, 1e20, -Infinity]}     | ${null}                  | ${"no valid epoch remains"}
   `(
     "returns $expected for $unixValues ($reason)",

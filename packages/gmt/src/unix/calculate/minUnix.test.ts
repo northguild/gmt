@@ -36,7 +36,8 @@ describe("minUnix drops values that are not unix epochs", () => {
     ${[0, -8_640_000_000_000_001]} | ${0}                      | ${"one past the minimum instant"}
     ${[0, -8_640_000_000_000_000]} | ${-8_640_000_000_000_000} | ${"the minimum instant is inclusive"}
     ${[0, -Infinity]}              | ${0}                      | ${"-Infinity is not an epoch"}
-    ${[3, "-5"]}                   | ${3}                      | ${"a string is not a number epoch"}
+    ${[3, "-5"]}                   | ${-5}                     | ${"a digit string is an epoch, returned as a number"}
+    ${[3, "+1"]}                   | ${3}                      | ${"a plus sign is not an epoch"}
     ${[1.5, -1e20, Infinity]}      | ${null}                   | ${"no valid epoch remains"}
   `(
     "returns $expected for $unixValues ($reason)",

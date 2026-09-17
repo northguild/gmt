@@ -136,3 +136,34 @@ describe("areUnixEqualBy across zone transitions", () => {
     },
   );
 });
+
+// weekStartsOn only names "monday" or "sunday"; any other value is invalid input, for every unit
+// (Temporal GetOption rejects a value outside its allowed list; undefined means the default).
+// 1710504000000 is 2024-03-15T12:00:00Z.
+describe("areUnixEqualBy with an invalid weekStartsOn", () => {
+  it.each`
+    unit      | weekStartsOn
+    ${"week"} | ${"tuesday"}
+    ${"week"} | ${"Monday"}
+    ${"week"} | ${""}
+    ${"week"} | ${null}
+    ${"week"} | ${1}
+    ${"week"} | ${true}
+    ${"day"}  | ${"tuesday"}
+    ${"day"}  | ${"Monday"}
+    ${"day"}  | ${""}
+    ${"day"}  | ${null}
+    ${"day"}  | ${1}
+    ${"day"}  | ${true}
+  `(
+    "returns false for unit $unit with invalid weekStartsOn $weekStartsOn",
+    ({ unit, weekStartsOn }) => {
+      expect(
+        areUnixEqualBy(1710504000000, 1710504000000, unit, {
+          timeZone: "UTC",
+          weekStartsOn,
+        }),
+      ).toBe(false);
+    },
+  );
+});

@@ -26,14 +26,14 @@ describe("sortUnix", () => {
 });
 
 describe("sortUnix drops values that are not unix epochs", () => {
-  // A unix epoch is an integer (isValidUnixMilliseconds / isValidUnixSeconds) naming a
+  // A unix epoch is a safe integer or a digit string (the one unix/ epoch grammar) naming a
   // Temporal.Instant: |ms| <= 8.64e15 (10^8 days either side of the epoch). With no epochUnit the
   // widest (milliseconds) range applies, which contains the seconds range.
   it.each`
     order     | unixValues                                            | expected
-    ${"asc"}  | ${[1e20, 1.5, NaN, "5"]}                              | ${[]}
-    ${"asc"}  | ${[3, 1.5, 1, -1e20, "2", Infinity]}                  | ${[1, 3]}
-    ${"desc"} | ${[3, 1.5, 1, -1e20, "2", Infinity]}                  | ${[3, 1]}
+    ${"asc"}  | ${[1e20, 1.5, NaN, "5.0", " 5"]}                      | ${[]}
+    ${"asc"}  | ${[3, 1.5, 1, -1e20, "2", Infinity]}                  | ${[1, 2, 3]}
+    ${"desc"} | ${[3, 1.5, 1, -1e20, "2", "0x2", Infinity]}           | ${[3, 2, 1]}
     ${"asc"}  | ${[8_640_000_000_000_000, -8_640_000_000_000_000, 0]} | ${[-8_640_000_000_000_000, 0, 8_640_000_000_000_000]}
     ${"asc"}  | ${[8_640_000_000_000_001, -8_640_000_000_000_001, 0]} | ${[0]}
   `(

@@ -1,3 +1,4 @@
+import { Temporal } from "@js-temporal/polyfill";
 import { intervalOverlappingDaysUnix } from "./intervalOverlappingDaysUnix";
 import {
   battleTestTimeZones,
@@ -9,10 +10,14 @@ const D = 86400000;
 describe("intervalOverlappingDaysUnix", () => {
   it.each`
     aStart | aEnd     | bStart | bEnd     | timeZone          | expected
-    ${0}   | ${2 * D} | ${D}   | ${3 * D} | ${"UTC"}          | ${2}
+    ${0}   | ${2 * D} | ${D}   | ${3 * D} | ${"UTC"}          | ${1}
     ${0}   | ${2 * D} | ${D}   | ${3 * D} | ${"Pacific/Apia"} | ${2}
     ${0}   | ${2 * D} | ${D}   | ${3 * D} | ${"Pacific/Niue"} | ${2}
+    ${0}   | ${D}     | ${0}   | ${D}     | ${"UTC"}          | ${1}
+    ${0}   | ${D + 1} | ${0}   | ${D + 1} | ${"UTC"}          | ${2}
   `(
+    // Half-open: the intersection [D, 2D) is 1970-01-02 in UTC only; at -11:00 (Apia, Niue in 1970)
+    // it runs from 01-01T13:00 to just before 01-02T13:00, so it touches two dates.
     "returns $expected for $aStart to $aEnd × $bStart to $bEnd in $timeZone",
     ({ aStart, aEnd, bStart, bEnd, timeZone, expected }) => {
       expect(
@@ -21,17 +26,44 @@ describe("intervalOverlappingDaysUnix", () => {
     },
   );
 
-  it("returns 1 for a zero-length interval sitting mid-day (UTC)", () => {
+  it("returns 0 for a zero-length interval, which holds no instant (UTC)", () => {
     expect(intervalOverlappingDaysUnix(0, 0, 0, 0, { timeZone: "UTC" })).toBe(
-      1,
+      0,
     );
   });
 
-  it("returns 1 for adjacent intervals sharing one instant (UTC)", () => {
-    expect(
-      intervalOverlappingDaysUnix(0, D, D, 2 * D, { timeZone: "UTC" }),
-    ).toBe(1);
-  });
+  // An empty interval strictly inside the other: the intersection is the empty span at 1970-01-02
+  // 12:00 UTC (129600000 ms = 1.5 days), which holds no instant and so no date.
+  it.each`
+    aStart     | aEnd       | bStart     | bEnd       | epochUnit
+    ${0}       | ${2 * D}   | ${1.5 * D} | ${1.5 * D} | ${"milliseconds"}
+    ${1.5 * D} | ${1.5 * D} | ${0}       | ${2 * D}   | ${"milliseconds"}
+    ${0}       | ${172800}  | ${129600}  | ${129600}  | ${"seconds"}
+  `(
+    "returns 0 when the intersection of [$aStart, $aEnd) and [$bStart, $bEnd) in $epochUnit is an empty interval inside the other",
+    ({ aStart, aEnd, bStart, bEnd, epochUnit }) => {
+      expect(
+        intervalOverlappingDaysUnix(aStart, aEnd, bStart, bEnd, { epochUnit }),
+      ).toBe(0);
+    },
+  );
+
+  // Half-open (coding-standards § 8): touching intervals share no instant, so no date.
+  it.each`
+    aStart | aEnd     | bStart   | bEnd      | epochUnit
+    ${0}   | ${D}     | ${D}     | ${2 * D}  | ${"milliseconds"}
+    ${0}   | ${86400} | ${86400} | ${172800} | ${"seconds"}
+  `(
+    "returns 0 for touching intervals [$aStart, $aEnd) and [$bStart, $bEnd) in $epochUnit (UTC)",
+    ({ aStart, aEnd, bStart, bEnd, epochUnit }) => {
+      expect(
+        intervalOverlappingDaysUnix(aStart, aEnd, bStart, bEnd, {
+          timeZone: "UTC",
+          epochUnit,
+        }),
+      ).toBe(0);
+    },
+  );
 
   it("returns 0 for disjoint intervals (UTC)", () => {
     expect(
@@ -48,8 +80,8 @@ describe("intervalOverlappingDaysUnix", () => {
       epochUnit: "milliseconds",
     });
 
-    expect(withDefault).toBe(2);
-    expect(withExplicit).toBe(2);
+    expect(withDefault).toBe(1);
+    expect(withExplicit).toBe(1);
   });
 
   it("returns the same result for seconds as for the equivalent milliseconds", () => {
@@ -58,14 +90,14 @@ describe("intervalOverlappingDaysUnix", () => {
         timeZone: "UTC",
         epochUnit: "seconds",
       }),
-    ).toBe(2);
+    ).toBe(1);
   });
 
   it("uses the system timeZone when options is omitted", () => {
     const restore = mockSystemTimeZone("UTC");
 
     try {
-      expect(intervalOverlappingDaysUnix(0, 2 * D, D, 3 * D)).toBe(2);
+      expect(intervalOverlappingDaysUnix(0, 2 * D, D, 3 * D)).toBe(1);
     } finally {
       restore();
     }
@@ -77,7 +109,7 @@ describe("intervalOverlappingDaysUnix", () => {
     try {
       expect(
         intervalOverlappingDaysUnix(0, 2 * D, D, 3 * D, { timeZone: "UTC" }),
-      ).toBe(2);
+      ).toBe(1);
     } finally {
       restore();
     }
@@ -174,24 +206,31 @@ describe("intervalOverlappingDaysUnix", () => {
           timeZone: "UTC",
         },
       ),
-    ).toBe(2);
+    ).toBe(1);
   });
 
-  it("proves zone-invariance across battleTestTimeZones for a fixed 2-day epoch span", () => {
+  it("counts the same one-day intersection per zone across battleTestTimeZones", () => {
+    // [D, 2D) is 24 hours. Where the zone's offset on 1970-01-02 is zero it is one local date; any
+    // other offset starts mid-day and touches two (no battle zone changes offset that day).
     for (const timeZone of battleTestTimeZones) {
+      const offset =
+        Temporal.Instant.fromEpochMilliseconds(D).toZonedDateTimeISO(
+          timeZone,
+        ).offsetNanoseconds;
+
       expect(
         intervalOverlappingDaysUnix(0, 2 * D, D, 3 * D, { timeZone }),
-      ).toBe(2);
+      ).toBe(offset === 0 ? 1 : 2);
     }
   });
 });
 
 describe("intervalOverlappingDaysUnix with an unrecognised epochUnit", () => {
-  // isValidUnixUnit defines the domain ("seconds" | "milliseconds"): any other value is invalid
+  // isValidUnixUnit defines the domain ("seconds" | "milliseconds", singular or plural): any other value is invalid
   // input and returns the sentinel, never a silent read as milliseconds.
   it.each`
     epochUnit
-    ${"second"}
+    ${"nanoseconds"}
     ${"SECONDS"}
     ${"ms"}
     ${""}
@@ -208,14 +247,15 @@ describe("intervalOverlappingDaysUnix with an unrecognised epochUnit", () => {
     ).toBe(null);
   });
 
-  // Distinct local dates of the instants in the closed span (tzdb): Goose_Bay fell back at 00:01 on
-  // 2010-11-07 into 2010-11-06 (1289098860000 = the transition), and Apia deleted 2011-12-30.
+  // Distinct local dates of the instants in the half-open span (tzdb): Goose_Bay fell back at 00:01
+  // on 2010-11-07 into 2010-11-06 (1289098860000 = the transition), Apia deleted 2011-12-30, and an
+  // empty span holds no instant.
   it.each`
     aStart           | aEnd             | timeZone               | expected
     ${1289098830000} | ${1289100600000} | ${"America/Goose_Bay"} | ${2}
     ${1289098740000} | ${1289100600000} | ${"America/Goose_Bay"} | ${2}
     ${1325235600000} | ${1325242800000} | ${"Pacific/Apia"}      | ${2}
-    ${1712458800000} | ${1712458800000} | ${"America/Santiago"}  | ${1}
+    ${1712458800000} | ${1712458800000} | ${"America/Santiago"}  | ${0}
   `(
     "returns $expected local dates for the self-overlap $aStart to $aEnd in $timeZone",
     ({ aStart, aEnd, timeZone, expected }) => {

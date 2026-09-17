@@ -76,11 +76,12 @@ describe("setUnix", () => {
     expect(dayThenMonth).toBe(Date.UTC(2024, 1, 5, 12, 0, 0));
   });
 
-  // The C3 silent-no-op trap regression pairing: disambiguation:"reject" with the default
-  // offset:"ignore" throws (returns null), while offset:"prefer" does NOT throw.
+  // Temporal ZonedDateTime.prototype.with defaults offset to "prefer": the source's offset is kept
+  // while it is still valid, so the ambiguous 01:00 resolves without consulting disambiguation.
+  // offset:"ignore" re-resolves the wall clock, so disambiguation:"reject" throws (null).
   it.each`
     timeZone             | epoch            | offset       | expected
-    ${"America/Chicago"} | ${1730616300000} | ${undefined} | ${null}
+    ${"America/Chicago"} | ${1730616300000} | ${undefined} | ${1730613600000}
     ${"America/Chicago"} | ${1730616300000} | ${"ignore"}  | ${null}
     ${"America/Chicago"} | ${1730616300000} | ${"prefer"}  | ${1730613600000}
   `(
@@ -91,6 +92,26 @@ describe("setUnix", () => {
           ? { timeZone, disambiguation: "reject" as const }
           : { timeZone, disambiguation: "reject" as const, offset };
       expect(setUnix(epoch, { minute: 0 }, optionsArg)).toBe(expected);
+    },
+  );
+
+  // 1730615400000 is the second 01:30 of the 2024-11-03 New York fall-back (-05:00). "prefer" keeps
+  // -05:00 for 01:45 (06:45Z); "ignore" re-resolves with "compatible", the earlier -04:00 (05:45Z).
+  it.each`
+    offset       | expected
+    ${undefined} | ${1730616300000}
+    ${"prefer"}  | ${1730616300000}
+    ${"ignore"}  | ${1730612700000}
+  `(
+    "sets minute 45 on the repeated 01:30 in New York with offset $offset giving $expected",
+    ({ offset, expected }) => {
+      expect(
+        setUnix(
+          1730615400000,
+          { minute: 45 },
+          { timeZone: "America/New_York", offset },
+        ),
+      ).toBe(expected);
     },
   );
 
@@ -143,11 +164,11 @@ describe("setUnix at the maximum instant", () => {
 });
 
 describe("setUnix with an unrecognised epochUnit", () => {
-  // isValidUnixUnit defines the domain ("seconds" | "milliseconds"): any other value is invalid
+  // isValidUnixUnit defines the domain ("seconds" | "milliseconds", singular or plural): any other value is invalid
   // input and returns the sentinel, never a silent read as milliseconds.
   it.each`
     epochUnit
-    ${"second"}
+    ${"nanoseconds"}
     ${"SECONDS"}
     ${"ms"}
     ${""}

@@ -1,15 +1,20 @@
 import { intervalXorUnix } from "./intervalXorUnix";
 
 describe("intervalXorUnix", () => {
-  // Closed [start, end]: the shared endpoint is covered twice, so xor excludes it from both pieces,
-  // each stepping one unit in from it. Pieces list A's remainder, then B's.
+  // Half-open [start, end): the result is every maximal run covered by exactly one interval, sorted
+  // by start. Touching intervals share no value, so they join into one run, and every boundary is an
+  // input's own start or end (coding-standards § 8; A = 2024-01-01T09:00Z, B = 12:00Z, C = 13:00Z,
+  // D = 17:00Z in ms).
   it.each`
-    aStart        | aEnd          | bStart        | bEnd          | expected                                                                   | reason
-    ${0}          | ${1500000000} | ${1500000000} | ${1700000000} | ${[{ start: 0, end: 1499999999 }, { start: 1500000001, end: 1700000000 }]} | ${"A ends where B starts"}
-    ${1500000000} | ${1700000000} | ${0}          | ${1500000000} | ${[{ start: 1500000001, end: 1700000000 }, { start: 0, end: 1499999999 }]} | ${"A starts where B ends"}
-    ${1500000000} | ${1500000000} | ${1500000000} | ${1700000000} | ${[{ start: 1500000001, end: 1700000000 }]}                                | ${"zero-length A on B's start"}
+    aStart           | aEnd             | bStart           | bEnd             | expected                                                                                        | reason
+    ${1704099600000} | ${1704114000000} | ${1704110400000} | ${1704128400000} | ${[{ start: 1704099600000, end: 1704110400000 }, { start: 1704114000000, end: 1704128400000 }]} | ${"[A, C) xor [B, D) is [A, B) and [C, D)"}
+    ${0}             | ${1500000000}    | ${1500000000}    | ${1700000000}    | ${[{ start: 0, end: 1700000000 }]}                                                              | ${"A ends where B starts: one joined run"}
+    ${1500000000}    | ${1700000000}    | ${0}             | ${1500000000}    | ${[{ start: 0, end: 1700000000 }]}                                                              | ${"A starts where B ends: one joined run"}
+    ${1500000000}    | ${1500000000}    | ${1500000000}    | ${1700000000}    | ${[{ start: 1500000000, end: 1700000000 }]}                                                     | ${"an empty A holds no value"}
+    ${0}             | ${10}            | ${20}            | ${20}            | ${[{ start: 0, end: 10 }]}                                                                      | ${"an empty B apart from A holds no value"}
+    ${5}             | ${5}             | ${5}             | ${5}             | ${[]}                                                                                           | ${"two empty intervals"}
   `(
-    "returns $expected for touching A=[$aStart, $aEnd] xor B=[$bStart, $bEnd] ($reason)",
+    "returns $expected for A=[$aStart, $aEnd) xor B=[$bStart, $bEnd) ($reason)",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalXorUnix(aStart, aEnd, bStart, bEnd)).toEqual(expected);
     },
@@ -17,11 +22,11 @@ describe("intervalXorUnix", () => {
 
   it.each`
     aStart        | aEnd          | bStart        | bEnd          | expected
-    ${0}          | ${1500000000} | ${1400000000} | ${1700000000} | ${{ result: [{ start: 0, end: 1399999999 }, { start: 1500000001, end: 1700000000 }] }}
-    ${0}          | ${1700000000} | ${1400000000} | ${1500000000} | ${{ result: [{ start: 0, end: 1399999999 }, { start: 1500000001, end: 1700000000 }] }}
+    ${0}          | ${1500000000} | ${1400000000} | ${1700000000} | ${{ result: [{ start: 0, end: 1400000000 }, { start: 1500000000, end: 1700000000 }] }}
+    ${0}          | ${1700000000} | ${1400000000} | ${1500000000} | ${{ result: [{ start: 0, end: 1400000000 }, { start: 1500000000, end: 1700000000 }] }}
     ${0}          | ${1700000000} | ${0}          | ${1700000000} | ${{ result: [] }}
     ${0}          | ${1500000000} | ${1600000000} | ${1700000000} | ${{ result: [{ start: 0, end: 1500000000 }, { start: 1600000000, end: 1700000000 }] }}
-    ${1400000000} | ${1500000000} | ${0}          | ${1000000000} | ${{ result: [{ start: 1400000000, end: 1500000000 }, { start: 0, end: 1000000000 }] }}
+    ${1400000000} | ${1500000000} | ${0}          | ${1000000000} | ${{ result: [{ start: 0, end: 1000000000 }, { start: 1400000000, end: 1500000000 }] }}
   `(
     "returns $expected when A=$aStart to $aEnd and B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
@@ -76,7 +81,7 @@ describe("intervalXorUnix", () => {
 
   it.each`
     aStart | aEnd            | bStart          | bEnd            | expected
-    ${"0"} | ${"1500000000"} | ${"1400000000"} | ${"1700000000"} | ${{ result: [{ start: 0, end: 1399999999 }, { start: 1500000001, end: 1700000000 }] }}
+    ${"0"} | ${"1500000000"} | ${"1400000000"} | ${"1700000000"} | ${{ result: [{ start: 0, end: 1400000000 }, { start: 1500000000, end: 1700000000 }] }}
     ${"0"} | ${"1700000000"} | ${"0"}          | ${"1700000000"} | ${{ result: [] }}
   `(
     "returns $expected for string numeric input",
@@ -103,12 +108,13 @@ describe("intervalXorUnix", () => {
     },
   );
 
-  // Overlap is [MAX - 7, MAX - 5]: A keeps [MAX - 10, MAX - 8], B keeps [MAX - 4, MAX].
+  // Range edge (CORE-6): nothing is computed past the largest safe integer. Half-open, the overlap
+  // is [MAX - 7, MAX - 5): A keeps [MAX - 10, MAX - 7), B keeps [MAX - 5, MAX).
   it("returns both one-sided pieces when B ends on the largest safe integer", () => {
     const max = Number.MAX_SAFE_INTEGER;
     expect(intervalXorUnix(max - 10, max - 5, max - 7, max)).toEqual([
-      { start: max - 10, end: max - 8 },
-      { start: max - 4, end: max },
+      { start: max - 10, end: max - 7 },
+      { start: max - 5, end: max },
     ]);
   });
 });

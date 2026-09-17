@@ -1,14 +1,15 @@
-import { closedXorSweep, parseUnixEpochIntervalList } from "../../internal";
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
+import { halfOpenXor, parseUnixEpochIntervalList } from "../../internal";
 
 /**
  * Return the symmetric difference across a list of Unix epoch intervals — the set of epoch
  * values covered by an odd number of the input intervals.
  *
  * - List-form generalization of `intervalXorUnix`, which is pairwise only.
- * - Implemented as a closed-interval coverage sweep: each interval opens at its start and closes
- *   at its end, and the result is every maximal run where the coverage count is odd. No boundary
- *   is computed past an end. For two overlapping intervals this reduces to exactly
- *   `intervalXorUnix`'s pairwise result.
+ * - Intervals are half-open `[start, end)`. The result is every maximal run where the coverage
+ *   count is odd, so touching runs join and an empty interval (`start === end`) changes nothing.
+ *   Every boundary is an input's own `start` or `end`; none is stepped by an epoch unit. For two
+ *   intervals this is exactly `intervalXorUnix`'s pairwise result.
  * - Order of the input list does not matter; the result is sorted by start.
  * - Returns `[]` for an empty list, and `[]` when every value is covered an even number of
  *   times (e.g. two identical intervals cancel out).
@@ -19,7 +20,8 @@ import { closedXorSweep, parseUnixEpochIntervalList } from "../../internal";
  * @param intervals array of `{ start, end }` records
  * @returns array of `{ start, end }` records covered an odd number of times, or `[]` on invalid input
  *
- * @example intervalXorAllUnix([{ start: 0, end: 1500000000 }, { start: 1400000000, end: 1700000000 }]) // [{ start: 0, end: 1399999999 }, { start: 1500000001, end: 1700000000 }]
+ * @example intervalXorAllUnix([{ start: 0, end: 1500000000 }, { start: 1400000000, end: 1700000000 }]) // [{ start: 0, end: 1400000000 }, { start: 1500000000, end: 1700000000 }]
+ * @example intervalXorAllUnix([{ start: 0, end: 5 }, { start: 5, end: 10 }]) // [{ start: 0, end: 10 }] (touching runs join)
  * @example intervalXorAllUnix([]) // []
  */
 export function intervalXorAllUnix(
@@ -35,9 +37,5 @@ export function intervalXorAllUnix(
     return [];
   }
 
-  return closedXorSweep(parsed, {
-    compare: (left, right) => left - right,
-    stepUp: (value) => value + 1,
-    stepDown: (value) => value - 1,
-  });
+  return halfOpenXor(parsed, (left, right) => left - right);
 }

@@ -1,4 +1,4 @@
-import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
+import { mockTemporalInstantFromEpochMillisecondsThrow } from "../../test/mocks";
 import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
 import { parseWeekFromUnix } from "./parseWeekFromUnix";
 
@@ -45,9 +45,12 @@ describe("parseWeekFromUnix", () => {
   );
 
   it.each`
-    value      | weekStartsOn | expected
-    ${epochMs} | ${"monday"}  | ${9}
-    ${epochMs} | ${"sunday"}  | ${9}
+    value            | weekStartsOn | expected
+    ${epochMs}       | ${"monday"}  | ${9}
+    ${epochMs}       | ${"sunday"}  | ${9}
+    ${1735646400000} | ${"monday"}  | ${1}
+    ${1735646400000} | ${"sunday"}  | ${1}
+    ${978264000000}  | ${"sunday"}  | ${1}
   `(
     "returns $expected for $value with weekStartsOn $weekStartsOn",
     ({ value, weekStartsOn, expected }) => {
@@ -69,7 +72,7 @@ describe("parseWeekFromUnix", () => {
   });
 
   it("returns null on failure", () => {
-    mockTemporalZonedDateTimeFromThrow();
+    mockTemporalInstantFromEpochMillisecondsThrow();
     const result = parseWeekFromUnix(epochMs);
     expect(result).toBeNull();
   });
@@ -114,6 +117,28 @@ describe("parseWeekFromUnix with a year outside 0000-9999", () => {
     "returns ISO week $expected for $value ms ($iso) in UTC",
     ({ value, expected }) => {
       expect(parseWeekFromUnix(value, { timeZone: "UTC" })).toBe(expected);
+    },
+  );
+});
+
+// weekStartsOn only names "monday" or "sunday"; any other value is invalid input, for every unit
+// (Temporal GetOption rejects a value outside its allowed list; undefined means the default).
+// 1710504000000 is 2024-03-15T12:00:00Z.
+describe("parseWeekFromUnix with an invalid weekStartsOn", () => {
+  it.each`
+    weekStartsOn
+    ${"tuesday"}
+    ${"Monday"}
+    ${""}
+    ${null}
+    ${1}
+    ${true}
+  `(
+    "returns null for 1710504000000 with invalid weekStartsOn $weekStartsOn",
+    ({ weekStartsOn }) => {
+      expect(
+        parseWeekFromUnix(1710504000000, { timeZone: "UTC", weekStartsOn }),
+      ).toBeNull();
     },
   );
 });

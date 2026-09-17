@@ -51,14 +51,11 @@ describe("splitIntervalByUnitUnix", () => {
   `(
     "skips the deleted local day when splitting $start to $end by $amount $unit in Pacific/Apia",
     ({ start, end, unit, amount, expected }) => {
-      const restore = mockSystemTimeZone("Pacific/Apia");
-      try {
-        expect(splitIntervalByUnitUnix(start, end, unit, amount)).toEqual(
-          expected,
-        );
-      } finally {
-        restore();
-      }
+      expect(
+        splitIntervalByUnitUnix(start, end, unit, amount, {
+          timeZone: "Pacific/Apia",
+        }),
+      ).toEqual(expected);
     },
   );
 
@@ -415,4 +412,38 @@ describe("splitIntervalByUnitUnix default piece limit", () => {
       }
     },
   );
+});
+
+describe("splitIntervalByUnitUnix epochUnit and timeZone options", () => {
+  // 1710046800000–1710216000000 is New York's 2024-03-10 00:00 to 2024-03-12 00:00. The New York
+  // day boundary is 1710129600000 (the 23-hour day); UTC days step 24 h to 1710133200000.
+  it.each`
+    start            | end              | unit      | amount | options                                                   | expected
+    ${1710046800000} | ${1710216000000} | ${"day"}  | ${1}   | ${{ timeZone: "America/New_York" }}                       | ${[{ start: 1710046800000, end: 1710129600000 }, { start: 1710129600000, end: 1710216000000 }]}
+    ${1710046800000} | ${1710216000000} | ${"day"}  | ${1}   | ${undefined}                                              | ${[{ start: 1710046800000, end: 1710133200000 }, { start: 1710133200000, end: 1710216000000 }]}
+    ${1710046800}    | ${1710216000}    | ${"days"} | ${1}   | ${{ epochUnit: "seconds", timeZone: "America/New_York" }} | ${[{ start: 1710046800, end: 1710129600 }, { start: 1710129600, end: 1710216000 }]}
+    ${"0"}           | ${"86400"}       | ${"hour"} | ${12}  | ${{ epochUnit: "second" }}                                | ${[{ start: 0, end: 43200 }, { start: 43200, end: 86400 }]}
+    ${0}             | ${86400000}      | ${"hour"} | ${12}  | ${{ timeZone: "Mars/Olympus" }}                           | ${[]}
+    ${0}             | ${86400000}      | ${"hour"} | ${12}  | ${{ epochUnit: "minutes" }}                               | ${[]}
+  `(
+    "returns $expected for [$start, $end) by $amount $unit with options $options",
+    ({ start, end, unit, amount, options, expected }) => {
+      expect(
+        splitIntervalByUnitUnix(start, end, unit, amount, options),
+      ).toEqual(expected);
+    },
+  );
+});
+
+// An unknown unit is invalid input whatever the span: a non-empty interval already returns
+// [] for it, so a zero-length interval must too, rather than the one zero-length slice a valid
+// unit gives.
+describe("splitIntervalByUnitUnix rejects an invalid unit on a zero-length interval", () => {
+  it.each`
+    unit
+    ${"invalid"}
+    ${"fortnight"}
+  `("returns [] for unit $unit", ({ unit }) => {
+    expect(splitIntervalByUnitUnix(0, 0, unit, 1)).toEqual([]);
+  });
 });

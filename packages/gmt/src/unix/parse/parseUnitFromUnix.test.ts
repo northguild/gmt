@@ -1,5 +1,5 @@
 import { battleTestLeapYearUnix } from "../../test";
-import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
+import { mockTemporalInstantFromEpochMillisecondsThrow } from "../../test/mocks";
 import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
 import { parseUnitFromUnix } from "./parseUnitFromUnix";
 
@@ -37,12 +37,8 @@ describe("parseUnitFromUnix", () => {
     ${"microsecond"} | ${"000"}
     ${"nanosecond"}  | ${"000"}
   `("returns $expected for unit $unit from ms epoch", ({ unit, expected }) => {
-    const val = parseUnitFromUnix(epochMs, unit as never);
-    if (unit === "microsecond" || unit === "nanosecond") {
-      expect(val).toMatch(/^\d+$/);
-    } else {
-      expect(val).toBe(expected as string);
-    }
+    // Temporal's microsecond and nanosecond fields are each 0-999, so both pad to 3 digits.
+    expect(parseUnitFromUnix(epochMs, unit as never)).toBe(expected);
   });
 
   it.each`
@@ -82,7 +78,7 @@ describe("parseUnitFromUnix", () => {
   );
 
   it("returns empty string on failure", () => {
-    mockTemporalZonedDateTimeFromThrow();
+    mockTemporalInstantFromEpochMillisecondsThrow();
     const result = parseUnitFromUnix(battleTestLeapYearUnix, "year");
     expect(result).toBe("");
   });
@@ -141,6 +137,79 @@ describe("parseUnitFromUnix week with a year outside 0000-9999", () => {
       expect(parseUnitFromUnix(value, "week", { timeZone: "UTC" })).toBe(
         expected,
       );
+    },
+  );
+});
+
+describe("parseUnitFromUnix unit names", () => {
+  // 1709217045123 is 2024-02-29T14:30:45.123Z. Temporal §13.17: plural names are the same unit.
+  it.each`
+    unit              | expected
+    ${"years"}        | ${"2024"}
+    ${"months"}       | ${"02"}
+    ${"weeks"}        | ${"9"}
+    ${"days"}         | ${"29"}
+    ${"hours"}        | ${"14"}
+    ${"minutes"}      | ${"30"}
+    ${"seconds"}      | ${"45"}
+    ${"milliseconds"} | ${"123"}
+    ${"microseconds"} | ${"000"}
+    ${"nanoseconds"}  | ${"000"}
+    ${"dayOfWeeks"}   | ${""}
+    ${"quarters"}     | ${""}
+  `("returns $expected for unit $unit", ({ unit, expected }) => {
+    expect(
+      parseUnitFromUnix(1709217045123, unit as never, { timeZone: "UTC" }),
+    ).toBe(expected);
+  });
+});
+
+// weekStartsOn only names "monday" or "sunday"; any other value is invalid input, for every unit
+// (Temporal GetOption rejects a value outside its allowed list; undefined means the default).
+// 1710504000000 is 2024-03-15T12:00:00Z.
+describe("parseUnitFromUnix with an invalid weekStartsOn", () => {
+  it.each`
+    unit      | weekStartsOn
+    ${"week"} | ${"tuesday"}
+    ${"week"} | ${"Monday"}
+    ${"week"} | ${""}
+    ${"week"} | ${null}
+    ${"week"} | ${1}
+    ${"week"} | ${true}
+    ${"hour"} | ${"tuesday"}
+    ${"hour"} | ${"Monday"}
+    ${"hour"} | ${""}
+    ${"hour"} | ${null}
+    ${"hour"} | ${1}
+    ${"hour"} | ${true}
+  `(
+    "returns an empty string for unit $unit with invalid weekStartsOn $weekStartsOn",
+    ({ unit, weekStartsOn }) => {
+      expect(
+        parseUnitFromUnix(1710504000000, unit, {
+          timeZone: "UTC",
+          weekStartsOn,
+        }),
+      ).toBe("");
+    },
+  );
+});
+
+// Every family with a time reads the three sub-second Temporal fields, zero-padded to 3 digits. An
+// epoch in milliseconds has no sub-millisecond part: 1709217045123 is 2024-02-29T14:30:45.123Z.
+describe("parseUnitFromUnix sub-second units", () => {
+  it.each`
+    unit              | expected
+    ${"millisecond"}  | ${"123"}
+    ${"milliseconds"} | ${"123"}
+    ${"microsecond"}  | ${"000"}
+    ${"microseconds"} | ${"000"}
+    ${"nanosecond"}   | ${"000"}
+    ${"nanoseconds"}  | ${"000"}
+  `(
+    "returns $expected for unit $unit of 1709217045123",
+    ({ unit, expected }) => {
+      expect(parseUnitFromUnix(1709217045123, unit)).toBe(expected);
     },
   );
 });

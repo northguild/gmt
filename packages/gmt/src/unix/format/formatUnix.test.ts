@@ -113,14 +113,21 @@ describe("formatUnix", () => {
       ).toBe("February 29, 2024 at 1:00:00 AM");
     });
 
-    it("falls back to UTC when an invalid timezone is provided", () => {
+    // ECMA-402 and Temporal throw RangeError for an unknown zone, so a typo is the sentinel, never UTC.
+    it.each`
+      timeZone
+      ${"Invalid/Zone"}
+      ${"America/New_Yrok"}
+      ${""}
+      ${null}
+    `("returns '' for invalid timeZone $timeZone", ({ timeZone }) => {
       expect(
         formatUnix(REF_MS, MustTestLocales.enUS, {
           dateStyle: "long",
           timeStyle: "long",
-          timeZone: "Invalid/Zone",
+          timeZone,
         }),
-      ).toBe("February 29, 2024 at 12:00:00 AM");
+      ).toBe("");
     });
   });
 
@@ -238,4 +245,29 @@ describe("formatUnix", () => {
       expect(formatUnix(value, locale, options)).toBe(expected);
     },
   );
+});
+
+// ECMA-402 CoerceOptionsToObject throws TypeError for null options (`new Intl.DateTimeFormat("en",
+// null)`), so null is invalid input; undefined is the defaults.
+describe("formatUnix with null options", () => {
+  it("returns an empty string for 1710685845000 with options null", () => {
+    expect(formatUnix(1710685845000, MustTestLocales.enUS, null as never)).toBe(
+      "",
+    );
+  });
+});
+
+// ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale data
+// is used, and a malformed tag anywhere in the list is invalid input. Expected strings from native
+// Intl with the same list (Chromium 153).
+describe("formatUnix with a locale list", () => {
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"17 mars 2024"}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
+  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+    expect(
+      formatUnix(1710685845000, locale as string[], { dateStyle: "long" }),
+    ).toBe(expected);
+  });
 });
