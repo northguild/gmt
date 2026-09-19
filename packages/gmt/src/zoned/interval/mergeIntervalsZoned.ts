@@ -1,7 +1,9 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
 import {
   calendarOfAllZonedValues,
   formatZonedInCalendar,
+  halfOpenMerge,
   parseCalendarZonedValue,
 } from "../../internal";
 import { isValidCalendarZonedInterval } from "./validate";
@@ -12,8 +14,13 @@ import { isValidCalendarZonedInterval } from "./validate";
  * - List-form generalization of `intervalUnionZoned`, which is pairwise only.
  * - Comparison and merging use each interval's instant, so intervals may carry different time
  *   zones.
- * - Intervals are merged when they overlap or share an instant exactly (adjacent intervals
- *   ARE merged).
+ * - Intervals are half-open `[start, end)`, the same rule as `mergeIntervals`. They are merged
+ *   when they overlap or touch (one's `end` is the same instant as the other's `start`), so the
+ *   runs returned never touch.
+ * - An empty interval (`start` and `end` the same instant) holds no instant: it is absorbed when
+ *   it touches or lies inside a run and dropped otherwise, so it never bridges a gap. A list of
+ *   only empty intervals returns `[]`, the same value as invalid input — use
+ *   `isValidCalendarZonedInterval` to tell them apart.
  * - Order of the input list does not matter; the result is sorted by start instant. Each merged
  *   record's `start`/`end` strings carry the time zone of whichever input interval contributed
  *   that boundary.
@@ -21,7 +28,7 @@ import { isValidCalendarZonedInterval } from "./validate";
  * - Returns `[]` when `intervals` is not an array, when any element is not a
  *   `{ start, end }` record of valid ISO ZonedDateTime strings, or when any element has
  *   `start > end` or a leap-second string.
- * - Accepts GMT calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
+ * - Accepts RFC 9557 calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
  *   well as bare ISO ones — E7 (issue #152) — but **rejects a mismatched set**: every endpoint in
  *   the list must name the same calendar system (E7's D4-zoned). This function returns *values*
  *   the caller reads back as datetimes, and an array whose elements carried different calendar
@@ -33,6 +40,8 @@ import { isValidCalendarZonedInterval } from "./validate";
  * @returns the minimum set of non-overlapping `{ start, end }` records, sorted by start, or `[]` on invalid input
  *
  * @example mergeIntervalsZoned([{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-10T00:00:00+00:00[UTC]" }, { start: "2024-01-05T00:00:00+00:00[UTC]", end: "2024-01-15T00:00:00+00:00[UTC]" }]) // [{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-15T00:00:00+00:00[UTC]" }]
+ * @example mergeIntervalsZoned([{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-01-01T12:00:00+00:00[UTC]" }, { start: "2024-01-01T12:00:00+00:00[UTC]", end: "2024-01-01T17:00:00+00:00[UTC]" }]) // [{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-01-01T17:00:00+00:00[UTC]" }] (touching)
+ * @example mergeIntervalsZoned([{ start: "2024-01-01T12:00:00+00:00[UTC]", end: "2024-01-01T12:00:00+00:00[UTC]" }]) // [] (an empty interval holds no instant)
  * @example mergeIntervalsZoned([]) // []
  */
 export function mergeIntervalsZoned(
@@ -70,42 +79,14 @@ export function mergeIntervalsZoned(
       end: parseCalendarZonedValue(interval.end),
     }));
 
-    parsed.sort((a, b) =>
-      Temporal.Instant.compare(a.start.toInstant(), b.start.toInstant()),
+    // Sorted, disjoint, non-touching, non-empty runs; each boundary keeps the ZonedDateTime (and
+    // so the zone) of the interval that contributed it.
+    return halfOpenMerge(parsed, Temporal.ZonedDateTime.compare).map(
+      (interval) => ({
+        start: formatZonedInCalendar(interval.start, calendar),
+        end: formatZonedInCalendar(interval.end, calendar),
+      }),
     );
-
-    const merged: Array<{
-      start: Temporal.ZonedDateTime;
-      end: Temporal.ZonedDateTime;
-    }> = [];
-
-    for (const interval of parsed) {
-      const last = merged[merged.length - 1];
-
-      if (
-        last &&
-        Temporal.Instant.compare(
-          interval.start.toInstant(),
-          last.end.toInstant(),
-        ) <= 0
-      ) {
-        if (
-          Temporal.Instant.compare(
-            interval.end.toInstant(),
-            last.end.toInstant(),
-          ) > 0
-        ) {
-          last.end = interval.end;
-        }
-      } else {
-        merged.push({ start: interval.start, end: interval.end });
-      }
-    }
-
-    return merged.map((interval) => ({
-      start: formatZonedInCalendar(interval.start, calendar),
-      end: formatZonedInCalendar(interval.end, calendar),
-    }));
   } catch {
     return [];
   }

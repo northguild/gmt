@@ -10,8 +10,8 @@ describe("intervalXorAllUnix", () => {
 
     expect(result).toEqual(intervalXorUnix(a.start, a.end, b.start, b.end));
     expect(result).toEqual([
-      { start: 0, end: 1399999999 },
-      { start: 1500000001, end: 1700000000 },
+      { start: 0, end: 1400000000 },
+      { start: 1500000000, end: 1700000000 },
     ]);
   });
 
@@ -47,7 +47,7 @@ describe("intervalXorAllUnix", () => {
   });
 
   it("handles a 3-way overlap, keeping only oddly-covered regions (odd-vs-even sweep)", () => {
-    // A=[0,1000] B=[400,1400] C=[800,1800]: [0,399]=1x, [400,799]=2x, [800,1000]=3x, [1001,1400]=2x, [1401,1800]=1x
+    // A=[0,1000) B=[400,1400) C=[800,1800): [0,400)=1x, [400,800)=2x, [800,1000)=3x, [1000,1400)=2x, [1400,1800)=1x
     expect(
       intervalXorAllUnix([
         { start: 0, end: 1000 },
@@ -55,9 +55,9 @@ describe("intervalXorAllUnix", () => {
         { start: 800, end: 1800 },
       ]),
     ).toEqual([
-      { start: 0, end: 399 },
+      { start: 0, end: 400 },
       { start: 800, end: 1000 },
-      { start: 1401, end: 1800 },
+      { start: 1400, end: 1800 },
     ]);
   });
 
@@ -69,9 +69,9 @@ describe("intervalXorAllUnix", () => {
         { start: 400, end: 1400 },
       ]),
     ).toEqual([
-      { start: 0, end: 399 },
+      { start: 0, end: 400 },
       { start: 800, end: 1000 },
-      { start: 1401, end: 1800 },
+      { start: 1400, end: 1800 },
     ]);
   });
 
@@ -101,16 +101,20 @@ describe("intervalXorAllUnix", () => {
     expect(intervalXorAllUnix(intervals)).toEqual([]);
   });
 
-  // Closed integer intervals: each expected run is the values covered an odd number of times,
-  // merged into maximal runs. The last row ends at Number.MAX_SAFE_INTEGER (2^53 - 1).
+  // Half-open [start, end): each expected run is the values covered an odd number of times, merged
+  // into maximal runs (coding-standards § 8; A = 2024-01-01T09:00Z, B = 12:00Z, C = 13:00Z,
+  // D = 17:00Z in ms). The range-edge row (CORE-6) ends at Number.MAX_SAFE_INTEGER (2^53 - 1).
   it.each`
     intervals                                                                                                   | expected
-    ${[{ start: 0, end: 10 }, { start: 3, end: 5 }]}                                                            | ${[{ start: 0, end: 2 }, { start: 6, end: 10 }]}
-    ${[{ start: 0, end: 5 }, { start: 5, end: 10 }]}                                                            | ${[{ start: 0, end: 4 }, { start: 6, end: 10 }]}
-    ${[{ start: 0, end: 3 }, { start: 4, end: 6 }]}                                                             | ${[{ start: 0, end: 6 }]}
-    ${[{ start: 9007199254740980, end: 9007199254740991 }, { start: 9007199254740985, end: 9007199254740991 }]} | ${[{ start: 9007199254740980, end: 9007199254740984 }]}
+    ${[{ start: 1704099600000, end: 1704114000000 }, { start: 1704110400000, end: 1704128400000 }]}             | ${[{ start: 1704099600000, end: 1704110400000 }, { start: 1704114000000, end: 1704128400000 }]}
+    ${[{ start: 0, end: 10 }, { start: 3, end: 5 }]}                                                            | ${[{ start: 0, end: 3 }, { start: 5, end: 10 }]}
+    ${[{ start: 0, end: 5 }, { start: 5, end: 10 }]}                                                            | ${[{ start: 0, end: 10 }]}
+    ${[{ start: 0, end: 3 }, { start: 4, end: 6 }]}                                                             | ${[{ start: 0, end: 3 }, { start: 4, end: 6 }]}
+    ${[{ start: 0, end: 10 }, { start: 5, end: 5 }]}                                                            | ${[{ start: 0, end: 10 }]}
+    ${[{ start: 5, end: 5 }]}                                                                                   | ${[]}
+    ${[{ start: 9007199254740980, end: 9007199254740991 }, { start: 9007199254740985, end: 9007199254740991 }]} | ${[{ start: 9007199254740980, end: 9007199254740985 }]}
   `(
-    "returns $expected for closed integer intervals $intervals",
+    "returns $expected for half-open integer intervals $intervals",
     ({ intervals, expected }) => {
       expect(intervalXorAllUnix(intervals)).toEqual(expected);
     },

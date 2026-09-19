@@ -1,4 +1,5 @@
 import { MustTestLocales } from "../../test/localeMatrix";
+import { parseDuration } from "../parse/parseDuration";
 import { formatDuration } from "./formatDuration";
 
 describe("formatDuration", () => {
@@ -48,6 +49,55 @@ describe("formatDuration", () => {
     expect(formatDuration(value, "en-US")).toBe(expected);
   });
 
+  // Expected values come from the runtime's own Intl.NumberFormat (unit style,
+  // maximumFractionDigits: 9, decimal-string input) and Intl.ListFormat, called directly.
+  // Temporal allows 9 fraction digits on seconds up to 2^53 - 1 (IsValidDuration), so the
+  // rendering must carry every digit the duration holds: no rounding, no float sum.
+  it.each`
+    value                              | style       | locale                  | expected
+    ${"PT0.000000001S"}                | ${"long"}   | ${MustTestLocales.enUS} | ${"0.000000001 seconds"}
+    ${"PT0.0004S"}                     | ${"long"}   | ${MustTestLocales.enUS} | ${"0.0004 seconds"}
+    ${"PT1M0.0001S"}                   | ${"long"}   | ${MustTestLocales.enUS} | ${"1 minute and 0.0001 seconds"}
+    ${"PT1.123456789S"}                | ${"long"}   | ${MustTestLocales.enUS} | ${"1.123456789 seconds"}
+    ${"PT1.0005S"}                     | ${"long"}   | ${MustTestLocales.enUS} | ${"1.0005 seconds"}
+    ${"PT9007199254740991.999999999S"} | ${"long"}   | ${MustTestLocales.enUS} | ${"9,007,199,254,740,991.999999999 seconds"}
+    ${"-PT0.000000001S"}               | ${"long"}   | ${MustTestLocales.enUS} | ${"-0.000000001 seconds"}
+    ${"PT0.000000001S"}                | ${"narrow"} | ${MustTestLocales.enUS} | ${"0.000000001s"}
+    ${"PT1.123456789S"}                | ${"long"}   | ${MustTestLocales.deDE} | ${"1,123456789 Sekunden"}
+  `(
+    "renders sub-second $value exactly ($style, $locale) as $expected",
+    ({ value, style, locale, expected }) => {
+      expect(formatDuration(value, locale, { style })).toBe(expected);
+    },
+  );
+
+  // Compatibility path for callers who relied on the pre-fix 3-digit rendering: round to the
+  // millisecond first. "halfExpand" reproduces Intl.NumberFormat's default rounding mode; the
+  // parseDuration default ("trunc") drops the extra digits instead.
+  it.each`
+    value               | roundingMode    | expected
+    ${"PT1.123456789S"} | ${undefined}    | ${"1.123 seconds"}
+    ${"PT1.0005S"}      | ${undefined}    | ${"1 second"}
+    ${"PT1.0005S"}      | ${"halfExpand"} | ${"1.001 seconds"}
+    ${"PT0.0004S"}      | ${"halfExpand"} | ${"0 seconds"}
+  `(
+    "renders $value rounded to milliseconds first (roundingMode $roundingMode) as $expected",
+    ({ value, roundingMode, expected }) => {
+      expect(
+        formatDuration(
+          parseDuration(value, { smallestUnit: "millisecond", roundingMode }),
+          "en-US",
+        ),
+      ).toBe(expected);
+    },
+  );
+
+  it("renders the zero seconds of a negative duration as 0, not -0, when zero: true", () => {
+    expect(formatDuration("-PT1H", "en-US", { zero: true })).toBe(
+      "0 years, 0 months, 0 weeks, 0 days, -1 hour, 0 minutes, and 0 seconds",
+    );
+  });
+
   it("omits zero-valued components by default", () => {
     expect(formatDuration("P1DT0H30M", "en-US")).toBe("1 day and 30 minutes");
   });
@@ -89,5 +139,16 @@ describe("formatDuration", () => {
     ${{ days: 1 }}
   `("returns an empty string for non-string input $value", ({ value }) => {
     expect(formatDuration(value as never)).toBe("");
+  });
+
+  // ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale data
+  // is used, and a malformed tag anywhere in the list is invalid input. Expected strings from native
+  // Intl with the same list.
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"1 jour, 2 heures et 30 minutes"}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
+  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+    expect(formatDuration("P1DT2H30M", locale)).toBe(expected);
   });
 });

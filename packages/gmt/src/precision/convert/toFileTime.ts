@@ -16,9 +16,11 @@ import {
  *   either side of the epoch. Reach for `truncateNanoseconds` first if the caller needs to
  *   see the loss.
  * - **The range is the format's own, and instants outside it are invalid input, not a
- *   negative tick count.** `FILETIME` is a pair of `DWORD`s, so it holds `0n` to `2^64 − 1` —
- *   1601-01-01 to `+060056-05-28T05:36:10.9551615Z`. Consumers commonly narrow this further:
- *   .NET's `DateTime.FromFileTimeUtc` stops at 9999-12-31.
+ *   negative tick count.** The range is `0n` to `2^63 − 1` — 1601-01-01 to
+ *   `+030828-09-14T02:48:05.4775807Z`. The struct's two `DWORD`s could hold more, but
+ *   Microsoft's `FileTimeToSystemTime` requires a value "less than 0x8000000000000000", and
+ *   `SetFileTime` reserves `2^64 − 1` as a "do not modify" marker. Consumers commonly narrow
+ *   this further: .NET's `DateTime.FromFileTimeUtc` stops at 9999-12-31.
  * - Returns `0n` on invalid input. `0n` is also the FILETIME epoch itself (1601-01-01) —
  *   validate the string first with `isValidInstant` when the two must be told apart.
  *
@@ -30,6 +32,8 @@ import {
  * @example toFileTime("2024-03-10T12:34:56.789Z") // 133545476967890000n
  * @example toFileTime("2024-03-10T12:00:00.123456789Z") // 133545456001234567n — floors to 100 ns
  * @example toFileTime("1600-12-31T23:59:59Z") // 0n — before the FILETIME epoch
+ * @example toFileTime("+030828-09-14T02:48:05.4775807Z") // 9223372036854775807n — 2^63 − 1, the largest FILETIME
+ * @example toFileTime("+030828-09-14T02:48:05.4775808Z") // 0n — 2^63, which FileTimeToSystemTime rejects
  * @example toFileTime("2024-03-10T12:00:00") // 0n — no offset designator
  * @example toFileTime("invalid") // 0n
  */

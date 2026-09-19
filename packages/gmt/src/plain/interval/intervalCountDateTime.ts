@@ -1,10 +1,10 @@
+// fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "@js-temporal/polyfill";
 import { getUnitSpan, resolveDateTimeUnit } from "../../internal";
 import {
   getStartOfDateTimeUnit,
   getStartOfNextDateTimeUnit,
 } from "../../internal/dateTimeUnitHelpers";
-import { plainDateTime } from "../../regex";
 import type { DateTimeUnit } from "../../types";
 import {
   isValidDateTime,
@@ -68,8 +68,8 @@ function startOfNextUnit(
  *   from `diffDateTime`, which measures exact elapsed duration. An interval from 23:59 to
  *   00:01 is two minutes long but touches 2 day boundaries.
  * - The end boundary is excluded: `"2024-01-01T00:00:00"` to `"2024-01-03T00:00:00"` counts 2 days.
- * - A zero-length interval counts 1 when it sits mid-unit and 0 when it sits exactly on a
- *   unit boundary.
+ * - A zero-length interval (`start === end`) returns `0`: the empty `[start, start)` holds no instant,
+ *   so it touches no unit (before 1.16.0 it counted 1 when mid-unit).
  * - Weeks start on Monday (ISO 8601).
  * - A unit that began before the first representable PlainDateTime
  *   (`-271821-04-19T00:00:00.000000001`) is still counted: whole units are measured from the unit
@@ -85,8 +85,7 @@ function startOfNextUnit(
  * @example intervalCountDateTime("2024-01-01T23:59:00", "2024-01-02T00:01:00", "day") // 2
  * @example intervalCountDateTime("2024-01-01T00:00:00", "2024-01-03T00:00:00", "day") // 2
  * @example intervalCountDateTime("2024-01-01T10:30:00", "2024-01-01T12:00:00", "hour") // 2
- * @example intervalCountDateTime("2024-01-01T05:00:00", "2024-01-01T05:00:00", "day") // 1 (zero-length, mid-day)
- * @example intervalCountDateTime("2024-01-01T00:00:00", "2024-01-01T00:00:00", "day") // 0 (zero-length, on the boundary)
+ * @example intervalCountDateTime("2024-01-01T05:00:00", "2024-01-01T05:00:00", "day") // 0 (zero-length: holds no instant)
  * @example intervalCountDateTime("invalid", "2024-01-02T00:00:00", "day") // null
  */
 export function intervalCountDateTime(
@@ -95,10 +94,6 @@ export function intervalCountDateTime(
   unit: string,
 ): number | null {
   if (typeof start !== "string" || typeof end !== "string") {
-    return null;
-  }
-
-  if (!plainDateTime.test(start) || !plainDateTime.test(end)) {
     return null;
   }
 
@@ -120,8 +115,15 @@ export function intervalCountDateTime(
     const startVal = Temporal.PlainDateTime.from(start);
     const endVal = Temporal.PlainDateTime.from(end);
 
-    if (Temporal.PlainDateTime.compare(startVal, endVal) > 0) {
+    const order = Temporal.PlainDateTime.compare(startVal, endVal);
+
+    if (order > 0) {
       return null;
+    }
+
+    // An empty interval [t, t) holds no instant, so it touches no unit (CORE-6 empty-interval rule).
+    if (order === 0) {
+      return 0;
     }
 
     const startOfEnd = startOfUnitIfRepresentable(endVal, resolvedUnit);

@@ -1,6 +1,10 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { floorToZone } from "../../calendar/calculate/floorToZone";
-import { battleTestTimeZones } from "../../test";
+import {
+  battleTestTimeZones,
+  dateLineCrossingAt,
+  dateLineCrossingTimeZones,
+} from "../../test";
 import { endOfZoned } from "./endOfZoned";
 import { startOfZoned } from "./startOfZoned";
 
@@ -90,109 +94,65 @@ describe("startOfZoned", () => {
     );
   });
 
-  // `disambiguation` is deprecated and ignored: a boundary is always the real bucket start, as
-  // TC39's `startOfDay()` takes no options. The source sits in the second, repeated 1am, so every
-  // row — "reject" included — starts the hour the source is in. Verified against `floorToZone` on
+  // A boundary is always the real bucket start, as TC39's `startOfDay()` gives. The source sits in
+  // the second, repeated 1am, so the hour starts at its own 01:00. Verified against `floorToZone` on
   // @js-temporal/polyfill@0.5.1.
   it.each`
-    value                                            | disambiguation  | expected
-    ${"2024-11-03T01:45:00-05:00[America/New_York]"} | ${undefined}    | ${"2024-11-03T01:00:00-05:00[America/New_York]"}
-    ${"2024-11-03T01:45:00-05:00[America/New_York]"} | ${"compatible"} | ${"2024-11-03T01:00:00-05:00[America/New_York]"}
-    ${"2024-11-03T01:45:00-05:00[America/New_York]"} | ${"earlier"}    | ${"2024-11-03T01:00:00-05:00[America/New_York]"}
-    ${"2024-11-03T01:45:00-05:00[America/New_York]"} | ${"later"}      | ${"2024-11-03T01:00:00-05:00[America/New_York]"}
-    ${"2024-11-03T01:45:00-05:00[America/New_York]"} | ${"reject"}     | ${"2024-11-03T01:00:00-05:00[America/New_York]"}
-    ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}    | ${undefined}    | ${"2024-10-27T02:00:00+01:00[Europe/Berlin]"}
-    ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}    | ${"compatible"} | ${"2024-10-27T02:00:00+01:00[Europe/Berlin]"}
-    ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}    | ${"earlier"}    | ${"2024-10-27T02:00:00+01:00[Europe/Berlin]"}
-    ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}    | ${"later"}      | ${"2024-10-27T02:00:00+01:00[Europe/Berlin]"}
-    ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}    | ${"reject"}     | ${"2024-10-27T02:00:00+01:00[Europe/Berlin]"}
+    value                                            | expected
+    ${"2024-11-03T01:45:00-05:00[America/New_York]"} | ${"2024-11-03T01:00:00-05:00[America/New_York]"}
+    ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}    | ${"2024-10-27T02:00:00+01:00[Europe/Berlin]"}
   `(
-    "returns the real hour start $expected for fall-back overlap $value with ignored disambiguation $disambiguation",
-    ({ value, disambiguation, expected }) => {
-      const optionsArg =
-        disambiguation === undefined ? undefined : { disambiguation };
-      expect(startOfZoned(value, "hour", optionsArg)).toBe(expected);
+    "returns the real hour start $expected for fall-back overlap $value",
+    ({ value, expected }) => {
+      expect(startOfZoned(value, "hour")).toBe(expected);
     },
   );
 
-  // `offset` is deprecated and ignored too, alone or combined with `disambiguation: "reject"`.
-  it.each`
-    offset       | expected
-    ${undefined} | ${"2024-11-03T01:00:00-05:00[America/New_York]"}
-    ${"ignore"}  | ${"2024-11-03T01:00:00-05:00[America/New_York]"}
-    ${"prefer"}  | ${"2024-11-03T01:00:00-05:00[America/New_York]"}
-    ${"use"}     | ${"2024-11-03T01:00:00-05:00[America/New_York]"}
-    ${"reject"}  | ${"2024-11-03T01:00:00-05:00[America/New_York]"}
-  `(
-    "returns the real hour start $expected with disambiguation reject and ignored offset $offset",
-    ({ offset, expected }) => {
-      const optionsArg =
-        offset === undefined
-          ? { disambiguation: "reject" as const }
-          : { disambiguation: "reject" as const, offset };
-      expect(
-        startOfZoned(
-          "2024-11-03T01:45:00-05:00[America/New_York]",
-          "hour",
-          optionsArg,
-        ),
-      ).toBe(expected);
-    },
-  );
+  // `disambiguation` and `offset` were removed in 1.16.0: they were ignored, because a boundary is
+  // always a real instant and TC39's `startOfDay()` takes neither. Passing one is a type error, and a
+  // JavaScript caller's stray property changes nothing.
+  it("treats the removed disambiguation option as a type error and ignores it at runtime", () => {
+    expect(
+      startOfZoned("2024-11-03T01:45:00-05:00[America/New_York]", "hour", {
+        // @ts-expect-error -- `disambiguation` was removed in 1.16.0
+        disambiguation: "reject",
+      }),
+    ).toBe("2024-11-03T01:00:00-05:00[America/New_York]");
+  });
+  it("treats the removed offset option as a type error and ignores it at runtime", () => {
+    expect(
+      startOfZoned("2024-11-03T01:45:00-05:00[America/New_York]", "hour", {
+        // @ts-expect-error -- `offset` was removed in 1.16.0
+        offset: "reject",
+      }),
+    ).toBe("2024-11-03T01:00:00-05:00[America/New_York]");
+  });
 
   // Local midnight itself is a DST gap (America/Sao_Paulo jumped 00:00 -> 01:00 on 2018-11-04), so
-  // the day starts at its first real instant, 01:00 — Temporal's `startOfDay()` — whatever
-  // `disambiguation` says. Verified on @js-temporal/polyfill@0.5.1.
-  it.each`
-    disambiguation  | expected
-    ${undefined}    | ${"2018-11-04T01:00:00-02:00[America/Sao_Paulo]"}
-    ${"compatible"} | ${"2018-11-04T01:00:00-02:00[America/Sao_Paulo]"}
-    ${"earlier"}    | ${"2018-11-04T01:00:00-02:00[America/Sao_Paulo]"}
-    ${"later"}      | ${"2018-11-04T01:00:00-02:00[America/Sao_Paulo]"}
-    ${"reject"}     | ${"2018-11-04T01:00:00-02:00[America/Sao_Paulo]"}
-  `(
-    "returns the day's first real instant $expected across a midnight gap with ignored disambiguation $disambiguation",
-    ({ disambiguation, expected }) => {
-      const optionsArg =
-        disambiguation === undefined ? undefined : { disambiguation };
-      expect(
-        startOfZoned(
-          "2018-11-04T12:00:00-02:00[America/Sao_Paulo]",
-          "day",
-          optionsArg,
-        ),
-      ).toBe(expected);
-    },
-  );
+  // the day starts at its first real instant, 01:00 — Temporal's `startOfDay()`. Verified on
+  // @js-temporal/polyfill@0.5.1.
+  it("returns the day's first real instant across a midnight gap", () => {
+    expect(
+      startOfZoned("2018-11-04T12:00:00-02:00[America/Sao_Paulo]", "day"),
+    ).toBe("2018-11-04T01:00:00-02:00[America/Sao_Paulo]");
+  });
 
   // A Sunday week in America/Sao_Paulo starts on 2018-11-04, whose midnight is a gap. The week
-  // starts at that Sunday's first real instant; `disambiguation: "reject"` no longer yields "".
-  it("returns the week's first real instant across a midnight gap with ignored disambiguation reject", () => {
+  // starts at that Sunday's first real instant.
+  it("returns the week's first real instant across a midnight gap", () => {
     expect(
       startOfZoned("2018-11-06T12:00:00-02:00[America/Sao_Paulo]", "week", {
         weekStartsOn: "sunday",
-        disambiguation: "reject",
       }),
     ).toBe("2018-11-04T01:00:00-02:00[America/Sao_Paulo]");
   });
 
-  // disambiguation has no effect on a spring-forward gap when the source itself was constructed via a valid pre/post-transition offset (arithmetic/field-set already lands on a valid instant)
-  it.each`
-    disambiguation
-    ${"compatible"}
-    ${"earlier"}
-    ${"later"}
-    ${"reject"}
-  `(
-    "returns the same start-of-day result regardless of disambiguation $disambiguation when no boundary jump crosses a transition",
-    ({ disambiguation }) => {
-      expect(
-        startOfZoned("2024-03-10T12:00:00-04:00[America/New_York]", "day", {
-          disambiguation,
-        }),
-      ).toBe("2024-03-10T00:00:00-05:00[America/New_York]");
-    },
-  );
+  // A spring-forward day whose midnight exists starts at that midnight, in the pre-transition offset.
+  it("returns the start of a spring-forward day at its real midnight", () => {
+    expect(
+      startOfZoned("2024-03-10T12:00:00-04:00[America/New_York]", "day"),
+    ).toBe("2024-03-10T00:00:00-05:00[America/New_York]");
+  });
 });
 
 // The start is the real zone boundary — the
@@ -232,87 +192,24 @@ describe("startOfZoned across zone transitions with default options", () => {
   });
 
   // Goose Bay fell back at 00:01 Sunday into Saturday 23:01, re-opening a Sunday-first week that
-  // starts at 23:01 (-04:00). An explicit `disambiguation` used to return the previous Sunday's
-  // midnight, a week before the input; it is now ignored. Verified against the
-  // `internal/zonedBucket.ts` walker (weekStartsOn 7) on @js-temporal/polyfill@0.5.1.
-  it.each`
-    options                                                     | expected
-    ${{ weekStartsOn: "sunday" }}                               | ${"2010-11-06T23:01:00-04:00[America/Goose_Bay]"}
-    ${{ weekStartsOn: "sunday", disambiguation: "compatible" }} | ${"2010-11-06T23:01:00-04:00[America/Goose_Bay]"}
-  `(
-    "returns $expected for Goose Bay's re-opened Sunday week with $options",
-    ({ options, expected }) => {
-      expect(
-        startOfZoned(
-          "2010-11-06T23:30:00-04:00[America/Goose_Bay]",
-          "week",
-          options,
-        ),
-      ).toBe(expected);
-    },
-  );
+  // starts at 23:01 (-04:00). Verified against the `internal/zonedBucket.ts` walker (weekStartsOn 7)
+  // on @js-temporal/polyfill@0.5.1.
+  it("returns 2010-11-06T23:01:00-04:00 for Goose Bay's re-opened Sunday week", () => {
+    expect(
+      startOfZoned("2010-11-06T23:30:00-04:00[America/Goose_Bay]", "week", {
+        weekStartsOn: "sunday",
+      }),
+    ).toBe("2010-11-06T23:01:00-04:00[America/Goose_Bay]");
+  });
 
-  // Regression: explicit `offset` or `disambiguation` used to opt into wall-clock `.with()`, which
-  // moved Chatham's never-happened local 03:00 forward to 04:00 — after the 03:50 input. Both are
-  // now ignored and the start is the real 03:45 boundary. Verified against `floorToZone` on
+  // Chatham's local 03:00 never happened on 2024-09-29, so the hour holding 03:50 starts at the
+  // real 03:45 boundary, never after the input. Verified against `floorToZone` on
   // @js-temporal/polyfill@0.5.1.
-  it.each`
-    options                                           | expected
-    ${{ offset: "ignore" }}                           | ${"2024-09-29T03:45:00+13:45[Pacific/Chatham]"}
-    ${{ disambiguation: "compatible" }}               | ${"2024-09-29T03:45:00+13:45[Pacific/Chatham]"}
-    ${{ disambiguation: "reject", offset: "reject" }} | ${"2024-09-29T03:45:00+13:45[Pacific/Chatham]"}
-  `(
-    "returns the real boundary $expected for Chatham's skipped hour with ignored $options",
-    ({ options, expected }) => {
-      expect(
-        startOfZoned(
-          "2024-09-29T03:50:00+13:45[Pacific/Chatham]",
-          "hour",
-          options,
-        ),
-      ).toBe(expected);
-    },
-  );
-});
-
-// The deprecated options never change a boundary: every explicit `disambiguation`/`offset` value
-// gives exactly the no-options output, at probe-zone transitions for every bucketing unit.
-describe("startOfZoned and endOfZoned ignore the deprecated resolution options", () => {
-  const explicitOptions = [
-    { disambiguation: "compatible" },
-    { disambiguation: "earlier" },
-    { disambiguation: "later" },
-    { disambiguation: "reject" },
-    { offset: "prefer" },
-    { offset: "use" },
-    { offset: "ignore" },
-    { offset: "reject" },
-    { disambiguation: "reject", offset: "reject" },
-  ] as const;
-
-  it.each`
-    value
-    ${"2024-09-29T03:50:00+13:45[Pacific/Chatham]"}
-    ${"2024-11-03T01:30:00-05:00[America/New_York]"}
-    ${"2024-11-03T00:30:00-05:00[America/Havana]"}
-    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"}
-    ${"2018-11-04T12:00:00-02:00[America/Sao_Paulo]"}
-  `(
-    "returns identical output to no options for $value by hour/day/week/month",
-    ({ value }) => {
-      for (const unit of ["hour", "day", "week", "month"] as const) {
-        for (const options of explicitOptions) {
-          const label = `${unit} with ${JSON.stringify(options)}`;
-          expect(startOfZoned(value, unit, options), label).toBe(
-            startOfZoned(value, unit),
-          );
-          expect(endOfZoned(value, unit, options), label).toBe(
-            endOfZoned(value, unit),
-          );
-        }
-      }
-    },
-  );
+  it("returns the real boundary 2024-09-29T03:45:00+13:45 for Chatham's skipped hour", () => {
+    expect(
+      startOfZoned("2024-09-29T03:50:00+13:45[Pacific/Chatham]", "hour"),
+    ).toBe("2024-09-29T03:45:00+13:45[Pacific/Chatham]");
+  });
 });
 
 // Invariant over every battle-test zone, sampled on either side of its first 2024 transition
@@ -401,6 +298,81 @@ describe("startOfZoned at the maximum instant", () => {
     "returns $expected for the $unit of $value",
     ({ value, unit, expected }) => {
       expect(startOfZoned(value, unit)).toBe(expected);
+    },
+  );
+
+  // Temporal §13.17 GetTemporalUnitValuedOption: a plural unit name is the same unit as its singular.
+  it.each`
+    unit              | expected
+    ${"years"}        | ${"2024-01-01T00:00:00+01:00[Europe/Berlin]"}
+    ${"months"}       | ${"2024-02-01T00:00:00+01:00[Europe/Berlin]"}
+    ${"weeks"}        | ${"2024-02-26T00:00:00+01:00[Europe/Berlin]"}
+    ${"days"}         | ${"2024-02-29T00:00:00+01:00[Europe/Berlin]"}
+    ${"hours"}        | ${"2024-02-29T13:00:00+01:00[Europe/Berlin]"}
+    ${"minutes"}      | ${"2024-02-29T13:45:00+01:00[Europe/Berlin]"}
+    ${"seconds"}      | ${"2024-02-29T13:45:30+01:00[Europe/Berlin]"}
+    ${"milliseconds"} | ${"2024-02-29T13:45:30.123+01:00[Europe/Berlin]"}
+    ${"microseconds"} | ${"2024-02-29T13:45:30.123456+01:00[Europe/Berlin]"}
+    ${"nanoseconds"}  | ${"2024-02-29T13:45:30.123456789+01:00[Europe/Berlin]"}
+  `(
+    "returns $expected for plural unit $unit on 2024-02-29T13:45:30.123456789+01:00[Europe/Berlin]",
+    ({ unit, expected }) => {
+      expect(
+        startOfZoned(
+          "2024-02-29T13:45:30.123456789+01:00[Europe/Berlin]",
+          unit,
+        ),
+      ).toBe(expected);
+    },
+  );
+
+  // weekStartsOn only names "monday" or "sunday"; any other value is invalid input, for every unit
+  // (Temporal GetOption rejects a value outside its allowed list; undefined means the default).
+  it.each`
+    unit      | weekStartsOn
+    ${"week"} | ${"tuesday"}
+    ${"week"} | ${"Monday"}
+    ${"week"} | ${""}
+    ${"week"} | ${null}
+    ${"week"} | ${1}
+    ${"week"} | ${true}
+    ${"day"}  | ${"tuesday"}
+    ${"day"}  | ${"Monday"}
+    ${"day"}  | ${""}
+    ${"day"}  | ${null}
+    ${"day"}  | ${1}
+    ${"day"}  | ${true}
+  `(
+    "returns an empty string for unit $unit with invalid weekStartsOn $weekStartsOn",
+    ({ unit, weekStartsOn }) => {
+      expect(
+        startOfZoned(
+          "2024-02-29T13:45:30.123456789+01:00[Europe/Berlin]",
+          unit,
+          { weekStartsOn },
+        ),
+      ).toBe("");
+    },
+  );
+});
+
+// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
+// are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
+// 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
+
+describe("startOfZoned across the 1844 date-line crossings (zoned.E)", () => {
+  it.each(dateLineCrossingTimeZones)(
+    "starts the week of 1845-01-02T12:00 in $timeZone on Monday 1844-12-30",
+    (crossing) => {
+      const monday = dateLineCrossingAt(crossing, -24);
+      expect(monday.dayOfWeek).toBe(1);
+      expect(
+        startOfZoned(dateLineCrossingAt(crossing, 36).toString(), "week"),
+      ).toBe(monday.toString());
+      expect(
+        startOfZoned(dateLineCrossingAt(crossing, -12).toString(), "day"),
+      ).toBe(monday.toString());
     },
   );
 });

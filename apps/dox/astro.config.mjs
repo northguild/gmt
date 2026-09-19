@@ -6,6 +6,7 @@ import { defineConfig } from "astro/config";
 import { fileURLToPath } from "node:url";
 import { referenceSidebar } from "./src/generated/reference/sidebar.ts";
 import rehypeExternalLinks from "./src/lib/rehype-external-links.ts";
+import { gmtReferenceWatch } from "./src/lib/gmt-reference-watch.ts";
 
 // DOX-A2 deploys to Cloudflare Workers' default *.workers.dev subdomain (no
 // custom domain yet). `site` must be set or @astrojs/sitemap (a Starlight
@@ -49,6 +50,9 @@ export default defineConfig({
     },
   },
   integrations: [
+    // Dev only (its hook is `astro:server:setup`): regenerates the API reference
+    // when gmt source changes, so a JSDoc edit shows up without a restart.
+    gmtReferenceWatch(),
     react(),
     starlight({
       title: "@northguild/gmt",
@@ -133,6 +137,7 @@ export default defineConfig({
           label: "Start here",
           items: [
             { slug: "why-gmt" },
+            { slug: "upstream" },
             { slug: "core-rules" },
             { slug: "install" },
           ],

@@ -9,9 +9,12 @@ import type { Temporal } from "@js-temporal/polyfill";
  * `getWeeksInMonth` (row for the month's last day, i.e. the row count).
  * Week 1 is the row containing the 1st of the month, even when that row
  * is a partial week (date-fns's `getWeekOfMonth` convention).
+ *
+ * Only the weekday of the 1st is read, so callers may pass `{ dayOfWeek }` without building a
+ * date that could lie before the representable range (April 1 of -271821).
  */
 export function monthGridWeekRow(
-  firstOfMonth: Temporal.PlainDate,
+  firstOfMonth: Pick<Temporal.PlainDate, "dayOfWeek">,
   firstDay: number,
   dayInMonth: number,
 ): number {

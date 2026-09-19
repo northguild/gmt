@@ -37,6 +37,20 @@ describe("repros", () => {
     },
   );
 
+  // D10 (tc39/proposal-temporal#3329): fields -> ISO across a 5-day month 13 in a far year, where
+  // a fixed 8-day search step skips the month. Chromium 153 native Temporal: ethioaa 18196 (coptic
+  // 12420 + 5776) month 13 day 1 is +012704-11-26, and month 12 day 30 the day before.
+  it.each`
+    calendar     | name                  | expected
+    ${"ethioaa"} | ${"fieldsFarMonth13"} | ${"+012704-11-26"}
+    ${"ethioaa"} | ${"fieldsFarMonth12"} | ${"+012704-11-25"}
+  `(
+    "D10 $name for $calendar expects Chromium's $expected",
+    ({ calendar, name, expected }) => {
+      expect(findRepro("D10", calendar, name)?.expected).toBe(expected);
+    },
+  );
+
   // Reads are `year|monthCode|day` (D8: `era|eraYear`; D3: `monthsInYear`).
   it.each`
     defect  | calendar      | name               | expected            | source
@@ -81,13 +95,15 @@ describe("repros", () => {
     },
   );
 
-  // D6: test262 wrapping-at-end-of-month-{hebrew,ethioaa}.js; the others are Chromium 152 grid rows.
+  // D6: test262 wrapping-at-end-of-month-{hebrew,ethioaa}.js; the others are Chromium 152 grid rows,
+  // and gregory is Chromium 153 (gregory joined CalendarSystem in CORE-8).
   // D7 mixedSign: Chromium 152 grid, ISO 2024-02-11 + 384 days by years.
   // D7 leapMonthEnd: Chromium and NonISODateSurpasses (unconstrained day 30 > 29), per
   // js-temporal-polyfill-bugs.md § C (C-D7b).
   it.each`
     defect  | calendar              | name              | expected
     ${"D6"} | ${"buddhist"}         | ${"monthEnd"}     | ${"P30D"}
+    ${"D6"} | ${"gregory"}          | ${"monthEnd"}     | ${"P30D"}
     ${"D6"} | ${"japanese"}         | ${"monthEnd"}     | ${"P30D"}
     ${"D6"} | ${"roc"}              | ${"monthEnd"}     | ${"P30D"}
     ${"D6"} | ${"persian"}          | ${"monthEnd"}     | ${"P30D"}
@@ -108,8 +124,8 @@ describe("repros", () => {
     },
   );
 
-  // Zoned range-limit repros (upstream-issue drafts A, B, D). Chromium 153 native Temporal; the
-  // min.* rows are the minimum edge that polyfill 05ce7a3 does not fix.
+  // Zoned repros (upstream-issue drafts A, B, D; zoned.E is js-temporal#372). Chromium 153 native
+  // Temporal; the min.* rows are the minimum edge that polyfill 05ce7a3 does not fix.
   it.each`
     defect       | name                            | expected
     ${"zoned.A"} | ${"max.parseSydney"}            | ${"+275760-09-13T09:00:00+10:00[Australia/Sydney]"}
@@ -127,10 +143,31 @@ describe("repros", () => {
     ${"zoned.B"} | ${"max.hoursInDaySantiago"}     | ${"23"}
     ${"zoned.D"} | ${"max.untilUtcRounded"}        | ${"RangeError"}
     ${"zoned.D"} | ${"max.totalUtc"}               | ${"RangeError"}
+    ${"zoned.E"} | ${"pre1847.nextManila"}         | ${"1845-01-01T00:00:00+08:04[Asia/Manila]"}
+    ${"zoned.E"} | ${"pre1847.previousManila"}     | ${"1845-01-01T00:00:00+08:04[Asia/Manila]"}
+    ${"zoned.E"} | ${"pre1847.previousGuam"}       | ${"1845-01-01T00:00:00+09:39[Pacific/Guam]"}
+    ${"zoned.E"} | ${"pre1847.hoursInDayManila"}   | ${"24"}
+    ${"zoned.E"} | ${"pre1847.startOfDayManila"}   | ${"1845-01-01T00:00:00+08:04[Asia/Manila]"}
   `(
     "$defect $name expects Chromium's $expected",
     ({ defect, name, expected }) => {
       expect(findRepro(defect, "iso8601", name)?.expected).toBe(expected);
+    },
+  );
+
+  // D9: 1,200 months from M03 day 5. Persian: 12 months in every year (Intl era/monthCode proposal
+  // §4.1.4 Table 3), so 100 years. Hebrew: the Dershowitz–Reingold count floor((235y − 234) / 19)
+  // lands on 5881 ordinal 3, a common year.
+  it.each`
+    calendar     | name             | expected
+    ${"persian"} | ${"addMonths"}   | ${"1502|M03|5"}
+    ${"persian"} | ${"untilMonths"} | ${"P1200M"}
+    ${"hebrew"}  | ${"addMonths"}   | ${"5881|M03|5"}
+    ${"hebrew"}  | ${"untilMonths"} | ${"P1200M"}
+  `(
+    "D9 $name for $calendar expects $expected",
+    ({ calendar, name, expected }) => {
+      expect(findRepro("D9", calendar, name)?.expected).toBe(expected);
     },
   );
 
@@ -149,38 +186,45 @@ describe("repros", () => {
 describe("reproPasses", () => {
   // The recorded polyfill 0.5.1 + Node ICU 78.3 output for each repro reads as "defect present".
   it.each`
-    defect       | calendar           | name                        | recorded
-    ${"D1"}      | ${"hebrew"}        | ${"fieldsMax"}              | ${"ERR RangeError: Invalid ISO date: +275760-09-19T00:00Z"}
-    ${"D1"}      | ${"islamic-civil"} | ${"fieldsMin"}              | ${"ERR RangeError: Invalid ISO date: -271821-01-01T00:00Z"}
-    ${"D1"}      | ${"persian"}       | ${"fieldsMin"}              | ${"ERR RangeError: Invalid ISO date: -271821-01-01T00:00Z"}
-    ${"D2"}      | ${"buddhist"}      | ${"1000-01-01"}             | ${"1542|M12|27"}
-    ${"D2"}      | ${"buddhist"}      | ${"1582-10-04"}             | ${"2125|M09|24"}
-    ${"D3"}      | ${"hebrew"}        | ${"-100000-01-01"}          | ${"ERR RangeError: Missing month converting"}
-    ${"D4"}      | ${"hebrew"}        | ${"-271821-11-05"}          | ${"-268057|M05|27"}
-    ${"D4"}      | ${"hebrew"}        | ${"-003761-09-01"}          | ${"0|M01|12"}
-    ${"D5"}      | ${"indian"}        | ${"-000500-06-15"}          | ${"ERR RangeError: calendar 'indian' is broken"}
-    ${"D8"}      | ${"japanese"}      | ${"1800-01-01"}             | ${"japanese|1800"}
-    ${"D8"}      | ${"japanese"}      | ${"1872-12-31"}             | ${"meiji|5"}
-    ${"D8"}      | ${"japanese"}      | ${"0000-12-31"}             | ${"japanese-inverse|1"}
-    ${"D1"}      | ${"hebrew"}        | ${"untilNearMax"}           | ${"ERR RangeError: Invalid ISO date: +275760-09-27T00:00Z"}
-    ${"D1"}      | ${"buddhist"}      | ${"addNearMax"}             | ${"ERR RangeError: Invalid ISO date: +275760-10-14T00:00Z"}
-    ${"D1"}      | ${"islamic-civil"} | ${"subtractNearMin"}        | ${"ERR RangeError: Invalid ISO date: -271821-01-01T00:00Z"}
-    ${"D1"}      | ${"hebrew"}        | ${"relativeTo"}             | ${"ERR RangeError: Invalid ISO date: +275760-09-17T00:00Z"}
-    ${"D6"}      | ${"buddhist"}      | ${"monthEnd"}               | ${"P1M"}
-    ${"D6"}      | ${"hebrew"}        | ${"monthEnd"}               | ${"P1M"}
-    ${"D6"}      | ${"ethioaa"}       | ${"monthEnd"}               | ${"P1M"}
-    ${"D7"}      | ${"hebrew"}        | ${"mixedSign"}              | ${"ERR RangeError: mixed-sign values not allowed as duration fields"}
-    ${"D7"}      | ${"hebrew"}        | ${"leapMonthEnd"}           | ${"P1Y"}
-    ${"zoned.A"} | ${"iso8601"}       | ${"max.untilSydney"}        | ${"ERR RangeError: Invalid time value"}
-    ${"zoned.A"} | ${"iso8601"}       | ${"min.untilNewYork"}       | ${"ERR RangeError: date/time value is outside the supported range"}
-    ${"zoned.B"} | ${"iso8601"}       | ${"max.nextTransition"}     | ${"null"}
-    ${"zoned.B"} | ${"iso8601"}       | ${"max.hoursInDaySantiago"} | ${"ERR TypeError: Cannot read properties of null (reading 'sign')"}
-    ${"zoned.D"} | ${"iso8601"}       | ${"max.untilUtcRounded"}    | ${"returned P3DT5H"}
-    ${"zoned.D"} | ${"iso8601"}       | ${"max.totalUtc"}           | ${"returned 2.0416666666666665"}
+    defect       | calendar           | name                          | recorded
+    ${"D1"}      | ${"hebrew"}        | ${"fieldsMax"}                | ${"ERR RangeError: Invalid ISO date: +275760-09-19T00:00Z"}
+    ${"D1"}      | ${"islamic-civil"} | ${"fieldsMin"}                | ${"ERR RangeError: Invalid ISO date: -271821-01-01T00:00Z"}
+    ${"D1"}      | ${"persian"}       | ${"fieldsMin"}                | ${"ERR RangeError: Invalid ISO date: -271821-01-01T00:00Z"}
+    ${"D2"}      | ${"buddhist"}      | ${"1000-01-01"}               | ${"1542|M12|27"}
+    ${"D2"}      | ${"buddhist"}      | ${"1582-10-04"}               | ${"2125|M09|24"}
+    ${"D3"}      | ${"hebrew"}        | ${"-100000-01-01"}            | ${"ERR RangeError: Missing month converting"}
+    ${"D4"}      | ${"hebrew"}        | ${"-271821-11-05"}            | ${"-268057|M05|27"}
+    ${"D4"}      | ${"hebrew"}        | ${"-003761-09-01"}            | ${"0|M01|12"}
+    ${"D5"}      | ${"indian"}        | ${"-000500-06-15"}            | ${"ERR RangeError: calendar 'indian' is broken"}
+    ${"D8"}      | ${"japanese"}      | ${"1800-01-01"}               | ${"japanese|1800"}
+    ${"D8"}      | ${"japanese"}      | ${"1872-12-31"}               | ${"meiji|5"}
+    ${"D8"}      | ${"japanese"}      | ${"0000-12-31"}               | ${"japanese-inverse|1"}
+    ${"D1"}      | ${"hebrew"}        | ${"untilNearMax"}             | ${"ERR RangeError: Invalid ISO date: +275760-09-27T00:00Z"}
+    ${"D1"}      | ${"buddhist"}      | ${"addNearMax"}               | ${"ERR RangeError: Invalid ISO date: +275760-10-14T00:00Z"}
+    ${"D1"}      | ${"islamic-civil"} | ${"subtractNearMin"}          | ${"ERR RangeError: Invalid ISO date: -271821-01-01T00:00Z"}
+    ${"D1"}      | ${"hebrew"}        | ${"relativeTo"}               | ${"ERR RangeError: Invalid ISO date: +275760-09-17T00:00Z"}
+    ${"D6"}      | ${"buddhist"}      | ${"monthEnd"}                 | ${"P1M"}
+    ${"D6"}      | ${"hebrew"}        | ${"monthEnd"}                 | ${"P1M"}
+    ${"D6"}      | ${"ethioaa"}       | ${"monthEnd"}                 | ${"P1M"}
+    ${"D7"}      | ${"hebrew"}        | ${"mixedSign"}                | ${"ERR RangeError: mixed-sign values not allowed as duration fields"}
+    ${"D7"}      | ${"hebrew"}        | ${"leapMonthEnd"}             | ${"P1Y"}
+    ${"zoned.A"} | ${"iso8601"}       | ${"max.untilSydney"}          | ${"ERR RangeError: Invalid time value"}
+    ${"zoned.A"} | ${"iso8601"}       | ${"min.untilNewYork"}         | ${"ERR RangeError: date/time value is outside the supported range"}
+    ${"zoned.B"} | ${"iso8601"}       | ${"max.nextTransition"}       | ${"null"}
+    ${"zoned.B"} | ${"iso8601"}       | ${"max.hoursInDaySantiago"}   | ${"ERR TypeError: Cannot read properties of null (reading 'sign')"}
+    ${"zoned.D"} | ${"iso8601"}       | ${"max.untilUtcRounded"}      | ${"returned P3DT5H"}
+    ${"zoned.D"} | ${"iso8601"}       | ${"max.totalUtc"}             | ${"returned 2.0416666666666665"}
+    ${"zoned.E"} | ${"iso8601"}       | ${"pre1847.nextManila"}       | ${"1899-09-06T12:00:00+08:00[Asia/Manila]"}
+    ${"zoned.E"} | ${"iso8601"}       | ${"pre1847.previousManila"}   | ${"null"}
+    ${"zoned.E"} | ${"iso8601"}       | ${"pre1847.previousGuam"}     | ${"null"}
+    ${"zoned.E"} | ${"iso8601"}       | ${"pre1847.hoursInDayManila"} | ${"479340.06444444443"}
+    ${"zoned.E"} | ${"iso8601"}       | ${"pre1847.startOfDayManila"} | ${"1899-09-06T12:00:00+08:00[Asia/Manila]"}
+    ${"D9"}      | ${"persian"}       | ${"addMonths"}                | ${"1328 Intl reads for 1200 months"}
+    ${"D9"}      | ${"hebrew"}        | ${"untilMonths"}              | ${"1518 Intl reads for 1200 months"}
   `(
     "reads the recorded 0.5.1 output $recorded for $defect $name ($calendar) as the defect",
     ({ defect, calendar, name, recorded }) => {
-      const repro = findRepro(defect as DefectId, calendar, name);
+      const repro = findRepro(defect, calendar, name);
       expect(repro).toBeDefined();
       expect(reproPasses(repro!, recorded)).toBe(false);
       expect(reproPasses(repro!, repro!.expected)).toBe(true);
@@ -212,7 +256,7 @@ describe("isCalendarArithmeticCompatNeeded", () => {
   it.each`
     calendar     | reason
     ${"iso8601"} | ${"iso8601 never takes the compat layer"}
-    ${"gregory"} | ${"a calendar id with no repro has no defect to work around"}
+    ${"chinese"} | ${"a calendar id with no repro has no defect to work around"}
   `("returns false for $calendar ($reason)", ({ calendar }) => {
     expect(isCalendarArithmeticCompatNeeded(calendar)).toBe(false);
   });

@@ -175,6 +175,58 @@ describe("businessDateFrom", () => {
       "2024-07-08",
     );
   });
+  it.each`
+    value              | direction | expected
+    ${"+275760-09-13"} | ${-1}     | ${"+275760-09-12"}
+    ${"-271821-04-19"} | ${1}      | ${"-271821-04-19"}
+  `(
+    "rolls $value in direction $direction to $expected at the range limit",
+    ({ value, direction, expected }) => {
+      expect(
+        businessDateFrom(
+          date(value),
+          direction,
+          DEFAULT_BUSINESS_CALENDAR,
+        )?.toString(),
+      ).toBe(expected);
+    },
+  );
+
+  it("throws a RangeError when the roll runs past the maximum", () => {
+    expect(() =>
+      businessDateFrom(date("+275760-09-13"), 1, DEFAULT_BUSINESS_CALENDAR),
+    ).toThrow(RangeError);
+  });
+
+  // A 60-day closure: one Temporal operation per closed day would be well over the bound.
+  it("rolls over a long closure without a Temporal operation per calendar day", () => {
+    const closure = resolved({
+      weekend: [6, 7],
+      holidays: Array.from({ length: 60 }, (_, index) =>
+        date("2024-07-01").add({ days: index }).toString(),
+      ),
+      timeZone: "UTC",
+    });
+    const add = vi.spyOn(Temporal.PlainDate.prototype, "add");
+    const dayOfWeek = vi.spyOn(
+      Temporal.PlainDate.prototype,
+      "dayOfWeek",
+      "get",
+    );
+    const toString = vi.spyOn(Temporal.PlainDate.prototype, "toString");
+
+    expect(businessDateFrom(date("2024-07-01"), 1, closure)?.toString()).toBe(
+      "2024-08-30",
+    );
+
+    const calls =
+      add.mock.calls.length +
+      dayOfWeek.mock.calls.length +
+      toString.mock.calls.length;
+
+    // The assertion's own `toString` is one of them.
+    expect(calls).toBeLessThan(10);
+  });
 });
 
 describe("stepBusinessDates", () => {
@@ -253,6 +305,86 @@ describe("stepBusinessDates", () => {
         DEFAULT_BUSINESS_CALENDAR,
       )?.toString(),
     ).toBe("2571-08-01");
+  });
+
+  // TC39 ISODateWithinLimits: +275760-09-13 (a Saturday) is the last PlainDate and
+  // -271821-04-19 (a Monday) the first. A step beyond either is a RangeError, as `add` throws;
+  // the public callers turn it into their sentinel.
+  it.each`
+    value              | direction | count | expected
+    ${"+275760-09-12"} | ${-1}     | ${1}  | ${"+275760-09-11"}
+    ${"+275760-09-10"} | ${1}      | ${2}  | ${"+275760-09-12"}
+    ${"-271821-04-20"} | ${-1}     | ${1}  | ${"-271821-04-19"}
+    ${"-271821-04-19"} | ${1}      | ${1}  | ${"-271821-04-20"}
+  `(
+    "steps $count business days from $value in direction $direction to $expected at the range limit",
+    ({ value, direction, count, expected }) => {
+      expect(
+        stepBusinessDates(
+          date(value),
+          direction,
+          count,
+          DEFAULT_BUSINESS_CALENDAR,
+        )?.toString(),
+      ).toBe(expected);
+    },
+  );
+
+  it.each`
+    value              | direction | count | description
+    ${"+275760-09-12"} | ${1}      | ${1}  | ${"the Saturday limit is closed, so the walk steps past it"}
+    ${"+275760-09-13"} | ${1}      | ${1}  | ${"already at the maximum"}
+    ${"-271821-04-19"} | ${-1}     | ${1}  | ${"already at the minimum"}
+    ${"-271821-04-22"} | ${-1}     | ${4}  | ${"only three business days lie at or after the minimum"}
+  `(
+    "throws a RangeError stepping $count from $value in direction $direction — $description",
+    ({ value, direction, count }) => {
+      expect(() =>
+        stepBusinessDates(
+          date(value),
+          direction,
+          count,
+          DEFAULT_BUSINESS_CALENDAR,
+        ),
+      ).toThrow(RangeError);
+    },
+  );
+
+  // The walks count ISO days; a date in another calendar would walk from the wrong day.
+  it("throws a RangeError for a date that is not in the ISO calendar", () => {
+    const hebrew = Temporal.PlainDate.from("2024-03-15").withCalendar("hebrew");
+    expect(() =>
+      stepBusinessDates(hebrew, 1, 1, DEFAULT_BUSINESS_CALENDAR),
+    ).toThrow(RangeError);
+    expect(() =>
+      businessDateFrom(hebrew, 1, DEFAULT_BUSINESS_CALENDAR),
+    ).toThrow(RangeError);
+  });
+
+  // The cap test above timed out on CI when every calendar day built a PlainDate through the
+  // polyfill. The walk is integer arithmetic; only the result is a Temporal object.
+  it("reaches the cap without a Temporal operation per calendar day walked", () => {
+    const add = vi.spyOn(Temporal.PlainDate.prototype, "add");
+    const dayOfWeek = vi.spyOn(
+      Temporal.PlainDate.prototype,
+      "dayOfWeek",
+      "get",
+    );
+    const toString = vi.spyOn(Temporal.PlainDate.prototype, "toString");
+
+    stepBusinessDates(
+      date("2024-01-01"),
+      1,
+      CAP_BUSINESS_DAYS + 1,
+      resolved(usIndependence),
+    );
+
+    const calls =
+      add.mock.calls.length +
+      dayOfWeek.mock.calls.length +
+      toString.mock.calls.length;
+
+    expect(calls).toBeLessThan(10);
   });
 
   it("returns null rather than a partial walk once the cap is exceeded", () => {

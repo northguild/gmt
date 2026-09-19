@@ -381,7 +381,7 @@ export async function initGlobe(
     // below all agree on the exact same instant — `getUnixNow()` ticking
     // between calls within one frame could otherwise put a dot on the
     // "wrong" side of its own terminator line, right at the boundary.
-    const antisolarReading = antisolarPoint(getUnixNow());
+    const antisolarReading = antisolarPoint(nowMs());
     const antisolar: [number, number] = [
       antisolarReading.lng,
       antisolarReading.lat,
@@ -915,6 +915,14 @@ function inertHost(zones: GlobeZone[]): GlobeHost {
     onSelect: () => {},
     destroy: () => {},
   };
+}
+
+/**
+ * The current epoch-ms. `getUnixNow` returns `null` only for an invalid `epochUnit` or a clock it
+ * cannot read, so the `0` fallback never renders in practice.
+ */
+function nowMs(): number {
+  return getUnixNow() ?? 0;
 }
 
 function shortLabel(id: string): string {

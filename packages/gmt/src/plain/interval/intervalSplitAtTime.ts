@@ -1,6 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { plainTime } from "../../regex";
 import { isValidTimeInterval } from "./validate";
+import { isValidTime } from "../validate";
 
 /**
  * Split a time interval at arbitrary `points`, producing consecutive sub-intervals.
@@ -14,6 +14,9 @@ import { isValidTimeInterval } from "./validate";
  * - Duplicate points collapse to a single boundary.
  * - Returns consecutive `{ start, end }` records, each record's `end` equal to the next
  *   record's `start`.
+ * - Every piece is half-open `[start, end)`: a boundary belongs only to the piece that starts
+ *   there, so the pieces share no value and together cover the interval exactly once (the rule
+ *   CORE-6's `splitIntervalAt` uses).
  * - Returns `[{ start, end }]` (the whole interval, unsplit) when no valid in-range point remains.
  * - Returns `[]` when `points` is not an array, when any element is not a valid ISO PlainTime
  *   string, or on invalid input (unparseable start/end, `start > end`).
@@ -47,7 +50,7 @@ export function intervalSplitAtTime(
     return [];
   }
 
-  if (!points.every((point) => plainTime.test(point))) {
+  if (!points.every((point) => isValidTime(point))) {
     return [];
   }
 

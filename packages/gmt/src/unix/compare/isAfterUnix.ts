@@ -1,43 +1,36 @@
-import { Temporal } from "@js-temporal/polyfill";
-import { isValidAmount } from "../../internal";
+import { compareUnixEpochs } from "../../internal/compareUnixEpochs";
 import type { UnixUnit } from "../validate/isValidUnixUnit";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return whether `value1` represents an instant strictly after `value2`.
  *
  * - Uses Temporal.Instant.compare to check ordering.
+ * - Each value is a safe integer or a string of optionally negative ASCII digits; anything else
+ *   is invalid.
  * - Returns false if either input is invalid.
  *
- * @param value1 first unix epoch value
- * @param value2 second unix epoch value
- * @param options optional: epochUnit ("seconds" | "milliseconds")
+ * @param value1 first unix epoch: a safe integer or a digit string
+ * @param value2 second unix epoch, in the same unit
+ * @param options optional: epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds")
  * @returns `true` if `value1` is after `value2`, otherwise `false`
  *
  * @example isAfterUnix(1706659200, 1704067200) // true
  * @example isAfterUnix(1706659200, 1706659200) // false
  * @example isAfterUnix(-1, 0) // false
+ * @example isAfterUnix("1706659200", "1704067200") // true (digit strings)
+ * @example isAfterUnix(" 1706659200", 1704067200) // false (a padded string is not an epoch)
  */
 export function isAfterUnix(
-  value1: number,
-  value2: number,
+  value1: number | string,
+  value2: number | string,
   options?: { epochUnit?: UnixUnit },
 ): boolean {
-  const epochUnit = options?.epochUnit ?? "milliseconds";
-
-  if (!isValidAmount(value1) || !isValidAmount(value2)) {
+  if (!isOptionsArgument(options)) {
     return false;
   }
 
-  try {
-    const instant1 = Temporal.Instant.fromEpochMilliseconds(
-      epochUnit === "seconds" ? value1 * 1000 : value1,
-    );
-    const instant2 = Temporal.Instant.fromEpochMilliseconds(
-      epochUnit === "seconds" ? value2 * 1000 : value2,
-    );
+  const order = compareUnixEpochs(value1, value2, options);
 
-    return Temporal.Instant.compare(instant1, instant2) === 1;
-  } catch {
-    return false;
-  }
+  return order !== null && order === 1;
 }

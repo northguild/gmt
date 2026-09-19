@@ -22,7 +22,7 @@ export function sortZoned(
   zonedDateTimes: string[],
   order: "asc" | "desc" = "asc",
 ): string[] {
-  if (!zonedDateTimes.length) return [];
+  if (!Array.isArray(zonedDateTimes) || !zonedDateTimes.length) return [];
 
   const valid = zonedDateTimes.filter(isValidZonedDateTime);
   if (!valid.length) return [];

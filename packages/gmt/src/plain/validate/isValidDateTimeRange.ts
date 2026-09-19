@@ -1,11 +1,14 @@
+// fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "@js-temporal/polyfill";
-import { plainDateTime } from "../../regex";
+import { isValidDateTime } from "./isValidDateTime";
+import { isObject, isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return true if `value1` and `value2` form a valid datetime range — both parseable as
  * ISO PlainDateTime strings and `value1 <= value2`.
  *
- * - Both inputs must be ISO 8601 datetime strings (e.g. `"2024-01-01T10:00:00"`).
+ * - Both inputs must be ISO 8601 datetime strings (e.g. `"2024-01-01T10:00:00"`), as
+ *   `isValidDateTime` accepts, annotations included.
  * - Equal `value1 === value2` is valid when `options.allowEqual` is true.
  * - Invalid input, malformed strings, or leap-second strings return `false`.
  *
@@ -18,20 +21,20 @@ import { plainDateTime } from "../../regex";
  * @example isValidDateTimeRange({ value1: "2024-12-31T23:59:59", value2: "2024-01-01T10:00:00" }) // false
  * @example isValidDateTimeRange({ value1: "2024-01-01T10:00:00", value2: "2024-01-01T10:00:00", options: { allowEqual: true } }) // true
  */
-export function isValidDateTimeRange({
-  value1,
-  value2,
-  options,
-}: {
+export function isValidDateTimeRange(props: {
   value1: string;
   value2: string;
   options?: { allowEqual?: boolean };
 }): boolean {
+  if (!isObject(props)) return false;
+  const { value1, value2, options } = props;
+  if (!isOptionsArgument(options)) return false;
+
   if (typeof value1 !== "string" || typeof value2 !== "string") {
     return false;
   }
 
-  if (!plainDateTime.test(value1) || !plainDateTime.test(value2)) {
+  if (!isValidDateTime(value1) || !isValidDateTime(value2)) {
     return false;
   }
 

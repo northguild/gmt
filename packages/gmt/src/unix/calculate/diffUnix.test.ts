@@ -238,3 +238,108 @@ describe("diffUnix at the minimum instant", () => {
     },
   );
 });
+
+describe("diffUnix with an unrecognised epochUnit", () => {
+  // isValidUnixUnit defines the domain ("seconds" | "milliseconds", singular or plural): any other value is invalid
+  // input and returns the sentinel, never a silent read as milliseconds.
+  it.each`
+    epochUnit
+    ${"nanoseconds"}
+    ${"SECONDS"}
+    ${"ms"}
+    ${""}
+    ${1000}
+  `("returns null for epochUnit $epochUnit", ({ epochUnit }) => {
+    expect(
+      diffUnix(1_706_659_200, 1_706_659_200, "days", {
+        epochUnit: epochUnit as never,
+        timeZone: "UTC",
+      }),
+    ).toBe(null);
+  });
+});
+
+describe("diffUnix invalid-input @example", () => {
+  it('returns null for diffUnix(NaN, 0, "days")', () => {
+    expect(diffUnix(NaN, 0, "days")).toBe(null);
+  });
+});
+
+describe("diffUnix unit names", () => {
+  // Temporal §13.17: singular and plural unit names are the same unit. 90000000 ms is P1DT1H in UTC.
+  // Record keys are the plural names, as in every other diff family.
+  it.each`
+    units               | expected
+    ${"day"}            | ${1}
+    ${"days"}           | ${1}
+    ${"hour"}           | ${25}
+    ${["day", "hour"]}  | ${{ days: 1, hours: 1 }}
+    ${["days", "hour"]} | ${{ days: 1, hours: 1 }}
+  `(
+    "returns $expected for 0 to 90000000 in units $units",
+    ({ units, expected }) => {
+      expect(diffUnix(0, 90000000, units, { timeZone: "UTC" })).toEqual(
+        expected,
+      );
+    },
+  );
+
+  // An empty units list names no largest unit (getLargestDateTimeDurationUnit returns ""), so there
+  // is nothing to measure: invalid input.
+  it("returns null for an empty units list", () => {
+    expect(diffUnix(0, 604_800, [])).toBeNull();
+  });
+});
+
+// Plan #16: a units array returns the whole difference; unlisted units between listed ones are
+// carried into the next smaller listed unit. Values from native Temporal (Chromium 153):
+// 1704067200000 ms (2024-01-01T00:00Z) until 1740787200000 ms (2025-03-01T00:00Z) is P1Y2M in UTC
+// (59 days after the year); in New York it is 2023-12-31T19:00-05:00 until 2025-02-28T19:00-05:00,
+// P1Y1M28D, and 2024-12-31T19:00 to 2025-02-28T19:00 is 1416 hours (59 days).
+describe("diffUnix units array carries unlisted units", () => {
+  it.each`
+    timeZone              | units                | expected
+    ${"UTC"}              | ${["years", "days"]} | ${{ years: 1, days: 59 }}
+    ${"America/New_York"} | ${["year", "hour"]}  | ${{ years: 1, hours: 1416 }}
+  `(
+    "returns $expected for $units from 1704067200000 to 1740787200000 ms in $timeZone",
+    ({ timeZone, units, expected }) => {
+      expect(
+        diffUnix(1704067200000, 1740787200000, units, {
+          epochUnit: "milliseconds",
+          timeZone,
+        }),
+      ).toEqual(expected);
+    },
+  );
+
+  // Temporal fills weeks only when largestUnit is weeks. 2024-01-01T00:00Z until 2024-03-20T00:00Z
+  // is P2M19D and 2024-03-01 until 2024-03-20 is P2W5D; 2024-02-29T23:59:59.999Z (1709251199999)
+  // until 2024-01-31T23:59:59.999Z (1706745599999) is -P29D (no years, 4 weeks).
+  it.each`
+    value1           | value2           | units                  | expected
+    ${1704067200000} | ${1710892800000} | ${["months", "weeks"]} | ${{ months: 2, weeks: 2 }}
+    ${1709251199999} | ${1706745599999} | ${["years", "weeks"]}  | ${{ years: 0, weeks: -4 }}
+  `(
+    "returns $expected for $units from $value1 to $value2 ms in UTC",
+    ({ value1, value2, units, expected }) => {
+      expect(diffUnix(value1, value2, units)).toEqual(expected);
+    },
+  );
+});
+
+// Temporal GetOptionsObject: an options argument that is not an object or undefined throws
+// TypeError (native Chromium 153: `until(other, null)`, `"x"`, `5` and `true` all throw), so each is
+// invalid input. Omitted options measure normally (PT25H).
+describe("diffUnix with a non-object options argument", () => {
+  it.each`
+    options      | expected
+    ${null}      | ${null}
+    ${"x"}       | ${null}
+    ${5}         | ${null}
+    ${true}      | ${null}
+    ${undefined} | ${25}
+  `("returns $expected for options $options", ({ options, expected }) => {
+    expect(diffUnix(0, 90000000, "hours", options)).toBe(expected);
+  });
+});

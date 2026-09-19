@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { battleTestTimeZones } from "../../test";
+import { battleTestTimeZones, dateLineCrossingTimeZones } from "../../test";
 import { getDstTransitions } from ".";
 
 describe("getDstTransitions", () => {
@@ -192,4 +192,35 @@ describe("getDstTransitions in the last representable year", () => {
       },
     ]);
   });
+});
+
+// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
+// are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
+// 1847-01-01).
+describe("getDstTransitions across the 1844 date-line crossings (zoned.E)", () => {
+  // The crossing is local 1845-01-01T00:00, so by the "local January 1 00:00 belongs to that
+  // year" rule it is 1845's transition and 1844 has none.
+  it.each(dateLineCrossingTimeZones)(
+    "lists $instant ($offsetBefore -> $offsetAfter) for $timeZone in 1845 and nothing in 1844",
+    ({ timeZone, instant, offsetBefore, offsetAfter }) => {
+      expect(getDstTransitions(timeZone, 1844)).toEqual([]);
+      expect(getDstTransitions(timeZone, 1845)).toEqual([
+        { instant, offsetBefore, offsetAfter },
+      ]);
+    },
+  );
+
+  it.each`
+    timeZone              | year    | expected
+    ${"Europe/London"}    | ${1846} | ${[]}
+    ${"Europe/London"}    | ${1847} | ${[{ instant: "1847-12-01T00:01:15Z", offsetBefore: "-00:01:15", offsetAfter: "+00:00" }]}
+    ${"America/New_York"} | ${1883} | ${[{ instant: "1883-11-18T17:00:00Z", offsetBefore: "-04:56:02", offsetAfter: "-05:00" }]}
+    ${"Asia/Manila"}      | ${1899} | ${[{ instant: "1899-09-06T04:00:00Z", offsetBefore: "+08:03:52", offsetAfter: "+08:00" }]}
+  `(
+    "lists $expected for $timeZone in $year (control)",
+    ({ timeZone, year, expected }) => {
+      expect(getDstTransitions(timeZone, year)).toEqual(expected);
+    },
+  );
 });

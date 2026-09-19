@@ -18,8 +18,8 @@ import type { Interval } from "../../types";
  *   removal name the same instant (GMT rule).
  * - `[]` is both a legitimate result (everything removed) and the invalid-input sentinel; check
  *   inputs with `isValidInterval` when the difference matters.
- * - The closed `intervalDifferenceUtc` (…) steps pieces 1 ns in from each removal; this is the
- *   half-open standard, where pieces end exactly where a removal starts.
+ * - The positional `intervalDifferenceUtc` (…) follow the same half-open rule for a single
+ *   removal: pieces end exactly where the removal starts.
  * - For zone-aligned removals (non-working local days), build them with `floorToZone` first.
  * - Returns `[]` when `from` is not a valid `Interval`, `remove` is not an array, or any element
  *   of `remove` is not a valid `Interval` — even one outside `from`.

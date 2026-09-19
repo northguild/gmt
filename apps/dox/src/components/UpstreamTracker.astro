@@ -1,0 +1,155 @@
+---
+/**
+ * The /upstream/ tracker: one table per repository, rendered at build time from
+ * `upstream-filings.ts`. The data is the live refresh `generate` writes when
+ * GitHub is reachable, and the committed snapshot otherwise; nothing is fetched
+ * in the browser.
+ */
+import {
+  checked,
+  dataSource,
+  filingRepos,
+  filingsForRepo,
+} from "../data/upstream-filings";
+import { filingInGmt, filingStatus } from "../lib/upstream-status";
+
+const KIND = { pr: "Pull request", issue: "Issue" } as const;
+const WORK = {
+  port: "Port",
+  fix: "Fix",
+  report: "Report",
+  release: "Release request",
+} as const;
+
+function ref(r: string): { label: string; href: string } {
+  const [repo, number] = r.split("#");
+  const short = repo === "tc39/proposal-temporal" ? "tc39" : "polyfill";
+  return {
+    label: `${short} #${number}`,
+    href: `https://github.com/${repo}/issues/${number}`,
+  };
+}
+
+const date = (iso: string) => iso.slice(0, 10);
+const checkedOn = new Date(checked).toISOString().replace("T", " ").slice(0, 16);
+---
+
+{
+  filingRepos.map((repo) => (
+    <section class="gmt-upstream-repo">
+      <h3>
+        <a href={`https://github.com/${repo}`}>{repo}</a>
+      </h3>
+      <table class="gmt-upstream-table">
+        <thead>
+          <tr>
+            <th>Filing</th>
+            <th>In GMT</th>
+            <th>The problem</th>
+            <th>Kind</th>
+            <th>Upstream status</th>
+            <th>Replies</th>
+            <th>Last activity</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filingsForRepo(repo).map((f) => (
+            <tr>
+              <td>
+                <a href={f.url}>#{f.number}</a>
+              </td>
+              <td>
+                <span
+                  class:list={[
+                    "gmt-upstream-badge",
+                    filingInGmt(f).handled && "gmt-upstream-badge--ok",
+                  ]}
+                >
+                  {filingInGmt(f).handled ? "✓ " : ""}
+                  {filingInGmt(f).label}
+                </span>
+              </td>
+              <td>
+                <strong>{f.title.replace(/^Polyfill: /, "")}</strong>
+                {f.summary && <p>{f.summary}</p>}
+                {!f.gmtGuard && f.gmtNote && (
+                  <p class="gmt-upstream-links">{f.gmtNote}</p>
+                )}
+                {(f.pairsWith.length > 0 ||
+                  f.closes.length > 0 ||
+                  f.dependsOn.length > 0) && (
+                  <p class="gmt-upstream-links">
+                    {f.pairsWith.map((p) => (
+                      <span>
+                        Same fix: <a href={ref(p).href}>{ref(p).label}</a>{" "}
+                      </span>
+                    ))}
+                    {f.closes.map((p) => (
+                      <span>
+                        Closes: <a href={ref(p).href}>{ref(p).label}</a>{" "}
+                      </span>
+                    ))}
+                    {f.dependsOn.map((p) => (
+                      <span>
+                        Depends on: <a href={ref(p).href}>{ref(p).label}</a>{" "}
+                      </span>
+                    ))}
+                  </p>
+                )}
+              </td>
+              <td>
+                {KIND[f.kind]}
+                {f.work && (
+                  <>
+                    <br />
+                    <span class="gmt-upstream-muted">{WORK[f.work]}</span>
+                  </>
+                )}
+              </td>
+              <td>{filingStatus(f)}</td>
+              <td>{f.maintainerComments}</td>
+              <td>{date(f.updatedAt)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  ))
+}
+
+<p class="gmt-table-note">
+  <strong>Already handled</strong>: GMT gives you the correct answer today, whichever
+  polyfill version you have installed. <strong>Doesn't affect GMT</strong>: the
+  bug is in code GMT doesn't use. <strong>Fix filed upstream</strong>: the fix is
+  written and waiting for the polyfill's maintainers, and reaches GMT with the next
+  polyfill release. <strong>Reported upstream</strong>: reported with a reproduction
+  for the maintainers to fix. Upstream status
+  is read from GitHub each time this site is built (last checked {checkedOn} UTC{
+    dataSource === "committed" ? ", from the saved copy" : ""
+  }). "Replies" counts comments from the project's maintainers and other users.
+</p>
+
+<style>
+  .gmt-upstream-table {
+    width: 100%;
+    font-size: var(--sl-text-sm);
+  }
+  .gmt-upstream-table td {
+    vertical-align: top;
+  }
+  .gmt-upstream-table td p {
+    margin-top: 0.25rem;
+  }
+  .gmt-upstream-badge {
+    white-space: nowrap;
+    font-weight: 600;
+  }
+  .gmt-upstream-badge--ok {
+    color: var(--sl-color-green);
+  }
+  .gmt-upstream-links,
+  .gmt-upstream-muted {
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-xs);
+  }
+</style>

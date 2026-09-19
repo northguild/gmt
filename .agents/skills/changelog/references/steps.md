@@ -6,7 +6,7 @@
 ls .changeset/*.md | grep -v README.md
 ```
 
-Read each one. Note which packages are affected and what bump type (`patch` / `minor` / `major`) is declared.
+Read each one. Note which packages are affected and what bump type (`patch` / `minor`) is declared. `major` is never used; a breaking change is `minor`.
 
 ### 2. Run the pr-desc skill internally
 
@@ -16,7 +16,7 @@ Invoke the `pr-desc` skill (or follow its steps directly: `git log --oneline mai
 
 For each package listed in the changeset frontmatter, read its `CHANGELOG.md` (e.g. `packages/gmt/CHANGELOG.md`). Study the tone, length, and structure of recent entries at the same bump level:
 
-- **Major** entries: typically include a multi-paragraph summary describing the full scope of what was introduced.
+- **Breaking changes** (in a `minor` entry): a `### Breaking changes` section listing every affected function, each with the old call or output and its replacement.
 - **Minor** entries: typically one lead sentence, then a bulleted list of new exports or capabilities. Concise — usually under 20 lines.
 - **Patch** entries: typically a single sentence per fix, starting with an action verb ("Fix", "Add", "Correct").
 
@@ -34,7 +34,7 @@ Guidelines:
 - **For bug fixes**, state the broken behavior and what it does now.
 - **For internal / test-only changes** (new mocks, probe helpers, internal utilities): omit entirely unless they affect how consumers test against the library.
 - **No file paths**, no commit SHAs, no branch names. Those belong in git history, not changelogs.
-- Use imperative mood for patch items ("Fix X", "Correct Y"). Use noun phrases for minor/major additions ("New `formatRelativeDate` formatter — …").
+- Use imperative mood for patch items ("Fix X", "Correct Y"). Use noun phrases for minor additions ("New `formatRelativeDate` formatter — …").
 - Match the line length and bullet density of the existing entries in that package's CHANGELOG.
 
 ### 5. Write back the changeset file

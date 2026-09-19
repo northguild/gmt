@@ -1,5 +1,8 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { isBusinessDate, resolveBusinessCalendar } from "../../internal";
+import {
+  isBusinessDate,
+  resolveBusinessCalendar,
+} from "../../internal/businessCalendar";
 import type { BusinessCalendar } from "../../types";
 import { isValidDate } from "../validate";
 

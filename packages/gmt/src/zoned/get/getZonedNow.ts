@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidTimeZone } from "../validate";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return the current zoned datetime for the specified IANA timeZone.
@@ -20,6 +21,10 @@ export function getZonedNow(
     smallestUnit?: Temporal.ZonedDateTimeToStringOptions["smallestUnit"];
   },
 ): string {
+  if (!isOptionsArgument(optionsArg)) {
+    return "";
+  }
+
   const options = {
     smallestUnit: "millisecond",
     ...optionsArg,

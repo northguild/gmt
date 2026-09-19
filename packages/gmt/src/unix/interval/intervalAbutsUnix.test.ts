@@ -1,13 +1,20 @@
 import { intervalAbutsUnix } from "./intervalAbutsUnix";
 
 describe("intervalAbutsUnix", () => {
+  // Half-open [start, end): two non-empty intervals abut when one's end equals the other's start
+  // (Allen's "meets", either order), so they share no value and leave no gap. An empty interval
+  // abuts nothing (coding-standards § 8; A = 2024-01-01T09:00Z, B = 12:00Z, D = 17:00Z in ms).
   it.each`
-    aStart        | aEnd          | bStart        | bEnd          | expected
-    ${0}          | ${1500000000} | ${1500000001} | ${1700000000} | ${true}
-    ${1500000001} | ${1700000000} | ${0}          | ${1500000000} | ${true}
-    ${0}          | ${1000}       | ${1001}       | ${2000}       | ${true}
+    aStart           | aEnd             | bStart           | bEnd             | expected | reason
+    ${1704099600000} | ${1704110400000} | ${1704110400000} | ${1704128400000} | ${true}  | ${"[A, B) ends where [B, D) starts"}
+    ${1704099600000} | ${1704110400000} | ${1704110400001} | ${1704128400000} | ${false} | ${"one unit apart"}
+    ${0}             | ${1500000000}    | ${1500000000}    | ${1700000000}    | ${true}  | ${"shared value"}
+    ${1500000000}    | ${1700000000}    | ${0}             | ${1500000000}    | ${true}  | ${"B ends where A starts"}
+    ${0}             | ${1500000000}    | ${1500000001}    | ${1700000000}    | ${false} | ${"one unit apart, larger values"}
+    ${1000}          | ${1000}          | ${1000}          | ${2000}          | ${false} | ${"an empty A at B's start abuts nothing"}
+    ${0}             | ${1000}          | ${1000}          | ${1000}          | ${false} | ${"an empty B at A's end abuts nothing"}
   `(
-    "returns $expected when A=$aStart to $aEnd and B=$bStart to $bEnd",
+    "returns $expected for A=[$aStart, $aEnd) and B=[$bStart, $bEnd) ($reason)",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalAbutsUnix(aStart, aEnd, bStart, bEnd)).toBe(expected);
     },
@@ -15,7 +22,7 @@ describe("intervalAbutsUnix", () => {
 
   it.each`
     aStart | aEnd          | bStart        | bEnd          | expected
-    ${0}   | ${1500000000} | ${1500000002} | ${1700000000} | ${false}
+    ${0}   | ${1500000000} | ${1500000001} | ${1700000000} | ${false}
     ${0}   | ${1500000001} | ${1500000000} | ${1700000000} | ${false}
     ${0}   | ${1500000000} | ${1600000000} | ${1700000000} | ${false}
   `(
@@ -70,8 +77,8 @@ describe("intervalAbutsUnix", () => {
 
   it.each`
     aStart          | aEnd            | bStart          | bEnd            | expected
-    ${"0"}          | ${"1500000000"} | ${"1500000001"} | ${"1700000000"} | ${true}
-    ${"1500000001"} | ${"1700000000"} | ${"0"}          | ${"1500000000"} | ${true}
+    ${"0"}          | ${"1500000000"} | ${"1500000000"} | ${"1700000000"} | ${true}
+    ${"1500000000"} | ${"1700000000"} | ${"0"}          | ${"1500000000"} | ${true}
   `(
     "returns $expected for string numeric input",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
@@ -79,30 +86,35 @@ describe("intervalAbutsUnix", () => {
     },
   );
 
-  // Epoch values are whole units. A fraction has no "next unit", and past 2^53 consecutive
-  // integers collapse (2 ** 53 + 1 === 2 ** 53), so neither can be tested for adjacency.
+  // Epoch values are whole units: fractions are invalid, and past 2^53 consecutive integers
+  // collapse (2 ** 53 + 1 === 2 ** 53), so a value there does not name one unit.
   it.each`
     aStart | aEnd       | bStart     | bEnd           | description
-    ${0}   | ${1.5}     | ${2.5}     | ${3}           | ${"fractional ends (1.5 + 1 === 2.5)"}
+    ${0}   | ${1.5}     | ${1.5}     | ${3}           | ${"a fractional shared end"}
     ${0}   | ${1}       | ${0.5}     | ${2}           | ${"a fractional start"}
     ${0}   | ${2 ** 53} | ${2 ** 53} | ${2 ** 53 + 4} | ${"unsafe integers (2^53 + 1 === 2^53)"}
-    ${"0"} | ${"1.5"}   | ${"2.5"}   | ${"3"}         | ${"fractional numeric strings"}
+    ${"0"} | ${"1.5"}   | ${"1.5"}   | ${"3"}         | ${"fractional numeric strings"}
     ${""}  | ${"0"}     | ${"1"}     | ${"2"}         | ${"an empty string, which Number() reads as 0"}
   `(
-    "returns false for A=[$aStart, $aEnd] and B=[$bStart, $bEnd] ($description)",
+    "returns false for A=[$aStart, $aEnd) and B=[$bStart, $bEnd) ($description)",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(intervalAbutsUnix(aStart, aEnd, bStart, bEnd)).toBe(false);
     },
   );
 
-  it("returns true when B ends on the largest safe integer, one unit after A", () => {
-    expect(
-      intervalAbutsUnix(
-        0,
-        Number.MAX_SAFE_INTEGER - 1,
-        Number.MAX_SAFE_INTEGER,
-        Number.MAX_SAFE_INTEGER,
-      ),
-    ).toBe(true);
-  });
+  // Range edge (CORE-6): no value is stepped past the largest safe integer. Half-open, B abuts A when
+  // it starts at A's end, and an empty B there abuts nothing.
+  it.each`
+    aEnd                           | bStart                         | expected | description
+    ${Number.MAX_SAFE_INTEGER - 1} | ${Number.MAX_SAFE_INTEGER - 1} | ${true}  | ${"B = [MAX - 1, MAX) starts at A's end"}
+    ${Number.MAX_SAFE_INTEGER - 2} | ${Number.MAX_SAFE_INTEGER - 1} | ${false} | ${"one unit apart below the maximum"}
+    ${Number.MAX_SAFE_INTEGER}     | ${Number.MAX_SAFE_INTEGER}     | ${false} | ${"an empty B = [MAX, MAX)"}
+  `(
+    "returns $expected for A=[0, $aEnd) and B=[$bStart, MAX_SAFE_INTEGER) ($description)",
+    ({ aEnd, bStart, expected }) => {
+      expect(intervalAbutsUnix(0, aEnd, bStart, Number.MAX_SAFE_INTEGER)).toBe(
+        expected,
+      );
+    },
+  );
 });

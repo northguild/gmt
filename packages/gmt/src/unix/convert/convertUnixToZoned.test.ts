@@ -55,10 +55,10 @@ describe("convertUnixToZoned", () => {
   });
 
   it('supports "milliseconds" and "seconds" units', () => {
-    expect(convertUnixToZoned(0, "UTC", "milliseconds")).toBe(
+    expect(convertUnixToZoned(0, "UTC", { epochUnit: "milliseconds" })).toBe(
       "1970-01-01T00:00:00+00:00[UTC]",
     );
-    expect(convertUnixToZoned(0, "UTC", "seconds")).toBe(
+    expect(convertUnixToZoned(0, "UTC", { epochUnit: "seconds" })).toBe(
       "1970-01-01T00:00:00+00:00[UTC]",
     );
   });
@@ -74,7 +74,9 @@ describe("convertUnixToZoned", () => {
   )(
     "returns $expected for 0 unix time in $timeZone using $unit",
     ({ timeZone, unit, expected }) => {
-      expect(convertUnixToZoned(0, timeZone, unit)).toBe(expected);
+      expect(convertUnixToZoned(0, timeZone, { epochUnit: unit })).toBe(
+        expected,
+      );
     },
   );
 
@@ -90,11 +92,13 @@ describe("convertUnixToZoned", () => {
     "returns $expected leap year date 2024-02-29 correctly for $timeZone using $unit",
     ({ timeZone, unit, expected }) => {
       if (unit === "seconds") {
-        expect(convertUnixToZoned(1709197200, timeZone, unit)).toBe(expected);
+        expect(
+          convertUnixToZoned(1709197200, timeZone, { epochUnit: unit }),
+        ).toBe(expected);
       } else {
-        expect(convertUnixToZoned(1709197200000, timeZone, unit)).toBe(
-          expected,
-        );
+        expect(
+          convertUnixToZoned(1709197200000, timeZone, { epochUnit: unit }),
+        ).toBe(expected);
       }
     },
   );
@@ -131,13 +135,41 @@ describe("convertUnixToZoned", () => {
     ${"minutes"}
     ${""}
     ${null}
-    ${undefined}
   `(
     "returns an empty string for invalid unit $invalidUnit",
     ({ invalidUnit }) => {
-      expect(convertUnixToZoned(0, "UTC", invalidUnit as never)).toBe("");
+      expect(
+        convertUnixToZoned(0, "UTC", { epochUnit: invalidUnit as never }),
+      ).toBe("");
     },
   );
+
+  it.each`
+    options                     | expected
+    ${undefined}                | ${"1970-01-20T19:46:04.8+01:00[Europe/Paris]"}
+    ${{ epochUnit: undefined }} | ${"1970-01-20T19:46:04.8+01:00[Europe/Paris]"}
+    ${{ epochUnit: "second" }}  | ${"2024-02-29T01:00:00+01:00[Europe/Paris]"}
+  `(
+    "returns $expected for 1709164800 in Europe/Paris with options $options",
+    ({ options, expected }) => {
+      expect(convertUnixToZoned(1709164800, "Europe/Paris", options)).toBe(
+        expected,
+      );
+    },
+  );
+
+  // The unit is an options object; a legacy positional unit string (or null) is not an options
+  // object (Temporal GetOptionsObject throws TypeError), so it is the sentinel, never a silent
+  // default. An explicit undefined is the same as omitted.
+  it.each`
+    options
+    ${"seconds"}
+    ${"milliseconds"}
+    ${null}
+    ${1000}
+  `("returns the sentinel for non-object options $options", ({ options }) => {
+    expect(convertUnixToZoned(1709164800, "UTC", options as never)).toBe("");
+  });
 
   for (const timeZone of battleTestTimeZones) {
     it(`returns a zoned datetime in battle-test timeZone ${timeZone}`, () => {
@@ -145,4 +177,10 @@ describe("convertUnixToZoned", () => {
       expect(parseTimeZoneFromZoned(value)).toBe(timeZone);
     });
   }
+});
+
+describe("convertUnixToZoned invalid-input @example", () => {
+  it('returns "" for convertUnixToZoned(NaN, "UTC")', () => {
+    expect(convertUnixToZoned(NaN, "UTC")).toBe("");
+  });
 });

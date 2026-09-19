@@ -21,7 +21,7 @@ export function sortUtc(
   utcDateTimes: string[],
   order: "asc" | "desc" = "asc",
 ): string[] {
-  if (!utcDateTimes.length) return [];
+  if (!Array.isArray(utcDateTimes) || !utcDateTimes.length) return [];
 
   const valid = utcDateTimes.filter(isValidUtc);
   if (!valid.length) return [];

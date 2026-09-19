@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { battleTestTimeZones, MustTestDstTimeZones } from "../../test";
+import { runInBoundedChild } from "../../test/boundedChild";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import type { ZoneBucketUnit } from "../../types";
 import { bucketRange } from "./bucketRange";
@@ -356,7 +357,6 @@ describe("bucketRange", () => {
     unit         | description
     ${"minute"}  | ${"a unit below hour"}
     ${"year"}    | ${"a unit above month"}
-    ${"days"}    | ${"a plural spelling"}
     ${""}        | ${"an empty string"}
     ${undefined} | ${"absent"}
     ${null}      | ${"null"}
@@ -437,10 +437,83 @@ describe("bucketRange", () => {
     },
   );
 
+  // The bucket holding the range is representable even when the NEXT boundary, after `end`, is past
+  // Temporal's maximum instant (+275760-09-13T00:00:00Z). +275760-09-12 is a Friday, so the ISO
+  // week began Monday 09-08; New York is at -04:00 and Kiritimati at +14:00 there.
+  it.each`
+    unit       | timeZone                | expected
+    ${"day"}   | ${"America/New_York"}   | ${["+275760-09-12T04:00:00Z"]}
+    ${"week"}  | ${"America/New_York"}   | ${["+275760-09-08T04:00:00Z"]}
+    ${"month"} | ${"America/New_York"}   | ${["+275760-09-01T04:00:00Z"]}
+    ${"week"}  | ${"UTC"}                | ${["+275760-09-08T00:00:00Z"]}
+    ${"month"} | ${"UTC"}                | ${["+275760-09-01T00:00:00Z"]}
+    ${"day"}   | ${"Pacific/Kiritimati"} | ${["+275760-09-12T10:00:00Z"]}
+    ${"week"}  | ${"Pacific/Kiritimati"} | ${["+275760-09-07T10:00:00Z"]}
+    ${"month"} | ${"Pacific/Kiritimati"} | ${["+275760-08-31T10:00:00Z"]}
+  `(
+    "buckets the last hour before the maximum instant by $unit in $timeZone as $expected",
+    ({ unit, timeZone, expected }) => {
+      expect(
+        bucketRange(
+          "+275760-09-12T23:00:00Z",
+          "+275760-09-13T00:00:00Z",
+          unit,
+          timeZone,
+        ),
+      ).toEqual(expected);
+    },
+  );
+
   it("returns an empty array when Temporal.Instant.from throws", () => {
     mockTemporalInstantFromThrow();
     expect(
       bucketRange(rangeStart, rangeEnd, "day", "America/New_York"),
     ).toEqual([]);
+  });
+});
+
+// D9#6: a range over the 10,000-bucket cap is refused from its span, before walking 10,000 buckets.
+// Stepping costs about 3 ms a bucket in fixed Etc/GMT±N zones before 1970, so the walk alone took
+// 30–70 s. Each row runs in a child process (256 MB, 20 s timeout). Expected [] because each span
+// holds more wall-clock units than the cap: hours 2,381 million, days 21,915, months 23,507, weeks
+// 11,687, months 12,000.
+describe("bucketRange over the cap without walking it", () => {
+  it.each`
+    start                        | end                       | unit       | timeZone              | why
+    ${"-271821-04-20T00:00:00Z"} | ${"2024-11-03T08:00:00Z"} | ${"hour"}  | ${"Etc/GMT+12"}       | ${"the whole range in hours"}
+    ${"1900-01-01T00:00:00Z"}    | ${"1960-01-01T00:00:00Z"} | ${"day"}   | ${"Etc/GMT+12"}       | ${"60 years of days"}
+    ${"0001-01-01T00:00:00Z"}    | ${"1960-01-01T00:00:00Z"} | ${"month"} | ${"Etc/GMT-14"}       | ${"1,959 years of months"}
+    ${"1800-01-01T00:00:00Z"}    | ${"2024-01-01T00:00:00Z"} | ${"week"}  | ${"America/New_York"} | ${"224 years of weeks across LMT and DST transitions"}
+    ${"1000-01-01T00:00:00Z"}    | ${"2000-01-01T00:00:00Z"} | ${"month"} | ${"America/New_York"} | ${"1,000 years of months"}
+  `(
+    "returns [] for $unit buckets from $start to $end in $timeZone within a second ($why)",
+    ({ start, end, unit, timeZone }) => {
+      const run = runInBoundedChild([
+        `gmt.bucketRange(${JSON.stringify(start)}, ${JSON.stringify(end)}, ${JSON.stringify(unit)}, ${JSON.stringify(timeZone)})`,
+      ]);
+      expect(
+        { timedOut: run.timedOut, crashed: run.crashed },
+        run.stderr,
+      ).toEqual({ timedOut: false, crashed: false });
+      expect(run.calls[0]?.value).toEqual([]);
+      expect(run.calls[0]?.ms).toBeLessThan(1_000);
+    },
+  );
+
+  // Temporal §13.17 GetTemporalUnitValuedOption: a plural unit name is the same unit as its singular.
+  // New York local days (-04:00 in June) start at 04:00Z.
+  it("returns the New York day buckets for the plural unit days", () => {
+    expect(
+      bucketRange(
+        "2024-06-15T03:00:00Z",
+        "2024-06-17T03:00:00Z",
+        "days",
+        "America/New_York",
+      ),
+    ).toEqual([
+      "2024-06-14T04:00:00Z",
+      "2024-06-15T04:00:00Z",
+      "2024-06-16T04:00:00Z",
+    ]);
   });
 });

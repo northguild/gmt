@@ -4,14 +4,19 @@ import { battleTestTimeZones } from "../../test/timeZoneMatrix";
 import { intervalDifferenceZoned } from "./intervalDifferenceZoned";
 
 describe("intervalDifferenceZoned", () => {
-  // Closed [start, end]: the shared endpoint belongs to both intervals, so A minus B loses it and the
-  // remaining piece stops (or starts) one unit short of it.
+  // Half-open [start, end), as in `subtractIntervals`: touching intervals share no instant, so A minus
+  // B is A whole, and every cut lands exactly on B's own start or end, keeping B's zone there (coding-standards § 8;
+  // A = 2024-01-01T09:00Z, B = 12:00Z, C = 13:00Z, D = 17:00Z).
   it.each`
-    aStart                              | aEnd                                | bStart                              | bEnd                                | expected                                                                                          | reason
-    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-06-30T12:00:00+00:00[UTC]"} | ${"2024-06-30T12:00:00+00:00[UTC]"} | ${"2024-12-31T17:00:00+00:00[UTC]"} | ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-06-30T11:59:59.999999999+00:00[UTC]" }]} | ${"A ends where B starts"}
-    ${"2024-06-30T12:00:00+00:00[UTC]"} | ${"2024-12-31T17:00:00+00:00[UTC]"} | ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-06-30T12:00:00+00:00[UTC]"} | ${[{ start: "2024-06-30T12:00:00.000000001+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" }]} | ${"A starts where B ends"}
+    aStart                              | aEnd                                | bStart                                           | bEnd                                             | expected                                                                                                                                                                                              | reason
+    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-01-01T17:00:00+00:00[UTC]"} | ${"2024-01-01T12:00:00+00:00[UTC]"}              | ${"2024-01-01T13:00:00+00:00[UTC]"}              | ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-01-01T12:00:00+00:00[UTC]" }, { start: "2024-01-01T13:00:00+00:00[UTC]", end: "2024-01-01T17:00:00+00:00[UTC]" }]}                           | ${"[A, D) minus [B, C) is [A, B) and [C, D)"}
+    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-01-01T17:00:00+00:00[UTC]"} | ${"2024-01-01T07:00:00-05:00[America/New_York]"} | ${"2024-01-01T08:00:00-05:00[America/New_York]"} | ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-01-01T07:00:00-05:00[America/New_York]" }, { start: "2024-01-01T08:00:00-05:00[America/New_York]", end: "2024-01-01T17:00:00+00:00[UTC]" }]} | ${"cuts from a New York B keep B's zone"}
+    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-06-30T12:00:00+00:00[UTC]"} | ${"2024-06-30T12:00:00+00:00[UTC]"}              | ${"2024-12-31T17:00:00+00:00[UTC]"}              | ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-06-30T12:00:00+00:00[UTC]" }]}                                                                                                               | ${"A ends where B starts"}
+    ${"2024-06-30T12:00:00+00:00[UTC]"} | ${"2024-12-31T17:00:00+00:00[UTC]"} | ${"2024-01-01T09:00:00+00:00[UTC]"}              | ${"2024-06-30T12:00:00+00:00[UTC]"}              | ${[{ start: "2024-06-30T12:00:00+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" }]}                                                                                                               | ${"A starts where B ends"}
+    ${"2024-01-01T12:00:00+00:00[UTC]"} | ${"2024-01-01T12:00:00+00:00[UTC]"} | ${"2024-01-01T09:00:00+00:00[UTC]"}              | ${"2024-01-01T10:00:00+00:00[UTC]"}              | ${[]}                                                                                                                                                                                                 | ${"empty A holds no instant"}
+    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-01-01T17:00:00+00:00[UTC]"} | ${"2024-01-01T12:00:00+00:00[UTC]"}              | ${"2024-01-01T12:00:00+00:00[UTC]"}              | ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-01-01T17:00:00+00:00[UTC]" }]}                                                                                                               | ${"empty B strictly inside removes nothing"}
   `(
-    "returns $expected for touching A=[$aStart, $aEnd] minus B=[$bStart, $bEnd] ($reason)",
+    "returns $expected for A=[$aStart, $aEnd) minus B=[$bStart, $bEnd) ($reason)",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalDifferenceZoned(aStart, aEnd, bStart, bEnd)).toEqual(
         expected,
@@ -67,10 +72,9 @@ describe("intervalDifferenceZoned", () => {
     },
   );
 
-  it("computes interior boundaries at exactly ±1 nanosecond from B's edges — not copied from B, not rounded to the second", () => {
-    // Regression test for the JSDoc @example drift this guards: the interior
-    // boundaries are re-derived one nanosecond off B's start/end, never equal
-    // to B's own endpoints and never truncated to whole seconds.
+  it("cuts interior boundaries exactly at B's own start and end — no nanosecond step, not rounded to the second", () => {
+    // Half-open: the piece before B ends at B's start (excluded from it) and the piece after B starts
+    // at B's end (excluded from B), so no boundary is stepped by a nanosecond.
     const result = intervalDifferenceZoned(
       "2024-01-01T09:00:00+00:00[UTC]",
       "2024-12-31T17:00:00+00:00[UTC]",
@@ -80,10 +84,10 @@ describe("intervalDifferenceZoned", () => {
     expect(result).toEqual([
       {
         start: "2024-01-01T09:00:00+00:00[UTC]",
-        end: "2024-06-01T11:59:59.999999999+00:00[UTC]",
+        end: "2024-06-01T12:00:00+00:00[UTC]",
       },
       {
-        start: "2024-07-01T13:00:00.000000001+00:00[UTC]",
+        start: "2024-07-01T13:00:00+00:00[UTC]",
         end: "2024-12-31T17:00:00+00:00[UTC]",
       },
     ]);
@@ -140,23 +144,17 @@ describe("intervalDifferenceZoned", () => {
       const result = intervalDifferenceZoned(aStart, aEnd, bStart, bEnd);
 
       expect(result).toHaveLength(2);
-      // First piece: A start to just before B start (nanosecond precision)
+      // First piece: A start to B start (excluded)
       expect(
         Temporal.ZonedDateTime.from(result[0].start).toInstant().toString(),
       ).toBe(aStartInstant.toString());
-      const firstEndInstant = Temporal.ZonedDateTime.from(
-        result[0].end,
-      ).toInstant();
       expect(
-        Temporal.Instant.compare(firstEndInstant, bStartInstant),
-      ).toBeLessThan(0);
-      // Second piece: just after B end to A end
-      const secondStartInstant = Temporal.ZonedDateTime.from(
-        result[1].start,
-      ).toInstant();
+        Temporal.ZonedDateTime.from(result[0].end).toInstant().toString(),
+      ).toBe(bStartInstant.toString());
+      // Second piece: B end (which B excludes) to A end
       expect(
-        Temporal.Instant.compare(secondStartInstant, bEndInstant),
-      ).toBeGreaterThan(0);
+        Temporal.ZonedDateTime.from(result[1].start).toInstant().toString(),
+      ).toBe(bEndInstant.toString());
       expect(
         Temporal.ZonedDateTime.from(result[1].end).toInstant().toString(),
       ).toBe(aEndInstant.toString());
@@ -194,12 +192,9 @@ describe("intervalDifferenceZoned", () => {
       const result = intervalDifferenceZoned(aStart, aEnd, bStart, bEnd);
 
       expect(result).toHaveLength(1);
-      const startEdgeStartInstant = Temporal.ZonedDateTime.from(
-        result[0].start,
-      ).toInstant();
       expect(
-        Temporal.Instant.compare(startEdgeStartInstant, bEndInstant),
-      ).toBeGreaterThanOrEqual(0);
+        Temporal.ZonedDateTime.from(result[0].start).toInstant().toString(),
+      ).toBe(bEndInstant.toString());
       expect(
         Temporal.ZonedDateTime.from(result[0].end).toInstant().toString(),
       ).toBe(aEndInstant.toString());
@@ -224,12 +219,9 @@ describe("intervalDifferenceZoned", () => {
       expect(
         Temporal.ZonedDateTime.from(result[0].start).toInstant().toString(),
       ).toBe(aStartInstant.toString());
-      const endEdgeEndInstant = Temporal.ZonedDateTime.from(
-        result[0].end,
-      ).toInstant();
       expect(
-        Temporal.Instant.compare(endEdgeEndInstant, bStartInstant),
-      ).toBeLessThan(0);
+        Temporal.ZonedDateTime.from(result[0].end).toInstant().toString(),
+      ).toBe(bStartInstant.toString());
     }
   });
 
@@ -270,9 +262,8 @@ describe("intervalDifferenceZoned", () => {
     }
   });
 
-  it("proves zone-invariance across battleTestTimeZones for touching intervals (A minus B keeps A up to 1 ns before B)", () => {
-    // A ends at the instant B starts. Closed, so that instant is covered by both and every piece
-    // stops 1 ns short of it.
+  it("proves zone-invariance across battleTestTimeZones for touching intervals (A minus B keeps A whole)", () => {
+    // A ends at the instant B starts. Half-open, so A excludes that instant and B removes nothing.
     const aStartInstant = Temporal.Instant.from("2024-01-01T09:00:00Z");
     const sharedInstant = Temporal.Instant.from("2024-06-30T12:00:00Z");
     const bEndInstant = Temporal.Instant.from("2024-12-31T17:00:00Z");
@@ -290,22 +281,19 @@ describe("intervalDifferenceZoned", () => {
       ]);
 
       expect(instants).toEqual([
-        [
-          aStartInstant.toString(),
-          sharedInstant.subtract({ nanoseconds: 1 }).toString(),
-        ],
+        [aStartInstant.toString(), sharedInstant.toString()],
       ]);
     }
   });
 
-  // E5 (issue #78), decision of record D2 — see isValidZonedDateTime.test.ts for the full
-  // rationale: zoned/ rejects any [u-ca=...] calendar annotation outright.
+  // The arguments name different calendars (hebrew and a bare iso8601 string), so the
+  // result is the sentinel (there is no single output calendar).
   it.each`
     aStart                                           | aEnd                                | bStart                                           | bEnd
     ${"2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC]"}              | ${"2024-06-30T23:59:59+00:00[UTC]"}
     ${"2024-01-01T00:00:00+00:00[UTC]"}              | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]"} | ${"2024-06-30T23:59:59+00:00[UTC]"}
   `(
-    "returns [] when an argument carries a calendar annotation: $aStart, $aEnd, $bStart, $bEnd",
+    "returns [] for mixed calendars: $aStart, $aEnd, $bStart, $bEnd",
     ({
       aStart,
       aEnd,

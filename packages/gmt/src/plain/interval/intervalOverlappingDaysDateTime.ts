@@ -1,21 +1,18 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
-import { plainDateTime } from "../../regex";
+import { halfOpenIntersection } from "../../internal";
+import { isValidDateTime } from "../validate";
 
 /**
  * Return how many distinct calendar dates two datetime intervals share.
  *
- * - Counts the number of local dates touched by the closed intersection
- *   `[max(aStart, bStart), min(aEnd, bEnd)]` — inclusive of both endpoints.
- * - Adjacent intervals (e.g. `aEnd === bStart`) share one date and count as `1`.
- * - Returns `0` when the intervals do not overlap at all (a well-defined answer, not
- *   invalid input).
+ * - Half-open: an interval holds every `t` with `start <= t < end`. The count is the number of
+ *   calendar days holding at least one moment of the intersection `[max(aStart, bStart),
+ *   min(aEnd, bEnd))`. An intersection ending exactly at midnight does not reach that day.
+ * - Touching intervals (`aEnd === bStart`) share no moment and count `0`; so does an empty interval.
+ * - Returns `0` when the intervals share nothing (a well-defined answer, not invalid input).
  * - Returns `null` if either interval is invalid (`start > end`).
  * - Returns `null` on invalid input (wrong type, malformed strings).
- * - Diverges from date-fns's `getOverlappingDaysInIntervals`, which rounds up elapsed
- *   24-hour periods instead of counting calendar dates (its own doc example — Jan 10-20 vs
- *   Jan 17-21 — returns 3 there, 4 here). To reproduce date-fns's number, compose
- *   `intervalIntersectionDateTime` with `intervalCountDateTime`:
- *   `const span = intervalIntersectionDateTime(aStart, aEnd, bStart, bEnd); span ? intervalCountDateTime(span.start, span.end, "day") : 0;`
  *
  * @param aStart ISO 8601 datetime string for the first interval start
  * @param aEnd ISO 8601 datetime string for the first interval end
@@ -24,8 +21,8 @@ import { plainDateTime } from "../../regex";
  * @returns number of shared calendar dates, `0` when disjoint, or null on invalid input
  *
  * @example intervalOverlappingDaysDateTime("2024-01-01T23:59:00", "2024-01-02T00:01:00", "2024-01-01T23:59:00", "2024-01-02T00:01:00") // 2
- * @example intervalOverlappingDaysDateTime("2024-01-01T00:00:00", "2024-01-02T00:00:00", "2024-01-02T00:00:00", "2024-01-03T00:00:00") // 1 (adjacent)
- * @example intervalOverlappingDaysDateTime("2024-01-01T00:00:00", "2024-01-02T00:00:00", "2024-01-02T00:00:00.001", "2024-01-03T00:00:00") // 0 (disjoint)
+ * @example intervalOverlappingDaysDateTime("2024-01-01T00:00:00", "2024-01-05T00:00:00", "2024-01-03T12:00:00", "2024-01-09T00:00:00") // 2 (01-03 and 01-04; 01-05T00:00 is excluded)
+ * @example intervalOverlappingDaysDateTime("2024-01-01T00:00:00", "2024-01-02T00:00:00", "2024-01-02T00:00:00", "2024-01-03T00:00:00") // 0 (touching)
  * @example intervalOverlappingDaysDateTime("invalid", "2024-06-30T23:59:59", "2024-04-01T00:00:00", "2024-12-31T23:59:59") // null
  */
 export function intervalOverlappingDaysDateTime(
@@ -44,10 +41,10 @@ export function intervalOverlappingDaysDateTime(
   }
 
   if (
-    !plainDateTime.test(aStart) ||
-    !plainDateTime.test(aEnd) ||
-    !plainDateTime.test(bStart) ||
-    !plainDateTime.test(bEnd)
+    !isValidDateTime(aStart) ||
+    !isValidDateTime(aEnd) ||
+    !isValidDateTime(bStart) ||
+    !isValidDateTime(bEnd)
   ) {
     return null;
   }
@@ -66,19 +63,27 @@ export function intervalOverlappingDaysDateTime(
       return null;
     }
 
+    const shared = halfOpenIntersection(
+      { start: aS, end: aE },
+      { start: bS, end: bE },
+      Temporal.PlainDateTime.compare,
+    );
+
     if (
-      Temporal.PlainDateTime.compare(aE, bS) < 0 ||
-      Temporal.PlainDateTime.compare(bE, aS) < 0
+      shared === null ||
+      Temporal.PlainDateTime.compare(shared.start, shared.end) === 0
     ) {
       return 0;
     }
 
-    const start = Temporal.PlainDateTime.compare(aS, bS) >= 0 ? aS : bS;
-    const end = Temporal.PlainDateTime.compare(aE, bE) <= 0 ? aE : bE;
-    const startDate = start.toPlainDate();
-    const endDate = end.toPlainDate();
+    const endsAtMidnight = shared.end
+      .toPlainTime()
+      .equals(new Temporal.PlainTime());
+    const days = shared.start
+      .toPlainDate()
+      .until(shared.end.toPlainDate(), { largestUnit: "day" }).days;
 
-    return startDate.until(endDate, { largestUnit: "day" }).days + 1;
+    return endsAtMidnight ? days : days + 1;
   } catch {
     return null;
   }

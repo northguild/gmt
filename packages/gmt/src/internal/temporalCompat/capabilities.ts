@@ -59,6 +59,7 @@ const ARITHMETIC_DEFECTS: readonly DefectId[] = [
   "D5",
   "D6",
   "D7",
+  "D10",
 ];
 
 /**

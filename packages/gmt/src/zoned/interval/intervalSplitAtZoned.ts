@@ -18,13 +18,14 @@ import { isValidCalendarZonedInterval } from "./validate";
  * - Points on the same instant as `start` or `end` are dropped too — they would only produce a
  *   zero-length sub-interval at the edge.
  * - Duplicate points (same instant) collapse to a single boundary.
- * - Returns consecutive `{ start, end }` records, each record's `end` equal to the next
- *   record's `start`.
+ * - Returns consecutive half-open `[start, end)` records, the same tiling as `splitIntervalAt`:
+ *   each record's `end` is the next record's `start` and belongs only to that next record, so the
+ *   pieces share no instant and together cover `[start, end)` exactly once.
  * - Returns `[{ start, end }]` (the whole interval, unsplit) when no valid in-range point remains.
  * - Returns `[]` when `points` is not an array, when any element is not a valid ISO
  *   ZonedDateTime string, or on invalid input (unparseable start/end, `start > end`,
  *   leap-second strings).
- * - Accepts GMT calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
+ * - Accepts RFC 9557 calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
  *   well as bare ISO ones — E7 (issue #152) — but **rejects a mismatched set**: `start`, `end`
  *   and every element of `points` must name the same calendar system (E7's D4-zoned), since the
  *   returned sub-intervals are values the caller reads back as datetimes and an array of

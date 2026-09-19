@@ -32,3 +32,5 @@ export * from "./time-unit";
 export * from "./unix-now-unit";
 export * from "./utc-now-unit";
 export * from "./zone-bucket-unit";
+// `UnixUnit` is declared beside its guard `isValidUnixUnit`; re-exported so `/types` carries every shared signature type
+export type { UnixUnit } from "../unix/validate/isValidUnixUnit";

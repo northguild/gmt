@@ -18,7 +18,7 @@ export function sortDates(
   dates: string[],
   order: "asc" | "desc" = "asc",
 ): string[] {
-  if (!dates.length) return [];
+  if (!Array.isArray(dates) || !dates.length) return [];
 
   const valid = dates.filter(isValidDate);
   if (!valid.length) return [];

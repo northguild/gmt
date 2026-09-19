@@ -29,6 +29,7 @@
  *     2024-10-24T09:00:00-04:00        invalid   (no bracket)
  *     2024-10-24T09:00:00-04:00[UTC]   invalid   (offset contradicts the zone)
  *     2024-10-24T09:00:00-04:00[-04:00]        valid
+ *     2024-10-24T09:00:00-0400[-0400]          invalid   (basic offset; GMT takes ±HH:MM only)
  *     2024-10-24T09:00:00-04:00[America/New_York]  valid
  *
  * The offset case is the one worth noticing: a numeric offset cannot simply be
@@ -76,8 +77,12 @@ export function normaliseZonedInput(
 
   const offset = TRAILING_OFFSET.exec(trimmed);
   if (offset) {
-    // `[UTC]` would contradict the offset; the offset becomes the zone.
-    return `${trimmed}[${offset[1]}]`;
+    // `[UTC]` would contradict the offset; the offset becomes the zone. GMT
+    // accepts only the extended `±HH:MM` form, so a basic `+0900` gains its colon.
+    const extended = offset[1].includes(":")
+      ? offset[1]
+      : `${offset[1].slice(0, 3)}:${offset[1].slice(3)}`;
+    return `${trimmed.slice(0, offset.index)}${extended}[${extended}]`;
   }
 
   // A trailing `Z` already satisfies `Instant.from`; it only needs the bracket.

@@ -78,8 +78,40 @@ describe("getWeeksInMonth", () => {
     expect(getWeeksInMonth("2026-02-15", locale)).toBeNull();
   });
 
+  // Range edges, from proleptic Gregorian day arithmetic (days-from-civil), not GMT. April -271821
+  // began on a Thursday (before the first PlainDate, -271821-04-19) and has 30 days: 4 + 30 = 34
+  // cells in a Sunday-first grid and 3 + 30 = 33 in a Monday-first one, 5 rows each. September
+  // +275760 began on a Monday and has 30 days: 1 + 30 and 0 + 30 cells, 5 rows each.
+  it.each`
+    value              | locale                  | expected
+    ${"-271821-04-19"} | ${MustTestLocales.enUS} | ${5}
+    ${"-271821-04-19"} | ${MustTestLocales.deDE} | ${5}
+    ${"+275760-09-13"} | ${MustTestLocales.enUS} | ${5}
+    ${"+275760-09-13"} | ${MustTestLocales.deDE} | ${5}
+  `(
+    "returns $expected week rows for the range-edge month of $value in $locale",
+    ({ value, locale, expected }) => {
+      expect(getWeeksInMonth(value, locale)).toBe(expected);
+    },
+  );
+
   it("returns null when Temporal.PlainDate.from throws", () => {
     mockTemporalPlainDateFromThrow();
     expect(getWeeksInMonth("2026-02-15", MustTestLocales.enUS)).toBeNull();
   });
+
+  // ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale
+  // data is read (en-US weeks start on Sunday, fr-FR on Monday, ar-EG weekends are Friday and
+  // Saturday: Intl.Locale#getWeekInfo), and a malformed tag anywhere in the list is invalid input.
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.enUS, MustTestLocales.frFR]} | ${6}
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${5}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${null}
+  `(
+    "returns $expected for June 2024 (1 June a Saturday, 30 June a Sunday) with locale list $locale",
+    ({ locale, expected }) => {
+      expect(getWeeksInMonth("2024-06-15", locale)).toBe(expected);
+    },
+  );
 });

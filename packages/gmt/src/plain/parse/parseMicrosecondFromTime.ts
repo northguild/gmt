@@ -7,7 +7,8 @@ import { isValidTime } from "../validate";
  * @param value ISO time string
  * @returns Microsecond (000-999) or "" on invalid input
  *
- * @example parseMicrosecondFromTime("12:30:45.123") // "123"
+ * @example parseMicrosecondFromTime("12:30:45.123") // "000"
+ * @example parseMicrosecondFromTime("12:30:45.123456") // "456"
  * @example parseMicrosecondFromTime("12:30:45.000") // "000"
  * @example parseMicrosecondFromTime("invalid") // ""
  */

@@ -1,6 +1,17 @@
 import { intervalSplitAtUnix } from "./intervalSplitAtUnix";
 
 describe("intervalSplitAtUnix", () => {
+  // Half-open, coding-standards § 8 (A = 2024-01-01T09:00Z, B = 12:00Z, D = 17:00Z in ms): the same output as
+  // before, now read as half-open pieces that partition [A, D) — B belongs only to [B, D).
+  it("splits [A, D) at B into [A, B) and [B, D)", () => {
+    expect(
+      intervalSplitAtUnix(1704099600000, 1704128400000, [1704110400000]),
+    ).toEqual([
+      { start: 1704099600000, end: 1704110400000 },
+      { start: 1704110400000, end: 1704128400000 },
+    ]);
+  });
+
   it("splits at a single in-range point", () => {
     expect(intervalSplitAtUnix(0, 100000, [50000])).toEqual([
       { start: 0, end: 50000 },

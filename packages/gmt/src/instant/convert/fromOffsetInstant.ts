@@ -1,7 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import {
   formatUtcOffset,
-  hasKeyValueAnnotation,
   parseInstantNanoseconds,
   parseUtcOffsetNanoseconds,
 } from "../../internal";
@@ -22,12 +21,14 @@ import type { OffsetInstant } from "./toOffsetInstant";
  *   two things that cannot both be true, and the whole point of carrying both fields is that
  *   a contradiction between them is visible.
  * - `timeZone` accepts every identifier Temporal does, as `toOffsetInstant`'s bracket does —
- *   including the slash-less IANA aliases (`EST5EDT`, `Zulu`). A `timeZone` that is really
+ *   including the single-component IANA names (`EST5EDT`, `Zulu`). A `timeZone` that is really
  *   an offset (`"-04:00"`, or the `"-0400"`/`"+05"` spellings Temporal canonicalises to one)
  *   returns `""`: it names no place, and no pair `toOffsetInstant` produces carries one.
  * - `offset` is canonicalised, so `"+05:45:00"` renders as `+05:45` and `"-00:00"` as
  *   `+00:00`. `Z` is not an accepted offset — for an event that happened at UTC the pair's
- *   offset is `+00:00`.
+ *   offset is `+00:00`. RFC 9557 §2.2 gives `Z` and `-00:00` a different meaning from `+00:00`
+ *   ("UTC known, local offset unknown"); a pair cannot carry that, so all three render as
+ *   `+00:00`.
  * - With a `timeZone`, a sub-minute offset is *written* rounded to the minute, because RFC
  *   9557 has no field for the seconds — `Africa/Monrovia`'s `-00:44:30` renders as `-00:45`.
  *   The bracketed zone is what resolves it, so the instant stays exact and the round trip
@@ -43,6 +44,7 @@ import type { OffsetInstant } from "./toOffsetInstant";
  * @example fromOffsetInstant({ instant: "2024-11-03T05:30:00Z", offset: "-04:00", timeZone: "America/New_York" }) // "2024-11-03T01:30:00-04:00[America/New_York]" — the first 01:30 of the fall-back night
  * @example fromOffsetInstant({ instant: "2024-11-03T06:30:00Z", offset: "-05:00", timeZone: "America/New_York" }) // "2024-11-03T01:30:00-05:00[America/New_York]" — the second, an hour later
  * @example fromOffsetInstant({ instant: "2024-07-15T16:00:00Z", offset: "+00:00" }) // "2024-07-15T16:00:00+00:00"
+ * @example fromOffsetInstant({ instant: "2024-07-15T16:00:00Z", offset: "-00:00" }) // "2024-07-15T16:00:00+00:00" (RFC 9557's "offset unknown" is not kept)
  * @example fromOffsetInstant({ instant: "1970-01-01T00:00:00Z", offset: "-00:44:30", timeZone: "Africa/Monrovia" }) // "1969-12-31T23:15:30-00:45[Africa/Monrovia]" — RFC 9557 rounds the written offset; the zone keeps the instant exact
  * @example fromOffsetInstant({ instant: "1970-01-01T00:00:00Z", offset: "-00:44:30" }) // "1969-12-31T23:15:30-00:44:30" — no zone to round against, so the seconds are written
  * @example fromOffsetInstant({ instant: "2024-07-15T16:00:00Z", offset: "-05:00", timeZone: "America/New_York" }) // "" (offset contradicts the zone)
@@ -58,11 +60,7 @@ export function fromOffsetInstant(value: OffsetInstant): string {
   const epochNanoseconds = parseInstantNanoseconds(value.instant);
   const offsetNanoseconds = parseUtcOffsetNanoseconds(value.offset);
 
-  if (
-    epochNanoseconds === null ||
-    offsetNanoseconds === null ||
-    hasKeyValueAnnotation(value.instant)
-  ) {
+  if (epochNanoseconds === null || offsetNanoseconds === null) {
     return "";
   }
 

@@ -161,6 +161,8 @@ describe("formatTime", () => {
     },
   );
 
+  // pt-PT 12-hour day period — CLDR changed the wording from "da tarde"
+  // (ICU 77 / Node 22.16–22.22) to "p.m." (ICU 78 / Node 22.23+, 24, 26).
   it("formats valid time 14:30:45 for pt-PT with 12-hour day period (CLDR wording varies by ICU version)", () => {
     expectOneOfIcu(
       formatTime("14:30:45", MustTestLocales.ptPT, {
@@ -404,6 +406,31 @@ describe("formatTime", () => {
     expect(formatTime(value, locale, options)).not.toBe("");
   });
 
+  // Temporal ECMA-402 PlainTime format (CreateDateTimeFormat ~time~, ~time~;
+  // GetDateTimeFormat inherit ~relevant~): `era` and `timeZoneName` are not
+  // inherited, so the hour/minute/second defaults apply (test262
+  // intl402/Temporal/PlainTime/prototype/toLocaleString/era.js), and a
+  // `dateStyle` is a TypeError (…/datestyle-and-timestyle.js). Expected
+  // values: native Intl.DateTimeFormat at UTC with the adjusted options.
+  it.each`
+    options                                       | expected        | reason
+    ${{ era: "long" }}                            | ${"2:30:45 PM"} | ${"era is not inherited, defaults apply"}
+    ${{ timeZoneName: "long" }}                   | ${"2:30:45 PM"} | ${"timeZoneName is not inherited, defaults apply"}
+    ${{ hour: "numeric", era: "long" }}           | ${"2 PM"}       | ${"era dropped beside a time field"}
+    ${{ dateStyle: "short", timeStyle: "short" }} | ${""}           | ${"dateStyle on a PlainTime is a TypeError"}
+    ${{ dateStyle: "short" }}                     | ${""}           | ${"dateStyle on a PlainTime is a TypeError"}
+    ${{ timeStyle: "short" }}                     | ${"2:30 PM"}    | ${"only the style that applies gives the pre-1.16.0 text"}
+    ${{ timeStyle: "full" }}                      | ${"2:30:45 PM"} | ${"zone field removed from the full time style"}
+    ${{ year: "numeric" }}                        | ${""}           | ${"only date fields: no PlainTime format"}
+  `(
+    "formats 14:30:45.123 in en-US with $options to $expected ($reason)",
+    ({ options, expected }) => {
+      expect(formatTime("14:30:45.123", MustTestLocales.enUS, options)).toBe(
+        expected,
+      );
+    },
+  );
+
   it.each`
     invalidValue
     ${"not-a-time"}
@@ -424,5 +451,35 @@ describe("formatTime", () => {
     mockTemporalPlainTimeFromThrow();
     const result = formatTime("00:00:00");
     expect(result).toBe("");
+  });
+
+  // ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale data
+  // is used, and a malformed tag anywhere in the list is invalid input. Expected strings from native
+  // Intl with the same list.
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"14:30"}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
+  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+    expect(
+      formatTime("14:30:45", locale, { hour: "2-digit", minute: "2-digit" }),
+    ).toBe(expected);
+  });
+});
+
+// Plan #14: ECMA-402 CoerceOptionsToObject throws TypeError for null options and wraps any other
+// primitive with ToObject, which carries no formatting fields, so a string or number formats with
+// the defaults. Expected strings from native Chromium 153 (`toLocaleString("en-US", 1)` and
+// `new Intl.DateTimeFormat("en-US", null)`, which throws).
+describe("formatTime with primitive options", () => {
+  it.each`
+    options   | expected
+    ${null}   | ${""}
+    ${"long"} | ${"2:30:00 PM"}
+    ${1}      | ${"2:30:00 PM"}
+  `("returns $expected for options $options", ({ options, expected }) => {
+    expect(formatTime("14:30:00", MustTestLocales.enUS, options as never)).toBe(
+      expected,
+    );
   });
 });

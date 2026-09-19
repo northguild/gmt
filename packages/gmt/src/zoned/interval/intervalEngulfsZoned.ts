@@ -1,23 +1,29 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
-import { parseCalendarZonedValue } from "../../internal";
+import { halfOpenContainsSpan, parseCalendarZonedValue } from "../../internal";
 import { isValidCalendarZonedDateTime } from "../validate";
 
 /**
- * Return true when interval B is fully contained within interval A — every instant of B
- * falls within A.
+ * Return true when the half-open interval B `[bStart, bEnd)` lies within the half-open interval
+ * A `[aStart, aEnd)` — every instant of B falls within A.
  *
  * - Uses `Temporal.Instant.compare` for comparison (via `.toInstant()`).
+ * - B is inside A when the intervals overlap and `aStart <= bStart` and `bEnd <= aEnd` by
+ *   instant. Both ends are exclusive, so B may start at A's start and end at A's end.
+ * - An empty B counts only strictly inside A, the same edge rule as `clampInterval`; at either edge
+ *   of A it returns `false`, and an empty A engulfs nothing.
  * - Equivalent to 4-argument `intervalContainsZoned(aStart, aEnd, bStart, bEnd)`.
  * - Returns `false` if either interval is invalid (`start > end`).
  * - Returns `false` on invalid input (wrong type, malformed strings, leap seconds).
  * - **Accepts mixed calendar systems** (E7's D4-zoned, issue #152): both bare ISO zoned strings
- *   and GMT calendar-annotated ones (`"5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"`),
+ *   and RFC 9557 calendar-annotated ones (`"2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]"`),
  *   and the two endpoints need not agree on a calendar. Ordering is calendar-independent —
  *   verified that `Temporal.Instant` carries no calendar field at all and that
  *   `Instant.compare`/`ZonedDateTime.compare` both return `0` for the same instant expressed in
  *   hebrew, islamic-civil, japanese and iso8601.
- * - Still rejects Temporal's own `[timeZone][u-ca=...]` RFC 9557 ordering, which reads GMT's
- *   calendar-native digits as ISO digits — see `regex/calendar-zoned-date-time.ts`.
+ * - Rejects a calendar annotation before the time zone annotation, which is not RFC 9557.
+ * - Compatibility: since 1.16.0 calendar strings are RFC 9557 (ISO digits, the `[u-ca=<id>]`
+ *   annotation after the zone, canonical calendar ids); see `isValidCalendarZonedDateTime`.
  *
  * @param aStart ISO 8601 zoned datetime string for the outer interval start
  * @param aEnd ISO 8601 zoned datetime string for the outer interval end
@@ -39,8 +45,8 @@ export function intervalEngulfsZoned(
 ): boolean {
   // One gate for all four endpoints: `isValidCalendarZonedDateTime` already covers non-strings,
   // empty strings, leap seconds (which Temporal would otherwise silently clamp to :59), unknown
-  // zones and Temporal's forbidden segment ordering — and, unlike `isValidZonedDateTime`, accepts
-  // GMT's calendar-annotated grammar.
+  // zones and a calendar annotation before the zone — and, unlike `isValidZonedDateTime`, accepts
+  // RFC 9557 calendar annotations.
   if (
     !isValidCalendarZonedDateTime(aStart) ||
     !isValidCalendarZonedDateTime(aEnd) ||
@@ -69,9 +75,11 @@ export function intervalEngulfsZoned(
       return false;
     }
 
-    return (
-      Temporal.Instant.compare(aS, bS) <= 0 &&
-      Temporal.Instant.compare(bE, aE) <= 0
+    // B overlaps A, and B's start and exclusive end both lie within A's bounds.
+    return halfOpenContainsSpan(
+      { start: aS, end: aE },
+      { start: bS, end: bE },
+      Temporal.Instant.compare,
     );
   } catch {
     return false;

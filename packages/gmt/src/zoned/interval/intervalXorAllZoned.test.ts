@@ -21,10 +21,10 @@ describe("intervalXorAllZoned", () => {
     expect(result).toEqual([
       {
         start: "2024-01-01T09:00:00+00:00[UTC]",
-        end: "2024-04-01T10:59:59.999999999+00:00[UTC]",
+        end: "2024-04-01T11:00:00+00:00[UTC]",
       },
       {
-        start: "2024-06-30T12:00:00.000000001+00:00[UTC]",
+        start: "2024-06-30T12:00:00+00:00[UTC]",
         end: "2024-12-31T17:00:00+00:00[UTC]",
       },
     ]);
@@ -85,12 +85,25 @@ describe("intervalXorAllZoned", () => {
     ]);
   });
 
+  // Half-open [start, end) (coding-standards § 8; A = 2024-01-01T09:00Z, B = 12:00Z, C = 13:00Z,
+  // D = 17:00Z): the result is every maximal run covered an odd number of times. Touching runs join,
+  // and an empty interval covers no instant, so it changes nothing.
+  it.each`
+    intervals                                                                                                                                                                   | expected                                                                                                                                                                    | reason
+    ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-01-01T13:00:00+00:00[UTC]" }, { start: "2024-01-01T12:00:00+00:00[UTC]", end: "2024-01-01T17:00:00+00:00[UTC]" }]} | ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-01-01T12:00:00+00:00[UTC]" }, { start: "2024-01-01T13:00:00+00:00[UTC]", end: "2024-01-01T17:00:00+00:00[UTC]" }]} | ${"[A, C) and [B, D) give [A, B) and [C, D)"}
+    ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-01-01T12:00:00+00:00[UTC]" }, { start: "2024-01-01T12:00:00+00:00[UTC]", end: "2024-01-01T17:00:00+00:00[UTC]" }]} | ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-01-01T17:00:00+00:00[UTC]" }]}                                                                                     | ${"touching [A, B) and [B, D) join into one run"}
+    ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-01-01T17:00:00+00:00[UTC]" }, { start: "2024-01-01T12:00:00+00:00[UTC]", end: "2024-01-01T12:00:00+00:00[UTC]" }]} | ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-01-01T17:00:00+00:00[UTC]" }]}                                                                                     | ${"an empty interval inside changes nothing"}
+    ${[{ start: "2024-01-01T12:00:00+00:00[UTC]", end: "2024-01-01T12:00:00+00:00[UTC]" }]}                                                                                     | ${[]}                                                                                                                                                                       | ${"a lone empty interval covers no instant"}
+  `("returns $expected for $intervals ($reason)", ({ intervals, expected }) => {
+    expect(intervalXorAllZoned(intervals)).toEqual(expected);
+  });
+
   it("returns [] for an empty list", () => {
     expect(intervalXorAllZoned([])).toEqual([]);
   });
 
   it("handles a 3-way overlap, keeping only oddly-covered regions (odd-vs-even sweep)", () => {
-    // A=[1,10] B=[5,15] C=[8,20] (all at T00:00:00Z): [1,4]=1x, [5,7]=2x, [8,10]=3x, [11,15]=2x, [16,20]=1x
+    // A=[1,10) B=[5,15) C=[8,20) (all at T00:00:00Z): [1,5)=1x, [5,8)=2x, [8,10)=3x, [10,15)=2x, [15,20)=1x
     expect(
       intervalXorAllZoned([
         {
@@ -109,14 +122,14 @@ describe("intervalXorAllZoned", () => {
     ).toEqual([
       {
         start: "2024-01-01T00:00:00+00:00[UTC]",
-        end: "2024-01-04T23:59:59.999999999+00:00[UTC]",
+        end: "2024-01-05T00:00:00+00:00[UTC]",
       },
       {
         start: "2024-01-08T00:00:00+00:00[UTC]",
         end: "2024-01-10T00:00:00+00:00[UTC]",
       },
       {
-        start: "2024-01-15T00:00:00.000000001+00:00[UTC]",
+        start: "2024-01-15T00:00:00+00:00[UTC]",
         end: "2024-01-20T00:00:00+00:00[UTC]",
       },
     ]);
@@ -141,14 +154,14 @@ describe("intervalXorAllZoned", () => {
     ).toEqual([
       {
         start: "2024-01-01T00:00:00+00:00[UTC]",
-        end: "2024-01-04T23:59:59.999999999+00:00[UTC]",
+        end: "2024-01-05T00:00:00+00:00[UTC]",
       },
       {
         start: "2024-01-08T00:00:00+00:00[UTC]",
         end: "2024-01-10T00:00:00+00:00[UTC]",
       },
       {
-        start: "2024-01-15T00:00:00.000000001+00:00[UTC]",
+        start: "2024-01-15T00:00:00+00:00[UTC]",
         end: "2024-01-20T00:00:00+00:00[UTC]",
       },
     ]);
@@ -170,17 +183,17 @@ describe("intervalXorAllZoned", () => {
     expect(result).toEqual([
       {
         start: "2024-03-01T00:00:00-05:00[America/New_York]",
-        end: "2024-03-07T23:59:59.999999999-05:00[America/New_York]",
+        end: "2024-03-08T00:00:00-05:00[America/New_York]",
       },
       {
-        start: "2024-03-15T00:00:00.000000001-04:00[America/New_York]",
+        start: "2024-03-15T00:00:00-04:00[America/New_York]",
         end: "2024-03-20T00:00:00-04:00[America/New_York]",
       },
     ]);
   });
 
   it("handles a 3-way overlap spanning a DST transition (America/New_York, 2024-03-10)", () => {
-    // A=[Mar1,Mar12] B=[Mar8,Mar16] C=[Mar11,Mar20]: [Mar1,Mar7]=1x, [Mar8,Mar10]=2x, [Mar11,Mar12]=3x, [Mar13,Mar16]=2x, [Mar17,Mar20]=1x
+    // A=[Mar1,Mar12) B=[Mar8,Mar16) C=[Mar11,Mar20): [Mar1,Mar8)=1x, [Mar8,Mar11)=2x, [Mar11,Mar12)=3x, [Mar12,Mar16)=2x, [Mar16,Mar20)=1x
     expect(
       intervalXorAllZoned([
         {
@@ -199,14 +212,14 @@ describe("intervalXorAllZoned", () => {
     ).toEqual([
       {
         start: "2024-03-01T00:00:00-05:00[America/New_York]",
-        end: "2024-03-07T23:59:59.999999999-05:00[America/New_York]",
+        end: "2024-03-08T00:00:00-05:00[America/New_York]",
       },
       {
         start: "2024-03-11T00:00:00-04:00[America/New_York]",
         end: "2024-03-12T00:00:00-04:00[America/New_York]",
       },
       {
-        start: "2024-03-16T00:00:00.000000001-04:00[America/New_York]",
+        start: "2024-03-16T00:00:00-04:00[America/New_York]",
         end: "2024-03-20T00:00:00-04:00[America/New_York]",
       },
     ]);
@@ -329,7 +342,7 @@ describe("intervalXorAllZoned", () => {
       ).toBe(aStartInstant.toString());
       expect(
         Temporal.ZonedDateTime.from(result[0].end).toInstant().toString(),
-      ).toBe(bStartInstant.subtract({ nanoseconds: 1 }).toString());
+      ).toBe(bStartInstant.toString());
       expect(
         Temporal.ZonedDateTime.from(result[1].start).toInstant().toString(),
       ).toBe(cStartInstant.toString());
@@ -338,15 +351,15 @@ describe("intervalXorAllZoned", () => {
       ).toBe(aEndInstant.toString());
       expect(
         Temporal.ZonedDateTime.from(result[2].start).toInstant().toString(),
-      ).toBe(bEndInstant.add({ nanoseconds: 1 }).toString());
+      ).toBe(bEndInstant.toString());
       expect(
         Temporal.ZonedDateTime.from(result[2].end).toInstant().toString(),
       ).toBe(cEndInstant.toString());
     }
   });
-  // E5 (issue #78), decision of record D2 — see isValidZonedDateTime.test.ts for the full
-  // rationale: zoned/ rejects any [u-ca=...] calendar annotation outright.
-  it("returns [] when any interval endpoint carries a calendar annotation", () => {
+  // The arguments name different calendars (hebrew and a bare iso8601 string), so the
+  // result is the sentinel (there is no single output calendar).
+  it("returns [] when the interval endpoints name different calendars", () => {
     expect(
       intervalXorAllZoned([
         {
@@ -357,15 +370,15 @@ describe("intervalXorAllZoned", () => {
     ).toEqual([]);
   });
 
-  // The last representable instant is +275760-09-13T00:00:00Z, so no boundary may be computed as
-  // `end + 1 ns`. Nested: 06:00..12:00 UTC on 09-12 is covered twice, so the odd runs end at
-  // 06:00 - 1 ns = 05:59:59.999999999 and resume at 12:00 + 1 ns = 12:00:00.000000001.
-  // Sydney row: max is 09-13T10:00+10:00; 04:00..06:00 local is covered twice.
+  // Range edge (CORE-6): the last representable instant is +275760-09-13T00:00:00Z, so no boundary
+  // may be computed past an end. Half-open, no boundary is stepped at all. Nested: [06:00, 12:00)
+  // UTC on 09-12 is covered twice, so the odd runs end at 06:00 and resume at 12:00.
+  // Sydney row: max is 09-13T10:00+10:00; [04:00, 06:00) local is covered twice.
   it.each`
     intervals                                                                                                                                                                                                                                   | expected
     ${[{ start: "+275760-09-12T00:00:00+00:00[UTC]", end: "+275760-09-13T00:00:00+00:00[UTC]" }]}                                                                                                                                               | ${[{ start: "+275760-09-12T00:00:00+00:00[UTC]", end: "+275760-09-13T00:00:00+00:00[UTC]" }]}
-    ${[{ start: "+275760-09-12T00:00:00+00:00[UTC]", end: "+275760-09-13T00:00:00+00:00[UTC]" }, { start: "+275760-09-12T06:00:00+00:00[UTC]", end: "+275760-09-12T12:00:00+00:00[UTC]" }]}                                                     | ${[{ start: "+275760-09-12T00:00:00+00:00[UTC]", end: "+275760-09-12T05:59:59.999999999+00:00[UTC]" }, { start: "+275760-09-12T12:00:00.000000001+00:00[UTC]", end: "+275760-09-13T00:00:00+00:00[UTC]" }]}
-    ${[{ start: "+275760-09-13T00:00:00+10:00[Australia/Sydney]", end: "+275760-09-13T10:00:00+10:00[Australia/Sydney]" }, { start: "+275760-09-13T04:00:00+10:00[Australia/Sydney]", end: "+275760-09-13T06:00:00+10:00[Australia/Sydney]" }]} | ${[{ start: "+275760-09-13T00:00:00+10:00[Australia/Sydney]", end: "+275760-09-13T03:59:59.999999999+10:00[Australia/Sydney]" }, { start: "+275760-09-13T06:00:00.000000001+10:00[Australia/Sydney]", end: "+275760-09-13T10:00:00+10:00[Australia/Sydney]" }]}
+    ${[{ start: "+275760-09-12T00:00:00+00:00[UTC]", end: "+275760-09-13T00:00:00+00:00[UTC]" }, { start: "+275760-09-12T06:00:00+00:00[UTC]", end: "+275760-09-12T12:00:00+00:00[UTC]" }]}                                                     | ${[{ start: "+275760-09-12T00:00:00+00:00[UTC]", end: "+275760-09-12T06:00:00+00:00[UTC]" }, { start: "+275760-09-12T12:00:00+00:00[UTC]", end: "+275760-09-13T00:00:00+00:00[UTC]" }]}
+    ${[{ start: "+275760-09-13T00:00:00+10:00[Australia/Sydney]", end: "+275760-09-13T10:00:00+10:00[Australia/Sydney]" }, { start: "+275760-09-13T04:00:00+10:00[Australia/Sydney]", end: "+275760-09-13T06:00:00+10:00[Australia/Sydney]" }]} | ${[{ start: "+275760-09-13T00:00:00+10:00[Australia/Sydney]", end: "+275760-09-13T04:00:00+10:00[Australia/Sydney]" }, { start: "+275760-09-13T06:00:00+10:00[Australia/Sydney]", end: "+275760-09-13T10:00:00+10:00[Australia/Sydney]" }]}
   `(
     "returns $expected for $intervals (an end at the maximum instant)",
     ({ intervals, expected }) => {

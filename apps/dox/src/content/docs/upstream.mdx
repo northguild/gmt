@@ -1,0 +1,87 @@
+---
+title: Helping fix Temporal
+description: >
+  GMT helps fix the Temporal standard and its polyfill: the bugs we found, how
+  GMT already gives you the correct answer, and a live tracker of the fixes we
+  sent back.
+slug: upstream
+---
+
+import UpstreamTracker from "../../components/UpstreamTracker.astro";
+import {
+  filingsByKind,
+  handledInGmt,
+  totalFilings,
+  unaffectingGmt,
+} from "../../data/upstream-filings";
+
+export const prs = filingsByKind.find((row) => row.label === "pr")?.count ?? 0;
+export const coversAll = handledInGmt + unaffectingGmt === totalFilings;
+
+GMT is built on [Temporal](https://tc39.es/proposal-temporal/), the new JavaScript date and
+time standard. Until browsers and Node ship Temporal natively, GMT runs on the community
+[`@js-temporal/polyfill`](https://github.com/js-temporal/temporal-polyfill).
+
+We test GMT against the Temporal standard itself, not against the polyfill. When the polyfill
+gives a wrong answer, GMT gives you the right one anyway, and we help fix it for everyone: we
+send the fix to the people who maintain the polyfill, and to the Temporal standard's own
+reference code wherever the same bug lives there too.
+
+**So far we have sent {totalFilings} reports and fixes to the Temporal projects, {prs} of them as ready-to-merge
+code changes.{coversAll ? " GMT already gives you the correct answer for every one of them" : ` GMT already gives you the correct answer for ${handledInGmt + unaffectingGmt} of them`}: {handledInGmt} through its own
+built-in fix, and {unaffectingGmt} because the bug is in code GMT doesn't use.**
+
+## Where each fix stands
+
+<UpstreamTracker />
+
+## What this means for you
+
+**You don't need to do anything.** Where the polyfill has one of these bugs, GMT detects it
+and uses its own correct code instead. GMT checks once, when it first loads, whether the
+installed polyfill still has each bug. If it doesn't, GMT uses the polyfill directly. Either
+way, you get the same correct answer.
+
+When the polyfill maintainers merge these fixes and publish a new release, GMT's extra code
+simply stops being needed. Your results don't change.
+
+We check this continuously. `pnpm compat` reports which of GMT's workarounds the installed
+polyfill still needs, and `pnpm compat:oracle` compares GMT's results with the Temporal
+built into Chrome, date by date, across every calendar GMT supports. For GMT 1.16.0 it found
+no differences.
+
+## What kind of bugs are these?
+
+They're rare edge cases. Most only show up:
+
+- near the very first or very last date Temporal can represent (around the year 275,000);
+- in non-Gregorian calendars, such as Hebrew, Persian, Islamic or Japanese; or
+- in time zone history from before the 1850s.
+
+Temporal is a large, carefully designed standard, and the polyfill is a big piece of work.
+Finding bugs like these is normal. We found them because GMT tests the unusual corners that
+most code never reaches.
+
+We sent them to two places:
+
+- **The polyfill** ([`js-temporal/temporal-polyfill`](https://github.com/js-temporal/temporal-polyfill)),
+  the package GMT and many other projects install. Some of its fixes are already written but
+  not yet in a published release, so we've asked for a new release. That would also fix two
+  bugs other users had already reported.
+- **The Temporal proposal** ([`tc39/proposal-temporal`](https://github.com/tc39/proposal-temporal)),
+  which has its own reference copy of the same code. Where a bug exists there too, we reported
+  it with the same fix, so it's corrected at the source.
+
+## How we check each fix
+
+- The correct answer comes from the Temporal standard, its official test suite (test262) and the
+  Temporal built into Chrome. We never use the polyfill's own answer as the reference.
+- Each fix is tested on a real build of the polyfill, with and without the change, using the
+  exact example in the report.
+- We also check that the fix doesn't change any answer that was already right.
+
+Every example and fix is written up in full in GMT's repository:
+[`js-temporal-polyfill-bugs.md`](https://github.com/northguild/gmt/blob/main/context/domination/js-temporal-polyfill-bugs.md).
+
+See also: [Why GMT?](/why-gmt/) · [Correct at the edges](/guides/concepts/correct-at-the-edges/) ·
+[Standards](/guides/concepts/standards/)

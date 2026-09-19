@@ -1484,6 +1484,39 @@ function zonedRelativeTo(
   return null;
 }
 
+const CALENDAR_DIFFERENCE_UNITS: ReadonlySet<string> = new Set([
+  "year",
+  "years",
+  "month",
+  "months",
+  "week",
+  "weeks",
+  "day",
+  "days",
+]);
+
+/**
+ * Whether Temporal's DifferenceTemporalZonedDateTime would reject `largestUnit` for this pair: a
+ * calendar unit (day or larger) between two different time zones (TimeZoneEquals is false), because
+ * "day lengths can vary between time zones due to DST". `ZonedDateTime#equals` applies TC39
+ * TimeZoneEquals, so `UTC` equals `Etc/UTC` and `Asia/Calcutta` equals `Asia/Kolkata`.
+ *
+ * @param one the start
+ * @param two the end
+ * @param largestUnit the requested `largestUnit`
+ * @returns true when the pair cannot be differenced in `largestUnit`
+ */
+export function isCalendarDifferenceAcrossZones(
+  one: Temporal.ZonedDateTime,
+  two: Temporal.ZonedDateTime,
+  largestUnit: string,
+): boolean {
+  if (!CALENDAR_DIFFERENCE_UNITS.has(largestUnit)) return false;
+  return !new Temporal.ZonedDateTime(0n, one.timeZoneId).equals(
+    new Temporal.ZonedDateTime(0n, two.timeZoneId),
+  );
+}
+
 /**
  * `ZonedDateTime#until`, correct at the range limits (see the note at the top of this file).
  *

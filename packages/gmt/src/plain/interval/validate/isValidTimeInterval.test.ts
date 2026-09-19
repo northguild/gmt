@@ -21,10 +21,12 @@ describe("isValidTimeInterval", () => {
   });
 
   it.each`
-    start         | end           | expected
-    ${"17:00:00"} | ${"09:00:00"} | ${false}
-    ${"23:59:59"} | ${"00:00:00"} | ${false}
-    ${"12:01:00"} | ${"12:00:00"} | ${false}
+    start                   | end                     | expected
+    ${"17:00:00"}           | ${"09:00:00"}           | ${false}
+    ${"23:59:59"}           | ${"00:00:00"}           | ${false}
+    ${"12:01:00"}           | ${"12:00:00"}           | ${false}
+    ${"12:00:00.000002"}    | ${"12:00:00.000001"}    | ${false}
+    ${"12:00:00.000000002"} | ${"12:00:00.000000001"} | ${false}
   `(
     "returns $expected for reversed time interval $start to $end",
     ({ start, end, expected }) => {

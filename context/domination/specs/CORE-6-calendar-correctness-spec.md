@@ -64,12 +64,12 @@ The list is `CalendarSystem` / `temporalCalendarIds` in `packages/gmt/src/intern
 | taiwan | `roc` | |
 | persian | `persian` | |
 | indian | `indian` | |
-| ethiopic, ethiopic-amete-alem, coptic | **`ethioaa` only** | `internal/ethiopicFamilyCalendar.ts` |
+| ethiopic, ethiopic-amete-alem, coptic | **`ethioaa` only** | `internal/calendarSystemIds.ts` (`computationCalendarId`) |
 
 **Research claim (3), verified exactly.** GMT never constructs or reads a Temporal date calendared
 as `"ethiopic"` or `"coptic"`:
-- every read and write goes through `withCalendar("ethioaa")` (`ethiopicFamilyFieldsFromDate`) and
-  `PlainDate.from({calendar: "ethioaa"})` (`dateFromEthiopicFamilyFields`);
+- every read and write computes in `"ethioaa"`: `computationCalendarId` in `internal/calendarSystemIds.ts`
+  routes both ids there (it replaced `internal/ethiopicFamilyCalendar.ts`, deleted in CORE-8);
 - `formatZonedInCalendar` and `convertZonedToCalendar` substitute `"ethioaa"`.
 
 `chinese` and `dangi` are not in `CalendarSystem`, and `isCalendarSystem` rejects them. So the

@@ -19,21 +19,28 @@ const AUTO_UNITS: Array<{ unit: RelativeTimeUnit; maxSeconds: number }> = [
  * - Auto-picks the display unit (second/minute/hour) based on the distance, unless
  *   `largestUnit` forces one.
  * - `roundingMethod` controls how the distance rounds to the display unit.
+ * - `options` must be an object or omitted: `null` or any other primitive returns `""`, as
+ *   Temporal's GetOptionsObject rejects it.
  *
  * @param value ISO time string to format
- * @param locale optional: BCP 47 locale tag
+ * @param locale optional: BCP 47 locale tag, or a preference list of tags (ECMA-402)
  * @param options optional: { style, numeric, largestUnit, roundingMethod, reference }
  * @returns the formatted relative-time string, or "" on invalid input
  *
  * @example formatRelativeTime("14:30:00", "en-US", { style: "short" }) // "2 hr. ago"
- * @example formatRelativeTime(value, "en-US", { roundingMethod: "floor" }) // rounds toward the earlier boundary
+ * @example formatRelativeTime("09:00:00", "en-US", { reference: "10:30:00", roundingMethod: "floor" }) // "2 hours ago" (−1.5 hours floors to −2)
  * @example formatRelativeTime("not-a-time") // ""
+ * @example formatRelativeTime("10:00:00", ["fr-FR", "en-US"], { reference: "12:00:00" }) // "il y a 2 heures"
+ * @example formatRelativeTime("10:00:00", "en-US", null as never) // "" (null options)
  */
 export function formatRelativeTime(
   value: string,
-  locale?: string,
+  locale?: string | string[],
   options: FormatRelativeTimeOptions = {},
 ): string {
+  // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
+  // invalid input.
+  if (options === null || typeof options !== "object") return "";
   if (!isValidTime(value)) return "";
   if (options.reference !== undefined && !isValidTime(options.reference))
     return "";

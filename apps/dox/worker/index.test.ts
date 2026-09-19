@@ -9,7 +9,7 @@
  * `?key=` interception all had nothing behind them. The last of those is also
  * where this file records a real surprise about the ordering (see below).
  */
-import worker from "./index";
+import worker, { corpusFetcher } from "./index";
 import { BRAINS, VISITOR_DAILY_MAX } from "../src/lib/chat-constants";
 
 /** A stand-in for the static-assets binding that reports whether it was hit. */
@@ -227,5 +227,42 @@ describe("worker entry — everything else", () => {
     );
     expect(response.status).toBe(303);
     expect(assets.calls).toHaveLength(0);
+  });
+});
+
+describe("corpusFetcher — where the retrieval corpus is read from", () => {
+  it("reads through the assets binding when no dev origin is set", async () => {
+    const assets = assetsBinding();
+    const fetchCorpus = corpusFetcher(makeEnv({ ASSETS: assets.binding }));
+
+    await fetchCorpus("https://gmt-dox.example/retrieval-chunks.json");
+
+    expect(assets.calls).toEqual([
+      "https://gmt-dox.example/retrieval-chunks.json",
+    ]);
+  });
+
+  it("reads the same path from DOX_ASSETS_ORIGIN, not the binding, when it is set", async () => {
+    const assets = assetsBinding();
+    const seen: string[] = [];
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+      seen.push(String(input));
+      return new Response("[]", { status: 200 });
+    });
+    try {
+      const fetchCorpus = corpusFetcher(
+        makeEnv({
+          ASSETS: assets.binding,
+          DOX_ASSETS_ORIGIN: "http://localhost:4321",
+        }),
+      );
+
+      await fetchCorpus("http://localhost:8787/retrieval-chunks.json?v=1");
+
+      expect(seen).toEqual(["http://localhost:4321/retrieval-chunks.json?v=1"]);
+      expect(assets.calls).toEqual([]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

@@ -55,6 +55,33 @@ describe("intervalDivideEquallyZoned", () => {
     ]);
   });
 
+  // Spans past 2^53 ns (about 104 days) must still split exactly: each boundary is
+  // start + round((end - start) · i / n) in integer epoch nanoseconds. 365 d + 3 ns splits into
+  // 121 d 16 h + 1 ns steps: 2024-05-01T16:00:00.000000001Z and 2024-08-31T08:00:00.000000002Z, read
+  // at Tokyo's fixed +09:00. Values from BigInt epoch-nanosecond arithmetic, not GMT.
+  it("splits a span longer than 2^53 nanoseconds exactly", () => {
+    expect(
+      intervalDivideEquallyZoned(
+        "2024-01-01T09:00:00+09:00[Asia/Tokyo]",
+        "2024-12-31T09:00:00.000000003+09:00[Asia/Tokyo]",
+        3,
+      ),
+    ).toEqual([
+      {
+        start: "2024-01-01T09:00:00+09:00[Asia/Tokyo]",
+        end: "2024-05-02T01:00:00.000000001+09:00[Asia/Tokyo]",
+      },
+      {
+        start: "2024-05-02T01:00:00.000000001+09:00[Asia/Tokyo]",
+        end: "2024-08-31T17:00:00.000000002+09:00[Asia/Tokyo]",
+      },
+      {
+        start: "2024-08-31T17:00:00.000000002+09:00[Asia/Tokyo]",
+        end: "2024-12-31T09:00:00.000000003+09:00[Asia/Tokyo]",
+      },
+    ]);
+  });
+
   it.each`
     n
     ${0}
@@ -112,9 +139,9 @@ describe("intervalDivideEquallyZoned", () => {
       ).toBe(midInstant.toString());
     }
   });
-  // E5 (issue #78), decision of record D2 — see isValidZonedDateTime.test.ts for the full
-  // rationale: zoned/ rejects any [u-ca=...] calendar annotation outright.
-  it("returns [] when start carries a calendar annotation", () => {
+  // The arguments name different calendars (hebrew and a bare iso8601 string), so the
+  // result is the sentinel (there is no single output calendar).
+  it("returns [] when start and end name different calendars", () => {
     expect(
       intervalDivideEquallyZoned(
         "2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]",
@@ -122,5 +149,107 @@ describe("intervalDivideEquallyZoned", () => {
         2,
       ),
     ).toEqual([]);
+  });
+});
+
+describe("intervalDivideEquallyZoned maxPieces", () => {
+  // 72 real hours / 3 = 24 hours in UTC: n = 3 pieces, so a limit of 3 or more leaves the output unchanged.
+  it.each`
+    n    | maxPieces
+    ${3} | ${3}
+    ${3} | ${10}
+  `(
+    "returns the 3 pieces for n $n with maxPieces $maxPieces",
+    ({ n, maxPieces }) => {
+      expect(
+        intervalDivideEquallyZoned(
+          "2024-01-01T00:00:00+00:00[UTC]",
+          "2024-01-04T00:00:00+00:00[UTC]",
+          n,
+          { maxPieces },
+        ),
+      ).toEqual([
+        {
+          start: "2024-01-01T00:00:00+00:00[UTC]",
+          end: "2024-01-02T00:00:00+00:00[UTC]",
+        },
+        {
+          start: "2024-01-02T00:00:00+00:00[UTC]",
+          end: "2024-01-03T00:00:00+00:00[UTC]",
+        },
+        {
+          start: "2024-01-03T00:00:00+00:00[UTC]",
+          end: "2024-01-04T00:00:00+00:00[UTC]",
+        },
+      ]);
+    },
+  );
+
+  // Owner decision A2: an output larger than maxPieces returns the sentinel, decided before any
+  // piece is built.
+  it.each`
+    start                               | end                                 | n    | maxPieces
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-04T00:00:00+00:00[UTC]"} | ${3} | ${2}
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC]"} | ${3} | ${2}
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-04T00:00:00+00:00[UTC]"} | ${2} | ${1}
+  `(
+    "returns [] for $start to $end with n $n over maxPieces $maxPieces",
+    ({ start, end, n, maxPieces }) => {
+      expect(
+        intervalDivideEquallyZoned(start, end, n, { maxPieces }).length,
+      ).toBe(0);
+    },
+  );
+
+  it.each`
+    label                   | options
+    ${"maxPieces 0"}        | ${{ maxPieces: 0 }}
+    ${"maxPieces -1"}       | ${{ maxPieces: -1 }}
+    ${"maxPieces 1.5"}      | ${{ maxPieces: 1.5 }}
+    ${"maxPieces NaN"}      | ${{ maxPieces: Number.NaN }}
+    ${"maxPieces Infinity"} | ${{ maxPieces: Number.POSITIVE_INFINITY }}
+    ${"maxPieces string"}   | ${{ maxPieces: "3" }}
+    ${"null options"}       | ${null}
+    ${"number options"}     | ${5}
+  `("returns [] for invalid $label", ({ options }) => {
+    expect(
+      intervalDivideEquallyZoned(
+        "2024-01-01T00:00:00+00:00[UTC]",
+        "2024-01-04T00:00:00+00:00[UTC]",
+        3,
+        options as never,
+      ).length,
+    ).toBe(0);
+  });
+});
+
+describe("intervalDivideEquallyZoned default piece limit", () => {
+  // Default maxPieces is 1_000_000 (owner decision A2). An array holds at most 2^32 - 1
+  // elements (ECMA-262 §10.4.2), so n >= 2^32 is the sentinel whatever the limit.
+  it.each`
+    n            | options
+    ${1_000_001} | ${undefined}
+    ${2 ** 32}   | ${undefined}
+    ${2 ** 32}   | ${{ maxPieces: 2 ** 40 }}
+  `("returns [] for n $n with options $options", ({ n, options }) => {
+    expect(
+      intervalDivideEquallyZoned(
+        "2024-01-01T00:00:00+00:00[UTC]",
+        "2024-01-04T00:00:00+00:00[UTC]",
+        n,
+        options,
+      ).length,
+    ).toBe(0);
+  });
+
+  it("returns [] for equal endpoints and n 2^32 under maxPieces 2^40", () => {
+    expect(
+      intervalDivideEquallyZoned(
+        "2024-01-01T00:00:00+00:00[UTC]",
+        "2024-01-01T00:00:00+00:00[UTC]",
+        2 ** 32,
+        { maxPieces: 2 ** 40 },
+      ).length,
+    ).toBe(0);
   });
 });

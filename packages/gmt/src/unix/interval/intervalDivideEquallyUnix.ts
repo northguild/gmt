@@ -1,21 +1,33 @@
+// fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { parseUnixEpochInterval } from "../../internal";
+import { divisionBoundary } from "../../internal/divisionBoundary";
+import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 
 /**
  * Split a Unix epoch interval into `n` equal-length sub-intervals.
  *
- * - Returns an array of `n` `{ start, end }` records that tile the original interval, each
- *   record's `end` equal to the next record's `start`.
- * - Boundaries are computed as plain numeric arithmetic on the epoch values — no timeZone is
- *   involved, so the split is exact whenever the total divides evenly by `n`.
+ * - Returns an array of `n` half-open `[start, end)` records that tile the original interval: each
+ *   record's `end` is the next record's `start` and belongs only to that next record, so the
+ *   pieces share no value and together cover `[start, end)` exactly once.
+ * - Each boundary is `start + round((end - start) · i / n)` in integers of the arguments' own epoch
+ *   unit (there is no `epochUnit` option: seconds in give seconds out, milliseconds give
+ *   milliseconds), taken in `bigint` so no product past 2^53 loses a unit: the split is exact
+ *   whenever the total divides evenly by `n`, and within half a unit of the exact cut otherwise (an
+ *   exact half rounds up). No time zone is involved.
  * - `n === 1` returns the original interval unchanged, as a single-element array.
- * - A zero-length interval (`start === end`) returns `n` identical zero-length sub-intervals.
+ * - A zero-length interval (`start === end`) returns `n` identical zero-length sub-intervals, each
+ *   an empty `[start, start)` that holds no instant.
  * - Returns `[]` when `n` is not a positive integer, or on invalid input (`start`/`end` that is
  *   not a safe integer or numeric string of one — fractions, empty strings and values beyond
  *   ±(2^53 − 1) are invalid — or `start > end`).
+ * - `options.maxPieces` (positive safe integer, default `1_000_000`) bounds the output: when `n`
+ *   exceeds it, or exceeds the longest possible array (2^32 - 1), the function returns `[]`
+ *   before building any piece. An invalid `maxPieces` also returns `[]`.
  *
- * @param start Unix epoch value (seconds or milliseconds) — interval start
- * @param end Unix epoch value (seconds or milliseconds) — interval end
+ * @param start Unix epoch value, in the one unit all epoch arguments share — interval start
+ * @param end Unix epoch value, in the one unit all epoch arguments share — interval end
  * @param n number of equal sub-intervals to produce (positive integer)
+ * @param options optional: `maxPieces` (positive safe integer, default `1_000_000`)
  * @returns array of `n` `{ start, end }` records, or `[]` on invalid input
  *
  * @example intervalDivideEquallyUnix(0, 90000000, 3) // [{ start: 0, end: 30000000 }, { start: 30000000, end: 60000000 }, { start: 60000000, end: 90000000 }]
@@ -23,13 +35,22 @@ import { parseUnixEpochInterval } from "../../internal";
  * @example intervalDivideEquallyUnix(0, 90000000, 1) // [{ start: 0, end: 90000000 }]
  * @example intervalDivideEquallyUnix(0, 90000000, 0) // []
  * @example intervalDivideEquallyUnix(NaN, 90000000, 3) // []
+ * @example intervalDivideEquallyUnix(0, 90000000, 3, { maxPieces: 2 }) // [] (3 pieces exceed the limit)
+ * @example intervalDivideEquallyUnix(0, 90000000, 3, { maxPieces: 3 }) // [{ start: 0, end: 30000000 }, { start: 30000000, end: 60000000 }, { start: 60000000, end: 90000000 }]
  */
 export function intervalDivideEquallyUnix(
   start: number | string,
   end: number | string,
   n: number,
+  options?: { maxPieces?: number },
 ): Array<{ start: number; end: number }> {
   if (typeof n !== "number" || !Number.isInteger(n) || n <= 0) {
+    return [];
+  }
+
+  const maxPieces = resolveMaxPieces(options);
+
+  if (maxPieces === null || exceedsPieceLimit(n, maxPieces)) {
     return [];
   }
 
@@ -45,11 +66,12 @@ export function intervalDivideEquallyUnix(
     return Array.from({ length: n }, () => ({ start: startMs, end: endMs }));
   }
 
-  const totalMs = endMs - startMs;
+  // Integer milliseconds in bigint: a span near ±8.64e15 times `i` passes 2^53.
+  const totalMs = BigInt(endMs) - BigInt(startMs);
 
   const boundaries: number[] = [startMs];
   for (let i = 1; i < n; i++) {
-    boundaries.push(startMs + Math.round((totalMs * i) / n));
+    boundaries.push(Number(BigInt(startMs) + divisionBoundary(totalMs, i, n)));
   }
   boundaries.push(endMs);
 

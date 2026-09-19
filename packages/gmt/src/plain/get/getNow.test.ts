@@ -5,7 +5,8 @@ import {
   battleTestTimeZones,
 } from "../../test";
 import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
-import { chopMilliseconds, chopTime, chopUtc } from "../chop";
+import { chopUtc } from "../../utc/chop";
+import { chopMilliseconds, chopTime } from "../chop";
 import { isAfterDateTime } from "../compare";
 import { isValidDateTime } from "../validate";
 import { getNow } from "./getNow";

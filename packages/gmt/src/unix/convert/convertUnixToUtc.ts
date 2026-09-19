@@ -1,39 +1,39 @@
-import { Temporal } from "@js-temporal/polyfill";
-import { isValidAmount } from "../../internal";
-import { isValidUnixUnit, type UnixUnit } from "../validate/isValidUnixUnit";
+import {
+  resolveUnixEpochUnitOptions,
+  unixEpochToInstant,
+} from "../../internal/unixEpochValue";
+import type { UnixUnit } from "../validate/isValidUnixUnit";
 
 /**
  * Convert a unix epoch value to a UTC Instant ISO string.
  *
  * - Converts to UTC Instant using Temporal.Instant.
- * - Validates value and epoch unit ("seconds" | "milliseconds").
- * - Returns "" for invalid input.
+ * - `value` is a safe integer or a string of optionally negative ASCII digits; anything else, or an
+ *   instant outside the Temporal range, returns "".
+ * - `options.epochUnit` is `"seconds"` or `"milliseconds"` (singular accepted), default
+ *   `"milliseconds"`. An explicit `undefined` is the same as omitted; a non-object `options` (such
+ *   as a bare `"seconds"` string) returns "".
  *
- * @param value epoch value (number)
- * @param unit optional unit, "seconds" or "milliseconds"
+ * @param value epoch value: a safe integer or a digit string
+ * @param options optional: epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds")
  * @returns UTC Instant string or "" on invalid
  *
  * @example convertUnixToUtc(1709164800000) // "2024-02-29T00:00:00Z"
- * @example convertUnixToUtc(1709164800, "seconds") // "2024-02-29T00:00:00Z"
+ * @example convertUnixToUtc(1709164800, { epochUnit: "seconds" }) // "2024-02-29T00:00:00Z"
+ * @example convertUnixToUtc("1709164800", { epochUnit: "second" }) // "2024-02-29T00:00:00Z"
  * @example convertUnixToUtc(-1) // "1969-12-31T23:59:59.999Z"
+ * @example convertUnixToUtc(1709164800, "seconds" as never) // "" (options must be an object)
+ * @example convertUnixToUtc(NaN) // ""
  */
 export function convertUnixToUtc(
-  value: number,
-  ...unitInput: [unit?: UnixUnit]
+  value: number | string,
+  options?: { epochUnit?: UnixUnit },
 ): string {
-  const resolvedUnit = unitInput.length === 0 ? "milliseconds" : unitInput[0];
+  const epochUnit = resolveUnixEpochUnitOptions(options);
 
-  if (!isValidAmount(value) || !isValidUnixUnit(resolvedUnit ?? "")) {
+  if (epochUnit === null) {
     return "";
   }
 
-  try {
-    const instant = Temporal.Instant.fromEpochMilliseconds(
-      resolvedUnit === "seconds" ? value * 1000 : value,
-    );
-
-    return instant.toString();
-  } catch {
-    return "";
-  }
+  return unixEpochToInstant(value, epochUnit)?.toString() ?? "";
 }

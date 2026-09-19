@@ -12,6 +12,7 @@ import {
   NANOSECONDS_PER_DAY_NUMBER,
   parseInstantNanoseconds,
 } from "../../internal";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Which Excel date system a serial belongs to.
@@ -71,6 +72,10 @@ export function toExcelSerial(
   isoString: string,
   options?: { system?: ExcelDateSystem },
 ): number | null {
+  if (!isOptionsArgument(options)) {
+    return null;
+  }
+
   const system = options?.system ?? "1900";
 
   if (system !== "1900" && system !== "1904") {

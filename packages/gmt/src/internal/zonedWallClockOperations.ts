@@ -9,10 +9,13 @@ import {
   type CarriedOffset,
   epochNanosecondsFor,
   interpretISODateTimeOffset,
+  isBeforePolyfillTransitionSearch,
   isNamedTimeZone,
   isNearRangeEdge,
   isValidEpoch,
   MAX_TRANSITIONS_BEFORE_MAXIMUM,
+  missedNextTransition,
+  missedPreviousTransition,
   NEXT_TRANSITION_HORIZON_NANOSECONDS,
   startOfDayEpochNanoseconds,
   timeZoneIdOf,
@@ -31,6 +34,11 @@ import {
  * Every wrapper returns the polyfill's own result whenever it has one, and re-throws the polyfill's
  * own error unless the zone is a named, non-UTC zone and the wall clock being resolved lies within
  * a month of either range limit — the only inputs either defect reaches.
+ *
+ * Defect 3 (the transition search floored at 1847-01-01) returns a wrong value instead of throwing,
+ * so the transition and start-of-day wrappers check for it first, and only for a named zone and an
+ * instant or local date before that floor (`needsOwnStartOfDay`); everything later goes straight to
+ * the polyfill. Retired with the `zoned.E` canary group.
  */
 
 const NANOSECONDS_PER_HOUR = 3_600_000_000_000;
@@ -67,6 +75,18 @@ function isAtRangeEdge(timeZone: string, date: Temporal.PlainDate): boolean {
   return isNamedTimeZone(timeZone) && isNearRangeEdge(date);
 }
 
+/**
+ * True when the polyfill's `GetStartOfDay` may return a valid-looking wrong value for this date (or
+ * this zoned value's date) because a transition skipping its midnight lies before the polyfill's
+ * 1847-01-01 transition search floor (defect 3).
+ */
+function needsOwnStartOfDay(
+  timeZone: string,
+  value: Temporal.PlainDate | Temporal.ZonedDateTime,
+): boolean {
+  return isNamedTimeZone(timeZone) && isBeforePolyfillTransitionSearch(value);
+}
+
 function inZoneOf(
   epochNanoseconds: bigint,
   zoned: Temporal.ZonedDateTime,
@@ -101,15 +121,50 @@ function plainToZonedAtEdge(
     return null;
   }
 
-  const epoch = isDate
-    ? startOfDayEpochNanoseconds(timeZone, plain)
-    : epochNanosecondsFor(timeZone, plain, disambiguation ?? "compatible");
-  return new Temporal.ZonedDateTime(epoch, timeZone, plain.calendarId);
+  if (isDate) {
+    return plainDateFromOwnStartOfDay(plain, timeZone);
+  }
+  return new Temporal.ZonedDateTime(
+    epochNanosecondsFor(timeZone, plain, disambiguation ?? "compatible"),
+    timeZone,
+    plain.calendarId,
+  );
+}
+
+function plainDateFromOwnStartOfDay(
+  date: Temporal.PlainDate,
+  timeZone: string,
+): Temporal.ZonedDateTime {
+  return new Temporal.ZonedDateTime(
+    startOfDayEpochNanoseconds(timeZone, date),
+    timeZone,
+    date.calendarId,
+  );
+}
+
+/** A PlainDate's start of day before the polyfill's transition search floor, or null. */
+function plainDateBeforeTransitionSearch(
+  date: Temporal.PlainDate,
+  timeZoneLike: string,
+): Temporal.ZonedDateTime | null {
+  if (!isBeforePolyfillTransitionSearch(date)) return null;
+
+  let timeZone: string;
+  try {
+    timeZone = timeZoneIdOf(timeZoneLike);
+  } catch {
+    return null;
+  }
+
+  return isNamedTimeZone(timeZone)
+    ? plainDateFromOwnStartOfDay(date, timeZone)
+    : null;
 }
 
 /**
  * `PlainDate#toZonedDateTime(timeZone)` (start of day) or
- * `PlainDateTime#toZonedDateTime(timeZone, { disambiguation })`, correct at the range limits.
+ * `PlainDateTime#toZonedDateTime(timeZone, { disambiguation })`, correct at the range limits and
+ * (start of day) before 1847.
  *
  * @param plain the date (resolved to its start of day) or date-time to place in `timeZone`
  * @param timeZone IANA identifier, offset time zone, or RFC 9557 string carrying one
@@ -121,6 +176,13 @@ export function plainToZoned(
   timeZone: string,
   disambiguation?: Disambiguation,
 ): Temporal.ZonedDateTime {
+  if (plain instanceof Temporal.PlainDate) {
+    const own = plainDateBeforeTransitionSearch(plain, timeZone);
+    if (own !== null) {
+      return own;
+    }
+  }
+
   try {
     return plain instanceof Temporal.PlainDate
       ? plain.toZonedDateTime(timeZone)
@@ -136,18 +198,25 @@ export function plainToZoned(
 // Start of day, withPlainTime, hoursInDay
 // ---------------------------------------------------------------------------------------------
 
+function startOfDayFromOwn(
+  zoned: Temporal.ZonedDateTime,
+): Temporal.ZonedDateTime {
+  return inZoneOf(
+    startOfDayEpochNanoseconds(zoned.timeZoneId, zoned.toPlainDate()),
+    zoned,
+  );
+}
+
 function startOfDayAtEdge(
   zoned: Temporal.ZonedDateTime,
 ): Temporal.ZonedDateTime | null {
-  const date = zoned.toPlainDate();
-  if (!isAtRangeEdge(zoned.timeZoneId, date)) {
-    return null;
-  }
-  return inZoneOf(startOfDayEpochNanoseconds(zoned.timeZoneId, date), zoned);
+  return isAtRangeEdge(zoned.timeZoneId, zoned.toPlainDate())
+    ? startOfDayFromOwn(zoned)
+    : null;
 }
 
 /**
- * `ZonedDateTime#startOfDay`, correct at the range limits.
+ * `ZonedDateTime#startOfDay`, correct at the range limits and before 1847.
  *
  * @param zoned the value whose local day to start
  * @returns the first valid wall-clock time of that day; throws where TC39 Temporal throws
@@ -155,6 +224,10 @@ function startOfDayAtEdge(
 export function zonedStartOfDay(
   zoned: Temporal.ZonedDateTime,
 ): Temporal.ZonedDateTime {
+  if (needsOwnStartOfDay(zoned.timeZoneId, zoned)) {
+    return startOfDayFromOwn(zoned);
+  }
+
   try {
     return zoned.startOfDay();
   } catch (error) {
@@ -188,7 +261,7 @@ function withPlainTimeAtEdge(
 }
 
 /**
- * `ZonedDateTime#withPlainTime`, correct at the range limits.
+ * `ZonedDateTime#withPlainTime`, correct at the range limits and (start of day) before 1847.
  *
  * @param zoned the value whose local date to keep
  * @param time the new wall-clock time; omitted means the start of the day
@@ -198,6 +271,10 @@ export function zonedWithPlainTime(
   zoned: Temporal.ZonedDateTime,
   time?: Temporal.PlainTime | Temporal.PlainTimeLike | string,
 ): Temporal.ZonedDateTime {
+  if (time === undefined && needsOwnStartOfDay(zoned.timeZoneId, zoned)) {
+    return startOfDayFromOwn(zoned);
+  }
+
   try {
     return zoned.withPlainTime(time);
   } catch (error) {
@@ -206,11 +283,13 @@ export function zonedWithPlainTime(
 }
 
 function hoursInDayAtEdge(zoned: Temporal.ZonedDateTime): number | null {
-  const date = zoned.toPlainDate();
-  if (!isAtRangeEdge(zoned.timeZoneId, date)) {
-    return null;
-  }
+  return isAtRangeEdge(zoned.timeZoneId, zoned.toPlainDate())
+    ? hoursInDayFromOwnStartOfDay(zoned)
+    : null;
+}
 
+function hoursInDayFromOwnStartOfDay(zoned: Temporal.ZonedDateTime): number {
+  const date = zoned.toPlainDate();
   const start = startOfDayEpochNanoseconds(zoned.timeZoneId, date);
   // Past the last representable date `add` throws, as TC39 `GetStartOfDay` does for that day.
   const end = startOfDayEpochNanoseconds(
@@ -221,12 +300,16 @@ function hoursInDayAtEdge(zoned: Temporal.ZonedDateTime): number | null {
 }
 
 /**
- * `ZonedDateTime#hoursInDay`, correct at the range limits.
+ * `ZonedDateTime#hoursInDay`, correct at the range limits and before 1847.
  *
  * @param zoned the value whose local day to measure
  * @returns hours from this day's start to the next day's start; throws where TC39 Temporal throws
  */
 export function zonedHoursInDay(zoned: Temporal.ZonedDateTime): number {
+  if (needsOwnStartOfDay(zoned.timeZoneId, zoned)) {
+    return hoursInDayFromOwnStartOfDay(zoned);
+  }
+
   try {
     return zoned.hoursInDay;
   } catch (error) {
@@ -273,11 +356,13 @@ function earliestTransitionBeforeMaximum(
 }
 
 /**
- * `ZonedDateTime#getTimeZoneTransition("next")`, correct at the range limits.
+ * `ZonedDateTime#getTimeZoneTransition("next")`, correct at the range limits and before 1847.
  *
- * The polyfill's forward scan gives up once a two-week step would pass the maximum instant, so a
- * `null` within its three-year horizon of the maximum is re-checked by walking back from the
- * maximum with `getTimeZoneTransition("previous")`, which scans correctly there.
+ * - Before 1847-01-01 the polyfill never searches (defect 3), so a named zone whose offset there
+ *   differs from its offset at 1847-01-01 has its transition found by bisection first.
+ * - The polyfill's forward scan gives up once a two-week step would pass the maximum instant, so a
+ *   `null` within its three-year horizon of the maximum is re-checked by walking back from the
+ *   maximum with `getTimeZoneTransition("previous")`, which scans correctly there.
  *
  * @param zoned the instant to search after (exclusive)
  * @returns the next transition, or null when there is none before the maximum instant
@@ -285,6 +370,16 @@ function earliestTransitionBeforeMaximum(
 export function zonedNextTransition(
   zoned: Temporal.ZonedDateTime,
 ): Temporal.ZonedDateTime | null {
+  if (isNamedTimeZone(zoned.timeZoneId)) {
+    const missed = missedNextTransition(
+      zoned.timeZoneId,
+      zoned.epochNanoseconds,
+    );
+    if (missed !== null) {
+      return inZoneOf(missed, zoned);
+    }
+  }
+
   const next = zoned.getTimeZoneTransition("next");
 
   if (
@@ -297,6 +392,30 @@ export function zonedNextTransition(
   }
 
   return earliestTransitionBeforeMaximum(zoned);
+}
+
+/**
+ * `ZonedDateTime#getTimeZoneTransition("previous")`, correct before 1847.
+ *
+ * The polyfill stops looking at 1847-01-01 (defect 3), so when it finds nothing in a named zone the
+ * span from the minimum instant to the floor is checked by comparing offsets and bisecting.
+ *
+ * @param zoned the instant to search before (exclusive)
+ * @returns the previous transition, or null when there is none
+ */
+export function zonedPreviousTransition(
+  zoned: Temporal.ZonedDateTime,
+): Temporal.ZonedDateTime | null {
+  const previous = zoned.getTimeZoneTransition("previous");
+  if (previous !== null || !isNamedTimeZone(zoned.timeZoneId)) {
+    return previous;
+  }
+
+  const missed = missedPreviousTransition(
+    zoned.timeZoneId,
+    zoned.epochNanoseconds,
+  );
+  return missed === null ? null : inZoneOf(missed, zoned);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -366,11 +485,45 @@ function addAtEdge(
 }
 
 /**
- * TC39 `AddZonedDateTime` with the calendar part through the Temporal compat layer (CORE-6 S5), or
- * null when `zoned`'s calendar needs no compat or the duration has no calendar units.
- *
- * `CalendarDateAdd` runs in `calendarDateAdd`; the wall clock it lands on resolves with
- * `~compatible~` through GMT's own `plainToZoned`; the time units are then exact time.
+ * TC39 §6.5.5 `AddZonedDateTime` for a signed duration with calendar units: `CalendarDateAdd` runs
+ * in `calendarDateAdd` (the Temporal compat layer, CORE-6 S5); the intermediate wall clock (added
+ * date, original time) resolves with `GetEpochNanosecondsFor(timeZone, dateTime, disambiguation)`
+ * through GMT's own `plainToZoned`, so a gap or an overlap landing honours `disambiguation`; the
+ * time units are then added in exact time and never re-resolved.
+ */
+function addDateThenTime(
+  zoned: Temporal.ZonedDateTime,
+  duration: Temporal.Duration,
+  overflow: Overflow,
+  disambiguation: Disambiguation,
+): Temporal.ZonedDateTime {
+  // Validates `overflow` exactly as ZonedDateTime#add does.
+  OVERFLOW_PROBE.add({ days: 0 }, { overflow });
+
+  const wall = zoned.toPlainDateTime();
+  const { years, months, weeks, days } = duration;
+  const date = calendarDateAdd(
+    wall.toPlainDate(),
+    { years, months, weeks, days },
+    overflow ?? "constrain",
+  );
+  const intermediate = plainToZoned(
+    date.toPlainDateTime(wall.toPlainTime()),
+    zoned.timeZoneId,
+    disambiguation,
+  );
+  const result = intermediate.epochNanoseconds + timeUnitsNanoseconds(duration);
+  if (!isValidEpoch(result)) {
+    throw new RangeError(
+      `${zoned.toString()} + ${duration.toString()} is outside the supported range`,
+    );
+  }
+  return inZoneOf(result, zoned);
+}
+
+/**
+ * `AddZonedDateTime` through the Temporal compat layer, or null when `zoned`'s calendar needs no
+ * compat or the duration has no calendar units.
  */
 function addWithCalendarCompat(
   zoned: Temporal.ZonedDateTime,
@@ -386,28 +539,7 @@ function addWithCalendarCompat(
   if (!hasDateUnits(duration)) {
     return null;
   }
-  // Validates `overflow` exactly as ZonedDateTime#add does.
-  OVERFLOW_PROBE.add({ days: 0 }, { overflow });
-
-  const wall = zoned.toPlainDateTime();
-  const { years, months, weeks, days } = duration;
-  const date = calendarDateAdd(
-    wall.toPlainDate(),
-    { years, months, weeks, days },
-    overflow ?? "constrain",
-  );
-  const intermediate = plainToZoned(
-    date.toPlainDateTime(wall.toPlainTime()),
-    zoned.timeZoneId,
-    "compatible",
-  );
-  const result = intermediate.epochNanoseconds + timeUnitsNanoseconds(duration);
-  if (!isValidEpoch(result)) {
-    throw new RangeError(
-      `${zoned.toString()} + ${duration.toString()} is outside the supported range`,
-    );
-  }
-  return inZoneOf(result, zoned);
+  return addDateThenTime(zoned, duration, overflow, "compatible");
 }
 
 /**
@@ -470,6 +602,52 @@ export function subtractFromZoned(
       addAtEdge(zoned, duration, options?.overflow, -1),
     );
   }
+}
+
+/**
+ * `addToZoned` / `subtractFromZoned` with a caller-chosen `disambiguation` for the intermediate
+ * wall-clock date-time — TC39 Temporal §6.5.5 AddZonedDateTime with the "compatible" argument of
+ * its `GetEpochNanosecondsFor` step replaced by `disambiguation`.
+ *
+ * - The date portion (years, months, weeks, days) is added to the wall-clock date, keeping the
+ *   wall-clock time. That intermediate date-time is resolved with `disambiguation` whenever it is
+ *   not a single instant: in a fall-back overlap "earlier"/"compatible" take the earlier instant and
+ *   "later" the later one; in a spring-forward gap "earlier" shifts it back by the gap length and
+ *   "later"/"compatible" forward (DisambiguatePossibleEpochNanoseconds); "reject" throws for both.
+ * - The time portion is then added in exact time and is never re-resolved.
+ * - With no date portion, the whole duration is exact time and `disambiguation` never applies.
+ *
+ * @param zoned the starting value
+ * @param duration the duration to add or subtract
+ * @param sign 1 to add, -1 to subtract
+ * @param options Temporal `overflow` for the calendar part and `disambiguation`
+ * @returns the result; throws where TC39 Temporal throws, or when "reject" meets a gap or overlap
+ */
+export function addToZonedDisambiguated(
+  zoned: Temporal.ZonedDateTime,
+  duration: Temporal.Duration | Temporal.DurationLike | string,
+  sign: 1 | -1,
+  options: {
+    overflow?: Overflow;
+    disambiguation: Disambiguation;
+  },
+): Temporal.ZonedDateTime {
+  const { overflow, disambiguation } = options;
+  // Validates `disambiguation` even when no wall clock is resolved below.
+  DISAMBIGUATION_PROBE.toZonedDateTime("UTC", { disambiguation });
+  const parsed = Temporal.Duration.from(duration);
+
+  if (disambiguation === "compatible" || !hasDateUnits(parsed)) {
+    const step = sign === 1 ? addToZoned : subtractFromZoned;
+    return step(zoned, parsed, { overflow });
+  }
+
+  return addDateThenTime(
+    zoned,
+    sign === 1 ? parsed : parsed.negated(),
+    overflow,
+    disambiguation,
+  );
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -580,8 +758,11 @@ function roundDayProgress(
   return twice < length ? 0n : length;
 }
 
-/** TC39 `ZonedDateTime#round` with `smallestUnit: "day"`: to the start of this day or the next. */
-function roundToDayAtEdge(
+/**
+ * TC39 `ZonedDateTime#round` with `smallestUnit: "day"`, from GMT's own `GetStartOfDay`: to the
+ * start of this day or the next.
+ */
+function roundToDayFromOwnStartOfDay(
   zoned: Temporal.ZonedDateTime,
   date: Temporal.PlainDate,
   roundingMode: Temporal.RoundingMode,
@@ -598,6 +779,10 @@ function roundToDayAtEdge(
     start + roundDayProgress(progress, end - start, roundingMode),
     zoned,
   );
+}
+
+function isDayUnit(unit: RoundingSmallestUnit): boolean {
+  return unit === "day" || unit === "days";
 }
 
 function roundAtEdge(
@@ -617,8 +802,12 @@ function roundAtEdge(
     return null;
   }
 
-  if (roundTo.smallestUnit === "day" || roundTo.smallestUnit === "days") {
-    return roundToDayAtEdge(zoned, date, roundTo.roundingMode ?? "halfExpand");
+  if (isDayUnit(roundTo.smallestUnit)) {
+    return roundToDayFromOwnStartOfDay(
+      zoned,
+      date,
+      roundTo.roundingMode ?? "halfExpand",
+    );
   }
 
   const epoch = interpretISODateTimeOffset(
@@ -633,7 +822,7 @@ function roundAtEdge(
 }
 
 /**
- * `ZonedDateTime#round`, correct at the range limits.
+ * `ZonedDateTime#round`, correct at the range limits and, by day, before 1847.
  *
  * @param zoned the value to round
  * @param roundTo Temporal `smallestUnit` (day or smaller) / `roundingIncrement` / `roundingMode`
@@ -643,6 +832,19 @@ export function roundZonedDateTime(
   zoned: Temporal.ZonedDateTime,
   roundTo: ZonedRoundTo,
 ): Temporal.ZonedDateTime {
+  if (
+    isDayUnit(roundTo.smallestUnit) &&
+    needsOwnStartOfDay(zoned.timeZoneId, zoned)
+  ) {
+    // Validates the options exactly as ZonedDateTime#round does, throwing where it throws.
+    zoned.toPlainDateTime().round(roundTo);
+    return roundToDayFromOwnStartOfDay(
+      zoned,
+      zoned.toPlainDate(),
+      roundTo.roundingMode ?? "halfExpand",
+    );
+  }
+
   try {
     return zoned.round(roundTo);
   } catch (error) {

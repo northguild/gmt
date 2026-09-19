@@ -36,12 +36,15 @@ function extractTitle(frontmatter: string): string {
   return match[1].trim().replace(/^["']|["']$/g, "");
 }
 
+/** Route for a guide or a top-level page: `…/content/docs/guides/a/b.mdx` →
+ * `/guides/a/b/`, `…/content/docs/upstream.mdx` → `/upstream/`, and
+ * `…/content/docs/index.mdx` → `/`. */
 export function routeForPath(globPath: string): string {
   const rel = globPath
-    .replace(/^.*\/content\/docs\/guides\//, "")
+    .replace(/^.*\/content\/docs\//, "")
     .replace(/\.(mdx?|md)$/, "");
   const segments = rel.split("/").filter((s) => s !== "index");
-  return `/guides/${segments.length > 0 ? segments.join("/") + "/" : ""}`;
+  return segments.length > 0 ? `/${segments.join("/")}/` : "/";
 }
 
 /** Parse one guide file. `path` need only *end* with its route-bearing tail. */

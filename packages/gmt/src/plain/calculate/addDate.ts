@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import {
   calendarSystemOfDateValue,
   formatDateInCalendar,
@@ -8,18 +9,19 @@ import {
 } from "../../internal";
 import type { DateDurationUnit, Overflow } from "../../types";
 import { isValidCalendarDate, isValidDateDurationUnit } from "../validate";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return a PlainDate ISO string with `amount` added according to `units`.
  *
  * - Validates `value`, `units`, and `amount` before performing the add.
- * - Accepts a GMT calendar-annotated PlainDate string (as produced by `convertDateToCalendar`,
- *   e.g. `"5784-06-15[u-ca=hebrew]"`), not just a bare ISO string — E5 (issue #78). Calendar-unit
- *   arithmetic ("add 1 month") resolves against that calendar (a Hebrew leap month, a Persian
- *   leap year), and the result is re-formatted in the same calendar — re-derived from the
- *   arithmetic result, never copied from the input tag, since arithmetic can cross a leap-month
- *   or era boundary (e.g. Adar I -> Adar). A bare ISO string is unaffected — always treated as,
- *   and always returns, `"gregorian"`.
+ * - Accepts an RFC 9557 calendar-annotated PlainDate string (as `Temporal.PlainDate#toString()` and
+ *   `convertDateToCalendar` write it, e.g. `"2024-02-24[u-ca=hebrew]"`), not just a bare ISO
+ *   string. Calendar-unit arithmetic ("add 1 month") resolves against that calendar (a Hebrew leap
+ *   month, a Persian leap year), and the result carries the same calendar annotation. A bare ISO
+ *   string is the `"iso8601"` calendar and returns a bare ISO string.
+ * - Compatibility: since 1.16.0 calendar strings are RFC 9557 (ISO digits, `[u-ca=<id>]`, canonical
+ *   calendar ids); see `isValidCalendarDate`.
  * - Returns "" for invalid inputs.
  *
  * `overflow` ("constrain" (default) | "reject") controls out-of-range results, e.g. adding 1 month
@@ -38,16 +40,24 @@ import { isValidCalendarDate, isValidDateDurationUnit } from "../validate";
  * @example addDate("invalid", { days: 5 }) // ""
  * @example addDate("2024-01-31", { months: 1 }, { overflow: "constrain" }) // "2024-02-29"
  * @example addDate("2024-01-31", { months: 1 }, { overflow: "reject" }) // ""
- * @example addDate("5784-06-15[u-ca=hebrew]", { months: 1 }) // "5784-07-15[u-ca=hebrew]" (Adar I -> Adar, both 30 days)
+ * @example addDate("2024-02-24[u-ca=hebrew]", { months: 1 }) // "2024-03-25[u-ca=hebrew]" (15 Adar I 5784 -> 15 Adar II)
+ * @example addDate("2024-10-03[u-ca=japanese;era=reiwa]", { days: 1 }) // "" (not RFC 9557)
  */
 export function addDate(
   value: string /* ISO 8601 date */,
   units: Partial<Record<DateDurationUnit, number>>,
   options?: { overflow?: Overflow },
 ): string {
+  if (!isOptionsArgument(options)) {
+    return "";
+  }
+
   const validDate = isValidCalendarDate(value);
-  const validUnits = Object.keys(units).every(isValidDateDurationUnit);
-  const validAmounts = Object.values(units).every(isValidAmount);
+  const validUnits =
+    typeof units === "object" &&
+    units !== null &&
+    Object.keys(units).every(isValidDateDurationUnit);
+  const validAmounts = validUnits && Object.values(units).every(isValidAmount);
 
   if (!validDate || !validUnits || !validAmounts) {
     return "";

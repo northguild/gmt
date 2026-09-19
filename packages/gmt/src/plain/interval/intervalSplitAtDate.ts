@@ -19,10 +19,13 @@ import { isValidDateInterval } from "./validate";
  * - Duplicate points collapse to a single boundary.
  * - Returns consecutive `{ start, end }` records, each record's `end` equal to the next
  *   record's `start`.
+ * - Every piece is half-open `[start, end)`: a boundary belongs only to the piece that starts
+ *   there, so the pieces share no value and together cover the interval exactly once (the rule
+ *   CORE-6's `splitIntervalAt` uses).
  * - Returns `[{ start, end }]` (the whole interval, unsplit) when no valid in-range point remains.
  * - Returns `[]` when `points` is not an array, when any element is not a valid ISO PlainDate
  *   string, or on invalid input (unparseable start/end, `start > end`).
- * - Accepts GMT calendar-annotated PlainDate strings — E5 (issue #78). `start`, `end`, and
+ * - Accepts RFC 9557 calendar-annotated PlainDate strings — E5 (issue #78). `start`, `end`, and
  *   every element of `points` must carry the *same* calendar tag (or all be bare ISO); any
  *   mismatch returns `[]` (E5 decision of record D4) — this also makes `.equals()`'s dedup of
  *   duplicate points safe, since same-calendar `PlainDate`s compare equal correctly.

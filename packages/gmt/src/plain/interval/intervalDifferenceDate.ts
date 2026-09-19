@@ -1,7 +1,9 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
 import {
   calendarOfAllDateValues,
   formatDateInCalendar,
+  halfOpenDifference,
   parseCalendarDateValue,
 } from "../../internal";
 import { isValidCalendarDate } from "../validate";
@@ -10,15 +12,20 @@ import { isValidCalendarDate } from "../validate";
  * Return the portion(s) of interval A not covered by interval B.
  *
  * - Uses `Temporal.PlainDate.compare` for comparison.
- * - Endpoints are inclusive, so a returned piece ends one day before, or starts
- *   one day after, the interval it borders.
+ * - Half-open: an interval holds every date `d` with `start <= d < end`. A returned piece ends exactly
+ *   where B starts, or starts exactly where B ends, because B's `end` is not in B (CORE-6's
+ *   `subtractIntervals`). No piece is stepped by one day.
+ * - B touching A (`bStart === aEnd` or `bEnd === aStart`), or empty, removes nothing.
+ * - An empty A (`aStart === aEnd`) has nothing left: returns `[]`. Every returned piece is non-empty.
+ * - `end` is the first day after the period: for a period whose last day is `last`, pass
+ *   `addDate(last, { days: 1 })`.
  * - Returns `[]` when B fully covers A.
  * - Returns `[{ start, end }]` when B overlaps one edge of A (or equals A).
  * - Returns `[{ start, end }, { start, end }]` when B is fully inside A with gaps on both sides.
  * - Returns A unchanged when B lies entirely before or after it.
  * - Returns `[]` if either interval is invalid (`start > end`).
  * - Returns `[]` on invalid input (wrong type, malformed strings).
- * - Accepts GMT calendar-annotated PlainDate strings — E5 (issue #78). Since the result is
+ * - Accepts RFC 9557 calendar-annotated PlainDate strings — E5 (issue #78). Since the result is
  *   date *values*, all four arguments must carry the *same* calendar tag (or all be bare ISO);
  *   a mismatch returns `[]` (E5 decision of record D4). Each output piece's tag is re-derived,
  *   never copied from an input.
@@ -29,11 +36,9 @@ import { isValidCalendarDate } from "../validate";
  * @param bEnd ISO 8601 date string for the second interval end, optionally calendar-annotated
  * @returns array of `{ start, end }` records representing A minus B, or `[]` on invalid input / mismatched calendars
  *
- * @example intervalDifferenceDate("2024-01-01", "2024-12-31", "2024-06-01", "2024-07-01") // [{ start: "2024-01-01", end: "2024-05-31" }, { start: "2024-07-02", end: "2024-12-31" }]
- * @example intervalDifferenceDate("2024-01-01", "2024-12-31", "2024-03-01", "2024-10-31") // [{ start: "2024-01-01", end: "2024-02-29" }, { start: "2024-11-01", end: "2024-12-31" }]
+ * @example intervalDifferenceDate("2024-01-01", "2024-12-31", "2024-06-01", "2024-07-01") // [{ start: "2024-01-01", end: "2024-06-01" }, { start: "2024-07-01", end: "2024-12-31" }]
+ * @example intervalDifferenceDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31") // [{ start: "2024-01-01", end: "2024-06-30" }] (touching B removes nothing)
  * @example intervalDifferenceDate("2024-01-01", "2024-12-31", "2024-01-01", "2024-12-31") // []
- * @example intervalDifferenceDate("2024-01-01", "2024-12-31", "2024-06-01", "2024-12-31") // [{ start: "2024-01-01", end: "2024-05-31" }]
- * @example intervalDifferenceDate("2024-01-05", "2024-01-10", "2024-01-01", "2024-01-02") // [{ start: "2024-01-05", end: "2024-01-10" }] (B entirely before A)
  * @example intervalDifferenceDate("invalid", "2024-12-31", "2024-06-01", "2024-07-01") // []
  */
 export function intervalDifferenceDate(
@@ -79,41 +84,14 @@ export function intervalDifferenceDate(
       return [];
     }
 
-    const result: Array<{ start: string; end: string }> = [];
-
-    // Left piece: A before B starts
-    if (Temporal.PlainDate.compare(aS, bS) < 0) {
-      const leftEnd =
-        Temporal.PlainDate.compare(
-          Temporal.PlainDate.compare(aE, bS) < 0
-            ? aE
-            : bS.subtract({ days: 1 }),
-          aS,
-        ) >= 0
-          ? Temporal.PlainDate.compare(aE, bS) < 0
-            ? aE
-            : bS.subtract({ days: 1 })
-          : null;
-
-      if (leftEnd !== null && Temporal.PlainDate.compare(leftEnd, aS) >= 0) {
-        result.push({
-          start: formatDateInCalendar(aS, calendar),
-          end: formatDateInCalendar(leftEnd, calendar),
-        });
-      }
-    }
-
-    // Right piece: A after B ends — starting at A's own start when B lies entirely before A
-    if (Temporal.PlainDate.compare(aE, bE) > 0) {
-      const rightStart =
-        Temporal.PlainDate.compare(bE, aS) < 0 ? aS : bE.add({ days: 1 });
-      result.push({
-        start: formatDateInCalendar(rightStart, calendar),
-        end: formatDateInCalendar(aE, calendar),
-      });
-    }
-
-    return result;
+    return halfOpenDifference(
+      { start: aS, end: aE },
+      [{ start: bS, end: bE }],
+      Temporal.PlainDate.compare,
+    ).map(({ start, end }) => ({
+      start: formatDateInCalendar(start, calendar),
+      end: formatDateInCalendar(end, calendar),
+    }));
   } catch {
     return [];
   }

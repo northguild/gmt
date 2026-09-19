@@ -6,29 +6,27 @@ import { isValidDate } from "../validate";
  * Return the candidate date nearest to `target` by calendar distance.
  *
  * - Distance is measured in whole days using `Temporal.PlainDate.compare`.
- * - Returns `null` if the candidates array is empty or contains no valid dates.
- * - Returns `null` if `target` is invalid.
+ * - Returns `""` if the candidates array is empty or contains no valid dates, or `target` is invalid.
+ * - **Compatibility:** before 1.16.0 invalid input returned `null`.
  * - On a tie (two equidistant candidates), returns the first one in array order.
  *
  * @param target ISO PlainDate string to measure distance from
  * @param candidates Array of ISO PlainDate strings to choose from
- * @returns The nearest candidate date string, or null on invalid input
+ * @returns The nearest candidate date string, or "" on invalid input
  *
  * @example closestDateTo("2024-03-15", ["2024-03-01", "2024-03-20", "2024-03-18"]) // "2024-03-18"
  * @example closestDateTo("2024-03-15", ["2024-03-01", "2024-03-29"]) // "2024-03-01"
- * @example closestDateTo("2024-03-15", []) // null
- * @example closestDateTo("invalid", ["2024-03-01"]) // null
+ * @example closestDateTo("2024-03-15", []) // ""
+ * @example closestDateTo("invalid", ["2024-03-01"]) // ""
  */
-export function closestDateTo(
-  target: string,
-  candidates: string[],
-): string | null {
+export function closestDateTo(target: string, candidates: string[]): string {
   if (
     !isValidDate(target) ||
+    !Array.isArray(candidates) ||
     !candidates.length ||
     !candidates.some(isValidDate)
   ) {
-    return null;
+    return "";
   }
 
   try {
@@ -48,6 +46,6 @@ export function closestDateTo(
 
     return closest.str;
   } catch {
-    return null;
+    return "";
   }
 }

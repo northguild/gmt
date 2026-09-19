@@ -50,23 +50,25 @@ describe("startOfQuarterForZoned", () => {
     },
   );
 
-  // The deprecated `disambiguation`/`offset` are accepted and ignored: an ordinary quarter start
-  // is unchanged by any value, "reject" included.
-  it.each`
-    disambiguation  | offset
-    ${"compatible"} | ${undefined}
-    ${"reject"}     | ${undefined}
-    ${"reject"}     | ${"prefer"}
-  `(
-    "accepts disambiguation $disambiguation and offset $offset without changing output for a non-transition quarter start",
-    ({ disambiguation, offset }) => {
-      const optionsArg =
-        offset === undefined ? { disambiguation } : { disambiguation, offset };
-      expect(
-        startOfQuarterForZoned("2024-02-15T14:30:00+00:00[UTC]", optionsArg),
-      ).toBe("2024-01-01T00:00:00+00:00[UTC]");
-    },
-  );
+  // `disambiguation` and `offset` were removed in 1.16.0: they were ignored, because a quarter
+  // boundary is always a real instant and TC39's `startOfDay()` takes neither. Passing one is a type error, and a
+  // JavaScript caller's stray property changes nothing.
+  it("treats the removed disambiguation option as a type error and ignores it at runtime", () => {
+    expect(
+      startOfQuarterForZoned("2024-02-15T14:30:00+00:00[UTC]", {
+        // @ts-expect-error -- `disambiguation` was removed in 1.16.0
+        disambiguation: "reject",
+      }),
+    ).toBe("2024-01-01T00:00:00+00:00[UTC]");
+  });
+  it("treats the removed offset option as a type error and ignores it at runtime", () => {
+    expect(
+      startOfQuarterForZoned("2024-02-15T14:30:00+00:00[UTC]", {
+        // @ts-expect-error -- `offset` was removed in 1.16.0
+        offset: "reject",
+      }),
+    ).toBe("2024-01-01T00:00:00+00:00[UTC]");
+  });
 });
 
 // The quarter starts at the real local bucket of its first month, and every wall-clock field
@@ -99,39 +101,16 @@ describe("startOfQuarterForZoned with default options", () => {
   });
 });
 
-// Explicit (ignored) options still reset the sub-second fields: the quarter starts at local
+// An explicit fractionalSecondDigits still resets the sub-second fields: the quarter starts at local
 // midnight, not at midnight plus the input's milliseconds.
 describe("startOfQuarterForZoned sub-second reset with explicit options", () => {
   it.each`
-    value                                   | options                                                        | expected
-    ${"2024-05-15T12:34:56.789+00:00[UTC]"} | ${{ disambiguation: "compatible", fractionalSecondDigits: 3 }} | ${"2024-04-01T00:00:00.000+00:00[UTC]"}
-    ${"2024-05-15T12:34:56.789+00:00[UTC]"} | ${{ offset: "prefer", fractionalSecondDigits: 3 }}             | ${"2024-04-01T00:00:00.000+00:00[UTC]"}
+    value                                   | options                          | expected
+    ${"2024-05-15T12:34:56.789+00:00[UTC]"} | ${{ fractionalSecondDigits: 3 }} | ${"2024-04-01T00:00:00.000+00:00[UTC]"}
   `(
     "returns $expected for $value with $options",
     ({ value, options, expected }) => {
       expect(startOfQuarterForZoned(value, options)).toBe(expected);
-    },
-  );
-});
-
-// Tunis repeated Q4's first local hour on 1978-10-01. The quarter starts at its first real
-// instant (+02:00), Temporal's `startOfDay()`; the deprecated `disambiguation`/`offset` are
-// ignored, so "later" no longer picks the second pass. Verified on @js-temporal/polyfill@0.5.1.
-describe("startOfQuarterForZoned at a zone transition with ignored explicit options", () => {
-  it.each`
-    options                                           | expected
-    ${{ disambiguation: "later" }}                    | ${"1978-10-01T00:00:00+02:00[Africa/Tunis]"}
-    ${{ disambiguation: "compatible" }}               | ${"1978-10-01T00:00:00+02:00[Africa/Tunis]"}
-    ${{ disambiguation: "reject", offset: "reject" }} | ${"1978-10-01T00:00:00+02:00[Africa/Tunis]"}
-  `(
-    "returns the real quarter start $expected for Tunis's repeated Q4 first hour with ignored $options",
-    ({ options, expected }) => {
-      expect(
-        startOfQuarterForZoned(
-          "1978-10-01T00:30:00+01:00[Africa/Tunis]",
-          options,
-        ),
-      ).toBe(expected);
     },
   );
 });

@@ -1,4 +1,4 @@
-import { stepBusinessDaysValue } from "../../internal";
+import { stepBusinessDaysValue } from "../../internal/businessDayValues";
 import type { BusinessCalendar } from "../../types";
 
 /**

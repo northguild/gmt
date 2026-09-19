@@ -107,16 +107,15 @@ describe("splitIntervalAt", () => {
   });
 
   it.each`
-    boundaries                                | reason
-    ${"x"}                                    | ${"not an array"}
-    ${null}                                   | ${"null"}
-    ${["2016-12-31T23:59:60Z"]}               | ${"leap-second boundary outside the interval"}
-    ${[123]}                                  | ${"non-string boundary"}
-    ${["2024-01-01T12:00:00"]}                | ${"zoneless boundary"}
-    ${[at("12:00:00"), undefined]}            | ${"undefined boundary among valid ones"}
-    ${["2024-01-01T12:00:00Z[u-ca=iso8601]"]} | ${"calendar-annotated boundary inside the interval"}
-    ${["2024-01-01T12:00:00Z[!u-ca=hebrew]"]} | ${"critical-flag calendar boundary inside the interval"}
-    ${["+275760-09-13T00:00:00.000000001Z"]}  | ${"boundary past the Instant range"}
+    boundaries                               | reason
+    ${"x"}                                   | ${"not an array"}
+    ${null}                                  | ${"null"}
+    ${["2016-12-31T23:59:60Z"]}              | ${"leap-second boundary outside the interval"}
+    ${[123]}                                 | ${"non-string boundary"}
+    ${["2024-01-01T12:00:00"]}               | ${"zoneless boundary"}
+    ${[at("12:00:00"), undefined]}           | ${"undefined boundary among valid ones"}
+    ${["2024-01-01T12:00:00Z[!foo=bar]"]}    | ${"unknown critical annotation on a boundary inside the interval"}
+    ${["+275760-09-13T00:00:00.000000001Z"]} | ${"boundary past the Instant range"}
   `("returns [] when boundaries are invalid ($reason)", ({ boundaries }) => {
     expect(splitIntervalAt(A, boundaries)).toEqual([]);
   });
@@ -129,12 +128,37 @@ describe("splitIntervalAt", () => {
     ${{ start: "2024-01-01T17:00:00Z", end: "2024-01-01T09:00:00Z" }}                 | ${"inverted"}
     ${{ start: "2024-01-01T09:30:00Z", end: "2024-01-01T10:00:00+01:00" }}            | ${"inverted by instant, ascending as text"}
     ${{ start: "2016-12-31T23:59:60Z", end: "2017-01-01T00:00:00Z" }}                 | ${"leap second"}
-    ${{ start: "2024-01-01T09:00:00Z[u-ca=iso8601]", end: "2024-01-01T17:00:00Z" }}   | ${"calendar annotation"}
+    ${{ start: "2024-01-01T09:00:00Z[!foo=bar]", end: "2024-01-01T17:00:00Z" }}       | ${"unknown critical annotation"}
     ${{ start: "2024-01-01T09:00:00", end: "2024-01-01T17:00:00Z" }}                  | ${"zoneless"}
     ${{ start: "2024-01-01T09:00:00[UTC]", end: "2024-01-01T17:00:00Z" }}             | ${"bracket-only zone"}
     ${{ start: "2024-01-01", end: "2024-01-01T17:00:00Z" }}                           | ${"date only"}
     ${{ start: "-271821-04-20T00:00:00Z", end: "+275760-09-13T00:00:00.000000001Z" }} | ${"past the Instant range"}
   `("returns [] when the interval is invalid ($reason)", ({ bad }) => {
     expect(splitIntervalAt(bad, [at("12:00:00")])).toEqual([]);
+  });
+
+  // Temporal.Instant.from ignores a calendar annotation (critical or not) and an elective unknown
+  // annotation (proposal-temporal ParseTemporalInstantString; RFC 9557 §3.3), so these endpoints
+  // are the unannotated instants. GMT echoes the caller's text (CORE-6), annotation included.
+  it("splits at annotated boundaries by instant and keeps the annotated texts", () => {
+    expect(
+      splitIntervalAt(
+        {
+          start: "2024-01-01T09:00:00Z[!u-ca=hebrew]",
+          end: "2024-01-01T17:00:00Z",
+        },
+        ["2024-01-01T15:00:00Z[foo=bar]", "2024-01-01T12:00:00Z[u-ca=iso8601]"],
+      ),
+    ).toEqual([
+      {
+        start: "2024-01-01T09:00:00Z[!u-ca=hebrew]",
+        end: "2024-01-01T12:00:00Z[u-ca=iso8601]",
+      },
+      {
+        start: "2024-01-01T12:00:00Z[u-ca=iso8601]",
+        end: "2024-01-01T15:00:00Z[foo=bar]",
+      },
+      { start: "2024-01-01T15:00:00Z[foo=bar]", end: "2024-01-01T17:00:00Z" },
+    ]);
   });
 });

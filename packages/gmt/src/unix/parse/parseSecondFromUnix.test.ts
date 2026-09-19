@@ -1,5 +1,5 @@
 import { battleTestLeapYearUnix } from "../../test";
-import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
+import { mockTemporalInstantFromEpochMillisecondsThrow } from "../../test/mocks";
 import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
 import { parseSecondFromUnix } from "./parseSecondFromUnix";
 
@@ -37,7 +37,7 @@ describe("parseSecondFromUnix", () => {
     ${1709164800}    | ${"seconds"}      | ${"00"}
     ${1704067200000} | ${"milliseconds"} | ${"00"}
   `(
-    "returns $expected for $value with epochUnit $epochUnit",
+    "returns $expected for $value in milliseconds and seconds",
     ({ value, epochUnit, expected }) => {
       expect(
         parseSecondFromUnix(value as never, { epochUnit: epochUnit as never }),
@@ -57,8 +57,34 @@ describe("parseSecondFromUnix", () => {
   });
 
   it("returns empty string on failure", () => {
-    mockTemporalZonedDateTimeFromThrow();
+    mockTemporalInstantFromEpochMillisecondsThrow();
     const result = parseSecondFromUnix(battleTestLeapYearUnix);
     expect(result).toBe("");
+  });
+});
+
+describe("parseSecondFromUnix with a blank epoch string", () => {
+  // Number("") and Number("   ") are 0 (ECMA-262 StringToNumber), a coercion artefact: a blank
+  // string holds no epoch value (POSIX XBD 4.19 defines an integer), so it is invalid input.
+  it.each`
+    label                | value
+    ${"empty"}           | ${""}
+    ${"spaces"}          | ${"   "}
+    ${"newline and tab"} | ${"\n\t"}
+    ${"no-break space"}  | ${"\u00a0"}
+  `(
+    'returns "" for a $label string in milliseconds and seconds',
+    ({ value }) => {
+      expect(parseSecondFromUnix(value, { timeZone: "UTC" })).toBe("");
+      expect(
+        parseSecondFromUnix(value, { epochUnit: "seconds", timeZone: "UTC" }),
+      ).toBe("");
+    },
+  );
+});
+
+describe("parseSecondFromUnix invalid-input @example", () => {
+  it('returns "" for parseSecondFromUnix("")', () => {
+    expect(parseSecondFromUnix("")).toBe("");
   });
 });

@@ -6,6 +6,12 @@ import {
   floorDateForFieldsBetween,
   isLastRepresentableDate,
 } from "./fieldSearch";
+import {
+  addManyMonths,
+  countManyMonths,
+  isLargeMonthSpan,
+  isLargeYearSpan,
+} from "./largeMonthSpan";
 import type { ArithmeticModel, YearMonth } from "./nonIsoArithmetic";
 
 /*
@@ -168,12 +174,32 @@ function addMonths(
   if (months === 0) {
     return start;
   }
+  if (isLargeMonthSpan(months)) {
+    // D9: jump whole years instead of the polyfill's month-by-month loop.
+    return addManyMonths(
+      calendarId,
+      start,
+      months,
+      (from, count) => addMonths(calendarId, from, count),
+      (from, to) => monthsBetween(calendarId, from, to),
+    );
+  }
   const jumped = polyfillAddMonths(calendarId, start, months);
   if (jumped !== undefined) {
     return jumped;
   }
-  // Near a limit: leave a month that begins before the range, jump to a month start short of the
-  // limit, and step the rest.
+  return addMonthsNearLimit(calendarId, start, months);
+}
+
+/**
+ * Near a limit: leave a month that begins before the range, jump to a month start short of the
+ * limit, and step the rest.
+ */
+function addMonthsNearLimit(
+  calendarId: string,
+  start: YearMonth,
+  months: number,
+): YearMonth | null {
   const sign = Math.sign(months);
   let origin: YearMonth | null = start;
   let remaining = months;
@@ -226,12 +252,29 @@ function monthsBetween(
   if (sign === 0) {
     return 0;
   }
+  if (isLargeYearSpan(from.year, to.year)) {
+    // D9: count whole years instead of the polyfill's month-by-month loop.
+    return countManyMonths(calendarId, from, to, (one, two) =>
+      monthsBetween(calendarId, one, two),
+    );
+  }
   const direct = polyfillMonthsBetween(calendarId, from, to);
   if (direct !== undefined) {
     return direct;
   }
-  // Near a limit: count the months at each end one at a time, and let the polyfill count between
-  // the month starts left in the middle.
+  return monthsBetweenNearLimit(calendarId, from, to, sign);
+}
+
+/**
+ * Near a limit: count the months at each end one at a time, and let the polyfill count between
+ * the month starts left in the middle.
+ */
+function monthsBetweenNearLimit(
+  calendarId: string,
+  from: YearMonth,
+  to: YearMonth,
+  sign: number,
+): number {
   let low = from;
   let high = to;
   let count = 0;

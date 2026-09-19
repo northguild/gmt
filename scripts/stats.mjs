@@ -49,6 +49,8 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve, sep } from "node:path";
 
+import { formatJson } from "./lib/format-json.mjs";
+
 const CORPUS = "apps/dox/src/generated/reference/gmt-corpus.json";
 const WORKFLOW = ".github/workflows/ci.yml";
 const LOCALES = "packages/gmt/src/test/localeMatrix.ts";
@@ -390,7 +392,7 @@ function evaluate(f) {
     );
   }
   if (stale.length > 0) {
-    edits.set(DOX_STATS, `${JSON.stringify(stats, null, 2)}\n`);
+    edits.set(DOX_STATS, formatJson(stats));
   }
 
   return { edits, problems };

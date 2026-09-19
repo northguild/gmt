@@ -1,6 +1,8 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidTimeZone } from "../../zoned";
 import { isValidUtc } from "../validate";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Convert a UTC datetime string to a plain time string in the format "HH:mm:ss".
@@ -21,6 +23,10 @@ export function convertUtcToPlainTime(
   value: string,
   options?: { timeZone?: string },
 ): string {
+  if (!isOptionsArgument(options)) {
+    return "";
+  }
+
   const { timeZone = "UTC" } = options ?? {};
 
   if (!isValidTimeZone(timeZone)) return "";

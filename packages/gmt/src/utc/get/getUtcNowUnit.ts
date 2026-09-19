@@ -1,6 +1,11 @@
 import { Temporal } from "@js-temporal/polyfill";
+import {
+  isoWeekOfYear,
+  zonedNowUnitValue,
+} from "../../internal/zonedNowUnitValue";
 import { isValidDateTimeUnit } from "../../plain/validate";
 import type { UtcNowUnit } from "../../types";
+import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 
 export type { UtcNowUnit };
 
@@ -13,6 +18,8 @@ function isValidUtcNowUnit(unit: string): unit is UtcNowUnit {
  *
  * - Valid units: "year", "month", "week", "day", "dayOfWeek", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond".
  * - Uses Temporal.Now.instant() converted to UTC.
+ * - `unit` accepts the singular or plural name of a Temporal unit (`"hour"` or `"hours"`), as Temporal
+ *   does; `"dayOfWeek"` has no plural.
  * - Returns "" on invalid unit or failure.
  *
  * @param unit unit to extract from current utc instant
@@ -20,46 +27,16 @@ function isValidUtcNowUnit(unit: string): unit is UtcNowUnit {
  *
  * @example getUtcNowUnit("year") // "2024"
  * @example getUtcNowUnit("month") // "02"
+ * @example getUtcNowUnit("hours") // "14", if the UTC time is 14:xx (plural unit name)
  * @example getUtcNowUnit("invalid") // ""
  */
 export function getUtcNowUnit(unit: UtcNowUnit): string {
-  if (!isValidUtcNowUnit(String(unit ?? ""))) return "";
+  const resolvedUnit = resolveDateTimeUnit(unit);
+  if (!isValidUtcNowUnit(String(resolvedUnit ?? ""))) return "";
 
   try {
     const now = Temporal.Now.instant().toZonedDateTimeISO("UTC");
-    const plainDateTime = now.toPlainDateTime();
-    const plainDate = Temporal.PlainDate.from({
-      year: plainDateTime.year,
-      month: plainDateTime.month,
-      day: plainDateTime.day,
-    });
-
-    switch (unit) {
-      case "year":
-        return plainDateTime.year.toString();
-      case "month":
-        return plainDateTime.month.toString().padStart(2, "0");
-      case "week":
-        return (plainDate.weekOfYear ?? 0).toString();
-      case "day":
-        return plainDateTime.day.toString().padStart(2, "0");
-      case "dayOfWeek":
-        return now.dayOfWeek.toString();
-      case "hour":
-        return plainDateTime.hour.toString().padStart(2, "0");
-      case "minute":
-        return plainDateTime.minute.toString().padStart(2, "0");
-      case "second":
-        return plainDateTime.second.toString().padStart(2, "0");
-      case "millisecond":
-        return plainDateTime.millisecond.toString().padStart(3, "0");
-      case "microsecond":
-        return (plainDateTime.microsecond ?? 0).toString().padStart(3, "0");
-      case "nanosecond":
-        return (plainDateTime.nanosecond ?? 0).toString().padStart(3, "0");
-      default:
-        return "";
-    }
+    return zonedNowUnitValue(now, resolvedUnit, isoWeekOfYear);
   } catch {
     return "";
   }

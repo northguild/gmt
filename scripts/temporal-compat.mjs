@@ -113,6 +113,30 @@ const WORKAROUNDS = [
     ],
   },
   {
+    defects: ["D10"],
+    title:
+      "D10 — fields → ISO skips a 5–6-day month 13 in far years (tc39/proposal-temporal#3329; ethioaa, so coptic and ethiopic)",
+    trigger:
+      "js-temporal ports tc39 #3292 together with the #3329 fix (0.5.1 predates #3292, so this group passes today: it guards against a port of #3292 alone)",
+    steps: [
+      "Delete the D10 repros in repros.ts, the D10 term of needsFieldSearch in calendarDateFromFields.ts, the D10 terms in calendarDateArithmetic.ts (the catch branch of calendarDateAdd, untilWorkaroundNeeded) and D10 in ARITHMETIC_DEFECTS (capabilities.ts).",
+      "Keep the non-RangeError fallbacks and the far-year month-13 rows in addDate, intervalCountDate and convertDateToCalendar tests: no expected value changes.",
+      `Full wording: ${COMPAT_README} § Removal steps 10.`,
+    ],
+  },
+  {
+    defects: ["D9"],
+    title:
+      "D9 — non-ISO months added and counted one month at a time (heap OOM for in-range amounts; temporalCompat/largeMonthSpan.ts)",
+    trigger:
+      "a js-temporal release adds and differences non-ISO months in bounded work: each D9 probe reads at most 100 Intl dates for 1,200 months",
+    steps: [
+      "Delete largeMonthSpan.ts, its two calls in readArithmeticModel.ts (addMonths, monthsBetween), the two D9 branches in calendarDateArithmetic.ts, and the D9 repros with withBoundedIntlReads in repros.ts.",
+      "Keep largeMonthArithmetic.test.ts: its rows are spec values and must still pass, in bounded time, on the fixed polyfill.",
+      `Full wording: ${COMPAT_README} § Removal steps 9.`,
+    ],
+  },
+  {
     defects: ["zoned.A"],
     title:
       "zoned.A — wall clock → exact time at the range limits (zonedWallClock.ts defect 1, zonedWallClockDifference.ts defect 1)",
@@ -132,6 +156,18 @@ const WORKAROUNDS = [
     steps: [
       "Delete the defect-2 (transition-less null) fallback described in the header note of internal/zonedWallClock.ts, and the zoned.B repros.",
       "Run internal/zonedWallClock*.test.ts: no expected value changes.",
+    ],
+  },
+  {
+    defects: ["zoned.E"],
+    title:
+      "zoned.E — transition search floored at 1847-01-01 (zonedWallClock.ts defect 3)",
+    trigger:
+      "a js-temporal release containing js-temporal/temporal-polyfill#372 (tc39/proposal-temporal#3330)",
+    steps: [
+      "Delete POLYFILL_TRANSITION_SEARCH_FLOOR, isBeforePolyfillTransitionSearch, missedNextTransition and missedPreviousTransition in internal/zonedWallClock.ts, and their gates: dateOnlyBeforeTransitionSearch there, and needsOwnStartOfDay, plainDateBeforeTransitionSearch and the pre-1847 check in zonedNextTransition in internal/zonedWallClockOperations.ts.",
+      "zonedPreviousTransition becomes the plain polyfill call (or inline it back into zonedBucket.ts). Delete the zoned.E repros and the pre-1847 assumption guard in internal/zonedWallClock.test.ts.",
+      "Run internal/zonedWallClock*.test.ts, internal/zonedBucket.test.ts and the zoned/unix/calendar test files carrying a `zoned.E` describe block: no expected value changes.",
     ],
   },
   {
@@ -311,26 +347,32 @@ function tagFor(mismatch) {
 // oracle: GMT string conventions
 // ---------------------------------------------------------------------------------------------
 
-/** Temporal calendar id in the scan → GMT's public CalendarSystem name. */
+/**
+ * Temporal calendar id in the scan → GMT's public CalendarSystem name. Since 1.16.0 GMT's ids are
+ * Temporal's canonical ids, so this is the identity; it stays as the list of calendars GMT supports.
+ */
 const GMT_CALENDAR = {
   buddhist: "buddhist",
   hebrew: "hebrew",
   "islamic-civil": "islamic-civil",
-  "islamic-tbla": "islamic-tabular",
+  "islamic-tbla": "islamic-tbla",
   "islamic-umalqura": "islamic-umalqura",
   persian: "persian",
   indian: "indian",
-  ethioaa: "ethiopic-amete-alem",
+  ethioaa: "ethioaa",
   japanese: "japanese",
-  roc: "taiwan",
-  gregory: "gregorian",
+  roc: "roc",
+  gregory: "gregory",
 };
 
-/** GMT's calendar year digits (coding-standards E1 with PadISOYear signs). */
-function calendarYear(year) {
-  return year < 0
-    ? `-${String(-year).padStart(6, "0")}`
-    : String(year).padStart(4, "0");
+/**
+ * GMT's calendar string for an ISO date (coding-standards "Calendar-annotated strings are
+ * RFC 9557"): exactly native `Temporal.PlainDate.from(iso).withCalendar(calendar).toString()`.
+ */
+function annotatedDate(iso, calendar) {
+  return calendar === "iso8601"
+    ? iso
+    : `${iso}[u-ca=${GMT_CALENDAR[calendar]}]`;
 }
 
 /** An RFC 9557 ISO date for epoch days (proleptic Gregorian, H. Hinnant's civil_from_days). */
@@ -402,6 +444,41 @@ function runTwin(native, calendars, dateString, gmt, compare) {
     const gmtCalendar = GMT_CALENDAR[calendar];
     if (!gmtCalendar)
       throw new Error(`scan calendar ${calendar} has no GMT name`);
+    /** GMT's read of an ISO date into `calendar`, against the native read (`"ERR"` when it failed). */
+    const compareRead = (at, iso, native) =>
+      compare(
+        {
+          ...at,
+          op: "read",
+          input: iso,
+          native,
+          expected: annotatedDate(iso, calendar),
+        },
+        () => gmt.convertDateToCalendar(iso, gmtCalendar),
+      );
+    /** GMT's one-month and one-year additions to `date`, against the native ones. */
+    const compareAdds = (at, date, addMonth, addYear) => {
+      compare(
+        {
+          ...at,
+          op: "addMonth",
+          input: date,
+          native: addMonth,
+          expected: expectDate(addMonth, calendar),
+        },
+        () => gmt.addDate(date, { months: 1 }),
+      );
+      compare(
+        {
+          ...at,
+          op: "addYear",
+          input: date,
+          native: addYear,
+          expected: expectDate(addYear, calendar),
+        },
+        () => gmt.addDate(date, { years: 1 }),
+      );
+    };
 
     for (const [tag, edgeIso, dir] of [
       ["max", xscan.max, -1],
@@ -416,10 +493,7 @@ function runTwin(native, calendars, dateString, gmt, compare) {
         const iso = addIsoDays(edgeIso, dir * n);
         const at = { scan: `xscan.edge.${tag}`, calendar, row: n, iso };
         if (row.length === 1) {
-          compare(
-            { ...at, op: "read", input: iso, native: "ERR", expected: "" },
-            () => gmt.convertDateToCalendar(iso, gmtCalendar),
-          );
+          compareRead(at, iso, "ERR");
           return;
         }
         const date = dateString(iso, calendar);
@@ -433,16 +507,7 @@ function runTwin(native, calendars, dateString, gmt, compare) {
           untilEdge,
           untilFar,
         ] = row;
-        compare(
-          {
-            ...at,
-            op: "read",
-            input: iso,
-            native: row[0],
-            expected: date ?? "",
-          },
-          () => gmt.convertDateToCalendar(iso, gmtCalendar),
-        );
+        compareRead(at, iso, row[0]);
         if (date === null) return;
         compare(
           {
@@ -452,7 +517,7 @@ function runTwin(native, calendars, dateString, gmt, compare) {
             native: fromFields,
             expected: expectValue(fromFields),
           },
-          () => gmt.convertDateToCalendar(date, "gregorian"),
+          () => gmt.convertDateToCalendar(date, "iso8601"),
         );
         compare(
           {
@@ -464,26 +529,7 @@ function runTwin(native, calendars, dateString, gmt, compare) {
           },
           () => String(gmt.isValidCalendarDate(date)),
         );
-        compare(
-          {
-            ...at,
-            op: "addMonth",
-            input: date,
-            native: addMonth,
-            expected: expectDate(addMonth, calendar),
-          },
-          () => gmt.addDate(date, { months: 1 }),
-        );
-        compare(
-          {
-            ...at,
-            op: "addYear",
-            input: date,
-            native: addYear,
-            expected: expectDate(addYear, calendar),
-          },
-          () => gmt.addDate(date, { years: 1 }),
-        );
+        compareAdds(at, date, addMonth, addYear);
         compare(
           {
             ...at,
@@ -537,17 +583,11 @@ function runTwin(native, calendars, dateString, gmt, compare) {
       const [iso, read, fromFields, addMonth, addYear, untilYears] = row;
       const at = { scan: "xscan.stride", calendar, row: k, iso };
       if (read === "ERR") {
-        compare(
-          { ...at, op: "read", input: iso, native: "ERR", expected: "" },
-          () => gmt.convertDateToCalendar(iso, gmtCalendar),
-        );
+        compareRead(at, iso, "ERR");
         return;
       }
       const date = dateString(iso, calendar);
-      compare(
-        { ...at, op: "read", input: iso, native: read, expected: date ?? "" },
-        () => gmt.convertDateToCalendar(iso, gmtCalendar),
-      );
+      compareRead(at, iso, read);
       if (date === null) return;
       compare(
         {
@@ -557,28 +597,9 @@ function runTwin(native, calendars, dateString, gmt, compare) {
           native: fromFields,
           expected: expectValue(fromFields),
         },
-        () => gmt.convertDateToCalendar(date, "gregorian"),
+        () => gmt.convertDateToCalendar(date, "iso8601"),
       );
-      compare(
-        {
-          ...at,
-          op: "addMonth",
-          input: date,
-          native: addMonth,
-          expected: expectDate(addMonth, calendar),
-        },
-        () => gmt.addDate(date, { months: 1 }),
-      );
-      compare(
-        {
-          ...at,
-          op: "addYear",
-          input: date,
-          native: addYear,
-          expected: expectDate(addYear, calendar),
-        },
-        () => gmt.addDate(date, { years: 1 }),
-      );
+      compareAdds(at, date, addMonth, addYear);
       const later = dateString(
         addIsoDays(iso, xscan.strideUntilDays),
         calendar,
@@ -685,19 +706,18 @@ function runTwin(native, calendars, dateString, gmt, compare) {
   }
 }
 
-/** Builds `dateString` over native reads: `year|month|day|era|eraYear` per `iso|calendar`. */
+/**
+ * Builds `dateString` over native reads (`year|month|day|era|eraYear` per `iso|calendar`): the
+ * RFC 9557 string for the date, or null when Chromium cannot read it in that calendar, so the ops
+ * that start from it are skipped.
+ */
 function dateStringFromReads(reads) {
   return (iso, calendar) => {
-    if (calendar === "gregory") return iso;
     const read = reads.get(`${iso}|${calendar}`);
     if (read === undefined)
       throw new Error(`no native read for ${iso} ${calendar}`);
     if (read === "ERR") return null;
-    const [year, month, day, era, eraYear] = read.split("|");
-    const japanese = calendar === "japanese";
-    const yearText = calendarYear(Number(japanese ? eraYear : year));
-    const suffix = japanese ? `;era=${era}` : "";
-    return `${yearText}-${month.padStart(2, "0")}-${day.padStart(2, "0")}[u-ca=${GMT_CALENDAR[calendar]}${suffix}]`;
+    return annotatedDate(iso, calendar);
   };
 }
 
@@ -761,8 +781,7 @@ async function runNative(chromePath, calendarsFor) {
 
     const pairs = new Map();
     const recordingDateString = (iso, calendar) => {
-      if (calendar !== "gregory")
-        pairs.set(`${iso}|${calendar}`, [iso, calendar]);
+      pairs.set(`${iso}|${calendar}`, [iso, calendar]);
       return "";
     };
     const noGmt = new Proxy({}, { get: () => () => "" });

@@ -1,6 +1,6 @@
 ---
 title: Containment and Overlap
-description: Test whether an instant is inside an interval, whether two intervals overlap, and compute or clamp to their intersection — half-open by default, closed in the positional functions.
+description: Test whether an instant is inside an interval, whether two intervals overlap, and compute or clamp to their intersection — half-open in both interval families.
 sidebar:
   order: 2
 ---
@@ -62,11 +62,11 @@ same instant differently, such as `04:00:00-05:00` and `09:00:00Z`, the first ar
 spelling wins. No specification covers this tie. GMT chose it because a rule based on
 position is deterministic without inventing a canonical spelling.
 
-## The positional functions are closed
+## The positional functions
 
-The older `intervalContains*`, `intervalsOverlap*` and `intervalIntersection*` functions
-in `plain/`, `utc/`, `zoned/` and `unix/` treat an interval as closed `[start, end]`, so
-the end is inside and a shared endpoint counts as overlap:
+The positional `intervalContains*`, `intervalsOverlap*` and `intervalIntersection*`
+functions in `plain/`, `utc/`, `zoned/` and `unix/` follow the same half-open rule, so the
+end is outside and touching intervals do not overlap:
 
 ```typescript
 import {
@@ -77,51 +77,51 @@ import {
 } from "@northguild/gmt";
 
 intervalContainsUtc("2024-01-01T09:00:00Z", "2024-01-01T17:00:00Z", "2024-01-01T17:00:00Z");
-// true — the end is inside
+// false — the end is excluded
 
-intervalsOverlapDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31");
-// true — they share 30 June
+intervalsOverlapDate("2024-01-01", "2024-07-01", "2024-07-01", "2025-01-01");
+// false — the first interval ends before 1 July
 
-intervalIntersectionDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31");
-// { start: "2024-06-30", end: "2024-06-30" } — a single-date span
+intervalIntersectionDate("2024-01-01", "2024-07-01", "2024-04-01", "2025-01-01");
+// { start: "2024-04-01", end: "2024-07-01" }
 
-intervalsOverlapDate("2024-01-01", "2024-06-30", "2024-07-01", "2024-12-31");
-// false
+intervalIntersectionDate("2024-01-01", "2024-07-01", "2024-07-01", "2025-01-01");
+// null — touching intervals share no date
 ```
 
 With a fourth argument, `intervalContains*` tests an inner interval instead of a point,
-and `intervalEngulfs*` is the same test under another name:
+and `intervalEngulfs*` is the same test under another name. The inner interval must lie
+within the outer one and overlap it, so it may end at the outer `end`, but an empty inner
+interval at `end` is not contained:
 
 ```typescript
 intervalContainsDate("2024-01-01", "2024-12-31", "2024-03-01", "2024-09-01"); // true
+intervalContainsDate("2024-01-01", "2025-01-01", "2024-07-01", "2025-01-01"); // true — same end
+intervalContainsDate("2024-01-01", "2025-01-01", "2025-01-01", "2025-01-01"); // false — empty, at the end
 ```
 
-`intervalAbuts*` is the closed model's adjacency test. Two intervals abut when one ends
-exactly one unit before the other starts: one nanosecond for `Utc`, `Zoned`, `DateTime`
-and `Time`, one day for `Date`, and one epoch unit for `Unix`. Intervals that share an
-endpoint already overlap, so they do not abut:
+`intervalAbuts*` is true when one interval's `end` equals the other's `start`, in either
+order. Any gap, even one nanosecond, means they do not abut, and an empty interval abuts
+nothing:
 
 ```typescript
 import { intervalAbutsDate, intervalAbutsUtc } from "@northguild/gmt";
 
-intervalAbutsDate("2024-01-01", "2024-06-30", "2024-07-01", "2024-12-31"); // true
-intervalAbutsDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31"); // false — shared endpoint
+intervalAbutsDate("2024-01-01", "2024-07-01", "2024-07-01", "2025-01-01"); // true
+intervalAbutsDate("2024-01-01", "2024-06-30", "2024-07-01", "2024-12-31"); // false — 30 June is in neither
 
 intervalAbutsUtc(
   "2024-01-01T09:00:00Z",
   "2024-01-01T12:00:00Z",
   "2024-01-01T12:00:00.000000001Z",
   "2024-01-01T17:00:00Z",
-); // true
+); // false — 1 ns apart
 ```
-
-Under the half-open standard, "abuts" is simply `a.end` equal to `b.start`, and
-`intervalsOverlap` returns `false` for that pair.
 
 ## See also
 
-- [Interval Basics](./interval-basics/): the half-open standard, validation, return conventions
-- [Set Operations](./set-operations/): merge, subtract, sum covered time
+- [Interval Basics](/guides/intervals/interval-basics/): the half-open standard, validation, return conventions
+- [Set Operations](/guides/intervals/set-operations/): merge, subtract, sum covered time
 - [`intervalsOverlap` reference](/reference/interval/compare/intervalsOverlap)
 - [`intersectIntervals` reference](/reference/interval/calculate/intersectIntervals)
 - [`clampInterval` reference](/reference/interval/calculate/clampInterval)

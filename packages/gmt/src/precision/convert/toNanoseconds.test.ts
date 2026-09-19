@@ -12,14 +12,26 @@ describe("toNanoseconds", () => {
     ${"2024-03-10T12:00:00.123456Z"}                 | ${1710072000123456000n}
     ${"2024-03-10T12:00:00-05:00"}                   | ${1710090000000000000n}
     ${"2024-03-10T12:00:00-05:00[America/New_York]"} | ${1710090000000000000n}
-    ${"2024-03-10 12:00:00Z"}                        | ${1710072000000000000n}
-    ${"2024-03-10t12:00:00z"}                        | ${1710072000000000000n}
-    ${"20240310T120000Z"}                            | ${1710072000000000000n}
-    ${"2024-03-10T120000Z"}                          | ${1710072000000000000n}
     ${"2024-03-10T12:00:00.60Z"}                     | ${1710072000600000000n}
   `("returns $expected for $value", ({ value, expected }) => {
     expect(toNanoseconds(value)).toBe(expected);
   });
+
+  // A bracketed zone annotation is syntactic only: Temporal.Instant.from ignores it, and the
+  // offset alone fixes the instant (test262 Temporal/Instant/from/
+  // argument-string-time-zone-annotation.js). A zone that does not exist, or one whose offset
+  // contradicts the string's, is not checked. 12:00+05:00 is 07:00Z; 12:00-04:00 is 16:00Z.
+  it.each`
+    value                                            | expected                | reason
+    ${"2024-03-10T12:00:00+05:00[America/New_York]"} | ${1710054000000000000n} | ${"offset contradicts the zone"}
+    ${"2024-03-10T12:00:00Z[Not/AZone]"}             | ${1710072000000000000n} | ${"zone that does not exist"}
+    ${"2024-03-10T12:00:00Z[+05:00]"}                | ${1710072000000000000n} | ${"numeric zone annotation"}
+  `(
+    "returns $expected for $value, from the offset alone ($reason)",
+    ({ value, expected }) => {
+      expect(toNanoseconds(value)).toBe(expected);
+    },
+  );
 
   it.each`
     value                            | expected
@@ -68,12 +80,25 @@ describe("toNanoseconds", () => {
     ${"2016-12-31t235960z"}                          | ${"leap second, all lowercase"}
     ${"2016-12-31T23:59:60+00:00"}                   | ${"leap second with numeric offset"}
     ${"2016-12-31T23:59:60-05:00[America/New_York]"} | ${"leap second in a zoned string"}
-    ${"2024-03-10T12:00:00-05:00[u-ca=hebrew]"}      | ${"calendar annotation"}
-    ${"2024-03-10T12:00:00Z[!u-ca=hebrew]"}          | ${"critical-flag calendar annotation"}
+    ${"2024-03-10 12:00:00Z"}                        | ${"space separator (strict extended shape)"}
+    ${"2024-03-10t12:00:00z"}                        | ${"lower-case t and z (strict extended shape)"}
+    ${"20240310T120000Z"}                            | ${"basic format (strict extended shape)"}
+    ${"2024-03-10T120000Z"}                          | ${"basic-format time (strict extended shape)"}
     ${"invalid"}                                     | ${"unparseable"}
     ${""}                                            | ${"empty string"}
   `("returns 0n when $value is invalid ($reason)", ({ value }) => {
     expect(toNanoseconds(value)).toBe(0n);
+  });
+
+  // A calendar annotation is read and ignored, as `Temporal.Instant.from` ignores it (an instant has
+  // no calendar): the critical flag included. Expected value computed from
+  // native Temporal (Chromium 153) epoch nanoseconds.
+  it.each`
+    value                                       | expected
+    ${"2024-03-10T12:00:00-05:00[u-ca=hebrew]"} | ${1710090000000000000n}
+    ${"2024-03-10T12:00:00Z[!u-ca=hebrew]"}     | ${1710072000000000000n}
+  `("returns $expected for $value", ({ value, expected }) => {
+    expect(toNanoseconds(value)).toBe(expected);
   });
 
   it.each`

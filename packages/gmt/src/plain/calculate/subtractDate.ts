@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
 import {
   calendarSystemOfDateValue,
@@ -9,15 +10,17 @@ import {
 } from "../../internal";
 import type { DateDurationUnit, Overflow } from "../../types";
 import { isValidCalendarDate, isValidDateDurationUnit } from "../validate";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return a PlainDate ISO string with `units` subtracted from `value`.
  *
  * - Validates `value`, `units`, and `amount` before performing the subtract.
- * - Accepts a GMT calendar-annotated PlainDate string (as produced by `convertDateToCalendar`),
- *   not just a bare ISO string — E5 (issue #78). See `addDate`'s JSDoc for the full calendar-unit
- *   arithmetic rationale (leap months/years, era transitions, the `overflow` asymmetry); this
- *   function is the mirror image (`.subtract` instead of `.add`).
+ * - Accepts an RFC 9557 calendar-annotated PlainDate string (as `convertDateToCalendar` writes it),
+ *   not just a bare ISO string. See `addDate`'s JSDoc for the calendar-unit arithmetic (leap
+ *   months and years, the `overflow` asymmetry); this function is the mirror image.
+ * - Compatibility: since 1.16.0 calendar strings are RFC 9557 (ISO digits, `[u-ca=<id>]`, canonical
+ *   calendar ids); see `isValidCalendarDate`.
  * - Returns "" for invalid inputs.
  *
  * `overflow` ("constrain" (default) | "reject") controls out-of-range results, e.g. subtracting
@@ -28,19 +31,26 @@ import { isValidCalendarDate, isValidDateDurationUnit } from "../validate";
  * @param options optional: overflow ("constrain" | "reject")
  * @returns ISO PlainDate string after subtraction, or "" on invalid input
  *
- * @example subtractDate("2024-03-15", { day: 5 }) // "2024-03-10"
- * @example subtractDate("invalid", { day: 5 }) // ""
+ * @example subtractDate("2024-03-15", { days: 5 }) // "2024-03-10"
+ * @example subtractDate("invalid", { days: 5 }) // ""
  * @example subtractDate("2024-03-31", { months: 1 }, { overflow: "reject" }) // ""
- * @example subtractDate("5784-07-15[u-ca=hebrew]", { months: 1 }) // "5784-06-15[u-ca=hebrew]" (Adar -> Adar I)
+ * @example subtractDate("2024-03-25[u-ca=hebrew]", { months: 1 }) // "2024-02-24[u-ca=hebrew]" (15 Adar II 5784 -> 15 Adar I)
  */
 export function subtractDate(
   value: string,
   units: Partial<Record<DateDurationUnit, number>>,
   options?: { overflow?: Overflow },
 ): string {
+  if (!isOptionsArgument(options)) {
+    return "";
+  }
+
   const validDate = isValidCalendarDate(value);
-  const validUnits = Object.keys(units).every(isValidDateDurationUnit);
-  const validAmounts = Object.values(units).every(isValidAmount);
+  const validUnits =
+    typeof units === "object" &&
+    units !== null &&
+    Object.keys(units).every(isValidDateDurationUnit);
+  const validAmounts = validUnits && Object.values(units).every(isValidAmount);
 
   if (!validDate || !validUnits || !validAmounts) {
     return "";

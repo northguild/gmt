@@ -13,15 +13,7 @@
  * Generated MDX + src/generated/* are gitignored and produced by a prebuild step.
  */
 
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
@@ -32,6 +24,11 @@ import type {
 import { argToValue, parseCallArgs } from "../src/lib/playground-parsers";
 import type { PlaygroundSpec } from "./build-utils/build-utils";
 import * as BU from "./build-utils/build-utils";
+import {
+  hashFiles,
+  syncTree,
+  writeIfChanged,
+} from "./build-utils/generated-files.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(__dirname, "..");
@@ -48,20 +45,33 @@ const GH_BASE = "https://github.com/northguild/gmt/blob/main/packages/gmt/src";
 // Walk
 // ---------------------------------------------------------------------------
 
-function walk(dir: string): string[] {
+/**
+ * Every file under `dir`, recursively, that `keepFile` accepts, skipping any directory
+ * `skipDir` names. The one directory walker the generator's three file lists share.
+ */
+function listFiles(
+  dir: string,
+  keepFile: (name: string) => boolean,
+  skipDir: (name: string) => boolean = () => false,
+): string[] {
   const out: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (SKIP_DIRS.includes(entry.name)) continue;
-      out.push(...walk(full));
-    } else if (entry.isFile()) {
-      if (!entry.name.endsWith(".ts")) continue;
-      if (SKIP_EXTS.some((s) => entry.name.endsWith(s))) continue;
+      if (!skipDir(entry.name)) out.push(...listFiles(full, keepFile, skipDir));
+    } else if (entry.isFile() && keepFile(entry.name)) {
       out.push(full);
     }
   }
   return out;
+}
+
+/** A gmt source file: `.ts`, and not a test or spec file. */
+const isSourceFile = (name: string) =>
+  name.endsWith(".ts") && !SKIP_EXTS.some((s) => name.endsWith(s));
+
+function walk(dir: string): string[] {
+  return listFiles(dir, isSourceFile, (name) => SKIP_DIRS.includes(name));
 }
 
 /**
@@ -215,28 +225,25 @@ interface ParsedJsDoc {
   examples: Example[];
 }
 
-function parseJsDoc(
+/**
+ * The symbol that carries a declaration's JSDoc. A function or variable
+ * declaration carries its symbol on the name node, not on the declaration.
+ * Missing the variable case cost every arrow-function export
+ * (`export const f = (…) => …`) its whole JSDoc — description, params and
+ * `@example`s alike.
+ */
+function jsDocSymbol(
   checker: ts.TypeChecker,
   node: ts.Node,
-): ParsedJsDoc | undefined {
-  // A function or variable declaration carries its symbol on the name node, not
-  // on the declaration. Missing the variable case cost every arrow-function
-  // export (`export const f = (…) => …`) its whole JSDoc — description,
-  // params and `@example`s alike.
-  const symbol = checker.getSymbolAtLocation(
+): ts.Symbol | undefined {
+  const named =
     (ts.isFunctionDeclaration(node) || ts.isVariableDeclaration(node)) &&
-      node.name
-      ? node.name
-      : node,
-  );
-  if (!symbol) return undefined;
+    node.name;
+  return checker.getSymbolAtLocation(named || node);
+}
 
-  const parts = symbol.getDocumentationComment(checker);
-  const raw = ts.displayPartsToString(parts);
-  if (!raw.trim() && symbol.getJsDocTags().length === 0) return undefined;
-
-  const lines = raw.split("\n");
-  const description = lines[0]?.trim() ?? "";
+/** The `- ` bullets after the summary line, each joined onto one line. */
+function parseBehavior(lines: string[]): string[] {
   const behavior: string[] = [];
   let cur = "";
   for (let i = 1; i < lines.length; i++) {
@@ -249,12 +256,18 @@ function parseJsDoc(
     }
   }
   if (cur) behavior.push(cur);
+  return behavior;
+}
 
+/** The `@param`, `@returns` and `@example` tags of a JSDoc block. */
+function parseJsDocTags(
+  tags: ts.JSDocTagInfo[],
+): Pick<ParsedJsDoc, "params" | "returns" | "examples"> {
   const params: ParamDoc[] = [];
   let returns = "";
   const examples: Example[] = [];
 
-  for (const tag of symbol.getJsDocTags()) {
+  for (const tag of tags) {
     const text = tag.text ? ts.displayPartsToString(tag.text) : "";
     if (tag.name === "param") {
       const m = text.match(/^(\w+)\s+([\s\S]*)$/);
@@ -268,6 +281,25 @@ function parseJsDoc(
       if (ex) examples.push(ex);
     }
   }
+
+  return { params, returns, examples };
+}
+
+function parseJsDoc(
+  checker: ts.TypeChecker,
+  node: ts.Node,
+): ParsedJsDoc | undefined {
+  const symbol = jsDocSymbol(checker, node);
+  if (!symbol) return undefined;
+
+  const parts = symbol.getDocumentationComment(checker);
+  const raw = ts.displayPartsToString(parts);
+  if (!raw.trim() && symbol.getJsDocTags().length === 0) return undefined;
+
+  const lines = raw.split("\n");
+  const description = lines[0]?.trim() ?? "";
+  const behavior = parseBehavior(lines);
+  const { params, returns, examples } = parseJsDocTags(symbol.getJsDocTags());
 
   return { description, behavior, params, returns, examples };
 }
@@ -388,13 +420,19 @@ function extractOptions(
       | ts.ParameterDeclaration
       | undefined;
     if (!paramNode) continue;
-    const t = checker.getTypeOfSymbolAtLocation(sp, node);
+    const t = checker.getNonNullableType(
+      checker.getTypeOfSymbolAtLocation(sp, node),
+    );
     const props = t.getProperties();
     if (props.length === 0) continue;
     removeParam = sp.name;
     for (const prop of props) {
       const propType = checker.getTypeOfSymbolAtLocation(prop, node);
-      const typeStr = checker.typeToString(propType);
+      const typeStr = declaredTypeString(
+        checker,
+        propType,
+        prop.valueDeclaration,
+      );
       // Match default value from JSDoc: `propName` (default: `value`) or `propName` (default: value)
       const defaultMatch = optionsDoc.match(
         new RegExp(
@@ -424,6 +462,34 @@ function extractOptions(
 // an extracted FnDoc into that module's input shape and wires the real
 // TypeScript compiler callbacks.
 
+/** True when the signature parameter `sp` is declared `x?:`, `x = default`, `...rest` or optional. */
+function isOptionalDeclaration(sp: ts.Symbol): boolean {
+  const decl = sp.valueDeclaration;
+  if (!decl || !ts.isParameter(decl)) return false;
+  return (
+    decl.questionToken !== undefined ||
+    decl.initializer !== undefined ||
+    decl.dotDotDotToken !== undefined ||
+    !!(sp.flags & ts.SymbolFlags.Optional)
+  );
+}
+
+/**
+ * Whether the documented parameter `name` may be omitted as a trailing arg:
+ * `x?:`, `x: T = default`, `x: T | undefined`, a rest parameter, or a
+ * documented element of a trailing rest tuple
+ * (`...input: [stepDays?: number, options?: …]`, which has no symbol of its
+ * own).
+ */
+function isOptionalParam(sigParams: ts.Symbol[], name: string): boolean {
+  const sp =
+    sigParams.find((s) => s.name === name) ??
+    sigParams.find((s) => s.name === `${name}Input`);
+  if (sp) return isOptionalDeclaration(sp);
+  const last = sigParams.at(-1)?.valueDeclaration;
+  return !!last && ts.isParameter(last) && last.dotDotDotToken !== undefined;
+}
+
 function buildPlaygroundSpec(
   checker: ts.TypeChecker,
   sig: ts.Signature | undefined,
@@ -438,21 +504,11 @@ function buildPlaygroundSpec(
         namespace: doc.namespace,
         module: doc.module,
         name: doc.name,
-        params: doc.params.map((p) => {
-          const sp =
-            sigParams.find((s) => s.name === p.name) ??
-            sigParams.find((s) => s.name === `${p.name}Input`);
-          const decl = sp?.valueDeclaration;
-          // `x?:`, `x: T = default`, or `x: T | undefined` — any form the
-          // example may legitimately omit as a trailing arg.
-          const optional =
-            !!decl &&
-            ts.isParameter(decl) &&
-            (decl.questionToken !== undefined ||
-              decl.initializer !== undefined ||
-              !!(sp && sp.flags & ts.SymbolFlags.Optional));
-          return { name: p.name, type: p.type, optional };
-        }),
+        params: doc.params.map((p) => ({
+          name: p.name,
+          type: p.type,
+          optional: isOptionalParam(sigParams, p.name),
+        })),
         options: doc.options.map((o) => ({ name: o.name })),
         examples: doc.examples,
       },
@@ -995,7 +1051,22 @@ export function extractFnBody(
   file: string,
   knownTypes: Set<string>,
 ): FnDoc {
-  const sigStr = sig ? checker.signatureToString(sig) : "(...)";
+  // `NoTruncation`: a reference signature is the whole type, never `… N more …`.
+  let sigStr = sig
+    ? checker.signatureToString(sig, undefined, ts.TypeFormatFlags.NoTruncation)
+    : "(...)";
+  for (const sp of sig?.getParameters() ?? []) {
+    const spType = checker.getTypeOfSymbolAtLocation(sp, node);
+    const full = checker.typeToString(
+      spType,
+      undefined,
+      ts.TypeFormatFlags.NoTruncation,
+    );
+    const shown = declaredTypeString(checker, spType, sp.valueDeclaration);
+    if (shown !== full) {
+      sigStr = sigStr.replace(`${sp.name}?: ${full}`, `${sp.name}?: ${shown}`);
+    }
+  }
   const signature = `${name}${sigStr}`;
 
   const jsDoc = parseJsDoc(checker, node);
@@ -1012,7 +1083,7 @@ export function extractFnBody(
       sigParams.find((s) => s.name === `${p.name}Input`);
     if (sp) {
       const t = checker.getTypeOfSymbolAtLocation(sp, node);
-      p.type = checker.typeToString(t);
+      p.type = declaredTypeString(checker, t, sp.valueDeclaration);
     }
   }
 
@@ -1131,7 +1202,7 @@ export function extractInterface(
   for (const prop of node.members) {
     if (ts.isPropertySignature(prop) && ts.isIdentifier(prop.name)) {
       const t = prop.type
-        ? checker.typeToString(checker.getTypeAtLocation(prop))
+        ? declaredTypeString(checker, checker.getTypeAtLocation(prop), prop)
         : "";
       members.push({
         name: prop.name.text + (prop.questionToken ? "?" : ""),
@@ -1622,88 +1693,123 @@ function buildSidebar(moduleSymbols: Map<string, SymbolEntry[]>): string {
 // Main
 // ---------------------------------------------------------------------------
 
+/**
+ * Content hash of every input, recorded after a successful generation. Unchanged inputs
+ * skip the TypeScript program entirely — a hash, not mtimes, so a checkout, formatter or
+ * `touch` that leaves the bytes alone does not cost a regeneration.
+ */
+const inputsStamp = join(outGen, ".inputs-hash");
+
 function main() {
   const outputs = [
     join(outGen, "gmt-corpus.json"),
     join(outGen, "route-manifest.ts"),
     join(outGen, "corpus.ts"),
     join(outGen, "live-playground-templates.ts"),
+    join(outGen, "sidebar.ts"),
   ];
-  for (const out of outputs) {
-    if (!existsSync(out)) {
-      runGeneration();
-      return;
-    }
-  }
-  const mdxDir = resolve(appRoot, "src", "content", "docs", "reference");
+  const hash = hashFiles(referenceInputs());
   // The MDX tree is gitignored, so a fresh checkout (or a manual `rm -rf`) can
   // leave the generated modules in place while this directory is gone.
-  // `findMdx` would throw ENOENT on the missing dir — treat it as "regenerate".
-  if (!existsSync(mdxDir)) {
-    runGeneration();
+  const upToDate =
+    outputs.every((out) => existsSync(out)) &&
+    existsSync(outMdx) &&
+    findMdx(outMdx).length > 0 &&
+    existsSync(inputsStamp) &&
+    readFileSync(inputsStamp, "utf8") === hash;
+
+  if (upToDate) {
+    console.log("[reference] outputs up-to-date, skipping");
     return;
   }
-  const mdxFiles = findMdx(mdxDir);
-  if (mdxFiles.length === 0) {
-    runGeneration();
-    return;
-  }
+  runGeneration();
+  writeIfChanged(inputsStamp, hash);
+}
 
-  const allInputs = walk(gmtSrc).filter((f) => {
-    const ext = f.endsWith(".ts");
-    const skipTest = SKIP_EXTS.some((s) => f.endsWith(s));
-    const rel = relative(gmtSrc, f);
-    const inSkipDir = rel.split("/").some((part) => SKIP_DIRS.includes(part));
-    return ext && !skipTest && !inSkipDir;
-  });
-
-  // The generator itself is an input: changing how a page is emitted (a new
-  // field kind, say) must invalidate the MDX tree just as changing the gmt
-  // source does, or the edit is silently ignored on an incremental build.
-  allInputs.push(
+/**
+ * Every file whose content can change the generated output: all non-test gmt source
+ * outside `src/test/` (internal modules included — the checker resolves the types they declare), the
+ * `exports` map `publicDeclarations` reads, and the generator itself, so changing how a
+ * page is emitted invalidates the output just as changing the source does.
+ */
+function referenceInputs(): string[] {
+  const source = allSourceFiles(gmtSrc);
+  return [
+    ...source,
+    resolve(gmtSrc, "..", "package.json"),
     fileURLToPath(import.meta.url),
     resolve(appRoot, "scripts", "build-utils", "build-utils.ts"),
     resolve(appRoot, "src", "lib", "playground-parsers.ts"),
-  );
+  ];
+}
 
-  const newestInput = allInputs.reduce((a, b) =>
-    statSync(a).mtime > statSync(b).mtime ? a : b,
-  );
-  const newestOutput = [...outputs, ...mdxFiles].reduce((a, b) =>
-    statSync(a).mtime > statSync(b).mtime ? a : b,
-  );
-
-  if (statSync(newestOutput).mtime <= statSync(newestInput).mtime) {
-    runGeneration();
-    return;
-  }
-  console.log("[reference] outputs up-to-date, skipping");
+function allSourceFiles(dir: string): string[] {
+  return listFiles(dir, isSourceFile, (name) => name === "test");
 }
 
 function findMdx(dir: string): string[] {
-  const out: string[] = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      out.push(...findMdx(full));
-    } else if (entry.isFile() && entry.name.endsWith(".mdx")) {
-      out.push(full);
-    }
+  return listFiles(dir, (name) => name.endsWith(".mdx"));
+}
+
+export const REFERENCE_COMPILER_OPTIONS: ts.CompilerOptions = {
+  target: ts.ScriptTarget.ESNext,
+  module: ts.ModuleKind.ESNext,
+  moduleResolution: ts.ModuleResolutionKind.Bundler,
+  allowJs: false,
+  skipLibCheck: true,
+  noEmit: true,
+  strict: false,
+  // Without it the checker erases `null` and `undefined` from every type, so a signature
+  // written `): number | null` would read `): number` on the reference page.
+  strictNullChecks: true,
+  // An optional property reads `T`, not `T | undefined`, inside an inline options type too.
+  exactOptionalPropertyTypes: true,
+};
+
+/** True when a type annotation lists `undefined` as one of its own union members. */
+function writesUndefined(node: ts.TypeNode): boolean {
+  if (ts.isParenthesizedTypeNode(node)) return writesUndefined(node.type);
+  if (ts.isUnionTypeNode(node)) return node.types.some(writesUndefined);
+  return node.kind === ts.SyntaxKind.UndefinedKeyword;
+}
+
+/** True when a parameter (`?` or a default) or a property (`?`) is declared optional. */
+function declaresOptional(decl: ts.Declaration): boolean {
+  if (ts.isParameter(decl)) {
+    return decl.questionToken !== undefined || decl.initializer !== undefined;
   }
-  return out;
+  return (
+    (ts.isPropertySignature(decl) || ts.isPropertyDeclaration(decl)) &&
+    decl.questionToken !== undefined
+  );
+}
+
+/**
+ * `typeToString` for a declared parameter or property, without the `| undefined` the checker adds
+ * to an optional one (`x?: string` reads `string | undefined` under `strictNullChecks`). The `?`
+ * already says it, and the source never wrote it. An `undefined` written in the declared type is
+ * kept.
+ */
+export function declaredTypeString(
+  checker: ts.TypeChecker,
+  type: ts.Type,
+  decl: ts.Declaration | undefined,
+): string {
+  const text = checker.typeToString(
+    type,
+    undefined,
+    ts.TypeFormatFlags.NoTruncation,
+  );
+  if (!decl || !declaresOptional(decl)) return text;
+  const typeNode = (decl as ts.ParameterDeclaration | ts.PropertySignature)
+    .type;
+  if (typeNode && writesUndefined(typeNode)) return text;
+  return text.replace(/ \| undefined$/, "");
 }
 
 function runGeneration() {
   const files = walk(gmtSrc).sort();
-  const program = ts.createProgram(files, {
-    target: ts.ScriptTarget.ESNext,
-    module: ts.ModuleKind.ESNext,
-    moduleResolution: ts.ModuleResolutionKind.Bundler,
-    allowJs: false,
-    skipLibCheck: true,
-    noEmit: true,
-    strict: false,
-  });
+  const program = ts.createProgram(files, REFERENCE_COMPILER_OPTIONS);
   const checker = program.getTypeChecker();
   const publicDecls = publicDeclarations(program, checker);
 
@@ -1751,23 +1857,22 @@ function runGeneration() {
 
   const usedBy = buildUsedBy(dedupedDocs);
 
-  // Clean stale output (barrel pages, renamed/removed exports)
-  rmSync(outMdx, { recursive: true, force: true });
-  mkdirSync(outMdx, { recursive: true });
+  // Every page this run emits, keyed by its path under `outMdx`. `syncTree` writes only the
+  // ones that changed and deletes the rest (barrel pages, renamed/removed exports), so an
+  // unchanged regeneration leaves the tree — and every watcher on it — alone.
+  const pages = new Map<string, string>();
 
   const moduleSymbols = new Map<string, SymbolEntry[]>();
 
   for (const doc of dedupedDocs) {
     const slug = pageSlug(doc.namespace, doc.module, doc.name);
-    const dir = resolve(outMdx, doc.namespace, doc.module);
-    mkdirSync(dir, { recursive: true });
 
     let mdx: string;
     if (doc.kind === "function") mdx = renderFn(doc, dedupedDocs);
     else if (doc.kind === "type") mdx = renderType(doc, usedBy);
     else mdx = renderRegex(doc);
 
-    writeFileSync(join(dir, `${doc.name}.mdx`), mdx);
+    pages.set(join(doc.namespace, doc.module, `${doc.name}.mdx`), mdx);
 
     // collect for sidebar
     const key = `${doc.namespace}/${doc.module}`;
@@ -1775,15 +1880,11 @@ function runGeneration() {
     moduleSymbols.get(key)!.push({ name: doc.name, slug });
   }
 
-  // DOX-C1 (#137): `outGen` must exist before anything writes into it. This
-  // used to run after the sidebar write below, which only worked because
-  // `outGen` normally already exists from a prior run — a genuinely clean
-  // checkout (no `src/generated/` at all) hit ENOENT here.
-  mkdirSync(outGen, { recursive: true });
+  const pageChanges = syncTree(outMdx, pages);
 
   // Write generated sidebar
   const sidebarMd = buildSidebar(moduleSymbols);
-  writeFileSync(join(outGen, "sidebar.ts"), sidebarMd);
+  writeIfChanged(join(outGen, "sidebar.ts"), sidebarMd);
 
   // Write artifacts
 
@@ -1803,7 +1904,7 @@ function runGeneration() {
     // both do.
     examples: d.kind === "type" ? [] : d.examples,
   }));
-  writeFileSync(
+  writeIfChanged(
     join(outGen, "gmt-corpus.json"),
     JSON.stringify(corpus, null, 2) + "\n",
   );
@@ -1818,7 +1919,7 @@ export const referenceRoutes: RouteManifest = new Set([
 ${routes.map((r) => `  ${JSON.stringify(r)},`).join("\n")}
 ]);
 `;
-  writeFileSync(join(outGen, "route-manifest.ts"), manifestTs);
+  writeIfChanged(join(outGen, "route-manifest.ts"), manifestTs);
 
   // 3. corpus.ts wrapper
   const corpusTs = `// GENERATED FILE — do not edit by hand.
@@ -1828,7 +1929,7 @@ import data from "./gmt-corpus.json";
 
 export const corpus: CorpusEntry[] = data as CorpusEntry[];
 `;
-  writeFileSync(join(outGen, "corpus.ts"), corpusTs);
+  writeIfChanged(join(outGen, "corpus.ts"), corpusTs);
 
   // 4. live playground templates — one template per function.
   const templatesRecord: Record<string, LivePlaygroundTemplate> = {};
@@ -1847,11 +1948,13 @@ export const LIVE_PLAYGROUND_TEMPLATES: Record<string, LivePlaygroundTemplate> =
     2,
   )};
 `;
-  writeFileSync(join(outGen, "live-playground-templates.ts"), templatesTs);
+  writeIfChanged(join(outGen, "live-playground-templates.ts"), templatesTs);
 
   console.log(
-    `[reference] wrote ${allDocs.length} pages, ${routes.length} routes, ${Object.keys(templatesRecord).length} live playground templates`,
+    `[reference] ${allDocs.length} pages (${pageChanges.written} written, ${pageChanges.removed} removed), ${routes.length} routes, ${Object.keys(templatesRecord).length} live playground templates`,
   );
 }
 
-main();
+// Generate only when run as a script. A test that imports this module for its
+// helpers must not regenerate (and delete) the MDX tree another test reads.
+if (resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) main();

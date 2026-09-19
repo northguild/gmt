@@ -91,7 +91,7 @@ import { getLocaleDayOfWeek, getLocaleZonedDayOfWeek } from "@northguild/gmt";
 
 getLocaleDayOfWeek("2024-02-25", "en-US"); // 0 (Sunday = first day of en-US week)
 getLocaleDayOfWeek("2024-02-26", "fr-FR"); // 0 (Monday = first day of fr-FR week)
-getLocaleDayOfWeek("2024-02-24", "he-IL"); // 0 (Saturday = first day of he-IL week)
+getLocaleDayOfWeek("2024-02-24", "ar-EG"); // 0 (Saturday = first day of ar-EG week)
 ```
 
 Index 0 is the locale's first day of the week, consistent with
@@ -102,8 +102,8 @@ Index 0 is the locale's first day of the week, consistent with
 ```typescript
 import { isRelativeDay, isThisUnit, isPast, isFuture } from "@northguild/gmt";
 
-isRelativeDay("2024-03-15", 0); // "is today"
-isRelativeDay("2024-03-14", -1); // "is yesterday"
+isRelativeDay("2024-03-15", 0); // true when today is 2024-03-15
+isRelativeDay("2024-03-14", -1); // true when today is 2024-03-15
 isThisUnit("2024-02-26", "week", "fr-FR"); // locale-aware week boundary
 isPast("2024-03-14"); // strictly before today
 isFuture("2024-03-16"); // strictly after today

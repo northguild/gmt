@@ -1,6 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { closedXorSweep } from "../../internal";
-import { isLeapSecond } from "../../plain/validate/isLeapSecond";
+import { halfOpenXor } from "../../internal";
 import { isValidUtcInterval } from "./validate";
 
 /**
@@ -8,10 +7,12 @@ import { isValidUtcInterval } from "./validate";
  * by an odd number of the input intervals.
  *
  * - List-form generalization of `intervalXorUtc`, which is pairwise only.
- * - Implemented as a closed-interval coverage sweep: each interval opens at its start and closes
- *   at its end, and the result is every maximal run where the coverage count is odd. No boundary
- *   is computed past an end, so an interval may end on the last representable instant. For two
- *   overlapping intervals this reduces to exactly `intervalXorUtc`'s pairwise result.
+ * - Half-open: an interval holds every `t` with `start <= t < end`. The result is every maximal
+ *   run covered an odd number of times, computed as a coverage-parity sweep over the start and
+ *   end boundaries. Runs end exactly at a boundary; no boundary is ever stepped by one unit, so
+ *   an interval may end on the type's last value without overflow or midnight wrap.
+ * - Touching odd runs join into one run; an empty interval (`start === end`) contributes nothing.
+ *   For two intervals this is exactly `intervalXorUtc`'s pairwise result.
  * - Order of the input list does not matter; the result is sorted by start.
  * - Returns `[]` for an empty list, and `[]` when every instant is covered an even number of
  *   times (e.g. two identical intervals cancel out).
@@ -22,7 +23,7 @@ import { isValidUtcInterval } from "./validate";
  * @param intervals array of `{ start, end }` records
  * @returns array of `{ start, end }` records covered an odd number of times, or `[]` on invalid input
  *
- * @example intervalXorAllUtc([{ start: "2024-01-01T00:00:00Z", end: "2024-01-10T00:00:00Z" }, { start: "2024-01-05T00:00:00Z", end: "2024-01-15T00:00:00Z" }]) // [{ start: "2024-01-01T00:00:00Z", end: "2024-01-04T23:59:59.999999999Z" }, { start: "2024-01-10T00:00:00.000000001Z", end: "2024-01-15T00:00:00Z" }]
+ * @example intervalXorAllUtc([{ start: "2024-01-01T09:00:00Z", end: "2024-01-01T13:00:00Z" }, { start: "2024-01-01T12:00:00Z", end: "2024-01-01T17:00:00Z" }]) // [{ start: "2024-01-01T09:00:00Z", end: "2024-01-01T12:00:00Z" }, { start: "2024-01-01T13:00:00Z", end: "2024-01-01T17:00:00Z" }]
  * @example intervalXorAllUtc([]) // []
  */
 export function intervalXorAllUtc(
@@ -39,8 +40,6 @@ export function intervalXorAllUtc(
         typeof interval === "object" &&
         typeof interval.start === "string" &&
         typeof interval.end === "string" &&
-        !isLeapSecond(interval.start) &&
-        !isLeapSecond(interval.end) &&
         isValidUtcInterval(interval.start, interval.end),
     )
   ) {
@@ -53,14 +52,12 @@ export function intervalXorAllUtc(
       end: Temporal.Instant.from(interval.end),
     }));
 
-    return closedXorSweep(parsed, {
-      compare: Temporal.Instant.compare,
-      stepUp: (value) => value.add({ nanoseconds: 1 }),
-      stepDown: (value) => value.subtract({ nanoseconds: 1 }),
-    }).map(({ start, end }) => ({
-      start: start.toString(),
-      end: end.toString(),
-    }));
+    return halfOpenXor(parsed, Temporal.Instant.compare).map(
+      ({ start, end }) => ({
+        start: start.toString(),
+        end: end.toString(),
+      }),
+    );
   } catch {
     return [];
   }

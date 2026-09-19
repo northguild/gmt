@@ -2,10 +2,15 @@ import { intervalUnionDate } from "./intervalUnionDate";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 
 describe("intervalUnionDate", () => {
+  // Half-open: the union is the single run of mergeIntervals([a, b]) (CORE-6 §1.2 coalesce).
+  // Touching intervals join; a stranded empty interval is the empty set and drops out; two empty
+  // intervals have no non-empty union, so they return null.
   it.each`
     aStart          | aEnd            | bStart          | bEnd            | expected
-    ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${{ start: "2024-01-01", end: "2024-01-01" }}
+    ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${null}
     ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-06-15"} | ${"2024-06-15"} | ${null}
+    ${"2024-01-05"} | ${"2024-01-05"} | ${"2024-06-15"} | ${"2024-06-30"} | ${{ start: "2024-06-15", end: "2024-06-30" }}
+    ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-06-30"} | ${"2024-06-30"} | ${{ start: "2024-01-01", end: "2024-06-30" }}
   `(
     "returns $expected for zero-length A=$aStart to $aEnd union B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
@@ -20,7 +25,7 @@ describe("intervalUnionDate", () => {
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-06-30"} | ${"2024-12-31"} | ${{ start: "2024-01-01", end: "2024-12-31" }}
     ${"2024-04-01"} | ${"2024-12-31"} | ${"2024-01-01"} | ${"2024-06-30"} | ${{ start: "2024-01-01", end: "2024-12-31" }}
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-06-29"} | ${"2024-06-29"} | ${{ start: "2024-01-01", end: "2024-06-30" }}
-    ${"2024-06-30"} | ${"2024-06-30"} | ${"2024-06-30"} | ${"2024-06-30"} | ${{ start: "2024-06-30", end: "2024-06-30" }}
+    ${"2024-06-30"} | ${"2024-06-30"} | ${"2024-06-30"} | ${"2024-06-30"} | ${null}
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-02-01"} | ${"2024-03-01"} | ${{ start: "2024-01-01", end: "2024-06-30" }}
   `(
     "returns merged interval when $aStart to $aEnd overlaps $bStart to $bEnd",
@@ -110,22 +115,22 @@ describe("intervalUnionDate", () => {
   it("merges in the shared calendar when all four arguments carry the same tag", () => {
     expect(
       intervalUnionDate(
-        "5784-06-15[u-ca=hebrew]",
-        "5784-06-20[u-ca=hebrew]",
-        "5784-06-18[u-ca=hebrew]",
-        "5784-07-01[u-ca=hebrew]",
+        "2024-02-24[u-ca=hebrew]",
+        "2024-02-29[u-ca=hebrew]",
+        "2024-02-27[u-ca=hebrew]",
+        "2024-03-11[u-ca=hebrew]",
       ),
     ).toEqual({
-      start: "5784-06-15[u-ca=hebrew]",
-      end: "5784-07-01[u-ca=hebrew]",
+      start: "2024-02-24[u-ca=hebrew]",
+      end: "2024-03-11[u-ca=hebrew]",
     });
   });
 
   it("returns null when calendars mismatch across the four arguments", () => {
     expect(
       intervalUnionDate(
-        "5784-06-15[u-ca=hebrew]",
-        "5784-06-20[u-ca=hebrew]",
+        "2024-02-24[u-ca=hebrew]",
+        "2024-02-29[u-ca=hebrew]",
         "2024-01-01",
         "2024-01-05",
       ),

@@ -33,6 +33,44 @@ describe("formatRfc3339", () => {
     expect(formatRfc3339(value)).toBe("");
   });
 
+  describe("sub-minute offsets are converted to UTC (RFC 3339 §4.2 NOTE)", () => {
+    // time-numoffset holds whole minutes only; "applications must convert
+    // them to a representable time zone". The instant is kept exactly and
+    // written with the UTC offset +00:00. Monrovia -00:44:30: 23:15:30 local
+    // = 00:00:00Z. Dublin -00:25:21: 11:34:39 local = 12:00:00Z.
+    it.each`
+      value                                                   | expected
+      ${"1969-12-31T23:15:30-00:45[Africa/Monrovia]"}         | ${"1970-01-01T00:00:00+00:00"}
+      ${"1900-06-01T11:34:39-00:25[Europe/Dublin]"}           | ${"1900-06-01T12:00:00+00:00"}
+      ${"1900-06-01T11:34:39.123456789-00:25[Europe/Dublin]"} | ${"1900-06-01T12:00:00.123456789+00:00"}
+    `(
+      "$value → $expected",
+      ({ value, expected }: { value: string; expected: string }) => {
+        expect(formatRfc3339(value)).toBe(expected);
+      },
+    );
+
+    it("the output names the same instant as the input", () => {
+      const out = formatRfc3339("1969-12-31T23:15:30-00:45[Africa/Monrovia]");
+      expect(new Date(out).getTime()).toBe(Date.UTC(1970, 0, 1, 0, 0, 0));
+    });
+  });
+
+  describe("date-fullyear = 4DIGIT (RFC 3339 §5.6)", () => {
+    it.each`
+      value                                  | expected
+      ${"-000001-06-15T12:00:00+00:00[UTC]"} | ${""}
+      ${"+010000-01-01T00:00:00+00:00[UTC]"} | ${""}
+      ${"0000-01-01T00:00:00+00:00[UTC]"}    | ${"0000-01-01T00:00:00+00:00"}
+      ${"9999-12-31T23:59:59+00:00[UTC]"}    | ${"9999-12-31T23:59:59+00:00"}
+    `(
+      "$value → '$expected'",
+      ({ value, expected }: { value: string; expected: string }) => {
+        expect(formatRfc3339(value)).toBe(expected);
+      },
+    );
+  });
+
   describe("output is identical across all 17 locales", () => {
     const valueByLocale = localeZonedDateTimeInputByLocale;
 

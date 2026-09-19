@@ -3,7 +3,7 @@ import {
   businessDateFrom,
   parseBusinessCalendar,
   type ResolvedBusinessCalendar,
-} from "../../internal";
+} from "../../internal/businessCalendar";
 import { isValidDate } from "../../plain/validate";
 import type { BusinessCalendar, RollConvention } from "../../types";
 import { isValidRollConvention } from "../validate";
@@ -76,9 +76,13 @@ function rollTo(
  * - `following` and `preceding` are **on or after** and **on or before**: they return `value`
  *   itself when it is already a working day. For the strict neighbours use `nextBusinessDay`
  *   and `previousBusinessDay`.
- * - `following`, `modifiedFollowing`, `preceding` and `modifiedPreceding` are the conventions
- *   defined by [ISDA 2006 Definitions §4.12(a)](https://www.isda.org/book/2006-isda-definitions/),
- *   and match that text; `none` is what
+ * - `following`, `modifiedFollowing` and `preceding` are the three conventions
+ *   [ISDA 2006 Definitions §4.12(a)](https://www.isda.org/a/smMDE/Blackline-2000-v-2006-ISDA-Definitions.pdf) defines, in
+ *   (i)–(iii), and match that text: (iii) reads "if 'Preceding' is specified, that date will be
+ *   the first preceding day that is a Business Day". §4.12(a) has no Modified Preceding;
+ *   `modifiedPreceding` follows FpML's `BusinessDayConventionEnum` `MODPRECEDING`: "adjusted
+ *   to the first preceding day that is a business day unless that day falls in the previous
+ *   calendar month, in which case … the first following day". `none` is what
  *   [OpenGamma Strata](https://strata.opengamma.io/apidocs/com/opengamma/strata/basics/date/BusinessDayConventions.html)
  *   calls `NO_ADJUST`. No TC39, ECMA or RFC standard governs them.
  * - `endOfMonth` is **not** an ISDA business-day convention, and not the industry "EOM rule",

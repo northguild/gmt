@@ -17,7 +17,7 @@ import { zonedDateTimeFrom } from "../../internal";
  * @example maxZoned([]) // null
  */
 export function maxZoned(zonedDateTimes: string[]): string | null {
-  if (!zonedDateTimes.length) return null;
+  if (!Array.isArray(zonedDateTimes) || !zonedDateTimes.length) return null;
 
   const valid = zonedDateTimes.filter(isValidZonedDateTime);
   if (!valid.length) return null;

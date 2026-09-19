@@ -9,8 +9,8 @@ import { isValidTimeZone } from "../../zoned/validate";
  *   (`"...[America/New_York]"`) when one is.
  * - No disambiguation policy applies: an instant maps to exactly one wall time in a zone,
  *   so DST gaps and overlaps cannot arise on this direction of the conversion.
- * - An explicitly passed time zone must be a valid IANA identifier; passing `undefined`
- *   explicitly is invalid input, not a request for UTC.
+ * - A time zone, when given, must be a valid IANA identifier. `undefined` is the same as omitting
+ *   it (UTC), as TC39 treats an undefined argument as absent.
  * - Rejects values outside the range `Temporal.Instant` can represent
  *   (±8_640_000_000_000_000_000_000n, i.e. ±10^8 days from the epoch).
  * - **Storage round-trip:** most engines cannot hold nanoseconds — PostgreSQL `timestamptz`
@@ -19,8 +19,7 @@ import { isValidTimeZone } from "../../zoned/validate";
  * - Returns "" on invalid input.
  *
  * @param nanoseconds nanoseconds since the Unix epoch (bigint)
- * @param timeZone optional IANA timeZone identifier — omit the argument entirely for UTC;
- *   passing `undefined` explicitly is invalid input and returns ""
+ * @param timeZone optional IANA timeZone identifier; omitted or `undefined` is UTC
  * @returns ISO 8601 instant string (UTC), zoned ISO 8601 string when a timeZone is given, or "" on invalid input
  *
  * @example fromNanoseconds(0n) // "1970-01-01T00:00:00Z"
@@ -28,22 +27,20 @@ import { isValidTimeZone } from "../../zoned/validate";
  * @example fromNanoseconds(1710072000123456789n, "America/New_York") // "2024-03-10T08:00:00.123456789-04:00[America/New_York]"
  * @example fromNanoseconds(-1000000000n) // "1969-12-31T23:59:59Z"
  * @example fromNanoseconds(0n, "Not/AZone") // ""
- * @example fromNanoseconds(0n, undefined) // "" — an explicit time zone must be valid
+ * @example fromNanoseconds(0n, undefined) // "1970-01-01T00:00:00Z" — undefined is the same as omitted
  * @example fromNanoseconds(1710072000123456789) // "" — number, not bigint
  */
 export function fromNanoseconds(
   nanoseconds: bigint,
-  ...timeZoneInput: [timeZone?: string]
+  timeZone?: string,
 ): string {
   if (!isValidEpochNanoseconds(nanoseconds)) {
     return "";
   }
 
-  const hasTimeZone = timeZoneInput.length > 0;
-  const timeZone = timeZoneInput[0];
-
+  // An explicit `undefined` is the same as omitting the argument (TC39 optional parameters).
   if (
-    hasTimeZone &&
+    timeZone !== undefined &&
     (typeof timeZone !== "string" || !isValidTimeZone(timeZone))
   ) {
     return "";

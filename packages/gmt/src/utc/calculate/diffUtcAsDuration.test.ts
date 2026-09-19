@@ -160,4 +160,42 @@ describe("diffUtcAsDuration", () => {
       ).toBe(expected);
     },
   );
+
+  // Temporal §13.17 GetTemporalUnitValuedOption: a singular unit name is the same unit as its plural.
+  it.each`
+    unit      | expected
+    ${"week"} | ${"P1W"}
+    ${"day"}  | ${"P7D"}
+    ${"hour"} | ${"PT168H"}
+  `(
+    "returns $expected for singular unit $unit from 2024-01-01T00:00:00Z to 2024-01-08T00:00:00Z",
+    ({ unit, expected }) => {
+      expect(
+        diffUtcAsDuration("2024-01-01T00:00:00Z", "2024-01-08T00:00:00Z", unit),
+      ).toBe(expected);
+    },
+  );
+});
+
+// Temporal GetOptionsObject: an options argument that is not an object or undefined throws
+// TypeError (native Chromium 153: `until(other, null)`, `"x"`, `5` and `true` all throw), so each is
+// invalid input. Omitted options measure normally (PT49H).
+describe("diffUtcAsDuration with a non-object options argument", () => {
+  it.each`
+    options      | expected
+    ${null}      | ${""}
+    ${"x"}       | ${""}
+    ${5}         | ${""}
+    ${true}      | ${""}
+    ${undefined} | ${"PT49H"}
+  `("returns $expected for options $options", ({ options, expected }) => {
+    expect(
+      diffUtcAsDuration(
+        "2024-02-28T14:30:00Z",
+        "2024-03-01T15:30:00Z",
+        "hours",
+        options,
+      ),
+    ).toBe(expected);
+  });
 });

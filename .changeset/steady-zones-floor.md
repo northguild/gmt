@@ -1,5 +1,5 @@
 ---
-"@northguild/gmt": patch
+"@northguild/gmt": minor
 ---
 
 Fix zone-aware boundaries, counts and splits that went wrong around DST transitions and month ends.
@@ -7,7 +7,7 @@ Fix zone-aware boundaries, counts and splits that went wrong around DST transiti
 Every fix follows TC39 Temporal. A boundary is a real instant in the zone, never a wall-clock time re-resolved after truncation. Repeated calendar steps are measured from the original anchor.
 
 - **Boundaries are always real.** `startOfZoned`, `endOfZoned`, `startOfUnix`, `endOfUnix`, `getLocaleZonedStartOfWeek`, `getLocaleZonedEndOfWeek`, `startOfQuarterForZoned`, `startOfQuarterForUnix`, `endOfQuarterForZoned`, `endOfQuarterForUnix` return the real start and end of the unit that contains the input: a start is never after the input and an end never before it. Before, `startOfZoned` could place Pacific/Chatham's hour 15 minutes _after_ its input, and `endOfZoned` could end New York's repeated 1 a.m. hour before the input.
-- **`disambiguation` and `offset` are deprecated on those functions, and on `mapZonedHoursInDay`, and ignored.** Boundary methods in TC39 Temporal take no resolution options — `startOfDay()` has none — and passing them here, even at their documented defaults, used to bring the wrong answer back. They remain in the types for compatibility and will be removed in the next major. A caller that passed `disambiguation: "reject"` to get `""` for an ambiguous boundary now gets the real boundary.
+- **`disambiguation` and `offset` are removed from those functions, and `mapZonedHoursInDay` takes no options.** Boundary methods in TC39 Temporal take no resolution options — `startOfDay()` has none — and passing them here, even at their documented defaults, used to bring the wrong answer back. See **Breaking changes** below.
 - **A repeated local midnight is one day.** When a fall-back repeats midnight on the same date (America/Havana, 3 November 2024), that date is one 25-hour day, matching `getHoursInZonedDay`; its repeated first hour is still two hour buckets. A fall-back that re-enters the previous date (America/Goose_Bay, 7 November 2010) remains its own 59-minute bucket, because the date changed.
 - **`areZonedEqualBy` and `areUnixEqualBy`** compare those boundary instants, so the two passes of a repeated hour are no longer equal. Across two different zones, `areZonedEqualBy` still compares each value's local unit.
 - **`intervalCountZoned`, `intervalCountUnix`, `intervalCountUtc`** count the buckets `bucketRange` would return. A 20-minute Chatham range straddling 04:00 now counts 2 hours, not 1, and a span over Samoa's deleted 30 December 2011 counts 2 days, not 3. Counting stops at 10,000 zone transitions and returns `null`; `bucketRange` separately stops at 10,000 buckets, so the two agree only within that list's cap.
@@ -18,3 +18,17 @@ Every fix follows TC39 Temporal. A boundary is a real instant in the zone, never
 - **`floorToZone`** and **`bucketRange`** return `""` and `[]` rather than a plausible wrong boundary if the zone walker ever runs out of transitions.
 
 `getFiscalPeriod`, `roundZoned`, `roundUnix`, `parseRfc2822` and `parseHttp` behave as before. Their documentation now states how a 29 February fiscal anchor clamps, how `round` behaves in Chatham, and that impossible dates such as 31 February are rejected.
+
+### Breaking changes
+
+`startOfZoned`, `endOfZoned`, `startOfQuarterForZoned`, `endOfQuarterForZoned`, `getLocaleZonedStartOfWeek`, `getLocaleZonedEndOfWeek`, `startOfUnix`, `endOfUnix`, `startOfQuarterForUnix` and `endOfQuarterForUnix` no longer declare `disambiguation` or `offset`, and `mapZonedHoursInDay` no longer declares an options argument. A call that passes one stops type-checking. The output is the real boundary either way; a caller that relied on `disambiguation: "reject"` returning `""` for an ambiguous boundary gets the boundary.
+
+| 1.15 | 1.16 |
+| --- | --- |
+| `startOfZoned(v, "hour", { disambiguation: "reject", offset: "prefer" })` | `startOfZoned(v, "hour")` |
+| `endOfZoned(v, "day", { weekStartsOn, fractionalSecondDigits, disambiguation, offset })` | `endOfZoned(v, "day", { weekStartsOn, fractionalSecondDigits })` |
+| `startOfQuarterForZoned(v, { disambiguation, offset, fractionalSecondDigits })`, likewise `endOfQuarterForZoned` | `startOfQuarterForZoned(v, { fractionalSecondDigits })` |
+| `getLocaleZonedStartOfWeek(v, locale, { fractionalSecondDigits, disambiguation, offset })`, likewise `…EndOfWeek` | `getLocaleZonedStartOfWeek(v, locale, { fractionalSecondDigits })` |
+| `startOfUnix(v, unit, { epochUnit, timeZone, weekStartsOn, disambiguation, offset })`, likewise `endOfUnix` | `startOfUnix(v, unit, { epochUnit, timeZone, weekStartsOn })` |
+| `startOfQuarterForUnix(v, { epochUnit, timeZone, disambiguation, offset })`, likewise `endOfQuarterForUnix` | `startOfQuarterForUnix(v, { epochUnit, timeZone })` |
+| `mapZonedHoursInDay(anchor, { disambiguation, offset })` | `mapZonedHoursInDay(anchor)` |

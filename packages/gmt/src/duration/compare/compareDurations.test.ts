@@ -56,6 +56,37 @@ describe("compareDurations", () => {
     },
   );
 
+  // Temporal.Duration.compare returns 0 for field-identical durations before it checks for
+  // calendar units, so no relativeTo is needed; any difference still requires one.
+  it.each`
+    a           | b           | expected
+    ${"P1Y"}    | ${"P1Y"}    | ${0}
+    ${"P1M"}    | ${"P1M"}    | ${0}
+    ${"P1W"}    | ${"P1W"}    | ${0}
+    ${"-P2Y3M"} | ${"-P2Y3M"} | ${0}
+    ${"P1M"}    | ${"P1M1D"}  | ${null}
+  `(
+    "returns $expected comparing calendar durations $a and $b without relativeTo",
+    ({ a, b, expected }) => {
+      expect(compareDurations(a, b)).toBe(expected);
+    },
+  );
+
+  // A zoned relativeTo string resolves with disambiguation "compatible" and offset "reject"
+  // (GetTemporalRelativeToOption): ambiguous 01:30 takes the earlier (EDT) instant, from which
+  // a day is 25 hours; a mismatched offset is rejected even for identical operands.
+  it.each`
+    a        | b          | relativeTo                                       | expected | note
+    ${"P1D"} | ${"PT24H"} | ${"2024-11-03T01:30[America/New_York]"}          | ${1}     | ${"ambiguous, compatible takes earlier EDT"}
+    ${"P1D"} | ${"PT24H"} | ${"2024-11-03T01:30-05:00[America/New_York]"}    | ${0}     | ${"explicit later EST offset"}
+    ${"P1D"} | ${"P1D"}   | ${"2024-03-10T00:00:00-04:00[America/New_York]"} | ${null}  | ${"offset does not match zone, rejected"}
+  `(
+    "returns $expected comparing $a to $b relativeTo $relativeTo ($note)",
+    ({ a, b, relativeTo, expected }) => {
+      expect(compareDurations(a, b, { relativeTo })).toBe(expected);
+    },
+  );
+
   // The anchor does not merely unblock the comparison, it decides it: a month is longer
   // than 30 days from January (31) and shorter from February 2024 (29).
   it.each`
@@ -75,14 +106,13 @@ describe("compareDurations", () => {
     },
   );
 
-  // E5 (issue #78): relativeTo accepts a GMT calendar-annotated PlainDate string, not
-  // Temporal's own ISO-digit u-ca convention. Regression golden verified directly against
-  // @js-temporal/polyfill: before this fix, the Hebrew-shape relativeTo below compared 0
-  // (misread as ISO year 5785), not -1.
+  // relativeTo accepts an RFC 9557 calendar-annotated PlainDate string (ISO digits). Expected:
+  // native Temporal, Chromium 153.0.8010.12.
   it.each`
-    a        | b         | relativeTo                   | expected | note
-    ${"P1M"} | ${"P30D"} | ${"5785-04-15[u-ca=hebrew]"} | ${-1}    | ${"Tevet, a 29-day Hebrew month"}
-    ${"P1M"} | ${"P30D"} | ${"5784-06-15[u-ca=hebrew]"} | ${0}     | ${"Adar I, a 30-day Hebrew month"}
+    a        | b         | relativeTo                    | expected | note
+    ${"P1M"} | ${"P30D"} | ${"2025-01-15[u-ca=hebrew]"}  | ${-1}    | ${"Tevet, a 29-day Hebrew month"}
+    ${"P1M"} | ${"P30D"} | ${"2024-02-24[u-ca=hebrew]"}  | ${0}     | ${"Adar I, a 30-day Hebrew month"}
+    ${"P1M"} | ${"P30D"} | ${"2024-02-10[!u-ca=hebrew]"} | ${0}     | ${"critical flag: 1 Adar I 5784, 30 days"}
   `(
     "returns $expected comparing $a to $b relativeTo calendar-annotated $relativeTo ($note)",
     ({ a, b, relativeTo, expected }) => {
@@ -142,6 +172,21 @@ describe("compareDurations", () => {
     expect(compareDurations("P1M", "P30D", { relativeTo })).toBeNull();
   });
 
+  // Temporal's ParseISODateTime clamps a second of 60 to 59 in every spelling its grammar
+  // accepts (DateTimeSeparator SP/T/t, basic TimeSpec); GMT rejects a leap-second relativeTo instead.
+  it.each`
+    relativeTo                          | spelling
+    ${"2016-12-31T23:59:60+00:00[UTC]"} | ${"zoned, uppercase T"}
+    ${"2016-12-31t23:59:60+00:00[UTC]"} | ${"zoned, lowercase t"}
+    ${"20161231T235960Z[UTC]"}          | ${"zoned, basic format"}
+    ${"2016-12-31 23:59:60"}            | ${"PlainDateTime, space separator"}
+  `(
+    "returns null for a leap-second relativeTo $relativeTo ($spelling)",
+    ({ relativeTo }) => {
+      expect(compareDurations("PT1H", "PT3600S", { relativeTo })).toBeNull();
+    },
+  );
+
   it("never throws on invalid input", () => {
     expect(() =>
       compareDurations("not a duration", "P1M", { relativeTo: "not a date" }),
@@ -183,9 +228,9 @@ describe("compareDurations relative to the first days of the range", () => {
 describe("compareDurations with a non-ISO calendar relativeTo (CORE-6)", () => {
   it.each`
     one      | two       | relativeTo                      | expected | reason
-    ${"P1M"} | ${"P29D"} | ${"279517-08-01[u-ca=hebrew]"}  | ${1}     | ${"D1: M07 of 279517 has 30 days"}
-    ${"P1M"} | ${"P30D"} | ${"2566-08-31[u-ca=buddhist]"}  | ${0}     | ${"D6: Aug 31 + 1 month is Sep 30, 30 days"}
-    ${"P1M"} | ${"P29D"} | ${"-096239-06-23[u-ca=hebrew]"} | ${0}     | ${"hebrew year <= 0: M06 has 29 days"}
+    ${"P1M"} | ${"P29D"} | ${"+275760-07-06[u-ca=hebrew]"} | ${1}     | ${"D1: M07 of 279517 has 30 days"}
+    ${"P1M"} | ${"P30D"} | ${"2023-08-31[u-ca=buddhist]"}  | ${0}     | ${"D6: Aug 31 + 1 month is Sep 30, 30 days"}
+    ${"P1M"} | ${"P29D"} | ${"-100000-01-01[u-ca=hebrew]"} | ${0}     | ${"hebrew year <= 0: M06 has 29 days"}
   `(
     "compares $one with $two relative to $relativeTo as $expected ($reason)",
     ({ one, two, relativeTo, expected }) => {

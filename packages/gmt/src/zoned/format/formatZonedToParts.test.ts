@@ -44,6 +44,62 @@ describe("formatZonedToParts", () => {
     });
   });
 
+  describe("no options — ECMA-402 GetDateTimeFormat(~any~, ~zoned-date-time~) defaults", () => {
+    // With no required field and no dateStyle/timeStyle, ECMA-402 (as amended
+    // by Temporal) formats a ZonedDateTime with year, month, day, hour, minute
+    // and second "numeric" plus timeZoneName "short" when not given — the
+    // output ZonedDateTime#toLocaleString gives. Expected values: runtime
+    // Intl.DateTimeFormat given those fields explicitly in the value's own
+    // zone, cross-checked against the polyfill's toLocaleString.
+    it.each`
+      locale                  | expected
+      ${MustTestLocales.enUS} | ${[{ type: "month", value: "3" }, { type: "literal", value: "/" }, { type: "day", value: "15" }, { type: "literal", value: "/" }, { type: "year", value: "2024" }, { type: "literal", value: ", " }, { type: "hour", value: "2" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }, { type: "literal", value: ":" }, { type: "second", value: "00" }, { type: "literal", value: " " }, { type: "dayPeriod", value: "PM" }, { type: "literal", value: " " }, { type: "timeZoneName", value: "EDT" }]}
+      ${MustTestLocales.deDE} | ${[{ type: "day", value: "15" }, { type: "literal", value: "." }, { type: "month", value: "3" }, { type: "literal", value: "." }, { type: "year", value: "2024" }, { type: "literal", value: ", " }, { type: "hour", value: "14" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }, { type: "literal", value: ":" }, { type: "second", value: "00" }, { type: "literal", value: " " }, { type: "timeZoneName", value: "GMT-4" }]}
+    `(
+      "no options for $locale formats date, time to the second and short zone name",
+      ({ locale, expected }) => {
+        const actual = formatZonedToParts(
+          "2024-03-15T14:30:00.000-04:00[America/New_York]",
+          locale,
+        );
+        expectDateTimeEqual(JSON.stringify(actual), JSON.stringify(expected));
+      },
+    );
+
+    it.each`
+      style           | zoneName
+      ${"long"}       | ${"Eastern Daylight Time"}
+      ${"longOffset"} | ${"GMT-04:00"}
+    `(
+      "timeZoneName $style alone keeps that style ($zoneName) and still gets date and time defaults",
+      ({ style, zoneName }) => {
+        const actual = formatZonedToParts(
+          "2024-03-15T14:30:00.000-04:00[America/New_York]",
+          MustTestLocales.enUS,
+          { timeZoneName: style },
+        );
+        const expected = [
+          { type: "month", value: "3" },
+          { type: "literal", value: "/" },
+          { type: "day", value: "15" },
+          { type: "literal", value: "/" },
+          { type: "year", value: "2024" },
+          { type: "literal", value: ", " },
+          { type: "hour", value: "2" },
+          { type: "literal", value: ":" },
+          { type: "minute", value: "30" },
+          { type: "literal", value: ":" },
+          { type: "second", value: "00" },
+          { type: "literal", value: " " },
+          { type: "dayPeriod", value: "PM" },
+          { type: "literal", value: " " },
+          { type: "timeZoneName", value: zoneName },
+        ];
+        expectDateTimeEqual(JSON.stringify(actual), JSON.stringify(expected));
+      },
+    );
+  });
+
   describe("part order differs between locales", () => {
     it("en-US puts month before day; fr-FR puts day before month", () => {
       const enParts = formatZonedToParts(
@@ -158,6 +214,45 @@ describe("formatZonedToParts", () => {
       const emptyOpts = formatZonedToParts(value, MustTestLocales.enUS, {});
       expect(emptyOpts).toEqual(noOpts);
     });
+
+    it.each`
+      description                            | options
+      ${"year present as undefined"}         | ${{ year: undefined }}
+      ${"timeZoneName present as undefined"} | ${{ timeZoneName: undefined }}
+      ${"timeZone present as undefined"}     | ${{ timeZone: undefined }}
+    `(
+      "$description is read as absent (ECMA-402 GetOption), so defaults still fill it",
+      ({ options }) => {
+        const value = valueByLocale[MustTestLocales.enUS];
+        const noOpts = formatZonedToParts(value, MustTestLocales.enUS);
+        expect(
+          formatZonedToParts(value, MustTestLocales.enUS, options),
+        ).toEqual(noOpts);
+      },
+    );
+  });
+
+  describe("timeZone option", () => {
+    // A ZonedDateTime is formatted in its own zone: Temporal's toLocaleString
+    // throws a TypeError for a timeZone option (CreateDateTimeFormat with
+    // toLocaleStringTimeZone; test262 intl402/Temporal/ZonedDateTime/
+    // prototype/toLocaleString/options-timeZone.js), so the parts are [].
+    it.each`
+      timeZone
+      ${"Asia/Tokyo"}
+      ${"America/New_York"}
+    `(
+      "returns [] when a timeZone option $timeZone is passed",
+      ({ timeZone }) => {
+        expect(
+          formatZonedToParts(
+            "2024-02-03T14:30:45-05:00[America/New_York]",
+            MustTestLocales.enUS,
+            { timeZone },
+          ),
+        ).toEqual([]);
+      },
+    );
   });
 
   describe("invalid input", () => {
@@ -174,5 +269,52 @@ describe("formatZonedToParts", () => {
     `("returns [] for invalid input: $value", ({ value }) => {
       expect(formatZonedToParts(value as never)).toEqual([]);
     });
+  });
+
+  // ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale data
+  // is used, and a malformed tag anywhere in the list is invalid input. Expected strings from native
+  // Intl with the same list.
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"3 févr. 2024, 14:30"}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
+  `(
+    "returns $expected (parts joined) for locale list $locale",
+    ({ locale, expected }) => {
+      const actual = formatZonedToParts(
+        "2024-02-03T14:30:45+01:00[Europe/Paris]",
+        locale,
+        { dateStyle: "medium", timeStyle: "short" },
+      );
+      expect(
+        Array.isArray(actual)
+          ? actual.map((part) => part.value).join("")
+          : actual,
+      ).toEqual(expected);
+    },
+  );
+});
+
+// Plan #14: ECMA-402 CoerceOptionsToObject throws TypeError for null options and wraps any other
+// primitive with ToObject, which carries no formatting fields, so a string or number formats with
+// the defaults. Expected strings from native Chromium 153 (`toLocaleString("en-US", 1)` and
+// `new Intl.DateTimeFormat("en-US", null)`, which throws).
+describe("formatZonedToParts with primitive options", () => {
+  it.each`
+    options   | expected
+    ${null}   | ${""}
+    ${"long"} | ${"2/3/2024, 2:30:00 PM EST"}
+    ${1}      | ${"2/3/2024, 2:30:00 PM EST"}
+  `("returns $expected for options $options", ({ options, expected }) => {
+    expectDateTimeEqual(
+      formatZonedToParts(
+        "2024-02-03T14:30:00-05:00[America/New_York]",
+        MustTestLocales.enUS,
+        options as never,
+      )
+        .map((part) => part.value)
+        .join(""),
+      expected,
+    );
   });
 });

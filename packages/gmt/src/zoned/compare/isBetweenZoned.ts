@@ -1,6 +1,8 @@
+// fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidZonedDateTime } from "../validate";
 import { zonedDateTimeFrom } from "../../internal";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return true when `zoned` is between `start` and `end` (inclusive by default).
@@ -23,6 +25,10 @@ export function isBetweenZoned(
   end: string,
   options?: { inclusiveStart?: boolean; inclusiveEnd?: boolean },
 ): boolean {
+  if (!isOptionsArgument(options)) {
+    return false;
+  }
+
   const inclusiveStart = options?.inclusiveStart ?? true;
   const inclusiveEnd = options?.inclusiveEnd ?? true;
 

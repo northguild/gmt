@@ -16,7 +16,7 @@ import { isValidUtc } from "../validate/isValidUtc";
  * @example minUtc([]) // null
  */
 export function minUtc(utcDateTimes: string[]): string | null {
-  if (!utcDateTimes.length) return null;
+  if (!Array.isArray(utcDateTimes) || !utcDateTimes.length) return null;
 
   const valid = utcDateTimes.filter(isValidUtc);
   if (!valid.length) return null;

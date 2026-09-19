@@ -14,6 +14,23 @@ describe("roundDateTime", () => {
     },
   );
 
+  // Temporal §13.17 GetTemporalUnitValuedOption: "Both singular and plural unit names are accepted".
+  it.each`
+    value                           | unit              | expected
+    ${"2024-06-15T12:34:56"}        | ${"years"}        | ${"2024-01-01T00:00:00"}
+    ${"2024-06-15T12:34:56"}        | ${"months"}       | ${"2024-06-01T00:00:00"}
+    ${"2024-06-15T12:34:56"}        | ${"weeks"}        | ${"2024-06-17T00:00:00"}
+    ${"2024-06-15T12:34:56"}        | ${"days"}         | ${"2024-06-16T00:00:00"}
+    ${"2024-06-15T12:34:56"}        | ${"hours"}        | ${"2024-06-15T13:00:00"}
+    ${"2024-06-15T12:34:56"}        | ${"minutes"}      | ${"2024-06-15T12:35:00"}
+    ${"2024-06-15T12:34:56.123456"} | ${"milliseconds"} | ${"2024-06-15T12:34:56.123"}
+  `(
+    "returns $expected for $value rounded to the plural unit $unit",
+    ({ value, unit, expected }) => {
+      expect(roundDateTime(value, { smallestUnit: unit })).toBe(expected);
+    },
+  );
+
   it.each`
     value                    | unit        | expected
     ${"2024-06-15T12:34:56"} | ${"day"}    | ${"2024-06-16T00:00:00"}
@@ -119,6 +136,56 @@ describe("roundDateTime", () => {
     },
   );
 
+  // Temporal GetRoundingIncrementOption: ToIntegerWithTruncation, then < 1 is a RangeError. The
+  // date-unit branch follows it as the day and time branch (Temporal itself) already does.
+  // 2024-05-20T00:00 is 19 of 31 days into May (rounds up); 2024-06-15T12:34:56 is 5.5 of 14 days
+  // into the two-week span from Monday 2024-06-10 (rounds down).
+  it.each`
+    value                    | unit       | roundingIncrement | expected
+    ${"2024-05-20T00:00:00"} | ${"month"} | ${1.5}            | ${"2024-06-01T00:00:00"}
+    ${"2024-06-15T12:34:56"} | ${"week"}  | ${2.7}            | ${"2024-06-10T00:00:00"}
+    ${"2024-06-15T12:34:56"} | ${"day"}   | ${1.5}            | ${"2024-06-16T00:00:00"}
+  `(
+    "returns $expected for $value with non-integer roundingIncrement $roundingIncrement truncated on $unit",
+    ({ value, unit, roundingIncrement, expected }) => {
+      expect(
+        roundDateTime(value, { smallestUnit: unit, roundingIncrement }),
+      ).toBe(expected);
+    },
+  );
+
+  it.each`
+    value                    | unit       | roundingIncrement
+    ${"2024-05-20T00:00:00"} | ${"month"} | ${0.9}
+    ${"2024-05-20T00:00:00"} | ${"year"}  | ${Number.NaN}
+    ${"2024-05-20T00:00:00"} | ${"week"}  | ${Number.POSITIVE_INFINITY}
+    ${"2024-05-20T00:00:00"} | ${"day"}   | ${0.9}
+  `(
+    "returns empty string for $value with roundingIncrement $roundingIncrement (below 1 after truncation or non-finite) on $unit",
+    ({ value, unit, roundingIncrement }) => {
+      expect(
+        roundDateTime(value, { smallestUnit: unit, roundingIncrement }),
+      ).toBe("");
+    },
+  );
+
+  // Temporal GetRoundingModeOption: a value outside the nine rounding modes is a RangeError.
+  it.each`
+    value                    | unit       | roundingMode
+    ${"2024-05-15T12:00:00"} | ${"month"} | ${"bogus"}
+    ${"2024-05-15T12:00:00"} | ${"year"}  | ${"HALFEXPAND"}
+    ${"2024-05-15T12:00:00"} | ${"week"}  | ${""}
+    ${"2024-05-15T12:00:00"} | ${"day"}   | ${"bogus"}
+    ${"2024-05-15T12:00:00"} | ${"hour"}  | ${"round"}
+  `(
+    "returns empty string for $value with unknown roundingMode $roundingMode on $unit",
+    ({ value, unit, roundingMode }) => {
+      expect(roundDateTime(value, { smallestUnit: unit, roundingMode })).toBe(
+        "",
+      );
+    },
+  );
+
   it.each`
     value                    | unit       | roundingMode    | expected
     ${"2024-06-16T12:34:56"} | ${"month"} | ${"halfExpand"} | ${"2024-07-01T00:00:00"}
@@ -169,8 +236,8 @@ describe("roundDateTime", () => {
   it.each`
     invalidUnit
     ${"invalid-unit"}
-    ${"hours"}
-    ${"minutes"}
+    ${"hourss"}
+    ${"Days"}
     ${""}
     ${null}
     ${undefined}
@@ -204,6 +271,31 @@ describe("roundDateTime", () => {
     ${"-271821-04-19T12:00:00"} | ${"year"}  | ${"ceil"}       | ${"-271820-01-01T00:00:00"}
   `(
     "returns $expected for the first-day value $value rounded to $unit with roundingMode $roundingMode",
+    ({ value, unit, roundingMode, expected }) => {
+      expect(roundDateTime(value, { smallestUnit: unit, roundingMode })).toBe(
+        expected,
+      );
+    },
+  );
+
+  // The last representable PlainDateTime is +275760-09-13T23:59:59.999999999 (a Saturday). The next
+  // week, month and year start after it, so a mode that picks the current start still has a value:
+  // 06-15T00:00 is 166/366 through the leap year 275760, 09-10T12:00 is 9.5/30 through September and
+  // 2.5/7 through its week, and the last instant is just under 13/30 through September. ceil past the
+  // range is the sentinel.
+  it.each`
+    value                                 | unit       | roundingMode    | expected
+    ${"+275760-06-15T00:00:00"}           | ${"year"}  | ${"floor"}      | ${"+275760-01-01T00:00:00"}
+    ${"+275760-06-15T00:00:00"}           | ${"year"}  | ${"halfExpand"} | ${"+275760-01-01T00:00:00"}
+    ${"+275760-06-15T00:00:00"}           | ${"year"}  | ${"ceil"}       | ${""}
+    ${"+275760-09-10T12:00:00"}           | ${"month"} | ${"floor"}      | ${"+275760-09-01T00:00:00"}
+    ${"+275760-09-13T23:59:59.999999999"} | ${"month"} | ${"halfExpand"} | ${"+275760-09-01T00:00:00"}
+    ${"+275760-09-10T12:00:00"}           | ${"month"} | ${"ceil"}       | ${""}
+    ${"+275760-09-10T12:00:00"}           | ${"week"}  | ${"halfExpand"} | ${"+275760-09-08T00:00:00"}
+    ${"+275760-09-13T23:59:59.999999999"} | ${"week"}  | ${"trunc"}      | ${"+275760-09-08T00:00:00"}
+    ${"+275760-09-13T23:59:59.999999999"} | ${"week"}  | ${"halfExpand"} | ${""}
+  `(
+    "returns $expected for the last-year value $value rounded to $unit with roundingMode $roundingMode",
     ({ value, unit, roundingMode, expected }) => {
       expect(roundDateTime(value, { smallestUnit: unit, roundingMode })).toBe(
         expected,

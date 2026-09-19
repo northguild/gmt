@@ -1,3 +1,5 @@
+import { type LocalesArgument, resolveRequiredLocale } from "./resolveLocale";
+
 // TypeScript's lib.es2024.intl.d.ts (as of TS 5.9) declares neither form of the Intl Locale
 // Info proposal's week data. Augment the ambient type once, here, rather than widening every
 // call site with `as unknown as`.
@@ -28,16 +30,19 @@ declare global {
  *   its week data.
  * - Returns `undefined` when neither form is available. Fields may be missing: Node 24/26 omit
  *   `minimalDays`. Callers apply their own ISO defaults.
- * - Throws `RangeError` (from `Intl.Locale`) if `locale` is not a valid BCP 47 tag; callers turn
+ * - Throws `RangeError` (from `Intl.Locale`) if `locale` is not a well-formed BCP 47 tag; callers turn
  *   that into their sentinel.
  *
  * @example localeWeekInfo("en-US")?.firstDay // 7
  * @example localeWeekInfo("ar-SA")?.weekend // [5, 6]
  */
 export function localeWeekInfo(
-  locale: string,
+  locale: LocalesArgument,
 ): Partial<LocaleWeekInfo> | undefined {
-  const intlLocale = new Intl.Locale(locale);
+  const resolved = resolveRequiredLocale(locale);
+  if (resolved === null) throw new RangeError("Invalid locale");
+
+  const intlLocale = new Intl.Locale(resolved);
   if (typeof intlLocale.getWeekInfo === "function") {
     return intlLocale.getWeekInfo();
   }

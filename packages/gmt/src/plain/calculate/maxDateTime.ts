@@ -14,7 +14,7 @@ import { isValidDateTime } from "../validate";
  * @example maxDateTime([]) // null
  */
 export function maxDateTime(dateTimes: string[]): string | null {
-  if (!dateTimes.length) return null;
+  if (!Array.isArray(dateTimes) || !dateTimes.length) return null;
 
   const valid = dateTimes.filter(isValidDateTime);
   if (!valid.length) return null;

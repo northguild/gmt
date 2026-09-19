@@ -121,7 +121,9 @@ updates and the dox registration. Decisions taken while building it:
   not a unique key for every rule, and the JSDoc says so with numbers.** A 364/371-day year
   drifts against the calendar, so no label drawn from a calendar year survives it for every
   anchor: under "the Saturday nearest to 31 December" two consecutive fiscal years both start
-  in 2023 and collide, and 2018, 2024 and 2029 label no fiscal year at all. Labelling by the
+  in 2023 and collide, and 2020, 2025 and 2031 label no fiscal year at all (under "the Saturday
+  nearest to 2 January" 2023 also labels two years, and 2018, 2024 and 2029 label none —
+  corrected in CORE-8, which found the two rules' figures had been swapped). Labelling by the
   year a fiscal year *ends* in, or by the calendar year holding most of it, only moves the
   collision to a different anchor family (a July start, in the midpoint case) while breaking
   agreement with the NRF — the standard this story cites. So the convention stays, the limit is

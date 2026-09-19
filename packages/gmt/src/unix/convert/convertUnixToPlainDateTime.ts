@@ -1,51 +1,52 @@
-import { Temporal } from "@js-temporal/polyfill";
-import { isValidTimeZone } from "../../zoned";
-import { getSystemTimeZone } from "../../zoned/get";
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
+import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
 import {
-  isValidUnixMilliseconds,
-  isValidUnixSeconds,
-  isValidUnixUnit,
-} from "../validate";
+  resolveUnixEpochUnit,
+  unixEpochToInstant,
+} from "../../internal/unixEpochValue";
+import type { UnixUnit } from "../validate/isValidUnixUnit";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Convert a Unix timestamp to a plain datetime string in the format "YYYY-MM-DDTHH:mm:ss".
  *
- * - Converts to PlainDateTime using the specified or system timezone.
- * - Validates epoch unit ("seconds" | "milliseconds").
+ * - Converts to PlainDateTime in `timeZone`: omitted is UTC, `"local"` is the system zone, and an
+ *   unknown zone returns "".
+ * - `unix` is a safe integer or a string of optionally negative ASCII digits; anything else returns
+ *   "".
+ * - Validates epoch unit ("seconds" | "milliseconds", singular accepted).
  * - Returns "" for invalid input.
  *
- * @param unix Unix timestamp (number)
- * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA)
+ * @param unix Unix epoch: a safe integer or a digit string
+ * @param options optional: epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds"), timeZone (IANA, or "local" for the system zone; default "UTC")
  * @returns plain datetime string in "YYYY-MM-DDTHH:mm:ss" format or "" on invalid input
  *
- * @example convertUnixToPlainDateTime(1709164800000) // "2024-02-29T00:00:00"
- * @example convertUnixToPlainDateTime(1709164800, { epochUnit: "seconds" }) // "2024-02-29T00:00:00"
- * @example convertUnixToPlainDateTime(-1) // "1969-12-31T23:59:59.999"
+ * @example convertUnixToPlainDateTime(1709164800000, { timeZone: "UTC" }) // "2024-02-29T00:00:00"
+ * @example convertUnixToPlainDateTime(1709164800, { epochUnit: "seconds", timeZone: "UTC" }) // "2024-02-29T00:00:00"
+ * @example convertUnixToPlainDateTime(-1, { timeZone: "UTC" }) // "1969-12-31T23:59:59.999"
+ * @example convertUnixToPlainDateTime("1709164800000", { timeZone: "Asia/Tokyo" }) // "2024-02-29T09:00:00"
+ * @example convertUnixToPlainDateTime(NaN) // ""
  */
 
 export function convertUnixToPlainDateTime(
-  unix: number,
-  options?: { epochUnit?: "seconds" | "milliseconds"; timeZone?: string },
+  unix: number | string,
+  options?: { epochUnit?: UnixUnit; timeZone?: string },
 ): string {
-  const { epochUnit = "milliseconds", timeZone = getSystemTimeZone() } =
-    options ?? {};
+  if (!isOptionsArgument(options)) {
+    return "";
+  }
 
-  if (!isValidUnixUnit(epochUnit)) return "";
-  if (!isValidTimeZone(timeZone)) return "";
+  const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
+  const timeZone = normalizeTimeZone(options?.timeZone);
+
+  if (epochUnit === null || !timeZone) return "";
+
+  const instant = unixEpochToInstant(unix, epochUnit);
+
+  if (instant === null) return "";
 
   try {
-    if (
-      (epochUnit === "milliseconds" && !isValidUnixMilliseconds(unix)) ||
-      (epochUnit === "seconds" && !isValidUnixSeconds(unix))
-    ) {
-      return "";
-    }
-
-    const instant = Temporal.Instant.fromEpochMilliseconds(
-      epochUnit === "seconds" ? unix * 1000 : unix,
-    );
-    const zonedDateTime = instant.toZonedDateTimeISO(timeZone);
-    return zonedDateTime.toPlainDateTime().toString();
+    return instant.toZonedDateTimeISO(timeZone).toPlainDateTime().toString();
   } catch {
     return "";
   }

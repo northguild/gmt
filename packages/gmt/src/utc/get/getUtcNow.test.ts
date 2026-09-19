@@ -21,8 +21,10 @@ describe("getUtcNow", () => {
   it("returns a value consumable by zoned unix converters", () => {
     const value = getUtcNow();
 
-    expect(convertUtcToUnix(value, "milliseconds")).toBe(1709164800000);
-    expect(convertUtcToUnix(value, "seconds")).toBe(1709164800);
+    expect(convertUtcToUnix(value, { epochUnit: "milliseconds" })).toBe(
+      1709164800000,
+    );
+    expect(convertUtcToUnix(value, { epochUnit: "seconds" })).toBe(1709164800);
   });
 
   it("returns empty string on failure", () => {
