@@ -1,5 +1,9 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { localDstEdgeBattleCases } from "../../test";
+import {
+  dateLineCrossingAt,
+  dateLineCrossingTimeZones,
+  localDstEdgeBattleCases,
+} from "../../test";
 import {
   mockTemporalPlainDateTimeFromThrow,
   mockTemporalZonedDateTimeFromThrow,
@@ -325,6 +329,23 @@ describe("resolveLocal at the maximum instant", () => {
     "resolves 2024-11-03T01:30:00 in the offset zone $timeZone → $expected",
     ({ timeZone, expected }) => {
       expect(resolveLocal("2024-11-03T01:30:00", timeZone)).toBe(expected);
+    },
+  );
+});
+
+// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
+// are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
+// 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
+
+describe("resolveLocal across the 1844 date-line crossings (zoned.E)", () => {
+  // 1844-12-31T12:00 never happened: "compatible" moves it forward by the 24-hour gap.
+  it.each(dateLineCrossingTimeZones)(
+    "resolves the skipped 1844-12-31T12:00 in $timeZone 12 hours after the crossing",
+    (crossing) => {
+      expect(resolveLocal("1844-12-31T12:00", crossing.timeZone)).toBe(
+        dateLineCrossingAt(crossing, 12).toInstant().toString(),
+      );
     },
   );
 });

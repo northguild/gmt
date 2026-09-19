@@ -1,4 +1,8 @@
-import { mockSystemTimeZone } from "../../test";
+import {
+  dateLineCrossingAt,
+  dateLineCrossingTimeZones,
+  mockSystemTimeZone,
+} from "../../test";
 import { Temporal } from "@js-temporal/polyfill";
 import { battleTestTimeZones } from "../../test/timeZoneMatrix";
 import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
@@ -255,6 +259,28 @@ describe("intervalCountUnix epochUnit and timeZone options", () => {
     "returns $expected for [$start, $end) in $unit with options $options",
     ({ start, end, unit, options, expected }) => {
       expect(intervalCountUnix(start, end, unit, options)).toBe(expected);
+    },
+  );
+});
+
+// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
+// are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
+// 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
+
+describe("intervalCountUnix across the 1844 date-line crossings (zoned.E)", () => {
+  // December 1844 has 31 dates less the skipped 12-31, January 31: 61 local days.
+  it.each(dateLineCrossingTimeZones)(
+    "counts 61 days from 1844-12-01 to 1845-02-01 in $timeZone",
+    (crossing) => {
+      expect(
+        intervalCountUnix(
+          dateLineCrossingAt(crossing, -30 * 24).epochMilliseconds,
+          dateLineCrossingAt(crossing, 31 * 24).epochMilliseconds,
+          "day",
+          { timeZone: crossing.timeZone },
+        ),
+      ).toBe(61);
     },
   );
 });

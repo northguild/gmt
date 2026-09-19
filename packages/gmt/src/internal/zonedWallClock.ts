@@ -32,6 +32,19 @@ import {
  *    of the range, and `GetStartOfDay` then dereferences that `null`: `PlainDate.from
  *    ("+275760-09-07").toZonedDateTime("America/Santiago")` throws `TypeError: Cannot read
  *    properties of null (reading 'sign')`. This one is NOT fixed on the polyfill's main branch.
+ * 3. **Transitions before 1847** (`GetNamedTimeZoneNextTransition` / `…PreviousTransition`). Both
+ *    searches are floored at `BEFORE_FIRST_DST = 1847-01-01T00:00Z` (`lib/ecmascript.ts`), so the
+ *    1844-12-31 date-line crossing of Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau is never
+ *    found: `next` from before it returns the zone's next post-1847 change (1899 in Manila),
+ *    `previous` returns `null`, and `GetStartOfDay` for the skipped 1844-12-31 returns that wrong
+ *    `next`, so `hoursInDay` for 1844-12-30 is 479,340. Offsets are right (they come from
+ *    `Intl.DateTimeFormat`); only the search is wrong. Reported as js-temporal/temporal-polyfill#372
+ *    and tc39/proposal-temporal#3330; fixed in no release yet. Unlike defects 1 and 2 the polyfill
+ *    returns a valid-looking wrong value here, so the recovery cannot wait for a throw: it runs
+ *    before the polyfill, only for instants before the floor (dates on or before 1847-01-01), and
+ *    finds the change by comparing two offsets and bisecting (`missedNextTransition`,
+ *    `missedPreviousTransition`, GMT's own `startOfDayEpochNanoseconds`). Every later instant pays
+ *    one bigint comparison and no `Intl` read.
  *
  * Every GMT wall clock → instant conversion goes through this file. Each helper calls the
  * polyfill first and returns its answer whenever it has one; only when the polyfill throws (or
@@ -44,7 +57,8 @@ import {
  * Remove each fallback once a polyfill release containing the fix is GMT's dependency floor:
  * for defect 1, both 05ce7a3 and 95237e0 (05ce7a3 alone retires nothing, since the `zoned.A`
  * `min.*` probes still fail with it); for defect 2, an upstream fix that does not exist yet (see
- * `context/domination/js-temporal-polyfill-bugs.md` § B).
+ * `context/domination/js-temporal-polyfill-bugs.md` § B); for defect 3, a release containing
+ * js-temporal/temporal-polyfill#372 (the `zoned.E` canary group; bugs document § E).
  * `pnpm compat` reports when every probe of a group passes.
  * ---------------------------------------------------------------------------------------------
  */
@@ -82,8 +96,25 @@ export const NEXT_TRANSITION_HORIZON_NANOSECONDS =
   BigInt(3 * 366 + EDGE_WINDOW_DAYS) * NANOSECONDS_PER_DAY;
 /** Previous-transition steps walked back from the maximum instant; real zones need two or three. */
 export const MAX_TRANSITIONS_BEFORE_MAXIMUM = 64;
-/** Bisection steps to pin a transition to the nanosecond: 2^64 ns covers any window. */
-const MAX_BISECTION_STEPS = 64;
+/**
+ * Bisection steps to pin a transition to the nanosecond: 2^75 ns covers the whole representable
+ * range (2 × 8.64e21 ns < 2^74), which `missedNextTransition` searches from the minimum instant.
+ */
+const MAX_BISECTION_STEPS = 75;
+
+/**
+ * 1847-01-01T00:00:00Z: `BEFORE_FIRST_DST` in js-temporal `lib/ecmascript.ts`. The polyfill never
+ * looks for a transition before it (defect 3).
+ */
+export const POLYFILL_TRANSITION_SEARCH_FLOOR = -3_881_520_000_000_000_000n;
+/** The last local date whose start can lie before the floor: midnight 1847-01-01 at UTC+14. */
+const LAST_DATE_BEFORE_TRANSITION_SEARCH = new Temporal.PlainDate(1847, 1, 1);
+/**
+ * Every instant from here on has a local date after 1847-01-01 in every zone (a UTC offset is
+ * always less than a day), so a zoned value can skip the date comparison and its offset read.
+ */
+const FIRST_INSTANT_AFTER_TRANSITION_SEARCH_DATE =
+  POLYFILL_TRANSITION_SEARCH_FLOOR + 2n * NANOSECONDS_PER_DAY;
 
 const UNIX_EPOCH_DATE = new Temporal.PlainDate(1970, 1, 1);
 const UTC_REFERENCE = new Temporal.ZonedDateTime(0n, "UTC");
@@ -333,6 +364,73 @@ export function startOfDayEpochNanoseconds(
   );
 }
 
+// ---------------------------------------------------------------------------------------------
+// Defect 3: transitions before the polyfill's 1847-01-01 search floor
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * True when a start of day on this local date — or, for a zoned value, on its own local date —
+ * may lie before the polyfill's transition search floor, so the polyfill's `GetStartOfDay` can
+ * miss a transition that skips it. A zoned value from 1847-01-03T00:00Z on reads no offset.
+ */
+export function isBeforePolyfillTransitionSearch(
+  value: Temporal.PlainDate | Temporal.ZonedDateTime,
+): boolean {
+  if (value instanceof Temporal.ZonedDateTime) {
+    return (
+      value.epochNanoseconds < FIRST_INSTANT_AFTER_TRANSITION_SEARCH_DATE &&
+      isBeforePolyfillTransitionSearch(value.toPlainDate())
+    );
+  }
+  return (
+    Temporal.PlainDate.compare(value, LAST_DATE_BEFORE_TRANSITION_SEARCH) <= 0
+  );
+}
+
+/**
+ * The first transition after `epochNanoseconds` in a named zone when it lies before the polyfill's
+ * search floor, which `getTimeZoneTransition("next")` skips; null for any instant at or after the
+ * floor, or when the offset is the same at both ends (then no zone changes in between, pinned by
+ * the all-zones test in `zonedWallClock.test.ts`, and the polyfill's own answer stands).
+ */
+export function missedNextTransition(
+  timeZone: string,
+  epochNanoseconds: bigint,
+): bigint | null {
+  if (epochNanoseconds >= POLYFILL_TRANSITION_SEARCH_FLOOR) return null;
+
+  const floorOffset = offsetAt(timeZone, POLYFILL_TRANSITION_SEARCH_FLOOR);
+  if (offsetAt(timeZone, epochNanoseconds) === floorOffset) return null;
+
+  return transitionBetween(
+    timeZone,
+    epochNanoseconds,
+    POLYFILL_TRANSITION_SEARCH_FLOOR,
+    floorOffset,
+  );
+}
+
+/**
+ * The last transition strictly before `epochNanoseconds` and before the polyfill's search floor,
+ * for a named zone where `getTimeZoneTransition("previous")` found none; null when the offset
+ * never changes between the minimum instant and there.
+ */
+export function missedPreviousTransition(
+  timeZone: string,
+  epochNanoseconds: bigint,
+): bigint | null {
+  const high =
+    epochNanoseconds - 1n < POLYFILL_TRANSITION_SEARCH_FLOOR
+      ? epochNanoseconds - 1n
+      : POLYFILL_TRANSITION_SEARCH_FLOOR;
+  if (high <= MIN_EPOCH_NANOSECONDS) return null;
+
+  const highOffset = offsetAt(timeZone, high);
+  if (offsetAt(timeZone, MIN_EPOCH_NANOSECONDS) === highOffset) return null;
+
+  return transitionBetween(timeZone, MIN_EPOCH_NANOSECONDS, high, highOffset);
+}
+
 /** TC39 `RoundNumberToIncrement(value, 1 minute, "half-expand")`. */
 function roundToMinute(nanoseconds: bigint): bigint {
   const sign = nanoseconds < 0n ? -1n : 1n;
@@ -542,6 +640,36 @@ function fromBagAtEdge(
 }
 
 /**
+ * A date-only zoned string (TC39: its start of day) whose date is on or before 1847-01-01 in a
+ * named zone, resolved with GMT's own `GetStartOfDay` (defect 3); null for anything else.
+ */
+function dateOnlyBeforeTransitionSearch(
+  item: string,
+  options: ZonedFromOptions | undefined,
+): Temporal.ZonedDateTime | null {
+  if (TIME_SEPARATOR.test(item)) return null;
+
+  let date: Temporal.PlainDate;
+  let timeZone: string;
+  try {
+    validateFromOptions(options);
+    date = Temporal.PlainDate.from(item);
+    timeZone = timeZoneIdOf(item);
+  } catch {
+    return null;
+  }
+
+  if (!isNamedTimeZone(timeZone) || !isBeforePolyfillTransitionSearch(date)) {
+    return null;
+  }
+  return new Temporal.ZonedDateTime(
+    startOfDayEpochNanoseconds(timeZone, date),
+    timeZone,
+    date.calendarId,
+  );
+}
+
+/**
  * `Temporal.ZonedDateTime.from`, correct across the whole representable range.
  *
  * Returns the polyfill's result whenever it has one. When the polyfill throws for a named zone
@@ -556,6 +684,14 @@ export function zonedDateTimeFrom(
   item: string | Temporal.ZonedDateTimeLike,
   options?: ZonedFromOptions,
 ): Temporal.ZonedDateTime {
+  const dateOnly =
+    typeof item === "string"
+      ? dateOnlyBeforeTransitionSearch(item, options)
+      : null;
+  if (dateOnly !== null) {
+    return dateOnly;
+  }
+
   try {
     return Temporal.ZonedDateTime.from(item, options);
   } catch (error) {

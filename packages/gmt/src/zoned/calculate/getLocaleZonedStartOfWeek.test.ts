@@ -1,6 +1,8 @@
 import { Temporal } from "@js-temporal/polyfill";
 import {
   battleTestTimeZones,
+  dateLineCrossingAt,
+  dateLineCrossingTimeZones,
   localeZonedDateTimeInputByLocale,
   MustTestLocales,
 } from "../../test";
@@ -274,6 +276,26 @@ describe("getLocaleZonedStartOfWeek across zone transitions with default options
           locale,
         ),
       ).toBe(expected);
+    },
+  );
+});
+
+// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
+// are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
+// 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
+
+describe("getLocaleZonedStartOfWeek across the 1844 date-line crossings (zoned.E)", () => {
+  // en-GB weeks start on Monday (CLDR weekData), so 1845-01-02's week starts on 1844-12-30.
+  it.each(dateLineCrossingTimeZones)(
+    "starts the en-GB week of 1845-01-02T12:00 in $timeZone on Monday 1844-12-30",
+    (crossing) => {
+      expect(
+        getLocaleZonedStartOfWeek(
+          dateLineCrossingAt(crossing, 36).toString(),
+          MustTestLocales.enGB,
+        ),
+      ).toBe(dateLineCrossingAt(crossing, -24).toString());
     },
   );
 });

@@ -1,4 +1,5 @@
 import { areUnixEqualBy } from "./areUnixEqualBy";
+import { dateLineCrossingAt, dateLineCrossingTimeZones } from "../../test";
 
 const options = { timeZone: "UTC" } as const;
 
@@ -164,6 +165,27 @@ describe("areUnixEqualBy with an invalid weekStartsOn", () => {
           weekStartsOn,
         }),
       ).toBe(false);
+    },
+  );
+});
+
+// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
+// are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
+// 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
+
+describe("areUnixEqualBy across the 1844 date-line crossings (zoned.E)", () => {
+  it.each(dateLineCrossingTimeZones)(
+    "puts 1844-12-30 and 1845-01-02 in one week in $timeZone",
+    (crossing) => {
+      expect(
+        areUnixEqualBy(
+          dateLineCrossingAt(crossing, -12).epochMilliseconds,
+          dateLineCrossingAt(crossing, 36).epochMilliseconds,
+          "week",
+          { timeZone: crossing.timeZone },
+        ),
+      ).toBe(true);
     },
   );
 });

@@ -550,6 +550,7 @@
   },
   "scripts": {
     "build": "rm -rf dist && tsc --project tsconfig.build.json && tsc-alias -p tsconfig.build.json --resolve-full-paths --resolve-full-extension .js",
+    "build:dev": "test -f dist/index.js || rm -f node_modules/.cache/tsbuildinfo/build.tsbuildinfo; tsc --project tsconfig.build.json --incremental --tsBuildInfoFile node_modules/.cache/tsbuildinfo/build.tsbuildinfo && tsc-alias -p tsconfig.build.json --resolve-full-paths --resolve-full-extension .js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

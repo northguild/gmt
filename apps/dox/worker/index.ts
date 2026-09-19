@@ -52,6 +52,11 @@ interface Env {
    * exists — without it Dox always uses the first brain and reports no counts,
    * which degrades gracefully instead of failing to boot. */
   DOX_USAGE?: UsageStore;
+  /** Dev only — `scripts/dev-all.mjs` sets it to the running `astro dev` server. The
+   * retrieval corpus is then read from that server instead of the built `dist/`, so the
+   * local chat needs no site build and answers from content edits as they are saved.
+   * Unset in production, where the assets binding serves the built corpus. */
+  DOX_ASSETS_ORIGIN?: string;
 }
 
 declare const caches: { default: Cache };
@@ -63,6 +68,21 @@ declare const caches: { default: Cache };
  * spent brain — `brainStateFromError` would rethrow it and end the request
  * instead of failing over.
  */
+/**
+ * How the chat handler fetches the retrieval corpus: through the assets binding, or — when
+ * `DOX_ASSETS_ORIGIN` is set in dev — the same path and query from that origin.
+ */
+export function corpusFetcher(
+  env: Env,
+): (input: RequestInfo | URL, init?: RequestInit) => Promise<Response> {
+  const origin = env.DOX_ASSETS_ORIGIN;
+  if (!origin) return (input, init) => env.ASSETS.fetch(input, init);
+  return (input, init) => {
+    const requested = new URL(input instanceof Request ? input.url : input);
+    return fetch(new URL(requested.pathname + requested.search, origin), init);
+  };
+}
+
 function configuredBrains(env: Env): Brain[] {
   return BRAINS.filter((brain: Brain) =>
     brain.provider === "workers-ai"
@@ -245,7 +265,7 @@ export default {
       isDev: (req) => isDevRequest(req, env.DOX_DEV_KEY, Date.now()),
       vocabulary: VOCABULARY_CONTENT,
       coreRules: CORE_RULES_CONTENT,
-      fetchImpl: (input, init) => env.ASSETS.fetch(input, init),
+      fetchImpl: corpusFetcher(env),
       cache: caches.default,
     });
 

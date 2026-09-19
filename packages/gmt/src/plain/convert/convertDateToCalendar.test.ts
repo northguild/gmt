@@ -120,6 +120,38 @@ describe("convertDateToCalendar", () => {
     },
   );
 
+  // tc39/proposal-temporal#3329: far-year month 13 (5 days in a common year) in the Coptic family.
+  // Expected fields: Chromium 153 native Temporal. GMT reads "coptic" and "ethiopic" in "ethioaa",
+  // whose year is the calendar's own plus 5776 (coptic) or 5500 (ethiopic), as at both limits.
+  it.each`
+    iso                | calendar      | year     | monthCode | day   | ethioaaYear
+    ${"+012704-11-25"} | ${"coptic"}   | ${12420} | ${"M12"}  | ${30} | ${18196}
+    ${"+012704-11-26"} | ${"coptic"}   | ${12420} | ${"M13"}  | ${1}  | ${18196}
+    ${"+012704-11-30"} | ${"coptic"}   | ${12420} | ${"M13"}  | ${5}  | ${18196}
+    ${"+012704-12-01"} | ${"coptic"}   | ${12421} | ${"M01"}  | ${1}  | ${18197}
+    ${"+012704-11-25"} | ${"ethiopic"} | ${12696} | ${"M12"}  | ${30} | ${18196}
+    ${"+012704-11-26"} | ${"ethiopic"} | ${12696} | ${"M13"}  | ${1}  | ${18196}
+    ${"+012704-11-30"} | ${"ethiopic"} | ${12696} | ${"M13"}  | ${5}  | ${18196}
+    ${"+012704-12-01"} | ${"ethiopic"} | ${12697} | ${"M01"}  | ${1}  | ${18197}
+    ${"+012704-11-25"} | ${"ethioaa"}  | ${18196} | ${"M12"}  | ${30} | ${18196}
+    ${"+012704-11-26"} | ${"ethioaa"}  | ${18196} | ${"M13"}  | ${1}  | ${18196}
+    ${"+012704-11-30"} | ${"ethioaa"}  | ${18196} | ${"M13"}  | ${5}  | ${18196}
+    ${"+012704-12-01"} | ${"ethioaa"}  | ${18197} | ${"M01"}  | ${1}  | ${18197}
+  `(
+    "round-trips far-year $iso in $calendar ($year-$monthCode-$day, ethioaa year $ethioaaYear)",
+    ({ iso, calendar, monthCode, day, ethioaaYear }) => {
+      const converted = convertDateToCalendar(iso, calendar);
+      expect(converted).toBe(`${iso}[u-ca=${calendar}]`);
+      expect(convertDateToCalendar(converted, "iso8601")).toBe(iso);
+      const fields = calendarFieldsOf(Temporal.PlainDate.from(iso), "ethioaa");
+      expect([fields.year, fields.monthCode, fields.day]).toEqual([
+        ethioaaYear,
+        monthCode,
+        day,
+      ]);
+    },
+  );
+
   it.each`
     value                                    | calendar       | reason
     ${"invalid"}                             | ${"hebrew"}    | ${"not a date"}

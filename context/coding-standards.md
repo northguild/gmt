@@ -206,16 +206,17 @@ Never compute a zoned start-of-unit by truncating the wall clock and resolving i
 - Use `internal/zonedBucket.ts` (`zonedUnitStart`, `nextZonedBucketStart`), or Temporal's own `zdt.startOfDay()` / `zdt.hoursInDay` for days.
 - **Probe zones** — every boundary function is tested against these transitions:
 
-| Zone                  | Transition                                          |
-| --------------------- | --------------------------------------------------- |
-| `Pacific/Chatham`     | 2024-09-29 spring (+45 min offset), 2024-04-07 fall |
-| `Antarctica/Casey`    | 2020-10-04 (three-hour jump)                        |
-| `America/New_York`    | 2024-11-03 fall-back                                |
-| `Australia/Lord_Howe` | 30-minute DST                                       |
-| `America/Santiago`    | 2024-09-08 (skipped local midnight)                 |
-| `America/Havana`      | 2024-11-03 (midnight repeated on the same date)     |
-| `America/Goose_Bay`   | 2010-11-07 (fall-back reopens the previous date)    |
-| `Pacific/Apia`        | 2011-12-30 (deleted day)                            |
+| Zone                                                                               | Transition                                                                                                                                                                                   |
+| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Pacific/Chatham`                                                                  | 2024-09-29 spring (+45 min offset), 2024-04-07 fall                                                                                                                                          |
+| `Antarctica/Casey`                                                                 | 2020-10-04 (three-hour jump)                                                                                                                                                                 |
+| `America/New_York`                                                                 | 2024-11-03 fall-back                                                                                                                                                                         |
+| `Australia/Lord_Howe`                                                              | 30-minute DST                                                                                                                                                                                |
+| `America/Santiago`                                                                 | 2024-09-08 (skipped local midnight)                                                                                                                                                          |
+| `America/Havana`                                                                   | 2024-11-03 (midnight repeated on the same date)                                                                                                                                              |
+| `America/Goose_Bay`                                                                | 2010-11-07 (fall-back reopens the previous date)                                                                                                                                             |
+| `Pacific/Apia`                                                                     | 2011-12-30 (deleted day)                                                                                                                                                                     |
+| `Asia/Manila`, `Pacific/Guam`, `Pacific/Saipan`, `Pacific/Kosrae`, `Pacific/Palau` | 1844-12-31 (deleted day crossing the date line, before the polyfill's 1847-01-01 transition search floor; `dateLineCrossingTimeZones` in `src/test/timeZoneMatrix.ts`, workaround `zoned.E`) |
 
 - **When a transition opens a new bucket.** Hours: when the clock lands on an hour boundary or the label jumps — New York's repeated 01:00 is its own hour, so a fall-back day has 25 hour buckets. Day and larger: only when the local label changes — Havana's repeated midnight on 2024-11-03 stays one 25-hour day (matching `hoursInDay`), while Goose_Bay's fall-back into 6 November is its own 59-minute bucket because the date changed.
 

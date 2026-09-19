@@ -186,6 +186,34 @@ describe("intervalCountDate", () => {
     },
   );
 
+  // tc39/proposal-temporal#3329: far-year month 13 of the Coptic family (5 days in a common year).
+  // Chromium 153 native Temporal: coptic 12420 (ethiopic 12696, ethioaa 18196) month 12 ends
+  // +012704-11-25, month 13 is +012704-11-26..30, and the next year's month 1 starts +012704-12-01.
+  it.each`
+    start              | end                | calendar      | unit       | expected | reason
+    ${"+012704-11-24"} | ${"+012704-12-05"} | ${"coptic"}   | ${"month"} | ${3}     | ${"months 12, 13 and the next year's 1"}
+    ${"+012704-11-26"} | ${"+012704-12-01"} | ${"coptic"}   | ${"month"} | ${1}     | ${"exactly the 5 days of month 13"}
+    ${"+012704-11-25"} | ${"+012704-11-27"} | ${"coptic"}   | ${"month"} | ${2}     | ${"the last day of month 12 into month 13"}
+    ${"+012704-11-24"} | ${"+012704-12-05"} | ${"coptic"}   | ${"year"}  | ${2}     | ${"years 12420 and 12421"}
+    ${"+012704-11-24"} | ${"+012704-12-05"} | ${"ethiopic"} | ${"month"} | ${3}     | ${"months 12, 13 and the next year's 1"}
+    ${"+012704-11-26"} | ${"+012704-12-01"} | ${"ethiopic"} | ${"month"} | ${1}     | ${"exactly the 5 days of month 13"}
+    ${"+012704-11-24"} | ${"+012704-12-05"} | ${"ethiopic"} | ${"year"}  | ${2}     | ${"years 12696 and 12697"}
+    ${"+012704-11-24"} | ${"+012704-12-05"} | ${"ethioaa"}  | ${"month"} | ${3}     | ${"months 12, 13 and the next year's 1"}
+    ${"+012704-11-26"} | ${"+012704-12-01"} | ${"ethioaa"}  | ${"month"} | ${1}     | ${"exactly the 5 days of month 13"}
+    ${"+012704-11-24"} | ${"+012704-12-05"} | ${"ethioaa"}  | ${"year"}  | ${2}     | ${"years 18196 and 18197"}
+  `(
+    "counts $expected $unit boundaries from $start to $end in $calendar ($reason)",
+    ({ start, end, calendar, unit, expected }) => {
+      expect(
+        intervalCountDate(
+          `${start}[u-ca=${calendar}]`,
+          `${end}[u-ca=${calendar}]`,
+          unit,
+        ),
+      ).toBe(expected);
+    },
+  );
+
   // Native Temporal (Chromium 153) until throws "Mismatched calendars." for each pair.
   it.each`
     start                          | end                           | reason

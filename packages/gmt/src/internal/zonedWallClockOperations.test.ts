@@ -1,4 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { dateLineCrossingTimeZones } from "../test/timeZoneMatrix";
 import {
   addToZoned,
   plainToZoned,
@@ -7,6 +8,7 @@ import {
   withZonedFields,
   zonedHoursInDay,
   zonedNextTransition,
+  zonedPreviousTransition,
   zonedStartOfDay,
   zonedWithPlainTime,
 } from "./zonedWallClockOperations";
@@ -336,4 +338,212 @@ describe("roundZonedDateTime to a day, every rounding mode", () => {
       ).toBe(expected);
     },
   );
+});
+
+describe("the 1844 date-line crossings (zoned.E)", () => {
+  // Each zone jumps a whole day forward at local 1844-12-31T00:00 in its LMT offset, so
+  // 1844-12-31 never happened and 1845-01-01T00:00 in the new offset is the transition itself.
+  // Expected values: Chromium 153 native Temporal. The polyfill's transition search starts at
+  // 1847-01-01 and misses these (js-temporal/temporal-polyfill#372).
+  const MIN_INSTANT = -MAX_INSTANT;
+  const epochOf = (instant: string) =>
+    Temporal.Instant.from(instant).epochNanoseconds;
+  // The transition built from its exact time: the constructor resolves no wall clock.
+  const crossings = dateLineCrossingTimeZones.map(({ timeZone, instant }) => ({
+    timeZone,
+    epoch: epochOf(instant),
+    crossing: at(epochOf(instant), timeZone).toString(),
+  }));
+
+  it.each(crossings)(
+    "confirms the $timeZone crossing oracle reads $crossing",
+    ({ timeZone, epoch }) => {
+      expect(at(epoch, timeZone).toPlainDateTime().toString()).toBe(
+        "1845-01-01T00:00:00",
+      );
+      expect(
+        at(epoch - 1n, timeZone)
+          .toPlainDateTime()
+          .toString(),
+      ).toBe("1844-12-30T23:59:59.999999999");
+    },
+  );
+
+  describe("zonedNextTransition", () => {
+    it.each(crossings)(
+      "finds $crossing in $timeZone from 1800, from 1ns before it and from the minimum instant",
+      ({ timeZone, epoch, crossing }) => {
+        for (const from of [
+          epochOf("1800-01-01T00:00:00Z"),
+          epoch - 1n,
+          MIN_INSTANT,
+        ]) {
+          expect(zonedNextTransition(at(from, timeZone))?.toString()).toBe(
+            crossing,
+          );
+        }
+      },
+    );
+
+    it.each`
+      from                      | timeZone              | expected                                         | reason
+      ${"1844-12-31T15:56:08Z"} | ${"Asia/Manila"}      | ${"1899-09-06T12:00:00+08:00[Asia/Manila]"}      | ${"from the crossing itself, the polyfill's own answer"}
+      ${"1846-01-01T00:00:00Z"} | ${"Europe/London"}    | ${"1847-12-01T00:01:15+00:00[Europe/London]"}    | ${"pre-1847, no earlier change: the polyfill's answer"}
+      ${"1800-01-01T00:00:00Z"} | ${"America/New_York"} | ${"1883-11-18T12:00:00-05:00[America/New_York]"} | ${"pre-1847, no earlier change: the polyfill's answer"}
+      ${"2026-01-01T00:00:00Z"} | ${"America/New_York"} | ${"2026-03-08T03:00:00-04:00[America/New_York]"} | ${"after the floor: never re-checked"}
+      ${"1800-01-01T00:00:00Z"} | ${"Asia/Tokyo"}       | ${"1888-01-01T00:00:00+09:00[Asia/Tokyo]"}       | ${"pre-1847, first change in 1888"}
+    `(
+      "finds $expected after $from in $timeZone ($reason)",
+      ({ from, timeZone, expected }) => {
+        expect(
+          zonedNextTransition(at(epochOf(from), timeZone))?.toString(),
+        ).toBe(expected);
+      },
+    );
+
+    it.each`
+      from                      | timeZone        | reason
+      ${"2026-01-01T00:00:00Z"} | ${"Asia/Tokyo"} | ${"no change since 1951"}
+      ${"1800-01-01T00:00:00Z"} | ${"UTC"}        | ${"UTC never changes"}
+      ${"1800-01-01T00:00:00Z"} | ${"+10:00"}     | ${"an offset zone never changes"}
+    `(
+      "returns null after $from in $timeZone ($reason)",
+      ({ from, timeZone }) => {
+        expect(zonedNextTransition(at(epochOf(from), timeZone))).toBeNull();
+      },
+    );
+  });
+
+  describe("zonedPreviousTransition", () => {
+    it.each(crossings)(
+      "finds $crossing in $timeZone from 1ns after it, from 1846 and from 1848",
+      ({ timeZone, epoch, crossing }) => {
+        for (const from of [
+          epoch + 1n,
+          epochOf("1846-01-01T00:00:00Z"),
+          epochOf("1848-01-01T00:00:00Z"),
+        ]) {
+          expect(zonedPreviousTransition(at(from, timeZone))?.toString()).toBe(
+            crossing,
+          );
+        }
+      },
+    );
+
+    it.each`
+      from                      | timeZone              | expected                                         | reason
+      ${"1900-01-01T00:00:00Z"} | ${"Asia/Manila"}      | ${"1899-09-06T12:00:00+08:00[Asia/Manila]"}      | ${"a later change the polyfill finds"}
+      ${"1900-01-01T00:00:00Z"} | ${"Pacific/Guam"}     | ${"1845-01-01T00:00:00+09:39[Pacific/Guam]"}     | ${"Guam's next change is in 1901"}
+      ${"1848-01-01T00:00:00Z"} | ${"Europe/London"}    | ${"1847-12-01T00:01:15+00:00[Europe/London]"}    | ${"a change after the floor"}
+      ${"1900-01-01T00:00:00Z"} | ${"America/New_York"} | ${"1883-11-18T12:00:00-05:00[America/New_York]"} | ${"a change after the floor"}
+    `(
+      "finds $expected before $from in $timeZone ($reason)",
+      ({ from, timeZone, expected }) => {
+        expect(
+          zonedPreviousTransition(at(epochOf(from), timeZone))?.toString(),
+        ).toBe(expected);
+      },
+    );
+
+    it.each`
+      from                      | timeZone              | reason
+      ${"1844-06-01T00:00:00Z"} | ${"Asia/Manila"}      | ${"before the crossing, nothing earlier"}
+      ${"1844-12-31T15:56:08Z"} | ${"Asia/Manila"}      | ${"previous is strict: the crossing itself is not before it"}
+      ${"1850-01-01T00:00:00Z"} | ${"America/New_York"} | ${"New York's first change is in 1883"}
+      ${"1900-01-01T00:00:00Z"} | ${"UTC"}              | ${"UTC never changes"}
+      ${"1800-01-01T00:00:00Z"} | ${"+10:00"}           | ${"an offset zone never changes"}
+    `(
+      "returns null before $from in $timeZone ($reason)",
+      ({ from, timeZone }) => {
+        expect(zonedPreviousTransition(at(epochOf(from), timeZone))).toBeNull();
+      },
+    );
+
+    it("returns null at the minimum instant", () => {
+      expect(
+        zonedPreviousTransition(at(MIN_INSTANT, "Asia/Manila")),
+      ).toBeNull();
+    });
+  });
+
+  describe("start of day", () => {
+    it.each(crossings)(
+      "gives 1844-12-30 and 1845-01-01 24 hours each in $timeZone",
+      ({ timeZone, epoch }) => {
+        // 1844-12-30T12:00 in the old offset, and 1845-01-01T12:00 in the new one.
+        expect(zonedHoursInDay(at(epoch - 12n * HOUR, timeZone))).toBe(24);
+        expect(zonedHoursInDay(at(epoch + 12n * HOUR, timeZone))).toBe(24);
+      },
+    );
+
+    it.each(crossings)(
+      "starts the skipped PlainDate 1844-12-31 in $timeZone at $crossing",
+      ({ timeZone, crossing }) => {
+        expect(
+          plainToZoned(
+            Temporal.PlainDate.from("1844-12-31"),
+            timeZone,
+          ).toString(),
+        ).toBe(crossing);
+      },
+    );
+
+    it.each(crossings)(
+      "starts 1845-01-01 in $timeZone at $crossing (zonedStartOfDay, zonedWithPlainTime)",
+      ({ timeZone, epoch, crossing }) => {
+        const noon = at(epoch + 12n * HOUR, timeZone);
+        expect(zonedStartOfDay(noon).toString()).toBe(crossing);
+        expect(zonedWithPlainTime(noon).toString()).toBe(crossing);
+      },
+    );
+
+    it.each(crossings)(
+      "resolves PlainDateTime 1844-12-31T12:00 in $timeZone 24 hours forward, past the skipped day",
+      ({ timeZone, epoch }) => {
+        expect(
+          plainToZoned(
+            Temporal.PlainDateTime.from("1844-12-31T12:00"),
+            timeZone,
+          ).toString(),
+        ).toBe(at(epoch + 12n * HOUR, timeZone).toString());
+      },
+    );
+
+    // 1844-12-30 is 24 hours long, so its noon is an exact half: halfExpand goes up to the next
+    // day's start (the crossing), halfFloor stays; 11:00 rounds down.
+    it.each(crossings)(
+      "rounds 1844-12-30 in $timeZone to a day",
+      ({ timeZone, epoch, crossing }) => {
+        const dayStart = at(epoch - 24n * HOUR, timeZone).toString();
+        expect(
+          roundZonedDateTime(at(epoch - 12n * HOUR, timeZone), {
+            smallestUnit: "day",
+          }).toString(),
+        ).toBe(crossing);
+        expect(
+          roundZonedDateTime(at(epoch - 12n * HOUR, timeZone), {
+            smallestUnit: "day",
+            roundingMode: "halfFloor",
+          }).toString(),
+        ).toBe(dayStart);
+        expect(
+          roundZonedDateTime(at(epoch - 13n * HOUR, timeZone), {
+            smallestUnit: "day",
+          }).toString(),
+        ).toBe(dayStart);
+      },
+    );
+
+    it.each`
+      from                      | timeZone              | expected
+      ${"1846-06-01T12:01:15Z"} | ${"Europe/London"}    | ${24}
+      ${"1847-12-01T12:00:00Z"} | ${"Europe/London"}    | ${23.979166666666668}
+      ${"1883-11-18T17:00:00Z"} | ${"America/New_York"} | ${24.066111111111113}
+    `(
+      "measures the day of $from in $timeZone as $expected hours (control)",
+      ({ from, timeZone, expected }) => {
+        expect(zonedHoursInDay(at(epochOf(from), timeZone))).toBe(expected);
+      },
+    );
+  });
 });

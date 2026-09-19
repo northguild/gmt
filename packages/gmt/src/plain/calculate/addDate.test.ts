@@ -398,6 +398,38 @@ describe("addDate", () => {
       expect(addDate(value, units, { overflow })).toBe(expected);
     },
   );
+
+  // tc39/proposal-temporal#3329: month 13 of the Coptic family is 5 days (6 in a leap year), and a
+  // fixed 8-day search step in fields -> ISO skips it in far years. GMT computes coptic and
+  // ethiopic in ethioaa. Expected values: Chromium 153 native Temporal. Coptic 12420 (ethiopic
+  // 12696, ethioaa 18196) is a common year; its month 12 ends +012704-11-25, month 13 is
+  // +012704-11-26..30, and the next year's month 1 starts +012704-12-01.
+  it.each`
+    value                             | units             | overflow       | expected                          | reason
+    ${"+012704-11-25[u-ca=coptic]"}   | ${{ months: 1 }}  | ${"constrain"} | ${"+012704-11-30[u-ca=coptic]"}   | ${"day 30 of month 12 constrains to month 13's last day, 5"}
+    ${"+012704-11-25[u-ca=coptic]"}   | ${{ months: 1 }}  | ${"reject"}    | ${""}                             | ${"month 13 has no day 30"}
+    ${"+012704-10-27[u-ca=coptic]"}   | ${{ months: 1 }}  | ${"constrain"} | ${"+012704-11-26[u-ca=coptic]"}   | ${"day 1 of month 12 to day 1 of month 13"}
+    ${"+012704-11-26[u-ca=coptic]"}   | ${{ months: 1 }}  | ${"constrain"} | ${"+012704-12-01[u-ca=coptic]"}   | ${"day 1 of month 13 to day 1 of the next year's month 1"}
+    ${"+012704-12-01[u-ca=coptic]"}   | ${{ months: -1 }} | ${"constrain"} | ${"+012704-11-26[u-ca=coptic]"}   | ${"back from the next year's month 1 into month 13"}
+    ${"+012704-11-24[u-ca=coptic]"}   | ${{ months: 2 }}  | ${"constrain"} | ${"+012704-12-29[u-ca=coptic]"}   | ${"month 12 day 29 over month 13 to month 1 day 29"}
+    ${"+012704-11-25[u-ca=ethiopic]"} | ${{ months: 1 }}  | ${"constrain"} | ${"+012704-11-30[u-ca=ethiopic]"} | ${"day 30 of month 12 constrains to month 13's last day, 5"}
+    ${"+012704-11-25[u-ca=ethiopic]"} | ${{ months: 1 }}  | ${"reject"}    | ${""}                             | ${"month 13 has no day 30"}
+    ${"+012704-10-27[u-ca=ethiopic]"} | ${{ months: 1 }}  | ${"constrain"} | ${"+012704-11-26[u-ca=ethiopic]"} | ${"day 1 of month 12 to day 1 of month 13"}
+    ${"+012704-11-26[u-ca=ethiopic]"} | ${{ months: 1 }}  | ${"constrain"} | ${"+012704-12-01[u-ca=ethiopic]"} | ${"day 1 of month 13 to day 1 of the next year's month 1"}
+    ${"+012704-12-01[u-ca=ethiopic]"} | ${{ months: -1 }} | ${"constrain"} | ${"+012704-11-26[u-ca=ethiopic]"} | ${"back from the next year's month 1 into month 13"}
+    ${"+012704-11-24[u-ca=ethiopic]"} | ${{ months: 2 }}  | ${"constrain"} | ${"+012704-12-29[u-ca=ethiopic]"} | ${"month 12 day 29 over month 13 to month 1 day 29"}
+    ${"+012704-11-25[u-ca=ethioaa]"}  | ${{ months: 1 }}  | ${"constrain"} | ${"+012704-11-30[u-ca=ethioaa]"}  | ${"day 30 of month 12 constrains to month 13's last day, 5"}
+    ${"+012704-11-25[u-ca=ethioaa]"}  | ${{ months: 1 }}  | ${"reject"}    | ${""}                             | ${"month 13 has no day 30"}
+    ${"+012704-10-27[u-ca=ethioaa]"}  | ${{ months: 1 }}  | ${"constrain"} | ${"+012704-11-26[u-ca=ethioaa]"}  | ${"day 1 of month 12 to day 1 of month 13"}
+    ${"+012704-11-26[u-ca=ethioaa]"}  | ${{ months: 1 }}  | ${"constrain"} | ${"+012704-12-01[u-ca=ethioaa]"}  | ${"day 1 of month 13 to day 1 of the next year's month 1"}
+    ${"+012704-12-01[u-ca=ethioaa]"}  | ${{ months: -1 }} | ${"constrain"} | ${"+012704-11-26[u-ca=ethioaa]"}  | ${"back from the next year's month 1 into month 13"}
+    ${"+012704-11-24[u-ca=ethioaa]"}  | ${{ months: 2 }}  | ${"constrain"} | ${"+012704-12-29[u-ca=ethioaa]"}  | ${"month 12 day 29 over month 13 to month 1 day 29"}
+  `(
+    "returns $expected for far-year $value + $units with overflow $overflow ($reason)",
+    ({ value, units, overflow, expected }) => {
+      expect(addDate(value, units, { overflow })).toBe(expected);
+    },
+  );
 });
 
 // Strict-shape rule (see coding-standards): the part before the first `[` must be GMT's strict extended date (or

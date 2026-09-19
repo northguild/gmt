@@ -1,6 +1,10 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { floorToZone } from "../../calendar/calculate/floorToZone";
-import { battleTestTimeZones } from "../../test";
+import {
+  battleTestTimeZones,
+  dateLineCrossingAt,
+  dateLineCrossingTimeZones,
+} from "../../test";
 import { endOfZoned } from "./endOfZoned";
 import { startOfZoned } from "./startOfZoned";
 
@@ -348,6 +352,27 @@ describe("startOfZoned at the maximum instant", () => {
           { weekStartsOn },
         ),
       ).toBe("");
+    },
+  );
+});
+
+// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
+// are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
+// 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
+
+describe("startOfZoned across the 1844 date-line crossings (zoned.E)", () => {
+  it.each(dateLineCrossingTimeZones)(
+    "starts the week of 1845-01-02T12:00 in $timeZone on Monday 1844-12-30",
+    (crossing) => {
+      const monday = dateLineCrossingAt(crossing, -24);
+      expect(monday.dayOfWeek).toBe(1);
+      expect(
+        startOfZoned(dateLineCrossingAt(crossing, 36).toString(), "week"),
+      ).toBe(monday.toString());
+      expect(
+        startOfZoned(dateLineCrossingAt(crossing, -12).toString(), "day"),
+      ).toBe(monday.toString());
     },
   );
 });

@@ -1,4 +1,9 @@
-import { battleTestTimeZones, MustTestDstTimeZones } from "../../test";
+import {
+  battleTestTimeZones,
+  dateLineCrossingAt,
+  dateLineCrossingTimeZones,
+  MustTestDstTimeZones,
+} from "../../test";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import { floorToZone } from "./floorToZone";
 
@@ -371,6 +376,32 @@ describe("floorToZone", () => {
   `("returns $expected for plural unit $unit", ({ unit, expected }) => {
     expect(floorToZone("2024-05-15T10:20:30.123Z", unit, "Europe/Berlin")).toBe(
       expected,
+    );
+  });
+});
+
+// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
+// are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
+// 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
+
+describe("floorToZone across the 1844 date-line crossings (zoned.E)", () => {
+  it.each(dateLineCrossingTimeZones)(
+    "floors 1845-01-02T12:00 in $timeZone to Monday 1844-12-30 by week",
+    (crossing) => {
+      expect(
+        floorToZone(
+          dateLineCrossingAt(crossing, 36).toInstant().toString(),
+          "week",
+          crossing.timeZone,
+        ),
+      ).toBe(dateLineCrossingAt(crossing, -24).toInstant().toString());
+    },
+  );
+
+  it("floors Manila's 1845-01-02T12:00 to 1844-12-30T15:56:08Z by week", () => {
+    expect(floorToZone("1845-01-02T03:56:08Z", "week", "Asia/Manila")).toBe(
+      "1844-12-30T15:56:08Z",
     );
   });
 });

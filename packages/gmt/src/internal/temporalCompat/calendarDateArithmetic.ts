@@ -75,6 +75,7 @@ function reachesCorrectedRange(calendarId: string, years: number[]): boolean {
 function untilWorkaroundNeeded(calendarId: string): boolean {
   return (
     isDefectPresent("D1", calendarId) ||
+    isDefectPresent("D10", calendarId) ||
     isDefectPresent("D6", calendarId) ||
     isDefectPresent("D7", calendarId)
   );
@@ -105,7 +106,9 @@ function verifiedPolyfillUntil(
   try {
     result = fieldsOf(one.until(two, { largestUnit }));
   } catch (error) {
-    if (!(error instanceof RangeError) || !untilWorkaroundNeeded(calendarId)) {
+    // Any throw but a RangeError is a polyfill defect, not a spec answer (an assertion from a
+    // #3292 port without the tc39/proposal-temporal#3329 fix): the spec algorithm answers.
+    if (error instanceof RangeError && !untilWorkaroundNeeded(calendarId)) {
       throw error;
     }
     return nonIsoDateUntil(
@@ -256,7 +259,13 @@ export function calendarDateAdd(
   try {
     return date.add(fields, { overflow });
   } catch (error) {
-    if (!(error instanceof RangeError) || !isDefectPresent("D1", calendarId)) {
+    // As in verifiedPolyfillUntil: a throw that is not a RangeError (tc39/proposal-temporal#3329)
+    // always takes the spec algorithm, which throws the RangeError itself for an out-of-range sum.
+    if (
+      error instanceof RangeError &&
+      !isDefectPresent("D1", calendarId) &&
+      !isDefectPresent("D10", calendarId)
+    ) {
       throw error;
     }
     return nonIsoDateAdd(

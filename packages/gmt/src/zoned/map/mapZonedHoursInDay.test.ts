@@ -1,4 +1,8 @@
-import { localNoonBattleCases } from "../../test";
+import {
+  dateLineCrossingAt,
+  dateLineCrossingTimeZones,
+  localNoonBattleCases,
+} from "../../test";
 import { mapZonedHoursInDay } from "./mapZonedHoursInDay";
 
 describe("mapZonedHoursInDay", () => {
@@ -185,4 +189,23 @@ describe("mapZonedHoursInDay at the range limits", () => {
     expect(result[0]).toBe("+275760-09-07T01:00:00-03:00[America/Santiago]");
     expect(result[22]).toBe("+275760-09-07T23:00:00-03:00[America/Santiago]");
   });
+});
+
+// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
+// are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
+// 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
+
+describe("mapZonedHoursInDay across the 1844 date-line crossings (zoned.E)", () => {
+  it.each(dateLineCrossingTimeZones)(
+    "lists the 24 hours of 1844-12-30 in $timeZone",
+    (crossing) => {
+      const hours = mapZonedHoursInDay(
+        dateLineCrossingAt(crossing, -12).toString(),
+      );
+      expect(hours).toHaveLength(24);
+      expect(hours[0]).toBe(dateLineCrossingAt(crossing, -24).toString());
+      expect(hours[23]).toBe(dateLineCrossingAt(crossing, -1).toString());
+    },
+  );
 });

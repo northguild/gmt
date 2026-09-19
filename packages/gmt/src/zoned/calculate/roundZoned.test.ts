@@ -1,5 +1,9 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { battleTestTimeZones } from "../../test";
+import {
+  battleTestTimeZones,
+  dateLineCrossingAt,
+  dateLineCrossingTimeZones,
+} from "../../test";
 import { roundZoned } from "./roundZoned";
 
 const baseInstant = Temporal.Instant.from("2024-06-15T16:34:56.789123456Z");
@@ -597,6 +601,31 @@ describe("roundZoned at the maximum instant", () => {
     "rounds $value to the $smallestUnit giving $expected",
     ({ value, smallestUnit, expected }) => {
       expect(roundZoned(value, { smallestUnit })).toBe(expected);
+    },
+  );
+});
+
+// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
+// are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
+// 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
+
+describe("roundZoned across the 1844 date-line crossings (zoned.E)", () => {
+  // 1844-12-30 is 24 hours long, so its noon is an exact half and halfExpand rounds up to the
+  // next day's start, the crossing; 11:00 rounds down.
+  it.each(dateLineCrossingTimeZones)(
+    "rounds 1844-12-30 in $timeZone to a day",
+    (crossing) => {
+      expect(
+        roundZoned(dateLineCrossingAt(crossing, -12).toString(), {
+          smallestUnit: "day",
+        }),
+      ).toBe(dateLineCrossingAt(crossing, 0).toString());
+      expect(
+        roundZoned(dateLineCrossingAt(crossing, -13).toString(), {
+          smallestUnit: "day",
+        }),
+      ).toBe(dateLineCrossingAt(crossing, -24).toString());
     },
   );
 });

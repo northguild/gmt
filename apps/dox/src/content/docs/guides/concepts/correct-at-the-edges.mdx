@@ -77,7 +77,8 @@ Tests: [startOfZoned](https://github.com/northguild/gmt/blob/main/packages/gmt/s
 In zones ahead
 of UTC — Sydney and Kiritimati among them — GMT returns the spec-correct `ZonedDateTime` for a
 wall-clock value at or near the last representable instant, which the underlying Temporal
-polyfill cannot yet parse that close to the edge. It still rejects a value one nanosecond past
+polyfill release cannot yet parse that close to the edge (fixed on its `main`; see
+[Helping fix Temporal](/upstream/)). It still rejects a value one nanosecond past
 the maximum, and any offset the spec would reject. The same helper resolves America/Santiago's
 last representable day, which opens with a daylight-saving change, to the instant the
 transition actually allows rather than to a midnight that was skipped.

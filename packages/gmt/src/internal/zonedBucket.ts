@@ -8,7 +8,10 @@ import {
   calendarFieldsOf,
   isCalendarArithmeticCompatNeeded,
 } from "./temporalCompat";
-import { zonedNextTransition } from "./zonedWallClockOperations";
+import {
+  zonedNextTransition,
+  zonedPreviousTransition,
+} from "./zonedWallClockOperations";
 
 /**
  * ISO day-of-week a week starts on: 1 = Monday .. 7 = Sunday, as `Temporal`'s `dayOfWeek` reads.
@@ -261,7 +264,7 @@ function transitionAtOrBefore(
       return zoned;
     }
 
-    return zoned.getTimeZoneTransition("previous");
+    return zonedPreviousTransition(zoned);
   } catch {
     return null;
   }

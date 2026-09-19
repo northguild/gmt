@@ -11,14 +11,26 @@ import { Temporal } from "@js-temporal/polyfill";
  */
 
 /** Defect ids from the CORE-6 calendar-correctness spec §1.2. */
-export type DefectId = "D1" | "D2" | "D3" | "D4" | "D5" | "D6" | "D7" | "D8";
+export type DefectId =
+  | "D1"
+  | "D2"
+  | "D3"
+  | "D4"
+  | "D5"
+  | "D6"
+  | "D7"
+  | "D8"
+  | "D10";
 
 /**
- * Zoned range-limit defects worked around in `internal/zonedWallClock*` (upstream issue drafts A, B
- * and D in the CORE-6 polyfill research). Canary-only: no capability probe gates them, because
- * those fallbacks already run only when the polyfill throws or returns an unchecked UTC value.
+ * Zoned defects worked around in `internal/zonedWallClock*`: the range-limit defects (upstream
+ * issue drafts A, B and D in the CORE-6 polyfill research) and zoned.E, the transition search
+ * floored at 1847-01-01 (js-temporal/temporal-polyfill#372). Canary-only: no capability probe
+ * gates them, because those fallbacks already run only when the polyfill throws, returns an
+ * unchecked UTC value, or (zoned.E) is asked about an instant before 1847, where GMT computes the
+ * spec's answer from offsets.
  */
-export type ZonedDefectId = "zoned.A" | "zoned.B" | "zoned.D";
+export type ZonedDefectId = "zoned.A" | "zoned.B" | "zoned.D" | "zoned.E";
 
 /**
  * D9: non-ISO months added and counted one month at a time (`largeMonthSpan.ts`). Canary-only: no
@@ -104,6 +116,30 @@ const d1Repros: Repro[] = extremeDateRows.flatMap(
     },
   ],
 );
+
+/**
+ * D10 (tc39/proposal-temporal#3329): proposal-temporal #3292 gave `calendarToIsoDate` a fixed 8-day
+ * search step, which skips a 5- or 6-day month 13 in far years and trips an assertion. Polyfill
+ * 0.5.1 predates #3292 and passes; these rows catch a js-temporal release that ports #3292 without
+ * the #3329 fix. GMT computes coptic and ethiopic in ethioaa (`calendarSystemIds.ts`), so ethioaa
+ * is the only id probed. Chromium 153 native Temporal: ethioaa 18196 (coptic 12420 + 5776).
+ */
+const d10Repros: Repro[] = [
+  {
+    defect: "D10",
+    calendar: "ethioaa",
+    name: "fieldsFarMonth13",
+    expected: "+012704-11-26",
+    run: () => fieldsToIso("ethioaa", 18196, 13, 1),
+  },
+  {
+    defect: "D10",
+    calendar: "ethioaa",
+    name: "fieldsFarMonth12",
+    expected: "+012704-11-25",
+    run: () => fieldsToIso("ethioaa", 18196, 12, 30),
+  },
+];
 
 function isoOf(date: Temporal.PlainDate): string {
   return date.withCalendar("iso8601").toString();
@@ -511,6 +547,49 @@ const zonedDRepros: Repro[] = [
   ),
 ];
 
+/** Asia/Manila's 1844-12-31 date-line crossing (−15:56:08 → +08:03:52), as Chromium 153 prints it. */
+const MANILA_CROSSING = "1845-01-01T00:00:00+08:04[Asia/Manila]";
+
+/**
+ * zoned.E (`internal/zonedWallClock.ts` defect 3): `GetNamedTimeZoneNextTransition` and
+ * `…PreviousTransition` start their search at `BEFORE_FIRST_DST` = 1847-01-01, so the 1844-12-31
+ * date-line crossing of Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau is never found, and
+ * `GetStartOfDay` for the skipped 1844-12-31 returns the wrong `next`. js-temporal/temporal-polyfill
+ * #372 (tc39/proposal-temporal#3330). Expected values: Chromium 153 native Temporal.
+ * `previousGuam` asks from after the floor, so it also proves the backward search reaches past it.
+ */
+const zonedERepros: Repro[] = [
+  zonedRepro("zoned.E", "pre1847.nextManila", MANILA_CROSSING, () =>
+    Temporal.Instant.from("1800-01-01T00:00:00Z")
+      .toZonedDateTimeISO("Asia/Manila")
+      .getTimeZoneTransition("next"),
+  ),
+  zonedRepro("zoned.E", "pre1847.previousManila", MANILA_CROSSING, () =>
+    Temporal.Instant.from("1846-01-01T00:00:00Z")
+      .toZonedDateTimeISO("Asia/Manila")
+      .getTimeZoneTransition("previous"),
+  ),
+  zonedRepro(
+    "zoned.E",
+    "pre1847.previousGuam",
+    "1845-01-01T00:00:00+09:39[Pacific/Guam]",
+    () =>
+      Temporal.Instant.from("1848-01-01T00:00:00Z")
+        .toZonedDateTimeISO("Pacific/Guam")
+        .getTimeZoneTransition("previous"),
+  ),
+  zonedRepro(
+    "zoned.E",
+    "pre1847.hoursInDayManila",
+    "24",
+    () =>
+      Temporal.ZonedDateTime.from("1844-12-30T12:00[Asia/Manila]").hoursInDay,
+  ),
+  zonedRepro("zoned.E", "pre1847.startOfDayManila", MANILA_CROSSING, () =>
+    Temporal.PlainDate.from("1844-12-31").toZonedDateTime("Asia/Manila"),
+  ),
+];
+
 /** More `Intl.DateTimeFormat#formatToParts` reads than this for 1,200 months is per-month work. */
 const D9_INTL_READ_LIMIT = 100;
 const D9_MONTHS = 1_200;
@@ -596,9 +675,11 @@ export const repros: readonly Repro[] = [
   ...zonedARepros,
   ...zonedBRepros,
   ...zonedDRepros,
+  ...zonedERepros,
   ...d1Repros,
   ...d1ArithmeticRepros,
   d1RelativeToRepro,
+  ...d10Repros,
   ...d6Repros,
   d7Repro,
   d7LeapMonthEndRepro,

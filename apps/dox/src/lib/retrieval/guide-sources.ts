@@ -1,5 +1,6 @@
 /**
- * Every guide file under `src/content/docs/guides/`, loaded through Vite.
+ * Every guide file under `src/content/docs/guides/`, plus every top-level page
+ * directly under `src/content/docs/` (Start here), loaded through Vite.
  *
  * The parsing lives in `guide-source-parse.ts`; this module is only the glob
  * that feeds it. Keeping them apart is load-bearing, not tidiness: the glob is
@@ -19,11 +20,10 @@ export type { GuideSource } from "./guide-source-parse";
 // `import.meta.glob` is resolved statically at build time against *this
 // file's* real path, the same fix `src/pages/llms.txt.ts` already uses for
 // the identical problem.
-const RAW = import.meta.glob("../../content/docs/guides/**/*.{md,mdx}", {
-  query: "?raw",
-  import: "default",
-  eager: true,
-}) as Record<string, string>;
+const RAW = import.meta.glob(
+  ["../../content/docs/guides/**/*.{md,mdx}", "../../content/docs/*.{md,mdx}"],
+  { query: "?raw", import: "default", eager: true },
+) as Record<string, string>;
 
 /**
  * DOX-C1 (#137) — every guide file under `src/content/docs/guides/`, parsed

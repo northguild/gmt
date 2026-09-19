@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main
+  # Refreshes the /upstream/ tracker even on a week with no push — see
+  # scripts/upstream.mjs. workflow_dispatch is the manual "refresh it now" button.
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
 
 # An in-flight deploy should never be cancelled mid-publish (unlike ci.yml's
 # cancel-in-progress: true, which is fine for tests but wrong for deploys).
@@ -40,8 +45,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # The build's generate step refreshes the /upstream/ tracker from GitHub
+      # (scripts/upstream.mjs refresh). It is best-effort: without a token or on a
+      # rate limit it keeps the committed snapshot and never fails the build.
       - name: Build apps/dox (builds @northguild/gmt first)
         run: pnpm --filter "@gmt/dox..." -r --if-present run build
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - uses: cloudflare/wrangler-action@v4
         with:

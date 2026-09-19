@@ -1,4 +1,5 @@
 import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
+import { dateLineCrossingAt, dateLineCrossingTimeZones } from "../../test";
 import { startOfUnix } from "./startOfUnix";
 
 // Epoch values used below, in ISO 8601 UTC:
@@ -245,6 +246,28 @@ describe("startOfUnix with an invalid weekStartsOn", () => {
       expect(
         startOfUnix(1710504000000, unit, { timeZone: "UTC", weekStartsOn }),
       ).toBeNull();
+    },
+  );
+});
+
+// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
+// are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
+// 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
+
+describe("startOfUnix across the 1844 date-line crossings (zoned.E)", () => {
+  it.each(dateLineCrossingTimeZones)(
+    "starts the week of 1845-01-02T12:00 in $timeZone on Monday 1844-12-30",
+    (crossing) => {
+      expect(
+        startOfUnix(
+          dateLineCrossingAt(crossing, 36).epochMilliseconds,
+          "week",
+          {
+            timeZone: crossing.timeZone,
+          },
+        ),
+      ).toBe(dateLineCrossingAt(crossing, -24).epochMilliseconds);
     },
   );
 });

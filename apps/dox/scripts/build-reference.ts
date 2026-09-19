@@ -13,15 +13,7 @@
  * Generated MDX + src/generated/* are gitignored and produced by a prebuild step.
  */
 
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
@@ -32,6 +24,11 @@ import type {
 import { argToValue, parseCallArgs } from "../src/lib/playground-parsers";
 import type { PlaygroundSpec } from "./build-utils/build-utils";
 import * as BU from "./build-utils/build-utils";
+import {
+  hashFiles,
+  syncTree,
+  writeIfChanged,
+} from "./build-utils/generated-files.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(__dirname, "..");
@@ -48,20 +45,33 @@ const GH_BASE = "https://github.com/northguild/gmt/blob/main/packages/gmt/src";
 // Walk
 // ---------------------------------------------------------------------------
 
-function walk(dir: string): string[] {
+/**
+ * Every file under `dir`, recursively, that `keepFile` accepts, skipping any directory
+ * `skipDir` names. The one directory walker the generator's three file lists share.
+ */
+function listFiles(
+  dir: string,
+  keepFile: (name: string) => boolean,
+  skipDir: (name: string) => boolean = () => false,
+): string[] {
   const out: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (SKIP_DIRS.includes(entry.name)) continue;
-      out.push(...walk(full));
-    } else if (entry.isFile()) {
-      if (!entry.name.endsWith(".ts")) continue;
-      if (SKIP_EXTS.some((s) => entry.name.endsWith(s))) continue;
+      if (!skipDir(entry.name)) out.push(...listFiles(full, keepFile, skipDir));
+    } else if (entry.isFile() && keepFile(entry.name)) {
       out.push(full);
     }
   }
   return out;
+}
+
+/** A gmt source file: `.ts`, and not a test or spec file. */
+const isSourceFile = (name: string) =>
+  name.endsWith(".ts") && !SKIP_EXTS.some((s) => name.endsWith(s));
+
+function walk(dir: string): string[] {
+  return listFiles(dir, isSourceFile, (name) => SKIP_DIRS.includes(name));
 }
 
 /**
@@ -1683,75 +1693,62 @@ function buildSidebar(moduleSymbols: Map<string, SymbolEntry[]>): string {
 // Main
 // ---------------------------------------------------------------------------
 
+/**
+ * Content hash of every input, recorded after a successful generation. Unchanged inputs
+ * skip the TypeScript program entirely — a hash, not mtimes, so a checkout, formatter or
+ * `touch` that leaves the bytes alone does not cost a regeneration.
+ */
+const inputsStamp = join(outGen, ".inputs-hash");
+
 function main() {
   const outputs = [
     join(outGen, "gmt-corpus.json"),
     join(outGen, "route-manifest.ts"),
     join(outGen, "corpus.ts"),
     join(outGen, "live-playground-templates.ts"),
+    join(outGen, "sidebar.ts"),
   ];
-  for (const out of outputs) {
-    if (!existsSync(out)) {
-      runGeneration();
-      return;
-    }
-  }
-  const mdxDir = resolve(appRoot, "src", "content", "docs", "reference");
+  const hash = hashFiles(referenceInputs());
   // The MDX tree is gitignored, so a fresh checkout (or a manual `rm -rf`) can
   // leave the generated modules in place while this directory is gone.
-  // `findMdx` would throw ENOENT on the missing dir — treat it as "regenerate".
-  if (!existsSync(mdxDir)) {
-    runGeneration();
+  const upToDate =
+    outputs.every((out) => existsSync(out)) &&
+    existsSync(outMdx) &&
+    findMdx(outMdx).length > 0 &&
+    existsSync(inputsStamp) &&
+    readFileSync(inputsStamp, "utf8") === hash;
+
+  if (upToDate) {
+    console.log("[reference] outputs up-to-date, skipping");
     return;
   }
-  const mdxFiles = findMdx(mdxDir);
-  if (mdxFiles.length === 0) {
-    runGeneration();
-    return;
-  }
+  runGeneration();
+  writeIfChanged(inputsStamp, hash);
+}
 
-  const allInputs = walk(gmtSrc).filter((f) => {
-    const ext = f.endsWith(".ts");
-    const skipTest = SKIP_EXTS.some((s) => f.endsWith(s));
-    const rel = relative(gmtSrc, f);
-    const inSkipDir = rel.split("/").some((part) => SKIP_DIRS.includes(part));
-    return ext && !skipTest && !inSkipDir;
-  });
-
-  // The generator itself is an input: changing how a page is emitted (a new
-  // field kind, say) must invalidate the MDX tree just as changing the gmt
-  // source does, or the edit is silently ignored on an incremental build.
-  allInputs.push(
+/**
+ * Every file whose content can change the generated output: all non-test gmt source
+ * outside `src/test/` (internal modules included — the checker resolves the types they declare), the
+ * `exports` map `publicDeclarations` reads, and the generator itself, so changing how a
+ * page is emitted invalidates the output just as changing the source does.
+ */
+function referenceInputs(): string[] {
+  const source = allSourceFiles(gmtSrc);
+  return [
+    ...source,
+    resolve(gmtSrc, "..", "package.json"),
     fileURLToPath(import.meta.url),
     resolve(appRoot, "scripts", "build-utils", "build-utils.ts"),
     resolve(appRoot, "src", "lib", "playground-parsers.ts"),
-  );
+  ];
+}
 
-  const newestInput = allInputs.reduce((a, b) =>
-    statSync(a).mtime > statSync(b).mtime ? a : b,
-  );
-  const newestOutput = [...outputs, ...mdxFiles].reduce((a, b) =>
-    statSync(a).mtime > statSync(b).mtime ? a : b,
-  );
-
-  if (statSync(newestOutput).mtime <= statSync(newestInput).mtime) {
-    runGeneration();
-    return;
-  }
-  console.log("[reference] outputs up-to-date, skipping");
+function allSourceFiles(dir: string): string[] {
+  return listFiles(dir, isSourceFile, (name) => name === "test");
 }
 
 function findMdx(dir: string): string[] {
-  const out: string[] = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      out.push(...findMdx(full));
-    } else if (entry.isFile() && entry.name.endsWith(".mdx")) {
-      out.push(full);
-    }
-  }
-  return out;
+  return listFiles(dir, (name) => name.endsWith(".mdx"));
 }
 
 export const REFERENCE_COMPILER_OPTIONS: ts.CompilerOptions = {
@@ -1860,23 +1857,22 @@ function runGeneration() {
 
   const usedBy = buildUsedBy(dedupedDocs);
 
-  // Clean stale output (barrel pages, renamed/removed exports)
-  rmSync(outMdx, { recursive: true, force: true });
-  mkdirSync(outMdx, { recursive: true });
+  // Every page this run emits, keyed by its path under `outMdx`. `syncTree` writes only the
+  // ones that changed and deletes the rest (barrel pages, renamed/removed exports), so an
+  // unchanged regeneration leaves the tree — and every watcher on it — alone.
+  const pages = new Map<string, string>();
 
   const moduleSymbols = new Map<string, SymbolEntry[]>();
 
   for (const doc of dedupedDocs) {
     const slug = pageSlug(doc.namespace, doc.module, doc.name);
-    const dir = resolve(outMdx, doc.namespace, doc.module);
-    mkdirSync(dir, { recursive: true });
 
     let mdx: string;
     if (doc.kind === "function") mdx = renderFn(doc, dedupedDocs);
     else if (doc.kind === "type") mdx = renderType(doc, usedBy);
     else mdx = renderRegex(doc);
 
-    writeFileSync(join(dir, `${doc.name}.mdx`), mdx);
+    pages.set(join(doc.namespace, doc.module, `${doc.name}.mdx`), mdx);
 
     // collect for sidebar
     const key = `${doc.namespace}/${doc.module}`;
@@ -1884,15 +1880,11 @@ function runGeneration() {
     moduleSymbols.get(key)!.push({ name: doc.name, slug });
   }
 
-  // DOX-C1 (#137): `outGen` must exist before anything writes into it. This
-  // used to run after the sidebar write below, which only worked because
-  // `outGen` normally already exists from a prior run — a genuinely clean
-  // checkout (no `src/generated/` at all) hit ENOENT here.
-  mkdirSync(outGen, { recursive: true });
+  const pageChanges = syncTree(outMdx, pages);
 
   // Write generated sidebar
   const sidebarMd = buildSidebar(moduleSymbols);
-  writeFileSync(join(outGen, "sidebar.ts"), sidebarMd);
+  writeIfChanged(join(outGen, "sidebar.ts"), sidebarMd);
 
   // Write artifacts
 
@@ -1912,7 +1904,7 @@ function runGeneration() {
     // both do.
     examples: d.kind === "type" ? [] : d.examples,
   }));
-  writeFileSync(
+  writeIfChanged(
     join(outGen, "gmt-corpus.json"),
     JSON.stringify(corpus, null, 2) + "\n",
   );
@@ -1927,7 +1919,7 @@ export const referenceRoutes: RouteManifest = new Set([
 ${routes.map((r) => `  ${JSON.stringify(r)},`).join("\n")}
 ]);
 `;
-  writeFileSync(join(outGen, "route-manifest.ts"), manifestTs);
+  writeIfChanged(join(outGen, "route-manifest.ts"), manifestTs);
 
   // 3. corpus.ts wrapper
   const corpusTs = `// GENERATED FILE — do not edit by hand.
@@ -1937,7 +1929,7 @@ import data from "./gmt-corpus.json";
 
 export const corpus: CorpusEntry[] = data as CorpusEntry[];
 `;
-  writeFileSync(join(outGen, "corpus.ts"), corpusTs);
+  writeIfChanged(join(outGen, "corpus.ts"), corpusTs);
 
   // 4. live playground templates — one template per function.
   const templatesRecord: Record<string, LivePlaygroundTemplate> = {};
@@ -1956,10 +1948,10 @@ export const LIVE_PLAYGROUND_TEMPLATES: Record<string, LivePlaygroundTemplate> =
     2,
   )};
 `;
-  writeFileSync(join(outGen, "live-playground-templates.ts"), templatesTs);
+  writeIfChanged(join(outGen, "live-playground-templates.ts"), templatesTs);
 
   console.log(
-    `[reference] wrote ${allDocs.length} pages, ${routes.length} routes, ${Object.keys(templatesRecord).length} live playground templates`,
+    `[reference] ${allDocs.length} pages (${pageChanges.written} written, ${pageChanges.removed} removed), ${routes.length} routes, ${Object.keys(templatesRecord).length} live playground templates`,
   );
 }
 

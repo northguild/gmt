@@ -1,4 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { dateLineCrossingAt, dateLineCrossingTimeZones } from "../../test";
 import { endOfZoned } from "./endOfZoned";
 
 describe("endOfZoned", () => {
@@ -287,6 +288,30 @@ describe("endOfZoned for an input inside the unit's final second", () => {
           weekStartsOn,
         }),
       ).toBe("");
+    },
+  );
+});
+
+// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
+// are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
+// 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
+
+describe("endOfZoned across the 1844 date-line crossings (zoned.E)", () => {
+  // 1844-12-30 ends 1ns before the crossing; its week (Monday 12-30 to Sunday 01-05, one date
+  // short) ends 1ns before Monday 1845-01-06, five days after the crossing.
+  it.each(dateLineCrossingTimeZones)(
+    "ends 1844-12-30 and its week in $timeZone",
+    (crossing) => {
+      const noon = dateLineCrossingAt(crossing, -12).toString();
+      expect(endOfZoned(noon, "day")).toBe(
+        dateLineCrossingAt(crossing, 0).subtract({ nanoseconds: 1 }).toString(),
+      );
+      expect(endOfZoned(noon, "week")).toBe(
+        dateLineCrossingAt(crossing, 5 * 24)
+          .subtract({ nanoseconds: 1 })
+          .toString(),
+      );
     },
   );
 });

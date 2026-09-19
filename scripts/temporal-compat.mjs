@@ -113,6 +113,18 @@ const WORKAROUNDS = [
     ],
   },
   {
+    defects: ["D10"],
+    title:
+      "D10 — fields → ISO skips a 5–6-day month 13 in far years (tc39/proposal-temporal#3329; ethioaa, so coptic and ethiopic)",
+    trigger:
+      "js-temporal ports tc39 #3292 together with the #3329 fix (0.5.1 predates #3292, so this group passes today: it guards against a port of #3292 alone)",
+    steps: [
+      "Delete the D10 repros in repros.ts, the D10 term of needsFieldSearch in calendarDateFromFields.ts, the D10 terms in calendarDateArithmetic.ts (the catch branch of calendarDateAdd, untilWorkaroundNeeded) and D10 in ARITHMETIC_DEFECTS (capabilities.ts).",
+      "Keep the non-RangeError fallbacks and the far-year month-13 rows in addDate, intervalCountDate and convertDateToCalendar tests: no expected value changes.",
+      `Full wording: ${COMPAT_README} § Removal steps 10.`,
+    ],
+  },
+  {
     defects: ["D9"],
     title:
       "D9 — non-ISO months added and counted one month at a time (heap OOM for in-range amounts; temporalCompat/largeMonthSpan.ts)",
@@ -144,6 +156,18 @@ const WORKAROUNDS = [
     steps: [
       "Delete the defect-2 (transition-less null) fallback described in the header note of internal/zonedWallClock.ts, and the zoned.B repros.",
       "Run internal/zonedWallClock*.test.ts: no expected value changes.",
+    ],
+  },
+  {
+    defects: ["zoned.E"],
+    title:
+      "zoned.E — transition search floored at 1847-01-01 (zonedWallClock.ts defect 3)",
+    trigger:
+      "a js-temporal release containing js-temporal/temporal-polyfill#372 (tc39/proposal-temporal#3330)",
+    steps: [
+      "Delete POLYFILL_TRANSITION_SEARCH_FLOOR, isBeforePolyfillTransitionSearch, missedNextTransition and missedPreviousTransition in internal/zonedWallClock.ts, and their gates: dateOnlyBeforeTransitionSearch there, and needsOwnStartOfDay, plainDateBeforeTransitionSearch and the pre-1847 check in zonedNextTransition in internal/zonedWallClockOperations.ts.",
+      "zonedPreviousTransition becomes the plain polyfill call (or inline it back into zonedBucket.ts). Delete the zoned.E repros and the pre-1847 assumption guard in internal/zonedWallClock.test.ts.",
+      "Run internal/zonedWallClock*.test.ts, internal/zonedBucket.test.ts and the zoned/unix/calendar test files carrying a `zoned.E` describe block: no expected value changes.",
     ],
   },
   {

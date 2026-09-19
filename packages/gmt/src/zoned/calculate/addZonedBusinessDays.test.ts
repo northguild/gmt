@@ -1,5 +1,9 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { battleTestTimeZones } from "../../test";
+import {
+  battleTestTimeZones,
+  dateLineCrossingAt,
+  dateLineCrossingTimeZones,
+} from "../../test";
 import { addZonedBusinessDays } from "./addZonedBusinessDays";
 
 describe("addZonedBusinessDays", () => {
@@ -231,6 +235,29 @@ describe("addZonedBusinessDays", () => {
     "reads the annotations of $value as Temporal does (amount $amount) → $expected",
     ({ value, amount, expected }) => {
       expect(addZonedBusinessDays(value, amount)).toBe(expected);
+    },
+  );
+});
+
+// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
+// are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
+// 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
+
+describe("addZonedBusinessDays across the 1844 date-line crossings (zoned.E)", () => {
+  // From Friday 1844-12-27 noon: 1 business day is Monday 12-30; 2 is Tuesday 12-31, a wall
+  // clock the zone skipped, which "compatible" resolves 24 hours later, to 1845-01-01T12:00.
+  it.each(dateLineCrossingTimeZones)(
+    "adds 1 and 2 business days to Friday 1844-12-27 noon in $timeZone",
+    (crossing) => {
+      const friday = dateLineCrossingAt(crossing, -84);
+      expect(friday.dayOfWeek).toBe(5);
+      expect(addZonedBusinessDays(friday.toString(), 1)).toBe(
+        dateLineCrossingAt(crossing, -12).toString(),
+      );
+      expect(addZonedBusinessDays(friday.toString(), 2)).toBe(
+        dateLineCrossingAt(crossing, 12).toString(),
+      );
     },
   );
 });
