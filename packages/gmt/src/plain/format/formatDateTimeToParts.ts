@@ -12,8 +12,12 @@ import { isValidDateTime } from "../validate";
  *   while the *locale* keeps control of order. See Decision 1 in
  *   `context/roadmap/issues/J.md`.
  * - Each part is `{ type, value }` where `type` can be:
- *   `"era"`, `"year"`, `"month"`, `"day"`, `"weekday"`, `"hour"`,
- *   `"minute"`, `"second"`, `"fractionalSecond"`, `"dayPeriod"`, `"literal"`.
+ *   `"era"`, `"year"`, `"relatedYear"`, `"yearName"`, `"month"`, `"day"`, `"weekday"`,
+ *   `"hour"`, `"minute"`, `"second"`, `"fractionalSecond"`, `"dayPeriod"`, `"literal"`.
+ * - A lunisolar calendar adds two more: `zh-u-ca-chinese` and `ko-u-ca-dangi` emit
+ *   `"relatedYear"` (the Gregorian year the cycle falls in) and `"yearName"` (the sexagenary
+ *   cycle name) in place of, or beside, `"year"`. Code that looks up a `"year"` part must handle
+ *   their absence.
  * - The caller should iterate the array as returned; reassembling in a fixed
  *   order reintroduces exactly the bug `formatToParts` exists to avoid.
  * - With no date/time field and no `dateStyle`/`timeStyle`, year, month, day,
@@ -31,6 +35,10 @@ import { isValidDateTime } from "../validate";
  *   Pass `{ year: "numeric", month: "numeric", day: "numeric" }` to keep that output.
  * - **Compatibility:** before 1.16.0 a `"long"`/`"full"` `timeStyle` added the internal UTC anchor
  *   as a `timeZoneName` part. `formatZonedToParts` on the value at UTC returns those parts.
+ * - `options` null returns `[]`, as ECMA-402's CoerceOptionsToObject rejects it. Any
+ *   other non-object — a string, a number, a boolean — formats with the defaults, as
+ *   `Intl.DateTimeFormat` does: CoerceOptionsToObject calls ToObject on it and the wrapper
+ *   carries no recognised option. Only `null` and `undefined` are special-cased.
  *
  * @param value ISO PlainDateTime string
  * @param locale optional BCP 47 locale identifier (default: runtime default), or a preference list of tags (ECMA-402)

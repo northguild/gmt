@@ -80,7 +80,9 @@ export function formatCalendar(
     // "long"/"full" are outside the type but reachable from JS; their zone
     // name would describe the UTC anchor, not the value. Temporal's
     // PlainDateTime format drops timeZoneName (AdjustDateTimeStyleFormat).
-    const timeStyle = plainTimeStyle(options.timeStyle ?? "short");
+    const timeStyle = plainTimeStyle(
+      options.timeStyle === undefined ? "short" : options.timeStyle,
+    );
 
     // Plain values carry no timezone. UTC is an arbitrary but stable anchor
     // for reusing Intl's part-level formatting — any fixed zone reproduces

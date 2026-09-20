@@ -34,6 +34,10 @@ import { isValidTimeZone } from "../validate";
  * @example getTimeZoneOffset("UTC", "2016-12-31T23:59:60Z".replace(":60", ":59")) // "+00:00" (the clamped instant)
  */
 export function getTimeZoneOffset(timeZone: string, instant: string): string {
+  if (typeof instant !== "string") {
+    return "";
+  }
+
   if (
     !isValidTimeZone(timeZone) ||
     instantLeapSecond.test(instant) ||

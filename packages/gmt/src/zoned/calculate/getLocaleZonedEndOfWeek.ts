@@ -53,7 +53,10 @@ export function getLocaleZonedEndOfWeek(
     return "";
   }
 
-  const fractionalSecondDigits = optionsArg?.fractionalSecondDigits ?? 9;
+  const fractionalSecondDigits =
+    optionsArg?.fractionalSecondDigits === undefined
+      ? 9
+      : optionsArg.fractionalSecondDigits;
 
   if (!isValidZonedDateTime(value)) return "";
 

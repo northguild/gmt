@@ -35,7 +35,10 @@ export function startOfQuarterForZoned(
     return "";
   }
 
-  const fractionalSecondDigits = optionsArg?.fractionalSecondDigits ?? 0;
+  const fractionalSecondDigits =
+    optionsArg?.fractionalSecondDigits === undefined
+      ? 0
+      : optionsArg.fractionalSecondDigits;
 
   try {
     const start = zonedUnitStart(zonedDateTimeFrom(value), "quarter");

@@ -78,7 +78,8 @@ export function normalizeDuration(
   try {
     const duration = Temporal.Duration.from(value);
     return durationRound(duration, {
-      largestUnit: options?.largestUnit ?? "auto",
+      largestUnit:
+        options?.largestUnit === undefined ? "auto" : options.largestUnit,
       smallestUnit: options?.smallestUnit,
       roundingIncrement: options?.roundingIncrement,
       roundingMode: options?.roundingMode,

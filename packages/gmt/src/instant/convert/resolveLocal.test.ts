@@ -222,6 +222,10 @@ describe("resolveLocal", () => {
     expect(resolveLocal("2024-11-03T01:30:00", timeZone)).toBe("");
   });
 
+  // `null` belongs here, not with the defaults: Temporal reads a present option through ToString,
+  // so Chromium 153 answers `zdt.with({ hour: 3 }, { disambiguation: null })` with "RangeError:
+  // Value null out of range for Temporal.ZonedDateTime.prototype.with options property
+  // disambiguation". Only an omitted member takes "compatible".
   it.each`
     disambiguation | description
     ${"fortnight"} | ${"is not a disambiguation value"}
@@ -229,6 +233,7 @@ describe("resolveLocal", () => {
     ${123}         | ${"is a number"}
     ${{}}          | ${"is an object"}
     ${[]}          | ${"is an array"}
+    ${null}        | ${"is explicitly null, a value rather than an omission"}
   `('returns "" when disambiguation $description', ({ disambiguation }) => {
     expect(
       resolveLocal("2024-11-03T01:30:00", "America/New_York", {
@@ -242,7 +247,6 @@ describe("resolveLocal", () => {
     ${undefined}                        | ${"no options object"}
     ${{}}                               | ${"an empty options object"}
     ${{ disambiguation: undefined }}    | ${"an explicitly undefined disambiguation"}
-    ${{ disambiguation: null }}         | ${"an explicitly null disambiguation"}
     ${{ disambiguation: "compatible" }} | ${'an explicit "compatible"'}
   `(
     "falls back to compatible for the ambiguous 2024-11-03T01:30:00 given $description",

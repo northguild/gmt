@@ -67,7 +67,10 @@ export function instantFormatOptions(
     ...options,
     ...DEFAULT_FIELDS,
     ...(defaults === "zoned-date-time"
-      ? { timeZoneName: options.timeZoneName ?? "short" }
+      ? {
+          timeZoneName:
+            options.timeZoneName === undefined ? "short" : options.timeZoneName,
+        }
       : {}),
     timeZone,
   };

@@ -87,7 +87,6 @@ describe("getQuarter", () => {
     ${undefined}                           | ${"no options object"}
     ${{}}                                  | ${"an empty options object"}
     ${{ fiscalYearStartMonth: undefined }} | ${"an explicit undefined"}
-    ${{ fiscalYearStartMonth: null }}      | ${"an explicit null"}
   `("falls back to a January fiscal year for $description", ({ options }) => {
     expect(getQuarter("2024-06-15", options)).toEqual({
       year: 2024,
@@ -95,6 +94,8 @@ describe("getQuarter", () => {
     });
   });
 
+  // `null` belongs here rather than with the defaults: a member that is present is a value to
+  // validate, and `null` is not a month number (context/coding-standards.md § API Contract).
   it.each`
     fiscalYearStartMonth        | description
     ${0}                        | ${"below the first month"}
@@ -104,6 +105,7 @@ describe("getQuarter", () => {
     ${Number.NaN}               | ${"NaN"}
     ${Number.POSITIVE_INFINITY} | ${"infinite"}
     ${"4"}                      | ${"a string"}
+    ${null}                     | ${"explicitly null, a value rather than an omission"}
   `(
     "returns null when fiscalYearStartMonth $fiscalYearStartMonth is $description",
     ({ fiscalYearStartMonth }) => {

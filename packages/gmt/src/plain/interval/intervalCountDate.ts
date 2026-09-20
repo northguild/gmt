@@ -57,7 +57,7 @@ function startOfUnitIfRepresentable(
  * @example intervalCountDate("2024-01-01", "2024-01-03", "day") // 2
  * @example intervalCountDate("2024-01-15", "2024-03-10", "month") // 3
  * @example intervalCountDate("2024-01-15", "2024-01-15", "month") // 0 (zero-length: holds no instant)
- *  * @example intervalCountDate("2024-01-01", "2024-01-10", "hour") // null
+ * @example intervalCountDate("2024-01-01", "2024-01-10", "hour") // null
  * @example intervalCountDate("invalid", "2024-01-10", "day") // null
  * @example intervalCountDate("2023-09-16[u-ca=hebrew]", "2024-10-03[u-ca=hebrew]", "month") // 13 (Hebrew leap year, measured in Hebrew)
  * @example intervalCountDate("2024-10-03[u-ca=hebrew]", "2024-11-03", "month") // null (different calendars)

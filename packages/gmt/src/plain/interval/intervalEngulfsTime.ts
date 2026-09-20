@@ -12,8 +12,11 @@ import { isValidTime } from "../validate";
  * - B must also overlap A, so an empty B (`bStart === bEnd`) counts only strictly inside A, never
  *   at an edge (CORE-6's `clampInterval` clamps it away there).
  * - Equivalent to 4-argument `intervalContainsTime(aStart, aEnd, bStart, bEnd)`.
- * - PlainTime has no day rollover: an interval never wraps past midnight, and because `end` is
- *   excluded no interval holds `23:59:59.999999999` as its end.
+ * - PlainTime has no day rollover: an interval never wraps past midnight. And because `end` is
+ *   excluded, no interval *contains* `23:59:59.999999999` — containing it would need an `end`
+ *   greater than it, and no PlainTime is. An interval may still *have* it as its `end`:
+ *   `intervalContainsTime("09:00:00", "23:59:59.999999999", "23:00:00")` is `true`, while
+ *   `intervalContainsTime("09:00:00", "23:59:59.999999999", "23:59:59.999999999")` is `false`.
  * - Uses `Temporal.PlainTime.compare` for comparison.
  * - Returns `false` if either interval is invalid (`start > end`).
  * - Returns `false` on invalid input (wrong type, malformed strings).

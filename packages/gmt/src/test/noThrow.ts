@@ -65,7 +65,14 @@ export type NoThrowCase = {
   calls: GarbageCall[];
 };
 
-/** The garbage values each argument position is replaced with, in turn. */
+/**
+ * The garbage values each argument position is replaced with, in turn.
+ *
+ * The last three are hostile to string coercion: `ToString` on them throws (a throwing
+ * `toString`, an object with no `Object.prototype` to fall back to, and a symbol, which
+ * `ToString` rejects outright per ECMA-262 §7.1.17). A guard that coerces before it validates
+ * turns invalid input into a thrown `TypeError` instead of the sentinel.
+ */
 const GARBAGE: [string, unknown][] = [
   ["null", null],
   ["undefined", undefined],
@@ -75,6 +82,16 @@ const GARBAGE: [string, unknown][] = [
   ["[]", []],
   ["{}", {}],
   ["NaN", Number.NaN],
+  [
+    "{ toString() { throw } }",
+    {
+      toString() {
+        throw new Error("hostile toString");
+      },
+    },
+  ],
+  ["Object.create(null)", Object.create(null) as unknown],
+  ["Symbol()", Symbol("hostile")],
 ];
 
 const SOURCE_ROOT = path.resolve(import.meta.dirname, "..");
@@ -178,6 +195,8 @@ type Signature = {
   arity: number;
   required: boolean[];
   names: string[];
+  /** The type annotation of each parameter, with any default value stripped. */
+  types: string[];
 };
 
 /** Whether the function body starts at `rest[end]`: a `{` after a complete type, or `=>`. */
@@ -221,7 +240,117 @@ function readSignature(entry: CorpusEntry): Signature {
         !/^\w+\?/.test(param) && splitTopLevel(param, "=").length === 1,
     ),
     names: params.map((param) => /^\w+/.exec(param)?.[0] ?? ""),
+    types: params.map((param) => {
+      const annotation = splitTopLevel(param, "=")[0] ?? "";
+      const colonAt = annotation.indexOf(":");
+      return colonAt < 0 ? "" : annotation.slice(colonAt + 1).trim();
+    }),
   };
+}
+
+/**
+ * The body of every named object type in the source tree, keyed by name. An interface's `extends`
+ * clause is inlined as an intersection, so one lookup yields the whole member set.
+ */
+function namedObjectTypes(): Map<string, string> {
+  const bodies = new Map<string, string>();
+  const files = readdirSync(SOURCE_ROOT, {
+    recursive: true,
+    encoding: "utf8",
+  }).filter((file) => file.endsWith(".ts") && !file.endsWith(".test.ts"));
+  for (const file of files) {
+    const source = readFileSync(path.join(SOURCE_ROOT, file), "utf8");
+    for (const match of source.matchAll(
+      /^(?:export )?interface (\w+)(?:<[^{]*?>)?(?:\s+extends\s+([^{]+?))?\s*\{/gm,
+    )) {
+      const open = match.index + match[0].length - 1;
+      const body = source.slice(open, closeBracket(source, open));
+      bodies.set(match[1], match[2] ? `${match[2].trim()} & ${body}` : body);
+    }
+    for (const match of source.matchAll(
+      /^(?:export )?type (\w+)(?:<[^=]*>)? =/gm,
+    )) {
+      const start = match.index + match[0].length;
+      bodies.set(match[1], splitTopLevel(source.slice(start), ";")[0] ?? "");
+    }
+  }
+  return bodies;
+}
+
+let namedObjectTypeCache: Map<string, string> | null = null;
+
+/**
+ * The option members `Intl.DateTimeFormat` reads, which no GMT source file declares.
+ *
+ * ECMA-402 CreateDateTimeFormat: `localeMatcher`, `calendar`, `numberingSystem`, `hour12` and
+ * `hourCycle` are read first, then `timeZone`, then each component of Table 16 (`weekday` through
+ * `timeZoneName`), then `formatMatcher`, `dateStyle` and `timeStyle`.
+ */
+const INTL_DATE_TIME_FORMAT_MEMBERS = [
+  "localeMatcher",
+  "calendar",
+  "numberingSystem",
+  "hour12",
+  "hourCycle",
+  "timeZone",
+  "weekday",
+  "era",
+  "year",
+  "month",
+  "day",
+  "dayPeriod",
+  "hour",
+  "minute",
+  "second",
+  "fractionalSecondDigits",
+  "timeZoneName",
+  "formatMatcher",
+  "dateStyle",
+  "timeStyle",
+];
+
+/** Comments carry `;`, `{` and member-shaped text, so they are removed before a type is read. */
+function withoutComments(type: string): string {
+  return type.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/\/\/[^\n]*/g, " ");
+}
+
+/**
+ * The member names of an options type: the keys a caller may documentably set. Object literals,
+ * named aliases, interfaces, intersections and unions all resolve to the union of their members.
+ */
+export function optionMembers(
+  type: string,
+  seen: Set<string> = new Set(),
+): string[] {
+  let text = withoutComments(type).replace(/\s+/g, " ").trim();
+  while (text.startsWith("(") && closeBracket(text, 0) === text.length) {
+    text = text.slice(1, -1).trim();
+  }
+  if (text === "" || text === "undefined" || text === "null") return [];
+  const parts = splitTopLevel(text, "&").flatMap((part) =>
+    splitTopLevel(part, "|"),
+  );
+  if (parts.length > 1) {
+    return [...new Set(parts.flatMap((part) => optionMembers(part, seen)))];
+  }
+  if (text.startsWith("{")) {
+    return splitTopLevel(text.slice(1, -1), ";")
+      .map((member) => /^(?:readonly )?([A-Za-z_$][\w$]*)\??\s*:/.exec(member))
+      .filter((match) => match !== null)
+      .map((match) => match[1]);
+  }
+  if (text === "Intl.DateTimeFormatOptions") {
+    return [...INTL_DATE_TIME_FORMAT_MEMBERS];
+  }
+  const base = text.replace(/<.*>$/, "");
+  if (seen.has(base)) return [];
+  seen.add(base);
+  namedObjectTypeCache ??= namedObjectTypes();
+  const body = namedObjectTypeCache.get(base);
+  if (body === undefined) {
+    throw new Error(`noThrow: unresolved options type "${text}"`);
+  }
+  return optionMembers(body, seen);
 }
 
 /**
@@ -332,6 +461,8 @@ export type OptionsCase = {
   position: number;
   sentinel: unknown;
   readsClock: boolean;
+  /** Every member the options type documents, from the function's own source signature. */
+  members: string[];
 };
 
 /** Every public function with a parameter named `options` (or `optionsArg`), across all namespaces. */
@@ -342,7 +473,7 @@ export function optionsCases(): OptionsCase[] {
   for (const entry of loadCorpus()) {
     if (seen.has(entry.name)) continue;
     seen.add(entry.name);
-    const { declared, names } = readSignature(entry);
+    const { declared, names, types } = readSignature(entry);
     const position = names.findIndex((name) => /^options(Arg)?$/.test(name));
     if (position < 0) continue;
     const sentinel = sentinelOf(declared);
@@ -375,6 +506,7 @@ export function optionsCases(): OptionsCase[] {
       position,
       sentinel: sentinel.value,
       readsClock: entry.module === "get",
+      members: optionMembers(types[position] ?? ""),
     });
   }
   return cases;
@@ -467,7 +599,6 @@ export function noThrowFailures(testCase: NoThrowCase): string[] {
       failures.push(`${label}: threw ${String(error)}`);
       continue;
     }
-    if (testCase.readsClock) continue;
     const { kinds, nullable } = testCase.declared;
     const typed =
       (nullable && result === null) ||
@@ -478,6 +609,11 @@ export function noThrowFailures(testCase: NoThrowCase): string[] {
       );
       continue;
     }
+    // `readsClock` only exempts the call from the sentinel comparison below — its result
+    // is the current moment, so it can never equal a fixed sentinel. The declared-type
+    // assertion above still applies: a `get/` reader that reads the clock must still
+    // return its declared type, never throw, and never silently drift into `unknown`.
+    if (testCase.readsClock) continue;
     const sentinel = sentinelOf(testCase.declared);
     if (
       missingRequired &&

@@ -30,8 +30,14 @@ export function isBetweenUtc(
     return false;
   }
 
-  const inclusiveStart = options?.inclusiveStart ?? true;
-  const inclusiveEnd = options?.inclusiveEnd ?? true;
+  // Only an omitted flag takes the `true` default. An explicit `null` is a value, and every
+  // reading of it gives `false`: ECMA-402 reads a boolean option through ToBoolean (null → false),
+  // and the house rule rejects an invalid member outright — neither yields `true`. So `null`
+  // behaves here exactly as `0` and `""` already do.
+  const inclusiveStart =
+    options?.inclusiveStart === undefined ? true : options.inclusiveStart;
+  const inclusiveEnd =
+    options?.inclusiveEnd === undefined ? true : options.inclusiveEnd;
 
   if (!isValidUtc(value) || !isValidUtc(start) || !isValidUtc(end)) {
     return false;

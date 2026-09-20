@@ -137,6 +137,7 @@ describe("toExcelSerial", () => {
     ${1904}   | ${"number, not the string literal"}
     ${""}     | ${"empty string"}
     ${true}   | ${"boolean"}
+    ${null}   | ${"explicitly null, a value to validate rather than an omission"}
   `("returns null when system $system is invalid ($reason)", ({ system }) => {
     expect(
       toExcelSerial("2024-03-10T12:00:00Z", {
@@ -150,7 +151,6 @@ describe("toExcelSerial", () => {
     ${undefined}             | ${"no options argument"}
     ${{}}                    | ${"empty options object"}
     ${{ system: undefined }} | ${"system explicitly undefined"}
-    ${{ system: null }}      | ${"system explicitly null"}
   `(
     "falls back to the 1900 system when options is $options ($reason)",
     ({ options }) => {

@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { resolveDateTimeUnit } from "../../internal";
+import { durationTotal, resolveDateTimeUnit } from "../../internal";
 import { isValidDateTimeUnit } from "../validate";
 import { isValidDateTimeInterval } from "./validate";
 
@@ -53,7 +53,7 @@ export function intervalLengthDateTime(
 
     // total() gives the exact elapsed length, unlike intervalCountDateTime's boundary-crossing
     // count — 23:59 -> 00:01 is 2 day boundaries via intervalCountDateTime but ~0.0014 days here.
-    return duration.total({ unit: resolvedUnit, relativeTo: startVal });
+    return durationTotal(duration, resolvedUnit, startVal);
   } catch {
     return null;
   }

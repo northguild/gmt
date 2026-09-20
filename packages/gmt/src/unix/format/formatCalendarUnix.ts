@@ -89,7 +89,7 @@ export function formatCalendarUnix(
       reference,
       timeZone,
       locale,
-      options.timeStyle ?? "short",
+      options.timeStyle === undefined ? "short" : options.timeStyle,
     );
   } catch {
     return "";

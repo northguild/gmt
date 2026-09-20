@@ -53,9 +53,9 @@ export function formatRelativeDuration(
   const absSeconds = Math.abs(diff.total("second"));
 
   const unit =
-    options.largestUnit ??
-    AUTO_UNITS.find((t) => absSeconds < t.maxSeconds)?.unit ??
-    "year";
+    options.largestUnit === undefined
+      ? (AUTO_UNITS.find((t) => absSeconds < t.maxSeconds)?.unit ?? "year")
+      : options.largestUnit;
 
   let amount: number;
   try {
@@ -70,8 +70,8 @@ export function formatRelativeDuration(
 
   return normalizeDateTime(
     new Intl.RelativeTimeFormat(locale, {
-      numeric: options.numeric ?? "auto",
-      style: options.style ?? "long",
+      numeric: options.numeric === undefined ? "auto" : options.numeric,
+      style: options.style === undefined ? "long" : options.style,
     }).format(amount, unit),
   );
 }

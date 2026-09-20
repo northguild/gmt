@@ -546,7 +546,10 @@ function stringEpochAtEdge(
     return startOfDayEpochNanoseconds(timeZone, wall.toPlainDate());
   }
 
-  const disambiguation = options?.disambiguation ?? "compatible";
+  const disambiguation =
+    options?.disambiguation === undefined
+      ? "compatible"
+      : options.disambiguation;
   if (!UTC_OFFSET.test(item)) {
     return epochNanosecondsFor(timeZone, wall, disambiguation);
   }
@@ -568,7 +571,7 @@ function stringEpochAtEdge(
     wall,
     offset,
     disambiguation,
-    options?.offset ?? "reject",
+    options?.offset === undefined ? "reject" : options.offset,
     !UTC_OFFSET_WITH_SECONDS.test(item),
   );
 }
@@ -632,8 +635,10 @@ function fromBagAtEdge(
     timeZone,
     wall,
     offset,
-    options?.disambiguation ?? "compatible",
-    options?.offset ?? "reject",
+    options?.disambiguation === undefined
+      ? "compatible"
+      : options.disambiguation,
+    options?.offset === undefined ? "reject" : options.offset,
     false,
   );
   return new Temporal.ZonedDateTime(epoch, timeZone, wall.calendarId);

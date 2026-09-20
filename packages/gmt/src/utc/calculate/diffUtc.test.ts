@@ -229,3 +229,25 @@ describe("diffUtc with a non-object options argument", () => {
     ).toBe(expected);
   });
 });
+
+// The result is a JavaScript number, so a nanosecond count past about 104 days
+// (Number.MAX_SAFE_INTEGER / 86_400_000_000_000 = 104.2499...) stops being exact. Pinned so the
+// JSDoc's "use spanNs / toNanoseconds for an exact count" stays true.
+describe("diffUtc nanosecond precision past Number.MAX_SAFE_INTEGER", () => {
+  it("is exact for a 104-day span", () => {
+    expect(
+      diffUtc("2024-01-01T00:00:00Z", "2024-04-14T00:00:00Z", "nanoseconds"),
+    ).toBe(8_985_600_000_000_000);
+  });
+
+  it("loses the odd nanosecond past 104 days", () => {
+    // The exact difference is 9072000000000001ns; a double cannot hold it.
+    expect(
+      diffUtc(
+        "2024-01-01T00:00:00Z",
+        "2024-04-15T00:00:00.000000001Z",
+        "nanoseconds",
+      ),
+    ).toBe(9_072_000_000_000_000);
+  });
+});

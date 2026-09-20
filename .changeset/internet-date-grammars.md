@@ -26,10 +26,17 @@ parseHttp("Sun Nov  6 08:49:37 1994"); // "1994-11-06T08:49:37Z"
 
 **A day name that contradicts the date is rejected.** RFC 5322 §3.3 requires the day of week to match the date. Both parsers ignored it, so `"Sat, 15 Mar 2024"` parsed as a Friday. They now return `""`.
 
+`parseHttp` applies the rule to **all three** HTTP-date forms, `asctime-date` included. That form writes the day name with no comma after it, so it is the one most likely to be read as decoration — it is not. 6 November 1994 was a Sunday, so all three of these return `""`, and only the Sunday spellings parse:
+
 ```typescript
 parseRfc2822("Sat, 15 Mar 2024 14:30:00 -0400"); // ""
-parseHttp("Sat, 15 Mar 2024 14:30:00 GMT"); // ""
+parseHttp("Sat, 15 Mar 2024 14:30:00 GMT"); // "" — IMF-fixdate
+parseHttp("Monday, 06-Nov-94 08:49:37 GMT"); // "" — rfc850-date
+parseHttp("Mon Nov  6 08:49:37 1994"); // "" — asctime-date
+parseHttp("Sun Nov  6 08:49:37 1994"); // "1994-11-06T08:49:37Z"
 ```
+
+Accepting a mismatch would mean choosing which of the two fields to believe, and RFC 9110 gives no rule for that. Rejecting is the only reading that never invents a date.
 
 Compatibility: remove the day name. The date alone then decides the result. For `parseHttp`, parse the string as RFC 5322 and convert it to UTC.
 

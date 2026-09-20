@@ -167,7 +167,9 @@ export function startOrEndOfUtc(
     // An end is next start − 1 ns, so it defaults to nanosecond precision: fewer digits would
     // print an earlier instant than the end (Calendar & zone semantics §3).
     const fractionalDigits = isEnd
-      ? (fractionalSecondDigits ?? 9)
+      ? fractionalSecondDigits === undefined
+        ? 9
+        : fractionalSecondDigits
       : defaultFractionalDigits(resolvedUnit, fractionalSecondDigits);
 
     return result

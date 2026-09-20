@@ -20,6 +20,11 @@ import { isValidUtc } from "../validate/isValidUtc";
  *   (ValidateTemporalUnitValue with ~time~), because an instant has no calendar or zone to define a
  *   day. Round a zoned value with `roundZoned` for a day boundary.
  * - Wraps all Temporal calls in try-catch; returns "" on any error.
+ * - Output precision follows `smallestUnit`: no fractional seconds for "second" and coarser,
+ *   3 digits for "millisecond", 6 for "microsecond" and 9 for "nanosecond", so the result never
+ *   hides the precision the unit asked for.
+ * - `fractionalSecondDigits` overrides that count outright, coarser or finer than the unit; an
+ *   invalid value returns "".
  *
  * @param value ISO UTC datetime string
  * @param options Rounding options: smallestUnit, optional roundingIncrement, roundingMode, fractionalSecondDigits
@@ -29,6 +34,8 @@ import { isValidUtc } from "../validate/isValidUtc";
  * @example roundUtc("2024-06-15T12:34:56Z", { smallestUnit: "minute", roundingIncrement: 15 }) // "2024-06-15T12:30:00Z"
  * @example roundUtc("2024-06-15T12:34:56Z", { smallestUnit: "second", roundingMode: "floor" }) // "2024-06-15T12:34:56Z"
  * @example roundUtc("2024-06-15T12:34:56Z", { smallestUnit: "hours" }) // "2024-06-15T13:00:00Z" (plural unit name)
+ * @example roundUtc("2024-06-15T12:34:56.123456789Z", { smallestUnit: "microsecond" }) // "2024-06-15T12:34:56.123457Z" (precision follows the unit)
+ * @example roundUtc("2024-06-15T12:34:56.123456789Z", { smallestUnit: "nanosecond", fractionalSecondDigits: 3 }) // "2024-06-15T12:34:56.123Z" (explicit digits win)
  * @example roundUtc("2024-06-15T12:34:56Z", { smallestUnit: "day" as never }) // "" (Instant rounds to time units only)
  * @example roundUtc("invalid", { smallestUnit: "hour" }) // ""
  * @example roundUtc("", { smallestUnit: "hour" }) // ""

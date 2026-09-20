@@ -5,5 +5,8 @@ export {
   calendarDateUntil,
 } from "./calendarDateArithmetic";
 export { calendarDateFromFields } from "./calendarDateFromFields";
-export { isCalendarArithmeticCompatNeeded } from "./capabilities";
+export {
+  isCalendarArithmeticCompatNeeded,
+  isMonthTotalCompatNeeded,
+} from "./capabilities";
 export { calendarFieldsOf } from "./calendarFields";

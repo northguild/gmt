@@ -56,7 +56,10 @@ export function resolveLocal(
     return "";
   }
 
-  const disambiguation = optionsArg?.disambiguation ?? "compatible";
+  const disambiguation =
+    optionsArg?.disambiguation === undefined
+      ? "compatible"
+      : optionsArg.disambiguation;
 
   if (
     !isValidDateTime(localDateTime) ||

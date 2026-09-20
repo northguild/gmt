@@ -50,6 +50,16 @@ export function isDefectPresent(defect: DefectId, calendar: string): boolean {
   return present;
 }
 
+/**
+ * True when this runtime's `Duration#total({ unit: "month" })` divides the leftover by the wrong
+ * month (defect D11). Only a `relativeTo` on the 29th, 30th or 31st can reach it, because only
+ * there does adding a month constrain the day. ISO-only: the non-ISO calendars already take the
+ * spec path through `isCalendarArithmeticCompatNeeded`.
+ */
+export function isMonthTotalCompatNeeded(): boolean {
+  return isDefectPresent("D11", "iso8601");
+}
+
 /** Defects that make the runtime's calendar arithmetic or reads differ from the spec. */
 const ARITHMETIC_DEFECTS: readonly DefectId[] = [
   "D1",

@@ -19,6 +19,12 @@ export type LocaleNameStyle = "long" | "short" | "narrow";
  *   locale; partial-ICU runtimes fall back to English).
  * - Restricted to the Gregorian calendar; non-Gregorian calendar variants
  *   are out of scope for this function.
+ * - **A `-u-ca-` subtag in `locale` is ignored.** Both lookups pass `calendar: "gregory"` in the
+ *   options bag, and ECMA-402's `ResolveLocale` ranks an options value above the locale
+ *   extension, so ``getLocaleMonthNames("en-US-u-ca-hebrew")`` returns the same
+ *   twelve Gregorian month names as ``getLocaleMonthNames("en-US")``. That is deliberate — the function is Gregorian by
+ *   contract — but it means the tag is accepted and overridden, not rejected. For another
+ *   calendar's names, format a date in it: `formatDate("2024-03-15", "en-US-u-ca-hebrew", { month: "long" })`.
  * - Returns `[]` if `locale` is not a well-formed BCP 47 tag (ECMA-402 `IsWellFormedLanguageTag`).
  *   A well-formed tag with no matching locale data is not an error: it falls back to the host's
  *   default locale, as ECMA-402 `ResolveLocale` requires.
@@ -30,6 +36,7 @@ export type LocaleNameStyle = "long" | "short" | "narrow";
  * @example getLocaleMonthNames("en-US") // ["January", "February", ... "December"]
  * @example getLocaleMonthNames("de-DE", "short") // ["Jan", "Feb", "Mär", ... "Dez"]
  * @example getLocaleMonthNames("fr-FR", "narrow") // ["J", "F", "M", ... "D"]
+ * @example getLocaleMonthNames("en-US-u-ca-hebrew") // ["January", "February", ... "December"] (the -u-ca- subtag is overridden)
  * @example getLocaleMonthNames("not-a-locale-!!") // []
  * @example getLocaleMonthNames(["fr-FR", "en-US"]) // ["janvier", "février", …, "décembre"]
  */

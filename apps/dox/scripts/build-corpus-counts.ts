@@ -30,6 +30,8 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildGuideChunks } from "../src/lib/retrieval/guide-chunks";
 import { toGuideSource } from "../src/lib/retrieval/guide-source-parse";
+import { gmtVersion } from "../src/generated/versions";
+import { pageExpressionValues } from "../src/lib/page-expression-values";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const APP = resolve(HERE, "..");
@@ -68,7 +70,12 @@ const functionCount = corpusEntries.filter((e) => e.kind === "function").length;
 const guideCount = buildGuideChunks(
   [...guideFiles(GUIDES), ...topLevelFiles(DOCS)]
     .sort()
-    .map((path) => toGuideSource(path, readFileSync(path, "utf8"))),
+    .map((path) =>
+      toGuideSource(path, readFileSync(path, "utf8"), {
+        gmtVersion,
+        values: pageExpressionValues(),
+      }),
+    ),
 ).length;
 
 const next = `// GENERATED FILE — do not edit by hand.

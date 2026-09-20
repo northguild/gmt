@@ -1,5 +1,6 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "@js-temporal/polyfill";
+import { durationTotal } from "../../internal";
 import { formatRelativeDuration } from "../../internal/formatRelativeDuration";
 import type {
   RelativeDateTimeUnit,
@@ -29,7 +30,7 @@ export interface FormatRelativeDateTimeOptions extends RelativeTimeFormatOptions
  * @param options optional: { style, numeric, largestUnit, roundingMethod, reference }
  * @returns the formatted relative-time string, or "" on invalid input
  *
- * @example formatRelativeDateTime("2026-03-17T09:00:00", "en-GB", { style: "long" }) // "in 3 hours"
+ * @example formatRelativeDateTime("2026-03-17T09:00:00", "en-GB", { style: "long", reference: "2026-03-17T06:00:00" }) // "in 3 hours"
  * @example formatRelativeDateTime("2026-01-15T00:00:00", "en-US", { reference: "2026-01-15T10:30:00", roundingMethod: "floor" }) // "11 hours ago" (−10.5 hours floors to −11; the default rounds to 10)
  * @example formatRelativeDateTime("2021-03-15T12:00:00", "en-US", { reference: "2024-03-15T12:00:00" }) // "3 years ago"
  * @example formatRelativeDateTime("not-a-date") // ""
@@ -57,7 +58,7 @@ export function formatRelativeDateTime(
     const diff = target.since(reference);
     // month/year are calendrical — relativeTo needs a PlainDate
     return formatRelativeDuration(diff, locale, options, (unit) =>
-      diff.total({ unit, relativeTo: reference.toPlainDate() }),
+      durationTotal(diff, unit, reference.toPlainDate()),
     );
   } catch {
     return "";

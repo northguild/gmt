@@ -32,7 +32,7 @@ if (!isValidTimeZone(tzParam)) throw new Error("Invalid timezone");
 
 For Unix epoch times, pick one canonical unit (milliseconds recommended) and stick to
 it. Convert explicitly when needed with `convertUtcToUnix` / `convertUnixToUtc`, which
-use milliseconds unless you pass `"seconds"`.
+use milliseconds unless you pass `{ epochUnit: "seconds" }`.
 
 ## Routers
 

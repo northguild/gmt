@@ -6,6 +6,7 @@ import { isValidDateTime } from "../validate";
  * Return the start of the quarter for a given ISO datetime.
  *
  * - Returns the first day of the quarter with time set to 00:00:00.
+ * - Resets every time field, including milliseconds, microseconds and nanoseconds.
  * - Q1 returns "01-01T00:00:00", Q2 returns "04-01T00:00:00", etc.
  * - Validates input using isValidDateTime.
  *
@@ -14,6 +15,7 @@ import { isValidDateTime } from "../validate";
  *
  * @example startOfQuarterForDateTime("2024-03-15T12:00:00") // "2024-01-01T00:00:00"
  * @example startOfQuarterForDateTime("2024-06-15T12:00:00") // "2024-04-01T00:00:00"
+ * @example startOfQuarterForDateTime("2024-05-15T12:34:56.789") // "2024-04-01T00:00:00"
  * @example startOfQuarterForDateTime("invalid") // ""
  */
 export function startOfQuarterForDateTime(value: string): string {
@@ -27,7 +29,16 @@ export function startOfQuarterForDateTime(value: string): string {
     const quarterStartMonth = Math.floor((month - 1) / 3) * 3 + 1;
 
     return dateTime
-      .with({ month: quarterStartMonth, day: 1, hour: 0, minute: 0, second: 0 })
+      .with({
+        month: quarterStartMonth,
+        day: 1,
+        hour: 0,
+        minute: 0,
+        second: 0,
+        millisecond: 0,
+        microsecond: 0,
+        nanosecond: 0,
+      })
       .toString();
   } catch {
     return "";

@@ -31,8 +31,12 @@ function isValidUtcNowUnit(unit: string): unit is UtcNowUnit {
  * @example getUtcNowUnit("invalid") // ""
  */
 export function getUtcNowUnit(unit: UtcNowUnit): string {
+  if (typeof unit !== "string") {
+    return "";
+  }
+
   const resolvedUnit = resolveDateTimeUnit(unit);
-  if (!isValidUtcNowUnit(String(resolvedUnit ?? ""))) return "";
+  if (!isValidUtcNowUnit(resolvedUnit)) return "";
 
   try {
     const now = Temporal.Now.instant().toZonedDateTimeISO("UTC");

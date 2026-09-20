@@ -8,15 +8,7 @@ slug: upstream
 ---
 
 import UpstreamTracker from "../../components/UpstreamTracker.astro";
-import {
-  filingsByKind,
-  handledInGmt,
-  totalFilings,
-  unaffectingGmt,
-} from "../../data/upstream-filings";
-
-export const prs = filingsByKind.find((row) => row.label === "pr")?.count ?? 0;
-export const coversAll = handledInGmt + unaffectingGmt === totalFilings;
+import { gmtVersion } from "../../generated/versions";
 
 GMT is built on [Temporal](https://tc39.es/proposal-temporal/), the new JavaScript date and
 time standard. Until browsers and Node ship Temporal natively, GMT runs on the community
@@ -26,10 +18,6 @@ We test GMT against the Temporal standard itself, not against the polyfill. When
 gives a wrong answer, GMT gives you the right one anyway, and we help fix it for everyone: we
 send the fix to the people who maintain the polyfill, and to the Temporal standard's own
 reference code wherever the same bug lives there too.
-
-**So far we have sent {totalFilings} reports and fixes to the Temporal projects, {prs} of them as ready-to-merge
-code changes.{coversAll ? " GMT already gives you the correct answer for every one of them" : ` GMT already gives you the correct answer for ${handledInGmt + unaffectingGmt} of them`}: {handledInGmt} through its own
-built-in fix, and {unaffectingGmt} because the bug is in code GMT doesn't use.**
 
 ## Where each fix stands
 
@@ -47,8 +35,8 @@ simply stops being needed. Your results don't change.
 
 We check this continuously. `pnpm compat` reports which of GMT's workarounds the installed
 polyfill still needs, and `pnpm compat:oracle` compares GMT's results with the Temporal
-built into Chrome, date by date, across every calendar GMT supports. For GMT 1.16.0 it found
-no differences.
+built into Chrome, date by date, across every calendar GMT supports. For GMT {gmtVersion} it
+found no differences.
 
 ## What kind of bugs are these?
 

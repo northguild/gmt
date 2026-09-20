@@ -10,7 +10,7 @@ List every import path explicitly, mark the package side-effect free, and state 
 
 **`sideEffects: false`.** An audit of every source module found only pure constant construction at load time, so bundlers may drop the modules an application does not use. An import cycle through the internal barrel is also gone.
 
-**Every namespace re-exports the polyfill.** `Temporal`, `Intl` and `toTemporalInstant` are available from each namespace subpath, not only from the root and some namespaces, and they are the same objects everywhere. `@northguild/gmt/types` exports the `UnixUnit` type.
+**Every namespace subpath except `types` re-exports the polyfill.** `Temporal`, `Intl` and `toTemporalInstant` are available from each of them, not only from the root and some namespaces, and they are the same objects everywhere. `@northguild/gmt/types` is type-only — it has no runtime exports at all — so the polyfill is not among them; it exports the `UnixUnit` type.
 
 ```typescript
 import { Temporal } from "@northguild/gmt/span";

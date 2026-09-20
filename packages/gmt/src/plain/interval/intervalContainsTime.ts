@@ -12,8 +12,11 @@ import { isValidTime } from "../validate";
  * - 4-arg: the inner interval must start at or after `intervalStart`, end at or before
  *   `intervalEnd`, and overlap the outer interval. An empty inner interval therefore counts only
  *   strictly inside, never at an edge (CORE-6's `clampInterval` clamps it away there).
- * - PlainTime has no day rollover: an interval never wraps past midnight, and because `end` is
- *   excluded no interval holds `23:59:59.999999999` as its end.
+ * - PlainTime has no day rollover: an interval never wraps past midnight. And because `end` is
+ *   excluded, no interval *contains* `23:59:59.999999999` — containing it would need an `end`
+ *   greater than it, and no PlainTime is. An interval may still *have* it as its `end`:
+ *   `intervalContainsTime("09:00:00", "23:59:59.999999999", "23:00:00")` is `true`, while
+ *   `intervalContainsTime("09:00:00", "23:59:59.999999999", "23:59:59.999999999")` is `false`.
  * - Uses `Temporal.PlainTime.compare` for comparison.
  * - Returns `false` if `intervalStart > intervalEnd` (invalid outer interval).
  * - Returns `false` if `innerStart > innerEnd` in 4-arg mode (invalid inner interval).

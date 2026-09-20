@@ -113,7 +113,7 @@ export function formatDuration(
 
   try {
     const duration = Temporal.Duration.from(value);
-    const style = options.style ?? "long";
+    const style = options.style === undefined ? "long" : options.style;
     const includeZero = options.zero ?? false;
 
     const amounts: Record<DurationUnit, number | Intl.StringNumericLiteral> = {

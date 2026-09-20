@@ -98,7 +98,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       # `validate` runs these, but only on pushes to main — by which point a drifting
-      # tracker, a carried bug or a missing changeset has already merged. These four are the
+      # tracker, a carried bug or a missing changeset has already merged. These are the
       # parts of it that are cheap enough to also gate every PR.
       - name: Tracker dependency columns are in sync
         run: node scripts/deps.mjs check
@@ -116,6 +116,12 @@ jobs:
 
       - name: Published figures match the repo
         run: node scripts/stats.mjs check
+
+      - name: Upstream filing tracker matches the committed snapshot
+        run: node scripts/upstream.mjs check
+
+      - name: Public API surface — reachability, examples, doc imports and links
+        run: node scripts/api-surface.mjs check
 
       - name: A changeset covers every changed package
         if: github.event_name == 'pull_request'

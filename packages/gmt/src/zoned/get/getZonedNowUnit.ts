@@ -80,11 +80,12 @@ export function getZonedNowUnit(
   ianaTimezone: string,
   unit: ZonedNowUnit,
 ): string {
+  if (typeof unit !== "string") {
+    return "";
+  }
+
   const resolvedUnit = resolveDateTimeUnit(unit);
-  if (
-    !isValidTimeZone(ianaTimezone) ||
-    !isValidZonedNowUnit(String(resolvedUnit ?? ""))
-  ) {
+  if (!isValidTimeZone(ianaTimezone) || !isValidZonedNowUnit(resolvedUnit)) {
     return "";
   }
 

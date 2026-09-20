@@ -1,5 +1,6 @@
 import type { Temporal } from "@js-temporal/polyfill";
 import {
+  durationTotal,
   parseCalendarDatePairForArithmetic,
   resolveDateTimeUnit,
 } from "../../internal";
@@ -110,7 +111,7 @@ export function intervalLengthDate(
     // total() gives the exact (possibly fractional) length, unlike intervalCountDate's
     // boundary-crossing count — e.g. Jan 31 -> Feb 1 is 1 month boundary via intervalCountDate
     // but only a fraction of a month via total().
-    return duration.total({ unit: resolvedUnit, relativeTo: startVal });
+    return durationTotal(duration, resolvedUnit, startVal);
   } catch {
     return null;
   }

@@ -25,6 +25,11 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   amounts (so adding the record to the start reaches the end). Units smaller than the smallest
  *   listed unit are truncated, as for a single unit. For example, `["years", "days"]` over
  *   1 year 59 days returns `{ years: 1, days: 59 }`.
+ * - Nanosecond precision: the result is a JavaScript `number`, so it stops being exact once it
+ *   passes `Number.MAX_SAFE_INTEGER` — about 104 days in nanoseconds and about 285 years in
+ *   microseconds. `diffDateTime("2024-01-01T00:00:00", "2024-04-15T00:00:00.000000001", "nanoseconds")`
+ *   returns `9072000000000000` rather than `9072000000000001`. For an exact count use the `bigint` APIs: `spanNs`
+ *   in `span/`, or `toNanoseconds` in `precision/`.
  *
  * @param dateTime1 ISO PlainDateTime string for the start
  * @param dateTime2 ISO PlainDateTime string for the end

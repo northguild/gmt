@@ -12,7 +12,10 @@ import { isOptionsArgument } from "../../internal/isObject";
 /**
  * Return the difference between two UTC datetimes measured in the given date-time unit.
  *
- * - Uses Temporal.Instant.until() to calculate the difference.
+ * - Converts both values to a `Temporal.ZonedDateTime` in UTC and uses its `until()`, so calendar
+ *   units (days, weeks, months, years) are measured on the UTC wall clock — which has no DST, so
+ *   every day is 24 hours — while time units are exact elapsed time.
+ *   `Temporal.Instant.until()` is not used: it rejects every calendar `largestUnit`.
  * - Supports single unit or array of units.
  * - Returns null for invalid input.
  *
@@ -28,6 +31,11 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   amounts (so adding the record to the start reaches the end). Units smaller than the smallest
  *   listed unit are truncated, as for a single unit. For example, `["years", "days"]` over
  *   1 year 59 days returns `{ years: 1, days: 59 }`.
+ * - Nanosecond precision: the result is a JavaScript `number`, so it stops being exact once it
+ *   passes `Number.MAX_SAFE_INTEGER` — about 104 days in nanoseconds and about 285 years in
+ *   microseconds. `diffUtc("2024-01-01T00:00:00Z", "2024-04-15T00:00:00.000000001Z", "nanoseconds")`
+ *   returns `9072000000000000` rather than `9072000000000001`. For an exact count use the `bigint` APIs: `spanNs`
+ *   in `span/`, or `toNanoseconds` in `precision/`.
  *
  * @param value1 UTC ISO datetime string (start)
  * @param value2 UTC ISO datetime string (end)

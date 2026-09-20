@@ -8,7 +8,9 @@
  * Vite. `scripts/build-corpus-counts.ts` runs under plain Node and imports the
  * parse half directly.
  */
+import { gmtVersion } from "~/generated/versions";
 import { toGuideSource, type GuideSource } from "./guide-source-parse";
+import { pageExpressionValues } from "../page-expression-values";
 
 export type { GuideSource } from "./guide-source-parse";
 
@@ -30,5 +32,7 @@ const RAW = import.meta.glob(
  * from the build-time glob import above.
  */
 export function loadGuideSources(): GuideSource[] {
-  return Object.entries(RAW).map(([path, raw]) => toGuideSource(path, raw));
+  return Object.entries(RAW).map(([path, raw]) =>
+    toGuideSource(path, raw, { gmtVersion, values: pageExpressionValues() }),
+  );
 }

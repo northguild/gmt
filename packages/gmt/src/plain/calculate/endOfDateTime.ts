@@ -164,7 +164,8 @@ export function endOfDateTime(
     // An end is the next start − 1 ns, so it defaults to nanosecond precision: fewer digits would
     // print an earlier value than the end (Calendar & zone semantics §3).
     return result.toString({
-      fractionalSecondDigits: fractionalSecondDigits ?? 9,
+      fractionalSecondDigits:
+        fractionalSecondDigits === undefined ? 9 : fractionalSecondDigits,
     });
   } catch {
     return "";

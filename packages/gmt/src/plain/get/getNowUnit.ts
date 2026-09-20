@@ -39,8 +39,12 @@ function isValidPlainNowUnit(unit: string): unit is NowUnit {
  * @example getNowUnit("invalid") // ""
  */
 export function getNowUnit(unit: NowUnit): string {
+  if (typeof unit !== "string") {
+    return "";
+  }
+
   const resolvedUnit = resolveDateTimeUnit(unit);
-  if (!isValidPlainNowUnit(String(resolvedUnit ?? ""))) return "";
+  if (!isValidPlainNowUnit(resolvedUnit)) return "";
 
   const timeZone = getSystemTimeZone();
   if (!timeZone) return "";

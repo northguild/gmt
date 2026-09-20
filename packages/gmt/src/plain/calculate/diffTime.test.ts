@@ -199,3 +199,21 @@ describe("diffTime with a non-object options argument", () => {
     expect(diffTime("01:00:00", "02:00:00", "hours", options)).toBe(expected);
   });
 });
+
+// Two plain times are less than a day apart, so unlike diffDateTime/diffUtc/diffUnix a nanosecond
+// result here is always a safe integer. Pinned so the JSDoc's guarantee stays true.
+describe("diffTime nanosecond precision", () => {
+  it.each`
+    time1                   | time2                   | expected
+    ${"00:00:00.000000000"} | ${"23:59:59.999999999"} | ${86_399_999_999_999}
+    ${"23:59:59.999999999"} | ${"00:00:00.000000000"} | ${-86_399_999_999_999}
+  `(
+    "returns the exact $expected nanoseconds from $time1 to $time2",
+    ({ time1, time2, expected }) => {
+      const ns = diffTime(time1, time2, "nanoseconds") as number;
+
+      expect(ns).toBe(expected);
+      expect(Number.isSafeInteger(ns)).toBe(true);
+    },
+  );
+});

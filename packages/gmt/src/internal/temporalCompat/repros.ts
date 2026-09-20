@@ -20,7 +20,8 @@ export type DefectId =
   | "D6"
   | "D7"
   | "D8"
-  | "D10";
+  | "D10"
+  | "D11";
 
 /**
  * Zoned defects worked around in `internal/zonedWallClock*`: the range-limit defects (upstream
@@ -139,7 +140,45 @@ const d10Repros: Repro[] = [
     expected: "+012704-11-25",
     run: () => fieldsToIso("ethioaa", 18196, 12, 30),
   },
+  {
+    defect: "D11",
+    calendar: "iso8601",
+    name: "totalMonthFromDay31",
+    expected: "1.0161290322580645",
+    run: () => monthTotal("2024-01-31T00:00:00", "2024-02-29T12:00:00"),
+  },
+  {
+    defect: "D11",
+    calendar: "iso8601",
+    name: "totalMonthFromDay31ShortTarget",
+    expected: "1.0161290322580645",
+    run: () => monthTotal("2023-01-31T00:00:00", "2023-02-28T12:00:00"),
+  },
+  {
+    defect: "D11",
+    calendar: "iso8601",
+    name: "totalMonthFromDay31ThirtyDayTarget",
+    expected: "1.0161290322580645",
+    run: () => monthTotal("2024-03-31T00:00:00", "2024-04-30T12:00:00"),
+  },
 ];
+
+/**
+ * `Duration#total({ unit: "month" })` for the span between two ISO datetimes, as a string.
+ *
+ * TC39 TotalRelativeDuration divides the leftover by the length of the month the *end* falls in —
+ * the span from `relativeTo` plus the whole months to `relativeTo` plus one more. The polyfill
+ * divides by the month that ends there instead, so any `relativeTo` on the 29th, 30th or 31st,
+ * where adding a month constrains the day, gets a fraction over the wrong denominator.
+ */
+function monthTotal(start: string, end: string): string {
+  const from = Temporal.PlainDateTime.from(start);
+  return String(
+    from
+      .until(Temporal.PlainDateTime.from(end), { largestUnit: "month" })
+      .total({ unit: "month", relativeTo: from }),
+  );
+}
 
 function isoOf(date: Temporal.PlainDate): string {
   return date.withCalendar("iso8601").toString();

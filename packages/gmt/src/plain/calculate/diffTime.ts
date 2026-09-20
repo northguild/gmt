@@ -25,6 +25,12 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   amounts (so adding the record to the start reaches the end). Units smaller than the smallest
  *   listed unit are truncated, as for a single unit. For example, `["hours", "seconds"]` over
  *   1 hour 30 minutes 15 seconds returns `{ hours: 1, seconds: 1815 }`.
+ * - Nanosecond precision is always exact here, unlike `diffDateTime`/`diffUtc`/`diffUnix`: two
+ *   plain times are less than a day apart, so the widest possible result,
+ *   `diffTime("00:00:00.000000000", "23:59:59.999999999", "nanoseconds")` = `86399999999999`,
+ *   is well inside `Number.MAX_SAFE_INTEGER`. Those three can span more than about 104 days, at
+ *   which point a nanosecond count stops being a safe integer and the `bigint` APIs (`spanNs` in
+ *   `span/`, `toNanoseconds` in `precision/`) are the exact ones.
  *
  * @param time1 ISO PlainTime string for the start
  * @param time2 ISO PlainTime string for the end

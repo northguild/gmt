@@ -82,7 +82,7 @@ export function formatTimeZoneName(
   if (resolvedLocale === null) return "";
 
   try {
-    const style = options?.style ?? "long";
+    const style = options?.style === undefined ? "long" : options.style;
     const formatter = new Intl.DateTimeFormat(resolvedLocale, {
       timeZone,
       timeZoneName: style,

@@ -40,7 +40,10 @@ export function endOfQuarterForZoned(
 
   // An end is next start − 1 ns, so it defaults to nanosecond precision: fewer digits would
   // print an earlier instant than the end (Calendar & zone semantics §3).
-  const fractionalSecondDigits = optionsArg?.fractionalSecondDigits ?? 9;
+  const fractionalSecondDigits =
+    optionsArg?.fractionalSecondDigits === undefined
+      ? 9
+      : optionsArg.fractionalSecondDigits;
 
   try {
     const end = zonedUnitEnd(zonedDateTimeFrom(value), "quarter");

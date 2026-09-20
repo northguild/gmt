@@ -15,6 +15,9 @@ import { isValidTime, isValidTimeUnit } from "../validate";
  * - Each unit is accepted in its singular or plural form ("hour" or "hours"), as Temporal's
  *   GetTemporalUnitValuedOption accepts both.
  * - Wraps Temporal.PlainTime.round() which throws on invalid options.
+ * - Output precision follows `smallestUnit`: no fractional seconds for "second" and coarser,
+ *   3 digits for "millisecond", 6 for "microsecond" and 9 for "nanosecond", so the result never
+ *   hides the precision the unit asked for.
  *
  * @param value ISO 8601 time string
  * @param options Rounding options: smallestUnit, optional roundingIncrement and roundingMode
@@ -24,6 +27,7 @@ import { isValidTime, isValidTimeUnit } from "../validate";
  * @example roundTime("12:34:56", { smallestUnit: "minute" }) // "12:35:00"
  * @example roundTime("12:34:56", { smallestUnit: "second", roundingMode: "floor" }) // "12:34:56"
  * @example roundTime("12:34:56", { smallestUnit: "hours" }) // "13:00:00" (plural unit name)
+ * @example roundTime("12:34:56.123456789", { smallestUnit: "microsecond" }) // "12:34:56.123457" (precision follows the unit)
  * @example roundTime("invalid", { smallestUnit: "hour" }) // ""
  */
 export function roundTime(

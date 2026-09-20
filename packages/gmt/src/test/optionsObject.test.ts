@@ -8,6 +8,13 @@
  * - Formatters that forward their options to `Intl.DateTimeFormat` (ECMA-402 CoerceOptionsToObject):
  *   `null` is a TypeError (sentinel), while a string or a number is coerced by ToObject to an object
  *   with no date-time options, so the result equals the defaults.
+ * - A *member* of the bag is read the same way: `undefined` is the member's default, and an
+ *   explicit `null` is a value that has to pass the member's validation. Temporal's
+ *   GetOption calls ToString on anything that is not `undefined`, so `{ overflow: null }` is
+ *   `"null"` — a RangeError, not the `"constrain"` default (Chromium 153 and the polyfill agree,
+ *   for `overflow`, `disambiguation`, `offset`, `largestUnit`, `smallestUnit`,
+ *   `fractionalSecondDigits`, `timeZoneName`, `style` and `timeStyle`). `numberingSystem` is the
+ *   exception both engines make: `"null"` is a well-formed subtag, so it is accepted and ignored.
  */
 import { isDeepStrictEqual } from "node:util";
 import { describe, expect, it } from "vitest";
@@ -28,6 +35,12 @@ import {
   isValidUnixRange,
   isValidUtcRange,
   isValidZonedRange,
+  isBetweenDate,
+  isBetweenDateTime,
+  isBetweenTime,
+  isBetweenUnix,
+  isBetweenUtc,
+  isBetweenZoned,
 } from "../index";
 import { type OptionsCase, optionsCases } from "./noThrow";
 
@@ -178,6 +191,80 @@ describe('reference option: a value outside its documented type → ""', () => {
       ).toEqual(
         Object.fromEntries(BAD_REFERENCES.map(([label]) => [label, ""])),
       );
+    },
+  );
+});
+
+/** A failing member is named with what it returned, so the report points straight at the read. */
+function show(value: unknown): string {
+  if (typeof value === "bigint") return `${value}n`;
+  return JSON.stringify(value) ?? String(value);
+}
+
+describe("option members: an explicit null is a value to validate, not an omission", () => {
+  it("resolves the documented members of every options-taking function", () => {
+    expect(
+      CASES.filter(({ members }) => members.length === 0).map(
+        ({ name }) => name,
+      ),
+    ).toEqual([]);
+  });
+
+  // `"zzbogus"` is the control: a member that rejects it is a member whose value is validated, so
+  // an explicit `null` — which every specification in play coerces to the string "null" — has to
+  // be rejected the same way. A member that accepts `"zzbogus"` (`numberingSystem`, whose value is
+  // a well-formed subtag either way, and the boolean flags) is not a pair and is skipped.
+  it.each(CASES)(
+    "$name: every member that rejects a bogus value rejects null the same way",
+    (testCase) => {
+      const disagreed: string[] = [];
+      for (const member of testCase.members) {
+        const bogus = callWith(testCase, { [member]: "zzbogus" });
+        if (!isDeepStrictEqual(bogus, testCase.sentinel)) continue;
+        const explicitNull = callWith(testCase, { [member]: null });
+        if (isDeepStrictEqual(explicitNull, testCase.sentinel)) continue;
+        disagreed.push(`${member}: null gave ${show(explicitNull)}`);
+      }
+      expect(disagreed).toEqual([]);
+    },
+  );
+});
+
+describe("boolean option members: null is false, the way ToBoolean reads it", () => {
+  // `inclusiveStart`/`inclusiveEnd` default to `true`, so an omitted member and an explicit `null`
+  // part company: ECMA-402 reads a boolean option through ToBoolean, under which `null` is `false`
+  // (as `0` and `""` already are here). A `??` read would instead hand `null` the `true` default —
+  // the one reading neither the house rule nor the spec convention supports.
+  it.each`
+    name                   | isBetween            | value                                            | start                                            | end
+    ${"isBetweenDate"}     | ${isBetweenDate}     | ${"2024-03-15"}                                  | ${"2024-03-15"}                                  | ${"2024-03-20"}
+    ${"isBetweenDateTime"} | ${isBetweenDateTime} | ${"2024-03-15T10:00:00"}                         | ${"2024-03-15T10:00:00"}                         | ${"2024-03-15T12:00:00"}
+    ${"isBetweenTime"}     | ${isBetweenTime}     | ${"10:00:00"}                                    | ${"10:00:00"}                                    | ${"12:00:00"}
+    ${"isBetweenUtc"}      | ${isBetweenUtc}      | ${"2024-03-15T10:00:00Z"}                        | ${"2024-03-15T10:00:00Z"}                        | ${"2024-03-15T12:00:00Z"}
+    ${"isBetweenUnix"}     | ${isBetweenUnix}     | ${1710496800000}                                 | ${1710496800000}                                 | ${1710504000000}
+    ${"isBetweenZoned"}    | ${isBetweenZoned}    | ${"2024-03-15T10:00:00-04:00[America/New_York]"} | ${"2024-03-15T10:00:00-04:00[America/New_York]"} | ${"2024-03-15T12:00:00-04:00[America/New_York]"}
+  `(
+    "$name($value, $start, $end, { inclusiveStart }): omitted is true; null, false and 0 are false",
+    ({ isBetween, value, start, end }) => {
+      const check = isBetween as (
+        v: unknown,
+        s: unknown,
+        e: unknown,
+        o?: unknown,
+      ) => boolean;
+      expect({
+        omitted: check(value, start, end),
+        explicitTrue: check(value, start, end, { inclusiveStart: true }),
+        explicitNull: check(value, start, end, { inclusiveStart: null }),
+        explicitFalse: check(value, start, end, { inclusiveStart: false }),
+        zero: check(value, start, end, { inclusiveStart: 0 }),
+      }).toEqual({
+        omitted: true,
+        explicitTrue: true,
+        explicitNull: false,
+        explicitFalse: false,
+        zero: false,
+      });
     },
   );
 });

@@ -7,9 +7,12 @@ import type { LocaleNameStyle } from "./getLocaleMonthNames";
  * Return the 7 weekday names for a locale, ordered starting from the
  * locale's first day of the week.
  *
- * - For `en-US` the array starts with Sunday; for `fr-FR` it starts with
- *   Monday; for `ar-SA` it starts with Saturday — matching GMT's existing
- *   locale-first-day convention in `getLocaleDayOfWeek` / `getLocaleStartOfWeek`.
+ * - The order is the locale's **first day of the week**, never its weekend. For `en-US` and
+ *   `ar-SA` the array starts with Sunday, for `fr-FR` with Monday, for `ar-EG` with Saturday —
+ *   matching GMT's existing locale-first-day convention in `getLocaleDayOfWeek` /
+ *   `getLocaleStartOfWeek`. `ar-SA`'s weekend is Friday and Saturday
+ *   (`new Intl.Locale("ar-SA").getWeekInfo()` is `{ firstDay: 7, weekend: [5, 6] }`), but its week
+ *   still begins on Sunday; a locale's weekend says nothing about where its week starts.
  * - This ordering is consistent with `getLocaleDayOfWeek`: for any valid
  *   date, `getLocaleWeekdayNames(locale)[getLocaleDayOfWeek(date, locale)]`
  *   is that date's localized weekday name.
@@ -26,6 +29,7 @@ import type { LocaleNameStyle } from "./getLocaleMonthNames";
  * @example getLocaleWeekdayNames("en-US") // ["Sunday", "Monday", ... "Saturday"]
  * @example getLocaleWeekdayNames("fr-FR") // ["lundi", "mardi", ... "dimanche"]
  * @example getLocaleWeekdayNames("de-DE", "short") // ["Mo", "Di", "Mi", ... "So"]
+ * @example getLocaleWeekdayNames("ar-EG")[0] // "السبت" (Saturday — ar-EG's first day, unlike ar-SA's Sunday)
  * @example getLocaleWeekdayNames("not-a-locale-!!") // []
  * @example getLocaleWeekdayNames(["fr-FR", "en-US"]) // ["lundi", "mardi", …, "dimanche"]
  */

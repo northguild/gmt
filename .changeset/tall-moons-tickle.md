@@ -40,7 +40,7 @@ spanWallClock(start, end, "hours");
 
 ### Validators for both namespaces
 
-`precision/` and `span/` were the only namespaces with no `validate/` module, and in `precision/` that was not cosmetic: `0n` is simultaneously the epoch and the invalid-input sentinel, and there was no public predicate to tell them apart. `toNanoseconds`' own JSDoc suggested `isValidUtc`, which gates on GMT's stricter `<date>T<time>Z` shape and returns `false` for the offsets, bracketed zones, space separators and basic-format strings `toNanoseconds` accepts — so following that advice discarded valid input.
+`precision/` and `span/` were the only namespaces with no `validate/` module, and in `precision/` that was not cosmetic: `0n` is simultaneously the epoch and the invalid-input sentinel, and there was no public predicate to tell them apart. `toNanoseconds`' own JSDoc suggested `isValidUtc`, which gates on GMT's stricter `<date>T<time>Z` shape and returns `false` for the offset and bracketed-zone strings `toNanoseconds` accepts — so following that advice discarded valid input.
 
 ```typescript
 import {
@@ -52,7 +52,7 @@ import {
 
 isValidInstant("1970-01-01T00:00:00Z"); // true  — toNanoseconds returns 0n, the epoch
 isValidInstant("garbage"); // false — toNanoseconds returns 0n, the sentinel
-isValidInstant("2024-03-10 12:00:00Z"); // true  — isValidUtc says false
+isValidInstant("2024-03-10T12:00:00-04:00[America/New_York]"); // true  — isValidUtc says false
 
 isValidNanoPattern("0"); // true  — parseNanoseconds returns 0n, the epoch
 isValidNanoseconds(0n); // true; isValidNanoseconds(0) is false — a number cannot carry one

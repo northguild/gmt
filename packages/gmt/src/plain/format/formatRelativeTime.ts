@@ -27,7 +27,7 @@ const AUTO_UNITS: Array<{ unit: RelativeTimeUnit; maxSeconds: number }> = [
  * @param options optional: { style, numeric, largestUnit, roundingMethod, reference }
  * @returns the formatted relative-time string, or "" on invalid input
  *
- * @example formatRelativeTime("14:30:00", "en-US", { style: "short" }) // "2 hr. ago"
+ * @example formatRelativeTime("14:30:00", "en-US", { style: "short", reference: "16:30:00" }) // "2 hr. ago"
  * @example formatRelativeTime("09:00:00", "en-US", { reference: "10:30:00", roundingMethod: "floor" }) // "2 hours ago" (−1.5 hours floors to −2)
  * @example formatRelativeTime("not-a-time") // ""
  * @example formatRelativeTime("10:00:00", ["fr-FR", "en-US"], { reference: "12:00:00" }) // "il y a 2 heures"
@@ -55,9 +55,9 @@ export function formatRelativeTime(
     const absSeconds = Math.abs(diff.total("second"));
 
     const unit =
-      options.largestUnit ??
-      AUTO_UNITS.find((t) => absSeconds < t.maxSeconds)?.unit ??
-      "hour";
+      options.largestUnit === undefined
+        ? (AUTO_UNITS.find((t) => absSeconds < t.maxSeconds)?.unit ?? "hour")
+        : options.largestUnit;
 
     const amount = resolveRelativeRounding(
       diff.total(unit),
@@ -66,8 +66,8 @@ export function formatRelativeTime(
 
     return normalizeDateTime(
       new Intl.RelativeTimeFormat(locale, {
-        numeric: options.numeric ?? "auto",
-        style: options.style ?? "long",
+        numeric: options.numeric === undefined ? "auto" : options.numeric,
+        style: options.style === undefined ? "long" : options.style,
       }).format(amount, unit),
     );
   } catch {

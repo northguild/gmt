@@ -26,6 +26,9 @@ import {
   getWeeksInMonth,
   isWeekend,
   isZonedWeekend,
+  parseDateTimeWithPattern,
+  parseDateWithPattern,
+  parseTimeWithPattern,
 } from "../index";
 
 type LocaleCall = (locale: unknown) => unknown;
@@ -73,4 +76,40 @@ describe("optional locale: an empty list is the default locale (ECMA-402)", () =
   it("formatDate(value, []) equals formatDate(value) with the locale omitted", () => {
     expect(formatDate("2024-02-03", [])).toBe(formatDate("2024-02-03"));
   });
+});
+
+/**
+ * The three pattern parsers take an optional `locale`, but their documented default is the fixed
+ * tag `"en-US"`, not the host default: a name-based token (`MMM`, `a`, …) has to resolve against
+ * *some* locale, and a decoder of a fixed producer format must not change meaning with the host.
+ * An empty preference list names no locale, so it is the omitted case and takes that same default
+ * — it must not fall through to ECMA-402's ResolveLocale, which would return the host locale.
+ *
+ * `"Mar"` is the en-US short month name for March and `"PM"` its post-meridiem name (CLDR, via
+ * Intl.DateTimeFormat in Chromium 153); a French host spells the month `"mars"` and a Japanese one
+ * writes `"午後"` for PM, so under either host the `[]` rows returned `""` before this contract held.
+ */
+describe("optional locale with a documented default: [] is that default, not the host", () => {
+  it.each`
+    name                          | call                                                                                        | expected
+    ${"parseDateWithPattern"}     | ${(l: never) => parseDateWithPattern("15-Mar-2024", "dd-MMM-yyyy", l)}                      | ${"2024-03-15"}
+    ${"parseDateTimeWithPattern"} | ${(l: never) => parseDateTimeWithPattern("15-Mar-2024 02:30 PM", "dd-MMM-yyyy hh:mm a", l)} | ${"2024-03-15T14:30:00"}
+    ${"parseTimeWithPattern"}     | ${(l: never) => parseTimeWithPattern("02:30:45 PM", "hh:mm:ss a", l)}                       | ${"14:30:45"}
+  `(
+    "$name: 'en-US', ['en-US'], omitted and [] all give $expected on any host",
+    ({ call, expected }) => {
+      const run = call as LocaleCall;
+      expect({
+        tag: run("en-US"),
+        list: run(["en-US"]),
+        omitted: run(undefined),
+        empty: run([]),
+      }).toEqual({
+        tag: expected,
+        list: expected,
+        omitted: expected,
+        empty: expected,
+      });
+    },
+  );
 });

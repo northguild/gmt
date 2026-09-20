@@ -459,7 +459,7 @@ function addAtEdge(
     wall = calendarDateAdd(
       start.toPlainDate(),
       { years, months, weeks, days },
-      overflow ?? "constrain",
+      overflow === undefined ? "constrain" : overflow,
     ).toPlainDateTime(start.toPlainTime());
   } catch {
     return null;
@@ -505,7 +505,7 @@ function addDateThenTime(
   const date = calendarDateAdd(
     wall.toPlainDate(),
     { years, months, weeks, days },
-    overflow ?? "constrain",
+    overflow === undefined ? "constrain" : overflow,
   );
   const intermediate = plainToZoned(
     date.toPlainDateTime(wall.toPlainTime()),
@@ -692,8 +692,10 @@ function withAtEdge(
     zoned.timeZoneId,
     wall,
     offset,
-    options?.disambiguation ?? "compatible",
-    options?.offset ?? "prefer",
+    options?.disambiguation === undefined
+      ? "compatible"
+      : options.disambiguation,
+    options?.offset === undefined ? "prefer" : options.offset,
     false,
   );
   return inZoneOf(epoch, zoned);

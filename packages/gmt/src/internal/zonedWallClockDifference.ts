@@ -8,6 +8,7 @@ import {
   calendarDateAdd as compatCalendarDateAdd,
   calendarDateUntil as compatCalendarDateUntil,
   isCalendarArithmeticCompatNeeded,
+  isMonthTotalCompatNeeded,
 } from "./temporalCompat";
 import {
   epochNanosecondsFor,
@@ -65,6 +66,19 @@ import {
  *    - Removal: delete the `isCalendarArithmeticCompatNeeded` terms in `zonedUntil`,
  *      `durationTotal`, `durationRound` and `durationCompare`, and the plain context's dispatch.
  *      The seams may keep calling the compat entry points, which are then the polyfill's calls.
+ * 4. **`Duration#total` divides a month fraction by the wrong month.** TC39
+ *    TotalRelativeDuration measures the leftover against the unit the *end* falls in — from
+ *    `relativeTo` plus the whole months to `relativeTo` plus one more. The polyfill measures it
+ *    against the month that ends there instead, so a `relativeTo` on the 29th, 30th or 31st,
+ *    where adding a month constrains the day, returns a fraction over the wrong denominator:
+ *    2024-01-31 to 2024-02-29T12:00 totals 1.0172413793103448 months where TC39 and Chromium 153
+ *    give 1.0161290322580645. The whole part and `until` agree; only the fraction is wrong.
+ *    - Trigger: `isMonthTotalCompatNeeded()` — the D11 probe fails — and the unit is "month" or
+ *      "year" with a `relativeTo` past the 28th. The operation then takes the spec path below,
+ *      which is the same `nudgeToCalendarUnit` the non-ISO calendars already use.
+ *    - Retired by: no upstream fix yet; filed against the polyfill with this repro.
+ *    - Removal: delete the `isMonthTotalCompatNeeded` term in `durationTotal` and the D11 rows in
+ *      `./temporalCompat/repros.ts`.
  * ---------------------------------------------------------------------------------------------
  */
 
@@ -1705,6 +1719,95 @@ function calendarTotalBySpec(
     : totalWithPlainRelativeTo(duration, plain, unitOption, unit);
 }
 
+/**
+ * The day of month a `relativeTo` resolves to, or 0 when there is none to read.
+ *
+ * Only the 29th, 30th and 31st can reach defect 4: below that, adding a month never constrains
+ * the day, so the two denominators coincide and the polyfill's answer is already the spec's.
+ */
+function relativeToDayOfMonth(
+  relativeTo: DurationRelativeTo | undefined,
+  zoned: Temporal.ZonedDateTime | null,
+): number {
+  if (zoned !== null) {
+    return zoned.day;
+  }
+  try {
+    if (relativeTo instanceof Temporal.PlainDateTime) {
+      return relativeTo.day;
+    }
+    if (relativeTo instanceof Temporal.PlainDate) {
+      return relativeTo.day;
+    }
+    if (typeof relativeTo === "string") {
+      return Temporal.PlainDate.from(relativeTo).day;
+    }
+    if (relativeTo !== null && typeof relativeTo === "object") {
+      return Temporal.PlainDate.from(relativeTo as never).day;
+    }
+  } catch {
+    return 0;
+  }
+  return 0;
+}
+
+/** The plain `relativeTo` Temporal would resolve, whatever its calendar, or null. */
+function plainRelativeTo(
+  relativeTo: DurationRelativeTo | undefined,
+): Temporal.PlainDate | null {
+  try {
+    if (relativeTo instanceof Temporal.PlainDate) {
+      return relativeTo;
+    }
+    if (relativeTo instanceof Temporal.PlainDateTime) {
+      return relativeTo.toPlainDate();
+    }
+    if (
+      typeof relativeTo === "string" &&
+      !TIME_ZONE_ANNOTATION.test(relativeTo)
+    ) {
+      return Temporal.PlainDate.from(relativeTo);
+    }
+    if (
+      relativeTo !== null &&
+      typeof relativeTo === "object" &&
+      !(relativeTo instanceof Temporal.ZonedDateTime)
+    ) {
+      return Temporal.PlainDate.from(relativeTo as never);
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+/**
+ * Defect 4: `Duration#total` by the spec when the polyfill would divide the month fraction by the
+ * wrong month. Returns null whenever the defect cannot apply, leaving the polyfill's own answer.
+ */
+function monthTotalBySpec(
+  duration: Temporal.Duration,
+  unitOption: string,
+  unit: Unit,
+  relativeTo: DurationRelativeTo | undefined,
+  zoned: Temporal.ZonedDateTime | null,
+): number | null {
+  if (
+    (unit !== "month" && unit !== "year") ||
+    relativeToDayOfMonth(relativeTo, zoned) < 29 ||
+    !isMonthTotalCompatNeeded()
+  ) {
+    return null;
+  }
+  if (zoned !== null) {
+    return totalAtLimit(duration, zoned, unitOption, unit);
+  }
+  const plain = plainRelativeTo(relativeTo);
+  return plain === null
+    ? null
+    : totalWithPlainRelativeTo(duration, plain, unitOption, unit);
+}
+
 /** Defect 3: `Duration#round` by the spec when the `relativeTo` calendar needs the compat layer. */
 function calendarRoundBySpec(
   duration: Temporal.Duration,
@@ -1772,6 +1875,15 @@ export function durationTotal(
       : calendarTotalBySpec(duration, unit, resolvedUnit, relativeTo, zoned);
   if (bySpec !== null) {
     return bySpec;
+  }
+
+  // Defect 4: the polyfill's month fraction, when the day can be constrained.
+  const byMonthSpec =
+    resolvedUnit === null
+      ? null
+      : monthTotalBySpec(duration, unit, resolvedUnit, relativeTo, zoned);
+  if (byMonthSpec !== null) {
+    return byMonthSpec;
   }
   if (zoned === null) {
     return duration.total({ unit, relativeTo });

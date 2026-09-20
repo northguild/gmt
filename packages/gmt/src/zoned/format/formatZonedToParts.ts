@@ -12,9 +12,13 @@ import { instantFormatOptions } from "../../internal/instantFormatOptions";
  *   while the *locale* keeps control of order. See Decision 1 in
  *   `context/roadmap/issues/J.md`.
  * - Each part is `{ type, value }` where `type` can be:
- *   `"era"`, `"year"`, `"month"`, `"day"`, `"weekday"`, `"hour"`,
- *   `"minute"`, `"second"`, `"fractionalSecond"`, `"dayPeriod"`,
+ *   `"era"`, `"year"`, `"relatedYear"`, `"yearName"`, `"month"`, `"day"`, `"weekday"`,
+ *   `"hour"`, `"minute"`, `"second"`, `"fractionalSecond"`, `"dayPeriod"`,
  *   `"timeZoneName"`, `"literal"`.
+ * - A lunisolar calendar adds two more: `zh-u-ca-chinese` and `ko-u-ca-dangi` emit
+ *   `"relatedYear"` (the Gregorian year the cycle falls in) and `"yearName"` (the sexagenary
+ *   cycle name) in place of, or beside, `"year"`. Code that looks up a `"year"` part must handle
+ *   their absence.
  * - The caller should iterate the array as returned; reassembling in a fixed
  *   order reintroduces exactly the bug `formatToParts` exists to avoid.
  * - With no date/time field and no `dateStyle`/`timeStyle`, year, month, day,

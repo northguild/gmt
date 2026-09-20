@@ -76,7 +76,7 @@ export function toExcelSerial(
     return null;
   }
 
-  const system = options?.system ?? "1900";
+  const system = options?.system === undefined ? "1900" : options.system;
 
   if (system !== "1900" && system !== "1904") {
     return null;

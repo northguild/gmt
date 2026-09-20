@@ -1,5 +1,9 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { normalizeDateTime, resolveRelativeRounding } from "../../internal";
+import {
+  durationTotal,
+  normalizeDateTime,
+  resolveRelativeRounding,
+} from "../../internal";
 import type { RelativeDateUnit, RelativeTimeFormatOptions } from "../../types";
 import { isValidDate } from "../validate";
 
@@ -56,9 +60,9 @@ export function formatRelativeDate(
     const absDays = Math.abs(diff.total("day"));
 
     const unit =
-      options.largestUnit ??
-      AUTO_UNITS.find((t) => absDays < t.maxDays)?.unit ??
-      "year";
+      options.largestUnit === undefined
+        ? (AUTO_UNITS.find((t) => absDays < t.maxDays)?.unit ?? "year")
+        : options.largestUnit;
 
     let amount: number;
     try {
@@ -69,15 +73,15 @@ export function formatRelativeDate(
     } catch {
       // month/year are calendrical and need a relativeTo anchor
       amount = resolveRelativeRounding(
-        diff.total({ unit, relativeTo: reference }),
+        durationTotal(diff, unit, reference),
         options.roundingMethod,
       );
     }
 
     return normalizeDateTime(
       new Intl.RelativeTimeFormat(locale, {
-        numeric: options.numeric ?? "auto",
-        style: options.style ?? "long",
+        numeric: options.numeric === undefined ? "auto" : options.numeric,
+        style: options.style === undefined ? "long" : options.style,
       }).format(amount, unit),
     );
   } catch {

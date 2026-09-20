@@ -13,8 +13,8 @@ import { isValidUtc } from "../validate";
  * - An empty A (`aStart === aEnd`) has nothing left: returns `[]`. Every returned piece is non-empty.
  * - Delegates to CORE-6's `subtractIntervals` once the arguments pass the UTC-string gate, and
  *   re-serialises the pieces to canonical `Z` strings.
- * - Returns `[]` when B fully covers A.
- * - Returns `[{ start, end }]` when B overlaps one edge of A (or equals A).
+ * - Returns `[]` when B fully covers A, which includes B equal to A.
+ * - Returns `[{ start, end }]` when B overlaps exactly one edge of A, leaving one piece.
  * - Returns `[{ start, end }, { start, end }]` when B is fully inside A with gaps on both sides.
  * - Returns A unchanged when B lies entirely before or after it.
  * - Returns `[]` if either interval is invalid (`start > end`).

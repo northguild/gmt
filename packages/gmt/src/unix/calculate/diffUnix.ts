@@ -15,7 +15,10 @@ import { isOptionsArgument } from "../../internal/isObject";
 /**
  * Return the difference between two Unix timestamps measured in the given unit.
  *
- * - Uses Temporal.Instant.until() to calculate the difference.
+ * - Converts both epochs to a `Temporal.ZonedDateTime` in `timeZone` and uses its `until()`, so
+ *   calendar units (days, weeks, months, years) are measured on that zone's wall clock — a
+ *   23-hour DST day is 1 day — while time units (hours and smaller) are exact elapsed time.
+ *   `Temporal.Instant.until()` is not used: it rejects every calendar `largestUnit`.
  * - Supports single unit or array of units.
  * - Returns null for invalid input.
  *
@@ -33,6 +36,13 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   1 year 59 days returns `{ years: 1, days: 59 }`.
  *   Days carried into a time unit follow the wall clock of `timeZone` (a 23-hour DST day is
  *   23 hours).
+ * - Nanosecond precision: the result is a JavaScript `number`, so past about 104 days a
+ *   nanosecond count exceeds `Number.MAX_SAFE_INTEGER`. Every value this function can return is
+ *   still exact — its inputs are whole milliseconds or seconds — but it is no longer a safe
+ *   integer, so arithmetic on it silently loses nanoseconds:
+ *   `diffUnix(0, 9072000000, "nanoseconds")` returns `9072000000000000`, and adding `1` to that
+ *   gives the same number back. For an exact count use the `bigint` APIs: `spanNs` in `span/`,
+ *   or `toNanoseconds` in `precision/`.
  * - Each value is a safe integer or a digit string (`"1706659200000"`); anything else is invalid.
  * - An omitted `timeZone` is UTC; pass `"local"` for the system time zone. An unknown zone is
  *   invalid.

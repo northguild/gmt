@@ -34,5 +34,9 @@ import { leapSecond } from "../../regex/leap-second";
  * @example /T\d{2}:\d{2}:60(?:[.,]\d+)?[-+Zz[]/.test("2016-12-31t23:59:60Z") // false (the earlier uppercase-T-only test)
  */
 export function isLeapSecond(value: string): boolean {
+  if (typeof value !== "string") {
+    return false;
+  }
+
   return leapSecond.test(value);
 }

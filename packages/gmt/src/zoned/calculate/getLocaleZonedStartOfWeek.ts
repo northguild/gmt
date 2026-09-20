@@ -51,7 +51,10 @@ export function getLocaleZonedStartOfWeek(
     return "";
   }
 
-  const fractionalSecondDigits = optionsArg?.fractionalSecondDigits ?? 0;
+  const fractionalSecondDigits =
+    optionsArg?.fractionalSecondDigits === undefined
+      ? 0
+      : optionsArg.fractionalSecondDigits;
 
   if (!isValidZonedDateTime(value)) return "";
 

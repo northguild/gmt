@@ -19,6 +19,10 @@ import { isValidDateTime } from "../validate";
  * - Returns "" for invalid input on either endpoint.
  * - Output is normalized: dash separators become ASCII "-" (unspaced between digits, spaced
  *   otherwise), and no-break, narrow and thin spaces become U+0020.
+ * - `options` null returns `""`, as ECMA-402's CoerceOptionsToObject rejects it. Any
+ *   other non-object — a string, a number, a boolean — formats with the defaults, as
+ *   `Intl.DateTimeFormat` does: CoerceOptionsToObject calls ToObject on it and the wrapper
+ *   carries no recognised option. Only `null` and `undefined` are special-cased.
  *
  * @param start ISO PlainDateTime string (range start)
  * @param end ISO PlainDateTime string (range end)

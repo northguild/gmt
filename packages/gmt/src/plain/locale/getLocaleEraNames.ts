@@ -14,6 +14,12 @@ import { zonedDateTimeFrom } from "../../internal/zonedWallClock";
  * - If a locale has no distinct BCE/CE era names, both array elements
  *   contain the same string — the function never returns a sentinel for
  *   a valid locale, only for invalid input.
+ * - **A `-u-ca-` subtag in `locale` is ignored.** Both lookups pass `calendar: "gregory"` in the
+ *   options bag, and ECMA-402's `ResolveLocale` ranks an options value above the locale
+ *   extension, so ``getLocaleEraNames("en-US-u-ca-buddhist")`` returns the same
+ *   `["Before Christ", "Anno Domini"]` as ``getLocaleEraNames("en-US")``. That is deliberate — the function is Gregorian by
+ *   contract — but it means the tag is accepted and overridden, not rejected. For another
+ *   calendar's names, format a date in it: `formatDate("2024-03-15", "en-US-u-ca-buddhist", { era: "long", year: "numeric" })`.
  * - Returns `[]` if `locale` is not a well-formed BCP 47 tag (ECMA-402 `IsWellFormedLanguageTag`).
  *   A well-formed tag with no matching locale data is not an error: it falls back to the host's
  *   default locale, as ECMA-402 `ResolveLocale` requires.
@@ -25,6 +31,7 @@ import { zonedDateTimeFrom } from "../../internal/zonedWallClock";
  * @example getLocaleEraNames("en-US") // ["Before Christ", "Anno Domini"]
  * @example getLocaleEraNames("de-DE", "short") // ["v. Chr.", "n. Chr."]
  * @example getLocaleEraNames("ja-JP", "narrow") // ["BC", "AD"]
+ * @example getLocaleEraNames("en-US-u-ca-buddhist") // ["Before Christ", "Anno Domini"] (the -u-ca- subtag is overridden)
  * @example getLocaleEraNames("not-a-locale-!!") // []
  * @example getLocaleEraNames(["fr-FR", "en-US"]) // ["avant Jésus-Christ", "après Jésus-Christ"]
  */

@@ -18,8 +18,6 @@ mapDatesInRange("0001-01-01", "9999-12-31", 1); // [] — 3,652,059 dates is ove
 mapDatesInRange("2024-01-01", "4000-01-01", 1, { maxPieces: 2000000 }).length; // 721720
 ```
 
-**Compatibility.** A call that returned more than 1,000,000 pieces now returns `[]`. Pass a larger `maxPieces` to get the array back. The engine's own array limit, 2^32 − 1 elements, still applies.
-
 **`splitIntervalByUnitTime` no longer loops forever.** A step that carried past midnight wrapped back to the morning, so the split never reached its end. The last slice now ends at `end`.
 
 ```typescript
@@ -27,3 +25,30 @@ splitIntervalByUnitTime("20:00:00", "23:00:00", "hour", 5); // [{ start: "20:00:
 ```
 
 **`bucketRange` gives up quickly.** It already returned `[]` over 10,000 buckets, but it counted them one at a time, which took up to a minute in zones with many offset changes. It now works out from the span when the range is certainly over the limit, and returns in under a second.
+
+### Breaking changes
+
+A call that used to return more than 1,000,000 pieces now returns `[]`. The input was valid before and still is — only the output changed — so nothing throws and nothing warns. Each row is the boundary: one piece under the default cap still returns the array, one piece over returns `[]`. Every function in the row's family behaves the same way.
+
+| Call | 1.15 | 1.16 (default `maxPieces: 1_000_000`) |
+| --- | --- | --- |
+| `mapDatesInRange("2024-01-01", "4761-11-27", 1)` | 1,000,000 dates | 1,000,000 dates |
+| `mapDatesInRange("2024-01-01", "4761-11-28", 1)` | 1,000,001 dates | `[]` |
+| `mapZonedDatesInRange(A, "4761-11-27T00:00:00-05:00[America/New_York]", 1)` | 1,000,000 dates | 1,000,000 dates |
+| `mapZonedDatesInRange(A, "4761-11-28T00:00:00-05:00[America/New_York]", 1)` | 1,000,001 dates | `[]` |
+| `splitIntervalByUnitDate("2024-01-01", "4761-11-28", "day", 1)` | 1,000,000 pieces | 1,000,000 pieces |
+| `splitIntervalByUnitDate("2024-01-01", "4761-11-29", "day", 1)` | 1,000,001 pieces | `[]` |
+| `splitIntervalByUnitUnix(0, 3_600_003_600_000, "hour", 1)` | 1,000,001 pieces | `[]` |
+| `intervalDivideEquallyUtc("2024-01-01T00:00:00Z", "2124-01-01T00:00:00Z", 1000000)` | 1,000,000 pieces | 1,000,000 pieces |
+| `intervalDivideEquallyUtc("2024-01-01T00:00:00Z", "2124-01-01T00:00:00Z", 1000001)` | 1,000,001 pieces | `[]` |
+| `intervalDivideEquallyTime("00:00:00", "23:59:59", 1000001)` | 1,000,001 pieces | `[]` |
+| `splitIntervalByUnitTime("20:00:00", "23:00:00", "hour", 5)` | never returned | `[{ start: "20:00:00", end: "23:00:00" }]` |
+
+`A` is `"2024-01-01T00:00:00-05:00[America/New_York]"`. The same boundary applies to `splitIntervalByUnitDateTime`, `splitIntervalByUnitTime`, `splitIntervalByUnitUtc`, `splitIntervalByUnitZoned` and to the other four `intervalDivideEqually*` functions.
+
+Migration:
+
+- **A call that legitimately needs more than a million pieces** passes its own cap: `mapDatesInRange("2024-01-01", "4761-11-28", 1, { maxPieces: 2_000_000 })` returns the 1,000,001 dates again. `maxPieces` must be a positive safe integer; anything else is invalid input and returns `[]`.
+- **Code that treated `[]` as “the range is empty”** must now also read it as “the range is too large”. These functions have one sentinel, so distinguish the two by checking the range yourself — `intervalCountDate(start, end, "day")` counts the pieces without building them.
+- **Nothing became slower.** A split stops as soon as piece `maxPieces + 1` is due, so an over-cap call returns in bounded time instead of exhausting the heap.
+- **The engine's own array limit, 2^32 − 1 elements, still applies** above any `maxPieces` you set.

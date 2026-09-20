@@ -504,8 +504,14 @@ export function parseValueWithPattern(
   // tokens, but a name-based token (MMM/MMMM/EEE/EEEE/a/GG/GGGG) needs
   // *some* locale to resolve against — default to "en-US" rather than
   // silently returning "" for every caller who didn't have another
-  // locale in mind.
-  const resolvedLocale = locale === undefined ? "en-US" : resolveLocale(locale);
+  // locale in mind. An empty preference list names no locale either, so
+  // it takes that same default: ECMA-402 ResolveLocale would answer `[]`
+  // with the *host* locale, which would make a decoder of a fixed
+  // producer format read differently on a French machine (house rule,
+  // ./resolveLocale.ts).
+  const omitted =
+    locale === undefined || (Array.isArray(locale) && locale.length === 0);
+  const resolvedLocale = omitted ? "en-US" : resolveLocale(locale);
   if (resolvedLocale === null) return null;
 
   const compiled = compilePattern(pattern, allowedFields, resolvedLocale);

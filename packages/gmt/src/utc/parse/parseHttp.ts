@@ -27,9 +27,14 @@ import { httpDate } from "../../regex";
  *   year in the past that had the same last two digits". The same string can
  *   therefore parse differently decades apart; if the clock cannot be read
  *   the result is `""`.
- * - **The day name must match the date.** RFC 9110 gives it RFC 5322's
- *   semantics: "the day-of-week (if included) MUST be the day implied by the
- *   date". A mismatch returns `""`.
+ * - **The day name must match the date, in all three formats.** RFC 9110 gives it
+ *   RFC 5322's semantics: "the day-of-week (if included) MUST be the day implied by
+ *   the date". A mismatch returns `""` — deliberately in asctime-date too, where the
+ *   day name is not separated by a comma and so is easy to overlook. `Mon Nov  6
+ *   08:49:37 1994` is `""`, exactly as `Mon, 06 Nov 1994 08:49:37 GMT` and
+ *   `Monday, 06-Nov-94 08:49:37 GMT` are: 6 November 1994 was a Sunday. A parser that
+ *   accepted the mismatch would have to pick which of the two fields to believe, and
+ *   there is no rule in RFC 9110 that says which.
  * - An impossible calendar date (`31 Feb`, `29 Feb 2023`) returns `""`: a parser never
  *   invents a date, so fields are validated with `overflow: "reject"`, not clamped.
  * - For the IMF-fixdate shape alone, test the exported `httpDate` pattern.
@@ -44,6 +49,7 @@ import { httpDate } from "../../regex";
  * @example parseHttp("Sun Nov  6 08:49:37 1994") // "1994-11-06T08:49:37Z" (asctime-date)
  * @example parseHttp("Fri, 15 Mar 2024 14:30:00 -0400") // "" (not an HTTP-date)
  * @example parseHttp("Sat, 15 Mar 2024 14:30:00 GMT") // "" (15 Mar 2024 was a Friday)
+ * @example parseHttp("Mon Nov  6 08:49:37 1994") // "" (asctime-date; 6 Nov 1994 was a Sunday)
  * @example convertZonedToUtc(parseRfc2822("15 Mar 2024 14:30:00 GMT")) // "2024-03-15T14:30:00Z" — the day name removed
  * @example parseHttp("Sat, 31 Feb 2024 14:30:00 GMT") // "" (impossible date)
  * @example parseHttp("not a date") // ""

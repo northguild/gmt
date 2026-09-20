@@ -65,6 +65,16 @@ const DOX_STATS = "apps/dox/src/data/gmt-stats.json";
 /** `regex/` exports patterns, not functions — counted and described separately. */
 const PATTERN_NAMESPACE = "regex";
 
+/**
+ * Competitor figures, each measured once at the commit the comparison table names and
+ * written out there in full. They are constants because they are somebody else's suite:
+ * only a re-measurement changes them, and that is a prose edit, not a derived number.
+ */
+/** `@internationalized/date`'s own test cases — the `vs. 386` in both READMEs. */
+const INTL_DATE_TESTS = 386;
+/** All four competitors' CI executions combined: 386 + 4,888 + 3,213 + 11,703. */
+const COMPETITOR_EXECUTIONS = 386 + 4_888 + 3_213 + 11_703;
+
 // ---------------------------------------------------------------- sources of truth
 
 /**
@@ -208,6 +218,13 @@ function figures() {
     // The whole suite runs under every Node version x every timezone, so this is one
     // product rather than a weighted sum: gmt-matrix has no partial legs.
     executions: counted.tests * nodes.length * timezones,
+    // The headline multipliers. Both were typed by hand and both went stale: the READMEs
+    // claimed ~40x and ~69x against figures that had since grown to ~50x and ~87x. They
+    // are ratios of a derived figure to a competitor constant, so derive them too.
+    executionMultiple: Math.round(
+      (counted.tests * nodes.length * timezones) / COMPETITOR_EXECUTIONS,
+    ),
+    testCaseMultiple: Math.round(counted.tests / INTL_DATE_TESTS),
   };
 }
 
@@ -302,6 +319,24 @@ function ruleSet(f) {
       files: READMES,
       find: /(\| )([\d,]+)( vs\. 386 \+ 4,888)/g,
       values: [n(f.executions)],
+    },
+    {
+      label: "headline executions multiplier",
+      files: READMES,
+      find: /(- \*\*~)(\d+)(× more CI test executions than all four competitors combined\*\*)/g,
+      values: [String(f.executionMultiple)],
+    },
+    {
+      label: "headline test-cases multiplier",
+      files: READMES,
+      find: /(- \*\*~)(\d+)(× more test cases than `@internationalized\/date`\*\*)/g,
+      values: [String(f.testCaseMultiple)],
+    },
+    {
+      label: "combined-competitors row multiplier",
+      files: READMES,
+      find: /(competitors \*\*combined\*\*<br>by ~)(\d+)(×)/g,
+      values: [String(f.executionMultiple)],
     },
   ];
 }

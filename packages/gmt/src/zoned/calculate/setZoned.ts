@@ -62,9 +62,12 @@ export function setZoned(
   if (!isValidZonedDateTime(value)) return "";
 
   const overflow = resolveOverflow(options?.overflow);
-  const disambiguation = options?.disambiguation ?? "compatible";
+  const disambiguation =
+    options?.disambiguation === undefined
+      ? "compatible"
+      : options.disambiguation;
   // Temporal ZonedDateTime#with's own default: keep the source offset while it is still valid.
-  const offset = options?.offset ?? "prefer";
+  const offset = options?.offset === undefined ? "prefer" : options.offset;
 
   try {
     const zoned = zonedDateTimeFrom(value);

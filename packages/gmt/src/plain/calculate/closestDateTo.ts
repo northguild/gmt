@@ -5,7 +5,11 @@ import { isValidDate } from "../validate";
 /**
  * Return the candidate date nearest to `target` by calendar distance.
  *
- * - Distance is measured in whole days using `Temporal.PlainDate.compare`.
+ * - Distance is the absolute whole-day count `Math.abs(target.until(candidate).days)`.
+ *   `Temporal.PlainDate.compare` is not used for it: `compare` orders two dates (`-1`, `0`,
+ *   `1`), it does not measure between them. `until()` on a `PlainDate` defaults to
+ *   `largestUnit: "day"`, so the count runs across month and year boundaries —
+ *   `2024-03-15` to `2026-01-01` is `657`.
  * - Returns `""` if the candidates array is empty or contains no valid dates, or `target` is invalid.
  * - **Compatibility:** before 1.16.0 invalid input returned `null`.
  * - On a tie (two equidistant candidates), returns the first one in array order.

@@ -73,6 +73,10 @@ export function spanWallClock(
   end: string,
   unit: WallClockSpanUnit,
 ): number | null {
+  if (typeof unit !== "string") {
+    return null;
+  }
+
   if (
     !Object.hasOwn(WALL_CLOCK_SPAN_UNITS, unit) ||
     !isValidZonedDateTime(start) ||

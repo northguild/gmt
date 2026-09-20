@@ -343,3 +343,22 @@ describe("diffUnix with a non-object options argument", () => {
     expect(diffUnix(0, 90000000, "hours", options)).toBe(expected);
   });
 });
+
+// Unix input is whole milliseconds or seconds, so every nanosecond result this function can return
+// is exactly representable — but past about 104 days it is no longer a safe integer, and
+// arithmetic on it silently loses nanoseconds. Pinned so the JSDoc's bigint advice stays true.
+describe("diffUnix nanosecond precision past Number.MAX_SAFE_INTEGER", () => {
+  it("returns an exact but unsafe integer for a 105-day span", () => {
+    const ns = diffUnix(0, 9_072_000_000, "nanoseconds") as number;
+
+    expect(ns).toBe(9_072_000_000_000_000);
+    expect(Number.isSafeInteger(ns)).toBe(false);
+    expect(ns + 1).toBe(ns);
+  });
+
+  it("is still a safe integer at 104 days", () => {
+    expect(
+      Number.isSafeInteger(diffUnix(0, 8_985_600_000, "nanoseconds") as number),
+    ).toBe(true);
+  });
+});

@@ -1,3 +1,5 @@
+import { renderMdxComponents } from "./mdx-jsx";
+
 /**
  * Pure helpers for converting MDX/Markdown pages to clean Markdown output.
  *
@@ -42,40 +44,138 @@ export function stripFrontmatter(raw: string): {
 }
 
 // ---------------------------------------------------------------------------
-// MDX → Markdown stripping (for hand-written guide pages)
+// MDX → Markdown stripping
 // ---------------------------------------------------------------------------
 
 /**
- * Minimal MDX-to-markdown conversion for the 3 hand-written guide `.mdx`
- * files (`install.mdx`, `core-rules.mdx`).
+ * Apply `transform` to the parts of `body` that are not inside a fenced code block.
+ *
+ * Every other rule here works on MDX syntax, and a code sample is not MDX: a guide that shows
+ * `import { addDate } from "@northguild/gmt";` means that line to be read, and the mistake and
+ * scenario cards are made almost entirely of such samples. Running the import and component rules
+ * over them silently deleted the sample's first line.
+ */
+function outsideFences(
+  body: string,
+  transform: (part: string) => string,
+): string {
+  return body
+    .split(/(^```[\s\S]*?^```)/m)
+    .map((part) => (part.startsWith("```") ? part : transform(part)))
+    .join("");
+}
+
+/**
+ * Drop `{ … .map( … ) … }` JSX blocks, brace by brace so a nested object literal or template
+ * literal inside one does not end the block early.
+ */
+function dropMapBlocks(body: string): string {
+  let out = "";
+  let index = 0;
+
+  while (index < body.length) {
+    const open = body.indexOf("{", index);
+    if (open === -1) break;
+
+    let depth = 0;
+    let cursor = open;
+    let inBacktick = false;
+    let quote = "";
+    for (; cursor < body.length; cursor += 1) {
+      const char = body[cursor];
+      if (body[cursor - 1] === "\\") continue;
+      if (quote) {
+        if (char === quote) quote = "";
+        continue;
+      }
+      if (inBacktick) {
+        if (char === "`") inBacktick = false;
+        continue;
+      }
+      if (char === "`") inBacktick = true;
+      else if (char === '"' || char === "'") quote = char;
+      else if (char === "{") depth += 1;
+      else if (char === "}") {
+        depth -= 1;
+        if (depth === 0) break;
+      }
+    }
+
+    const block = body.slice(open, cursor + 1);
+    out += body.slice(index, open);
+    if (!block.includes(".map(")) out += block;
+    index = cursor + 1;
+  }
+
+  return out + body.slice(index);
+}
+
+/**
+ * MDX → Markdown for the text surfaces (`.md`, `llms.txt`, `llms-full.txt`, retrieval chunks),
+ * which are built from the raw `.mdx` and so see everything Astro would have evaluated.
  *
  * Drops:
- * - `import …` / `export …` lines
- * - Starlight component tags (`<Card>`, `<CardGrid>`, `<Tabs>`, `<TabItem>`,
- *   `<Aside>`, `<Steps>`, `<Playground>`) — keeps inner text
+ * - `import …` / `export …` statements, however many lines they span
+ * - `{/* … *\/}` MDX comments
+ * - JSX blocks that map over data (`{rows.map(…)}`) — the generated tables and charts, whose
+ *   numbers the surrounding prose already states
+ * - Starlight component tags (`<Card>`, `<CardGrid>`, `<Tabs>`, `<TabItem>`, `<Aside>`,
+ *   `<Steps>`, `<Playground>`) — keeps inner text
  *
- * Replaces `{gmtVersion}` with the provided value.
- *
- * Note: fidelity is best-effort and improves when DOX-A4a ports real guide
- * content into plain `.md` files.
+ * Renders the components that carry prose of their own (`<Mistake>`, `<Scenario>`) to Markdown,
+ * and substitutes `{gmtVersion}` plus any `values` given, so a figure stated as an expression
+ * reaches the text surfaces as the figure.
  */
-export function stripMdx(body: string, vars: { gmtVersion?: string }): string {
-  let md = body;
+export function stripMdx(
+  body: string,
+  vars: { gmtVersion?: string; values?: Record<string, string> },
+): string {
+  let md = renderMdxComponents(body);
 
-  // Drop import/export lines
-  md = md.replace(/^\s*import\s.+$/gm, "");
-  md = md.replace(/^\s*export\s.+$/gm, "");
+  // Drop whole import statements, not just their first line. A multi-line
+  // import (`import {\n  a,\n  b,\n} from "x";`) used to leave every
+  // continuation line — including the closing `} from "...";` — behind as
+  // literal text, because the old regex only matched a single line. Matching
+  // non-greedily up to the first `;` after `import` consumes the whole
+  // statement regardless of how many lines it spans; no import specifier in
+  // this codebase embeds a `;` of its own.
+  md = outsideFences(md, (part) =>
+    part
+      .replace(/^[ \t]*import\b[\s\S]*?;[ \t]*$/gm, "")
+      // `export` statements span lines too (`export const x = {\n …\n};`), and a single-line
+      // rule left every continuation behind as prose.
+      .replace(/^[ \t]*export\b[\s\S]*?;[ \t]*$/gm, "")
+      // Remove Starlight + playground component tags (keep inner text)
+      .replace(
+        /<\/?(Card|CardGrid|Tabs|TabItem|Aside|Steps|Playground)\b[^>]*>/g,
+        "",
+      ),
+  );
 
-  // Remove Starlight + playground component tags (keep inner text)
-  md = md.replace(
-    /<\/?(Card|CardGrid|Tabs|TabItem|Aside|Steps|Playground)\b[^>]*>/g,
-    "",
+  // MDX comments: `{/* … */}`, which are authoring notes, never page text.
+  md = outsideFences(md, (part) =>
+    part.replace(/\{\s*\/\*[\s\S]*?\*\/\s*\}/g, ""),
   );
 
   // Substitute template variables
   if (vars.gmtVersion != null) {
     md = md.replace(/\{gmtVersion\}/g, vars.gmtVersion);
   }
+
+  // Figures the pages state as expressions over the stats modules.
+  const values = vars.values ?? {};
+  md = outsideFences(md, (part) =>
+    part
+      .replace(/\{([^{}\n]+)\}/g, (whole, expression: string) => {
+        const resolved = values[expression.trim()];
+        return resolved === undefined ? whole : resolved;
+      })
+      // `{" "}` is JSX line-break padding.
+      .replace(/\{"\s*"\}/g, " "),
+  );
+
+  // A `.map(…)` block is a generated table or chart, whose figures the prose already states.
+  md = outsideFences(md, dropMapBlocks);
 
   return md;
 }

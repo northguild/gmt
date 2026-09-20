@@ -9,7 +9,11 @@ import {
   checked,
   dataSource,
   filingRepos,
+  filingsByKind,
   filingsForRepo,
+  handledInGmt,
+  totalFilings,
+  unaffectingGmt,
 } from "../data/upstream-filings";
 import { filingInGmt, filingStatus } from "../lib/upstream-status";
 
@@ -32,7 +36,28 @@ function ref(r: string): { label: string; href: string } {
 
 const date = (iso: string) => iso.slice(0, 10);
 const checkedOn = new Date(checked).toISOString().replace("T", " ").slice(0, 16);
+
+// Computed here, not in upstream.mdx: the raw-text `.md`/`llms-full.txt`/
+// retrieval-chunk pipeline (page-markdown.ts's `stripMdx`) never evaluates
+// JSX expressions, so keeping this arithmetic in the MDX body shipped literal
+// `{totalFilings}` and a `{coversAll ? … : …}` ternary into those surfaces.
+// Astro evaluates it here at build time either way, so the rendered page is
+// unaffected.
+const prs = filingsByKind.find((row) => row.label === "pr")?.count ?? 0;
+const coversAll = handledInGmt + unaffectingGmt === totalFilings;
 ---
+
+<p>
+  <strong>
+    So far we have sent {totalFilings} reports and fixes to the Temporal projects, {prs} of them as
+    ready-to-merge code changes.
+    {coversAll
+      ? " GMT already gives you the correct answer for every one of them"
+      : ` GMT already gives you the correct answer for ${handledInGmt + unaffectingGmt} of them`}
+    : {handledInGmt} through its own built-in fix, and {unaffectingGmt} because the bug is in code
+    GMT doesn't use.
+  </strong>
+</p>
 
 {
   filingRepos.map((repo) => (

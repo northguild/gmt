@@ -166,6 +166,9 @@ function roundDateUnit(
  *   returns "", and a `roundingMode` outside Temporal's nine returns "" (previously a date unit
  *   floored silently).
  * - Wraps all Temporal calls in try-catch; returns "" on any error.
+ * - Output precision follows `smallestUnit`: no fractional seconds for "second" and coarser,
+ *   3 digits for "millisecond", 6 for "microsecond" and 9 for "nanosecond", so the result never
+ *   hides the precision the unit asked for.
  *
  * @param value ISO 8601 datetime string
  * @param options Rounding options: smallestUnit, optional roundingIncrement and roundingMode
@@ -179,6 +182,7 @@ function roundDateUnit(
  * @example roundDateTime("2024-06-15T12:34:56", { smallestUnit: "day" }) // "2024-06-16T00:00:00"
  * @example roundDateTime("2024-06-15T12:34:56", { smallestUnit: "hour" }) // "2024-06-15T13:00:00"
  * @example roundDateTime("2024-06-15T12:34:56", { smallestUnit: "hours" }) // "2024-06-15T13:00:00" (plural unit name)
+ * @example roundDateTime("2024-06-15T12:34:56.123456789", { smallestUnit: "millisecond" }) // "2024-06-15T12:34:56.123" (precision follows the unit)
  * @example roundDateTime("2024-05-15T12:00:00", { smallestUnit: "month", roundingMode: "bogus" as never }) // ""
  * @example roundDateTime("invalid", { smallestUnit: "year" }) // ""
  */

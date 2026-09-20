@@ -18,7 +18,11 @@ import { isOptionsArgument } from "../../internal/isObject";
  * Return the difference between two Unix timestamps as an ISO 8601 duration string,
  * bridging to the `duration` namespace (see `parseDuration`, `normalizeDuration`).
  *
- * - Uses Temporal.Instant.until() with `largestUnit` set to `unit`, then `.toString()`.
+ * - Converts both epochs to a `Temporal.ZonedDateTime` in `timeZone` and uses its `until()` with
+ *   `largestUnit` set to `unit`, then `.toString()`. Calendar units (days, weeks, months, years)
+ *   are therefore measured on that zone's wall clock — a 23-hour DST day is `P1D` — while time
+ *   units are exact elapsed time. `Temporal.Instant.until()` is not used: it rejects every
+ *   calendar `largestUnit`.
  * - Unlike `diffUnix`, `unit` is a single unit (not an array) — an ISO duration string
  *   already expresses a full multi-unit breakdown via `largestUnit` alone, so there's no
  *   array-of-units overload here.

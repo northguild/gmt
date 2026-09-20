@@ -17,6 +17,10 @@ import { isValidDate } from "../validate";
  *   the japanese calendar and `month: "long"` gave `"R6/2"`), `timeZoneName` alone returned `""`,
  *   and a `timeStyle` beside `dateStyle` was ignored. Pass the numeric fields to keep the numeric
  *   text, and pass only `dateStyle` to keep the styled text.
+ * - `options` null returns `""`, as ECMA-402's CoerceOptionsToObject rejects it. Any
+ *   other non-object — a string, a number, a boolean — formats with the defaults, as
+ *   `Intl.DateTimeFormat` does: CoerceOptionsToObject calls ToObject on it and the wrapper
+ *   carries no recognised option. Only `null` and `undefined` are special-cased.
  *
  * @param value ISO PlainDate string
  * @param locale optional BCP 47 locale identifier (default: runtime default), or a preference list of tags (ECMA-402)

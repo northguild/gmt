@@ -45,7 +45,10 @@ export function getQuarter(
     return null;
   }
 
-  const fiscalYearStartMonth = optionsArg?.fiscalYearStartMonth ?? 1;
+  const fiscalYearStartMonth =
+    optionsArg?.fiscalYearStartMonth === undefined
+      ? 1
+      : optionsArg.fiscalYearStartMonth;
 
   if (
     !Number.isInteger(fiscalYearStartMonth) ||

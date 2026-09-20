@@ -125,6 +125,18 @@ const WORKAROUNDS = [
     ],
   },
   {
+    defects: ["D11"],
+    title:
+      "D11 — Duration#total divides a month fraction by the wrong month (relativeTo on the 29th-31st)",
+    trigger:
+      "a js-temporal release measures a calendar-unit remainder against the unit the end falls in, as TC39 NudgeToCalendarUnit does (reported upstream with these repros)",
+    steps: [
+      "Delete the D11 repros in repros.ts, isMonthTotalCompatNeeded in capabilities.ts and its export in index.ts, and monthTotalBySpec with its call in durationTotal (internal/zonedWallClockDifference.ts).",
+      "Keep test/intervalLengthOracle.test.ts: its values are the spec's on either runtime.",
+      `Full wording: ${COMPAT_README} § Removal steps 11.`,
+    ],
+  },
+  {
     defects: ["D9"],
     title:
       "D9 — non-ISO months added and counted one month at a time (heap OOM for in-range amounts; temporalCompat/largeMonthSpan.ts)",

@@ -41,6 +41,7 @@ IANA tzdb rules, and Chromium 152/153 native Temporal as recorded in GMT's canar
 | D   | `"UTC"` fast path in `GetPossibleEpochNanoseconds` skips `IsValidEpochNanoseconds`                  | **Port** proposal-temporal PR #3205 (`d90d432`) + release                                                                                                                                                                                                                                                                                                              | js-temporal PR #367                                                                                                         | Yes (patched build)                                                                                                                      | `zoned.D`: `checkUtcValidity` in `internal/zonedWallClockDifference.ts`                                                                   | same release                                                                      |
 | E   | Transition search starts in 1847, after the first TZDB transition (1844-12-31)                      | **Bug report + PR** (new patch), both repositories                                                                                                                                                                                                                                                                                                                     | js-temporal PR #372 + tc39 #3330                                                                                            | Only as stated in the filings; not re-run in this document's builds                                                                      | `zoned.E`: defect-3 pre-1847 checks in `internal/zonedWallClock.ts`, `zonedWallClockOperations.ts`                                        | same release                                                                      |
 | F   | `calendarToIsoDate` overshoot assertion (tc39 #3292) is reachable, coptic/ethiopic/ethioaa month 13 | **Bug report** to tc39 only; js-temporal has not ported #3292                                                                                                                                                                                                                                                                                                          | tc39 #3329                                                                                                                  | Only as stated in the filing                                                                                                             | none: not in js-temporal, so not in GMT's runtime                                                                                         | none                                                                              |
+| H   | `Duration#total` divides a calendar-unit remainder by the wrong month                              | **Bug report + PR** (new patch), both repositories — not yet filed                                                                                                                                                                                                                                                                                                     | Not filed yet (found 2026-09-20, CORE-8 review)                                                                             | Yes (Chromium 153 vs polyfill 0.5.1, 2,016-case scan; 16 mismatches, all `month`)                                                        | `D11`: `monthTotalBySpec` in `internal/zonedWallClockDifference.ts`                                                                       | same release                                                                      |
 
 ## Filed
 
@@ -1309,6 +1310,114 @@ target month.
 workaround 0.5.1 needs).
 
 ---
+
+## G. CLDR calendar-alias asymmetry: `ethiopic-amete-alem` is accepted, `gregorian` is not (ICU note, not a polyfill defect)
+
+**Status: no ask. GMT matches both engines exactly; recorded so nobody "fixes" it.** Reviewed 2026-09-20
+(baldurpan, CORE-8). Owner decision: `gregorian` stays rejected and `ethiopic-amete-alem` stays accepted.
+
+CLDR `bcp47/calendar.xml` gives four calendar types an `alias` attribute naming their legacy Unicode name:
+`gregory`/`gregorian`, `roc`/`taiwan`, `islamic-tbla`/`islamic-tabular`, `ethioaa`/`ethiopic-amete-alem`.
+Only the last of the four is usable as a Temporal calendar id. That is not GMT's choice and not the
+polyfill's: Chromium 153 (ICU4X) and `@js-temporal/polyfill` 0.5.1 agree row for row, and GMT agrees with
+both.
+
+`Temporal.PlainDate.from("2024-10-03").withCalendar(id).toString()`, and
+`new Intl.DateTimeFormat("en-US", { calendar: id }).resolvedOptions().calendar`:
+
+| `id` | Chromium 153 Temporal | polyfill 0.5.1 | GMT `convertDateToCalendar` | Chromium `Intl` |
+| --- | --- | --- | --- | --- |
+| `gregorian` | `RangeError` | `RangeError` | `""` | `RangeError` |
+| `gregory` | `[u-ca=gregory]` | `[u-ca=gregory]` | `[u-ca=gregory]` | `gregory` |
+| `ethiopic-amete-alem` | `[u-ca=ethioaa]` | `[u-ca=ethioaa]` | `[u-ca=ethioaa]` | `ethioaa` |
+| `ethioaa` | `[u-ca=ethioaa]` | `[u-ca=ethioaa]` | `[u-ca=ethioaa]` | `ethioaa` |
+| `islamic-tabular` | `RangeError` | `RangeError` | `""` | `gregory` |
+| `islamic-tbla` | `[u-ca=islamic-tbla]` | `[u-ca=islamic-tbla]` | `[u-ca=islamic-tbla]` | `islamic-tbla` |
+| `taiwan` | `RangeError` | `RangeError` | `""` | `gregory` |
+| `roc` | `[u-ca=roc]` | `[u-ca=roc]` | `[u-ca=roc]` | `roc` |
+
+Two separate mechanisms produce the three rejections, which is why they are not one bug:
+
+- **`gregorian` is structurally invalid.** A Unicode locale extension `type` subtag is 3–8 alphanumerics
+  (UTS 35). `gregorian` is nine letters, so it fails the syntax check before any calendar lookup — which is
+  why `Intl` throws for it too, while it merely falls back for the other two.
+- **`islamic-tabular` and `taiwan` are structurally valid but not available calendars.** ECMA-402's
+  `AvailableCanonicalCalendars` is ICU's list; ICU canonicalizes `ethiopic-amete-alem` to `ethioaa` but does
+  not canonicalize these two, so Temporal's `CanonicalizeCalendar` throws while `Intl.DateTimeFormat`'s
+  option path silently falls back to `gregory`.
+
+**Why GMT does not paper over it.** GMT's calendar ids are exactly the ids Temporal accepts (Core Rule: the
+public string contract is Temporal's). Accepting `gregorian` would mean GMT's accepted set is wider than
+Temporal's, so a string GMT validated would throw the moment it reached `Temporal` — including the `Temporal`
+GMT itself re-exports. The `Intl` fallback is worse than the throw: `{ calendar: "taiwan" }` formatting as
+Gregorian is a silently wrong date, not an error. GMT surfaces both as its `""`/`null` sentinel.
+
+**Documented at:** `convertDateToCalendar`, `convertZonedToCalendar`, `isValidCalendarDate` and
+`isValidCalendarZonedDateTime` JSDoc, and `context/domination/research/calendar-standards-decisions.md`.
+
+**Trigger to revisit:** an ICU release that adds `islamic-tabular`/`taiwan` to the canonicalization table, or
+a TC39 amendment to `CanonicalizeCalendar`. Neither is filed; neither is being asked for.
+
+
+## H. `Duration#total` divides a calendar-unit remainder by the wrong month
+
+**Status: not filed yet.** Found 2026-09-20 while closing a coverage gap baldurpan raised in the
+CORE-8 review (`intervalLength*` in calendar units had only ever been compared against the same
+`until`/`total` primitives the implementation calls). Verified against Chromium 153 native Temporal.
+
+### The defect
+
+TC39 `Duration.prototype.total` → `TotalRelativeDuration` → **`NudgeToCalendarUnit`** measures the
+leftover against the unit the *end* falls in: `r1` whole units from `relativeTo`, then the fraction is
+
+```
+(target - (relativeTo + r1 units)) / ((relativeTo + (r1 + 1) units) - (relativeTo + r1 units))
+```
+
+so the denominator is the month that **starts** at the whole-month mark. The polyfill divides by the
+month that **ends** there instead. The two coincide unless adding a month constrains the day, so only a
+`relativeTo` on the 29th, 30th or 31st can reach it.
+
+### Repro
+
+```js
+const from = Temporal.PlainDateTime.from("2024-01-31T00:00:00");
+const to = Temporal.PlainDateTime.from("2024-02-29T12:00:00");
+const d = from.until(to, { largestUnit: "month" });
+
+d.toString();                                   // "P29DT12H"       — both engines agree
+d.total({ unit: "month", relativeTo: from });   // polyfill 0.5.1: 1.0172413793103448  (12h / 29d)
+                                                // Chromium 153:   1.0161290322580645  (12h / 31d)
+```
+
+`Jan 31 + 1 month` is `Feb 29` (constrained), and `Jan 31 + 2 months` is `Mar 31`, so the spec's
+denominator is `Feb 29 → Mar 31` = 31 days. The polyfill uses `Jan 31 → Feb 29` = 29 days.
+
+### Scope, as scanned
+
+`scanTotals2`: every day-of-month in `[1, 14, 15, 28, 29, 30, 31]` across all twelve months of 2024,
+ending `{hours: 12}`, `{days: 3}` and `{days: 3, hours: 7}` past `k ∈ {0, 1, 2, 13}` units, for units
+`year` and `month` — 2,016 rows, run in Chromium 153.0.8010.12 and in `@js-temporal/polyfill` 0.5.1.
+
+- **16 mismatches, every one `unit: "month"`.** By start day: 31 → 12, 30 → 2, 29 → 2. By `k`: 1 → 5,
+  2 → 4, 13 → 7.
+- **`until` agrees on all 2,016 rows.** Only the fraction `total` returns is wrong.
+- No `year` row mismatched.
+
+### Ask
+
+Bug report + PR against `js-temporal/temporal-polyfill`, and the same against
+`tc39/proposal-temporal` if its reference code shares the denominator (not checked yet — check
+`NudgeToCalendarUnit`'s `endEpochNs` before filing there).
+
+### GMT
+
+Fixed in GMT as defect **D11** (`packages/gmt/src/internal/temporalCompat/README.md`). `durationTotal`
+routes `month`/`year` totals with a `relativeTo` past the 28th through the `nudgeToCalendarUnit` spec
+path GMT already owns for the non-ISO calendars, gated on the `D11` probe so it retires by canary.
+Four call sites that had been calling `Duration#total` directly now go through `durationTotal`:
+`intervalLengthDate`, `intervalLengthDateTime`, `formatRelativeDate` and `formatRelativeDateTime`.
+After the fix, all 2,016 scan rows match Chromium 153 exactly.
 
 ## Corrections and contradictions
 

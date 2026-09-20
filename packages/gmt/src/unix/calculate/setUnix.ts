@@ -68,9 +68,12 @@ export function setUnix(
   if (instant === null) return null;
 
   const overflow = resolveOverflow(options?.overflow);
-  const disambiguation = options?.disambiguation ?? "compatible";
+  const disambiguation =
+    options?.disambiguation === undefined
+      ? "compatible"
+      : options.disambiguation;
   // Temporal ZonedDateTime.prototype.with: GetTemporalOffsetOption(options, "prefer").
-  const offset = options?.offset ?? "prefer";
+  const offset = options?.offset === undefined ? "prefer" : options.offset;
 
   try {
     const zoned = instant.toZonedDateTimeISO(timeZone);

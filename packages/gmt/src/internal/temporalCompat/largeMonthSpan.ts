@@ -183,7 +183,15 @@ function monthsBetweenYearStarts(
   if (start === undefined || end === undefined) {
     return null;
   }
-  return wholeMonths(daysBetween(start, end), profile.meanMonthDays ?? 0);
+  // `measureProfile` always sets `meanMonthDays` for every `LEAP_MONTH_CALENDARS` member —
+  // the only calendars that reach this line, since the `fixedMonthsPerYear` branch above
+  // already returned. Dead by construction today, but a `?? 0` here would silently turn a
+  // future violation of that invariant into `days / 0` (`Infinity`) instead of a clear
+  // error, so it is asserted instead.
+  if (profile.meanMonthDays === undefined) {
+    throw new RangeError(`${calendarId} has no measured mean month length`);
+  }
+  return wholeMonths(daysBetween(start, end), profile.meanMonthDays);
 }
 
 /** True when an amount of months is large enough for the year jumps. */

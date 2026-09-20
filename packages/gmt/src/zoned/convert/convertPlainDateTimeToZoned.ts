@@ -46,10 +46,16 @@ export function convertPlainDateTimeToZoned(
     return "";
   }
 
-  const disambiguation = optionsArg?.disambiguation ?? "compatible";
+  const disambiguation =
+    optionsArg?.disambiguation === undefined
+      ? "compatible"
+      : optionsArg.disambiguation;
 
   const options: Partial<Temporal.ZonedDateTimeToStringOptions> = {
-    smallestUnit: optionsArg?.smallestUnit ?? "milliseconds",
+    smallestUnit:
+      optionsArg?.smallestUnit === undefined
+        ? "milliseconds"
+        : optionsArg.smallestUnit,
   };
 
   try {

@@ -67,3 +67,15 @@ Migration:
 - **An interval whose `end` was the last day, or last unit, it covers** now stops before it. Pass the next day or unit as `end`: `intervalContainsDate("2024-01-01", addDate("2024-01-31", { days: 1 }), "2024-01-31")` is `true`.
 - **Code that undid the one-unit step**, for example by adding a nanosecond to a piece from `intervalDifference*`, must stop: pieces now end and start exactly at the cut.
 - **Code that tested `intervalAbuts*` for a one-unit gap** now tests for a shared endpoint.
+- **`mapDatesInRange` and `mapZonedDatesInRange` stay end-inclusive** and did not change. They enumerate the dates a range covers, so `end` is one of them; `interval*` bounds a span, so `end` is not in it. Mixing the two in one expression is where this bites:
+
+  ```typescript
+  mapDatesInRange("2024-01-01", "2024-01-05", 1);
+  // ["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04", "2024-01-05"] — 5 dates
+
+  intervalCountDate("2024-01-01", "2024-01-05", "day"); // 4
+  intervalContainsDate("2024-01-01", "2024-01-05", "2024-01-05"); // false
+  splitIntervalByUnitDate("2024-01-01", "2024-01-05", "day", 1).length; // 4
+  ```
+
+  The same `start`/`end` pair therefore yields `n + 1` from the `map*` functions and `n` from the `interval*` ones. To read one set of bounds both ways, pass `addDate(end, { days: 1 })` to the `interval*` call, or `subDate(end, { days: 1 })` to the `map*` call.

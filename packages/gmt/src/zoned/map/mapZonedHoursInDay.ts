@@ -17,7 +17,7 @@ import { addToZoned, zonedDateTimeFrom, zonedStartOfDay } from "../../internal";
  * @returns array of zoned ISO 8601 strings for each hour in the day
  *
  * @example mapZonedHoursInDay("2024-02-29T12:34:56.789+00:00[UTC]") // ["2024-02-29T00:00:00+00:00[UTC]", "2024-02-29T01:00:00+00:00[UTC]", ..., "2024-02-29T23:00:00+00:00[UTC]"]
- * @example mapZonedHoursInDay("2024-03-10T12:34:56.789-05:00[America/New_York]") // ["2024-03-10T00:00:00-05:00[America/New_York]", ...] (23 entries; 2 AM is skipped)
+ * @example mapZonedHoursInDay("2024-03-10T12:34:56.789-04:00[America/New_York]") // ["2024-03-10T00:00:00-05:00[America/New_York]", ...] (23 entries; 2 AM is skipped — the anchor is after the spring-forward, so its offset is -04:00)
  * @example mapZonedHoursInDay("2024-09-08T12:00:00-03:00[America/Santiago]") // ["2024-09-08T01:00:00-03:00[America/Santiago]", ..., "2024-09-08T23:00:00-03:00[America/Santiago]"] (23 entries; midnight is skipped)
  * @example mapZonedHoursInDay("invalid") // []
  */

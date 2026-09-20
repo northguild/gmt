@@ -16,6 +16,10 @@ import { isValidTime } from "../validate";
  * - **Compatibility:** before 1.16.0 `era` or `timeZoneName` alone returned `""`, `era` beside a
  *   time field added the era name, and a `dateStyle` beside `timeStyle` was ignored. Pass only
  *   `timeStyle` to keep the styled text.
+ * - `options` null returns `""`, as ECMA-402's CoerceOptionsToObject rejects it. Any
+ *   other non-object — a string, a number, a boolean — formats with the defaults, as
+ *   `Intl.DateTimeFormat` does: CoerceOptionsToObject calls ToObject on it and the wrapper
+ *   carries no recognised option. Only `null` and `undefined` are special-cased.
  *
  * @param value ISO PlainTime string
  * @param locale optional BCP 47 locale identifier, or a preference list of tags (ECMA-402)

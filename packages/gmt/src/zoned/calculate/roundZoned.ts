@@ -34,6 +34,9 @@ function isZonedRoundingUnit(unit: unknown): unit is "day" | Temporal.TimeUnit {
  *   limitation: `ZonedDateTime.prototype.round` accepts time units and "day" only
  *   (ValidateTemporalUnitValue with ~time~ and « day »).
  * - Wraps Temporal.ZonedDateTime.round() which throws on invalid options.
+ * - Output precision follows `smallestUnit`: no fractional seconds for "day", "second" and
+ *   coarser, 3 digits for "millisecond", 6 for "microsecond" and 9 for "nanosecond", so the
+ *   result never hides the precision the unit asked for.
  * - Note: Temporal's `ZonedDateTime.prototype.round` takes no `disambiguation` or `offset` options.
  * - Follows TC39 `ZonedDateTime.round`, which rounds the wall clock and re-resolves it in the
  *   zone. Across a transition the result can land after the input or on another local date —
@@ -48,6 +51,7 @@ function isZonedRoundingUnit(unit: unknown): unit is "day" | Temporal.TimeUnit {
  * @example roundZoned("2024-06-15T12:34:56-04:00[America/New_York]", { smallestUnit: "minute", roundingIncrement: 15 }) // "2024-06-15T12:30:00-04:00[America/New_York]"
  * @example roundZoned("2024-09-29T03:50:00+13:45[Pacific/Chatham]", { smallestUnit: "hour", roundingMode: "trunc" }) // "2024-09-29T04:00:00+13:45[Pacific/Chatham]" (after the input — TC39 wall-clock rounding)
  * @example roundZoned("2024-06-15T12:34:56-04:00[America/New_York]", { smallestUnit: "hours" }) // "2024-06-15T13:00:00-04:00[America/New_York]" (plural unit name)
+ * @example roundZoned("2024-06-15T12:34:56.123456789-04:00[America/New_York]", { smallestUnit: "millisecond" }) // "2024-06-15T12:34:56.123-04:00[America/New_York]" (precision follows the unit)
  * @example roundZoned("invalid", { smallestUnit: "hour" }) // ""
  */
 export function roundZoned(

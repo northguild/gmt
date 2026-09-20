@@ -10,7 +10,10 @@ import { isValidTime } from "../validate";
  * - Half-open: an interval holds every `t` with `start <= t < end`. The union is returned only
  *   when it is one non-empty interval — the single run CORE-6's `mergeIntervals` would give.
  * - Overlapping intervals, and touching intervals (`aEnd === bStart`), return their combined span.
- * - Intervals with any gap between them return `null`, even a one-unit gap.
+ * - Two **non-empty** intervals with any gap between them return `null`, even a one-unit gap.
+ *   The caveat matters: an empty interval is the empty set, so it is never “separated” from
+ *   anything. A non-empty interval unioned with an empty one far away is still that non-empty
+ *   interval — see the next bullet — not `null`.
  * - An empty interval (`start === end`) is the empty set: it adds nothing, so the union is the
  *   other interval. Two empty intervals have no non-empty union and return `null`.
  * - Returns `null` if either interval is invalid (`start > end`).

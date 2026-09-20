@@ -98,7 +98,10 @@ export function addZoned(
     return "";
   }
 
-  const disambiguation = optionsArg?.disambiguation ?? "compatible";
+  const disambiguation =
+    optionsArg?.disambiguation === undefined
+      ? "compatible"
+      : optionsArg.disambiguation;
   const overflow = resolveOverflow(optionsArg?.overflow);
 
   try {

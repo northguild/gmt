@@ -3298,6 +3298,10 @@
         "result": "\"2024-06-15T13:00:00\" (plural unit name)"
       },
       {
+        "call": "roundDateTime(\"2024-06-15T12:34:56.123456789\", { smallestUnit: \"millisecond\" })",
+        "result": "\"2024-06-15T12:34:56.123\" (precision follows the unit)"
+      },
+      {
         "call": "roundDateTime(\"2024-05-15T12:00:00\", { smallestUnit: \"month\", roundingMode: \"bogus\" as never })",
         "result": "\"\""
       },
@@ -3332,6 +3336,10 @@
       {
         "call": "roundTime(\"12:34:56\", { smallestUnit: \"hours\" })",
         "result": "\"13:00:00\" (plural unit name)"
+      },
+      {
+        "call": "roundTime(\"12:34:56.123456789\", { smallestUnit: \"microsecond\" })",
+        "result": "\"12:34:56.123457\" (precision follows the unit)"
       },
       {
         "call": "roundTime(\"invalid\", { smallestUnit: \"hour\" })",
@@ -3595,6 +3603,10 @@
       },
       {
         "call": "startOfQuarterForDateTime(\"2024-06-15T12:00:00\")",
+        "result": "\"2024-04-01T00:00:00\""
+      },
+      {
+        "call": "startOfQuarterForDateTime(\"2024-05-15T12:34:56.789\")",
         "result": "\"2024-04-01T00:00:00\""
       },
       {
@@ -4642,7 +4654,11 @@
       },
       {
         "call": "convertDateToCalendar(\"2024-10-03\", \"gregorian\" as never)",
-        "result": "\"\" (not a calendar id)"
+        "result": "\"\" (a CLDR alias Temporal does not accept; use \"gregory\")"
+      },
+      {
+        "call": "convertDateToCalendar(\"2024-10-03\", \"taiwan\" as never)",
+        "result": "\"\" (a CLDR alias Temporal does not accept; use \"roc\")"
       },
       {
         "call": "convertDateToCalendar(\"invalid\", \"hebrew\")",
@@ -5006,7 +5022,7 @@
     "sourcePath": "packages/gmt/src/plain/format/formatRelativeDateTime.ts",
     "examples": [
       {
-        "call": "formatRelativeDateTime(\"2026-03-17T09:00:00\", \"en-GB\", { style: \"long\" })",
+        "call": "formatRelativeDateTime(\"2026-03-17T09:00:00\", \"en-GB\", { style: \"long\", reference: \"2026-03-17T06:00:00\" })",
         "result": "\"in 3 hours\""
       },
       {
@@ -5053,7 +5069,7 @@
     "sourcePath": "packages/gmt/src/plain/format/formatRelativeTime.ts",
     "examples": [
       {
-        "call": "formatRelativeTime(\"14:30:00\", \"en-US\", { style: \"short\" })",
+        "call": "formatRelativeTime(\"14:30:00\", \"en-US\", { style: \"short\", reference: \"16:30:00\" })",
         "result": "\"2 hr. ago\""
       },
       {
@@ -5685,8 +5701,8 @@
         "result": "3"
       },
       {
-        "call": "intervalCountDate(\"2024-01-15\", \"2024-01-15\", \"month\") // 0 (zero-length: holds no instant)",
-        "result": "*"
+        "call": "intervalCountDate(\"2024-01-15\", \"2024-01-15\", \"month\")",
+        "result": "0 (zero-length: holds no instant)"
       },
       {
         "call": "intervalCountDate(\"2024-01-01\", \"2024-01-10\", \"hour\")",
@@ -7229,6 +7245,10 @@
         "result": "[\"BC\", \"AD\"]"
       },
       {
+        "call": "getLocaleEraNames(\"en-US-u-ca-buddhist\")",
+        "result": "[\"Before Christ\", \"Anno Domini\"] (the -u-ca- subtag is overridden)"
+      },
+      {
         "call": "getLocaleEraNames(\"not-a-locale-!!\")",
         "result": "[]"
       },
@@ -7304,6 +7324,10 @@
         "result": "[\"J\", \"F\", \"M\", ... \"D\"]"
       },
       {
+        "call": "getLocaleMonthNames(\"en-US-u-ca-hebrew\")",
+        "result": "[\"January\", \"February\", ... \"December\"] (the -u-ca- subtag is overridden)"
+      },
+      {
         "call": "getLocaleMonthNames(\"not-a-locale-!!\")",
         "result": "[]"
       },
@@ -7334,6 +7358,10 @@
       {
         "call": "getLocaleWeekdayNames(\"de-DE\", \"short\")",
         "result": "[\"Mo\", \"Di\", \"Mi\", ... \"So\"]"
+      },
+      {
+        "call": "getLocaleWeekdayNames(\"ar-EG\")[0]",
+        "result": "\"السبت\" (Saturday — ar-EG's first day, unlike ar-SA's Sunday)"
       },
       {
         "call": "getLocaleWeekdayNames(\"not-a-locale-!!\")",
@@ -13860,6 +13888,14 @@
         "result": "\"2024-06-15T13:00:00Z\" (plural unit name)"
       },
       {
+        "call": "roundUtc(\"2024-06-15T12:34:56.123456789Z\", { smallestUnit: \"microsecond\" })",
+        "result": "\"2024-06-15T12:34:56.123457Z\" (precision follows the unit)"
+      },
+      {
+        "call": "roundUtc(\"2024-06-15T12:34:56.123456789Z\", { smallestUnit: \"nanosecond\", fractionalSecondDigits: 3 })",
+        "result": "\"2024-06-15T12:34:56.123Z\" (explicit digits win)"
+      },
+      {
         "call": "roundUtc(\"2024-06-15T12:34:56Z\", { smallestUnit: \"day\" as never })",
         "result": "\"\" (Instant rounds to time units only)"
       },
@@ -15377,6 +15413,10 @@
         "result": "\"\" (15 Mar 2024 was a Friday)"
       },
       {
+        "call": "parseHttp(\"Mon Nov  6 08:49:37 1994\")",
+        "result": "\"\" (asctime-date; 6 Nov 1994 was a Sunday)"
+      },
+      {
         "call": "convertZonedToUtc(parseRfc2822(\"15 Mar 2024 14:30:00 GMT\"))",
         "result": "\"2024-03-15T14:30:00Z\" — the day name removed"
       },
@@ -16364,6 +16404,10 @@
         "result": "\"2024-06-15T13:00:00-04:00[America/New_York]\" (plural unit name)"
       },
       {
+        "call": "roundZoned(\"2024-06-15T12:34:56.123456789-04:00[America/New_York]\", { smallestUnit: \"millisecond\" })",
+        "result": "\"2024-06-15T12:34:56.123-04:00[America/New_York]\" (precision follows the unit)"
+      },
+      {
         "call": "roundZoned(\"invalid\", { smallestUnit: \"hour\" })",
         "result": "\"\""
       }
@@ -17282,7 +17326,7 @@
         "result": "\"2 months ago\""
       },
       {
-        "call": "formatRelativeZoned(\"2026-03-08T01:00:00-05:00[America/New_York]\", \"en-US\")",
+        "call": "formatRelativeZoned(\"2026-03-08T01:00:00-05:00[America/New_York]\", \"en-US\", { reference: \"2026-03-07T01:00:00-05:00[America/New_York]\" })",
         "result": "\"tomorrow\""
       },
       {
@@ -18694,8 +18738,8 @@
         "result": "[\"2024-02-29T00:00:00+00:00[UTC]\", \"2024-02-29T01:00:00+00:00[UTC]\", ..., \"2024-02-29T23:00:00+00:00[UTC]\"]"
       },
       {
-        "call": "mapZonedHoursInDay(\"2024-03-10T12:34:56.789-05:00[America/New_York]\")",
-        "result": "[\"2024-03-10T00:00:00-05:00[America/New_York]\", ...] (23 entries; 2 AM is skipped)"
+        "call": "mapZonedHoursInDay(\"2024-03-10T12:34:56.789-04:00[America/New_York]\")",
+        "result": "[\"2024-03-10T00:00:00-05:00[America/New_York]\", ...] (23 entries; 2 AM is skipped — the anchor is after the spring-forward, so its offset is -04:00)"
       },
       {
         "call": "mapZonedHoursInDay(\"2024-09-08T12:00:00-03:00[America/Santiago]\")",

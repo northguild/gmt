@@ -121,6 +121,23 @@ const DOX_REFERENCE = "apps/dox/src/content/docs/reference";
 /** Directories under `src/` that are never public. */
 const PRIVATE_DIRS = new Set(["internal", "test"]);
 
+/**
+ * The `clock`/`elided`/`prose` skip buckets (see the header comment) are bare `catch`es: nothing
+ * bounded how many examples or documented results they could swallow, which is how three real doc
+ * defects (a stray `*`, three stale clock examples, `mapZonedHoursInDay`'s wrong offset) stayed
+ * invisible — `check` was green while they shipped wrong. This pins the total skipped in each tally
+ * at the count verified correct on 2026-09-20 (Story CORE-8's review), so a silent increase — a new
+ * example that should have been checked but instead fell into a skip bucket — fails `check` instead
+ * of passing quietly.
+ *
+ * **To update:** run `node scripts/api-surface.mjs check` and read the new totals out of its summary
+ * line (`N skipped` for examples, `N skipped` for documented results). Only lower this when skips
+ * were *removed* (an example now runs instead of being skipped) or *legitimately added* (a new
+ * `get/` reader, a new prose aside) — never to silence a regression without reading `show`'s list
+ * first to confirm every new skip is one of those two things.
+ */
+const SKIP_BUDGET = { examples: 164, docResults: 64 };
+
 // A Temporal/Intl result formatted by the runtime depends on the zone; examples document UTC.
 if (process.env.TZ !== "UTC") {
   const run = spawnSync(process.execPath, process.argv.slice(1), {
@@ -932,22 +949,38 @@ for (const d of docLinks) {
 
 const skipTotal = (tally) =>
   Object.values(tally.skipped).reduce((n, list) => n + list.length, 0);
+const exampleSkips = skipTotal(examples);
+const docResultSkips = skipTotal(docResults);
 console.log(
   `api-surface: ${reachable.size} public source files, ${unreachable.length} unreachable file(s); ` +
-    `${checked} of ${total} examples checked, ${failures.length} failing, ${skipTotal(examples)} skipped ` +
+    `${checked} of ${total} examples checked, ${failures.length} failing, ${exampleSkips} skipped ` +
     `(${skipCounts(examples)}); ` +
     `${docResults.checked} of ${judged(docResults)} documented results checked, ${docResults.failures.length} failing, ` +
-    `${skipTotal(docResults)} skipped (${skipCounts(docResults)}); ` +
+    `${docResultSkips} skipped (${skipCounts(docResults)}); ` +
     `${documentedImports.length} documented imports, ${docImports.length} unresolved; ` +
     `${linksChecked} reference links, ${docLinks.length} broken; ` +
     `${siteLinksChecked} site links, ${siteLinks.length} broken`,
 );
+if (exampleSkips !== SKIP_BUDGET.examples) {
+  console.log(
+    `  skip budget: examples skipped ${exampleSkips}, pinned at exactly ${SKIP_BUDGET.examples} — ` +
+      `run \`node scripts/api-surface.mjs show\` to see what changed, then update SKIP_BUDGET.examples`,
+  );
+}
+if (docResultSkips !== SKIP_BUDGET.docResults) {
+  console.log(
+    `  skip budget: documented results skipped ${docResultSkips}, pinned at exactly ${SKIP_BUDGET.docResults} — ` +
+      `run \`node scripts/api-surface.mjs show\` to see what changed, then update SKIP_BUDGET.docResults`,
+  );
+}
 if (
   unreachable.length > 0 ||
   failures.length > 0 ||
   docResults.failures.length > 0 ||
   docImports.length > 0 ||
   docLinks.length > 0 ||
-  siteLinks.length > 0
+  siteLinks.length > 0 ||
+  exampleSkips !== SKIP_BUDGET.examples ||
+  docResultSkips !== SKIP_BUDGET.docResults
 )
   process.exit(1);

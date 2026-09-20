@@ -87,7 +87,10 @@ export function intervalFromDurationZoned(
     return null;
   }
 
-  const disambiguation = options?.disambiguation ?? "compatible";
+  const disambiguation =
+    options?.disambiguation === undefined
+      ? "compatible"
+      : options.disambiguation;
   const overflow = resolveOverflow(options?.overflow);
 
   try {

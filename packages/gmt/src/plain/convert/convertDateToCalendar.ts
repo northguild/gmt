@@ -18,6 +18,12 @@ import { isValidCalendarDate } from "../validate";
  *   so conversions chain between calendars.
  * - `calendar` is a canonical calendar id; like Temporal's `withCalendar`, an alias or another
  *   letter case is canonicalized (`"ethiopic-amete-alem"` writes `[u-ca=ethioaa]`).
+ * - **Only one of CLDR's four legacy calendar aliases works, and that is Temporal's rule, not
+ *   GMT's.** `ethiopic-amete-alem` canonicalizes to `ethioaa`; `gregorian`, `islamic-tabular` and
+ *   `taiwan` return `""`. Chromium 153 and `@js-temporal/polyfill` both throw `RangeError` for
+ *   those three: `gregorian` is nine letters, past the 8-character limit on a Unicode
+ *   locale-extension `type` subtag, and the other two are absent from ECMA-402's
+ *   `AvailableCanonicalCalendars`. Use `gregory`, `islamic-tbla` and `roc`.
  * - Returns "" on invalid input or an unsupported `calendar`.
  *
  * Compatibility: since 1.16.0 the string is RFC 9557. Earlier releases wrote the calendar's own
@@ -39,7 +45,8 @@ import { isValidCalendarDate } from "../validate";
  * @example convertDateToCalendar("2024-10-03", "gregory") // "2024-10-03[u-ca=gregory]"
  * @example convertDateToCalendar("2024-10-03", "ethiopic-amete-alem" as never) // "2024-10-03[u-ca=ethioaa]"
  * @example convertDateToCalendar("0006-10-03[u-ca=japanese;era=reiwa]", "iso8601") // "" (not RFC 9557)
- * @example convertDateToCalendar("2024-10-03", "gregorian" as never) // "" (not a calendar id)
+ * @example convertDateToCalendar("2024-10-03", "gregorian" as never) // "" (a CLDR alias Temporal does not accept; use "gregory")
+ * @example convertDateToCalendar("2024-10-03", "taiwan" as never) // "" (a CLDR alias Temporal does not accept; use "roc")
  * @example convertDateToCalendar("invalid", "hebrew") // ""
  */
 export function convertDateToCalendar(
