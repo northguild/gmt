@@ -4,8 +4,16 @@ import {
   type CalendarDateUnit,
   calendarDateUntil,
   isCalendarArithmeticCompatNeeded,
+  isNudgeWindowCompatNeeded,
 } from "./temporalCompat";
 import { plainDateUntilWithRounding } from "./zonedWallClockDifference";
+
+/** Month and year are the units whose nudge window can miss its target; see D11. */
+function isNudgeWindowSmallestUnit(unit: unknown): boolean {
+  return (
+    unit === "month" || unit === "months" || unit === "year" || unit === "years"
+  );
+}
 
 /** Plural date units to Temporal's singular spelling; anything else passes through unchanged. */
 function singularDateUnit(unit: string): CalendarDateUnit {
@@ -53,7 +61,12 @@ export function plainDateUntil(
   };
   if (
     start.calendarId === end.calendarId &&
-    isCalendarArithmeticCompatNeeded(start.calendarId)
+    (isCalendarArithmeticCompatNeeded(start.calendarId) ||
+      // Defect 4 (D11): the polyfill rounds over a nudge window that need not contain the end, and
+      // only a start past the 28th with a month or year `smallestUnit` can reach that.
+      (start.day >= 29 &&
+        isNudgeWindowSmallestUnit(options.smallestUnit) &&
+        isNudgeWindowCompatNeeded()))
   ) {
     return plainDateUntilWithRounding(start, end, untilOptions);
   }

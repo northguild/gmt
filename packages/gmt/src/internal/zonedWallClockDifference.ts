@@ -8,7 +8,7 @@ import {
   calendarDateAdd as compatCalendarDateAdd,
   calendarDateUntil as compatCalendarDateUntil,
   isCalendarArithmeticCompatNeeded,
-  isMonthTotalCompatNeeded,
+  isNudgeWindowCompatNeeded,
 } from "./temporalCompat";
 import {
   epochNanosecondsFor,
@@ -66,19 +66,27 @@ import {
  *    - Removal: delete the `isCalendarArithmeticCompatNeeded` terms in `zonedUntil`,
  *      `durationTotal`, `durationRound` and `durationCompare`, and the plain context's dispatch.
  *      The seams may keep calling the compat entry points, which are then the polyfill's calls.
- * 4. **`Duration#total` divides a month fraction by the wrong month.** TC39
- *    TotalRelativeDuration measures the leftover against the unit the *end* falls in — from
- *    `relativeTo` plus the whole months to `relativeTo` plus one more. The polyfill measures it
- *    against the month that ends there instead, so a `relativeTo` on the 29th, 30th or 31st,
- *    where adding a month constrains the day, returns a fraction over the wrong denominator:
+ * 4. **The calendar nudge window is never retried** (D11). TC39 bounds a duration between
+ *    `relativeTo + r1 units` and `relativeTo + r2 units`, taken from the duration's own count of
+ *    that unit, and `NudgeToCalendarUnit` then checks that the target falls inside that window; when
+ *    it does not, `ComputeNudgeWindow` runs again with `additionalShift`, so `r1` becomes 1 rather
+ *    than 0. The polyfill computes the window once and never retries — its own
+ *    `assert(start <= dest <= end)` is compiled out of production builds — so the answer is taken
+ *    over bounds that do not contain the target. It reaches `Duration#total` (a wrong fraction:
  *    2024-01-31 to 2024-02-29T12:00 totals 1.0172413793103448 months where TC39 and Chromium 153
- *    give 1.0161290322580645. The whole part and `until` agree; only the fraction is wrong.
- *    - Trigger: `isMonthTotalCompatNeeded()` — the D11 probe fails — and the unit is "month" or
- *      "year" with a `relativeTo` past the 28th. The operation then takes the spec path below,
- *      which is the same `nudgeToCalendarUnit` the non-ISO calendars already use.
- *    - Retired by: no upstream fix yet; filed against the polyfill with this repro.
- *    - Removal: delete the `isMonthTotalCompatNeeded` term in `durationTotal` and the D11 rows in
- *      `./temporalCompat/repros.ts`.
+ *    give 1.0161290322580645), `Duration#round` and `until`/`since` with a calendar `smallestUnit`
+ *    (a whole unit: the same span truncates to `PT0S` instead of `P1M`). Only a `relativeTo` or
+ *    start past the 28th can reach it, because only there does adding a month constrain the day.
+ *    - Trigger: `isNudgeWindowCompatNeeded()` — the D11 probe fails — with a "month" or "year" unit
+ *      and a `relativeTo` on the 29th, 30th or 31st. The operation then takes the spec path below,
+ *      the same `nudgeToCalendarUnit` the non-ISO calendars already use.
+ *    - Retired by: a js-temporal release containing a port of proposal-temporal #3172
+ *      (`5dd0b0d97ee1`, merged 2025-11-19), which is the fix for tc39/proposal-temporal#3168.
+ *      Not on js-temporal `main` either, so no release alone will do it.
+ *    - Removal: delete the `isNudgeWindowCompatNeeded` terms in `durationTotal`, `durationRound`,
+ *      `zonedUntil`, `plainUntilWithRounding` and `internal/plainDateUntil.ts`, and the D11 rows in
+ *      `./temporalCompat/repros.ts`. Keep the `progress === 0n` branch in `nudgeToCalendarUnit`:
+ *      that is GMT's own bug, not the polyfill's.
  * ---------------------------------------------------------------------------------------------
  */
 
@@ -737,7 +745,13 @@ function nudgeToCalendarUnit(
   );
 
   let roundedUnit: number;
-  if (progress === span) {
+  if (progress === 0n) {
+    // The target is the lower bound itself, so it is already rounded. TC39 leaves this to
+    // ApplyUnsignedRoundingMode's "if x is equal to r1, return r1" step, which this
+    // comparison-based form cannot see: without the branch, `ceil` (unsigned mode "infinity")
+    // would expand an exact boundary to the next whole unit.
+    roundedUnit = Math.abs(r1);
+  } else if (progress === span) {
     roundedUnit = Math.abs(r2);
   } else {
     roundedUnit = applyUnsignedRoundingMode(
@@ -938,6 +952,7 @@ function differenceZonedDateTimeWithRounding(
 
 /** An ISO date far from the limits, used only to validate options. */
 const PLAIN_DATE_PROBE = new Temporal.PlainDate(2000, 1, 1);
+const PLAIN_DATE_TIME_PROBE = new Temporal.PlainDateTime(2000, 1, 1);
 
 /** TC39 `IsCalendarUnit`. */
 function isCalendarUnit(unit: Unit): unit is "year" | "month" | "week" {
@@ -1563,6 +1578,20 @@ export function zonedUntil(
     if (bySpec !== null) return bySpec;
   }
 
+  // Defect 4: the polyfill rounds over a nudge window that need not contain the target, so a
+  // calendar `smallestUnit` from a day that a month add would constrain takes the spec path too.
+  if (
+    settings !== null &&
+    one.timeZoneId === two.timeZoneId &&
+    one.calendarId === two.calendarId &&
+    isNudgeWindowUnit(settings.smallestUnit) &&
+    one.day >= 29 &&
+    isNudgeWindowCompatNeeded()
+  ) {
+    const bySpec = untilAtLimit(one, two, options, settings);
+    if (bySpec !== null) return bySpec;
+  }
+
   const atRangeLimit =
     settings !== null &&
     one.timeZoneId === two.timeZoneId &&
@@ -1720,6 +1749,14 @@ function calendarTotalBySpec(
 }
 
 /**
+ * Units whose nudge window can miss its target: only a month, or a year that carries months with it.
+ * A week or a day is a fixed count of days, so `relativeTo + r1 units` never has to constrain.
+ */
+function isNudgeWindowUnit(unit: Unit | undefined): boolean {
+  return unit === "month" || unit === "year";
+}
+
+/**
  * The day of month a `relativeTo` resolves to, or 0 when there is none to read.
  *
  * Only the 29th, 30th and 31st can reach defect 4: below that, adding a month never constrains
@@ -1793,9 +1830,9 @@ function monthTotalBySpec(
   zoned: Temporal.ZonedDateTime | null,
 ): number | null {
   if (
-    (unit !== "month" && unit !== "year") ||
+    !isNudgeWindowUnit(unit) ||
     relativeToDayOfMonth(relativeTo, zoned) < 29 ||
-    !isMonthTotalCompatNeeded()
+    !isNudgeWindowCompatNeeded()
   ) {
     return null;
   }
@@ -1806,6 +1843,33 @@ function monthTotalBySpec(
   return plain === null
     ? null
     : totalWithPlainRelativeTo(duration, plain, unitOption, unit);
+}
+
+/**
+ * Defect 4: `Duration#round` by the spec when the polyfill would round over a nudge window that
+ * does not contain the target. Returns null whenever the defect cannot apply, leaving the
+ * polyfill's own answer.
+ */
+function monthRoundBySpec(
+  duration: Temporal.Duration,
+  roundTo: DurationRoundOptions,
+  settings: RoundingSettings,
+  zoned: Temporal.ZonedDateTime | null,
+): Temporal.Duration | null {
+  if (
+    !isNudgeWindowUnit(settings.smallestUnit) ||
+    relativeToDayOfMonth(roundTo.relativeTo, zoned) < 29 ||
+    !isNudgeWindowCompatNeeded()
+  ) {
+    return null;
+  }
+  if (zoned !== null) {
+    return roundAtLimit(duration, zoned, roundTo, settings);
+  }
+  const plain = plainRelativeTo(roundTo.relativeTo);
+  return plain === null
+    ? null
+    : roundWithPlainRelativeTo(duration, plain, roundTo, settings);
 }
 
 /** Defect 3: `Duration#round` by the spec when the `relativeTo` calendar needs the compat layer. */
@@ -1850,6 +1914,69 @@ function calendarCompareBySpec(
         Temporal.Duration.from(two),
         plain,
       );
+}
+
+/**
+ * `PlainDateTime#until` / `#since`, correct when the polyfill would round over a nudge window that
+ * does not contain the target (defect 4).
+ *
+ * The plain difference functions round through the polyfill directly, because neither the range
+ * limits nor the non-ISO calendars reach them the way they reach the zoned ones. A calendar
+ * `smallestUnit` measured from a day that a month add would constrain is the one case that does, so
+ * it takes the spec path and everything else stays the polyfill's own call.
+ *
+ * @param one the earlier plain datetime
+ * @param two the later plain datetime
+ * @param options Temporal difference options, passed through unchanged when the defect cannot apply
+ * @returns the difference; throws where TC39 Temporal throws
+ */
+export function plainUntilWithRounding(
+  one: Temporal.PlainDateTime,
+  two: Temporal.PlainDateTime,
+  options: {
+    largestUnit?: unknown;
+    smallestUnit?: unknown;
+    roundingIncrement?: number;
+    roundingMode?: Temporal.RoundingMode;
+  } = {},
+): Temporal.Duration {
+  const settings = roundingSettings(
+    options.largestUnit,
+    options.smallestUnit,
+    (smallestUnit) => largerUnit("hour", smallestUnit),
+    options.roundingIncrement,
+    options.roundingMode ?? "trunc",
+  );
+
+  if (
+    settings !== null &&
+    isNudgeWindowUnit(settings.smallestUnit) &&
+    one.day >= 29 &&
+    one.calendarId === two.calendarId &&
+    Temporal.PlainDateTime.compare(one, two) <= 0 &&
+    isNudgeWindowCompatNeeded() &&
+    optionsAreValid(() =>
+      PLAIN_DATE_TIME_PROBE.until(PLAIN_DATE_TIME_PROBE, options as never),
+    )
+  ) {
+    const rounded = differencePlainDateTimeWithRounding(
+      one,
+      two,
+      one.calendarId,
+      settings,
+    );
+    return temporalDurationFromInternal(
+      rounded,
+      isDateUnit(settings.largestUnit)
+        ? "hour"
+        : (settings.largestUnit as TimeUnit),
+    );
+  }
+
+  return one.until(
+    two,
+    options as Temporal.DifferenceOptions<Temporal.DateTimeUnit>,
+  );
 }
 
 /**
@@ -1931,6 +2058,16 @@ export function durationRound(
   if (bySpec !== null) {
     return bySpec;
   }
+
+  // Defect 4: the polyfill's nudge window, when the day can be constrained.
+  const byNudgeSpec =
+    settings === null
+      ? null
+      : monthRoundBySpec(duration, roundTo, settings, zoned);
+  if (byNudgeSpec !== null) {
+    return byNudgeSpec;
+  }
+
   if (zoned === null) {
     return duration.round(roundTo as Temporal.DurationRoundTo);
   }

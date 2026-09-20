@@ -41,7 +41,7 @@ IANA tzdb rules, and Chromium 152/153 native Temporal as recorded in GMT's canar
 | D   | `"UTC"` fast path in `GetPossibleEpochNanoseconds` skips `IsValidEpochNanoseconds`                  | **Port** proposal-temporal PR #3205 (`d90d432`) + release                                                                                                                                                                                                                                                                                                              | js-temporal PR #367                                                                                                         | Yes (patched build)                                                                                                                      | `zoned.D`: `checkUtcValidity` in `internal/zonedWallClockDifference.ts`                                                                   | same release                                                                      |
 | E   | Transition search starts in 1847, after the first TZDB transition (1844-12-31)                      | **Bug report + PR** (new patch), both repositories                                                                                                                                                                                                                                                                                                                     | js-temporal PR #372 + tc39 #3330                                                                                            | Only as stated in the filings; not re-run in this document's builds                                                                      | `zoned.E`: defect-3 pre-1847 checks in `internal/zonedWallClock.ts`, `zonedWallClockOperations.ts`                                        | same release                                                                      |
 | F   | `calendarToIsoDate` overshoot assertion (tc39 #3292) is reachable, coptic/ethiopic/ethioaa month 13 | **Bug report** to tc39 only; js-temporal has not ported #3292                                                                                                                                                                                                                                                                                                          | tc39 #3329                                                                                                                  | Only as stated in the filing                                                                                                             | none: not in js-temporal, so not in GMT's runtime                                                                                         | none                                                                              |
-| H   | `Duration#total` divides a calendar-unit remainder by the wrong month                              | **Bug report + PR** (new patch), both repositories — not yet filed                                                                                                                                                                                                                                                                                                     | Not filed yet (found 2026-09-20, CORE-8 review)                                                                             | Yes (Chromium 153 vs polyfill 0.5.1, 2,016-case scan; 16 mismatches, all `month`)                                                        | `D11`: `monthTotalBySpec` in `internal/zonedWallClockDifference.ts`                                                                       | same release                                                                      |
+| H   | The calendar nudge window is never retried (`total`, `round`, `until` with a calendar `smallestUnit`) | **Port + release**: js-temporal ports proposal-temporal #3172 (`5dd0b0d97ee1`). **Not** a new patch, and **no tc39 filing**: tc39 #3168 is already fixed by #3172 | Not filed yet (found 2026-09-20, CORE-8 review). js-temporal only | Yes (Chromium 153 vs polyfill 0.5.1: 2,016-row `total`, 12,960-row `round`, 9,940-row `until` scans; 16 + 15 + 15 mismatches, all `month`) | `D11`: the defect-4 gates in `internal/zonedWallClockDifference.ts` and `internal/plainDateUntil.ts` | same release |
 
 ## Filed
 
@@ -1359,65 +1359,97 @@ Gregorian is a silently wrong date, not an error. GMT surfaces both as its `""`/
 a TC39 amendment to `CanonicalizeCalendar`. Neither is filed; neither is being asked for.
 
 
-## H. `Duration#total` divides a calendar-unit remainder by the wrong month
+## H. The calendar nudge window is never retried (`total`, `round`, `until`)
 
-**Status: not filed yet.** Found 2026-09-20 while closing a coverage gap baldurpan raised in the
-CORE-8 review (`intervalLength*` in calendar units had only ever been compared against the same
-`until`/`total` primitives the implementation calls). Verified against Chromium 153 native Temporal.
+**Status: not filed yet — one filing, to js-temporal only.** Found 2026-09-20 while closing a coverage
+gap baldurpan raised in the CORE-8 review (`intervalLength*` in calendar units had only ever been
+compared against the same `until`/`total` primitives the implementation calls).
+
+### Already fixed upstream in tc39 — do not file there
+
+This is **tc39/proposal-temporal [#3168](https://github.com/tc39/proposal-temporal/issues/3168)**
+("Assertion failure in year-and-a-bit durations relative to leap day", closed), fixed by
+**[#3172](https://github.com/tc39/proposal-temporal/pull/3172)** (Normative, commit `5dd0b0d97ee1`,
+merged 2025-11-19). ptomato's diagnosis there is exactly ours: "_destEpochNs_ (2021-02-28T01:00Z) >
+_endEpochNs_ (2021-02-28T00:00Z) … _r1_ and _r2_ should be 1 and 2 instead of 0 and 1."
+
+`@js-temporal/polyfill` has **not** ported it — not in 0.5.1, and not on `main`, where
+`lib/ecmascript.ts`'s `NudgeToCalendarUnit` still computes `r1`/`r2` once. No js-temporal issue
+mentions it. **The ask is therefore a port-and-release request**, the same shape as item C.
 
 ### The defect
 
-TC39 `Duration.prototype.total` → `TotalRelativeDuration` → **`NudgeToCalendarUnit`** measures the
-leftover against the unit the *end* falls in: `r1` whole units from `relativeTo`, then the fraction is
+TC39 bounds the duration between `relativeTo + r1 units` and `relativeTo + r2 units`, where `r1` is
+the duration's own count of that unit, then checks that the target falls inside the window. When it
+does not, `ComputeNudgeWindow` runs again with `additionalShift = true`, so `r1` becomes 1 rather
+than 0 (spec/duration.html, `NudgeToCalendarUnit` steps 2–9). The polyfill computes the window once;
+its `assert(start <= dest <= end)` is compiled out of production builds, so `progress` silently
+exceeds 1 and the answer comes from bounds that exclude the target.
 
-```
-(target - (relativeTo + r1 units)) / ((relativeTo + (r1 + 1) units) - (relativeTo + r1 units))
-```
-
-so the denominator is the month that **starts** at the whole-month mark. The polyfill divides by the
-month that **ends** there instead. The two coincide unless adding a month constrains the day, so only a
-`relativeTo` on the 29th, 30th or 31st can reach it.
+Reachable only when the duration's own month count is one short of the truth, which is exactly when
+adding a month constrains the day — a `relativeTo` on the 29th, 30th or 31st.
 
 ### Repro
 
 ```js
 const from = Temporal.PlainDateTime.from("2024-01-31T00:00:00");
 const to = Temporal.PlainDateTime.from("2024-02-29T12:00:00");
-const d = from.until(to, { largestUnit: "month" });
 
-d.toString();                                   // "P29DT12H"       — both engines agree
-d.total({ unit: "month", relativeTo: from });   // polyfill 0.5.1: 1.0172413793103448  (12h / 29d)
-                                                // Chromium 153:   1.0161290322580645  (12h / 31d)
+from.until(to, { largestUnit: "month" }).toString();
+// "P29DT12H" — both engines agree, so r1 = 0 months
+
+from.until(to, { largestUnit: "month" }).total({ unit: "month", relativeTo: from });
+// polyfill 0.5.1: 1.0172413793103448   Chromium 153: 1.0161290322580645
+
+from.until(to, { largestUnit: "month", smallestUnit: "month", roundingMode: "trunc" }).toString();
+// polyfill 0.5.1: "PT0S"               Chromium 153: "P1M"     <- a whole month
+
+Temporal.Duration.from("P29DT12H")
+  .round({ smallestUnit: "month", roundingMode: "floor", relativeTo: Temporal.PlainDate.from("2024-01-31") })
+  .toString();
+// polyfill 0.5.1: "PT0S"               Chromium 153: "P1M"
 ```
 
-`Jan 31 + 1 month` is `Feb 29` (constrained), and `Jan 31 + 2 months` is `Mar 31`, so the spec's
-denominator is `Feb 29 → Mar 31` = 31 days. The polyfill uses `Jan 31 → Feb 29` = 29 days.
+Note that #3168's own reproducer (`new Temporal.Duration(1, 0, 0, 0, 1)` relative to `2020-02-29`,
+unit `years`) **passes** on js-temporal 0.5.1 — there `r1` is already 1 from the duration's own years,
+so no retry is needed. The month reproducers above are the ones to file.
 
-### Scope, as scanned
+### Scope, as scanned (Chromium 153.0.8010.12 vs `@js-temporal/polyfill` 0.5.1)
 
-`scanTotals2`: every day-of-month in `[1, 14, 15, 28, 29, 30, 31]` across all twelve months of 2024,
-ending `{hours: 12}`, `{days: 3}` and `{days: 3, hours: 7}` past `k ∈ {0, 1, 2, 13}` units, for units
-`year` and `month` — 2,016 rows, run in Chromium 153.0.8010.12 and in `@js-temporal/polyfill` 0.5.1.
+| Operation | Rows | Mismatches |
+| --- | --- | --- |
+| `Duration#total` | 2,016 | 16 |
+| `Duration#round` | 12,960 | 15 |
+| `until` / `since` with a calendar `smallestUnit` | 9,940 | 15 |
+| `Duration.compare` | 256 | **0** — reaches no nudge window |
 
-- **16 mismatches, every one `unit: "month"`.** By start day: 31 → 12, 30 → 2, 29 → 2. By `k`: 1 → 5,
-  2 → 4, 13 → 7.
-- **`until` agrees on all 2,016 rows.** Only the fraction `total` returns is wrong.
-- No `year` row mismatched.
+Every mismatch is `unit: "month"`. `round` and `until` diverge only in the directed rounding modes
+(`ceil`, `floor`, `trunc`); the half modes agree either way. `until` without rounding agrees on all
+rows, so only the rounded forms are affected.
 
 ### Ask
 
-Bug report + PR against `js-temporal/temporal-polyfill`, and the same against
-`tc39/proposal-temporal` if its reference code shares the denominator (not checked yet — check
-`NudgeToCalendarUnit`'s `endEpochNs` before filing there).
+Bug report + **port** request against `js-temporal/temporal-polyfill`: port proposal-temporal
+`5dd0b0d97ee1` (#3172) and release. Because `main` is affected too, it cannot ride the existing
+release request #373. **No tc39 filing** — already fixed there.
 
 ### GMT
 
-Fixed in GMT as defect **D11** (`packages/gmt/src/internal/temporalCompat/README.md`). `durationTotal`
-routes `month`/`year` totals with a `relativeTo` past the 28th through the `nudgeToCalendarUnit` spec
-path GMT already owns for the non-ISO calendars, gated on the `D11` probe so it retires by canary.
-Four call sites that had been calling `Duration#total` directly now go through `durationTotal`:
-`intervalLengthDate`, `intervalLengthDateTime`, `formatRelativeDate` and `formatRelativeDateTime`.
-After the fix, all 2,016 scan rows match Chromium 153 exactly.
+Fixed as compat defect **D11** (`packages/gmt/src/internal/temporalCompat/README.md`). GMT already
+owned a spec-current `computeNudgeWindow` with `additionalShift`, so the fix routes the three
+operations to it when the probe fails and the `relativeTo` is past the 28th:
+`monthTotalBySpec` and `monthRoundBySpec` in `durationTotal`/`durationRound`, a defect-4 gate in
+`zonedUntil` (which covers `diffUtc`, `diffUnix` and `diffZoned`), the new `plainUntilWithRounding`
+(for `diffDateTime`), and a D11 term in `internal/plainDateUntil.ts` (for `diffDate`). After the fix
+all three scans match Chromium exactly. Probe-gated, retires by canary.
+
+**A second defect, in GMT's own mirror, found by the same scan.** When the target lands exactly on
+the window's lower bound the duration is already rounded, which TC39 handles inside
+`ApplyUnsignedRoundingMode` ("if x is equal to r1, return r1"). GMT's form takes a comparison rather
+than the value, so `ceil` expanded an exact boundary to the next whole unit — `P60D` from
+`2024-01-31` gave `P3M` where Chromium gives `P2M`. It was live for the non-ISO calendars before this
+change, since they already took this path. Fixed by the `progress === 0n` branch in
+`nudgeToCalendarUnit`; it is GMT's bug, not the polyfill's, and stays when D11 retires.
 
 ## Corrections and contradictions
 

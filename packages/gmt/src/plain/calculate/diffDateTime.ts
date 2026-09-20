@@ -1,6 +1,7 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "@js-temporal/polyfill";
 import { differenceRecord } from "../../internal/differenceRecord";
+import { plainUntilWithRounding } from "../../internal";
 import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
 import type { DateTimeDurationUnit, RoundingOptions } from "../../types";
 import { isValidDateTime, isValidDateTimeDurationUnit } from "../validate";
@@ -80,7 +81,7 @@ export function diffDateTime(
     const dt1 = Temporal.PlainDateTime.from(dateTime1);
     const dt2 = Temporal.PlainDateTime.from(dateTime2);
 
-    const duration = dt1.until(dt2, {
+    const duration = plainUntilWithRounding(dt1, dt2, {
       largestUnit,
       smallestUnit: options?.smallestUnit,
       roundingIncrement: options?.roundingIncrement,

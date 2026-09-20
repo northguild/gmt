@@ -127,12 +127,12 @@ const WORKAROUNDS = [
   {
     defects: ["D11"],
     title:
-      "D11 — Duration#total divides a month fraction by the wrong month (relativeTo on the 29th-31st)",
+      "D11 — the calendar nudge window is never retried, so total, round and until with a calendar smallestUnit answer over the wrong bounds (relativeTo on the 29th-31st)",
     trigger:
-      "a js-temporal release measures a calendar-unit remainder against the unit the end falls in, as TC39 NudgeToCalendarUnit does (reported upstream with these repros)",
+      "a js-temporal release ports proposal-temporal #3172 (5dd0b0d97ee1, the fix for tc39 #3168), which retries the nudge window; not on js-temporal main either",
     steps: [
-      "Delete the D11 repros in repros.ts, isMonthTotalCompatNeeded in capabilities.ts and its export in index.ts, and monthTotalBySpec with its call in durationTotal (internal/zonedWallClockDifference.ts).",
-      "Keep test/intervalLengthOracle.test.ts: its values are the spec's on either runtime.",
+      "Delete the D11 repros in repros.ts, isNudgeWindowCompatNeeded in capabilities.ts and its export in index.ts, and the defect-4 terms in zonedWallClockDifference.ts (monthTotalBySpec, monthRoundBySpec, the zonedUntil gate, plainUntilWithRounding) and plainDateUntil.ts.",
+      "Keep test/nudgeWindowRetry.test.ts and test/intervalLengthOracle.test.ts, and the progress === 0n branch in nudgeToCalendarUnit (GMT's own fix, not the polyfill's).",
       `Full wording: ${COMPAT_README} § Removal steps 11.`,
     ],
   },

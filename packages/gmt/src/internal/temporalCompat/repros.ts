@@ -161,6 +161,28 @@ const d10Repros: Repro[] = [
     expected: "1.0161290322580645",
     run: () => monthTotal("2024-03-31T00:00:00", "2024-04-30T12:00:00"),
   },
+  {
+    defect: "D11",
+    calendar: "iso8601",
+    name: "roundMonthFromDay31Floor",
+    expected: "P1M",
+    run: () => monthRound("P29DT12H", "2024-01-31", "floor"),
+  },
+  {
+    defect: "D11",
+    calendar: "iso8601",
+    name: "roundMonthFromDay30Ceil",
+    expected: "P2M",
+    run: () => monthRound("P30DT12H", "2024-01-30", "ceil"),
+  },
+  {
+    defect: "D11",
+    calendar: "iso8601",
+    name: "untilMonthFromDay31Trunc",
+    expected: "P1M",
+    run: () =>
+      monthUntil("2024-01-31T00:00:00", "2024-02-29T12:00:00", "trunc"),
+  },
 ];
 
 /**
@@ -178,6 +200,41 @@ function monthTotal(start: string, end: string): string {
       .until(Temporal.PlainDateTime.from(end), { largestUnit: "month" })
       .total({ unit: "month", relativeTo: from }),
   );
+}
+
+/**
+ * `Duration#round` and `PlainDateTime#until` to a calendar unit, as strings.
+ *
+ * Same window as `monthTotal`: the directed rounding modes take the answer from whichever bound the
+ * target sits nearest, so a window that does not contain the target loses a whole unit rather than a
+ * fraction of one.
+ */
+function monthRound(
+  duration: string,
+  relativeTo: string,
+  roundingMode: Temporal.RoundingMode,
+): string {
+  return Temporal.Duration.from(duration)
+    .round({
+      smallestUnit: "month",
+      roundingMode,
+      relativeTo: Temporal.PlainDate.from(relativeTo),
+    })
+    .toString();
+}
+
+function monthUntil(
+  start: string,
+  end: string,
+  roundingMode: Temporal.RoundingMode,
+): string {
+  return Temporal.PlainDateTime.from(start)
+    .until(Temporal.PlainDateTime.from(end), {
+      largestUnit: "month",
+      smallestUnit: "month",
+      roundingMode,
+    })
+    .toString();
 }
 
 function isoOf(date: Temporal.PlainDate): string {

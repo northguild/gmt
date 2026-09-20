@@ -7,6 +7,6 @@ export {
 export { calendarDateFromFields } from "./calendarDateFromFields";
 export {
   isCalendarArithmeticCompatNeeded,
-  isMonthTotalCompatNeeded,
+  isNudgeWindowCompatNeeded,
 } from "./capabilities";
 export { calendarFieldsOf } from "./calendarFields";
