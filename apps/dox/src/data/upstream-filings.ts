@@ -49,6 +49,18 @@ export interface UpstreamFiling {
   /** Why the defect doesn't affect GMT, when no workaround is needed. Exactly one of
    * `gmtGuard` and `gmtNote` is set (`scripts/upstream.mjs check` enforces it). */
   gmtNote: string | null;
+  /**
+   * Whether we opened this filing or only contributed to someone else's.
+   *
+   * Absent means `"author"`, so the filings we opened need no field. A `"contributor"` row is a
+   * maintainer's issue or PR that already carried the fix, where the useful thing was evidence
+   * rather than a duplicate: it is tracked because its state is what retires a GMT workaround, but
+   * it is never counted among the fixes we sent.
+   */
+  role?: "author" | "contributor";
+  /** A `"contributor"` row's link to our own comment. `url` cannot hold it: `sync` rewrites `url`
+   * from the repo, kind and number every run. */
+  contributionUrl?: string | null;
   state: "open" | "closed";
   draft: boolean;
   reviewDecision: "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
@@ -165,4 +177,18 @@ export const handledInGmt: number = filings.filter(
 /** Filings whose defect is in code GMT doesn't use, so they don't affect GMT. */
 export const unaffectingGmt: number = filings.filter(
   (f) => f.gmtGuard === null && f.gmtNote !== null,
+).length;
+
+const isOurs = (f: UpstreamFiling): boolean => f.role !== "contributor";
+
+/** Filings we opened ourselves. */
+export const filedByUs: number = filings.filter(isOurs).length;
+
+/** Filings someone else opened, where our contribution was evidence on an existing fix. */
+export const contributions: number = filings.filter((f) => !isOurs(f)).length;
+
+/** Our own pull requests — the filings that carry a ready-to-merge patch. A maintainer's PR we
+ * only commented on is not one of these, which is why the page cannot count `kind === "pr"`. */
+export const filedPrs: number = filings.filter(
+  (f) => isOurs(f) && f.kind === "pr",
 ).length;

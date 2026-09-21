@@ -129,7 +129,7 @@ const WORKAROUNDS = [
     title:
       "D11 — the calendar nudge window is never retried, so total, round and until with a calendar smallestUnit answer over the wrong bounds (relativeTo on the 29th-31st)",
     trigger:
-      "a js-temporal release ports proposal-temporal #3172 (5dd0b0d97ee1, the fix for tc39 #3168), which retries the nudge window; not on js-temporal main either",
+      "a js-temporal release contains js-temporal/temporal-polyfill#361's 50d66d2, which ports proposal-temporal #3172 (5dd0b0d97ee1, the fix for tc39 #3168) and retries the nudge window; already written in ptomato's open PR #361 but not on main, so no new filing is needed",
     steps: [
       "Delete the D11 repros in repros.ts, isNudgeWindowCompatNeeded in capabilities.ts and its export in index.ts, and the defect-4 terms in zonedWallClockDifference.ts (monthTotalBySpec, monthRoundBySpec, the zonedUntil gate, plainUntilWithRounding) and plainDateUntil.ts.",
       "Keep test/nudgeWindowRetry.test.ts and test/intervalLengthOracle.test.ts, and the progress === 0n branch in nudgeToCalendarUnit (GMT's own fix, not the polyfill's).",

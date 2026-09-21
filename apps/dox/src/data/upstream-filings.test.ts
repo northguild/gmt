@@ -5,6 +5,9 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   checked,
+  contributions,
+  filedByUs,
+  filedPrs,
   filings,
   filingsByKind,
   filingsByRepo,
@@ -96,6 +99,56 @@ describe("upstream filings", () => {
       ).toBe(true);
     }
     expect(handledInGmt + unaffectingGmt).toBe(totalFilings);
+  });
+
+  it("separates the filings we opened from the ones we only contributed to", () => {
+    // `role` is absent on the filings we opened, so the split has to treat absence as "ours"
+    // rather than counting an explicit value.
+    expect(filedByUs + contributions).toBe(totalFilings);
+    expect(filedPrs).toBeLessThanOrEqual(filedByUs);
+
+    for (const f of filings) {
+      if (f.role === undefined) continue;
+      expect(["author", "contributor"], `${f.repo}#${f.number}`).toContain(
+        f.role,
+      );
+    }
+  });
+
+  it("links our own comment on every filing we did not open", () => {
+    // Without it the page would show a maintainer's PR with nothing saying what we did on it.
+    // `url` cannot carry the anchor: `scripts/upstream.mjs` rewrites it from repo, kind and number.
+    for (const f of filings) {
+      const label = `${f.repo}#${f.number}`;
+      if (f.role === "contributor") {
+        expect(f.contributionUrl, label).toBeTruthy();
+        expect(f.contributionUrl, label).toContain(`/${f.number}#`);
+      } else {
+        expect(f.contributionUrl ?? null, label).toBeNull();
+      }
+    }
+  });
+
+  it("keeps js-temporal#361 marked as the maintainer's own pull request", () => {
+    // Pinned deliberately. `scripts/upstream.mjs` builds each row field by field, so a field it
+    // stops naming is dropped on the next sync — and a dropped `role` reads as "ours", which would
+    // silently turn ptomato's PR into one of the fixes we claim to have sent. The generic
+    // "every contributor row has a link" test passes vacuously if the row stops being one.
+    // Read the committed file rather than the module: the module prefers the gitignored live
+    // refresh when one exists, and that copy is whatever the last `gh` run wrote.
+    const committed = JSON.parse(
+      readFileSync(
+        resolve(import.meta.dirname, "upstream-filings.json"),
+        "utf8",
+      ),
+    ) as { filings: Array<Record<string, unknown>> };
+
+    const filing = committed.filings.find(
+      (f) => f.repo === "js-temporal/temporal-polyfill" && f.number === 361,
+    );
+    expect(filing).toBeDefined();
+    expect(filing?.role).toBe("contributor");
+    expect(String(filing?.contributionUrl)).toContain("#issuecomment-");
   });
 
   it("lists guardsAddressed sorted and deduplicated", () => {

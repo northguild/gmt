@@ -41,11 +41,14 @@ IANA tzdb rules, and Chromium 152/153 native Temporal as recorded in GMT's canar
 | D   | `"UTC"` fast path in `GetPossibleEpochNanoseconds` skips `IsValidEpochNanoseconds`                  | **Port** proposal-temporal PR #3205 (`d90d432`) + release                                                                                                                                                                                                                                                                                                              | js-temporal PR #367                                                                                                         | Yes (patched build)                                                                                                                      | `zoned.D`: `checkUtcValidity` in `internal/zonedWallClockDifference.ts`                                                                   | same release                                                                      |
 | E   | Transition search starts in 1847, after the first TZDB transition (1844-12-31)                      | **Bug report + PR** (new patch), both repositories                                                                                                                                                                                                                                                                                                                     | js-temporal PR #372 + tc39 #3330                                                                                            | Only as stated in the filings; not re-run in this document's builds                                                                      | `zoned.E`: defect-3 pre-1847 checks in `internal/zonedWallClock.ts`, `zonedWallClockOperations.ts`                                        | same release                                                                      |
 | F   | `calendarToIsoDate` overshoot assertion (tc39 #3292) is reachable, coptic/ethiopic/ethioaa month 13 | **Bug report** to tc39 only; js-temporal has not ported #3292                                                                                                                                                                                                                                                                                                          | tc39 #3329                                                                                                                  | Only as stated in the filing                                                                                                             | none: not in js-temporal, so not in GMT's runtime                                                                                         | none                                                                              |
-| H   | The calendar nudge window is never retried (`total`, `round`, `until` with a calendar `smallestUnit`) | **Port + release**: js-temporal ports proposal-temporal #3172 (`5dd0b0d97ee1`). **Not** a new patch, and **no tc39 filing**: tc39 #3168 is already fixed by #3172 | Not filed yet (found 2026-09-20, CORE-8 review). js-temporal only | Yes (Chromium 153 vs polyfill 0.5.1: 2,016-row `total`, 12,960-row `round`, 9,940-row `until` scans; 16 + 15 + 15 mismatches, all `month`) | `D11`: the defect-4 gates in `internal/zonedWallClockDifference.ts` and `internal/plainDateUntil.ts` | same release |
+| H   | The calendar nudge window is never retried (`total`, `round`, `until` with a calendar `smallestUnit`) | **Review and land what is already written**: the port is ptomato's `50d66d2` in js-temporal PR #361. **No filing of our own**, and **no tc39 filing** — tc39 #3168 is already fixed there by #3172 | Comment on js #361 (2026-09-20) adding the reproducer, the scan and the before/after measurements | Yes (Chromium 153 vs 0.5.1: 2,016-row `total`, 12,960-row `round`, 9,940-row `until` scans; 16 + 15 + 15 mismatches, all `month`. `50d66d2` measured on `main` and verified to flip all three) | `D11`: the defect-4 gates in `internal/zonedWallClockDifference.ts` and `internal/plainDateUntil.ts` | `50d66d2` on `main` **and then** a release |
 
 ## Filed
 
 All 11 filed by the owner (`craig-o-curtis`), read back on 2026-09-19 with `gh pr view` / `gh issue view`,
+plus a twelfth entry on the `/upstream/` tracker that is **not** a filing of ours: our comment on
+ptomato's js-temporal PR #361 (§ H). It is tracked because its state is what retires GMT's `D11`.
+
 comments included. All open. No maintainer has commented or reviewed; the only comments are the owner's own
 cross-links on tc39 #3327, #3328 and #3330. "Filed" is `createdAt`, UTC. "js" is js-temporal/temporal-polyfill,
 "tc39" is tc39/proposal-temporal.
@@ -1361,21 +1364,34 @@ a TC39 amendment to `CanonicalizeCalendar`. Neither is filed; neither is being a
 
 ## H. The calendar nudge window is never retried (`total`, `round`, `until`)
 
-**Status: not filed yet — one filing, to js-temporal only.** Found 2026-09-20 while closing a coverage
-gap baldurpan raised in the CORE-8 review (`intervalLength*` in calendar units had only ever been
-compared against the same `until`/`total` primitives the implementation calls).
+**Status: nothing to file. The port is already written, in an open maintainer PR.** Found 2026-09-20
+while closing a coverage gap baldurpan raised in the CORE-8 review (`intervalLength*` in calendar
+units had only ever been compared against the same `until`/`total` primitives the implementation
+calls).
 
-### Already fixed upstream in tc39 — do not file there
+### Already fixed in tc39, and already ported in an open js-temporal PR
 
 This is **tc39/proposal-temporal [#3168](https://github.com/tc39/proposal-temporal/issues/3168)**
-("Assertion failure in year-and-a-bit durations relative to leap day", closed), fixed by
-**[#3172](https://github.com/tc39/proposal-temporal/pull/3172)** (Normative, commit `5dd0b0d97ee1`,
-merged 2025-11-19). ptomato's diagnosis there is exactly ours: "_destEpochNs_ (2021-02-28T01:00Z) >
-_endEpochNs_ (2021-02-28T00:00Z) … _r1_ and _r2_ should be 1 and 2 instead of 0 and 1."
+(closed), fixed by **[#3172](https://github.com/tc39/proposal-temporal/pull/3172)** (Normative,
+commit `5dd0b0d97ee1`, merged 2025-11-19). ptomato's diagnosis there is exactly ours: "_destEpochNs_
+(2021-02-28T01:00Z) > _endEpochNs_ (2021-02-28T00:00Z) … _r1_ and _r2_ should be 1 and 2 instead of
+0 and 1."
 
-`@js-temporal/polyfill` has **not** ported it — not in 0.5.1, and not on `main`, where
-`lib/ecmascript.ts`'s `NudgeToCalendarUnit` still computes `r1`/`r2` once. No js-temporal issue
-mentions it. **The ask is therefore a port-and-release request**, the same shape as item C.
+The port into `@js-temporal/polyfill` is **also already written**, by the maintainer: commit
+`50d66d2` in **[PR #361](https://github.com/js-temporal/temporal-polyfill/pull/361)** ("April 2026
+rebase, part 3", opened 2026-04-22). That PR is open, mergeable and unreviewed.
+
+A first pass here concluded a port request was needed, because it checked only our own filings
+(#367–#372) for `NudgeToCalendarUnit` and not the maintainer's open PRs. **Do not file anything.**
+What #361 was missing was evidence that the normative commit inside it fixes a user-visible wrong
+answer today — its own description reasonably calls the change "unlikely to break any working code" —
+so that is what we added, as a comment:
+<https://github.com/js-temporal/temporal-polyfill/pull/361#issuecomment-5752268476>.
+
+`50d66d2` is **not on `main`** (checked against the GitHub contents API, not a local clone) and in no
+release, so **every D11 workaround stays**. The removal trigger is two gates, not one: `50d66d2` has
+to land on `main` — via #361 or a split-out PR — *and then* ship in a release that becomes GMT's
+`@js-temporal/polyfill` floor.
 
 ### The defect
 
@@ -1429,9 +1445,47 @@ rows, so only the rounded forms are affected.
 
 ### Ask
 
-Bug report + **port** request against `js-temporal/temporal-polyfill`: port proposal-temporal
-`5dd0b0d97ee1` (#3172) and release. Because `main` is affected too, it cannot ride the existing
-release request #373. **No tc39 filing** — already fixed there.
+None of ours to file. What helps is #361 being reviewed and landed, or `50d66d2` split out as a
+standalone PR — it applies cleanly to `main` by itself and touches only `lib/ecmascript.ts`, which
+the comment offers to do if the maintainer prefers it. If he takes that offer, that PR becomes a
+filing of ours and the tracker gains it as a real PR number.
+
+### `50d66d2` measured, not assumed
+
+Both columns built from a clean tree with `NODE_ENV=production` (assertions stripped, so the defect
+shows as a wrong value rather than a throw): `main` at `c8f344c`, versus the same tree with
+`50d66d2` applied. Node 24.21.0, ICU 78.3.
+
+| Probe | `main` | with `50d66d2` |
+| --- | --- | --- |
+| `until(largestUnit:"month")` | `P29DT12H` | `P29DT12H` (correct on both) |
+| `.total({unit:"month"})` | `1.0172413793103448` | `1.0161290322580645` |
+| `until` + `smallestUnit:"month"`, `trunc` | `PT0S` | `P1M` |
+| `Duration.from("P29DT12H").round(floor, relativeTo 2024-01-31)` | `PT0S` | `P1M` |
+
+Derivable without either build: after the retry the window is `Feb 29 → Mar 31` (31 days) over a 12 h
+numerator, so `1 + 0.5/31 = 1.0161290322580645`; the unretried path uses `Jan 31 → Feb 29` (29 days)
+over a 29 d 12 h numerator, `29.5/29 = 1.0172413793103448`.
+
+With `50d66d2` applied alone on `main`: `npm test` 607 passed / 0 failed; `npm run test262` (pinned
+`ac3035f0`, production) 4855 finished, 4828 passed, 0 failed, 0 passed unexpectedly, 27 expected
+failures, 6 missing; `npm run lint` clean.
+
+### Three traps, recorded so they are not re-hit
+
+1. **Node's bundled Temporal is not a valid oracle here.** Node 24.21.0 ships V8 13.6, whose
+   `Temporal` predates the fix: `node --harmony-temporal` gives `until(...) === "P1MT12H"` (not the
+   correct `"P29DT12H"`) and `total === 1.0344827586206897` — matching *neither* the buggy nor the
+   expected value. Use Chromium 153, or derive from the algorithm.
+2. **`nudgedEpochNs` is intentionally left alone.** In the patched function the `duration` line uses
+   `roundedUnit === Math.abs(r2)` while `nudgedEpochNs` still uses the OR'd `didExpandCalendarUnit`.
+   After a retry those conditions genuinely differ, so it reads like an oversight — but tc39 `main`
+   and #361 both leave it that way. If it is a further defect it belongs upstream as a new issue,
+   not as a local "fix".
+3. **#3168's own reproducer does not expose this.** `new Temporal.Duration(1, 0, 0, 0, 1)` relative
+   to `2020-02-29` with unit `years` *passes* on 0.5.1 — `r1` is already 1 from the duration's own
+   years field, so no retry is needed. Only a `relativeTo` on the 29th–31st with unit `month`
+   reaches it.
 
 ### GMT
 

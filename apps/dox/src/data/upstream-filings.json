@@ -1,6 +1,31 @@
 {
-  "checked": "2026-09-19T05:16:23.770Z",
+  "checked": "2026-09-20T20:13:29.012Z",
   "filings": [
+    {
+      "repo": "js-temporal/temporal-polyfill",
+      "number": 361,
+      "kind": "pr",
+      "role": "contributor",
+      "work": "port",
+      "title": "April 2026 rebase, part 3",
+      "url": "https://github.com/js-temporal/temporal-polyfill/pull/361",
+      "contributionUrl": "https://github.com/js-temporal/temporal-polyfill/pull/361#issuecomment-5752268476",
+      "summary": "Rounding or measuring a span in months from the 29th, 30th or 31st answers against the wrong pair of dates, because the polyfill never rechecks that its bounding window contains the target. The maintainer had already written the port (50d66d2) in this rebase PR, so rather than file a duplicate we added what it was missing: a reproducer, a scan of Chromium 153 against the published release, and before-and-after measurements of the commit applied on main.",
+      "pairsWith": [],
+      "closes": [],
+      "dependsOn": [],
+      "gmtGuard": "D11",
+      "gmtNote": null,
+      "state": "open",
+      "draft": false,
+      "reviewDecision": "REVIEW_REQUIRED",
+      "comments": 1,
+      "maintainerComments": 0,
+      "createdAt": "2026-04-22",
+      "updatedAt": "2026-09-20",
+      "closedAt": null,
+      "mergedAt": null
+    },
     {
       "repo": "js-temporal/temporal-polyfill",
       "number": 367,

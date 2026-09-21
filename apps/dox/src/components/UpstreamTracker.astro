@@ -7,9 +7,11 @@
  */
 import {
   checked,
+  contributions,
   dataSource,
+  filedByUs,
+  filedPrs,
   filingRepos,
-  filingsByKind,
   filingsForRepo,
   handledInGmt,
   totalFilings,
@@ -43,14 +45,21 @@ const checkedOn = new Date(checked).toISOString().replace("T", " ").slice(0, 16)
 // `{totalFilings}` and a `{coversAll ? … : …}` ternary into those surfaces.
 // Astro evaluates it here at build time either way, so the rendered page is
 // unaffected.
-const prs = filingsByKind.find((row) => row.label === "pr")?.count ?? 0;
+//
+// `filedPrs`, not a count of `kind === "pr"`: one row is a maintainer's pull
+// request we only added evidence to, and claiming it as a fix we sent would be
+// false.
 const coversAll = handledInGmt + unaffectingGmt === totalFilings;
 ---
 
 <p>
   <strong>
-    So far we have sent {totalFilings} reports and fixes to the Temporal projects, {prs} of them as
-    ready-to-merge code changes.
+    So far we have sent {filedByUs} reports and fixes to the Temporal projects, {filedPrs} of them as
+    ready-to-merge code changes{
+      contributions > 0
+        ? `, and added the evidence to ${contributions === 1 ? "one more the maintainers had" : `${contributions} more the maintainers had`} already written`
+        : ""
+    }.
     {coversAll
       ? " GMT already gives you the correct answer for every one of them"
       : ` GMT already gives you the correct answer for ${handledInGmt + unaffectingGmt} of them`}
@@ -130,6 +139,15 @@ const coversAll = handledInGmt + unaffectingGmt === totalFilings;
                     <span class="gmt-upstream-muted">{WORK[f.work]}</span>
                   </>
                 )}
+                {f.role === "contributor" && (
+                  <>
+                    <br />
+                    <span class="gmt-upstream-muted">
+                      Theirs —{" "}
+                      <a href={f.contributionUrl ?? f.url}>we added evidence</a>
+                    </span>
+                  </>
+                )}
               </td>
               <td>{filingStatus(f)}</td>
               <td>{f.maintainerComments}</td>
@@ -148,7 +166,9 @@ const coversAll = handledInGmt + unaffectingGmt === totalFilings;
   bug is in code GMT doesn't use. <strong>Fix filed upstream</strong>: the fix is
   written and waiting for the polyfill's maintainers, and reaches GMT with the next
   polyfill release. <strong>Reported upstream</strong>: reported with a reproduction
-  for the maintainers to fix. Upstream status
+  for the maintainers to fix. A row marked <strong>Theirs</strong> is a filing
+  someone else opened, where our part was the evidence rather than the patch.
+  Upstream status
   is read from GitHub each time this site is built (last checked {checkedOn} UTC{
     dataSource === "committed" ? ", from the saved copy" : ""
   }). "Replies" counts comments from the project's maintainers and other users.

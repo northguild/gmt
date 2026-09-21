@@ -89,6 +89,11 @@ const HAND_WRITTEN_FIELDS = [
   "dependsOn",
   "gmtGuard",
   "gmtNote",
+  // `role` and `contributionUrl` are hand-written too: discovery searches by author, so a filing
+  // someone else opened is only ever here because a human added it, and a sync that dropped these
+  // would silently turn a maintainer's PR into one of ours.
+  "role",
+  "contributionUrl",
 ];
 const EMPTY_HAND_WRITTEN = {
   summary: "",
@@ -98,6 +103,8 @@ const EMPTY_HAND_WRITTEN = {
   dependsOn: [],
   gmtGuard: null,
   gmtNote: null,
+  role: "author",
+  contributionUrl: null,
 };
 
 // ---------------------------------------------------------------- gh arguments and parsing
@@ -196,13 +203,20 @@ function parseSynced(raw, repo, number, kind) {
  * hand-written judgement, then what GitHub itself reports.
  */
 function buildFiling({ repo, number, kind }, hw, synced) {
+  // `role` and `contributionUrl` are written only for a filing we did not open, so the ones we did
+  // stay as they are. They have to be listed here as well as in HAND_WRITTEN_FIELDS: this builds
+  // the output field by field, so anything it does not name is dropped on the next sync — and a
+  // dropped `role` reads as "ours", which is the one mistake this file must not make quietly.
+  const ours = hw.role !== "contributor";
   return {
     repo,
     number,
     kind,
+    ...(ours ? {} : { role: hw.role }),
     work: hw.work,
     title: synced.title,
     url: synced.url,
+    ...(ours ? {} : { contributionUrl: hw.contributionUrl }),
     summary: hw.summary,
     pairsWith: hw.pairsWith,
     closes: hw.closes,
@@ -319,7 +333,10 @@ function sync() {
   const existing = readFile();
   const byKey = new Map(existing.filings.map((f) => [keyOf(f), f]));
 
-  const discovered = REPOS.flatMap(discover);
+  // `(repo) => discover(repo)`, never `flatMap(discover)`: `flatMap` passes the element's index
+  // as the second argument, which `discover` takes as its `timeout`, so the second repository got
+  // a 1 ms cap and `sync` always died there.
+  const discovered = REPOS.flatMap((repo) => discover(repo));
   const newlyFound = [];
   for (const { repo, number, kind } of discovered) {
     const key = `${repo}#${number}`;
@@ -578,6 +595,30 @@ function checkGuard(f, label, guards, report) {
   }
 }
 
+/**
+ * A filing we only contributed to must link the contribution.
+ *
+ * Discovery searches by author, so a row someone else opened is here by hand; without the comment
+ * link the page would show a maintainer's PR with nothing saying what we did on it.
+ */
+function checkRole(f, label, report) {
+  if (f.role !== undefined && f.role !== "author" && f.role !== "contributor") {
+    report.problems.push(
+      `${label} — role "${f.role}" is not "author" or "contributor"`,
+    );
+  }
+  if (f.role === "contributor" && !f.contributionUrl) {
+    report.problems.push(
+      `${label} — a contributor filing needs contributionUrl (the link to our own comment)`,
+    );
+  }
+  if (f.role !== "contributor" && f.contributionUrl) {
+    report.problems.push(
+      `${label} — contributionUrl is only for a filing we did not open (role "contributor")`,
+    );
+  }
+}
+
 function checkDates(f, label, report) {
   for (const field of DATE_FIELDS) {
     const value = f[field];
@@ -596,6 +637,7 @@ function checkFiling(f, { guards, seen, report }) {
   checkKindAndUrl(f, label, report);
   checkEnums(f, label, report);
   checkGuard(f, label, guards, report);
+  checkRole(f, label, report);
   checkDates(f, label, report);
   if (f.summary === "") report.warnings.push(`${label} — empty summary`);
 }
