@@ -4,12 +4,88 @@ Record of the defects GMT needs fixed in `js-temporal/temporal-polyfill` (and, w
 `tc39/proposal-temporal`), the evidence for each, and what has been filed. Nothing here has been posted by an
 agent. The owner files every item.
 
-> **Status of this document:** updated 2026-09-19. **Filed:** 11 items, all open with no maintainer comment or
-> review yet: six PRs and a release request in js-temporal (#367–#373) and four issues in tc39 (#3327–#3330).
-> See "Filed" for the list and "Still unfiled" for what remains. A, B, C and D are verified on production
-> builds of js-temporal `main` `c8f344c`. With every patch here applied (build `final2`), GMT's canary reports 9 of 10 workaround
-> groups removable (only D4, an ICU defect, remains), every repro passes, and the Chromium 152 month-arithmetic
-> grid matches native for all 11 calendars. See "Corrections and contradictions" before changing any GMT trigger.
+> **Status of this document:** updated 2026-09-23. **Filed:** 11 items by us, plus a comment on the
+> maintainer's own PR #361. **All six js-temporal PRs (#367–#372) are closed unmerged and none was
+> rejected** — each was routed to `tc39/proposal-temporal` first, so the polyfill's rebase stays
+> manageable. #373 (release) is open and answered: one release once the rebase has caught up. #361
+> merged 2026-09-21. The four tc39 issues (#3327–#3330) are open with no maintainer reply.
+> **Nothing is released**, so no GMT workaround retires: `pnpm compat` reports 14 groups, 81 probes,
+> 13 still needed. A, B, C and D are verified on production builds of js-temporal `main` `c8f344c`.
+> See "Filed" for the list, **"TODO — after PR #253" for what to pick up next**, and "Corrections and
+> contradictions" before changing any GMT trigger.
+
+## TODO — after PR #253
+
+Filing is **stopped** for now. PR #253 (CORE-8) ships with every defect below already worked around
+in GMT, so none of this blocks the release. Pick it up afterwards, in this order.
+
+**1. Post the two verified tc39 patches.** Both are written and checked against tc39's current
+`polyfill/lib/ecmascript.mjs` (anchors in "Still unfiled" § 1); neither has been run against tc39's
+own test suite, and both drafts say so and offer to open a PR instead.
+
+- [ ] **tc39 #3328 (B)** — the patch is § B "Patch"; the tc39 file has the same shape.
+- [ ] **tc39 #3330 (E)** — the patch is § E; it is the single `BEFORE_FIRST_DST` constant.
+
+**2. Comment on tc39 #3327 (C-D1b) without a patch.** tc39's `polyfill/lib/calendar.mjs` does not
+contain the functions the js-temporal diff touches, so transcribing it would be a guess. Say what the
+fix has to do, offer to adapt it properly, and carry the **C-D7b** note with it: when tc39
+`196a3191` is ported, its **months-loop hunk must be left out** — that hunk is what corrupts the
+calendar cache and produces the wrong, non-round-tripping result at ordinary dates. Its
+`CompareSurpasses` hunk is the part worth having.
+
+- [ ] Post the #3327 comment, including the C-D7b caveat.
+
+**How to post these — no clone required.** All three are GitHub comments, so nothing needs to be
+checked out. Line numbers drift as `main` moves, so re-check the anchors first and paste the patch
+as a fenced `diff` block:
+
+```sh
+# Re-read the current file straight from GitHub (one call, no clone, no working copy).
+gh api -H "Accept: application/vnd.github.raw" \
+  repos/tc39/proposal-temporal/contents/polyfill/lib/ecmascript.mjs > /tmp/tc39-ecmascript.mjs
+
+# Confirm the patch still applies where the doc says it does.
+grep -n "BEFORE_FIRST_DST\|const MS_MAX\|leftOffsetNs === rightOffsetNs" /tmp/tc39-ecmascript.mjs
+
+# Post. Write the body in a file first: a heredoc keeps backticks and $ out of the shell's reach.
+gh issue comment 3328 --repo tc39/proposal-temporal --body-file <draft>.md
+```
+
+Verified this way on 2026-09-23: `MathMin` imported at line 52, `MS_MAX` at 129,
+`BEFORE_FIRST_DST` at 143, B's `while` loop at 2444, its post-loop `return null` at 2452.
+
+**If a maintainer asks for a PR instead**, then a clone is needed — and it must bring the test262
+submodule, or `npm run test262` fails with an empty directory rather than a useful error:
+
+```sh
+git clone --recurse-submodules https://github.com/tc39/proposal-temporal.git
+cd proposal-temporal/polyfill
+npm ci
+npm test        # node ./test/all.mjs
+npm run test262 # builds, then runs the pinned test262 suite
+```
+
+Run both before opening the PR. Neither has been run for these patches — the behaviour was verified
+on js-temporal, whose code at these two sites is identical — and both drafts say so plainly, so
+saying it again in the PR costs nothing and keeps the claim honest.
+
+**3. Then wait, and let the canary tell you.** Every remaining item is somebody else's clock:
+
+- [ ] **A polyfill release** is the single event that retires workarounds. When one ships, run
+      `pnpm compat`; any group whose probes all pass is removable, and its removal steps are printed.
+      Then `pnpm compat:snapshot` and commit the updated `apps/dox/src/data/temporal-compat.json`.
+- [ ] **D4 (ICU)** — nothing to file. It needs an ICU4C release containing `5267bb5778` and a Node
+      release bundling it. GMT must never own calendar data, so this one only ever waits.
+- [ ] **The coptic minimum** — still unfiled and still probably unnecessary: #370 states that #361's
+      coptic `ERA0` change fixes the round trip before the coptic epoch, and #361 has merged.
+      Re-check once it is released; file only if a probe still fails.
+- [ ] **#373 (release request)** needs no chasing. The maintainers have answered it; re-asking would
+      not help.
+
+**Housekeeping when any of the above moves:** run `pnpm upstream:sync` to refresh
+`apps/dox/src/data/upstream-filings.json`, and give any newly closed-unmerged filing an `outcome`
+saying why — `node scripts/upstream.mjs check` fails without one, because a bare "Closed" reads as a
+rejection.
 
 ## Environment
 
@@ -113,7 +189,7 @@ only filings worth making now are in tc39.
    (leftOffsetNs === rightOffsetNs && leftMs < uppercap)` loop B patches is verbatim at line 2444,
    `MathMin` is imported at line 52, `MS_MAX = DAY_MS * 1e8` is at line 129, and the
    `BEFORE_FIRST_DST = DateUTC(1847, 0, 1)` line E replaces is at line 143. The post-loop
-   `if (leftOffsetNs === rightOffsetNs) return null;` B's termination argument relies on is at 2451.
+   `if (leftOffsetNs === rightOffsetNs) return null;` B's termination argument relies on is at 2452.
 
    Neither has been run against tc39's own test suite, and both drafts say so and offer to open a
    PR instead — the patched behaviour was verified in js-temporal, whose code here is identical.
