@@ -11,6 +11,7 @@
  */
 import worker, { corpusFetcher } from "./index";
 import { BRAINS, VISITOR_DAILY_MAX } from "../src/lib/chat-constants";
+import { isValidUtc } from "@northguild/gmt";
 
 /** A stand-in for the static-assets binding that reports whether it was hit. */
 function assetsBinding() {
@@ -78,12 +79,12 @@ describe("worker entry — /api/brains", () => {
     expect(body.visitor.limit).toBe(VISITOR_DAILY_MAX);
     // No DOX_DEV_KEY in this env, so the bypass cannot engage.
     expect(body.visitor.unlimited).toBe(false);
-    expect(Number.isNaN(Date.parse(body.visitor.resetsAt))).toBe(false);
+    expect(isValidUtc(body.visitor.resetsAt)).toBe(true);
     // DOX-C4: each provider refills on its own clock, so each carries its own
     // reset instant.
     expect(body.providers.map((p) => p.id)).toEqual(["google", "workers-ai"]);
     for (const provider of body.providers) {
-      expect(Number.isNaN(Date.parse(provider.resetsAt))).toBe(false);
+      expect(isValidUtc(provider.resetsAt)).toBe(true);
     }
   });
 

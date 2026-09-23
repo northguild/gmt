@@ -167,7 +167,7 @@ describe("formatCalendarUtc", () => {
 
     it("defaults reference to 'now' when omitted", () => {
       vi.useFakeTimers();
-      vi.setSystemTime(new Date(REF));
+      vi.setSystemTime(REF);
       try {
         expect(
           formatCalendarUtc(VAL, MustTestLocales.enUS, {

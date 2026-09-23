@@ -772,7 +772,7 @@ describe("buildPlaygroundFields", () => {
         returnType: "string",
         params: [{ name: "value", type: "string", value: "" }],
       },
-      "foo(new Date())",
+      "foo(new Date())", // date-ban: source text in a fixture, asserting the playground builder rejects a call expression it cannot parse
     );
     expect(callExprArg).toBeUndefined();
   });

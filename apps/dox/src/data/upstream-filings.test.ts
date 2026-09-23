@@ -18,6 +18,7 @@ import {
   totalFilings,
   unaffectingGmt,
 } from "./upstream-filings";
+import { getUtcNow, isAfterUtc, isValidUtc } from "@northguild/gmt";
 
 // The literal `DefectId` / `ZonedDefectId` / `BoundedWorkDefectId` union members
 // `repros.ts` declares — the same set `scripts/upstream.mjs check` parses out of
@@ -43,8 +44,8 @@ describe("upstream filings", () => {
   });
 
   it("was checked, and not in the future", () => {
-    expect(Number.isNaN(Date.parse(checked))).toBe(false);
-    expect(Date.parse(checked)).toBeLessThanOrEqual(Date.now());
+    expect(isValidUtc(checked)).toBe(true);
+    expect(isAfterUtc(checked, getUtcNow())).toBe(false);
   });
 
   it("gives every filing a URL matching its own repo, kind and number", () => {

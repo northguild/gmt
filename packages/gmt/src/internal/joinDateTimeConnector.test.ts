@@ -1,8 +1,8 @@
-import { expectDateTimeEqual } from "../test";
+import { expectDateTimeEqual, utcMs } from "../test";
 import { joinDateTimeConnector } from "./joinDateTimeConnector";
 import { normalizeDateTime } from "./normalizeDateTime";
 
-const EPOCH_MS = Date.UTC(2024, 2, 15, 14, 30); // 2024-03-15T14:30:00Z
+const EPOCH_MS = utcMs("2024-03-15T14:30:00Z");
 
 // Callers (formatCalendar*) always pipe this helper's output through
 // normalizeDateTime, which collapses Intl's narrow no-break space before

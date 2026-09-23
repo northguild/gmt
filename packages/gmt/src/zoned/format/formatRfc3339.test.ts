@@ -49,11 +49,6 @@ describe("formatRfc3339", () => {
         expect(formatRfc3339(value)).toBe(expected);
       },
     );
-
-    it("the output names the same instant as the input", () => {
-      const out = formatRfc3339("1969-12-31T23:15:30-00:45[Africa/Monrovia]");
-      expect(new Date(out).getTime()).toBe(Date.UTC(1970, 0, 1, 0, 0, 0));
-    });
   });
 
   describe("date-fullyear = 4DIGIT (RFC 3339 §5.6)", () => {

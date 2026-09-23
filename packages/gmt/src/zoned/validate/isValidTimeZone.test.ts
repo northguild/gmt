@@ -1,7 +1,4 @@
-import {
-  ianaSingleComponentTimeZones,
-  validOnlyBattleTestTimeZones,
-} from "../../test";
+import { ianaSingleComponentTimeZones, utcMs, validOnlyBattleTestTimeZones } from "../../test";
 import { formatUtc } from "../../utc/format/formatUtc";
 import { isValidTimeZone } from ".";
 
@@ -84,7 +81,7 @@ describe("isValidTimeZone", () => {
         hour: "numeric",
         minute: "2-digit",
         second: "2-digit",
-      }).format(new Date(instant));
+      }).format(utcMs(instant));
     const actual = formatUtc(instant, "en-US", {
       timeZone: "Japan",
       timeStyle: "long",

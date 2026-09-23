@@ -420,6 +420,7 @@ function liveFileIsFresh(livePath) {
   if (process.env.CI || process.env.UPSTREAM_REFRESH === "force") return false;
   return (
     existsSync(livePath) &&
+    // oxlint-disable-next-line @northguild/gmt-oxlint/no-date-now -- see above: elapsed time, not a date
     Date.now() - statSync(livePath).mtimeMs < REFRESH_TTL_MS // date-ban: elapsed time against a file's epoch-ms mtime, not a date value
   );
 }

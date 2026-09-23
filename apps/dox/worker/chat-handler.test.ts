@@ -23,10 +23,12 @@ import {
 } from "../src/lib/pt-day";
 import { DOX_TOOL_NAMES, ENABLED_TOOL_NAMES } from "../src/lib/dox-tools";
 import { APICallError } from "ai";
+import { convertUnixToUtc, convertUtcToUnix } from "@northguild/gmt";
+import { getUnixNowMs } from "./clock";
 
 /** The ledger's bucket for "now" — tests assert against real keys rather than
  * reimplementing the Pacific-day rule. */
-const ptDay = () => ptDayKey(Date.now());
+const ptDay = () => ptDayKey(getUnixNowMs());
 
 const SAMPLE_CHUNKS: RetrievalChunk[] = [
   {
@@ -436,7 +438,7 @@ describe("brains, budgets and failover", () => {
     // This is the whole point of the feature: one model's daily allowance
     // running out must not take Dox down, because the allowance is per model.
     const usage = fakeUsage();
-    await markBrain(usage, BRAINS[0], "spent", Date.now());
+    await markBrain(usage, BRAINS[0], "spent", getUnixNowMs());
 
     const { asked, resolveModel } = spyResolver();
     const handler = makeHandler({ resolveModel, usage });
@@ -462,7 +464,7 @@ describe("brains, budgets and failover", () => {
 
   it("falls through rather than refusing when the picked brain is spent", async () => {
     const usage = fakeUsage();
-    await markBrain(usage, BRAINS[2], "spent", Date.now());
+    await markBrain(usage, BRAINS[2], "spent", getUnixNowMs());
 
     const { asked, resolveModel } = spyResolver();
     const handler = makeHandler({ resolveModel, usage });
@@ -478,7 +480,7 @@ describe("brains, budgets and failover", () => {
   });
 
   it("reports exhaustion as a sentinel state with a reset time, not an error", async () => {
-    const NOW = Date.UTC(2026, 5, 15, 19, 0, 0); // noon Pacific
+    const NOW = convertUtcToUnix("2026-06-15T19:00:00Z")!; // noon Pacific
     const usage = fakeUsage();
     for (const brain of BRAINS) {
       await markBrain(usage, brain, "spent", NOW);
@@ -497,13 +499,13 @@ describe("brains, budgets and failover", () => {
     // with Gemini on Pacific time and Workers AI on UTC (DOX-C4), that is the
     // soonest refill, UTC midnight here, not "midnight Pacific".
     expect(body.resetsAt).toBe(
-      new Date(nextMidnightMs(NOW, "UTC")).toISOString(),
+      convertUnixToUtc(nextMidnightMs(NOW, "UTC")),
     );
     expect(String(body.error)).not.toMatch(/Pacific|UTC|midnight/);
   });
 
   it("gives Pacific midnight as the soonest refill when only Gemini is configured", async () => {
-    const NOW = Date.UTC(2026, 5, 15, 19, 0, 0);
+    const NOW = convertUtcToUnix("2026-06-15T19:00:00Z")!;
     const geminiOnly = BRAINS.filter((brain) => brain.provider === "google");
     const usage = fakeUsage();
     for (const brain of geminiOnly) {
@@ -522,7 +524,7 @@ describe("brains, budgets and failover", () => {
     );
     const body = (await response.json()) as Record<string, unknown>;
     expect(body.resetsAt).toBe(
-      new Date(Date.UTC(2026, 5, 16, 7, 0, 0)).toISOString(),
+      "2026-06-16T07:00:00Z",
     );
   });
 
@@ -544,7 +546,7 @@ describe("brains, budgets and failover", () => {
     const usage = fakeUsage();
     const hash = await hashVisitor("9.9.9.9");
     for (let i = 0; i < VISITOR_DAILY_MAX; i++) {
-      await recordRequest(usage, BRAINS[0], hash, Date.now());
+      await recordRequest(usage, BRAINS[0], hash, getUnixNowMs());
     }
 
     const { asked, resolveModel } = spyResolver();
@@ -562,7 +564,7 @@ describe("brains, budgets and failover", () => {
     const usage = fakeUsage();
     const hash = await hashVisitor("9.9.9.9");
     for (let i = 0; i < VISITOR_DAILY_MAX * 2; i++) {
-      await recordRequest(usage, BRAINS[0], hash, Date.now());
+      await recordRequest(usage, BRAINS[0], hash, getUnixNowMs());
     }
 
     const { asked, resolveModel } = spyResolver();
@@ -804,7 +806,7 @@ describe("brains, budgets and failover", () => {
   });
 
   describe("Workers AI brains (DOX-C4)", () => {
-    const NOW = Date.UTC(2026, 5, 15, 19, 0, 0); // noon Pacific
+    const NOW = convertUtcToUnix("2026-06-15T19:00:00Z")!; // noon Pacific
     const cfBrains = BRAINS.filter((brain) => brain.provider === "workers-ai");
     const geminiBrain = BRAINS.find((brain) => brain.provider === "google")!;
     /** Two Workers AI brains, whatever `BRAINS` currently enables — the shared

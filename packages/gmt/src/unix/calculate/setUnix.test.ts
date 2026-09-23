@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { battleTestTimeZones } from "../../test";
+import { battleTestTimeZones, utcMs } from "../../test";
 import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
 import { setUnix } from "./setUnix";
 
@@ -61,7 +61,7 @@ describe("setUnix", () => {
   );
 
   it("resolves multi-field updates atomically regardless of field order in the object", () => {
-    const value = Date.UTC(2024, 0, 31, 12, 0, 0);
+    const value = utcMs("2024-01-31T12:00:00Z");
     const monthThenDay = setUnix(
       value,
       { month: 2, day: 5 },
@@ -72,8 +72,8 @@ describe("setUnix", () => {
       { day: 5, month: 2 },
       { timeZone: "UTC" },
     );
-    expect(monthThenDay).toBe(Date.UTC(2024, 1, 5, 12, 0, 0));
-    expect(dayThenMonth).toBe(Date.UTC(2024, 1, 5, 12, 0, 0));
+    expect(monthThenDay).toBe(utcMs("2024-02-05T12:00:00Z"));
+    expect(dayThenMonth).toBe(utcMs("2024-02-05T12:00:00Z"));
   });
 
   // Temporal ZonedDateTime.prototype.with defaults offset to "prefer": the source's offset is kept

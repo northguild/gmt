@@ -1,4 +1,5 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { convertUnixToUtc } from "@northguild/gmt";
 import { createWorkersAI } from "workers-ai-provider";
 import {
   BRAINS,
@@ -8,6 +9,7 @@ import {
 } from "../src/lib/chat-constants";
 import { nextPtMidnightMs } from "../src/lib/pt-day";
 import { chooseBrain, remainingFor } from "./brains";
+import { getUnixNowMs } from "./clock";
 import { createChatHandler } from "./chat-handler";
 import { CORE_RULES_CONTENT } from "./core-rules";
 import {
@@ -113,7 +115,7 @@ async function handleDevKey(url: URL, env: Env): Promise<Response> {
   // What this endpoint must never do is *leak* — hence the redirect that
   // strips the key and the HttpOnly cookie that keeps it out of the page.
   if (env.DOX_DEV_KEY && (await timingSafeEqual(candidate, env.DOX_DEV_KEY))) {
-    const token = await signDevToken(env.DOX_DEV_KEY, Date.now());
+    const token = await signDevToken(env.DOX_DEV_KEY, getUnixNowMs());
     headers.append(
       "set-cookie",
       devCookieHeader(token, url.protocol === "https:"),
@@ -125,7 +127,7 @@ async function handleDevKey(url: URL, env: Env): Promise<Response> {
 
 /** `GET /api/brains` — what the badge and the selector need before any chat. */
 async function handleBrains(request: Request, env: Env): Promise<Response> {
-  const nowMs = Date.now();
+  const nowMs = getUnixNowMs();
   const dev = await isDevRequest(request, env.DOX_DEV_KEY, nowMs);
   const visitorHash = await hashVisitor(clientIdFromRequest(request));
   const brains = configuredBrains(env);
@@ -162,7 +164,7 @@ async function handleBrains(request: Request, env: Env): Promise<Response> {
         // nothing on the free tier can raise that, and the UI says so.
         unlimited: dev,
         // The visitor cap is Dox's own and always on the Pacific day.
-        resetsAt: new Date(nextPtMidnightMs(nowMs)).toISOString(),
+        resetsAt: convertUnixToUtc(nextPtMidnightMs(nowMs)),
       },
     },
     {
@@ -262,7 +264,7 @@ export default {
       },
       brains,
       usage: env.DOX_USAGE,
-      isDev: (req) => isDevRequest(req, env.DOX_DEV_KEY, Date.now()),
+      isDev: (req) => isDevRequest(req, env.DOX_DEV_KEY, getUnixNowMs()),
       vocabulary: VOCABULARY_CONTENT,
       coreRules: CORE_RULES_CONTENT,
       fetchImpl: corpusFetcher(env),

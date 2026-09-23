@@ -10,11 +10,12 @@ import {
   type ResetFormatContext,
   type ResetFormatId,
 } from "./reset-formats";
+import { convertUtcToUnix } from "@northguild/gmt";
 
 /** Midnight Pacific on 2026-06-16 — the instant `/api/brains` would send as
  * Gemini's reset — viewed from four hours earlier. Both are UTC ISO strings,
  * the one value type every preset takes. */
-const RESETS_AT = "2026-06-16T07:00:00.000Z";
+const RESETS_AT = "2026-06-16T07:00:00Z";
 const NOW = "2026-06-16T03:00:00Z";
 
 const ctx = (timeZone: string): ResetFormatContext => ({
@@ -61,9 +62,9 @@ describe("RESET_FORMATS", () => {
   it("renders the zone-free presets", () => {
     expect(render("utc", "UTC")).toBe("6/16/2026, 7:00:00 AM UTC");
     expect(render("http", "UTC")).toBe("Tue, 16 Jun 2026 07:00:00 GMT");
-    expect(render("unix-ms", "UTC")).toBe(String(Date.UTC(2026, 5, 16, 7)));
+    expect(render("unix-ms", "UTC")).toBe(String(convertUtcToUnix("2026-06-16T07:00:00Z")!));
     expect(render("unix-s", "UTC")).toBe(
-      String(Date.UTC(2026, 5, 16, 7) / 1000),
+      String(convertUtcToUnix("2026-06-16T07:00:00Z")! / 1000),
     );
   });
 

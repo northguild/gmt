@@ -564,7 +564,7 @@
     "@northguild/gmt-oxlint": "workspace:*",
     "@tanstack/intent": "^0.4.0",
     "oxfmt": "^0.62.0",
-    "oxlint": "^1.0.0"
+    "oxlint": "^1.78.0"
   },
   "engines": {
     "node": ">=22.16.0"

@@ -1,10 +1,6 @@
 import { normalizeDateTime } from "../../internal";
 import { vi } from "vitest";
-import {
-  MustTestLocales,
-  battleTestTimeZones,
-  expectDateTimeEqual,
-} from "../../test";
+import { MustTestLocales, battleTestTimeZones, expectDateTimeEqual, utcMs } from "../../test";
 import { mockTemporalNowZonedDateTimeISOThrow } from "../../test/mocks";
 import { formatCalendarZoned } from "./formatCalendarZoned";
 
@@ -154,7 +150,7 @@ describe("formatCalendarZoned", () => {
     });
 
     it("accepts a numeric epoch-millisecond reference, placed into value's zone", () => {
-      const referenceMs = Date.UTC(2024, 2, 15, 13, 0);
+      const referenceMs = utcMs("2024-03-15T13:00:00Z");
       expect(
         formatCalendarZoned(
           "2024-03-16T14:30:00-04:00[America/New_York]",
@@ -177,7 +173,7 @@ describe("formatCalendarZoned", () => {
 
     it("defaults to 'now' in value's own zone when reference is omitted", () => {
       vi.useFakeTimers();
-      vi.setSystemTime(new Date("2024-03-15T13:00:00Z"));
+      vi.setSystemTime("2024-03-15T13:00:00Z");
       try {
         expect(
           formatCalendarZoned(

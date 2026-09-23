@@ -105,11 +105,26 @@ function roundQuotient(
   return negative ? -roundedMagnitude : roundedMagnitude;
 }
 
-const epochNanoseconds = (utc: string): bigint => {
+/** The one UTC day every span above lives on. */
+const SPAN_DATE = "2024-06-15";
+
+/**
+ * Nanoseconds since midnight, by integer arithmetic on the digits.
+ *
+ * Only the *difference* between two of these is ever used, and every span starts and ends on the
+ * same UTC day, so the date cancels and nothing here has to parse one. That is what keeps the
+ * header's promise: no Temporal call and no GMT call helps produce the expected value — and no
+ * `Date` either, which would be someone else's arithmetic just the same.
+ */
+const nanosecondsFromMidnight = (utc: string): bigint => {
   const [datePart, timePart] = utc.replace("Z", "").split("T");
-  const [seconds, fraction = ""] = timePart.split(".");
-  const wholeMs = Date.parse(`${datePart}T${seconds}Z`);
-  return BigInt(wholeMs) * 1_000_000n + BigInt(fraction.padEnd(9, "0"));
+  if (datePart !== SPAN_DATE) {
+    throw new Error(`spans must stay on ${SPAN_DATE} so the date cancels: ${utc}`);
+  }
+  const [clock, fraction = ""] = timePart.split(".");
+  const [hours, minutes, seconds] = clock.split(":").map(Number);
+  const wholeSeconds = BigInt(hours * 3600 + minutes * 60 + seconds);
+  return wholeSeconds * 1_000_000_000n + BigInt(fraction.padEnd(9, "0"));
 };
 
 describe("diffUtc rounds to the value Temporal's rounding modes define", () => {
@@ -117,7 +132,8 @@ describe("diffUtc rounds to the value Temporal's rounding modes define", () => {
     for (const [start, end] of SPANS) {
       for (const increment of increments) {
         for (const mode of MODES) {
-          const forward = epochNanoseconds(end) - epochNanoseconds(start);
+          const forward =
+            nanosecondsFromMidnight(end) - nanosecondsFromMidnight(start);
           const step = size * BigInt(increment);
 
           it(`${unit} x${increment} ${mode}: ${start} to ${end}`, () => {

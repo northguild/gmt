@@ -1,18 +1,13 @@
 import { vi } from "vitest";
-import {
-  MustTestLocales,
-  battleTestTimeZones,
-  expectDateTimeEqual,
-  MustTestDstTimeZones,
-} from "../../test";
+import { MustTestDstTimeZones, MustTestLocales, battleTestTimeZones, expectDateTimeEqual, utcMs } from "../../test";
 import { mockTemporalNowInstantThrow } from "../../test/mocks";
 import {
   formatCalendarUnix,
   type FormatCalendarUnixOptions,
 } from "./formatCalendarUnix";
 
-const REF_MS = Date.UTC(2024, 2, 15, 13, 0); // 2024-03-15T09:00:00-04:00[America/New_York]
-const VAL_MS = Date.UTC(2024, 2, 16, 18, 30); // 2024-03-16T14:30:00-04:00[America/New_York]
+const REF_MS = utcMs("2024-03-15T13:00:00Z"); // 2024-03-15T09:00:00-04:00[America/New_York]
+const VAL_MS = utcMs("2024-03-16T18:30:00Z"); // 2024-03-16T14:30:00-04:00[America/New_York]
 
 // Expected values per battle-test timeZone, verified against @js-temporal/polyfill.
 const calendarLabelByZone = {
@@ -49,9 +44,9 @@ describe("formatCalendarUnix", () => {
   describe("±1 and 0 permutations", () => {
     it.each`
       valueMs                          | expected
-      ${Date.UTC(2024, 2, 15, 18, 30)} | ${"today at 2:30 PM"}
+      ${utcMs("2024-03-15T18:30:00Z")} | ${"today at 2:30 PM"}
       ${VAL_MS}                        | ${"tomorrow at 2:30 PM"}
-      ${Date.UTC(2024, 2, 14, 18, 30)} | ${"yesterday at 2:30 PM"}
+      ${utcMs("2024-03-14T18:30:00Z")} | ${"yesterday at 2:30 PM"}
     `(
       "formats epoch $valueMs relative to REF as $expected",
       ({ valueMs, expected }) => {
@@ -72,7 +67,7 @@ describe("formatCalendarUnix", () => {
     it("6 days out stays relative, 7 days out flips to absolute", () => {
       expect(
         formatCalendarUnix(
-          Date.UTC(2024, 2, 21, 18, 30),
+          utcMs("2024-03-21T18:30:00Z"),
           MustTestLocales.enUS,
           {
             timeZone: "America/New_York",
@@ -82,7 +77,7 @@ describe("formatCalendarUnix", () => {
       ).toBe("in 6 days at 2:30 PM");
       expect(
         formatCalendarUnix(
-          Date.UTC(2024, 2, 22, 18, 30),
+          utcMs("2024-03-22T18:30:00Z"),
           MustTestLocales.enUS,
           {
             timeZone: "America/New_York",
