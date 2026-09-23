@@ -45,13 +45,25 @@ IANA tzdb rules, and Chromium 152/153 native Temporal as recorded in GMT's canar
 
 ## Filed
 
-All 11 filed by the owner (`craig-o-curtis`), read back on 2026-09-19 with `gh pr view` / `gh issue view`,
-plus a twelfth entry on the `/upstream/` tracker that is **not** a filing of ours: our comment on
-ptomato's js-temporal PR #361 (§ H). It is tracked because its state is what retires GMT's `D11`.
-
-comments included. All open. No maintainer has commented or reviewed; the only comments are the owner's own
-cross-links on tc39 #3327, #3328 and #3330. "Filed" is `createdAt`, UTC. "js" is js-temporal/temporal-polyfill,
+All 11 filed by the owner (`craig-o-curtis`), plus a twelfth entry on the `/upstream/` tracker that is
+**not** a filing of ours: our comment on ptomato's js-temporal PR #361 (§ H), tracked because its
+state is what retires GMT's `D11`. "Filed" is `createdAt`, UTC. "js" is js-temporal/temporal-polyfill,
 "tc39" is tc39/proposal-temporal.
+
+**Status as of 2026-09-23** (`gh pr view` / `gh issue view`, comments included). Re-checked on
+2026-09-23: nothing has moved since 2026-09-21 — all six js PRs closed, #373 open, #361 merged, and
+all four tc39 issues open with our own cross-link as the only comment.
+
+- **All six js PRs (#367–#372) are closed, unmerged — and none was rejected.** ptomato closed #367,
+  #368 and #369 with "I'd prefer to keep the commits ported in order — otherwise the rebases become
+  unmanageable", and #370, #371 and #372 with "I'll plan to apply this in proposal-temporal and pull
+  it in here after it's been merged there". Every defect stands; only the route changed.
+- **#373 (release request) is open**, answered: "we'd prefer to just make one release once it has
+  caught up to the current state of the spec."
+- **#361 merged on 2026-09-21**, which lands `50d66d2` (D11) on the polyfill's `main` along with D3,
+  D5, D7 and the ICU 78 calendar fixes. Nothing is released yet, so no GMT workaround retires.
+- **The four tc39 issues (#3327–#3330) are open with no maintainer reply**; the only comments are our
+  own cross-links.
 
 | Repository | #    | Kind  | Title                                                                                                         | Carries                                                                       | Pairs with                                                         | Depends on | Closes                                                                                  | Filed      |
 | ---------- | ---- | ----- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------ | ---------- | --------------------------------------------------------------------------------------- | ---------- |
@@ -85,27 +97,41 @@ Notes on the filings:
 
 ### Still unfiled
 
-Built from this document's own asks and checked against the 11 filings above.
+Re-derived 2026-09-22, after the maintainer closed all six js-temporal PRs and merged #361.
 
-1. **C-D7b**, the port of tc39 `196a3191`'s `CompareSurpasses` hunk (C's Ask, point 2). No filing carries it.
-   Port **only** that hunk: #370 and tc39 #3327 say the same commit's months-loop hunk corrupts the calendar
-   cache, and that C-D1b replaces it. GMT's canary guards the row as `D7.leapMonthEnd`.
-2. **The ask to merge #361** (C's Ask, point 1), which carries D3, D5 and D7, the ICU 78 fixes for chinese/dangi
-   and coptic, and closes #360. Not asked anywhere. #373 mentions it as an aside, and #368, #369 and #370 cite
-   #361 as the fix for neighbouring failures.
-3. **D4, the ICU note** (C, "D4: ICU note"). Nothing to file with js-temporal. It waits for an ICU4C release
-   containing `5267bb5778` (the latest is still `release-78.3`) and a Node release bundling it; optionally a note
-   on ICU-23007 or nodejs/node then.
-4. **The coptic minimum** (C's scan, "File separately if wanted"). Not filed, and probably not needed: #370
-   states that #361's coptic `ERA0` change fixes the round trip before the coptic epoch (see C's log).
-5. **tc39 side:** nothing outstanding. B, C-D1b and E are filed in both repositories; A is js-temporal only by
-   nature; D, C-D1 and C-D8 are ports of tc39 commits; C-D7b's source is already in tc39; F is tc39 only.
+**What the closures established.** Every one was an acceptance with a routing instruction, not a
+rejection: ports must land "in order" so the rebase stays manageable (#367, #368, #369), and new
+fixes should be applied "in proposal-temporal and pull[ed] in here after" (#370, #371, #372). #373
+stays open because the maintainers "would prefer to just make one release once it has caught up to
+the current state of the spec". So the route is **tc39 → polyfill rebase → one release**, and the
+only filings worth making now are in tc39.
 
-Raised in the filings but not asked by this document, so not listed above as work GMT needs: tc39 #3277
-(chinese/dangi far from the present, `Internal error. Icu error.`) is not ported to js-temporal (#369, #370);
-tc39's comment "we count years prior to 1872 as CE" should say 1873 (#368); the mirror-image early return in
-`GetNamedTimeZonePreviousTransition` has no visible effect today (#371, #3328); test262 has no test for either
-problem in #3327 (#3327 suggests two).
+1. **B (#3328) and E (#3330): post the patch against tc39's own reference implementation.** Both
+   defects live in `polyfill/lib/ecmascript.mjs`'s `GetNamedTimeZoneNextTransition`, which is the
+   same shape as the polyfill's, so the verified diffs adapt directly. **Drafted, and the
+   adaptation checked against the file itself on 2026-09-23** rather than assumed: the `while
+   (leftOffsetNs === rightOffsetNs && leftMs < uppercap)` loop B patches is verbatim at line 2444,
+   `MathMin` is imported at line 52, `MS_MAX = DAY_MS * 1e8` is at line 129, and the
+   `BEFORE_FIRST_DST = DateUTC(1847, 0, 1)` line E replaces is at line 143. The post-loop
+   `if (leftOffsetNs === rightOffsetNs) return null;` B's termination argument relies on is at 2451.
+
+   Neither has been run against tc39's own test suite, and both drafts say so and offer to open a
+   PR instead — the patched behaviour was verified in js-temporal, whose code here is identical.
+2. **C-D1b (#3327): do not port blind.** tc39's `polyfill/lib/calendar.mjs` does not contain the
+   function names the js-temporal diff touches, so the change needs adapting properly rather than
+   transcribing. Say so on the issue and offer to do it, rather than posting a guess.
+3. **C-D7b** — the `CompareSurpasses` hunk of tc39 `196a3191`. Its source is already in tc39, so
+   there is nothing to file there; it is a note on #3327 that the months-loop hunk of that commit
+   must be left out when it is ported, because that hunk is what corrupts the calendar cache.
+4. **The ask to merge #361 — done.** It merged 2026-09-21, which lands D3, D5, D7, the ICU 78 fixes
+   for chinese/dangi and coptic, the D11 nudge-window port (`50d66d2`), and closes #360. None of it
+   is released, so every GMT workaround stays; `pnpm compat` is unchanged at 13 of 14 groups needed.
+5. **D4, the ICU note.** Nothing to file. It waits for an ICU4C release containing `5267bb5778` and
+   a Node release bundling it.
+6. **The coptic minimum.** Still not filed and still probably unnecessary: #370 states that #361's
+   coptic `ERA0` change fixes the round trip before the coptic epoch, and #361 has now merged.
+7. **A release (#373) is the one remaining ask of ours that is open**, and the maintainers have
+   already answered it: after the rebase. Nothing to add — re-asking would not help.
 
 ## Upstream issues these fixes close
 
