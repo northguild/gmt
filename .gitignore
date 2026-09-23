@@ -69,6 +69,8 @@ apps/dox/.visual/
 
 # Playwright mcp
 .playwright-mcp/
+# Agent scratch space. Transient validate/build logs land here; nothing in it belongs in a commit.
+scratchpad/
 
 # Plans
 .github/plans/
