@@ -70,15 +70,15 @@ module.exports = [...gmtEslintConfig];
 
 ## Banned patterns
 
-| Pattern                     | Rule                       | Suggestion                                                                                                            |
-| --------------------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `Date` (global reference)   | `no-restricted-globals`    | Use `getUtcNow()`, `getNow()`, `getUnixNow()`, or `getZonedNow(timezone)`                                             |
-| `new Date(...)`             | `no-restricted-syntax`     | Use `getUtcNow()`, `getNow()`, or `getZonedNow(timezone)`                                                             |
-| `Date.now()`                | `no-restricted-properties` | Use `getUnixNow('milliseconds' \| 'seconds')` or `getNow()`                                                           |
-| `Date.UTC(...)`             | `no-restricted-properties` | Use `convertUtcDateTimeToUnix('YYYY-MM-DDTHH:mm:ss', 'milliseconds' \| 'seconds')`                                    |
-| `Date.parse(...)`           | `no-restricted-properties` | Use `convertZonedToUnix(value)`                                                                                       |
+| Pattern                                                                           | Rule                       | Suggestion                                                                                                            |
+| --------------------------------------------------------------------------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `Date` (global reference)                                                         | `no-restricted-globals`    | Use `getUtcNow()`, `getNow()`, `getUnixNow()`, or `getZonedNow(timezone)`                                             |
+| `new Date(...)`                                                                   | `no-restricted-syntax`     | Use `getUtcNow()`, `getNow()`, or `getZonedNow(timezone)`                                                             |
+| `Date.now()`                                                                      | `no-restricted-properties` | Use `getUnixNow({ epochUnit: 'milliseconds' \| 'seconds' })` or `getNow()`                                            |
+| `Date.UTC(...)`                                                                   | `no-restricted-properties` | Use `convertUtcToUnix('YYYY-MM-DDTHH:mm:ssZ', { epochUnit: 'milliseconds' \| 'seconds' })`                            |
+| `Date.parse(...)`                                                                 | `no-restricted-properties` | Use `convertZonedToUnix(value)`                                                                                       |
 | Importing moment, moment-timezone, dayjs, luxon, date-fns, date-fns-tz, spacetime | `no-restricted-imports`    | Use `@northguild/gmt`                                                                                                 |
-| `$date.getTimezoneOffset()` | `no-restricted-syntax`     | Use `getZonedNow(timezone)`, other gmt zoned helpers such as `convertZonedToUnix(value)`, or `Temporal.ZonedDateTime` |
+| `$date.getTimezoneOffset()`                                                       | `no-restricted-syntax`     | Use `getZonedNow(timezone)`, other gmt zoned helpers such as `convertZonedToUnix(value)`, or `Temporal.ZonedDateTime` |
 
 > **`@js-joda/core` is deliberately allowed.** It has its own value types and touches
 > `Date` only at the boundary (reading the clock, host zone lookup, `toDate()` interop),

@@ -4,76 +4,27 @@ import { battleTestTimeZones } from "../../test/timeZoneMatrix";
 import { intervalAbutsZoned } from "./intervalAbutsZoned";
 
 describe("intervalAbutsZoned", () => {
-  it("returns true when A=2024-01-01T09:00:00+00:00[UTC]..2024-06-30T12:00:00+00:00[UTC] and B=2024-06-30T12:00:00.000000001+00:00[UTC]..2024-12-31T17:00:00+00:00[UTC]", () => {
-    expect(
-      intervalAbutsZoned(
-        "2024-01-01T09:00:00+00:00[UTC]",
-        "2024-06-30T12:00:00+00:00[UTC]",
-        "2024-06-30T12:00:00.000000001+00:00[UTC]",
-        "2024-12-31T17:00:00+00:00[UTC]",
-      ),
-    ).toBe(true);
-  });
-
-  it("returns false when A=2024-06-30T12:00:00+00:00[UTC]..2024-12-31T17:00:00+00:00[UTC] and B=2024-01-01T09:00:00+00:00[UTC]..2024-06-30T12:00:00.000000001+00:00[UTC]", () => {
-    expect(
-      intervalAbutsZoned(
-        "2024-06-30T12:00:00+00:00[UTC]",
-        "2024-12-31T17:00:00+00:00[UTC]",
-        "2024-01-01T09:00:00+00:00[UTC]",
-        "2024-06-30T12:00:00.000000001+00:00[UTC]",
-      ),
-    ).toBe(false);
-  });
-
-  it("returns true when A=2024-06-30T12:00:00.000000001+00:00[UTC]..2024-12-31T17:00:00+00:00[UTC] and B=2024-01-01T09:00:00+00:00[UTC]..2024-06-30T12:00:00+00:00[UTC]", () => {
-    expect(
-      intervalAbutsZoned(
-        "2024-06-30T12:00:00.000000001+00:00[UTC]",
-        "2024-12-31T17:00:00+00:00[UTC]",
-        "2024-01-01T09:00:00+00:00[UTC]",
-        "2024-06-30T12:00:00+00:00[UTC]",
-      ),
-    ).toBe(true);
-  });
-
-  it("returns true when A=2024-06-15T12:00:00+00:00[UTC]..2024-06-15T12:00:00+00:00[UTC] and B=2024-06-15T12:00:00.000000001+00:00[UTC]..2024-06-15T13:00:00+00:00[UTC]", () => {
-    expect(
-      intervalAbutsZoned(
-        "2024-06-15T12:00:00+00:00[UTC]",
-        "2024-06-15T12:00:00+00:00[UTC]",
-        "2024-06-15T12:00:00.000000001+00:00[UTC]",
-        "2024-06-15T13:00:00+00:00[UTC]",
-      ),
-    ).toBe(true);
-  });
-
-  it("returns false for non-adjacent intervals", () => {
-    expect(
-      intervalAbutsZoned(
-        "2024-01-01T09:00:00+00:00[UTC]",
-        "2024-06-30T12:00:00+00:00[UTC]",
-        "2024-06-30T12:00:01+00:00[UTC]",
-        "2024-12-31T17:00:00+00:00[UTC]",
-      ),
-    ).toBe(false);
-    expect(
-      intervalAbutsZoned(
-        "2024-01-01T09:00:00+00:00[UTC]",
-        "2024-06-30T13:00:00+00:00[UTC]",
-        "2024-06-30T12:00:00+00:00[UTC]",
-        "2024-12-31T17:00:00+00:00[UTC]",
-      ),
-    ).toBe(false);
-    expect(
-      intervalAbutsZoned(
-        "2024-01-01T09:00:00+00:00[UTC]",
-        "2024-06-30T12:00:00+00:00[UTC]",
-        "2024-04-01T11:00:00+00:00[UTC]",
-        "2024-08-01T13:00:00+00:00[UTC]",
-      ),
-    ).toBe(false);
-  });
+  // Half-open [start, end): two non-empty intervals abut when one's end is the same instant as the
+  // other's start (Allen's "meets", either order), so they share no instant and leave no gap. An
+  // empty interval abuts nothing (coding-standards § 8; A = 2024-01-01T09:00Z, B = 12:00Z,
+  // C = 13:00Z, D = 17:00Z).
+  it.each`
+    aStart                              | aEnd                                          | bStart                                           | bEnd                                | expected | reason
+    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-01-01T12:00:00+00:00[UTC]"}           | ${"2024-01-01T12:00:00+00:00[UTC]"}              | ${"2024-01-01T17:00:00+00:00[UTC]"} | ${true}  | ${"[A, B) ends where [B, D) starts"}
+    ${"2024-01-01T12:00:00+00:00[UTC]"} | ${"2024-01-01T17:00:00+00:00[UTC]"}           | ${"2024-01-01T09:00:00+00:00[UTC]"}              | ${"2024-01-01T12:00:00+00:00[UTC]"} | ${true}  | ${"B ends where A starts"}
+    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-01-01T12:00:00+00:00[UTC]"}           | ${"2024-01-01T07:00:00-05:00[America/New_York]"} | ${"2024-01-01T17:00:00+00:00[UTC]"} | ${true}  | ${"the shared instant spelled in another zone"}
+    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-01-01T12:00:00+00:00[UTC]"}           | ${"2024-01-01T12:00:00.000000001+00:00[UTC]"}    | ${"2024-01-01T17:00:00+00:00[UTC]"} | ${false} | ${"one nanosecond apart"}
+    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-01-01T12:00:00.000000001+00:00[UTC]"} | ${"2024-01-01T12:00:00+00:00[UTC]"}              | ${"2024-01-01T17:00:00+00:00[UTC]"} | ${false} | ${"one nanosecond of overlap"}
+    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-01-01T12:00:00+00:00[UTC]"}           | ${"2024-01-01T12:00:01+00:00[UTC]"}              | ${"2024-01-01T17:00:00+00:00[UTC]"} | ${false} | ${"a one-second gap"}
+    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-01-01T13:00:00+00:00[UTC]"}           | ${"2024-01-01T12:00:00+00:00[UTC]"}              | ${"2024-01-01T17:00:00+00:00[UTC]"} | ${false} | ${"overlapping [A, C) and [B, D)"}
+    ${"2024-01-01T12:00:00+00:00[UTC]"} | ${"2024-01-01T12:00:00+00:00[UTC]"}           | ${"2024-01-01T12:00:00+00:00[UTC]"}              | ${"2024-01-01T17:00:00+00:00[UTC]"} | ${false} | ${"an empty A at B's start abuts nothing"}
+    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-01-01T12:00:00+00:00[UTC]"}           | ${"2024-01-01T12:00:00+00:00[UTC]"}              | ${"2024-01-01T12:00:00+00:00[UTC]"} | ${false} | ${"an empty B at A's end abuts nothing"}
+  `(
+    "returns $expected for A=[$aStart, $aEnd) and B=[$bStart, $bEnd) ($reason)",
+    ({ aStart, aEnd, bStart, bEnd, expected }) => {
+      expect(intervalAbutsZoned(aStart, aEnd, bStart, bEnd)).toBe(expected);
+    },
+  );
 
   it("returns false for reversed intervals", () => {
     expect(
@@ -136,9 +87,7 @@ describe("intervalAbutsZoned", () => {
   it("proves zone-invariance across battleTestTimeZones for adjacent intervals (abuts = true)", () => {
     const aStartInstant = Temporal.Instant.from("2024-01-01T09:00:00Z");
     const aEndInstant = Temporal.Instant.from("2024-06-30T12:00:00Z");
-    const bStartInstant = Temporal.Instant.from(
-      "2024-06-30T12:00:00.000000001Z",
-    );
+    const bStartInstant = aEndInstant;
     const bEndInstant = Temporal.Instant.from("2024-12-31T17:00:00Z");
 
     for (const timeZone of battleTestTimeZones) {
@@ -199,9 +148,9 @@ describe("intervalAbutsZoned", () => {
     }
   });
 
-  it("proves zone-invariance across battleTestTimeZones for zero-length interval abutting another", () => {
+  it("proves zone-invariance across battleTestTimeZones for a zero-length interval at another's start (abuts = false)", () => {
     const instant = Temporal.Instant.from("2024-06-15T12:00:00Z");
-    const nextInstant = Temporal.Instant.from("2024-06-15T12:00:00.000000001Z");
+    const nextInstant = instant;
     const bEndInstant = Temporal.Instant.from("2024-06-15T13:00:00Z");
 
     for (const timeZone of battleTestTimeZones) {
@@ -210,18 +159,19 @@ describe("intervalAbutsZoned", () => {
       const bStart = nextInstant.toZonedDateTimeISO(timeZone).toString();
       const bEnd = bEndInstant.toZonedDateTimeISO(timeZone).toString();
 
-      expect(intervalAbutsZoned(aStart, aEnd, bStart, bEnd)).toBe(true);
+      expect(intervalAbutsZoned(aStart, aEnd, bStart, bEnd)).toBe(false);
     }
   });
 
-  // E5 (issue #78), decision of record D2 — see isValidZonedDateTime.test.ts for the full
-  // rationale: zoned/ rejects any [u-ca=...] calendar annotation outright.
+  // An RFC 9557 calendar-annotated argument is valid, and ordering has no calendar check
+  // (Temporal.ZonedDateTime.compare; native Chromium 153 compares the hebrew and bare 2024-01-01
+  // UTC values as 0), so mixed calendars give the bare-ISO answer. Both rows are the same interval.
   it.each`
     aStart                                           | aEnd                                | bStart                                           | bEnd
     ${"2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC]"}              | ${"2024-06-30T23:59:59+00:00[UTC]"}
     ${"2024-01-01T00:00:00+00:00[UTC]"}              | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]"} | ${"2024-06-30T23:59:59+00:00[UTC]"}
   `(
-    "returns false when an argument carries a calendar annotation: $aStart, $aEnd, $bStart, $bEnd",
+    "returns false for mixed calendars (equal intervals do not abut): $aStart, $aEnd, $bStart, $bEnd",
     ({
       aStart,
       aEnd,
@@ -237,20 +187,21 @@ describe("intervalAbutsZoned", () => {
     },
   );
 
-  // The last representable instant is +275760-09-13T00:00:00Z (New York: T20:00:00-04:00 on 09-12).
-  // B ends one nanosecond before A starts (12:00:00Z - 1 ns = 11:59:59.999999999Z), so they abut in
-  // either order, even though nothing can be added to A's end.
+  // Range edge (CORE-6): the last representable instant is +275760-09-13T00:00:00Z (New York:
+  // T20:00:00-04:00 on 09-12). Half-open, B ends at the instant A starts (12:00:00Z), so they abut in
+  // either order with no step taken at all, and one nanosecond apart they do not.
   // Sydney (+10:00 all September) reaches the max at T10:00 on 09-13, in the last hours only a
-  // positive-offset zone has: B ends at 03:59:59.999999999, 1 ns before A starts at 04:00.
+  // positive-offset zone has: B ends at 04:00, where A starts.
   it.each`
-    aStart                                              | aEnd                                                | bStart                                              | bEnd                                                          | expected
-    ${"+275760-09-12T12:00:00+00:00[UTC]"}              | ${"+275760-09-13T00:00:00+00:00[UTC]"}              | ${"+275760-09-12T00:00:00+00:00[UTC]"}              | ${"+275760-09-12T11:59:59.999999999+00:00[UTC]"}              | ${true}
-    ${"+275760-09-12T00:00:00+00:00[UTC]"}              | ${"+275760-09-12T11:59:59.999999999+00:00[UTC]"}    | ${"+275760-09-12T12:00:00+00:00[UTC]"}              | ${"+275760-09-13T00:00:00+00:00[UTC]"}                        | ${true}
-    ${"+275760-09-12T08:00:00-04:00[America/New_York]"} | ${"+275760-09-12T20:00:00-04:00[America/New_York]"} | ${"+275760-09-11T20:00:00-04:00[America/New_York]"} | ${"+275760-09-12T07:59:59.999999999-04:00[America/New_York]"} | ${true}
-    ${"+275760-09-13T00:00:00+00:00[UTC]"}              | ${"+275760-09-13T00:00:00+00:00[UTC]"}              | ${"+275760-09-12T00:00:00+00:00[UTC]"}              | ${"+275760-09-12T11:59:59.999999999+00:00[UTC]"}              | ${false}
-    ${"+275760-09-13T04:00:00+10:00[Australia/Sydney]"} | ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"} | ${"+275760-09-12T10:00:00+10:00[Australia/Sydney]"} | ${"+275760-09-13T03:59:59.999999999+10:00[Australia/Sydney]"} | ${true}
+    aStart                                              | aEnd                                                | bStart                                              | bEnd                                                | expected
+    ${"+275760-09-12T12:00:00+00:00[UTC]"}              | ${"+275760-09-13T00:00:00+00:00[UTC]"}              | ${"+275760-09-12T00:00:00+00:00[UTC]"}              | ${"+275760-09-12T12:00:00+00:00[UTC]"}              | ${true}
+    ${"+275760-09-12T00:00:00+00:00[UTC]"}              | ${"+275760-09-12T12:00:00+00:00[UTC]"}              | ${"+275760-09-12T12:00:00+00:00[UTC]"}              | ${"+275760-09-13T00:00:00+00:00[UTC]"}              | ${true}
+    ${"+275760-09-12T12:00:00+00:00[UTC]"}              | ${"+275760-09-13T00:00:00+00:00[UTC]"}              | ${"+275760-09-12T00:00:00+00:00[UTC]"}              | ${"+275760-09-12T11:59:59.999999999+00:00[UTC]"}    | ${false}
+    ${"+275760-09-12T08:00:00-04:00[America/New_York]"} | ${"+275760-09-12T20:00:00-04:00[America/New_York]"} | ${"+275760-09-11T20:00:00-04:00[America/New_York]"} | ${"+275760-09-12T08:00:00-04:00[America/New_York]"} | ${true}
+    ${"+275760-09-13T00:00:00+00:00[UTC]"}              | ${"+275760-09-13T00:00:00+00:00[UTC]"}              | ${"+275760-09-12T00:00:00+00:00[UTC]"}              | ${"+275760-09-13T00:00:00+00:00[UTC]"}              | ${false}
+    ${"+275760-09-13T04:00:00+10:00[Australia/Sydney]"} | ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"} | ${"+275760-09-12T10:00:00+10:00[Australia/Sydney]"} | ${"+275760-09-13T04:00:00+10:00[Australia/Sydney]"} | ${true}
   `(
-    "returns $expected when A=[$aStart, $aEnd] and B=[$bStart, $bEnd] (an end at the maximum instant)",
+    "returns $expected when A=[$aStart, $aEnd) and B=[$bStart, $bEnd) (an end at the maximum instant)",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalAbutsZoned(aStart, aEnd, bStart, bEnd)).toBe(expected);
     },

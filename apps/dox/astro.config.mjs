@@ -6,6 +6,7 @@ import { defineConfig } from "astro/config";
 import { fileURLToPath } from "node:url";
 import { referenceSidebar } from "./src/generated/reference/sidebar.ts";
 import rehypeExternalLinks from "./src/lib/rehype-external-links.ts";
+import { gmtReferenceWatch } from "./src/lib/gmt-reference-watch.ts";
 
 // DOX-A2 deploys to Cloudflare Workers' default *.workers.dev subdomain (no
 // custom domain yet). `site` must be set or @astrojs/sitemap (a Starlight
@@ -49,6 +50,9 @@ export default defineConfig({
     },
   },
   integrations: [
+    // Dev only (its hook is `astro:server:setup`): regenerates the API reference
+    // when gmt source changes, so a JSDoc edit shows up without a restart.
+    gmtReferenceWatch(),
     react(),
     starlight({
       title: "@northguild/gmt",
@@ -60,6 +64,11 @@ export default defineConfig({
           label: "GitHub",
           href: "https://github.com/northguild/gmt",
         },
+        {
+          icon: "discord",
+          label: "Discord",
+          href: "https://discord.gg/TdvQdP3t5a",
+        },
       ],
       // The Dox crystal, hand-authored in public/favicon.svg. Without this
       // Starlight falls back to its own default of '/favicon.svg' — a file
@@ -67,6 +76,13 @@ export default defineConfig({
       // being served the 404 page. The PNG fallbacks, for browsers that
       // cannot use an SVG icon, are in `head` below.
       favicon: "/favicon.svg",
+      // Inline the code-block styles instead of linking `ec.<hash>.css`.
+      // Expressive Code emits that <link> inside <body>, at the first code
+      // block, and the browser holds back everything after an in-body
+      // stylesheet until it has loaded — so on each route change the page
+      // painted with an empty gap below the first heading for a frame. An
+      // inline <style> applies as it is parsed. Costs ~4 KB gzipped per page.
+      expressiveCode: { emitExternalStylesheet: false },
       // Preload the self-hosted display font (vendored to `public/fonts/`, see
       // gmt-tokens.css). Without this the browser only discovers the @font-face
       // after the CSS bundle parses, so the site title and every heading
@@ -80,6 +96,22 @@ export default defineConfig({
             as: "font",
             type: "font/woff2",
             crossorigin: "anonymous",
+          },
+        },
+        // Hold the first paint until the end-of-page marker (src/components/
+        // Footer.astro) is parsed. On a route change the browser keeps showing
+        // the old page until the new one first paints; without this that
+        // happens mid-parse, so the header, sidebar and content appear in
+        // separate frames — the "flash". Browsers without `rel="expect"`
+        // ignore it, and blocking always ends when parsing finishes, so a
+        // page without the marker still renders.
+        // https://html.spec.whatwg.org/multipage/links.html#link-type-expect
+        {
+          tag: "link",
+          attrs: {
+            rel: "expect",
+            href: "#gmt-page-end",
+            blocking: "render",
           },
         },
         // DOX-A3b: discoverability — let LLMs find the llms.txt surface
@@ -133,6 +165,7 @@ export default defineConfig({
           label: "Start here",
           items: [
             { slug: "why-gmt" },
+            { slug: "upstream" },
             { slug: "core-rules" },
             { slug: "install" },
           ],
@@ -158,6 +191,7 @@ export default defineConfig({
       components: {
         Head: "./src/components/Head.astro",
         Header: "./src/components/Header.astro",
+        Footer: "./src/components/Footer.astro",
         ThemeProvider: "./src/components/ThemeProvider.astro",
         ThemeSelect: "./src/components/ThemeSelect.astro",
         Hero: "./src/components/Hero.astro",
@@ -186,6 +220,8 @@ export default defineConfig({
         "./src/styles/gmt-light.css", // floating [data-theme="light"] overrides
         "./src/styles/gmt-reveal.css", // shared scroll-into-view stagger utility
         "./src/styles/dox.css", // live component layout
+        "./src/styles/gmt-upstream.css", // /upstream/ defect table + filings tracker
+        "./src/styles/gmt-view-transitions.css", // cross-document route transitions (static header/sidebar, content fade)
         "./src/styles/gmt-a11y.css", // DOX-D1 prefers-reduced-transparency / -contrast / forced-colors — loaded last
       ],
     }),

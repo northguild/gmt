@@ -33,14 +33,14 @@ describe("getLocaleZonedEndOfWeek", () => {
   // Full week coverage for a Sunday-first locale (en-US, firstDay 7), fixed at UTC.
   it.each`
     value                               | expected
-    ${"2024-02-25T12:00:00+00:00[UTC]"} | ${"2024-03-02T23:59:59+00:00[UTC]"}
-    ${"2024-02-26T12:00:00+00:00[UTC]"} | ${"2024-03-02T23:59:59+00:00[UTC]"}
-    ${"2024-02-27T12:00:00+00:00[UTC]"} | ${"2024-03-02T23:59:59+00:00[UTC]"}
-    ${"2024-02-28T12:00:00+00:00[UTC]"} | ${"2024-03-02T23:59:59+00:00[UTC]"}
-    ${"2024-02-29T12:00:00+00:00[UTC]"} | ${"2024-03-02T23:59:59+00:00[UTC]"}
-    ${"2024-03-01T12:00:00+00:00[UTC]"} | ${"2024-03-02T23:59:59+00:00[UTC]"}
-    ${"2024-03-02T12:00:00+00:00[UTC]"} | ${"2024-03-02T23:59:59+00:00[UTC]"}
-    ${"2024-03-03T12:00:00+00:00[UTC]"} | ${"2024-03-09T23:59:59+00:00[UTC]"}
+    ${"2024-02-25T12:00:00+00:00[UTC]"} | ${"2024-03-02T23:59:59.999999999+00:00[UTC]"}
+    ${"2024-02-26T12:00:00+00:00[UTC]"} | ${"2024-03-02T23:59:59.999999999+00:00[UTC]"}
+    ${"2024-02-27T12:00:00+00:00[UTC]"} | ${"2024-03-02T23:59:59.999999999+00:00[UTC]"}
+    ${"2024-02-28T12:00:00+00:00[UTC]"} | ${"2024-03-02T23:59:59.999999999+00:00[UTC]"}
+    ${"2024-02-29T12:00:00+00:00[UTC]"} | ${"2024-03-02T23:59:59.999999999+00:00[UTC]"}
+    ${"2024-03-01T12:00:00+00:00[UTC]"} | ${"2024-03-02T23:59:59.999999999+00:00[UTC]"}
+    ${"2024-03-02T12:00:00+00:00[UTC]"} | ${"2024-03-02T23:59:59.999999999+00:00[UTC]"}
+    ${"2024-03-03T12:00:00+00:00[UTC]"} | ${"2024-03-09T23:59:59.999999999+00:00[UTC]"}
   `(
     "returns $expected for $value in en-US (Sunday-first)",
     ({ value, expected }) => {
@@ -53,14 +53,14 @@ describe("getLocaleZonedEndOfWeek", () => {
   // Full week coverage for a Monday-first locale (fr-FR, firstDay 1), fixed at UTC.
   it.each`
     value                               | expected
-    ${"2024-02-25T12:00:00+00:00[UTC]"} | ${"2024-02-25T23:59:59+00:00[UTC]"}
-    ${"2024-02-26T12:00:00+00:00[UTC]"} | ${"2024-03-03T23:59:59+00:00[UTC]"}
-    ${"2024-02-27T12:00:00+00:00[UTC]"} | ${"2024-03-03T23:59:59+00:00[UTC]"}
-    ${"2024-02-28T12:00:00+00:00[UTC]"} | ${"2024-03-03T23:59:59+00:00[UTC]"}
-    ${"2024-02-29T12:00:00+00:00[UTC]"} | ${"2024-03-03T23:59:59+00:00[UTC]"}
-    ${"2024-03-01T12:00:00+00:00[UTC]"} | ${"2024-03-03T23:59:59+00:00[UTC]"}
-    ${"2024-03-02T12:00:00+00:00[UTC]"} | ${"2024-03-03T23:59:59+00:00[UTC]"}
-    ${"2024-03-03T12:00:00+00:00[UTC]"} | ${"2024-03-03T23:59:59+00:00[UTC]"}
+    ${"2024-02-25T12:00:00+00:00[UTC]"} | ${"2024-02-25T23:59:59.999999999+00:00[UTC]"}
+    ${"2024-02-26T12:00:00+00:00[UTC]"} | ${"2024-03-03T23:59:59.999999999+00:00[UTC]"}
+    ${"2024-02-27T12:00:00+00:00[UTC]"} | ${"2024-03-03T23:59:59.999999999+00:00[UTC]"}
+    ${"2024-02-28T12:00:00+00:00[UTC]"} | ${"2024-03-03T23:59:59.999999999+00:00[UTC]"}
+    ${"2024-02-29T12:00:00+00:00[UTC]"} | ${"2024-03-03T23:59:59.999999999+00:00[UTC]"}
+    ${"2024-03-01T12:00:00+00:00[UTC]"} | ${"2024-03-03T23:59:59.999999999+00:00[UTC]"}
+    ${"2024-03-02T12:00:00+00:00[UTC]"} | ${"2024-03-03T23:59:59.999999999+00:00[UTC]"}
+    ${"2024-03-03T12:00:00+00:00[UTC]"} | ${"2024-03-03T23:59:59.999999999+00:00[UTC]"}
   `(
     "returns $expected for $value in fr-FR (Monday-first)",
     ({ value, expected }) => {
@@ -80,8 +80,8 @@ describe("getLocaleZonedEndOfWeek", () => {
     battleTestTimeZones.map((timeZone) => ({
       timeZone,
       expected: zonesRolledForward.has(timeZone)
-        ? "2024-02-10T23:59:59" // rolled forward: end of the NEW week (Saturday)
-        : "2024-02-03T23:59:59", // still Saturday: end of the CURRENT week
+        ? "2024-02-10T23:59:59.999999999" // rolled forward: end of the NEW week (Saturday)
+        : "2024-02-03T23:59:59.999999999", // still Saturday: end of the CURRENT week
     })),
   )(
     "returns end-of-week with date $expected for $timeZone at the Sat/Sun rollover instant (en-US)",
@@ -97,27 +97,27 @@ describe("getLocaleZonedEndOfWeek", () => {
   // One representative Saturday check per must-test locale, using the shared
   // locale-zoned fixture (2024-02-03, a Saturday, per timeZone/offset).
   // is-IS is intentionally excluded from this static table: its weekInfo.firstDay
-  // is CLDR-version-dependent (Monday on ICU 77 / Node 20, Sunday on ICU 78 /
-  // Node 24), unlike every other locale here, which is stable across the
-  // Node 20/22/24 range this package supports. Asserted dynamically below instead.
+  // is CLDR-version-dependent (Monday on ICU 77, which is Node 22.16–22.22; Sunday on ICU 78,
+  // which is Node 20.20+, 22.23+, 24 and 26), unlike every other locale here, which is stable
+  // across the Node versions this package supports. Asserted dynamically below instead.
   it.each`
     locale                  | expected
-    ${MustTestLocales.enUS} | ${"2024-02-03T23:59:59-05:00[America/New_York]"}
-    ${MustTestLocales.enGB} | ${"2024-02-04T23:59:59+00:00[Europe/London]"}
-    ${MustTestLocales.deDE} | ${"2024-02-04T23:59:59+01:00[Europe/Berlin]"}
-    ${MustTestLocales.frFR} | ${"2024-02-04T23:59:59+01:00[Europe/Paris]"}
-    ${MustTestLocales.esES} | ${"2024-02-04T23:59:59+01:00[Europe/Madrid]"}
-    ${MustTestLocales.itIT} | ${"2024-02-04T23:59:59+01:00[Europe/Rome]"}
-    ${MustTestLocales.ptPT} | ${"2024-02-03T23:59:59+00:00[Europe/Lisbon]"}
-    ${MustTestLocales.svSE} | ${"2024-02-04T23:59:59+01:00[Europe/Stockholm]"}
-    ${MustTestLocales.zhCN} | ${"2024-02-04T23:59:59+08:00[Asia/Shanghai]"}
-    ${MustTestLocales.zhTW} | ${"2024-02-03T23:59:59+08:00[Asia/Taipei]"}
-    ${MustTestLocales.jaJP} | ${"2024-02-03T23:59:59+09:00[Asia/Tokyo]"}
-    ${MustTestLocales.koKR} | ${"2024-02-03T23:59:59+09:00[Asia/Seoul]"}
-    ${MustTestLocales.arSA} | ${"2024-02-03T23:59:59+03:00[Asia/Riyadh]"}
-    ${MustTestLocales.heIL} | ${"2024-02-03T23:59:59+02:00[Asia/Jerusalem]"}
-    ${MustTestLocales.ruRU} | ${"2024-02-04T23:59:59+03:00[Europe/Moscow]"}
-    ${MustTestLocales.trTR} | ${"2024-02-04T23:59:59+03:00[Europe/Istanbul]"}
+    ${MustTestLocales.enUS} | ${"2024-02-03T23:59:59.999999999-05:00[America/New_York]"}
+    ${MustTestLocales.enGB} | ${"2024-02-04T23:59:59.999999999+00:00[Europe/London]"}
+    ${MustTestLocales.deDE} | ${"2024-02-04T23:59:59.999999999+01:00[Europe/Berlin]"}
+    ${MustTestLocales.frFR} | ${"2024-02-04T23:59:59.999999999+01:00[Europe/Paris]"}
+    ${MustTestLocales.esES} | ${"2024-02-04T23:59:59.999999999+01:00[Europe/Madrid]"}
+    ${MustTestLocales.itIT} | ${"2024-02-04T23:59:59.999999999+01:00[Europe/Rome]"}
+    ${MustTestLocales.ptPT} | ${"2024-02-03T23:59:59.999999999+00:00[Europe/Lisbon]"}
+    ${MustTestLocales.svSE} | ${"2024-02-04T23:59:59.999999999+01:00[Europe/Stockholm]"}
+    ${MustTestLocales.zhCN} | ${"2024-02-04T23:59:59.999999999+08:00[Asia/Shanghai]"}
+    ${MustTestLocales.zhTW} | ${"2024-02-03T23:59:59.999999999+08:00[Asia/Taipei]"}
+    ${MustTestLocales.jaJP} | ${"2024-02-03T23:59:59.999999999+09:00[Asia/Tokyo]"}
+    ${MustTestLocales.koKR} | ${"2024-02-03T23:59:59.999999999+09:00[Asia/Seoul]"}
+    ${MustTestLocales.arSA} | ${"2024-02-03T23:59:59.999999999+03:00[Asia/Riyadh]"}
+    ${MustTestLocales.heIL} | ${"2024-02-03T23:59:59.999999999+02:00[Asia/Jerusalem]"}
+    ${MustTestLocales.ruRU} | ${"2024-02-04T23:59:59.999999999+03:00[Europe/Moscow]"}
+    ${MustTestLocales.trTR} | ${"2024-02-04T23:59:59.999999999+03:00[Europe/Istanbul]"}
   `(
     "returns $expected for the shared locale fixture in $locale",
     ({ locale, expected }) => {
@@ -136,8 +136,8 @@ describe("getLocaleZonedEndOfWeek", () => {
     const firstDay = runtimeWeekInfo(MustTestLocales.isIS).firstDay;
     const expected =
       firstDay === 1
-        ? "2024-02-04T23:59:59+00:00[Atlantic/Reykjavik]"
-        : "2024-02-03T23:59:59+00:00[Atlantic/Reykjavik]";
+        ? "2024-02-04T23:59:59.999999999+00:00[Atlantic/Reykjavik]"
+        : "2024-02-03T23:59:59.999999999+00:00[Atlantic/Reykjavik]";
     expect(
       getLocaleZonedEndOfWeek(
         localeZonedDateTimeInputByLocale[MustTestLocales.isIS],
@@ -182,31 +182,66 @@ describe("getLocaleZonedEndOfWeek", () => {
     ).toBe("");
   });
 
-  // America/Sao_Paulo repeated 23:00-23:59:59 on Saturday 2014-02-15, the last day of an en-US
-  // week. The week ends on the second pass (-03:00), one nanosecond before Sunday's
-  // `startOfDay()`, and the deprecated `disambiguation`/`offset` are ignored: "compatible" no
-  // longer ends it an hour early, and "reject" no longer yields "". Verified on
-  // @js-temporal/polyfill@0.5.1.
+  // The end is the next week's start minus one nanosecond, printed at nanosecond precision by
+  // default like endOfZoned. An explicit fractionalSecondDigits truncates it, as Temporal toString does.
   it.each`
-    disambiguation  | offset       | expected
-    ${"compatible"} | ${undefined} | ${"2014-02-15T23:59:59-03:00[America/Sao_Paulo]"}
-    ${"later"}      | ${undefined} | ${"2014-02-15T23:59:59-03:00[America/Sao_Paulo]"}
-    ${"reject"}     | ${undefined} | ${"2014-02-15T23:59:59-03:00[America/Sao_Paulo]"}
-    ${"reject"}     | ${"prefer"}  | ${"2014-02-15T23:59:59-03:00[America/Sao_Paulo]"}
+    fractionalSecondDigits | expected
+    ${undefined}           | ${"2024-03-02T23:59:59.999999999+00:00[UTC]"}
+    ${0}                   | ${"2024-03-02T23:59:59+00:00[UTC]"}
+    ${3}                   | ${"2024-03-02T23:59:59.999+00:00[UTC]"}
+    ${9}                   | ${"2024-03-02T23:59:59.999999999+00:00[UTC]"}
   `(
-    "returns the real week end $expected across a repeated last hour with ignored disambiguation $disambiguation and offset $offset",
-    ({ disambiguation, offset, expected }) => {
-      const optionsArg =
-        offset === undefined ? { disambiguation } : { disambiguation, offset };
+    "returns $expected for 2024-02-29T12:00:00+00:00[UTC] in en-US with fractionalSecondDigits $fractionalSecondDigits",
+    ({ fractionalSecondDigits, expected }) => {
       expect(
         getLocaleZonedEndOfWeek(
-          "2014-02-12T12:00:00-02:00[America/Sao_Paulo]",
+          "2024-02-29T12:00:00+00:00[UTC]",
           MustTestLocales.enUS,
-          optionsArg,
+          { fractionalSecondDigits },
         ),
       ).toBe(expected);
     },
   );
+
+  // America/Sao_Paulo repeated 23:00-23:59:59 on Saturday 2014-02-15, the last day of an en-US
+  // week. The week ends on the second pass (-03:00), one nanosecond before Sunday's
+  // `startOfDay()`. Verified on @js-temporal/polyfill@0.5.1.
+  it("returns the real week end across a repeated last hour", () => {
+    expect(
+      getLocaleZonedEndOfWeek(
+        "2014-02-12T12:00:00-02:00[America/Sao_Paulo]",
+        MustTestLocales.enUS,
+      ),
+    ).toBe("2014-02-15T23:59:59.999999999-03:00[America/Sao_Paulo]");
+  });
+
+  // `disambiguation` and `offset` were removed in 1.16.0: they were ignored, because a boundary is
+  // always a real instant and TC39's `startOfDay()` takes neither. Passing one is a type error, and a
+  // JavaScript caller's stray property changes nothing.
+  it("treats the removed disambiguation option as a type error and ignores it at runtime", () => {
+    expect(
+      getLocaleZonedEndOfWeek(
+        "2014-02-12T12:00:00-02:00[America/Sao_Paulo]",
+        MustTestLocales.enUS,
+        {
+          // @ts-expect-error -- `disambiguation` was removed in 1.16.0
+          disambiguation: "reject",
+        },
+      ),
+    ).toBe("2014-02-15T23:59:59.999999999-03:00[America/Sao_Paulo]");
+  });
+  it("treats the removed offset option as a type error and ignores it at runtime", () => {
+    expect(
+      getLocaleZonedEndOfWeek(
+        "2014-02-12T12:00:00-02:00[America/Sao_Paulo]",
+        MustTestLocales.enUS,
+        {
+          // @ts-expect-error -- `offset` was removed in 1.16.0
+          offset: "reject",
+        },
+      ),
+    ).toBe("2014-02-15T23:59:59.999999999-03:00[America/Sao_Paulo]");
+  });
 });
 
 // The week is the real local bucket in the
@@ -215,16 +250,51 @@ describe("getLocaleZonedEndOfWeek", () => {
 // `startOfDay()` for Santiago, on @js-temporal/polyfill@0.5.1.
 describe("getLocaleZonedEndOfWeek across zone transitions with default options", () => {
   it.each`
-    value                                             | locale                  | expected                                          | description
-    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${MustTestLocales.enUS} | ${"2010-11-06T23:59:59-04:00[America/Goose_Bay]"} | ${"Goose Bay fell back at 00:01 Sunday; the re-opened week ends at the second Sunday midnight"}
-    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${MustTestLocales.frFR} | ${"2010-11-07T23:59:59-04:00[America/Goose_Bay]"} | ${"a Monday-first week runs straight through the same transition"}
-    ${"2024-09-11T12:00:00-03:00[America/Santiago]"}  | ${MustTestLocales.enUS} | ${"2024-09-14T23:59:59-03:00[America/Santiago]"}  | ${"the week after Santiago's skipped Sunday midnight"}
-    ${"-271821-04-20T12:00:00+00:00[UTC]"}            | ${MustTestLocales.enUS} | ${"-271821-04-24T23:59:59+00:00[UTC]"}            | ${"the first representable instant; its Sunday-first week began before the range but ends on Saturday"}
-    ${"-271821-04-20T12:00:00+00:00[UTC]"}            | ${MustTestLocales.frFR} | ${"-271821-04-25T23:59:59+00:00[UTC]"}            | ${"the first representable instant; its Monday-first week began before the range but ends on Sunday"}
+    value                                             | locale                  | expected                                                    | description
+    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${MustTestLocales.enUS} | ${"2010-11-06T23:59:59.999999999-04:00[America/Goose_Bay]"} | ${"Goose Bay fell back at 00:01 Sunday; the re-opened week ends at the second Sunday midnight"}
+    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${MustTestLocales.frFR} | ${"2010-11-07T23:59:59.999999999-04:00[America/Goose_Bay]"} | ${"a Monday-first week runs straight through the same transition"}
+    ${"2024-09-11T12:00:00-03:00[America/Santiago]"}  | ${MustTestLocales.enUS} | ${"2024-09-14T23:59:59.999999999-03:00[America/Santiago]"}  | ${"the week after Santiago's skipped Sunday midnight"}
+    ${"-271821-04-20T12:00:00+00:00[UTC]"}            | ${MustTestLocales.enUS} | ${"-271821-04-24T23:59:59.999999999+00:00[UTC]"}            | ${"the first representable instant; its Sunday-first week began before the range but ends on Saturday"}
+    ${"-271821-04-20T12:00:00+00:00[UTC]"}            | ${MustTestLocales.frFR} | ${"-271821-04-25T23:59:59.999999999+00:00[UTC]"}            | ${"the first representable instant; its Monday-first week began before the range but ends on Sunday"}
   `(
     "returns $expected for $value in $locale ($description)",
     ({ value, locale, expected }) => {
       expect(getLocaleZonedEndOfWeek(value, locale)).toBe(expected);
+    },
+  );
+
+  // A well-formed tag with no locale data is not invalid input: ECMA-402 `ResolveLocale` falls
+  // back instead of throwing, so the sentinel would be wrong here. Only a malformed tag such as
+  // "not-a-locale-!!" is invalid. The expected value comes from the runtime's own week data.
+  it("falls back for a well-formed tag with no locale data instead of returning the sentinel", () => {
+    const { firstDay } = runtimeWeekInfo("not-a-locale");
+    const date = Temporal.PlainDate.from("2024-02-29");
+    const offset = (date.dayOfWeek - firstDay + 7) % 7;
+    expect(
+      getLocaleZonedEndOfWeek(
+        "2024-02-29T12:00:00+00:00[UTC]",
+        "not-a-locale",
+      ).slice(0, 10),
+    ).toBe(date.subtract({ days: offset }).add({ days: 6 }).toString());
+  });
+
+  // ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale
+  // data is read (en-US weeks start on Sunday, fr-FR on Monday, ar-EG weekends are Friday and
+  // Saturday: Intl.Locale#getWeekInfo), and a malformed tag anywhere in the list is invalid input.
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.enUS, MustTestLocales.frFR]} | ${"2024-05-18T23:59:59.999999999+02:00[Europe/Berlin]"}
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"2024-05-19T23:59:59.999999999+02:00[Europe/Berlin]"}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
+  `(
+    "returns $expected for 2024-05-15T12:00 Berlin with locale list $locale",
+    ({ locale, expected }) => {
+      expect(
+        getLocaleZonedEndOfWeek(
+          "2024-05-15T12:00:00+02:00[Europe/Berlin]",
+          locale,
+        ),
+      ).toBe(expected);
     },
   );
 });

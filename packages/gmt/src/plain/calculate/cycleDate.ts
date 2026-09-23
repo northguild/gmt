@@ -1,8 +1,13 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { cycleFieldValue, dateCycleFieldBounds } from "../../internal";
+import {
+  cycleFieldValue,
+  dateCycleFieldBounds,
+  isValidAmount,
+} from "../../internal";
 import type { DateCycleField, Overflow } from "../../types";
 import { isValidDate, isValidDateCycleField } from "../validate";
 import { setDate } from "./setDate";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return a PlainDate ISO string with `field` cycled by `amount`, wrapping at that field's own
@@ -25,7 +30,7 @@ import { setDate } from "./setDate";
  *   `@internationalized/date`'s `CycleOptions.round`. E.g. cycling `year` `2022` by `+5` with
  *   `round: true` lands on `2025` (the next multiple of 5 above 2022), not `2020` (the nearest
  *   multiple).
- * - Returns "" for an invalid `value` or an invalid `field`.
+ * - Returns "" for an invalid `value`, an invalid `field`, or an `amount` that is not a finite number.
  *
  * @param value ISO PlainDate string
  * @param field the field to cycle: "year" | "month" | "day"
@@ -49,7 +54,17 @@ export function cycleDate(
   amount: number,
   options?: { round?: boolean; overflow?: Overflow },
 ): string {
-  if (!isValidDate(value) || !isValidDateCycleField(field)) return "";
+  if (!isOptionsArgument(options)) {
+    return "";
+  }
+
+  if (
+    !isValidDate(value) ||
+    !isValidDateCycleField(field) ||
+    !isValidAmount(amount)
+  ) {
+    return "";
+  }
 
   try {
     const date = Temporal.PlainDate.from(value);

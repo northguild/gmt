@@ -33,8 +33,10 @@ export type LocalTimeClassification = "unique" | "ambiguous" | "nonexistent";
  * - Reads the zone's own transition table via `Temporal`, so it is right for every IANA zone
  *   and every year, including 30- and 45-minute shifts and zones that skipped a whole
  *   calendar day changing sides of the date line.
- * - `localDateTime` must be zoneless: `<date>T<time>`, as `isValidDateTime` accepts. A string
- *   that already carries an offset or a bracketed zone has no ambiguity left to report.
+ * - `localDateTime` is a PlainDateTime string, as `isValidDateTime` accepts: `<date>T<time>`
+ *   with no offset (a string with an offset has no ambiguity left to report). Its RFC 9557
+ *   annotations are read as `Temporal.PlainDateTime.from` reads them, so a time zone annotation
+ *   is ignored and `timeZone` alone is the zone.
  * - Returns null on invalid input — never `"unique"`, which would read as a verdict.
  *
  * @param localDateTime zoneless ISO 8601 local datetime string (e.g. "2024-11-03T01:30:00")

@@ -23,6 +23,22 @@ describe("intervalDivideEquallyUnix", () => {
     ]);
   });
 
+  // Past 2^53 the float product (end - start) · i loses whole milliseconds. Each boundary is
+  // start + round((end - start) · i / n) in integer milliseconds: the span is 17,279,999,999,096,463
+  // ms, so boundary 5 is start + round(86,399,999,995,482,315 / 6) = start + 14,399,999,999,247,053
+  // (an exact .5 rounds up, as Math.round does). Values from BigInt arithmetic, not GMT.
+  it("splits a span wider than 2^53 milliseconds exactly", () => {
+    const cuts = [
+      -8639999999333903, -5759999999484492, -2879999999635082, 214329,
+      2880000000063739, 5759999999913150, 8639999999762560,
+    ];
+    expect(
+      intervalDivideEquallyUnix(-8639999999333903, 8639999999762560, 6),
+    ).toEqual(
+      cuts.slice(0, -1).map((cut, i) => ({ start: cut, end: cuts[i + 1] })),
+    );
+  });
+
   it("accepts start/end as numeric strings", () => {
     expect(intervalDivideEquallyUnix("0", "90000000", 3)).toEqual([
       { start: 0, end: 30000000 },
@@ -69,4 +85,73 @@ describe("intervalDivideEquallyUnix", () => {
       expect(intervalDivideEquallyUnix(start, end, 3)).toEqual([]);
     },
   );
+});
+
+describe("intervalDivideEquallyUnix maxPieces", () => {
+  // 90000000 ms / 3 = 30000000 ms: n = 3 pieces, so a limit of 3 or more leaves the output unchanged.
+  it.each`
+    n    | maxPieces
+    ${3} | ${3}
+    ${3} | ${10}
+  `(
+    "returns the 3 pieces for n $n with maxPieces $maxPieces",
+    ({ n, maxPieces }) => {
+      expect(intervalDivideEquallyUnix(0, 90000000, n, { maxPieces })).toEqual([
+        { start: 0, end: 30000000 },
+        { start: 30000000, end: 60000000 },
+        { start: 60000000, end: 90000000 },
+      ]);
+    },
+  );
+
+  // Owner decision A2: an output larger than maxPieces returns the sentinel, decided before any
+  // piece is built.
+  it.each`
+    start | end         | n    | maxPieces
+    ${0}  | ${90000000} | ${3} | ${2}
+    ${0}  | ${0}        | ${3} | ${2}
+    ${0}  | ${90000000} | ${2} | ${1}
+  `(
+    "returns [] for $start to $end with n $n over maxPieces $maxPieces",
+    ({ start, end, n, maxPieces }) => {
+      expect(
+        intervalDivideEquallyUnix(start, end, n, { maxPieces }).length,
+      ).toBe(0);
+    },
+  );
+
+  it.each`
+    label                   | options
+    ${"maxPieces 0"}        | ${{ maxPieces: 0 }}
+    ${"maxPieces -1"}       | ${{ maxPieces: -1 }}
+    ${"maxPieces 1.5"}      | ${{ maxPieces: 1.5 }}
+    ${"maxPieces NaN"}      | ${{ maxPieces: Number.NaN }}
+    ${"maxPieces Infinity"} | ${{ maxPieces: Number.POSITIVE_INFINITY }}
+    ${"maxPieces string"}   | ${{ maxPieces: "3" }}
+    ${"null options"}       | ${null}
+    ${"number options"}     | ${5}
+  `("returns [] for invalid $label", ({ options }) => {
+    expect(
+      intervalDivideEquallyUnix(0, 90000000, 3, options as never).length,
+    ).toBe(0);
+  });
+});
+
+describe("intervalDivideEquallyUnix default piece limit", () => {
+  // Default maxPieces is 1_000_000 (owner decision A2). An array holds at most 2^32 - 1
+  // elements (ECMA-262 §10.4.2), so n >= 2^32 is the sentinel whatever the limit.
+  it.each`
+    n            | options
+    ${1_000_001} | ${undefined}
+    ${2 ** 32}   | ${undefined}
+    ${2 ** 32}   | ${{ maxPieces: 2 ** 40 }}
+  `("returns [] for n $n with options $options", ({ n, options }) => {
+    expect(intervalDivideEquallyUnix(0, 90000000, n, options).length).toBe(0);
+  });
+
+  it("returns [] for equal endpoints and n 2^32 under maxPieces 2^40", () => {
+    expect(
+      intervalDivideEquallyUnix(0, 0, 2 ** 32, { maxPieces: 2 ** 40 }).length,
+    ).toBe(0);
+  });
 });

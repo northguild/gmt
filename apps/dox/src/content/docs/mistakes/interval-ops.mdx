@@ -5,10 +5,9 @@ description: Common mistakes when working with date and time intervals in GMT.
 
 GMT has two families of interval functions. The half-open `interval/` module
 (`intervalsOverlap`, `intersectIntervals`, `subtractIntervals`, `sumIntervals`, …) takes
-`{ start, end }` records of instant strings. The older positional functions in `plain/`,
-`utc/`, `zoned/` and `unix/` take separate strings, and most of them read an interval as
-closed. Most interval bugs come from mixing the two. Every output shown here is what the
-function returns today.
+`{ start, end }` records of instant strings. The positional functions in `plain/`,
+`utc/`, `zoned/` and `unix/` take separate strings. Both families read an interval as
+half-open `[start, end)`. Every output shown here is what the function returns.
 
 ## Mistakes
 
@@ -16,45 +15,39 @@ import Mistake from "../../../components/Mistake.astro";
 
 <Mistake
   severity="high"
-  title="Assuming touching intervals do not overlap in the positional functions"
-  description="The positional intervalsOverlap* functions are closed [start, end]: a shared endpoint belongs to both intervals, so touching intervals overlap. Only the half-open interval/ module treats them as disjoint."
+  title="Passing the last day of a period as a Date interval's end"
+  description="A positional Date interval is half-open like every other interval: end is the first day after the period, not the last day in it. An end of 2024-06-30 leaves 30 June out, so it does not touch an interval starting on 1 July. Add one day to the last day."
+  wrongCode={`intervalAbutsDate("2024-01-01", "2024-06-30", "2024-07-01", "2024-12-31");
+// expected true — actually false: 30 June lies in neither interval`}
+  rightCode={`import { addDate, intervalAbutsDate } from "@northguild/gmt";
+
+const end = addDate("2024-06-30", { days: 1 }); // "2024-07-01"
+intervalAbutsDate("2024-01-01", end, "2024-07-01", "2025-01-01"); // true`}
+/>
+
+<Mistake
+  severity="high"
+  title="Expecting touching intervals to overlap"
+  description="Both interval families are half-open: an interval's end is not inside it, so two intervals that touch share no instant. They abut, their intersection is null, and their union joins them."
   wrongCode={`intervalsOverlapUtc("2024-01-01T09:00:00Z", "2024-01-01T17:00:00Z", "2024-01-01T17:00:00Z", "2024-01-01T18:00:00Z");
-// expected false — actually true`}
-  rightCode={`import { intervalsOverlap } from "@northguild/gmt";
-
-intervalsOverlap(
-  { start: "2024-01-01T09:00:00Z", end: "2024-01-01T17:00:00Z" },
-  { start: "2024-01-01T17:00:00Z", end: "2024-01-01T18:00:00Z" },
-); // false — half-open, they share no instant`}
-/>
-
-<Mistake
-  severity="high"
-  title="Reading intervalAbuts* as a shared endpoint"
-  description="The positional intervalAbuts* functions are true when one interval ends exactly one unit before the other starts — one nanosecond, one day for Date, one epoch unit for Unix. Intervals that share an endpoint already overlap, so they do not abut."
-  wrongCode={`intervalAbutsDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31");
 // expected true — actually false`}
-  rightCode={`intervalAbutsDate("2024-01-01", "2024-06-30", "2024-07-01", "2024-12-31"); // true
+  rightCode={`import { intervalAbutsUtc } from "@northguild/gmt";
 
-// Half-open: "abuts" is just a.end === b.start, and those intervals do not overlap
-intervalsOverlap({ start: "…T09:00:00Z", end: "…T17:00:00Z" }, { start: "…T17:00:00Z", end: "…T18:00:00Z" }); // false`}
+intervalAbutsUtc("2024-01-01T09:00:00Z", "2024-01-01T17:00:00Z", "2024-01-01T17:00:00Z", "2024-01-01T18:00:00Z");
+// true — the first ends where the second starts`}
 />
 
 <Mistake
-  severity="high"
-  title="Expecting intervalDifference* pieces to meet the removal exactly"
-  description="The closed intervalDifference* and intervalXor* functions step one unit in from each cut, so the pieces end one nanosecond before a removal starts and begin one nanosecond after it ends. Summing those pieces is 2 ns short. subtractIntervals cuts exactly."
-  wrongCode={`intervalDifferenceUtc("2024-01-01T09:00:00Z", "2024-01-01T17:00:00Z", "2024-01-01T12:00:00Z", "2024-01-01T13:00:00Z");
-// [{ start: "2024-01-01T09:00:00Z", end: "2024-01-01T11:59:59.999999999Z" },
-//  { start: "2024-01-01T13:00:00.000000001Z", end: "2024-01-01T17:00:00Z" }]`}
-  rightCode={`import { subtractIntervals, sumIntervals } from "@northguild/gmt";
+  severity="medium"
+  title="Stepping one unit around a cut by hand"
+  description="intervalDifference* and intervalXor* cut exactly at the removal's start and end, as subtractIntervals does. Adding or subtracting a nanosecond (or a day, or an epoch unit) to the pieces leaves a gap that sumIntervals counts as missing time."
+  wrongCode={`// The pieces already meet the lunch break exactly; do not nudge them
+const morningEnd = "2024-01-01T11:59:59.999999999Z";`}
+  rightCode={`import { intervalDifferenceUtc } from "@northguild/gmt";
 
-const worked = subtractIntervals(
-  { start: "2024-01-01T09:00:00Z", end: "2024-01-01T17:00:00Z" },
-  [{ start: "2024-01-01T12:00:00Z", end: "2024-01-01T13:00:00Z" }],
-);
-// [{ start: "…T09:00:00Z", end: "…T12:00:00Z" }, { start: "…T13:00:00Z", end: "…T17:00:00Z" }]
-sumIntervals(worked); // "PT7H"`}
+intervalDifferenceUtc("2024-01-01T09:00:00Z", "2024-01-01T17:00:00Z", "2024-01-01T12:00:00Z", "2024-01-01T13:00:00Z");
+// [{ start: "2024-01-01T09:00:00Z", end: "2024-01-01T12:00:00Z" },
+//  { start: "2024-01-01T13:00:00Z", end: "2024-01-01T17:00:00Z" }]`}
 />
 
 <Mistake
@@ -122,11 +115,10 @@ intervalLengthDateTime("2024-01-01T23:59:00", "2024-01-02T00:01:00", "day");
 
 <Mistake
   severity="medium"
-  title="Expecting a zero-length interval to always count 0 or always count 1"
-  description="intervalCount* counts 1 for a zero-length interval that sits mid-unit and 0 for one exactly on a unit boundary. A PlainDate always sits on a day boundary, so it counts 0 days but 1 month."
-  wrongCode={`intervalCountDate("2024-01-15", "2024-01-15", "day");   // 0
-intervalCountDate("2024-01-15", "2024-01-15", "month"); // 1 — not 0`}
-  rightCode={`intervalCountDate("2024-01-01", "2024-01-01", "month"); // 0 — exactly on a month boundary`}
+  title="Expecting a zero-length interval to count the unit it sits in"
+  description="intervalCount* counts the units the half-open [start, end) touches. A zero-length interval holds no instant, so it counts 0 in every unit, even mid-month. Before 1.16.0 it counted 1 when it sat mid-unit."
+  wrongCode={`intervalCountDate("2024-01-15", "2024-01-15", "month"); // expecting 1`}
+  rightCode={`intervalCountDate("2024-01-15", "2024-01-15", "month"); // 0 — an empty interval touches no month`}
 />
 
 <Mistake
@@ -143,13 +135,13 @@ intervalFromDurationDate("2024-03-15", "-P10D", "start"); // null`}
 
 <Mistake
   severity="medium"
-  title="Reading intervalOverlappingDays* as a closed intersection object"
-  description="intervalOverlappingDays* returns a number: how many distinct calendar dates the closed intersection touches, counting both endpoints. For the shared span itself, use intervalIntersection* or intersectIntervals."
-  wrongCode={`const shared = intervalOverlappingDaysDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
+  title="Reading intervalOverlappingDays* as an intersection object"
+  description="intervalOverlappingDays* returns a number: how many distinct calendar dates hold an instant of the half-open intersection. Touching intervals share no date. For the shared span itself, use intervalIntersection* or intersectIntervals."
+  wrongCode={`const shared = intervalOverlappingDaysDate("2024-01-01", "2024-07-01", "2024-04-01", "2025-01-01");
 shared.start; // undefined — shared is 91`}
-  rightCode={`intervalOverlappingDaysDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31"); // 1 — shared endpoint
-intervalIntersectionDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31");
-// { start: "2024-04-01", end: "2024-06-30" }`}
+  rightCode={`intervalOverlappingDaysDate("2024-01-01", "2024-07-01", "2024-07-01", "2025-01-01"); // 0 — touching
+intervalIntersectionDate("2024-01-01", "2024-07-01", "2024-04-01", "2025-01-01");
+// { start: "2024-04-01", end: "2024-07-01" }`}
 />
 
 <Mistake
@@ -159,7 +151,7 @@ intervalIntersectionDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31")
   wrongCode={`intervalXorAll(a, b);`}
   rightCode={`import { intervalXorAllDate, mergeIntervals } from "@northguild/gmt";
 
-intervalXorAllDate([a, b, c]); // positional, closed, Date values
+intervalXorAllDate([a, b, c]); // positional, Date values
 mergeIntervals([x, y, z]);     // half-open, instant strings`}
 />
 

@@ -23,18 +23,25 @@ describe("getLocaleWeekYearBounds", () => {
 
   it("returns a start that always falls on firstDay, and an end exactly 7*n days later", () => {
     const date = Temporal.PlainDate.from("2024-06-15");
-    const { start, end } = getLocaleWeekYearBounds(date, 1, 4);
-    expect(start.dayOfWeek).toBe(1);
-    expect(end.dayOfWeek).toBe(1);
-    const days = start.until(end, { largestUnit: "days" }).days;
-    expect(days % 7).toBe(0);
+    const { startOffsetDays, endOffsetDays } = getLocaleWeekYearBounds(
+      date,
+      1,
+      4,
+    );
+    expect(date.add({ days: startOffsetDays }).dayOfWeek).toBe(1);
+    expect(date.add({ days: endOffsetDays }).dayOfWeek).toBe(1);
+    expect((endOffsetDays - startOffsetDays) % 7).toBe(0);
   });
 
   it("[start, end) bounds contain the source date", () => {
     const date = Temporal.PlainDate.from("2024-06-15");
-    const { start, end } = getLocaleWeekYearBounds(date, 1, 4);
-    expect(Temporal.PlainDate.compare(start, date)).toBeLessThanOrEqual(0);
-    expect(Temporal.PlainDate.compare(date, end)).toBeLessThan(0);
+    const { startOffsetDays, endOffsetDays } = getLocaleWeekYearBounds(
+      date,
+      1,
+      4,
+    );
+    expect(startOffsetDays).toBeLessThanOrEqual(0);
+    expect(endOffsetDays).toBeGreaterThan(0);
   });
 
   // en-US: firstDay=7 (Sunday), minimalDays=1 — Jan 1 is always week 1.
@@ -56,20 +63,45 @@ describe("getLocaleWeekYearBounds", () => {
     const date = Temporal.PlainDate.from("2024-12-30");
     const bounds = getLocaleWeekYearBounds(date, 1, 4);
     expect(bounds.weekYear).toBe(2025);
-    expect(Temporal.PlainDate.compare(bounds.start, date)).toBe(0);
+    expect(bounds.startOffsetDays).toBe(0);
   });
 
   it("computes a 53-week year's bounds spanning 371 days", () => {
     const date = Temporal.PlainDate.from("2020-06-15");
-    const { start, end } = getLocaleWeekYearBounds(date, 1, 4);
-    const days = start.until(end, { largestUnit: "days" }).days;
+    const { startOffsetDays, endOffsetDays } = getLocaleWeekYearBounds(
+      date,
+      1,
+      4,
+    );
+    const days = endOffsetDays - startOffsetDays;
     expect(days).toBe(53 * 7);
   });
 
   it("computes a common 52-week year's bounds spanning 364 days", () => {
     const date = Temporal.PlainDate.from("2024-06-15");
-    const { start, end } = getLocaleWeekYearBounds(date, 1, 4);
-    const days = start.until(end, { largestUnit: "days" }).days;
+    const { startOffsetDays, endOffsetDays } = getLocaleWeekYearBounds(
+      date,
+      1,
+      4,
+    );
+    const days = endOffsetDays - startOffsetDays;
     expect(days).toBe(52 * 7);
   });
+
+  // Range edges: offsets from days-from-civil epoch days (not GMT). Under Sunday-first, minimalDays
+  // 4, week 1 of -271821 starts on epoch day -100,000,107 and of -271820 on -99,999,743; the first
+  // PlainDate is day -100,000,001. Week 1 of 275760 starts on day 99,999,742 and of 275761 on
+  // 100,000,113; the last PlainDate is day 100,000,000. Both neighbouring starts lie outside.
+  it.each`
+    value              | weekYear   | startOffsetDays | endOffsetDays
+    ${"-271821-04-19"} | ${-271821} | ${-106}         | ${258}
+    ${"+275760-09-13"} | ${275760}  | ${-258}         | ${113}
+  `(
+    "returns week-year $weekYear with offsets [$startOffsetDays, $endOffsetDays) for the range-edge date $value",
+    ({ value, weekYear, startOffsetDays, endOffsetDays }) => {
+      expect(
+        getLocaleWeekYearBounds(Temporal.PlainDate.from(value), 7, 4),
+      ).toEqual({ weekYear, startOffsetDays, endOffsetDays });
+    },
+  );
 });

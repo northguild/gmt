@@ -16,9 +16,9 @@ GMT publishes three opt-in linting packages that enforce the `Date` API ban at t
 | -------------------------- | ------------------------------------------------------------ |
 | `Date` (bare global)       | `getNow()`, `getUnixNow()`, `getUtcNow()`, `getZonedNow(tz)` |
 | `new Date(...)`            | `getUtcNow()`, `getNow()`, `getZonedNow(tz)`                 |
-| `Date.now()`               | `getUnixNow('milliseconds' \| 'seconds')`                    |
+| `Date.now()`               | `getUnixNow({ epochUnit: 'milliseconds' \| 'seconds' })`     |
 | `Date.parse(...)`          | `convertZonedToUnix(value)`                                  |
-| `Date.UTC(...)`            | `convertUtcDateTimeToUnix(value, unit)`                      |
+| `Date.UTC(...)`            | `convertUtcToUnix(value, { epochUnit })`                     |
 | `date.getTimezoneOffset()` | `getZonedNow(tz)` or zoned helpers                           |
 | Importing `moment`, `moment-timezone`, `dayjs`, `luxon`, `date-fns`, `date-fns-tz`, `spacetime` | `@northguild/gmt` |
 

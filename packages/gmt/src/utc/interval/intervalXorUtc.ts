@@ -1,16 +1,17 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
-import { isLeapSecond } from "../../plain/validate/isLeapSecond";
-import { utcDateTime } from "../../regex/utc-date-time";
+import { halfOpenXor } from "../../internal";
+import { isValidUtc } from "../validate";
 
 /**
  * Return the symmetric difference of two UTC intervals — time covered by exactly one interval.
  *
- * - Uses `Temporal.Instant.compare` for comparison.
- * - Endpoints are inclusive, so a returned piece ends one nanosecond before, or starts
- *   one nanosecond after, the interval it borders.
- * - Returns `[]` when intervals are identical or both invalid.
- * - Returns `[{ start, end }]` when one interval fully contains the other.
- * - Returns `[{ start, end }, { start, end }]` when intervals partially overlap.
+ * - Half-open: an interval holds every `t` with `start <= t < end`. The result is every maximal
+ *   run covered by exactly one of the two intervals, sorted by start — the same set as
+ *   CORE-6's `mergeIntervals([...subtractIntervals(a, [b]), ...subtractIntervals(b, [a])])`.
+ * - Pieces end exactly where the other interval starts; no piece is stepped by one nanosecond.
+ * - Touching intervals (`aEnd === bStart`) share nothing, so they return one combined run.
+ * - Returns `[]` when the intervals are identical. An empty interval contributes nothing.
  * - Returns `[]` if either interval is invalid (`start > end`).
  * - Returns `[]` on invalid input (wrong type, malformed strings, leap seconds).
  *
@@ -20,8 +21,8 @@ import { utcDateTime } from "../../regex/utc-date-time";
  * @param bEnd ISO 8601 UTC datetime string for the second interval end
  * @returns array of `{ start, end }` records representing the symmetric difference, or `[]` on invalid input
  *
- * @example intervalXorUtc("2024-01-01T09:00:00Z", "2024-06-30T12:00:00Z", "2024-04-01T11:00:00Z", "2024-12-31T17:00:00Z") // [{ start: "2024-01-01T09:00:00Z", end: "2024-04-01T10:59:59.999999999Z" }, { start: "2024-06-30T12:00:00.000000001Z", end: "2024-12-31T17:00:00Z" }]
- * @example intervalXorUtc("2024-01-01T09:00:00Z", "2024-12-31T17:00:00Z", "2024-04-01T11:00:00Z", "2024-06-30T12:00:00Z") // [{ start: "2024-01-01T09:00:00Z", end: "2024-04-01T10:59:59.999999999Z" }, { start: "2024-06-30T12:00:00.000000001Z", end: "2024-12-31T17:00:00Z" }]
+ * @example intervalXorUtc("2024-01-01T09:00:00Z", "2024-01-01T13:00:00Z", "2024-01-01T12:00:00Z", "2024-01-01T17:00:00Z") // [{ start: "2024-01-01T09:00:00Z", end: "2024-01-01T12:00:00Z" }, { start: "2024-01-01T13:00:00Z", end: "2024-01-01T17:00:00Z" }]
+ * @example intervalXorUtc("2024-01-01T09:00:00Z", "2024-01-01T12:00:00Z", "2024-01-01T12:00:00Z", "2024-01-01T17:00:00Z") // [{ start: "2024-01-01T09:00:00Z", end: "2024-01-01T17:00:00Z" }] (touching)
  * @example intervalXorUtc("2024-01-01T09:00:00Z", "2024-12-31T17:00:00Z", "2024-01-01T09:00:00Z", "2024-12-31T17:00:00Z") // []
  * @example intervalXorUtc("invalid", "2024-06-30T12:00:00Z", "2024-07-01T13:00:00Z", "2024-12-31T17:00:00Z") // []
  */
@@ -41,19 +42,10 @@ export function intervalXorUtc(
   }
 
   if (
-    !utcDateTime.test(aStart) ||
-    !utcDateTime.test(aEnd) ||
-    !utcDateTime.test(bStart) ||
-    !utcDateTime.test(bEnd)
-  ) {
-    return [];
-  }
-
-  if (
-    isLeapSecond(aStart) ||
-    isLeapSecond(aEnd) ||
-    isLeapSecond(bStart) ||
-    isLeapSecond(bEnd)
+    !isValidUtc(aStart) ||
+    !isValidUtc(aEnd) ||
+    !isValidUtc(bStart) ||
+    !isValidUtc(bEnd)
   ) {
     return [];
   }
@@ -72,52 +64,16 @@ export function intervalXorUtc(
       return [];
     }
 
-    const result: Array<{ start: string; end: string }> = [];
-
-    // If intervals don't overlap, return both as-is
-    if (
-      Temporal.Instant.compare(aE, bS) < 0 ||
-      Temporal.Instant.compare(bE, aS) < 0
-    ) {
-      return [
-        { start: aS.toString(), end: aE.toString() },
-        { start: bS.toString(), end: bE.toString() },
-      ];
-    }
-
-    // Left piece: A before B starts
-    if (Temporal.Instant.compare(aS, bS) < 0) {
-      result.push({
-        start: aS.toString(),
-        end: bS.subtract({ nanoseconds: 1 }).toString(),
-      });
-    }
-
-    // Right piece: A after B ends
-    if (Temporal.Instant.compare(aE, bE) > 0) {
-      result.push({
-        start: bE.add({ nanoseconds: 1 }).toString(),
-        end: aE.toString(),
-      });
-    }
-
-    // Left piece: B before A starts
-    if (Temporal.Instant.compare(bS, aS) < 0) {
-      result.push({
-        start: bS.toString(),
-        end: aS.subtract({ nanoseconds: 1 }).toString(),
-      });
-    }
-
-    // Right piece: B after A ends
-    if (Temporal.Instant.compare(bE, aE) > 0) {
-      result.push({
-        start: aE.add({ nanoseconds: 1 }).toString(),
-        end: bE.toString(),
-      });
-    }
-
-    return result;
+    return halfOpenXor(
+      [
+        { start: aS, end: aE },
+        { start: bS, end: bE },
+      ],
+      Temporal.Instant.compare,
+    ).map(({ start, end }) => ({
+      start: start.toString(),
+      end: end.toString(),
+    }));
   } catch {
     return [];
   }

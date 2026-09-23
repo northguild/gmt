@@ -1,0 +1,132 @@
+/*
+ * The /upstream/ page: the defect table and the filings tracker.
+ *
+ * A stylesheet rather than `<style>` blocks in the components, for the same reason
+ * `gmt-dst-inspector.css` is one: the rules here exist to *override* `gmt-content.css`, and an
+ * Astro scoped style cannot. Astro compiles `<style>` to `:where(.astro-hash)`, which adds no
+ * specificity at all, so a one-class rule in a component loses to a site rule like
+ * `.sl-markdown-content ul li` (0,1,2) and the override silently does nothing. Loaded after
+ * `gmt-content.css` in `astro.config.mjs`, these win on order at equal specificity and read as
+ * ordinary CSS.
+ */
+
+/* ---- The defect table: what GMT works around ---- */
+
+/*
+ * Two site-wide rules have to be undone here, because this is the only table on the site whose
+ * first column is prose rather than a short label:
+ *
+ * 1. Starlight sets `.sl-markdown-content table { display: block; overflow: auto }` so wide tables
+ *    scroll. A block box is not a table box, so `table-layout` and a percentage `width` never
+ *    reach the columns — the anonymous table inside sizes itself to its content, and one long
+ *    summary stretched the first column to 862px inside a 612px page. Restoring `display: table`
+ *    is what makes the widths below apply; the scrolling moves to the wrapper, which keeps the
+ *    narrow-screen escape hatch.
+ * 2. `gmt-content.css` sets `white-space: nowrap; width: 1%` on every first cell, which is right
+ *    for a parameter table and wrong for prose.
+ */
+.gmt-defects-scroll {
+  overflow-x: auto;
+}
+
+.sl-markdown-content .gmt-defects {
+  display: table;
+  width: 100%;
+  min-width: 34rem;
+  table-layout: fixed;
+  font-size: var(--sl-text-sm);
+}
+
+.sl-markdown-content .gmt-defects :is(th, td) {
+  vertical-align: top;
+  text-align: left;
+  overflow-wrap: break-word;
+}
+
+.sl-markdown-content .gmt-defects :is(th, td).gmt-defects-what {
+  width: 50%;
+  white-space: normal;
+}
+
+.sl-markdown-content .gmt-defects :is(th, td).gmt-defects-state {
+  width: 24%;
+}
+
+.sl-markdown-content .gmt-defects :is(th, td).gmt-defects-sent {
+  width: 26%;
+}
+
+.sl-markdown-content .gmt-defects td p {
+  margin-top: 0.25rem;
+  color: var(--sl-color-gray-3);
+  font-size: var(--sl-text-xs);
+}
+
+.gmt-defects-badge {
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.gmt-defects-badge--ok {
+  color: var(--sl-color-green);
+}
+
+.sl-markdown-content .gmt-defects-refs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * `gmt-content.css` gives every list item in the content area an indent and a small bar for a
+ * bullet. Both go here: a reference like `polyfill #369` is already close to the width of its
+ * column, and the indent alone was enough to clip it. `padding-inline-start` is named as well as
+ * `padding-left`, because the site sets the logical property and the physical one does not
+ * override it on its own.
+ */
+.sl-markdown-content .gmt-defects-refs li {
+  margin: 0 0 0.15rem;
+  padding-left: 0;
+  padding-inline-start: 0;
+  white-space: nowrap;
+}
+
+.sl-markdown-content .gmt-defects-refs li::before {
+  display: none;
+  content: none;
+}
+
+.gmt-defects-none {
+  color: var(--sl-color-gray-4);
+}
+
+.gmt-defects-note,
+.gmt-upstream-links,
+.gmt-upstream-muted {
+  color: var(--sl-color-gray-3);
+  font-size: var(--sl-text-xs);
+}
+
+/* ---- The filings tracker: what we sent ---- */
+
+.sl-markdown-content .gmt-upstream-table {
+  width: 100%;
+  font-size: var(--sl-text-sm);
+}
+
+.sl-markdown-content .gmt-upstream-table td {
+  vertical-align: top;
+}
+
+.sl-markdown-content .gmt-upstream-table td p {
+  margin-top: 0.25rem;
+}
+
+.gmt-upstream-badge {
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.gmt-upstream-badge--ok {
+  color: var(--sl-color-green);
+}

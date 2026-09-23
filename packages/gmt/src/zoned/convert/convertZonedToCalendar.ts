@@ -1,81 +1,60 @@
 import {
+  canonicalCalendarSystem,
   formatZonedInCalendar,
-  isEthiopicFamilyCalendar,
   parseCalendarZonedValue,
-  temporalCalendarIds,
 } from "../../internal";
 import type { CalendarSystem } from "../../types";
 import { isValidCalendarZonedDateTime } from "../validate";
 
 /**
- * Convert a zoned datetime to the same instant expressed in a different calendar system.
+ * Express a zoned datetime in a calendar system: the RFC 9557 string
+ * `Temporal.ZonedDateTime#toString()` writes for that instant, zone and calendar.
  *
- * - Accepts a bare ISO zoned datetime ("2024-10-03T14:30:45-04:00[America/New_York]") or a
- *   calendar-annotated zoned datetime previously produced by this function
- *   ("5785-01-01T14:30:45-04:00[u-ca=hebrew][America/New_York]"), so conversions can chain
- *   between calendar systems.
- * - The instant, the wall time, the UTC offset and the IANA zone are all unchanged — only the
- *   calendar the date fields resolve through changes.
- * - The output for "gregorian" is always a bare, unannotated ISO zoned string, matching every
- *   other GMT zoned string. Any other calendar returns its own native year/month/day tagged with
- *   `[u-ca=<identifier>]`, placed BEFORE the `[timeZone]` segment.
- * - **The segment ordering `[u-ca=...][timeZone]` is the reverse of RFC 9557 and is deliberate.**
- *   GMT's digits are calendar-native, so the string is never valid RFC 9557 anyway; ordering the
- *   annotation first makes Temporal reject the whole shape instead of silently misreading a
- *   Hebrew year 5784 as ISO year 5784. See `regex/calendar-zoned-date-time.ts`.
- * - Uses Temporal's built-in calendar support for every calendar except the Ethiopic family
- *   ("ethiopic" / "ethiopic-amete-alem" / "coptic"), which is computed with GMT-owned arithmetic
- *   through the ICU-independent "ethioaa" carrier — see `internal/ethiopicFamilyCalendar.ts`.
+ * - The instant, the wall time, the UTC offset, the IANA zone and the digits are all unchanged:
+ *   the date is always written as ISO 8601. A `[u-ca=<id>]` annotation after the `[timeZone]`
+ *   annotation names the calendar (RFC 9557 §3.3, §4.1). Eras and calendar years are never part
+ *   of the string.
+ * - `"iso8601"` writes a bare ISO zoned string; every other calendar, `"gregory"` included, is
+ *   annotated.
+ * - Accepts a bare ISO zoned datetime or any calendar-annotated one GMT reads (see
+ *   `isValidCalendarZonedDateTime`), so conversions chain between calendars.
+ * - `calendar` is a canonical calendar id; like Temporal's `withCalendar`, an alias or another
+ *   letter case is canonicalized.
  * - Returns "" on invalid input or an unsupported `calendar`.
  *
- * "japanese" and "ethiopic" are the two calendars tagged with an era instead of a plain native
- * year — see the README's calendar-systems section for why.
+ * Compatibility: since 1.16.0 the string is RFC 9557. Earlier releases wrote the calendar's own
+ * year, month and day, a `;era=` suffix for `japanese` and `ethiopic`, the calendar annotation
+ * before the time zone, and the ids `gregorian`, `taiwan`, `islamic-tabular` and
+ * `ethiopic-amete-alem`; those strings are not converted.
  *
  * @param value ISO zoned datetime string, optionally calendar-annotated
- * @param calendar target calendar system ("gregorian" | "hebrew" | "islamic-civil" |
- *   "islamic-tabular" | "islamic-umalqura" | "japanese" | "buddhist" | "taiwan" |
- *   "persian" | "indian" | "ethiopic" | "ethiopic-amete-alem" | "coptic")
- * @returns calendar-native zoned datetime string, or "" on invalid input
+ * @param calendar target calendar id ("iso8601" | "gregory" | "hebrew" | "islamic-civil" |
+ *   "islamic-tbla" | "islamic-umalqura" | "japanese" | "buddhist" | "roc" | "persian" |
+ *   "indian" | "ethiopic" | "ethioaa" | "coptic")
+ * @returns RFC 9557 zoned datetime string, or "" on invalid input
  *
- * @example convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "hebrew") // "5785-01-01T14:30:45-04:00[u-ca=hebrew][America/New_York]"
- * @example convertZonedToCalendar("5785-01-01T14:30:45-04:00[u-ca=hebrew][America/New_York]", "gregorian") // "2024-10-03T14:30:45-04:00[America/New_York]"
- * @example convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "gregorian") // "2024-10-03T14:30:45-04:00[America/New_York]"
- * @example convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "islamic-civil") // "1446-03-29T14:30:45-04:00[u-ca=islamic-civil][America/New_York]"
- * @example convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "islamic-tabular") // "1446-03-30T14:30:45-04:00[u-ca=islamic-tabular][America/New_York]"
- * @example convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "islamic-umalqura") // "1446-03-30T14:30:45-04:00[u-ca=islamic-umalqura][America/New_York]"
- * @example convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "japanese") // "0006-10-03T14:30:45-04:00[u-ca=japanese;era=reiwa][America/New_York]"
- * @example convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "buddhist") // "2567-10-03T14:30:45-04:00[u-ca=buddhist][America/New_York]"
- * @example convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "taiwan") // "0113-10-03T14:30:45-04:00[u-ca=taiwan][America/New_York]"
- * @example convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "persian") // "1403-07-12T14:30:45-04:00[u-ca=persian][America/New_York]"
- * @example convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "indian") // "1946-07-11T14:30:45-04:00[u-ca=indian][America/New_York]"
- * @example convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "ethiopic") // "2017-01-23T14:30:45-04:00[u-ca=ethiopic;era=ethiopic][America/New_York]"
- * @example convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "ethiopic-amete-alem") // "7517-01-23T14:30:45-04:00[u-ca=ethiopic-amete-alem][America/New_York]"
- * @example convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "coptic") // "1741-01-23T14:30:45-04:00[u-ca=coptic][America/New_York]"
- * @example convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York][u-ca=hebrew]", "gregorian") // "" (Temporal's segment ordering is not GMT's grammar)
+ * @example convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "hebrew") // "2024-10-03T14:30:45-04:00[America/New_York][u-ca=hebrew]"
+ * @example convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York][u-ca=hebrew]", "iso8601") // "2024-10-03T14:30:45-04:00[America/New_York]"
+ * @example convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "japanese") // "2024-10-03T14:30:45-04:00[America/New_York][u-ca=japanese]"
+ * @example convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "roc") // "2024-10-03T14:30:45-04:00[America/New_York][u-ca=roc]"
+ * @example convertZonedToCalendar("+275760-09-13T00:00:00+00:00[UTC]", "hebrew") // "+275760-09-13T00:00:00+00:00[UTC][u-ca=hebrew]"
+ * @example convertZonedToCalendar("2024-10-03T14:30:45-04:00[u-ca=hebrew][America/New_York]", "iso8601") // "" (calendar before zone is not RFC 9557)
  * @example convertZonedToCalendar("invalid", "hebrew") // ""
  */
 export function convertZonedToCalendar(
   value: string,
   calendar: CalendarSystem,
 ): string {
-  if (
-    !isValidCalendarZonedDateTime(value) ||
-    !(calendar in temporalCalendarIds)
-  ) {
+  if (!isValidCalendarZonedDateTime(value)) {
+    return "";
+  }
+  const target = canonicalCalendarSystem(calendar);
+  if (!target) {
     return "";
   }
 
   try {
-    const zoned = parseCalendarZonedValue(value);
-    // The whole Ethiopic family computes through "ethioaa" rather than Temporal's own
-    // "ethiopic"/"coptic" ids, which throw under ICU >= 78 — see internal/ethiopicFamilyCalendar.ts.
-    const temporalCalendarId = isEthiopicFamilyCalendar(calendar)
-      ? "ethioaa"
-      : temporalCalendarIds[calendar];
-    return formatZonedInCalendar(
-      zoned.withCalendar(temporalCalendarId),
-      calendar,
-    );
+    return formatZonedInCalendar(parseCalendarZonedValue(value), target);
   } catch {
     return "";
   }

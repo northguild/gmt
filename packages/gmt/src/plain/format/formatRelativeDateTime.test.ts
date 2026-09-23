@@ -693,4 +693,61 @@ describe("formatRelativeDateTime", () => {
       ).toBe("");
     });
   });
+
+  // ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale data
+  // is used, and a malformed tag anywhere in the list is invalid input. Expected strings from native
+  // Intl with the same list.
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"il y a 3 heures"}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
+  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+    expect(
+      formatRelativeDateTime("2024-03-15T09:00:00", locale, {
+        reference: "2024-03-15T12:00:00",
+      }),
+    ).toBe(expected);
+  });
+
+  // Beyond a day, the unit is auto-picked with formatRelativeDate's thresholds: day under 7 days, week under
+  // 28, month under 365, year beyond. Totals are rounded (default "round"); labels from native
+  // Intl.RelativeTimeFormat("en-US", { numeric: "auto" }).
+  it.each`
+    value                    | expected          | reason
+    ${"2024-03-12T12:00:00"} | ${"3 days ago"}   | ${"3 days: day"}
+    ${"2024-03-08T12:00:00"} | ${"last week"}    | ${"7 days: week"}
+    ${"2024-03-01T12:00:00"} | ${"2 weeks ago"}  | ${"14 days: week"}
+    ${"2024-01-15T12:00:00"} | ${"2 months ago"} | ${"60 days: month, 15 January to 15 March"}
+    ${"2025-03-15T12:00:00"} | ${"next year"}    | ${"365 days: year"}
+    ${"2021-03-15T12:00:00"} | ${"3 years ago"}  | ${"1096 days: year"}
+  `(
+    "formats $value against 2024-03-15T12:00 as $expected ($reason)",
+    ({ value, expected }) => {
+      expect(
+        formatRelativeDateTime(value, "en-US", {
+          reference: "2024-03-15T12:00:00",
+        }),
+      ).toBe(expected);
+    },
+  );
+});
+
+// Plan #14: options must be an object or omitted, as Temporal's GetOptionsObject requires (native
+// Chromium 153 `Temporal.PlainDate.from("2024-02-03", null)`, `"x"` and `1` all throw TypeError), so
+// null and every other non-object is invalid input.
+describe("formatRelativeDateTime with non-object options", () => {
+  it.each`
+    options
+    ${null}
+    ${"long"}
+    ${1}
+  `("returns an empty string for options $options", ({ options }) => {
+    expect(
+      formatRelativeDateTime(
+        "2024-03-12T10:00:00",
+        MustTestLocales.enUS,
+        options as never,
+      ),
+    ).toBe("");
+  });
 });

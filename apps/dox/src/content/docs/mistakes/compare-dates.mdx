@@ -36,12 +36,12 @@ if (isValidDate(a) && isValidDate(b)) {
 <Mistake
   severity="medium"
   title="Comparing different date formats"
-  description="Comparing a plain date string to a zoned datetime string produces an empty string (false) because the shapes do not match. Both inputs must be the same type."
-  wrongCode={`isBeforeDate("2024-03-15", "2024-03-15T10:00:00-05:00[America/New_York]"); // plain vs zoned — ""`}
-  rightCode={`import { isBeforeDate, convertZonedToPlainDateTime } from "@northguild/gmt";
+  description="isBeforeDate compares two plain dates. A zoned datetime string is invalid input to it, so the result is false whatever the dates are. Convert first so both inputs have the same shape."
+  wrongCode={`isBeforeDate("2024-03-14", "2024-03-15T10:00:00-04:00[America/New_York]"); // false — the zoned string is invalid input`}
+  rightCode={`import { isBeforeDate, parseDateFromZoned } from "@northguild/gmt";
 
-isBeforeDate("2024-03-15", convertZonedToPlainDateTime("2024-03-15T10:00:00-05:00[America/New_York]"));
-// same shape — correct`}
+isBeforeDate("2024-03-14", parseDateFromZoned("2024-03-15T10:00:00-04:00[America/New_York]"));
+// true — both are plain dates`}
 />
 
 <Mistake
@@ -50,21 +50,24 @@ isBeforeDate("2024-03-15", convertZonedToPlainDateTime("2024-03-15T10:00:00-05:0
   description="isWeekend follows the locale's weekend definition. In Israel, the weekend is Friday-Saturday. In some Gulf states, it is Friday-Saturday or Saturday-Sunday depending on recent policy changes."
   wrongCode={`const isWeekend = (d) => {
   const day = new Date(d).getDay();
-  return day === 0 || day === 6; // Saturday/Sunday only — wrong for many locales`}
+  return day === 0 || day === 6; // Saturday/Sunday only — wrong for many locales
+};`}
   rightCode={`import { isWeekend } from "@northguild/gmt";
 
 isWeekend("2024-03-15", "en-US"); // false
-isWeekend("2024-03-15", "he-IL"); // true if it's Friday — locale-aware`}
+isWeekend("2024-03-15", "he-IL"); // true — 2024-03-15 is a Friday, and he-IL's weekend is Friday–Saturday`}
 />
 
 <Mistake
   severity="medium"
   title="Confusing isBusinessDay with isWeekend"
-  description="isBusinessDay returns true for Monday-Friday in the locale. It is the inverse of isWeekend only where the weekend is exactly two days and the work week is five. They are related but not opposites in all locales."
-  wrongCode={`// assuming !isWeekend(d) === isBusinessDay(d)`}
+  description="isWeekend follows the locale's weekend. isBusinessDay takes no locale: it defaults to Monday–Friday with no holidays, or takes a business calendar with its own weekend and holidays. So !isWeekend(d, locale) and isBusinessDay(d) disagree wherever the locale's weekend is not Saturday–Sunday, and on every holiday."
+  wrongCode={`// assuming !isWeekend(d, locale) === isBusinessDay(d)`}
   rightCode={`import { isWeekend, isBusinessDay } from "@northguild/gmt";
 
-// they are related but independent — check both if you need work-day logic`}
+isWeekend("2024-03-15", "he-IL"); // true — Friday
+isBusinessDay("2024-03-15"); // true — the default calendar is Monday–Friday
+isBusinessDay("2024-03-15", { weekend: [5, 6], holidays: [], timeZone: "Asia/Jerusalem" }); // false`}
 />
 
 <Mistake
@@ -80,24 +83,21 @@ areDatesEqualBy("2024-03-15", "2024-03-20", "month"); // true — same month and
 <Mistake
   severity="high"
   title="Assuming isRelativeDay/isThisUnit/isPast/isFuture are timeZone-independent"
-  description="These comparison functions resolve 'today' and 'now' in the system timezone by default. A date that is 'today' in New York is 'tomorrow' in Tokyo. Always pass an explicit timezone when the result must be deterministic."
+  description="The plain predicates resolve 'today' in the system time zone, and a plain date has no zone to pass. A date that is 'today' in New York is 'tomorrow' in Tokyo. When the result must not depend on the host, use the zoned variants: isZonedRelativeDay and isZonedThisUnit resolve 'today' in the value's own time zone, and isZonedPast and isZonedFuture compare instants."
   wrongCode={`isPast("2024-03-15"); // depends on the system timezone at runtime`}
-  rightCode={`import { isPast } from "@northguild/gmt";
+  rightCode={`import { isZonedPast } from "@northguild/gmt";
 
-isPast("2024-03-15", "America/New_York"); // deterministic regardless of host timezone`}
+isZonedPast("2024-03-15T00:00:00-04:00[America/New_York]"); // compares instants — no host time zone involved`}
 />
 
 <Mistake
   severity="medium"
   title="Assuming nextWeekday/previousWeekday return the input when it's already on the target day"
-  description="nextWeekday(Friday, 'Friday') returns the *next* Friday, not today. If you need 'the next occurrence, including today', check isThisUnit first."
-  wrongCode={`nextWeekday("2024-03-15", "Friday"); // "2024-03-22" — even though it's already Friday`}
-  rightCode={`import { nextWeekday, isThisUnit } from "@northguild/gmt";
+  description="nextWeekday on a Friday with target day 5 (Friday) returns the *next* Friday, not the input. For 'the next occurrence, including this day', pass { inclusive: true }."
+  wrongCode={`nextWeekday("2024-03-15", 5); // "2024-03-22" — even though it's already Friday`}
+  rightCode={`import { nextWeekday } from "@northguild/gmt";
 
-const target = "2024-03-15";
-if (isThisUnit(target, "weekday", "Friday")) {
-  // already Friday — use today or next week
-}`}
+nextWeekday("2024-03-15", 5, { inclusive: true }); // "2024-03-15" — already a Friday`}
 />
 
 ## See also

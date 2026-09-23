@@ -60,36 +60,29 @@ describe("setUtc", () => {
     },
   );
 
-  // disambiguation/offset are accepted but permanently inert: UTC has no DST transitions
-  it.each`
-    disambiguation
-    ${"compatible"}
-    ${"earlier"}
-    ${"later"}
-    ${"reject"}
-  `(
-    "produces identical output regardless of disambiguation $disambiguation (inert on this function)",
-    ({ disambiguation }) => {
-      expect(setUtc(canonicalInput, { hour: 9 }, { disambiguation })).toBe(
-        "2024-03-10T09:00:00Z",
-      );
-    },
-  );
-
-  it.each`
-    offset
-    ${"prefer"}
-    ${"use"}
-    ${"ignore"}
-    ${"reject"}
-  `(
-    "produces identical output regardless of offset $offset (inert on this function)",
-    ({ offset }) => {
-      expect(setUtc(canonicalInput, { hour: 9 }, { offset })).toBe(
-        "2024-03-10T09:00:00Z",
-      );
-    },
-  );
+  // `disambiguation` and `offset` were removed in 1.16.0: a UTC instant's wall clock is never
+  // ambiguous and carries a fixed +00:00 offset, so neither had anything to act on. Passing one is a
+  // type error, and a JavaScript caller's stray property changes nothing.
+  it("treats the removed disambiguation option as a type error and ignores it at runtime", () => {
+    expect(
+      setUtc(
+        canonicalInput,
+        { hour: 9 },
+        // @ts-expect-error -- `disambiguation` was removed in 1.16.0
+        { disambiguation: "reject" },
+      ),
+    ).toBe("2024-03-10T09:00:00Z");
+  });
+  it("treats the removed offset option as a type error and ignores it at runtime", () => {
+    expect(
+      setUtc(
+        canonicalInput,
+        { hour: 9 },
+        // @ts-expect-error -- `offset` was removed in 1.16.0
+        { offset: "reject" },
+      ),
+    ).toBe("2024-03-10T09:00:00Z");
+  });
 
   it("returns an empty string when the with() call throws for a malformed fields object", () => {
     expect(setUtc(canonicalInput, { hour: Number.NaN })).toBe("");

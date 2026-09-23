@@ -69,8 +69,10 @@ These are the non-negotiables. Full detail is in the context files above.
 8. **JSDoc with `@example` on every public function.** Cover valid, invalid, and edge-case inputs.
 9. **TC39 Temporal is the calendar authority.** Arithmetic clamps (`overflow: "constrain"`); parsers reject. See [§ Calendar & zone semantics](./context/coding-standards.md#calendar--zone-semantics).
 10. **Never truncate-and-re-resolve a zoned boundary.** Use `internal/zonedBucket.ts` or `startOfDay()`/`hoursInDay`; test against the probe zones. Same section.
-11. **One changeset rule.** Fix → `patch`, no behaviour change → none, new API → `minor`. See [coding-standards § Changesets](./context/coding-standards.md#changesets).
+11. **One changeset rule.** Fix → `patch`, no behaviour change → none, new API → `minor`, breaking change → `minor` with a **Breaking changes** migration section. `major` is never used. See [coding-standards § Changesets](./context/coding-standards.md#changesets).
 12. **Zero known bugs.** A defect found is fixed now, in the same story, and its whole class with it. It is never deferred, pinned with `it.fails`, skipped, or documented as known. No disabled, focused or expected-to-fail test ships; `node scripts/test-markers.mjs check` in `validate` enforces it. That script is a backstop, not the definition of this rule: its checks are lexical, so it catches `it.skip` / `it.fails` reliably but cannot see a carried defect worded any other way, and a green check is never on its own evidence that the rule was met. See [testing standards § Zero known bugs](./context/testing-standards/references/index.md#zero-known-bugs).
+
+13. **Plain English for anything a person reads.** Commit messages, changesets, PR titles, descriptions and review comments, issues and comments on upstream repos, handoff notes, and replies to the user all follow ISO 24495-1:2023 — the reader can find what they need, understand it first time, and act on it. Plain governs how it is said, not how much: depth, numbers and precise domain terms stay. The [`plain-english` skill](./.agents/skills/plain-english/SKILL.md) carries the rules.
 
 ## Python in Skills
 

@@ -1,6 +1,8 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
 import { advanceToWeekday, isValidDayOfWeek } from "../../internal";
 import { isValidDate } from "../validate";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return a PlainDate ISO string for the next occurrence of `dayOfWeek` on or after `value`.
@@ -40,6 +42,10 @@ export function nextWeekday(
   dayOfWeek: number,
   options?: { inclusive?: boolean },
 ): string {
+  if (!isOptionsArgument(options)) {
+    return "";
+  }
+
   if (!isValidDate(value) || !isValidDayOfWeek(dayOfWeek)) return "";
 
   try {

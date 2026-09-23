@@ -104,21 +104,21 @@ describe("intervalSplitAtDate", () => {
   it("splits in the shared calendar when start, end, and every point carry the same tag", () => {
     expect(
       intervalSplitAtDate(
-        "5784-01-01[u-ca=hebrew]",
-        "5784-01-11[u-ca=hebrew]",
-        ["5784-01-05[u-ca=hebrew]"],
+        "2023-09-16[u-ca=hebrew]",
+        "2023-09-26[u-ca=hebrew]",
+        ["2023-09-20[u-ca=hebrew]"],
       ),
     ).toEqual([
-      { start: "5784-01-01[u-ca=hebrew]", end: "5784-01-05[u-ca=hebrew]" },
-      { start: "5784-01-05[u-ca=hebrew]", end: "5784-01-11[u-ca=hebrew]" },
+      { start: "2023-09-16[u-ca=hebrew]", end: "2023-09-20[u-ca=hebrew]" },
+      { start: "2023-09-20[u-ca=hebrew]", end: "2023-09-26[u-ca=hebrew]" },
     ]);
   });
 
   it("returns [] when a point carries a mismatched calendar tag", () => {
     expect(
       intervalSplitAtDate(
-        "5784-01-01[u-ca=hebrew]",
-        "5784-01-11[u-ca=hebrew]",
+        "2023-09-16[u-ca=hebrew]",
+        "2023-09-26[u-ca=hebrew]",
         ["2024-01-05"],
       ),
     ).toEqual([]);

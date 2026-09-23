@@ -26,5 +26,25 @@
     "source.organizeImports": "explicit",
     "source.fixAll": "explicit"
   },
-  "typescript.tsdk": "node_modules/typescript/lib"
+  "typescript.tsdk": "node_modules/typescript/lib",
+
+  // Generated and build output that `pnpm dox:dev` / `dox:build` rewrite: watching it made
+  // every dev-server start look like thousands of edits to VS Code. `packages/*/dist` stays
+  // watched so the TypeScript server picks up rebuilt `@northguild/gmt` types.
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "apps/dox/dist/**": true,
+    "apps/dox/.astro/**": true,
+    "apps/dox/.wrangler/**": true,
+    "apps/dox/.visual/**": true,
+    "apps/dox/src/generated/**": true,
+    "apps/dox/src/content/docs/reference/**": true
+  },
+  "search.exclude": {
+    "**/dist": true,
+    "apps/dox/.astro": true,
+    "apps/dox/.wrangler": true,
+    "apps/dox/src/generated": true,
+    "apps/dox/src/content/docs/reference": true
+  }
 }

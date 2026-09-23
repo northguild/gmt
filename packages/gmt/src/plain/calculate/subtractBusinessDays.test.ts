@@ -215,4 +215,18 @@ describe("subtractBusinessDays", () => {
       );
     },
   );
+
+  // Temporal's ISO grammar reads an elective annotation (`[foo=bar]`) and `[u-ca=iso8601]` and ignores
+  // them (RFC 9557 §3.3; native Temporal agrees), so the result is the unannotated input's.
+  it.each`
+    value                         | amount | expected
+    ${"2024-03-18[foo=bar]"}      | ${0}   | ${"2024-03-18"}
+    ${"2024-03-18[u-ca=iso8601]"} | ${1}   | ${"2024-03-15"}
+    ${"2024-03-18[!foo=bar]"}     | ${1}   | ${""}
+  `(
+    "reads the annotations of $value as Temporal does (amount $amount) → $expected",
+    ({ value, amount, expected }) => {
+      expect(subtractBusinessDays(value, amount)).toBe(expected);
+    },
+  );
 });

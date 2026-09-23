@@ -64,15 +64,19 @@ describe("intervalLengthUnix", () => {
   );
 
   it("returns exactly 23 real hours across a spring-forward day in America/New_York", () => {
-    timeZoneSpy.mockReturnValue("America/New_York");
-
-    expect(intervalLengthUnix(1710046800000, 1710129600000, "hour")).toBe(23);
+    expect(
+      intervalLengthUnix(1710046800000, 1710129600000, "hour", {
+        timeZone: "America/New_York",
+      }),
+    ).toBe(23);
   });
 
   it("returns exactly 1 calendar day for a spring-forward day even though it is 23 real hours", () => {
-    timeZoneSpy.mockReturnValue("America/New_York");
-
-    expect(intervalLengthUnix(1710046800000, 1710129600000, "day")).toBe(1);
+    expect(
+      intervalLengthUnix(1710046800000, 1710129600000, "day", {
+        timeZone: "America/New_York",
+      }),
+    ).toBe(1);
   });
 
   it("proves zone-invariance across battleTestTimeZones for a fixed real-time span measured in hours", () => {
@@ -80,13 +84,12 @@ describe("intervalLengthUnix", () => {
     const endInstant = Temporal.Instant.from("2024-06-01T05:00:00Z");
 
     for (const timeZone of battleTestTimeZones) {
-      timeZoneSpy.mockReturnValue(timeZone);
-
       expect(
         intervalLengthUnix(
           startInstant.epochMilliseconds,
           endInstant.epochMilliseconds,
           "hour",
+          { timeZone },
         ),
         `hour length in ${timeZone}`,
       ).toBe(5);
@@ -147,10 +150,12 @@ describe("intervalLengthUnix", () => {
     },
   );
 
-  it("returns null when the system timeZone is unavailable", () => {
+  it("returns null for timeZone local when the system timeZone is unavailable", () => {
     timeZoneSpy.mockReturnValue("");
 
-    expect(intervalLengthUnix(0, 86400000, "hour")).toBeNull();
+    expect(
+      intervalLengthUnix(0, 86400000, "hour", { timeZone: "local" }),
+    ).toBeNull();
   });
 });
 
@@ -179,10 +184,11 @@ describe("intervalLengthUnix at the maximum instant", () => {
     ${MAX_MS - 3 * DAY_MS - 5 * HOUR_MS} | ${MAX_MS - DAY_MS}     | ${"Pacific/Kiritimati"} | ${2.2083333333333335}
     ${MAX_MS - 7 * DAY_MS - HOUR_MS}     | ${MAX_MS - 5 * DAY_MS} | ${"UTC"}                | ${2.0416666666666665}
   `(
-    "returns $expected days for $start to $end in system timeZone $timeZone",
+    "returns $expected days for $start to $end in timeZone $timeZone",
     ({ start, end, timeZone, expected }) => {
-      timeZoneSpy.mockReturnValue(timeZone);
-      expect(intervalLengthUnix(start, end, "day")).toBe(expected);
+      expect(intervalLengthUnix(start, end, "day", { timeZone })).toBe(
+        expected,
+      );
     },
   );
 
@@ -194,10 +200,9 @@ describe("intervalLengthUnix at the maximum instant", () => {
     ${MAX_MS - 2 * DAY_MS - HOUR_MS} | ${MAX_MS} | ${"UTC"}
     ${MAX_MS - 2 * DAY_MS - HOUR_MS} | ${MAX_MS} | ${"Europe/London"}
   `(
-    "returns null in days for $start to $end in system timeZone $timeZone",
+    "returns null in days for $start to $end in timeZone $timeZone",
     ({ start, end, timeZone }) => {
-      timeZoneSpy.mockReturnValue(timeZone);
-      expect(intervalLengthUnix(start, end, "day")).toBeNull();
+      expect(intervalLengthUnix(start, end, "day", { timeZone })).toBeNull();
     },
   );
 });
@@ -225,10 +230,37 @@ describe("intervalLengthUnix at the minimum instant", () => {
     ${MIN_MS} | ${MIN_MS + 2 * DAY_MS + HOUR_MS} | ${"America/New_York"}
     ${MIN_MS} | ${MIN_MS + 2 * DAY_MS + HOUR_MS} | ${"Pacific/Honolulu"}
   `(
-    "returns 2.0416666666666665 days for $start to $end in system timeZone $timeZone",
+    "returns 2.0416666666666665 days for $start to $end in timeZone $timeZone",
     ({ start, end, timeZone }) => {
-      timeZoneSpy.mockReturnValue(timeZone);
-      expect(intervalLengthUnix(start, end, "day")).toBe(2.0416666666666665);
+      expect(intervalLengthUnix(start, end, "day", { timeZone })).toBe(
+        2.0416666666666665,
+      );
+    },
+  );
+});
+
+describe("intervalLengthUnix epochUnit and timeZone options", () => {
+  // 1710046800000–1710129600000 is New York's 2024-03-10, a 23-hour local day (spring forward):
+  // one calendar day there, 23/24 of a UTC day.
+  it.each`
+    start            | end              | unit       | options                                                   | expected
+    ${1710046800000} | ${1710129600000} | ${"day"}   | ${{ timeZone: "America/New_York" }}                       | ${1}
+    ${1710046800000} | ${1710129600000} | ${"day"}   | ${undefined}                                              | ${23 / 24}
+    ${1710046800000} | ${1710129600000} | ${"day"}   | ${{ timeZone: "UTC" }}                                    | ${23 / 24}
+    ${0}             | ${86400}         | ${"hour"}  | ${{ epochUnit: "seconds" }}                               | ${24}
+    ${"0"}           | ${"86400"}       | ${"hours"} | ${{ epochUnit: "second" }}                                | ${24}
+    ${1710046800}    | ${1710129600}    | ${"day"}   | ${{ epochUnit: "seconds", timeZone: "America/New_York" }} | ${1}
+    ${0}             | ${86400000}      | ${"hour"}  | ${{ timeZone: "America/New_Yrok" }}                       | ${null}
+    ${0}             | ${86400000}      | ${"hour"}  | ${{ epochUnit: "nanoseconds" }}                           | ${null}
+  `(
+    "returns $expected for [$start, $end) in $unit with options $options",
+    ({ start, end, unit, options, expected }) => {
+      const result = intervalLengthUnix(start, end, unit, options);
+      if (typeof expected === "number") {
+        expect(result).toBeCloseTo(expected, 12);
+      } else {
+        expect(result).toBe(expected);
+      }
     },
   );
 });

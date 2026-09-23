@@ -1,26 +1,33 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
 import {
   calendarOfAllZonedValues,
   formatZonedInCalendar,
+  halfOpenXor,
   parseCalendarZonedValue,
 } from "../../internal";
 import { isValidCalendarZonedDateTime } from "../validate";
 
 /**
- * Return the symmetric difference of two zoned intervals — time covered by exactly one interval.
+ * Return the symmetric difference of two half-open zoned intervals `[start, end)` — the instants
+ * covered by exactly one interval.
  *
- * - Uses `Temporal.Instant.compare` for comparison (via `.toInstant()`).
- * - Returns `[]` when intervals are identical or both invalid.
- * - Returns `[{ start, end }]` when the intervals share a start or share an end: the shorter one is
- *   covered entirely, so only the longer one's remainder exists.
- * - Touching intervals (one ends exactly where the other starts) return two pieces: the shared
- *   instant belongs to both closed intervals, so it is excluded from each piece, which stops one
- *   nanosecond short of it.
- * - Returns `[{ start, end }, { start, end }]` when intervals partially overlap, and also when
- *   one interval strictly contains the other (the piece before B and the piece after B).
+ * - Compares instants (`Temporal.ZonedDateTime.compare`, calendar- and zone-blind).
+ * - The result is every maximal run covered by exactly one interval, sorted by start instant — the
+ *   same as `mergeIntervals` of `subtractIntervals(a, [b])` and `subtractIntervals(b, [a])`, and
+ *   the same as `intervalXorAllZoned([a, b])`.
+ * - Every boundary is an input's own `start` or `end`, in that input's time zone (the first
+ *   interval's on a tie); no boundary is stepped by a nanosecond.
+ * - Touching intervals share no instant, so they join into one run. An empty interval (`start`
+ *   and `end` the same instant) holds no instant and changes nothing.
+ * - Returns `[]` when the intervals are identical.
+ * - Returns `[{ start, end }]` when the intervals share a start or an end, or touch.
+ * - Returns `[{ start, end }, { start, end }]` when they partially overlap, when one strictly
+ *   contains the other (the piece before B and the piece after B), or when they are disjoint with
+ *   a gap.
  * - Returns `[]` if either interval is invalid (`start > end`).
  * - Returns `[]` on invalid input (wrong type, malformed strings, leap seconds).
- * - Accepts GMT calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
+ * - Accepts RFC 9557 calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
  *   well as bare ISO ones — E7 (issue #152) — but **rejects a mismatched pair**: every endpoint
  *   must name the same calendar system (E7's D4-zoned). Unlike the ordering functions, this one
  *   returns a *value* the caller reads back as a datetime, and there is no principled way to pick
@@ -32,8 +39,7 @@ import { isValidCalendarZonedDateTime } from "../validate";
  *   answer.) A mismatch returns the sentinel.
  * - Output boundaries are re-derived in the resolved calendar via `formatZonedInCalendar`, never
  *   copied from an input string (E7's D7-zoned).
- * - Still rejects Temporal's own `[timeZone][u-ca=...]` RFC 9557 ordering — see
- *   `regex/calendar-zoned-date-time.ts`.
+ * - Rejects a calendar annotation before the time zone annotation, which is not RFC 9557.
  *
  * @param aStart ISO 8601 zoned datetime string for the first interval start
  * @param aEnd ISO 8601 zoned datetime string for the first interval end
@@ -41,8 +47,9 @@ import { isValidCalendarZonedDateTime } from "../validate";
  * @param bEnd ISO 8601 zoned datetime string for the second interval end
  * @returns array of `{ start, end }` records representing the symmetric difference, or `[]` on invalid input
  *
- * @example intervalXorZoned("2024-01-01T09:00:00+00:00[UTC]", "2024-06-30T12:00:00+00:00[UTC]", "2024-04-01T11:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]") // partial overlap — [{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-04-01T10:59:59.999999999+00:00[UTC]" }, { start: "2024-06-30T12:00:00.000000001+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" }]
- * @example intervalXorZoned("2024-01-01T09:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]", "2024-02-01T08:00:00+00:00[UTC]", "2024-03-01T10:00:00+00:00[UTC]") // B strictly inside A — two remainder pieces — [{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-02-01T07:59:59.999999999+00:00[UTC]" }, { start: "2024-03-01T10:00:00.000000001+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" }]
+ * @example intervalXorZoned("2024-01-01T09:00:00+00:00[UTC]", "2024-06-30T12:00:00+00:00[UTC]", "2024-04-01T11:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]") // partial overlap — [{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-04-01T11:00:00+00:00[UTC]" }, { start: "2024-06-30T12:00:00+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" }]
+ * @example intervalXorZoned("2024-01-01T09:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]", "2024-02-01T08:00:00+00:00[UTC]", "2024-03-01T10:00:00+00:00[UTC]") // B strictly inside A — two remainder pieces — [{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-02-01T08:00:00+00:00[UTC]" }, { start: "2024-03-01T10:00:00+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" }]
+ * @example intervalXorZoned("2024-01-01T09:00:00+00:00[UTC]", "2024-06-30T12:00:00+00:00[UTC]", "2024-06-30T12:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]") // touching intervals join — [{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" }]
  * @example intervalXorZoned("2024-01-01T09:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]", "2024-01-01T09:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]") // []
  * @example intervalXorZoned("invalid", "2024-06-30T12:00:00+00:00[UTC]", "2024-07-01T13:00:00+00:00[UTC]", "2024-12-31T17:00:00+00:00[UTC]") // []
  */
@@ -54,7 +61,7 @@ export function intervalXorZoned(
 ): Array<{ start: string; end: string }> {
   // One gate for all four endpoints: `isValidCalendarZonedDateTime` covers non-strings, empty
   // strings, leap seconds (which Temporal would otherwise silently clamp to :59), unknown zones
-  // and Temporal's forbidden segment ordering, while accepting GMT's calendar-annotated grammar.
+  // and a calendar annotation before the zone, while accepting RFC 9557 calendar annotations.
   if (
     !isValidCalendarZonedDateTime(aStart) ||
     !isValidCalendarZonedDateTime(aEnd) ||
@@ -77,83 +84,26 @@ export function intervalXorZoned(
     const bSZdt = parseCalendarZonedValue(bStart);
     const bEZdt = parseCalendarZonedValue(bEnd);
 
-    const aS = aSZdt.toInstant();
-    const aE = aEZdt.toInstant();
-    const bS = bSZdt.toInstant();
-    const bE = bEZdt.toInstant();
-
-    if (Temporal.Instant.compare(aS, aE) > 0) {
+    if (Temporal.ZonedDateTime.compare(aSZdt, aEZdt) > 0) {
       return [];
     }
 
-    if (Temporal.Instant.compare(bS, bE) > 0) {
+    if (Temporal.ZonedDateTime.compare(bSZdt, bEZdt) > 0) {
       return [];
     }
 
-    const result: Array<{ start: string; end: string }> = [];
-
-    // If intervals don't overlap, return both as-is
-    if (
-      Temporal.Instant.compare(aE, bS) < 0 ||
-      Temporal.Instant.compare(bE, aS) < 0
-    ) {
-      return [
-        {
-          start: formatZonedInCalendar(aSZdt, calendar),
-          end: formatZonedInCalendar(aEZdt, calendar),
-        },
-        {
-          start: formatZonedInCalendar(bSZdt, calendar),
-          end: formatZonedInCalendar(bEZdt, calendar),
-        },
-      ];
-    }
-
-    // Left piece: A before B starts
-    if (Temporal.Instant.compare(aS, bS) < 0) {
-      result.push({
-        start: formatZonedInCalendar(aSZdt, calendar),
-        end: formatZonedInCalendar(
-          bS.subtract({ nanoseconds: 1 }).toZonedDateTimeISO(aEZdt.timeZoneId),
-          calendar,
-        ),
-      });
-    }
-
-    // Right piece: A after B ends
-    if (Temporal.Instant.compare(aE, bE) > 0) {
-      result.push({
-        start: formatZonedInCalendar(
-          bE.add({ nanoseconds: 1 }).toZonedDateTimeISO(aEZdt.timeZoneId),
-          calendar,
-        ),
-        end: formatZonedInCalendar(aEZdt, calendar),
-      });
-    }
-
-    // Left piece: B before A starts
-    if (Temporal.Instant.compare(bS, aS) < 0) {
-      result.push({
-        start: formatZonedInCalendar(bSZdt, calendar),
-        end: formatZonedInCalendar(
-          aS.subtract({ nanoseconds: 1 }).toZonedDateTimeISO(bEZdt.timeZoneId),
-          calendar,
-        ),
-      });
-    }
-
-    // Right piece: B after A ends
-    if (Temporal.Instant.compare(bE, aE) > 0) {
-      result.push({
-        start: formatZonedInCalendar(
-          aE.add({ nanoseconds: 1 }).toZonedDateTimeISO(bEZdt.timeZoneId),
-          calendar,
-        ),
-        end: formatZonedInCalendar(bEZdt, calendar),
-      });
-    }
-
-    return result;
+    // Maximal runs covered exactly once. Each boundary is the ZonedDateTime that supplied it (the
+    // first interval's on a tie), so it keeps that input's zone.
+    return halfOpenXor(
+      [
+        { start: aSZdt, end: aEZdt },
+        { start: bSZdt, end: bEZdt },
+      ],
+      Temporal.ZonedDateTime.compare,
+    ).map(({ start, end }) => ({
+      start: formatZonedInCalendar(start, calendar),
+      end: formatZonedInCalendar(end, calendar),
+    }));
   } catch {
     return [];
   }

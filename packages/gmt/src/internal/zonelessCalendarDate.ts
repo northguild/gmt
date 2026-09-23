@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { isValidIsoDateLike } from "../plain/validate";
+import { isValidIsoDateLike } from "../plain/validate/isValidIsoDateLike";
 
 /**
  * Read the calendar date `value` names, where `value` is a zoneless ISO date or datetime.

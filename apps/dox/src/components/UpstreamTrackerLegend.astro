@@ -1,0 +1,25 @@
+---
+/**
+ * What each badge in the tracker means, and where the table's numbers come from.
+ *
+ * Its own component so `UpstreamTracker.astro` stays the table it is named for. The wording is
+ * deliberate on one point: a closed row is not a rejected one, and saying so here is the only
+ * place the page explains what GitHub's bare "Closed" actually meant.
+ */
+import { checkedOn, sourceClause } from "../lib/upstream-summary";
+---
+
+<p class="gmt-table-note">
+  <strong>Already handled</strong>: GMT gives you the correct answer today, whichever
+  polyfill version you have installed. <strong>Doesn't affect GMT</strong>: the
+  bug is in code GMT doesn't use. <strong>Fix filed upstream</strong>: we have
+  written the fix and the polyfill's maintainers have it; it reaches you with the
+  next polyfill release. <strong>Reported upstream</strong>: we sent the
+  maintainers the bug and a way to reproduce it. A row marked
+  <strong>Theirs</strong> is a report someone else opened, where our part was the
+  evidence rather than the fix. Each closed row says why it closed: so far every
+  one was closed because the fix was going somewhere better, not because it was
+  turned down. We read each report's state from GitHub every time this site is
+  built (last checked {checkedOn} UTC{sourceClause}). <strong>Replies</strong>
+  counts comments from the project's maintainers and other users.
+</p>

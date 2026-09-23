@@ -4,6 +4,7 @@ import { isValidInstant } from "../../precision/validate";
 import type { ZoneBucketUnit } from "../../types";
 import { isValidTimeZone } from "../../zoned/validate";
 import { isValidZoneBucketUnit } from "../validate";
+import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 
 /**
  * Floor an instant to the start of the `unit` containing it **in `timeZone`**, and return
@@ -14,9 +15,10 @@ import { isValidZoneBucketUnit } from "../validate";
  * day it belongs to started 20 hours before the UTC one did. The zone is an argument because
  * GMT has no ambient one and must not acquire one.
  *
- * - `unit` is `"hour"`, `"day"`, `"week"` or `"month"`. Weeks start on Monday (ISO 8601),
- *   matching `startOfZoned` and `intervalCountZoned`. `isValidZoneBucketUnit` narrows a
- *   candidate unit, so a unit out of config can be told apart from a bad instant.
+ * - `unit` is `"hour"`, `"day"`, `"week"` or `"month"`, or its plural (`"days"`), as Temporal
+ *   accepts. Weeks start on Monday (ISO 8601), matching `startOfZoned` and `intervalCountZoned`.
+ *   `isValidZoneBucketUnit` narrows a candidate unit, singular or plural, so a unit out of config
+ *   can be told apart from a bad instant.
  * - `value` is any instant `isValidInstant` accepts — `Z`, an offset, or a bracketed zone.
  *   Only its instant is read: a bracketed zone in `value` is *not* the zone the boundary is
  *   computed in, `timeZone` is, and the two may differ freely.
@@ -28,7 +30,7 @@ import { isValidZoneBucketUnit } from "../validate";
  *   week or month containing the first instant Temporal supports began before it.
  *
  * @param value ISO 8601 instant string (e.g. "2024-06-15T03:00:00Z")
- * @param unit boundary unit ("hour" | "day" | "week" | "month")
+ * @param unit boundary unit ("hour" | "day" | "week" | "month", or its plural)
  * @param timeZone IANA timeZone identifier the boundary is computed in
  * @returns UTC instant string ending in "Z", or "" on invalid input
  *
@@ -37,6 +39,7 @@ import { isValidZoneBucketUnit } from "../validate";
  * @example floorToZone("2024-06-15T03:00:00Z", "hour", "Asia/Kathmandu") // "2024-06-15T02:15:00Z" (a +05:45 zone's hour boundary)
  * @example floorToZone("2024-06-15T03:00:00Z", "week", "America/New_York") // "2024-06-10T04:00:00Z" (the Monday)
  * @example floorToZone("2024-09-08T10:00:00Z", "day", "America/Santiago") // "2024-09-08T04:00:00Z" (local midnight is skipped, so the day starts at 01:00)
+ * @example floorToZone("2024-05-15T10:20:30.123Z", "days", "Europe/Berlin") // "2024-05-14T22:00:00Z" (plural unit name)
  * @example floorToZone("2024-06-15T03:00:00Z", "year", "UTC") // "" (not a bucketing unit)
  * @example floorToZone("2024-06-15T03:00:00", "day", "UTC") // "" (zoneless, so it names no instant)
  * @example floorToZone("-271821-04-20T00:00:00Z", "month", "UTC") // "" (that month began before Temporal's range does)
@@ -44,12 +47,15 @@ import { isValidZoneBucketUnit } from "../validate";
  */
 export function floorToZone(
   value: string,
-  unit: ZoneBucketUnit,
+  unit: Temporal.SmallestUnit<ZoneBucketUnit>,
   timeZone: string,
 ): string {
+  // The singular name; the guard below rejects anything outside the four units.
+  const resolvedUnit = resolveDateTimeUnit(unit) as ZoneBucketUnit;
+
   if (
     !isValidInstant(value) ||
-    !isValidZoneBucketUnit(unit) ||
+    !isValidZoneBucketUnit(resolvedUnit) ||
     !isValidTimeZone(timeZone)
   ) {
     return "";
@@ -57,7 +63,7 @@ export function floorToZone(
 
   try {
     const zoned = Temporal.Instant.from(value).toZonedDateTimeISO(timeZone);
-    const start = zonedUnitStart(zoned, unit);
+    const start = zonedUnitStart(zoned, resolvedUnit);
 
     return start ? start.toInstant().toString() : "";
   } catch {

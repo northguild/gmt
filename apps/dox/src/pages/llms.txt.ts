@@ -2,6 +2,11 @@ import type { APIContext, APIRoute } from "astro";
 import { corpus } from "~/generated/reference/corpus";
 import { renderLlmsTxt, type LlmsSection } from "~/lib/llms";
 import { stripFrontmatter, stripMdx } from "~/lib/page-markdown";
+import { topLevelPages } from "~/lib/top-level-pages";
+import { pageExpressionValues } from "~/lib/page-expression-values";
+
+/** The splash pages' figures, evaluated once per build. */
+const values = pageExpressionValues();
 
 const RAW = import.meta.glob("../content/docs/**/*.{md,mdx}", {
   query: "?raw",
@@ -34,6 +39,19 @@ export const GET: APIRoute = ({ site }: APIContext) => {
     sections.push({ heading: `Reference — ${ns}`, links });
   }
 
+  // Start here — every top-level page under content/docs/, in sidebar order.
+  const startLinks = topLevelPages(RAW).map(({ slug, source }) => {
+    const { data, body } = stripFrontmatter(source);
+    const md = stripMdx(body, { gmtVersion: "", values });
+    const description = data.description ?? md.split("\n")[0] ?? "";
+    return {
+      title: data.title ?? slug,
+      url: `${base}/${slug}.md`,
+      description: String(description).replace(/\s+/g, " ").trim(),
+    };
+  });
+  sections.push({ heading: "Start here", links: startLinks });
+
   // Guides section — every non-index page under content/docs/guides/
   const guideLinks = Object.entries(RAW)
     .filter(([path]) => path.includes("/content/docs/guides/"))
@@ -48,7 +66,7 @@ export const GET: APIRoute = ({ site }: APIContext) => {
         .replace(/^.*\/content\/docs\//, "")
         .replace(/\.(md|mdx)$/, "");
       const { data, body } = stripFrontmatter(raw);
-      const md = stripMdx(body, { gmtVersion: "" });
+      const md = stripMdx(body, { gmtVersion: "", values });
       const title = data.title ?? rel;
       const description = data.description ?? md.split("\n")[0] ?? "";
       return {
@@ -74,7 +92,7 @@ export const GET: APIRoute = ({ site }: APIContext) => {
         .replace(/^.*\/content\/docs\//, "")
         .replace(/\.(md|mdx)$/, "");
       const { data, body } = stripFrontmatter(raw);
-      const md = stripMdx(body, { gmtVersion: "" });
+      const md = stripMdx(body, { gmtVersion: "", values });
       const title = data.title ?? rel;
       const description = data.description ?? md.split("\n")[0] ?? "";
       return {
@@ -100,7 +118,7 @@ export const GET: APIRoute = ({ site }: APIContext) => {
         .replace(/^.*\/content\/docs\//, "")
         .replace(/\.(md|mdx)$/, "");
       const { data, body } = stripFrontmatter(raw);
-      const md = stripMdx(body, { gmtVersion: "" });
+      const md = stripMdx(body, { gmtVersion: "", values });
       const title = data.title ?? rel;
       const description = data.description ?? md.split("\n")[0] ?? "";
       return {

@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidTimeZone } from "../validate";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return the current zoned datetime for the specified IANA timeZone.
@@ -20,18 +21,28 @@ export function getZonedNow(
     smallestUnit?: Temporal.ZonedDateTimeToStringOptions["smallestUnit"];
   },
 ): string {
-  const options = {
-    smallestUnit: "millisecond",
-    ...optionsArg,
-  } as Partial<Temporal.ZonedDateTimeToStringOptions>;
-  if (!isValidTimeZone(ianaTimezone)) {
-    return "";
-  }
-
   try {
-    const now = Temporal.Now.zonedDateTimeISO(ianaTimezone);
-    return now.toString(options);
+    if (!isOptionsArgument(optionsArg)) {
+      return "";
+    }
+
+    const options = {
+      smallestUnit: "millisecond",
+      ...optionsArg,
+    } as Partial<Temporal.ZonedDateTimeToStringOptions>;
+    if (!isValidTimeZone(ianaTimezone)) {
+      return "";
+    }
+
+    try {
+      const now = Temporal.Now.zonedDateTimeISO(ianaTimezone);
+      return now.toString(options);
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

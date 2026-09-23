@@ -20,6 +20,19 @@ describe("startOfQuarterForDateTime", () => {
   });
 
   it.each`
+    value                              | expected
+    ${"2024-05-15T12:34:56.789"}       | ${"2024-04-01T00:00:00"}
+    ${"2024-02-29T23:59:59.999999999"} | ${"2024-01-01T00:00:00"}
+    ${"2024-07-04T00:00:00.000000001"} | ${"2024-07-01T00:00:00"}
+    ${"2024-12-31T23:59:59.5"}         | ${"2024-10-01T00:00:00"}
+  `(
+    "resets milliseconds, microseconds and nanoseconds: $value",
+    ({ value, expected }) => {
+      expect(startOfQuarterForDateTime(value)).toBe(expected);
+    },
+  );
+
+  it.each`
     nonStringInput
     ${"invalid-date"}
     ${"2024-02-30T12:00:00"}

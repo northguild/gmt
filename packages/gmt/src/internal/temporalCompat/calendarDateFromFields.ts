@@ -53,8 +53,19 @@ function isNearEdgeYear(calendarId: string, year: number): boolean {
 function needsFieldSearch(calendarId: string, year: number): boolean {
   return (
     hasReadCorrection(calendarId, year) ||
-    (isDefectPresent("D1", calendarId) && isNearEdgeYear(calendarId, year))
+    (isDefectPresent("D1", calendarId) && isNearEdgeYear(calendarId, year)) ||
+    isDefectPresent("D10", calendarId)
   );
+}
+
+/**
+ * True when the polyfill failed with anything but the `RangeError` Temporal specifies for fields
+ * that name no date: an internal assertion (tc39/proposal-temporal#3329, a port of #3292 without
+ * its fix) or a `TypeError` from a broken read. The field search then answers, as the spec would,
+ * rather than the public wrapper turning the throw into its sentinel.
+ */
+function isPolyfillDefectError(error: unknown): boolean {
+  return error !== undefined && !(error instanceof RangeError);
 }
 
 function readBackMatches(
@@ -106,6 +117,10 @@ function rejectPreProposalEra(
  *   corrected reads. Retired with the read corrections in `calendarFields.ts`.
  * - **D8:** era codes that only the pre-proposal polyfill accepts (`japanese-inverse`) are
  *   rejected, as a fixed runtime rejects them.
+ * - **D10:** a polyfill porting proposal-temporal #3292 without the tc39/proposal-temporal#3329 fix
+ *   skips a 5- or 6-day month 13 (ethioaa, and so coptic and ethiopic) in far years. While its
+ *   probe fails, every year searches. Any throw other than a `RangeError` also searches, whatever
+ *   the probes say.
  *
  * Era input is never searched: only "japanese" uses eras here, and it has no D1 window.
  *
@@ -132,7 +147,13 @@ export function calendarDateFromFields(
     polyfillError = error;
   }
 
-  if ("era" in fields || !needsFieldSearch(calendarId, fields.year)) {
+  if (
+    "era" in fields ||
+    !(
+      isPolyfillDefectError(polyfillError) ||
+      needsFieldSearch(calendarId, fields.year)
+    )
+  ) {
     throw (
       polyfillError ??
       new RangeError(`${calendarId} fields do not read back unchanged`)

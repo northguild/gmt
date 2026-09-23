@@ -1,4 +1,5 @@
 ---
+import { libraryStack, type Layer } from "../data/library-stack";
 import SectionHeading from "./SectionHeading.astro";
 import { competitorComparisons } from "../data/library-comparison";
 
@@ -20,33 +21,6 @@ import { competitorComparisons } from "../data/library-comparison";
  * entry there, not a second edit in this file.
  */
 
-interface Layer {
-  name: string;
-  detail: string;
-  foundation: string;
-  kind: "date" | "wraps" | "nonstandard" | "standard" | "gmt";
-}
-
-const structuralStack: Layer[] = [
-  {
-    name: "Temporal",
-    detail: "The TC39 standard. Separate types for instants, wall-clock times, zoned times, plain dates, and durations. No Date anywhere.",
-    foundation: "TC39 standard",
-    kind: "standard",
-  },
-  {
-    name: "@northguild/gmt",
-    detail: "Temporal underneath, with an ISO 8601 string-in / typed-value-out surface on top. The layer you actually write against.",
-    foundation: "Temporal inside",
-    kind: "gmt",
-  },
-  {
-    name: "Date",
-    detail: "Epoch milliseconds interpreted through the host timezone. Every fault above lives here.",
-    foundation: "root cause",
-    kind: "date",
-  },
-];
 
 const competitorStack: Layer[] = competitorComparisons
   .filter((lib) => lib.kind && lib.detail && lib.foundation)
@@ -63,9 +37,9 @@ const competitorStack: Layer[] = competitorComparisons
 // <style> below), so they must follow it; "nonstandard" rows (currently just
 // @internationalized/date) are their own case and read best last.
 const stack: Layer[] = [
-  structuralStack[0],
-  structuralStack[1],
-  structuralStack[2],
+  libraryStack[0],
+  libraryStack[1],
+  libraryStack[2],
   ...competitorStack.filter((l) => l.kind === "wraps"),
   ...competitorStack.filter((l) => l.kind === "nonstandard"),
 ];

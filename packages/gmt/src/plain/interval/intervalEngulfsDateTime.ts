@@ -1,27 +1,33 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
-import { plainDateTime } from "../../regex";
+import { halfOpenContainsSpan } from "../../internal";
+import { isValidDateTime } from "../validate";
 
 /**
- * Return true when interval B is fully contained within interval A — every instant of B
- * falls within A.
+ * Return true when the half-open interval B `[bStart, bEnd)` lies within the half-open interval
+ * A `[aStart, aEnd)` — every moment of B is also in A.
  *
- * - Uses `Temporal.PlainDateTime.compare` for comparison.
- * - Endpoints are inclusive: B may start at A's start and end at A's end.
+ * - Half-open: an interval holds every `t` with `start <= t < end`. B may start at A's start and
+ *   end at A's end, because neither end is part of either interval.
+ * - B must also overlap A, so an empty B (`bStart === bEnd`) counts only strictly inside A, never
+ *   at an edge (CORE-6's `clampInterval` clamps it away there).
  * - Equivalent to 4-argument `intervalContainsDateTime(aStart, aEnd, bStart, bEnd)`.
+ * - Uses `Temporal.PlainDateTime.compare` for comparison.
  * - Returns `false` if either interval is invalid (`start > end`).
  * - Returns `false` on invalid input (wrong type, malformed strings).
  *
  * @param aStart ISO 8601 datetime string for the outer interval start
- * @param aEnd ISO 8601 datetime string for the outer interval end
+ * @param aEnd ISO 8601 datetime string for the outer interval end (excluded)
  * @param bStart ISO 8601 datetime string for the inner interval start
- * @param bEnd ISO 8601 datetime string for the inner interval end
- * @returns true if B is fully contained in A, or false on invalid input
+ * @param bEnd ISO 8601 datetime string for the inner interval end (excluded)
+ * @returns true if B lies within A, or false on invalid input
  *
- * @example intervalEngulfsDateTime("2024-01-01T09:00:00", "2024-12-31T17:00:00", "2024-06-01T12:00:00", "2024-07-01T13:00:00") // true
- * @example intervalEngulfsDateTime("2024-01-01T09:00:00", "2024-12-31T17:00:00", "2024-01-01T09:00:00", "2024-12-31T17:00:00") // true (equal intervals)
- * @example intervalEngulfsDateTime("2024-01-01T09:00:00", "2024-12-31T17:00:00", "2024-01-01T09:00:00", "2024-06-30T12:00:00") // true
- * @example intervalEngulfsDateTime("2024-06-01T12:00:00", "2024-07-01T13:00:00", "2024-01-01T09:00:00", "2024-12-31T17:00:00") // false
- * @example intervalEngulfsDateTime("invalid", "2024-12-31T17:00:00", "2024-06-01T12:00:00", "2024-07-01T13:00:00") // false
+ * @example intervalEngulfsDateTime("2024-01-01T09:00:00", "2024-01-01T17:00:00", "2024-01-01T12:00:00", "2024-01-01T13:00:00") // true
+ * @example intervalEngulfsDateTime("2024-01-01T09:00:00", "2024-01-01T17:00:00", "2024-01-01T09:00:00", "2024-01-01T17:00:00") // true (equal intervals)
+ * @example intervalEngulfsDateTime("2024-01-01T09:00:00", "2024-01-01T17:00:00", "2024-01-01T12:00:00", "2024-01-01T17:00:00") // true (same end)
+ * @example intervalEngulfsDateTime("2024-01-01T09:00:00", "2024-01-01T17:00:00", "2024-01-01T12:00:00", "2024-01-01T12:00:00") // true (empty interval strictly inside)
+ * @example intervalEngulfsDateTime("2024-01-01T09:00:00", "2024-01-01T17:00:00", "2024-01-01T17:00:00", "2024-01-01T17:00:00") // false (empty interval at the edge)
+ * @example intervalEngulfsDateTime("2024-01-01T12:00:00", "2024-01-01T13:00:00", "2024-01-01T09:00:00", "2024-01-01T17:00:00") // false
  */
 export function intervalEngulfsDateTime(
   aStart: string,
@@ -39,10 +45,10 @@ export function intervalEngulfsDateTime(
   }
 
   if (
-    !plainDateTime.test(aStart) ||
-    !plainDateTime.test(aEnd) ||
-    !plainDateTime.test(bStart) ||
-    !plainDateTime.test(bEnd)
+    !isValidDateTime(aStart) ||
+    !isValidDateTime(aEnd) ||
+    !isValidDateTime(bStart) ||
+    !isValidDateTime(bEnd)
   ) {
     return false;
   }
@@ -61,9 +67,10 @@ export function intervalEngulfsDateTime(
       return false;
     }
 
-    return (
-      Temporal.PlainDateTime.compare(aS, bS) <= 0 &&
-      Temporal.PlainDateTime.compare(bE, aE) <= 0
+    return halfOpenContainsSpan(
+      { start: aS, end: aE },
+      { start: bS, end: bE },
+      Temporal.PlainDateTime.compare,
     );
   } catch {
     return false;

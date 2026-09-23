@@ -56,6 +56,10 @@ describe("isValidUnixInterval", () => {
     ${-(2 ** 53)} | ${0}       | ${"-2^53 is not a safe integer"}
     ${""}         | ${1000}    | ${"empty string is not epoch 0"}
     ${0}          | ${"   "}   | ${"whitespace string is not epoch 0"}
+    ${"-86400"}   | ${"1e3"}   | ${"exponent notation is not an epoch"}
+    ${" 0"}       | ${"1"}     | ${"a padded string is not an epoch"}
+    ${"+0"}       | ${"1"}     | ${"a plus sign is not an epoch"}
+    ${"0"}        | ${"0x10"}  | ${"a hex string is not an epoch"}
   `(
     "returns false for a non-safe-integer epoch: $start, $end ($reason)",
     ({ start, end }) => {
@@ -66,7 +70,7 @@ describe("isValidUnixInterval", () => {
   it.each`
     start                       | end                        | reason
     ${-Number.MAX_SAFE_INTEGER} | ${Number.MAX_SAFE_INTEGER} | ${"both safe-integer limits"}
-    ${"-86400"}                 | ${"1e3"}                   | ${"numeric strings coerce to safe integers"}
+    ${"-86400"}                 | ${"1000"}                  | ${"digit strings read as epochs"}
   `(
     "returns true for safe-integer epochs: $start, $end ($reason)",
     ({ start, end }) => {

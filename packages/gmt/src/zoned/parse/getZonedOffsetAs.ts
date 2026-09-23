@@ -17,10 +17,19 @@ const NANOSECONDS_PER_MINUTE = 60_000_000_000;
  * import { getZonedOffsetAs } from "@northguild/gmt/zoned";
  * getZonedOffsetAs("2024-07-15T12:00:00-04:00[America/New_York]", "minutes");
  */
-export type ZonedOffsetUnit = "minutes" | "nanoseconds";
+export type ZonedOffsetUnit =
+  | "minutes"
+  | "nanoseconds"
+  | "minute"
+  | "nanosecond";
 
 function isValidZonedOffsetUnit(unit: unknown): unit is ZonedOffsetUnit {
-  return unit === "minutes" || unit === "nanoseconds";
+  return (
+    unit === "minutes" ||
+    unit === "nanoseconds" ||
+    unit === "minute" ||
+    unit === "nanosecond"
+  );
 }
 
 /**
@@ -34,16 +43,18 @@ function isValidZonedOffsetUnit(unit: unknown): unit is ZonedOffsetUnit {
  * - "minutes" divides by 60e9 — every IANA offset is a whole number of
  *   minutes, so this never truncates a fraction.
  * - Negative offsets (west of UTC) return a negative number.
+ * - `unit` accepts the plural or singular name (`"minutes"` or `"minute"`), as Temporal does.
  * - Returns null on invalid `value` or `unit`.
  *
  * @param value zoned ISO 8601 datetime string
- * @param unit "minutes" | "nanoseconds"
+ * @param unit "minutes" | "nanoseconds" (or the singular "minute" | "nanosecond")
  * @returns the offset in the requested unit, or null on invalid input
  *
  * @example getZonedOffsetAs("2024-07-15T12:00:00-04:00[America/New_York]", "minutes") // -240
  * @example getZonedOffsetAs("2024-05-15T12:00:00+05:45[Asia/Kathmandu]", "minutes") // 345
  * @example getZonedOffsetAs("2024-02-29T12:00:00+00:00[UTC]", "nanoseconds") // 0
  * @example getZonedOffsetAs("2024-07-15T12:00:00-04:00[America/New_York]", "nanoseconds") // -14400000000000
+ * @example getZonedOffsetAs("2024-07-15T12:00:00-04:00[America/New_York]", "minute") // -240 (singular unit name)
  * @example getZonedOffsetAs("invalid", "minutes") // null
  * @example getZonedOffsetAs("2024-02-29T12:00:00+00:00[UTC]", "fortnights" as never) // null
  */
@@ -57,7 +68,7 @@ export function getZonedOffsetAs(
 
   try {
     const { offsetNanoseconds } = zonedDateTimeFrom(value);
-    return unit === "nanoseconds"
+    return unit === "nanoseconds" || unit === "nanosecond"
       ? offsetNanoseconds
       : offsetNanoseconds / NANOSECONDS_PER_MINUTE;
   } catch {

@@ -1,15 +1,17 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
-import { plainTime } from "../../regex";
+import { halfOpenXor } from "../../internal";
+import { isValidTime } from "../validate";
 
 /**
  * Return the symmetric difference of two time intervals — time covered by exactly one interval.
  *
- * - Uses `Temporal.PlainTime.compare` for comparison.
- * - Endpoints are inclusive, so a returned piece ends one nanosecond before, or starts
- *   one nanosecond after, the interval it borders.
- * - Returns `[]` when intervals are identical or both invalid.
- * - Returns `[{ start, end }]` when one interval fully contains the other.
- * - Returns `[{ start, end }, { start, end }]` when intervals partially overlap.
+ * - Half-open: an interval holds every `t` with `start <= t < end`. The result is every maximal
+ *   run covered by exactly one of the two intervals, sorted by start — the same set as
+ *   CORE-6's `mergeIntervals([...subtractIntervals(a, [b]), ...subtractIntervals(b, [a])])`.
+ * - Pieces end exactly where the other interval starts; no piece is stepped by one nanosecond.
+ * - Touching intervals (`aEnd === bStart`) share nothing, so they return one combined run.
+ * - Returns `[]` when the intervals are identical. An empty interval contributes nothing.
  * - Returns `[]` if either interval is invalid (`start > end`).
  * - Returns `[]` on invalid input (wrong type, malformed strings).
  *
@@ -19,10 +21,9 @@ import { plainTime } from "../../regex";
  * @param bEnd ISO 8601 time string for the second interval end
  * @returns array of `{ start, end }` records representing the symmetric difference, or `[]` on invalid input
  *
- * @example intervalXorTime("09:00:00", "12:00:00", "11:00:00", "17:00:00") // [{ start: "09:00:00", end: "10:59:59.999999999" }, { start: "12:00:00.000000001", end: "17:00:00" }]
- * @example intervalXorTime("09:00:00", "17:00:00", "11:00:00", "12:00:00") // [{ start: "09:00:00", end: "10:59:59.999999999" }, { start: "12:00:00.000000001", end: "17:00:00" }]
+ * @example intervalXorTime("09:00:00", "12:00:00", "11:00:00", "17:00:00") // [{ start: "09:00:00", end: "11:00:00" }, { start: "12:00:00", end: "17:00:00" }]
+ * @example intervalXorTime("09:00:00", "12:00:00", "12:00:00", "17:00:00") // [{ start: "09:00:00", end: "17:00:00" }] (touching)
  * @example intervalXorTime("09:00:00", "17:00:00", "09:00:00", "17:00:00") // []
- * @example intervalXorTime("09:00:00", "12:00:00", "13:00:00", "17:00:00") // [{ start: "09:00:00", end: "12:00:00" }, { start: "13:00:00", end: "17:00:00" }]
  * @example intervalXorTime("invalid", "12:00:00", "13:00:00", "17:00:00") // []
  */
 export function intervalXorTime(
@@ -41,10 +42,10 @@ export function intervalXorTime(
   }
 
   if (
-    !plainTime.test(aStart) ||
-    !plainTime.test(aEnd) ||
-    !plainTime.test(bStart) ||
-    !plainTime.test(bEnd)
+    !isValidTime(aStart) ||
+    !isValidTime(aEnd) ||
+    !isValidTime(bStart) ||
+    !isValidTime(bEnd)
   ) {
     return [];
   }
@@ -63,52 +64,16 @@ export function intervalXorTime(
       return [];
     }
 
-    const result: Array<{ start: string; end: string }> = [];
-
-    // If intervals don't overlap, return both as-is
-    if (
-      Temporal.PlainTime.compare(aE, bS) < 0 ||
-      Temporal.PlainTime.compare(bE, aS) < 0
-    ) {
-      return [
-        { start: aS.toString(), end: aE.toString() },
-        { start: bS.toString(), end: bE.toString() },
-      ];
-    }
-
-    // Left piece: A before B starts
-    if (Temporal.PlainTime.compare(aS, bS) < 0) {
-      result.push({
-        start: aS.toString(),
-        end: bS.subtract({ nanoseconds: 1 }).toString(),
-      });
-    }
-
-    // Right piece: A after B ends
-    if (Temporal.PlainTime.compare(aE, bE) > 0) {
-      result.push({
-        start: bE.add({ nanoseconds: 1 }).toString(),
-        end: aE.toString(),
-      });
-    }
-
-    // Left piece: B before A starts
-    if (Temporal.PlainTime.compare(bS, aS) < 0) {
-      result.push({
-        start: bS.toString(),
-        end: aS.subtract({ nanoseconds: 1 }).toString(),
-      });
-    }
-
-    // Right piece: B after A ends
-    if (Temporal.PlainTime.compare(bE, aE) > 0) {
-      result.push({
-        start: aE.add({ nanoseconds: 1 }).toString(),
-        end: bE.toString(),
-      });
-    }
-
-    return result;
+    return halfOpenXor(
+      [
+        { start: aS, end: aE },
+        { start: bS, end: bE },
+      ],
+      Temporal.PlainTime.compare,
+    ).map(({ start, end }) => ({
+      start: start.toString(),
+      end: end.toString(),
+    }));
   } catch {
     return [];
   }

@@ -2,50 +2,38 @@ import { Temporal } from "@js-temporal/polyfill";
 import { formatDateInCalendar } from "./formatDateInCalendar";
 
 describe("formatDateInCalendar", () => {
-  it("formats an iso8601 PlainDate as a bare ISO string for gregorian", () => {
-    const date = Temporal.PlainDate.from("2024-10-03");
-    expect(formatDateInCalendar(date, "gregorian")).toBe("2024-10-03");
-  });
+  // Temporal TemporalDateToString with calendarName "auto": PadISOYear, ISO month and day, then
+  // FormatCalendarAnnotation, which is empty only for "iso8601".
+  it.each`
+    iso                | calendarId        | calendar          | expected
+    ${"2024-10-03"}    | ${"iso8601"}      | ${"iso8601"}      | ${"2024-10-03"}
+    ${"2024-10-03"}    | ${"gregory"}      | ${"gregory"}      | ${"2024-10-03[u-ca=gregory]"}
+    ${"2024-10-03"}    | ${"hebrew"}       | ${"hebrew"}       | ${"2024-10-03[u-ca=hebrew]"}
+    ${"2024-10-03"}    | ${"islamic-tbla"} | ${"islamic-tbla"} | ${"2024-10-03[u-ca=islamic-tbla]"}
+    ${"2024-10-03"}    | ${"ethioaa"}      | ${"ethiopic"}     | ${"2024-10-03[u-ca=ethiopic]"}
+    ${"2024-10-03"}    | ${"ethioaa"}      | ${"coptic"}       | ${"2024-10-03[u-ca=coptic]"}
+    ${"2024-10-03"}    | ${"ethioaa"}      | ${"ethioaa"}      | ${"2024-10-03[u-ca=ethioaa]"}
+    ${"+275760-09-13"} | ${"hebrew"}       | ${"hebrew"}       | ${"+275760-09-13[u-ca=hebrew]"}
+    ${"-271821-04-19"} | ${"roc"}          | ${"roc"}          | ${"-271821-04-19[u-ca=roc]"}
+    ${"0000-01-01"}    | ${"japanese"}     | ${"japanese"}     | ${"0000-01-01[u-ca=japanese]"}
+    ${"+010000-01-01"} | ${"persian"}      | ${"persian"}      | ${"+010000-01-01[u-ca=persian]"}
+  `(
+    "formats ISO $iso computed in $calendarId as $calendar: $expected",
+    ({ iso, calendarId, calendar, expected }) => {
+      const date = Temporal.PlainDate.from(iso).withCalendar(calendarId);
+      expect(formatDateInCalendar(date, calendar)).toBe(expected);
+    },
+  );
 
-  it("formats a hebrew PlainDate with calendar-native fields and annotation", () => {
-    const date = Temporal.PlainDate.from("2024-10-03").withCalendar("hebrew");
+  it("writes the ISO digits of the date, whatever calendar it computes in", () => {
+    const date = Temporal.PlainDate.from({
+      calendar: "hebrew",
+      year: 5784,
+      month: 6,
+      day: 15,
+    });
     expect(formatDateInCalendar(date, "hebrew")).toBe(
-      "5785-01-01[u-ca=hebrew]",
-    );
-  });
-
-  it("routes ethiopic-amete-alem through formatEthiopicFamilyDate, not formatCalendarDate", () => {
-    // Backed by Temporal's "ethioaa" id per ethiopicFamilyCalendar.ts — never "ethiopic" or
-    // "coptic" directly, since those two throw under this environment's ICU (see the module
-    // comment in ethiopicFamilyCalendar.ts).
-    const date = Temporal.PlainDate.from("2024-10-03").withCalendar("ethioaa");
-    expect(formatDateInCalendar(date, "ethiopic-amete-alem")).toBe(
-      "7517-01-23[u-ca=ethiopic-amete-alem]",
-    );
-  });
-
-  it("routes the same ethioaa-backed date differently depending on the known target calendar", () => {
-    // The whole reason calendarSystemOfDateValue must be captured up front: an "ethioaa"-
-    // calendared Temporal.PlainDate alone cannot distinguish "ethiopic" from "ethiopic-amete-
-    // alem" from "coptic" — the caller must already know which one it is.
-    const date = Temporal.PlainDate.from("2024-10-03").withCalendar("ethioaa");
-    expect(formatDateInCalendar(date, "ethiopic")).toBe(
-      "2017-01-23[u-ca=ethiopic;era=ethiopic]",
-    );
-    expect(formatDateInCalendar(date, "coptic")).toBe(
-      "1741-01-23[u-ca=coptic]",
-    );
-  });
-
-  it("re-derives a japanese date's era from the actual date, not a copied tag", () => {
-    const heisei =
-      Temporal.PlainDate.from("2019-04-30").withCalendar("japanese");
-    const reiwa = heisei.add({ days: 1 });
-    expect(formatDateInCalendar(heisei, "japanese")).toBe(
-      "0031-04-30[u-ca=japanese;era=heisei]",
-    );
-    expect(formatDateInCalendar(reiwa, "japanese")).toBe(
-      "0001-05-01[u-ca=japanese;era=reiwa]",
+      "2024-02-24[u-ca=hebrew]",
     );
   });
 });

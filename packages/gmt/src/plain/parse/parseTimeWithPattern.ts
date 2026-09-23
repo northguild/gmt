@@ -49,47 +49,53 @@ import { parseValueWithPattern, TIME_PATTERN_FIELDS } from "../../internal";
  *
  * @param value The string to decode (e.g. "02:30:45 PM")
  * @param pattern The token pattern describing `value`'s shape (e.g. "hh:mm:ss a")
- * @param locale Optional BCP 47 locale for the meridiem token (default "en-US")
+ * @param locale Optional BCP 47 locale tag, or a preference list of tags, for the meridiem token (default "en-US")
  * @returns ISO `PlainTime` string, or "" on no match, malformed pattern, or invalid input
  *
  * @example parseTimeWithPattern("14:30:45", "HH:mm:ss") // "14:30:45"
  * @example parseTimeWithPattern("02:30:45 PM", "hh:mm:ss a") // "14:30:45"
  * @example parseTimeWithPattern("25:00", "HH:mm") // "" (shape-valid, not a real time)
  * @example parseTimeWithPattern("2024-03-15", "yyyy-MM-dd") // "" (date token in a time-only pattern)
+ * @example parseTimeWithPattern("午後 10:20", "a h:mm", ["ja-JP", "en-US"]) // "22:20:00"
  */
 export function parseTimeWithPattern(
   value: string,
   pattern: string,
-  locale?: string,
+  locale?: string | string[],
 ): string {
-  if (typeof value !== "string") return "";
-  if (typeof pattern !== "string") return "";
-  if (locale !== undefined && typeof locale !== "string") return "";
-
-  const fields = parseValueWithPattern(
-    value,
-    pattern,
-    locale,
-    TIME_PATTERN_FIELDS,
-  );
-  if (fields === null) return "";
-
   try {
-    // The regex only proved `value` has the right *shape* for `pattern`
-    // (e.g. "25:00" matches "HH:mm") — Temporal is what proves the time
-    // is real: `overflow: "reject"` throws instead of silently clamping
-    // an out-of-range field, which is what the default "constrain" would
-    // do.
-    return Temporal.PlainTime.from(
-      {
-        hour: fields.hour,
-        minute: fields.minute,
-        second: fields.second,
-        millisecond: fields.millisecond,
-      },
-      { overflow: "reject" },
-    ).toString();
+    if (typeof value !== "string") return "";
+    if (typeof pattern !== "string") return "";
+
+    const fields = parseValueWithPattern(
+      value,
+      pattern,
+      locale,
+      TIME_PATTERN_FIELDS,
+    );
+    if (fields === null) return "";
+
+    try {
+      // The regex only proved `value` has the right *shape* for `pattern`
+      // (e.g. "25:00" matches "HH:mm") — Temporal is what proves the time
+      // is real: `overflow: "reject"` throws instead of silently clamping
+      // an out-of-range field, which is what the default "constrain" would
+      // do.
+      return Temporal.PlainTime.from(
+        {
+          hour: fields.hour,
+          minute: fields.minute,
+          second: fields.second,
+          millisecond: fields.millisecond,
+        },
+        { overflow: "reject" },
+      ).toString();
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

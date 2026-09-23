@@ -57,6 +57,24 @@ describe("roundUtc", () => {
     },
   );
 
+  // Temporal §13.17 GetTemporalUnitValuedOption: "Both singular and plural unit names are accepted".
+  it.each`
+    value                               | unit              | roundingIncrement | expected
+    ${hourMinuteInput}                  | ${"hours"}        | ${undefined}      | ${"2024-06-15T13:00:00Z"}
+    ${hourMinuteInput}                  | ${"minutes"}      | ${15}             | ${"2024-06-15T12:30:00Z"}
+    ${"2024-06-15T12:34:56.5Z"}         | ${"seconds"}      | ${undefined}      | ${"2024-06-15T12:34:57Z"}
+    ${subMsInput}                       | ${"milliseconds"} | ${undefined}      | ${"2024-06-15T12:34:56.789Z"}
+    ${subMsInput}                       | ${"microseconds"} | ${undefined}      | ${"2024-06-15T12:34:56.789123Z"}
+    ${"2024-06-15T12:34:56.123456789Z"} | ${"nanoseconds"}  | ${undefined}      | ${"2024-06-15T12:34:56.123456789Z"}
+  `(
+    "returns $expected for $value rounded to the plural unit $unit with roundingIncrement $roundingIncrement",
+    ({ value, unit, roundingIncrement, expected }) => {
+      expect(roundUtc(value, { smallestUnit: unit, roundingIncrement })).toBe(
+        expected,
+      );
+    },
+  );
+
   it.each`
     value              | unit        | roundingIncrement
     ${hourMinuteInput} | ${"minute"} | ${0}
@@ -122,6 +140,8 @@ describe("roundUtc", () => {
   it.each`
     invalidUnit
     ${"invalid-unit"}
+    ${"hourss"}
+    ${"Hours"}
     ${""}
     ${null}
     ${undefined}
@@ -137,6 +157,8 @@ describe("roundUtc", () => {
     ${"month"}
     ${"week"}
     ${"day"}
+    ${"days"}
+    ${"years"}
   `("returns empty string for unsupported date unit $unit", ({ unit }) => {
     expect(
       roundUtc("2024-06-15T12:34:56Z", { smallestUnit: unit as never }),

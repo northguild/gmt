@@ -1,69 +1,68 @@
 import {
-  formatCalendarDate,
-  formatEthiopicFamilyDate,
-  isEthiopicFamilyCalendar,
+  canonicalCalendarSystem,
+  formatDateInCalendar,
   parseCalendarDateValue,
-  temporalCalendarIds,
 } from "../../internal";
 import type { CalendarSystem } from "../../types";
 import { isValidCalendarDate } from "../validate";
 
 /**
- * Convert a PlainDate to the same date expressed in a different calendar system.
+ * Express a PlainDate in a calendar system: the RFC 9557 string
+ * `Temporal.PlainDate#toString()` writes for that date in that calendar.
  *
- * - Accepts a plain ISO date ("2024-10-03") or a calendar-annotated date previously
- *   produced by this function ("5785-01-01[u-ca=hebrew]"), so conversions can chain
- *   between calendar systems.
- * - The output for "gregorian" is always a bare, unannotated ISO string, matching every
- *   other GMT PlainDate string. Any other calendar returns its own native year/month/day
- *   (e.g. Hebrew year 5785, not the ISO year), tagged with `[u-ca=<identifier>]` — this
- *   diverges from Temporal's own `[u-ca=...]` string convention (which keeps ISO digits
- *   and only annotates the calendar) specifically so the calendar's native fields are
- *   visible in GMT's string contract, not hidden behind calendar-aware accessors.
- * - Uses Temporal's built-in calendar support (`PlainDate.prototype.withCalendar`) for every
- *   calendar except the Ethiopic family ("ethiopic" / "ethiopic-amete-alem" / "coptic"),
- *   which is computed with GMT-owned arithmetic instead — see
- *   `internal/ethiopicFamilyCalendar.ts` for why. Either way, the underlying date never
- *   changes, only which calendar's fields it resolves through.
+ * - The date never changes, and neither do its digits: they are always the ISO 8601 date.
+ *   The calendar is carried by a `[u-ca=<id>]` annotation (RFC 9557 §3.3), and eras, calendar
+ *   years and month codes are never part of the string.
+ * - `"iso8601"` writes a bare ISO date; every other calendar, `"gregory"` included, is annotated.
+ * - Accepts a bare ISO date or any calendar-annotated date GMT reads (see `isValidCalendarDate`),
+ *   so conversions chain between calendars.
+ * - `calendar` is a canonical calendar id; like Temporal's `withCalendar`, an alias or another
+ *   letter case is canonicalized (`"ethiopic-amete-alem"` writes `[u-ca=ethioaa]`).
+ * - **Only one of CLDR's four legacy calendar aliases works, and that is Temporal's rule, not
+ *   GMT's.** `ethiopic-amete-alem` canonicalizes to `ethioaa`; `gregorian`, `islamic-tabular` and
+ *   `taiwan` return `""`. Chromium 153 and `@js-temporal/polyfill` both throw `RangeError` for
+ *   those three: `gregorian` is nine letters, past the 8-character limit on a Unicode
+ *   locale-extension `type` subtag, and the other two are absent from ECMA-402's
+ *   `AvailableCanonicalCalendars`. Use `gregory`, `islamic-tbla` and `roc`.
  * - Returns "" on invalid input or an unsupported `calendar`.
  *
- * "japanese" and "ethiopic" are the two calendars tagged with an era instead of a plain
- * native year — see the README's calendar-systems section for why.
+ * Compatibility: since 1.16.0 the string is RFC 9557. Earlier releases wrote the calendar's own
+ * year, month and day (`"5785-01-01[u-ca=hebrew]"` for ISO 2024-10-03), a `;era=` suffix for
+ * `japanese` and `ethiopic`, and the ids `gregorian`, `taiwan`, `islamic-tabular` and
+ * `ethiopic-amete-alem`; those strings are not converted.
  *
  * @param value ISO PlainDate string, optionally calendar-annotated
- * @param calendar target calendar system ("gregorian" | "hebrew" | "islamic-civil" |
- *   "islamic-tabular" | "islamic-umalqura" | "japanese" | "buddhist" | "taiwan" |
- *   "persian" | "indian" | "ethiopic" | "ethiopic-amete-alem" | "coptic")
- * @returns calendar-native ISO-shaped PlainDate string, or "" on invalid input
+ * @param calendar target calendar id ("iso8601" | "gregory" | "hebrew" | "islamic-civil" |
+ *   "islamic-tbla" | "islamic-umalqura" | "japanese" | "buddhist" | "roc" | "persian" |
+ *   "indian" | "ethiopic" | "ethioaa" | "coptic")
+ * @returns RFC 9557 PlainDate string, or "" on invalid input
  *
- * @example convertDateToCalendar("2024-10-03", "hebrew") // "5785-01-01[u-ca=hebrew]"
- * @example convertDateToCalendar("5785-01-01[u-ca=hebrew]", "gregorian") // "2024-10-03"
- * @example convertDateToCalendar("2024-10-03", "gregorian") // "2024-10-03"
- * @example convertDateToCalendar("2024-10-03", "islamic-umalqura") // "1446-03-30[u-ca=islamic-umalqura]"
- * @example convertDateToCalendar("2024-10-03", "japanese") // "0006-10-03[u-ca=japanese;era=reiwa]"
- * @example convertDateToCalendar("2024-10-03", "buddhist") // "2567-10-03[u-ca=buddhist]"
- * @example convertDateToCalendar("2024-10-03", "taiwan") // "0113-10-03[u-ca=taiwan]"
- * @example convertDateToCalendar("2024-10-03", "persian") // "1403-07-12[u-ca=persian]"
- * @example convertDateToCalendar("2024-10-03", "indian") // "1946-07-11[u-ca=indian]"
- * @example convertDateToCalendar("2024-10-03", "ethiopic") // "2017-01-23[u-ca=ethiopic;era=ethiopic]"
- * @example convertDateToCalendar("2024-10-03", "ethiopic-amete-alem") // "7517-01-23[u-ca=ethiopic-amete-alem]"
- * @example convertDateToCalendar("2024-10-03", "coptic") // "1741-01-23[u-ca=coptic]"
+ * @example convertDateToCalendar("2024-10-03", "hebrew") // "2024-10-03[u-ca=hebrew]"
+ * @example convertDateToCalendar("2024-10-03", "japanese") // "2024-10-03[u-ca=japanese]"
+ * @example convertDateToCalendar("1000-01-01", "roc") // "1000-01-01[u-ca=roc]"
+ * @example convertDateToCalendar("+275760-09-13", "hebrew") // "+275760-09-13[u-ca=hebrew]"
+ * @example convertDateToCalendar("2024-10-03[u-ca=hebrew]", "iso8601") // "2024-10-03"
+ * @example convertDateToCalendar("2024-10-03", "gregory") // "2024-10-03[u-ca=gregory]"
+ * @example convertDateToCalendar("2024-10-03", "ethiopic-amete-alem" as never) // "2024-10-03[u-ca=ethioaa]"
+ * @example convertDateToCalendar("0006-10-03[u-ca=japanese;era=reiwa]", "iso8601") // "" (not RFC 9557)
+ * @example convertDateToCalendar("2024-10-03", "gregorian" as never) // "" (a CLDR alias Temporal does not accept; use "gregory")
+ * @example convertDateToCalendar("2024-10-03", "taiwan" as never) // "" (a CLDR alias Temporal does not accept; use "roc")
  * @example convertDateToCalendar("invalid", "hebrew") // ""
  */
 export function convertDateToCalendar(
   value: string,
   calendar: CalendarSystem,
 ): string {
-  if (!isValidCalendarDate(value) || !(calendar in temporalCalendarIds)) {
+  if (!isValidCalendarDate(value)) {
+    return "";
+  }
+  const target = canonicalCalendarSystem(calendar);
+  if (!target) {
     return "";
   }
 
   try {
-    const date = parseCalendarDateValue(value);
-    if (isEthiopicFamilyCalendar(calendar)) {
-      return formatEthiopicFamilyDate(date, calendar);
-    }
-    return formatCalendarDate(date.withCalendar(temporalCalendarIds[calendar]));
+    return formatDateInCalendar(parseCalendarDateValue(value), target);
   } catch {
     return "";
   }

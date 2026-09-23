@@ -21,21 +21,27 @@ export function sortUtc(
   utcDateTimes: string[],
   order: "asc" | "desc" = "asc",
 ): string[] {
-  if (!utcDateTimes.length) return [];
-
-  const valid = utcDateTimes.filter(isValidUtc);
-  if (!valid.length) return [];
-
   try {
-    const comparables = valid.map((d) => Temporal.Instant.from(d));
-    comparables.sort(Temporal.Instant.compare);
+    if (!Array.isArray(utcDateTimes) || !utcDateTimes.length) return [];
 
-    if (order === "desc") {
-      return comparables.reverse().map((d) => d.toString());
+    const valid = utcDateTimes.filter(isValidUtc);
+    if (!valid.length) return [];
+
+    try {
+      const comparables = valid.map((d) => Temporal.Instant.from(d));
+      comparables.sort(Temporal.Instant.compare);
+
+      if (order === "desc") {
+        return comparables.reverse().map((d) => d.toString());
+      }
+
+      return comparables.map((d) => d.toString());
+    } catch {
+      return [];
     }
-
-    return comparables.map((d) => d.toString());
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

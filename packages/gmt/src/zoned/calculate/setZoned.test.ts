@@ -74,16 +74,15 @@ describe("setZoned", () => {
     expect(localNoonBattleCases.length).toBe(battleTestTimeZones.length);
   });
 
-  // The C3 silent-no-op trap regression pairing (required by J1's Definition of Done):
-  // disambiguation:"reject" with the default offset:"ignore" throws (returns ""), while
-  // disambiguation:"reject" with offset:"prefer" does NOT throw, because the source's
-  // still-valid offset is kept and disambiguation is never consulted.
+  // `offset` defaults to "prefer", as Temporal's ZonedDateTime#with does (§6.3.24 GetTemporalOffsetOption
+  // default): the source's -05:00 / +01:00 is still valid on the repeated hour, so it is kept and
+  // disambiguation "reject" is never consulted. offset "ignore" re-resolves the wall time, so "reject" fires.
   it.each`
     timeZone             | value                                           | offset       | expected
-    ${"America/Chicago"} | ${"2024-11-03T01:45:00-05:00[America/Chicago]"} | ${undefined} | ${""}
+    ${"America/Chicago"} | ${"2024-11-03T01:45:00-05:00[America/Chicago]"} | ${undefined} | ${"2024-11-03T01:00:00-05:00[America/Chicago]"}
     ${"America/Chicago"} | ${"2024-11-03T01:45:00-05:00[America/Chicago]"} | ${"ignore"}  | ${""}
     ${"America/Chicago"} | ${"2024-11-03T01:45:00-05:00[America/Chicago]"} | ${"prefer"}  | ${"2024-11-03T01:00:00-05:00[America/Chicago]"}
-    ${"Europe/Berlin"}   | ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}   | ${undefined} | ${""}
+    ${"Europe/Berlin"}   | ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}   | ${undefined} | ${"2024-10-27T02:00:00+01:00[Europe/Berlin]"}
     ${"Europe/Berlin"}   | ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}   | ${"ignore"}  | ${""}
     ${"Europe/Berlin"}   | ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}   | ${"prefer"}  | ${"2024-10-27T02:00:00+01:00[Europe/Berlin]"}
   `(
@@ -97,21 +96,27 @@ describe("setZoned", () => {
     },
   );
 
-  it("produces genuinely different output across disambiguation values on a fall-back overlap (regression guard against offset:prefer silently no-opping disambiguation)", () => {
+  it("produces different output across disambiguation values on a fall-back overlap with offset ignore", () => {
     const value = "2024-11-03T01:45:00-05:00[America/Chicago]";
     const compatible = setZoned(
       value,
       { minute: 0 },
       {
         disambiguation: "compatible",
+        offset: "ignore",
       },
     );
-    const later = setZoned(value, { minute: 0 }, { disambiguation: "later" });
+    const later = setZoned(
+      value,
+      { minute: 0 },
+      { disambiguation: "later", offset: "ignore" },
+    );
     const rejected = setZoned(
       value,
       { minute: 0 },
       {
         disambiguation: "reject",
+        offset: "ignore",
       },
     );
 
@@ -142,23 +147,38 @@ describe("setZoned", () => {
   );
 
   // Fall-back overlap: the arithmetic result of + 1 day lands on the ambiguous repeated local time
+  // offset defaults to "prefer" (Temporal ZonedDateTime#with): the source's offset is still valid on
+  // the repeated hour, so it is kept and disambiguation is not consulted; offset "ignore" re-resolves
+  // the wall time through disambiguation. Expected values checked with Temporal ZonedDateTime#with.
   it.each`
-    timeZone             | value                                           | disambiguation  | expected
-    ${"America/Chicago"} | ${"2024-11-02T01:45:00-05:00[America/Chicago]"} | ${undefined}    | ${"2024-11-03T01:45:00-05:00[America/Chicago]"}
-    ${"America/Chicago"} | ${"2024-11-02T01:45:00-05:00[America/Chicago]"} | ${"compatible"} | ${"2024-11-03T01:45:00-05:00[America/Chicago]"}
-    ${"America/Chicago"} | ${"2024-11-02T01:45:00-05:00[America/Chicago]"} | ${"earlier"}    | ${"2024-11-03T01:45:00-05:00[America/Chicago]"}
-    ${"America/Chicago"} | ${"2024-11-02T01:45:00-05:00[America/Chicago]"} | ${"later"}      | ${"2024-11-03T01:45:00-06:00[America/Chicago]"}
-    ${"America/Chicago"} | ${"2024-11-02T01:45:00-05:00[America/Chicago]"} | ${"reject"}     | ${""}
-    ${"Europe/Berlin"}   | ${"2024-10-26T02:45:00+02:00[Europe/Berlin]"}   | ${undefined}    | ${"2024-10-27T02:45:00+02:00[Europe/Berlin]"}
-    ${"Europe/Berlin"}   | ${"2024-10-26T02:45:00+02:00[Europe/Berlin]"}   | ${"compatible"} | ${"2024-10-27T02:45:00+02:00[Europe/Berlin]"}
-    ${"Europe/Berlin"}   | ${"2024-10-26T02:45:00+02:00[Europe/Berlin]"}   | ${"earlier"}    | ${"2024-10-27T02:45:00+02:00[Europe/Berlin]"}
-    ${"Europe/Berlin"}   | ${"2024-10-26T02:45:00+02:00[Europe/Berlin]"}   | ${"later"}      | ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}
-    ${"Europe/Berlin"}   | ${"2024-10-26T02:45:00+02:00[Europe/Berlin]"}   | ${"reject"}     | ${""}
+    timeZone             | value                                           | offset       | disambiguation  | expected
+    ${"America/Chicago"} | ${"2024-11-02T01:45:00-05:00[America/Chicago]"} | ${undefined} | ${undefined}    | ${"2024-11-03T01:45:00-05:00[America/Chicago]"}
+    ${"America/Chicago"} | ${"2024-11-02T01:45:00-05:00[America/Chicago]"} | ${undefined} | ${"compatible"} | ${"2024-11-03T01:45:00-05:00[America/Chicago]"}
+    ${"America/Chicago"} | ${"2024-11-02T01:45:00-05:00[America/Chicago]"} | ${undefined} | ${"earlier"}    | ${"2024-11-03T01:45:00-05:00[America/Chicago]"}
+    ${"America/Chicago"} | ${"2024-11-02T01:45:00-05:00[America/Chicago]"} | ${undefined} | ${"later"}      | ${"2024-11-03T01:45:00-05:00[America/Chicago]"}
+    ${"America/Chicago"} | ${"2024-11-02T01:45:00-05:00[America/Chicago]"} | ${undefined} | ${"reject"}     | ${"2024-11-03T01:45:00-05:00[America/Chicago]"}
+    ${"Europe/Berlin"}   | ${"2024-10-26T02:45:00+02:00[Europe/Berlin]"}   | ${undefined} | ${undefined}    | ${"2024-10-27T02:45:00+02:00[Europe/Berlin]"}
+    ${"Europe/Berlin"}   | ${"2024-10-26T02:45:00+02:00[Europe/Berlin]"}   | ${undefined} | ${"compatible"} | ${"2024-10-27T02:45:00+02:00[Europe/Berlin]"}
+    ${"Europe/Berlin"}   | ${"2024-10-26T02:45:00+02:00[Europe/Berlin]"}   | ${undefined} | ${"earlier"}    | ${"2024-10-27T02:45:00+02:00[Europe/Berlin]"}
+    ${"Europe/Berlin"}   | ${"2024-10-26T02:45:00+02:00[Europe/Berlin]"}   | ${undefined} | ${"later"}      | ${"2024-10-27T02:45:00+02:00[Europe/Berlin]"}
+    ${"Europe/Berlin"}   | ${"2024-10-26T02:45:00+02:00[Europe/Berlin]"}   | ${undefined} | ${"reject"}     | ${"2024-10-27T02:45:00+02:00[Europe/Berlin]"}
+    ${"America/Chicago"} | ${"2024-11-02T01:45:00-05:00[America/Chicago]"} | ${"ignore"}  | ${undefined}    | ${"2024-11-03T01:45:00-05:00[America/Chicago]"}
+    ${"America/Chicago"} | ${"2024-11-02T01:45:00-05:00[America/Chicago]"} | ${"ignore"}  | ${"compatible"} | ${"2024-11-03T01:45:00-05:00[America/Chicago]"}
+    ${"America/Chicago"} | ${"2024-11-02T01:45:00-05:00[America/Chicago]"} | ${"ignore"}  | ${"earlier"}    | ${"2024-11-03T01:45:00-05:00[America/Chicago]"}
+    ${"America/Chicago"} | ${"2024-11-02T01:45:00-05:00[America/Chicago]"} | ${"ignore"}  | ${"later"}      | ${"2024-11-03T01:45:00-06:00[America/Chicago]"}
+    ${"America/Chicago"} | ${"2024-11-02T01:45:00-05:00[America/Chicago]"} | ${"ignore"}  | ${"reject"}     | ${""}
+    ${"Europe/Berlin"}   | ${"2024-10-26T02:45:00+02:00[Europe/Berlin]"}   | ${"ignore"}  | ${undefined}    | ${"2024-10-27T02:45:00+02:00[Europe/Berlin]"}
+    ${"Europe/Berlin"}   | ${"2024-10-26T02:45:00+02:00[Europe/Berlin]"}   | ${"ignore"}  | ${"compatible"} | ${"2024-10-27T02:45:00+02:00[Europe/Berlin]"}
+    ${"Europe/Berlin"}   | ${"2024-10-26T02:45:00+02:00[Europe/Berlin]"}   | ${"ignore"}  | ${"earlier"}    | ${"2024-10-27T02:45:00+02:00[Europe/Berlin]"}
+    ${"Europe/Berlin"}   | ${"2024-10-26T02:45:00+02:00[Europe/Berlin]"}   | ${"ignore"}  | ${"later"}      | ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}
+    ${"Europe/Berlin"}   | ${"2024-10-26T02:45:00+02:00[Europe/Berlin]"}   | ${"ignore"}  | ${"reject"}     | ${""}
   `(
-    "resolves fall-back overlap for $value + day:+1 with disambiguation $disambiguation to $expected",
-    ({ value, disambiguation, expected }) => {
+    "resolves fall-back overlap for $value + day:+1 with offset $offset and disambiguation $disambiguation to $expected",
+    ({ value, offset, disambiguation, expected }) => {
       const optionsArg =
-        disambiguation === undefined ? undefined : { disambiguation };
+        disambiguation === undefined && offset === undefined
+          ? undefined
+          : { disambiguation, offset };
       const day = Number(value.slice(8, 10)) + 1;
       expect(setZoned(value, { day }, optionsArg)).toBe(expected);
     },

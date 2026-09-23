@@ -61,49 +61,27 @@ describe("endOfUnix", () => {
     expect(endOfUnix(1706659200, invalidUnit as never)).toBeNull();
   });
 
-  // `disambiguation` is deprecated and ignored: the source sits in the second, repeated 1:45am,
-  // and every row — "reject" included — returns the real end of that second pass, never before
-  // the source. Verified against `bucketRange` on @js-temporal/polyfill@0.5.1.
-  it.each`
-    disambiguation  | expected
-    ${undefined}    | ${1730617199999}
-    ${"compatible"} | ${1730617199999}
-    ${"earlier"}    | ${1730617199999}
-    ${"later"}      | ${1730617199999}
-    ${"reject"}     | ${1730617199999}
-  `(
-    "returns the real hour end $expected on a fall-back overlap with ignored disambiguation $disambiguation",
-    ({ disambiguation, expected }) => {
-      const optionsArg =
-        disambiguation === undefined
-          ? { timeZone: "America/New_York" }
-          : { timeZone: "America/New_York", disambiguation };
-      expect(endOfUnix(1730616300000, "hour", optionsArg)).toBe(expected);
-    },
-  );
-
-  // `offset` is deprecated and ignored too, alone or combined with `disambiguation: "reject"`.
-  it.each`
-    offset       | expected
-    ${undefined} | ${1730617199999}
-    ${"ignore"}  | ${1730617199999}
-    ${"prefer"}  | ${1730617199999}
-    ${"use"}     | ${1730617199999}
-    ${"reject"}  | ${1730617199999}
-  `(
-    "returns the real hour end $expected with disambiguation reject and ignored offset $offset",
-    ({ offset, expected }) => {
-      const optionsArg =
-        offset === undefined
-          ? { timeZone: "America/New_York", disambiguation: "reject" as const }
-          : {
-              timeZone: "America/New_York",
-              disambiguation: "reject" as const,
-              offset,
-            };
-      expect(endOfUnix(1730616300000, "hour", optionsArg)).toBe(expected);
-    },
-  );
+  // 1730616300000 is the second, repeated 1:45am of New York's 2024-11-03 fall-back.
+  // `disambiguation` and `offset` were removed in 1.16.0: a boundary is always a real instant, as
+  // TC39's `startOfDay()` takes neither. Passing one is a type error and changes nothing at runtime.
+  it("treats the removed disambiguation option as a type error and ignores it at runtime", () => {
+    expect(
+      endOfUnix(1730616300000, "hour", {
+        timeZone: "America/New_York",
+        // @ts-expect-error -- `disambiguation` was removed in 1.16.0
+        disambiguation: "reject",
+      }),
+    ).toBe(1730617199999);
+  });
+  it("treats the removed offset option as a type error and ignores it at runtime", () => {
+    expect(
+      endOfUnix(1730616300000, "hour", {
+        timeZone: "America/New_York",
+        // @ts-expect-error -- `offset` was removed in 1.16.0
+        offset: "reject",
+      }),
+    ).toBe(1730617199999);
+  });
 
   it("returns null when Temporal.Instant.fromEpochMilliseconds throws", () => {
     vi.spyOn(Temporal.Instant, "fromEpochMilliseconds").mockImplementation(
@@ -156,13 +134,12 @@ describe("endOfUnix across zone transitions with default options", () => {
   );
 
   // Goose Bay fell back at 00:01 Sunday into Saturday 23:01, re-opening a Sunday-first week that
-  // ends at the second pass's 23:59:59.999 (-04:00). An explicit `disambiguation` used to end it
-  // on the first pass (1289098799999, -03:00), before the input; it is now ignored. Verified
+  // ends at the second pass's 23:59:59.999 (-04:00). The removed `disambiguation` option used to
+  // end it on the first pass (1289098799999, -03:00), before the input. Verified
   // against the `internal/zonedBucket.ts` walker (weekStartsOn 7) on @js-temporal/polyfill@0.5.1.
   it.each`
-    options                                                                                    | expected
-    ${{ timeZone: "America/Goose_Bay", weekStartsOn: "sunday" }}                               | ${1289102399999}
-    ${{ timeZone: "America/Goose_Bay", weekStartsOn: "sunday", disambiguation: "compatible" }} | ${1289102399999}
+    options                                                      | expected
+    ${{ timeZone: "America/Goose_Bay", weekStartsOn: "sunday" }} | ${1289102399999}
   `(
     "returns $expected for 1289100600000 by week with $options",
     ({ options, expected }) => {
@@ -187,6 +164,67 @@ describe("endOfUnix across zone transitions with default options", () => {
     "returns $expected as the $unit end of the first-day value $value in $timeZone (weekStartsOn $weekStartsOn)",
     ({ value, unit, timeZone, weekStartsOn, expected }) => {
       expect(endOfUnix(value, unit, { timeZone, weekStartsOn })).toBe(expected);
+    },
+  );
+});
+
+describe("endOfUnix invalid-input @example", () => {
+  it('returns null for endOfUnix(NaN, "day")', () => {
+    expect(endOfUnix(NaN, "day")).toBe(null);
+  });
+});
+
+describe("endOfUnix unit names", () => {
+  // 1706780800 is 2024-02-01T09:46:40Z. Temporal §13.17: plural unit names are the singular unit.
+  it.each`
+    value         | unit       | expected
+    ${1706780800} | ${"days"}  | ${1706831999}
+    ${1706780800} | ${"hours"} | ${1706781599}
+  `(
+    "returns $expected for value $value and plural unit $unit",
+    ({ value, unit, expected }) => {
+      expect(
+        endOfUnix(value, unit, { epochUnit: "seconds", timeZone: "UTC" }),
+      ).toBe(expected);
+    },
+  );
+
+  // Quarters have their own functions (startOfQuarterForUnix / endOfQuarterForUnix).
+  it.each`
+    unit
+    ${"quarter"}
+    ${"quarters"}
+  `("returns null for unit $unit", ({ unit }) => {
+    expect(
+      endOfUnix(1706780800, unit, { epochUnit: "seconds", timeZone: "UTC" }),
+    ).toBeNull();
+  });
+});
+
+// weekStartsOn only names "monday" or "sunday"; any other value is invalid input, for every unit
+// (Temporal GetOption rejects a value outside its allowed list; undefined means the default).
+// 1710504000000 is 2024-03-15T12:00:00Z.
+describe("endOfUnix with an invalid weekStartsOn", () => {
+  it.each`
+    unit      | weekStartsOn
+    ${"week"} | ${"tuesday"}
+    ${"week"} | ${"Monday"}
+    ${"week"} | ${""}
+    ${"week"} | ${null}
+    ${"week"} | ${1}
+    ${"week"} | ${true}
+    ${"day"}  | ${"tuesday"}
+    ${"day"}  | ${"Monday"}
+    ${"day"}  | ${""}
+    ${"day"}  | ${null}
+    ${"day"}  | ${1}
+    ${"day"}  | ${true}
+  `(
+    "returns null for unit $unit with invalid weekStartsOn $weekStartsOn",
+    ({ unit, weekStartsOn }) => {
+      expect(
+        endOfUnix(1710504000000, unit, { timeZone: "UTC", weekStartsOn }),
+      ).toBeNull();
     },
   );
 });

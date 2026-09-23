@@ -1,0 +1,36 @@
+---
+/**
+ * The defect table: what GMT works around, and whether it still has to.
+ *
+ * One row per canary group, rendered by `UpstreamDefectRow.astro`. The filings for each row are
+ * joined by `gmtGuard`, so a defect's paper trail follows it without anyone maintaining a second
+ * list. Styles live in `src/styles/gmt-upstream.css` — see its header for why they cannot be a
+ * scoped `<style>` block here.
+ */
+import { compatGroups } from "../data/temporal-compat";
+import { filings } from "../data/upstream-filings";
+import UpstreamDefectRow from "./UpstreamDefectRow.astro";
+
+/** The filings that name any of a group's canary ids, in the order the tracker lists them. */
+const filingsFor = (defects: readonly string[]) =>
+  filings.filter((f) => f.gmtGuard && defects.includes(f.gmtGuard));
+---
+
+<div class="gmt-defects-scroll">
+  <table class="gmt-defects">
+    <thead>
+      <tr>
+        <th class="gmt-defects-what">What GMT works around</th>
+        <th class="gmt-defects-state">Still needed?</th>
+        <th class="gmt-defects-sent">What we sent</th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        compatGroups.map((group) => (
+          <UpstreamDefectRow group={group} filings={filingsFor(group.defects)} />
+        ))
+      }
+    </tbody>
+  </table>
+</div>

@@ -1,21 +1,28 @@
-import { Temporal } from "@js-temporal/polyfill";
-import { durationUntilString } from "../../internal";
+import type { Temporal } from "@js-temporal/polyfill";
+import { durationUntilString, resolveDurationUnit } from "../../internal";
+import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
 import {
-  isValidUnixEpochPair,
-  resolveUnixTimeZone,
-} from "../../internal/resolveUnixTimeZone";
+  resolveUnixEpochUnit,
+  unixEpochToInstant,
+} from "../../internal/unixEpochValue";
 import { isValidDateTimeDurationUnit } from "../../plain/validate";
 import type {
   DateTimeDurationUnit,
   DurationStringOptions,
   RoundingOptions,
 } from "../../types";
+import type { UnixUnit } from "../validate/isValidUnixUnit";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return the difference between two Unix timestamps as an ISO 8601 duration string,
  * bridging to the `duration` namespace (see `parseDuration`, `normalizeDuration`).
  *
- * - Uses Temporal.Instant.until() with `largestUnit` set to `unit`, then `.toString()`.
+ * - Converts both epochs to a `Temporal.ZonedDateTime` in `timeZone` and uses its `until()` with
+ *   `largestUnit` set to `unit`, then `.toString()`. Calendar units (days, weeks, months, years)
+ *   are therefore measured on that zone's wall clock — a 23-hour DST day is `P1D` — while time
+ *   units are exact elapsed time. `Temporal.Instant.until()` is not used: it rejects every
+ *   calendar `largestUnit`.
  * - Unlike `diffUnix`, `unit` is a single unit (not an array) — an ISO duration string
  *   already expresses a full multi-unit breakdown via `largestUnit` alone, so there's no
  *   array-of-units overload here.
@@ -28,56 +35,70 @@ import type {
  * (mirroring `parseDuration`'s options) — kept separate from the `.until()` rounding options
  * above because both option sets have colliding `smallestUnit`/`roundingMode` keys with
  * different Temporal types.
+ * - Each value is a safe integer or a digit string (`"1706659200000"`); anything else is invalid.
+ * - An omitted `timeZone` is UTC; pass `"local"` for the system time zone. An unknown zone is
+ *   invalid.
+ * - Unit names may be singular or plural (`"day"` or `"days"`), as in Temporal.
  *
- * @param value1 first Unix timestamp
- * @param value2 second Unix timestamp
+ * @param value1 first Unix epoch: a safe integer, or a string of optionally negative ASCII digits
+ * @param value2 second Unix epoch, in the same form and unit
  * @param unit DateTimeDurationUnit to use as the duration's largestUnit
- * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA), smallestUnit, roundingIncrement, roundingMode (.until() rounding); toStringSmallestUnit, fractionalSecondDigits, toStringRoundingMode (.toString() precision)
+ * @param options optional: epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds"), timeZone (IANA, or "local" for the system zone; default "UTC"), smallestUnit, roundingIncrement, roundingMode (.until() rounding); toStringSmallestUnit, fractionalSecondDigits, toStringRoundingMode (.toString() precision); a non-object value (such as `null`) is invalid
  * @returns ISO 8601 duration string, or "" on invalid input
  *
  * @example diffUnixAsDuration(1706659200000, 1706745600000, "days") // "P1D"
  * @example diffUnixAsDuration(1706745600000, 1706659200000, "days") // "-P1D"
  * @example diffUnixAsDuration(1706659200, 1706745600, "days", { epochUnit: "seconds" }) // "P1D"
+ * @example diffUnixAsDuration("0", "90000000", "day") // "P1DT1H" (digit strings, singular unit, UTC by default)
  * @example diffUnixAsDuration(NaN, 1706745600000, "days") // ""
  */
 export function diffUnixAsDuration(
-  value1: number,
-  value2: number,
-  unit: DateTimeDurationUnit,
+  value1: number | string,
+  value2: number | string,
+  unit: DateTimeDurationUnit | Temporal.DateTimeUnit,
   options?: {
-    epochUnit?: "seconds" | "milliseconds";
+    epochUnit?: UnixUnit;
     timeZone?: string;
   } & RoundingOptions<Temporal.DateTimeUnit> &
     DurationStringOptions,
 ): string {
-  const epochUnit = options?.epochUnit ?? "milliseconds";
-  const timeZone = resolveUnixTimeZone(options?.timeZone);
-
-  if (!timeZone) return "";
-
-  const validUnit = isValidDateTimeDurationUnit(unit);
-
-  if (!validUnit) {
-    return "";
-  }
-
-  if (!isValidUnixEpochPair(value1, value2)) {
-    return "";
-  }
-
   try {
-    const instant1 = Temporal.Instant.fromEpochMilliseconds(
-      epochUnit === "seconds" ? value1 * 1000 : value1,
-    );
-    const instant2 = Temporal.Instant.fromEpochMilliseconds(
-      epochUnit === "seconds" ? value2 * 1000 : value2,
-    );
+    // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
+    if (!isOptionsArgument(options)) {
+      return "";
+    }
+    const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
+    const timeZone = normalizeTimeZone(options?.timeZone);
 
-    const zdt1 = instant1.toZonedDateTimeISO(timeZone);
-    const zdt2 = instant2.toZonedDateTimeISO(timeZone);
+    if (!timeZone || epochUnit === null) return "";
 
-    return durationUntilString(zdt1, zdt2, unit, options);
+    const largestUnit =
+      typeof unit === "string" ? resolveDurationUnit(unit) : unit;
+
+    if (!isValidDateTimeDurationUnit(largestUnit)) {
+      return "";
+    }
+
+    const instant1 = unixEpochToInstant(value1, epochUnit);
+    const instant2 = unixEpochToInstant(value2, epochUnit);
+
+    if (instant1 === null || instant2 === null) {
+      return "";
+    }
+
+    try {
+      return durationUntilString(
+        instant1.toZonedDateTimeISO(timeZone),
+        instant2.toZonedDateTimeISO(timeZone),
+        largestUnit,
+        options,
+      );
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

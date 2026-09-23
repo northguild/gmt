@@ -76,7 +76,6 @@ describe("fromNanoseconds", () => {
     ${"Not/AZone"}       | ${"unknown identifier"}
     ${"America/Newyork"} | ${"misspelled identifier"}
     ${""}                | ${"empty string"}
-    ${undefined}         | ${"explicitly passed undefined"}
     ${null}              | ${"null"}
     ${123}               | ${"non-string"}
   `(
@@ -85,6 +84,14 @@ describe("fromNanoseconds", () => {
       expect(fromNanoseconds(0n, timeZone as unknown as string)).toBe("");
     },
   );
+
+  // TC39 treats an explicit undefined argument as absent (GetOption, and every optional Temporal
+  // parameter), so `undefined` is the same as omitting the time zone: a UTC instant string.
+  it("returns the UTC string for 1710072000123456789n with an explicit undefined time zone", () => {
+    expect(fromNanoseconds(1710072000123456789n, undefined)).toBe(
+      "2024-03-10T12:00:00.123456789Z",
+    );
+  });
 
   it('returns "" when Temporal.Instant.fromEpochNanoseconds throws', () => {
     mockTemporalInstantFromEpochNanosecondsThrow();

@@ -14,21 +14,27 @@ import { isValidTime } from "../validate";
  * @example minTime([]) // null
  */
 export function minTime(times: string[]): string | null {
-  if (!times.length) return null;
-
-  const valid = times.filter(isValidTime);
-  if (!valid.length) return null;
-
   try {
-    const min = valid.reduce((currentMin, candidateStr) => {
-      const candidate = Temporal.PlainTime.from(candidateStr);
-      return Temporal.PlainTime.compare(candidate, currentMin) < 0
-        ? candidate
-        : currentMin;
-    }, Temporal.PlainTime.from(valid[0]));
+    if (!Array.isArray(times) || !times.length) return null;
 
-    return min.toString();
+    const valid = times.filter(isValidTime);
+    if (!valid.length) return null;
+
+    try {
+      const min = valid.reduce((currentMin, candidateStr) => {
+        const candidate = Temporal.PlainTime.from(candidateStr);
+        return Temporal.PlainTime.compare(candidate, currentMin) < 0
+          ? candidate
+          : currentMin;
+      }, Temporal.PlainTime.from(valid[0]));
+
+      return min.toString();
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

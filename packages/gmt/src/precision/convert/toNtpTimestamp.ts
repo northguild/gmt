@@ -22,7 +22,8 @@ import {
  *   round trip through `fromNtpTimestamp` is exact for any nanosecond-precision instant.
  * - Returns `0n` on invalid input. `0n` is also the NTP epoch itself (1900-01-01, era 0) and
  *   every era boundary after it — validate the string first with `isValidInstant` when the two
- *   must be told apart.
+ *   must be told apart. RFC 5905 §6 also makes a zero timestamp "a special case representing
+ *   unknown or unsynchronized time", so the sentinel reads as unsynchronized to an NTP peer.
  *
  * @param isoString ISO 8601 instant string (e.g. "2024-03-10T12:00:00Z")
  * @returns 64-bit NTP timestamp as a bigint, or 0n on invalid input

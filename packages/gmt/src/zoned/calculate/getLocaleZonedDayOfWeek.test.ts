@@ -173,4 +173,36 @@ describe("getLocaleZonedDayOfWeek", () => {
       ),
     ).toBeNull();
   });
+
+  // A well-formed tag with no locale data is not invalid input: ECMA-402 `ResolveLocale` falls
+  // back instead of throwing, so the sentinel would be wrong here. Only a malformed tag such as
+  // "not-a-locale-!!" is invalid. The expected value comes from the runtime's own week data.
+  it("falls back for a well-formed tag with no locale data instead of returning the sentinel", () => {
+    const { firstDay } = runtimeWeekInfo("not-a-locale");
+    const date = Temporal.PlainDate.from("2024-02-29");
+    const offset = (date.dayOfWeek - firstDay + 7) % 7;
+    expect(
+      getLocaleZonedDayOfWeek("2024-02-29T12:00:00+00:00[UTC]", "not-a-locale"),
+    ).toBe(offset);
+  });
+
+  // ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale
+  // data is read (en-US weeks start on Sunday, fr-FR on Monday, ar-EG weekends are Friday and
+  // Saturday: Intl.Locale#getWeekInfo), and a malformed tag anywhere in the list is invalid input.
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.enUS, MustTestLocales.frFR]} | ${3}
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${2}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${null}
+  `(
+    "returns $expected for Wednesday 2024-05-15T12:00 Berlin with locale list $locale",
+    ({ locale, expected }) => {
+      expect(
+        getLocaleZonedDayOfWeek(
+          "2024-05-15T12:00:00+02:00[Europe/Berlin]",
+          locale,
+        ),
+      ).toBe(expected);
+    },
+  );
 });

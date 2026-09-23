@@ -163,11 +163,46 @@
 
 ---
 
+## Q5. CLDR calendar aliases: `gregorian` is rejected, `ethiopic-amete-alem` is accepted
+
+**Question.** CLDR `bcp47/calendar.xml` gives four calendar types a legacy `alias`: `gregory`/`gregorian`,
+`roc`/`taiwan`, `islamic-tbla`/`islamic-tabular`, `ethioaa`/`ethiopic-amete-alem`. GMT accepts only one of
+the four aliases. Is that a GMT defect?
+
+**No — it is exactly what both engines do.** Probed 2026-09-20 against Chromium 153 (ICU4X native Temporal)
+and `@js-temporal/polyfill` 0.5.1. `Temporal.PlainDate.from("2024-10-03").withCalendar(id)`:
+
+| `id` | Chromium 153 | polyfill 0.5.1 | GMT `convertDateToCalendar` | Chromium `Intl` `resolvedOptions().calendar` |
+| --- | --- | --- | --- | --- |
+| `gregorian` | `RangeError` | `RangeError` | `""` | `RangeError` |
+| `gregory` | `[u-ca=gregory]` | `[u-ca=gregory]` | `[u-ca=gregory]` | `gregory` |
+| `ethiopic-amete-alem` | `[u-ca=ethioaa]` | `[u-ca=ethioaa]` | `[u-ca=ethioaa]` | `ethioaa` |
+| `islamic-tabular` | `RangeError` | `RangeError` | `""` | `gregory` |
+| `islamic-tbla` | `[u-ca=islamic-tbla]` | `[u-ca=islamic-tbla]` | `[u-ca=islamic-tbla]` | `islamic-tbla` |
+| `taiwan` | `RangeError` | `RangeError` | `""` | `gregory` |
+| `roc` | `[u-ca=roc]` | `[u-ca=roc]` | `[u-ca=roc]` | `roc` |
+
+**Two mechanisms, not one.** `gregorian` is nine letters, and a Unicode locale-extension `type` subtag is
+3–8 alphanumerics (UTS 35), so it fails the syntax check before any calendar lookup — which is why `Intl`
+throws for it and not for the other two. `islamic-tabular` and `taiwan` are syntactically valid but are not
+in ECMA-402's `AvailableCanonicalCalendars`, which is ICU's list: ICU canonicalizes `ethiopic-amete-alem` to
+`ethioaa` and does not canonicalize those two. Temporal's `CanonicalizeCalendar` therefore throws, while
+`Intl.DateTimeFormat`'s option path silently falls back to `gregory`.
+
+**Decision (owner, 2026-09-20).** Keep both behaviours. GMT's accepted calendar ids are exactly Temporal's:
+widening them would let a string GMT validated throw the moment it reached the `Temporal` GMT re-exports, and
+the `Intl` fallback — `{ calendar: "taiwan" }` quietly formatting as Gregorian — is a wrong date rather than
+an error. GMT surfaces both as its `""`/`null` sentinel. Recorded as section G of
+[js-temporal-polyfill-bugs.md](../js-temporal-polyfill-bugs.md); no upstream ask.
+
+---
+
 ## Owner decisions (2026-09-14)
 
-1. **Q1: adopt the standard form,** an ISO date plus `[u-ca=<id>]`. It is a breaking change to every shipped calendar string, so it ships as its own major-version story, not in CORE-6.
-2. **Q2: emit the proposal era codes** (`ce`, `bce`, `meiji` from 1873 at year 6, …). `japanese` stays accepted as a deprecated input alias until the next major.
+1. **Q1: adopt the standard form,** an ISO date plus `[u-ca=<id>]`. It is a breaking change to every shipped calendar string, so it ships as its own story, not in CORE-6. (Delivered with CORE-8 in 1.16.0 after the owner ruled out a major release on 2026-09-17.)
+2. **Q2: emit the proposal era codes** (`ce`, `bce`, `meiji` from 1873 at year 6, …). (Superseded 2026-09-17: 1.16.0 removed `;era=` from the grammar, and the `japanese` alias with it.)
 3. **Q4: the standard wins over the future-proofing rule.** GMT implements the published Hebrew and Indian arithmetic rules in its compat layer. They stay dormant unless the runtime is wrong, and are removed once Node's ICU and the polyfill are fixed.
+4. **Q5 (2026-09-20): keep the CLDR alias asymmetry.** `gregorian`, `islamic-tabular` and `taiwan` stay rejected; `ethiopic-amete-alem` stays accepted. GMT's accepted calendar ids are Temporal's, whatever CLDR lists as an alias.
 
 ## Owner decisions that were required
 
@@ -184,5 +219,8 @@
 - RFC 3339 §1, §5.6: https://www.rfc-editor.org/rfc/rfc3339
 - RFC 9557 §3.3, §4.1, §5: https://www.rfc-editor.org/rfc/rfc9557
 - CLDR `supplementalData.xml` `<calendarData>`: https://github.com/unicode-org/cldr/blob/main/common/supplemental/supplementalData.xml
+- CLDR `bcp47/calendar.xml` (the `alias` attribute on each calendar type): https://github.com/unicode-org/cldr/blob/main/common/bcp47/calendar.xml
+- UTS 35 §3.2 `unicode_locale_extensions` (a `type` subtag is 3–8 alphanumerics): https://unicode.org/reports/tr35/#Unicode_locale_identifier
+- ECMA-402 `AvailableCanonicalCalendars`, `CanonicalizeCalendar`: https://tc39.es/ecma402/
 - test262 `intl402/Temporal/PlainDate/from/{extreme-dates,japanese-pre-meiji,non-positive-single-era-year}.js` and `prototype/add/proleptic-buddhist.js`: https://github.com/tc39/test262/tree/main/test/intl402/Temporal/PlainDate
 - Related: [CORE-6 calendar correctness spec](../specs/CORE-6-calendar-correctness-spec.md), [range-edge correctness audit](./range-edge-correctness-audit.md)

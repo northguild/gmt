@@ -1,7 +1,9 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
 import {
   calendarOfAllDateValues,
   formatDateInCalendar,
+  halfOpenXor,
   parseCalendarDateValue,
 } from "../../internal";
 import { isValidCalendarDate } from "../validate";
@@ -9,15 +11,15 @@ import { isValidCalendarDate } from "../validate";
 /**
  * Return the symmetric difference of two date intervals — time covered by exactly one interval.
  *
- * - Uses `Temporal.PlainDate.compare` for comparison.
- * - Endpoints are inclusive, so a returned piece ends one day before, or starts
- *   one day after, the interval it borders.
- * - Returns `[]` when intervals are identical or both invalid.
- * - Returns `[{ start, end }]` when one interval fully contains the other.
- * - Returns `[{ start, end }, { start, end }]` when intervals partially overlap (two non-overlapping pieces).
+ * - Half-open: an interval holds every `t` with `start <= t < end`. The result is every maximal
+ *   run covered by exactly one of the two intervals, sorted by start — the same set as
+ *   CORE-6's `mergeIntervals([...subtractIntervals(a, [b]), ...subtractIntervals(b, [a])])`.
+ * - Pieces end exactly where the other interval starts; no piece is stepped by one day.
+ * - Touching intervals (`aEnd === bStart`) share nothing, so they return one combined run.
+ * - Returns `[]` when the intervals are identical. An empty interval contributes nothing.
  * - Returns `[]` if either interval is invalid (`start > end`).
  * - Returns `[]` on invalid input (wrong type, malformed strings).
- * - Accepts GMT calendar-annotated PlainDate strings — E5 (issue #78). Since the result is
+ * - Accepts RFC 9557 calendar-annotated PlainDate strings — E5 (issue #78). Since the result is
  *   date *values*, all four arguments must carry the *same* calendar tag (or all be bare ISO);
  *   a mismatch returns `[]` (E5 decision of record D4). Each output piece's tag is re-derived,
  *   never copied from an input.
@@ -28,11 +30,10 @@ import { isValidCalendarDate } from "../validate";
  * @param bEnd ISO 8601 date string for the second interval end, optionally calendar-annotated
  * @returns array of `{ start, end }` records representing the symmetric difference, or `[]` on invalid input / mismatched calendars
  *
- * @example intervalXorDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31") // [{ start: "2024-01-01", end: "2024-03-31" }, { start: "2024-07-01", end: "2024-12-31" }]
- * @example intervalXorDate("2024-01-01", "2024-12-31", "2024-04-01", "2024-06-30") // [{ start: "2024-01-01", end: "2024-03-31" }, { start: "2024-07-01", end: "2024-12-31" }]
+ * @example intervalXorDate("2024-01-01", "2024-06-30", "2024-04-01", "2024-12-31") // [{ start: "2024-01-01", end: "2024-04-01" }, { start: "2024-06-30", end: "2024-12-31" }]
+ * @example intervalXorDate("2024-01-01", "2024-06-30", "2024-06-30", "2024-12-31") // [{ start: "2024-01-01", end: "2024-12-31" }] (touching)
  * @example intervalXorDate("2024-01-01", "2024-12-31", "2024-01-01", "2024-12-31") // []
- * @example intervalXorDate("2024-01-01", "2024-06-30", "2024-07-01", "2024-12-31") // [{ start: "2024-01-01", end: "2024-06-30" }, { start: "2024-07-01", end: "2024-12-31" }]
- * @example intervalXorDate("invalid", "2024-06-30", "2024-07-01", "2024-12-31") // []
+ * @example intervalXorDate("invalid", "2024-06-30", "2024-04-01", "2024-12-31") // []
  */
 export function intervalXorDate(
   aStart: string,
@@ -77,58 +78,16 @@ export function intervalXorDate(
       return [];
     }
 
-    const result: Array<{ start: string; end: string }> = [];
-
-    // If intervals don't overlap, return both as-is
-    if (
-      Temporal.PlainDate.compare(aE, bS) < 0 ||
-      Temporal.PlainDate.compare(bE, aS) < 0
-    ) {
-      return [
-        {
-          start: formatDateInCalendar(aS, calendar),
-          end: formatDateInCalendar(aE, calendar),
-        },
-        {
-          start: formatDateInCalendar(bS, calendar),
-          end: formatDateInCalendar(bE, calendar),
-        },
-      ];
-    }
-
-    // Left piece: A before B starts
-    if (Temporal.PlainDate.compare(aS, bS) < 0) {
-      result.push({
-        start: formatDateInCalendar(aS, calendar),
-        end: formatDateInCalendar(bS.subtract({ days: 1 }), calendar),
-      });
-    }
-
-    // Right piece: A after B ends
-    if (Temporal.PlainDate.compare(aE, bE) > 0) {
-      result.push({
-        start: formatDateInCalendar(bE.add({ days: 1 }), calendar),
-        end: formatDateInCalendar(aE, calendar),
-      });
-    }
-
-    // Left piece: B before A starts
-    if (Temporal.PlainDate.compare(bS, aS) < 0) {
-      result.push({
-        start: formatDateInCalendar(bS, calendar),
-        end: formatDateInCalendar(aS.subtract({ days: 1 }), calendar),
-      });
-    }
-
-    // Right piece: B after A ends
-    if (Temporal.PlainDate.compare(bE, aE) > 0) {
-      result.push({
-        start: formatDateInCalendar(aE.add({ days: 1 }), calendar),
-        end: formatDateInCalendar(bE, calendar),
-      });
-    }
-
-    return result;
+    return halfOpenXor(
+      [
+        { start: aS, end: aE },
+        { start: bS, end: bE },
+      ],
+      Temporal.PlainDate.compare,
+    ).map(({ start, end }) => ({
+      start: formatDateInCalendar(start, calendar),
+      end: formatDateInCalendar(end, calendar),
+    }));
   } catch {
     return [];
   }

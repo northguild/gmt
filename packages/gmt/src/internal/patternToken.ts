@@ -1,3 +1,4 @@
+import { type LocalesArgument, resolveLocale } from "./resolveLocale";
 import { getLocaleEraNames } from "../plain/locale/getLocaleEraNames";
 import { getLocaleMeridiems } from "../plain/locale/getLocaleMeridiems";
 import { getLocaleMonthNames } from "../plain/locale/getLocaleMonthNames";
@@ -493,19 +494,25 @@ function resolvePatternFields(
 export function parseValueWithPattern(
   value: string,
   pattern: string,
-  locale: string | undefined,
+  locale: LocalesArgument | undefined,
   allowedFields: ReadonlySet<PatternField>,
 ): ParsedPatternFields | null {
   if (typeof value !== "string" || value.length === 0) return null;
   if (typeof pattern !== "string" || pattern.length === 0) return null;
-  if (locale !== undefined && typeof locale !== "string") return null;
 
   // No `locale` is required to parse a pattern containing only numeric
   // tokens, but a name-based token (MMM/MMMM/EEE/EEEE/a/GG/GGGG) needs
   // *some* locale to resolve against — default to "en-US" rather than
   // silently returning "" for every caller who didn't have another
-  // locale in mind.
-  const resolvedLocale = typeof locale === "string" ? locale : "en-US";
+  // locale in mind. An empty preference list names no locale either, so
+  // it takes that same default: ECMA-402 ResolveLocale would answer `[]`
+  // with the *host* locale, which would make a decoder of a fixed
+  // producer format read differently on a French machine (house rule,
+  // ./resolveLocale.ts).
+  const omitted =
+    locale === undefined || (Array.isArray(locale) && locale.length === 0);
+  const resolvedLocale = omitted ? "en-US" : resolveLocale(locale);
+  if (resolvedLocale === null) return null;
 
   const compiled = compilePattern(pattern, allowedFields, resolvedLocale);
   if (compiled === null) return null;

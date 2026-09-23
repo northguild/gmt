@@ -3,7 +3,7 @@ import {
   battleTestLeapYearUnixSeconds,
   MustTestDstTimeZones,
 } from "../../test";
-import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
+import { mockTemporalInstantFromEpochMillisecondsThrow } from "../../test/mocks";
 import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
 import { parseDateFromUnix } from "./parseDateFromUnix";
 
@@ -74,7 +74,7 @@ describe("parseDateFromUnix", () => {
     ${1710685800}    | ${"seconds"}      | ${"2024-03-17"}
     ${1710685800000} | ${"milliseconds"} | ${"2024-03-17"}
   `(
-    "returns $expected for $value with epochUnit $epochUnit",
+    "returns $expected for $value in milliseconds and seconds",
     ({ value, epochUnit, expected }) => {
       expect(parseDateFromUnix(value, { epochUnit: epochUnit as never })).toBe(
         expected,
@@ -99,8 +99,14 @@ describe("parseDateFromUnix", () => {
   );
 
   it("returns empty string on failure", () => {
-    mockTemporalZonedDateTimeFromThrow();
+    mockTemporalInstantFromEpochMillisecondsThrow();
     const result = parseDateFromUnix(battleTestLeapYearUnix);
     expect(result).toBe("");
+  });
+});
+
+describe("parseDateFromUnix invalid-input @example", () => {
+  it('returns "" for parseDateFromUnix(1.5)', () => {
+    expect(parseDateFromUnix(1.5)).toBe("");
   });
 });

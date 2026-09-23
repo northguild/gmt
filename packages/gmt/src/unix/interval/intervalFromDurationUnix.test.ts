@@ -155,11 +155,15 @@ describe("intervalFromDurationUnix", () => {
     ).toBeNull();
   });
 
-  it("returns null when the system timeZone is unavailable", () => {
+  it("returns null for timeZone local when the system timeZone is unavailable", () => {
     cleanup();
     cleanup = mockSystemTimeZone("");
 
-    expect(intervalFromDurationUnix(1704067200000, "P1D", "start")).toBeNull();
+    expect(
+      intervalFromDurationUnix(1704067200000, "P1D", "start", {
+        timeZone: "local",
+      }),
+    ).toBeNull();
   });
 
   it("returns null when Temporal.Instant.fromEpochMilliseconds throws", () => {
@@ -188,4 +192,24 @@ describe("intervalFromDurationUnix at the maximum instant", () => {
       ).toEqual(expected);
     },
   );
+});
+
+describe("intervalFromDurationUnix with an unrecognised epochUnit", () => {
+  // isValidUnixUnit defines the domain ("seconds" | "milliseconds", singular or plural): any other value is invalid
+  // input and returns the sentinel, never a silent read as milliseconds.
+  it.each`
+    epochUnit
+    ${"nanoseconds"}
+    ${"SECONDS"}
+    ${"ms"}
+    ${""}
+    ${1000}
+  `("returns null for epochUnit $epochUnit", ({ epochUnit }) => {
+    expect(
+      intervalFromDurationUnix(1_706_659_200, "P1D", "start", {
+        epochUnit: epochUnit as never,
+        timeZone: "UTC",
+      }),
+    ).toBe(null);
+  });
 });

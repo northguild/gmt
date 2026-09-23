@@ -34,24 +34,28 @@ describe("startOfQuarterForUnix", () => {
     expect(startOfQuarterForUnix(invalidValue as never)).toBeNull();
   });
 
-  // The deprecated `disambiguation`/`offset` are accepted and ignored: an ordinary quarter start
-  // is unchanged by any value, "reject" included.
-  it.each`
-    disambiguation  | offset
-    ${"compatible"} | ${undefined}
-    ${"reject"}     | ${undefined}
-    ${"reject"}     | ${"prefer"}
-  `(
-    "accepts disambiguation $disambiguation and offset $offset without changing output for a non-transition quarter start",
-    ({ disambiguation, offset }) => {
-      const base = { epochUnit: "seconds" as const, timeZone: "UTC" };
-      const optionsArg =
-        offset === undefined
-          ? { ...base, disambiguation }
-          : { ...base, disambiguation, offset };
-      expect(startOfQuarterForUnix(1706659200, optionsArg)).toBe(1704067200);
-    },
-  );
+  // `disambiguation` and `offset` were removed in 1.16.0: a boundary is always a real instant, as
+  // TC39's `startOfDay()` takes neither. Passing one is a type error and changes nothing at runtime.
+  it("treats the removed disambiguation option as a type error and ignores it at runtime", () => {
+    expect(
+      startOfQuarterForUnix(1706659200, {
+        epochUnit: "seconds",
+        timeZone: "UTC",
+        // @ts-expect-error -- `disambiguation` was removed in 1.16.0
+        disambiguation: "reject",
+      }),
+    ).toBe(1704067200);
+  });
+  it("treats the removed offset option as a type error and ignores it at runtime", () => {
+    expect(
+      startOfQuarterForUnix(1706659200, {
+        epochUnit: "seconds",
+        timeZone: "UTC",
+        // @ts-expect-error -- `offset` was removed in 1.16.0
+        offset: "prefer",
+      }),
+    ).toBe(1704067200);
+  });
 
   it("returns null when Temporal.Instant.fromEpochMilliseconds throws", () => {
     vi.spyOn(Temporal.Instant, "fromEpochMilliseconds").mockImplementation(
@@ -81,13 +85,13 @@ describe("startOfQuarterForUnix with default options", () => {
   );
 });
 
-// Explicit (ignored) options still reset the milliseconds.
+// Explicit options still reset the milliseconds.
 // 1715776496789 is 2024-05-15T12:34:56.789Z; 1711929600000 is 2024-04-01T00:00:00Z
 describe("startOfQuarterForUnix sub-second reset with explicit options", () => {
   it.each`
-    value            | options                                              | expected
-    ${1715776496789} | ${{ timeZone: "UTC", disambiguation: "compatible" }} | ${1711929600000}
-    ${1715776496789} | ${{ timeZone: "UTC", offset: "prefer" }}             | ${1711929600000}
+    value            | options                                          | expected
+    ${1715776496789} | ${{ timeZone: "UTC" }}                           | ${1711929600000}
+    ${1715776496789} | ${{ timeZone: "UTC", epochUnit: "millisecond" }} | ${1711929600000}
   `(
     "returns $expected for $value with $options",
     ({ value, options, expected }) => {
@@ -97,16 +101,14 @@ describe("startOfQuarterForUnix sub-second reset with explicit options", () => {
 });
 
 // Tunis repeated Q4's first local hour on 1978-10-01. The quarter starts at its first real
-// instant whatever the deprecated `disambiguation`/`offset` say — "later" used to return the
+// instant — the removed `disambiguation: "later"` used to return the
 // second pass (276044400000, 1978-10-01T00:00:00+01:00). Verified on @js-temporal/polyfill@0.5.1.
 // 276046200000 is 1978-10-01T00:30:00+01:00[Africa/Tunis]
 // 276040800000 is 1978-10-01T00:00:00+02:00[Africa/Tunis]
 describe("startOfQuarterForUnix at a zone transition", () => {
   it.each`
-    options                                                                     | expected
-    ${{ timeZone: "Africa/Tunis" }}                                             | ${276040800000}
-    ${{ timeZone: "Africa/Tunis", disambiguation: "later" }}                    | ${276040800000}
-    ${{ timeZone: "Africa/Tunis", disambiguation: "reject", offset: "reject" }} | ${276040800000}
+    options                         | expected
+    ${{ timeZone: "Africa/Tunis" }} | ${276040800000}
   `(
     "returns $expected for 276046200000 with $options",
     ({ options, expected }) => {
@@ -128,4 +130,10 @@ describe("startOfQuarterForUnix at a zone transition", () => {
       );
     },
   );
+});
+
+describe("startOfQuarterForUnix invalid-input @example", () => {
+  it("returns null for startOfQuarterForUnix(NaN)", () => {
+    expect(startOfQuarterForUnix(NaN)).toBe(null);
+  });
 });

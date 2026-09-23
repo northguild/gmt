@@ -1,3 +1,5 @@
+// Re-export the Temporal polyfill (`Temporal`, `Intl`, `toTemporalInstant`) so every namespace subpath offers it
+export * from "@js-temporal/polyfill";
 export * from "./calendar-date";
 export * from "./calendar-zoned-date-time";
 export * from "./date";

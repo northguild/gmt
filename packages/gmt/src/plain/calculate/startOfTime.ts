@@ -1,11 +1,21 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
 import { defaultFractionalDigits } from "../../internal";
+import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import type { FractionalDigit } from "../../types";
 import { isValidTime } from "../validate";
+import { isOptionsArgument } from "../../internal/isObject";
 
-type StartOfTimeUnit = Temporal.TimeUnit | "day";
+/**
+ * Units `startOfTime` accepts: a Temporal time unit, or `"day"` for midnight, each singular or plural.
+ *
+ * @example
+ * import { StartOfTimeUnit } from "@northguild/gmt/plain";
+ * const unit: StartOfTimeUnit = "hours";
+ */
+export type StartOfTimeUnit = Temporal.SmallestUnit<Temporal.TimeUnit | "day">;
 
-const supported: StartOfTimeUnit[] = [
+const supported: readonly string[] = [
   "day",
   "hour",
   "minute",
@@ -18,7 +28,12 @@ const supported: StartOfTimeUnit[] = [
 /**
  * Return the start of the specified time `unit` for a given ISO 8601 time string.
  *
+ * - The start keeps every field larger than `unit` and zeroes every smaller one, down to the
+ *   nanosecond: `"millisecond"` keeps the milliseconds, `"day"` is midnight.
+ * - `unit` accepts the singular or plural name (`"hour"` or `"hours"`), as Temporal does.
  * - Returns "" for invalid inputs.
+ * - **Compatibility:** before 1.16.0 the sub-second units zeroed their own field (`"millisecond"`
+ *   on `12:34:56.999` gave `12:34:56.000`), and `"day"`/`"hour"`/`"minute"` kept the fraction.
  *
  * @param value ISO 8601 time string
  * @param unit StartOfTimeUnit to specify the unit for the start
@@ -26,6 +41,8 @@ const supported: StartOfTimeUnit[] = [
  * @returns ISO 8601 string representing the start of the specified unit, or "" on invalid input
  *
  * @example startOfTime("12:34:56", "hour") // "12:00:00"
+ * @example startOfTime("12:34:56.999", "millisecond") // "12:34:56.999"
+ * @example startOfTime("12:34:56.123456789", "minutes", { fractionalSecondDigits: 9 }) // "12:34:00.000000000"
  * @example startOfTime("invalid", "hour") // ""
  */
 export function startOfTime(
@@ -33,46 +50,38 @@ export function startOfTime(
   unit: StartOfTimeUnit,
   optionsArg?: { fractionalSecondDigits?: FractionalDigit },
 ): string {
-  const fractionalSecondDigits = optionsArg?.fractionalSecondDigits;
-  if (!isValidTime(value) || !supported.includes(unit)) return "";
-
   try {
-    const source = Temporal.PlainTime.from(value);
-    let result: Temporal.PlainTime;
-
-    switch (unit) {
-      case "day":
-        result = source.with({ hour: 0, minute: 0, second: 0 });
-        break;
-      case "hour":
-        result = source.with({ minute: 0, second: 0 });
-        break;
-      case "minute":
-        result = source.with({ second: 0 });
-        break;
-      case "second":
-        result = source.with({ millisecond: 0, microsecond: 0, nanosecond: 0 });
-        break;
-      case "millisecond":
-        result = source.with({ millisecond: 0, microsecond: 0, nanosecond: 0 });
-        break;
-      case "microsecond":
-        result = source.with({ microsecond: 0, nanosecond: 0 });
-        break;
-      case "nanosecond":
-        result = source.with({ nanosecond: 0 });
-        break;
-      default:
-        return "";
+    if (!isOptionsArgument(optionsArg)) {
+      return "";
     }
 
-    const fractionalDigits = defaultFractionalDigits(
-      unit,
-      fractionalSecondDigits,
-    );
+    const fractionalSecondDigits = optionsArg?.fractionalSecondDigits;
+    const resolvedUnit = resolveDateTimeUnit(unit);
 
-    return result.toString({ fractionalSecondDigits: fractionalDigits });
+    if (!isValidTime(value) || !supported.includes(resolvedUnit)) return "";
+
+    try {
+      const source = Temporal.PlainTime.from(value);
+      const result =
+        resolvedUnit === "day"
+          ? new Temporal.PlainTime()
+          : source.round({
+              smallestUnit: resolvedUnit as Temporal.TimeUnit,
+              roundingMode: "floor",
+            });
+
+      const fractionalDigits = defaultFractionalDigits(
+        resolvedUnit,
+        fractionalSecondDigits,
+      );
+
+      return result.toString({ fractionalSecondDigits: fractionalDigits });
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

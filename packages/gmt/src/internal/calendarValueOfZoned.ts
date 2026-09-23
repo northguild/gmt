@@ -1,46 +1,47 @@
-import { calendarZonedDateTime } from "../regex";
 import type { CalendarSystem } from "../types";
-import { isCalendarSystem } from "./calendarSystemIds";
+import { canonicalCalendarSystem } from "./calendarSystemIds";
 import { hasCalendarAnnotation } from "./hasCalendarAnnotation";
+import { zonedDateTimeFrom } from "./zonedWallClock";
 
 /**
- * Determine which CalendarSystem a GMT ZonedDateTime string is expressed in: `"gregorian"` for a
- * bare (non-annotated) ISO zoned string, the tagged CalendarSystem for a GMT calendar-annotated
- * zoned string (as produced by `convertZonedToCalendar`), or `null` when the annotation names an
- * unrecognized calendar identifier.
+ * Determine which CalendarSystem a GMT ZonedDateTime string is expressed in: `"iso8601"` for a
+ * string with no `u-ca` annotation, the canonical id of the calendar Temporal reads from the
+ * annotations otherwise (as `convertZonedToCalendar` writes them; in `[u-ca=hebrew][u-ca=roc]` the
+ * first annotation wins), or `null` when the string does not parse or GMT does not support that
+ * calendar.
  *
- * Kept as its own file rather than an overload of `calendarValueOfDate.ts` because the two differ
- * on both axes that matter: the regex (zoned carries a time, an offset and a `[timeZone]`
- * segment) and the non-matching fallback. `calendarSystemOfDateValue` reports `"gregorian"` for
- * ANY non-match, which is safe there because `plain/`'s only annotated shape is the one its regex
- * accepts. In `zoned/` a non-matching string may still carry `[u-ca=...]` — Temporal's own
- * RFC 9557 ordering, or a wrong-ordered GMT string — and calling either of those `"gregorian"`
- * would hand a caller a Gregorian answer for a string that visibly asked for something else. Those
- * fail closed with `null` instead.
+ * Kept as its own file rather than an overload of `calendarValueOfDate.ts` because the parse
+ * differs: a zoned string goes to `zonedDateTimeFrom`. The offset is ignored for this read (the
+ * calendar does not depend on it), so a caller's own `offset` option still decides whether the
+ * value itself is accepted.
  *
- * Does not itself validate overall shape or field values — pair with `parseCalendarZonedValue`
- * (which throws on invalid input) for full validation. Callers are expected to have already
- * confirmed `value` is valid (e.g. via `isValidCalendarZonedDateTime`) before relying on this.
+ * Does not itself validate the value — pair with `parseCalendarZonedValue` (which throws on
+ * invalid input) for full validation. Callers are expected to have already confirmed `value` is
+ * valid (e.g. via `isValidCalendarZonedDateTime`) before relying on this.
  *
  * Part of E7 (issue #152)'s calendar-aware `zoned/` gate.
  */
 export function calendarSystemOfZonedValue(
   value: string,
 ): CalendarSystem | null {
-  const match = calendarZonedDateTime.exec(value);
-  if (!match) {
-    return hasCalendarAnnotation(value) ? null : "gregorian";
+  if (!hasCalendarAnnotation(value)) {
+    return "iso8601";
   }
-  const [, , , , , , calendarId] = match;
-  return isCalendarSystem(calendarId) ? calendarId : null;
+  try {
+    return canonicalCalendarSystem(
+      zonedDateTimeFrom(value, { offset: "ignore" }).calendarId,
+    );
+  } catch {
+    return null;
+  }
 }
 
 /**
  * N-ary generalization of `calendarSystemOfZonedValue` for list-form functions
  * (`mergeIntervalsZoned`, `intervalXorAllZoned`, `intervalSplitAtZoned`'s `points`, and the
  * four-endpoint pairwise set operations): returns the shared CalendarSystem when every value
- * carries the same tag, or `null` on any mismatch or unrecognized identifier. An empty list is
- * treated as `"gregorian"` (the identity/no-op case).
+ * names the same calendar, or `null` on any mismatch or unsupported identifier. An empty list is
+ * treated as `"iso8601"` (the identity/no-op case).
  *
  * This is E7's D4-zoned reject gate for the eight value-returning interval set operations. A
  * "winning endpoint's tag survives" policy was considered and rejected: four of the eight return
@@ -53,7 +54,7 @@ export function calendarOfAllZonedValues(
   values: readonly string[],
 ): CalendarSystem | null {
   if (values.length === 0) {
-    return "gregorian";
+    return "iso8601";
   }
   const first = calendarSystemOfZonedValue(values[0]);
   if (!first) {

@@ -18,21 +18,27 @@ export function sortTimes(
   times: string[],
   order: "asc" | "desc" = "asc",
 ): string[] {
-  if (!times.length) return [];
-
-  const valid = times.filter(isValidTime);
-  if (!valid.length) return [];
-
   try {
-    const comparables = valid.map((t) => Temporal.PlainTime.from(t));
-    comparables.sort(Temporal.PlainTime.compare);
+    if (!Array.isArray(times) || !times.length) return [];
 
-    if (order === "desc") {
-      return comparables.reverse().map((t) => t.toString());
+    const valid = times.filter(isValidTime);
+    if (!valid.length) return [];
+
+    try {
+      const comparables = valid.map((t) => Temporal.PlainTime.from(t));
+      comparables.sort(Temporal.PlainTime.compare);
+
+      if (order === "desc") {
+        return comparables.reverse().map((t) => t.toString());
+      }
+
+      return comparables.map((t) => t.toString());
+    } catch {
+      return [];
     }
-
-    return comparables.map((t) => t.toString());
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

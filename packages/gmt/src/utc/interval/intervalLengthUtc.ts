@@ -1,7 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { durationTotal, resolveDateTimeUnit, zonedUntil } from "../../internal";
 import { isValidDateTimeUnit } from "../../plain/validate";
-import { isLeapSecond } from "../../plain/validate/isLeapSecond";
 import { isValidUtcInterval } from "./validate";
 
 /**
@@ -37,10 +36,6 @@ export function intervalLengthUtc(
   const resolvedUnit = resolveDateTimeUnit(unit);
 
   if (!isValidDateTimeUnit(resolvedUnit)) {
-    return null;
-  }
-
-  if (isLeapSecond(start) || isLeapSecond(end)) {
     return null;
   }
 

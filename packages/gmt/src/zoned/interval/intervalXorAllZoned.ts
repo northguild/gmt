@@ -1,8 +1,9 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
 import {
   calendarOfAllZonedValues,
-  closedXorSweep,
   formatZonedInCalendar,
+  halfOpenXor,
   parseCalendarZonedValue,
 } from "../../internal";
 import { isValidCalendarZonedInterval } from "./validate";
@@ -12,19 +13,20 @@ import { isValidCalendarZonedInterval } from "./validate";
  * covered by an odd number of the input intervals.
  *
  * - List-form generalization of `intervalXorZoned`, which is pairwise only.
- * - Implemented as a closed-interval coverage sweep over instants: each interval opens at its
- *   start instant and closes at its end instant, and the result is every maximal run where the
- *   coverage count is odd. No boundary is computed past an end, so an interval may end on the last
- *   representable instant. For two overlapping intervals this reduces to exactly
- *   `intervalXorZoned`'s pairwise result.
- * - Output boundaries carry the time zone of whichever input interval contributed them.
+ * - Intervals are half-open `[start, end)`. The result is every maximal run of instants where the
+ *   coverage count is odd, so touching runs join and an empty interval (`start` and `end` the same
+ *   instant) changes nothing. Every boundary is an input's own `start` or `end`; none is stepped
+ *   by a nanosecond, so an interval may end on the last representable instant. For two intervals
+ *   this is exactly `intervalXorZoned`'s pairwise result.
+ * - Output boundaries carry the time zone of whichever input interval contributed them (the
+ *   earlier one in the list on a tie).
  * - Order of the input list does not matter; the result is sorted by start instant.
  * - Returns `[]` for an empty list, and `[]` when every instant is covered an even number of
  *   times (e.g. two identical intervals cancel out).
  * - Returns `[]` when `intervals` is not an array, when any element is not a
  *   `{ start, end }` record of valid ISO ZonedDateTime strings, or when any element has
  *   `start > end` or a leap-second string.
- * - Accepts GMT calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
+ * - Accepts RFC 9557 calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
  *   well as bare ISO ones — E7 (issue #152) — but **rejects a mismatched set**: every endpoint in
  *   the list must name the same calendar system (E7's D4-zoned). This function returns *values*
  *   the caller reads back as datetimes, and an array whose elements carried different calendar
@@ -35,57 +37,60 @@ import { isValidCalendarZonedInterval } from "./validate";
  * @param intervals array of `{ start, end }` records
  * @returns array of `{ start, end }` records covered an odd number of times, or `[]` on invalid input
  *
- * @example intervalXorAllZoned([{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-10T00:00:00+00:00[UTC]" }, { start: "2024-01-05T00:00:00+00:00[UTC]", end: "2024-01-15T00:00:00+00:00[UTC]" }]) // [{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-04T23:59:59.999999999+00:00[UTC]" }, { start: "2024-01-10T00:00:00.000000001+00:00[UTC]", end: "2024-01-15T00:00:00+00:00[UTC]" }]
+ * @example intervalXorAllZoned([{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-10T00:00:00+00:00[UTC]" }, { start: "2024-01-05T00:00:00+00:00[UTC]", end: "2024-01-15T00:00:00+00:00[UTC]" }]) // [{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-05T00:00:00+00:00[UTC]" }, { start: "2024-01-10T00:00:00+00:00[UTC]", end: "2024-01-15T00:00:00+00:00[UTC]" }]
  * @example intervalXorAllZoned([]) // []
  */
 export function intervalXorAllZoned(
   intervals: Array<{ start: string; end: string }>,
 ): Array<{ start: string; end: string }> {
-  if (!Array.isArray(intervals) || intervals.length === 0) {
-    return [];
-  }
-
-  if (
-    !intervals.every(
-      (interval) =>
-        interval &&
-        typeof interval === "object" &&
-        typeof interval.start === "string" &&
-        typeof interval.end === "string" &&
-        isValidCalendarZonedInterval(interval.start, interval.end),
-    )
-  ) {
-    return [];
-  }
-
-  // D4-zoned reject gate: every endpoint across every interval must agree on a calendar, or there
-  // is no calendar to express the returned boundaries in.
-  const calendar = calendarOfAllZonedValues(
-    intervals.flatMap((interval) => [interval.start, interval.end]),
-  );
-  if (!calendar) {
-    return [];
-  }
-
   try {
-    const parsed = intervals.map((interval) => ({
-      start: parseCalendarZonedValue(interval.start),
-      end: parseCalendarZonedValue(interval.end),
-    }));
+    if (!Array.isArray(intervals) || intervals.length === 0) {
+      return [];
+    }
 
-    // Grouping and ordering use `Temporal.ZonedDateTime.compare`, which compares epoch
-    // nanoseconds only — calendar- and zone-blind, unlike `ZonedDateTime.prototype.equals`. Each
-    // boundary stays the ZonedDateTime of the input that contributed it (nanosecond steps are exact
-    // time and keep its zone), so it is formatted in that interval's zone.
-    return closedXorSweep(parsed, {
-      compare: Temporal.ZonedDateTime.compare,
-      stepUp: (value) => value.add({ nanoseconds: 1 }),
-      stepDown: (value) => value.subtract({ nanoseconds: 1 }),
-    }).map(({ start, end }) => ({
-      start: formatZonedInCalendar(start, calendar),
-      end: formatZonedInCalendar(end, calendar),
-    }));
+    if (
+      !intervals.every(
+        (interval) =>
+          interval &&
+          typeof interval === "object" &&
+          typeof interval.start === "string" &&
+          typeof interval.end === "string" &&
+          isValidCalendarZonedInterval(interval.start, interval.end),
+      )
+    ) {
+      return [];
+    }
+
+    // D4-zoned reject gate: every endpoint across every interval must agree on a calendar, or there
+    // is no calendar to express the returned boundaries in.
+    const calendar = calendarOfAllZonedValues(
+      intervals.flatMap((interval) => [interval.start, interval.end]),
+    );
+    if (!calendar) {
+      return [];
+    }
+
+    try {
+      const parsed = intervals.map((interval) => ({
+        start: parseCalendarZonedValue(interval.start),
+        end: parseCalendarZonedValue(interval.end),
+      }));
+
+      // Ordering and grouping use `Temporal.ZonedDateTime.compare`, which compares epoch nanoseconds
+      // only — calendar- and zone-blind, unlike `ZonedDateTime.prototype.equals`. Each boundary stays
+      // the ZonedDateTime of the input that contributed it, so it is formatted in that input's zone.
+      return halfOpenXor(parsed, Temporal.ZonedDateTime.compare).map(
+        ({ start, end }) => ({
+          start: formatZonedInCalendar(start, calendar),
+          end: formatZonedInCalendar(end, calendar),
+        }),
+      );
+    } catch {
+      return [];
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

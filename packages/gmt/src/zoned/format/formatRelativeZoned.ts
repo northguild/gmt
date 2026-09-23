@@ -1,12 +1,9 @@
 import { Temporal } from "@js-temporal/polyfill";
-import {
-  durationTotal,
-  normalizeDateTime,
-  resolveRelativeRounding,
-  zonedDateTimeFrom,
-} from "../../internal";
+import { durationTotal, zonedDateTimeFrom } from "../../internal";
+import { formatRelativeDuration } from "../../internal/formatRelativeDuration";
 import type { RelativeRoundingMethod, RelativeUnit } from "../../types";
 import { isValidUtc } from "../../utc/validate";
+import { isValidZonedFormatReference } from "../../internal/zonedFormatReference";
 import { isValidZonedDateTime } from "../validate";
 
 export interface FormatRelativeZonedOptions {
@@ -29,103 +26,90 @@ export interface FormatRelativeZonedOptions {
   reference?: string | number;
 }
 
-const AUTO_UNITS: Array<{ unit: RelativeUnit; maxSeconds: number }> = [
-  { unit: "second", maxSeconds: 60 },
-  { unit: "minute", maxSeconds: 3_600 },
-  { unit: "hour", maxSeconds: 86_400 },
-  { unit: "day", maxSeconds: Infinity },
-];
-
 /**
  * Format the relative time between a zoned date-time and a reference instant.
  *
- * - Auto-picks the display unit (second through year) based on the distance, unless
- *   `largestUnit` forces one.
+ * - Auto-picks the display unit based on the distance, unless `largestUnit` forces one: second
+ *   under a minute, minute under an hour, hour under a day, then `formatRelativeDate`'s thresholds —
+ *   day under 7 days, week under 28, month under 365, year beyond — so a 3-year distance reads
+ *   "3 years ago".
+ * - **Compatibility:** before 1.16.0 week, month and year were never auto-picked ("1,096 days ago").
+ *   Pass `largestUnit: "day"` to keep a day count.
  * - `roundingMethod` controls how the distance rounds to the display unit.
+ * - `options` must be an object or omitted: `null` or any other primitive returns `""`, as
+ *   Temporal's GetOptionsObject rejects it.
  *
  * @param value ZonedDateTime ISO string to format
- * @param locale optional: BCP 47 locale tag
+ * @param locale optional: BCP 47 locale tag, or a preference list of tags (ECMA-402)
  * @param options optional: { style, numeric, largestUnit, roundingMethod, reference }
  * @returns the formatted relative-time string, or "" on invalid input
  *
- * @example formatRelativeZoned("2026-03-08T01:00:00-05:00[America/New_York]", "en-US") // "tomorrow"
- * @example formatRelativeZoned(value, "en-US", { roundingMethod: "floor" }) // rounds toward the earlier boundary
+ * @example formatRelativeZoned("2023-12-29T00:00:00+00:00[UTC]", "en-US", { reference: "2024-02-29T00:00:00+00:00[UTC]" }) // "2 months ago"
+ * @example formatRelativeZoned("2026-03-08T01:00:00-05:00[America/New_York]", "en-US", { reference: "2026-03-07T01:00:00-05:00[America/New_York]" }) // "tomorrow"
+ * @example formatRelativeZoned("2026-01-15T00:00:00+00:00[UTC]", "en-US", { reference: "2026-01-15T10:30:00+00:00[UTC]", roundingMethod: "floor" }) // "11 hours ago" (−10.5 hours floors to −11; the default rounds to 10)
  * @example formatRelativeZoned("not-a-date") // ""
+ * @example formatRelativeZoned("2024-02-28T23:30:00+00:00[UTC]", ["fr-FR", "en-US"], { reference: "2024-02-29T00:00:00+00:00[UTC]" }) // "il y a 30 minutes"
+ * @example formatRelativeZoned("2024-03-12T10:00:00-04:00[America/New_York]", "en-US", null as never) // "" (null options)
  */
 export function formatRelativeZoned(
   value: string,
-  locale?: string,
+  locale?: string | string[],
   options: FormatRelativeZonedOptions = {},
 ): string {
-  if (!isValidZonedDateTime(value)) return "";
-
-  // String reference must be a valid ZonedDateTime or UTC ISO string.
-  if (
-    typeof options.reference === "string" &&
-    !isValidZonedDateTime(options.reference) &&
-    !isValidUtc(options.reference)
-  )
-    return "";
-
-  if (
-    typeof options.reference === "number" &&
-    !Number.isFinite(options.reference)
-  )
-    return "";
-
   try {
-    const valueZDT = zonedDateTimeFrom(value);
-    const valueInstant = valueZDT.toInstant();
+    // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
+    // invalid input.
+    if (options === null || typeof options !== "object") return "";
+    if (!isValidZonedDateTime(value)) return "";
 
-    let refZDT: Temporal.ZonedDateTime;
-    if (options.reference == null) {
-      // "now" in value's own zone — keeps the calendar context consistent.
-      refZDT = Temporal.Now.zonedDateTimeISO(valueZDT.timeZoneId);
-    } else if (typeof options.reference === "string") {
-      // UTC string → place into value's zone for a consistent calendar anchor.
-      // ZonedDateTime string → keep its own zone; Temporal handles cross-zone diffs.
-      // isValidUtc covers both `Z` and `z` suffixes (the regex accepts [Zz]).
-      refZDT = isValidUtc(options.reference)
-        ? Temporal.Instant.from(options.reference).toZonedDateTimeISO(
-            valueZDT.timeZoneId,
-          )
-        : zonedDateTimeFrom(options.reference);
-    } else {
-      // Numeric epoch (ms) → place into value's zone.
-      refZDT = Temporal.Instant.fromEpochMilliseconds(
-        options.reference,
-      ).toZonedDateTimeISO(valueZDT.timeZoneId);
-    }
+    if (!isValidZonedFormatReference(options.reference)) return "";
 
-    const diff = valueInstant.since(refZDT.toInstant());
-    const absSeconds = Math.abs(diff.total("second"));
-
-    const unit =
-      options.largestUnit ??
-      AUTO_UNITS.find((t) => absSeconds < t.maxSeconds)?.unit ??
-      "day";
-
-    let amount: number;
     try {
-      amount = resolveRelativeRounding(
-        diff.total(unit),
-        options.roundingMethod,
+      const valueZDT = zonedDateTimeFrom(value);
+      const valueInstant = valueZDT.toInstant();
+
+      const refZDT = resolveZonedReference(
+        options.reference,
+        valueZDT.timeZoneId,
+      );
+
+      const diff = valueInstant.since(refZDT.toInstant());
+      // month/year are calendrical and need a relativeTo anchor
+      return formatRelativeDuration(diff, locale, options, (unit) =>
+        durationTotal(diff, unit, refZDT),
       );
     } catch {
-      // month/year are calendrical and need a relativeTo anchor
-      amount = resolveRelativeRounding(
-        durationTotal(diff, unit, refZDT),
-        options.roundingMethod,
-      );
+      return "";
     }
-
-    return normalizeDateTime(
-      new Intl.RelativeTimeFormat(locale, {
-        numeric: options.numeric ?? "auto",
-        style: options.style ?? "long",
-      }).format(amount, unit),
-    );
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
+}
+
+/**
+ * The reference as a zoned date-time: now or a UTC string or epoch placed into `timeZoneId`, or a
+ * zoned string kept in its own zone. Throws where Temporal throws.
+ */
+function resolveZonedReference(
+  reference: string | number | undefined,
+  timeZoneId: string,
+): Temporal.ZonedDateTime {
+  if (reference === undefined) {
+    // "now" in value's own zone — keeps the calendar context consistent.
+    return Temporal.Now.zonedDateTimeISO(timeZoneId);
+  }
+  if (typeof reference === "string") {
+    // UTC string → place into value's zone for a consistent calendar anchor.
+    // ZonedDateTime string → keep its own zone; Temporal handles cross-zone diffs.
+    // isValidUtc covers both `Z` and `z` suffixes (the regex accepts [Zz]).
+    return isValidUtc(reference)
+      ? Temporal.Instant.from(reference).toZonedDateTimeISO(timeZoneId)
+      : zonedDateTimeFrom(reference);
+  }
+  // Numeric epoch (ms) → place into value's zone.
+  return Temporal.Instant.fromEpochMilliseconds(reference).toZonedDateTimeISO(
+    timeZoneId,
+  );
 }

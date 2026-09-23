@@ -92,4 +92,33 @@ describe("isValidTimeRange", () => {
       ).toBe(false);
     },
   );
+
+  // Each endpoint is read as the single-value validator reads it (RFC 9557 §3.3, Temporal
+  // `ParseISODateTime`): elective and `[u-ca=iso8601]` annotations are ignored, an unknown critical
+  // one is rejected. Native Temporal agrees.
+  it.each`
+    value1               | value2                  | expected
+    ${"12:00[foo=bar]"}  | ${"13:00[u-ca=hebrew]"} | ${true}
+    ${"12:00[!foo=bar]"} | ${"13:00"}              | ${false}
+  `(
+    "reads the annotations of $value1 and $value2 → $expected",
+    ({ value1, value2, expected }) => {
+      expect(isValidTimeRange({ value1, value2 })).toBe(expected);
+    },
+  );
+
+  // Temporal.PlainTime.compare orders to the nanosecond, so a sub-millisecond difference is an order.
+  it.each`
+    value1                  | value2                  | allowEqual | expected
+    ${"12:00:00.000001"}    | ${"12:00:00.000002"}    | ${false}   | ${true}
+    ${"12:00:00.000002"}    | ${"12:00:00.000001"}    | ${true}    | ${false}
+    ${"12:00:00.000000001"} | ${"12:00:00.000000001"} | ${true}    | ${true}
+  `(
+    "orders $value1 before $value2 to the nanosecond (allowEqual $allowEqual) → $expected",
+    ({ value1, value2, allowEqual, expected }) => {
+      expect(
+        isValidTimeRange({ value1, value2, options: { allowEqual } }),
+      ).toBe(expected);
+    },
+  );
 });

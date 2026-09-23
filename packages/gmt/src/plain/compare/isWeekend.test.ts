@@ -1,3 +1,5 @@
+import { runtimeWeekInfo } from "../../test/runtimeWeekInfo";
+import { Temporal } from "@js-temporal/polyfill";
 import { MustTestLocales } from "../../test";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { isWeekend } from "./isWeekend";
@@ -105,4 +107,30 @@ describe("isWeekend", () => {
     mockTemporalPlainDateFromThrow();
     expect(isWeekend("2024-02-03", MustTestLocales.enUS)).toBe(false);
   });
+
+  // A well-formed tag with no locale data is not invalid input: ECMA-402 `ResolveLocale` falls
+  // back instead of throwing, so the sentinel would be wrong here. Only a malformed tag such as
+  // "not-a-locale-!!" is invalid. The expected value comes from the runtime's own week data.
+  it("falls back for a well-formed tag with no locale data instead of returning the sentinel", () => {
+    const { weekend } = runtimeWeekInfo("not-a-locale");
+    const date = Temporal.PlainDate.from("2024-02-03");
+    expect(isWeekend("2024-02-03", "not-a-locale")).toBe(
+      weekend.includes(date.dayOfWeek),
+    );
+  });
+
+  // ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale
+  // data is read (en-US weeks start on Sunday, fr-FR on Monday, ar-EG weekends are Friday and
+  // Saturday: Intl.Locale#getWeekInfo), and a malformed tag anywhere in the list is invalid input.
+  it.each`
+    locale                                      | expected
+    ${["ar-EG", MustTestLocales.frFR]}          | ${true}
+    ${[MustTestLocales.frFR, "ar-EG"]}          | ${false}
+    ${[MustTestLocales.frFR, "not a locale!!"]} | ${false}
+  `(
+    "returns $expected for Friday 2024-05-17 with locale list $locale",
+    ({ locale, expected }) => {
+      expect(isWeekend("2024-05-17", locale)).toBe(expected);
+    },
+  );
 });

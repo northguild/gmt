@@ -3,9 +3,13 @@ import { intervalEngulfsDate } from "./intervalEngulfsDate";
 describe("intervalEngulfsDate", () => {
   it.each`
     outerStart      | outerEnd        | innerStart      | innerEnd        | expected
-    ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${true}
+    // Half-open: B within A and overlapping it, so an empty B counts only strictly inside A
+    // (CORE-6 §3 clampInterval clamps an empty interval at an edge to null).
+    ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${false}
     ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-02"} | ${"2024-01-02"} | ${false}
-    ${"2024-01-01"} | ${"2024-01-10"} | ${"2024-01-01"} | ${"2024-01-01"} | ${true}
+    ${"2024-01-01"} | ${"2024-01-10"} | ${"2024-01-01"} | ${"2024-01-01"} | ${false}
+    ${"2024-01-01"} | ${"2024-01-10"} | ${"2024-01-05"} | ${"2024-01-05"} | ${true}
+    ${"2024-01-01"} | ${"2024-01-10"} | ${"2024-01-10"} | ${"2024-01-10"} | ${false}
   `(
     "returns $expected for zero-length inner interval $innerStart to $innerEnd inside $outerStart to $outerEnd",
     ({ outerStart, outerEnd, innerStart, innerEnd, expected }) => {
@@ -86,8 +90,8 @@ describe("intervalEngulfsDate", () => {
       intervalEngulfsDate(
         "2024-10-01",
         "2024-10-31",
-        "5785-01-01[u-ca=hebrew]",
-        "5785-01-01[u-ca=hebrew]",
+        "2024-10-03[u-ca=hebrew]",
+        "2024-10-03[u-ca=hebrew]",
       ),
     ).toBe(true);
   });

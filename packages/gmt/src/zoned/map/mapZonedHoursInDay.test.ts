@@ -1,4 +1,8 @@
-import { localNoonBattleCases } from "../../test";
+import {
+  dateLineCrossingAt,
+  dateLineCrossingTimeZones,
+  localNoonBattleCases,
+} from "../../test";
 import { mapZonedHoursInDay } from "./mapZonedHoursInDay";
 
 describe("mapZonedHoursInDay", () => {
@@ -36,28 +40,31 @@ describe("mapZonedHoursInDay", () => {
     },
   );
 
-  // Regression: explicit `disambiguation` or `offset` used to run 24 wall-clock hours from the
-  // resolved midnight, spilling onto the next date. Both are deprecated and ignored, so the window
-  // is always the real 23-hour day, `startOfDay()` to the next day's `startOfDay()`. Verified on
-  // @js-temporal/polyfill@0.5.1 (`hoursInDay` is 23).
-  it.each`
-    options                                           | expectedLength | expectedFirst                                    | expectedLast
-    ${{ disambiguation: "compatible" }}               | ${23}          | ${"2024-09-08T01:00:00-03:00[America/Santiago]"} | ${"2024-09-08T23:00:00-03:00[America/Santiago]"}
-    ${{ offset: "ignore" }}                           | ${23}          | ${"2024-09-08T01:00:00-03:00[America/Santiago]"} | ${"2024-09-08T23:00:00-03:00[America/Santiago]"}
-    ${{ disambiguation: "reject", offset: "reject" }} | ${23}          | ${"2024-09-08T01:00:00-03:00[America/Santiago]"} | ${"2024-09-08T23:00:00-03:00[America/Santiago]"}
-  `(
-    "returns $expectedLength entries ending $expectedLast for Santiago's skipped midnight with ignored $options",
-    ({ options, expectedLength, expectedFirst, expectedLast }) => {
-      const result = mapZonedHoursInDay(
-        "2024-09-08T12:00:00-03:00[America/Santiago]",
-        options,
-      );
+  // Santiago skipped local midnight on 2024-09-08: the window is the real 23-hour day,
+  // `startOfDay()` to the next day's `startOfDay()`. Verified on @js-temporal/polyfill@0.5.1
+  // (`hoursInDay` is 23).
+  it("returns 23 entries from 01:00 to 23:00 for Santiago's skipped midnight", () => {
+    const result = mapZonedHoursInDay(
+      "2024-09-08T12:00:00-03:00[America/Santiago]",
+    );
 
-      expect(result).toHaveLength(expectedLength);
-      expect(result[0]).toBe(expectedFirst);
-      expect(result.at(-1)).toBe(expectedLast);
-    },
-  );
+    expect(result).toHaveLength(23);
+    expect(result[0]).toBe("2024-09-08T01:00:00-03:00[America/Santiago]");
+    expect(result.at(-1)).toBe("2024-09-08T23:00:00-03:00[America/Santiago]");
+  });
+
+  // The options parameter (`disambiguation`, `offset`) was removed in 1.16.0: both were ignored,
+  // because the day is always its real span. Passing one is a type error, and a JavaScript caller's
+  // stray argument changes nothing.
+  it("treats the removed options argument as a type error and ignores it at runtime", () => {
+    expect(
+      mapZonedHoursInDay(
+        "2024-09-08T12:00:00-03:00[America/Santiago]",
+        // @ts-expect-error -- the options argument was removed in 1.16.0
+        { disambiguation: "reject", offset: "reject" },
+      ),
+    ).toHaveLength(23);
+  });
 
   // Repeated local midnight: Havana 2024-11-03 is one 25-hour day (the label never changes);
   // Goose Bay fell back at 00:01 on 2010-11-07, so that date has two midnights and 25 hours
@@ -164,52 +171,12 @@ describe("mapZonedHoursInDay", () => {
   }
 
   // America/Sao_Paulo skipped local midnight on 2018-11-04, so that day is 23 hours long
-  // (`hoursInDay`). The deprecated `disambiguation` is ignored: every value — "reject" included —
-  // returns the real day. Verified on @js-temporal/polyfill@0.5.1.
-  it.each`
-    disambiguation  | expectedLength
-    ${undefined}    | ${23}
-    ${"compatible"} | ${23}
-    ${"earlier"}    | ${23}
-    ${"later"}      | ${23}
-    ${"reject"}     | ${23}
-  `(
-    "returns $expectedLength entries for an anchor whose midnight is skipped with ignored disambiguation $disambiguation",
-    ({ disambiguation, expectedLength }) => {
-      const optionsArg =
-        disambiguation === undefined ? undefined : { disambiguation };
-      expect(
-        mapZonedHoursInDay(
-          "2018-11-04T12:00:00-02:00[America/Sao_Paulo]",
-          optionsArg,
-        ),
-      ).toHaveLength(expectedLength);
-    },
-  );
-
-  // The deprecated `offset` is ignored too, alone or combined with `disambiguation: "reject"`.
-  it.each`
-    offset       | expectedLength
-    ${undefined} | ${23}
-    ${"ignore"}  | ${23}
-    ${"prefer"}  | ${23}
-    ${"use"}     | ${23}
-    ${"reject"}  | ${23}
-  `(
-    "returns $expectedLength entries with disambiguation reject and ignored offset $offset",
-    ({ offset, expectedLength }) => {
-      const optionsArg =
-        offset === undefined
-          ? { disambiguation: "reject" as const }
-          : { disambiguation: "reject" as const, offset };
-      expect(
-        mapZonedHoursInDay(
-          "2018-11-04T12:00:00-02:00[America/Sao_Paulo]",
-          optionsArg,
-        ),
-      ).toHaveLength(expectedLength);
-    },
-  );
+  // (`hoursInDay`). Verified on @js-temporal/polyfill@0.5.1.
+  it("returns 23 entries for an anchor whose midnight is skipped", () => {
+    expect(
+      mapZonedHoursInDay("2018-11-04T12:00:00-02:00[America/Sao_Paulo]"),
+    ).toHaveLength(23);
+  });
 });
 
 describe("mapZonedHoursInDay at the range limits", () => {
@@ -222,4 +189,23 @@ describe("mapZonedHoursInDay at the range limits", () => {
     expect(result[0]).toBe("+275760-09-07T01:00:00-03:00[America/Santiago]");
     expect(result[22]).toBe("+275760-09-07T23:00:00-03:00[America/Santiago]");
   });
+});
+
+// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
+// are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
+// 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
+
+describe("mapZonedHoursInDay across the 1844 date-line crossings (zoned.E)", () => {
+  it.each(dateLineCrossingTimeZones)(
+    "lists the 24 hours of 1844-12-30 in $timeZone",
+    (crossing) => {
+      const hours = mapZonedHoursInDay(
+        dateLineCrossingAt(crossing, -12).toString(),
+      );
+      expect(hours).toHaveLength(24);
+      expect(hours[0]).toBe(dateLineCrossingAt(crossing, -24).toString());
+      expect(hours[23]).toBe(dateLineCrossingAt(crossing, -1).toString());
+    },
+  );
 });

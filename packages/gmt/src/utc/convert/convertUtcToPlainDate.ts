@@ -1,6 +1,8 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidTimeZone } from "../../zoned";
 import { isValidUtc } from "../validate";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Convert a UTC datetime string to a plain date string in the format "YYYY-MM-DD".
@@ -21,18 +23,28 @@ export function convertUtcToPlainDate(
   value: string,
   options?: { timeZone?: string },
 ): string {
-  const { timeZone = "UTC" } = options ?? {};
-
-  if (!isValidTimeZone(timeZone)) return "";
-  if (!isValidUtc(value)) return "";
-
   try {
-    const instant = Temporal.Instant.from(value);
-    const zonedDateTime = instant.toZonedDateTimeISO(timeZone);
-    return `${zonedDateTime.year.toString().padStart(4, "0")}-${zonedDateTime.month
-      .toString()
-      .padStart(2, "0")}-${zonedDateTime.day.toString().padStart(2, "0")}`;
+    if (!isOptionsArgument(options)) {
+      return "";
+    }
+
+    const { timeZone = "UTC" } = options ?? {};
+
+    if (!isValidTimeZone(timeZone)) return "";
+    if (!isValidUtc(value)) return "";
+
+    try {
+      const instant = Temporal.Instant.from(value);
+      const zonedDateTime = instant.toZonedDateTimeISO(timeZone);
+      return `${zonedDateTime.year.toString().padStart(4, "0")}-${zonedDateTime.month
+        .toString()
+        .padStart(2, "0")}-${zonedDateTime.day.toString().padStart(2, "0")}`;
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

@@ -1,8 +1,15 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { plainDate } from "../../regex";
-import { isLeapSecond } from "./isLeapSecond";
+import { isValidDate } from "./isValidDate";
+import { isObject, isOptionsArgument } from "../../internal/isObject";
 
-interface IsValidDateRangeProps {
+/**
+ * The argument object of `isValidDateRange`.
+ *
+ * @example
+ * import { IsValidDateRangeProps } from "@northguild/gmt/plain";
+ * const range: IsValidDateRangeProps = { value1: "2024-02-28", value2: "2024-02-29" };
+ */
+export interface IsValidDateRangeProps {
   value1: string;
   value2: string;
   options?: { allowEqual?: boolean };
@@ -11,7 +18,8 @@ interface IsValidDateRangeProps {
 /**
  * Return whether `value1` is before `value2`.
  *
- * - Validates both dates using regex and Temporal.PlainDate.from().
+ * - Validates both dates with `isValidDate`, so each endpoint's RFC 9557 annotations are read as
+ *   `Temporal.PlainDate.from` reads them (an elective `[foo=bar]` or `[u-ca=iso8601]` is ignored).
  * - Rejects leap seconds in either date.
  * - When `options.allowEqual` is true, equality is considered valid as well.
  *
@@ -25,41 +33,43 @@ interface IsValidDateRangeProps {
  * @example isValidDateRange({ value1: "2024-02-29", value2: "2024-02-29" }) // false
  * @example isValidDateRange({ value1: "2024-02-29", value2: "2024-02-29", options: { allowEqual: true } }) // true
  */
-export function isValidDateRange({
-  value1,
-  value2,
-  options,
-}: IsValidDateRangeProps): boolean {
-  if (isLeapSecond(value1) || isLeapSecond(value2)) {
-    return false;
-  }
-
-  if (!plainDate.test(value1) || !plainDate.test(value2)) {
-    return false;
-  }
-
+export function isValidDateRange(props: IsValidDateRangeProps): boolean {
   try {
-    const date1 = Temporal.PlainDate.from(value1);
-    const date2 = Temporal.PlainDate.from(value2);
+    if (!isObject(props)) return false;
+    const { value1, value2, options } = props;
+    if (!isOptionsArgument(options)) return false;
 
-    const isLessThan =
-      date1.year < date2.year ||
-      (date1.year === date2.year && date1.month < date2.month) ||
-      (date1.year === date2.year &&
-        date1.month === date2.month &&
-        date1.day < date2.day);
-
-    const isEqual =
-      date1.year === date2.year &&
-      date1.month === date2.month &&
-      date1.day === date2.day;
-
-    if (options?.allowEqual) {
-      return isLessThan || isEqual;
+    if (!isValidDate(value1) || !isValidDate(value2)) {
+      return false;
     }
 
-    return isLessThan;
+    try {
+      const date1 = Temporal.PlainDate.from(value1);
+      const date2 = Temporal.PlainDate.from(value2);
+
+      const isLessThan =
+        date1.year < date2.year ||
+        (date1.year === date2.year && date1.month < date2.month) ||
+        (date1.year === date2.year &&
+          date1.month === date2.month &&
+          date1.day < date2.day);
+
+      const isEqual =
+        date1.year === date2.year &&
+        date1.month === date2.month &&
+        date1.day === date2.day;
+
+      if (options?.allowEqual) {
+        return isLessThan || isEqual;
+      }
+
+      return isLessThan;
+    } catch {
+      return false;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return false;
   }
 }

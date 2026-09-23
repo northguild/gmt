@@ -2,14 +2,16 @@ import { intervalIntersectionTime } from "./intervalIntersectionTime";
 import { mockTemporalPlainTimeFromThrow } from "../../test/mocks";
 
 describe("intervalIntersectionTime", () => {
+  // Half-open: null unless A.start < B.end && B.start < A.end (CORE-6 §3 intersectIntervals), so
+  // touching intervals, identical empties and an empty interval at an edge have no intersection.
   it.each`
     aStart        | aEnd          | bStart        | bEnd          | expected
     ${"09:00:00"} | ${"17:00:00"} | ${"12:00:00"} | ${"18:00:00"} | ${{ start: "12:00:00", end: "17:00:00" }}
     ${"09:00:00"} | ${"17:00:00"} | ${"09:00:00"} | ${"12:00:00"} | ${{ start: "09:00:00", end: "12:00:00" }}
-    ${"09:00:00"} | ${"17:00:00"} | ${"17:00:00"} | ${"18:00:00"} | ${{ start: "17:00:00", end: "17:00:00" }}
+    ${"09:00:00"} | ${"17:00:00"} | ${"17:00:00"} | ${"18:00:00"} | ${null}
     ${"12:00:00"} | ${"18:00:00"} | ${"09:00:00"} | ${"17:00:00"} | ${{ start: "12:00:00", end: "17:00:00" }}
     ${"09:00:00"} | ${"17:00:00"} | ${"10:00:00"} | ${"11:00:00"} | ${{ start: "10:00:00", end: "11:00:00" }}
-    ${"10:00:00"} | ${"10:00:00"} | ${"10:00:00"} | ${"10:00:00"} | ${{ start: "10:00:00", end: "10:00:00" }}
+    ${"10:00:00"} | ${"10:00:00"} | ${"10:00:00"} | ${"10:00:00"} | ${null}
   `(
     "returns $expected when intervals $aStart to $aEnd and $bStart to $bEnd overlap",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
@@ -21,8 +23,8 @@ describe("intervalIntersectionTime", () => {
 
   it.each`
     aStart        | aEnd          | bStart        | bEnd          | expected
-    ${"09:00:00"} | ${"17:00:00"} | ${"17:00:00"} | ${"18:00:00"} | ${{ start: "17:00:00", end: "17:00:00" }}
-    ${"17:00:00"} | ${"18:00:00"} | ${"09:00:00"} | ${"17:00:00"} | ${{ start: "17:00:00", end: "17:00:00" }}
+    ${"09:00:00"} | ${"17:00:00"} | ${"17:00:00"} | ${"18:00:00"} | ${null}
+    ${"17:00:00"} | ${"18:00:00"} | ${"09:00:00"} | ${"17:00:00"} | ${null}
   `(
     "returns $expected for adjacent intervals",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {

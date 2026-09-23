@@ -141,6 +141,7 @@ describe("fromExcelSerial", () => {
     ${1904}   | ${"number, not the string literal"}
     ${""}     | ${"empty string"}
     ${true}   | ${"boolean"}
+    ${null}   | ${"explicitly null, a value to validate rather than an omission"}
   `('returns "" when system $system is invalid ($reason)', ({ system }) => {
     expect(
       fromExcelSerial(45361.5, { system: system as unknown as "1900" }),
@@ -152,7 +153,6 @@ describe("fromExcelSerial", () => {
     ${undefined}             | ${"no options argument"}
     ${{}}                    | ${"empty options object"}
     ${{ system: undefined }} | ${"system explicitly undefined"}
-    ${{ system: null }}      | ${"system explicitly null"}
   `(
     "falls back to the 1900 system when options is $options ($reason)",
     ({ options }) => {

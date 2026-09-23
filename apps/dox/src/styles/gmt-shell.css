@@ -69,6 +69,35 @@ h1[data-page-title] {
   background-color: var(--gmt-void);
 }
 
+/* Content width. Starlight's default is 45rem, which on a monospace body
+ * reads as a thin column; 50rem matches react.dev's text column (its
+ * `max-w-4xl` article minus 3rem padding either side). Sidebar-less pages
+ * are unaffected: Starlight's Page.astro re-declares this for them. */
+:root {
+  --sl-content-width: 50rem;
+}
+
+/* Wide-screen columns: sidebar | centred content | "On this page".
+ *
+ * Starlight (TwoColumnContent.astro) splits all the leftover width between
+ * the content pane and the TOC — the TOC gets `--sl-sidebar-width` plus half
+ * the spare space, and the content is pinned to its pane's right edge with
+ * `--sl-content-margin-inline: auto 0`. On a 2560px screen that made the TOC
+ * ~930px wide next to a 720px content column. Instead the TOC keeps a fixed
+ * width, the pane takes everything between the two sidebars, and the content
+ * centres in it. Header.astro lines the search box up with the result, so
+ * change the two together. */
+@media (min-width: 72rem) {
+  .right-sidebar-container {
+    width: var(--sl-sidebar-width);
+  }
+
+  :root[data-has-sidebar][data-has-toc] .main-pane {
+    --sl-content-margin-inline: auto;
+    width: calc(100% - var(--sl-sidebar-width));
+  }
+}
+
 .sidebar-pane,
 #starlight__sidebar {
   /* background handled by gmt-glass.css (translucent + backdrop-filter) */

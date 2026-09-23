@@ -10,16 +10,20 @@
     "typecheck": "pnpm -r --if-present run typecheck",
     "lint:all": "pnpm -r --if-present run lint",
     "test:all": "pnpm -r --if-present run test",
-    "validate": "node scripts/deps.mjs check && node scripts/test-markers.mjs check && pnpm -r --if-present run build && node scripts/stats.mjs check && pnpm -r --if-present run lint && pnpm -r --if-present run typecheck && pnpm -r --if-present run test",
+    "validate": "node scripts/deps.mjs check && node scripts/test-markers.mjs check && pnpm -r --if-present run build && node scripts/stats.mjs check && node scripts/temporal-compat.mjs snapshot --check && node scripts/upstream.mjs check && node scripts/api-surface.mjs check && pnpm -r --if-present run lint && pnpm -r --if-present run typecheck && pnpm -r --if-present run test",
     "deps": "node scripts/deps.mjs",
     "deps:sync": "node scripts/deps.mjs sync",
     "deps:ready": "node scripts/deps.mjs ready",
     "stats": "node scripts/stats.mjs",
     "stats:sync": "node scripts/stats.mjs sync",
+    "upstream:sync": "node scripts/upstream.mjs sync",
+    "api-surface": "node scripts/api-surface.mjs",
     "test:markers": "node scripts/test-markers.mjs check",
     "compat": "node scripts/temporal-compat.mjs check",
+    "compat:snapshot": "node scripts/temporal-compat.mjs snapshot",
     "compat:oracle": "node scripts/temporal-compat.mjs oracle",
     "dox:dev": "pnpm --filter @gmt/dox dev",
+    "dox:dev:site": "pnpm --filter @gmt/dox dev:site",
     "dox:build": "pnpm --filter @gmt/dox build",
     "dox:preview": "pnpm --filter @gmt/dox preview",
     "dox:generate": "pnpm --filter @gmt/dox generate",
@@ -43,7 +47,7 @@
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.2",
-    "@fontsource/michroma": "^5.3.0",
+    "@northguild/gmt-oxlint": "workspace:*",
     "@tanstack/intent": "^0.4.0",
     "@types/node": "^22.13.10",
     "fallow": "^3.17.0",
@@ -54,7 +58,7 @@
     "vitest": "^4.1.0"
   },
   "engines": {
-    "node": ">=22 <25 || >=26 <27"
+    "node": ">=22.16.0 <25 || >=26 <27"
   },
   "packageManager": "pnpm@10.32.1"
 }

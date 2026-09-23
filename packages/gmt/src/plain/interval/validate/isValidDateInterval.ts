@@ -9,8 +9,10 @@ import { isValidCalendarDate } from "../../validate";
  * - Both inputs must be ISO 8601 date strings (e.g. `"2024-01-01"`).
  * - Equal `start === end` is valid.
  * - Invalid input, malformed strings, or leap-second strings return `false`.
- * - Accepts GMT calendar-annotated PlainDate strings — E5 (issue #78). Ordering is
+ * - Accepts RFC 9557 calendar-annotated PlainDate strings — E5 (issue #78). Ordering is
  *   calendar-independent, so `start`/`end` may carry different or no calendar tags (D4).
+ * - Compatibility: since 1.16.0 calendar strings are RFC 9557 (ISO digits, `[u-ca=<id>]`, canonical
+ *   calendar ids); see `isValidCalendarDate`.
  *
  * @param start ISO 8601 date string (interval start), optionally calendar-annotated
  * @param end ISO 8601 date string (interval end), optionally calendar-annotated
@@ -20,7 +22,7 @@ import { isValidCalendarDate } from "../../validate";
  * @example isValidDateInterval("2024-01-01", "2024-01-01") // true
  * @example isValidDateInterval("2024-12-31", "2024-01-01") // false
  * @example isValidDateInterval("invalid", "2024-12-31") // false
- * @example isValidDateInterval("5785-01-01[u-ca=hebrew]", "2024-12-31") // true (mixed calendars — ordering is calendar-independent)
+ * @example isValidDateInterval("2024-10-03[u-ca=hebrew]", "2024-12-31") // true (mixed calendars — ordering is calendar-independent)
  */
 export function isValidDateInterval(start: string, end: string): boolean {
   if (typeof start !== "string" || typeof end !== "string") {

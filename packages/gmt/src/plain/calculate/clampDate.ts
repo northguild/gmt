@@ -39,13 +39,13 @@ export function clampDate(value: string, min: string, max: string): string {
     const cmpMax = Temporal.PlainDate.compare(v, mx);
 
     if (cmpMin < 0) {
-      return min;
+      return mn.toString();
     }
     if (cmpMax > 0) {
-      return max;
+      return mx.toString();
     }
 
-    return value;
+    return v.toString();
   } catch {
     return "";
   }

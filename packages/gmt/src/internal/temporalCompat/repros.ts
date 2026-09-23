@@ -11,17 +11,38 @@ import { Temporal } from "@js-temporal/polyfill";
  */
 
 /** Defect ids from the CORE-6 calendar-correctness spec §1.2. */
-export type DefectId = "D1" | "D2" | "D3" | "D4" | "D5" | "D6" | "D7" | "D8";
+export type DefectId =
+  | "D1"
+  | "D2"
+  | "D3"
+  | "D4"
+  | "D5"
+  | "D6"
+  | "D7"
+  | "D8"
+  | "D10"
+  | "D11";
 
 /**
- * Zoned range-limit defects worked around in `internal/zonedWallClock*` (upstream issue drafts A, B
- * and D in the CORE-6 polyfill research). Canary-only: no capability probe gates them, because
- * those fallbacks already run only when the polyfill throws or returns an unchecked UTC value.
+ * Zoned defects worked around in `internal/zonedWallClock*`: the range-limit defects (upstream
+ * issue drafts A, B and D in the CORE-6 polyfill research) and zoned.E, the transition search
+ * floored at 1847-01-01 (js-temporal/temporal-polyfill#372). Canary-only: no capability probe
+ * gates them, because those fallbacks already run only when the polyfill throws, returns an
+ * unchecked UTC value, or (zoned.E) is asked about an instant before 1847, where GMT computes the
+ * spec's answer from offsets.
  */
-export type ZonedDefectId = "zoned.A" | "zoned.B" | "zoned.D";
+export type ZonedDefectId = "zoned.A" | "zoned.B" | "zoned.D" | "zoned.E";
+
+/**
+ * D9: non-ISO months added and counted one month at a time (`largeMonthSpan.ts`). Canary-only: no
+ * capability probe gates it, because a probe large enough to show the cost would be the abort
+ * itself, and timing is not deterministic. The workaround runs only for amounts of at least
+ * `LARGE_MONTH_SPAN` months and computes the spec's answer, so it changes no output either way.
+ */
+export type BoundedWorkDefectId = "D9";
 
 export interface Repro {
-  defect: DefectId | ZonedDefectId;
+  defect: DefectId | ZonedDefectId | BoundedWorkDefectId;
   /** Temporal calendar id the repro exercises. */
   calendar: string;
   /** Short name, unique per defect and calendar. */
@@ -97,6 +118,125 @@ const d1Repros: Repro[] = extremeDateRows.flatMap(
   ],
 );
 
+/**
+ * D10 (tc39/proposal-temporal#3329): proposal-temporal #3292 gave `calendarToIsoDate` a fixed 8-day
+ * search step, which skips a 5- or 6-day month 13 in far years and trips an assertion. Polyfill
+ * 0.5.1 predates #3292 and passes; these rows catch a js-temporal release that ports #3292 without
+ * the #3329 fix. GMT computes coptic and ethiopic in ethioaa (`calendarSystemIds.ts`), so ethioaa
+ * is the only id probed. Chromium 153 native Temporal: ethioaa 18196 (coptic 12420 + 5776).
+ */
+const d10Repros: Repro[] = [
+  {
+    defect: "D10",
+    calendar: "ethioaa",
+    name: "fieldsFarMonth13",
+    expected: "+012704-11-26",
+    run: () => fieldsToIso("ethioaa", 18196, 13, 1),
+  },
+  {
+    defect: "D10",
+    calendar: "ethioaa",
+    name: "fieldsFarMonth12",
+    expected: "+012704-11-25",
+    run: () => fieldsToIso("ethioaa", 18196, 12, 30),
+  },
+  {
+    defect: "D11",
+    calendar: "iso8601",
+    name: "totalMonthFromDay31",
+    expected: "1.0161290322580645",
+    run: () => monthTotal("2024-01-31T00:00:00", "2024-02-29T12:00:00"),
+  },
+  {
+    defect: "D11",
+    calendar: "iso8601",
+    name: "totalMonthFromDay31ShortTarget",
+    expected: "1.0161290322580645",
+    run: () => monthTotal("2023-01-31T00:00:00", "2023-02-28T12:00:00"),
+  },
+  {
+    defect: "D11",
+    calendar: "iso8601",
+    name: "totalMonthFromDay31ThirtyDayTarget",
+    expected: "1.0161290322580645",
+    run: () => monthTotal("2024-03-31T00:00:00", "2024-04-30T12:00:00"),
+  },
+  {
+    defect: "D11",
+    calendar: "iso8601",
+    name: "roundMonthFromDay31Floor",
+    expected: "P1M",
+    run: () => monthRound("P29DT12H", "2024-01-31", "floor"),
+  },
+  {
+    defect: "D11",
+    calendar: "iso8601",
+    name: "roundMonthFromDay30Ceil",
+    expected: "P2M",
+    run: () => monthRound("P30DT12H", "2024-01-30", "ceil"),
+  },
+  {
+    defect: "D11",
+    calendar: "iso8601",
+    name: "untilMonthFromDay31Trunc",
+    expected: "P1M",
+    run: () =>
+      monthUntil("2024-01-31T00:00:00", "2024-02-29T12:00:00", "trunc"),
+  },
+];
+
+/**
+ * `Duration#total({ unit: "month" })` for the span between two ISO datetimes, as a string.
+ *
+ * TC39 TotalRelativeDuration divides the leftover by the length of the month the *end* falls in —
+ * the span from `relativeTo` plus the whole months to `relativeTo` plus one more. The polyfill
+ * divides by the month that ends there instead, so any `relativeTo` on the 29th, 30th or 31st,
+ * where adding a month constrains the day, gets a fraction over the wrong denominator.
+ */
+function monthTotal(start: string, end: string): string {
+  const from = Temporal.PlainDateTime.from(start);
+  return String(
+    from
+      .until(Temporal.PlainDateTime.from(end), { largestUnit: "month" })
+      .total({ unit: "month", relativeTo: from }),
+  );
+}
+
+/**
+ * `Duration#round` and `PlainDateTime#until` to a calendar unit, as strings.
+ *
+ * Same window as `monthTotal`: the directed rounding modes take the answer from whichever bound the
+ * target sits nearest, so a window that does not contain the target loses a whole unit rather than a
+ * fraction of one.
+ */
+function monthRound(
+  duration: string,
+  relativeTo: string,
+  roundingMode: Temporal.RoundingMode,
+): string {
+  return Temporal.Duration.from(duration)
+    .round({
+      smallestUnit: "month",
+      roundingMode,
+      relativeTo: Temporal.PlainDate.from(relativeTo),
+    })
+    .toString();
+}
+
+function monthUntil(
+  start: string,
+  end: string,
+  roundingMode: Temporal.RoundingMode,
+): string {
+  return Temporal.PlainDateTime.from(start)
+    .until(Temporal.PlainDateTime.from(end), {
+      largestUnit: "month",
+      smallestUnit: "month",
+      roundingMode,
+    })
+    .toString();
+}
+
 function isoOf(date: Temporal.PlainDate): string {
   return date.withCalendar("iso8601").toString();
 }
@@ -164,12 +304,15 @@ const d1ArithmeticRepros: Repro[] = [
  * D6: `until` re-constrains the day while counting months. The spec's NonISODateSurpasses compares
  * the un-constrained day, so a month-end start does not reach a shorter month's end. Hebrew and
  * ethioaa are test262 `wrapping-at-end-of-month-{hebrew,ethioaa}.js`; the rest are Chromium 152
- * (q2-grid-chromium152.json, the first D6 row of each calendar).
+ * (q2-grid-chromium152.json, the first D6 row of each calendar), and gregory is Chromium 153
+ * (added to `CalendarSystem` in CORE-8; gregory months and days are ISO's, and ISO's own
+ * `ISODateSurpasses` gives the same P30D).
  */
 const d6Repros: Repro[] = [
   ...(
     [
       ["buddhist", "2023-08-31", "2023-09-30", "P30D"],
+      ["gregory", "2023-08-31", "2023-09-30", "P30D"],
       ["japanese", "2023-08-31", "2023-09-30", "P30D"],
       ["roc", "2023-08-31", "2023-09-30", "P30D"],
       ["persian", "2023-09-22", "2023-10-22", "P30D"],
@@ -500,13 +643,139 @@ const zonedDRepros: Repro[] = [
   ),
 ];
 
+/** Asia/Manila's 1844-12-31 date-line crossing (−15:56:08 → +08:03:52), as Chromium 153 prints it. */
+const MANILA_CROSSING = "1845-01-01T00:00:00+08:04[Asia/Manila]";
+
+/**
+ * zoned.E (`internal/zonedWallClock.ts` defect 3): `GetNamedTimeZoneNextTransition` and
+ * `…PreviousTransition` start their search at `BEFORE_FIRST_DST` = 1847-01-01, so the 1844-12-31
+ * date-line crossing of Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau is never found, and
+ * `GetStartOfDay` for the skipped 1844-12-31 returns the wrong `next`. js-temporal/temporal-polyfill
+ * #372 (tc39/proposal-temporal#3330). Expected values: Chromium 153 native Temporal.
+ * `previousGuam` asks from after the floor, so it also proves the backward search reaches past it.
+ */
+const zonedERepros: Repro[] = [
+  zonedRepro("zoned.E", "pre1847.nextManila", MANILA_CROSSING, () =>
+    Temporal.Instant.from("1800-01-01T00:00:00Z")
+      .toZonedDateTimeISO("Asia/Manila")
+      .getTimeZoneTransition("next"),
+  ),
+  zonedRepro("zoned.E", "pre1847.previousManila", MANILA_CROSSING, () =>
+    Temporal.Instant.from("1846-01-01T00:00:00Z")
+      .toZonedDateTimeISO("Asia/Manila")
+      .getTimeZoneTransition("previous"),
+  ),
+  zonedRepro(
+    "zoned.E",
+    "pre1847.previousGuam",
+    "1845-01-01T00:00:00+09:39[Pacific/Guam]",
+    () =>
+      Temporal.Instant.from("1848-01-01T00:00:00Z")
+        .toZonedDateTimeISO("Pacific/Guam")
+        .getTimeZoneTransition("previous"),
+  ),
+  zonedRepro(
+    "zoned.E",
+    "pre1847.hoursInDayManila",
+    "24",
+    () =>
+      Temporal.ZonedDateTime.from("1844-12-30T12:00[Asia/Manila]").hoursInDay,
+  ),
+  zonedRepro("zoned.E", "pre1847.startOfDayManila", MANILA_CROSSING, () =>
+    Temporal.PlainDate.from("1844-12-31").toZonedDateTime("Asia/Manila"),
+  ),
+];
+
+/** More `Intl.DateTimeFormat#formatToParts` reads than this for 1,200 months is per-month work. */
+const D9_INTL_READ_LIMIT = 100;
+const D9_MONTHS = 1_200;
+
+/**
+ * `run()`'s output, or a note of how many `Intl.DateTimeFormat#formatToParts` calls it made when
+ * that is more than `D9_INTL_READ_LIMIT`. Polyfill 0.5.1 reads the calendar through that method
+ * once or more per month stepped; bounded arithmetic reads a handful of dates, or none.
+ */
+function withBoundedIntlReads(run: () => string): string {
+  const prototype = Intl.DateTimeFormat.prototype;
+  const original = prototype.formatToParts;
+  let reads = 0;
+  prototype.formatToParts = function formatToParts(
+    this: Intl.DateTimeFormat,
+    date?: Date | number,
+  ) {
+    reads++;
+    return original.call(this, date);
+  };
+  try {
+    const output = run();
+    return reads <= D9_INTL_READ_LIMIT
+      ? output
+      : `${reads} Intl reads for ${D9_MONTHS} months`;
+  } finally {
+    prototype.formatToParts = original;
+  }
+}
+
+/**
+ * D9: 1,200 months from month M03 day 5. Persian has 12 months in every year (Intl era/monthCode
+ * proposal §4.1.4 Table 3), so they are 100 years. Hebrew: the Dershowitz–Reingold month count
+ * `floor((235y − 234) / 19)` puts month 1,200 after 5784-M03 at 5881 ordinal 3, a common year, so
+ * `M03`.
+ */
+const d9Repros: readonly Repro[] = (
+  [
+    ["persian", 1402, "1502|M03|5"],
+    ["hebrew", 5784, "5881|M03|5"],
+  ] as const
+).flatMap(([calendar, year, expected]): Repro[] => {
+  const start = () =>
+    Temporal.PlainDate.from({ calendar, year, month: 3, day: 5 });
+  const [endYear] = expected.split("|").map(Number);
+  return [
+    {
+      defect: "D9",
+      calendar,
+      name: "addMonths",
+      expected,
+      run: () =>
+        withBoundedIntlReads(() => {
+          const date = start().add({ months: D9_MONTHS });
+          return `${date.year}|${date.monthCode}|${date.day}`;
+        }),
+    },
+    {
+      defect: "D9",
+      calendar,
+      name: "untilMonths",
+      expected: `P${D9_MONTHS}M`,
+      run: () =>
+        withBoundedIntlReads(() =>
+          start()
+            .until(
+              Temporal.PlainDate.from({
+                calendar,
+                year: endYear ?? Number.NaN,
+                monthCode: "M03",
+                day: 5,
+              }),
+              { largestUnit: "months" },
+            )
+            .toString(),
+        ),
+    },
+  ];
+});
+
 export const repros: readonly Repro[] = [
+  ...d9Repros,
   ...zonedARepros,
   ...zonedBRepros,
   ...zonedDRepros,
+  ...zonedERepros,
   ...d1Repros,
   ...d1ArithmeticRepros,
   d1RelativeToRepro,
+  ...d10Repros,
   ...d6Repros,
   d7Repro,
   d7LeapMonthEndRepro,
@@ -555,7 +824,7 @@ export const repros: readonly Repro[] = [
 
 /** The repro with this defect, calendar and name, if any. */
 export function findRepro(
-  defect: DefectId | ZonedDefectId,
+  defect: DefectId | ZonedDefectId | BoundedWorkDefectId,
   calendar: string,
   name: string,
 ): Repro | undefined {

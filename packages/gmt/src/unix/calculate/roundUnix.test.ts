@@ -1,5 +1,9 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { mockSystemTimeZone } from "../../test/timeZoneMatrix";
+import {
+  dateLineCrossingAt,
+  dateLineCrossingTimeZones,
+  mockSystemTimeZone,
+} from "../../test/timeZoneMatrix";
 import { roundUnix } from "./roundUnix";
 
 describe("roundUnix", () => {
@@ -199,6 +203,89 @@ describe("roundUnix at the maximum instant", () => {
     "rounds $value to the $smallestUnit in $timeZone giving $expected",
     ({ value, smallestUnit, timeZone, expected }) => {
       expect(roundUnix(value, { smallestUnit, timeZone })).toBe(expected);
+    },
+  );
+});
+
+describe("roundUnix with an unrecognised epochUnit", () => {
+  // isValidUnixUnit defines the domain ("seconds" | "milliseconds", singular or plural): any other value is invalid
+  // input and returns the sentinel, never a silent read as milliseconds.
+  it.each`
+    epochUnit
+    ${"nanoseconds"}
+    ${"SECONDS"}
+    ${"ms"}
+    ${""}
+    ${1000}
+  `("returns null for epochUnit $epochUnit", ({ epochUnit }) => {
+    expect(
+      roundUnix(1_706_659_200, {
+        smallestUnit: "day",
+        epochUnit: epochUnit as never,
+        timeZone: "UTC",
+      }),
+    ).toBe(null);
+  });
+});
+
+describe("roundUnix with a plural smallestUnit", () => {
+  // Temporal §13.17 GetTemporalUnitValuedOption: "Both singular and plural unit names are accepted".
+  // 1715779905500 is 2024-05-15T13:31:45.5Z; expected values from polyfill ZonedDateTime.round in
+  // UTC (halfExpand): past noon rounds up a day, 31 minutes up an hour, 45.5 s up a minute, and
+  // the .5 s tie up a second.
+  it.each`
+    unit              | epochUnit         | value            | expected
+    ${"days"}         | ${"milliseconds"} | ${1715779905500} | ${1715817600000}
+    ${"hours"}        | ${"milliseconds"} | ${1715779905500} | ${1715781600000}
+    ${"minutes"}      | ${"milliseconds"} | ${1715779905500} | ${1715779920000}
+    ${"seconds"}      | ${"milliseconds"} | ${1715779905500} | ${1715779906000}
+    ${"milliseconds"} | ${"milliseconds"} | ${1715779905500} | ${1715779905500}
+    ${"microseconds"} | ${"milliseconds"} | ${1715779905500} | ${1715779905500}
+    ${"nanoseconds"}  | ${"milliseconds"} | ${1715779905500} | ${1715779905500}
+    ${"days"}         | ${"seconds"}      | ${1715779905}    | ${1715817600}
+  `(
+    "returns $expected for $value ($epochUnit) rounded to the plural unit $unit in UTC",
+    ({ unit, epochUnit, value, expected }) => {
+      expect(
+        roundUnix(value, { smallestUnit: unit, epochUnit, timeZone: "UTC" }),
+      ).toBe(expected);
+    },
+  );
+
+  // Temporal ZonedDateTime.prototype.round throws RangeError for weeks, months and years, in
+  // either spelling.
+  it.each`
+    unit
+    ${"weeks"}
+    ${"months"}
+    ${"years"}
+    ${"dayss"}
+    ${"s"}
+  `("returns null for the unsupported unit $unit", ({ unit }) => {
+    expect(
+      roundUnix(1715779905500, {
+        smallestUnit: unit as never,
+        timeZone: "UTC",
+      }),
+    ).toBeNull();
+  });
+});
+
+// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
+// are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
+// 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
+
+describe("roundUnix across the 1844 date-line crossings (zoned.E)", () => {
+  it.each(dateLineCrossingTimeZones)(
+    "rounds noon of 1844-12-30 in $timeZone to the crossing, $instant",
+    (crossing) => {
+      expect(
+        roundUnix(dateLineCrossingAt(crossing, -12).epochMilliseconds, {
+          smallestUnit: "day",
+          timeZone: crossing.timeZone,
+        }),
+      ).toBe(dateLineCrossingAt(crossing, 0).epochMilliseconds);
     },
   );
 });

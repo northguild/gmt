@@ -1,8 +1,10 @@
+import { normalizeDateTime } from "../../internal";
 import { vi } from "vitest";
 import {
   MustTestLocales,
   battleTestTimeZones,
   expectDateTimeEqual,
+  utcMs,
 } from "../../test";
 import { mockTemporalNowZonedDateTimeISOThrow } from "../../test/mocks";
 import { formatCalendarZoned } from "./formatCalendarZoned";
@@ -153,7 +155,7 @@ describe("formatCalendarZoned", () => {
     });
 
     it("accepts a numeric epoch-millisecond reference, placed into value's zone", () => {
-      const referenceMs = Date.UTC(2024, 2, 15, 13, 0);
+      const referenceMs = utcMs("2024-03-15T13:00:00Z");
       expect(
         formatCalendarZoned(
           "2024-03-16T14:30:00-04:00[America/New_York]",
@@ -176,7 +178,7 @@ describe("formatCalendarZoned", () => {
 
     it("defaults to 'now' in value's own zone when reference is omitted", () => {
       vi.useFakeTimers();
-      vi.setSystemTime(new Date("2024-03-15T13:00:00Z"));
+      vi.setSystemTime("2024-03-15T13:00:00Z");
       try {
         expect(
           formatCalendarZoned(
@@ -243,5 +245,42 @@ describe("formatCalendarZoned", () => {
         ),
       ).toBe("");
     });
+  });
+
+  // ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale data
+  // is used, and a malformed tag anywhere in the list is invalid input. Expected strings from native
+  // Intl with the same list.
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"demain à 14:30"}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
+  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+    expect(
+      formatCalendarZoned(
+        "2024-03-16T14:30:00-04:00[America/New_York]",
+        locale,
+        { reference: "2024-03-15T09:00:00-04:00[America/New_York]" },
+      ),
+    ).toBe(normalizeDateTime(expected));
+  });
+});
+
+// Plan #14: options must be an object or omitted, as Temporal's GetOptionsObject requires (native
+// Chromium 153 `Temporal.PlainDate.from("2024-02-03", null)`, `"x"` and `1` all throw TypeError), so
+// null and every other non-object is invalid input.
+describe("formatCalendarZoned with non-object options", () => {
+  it.each`
+    options
+    ${null}
+    ${"long"}
+    ${1}
+  `("returns an empty string for options $options", ({ options }) => {
+    expect(
+      formatCalendarZoned(
+        "2024-03-12T10:00:00-04:00[America/New_York]",
+        MustTestLocales.enUS,
+        options as never,
+      ),
+    ).toBe("");
   });
 });

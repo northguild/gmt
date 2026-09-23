@@ -1,5 +1,8 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { isBusinessDate, resolveBusinessCalendar } from "../../internal";
+import {
+  isBusinessDate,
+  resolveBusinessCalendar,
+} from "../../internal/businessCalendar";
 import type { BusinessCalendar } from "../../types";
 import { isValidDate } from "../validate";
 
@@ -40,13 +43,19 @@ export function isBusinessDay(
   value: string,
   calendar?: BusinessCalendar,
 ): boolean {
-  const resolved = resolveBusinessCalendar(calendar);
-
-  if (!isValidDate(value) || resolved === null) return false;
-
   try {
-    return isBusinessDate(Temporal.PlainDate.from(value), resolved);
+    const resolved = resolveBusinessCalendar(calendar);
+
+    if (!isValidDate(value) || resolved === null) return false;
+
+    try {
+      return isBusinessDate(Temporal.PlainDate.from(value), resolved);
+    } catch {
+      return false;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return false;
   }
 }

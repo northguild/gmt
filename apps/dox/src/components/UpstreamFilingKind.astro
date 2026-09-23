@@ -1,0 +1,43 @@
+---
+/**
+ * The "Kind" cell: what the filing is, what it was for, and whose it is.
+ *
+ * The role line only appears on a filing someone else opened. It matters because the counts above
+ * the table deliberately exclude those: claiming a maintainer's own pull request as a fix we sent
+ * would be false, so the row says plainly what our part was.
+ */
+import type { UpstreamFiling } from "../data/upstream-filings";
+
+interface Props {
+  filing: UpstreamFiling;
+}
+
+// See `UpstreamFilingRow.astro`: `Astro.props` is untyped in this app, so `Props` is applied here.
+const { filing } = Astro.props as Props;
+
+const KIND = { pr: "Pull request", issue: "Issue" } as const;
+const WORK = {
+  port: "Port",
+  fix: "Fix",
+  report: "Report",
+  release: "Release request",
+} as const;
+---
+
+<td>
+  {KIND[filing.kind]}
+  {filing.work && (
+    <>
+      <br />
+      <span class="gmt-upstream-muted">{WORK[filing.work]}</span>
+    </>
+  )}
+  {filing.role === "contributor" && (
+    <>
+      <br />
+      <span class="gmt-upstream-muted">
+        Theirs — <a href={filing.contributionUrl ?? filing.url}>we added evidence</a>
+      </span>
+    </>
+  )}
+</td>

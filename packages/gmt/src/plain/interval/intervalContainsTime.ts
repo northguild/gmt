@@ -1,28 +1,39 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { plainTime } from "../../regex";
+import { halfOpenContainsPoint, halfOpenContainsSpan } from "../../internal";
+import { isValidTime } from "../validate";
 
 /**
- * Return true when `pointOrStart` falls within the interval `[intervalStart, intervalEnd]`
- * (3-arg), or when the inner interval `[innerStart, innerEnd]` is fully contained within
- * the outer interval `[intervalStart, intervalEnd]` (4-arg).
+ * Return true when `pointOrStart` lies in the half-open interval `[intervalStart, intervalEnd)`
+ * (3-arg), or when the inner interval `[innerStart, innerEnd)` lies within it (4-arg).
  *
+ * - Half-open: an interval holds every clock time `t` with `start <= t < end`, so `intervalEnd` itself is
+ *   outside (the rule CORE-6's `intervalContains` uses). An empty interval (`start === end`)
+ *   contains no point.
+ * - 4-arg: the inner interval must start at or after `intervalStart`, end at or before
+ *   `intervalEnd`, and overlap the outer interval. An empty inner interval therefore counts only
+ *   strictly inside, never at an edge (CORE-6's `clampInterval` clamps it away there).
+ * - PlainTime has no day rollover: an interval never wraps past midnight. And because `end` is
+ *   excluded, no interval *contains* `23:59:59.999999999` — containing it would need an `end`
+ *   greater than it, and no PlainTime is. An interval may still *have* it as its `end`:
+ *   `intervalContainsTime("09:00:00", "23:59:59.999999999", "23:00:00")` is `true`, while
+ *   `intervalContainsTime("09:00:00", "23:59:59.999999999", "23:59:59.999999999")` is `false`.
  * - Uses `Temporal.PlainTime.compare` for comparison.
- * - Always-inclusive boundaries: `start <= point <= end`.
  * - Returns `false` if `intervalStart > intervalEnd` (invalid outer interval).
  * - Returns `false` if `innerStart > innerEnd` in 4-arg mode (invalid inner interval).
- * - Returns `false` on invalid input (wrong type, malformed strings, leap seconds).
+ * - Returns `false` on invalid input (wrong type, malformed strings).
  *
  * @param intervalStart ISO 8601 time string for the outer interval start
- * @param intervalEnd ISO 8601 time string for the outer interval end
+ * @param intervalEnd ISO 8601 time string for the outer interval end (excluded)
  * @param pointOrStart ISO 8601 time string for the point (3-arg) or inner start (4-arg)
  * @param pointEnd optional ISO 8601 time string for the inner interval end (4-arg mode)
  * @returns true if the point or inner interval is contained, or false on invalid input
  *
  * @example intervalContainsTime("09:00:00", "17:00:00", "12:00:00") // true
- * @example intervalContainsTime("09:00:00", "17:00:00", "12:00:00", "13:00:00") // true
- * @example intervalContainsTime("17:00:00", "09:00:00", "12:00:00") // false
- * @example intervalContainsTime("09:00:00", "17:00:00", "12:00:00", "11:00:00") // false
- * @example intervalContainsTime("invalid", "17:00:00", "12:00:00") // false
+ * @example intervalContainsTime("09:00:00", "17:00:00", "16:59:59.999999999") // true (last value before the end)
+ * @example intervalContainsTime("09:00:00", "17:00:00", "17:00:00") // false (end is excluded)
+ * @example intervalContainsTime("09:00:00", "17:00:00", "12:00:00", "17:00:00") // true (inner shares the end)
+ * @example intervalContainsTime("09:00:00", "17:00:00", "17:00:00", "17:00:00") // false (empty interval at the edge)
+ * @example intervalContainsTime("17:00:00", "09:00:00", "12:00:00") // false (reversed interval)
  */
 export function intervalContainsTime(
   intervalStart: string,
@@ -40,10 +51,10 @@ export function intervalContainsTime(
   }
 
   if (
-    !plainTime.test(intervalStart) ||
-    !plainTime.test(intervalEnd) ||
-    !plainTime.test(pointOrStart) ||
-    (pointEnd !== undefined && !plainTime.test(pointEnd))
+    !isValidTime(intervalStart) ||
+    !isValidTime(intervalEnd) ||
+    !isValidTime(pointOrStart) ||
+    (pointEnd !== undefined && !isValidTime(pointEnd))
   ) {
     return false;
   }
@@ -58,9 +69,10 @@ export function intervalContainsTime(
     }
 
     if (pointEnd === undefined) {
-      return (
-        Temporal.PlainTime.compare(s, p) <= 0 &&
-        Temporal.PlainTime.compare(p, e) <= 0
+      return halfOpenContainsPoint(
+        { start: s, end: e },
+        p,
+        Temporal.PlainTime.compare,
       );
     }
 
@@ -70,9 +82,10 @@ export function intervalContainsTime(
       return false;
     }
 
-    return (
-      Temporal.PlainTime.compare(s, p) <= 0 &&
-      Temporal.PlainTime.compare(pe, e) <= 0
+    return halfOpenContainsSpan(
+      { start: s, end: e },
+      { start: p, end: pe },
+      Temporal.PlainTime.compare,
     );
   } catch {
     return false;

@@ -1,8 +1,10 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
 import { isValidAmount, resolveOverflow } from "../../internal";
 import { isValidDateTimeDurationUnit } from "../../plain/validate";
 import type { DateTimeDurationUnit, Overflow } from "../../types";
 import { isValidUtc } from "../validate/isValidUtc";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Add a temporal amount to a UTC datetime string and return a new UTC Instant string.
@@ -28,22 +30,36 @@ export function addUtc(
   units: Partial<Record<DateTimeDurationUnit, number>>,
   options?: { overflow?: Overflow },
 ): string {
-  const validUtc = isValidUtc(value);
-  const validUnits = Object.keys(units).every(isValidDateTimeDurationUnit);
-  const validAmounts = Object.values(units).every(isValidAmount);
-
-  if (!validUtc || !validUnits || !validAmounts) {
-    return "";
-  }
-
   try {
-    const instant = Temporal.Instant.from(value);
-    const zoned = instant.toZonedDateTimeISO("UTC");
-    const result = zoned.add(units, {
-      overflow: resolveOverflow(options?.overflow),
-    });
-    return result.toInstant().toString();
+    if (!isOptionsArgument(options)) {
+      return "";
+    }
+
+    const validUtc = isValidUtc(value);
+    const validUnits =
+      typeof units === "object" &&
+      units !== null &&
+      Object.keys(units).every(isValidDateTimeDurationUnit);
+    const validAmounts =
+      validUnits && Object.values(units).every(isValidAmount);
+
+    if (!validUtc || !validUnits || !validAmounts) {
+      return "";
+    }
+
+    try {
+      const instant = Temporal.Instant.from(value);
+      const zoned = instant.toZonedDateTimeISO("UTC");
+      const result = zoned.add(units, {
+        overflow: resolveOverflow(options?.overflow),
+      });
+      return result.toInstant().toString();
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

@@ -10,7 +10,8 @@ import { isValidDateTime } from "../validate";
  * @param value ISO datetime string
  * @returns Microsecond (000-999) or "" on invalid input
  *
- * @example parseMicrosecondFromDateTime("2024-03-15T14:30:45.123") // "123"
+ * @example parseMicrosecondFromDateTime("2024-03-15T14:30:45.123") // "000"
+ * @example parseMicrosecondFromDateTime("2024-03-15T14:30:45.123456") // "456"
  * @example parseMicrosecondFromDateTime("2024-03-15T14:30:45.000") // "000"
  * @example parseMicrosecondFromDateTime("invalid") // ""
  */

@@ -34,43 +34,49 @@ export function splitIntervalAt(
   interval: Interval,
   boundaries: string[],
 ): Interval[] {
-  const record = parseIntervalNanoseconds(interval);
+  try {
+    const record = parseIntervalNanoseconds(interval);
 
-  if (record === null || !Array.isArray(boundaries)) {
-    return [];
-  }
-
-  const inside: Array<{ instant: bigint; text: string }> = [];
-
-  for (let index = 0; index < boundaries.length; index++) {
-    const text = boundaries[index];
-    const instant = parseInstantNanoseconds(text);
-
-    if (instant === null) {
+    if (record === null || !Array.isArray(boundaries)) {
       return [];
     }
 
-    if (record.start < instant && instant < record.end) {
-      inside.push({ instant, text });
+    const inside: Array<{ instant: bigint; text: string }> = [];
+
+    for (let index = 0; index < boundaries.length; index++) {
+      const text = boundaries[index];
+      const instant = parseInstantNanoseconds(text);
+
+      if (instant === null) {
+        return [];
+      }
+
+      if (record.start < instant && instant < record.end) {
+        inside.push({ instant, text });
+      }
     }
-  }
 
-  // Array.prototype.sort is stable (ES2019): equal instants keep their input order.
-  inside.sort((x, y) =>
-    x.instant < y.instant ? -1 : x.instant > y.instant ? 1 : 0,
-  );
+    // Array.prototype.sort is stable (ES2019): equal instants keep their input order.
+    inside.sort((x, y) =>
+      x.instant < y.instant ? -1 : x.instant > y.instant ? 1 : 0,
+    );
 
-  const texts = [record.startText];
+    const texts = [record.startText];
 
-  for (let index = 0; index < inside.length; index++) {
-    if (index === 0 || inside[index].instant !== inside[index - 1].instant) {
-      texts.push(inside[index].text);
+    for (let index = 0; index < inside.length; index++) {
+      if (index === 0 || inside[index].instant !== inside[index - 1].instant) {
+        texts.push(inside[index].text);
+      }
     }
+
+    texts.push(record.endText);
+
+    return texts
+      .slice(0, -1)
+      .map((start, index) => ({ start, end: texts[index + 1] }));
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
+    return [];
   }
-
-  texts.push(record.endText);
-
-  return texts
-    .slice(0, -1)
-    .map((start, index) => ({ start, end: texts[index + 1] }));
 }

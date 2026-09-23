@@ -1,14 +1,19 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
-import { plainTime } from "../../regex";
+import { halfOpenDifference } from "../../internal";
+import { isValidTime } from "../validate";
 
 /**
  * Return the portion(s) of interval A not covered by interval B.
  *
  * - Uses `Temporal.PlainTime.compare` for comparison.
- * - Endpoints are inclusive, so a returned piece ends one nanosecond before, or starts
- *   one nanosecond after, the interval it borders.
- * - Returns `[]` when B fully covers A.
- * - Returns `[{ start, end }]` when B overlaps one edge of A (or equals A).
+ * - Half-open: an interval holds every `t` with `start <= t < end`. A returned piece ends exactly
+ *   where B starts, or starts exactly where B ends, because B's `end` is not in B (CORE-6's
+ *   `subtractIntervals`). No piece is stepped by one unit.
+ * - B touching A (`bStart === aEnd` or `bEnd === aStart`), or empty, removes nothing.
+ * - An empty A (`aStart === aEnd`) has nothing left: returns `[]`. Every returned piece is non-empty.
+ * - Returns `[]` when B fully covers A, which includes B equal to A.
+ * - Returns `[{ start, end }]` when B overlaps exactly one edge of A, leaving one piece.
  * - Returns `[{ start, end }, { start, end }]` when B is fully inside A with gaps on both sides.
  * - Returns A unchanged when B lies entirely before or after it.
  * - Returns `[]` if either interval is invalid (`start > end`).
@@ -20,10 +25,10 @@ import { plainTime } from "../../regex";
  * @param bEnd ISO 8601 time string for the second interval end
  * @returns array of `{ start, end }` records representing A minus B, or `[]` on invalid input
  *
- * @example intervalDifferenceTime("09:00:00", "17:00:00", "12:00:00", "13:00:00") // [{ start: "09:00:00", end: "11:59:59.999999999" }, { start: "13:00:00.000000001", end: "17:00:00" }]
+ * @example intervalDifferenceTime("09:00:00", "17:00:00", "12:00:00", "13:00:00") // [{ start: "09:00:00", end: "12:00:00" }, { start: "13:00:00", end: "17:00:00" }]
  * @example intervalDifferenceTime("09:00:00", "17:00:00", "09:00:00", "17:00:00") // []
- * @example intervalDifferenceTime("09:00:00", "17:00:00", "12:00:00", "17:00:00") // [{ start: "09:00:00", end: "11:59:59.999999999" }]
- * @example intervalDifferenceTime("12:00:00", "17:00:00", "09:00:00", "10:00:00") // [{ start: "12:00:00", end: "17:00:00" }] (B entirely before A)
+ * @example intervalDifferenceTime("09:00:00", "17:00:00", "12:00:00", "17:00:00") // [{ start: "09:00:00", end: "12:00:00" }]
+ * @example intervalDifferenceTime("12:00:00", "17:00:00", "09:00:00", "12:00:00") // [{ start: "12:00:00", end: "17:00:00" }] (touching B removes nothing)
  * @example intervalDifferenceTime("invalid", "17:00:00", "12:00:00", "13:00:00") // []
  */
 export function intervalDifferenceTime(
@@ -42,10 +47,10 @@ export function intervalDifferenceTime(
   }
 
   if (
-    !plainTime.test(aStart) ||
-    !plainTime.test(aEnd) ||
-    !plainTime.test(bStart) ||
-    !plainTime.test(bEnd)
+    !isValidTime(aStart) ||
+    !isValidTime(aEnd) ||
+    !isValidTime(bStart) ||
+    !isValidTime(bEnd)
   ) {
     return [];
   }
@@ -64,30 +69,14 @@ export function intervalDifferenceTime(
       return [];
     }
 
-    const result: Array<{ start: string; end: string }> = [];
-
-    // Left piece: A before B starts
-    if (Temporal.PlainTime.compare(aS, bS) < 0) {
-      const leftEnd =
-        Temporal.PlainTime.compare(aE, bS) < 0
-          ? aE
-          : bS.subtract({ nanoseconds: 1 });
-      if (Temporal.PlainTime.compare(leftEnd, aS) >= 0) {
-        result.push({ start: aS.toString(), end: leftEnd.toString() });
-      }
-    }
-
-    // Right piece: A after B ends — starting at A's own start when B lies entirely before A. The
-    // step is only taken when B ends inside A, so it never wraps past 23:59:59.999999999.
-    if (Temporal.PlainTime.compare(aE, bE) > 0) {
-      const rightStart =
-        Temporal.PlainTime.compare(bE, aS) < 0
-          ? aS
-          : bE.add({ nanoseconds: 1 });
-      result.push({ start: rightStart.toString(), end: aE.toString() });
-    }
-
-    return result;
+    return halfOpenDifference(
+      { start: aS, end: aE },
+      [{ start: bS, end: bE }],
+      Temporal.PlainTime.compare,
+    ).map(({ start, end }) => ({
+      start: start.toString(),
+      end: end.toString(),
+    }));
   } catch {
     return [];
   }

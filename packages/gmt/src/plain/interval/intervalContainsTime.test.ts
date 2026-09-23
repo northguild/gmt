@@ -3,13 +3,16 @@ import { mockTemporalPlainTimeFromThrow } from "../../test/mocks";
 
 describe("intervalContainsTime", () => {
   it.each`
-    intervalStart | intervalEnd   | pointOrStart  | pointEnd     | expected
-    ${"09:00:00"} | ${"17:00:00"} | ${"12:00:00"} | ${undefined} | ${true}
-    ${"09:00:00"} | ${"17:00:00"} | ${"09:00:00"} | ${undefined} | ${true}
-    ${"09:00:00"} | ${"17:00:00"} | ${"17:00:00"} | ${undefined} | ${true}
-    ${"12:00:00"} | ${"12:00:00"} | ${"12:00:00"} | ${undefined} | ${true}
-    ${"09:00:00"} | ${"17:00:00"} | ${"08:59:59"} | ${undefined} | ${false}
-    ${"09:00:00"} | ${"17:00:00"} | ${"17:00:01"} | ${undefined} | ${false}
+    intervalStart | intervalEnd             | pointOrStart            | pointEnd     | expected
+    // Half-open [start, end): start <= point < end (CORE-6 §3 intervalContains).
+    ${"09:00:00"} | ${"17:00:00"}           | ${"12:00:00"}           | ${undefined} | ${true}
+    ${"09:00:00"} | ${"17:00:00"}           | ${"09:00:00"}           | ${undefined} | ${true}
+    ${"09:00:00"} | ${"17:00:00"}           | ${"16:59:59.999999999"} | ${undefined} | ${true}
+    ${"22:00:00"} | ${"23:59:59.999999999"} | ${"23:59:59.999999999"} | ${undefined} | ${false}
+    ${"09:00:00"} | ${"17:00:00"}           | ${"17:00:00"}           | ${undefined} | ${false}
+    ${"12:00:00"} | ${"12:00:00"}           | ${"12:00:00"}           | ${undefined} | ${false}
+    ${"09:00:00"} | ${"17:00:00"}           | ${"08:59:59"}           | ${undefined} | ${false}
+    ${"09:00:00"} | ${"17:00:00"}           | ${"17:00:01"}           | ${undefined} | ${false}
   `(
     "returns $expected for point $pointOrStart in time interval $intervalStart to $intervalEnd",
     ({ intervalStart, intervalEnd, pointOrStart, pointEnd, expected }) => {
@@ -26,10 +29,15 @@ describe("intervalContainsTime", () => {
 
   it.each`
     intervalStart | intervalEnd   | innerStart    | innerEnd      | expected
+    // Inner within outer and overlapping it: an empty inner counts only strictly inside
+    // (CORE-6 §3 clampInterval clamps an empty interval at an edge to null).
     ${"09:00:00"} | ${"17:00:00"} | ${"10:00:00"} | ${"16:00:00"} | ${true}
     ${"09:00:00"} | ${"17:00:00"} | ${"09:00:00"} | ${"17:00:00"} | ${true}
-    ${"09:00:00"} | ${"17:00:00"} | ${"17:00:00"} | ${"17:00:00"} | ${true}
-    ${"12:00:00"} | ${"12:00:00"} | ${"12:00:00"} | ${"12:00:00"} | ${true}
+    ${"09:00:00"} | ${"17:00:00"} | ${"12:00:00"} | ${"17:00:00"} | ${true}
+    ${"09:00:00"} | ${"17:00:00"} | ${"12:00:00"} | ${"12:00:00"} | ${true}
+    ${"09:00:00"} | ${"17:00:00"} | ${"09:00:00"} | ${"09:00:00"} | ${false}
+    ${"09:00:00"} | ${"17:00:00"} | ${"17:00:00"} | ${"17:00:00"} | ${false}
+    ${"12:00:00"} | ${"12:00:00"} | ${"12:00:00"} | ${"12:00:00"} | ${false}
     ${"09:00:00"} | ${"17:00:00"} | ${"08:00:00"} | ${"12:00:00"} | ${false}
     ${"09:00:00"} | ${"17:00:00"} | ${"12:00:00"} | ${"18:00:00"} | ${false}
     ${"09:00:00"} | ${"17:00:00"} | ${"12:00:00"} | ${"11:00:00"} | ${false}

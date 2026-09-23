@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { closedXorSweep } from "../../internal";
+import { halfOpenXor } from "../../internal";
 import { isValidDateTimeInterval } from "./validate";
 
 /**
@@ -7,10 +7,12 @@ import { isValidDateTimeInterval } from "./validate";
  * covered by an odd number of the input intervals.
  *
  * - List-form generalization of `intervalXorDateTime`, which is pairwise only.
- * - Implemented as a closed-interval coverage sweep: each interval opens at its start and closes
- *   at its end, and the result is every maximal run where the coverage count is odd. No boundary
- *   is computed past an end, so an interval may end on the last representable value. For two
- *   overlapping intervals this reduces to exactly `intervalXorDateTime`'s pairwise result.
+ * - Half-open: an interval holds every `t` with `start <= t < end`. The result is every maximal
+ *   run covered an odd number of times, computed as a coverage-parity sweep over the start and
+ *   end boundaries. Runs end exactly at a boundary; no boundary is ever stepped by one unit, so
+ *   an interval may end on the type's last value without overflow or midnight wrap.
+ * - Touching odd runs join into one run; an empty interval (`start === end`) contributes nothing.
+ *   For two intervals this is exactly `intervalXorDateTime`'s pairwise result.
  * - Order of the input list does not matter; the result is sorted by start.
  * - Returns `[]` for an empty list, and `[]` when every instant is covered an even number of
  *   times (e.g. two identical intervals cancel out).
@@ -21,42 +23,46 @@ import { isValidDateTimeInterval } from "./validate";
  * @param intervals array of `{ start, end }` records
  * @returns array of `{ start, end }` records covered an odd number of times, or `[]` on invalid input
  *
- * @example intervalXorAllDateTime([{ start: "2024-01-01T00:00:00", end: "2024-01-10T00:00:00" }, { start: "2024-01-05T00:00:00", end: "2024-01-15T00:00:00" }]) // [{ start: "2024-01-01T00:00:00", end: "2024-01-04T23:59:59.999999999" }, { start: "2024-01-10T00:00:00.000000001", end: "2024-01-15T00:00:00" }]
+ * @example intervalXorAllDateTime([{ start: "2024-01-01T00:00:00", end: "2024-01-10T00:00:00" }, { start: "2024-01-05T00:00:00", end: "2024-01-15T00:00:00" }]) // [{ start: "2024-01-01T00:00:00", end: "2024-01-05T00:00:00" }, { start: "2024-01-10T00:00:00", end: "2024-01-15T00:00:00" }]
  * @example intervalXorAllDateTime([]) // []
  */
 export function intervalXorAllDateTime(
   intervals: Array<{ start: string; end: string }>,
 ): Array<{ start: string; end: string }> {
-  if (!Array.isArray(intervals) || intervals.length === 0) {
-    return [];
-  }
-
-  if (
-    !intervals.every(
-      (interval) =>
-        interval &&
-        typeof interval === "object" &&
-        isValidDateTimeInterval(interval.start, interval.end),
-    )
-  ) {
-    return [];
-  }
-
   try {
-    const parsed = intervals.map((interval) => ({
-      start: Temporal.PlainDateTime.from(interval.start),
-      end: Temporal.PlainDateTime.from(interval.end),
-    }));
+    if (!Array.isArray(intervals) || intervals.length === 0) {
+      return [];
+    }
 
-    return closedXorSweep(parsed, {
-      compare: Temporal.PlainDateTime.compare,
-      stepUp: (value) => value.add({ nanoseconds: 1 }),
-      stepDown: (value) => value.subtract({ nanoseconds: 1 }),
-    }).map(({ start, end }) => ({
-      start: start.toString(),
-      end: end.toString(),
-    }));
+    if (
+      !intervals.every(
+        (interval) =>
+          interval &&
+          typeof interval === "object" &&
+          isValidDateTimeInterval(interval.start, interval.end),
+      )
+    ) {
+      return [];
+    }
+
+    try {
+      const parsed = intervals.map((interval) => ({
+        start: Temporal.PlainDateTime.from(interval.start),
+        end: Temporal.PlainDateTime.from(interval.end),
+      }));
+
+      return halfOpenXor(parsed, Temporal.PlainDateTime.compare).map(
+        ({ start, end }) => ({
+          start: start.toString(),
+          end: end.toString(),
+        }),
+      );
+    } catch {
+      return [];
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

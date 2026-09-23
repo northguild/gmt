@@ -92,4 +92,23 @@ describe("getLocaleWeekdayNames", () => {
       expect(new Set(names)).toEqual(new Set(iso));
     }
   });
+
+  // A well-formed tag with no locale data is not invalid input: ECMA-402 `ResolveLocale` falls
+  // back to the host's default locale instead of throwing, so the sentinel would be wrong here.
+  // Only the length is asserted, because the labels depend on the host locale.
+  it("falls back for a well-formed tag with no locale data instead of returning []", () => {
+    expect(getLocaleWeekdayNames("not-a-locale")).toHaveLength(7);
+  });
+
+  // ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale
+  // data is read (en-US weeks start on Sunday, fr-FR on Monday, ar-EG weekends are Friday and
+  // Saturday: Intl.Locale#getWeekInfo), and a malformed tag anywhere in the list is invalid input.
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${[]}
+    ${[42]}                                         | ${[]}
+  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+    expect(getLocaleWeekdayNames(locale)).toEqual(expected);
+  });
 });

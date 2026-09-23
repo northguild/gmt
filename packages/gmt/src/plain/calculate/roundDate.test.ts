@@ -67,6 +67,52 @@ describe("roundDate", () => {
     },
   );
 
+  // Temporal GetRoundingIncrementOption: ToIntegerWithTruncation, then < 1 is a RangeError.
+  // 2024-05-20 is 19 of 31 days into May (0.61, rounds up); 2024-06-15 is 5 of 14 days into the
+  // two-week span from Monday 2024-06-10 (rounds down).
+  it.each`
+    value           | unit       | roundingIncrement | expected
+    ${"2024-05-20"} | ${"month"} | ${1.5}            | ${"2024-06-01"}
+    ${"2024-06-15"} | ${"week"}  | ${2.7}            | ${"2024-06-10"}
+    ${"2024-06-15"} | ${"day"}   | ${1.9}            | ${"2024-06-15"}
+  `(
+    "returns $expected for $value with non-integer roundingIncrement $roundingIncrement truncated on $unit",
+    ({ value, unit, roundingIncrement, expected }) => {
+      expect(roundDate(value, { smallestUnit: unit, roundingIncrement })).toBe(
+        expected,
+      );
+    },
+  );
+
+  it.each`
+    value           | unit       | roundingIncrement
+    ${"2024-05-20"} | ${"month"} | ${0.9}
+    ${"2024-05-20"} | ${"day"}   | ${-0.5}
+    ${"2024-05-20"} | ${"year"}  | ${Number.NaN}
+    ${"2024-05-20"} | ${"week"}  | ${Number.POSITIVE_INFINITY}
+  `(
+    "returns empty string for $value with roundingIncrement $roundingIncrement (below 1 after truncation or non-finite) on $unit",
+    ({ value, unit, roundingIncrement }) => {
+      expect(roundDate(value, { smallestUnit: unit, roundingIncrement })).toBe(
+        "",
+      );
+    },
+  );
+
+  // Temporal GetRoundingModeOption: a value outside the nine rounding modes is a RangeError.
+  it.each`
+    value           | unit       | roundingMode
+    ${"2024-05-20"} | ${"month"} | ${"bogus"}
+    ${"2024-05-20"} | ${"year"}  | ${"HALFEXPAND"}
+    ${"2024-05-20"} | ${"week"}  | ${""}
+    ${"2024-05-20"} | ${"day"}   | ${"round"}
+  `(
+    "returns empty string for $value with unknown roundingMode $roundingMode on $unit",
+    ({ value, unit, roundingMode }) => {
+      expect(roundDate(value, { smallestUnit: unit, roundingMode })).toBe("");
+    },
+  );
+
   it.each`
     value           | unit       | roundingMode    | expected
     ${"2024-06-16"} | ${"month"} | ${"halfExpand"} | ${"2024-07-01"}
@@ -146,4 +192,73 @@ describe("roundDate", () => {
       );
     },
   );
+
+  // +275760-09-13 is the last representable PlainDate (a Saturday, day 257 of the leap year 275760).
+  // The next week, month and year start after it, so a mode that picks the current start still has
+  // a value: 06-15 is 166/366 through its year (under half), 09-10 is 9/30 through September and a
+  // Wednesday 2/7 through its week, 09-13 is 12/30 through September but 5/7 through its week (over
+  // half, so up to 09-15, which does not exist). Increment 2 spans Sep+Oct (61 days) or 275760+275761
+  // (366+365 days), both still under half. ceil past the last date is the sentinel.
+  it.each`
+    value              | unit       | roundingMode    | increment | expected
+    ${"+275760-06-15"} | ${"year"}  | ${"floor"}      | ${1}      | ${"+275760-01-01"}
+    ${"+275760-06-15"} | ${"year"}  | ${"trunc"}      | ${1}      | ${"+275760-01-01"}
+    ${"+275760-06-15"} | ${"year"}  | ${"halfExpand"} | ${1}      | ${"+275760-01-01"}
+    ${"+275760-06-15"} | ${"year"}  | ${"halfExpand"} | ${2}      | ${"+275760-01-01"}
+    ${"+275760-01-01"} | ${"year"}  | ${"halfExpand"} | ${1}      | ${"+275760-01-01"}
+    ${"+275760-06-15"} | ${"year"}  | ${"ceil"}       | ${1}      | ${""}
+    ${"+275760-09-13"} | ${"year"}  | ${"halfExpand"} | ${1}      | ${""}
+    ${"+275760-09-10"} | ${"month"} | ${"floor"}      | ${1}      | ${"+275760-09-01"}
+    ${"+275760-09-13"} | ${"month"} | ${"halfExpand"} | ${1}      | ${"+275760-09-01"}
+    ${"+275760-09-13"} | ${"month"} | ${"halfEven"}   | ${2}      | ${"+275760-09-01"}
+    ${"+275760-09-10"} | ${"month"} | ${"ceil"}       | ${1}      | ${""}
+    ${"+275760-09-13"} | ${"week"}  | ${"floor"}      | ${1}      | ${"+275760-09-08"}
+    ${"+275760-09-10"} | ${"week"}  | ${"halfExpand"} | ${1}      | ${"+275760-09-08"}
+    ${"+275760-09-13"} | ${"week"}  | ${"halfExpand"} | ${1}      | ${""}
+    ${"+275760-09-13"} | ${"week"}  | ${"ceil"}       | ${1}      | ${""}
+  `(
+    "returns $expected for the last-year PlainDate $value rounded to $unit (increment $increment) with roundingMode $roundingMode",
+    ({ value, unit, roundingMode, increment, expected }) => {
+      expect(
+        roundDate(value, {
+          smallestUnit: unit,
+          roundingMode,
+          roundingIncrement: increment,
+        }),
+      ).toBe(expected);
+    },
+  );
+});
+
+describe("roundDate with a plural smallestUnit", () => {
+  // Temporal §13.17 GetTemporalUnitValuedOption: "Both singular and plural unit names are accepted",
+  // so each plural rounds exactly as its singular. 2024-06-15 is day 166 of 366 (under half: the
+  // year's start), 14 of 30 days into June (under half), and a Saturday 5 of 7 days into its
+  // Monday week (over half: the next Monday). 2024-06-16 is exactly half way through June, and
+  // halfExpand rounds the tie up.
+  it.each`
+    value           | unit        | roundingIncrement | expected
+    ${"2024-06-15"} | ${"years"}  | ${undefined}      | ${"2024-01-01"}
+    ${"2024-06-15"} | ${"months"} | ${undefined}      | ${"2024-06-01"}
+    ${"2024-06-16"} | ${"months"} | ${undefined}      | ${"2024-07-01"}
+    ${"2024-06-15"} | ${"weeks"}  | ${undefined}      | ${"2024-06-17"}
+    ${"2024-06-15"} | ${"weeks"}  | ${2}              | ${"2024-06-10"}
+    ${"2024-06-15"} | ${"days"}   | ${undefined}      | ${"2024-06-15"}
+  `(
+    "returns $expected for $value rounded to the plural unit $unit with increment $roundingIncrement",
+    ({ value, unit, roundingIncrement, expected }) => {
+      expect(roundDate(value, { smallestUnit: unit, roundingIncrement })).toBe(
+        expected,
+      );
+    },
+  );
+
+  it.each`
+    unit
+    ${"hours"}
+    ${"dayss"}
+    ${"s"}
+  `("returns an empty string for the unit $unit", ({ unit }) => {
+    expect(roundDate("2024-06-15", { smallestUnit: unit as never })).toBe("");
+  });
 });

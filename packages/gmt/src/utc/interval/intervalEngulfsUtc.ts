@@ -1,28 +1,33 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
-import { isLeapSecond } from "../../plain/validate/isLeapSecond";
-import { utcDateTime } from "../../regex/utc-date-time";
+import { halfOpenContainsSpan } from "../../internal";
+import { isValidUtc } from "../validate";
 
 /**
- * Return true when interval B is fully contained within interval A — every instant of B
- * falls within A.
+ * Return true when the half-open interval B `[bStart, bEnd)` lies within the half-open interval
+ * A `[aStart, aEnd)` — every instant of B is also in A.
  *
- * - Uses `Temporal.Instant.compare` for comparison.
- * - Endpoints are inclusive: B may start at A's start and end at A's end.
+ * - Half-open: an interval holds every `t` with `start <= t < end`. B may start at A's start and
+ *   end at A's end, because neither end is part of either interval.
+ * - B must also overlap A, so an empty B (`bStart === bEnd`) counts only strictly inside A, never
+ *   at an edge (CORE-6's `clampInterval` clamps it away there).
  * - Equivalent to 4-argument `intervalContainsUtc(aStart, aEnd, bStart, bEnd)`.
+ * - Uses `Temporal.Instant.compare` for comparison.
  * - Returns `false` if either interval is invalid (`start > end`).
- * - Returns `false` on invalid input (wrong type, malformed strings, leap seconds).
+ * - Returns `false` on invalid input (wrong type, non-`Z` strings, malformed strings, leap seconds).
  *
  * @param aStart ISO 8601 UTC datetime string for the outer interval start
- * @param aEnd ISO 8601 UTC datetime string for the outer interval end
+ * @param aEnd ISO 8601 UTC datetime string for the outer interval end (excluded)
  * @param bStart ISO 8601 UTC datetime string for the inner interval start
- * @param bEnd ISO 8601 UTC datetime string for the inner interval end
- * @returns true if B is fully contained in A, or false on invalid input
+ * @param bEnd ISO 8601 UTC datetime string for the inner interval end (excluded)
+ * @returns true if B lies within A, or false on invalid input
  *
- * @example intervalEngulfsUtc("2024-01-01T09:00:00Z", "2024-12-31T17:00:00Z", "2024-06-01T12:00:00Z", "2024-07-01T13:00:00Z") // true
- * @example intervalEngulfsUtc("2024-01-01T09:00:00Z", "2024-12-31T17:00:00Z", "2024-01-01T09:00:00Z", "2024-12-31T17:00:00Z") // true (equal intervals)
- * @example intervalEngulfsUtc("2024-01-01T09:00:00Z", "2024-12-31T17:00:00Z", "2024-01-01T09:00:00Z", "2024-06-30T12:00:00Z") // true
- * @example intervalEngulfsUtc("2024-06-01T12:00:00Z", "2024-07-01T13:00:00Z", "2024-01-01T09:00:00Z", "2024-12-31T17:00:00Z") // false
- * @example intervalEngulfsUtc("invalid", "2024-12-31T17:00:00Z", "2024-06-01T12:00:00Z", "2024-07-01T13:00:00Z") // false
+ * @example intervalEngulfsUtc("2024-01-01T09:00:00Z", "2024-01-01T17:00:00Z", "2024-01-01T12:00:00Z", "2024-01-01T13:00:00Z") // true
+ * @example intervalEngulfsUtc("2024-01-01T09:00:00Z", "2024-01-01T17:00:00Z", "2024-01-01T09:00:00Z", "2024-01-01T17:00:00Z") // true (equal intervals)
+ * @example intervalEngulfsUtc("2024-01-01T09:00:00Z", "2024-01-01T17:00:00Z", "2024-01-01T12:00:00Z", "2024-01-01T17:00:00Z") // true (same end)
+ * @example intervalEngulfsUtc("2024-01-01T09:00:00Z", "2024-01-01T17:00:00Z", "2024-01-01T12:00:00Z", "2024-01-01T12:00:00Z") // true (empty interval strictly inside)
+ * @example intervalEngulfsUtc("2024-01-01T09:00:00Z", "2024-01-01T17:00:00Z", "2024-01-01T17:00:00Z", "2024-01-01T17:00:00Z") // false (empty interval at the edge)
+ * @example intervalEngulfsUtc("2024-01-01T12:00:00Z", "2024-01-01T13:00:00Z", "2024-01-01T09:00:00Z", "2024-01-01T17:00:00Z") // false
  */
 export function intervalEngulfsUtc(
   aStart: string,
@@ -40,19 +45,10 @@ export function intervalEngulfsUtc(
   }
 
   if (
-    !utcDateTime.test(aStart) ||
-    !utcDateTime.test(aEnd) ||
-    !utcDateTime.test(bStart) ||
-    !utcDateTime.test(bEnd)
-  ) {
-    return false;
-  }
-
-  if (
-    isLeapSecond(aStart) ||
-    isLeapSecond(aEnd) ||
-    isLeapSecond(bStart) ||
-    isLeapSecond(bEnd)
+    !isValidUtc(aStart) ||
+    !isValidUtc(aEnd) ||
+    !isValidUtc(bStart) ||
+    !isValidUtc(bEnd)
   ) {
     return false;
   }
@@ -71,9 +67,10 @@ export function intervalEngulfsUtc(
       return false;
     }
 
-    return (
-      Temporal.Instant.compare(aS, bS) <= 0 &&
-      Temporal.Instant.compare(bE, aE) <= 0
+    return halfOpenContainsSpan(
+      { start: aS, end: aE },
+      { start: bS, end: bE },
+      Temporal.Instant.compare,
     );
   } catch {
     return false;

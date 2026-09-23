@@ -17,8 +17,8 @@ import type { Interval } from "../../types";
  *   (GMT rule: first wins ties between spellings of one instant).
  * - `[]` is both a legitimate result (an empty list, or a list of only empty intervals) and the
  *   invalid-input sentinel; check inputs with `isValidInterval` when the difference matters.
- * - The closed `mergeIntervalsUtc`, `mergeIntervalsZoned` (…) also merge touching intervals but
- *   re-serialise endpoints; this is the half-open standard.
+ * - The positional `mergeIntervalsUtc`, `mergeIntervalsZoned` (…) follow the same half-open rule
+ *   and re-serialise endpoints instead of echoing the caller's strings.
  * - Returns `[]` when `intervals` is not an array or any element is not a valid `Interval`.
  *
  * @param intervals array of `{ start, end }` records of ISO 8601 instant strings
@@ -31,14 +31,20 @@ import type { Interval } from "../../types";
  * @example mergeIntervals([{ start: "2024-01-01T17:00:00Z", end: "2024-01-01T09:00:00Z" }]) // [] — inverted
  */
 export function mergeIntervals(intervals: Interval[]): Interval[] {
-  const records = parseIntervalNanosecondsList(intervals);
+  try {
+    const records = parseIntervalNanosecondsList(intervals);
 
-  if (records === null) {
+    if (records === null) {
+      return [];
+    }
+
+    return coalesceIntervalNanoseconds(records).map((run) => ({
+      start: run.startText,
+      end: run.endText,
+    }));
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
-
-  return coalesceIntervalNanoseconds(records).map((run) => ({
-    start: run.startText,
-    end: run.endText,
-  }));
 }

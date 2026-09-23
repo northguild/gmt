@@ -1,157 +1,69 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { calendarDate, plainDate } from "../regex";
+import { plainDate } from "../regex/date";
+import { plainDateTime } from "../regex/date-time";
 import {
-  calendarSystemIdFromTemporal,
-  isCalendarSystem,
-  temporalCalendarIds,
+  canonicalCalendarSystem,
+  computationCalendarId,
 } from "./calendarSystemIds";
-import {
-  dateFromEthiopicFamilyFields,
-  isEthiopicFamilyCalendar,
-} from "./ethiopicFamilyCalendar";
-import { formatCalendarYear } from "./formatCalendarYear";
-import { calendarDateFromFields, calendarFieldsOf } from "./temporalCompat";
+import { isoStringBody } from "./isoStringBody";
 
 /**
- * GMT's `;era=japanese` token, which GMT emitted for pre-Meiji dates before CORE-6, is a
- * deprecated input alias of the Intl era/monthCode proposal's `ce` (the era GMT now emits for
- * those dates). Accepted until the next major version.
+ * Second `60` in the time of day, before any `[`: `T`, `t` or space separator, extended or basic
+ * digits. Temporal's ParseISODateTime clamps it to `:59`; GMT's Plain date-time inputs reject it
+ * (`isValidDateTime`, a duration `relativeTo`). Unlike `regex/leap-second.ts`, no designator is
+ * required, because a Plain string has none.
  */
-const DEPRECATED_JAPANESE_ERA_ALIAS = "japanese";
-
-function temporalEraOf(calendarId: string, era: string): string {
-  return calendarId === "japanese" && era === DEPRECATED_JAPANESE_ERA_ALIAS
-    ? "ce"
-    : era;
-}
+export const temporalStringLeapSecond =
+  /^[^[]*?[Tt ]\d{2}:?\d{2}:?60(?:[.,]\d+)?(?:[-+Zz[]|$)/;
 
 /**
- * Parse a plain ISO PlainDate string or a GMT calendar-annotated PlainDate string
- * (`"5785-01-01[u-ca=hebrew]"`, calendar-native fields, not Temporal's own ISO-digit
- * `[u-ca=...]` annotation convention) into a Temporal.PlainDate. Throws on invalid input —
- * callers wrap this in try-catch per GMT's sentinel-return contract.
+ * Parse a GMT calendar date string into a Temporal.PlainDate, exactly as `Temporal.PlainDate.from`
+ * reads it, restricted to GMT's written shape and GMT's calendars. Throws on invalid input — callers
+ * wrap this in try-catch per GMT's sentinel contract.
  *
- * The regex only proves shape; `Temporal.PlainDate.from` performs the real construction
- * and validation (rejecting overflowed fields and unknown calendar identifiers), per the
- * scoped manual-string-parsing exception for fixed, non-caller-supplied grammars. The
- * Ethiopic family ("ethiopic" / "ethiopic-amete-alem" / "coptic") is the one exception —
- * see ethiopicFamilyCalendar.ts for why they're constructed via GMT-owned arithmetic
- * instead of Temporal's own calendar ids for those three.
+ * - The part before the first `[` must be GMT's strict extended date (`plainDate`) or date-time
+ *   (`plainDateTime`), as `isValidDate` and `isValidDateTime` require. Basic
+ *   format (`20241003`), a space or lower-case `t` separator and a UTC offset are rejected, although
+ *   `Temporal.PlainDate.from` reads them. Only then does Temporal read the annotations.
+ * - An ISO date, optionally followed by RFC 9557 annotations (`"2024-10-03[u-ca=hebrew]"`, which is
+ *   what `Temporal.PlainDate#toString()` writes). The digits are always the ISO date; the annotation
+ *   names the calendar (RFC 9557 §3.3).
+ * - A date-time is read as its date, as `Temporal.PlainDate.from` reads it
+ *   (`"2024-10-03T14:30[u-ca=hebrew]"` is 2024-10-03 in Hebrew): the time is dropped. A leap
+ *   second (second `60`) is rejected, as every GMT Plain date-time input rejects it.
+ * - The annotations follow Temporal's ISO grammar (`ParseISODateTime`): a time zone annotation
+ *   and elective unknown annotations (`[foo=bar]`) are read and ignored, the first `u-ca`
+ *   annotation names the calendar, and an unknown critical annotation (`[!foo=bar]`) or a second
+ *   `u-ca` annotation when either one is critical is rejected. `Temporal.PlainDate.from` applies
+ *   those rules and canonicalizes the id (`HEBREW` → `hebrew`, `islamicc` → `islamic-civil`,
+ *   `ethiopic-amete-alem` → `ethioaa`).
+ * - The calendar must be a `CalendarSystem`. Temporal also knows `chinese`, `dangi`, `islamic` and
+ *   `islamic-rgsa`, which GMT does not support.
+ * - The result computes in `computationCalendarId(calendar)`: `"ethiopic"` and `"coptic"` are read
+ *   in `"ethioaa"`, so callers that write a string back take the calendar from
+ *   `calendarSystemOfDateValue(value)`, not from `date.calendarId`.
  *
- * The non-annotated fallback branch requires the strict PlainDate-only shape (via the
- * `plainDate` regex) before delegating to `Temporal.PlainDate.from` — bare `.from()` silently
- * truncates a full datetime/zoned string to its date portion (`Temporal.PlainDate.from("2024-
- * 03-10T14:30:00")` succeeds), which would make this function (and therefore
- * `isValidCalendarDate`/`convertDateToCalendar`) wrongly accept datetime input. Found and
- * fixed as part of E5 (issue #78) — it predates this story but this function is E5's shared
- * gate, so it must not inherit the hazard.
+ * @param value an extended ISO date or date-time, optionally with RFC 9557 annotations
+ * @returns the Temporal.PlainDate, in the computation calendar
  */
 export function parseCalendarDateValue(value: string): Temporal.PlainDate {
-  const match = calendarDate.exec(value);
-  if (!match) {
-    if (!plainDate.test(value)) {
-      throw new RangeError(`Not a valid GMT PlainDate string: ${value}`);
-    }
-    return Temporal.PlainDate.from(value);
+  // Temporal.PlainDate.from also takes objects and property bags; GMT reads strings only.
+  if (typeof value !== "string") {
+    throw new TypeError("A GMT calendar date must be a string");
   }
-
-  const [, year, month, day, calendarId, era] = match;
-  if (isEthiopicFamilyCalendar(calendarId)) {
-    return dateFromEthiopicFamilyFields(calendarId, {
-      year: era ? undefined : Number(year),
-      era,
-      eraYear: era ? Number(year) : undefined,
-      month: Number(month),
-      day: Number(day),
-    });
+  if (temporalStringLeapSecond.test(value)) {
+    throw new RangeError(`Leap seconds are not supported: ${value}`);
   }
-
-  // The regex captures GMT's own calendar identifier (e.g. "islamic-tabular"), which
-  // doesn't always match Temporal's id for the same calendar (e.g. "islamic-tbla") — an
-  // unrecognized id is passed through as-is so Temporal.PlainDate.from rejects it the
-  // same way it rejects any other unknown calendar identifier.
-  const temporalCalendarId = isCalendarSystem(calendarId)
-    ? temporalCalendarIds[calendarId]
-    : calendarId;
-  // A captured `;era=` suffix (only ever present for "japanese", the one remaining calendar
-  // whose plain `.year` doesn't reset at an era change) means `year` is an era-relative
-  // `eraYear`, not a proleptic year — Temporal needs `era`+`eraYear` together to resolve
-  // it back to the correct date.
-  const fields = era
-    ? {
-        era: temporalEraOf(calendarId, era),
-        eraYear: Number(year),
-        month: Number(month),
-        day: Number(day),
-      }
-    : { year: Number(year), month: Number(month), day: Number(day) };
-  return calendarDateFromFields(temporalCalendarId, fields, "reject");
-}
-
-/**
- * The two halves of GMT's calendar-annotated PlainDate string, kept separate so a zoned string
- * can splice its own time/offset between them: `<date>` is the calendar-native (or bare ISO)
- * `YYYY-MM-DD`, `<annotation>` is the `[u-ca=...]` tail (empty for the "iso8601" calendar).
- *
- * `formatCalendarDate` is `date + annotation`; `internal/calendarZonedString.ts`'s
- * `formatZonedInCalendar` is `date + "T" + time + offset + annotation + "[" + timeZone + "]"`,
- * since GMT's zoned grammar orders `[u-ca=...]` before `[timeZone]` (see
- * `regex/calendar-zoned-date-time.ts` for why). Splitting here rather than string-slicing
- * `formatCalendarDate`'s output on `"["` keeps the era/zero-padding logic in exactly one place.
- */
-export interface CalendarDateStringParts {
-  date: string;
-  annotation: string;
-}
-
-/**
- * Split a Temporal.PlainDate into GMT's calendar-annotated string halves: a bare ISO date with
- * an empty annotation for the "iso8601" calendar (GMT's existing default, unannotated), or the
- * calendar's own native year/month/day plus a `[u-ca=<identifier>]` annotation for any other.
- *
- * "japanese" is the one exception to "native year": Temporal's `.year` for it stays
- * proleptic across era changes (Meiji 1 and Reiwa 1 don't both read `1`), which would
- * contradict the era-based numbering the calendar is for — so it's tagged with `.eraYear`
- * and `;era=<name>` instead, both of which Temporal always populates for this calendar
- * (including for pre-Meiji dates, under a synthetic "japanese" era — see the README's
- * calendar-systems section for why GMT doesn't reject those unlike `@internationalized/date`).
- *
- * This function is never called with an Ethiopic-family ("ethiopic" /
- * "ethiopic-amete-alem" / "coptic") calendared date — those three format through
- * `ethiopicFamilyDateParts` in ethiopicFamilyCalendar.ts instead, which never touches
- * Temporal's own "ethiopic"/"coptic" calendar ids. See that file for why.
- */
-export function calendarDateParts(
-  date: Temporal.PlainDate,
-): CalendarDateStringParts {
-  if (date.calendarId === "iso8601") {
-    return { date: date.toString(), annotation: "" };
+  const body = isoStringBody(value);
+  if (!plainDate.test(body) && !plainDateTime.test(body)) {
+    throw new RangeError(
+      `Not an extended ISO 8601 date or date-time: ${value}`,
+    );
   }
-
-  const calendarId = calendarSystemIdFromTemporal(date.calendarId);
-  const isEraBased = calendarId === "japanese";
-  const fields = calendarFieldsOf(date, date.calendarId);
-  const year = formatCalendarYear(
-    isEraBased ? (fields.eraYear ?? fields.year) : fields.year,
-  );
-  const month = String(fields.month).padStart(2, "0");
-  const day = String(fields.day).padStart(2, "0");
-  const eraSuffix = isEraBased ? `;era=${fields.era}` : "";
-  return {
-    date: `${year}-${month}-${day}`,
-    annotation: `[u-ca=${calendarId}${eraSuffix}]`,
-  };
-}
-
-/**
- * Format a Temporal.PlainDate as GMT's calendar-annotated string: a bare ISO string for
- * the "iso8601" calendar (GMT's existing default, unannotated), or the calendar's own
- * native year/month/day tagged with `[u-ca=<identifier>]` for any other calendar.
- *
- * See `calendarDateParts` (the shared primitive this concatenates) for the era handling and
- * the Ethiopic-family carve-out.
- */
-export function formatCalendarDate(date: Temporal.PlainDate): string {
-  const { date: datePart, annotation } = calendarDateParts(date);
-  return `${datePart}${annotation}`;
+  const date = Temporal.PlainDate.from(value);
+  const calendar = canonicalCalendarSystem(date.calendarId);
+  if (!calendar) {
+    throw new RangeError(`Unsupported calendar: ${date.calendarId}`);
+  }
+  return date.withCalendar(computationCalendarId(calendar));
 }

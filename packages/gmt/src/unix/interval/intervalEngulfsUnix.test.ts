@@ -2,14 +2,33 @@ import { intervalEngulfsUnix } from "./intervalEngulfsUnix";
 
 describe("intervalEngulfsUnix", () => {
   it.each`
-    aStart  | aEnd          | bStart        | bEnd          | expected
-    ${0}    | ${1700000000} | ${1500000000} | ${1600000000} | ${true}
-    ${0}    | ${1700000000} | ${0}          | ${1700000000} | ${true}
-    ${0}    | ${1700000000} | ${0}          | ${1500000000} | ${true}
-    ${0}    | ${1700000000} | ${1500000000} | ${1700000000} | ${true}
-    ${1000} | ${1000}       | ${1000}       | ${1000}       | ${true}
+    aStart | aEnd          | bStart        | bEnd          | expected
+    ${0}   | ${1700000000} | ${1500000000} | ${1600000000} | ${true}
+    ${0}   | ${1700000000} | ${0}          | ${1700000000} | ${true}
+    ${0}   | ${1700000000} | ${0}          | ${1500000000} | ${true}
+    ${0}   | ${1700000000} | ${1500000000} | ${1700000000} | ${true}
   `(
     "returns $expected when B is inside A ($aStart to $aEnd, $bStart to $bEnd)",
+    ({ aStart, aEnd, bStart, bEnd, expected }) => {
+      expect(intervalEngulfsUnix(aStart, aEnd, bStart, bEnd)).toBe(expected);
+    },
+  );
+
+  // Half-open [start, end) (coding-standards § 8; A = 2024-01-01T09:00Z, B = 12:00Z, C = 13:00Z,
+  // D = 17:00Z in ms). B is inside A when the two overlap and B's bounds lie within A's, so B may
+  // share A's end, and an empty B counts only strictly inside A — as `clampInterval` clamps it to
+  // itself there and to `null` at an edge.
+  it.each`
+    aStart           | aEnd             | bStart           | bEnd             | expected | reason
+    ${1704099600000} | ${1704128400000} | ${1704110400000} | ${1704128400000} | ${true}  | ${"[B, D) shares the end of [A, D)"}
+    ${1704099600000} | ${1704128400000} | ${1704110400000} | ${1704110400000} | ${true}  | ${"empty [B, B) strictly inside"}
+    ${1704099600000} | ${1704128400000} | ${1704128400000} | ${1704128400000} | ${false} | ${"empty [D, D) at the end edge"}
+    ${1704099600000} | ${1704128400000} | ${1704099600000} | ${1704099600000} | ${false} | ${"empty [A, A) at the start edge"}
+    ${1704110400000} | ${1704110400000} | ${1704110400000} | ${1704110400000} | ${false} | ${"identical empty intervals"}
+    ${1704099600000} | ${1704110400000} | ${1704114000000} | ${1704114000000} | ${false} | ${"empty [C, C) beyond the end of [A, B)"}
+    ${1704099600000} | ${1704110400000} | ${1704110400000} | ${1704110400001} | ${false} | ${"B runs one unit past A's end"}
+  `(
+    "returns $expected for A=[$aStart, $aEnd) and B=[$bStart, $bEnd) ($reason)",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalEngulfsUnix(aStart, aEnd, bStart, bEnd)).toBe(expected);
     },

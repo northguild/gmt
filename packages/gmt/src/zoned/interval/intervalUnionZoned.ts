@@ -1,20 +1,29 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
 import {
   calendarOfAllZonedValues,
   formatZonedInCalendar,
+  halfOpenUnion,
   parseCalendarZonedValue,
 } from "../../internal";
 import { isValidCalendarZonedDateTime } from "../validate";
 
 /**
- * Return the combined span of two zoned intervals, or null when they are disjoint.
+ * Return the combined span of two half-open zoned intervals `[start, end)`, or null when their
+ * union is not one non-empty span.
  *
  * - Uses `Temporal.ZonedDateTime.compare` for comparison (same instant semantics).
- * - Overlapping intervals return their merged span.
- * - Adjacent intervals (e.g. `aEnd === bStart`) share one instant and ARE merged.
+ * - The result is the single run `mergeIntervalsZoned([a, b])` produces, the same rule as
+ *   `mergeIntervals`. Overlapping intervals return their merged span, and each boundary keeps the
+ *   time zone of the interval that contributed it.
+ * - Touching intervals (e.g. `aEnd` the same instant as `bStart`) leave no gap between them and
+ *   ARE merged.
+ * - An empty interval (`start` and `end` the same instant) holds no instant, so it never changes
+ *   the result: with a non-empty interval the answer is that interval, and two empty intervals
+ *   give `null`.
  * - Returns `null` if either interval is invalid (`start > end`).
  * - Returns `null` on invalid input (wrong type, malformed strings, leap seconds).
- * - Accepts GMT calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
+ * - Accepts RFC 9557 calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
  *   well as bare ISO ones — E7 (issue #152) — but **rejects a mismatched pair**: every endpoint
  *   must name the same calendar system (E7's D4-zoned). Unlike the ordering functions, this one
  *   returns a *value* the caller reads back as a datetime, and there is no principled way to pick
@@ -26,8 +35,7 @@ import { isValidCalendarZonedDateTime } from "../validate";
  *   answer.) A mismatch returns the sentinel.
  * - Output boundaries are re-derived in the resolved calendar via `formatZonedInCalendar`, never
  *   copied from an input string (E7's D7-zoned).
- * - Still rejects Temporal's own `[timeZone][u-ca=...]` RFC 9557 ordering — see
- *   `regex/calendar-zoned-date-time.ts`.
+ * - Rejects a calendar annotation before the time zone annotation, which is not RFC 9557.
  *
  * @param aStart ISO 8601 zoned datetime string for the first interval start
  * @param aEnd ISO 8601 zoned datetime string for the first interval end
@@ -36,8 +44,8 @@ import { isValidCalendarZonedDateTime } from "../validate";
  * @returns `{ start, end }` with the merged span, or null on invalid input / disjoint intervals
  *
  * @example intervalUnionZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-06-30T23:59:59+00:00[UTC]", "2024-04-01T00:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]") // { start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-12-31T23:59:59+00:00[UTC]" }
- * @example intervalUnionZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-06-30T23:59:59+00:00[UTC]", "2024-06-30T23:59:59+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]") // { start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-12-31T23:59:59+00:00[UTC]" }
- * @example intervalUnionZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-06-30T23:59:59+00:00[UTC]", "2024-07-01T00:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]") // null
+ * @example intervalUnionZoned("2024-01-01T09:00:00+00:00[UTC]", "2024-01-01T12:00:00+00:00[UTC]", "2024-01-01T12:00:00+00:00[UTC]", "2024-01-01T17:00:00+00:00[UTC]") // { start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-01-01T17:00:00+00:00[UTC]" } (touching)
+ * @example intervalUnionZoned("2024-01-01T09:00:00+00:00[UTC]", "2024-01-01T12:00:00+00:00[UTC]", "2024-01-01T12:00:00.000000001+00:00[UTC]", "2024-01-01T17:00:00+00:00[UTC]") // null (one-nanosecond gap)
  * @example intervalUnionZoned("invalid", "2024-06-30T23:59:59+00:00[UTC]", "2024-04-01T00:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]") // null
  */
 export function intervalUnionZoned(
@@ -48,7 +56,7 @@ export function intervalUnionZoned(
 ): { start: string; end: string } | null {
   // One gate for all four endpoints: `isValidCalendarZonedDateTime` covers non-strings, empty
   // strings, leap seconds (which Temporal would otherwise silently clamp to :59), unknown zones
-  // and Temporal's forbidden segment ordering, while accepting GMT's calendar-annotated grammar.
+  // and a calendar annotation before the zone, while accepting RFC 9557 calendar annotations.
   if (
     !isValidCalendarZonedDateTime(aStart) ||
     !isValidCalendarZonedDateTime(aEnd) ||
@@ -79,20 +87,19 @@ export function intervalUnionZoned(
       return null;
     }
 
-    if (
-      Temporal.ZonedDateTime.compare(aZde, bZdt) < 0 ||
-      Temporal.ZonedDateTime.compare(bZde, aZdt) < 0
-    ) {
-      return null;
-    }
+    // One merged run, or null when a gap (or no instant at all) leaves no single span.
+    const union = halfOpenUnion(
+      { start: aZdt, end: aZde },
+      { start: bZdt, end: bZde },
+      Temporal.ZonedDateTime.compare,
+    );
 
-    const start = Temporal.ZonedDateTime.compare(aZdt, bZdt) <= 0 ? aZdt : bZdt;
-    const end = Temporal.ZonedDateTime.compare(aZde, bZde) >= 0 ? aZde : bZde;
-
-    return {
-      start: formatZonedInCalendar(start, calendar),
-      end: formatZonedInCalendar(end, calendar),
-    };
+    return union === null
+      ? null
+      : {
+          start: formatZonedInCalendar(union.start, calendar),
+          end: formatZonedInCalendar(union.end, calendar),
+        };
   } catch {
     return null;
   }
