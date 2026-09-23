@@ -149,11 +149,22 @@ jobs:
           DOX_DIST_REQUIRED: "1"
         run: pnpm --filter dox exec vitest run scripts/llms.test.ts
 
+      # A release PR (`changeset:version` already run) deletes the changesets it consumed
+      # and bumps versions instead of adding a new one — that's the point of it, per
+      # PUBLISHING.md step 3. `changeset status` can't tell the difference and fails any
+      # such PR, so detect it here instead of gating on it.
       - name: A changeset covers every changed package
         if: github.event_name == 'pull_request'
         run: |
           git fetch --no-tags origin "${{ github.base_ref }}"
-          pnpm exec changeset status --since="origin/${{ github.base_ref }}"
+          BASE="origin/${{ github.base_ref }}"
+          DELETED_CHANGESETS=$(git diff --name-status "$BASE"...HEAD -- '.changeset/*.md' | grep -c '^D' || true)
+          VERSION_BUMPED=$(git diff "$BASE"...HEAD -- '**/package.json' | grep -c '^+.*"version":' || true)
+          if [ "$DELETED_CHANGESETS" -gt 0 ] && [ "$VERSION_BUMPED" -gt 0 ]; then
+            echo "Release PR: changesets were consumed by changeset:version — skipping."
+          else
+            pnpm exec changeset status --since="$BASE"
+          fi
 
   build-lint:
     name: Build & Lint (Node ${{ matrix.node-version }})
