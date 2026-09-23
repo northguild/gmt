@@ -46,7 +46,6 @@
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.2",
-    "@fontsource/michroma": "^5.3.0",
     "@tanstack/intent": "^0.4.0",
     "@types/node": "^22.13.10",
     "fallow": "^3.17.0",
