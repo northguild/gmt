@@ -16,7 +16,7 @@ never publishes anything.
 | `packages/gmt-oxlint` | `@northguild/gmt-oxlint` |
 
 Each is versioned independently, so tags are per-package —
-`@northguild/gmt@1.15.0`. There is no repo-wide `vX.Y.Z` tag.
+`@northguild/gmt@1.16.0`. There is no repo-wide `vX.Y.Z` tag.
 
 ---
 
@@ -48,7 +48,7 @@ TanStack Intent skills in `packages/gmt/skills/` (via `/tanstack-intent`) in the
 same branch — see [CONTRIBUTING.md](./CONTRIBUTING.md#agent-skills). They ship
 inside the tarball.
 
-### 2. Merge as usual. Nothing is published.
+### 2. Merge as usual. Nothing is published
 
 Merge that PR, and the next one, and the one after that. Changesets pile up on
 `main` unreleased. The `Release` workflow runs on each push and decides there is
