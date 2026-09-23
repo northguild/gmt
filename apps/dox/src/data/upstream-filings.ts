@@ -58,6 +58,13 @@ export interface UpstreamFiling {
    * it is never counted among the fixes we sent.
    */
   role?: "author" | "contributor";
+  /**
+   * Why a filing closed without merging, in the maintainer's own terms.
+   *
+   * A bare "Closed" reads as a rejection. Every one of ours was closed with a routing instruction
+   * instead — ports must land in order, new fixes go to the standard first — so the page says which.
+   */
+  outcome?: string | null;
   /** A `"contributor"` row's link to our own comment. `url` cannot hold it: `sync` rewrites `url`
    * from the repo, kind and number every run. */
   contributionUrl?: string | null;

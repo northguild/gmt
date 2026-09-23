@@ -64,6 +64,7 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 import { formatJson } from "./lib/format-json.mjs";
+import { loadGmt, tryLoadGmt } from "./lib/gmt.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const FILE = "apps/dox/src/data/upstream-filings.json";
@@ -94,6 +95,7 @@ const HAND_WRITTEN_FIELDS = [
   // would silently turn a maintainer's PR into one of ours.
   "role",
   "contributionUrl",
+  "outcome",
 ];
 const EMPTY_HAND_WRITTEN = {
   summary: "",
@@ -105,6 +107,7 @@ const EMPTY_HAND_WRITTEN = {
   gmtNote: null,
   role: "author",
   contributionUrl: null,
+  outcome: null,
 };
 
 // ---------------------------------------------------------------- gh arguments and parsing
@@ -186,7 +189,13 @@ function parseSynced(raw, repo, number, kind) {
   return {
     title: data.title,
     url: filingUrl(repo, kind, number),
-    state: data.state.toLowerCase(),
+    // `gh pr view` reports MERGED as its own state, which the schema does not have: a merged PR is
+    // closed, and `mergedAt` is what tells the two apart (`filingStatus` reads it first). Until
+    // #361 merged, no filing of ours had ever exercised this.
+    state:
+      data.state.toLowerCase() === "merged"
+        ? "closed"
+        : data.state.toLowerCase(),
     draft: pr.draft,
     reviewDecision: pr.reviewDecision,
     comments: comments.length,
@@ -223,6 +232,7 @@ function buildFiling({ repo, number, kind }, hw, synced) {
     dependsOn: hw.dependsOn,
     gmtGuard: hw.gmtGuard,
     gmtNote: hw.gmtNote,
+    ...(hw.outcome ? { outcome: hw.outcome } : {}),
     state: synced.state,
     draft: synced.draft,
     reviewDecision: synced.reviewDecision,
@@ -329,7 +339,8 @@ function handWrittenFieldsOf(filing) {
 
 // ---------------------------------------------------------------- commands
 
-function sync() {
+async function sync() {
+  const gmt = await loadGmt();
   const existing = readFile();
   const byKey = new Map(existing.filings.map((f) => [keyOf(f), f]));
 
@@ -356,7 +367,7 @@ function sync() {
     )
     .sort(byRepoThenNumber);
 
-  const output = { checked: new Date().toISOString(), filings };
+  const output = { checked: gmt.getUtcNow(), filings };
   writeFileSync(`${ROOT}${FILE}`, formatJson(output));
 
   console.log(`upstream: wrote ${filings.length} filing(s) to ${FILE}`);
@@ -398,16 +409,87 @@ async function refreshFiling(key, committedByKey, kindOf, timeout) {
  * per-field care — a partial write here would need the same validation `check` already gives the
  * committed file, for a cache nothing depends on being complete.
  */
-/** The live file is fresh enough to reuse: under the TTL, and no CI run or forced refresh. */
+/**
+ * The live file is fresh enough to reuse: under the TTL, and no CI run or forced refresh.
+ *
+ * `mtimeMs` is filesystem metadata in epoch milliseconds, and this asks how long ago that was —
+ * elapsed time, not a date anyone reads. GMT is string-in, string-out for date values and is the
+ * wrong tool for a cache window, so this stays plain arithmetic.
+ */
 function liveFileIsFresh(livePath) {
   if (process.env.CI || process.env.UPSTREAM_REFRESH === "force") return false;
   return (
     existsSync(livePath) &&
-    Date.now() - statSync(livePath).mtimeMs < REFRESH_TTL_MS
+    Date.now() - statSync(livePath).mtimeMs < REFRESH_TTL_MS // date-ban: elapsed time against a file's epoch-ms mtime, not a date value
   );
 }
 
+/**
+ * The refresh's stopwatch: how long any one call may take, and a way to race the whole run.
+ *
+ * `performance.now()`, not `Date.now()`: this is elapsed time, and a monotonic clock cannot be
+ * moved by an NTP correction part-way through. GMT handles date *values*; it is deliberately not
+ * a timer.
+ */
+function startRefreshBudget() {
+  const deadline = performance.now() + REFRESH_BUDGET_MS;
+  const remaining = () => Math.max(deadline - performance.now(), 0);
+
+  /** Per-call timeout: whatever is left of the run, capped so one call cannot eat the lot. */
+  const timeLeft = () => Math.min(remaining(), REFRESH_CALL_TIMEOUT_MS);
+
+  /**
+   * Races `work` against the remaining total budget, so a hang past `REFRESH_BUDGET_MS` is caught
+   * even if some individual call's own timeout did not fire (defense in depth — every call also
+   * gets its own `timeLeft()`). Clears the timer once either side settles: an uncleared
+   * `setTimeout` keeps the process alive until it fires whoever won, which otherwise made a
+   * refresh that finished in under a second still take the full budget to exit.
+   */
+  const withBudget = (work) => {
+    let timer;
+    const expiry = new Promise((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error("refresh: time budget exceeded")),
+        remaining(),
+      );
+    });
+    return Promise.race([work, expiry]).finally(() => clearTimeout(timer));
+  };
+
+  return { timeLeft, withBudget };
+}
+
+/** Every filing the committed file knows plus everything discovery just found, newest state. */
+async function fetchAllFilings(committedByKey, { timeLeft, withBudget }) {
+  // One round trip per repo, concurrently — `gh`'s own network latency is what a sequential
+  // loop was paying for 13 times over, not CPU work this process does itself.
+  const discovered = (
+    await withBudget(
+      Promise.all(REPOS.map((repo) => discoverAsync(repo, timeLeft()))),
+    )
+  ).flat();
+
+  const kindOf = new Map(discovered.map((d) => [keyOf(d), d.kind]));
+  const keys = [...new Set([...committedByKey.keys(), ...kindOf.keys()])];
+
+  const filings = await withBudget(
+    Promise.all(
+      keys.map((key) => refreshFiling(key, committedByKey, kindOf, timeLeft())),
+    ),
+  );
+  return filings.sort(byRepoThenNumber);
+}
+
 async function refresh() {
+  // `refresh` must never break dev or CI, so an unbuilt GMT is one warning and no write — the same
+  // contract it already honours for a missing or unauthenticated `gh`.
+  const gmt = await tryLoadGmt();
+  if (gmt === null) {
+    console.warn(
+      "upstream: skipping refresh — packages/gmt is not built, so the committed snapshot stands",
+    );
+    return;
+  }
   const livePath = `${ROOT}${LIVE_FILE}`;
   if (liveFileIsFresh(livePath)) {
     console.log(
@@ -415,56 +497,15 @@ async function refresh() {
     );
     return;
   }
-  const deadline = Date.now() + REFRESH_BUDGET_MS;
-  const timeLeft = () =>
-    Math.min(Math.max(deadline - Date.now(), 0), REFRESH_CALL_TIMEOUT_MS);
-  /** Races `work` against the remaining total budget, so a hang past `REFRESH_BUDGET_MS` is
-   * caught even if some individual call's own timeout did not fire (defense in depth — each call
-   * below already gets its own `timeLeft()` as a `timeout`). Clears the timer once either side
-   * settles — an uncleared `setTimeout` keeps the process alive until it fires regardless of who
-   * won the race, which otherwise made a refresh that finished in under a second still take the
-   * full budget to exit. */
-  const withBudget = (work) => {
-    let timer;
-    const budget = new Promise((_, reject) => {
-      timer = setTimeout(
-        () => reject(new Error("refresh: time budget exceeded")),
-        Math.max(deadline - Date.now(), 0),
-      );
-    });
-    return Promise.race([work, budget]).finally(() => clearTimeout(timer));
-  };
-
-  const committed = readFile();
-  const committedByKey = new Map(committed.filings.map((f) => [keyOf(f), f]));
+  const budget = startRefreshBudget();
+  const committedByKey = new Map(
+    readFile().filings.map((f) => [keyOf(f), f]),
+  );
 
   try {
-    // One round trip per repo, concurrently — `gh`'s own network latency is what a sequential
-    // loop was paying for 13 times over, not CPU work this process does itself.
-    const discovered = (
-      await withBudget(
-        Promise.all(REPOS.map((repo) => discoverAsync(repo, timeLeft()))),
-      )
-    ).flat();
-
-    const kindOf = new Map(discovered.map((d) => [keyOf(d), d.kind]));
-    const keys = [...new Set([...committedByKey.keys(), ...kindOf.keys()])];
-
-    const filings = (
-      await withBudget(
-        Promise.all(
-          keys.map((key) =>
-            refreshFiling(key, committedByKey, kindOf, timeLeft()),
-          ),
-        ),
-      )
-    ).sort(byRepoThenNumber);
-
+    const filings = await fetchAllFilings(committedByKey, budget);
     mkdirSync(dirname(livePath), { recursive: true });
-    writeFileSync(
-      livePath,
-      formatJson({ checked: new Date().toISOString(), filings }),
-    );
+    writeFileSync(livePath, formatJson({ checked: gmt.getUtcNow(), filings }));
     console.log(
       `upstream: refreshed ${filings.length} filing(s) into ${LIVE_FILE}`,
     );
@@ -477,7 +518,7 @@ async function refresh() {
 
 // ---------------------------------------------------------------- check
 
-const STALE_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
+const STALE_AFTER_DAYS = 30;
 const REQUIRED_FIELDS = [
   "repo",
   "number",
@@ -517,21 +558,40 @@ function checkFilingsPresent(data, report) {
   }
 }
 
-/** `checked` as epoch ms, or `NaN` when it is missing or not a string. */
-const parseStamp = (checked) =>
-  typeof checked === "string" ? Date.parse(checked) : Number.NaN;
+/**
+ * How old the `checked` stamp is, through GMT rather than `Date.parse`.
+ *
+ * `diffUtc` returns `null` for anything it cannot read, so an unparseable stamp is one branch
+ * rather than a `NaN` that compares false against everything.
+ */
+const unreadableStamp = (checked, gmt) =>
+  typeof checked !== "string" || !gmt.isValidUtc(checked);
 
-function checkStamp(checked, report) {
-  const at = parseStamp(checked);
-  if (Number.isNaN(at)) {
-    report.problems.push(`${FILE}: "checked" is missing or not a valid date`);
-  } else if (at > Date.now()) {
+/** `null` when the stamp is unreadable, so callers get one branch instead of a `NaN`. */
+const stampAgeDays = (checked, gmt) =>
+  gmt.diffUtc(checked, gmt.getUtcNow(), "days");
+
+function reportStampAge(checked, ageDays, report) {
+  if (ageDays < 0) {
     report.problems.push(`${FILE}: "checked" (${checked}) is in the future`);
-  } else if (Date.now() - at > STALE_AFTER_MS) {
+    return;
+  }
+  if (ageDays > STALE_AFTER_DAYS) {
     report.warnings.push(
-      `${FILE}: "checked" (${checked}) is over 30 days old — run \`pnpm upstream:sync\``,
+      `${FILE}: "checked" (${checked}) is over ${STALE_AFTER_DAYS} days old — run \`pnpm upstream:sync\``,
     );
   }
+}
+
+function checkStamp(checked, report, gmt) {
+  const ageDays = unreadableStamp(checked, gmt)
+    ? null
+    : stampAgeDays(checked, gmt);
+  if (ageDays === null) {
+    report.problems.push(`${FILE}: "checked" is missing or not a valid date`);
+    return;
+  }
+  reportStampAge(checked, ageDays, report);
 }
 
 const labelOf = (f) => `${FILE}: ${f.repo ?? "?"}#${f.number ?? "?"}`;
@@ -601,28 +661,77 @@ function checkGuard(f, label, guards, report) {
  * Discovery searches by author, so a row someone else opened is here by hand; without the comment
  * link the page would show a maintainer's PR with nothing saying what we did on it.
  */
-function checkRole(f, label, report) {
-  if (f.role !== undefined && f.role !== "author" && f.role !== "contributor") {
-    report.problems.push(
+/**
+ * A filing that closed without merging needs an `outcome`.
+ *
+ * The page shows GitHub's own state, and "Closed" on its own reads as "rejected" — which is the
+ * opposite of what every closure of ours has said so far.
+ */
+/** Closed with nothing merged — the state that reads as a rejection unless a row explains it. */
+const closedUnmerged = (f) => f.state === "closed" && !f.mergedAt;
+
+/**
+ * Each rule is a named predicate and the problem it reports.
+ *
+ * Written this way rather than as a run of `if`s so that every rule is one testable question with
+ * a name, and adding one is adding a row. `applies` is deliberately separate from `message`: the
+ * message reads the same field the predicate judged, and keeping them adjacent stops the two
+ * drifting apart.
+ */
+const OUTCOME_RULES = [
+  {
+    applies: (f) => closedUnmerged(f) && !f.outcome,
+    message: (_f, label) =>
+      `${label} — closed without merging, so it needs an outcome saying why (a bare "Closed" reads as a rejection)`,
+  },
+  {
+    applies: (f) => !closedUnmerged(f) && Boolean(f.outcome),
+    message: (_f, label) =>
+      `${label} — outcome is only for a filing that closed without merging`,
+  },
+];
+
+const ROLE_RULES = [
+  {
+    applies: (f) =>
+      f.role !== undefined && f.role !== "author" && f.role !== "contributor",
+    message: (f, label) =>
       `${label} — role "${f.role}" is not "author" or "contributor"`,
-    );
-  }
-  if (f.role === "contributor" && !f.contributionUrl) {
-    report.problems.push(
+  },
+  {
+    applies: (f) => f.role === "contributor" && !f.contributionUrl,
+    message: (_f, label) =>
       `${label} — a contributor filing needs contributionUrl (the link to our own comment)`,
-    );
-  }
-  if (f.role !== "contributor" && f.contributionUrl) {
-    report.problems.push(
+  },
+  {
+    applies: (f) => f.role !== "contributor" && Boolean(f.contributionUrl),
+    message: (_f, label) =>
       `${label} — contributionUrl is only for a filing we did not open (role "contributor")`,
-    );
+  },
+];
+
+/** Runs a rule table, reporting the message of every rule that applies. */
+function applyRules(rules, f, label, report) {
+  for (const rule of rules) {
+    if (rule.applies(f)) report.problems.push(rule.message(f, label));
   }
 }
 
-function checkDates(f, label, report) {
+function checkOutcome(f, label, report) {
+  applyRules(OUTCOME_RULES, f, label, report);
+}
+
+function checkRole(f, label, report) {
+  applyRules(ROLE_RULES, f, label, report);
+}
+
+function checkDates(f, label, report, gmt) {
   for (const field of DATE_FIELDS) {
     const value = f[field];
-    if (value !== null && Number.isNaN(Date.parse(value))) {
+    // These are plain calendar days (`dateOnly` trims the time off on the way in), so the check is
+    // GMT's date validator rather than `Date.parse`, which also accepts things like "2026" and
+    // whatever the host decides "03/04/2026" means.
+    if (value !== null && !gmt.isValidDate(value)) {
       report.problems.push(
         `${label} — ${field} "${value}" is not a valid date`,
       );
@@ -630,7 +739,7 @@ function checkDates(f, label, report) {
   }
 }
 
-function checkFiling(f, { guards, seen, report }) {
+function checkFiling(f, { guards, seen, report, gmt }) {
   const label = labelOf(f);
   checkRequiredFields(f, label, report);
   checkDuplicate(f, label, seen, report);
@@ -638,7 +747,8 @@ function checkFiling(f, { guards, seen, report }) {
   checkEnums(f, label, report);
   checkGuard(f, label, guards, report);
   checkRole(f, label, report);
-  checkDates(f, label, report);
+  checkOutcome(f, label, report);
+  checkDates(f, label, report, gmt);
   if (f.summary === "") report.warnings.push(`${label} — empty summary`);
 }
 
@@ -654,12 +764,13 @@ function reportCheck({ problems, warnings }, data) {
   console.log(`upstream: ${data.filings.length} filing(s) OK`);
 }
 
-function check() {
+async function check() {
+  const gmt = await loadGmt();
   const report = { problems: [], warnings: [] };
   const data = readFile();
   checkFilingsPresent(data, report);
-  checkStamp(data.checked, report);
-  const context = { guards: knownGuards(), seen: new Set(), report };
+  checkStamp(data.checked, report, gmt);
+  const context = { guards: knownGuards(), seen: new Set(), report, gmt };
   for (const f of data.filings ?? []) checkFiling(f, context);
   reportCheck(report, data);
 }

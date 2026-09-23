@@ -1,0 +1,102 @@
+{
+  "groups": [
+    {
+      "defects": ["D1"],
+      "title": "D1 — calendar fields → ISO, add, until and Duration relativeTo near the limits (temporalCompat)",
+      "trigger": "a js-temporal release ports proposal-temporal a41eb67 (+ af0cb4b) and becomes GMT's @js-temporal/polyfill floor (upstream-issue draft C)",
+      "probes": 27,
+      "failing": 23
+    },
+    {
+      "defects": ["D2"],
+      "title": "D2 — buddhist read through ICU4C's Julian/Gregorian hybrid",
+      "trigger": "a js-temporal release contains 2bb6ba1 (already on main)",
+      "probes": 2,
+      "failing": 2
+    },
+    {
+      "defects": ["D3", "D4"],
+      "title": "D3 + D4 — Hebrew years <= 0 (polyfill leap-year %, ICU4C one day off)",
+      "trigger": "BOTH a js-temporal release ports proposal-temporal 0df570c AND GMT's engines.node floor bundles an ICU containing 5267bb5778 (ICU-23007)",
+      "probes": 3,
+      "failing": 3
+    },
+    {
+      "defects": ["D5"],
+      "title": "D5 — Indian before ISO year 1 (stale V8 bug 10529 detector)",
+      "trigger": "a js-temporal release ports proposal-temporal 314b112",
+      "probes": 1,
+      "failing": 1
+    },
+    {
+      "defects": ["D6"],
+      "title": "D6 — non-ISO until re-constrains the day while counting months",
+      "trigger": "a js-temporal release contains 10aeb98 (already on main)",
+      "probes": 11,
+      "failing": 11
+    },
+    {
+      "defects": ["D7"],
+      "title": "D7 — Hebrew until by years throws mixed-sign (tc39/proposal-temporal#3159)",
+      "trigger": "a js-temporal release ports proposal-temporal 0e32ee0",
+      "probes": 2,
+      "failing": 2
+    },
+    {
+      "defects": ["D8"],
+      "title": "D8 — japanese pre-proposal era codes",
+      "trigger": "a js-temporal release contains 2bb6ba1",
+      "probes": 3,
+      "failing": 3
+    },
+    {
+      "defects": ["D10"],
+      "title": "D10 — fields → ISO skips a 5–6-day month 13 in far years (tc39/proposal-temporal#3329; ethioaa, so coptic and ethiopic)",
+      "trigger": "js-temporal ports tc39 #3292 together with the #3329 fix (0.5.1 predates #3292, so this group passes today: it guards against a port of #3292 alone)",
+      "probes": 2,
+      "failing": 0
+    },
+    {
+      "defects": ["D11"],
+      "title": "D11 — the calendar nudge window is never retried, so total, round and until with a calendar smallestUnit answer over the wrong bounds (relativeTo on the 29th-31st)",
+      "trigger": "a js-temporal release contains js-temporal/temporal-polyfill#361's 50d66d2, which ports proposal-temporal #3172 (5dd0b0d97ee1, the fix for tc39 #3168) and retries the nudge window; already written in ptomato's open PR #361 but not on main, so no new filing is needed",
+      "probes": 6,
+      "failing": 6
+    },
+    {
+      "defects": ["D9"],
+      "title": "D9 — non-ISO months added and counted one month at a time (heap OOM for in-range amounts; temporalCompat/largeMonthSpan.ts)",
+      "trigger": "a js-temporal release adds and differences non-ISO months in bounded work: each D9 probe reads at most 100 Intl dates for 1,200 months",
+      "probes": 4,
+      "failing": 4
+    },
+    {
+      "defects": ["zoned.A"],
+      "title": "zoned.A — wall clock → exact time at the range limits (zonedWallClock.ts defect 1, zonedWallClockDifference.ts defect 1)",
+      "trigger": "a js-temporal release contains 05ce7a3 (fixes the max.* probes only) AND an upstream fix for the minimum edge (min.* probes still fail with 05ce7a3 applied); upstream-issue draft A must ask for both",
+      "probes": 10,
+      "failing": 10
+    },
+    {
+      "defects": ["zoned.B"],
+      "title": "zoned.B — next transition missed near the maximum (zonedWallClock.ts defect 2)",
+      "trigger": "a js-temporal release fixes GetNamedTimeZoneNextTransition near the maximum (upstream-issue draft B; not fixed on main)",
+      "probes": 3,
+      "failing": 3
+    },
+    {
+      "defects": ["zoned.E"],
+      "title": "zoned.E — transition search floored at 1847-01-01 (zonedWallClock.ts defect 3)",
+      "trigger": "a js-temporal release containing js-temporal/temporal-polyfill#372 (tc39/proposal-temporal#3330)",
+      "probes": 5,
+      "failing": 5
+    },
+    {
+      "defects": ["zoned.D"],
+      "title": "zoned.D — UTC fast path skips IsValidEpochNanoseconds (zonedWallClockDifference.ts defect 2)",
+      "trigger": "a js-temporal release validates the UTC fast path of GetPossibleEpochNanoseconds (upstream-issue draft D; not fixed on main)",
+      "probes": 2,
+      "failing": 2
+    }
+  ]
+}

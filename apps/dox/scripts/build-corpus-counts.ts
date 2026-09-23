@@ -68,14 +68,12 @@ const referenceCount = corpusEntries.length;
 const functionCount = corpusEntries.filter((e) => e.kind === "function").length;
 
 const guideCount = buildGuideChunks(
-  [...guideFiles(GUIDES), ...topLevelFiles(DOCS)]
-    .sort()
-    .map((path) =>
-      toGuideSource(path, readFileSync(path, "utf8"), {
-        gmtVersion,
-        values: pageExpressionValues(),
-      }),
-    ),
+  [...guideFiles(GUIDES), ...topLevelFiles(DOCS)].sort().map((path) =>
+    toGuideSource(path, readFileSync(path, "utf8"), {
+      gmtVersion,
+      values: pageExpressionValues(),
+    }),
+  ),
 ).length;
 
 const next = `// GENERATED FILE — do not edit by hand.

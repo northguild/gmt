@@ -7,6 +7,7 @@ description: >
 slug: upstream
 ---
 
+import UpstreamDefects from "../../components/UpstreamDefects.astro";
 import UpstreamTracker from "../../components/UpstreamTracker.astro";
 import { gmtVersion } from "../../generated/versions";
 
@@ -14,32 +15,65 @@ GMT is built on [Temporal](https://tc39.es/proposal-temporal/), the new JavaScri
 time standard. Until browsers and Node ship Temporal natively, GMT runs on the community
 [`@js-temporal/polyfill`](https://github.com/js-temporal/temporal-polyfill).
 
-We test GMT against the Temporal standard itself, not against the polyfill. When the polyfill
-gives a wrong answer, GMT gives you the right one anyway, and we help fix it for everyone: we
-send the fix to the people who maintain the polyfill, and to the Temporal standard's own
-reference code wherever the same bug lives there too.
+**If you use GMT, there is nothing on this page for you to do.** The polyfill has a handful of bugs
+in rare corners of the calendar. GMT spots each one and gives you the right answer anyway. The rest
+of this page is the detail: which bugs, and what we have done to get them fixed for everyone.
 
-Sometimes the fix is already written and waiting, and another pull request would only add noise. Then
-the useful thing is evidence — a way to reproduce the bug, and measurements showing what the pending
-fix changes — so those are tracked here too, marked as someone else's work.
+We test GMT against the Temporal standard itself, never against the polyfill, so we can see when the
+polyfill is wrong. When it is, we send the fix to the people who maintain the polyfill, and to the
+Temporal standard's own reference code where the same bug lives there too.
 
-## Where each fix stands
+## Which bugs GMT still works around
+
+Each row is one bug in the polyfill, together with the code GMT runs instead so that you still get
+the right answer.
+
+The middle column says whether GMT still needs that code. GMT includes a small test for each bug and
+runs it against the polyfill version it depends on; the numbers are what those tests returned when
+this page was built. When the polyfill fixes a bug, the row changes on its own.
+
+<UpstreamDefects />
+
+**Still needed?** shows what GMT's own tests for that bug returned against the polyfill version it
+depends on. A dash under **What we sent** means we had nothing to send: either someone had already
+fixed the bug, or it cannot reach anyone using GMT.
+
+## How a fix reaches you
+
+The polyfill is being brought back in line with the current version of the standard, one change at a
+time. It is a long job, and it decides where each fix has to go:
+
+- **The standard first.** Its maintainers asked us to send fixes to the Temporal standard rather
+  than straight to the polyfill, so that the catching-up work stays manageable.
+- **The polyfill next.** Fixes arrive there as that work moves forward. This is why several of the
+  pull requests below were closed with thanks instead of merged. None was turned down; each was sent
+  where it would do more good.
+- **A release last.** The maintainers would rather publish one release once the polyfill has caught
+  up than a release for each fix.
+
+Until that release, GMT's own code covers every bug in the table above.
+
+## What we sent, and what happened to it
+
+Sometimes a fix is already written and waiting, and another pull request would only add noise. What
+helps then is evidence: a way to reproduce the bug, and measurements of what the pending fix
+changes. Those are listed here too, marked as someone else's work.
 
 <UpstreamTracker />
 
 ## What this means for you
 
-**You don't need to do anything.** Where the polyfill has one of these bugs, GMT detects it
-and uses its own correct code instead. GMT checks once, when it first loads, whether the
-installed polyfill still has each bug. If it doesn't, GMT uses the polyfill directly. Either
-way, you get the same correct answer.
+**You don't need to do anything.** Where the polyfill has one of these bugs, GMT uses its own
+correct code instead. It checks once, as it loads, whether the installed polyfill still has each
+bug; where the bug is gone, GMT uses the polyfill directly. You get the same correct answer either
+way.
 
-When the polyfill maintainers merge these fixes and publish a new release, GMT's extra code
-simply stops being needed. Your results don't change.
+So when a polyfill release carries these fixes, GMT's extra code simply stops being used. Your
+results don't change, which is the point: there is nothing here for you to keep track of.
 
-We check this continuously. `pnpm compat` reports which of GMT's workarounds the installed
-polyfill still needs, and `pnpm compat:oracle` compares GMT's results with the Temporal
-built into Chrome, date by date, across every calendar GMT supports. For GMT {gmtVersion} it
+These checks run on their own, so nobody has to remember them. Every bug on this page has a test
+that runs against the installed polyfill, and GMT's answers are compared with the Temporal built
+into Chrome — date by date, across every calendar GMT supports. For GMT {gmtVersion} that comparison
 found no differences.
 
 ## What kind of bugs are these?

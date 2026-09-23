@@ -1,0 +1,24 @@
+---
+/**
+ * The one-sentence tally above the tracker's tables.
+ *
+ * A sibling of `UpstreamTrackerLegend.astro`, for the same reason: the tracker component stays the
+ * table it is named for. The numbers are computed in `lib/upstream-summary.ts` so the site's
+ * raw-text surfaces get real figures rather than un-evaluated JSX.
+ */
+import {
+  filedByUs,
+  filedPrs,
+  handledInGmt,
+  unaffectingGmt,
+} from "../data/upstream-filings";
+import { contributionClause, coverageClause } from "../lib/upstream-summary";
+---
+
+<p>
+  <strong>
+    So far we have sent {filedByUs} reports and fixes to the Temporal projects, {filedPrs} of them as
+    ready-to-merge code changes{contributionClause}. {coverageClause}: {handledInGmt} through its own
+    built-in fix, and {unaffectingGmt} because the bug is in code GMT doesn't use.
+  </strong>
+</p>

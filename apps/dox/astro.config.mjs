@@ -191,6 +191,7 @@ export default defineConfig({
         "./src/styles/gmt-light.css", // floating [data-theme="light"] overrides
         "./src/styles/gmt-reveal.css", // shared scroll-into-view stagger utility
         "./src/styles/dox.css", // live component layout
+        "./src/styles/gmt-upstream.css", // /upstream/ defect table + filings tracker
         "./src/styles/gmt-a11y.css", // DOX-D1 prefers-reduced-transparency / -contrast / forced-colors — loaded last
       ],
     }),

@@ -150,7 +150,10 @@ const LIVE_CLOCK_SELECTORS = [
 // THIS worktree's build, not a stray daemon left running by another worktree or an
 // earlier run on the same port (see the PORT comment above).
 async function waitForOurServer(url, timeoutMs = 30_000) {
-  const start = Date.now();
+  // `performance.now()`, not `Date.now()`: this is a polling stopwatch, and a monotonic clock
+  // cannot be dragged backwards mid-wait by a clock correction. GMT handles date values, not
+  // elapsed time, so it is not the tool here either.
+  const start = performance.now();
   for (;;) {
     try {
       const res = await fetch(url);
@@ -162,7 +165,7 @@ async function waitForOurServer(url, timeoutMs = 30_000) {
           `preview daemon from another worktree; pick a different PORT`,
       );
     } catch (err) {
-      if (Date.now() - start > timeoutMs) {
+      if (performance.now() - start > timeoutMs) {
         throw new Error(
           `preview server did not come up at ${url}: ${err.message}`,
         );
@@ -212,6 +215,55 @@ function pixelDiffRatio(before, after) {
 // DoD line an actual pass/fail: perceptually diff every before/after pair
 // (see MAX_DIFF_PIXEL_RATIO above for why not byte-identical) and fail loudly
 // on any diff over threshold or any file missing from either side.
+/** One snapshot's verdict line, and whether it counts as a failure. */
+async function compareOne(name, beforePath, afterPath) {
+  let ratio;
+  try {
+    const [before, after] = await Promise.all([
+      loadPng(beforePath),
+      loadPng(afterPath),
+    ]);
+    ratio = pixelDiffRatio(before, after);
+  } catch (err) {
+    return { failed: true, line: `✗ ${name.padEnd(32)} ERROR (${err.message})` };
+  }
+
+  const percent = `${(ratio * 100).toFixed(3)}% diff`;
+  return ratio <= MAX_DIFF_PIXEL_RATIO
+    ? { failed: false, line: `✓ ${name.padEnd(32)} ${percent} (within tolerance)` }
+    : { failed: true, line: `✗ ${name.padEnd(32)} ${percent} — DIFFERS` };
+}
+
+/** A snapshot present on only one side cannot be compared, so it is reported as missing. */
+const missingLine = (name, hasBefore) =>
+  `✗ ${name.padEnd(32)} MISSING (${hasBefore ? "no after" : "no before"})`;
+
+async function reportSnapshot(name, dirs, presence) {
+  if (!presence.hasBefore || !presence.hasAfter) {
+    console.log(missingLine(name, presence.hasBefore));
+    return true;
+  }
+  const { failed, line } = await compareOne(
+    name,
+    path.join(dirs.beforeDir, name),
+    path.join(dirs.afterDir, name),
+  );
+  console.log(line);
+  return failed;
+}
+
+function reportDiffTotal(failures, total) {
+  console.log();
+  if (failures === 0) {
+    console.log(`All ${total} snapshots match within tolerance.`);
+    return;
+  }
+  console.error(
+    `${failures} of ${total} snapshot(s) differ (beyond ${MAX_DIFF_PIXEL_RATIO * 100}% tolerance) or are missing.`,
+  );
+  process.exitCode = 1;
+}
+
 async function diffSnapshots() {
   const beforeDir = path.join(ROOT, ".visual", "before");
   const afterDir = path.join(ROOT, ".visual", "after");
@@ -233,52 +285,133 @@ async function diffSnapshots() {
 
   let failures = 0;
   for (const name of allNames) {
-    const beforePath = path.join(beforeDir, name);
-    const afterPath = path.join(afterDir, name);
-    const hasBefore = beforeFiles.includes(name);
-    const hasAfter = afterFiles.includes(name);
-
-    if (!hasBefore || !hasAfter) {
-      console.log(
-        `✗ ${name.padEnd(32)} MISSING (${hasBefore ? "no after" : "no before"})`,
-      );
-      failures++;
-      continue;
-    }
-
-    let ratio;
-    try {
-      const [before, after] = await Promise.all([
-        loadPng(beforePath),
-        loadPng(afterPath),
-      ]);
-      ratio = pixelDiffRatio(before, after);
-    } catch (err) {
-      console.log(`✗ ${name.padEnd(32)} ERROR (${err.message})`);
-      failures++;
-      continue;
-    }
-
-    if (ratio <= MAX_DIFF_PIXEL_RATIO) {
-      console.log(
-        `✓ ${name.padEnd(32)} ${(ratio * 100).toFixed(3)}% diff (within tolerance)`,
-      );
-    } else {
-      console.log(
-        `✗ ${name.padEnd(32)} ${(ratio * 100).toFixed(3)}% diff — DIFFERS`,
-      );
-      failures++;
-    }
+    const failed = await reportSnapshot(
+      name,
+      { beforeDir, afterDir },
+      {
+        hasBefore: beforeFiles.includes(name),
+        hasAfter: afterFiles.includes(name),
+      },
+    );
+    if (failed) failures++;
   }
 
-  console.log();
-  if (failures > 0) {
-    console.error(
-      `${failures} of ${allNames.length} snapshot(s) differ (beyond ${MAX_DIFF_PIXEL_RATIO * 100}% tolerance) or are missing.`,
+  reportDiffTotal(failures, allNames.length);
+}
+
+/** Starts `astro preview` detached, so the shots are taken against a built site. */
+function startPreviewDaemon() {
+  console.log(`Starting astro preview on port ${PORT}...`);
+  spawn("pnpm", ["exec", "astro", "preview", "--port", String(PORT)], {
+    cwd: ROOT,
+    stdio: "ignore",
+    detached: true,
+  }).unref();
+}
+
+/**
+ * A page context pinned to one viewport and theme.
+ *
+ * `reducedMotion: "reduce"` is the load-bearing part: the globe's ambient rotation
+ * (`src/lib/globe.ts`'s `requestAnimationFrame` loop) runs at real elapsed time, so a fixed wait
+ * cannot land on the same angle across two process launches. `globe.ts` already skips ambient
+ * rotation entirely when `prefers-reduced-motion` matches, so emulating it is what makes
+ * home/zoned-earth deterministic rather than a workaround. The theme is set before any page
+ * script runs, matching how `ThemeProvider.astro` reads localStorage on first paint.
+ */
+async function newThemedContext(browser, viewport, theme) {
+  const context = await browser.newContext({
+    viewport: { width: viewport.width, height: viewport.height },
+    reducedMotion: "reduce",
+  });
+  await context.addInitScript((t) => {
+    localStorage.setItem("starlight-theme", t);
+  }, theme);
+  return context;
+}
+
+async function shoot(page, outDir, fileName, clockMasks, options = {}) {
+  await page.screenshot({
+    path: path.join(outDir, fileName),
+    mask: clockMasks,
+    ...options,
+  });
+  console.log(`  captured ${fileName}`);
+}
+
+/** Every page in `PAGES`, full height. */
+async function capturePages(page, outDir, clockMasks, theme, viewport) {
+  for (const p of PAGES) {
+    await page.goto(`${BASE_URL}${p.path}`, { waitUntil: "networkidle" });
+    // Let ambient globe rotation / any load-time animation settle to a consistent frame.
+    await page.waitForTimeout(300);
+    await shoot(
+      page,
+      outDir,
+      `${p.slug}-${theme}-${viewport.name}.png`,
+      clockMasks,
+      { fullPage: true },
     );
-    process.exitCode = 1;
-  } else {
-    console.log(`All ${allNames.length} snapshots match within tolerance.`);
+  }
+}
+
+/** The search modal — desktop only, because its trigger is hidden on mobile in favour of the menu. */
+async function captureSearchModal(page, outDir, clockMasks, theme, viewport) {
+  await page.goto(`${BASE_URL}/`, { waitUntil: "networkidle" });
+  await page.click("[data-open-modal]");
+  await page.waitForSelector("dialog[open]", { state: "visible" });
+  await page.waitForTimeout(150);
+  await shoot(page, outDir, `search-${theme}-${viewport.name}.png`, clockMasks);
+}
+
+/**
+ * The mobile menu — mobile only, since the sidebar is already open on desktop.
+ *
+ * `/install/` because it has a sidebar to toggle; `home` uses the splash template and never
+ * renders the menu button. The wait is on `attached`, not `visible`: `aria-expanded` toggles on
+ * the wrapping `<starlight-menu-button>` (see Starlight's `MobileMenuToggle.astro`), which has no
+ * box of its own because its only child is `position: fixed`, so it never becomes "visible".
+ */
+async function captureMobileMenu(page, outDir, clockMasks, theme, viewport) {
+  await page.goto(`${BASE_URL}/install/`, { waitUntil: "networkidle" });
+  await page.click('button[aria-label="Menu"]');
+  await page.waitForSelector('starlight-menu-button[aria-expanded="true"]', {
+    state: "attached",
+  });
+  await page.waitForTimeout(150);
+  await shoot(page, outDir, `menu-${theme}-${viewport.name}.png`, clockMasks);
+}
+
+/**
+ * One viewport/theme pass: every page, plus the one interaction state that viewport can show.
+ *
+ * The interaction shots exist so the DoD's "search modal" and "mobile menu" lines are captured
+ * rather than asserted.
+ */
+async function captureOnePass(browser, outDir, viewport, theme) {
+  const context = await newThemedContext(browser, viewport, theme);
+  try {
+    const page = await context.newPage();
+    const clockMasks = LIVE_CLOCK_SELECTORS.map((sel) => page.locator(sel));
+    await capturePages(page, outDir, clockMasks, theme, viewport);
+    const captureInteraction =
+      viewport.name === "desktop" ? captureSearchModal : captureMobileMenu;
+    await captureInteraction(page, outDir, clockMasks, theme, viewport);
+  } finally {
+    await context.close();
+  }
+}
+
+async function captureAll(outDir) {
+  const browser = await chromium.launch();
+  try {
+    for (const viewport of VIEWPORTS) {
+      for (const theme of THEMES) {
+        await captureOnePass(browser, outDir, viewport, theme);
+      }
+    }
+  } finally {
+    await browser.close();
   }
 }
 
@@ -289,108 +422,11 @@ async function main() {
   // Clear any daemon this project left running (e.g. from a prior interrupted run)
   // before starting a fresh one.
   await stopPreviewDaemon();
-
-  console.log(`Starting astro preview on port ${PORT}...`);
-  spawn("pnpm", ["exec", "astro", "preview", "--port", String(PORT)], {
-    cwd: ROOT,
-    stdio: "ignore",
-    detached: true,
-  }).unref();
+  startPreviewDaemon();
 
   try {
     await waitForOurServer(BASE_URL);
-
-    const browser = await chromium.launch();
-    try {
-      for (const viewport of VIEWPORTS) {
-        for (const theme of THEMES) {
-          const context = await browser.newContext({
-            viewport: { width: viewport.width, height: viewport.height },
-            // The globe's ambient auto-rotation (src/lib/globe.ts's
-            // `requestAnimationFrame` loop) runs at real elapsed time, so a
-            // fixed wait can't land on the same rotation angle across two
-            // separate process launches — globe.ts already checks
-            // `prefers-reduced-motion` and skips starting ambient rotation
-            // entirely when it matches (`if (reduceMotion?.matches) return;`
-            // before `ambientActive = true`), so emulating it here is what
-            // makes home/zoned-earth deterministic, not a workaround.
-            reducedMotion: "reduce",
-          });
-          // Set the theme before any page script runs, matching how
-          // ThemeProvider.astro reads localStorage on first paint.
-          await context.addInitScript((t) => {
-            localStorage.setItem("starlight-theme", t);
-          }, theme);
-          const page = await context.newPage();
-          const clockMasks = LIVE_CLOCK_SELECTORS.map((sel) =>
-            page.locator(sel),
-          );
-
-          for (const p of PAGES) {
-            await page.goto(`${BASE_URL}${p.path}`, {
-              waitUntil: "networkidle",
-            });
-            // Let ambient globe rotation / any load-time animation settle to a
-            // consistent frame before the shot.
-            await page.waitForTimeout(300);
-            const fileName = `${p.slug}-${theme}-${viewport.name}.png`;
-            await page.screenshot({
-              path: path.join(outDir, fileName),
-              fullPage: true,
-              mask: clockMasks,
-            });
-            console.log(`  captured ${fileName}`);
-          }
-
-          // Two interaction states, one per viewport, so the DoD's "search
-          // modal" and "mobile menu" lines are actually captured rather than
-          // asserted. Desktop-only for search (the trigger is hidden on
-          // mobile in favor of the menu) and mobile-only for the menu (the
-          // sidebar is already visible on desktop, so there's nothing to
-          // toggle).
-          if (viewport.name === "desktop") {
-            await page.goto(`${BASE_URL}/`, { waitUntil: "networkidle" });
-            await page.click("[data-open-modal]");
-            await page.waitForSelector("dialog[open]", { state: "visible" });
-            await page.waitForTimeout(150);
-            const fileName = `search-${theme}-${viewport.name}.png`;
-            await page.screenshot({
-              path: path.join(outDir, fileName),
-              mask: clockMasks,
-            });
-            console.log(`  captured ${fileName}`);
-          } else {
-            // `install` has a sidebar to toggle; `home` (splash template)
-            // doesn't render the menu button at all.
-            await page.goto(`${BASE_URL}/install/`, {
-              waitUntil: "networkidle",
-            });
-            await page.click('button[aria-label="Menu"]');
-            // `aria-expanded` toggles on the wrapping <starlight-menu-button>
-            // custom element, not on the <button> itself — see
-            // @astrojs/starlight/components/MobileMenuToggle.astro. That
-            // wrapper has no box of its own (its only child is
-            // `position: fixed`), so it never satisfies Playwright's default
-            // "visible" wait — "attached" is the right state to wait for.
-            await page.waitForSelector(
-              'starlight-menu-button[aria-expanded="true"]',
-              { state: "attached" },
-            );
-            await page.waitForTimeout(150);
-            const fileName = `menu-${theme}-${viewport.name}.png`;
-            await page.screenshot({
-              path: path.join(outDir, fileName),
-              mask: clockMasks,
-            });
-            console.log(`  captured ${fileName}`);
-          }
-
-          await context.close();
-        }
-      }
-    } finally {
-      await browser.close();
-    }
+    await captureAll(outDir);
   } finally {
     await stopPreviewDaemon();
   }
