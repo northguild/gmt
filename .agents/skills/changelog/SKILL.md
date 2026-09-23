@@ -8,6 +8,8 @@ argument-hint: "no arguments needed"
 
 Improve the pending `.changeset/*.md` file(s) so the description that will land in `CHANGELOG.md` is accurate, concise, and consumer-focused. Run this skill after development is done and before the PR merges. Merging publishes nothing: the changeset sits on `main` until a maintainer runs `pnpm run changeset:version` in a separate release PR, which consumes the changeset files into `CHANGELOG.md` (see `.github/workflows/release.yml` and `PUBLISHING.md`). Polish it now, while the diff is fresh.
 
+**Write it in plain English** — [`plain-english` skill](../plain-english/SKILL.md), AGENTS.md Core Rule 13. A CHANGELOG entry is read by someone deciding whether to upgrade: say what changed for them, not how it was implemented.
+
 ## Context
 
 Changesets uses the description in `.changeset/<slug>.md` verbatim as the body of the version entry it writes into each affected package's `CHANGELOG.md`. The quality of that entry is determined entirely by what is in the changeset file before `changeset:version` is run.
