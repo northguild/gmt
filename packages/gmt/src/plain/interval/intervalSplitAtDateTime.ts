@@ -70,7 +70,8 @@ export function intervalSplitAtDateTime(
       inRangePoints.sort(Temporal.PlainDateTime.compare);
 
       const uniquePoints = inRangePoints.filter(
-        (point, index) => index === 0 || !point.equals(inRangePoints[index - 1]),
+        (point, index) =>
+          index === 0 || !point.equals(inRangePoints[index - 1]),
       );
 
       const boundaries = [startVal, ...uniquePoints, endVal];

@@ -30,16 +30,21 @@ import { stripFrontmatter, stripMdx } from "../src/lib/page-markdown";
  * nothing still reports as passing. That is not hypothetical: the CI Tests job builds only
  * `@northguild/gmt`, so all three of them had never run there, and a raw `<UpstreamDefects />`
  * reached every text surface with the suite green (CORE-8 review, #253). Locally a skip is the
- * right call, because requiring a 45-second build before `vitest` would be hostile. In CI it is a
- * hole, so there it fails instead: `Story consistency` builds the site immediately beforehand.
+ * right call, because requiring a 45-second build before `vitest` would be hostile. The same is
+ * true of the CI Tests job, which runs this suite across three Node versions and has no reason to
+ * build the site three times.
+ *
+ * So the failure is keyed to `DOX_DIST_REQUIRED`, which `Story consistency` sets on the one step
+ * that builds the site first — not to `CI`, which is set everywhere and would turn a legitimate
+ * skip into a failure in every other job.
  */
 function distDirOrSkip(): string | null {
   const distDir = resolve(import.meta.dirname, "..", "dist");
   if (existsSync(distDir)) return distDir;
-  if (process.env.CI) {
+  if (process.env.DOX_DIST_REQUIRED) {
     throw new Error(
       "apps/dox/dist is missing, so the text-surface gates would silently pass. " +
-        "Run `pnpm --filter dox run build` before this suite in CI.",
+        "The step that sets DOX_DIST_REQUIRED must run `pnpm --filter dox run build` first.",
     );
   }
   return null;

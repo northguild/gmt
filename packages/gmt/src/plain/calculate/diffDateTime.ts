@@ -94,11 +94,16 @@ export function diffDateTime(
 
       // craft record for units passed
       // An unlisted unit between two listed units is carried into the next smaller listed unit.
-      return differenceRecord(dt1, duration, resolved as DateTimeDurationUnit[], {
-        add: (from, amount) => from.add(amount),
-        until: (from, to, largest) =>
-          from.until(to, { largestUnit: largest as Temporal.DateTimeUnit }),
-      });
+      return differenceRecord(
+        dt1,
+        duration,
+        resolved as DateTimeDurationUnit[],
+        {
+          add: (from, amount) => from.add(amount),
+          until: (from, to, largest) =>
+            from.until(to, { largestUnit: largest as Temporal.DateTimeUnit }),
+        },
+      );
     } catch {
       return null;
     }

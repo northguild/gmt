@@ -15,19 +15,22 @@ export interface Layer {
 export const libraryStack: Layer[] = [
   {
     name: "Temporal",
-    detail: "The TC39 standard. Separate types for instants, wall-clock times, zoned times, plain dates, and durations. No Date anywhere.",
+    detail:
+      "The TC39 standard. Separate types for instants, wall-clock times, zoned times, plain dates, and durations. No Date anywhere.",
     foundation: "TC39 standard",
     kind: "standard",
   },
   {
     name: "@northguild/gmt",
-    detail: "Temporal underneath, with an ISO 8601 string-in / typed-value-out surface on top. The layer you actually write against.",
+    detail:
+      "Temporal underneath, with an ISO 8601 string-in / typed-value-out surface on top. The layer you actually write against.",
     foundation: "Temporal inside",
     kind: "gmt",
   },
   {
     name: "Date",
-    detail: "Epoch milliseconds interpreted through the host timezone. Every fault above lives here.",
+    detail:
+      "Epoch milliseconds interpreted through the host timezone. Every fault above lives here.",
     foundation: "root cause",
     kind: "date",
   },

@@ -1,4 +1,8 @@
-import { ianaSingleComponentTimeZones, utcMs, validOnlyBattleTestTimeZones } from "../../test";
+import {
+  ianaSingleComponentTimeZones,
+  utcMs,
+  validOnlyBattleTestTimeZones,
+} from "../../test";
 import { formatUtc } from "../../utc/format/formatUtc";
 import { isValidTimeZone } from ".";
 

@@ -25,7 +25,6 @@ import {
 } from "../data/upstream-filings";
 import { contributionClause, coverageClause } from "./upstream-summary";
 
-
 /** A parsed JSX element: the props it was given, and the span it occupied. */
 interface JsxElement {
   readonly props: Record<string, string>;
@@ -191,14 +190,18 @@ function renderScenario(props: Record<string, string>): string {
   return `\n${parts.join("\n\n")}\n`;
 }
 
-
-
 /** `<WhyDateBug />` as a Markdown table — the home page's case against `Date`. */
 function renderWhyDateBug(): string {
   const rows = dateFaults.map(
     (f) => `| \`${f.input}\` | ${f.output} | ${f.why} |`,
   );
-  return ["", "| You write | You get | Why |", "| --- | --- | --- |", ...rows, ""].join("\n");
+  return [
+    "",
+    "| You write | You get | Why |",
+    "| --- | --- | --- |",
+    ...rows,
+    "",
+  ].join("\n");
 }
 
 /** `<WhyDateAlternatives />` as a Markdown table — what each layer is built on. */
@@ -206,7 +209,13 @@ function renderWhyDateAlternatives(): string {
   const rows = libraryStack.map(
     (l) => `| **${l.name}** | ${l.foundation} | ${l.detail} |`,
   );
-  return ["", "| Layer | Built on | What it is |", "| --- | --- | --- |", ...rows, ""].join("\n");
+  return [
+    "",
+    "| Layer | Built on | What it is |",
+    "| --- | --- | --- |",
+    ...rows,
+    "",
+  ].join("\n");
 }
 
 /**
@@ -224,7 +233,9 @@ function renderUpstreamDefects(): string {
   const rows = compatGroups.map((group) => {
     const sent = filings
       .filter((f) => f.gmtGuard && group.defects.includes(f.gmtGuard))
-      .map((f) => `[${shortRef(f.repo, f.number)}](${f.contributionUrl ?? f.url})`)
+      .map(
+        (f) => `[${shortRef(f.repo, f.number)}](${f.contributionUrl ?? f.url})`,
+      )
       .join(", ");
     const state =
       group.failing > 0

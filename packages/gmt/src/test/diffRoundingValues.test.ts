@@ -119,7 +119,9 @@ const SPAN_DATE = "2024-06-15";
 const nanosecondsFromMidnight = (utc: string): bigint => {
   const [datePart, timePart] = utc.replace("Z", "").split("T");
   if (datePart !== SPAN_DATE) {
-    throw new Error(`spans must stay on ${SPAN_DATE} so the date cancels: ${utc}`);
+    throw new Error(
+      `spans must stay on ${SPAN_DATE} so the date cancels: ${utc}`,
+    );
   }
   const [clock, fraction = ""] = timePart.split(".");
   const [hours, minutes, seconds] = clock.split(":").map(Number);

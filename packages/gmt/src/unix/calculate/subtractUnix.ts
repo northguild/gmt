@@ -64,7 +64,8 @@ export function subtractUnix(
       typeof units === "object" &&
       units !== null &&
       Object.keys(units).every(isValidDateTimeDurationUnit);
-    const validAmounts = validUnits && Object.values(units).every(isValidAmount);
+    const validAmounts =
+      validUnits && Object.values(units).every(isValidAmount);
 
     if (!validUnits || !validAmounts) {
       return null;
@@ -78,7 +79,10 @@ export function subtractUnix(
 
     try {
       const zdt: Temporal.ZonedDateTime = instant.toZonedDateTimeISO(timeZone);
-      return toUnixEpoch(subtractFromZoned(zdt, units, { overflow }), epochUnit);
+      return toUnixEpoch(
+        subtractFromZoned(zdt, units, { overflow }),
+        epochUnit,
+      );
     } catch {
       return null;
     }

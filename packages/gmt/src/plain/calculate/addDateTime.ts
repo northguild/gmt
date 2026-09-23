@@ -38,7 +38,8 @@ export function addDateTime(
       typeof units === "object" &&
       units !== null &&
       Object.keys(units).every(isValidDateTimeDurationUnit);
-    const validAmounts = validUnits && Object.values(units).every(isValidAmount);
+    const validAmounts =
+      validUnits && Object.values(units).every(isValidAmount);
 
     if (!validDateTime || !validUnits || !validAmounts) {
       return "";

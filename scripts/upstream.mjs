@@ -499,9 +499,7 @@ async function refresh() {
     return;
   }
   const budget = startRefreshBudget();
-  const committedByKey = new Map(
-    readFile().filings.map((f) => [keyOf(f), f]),
-  );
+  const committedByKey = new Map(readFile().filings.map((f) => [keyOf(f), f]));
 
   try {
     const filings = await fetchAllFilings(committedByKey, budget);

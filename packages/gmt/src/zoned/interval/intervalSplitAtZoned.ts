@@ -73,7 +73,9 @@ export function intervalSplitAtZoned(
       const startInstant = startVal.toInstant();
       const endInstant = endVal.toInstant();
 
-      const parsedPoints = points.map((point) => parseCalendarZonedValue(point));
+      const parsedPoints = points.map((point) =>
+        parseCalendarZonedValue(point),
+      );
 
       const inRangePoints = parsedPoints.filter((point) => {
         const instant = point.toInstant();

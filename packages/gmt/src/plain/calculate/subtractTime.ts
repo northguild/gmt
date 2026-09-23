@@ -31,7 +31,8 @@ export function subtractTime(
       typeof units === "object" &&
       units !== null &&
       Object.keys(units).every(isValidTimeDurationUnit);
-    const validAmounts = validUnits && Object.values(units).every(isValidAmount);
+    const validAmounts =
+      validUnits && Object.values(units).every(isValidAmount);
 
     if (!validTime || !validUnits || !validAmounts) {
       return "";

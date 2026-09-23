@@ -72,7 +72,9 @@ export function intervalDivideEquallyUnix(
 
     const boundaries: number[] = [startMs];
     for (let i = 1; i < n; i++) {
-      boundaries.push(Number(BigInt(startMs) + divisionBoundary(totalMs, i, n)));
+      boundaries.push(
+        Number(BigInt(startMs) + divisionBoundary(totalMs, i, n)),
+      );
     }
     boundaries.push(endMs);
 

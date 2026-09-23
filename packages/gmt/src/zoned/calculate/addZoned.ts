@@ -92,7 +92,8 @@ export function addZoned(
       typeof units === "object" &&
       units !== null &&
       Object.keys(units).every(isValidDateTimeDurationUnit);
-    const validAmounts = validUnits && Object.values(units).every(isValidAmount);
+    const validAmounts =
+      validUnits && Object.values(units).every(isValidAmount);
 
     if (!validZonedDateTime || !validUnits || !validAmounts) {
       // TODO descriptive messages of what failed - likely could be GMT offset for historical changes and DST

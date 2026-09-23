@@ -97,7 +97,9 @@ export function mapZonedDatesInRange(
       // dates instead of throwing on the step after the last one.
       const result: string[] = [];
       for (let index = 0; index < count; index++) {
-        result.push(startDate.add({ days: index * resolvedStepDays }).toString());
+        result.push(
+          startDate.add({ days: index * resolvedStepDays }).toString(),
+        );
       }
 
       return result;

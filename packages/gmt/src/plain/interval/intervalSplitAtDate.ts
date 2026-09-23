@@ -84,7 +84,8 @@ export function intervalSplitAtDate(
       inRangePoints.sort(Temporal.PlainDate.compare);
 
       const uniquePoints = inRangePoints.filter(
-        (point, index) => index === 0 || !point.equals(inRangePoints[index - 1]),
+        (point, index) =>
+          index === 0 || !point.equals(inRangePoints[index - 1]),
       );
 
       const boundaries = [startVal, ...uniquePoints, endVal];

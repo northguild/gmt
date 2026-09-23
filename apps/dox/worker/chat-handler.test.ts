@@ -498,9 +498,7 @@ describe("brains, budgets and failover", () => {
     // The reader is told when it comes back, not just that it is gone — and
     // with Gemini on Pacific time and Workers AI on UTC (DOX-C4), that is the
     // soonest refill, UTC midnight here, not "midnight Pacific".
-    expect(body.resetsAt).toBe(
-      convertUnixToUtc(nextMidnightMs(NOW, "UTC")),
-    );
+    expect(body.resetsAt).toBe(convertUnixToUtc(nextMidnightMs(NOW, "UTC")));
     expect(String(body.error)).not.toMatch(/Pacific|UTC|midnight/);
   });
 
@@ -523,9 +521,7 @@ describe("brains, budgets and failover", () => {
       chatRequest({ messages: [userMessage("what is a DST gap")] }),
     );
     const body = (await response.json()) as Record<string, unknown>;
-    expect(body.resetsAt).toBe(
-      "2026-06-16T07:00:00Z",
-    );
+    expect(body.resetsAt).toBe("2026-06-16T07:00:00Z");
   });
 
   it("records a request against the brain and the visitor", async () => {

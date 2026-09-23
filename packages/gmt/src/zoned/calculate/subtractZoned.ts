@@ -88,7 +88,8 @@ export function subtractZoned(
       typeof units === "object" &&
       units !== null &&
       Object.keys(units).every(isValidDateTimeDurationUnit);
-    const validAmounts = validUnits && Object.values(units).every(isValidAmount);
+    const validAmounts =
+      validUnits && Object.values(units).every(isValidAmount);
 
     if (!validZonedDateTime || !validUnits || !validAmounts) {
       return "";

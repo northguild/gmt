@@ -65,7 +65,9 @@ export function formatCalendarZoned(
         reference = Temporal.Now.zonedDateTimeISO(timeZone);
       } else if (typeof options.reference === "string") {
         reference = isValidUtc(options.reference)
-          ? Temporal.Instant.from(options.reference).toZonedDateTimeISO(timeZone)
+          ? Temporal.Instant.from(options.reference).toZonedDateTimeISO(
+              timeZone,
+            )
           : zonedDateTimeFrom(options.reference).withTimeZone(timeZone);
       } else {
         reference = Temporal.Instant.fromEpochMilliseconds(

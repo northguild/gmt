@@ -141,7 +141,12 @@ jobs:
       - name: Build the dox site
         run: pnpm --filter dox run build
 
+      # DOX_DIST_REQUIRED turns those gates' "no dist, nothing to check" skip into a failure, but
+      # only here, where the step above guarantees a build. Keyed to `CI` it would fire in the
+      # Tests job too, which runs the same suite on three Node versions and does not build the site.
       - name: Text surfaces carry no raw component tags or unevaluated expressions
+        env:
+          DOX_DIST_REQUIRED: "1"
         run: pnpm --filter dox exec vitest run scripts/llms.test.ts
 
       - name: A changeset covers every changed package

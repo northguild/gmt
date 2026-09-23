@@ -225,12 +225,18 @@ async function compareOne(name, beforePath, afterPath) {
     ]);
     ratio = pixelDiffRatio(before, after);
   } catch (err) {
-    return { failed: true, line: `✗ ${name.padEnd(32)} ERROR (${err.message})` };
+    return {
+      failed: true,
+      line: `✗ ${name.padEnd(32)} ERROR (${err.message})`,
+    };
   }
 
   const percent = `${(ratio * 100).toFixed(3)}% diff`;
   return ratio <= MAX_DIFF_PIXEL_RATIO
-    ? { failed: false, line: `✓ ${name.padEnd(32)} ${percent} (within tolerance)` }
+    ? {
+        failed: false,
+        line: `✓ ${name.padEnd(32)} ${percent} (within tolerance)`,
+      }
     : { failed: true, line: `✗ ${name.padEnd(32)} ${percent} — DIFFERS` };
 }
 

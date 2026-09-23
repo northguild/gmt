@@ -1,6 +1,11 @@
 import { normalizeDateTime } from "../../internal";
 import { vi } from "vitest";
-import { MustTestLocales, battleTestTimeZones, expectDateTimeEqual, utcMs } from "../../test";
+import {
+  MustTestLocales,
+  battleTestTimeZones,
+  expectDateTimeEqual,
+  utcMs,
+} from "../../test";
 import { mockTemporalNowZonedDateTimeISOThrow } from "../../test/mocks";
 import { formatCalendarZoned } from "./formatCalendarZoned";
 

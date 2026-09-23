@@ -511,7 +511,8 @@ function stripAnnotation(value) {
  */
 function twinHelpers(calendar, dateString, gmt, compare) {
   const gmtCalendar = GMT_CALENDAR[calendar];
-  if (!gmtCalendar) throw new Error(`scan calendar ${calendar} has no GMT name`);
+  if (!gmtCalendar)
+    throw new Error(`scan calendar ${calendar} has no GMT name`);
 
   const expectDate = (nativeIso) =>
     nativeIso === "ERR" ? "" : (dateString(nativeIso, calendar) ?? "");
@@ -547,10 +548,21 @@ function twinHelpers(calendar, dateString, gmt, compare) {
   /** A `from → to` difference in `unit`, in whichever direction the scan walks. */
   const compareUntil = (at, op, from, to, native) =>
     compareOp(at, op, `${from} → ${to}`, native, expectValue(native), () =>
-      gmt.diffDateAsDuration(from, to, op.endsWith("Months") ? "months" : "years"),
+      gmt.diffDateAsDuration(
+        from,
+        to,
+        op.endsWith("Months") ? "months" : "years",
+      ),
     );
 
-  return { expectDate, expectValue, compareRead, compareOp, compareAdds, compareUntil };
+  return {
+    expectDate,
+    expectValue,
+    compareRead,
+    compareOp,
+    compareAdds,
+    compareUntil,
+  };
 }
 
 /** One row of `xscan.edge`: a date stepped `n` days in from the supported range's edge. */
@@ -561,13 +573,26 @@ function compareEdgeRow(row, n, context) {
     return;
   }
   const date = dateString(iso, calendar);
-  const [, fromFields, addMonth, addYear, subMonth, subYear, untilEdge, untilFar] =
-    row;
+  const [
+    ,
+    fromFields,
+    addMonth,
+    addYear,
+    subMonth,
+    subYear,
+    untilEdge,
+    untilFar,
+  ] = row;
   h.compareRead(at, iso, row[0]);
   if (date === null) return;
 
-  h.compareOp(at, "fromFields", date, fromFields, h.expectValue(fromFields), () =>
-    gmt.convertDateToCalendar(date, "iso8601"),
+  h.compareOp(
+    at,
+    "fromFields",
+    date,
+    fromFields,
+    h.expectValue(fromFields),
+    () => gmt.convertDateToCalendar(date, "iso8601"),
   );
   h.compareOp(
     at,
@@ -634,8 +659,13 @@ function compareStrideScan(xscan, calendar, dateString, gmt, h) {
     h.compareRead(at, iso, read);
     if (date === null) return;
 
-    h.compareOp(at, "fromFields", date, fromFields, h.expectValue(fromFields), () =>
-      gmt.convertDateToCalendar(date, "iso8601"),
+    h.compareOp(
+      at,
+      "fromFields",
+      date,
+      fromFields,
+      h.expectValue(fromFields),
+      () => gmt.convertDateToCalendar(date, "iso8601"),
     );
     h.compareAdds(at, date, addMonth, addYear);
 
@@ -846,7 +876,11 @@ function makeOracleTally() {
 
   const record = (row, actual) => {
     const tag = tagFor(row);
-    const mismatch = { ...row, gmt: actual, ...(tag ? { tag: tag.test262 } : {}) };
+    const mismatch = {
+      ...row,
+      gmt: actual,
+      ...(tag ? { tag: tag.test262 } : {}),
+    };
     counts.mismatches++;
     counts[tag ? "tagged" : "untagged"]++;
     const key = `${row.scan} ${row.calendar} ${row.op}${tag ? " [tagged]" : ""}`;

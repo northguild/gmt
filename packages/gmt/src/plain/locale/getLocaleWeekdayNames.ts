@@ -54,9 +54,13 @@ export function getLocaleWeekdayNames(
         const date = Temporal.PlainDate.from("2024-01-15").add({
           days: dayOfWeek - 1,
         });
-        isoOrder.push(date.toLocaleString(resolvedLocale, { weekday: resolved }));
+        isoOrder.push(
+          date.toLocaleString(resolvedLocale, { weekday: resolved }),
+        );
       }
-      return isoOrder.slice(firstDay - 1).concat(isoOrder.slice(0, firstDay - 1));
+      return isoOrder
+        .slice(firstDay - 1)
+        .concat(isoOrder.slice(0, firstDay - 1));
     } catch {
       return [];
     }

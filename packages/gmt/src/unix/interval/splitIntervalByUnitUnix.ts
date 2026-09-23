@@ -93,7 +93,9 @@ export function splitIntervalByUnitUnix(
     }
 
     try {
-      const spanNs = Number(endVal.epochNanoseconds - startVal.epochNanoseconds);
+      const spanNs = Number(
+        endVal.epochNanoseconds - startVal.epochNanoseconds,
+      );
 
       if (
         exceedsPieceLimit(

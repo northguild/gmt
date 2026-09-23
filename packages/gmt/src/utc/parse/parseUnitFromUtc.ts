@@ -89,7 +89,8 @@ export function parseUnitFromUtc(
     }
 
     try {
-      const dateTime = Temporal.Instant.from(value).toZonedDateTimeISO(timeZone);
+      const dateTime =
+        Temporal.Instant.from(value).toZonedDateTimeISO(timeZone);
 
       switch (resolveDateTimeUnit(unit)) {
         case "year":

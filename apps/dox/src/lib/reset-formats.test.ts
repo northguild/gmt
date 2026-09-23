@@ -62,7 +62,9 @@ describe("RESET_FORMATS", () => {
   it("renders the zone-free presets", () => {
     expect(render("utc", "UTC")).toBe("6/16/2026, 7:00:00 AM UTC");
     expect(render("http", "UTC")).toBe("Tue, 16 Jun 2026 07:00:00 GMT");
-    expect(render("unix-ms", "UTC")).toBe(String(convertUtcToUnix("2026-06-16T07:00:00Z")!));
+    expect(render("unix-ms", "UTC")).toBe(
+      String(convertUtcToUnix("2026-06-16T07:00:00Z")!),
+    );
     expect(render("unix-s", "UTC")).toBe(
       String(convertUtcToUnix("2026-06-16T07:00:00Z")! / 1000),
     );

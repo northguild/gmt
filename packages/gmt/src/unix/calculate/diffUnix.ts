@@ -125,7 +125,9 @@ export function diffUnix(
       return differenceRecord(start, duration, plurals, {
         add: (from, amount) => addToZoned(from, amount),
         until: (from, to, largest) =>
-          zonedUntil(from, to, { largestUnit: largest as Temporal.DateTimeUnit }),
+          zonedUntil(from, to, {
+            largestUnit: largest as Temporal.DateTimeUnit,
+          }),
       });
     } catch {
       return null;

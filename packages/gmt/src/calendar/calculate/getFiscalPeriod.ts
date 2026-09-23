@@ -85,7 +85,10 @@ export function getFiscalPeriod(
     if (!date) return null;
 
     try {
-      const fiscalYear = fiscalYearOf(date, Temporal.PlainDate.from(yearEndsOn));
+      const fiscalYear = fiscalYearOf(
+        date,
+        Temporal.PlainDate.from(yearEndsOn),
+      );
       if (!fiscalYear) return null;
 
       const { start, weeks } = fiscalYear;

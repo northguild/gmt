@@ -35,7 +35,8 @@ export function parseDayOfWeekFromUtc(
     if (timeZone === null) return null;
 
     try {
-      const dateTime = Temporal.Instant.from(value).toZonedDateTimeISO(timeZone);
+      const dateTime =
+        Temporal.Instant.from(value).toZonedDateTimeISO(timeZone);
       return dateTime.dayOfWeek;
     } catch {
       return null;

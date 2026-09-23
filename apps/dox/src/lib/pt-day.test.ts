@@ -24,7 +24,9 @@ describe("the UTC clock (Workers AI)", () => {
     // 300 s margin.
     expect(secondsUntilMidnight(noonPacific, "UTC")).toBe(5 * 3600 + 300);
     expect(secondsUntilPtReset(noonPacific)).toBe(12 * 3600 + 300);
-    expect(nextMidnightMs(noonPacific, "UTC")).toBe(convertUtcToUnix("2026-06-16T00:00:00Z")!);
+    expect(nextMidnightMs(noonPacific, "UTC")).toBe(
+      convertUtcToUnix("2026-06-16T00:00:00Z")!,
+    );
   });
 
   it("is unaffected by a Pacific DST change", () => {

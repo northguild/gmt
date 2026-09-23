@@ -203,7 +203,8 @@ export function roundDateTime(
         ? resolveDateTimeUnit(options.smallestUnit)
         : options.smallestUnit;
 
-    if (!isValidDateTime(value) || !isValidDateTimeUnit(smallestUnit)) return "";
+    if (!isValidDateTime(value) || !isValidDateTimeUnit(smallestUnit))
+      return "";
 
     try {
       const source = Temporal.PlainDateTime.from(value);

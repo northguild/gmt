@@ -132,7 +132,11 @@ export function rollDate(
     }
 
     try {
-      const rolled = rollTo(Temporal.PlainDate.from(value), convention, resolved);
+      const rolled = rollTo(
+        Temporal.PlainDate.from(value),
+        convention,
+        resolved,
+      );
 
       return rolled === null ? "" : rolled.toString();
     } catch {

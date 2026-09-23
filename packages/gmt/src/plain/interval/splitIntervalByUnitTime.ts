@@ -121,7 +121,9 @@ export function splitIntervalByUnitTime(
         elapsedNs += stepNs
       ) {
         const sliceEnd =
-          elapsedNs >= spanNs ? endVal : current.add({ [resolvedUnit]: amount });
+          elapsedNs >= spanNs
+            ? endVal
+            : current.add({ [resolvedUnit]: amount });
 
         if (result.length === maxPieces) {
           return [];

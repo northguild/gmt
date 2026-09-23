@@ -59,7 +59,9 @@ export function intervalSplitAtTime(
       const startVal = Temporal.PlainTime.from(start);
       const endVal = Temporal.PlainTime.from(end);
 
-      const parsedPoints = points.map((point) => Temporal.PlainTime.from(point));
+      const parsedPoints = points.map((point) =>
+        Temporal.PlainTime.from(point),
+      );
 
       const inRangePoints = parsedPoints.filter(
         (point) =>
@@ -70,7 +72,8 @@ export function intervalSplitAtTime(
       inRangePoints.sort(Temporal.PlainTime.compare);
 
       const uniquePoints = inRangePoints.filter(
-        (point, index) => index === 0 || !point.equals(inRangePoints[index - 1]),
+        (point, index) =>
+          index === 0 || !point.equals(inRangePoints[index - 1]),
       );
 
       const boundaries = [startVal, ...uniquePoints, endVal];

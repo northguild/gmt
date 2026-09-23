@@ -83,7 +83,11 @@ export function setUnix(
       const result =
         Object.keys(fields).length === 0
           ? zoned
-          : withZonedFields(zoned, fields, { overflow, disambiguation, offset });
+          : withZonedFields(zoned, fields, {
+              overflow,
+              disambiguation,
+              offset,
+            });
 
       return toUnixEpoch(result, epochUnit);
     } catch {

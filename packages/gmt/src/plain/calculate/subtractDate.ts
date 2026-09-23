@@ -51,7 +51,8 @@ export function subtractDate(
       typeof units === "object" &&
       units !== null &&
       Object.keys(units).every(isValidDateDurationUnit);
-    const validAmounts = validUnits && Object.values(units).every(isValidAmount);
+    const validAmounts =
+      validUnits && Object.values(units).every(isValidAmount);
 
     if (!validDate || !validUnits || !validAmounts) {
       return "";

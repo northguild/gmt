@@ -72,7 +72,9 @@ export function intervalDivideEquallyTime(
 
       // Under a day of nanoseconds (< 2^53), so the total itself is exact; the quotient is not.
       const totalNs = BigInt(
-        startVal.until(endVal, { largestUnit: "nanosecond" }).total("nanosecond"),
+        startVal
+          .until(endVal, { largestUnit: "nanosecond" })
+          .total("nanosecond"),
       );
 
       const boundaries: Temporal.PlainTime[] = [startVal];

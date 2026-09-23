@@ -88,7 +88,11 @@ export function startOfDateTime(
           });
           break;
         case "second":
-          result = source.with({ millisecond: 0, microsecond: 0, nanosecond: 0 });
+          result = source.with({
+            millisecond: 0,
+            microsecond: 0,
+            nanosecond: 0,
+          });
           break;
         case "millisecond":
           result = source.with({ microsecond: 0, nanosecond: 0 });
