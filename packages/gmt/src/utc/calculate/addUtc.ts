@@ -30,29 +30,35 @@ export function addUtc(
   units: Partial<Record<DateTimeDurationUnit, number>>,
   options?: { overflow?: Overflow },
 ): string {
-  if (!isOptionsArgument(options)) {
-    return "";
-  }
-
-  const validUtc = isValidUtc(value);
-  const validUnits =
-    typeof units === "object" &&
-    units !== null &&
-    Object.keys(units).every(isValidDateTimeDurationUnit);
-  const validAmounts = validUnits && Object.values(units).every(isValidAmount);
-
-  if (!validUtc || !validUnits || !validAmounts) {
-    return "";
-  }
-
   try {
-    const instant = Temporal.Instant.from(value);
-    const zoned = instant.toZonedDateTimeISO("UTC");
-    const result = zoned.add(units, {
-      overflow: resolveOverflow(options?.overflow),
-    });
-    return result.toInstant().toString();
+    if (!isOptionsArgument(options)) {
+      return "";
+    }
+
+    const validUtc = isValidUtc(value);
+    const validUnits =
+      typeof units === "object" &&
+      units !== null &&
+      Object.keys(units).every(isValidDateTimeDurationUnit);
+    const validAmounts = validUnits && Object.values(units).every(isValidAmount);
+
+    if (!validUtc || !validUnits || !validAmounts) {
+      return "";
+    }
+
+    try {
+      const instant = Temporal.Instant.from(value);
+      const zoned = instant.toZonedDateTimeISO("UTC");
+      const result = zoned.add(units, {
+        overflow: resolveOverflow(options?.overflow),
+      });
+      return result.toInstant().toString();
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

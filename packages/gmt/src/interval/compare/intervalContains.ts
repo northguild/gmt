@@ -31,12 +31,18 @@ export function intervalContains(
   interval: Interval,
   isoString: string,
 ): boolean {
-  const record = parseIntervalNanoseconds(interval);
-  const instant = parseInstantNanoseconds(isoString);
+  try {
+    const record = parseIntervalNanoseconds(interval);
+    const instant = parseInstantNanoseconds(isoString);
 
-  if (record === null || instant === null) {
+    if (record === null || instant === null) {
+      return false;
+    }
+
+    return record.start <= instant && instant < record.end;
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return false;
   }
-
-  return record.start <= instant && instant < record.end;
 }

@@ -46,35 +46,41 @@ export function areUtcEqualBy(
     weekStartsOn?: "monday" | "sunday";
   },
 ): boolean {
-  if (!isOptionsArgument(options)) {
-    return false;
-  }
-
-  const resolvedUnit = resolveDateTimeUnit(unit);
-  const weekStartsOn = resolveWeekStartsOn(options?.weekStartsOn);
-
-  if (
-    !isValidUtc(value1) ||
-    !isValidUtc(value2) ||
-    !isValidDateTimeUnit(resolvedUnit) ||
-    weekStartsOn === null
-  ) {
-    return false;
-  }
-
   try {
-    const start1 = startOfUtc(value1, resolvedUnit, { weekStartsOn });
-    const start2 = startOfUtc(value2, resolvedUnit, { weekStartsOn });
+    if (!isOptionsArgument(options)) {
+      return false;
+    }
 
-    if (start1 === "" || start2 === "") return false;
+    const resolvedUnit = resolveDateTimeUnit(unit);
+    const weekStartsOn = resolveWeekStartsOn(options?.weekStartsOn);
 
-    return (
-      Temporal.Instant.compare(
-        Temporal.Instant.from(start1),
-        Temporal.Instant.from(start2),
-      ) === 0
-    );
+    if (
+      !isValidUtc(value1) ||
+      !isValidUtc(value2) ||
+      !isValidDateTimeUnit(resolvedUnit) ||
+      weekStartsOn === null
+    ) {
+      return false;
+    }
+
+    try {
+      const start1 = startOfUtc(value1, resolvedUnit, { weekStartsOn });
+      const start2 = startOfUtc(value2, resolvedUnit, { weekStartsOn });
+
+      if (start1 === "" || start2 === "") return false;
+
+      return (
+        Temporal.Instant.compare(
+          Temporal.Instant.from(start1),
+          Temporal.Instant.from(start2),
+        ) === 0
+      );
+    } catch {
+      return false;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return false;
   }
 }

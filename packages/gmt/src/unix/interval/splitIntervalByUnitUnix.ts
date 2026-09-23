@@ -62,62 +62,68 @@ export function splitIntervalByUnitUnix(
   amount: number,
   options?: { maxPieces?: number; epochUnit?: UnixUnit; timeZone?: string },
 ): Array<{ start: number; end: number }> {
-  const pair = resolveUnixIntervalPair(start, end, unit, options);
-
-  if (pair === null) {
-    return [];
-  }
-
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return [];
-  }
-
-  const maxPieces = resolveMaxPieces(options);
-
-  if (maxPieces === null) {
-    return [];
-  }
-
-  const { startVal, endVal, epochUnit } = pair;
-  // Temporal's plural duration field name, as the tiling steps add `{ [unit]: amount }`.
-  const resolvedUnit = resolveDurationUnit(pair.resolvedUnit);
-
-  if (startVal.epochNanoseconds === endVal.epochNanoseconds) {
-    return [
-      {
-        start: toUnixEpoch(startVal, epochUnit),
-        end: toUnixEpoch(endVal, epochUnit),
-      },
-    ];
-  }
-
   try {
-    const spanNs = Number(endVal.epochNanoseconds - startVal.epochNanoseconds);
+    const pair = resolveUnixIntervalPair(start, end, unit, options);
 
-    if (
-      exceedsPieceLimit(
-        minSlicesForSpan(spanNs, resolvedUnit, amount, true),
-        maxPieces,
-      )
-    ) {
+    if (pair === null) {
       return [];
     }
 
-    // Boundaries stay ZonedDateTime (nanosecond) values; only the output is floored to epochUnit.
-    const slices = tileByUnit(
-      startVal,
-      endVal,
-      Temporal.ZonedDateTime.compare,
-      resolvedUnit,
-      amount,
-      maxPieces,
-    );
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return [];
+    }
 
-    return (slices ?? []).map(([sliceStart, sliceEnd]) => ({
-      start: toUnixEpoch(sliceStart, epochUnit),
-      end: toUnixEpoch(sliceEnd, epochUnit),
-    }));
+    const maxPieces = resolveMaxPieces(options);
+
+    if (maxPieces === null) {
+      return [];
+    }
+
+    const { startVal, endVal, epochUnit } = pair;
+    // Temporal's plural duration field name, as the tiling steps add `{ [unit]: amount }`.
+    const resolvedUnit = resolveDurationUnit(pair.resolvedUnit);
+
+    if (startVal.epochNanoseconds === endVal.epochNanoseconds) {
+      return [
+        {
+          start: toUnixEpoch(startVal, epochUnit),
+          end: toUnixEpoch(endVal, epochUnit),
+        },
+      ];
+    }
+
+    try {
+      const spanNs = Number(endVal.epochNanoseconds - startVal.epochNanoseconds);
+
+      if (
+        exceedsPieceLimit(
+          minSlicesForSpan(spanNs, resolvedUnit, amount, true),
+          maxPieces,
+        )
+      ) {
+        return [];
+      }
+
+      // Boundaries stay ZonedDateTime (nanosecond) values; only the output is floored to epochUnit.
+      const slices = tileByUnit(
+        startVal,
+        endVal,
+        Temporal.ZonedDateTime.compare,
+        resolvedUnit,
+        amount,
+        maxPieces,
+      );
+
+      return (slices ?? []).map(([sliceStart, sliceEnd]) => ({
+        start: toUnixEpoch(sliceStart, epochUnit),
+        end: toUnixEpoch(sliceEnd, epochUnit),
+      }));
+    } catch {
+      return [];
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

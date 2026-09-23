@@ -16,9 +16,15 @@ import { parseUnixEpochsInInstantRange } from "../../internal/unixEpochValue";
  * @example maxUnix(["-86400", "-1"]) // -1
  */
 export function maxUnix(unixValues: Array<number | string>): number | null {
-  const valid = parseUnixEpochsInInstantRange(unixValues);
-  if (!valid.length) return null;
+  try {
+    const valid = parseUnixEpochsInInstantRange(unixValues);
+    if (!valid.length) return null;
 
-  // Pairwise, not `Math.max(...valid)`: spreading a long list overflows the call stack.
-  return valid.reduce((a, b) => Math.max(a, b));
+    // Pairwise, not `Math.max(...valid)`: spreading a long list overflows the call stack.
+    return valid.reduce((a, b) => Math.max(a, b));
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
+    return null;
+  }
 }

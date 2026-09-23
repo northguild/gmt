@@ -29,15 +29,21 @@ export function convertZonedToUnix(
   value: string,
   options?: { epochUnit?: UnixUnit },
 ): number | null {
-  const epochUnit = resolveUnixEpochUnitOptions(options);
-
-  if (!isValidZonedDateTime(value) || epochUnit === null) {
-    return null;
-  }
-
   try {
-    return toUnixEpoch(zonedDateTimeFrom(value).toInstant(), epochUnit);
+    const epochUnit = resolveUnixEpochUnitOptions(options);
+
+    if (!isValidZonedDateTime(value) || epochUnit === null) {
+      return null;
+    }
+
+    try {
+      return toUnixEpoch(zonedDateTimeFrom(value).toInstant(), epochUnit);
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

@@ -44,26 +44,32 @@ export function getLocaleMonthNames(
   locale: string | string[],
   style: LocaleNameStyle = "long",
 ): string[] {
-  const resolvedLocale = resolveRequiredLocale(locale);
-  if (resolvedLocale === null) return [];
-
   try {
-    const resolved: "long" | "short" | "narrow" =
-      style === "short" || style === "narrow" ? style : "long";
-    const names: string[] = [];
-    for (let month = 1; month <= 12; month++) {
-      const date = Temporal.PlainDate.from(
-        `2024-${String(month).padStart(2, "0")}-15`,
-      );
-      names.push(
-        date.toLocaleString(resolvedLocale, {
-          month: resolved,
-          calendar: "gregory",
-        }),
-      );
+    const resolvedLocale = resolveRequiredLocale(locale);
+    if (resolvedLocale === null) return [];
+
+    try {
+      const resolved: "long" | "short" | "narrow" =
+        style === "short" || style === "narrow" ? style : "long";
+      const names: string[] = [];
+      for (let month = 1; month <= 12; month++) {
+        const date = Temporal.PlainDate.from(
+          `2024-${String(month).padStart(2, "0")}-15`,
+        );
+        names.push(
+          date.toLocaleString(resolvedLocale, {
+            month: resolved,
+            calendar: "gregory",
+          }),
+        );
+      }
+      return names;
+    } catch {
+      return [];
     }
-    return names;
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

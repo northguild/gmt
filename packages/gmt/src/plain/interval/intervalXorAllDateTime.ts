@@ -29,34 +29,40 @@ import { isValidDateTimeInterval } from "./validate";
 export function intervalXorAllDateTime(
   intervals: Array<{ start: string; end: string }>,
 ): Array<{ start: string; end: string }> {
-  if (!Array.isArray(intervals) || intervals.length === 0) {
-    return [];
-  }
-
-  if (
-    !intervals.every(
-      (interval) =>
-        interval &&
-        typeof interval === "object" &&
-        isValidDateTimeInterval(interval.start, interval.end),
-    )
-  ) {
-    return [];
-  }
-
   try {
-    const parsed = intervals.map((interval) => ({
-      start: Temporal.PlainDateTime.from(interval.start),
-      end: Temporal.PlainDateTime.from(interval.end),
-    }));
+    if (!Array.isArray(intervals) || intervals.length === 0) {
+      return [];
+    }
 
-    return halfOpenXor(parsed, Temporal.PlainDateTime.compare).map(
-      ({ start, end }) => ({
-        start: start.toString(),
-        end: end.toString(),
-      }),
-    );
+    if (
+      !intervals.every(
+        (interval) =>
+          interval &&
+          typeof interval === "object" &&
+          isValidDateTimeInterval(interval.start, interval.end),
+      )
+    ) {
+      return [];
+    }
+
+    try {
+      const parsed = intervals.map((interval) => ({
+        start: Temporal.PlainDateTime.from(interval.start),
+        end: Temporal.PlainDateTime.from(interval.end),
+      }));
+
+      return halfOpenXor(parsed, Temporal.PlainDateTime.compare).map(
+        ({ start, end }) => ({
+          start: start.toString(),
+          end: end.toString(),
+        }),
+      );
+    } catch {
+      return [];
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

@@ -23,6 +23,28 @@ const mdxExists = existsSync(refDir);
 import { renderLlmsFull, renderLlmsTxt } from "../src/lib/llms";
 import { stripFrontmatter, stripMdx } from "../src/lib/page-markdown";
 
+/**
+ * The built site, or a reason to stop.
+ *
+ * These gates read `dist`, so without a build they have nothing to check — and a test that checks
+ * nothing still reports as passing. That is not hypothetical: the CI Tests job builds only
+ * `@northguild/gmt`, so all three of them had never run there, and a raw `<UpstreamDefects />`
+ * reached every text surface with the suite green (CORE-8 review, #253). Locally a skip is the
+ * right call, because requiring a 45-second build before `vitest` would be hostile. In CI it is a
+ * hole, so there it fails instead: `Story consistency` builds the site immediately beforehand.
+ */
+function distDirOrSkip(): string | null {
+  const distDir = resolve(import.meta.dirname, "..", "dist");
+  if (existsSync(distDir)) return distDir;
+  if (process.env.CI) {
+    throw new Error(
+      "apps/dox/dist is missing, so the text-surface gates would silently pass. " +
+        "Run `pnpm --filter dox run build` before this suite in CI.",
+    );
+  }
+  return null;
+}
+
 describe("llms.txt surface", () => {
   it("has a non-empty corpus to build sections from", () => {
     const corpus = JSON.parse(
@@ -437,8 +459,8 @@ Body text here.`;
       // The exact shape a multi-line import left when only its first line was
       // stripped: `import {\n  a,\n} from "x";` became a standalone leftover
       // `} from "x";` line.
-      const distDir = resolve(import.meta.dirname, "..", "dist");
-      if (!existsSync(distDir)) return;
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
       const strayImportRe = /^\}[ \t]*from[ \t]*["']/m;
 
       for (const file of allDistMdFiles(distDir)) {
@@ -515,8 +537,8 @@ Body text here.`;
       );
 
     it("no built text surface carries an unevaluated JSX expression", () => {
-      const distDir = resolve(import.meta.dirname, "..", "dist");
-      if (!existsSync(distDir)) return;
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
 
       for (const name of readdirSync(distDir).filter((f) =>
         f.endsWith(".md"),
@@ -550,17 +572,51 @@ Body text here.`;
       }
     });
 
-    it("no built text surface carries a raw component tag", () => {
-      const distDir = resolve(import.meta.dirname, "..", "dist");
-      const llmsFull = resolve(distDir, "llms-full.txt");
-      if (!existsSync(llmsFull)) return;
+    /**
+     * Any capitalised tag, not a list of the ones we remembered.
+     *
+     * This used to name nine components — exactly the nine `renderMdxComponents` handles — so it
+     * mirrored the handler list instead of checking it, and `<UpstreamDefects />` shipped raw into
+     * every text surface while the gate stayed green (CORE-8 review, #253). A lowercase HTML tag is
+     * fine in Markdown; an uppercase one is a component that never rendered.
+     *
+     * The lookbehind keeps TypeScript generics out: a signature like `RoundingOptions<DateUnit>`
+     * in a documented result is not a tag, and a `<` that follows an identifier character never
+     * opens one.
+     */
+    const rawComponentTags = (text: string): string[] =>
+      text.match(/(?<![A-Za-z0-9_])<\/?[A-Z][A-Za-z0-9]*(?=[\s/>])/g) ?? [];
 
-      // Every component either renders to Markdown or unwraps to its children.
-      expect(
-        readFileSync(llmsFull, "utf8").match(
-          /<\/?(Mistake|Scenario|GridSection|ChartContainer|TimezoneMap|UpstreamTracker|Card|CardGrid|PlaygroundForm)\b/g,
-        ) ?? [],
-      ).toEqual([]);
+    it("no built text surface carries a raw component tag", () => {
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
+
+      for (const name of readdirSync(distDir).filter((f) =>
+        f.endsWith(".md"),
+      )) {
+        expect({
+          file: name,
+          left: rawComponentTags(readFileSync(resolve(distDir, name), "utf8")),
+        }).toEqual({ file: name, left: [] });
+      }
+
+      const llmsFull = resolve(distDir, "llms-full.txt");
+      if (existsSync(llmsFull)) {
+        expect(rawComponentTags(readFileSync(llmsFull, "utf8"))).toEqual([]);
+      }
+
+      const retrievalChunks = resolve(distDir, "retrieval-chunks.json");
+      if (existsSync(retrievalChunks)) {
+        const chunks = JSON.parse(
+          readFileSync(retrievalChunks, "utf8"),
+        ) as Array<{ url: string; text: string }>;
+        for (const chunk of chunks) {
+          expect({
+            url: chunk.url,
+            left: rawComponentTags(chunk.text),
+          }).toEqual({ url: chunk.url, left: [] });
+        }
+      }
     });
 
     it("a rendered mistake card keeps its code samples whole", () => {

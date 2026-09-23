@@ -9,6 +9,22 @@
  *
  * Kept free of Astro globals so vitest can import it directly.
  */
+import { dateFaults } from "../data/date-faults";
+import { libraryStack } from "../data/library-stack";
+import {
+  compatGroups,
+  groupLabel,
+  groupWhatBreaks,
+} from "../data/temporal-compat";
+import {
+  filedByUs,
+  filedPrs,
+  filings,
+  handledInGmt,
+  unaffectingGmt,
+} from "../data/upstream-filings";
+import { contributionClause, coverageClause } from "./upstream-summary";
+
 
 /** A parsed JSX element: the props it was given, and the span it occupied. */
 interface JsxElement {
@@ -175,12 +191,78 @@ function renderScenario(props: Record<string, string>): string {
   return `\n${parts.join("\n\n")}\n`;
 }
 
+
+
+/** `<WhyDateBug />` as a Markdown table — the home page's case against `Date`. */
+function renderWhyDateBug(): string {
+  const rows = dateFaults.map(
+    (f) => `| \`${f.input}\` | ${f.output} | ${f.why} |`,
+  );
+  return ["", "| You write | You get | Why |", "| --- | --- | --- |", ...rows, ""].join("\n");
+}
+
+/** `<WhyDateAlternatives />` as a Markdown table — what each layer is built on. */
+function renderWhyDateAlternatives(): string {
+  const rows = libraryStack.map(
+    (l) => `| **${l.name}** | ${l.foundation} | ${l.detail} |`,
+  );
+  return ["", "| Layer | Built on | What it is |", "| --- | --- | --- |", ...rows, ""].join("\n");
+}
+
+/**
+ * `<UpstreamDefects />` as a Markdown table.
+ *
+ * The page's whole argument is the table — which polyfill bugs GMT works around, and whether it
+ * still has to. Passing the tag through shipped a page whose prose says "each row" and "the middle
+ * column" over nothing at all, and left the Dox chat with no answer to "which Temporal bugs does
+ * GMT work around" (CORE-8 review, #253). Same three columns as the HTML, same source data.
+ */
+function renderUpstreamDefects(): string {
+  const shortRef = (repo: string, number: number): string =>
+    `${repo === "tc39/proposal-temporal" ? "tc39" : "polyfill"} #${number}`;
+
+  const rows = compatGroups.map((group) => {
+    const sent = filings
+      .filter((f) => f.gmtGuard && group.defects.includes(f.gmtGuard))
+      .map((f) => `[${shortRef(f.repo, f.number)}](${f.contributionUrl ?? f.url})`)
+      .join(", ");
+    const state =
+      group.failing > 0
+        ? `Yes — ${group.failing} of ${group.probes} checks fail`
+        : `No — ${group.probes} of ${group.probes} checks pass`;
+    return `| **${groupLabel(group)}** — ${groupWhatBreaks(group)} | ${state} | ${sent || "—"} |`;
+  });
+
+  return [
+    "",
+    "| What GMT works around | Still needed? | What we sent |",
+    "| --- | --- | --- |",
+    ...rows,
+    "",
+  ].join("\n");
+}
+
+/**
+ * `<UpstreamTracker />` keeps only its tally sentence.
+ *
+ * The filings table itself is a link list the prose below it already walks through, but the
+ * sentence counting what we sent is stated nowhere else, and dropping the whole component took it
+ * with it (CORE-8 review, #253).
+ */
+function renderUpstreamTracker(): string {
+  return `\n**So far we have sent ${filedByUs} reports and fixes to the Temporal projects, ${filedPrs} of them as ready-to-merge code changes${contributionClause}. ${coverageClause}: ${handledInGmt} through its own built-in fix, and ${unaffectingGmt} because the bug is in code GMT doesn't use.**\n`;
+}
+
 /**
  * Render the components that carry prose, and unwrap the ones that don't.
  *
  * `ChartContainer` and `TimezoneMap` draw an SVG from data that is already stated in the
- * surrounding text, and `UpstreamTracker` renders a table the `/upstream/` page's own prose
- * summarises, so their tags go and their captions stay.
+ * surrounding text, so their tags go and their captions stay. `UpstreamTracker` used to be dropped
+ * on the same reasoning, but the prose that summarised it moved into the component, so it now keeps
+ * its tally sentence.
+ *
+ * Adding a component here is not optional: `llms.test.ts` fails on **any** capitalised tag left in
+ * a built text surface, so an unhandled one is caught rather than shipped.
  */
 export function renderMdxComponents(body: string): string {
   let out = body;
@@ -195,7 +277,32 @@ export function renderMdxComponents(body: string): string {
     });
   }
 
-  for (const dropped of ["TimezoneMap", "UpstreamTracker", "PlaygroundForm"]) {
+  out = replaceElements(out, "UpstreamDefects", renderUpstreamDefects);
+  out = replaceElements(out, "UpstreamTracker", renderUpstreamTracker);
+
+  // `SectionHeading` is an `<h2>` around its children, so it becomes one.
+  out = replaceElements(
+    out,
+    "SectionHeading",
+    (_props, children) => `\n## ${children.trim()}\n`,
+  );
+
+  // The home page's two argument cards hold real prose — the `Date` faults and the library
+  // stack — so they render rather than drop. They were invisible to the old nine-name gate.
+  out = replaceElements(out, "WhyDateBug", renderWhyDateBug);
+  out = replaceElements(out, "WhyDateAlternatives", renderWhyDateAlternatives);
+
+  // Decorative or interactive, with no prose of their own: a globe, a scroll animation, and the
+  // three live widgets whose surrounding text already states what they demonstrate.
+  for (const dropped of [
+    "TimezoneMap",
+    "PlaygroundForm",
+    "HeroGlobe",
+    "ScrollReveal",
+    "IntervalVisualizer",
+    "DstInspector",
+    "ConverterBench",
+  ]) {
     out = replaceElements(out, dropped, (props) =>
       props.caption ? `\n${props.caption}\n` : "",
     );

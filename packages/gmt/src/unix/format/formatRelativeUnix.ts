@@ -57,27 +57,33 @@ export function formatRelativeUnix(
   locale?: string | string[],
   options: FormatRelativeUnixOptions = {},
 ): string {
-  // Temporal GetOptionsObject: undefined is defaults (the parameter default); anything else that is
-  // not an object, including null, is a TypeError.
-  if (options === null || typeof options !== "object") return "";
-  const epochUnit = resolveUnixEpochUnit(options.epochUnit);
-  if (epochUnit === null) return "";
-  const tz = normalizeTimeZone(options.timeZone);
-  if (!tz) return "";
-
-  const target = unixEpochToInstant(value, epochUnit);
-  if (target === null) return "";
-
-  const reference = resolveUnixFormatReference(options.reference, epochUnit);
-  if (reference === null) return "";
-
   try {
-    const diff = target.since(reference);
-    // month/year are calendrical and need a relativeTo anchor.
-    return formatRelativeDuration(diff, locale, options, (unit) =>
-      durationTotal(diff, unit, reference.toZonedDateTimeISO(tz)),
-    );
+    // Temporal GetOptionsObject: undefined is defaults (the parameter default); anything else that is
+    // not an object, including null, is a TypeError.
+    if (options === null || typeof options !== "object") return "";
+    const epochUnit = resolveUnixEpochUnit(options.epochUnit);
+    if (epochUnit === null) return "";
+    const tz = normalizeTimeZone(options.timeZone);
+    if (!tz) return "";
+
+    const target = unixEpochToInstant(value, epochUnit);
+    if (target === null) return "";
+
+    const reference = resolveUnixFormatReference(options.reference, epochUnit);
+    if (reference === null) return "";
+
+    try {
+      const diff = target.since(reference);
+      // month/year are calendrical and need a relativeTo anchor.
+      return formatRelativeDuration(diff, locale, options, (unit) =>
+        durationTotal(diff, unit, reference.toZonedDateTimeISO(tz)),
+      );
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

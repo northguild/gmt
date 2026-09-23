@@ -34,22 +34,28 @@ export function parseWeekFromUtc(
   value: string,
   optionsArg?: { weekStartsOn?: "monday" | "sunday"; timeZone?: string },
 ): number | null {
-  if (!isOptionsArgument(optionsArg)) {
-    return null;
-  }
-
-  if (!isValidUtc(value)) return null;
-
-  const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
-  const timeZone = resolveReadingTimeZone(optionsArg?.timeZone);
-  if (weekStartsOn === null || timeZone === null) return null;
-
   try {
-    const instant = Temporal.Instant.from(value);
-    const dt = instant.toZonedDateTimeISO(timeZone);
-    const dateStr = dt.toPlainDate().toString();
-    return getWeekNumber(dateStr, weekStartsOn);
+    if (!isOptionsArgument(optionsArg)) {
+      return null;
+    }
+
+    if (!isValidUtc(value)) return null;
+
+    const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
+    const timeZone = resolveReadingTimeZone(optionsArg?.timeZone);
+    if (weekStartsOn === null || timeZone === null) return null;
+
+    try {
+      const instant = Temporal.Instant.from(value);
+      const dt = instant.toZonedDateTimeISO(timeZone);
+      const dateStr = dt.toPlainDate().toString();
+      return getWeekNumber(dateStr, weekStartsOn);
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

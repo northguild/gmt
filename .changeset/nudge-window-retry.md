@@ -4,7 +4,7 @@
 
 Fix lengths, rounding and differences in months or years measured from the 29th, 30th or 31st (Story CORE-8).
 
-**Which functions.** `intervalLengthDate`, `intervalLengthDateTime`, `intervalLengthUtc`, `intervalLengthZoned`, `intervalLengthUnix`, `formatRelativeDate`, `formatRelativeDateTime`, `normalizeDuration`, and every `diff*` function given a `smallestUnit` of months or years — anything that measures a span in months or years from a start date whose day gets pushed back when a month is added.
+**Which functions.** `intervalLengthDate`, `intervalLengthDateTime`, `intervalLengthUtc`, `intervalLengthZoned`, `intervalLengthUnix`, `formatRelativeDate`, `formatRelativeDateTime`, `normalizeDuration`, and the `diff*` functions that carry a time component — `diffDateTime`, `diffUtc`, `diffUnix` and `diffZoned` — given a `smallestUnit` of months or years. `diffDate` is not affected: two dates have no time component, so the bracket always closes on a date it already reaches.
 
 **What was wrong.** A month has no fixed length, so measuring one means bracketing the span between two dates a month apart. Temporal checks that the answer actually falls inside that bracket and moves it along when it does not. `@js-temporal/polyfill` 0.5.1 skips that check, so any measurement from the 29th, 30th or 31st — the days where adding a month has to clamp — could be taken against the wrong pair of dates.
 

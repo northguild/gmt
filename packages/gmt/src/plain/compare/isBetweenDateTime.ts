@@ -32,45 +32,51 @@ export function isBetweenDateTime(
   end: string,
   options?: { inclusiveStart?: boolean; inclusiveEnd?: boolean },
 ): boolean {
-  if (!isOptionsArgument(options)) {
-    return false;
-  }
-
-  // Only an omitted flag takes the `true` default. An explicit `null` is a value, and every
-  // reading of it gives `false`: ECMA-402 reads a boolean option through ToBoolean (null → false),
-  // and the house rule rejects an invalid member outright — neither yields `true`. So `null`
-  // behaves here exactly as `0` and `""` already do.
-  const inclusiveStart =
-    options?.inclusiveStart === undefined ? true : options.inclusiveStart;
-  const inclusiveEnd =
-    options?.inclusiveEnd === undefined ? true : options.inclusiveEnd;
-
-  if (
-    !isValidDateTime(dateTime) ||
-    !isValidDateTime(start) ||
-    !isValidDateTime(end)
-  ) {
-    return false;
-  }
-
   try {
-    const d = Temporal.PlainDateTime.from(dateTime);
-    const s = Temporal.PlainDateTime.from(start);
-    const e = Temporal.PlainDateTime.from(end);
-
-    if (Temporal.PlainDateTime.compare(s, e) === 1) {
+    if (!isOptionsArgument(options)) {
       return false;
     }
 
-    const startCheck = inclusiveStart
-      ? Temporal.PlainDateTime.compare(s, d) <= 0
-      : Temporal.PlainDateTime.compare(s, d) < 0;
-    const endCheck = inclusiveEnd
-      ? Temporal.PlainDateTime.compare(d, e) <= 0
-      : Temporal.PlainDateTime.compare(d, e) < 0;
+    // Only an omitted flag takes the `true` default. An explicit `null` is a value, and every
+    // reading of it gives `false`: ECMA-402 reads a boolean option through ToBoolean (null → false),
+    // and the house rule rejects an invalid member outright — neither yields `true`. So `null`
+    // behaves here exactly as `0` and `""` already do.
+    const inclusiveStart =
+      options?.inclusiveStart === undefined ? true : options.inclusiveStart;
+    const inclusiveEnd =
+      options?.inclusiveEnd === undefined ? true : options.inclusiveEnd;
 
-    return startCheck && endCheck;
+    if (
+      !isValidDateTime(dateTime) ||
+      !isValidDateTime(start) ||
+      !isValidDateTime(end)
+    ) {
+      return false;
+    }
+
+    try {
+      const d = Temporal.PlainDateTime.from(dateTime);
+      const s = Temporal.PlainDateTime.from(start);
+      const e = Temporal.PlainDateTime.from(end);
+
+      if (Temporal.PlainDateTime.compare(s, e) === 1) {
+        return false;
+      }
+
+      const startCheck = inclusiveStart
+        ? Temporal.PlainDateTime.compare(s, d) <= 0
+        : Temporal.PlainDateTime.compare(s, d) < 0;
+      const endCheck = inclusiveEnd
+        ? Temporal.PlainDateTime.compare(d, e) <= 0
+        : Temporal.PlainDateTime.compare(d, e) < 0;
+
+      return startCheck && endCheck;
+    } catch {
+      return false;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return false;
   }
 }

@@ -43,54 +43,60 @@ export function intervalDivideEquallyUtc(
   n: number,
   options?: { maxPieces?: number },
 ): Array<{ start: string; end: string }> {
-  if (typeof n !== "number" || !Number.isInteger(n) || n <= 0) {
-    return [];
-  }
-
-  const maxPieces = resolveMaxPieces(options);
-
-  if (maxPieces === null || exceedsPieceLimit(n, maxPieces)) {
-    return [];
-  }
-
-  if (!isValidUtcInterval(start, end)) {
-    return [];
-  }
-
   try {
-    const startVal = Temporal.Instant.from(start);
-    const endVal = Temporal.Instant.from(end);
-
-    if (startVal.equals(endVal)) {
-      return Array.from({ length: n }, () => ({
-        start: startVal.toString(),
-        end: endVal.toString(),
-      }));
+    if (typeof n !== "number" || !Number.isInteger(n) || n <= 0) {
+      return [];
     }
 
-    const startNs = startVal.epochNanoseconds;
-    const totalNs = endVal.epochNanoseconds - startNs;
+    const maxPieces = resolveMaxPieces(options);
 
-    const boundaries: Temporal.Instant[] = [startVal];
-    for (let i = 1; i < n; i++) {
-      boundaries.push(
-        Temporal.Instant.fromEpochNanoseconds(
-          startNs + divisionBoundary(totalNs, i, n),
-        ),
-      );
-    }
-    boundaries.push(endVal);
-
-    const result: Array<{ start: string; end: string }> = [];
-    for (let i = 0; i < boundaries.length - 1; i++) {
-      result.push({
-        start: boundaries[i].toString(),
-        end: boundaries[i + 1].toString(),
-      });
+    if (maxPieces === null || exceedsPieceLimit(n, maxPieces)) {
+      return [];
     }
 
-    return result;
+    if (!isValidUtcInterval(start, end)) {
+      return [];
+    }
+
+    try {
+      const startVal = Temporal.Instant.from(start);
+      const endVal = Temporal.Instant.from(end);
+
+      if (startVal.equals(endVal)) {
+        return Array.from({ length: n }, () => ({
+          start: startVal.toString(),
+          end: endVal.toString(),
+        }));
+      }
+
+      const startNs = startVal.epochNanoseconds;
+      const totalNs = endVal.epochNanoseconds - startNs;
+
+      const boundaries: Temporal.Instant[] = [startVal];
+      for (let i = 1; i < n; i++) {
+        boundaries.push(
+          Temporal.Instant.fromEpochNanoseconds(
+            startNs + divisionBoundary(totalNs, i, n),
+          ),
+        );
+      }
+      boundaries.push(endVal);
+
+      const result: Array<{ start: string; end: string }> = [];
+      for (let i = 0; i < boundaries.length - 1; i++) {
+        result.push({
+          start: boundaries[i].toString(),
+          end: boundaries[i + 1].toString(),
+        });
+      }
+
+      return result;
+    } catch {
+      return [];
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

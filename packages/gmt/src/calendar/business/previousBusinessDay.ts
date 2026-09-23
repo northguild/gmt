@@ -33,5 +33,11 @@ export function previousBusinessDay(
   value: string,
   calendar: BusinessCalendar,
 ): string {
-  return neighbourBusinessDayValue(value, -1, calendar);
+  try {
+    return neighbourBusinessDayValue(value, -1, calendar);
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
+    return "";
+  }
 }

@@ -23,15 +23,21 @@ import type { UnixUnit } from "../validate/isValidUnixUnit";
  * @example getUnixNow("seconds" as never) // null (options must be an object)
  */
 export function getUnixNow(options?: { epochUnit?: UnixUnit }): number | null {
-  const epochUnit = resolveUnixEpochUnitOptions(options);
-
-  if (epochUnit === null) {
-    return null;
-  }
-
   try {
-    return toUnixEpoch(Temporal.Now.instant(), epochUnit);
+    const epochUnit = resolveUnixEpochUnitOptions(options);
+
+    if (epochUnit === null) {
+      return null;
+    }
+
+    try {
+      return toUnixEpoch(Temporal.Now.instant(), epochUnit);
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

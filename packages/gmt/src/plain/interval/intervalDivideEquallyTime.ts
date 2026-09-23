@@ -44,56 +44,62 @@ export function intervalDivideEquallyTime(
   n: number,
   options?: { maxPieces?: number },
 ): Array<{ start: string; end: string }> {
-  if (typeof n !== "number" || !Number.isInteger(n) || n <= 0) {
-    return [];
-  }
-
-  const maxPieces = resolveMaxPieces(options);
-
-  if (maxPieces === null || exceedsPieceLimit(n, maxPieces)) {
-    return [];
-  }
-
-  if (!isValidTimeInterval(start, end)) {
-    return [];
-  }
-
   try {
-    const startVal = Temporal.PlainTime.from(start);
-    const endVal = Temporal.PlainTime.from(end);
-
-    if (startVal.equals(endVal)) {
-      return Array.from({ length: n }, () => ({
-        start: startVal.toString(),
-        end: endVal.toString(),
-      }));
+    if (typeof n !== "number" || !Number.isInteger(n) || n <= 0) {
+      return [];
     }
 
-    // Under a day of nanoseconds (< 2^53), so the total itself is exact; the quotient is not.
-    const totalNs = BigInt(
-      startVal.until(endVal, { largestUnit: "nanosecond" }).total("nanosecond"),
-    );
+    const maxPieces = resolveMaxPieces(options);
 
-    const boundaries: Temporal.PlainTime[] = [startVal];
-    for (let i = 1; i < n; i++) {
-      boundaries.push(
-        startVal.add({
-          nanoseconds: Number(divisionBoundary(totalNs, i, n)),
-        }),
+    if (maxPieces === null || exceedsPieceLimit(n, maxPieces)) {
+      return [];
+    }
+
+    if (!isValidTimeInterval(start, end)) {
+      return [];
+    }
+
+    try {
+      const startVal = Temporal.PlainTime.from(start);
+      const endVal = Temporal.PlainTime.from(end);
+
+      if (startVal.equals(endVal)) {
+        return Array.from({ length: n }, () => ({
+          start: startVal.toString(),
+          end: endVal.toString(),
+        }));
+      }
+
+      // Under a day of nanoseconds (< 2^53), so the total itself is exact; the quotient is not.
+      const totalNs = BigInt(
+        startVal.until(endVal, { largestUnit: "nanosecond" }).total("nanosecond"),
       );
-    }
-    boundaries.push(endVal);
 
-    const result: Array<{ start: string; end: string }> = [];
-    for (let i = 0; i < boundaries.length - 1; i++) {
-      result.push({
-        start: boundaries[i].toString(),
-        end: boundaries[i + 1].toString(),
-      });
-    }
+      const boundaries: Temporal.PlainTime[] = [startVal];
+      for (let i = 1; i < n; i++) {
+        boundaries.push(
+          startVal.add({
+            nanoseconds: Number(divisionBoundary(totalNs, i, n)),
+          }),
+        );
+      }
+      boundaries.push(endVal);
 
-    return result;
+      const result: Array<{ start: string; end: string }> = [];
+      for (let i = 0; i < boundaries.length - 1; i++) {
+        result.push({
+          start: boundaries[i].toString(),
+          end: boundaries[i + 1].toString(),
+        });
+      }
+
+      return result;
+    } catch {
+      return [];
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

@@ -71,55 +71,61 @@ export function intervalFromDurationZoned(
     overflow?: Overflow;
   },
 ): { start: string; end: string } | null {
-  if (!isOptionsArgument(options)) {
-    return null;
-  }
-
-  if (!isValidCalendarZonedDateTime(value)) {
-    return null;
-  }
-
-  if (!isValidDuration(duration)) {
-    return null;
-  }
-
-  if (anchor !== "start" && anchor !== "end") {
-    return null;
-  }
-
-  const disambiguation =
-    options?.disambiguation === undefined
-      ? "compatible"
-      : options.disambiguation;
-  const overflow = resolveOverflow(options?.overflow);
-
   try {
-    const calendar = calendarSystemOfZonedValue(value);
-    if (!calendar) {
-      return null;
-    }
-    const point = parseCalendarZonedValue(value);
-    const dur = Temporal.Duration.from(duration);
-
-    const other = addToZonedDisambiguated(
-      point,
-      dur,
-      anchor === "start" ? 1 : -1,
-      { overflow, disambiguation },
-    );
-
-    const start = anchor === "start" ? point : other;
-    const end = anchor === "start" ? other : point;
-
-    if (Temporal.ZonedDateTime.compare(start, end) > 0) {
+    if (!isOptionsArgument(options)) {
       return null;
     }
 
-    return {
-      start: formatZonedInCalendar(start, calendar),
-      end: formatZonedInCalendar(end, calendar),
-    };
+    if (!isValidCalendarZonedDateTime(value)) {
+      return null;
+    }
+
+    if (!isValidDuration(duration)) {
+      return null;
+    }
+
+    if (anchor !== "start" && anchor !== "end") {
+      return null;
+    }
+
+    const disambiguation =
+      options?.disambiguation === undefined
+        ? "compatible"
+        : options.disambiguation;
+    const overflow = resolveOverflow(options?.overflow);
+
+    try {
+      const calendar = calendarSystemOfZonedValue(value);
+      if (!calendar) {
+        return null;
+      }
+      const point = parseCalendarZonedValue(value);
+      const dur = Temporal.Duration.from(duration);
+
+      const other = addToZonedDisambiguated(
+        point,
+        dur,
+        anchor === "start" ? 1 : -1,
+        { overflow, disambiguation },
+      );
+
+      const start = anchor === "start" ? point : other;
+      const end = anchor === "start" ? other : point;
+
+      if (Temporal.ZonedDateTime.compare(start, end) > 0) {
+        return null;
+      }
+
+      return {
+        start: formatZonedInCalendar(start, calendar),
+        end: formatZonedInCalendar(end, calendar),
+      };
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

@@ -36,37 +36,43 @@ import type { BusinessCalendar } from "../../types";
 export function mergeCalendars(
   calendars: BusinessCalendar[],
 ): BusinessCalendar | null {
-  if (!Array.isArray(calendars) || calendars.length === 0) {
-    return null;
-  }
-
-  const weekend = new Set<number>();
-  const holidays = new Set<string>();
-
-  for (const calendar of calendars) {
-    const resolved = parseBusinessCalendar(calendar);
-
-    if (resolved === null) {
+  try {
+    if (!Array.isArray(calendars) || calendars.length === 0) {
       return null;
     }
 
-    for (const day of resolved.weekend) {
-      weekend.add(day);
+    const weekend = new Set<number>();
+    const holidays = new Set<string>();
+
+    for (const calendar of calendars) {
+      const resolved = parseBusinessCalendar(calendar);
+
+      if (resolved === null) {
+        return null;
+      }
+
+      for (const day of resolved.weekend) {
+        weekend.add(day);
+      }
+
+      for (const holiday of resolved.holidays) {
+        holidays.add(holiday);
+      }
     }
 
-    for (const holiday of resolved.holidays) {
-      holidays.add(holiday);
-    }
+    const merged = {
+      weekend: [...weekend].sort((a, b) => a - b),
+      // Chronological, not lexicographic: a bare `.sort()` compares as strings, which puts the
+      // "+" and "-" of an expanded year below every digit.
+      holidays: [...holidays].sort((a, b) => Temporal.PlainDate.compare(a, b)),
+      timeZone: calendars[0].timeZone,
+    };
+
+    // The union can close every weekday even when no input does, which is not a calendar.
+    return parseBusinessCalendar(merged) === null ? null : merged;
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
+    return null;
   }
-
-  const merged = {
-    weekend: [...weekend].sort((a, b) => a - b),
-    // Chronological, not lexicographic: a bare `.sort()` compares as strings, which puts the
-    // "+" and "-" of an expanded year below every digit.
-    holidays: [...holidays].sort((a, b) => Temporal.PlainDate.compare(a, b)),
-    timeZone: calendars[0].timeZone,
-  };
-
-  // The union can close every weekday even when no input does, which is not a calendar.
-  return parseBusinessCalendar(merged) === null ? null : merged;
 }

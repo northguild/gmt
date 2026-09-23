@@ -18,8 +18,9 @@
  *   monotonic `performance.now()`, and a file's `mtimeMs` is epoch milliseconds from the
  *   filesystem. An independent oracle is not a date either — a test that checks GMT's output by
  *   parsing it with GMT proves nothing. Those stay, with the reason on the line.
- * - **Vendored source.** Code copied unmodified from upstream is reviewed as "copied", not linted
- *   as our own — the same carve-out `oxlint.config.ts` makes.
+ * - **Vendored source.** Code copied from upstream and left alone is reviewed as "copied", not
+ *   linted as our own — the same carve-out the `oxlint.config.mts` files make. It covers `ui/`
+ *   only: a tree we have modified is ours, whatever its provenance.
  */
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
@@ -41,14 +42,22 @@ const SCANNED_EXTENSIONS = new Set([".ts", ".tsx", ".astro", ".mjs"]);
 const EXEMPT_FILES = new Set([
   "src/lib/agent-prompt.ts",
   "src/components/WhyDateBug.astro",
+  "src/data/date-faults.ts",
   "src/data/library-comparison.ts",
 ]);
 
 /**
- * Vendored, unmodified shadcn/AI Elements registry source (DOX-C0, #171). Mirrors the ignore list
- * in `oxlint.config.ts` — if one grows, so does the other.
+ * Vendored shadcn registry source (DOX-C0, #171). Mirrors the ignore list in the two
+ * `oxlint.config.mts` files — if one grows, so does the other.
+ *
+ * `ai-elements/` is **not** here. Its exemption used to read "vendored, unmodified", and that was
+ * false three ways: all 15 oxlint pragmas naming this repo's own plugins were present in the
+ * vendoring commit itself, `prompt-input.tsx` was edited again afterwards with a
+ * `LOCAL MODIFICATION (GMT)` marker, and the directory's own README says we re-theme every
+ * component there. It hid four live `Date` calls, one of them a calendar value formatted into a
+ * user-visible filename, on the site that argues `Date` is the wrong tool (CORE-8 review, #253).
  */
-const VENDORED = ["apps/dox/src/components/ai-elements/", "apps/dox/src/components/ui/"];
+const VENDORED = ["apps/dox/src/components/ui/"];
 
 const ROOTS = [
   join(DOX, "src"),
@@ -89,6 +98,25 @@ const FILES = ROOTS.flatMap(walk)
   .sort();
 
 describe("Date ban", () => {
+  /**
+   * The carve-out lives in three files, and the comments in each promise the other two match.
+   * Nothing checked that until a tree stayed exempt here after it stopped being exempt there.
+   */
+  it("exempts the same vendored trees the oxlint configs ignore", () => {
+    const vendoredIn = (configPath: string, prefix: string): string[] =>
+      [
+        ...readFileSync(join(REPO, configPath), "utf8").matchAll(
+          /"([^"]*src\/components\/[^"]*)\/\*\*"/g,
+        ),
+      ].map(([, pattern]) => `${prefix}${pattern.replace(/^src\//, "src/")}/`);
+
+    const root = vendoredIn("oxlint.config.mts", "");
+    const dox = vendoredIn("apps/dox/oxlint.config.mts", "apps/dox/");
+
+    expect(root).toEqual(dox);
+    expect(root).toEqual([...VENDORED]);
+  });
+
   it("scans the site, the Worker, the library, and every build script", () => {
     expect(FILES.length).toBeGreaterThan(30);
     expect(FILES).toContain("apps/dox/src/lib/dst-inspector.ts");

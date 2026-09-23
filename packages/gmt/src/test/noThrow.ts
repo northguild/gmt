@@ -73,6 +73,30 @@ export type NoThrowCase = {
  * `ToString` rejects outright per ECMA-262 §7.1.17). A guard that coerces before it validates
  * turns invalid input into a thrown `TypeError` instead of the sentinel.
  */
+/** A proxy whose every trap throws: hostile to reads, key enumeration and `Array.isArray` alike. */
+function hostileProxy(): unknown {
+  const trap = (): never => {
+    throw new TypeError("hostile proxy");
+  };
+  return new Proxy(
+    {},
+    {
+      get: trap,
+      has: trap,
+      ownKeys: trap,
+      getOwnPropertyDescriptor: trap,
+      getPrototypeOf: trap,
+    },
+  );
+}
+
+/** A revoked proxy: every internal method throws, including the ones a `typeof` guard cannot see. */
+function revokedProxy(): unknown {
+  const { proxy, revoke } = Proxy.revocable({}, {});
+  revoke();
+  return proxy;
+}
+
 const GARBAGE: [string, unknown][] = [
   ["null", null],
   ["undefined", undefined],
@@ -92,6 +116,20 @@ const GARBAGE: [string, unknown][] = [
   ],
   ["Object.create(null)", Object.create(null) as unknown],
   ["Symbol()", Symbol("hostile")],
+  // The three above close the holes a `ToString` guard leaves. These three close the class:
+  // they are hostile to *every* access, not to one operation anyone thought to name. A list of
+  // remembered shapes cannot see what is not on it — which is how six exports and then a further
+  // 221 stayed invisible here (CORE-8 review, #253).
+  [
+    "{ get length() { throw } }",
+    {
+      get length(): never {
+        throw new Error("hostile getter");
+      },
+    },
+  ],
+  ["Proxy that throws on any trap", hostileProxy()],
+  ["revoked Proxy", revokedProxy()],
 ];
 
 const SOURCE_ROOT = path.resolve(import.meta.dirname, "..");

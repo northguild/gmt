@@ -41,41 +41,47 @@ export function isBetweenUnix(
     inclusiveEnd?: boolean;
   },
 ): boolean {
-  if (!isOptionsArgument(options)) {
+  try {
+    if (!isOptionsArgument(options)) {
+      return false;
+    }
+
+    const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
+    const timeZone = normalizeTimeZone(options?.timeZone);
+    // Only an omitted flag takes the `true` default. An explicit `null` is a value, and every
+    // reading of it gives `false`: ECMA-402 reads a boolean option through ToBoolean (null → false),
+    // and the house rule rejects an invalid member outright — neither yields `true`. So `null`
+    // behaves here exactly as `0` and `""` already do.
+    const inclusiveStart =
+      options?.inclusiveStart === undefined ? true : options.inclusiveStart;
+    const inclusiveEnd =
+      options?.inclusiveEnd === undefined ? true : options.inclusiveEnd;
+
+    if (!timeZone || epochUnit === null) return false;
+
+    const instant = unixEpochToInstant(value, epochUnit);
+    const startInstant = unixEpochToInstant(start, epochUnit);
+    const endInstant = unixEpochToInstant(end, epochUnit);
+
+    if (instant === null || startInstant === null || endInstant === null) {
+      return false;
+    }
+
+    if (Temporal.Instant.compare(startInstant, endInstant) === 1) {
+      return false;
+    }
+
+    const startCheck = inclusiveStart
+      ? Temporal.Instant.compare(startInstant, instant) <= 0
+      : Temporal.Instant.compare(startInstant, instant) < 0;
+    const endCheck = inclusiveEnd
+      ? Temporal.Instant.compare(instant, endInstant) <= 0
+      : Temporal.Instant.compare(instant, endInstant) < 0;
+
+    return startCheck && endCheck;
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return false;
   }
-
-  const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
-  const timeZone = normalizeTimeZone(options?.timeZone);
-  // Only an omitted flag takes the `true` default. An explicit `null` is a value, and every
-  // reading of it gives `false`: ECMA-402 reads a boolean option through ToBoolean (null → false),
-  // and the house rule rejects an invalid member outright — neither yields `true`. So `null`
-  // behaves here exactly as `0` and `""` already do.
-  const inclusiveStart =
-    options?.inclusiveStart === undefined ? true : options.inclusiveStart;
-  const inclusiveEnd =
-    options?.inclusiveEnd === undefined ? true : options.inclusiveEnd;
-
-  if (!timeZone || epochUnit === null) return false;
-
-  const instant = unixEpochToInstant(value, epochUnit);
-  const startInstant = unixEpochToInstant(start, epochUnit);
-  const endInstant = unixEpochToInstant(end, epochUnit);
-
-  if (instant === null || startInstant === null || endInstant === null) {
-    return false;
-  }
-
-  if (Temporal.Instant.compare(startInstant, endInstant) === 1) {
-    return false;
-  }
-
-  const startCheck = inclusiveStart
-    ? Temporal.Instant.compare(startInstant, instant) <= 0
-    : Temporal.Instant.compare(startInstant, instant) < 0;
-  const endCheck = inclusiveEnd
-    ? Temporal.Instant.compare(instant, endInstant) <= 0
-    : Temporal.Instant.compare(instant, endInstant) < 0;
-
-  return startCheck && endCheck;
 }

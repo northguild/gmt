@@ -94,36 +94,42 @@ export function parseDateTimeWithPattern(
   pattern: string,
   locale?: string | string[],
 ): string {
-  if (typeof value !== "string") return "";
-  if (typeof pattern !== "string") return "";
-
-  const fields = parseValueWithPattern(
-    value,
-    pattern,
-    locale,
-    DATE_TIME_PATTERN_FIELDS,
-  );
-  if (fields === null) return "";
-
   try {
-    // The regex only proved `value` has the right *shape* for `pattern`
-    // (e.g. "02/31/2024 14:30:00" matches "MM/dd/yyyy HH:mm:ss") —
-    // Temporal is what proves the value is real: `overflow: "reject"`
-    // throws instead of silently clamping an out-of-range field, which
-    // is what the default "constrain" would do.
-    return Temporal.PlainDateTime.from(
-      {
-        year: fields.year,
-        month: fields.month,
-        day: fields.day,
-        hour: fields.hour,
-        minute: fields.minute,
-        second: fields.second,
-        millisecond: fields.millisecond,
-      },
-      { overflow: "reject" },
-    ).toString();
+    if (typeof value !== "string") return "";
+    if (typeof pattern !== "string") return "";
+
+    const fields = parseValueWithPattern(
+      value,
+      pattern,
+      locale,
+      DATE_TIME_PATTERN_FIELDS,
+    );
+    if (fields === null) return "";
+
+    try {
+      // The regex only proved `value` has the right *shape* for `pattern`
+      // (e.g. "02/31/2024 14:30:00" matches "MM/dd/yyyy HH:mm:ss") —
+      // Temporal is what proves the value is real: `overflow: "reject"`
+      // throws instead of silently clamping an out-of-range field, which
+      // is what the default "constrain" would do.
+      return Temporal.PlainDateTime.from(
+        {
+          year: fields.year,
+          month: fields.month,
+          day: fields.day,
+          hour: fields.hour,
+          minute: fields.minute,
+          second: fields.second,
+          millisecond: fields.millisecond,
+        },
+        { overflow: "reject" },
+      ).toString();
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

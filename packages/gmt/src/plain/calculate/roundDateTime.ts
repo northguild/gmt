@@ -194,42 +194,48 @@ export function roundDateTime(
     roundingMode?: Temporal.RoundingMode;
   },
 ): string {
-  if (!isObject(options)) return "";
-
-  const { roundingIncrement, roundingMode } = options;
-  const smallestUnit: unknown =
-    typeof options.smallestUnit === "string"
-      ? resolveDateTimeUnit(options.smallestUnit)
-      : options.smallestUnit;
-
-  if (!isValidDateTime(value) || !isValidDateTimeUnit(smallestUnit)) return "";
-
   try {
-    const source = Temporal.PlainDateTime.from(value);
+    if (!isObject(options)) return "";
 
-    if (TIME_UNITS.includes(smallestUnit)) {
-      return roundTimeUnit(
-        source,
-        smallestUnit as RoundableTimeUnit,
+    const { roundingIncrement, roundingMode } = options;
+    const smallestUnit: unknown =
+      typeof options.smallestUnit === "string"
+        ? resolveDateTimeUnit(options.smallestUnit)
+        : options.smallestUnit;
+
+    if (!isValidDateTime(value) || !isValidDateTimeUnit(smallestUnit)) return "";
+
+    try {
+      const source = Temporal.PlainDateTime.from(value);
+
+      if (TIME_UNITS.includes(smallestUnit)) {
+        return roundTimeUnit(
+          source,
+          smallestUnit as RoundableTimeUnit,
+          roundingIncrement,
+          roundingMode,
+        );
+      }
+
+      // Manual rounding for date units (year, month, week)
+      const resolved = resolveManualRoundingOptions(
         roundingIncrement,
         roundingMode,
       );
+      if (resolved === null) return "";
+
+      return roundDateUnit(
+        source,
+        smallestUnit,
+        resolved.increment,
+        resolved.mode,
+      );
+    } catch {
+      return "";
     }
-
-    // Manual rounding for date units (year, month, week)
-    const resolved = resolveManualRoundingOptions(
-      roundingIncrement,
-      roundingMode,
-    );
-    if (resolved === null) return "";
-
-    return roundDateUnit(
-      source,
-      smallestUnit,
-      resolved.increment,
-      resolved.mode,
-    );
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

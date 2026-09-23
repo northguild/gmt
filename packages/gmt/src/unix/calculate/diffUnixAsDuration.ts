@@ -62,37 +62,43 @@ export function diffUnixAsDuration(
   } & RoundingOptions<Temporal.DateTimeUnit> &
     DurationStringOptions,
 ): string {
-  // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
-  if (!isOptionsArgument(options)) {
-    return "";
-  }
-  const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
-  const timeZone = normalizeTimeZone(options?.timeZone);
-
-  if (!timeZone || epochUnit === null) return "";
-
-  const largestUnit =
-    typeof unit === "string" ? resolveDurationUnit(unit) : unit;
-
-  if (!isValidDateTimeDurationUnit(largestUnit)) {
-    return "";
-  }
-
-  const instant1 = unixEpochToInstant(value1, epochUnit);
-  const instant2 = unixEpochToInstant(value2, epochUnit);
-
-  if (instant1 === null || instant2 === null) {
-    return "";
-  }
-
   try {
-    return durationUntilString(
-      instant1.toZonedDateTimeISO(timeZone),
-      instant2.toZonedDateTimeISO(timeZone),
-      largestUnit,
-      options,
-    );
+    // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
+    if (!isOptionsArgument(options)) {
+      return "";
+    }
+    const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
+    const timeZone = normalizeTimeZone(options?.timeZone);
+
+    if (!timeZone || epochUnit === null) return "";
+
+    const largestUnit =
+      typeof unit === "string" ? resolveDurationUnit(unit) : unit;
+
+    if (!isValidDateTimeDurationUnit(largestUnit)) {
+      return "";
+    }
+
+    const instant1 = unixEpochToInstant(value1, epochUnit);
+    const instant2 = unixEpochToInstant(value2, epochUnit);
+
+    if (instant1 === null || instant2 === null) {
+      return "";
+    }
+
+    try {
+      return durationUntilString(
+        instant1.toZonedDateTimeISO(timeZone),
+        instant2.toZonedDateTimeISO(timeZone),
+        largestUnit,
+        options,
+      );
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

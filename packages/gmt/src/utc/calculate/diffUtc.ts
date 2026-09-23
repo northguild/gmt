@@ -57,63 +57,69 @@ export function diffUtc(
     | Array<DateTimeDurationUnit | Temporal.DateTimeUnit>,
   options?: RoundingOptions<Temporal.DateTimeUnit>,
 ): number | Record<DateTimeDurationUnit, number> | null {
-  // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
-  if (!isOptionsArgument(options)) {
-    return null;
-  }
-  const validUtc1 = isValidUtc(value1);
-  const validUtc2 = isValidUtc(value2);
-  // Singular names resolve to their plural (Temporal §13.17); record keys are the plural names.
-  const resolved = Array.isArray(units)
-    ? units.map((unit) => resolveDurationUnit(unit))
-    : resolveDurationUnit(units);
-  const isSingleUnit = !Array.isArray(resolved);
-  const validUnits = isSingleUnit
-    ? isValidDateTimeDurationUnit(resolved)
-    : resolved.every(isValidDateTimeDurationUnit);
-
-  if (!validUtc1 || !validUtc2 || !validUnits) {
-    return null;
-  }
-
   try {
-    // An empty units list names no largest unit, so there is nothing to measure.
-    const largestUnit = isSingleUnit
-      ? (resolved as DateTimeDurationUnit)
-      : getLargestDateTimeDurationUnit(resolved as DateTimeDurationUnit[]);
-    if (largestUnit === "") return null;
+    // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
+    if (!isOptionsArgument(options)) {
+      return null;
+    }
+    const validUtc1 = isValidUtc(value1);
+    const validUtc2 = isValidUtc(value2);
+    // Singular names resolve to their plural (Temporal §13.17); record keys are the plural names.
+    const resolved = Array.isArray(units)
+      ? units.map((unit) => resolveDurationUnit(unit))
+      : resolveDurationUnit(units);
+    const isSingleUnit = !Array.isArray(resolved);
+    const validUnits = isSingleUnit
+      ? isValidDateTimeDurationUnit(resolved)
+      : resolved.every(isValidDateTimeDurationUnit);
 
-    const instant1 = Temporal.Instant.from(value1);
-    const instant2 = Temporal.Instant.from(value2);
-
-    const zdt1 = instant1.toZonedDateTimeISO("UTC");
-    const zdt2 = instant2.toZonedDateTimeISO("UTC");
-
-    const duration = zonedUntil(zdt1, zdt2, {
-      largestUnit,
-      smallestUnit: options?.smallestUnit,
-      roundingIncrement: options?.roundingIncrement,
-      roundingMode: options?.roundingMode,
-    });
-
-    if (isSingleUnit) {
-      return duration[resolved as DateTimeDurationUnit] ?? 0;
+    if (!validUtc1 || !validUtc2 || !validUnits) {
+      return null;
     }
 
-    // An unlisted unit between two listed units is carried into the next smaller listed unit.
-    return differenceRecord(
-      zdt1,
-      duration,
-      resolved as DateTimeDurationUnit[],
-      {
-        add: (from, amount) => addToZoned(from, amount),
-        until: (from, to, largest) =>
-          zonedUntil(from, to, {
-            largestUnit: largest as Temporal.DateTimeUnit,
-          }),
-      },
-    );
+    try {
+      // An empty units list names no largest unit, so there is nothing to measure.
+      const largestUnit = isSingleUnit
+        ? (resolved as DateTimeDurationUnit)
+        : getLargestDateTimeDurationUnit(resolved as DateTimeDurationUnit[]);
+      if (largestUnit === "") return null;
+
+      const instant1 = Temporal.Instant.from(value1);
+      const instant2 = Temporal.Instant.from(value2);
+
+      const zdt1 = instant1.toZonedDateTimeISO("UTC");
+      const zdt2 = instant2.toZonedDateTimeISO("UTC");
+
+      const duration = zonedUntil(zdt1, zdt2, {
+        largestUnit,
+        smallestUnit: options?.smallestUnit,
+        roundingIncrement: options?.roundingIncrement,
+        roundingMode: options?.roundingMode,
+      });
+
+      if (isSingleUnit) {
+        return duration[resolved as DateTimeDurationUnit] ?? 0;
+      }
+
+      // An unlisted unit between two listed units is carried into the next smaller listed unit.
+      return differenceRecord(
+        zdt1,
+        duration,
+        resolved as DateTimeDurationUnit[],
+        {
+          add: (from, amount) => addToZoned(from, amount),
+          until: (from, to, largest) =>
+            zonedUntil(from, to, {
+              largestUnit: largest as Temporal.DateTimeUnit,
+            }),
+        },
+      );
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

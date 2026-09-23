@@ -133,6 +133,17 @@ jobs:
       - name: Public API surface — reachability, examples, doc imports and links
         run: node scripts/api-surface.mjs check
 
+      # `llms.test.ts`'s three text-surface gates all early-return when `apps/dox/dist` is absent,
+      # and the Tests job never builds the site — it is a separate runner that builds only
+      # `@northguild/gmt`. So those gates had never run in CI, which is how a raw `<UpstreamDefects />`
+      # reached every text surface with the suite green (CORE-8 review, #253). Built here, once,
+      # rather than in the Node matrix, because one runner is enough to check generated output.
+      - name: Build the dox site
+        run: pnpm --filter dox run build
+
+      - name: Text surfaces carry no raw component tags or unevaluated expressions
+        run: pnpm --filter dox exec vitest run scripts/llms.test.ts
+
       - name: A changeset covers every changed package
         if: github.event_name == 'pull_request'
         run: |

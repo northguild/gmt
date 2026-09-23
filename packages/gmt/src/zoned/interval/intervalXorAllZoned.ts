@@ -43,48 +43,54 @@ import { isValidCalendarZonedInterval } from "./validate";
 export function intervalXorAllZoned(
   intervals: Array<{ start: string; end: string }>,
 ): Array<{ start: string; end: string }> {
-  if (!Array.isArray(intervals) || intervals.length === 0) {
-    return [];
-  }
-
-  if (
-    !intervals.every(
-      (interval) =>
-        interval &&
-        typeof interval === "object" &&
-        typeof interval.start === "string" &&
-        typeof interval.end === "string" &&
-        isValidCalendarZonedInterval(interval.start, interval.end),
-    )
-  ) {
-    return [];
-  }
-
-  // D4-zoned reject gate: every endpoint across every interval must agree on a calendar, or there
-  // is no calendar to express the returned boundaries in.
-  const calendar = calendarOfAllZonedValues(
-    intervals.flatMap((interval) => [interval.start, interval.end]),
-  );
-  if (!calendar) {
-    return [];
-  }
-
   try {
-    const parsed = intervals.map((interval) => ({
-      start: parseCalendarZonedValue(interval.start),
-      end: parseCalendarZonedValue(interval.end),
-    }));
+    if (!Array.isArray(intervals) || intervals.length === 0) {
+      return [];
+    }
 
-    // Ordering and grouping use `Temporal.ZonedDateTime.compare`, which compares epoch nanoseconds
-    // only — calendar- and zone-blind, unlike `ZonedDateTime.prototype.equals`. Each boundary stays
-    // the ZonedDateTime of the input that contributed it, so it is formatted in that input's zone.
-    return halfOpenXor(parsed, Temporal.ZonedDateTime.compare).map(
-      ({ start, end }) => ({
-        start: formatZonedInCalendar(start, calendar),
-        end: formatZonedInCalendar(end, calendar),
-      }),
+    if (
+      !intervals.every(
+        (interval) =>
+          interval &&
+          typeof interval === "object" &&
+          typeof interval.start === "string" &&
+          typeof interval.end === "string" &&
+          isValidCalendarZonedInterval(interval.start, interval.end),
+      )
+    ) {
+      return [];
+    }
+
+    // D4-zoned reject gate: every endpoint across every interval must agree on a calendar, or there
+    // is no calendar to express the returned boundaries in.
+    const calendar = calendarOfAllZonedValues(
+      intervals.flatMap((interval) => [interval.start, interval.end]),
     );
+    if (!calendar) {
+      return [];
+    }
+
+    try {
+      const parsed = intervals.map((interval) => ({
+        start: parseCalendarZonedValue(interval.start),
+        end: parseCalendarZonedValue(interval.end),
+      }));
+
+      // Ordering and grouping use `Temporal.ZonedDateTime.compare`, which compares epoch nanoseconds
+      // only — calendar- and zone-blind, unlike `ZonedDateTime.prototype.equals`. Each boundary stays
+      // the ZonedDateTime of the input that contributed it, so it is formatted in that input's zone.
+      return halfOpenXor(parsed, Temporal.ZonedDateTime.compare).map(
+        ({ start, end }) => ({
+          start: formatZonedInCalendar(start, calendar),
+          end: formatZonedInCalendar(end, calendar),
+        }),
+      );
+    } catch {
+      return [];
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

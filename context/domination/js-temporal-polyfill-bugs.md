@@ -1595,9 +1595,16 @@ Fixed as compat defect **D11** (`packages/gmt/src/internal/temporalCompat/README
 owned a spec-current `computeNudgeWindow` with `additionalShift`, so the fix routes the three
 operations to it when the probe fails and the `relativeTo` is past the 28th:
 `monthTotalBySpec` and `monthRoundBySpec` in `durationTotal`/`durationRound`, a defect-4 gate in
-`zonedUntil` (which covers `diffUtc`, `diffUnix` and `diffZoned`), the new `plainUntilWithRounding`
-(for `diffDateTime`), and a D11 term in `internal/plainDateUntil.ts` (for `diffDate`). After the fix
-all three scans match Chromium exactly. Probe-gated, retires by canary.
+`zonedUntil` (which covers `diffUtc`, `diffUnix` and `diffZoned`), and the new
+`plainUntilWithRounding` (for `diffDateTime`). After the fix all three scans match Chromium exactly.
+Probe-gated, retires by canary.
+
+`internal/plainDateUntil.ts` carried a fifth D11 term for `diffDate` until the CORE-8 review (#253)
+showed it corrected nothing. The nudge window can only miss its target when the target sits strictly
+between the window bounds by a sub-day amount, and two `PlainDate`s have no time component, so the
+defect is structurally unreachable there — ~1.96M rows against the raw polyfill, both directions,
+zero divergence. The term was removed: routing ISO through that path bought no corrected answer and
+widened the blast radius of GMT's own `progress === 0n` boundary defect to ISO date differences.
 
 **A second defect, in GMT's own mirror, found by the same scan.** When the target lands exactly on
 the window's lower bound the duration is already rounded, which TC39 handles inside

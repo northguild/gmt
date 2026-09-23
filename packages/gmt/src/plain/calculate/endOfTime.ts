@@ -50,75 +50,81 @@ export function endOfTime(
   unit: EndOfTimeUnit,
   optionsArg?: { fractionalSecondDigits?: FractionalDigit },
 ): string {
-  if (!isOptionsArgument(optionsArg)) {
-    return "";
-  }
-
-  const fractionalSecondDigits = optionsArg?.fractionalSecondDigits;
-
-  const resolvedUnit = resolveDateTimeUnit(unit);
-
-  if (!isValidTime(value) || !supported.includes(resolvedUnit)) return "";
-
   try {
-    const source = Temporal.PlainTime.from(value);
-    let result: Temporal.PlainTime;
-
-    switch (resolvedUnit) {
-      case "day":
-        result = source.with({
-          hour: 23,
-          minute: 59,
-          second: 59,
-          millisecond: 999,
-          microsecond: 999,
-          nanosecond: 999,
-        });
-        break;
-      case "hour":
-        result = source.with({
-          minute: 59,
-          second: 59,
-          millisecond: 999,
-          microsecond: 999,
-          nanosecond: 999,
-        });
-        break;
-      case "minute":
-        result = source.with({
-          second: 59,
-          millisecond: 999,
-          microsecond: 999,
-          nanosecond: 999,
-        });
-        break;
-      case "second":
-        result = source.with({
-          millisecond: 999,
-          microsecond: 999,
-          nanosecond: 999,
-        });
-        break;
-      case "millisecond":
-        result = source.with({ microsecond: 999, nanosecond: 999 });
-        break;
-      case "microsecond":
-        result = source.with({ nanosecond: 999 });
-        break;
-      case "nanosecond":
-        result = source;
-        break;
-      default:
-        return "";
+    if (!isOptionsArgument(optionsArg)) {
+      return "";
     }
 
-    // An end is the next start − 1 ns, so it defaults to nanosecond precision: fewer digits would
-    // print an earlier value than the end (Calendar & zone semantics §3).
-    return result.toString({
-      fractionalSecondDigits:
-        fractionalSecondDigits === undefined ? 9 : fractionalSecondDigits,
-    });
+    const fractionalSecondDigits = optionsArg?.fractionalSecondDigits;
+
+    const resolvedUnit = resolveDateTimeUnit(unit);
+
+    if (!isValidTime(value) || !supported.includes(resolvedUnit)) return "";
+
+    try {
+      const source = Temporal.PlainTime.from(value);
+      let result: Temporal.PlainTime;
+
+      switch (resolvedUnit) {
+        case "day":
+          result = source.with({
+            hour: 23,
+            minute: 59,
+            second: 59,
+            millisecond: 999,
+            microsecond: 999,
+            nanosecond: 999,
+          });
+          break;
+        case "hour":
+          result = source.with({
+            minute: 59,
+            second: 59,
+            millisecond: 999,
+            microsecond: 999,
+            nanosecond: 999,
+          });
+          break;
+        case "minute":
+          result = source.with({
+            second: 59,
+            millisecond: 999,
+            microsecond: 999,
+            nanosecond: 999,
+          });
+          break;
+        case "second":
+          result = source.with({
+            millisecond: 999,
+            microsecond: 999,
+            nanosecond: 999,
+          });
+          break;
+        case "millisecond":
+          result = source.with({ microsecond: 999, nanosecond: 999 });
+          break;
+        case "microsecond":
+          result = source.with({ nanosecond: 999 });
+          break;
+        case "nanosecond":
+          result = source;
+          break;
+        default:
+          return "";
+      }
+
+      // An end is the next start − 1 ns, so it defaults to nanosecond precision: fewer digits would
+      // print an earlier value than the end (Calendar & zone semantics §3).
+      return result.toString({
+        fractionalSecondDigits:
+          fractionalSecondDigits === undefined ? 9 : fractionalSecondDigits,
+      });
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

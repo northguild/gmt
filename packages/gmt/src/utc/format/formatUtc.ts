@@ -65,29 +65,35 @@ export function formatUtc(
   locale?: string | string[],
   options?: FormatUtcOptions,
 ): string {
-  // ECMA-402 CoerceOptionsToObject: undefined is defaults; null is a TypeError.
-  if (options === null) return "";
-  if (!isValidUtc(value)) return "";
-
-  const {
-    timeZone,
-    includeTimeZoneName = false,
-    ...intlOptions
-  } = options ?? {};
-
-  const instant = toInstantFromUtc(value);
-  if (instant === null) return "";
-
-  // ECMA-402 throws RangeError for an unknown zone: the sentinel, never a silent UTC.
-  const tz = normalizeTimeZone(timeZone);
-  if (!tz) return "";
-
   try {
-    const zdt = instant.toZonedDateTimeISO(tz);
-    return normalizeDateTime(
-      formatWallClockOrZoned(zdt, locale, intlOptions, includeTimeZoneName),
-    );
+    // ECMA-402 CoerceOptionsToObject: undefined is defaults; null is a TypeError.
+    if (options === null) return "";
+    if (!isValidUtc(value)) return "";
+
+    const {
+      timeZone,
+      includeTimeZoneName = false,
+      ...intlOptions
+    } = options ?? {};
+
+    const instant = toInstantFromUtc(value);
+    if (instant === null) return "";
+
+    // ECMA-402 throws RangeError for an unknown zone: the sentinel, never a silent UTC.
+    const tz = normalizeTimeZone(timeZone);
+    if (!tz) return "";
+
+    try {
+      const zdt = instant.toZonedDateTimeISO(tz);
+      return normalizeDateTime(
+        formatWallClockOrZoned(zdt, locale, intlOptions, includeTimeZoneName),
+      );
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

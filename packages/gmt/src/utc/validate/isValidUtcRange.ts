@@ -27,30 +27,36 @@ export function isValidUtcRange(props: {
   value2: string;
   options?: { allowEqual?: boolean };
 }): boolean {
-  if (!isObject(props)) return false;
-  const { value1, value2, options } = props;
-  if (!isOptionsArgument(options)) return false;
-
-  if (typeof value1 !== "string" || typeof value2 !== "string") {
-    return false;
-  }
-
-  if (!isValidUtc(value1) || !isValidUtc(value2)) {
-    return false;
-  }
-
   try {
-    const startInstant = Temporal.Instant.from(value1);
-    const endInstant = Temporal.Instant.from(value2);
+    if (!isObject(props)) return false;
+    const { value1, value2, options } = props;
+    if (!isOptionsArgument(options)) return false;
 
-    const cmp = Temporal.Instant.compare(startInstant, endInstant);
-
-    if (options?.allowEqual) {
-      return cmp <= 0;
+    if (typeof value1 !== "string" || typeof value2 !== "string") {
+      return false;
     }
 
-    return cmp < 0;
+    if (!isValidUtc(value1) || !isValidUtc(value2)) {
+      return false;
+    }
+
+    try {
+      const startInstant = Temporal.Instant.from(value1);
+      const endInstant = Temporal.Instant.from(value2);
+
+      const cmp = Temporal.Instant.compare(startInstant, endInstant);
+
+      if (options?.allowEqual) {
+        return cmp <= 0;
+      }
+
+      return cmp < 0;
+    } catch {
+      return false;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return false;
   }
 }

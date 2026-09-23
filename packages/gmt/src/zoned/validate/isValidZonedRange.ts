@@ -35,42 +35,48 @@ export function isValidZonedRange(props: {
   value2: string;
   options?: { allowEqual?: boolean };
 }): boolean {
-  if (!isObject(props)) return false;
-  const { value1, value2, options } = props;
-  if (!isOptionsArgument(options)) return false;
-
-  if (typeof value1 !== "string" || typeof value2 !== "string") {
-    return false;
-  }
-
-  if (
-    isLeapSecond(value1) ||
-    isLeapSecond(value2) ||
-    !hasZonedDateTimeShape(value1) ||
-    !hasZonedDateTimeShape(value2)
-  ) {
-    return false;
-  }
-
   try {
-    const zdt1 = zonedDateTimeFrom(value1);
-    const zdt2 = zonedDateTimeFrom(value2);
+    if (!isObject(props)) return false;
+    const { value1, value2, options } = props;
+    if (!isOptionsArgument(options)) return false;
 
-    if (zdt1.calendarId !== "iso8601" || zdt2.calendarId !== "iso8601") {
+    if (typeof value1 !== "string" || typeof value2 !== "string") {
       return false;
     }
 
-    const instant1 = zdt1.toInstant();
-    const instant2 = zdt2.toInstant();
-
-    const cmp = Temporal.Instant.compare(instant1, instant2);
-
-    if (options?.allowEqual) {
-      return cmp <= 0;
+    if (
+      isLeapSecond(value1) ||
+      isLeapSecond(value2) ||
+      !hasZonedDateTimeShape(value1) ||
+      !hasZonedDateTimeShape(value2)
+    ) {
+      return false;
     }
 
-    return cmp < 0;
+    try {
+      const zdt1 = zonedDateTimeFrom(value1);
+      const zdt2 = zonedDateTimeFrom(value2);
+
+      if (zdt1.calendarId !== "iso8601" || zdt2.calendarId !== "iso8601") {
+        return false;
+      }
+
+      const instant1 = zdt1.toInstant();
+      const instant2 = zdt2.toInstant();
+
+      const cmp = Temporal.Instant.compare(instant1, instant2);
+
+      if (options?.allowEqual) {
+        return cmp <= 0;
+      }
+
+      return cmp < 0;
+    } catch {
+      return false;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return false;
   }
 }

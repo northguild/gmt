@@ -36,17 +36,23 @@ const ORDER: readonly TimeDurationUnit[] = [
 export function getLargestTimeDurationUnit(
   units: Array<TimeDurationUnit | Temporal.TimeUnit>,
 ): TimeDurationUnit | "" {
-  if (!Array.isArray(units) || units.length === 0) return "";
+  try {
+    if (!Array.isArray(units) || units.length === 0) return "";
 
-  const plurals: unknown[] = units.map((unit) => resolveDurationUnit(unit));
-  if (
-    !plurals.every(
-      (unit): unit is TimeDurationUnit =>
-        typeof unit === "string" && isValidTimeDurationUnit(unit),
-    )
-  ) {
+    const plurals: unknown[] = units.map((unit) => resolveDurationUnit(unit));
+    if (
+      !plurals.every(
+        (unit): unit is TimeDurationUnit =>
+          typeof unit === "string" && isValidTimeDurationUnit(unit),
+      )
+    ) {
+      return "";
+    }
+
+    return ORDER.find((unit) => plurals.includes(unit)) ?? "";
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
-
-  return ORDER.find((unit) => plurals.includes(unit)) ?? "";
 }

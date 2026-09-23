@@ -40,25 +40,31 @@ export function setUtc(
     overflow?: Overflow;
   },
 ): string {
-  if (!isOptionsArgument(options)) {
-    return "";
-  }
-
-  if (!isValidUtc(value)) return "";
-
-  const overflow = resolveOverflow(options?.overflow);
-
   try {
-    const instant = Temporal.Instant.from(value);
-    const zoned = instant.toZonedDateTimeISO("UTC");
-    // Temporal.ZonedDateTime.prototype.with() throws on an empty fields object ("no supported
-    // properties found") rather than treating it as a no-op, so short-circuit here.
-    const result =
-      Object.keys(fields).length === 0
-        ? zoned
-        : zoned.with(fields, { overflow });
-    return result.toInstant().toString();
+    if (!isOptionsArgument(options)) {
+      return "";
+    }
+
+    if (!isValidUtc(value)) return "";
+
+    const overflow = resolveOverflow(options?.overflow);
+
+    try {
+      const instant = Temporal.Instant.from(value);
+      const zoned = instant.toZonedDateTimeISO("UTC");
+      // Temporal.ZonedDateTime.prototype.with() throws on an empty fields object ("no supported
+      // properties found") rather than treating it as a no-op, so short-circuit here.
+      const result =
+        Object.keys(fields).length === 0
+          ? zoned
+          : zoned.with(fields, { overflow });
+      return result.toInstant().toString();
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

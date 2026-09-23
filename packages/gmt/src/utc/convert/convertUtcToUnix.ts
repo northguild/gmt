@@ -30,15 +30,21 @@ export function convertUtcToUnix(
   value: string,
   options?: { epochUnit?: UnixUnit },
 ): number | null {
-  const epochUnit = resolveUnixEpochUnitOptions(options);
-
-  if (!isValidUtc(value) || epochUnit === null) {
-    return null;
-  }
-
   try {
-    return toUnixEpoch(Temporal.Instant.from(value), epochUnit);
+    const epochUnit = resolveUnixEpochUnitOptions(options);
+
+    if (!isValidUtc(value) || epochUnit === null) {
+      return null;
+    }
+
+    try {
+      return toUnixEpoch(Temporal.Instant.from(value), epochUnit);
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

@@ -38,28 +38,34 @@ export function roundTime(
     roundingMode?: Temporal.RoundingMode;
   },
 ): string {
-  if (!isObject(options)) return "";
-
-  const { roundingIncrement, roundingMode } = options;
-  const smallestUnit: unknown =
-    typeof options.smallestUnit === "string"
-      ? resolveDateTimeUnit(options.smallestUnit)
-      : options.smallestUnit;
-
-  if (!isValidTime(value) || !isValidTimeUnit(smallestUnit)) return "";
-
   try {
-    const source = Temporal.PlainTime.from(value);
-    const result = source.round({
-      smallestUnit,
-      roundingIncrement,
-      roundingMode,
-    });
+    if (!isObject(options)) return "";
 
-    const fractionalDigits = defaultFractionalDigits(smallestUnit);
+    const { roundingIncrement, roundingMode } = options;
+    const smallestUnit: unknown =
+      typeof options.smallestUnit === "string"
+        ? resolveDateTimeUnit(options.smallestUnit)
+        : options.smallestUnit;
 
-    return result.toString({ fractionalSecondDigits: fractionalDigits });
+    if (!isValidTime(value) || !isValidTimeUnit(smallestUnit)) return "";
+
+    try {
+      const source = Temporal.PlainTime.from(value);
+      const result = source.round({
+        smallestUnit,
+        roundingIncrement,
+        roundingMode,
+      });
+
+      const fractionalDigits = defaultFractionalDigits(smallestUnit);
+
+      return result.toString({ fractionalSecondDigits: fractionalDigits });
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

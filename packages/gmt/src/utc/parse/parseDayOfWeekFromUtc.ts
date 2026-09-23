@@ -24,19 +24,25 @@ export function parseDayOfWeekFromUtc(
   value: string,
   options?: { timeZone?: string },
 ): number | null {
-  if (!isOptionsArgument(options)) {
-    return null;
-  }
-
-  if (!isValidUtc(value)) return null;
-
-  const timeZone = resolveReadingTimeZone(options?.timeZone);
-  if (timeZone === null) return null;
-
   try {
-    const dateTime = Temporal.Instant.from(value).toZonedDateTimeISO(timeZone);
-    return dateTime.dayOfWeek;
+    if (!isOptionsArgument(options)) {
+      return null;
+    }
+
+    if (!isValidUtc(value)) return null;
+
+    const timeZone = resolveReadingTimeZone(options?.timeZone);
+    if (timeZone === null) return null;
+
+    try {
+      const dateTime = Temporal.Instant.from(value).toZonedDateTimeISO(timeZone);
+      return dateTime.dayOfWeek;
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

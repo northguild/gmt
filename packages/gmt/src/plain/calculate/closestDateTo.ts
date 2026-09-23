@@ -24,32 +24,38 @@ import { isValidDate } from "../validate";
  * @example closestDateTo("invalid", ["2024-03-01"]) // ""
  */
 export function closestDateTo(target: string, candidates: string[]): string {
-  if (
-    !isValidDate(target) ||
-    !Array.isArray(candidates) ||
-    !candidates.length ||
-    !candidates.some(isValidDate)
-  ) {
-    return "";
-  }
-
   try {
-    const t = Temporal.PlainDate.from(target);
-    const validCandidates = candidates.filter(isValidDate);
+    if (
+      !isValidDate(target) ||
+      !Array.isArray(candidates) ||
+      !candidates.length ||
+      !candidates.some(isValidDate)
+    ) {
+      return "";
+    }
 
-    const parsed = validCandidates.map((c) => ({
-      str: c,
-      date: Temporal.PlainDate.from(c),
-    }));
+    try {
+      const t = Temporal.PlainDate.from(target);
+      const validCandidates = candidates.filter(isValidDate);
 
-    const closest = parsed.reduce((best, candidate) => {
-      const bestDist = Math.abs(t.until(best.date).days);
-      const candDist = Math.abs(t.until(candidate.date).days);
-      return candDist < bestDist ? candidate : best;
-    }, parsed[0]);
+      const parsed = validCandidates.map((c) => ({
+        str: c,
+        date: Temporal.PlainDate.from(c),
+      }));
 
-    return closest.str;
+      const closest = parsed.reduce((best, candidate) => {
+        const bestDist = Math.abs(t.until(best.date).days);
+        const candDist = Math.abs(t.until(candidate.date).days);
+        return candDist < bestDist ? candidate : best;
+      }, parsed[0]);
+
+      return closest.str;
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

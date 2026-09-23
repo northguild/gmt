@@ -25,21 +25,27 @@ export function addTime(
   value: string,
   units: Partial<Record<TimeDurationUnit, number>>,
 ): string {
-  const validTime = isValidTime(value);
-  const validUnits =
-    typeof units === "object" &&
-    units !== null &&
-    Object.keys(units).every(isValidTimeDurationUnit);
-  const validAmounts = validUnits && Object.values(units).every(isValidAmount);
-
-  if (!validTime || !validUnits || !validAmounts) {
-    return "";
-  }
-
   try {
-    const time = Temporal.PlainTime.from(value);
-    return time.add(units).toString();
+    const validTime = isValidTime(value);
+    const validUnits =
+      typeof units === "object" &&
+      units !== null &&
+      Object.keys(units).every(isValidTimeDurationUnit);
+    const validAmounts = validUnits && Object.values(units).every(isValidAmount);
+
+    if (!validTime || !validUnits || !validAmounts) {
+      return "";
+    }
+
+    try {
+      const time = Temporal.PlainTime.from(value);
+      return time.add(units).toString();
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

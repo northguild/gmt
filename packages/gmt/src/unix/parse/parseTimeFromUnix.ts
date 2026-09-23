@@ -23,11 +23,17 @@ export function parseTimeFromUnix(
   value: number | string,
   options?: { epochUnit?: UnixUnit; timeZone?: string },
 ): string {
-  if (!isOptionsArgument(options)) {
+  try {
+    if (!isOptionsArgument(options)) {
+      return "";
+    }
+
+    const zdt = unixZonedDateTime(value, options);
+
+    return zdt === null ? "" : zdt.toPlainTime().toString();
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
-
-  const zdt = unixZonedDateTime(value, options);
-
-  return zdt === null ? "" : zdt.toPlainTime().toString();
 }

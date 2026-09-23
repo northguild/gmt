@@ -53,67 +53,73 @@ export function intervalDivideEquallyZoned(
   n: number,
   options?: { maxPieces?: number },
 ): Array<{ start: string; end: string }> {
-  if (typeof n !== "number" || !Number.isInteger(n) || n <= 0) {
-    return [];
-  }
-
-  const maxPieces = resolveMaxPieces(options);
-
-  if (maxPieces === null || exceedsPieceLimit(n, maxPieces)) {
-    return [];
-  }
-
-  if (!isValidCalendarZonedInterval(start, end)) {
-    return [];
-  }
-
-  // D4-zoned reject gate: both endpoints must agree on a calendar, or there is no calendar to
-  // express the synthesized boundaries in.
-  const calendar = calendarOfAllZonedValues([start, end]);
-  if (!calendar) {
-    return [];
-  }
-
   try {
-    const startVal = parseCalendarZonedValue(start);
-    const endVal = parseCalendarZonedValue(end);
-
-    // Safe: `.equals()` here is `Temporal.Instant.prototype.equals`, and `Instant` carries no
-    // calendar field at all — verified calendar-blind. E7 re-audited this site rather than
-    // inheriting E5's "structurally unreachable" verdict, which depended on mixed calendars never
-    // reaching `zoned/` at all.
-    if (startVal.toInstant().equals(endVal.toInstant())) {
-      return Array.from({ length: n }, () => ({
-        start: formatZonedInCalendar(startVal, calendar),
-        end: formatZonedInCalendar(endVal, calendar),
-      }));
+    if (typeof n !== "number" || !Number.isInteger(n) || n <= 0) {
+      return [];
     }
 
-    const startNs = startVal.epochNanoseconds;
-    const totalNs = endVal.epochNanoseconds - startNs;
+    const maxPieces = resolveMaxPieces(options);
 
-    const boundaries: Array<typeof startVal> = [startVal];
-    for (let i = 1; i < n; i++) {
-      boundaries.push(
-        new Temporal.ZonedDateTime(
-          startNs + divisionBoundary(totalNs, i, n),
-          startVal.timeZoneId,
-          startVal.calendarId,
-        ),
-      );
-    }
-    boundaries.push(endVal);
-
-    const result: Array<{ start: string; end: string }> = [];
-    for (let i = 0; i < boundaries.length - 1; i++) {
-      result.push({
-        start: formatZonedInCalendar(boundaries[i], calendar),
-        end: formatZonedInCalendar(boundaries[i + 1], calendar),
-      });
+    if (maxPieces === null || exceedsPieceLimit(n, maxPieces)) {
+      return [];
     }
 
-    return result;
+    if (!isValidCalendarZonedInterval(start, end)) {
+      return [];
+    }
+
+    // D4-zoned reject gate: both endpoints must agree on a calendar, or there is no calendar to
+    // express the synthesized boundaries in.
+    const calendar = calendarOfAllZonedValues([start, end]);
+    if (!calendar) {
+      return [];
+    }
+
+    try {
+      const startVal = parseCalendarZonedValue(start);
+      const endVal = parseCalendarZonedValue(end);
+
+      // Safe: `.equals()` here is `Temporal.Instant.prototype.equals`, and `Instant` carries no
+      // calendar field at all — verified calendar-blind. E7 re-audited this site rather than
+      // inheriting E5's "structurally unreachable" verdict, which depended on mixed calendars never
+      // reaching `zoned/` at all.
+      if (startVal.toInstant().equals(endVal.toInstant())) {
+        return Array.from({ length: n }, () => ({
+          start: formatZonedInCalendar(startVal, calendar),
+          end: formatZonedInCalendar(endVal, calendar),
+        }));
+      }
+
+      const startNs = startVal.epochNanoseconds;
+      const totalNs = endVal.epochNanoseconds - startNs;
+
+      const boundaries: Array<typeof startVal> = [startVal];
+      for (let i = 1; i < n; i++) {
+        boundaries.push(
+          new Temporal.ZonedDateTime(
+            startNs + divisionBoundary(totalNs, i, n),
+            startVal.timeZoneId,
+            startVal.calendarId,
+          ),
+        );
+      }
+      boundaries.push(endVal);
+
+      const result: Array<{ start: string; end: string }> = [];
+      for (let i = 0; i < boundaries.length - 1; i++) {
+        result.push({
+          start: formatZonedInCalendar(boundaries[i], calendar),
+          end: formatZonedInCalendar(boundaries[i + 1], calendar),
+        });
+      }
+
+      return result;
+    } catch {
+      return [];
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

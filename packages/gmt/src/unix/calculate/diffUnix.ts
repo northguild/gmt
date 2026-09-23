@@ -74,59 +74,65 @@ export function diffUnix(
     timeZone?: string;
   } & RoundingOptions<Temporal.DateTimeUnit>,
 ): number | Record<DateTimeDurationUnit, number> | null {
-  // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
-  if (!isOptionsArgument(options)) {
-    return null;
-  }
-  const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
-  const timeZone = normalizeTimeZone(options?.timeZone);
-
-  if (!timeZone || epochUnit === null) return null;
-
-  const requested: unknown[] = Array.isArray(units) ? units : [units];
-  const plurals = requested.map((unit) =>
-    typeof unit === "string" ? resolveDurationUnit(unit) : "",
-  );
-
-  if (!plurals.every(isValidDateTimeDurationUnit)) {
-    return null;
-  }
-
-  const instant1 = unixEpochToInstant(value1, epochUnit);
-  const instant2 = unixEpochToInstant(value2, epochUnit);
-
-  if (instant1 === null || instant2 === null) {
-    return null;
-  }
-
-  const largestUnit = getLargestDateTimeDurationUnit(plurals);
-  if (largestUnit === "") return null;
-
   try {
-    const duration = zonedUntil(
-      instant1.toZonedDateTimeISO(timeZone),
-      instant2.toZonedDateTimeISO(timeZone),
-      {
-        largestUnit,
-        smallestUnit: options?.smallestUnit,
-        roundingIncrement: options?.roundingIncrement,
-        roundingMode: options?.roundingMode,
-      },
+    // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
+    if (!isOptionsArgument(options)) {
+      return null;
+    }
+    const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
+    const timeZone = normalizeTimeZone(options?.timeZone);
+
+    if (!timeZone || epochUnit === null) return null;
+
+    const requested: unknown[] = Array.isArray(units) ? units : [units];
+    const plurals = requested.map((unit) =>
+      typeof unit === "string" ? resolveDurationUnit(unit) : "",
     );
 
-    if (!Array.isArray(units)) {
-      return duration[plurals[0]] ?? 0;
+    if (!plurals.every(isValidDateTimeDurationUnit)) {
+      return null;
     }
 
-    // An unlisted unit between two listed units is carried into the next smaller listed unit.
-    const start = instant1.toZonedDateTimeISO(timeZone);
-    // Record keys are the plural names, as in every other diff family.
-    return differenceRecord(start, duration, plurals, {
-      add: (from, amount) => addToZoned(from, amount),
-      until: (from, to, largest) =>
-        zonedUntil(from, to, { largestUnit: largest as Temporal.DateTimeUnit }),
-    });
+    const instant1 = unixEpochToInstant(value1, epochUnit);
+    const instant2 = unixEpochToInstant(value2, epochUnit);
+
+    if (instant1 === null || instant2 === null) {
+      return null;
+    }
+
+    const largestUnit = getLargestDateTimeDurationUnit(plurals);
+    if (largestUnit === "") return null;
+
+    try {
+      const duration = zonedUntil(
+        instant1.toZonedDateTimeISO(timeZone),
+        instant2.toZonedDateTimeISO(timeZone),
+        {
+          largestUnit,
+          smallestUnit: options?.smallestUnit,
+          roundingIncrement: options?.roundingIncrement,
+          roundingMode: options?.roundingMode,
+        },
+      );
+
+      if (!Array.isArray(units)) {
+        return duration[plurals[0]] ?? 0;
+      }
+
+      // An unlisted unit between two listed units is carried into the next smaller listed unit.
+      const start = instant1.toZonedDateTimeISO(timeZone);
+      // Record keys are the plural names, as in every other diff family.
+      return differenceRecord(start, duration, plurals, {
+        add: (from, amount) => addToZoned(from, amount),
+        until: (from, to, largest) =>
+          zonedUntil(from, to, { largestUnit: largest as Temporal.DateTimeUnit }),
+      });
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

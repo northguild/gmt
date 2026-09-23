@@ -28,34 +28,40 @@ import { isValidTimeInterval } from "./validate";
 export function mergeIntervalsTime(
   intervals: Array<{ start: string; end: string }>,
 ): Array<{ start: string; end: string }> {
-  if (!Array.isArray(intervals) || intervals.length === 0) {
-    return [];
-  }
-
-  if (
-    !intervals.every(
-      (interval) =>
-        interval &&
-        typeof interval === "object" &&
-        isValidTimeInterval(interval.start, interval.end),
-    )
-  ) {
-    return [];
-  }
-
   try {
-    const parsed = intervals.map((interval) => ({
-      start: Temporal.PlainTime.from(interval.start),
-      end: Temporal.PlainTime.from(interval.end),
-    }));
+    if (!Array.isArray(intervals) || intervals.length === 0) {
+      return [];
+    }
 
-    const merged = halfOpenMerge(parsed, Temporal.PlainTime.compare);
+    if (
+      !intervals.every(
+        (interval) =>
+          interval &&
+          typeof interval === "object" &&
+          isValidTimeInterval(interval.start, interval.end),
+      )
+    ) {
+      return [];
+    }
 
-    return merged.map((interval) => ({
-      start: interval.start.toString(),
-      end: interval.end.toString(),
-    }));
+    try {
+      const parsed = intervals.map((interval) => ({
+        start: Temporal.PlainTime.from(interval.start),
+        end: Temporal.PlainTime.from(interval.end),
+      }));
+
+      const merged = halfOpenMerge(parsed, Temporal.PlainTime.compare);
+
+      return merged.map((interval) => ({
+        start: interval.start.toString(),
+        end: interval.end.toString(),
+      }));
+    } catch {
+      return [];
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

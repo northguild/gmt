@@ -62,30 +62,36 @@ export function formatUnix(
   locale?: string | string[],
   options?: FormatUnixOptions,
 ): string {
-  // ECMA-402 CoerceOptionsToObject: undefined is defaults; null is a TypeError.
-  if (options === null) return "";
-  const {
-    epochUnit,
-    timeZone,
-    includeTimeZoneName = false,
-    ...intlOptions
-  } = options ?? {};
-
-  const resolvedUnit = resolveUnixEpochUnit(epochUnit);
-  if (resolvedUnit === null) return "";
-
-  const instant = unixEpochToInstant(value, resolvedUnit);
-  if (instant === null) return "";
-
-  const tz = normalizeTimeZone(timeZone);
-  if (!tz) return "";
-
   try {
-    const zdt = instant.toZonedDateTimeISO(tz);
-    return normalizeDateTime(
-      formatWallClockOrZoned(zdt, locale, intlOptions, includeTimeZoneName),
-    );
+    // ECMA-402 CoerceOptionsToObject: undefined is defaults; null is a TypeError.
+    if (options === null) return "";
+    const {
+      epochUnit,
+      timeZone,
+      includeTimeZoneName = false,
+      ...intlOptions
+    } = options ?? {};
+
+    const resolvedUnit = resolveUnixEpochUnit(epochUnit);
+    if (resolvedUnit === null) return "";
+
+    const instant = unixEpochToInstant(value, resolvedUnit);
+    if (instant === null) return "";
+
+    const tz = normalizeTimeZone(timeZone);
+    if (!tz) return "";
+
+    try {
+      const zdt = instant.toZonedDateTimeISO(tz);
+      return normalizeDateTime(
+        formatWallClockOrZoned(zdt, locale, intlOptions, includeTimeZoneName),
+      );
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

@@ -31,21 +31,27 @@ export function convertUnixToZoned(
   timeZone: string,
   options?: { epochUnit?: UnixUnit },
 ): string {
-  const epochUnit = resolveUnixEpochUnitOptions(options);
-
-  if (epochUnit === null || !isValidTimeZone(timeZone)) {
-    return "";
-  }
-
-  const instant = unixEpochToInstant(value, epochUnit);
-
-  if (instant === null) {
-    return "";
-  }
-
   try {
-    return instant.toZonedDateTimeISO(timeZone).toString();
+    const epochUnit = resolveUnixEpochUnitOptions(options);
+
+    if (epochUnit === null || !isValidTimeZone(timeZone)) {
+      return "";
+    }
+
+    const instant = unixEpochToInstant(value, epochUnit);
+
+    if (instant === null) {
+      return "";
+    }
+
+    try {
+      return instant.toZonedDateTimeISO(timeZone).toString();
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

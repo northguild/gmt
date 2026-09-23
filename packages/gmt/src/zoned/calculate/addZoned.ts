@@ -82,40 +82,46 @@ export function addZoned(
     overflow?: Overflow;
   },
 ): string {
-  if (!isOptionsArgument(optionsArg)) {
-    return "";
-  }
-
-  const validZonedDateTime = isValidCalendarZonedDateTime(value);
-  const validUnits =
-    typeof units === "object" &&
-    units !== null &&
-    Object.keys(units).every(isValidDateTimeDurationUnit);
-  const validAmounts = validUnits && Object.values(units).every(isValidAmount);
-
-  if (!validZonedDateTime || !validUnits || !validAmounts) {
-    // TODO descriptive messages of what failed - likely could be GMT offset for historical changes and DST
-    return "";
-  }
-
-  const disambiguation =
-    optionsArg?.disambiguation === undefined
-      ? "compatible"
-      : optionsArg.disambiguation;
-  const overflow = resolveOverflow(optionsArg?.overflow);
-
   try {
-    const calendar = calendarSystemOfZonedValue(value);
-    if (!calendar) {
+    if (!isOptionsArgument(optionsArg)) {
       return "";
     }
-    const zoned = parseCalendarZonedValue(value);
-    const added = addToZonedDisambiguated(zoned, units, 1, {
-      overflow,
-      disambiguation,
-    });
-    return formatZonedInCalendar(added, calendar);
+
+    const validZonedDateTime = isValidCalendarZonedDateTime(value);
+    const validUnits =
+      typeof units === "object" &&
+      units !== null &&
+      Object.keys(units).every(isValidDateTimeDurationUnit);
+    const validAmounts = validUnits && Object.values(units).every(isValidAmount);
+
+    if (!validZonedDateTime || !validUnits || !validAmounts) {
+      // TODO descriptive messages of what failed - likely could be GMT offset for historical changes and DST
+      return "";
+    }
+
+    const disambiguation =
+      optionsArg?.disambiguation === undefined
+        ? "compatible"
+        : optionsArg.disambiguation;
+    const overflow = resolveOverflow(optionsArg?.overflow);
+
+    try {
+      const calendar = calendarSystemOfZonedValue(value);
+      if (!calendar) {
+        return "";
+      }
+      const zoned = parseCalendarZonedValue(value);
+      const added = addToZonedDisambiguated(zoned, units, 1, {
+        overflow,
+        disambiguation,
+      });
+      return formatZonedInCalendar(added, calendar);
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

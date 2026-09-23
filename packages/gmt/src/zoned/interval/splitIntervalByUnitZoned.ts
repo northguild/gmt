@@ -67,80 +67,86 @@ export function splitIntervalByUnitZoned(
   amount: number,
   options?: { maxPieces?: number },
 ): Array<{ start: string; end: string }> {
-  if (
-    !isValidCalendarZonedDateTime(start) ||
-    !isValidCalendarZonedDateTime(end)
-  ) {
-    return [];
-  }
-
-  if (typeof unit !== "string") {
-    return [];
-  }
-
-  const resolvedUnit = resolveDurationUnit(unit);
-
-  // An unknown unit is invalid whatever the span, a zero-length one included.
-  if (!isValidDateTimeDurationUnit(resolvedUnit)) {
-    return [];
-  }
-
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return [];
-  }
-
-  const maxPieces = resolveMaxPieces(options);
-
-  if (maxPieces === null) {
-    return [];
-  }
-
   try {
-    const {
-      calendar,
-      a: startVal,
-      b: endVal,
-    } = parseCalendarZonedPairForArithmetic(start, end);
-
-    if (Temporal.ZonedDateTime.compare(startVal, endVal) > 0) {
-      return [];
-    }
-
-    if (Temporal.ZonedDateTime.compare(startVal, endVal) === 0) {
-      return [
-        {
-          start: formatZonedInCalendar(startVal, calendar),
-          end: formatZonedInCalendar(endVal, calendar),
-        },
-      ];
-    }
-    const spanNs = Number(endVal.epochNanoseconds - startVal.epochNanoseconds);
-
     if (
-      exceedsPieceLimit(
-        minSlicesForSpan(spanNs, resolvedUnit, amount, true),
-        maxPieces,
-      )
+      !isValidCalendarZonedDateTime(start) ||
+      !isValidCalendarZonedDateTime(end)
     ) {
       return [];
     }
 
-    // `addToZoned` runs calendar units through the Temporal compat layer (CORE-6).
-    const slices = tileByUnit(
-      startVal,
-      endVal,
-      Temporal.ZonedDateTime.compare,
-      resolvedUnit,
-      amount,
-      maxPieces,
-      (value, duration) => addToZoned(value, duration),
-    );
+    if (typeof unit !== "string") {
+      return [];
+    }
 
-    return (slices ?? []).map(([sliceStart, sliceEnd]) => ({
-      start: formatZonedInCalendar(sliceStart, calendar),
-      end: formatZonedInCalendar(sliceEnd, calendar),
-    }));
+    const resolvedUnit = resolveDurationUnit(unit);
+
+    // An unknown unit is invalid whatever the span, a zero-length one included.
+    if (!isValidDateTimeDurationUnit(resolvedUnit)) {
+      return [];
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return [];
+    }
+
+    const maxPieces = resolveMaxPieces(options);
+
+    if (maxPieces === null) {
+      return [];
+    }
+
+    try {
+      const {
+        calendar,
+        a: startVal,
+        b: endVal,
+      } = parseCalendarZonedPairForArithmetic(start, end);
+
+      if (Temporal.ZonedDateTime.compare(startVal, endVal) > 0) {
+        return [];
+      }
+
+      if (Temporal.ZonedDateTime.compare(startVal, endVal) === 0) {
+        return [
+          {
+            start: formatZonedInCalendar(startVal, calendar),
+            end: formatZonedInCalendar(endVal, calendar),
+          },
+        ];
+      }
+      const spanNs = Number(endVal.epochNanoseconds - startVal.epochNanoseconds);
+
+      if (
+        exceedsPieceLimit(
+          minSlicesForSpan(spanNs, resolvedUnit, amount, true),
+          maxPieces,
+        )
+      ) {
+        return [];
+      }
+
+      // `addToZoned` runs calendar units through the Temporal compat layer (CORE-6).
+      const slices = tileByUnit(
+        startVal,
+        endVal,
+        Temporal.ZonedDateTime.compare,
+        resolvedUnit,
+        amount,
+        maxPieces,
+        (value, duration) => addToZoned(value, duration),
+      );
+
+      return (slices ?? []).map(([sliceStart, sliceEnd]) => ({
+        start: formatZonedInCalendar(sliceStart, calendar),
+        end: formatZonedInCalendar(sliceEnd, calendar),
+      }));
+    } catch {
+      return [];
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

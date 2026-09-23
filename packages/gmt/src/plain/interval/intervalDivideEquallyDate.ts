@@ -53,58 +53,64 @@ export function intervalDivideEquallyDate(
   n: number,
   options?: { maxPieces?: number },
 ): Array<{ start: string; end: string }> {
-  if (typeof n !== "number" || !Number.isInteger(n) || n <= 0) {
-    return [];
-  }
-
-  const maxPieces = resolveMaxPieces(options);
-
-  if (maxPieces === null || exceedsPieceLimit(n, maxPieces)) {
-    return [];
-  }
-
-  if (!isValidDateInterval(start, end)) {
-    return [];
-  }
-
-  const calendar = calendarOfAllDateValues([start, end]);
-  if (!calendar) {
-    return [];
-  }
-
   try {
-    const startVal = parseCalendarDateValue(start);
-    const endVal = parseCalendarDateValue(end);
-
-    if (startVal.equals(endVal)) {
-      return Array.from({ length: n }, () => ({
-        start: formatDateInCalendar(startVal, calendar),
-        end: formatDateInCalendar(endVal, calendar),
-      }));
+    if (typeof n !== "number" || !Number.isInteger(n) || n <= 0) {
+      return [];
     }
 
-    const totalDays = BigInt(
-      startVal.until(endVal, { largestUnit: "day" }).days,
-    );
+    const maxPieces = resolveMaxPieces(options);
 
-    const boundaries = [startVal];
-    for (let i = 1; i < n; i++) {
-      boundaries.push(
-        startVal.add({ days: Number(divisionBoundary(totalDays, i, n)) }),
+    if (maxPieces === null || exceedsPieceLimit(n, maxPieces)) {
+      return [];
+    }
+
+    if (!isValidDateInterval(start, end)) {
+      return [];
+    }
+
+    const calendar = calendarOfAllDateValues([start, end]);
+    if (!calendar) {
+      return [];
+    }
+
+    try {
+      const startVal = parseCalendarDateValue(start);
+      const endVal = parseCalendarDateValue(end);
+
+      if (startVal.equals(endVal)) {
+        return Array.from({ length: n }, () => ({
+          start: formatDateInCalendar(startVal, calendar),
+          end: formatDateInCalendar(endVal, calendar),
+        }));
+      }
+
+      const totalDays = BigInt(
+        startVal.until(endVal, { largestUnit: "day" }).days,
       );
-    }
-    boundaries.push(endVal);
 
-    const result: Array<{ start: string; end: string }> = [];
-    for (let i = 0; i < boundaries.length - 1; i++) {
-      result.push({
-        start: formatDateInCalendar(boundaries[i], calendar),
-        end: formatDateInCalendar(boundaries[i + 1], calendar),
-      });
-    }
+      const boundaries = [startVal];
+      for (let i = 1; i < n; i++) {
+        boundaries.push(
+          startVal.add({ days: Number(divisionBoundary(totalDays, i, n)) }),
+        );
+      }
+      boundaries.push(endVal);
 
-    return result;
+      const result: Array<{ start: string; end: string }> = [];
+      for (let i = 0; i < boundaries.length - 1; i++) {
+        result.push({
+          start: formatDateInCalendar(boundaries[i], calendar),
+          end: formatDateInCalendar(boundaries[i + 1], calendar),
+        });
+      }
+
+      return result;
+    } catch {
+      return [];
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

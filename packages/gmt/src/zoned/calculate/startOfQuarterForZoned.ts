@@ -27,23 +27,29 @@ export function startOfQuarterForZoned(
     fractionalSecondDigits?: FractionalDigit;
   },
 ): string {
-  if (!isOptionsArgument(optionsArg)) {
-    return "";
-  }
-
-  if (!isValidZonedDateTime(value)) {
-    return "";
-  }
-
-  const fractionalSecondDigits =
-    optionsArg?.fractionalSecondDigits === undefined
-      ? 0
-      : optionsArg.fractionalSecondDigits;
-
   try {
-    const start = zonedUnitStart(zonedDateTimeFrom(value), "quarter");
-    return start ? start.toString({ fractionalSecondDigits }) : "";
+    if (!isOptionsArgument(optionsArg)) {
+      return "";
+    }
+
+    if (!isValidZonedDateTime(value)) {
+      return "";
+    }
+
+    const fractionalSecondDigits =
+      optionsArg?.fractionalSecondDigits === undefined
+        ? 0
+        : optionsArg.fractionalSecondDigits;
+
+    try {
+      const start = zonedUnitStart(zonedDateTimeFrom(value), "quarter");
+      return start ? start.toString({ fractionalSecondDigits }) : "";
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

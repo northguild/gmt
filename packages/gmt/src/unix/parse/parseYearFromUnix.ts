@@ -22,9 +22,15 @@ export function parseYearFromUnix(
   value: number | string,
   options?: { epochUnit?: UnixUnit; timeZone?: string },
 ): string {
-  if (!isOptionsArgument(options)) {
+  try {
+    if (!isOptionsArgument(options)) {
+      return "";
+    }
+
+    return parseUnitFromUnix(value, "year", options);
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
-
-  return parseUnitFromUnix(value, "year", options);
 }

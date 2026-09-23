@@ -18,21 +18,27 @@ export function sortDateTimes(
   dateTimes: string[],
   order: "asc" | "desc" = "asc",
 ): string[] {
-  if (!Array.isArray(dateTimes) || !dateTimes.length) return [];
-
-  const valid = dateTimes.filter(isValidDateTime);
-  if (!valid.length) return [];
-
   try {
-    const comparables = valid.map((d) => Temporal.PlainDateTime.from(d));
-    comparables.sort(Temporal.PlainDateTime.compare);
+    if (!Array.isArray(dateTimes) || !dateTimes.length) return [];
 
-    if (order === "desc") {
-      return comparables.reverse().map((d) => d.toString());
+    const valid = dateTimes.filter(isValidDateTime);
+    if (!valid.length) return [];
+
+    try {
+      const comparables = valid.map((d) => Temporal.PlainDateTime.from(d));
+      comparables.sort(Temporal.PlainDateTime.compare);
+
+      if (order === "desc") {
+        return comparables.reverse().map((d) => d.toString());
+      }
+
+      return comparables.map((d) => d.toString());
+    } catch {
+      return [];
     }
-
-    return comparables.map((d) => d.toString());
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

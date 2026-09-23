@@ -21,22 +21,28 @@ export function getZonedNow(
     smallestUnit?: Temporal.ZonedDateTimeToStringOptions["smallestUnit"];
   },
 ): string {
-  if (!isOptionsArgument(optionsArg)) {
-    return "";
-  }
-
-  const options = {
-    smallestUnit: "millisecond",
-    ...optionsArg,
-  } as Partial<Temporal.ZonedDateTimeToStringOptions>;
-  if (!isValidTimeZone(ianaTimezone)) {
-    return "";
-  }
-
   try {
-    const now = Temporal.Now.zonedDateTimeISO(ianaTimezone);
-    return now.toString(options);
+    if (!isOptionsArgument(optionsArg)) {
+      return "";
+    }
+
+    const options = {
+      smallestUnit: "millisecond",
+      ...optionsArg,
+    } as Partial<Temporal.ZonedDateTimeToStringOptions>;
+    if (!isValidTimeZone(ianaTimezone)) {
+      return "";
+    }
+
+    try {
+      const now = Temporal.Now.zonedDateTimeISO(ianaTimezone);
+      return now.toString(options);
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

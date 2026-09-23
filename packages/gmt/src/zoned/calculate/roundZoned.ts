@@ -70,31 +70,37 @@ export function roundZoned(
     roundingMode?: Temporal.RoundingMode;
   },
 ): string {
-  if (!isObject(options)) return "";
-
-  const { roundingIncrement, roundingMode } = options;
-  const smallestUnit: unknown =
-    typeof options.smallestUnit === "string"
-      ? resolveDateTimeUnit(options.smallestUnit)
-      : options.smallestUnit;
-
-  if (!isValidZonedDateTime(value)) return "";
-
-  // Temporal ZonedDateTime.prototype.round: ValidateTemporalUnitValue(smallestUnit, ~time~, « day »)
-  if (!isZonedRoundingUnit(smallestUnit)) return "";
-
   try {
-    const source = zonedDateTimeFrom(value);
-    const result = roundZonedDateTime(source, {
-      smallestUnit,
-      roundingIncrement,
-      roundingMode,
-    });
+    if (!isObject(options)) return "";
 
-    const fractionalDigits = defaultFractionalDigits(smallestUnit);
+    const { roundingIncrement, roundingMode } = options;
+    const smallestUnit: unknown =
+      typeof options.smallestUnit === "string"
+        ? resolveDateTimeUnit(options.smallestUnit)
+        : options.smallestUnit;
 
-    return result.toString({ fractionalSecondDigits: fractionalDigits });
+    if (!isValidZonedDateTime(value)) return "";
+
+    // Temporal ZonedDateTime.prototype.round: ValidateTemporalUnitValue(smallestUnit, ~time~, « day »)
+    if (!isZonedRoundingUnit(smallestUnit)) return "";
+
+    try {
+      const source = zonedDateTimeFrom(value);
+      const result = roundZonedDateTime(source, {
+        smallestUnit,
+        roundingIncrement,
+        roundingMode,
+      });
+
+      const fractionalDigits = defaultFractionalDigits(smallestUnit);
+
+      return result.toString({ fractionalSecondDigits: fractionalDigits });
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

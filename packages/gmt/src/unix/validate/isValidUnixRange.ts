@@ -32,16 +32,22 @@ export function isValidUnixRange(props: {
   value2: number | string;
   options?: { allowEqual?: boolean };
 }): boolean {
-  if (!isObject(props)) return false;
-  const { value1, value2, options } = props;
-  if (!isOptionsArgument(options)) return false;
+  try {
+    if (!isObject(props)) return false;
+    const { value1, value2, options } = props;
+    if (!isOptionsArgument(options)) return false;
 
-  const first = parseUnixEpochValue(value1);
-  const second = parseUnixEpochValue(value2);
+    const first = parseUnixEpochValue(value1);
+    const second = parseUnixEpochValue(value2);
 
-  if (first === null || second === null) {
+    if (first === null || second === null) {
+      return false;
+    }
+
+    return options?.allowEqual ? first <= second : first < second;
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return false;
   }
-
-  return options?.allowEqual ? first <= second : first < second;
 }

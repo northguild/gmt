@@ -44,41 +44,47 @@ export function intervalDivideEquallyUnix(
   n: number,
   options?: { maxPieces?: number },
 ): Array<{ start: number; end: number }> {
-  if (typeof n !== "number" || !Number.isInteger(n) || n <= 0) {
+  try {
+    if (typeof n !== "number" || !Number.isInteger(n) || n <= 0) {
+      return [];
+    }
+
+    const maxPieces = resolveMaxPieces(options);
+
+    if (maxPieces === null || exceedsPieceLimit(n, maxPieces)) {
+      return [];
+    }
+
+    const interval = parseUnixEpochInterval(start, end);
+
+    if (interval === null) {
+      return [];
+    }
+
+    const { start: startMs, end: endMs } = interval;
+
+    if (startMs === endMs) {
+      return Array.from({ length: n }, () => ({ start: startMs, end: endMs }));
+    }
+
+    // Integer milliseconds in bigint: a span near ±8.64e15 times `i` passes 2^53.
+    const totalMs = BigInt(endMs) - BigInt(startMs);
+
+    const boundaries: number[] = [startMs];
+    for (let i = 1; i < n; i++) {
+      boundaries.push(Number(BigInt(startMs) + divisionBoundary(totalMs, i, n)));
+    }
+    boundaries.push(endMs);
+
+    const result: Array<{ start: number; end: number }> = [];
+    for (let i = 0; i < boundaries.length - 1; i++) {
+      result.push({ start: boundaries[i], end: boundaries[i + 1] });
+    }
+
+    return result;
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
-
-  const maxPieces = resolveMaxPieces(options);
-
-  if (maxPieces === null || exceedsPieceLimit(n, maxPieces)) {
-    return [];
-  }
-
-  const interval = parseUnixEpochInterval(start, end);
-
-  if (interval === null) {
-    return [];
-  }
-
-  const { start: startMs, end: endMs } = interval;
-
-  if (startMs === endMs) {
-    return Array.from({ length: n }, () => ({ start: startMs, end: endMs }));
-  }
-
-  // Integer milliseconds in bigint: a span near ±8.64e15 times `i` passes 2^53.
-  const totalMs = BigInt(endMs) - BigInt(startMs);
-
-  const boundaries: number[] = [startMs];
-  for (let i = 1; i < n; i++) {
-    boundaries.push(Number(BigInt(startMs) + divisionBoundary(totalMs, i, n)));
-  }
-  boundaries.push(endMs);
-
-  const result: Array<{ start: number; end: number }> = [];
-  for (let i = 0; i < boundaries.length - 1; i++) {
-    result.push({ start: boundaries[i], end: boundaries[i + 1] });
-  }
-
-  return result;
 }

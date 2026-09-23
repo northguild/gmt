@@ -52,30 +52,36 @@ export function resolveLocal(
   timeZone: string,
   optionsArg?: { disambiguation?: Disambiguation },
 ): string {
-  if (!isOptionsArgument(optionsArg)) {
-    return "";
-  }
-
-  const disambiguation =
-    optionsArg?.disambiguation === undefined
-      ? "compatible"
-      : optionsArg.disambiguation;
-
-  if (
-    !isValidDateTime(localDateTime) ||
-    !isValidTimeZone(timeZone) ||
-    !DISAMBIGUATIONS.includes(disambiguation)
-  ) {
-    return "";
-  }
-
   try {
-    return zonedDateTimeFrom(`${isoStringBody(localDateTime)}[${timeZone}]`, {
-      disambiguation,
-    })
-      .toInstant()
-      .toString();
+    if (!isOptionsArgument(optionsArg)) {
+      return "";
+    }
+
+    const disambiguation =
+      optionsArg?.disambiguation === undefined
+        ? "compatible"
+        : optionsArg.disambiguation;
+
+    if (
+      !isValidDateTime(localDateTime) ||
+      !isValidTimeZone(timeZone) ||
+      !DISAMBIGUATIONS.includes(disambiguation)
+    ) {
+      return "";
+    }
+
+    try {
+      return zonedDateTimeFrom(`${isoStringBody(localDateTime)}[${timeZone}]`, {
+        disambiguation,
+      })
+        .toInstant()
+        .toString();
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

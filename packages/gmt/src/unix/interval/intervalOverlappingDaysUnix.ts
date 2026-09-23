@@ -64,58 +64,64 @@ export function intervalOverlappingDaysUnix(
     timeZone?: string;
   },
 ): number | null {
-  if (!isOptionsArgument(options)) {
-    return null;
-  }
-
-  const a = parseUnixEpochInterval(aStart, aEnd);
-  const b = parseUnixEpochInterval(bStart, bEnd);
-
-  if (a === null || b === null) {
-    return null;
-  }
-
-  const { start: a1, end: a2 } = a;
-  const { start: b1, end: b2 } = b;
-
-  const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
-  const timeZone = normalizeTimeZone(options?.timeZone);
-
-  if (!timeZone || epochUnit === null) {
-    return null;
-  }
-
-  const overlap = halfOpenIntersection(
-    { start: a1, end: a2 },
-    { start: b1, end: b2 },
-    (left, right) => left - right,
-  );
-
-  if (overlap === null) {
-    return 0;
-  }
-
-  // An empty intersection [t, t) (an empty interval strictly inside the other) holds no instant,
-  // so it holds no date.
-  if (overlap.start === overlap.end) {
-    return 0;
-  }
-
-  const first = unixEpochToInstant(overlap.start, epochUnit);
-  const afterLast = unixEpochToInstant(overlap.end, epochUnit);
-
-  if (first === null || afterLast === null) {
-    return null;
-  }
-
   try {
-    // The last instant the half-open intersection holds is one nanosecond before its end, so the
-    // closed local-date count runs to there.
-    return countZonedLocalDates(
-      first.toZonedDateTimeISO(timeZone),
-      afterLast.toZonedDateTimeISO(timeZone).subtract({ nanoseconds: 1 }),
+    if (!isOptionsArgument(options)) {
+      return null;
+    }
+
+    const a = parseUnixEpochInterval(aStart, aEnd);
+    const b = parseUnixEpochInterval(bStart, bEnd);
+
+    if (a === null || b === null) {
+      return null;
+    }
+
+    const { start: a1, end: a2 } = a;
+    const { start: b1, end: b2 } = b;
+
+    const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
+    const timeZone = normalizeTimeZone(options?.timeZone);
+
+    if (!timeZone || epochUnit === null) {
+      return null;
+    }
+
+    const overlap = halfOpenIntersection(
+      { start: a1, end: a2 },
+      { start: b1, end: b2 },
+      (left, right) => left - right,
     );
+
+    if (overlap === null) {
+      return 0;
+    }
+
+    // An empty intersection [t, t) (an empty interval strictly inside the other) holds no instant,
+    // so it holds no date.
+    if (overlap.start === overlap.end) {
+      return 0;
+    }
+
+    const first = unixEpochToInstant(overlap.start, epochUnit);
+    const afterLast = unixEpochToInstant(overlap.end, epochUnit);
+
+    if (first === null || afterLast === null) {
+      return null;
+    }
+
+    try {
+      // The last instant the half-open intersection holds is one nanosecond before its end, so the
+      // closed local-date count runs to there.
+      return countZonedLocalDates(
+        first.toZonedDateTimeISO(timeZone),
+        afterLast.toZonedDateTimeISO(timeZone).subtract({ nanoseconds: 1 }),
+      );
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

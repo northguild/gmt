@@ -25,5 +25,11 @@ export function clampInterval(
   interval: Interval,
   bounds: Interval,
 ): Interval | null {
-  return intersectIntervals(interval, bounds);
+  try {
+    return intersectIntervals(interval, bounds);
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
+    return null;
+  }
 }

@@ -36,54 +36,60 @@ export function intervalSplitAtDateTime(
   end: string,
   points: string[],
 ): Array<{ start: string; end: string }> {
-  if (!Array.isArray(points)) {
-    return [];
-  }
-
-  if (!isValidDateTimeInterval(start, end)) {
-    return [];
-  }
-
-  if (!points.every((point) => typeof point === "string")) {
-    return [];
-  }
-
-  if (!points.every((point) => isValidDateTime(point))) {
-    return [];
-  }
-
   try {
-    const startVal = Temporal.PlainDateTime.from(start);
-    const endVal = Temporal.PlainDateTime.from(end);
-
-    const parsedPoints = points.map((point) =>
-      Temporal.PlainDateTime.from(point),
-    );
-
-    const inRangePoints = parsedPoints.filter(
-      (point) =>
-        Temporal.PlainDateTime.compare(point, startVal) > 0 &&
-        Temporal.PlainDateTime.compare(point, endVal) < 0,
-    );
-
-    inRangePoints.sort(Temporal.PlainDateTime.compare);
-
-    const uniquePoints = inRangePoints.filter(
-      (point, index) => index === 0 || !point.equals(inRangePoints[index - 1]),
-    );
-
-    const boundaries = [startVal, ...uniquePoints, endVal];
-
-    const result: Array<{ start: string; end: string }> = [];
-    for (let i = 0; i < boundaries.length - 1; i++) {
-      result.push({
-        start: boundaries[i].toString(),
-        end: boundaries[i + 1].toString(),
-      });
+    if (!Array.isArray(points)) {
+      return [];
     }
 
-    return result;
+    if (!isValidDateTimeInterval(start, end)) {
+      return [];
+    }
+
+    if (!points.every((point) => typeof point === "string")) {
+      return [];
+    }
+
+    if (!points.every((point) => isValidDateTime(point))) {
+      return [];
+    }
+
+    try {
+      const startVal = Temporal.PlainDateTime.from(start);
+      const endVal = Temporal.PlainDateTime.from(end);
+
+      const parsedPoints = points.map((point) =>
+        Temporal.PlainDateTime.from(point),
+      );
+
+      const inRangePoints = parsedPoints.filter(
+        (point) =>
+          Temporal.PlainDateTime.compare(point, startVal) > 0 &&
+          Temporal.PlainDateTime.compare(point, endVal) < 0,
+      );
+
+      inRangePoints.sort(Temporal.PlainDateTime.compare);
+
+      const uniquePoints = inRangePoints.filter(
+        (point, index) => index === 0 || !point.equals(inRangePoints[index - 1]),
+      );
+
+      const boundaries = [startVal, ...uniquePoints, endVal];
+
+      const result: Array<{ start: string; end: string }> = [];
+      for (let i = 0; i < boundaries.length - 1; i++) {
+        result.push({
+          start: boundaries[i].toString(),
+          end: boundaries[i + 1].toString(),
+        });
+      }
+
+      return result;
+    } catch {
+      return [];
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

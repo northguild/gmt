@@ -55,119 +55,125 @@ export function endOfDateTime(
     fractionalSecondDigits?: FractionalDigit;
   },
 ): string {
-  if (!isOptionsArgument(optionsArg)) {
-    return "";
-  }
-
-  const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
-  const fractionalSecondDigits = optionsArg?.fractionalSecondDigits;
-
-  const resolvedUnit = resolveDateTimeUnit(unit);
-
-  if (
-    weekStartsOn === null ||
-    !isValidDateTime(value) ||
-    !supported.includes(resolvedUnit)
-  )
-    return "";
-
   try {
-    const source = Temporal.PlainDateTime.from(value);
-    let result: Temporal.PlainDateTime;
-
-    switch (resolvedUnit) {
-      case "year":
-        result = source.with({ month: 12, day: 31 }).withPlainTime({
-          hour: 23,
-          minute: 59,
-          second: 59,
-          millisecond: 999,
-          microsecond: 999,
-          nanosecond: 999,
-        });
-        break;
-      case "month": {
-        // Computed from `value` itself: the month's first day may lie before the range.
-        result = source.with({ day: source.daysInMonth }).withPlainTime({
-          hour: 23,
-          minute: 59,
-          second: 59,
-          millisecond: 999,
-          microsecond: 999,
-          nanosecond: 999,
-        });
-        break;
-      }
-      case "week": {
-        // Sunday is day 7, so `dayOfWeek % 7` counts Sunday as day 0 of a Sunday-first week.
-        const daysToAdd =
-          weekStartsOn === "monday"
-            ? 7 - source.dayOfWeek
-            : 6 - (source.dayOfWeek % 7);
-        result = source.add({ days: daysToAdd }).withPlainTime({
-          hour: 23,
-          minute: 59,
-          second: 59,
-          millisecond: 999,
-          microsecond: 999,
-          nanosecond: 999,
-        });
-        break;
-      }
-      case "day":
-        result = source.withPlainTime({
-          hour: 23,
-          minute: 59,
-          second: 59,
-          millisecond: 999,
-          microsecond: 999,
-          nanosecond: 999,
-        });
-        break;
-      case "hour":
-        result = source.with({
-          minute: 59,
-          second: 59,
-          millisecond: 999,
-          microsecond: 999,
-          nanosecond: 999,
-        });
-        break;
-      case "minute":
-        result = source.with({
-          second: 59,
-          millisecond: 999,
-          microsecond: 999,
-          nanosecond: 999,
-        });
-        break;
-      case "second":
-        result = source.with({
-          millisecond: 999,
-          microsecond: 999,
-          nanosecond: 999,
-        });
-        break;
-      case "millisecond":
-        result = source.with({ microsecond: 999, nanosecond: 999 });
-        break;
-      case "microsecond":
-        result = source.with({ nanosecond: 999 });
-        break;
-      case "nanosecond":
-        result = source;
-        break;
-      default:
-        return "";
+    if (!isOptionsArgument(optionsArg)) {
+      return "";
     }
 
-    // An end is the next start − 1 ns, so it defaults to nanosecond precision: fewer digits would
-    // print an earlier value than the end (Calendar & zone semantics §3).
-    return result.toString({
-      fractionalSecondDigits:
-        fractionalSecondDigits === undefined ? 9 : fractionalSecondDigits,
-    });
+    const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
+    const fractionalSecondDigits = optionsArg?.fractionalSecondDigits;
+
+    const resolvedUnit = resolveDateTimeUnit(unit);
+
+    if (
+      weekStartsOn === null ||
+      !isValidDateTime(value) ||
+      !supported.includes(resolvedUnit)
+    )
+      return "";
+
+    try {
+      const source = Temporal.PlainDateTime.from(value);
+      let result: Temporal.PlainDateTime;
+
+      switch (resolvedUnit) {
+        case "year":
+          result = source.with({ month: 12, day: 31 }).withPlainTime({
+            hour: 23,
+            minute: 59,
+            second: 59,
+            millisecond: 999,
+            microsecond: 999,
+            nanosecond: 999,
+          });
+          break;
+        case "month": {
+          // Computed from `value` itself: the month's first day may lie before the range.
+          result = source.with({ day: source.daysInMonth }).withPlainTime({
+            hour: 23,
+            minute: 59,
+            second: 59,
+            millisecond: 999,
+            microsecond: 999,
+            nanosecond: 999,
+          });
+          break;
+        }
+        case "week": {
+          // Sunday is day 7, so `dayOfWeek % 7` counts Sunday as day 0 of a Sunday-first week.
+          const daysToAdd =
+            weekStartsOn === "monday"
+              ? 7 - source.dayOfWeek
+              : 6 - (source.dayOfWeek % 7);
+          result = source.add({ days: daysToAdd }).withPlainTime({
+            hour: 23,
+            minute: 59,
+            second: 59,
+            millisecond: 999,
+            microsecond: 999,
+            nanosecond: 999,
+          });
+          break;
+        }
+        case "day":
+          result = source.withPlainTime({
+            hour: 23,
+            minute: 59,
+            second: 59,
+            millisecond: 999,
+            microsecond: 999,
+            nanosecond: 999,
+          });
+          break;
+        case "hour":
+          result = source.with({
+            minute: 59,
+            second: 59,
+            millisecond: 999,
+            microsecond: 999,
+            nanosecond: 999,
+          });
+          break;
+        case "minute":
+          result = source.with({
+            second: 59,
+            millisecond: 999,
+            microsecond: 999,
+            nanosecond: 999,
+          });
+          break;
+        case "second":
+          result = source.with({
+            millisecond: 999,
+            microsecond: 999,
+            nanosecond: 999,
+          });
+          break;
+        case "millisecond":
+          result = source.with({ microsecond: 999, nanosecond: 999 });
+          break;
+        case "microsecond":
+          result = source.with({ nanosecond: 999 });
+          break;
+        case "nanosecond":
+          result = source;
+          break;
+        default:
+          return "";
+      }
+
+      // An end is the next start − 1 ns, so it defaults to nanosecond precision: fewer digits would
+      // print an earlier value than the end (Calendar & zone semantics §3).
+      return result.toString({
+        fractionalSecondDigits:
+          fractionalSecondDigits === undefined ? 9 : fractionalSecondDigits,
+      });
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

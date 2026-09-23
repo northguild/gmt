@@ -47,57 +47,63 @@ export function intervalSplitAtDate(
   end: string,
   points: string[],
 ): Array<{ start: string; end: string }> {
-  if (!Array.isArray(points)) {
-    return [];
-  }
-
-  if (!isValidDateInterval(start, end)) {
-    return [];
-  }
-
-  if (!points.every((point) => typeof point === "string")) {
-    return [];
-  }
-
-  if (!points.every((point) => isValidCalendarDate(point))) {
-    return [];
-  }
-
-  const calendar = calendarOfAllDateValues([start, end, ...points]);
-  if (!calendar) {
-    return [];
-  }
-
   try {
-    const startVal = parseCalendarDateValue(start);
-    const endVal = parseCalendarDateValue(end);
-
-    const parsedPoints = points.map((point) => parseCalendarDateValue(point));
-
-    const inRangePoints = parsedPoints.filter(
-      (point) =>
-        Temporal.PlainDate.compare(point, startVal) > 0 &&
-        Temporal.PlainDate.compare(point, endVal) < 0,
-    );
-
-    inRangePoints.sort(Temporal.PlainDate.compare);
-
-    const uniquePoints = inRangePoints.filter(
-      (point, index) => index === 0 || !point.equals(inRangePoints[index - 1]),
-    );
-
-    const boundaries = [startVal, ...uniquePoints, endVal];
-
-    const result: Array<{ start: string; end: string }> = [];
-    for (let i = 0; i < boundaries.length - 1; i++) {
-      result.push({
-        start: formatDateInCalendar(boundaries[i], calendar),
-        end: formatDateInCalendar(boundaries[i + 1], calendar),
-      });
+    if (!Array.isArray(points)) {
+      return [];
     }
 
-    return result;
+    if (!isValidDateInterval(start, end)) {
+      return [];
+    }
+
+    if (!points.every((point) => typeof point === "string")) {
+      return [];
+    }
+
+    if (!points.every((point) => isValidCalendarDate(point))) {
+      return [];
+    }
+
+    const calendar = calendarOfAllDateValues([start, end, ...points]);
+    if (!calendar) {
+      return [];
+    }
+
+    try {
+      const startVal = parseCalendarDateValue(start);
+      const endVal = parseCalendarDateValue(end);
+
+      const parsedPoints = points.map((point) => parseCalendarDateValue(point));
+
+      const inRangePoints = parsedPoints.filter(
+        (point) =>
+          Temporal.PlainDate.compare(point, startVal) > 0 &&
+          Temporal.PlainDate.compare(point, endVal) < 0,
+      );
+
+      inRangePoints.sort(Temporal.PlainDate.compare);
+
+      const uniquePoints = inRangePoints.filter(
+        (point, index) => index === 0 || !point.equals(inRangePoints[index - 1]),
+      );
+
+      const boundaries = [startVal, ...uniquePoints, endVal];
+
+      const result: Array<{ start: string; end: string }> = [];
+      for (let i = 0; i < boundaries.length - 1; i++) {
+        result.push({
+          start: formatDateInCalendar(boundaries[i], calendar),
+          end: formatDateInCalendar(boundaries[i + 1], calendar),
+        });
+      }
+
+      return result;
+    } catch {
+      return [];
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

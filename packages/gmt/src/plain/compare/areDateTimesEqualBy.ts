@@ -52,35 +52,41 @@ export function areDateTimesEqualBy(
     weekStartsOn?: "monday" | "sunday";
   },
 ): boolean {
-  if (!isOptionsArgument(optionsArg)) {
-    return false;
-  }
-
-  const resolvedUnit = resolveDateTimeUnit(unit);
-  const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
-
-  if (
-    !isValidDateTime(value1) ||
-    !isValidDateTime(value2) ||
-    !isValidDateTimeUnit(resolvedUnit) ||
-    weekStartsOn === null
-  ) {
-    return false;
-  }
-
   try {
-    const start1 = startOfDateTime(value1, resolvedUnit, { weekStartsOn });
-    const start2 = startOfDateTime(value2, resolvedUnit, { weekStartsOn });
+    if (!isOptionsArgument(optionsArg)) {
+      return false;
+    }
 
-    if (start1 === "" || start2 === "") return false;
+    const resolvedUnit = resolveDateTimeUnit(unit);
+    const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
 
-    return (
-      Temporal.PlainDateTime.compare(
-        Temporal.PlainDateTime.from(start1),
-        Temporal.PlainDateTime.from(start2),
-      ) === 0
-    );
+    if (
+      !isValidDateTime(value1) ||
+      !isValidDateTime(value2) ||
+      !isValidDateTimeUnit(resolvedUnit) ||
+      weekStartsOn === null
+    ) {
+      return false;
+    }
+
+    try {
+      const start1 = startOfDateTime(value1, resolvedUnit, { weekStartsOn });
+      const start2 = startOfDateTime(value2, resolvedUnit, { weekStartsOn });
+
+      if (start1 === "" || start2 === "") return false;
+
+      return (
+        Temporal.PlainDateTime.compare(
+          Temporal.PlainDateTime.from(start1),
+          Temporal.PlainDateTime.from(start2),
+        ) === 0
+      );
+    } catch {
+      return false;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return false;
   }
 }

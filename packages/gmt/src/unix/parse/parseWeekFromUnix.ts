@@ -34,18 +34,24 @@ export function parseWeekFromUnix(
     weekStartsOn?: "monday" | "sunday";
   },
 ): number | null {
-  // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
-  if (!isOptionsArgument(options)) {
-    return null;
-  }
-  const zdt = unixZonedDateTime(value, options);
-  const weekStartsOn = resolveWeekStartsOn(options?.weekStartsOn);
-
-  if (zdt === null || weekStartsOn === null) return null;
-
   try {
-    return getWeekNumber(zdt.toPlainDate().toString(), weekStartsOn);
+    // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
+    if (!isOptionsArgument(options)) {
+      return null;
+    }
+    const zdt = unixZonedDateTime(value, options);
+    const weekStartsOn = resolveWeekStartsOn(options?.weekStartsOn);
+
+    if (zdt === null || weekStartsOn === null) return null;
+
+    try {
+      return getWeekNumber(zdt.toPlainDate().toString(), weekStartsOn);
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

@@ -74,28 +74,34 @@ export function parseDateWithPattern(
   pattern: string,
   locale?: string | string[],
 ): string {
-  if (typeof value !== "string") return "";
-  if (typeof pattern !== "string") return "";
-
-  const fields = parseValueWithPattern(
-    value,
-    pattern,
-    locale,
-    DATE_PATTERN_FIELDS,
-  );
-  if (fields === null) return "";
-
   try {
-    // The regex only proved `value` has the right *shape* for `pattern`
-    // (e.g. "02/31/2024" matches "MM/dd/yyyy") — Temporal is what proves
-    // the date is real: `overflow: "reject"` throws instead of silently
-    // clamping Feb 31 to Feb 29, which is what the default "constrain"
-    // would do.
-    return Temporal.PlainDate.from(
-      { year: fields.year, month: fields.month, day: fields.day },
-      { overflow: "reject" },
-    ).toString();
+    if (typeof value !== "string") return "";
+    if (typeof pattern !== "string") return "";
+
+    const fields = parseValueWithPattern(
+      value,
+      pattern,
+      locale,
+      DATE_PATTERN_FIELDS,
+    );
+    if (fields === null) return "";
+
+    try {
+      // The regex only proved `value` has the right *shape* for `pattern`
+      // (e.g. "02/31/2024" matches "MM/dd/yyyy") — Temporal is what proves
+      // the date is real: `overflow: "reject"` throws instead of silently
+      // clamping Feb 31 to Feb 29, which is what the default "constrain"
+      // would do.
+      return Temporal.PlainDate.from(
+        { year: fields.year, month: fields.month, day: fields.day },
+        { overflow: "reject" },
+      ).toString();
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

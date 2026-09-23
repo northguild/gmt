@@ -28,19 +28,25 @@ export function parseWeekFromDate(
   value: string,
   optionsArg?: { weekStartsOn?: "monday" | "sunday" },
 ): number | null {
-  if (!isOptionsArgument(optionsArg)) {
-    return null;
-  }
-
-  if (!isValidDate(value)) {
-    return null;
-  }
-  const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
-  if (weekStartsOn === null) return null;
-
   try {
-    return getWeekNumber(value, weekStartsOn);
+    if (!isOptionsArgument(optionsArg)) {
+      return null;
+    }
+
+    if (!isValidDate(value)) {
+      return null;
+    }
+    const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
+    if (weekStartsOn === null) return null;
+
+    try {
+      return getWeekNumber(value, weekStartsOn);
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

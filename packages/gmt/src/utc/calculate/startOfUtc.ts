@@ -29,9 +29,15 @@ export function startOfUtc(
     fractionalSecondDigits?: FractionalDigit;
   },
 ): string {
-  if (!isOptionsArgument(options)) {
+  try {
+    if (!isOptionsArgument(options)) {
+      return "";
+    }
+
+    return startOrEndOfUtc(value, unit, options ?? {}, false);
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
-
-  return startOrEndOfUtc(value, unit, options ?? {}, false);
 }

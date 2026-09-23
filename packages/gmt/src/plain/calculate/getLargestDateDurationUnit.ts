@@ -30,17 +30,23 @@ const ORDER: readonly DateDurationUnit[] = ["years", "months", "weeks", "days"];
 export function getLargestDateDurationUnit(
   units: Array<DateDurationUnit | Temporal.DateUnit>,
 ): DateDurationUnit | "" {
-  if (!Array.isArray(units) || units.length === 0) return "";
+  try {
+    if (!Array.isArray(units) || units.length === 0) return "";
 
-  const plurals: unknown[] = units.map((unit) => resolveDurationUnit(unit));
-  if (
-    !plurals.every(
-      (unit): unit is DateDurationUnit =>
-        typeof unit === "string" && isValidDateDurationUnit(unit),
-    )
-  ) {
+    const plurals: unknown[] = units.map((unit) => resolveDurationUnit(unit));
+    if (
+      !plurals.every(
+        (unit): unit is DateDurationUnit =>
+          typeof unit === "string" && isValidDateDurationUnit(unit),
+      )
+    ) {
+      return "";
+    }
+
+    return ORDER.find((unit) => plurals.includes(unit)) ?? "";
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
-
-  return ORDER.find((unit) => plurals.includes(unit)) ?? "";
 }

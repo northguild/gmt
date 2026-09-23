@@ -41,24 +41,30 @@ export function intervalLengthUnix(
   unit: string,
   options?: { epochUnit?: UnixUnit; timeZone?: string },
 ): number | null {
-  if (!isOptionsArgument(options)) {
-    return null;
-  }
-
-  const resolved = resolveUnixIntervalPair(start, end, unit, options);
-
-  if (!resolved) return null;
-
   try {
-    const { startVal, endVal, resolvedUnit } = resolved;
-    const duration = zonedUntil(startVal, endVal, {
-      largestUnit: resolvedUnit,
-    });
+    if (!isOptionsArgument(options)) {
+      return null;
+    }
 
-    // total() gives the exact elapsed length, unlike intervalCountUnix's boundary-crossing
-    // count over the same zone's calendar.
-    return durationTotal(duration, resolvedUnit, startVal);
+    const resolved = resolveUnixIntervalPair(start, end, unit, options);
+
+    if (!resolved) return null;
+
+    try {
+      const { startVal, endVal, resolvedUnit } = resolved;
+      const duration = zonedUntil(startVal, endVal, {
+        largestUnit: resolvedUnit,
+      });
+
+      // total() gives the exact elapsed length, unlike intervalCountUnix's boundary-crossing
+      // count over the same zone's calendar.
+      return durationTotal(duration, resolvedUnit, startVal);
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

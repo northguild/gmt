@@ -56,32 +56,38 @@ export function roundUtc(
     fractionalSecondDigits?: FractionalDigit;
   },
 ): string {
-  if (!isObject(options)) return "";
-
-  const { roundingIncrement, roundingMode, fractionalSecondDigits } = options;
-  const smallestUnit: unknown =
-    typeof options.smallestUnit === "string"
-      ? resolveDateTimeUnit(options.smallestUnit)
-      : options.smallestUnit;
-
-  // Temporal Instant.prototype.round: ValidateTemporalUnitValue(smallestUnit, ~time~)
-  if (!isValidUtc(value) || !isValidTimeUnit(smallestUnit)) return "";
-
   try {
-    const instant = Temporal.Instant.from(value);
-    const result = instant.round({
-      smallestUnit,
-      roundingIncrement,
-      roundingMode,
-    });
+    if (!isObject(options)) return "";
 
-    const fractionalDigits = defaultFractionalDigits(
-      smallestUnit,
-      fractionalSecondDigits,
-    );
+    const { roundingIncrement, roundingMode, fractionalSecondDigits } = options;
+    const smallestUnit: unknown =
+      typeof options.smallestUnit === "string"
+        ? resolveDateTimeUnit(options.smallestUnit)
+        : options.smallestUnit;
 
-    return result.toString({ fractionalSecondDigits: fractionalDigits });
+    // Temporal Instant.prototype.round: ValidateTemporalUnitValue(smallestUnit, ~time~)
+    if (!isValidUtc(value) || !isValidTimeUnit(smallestUnit)) return "";
+
+    try {
+      const instant = Temporal.Instant.from(value);
+      const result = instant.round({
+        smallestUnit,
+        roundingIncrement,
+        roundingMode,
+      });
+
+      const fractionalDigits = defaultFractionalDigits(
+        smallestUnit,
+        fractionalSecondDigits,
+      );
+
+      return result.toString({ fractionalSecondDigits: fractionalDigits });
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

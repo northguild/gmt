@@ -51,60 +51,66 @@ export function diffTime(
     | Array<TimeDurationUnit | Temporal.TimeUnit>,
   options?: RoundingOptions<Temporal.TimeUnit>,
 ): number | Record<TimeDurationUnit, number> | null {
-  // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
-  if (!isOptionsArgument(options)) {
-    return null;
-  }
-  const validTimes = isValidTime(time1) && isValidTime(time2);
-  // Singular names resolve to their plural (Temporal §13.17); record keys are the plural names.
-  const resolved = Array.isArray(units)
-    ? units.map((unit) => resolveDurationUnit(unit))
-    : resolveDurationUnit(units);
-  const isSingleUnit = !Array.isArray(resolved);
-  const validUnits = isSingleUnit
-    ? isValidTimeDurationUnit(resolved)
-    : resolved.every(isValidTimeDurationUnit);
-
-  if (!validTimes || !validUnits) {
-    return null;
-  }
-
   try {
-    // An empty units list names no largest unit, so there is nothing to measure.
-    const largestUnit = isSingleUnit
-      ? (resolved as TimeDurationUnit)
-      : getLargestTimeDurationUnit(resolved as TimeDurationUnit[]);
-    if (largestUnit === "") return null;
+    // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
+    if (!isOptionsArgument(options)) {
+      return null;
+    }
+    const validTimes = isValidTime(time1) && isValidTime(time2);
+    // Singular names resolve to their plural (Temporal §13.17); record keys are the plural names.
+    const resolved = Array.isArray(units)
+      ? units.map((unit) => resolveDurationUnit(unit))
+      : resolveDurationUnit(units);
+    const isSingleUnit = !Array.isArray(resolved);
+    const validUnits = isSingleUnit
+      ? isValidTimeDurationUnit(resolved)
+      : resolved.every(isValidTimeDurationUnit);
 
-    const t1 = Temporal.PlainTime.from(time1);
-    const t2 = Temporal.PlainTime.from(time2);
-
-    const duration = t1.until(t2, {
-      largestUnit,
-      smallestUnit: options?.smallestUnit,
-      roundingIncrement: options?.roundingIncrement,
-      roundingMode: options?.roundingMode,
-    });
-
-    // craft record for units passed
-    if (isSingleUnit) {
-      return duration[resolved as TimeDurationUnit] ?? 0;
+    if (!validTimes || !validUnits) {
+      return null;
     }
 
-    // An unlisted unit between two listed units is carried into the next smaller listed unit.
-    // Measured on one arbitrary day, because a rounded PlainTime end can pass midnight.
-    const day = Temporal.PlainDate.from("2000-01-01");
-    return differenceRecord(
-      day.toPlainDateTime(t1),
-      duration,
-      resolved as TimeDurationUnit[],
-      {
-        add: (from, amount) => from.add(amount),
-        until: (from, to, largest) =>
-          from.until(to, { largestUnit: largest as Temporal.DateTimeUnit }),
-      },
-    ) as Record<TimeDurationUnit, number>;
+    try {
+      // An empty units list names no largest unit, so there is nothing to measure.
+      const largestUnit = isSingleUnit
+        ? (resolved as TimeDurationUnit)
+        : getLargestTimeDurationUnit(resolved as TimeDurationUnit[]);
+      if (largestUnit === "") return null;
+
+      const t1 = Temporal.PlainTime.from(time1);
+      const t2 = Temporal.PlainTime.from(time2);
+
+      const duration = t1.until(t2, {
+        largestUnit,
+        smallestUnit: options?.smallestUnit,
+        roundingIncrement: options?.roundingIncrement,
+        roundingMode: options?.roundingMode,
+      });
+
+      // craft record for units passed
+      if (isSingleUnit) {
+        return duration[resolved as TimeDurationUnit] ?? 0;
+      }
+
+      // An unlisted unit between two listed units is carried into the next smaller listed unit.
+      // Measured on one arbitrary day, because a rounded PlainTime end can pass midnight.
+      const day = Temporal.PlainDate.from("2000-01-01");
+      return differenceRecord(
+        day.toPlainDateTime(t1),
+        duration,
+        resolved as TimeDurationUnit[],
+        {
+          add: (from, amount) => from.add(amount),
+          until: (from, to, largest) =>
+            from.until(to, { largestUnit: largest as Temporal.DateTimeUnit }),
+        },
+      ) as Record<TimeDurationUnit, number>;
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

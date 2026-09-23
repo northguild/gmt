@@ -40,17 +40,23 @@ const ORDER: readonly DateTimeDurationUnit[] = [
 export function getLargestDateTimeDurationUnit(
   units: Array<DateTimeDurationUnit | Temporal.DateTimeUnit>,
 ): DateTimeDurationUnit | "" {
-  if (!Array.isArray(units) || units.length === 0) return "";
+  try {
+    if (!Array.isArray(units) || units.length === 0) return "";
 
-  const plurals: unknown[] = units.map((unit) => resolveDurationUnit(unit));
-  if (
-    !plurals.every(
-      (unit): unit is DateTimeDurationUnit =>
-        typeof unit === "string" && isValidDateTimeDurationUnit(unit),
-    )
-  ) {
+    const plurals: unknown[] = units.map((unit) => resolveDurationUnit(unit));
+    if (
+      !plurals.every(
+        (unit): unit is DateTimeDurationUnit =>
+          typeof unit === "string" && isValidDateTimeDurationUnit(unit),
+      )
+    ) {
+      return "";
+    }
+
+    return ORDER.find((unit) => plurals.includes(unit)) ?? "";
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
-
-  return ORDER.find((unit) => plurals.includes(unit)) ?? "";
 }

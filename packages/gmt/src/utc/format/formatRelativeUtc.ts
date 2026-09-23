@@ -48,28 +48,34 @@ export function formatRelativeUtc(
   locale?: string | string[],
   options: FormatRelativeUtcOptions = {},
 ): string {
-  // Temporal GetOptionsObject: undefined is defaults (the parameter default); anything else that is
-  // not an object, including null, is a TypeError.
-  if (options === null || typeof options !== "object") return "";
-  if (!isValidUtc(value)) return "";
-  const tz = normalizeTimeZone(options.timeZone);
-  if (!tz) return "";
-  if (options.reference !== undefined && !isValidUtc(options.reference))
-    return "";
-
-  const target = toInstantFromUtc(value);
-  if (target === null) return "";
-
-  const reference = toReferenceInstantFromUtc(options.reference);
-  if (reference === null) return "";
-
   try {
-    const diff = target.since(reference);
-    // Only a calendrical unit (month, year) reads the anchor, so the zone is applied lazily.
-    return formatRelativeDuration(diff, locale, options, (unit) =>
-      durationTotal(diff, unit, reference.toZonedDateTimeISO(tz)),
-    );
+    // Temporal GetOptionsObject: undefined is defaults (the parameter default); anything else that is
+    // not an object, including null, is a TypeError.
+    if (options === null || typeof options !== "object") return "";
+    if (!isValidUtc(value)) return "";
+    const tz = normalizeTimeZone(options.timeZone);
+    if (!tz) return "";
+    if (options.reference !== undefined && !isValidUtc(options.reference))
+      return "";
+
+    const target = toInstantFromUtc(value);
+    if (target === null) return "";
+
+    const reference = toReferenceInstantFromUtc(options.reference);
+    if (reference === null) return "";
+
+    try {
+      const diff = target.since(reference);
+      // Only a calendrical unit (month, year) reads the anchor, so the zone is applied lazily.
+      return formatRelativeDuration(diff, locale, options, (unit) =>
+        durationTotal(diff, unit, reference.toZonedDateTimeISO(tz)),
+      );
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

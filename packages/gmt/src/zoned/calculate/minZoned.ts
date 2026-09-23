@@ -17,21 +17,27 @@ import { zonedDateTimeFrom } from "../../internal";
  * @example minZoned([]) // null
  */
 export function minZoned(zonedDateTimes: string[]): string | null {
-  if (!Array.isArray(zonedDateTimes) || !zonedDateTimes.length) return null;
-
-  const valid = zonedDateTimes.filter(isValidZonedDateTime);
-  if (!valid.length) return null;
-
   try {
-    const min = valid.reduce((currentMin, candidateStr) => {
-      const candidate = zonedDateTimeFrom(candidateStr);
-      return Temporal.ZonedDateTime.compare(candidate, currentMin) < 0
-        ? candidate
-        : currentMin;
-    }, zonedDateTimeFrom(valid[0]));
+    if (!Array.isArray(zonedDateTimes) || !zonedDateTimes.length) return null;
 
-    return min.toString();
+    const valid = zonedDateTimes.filter(isValidZonedDateTime);
+    if (!valid.length) return null;
+
+    try {
+      const min = valid.reduce((currentMin, candidateStr) => {
+        const candidate = zonedDateTimeFrom(candidateStr);
+        return Temporal.ZonedDateTime.compare(candidate, currentMin) < 0
+          ? candidate
+          : currentMin;
+      }, zonedDateTimeFrom(valid[0]));
+
+      return min.toString();
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

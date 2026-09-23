@@ -58,80 +58,86 @@ export function roundDate(
     roundingMode?: Temporal.RoundingMode;
   },
 ): string {
-  if (!isObject(options)) return "";
-
-  const { roundingIncrement, roundingMode } = options;
-  const smallestUnit: unknown =
-    typeof options.smallestUnit === "string"
-      ? resolveDateTimeUnit(options.smallestUnit)
-      : options.smallestUnit;
-
-  if (!isValidDate(value) || !isValidDateUnit(smallestUnit)) return "";
-
   try {
-    const source = Temporal.PlainDate.from(value);
+    if (!isObject(options)) return "";
 
-    // Manual rounding for all date units (year, month, week, day)
-    const resolved = resolveManualRoundingOptions(
-      roundingIncrement,
-      roundingMode,
-    );
-    if (resolved === null) return "";
-    const { increment, mode } = resolved;
+    const { roundingIncrement, roundingMode } = options;
+    const smallestUnit: unknown =
+      typeof options.smallestUnit === "string"
+        ? resolveDateTimeUnit(options.smallestUnit)
+        : options.smallestUnit;
 
-    // Measured towards the next start, never from the current one: at the first representable
-    // date the current month or year began before the range, and only the next start exists. Each
-    // start is built only when the mode needs it, and the unit's length is measured on a date in
-    // the same place of its 400-year cycle when the next start lies after the last representable
-    // date (+275760-09-13), where the current start may still be the answer.
-    const elapsedDays = getDaysIntoDateUnit(source, smallestUnit);
-    const startOfNextFrom = (from: Temporal.PlainDate): Temporal.PlainDate =>
-      addDateUnit(
-        getStartOfNextDateUnit(from, smallestUnit),
-        smallestUnit,
-        increment - 1,
+    if (!isValidDate(value) || !isValidDateUnit(smallestUnit)) return "";
+
+    try {
+      const source = Temporal.PlainDate.from(value);
+
+      // Manual rounding for all date units (year, month, week, day)
+      const resolved = resolveManualRoundingOptions(
+        roundingIncrement,
+        roundingMode,
       );
-    const startOfNext = (): Temporal.PlainDate => startOfNextFrom(source);
-    // Throws (so returns "") when the start lies outside the range.
-    const startOfCurrent = (): Temporal.PlainDate =>
-      getStartOfDateUnit(source, smallestUnit);
-    const fraction = (): number =>
-      elapsedDays /
-      (elapsedDays +
-        measureNearRangeEnd(source, (from) =>
-          from.until(startOfNextFrom(from)).total("days"),
-        ));
+      if (resolved === null) return "";
+      const { increment, mode } = resolved;
 
-    let rounded: Temporal.PlainDate;
-    switch (mode) {
-      case "ceil":
-      case "expand":
-        rounded = elapsedDays > 0 ? startOfNext() : startOfCurrent();
-        break;
-      case "floor":
-      case "trunc":
-        rounded = startOfCurrent();
-        break;
-      case "halfExpand":
-      case "halfCeil":
-        rounded = fraction() >= 0.5 ? startOfNext() : startOfCurrent();
-        break;
-      case "halfTrunc":
-      case "halfFloor":
-        rounded = fraction() > 0.5 ? startOfNext() : startOfCurrent();
-        break;
-      case "halfEven":
-        // Half-even breaks an exact tie towards the even multiple of the increment. The grid here
-        // is anchored at the unit containing `source` — `startOfNext` counts the increment from
-        // that unit, not from an absolute epoch — so the current start is multiple 0 and
-        // `startOfNext` is multiple 1. The even multiple at a tie is therefore always the current
-        // start. Above and below the tie it rounds to the nearer start, like every other half mode.
-        rounded = fraction() > 0.5 ? startOfNext() : startOfCurrent();
-        break;
+      // Measured towards the next start, never from the current one: at the first representable
+      // date the current month or year began before the range, and only the next start exists. Each
+      // start is built only when the mode needs it, and the unit's length is measured on a date in
+      // the same place of its 400-year cycle when the next start lies after the last representable
+      // date (+275760-09-13), where the current start may still be the answer.
+      const elapsedDays = getDaysIntoDateUnit(source, smallestUnit);
+      const startOfNextFrom = (from: Temporal.PlainDate): Temporal.PlainDate =>
+        addDateUnit(
+          getStartOfNextDateUnit(from, smallestUnit),
+          smallestUnit,
+          increment - 1,
+        );
+      const startOfNext = (): Temporal.PlainDate => startOfNextFrom(source);
+      // Throws (so returns "") when the start lies outside the range.
+      const startOfCurrent = (): Temporal.PlainDate =>
+        getStartOfDateUnit(source, smallestUnit);
+      const fraction = (): number =>
+        elapsedDays /
+        (elapsedDays +
+          measureNearRangeEnd(source, (from) =>
+            from.until(startOfNextFrom(from)).total("days"),
+          ));
+
+      let rounded: Temporal.PlainDate;
+      switch (mode) {
+        case "ceil":
+        case "expand":
+          rounded = elapsedDays > 0 ? startOfNext() : startOfCurrent();
+          break;
+        case "floor":
+        case "trunc":
+          rounded = startOfCurrent();
+          break;
+        case "halfExpand":
+        case "halfCeil":
+          rounded = fraction() >= 0.5 ? startOfNext() : startOfCurrent();
+          break;
+        case "halfTrunc":
+        case "halfFloor":
+          rounded = fraction() > 0.5 ? startOfNext() : startOfCurrent();
+          break;
+        case "halfEven":
+          // Half-even breaks an exact tie towards the even multiple of the increment. The grid here
+          // is anchored at the unit containing `source` — `startOfNext` counts the increment from
+          // that unit, not from an absolute epoch — so the current start is multiple 0 and
+          // `startOfNext` is multiple 1. The even multiple at a tie is therefore always the current
+          // start. Above and below the tie it rounds to the nearer start, like every other half mode.
+          rounded = fraction() > 0.5 ? startOfNext() : startOfCurrent();
+          break;
+      }
+
+      return rounded.toString();
+    } catch {
+      return "";
     }
-
-    return rounded.toString();
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

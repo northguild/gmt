@@ -30,22 +30,28 @@ import { isValidUtcInterval } from "./validate";
 export function mergeIntervalsUtc(
   intervals: Array<{ start: string; end: string }>,
 ): Array<{ start: string; end: string }> {
-  if (!Array.isArray(intervals) || intervals.length === 0) {
+  try {
+    if (!Array.isArray(intervals) || intervals.length === 0) {
+      return [];
+    }
+
+    if (
+      !intervals.every(
+        (interval) =>
+          interval &&
+          typeof interval === "object" &&
+          typeof interval.start === "string" &&
+          typeof interval.end === "string" &&
+          isValidUtcInterval(interval.start, interval.end),
+      )
+    ) {
+      return [];
+    }
+
+    return canonicalInstantIntervals(mergeIntervals(intervals)) ?? [];
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
-
-  if (
-    !intervals.every(
-      (interval) =>
-        interval &&
-        typeof interval === "object" &&
-        typeof interval.start === "string" &&
-        typeof interval.end === "string" &&
-        isValidUtcInterval(interval.start, interval.end),
-    )
-  ) {
-    return [];
-  }
-
-  return canonicalInstantIntervals(mergeIntervals(intervals)) ?? [];
 }

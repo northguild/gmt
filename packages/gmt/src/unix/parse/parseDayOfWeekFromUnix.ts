@@ -22,9 +22,15 @@ export function parseDayOfWeekFromUnix(
   value: number | string,
   options?: { epochUnit?: UnixUnit; timeZone?: string },
 ): number | null {
-  if (!isOptionsArgument(options)) {
+  try {
+    if (!isOptionsArgument(options)) {
+      return null;
+    }
+
+    return unixZonedDateTime(value, options)?.dayOfWeek ?? null;
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
-
-  return unixZonedDateTime(value, options)?.dayOfWeek ?? null;
 }

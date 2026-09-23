@@ -27,30 +27,36 @@ export function isValidTimeRange(props: {
   value2: string;
   options?: { allowEqual?: boolean };
 }): boolean {
-  if (!isObject(props)) return false;
-  const { value1, value2, options } = props;
-  if (!isOptionsArgument(options)) return false;
-
-  if (typeof value1 !== "string" || typeof value2 !== "string") {
-    return false;
-  }
-
-  if (!isValidTime(value1) || !isValidTime(value2)) {
-    return false;
-  }
-
   try {
-    const time1 = Temporal.PlainTime.from(value1);
-    const time2 = Temporal.PlainTime.from(value2);
+    if (!isObject(props)) return false;
+    const { value1, value2, options } = props;
+    if (!isOptionsArgument(options)) return false;
 
-    const cmp = Temporal.PlainTime.compare(time1, time2);
-
-    if (options?.allowEqual) {
-      return cmp <= 0;
+    if (typeof value1 !== "string" || typeof value2 !== "string") {
+      return false;
     }
 
-    return cmp < 0;
+    if (!isValidTime(value1) || !isValidTime(value2)) {
+      return false;
+    }
+
+    try {
+      const time1 = Temporal.PlainTime.from(value1);
+      const time2 = Temporal.PlainTime.from(value2);
+
+      const cmp = Temporal.PlainTime.compare(time1, time2);
+
+      if (options?.allowEqual) {
+        return cmp <= 0;
+      }
+
+      return cmp < 0;
+    } catch {
+      return false;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return false;
   }
 }

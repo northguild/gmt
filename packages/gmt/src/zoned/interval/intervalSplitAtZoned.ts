@@ -47,67 +47,73 @@ export function intervalSplitAtZoned(
   end: string,
   points: string[],
 ): Array<{ start: string; end: string }> {
-  if (!Array.isArray(points)) {
-    return [];
-  }
-
-  if (!isValidCalendarZonedInterval(start, end)) {
-    return [];
-  }
-
-  if (!points.every((point) => isValidCalendarZonedDateTime(point))) {
-    return [];
-  }
-
-  // D4-zoned reject gate: the interval's endpoints AND every split point must agree on a
-  // calendar, or there is no calendar to express the returned sub-intervals in.
-  const calendar = calendarOfAllZonedValues([start, end, ...points]);
-  if (!calendar) {
-    return [];
-  }
-
   try {
-    const startVal = parseCalendarZonedValue(start);
-    const endVal = parseCalendarZonedValue(end);
-    const startInstant = startVal.toInstant();
-    const endInstant = endVal.toInstant();
-
-    const parsedPoints = points.map((point) => parseCalendarZonedValue(point));
-
-    const inRangePoints = parsedPoints.filter((point) => {
-      const instant = point.toInstant();
-      return (
-        Temporal.Instant.compare(instant, startInstant) > 0 &&
-        Temporal.Instant.compare(instant, endInstant) < 0
-      );
-    });
-
-    inRangePoints.sort((a, b) =>
-      Temporal.Instant.compare(a.toInstant(), b.toInstant()),
-    );
-
-    // Safe: `.equals()` here is `Temporal.Instant.prototype.equals`, and `Instant` carries no
-    // calendar field at all — verified calendar-blind. E7 re-audited this site rather than
-    // inheriting E5's "structurally unreachable" verdict, which depended on mixed calendars never
-    // reaching `zoned/` at all.
-    const uniquePoints = inRangePoints.filter(
-      (point, index) =>
-        index === 0 ||
-        !point.toInstant().equals(inRangePoints[index - 1].toInstant()),
-    );
-
-    const boundaries = [startVal, ...uniquePoints, endVal];
-
-    const result: Array<{ start: string; end: string }> = [];
-    for (let i = 0; i < boundaries.length - 1; i++) {
-      result.push({
-        start: formatZonedInCalendar(boundaries[i], calendar),
-        end: formatZonedInCalendar(boundaries[i + 1], calendar),
-      });
+    if (!Array.isArray(points)) {
+      return [];
     }
 
-    return result;
+    if (!isValidCalendarZonedInterval(start, end)) {
+      return [];
+    }
+
+    if (!points.every((point) => isValidCalendarZonedDateTime(point))) {
+      return [];
+    }
+
+    // D4-zoned reject gate: the interval's endpoints AND every split point must agree on a
+    // calendar, or there is no calendar to express the returned sub-intervals in.
+    const calendar = calendarOfAllZonedValues([start, end, ...points]);
+    if (!calendar) {
+      return [];
+    }
+
+    try {
+      const startVal = parseCalendarZonedValue(start);
+      const endVal = parseCalendarZonedValue(end);
+      const startInstant = startVal.toInstant();
+      const endInstant = endVal.toInstant();
+
+      const parsedPoints = points.map((point) => parseCalendarZonedValue(point));
+
+      const inRangePoints = parsedPoints.filter((point) => {
+        const instant = point.toInstant();
+        return (
+          Temporal.Instant.compare(instant, startInstant) > 0 &&
+          Temporal.Instant.compare(instant, endInstant) < 0
+        );
+      });
+
+      inRangePoints.sort((a, b) =>
+        Temporal.Instant.compare(a.toInstant(), b.toInstant()),
+      );
+
+      // Safe: `.equals()` here is `Temporal.Instant.prototype.equals`, and `Instant` carries no
+      // calendar field at all — verified calendar-blind. E7 re-audited this site rather than
+      // inheriting E5's "structurally unreachable" verdict, which depended on mixed calendars never
+      // reaching `zoned/` at all.
+      const uniquePoints = inRangePoints.filter(
+        (point, index) =>
+          index === 0 ||
+          !point.toInstant().equals(inRangePoints[index - 1].toInstant()),
+      );
+
+      const boundaries = [startVal, ...uniquePoints, endVal];
+
+      const result: Array<{ start: string; end: string }> = [];
+      for (let i = 0; i < boundaries.length - 1; i++) {
+        result.push({
+          start: formatZonedInCalendar(boundaries[i], calendar),
+          end: formatZonedInCalendar(boundaries[i + 1], calendar),
+        });
+      }
+
+      return result;
+    } catch {
+      return [];
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

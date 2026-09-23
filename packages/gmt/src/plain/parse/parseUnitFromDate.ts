@@ -36,34 +36,40 @@ export function parseUnitFromDate(
   unit: Temporal.SmallestUnit<"year" | "month" | "day" | "week"> | "dayOfWeek",
   optionsArg?: { weekStartsOn?: "monday" | "sunday" },
 ): string {
-  // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
-  if (!isOptionsArgument(optionsArg)) {
-    return "";
-  }
-  const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
-
-  if (!isValidDate(value) || weekStartsOn === null) {
-    return "";
-  }
-
   try {
-    const date = Temporal.PlainDate.from(value);
+    // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
+    if (!isOptionsArgument(optionsArg)) {
+      return "";
+    }
+    const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
 
-    switch (resolveDateTimeUnit(unit)) {
-      case "year":
-        return date.year.toString();
-      case "month":
-        return date.month.toString().padStart(2, "0");
-      case "day":
-        return date.day.toString().padStart(2, "0");
-      case "week":
-        return (getWeekNumber(value, weekStartsOn) ?? 0).toString();
-      case "dayOfWeek":
-        return date.dayOfWeek.toString();
-      default:
-        return "";
+    if (!isValidDate(value) || weekStartsOn === null) {
+      return "";
+    }
+
+    try {
+      const date = Temporal.PlainDate.from(value);
+
+      switch (resolveDateTimeUnit(unit)) {
+        case "year":
+          return date.year.toString();
+        case "month":
+          return date.month.toString().padStart(2, "0");
+        case "day":
+          return date.day.toString().padStart(2, "0");
+        case "week":
+          return (getWeekNumber(value, weekStartsOn) ?? 0).toString();
+        case "dayOfWeek":
+          return date.dayOfWeek.toString();
+        default:
+          return "";
+      }
+    } catch {
+      return "";
     }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

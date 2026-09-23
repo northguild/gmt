@@ -91,56 +91,62 @@ export function parseUnitFromZoned(
   unit: ZonedParseUnit,
   optionsArg?: { weekStartsOn?: "monday" | "sunday" },
 ): string {
-  // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
-  if (!isOptionsArgument(optionsArg)) {
-    return "";
-  }
-  const resolvedUnit = resolveDateTimeUnit(unit);
-  const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
-
-  if (
-    !isValidZonedDateTime(value) ||
-    !isValidZonedUnit(resolvedUnit) ||
-    weekStartsOn === null
-  ) {
-    return "";
-  }
-
   try {
-    const zonedDateTime = zonedDateTimeFrom(value);
+    // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
+    if (!isOptionsArgument(optionsArg)) {
+      return "";
+    }
+    const resolvedUnit = resolveDateTimeUnit(unit);
+    const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
 
-    switch (resolvedUnit) {
-      case "year":
-        return zonedDateTime.year.toString();
-      case "month":
-        return zonedDateTime.month.toString().padStart(2, "0");
-      case "week":
-        return (
-          getWeekNumber(zonedDateTime.toPlainDate().toString(), weekStartsOn) ??
-          0
-        ).toString();
-      case "day":
-        return zonedDateTime.day.toString().padStart(2, "0");
-      case "dayOfWeek":
-        return zonedDateTime.dayOfWeek.toString();
-      case "hour":
-        return zonedDateTime.hour.toString().padStart(2, "0");
-      case "minute":
-        return zonedDateTime.minute.toString().padStart(2, "0");
-      case "second":
-        return zonedDateTime.second.toString().padStart(2, "0");
-      case "millisecond":
-        return zonedDateTime.millisecond.toString().padStart(3, "0");
-      case "microsecond":
-        return zonedDateTime.microsecond.toString().padStart(3, "0");
-      case "nanosecond":
-        return zonedDateTime.nanosecond.toString().padStart(3, "0");
-      case "timeZone":
-        return zonedDateTime.timeZoneId;
-      default:
-        return "";
+    if (
+      !isValidZonedDateTime(value) ||
+      !isValidZonedUnit(resolvedUnit) ||
+      weekStartsOn === null
+    ) {
+      return "";
+    }
+
+    try {
+      const zonedDateTime = zonedDateTimeFrom(value);
+
+      switch (resolvedUnit) {
+        case "year":
+          return zonedDateTime.year.toString();
+        case "month":
+          return zonedDateTime.month.toString().padStart(2, "0");
+        case "week":
+          return (
+            getWeekNumber(zonedDateTime.toPlainDate().toString(), weekStartsOn) ??
+            0
+          ).toString();
+        case "day":
+          return zonedDateTime.day.toString().padStart(2, "0");
+        case "dayOfWeek":
+          return zonedDateTime.dayOfWeek.toString();
+        case "hour":
+          return zonedDateTime.hour.toString().padStart(2, "0");
+        case "minute":
+          return zonedDateTime.minute.toString().padStart(2, "0");
+        case "second":
+          return zonedDateTime.second.toString().padStart(2, "0");
+        case "millisecond":
+          return zonedDateTime.millisecond.toString().padStart(3, "0");
+        case "microsecond":
+          return zonedDateTime.microsecond.toString().padStart(3, "0");
+        case "nanosecond":
+          return zonedDateTime.nanosecond.toString().padStart(3, "0");
+        case "timeZone":
+          return zonedDateTime.timeZoneId;
+        default:
+          return "";
+      }
+    } catch {
+      return "";
     }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

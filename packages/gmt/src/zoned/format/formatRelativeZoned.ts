@@ -56,28 +56,34 @@ export function formatRelativeZoned(
   locale?: string | string[],
   options: FormatRelativeZonedOptions = {},
 ): string {
-  // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
-  // invalid input.
-  if (options === null || typeof options !== "object") return "";
-  if (!isValidZonedDateTime(value)) return "";
-
-  if (!isValidZonedFormatReference(options.reference)) return "";
-
   try {
-    const valueZDT = zonedDateTimeFrom(value);
-    const valueInstant = valueZDT.toInstant();
+    // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
+    // invalid input.
+    if (options === null || typeof options !== "object") return "";
+    if (!isValidZonedDateTime(value)) return "";
 
-    const refZDT = resolveZonedReference(
-      options.reference,
-      valueZDT.timeZoneId,
-    );
+    if (!isValidZonedFormatReference(options.reference)) return "";
 
-    const diff = valueInstant.since(refZDT.toInstant());
-    // month/year are calendrical and need a relativeTo anchor
-    return formatRelativeDuration(diff, locale, options, (unit) =>
-      durationTotal(diff, unit, refZDT),
-    );
+    try {
+      const valueZDT = zonedDateTimeFrom(value);
+      const valueInstant = valueZDT.toInstant();
+
+      const refZDT = resolveZonedReference(
+        options.reference,
+        valueZDT.timeZoneId,
+      );
+
+      const diff = valueInstant.since(refZDT.toInstant());
+      // month/year are calendrical and need a relativeTo anchor
+      return formatRelativeDuration(diff, locale, options, (unit) =>
+        durationTotal(diff, unit, refZDT),
+      );
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

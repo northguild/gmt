@@ -51,54 +51,60 @@ export function diffDateTime(
     | Array<DateTimeDurationUnit | Temporal.DateTimeUnit>,
   options?: RoundingOptions<Temporal.DateTimeUnit>,
 ): number | Record<DateTimeDurationUnit, number> | null {
-  // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
-  if (!isOptionsArgument(options)) {
-    return null;
-  }
-  const validDateTimes =
-    isValidDateTime(dateTime1) && isValidDateTime(dateTime2);
-  // Singular names resolve to their plural (Temporal §13.17); record keys are the plural names.
-  const resolved = Array.isArray(units)
-    ? units.map((unit) => resolveDurationUnit(unit))
-    : resolveDurationUnit(units);
-  const isSingleUnit = !Array.isArray(resolved);
-  const validUnits = isSingleUnit
-    ? isValidDateTimeDurationUnit(resolved)
-    : resolved.every(isValidDateTimeDurationUnit);
-  //
-
-  if (!validDateTimes || !validUnits) {
-    return null;
-  }
-
   try {
-    // An empty units list names no largest unit, so there is nothing to measure.
-    const largestUnit = isSingleUnit
-      ? (resolved as DateTimeDurationUnit)
-      : getLargestDateTimeDurationUnit(resolved as DateTimeDurationUnit[]);
-    if (largestUnit === "") return null;
+    // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
+    if (!isOptionsArgument(options)) {
+      return null;
+    }
+    const validDateTimes =
+      isValidDateTime(dateTime1) && isValidDateTime(dateTime2);
+    // Singular names resolve to their plural (Temporal §13.17); record keys are the plural names.
+    const resolved = Array.isArray(units)
+      ? units.map((unit) => resolveDurationUnit(unit))
+      : resolveDurationUnit(units);
+    const isSingleUnit = !Array.isArray(resolved);
+    const validUnits = isSingleUnit
+      ? isValidDateTimeDurationUnit(resolved)
+      : resolved.every(isValidDateTimeDurationUnit);
+    //
 
-    const dt1 = Temporal.PlainDateTime.from(dateTime1);
-    const dt2 = Temporal.PlainDateTime.from(dateTime2);
-
-    const duration = plainUntilWithRounding(dt1, dt2, {
-      largestUnit,
-      smallestUnit: options?.smallestUnit,
-      roundingIncrement: options?.roundingIncrement,
-      roundingMode: options?.roundingMode,
-    });
-    if (isSingleUnit) {
-      return duration[resolved as DateTimeDurationUnit] ?? 0;
+    if (!validDateTimes || !validUnits) {
+      return null;
     }
 
-    // craft record for units passed
-    // An unlisted unit between two listed units is carried into the next smaller listed unit.
-    return differenceRecord(dt1, duration, resolved as DateTimeDurationUnit[], {
-      add: (from, amount) => from.add(amount),
-      until: (from, to, largest) =>
-        from.until(to, { largestUnit: largest as Temporal.DateTimeUnit }),
-    });
+    try {
+      // An empty units list names no largest unit, so there is nothing to measure.
+      const largestUnit = isSingleUnit
+        ? (resolved as DateTimeDurationUnit)
+        : getLargestDateTimeDurationUnit(resolved as DateTimeDurationUnit[]);
+      if (largestUnit === "") return null;
+
+      const dt1 = Temporal.PlainDateTime.from(dateTime1);
+      const dt2 = Temporal.PlainDateTime.from(dateTime2);
+
+      const duration = plainUntilWithRounding(dt1, dt2, {
+        largestUnit,
+        smallestUnit: options?.smallestUnit,
+        roundingIncrement: options?.roundingIncrement,
+        roundingMode: options?.roundingMode,
+      });
+      if (isSingleUnit) {
+        return duration[resolved as DateTimeDurationUnit] ?? 0;
+      }
+
+      // craft record for units passed
+      // An unlisted unit between two listed units is carried into the next smaller listed unit.
+      return differenceRecord(dt1, duration, resolved as DateTimeDurationUnit[], {
+        add: (from, amount) => from.add(amount),
+        until: (from, to, largest) =>
+          from.until(to, { largestUnit: largest as Temporal.DateTimeUnit }),
+      });
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

@@ -22,24 +22,30 @@ export function parseTimeFromUtc(
   value: string,
   options?: { timeZone?: string },
 ): string {
-  if (!isOptionsArgument(options)) {
-    return "";
-  }
-
-  if (!isValidUtc(value)) {
-    return "";
-  }
-
-  const { timeZone = "UTC" } = options ?? {};
-  if (timeZone !== "UTC" && !isValidTimeZone(timeZone)) {
-    return "";
-  }
-
   try {
-    const instant = Temporal.Instant.from(value);
-    const dateTime = instant.toZonedDateTimeISO(timeZone);
-    return dateTime.toPlainTime().toString();
+    if (!isOptionsArgument(options)) {
+      return "";
+    }
+
+    if (!isValidUtc(value)) {
+      return "";
+    }
+
+    const { timeZone = "UTC" } = options ?? {};
+    if (timeZone !== "UTC" && !isValidTimeZone(timeZone)) {
+      return "";
+    }
+
+    try {
+      const instant = Temporal.Instant.from(value);
+      const dateTime = instant.toZonedDateTimeISO(timeZone);
+      return dateTime.toPlainTime().toString();
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

@@ -22,14 +22,20 @@ export function sortUnix(
   unixValues: Array<number | string>,
   order: "asc" | "desc" = "asc",
 ): number[] {
-  const valid = parseUnixEpochsInInstantRange(unixValues);
-  if (!valid.length) return [];
+  try {
+    const valid = parseUnixEpochsInInstantRange(unixValues);
+    if (!valid.length) return [];
 
-  const sorted = valid.sort((a, b) => a - b);
+    const sorted = valid.sort((a, b) => a - b);
 
-  if (order === "desc") {
-    return sorted.reverse();
+    if (order === "desc") {
+      return sorted.reverse();
+    }
+
+    return sorted;
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
+    return [];
   }
-
-  return sorted;
 }

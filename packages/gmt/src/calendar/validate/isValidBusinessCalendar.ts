@@ -33,5 +33,11 @@ import type { BusinessCalendar } from "../../types";
 export function isValidBusinessCalendar(
   calendar: unknown,
 ): calendar is BusinessCalendar {
-  return parseBusinessCalendar(calendar) !== null;
+  try {
+    return parseBusinessCalendar(calendar) !== null;
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
+    return false;
+  }
 }

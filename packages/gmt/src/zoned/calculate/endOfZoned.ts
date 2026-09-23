@@ -40,9 +40,15 @@ export function endOfZoned(
     fractionalSecondDigits?: FractionalDigit;
   },
 ): string {
-  if (!isOptionsArgument(optionsArg)) {
+  try {
+    if (!isOptionsArgument(optionsArg)) {
+      return "";
+    }
+
+    return startOrEndOfZoned(value, unit, optionsArg ?? {}, true);
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
-
-  return startOrEndOfZoned(value, unit, optionsArg ?? {}, true);
 }

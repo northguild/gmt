@@ -27,11 +27,17 @@ export function isBeforeUnix(
   value2: number | string,
   options?: { epochUnit?: UnixUnit },
 ): boolean {
-  if (!isOptionsArgument(options)) {
+  try {
+    if (!isOptionsArgument(options)) {
+      return false;
+    }
+
+    const order = compareUnixEpochs(value1, value2, options);
+
+    return order !== null && order === -1;
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return false;
   }
-
-  const order = compareUnixEpochs(value1, value2, options);
-
-  return order !== null && order === -1;
 }

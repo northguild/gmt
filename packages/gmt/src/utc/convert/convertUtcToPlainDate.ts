@@ -23,22 +23,28 @@ export function convertUtcToPlainDate(
   value: string,
   options?: { timeZone?: string },
 ): string {
-  if (!isOptionsArgument(options)) {
-    return "";
-  }
-
-  const { timeZone = "UTC" } = options ?? {};
-
-  if (!isValidTimeZone(timeZone)) return "";
-  if (!isValidUtc(value)) return "";
-
   try {
-    const instant = Temporal.Instant.from(value);
-    const zonedDateTime = instant.toZonedDateTimeISO(timeZone);
-    return `${zonedDateTime.year.toString().padStart(4, "0")}-${zonedDateTime.month
-      .toString()
-      .padStart(2, "0")}-${zonedDateTime.day.toString().padStart(2, "0")}`;
+    if (!isOptionsArgument(options)) {
+      return "";
+    }
+
+    const { timeZone = "UTC" } = options ?? {};
+
+    if (!isValidTimeZone(timeZone)) return "";
+    if (!isValidUtc(value)) return "";
+
+    try {
+      const instant = Temporal.Instant.from(value);
+      const zonedDateTime = instant.toZonedDateTimeISO(timeZone);
+      return `${zonedDateTime.year.toString().padStart(4, "0")}-${zonedDateTime.month
+        .toString()
+        .padStart(2, "0")}-${zonedDateTime.day.toString().padStart(2, "0")}`;
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

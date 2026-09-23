@@ -42,25 +42,31 @@ export function formatRelativeDateTime(
   locale?: string | string[],
   options: FormatRelativeDateTimeOptions = {},
 ): string {
-  // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
-  // invalid input.
-  if (options === null || typeof options !== "object") return "";
-  if (!isValidDateTime(value)) return "";
-  if (options.reference !== undefined && !isValidDateTime(options.reference))
-    return "";
-
   try {
-    const target = Temporal.PlainDateTime.from(value);
-    const reference = options.reference
-      ? Temporal.PlainDateTime.from(options.reference)
-      : Temporal.Now.plainDateTimeISO();
+    // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
+    // invalid input.
+    if (options === null || typeof options !== "object") return "";
+    if (!isValidDateTime(value)) return "";
+    if (options.reference !== undefined && !isValidDateTime(options.reference))
+      return "";
 
-    const diff = target.since(reference);
-    // month/year are calendrical — relativeTo needs a PlainDate
-    return formatRelativeDuration(diff, locale, options, (unit) =>
-      durationTotal(diff, unit, reference.toPlainDate()),
-    );
+    try {
+      const target = Temporal.PlainDateTime.from(value);
+      const reference = options.reference
+        ? Temporal.PlainDateTime.from(options.reference)
+        : Temporal.Now.plainDateTimeISO();
+
+      const diff = target.since(reference);
+      // month/year are calendrical — relativeTo needs a PlainDate
+      return formatRelativeDuration(diff, locale, options, (unit) =>
+        durationTotal(diff, unit, reference.toPlainDate()),
+      );
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

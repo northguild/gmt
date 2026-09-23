@@ -69,29 +69,35 @@ export function formatCalendarUnix(
   locale?: string | string[],
   options: FormatCalendarUnixOptions = {},
 ): string {
-  // Temporal GetOptionsObject: undefined is defaults (the parameter default); anything else that is
-  // not an object, including null, is a TypeError.
-  if (options === null || typeof options !== "object") return "";
-  const epochUnit = resolveUnixEpochUnit(options.epochUnit);
-  if (epochUnit === null) return "";
-  const timeZone = normalizeTimeZone(options.timeZone);
-  if (!timeZone) return "";
-
-  const target = unixEpochToInstant(value, epochUnit);
-  if (target === null) return "";
-
-  const reference = resolveUnixFormatReference(options.reference, epochUnit);
-  if (reference === null) return "";
-
   try {
-    return formatCalendarInstants(
-      target,
-      reference,
-      timeZone,
-      locale,
-      options.timeStyle === undefined ? "short" : options.timeStyle,
-    );
+    // Temporal GetOptionsObject: undefined is defaults (the parameter default); anything else that is
+    // not an object, including null, is a TypeError.
+    if (options === null || typeof options !== "object") return "";
+    const epochUnit = resolveUnixEpochUnit(options.epochUnit);
+    if (epochUnit === null) return "";
+    const timeZone = normalizeTimeZone(options.timeZone);
+    if (!timeZone) return "";
+
+    const target = unixEpochToInstant(value, epochUnit);
+    if (target === null) return "";
+
+    const reference = resolveUnixFormatReference(options.reference, epochUnit);
+    if (reference === null) return "";
+
+    try {
+      return formatCalendarInstants(
+        target,
+        reference,
+        timeZone,
+        locale,
+        options.timeStyle === undefined ? "short" : options.timeStyle,
+      );
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

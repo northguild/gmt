@@ -34,22 +34,28 @@ export function convertUnixToPlainDate(
   unix: number | string,
   options?: { epochUnit?: UnixUnit; timeZone?: string },
 ): string {
-  if (!isOptionsArgument(options)) {
-    return "";
-  }
-
-  const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
-  const timeZone = normalizeTimeZone(options?.timeZone);
-
-  if (epochUnit === null || !timeZone) return "";
-
-  const instant = unixEpochToInstant(unix, epochUnit);
-
-  if (instant === null) return "";
-
   try {
-    return instant.toZonedDateTimeISO(timeZone).toPlainDate().toString();
+    if (!isOptionsArgument(options)) {
+      return "";
+    }
+
+    const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
+    const timeZone = normalizeTimeZone(options?.timeZone);
+
+    if (epochUnit === null || !timeZone) return "";
+
+    const instant = unixEpochToInstant(unix, epochUnit);
+
+    if (instant === null) return "";
+
+    try {
+      return instant.toZonedDateTimeISO(timeZone).toPlainDate().toString();
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

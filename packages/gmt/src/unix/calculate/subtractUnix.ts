@@ -49,36 +49,42 @@ export function subtractUnix(
     overflow?: Overflow;
   },
 ): number | null {
-  if (!isOptionsArgument(options)) {
-    return null;
-  }
-
-  const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
-  const timeZone = normalizeTimeZone(options?.timeZone);
-  const overflow = resolveOverflow(options?.overflow);
-
-  if (!timeZone || epochUnit === null) return null;
-
-  const validUnits =
-    typeof units === "object" &&
-    units !== null &&
-    Object.keys(units).every(isValidDateTimeDurationUnit);
-  const validAmounts = validUnits && Object.values(units).every(isValidAmount);
-
-  if (!validUnits || !validAmounts) {
-    return null;
-  }
-
-  const instant = unixEpochToInstant(value, epochUnit);
-
-  if (instant === null) {
-    return null;
-  }
-
   try {
-    const zdt: Temporal.ZonedDateTime = instant.toZonedDateTimeISO(timeZone);
-    return toUnixEpoch(subtractFromZoned(zdt, units, { overflow }), epochUnit);
+    if (!isOptionsArgument(options)) {
+      return null;
+    }
+
+    const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
+    const timeZone = normalizeTimeZone(options?.timeZone);
+    const overflow = resolveOverflow(options?.overflow);
+
+    if (!timeZone || epochUnit === null) return null;
+
+    const validUnits =
+      typeof units === "object" &&
+      units !== null &&
+      Object.keys(units).every(isValidDateTimeDurationUnit);
+    const validAmounts = validUnits && Object.values(units).every(isValidAmount);
+
+    if (!validUnits || !validAmounts) {
+      return null;
+    }
+
+    const instant = unixEpochToInstant(value, epochUnit);
+
+    if (instant === null) {
+      return null;
+    }
+
+    try {
+      const zdt: Temporal.ZonedDateTime = instant.toZonedDateTimeISO(timeZone);
+      return toUnixEpoch(subtractFromZoned(zdt, units, { overflow }), epochUnit);
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

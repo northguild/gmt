@@ -52,37 +52,43 @@ export function areDatesEqualBy(
   unit: Temporal.SmallestUnit<Temporal.DateUnit>,
   optionsArg?: { weekStartsOn?: "monday" | "sunday" },
 ): boolean {
-  if (!isOptionsArgument(optionsArg)) {
-    return false;
-  }
-
-  const resolvedUnit = resolveDateTimeUnit(unit);
-  const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
-
-  if (
-    !isValidDate(value1) ||
-    !isValidDate(value2) ||
-    !supported.includes(resolvedUnit) ||
-    weekStartsOn === null
-  ) {
-    return false;
-  }
-
-  // "day" has no coarser boundary to reset, so this is just direct equality.
-  if (resolvedUnit === "day") {
-    return areDatesEqual(value1, value2);
-  }
-
   try {
-    const start1 = startOfDate(value1, resolvedUnit as Temporal.DateUnit, {
-      weekStartsOn,
-    });
-    const start2 = startOfDate(value2, resolvedUnit as Temporal.DateUnit, {
-      weekStartsOn,
-    });
+    if (!isOptionsArgument(optionsArg)) {
+      return false;
+    }
 
-    return start1 !== "" && start1 === start2;
+    const resolvedUnit = resolveDateTimeUnit(unit);
+    const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
+
+    if (
+      !isValidDate(value1) ||
+      !isValidDate(value2) ||
+      !supported.includes(resolvedUnit) ||
+      weekStartsOn === null
+    ) {
+      return false;
+    }
+
+    // "day" has no coarser boundary to reset, so this is just direct equality.
+    if (resolvedUnit === "day") {
+      return areDatesEqual(value1, value2);
+    }
+
+    try {
+      const start1 = startOfDate(value1, resolvedUnit as Temporal.DateUnit, {
+        weekStartsOn,
+      });
+      const start2 = startOfDate(value2, resolvedUnit as Temporal.DateUnit, {
+        weekStartsOn,
+      });
+
+      return start1 !== "" && start1 === start2;
+    } catch {
+      return false;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return false;
   }
 }

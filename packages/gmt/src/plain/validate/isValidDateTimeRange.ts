@@ -26,30 +26,36 @@ export function isValidDateTimeRange(props: {
   value2: string;
   options?: { allowEqual?: boolean };
 }): boolean {
-  if (!isObject(props)) return false;
-  const { value1, value2, options } = props;
-  if (!isOptionsArgument(options)) return false;
-
-  if (typeof value1 !== "string" || typeof value2 !== "string") {
-    return false;
-  }
-
-  if (!isValidDateTime(value1) || !isValidDateTime(value2)) {
-    return false;
-  }
-
   try {
-    const dt1 = Temporal.PlainDateTime.from(value1);
-    const dt2 = Temporal.PlainDateTime.from(value2);
+    if (!isObject(props)) return false;
+    const { value1, value2, options } = props;
+    if (!isOptionsArgument(options)) return false;
 
-    const cmp = Temporal.PlainDateTime.compare(dt1, dt2);
-
-    if (options?.allowEqual) {
-      return cmp <= 0;
+    if (typeof value1 !== "string" || typeof value2 !== "string") {
+      return false;
     }
 
-    return cmp < 0;
+    if (!isValidDateTime(value1) || !isValidDateTime(value2)) {
+      return false;
+    }
+
+    try {
+      const dt1 = Temporal.PlainDateTime.from(value1);
+      const dt2 = Temporal.PlainDateTime.from(value2);
+
+      const cmp = Temporal.PlainDateTime.compare(dt1, dt2);
+
+      if (options?.allowEqual) {
+        return cmp <= 0;
+      }
+
+      return cmp < 0;
+    } catch {
+      return false;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return false;
   }
 }

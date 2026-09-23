@@ -16,9 +16,15 @@ import { parseUnixEpochsInInstantRange } from "../../internal/unixEpochValue";
  * @example minUnix(["1700000000000", "1e3"]) // 1700000000000 ("1e3" is not a digit string)
  */
 export function minUnix(unixValues: Array<number | string>): number | null {
-  const valid = parseUnixEpochsInInstantRange(unixValues);
-  if (!valid.length) return null;
+  try {
+    const valid = parseUnixEpochsInInstantRange(unixValues);
+    if (!valid.length) return null;
 
-  // Pairwise, not `Math.min(...valid)`: spreading a long list overflows the call stack.
-  return valid.reduce((a, b) => Math.min(a, b));
+    // Pairwise, not `Math.min(...valid)`: spreading a long list overflows the call stack.
+    return valid.reduce((a, b) => Math.min(a, b));
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
+    return null;
+  }
 }

@@ -46,32 +46,38 @@ export function isZonedThisUnit(
   unit: Temporal.SmallestUnit<Temporal.DateUnit>,
   locale?: string | string[],
 ): boolean {
-  const resolvedUnit = resolveDateTimeUnit(unit);
-
-  if (
-    !isValidZonedDateTime(value) ||
-    !isValidDateUnit(resolvedUnit) ||
-    (locale !== undefined && resolveLocale(locale) === null)
-  ) {
-    return false;
-  }
-
   try {
-    const zonedDateTime = zonedDateTimeFrom(value);
-    const today = Temporal.Now.zonedDateTimeISO(zonedDateTime.timeZoneId)
-      .toPlainDate()
-      .toString();
-    const valueDate = zonedDateTime.toPlainDate().toString();
+    const resolvedUnit = resolveDateTimeUnit(unit);
 
-    if (resolvedUnit === "week" && locale !== undefined) {
-      const startOfWeekValue = getLocaleStartOfWeek(valueDate, locale);
-      const startOfWeekToday = getLocaleStartOfWeek(today, locale);
-
-      return startOfWeekValue !== "" && startOfWeekValue === startOfWeekToday;
+    if (
+      !isValidZonedDateTime(value) ||
+      !isValidDateUnit(resolvedUnit) ||
+      (locale !== undefined && resolveLocale(locale) === null)
+    ) {
+      return false;
     }
 
-    return areDatesEqualBy(valueDate, today, resolvedUnit);
+    try {
+      const zonedDateTime = zonedDateTimeFrom(value);
+      const today = Temporal.Now.zonedDateTimeISO(zonedDateTime.timeZoneId)
+        .toPlainDate()
+        .toString();
+      const valueDate = zonedDateTime.toPlainDate().toString();
+
+      if (resolvedUnit === "week" && locale !== undefined) {
+        const startOfWeekValue = getLocaleStartOfWeek(valueDate, locale);
+        const startOfWeekToday = getLocaleStartOfWeek(today, locale);
+
+        return startOfWeekValue !== "" && startOfWeekValue === startOfWeekToday;
+      }
+
+      return areDatesEqualBy(valueDate, today, resolvedUnit);
+    } catch {
+      return false;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return false;
   }
 }

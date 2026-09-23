@@ -63,56 +63,62 @@ export function formatCalendar(
   locale?: string | string[],
   options: FormatCalendarOptions = {},
 ): string {
-  // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
-  // invalid input.
-  if (options === null || typeof options !== "object") return "";
-  if (!isValidDateTime(value)) return "";
-  if (options.reference !== undefined && !isValidDateTime(options.reference))
-    return "";
-
   try {
-    const target = Temporal.PlainDateTime.from(value);
-    const reference = options.reference
-      ? Temporal.PlainDateTime.from(options.reference)
-      : Temporal.Now.plainDateTimeISO();
+    // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
+    // invalid input.
+    if (options === null || typeof options !== "object") return "";
+    if (!isValidDateTime(value)) return "";
+    if (options.reference !== undefined && !isValidDateTime(options.reference))
+      return "";
 
-    const diffDays = target.toPlainDate().since(reference.toPlainDate()).days;
-    // "long"/"full" are outside the type but reachable from JS; their zone
-    // name would describe the UTC anchor, not the value. Temporal's
-    // PlainDateTime format drops timeZoneName (AdjustDateTimeStyleFormat).
-    const timeStyle = plainTimeStyle(
-      options.timeStyle === undefined ? "short" : options.timeStyle,
-    );
+    try {
+      const target = Temporal.PlainDateTime.from(value);
+      const reference = options.reference
+        ? Temporal.PlainDateTime.from(options.reference)
+        : Temporal.Now.plainDateTimeISO();
 
-    // Plain values carry no timezone. UTC is an arbitrary but stable anchor
-    // for reusing Intl's part-level formatting — any fixed zone reproduces
-    // the same wall-clock fields since there's no real zone to get wrong.
-    const epochMilliseconds = target.toZonedDateTime("UTC").epochMilliseconds;
-
-    if (Math.abs(diffDays) > ABS_DAY_THRESHOLD) {
-      return normalizeDateTime(
-        new Intl.DateTimeFormat(locale, {
-          dateStyle: "long",
-          timeStyle,
-          timeZone: "UTC",
-        }).format(epochMilliseconds),
+      const diffDays = target.toPlainDate().since(reference.toPlainDate()).days;
+      // "long"/"full" are outside the type but reachable from JS; their zone
+      // name would describe the UTC anchor, not the value. Temporal's
+      // PlainDateTime format drops timeZoneName (AdjustDateTimeStyleFormat).
+      const timeStyle = plainTimeStyle(
+        options.timeStyle === undefined ? "short" : options.timeStyle,
       );
+
+      // Plain values carry no timezone. UTC is an arbitrary but stable anchor
+      // for reusing Intl's part-level formatting — any fixed zone reproduces
+      // the same wall-clock fields since there's no real zone to get wrong.
+      const epochMilliseconds = target.toZonedDateTime("UTC").epochMilliseconds;
+
+      if (Math.abs(diffDays) > ABS_DAY_THRESHOLD) {
+        return normalizeDateTime(
+          new Intl.DateTimeFormat(locale, {
+            dateStyle: "long",
+            timeStyle,
+            timeZone: "UTC",
+          }).format(epochMilliseconds),
+        );
+      }
+
+      const dayLabel = new Intl.RelativeTimeFormat(locale, {
+        numeric: "auto",
+      }).format(diffDays, "day");
+
+      return normalizeDateTime(
+        joinDateTimeConnector(
+          epochMilliseconds,
+          "UTC",
+          locale,
+          dayLabel,
+          timeStyle,
+        ),
+      );
+    } catch {
+      return "";
     }
-
-    const dayLabel = new Intl.RelativeTimeFormat(locale, {
-      numeric: "auto",
-    }).format(diffDays, "day");
-
-    return normalizeDateTime(
-      joinDateTimeConnector(
-        epochMilliseconds,
-        "UTC",
-        locale,
-        dayLabel,
-        timeStyle,
-      ),
-    );
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

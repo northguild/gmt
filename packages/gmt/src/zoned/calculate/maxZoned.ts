@@ -17,21 +17,27 @@ import { zonedDateTimeFrom } from "../../internal";
  * @example maxZoned([]) // null
  */
 export function maxZoned(zonedDateTimes: string[]): string | null {
-  if (!Array.isArray(zonedDateTimes) || !zonedDateTimes.length) return null;
-
-  const valid = zonedDateTimes.filter(isValidZonedDateTime);
-  if (!valid.length) return null;
-
   try {
-    const max = valid.reduce((currentMax, candidateStr) => {
-      const candidate = zonedDateTimeFrom(candidateStr);
-      return Temporal.ZonedDateTime.compare(candidate, currentMax) > 0
-        ? candidate
-        : currentMax;
-    }, zonedDateTimeFrom(valid[0]));
+    if (!Array.isArray(zonedDateTimes) || !zonedDateTimes.length) return null;
 
-    return max.toString();
+    const valid = zonedDateTimes.filter(isValidZonedDateTime);
+    if (!valid.length) return null;
+
+    try {
+      const max = valid.reduce((currentMax, candidateStr) => {
+        const candidate = zonedDateTimeFrom(candidateStr);
+        return Temporal.ZonedDateTime.compare(candidate, currentMax) > 0
+          ? candidate
+          : currentMax;
+      }, zonedDateTimeFrom(valid[0]));
+
+      return max.toString();
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

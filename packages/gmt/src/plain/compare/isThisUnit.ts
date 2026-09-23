@@ -53,26 +53,32 @@ export function isThisUnit(
   unit: Temporal.SmallestUnit<Temporal.DateUnit>,
   locale?: string | string[],
 ): boolean {
-  const resolvedUnit = resolveDateTimeUnit(unit);
+  try {
+    const resolvedUnit = resolveDateTimeUnit(unit);
 
-  if (
-    !isValidDateUnit(resolvedUnit) ||
-    (locale !== undefined && resolveLocale(locale) === null)
-  ) {
+    if (
+      !isValidDateUnit(resolvedUnit) ||
+      (locale !== undefined && resolveLocale(locale) === null)
+    ) {
+      return false;
+    }
+
+    const today = getToday();
+    if (today === "") {
+      return false;
+    }
+
+    if (resolvedUnit === "week" && locale !== undefined) {
+      const startOfWeekValue = getLocaleStartOfWeek(value, locale);
+      const startOfWeekToday = getLocaleStartOfWeek(today, locale);
+
+      return startOfWeekValue !== "" && startOfWeekValue === startOfWeekToday;
+    }
+
+    return areDatesEqualBy(value, today, resolvedUnit);
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return false;
   }
-
-  const today = getToday();
-  if (today === "") {
-    return false;
-  }
-
-  if (resolvedUnit === "week" && locale !== undefined) {
-    const startOfWeekValue = getLocaleStartOfWeek(value, locale);
-    const startOfWeekToday = getLocaleStartOfWeek(today, locale);
-
-    return startOfWeekValue !== "" && startOfWeekValue === startOfWeekToday;
-  }
-
-  return areDatesEqualBy(value, today, resolvedUnit);
 }

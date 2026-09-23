@@ -32,21 +32,27 @@ export function parseWeekFromZoned(
   value: string,
   optionsArg?: { weekStartsOn?: "monday" | "sunday" },
 ): number | null {
-  if (!isOptionsArgument(optionsArg)) {
-    return null;
-  }
-
-  if (!isValidZonedDateTime(value)) {
-    return null;
-  }
-
-  const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
-  if (weekStartsOn === null) return null;
-
   try {
-    const zonedDateTime = zonedDateTimeFrom(value);
-    return getWeekNumber(zonedDateTime.toPlainDate().toString(), weekStartsOn);
+    if (!isOptionsArgument(optionsArg)) {
+      return null;
+    }
+
+    if (!isValidZonedDateTime(value)) {
+      return null;
+    }
+
+    const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
+    if (weekStartsOn === null) return null;
+
+    try {
+      const zonedDateTime = zonedDateTimeFrom(value);
+      return getWeekNumber(zonedDateTime.toPlainDate().toString(), weekStartsOn);
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

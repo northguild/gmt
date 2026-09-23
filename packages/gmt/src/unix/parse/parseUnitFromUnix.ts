@@ -76,48 +76,54 @@ export function parseUnitFromUnix(
     weekStartsOn?: "monday" | "sunday";
   },
 ): string {
-  // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
-  if (!isOptionsArgument(options)) {
-    return "";
-  }
-  const zdt = unixZonedDateTime(value, options);
-  const weekStartsOn = resolveWeekStartsOn(options?.weekStartsOn);
-
-  if (zdt === null || typeof unit !== "string" || weekStartsOn === null) {
-    return "";
-  }
-
   try {
-    switch (resolveDateTimeUnit(unit)) {
-      case "year":
-        return zdt.year.toString();
-      case "month":
-        return zdt.month.toString().padStart(2, "0");
-      case "week": {
-        return (
-          getWeekNumber(zdt.toPlainDate().toString(), weekStartsOn) ?? 0
-        ).toString();
+    // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
+    if (!isOptionsArgument(options)) {
+      return "";
+    }
+    const zdt = unixZonedDateTime(value, options);
+    const weekStartsOn = resolveWeekStartsOn(options?.weekStartsOn);
+
+    if (zdt === null || typeof unit !== "string" || weekStartsOn === null) {
+      return "";
+    }
+
+    try {
+      switch (resolveDateTimeUnit(unit)) {
+        case "year":
+          return zdt.year.toString();
+        case "month":
+          return zdt.month.toString().padStart(2, "0");
+        case "week": {
+          return (
+            getWeekNumber(zdt.toPlainDate().toString(), weekStartsOn) ?? 0
+          ).toString();
+        }
+        case "day":
+          return zdt.day.toString().padStart(2, "0");
+        case "dayOfWeek":
+          return zdt.dayOfWeek.toString();
+        case "hour":
+          return zdt.hour.toString().padStart(2, "0");
+        case "minute":
+          return zdt.minute.toString().padStart(2, "0");
+        case "second":
+          return zdt.second.toString().padStart(2, "0");
+        case "millisecond":
+          return zdt.millisecond.toString().padStart(3, "0");
+        case "microsecond":
+          return zdt.microsecond.toString().padStart(3, "0");
+        case "nanosecond":
+          return zdt.nanosecond.toString().padStart(3, "0");
+        default:
+          return "";
       }
-      case "day":
-        return zdt.day.toString().padStart(2, "0");
-      case "dayOfWeek":
-        return zdt.dayOfWeek.toString();
-      case "hour":
-        return zdt.hour.toString().padStart(2, "0");
-      case "minute":
-        return zdt.minute.toString().padStart(2, "0");
-      case "second":
-        return zdt.second.toString().padStart(2, "0");
-      case "millisecond":
-        return zdt.millisecond.toString().padStart(3, "0");
-      case "microsecond":
-        return zdt.microsecond.toString().padStart(3, "0");
-      case "nanosecond":
-        return zdt.nanosecond.toString().padStart(3, "0");
-      default:
-        return "";
+    } catch {
+      return "";
     }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

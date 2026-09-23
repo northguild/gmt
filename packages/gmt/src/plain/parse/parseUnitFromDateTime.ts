@@ -50,48 +50,54 @@ export function parseUnitFromDateTime(
     | "dayOfWeek",
   optionsArg?: { weekStartsOn?: "monday" | "sunday" },
 ): string {
-  // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
-  if (!isOptionsArgument(optionsArg)) {
-    return "";
-  }
-  const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
-
-  if (!isValidDateTime(value) || weekStartsOn === null) {
-    return "";
-  }
-
   try {
-    const dateTime = Temporal.PlainDateTime.from(value);
+    // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
+    if (!isOptionsArgument(optionsArg)) {
+      return "";
+    }
+    const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
 
-    switch (resolveDateTimeUnit(unit)) {
-      case "year":
-        return dateTime.year.toString();
-      case "month":
-        return dateTime.month.toString().padStart(2, "0");
-      case "day":
-        return dateTime.day.toString().padStart(2, "0");
-      case "week":
-        return (
-          getWeekNumber(dateTime.toPlainDate().toString(), weekStartsOn) ?? 0
-        ).toString();
-      case "dayOfWeek":
-        return dateTime.dayOfWeek.toString();
-      case "hour":
-        return dateTime.hour.toString().padStart(2, "0");
-      case "minute":
-        return dateTime.minute.toString().padStart(2, "0");
-      case "second":
-        return dateTime.second.toString().padStart(2, "0");
-      case "millisecond":
-        return dateTime.millisecond.toString().padStart(3, "0");
-      case "microsecond":
-        return dateTime.microsecond.toString().padStart(3, "0");
-      case "nanosecond":
-        return dateTime.nanosecond.toString().padStart(3, "0");
-      default:
-        return "";
+    if (!isValidDateTime(value) || weekStartsOn === null) {
+      return "";
+    }
+
+    try {
+      const dateTime = Temporal.PlainDateTime.from(value);
+
+      switch (resolveDateTimeUnit(unit)) {
+        case "year":
+          return dateTime.year.toString();
+        case "month":
+          return dateTime.month.toString().padStart(2, "0");
+        case "day":
+          return dateTime.day.toString().padStart(2, "0");
+        case "week":
+          return (
+            getWeekNumber(dateTime.toPlainDate().toString(), weekStartsOn) ?? 0
+          ).toString();
+        case "dayOfWeek":
+          return dateTime.dayOfWeek.toString();
+        case "hour":
+          return dateTime.hour.toString().padStart(2, "0");
+        case "minute":
+          return dateTime.minute.toString().padStart(2, "0");
+        case "second":
+          return dateTime.second.toString().padStart(2, "0");
+        case "millisecond":
+          return dateTime.millisecond.toString().padStart(3, "0");
+        case "microsecond":
+          return dateTime.microsecond.toString().padStart(3, "0");
+        case "nanosecond":
+          return dateTime.nanosecond.toString().padStart(3, "0");
+        default:
+          return "";
+      }
+    } catch {
+      return "";
     }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

@@ -50,23 +50,29 @@ export function intervalCountUnix(
   unit: string,
   options?: { epochUnit?: UnixUnit; timeZone?: string },
 ): number | null {
-  if (!isOptionsArgument(options)) {
-    return null;
-  }
-
-  const resolved = resolveUnixIntervalPair(start, end, unit, options);
-  if (!resolved) return null;
-
   try {
-    const { startVal, endVal, resolvedUnit } = resolved;
-
-    // An empty interval [t, t) holds no instant, so it touches no unit (CORE-6 empty-interval rule).
-    if (startVal.epochNanoseconds === endVal.epochNanoseconds) {
-      return 0;
+    if (!isOptionsArgument(options)) {
+      return null;
     }
 
-    return countZonedBuckets(startVal, endVal, resolvedUnit);
+    const resolved = resolveUnixIntervalPair(start, end, unit, options);
+    if (!resolved) return null;
+
+    try {
+      const { startVal, endVal, resolvedUnit } = resolved;
+
+      // An empty interval [t, t) holds no instant, so it touches no unit (CORE-6 empty-interval rule).
+      if (startVal.epochNanoseconds === endVal.epochNanoseconds) {
+        return 0;
+      }
+
+      return countZonedBuckets(startVal, endVal, resolvedUnit);
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

@@ -45,47 +45,53 @@ export function formatZonedRange(
   locale?: string | string[],
   options?: DateTimeFormatOptions,
 ): string {
-  // ECMA-402 CoerceOptionsToObject: null options throw TypeError, so they are invalid input.
-  if (options === null) {
-    return "";
-  }
-  if (!isValidZonedDateTime(from) || !isValidZonedDateTime(to)) {
-    return "";
-  }
-
-  let zdt1: Temporal.ZonedDateTime;
-  let zdt2: Temporal.ZonedDateTime;
   try {
-    zdt1 = zonedDateTimeFrom(from);
-    zdt2 = zonedDateTimeFrom(to);
-  } catch {
-    return "";
-  }
+    // ECMA-402 CoerceOptionsToObject: null options throw TypeError, so they are invalid input.
+    if (options === null) {
+      return "";
+    }
+    if (!isValidZonedDateTime(from) || !isValidZonedDateTime(to)) {
+      return "";
+    }
 
-  if (zdt1.timeZoneId !== zdt2.timeZoneId) {
-    return "";
-  }
+    let zdt1: Temporal.ZonedDateTime;
+    let zdt2: Temporal.ZonedDateTime;
+    try {
+      zdt1 = zonedDateTimeFrom(from);
+      zdt2 = zonedDateTimeFrom(to);
+    } catch {
+      return "";
+    }
 
-  // Both instants are formatted in the endpoints' own zone with the options
-  // an Instant format resolves to (GetDateTimeFormat ~any~, ~all~, ~all~), so
-  // the requested fields and widths are kept. A `timeZone` option is rejected
-  // rather than silently overridden.
-  const formatOptions = instantFormatOptions(
-    options ?? {},
-    zdt1.timeZoneId,
-    "all",
-  );
-  if (formatOptions === null) {
-    return "";
-  }
+    if (zdt1.timeZoneId !== zdt2.timeZoneId) {
+      return "";
+    }
 
-  try {
-    const out = new Intl.DateTimeFormat(locale, formatOptions).formatRange(
-      zdt1.epochMilliseconds,
-      zdt2.epochMilliseconds,
+    // Both instants are formatted in the endpoints' own zone with the options
+    // an Instant format resolves to (GetDateTimeFormat ~any~, ~all~, ~all~), so
+    // the requested fields and widths are kept. A `timeZone` option is rejected
+    // rather than silently overridden.
+    const formatOptions = instantFormatOptions(
+      options ?? {},
+      zdt1.timeZoneId,
+      "all",
     );
-    return normalizeDateTime(out);
+    if (formatOptions === null) {
+      return "";
+    }
+
+    try {
+      const out = new Intl.DateTimeFormat(locale, formatOptions).formatRange(
+        zdt1.epochMilliseconds,
+        zdt2.epochMilliseconds,
+      );
+      return normalizeDateTime(out);
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

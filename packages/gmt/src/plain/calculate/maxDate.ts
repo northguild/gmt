@@ -14,21 +14,27 @@ import { isValidDate } from "../validate";
  * @example maxDate([]) // null
  */
 export function maxDate(dates: string[]): string | null {
-  if (!Array.isArray(dates) || !dates.length) return null;
-
-  const valid = dates.filter(isValidDate);
-  if (!valid.length) return null;
-
   try {
-    const max = valid.reduce((currentMax, candidateStr) => {
-      const candidate = Temporal.PlainDate.from(candidateStr);
-      return Temporal.PlainDate.compare(candidate, currentMax) > 0
-        ? candidate
-        : currentMax;
-    }, Temporal.PlainDate.from(valid[0]));
+    if (!Array.isArray(dates) || !dates.length) return null;
 
-    return max.toString();
+    const valid = dates.filter(isValidDate);
+    if (!valid.length) return null;
+
+    try {
+      const max = valid.reduce((currentMax, candidateStr) => {
+        const candidate = Temporal.PlainDate.from(candidateStr);
+        return Temporal.PlainDate.compare(candidate, currentMax) > 0
+          ? candidate
+          : currentMax;
+      }, Temporal.PlainDate.from(valid[0]));
+
+      return max.toString();
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

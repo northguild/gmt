@@ -55,32 +55,38 @@ export function setZoned(
     offset?: Offset;
   },
 ): string {
-  if (!isOptionsArgument(options)) {
-    return "";
-  }
-
-  if (!isValidZonedDateTime(value)) return "";
-
-  const overflow = resolveOverflow(options?.overflow);
-  const disambiguation =
-    options?.disambiguation === undefined
-      ? "compatible"
-      : options.disambiguation;
-  // Temporal ZonedDateTime#with's own default: keep the source offset while it is still valid.
-  const offset = options?.offset === undefined ? "prefer" : options.offset;
-
   try {
-    const zoned = zonedDateTimeFrom(value);
-    // Temporal.ZonedDateTime.prototype.with() throws on an empty fields object ("no supported
-    // properties found") rather than treating it as a no-op, so short-circuit here.
-    if (Object.keys(fields).length === 0) return zoned.toString();
+    if (!isOptionsArgument(options)) {
+      return "";
+    }
 
-    return withZonedFields(zoned, fields, {
-      overflow,
-      disambiguation,
-      offset,
-    }).toString();
+    if (!isValidZonedDateTime(value)) return "";
+
+    const overflow = resolveOverflow(options?.overflow);
+    const disambiguation =
+      options?.disambiguation === undefined
+        ? "compatible"
+        : options.disambiguation;
+    // Temporal ZonedDateTime#with's own default: keep the source offset while it is still valid.
+    const offset = options?.offset === undefined ? "prefer" : options.offset;
+
+    try {
+      const zoned = zonedDateTimeFrom(value);
+      // Temporal.ZonedDateTime.prototype.with() throws on an empty fields object ("no supported
+      // properties found") rather than treating it as a no-op, so short-circuit here.
+      if (Object.keys(fields).length === 0) return zoned.toString();
+
+      return withZonedFields(zoned, fields, {
+        overflow,
+        disambiguation,
+        offset,
+      }).toString();
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

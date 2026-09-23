@@ -70,30 +70,36 @@ export function formatTimeZoneName(
   locale: string | string[],
   options?: FormatTimeZoneNameOptions,
 ): string {
-  if (!isOptionsArgument(options)) {
-    return "";
-  }
-
-  if (!isValidTimeZone(timeZone)) {
-    return "";
-  }
-
-  const resolvedLocale = resolveRequiredLocale(locale);
-  if (resolvedLocale === null) return "";
-
   try {
-    const style = options?.style === undefined ? "long" : options.style;
-    const formatter = new Intl.DateTimeFormat(resolvedLocale, {
-      timeZone,
-      timeZoneName: style,
-      hour: "numeric",
-    });
+    if (!isOptionsArgument(options)) {
+      return "";
+    }
 
-    const parts = formatter.formatToParts(
-      Temporal.Now.instant().epochMilliseconds,
-    );
-    return parts.find((part) => part.type === "timeZoneName")?.value ?? "";
+    if (!isValidTimeZone(timeZone)) {
+      return "";
+    }
+
+    const resolvedLocale = resolveRequiredLocale(locale);
+    if (resolvedLocale === null) return "";
+
+    try {
+      const style = options?.style === undefined ? "long" : options.style;
+      const formatter = new Intl.DateTimeFormat(resolvedLocale, {
+        timeZone,
+        timeZoneName: style,
+        hour: "numeric",
+      });
+
+      const parts = formatter.formatToParts(
+        Temporal.Now.instant().epochMilliseconds,
+      );
+      return parts.find((part) => part.type === "timeZoneName")?.value ?? "";
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

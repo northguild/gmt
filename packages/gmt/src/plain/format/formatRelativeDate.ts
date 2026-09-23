@@ -43,48 +43,54 @@ export function formatRelativeDate(
   locale?: string | string[],
   options: FormatRelativeDateOptions = {},
 ): string {
-  // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
-  // invalid input.
-  if (options === null || typeof options !== "object") return "";
-  if (!isValidDate(value)) return "";
-  if (options.reference !== undefined && !isValidDate(options.reference))
-    return "";
-
   try {
-    const target = Temporal.PlainDate.from(value);
-    const reference = options.reference
-      ? Temporal.PlainDate.from(options.reference)
-      : Temporal.Now.plainDateISO();
+    // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
+    // invalid input.
+    if (options === null || typeof options !== "object") return "";
+    if (!isValidDate(value)) return "";
+    if (options.reference !== undefined && !isValidDate(options.reference))
+      return "";
 
-    const diff = target.since(reference);
-    const absDays = Math.abs(diff.total("day"));
-
-    const unit =
-      options.largestUnit === undefined
-        ? (AUTO_UNITS.find((t) => absDays < t.maxDays)?.unit ?? "year")
-        : options.largestUnit;
-
-    let amount: number;
     try {
-      amount = resolveRelativeRounding(
-        diff.total(unit),
-        options.roundingMethod,
+      const target = Temporal.PlainDate.from(value);
+      const reference = options.reference
+        ? Temporal.PlainDate.from(options.reference)
+        : Temporal.Now.plainDateISO();
+
+      const diff = target.since(reference);
+      const absDays = Math.abs(diff.total("day"));
+
+      const unit =
+        options.largestUnit === undefined
+          ? (AUTO_UNITS.find((t) => absDays < t.maxDays)?.unit ?? "year")
+          : options.largestUnit;
+
+      let amount: number;
+      try {
+        amount = resolveRelativeRounding(
+          diff.total(unit),
+          options.roundingMethod,
+        );
+      } catch {
+        // month/year are calendrical and need a relativeTo anchor
+        amount = resolveRelativeRounding(
+          durationTotal(diff, unit, reference),
+          options.roundingMethod,
+        );
+      }
+
+      return normalizeDateTime(
+        new Intl.RelativeTimeFormat(locale, {
+          numeric: options.numeric === undefined ? "auto" : options.numeric,
+          style: options.style === undefined ? "long" : options.style,
+        }).format(amount, unit),
       );
     } catch {
-      // month/year are calendrical and need a relativeTo anchor
-      amount = resolveRelativeRounding(
-        durationTotal(diff, unit, reference),
-        options.roundingMethod,
-      );
+      return "";
     }
-
-    return normalizeDateTime(
-      new Intl.RelativeTimeFormat(locale, {
-        numeric: options.numeric === undefined ? "auto" : options.numeric,
-        style: options.style === undefined ? "long" : options.style,
-      }).format(amount, unit),
-    );
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

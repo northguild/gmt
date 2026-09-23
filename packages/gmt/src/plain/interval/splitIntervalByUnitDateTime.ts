@@ -50,74 +50,80 @@ export function splitIntervalByUnitDateTime(
   amount: number,
   options?: { maxPieces?: number },
 ): Array<{ start: string; end: string }> {
-  if (typeof start !== "string" || typeof end !== "string") {
-    return [];
-  }
-
-  if (!isValidDateTime(start) || !isValidDateTime(end)) {
-    return [];
-  }
-
-  if (typeof unit !== "string") {
-    return [];
-  }
-
-  const resolvedUnit = resolveDurationUnit(unit);
-
-  // An unknown unit is invalid whatever the span, a zero-length one included.
-  if (!isValidDateTimeDurationUnit(resolvedUnit)) {
-    return [];
-  }
-
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return [];
-  }
-
-  const maxPieces = resolveMaxPieces(options);
-
-  if (maxPieces === null) {
-    return [];
-  }
-
   try {
-    const startVal = Temporal.PlainDateTime.from(start);
-    const endVal = Temporal.PlainDateTime.from(end);
-
-    if (Temporal.PlainDateTime.compare(startVal, endVal) > 0) {
+    if (typeof start !== "string" || typeof end !== "string") {
       return [];
     }
 
-    if (Temporal.PlainDateTime.compare(startVal, endVal) === 0) {
-      return [{ start: startVal.toString(), end: endVal.toString() }];
+    if (!isValidDateTime(start) || !isValidDateTime(end)) {
+      return [];
     }
 
-    const spanNs = startVal
-      .until(endVal, { largestUnit: "hours" })
-      .total("nanoseconds");
+    if (typeof unit !== "string") {
+      return [];
+    }
 
-    if (
-      exceedsPieceLimit(
-        minSlicesForSpan(spanNs, resolvedUnit, amount, false),
+    const resolvedUnit = resolveDurationUnit(unit);
+
+    // An unknown unit is invalid whatever the span, a zero-length one included.
+    if (!isValidDateTimeDurationUnit(resolvedUnit)) {
+      return [];
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return [];
+    }
+
+    const maxPieces = resolveMaxPieces(options);
+
+    if (maxPieces === null) {
+      return [];
+    }
+
+    try {
+      const startVal = Temporal.PlainDateTime.from(start);
+      const endVal = Temporal.PlainDateTime.from(end);
+
+      if (Temporal.PlainDateTime.compare(startVal, endVal) > 0) {
+        return [];
+      }
+
+      if (Temporal.PlainDateTime.compare(startVal, endVal) === 0) {
+        return [{ start: startVal.toString(), end: endVal.toString() }];
+      }
+
+      const spanNs = startVal
+        .until(endVal, { largestUnit: "hours" })
+        .total("nanoseconds");
+
+      if (
+        exceedsPieceLimit(
+          minSlicesForSpan(spanNs, resolvedUnit, amount, false),
+          maxPieces,
+        )
+      ) {
+        return [];
+      }
+
+      const slices = tileByUnit(
+        startVal,
+        endVal,
+        Temporal.PlainDateTime.compare,
+        resolvedUnit,
+        amount,
         maxPieces,
-      )
-    ) {
+      );
+
+      return (slices ?? []).map(([sliceStart, sliceEnd]) => ({
+        start: sliceStart.toString(),
+        end: sliceEnd.toString(),
+      }));
+    } catch {
       return [];
     }
-
-    const slices = tileByUnit(
-      startVal,
-      endVal,
-      Temporal.PlainDateTime.compare,
-      resolvedUnit,
-      amount,
-      maxPieces,
-    );
-
-    return (slices ?? []).map(([sliceStart, sliceEnd]) => ({
-      start: sliceStart.toString(),
-      end: sliceEnd.toString(),
-    }));
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

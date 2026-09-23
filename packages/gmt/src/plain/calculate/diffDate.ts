@@ -66,46 +66,52 @@ export function diffDate(
     | Array<DateDurationUnit | Temporal.DateUnit>,
   options?: RoundingOptions<Temporal.DateUnit>,
 ): number | Record<DateDurationUnit, number> | null {
-  // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
-  if (!isOptionsArgument(options)) {
-    return null;
-  }
-  const validDates = isValidCalendarDate(date1) && isValidCalendarDate(date2);
-  // Singular names resolve to their plural (Temporal §13.17); record keys are the plural names.
-  const resolved = Array.isArray(unitArg)
-    ? unitArg.map((unit) => resolveDurationUnit(unit))
-    : resolveDurationUnit(unitArg);
-  const isSingleUnit = !Array.isArray(resolved);
-  const validUnits = isSingleUnit
-    ? isValidDateDurationUnit(resolved)
-    : resolved.every(isValidDateDurationUnit);
-
-  if (!validDates || !validUnits) {
-    return null;
-  }
-
   try {
-    // An empty units list names no largest unit, so there is nothing to measure.
-    const largestUnit = isSingleUnit
-      ? (resolved as DateDurationUnit)
-      : getLargestDateDurationUnit(resolved as DateDurationUnit[]);
-    if (largestUnit === "") return null;
+    // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
+    if (!isOptionsArgument(options)) {
+      return null;
+    }
+    const validDates = isValidCalendarDate(date1) && isValidCalendarDate(date2);
+    // Singular names resolve to their plural (Temporal §13.17); record keys are the plural names.
+    const resolved = Array.isArray(unitArg)
+      ? unitArg.map((unit) => resolveDurationUnit(unit))
+      : resolveDurationUnit(unitArg);
+    const isSingleUnit = !Array.isArray(resolved);
+    const validUnits = isSingleUnit
+      ? isValidDateDurationUnit(resolved)
+      : resolved.every(isValidDateDurationUnit);
 
-    const { a: d1, b: d2 } = parseCalendarDatePairForArithmetic(date1, date2);
-
-    const duration = plainDateUntil(d1, d2, largestUnit, options);
-
-    // craft record for units passed
-    if (isSingleUnit) {
-      return duration[resolved as DateDurationUnit] ?? 0;
+    if (!validDates || !validUnits) {
+      return null;
     }
 
-    // An unlisted unit between two listed units is carried into the next smaller listed unit.
-    return differenceRecord(d1, duration, resolved as DateDurationUnit[], {
-      add: (from, amount) => plainDateAdd(from, amount),
-      until: (from, to, unit) => plainDateUntil(from, to, unit),
-    });
+    try {
+      // An empty units list names no largest unit, so there is nothing to measure.
+      const largestUnit = isSingleUnit
+        ? (resolved as DateDurationUnit)
+        : getLargestDateDurationUnit(resolved as DateDurationUnit[]);
+      if (largestUnit === "") return null;
+
+      const { a: d1, b: d2 } = parseCalendarDatePairForArithmetic(date1, date2);
+
+      const duration = plainDateUntil(d1, d2, largestUnit, options);
+
+      // craft record for units passed
+      if (isSingleUnit) {
+        return duration[resolved as DateDurationUnit] ?? 0;
+      }
+
+      // An unlisted unit between two listed units is carried into the next smaller listed unit.
+      return differenceRecord(d1, duration, resolved as DateDurationUnit[], {
+        add: (from, amount) => plainDateAdd(from, amount),
+        until: (from, to, unit) => plainDateUntil(from, to, unit),
+      });
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

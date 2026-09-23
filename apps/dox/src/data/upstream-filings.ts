@@ -102,12 +102,19 @@ function isUpstreamFilings(value: unknown): value is UpstreamFilings {
 // `eager: true` + `import: "default"` because a page needs this synchronously
 // at render time, not a dynamic loader; the glob (rather than a static
 // `import`) is what lets the file be absent without failing the build.
-const liveModules = import.meta.glob(
-  "../generated/upstream-filings.live.json",
-  {
-    eager: true,
-    import: "default",
-  },
+//
+// `import.meta.glob` is Vite's, so it exists during an Astro build and not in the plain Node that
+// generates the text surfaces. Guarded rather than assumed: without this, importing this module
+// from `lib/mdx-jsx.ts` — which the `.md`, `llms-full.txt` and retrieval-chunk pipeline runs
+// outside Vite — dies on `glob is not a function`. Outside Vite it takes the committed snapshot,
+// which is the same fallback a missing live file already gets, and the one `upstream check` gates.
+const liveModules = (
+  typeof import.meta.glob === "function"
+    ? import.meta.glob("../generated/upstream-filings.live.json", {
+        eager: true,
+        import: "default",
+      })
+    : {}
 ) as Record<string, unknown>;
 const liveData = Object.values(liveModules)[0];
 

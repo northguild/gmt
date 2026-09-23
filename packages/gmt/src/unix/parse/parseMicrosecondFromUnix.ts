@@ -21,9 +21,15 @@ export function parseMicrosecondFromUnix(
   value: number | string,
   options?: { epochUnit?: UnixUnit; timeZone?: string },
 ): string {
-  if (!isOptionsArgument(options)) {
+  try {
+    if (!isOptionsArgument(options)) {
+      return "";
+    }
+
+    return parseUnitFromUnix(value, "microsecond", options);
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
-
-  return parseUnitFromUnix(value, "microsecond", options);
 }

@@ -21,11 +21,17 @@ export function parseDateFromUtc(
   value: string,
   options?: { timeZone?: string },
 ): string {
-  if (!isOptionsArgument(options)) {
+  try {
+    if (!isOptionsArgument(options)) {
+      return "";
+    }
+
+    const dateTime = utcZonedDateTime(value, options);
+
+    return dateTime === null ? "" : dateTime.toPlainDate().toString();
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
-
-  const dateTime = utcZonedDateTime(value, options);
-
-  return dateTime === null ? "" : dateTime.toPlainDate().toString();
 }

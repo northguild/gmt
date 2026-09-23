@@ -77,40 +77,46 @@ export function roundUnix(
     timeZone?: string;
   },
 ): number | null {
-  if (!isObject(options)) return null;
-
-  const { roundingIncrement, roundingMode } = options;
-  const epochUnit = resolveUnixEpochUnit(options.epochUnit);
-  const timeZone = normalizeTimeZone(options.timeZone);
-  const smallestUnit: unknown =
-    typeof options.smallestUnit === "string"
-      ? resolveDateTimeUnit(options.smallestUnit)
-      : options.smallestUnit;
-
-  if (!timeZone || epochUnit === null || !isValidDateTimeUnit(smallestUnit)) {
-    return null;
-  }
-
-  // Temporal ZonedDateTime.prototype.round: ValidateTemporalUnitValue(smallestUnit, ~time~, « day »)
-  if (!isZonedRoundingUnit(smallestUnit)) {
-    return null;
-  }
-
-  const instant = unixEpochToInstant(value, epochUnit);
-
-  if (instant === null) {
-    return null;
-  }
-
   try {
-    const result = roundZonedDateTime(instant.toZonedDateTimeISO(timeZone), {
-      smallestUnit,
-      roundingIncrement,
-      roundingMode,
-    });
+    if (!isObject(options)) return null;
 
-    return toUnixEpoch(result, epochUnit);
+    const { roundingIncrement, roundingMode } = options;
+    const epochUnit = resolveUnixEpochUnit(options.epochUnit);
+    const timeZone = normalizeTimeZone(options.timeZone);
+    const smallestUnit: unknown =
+      typeof options.smallestUnit === "string"
+        ? resolveDateTimeUnit(options.smallestUnit)
+        : options.smallestUnit;
+
+    if (!timeZone || epochUnit === null || !isValidDateTimeUnit(smallestUnit)) {
+      return null;
+    }
+
+    // Temporal ZonedDateTime.prototype.round: ValidateTemporalUnitValue(smallestUnit, ~time~, « day »)
+    if (!isZonedRoundingUnit(smallestUnit)) {
+      return null;
+    }
+
+    const instant = unixEpochToInstant(value, epochUnit);
+
+    if (instant === null) {
+      return null;
+    }
+
+    try {
+      const result = roundZonedDateTime(instant.toZonedDateTimeISO(timeZone), {
+        smallestUnit,
+        roundingIncrement,
+        roundingMode,
+      });
+
+      return toUnixEpoch(result, epochUnit);
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

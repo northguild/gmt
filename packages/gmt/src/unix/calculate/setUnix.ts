@@ -55,37 +55,43 @@ export function setUnix(
     offset?: Offset;
   },
 ): number | null {
-  if (!isOptionsArgument(options)) {
-    return null;
-  }
-
-  const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
-  const timeZone = normalizeTimeZone(options?.timeZone);
-
-  if (!timeZone || epochUnit === null) return null;
-
-  const instant = unixEpochToInstant(value, epochUnit);
-  if (instant === null) return null;
-
-  const overflow = resolveOverflow(options?.overflow);
-  const disambiguation =
-    options?.disambiguation === undefined
-      ? "compatible"
-      : options.disambiguation;
-  // Temporal ZonedDateTime.prototype.with: GetTemporalOffsetOption(options, "prefer").
-  const offset = options?.offset === undefined ? "prefer" : options.offset;
-
   try {
-    const zoned = instant.toZonedDateTimeISO(timeZone);
-    // Temporal.ZonedDateTime.prototype.with() throws on an empty fields object ("no supported
-    // properties found") rather than treating it as a no-op, so short-circuit here.
-    const result =
-      Object.keys(fields).length === 0
-        ? zoned
-        : withZonedFields(zoned, fields, { overflow, disambiguation, offset });
+    if (!isOptionsArgument(options)) {
+      return null;
+    }
 
-    return toUnixEpoch(result, epochUnit);
+    const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
+    const timeZone = normalizeTimeZone(options?.timeZone);
+
+    if (!timeZone || epochUnit === null) return null;
+
+    const instant = unixEpochToInstant(value, epochUnit);
+    if (instant === null) return null;
+
+    const overflow = resolveOverflow(options?.overflow);
+    const disambiguation =
+      options?.disambiguation === undefined
+        ? "compatible"
+        : options.disambiguation;
+    // Temporal ZonedDateTime.prototype.with: GetTemporalOffsetOption(options, "prefer").
+    const offset = options?.offset === undefined ? "prefer" : options.offset;
+
+    try {
+      const zoned = instant.toZonedDateTimeISO(timeZone);
+      // Temporal.ZonedDateTime.prototype.with() throws on an empty fields object ("no supported
+      // properties found") rather than treating it as a no-op, so short-circuit here.
+      const result =
+        Object.keys(fields).length === 0
+          ? zoned
+          : withZonedFields(zoned, fields, { overflow, disambiguation, offset });
+
+      return toUnixEpoch(result, epochUnit);
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

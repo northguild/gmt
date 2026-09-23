@@ -38,39 +38,45 @@ export function formatRelativeTime(
   locale?: string | string[],
   options: FormatRelativeTimeOptions = {},
 ): string {
-  // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
-  // invalid input.
-  if (options === null || typeof options !== "object") return "";
-  if (!isValidTime(value)) return "";
-  if (options.reference !== undefined && !isValidTime(options.reference))
-    return "";
-
   try {
-    const target = Temporal.PlainTime.from(value);
-    const reference = options.reference
-      ? Temporal.PlainTime.from(options.reference)
-      : Temporal.Now.plainTimeISO();
+    // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
+    // invalid input.
+    if (options === null || typeof options !== "object") return "";
+    if (!isValidTime(value)) return "";
+    if (options.reference !== undefined && !isValidTime(options.reference))
+      return "";
 
-    const diff = target.since(reference);
-    const absSeconds = Math.abs(diff.total("second"));
+    try {
+      const target = Temporal.PlainTime.from(value);
+      const reference = options.reference
+        ? Temporal.PlainTime.from(options.reference)
+        : Temporal.Now.plainTimeISO();
 
-    const unit =
-      options.largestUnit === undefined
-        ? (AUTO_UNITS.find((t) => absSeconds < t.maxSeconds)?.unit ?? "hour")
-        : options.largestUnit;
+      const diff = target.since(reference);
+      const absSeconds = Math.abs(diff.total("second"));
 
-    const amount = resolveRelativeRounding(
-      diff.total(unit),
-      options.roundingMethod,
-    );
+      const unit =
+        options.largestUnit === undefined
+          ? (AUTO_UNITS.find((t) => absSeconds < t.maxSeconds)?.unit ?? "hour")
+          : options.largestUnit;
 
-    return normalizeDateTime(
-      new Intl.RelativeTimeFormat(locale, {
-        numeric: options.numeric === undefined ? "auto" : options.numeric,
-        style: options.style === undefined ? "long" : options.style,
-      }).format(amount, unit),
-    );
+      const amount = resolveRelativeRounding(
+        diff.total(unit),
+        options.roundingMethod,
+      );
+
+      return normalizeDateTime(
+        new Intl.RelativeTimeFormat(locale, {
+          numeric: options.numeric === undefined ? "auto" : options.numeric,
+          style: options.style === undefined ? "long" : options.style,
+        }).format(amount, unit),
+      );
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

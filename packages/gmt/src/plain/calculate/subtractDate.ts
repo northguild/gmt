@@ -41,34 +41,40 @@ export function subtractDate(
   units: Partial<Record<DateDurationUnit, number>>,
   options?: { overflow?: Overflow },
 ): string {
-  if (!isOptionsArgument(options)) {
-    return "";
-  }
-
-  const validDate = isValidCalendarDate(value);
-  const validUnits =
-    typeof units === "object" &&
-    units !== null &&
-    Object.keys(units).every(isValidDateDurationUnit);
-  const validAmounts = validUnits && Object.values(units).every(isValidAmount);
-
-  if (!validDate || !validUnits || !validAmounts) {
-    return "";
-  }
-
   try {
-    const calendar = calendarSystemOfDateValue(value);
-    if (!calendar) {
+    if (!isOptionsArgument(options)) {
       return "";
     }
-    const date = parseCalendarDateValue(value);
-    const result = plainDateAdd(
-      date,
-      Temporal.Duration.from(units).negated(),
-      resolveOverflow(options?.overflow),
-    );
-    return formatDateInCalendar(result, calendar);
+
+    const validDate = isValidCalendarDate(value);
+    const validUnits =
+      typeof units === "object" &&
+      units !== null &&
+      Object.keys(units).every(isValidDateDurationUnit);
+    const validAmounts = validUnits && Object.values(units).every(isValidAmount);
+
+    if (!validDate || !validUnits || !validAmounts) {
+      return "";
+    }
+
+    try {
+      const calendar = calendarSystemOfDateValue(value);
+      if (!calendar) {
+        return "";
+      }
+      const date = parseCalendarDateValue(value);
+      const result = plainDateAdd(
+        date,
+        Temporal.Duration.from(units).negated(),
+        resolveOverflow(options?.overflow),
+      );
+      return formatDateInCalendar(result, calendar);
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

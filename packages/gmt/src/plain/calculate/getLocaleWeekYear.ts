@@ -49,20 +49,26 @@ export function getLocaleWeekYear(
   locale: string | string[],
   options?: { minimalDays?: number },
 ): number | null {
-  if (!isOptionsArgument(options)) {
-    return null;
-  }
-
-  if (!isValidDate(value)) return null;
-
-  const firstDay = getLocaleFirstDayOfWeek(locale);
-  const minimalDays = resolveMinimalDaysInFirstWeek(options);
-  if (firstDay === null || minimalDays === null) return null;
-
   try {
-    const date = Temporal.PlainDate.from(value);
-    return getLocaleWeekYearBounds(date, firstDay, minimalDays).weekYear;
+    if (!isOptionsArgument(options)) {
+      return null;
+    }
+
+    if (!isValidDate(value)) return null;
+
+    const firstDay = getLocaleFirstDayOfWeek(locale);
+    const minimalDays = resolveMinimalDaysInFirstWeek(options);
+    if (firstDay === null || minimalDays === null) return null;
+
+    try {
+      const date = Temporal.PlainDate.from(value);
+      return getLocaleWeekYearBounds(date, firstDay, minimalDays).weekYear;
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

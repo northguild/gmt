@@ -39,68 +39,74 @@ export function mapZonedDatesInRange(
   stepDays?: number,
   options?: { maxPieces?: number },
 ): string[] {
-  // An explicit undefined is the omitted argument, as TC39 GetOption treats it.
-  const resolvedStepDays = stepDays === undefined ? 1 : stepDays;
-
-  if (
-    typeof resolvedStepDays !== "number" ||
-    !Number.isInteger(resolvedStepDays) ||
-    resolvedStepDays <= 0
-  ) {
-    return [];
-  }
-
-  const maxPieces = resolveMaxPieces(options);
-
-  if (maxPieces === null) {
-    return [];
-  }
-
-  if (
-    !isValidZonedDateTime(startZonedDateTime) ||
-    !isValidZonedDateTime(endZonedDateTime)
-  ) {
-    return [];
-  }
-
   try {
-    let start: Temporal.ZonedDateTime;
-    let end: Temporal.ZonedDateTime;
+    // An explicit undefined is the omitted argument, as TC39 GetOption treats it.
+    const resolvedStepDays = stepDays === undefined ? 1 : stepDays;
+
+    if (
+      typeof resolvedStepDays !== "number" ||
+      !Number.isInteger(resolvedStepDays) ||
+      resolvedStepDays <= 0
+    ) {
+      return [];
+    }
+
+    const maxPieces = resolveMaxPieces(options);
+
+    if (maxPieces === null) {
+      return [];
+    }
+
+    if (
+      !isValidZonedDateTime(startZonedDateTime) ||
+      !isValidZonedDateTime(endZonedDateTime)
+    ) {
+      return [];
+    }
+
     try {
-      start = zonedDateTimeFrom(startZonedDateTime);
-      end = zonedDateTimeFrom(endZonedDateTime);
+      let start: Temporal.ZonedDateTime;
+      let end: Temporal.ZonedDateTime;
+      try {
+        start = zonedDateTimeFrom(startZonedDateTime);
+        end = zonedDateTimeFrom(endZonedDateTime);
+      } catch {
+        return [];
+      }
+
+      if (start.timeZoneId !== end.timeZoneId) {
+        return [];
+      }
+
+      const startDate = start.toPlainDate();
+      const endDate = end.toPlainDate();
+
+      if (Temporal.PlainDate.compare(startDate, endDate) === 1) {
+        return [];
+      }
+
+      const count =
+        Math.floor(startDate.until(endDate).days / resolvedStepDays) + 1;
+
+      if (exceedsPieceLimit(count, maxPieces)) {
+        return [];
+      }
+
+      // Each date is anchored at the start (start + k·step) and only the `count` in-range dates are
+      // built, so no step past the end is taken — a range ending on Temporal's date limit keeps its
+      // dates instead of throwing on the step after the last one.
+      const result: string[] = [];
+      for (let index = 0; index < count; index++) {
+        result.push(startDate.add({ days: index * resolvedStepDays }).toString());
+      }
+
+      return result;
     } catch {
       return [];
     }
-
-    if (start.timeZoneId !== end.timeZoneId) {
-      return [];
-    }
-
-    const startDate = start.toPlainDate();
-    const endDate = end.toPlainDate();
-
-    if (Temporal.PlainDate.compare(startDate, endDate) === 1) {
-      return [];
-    }
-
-    const count =
-      Math.floor(startDate.until(endDate).days / resolvedStepDays) + 1;
-
-    if (exceedsPieceLimit(count, maxPieces)) {
-      return [];
-    }
-
-    // Each date is anchored at the start (start + k·step) and only the `count` in-range dates are
-    // built, so no step past the end is taken — a range ending on Temporal's date limit keeps its
-    // dates instead of throwing on the step after the last one.
-    const result: string[] = [];
-    for (let index = 0; index < count; index++) {
-      result.push(startDate.add({ days: index * resolvedStepDays }).toString());
-    }
-
-    return result;
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

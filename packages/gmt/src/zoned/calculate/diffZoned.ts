@@ -81,54 +81,60 @@ export function diffZoned(
     | Array<DateTimeDurationUnit | Temporal.DateTimeUnit>,
   options?: RoundingOptions<Temporal.DateTimeUnit>,
 ): number | Record<DateTimeDurationUnit, number> | null {
-  // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
-  if (!isOptionsArgument(options)) {
-    return null;
-  }
-  const validZonedDateTimes =
-    isValidCalendarZonedDateTime(value1) &&
-    isValidCalendarZonedDateTime(value2);
-  // Singular names resolve to their plural (Temporal §13.17); record keys are the plural names.
-  const resolved = Array.isArray(units)
-    ? units.map((unit) => resolveDurationUnit(unit))
-    : resolveDurationUnit(units);
-  const isSingleUnit = !Array.isArray(resolved);
-  const validUnits = isSingleUnit
-    ? isValidDateTimeDurationUnit(resolved)
-    : resolved.every(isValidDateTimeDurationUnit);
-
-  if (!validZonedDateTimes || !validUnits) {
-    return null;
-  }
-
   try {
-    const { a, b } = parseCalendarZonedPairForArithmetic(value1, value2);
-    const largestUnit = isSingleUnit
-      ? (resolved as DateTimeDurationUnit)
-      : getLargestDateTimeDurationUnit(resolved as DateTimeDurationUnit[]);
-    if (largestUnit === "") return null;
-    if (isCalendarDifferenceAcrossZones(a, b, largestUnit)) {
+    // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
+    if (!isOptionsArgument(options)) {
+      return null;
+    }
+    const validZonedDateTimes =
+      isValidCalendarZonedDateTime(value1) &&
+      isValidCalendarZonedDateTime(value2);
+    // Singular names resolve to their plural (Temporal §13.17); record keys are the plural names.
+    const resolved = Array.isArray(units)
+      ? units.map((unit) => resolveDurationUnit(unit))
+      : resolveDurationUnit(units);
+    const isSingleUnit = !Array.isArray(resolved);
+    const validUnits = isSingleUnit
+      ? isValidDateTimeDurationUnit(resolved)
+      : resolved.every(isValidDateTimeDurationUnit);
+
+    if (!validZonedDateTimes || !validUnits) {
       return null;
     }
 
-    const duration = zonedUntil(a, b, {
-      largestUnit,
-      smallestUnit: options?.smallestUnit,
-      roundingIncrement: options?.roundingIncrement,
-      roundingMode: options?.roundingMode,
-    });
+    try {
+      const { a, b } = parseCalendarZonedPairForArithmetic(value1, value2);
+      const largestUnit = isSingleUnit
+        ? (resolved as DateTimeDurationUnit)
+        : getLargestDateTimeDurationUnit(resolved as DateTimeDurationUnit[]);
+      if (largestUnit === "") return null;
+      if (isCalendarDifferenceAcrossZones(a, b, largestUnit)) {
+        return null;
+      }
 
-    if (isSingleUnit) {
-      return duration[resolved as DateTimeDurationUnit] ?? 0;
+      const duration = zonedUntil(a, b, {
+        largestUnit,
+        smallestUnit: options?.smallestUnit,
+        roundingIncrement: options?.roundingIncrement,
+        roundingMode: options?.roundingMode,
+      });
+
+      if (isSingleUnit) {
+        return duration[resolved as DateTimeDurationUnit] ?? 0;
+      }
+
+      // An unlisted unit between two listed units is carried into the next smaller listed unit.
+      return differenceRecord(a, duration, resolved as DateTimeDurationUnit[], {
+        add: (from, amount) => addToZoned(from, amount),
+        until: (from, to, largest) =>
+          zonedUntil(from, to, { largestUnit: largest as Temporal.DateTimeUnit }),
+      });
+    } catch {
+      return null;
     }
-
-    // An unlisted unit between two listed units is carried into the next smaller listed unit.
-    return differenceRecord(a, duration, resolved as DateTimeDurationUnit[], {
-      add: (from, amount) => addToZoned(from, amount),
-      until: (from, to, largest) =>
-        zonedUntil(from, to, { largestUnit: largest as Temporal.DateTimeUnit }),
-    });
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

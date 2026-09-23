@@ -47,28 +47,34 @@ export function getLocaleZonedStartOfWeek(
     fractionalSecondDigits?: FractionalDigit;
   },
 ): string {
-  if (!isOptionsArgument(optionsArg)) {
-    return "";
-  }
-
-  const fractionalSecondDigits =
-    optionsArg?.fractionalSecondDigits === undefined
-      ? 0
-      : optionsArg.fractionalSecondDigits;
-
-  if (!isValidZonedDateTime(value)) return "";
-
-  const firstDay = getLocaleFirstDayOfWeek(locale);
-  if (firstDay === null) return "";
-
   try {
-    const start = zonedUnitStart(
-      zonedDateTimeFrom(value),
-      "week",
-      firstDay as WeekStartDay,
-    );
-    return start ? start.toString({ fractionalSecondDigits }) : "";
+    if (!isOptionsArgument(optionsArg)) {
+      return "";
+    }
+
+    const fractionalSecondDigits =
+      optionsArg?.fractionalSecondDigits === undefined
+        ? 0
+        : optionsArg.fractionalSecondDigits;
+
+    if (!isValidZonedDateTime(value)) return "";
+
+    const firstDay = getLocaleFirstDayOfWeek(locale);
+    if (firstDay === null) return "";
+
+    try {
+      const start = zonedUnitStart(
+        zonedDateTimeFrom(value),
+        "week",
+        firstDay as WeekStartDay,
+      );
+      return start ? start.toString({ fractionalSecondDigits }) : "";
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

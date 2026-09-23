@@ -28,16 +28,22 @@ import { halfOpenMerge, parseUnixEpochIntervalList } from "../../internal";
 export function mergeIntervalsUnix(
   intervals: Array<{ start: number | string; end: number | string }>,
 ): Array<{ start: number; end: number }> {
-  if (!Array.isArray(intervals) || intervals.length === 0) {
+  try {
+    if (!Array.isArray(intervals) || intervals.length === 0) {
+      return [];
+    }
+
+    const parsed = parseUnixEpochIntervalList(intervals);
+
+    if (parsed === null) {
+      return [];
+    }
+
+    // Sorted, disjoint, non-touching, non-empty runs.
+    return halfOpenMerge(parsed, (left, right) => left - right);
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
-
-  const parsed = parseUnixEpochIntervalList(intervals);
-
-  if (parsed === null) {
-    return [];
-  }
-
-  // Sorted, disjoint, non-touching, non-empty runs.
-  return halfOpenMerge(parsed, (left, right) => left - right);
 }

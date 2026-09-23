@@ -38,41 +38,47 @@ import { isValidDateInterval } from "./validate";
 export function mergeIntervalsDate(
   intervals: Array<{ start: string; end: string }>,
 ): Array<{ start: string; end: string }> {
-  if (!Array.isArray(intervals) || intervals.length === 0) {
-    return [];
-  }
-
-  if (
-    !intervals.every(
-      (interval) =>
-        interval &&
-        typeof interval === "object" &&
-        isValidDateInterval(interval.start, interval.end),
-    )
-  ) {
-    return [];
-  }
-
-  const calendar = calendarOfAllDateValues(
-    intervals.flatMap((interval) => [interval.start, interval.end]),
-  );
-  if (!calendar) {
-    return [];
-  }
-
   try {
-    const parsed = intervals.map((interval) => ({
-      start: parseCalendarDateValue(interval.start),
-      end: parseCalendarDateValue(interval.end),
-    }));
+    if (!Array.isArray(intervals) || intervals.length === 0) {
+      return [];
+    }
 
-    const merged = halfOpenMerge(parsed, Temporal.PlainDate.compare);
+    if (
+      !intervals.every(
+        (interval) =>
+          interval &&
+          typeof interval === "object" &&
+          isValidDateInterval(interval.start, interval.end),
+      )
+    ) {
+      return [];
+    }
 
-    return merged.map((interval) => ({
-      start: formatDateInCalendar(interval.start, calendar),
-      end: formatDateInCalendar(interval.end, calendar),
-    }));
+    const calendar = calendarOfAllDateValues(
+      intervals.flatMap((interval) => [interval.start, interval.end]),
+    );
+    if (!calendar) {
+      return [];
+    }
+
+    try {
+      const parsed = intervals.map((interval) => ({
+        start: parseCalendarDateValue(interval.start),
+        end: parseCalendarDateValue(interval.end),
+      }));
+
+      const merged = halfOpenMerge(parsed, Temporal.PlainDate.compare);
+
+      return merged.map((interval) => ({
+        start: formatDateInCalendar(interval.start, calendar),
+        end: formatDateInCalendar(interval.end, calendar),
+      }));
+    } catch {
+      return [];
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

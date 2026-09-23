@@ -45,65 +45,71 @@ export function intervalDivideEquallyDateTime(
   n: number,
   options?: { maxPieces?: number },
 ): Array<{ start: string; end: string }> {
-  if (typeof n !== "number" || !Number.isInteger(n) || n <= 0) {
-    return [];
-  }
-
-  const maxPieces = resolveMaxPieces(options);
-
-  if (maxPieces === null || exceedsPieceLimit(n, maxPieces)) {
-    return [];
-  }
-
-  if (!isValidDateTimeInterval(start, end)) {
-    return [];
-  }
-
   try {
-    const startVal = Temporal.PlainDateTime.from(start);
-    const endVal = Temporal.PlainDateTime.from(end);
-
-    if (startVal.equals(endVal)) {
-      return Array.from({ length: n }, () => ({
-        start: startVal.toString(),
-        end: endVal.toString(),
-      }));
+    if (typeof n !== "number" || !Number.isInteger(n) || n <= 0) {
+      return [];
     }
 
-    // A PlainDateTime has no DST, so every day is 86,400 s. The span is read in whole fields
-    // (days, then time below a day), each an exact integer, and summed in bigint.
-    const span = startVal.until(endVal, { largestUnit: "day" });
-    const totalNs =
-      BigInt(span.days) * NANOSECONDS_PER_DAY +
-      BigInt(span.hours) * 3_600_000_000_000n +
-      BigInt(span.minutes) * 60_000_000_000n +
-      BigInt(span.seconds) * 1_000_000_000n +
-      BigInt(span.milliseconds) * 1_000_000n +
-      BigInt(span.microseconds) * 1_000n +
-      BigInt(span.nanoseconds);
+    const maxPieces = resolveMaxPieces(options);
 
-    const boundaries: Temporal.PlainDateTime[] = [startVal];
-    for (let i = 1; i < n; i++) {
-      const offsetNs = divisionBoundary(totalNs, i, n);
-      boundaries.push(
-        startVal.add({
-          days: Number(offsetNs / NANOSECONDS_PER_DAY),
-          nanoseconds: Number(offsetNs % NANOSECONDS_PER_DAY),
-        }),
-      );
-    }
-    boundaries.push(endVal);
-
-    const result: Array<{ start: string; end: string }> = [];
-    for (let i = 0; i < boundaries.length - 1; i++) {
-      result.push({
-        start: boundaries[i].toString(),
-        end: boundaries[i + 1].toString(),
-      });
+    if (maxPieces === null || exceedsPieceLimit(n, maxPieces)) {
+      return [];
     }
 
-    return result;
+    if (!isValidDateTimeInterval(start, end)) {
+      return [];
+    }
+
+    try {
+      const startVal = Temporal.PlainDateTime.from(start);
+      const endVal = Temporal.PlainDateTime.from(end);
+
+      if (startVal.equals(endVal)) {
+        return Array.from({ length: n }, () => ({
+          start: startVal.toString(),
+          end: endVal.toString(),
+        }));
+      }
+
+      // A PlainDateTime has no DST, so every day is 86,400 s. The span is read in whole fields
+      // (days, then time below a day), each an exact integer, and summed in bigint.
+      const span = startVal.until(endVal, { largestUnit: "day" });
+      const totalNs =
+        BigInt(span.days) * NANOSECONDS_PER_DAY +
+        BigInt(span.hours) * 3_600_000_000_000n +
+        BigInt(span.minutes) * 60_000_000_000n +
+        BigInt(span.seconds) * 1_000_000_000n +
+        BigInt(span.milliseconds) * 1_000_000n +
+        BigInt(span.microseconds) * 1_000n +
+        BigInt(span.nanoseconds);
+
+      const boundaries: Temporal.PlainDateTime[] = [startVal];
+      for (let i = 1; i < n; i++) {
+        const offsetNs = divisionBoundary(totalNs, i, n);
+        boundaries.push(
+          startVal.add({
+            days: Number(offsetNs / NANOSECONDS_PER_DAY),
+            nanoseconds: Number(offsetNs % NANOSECONDS_PER_DAY),
+          }),
+        );
+      }
+      boundaries.push(endVal);
+
+      const result: Array<{ start: string; end: string }> = [];
+      for (let i = 0; i < boundaries.length - 1; i++) {
+        result.push({
+          start: boundaries[i].toString(),
+          end: boundaries[i + 1].toString(),
+        });
+      }
+
+      return result;
+    } catch {
+      return [];
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

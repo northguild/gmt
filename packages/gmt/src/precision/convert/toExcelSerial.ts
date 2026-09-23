@@ -72,49 +72,55 @@ export function toExcelSerial(
   isoString: string,
   options?: { system?: ExcelDateSystem },
 ): number | null {
-  if (!isOptionsArgument(options)) {
+  try {
+    if (!isOptionsArgument(options)) {
+      return null;
+    }
+
+    const system = options?.system === undefined ? "1900" : options.system;
+
+    if (system !== "1900" && system !== "1904") {
+      return null;
+    }
+
+    const nanoseconds = parseInstantNanoseconds(isoString);
+
+    if (nanoseconds === null) {
+      return null;
+    }
+
+    const epochNanoseconds =
+      system === "1904"
+        ? EXCEL_1904_EPOCH_NANOSECONDS
+        : nanoseconds >= EXCEL_1900_PHANTOM_END_NANOSECONDS
+          ? EXCEL_1900_EPOCH_NANOSECONDS
+          : EXCEL_1900_PRE_PHANTOM_EPOCH_NANOSECONDS;
+
+    // Split the day count from the intra-day remainder so the whole-day part stays exact:
+    // a single `Number(...) / 86400e9` would round the day count through the same double as
+    // the fraction, and the serials Excel actually stores are mostly whole days.
+    const sinceEpoch = nanoseconds - epochNanoseconds;
+    const days = floorDivide(sinceEpoch, NANOSECONDS_PER_DAY);
+    const serial =
+      Number(days) +
+      Number(sinceEpoch - days * NANOSECONDS_PER_DAY) /
+        NANOSECONDS_PER_DAY_NUMBER;
+
+    const minimum =
+      system === "1904" ? MIN_EXCEL_1904_SERIAL : MIN_EXCEL_1900_SERIAL;
+    const maximumExclusive =
+      system === "1904"
+        ? MAX_EXCEL_1904_SERIAL_EXCLUSIVE
+        : MAX_EXCEL_1900_SERIAL_EXCLUSIVE;
+
+    if (serial < minimum || serial >= maximumExclusive) {
+      return null;
+    }
+
+    return serial;
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
-
-  const system = options?.system === undefined ? "1900" : options.system;
-
-  if (system !== "1900" && system !== "1904") {
-    return null;
-  }
-
-  const nanoseconds = parseInstantNanoseconds(isoString);
-
-  if (nanoseconds === null) {
-    return null;
-  }
-
-  const epochNanoseconds =
-    system === "1904"
-      ? EXCEL_1904_EPOCH_NANOSECONDS
-      : nanoseconds >= EXCEL_1900_PHANTOM_END_NANOSECONDS
-        ? EXCEL_1900_EPOCH_NANOSECONDS
-        : EXCEL_1900_PRE_PHANTOM_EPOCH_NANOSECONDS;
-
-  // Split the day count from the intra-day remainder so the whole-day part stays exact:
-  // a single `Number(...) / 86400e9` would round the day count through the same double as
-  // the fraction, and the serials Excel actually stores are mostly whole days.
-  const sinceEpoch = nanoseconds - epochNanoseconds;
-  const days = floorDivide(sinceEpoch, NANOSECONDS_PER_DAY);
-  const serial =
-    Number(days) +
-    Number(sinceEpoch - days * NANOSECONDS_PER_DAY) /
-      NANOSECONDS_PER_DAY_NUMBER;
-
-  const minimum =
-    system === "1904" ? MIN_EXCEL_1904_SERIAL : MIN_EXCEL_1900_SERIAL;
-  const maximumExclusive =
-    system === "1904"
-      ? MAX_EXCEL_1904_SERIAL_EXCLUSIVE
-      : MAX_EXCEL_1900_SERIAL_EXCLUSIVE;
-
-  if (serial < minimum || serial >= maximumExclusive) {
-    return null;
-  }
-
-  return serial;
 }

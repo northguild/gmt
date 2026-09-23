@@ -19,43 +19,49 @@ import { zonedDateTimeFrom } from "../../internal";
  * @example closestZonedTo("invalid", ["2024-03-01T00:00:00+00:00[UTC]"]) // ""
  */
 export function closestZonedTo(target: string, candidates: string[]): string {
-  if (
-    !isValidZonedDateTime(target) ||
-    !Array.isArray(candidates) ||
-    !candidates.length
-  ) {
-    return "";
-  }
-
   try {
-    const t = zonedDateTimeFrom(target);
-    const validCandidates = candidates.filter(isValidZonedDateTime);
-
-    if (!validCandidates.length) {
+    if (
+      !isValidZonedDateTime(target) ||
+      !Array.isArray(candidates) ||
+      !candidates.length
+    ) {
       return "";
     }
 
-    const parsed = validCandidates.map((c) => ({
-      str: c,
-      date: zonedDateTimeFrom(c),
-    }));
+    try {
+      const t = zonedDateTimeFrom(target);
+      const validCandidates = candidates.filter(isValidZonedDateTime);
 
-    const closest = parsed.reduce((best, candidate) => {
-      const bestDist =
-        Math.abs(
-          best.date.toInstant().epochMilliseconds -
-            t.toInstant().epochMilliseconds,
-        ) / 86400000;
-      const candDist =
-        Math.abs(
-          candidate.date.toInstant().epochMilliseconds -
-            t.toInstant().epochMilliseconds,
-        ) / 86400000;
-      return candDist < bestDist ? candidate : best;
-    }, parsed[0]);
+      if (!validCandidates.length) {
+        return "";
+      }
 
-    return closest.date.toString();
+      const parsed = validCandidates.map((c) => ({
+        str: c,
+        date: zonedDateTimeFrom(c),
+      }));
+
+      const closest = parsed.reduce((best, candidate) => {
+        const bestDist =
+          Math.abs(
+            best.date.toInstant().epochMilliseconds -
+              t.toInstant().epochMilliseconds,
+          ) / 86400000;
+        const candDist =
+          Math.abs(
+            candidate.date.toInstant().epochMilliseconds -
+              t.toInstant().epochMilliseconds,
+          ) / 86400000;
+        return candDist < bestDist ? candidate : best;
+      }, parsed[0]);
+
+      return closest.date.toString();
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

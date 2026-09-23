@@ -43,14 +43,20 @@ export function endOfUnix(
     weekStartsOn?: "monday" | "sunday";
   },
 ): number | null {
-  if (!isOptionsArgument(options)) {
+  try {
+    if (!isOptionsArgument(options)) {
+      return null;
+    }
+
+    const resolvedUnit =
+      typeof unit === "string" ? resolveDateTimeUnit(unit) : unit;
+
+    if (!isValidDateTimeUnit(resolvedUnit)) return null;
+
+    return startOrEndOfUnix(value, resolvedUnit, options ?? {}, true);
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
-
-  const resolvedUnit =
-    typeof unit === "string" ? resolveDateTimeUnit(unit) : unit;
-
-  if (!isValidDateTimeUnit(resolvedUnit)) return null;
-
-  return startOrEndOfUnix(value, resolvedUnit, options ?? {}, true);
 }

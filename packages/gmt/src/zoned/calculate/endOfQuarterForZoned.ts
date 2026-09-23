@@ -30,25 +30,31 @@ export function endOfQuarterForZoned(
     fractionalSecondDigits?: FractionalDigit;
   },
 ): string {
-  if (!isOptionsArgument(optionsArg)) {
-    return "";
-  }
-
-  if (!isValidZonedDateTime(value)) {
-    return "";
-  }
-
-  // An end is next start − 1 ns, so it defaults to nanosecond precision: fewer digits would
-  // print an earlier instant than the end (Calendar & zone semantics §3).
-  const fractionalSecondDigits =
-    optionsArg?.fractionalSecondDigits === undefined
-      ? 9
-      : optionsArg.fractionalSecondDigits;
-
   try {
-    const end = zonedUnitEnd(zonedDateTimeFrom(value), "quarter");
-    return end ? end.toString({ fractionalSecondDigits }) : "";
+    if (!isOptionsArgument(optionsArg)) {
+      return "";
+    }
+
+    if (!isValidZonedDateTime(value)) {
+      return "";
+    }
+
+    // An end is next start − 1 ns, so it defaults to nanosecond precision: fewer digits would
+    // print an earlier instant than the end (Calendar & zone semantics §3).
+    const fractionalSecondDigits =
+      optionsArg?.fractionalSecondDigits === undefined
+        ? 9
+        : optionsArg.fractionalSecondDigits;
+
+    try {
+      const end = zonedUnitEnd(zonedDateTimeFrom(value), "quarter");
+      return end ? end.toString({ fractionalSecondDigits }) : "";
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

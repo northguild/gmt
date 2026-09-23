@@ -120,21 +120,27 @@ export function rollDate(
   convention: RollConvention,
   calendar: BusinessCalendar,
 ): string {
-  const resolved = parseBusinessCalendar(calendar);
-
-  if (
-    !isValidDate(value) ||
-    !isValidRollConvention(convention) ||
-    resolved === null
-  ) {
-    return "";
-  }
-
   try {
-    const rolled = rollTo(Temporal.PlainDate.from(value), convention, resolved);
+    const resolved = parseBusinessCalendar(calendar);
 
-    return rolled === null ? "" : rolled.toString();
+    if (
+      !isValidDate(value) ||
+      !isValidRollConvention(convention) ||
+      resolved === null
+    ) {
+      return "";
+    }
+
+    try {
+      const rolled = rollTo(Temporal.PlainDate.from(value), convention, resolved);
+
+      return rolled === null ? "" : rolled.toString();
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

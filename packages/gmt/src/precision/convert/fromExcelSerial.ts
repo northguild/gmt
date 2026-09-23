@@ -52,57 +52,63 @@ export function fromExcelSerial(
   value: number,
   options?: { system?: ExcelDateSystem },
 ): string {
-  if (!isOptionsArgument(options)) {
-    return "";
-  }
+  try {
+    if (!isOptionsArgument(options)) {
+      return "";
+    }
 
-  const system = options?.system === undefined ? "1900" : options.system;
+    const system = options?.system === undefined ? "1900" : options.system;
 
-  if (system !== "1900" && system !== "1904") {
-    return "";
-  }
+    if (system !== "1900" && system !== "1904") {
+      return "";
+    }
 
-  if (!Number.isFinite(value)) {
-    return "";
-  }
+    if (!Number.isFinite(value)) {
+      return "";
+    }
 
-  // Snap to the millisecond grid before deciding anything: the range and phantom-day
-  // comparisons must be made against the value actually built, not against a serial that
-  // rounds across a boundary on the way there.
-  const dayMilliseconds = Math.round(value * MILLISECONDS_PER_DAY);
+    // Snap to the millisecond grid before deciding anything: the range and phantom-day
+    // comparisons must be made against the value actually built, not against a serial that
+    // rounds across a boundary on the way there.
+    const dayMilliseconds = Math.round(value * MILLISECONDS_PER_DAY);
 
-  const minimum =
-    system === "1904" ? MIN_EXCEL_1904_SERIAL : MIN_EXCEL_1900_SERIAL;
-  const maximumExclusive =
-    system === "1904"
-      ? MAX_EXCEL_1904_SERIAL_EXCLUSIVE
-      : MAX_EXCEL_1900_SERIAL_EXCLUSIVE;
+    const minimum =
+      system === "1904" ? MIN_EXCEL_1904_SERIAL : MIN_EXCEL_1900_SERIAL;
+    const maximumExclusive =
+      system === "1904"
+        ? MAX_EXCEL_1904_SERIAL_EXCLUSIVE
+        : MAX_EXCEL_1900_SERIAL_EXCLUSIVE;
 
-  if (
-    dayMilliseconds < minimum * MILLISECONDS_PER_DAY ||
-    dayMilliseconds >= maximumExclusive * MILLISECONDS_PER_DAY
-  ) {
-    return "";
-  }
+    if (
+      dayMilliseconds < minimum * MILLISECONDS_PER_DAY ||
+      dayMilliseconds >= maximumExclusive * MILLISECONDS_PER_DAY
+    ) {
+      return "";
+    }
 
-  if (system === "1904") {
+    if (system === "1904") {
+      return fromNanoseconds(
+        BigInt(dayMilliseconds) * NANOSECONDS_PER_MILLISECOND +
+          EXCEL_1904_EPOCH_NANOSECONDS,
+      );
+    }
+
+    const phantomStart = EXCEL_PHANTOM_SERIAL * MILLISECONDS_PER_DAY;
+    const phantomEnd = (EXCEL_PHANTOM_SERIAL + 1) * MILLISECONDS_PER_DAY;
+
+    if (dayMilliseconds >= phantomStart && dayMilliseconds < phantomEnd) {
+      return "";
+    }
+
     return fromNanoseconds(
       BigInt(dayMilliseconds) * NANOSECONDS_PER_MILLISECOND +
-        EXCEL_1904_EPOCH_NANOSECONDS,
+        (dayMilliseconds >= phantomEnd
+          ? EXCEL_1900_EPOCH_NANOSECONDS
+          : EXCEL_1900_PRE_PHANTOM_EPOCH_NANOSECONDS),
     );
-  }
-
-  const phantomStart = EXCEL_PHANTOM_SERIAL * MILLISECONDS_PER_DAY;
-  const phantomEnd = (EXCEL_PHANTOM_SERIAL + 1) * MILLISECONDS_PER_DAY;
-
-  if (dayMilliseconds >= phantomStart && dayMilliseconds < phantomEnd) {
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
-
-  return fromNanoseconds(
-    BigInt(dayMilliseconds) * NANOSECONDS_PER_MILLISECOND +
-      (dayMilliseconds >= phantomEnd
-        ? EXCEL_1900_EPOCH_NANOSECONDS
-        : EXCEL_1900_PRE_PHANTOM_EPOCH_NANOSECONDS),
-  );
 }

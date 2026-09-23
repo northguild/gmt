@@ -29,11 +29,17 @@ export function convertUnixToUtc(
   value: number | string,
   options?: { epochUnit?: UnixUnit },
 ): string {
-  const epochUnit = resolveUnixEpochUnitOptions(options);
+  try {
+    const epochUnit = resolveUnixEpochUnitOptions(options);
 
-  if (epochUnit === null) {
+    if (epochUnit === null) {
+      return "";
+    }
+
+    return unixEpochToInstant(value, epochUnit)?.toString() ?? "";
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
-
-  return unixEpochToInstant(value, epochUnit)?.toString() ?? "";
 }

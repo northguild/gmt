@@ -73,32 +73,38 @@ export function getFiscalPeriod(
   value: string,
   calendar: FiscalCalendar,
 ): { year: number; period: number; week: number } | null {
-  const pattern = calendar?.pattern;
-  const yearEndsOn = calendar?.yearEndsOn;
-
-  if (!isValidFiscalPattern(pattern) || !isValidDate(yearEndsOn)) {
-    return null;
-  }
-
-  const date = zonelessCalendarDate(value);
-  if (!date) return null;
-
   try {
-    const fiscalYear = fiscalYearOf(date, Temporal.PlainDate.from(yearEndsOn));
-    if (!fiscalYear) return null;
+    const pattern = calendar?.pattern;
+    const yearEndsOn = calendar?.yearEndsOn;
 
-    const { start, weeks } = fiscalYear;
-    const week =
-      Math.floor(
-        start.until(date, { largestUnit: "day" }).days / DAYS_PER_WEEK,
-      ) + 1;
+    if (!isValidFiscalPattern(pattern) || !isValidDate(yearEndsOn)) {
+      return null;
+    }
 
-    return {
-      year: start.year,
-      period: fiscalPeriodOfWeek(week, weeks, pattern),
-      week,
-    };
+    const date = zonelessCalendarDate(value);
+    if (!date) return null;
+
+    try {
+      const fiscalYear = fiscalYearOf(date, Temporal.PlainDate.from(yearEndsOn));
+      if (!fiscalYear) return null;
+
+      const { start, weeks } = fiscalYear;
+      const week =
+        Math.floor(
+          start.until(date, { largestUnit: "day" }).days / DAYS_PER_WEEK,
+        ) + 1;
+
+      return {
+        year: start.year,
+        period: fiscalPeriodOfWeek(week, weeks, pattern),
+        week,
+      };
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

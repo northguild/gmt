@@ -30,53 +30,59 @@ export function startOfDate(
   unit: Temporal.SmallestUnit<Temporal.DateUnit>,
   optionsArg?: { weekStartsOn?: "monday" | "sunday" },
 ): string {
-  if (!isOptionsArgument(optionsArg)) {
-    return "";
-  }
-
-  const resolvedUnit = resolveDateTimeUnit(unit);
-  const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
-
-  if (
-    weekStartsOn === null ||
-    !isValidDate(value) ||
-    !supported.includes(resolvedUnit as Temporal.DateUnit)
-  )
-    return "";
-
   try {
-    const source = Temporal.PlainDate.from(value);
-    let result: Temporal.PlainDate;
-
-    switch (resolvedUnit) {
-      case "year":
-        result = source.with({ month: 1, day: 1 });
-        break;
-      case "month":
-        result = source.with({ day: 1 });
-        break;
-      case "day":
-        result = source;
-        break;
-      case "week": {
-        // Week start: compute how many days to subtract to reach Monday.
-        // Temporal: 1 (Mon) to 7 (Sun)
-        // If Monday start: Monday(1) subtracts 0, Sunday(7) subtracts 6.
-        // If Sunday start: Sunday(7) subtracts 0, Monday(1) subtracts 1.
-        const daysToSubtract =
-          weekStartsOn === "monday"
-            ? source.dayOfWeek - 1
-            : source.dayOfWeek % 7;
-
-        result = source.subtract({ days: daysToSubtract });
-        break;
-      }
-      default:
-        return "";
+    if (!isOptionsArgument(optionsArg)) {
+      return "";
     }
 
-    return result.toString();
+    const resolvedUnit = resolveDateTimeUnit(unit);
+    const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
+
+    if (
+      weekStartsOn === null ||
+      !isValidDate(value) ||
+      !supported.includes(resolvedUnit as Temporal.DateUnit)
+    )
+      return "";
+
+    try {
+      const source = Temporal.PlainDate.from(value);
+      let result: Temporal.PlainDate;
+
+      switch (resolvedUnit) {
+        case "year":
+          result = source.with({ month: 1, day: 1 });
+          break;
+        case "month":
+          result = source.with({ day: 1 });
+          break;
+        case "day":
+          result = source;
+          break;
+        case "week": {
+          // Week start: compute how many days to subtract to reach Monday.
+          // Temporal: 1 (Mon) to 7 (Sun)
+          // If Monday start: Monday(1) subtracts 0, Sunday(7) subtracts 6.
+          // If Sunday start: Sunday(7) subtracts 0, Monday(1) subtracts 1.
+          const daysToSubtract =
+            weekStartsOn === "monday"
+              ? source.dayOfWeek - 1
+              : source.dayOfWeek % 7;
+
+          result = source.subtract({ days: daysToSubtract });
+          break;
+        }
+        default:
+          return "";
+      }
+
+      return result.toString();
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

@@ -38,33 +38,39 @@ export function convertPlainDateTimeToZoned(
     disambiguation?: Disambiguation;
   },
 ): string {
-  if (!isOptionsArgument(optionsArg)) {
-    return "";
-  }
-
-  if (!isValidDateTime(value) || !isValidTimeZone(timeZone)) {
-    return "";
-  }
-
-  const disambiguation =
-    optionsArg?.disambiguation === undefined
-      ? "compatible"
-      : optionsArg.disambiguation;
-
-  const options: Partial<Temporal.ZonedDateTimeToStringOptions> = {
-    smallestUnit:
-      optionsArg?.smallestUnit === undefined
-        ? "milliseconds"
-        : optionsArg.smallestUnit,
-  };
-
   try {
-    const zonedDateTime = zonedDateTimeFrom(
-      `${isoStringBody(value)}[${timeZone}]`,
-      { disambiguation },
-    );
-    return zonedDateTime.toString(options);
+    if (!isOptionsArgument(optionsArg)) {
+      return "";
+    }
+
+    if (!isValidDateTime(value) || !isValidTimeZone(timeZone)) {
+      return "";
+    }
+
+    const disambiguation =
+      optionsArg?.disambiguation === undefined
+        ? "compatible"
+        : optionsArg.disambiguation;
+
+    const options: Partial<Temporal.ZonedDateTimeToStringOptions> = {
+      smallestUnit:
+        optionsArg?.smallestUnit === undefined
+          ? "milliseconds"
+          : optionsArg.smallestUnit,
+    };
+
+    try {
+      const zonedDateTime = zonedDateTimeFrom(
+        `${isoStringBody(value)}[${timeZone}]`,
+        { disambiguation },
+      );
+      return zonedDateTime.toString(options);
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

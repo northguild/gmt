@@ -50,92 +50,98 @@ export function splitIntervalByUnitTime(
   amount: number,
   options?: { maxPieces?: number },
 ): Array<{ start: string; end: string }> {
-  if (typeof start !== "string" || typeof end !== "string") {
-    return [];
-  }
-
-  if (!isValidTime(start) || !isValidTime(end)) {
-    return [];
-  }
-
-  if (typeof unit !== "string") {
-    return [];
-  }
-
-  const resolvedUnit = resolveDurationUnit(unit);
-
-  // An unknown unit is invalid whatever the span, a zero-length one included.
-  if (!isValidTimeDurationUnit(resolvedUnit)) {
-    return [];
-  }
-
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return [];
-  }
-
-  const maxPieces = resolveMaxPieces(options);
-
-  if (maxPieces === null) {
-    return [];
-  }
-
   try {
-    const startVal = Temporal.PlainTime.from(start);
-    const endVal = Temporal.PlainTime.from(end);
-
-    if (Temporal.PlainTime.compare(startVal, endVal) > 0) {
+    if (typeof start !== "string" || typeof end !== "string") {
       return [];
     }
 
-    if (Temporal.PlainTime.compare(startVal, endVal) === 0) {
-      return [{ start: startVal.toString(), end: endVal.toString() }];
-    }
-
-    // PlainTime.add ignores calendar units, so no step would advance.
-    if (!isExactDurationUnit(resolvedUnit)) {
+    if (!isValidTime(start) || !isValidTime(end)) {
       return [];
     }
 
-    const spanNs = startVal.until(endVal).total("nanoseconds");
-    const stepNs = Temporal.Duration.from({ [resolvedUnit]: amount }).total(
-      "nanoseconds",
-    );
-
-    if (
-      exceedsPieceLimit(
-        minSlicesForSpan(spanNs, resolvedUnit, amount, false),
-        maxPieces,
-      )
-    ) {
+    if (typeof unit !== "string") {
       return [];
     }
 
-    const result: Array<{ start: string; end: string }> = [];
+    const resolvedUnit = resolveDurationUnit(unit);
 
-    // Progress is measured in elapsed nanoseconds, not by comparing times: PlainTime.add wraps at
-    // midnight, and a step that reaches or passes midnight is past `end`, so it ends the split.
-    for (
-      let elapsedNs = stepNs, current = startVal;
-      elapsedNs - stepNs < spanNs;
-      elapsedNs += stepNs
-    ) {
-      const sliceEnd =
-        elapsedNs >= spanNs ? endVal : current.add({ [resolvedUnit]: amount });
+    // An unknown unit is invalid whatever the span, a zero-length one included.
+    if (!isValidTimeDurationUnit(resolvedUnit)) {
+      return [];
+    }
 
-      if (result.length === maxPieces) {
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return [];
+    }
+
+    const maxPieces = resolveMaxPieces(options);
+
+    if (maxPieces === null) {
+      return [];
+    }
+
+    try {
+      const startVal = Temporal.PlainTime.from(start);
+      const endVal = Temporal.PlainTime.from(end);
+
+      if (Temporal.PlainTime.compare(startVal, endVal) > 0) {
         return [];
       }
 
-      result.push({
-        start: current.toString(),
-        end: sliceEnd.toString(),
-      });
+      if (Temporal.PlainTime.compare(startVal, endVal) === 0) {
+        return [{ start: startVal.toString(), end: endVal.toString() }];
+      }
 
-      current = sliceEnd;
+      // PlainTime.add ignores calendar units, so no step would advance.
+      if (!isExactDurationUnit(resolvedUnit)) {
+        return [];
+      }
+
+      const spanNs = startVal.until(endVal).total("nanoseconds");
+      const stepNs = Temporal.Duration.from({ [resolvedUnit]: amount }).total(
+        "nanoseconds",
+      );
+
+      if (
+        exceedsPieceLimit(
+          minSlicesForSpan(spanNs, resolvedUnit, amount, false),
+          maxPieces,
+        )
+      ) {
+        return [];
+      }
+
+      const result: Array<{ start: string; end: string }> = [];
+
+      // Progress is measured in elapsed nanoseconds, not by comparing times: PlainTime.add wraps at
+      // midnight, and a step that reaches or passes midnight is past `end`, so it ends the split.
+      for (
+        let elapsedNs = stepNs, current = startVal;
+        elapsedNs - stepNs < spanNs;
+        elapsedNs += stepNs
+      ) {
+        const sliceEnd =
+          elapsedNs >= spanNs ? endVal : current.add({ [resolvedUnit]: amount });
+
+        if (result.length === maxPieces) {
+          return [];
+        }
+
+        result.push({
+          start: current.toString(),
+          end: sliceEnd.toString(),
+        });
+
+        current = sliceEnd;
+      }
+
+      return result;
+    } catch {
+      return [];
     }
-
-    return result;
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

@@ -65,87 +65,93 @@ export function splitIntervalByUnitDate(
   amount: number,
   options?: { maxPieces?: number },
 ): Array<{ start: string; end: string }> {
-  if (typeof start !== "string" || typeof end !== "string") {
-    return [];
-  }
-
-  if (!isValidCalendarDate(start) || !isValidCalendarDate(end)) {
-    return [];
-  }
-
-  if (typeof unit !== "string") {
-    return [];
-  }
-
-  const resolvedUnit = resolveDurationUnit(unit);
-
-  // An unknown unit is invalid whatever the span, a zero-length one included.
-  if (!isValidDateDurationUnit(resolvedUnit)) {
-    return [];
-  }
-
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return [];
-  }
-
-  const maxPieces = resolveMaxPieces(options);
-
-  if (maxPieces === null) {
-    return [];
-  }
-
   try {
-    const {
-      calendar,
-      a: startVal,
-      b: endVal,
-    } = parseCalendarDatePairForArithmetic(start, end);
-
-    if (Temporal.PlainDate.compare(startVal, endVal) > 0) {
+    if (typeof start !== "string" || typeof end !== "string") {
       return [];
     }
 
-    if (Temporal.PlainDate.compare(startVal, endVal) === 0) {
-      return [
-        {
-          start: formatDateInCalendar(startVal, calendar),
-          end: formatDateInCalendar(endVal, calendar),
-        },
-      ];
+    if (!isValidCalendarDate(start) || !isValidCalendarDate(end)) {
+      return [];
     }
 
-    // Counted on the ISO dates: a day count is calendar-independent, and ISO `until` stays clear
-    // of the non-ISO polyfill arithmetic that the compat layer routes around near the range edges.
-    const spanNs =
-      startVal
-        .withCalendar("iso8601")
-        .until(endVal.withCalendar("iso8601"), { largestUnit: "days" }).days *
-      NANOSECONDS_PER_DAY_NUMBER;
+    if (typeof unit !== "string") {
+      return [];
+    }
 
-    if (
-      exceedsPieceLimit(
-        minSlicesForSpan(spanNs, resolvedUnit, amount, false),
+    const resolvedUnit = resolveDurationUnit(unit);
+
+    // An unknown unit is invalid whatever the span, a zero-length one included.
+    if (!isValidDateDurationUnit(resolvedUnit)) {
+      return [];
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return [];
+    }
+
+    const maxPieces = resolveMaxPieces(options);
+
+    if (maxPieces === null) {
+      return [];
+    }
+
+    try {
+      const {
+        calendar,
+        a: startVal,
+        b: endVal,
+      } = parseCalendarDatePairForArithmetic(start, end);
+
+      if (Temporal.PlainDate.compare(startVal, endVal) > 0) {
+        return [];
+      }
+
+      if (Temporal.PlainDate.compare(startVal, endVal) === 0) {
+        return [
+          {
+            start: formatDateInCalendar(startVal, calendar),
+            end: formatDateInCalendar(endVal, calendar),
+          },
+        ];
+      }
+
+      // Counted on the ISO dates: a day count is calendar-independent, and ISO `until` stays clear
+      // of the non-ISO polyfill arithmetic that the compat layer routes around near the range edges.
+      const spanNs =
+        startVal
+          .withCalendar("iso8601")
+          .until(endVal.withCalendar("iso8601"), { largestUnit: "days" }).days *
+        NANOSECONDS_PER_DAY_NUMBER;
+
+      if (
+        exceedsPieceLimit(
+          minSlicesForSpan(spanNs, resolvedUnit, amount, false),
+          maxPieces,
+        )
+      ) {
+        return [];
+      }
+
+      const slices = tileByUnit(
+        startVal,
+        endVal,
+        Temporal.PlainDate.compare,
+        resolvedUnit,
+        amount,
         maxPieces,
-      )
-    ) {
+        (value, duration) => plainDateAdd(value, duration, "constrain"),
+      );
+
+      return (slices ?? []).map(([sliceStart, sliceEnd]) => ({
+        start: formatDateInCalendar(sliceStart, calendar),
+        end: formatDateInCalendar(sliceEnd, calendar),
+      }));
+    } catch {
       return [];
     }
-
-    const slices = tileByUnit(
-      startVal,
-      endVal,
-      Temporal.PlainDate.compare,
-      resolvedUnit,
-      amount,
-      maxPieces,
-      (value, duration) => plainDateAdd(value, duration, "constrain"),
-    );
-
-    return (slices ?? []).map(([sliceStart, sliceEnd]) => ({
-      start: formatDateInCalendar(sliceStart, calendar),
-      end: formatDateInCalendar(sliceEnd, calendar),
-    }));
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

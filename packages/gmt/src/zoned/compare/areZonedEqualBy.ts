@@ -53,45 +53,51 @@ export function areZonedEqualBy(
   unit: Temporal.SmallestUnit<DateTimeUnit>,
   optionsArg?: { weekStartsOn?: "monday" | "sunday" },
 ): boolean {
-  if (!isOptionsArgument(optionsArg)) {
-    return false;
-  }
-
-  const resolvedUnit = resolveDateTimeUnit(unit);
-  const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
-
-  if (
-    !isValidZonedDateTime(value1) ||
-    !isValidZonedDateTime(value2) ||
-    !isValidDateTimeUnit(resolvedUnit) ||
-    weekStartsOn === null
-  ) {
-    return false;
-  }
-
   try {
-    const start1 = startOfZoned(value1, resolvedUnit, { weekStartsOn });
-    const start2 = startOfZoned(value2, resolvedUnit, { weekStartsOn });
-
-    if (start1 === "" || start2 === "") return false;
-
-    const zoned1 = zonedDateTimeFrom(start1);
-    const zoned2 = zonedDateTimeFrom(start2);
-
-    // Same zone: one real bucket is one instant, so a repeated wall clock is not a match.
-    if (zoned1.timeZoneId === zoned2.timeZoneId) {
-      return (
-        Temporal.Instant.compare(zoned1.toInstant(), zoned2.toInstant()) === 0
-      );
+    if (!isOptionsArgument(optionsArg)) {
+      return false;
     }
 
-    return (
-      Temporal.PlainDateTime.compare(
-        zoned1.toPlainDateTime(),
-        zoned2.toPlainDateTime(),
-      ) === 0
-    );
+    const resolvedUnit = resolveDateTimeUnit(unit);
+    const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
+
+    if (
+      !isValidZonedDateTime(value1) ||
+      !isValidZonedDateTime(value2) ||
+      !isValidDateTimeUnit(resolvedUnit) ||
+      weekStartsOn === null
+    ) {
+      return false;
+    }
+
+    try {
+      const start1 = startOfZoned(value1, resolvedUnit, { weekStartsOn });
+      const start2 = startOfZoned(value2, resolvedUnit, { weekStartsOn });
+
+      if (start1 === "" || start2 === "") return false;
+
+      const zoned1 = zonedDateTimeFrom(start1);
+      const zoned2 = zonedDateTimeFrom(start2);
+
+      // Same zone: one real bucket is one instant, so a repeated wall clock is not a match.
+      if (zoned1.timeZoneId === zoned2.timeZoneId) {
+        return (
+          Temporal.Instant.compare(zoned1.toInstant(), zoned2.toInstant()) === 0
+        );
+      }
+
+      return (
+        Temporal.PlainDateTime.compare(
+          zoned1.toPlainDateTime(),
+          zoned2.toPlainDateTime(),
+        ) === 0
+      );
+    } catch {
+      return false;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return false;
   }
 }

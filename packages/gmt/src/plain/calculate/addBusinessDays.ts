@@ -38,5 +38,11 @@ export function addBusinessDays(
   amount: number,
   calendar?: BusinessCalendar,
 ): string {
-  return stepBusinessDaysValue(value, amount, 1, calendar);
+  try {
+    return stepBusinessDaysValue(value, amount, 1, calendar);
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
+    return "";
+  }
 }

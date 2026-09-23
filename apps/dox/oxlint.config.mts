@@ -22,10 +22,12 @@ export default defineConfig({
     ".astro/**",
     "src/generated/**",
     "src/content/docs/reference/**",
-    // DOX-C0 (#171): vendored, unmodified shadcn/AI Elements registry source —
-    // reviewed as "copied from upstream", not linted as our own.
+    // DOX-C0 (#171): vendored shadcn registry source. `ui/**` is genuinely untouched — 18
+    // files, no local pragmas, no `Date` — so it is reviewed as copied, not linted as ours.
+    // `ai-elements/**` is deliberately NOT exempt. It was modified before it landed (all 15
+    // oxlint pragmas were in the vendoring commit) and again after, and its own README says
+    // we re-theme every component there. It lints clean today (CORE-8 review, #253).
     "src/components/ui/**",
-    "src/components/ai-elements/**",
   ],
   rules: {
     ...recommendedRules,

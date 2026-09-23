@@ -83,26 +83,32 @@ export function businessDaysBetween(
   end: string,
   calendar: BusinessCalendar,
 ): number | null {
-  const resolved = parseBusinessCalendar(calendar);
-
-  if (!isValidDate(start) || !isValidDate(end) || resolved === null) {
-    return null;
-  }
-
   try {
-    const startDate = Temporal.PlainDate.from(start);
-    const endDate = Temporal.PlainDate.from(end);
-    const reversed = Temporal.PlainDate.compare(startDate, endDate) > 0;
-    const count = countBusinessDates(
-      reversed ? endDate : startDate,
-      reversed ? startDate : endDate,
-      resolved.weekend,
-      resolved.holidays,
-    );
+    const resolved = parseBusinessCalendar(calendar);
 
-    // `0 - count` rather than `-count`: an empty reversed range must be 0, not -0.
-    return reversed ? 0 - count : count;
+    if (!isValidDate(start) || !isValidDate(end) || resolved === null) {
+      return null;
+    }
+
+    try {
+      const startDate = Temporal.PlainDate.from(start);
+      const endDate = Temporal.PlainDate.from(end);
+      const reversed = Temporal.PlainDate.compare(startDate, endDate) > 0;
+      const count = countBusinessDates(
+        reversed ? endDate : startDate,
+        reversed ? startDate : endDate,
+        resolved.weekend,
+        resolved.holidays,
+      );
+
+      // `0 - count` rather than `-count`: an empty reversed range must be 0, not -0.
+      return reversed ? 0 - count : count;
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

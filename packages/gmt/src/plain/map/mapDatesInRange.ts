@@ -43,50 +43,56 @@ export function mapDatesInRange(
   stepDays?: number,
   options?: { maxPieces?: number },
 ): string[] {
-  // An explicit undefined is the omitted argument, as TC39 GetOption treats it.
-  const resolvedStepDays = stepDays === undefined ? 1 : stepDays;
-
-  if (
-    typeof resolvedStepDays !== "number" ||
-    !Number.isInteger(resolvedStepDays) ||
-    resolvedStepDays <= 0
-  ) {
-    return [];
-  }
-
-  const maxPieces = resolveMaxPieces(options);
-
-  if (maxPieces === null) {
-    return [];
-  }
-
-  if (!isValidDate(startDate) || !isValidDate(endDate)) {
-    return [];
-  }
   try {
-    const start = Temporal.PlainDate.from(startDate);
-    const end = Temporal.PlainDate.from(endDate);
+    // An explicit undefined is the omitted argument, as TC39 GetOption treats it.
+    const resolvedStepDays = stepDays === undefined ? 1 : stepDays;
 
-    if (Temporal.PlainDate.compare(start, end) === 1) {
+    if (
+      typeof resolvedStepDays !== "number" ||
+      !Number.isInteger(resolvedStepDays) ||
+      resolvedStepDays <= 0
+    ) {
       return [];
     }
 
-    const count = Math.floor(start.until(end).days / resolvedStepDays) + 1;
+    const maxPieces = resolveMaxPieces(options);
 
-    if (exceedsPieceLimit(count, maxPieces)) {
+    if (maxPieces === null) {
       return [];
     }
 
-    // Each date is anchored at the start (start + k·step) and only the `count` in-range dates are
-    // built, so no step past the end is taken — a range ending on Temporal's date limit keeps its
-    // dates instead of throwing on the step after the last one.
-    const result: string[] = [];
-    for (let index = 0; index < count; index++) {
-      result.push(start.add({ days: index * resolvedStepDays }).toString());
+    if (!isValidDate(startDate) || !isValidDate(endDate)) {
+      return [];
     }
+    try {
+      const start = Temporal.PlainDate.from(startDate);
+      const end = Temporal.PlainDate.from(endDate);
 
-    return result;
+      if (Temporal.PlainDate.compare(start, end) === 1) {
+        return [];
+      }
+
+      const count = Math.floor(start.until(end).days / resolvedStepDays) + 1;
+
+      if (exceedsPieceLimit(count, maxPieces)) {
+        return [];
+      }
+
+      // Each date is anchored at the start (start + k·step) and only the `count` in-range dates are
+      // built, so no step past the end is taken — a range ending on Temporal's date limit keeps its
+      // dates instead of throwing on the step after the last one.
+      const result: string[] = [];
+      for (let index = 0; index < count; index++) {
+        result.push(start.add({ days: index * resolvedStepDays }).toString());
+      }
+
+      return result;
+    } catch {
+      return [];
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

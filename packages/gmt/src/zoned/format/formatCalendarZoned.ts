@@ -48,38 +48,44 @@ export function formatCalendarZoned(
   locale?: string | string[],
   options: FormatCalendarZonedOptions = {},
 ): string {
-  // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
-  // invalid input.
-  if (options === null || typeof options !== "object") return "";
-  if (!isValidZonedDateTime(value)) return "";
-
-  if (!isValidZonedFormatReference(options.reference)) return "";
-
   try {
-    const target = zonedDateTimeFrom(value);
-    const timeZone = target.timeZoneId;
+    // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
+    // invalid input.
+    if (options === null || typeof options !== "object") return "";
+    if (!isValidZonedDateTime(value)) return "";
 
-    let reference: Temporal.ZonedDateTime;
-    if (options.reference === undefined) {
-      reference = Temporal.Now.zonedDateTimeISO(timeZone);
-    } else if (typeof options.reference === "string") {
-      reference = isValidUtc(options.reference)
-        ? Temporal.Instant.from(options.reference).toZonedDateTimeISO(timeZone)
-        : zonedDateTimeFrom(options.reference).withTimeZone(timeZone);
-    } else {
-      reference = Temporal.Instant.fromEpochMilliseconds(
-        options.reference,
-      ).toZonedDateTimeISO(timeZone);
+    if (!isValidZonedFormatReference(options.reference)) return "";
+
+    try {
+      const target = zonedDateTimeFrom(value);
+      const timeZone = target.timeZoneId;
+
+      let reference: Temporal.ZonedDateTime;
+      if (options.reference === undefined) {
+        reference = Temporal.Now.zonedDateTimeISO(timeZone);
+      } else if (typeof options.reference === "string") {
+        reference = isValidUtc(options.reference)
+          ? Temporal.Instant.from(options.reference).toZonedDateTimeISO(timeZone)
+          : zonedDateTimeFrom(options.reference).withTimeZone(timeZone);
+      } else {
+        reference = Temporal.Instant.fromEpochMilliseconds(
+          options.reference,
+        ).toZonedDateTimeISO(timeZone);
+      }
+
+      return formatCalendarDays(
+        target.toPlainDate().since(reference.toPlainDate()).days,
+        target.epochMilliseconds,
+        timeZone,
+        locale,
+        options.timeStyle === undefined ? "short" : options.timeStyle,
+      );
+    } catch {
+      return "";
     }
-
-    return formatCalendarDays(
-      target.toPlainDate().since(reference.toPlainDate()).days,
-      target.epochMilliseconds,
-      timeZone,
-      locale,
-      options.timeStyle === undefined ? "short" : options.timeStyle,
-    );
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

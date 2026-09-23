@@ -22,13 +22,19 @@ export function parseMicrosecondFromUtc(
   value: string,
   options?: { timeZone?: string },
 ): string {
-  if (!isOptionsArgument(options)) {
+  try {
+    if (!isOptionsArgument(options)) {
+      return "";
+    }
+
+    const dateTime = utcZonedDateTime(value, options);
+
+    return dateTime === null
+      ? ""
+      : dateTime.microsecond.toString().padStart(3, "0");
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
-
-  const dateTime = utcZonedDateTime(value, options);
-
-  return dateTime === null
-    ? ""
-    : dateTime.microsecond.toString().padStart(3, "0");
 }

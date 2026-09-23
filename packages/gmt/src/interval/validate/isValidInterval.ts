@@ -29,5 +29,11 @@ import type { Interval } from "../../types";
  * @example isValidInterval({ start: "2024-01-01T09:00:00Z[!foo=bar]", end: "2024-01-01T17:00:00Z" }) // false — unknown critical annotation
  */
 export function isValidInterval(interval: Interval): boolean {
-  return parseIntervalNanoseconds(interval) !== null;
+  try {
+    return parseIntervalNanoseconds(interval) !== null;
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
+    return false;
+  }
 }

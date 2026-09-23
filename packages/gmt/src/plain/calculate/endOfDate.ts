@@ -33,51 +33,57 @@ export function endOfDate(
   unit: Temporal.SmallestUnit<Temporal.DateUnit>,
   optionsArg?: { weekStartsOn?: "monday" | "sunday" },
 ): string {
-  if (!isOptionsArgument(optionsArg)) {
-    return "";
-  }
-
-  const resolvedUnit = resolveDateTimeUnit(unit);
-  const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
-
-  if (
-    weekStartsOn === null ||
-    !isValidDate(value) ||
-    !supported.includes(resolvedUnit as Temporal.DateUnit)
-  )
-    return "";
-
   try {
-    const source = Temporal.PlainDate.from(value);
-    let result: Temporal.PlainDate;
-
-    switch (resolvedUnit) {
-      case "year":
-        result = source.with({ month: 12, day: 31 });
-        break;
-      case "month":
-        // Computed from `value` itself: the month's first day may lie before the range.
-        result = source.with({ day: source.daysInMonth });
-        break;
-      case "week": {
-        // Sunday is day 7, so `dayOfWeek % 7` counts Sunday as day 0 of a Sunday-first week.
-        const daysToEndOfWeek =
-          weekStartsOn === "monday"
-            ? 7 - source.dayOfWeek
-            : 6 - (source.dayOfWeek % 7);
-
-        result = source.add({ days: daysToEndOfWeek });
-        break;
-      }
-      case "day":
-        result = source;
-        break;
-      default:
-        return "";
+    if (!isOptionsArgument(optionsArg)) {
+      return "";
     }
 
-    return result.toString();
+    const resolvedUnit = resolveDateTimeUnit(unit);
+    const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
+
+    if (
+      weekStartsOn === null ||
+      !isValidDate(value) ||
+      !supported.includes(resolvedUnit as Temporal.DateUnit)
+    )
+      return "";
+
+    try {
+      const source = Temporal.PlainDate.from(value);
+      let result: Temporal.PlainDate;
+
+      switch (resolvedUnit) {
+        case "year":
+          result = source.with({ month: 12, day: 31 });
+          break;
+        case "month":
+          // Computed from `value` itself: the month's first day may lie before the range.
+          result = source.with({ day: source.daysInMonth });
+          break;
+        case "week": {
+          // Sunday is day 7, so `dayOfWeek % 7` counts Sunday as day 0 of a Sunday-first week.
+          const daysToEndOfWeek =
+            weekStartsOn === "monday"
+              ? 7 - source.dayOfWeek
+              : 6 - (source.dayOfWeek % 7);
+
+          result = source.add({ days: daysToEndOfWeek });
+          break;
+        }
+        case "day":
+          result = source;
+          break;
+        default:
+          return "";
+      }
+
+      return result.toString();
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

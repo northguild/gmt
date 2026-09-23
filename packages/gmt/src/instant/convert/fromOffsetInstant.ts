@@ -53,55 +53,61 @@ import type { OffsetInstant } from "./toOffsetInstant";
  * @example fromOffsetInstant({ instant: "not an instant", offset: "-04:00" }) // ""
  */
 export function fromOffsetInstant(value: OffsetInstant): string {
-  if (typeof value !== "object" || value === null) {
-    return "";
-  }
-
-  const epochNanoseconds = parseInstantNanoseconds(value.instant);
-  const offsetNanoseconds = parseUtcOffsetNanoseconds(value.offset);
-
-  if (epochNanoseconds === null || offsetNanoseconds === null) {
-    return "";
-  }
-
-  const offset = formatUtcOffset(offsetNanoseconds);
-
-  if (offset === null) {
-    return "";
-  }
-
   try {
-    const instant = Temporal.Instant.fromEpochNanoseconds(epochNanoseconds);
-
-    if (value.timeZone !== undefined) {
-      // Temporal is the authority on what identifier this is, exactly as it is for a
-      // bracketed zone in `toOffsetInstant` — an unrecognised one throws, and the two
-      // functions have to agree or a pair one produced would not survive the other. The
-      // canonicalised id is what gets tested for an offset, since `"-0400"` and `"+05"` are
-      // offsets too and only Temporal knows that.
-      const zoned = instant.toZonedDateTimeISO(value.timeZone);
-
-      if (utcOffset.test(zoned.timeZoneId)) {
-        return "";
-      }
-
-      return zoned.offset === offset ? zoned.toString() : "";
+    if (typeof value !== "object" || value === null) {
+      return "";
     }
 
-    // With no zone, the offset is the only thing that can shift the instant onto a wall
-    // clock. The shift happens on the wall clock, never on the instant: `PlainDateTime`
-    // reaches a day further either side than `Instant` does, so shifting the instant first
-    // would reject the last 14 hours of the representable range — where a pair like
-    // `{ "+275760-09-13T00:00:00Z", "+14:00" }` names a local time that exists. No offset
-    // time zone is used either, since Temporal refuses to build one from a sub-minute
-    // offset.
-    const wallClock = instant
-      .toZonedDateTimeISO("UTC")
-      .toPlainDateTime()
-      .add({ nanoseconds: Number(offsetNanoseconds) });
+    const epochNanoseconds = parseInstantNanoseconds(value.instant);
+    const offsetNanoseconds = parseUtcOffsetNanoseconds(value.offset);
 
-    return `${wallClock.toString()}${offset}`;
+    if (epochNanoseconds === null || offsetNanoseconds === null) {
+      return "";
+    }
+
+    const offset = formatUtcOffset(offsetNanoseconds);
+
+    if (offset === null) {
+      return "";
+    }
+
+    try {
+      const instant = Temporal.Instant.fromEpochNanoseconds(epochNanoseconds);
+
+      if (value.timeZone !== undefined) {
+        // Temporal is the authority on what identifier this is, exactly as it is for a
+        // bracketed zone in `toOffsetInstant` — an unrecognised one throws, and the two
+        // functions have to agree or a pair one produced would not survive the other. The
+        // canonicalised id is what gets tested for an offset, since `"-0400"` and `"+05"` are
+        // offsets too and only Temporal knows that.
+        const zoned = instant.toZonedDateTimeISO(value.timeZone);
+
+        if (utcOffset.test(zoned.timeZoneId)) {
+          return "";
+        }
+
+        return zoned.offset === offset ? zoned.toString() : "";
+      }
+
+      // With no zone, the offset is the only thing that can shift the instant onto a wall
+      // clock. The shift happens on the wall clock, never on the instant: `PlainDateTime`
+      // reaches a day further either side than `Instant` does, so shifting the instant first
+      // would reject the last 14 hours of the representable range — where a pair like
+      // `{ "+275760-09-13T00:00:00Z", "+14:00" }` names a local time that exists. No offset
+      // time zone is used either, since Temporal refuses to build one from a sub-minute
+      // offset.
+      const wallClock = instant
+        .toZonedDateTimeISO("UTC")
+        .toPlainDateTime()
+        .add({ nanoseconds: Number(offsetNanoseconds) });
+
+      return `${wallClock.toString()}${offset}`;
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

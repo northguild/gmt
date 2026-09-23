@@ -47,47 +47,53 @@ import { isValidCalendarZonedInterval } from "./validate";
 export function mergeIntervalsZoned(
   intervals: Array<{ start: string; end: string }>,
 ): Array<{ start: string; end: string }> {
-  if (!Array.isArray(intervals) || intervals.length === 0) {
-    return [];
-  }
-
-  if (
-    !intervals.every(
-      (interval) =>
-        interval &&
-        typeof interval === "object" &&
-        typeof interval.start === "string" &&
-        typeof interval.end === "string" &&
-        isValidCalendarZonedInterval(interval.start, interval.end),
-    )
-  ) {
-    return [];
-  }
-
-  // D4-zoned reject gate: every endpoint across every interval must agree on a calendar, or there
-  // is no calendar to express the merged boundaries in.
-  const calendar = calendarOfAllZonedValues(
-    intervals.flatMap((interval) => [interval.start, interval.end]),
-  );
-  if (!calendar) {
-    return [];
-  }
-
   try {
-    const parsed = intervals.map((interval) => ({
-      start: parseCalendarZonedValue(interval.start),
-      end: parseCalendarZonedValue(interval.end),
-    }));
+    if (!Array.isArray(intervals) || intervals.length === 0) {
+      return [];
+    }
 
-    // Sorted, disjoint, non-touching, non-empty runs; each boundary keeps the ZonedDateTime (and
-    // so the zone) of the interval that contributed it.
-    return halfOpenMerge(parsed, Temporal.ZonedDateTime.compare).map(
-      (interval) => ({
-        start: formatZonedInCalendar(interval.start, calendar),
-        end: formatZonedInCalendar(interval.end, calendar),
-      }),
+    if (
+      !intervals.every(
+        (interval) =>
+          interval &&
+          typeof interval === "object" &&
+          typeof interval.start === "string" &&
+          typeof interval.end === "string" &&
+          isValidCalendarZonedInterval(interval.start, interval.end),
+      )
+    ) {
+      return [];
+    }
+
+    // D4-zoned reject gate: every endpoint across every interval must agree on a calendar, or there
+    // is no calendar to express the merged boundaries in.
+    const calendar = calendarOfAllZonedValues(
+      intervals.flatMap((interval) => [interval.start, interval.end]),
     );
+    if (!calendar) {
+      return [];
+    }
+
+    try {
+      const parsed = intervals.map((interval) => ({
+        start: parseCalendarZonedValue(interval.start),
+        end: parseCalendarZonedValue(interval.end),
+      }));
+
+      // Sorted, disjoint, non-touching, non-empty runs; each boundary keeps the ZonedDateTime (and
+      // so the zone) of the interval that contributed it.
+      return halfOpenMerge(parsed, Temporal.ZonedDateTime.compare).map(
+        (interval) => ({
+          start: formatZonedInCalendar(interval.start, calendar),
+          end: formatZonedInCalendar(interval.end, calendar),
+        }),
+      );
+    } catch {
+      return [];
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

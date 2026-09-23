@@ -50,32 +50,38 @@ export function startOfTime(
   unit: StartOfTimeUnit,
   optionsArg?: { fractionalSecondDigits?: FractionalDigit },
 ): string {
-  if (!isOptionsArgument(optionsArg)) {
-    return "";
-  }
-
-  const fractionalSecondDigits = optionsArg?.fractionalSecondDigits;
-  const resolvedUnit = resolveDateTimeUnit(unit);
-
-  if (!isValidTime(value) || !supported.includes(resolvedUnit)) return "";
-
   try {
-    const source = Temporal.PlainTime.from(value);
-    const result =
-      resolvedUnit === "day"
-        ? new Temporal.PlainTime()
-        : source.round({
-            smallestUnit: resolvedUnit as Temporal.TimeUnit,
-            roundingMode: "floor",
-          });
+    if (!isOptionsArgument(optionsArg)) {
+      return "";
+    }
 
-    const fractionalDigits = defaultFractionalDigits(
-      resolvedUnit,
-      fractionalSecondDigits,
-    );
+    const fractionalSecondDigits = optionsArg?.fractionalSecondDigits;
+    const resolvedUnit = resolveDateTimeUnit(unit);
 
-    return result.toString({ fractionalSecondDigits: fractionalDigits });
+    if (!isValidTime(value) || !supported.includes(resolvedUnit)) return "";
+
+    try {
+      const source = Temporal.PlainTime.from(value);
+      const result =
+        resolvedUnit === "day"
+          ? new Temporal.PlainTime()
+          : source.round({
+              smallestUnit: resolvedUnit as Temporal.TimeUnit,
+              roundingMode: "floor",
+            });
+
+      const fractionalDigits = defaultFractionalDigits(
+        resolvedUnit,
+        fractionalSecondDigits,
+      );
+
+      return result.toString({ fractionalSecondDigits: fractionalDigits });
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

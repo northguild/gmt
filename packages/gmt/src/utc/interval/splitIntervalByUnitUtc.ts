@@ -53,74 +53,80 @@ export function splitIntervalByUnitUtc(
   amount: number,
   options?: { maxPieces?: number },
 ): Array<{ start: string; end: string }> {
-  if (typeof start !== "string" || typeof end !== "string") {
-    return [];
-  }
-
-  if (!isValidUtc(start) || !isValidUtc(end)) {
-    return [];
-  }
-
-  if (typeof unit !== "string") {
-    return [];
-  }
-
-  const resolvedUnit = resolveDurationUnit(unit);
-
-  // An unknown unit is invalid whatever the span, a zero-length one included.
-  if (!isValidDateTimeDurationUnit(resolvedUnit)) {
-    return [];
-  }
-
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return [];
-  }
-
-  const maxPieces = resolveMaxPieces(options);
-
-  if (maxPieces === null) {
-    return [];
-  }
-
   try {
-    const startInstant = Temporal.Instant.from(start);
-    const endInstant = Temporal.Instant.from(end);
-
-    if (Temporal.Instant.compare(startInstant, endInstant) > 0) {
+    if (typeof start !== "string" || typeof end !== "string") {
       return [];
     }
 
-    if (Temporal.Instant.compare(startInstant, endInstant) === 0) {
-      return [{ start: startInstant.toString(), end: endInstant.toString() }];
+    if (!isValidUtc(start) || !isValidUtc(end)) {
+      return [];
     }
 
-    const spanNs = Number(
-      endInstant.epochNanoseconds - startInstant.epochNanoseconds,
-    );
+    if (typeof unit !== "string") {
+      return [];
+    }
 
-    if (
-      exceedsPieceLimit(
-        minSlicesForSpan(spanNs, resolvedUnit, amount, false),
+    const resolvedUnit = resolveDurationUnit(unit);
+
+    // An unknown unit is invalid whatever the span, a zero-length one included.
+    if (!isValidDateTimeDurationUnit(resolvedUnit)) {
+      return [];
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return [];
+    }
+
+    const maxPieces = resolveMaxPieces(options);
+
+    if (maxPieces === null) {
+      return [];
+    }
+
+    try {
+      const startInstant = Temporal.Instant.from(start);
+      const endInstant = Temporal.Instant.from(end);
+
+      if (Temporal.Instant.compare(startInstant, endInstant) > 0) {
+        return [];
+      }
+
+      if (Temporal.Instant.compare(startInstant, endInstant) === 0) {
+        return [{ start: startInstant.toString(), end: endInstant.toString() }];
+      }
+
+      const spanNs = Number(
+        endInstant.epochNanoseconds - startInstant.epochNanoseconds,
+      );
+
+      if (
+        exceedsPieceLimit(
+          minSlicesForSpan(spanNs, resolvedUnit, amount, false),
+          maxPieces,
+        )
+      ) {
+        return [];
+      }
+
+      const slices = tileByUnit(
+        startInstant.toZonedDateTimeISO("UTC"),
+        endInstant.toZonedDateTimeISO("UTC"),
+        Temporal.ZonedDateTime.compare,
+        resolvedUnit,
+        amount,
         maxPieces,
-      )
-    ) {
+      );
+
+      return (slices ?? []).map(([sliceStart, sliceEnd]) => ({
+        start: sliceStart.toInstant().toString(),
+        end: sliceEnd.toInstant().toString(),
+      }));
+    } catch {
       return [];
     }
-
-    const slices = tileByUnit(
-      startInstant.toZonedDateTimeISO("UTC"),
-      endInstant.toZonedDateTimeISO("UTC"),
-      Temporal.ZonedDateTime.compare,
-      resolvedUnit,
-      amount,
-      maxPieces,
-    );
-
-    return (slices ?? []).map(([sliceStart, sliceEnd]) => ({
-      start: sliceStart.toInstant().toString(),
-      end: sliceEnd.toInstant().toString(),
-    }));
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

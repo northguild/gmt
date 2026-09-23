@@ -32,9 +32,15 @@ export function startOfQuarterForUnix(
     timeZone?: string;
   },
 ): number | null {
-  if (!isOptionsArgument(options)) {
+  try {
+    if (!isOptionsArgument(options)) {
+      return null;
+    }
+
+    return startOrEndOfUnix(value, "quarter", options ?? {}, false);
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
-
-  return startOrEndOfUnix(value, "quarter", options ?? {}, false);
 }

@@ -78,39 +78,45 @@ export function subtractZoned(
     overflow?: Overflow;
   },
 ): string {
-  if (!isOptionsArgument(optionsArg)) {
-    return "";
-  }
-
-  const validZonedDateTime = isValidCalendarZonedDateTime(value);
-  const validUnits =
-    typeof units === "object" &&
-    units !== null &&
-    Object.keys(units).every(isValidDateTimeDurationUnit);
-  const validAmounts = validUnits && Object.values(units).every(isValidAmount);
-
-  if (!validZonedDateTime || !validUnits || !validAmounts) {
-    return "";
-  }
-
-  const disambiguation =
-    optionsArg?.disambiguation === undefined
-      ? "compatible"
-      : optionsArg.disambiguation;
-  const overflow = resolveOverflow(optionsArg?.overflow);
-
   try {
-    const calendar = calendarSystemOfZonedValue(value);
-    if (!calendar) {
+    if (!isOptionsArgument(optionsArg)) {
       return "";
     }
-    const zoned = parseCalendarZonedValue(value);
-    const subtracted = addToZonedDisambiguated(zoned, units, -1, {
-      overflow,
-      disambiguation,
-    });
-    return formatZonedInCalendar(subtracted, calendar);
+
+    const validZonedDateTime = isValidCalendarZonedDateTime(value);
+    const validUnits =
+      typeof units === "object" &&
+      units !== null &&
+      Object.keys(units).every(isValidDateTimeDurationUnit);
+    const validAmounts = validUnits && Object.values(units).every(isValidAmount);
+
+    if (!validZonedDateTime || !validUnits || !validAmounts) {
+      return "";
+    }
+
+    const disambiguation =
+      optionsArg?.disambiguation === undefined
+        ? "compatible"
+        : optionsArg.disambiguation;
+    const overflow = resolveOverflow(optionsArg?.overflow);
+
+    try {
+      const calendar = calendarSystemOfZonedValue(value);
+      if (!calendar) {
+        return "";
+      }
+      const zoned = parseCalendarZonedValue(value);
+      const subtracted = addToZonedDisambiguated(zoned, units, -1, {
+        overflow,
+        disambiguation,
+      });
+      return formatZonedInCalendar(subtracted, calendar);
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

@@ -28,23 +28,29 @@ export function parseWeekFromDateTime(
   value: string,
   optionsArg?: { weekStartsOn?: "monday" | "sunday" },
 ): number | null {
-  if (!isOptionsArgument(optionsArg)) {
-    return null;
-  }
-
-  if (!isValidDateTime(value)) {
-    return null;
-  }
-  const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
-  if (weekStartsOn === null) return null;
-
   try {
-    // getWeekNumber takes a PlainDate string only, so pass the date half.
-    return getWeekNumber(
-      Temporal.PlainDateTime.from(value).toPlainDate().toString(),
-      weekStartsOn,
-    );
+    if (!isOptionsArgument(optionsArg)) {
+      return null;
+    }
+
+    if (!isValidDateTime(value)) {
+      return null;
+    }
+    const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
+    if (weekStartsOn === null) return null;
+
+    try {
+      // getWeekNumber takes a PlainDate string only, so pass the date half.
+      return getWeekNumber(
+        Temporal.PlainDateTime.from(value).toPlainDate().toString(),
+        weekStartsOn,
+      );
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

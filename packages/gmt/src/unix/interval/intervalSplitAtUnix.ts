@@ -32,45 +32,51 @@ export function intervalSplitAtUnix(
   end: number | string,
   points: Array<number | string>,
 ): Array<{ start: number; end: number }> {
-  if (!Array.isArray(points)) {
-    return [];
-  }
-
-  const interval = parseUnixEpochInterval(start, end);
-
-  if (interval === null) {
-    return [];
-  }
-
-  const { start: startMs, end: endMs } = interval;
-
-  const parsedPoints: number[] = [];
-  for (const point of points) {
-    const parsed = parseUnixEpochValue(point);
-
-    if (parsed === null) {
+  try {
+    if (!Array.isArray(points)) {
       return [];
     }
 
-    parsedPoints.push(parsed);
+    const interval = parseUnixEpochInterval(start, end);
+
+    if (interval === null) {
+      return [];
+    }
+
+    const { start: startMs, end: endMs } = interval;
+
+    const parsedPoints: number[] = [];
+    for (const point of points) {
+      const parsed = parseUnixEpochValue(point);
+
+      if (parsed === null) {
+        return [];
+      }
+
+      parsedPoints.push(parsed);
+    }
+
+    const inRangePoints = parsedPoints.filter(
+      (point) => point > startMs && point < endMs,
+    );
+
+    inRangePoints.sort((a, b) => a - b);
+
+    const uniquePoints = inRangePoints.filter(
+      (point, index) => index === 0 || point !== inRangePoints[index - 1],
+    );
+
+    const boundaries = [startMs, ...uniquePoints, endMs];
+
+    const result: Array<{ start: number; end: number }> = [];
+    for (let i = 0; i < boundaries.length - 1; i++) {
+      result.push({ start: boundaries[i], end: boundaries[i + 1] });
+    }
+
+    return result;
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
+    return [];
   }
-
-  const inRangePoints = parsedPoints.filter(
-    (point) => point > startMs && point < endMs,
-  );
-
-  inRangePoints.sort((a, b) => a - b);
-
-  const uniquePoints = inRangePoints.filter(
-    (point, index) => index === 0 || point !== inRangePoints[index - 1],
-  );
-
-  const boundaries = [startMs, ...uniquePoints, endMs];
-
-  const result: Array<{ start: number; end: number }> = [];
-  for (let i = 0; i < boundaries.length - 1; i++) {
-    result.push({ start: boundaries[i], end: boundaries[i + 1] });
-  }
-
-  return result;
 }

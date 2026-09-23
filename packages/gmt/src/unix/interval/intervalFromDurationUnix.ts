@@ -53,53 +53,59 @@ export function intervalFromDurationUnix(
     overflow?: Overflow;
   },
 ): { start: number; end: number } | null {
-  if (!isOptionsArgument(options)) {
-    return null;
-  }
-
-  if (!isValidDuration(duration)) {
-    return null;
-  }
-
-  if (anchor !== "start" && anchor !== "end") {
-    return null;
-  }
-
-  const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
-  const timeZone = normalizeTimeZone(options?.timeZone);
-
-  if (!timeZone || epochUnit === null) {
-    return null;
-  }
-
-  const instant = unixEpochToInstant(value, epochUnit);
-
-  if (instant === null) {
-    return null;
-  }
-
   try {
-    const point = instant.toZonedDateTimeISO(timeZone);
-    const dur = Temporal.Duration.from(duration);
-    const overflow = resolveOverflow(options?.overflow);
-
-    const other =
-      anchor === "start"
-        ? addToZoned(point, dur, { overflow })
-        : subtractFromZoned(point, dur, { overflow });
-
-    const start = anchor === "start" ? point : other;
-    const end = anchor === "start" ? other : point;
-
-    if (Temporal.ZonedDateTime.compare(start, end) > 0) {
+    if (!isOptionsArgument(options)) {
       return null;
     }
 
-    return {
-      start: toUnixEpoch(start, epochUnit),
-      end: toUnixEpoch(end, epochUnit),
-    };
+    if (!isValidDuration(duration)) {
+      return null;
+    }
+
+    if (anchor !== "start" && anchor !== "end") {
+      return null;
+    }
+
+    const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
+    const timeZone = normalizeTimeZone(options?.timeZone);
+
+    if (!timeZone || epochUnit === null) {
+      return null;
+    }
+
+    const instant = unixEpochToInstant(value, epochUnit);
+
+    if (instant === null) {
+      return null;
+    }
+
+    try {
+      const point = instant.toZonedDateTimeISO(timeZone);
+      const dur = Temporal.Duration.from(duration);
+      const overflow = resolveOverflow(options?.overflow);
+
+      const other =
+        anchor === "start"
+          ? addToZoned(point, dur, { overflow })
+          : subtractFromZoned(point, dur, { overflow });
+
+      const start = anchor === "start" ? point : other;
+      const end = anchor === "start" ? other : point;
+
+      if (Temporal.ZonedDateTime.compare(start, end) > 0) {
+        return null;
+      }
+
+      return {
+        start: toUnixEpoch(start, epochUnit),
+        end: toUnixEpoch(end, epochUnit),
+      };
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

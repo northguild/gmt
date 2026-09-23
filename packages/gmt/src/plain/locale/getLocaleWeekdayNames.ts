@@ -37,26 +37,32 @@ export function getLocaleWeekdayNames(
   locale: string | string[],
   style: LocaleNameStyle = "long",
 ): string[] {
-  const resolvedLocale = resolveRequiredLocale(locale);
-  if (resolvedLocale === null) return [];
-
-  const firstDay = getLocaleFirstDayOfWeek(resolvedLocale);
-  if (firstDay === null) return [];
-
   try {
-    const resolved: "long" | "short" | "narrow" =
-      style === "short" || style === "narrow" ? style : "long";
-    // Build the names in ISO order (Monday-first), then rotate so the
-    // locale's first day of week sits at index 0.
-    const isoOrder: string[] = [];
-    for (let dayOfWeek = 1; dayOfWeek <= 7; dayOfWeek++) {
-      const date = Temporal.PlainDate.from("2024-01-15").add({
-        days: dayOfWeek - 1,
-      });
-      isoOrder.push(date.toLocaleString(resolvedLocale, { weekday: resolved }));
+    const resolvedLocale = resolveRequiredLocale(locale);
+    if (resolvedLocale === null) return [];
+
+    const firstDay = getLocaleFirstDayOfWeek(resolvedLocale);
+    if (firstDay === null) return [];
+
+    try {
+      const resolved: "long" | "short" | "narrow" =
+        style === "short" || style === "narrow" ? style : "long";
+      // Build the names in ISO order (Monday-first), then rotate so the
+      // locale's first day of week sits at index 0.
+      const isoOrder: string[] = [];
+      for (let dayOfWeek = 1; dayOfWeek <= 7; dayOfWeek++) {
+        const date = Temporal.PlainDate.from("2024-01-15").add({
+          days: dayOfWeek - 1,
+        });
+        isoOrder.push(date.toLocaleString(resolvedLocale, { weekday: resolved }));
+      }
+      return isoOrder.slice(firstDay - 1).concat(isoOrder.slice(0, firstDay - 1));
+    } catch {
+      return [];
     }
-    return isoOrder.slice(firstDay - 1).concat(isoOrder.slice(0, firstDay - 1));
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }
