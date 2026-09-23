@@ -4,6 +4,25 @@ import { battleTestTimeZones } from "../../test/timeZoneMatrix";
 import { intervalUnionZoned } from "./intervalUnionZoned";
 
 describe("intervalUnionZoned", () => {
+  // Half-open [start, end) (coding-standards § 8; A = 2024-01-01T09:00Z, B = 12:00Z, C = 13:00Z,
+  // D = 17:00Z). The union is the single run `mergeIntervalsZoned` makes of the pair: touching
+  // intervals join, a gap gives null, and an empty interval adds no instants, so it is absorbed
+  // when it touches the other and dropped when it does not.
+  it.each`
+    aStart                              | aEnd                                | bStart                                        | bEnd                                | expected                                                                              | reason
+    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-01-01T12:00:00+00:00[UTC]"} | ${"2024-01-01T12:00:00+00:00[UTC]"}           | ${"2024-01-01T17:00:00+00:00[UTC]"} | ${{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-01-01T17:00:00+00:00[UTC]" }} | ${"touching [A, B) and [B, D) join"}
+    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-01-01T12:00:00+00:00[UTC]"} | ${"2024-01-01T12:00:00.000000001+00:00[UTC]"} | ${"2024-01-01T17:00:00+00:00[UTC]"} | ${null}                                                                               | ${"one-nanosecond gap"}
+    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-01-01T13:00:00+00:00[UTC]"} | ${"2024-01-01T12:00:00+00:00[UTC]"}           | ${"2024-01-01T17:00:00+00:00[UTC]"} | ${{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-01-01T17:00:00+00:00[UTC]" }} | ${"overlapping [A, C) and [B, D)"}
+    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-01-01T12:00:00+00:00[UTC]"} | ${"2024-01-01T17:00:00+00:00[UTC]"}           | ${"2024-01-01T17:00:00+00:00[UTC]"} | ${{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-01-01T12:00:00+00:00[UTC]" }} | ${"empty [D, D) apart from [A, B) adds nothing"}
+    ${"2024-01-01T17:00:00+00:00[UTC]"} | ${"2024-01-01T17:00:00+00:00[UTC]"} | ${"2024-01-01T09:00:00+00:00[UTC]"}           | ${"2024-01-01T12:00:00+00:00[UTC]"} | ${{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-01-01T12:00:00+00:00[UTC]" }} | ${"empty first interval apart from the second adds nothing"}
+    ${"2024-01-01T12:00:00+00:00[UTC]"} | ${"2024-01-01T12:00:00+00:00[UTC]"} | ${"2024-01-01T12:00:00+00:00[UTC]"}           | ${"2024-01-01T12:00:00+00:00[UTC]"} | ${null}                                                                               | ${"two empty intervals have no instant to span"}
+  `(
+    "returns $expected for [$aStart, $aEnd) and [$bStart, $bEnd) ($reason)",
+    ({ aStart, aEnd, bStart, bEnd, expected }) => {
+      expect(intervalUnionZoned(aStart, aEnd, bStart, bEnd)).toEqual(expected);
+    },
+  );
+
   it.each`
     aStart                              | aEnd                                | bStart                              | bEnd                                | expected
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-04-01T00:00:00+00:00[UTC]"} | ${"2024-12-31T23:59:59+00:00[UTC]"} | ${{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-12-31T23:59:59+00:00[UTC]" }}
@@ -11,7 +30,6 @@ describe("intervalUnionZoned", () => {
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-12-31T23:59:59+00:00[UTC]"} | ${{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-12-31T23:59:59+00:00[UTC]" }}
     ${"2024-04-01T00:00:00+00:00[UTC]"} | ${"2024-12-31T23:59:59+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-12-31T23:59:59+00:00[UTC]" }}
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-06-29T00:00:00+00:00[UTC]"} | ${"2024-06-29T00:00:00+00:00[UTC]"} | ${{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-06-30T23:59:59+00:00[UTC]" }}
-    ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${{ start: "2024-06-30T23:59:59+00:00[UTC]", end: "2024-06-30T23:59:59+00:00[UTC]" }}
   `(
     "returns merged interval when $aStart to $aEnd overlaps $bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
@@ -218,14 +236,14 @@ describe("intervalUnionZoned", () => {
       ).toBe(expectedEnd);
     },
   );
-  // E5 (issue #78), decision of record D2 -- see isValidZonedDateTime.test.ts for the full
-  // rationale: zoned/ rejects any [u-ca=...] calendar annotation outright.
+  // The arguments name different calendars (hebrew and a bare iso8601 string), so the
+  // result is the sentinel (there is no single output calendar).
   it.each`
     aStart                                           | aEnd                                | bStart                                           | bEnd
     ${"2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC]"}              | ${"2024-06-30T23:59:59+00:00[UTC]"}
     ${"2024-01-01T00:00:00+00:00[UTC]"}              | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]"} | ${"2024-06-30T23:59:59+00:00[UTC]"}
   `(
-    "returns null when an argument carries a calendar annotation: $aStart, $aEnd, $bStart, $bEnd",
+    "returns null for mixed calendars: $aStart, $aEnd, $bStart, $bEnd",
     ({
       aStart,
       aEnd,

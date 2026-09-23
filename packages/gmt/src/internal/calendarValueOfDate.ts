@@ -1,42 +1,43 @@
-import { calendarDate } from "../regex";
+import { Temporal } from "@js-temporal/polyfill";
 import type { CalendarSystem } from "../types";
-import { isCalendarSystem } from "./calendarSystemIds";
+import { canonicalCalendarSystem } from "./calendarSystemIds";
+import { hasCalendarAnnotation } from "./hasCalendarAnnotation";
 
 /**
- * Determine which CalendarSystem a GMT PlainDate string is expressed in: `"gregorian"` for a
- * bare (non-annotated) string, the tagged CalendarSystem for a calendar-annotated string (as
- * produced by `convertDateToCalendar`), or `null` when the annotation names an unrecognized
- * calendar identifier.
+ * Determine which CalendarSystem a GMT PlainDate string is expressed in: `"iso8601"` for a string
+ * with no `u-ca` annotation, the canonical id of the calendar Temporal reads from the annotations
+ * otherwise (`[u-ca=HEBREW]` is `"hebrew"`, `[u-ca=ethiopic-amete-alem]` is `"ethioaa"`, and in
+ * `[u-ca=hebrew][u-ca=roc]` the first annotation wins), or `null` when the annotations do not
+ * parse or GMT does not support that calendar.
  *
- * Does not itself validate overall shape or field values — pair with `parseCalendarDateValue`
- * (which throws on invalid input) for full validation. Callers are expected to have already
- * confirmed `value` is valid (e.g. via `isValidCalendarDate`) before relying on this.
- *
- * Part of E5 (issue #78)'s calendar-aware `plain/` gate — see the E5 decisions of record for
- * why calendar-system awareness is confined to `plain/` `PlainDate` values (D1).
+ * Does not itself validate the date — pair with `parseCalendarDateValue` (which throws on invalid
+ * input) for full validation. Callers are expected to have already confirmed `value` is valid
+ * (e.g. via `isValidCalendarDate`) before relying on this.
  */
 export function calendarSystemOfDateValue(
   value: string,
 ): CalendarSystem | null {
-  const match = calendarDate.exec(value);
-  if (!match) {
-    return "gregorian";
+  if (!hasCalendarAnnotation(value)) {
+    return "iso8601";
   }
-  const [, , , , calendarId] = match;
-  return isCalendarSystem(calendarId) ? calendarId : null;
+  try {
+    return canonicalCalendarSystem(Temporal.PlainDate.from(value).calendarId);
+  } catch {
+    return null;
+  }
 }
 
 /**
  * N-ary generalization of `calendarSystemOfDateValue` for list-form functions
  * (`mergeIntervalsDate`, `intervalXorAllDate`, `intervalSplitAtDate`'s `points`): returns the
- * shared CalendarSystem when every value carries the same tag, or `null` on any mismatch or
- * unrecognized identifier. An empty list is treated as `"gregorian"` (the identity/no-op case).
+ * shared CalendarSystem when every value names the same calendar, or `null` on any mismatch or
+ * unsupported identifier. An empty list is treated as `"iso8601"` (the identity/no-op case).
  */
 export function calendarOfAllDateValues(
   values: readonly string[],
 ): CalendarSystem | null {
   if (values.length === 0) {
-    return "gregorian";
+    return "iso8601";
   }
   const first = calendarSystemOfDateValue(values[0]);
   if (!first) {

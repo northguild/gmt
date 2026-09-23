@@ -13,7 +13,7 @@ import { zonedDateTimeFrom } from "../../internal";
  * @param value2 second zoned datetime string
  * @returns `true` if `value1` is before `value2`, otherwise `false`
  *
- * @example isBeforeZoned("2024-03-17T14:30:45-05:00[America/New_York]", "2024-03-17T15:30:45-05:00[America/New_York]") // true
+ * @example isBeforeZoned("2024-03-17T14:30:45-04:00[America/New_York]", "2024-03-17T15:30:45-04:00[America/New_York]") // true
  * @example isBeforeZoned("invalid", "2024-03-17T14:30:45-05:00[America/New_York]") // false
  */
 export function isBeforeZoned(value1: string, value2: string): boolean {

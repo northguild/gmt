@@ -60,3 +60,9 @@ describe("convertUnixToPlainTime", () => {
     expect(convertUnixToPlainTime(unix as never)).toBe("");
   });
 });
+
+describe("convertUnixToPlainTime invalid-input @example", () => {
+  it('returns "" for convertUnixToPlainTime(NaN)', () => {
+    expect(convertUnixToPlainTime(NaN)).toBe("");
+  });
+});

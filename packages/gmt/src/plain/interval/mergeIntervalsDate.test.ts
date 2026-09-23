@@ -32,7 +32,16 @@ describe("mergeIntervalsDate", () => {
     ]);
   });
 
-  it("keeps a 1-day gap separate (not adjacent)", () => {
+  it("absorbs a zero-length interval at a run's end: [01-10, 01-10) after [01-01, 01-10)", () => {
+    expect(
+      mergeIntervalsDate([
+        { start: "2024-01-01", end: "2024-01-10" },
+        { start: "2024-01-10", end: "2024-01-10" },
+      ]),
+    ).toEqual([{ start: "2024-01-01", end: "2024-01-10" }]);
+  });
+
+  it("keeps a 1-day gap separate: [01-01, 01-05) leaves 01-05 uncovered", () => {
     expect(
       mergeIntervalsDate([
         { start: "2024-01-01", end: "2024-01-05" },
@@ -79,10 +88,12 @@ describe("mergeIntervalsDate", () => {
     expect(mergeIntervalsDate(intervals)).toEqual([]);
   });
 
-  it("preserves a single zero-length interval", () => {
+  // Half-open: an empty interval holds no day. It is absorbed by a run it touches or lies in, and
+  // dropped when nothing touches it (CORE-6 §1.2 coalesce).
+  it("drops a single zero-length interval: [2024-01-01, 2024-01-01) is empty", () => {
     expect(
       mergeIntervalsDate([{ start: "2024-01-01", end: "2024-01-01" }]),
-    ).toEqual([{ start: "2024-01-01", end: "2024-01-01" }]);
+    ).toEqual([]);
   });
 
   it("merges a zero-length interval with an overlapping interval", () => {
@@ -94,16 +105,13 @@ describe("mergeIntervalsDate", () => {
     ).toEqual([{ start: "2024-01-01", end: "2024-01-10" }]);
   });
 
-  it("keeps a zero-length interval separate from a disjoint interval", () => {
+  it("drops a zero-length interval that touches nothing: [01-01, 01-01) beside [01-05, 01-10)", () => {
     expect(
       mergeIntervalsDate([
         { start: "2024-01-01", end: "2024-01-01" },
         { start: "2024-01-05", end: "2024-01-10" },
       ]),
-    ).toEqual([
-      { start: "2024-01-01", end: "2024-01-01" },
-      { start: "2024-01-05", end: "2024-01-10" },
-    ]);
+    ).toEqual([{ start: "2024-01-05", end: "2024-01-10" }]);
   });
 
   it("returns [] when Temporal.PlainDate.from throws", () => {
@@ -117,18 +125,18 @@ describe("mergeIntervalsDate", () => {
   it("merges in the shared calendar when every interval carries the same tag", () => {
     expect(
       mergeIntervalsDate([
-        { start: "5784-01-01[u-ca=hebrew]", end: "5784-01-10[u-ca=hebrew]" },
-        { start: "5784-01-05[u-ca=hebrew]", end: "5784-01-20[u-ca=hebrew]" },
+        { start: "2023-09-16[u-ca=hebrew]", end: "2023-09-25[u-ca=hebrew]" },
+        { start: "2023-09-20[u-ca=hebrew]", end: "2023-10-05[u-ca=hebrew]" },
       ]),
     ).toEqual([
-      { start: "5784-01-01[u-ca=hebrew]", end: "5784-01-20[u-ca=hebrew]" },
+      { start: "2023-09-16[u-ca=hebrew]", end: "2023-10-05[u-ca=hebrew]" },
     ]);
   });
 
   it("returns [] when any interval in the list carries a mismatched calendar tag", () => {
     expect(
       mergeIntervalsDate([
-        { start: "5784-01-01[u-ca=hebrew]", end: "5784-01-10[u-ca=hebrew]" },
+        { start: "2023-09-16[u-ca=hebrew]", end: "2023-09-25[u-ca=hebrew]" },
         { start: "2024-01-05", end: "2024-01-20" },
       ]),
     ).toEqual([]);

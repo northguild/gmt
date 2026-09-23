@@ -51,6 +51,11 @@ export function plainDateUntil(
     roundingIncrement: options.roundingIncrement,
     roundingMode: options.roundingMode,
   };
+  // No D11 term here. The nudge window can only miss its target when the target sits strictly
+  // between the window bounds by a sub-day amount, which is why every D11 case carries a time
+  // component. Two PlainDates have none, so the target always lands on a date the window already
+  // reaches and the defect is unreachable through this function — measured over ~1.96M rows
+  // against the raw polyfill, in both directions, with zero divergence (CORE-8 review, #253).
   if (
     start.calendarId === end.calendarId &&
     isCalendarArithmeticCompatNeeded(start.calendarId)

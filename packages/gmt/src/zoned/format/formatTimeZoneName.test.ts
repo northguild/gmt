@@ -15,6 +15,9 @@ function mockNow(instant: Temporal.Instant): () => void {
 
 describe("formatTimeZoneName", () => {
   describe("season-independent styles (shortGeneric/longGeneric)", () => {
+    // ja-JP longGeneric: "米国東部時間" is ICU 78 (Node 22.23+, 24, 26; checked on
+    // ICU 78.3); "アメリカ東部時間" is the ICU 77 (Node 22.16–22.22) wording from
+    // the original golden, not re-run here.
     it.each`
       locale                  | shortGeneric             | longGeneric
       ${MustTestLocales.enUS} | ${"ET"}                  | ${"Eastern Time"}
@@ -156,4 +159,19 @@ describe("formatTimeZoneName", () => {
   `("returns '' for invalid locale $locale", ({ locale }) => {
     expect(formatTimeZoneName("America/New_York", locale as never)).toBe("");
   });
+
+  // ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale
+  // data is read (native Intl.DateTimeFormat gives fr-FR longGeneric "heure d’Europe centrale"), and a malformed tag anywhere in the list is invalid input.
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"heure d’Europe centrale"}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
+  `(
+    "returns $expected for Europe/Berlin longGeneric with locale list $locale",
+    ({ locale, expected }) => {
+      expect(
+        formatTimeZoneName("Europe/Berlin", locale, { style: "longGeneric" }),
+      ).toBe(expected);
+    },
+  );
 });

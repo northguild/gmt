@@ -11,6 +11,10 @@ describe("getTimeZoneOffset", () => {
     ${"Asia/Kolkata"}     | ${"2024-07-15T00:00:00Z"} | ${"+05:30"}
     ${"Pacific/Chatham"}  | ${"2024-07-15T00:00:00Z"} | ${"+12:45"}
     ${"UTC"}              | ${"2024-07-15T00:00:00Z"} | ${"+00:00"}
+    ${"Japan"}            | ${"2024-01-01T00:00:00Z"} | ${"+09:00"}
+    ${"EST5EDT"}          | ${"2024-07-15T12:00:00Z"} | ${"-04:00"}
+    ${"Zulu"}             | ${"2024-07-15T12:00:00Z"} | ${"+00:00"}
+    ${"utc"}              | ${"2024-07-15T12:00:00Z"} | ${"+00:00"}
   `(
     "returns $expected for $timeZone at $instant",
     ({ timeZone, instant, expected }) => {
@@ -54,6 +58,44 @@ describe("getTimeZoneOffset", () => {
     ${undefined}
   `("returns '' for invalid instant $instant", ({ instant }) => {
     expect(getTimeZoneOffset("America/New_York", instant as never)).toBe("");
+  });
+
+  // Temporal's ParseISODateTime clamps second 60 to 59 in every spelling its grammar accepts;
+  // GMT rejects the leap second rather than report the offset of a different instant.
+  it.each`
+    instant                        | spelling
+    ${"2016-12-31T23:59:60Z"}      | ${"extended, uppercase T"}
+    ${"2016-12-31t23:59:60z"}      | ${"lowercase t and z"}
+    ${"2016-12-31 23:59:60+00:00"} | ${"space separator"}
+    ${"20161231T235960Z"}          | ${"basic format"}
+  `(
+    "returns '' for leap-second instant $instant ($spelling)",
+    ({ instant }) => {
+      expect(getTimeZoneOffset("UTC", instant)).toBe("");
+    },
+  );
+
+  // Strict-shape rule (see coding-standards): an instant string is ISO 8601 extended format before its first `[`.
+  // Polyfill 0.5.1 reads each of these as 2024-07-15T16:00Z, where New York is at -04:00.
+  it.each`
+    instant                       | spelling
+    ${"2024-07-15T16:00:00z"}     | ${"lower-case z"}
+    ${"2024-07-15t16:00:00Z"}     | ${"lower-case t separator"}
+    ${"2024-07-15 16:00:00Z"}     | ${"space separator"}
+    ${"20240715T160000Z"}         | ${"basic format"}
+    ${"2024-07-15T12:00:00-0400"} | ${"basic offset"}
+    ${"2024-07-15T12:00:00-04"}   | ${"hour-only offset"}
+  `(
+    "returns '' for non-extended instant $instant ($spelling)",
+    ({ instant }) => {
+      expect(getTimeZoneOffset("America/New_York", instant)).toBe("");
+    },
+  );
+
+  it("still reads an instant whose elective annotation value looks like a leap second", () => {
+    expect(
+      getTimeZoneOffset("Asia/Tokyo", "2024-01-01T00:00:00Z[x=T123460Z]"),
+    ).toBe("+09:00");
   });
 
   for (const timeZone of battleTestTimeZones) {

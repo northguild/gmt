@@ -74,6 +74,12 @@ describe("noDateUtcRule", () => {
     });
   });
 
+  it("points at convertUtcToUnix, the function that exists, with its epochUnit option", () => {
+    expect(MSG_DATE_UTC).toBe(
+      "Avoid Date.UTC(). Use @northguild/gmt convertUtcToUnix('YYYY-MM-DDTHH:mm:ssZ', { epochUnit: 'milliseconds' | 'seconds' }) instead.",
+    );
+  });
+
   it("has correct rule meta", () => {
     expect(noDateUtcRule.meta.type).toBe("problem");
     expect(noDateUtcRule.meta.docs.description).toBeTruthy();

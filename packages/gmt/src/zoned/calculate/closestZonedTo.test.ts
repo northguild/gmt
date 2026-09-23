@@ -72,10 +72,10 @@ describe("closestZonedTo", () => {
   describe("empty array", () => {
     it.each`
       target                                     | expected
-      ${"2024-03-15T12:00:00[America/New_York]"} | ${null}
-      ${"2024-01-01T12:00:00[America/New_York]"} | ${null}
+      ${"2024-03-15T12:00:00[America/New_York]"} | ${""}
+      ${"2024-01-01T12:00:00[America/New_York]"} | ${""}
     `(
-      "returns null when candidates is empty (target=$target)",
+      "returns an empty string when candidates is empty (target=$target)",
       ({ target, expected }) => {
         expect(closestZonedTo(target, [])).toBe(expected);
       },
@@ -85,11 +85,11 @@ describe("closestZonedTo", () => {
   describe("invalid target", () => {
     it.each`
       target                                     | candidates                                   | expected
-      ${"invalid"}                               | ${["2024-03-01T00:00:00[America/New_York]"]} | ${null}
-      ${""}                                      | ${["2024-03-01T00:00:00[America/New_York]"]} | ${null}
-      ${"2024-02-30T12:00:00[America/New_York]"} | ${["2024-03-01T00:00:00[America/New_York]"]} | ${null}
+      ${"invalid"}                               | ${["2024-03-01T00:00:00[America/New_York]"]} | ${""}
+      ${""}                                      | ${["2024-03-01T00:00:00[America/New_York]"]} | ${""}
+      ${"2024-02-30T12:00:00[America/New_York]"} | ${["2024-03-01T00:00:00[America/New_York]"]} | ${""}
     `(
-      "returns null when target is invalid ($target)",
+      "returns an empty string when target is invalid ($target)",
       ({ target, candidates, expected }) => {
         expect(closestZonedTo(target, candidates)).toBe(expected);
       },
@@ -99,10 +99,10 @@ describe("closestZonedTo", () => {
   describe("all-invalid candidates", () => {
     it.each`
       target                                     | candidates                                              | expected
-      ${"2024-03-15T12:00:00[America/New_York]"} | ${["invalid", "2024-02-30T00:00:00[America/New_York]"]} | ${null}
-      ${"2024-03-15T12:00:00[America/New_York]"} | ${["", "not-a-date[America/New_York]"]}                 | ${null}
+      ${"2024-03-15T12:00:00[America/New_York]"} | ${["invalid", "2024-02-30T00:00:00[America/New_York]"]} | ${""}
+      ${"2024-03-15T12:00:00[America/New_York]"} | ${["", "not-a-date[America/New_York]"]}                 | ${""}
     `(
-      "returns null when all candidates are invalid",
+      "returns an empty string when all candidates are invalid",
       ({ target, candidates, expected }) => {
         expect(closestZonedTo(target, candidates)).toBe(expected);
       },
@@ -264,4 +264,20 @@ describe("closestZonedTo", () => {
       });
     }
   });
+
+  // A string function's sentinel is "" (coding-standards § API Contract).
+  it.each`
+    candidates
+    ${null}
+    ${undefined}
+    ${"2024-03-01"}
+    ${{}}
+  `(
+    "returns an empty string for non-array candidates $candidates",
+    ({ candidates }) => {
+      expect(
+        closestZonedTo("2024-03-15T12:00:00[America/New_York]", candidates),
+      ).toBe("");
+    },
+  );
 });

@@ -1,0 +1,65 @@
+/*
+ * Cross-document view transitions — how one route hands over to the next.
+ *
+ * Every route change on this site is a full page load. With `navigation: auto`
+ * the browser snapshots the old page, loads the new one, and animates between
+ * the two instead of cutting. Supported in Chrome/Edge 126+ and Safari 18.2+;
+ * Firefox ignores the rule and keeps the plain cut.
+ * https://drafts.csswg.org/css-view-transitions-2/#view-transition-rule
+ *
+ * The header and sidebar are the same on every page, so they get their own
+ * names and no animation: they swap in place and never visibly move. Only the
+ * rest of the page (the content column and "On this page") cross-fades.
+ *
+ * This depends on the new page's first render being complete. The
+ * `rel="expect"` render-block in astro.config.mjs (marker in Footer.astro) and
+ * the inline Expressive Code styles guarantee that; without them the browser
+ * would animate into a half-painted page.
+ *
+ * Names must be unique on a page. On /dox the header is `display: none`, so it
+ * is not captured and that route simply cross-fades.
+ */
+
+@view-transition {
+  navigation: auto;
+}
+
+header.header {
+  view-transition-name: gmt-header;
+}
+
+/* The pane, not `nav.sidebar`: that wrapper is a zero-height static box and
+   the visible sidebar is this fixed child. On narrow screens it is the mobile
+   menu, which is not rendered while closed and so is never captured. */
+.sidebar-pane {
+  view-transition-name: gmt-sidebar;
+}
+
+/* Show only the new snapshot. `animation: none` alone is not enough: the
+   default styles keep the old and new images both at full opacity and blend
+   them with `mix-blend-mode: plus-lighter`, so for the whole transition the
+   old page's sidebar highlight showed through and the header came out
+   brighter. */
+::view-transition-group(gmt-header),
+::view-transition-new(gmt-header),
+::view-transition-group(gmt-sidebar),
+::view-transition-new(gmt-sidebar) {
+  animation: none;
+}
+
+::view-transition-old(gmt-header),
+::view-transition-old(gmt-sidebar) {
+  display: none;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--gmt-duration-fast);
+  animation-timing-function: var(--gmt-easing);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @view-transition {
+    navigation: none;
+  }
+}

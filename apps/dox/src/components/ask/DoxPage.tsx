@@ -14,7 +14,7 @@
  * `.gmt-hive-body`. The rail collapses to nothing when empty, so a conversation
  * with no widget in it lays out exactly as it did before.
  */
-import { useCallback, useEffect, useState } from "react";
+import { startTransition, useCallback, useEffect, useState } from "react";
 import { DoxChat } from "./DoxChat";
 import { HeaderClock } from "./HeaderClock";
 import { useBrains } from "./use-brains";
@@ -58,12 +58,22 @@ export default function DoxPage() {
          receipt in the transcript has already said so. */
       const resolved = resolveWidget(toolName, input);
       if (!resolved.ok) return;
-      setRailWidget({ toolCallId, entry: resolved.entry, args: resolved.args });
+      /* In a transition so the rail's <ViewTransition> slides it in (and the
+         previous widget out); a plain setState would swap it with no motion. */
+      startTransition(() => {
+        setRailWidget({
+          toolCallId,
+          entry: resolved.entry,
+          args: resolved.args,
+        });
+      });
     },
     [],
   );
 
-  const closeWidget = useCallback(() => setRailWidget(null), []);
+  const closeWidget = useCallback(() => {
+    startTransition(() => setRailWidget(null));
+  }, []);
 
   return (
     <div className="gmt-ask gmt-hive-shell">

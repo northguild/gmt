@@ -31,7 +31,7 @@ export default [
         {
           name: "Date",
           message:
-            "Avoid Date. Use @northguild/gmt getNow(), getUnixNow('milliseconds' | 'seconds'), getUtcNow(), or getZonedNow(timezone) instead.",
+            "Avoid Date. Use @northguild/gmt getNow(), getUnixNow({ epochUnit: 'milliseconds' | 'seconds' }), getUtcNow(), or getZonedNow(timezone) instead.",
         },
       ],
       "no-restricted-properties": [
@@ -40,13 +40,13 @@ export default [
           object: "Date",
           property: "now",
           message:
-            "Avoid Date.now(). Use @northguild/gmt getUnixNow('milliseconds' | 'seconds') or getNow() instead.",
+            "Avoid Date.now(). Use @northguild/gmt getUnixNow({ epochUnit: 'milliseconds' | 'seconds' }) or getNow() instead.",
         },
         {
           object: "Date",
           property: "UTC",
           message:
-            "Avoid Date.UTC(). Use @northguild/gmt convertUtcDateTimeToUnix('YYYY-MM-DDTHH:mm:ss', 'milliseconds' | 'seconds') instead.",
+            "Avoid Date.UTC(). Use @northguild/gmt convertUtcToUnix('YYYY-MM-DDTHH:mm:ssZ', { epochUnit: 'milliseconds' | 'seconds' }) instead.",
         },
         {
           object: "Date",

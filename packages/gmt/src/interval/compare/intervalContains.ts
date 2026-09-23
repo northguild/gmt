@@ -10,10 +10,12 @@ import type { Interval } from "../../types";
  * - `start ≤ t < end`: `start` is inside, `end` is not.
  * - Always `false` for an empty interval (`start === end`) — it contains no instant.
  * - Compares instants: `isoString` may name a different zone from either endpoint.
- * - The closed `intervalContainsUtc`, `intervalContainsZoned` (…) include `end`; this is the
- *   half-open standard.
+ * - The positional `intervalContainsUtc`, `intervalContainsZoned` (…) follow the same half-open
+ *   rule and exclude `end`.
  * - Returns `false` on invalid input — `interval` not an `Interval`, or `isoString` not an
- *   instant string (offset required, no leap second, no `[u-ca=...]`).
+ *   instant string (offset required, no leap second, no unknown critical annotation such as
+ *   `[!foo=bar]`). Zone, calendar and elective annotations are ignored, as
+ *   `Temporal.Instant.from` ignores them.
  *
  * @param interval `{ start, end }` record of ISO 8601 instant strings
  * @param isoString ISO 8601 instant string to test
@@ -29,12 +31,18 @@ export function intervalContains(
   interval: Interval,
   isoString: string,
 ): boolean {
-  const record = parseIntervalNanoseconds(interval);
-  const instant = parseInstantNanoseconds(isoString);
+  try {
+    const record = parseIntervalNanoseconds(interval);
+    const instant = parseInstantNanoseconds(isoString);
 
-  if (record === null || instant === null) {
+    if (record === null || instant === null) {
+      return false;
+    }
+
+    return record.start <= instant && instant < record.end;
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return false;
   }
-
-  return record.start <= instant && instant < record.end;
 }

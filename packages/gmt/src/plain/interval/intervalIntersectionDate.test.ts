@@ -2,9 +2,11 @@ import { intervalIntersectionDate } from "./intervalIntersectionDate";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 
 describe("intervalIntersectionDate", () => {
+  // Half-open: null unless A.start < B.end && B.start < A.end (CORE-6 §3 intersectIntervals), so
+  // touching intervals, identical empties and an empty interval at an edge have no intersection.
   it.each`
     aStart          | aEnd            | bStart          | bEnd            | expected
-    ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${{ start: "2024-01-01", end: "2024-01-01" }}
+    ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${null}
     ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-06-15"} | ${"2024-06-15"} | ${null}
   `(
     "returns $expected for zero-length A=$aStart to $aEnd intersect B=$bStart to $bEnd",
@@ -19,10 +21,10 @@ describe("intervalIntersectionDate", () => {
     aStart          | aEnd            | bStart          | bEnd            | expected
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-04-01"} | ${"2024-12-31"} | ${{ start: "2024-04-01", end: "2024-06-30" }}
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-01-01"} | ${"2024-06-30"} | ${{ start: "2024-01-01", end: "2024-06-30" }}
-    ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-06-30"} | ${"2024-12-31"} | ${{ start: "2024-06-30", end: "2024-06-30" }}
+    ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-06-30"} | ${"2024-12-31"} | ${null}
     ${"2024-04-01"} | ${"2024-12-31"} | ${"2024-01-01"} | ${"2024-06-30"} | ${{ start: "2024-04-01", end: "2024-06-30" }}
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-06-29"} | ${"2024-06-29"} | ${{ start: "2024-06-29", end: "2024-06-29" }}
-    ${"2024-06-30"} | ${"2024-06-30"} | ${"2024-06-30"} | ${"2024-06-30"} | ${{ start: "2024-06-30", end: "2024-06-30" }}
+    ${"2024-06-30"} | ${"2024-06-30"} | ${"2024-06-30"} | ${"2024-06-30"} | ${null}
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-02-01"} | ${"2024-03-01"} | ${{ start: "2024-02-01", end: "2024-03-01" }}
   `(
     "returns $expected when intervals $aStart to $aEnd and $bStart to $bEnd overlap",
@@ -48,8 +50,8 @@ describe("intervalIntersectionDate", () => {
 
   it.each`
     aStart          | aEnd            | bStart          | bEnd            | expected
-    ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-06-30"} | ${"2024-06-30"} | ${{ start: "2024-06-30", end: "2024-06-30" }}
-    ${"2024-06-30"} | ${"2024-06-30"} | ${"2024-01-01"} | ${"2024-06-30"} | ${{ start: "2024-06-30", end: "2024-06-30" }}
+    ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-06-30"} | ${"2024-06-30"} | ${null}
+    ${"2024-06-30"} | ${"2024-06-30"} | ${"2024-01-01"} | ${"2024-06-30"} | ${null}
   `(
     "returns $expected for adjacent intervals",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
@@ -126,22 +128,22 @@ describe("intervalIntersectionDate", () => {
   it("intersects in the shared calendar when all four arguments carry the same tag", () => {
     expect(
       intervalIntersectionDate(
-        "5784-06-15[u-ca=hebrew]",
-        "5784-06-25[u-ca=hebrew]",
-        "5784-06-20[u-ca=hebrew]",
-        "5784-07-01[u-ca=hebrew]",
+        "2024-02-24[u-ca=hebrew]",
+        "2024-03-05[u-ca=hebrew]",
+        "2024-02-29[u-ca=hebrew]",
+        "2024-03-11[u-ca=hebrew]",
       ),
     ).toEqual({
-      start: "5784-06-20[u-ca=hebrew]",
-      end: "5784-06-25[u-ca=hebrew]",
+      start: "2024-02-29[u-ca=hebrew]",
+      end: "2024-03-05[u-ca=hebrew]",
     });
   });
 
   it("returns null when calendars mismatch across the four arguments", () => {
     expect(
       intervalIntersectionDate(
-        "5784-06-15[u-ca=hebrew]",
-        "5784-06-25[u-ca=hebrew]",
+        "2024-02-24[u-ca=hebrew]",
+        "2024-03-05[u-ca=hebrew]",
         "2024-01-01",
         "2024-01-05",
       ),

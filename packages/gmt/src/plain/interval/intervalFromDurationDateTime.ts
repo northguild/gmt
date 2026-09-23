@@ -3,6 +3,7 @@ import { isValidDuration } from "../../duration/validate";
 import { resolveOverflow } from "../../internal";
 import type { Overflow } from "../../types";
 import { isValidDateTime } from "../validate";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Construct a datetime interval from a single point plus an ISO 8601 duration, anchored at either end.
@@ -36,6 +37,10 @@ export function intervalFromDurationDateTime(
   anchor: "start" | "end",
   options?: { overflow?: Overflow },
 ): { start: string; end: string } | null {
+  if (!isOptionsArgument(options)) {
+    return null;
+  }
+
   if (typeof value !== "string" || !isValidDateTime(value)) {
     return null;
   }

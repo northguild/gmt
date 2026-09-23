@@ -1,14 +1,19 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
-import { plainDateTime } from "../../regex";
+import { halfOpenDifference } from "../../internal";
+import { isValidDateTime } from "../validate";
 
 /**
  * Return the portion(s) of interval A not covered by interval B.
  *
  * - Uses `Temporal.PlainDateTime.compare` for comparison.
- * - Endpoints are inclusive, so a returned piece ends one nanosecond before, or starts
- *   one nanosecond after, the interval it borders.
- * - Returns `[]` when B fully covers A.
- * - Returns `[{ start, end }]` when B overlaps one edge of A (or equals A).
+ * - Half-open: an interval holds every `t` with `start <= t < end`. A returned piece ends exactly
+ *   where B starts, or starts exactly where B ends, because B's `end` is not in B (CORE-6's
+ *   `subtractIntervals`). No piece is stepped by one unit.
+ * - B touching A (`bStart === aEnd` or `bEnd === aStart`), or empty, removes nothing.
+ * - An empty A (`aStart === aEnd`) has nothing left: returns `[]`. Every returned piece is non-empty.
+ * - Returns `[]` when B fully covers A, which includes B equal to A.
+ * - Returns `[{ start, end }]` when B overlaps exactly one edge of A, leaving one piece.
  * - Returns `[{ start, end }, { start, end }]` when B is fully inside A with gaps on both sides.
  * - Returns A unchanged when B lies entirely before or after it.
  * - Returns `[]` if either interval is invalid (`start > end`).
@@ -20,8 +25,8 @@ import { plainDateTime } from "../../regex";
  * @param bEnd ISO 8601 datetime string for the second interval end
  * @returns array of `{ start, end }` records representing A minus B, or `[]` on invalid input
  *
- * @example intervalDifferenceDateTime("2024-01-01T09:00:00", "2024-12-31T17:00:00", "2024-06-01T12:00:00", "2024-07-01T13:00:00") // [{ start: "2024-01-01T09:00:00", end: "2024-06-01T11:59:59.999999999" }, { start: "2024-07-01T13:00:00.000000001", end: "2024-12-31T17:00:00" }]
- * @example intervalDifferenceDateTime("2024-01-01T09:00:00", "2024-12-31T17:00:00", "2024-01-01T09:00:00", "2024-12-31T17:00:00") // []
+ * @example intervalDifferenceDateTime("2024-01-01T09:00:00", "2024-01-01T17:00:00", "2024-01-01T12:00:00", "2024-01-01T13:00:00") // [{ start: "2024-01-01T09:00:00", end: "2024-01-01T12:00:00" }, { start: "2024-01-01T13:00:00", end: "2024-01-01T17:00:00" }]
+ * @example intervalDifferenceDateTime("2024-01-01T09:00:00", "2024-01-01T17:00:00", "2024-01-01T09:00:00", "2024-01-01T17:00:00") // []
  * @example intervalDifferenceDateTime("invalid", "2024-12-31T17:00:00", "2024-06-01T12:00:00", "2024-07-01T13:00:00") // []
  */
 export function intervalDifferenceDateTime(
@@ -40,10 +45,10 @@ export function intervalDifferenceDateTime(
   }
 
   if (
-    !plainDateTime.test(aStart) ||
-    !plainDateTime.test(aEnd) ||
-    !plainDateTime.test(bStart) ||
-    !plainDateTime.test(bEnd)
+    !isValidDateTime(aStart) ||
+    !isValidDateTime(aEnd) ||
+    !isValidDateTime(bStart) ||
+    !isValidDateTime(bEnd)
   ) {
     return [];
   }
@@ -62,29 +67,14 @@ export function intervalDifferenceDateTime(
       return [];
     }
 
-    const result: Array<{ start: string; end: string }> = [];
-
-    // Left piece: A before B starts
-    if (Temporal.PlainDateTime.compare(aS, bS) < 0) {
-      const leftEnd =
-        Temporal.PlainDateTime.compare(aE, bS) < 0
-          ? aE
-          : bS.subtract({ nanoseconds: 1 });
-      if (Temporal.PlainDateTime.compare(leftEnd, aS) >= 0) {
-        result.push({ start: aS.toString(), end: leftEnd.toString() });
-      }
-    }
-
-    // Right piece: A after B ends — starting at A's own start when B lies entirely before A
-    if (Temporal.PlainDateTime.compare(aE, bE) > 0) {
-      const rightStart =
-        Temporal.PlainDateTime.compare(bE, aS) < 0
-          ? aS
-          : bE.add({ nanoseconds: 1 });
-      result.push({ start: rightStart.toString(), end: aE.toString() });
-    }
-
-    return result;
+    return halfOpenDifference(
+      { start: aS, end: aE },
+      [{ start: bS, end: bE }],
+      Temporal.PlainDateTime.compare,
+    ).map(({ start, end }) => ({
+      start: start.toString(),
+      end: end.toString(),
+    }));
   } catch {
     return [];
   }

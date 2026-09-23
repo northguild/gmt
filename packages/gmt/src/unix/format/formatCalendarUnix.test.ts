@@ -1,15 +1,19 @@
 import { vi } from "vitest";
 import {
+  MustTestDstTimeZones,
   MustTestLocales,
   battleTestTimeZones,
   expectDateTimeEqual,
-  MustTestDstTimeZones,
+  utcMs,
 } from "../../test";
 import { mockTemporalNowInstantThrow } from "../../test/mocks";
-import { formatCalendarUnix } from "./formatCalendarUnix";
+import {
+  formatCalendarUnix,
+  type FormatCalendarUnixOptions,
+} from "./formatCalendarUnix";
 
-const REF_MS = Date.UTC(2024, 2, 15, 13, 0); // 2024-03-15T09:00:00-04:00[America/New_York]
-const VAL_MS = Date.UTC(2024, 2, 16, 18, 30); // 2024-03-16T14:30:00-04:00[America/New_York]
+const REF_MS = utcMs("2024-03-15T13:00:00Z"); // 2024-03-15T09:00:00-04:00[America/New_York]
+const VAL_MS = utcMs("2024-03-16T18:30:00Z"); // 2024-03-16T14:30:00-04:00[America/New_York]
 
 // Expected values per battle-test timeZone, verified against @js-temporal/polyfill.
 const calendarLabelByZone = {
@@ -46,9 +50,9 @@ describe("formatCalendarUnix", () => {
   describe("±1 and 0 permutations", () => {
     it.each`
       valueMs                          | expected
-      ${Date.UTC(2024, 2, 15, 18, 30)} | ${"today at 2:30 PM"}
+      ${utcMs("2024-03-15T18:30:00Z")} | ${"today at 2:30 PM"}
       ${VAL_MS}                        | ${"tomorrow at 2:30 PM"}
-      ${Date.UTC(2024, 2, 14, 18, 30)} | ${"yesterday at 2:30 PM"}
+      ${utcMs("2024-03-14T18:30:00Z")} | ${"yesterday at 2:30 PM"}
     `(
       "formats epoch $valueMs relative to REF as $expected",
       ({ valueMs, expected }) => {
@@ -69,7 +73,7 @@ describe("formatCalendarUnix", () => {
     it("6 days out stays relative, 7 days out flips to absolute", () => {
       expect(
         formatCalendarUnix(
-          Date.UTC(2024, 2, 21, 18, 30),
+          utcMs("2024-03-21T18:30:00Z"),
           MustTestLocales.enUS,
           {
             timeZone: "America/New_York",
@@ -79,7 +83,7 @@ describe("formatCalendarUnix", () => {
       ).toBe("in 6 days at 2:30 PM");
       expect(
         formatCalendarUnix(
-          Date.UTC(2024, 2, 22, 18, 30),
+          utcMs("2024-03-22T18:30:00Z"),
           MustTestLocales.enUS,
           {
             timeZone: "America/New_York",
@@ -207,13 +211,31 @@ describe("formatCalendarUnix", () => {
       ).toBe("tomorrow at 6:30 PM");
     });
 
-    it("defaults timeZone to UTC for an invalid timeZone string", () => {
+    // ECMA-402 and Temporal throw RangeError for an unknown zone, so a typo is the sentinel, never UTC.
+    it.each`
+      timeZone
+      ${"Not/AZone"}
+      ${""}
+      ${null}
+    `("returns '' for invalid timeZone $timeZone", ({ timeZone }) => {
       expect(
         formatCalendarUnix(VAL_MS, MustTestLocales.enUS, {
           reference: REF_MS,
-          timeZone: "Not/AZone",
+          timeZone,
         }),
-      ).toBe("tomorrow at 6:30 PM");
+      ).toBe("");
+    });
+
+    // Temporal GetOptionsObject throws TypeError for null (and any non-object), so it is invalid.
+    it.each`
+      options
+      ${null}
+      ${"UTC"}
+      ${1}
+    `("returns '' for options $options", ({ options }) => {
+      expect(
+        formatCalendarUnix(VAL_MS, MustTestLocales.enUS, options as never),
+      ).toBe("");
     });
   });
 
@@ -251,5 +273,71 @@ describe("formatCalendarUnix", () => {
       mockTemporalNowInstantThrow();
       expect(formatCalendarUnix(VAL_MS, MustTestLocales.enUS)).toBe("");
     });
+  });
+});
+
+describe("formatCalendarUnix with an unrecognised epochUnit", () => {
+  // isValidUnixUnit defines the domain ("seconds" | "milliseconds", singular or plural): any other value is invalid
+  // input and returns the sentinel, never a silent read as milliseconds.
+  it.each`
+    epochUnit
+    ${"nanoseconds"}
+    ${"SECONDS"}
+    ${"ms"}
+    ${""}
+    ${1000}
+  `('returns "" for epochUnit $epochUnit', ({ epochUnit }) => {
+    expect(
+      formatCalendarUnix(1_706_659_200, "en-US", {
+        epochUnit: epochUnit as never,
+        reference: 1_706_659_200,
+        timeZone: "UTC",
+      }),
+    ).toBe("");
+  });
+});
+
+describe("FormatCalendarUnixOptions has no never-read members", () => {
+  // style, numeric, largestUnit and roundingMethod were never read and are removed in 1.16.0;
+  // a calendar label has no relative-time unit to choose or round.
+  it("rejects style, numeric, largestUnit and roundingMethod at compile time", () => {
+    const options: FormatCalendarUnixOptions = {
+      reference: 1710685000000,
+      timeZone: "UTC",
+      // @ts-expect-error -- `style` was removed in 1.16.0
+      style: "narrow",
+    };
+    const numeric: FormatCalendarUnixOptions = {
+      // @ts-expect-error -- `numeric` was removed in 1.16.0
+      numeric: "always",
+    };
+    const largestUnit: FormatCalendarUnixOptions = {
+      // @ts-expect-error -- `largestUnit` was removed in 1.16.0
+      largestUnit: "week",
+    };
+    const roundingMethod: FormatCalendarUnixOptions = {
+      // @ts-expect-error -- `roundingMethod` was removed in 1.16.0
+      roundingMethod: "ceil",
+    };
+    // 1710772200000 is 2024-03-18T14:30Z, one UTC calendar day after the reference.
+    expect(formatCalendarUnix(1710772200000, "en-US", options)).toBe(
+      "tomorrow at 2:30 PM",
+    );
+    expect([numeric, largestUnit, roundingMethod]).toHaveLength(3);
+  });
+});
+
+// ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale data
+// is used, and a malformed tag anywhere in the list is invalid input. Expected strings from native
+// Intl with the same list (Chromium 153).
+describe("formatCalendarUnix with a locale list", () => {
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"demain à 18:30"}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
+  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+    expect(
+      formatCalendarUnix(VAL_MS, locale as string[], { reference: REF_MS }),
+    ).toBe(expected);
   });
 });

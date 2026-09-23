@@ -9,7 +9,7 @@
  * | Format | Epoch | Unit | Representable range |
  * | --- | --- | --- | --- |
  * | NTP | 1900-01-01 | 2^-32 s | 64 bits, wrapping every 2^32 s (~136.19 years) into a new era |
- * | FILETIME | 1601-01-01 | 100 ns | unsigned 64-bit, 1601-01-01 to +060056-05-28 |
+ * | FILETIME | 1601-01-01 | 100 ns | `0n` to 2^63 − 1, 1601-01-01 to +030828-09-14 (`FileTimeToSystemTime`'s limit) |
  * | .NET ticks | 0001-01-01 | 100 ns | `DateTime.MinValue` to `DateTime.MaxValue`, 0001-01-01 to 9999-12-31 |
  * | Excel 1900 | 1899-12-30 | 1 day | serial 1 (1900-01-01) to 2958465 (9999-12-31); 60 is the phantom 1900-02-29 |
  * | Excel 1904 | 1904-01-01 | 1 day | serial 0 (1904-01-01) to 2957003 (9999-12-31) |
@@ -72,8 +72,16 @@ export const FILE_TIME_EPOCH_OFFSET_TICKS = 116_444_736_000_000_000n;
 /** Smallest FILETIME: `FILETIME` is a pair of `DWORD`s, so the value is unsigned. */
 export const MIN_FILE_TIME = 0n;
 
-/** Largest FILETIME: 2^64 − 1, i.e. `+060056-05-28T05:36:10.9551615Z`. */
-export const MAX_FILE_TIME = 18_446_744_073_709_551_615n;
+/**
+ * Largest convertible FILETIME: 2^63 − 1, i.e. `+030828-09-14T02:48:05.4775807Z`.
+ *
+ * The struct's two `DWORD`s hold up to 2^64 − 1, but Microsoft's `FileTimeToSystemTime`
+ * says the value "must be less than 0x8000000000000000. Otherwise, the function fails", and
+ * `SetFileTime` reserves `0xFFFFFFFF`/`0xFFFFFFFF` (2^64 − 1) as a "do not modify" marker
+ * rather than a time. Values from 2^63 up are therefore not dates.
+ * Source: https://learn.microsoft.com/en-us/windows/win32/api/timezoneapi/nf-timezoneapi-filetimetosystemtime
+ */
+export const MAX_FILE_TIME = 9_223_372_036_854_775_807n;
 
 // --- .NET ticks -----------------------------------------------------------
 

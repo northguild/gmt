@@ -2,43 +2,24 @@ import { mockTemporalPlainDateTimeFromThrow } from "../../test/mocks";
 import { intervalsOverlapDateTime } from "./intervalsOverlapDateTime";
 
 describe("intervalsOverlapDateTime", () => {
+  // Half-open [start, end): A.start < B.end && B.start < A.end (CORE-6 §3 intervalsOverlap).
   it.each`
-    aStart                   | aEnd                     | bStart                   | bEnd                     | expected
-    ${"2024-01-01T10:00:00"} | ${"2024-06-30T23:59:59"} | ${"2024-04-01T00:00:00"} | ${"2024-12-31T23:59:59"} | ${true}
-    ${"2024-01-01T10:00:00"} | ${"2024-12-31T23:59:59"} | ${"2024-01-01T10:00:00"} | ${"2024-06-30T23:59:59"} | ${true}
-    ${"2024-01-01T10:00:00"} | ${"2024-06-30T23:59:59"} | ${"2024-06-30T23:59:59"} | ${"2024-12-31T23:59:59"} | ${true}
-    ${"2024-06-15T12:00:00"} | ${"2024-06-15T12:00:00"} | ${"2024-06-15T12:00:00"} | ${"2024-06-15T12:00:00"} | ${true}
+    aStart                   | aEnd                     | bStart                             | bEnd                     | expected | reason
+    ${"2024-01-01T10:00:00"} | ${"2024-06-30T23:59:59"} | ${"2024-04-01T00:00:00"}           | ${"2024-12-31T23:59:59"} | ${true}  | ${"partial overlap"}
+    ${"2024-01-01T10:00:00"} | ${"2024-12-31T23:59:59"} | ${"2024-01-01T10:00:00"}           | ${"2024-06-30T23:59:59"} | ${true}  | ${"same start"}
+    ${"2024-01-01T09:00:00"} | ${"2024-01-01T12:00:00"} | ${"2024-01-01T12:00:00"}           | ${"2024-01-01T17:00:00"} | ${false} | ${"touching"}
+    ${"2024-01-01T12:00:00"} | ${"2024-01-01T17:00:00"} | ${"2024-01-01T09:00:00"}           | ${"2024-01-01T12:00:00"} | ${false} | ${"touching, reversed order"}
+    ${"2024-01-01T09:00:00"} | ${"2024-01-01T12:00:00"} | ${"2024-01-01T11:59:59.999999999"} | ${"2024-01-01T17:00:00"} | ${true}  | ${"1 ns shared"}
+    ${"2024-01-01T10:00:00"} | ${"2024-06-30T23:59:59"} | ${"2024-07-01T00:00:00"}           | ${"2024-12-31T23:59:59"} | ${false} | ${"disjoint"}
+    ${"2024-01-01T10:00:00"} | ${"2024-06-30T23:59:59"} | ${"2024-06-30T23:59:59"}           | ${"2024-06-30T23:59:59"} | ${false} | ${"empty B at A's end"}
+    ${"2024-06-30T23:59:59"} | ${"2024-06-30T23:59:59"} | ${"2024-01-01T10:00:00"}           | ${"2024-06-30T23:59:59"} | ${false} | ${"empty A at B's end"}
+    ${"2024-01-01T10:00:00"} | ${"2024-06-30T23:59:59"} | ${"2024-01-01T10:00:00"}           | ${"2024-01-01T10:00:00"} | ${false} | ${"empty B at A's start"}
+    ${"2024-01-01T10:00:00"} | ${"2024-06-30T23:59:59"} | ${"2024-03-01T00:00:00"}           | ${"2024-03-01T00:00:00"} | ${true}  | ${"empty B strictly inside A"}
+    ${"2024-06-15T12:00:00"} | ${"2024-06-15T12:00:00"} | ${"2024-06-15T12:00:00"}           | ${"2024-06-15T12:00:00"} | ${false} | ${"identical empties"}
+    ${"2024-06-30T23:59:59"} | ${"2024-01-01T10:00:00"} | ${"2024-12-31T23:59:59"}           | ${"2024-04-01T00:00:00"} | ${false} | ${"both reversed"}
+    ${"2024-01-01T10:00:00"} | ${"2024-06-30T23:59:59"} | ${"2024-06-30T23:59:59"}           | ${"2024-05-01T00:00:00"} | ${false} | ${"reversed B"}
   `(
-    "returns $expected when intervals $aStart to $aEnd and $bStart to $bEnd overlap",
-    ({ aStart, aEnd, bStart, bEnd, expected }) => {
-      expect(intervalsOverlapDateTime(aStart, aEnd, bStart, bEnd)).toBe(
-        expected,
-      );
-    },
-  );
-
-  it.each`
-    aStart                   | aEnd                     | bStart                   | bEnd                     | expected
-    ${"2024-01-01T10:00:00"} | ${"2024-06-30T23:59:59"} | ${"2024-07-01T00:00:00"} | ${"2024-12-31T23:59:59"} | ${false}
-    ${"2024-07-01T00:00:00"} | ${"2024-12-31T23:59:59"} | ${"2024-01-01T10:00:00"} | ${"2024-06-30T23:59:59"} | ${false}
-    ${"2024-01-01T10:00:00"} | ${"2024-06-30T23:59:59"} | ${"2024-06-30T23:59:59"} | ${"2024-06-30T23:59:59"} | ${true}
-    ${"2024-06-30T23:59:59"} | ${"2024-06-30T23:59:59"} | ${"2024-01-01T10:00:00"} | ${"2024-06-30T23:59:59"} | ${true}
-    ${"2024-01-01T10:00:00"} | ${"2024-06-30T23:59:59"} | ${"2024-06-30T23:59:59"} | ${"2024-05-01T00:00:00"} | ${false}
-  `(
-    "returns $expected for adjacent or contained intervals",
-    ({ aStart, aEnd, bStart, bEnd, expected }) => {
-      expect(intervalsOverlapDateTime(aStart, aEnd, bStart, bEnd)).toBe(
-        expected,
-      );
-    },
-  );
-
-  it.each`
-    aStart                   | aEnd                     | bStart                   | bEnd                     | expected
-    ${"2024-06-30T23:59:59"} | ${"2024-01-01T10:00:00"} | ${"2024-12-31T23:59:59"} | ${"2024-04-01T00:00:00"} | ${false}
-    ${"2024-01-01T10:00:00"} | ${"2024-06-30T23:59:59"} | ${"2024-06-30T23:59:59"} | ${"2024-05-01T00:00:00"} | ${false}
-  `(
-    "returns $expected for reversed intervals",
+    "returns $expected for [$aStart, $aEnd) and [$bStart, $bEnd) ($reason)",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalsOverlapDateTime(aStart, aEnd, bStart, bEnd)).toBe(
         expected,

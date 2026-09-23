@@ -22,8 +22,8 @@ import { installJsdomShims } from "~/test/jsdom-shims";
 
 installJsdomShims();
 
-const PACIFIC_MIDNIGHT = "2026-06-16T07:00:00.000Z";
-const UTC_MIDNIGHT = "2026-06-16T00:00:00.000Z";
+const PACIFIC_MIDNIGHT = "2026-06-16T07:00:00Z";
+const UTC_MIDNIGHT = "2026-06-16T00:00:00Z";
 /** Four hours before Pacific midnight — noon in Tokyo. */
 const NOW = "2026-06-16T03:00:00Z";
 

@@ -8,6 +8,8 @@ argument-hint: "no arguments needed"
 
 Produce a commit message for the changes that have accumulated since the last commit. **Do not run `git commit` or any destructive git command.** Output the message as a copyable code block and stop.
 
+**Write it in plain English** — [`plain-english` skill](../plain-english/SKILL.md), AGENTS.md Core Rule 13. Lead with what changed, one idea per sentence, active voice, concrete names and numbers. Depth stays; a long body is fine if every sentence is short and direct.
+
 ## Steps
 
 ### 1. Understand what changed

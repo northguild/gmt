@@ -24,10 +24,8 @@ const sameInstantZonedCases = battleTestTimeZones.map((timeZone) => ({
 }));
 
 describe("parseCalendarZonedValue / formatZonedInCalendar", () => {
-  // DoD-1: the grammar must survive a full parse -> format round trip for every supported
-  // calendar in every battle-test zone — 13 x 20 = 260 cases. Exhaustive here (rather than
-  // sampled) because the round trip is cheap and is precisely where a calendar-specific
-  // formatting bug would hide.
+  // The grammar survives a full parse -> format round trip for every supported calendar in every
+  // battle-test zone, and the annotated string is exactly Temporal's own ZonedDateTime#toString.
   it.each(
     sameInstantZonedCases.flatMap(({ timeZone, value }) =>
       allCalendars.map((calendar) => ({ timeZone, value, calendar })),
@@ -36,26 +34,26 @@ describe("parseCalendarZonedValue / formatZonedInCalendar", () => {
     "round-trips $calendar in $timeZone back to the original ISO value",
     ({ value, calendar }) => {
       const annotated = convertZonedToCalendar(value, calendar);
-      expect(annotated).not.toBe("");
+      expect(annotated).toBe(
+        Temporal.ZonedDateTime.from(value).withCalendar(calendar).toString(),
+      );
 
       const reparsed = parseCalendarZonedValue(annotated);
       expect(reparsed.toInstant().toString()).toBe(
         Temporal.ZonedDateTime.from(value).toInstant().toString(),
       );
-      expect(formatZonedInCalendar(reparsed, "gregorian")).toBe(value);
+      expect(formatZonedInCalendar(reparsed, "iso8601")).toBe(value);
     },
   );
 
-  // The two era-bearing calendars named explicitly in E7's definition of done — the era suffix is
-  // the part of the grammar that can never round-trip through Temporal directly (`;era=` is not
-  // valid RFC 9557 at any segment ordering), so it gets its own named rows rather than only
-  // living inside the 260-case sweep above.
+  // The era-based calendars: no era in the string, the calendar annotation after the zone.
+  // Expected values: native Temporal (Chromium 153), ZonedDateTime#withCalendar(calendar).toString().
   it.each`
     value                                              | calendar      | expected
-    ${"2024-10-03T14:30:45+00:00[UTC]"}                | ${"japanese"} | ${"0006-10-03T14:30:45+00:00[u-ca=japanese;era=reiwa][UTC]"}
-    ${"2024-10-03T14:30:45+03:00[Africa/Addis_Ababa]"} | ${"ethiopic"} | ${"2017-01-23T14:30:45+03:00[u-ca=ethiopic;era=ethiopic][Africa/Addis_Ababa]"}
+    ${"2024-10-03T14:30:45+00:00[UTC]"}                | ${"japanese"} | ${"2024-10-03T14:30:45+00:00[UTC][u-ca=japanese]"}
+    ${"2024-10-03T14:30:45+03:00[Africa/Addis_Ababa]"} | ${"ethiopic"} | ${"2024-10-03T14:30:45+03:00[Africa/Addis_Ababa][u-ca=ethiopic]"}
   `(
-    "formats the era-bearing $calendar value as $expected",
+    "formats the era-based $calendar value as $expected",
     ({ value, calendar, expected }) => {
       expect(convertZonedToCalendar(value, calendar as CalendarSystem)).toBe(
         expected,
@@ -70,10 +68,13 @@ describe("parseCalendarZonedValue / formatZonedInCalendar", () => {
   );
 
   it.each`
-    value                                                                      | calendar                 | expected
-    ${"5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"}              | ${"hebrew"}              | ${"5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"}
-    ${"7517-12-30T00:30:00-04:00[u-ca=ethiopic-amete-alem][America/Santiago]"} | ${"ethiopic-amete-alem"} | ${"7517-12-30T00:30:00-04:00[u-ca=ethiopic-amete-alem][America/Santiago]"}
-    ${"2024-10-03T14:30:45-04:00[America/New_York]"}                           | ${"gregorian"}           | ${"2024-10-03T14:30:45-04:00[America/New_York]"}
+    value                                                          | calendar     | expected
+    ${"2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]"}  | ${"hebrew"}  | ${"2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]"}
+    ${"2025-09-05T00:30:00-04:00[America/Santiago][u-ca=ethioaa]"} | ${"ethioaa"} | ${"2025-09-05T00:30:00-04:00[America/Santiago][u-ca=ethioaa]"}
+    ${"2025-09-05T00:30:00-04:00[America/Santiago][u-ca=coptic]"}  | ${"coptic"}  | ${"2025-09-05T00:30:00-04:00[America/Santiago][u-ca=coptic]"}
+    ${"2024-10-03T14:30:45-04:00[America/New_York]"}               | ${"iso8601"} | ${"2024-10-03T14:30:45-04:00[America/New_York]"}
+    ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=iso8601]"} | ${"iso8601"} | ${"2024-10-03T14:30:45-04:00[America/New_York]"}
+    ${"2024-10-03T14:30:45-04:00[America/New_York][!u-ca=HEBREW]"} | ${"hebrew"}  | ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=hebrew]"}
   `(
     "re-formats parsed $value in $calendar as $expected",
     ({ value, calendar, expected }) => {
@@ -86,18 +87,14 @@ describe("parseCalendarZonedValue / formatZonedInCalendar", () => {
     },
   );
 
-  // formatZonedInCalendar is the ONLY writer of the annotated zoned grammar. These two rows pin
-  // the reason: Temporal's own stringifiers emit the opposite segment ordering, which GMT rejects.
-  it("never emits Temporal's [timeZone][u-ca=...] ordering, which Temporal's own toString does", () => {
+  // The annotated zoned grammar is Temporal's own ZonedDateTime#toString.
+  it("writes the same string as Temporal's own toString", () => {
     const heb = parseCalendarZonedValue(
       calendarZonedFixtures.hebrewLeapMonth.adarI15NewYork,
     );
 
     expect(heb.toString()).toBe(
       "2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]",
-    );
-    expect(heb.toPlainDateTime().toString()).toBe(
-      "2024-02-24T14:30:00[u-ca=hebrew]",
     );
 
     expect(formatZonedInCalendar(heb, "hebrew")).toBe(
@@ -117,45 +114,60 @@ describe("parseCalendarZonedValue / formatZonedInCalendar", () => {
   });
 
   it.each`
-    value                                                                    | reason
-    ${"2024-03-10T14:30:00-04:00[America/New_York][u-ca=hebrew]"}            | ${"Temporal's RFC 9557 segment ordering"}
-    ${"5784-06-15T14:30:00-05:00[America/New_York][u-ca=hebrew]"}            | ${"GMT digits in RFC 9557 ordering (the misparse hazard)"}
-    ${"5784-06-15T14:30:00-05:00[u-ca=hebrew]"}                              | ${"no time zone segment"}
-    ${"5784-06-15[u-ca=hebrew]"}                                             | ${"plain calendar date, no time or zone"}
-    ${"5784-06-15T14:30:00-05:00[u-ca=martian][America/New_York]"}           | ${"unknown calendar identifier"}
-    ${"5784-06-15T14:30:00-05:00[u-ca=hebrew][Not/AZone]"}                   | ${"unknown time zone"}
-    ${"0031-04-30T12:00:00+09:00[u-ca=japanese;era=nosucherra][Asia/Tokyo]"} | ${"unknown era"}
-    ${"5785-13-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"}            | ${"month 13 in a non-leap Hebrew year"}
-    ${"5784-06-15T14:30:00+03:00[u-ca=hebrew][America/New_York]"}            | ${"stale offset for the named zone"}
-    ${"2024-06-30T23:59:60+00:00[UTC]"}                                      | ${"leap second, which Temporal would otherwise clamp to :59"}
-    ${"invalid"}                                                             | ${"not a datetime at all"}
+    value                                                                       | reason
+    ${"2024-03-10T14:30:00-04:00[u-ca=hebrew][America/New_York]"}               | ${"calendar before zone (not RFC 9557; Temporal rejects it)"}
+    ${"2024-02-24T14:30:00-05:00[u-ca=hebrew]"}                                 | ${"no time zone segment"}
+    ${"2024-02-24[u-ca=hebrew]"}                                                | ${"plain calendar date, no time or zone"}
+    ${"2024-02-24T14:30:00-05:00[America/New_York][u-ca=martian]"}              | ${"unknown calendar identifier"}
+    ${"2024-02-24T14:30:00-05:00[America/New_York][u-ca=chinese]"}              | ${"calendar GMT does not support"}
+    ${"2024-02-24T14:30:00-05:00[America/New_York][u-ca=taiwan]"}               | ${"pre-1.16.0 GMT id"}
+    ${"279517-10-11T14:30:00-05:00[America/New_York][u-ca=hebrew]"}             | ${"six-digit unsigned year"}
+    ${"2024-02-24T14:30:00-05:00[Not/AZone][u-ca=hebrew]"}                      | ${"unknown time zone"}
+    ${"2019-04-30T12:00:00+09:00[Asia/Tokyo][u-ca=japanese;era=heisei]"}        | ${"';era=' is not RFC 9557 syntax"}
+    ${"2024-13-15T14:30:00-05:00[America/New_York][u-ca=hebrew]"}               | ${"ISO month 13 (the digits are ISO)"}
+    ${"2024-02-24T14:30:00+03:00[America/New_York][u-ca=hebrew]"}               | ${"stale offset for the named zone"}
+    ${"2024-06-30T23:59:60+00:00[UTC]"}                                         | ${"leap second, which Temporal would otherwise clamp to :59"}
+    ${"2016-12-31t23:59:60+00:00[UTC]"}                                         | ${"leap second, lowercase t separator"}
+    ${"2016-12-31 23:59:60+00:00[UTC]"}                                         | ${"leap second, space separator"}
+    ${"20161231T235960Z[UTC]"}                                                  | ${"leap second, basic format"}
+    ${"invalid"}                                                                | ${"not a datetime at all"}
+    ${"2024-02-24T14:30:00-05:00[America/New_York][!foo=bar][u-ca=hebrew]"}     | ${"unknown critical annotation"}
+    ${"2024-02-24T14:30:00-05:00[America/New_York][!u-ca=hebrew][u-ca=roc]"}    | ${"second calendar after a critical one"}
+    ${"2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew][!u-ca=roc]"}    | ${"critical second calendar"}
+    ${"2024-02-24T14:30:00-05:00[America/New_York][u-ca=chinese][u-ca=hebrew]"} | ${"the first calendar is one GMT does not support"}
+    ${"2024-02-24T14:30:00-05:00[America/New_York][Asia/Tokyo][u-ca=hebrew]"}   | ${"two time zone annotations"}
+    ${"20240224T143000-0500[America/New_York][u-ca=hebrew]"}                    | ${"basic format (strict extended shape)"}
+    ${"2024-02-24 14:30:00-05:00[America/New_York][u-ca=hebrew]"}               | ${"space separator (strict extended shape)"}
+    ${"2024-02-24t14:30:00-05:00[America/New_York][u-ca=hebrew]"}               | ${"lower-case t separator (strict extended shape)"}
+    ${"2024-02-24T19:30:00z[America/New_York][u-ca=hebrew]"}                    | ${"lower-case z designator (strict extended shape)"}
+    ${"2024-02-24T14:30:00-05[America/New_York][u-ca=hebrew]"}                  | ${"hour-only offset (strict extended shape)"}
+    ${"2024-09-18[America/New_York][u-ca=hebrew]"}                              | ${"date without a time (strict extended shape)"}
   `("throws for $value ($reason)", ({ value }) => {
     expect(() => parseCalendarZonedValue(value)).toThrow();
   });
 
-  // The regression trap for an over-eager regex or field check that assumes month <= 12: Hebrew
-  // 5784 IS a leap year, so month 13 genuinely exists and must parse.
-  it("accepts month 13 in the Hebrew leap year 5784 even though 5785 rejects it", () => {
-    expect(
-      parseCalendarZonedValue(
-        "5784-13-15T14:30:00-04:00[u-ca=hebrew][America/New_York]",
-      ).calendarId,
-    ).toBe("hebrew");
-    expect(() =>
-      parseCalendarZonedValue(
-        "5785-13-15T14:30:00-05:00[u-ca=hebrew][America/New_York]",
-      ),
-    ).toThrow();
+  it.each`
+    value                                                                   | calendarId
+    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=hebrew]"}           | ${"hebrew"}
+    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=ethiopic]"}         | ${"ethioaa"}
+    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=islamicc]"}         | ${"islamic-civil"}
+    ${"2024-09-18T14:30:00-04:00[America/New_York][foo=bar][u-ca=hebrew]"}  | ${"hebrew"}
+    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=hebrew][foo=bar]"}  | ${"hebrew"}
+    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=hebrew][u-ca=roc]"} | ${"hebrew"}
+    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=coptic][foo=bar]"}  | ${"ethioaa"}
+    ${"2024-09-18T14:30:00-04:00[America/New_York][foo=bar]"}               | ${"iso8601"}
+  `("parses $value, computing in $calendarId", ({ value, calendarId }) => {
+    expect(parseCalendarZonedValue(value).calendarId).toBe(calendarId);
   });
 
   it("passes disambiguation through to Temporal for a fold landing", () => {
     // Morocco's 2019-05-05 fall-back fold — the same fixture the Japanese era tests use.
     const earlier = parseCalendarZonedValue(
-      "0001-05-05T02:30:00[u-ca=japanese;era=reiwa][Africa/Casablanca]",
+      "2019-05-05T02:30:00[Africa/Casablanca][u-ca=japanese]",
       { disambiguation: "earlier" },
     );
     const later = parseCalendarZonedValue(
-      "0001-05-05T02:30:00[u-ca=japanese;era=reiwa][Africa/Casablanca]",
+      "2019-05-05T02:30:00[Africa/Casablanca][u-ca=japanese]",
       { disambiguation: "later" },
     );
 
@@ -168,20 +180,19 @@ describe("parseCalendarZonedValue / formatZonedInCalendar", () => {
       "2024-10-03T14:30:45-04:00[America/New_York]",
     );
     expect(bare.calendarId).toBe("iso8601");
-    expect(formatZonedInCalendar(bare, "gregorian")).toBe(
+    expect(formatZonedInCalendar(bare, "iso8601")).toBe(
       "2024-10-03T14:30:45-04:00[America/New_York]",
     );
   });
 });
 
 describe("parseCalendarZonedValue at the maximum instant", () => {
-  // Temporal.PlainDate.from("+275760-09-13").withCalendar("persian") is year 275139, ordinal month 7,
-  // day 12 (plain polyfill fields, which round-trip to the same ISO date): 10:00 +10:00 that day in
-  // Sydney is the last representable instant.
+  // 10:00 +10:00 on +275760-09-13 in Sydney is the last representable instant (Temporal
+  // nsMaxInstant, 8.64e21 ns).
   it.each`
-    value                                                            | calendarId   | epochNanoseconds
-    ${"275139-07-12T10:00:00+10:00[u-ca=persian][Australia/Sydney]"} | ${"persian"} | ${8_640_000_000_000_000_000_000n}
-    ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"}              | ${"iso8601"} | ${8_640_000_000_000_000_000_000n}
+    value                                                             | calendarId   | epochNanoseconds
+    ${"+275760-09-13T10:00:00+10:00[Australia/Sydney][u-ca=persian]"} | ${"persian"} | ${8_640_000_000_000_000_000_000n}
+    ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"}               | ${"iso8601"} | ${8_640_000_000_000_000_000_000n}
   `(
     "parses $value to the $calendarId instant $epochNanoseconds",
     ({ value, calendarId, epochNanoseconds }) => {

@@ -15,10 +15,10 @@ import Mistake from "../../../components/Mistake.astro";
   title="Using Intl.DateTimeFormat directly"
   description="Intl.DateTimeFormat does not cover GMT's extended format set (Rfc2822, HTTP, SQL, Rfc3339, relative), and its `formatToParts` output order varies by locale. GMT's format functions are consistent across locales and formats."
   wrongCode={`const f = new Intl.DateTimeFormat("en-US", { dateStyle: "full" });
-f.format(new Date("2024-03-15")); // "Friday, March 15, 2024" — locale-dependent order`}
+f.format(new Date("2024-03-15")); // "Thursday, March 14, 2024" in New York — the Date is UTC midnight`}
   rightCode={`import { formatDate } from "@northguild/gmt";
 
-formatDate("2024-03-15"); // "Friday, March 15, 2024" — locale-aware, consistent API`}
+formatDate("2024-03-15", "en-US", { dateStyle: "full" }); // "Friday, March 15, 2024" — no time zone involved`}
 />
 
 <Mistake
@@ -37,13 +37,16 @@ if (out === "") {
 
 <Mistake
   severity="medium"
-  title="Assuming getLocale* throws or returns English for an invalid locale"
-  description="getLocaleMonthNames, getLocaleEraNames, and friends return empty arrays for an unknown locale. They do not throw, and they do not fall back to English."
-  wrongCode={`const months = getLocaleMonthNames("xx-XX"); // [] — not English, not an error`}
+  title="Assuming getLocale* rejects a locale it has no data for"
+  description="getLocaleMonthNames, getLocaleEraNames, and friends return an empty array only for a malformed locale tag. A well-formed tag with no locale data is not an error: it falls back to the runtime's default locale, as ECMA-402 locale resolution requires. They never throw."
+  wrongCode={`const months = getLocaleMonthNames("xx-XX");
+if (months.length === 0) {
+  // never reached — "xx-XX" is well-formed, so this is the default locale's names
+}`}
   rightCode={`import { getLocaleMonthNames } from "@northguild/gmt";
 
-const months = getLocaleMonthNames("en-US"); // known locale
-// always validate or default the locale before calling`}
+getLocaleMonthNames("not-a-locale-!!"); // [] — only a malformed tag is rejected
+// check for locale data yourself, e.g. Intl.DateTimeFormat.supportedLocalesOf(["xx-XX"]) is []`}
 />
 
 <Mistake
@@ -53,7 +56,7 @@ const months = getLocaleMonthNames("en-US"); // known locale
   wrongCode={`// no equivalent of format("{yyyy}-{MM}-{dd}", date)`}
   rightCode={`import { formatDate } from "@northguild/gmt";
 
-formatDate("2024-03-15"); // "Friday, March 15, 2024" — dedicated function, no tokens`}
+formatDate("2024-03-15", "en-US", { dateStyle: "long" }); // "March 15, 2024" — dedicated function, no tokens`}
 />
 
 <Mistake
@@ -61,21 +64,21 @@ formatDate("2024-03-15"); // "Friday, March 15, 2024" — dedicated function, no
   title="Reassembling formatToParts output in a fixed order"
   description="`Intl.DateTimeFormat.formatToParts()` returns parts in locale-specific order. Concatenating them in a hardcoded sequence (e.g. month before day) produces wrong output for `ja-JP`, `zh-CN`, and others."
   wrongCode={`const parts = new Intl.DateTimeFormat("ja-JP").formatToParts(new Date());
-// parts[0] is the era, parts[1] is the year — hardcoding order breaks other locales`}
+// parts[0] is the year, not the month — hardcoding en-US order breaks here`}
   rightCode={`import { formatDate } from "@northguild/gmt";
 
-formatDate("2024-03-15"); // locale-correct order, no manual assembly`}
+formatDate("2024-03-15", "ja-JP", { dateStyle: "long" }); // "2024年3月15日" — locale-correct order, no manual assembly`}
 />
 
 <Mistake
   severity="medium"
   title="Confusing formatCalendar with formatRelativeDateTime"
-  description="formatCalendar converts a date to a non-Gregorian calendar string (e.g. Japanese, Hebrew). formatRelativeDateTime produces '3 days ago' / 'in 2 hours'. They have completely different output shapes."
-  wrongCode={`const out = formatCalendar("2024-03-15", "japanese"); // "令和6年3月15日"
-// used where a relative description was wanted`}
-  rightCode={`import { formatRelativeDate } from "@northguild/gmt";
+  description="formatCalendar names the calendar day and the time of a datetime — 'tomorrow at 9:00 AM' — and falls back to an absolute date a week or more away. formatRelativeDateTime states a distance — 'tomorrow', 'in 3 hours', '3 days ago' — with no time of day. They have different output shapes."
+  wrongCode={`formatCalendar("2024-03-16T09:00:00", "en-US", { reference: "2024-03-15T08:00:00" });
+// "tomorrow at 9:00 AM" — used where a relative distance was wanted`}
+  rightCode={`import { formatRelativeDateTime } from "@northguild/gmt";
 
-formatRelativeDate("2024-03-15"); // "today" — relative description`}
+formatRelativeDateTime("2024-03-16T09:00:00", "en-US", { reference: "2024-03-15T08:00:00" }); // "tomorrow"`}
 />
 
 ## See also

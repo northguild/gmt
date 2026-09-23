@@ -1,64 +1,66 @@
+import { Temporal } from "@js-temporal/polyfill";
 import type { CalendarSystem } from "../types";
 
-// Maps GMT's public CalendarSystem identifiers to the Temporal/Intl calendar identifiers
-// they wrap. "gregorian" maps to "iso8601" (Temporal's default, era-free calendar) rather
-// than "gregory" (which carries BCE/CE eras) since GMT's existing unannotated ISO strings
-// are already iso8601-calendared — this keeps "gregorian" round-trips a no-op.
-//
-// "islamic-tabular" maps to Temporal's "islamic-tbla" id (its name for the same
-// arithmetic/astronomical-epoch tabular calendar). "islamic-umalqura" resolves through
-// Temporal's built-in Umm al-Qura implementation rather than a table GMT ports itself —
-// per E1's "no ported leap-year tables or arithmetic" precedent, the polyfill already
-// carries the correct tabulated/algorithmic data, so a GMT-owned copy would only add a
-// second, divergence-prone source of truth.
-//
-// "taiwan" maps to Temporal's "roc" id (Republic of China calendar — the same calendar
-// react-aria's TaiwanCalendar wraps under a different name). "japanese", "buddhist", and
-// "persian"/"indian" match Temporal's own ids directly.
-//
-// "ethiopic-amete-alem" maps to Temporal's "ethioaa" id (Ethiopic calendar anchored to the
-// Amete Alem/"Year of the World" epoch, ~5493 BCE — a single continuous era, never resets).
-// "ethiopic" and "coptic" match Temporal's own ids directly; both share the Ethiopic
-// family's 13-month structure (12 x 30 days + a 5/6-day Pagume/Nasie) but differ in epoch —
-// "ethiopic" additionally resets to the Amete Mihret/"Incarnation" era at its own epoch
-// (~AD 8), which is why it needs the same eraYear-based string handling as "japanese" (see
-// calendarDateString.ts's isEraBased).
-export const temporalCalendarIds: Record<CalendarSystem, string> = {
-  gregorian: "iso8601",
-  hebrew: "hebrew",
-  "islamic-civil": "islamic-civil",
-  "islamic-tabular": "islamic-tbla",
-  "islamic-umalqura": "islamic-umalqura",
-  japanese: "japanese",
-  buddhist: "buddhist",
-  taiwan: "roc",
-  persian: "persian",
-  indian: "indian",
-  ethiopic: "ethiopic",
-  "ethiopic-amete-alem": "ethioaa",
-  coptic: "coptic",
-};
+/**
+ * Every `CalendarSystem`, by canonical calendar id: the CLDR `common/bcp47/calendar.xml` type,
+ * which is also what Temporal's `CanonicalizeCalendar` returns and what RFC 9557's `[u-ca=<id>]`
+ * carries. `"iso8601"` plus the Intl Era and Month Code proposal's `table-calendar-types` rows
+ * GMT supports (not `"chinese"` or `"dangi"`).
+ */
+export const calendarSystems: readonly CalendarSystem[] = [
+  "iso8601",
+  "gregory",
+  "hebrew",
+  "islamic-civil",
+  "islamic-tbla",
+  "islamic-umalqura",
+  "japanese",
+  "buddhist",
+  "roc",
+  "persian",
+  "indian",
+  "ethiopic",
+  "ethioaa",
+  "coptic",
+];
 
+const calendarSystemSet: ReadonlySet<string> = new Set(calendarSystems);
+
+/** True when `value` is exactly a canonical `CalendarSystem` id (no alias, no case folding). */
 export function isCalendarSystem(value: string): value is CalendarSystem {
-  return value in temporalCalendarIds;
+  return calendarSystemSet.has(value);
 }
 
-// Reverse of temporalCalendarIds — needed because some GMT calendar identifiers (e.g.
-// "islamic-tabular") don't match Temporal's own id for the same calendar ("islamic-tbla"),
-// so a PlainDate's `calendarId` can't be used directly as GMT's string annotation.
-const gmtCalendarSystemIds: Record<string, CalendarSystem> = Object.fromEntries(
-  Object.entries(temporalCalendarIds).map(([gmtId, temporalId]) => [
-    temporalId,
-    gmtId as CalendarSystem,
-  ]),
-);
-
-export function calendarSystemIdFromTemporal(
-  temporalId: string,
-): CalendarSystem {
-  const gmtId = gmtCalendarSystemIds[temporalId];
-  if (!gmtId) {
-    throw new Error(`Unsupported Temporal calendar id: ${temporalId}`);
+/**
+ * The `CalendarSystem` a calendar id names, or `null` when GMT does not support it.
+ *
+ * Canonicalization is Temporal's (`CanonicalizeCalendar`: ASCII-lowercase, then the CLDR alias
+ * mapping, so `"ethiopic-amete-alem"` is `"ethioaa"` and `"islamicc"` is `"islamic-civil"`),
+ * asked of the polyfill rather than kept as a GMT copy of the alias table. Constructing a
+ * `PlainDate` reads no calendar fields, so this is safe for every calendar.
+ */
+export function canonicalCalendarSystem(id: string): CalendarSystem | null {
+  if (typeof id !== "string" || id.length === 0) {
+    return null;
   }
-  return gmtId;
+  try {
+    const canonical = new Temporal.PlainDate(1970, 1, 1, id).calendarId;
+    return isCalendarSystem(canonical) ? canonical : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The Temporal calendar a `CalendarSystem` computes in. The Ethiopic family (`"ethiopic"`,
+ * `"coptic"`) computes in `"ethioaa"`: polyfill 0.5.1 cannot read `"ethiopic"`/`"coptic"` fields
+ * under ICU >= 78, and the three calendars share months, days and arithmetic, differing only by a
+ * constant year offset (test262 `extreme-dates.js`: ethiopic = ethioaa − 5500, coptic = ethioaa −
+ * 5776 at both limits). Strings still carry the
+ * requested id; only the computation is routed.
+ */
+export function computationCalendarId(calendar: CalendarSystem): string {
+  return calendar === "ethiopic" || calendar === "coptic"
+    ? "ethioaa"
+    : calendar;
 }

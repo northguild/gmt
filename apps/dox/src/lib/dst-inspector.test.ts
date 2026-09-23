@@ -25,6 +25,7 @@ import {
   type DstTransition,
   type TickerWindow,
 } from "../lib/dst-inspector";
+import { parseHourFromUtc } from "@northguild/gmt";
 
 // ---------------------------------------------------------------------------
 // Test fixtures
@@ -574,8 +575,7 @@ describe("DST widget behavior", () => {
   it("calculates the correct local hour for fall-back overlap", () => {
     // Fall back happens at 6am UTC = 2am EDT (after transition)
     const transition = NY_TRANSITIONS[1];
-    const instant = new Date(transition.instant);
-    expect(instant.getUTCHours()).toBe(6);
+    expect(parseHourFromUtc(transition.instant)).toBe("06");
     expect(localHourAtTransition(transition, ZONE)).toBe(1);
   });
 

@@ -7,6 +7,8 @@ description: Perform code reviews for GMT Temporal projects (gmt, gmt-oxlint, gm
 
 Follow these guidelines when reviewing code for GMT Temporal projects.
 
+**Write it in plain English** — [`plain-english` skill](../plain-english/SKILL.md), AGENTS.md Core Rule 13. Review comments are read by the author under time pressure: name the file and line, state the defect in one sentence, and say what would fix it.
+
 ## Review Checklist
 
 **The canonical, up-to-date checklist is [context/code-review-checklist.md](../../../context/code-review-checklist.md) — read and apply it in full for every review.** It covers API Contract, Architecture, Tests, Documentation (including README and TanStack Intent skill freshness), Long-Term Impact flags, and reviewer Tone. Do not rely on a separate copy here; that file is the single source of truth so it doesn't drift out of sync with this skill.

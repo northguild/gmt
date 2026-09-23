@@ -77,18 +77,13 @@ describe("subtractTime", () => {
     },
   );
 
-  it("produces the same wrapped result regardless of overflow (PlainTime always wraps around the clock)", () => {
+  // The options argument (only `overflow`) was removed in 1.16.0: Temporal `PlainTime#subtract`
+  // takes no options and always wraps around the clock. Passing one is a type error, and a
+  // JavaScript caller's stray argument changes nothing.
+  it("treats the removed options argument as a type error and ignores it at runtime", () => {
     expect(
-      subtractTime("01:00:00", { hours: 2 }, { overflow: "constrain" }),
+      // @ts-expect-error -- the `overflow` options argument was removed in 1.16.0
+      subtractTime("01:00:00", { hours: 2 }, { overflow: "reject" }),
     ).toBe("23:00:00");
-    expect(subtractTime("01:00:00", { hours: 2 }, { overflow: "reject" })).toBe(
-      "23:00:00",
-    );
-    expect(
-      subtractTime("01:00:00", { hours: 24 }, { overflow: "constrain" }),
-    ).toBe("01:00:00");
-    expect(
-      subtractTime("01:00:00", { hours: 24 }, { overflow: "reject" }),
-    ).toBe("01:00:00");
   });
 });

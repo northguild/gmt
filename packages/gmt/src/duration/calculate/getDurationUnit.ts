@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { isValidDateTimeDurationUnit } from "../../plain/validate";
 import type { DateTimeDurationUnit } from "../../types";
 import { isValidDuration } from "../validate/isValidDuration";
+import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
 
 /**
  * Read a single component out of an ISO 8601 duration string.
@@ -16,11 +17,12 @@ import { isValidDuration } from "../validate/isValidDuration";
  *   is 30 — the input's own precision, not the caller's spelling of it, decides the fields.
  * - A negative duration stores *every* field as negative, so this returns a negative number
  *   for each nonzero component of "-P1DT2H", not just the leading one.
+ * - `unit` accepts the plural or singular name (`"hours"` or `"hour"`), as Temporal does.
  * - Returns null when `value` is not a valid duration string or `unit` is not a valid
  *   DateTimeDurationUnit.
  *
  * @param value ISO 8601 duration string
- * @param unit DateTimeDurationUnit to read ("years" | "months" | "weeks" | "days" | "hours" | "minutes" | "seconds" | "milliseconds" | "microseconds" | "nanoseconds")
+ * @param unit DateTimeDurationUnit to read ("years" | "months" | "weeks" | "days" | "hours" | "minutes" | "seconds" | "milliseconds" | "microseconds" | "nanoseconds", or the singular name)
  * @returns the component's value, or null on invalid input
  *
  * @example getDurationUnit("P1DT2H30M", "hours") // 2
@@ -30,18 +32,21 @@ import { isValidDuration } from "../validate/isValidDuration";
  * @example getDurationUnit("P1M", "months") // 1 (no relativeTo needed to read a field)
  * @example getDurationUnit("PT0S", "days") // 0
  * @example getDurationUnit("not a duration", "hours") // null
+ * @example getDurationUnit("P1DT2H30M", "hour") // 2 (singular unit name)
  * @example getDurationUnit("P1D", "fortnights") // null
  */
 export function getDurationUnit(
   value: string,
-  unit: DateTimeDurationUnit,
+  unit: DateTimeDurationUnit | Temporal.DateTimeUnit,
 ): number | null {
-  if (!isValidDuration(value) || !isValidDateTimeDurationUnit(unit)) {
+  const resolvedUnit = resolveDurationUnit(unit);
+
+  if (!isValidDuration(value) || !isValidDateTimeDurationUnit(resolvedUnit)) {
     return null;
   }
 
   try {
-    return Temporal.Duration.from(value)[unit];
+    return Temporal.Duration.from(value)[resolvedUnit];
   } catch {
     return null;
   }

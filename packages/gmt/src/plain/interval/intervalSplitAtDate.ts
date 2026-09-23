@@ -19,10 +19,13 @@ import { isValidDateInterval } from "./validate";
  * - Duplicate points collapse to a single boundary.
  * - Returns consecutive `{ start, end }` records, each record's `end` equal to the next
  *   record's `start`.
+ * - Every piece is half-open `[start, end)`: a boundary belongs only to the piece that starts
+ *   there, so the pieces share no value and together cover the interval exactly once (the rule
+ *   CORE-6's `splitIntervalAt` uses).
  * - Returns `[{ start, end }]` (the whole interval, unsplit) when no valid in-range point remains.
  * - Returns `[]` when `points` is not an array, when any element is not a valid ISO PlainDate
  *   string, or on invalid input (unparseable start/end, `start > end`).
- * - Accepts GMT calendar-annotated PlainDate strings — E5 (issue #78). `start`, `end`, and
+ * - Accepts RFC 9557 calendar-annotated PlainDate strings — E5 (issue #78). `start`, `end`, and
  *   every element of `points` must carry the *same* calendar tag (or all be bare ISO); any
  *   mismatch returns `[]` (E5 decision of record D4) — this also makes `.equals()`'s dedup of
  *   duplicate points safe, since same-calendar `PlainDate`s compare equal correctly.
@@ -44,57 +47,64 @@ export function intervalSplitAtDate(
   end: string,
   points: string[],
 ): Array<{ start: string; end: string }> {
-  if (!Array.isArray(points)) {
-    return [];
-  }
-
-  if (!isValidDateInterval(start, end)) {
-    return [];
-  }
-
-  if (!points.every((point) => typeof point === "string")) {
-    return [];
-  }
-
-  if (!points.every((point) => isValidCalendarDate(point))) {
-    return [];
-  }
-
-  const calendar = calendarOfAllDateValues([start, end, ...points]);
-  if (!calendar) {
-    return [];
-  }
-
   try {
-    const startVal = parseCalendarDateValue(start);
-    const endVal = parseCalendarDateValue(end);
-
-    const parsedPoints = points.map((point) => parseCalendarDateValue(point));
-
-    const inRangePoints = parsedPoints.filter(
-      (point) =>
-        Temporal.PlainDate.compare(point, startVal) > 0 &&
-        Temporal.PlainDate.compare(point, endVal) < 0,
-    );
-
-    inRangePoints.sort(Temporal.PlainDate.compare);
-
-    const uniquePoints = inRangePoints.filter(
-      (point, index) => index === 0 || !point.equals(inRangePoints[index - 1]),
-    );
-
-    const boundaries = [startVal, ...uniquePoints, endVal];
-
-    const result: Array<{ start: string; end: string }> = [];
-    for (let i = 0; i < boundaries.length - 1; i++) {
-      result.push({
-        start: formatDateInCalendar(boundaries[i], calendar),
-        end: formatDateInCalendar(boundaries[i + 1], calendar),
-      });
+    if (!Array.isArray(points)) {
+      return [];
     }
 
-    return result;
+    if (!isValidDateInterval(start, end)) {
+      return [];
+    }
+
+    if (!points.every((point) => typeof point === "string")) {
+      return [];
+    }
+
+    if (!points.every((point) => isValidCalendarDate(point))) {
+      return [];
+    }
+
+    const calendar = calendarOfAllDateValues([start, end, ...points]);
+    if (!calendar) {
+      return [];
+    }
+
+    try {
+      const startVal = parseCalendarDateValue(start);
+      const endVal = parseCalendarDateValue(end);
+
+      const parsedPoints = points.map((point) => parseCalendarDateValue(point));
+
+      const inRangePoints = parsedPoints.filter(
+        (point) =>
+          Temporal.PlainDate.compare(point, startVal) > 0 &&
+          Temporal.PlainDate.compare(point, endVal) < 0,
+      );
+
+      inRangePoints.sort(Temporal.PlainDate.compare);
+
+      const uniquePoints = inRangePoints.filter(
+        (point, index) =>
+          index === 0 || !point.equals(inRangePoints[index - 1]),
+      );
+
+      const boundaries = [startVal, ...uniquePoints, endVal];
+
+      const result: Array<{ start: string; end: string }> = [];
+      for (let i = 0; i < boundaries.length - 1; i++) {
+        result.push({
+          start: formatDateInCalendar(boundaries[i], calendar),
+          end: formatDateInCalendar(boundaries[i + 1], calendar),
+        });
+      }
+
+      return result;
+    } catch {
+      return [];
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

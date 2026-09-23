@@ -1,6 +1,22 @@
 import { getWeeksInYear } from "./getWeeksInYear";
 
 describe("getWeeksInYear", () => {
+  // Range edges. ISO 8601 week-year Y has 53 weeks exactly when January 1 is a Thursday, or a
+  // Wednesday in a leap year (p(Y) = 4 or p(Y - 1) = 3, p(y) = (y + ⌊y/4⌋ - ⌊y/100⌋ + ⌊y/400⌋) mod 7).
+  // +275760-01-01 is a Tuesday and -271821-01-01 a Friday, so both years have 52; every edge date
+  // below lies in its own calendar year's week-year.
+  it.each`
+    value              | expected
+    ${"-271821-04-19"} | ${52}
+    ${"+275760-01-01"} | ${52}
+    ${"+275760-09-13"} | ${52}
+  `(
+    "returns $expected ISO weeks for the range-edge date $value",
+    ({ value, expected }) => {
+      expect(getWeeksInYear(value)).toBe(expected);
+    },
+  );
+
   it.each`
     value           | expected
     ${"2024-06-15"} | ${52}

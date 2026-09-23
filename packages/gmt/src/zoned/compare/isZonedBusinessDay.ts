@@ -9,10 +9,13 @@ import { zonedDateTimeFrom } from "../../internal";
  * - Locale-agnostic: no `Intl.Locale` lookup and no holiday calendar.
  * - Returns false if `value` is invalid.
  *
- * This is the timezone-aware complement to the plain `isBusinessDay`: both use
- * ISO Mon–Fri, but `isZonedBusinessDay` resolves the local day in the given
- * timezone (so a UTC instant that is Friday evening may be Saturday morning
- * in `Asia/Tokyo` and thus not a business day there).
+ * - Resolves the local day in the value's own timezone, so a UTC instant that is
+ *   Friday evening may be Saturday morning in `Asia/Tokyo` and thus not a business
+ *   day there.
+ * - Has no calendar parameter: the weekend is always Saturday–Sunday. It is not
+ *   the zoned form of the plain `isBusinessDay`, which takes a `BusinessCalendar`
+ *   (weekend days, holidays). For a Friday–Saturday weekend or holidays, convert
+ *   to a plain date and call `isBusinessDay` with a calendar.
  *
  * @param value ISO 8601 zoned datetime string
  * @returns true if `value` is a Monday–Friday business day, false on invalid input

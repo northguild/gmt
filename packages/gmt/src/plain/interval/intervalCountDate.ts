@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "@js-temporal/polyfill";
 import {
   getUnitSpan,
@@ -32,18 +33,21 @@ function startOfUnitIfRepresentable(
  * - Counts calendar boundaries touched by the half-open interval `[start, end)` — distinct
  *   from `diffDate`, which measures exact elapsed duration.
  * - `"2024-01-01"` to `"2024-01-03"` counted in days is 2: the end boundary is excluded.
- * - A zero-length interval counts 1 when it sits mid-unit and 0 when it sits exactly on a
- *   unit boundary (e.g. `"2024-01-15"` counts 1 month but 0 days).
+ * - A zero-length interval (`start === end`) returns `0`: the empty `[start, start)` holds no instant,
+ *   so it touches no unit (before 1.16.0 it counted 1 when mid-unit).
  * - Weeks start on Monday (ISO 8601).
  * - A unit that began before the first representable date (`-271821-04-19`) is still counted:
  *   whole units are measured from the unit after `start`'s, never from `start`'s own start.
  * - Accepts singular or plural units (`"day"` and `"days"` behave identically).
  * - Returns `null` on invalid input (unparseable start/end, `start > end`, unsupported unit,
  *   or a unit that has no effect on `PlainDate`, e.g. `"hours"`).
- * - Accepts GMT calendar-annotated PlainDate strings — E5 (issue #78). When `start` and `end`
+ * - Accepts RFC 9557 calendar-annotated PlainDate strings — E5 (issue #78). When `start` and `end`
  *   carry the *same* calendar tag, boundaries are counted in that calendar (a Hebrew leap year
- *   crosses 13 month boundaries, not 12 — see the roadmap's E5 decisions of record, D5). When
- *   they carry different tags (or either is bare ISO), counting falls back to Gregorian.
+ *   crosses 13 month boundaries, not 12). When they name different calendars (a bare ISO string
+ *   names `iso8601`) the result is `null`, as Temporal's `until` throws when `CalendarEquals` is
+ *   false (before 1.16.0 it counted in ISO).
+ * - Compatibility: since 1.16.0 calendar strings are RFC 9557 (ISO digits, `[u-ca=<id>]`, canonical
+ *   calendar ids); see `isValidCalendarDate`.
  *
  * @param start ISO PlainDate string for the interval start, optionally calendar-annotated
  * @param end ISO PlainDate string for the interval end, optionally calendar-annotated
@@ -52,11 +56,11 @@ function startOfUnitIfRepresentable(
  *
  * @example intervalCountDate("2024-01-01", "2024-01-03", "day") // 2
  * @example intervalCountDate("2024-01-15", "2024-03-10", "month") // 3
- * @example intervalCountDate("2024-01-15", "2024-01-15", "month") // 1 (zero-length, mid-month)
- * @example intervalCountDate("2024-01-01", "2024-01-01", "month") // 0 (zero-length, on the boundary)
+ * @example intervalCountDate("2024-01-15", "2024-01-15", "month") // 0 (zero-length: holds no instant)
  * @example intervalCountDate("2024-01-01", "2024-01-10", "hour") // null
  * @example intervalCountDate("invalid", "2024-01-10", "day") // null
- * @example intervalCountDate("5784-01-01[u-ca=hebrew]", "5785-01-01[u-ca=hebrew]", "month") // 13 (Hebrew leap year, measured in Hebrew)
+ * @example intervalCountDate("2023-09-16[u-ca=hebrew]", "2024-10-03[u-ca=hebrew]", "month") // 13 (Hebrew leap year, measured in Hebrew)
+ * @example intervalCountDate("2024-10-03[u-ca=hebrew]", "2024-11-03", "month") // null (different calendars)
  */
 export function intervalCountDate(
   start: string,
@@ -87,8 +91,15 @@ export function intervalCountDate(
       end,
     );
 
-    if (Temporal.PlainDate.compare(startVal, endVal) > 0) {
+    const order = Temporal.PlainDate.compare(startVal, endVal);
+
+    if (order > 0) {
       return null;
+    }
+
+    // An empty interval [t, t) holds no instant, so it touches no unit (CORE-6 empty-interval rule).
+    if (order === 0) {
+      return 0;
     }
 
     const startOfEnd = startOfUnitIfRepresentable(endVal, resolvedUnit);

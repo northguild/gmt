@@ -1,4 +1,5 @@
 import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
+import { dateLineCrossingAt, dateLineCrossingTimeZones } from "../../test";
 import { startOfUnix } from "./startOfUnix";
 
 // Epoch values used below, in ISO 8601 UTC:
@@ -77,49 +78,27 @@ describe("startOfUnix", () => {
     expect(startOfUnix(1706659200, invalidUnit as never)).toBeNull();
   });
 
-  // `disambiguation` is deprecated and ignored: the source sits in the second, repeated 1:45am,
-  // and every row — "reject" included — returns the real start of that second pass. Verified
-  // against `floorToZone` on @js-temporal/polyfill@0.5.1.
-  it.each`
-    disambiguation  | expected
-    ${undefined}    | ${1730613600000}
-    ${"compatible"} | ${1730613600000}
-    ${"earlier"}    | ${1730613600000}
-    ${"later"}      | ${1730613600000}
-    ${"reject"}     | ${1730613600000}
-  `(
-    "returns the real hour start $expected on a fall-back overlap with ignored disambiguation $disambiguation",
-    ({ disambiguation, expected }) => {
-      const optionsArg =
-        disambiguation === undefined
-          ? { timeZone: "America/New_York" }
-          : { timeZone: "America/New_York", disambiguation };
-      expect(startOfUnix(1730616300000, "hour", optionsArg)).toBe(expected);
-    },
-  );
-
-  // `offset` is deprecated and ignored too, alone or combined with `disambiguation: "reject"`.
-  it.each`
-    offset       | expected
-    ${undefined} | ${1730613600000}
-    ${"ignore"}  | ${1730613600000}
-    ${"prefer"}  | ${1730613600000}
-    ${"use"}     | ${1730613600000}
-    ${"reject"}  | ${1730613600000}
-  `(
-    "returns the real hour start $expected with disambiguation reject and ignored offset $offset",
-    ({ offset, expected }) => {
-      const optionsArg =
-        offset === undefined
-          ? { timeZone: "America/New_York", disambiguation: "reject" as const }
-          : {
-              timeZone: "America/New_York",
-              disambiguation: "reject" as const,
-              offset,
-            };
-      expect(startOfUnix(1730616300000, "hour", optionsArg)).toBe(expected);
-    },
-  );
+  // 1730616300000 is the second, repeated 1:45am of New York's 2024-11-03 fall-back.
+  // `disambiguation` and `offset` were removed in 1.16.0: a boundary is always a real instant, as
+  // TC39's `startOfDay()` takes neither. Passing one is a type error and changes nothing at runtime.
+  it("treats the removed disambiguation option as a type error and ignores it at runtime", () => {
+    expect(
+      startOfUnix(1730616300000, "hour", {
+        timeZone: "America/New_York",
+        // @ts-expect-error -- `disambiguation` was removed in 1.16.0
+        disambiguation: "reject",
+      }),
+    ).toBe(1730613600000);
+  });
+  it("treats the removed offset option as a type error and ignores it at runtime", () => {
+    expect(
+      startOfUnix(1730616300000, "hour", {
+        timeZone: "America/New_York",
+        // @ts-expect-error -- `offset` was removed in 1.16.0
+        offset: "reject",
+      }),
+    ).toBe(1730613600000);
+  });
 
   // Local midnight itself is a DST gap (America/Sao_Paulo jumped 00:00 -> 01:00 on 2018-11-04), so
   // the day starts at its first real instant (Temporal's `startOfDay()`, 1541300400000) whatever
@@ -205,6 +184,90 @@ describe("startOfUnix across zone transitions with default options", () => {
     "returns $expected for the maximum instant $value by $unit in $timeZone",
     ({ value, unit, timeZone, expected }) => {
       expect(startOfUnix(value, unit, { timeZone })).toBe(expected);
+    },
+  );
+});
+
+describe("startOfUnix invalid-input @example", () => {
+  it('returns null for startOfUnix(NaN, "day")', () => {
+    expect(startOfUnix(NaN, "day")).toBe(null);
+  });
+});
+
+describe("startOfUnix unit names", () => {
+  // 1706780800 is 2024-02-01T09:46:40Z. Temporal §13.17: plural unit names are the singular unit.
+  it.each`
+    value         | unit       | expected
+    ${1706780800} | ${"days"}  | ${1706745600}
+    ${1706780800} | ${"hours"} | ${1706778000}
+    ${1706780800} | ${"years"} | ${1704067200}
+  `(
+    "returns $expected for value $value and plural unit $unit",
+    ({ value, unit, expected }) => {
+      expect(
+        startOfUnix(value, unit, { epochUnit: "seconds", timeZone: "UTC" }),
+      ).toBe(expected);
+    },
+  );
+
+  // Quarters have their own functions (startOfQuarterForUnix / endOfQuarterForUnix).
+  it.each`
+    unit
+    ${"quarter"}
+    ${"quarters"}
+  `("returns null for unit $unit", ({ unit }) => {
+    expect(
+      startOfUnix(1706780800, unit, { epochUnit: "seconds", timeZone: "UTC" }),
+    ).toBeNull();
+  });
+});
+
+// weekStartsOn only names "monday" or "sunday"; any other value is invalid input, for every unit
+// (Temporal GetOption rejects a value outside its allowed list; undefined means the default).
+// 1710504000000 is 2024-03-15T12:00:00Z.
+describe("startOfUnix with an invalid weekStartsOn", () => {
+  it.each`
+    unit      | weekStartsOn
+    ${"week"} | ${"tuesday"}
+    ${"week"} | ${"Monday"}
+    ${"week"} | ${""}
+    ${"week"} | ${null}
+    ${"week"} | ${1}
+    ${"week"} | ${true}
+    ${"day"}  | ${"tuesday"}
+    ${"day"}  | ${"Monday"}
+    ${"day"}  | ${""}
+    ${"day"}  | ${null}
+    ${"day"}  | ${1}
+    ${"day"}  | ${true}
+  `(
+    "returns null for unit $unit with invalid weekStartsOn $weekStartsOn",
+    ({ unit, weekStartsOn }) => {
+      expect(
+        startOfUnix(1710504000000, unit, { timeZone: "UTC", weekStartsOn }),
+      ).toBeNull();
+    },
+  );
+});
+
+// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
+// are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
+// 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
+
+describe("startOfUnix across the 1844 date-line crossings (zoned.E)", () => {
+  it.each(dateLineCrossingTimeZones)(
+    "starts the week of 1845-01-02T12:00 in $timeZone on Monday 1844-12-30",
+    (crossing) => {
+      expect(
+        startOfUnix(
+          dateLineCrossingAt(crossing, 36).epochMilliseconds,
+          "week",
+          {
+            timeZone: crossing.timeZone,
+          },
+        ),
+      ).toBe(dateLineCrossingAt(crossing, -24).epochMilliseconds);
     },
   );
 });

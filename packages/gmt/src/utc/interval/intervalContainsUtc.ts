@@ -1,28 +1,37 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { isLeapSecond } from "../../plain/validate/isLeapSecond";
-import { utcDateTime } from "../../regex/utc-date-time";
+import { halfOpenContainsSpan } from "../../internal";
+import { intervalContains } from "../../interval/compare";
+import { isValidUtc } from "../validate";
 
 /**
- * Return true when `pointOrStart` falls within the interval `[intervalStart, intervalEnd]`
- * (3-arg), or when the inner interval `[innerStart, innerEnd]` is fully contained within
- * the outer interval `[intervalStart, intervalEnd]` (4-arg).
+ * Return true when `pointOrStart` lies in the half-open interval `[intervalStart, intervalEnd)`
+ * (3-arg), or when the inner interval `[innerStart, innerEnd)` lies within it (4-arg).
  *
- * - Uses `Temporal.Instant.compare` for comparison (same instant semantics).
- * - Always-inclusive boundaries: `start <= point <= end`.
+ * - Half-open: an interval holds every instant `t` with `start <= t < end`, so `intervalEnd` itself is
+ *   outside (the rule CORE-6's `intervalContains` uses). An empty interval (`start === end`)
+ *   contains no point.
+ * - 4-arg: the inner interval must start at or after `intervalStart`, end at or before
+ *   `intervalEnd`, and overlap the outer interval. An empty inner interval therefore counts only
+ *   strictly inside, never at an edge (CORE-6's `clampInterval` clamps it away there).
+ * - The 3-argument form delegates to CORE-6's `intervalContains` once the arguments pass the
+ *   UTC-string gate.
+ * - Uses `Temporal.Instant.compare` for comparison.
  * - Returns `false` if `intervalStart > intervalEnd` (invalid outer interval).
  * - Returns `false` if `innerStart > innerEnd` in 4-arg mode (invalid inner interval).
- * - Returns `false` on invalid input (wrong type, malformed strings, leap seconds).
+ * - Returns `false` on invalid input (wrong type, non-`Z` strings, malformed strings, leap seconds).
  *
  * @param intervalStart ISO 8601 UTC datetime string for the outer interval start
- * @param intervalEnd ISO 8601 UTC datetime string for the outer interval end
+ * @param intervalEnd ISO 8601 UTC datetime string for the outer interval end (excluded)
  * @param pointOrStart ISO 8601 UTC datetime string for the point (3-arg) or inner start (4-arg)
  * @param pointEnd optional ISO 8601 UTC datetime string for the inner interval end (4-arg mode)
  * @returns true if the point or inner interval is contained, or false on invalid input
  *
- * @example intervalContainsUtc("2024-01-01T00:00:00Z", "2024-12-31T23:59:59Z", "2024-06-15T12:00:00Z") // true
- * @example intervalContainsUtc("2024-01-01T00:00:00Z", "2024-12-31T23:59:59Z", "2024-06-15T12:00:00Z", "2024-07-15T12:00:00Z") // true
- * @example intervalContainsUtc("2024-12-31T23:59:59Z", "2024-01-01T00:00:00Z", "2024-06-15T12:00:00Z") // false
- * @example intervalContainsUtc("invalid", "2024-12-31T23:59:59Z", "2024-06-15T12:00:00Z") // false
+ * @example intervalContainsUtc("2024-01-01T09:00:00Z", "2024-01-01T17:00:00Z", "2024-01-01T12:00:00Z") // true
+ * @example intervalContainsUtc("2024-01-01T09:00:00Z", "2024-01-01T17:00:00Z", "2024-01-01T16:59:59.999999999Z") // true (last value before the end)
+ * @example intervalContainsUtc("2024-01-01T09:00:00Z", "2024-01-01T17:00:00Z", "2024-01-01T17:00:00Z") // false (end is excluded)
+ * @example intervalContainsUtc("2024-01-01T09:00:00Z", "2024-01-01T17:00:00Z", "2024-01-01T12:00:00Z", "2024-01-01T17:00:00Z") // true (inner shares the end)
+ * @example intervalContainsUtc("2024-01-01T09:00:00Z", "2024-01-01T17:00:00Z", "2024-01-01T17:00:00Z", "2024-01-01T17:00:00Z") // false (empty interval at the edge)
+ * @example intervalContainsUtc("2024-01-01T17:00:00Z", "2024-01-01T09:00:00Z", "2024-01-01T12:00:00Z") // false (reversed interval)
  */
 export function intervalContainsUtc(
   intervalStart: string,
@@ -40,48 +49,38 @@ export function intervalContainsUtc(
   }
 
   if (
-    !utcDateTime.test(intervalStart) ||
-    !utcDateTime.test(intervalEnd) ||
-    !utcDateTime.test(pointOrStart) ||
-    (pointEnd !== undefined && !utcDateTime.test(pointEnd))
+    !isValidUtc(intervalStart) ||
+    !isValidUtc(intervalEnd) ||
+    !isValidUtc(pointOrStart) ||
+    (pointEnd !== undefined && !isValidUtc(pointEnd))
   ) {
     return false;
   }
 
-  if (
-    isLeapSecond(intervalStart) ||
-    isLeapSecond(intervalEnd) ||
-    isLeapSecond(pointOrStart) ||
-    (pointEnd !== undefined && isLeapSecond(pointEnd))
-  ) {
-    return false;
+  if (pointEnd === undefined) {
+    return intervalContains(
+      { start: intervalStart, end: intervalEnd },
+      pointOrStart,
+    );
   }
 
   try {
     const startInstant = Temporal.Instant.from(intervalStart);
     const endInstant = Temporal.Instant.from(intervalEnd);
-    const pointInstant = Temporal.Instant.from(pointOrStart);
+    const innerStartInstant = Temporal.Instant.from(pointOrStart);
+    const innerEndInstant = Temporal.Instant.from(pointEnd);
 
-    if (Temporal.Instant.compare(startInstant, endInstant) > 0) {
+    if (
+      Temporal.Instant.compare(startInstant, endInstant) > 0 ||
+      Temporal.Instant.compare(innerStartInstant, innerEndInstant) > 0
+    ) {
       return false;
     }
 
-    if (pointEnd === undefined) {
-      return (
-        Temporal.Instant.compare(startInstant, pointInstant) <= 0 &&
-        Temporal.Instant.compare(pointInstant, endInstant) <= 0
-      );
-    }
-
-    const endPointInstant = Temporal.Instant.from(pointEnd);
-
-    if (Temporal.Instant.compare(pointInstant, endPointInstant) > 0) {
-      return false;
-    }
-
-    return (
-      Temporal.Instant.compare(startInstant, pointInstant) <= 0 &&
-      Temporal.Instant.compare(endPointInstant, endInstant) <= 0
+    return halfOpenContainsSpan(
+      { start: startInstant, end: endInstant },
+      { start: innerStartInstant, end: innerEndInstant },
+      Temporal.Instant.compare,
     );
   } catch {
     return false;

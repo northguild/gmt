@@ -9,6 +9,7 @@ import {
 } from "../../internal";
 import type { Overflow } from "../../types";
 import { isValidCalendarDate } from "../validate";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Construct a date interval from a single point plus an ISO 8601 duration, anchored at either end.
@@ -22,7 +23,7 @@ import { isValidCalendarDate } from "../validate";
  *   happens, mirroring `intervalIntersectionDate`'s `start > end` rejection.
  * - `overflow` ("constrain" (default) | "reject") controls out-of-range results, e.g. adding 1 month
  *   to Jan 31: "constrain" clamps to Feb 29/28, "reject" returns null.
- * - Accepts a GMT calendar-annotated PlainDate string — E5 (issue #78). The computed endpoint
+ * - Accepts a RFC 9557 calendar-annotated PlainDate string — E5 (issue #78). The computed endpoint
  *   is resolved in `value`'s own calendar (no `relativeTo`/pair-matching question, since there
  *   is only one calendar-tagged input) and both endpoints are re-formatted in that calendar,
  *   re-derived from the actual result rather than copied from `value`'s tag (a leap-month or
@@ -41,7 +42,7 @@ import { isValidCalendarDate } from "../validate";
  * @example intervalFromDurationDate("2024-01-31", "P1M", "start", { overflow: "reject" }) // null
  * @example intervalFromDurationDate("2024-01-05", "-P10D", "start") // null (inverted span)
  * @example intervalFromDurationDate("invalid", "P1M", "start") // null
- * @example intervalFromDurationDate("5784-06-15[u-ca=hebrew]", "P1M", "start") // { start: "5784-06-15[u-ca=hebrew]", end: "5784-07-15[u-ca=hebrew]" } (Adar I -> Adar)
+ * @example intervalFromDurationDate("2024-02-24[u-ca=hebrew]", "P1M", "start") // { start: "2024-02-24[u-ca=hebrew]", end: "2024-03-25[u-ca=hebrew]" } (Adar I -> Adar)
  */
 export function intervalFromDurationDate(
   value: string,
@@ -49,6 +50,10 @@ export function intervalFromDurationDate(
   anchor: "start" | "end",
   options?: { overflow?: Overflow },
 ): { start: string; end: string } | null {
+  if (!isOptionsArgument(options)) {
+    return null;
+  }
+
   if (typeof value !== "string" || !isValidCalendarDate(value)) {
     return null;
   }

@@ -11,26 +11,19 @@ export interface CalendarZonedPair {
 
 /**
  * Parse two GMT ZonedDateTime values for calendar-unit arithmetic (diff, count, length,
- * split-by-unit): measure in the endpoints' shared calendar when both match, fall back to
- * Gregorian/ISO otherwise, rather than rejecting outright. The zoned sibling of
- * `calendarDatePairPolicy.ts`'s `parseCalendarDatePairForArithmetic` (E5 decision D5).
+ * split-by-unit): both must name the same calendar, which the pair is measured in. The zoned
+ * sibling of `calendarDatePairPolicy.ts`'s `parseCalendarDatePairForArithmetic`.
  *
- * The fallback is MORE load-bearing here than in `plain/`, not less.
- * `Temporal.PlainDate.prototype.until` throws across mismatched calendars only for date units;
- * `Temporal.ZonedDateTime.prototype.until` throws for EVERY `largestUnit` — verified, including
- * `"hour"` and `"nanosecond"`. Without this policy, `diffZoned(hebrewValue, islamicValue,
- * "hours")` would return `null` for a question that has nothing to do with either calendar.
+ * Follows TC39 Temporal's `DifferenceTemporalZonedDateTime`: when `CalendarEquals` is false it
+ * throws a RangeError, for every `largestUnit`, `"hour"` and `"nanosecond"` included (native
+ * Temporal agrees). Calendars are compared by their canonical id; a bare ISO string names
+ * `iso8601`. Callers catch the throw and return their sentinel. (Before 1.16.0 the pair fell
+ * back to ISO; ordering-only functions still accept mixed calendars, because
+ * `Temporal.ZonedDateTime.compare` has no calendar check.)
  *
- * **Consume the returned `a`/`b`, never the values you parsed them from.** The returned operands
- * are already normalized to the resolved calendar, and every downstream use — including a
- * `Temporal.Duration.prototype.total` `relativeTo` anchor — has to be the normalized one. Feeding
- * a raw calendar-tagged operand to `relativeTo` while measuring in ISO does NOT throw; it returns
- * a plausible-looking wrong number (verified: 12.586… where the correct ISO answer is 12.5666…
- * and the correct Hebrew answer is 13), which no sanity check would catch.
- *
- * Throws if either value fails to parse as a valid GMT ZonedDateTime string — callers are
- * expected to have already validated both values (e.g. via `isValidCalendarZonedDateTime`) before
- * calling this, consistent with GMT's existing gate-then-parse-inside-try structure.
+ * Throws if either value fails to parse as a valid GMT ZonedDateTime string, or if the calendars
+ * differ — callers validate both values first (e.g. via `isValidCalendarZonedDateTime`) and wrap
+ * this in try-catch, consistent with GMT's gate-then-parse-inside-try structure.
  */
 export function parseCalendarZonedPairForArithmetic(
   aValue: string,
@@ -41,13 +34,11 @@ export function parseCalendarZonedPairForArithmetic(
   const a = parseCalendarZonedValue(aValue);
   const b = parseCalendarZonedValue(bValue);
 
-  if (calendarA && calendarB && calendarA === calendarB) {
-    return { calendar: calendarA, a, b };
+  if (!calendarA || calendarA !== calendarB) {
+    throw new RangeError(
+      `Mismatched calendars: ${String(calendarA)} and ${String(calendarB)}`,
+    );
   }
 
-  return {
-    calendar: "gregorian",
-    a: a.withCalendar("iso8601"),
-    b: b.withCalendar("iso8601"),
-  };
+  return { calendar: calendarA, a, b };
 }

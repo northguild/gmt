@@ -1,9 +1,10 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { bucketRange } from "../calendar/calculate/bucketRange";
 import { floorToZone } from "../calendar/calculate/floorToZone";
-import { battleTestTimeZones } from "../test";
+import { battleTestTimeZones, dateLineCrossingTimeZones } from "../test";
 import type { ZoneBucketUnit } from "../types";
 import {
+  countZonedBuckets,
   nextZonedBucketStart,
   zonedUnitEnd,
   zonedUnitStart,
@@ -254,4 +255,61 @@ describe("zonedUnitEnd", () => {
       zonedUnitEnd(zonedAt("2024-06-15T12:30:00Z", "UTC"), "hour"),
     ).toBeNull();
   });
+});
+
+describe("the 1844 date-line crossings (zoned.E)", () => {
+  // Each zone skipped 1844-12-31 (Chromium 153: the offset jumps a whole day forward at local
+  // 1844-12-31T00:00 in LMT), so Monday 1844-12-30's week runs straight into Wednesday 1845-01-01.
+  // Buckets are built from exact times: the constructor resolves no wall clock.
+  const HOUR = 3_600_000_000_000n;
+  const DAY = 24n * HOUR;
+  const crossings = dateLineCrossingTimeZones.map(({ timeZone, instant }) => {
+    const epoch = Temporal.Instant.from(instant).epochNanoseconds;
+    const at = (offset: bigint) =>
+      new Temporal.ZonedDateTime(epoch + offset, timeZone);
+    return {
+      timeZone,
+      at,
+      crossing: at(0n).toString(),
+      monday: at(-DAY).toString(),
+    };
+  });
+
+  it.each(crossings)(
+    "starts the week of 1845-01-02T12:00 in $timeZone on Monday 1844-12-30 ($monday)",
+    ({ at, monday }) => {
+      expect(at(-DAY).toPlainDate().dayOfWeek).toBe(1);
+      expect(zonedUnitStart(at(36n * HOUR), "week")?.toString()).toBe(monday);
+    },
+  );
+
+  it.each(crossings)(
+    "starts the day of 1844-12-30T12:00 in $timeZone at $monday and moves to $crossing",
+    ({ at, crossing, monday }) => {
+      const dayStart = zonedUnitStart(at(-12n * HOUR), "day");
+      expect(dayStart?.toString()).toBe(monday);
+      expect(
+        nextZonedBucketStart(
+          dayStart as Temporal.ZonedDateTime,
+          "day",
+        )?.toString(),
+      ).toBe(crossing);
+    },
+  );
+
+  // December has 31 dates less the skipped one, January 31: 61 local days.
+  it.each(crossings)(
+    "counts 61 days from 1844-12-01 to 1845-02-01 in $timeZone",
+    ({ at }) => {
+      const decemberFirst = at(-30n * DAY);
+      const februaryFirst = at(31n * DAY);
+      expect(decemberFirst.toPlainDateTime().toString()).toBe(
+        "1844-12-01T00:00:00",
+      );
+      expect(februaryFirst.toPlainDateTime().toString()).toBe(
+        "1845-02-01T00:00:00",
+      );
+      expect(countZonedBuckets(decemberFirst, februaryFirst, "day")).toBe(61);
+    },
+  );
 });

@@ -10,7 +10,8 @@ const DIGITS_BY_UNIT: Readonly<Record<string, FractionalDigit>> = {
 /**
  * Resolve how many fractional second digits a result snapped to `unit` is printed with.
  *
- * - An explicit `fractionalSecondDigits` always wins.
+ * - An explicit `fractionalSecondDigits` always wins — including an invalid one, which Temporal's
+ *   `toString` then rejects, so the caller returns its sentinel. Only an omitted member defaults.
  * - Otherwise 3 for "millisecond", 6 for "microsecond", 9 for "nanosecond", and 0 for anything
  *   coarser (or unrecognised), so the output never hides the precision the unit asked for.
  *
@@ -22,5 +23,7 @@ export function defaultFractionalDigits(
   unit: string,
   fractionalSecondDigits?: FractionalDigit,
 ): FractionalDigit {
-  return fractionalSecondDigits ?? DIGITS_BY_UNIT[unit] ?? 0;
+  return fractionalSecondDigits === undefined
+    ? (DIGITS_BY_UNIT[unit] ?? 0)
+    : fractionalSecondDigits;
 }

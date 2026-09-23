@@ -9,7 +9,7 @@
  * `/dox` via Starlight's `customCss` (see `astro.config.mjs`), so a mounted
  * widget arrives fully styled with no CSS of its own.
  */
-import { useCallback, useState } from "react";
+import { useCallback, useState, ViewTransition } from "react";
 import {
   Artifact,
   ArtifactActions,
@@ -70,36 +70,48 @@ export function WidgetRail({
   // widget mounted.
   if (!widget) return null;
 
+  /* Slides in and out (gmt-hive.css, "Rail and transcript view transitions").
+     Only animates for updates inside `startTransition` — the host's
+     `showWidget`/`closeWidget` — and must stay the outermost element, before
+     any DOM node, or React won't run enter/exit for it. Keyed on the call, so
+     swapping widgets plays the old one out and the new one in. */
   return (
-    <aside className="gmt-hive-rail" aria-label="Widget panel">
-      <Artifact className="gmt-hive-artifact">
-        <ArtifactHeader className="gmt-hive-artifact-header">
-          <ArtifactTitle className="gmt-hive-artifact-title">
-            {widget.entry.title}
-          </ArtifactTitle>
-          <ArtifactActions>
-            <button
-              type="button"
-              className="gmt-hive-artifact-link gmt-sonar-focus"
-              onClick={copyPermalink}
-            >
-              {copied ? "Copied" : "Copy link to this view"}
-            </button>
-            <ArtifactClose onClick={onClose} />
-          </ArtifactActions>
-        </ArtifactHeader>
-        <div className="gmt-hive-artifact-body">
-          <MountedWidget
-            /* Keyed on the call, so asking a second question remounts rather
+    <ViewTransition
+      key={widget.toolCallId}
+      enter="gmt-rail-in"
+      exit="gmt-rail-out"
+      default="none"
+    >
+      <aside className="gmt-hive-rail" aria-label="Widget panel">
+        <Artifact className="gmt-hive-artifact">
+          <ArtifactHeader className="gmt-hive-artifact-header">
+            <ArtifactTitle className="gmt-hive-artifact-title">
+              {widget.entry.title}
+            </ArtifactTitle>
+            <ArtifactActions>
+              <button
+                type="button"
+                className="gmt-hive-artifact-link gmt-sonar-focus"
+                onClick={copyPermalink}
+              >
+                {copied ? "Copied" : "Copy link to this view"}
+              </button>
+              <ArtifactClose onClick={onClose} />
+            </ArtifactActions>
+          </ArtifactHeader>
+          <div className="gmt-hive-artifact-body">
+            <MountedWidget
+              /* Keyed on the call, so asking a second question remounts rather
                than reusing a host that still holds the first widget's DOM. */
-            key={widget.toolCallId}
-            entry={widget.entry}
-            args={widget.args}
-            idPrefix={`rail-${widget.toolCallId}`}
-            onHandle={setHandle}
-          />
-        </div>
-      </Artifact>
-    </aside>
+              key={widget.toolCallId}
+              entry={widget.entry}
+              args={widget.args}
+              idPrefix={`rail-${widget.toolCallId}`}
+              onHandle={setHandle}
+            />
+          </div>
+        </Artifact>
+      </aside>
+    </ViewTransition>
   );
 }

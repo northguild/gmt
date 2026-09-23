@@ -42,3 +42,22 @@ describe("isBeforeUnix", () => {
     },
   );
 });
+
+describe("isBeforeUnix with an unrecognised epochUnit", () => {
+  // isValidUnixUnit defines the domain ("seconds" | "milliseconds", singular or plural): any other value is invalid
+  // input and returns the sentinel, never a silent read as milliseconds.
+  it.each`
+    epochUnit
+    ${"nanoseconds"}
+    ${"SECONDS"}
+    ${"ms"}
+    ${""}
+    ${1000}
+  `("returns false for epochUnit $epochUnit", ({ epochUnit }) => {
+    expect(
+      isBeforeUnix(1_706_659_200, 1_706_659_200 + 1, {
+        epochUnit: epochUnit as never,
+      }),
+    ).toBe(false);
+  });
+});

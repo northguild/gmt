@@ -50,6 +50,20 @@ export function isDefectPresent(defect: DefectId, calendar: string): boolean {
   return present;
 }
 
+/**
+ * True when this runtime never retries the calendar nudge window (defect D11).
+ *
+ * TC39 bounds a duration between `relativeTo + r1 units` and `relativeTo + r2 units`, and recomputes
+ * the window one unit further along when the target falls outside it. A runtime that computes the
+ * window once answers `Duration#total`, `Duration#round` and `until`/`since` with a calendar
+ * `smallestUnit` over the wrong bounds. Only a `relativeTo` on the 29th, 30th or 31st can reach it,
+ * because only there does adding a month constrain the day. ISO-only: the non-ISO calendars already
+ * take the spec path through `isCalendarArithmeticCompatNeeded`.
+ */
+export function isNudgeWindowCompatNeeded(): boolean {
+  return isDefectPresent("D11", "iso8601");
+}
+
 /** Defects that make the runtime's calendar arithmetic or reads differ from the spec. */
 const ARITHMETIC_DEFECTS: readonly DefectId[] = [
   "D1",
@@ -59,6 +73,7 @@ const ARITHMETIC_DEFECTS: readonly DefectId[] = [
   "D5",
   "D6",
   "D7",
+  "D10",
 ];
 
 /**

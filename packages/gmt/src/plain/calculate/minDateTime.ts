@@ -14,21 +14,27 @@ import { isValidDateTime } from "../validate";
  * @example minDateTime([]) // null
  */
 export function minDateTime(dateTimes: string[]): string | null {
-  if (!dateTimes.length) return null;
-
-  const valid = dateTimes.filter(isValidDateTime);
-  if (!valid.length) return null;
-
   try {
-    const min = valid.reduce((currentMin, candidateStr) => {
-      const candidate = Temporal.PlainDateTime.from(candidateStr);
-      return Temporal.PlainDateTime.compare(candidate, currentMin) < 0
-        ? candidate
-        : currentMin;
-    }, Temporal.PlainDateTime.from(valid[0]));
+    if (!Array.isArray(dateTimes) || !dateTimes.length) return null;
 
-    return min.toString();
+    const valid = dateTimes.filter(isValidDateTime);
+    if (!valid.length) return null;
+
+    try {
+      const min = valid.reduce((currentMin, candidateStr) => {
+        const candidate = Temporal.PlainDateTime.from(candidateStr);
+        return Temporal.PlainDateTime.compare(candidate, currentMin) < 0
+          ? candidate
+          : currentMin;
+      }, Temporal.PlainDateTime.from(valid[0]));
+
+      return min.toString();
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

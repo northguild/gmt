@@ -8,6 +8,26 @@ import {
 import { addDate } from "./addDate";
 
 describe("addDate", () => {
+  // An RFC 9557 string's digits are ISO, so "5784-06-15[u-ca=hebrew]" is ISO
+  // 5784-06-15 read in the Hebrew calendar (Hebrew 9544). Expected: native Temporal, Chromium
+  // 153.0.8010.12, `Temporal.PlainDate.from(value).add(units).toString()`.
+  it.each`
+    value                                    | units             | expected
+    ${"5784-06-15[u-ca=hebrew]"}             | ${{ months: 1 }}  | ${"5784-07-14[u-ca=hebrew]"}
+    ${"2024-02-24[u-ca=hebrew]"}             | ${{ months: 1 }}  | ${"2024-03-25[u-ca=hebrew]"}
+    ${"2024-02-24[!u-ca=HEBREW]"}            | ${{ months: 1 }}  | ${"2024-03-25[u-ca=hebrew]"}
+    ${"2024-10-03[u-ca=japanese;era=reiwa]"} | ${{ days: 1 }}    | ${""}
+    ${"+275759-09-13[u-ca=gregory]"}         | ${{ years: 1 }}   | ${"+275760-09-13[u-ca=gregory]"}
+    ${"-271821-05-19[u-ca=gregory]"}         | ${{ months: -1 }} | ${"-271821-04-19[u-ca=gregory]"}
+    ${"-000001-02-28[u-ca=gregory]"}         | ${{ days: 1 }}    | ${"-000001-03-01[u-ca=gregory]"}
+    ${"+275760-09-13[u-ca=gregory]"}         | ${{ days: 1 }}    | ${""}
+  `(
+    "adds $units to $value as $expected (RFC 9557 input)",
+    ({ value, units, expected }) => {
+      expect(addDate(value, units)).toBe(expected);
+    },
+  );
+
   it.each`
     value           | units                                         | expected
     ${"2024-02-29"} | ${{ days: 1 }}                                | ${"2024-03-01"}
@@ -58,7 +78,7 @@ describe("addDate", () => {
     ${"12"}
     ${"2024"}
     ${"2024-02"}
-    ${"2024-02-29T12:00:00"}
+    ${"2024-02-29T12:00:00Z"}
     ${"2024-02-29T12:00:00Z"}
   `(
     "returns an empty string for an invalid date $invalidDate",
@@ -131,10 +151,10 @@ describe("addDate", () => {
     value                                       | units            | options                      | expected                                | note
     ${hebrewLeapYear5784.adarI15}               | ${{ months: 1 }} | ${undefined}                 | ${hebrewLeapYear5784.adar15}            | ${"Adar I -> Adar (Hebrew leap month)"}
     ${japaneseEraBoundary.heisei31_0430}        | ${{ days: 1 }}   | ${undefined}                 | ${japaneseEraBoundary.reiwa1_0501}      | ${"Heisei -> Reiwa era transition"}
-    ${islamicVariantDivergence.civil}           | ${{ months: 1 }} | ${undefined}                 | ${"1441-07-29[u-ca=islamic-civil]"}     | ${"islamic-civil variant"}
-    ${islamicVariantDivergence.tabular}         | ${{ months: 1 }} | ${undefined}                 | ${"1441-08-01[u-ca=islamic-tabular]"}   | ${"islamic-tabular variant"}
-    ${islamicVariantDivergence.umalqura}        | ${{ months: 1 }} | ${undefined}                 | ${"1441-07-29[u-ca=islamic-umalqura]"}  | ${"islamic-umalqura variant"}
-    ${persianLeapYearFixture.month12day30_1403} | ${{ years: 1 }}  | ${undefined}                 | ${"1404-12-29[u-ca=persian]"}           | ${"Persian leap year -> non-leap (30 -> 29 day month 12)"}
+    ${islamicVariantDivergence.civil}           | ${{ months: 1 }} | ${undefined}                 | ${"2020-03-24[u-ca=islamic-civil]"}     | ${"islamic-civil variant"}
+    ${islamicVariantDivergence.tabular}         | ${{ months: 1 }} | ${undefined}                 | ${"2020-03-25[u-ca=islamic-tbla]"}      | ${"islamic-tbla variant"}
+    ${islamicVariantDivergence.umalqura}        | ${{ months: 1 }} | ${undefined}                 | ${"2020-03-24[u-ca=islamic-umalqura]"}  | ${"islamic-umalqura variant"}
+    ${persianLeapYearFixture.month12day30_1403} | ${{ years: 1 }}  | ${undefined}                 | ${"2026-03-20[u-ca=persian]"}           | ${"Persian leap year -> non-leap (30 -> 29 day month 12)"}
     ${ethiopicPagumenFixture.m12d30_7515}       | ${{ months: 1 }} | ${{ overflow: "constrain" }} | ${ethiopicPagumenFixture.pagumen6_7515} | ${"30-day month 12 constrains into the 6-day leap Pagumen"}
   `(
     "returns $expected for calendar-annotated $value + $units ($note)",
@@ -148,10 +168,10 @@ describe("addDate", () => {
   // (q2-xscan-chromium152.json edge rows `[n]`). A result past the maximum must stay "" (TC39
   // ISODateWithinLimits): the workaround never clamps.
   it.each`
-    value                            | units            | expected                         | reason
-    ${"276302-09-13[u-ca=buddhist]"} | ${{ years: 1 }}  | ${"276303-09-13[u-ca=buddhist]"} | ${"D1-A: lands exactly on the maximum (xscan buddhist max[366])"}
-    ${"279517-09-11[u-ca=hebrew]"}   | ${{ months: 1 }} | ${"279517-10-11[u-ca=hebrew]"}   | ${"lands exactly on the maximum (xscan hebrew max[29])"}
-    ${"279517-09-12[u-ca=hebrew]"}   | ${{ months: 1 }} | ${""}                            | ${"one day past the maximum is a RangeError, not clamped (xscan hebrew max[28] ERR)"}
+    value                             | units            | expected                          | reason
+    ${"+275759-09-13[u-ca=buddhist]"} | ${{ years: 1 }}  | ${"+275760-09-13[u-ca=buddhist]"} | ${"D1-A: lands exactly on the maximum (xscan buddhist max[366])"}
+    ${"+275760-08-15[u-ca=hebrew]"}   | ${{ months: 1 }} | ${"+275760-09-13[u-ca=hebrew]"}   | ${"lands exactly on the maximum (xscan hebrew max[29])"}
+    ${"+275760-08-16[u-ca=hebrew]"}   | ${{ months: 1 }} | ${""}                             | ${"one day past the maximum is a RangeError, not clamped (xscan hebrew max[28] ERR)"}
   `(
     "returns $expected for $value + $units ($reason)",
     ({ value, units, expected }) => {
@@ -163,14 +183,14 @@ describe("addDate", () => {
   // Chromium 152 edge rows: result ISO dates are read back from the same scan's rows.
   it.each`
     value                                     | units            | expected                                  | reason
-    ${"-280804-03-30[u-ca=islamic-civil]"}    | ${{ months: 1 }} | ${"-280804-04-29[u-ca=islamic-civil]"}    | ${"xscan islamic-civil min[9]: Rabi I 30 constrains to the 29-day Rabi II"}
-    ${"-280804-05-30[u-ca=islamic-civil]"}    | ${{ months: 1 }} | ${"-280804-06-29[u-ca=islamic-civil]"}    | ${"xscan islamic-civil min[68]"}
-    ${"-280804-05-30[u-ca=islamic-tabular]"}  | ${{ months: 1 }} | ${"-280804-06-29[u-ca=islamic-tabular]"}  | ${"xscan islamic-tbla min[67]"}
-    ${"-280804-09-30[u-ca=islamic-umalqura]"} | ${{ months: 1 }} | ${"-280804-10-29[u-ca=islamic-umalqura]"} | ${"xscan islamic-umalqura min[186]"}
-    ${"-272442-11-30[u-ca=persian]"}          | ${{ months: 1 }} | ${"-272442-12-29[u-ca=persian]"}          | ${"xscan persian min[327]: into the 29-day Esfand"}
-    ${"279516-09-11[u-ca=hebrew]"}            | ${{ years: 1 }}  | ${"279517-10-11[u-ca=hebrew]"}            | ${"xscan hebrew max[383]: Iyar 11 into leap 279517 is ordinal month 10, the maximum"}
-    ${"279516-09-05[u-ca=hebrew]"}            | ${{ years: 1 }}  | ${"279517-10-05[u-ca=hebrew]"}            | ${"xscan hebrew max[389]"}
-    ${"283582-05-23[u-ca=islamic-umalqura]"}  | ${{ years: 1 }}  | ${"283583-05-23[u-ca=islamic-umalqura]"}  | ${"xscan islamic-umalqura max[354]: lands on the maximum"}
+    ${"-271821-04-28[u-ca=islamic-civil]"}    | ${{ months: 1 }} | ${"-271821-05-27[u-ca=islamic-civil]"}    | ${"xscan islamic-civil min[9]: Rabi I 30 constrains to the 29-day Rabi II"}
+    ${"-271821-06-26[u-ca=islamic-civil]"}    | ${{ months: 1 }} | ${"-271821-07-25[u-ca=islamic-civil]"}    | ${"xscan islamic-civil min[68]"}
+    ${"-271821-06-25[u-ca=islamic-tbla]"}     | ${{ months: 1 }} | ${"-271821-07-24[u-ca=islamic-tbla]"}     | ${"xscan islamic-tbla min[67]"}
+    ${"-271821-10-22[u-ca=islamic-umalqura]"} | ${{ months: 1 }} | ${"-271821-11-20[u-ca=islamic-umalqura]"} | ${"xscan islamic-umalqura min[186]"}
+    ${"-271820-03-11[u-ca=persian]"}          | ${{ months: 1 }} | ${"-271820-04-09[u-ca=persian]"}          | ${"xscan persian min[327]: into the 29-day Esfand"}
+    ${"+275759-08-27[u-ca=hebrew]"}           | ${{ years: 1 }}  | ${"+275760-09-13[u-ca=hebrew]"}           | ${"xscan hebrew max[383]: Iyar 11 into leap 279517 is ordinal month 10, the maximum"}
+    ${"+275759-08-21[u-ca=hebrew]"}           | ${{ years: 1 }}  | ${"+275760-09-07[u-ca=hebrew]"}           | ${"xscan hebrew max[389]"}
+    ${"+275759-09-25[u-ca=islamic-umalqura]"} | ${{ years: 1 }}  | ${"+275760-09-13[u-ca=islamic-umalqura]"} | ${"xscan islamic-umalqura max[354]: lands on the maximum"}
   `(
     "returns $expected for $value + $units ($reason)",
     ({ value, units, expected }) => {
@@ -186,25 +206,25 @@ describe("addDate", () => {
   // corrected-range samples; edge results are Chromium's own reads.
   it.each`
     value                             | units            | expected                          | reason
-    ${"-271275-01-13[u-ca=buddhist]"} | ${{ months: 1 }} | ${"-271275-02-13[u-ca=buddhist]"} | ${"stride buddhist k=0"}
-    ${"-271275-01-13[u-ca=buddhist]"} | ${{ years: 1 }}  | ${"-271274-01-13[u-ca=buddhist]"} | ${"stride buddhist k=0"}
-    ${"-261967-01-30[u-ca=buddhist]"} | ${{ months: 1 }} | ${"-261967-02-28[u-ca=buddhist]"} | ${"stride buddhist k=34: constrains to the 28-day February"}
-    ${"1943-07-25[u-ca=buddhist]"}    | ${{ years: 1 }}  | ${"1944-07-25[u-ca=buddhist]"}    | ${"stride buddhist k=998 (ISO 1400)"}
-    ${"-271278-04-19[u-ca=buddhist]"} | ${{ years: 1 }}  | ${"-271277-04-19[u-ca=buddhist]"} | ${"xscan buddhist min[0]"}
-    ${"-268055-07-30[u-ca=hebrew]"}   | ${{ months: 1 }} | ${"-268055-08-29[u-ca=hebrew]"}   | ${"stride hebrew k=0: Nisan 30 constrains to Iyar 29"}
-    ${"-268055-07-30[u-ca=hebrew]"}   | ${{ years: 1 }}  | ${"-268054-08-30[u-ca=hebrew]"}   | ${"stride hebrew k=0: Nisan is ordinal 8 in leap -268054"}
-    ${"-178808-03-15[u-ca=hebrew]"}   | ${{ years: 1 }}  | ${"-178807-03-15[u-ca=hebrew]"}   | ${"stride hebrew k=326"}
-    ${"-000041-05-16[u-ca=hebrew]"}   | ${{ months: 1 }} | ${"-000041-06-16[u-ca=hebrew]"}   | ${"stride hebrew k=979, the last Hebrew year <= 0 sample"}
-    ${"-266686-06-03[u-ca=hebrew]"}   | ${{ years: 1 }}  | ${"-266685-06-03[u-ca=hebrew]"}   | ${"stride hebrew k=5: Adar I (M05L) of leap -266686 constrains to Adar (M06) of common -266685"}
-    ${"-266686-06-03[u-ca=hebrew]"}   | ${{ months: 1 }} | ${"-266686-07-03[u-ca=hebrew]"}   | ${"stride hebrew k=5: Adar I -> Adar"}
-    ${"-268058-12-14[u-ca=hebrew]"}   | ${{ years: 1 }}  | ${"-268057-13-14[u-ca=hebrew]"}   | ${"xscan hebrew min[40]: Adar into leap -268057 is ordinal 13's predecessor code"}
-    ${"-268057-12-21[u-ca=hebrew]"}   | ${{ months: 1 }} | ${"-268057-13-21[u-ca=hebrew]"}   | ${"xscan hebrew min[400]"}
-    ${"0000-01-13[u-ca=hebrew]"}      | ${{ years: 2 }}  | ${"0002-01-13[u-ca=hebrew]"}      | ${"from the corrected range into year 2: Tishri 13 exists every year (spec NonISODateAdd)"}
-    ${"-271897-10-23[u-ca=indian]"}   | ${{ months: 1 }} | ${"-271897-11-23[u-ca=indian]"}   | ${"stride indian k=0"}
-    ${"-090664-12-12[u-ca=indian]"}   | ${{ months: 1 }} | ${"-090663-01-12[u-ca=indian]"}   | ${"stride indian k=662: across the Saka year end"}
-    ${"-261767-02-30[u-ca=indian]"}   | ${{ years: 1 }}  | ${"-261766-02-30[u-ca=indian]"}   | ${"stride indian k=37"}
-    ${"-000321-09-28[u-ca=indian]"}   | ${{ years: 1 }}  | ${"-000320-09-28[u-ca=indian]"}   | ${"stride indian k=992 (ISO -243)"}
-    ${"-271899-01-29[u-ca=indian]"}   | ${{ months: 1 }} | ${"-271899-02-29[u-ca=indian]"}   | ${"xscan indian min[0]"}
+    ${"-271818-01-13[u-ca=buddhist]"} | ${{ months: 1 }} | ${"-271818-02-13[u-ca=buddhist]"} | ${"stride buddhist k=0"}
+    ${"-271818-01-13[u-ca=buddhist]"} | ${{ years: 1 }}  | ${"-271817-01-13[u-ca=buddhist]"} | ${"stride buddhist k=0"}
+    ${"-262510-01-30[u-ca=buddhist]"} | ${{ months: 1 }} | ${"-262510-02-28[u-ca=buddhist]"} | ${"stride buddhist k=34: constrains to the 28-day February"}
+    ${"1400-07-25[u-ca=buddhist]"}    | ${{ years: 1 }}  | ${"1401-07-25[u-ca=buddhist]"}    | ${"stride buddhist k=998 (ISO 1400)"}
+    ${"-271821-04-19[u-ca=buddhist]"} | ${{ years: 1 }}  | ${"-271820-04-19[u-ca=buddhist]"} | ${"xscan buddhist min[0]"}
+    ${"-271818-01-13[u-ca=hebrew]"}   | ${{ months: 1 }} | ${"-271818-02-11[u-ca=hebrew]"}   | ${"stride hebrew k=0: Nisan 30 constrains to Iyar 29"}
+    ${"-271818-01-13[u-ca=hebrew]"}   | ${{ years: 1 }}  | ${"-271817-02-02[u-ca=hebrew]"}   | ${"stride hebrew k=0: Nisan is ordinal 8 in leap -268054"}
+    ${"-182571-10-09[u-ca=hebrew]"}   | ${{ years: 1 }}  | ${"-182570-09-29[u-ca=hebrew]"}   | ${"stride hebrew k=326"}
+    ${"-003801-01-03[u-ca=hebrew]"}   | ${{ months: 1 }} | ${"-003801-02-02[u-ca=hebrew]"}   | ${"stride hebrew k=979, the last Hebrew year <= 0 sample"}
+    ${"-270450-11-13[u-ca=hebrew]"}   | ${{ years: 1 }}  | ${"-270449-12-03[u-ca=hebrew]"}   | ${"stride hebrew k=5: Adar I (M05L) of leap -266686 constrains to Adar (M06) of common -266685"}
+    ${"-270450-11-13[u-ca=hebrew]"}   | ${{ months: 1 }} | ${"-270450-12-13[u-ca=hebrew]"}   | ${"stride hebrew k=5: Adar I -> Adar"}
+    ${"-271821-05-29[u-ca=hebrew]"}   | ${{ years: 1 }}  | ${"-271820-06-15[u-ca=hebrew]"}   | ${"xscan hebrew min[40]: Adar into leap -268057 is ordinal 13's predecessor code"}
+    ${"-271820-05-23[u-ca=hebrew]"}   | ${{ months: 1 }} | ${"-271820-06-22[u-ca=hebrew]"}   | ${"xscan hebrew min[400]"}
+    ${"-003761-09-01[u-ca=hebrew]"}   | ${{ years: 2 }}  | ${"-003759-09-09[u-ca=hebrew]"}   | ${"from the corrected range into year 2: Tishri 13 exists every year (spec NonISODateAdd)"}
+    ${"-271818-01-13[u-ca=indian]"}   | ${{ months: 1 }} | ${"-271818-02-12[u-ca=indian]"}   | ${"stride indian k=0"}
+    ${"-090585-03-03[u-ca=indian]"}   | ${{ months: 1 }} | ${"-090585-04-02[u-ca=indian]"}   | ${"stride indian k=662: across the Saka year end"}
+    ${"-261689-05-20[u-ca=indian]"}   | ${{ years: 1 }}  | ${"-261688-05-20[u-ca=indian]"}   | ${"stride indian k=37"}
+    ${"-000243-12-19[u-ca=indian]"}   | ${{ years: 1 }}  | ${"-000242-12-19[u-ca=indian]"}   | ${"stride indian k=992 (ISO -243)"}
+    ${"-271821-04-19[u-ca=indian]"}   | ${{ months: 1 }} | ${"-271821-05-19[u-ca=indian]"}   | ${"xscan indian min[0]"}
   `(
     "returns $expected for $value + $units ($reason)",
     ({ value, units, expected }) => {
@@ -222,151 +242,206 @@ describe("addDate", () => {
     ).toBe("");
   });
 
-  it('returns "" for a datetime/zoned string instead of silently truncating to its date portion (parseCalendarDateValue regression, E5)', () => {
-    expect(addDate("2024-03-10T14:30:00", { days: 1 })).toBe("");
-  });
+  // A date-time is read as its date, as Temporal.PlainDate.from reads it (decided
+  // 2026-09-17; before 1.16.0 the sentinel). Expected values from native Chromium 153.
+  it.each`
+    value                              | units            | expected
+    ${"2024-03-10T14:30:00"}           | ${{ days: 1 }}   | ${"2024-03-11"}
+    ${"2024-10-03T14:30[u-ca=hebrew]"} | ${{ months: 1 }} | ${"2024-11-02[u-ca=hebrew]"}
+  `(
+    "returns $expected for the date-time $value plus $units",
+    ({ value, units, expected }) => {
+      expect(addDate(value, units)).toBe(expected);
+    },
+  );
 
   // CORE-6 modern grid subset (spec §4.4): +1 month (constrain and reject), +1 year and -13 months
   // from the same starts as diffDateAsDuration.test.ts. Expected values: Chromium 152 native
   // Temporal (q2-grid-chromium152.json); "" where Chromium throws.
   it.each`
-    value                                     | units              | overflow       | expected                                  | source
-    ${"2566-06-01[u-ca=buddhist]"}            | ${{ months: 1 }}   | ${"constrain"} | ${"2566-07-01[u-ca=buddhist]"}            | ${"grid buddhist i=0"}
-    ${"2566-06-01[u-ca=buddhist]"}            | ${{ months: 1 }}   | ${"reject"}    | ${"2566-07-01[u-ca=buddhist]"}            | ${"grid buddhist i=0"}
-    ${"2566-06-01[u-ca=buddhist]"}            | ${{ years: 1 }}    | ${"constrain"} | ${"2567-06-01[u-ca=buddhist]"}            | ${"grid buddhist i=0"}
-    ${"2566-06-01[u-ca=buddhist]"}            | ${{ months: -13 }} | ${"constrain"} | ${"2565-05-01[u-ca=buddhist]"}            | ${"grid buddhist i=0"}
-    ${"2566-06-30[u-ca=buddhist]"}            | ${{ months: 1 }}   | ${"constrain"} | ${"2566-07-30[u-ca=buddhist]"}            | ${"grid buddhist i=29"}
-    ${"2566-06-30[u-ca=buddhist]"}            | ${{ months: 1 }}   | ${"reject"}    | ${"2566-07-30[u-ca=buddhist]"}            | ${"grid buddhist i=29"}
-    ${"2566-06-30[u-ca=buddhist]"}            | ${{ years: 1 }}    | ${"constrain"} | ${"2567-06-30[u-ca=buddhist]"}            | ${"grid buddhist i=29"}
-    ${"2566-06-30[u-ca=buddhist]"}            | ${{ months: -13 }} | ${"constrain"} | ${"2565-05-30[u-ca=buddhist]"}            | ${"grid buddhist i=29"}
-    ${"2566-09-30[u-ca=buddhist]"}            | ${{ months: 1 }}   | ${"constrain"} | ${"2566-10-30[u-ca=buddhist]"}            | ${"grid buddhist i=121"}
-    ${"2566-09-30[u-ca=buddhist]"}            | ${{ months: 1 }}   | ${"reject"}    | ${"2566-10-30[u-ca=buddhist]"}            | ${"grid buddhist i=121"}
-    ${"2566-09-30[u-ca=buddhist]"}            | ${{ years: 1 }}    | ${"constrain"} | ${"2567-09-30[u-ca=buddhist]"}            | ${"grid buddhist i=121"}
-    ${"2566-09-30[u-ca=buddhist]"}            | ${{ months: -13 }} | ${"constrain"} | ${"2565-08-30[u-ca=buddhist]"}            | ${"grid buddhist i=121"}
-    ${"5783-09-12[u-ca=hebrew]"}              | ${{ months: 1 }}   | ${"constrain"} | ${"5783-10-12[u-ca=hebrew]"}              | ${"grid hebrew i=0"}
-    ${"5783-09-12[u-ca=hebrew]"}              | ${{ months: 1 }}   | ${"reject"}    | ${"5783-10-12[u-ca=hebrew]"}              | ${"grid hebrew i=0"}
-    ${"5783-09-12[u-ca=hebrew]"}              | ${{ years: 1 }}    | ${"constrain"} | ${"5784-10-12[u-ca=hebrew]"}              | ${"grid hebrew i=0"}
-    ${"5783-09-12[u-ca=hebrew]"}              | ${{ months: -13 }} | ${"constrain"} | ${"5782-09-12[u-ca=hebrew]"}              | ${"grid hebrew i=0"}
-    ${"5783-09-30[u-ca=hebrew]"}              | ${{ months: 1 }}   | ${"constrain"} | ${"5783-10-29[u-ca=hebrew]"}              | ${"grid hebrew i=18"}
-    ${"5783-09-30[u-ca=hebrew]"}              | ${{ months: 1 }}   | ${"reject"}    | ${""}                                     | ${"grid hebrew i=18"}
-    ${"5783-09-30[u-ca=hebrew]"}              | ${{ years: 1 }}    | ${"constrain"} | ${"5784-10-30[u-ca=hebrew]"}              | ${"grid hebrew i=18"}
-    ${"5783-09-30[u-ca=hebrew]"}              | ${{ months: -13 }} | ${"constrain"} | ${"5782-09-29[u-ca=hebrew]"}              | ${"grid hebrew i=18"}
-    ${"5783-12-29[u-ca=hebrew]"}              | ${{ months: 1 }}   | ${"constrain"} | ${"5784-01-29[u-ca=hebrew]"}              | ${"grid hebrew i=106"}
-    ${"5783-12-29[u-ca=hebrew]"}              | ${{ months: 1 }}   | ${"reject"}    | ${"5784-01-29[u-ca=hebrew]"}              | ${"grid hebrew i=106"}
-    ${"5783-12-29[u-ca=hebrew]"}              | ${{ years: 1 }}    | ${"constrain"} | ${"5784-13-29[u-ca=hebrew]"}              | ${"grid hebrew i=106"}
-    ${"5783-12-29[u-ca=hebrew]"}              | ${{ months: -13 }} | ${"constrain"} | ${"5782-12-29[u-ca=hebrew]"}              | ${"grid hebrew i=106"}
-    ${"1444-11-12[u-ca=islamic-civil]"}       | ${{ months: 1 }}   | ${"constrain"} | ${"1444-12-12[u-ca=islamic-civil]"}       | ${"grid islamic-civil i=0"}
-    ${"1444-11-12[u-ca=islamic-civil]"}       | ${{ months: 1 }}   | ${"reject"}    | ${"1444-12-12[u-ca=islamic-civil]"}       | ${"grid islamic-civil i=0"}
-    ${"1444-11-12[u-ca=islamic-civil]"}       | ${{ years: 1 }}    | ${"constrain"} | ${"1445-11-12[u-ca=islamic-civil]"}       | ${"grid islamic-civil i=0"}
-    ${"1444-11-12[u-ca=islamic-civil]"}       | ${{ months: -13 }} | ${"constrain"} | ${"1443-10-12[u-ca=islamic-civil]"}       | ${"grid islamic-civil i=0"}
-    ${"1444-11-30[u-ca=islamic-civil]"}       | ${{ months: 1 }}   | ${"constrain"} | ${"1444-12-29[u-ca=islamic-civil]"}       | ${"grid islamic-civil i=18"}
-    ${"1444-11-30[u-ca=islamic-civil]"}       | ${{ months: 1 }}   | ${"reject"}    | ${""}                                     | ${"grid islamic-civil i=18"}
-    ${"1444-11-30[u-ca=islamic-civil]"}       | ${{ years: 1 }}    | ${"constrain"} | ${"1445-11-30[u-ca=islamic-civil]"}       | ${"grid islamic-civil i=18"}
-    ${"1444-11-30[u-ca=islamic-civil]"}       | ${{ months: -13 }} | ${"constrain"} | ${"1443-10-29[u-ca=islamic-civil]"}       | ${"grid islamic-civil i=18"}
-    ${"1445-02-29[u-ca=islamic-civil]"}       | ${{ months: 1 }}   | ${"constrain"} | ${"1445-03-29[u-ca=islamic-civil]"}       | ${"grid islamic-civil i=106"}
-    ${"1445-02-29[u-ca=islamic-civil]"}       | ${{ months: 1 }}   | ${"reject"}    | ${"1445-03-29[u-ca=islamic-civil]"}       | ${"grid islamic-civil i=106"}
-    ${"1445-02-29[u-ca=islamic-civil]"}       | ${{ years: 1 }}    | ${"constrain"} | ${"1446-02-29[u-ca=islamic-civil]"}       | ${"grid islamic-civil i=106"}
-    ${"1445-02-29[u-ca=islamic-civil]"}       | ${{ months: -13 }} | ${"constrain"} | ${"1444-01-29[u-ca=islamic-civil]"}       | ${"grid islamic-civil i=106"}
-    ${"1444-11-13[u-ca=islamic-tabular]"}     | ${{ months: 1 }}   | ${"constrain"} | ${"1444-12-13[u-ca=islamic-tabular]"}     | ${"grid islamic-tbla i=0"}
-    ${"1444-11-13[u-ca=islamic-tabular]"}     | ${{ months: 1 }}   | ${"reject"}    | ${"1444-12-13[u-ca=islamic-tabular]"}     | ${"grid islamic-tbla i=0"}
-    ${"1444-11-13[u-ca=islamic-tabular]"}     | ${{ years: 1 }}    | ${"constrain"} | ${"1445-11-13[u-ca=islamic-tabular]"}     | ${"grid islamic-tbla i=0"}
-    ${"1444-11-13[u-ca=islamic-tabular]"}     | ${{ months: -13 }} | ${"constrain"} | ${"1443-10-13[u-ca=islamic-tabular]"}     | ${"grid islamic-tbla i=0"}
-    ${"1444-11-30[u-ca=islamic-tabular]"}     | ${{ months: 1 }}   | ${"constrain"} | ${"1444-12-29[u-ca=islamic-tabular]"}     | ${"grid islamic-tbla i=17"}
-    ${"1444-11-30[u-ca=islamic-tabular]"}     | ${{ months: 1 }}   | ${"reject"}    | ${""}                                     | ${"grid islamic-tbla i=17"}
-    ${"1444-11-30[u-ca=islamic-tabular]"}     | ${{ years: 1 }}    | ${"constrain"} | ${"1445-11-30[u-ca=islamic-tabular]"}     | ${"grid islamic-tbla i=17"}
-    ${"1444-11-30[u-ca=islamic-tabular]"}     | ${{ months: -13 }} | ${"constrain"} | ${"1443-10-29[u-ca=islamic-tabular]"}     | ${"grid islamic-tbla i=17"}
-    ${"1445-02-29[u-ca=islamic-tabular]"}     | ${{ months: 1 }}   | ${"constrain"} | ${"1445-03-29[u-ca=islamic-tabular]"}     | ${"grid islamic-tbla i=105"}
-    ${"1445-02-29[u-ca=islamic-tabular]"}     | ${{ months: 1 }}   | ${"reject"}    | ${"1445-03-29[u-ca=islamic-tabular]"}     | ${"grid islamic-tbla i=105"}
-    ${"1445-02-29[u-ca=islamic-tabular]"}     | ${{ years: 1 }}    | ${"constrain"} | ${"1446-02-29[u-ca=islamic-tabular]"}     | ${"grid islamic-tbla i=105"}
-    ${"1445-02-29[u-ca=islamic-tabular]"}     | ${{ months: -13 }} | ${"constrain"} | ${"1444-01-29[u-ca=islamic-tabular]"}     | ${"grid islamic-tbla i=105"}
-    ${"1444-11-12[u-ca=islamic-umalqura]"}    | ${{ months: 1 }}   | ${"constrain"} | ${"1444-12-12[u-ca=islamic-umalqura]"}    | ${"grid islamic-umalqura i=0"}
-    ${"1444-11-12[u-ca=islamic-umalqura]"}    | ${{ months: 1 }}   | ${"reject"}    | ${"1444-12-12[u-ca=islamic-umalqura]"}    | ${"grid islamic-umalqura i=0"}
-    ${"1444-11-12[u-ca=islamic-umalqura]"}    | ${{ years: 1 }}    | ${"constrain"} | ${"1445-11-12[u-ca=islamic-umalqura]"}    | ${"grid islamic-umalqura i=0"}
-    ${"1444-11-12[u-ca=islamic-umalqura]"}    | ${{ months: -13 }} | ${"constrain"} | ${"1443-10-12[u-ca=islamic-umalqura]"}    | ${"grid islamic-umalqura i=0"}
-    ${"1444-11-29[u-ca=islamic-umalqura]"}    | ${{ months: 1 }}   | ${"constrain"} | ${"1444-12-29[u-ca=islamic-umalqura]"}    | ${"grid islamic-umalqura i=17"}
-    ${"1444-11-29[u-ca=islamic-umalqura]"}    | ${{ months: 1 }}   | ${"reject"}    | ${"1444-12-29[u-ca=islamic-umalqura]"}    | ${"grid islamic-umalqura i=17"}
-    ${"1444-11-29[u-ca=islamic-umalqura]"}    | ${{ years: 1 }}    | ${"constrain"} | ${"1445-11-29[u-ca=islamic-umalqura]"}    | ${"grid islamic-umalqura i=17"}
-    ${"1444-11-29[u-ca=islamic-umalqura]"}    | ${{ months: -13 }} | ${"constrain"} | ${"1443-10-29[u-ca=islamic-umalqura]"}    | ${"grid islamic-umalqura i=17"}
-    ${"1445-02-30[u-ca=islamic-umalqura]"}    | ${{ months: 1 }}   | ${"constrain"} | ${"1445-03-30[u-ca=islamic-umalqura]"}    | ${"grid islamic-umalqura i=106"}
-    ${"1445-02-30[u-ca=islamic-umalqura]"}    | ${{ months: 1 }}   | ${"reject"}    | ${"1445-03-30[u-ca=islamic-umalqura]"}    | ${"grid islamic-umalqura i=106"}
-    ${"1445-02-30[u-ca=islamic-umalqura]"}    | ${{ years: 1 }}    | ${"constrain"} | ${"1446-02-30[u-ca=islamic-umalqura]"}    | ${"grid islamic-umalqura i=106"}
-    ${"1445-02-30[u-ca=islamic-umalqura]"}    | ${{ months: -13 }} | ${"constrain"} | ${"1444-01-29[u-ca=islamic-umalqura]"}    | ${"grid islamic-umalqura i=106"}
-    ${"1402-03-11[u-ca=persian]"}             | ${{ months: 1 }}   | ${"constrain"} | ${"1402-04-11[u-ca=persian]"}             | ${"grid persian i=0"}
-    ${"1402-03-11[u-ca=persian]"}             | ${{ months: 1 }}   | ${"reject"}    | ${"1402-04-11[u-ca=persian]"}             | ${"grid persian i=0"}
-    ${"1402-03-11[u-ca=persian]"}             | ${{ years: 1 }}    | ${"constrain"} | ${"1403-03-11[u-ca=persian]"}             | ${"grid persian i=0"}
-    ${"1402-03-11[u-ca=persian]"}             | ${{ months: -13 }} | ${"constrain"} | ${"1401-02-11[u-ca=persian]"}             | ${"grid persian i=0"}
-    ${"1402-03-31[u-ca=persian]"}             | ${{ months: 1 }}   | ${"constrain"} | ${"1402-04-31[u-ca=persian]"}             | ${"grid persian i=20"}
-    ${"1402-03-31[u-ca=persian]"}             | ${{ months: 1 }}   | ${"reject"}    | ${"1402-04-31[u-ca=persian]"}             | ${"grid persian i=20"}
-    ${"1402-03-31[u-ca=persian]"}             | ${{ years: 1 }}    | ${"constrain"} | ${"1403-03-31[u-ca=persian]"}             | ${"grid persian i=20"}
-    ${"1402-03-31[u-ca=persian]"}             | ${{ months: -13 }} | ${"constrain"} | ${"1401-02-31[u-ca=persian]"}             | ${"grid persian i=20"}
-    ${"1402-06-31[u-ca=persian]"}             | ${{ months: 1 }}   | ${"constrain"} | ${"1402-07-30[u-ca=persian]"}             | ${"grid persian i=113"}
-    ${"1402-06-31[u-ca=persian]"}             | ${{ months: 1 }}   | ${"reject"}    | ${""}                                     | ${"grid persian i=113"}
-    ${"1402-06-31[u-ca=persian]"}             | ${{ years: 1 }}    | ${"constrain"} | ${"1403-06-31[u-ca=persian]"}             | ${"grid persian i=113"}
-    ${"1402-06-31[u-ca=persian]"}             | ${{ months: -13 }} | ${"constrain"} | ${"1401-05-31[u-ca=persian]"}             | ${"grid persian i=113"}
-    ${"1945-03-11[u-ca=indian]"}              | ${{ months: 1 }}   | ${"constrain"} | ${"1945-04-11[u-ca=indian]"}              | ${"grid indian i=0"}
-    ${"1945-03-11[u-ca=indian]"}              | ${{ months: 1 }}   | ${"reject"}    | ${"1945-04-11[u-ca=indian]"}              | ${"grid indian i=0"}
-    ${"1945-03-11[u-ca=indian]"}              | ${{ years: 1 }}    | ${"constrain"} | ${"1946-03-11[u-ca=indian]"}              | ${"grid indian i=0"}
-    ${"1945-03-11[u-ca=indian]"}              | ${{ months: -13 }} | ${"constrain"} | ${"1944-02-11[u-ca=indian]"}              | ${"grid indian i=0"}
-    ${"1945-03-31[u-ca=indian]"}              | ${{ months: 1 }}   | ${"constrain"} | ${"1945-04-31[u-ca=indian]"}              | ${"grid indian i=20"}
-    ${"1945-03-31[u-ca=indian]"}              | ${{ months: 1 }}   | ${"reject"}    | ${"1945-04-31[u-ca=indian]"}              | ${"grid indian i=20"}
-    ${"1945-03-31[u-ca=indian]"}              | ${{ years: 1 }}    | ${"constrain"} | ${"1946-03-31[u-ca=indian]"}              | ${"grid indian i=20"}
-    ${"1945-03-31[u-ca=indian]"}              | ${{ months: -13 }} | ${"constrain"} | ${"1944-02-31[u-ca=indian]"}              | ${"grid indian i=20"}
-    ${"1945-06-31[u-ca=indian]"}              | ${{ months: 1 }}   | ${"constrain"} | ${"1945-07-30[u-ca=indian]"}              | ${"grid indian i=113"}
-    ${"1945-06-31[u-ca=indian]"}              | ${{ months: 1 }}   | ${"reject"}    | ${""}                                     | ${"grid indian i=113"}
-    ${"1945-06-31[u-ca=indian]"}              | ${{ years: 1 }}    | ${"constrain"} | ${"1946-06-31[u-ca=indian]"}              | ${"grid indian i=113"}
-    ${"1945-06-31[u-ca=indian]"}              | ${{ months: -13 }} | ${"constrain"} | ${"1944-05-31[u-ca=indian]"}              | ${"grid indian i=113"}
-    ${"7515-09-24[u-ca=ethiopic-amete-alem]"} | ${{ months: 1 }}   | ${"constrain"} | ${"7515-10-24[u-ca=ethiopic-amete-alem]"} | ${"grid ethioaa i=0"}
-    ${"7515-09-24[u-ca=ethiopic-amete-alem]"} | ${{ months: 1 }}   | ${"reject"}    | ${"7515-10-24[u-ca=ethiopic-amete-alem]"} | ${"grid ethioaa i=0"}
-    ${"7515-09-24[u-ca=ethiopic-amete-alem]"} | ${{ years: 1 }}    | ${"constrain"} | ${"7516-09-24[u-ca=ethiopic-amete-alem]"} | ${"grid ethioaa i=0"}
-    ${"7515-09-24[u-ca=ethiopic-amete-alem]"} | ${{ months: -13 }} | ${"constrain"} | ${"7514-09-24[u-ca=ethiopic-amete-alem]"} | ${"grid ethioaa i=0"}
-    ${"7515-09-30[u-ca=ethiopic-amete-alem]"} | ${{ months: 1 }}   | ${"constrain"} | ${"7515-10-30[u-ca=ethiopic-amete-alem]"} | ${"grid ethioaa i=6"}
-    ${"7515-09-30[u-ca=ethiopic-amete-alem]"} | ${{ months: 1 }}   | ${"reject"}    | ${"7515-10-30[u-ca=ethiopic-amete-alem]"} | ${"grid ethioaa i=6"}
-    ${"7515-09-30[u-ca=ethiopic-amete-alem]"} | ${{ years: 1 }}    | ${"constrain"} | ${"7516-09-30[u-ca=ethiopic-amete-alem]"} | ${"grid ethioaa i=6"}
-    ${"7515-09-30[u-ca=ethiopic-amete-alem]"} | ${{ months: -13 }} | ${"constrain"} | ${"7514-09-30[u-ca=ethiopic-amete-alem]"} | ${"grid ethioaa i=6"}
-    ${"7515-12-30[u-ca=ethiopic-amete-alem]"} | ${{ months: 1 }}   | ${"constrain"} | ${"7515-13-06[u-ca=ethiopic-amete-alem]"} | ${"grid ethioaa i=96"}
-    ${"7515-12-30[u-ca=ethiopic-amete-alem]"} | ${{ months: 1 }}   | ${"reject"}    | ${""}                                     | ${"grid ethioaa i=96"}
-    ${"7515-12-30[u-ca=ethiopic-amete-alem]"} | ${{ years: 1 }}    | ${"constrain"} | ${"7516-12-30[u-ca=ethiopic-amete-alem]"} | ${"grid ethioaa i=96"}
-    ${"7515-12-30[u-ca=ethiopic-amete-alem]"} | ${{ months: -13 }} | ${"constrain"} | ${"7514-12-30[u-ca=ethiopic-amete-alem]"} | ${"grid ethioaa i=96"}
-    ${"0005-06-01[u-ca=japanese;era=reiwa]"}  | ${{ months: 1 }}   | ${"constrain"} | ${"0005-07-01[u-ca=japanese;era=reiwa]"}  | ${"grid japanese i=0"}
-    ${"0005-06-01[u-ca=japanese;era=reiwa]"}  | ${{ months: 1 }}   | ${"reject"}    | ${"0005-07-01[u-ca=japanese;era=reiwa]"}  | ${"grid japanese i=0"}
-    ${"0005-06-01[u-ca=japanese;era=reiwa]"}  | ${{ years: 1 }}    | ${"constrain"} | ${"0006-06-01[u-ca=japanese;era=reiwa]"}  | ${"grid japanese i=0"}
-    ${"0005-06-01[u-ca=japanese;era=reiwa]"}  | ${{ months: -13 }} | ${"constrain"} | ${"0004-05-01[u-ca=japanese;era=reiwa]"}  | ${"grid japanese i=0"}
-    ${"0005-06-30[u-ca=japanese;era=reiwa]"}  | ${{ months: 1 }}   | ${"constrain"} | ${"0005-07-30[u-ca=japanese;era=reiwa]"}  | ${"grid japanese i=29"}
-    ${"0005-06-30[u-ca=japanese;era=reiwa]"}  | ${{ months: 1 }}   | ${"reject"}    | ${"0005-07-30[u-ca=japanese;era=reiwa]"}  | ${"grid japanese i=29"}
-    ${"0005-06-30[u-ca=japanese;era=reiwa]"}  | ${{ years: 1 }}    | ${"constrain"} | ${"0006-06-30[u-ca=japanese;era=reiwa]"}  | ${"grid japanese i=29"}
-    ${"0005-06-30[u-ca=japanese;era=reiwa]"}  | ${{ months: -13 }} | ${"constrain"} | ${"0004-05-30[u-ca=japanese;era=reiwa]"}  | ${"grid japanese i=29"}
-    ${"0005-09-30[u-ca=japanese;era=reiwa]"}  | ${{ months: 1 }}   | ${"constrain"} | ${"0005-10-30[u-ca=japanese;era=reiwa]"}  | ${"grid japanese i=121"}
-    ${"0005-09-30[u-ca=japanese;era=reiwa]"}  | ${{ months: 1 }}   | ${"reject"}    | ${"0005-10-30[u-ca=japanese;era=reiwa]"}  | ${"grid japanese i=121"}
-    ${"0005-09-30[u-ca=japanese;era=reiwa]"}  | ${{ years: 1 }}    | ${"constrain"} | ${"0006-09-30[u-ca=japanese;era=reiwa]"}  | ${"grid japanese i=121"}
-    ${"0005-09-30[u-ca=japanese;era=reiwa]"}  | ${{ months: -13 }} | ${"constrain"} | ${"0004-08-30[u-ca=japanese;era=reiwa]"}  | ${"grid japanese i=121"}
-    ${"0112-06-01[u-ca=taiwan]"}              | ${{ months: 1 }}   | ${"constrain"} | ${"0112-07-01[u-ca=taiwan]"}              | ${"grid roc i=0"}
-    ${"0112-06-01[u-ca=taiwan]"}              | ${{ months: 1 }}   | ${"reject"}    | ${"0112-07-01[u-ca=taiwan]"}              | ${"grid roc i=0"}
-    ${"0112-06-01[u-ca=taiwan]"}              | ${{ years: 1 }}    | ${"constrain"} | ${"0113-06-01[u-ca=taiwan]"}              | ${"grid roc i=0"}
-    ${"0112-06-01[u-ca=taiwan]"}              | ${{ months: -13 }} | ${"constrain"} | ${"0111-05-01[u-ca=taiwan]"}              | ${"grid roc i=0"}
-    ${"0112-06-30[u-ca=taiwan]"}              | ${{ months: 1 }}   | ${"constrain"} | ${"0112-07-30[u-ca=taiwan]"}              | ${"grid roc i=29"}
-    ${"0112-06-30[u-ca=taiwan]"}              | ${{ months: 1 }}   | ${"reject"}    | ${"0112-07-30[u-ca=taiwan]"}              | ${"grid roc i=29"}
-    ${"0112-06-30[u-ca=taiwan]"}              | ${{ years: 1 }}    | ${"constrain"} | ${"0113-06-30[u-ca=taiwan]"}              | ${"grid roc i=29"}
-    ${"0112-06-30[u-ca=taiwan]"}              | ${{ months: -13 }} | ${"constrain"} | ${"0111-05-30[u-ca=taiwan]"}              | ${"grid roc i=29"}
-    ${"0112-09-30[u-ca=taiwan]"}              | ${{ months: 1 }}   | ${"constrain"} | ${"0112-10-30[u-ca=taiwan]"}              | ${"grid roc i=121"}
-    ${"0112-09-30[u-ca=taiwan]"}              | ${{ months: 1 }}   | ${"reject"}    | ${"0112-10-30[u-ca=taiwan]"}              | ${"grid roc i=121"}
-    ${"0112-09-30[u-ca=taiwan]"}              | ${{ years: 1 }}    | ${"constrain"} | ${"0113-09-30[u-ca=taiwan]"}              | ${"grid roc i=121"}
-    ${"0112-09-30[u-ca=taiwan]"}              | ${{ months: -13 }} | ${"constrain"} | ${"0111-08-30[u-ca=taiwan]"}              | ${"grid roc i=121"}
-    ${"2023-06-01"}                           | ${{ months: 1 }}   | ${"constrain"} | ${"2023-07-01"}                           | ${"grid gregory i=0"}
-    ${"2023-06-01"}                           | ${{ months: 1 }}   | ${"reject"}    | ${"2023-07-01"}                           | ${"grid gregory i=0"}
-    ${"2023-06-01"}                           | ${{ years: 1 }}    | ${"constrain"} | ${"2024-06-01"}                           | ${"grid gregory i=0"}
-    ${"2023-06-01"}                           | ${{ months: -13 }} | ${"constrain"} | ${"2022-05-01"}                           | ${"grid gregory i=0"}
-    ${"2023-06-30"}                           | ${{ months: 1 }}   | ${"constrain"} | ${"2023-07-30"}                           | ${"grid gregory i=29"}
-    ${"2023-06-30"}                           | ${{ months: 1 }}   | ${"reject"}    | ${"2023-07-30"}                           | ${"grid gregory i=29"}
-    ${"2023-06-30"}                           | ${{ years: 1 }}    | ${"constrain"} | ${"2024-06-30"}                           | ${"grid gregory i=29"}
-    ${"2023-06-30"}                           | ${{ months: -13 }} | ${"constrain"} | ${"2022-05-30"}                           | ${"grid gregory i=29"}
-    ${"2023-09-30"}                           | ${{ months: 1 }}   | ${"constrain"} | ${"2023-10-30"}                           | ${"grid gregory i=121"}
-    ${"2023-09-30"}                           | ${{ months: 1 }}   | ${"reject"}    | ${"2023-10-30"}                           | ${"grid gregory i=121"}
-    ${"2023-09-30"}                           | ${{ years: 1 }}    | ${"constrain"} | ${"2024-09-30"}                           | ${"grid gregory i=121"}
-    ${"2023-09-30"}                           | ${{ months: -13 }} | ${"constrain"} | ${"2022-08-30"}                           | ${"grid gregory i=121"}
+    value                                  | units              | overflow       | expected                               | source
+    ${"2023-06-01[u-ca=buddhist]"}         | ${{ months: 1 }}   | ${"constrain"} | ${"2023-07-01[u-ca=buddhist]"}         | ${"grid buddhist i=0"}
+    ${"2023-06-01[u-ca=buddhist]"}         | ${{ months: 1 }}   | ${"reject"}    | ${"2023-07-01[u-ca=buddhist]"}         | ${"grid buddhist i=0"}
+    ${"2023-06-01[u-ca=buddhist]"}         | ${{ years: 1 }}    | ${"constrain"} | ${"2024-06-01[u-ca=buddhist]"}         | ${"grid buddhist i=0"}
+    ${"2023-06-01[u-ca=buddhist]"}         | ${{ months: -13 }} | ${"constrain"} | ${"2022-05-01[u-ca=buddhist]"}         | ${"grid buddhist i=0"}
+    ${"2023-06-30[u-ca=buddhist]"}         | ${{ months: 1 }}   | ${"constrain"} | ${"2023-07-30[u-ca=buddhist]"}         | ${"grid buddhist i=29"}
+    ${"2023-06-30[u-ca=buddhist]"}         | ${{ months: 1 }}   | ${"reject"}    | ${"2023-07-30[u-ca=buddhist]"}         | ${"grid buddhist i=29"}
+    ${"2023-06-30[u-ca=buddhist]"}         | ${{ years: 1 }}    | ${"constrain"} | ${"2024-06-30[u-ca=buddhist]"}         | ${"grid buddhist i=29"}
+    ${"2023-06-30[u-ca=buddhist]"}         | ${{ months: -13 }} | ${"constrain"} | ${"2022-05-30[u-ca=buddhist]"}         | ${"grid buddhist i=29"}
+    ${"2023-09-30[u-ca=buddhist]"}         | ${{ months: 1 }}   | ${"constrain"} | ${"2023-10-30[u-ca=buddhist]"}         | ${"grid buddhist i=121"}
+    ${"2023-09-30[u-ca=buddhist]"}         | ${{ months: 1 }}   | ${"reject"}    | ${"2023-10-30[u-ca=buddhist]"}         | ${"grid buddhist i=121"}
+    ${"2023-09-30[u-ca=buddhist]"}         | ${{ years: 1 }}    | ${"constrain"} | ${"2024-09-30[u-ca=buddhist]"}         | ${"grid buddhist i=121"}
+    ${"2023-09-30[u-ca=buddhist]"}         | ${{ months: -13 }} | ${"constrain"} | ${"2022-08-30[u-ca=buddhist]"}         | ${"grid buddhist i=121"}
+    ${"2023-06-01[u-ca=hebrew]"}           | ${{ months: 1 }}   | ${"constrain"} | ${"2023-07-01[u-ca=hebrew]"}           | ${"grid hebrew i=0"}
+    ${"2023-06-01[u-ca=hebrew]"}           | ${{ months: 1 }}   | ${"reject"}    | ${"2023-07-01[u-ca=hebrew]"}           | ${"grid hebrew i=0"}
+    ${"2023-06-01[u-ca=hebrew]"}           | ${{ years: 1 }}    | ${"constrain"} | ${"2024-06-18[u-ca=hebrew]"}           | ${"grid hebrew i=0"}
+    ${"2023-06-01[u-ca=hebrew]"}           | ${{ months: -13 }} | ${"constrain"} | ${"2022-05-13[u-ca=hebrew]"}           | ${"grid hebrew i=0"}
+    ${"2023-06-19[u-ca=hebrew]"}           | ${{ months: 1 }}   | ${"constrain"} | ${"2023-07-18[u-ca=hebrew]"}           | ${"grid hebrew i=18"}
+    ${"2023-06-19[u-ca=hebrew]"}           | ${{ months: 1 }}   | ${"reject"}    | ${""}                                  | ${"grid hebrew i=18"}
+    ${"2023-06-19[u-ca=hebrew]"}           | ${{ years: 1 }}    | ${"constrain"} | ${"2024-07-06[u-ca=hebrew]"}           | ${"grid hebrew i=18"}
+    ${"2023-06-19[u-ca=hebrew]"}           | ${{ months: -13 }} | ${"constrain"} | ${"2022-05-30[u-ca=hebrew]"}           | ${"grid hebrew i=18"}
+    ${"2023-09-15[u-ca=hebrew]"}           | ${{ months: 1 }}   | ${"constrain"} | ${"2023-10-14[u-ca=hebrew]"}           | ${"grid hebrew i=106"}
+    ${"2023-09-15[u-ca=hebrew]"}           | ${{ months: 1 }}   | ${"reject"}    | ${"2023-10-14[u-ca=hebrew]"}           | ${"grid hebrew i=106"}
+    ${"2023-09-15[u-ca=hebrew]"}           | ${{ years: 1 }}    | ${"constrain"} | ${"2024-10-02[u-ca=hebrew]"}           | ${"grid hebrew i=106"}
+    ${"2023-09-15[u-ca=hebrew]"}           | ${{ months: -13 }} | ${"constrain"} | ${"2022-08-26[u-ca=hebrew]"}           | ${"grid hebrew i=106"}
+    ${"2023-06-01[u-ca=islamic-civil]"}    | ${{ months: 1 }}   | ${"constrain"} | ${"2023-07-01[u-ca=islamic-civil]"}    | ${"grid islamic-civil i=0"}
+    ${"2023-06-01[u-ca=islamic-civil]"}    | ${{ months: 1 }}   | ${"reject"}    | ${"2023-07-01[u-ca=islamic-civil]"}    | ${"grid islamic-civil i=0"}
+    ${"2023-06-01[u-ca=islamic-civil]"}    | ${{ years: 1 }}    | ${"constrain"} | ${"2024-05-20[u-ca=islamic-civil]"}    | ${"grid islamic-civil i=0"}
+    ${"2023-06-01[u-ca=islamic-civil]"}    | ${{ months: -13 }} | ${"constrain"} | ${"2022-05-14[u-ca=islamic-civil]"}    | ${"grid islamic-civil i=0"}
+    ${"2023-06-19[u-ca=islamic-civil]"}    | ${{ months: 1 }}   | ${"constrain"} | ${"2023-07-18[u-ca=islamic-civil]"}    | ${"grid islamic-civil i=18"}
+    ${"2023-06-19[u-ca=islamic-civil]"}    | ${{ months: 1 }}   | ${"reject"}    | ${""}                                  | ${"grid islamic-civil i=18"}
+    ${"2023-06-19[u-ca=islamic-civil]"}    | ${{ years: 1 }}    | ${"constrain"} | ${"2024-06-07[u-ca=islamic-civil]"}    | ${"grid islamic-civil i=18"}
+    ${"2023-06-19[u-ca=islamic-civil]"}    | ${{ months: -13 }} | ${"constrain"} | ${"2022-05-31[u-ca=islamic-civil]"}    | ${"grid islamic-civil i=18"}
+    ${"2023-09-15[u-ca=islamic-civil]"}    | ${{ months: 1 }}   | ${"constrain"} | ${"2023-10-14[u-ca=islamic-civil]"}    | ${"grid islamic-civil i=106"}
+    ${"2023-09-15[u-ca=islamic-civil]"}    | ${{ months: 1 }}   | ${"reject"}    | ${"2023-10-14[u-ca=islamic-civil]"}    | ${"grid islamic-civil i=106"}
+    ${"2023-09-15[u-ca=islamic-civil]"}    | ${{ years: 1 }}    | ${"constrain"} | ${"2024-09-04[u-ca=islamic-civil]"}    | ${"grid islamic-civil i=106"}
+    ${"2023-09-15[u-ca=islamic-civil]"}    | ${{ months: -13 }} | ${"constrain"} | ${"2022-08-27[u-ca=islamic-civil]"}    | ${"grid islamic-civil i=106"}
+    ${"2023-06-01[u-ca=islamic-tbla]"}     | ${{ months: 1 }}   | ${"constrain"} | ${"2023-07-01[u-ca=islamic-tbla]"}     | ${"grid islamic-tbla i=0"}
+    ${"2023-06-01[u-ca=islamic-tbla]"}     | ${{ months: 1 }}   | ${"reject"}    | ${"2023-07-01[u-ca=islamic-tbla]"}     | ${"grid islamic-tbla i=0"}
+    ${"2023-06-01[u-ca=islamic-tbla]"}     | ${{ years: 1 }}    | ${"constrain"} | ${"2024-05-20[u-ca=islamic-tbla]"}     | ${"grid islamic-tbla i=0"}
+    ${"2023-06-01[u-ca=islamic-tbla]"}     | ${{ months: -13 }} | ${"constrain"} | ${"2022-05-14[u-ca=islamic-tbla]"}     | ${"grid islamic-tbla i=0"}
+    ${"2023-06-18[u-ca=islamic-tbla]"}     | ${{ months: 1 }}   | ${"constrain"} | ${"2023-07-17[u-ca=islamic-tbla]"}     | ${"grid islamic-tbla i=17"}
+    ${"2023-06-18[u-ca=islamic-tbla]"}     | ${{ months: 1 }}   | ${"reject"}    | ${""}                                  | ${"grid islamic-tbla i=17"}
+    ${"2023-06-18[u-ca=islamic-tbla]"}     | ${{ years: 1 }}    | ${"constrain"} | ${"2024-06-06[u-ca=islamic-tbla]"}     | ${"grid islamic-tbla i=17"}
+    ${"2023-06-18[u-ca=islamic-tbla]"}     | ${{ months: -13 }} | ${"constrain"} | ${"2022-05-30[u-ca=islamic-tbla]"}     | ${"grid islamic-tbla i=17"}
+    ${"2023-09-14[u-ca=islamic-tbla]"}     | ${{ months: 1 }}   | ${"constrain"} | ${"2023-10-13[u-ca=islamic-tbla]"}     | ${"grid islamic-tbla i=105"}
+    ${"2023-09-14[u-ca=islamic-tbla]"}     | ${{ months: 1 }}   | ${"reject"}    | ${"2023-10-13[u-ca=islamic-tbla]"}     | ${"grid islamic-tbla i=105"}
+    ${"2023-09-14[u-ca=islamic-tbla]"}     | ${{ years: 1 }}    | ${"constrain"} | ${"2024-09-03[u-ca=islamic-tbla]"}     | ${"grid islamic-tbla i=105"}
+    ${"2023-09-14[u-ca=islamic-tbla]"}     | ${{ months: -13 }} | ${"constrain"} | ${"2022-08-26[u-ca=islamic-tbla]"}     | ${"grid islamic-tbla i=105"}
+    ${"2023-06-01[u-ca=islamic-umalqura]"} | ${{ months: 1 }}   | ${"constrain"} | ${"2023-06-30[u-ca=islamic-umalqura]"} | ${"grid islamic-umalqura i=0"}
+    ${"2023-06-01[u-ca=islamic-umalqura]"} | ${{ months: 1 }}   | ${"reject"}    | ${"2023-06-30[u-ca=islamic-umalqura]"} | ${"grid islamic-umalqura i=0"}
+    ${"2023-06-01[u-ca=islamic-umalqura]"} | ${{ years: 1 }}    | ${"constrain"} | ${"2024-05-20[u-ca=islamic-umalqura]"} | ${"grid islamic-umalqura i=0"}
+    ${"2023-06-01[u-ca=islamic-umalqura]"} | ${{ months: -13 }} | ${"constrain"} | ${"2022-05-13[u-ca=islamic-umalqura]"} | ${"grid islamic-umalqura i=0"}
+    ${"2023-06-18[u-ca=islamic-umalqura]"} | ${{ months: 1 }}   | ${"constrain"} | ${"2023-07-17[u-ca=islamic-umalqura]"} | ${"grid islamic-umalqura i=17"}
+    ${"2023-06-18[u-ca=islamic-umalqura]"} | ${{ months: 1 }}   | ${"reject"}    | ${"2023-07-17[u-ca=islamic-umalqura]"} | ${"grid islamic-umalqura i=17"}
+    ${"2023-06-18[u-ca=islamic-umalqura]"} | ${{ years: 1 }}    | ${"constrain"} | ${"2024-06-06[u-ca=islamic-umalqura]"} | ${"grid islamic-umalqura i=17"}
+    ${"2023-06-18[u-ca=islamic-umalqura]"} | ${{ months: -13 }} | ${"constrain"} | ${"2022-05-30[u-ca=islamic-umalqura]"} | ${"grid islamic-umalqura i=17"}
+    ${"2023-09-15[u-ca=islamic-umalqura]"} | ${{ months: 1 }}   | ${"constrain"} | ${"2023-10-15[u-ca=islamic-umalqura]"} | ${"grid islamic-umalqura i=106"}
+    ${"2023-09-15[u-ca=islamic-umalqura]"} | ${{ months: 1 }}   | ${"reject"}    | ${"2023-10-15[u-ca=islamic-umalqura]"} | ${"grid islamic-umalqura i=106"}
+    ${"2023-09-15[u-ca=islamic-umalqura]"} | ${{ years: 1 }}    | ${"constrain"} | ${"2024-09-03[u-ca=islamic-umalqura]"} | ${"grid islamic-umalqura i=106"}
+    ${"2023-09-15[u-ca=islamic-umalqura]"} | ${{ months: -13 }} | ${"constrain"} | ${"2022-08-27[u-ca=islamic-umalqura]"} | ${"grid islamic-umalqura i=106"}
+    ${"2023-06-01[u-ca=persian]"}          | ${{ months: 1 }}   | ${"constrain"} | ${"2023-07-02[u-ca=persian]"}          | ${"grid persian i=0"}
+    ${"2023-06-01[u-ca=persian]"}          | ${{ months: 1 }}   | ${"reject"}    | ${"2023-07-02[u-ca=persian]"}          | ${"grid persian i=0"}
+    ${"2023-06-01[u-ca=persian]"}          | ${{ years: 1 }}    | ${"constrain"} | ${"2024-05-31[u-ca=persian]"}          | ${"grid persian i=0"}
+    ${"2023-06-01[u-ca=persian]"}          | ${{ months: -13 }} | ${"constrain"} | ${"2022-05-01[u-ca=persian]"}          | ${"grid persian i=0"}
+    ${"2023-06-21[u-ca=persian]"}          | ${{ months: 1 }}   | ${"constrain"} | ${"2023-07-22[u-ca=persian]"}          | ${"grid persian i=20"}
+    ${"2023-06-21[u-ca=persian]"}          | ${{ months: 1 }}   | ${"reject"}    | ${"2023-07-22[u-ca=persian]"}          | ${"grid persian i=20"}
+    ${"2023-06-21[u-ca=persian]"}          | ${{ years: 1 }}    | ${"constrain"} | ${"2024-06-20[u-ca=persian]"}          | ${"grid persian i=20"}
+    ${"2023-06-21[u-ca=persian]"}          | ${{ months: -13 }} | ${"constrain"} | ${"2022-05-21[u-ca=persian]"}          | ${"grid persian i=20"}
+    ${"2023-09-22[u-ca=persian]"}          | ${{ months: 1 }}   | ${"constrain"} | ${"2023-10-22[u-ca=persian]"}          | ${"grid persian i=113"}
+    ${"2023-09-22[u-ca=persian]"}          | ${{ months: 1 }}   | ${"reject"}    | ${""}                                  | ${"grid persian i=113"}
+    ${"2023-09-22[u-ca=persian]"}          | ${{ years: 1 }}    | ${"constrain"} | ${"2024-09-21[u-ca=persian]"}          | ${"grid persian i=113"}
+    ${"2023-09-22[u-ca=persian]"}          | ${{ months: -13 }} | ${"constrain"} | ${"2022-08-22[u-ca=persian]"}          | ${"grid persian i=113"}
+    ${"2023-06-01[u-ca=indian]"}           | ${{ months: 1 }}   | ${"constrain"} | ${"2023-07-02[u-ca=indian]"}           | ${"grid indian i=0"}
+    ${"2023-06-01[u-ca=indian]"}           | ${{ months: 1 }}   | ${"reject"}    | ${"2023-07-02[u-ca=indian]"}           | ${"grid indian i=0"}
+    ${"2023-06-01[u-ca=indian]"}           | ${{ years: 1 }}    | ${"constrain"} | ${"2024-06-01[u-ca=indian]"}           | ${"grid indian i=0"}
+    ${"2023-06-01[u-ca=indian]"}           | ${{ months: -13 }} | ${"constrain"} | ${"2022-05-01[u-ca=indian]"}           | ${"grid indian i=0"}
+    ${"2023-06-21[u-ca=indian]"}           | ${{ months: 1 }}   | ${"constrain"} | ${"2023-07-22[u-ca=indian]"}           | ${"grid indian i=20"}
+    ${"2023-06-21[u-ca=indian]"}           | ${{ months: 1 }}   | ${"reject"}    | ${"2023-07-22[u-ca=indian]"}           | ${"grid indian i=20"}
+    ${"2023-06-21[u-ca=indian]"}           | ${{ years: 1 }}    | ${"constrain"} | ${"2024-06-21[u-ca=indian]"}           | ${"grid indian i=20"}
+    ${"2023-06-21[u-ca=indian]"}           | ${{ months: -13 }} | ${"constrain"} | ${"2022-05-21[u-ca=indian]"}           | ${"grid indian i=20"}
+    ${"2023-09-22[u-ca=indian]"}           | ${{ months: 1 }}   | ${"constrain"} | ${"2023-10-22[u-ca=indian]"}           | ${"grid indian i=113"}
+    ${"2023-09-22[u-ca=indian]"}           | ${{ months: 1 }}   | ${"reject"}    | ${""}                                  | ${"grid indian i=113"}
+    ${"2023-09-22[u-ca=indian]"}           | ${{ years: 1 }}    | ${"constrain"} | ${"2024-09-22[u-ca=indian]"}           | ${"grid indian i=113"}
+    ${"2023-09-22[u-ca=indian]"}           | ${{ months: -13 }} | ${"constrain"} | ${"2022-08-22[u-ca=indian]"}           | ${"grid indian i=113"}
+    ${"2023-06-01[u-ca=ethioaa]"}          | ${{ months: 1 }}   | ${"constrain"} | ${"2023-07-01[u-ca=ethioaa]"}          | ${"grid ethioaa i=0"}
+    ${"2023-06-01[u-ca=ethioaa]"}          | ${{ months: 1 }}   | ${"reject"}    | ${"2023-07-01[u-ca=ethioaa]"}          | ${"grid ethioaa i=0"}
+    ${"2023-06-01[u-ca=ethioaa]"}          | ${{ years: 1 }}    | ${"constrain"} | ${"2024-06-01[u-ca=ethioaa]"}          | ${"grid ethioaa i=0"}
+    ${"2023-06-01[u-ca=ethioaa]"}          | ${{ months: -13 }} | ${"constrain"} | ${"2022-06-01[u-ca=ethioaa]"}          | ${"grid ethioaa i=0"}
+    ${"2023-06-07[u-ca=ethioaa]"}          | ${{ months: 1 }}   | ${"constrain"} | ${"2023-07-07[u-ca=ethioaa]"}          | ${"grid ethioaa i=6"}
+    ${"2023-06-07[u-ca=ethioaa]"}          | ${{ months: 1 }}   | ${"reject"}    | ${"2023-07-07[u-ca=ethioaa]"}          | ${"grid ethioaa i=6"}
+    ${"2023-06-07[u-ca=ethioaa]"}          | ${{ years: 1 }}    | ${"constrain"} | ${"2024-06-07[u-ca=ethioaa]"}          | ${"grid ethioaa i=6"}
+    ${"2023-06-07[u-ca=ethioaa]"}          | ${{ months: -13 }} | ${"constrain"} | ${"2022-06-07[u-ca=ethioaa]"}          | ${"grid ethioaa i=6"}
+    ${"2023-09-05[u-ca=ethioaa]"}          | ${{ months: 1 }}   | ${"constrain"} | ${"2023-09-11[u-ca=ethioaa]"}          | ${"grid ethioaa i=96"}
+    ${"2023-09-05[u-ca=ethioaa]"}          | ${{ months: 1 }}   | ${"reject"}    | ${""}                                  | ${"grid ethioaa i=96"}
+    ${"2023-09-05[u-ca=ethioaa]"}          | ${{ years: 1 }}    | ${"constrain"} | ${"2024-09-05[u-ca=ethioaa]"}          | ${"grid ethioaa i=96"}
+    ${"2023-09-05[u-ca=ethioaa]"}          | ${{ months: -13 }} | ${"constrain"} | ${"2022-09-05[u-ca=ethioaa]"}          | ${"grid ethioaa i=96"}
+    ${"2023-06-01[u-ca=japanese]"}         | ${{ months: 1 }}   | ${"constrain"} | ${"2023-07-01[u-ca=japanese]"}         | ${"grid japanese i=0"}
+    ${"2023-06-01[u-ca=japanese]"}         | ${{ months: 1 }}   | ${"reject"}    | ${"2023-07-01[u-ca=japanese]"}         | ${"grid japanese i=0"}
+    ${"2023-06-01[u-ca=japanese]"}         | ${{ years: 1 }}    | ${"constrain"} | ${"2024-06-01[u-ca=japanese]"}         | ${"grid japanese i=0"}
+    ${"2023-06-01[u-ca=japanese]"}         | ${{ months: -13 }} | ${"constrain"} | ${"2022-05-01[u-ca=japanese]"}         | ${"grid japanese i=0"}
+    ${"2023-06-30[u-ca=japanese]"}         | ${{ months: 1 }}   | ${"constrain"} | ${"2023-07-30[u-ca=japanese]"}         | ${"grid japanese i=29"}
+    ${"2023-06-30[u-ca=japanese]"}         | ${{ months: 1 }}   | ${"reject"}    | ${"2023-07-30[u-ca=japanese]"}         | ${"grid japanese i=29"}
+    ${"2023-06-30[u-ca=japanese]"}         | ${{ years: 1 }}    | ${"constrain"} | ${"2024-06-30[u-ca=japanese]"}         | ${"grid japanese i=29"}
+    ${"2023-06-30[u-ca=japanese]"}         | ${{ months: -13 }} | ${"constrain"} | ${"2022-05-30[u-ca=japanese]"}         | ${"grid japanese i=29"}
+    ${"2023-09-30[u-ca=japanese]"}         | ${{ months: 1 }}   | ${"constrain"} | ${"2023-10-30[u-ca=japanese]"}         | ${"grid japanese i=121"}
+    ${"2023-09-30[u-ca=japanese]"}         | ${{ months: 1 }}   | ${"reject"}    | ${"2023-10-30[u-ca=japanese]"}         | ${"grid japanese i=121"}
+    ${"2023-09-30[u-ca=japanese]"}         | ${{ years: 1 }}    | ${"constrain"} | ${"2024-09-30[u-ca=japanese]"}         | ${"grid japanese i=121"}
+    ${"2023-09-30[u-ca=japanese]"}         | ${{ months: -13 }} | ${"constrain"} | ${"2022-08-30[u-ca=japanese]"}         | ${"grid japanese i=121"}
+    ${"2023-06-01[u-ca=roc]"}              | ${{ months: 1 }}   | ${"constrain"} | ${"2023-07-01[u-ca=roc]"}              | ${"grid roc i=0"}
+    ${"2023-06-01[u-ca=roc]"}              | ${{ months: 1 }}   | ${"reject"}    | ${"2023-07-01[u-ca=roc]"}              | ${"grid roc i=0"}
+    ${"2023-06-01[u-ca=roc]"}              | ${{ years: 1 }}    | ${"constrain"} | ${"2024-06-01[u-ca=roc]"}              | ${"grid roc i=0"}
+    ${"2023-06-01[u-ca=roc]"}              | ${{ months: -13 }} | ${"constrain"} | ${"2022-05-01[u-ca=roc]"}              | ${"grid roc i=0"}
+    ${"2023-06-30[u-ca=roc]"}              | ${{ months: 1 }}   | ${"constrain"} | ${"2023-07-30[u-ca=roc]"}              | ${"grid roc i=29"}
+    ${"2023-06-30[u-ca=roc]"}              | ${{ months: 1 }}   | ${"reject"}    | ${"2023-07-30[u-ca=roc]"}              | ${"grid roc i=29"}
+    ${"2023-06-30[u-ca=roc]"}              | ${{ years: 1 }}    | ${"constrain"} | ${"2024-06-30[u-ca=roc]"}              | ${"grid roc i=29"}
+    ${"2023-06-30[u-ca=roc]"}              | ${{ months: -13 }} | ${"constrain"} | ${"2022-05-30[u-ca=roc]"}              | ${"grid roc i=29"}
+    ${"2023-09-30[u-ca=roc]"}              | ${{ months: 1 }}   | ${"constrain"} | ${"2023-10-30[u-ca=roc]"}              | ${"grid roc i=121"}
+    ${"2023-09-30[u-ca=roc]"}              | ${{ months: 1 }}   | ${"reject"}    | ${"2023-10-30[u-ca=roc]"}              | ${"grid roc i=121"}
+    ${"2023-09-30[u-ca=roc]"}              | ${{ years: 1 }}    | ${"constrain"} | ${"2024-09-30[u-ca=roc]"}              | ${"grid roc i=121"}
+    ${"2023-09-30[u-ca=roc]"}              | ${{ months: -13 }} | ${"constrain"} | ${"2022-08-30[u-ca=roc]"}              | ${"grid roc i=121"}
+    ${"2023-06-01"}                        | ${{ months: 1 }}   | ${"constrain"} | ${"2023-07-01"}                        | ${"grid gregory i=0"}
+    ${"2023-06-01"}                        | ${{ months: 1 }}   | ${"reject"}    | ${"2023-07-01"}                        | ${"grid gregory i=0"}
+    ${"2023-06-01"}                        | ${{ years: 1 }}    | ${"constrain"} | ${"2024-06-01"}                        | ${"grid gregory i=0"}
+    ${"2023-06-01"}                        | ${{ months: -13 }} | ${"constrain"} | ${"2022-05-01"}                        | ${"grid gregory i=0"}
+    ${"2023-06-30"}                        | ${{ months: 1 }}   | ${"constrain"} | ${"2023-07-30"}                        | ${"grid gregory i=29"}
+    ${"2023-06-30"}                        | ${{ months: 1 }}   | ${"reject"}    | ${"2023-07-30"}                        | ${"grid gregory i=29"}
+    ${"2023-06-30"}                        | ${{ years: 1 }}    | ${"constrain"} | ${"2024-06-30"}                        | ${"grid gregory i=29"}
+    ${"2023-06-30"}                        | ${{ months: -13 }} | ${"constrain"} | ${"2022-05-30"}                        | ${"grid gregory i=29"}
+    ${"2023-09-30"}                        | ${{ months: 1 }}   | ${"constrain"} | ${"2023-10-30"}                        | ${"grid gregory i=121"}
+    ${"2023-09-30"}                        | ${{ months: 1 }}   | ${"reject"}    | ${"2023-10-30"}                        | ${"grid gregory i=121"}
+    ${"2023-09-30"}                        | ${{ years: 1 }}    | ${"constrain"} | ${"2024-09-30"}                        | ${"grid gregory i=121"}
+    ${"2023-09-30"}                        | ${{ months: -13 }} | ${"constrain"} | ${"2022-08-30"}                        | ${"grid gregory i=121"}
   `(
     "returns $expected for $value + $units with overflow $overflow ($source)",
     ({ value, units, overflow, expected }) => {
       expect(addDate(value, units, { overflow })).toBe(expected);
     },
   );
+
+  // tc39/proposal-temporal#3329: month 13 of the Coptic family is 5 days (6 in a leap year), and a
+  // fixed 8-day search step in fields -> ISO skips it in far years. GMT computes coptic and
+  // ethiopic in ethioaa. Expected values: Chromium 153 native Temporal. Coptic 12420 (ethiopic
+  // 12696, ethioaa 18196) is a common year; its month 12 ends +012704-11-25, month 13 is
+  // +012704-11-26..30, and the next year's month 1 starts +012704-12-01.
+  it.each`
+    value                             | units             | overflow       | expected                          | reason
+    ${"+012704-11-25[u-ca=coptic]"}   | ${{ months: 1 }}  | ${"constrain"} | ${"+012704-11-30[u-ca=coptic]"}   | ${"day 30 of month 12 constrains to month 13's last day, 5"}
+    ${"+012704-11-25[u-ca=coptic]"}   | ${{ months: 1 }}  | ${"reject"}    | ${""}                             | ${"month 13 has no day 30"}
+    ${"+012704-10-27[u-ca=coptic]"}   | ${{ months: 1 }}  | ${"constrain"} | ${"+012704-11-26[u-ca=coptic]"}   | ${"day 1 of month 12 to day 1 of month 13"}
+    ${"+012704-11-26[u-ca=coptic]"}   | ${{ months: 1 }}  | ${"constrain"} | ${"+012704-12-01[u-ca=coptic]"}   | ${"day 1 of month 13 to day 1 of the next year's month 1"}
+    ${"+012704-12-01[u-ca=coptic]"}   | ${{ months: -1 }} | ${"constrain"} | ${"+012704-11-26[u-ca=coptic]"}   | ${"back from the next year's month 1 into month 13"}
+    ${"+012704-11-24[u-ca=coptic]"}   | ${{ months: 2 }}  | ${"constrain"} | ${"+012704-12-29[u-ca=coptic]"}   | ${"month 12 day 29 over month 13 to month 1 day 29"}
+    ${"+012704-11-25[u-ca=ethiopic]"} | ${{ months: 1 }}  | ${"constrain"} | ${"+012704-11-30[u-ca=ethiopic]"} | ${"day 30 of month 12 constrains to month 13's last day, 5"}
+    ${"+012704-11-25[u-ca=ethiopic]"} | ${{ months: 1 }}  | ${"reject"}    | ${""}                             | ${"month 13 has no day 30"}
+    ${"+012704-10-27[u-ca=ethiopic]"} | ${{ months: 1 }}  | ${"constrain"} | ${"+012704-11-26[u-ca=ethiopic]"} | ${"day 1 of month 12 to day 1 of month 13"}
+    ${"+012704-11-26[u-ca=ethiopic]"} | ${{ months: 1 }}  | ${"constrain"} | ${"+012704-12-01[u-ca=ethiopic]"} | ${"day 1 of month 13 to day 1 of the next year's month 1"}
+    ${"+012704-12-01[u-ca=ethiopic]"} | ${{ months: -1 }} | ${"constrain"} | ${"+012704-11-26[u-ca=ethiopic]"} | ${"back from the next year's month 1 into month 13"}
+    ${"+012704-11-24[u-ca=ethiopic]"} | ${{ months: 2 }}  | ${"constrain"} | ${"+012704-12-29[u-ca=ethiopic]"} | ${"month 12 day 29 over month 13 to month 1 day 29"}
+    ${"+012704-11-25[u-ca=ethioaa]"}  | ${{ months: 1 }}  | ${"constrain"} | ${"+012704-11-30[u-ca=ethioaa]"}  | ${"day 30 of month 12 constrains to month 13's last day, 5"}
+    ${"+012704-11-25[u-ca=ethioaa]"}  | ${{ months: 1 }}  | ${"reject"}    | ${""}                             | ${"month 13 has no day 30"}
+    ${"+012704-10-27[u-ca=ethioaa]"}  | ${{ months: 1 }}  | ${"constrain"} | ${"+012704-11-26[u-ca=ethioaa]"}  | ${"day 1 of month 12 to day 1 of month 13"}
+    ${"+012704-11-26[u-ca=ethioaa]"}  | ${{ months: 1 }}  | ${"constrain"} | ${"+012704-12-01[u-ca=ethioaa]"}  | ${"day 1 of month 13 to day 1 of the next year's month 1"}
+    ${"+012704-12-01[u-ca=ethioaa]"}  | ${{ months: -1 }} | ${"constrain"} | ${"+012704-11-26[u-ca=ethioaa]"}  | ${"back from the next year's month 1 into month 13"}
+    ${"+012704-11-24[u-ca=ethioaa]"}  | ${{ months: 2 }}  | ${"constrain"} | ${"+012704-12-29[u-ca=ethioaa]"}  | ${"month 12 day 29 over month 13 to month 1 day 29"}
+  `(
+    "returns $expected for far-year $value + $units with overflow $overflow ($reason)",
+    ({ value, units, overflow, expected }) => {
+      expect(addDate(value, units, { overflow })).toBe(expected);
+    },
+  );
+});
+
+// Strict-shape rule (see coding-standards): the part before the first `[` must be GMT's strict extended date (or
+// date-time), as `isValidDate`/`isValidDateTime` require. Native Chromium 153
+// `Temporal.PlainDate.from` reads each of these as 2024-10-03; GMT rejects them.
+describe("addDate rejects calendar strings outside GMT's strict shape", () => {
+  it.each`
+    value                                    | reason
+    ${"20241003[u-ca=hebrew]"}               | ${"basic format"}
+    ${"2024-10-03 14:30[u-ca=hebrew]"}       | ${"space separator"}
+    ${"2024-10-03T14:30+01:00[u-ca=hebrew]"} | ${"UTC offset"}
+  `('returns "" for $value ($reason)', ({ value }) => {
+    expect(addDate(value, { days: 1 })).toBe("");
+  });
 });

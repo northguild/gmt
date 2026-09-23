@@ -200,6 +200,72 @@
   }
 }
 
+/* Rail and transcript view transitions. React's <ViewTransition> tags the
+   snapshots with these classes (WidgetRail.tsx, DoxChat.tsx); they only run for
+   updates inside a transition. The pseudo-elements hang off <html>, not the
+   element, so the bottom-sheet variant needs its own media query rather than
+   inheriting a direction. */
+::view-transition-new(.gmt-rail-in) {
+  animation: gmt-rail-slide var(--gmt-duration-med) var(--gmt-easing) both;
+}
+
+::view-transition-old(.gmt-rail-out) {
+  animation: gmt-rail-slide var(--gmt-duration-med) var(--gmt-easing) reverse
+    both;
+}
+
+@keyframes gmt-rail-slide {
+  from {
+    opacity: 0;
+    transform: translateX(2rem);
+  }
+}
+
+@media (max-width: 60rem) {
+  @keyframes gmt-rail-slide {
+    from {
+      opacity: 0;
+      transform: translateY(2rem);
+    }
+  }
+}
+
+/* First send: the hub fades out as the transcript rises in. */
+::view-transition-old(.gmt-hive-out) {
+  animation: gmt-hive-fade var(--gmt-duration-fast) var(--gmt-easing) reverse
+    both;
+}
+
+::view-transition-new(.gmt-hive-in) {
+  animation: gmt-hive-rise var(--gmt-duration-med) var(--gmt-easing) both;
+}
+
+@keyframes gmt-hive-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes gmt-hive-rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(.gmt-rail-in),
+  ::view-transition-group(.gmt-rail-out),
+  ::view-transition-group(.gmt-hive-in),
+  ::view-transition-group(.gmt-hive-out),
+  ::view-transition-old(.gmt-rail-out),
+  ::view-transition-new(.gmt-rail-in),
+  ::view-transition-old(.gmt-hive-out),
+  ::view-transition-new(.gmt-hive-in) {
+    animation: none;
+  }
+}
+
 .gmt-hive-artifact {
   display: flex;
   flex-direction: column;

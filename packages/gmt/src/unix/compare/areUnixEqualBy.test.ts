@@ -1,4 +1,5 @@
 import { areUnixEqualBy } from "./areUnixEqualBy";
+import { dateLineCrossingAt, dateLineCrossingTimeZones } from "../../test";
 
 const options = { timeZone: "UTC" } as const;
 
@@ -133,6 +134,58 @@ describe("areUnixEqualBy across zone transitions", () => {
     "returns $expected for $value1 and $value2 by $unit in $timeZone",
     ({ value1, value2, unit, timeZone, expected }) => {
       expect(areUnixEqualBy(value1, value2, unit, { timeZone })).toBe(expected);
+    },
+  );
+});
+
+// weekStartsOn only names "monday" or "sunday"; any other value is invalid input, for every unit
+// (Temporal GetOption rejects a value outside its allowed list; undefined means the default).
+// 1710504000000 is 2024-03-15T12:00:00Z.
+describe("areUnixEqualBy with an invalid weekStartsOn", () => {
+  it.each`
+    unit      | weekStartsOn
+    ${"week"} | ${"tuesday"}
+    ${"week"} | ${"Monday"}
+    ${"week"} | ${""}
+    ${"week"} | ${null}
+    ${"week"} | ${1}
+    ${"week"} | ${true}
+    ${"day"}  | ${"tuesday"}
+    ${"day"}  | ${"Monday"}
+    ${"day"}  | ${""}
+    ${"day"}  | ${null}
+    ${"day"}  | ${1}
+    ${"day"}  | ${true}
+  `(
+    "returns false for unit $unit with invalid weekStartsOn $weekStartsOn",
+    ({ unit, weekStartsOn }) => {
+      expect(
+        areUnixEqualBy(1710504000000, 1710504000000, unit, {
+          timeZone: "UTC",
+          weekStartsOn,
+        }),
+      ).toBe(false);
+    },
+  );
+});
+
+// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
+// are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
+// 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
+
+describe("areUnixEqualBy across the 1844 date-line crossings (zoned.E)", () => {
+  it.each(dateLineCrossingTimeZones)(
+    "puts 1844-12-30 and 1845-01-02 in one week in $timeZone",
+    (crossing) => {
+      expect(
+        areUnixEqualBy(
+          dateLineCrossingAt(crossing, -12).epochMilliseconds,
+          dateLineCrossingAt(crossing, 36).epochMilliseconds,
+          "week",
+          { timeZone: crossing.timeZone },
+        ),
+      ).toBe(true);
     },
   );
 });

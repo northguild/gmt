@@ -28,7 +28,7 @@ export interface LatLng {
  * Longitude/latitude on Earth where the sun is directly overhead, in degrees.
  *
  * @param instantMs milliseconds since the Unix epoch — e.g. `getUnixNow()`, or
- *   `convertUtcToUnix(utc, "milliseconds")`. Deliberately a plain number, not a
+ *   `convertUtcToUnix(utc, { epochUnit: "milliseconds" })`. Deliberately a plain number, not a
  *   `Date`: this file is pure astronomy maths and callers stay on
  *   `@northguild/gmt`.
  */

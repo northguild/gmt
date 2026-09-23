@@ -60,16 +60,23 @@ converting between time zones, or doing arithmetic that must respect DST.
    is correct; bare `"-05:00"` loses the zone and can't observe DST rules.
 2. **DST disambiguation.** `convertPlainDateTimeToZoned`, `addZoned` and
    `setZoned` accept `disambiguation` (`"compatible"` | `"earlier"` |
-   `"later"` | `"reject"`) for gap/overlap resolution. On `addZoned` it only
-   affects fall-back overlaps, **not** spring-forward gaps — use
-   `convertPlainDateTimeToZoned` with `"reject"` for gap-safety.
+   `"later"` | `"reject"`) for gap/overlap resolution. On `addZoned`,
+   `subtractZoned` and `intervalFromDurationZoned` it follows TC39
+   AddZonedDateTime: the date part (years to days) moves the wall clock, the
+   time part (hours and smaller) is added in exact time, and `disambiguation`
+   resolves the wall clock the date part lands on, in a spring-forward gap or
+   a fall-back overlap: `"compatible"`/`"later"` move a gap landing forward,
+   `"earlier"` back, `"reject"` returns the sentinel. A time-only duration
+   ignores it, so `+ { minutes: 10 }` is always 10 real minutes.
 3. **Boundaries are always the real zone boundary.** `startOfZoned`,
    `endOfZoned`, `startOfQuarterForZoned`, `endOfQuarterForZoned`,
    `getLocaleZonedStartOfWeek`, `getLocaleZonedEndOfWeek` and their `unix/`
    counterparts (`startOfUnix`,
    `endOfUnix`, …) return the real start and end of the unit that contains the
    input: the start is never after the input, and the end is the last
-   nanosecond before the next start. `Pacific/Chatham`'s 03:00 hour on its
+   nanosecond before the next start, printed at nanosecond precision by default
+   (`"…T23:59:59.999999999…"`); pass `fractionalSecondDigits: 0` for the shorter
+   pre-1.16.0 string. `Pacific/Chatham`'s 03:00 hour on its
    spring-forward begins at 03:45, and New York's repeated 1 a.m. is its own
    hour. `areZonedEqualBy`/`areUnixEqualBy` compare these boundary instants, so
    the two passes of a repeated hour are not equal. A day whose midnight repeats
@@ -78,9 +85,9 @@ converting between time zones, or doing arithmetic that must respect DST.
    date via TC39 `hoursInDay`; that differs from `startOfZoned(…, "day")` only
    where a fall-back re-enters the previous date (America/Goose_Bay,
    2010-11-07).
-4. **Do not pass `disambiguation` or `offset` to boundary functions.** They are
-   deprecated and ignored there, matching TC39 `startOfDay()`, which takes no
-   such options. Use them only on functions that set wall-clock fields —
+4. **Boundary functions take no `disambiguation` or `offset`.** They match
+   TC39 `startOfDay()`, which takes no such options. Resolution options belong on
+   functions that set wall-clock fields —
    `convertPlainDateTimeToZoned`, `resolveLocal`, `addZoned`, `setZoned`.
 5. **Classify a zoneless wall time before resolving it.** `classifyLocal(local,
    zone)` returns `"unique"` | `"ambiguous"` | `"nonexistent"` so code can branch
@@ -113,14 +120,20 @@ converting between time zones, or doing arithmetic that must respect DST.
    `Australia/Lord_Howe`, and 23 on a day whose midnight is skipped
    (`America/Santiago`, 2024-09-08). `mapZonedHoursInDay` stops at the next
    local day.
-10. **Calendar annotations.** GMT's zoned grammar puts `[u-ca=...]` **before**
-    `[timeZone]` — the reverse of RFC 9557. Only `addZoned`, `subtractZoned`,
-    `diffZoned`, `convertZonedToCalendar` and `zoned/interval/*` accept it;
-    everything else rejects it and returns `""`. Always produce these with
-    `convertZonedToCalendar`. The date half follows the plain grammar: a
-    negative year is `-` plus six digits, and Japanese eras are `ce`, `bce`,
-    then `meiji` from 1873 (see the `gmt-arithmetic` skill). `[!u-ca=…]` is
-    rejected everywhere `[u-ca=…]` is.
+10. **Calendar annotations.** A calendar-annotated zoned string is RFC 9557,
+    `Temporal.ZonedDateTime#toString()`: ISO digits, then `[timeZone]`, then
+    `[u-ca=<id>]` (`"2024-10-03T14:30:45-04:00[America/New_York][u-ca=hebrew]"`).
+    A calendar annotation before the zone is rejected. Only `addZoned`, `subtractZoned`,
+    `diffZoned`, `diffZonedAsDuration`, `convertZonedToCalendar`,
+    `isValidCalendarZonedDateTime` and `zoned/interval/*` (including
+    `isValidCalendarZonedInterval`) accept it; everything else rejects it and
+    returns its invalid-input sentinel — `""` for a string result, `null` for a
+    number, `[]` for a list, and `false` for a validator or predicate such as
+    `isValidZonedDateTime` or `isBeforeZoned`. Always produce these with
+    `convertZonedToCalendar`. Calendar ids are the canonical Temporal ids (see
+    the `gmt-arithmetic` skill), and `[!u-ca=…]` is accepted wherever
+    `[u-ca=…]` is. Differences between values naming different calendars
+    return the sentinel for every unit, hours included.
 11. **Zoned values are exact at the range limits.** In zones ahead of UTC,
     `isValidZonedDateTime("+275760-09-13T10:00:00+10:00[Australia/Sydney]")`
     is `true` and one nanosecond later is `false`. Parsing, arithmetic,
@@ -130,7 +143,28 @@ converting between time zones, or doing arithmetic that must respect DST.
     UTC, an offset-less wall clock (`"-271821-04-19T12:00:00[Etc/GMT+12]"`)
     resolves. The same string with its `-12:00` offset returns the sentinel,
     because TC39 checks that local date against the day range.
-12. **Read the README.** This skill is a routing pointer. For the full DST
+12. **Zoned differences count calendar units on the wall clock.** `diffZoned`,
+    `diffZonedAsDuration` and `intervalLengthZoned` follow TC39
+    DifferenceZonedDateTime: days, weeks, months and years are counted on the
+    zone's wall clock (noon to noon across a 23-hour day is `1` day), and hours
+    and smaller are exact time. Two values in different zones have no shared
+    wall clock, so a calendar unit returns `null`/`""`; hours still work.
+    Convert both ends to one zone with `convertZonedToZoned` first, or diff the
+    UTC instants with `diffUtc` if UTC days are what you mean.
+    `intervalOverlappingDaysZoned`/`intervalOverlappingDaysUnix` count the
+    distinct local dates the overlap touches: a deleted day is not counted, and a
+    fall-back into the previous date counts that date.
+13. **Zone names and leap seconds.** Every IANA name is a zone, including
+    single-component links (`Japan`, `Zulu`, `EST5EDT`), in any case.
+    `toOffsetInstant` returns IANA casing (`"america/new_york"` gives
+    `"America/New_York"`). `:60` is invalid in every spelling (`T`, `t`, space,
+    basic format) and every zoned function returns its sentinel for it rather
+    than reading `:59`.
+14. **A zoned value formats in its own zone.** `formatZonedDateTime`,
+    `formatZonedRange` and `formatZonedToParts` return `""`/`[]` for a
+    `timeZone` option. To show an instant in another zone, use
+    `formatUtc(convertZonedToUtc(value), locale, { timeZone })`.
+15. **Read the README.** This skill is a routing pointer. For the full DST
     disambiguation walkthrough, code examples, and locale ICU notes, read the
     installed package's `README.md` and the source JSDoc.
 
@@ -160,4 +194,4 @@ converting between time zones, or doing arithmetic that must respect DST.
 ## References
 
 - [README — Timezone and Calendar examples](README.md)
-- [DST Disambiguation guide](https://gmt-dox.northguild.workers.dev/docs/dst-disambiguation/)
+- [DST Disambiguation guide](https://gmt-dox.northguild.workers.dev/guides/concepts/dst-disambiguation/)

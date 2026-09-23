@@ -42,8 +42,8 @@ describe("toFileTime", () => {
   );
 
   it.each`
-    value                                | expected                 | reason
-    ${"+060056-05-28T05:36:10.9551615Z"} | ${18446744073709551615n} | ${"the unsigned 64-bit maximum"}
+    value                                | expected                | reason
+    ${"+030828-09-14T02:48:05.4775807Z"} | ${9223372036854775807n} | ${"2^63 − 1, the largest value FileTimeToSystemTime accepts"}
   `(
     "returns $expected at the FILETIME boundary $value ($reason)",
     ({ value, expected }) => {
@@ -56,8 +56,10 @@ describe("toFileTime", () => {
     ${"1600-12-31T23:59:59.9999999Z"}    | ${"one tick before the FILETIME epoch"}
     ${"1600-12-31T23:59:59Z"}            | ${"before the FILETIME epoch"}
     ${"1066-10-14T00:00:00Z"}            | ${"centuries before the FILETIME epoch"}
-    ${"+060056-05-28T05:36:10.9551616Z"} | ${"one tick past the unsigned 64-bit maximum"}
-    ${"+060056-05-28T05:36:11Z"}         | ${"past the unsigned 64-bit maximum"}
+    ${"+030828-09-14T02:48:05.4775808Z"} | ${"2^63, one tick past the largest convertible FILETIME"}
+    ${"+050000-01-01T00:00:00Z"}         | ${"between 2^63 and 2^64"}
+    ${"+060056-05-28T05:36:10.9551615Z"} | ${"2^64 − 1, SetFileTime's do-not-modify marker"}
+    ${"+060056-05-28T05:36:11Z"}         | ${"past the struct's two DWORDs"}
     ${"+275760-09-13T00:00:00Z"}         | ${"the largest representable instant"}
   `(
     "returns 0n for $value, which FILETIME cannot represent ($reason)",
@@ -67,17 +69,25 @@ describe("toFileTime", () => {
   );
 
   it.each`
-    value                                       | reason
-    ${"2024-03-10"}                             | ${"date-only, no offset"}
-    ${"2024-03-10T12:00:00"}                    | ${"no offset designator"}
-    ${"2024-02-30T12:00:00Z"}                   | ${"day out of range"}
-    ${"2016-12-31T23:59:60Z"}                   | ${"leap second"}
-    ${"2016-12-31 23:59:60Z"}                   | ${"leap second, space separator"}
-    ${"2024-03-10T12:00:00-05:00[u-ca=hebrew]"} | ${"calendar annotation"}
-    ${"invalid"}                                | ${"unparseable"}
-    ${""}                                       | ${"empty string"}
+    value                     | reason
+    ${"2024-03-10"}           | ${"date-only, no offset"}
+    ${"2024-03-10T12:00:00"}  | ${"no offset designator"}
+    ${"2024-02-30T12:00:00Z"} | ${"day out of range"}
+    ${"2016-12-31T23:59:60Z"} | ${"leap second"}
+    ${"2016-12-31 23:59:60Z"} | ${"leap second, space separator"}
+    ${"invalid"}              | ${"unparseable"}
+    ${""}                     | ${"empty string"}
   `("returns 0n when $value is invalid ($reason)", ({ value }) => {
     expect(toFileTime(value)).toBe(0n);
+  });
+
+  // A calendar annotation is read and ignored, as `Temporal.Instant.from` ignores it (an instant has
+  // no calendar): 2024-03-10T12:00:00-05:00 is 2024-03-10T17:00:00Z. Expected value computed from
+  // native Temporal (Chromium 153) epoch nanoseconds.
+  it("returns 133545636000000000n for 2024-03-10T12:00:00-05:00[u-ca=hebrew]", () => {
+    expect(toFileTime("2024-03-10T12:00:00-05:00[u-ca=hebrew]")).toBe(
+      133545636000000000n,
+    );
   });
 
   it.each`

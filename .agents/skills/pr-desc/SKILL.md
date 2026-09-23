@@ -6,6 +6,8 @@ argument-hint: ""
 
 Generate a PR title and description for the current branch by comparing it against `main`.
 
+**Write it in plain English** — [`plain-english` skill](../plain-english/SKILL.md), AGENTS.md Core Rule 13. The reviewer should find what they need, understand it first time, and know what to look at.
+
 ## Steps
 
 1. Run `git log --oneline main..HEAD` to list commits on this branch.

@@ -39,6 +39,7 @@
  * The ledger only needs to tell two visitors apart for a day; it has no reason
  * to be able to name either of them.
  */
+import { convertUnixToUtc } from "@northguild/gmt";
 import {
   BRAIN_PROVIDERS,
   type Brain,
@@ -126,9 +127,9 @@ export function providerResets(
   return providers.map((id) => ({
     id,
     label: BRAIN_PROVIDERS[id].label,
-    resetsAt: new Date(
+    resetsAt: convertUnixToUtc(
       nextMidnightMs(nowMs, BRAIN_PROVIDERS[id].resetTimeZone),
-    ).toISOString(),
+    ),
   }));
 }
 

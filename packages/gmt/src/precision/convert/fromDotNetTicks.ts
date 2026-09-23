@@ -11,6 +11,10 @@ import { fromNanoseconds } from "./fromNanoseconds";
  *
  * - `value` counts 100-nanosecond intervals since 0001-01-01T00:00:00 in the proleptic
  *   Gregorian calendar.
+ * - **Only UTC ticks name an instant.** .NET counts `Ticks` in the zone of the `DateTime`'s
+ *   `Kind`: a `Local` or `Unspecified` value counts local wall-clock time, and this function
+ *   reads every value as UTC. Pass `DateTime.UtcNow.Ticks` or `ToUniversalTime().Ticks`;
+ *   `DateTime.Now.Ticks` on a UTC−5 host decodes five hours early.
  * - Accepts `DateTime.MinValue` (`0n`) to `DateTime.MaxValue` (`3155378975999999999n`,
  *   9999-12-31T23:59:59.9999999). A tick count outside that is not a `DateTime`, and a
  *   negative value in particular is rejected rather than read as a pre-year-1 instant.

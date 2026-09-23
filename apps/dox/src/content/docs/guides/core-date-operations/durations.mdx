@@ -122,7 +122,14 @@ diffZonedAsDuration(
   "2024-03-11T12:00:00-04:00[America/New_York]",
   "days",
 );
-// "P1DT23H" — real elapsed time across a DST spring-forward
+// "P2D" — calendar days on New York's wall clock, across a DST spring-forward
+
+diffZonedAsDuration(
+  "2024-03-09T12:00:00-05:00[America/New_York]",
+  "2024-03-11T12:00:00-04:00[America/New_York]",
+  "hours",
+);
+// "PT47H" — real elapsed time: the spring-forward day had 23 hours
 ```
 
 Feed the result straight into any duration function:

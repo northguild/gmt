@@ -1,15 +1,17 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
-import { closedIntervalsAbut } from "../../internal";
-import { plainDateTime } from "../../regex";
+import { halfOpenAbuts } from "../../internal";
+import { isValidDateTime } from "../validate";
 
 /**
- * Return true when two datetime intervals are exactly adjacent — one's end is one nanosecond
- * before the other's start, so they share no instant and leave no gap.
+ * Return true when two half-open datetime intervals `[aStart, aEnd)` and `[bStart, bEnd)` are exactly
+ * adjacent — one ends where the other starts, so they share nothing and leave no gap.
  *
+ * - Half-open: an interval holds every `t` with `start <= t < end`, so an interval's `end` is the
+ *   first value after it. Returns `true` when `aEnd === bStart` or `bEnd === aStart` (Allen's
+ *   "meets"). There is no one-nanosecond step: a one-nanosecond gap is a gap.
+ * - An empty interval (`start === end`) abuts nothing.
  * - Uses `Temporal.PlainDateTime.compare` for comparison.
- * - Returns `true` when `bStart - 1 nanosecond === aEnd` (with `aEnd < bStart`) or
- *   `aStart - 1 nanosecond === bEnd` (with `bEnd < aStart`). The step is taken down from the later
- *   start, so an interval ending at the last representable value still abuts.
  * - Returns `false` when intervals overlap, are disjoint with a gap, or are invalid.
  * - Returns `false` on invalid input (wrong type, malformed strings).
  *
@@ -19,10 +21,9 @@ import { plainDateTime } from "../../regex";
  * @param bEnd ISO 8601 datetime string for the second interval end
  * @returns true if intervals are exactly adjacent, or false on invalid input
  *
- * @example intervalAbutsDateTime("2024-01-01T09:00:00", "2024-06-30T12:00:00", "2024-06-30T12:00:00.000000001", "2024-12-31T17:00:00") // true
- * @example intervalAbutsDateTime("2024-06-30T12:00:00.000000001", "2024-12-31T17:00:00", "2024-01-01T09:00:00", "2024-06-30T12:00:00") // true
- * @example intervalAbutsDateTime("2024-01-01T09:00:00", "2024-06-30T12:00:00", "2024-06-30T12:00:01", "2024-12-31T17:00:00") // false (gap)
- * @example intervalAbutsDateTime("2024-01-01T09:00:00", "2024-06-30T13:00:00", "2024-06-30T12:00:00", "2024-12-31T17:00:00") // false (overlap)
+ * @example intervalAbutsDateTime("2024-01-01T09:00:00", "2024-01-01T12:00:00", "2024-01-01T12:00:00", "2024-01-01T17:00:00") // true
+ * @example intervalAbutsDateTime("2024-01-01T09:00:00", "2024-01-01T12:00:00", "2024-01-01T12:00:00.000000001", "2024-01-01T17:00:00") // false (1 ns gap)
+ * @example intervalAbutsDateTime("2024-01-01T09:00:00", "2024-01-01T13:00:00", "2024-01-01T12:00:00", "2024-01-01T17:00:00") // false (overlap)
  * @example intervalAbutsDateTime("invalid", "2024-06-30T12:00:00", "2024-06-30T12:00:00", "2024-12-31T17:00:00") // false
  */
 export function intervalAbutsDateTime(
@@ -41,10 +42,10 @@ export function intervalAbutsDateTime(
   }
 
   if (
-    !plainDateTime.test(aStart) ||
-    !plainDateTime.test(aEnd) ||
-    !plainDateTime.test(bStart) ||
-    !plainDateTime.test(bEnd)
+    !isValidDateTime(aStart) ||
+    !isValidDateTime(aEnd) ||
+    !isValidDateTime(bStart) ||
+    !isValidDateTime(bEnd)
   ) {
     return false;
   }
@@ -63,13 +64,10 @@ export function intervalAbutsDateTime(
       return false;
     }
 
-    return closedIntervalsAbut(
-      aS,
-      aE,
-      bS,
-      bE,
+    return halfOpenAbuts(
+      { start: aS, end: aE },
+      { start: bS, end: bE },
       Temporal.PlainDateTime.compare,
-      (value) => value.subtract({ nanoseconds: 1 }),
     );
   } catch {
     return false;

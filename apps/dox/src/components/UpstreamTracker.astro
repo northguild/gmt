@@ -1,0 +1,46 @@
+---
+/**
+ * The /upstream/ tracker: one table per repository, built from `upstream-filings.ts` — the live
+ * refresh when GitHub is reachable, the committed snapshot otherwise. Nothing is fetched in the
+ * browser. Sentences come from `lib/upstream-summary.ts`, styles from `styles/gmt-upstream.css`.
+ */
+import { filingRepos, filingsForRepo } from "../data/upstream-filings";
+import { asDate } from "../lib/upstream-summary";
+import UpstreamFilingRow from "./UpstreamFilingRow.astro";
+import UpstreamTrackerLegend from "./UpstreamTrackerLegend.astro";
+import UpstreamTrackerSummary from "./UpstreamTrackerSummary.astro";
+
+const COLUMNS = [
+  "Filing",
+  "In GMT",
+  "The problem",
+  "Kind",
+  "Upstream status",
+  "Replies",
+  "Last activity",
+];
+---
+
+<UpstreamTrackerSummary />
+
+{
+  filingRepos.map((repo) => (
+    <section class="gmt-upstream-repo">
+      <h3>
+        <a href={`https://github.com/${repo}`}>{repo}</a>
+      </h3>
+      <table class="gmt-upstream-table">
+        <thead>
+          <tr>{COLUMNS.map((column) => <th>{column}</th>)}</tr>
+        </thead>
+        <tbody>
+          {filingsForRepo(repo).map((f) => (
+            <UpstreamFilingRow filing={f} formatDate={asDate} />
+          ))}
+        </tbody>
+      </table>
+    </section>
+  ))
+}
+
+<UpstreamTrackerLegend />

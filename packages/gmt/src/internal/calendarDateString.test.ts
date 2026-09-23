@@ -1,126 +1,146 @@
-import { Temporal } from "@js-temporal/polyfill";
-import {
-  formatCalendarDate,
-  parseCalendarDateValue,
-} from "./calendarDateString";
+import { parseCalendarDateValue } from "./calendarDateString";
 
 describe("parseCalendarDateValue", () => {
+  // RFC 9557: the digits are the ISO date whatever the annotation says, so every row names ISO
+  // 2024-10-03. The calendar is the annotation's, canonicalized; "ethiopic" and "coptic" compute
+  // in "ethioaa" (internal/calendarSystemIds.ts computationCalendarId).
   it.each`
-    value                                       | expectedIso
-    ${"2024-10-03"}                             | ${"2024-10-03"}
-    ${"5785-01-01[u-ca=hebrew]"}                | ${"2024-10-03"}
-    ${"5784-06-01[u-ca=hebrew]"}                | ${"2024-02-10"}
-    ${"1446-03-29[u-ca=islamic-civil]"}         | ${"2024-10-03"}
-    ${"1446-03-30[u-ca=islamic-tabular]"}       | ${"2024-10-03"}
-    ${"1446-03-30[u-ca=islamic-umalqura]"}      | ${"2024-10-03"}
-    ${"0006-10-03[u-ca=japanese;era=reiwa]"}    | ${"2024-10-03"}
-    ${"2567-10-03[u-ca=buddhist]"}              | ${"2024-10-03"}
-    ${"0113-10-03[u-ca=taiwan]"}                | ${"2024-10-03"}
-    ${"1403-07-12[u-ca=persian]"}               | ${"2024-10-03"}
-    ${"1946-07-11[u-ca=indian]"}                | ${"2024-10-03"}
-    ${"2017-01-23[u-ca=ethiopic;era=ethiopic]"} | ${"2024-10-03"}
-    ${"7517-01-23[u-ca=ethiopic-amete-alem]"}   | ${"2024-10-03"}
-    ${"1741-01-23[u-ca=coptic]"}                | ${"2024-10-03"}
+    value                                  | expectedIso        | calendarId
+    ${"2024-10-03"}                        | ${"2024-10-03"}    | ${"iso8601"}
+    ${"2024-10-03[u-ca=iso8601]"}          | ${"2024-10-03"}    | ${"iso8601"}
+    ${"2024-10-03[u-ca=gregory]"}          | ${"2024-10-03"}    | ${"gregory"}
+    ${"2024-10-03[u-ca=hebrew]"}           | ${"2024-10-03"}    | ${"hebrew"}
+    ${"2024-10-03[u-ca=islamic-civil]"}    | ${"2024-10-03"}    | ${"islamic-civil"}
+    ${"2024-10-03[u-ca=islamic-tbla]"}     | ${"2024-10-03"}    | ${"islamic-tbla"}
+    ${"2024-10-03[u-ca=islamic-umalqura]"} | ${"2024-10-03"}    | ${"islamic-umalqura"}
+    ${"2024-10-03[u-ca=japanese]"}         | ${"2024-10-03"}    | ${"japanese"}
+    ${"2024-10-03[u-ca=buddhist]"}         | ${"2024-10-03"}    | ${"buddhist"}
+    ${"2024-10-03[u-ca=roc]"}              | ${"2024-10-03"}    | ${"roc"}
+    ${"2024-10-03[u-ca=persian]"}          | ${"2024-10-03"}    | ${"persian"}
+    ${"2024-10-03[u-ca=indian]"}           | ${"2024-10-03"}    | ${"indian"}
+    ${"2024-10-03[u-ca=ethiopic]"}         | ${"2024-10-03"}    | ${"ethioaa"}
+    ${"2024-10-03[u-ca=ethioaa]"}          | ${"2024-10-03"}    | ${"ethioaa"}
+    ${"2024-10-03[u-ca=coptic]"}           | ${"2024-10-03"}    | ${"ethioaa"}
+    ${"2024-10-03[!u-ca=hebrew]"}          | ${"2024-10-03"}    | ${"hebrew"}
+    ${"2024-10-03[u-ca=HEBREW]"}           | ${"2024-10-03"}    | ${"hebrew"}
+    ${"2024-10-03[u-ca=islamicc]"}         | ${"2024-10-03"}    | ${"islamic-civil"}
+    ${"+275760-09-13[u-ca=hebrew]"}        | ${"+275760-09-13"} | ${"hebrew"}
+    ${"-271821-04-19[u-ca=hebrew]"}        | ${"-271821-04-19"} | ${"hebrew"}
   `(
-    "parses $value to iso $expectedIso",
-    ({ value, expectedIso }: { value: string; expectedIso: string }) => {
-      expect(
-        parseCalendarDateValue(value).withCalendar("iso8601").toString(),
-      ).toBe(expectedIso);
+    "parses $value to ISO $expectedIso computed in $calendarId",
+    ({ value, expectedIso, calendarId }) => {
+      const date = parseCalendarDateValue(value);
+      expect(date.withCalendar("iso8601").toString()).toBe(expectedIso);
+      expect(date.calendarId).toBe(calendarId);
+    },
+  );
+
+  // Temporal's annotation grammar (ParseISODateTime; native Chromium 153 agrees): a time zone
+  // annotation on a date and elective unknown annotations are read and ignored, and the first
+  // u-ca annotation names the calendar. "[x=y]" is a one-character key and value, valid in the
+  // spec's Annotation grammar (Chromium 153 rejects it; the spec text is the authority).
+  it.each`
+    value                                      | calendarId
+    ${"2024-10-03[Asia/Tokyo][u-ca=hebrew]"}   | ${"hebrew"}
+    ${"2024-10-03[!Asia/Tokyo][u-ca=hebrew]"}  | ${"hebrew"}
+    ${"2024-10-03[+09:00][u-ca=roc]"}          | ${"roc"}
+    ${"2024-10-03[foo=bar][u-ca=hebrew]"}      | ${"hebrew"}
+    ${"2024-10-03[u-ca=hebrew][foo=bar]"}      | ${"hebrew"}
+    ${"2024-10-03[x=y][u-ca=roc]"}             | ${"roc"}
+    ${"2024-10-03[u-ca=hebrew][u-ca=roc]"}     | ${"hebrew"}
+    ${"2024-10-03[u-ca=hebrew][u-ca=chinese]"} | ${"hebrew"}
+    ${"2024-10-03[u-ca=coptic][foo=bar]"}      | ${"ethioaa"}
+    ${"2024-10-03[Asia/Tokyo]"}                | ${"iso8601"}
+    ${"2024-10-03[foo=bar]"}                   | ${"iso8601"}
+  `(
+    "parses $value to ISO 2024-10-03 computed in $calendarId, ignoring the other annotations",
+    ({ value, calendarId }) => {
+      const date = parseCalendarDateValue(value);
+      expect(date.withCalendar("iso8601").toString()).toBe("2024-10-03");
+      expect(date.calendarId).toBe(calendarId);
     },
   );
 
   it.each`
-    value
-    ${"2024-02-30"}
-    ${"5783-14-01[u-ca=hebrew]"}
-    ${"2024-10-03[u-ca=martian]"}
-    ${"not-a-date"}
-    ${"0000-10-03[u-ca=japanese;era=unknown-era]"}
-    ${"0000-01-01[u-ca=ethiopic;era=unknown-era]"}
-  `("throws for invalid $value", ({ value }: { value: string }) => {
+    value                                       | reason
+    ${"2024-10-03[!foo=bar][u-ca=hebrew]"}      | ${"unknown critical annotation"}
+    ${"2024-10-03[u-ca=hebrew][!foo=bar]"}      | ${"unknown critical annotation after the calendar"}
+    ${"2024-10-03[!u-ca=hebrew][u-ca=roc]"}     | ${"second calendar after a critical one"}
+    ${"2024-10-03[u-ca=hebrew][!u-ca=roc]"}     | ${"critical second calendar"}
+    ${"2024-10-03[!u-ca=hebrew][!u-ca=hebrew]"} | ${"repeated critical calendar"}
+    ${"2024-10-03[u-ca=chinese][u-ca=hebrew]"}  | ${"the first calendar names one GMT does not support"}
+    ${"2024-10-03[u-ca=hebrew][Asia/Tokyo]"}    | ${"time zone annotation after the calendar"}
+    ${"2024-10-03[Asia/Tokyo][UTC]"}            | ${"two time zone annotations"}
+    ${"2024-10-03[Foo=bar][u-ca=hebrew]"}       | ${"upper-case annotation key"}
+    ${"2024-02-30"}                             | ${"ISO day 30 of February"}
+    ${"2023-02-29[u-ca=hebrew]"}                | ${"ISO 2023 is not a leap year, whatever the calendar"}
+    ${"2024-10-03[u-ca=martian]"}               | ${"unknown calendar"}
+    ${"2024-10-03[u-ca=gregorian]"}             | ${"CLDR alias Temporal does not accept"}
+    ${"2024-10-03[u-ca=taiwan]"}                | ${"pre-1.16.0 GMT name"}
+    ${"2024-10-03[u-ca=islamic]"}               | ${"not in the proposal's calendar table"}
+    ${"2024-10-03[u-ca=chinese]"}               | ${"not supported by GMT"}
+    ${"0006-10-03[u-ca=japanese;era=reiwa]"}    | ${"';era=' is not RFC 9557 syntax"}
+    ${"279517-10-11[u-ca=hebrew]"}              | ${"six-digit unsigned year"}
+    ${"+275760-09-14[u-ca=hebrew]"}             | ${"past the maximum ISO date"}
+    ${"-000000-01-01[u-ca=roc]"}                | ${"negative zero year"}
+    ${"not-a-date"}                             | ${"not a date"}
+  `("throws for $value ($reason)", ({ value }) => {
     expect(() => parseCalendarDateValue(value)).toThrow();
   });
 
-  // Regression (E5, issue #78): a bare (non-calendar-annotated) datetime/zoned string used to
-  // silently succeed here — Temporal.PlainDate.from truncates a full datetime string to its
-  // date portion rather than rejecting it, which this function's fallback branch inherited
-  // before E5 added the strict `plainDate` regex pre-check. Predates E5 but is fixed as part
-  // of it, since this function is E5's own shared parsing gate for `plain/` calendar-aware
-  // functions and must not inherit the hazard.
+  // A date-time is read as its date, as `Temporal.PlainDate.from` reads it (decided
+  // 2026-09-17). Expected `toString()` values from native Chromium 153 (polyfill 0.5.1 agrees).
   it.each`
-    value
-    ${"2024-03-10T14:30:00"}
-    ${"2024-03-10T14:30:00-05:00[America/New_York]"}
+    value                                                   | expected
+    ${"2024-03-10T14:30:00"}                                | ${"2024-03-10"}
+    ${"2024-03-10T14:30:00[America/New_York]"}              | ${"2024-03-10"}
+    ${"2024-03-10T14:30:00[u-ca=hebrew]"}                   | ${"2024-03-10[u-ca=hebrew]"}
+    ${"2024-10-03T23:59:59.999999999[u-ca=hebrew]"}         | ${"2024-10-03[u-ca=hebrew]"}
+    ${"2024-10-03T14:30:00[America/New_York][u-ca=hebrew]"} | ${"2024-10-03[u-ca=hebrew]"}
+    ${"+275760-09-13T23:59[u-ca=roc]"}                      | ${"+275760-09-13[u-ca=roc]"}
   `(
-    "throws for a datetime/zoned string $value instead of silently truncating to its date portion",
-    ({ value }: { value: string }) => {
+    "reads the date-time $value as the date $expected",
+    ({ value, expected }) => {
+      expect(parseCalendarDateValue(value).toString()).toBe(expected);
+    },
+  );
+
+  // Temporal rejects these date-times: a UTC designator on a Plain type, hour 24, an unknown
+  // critical annotation, and a calendar GMT does not support. A leap second is rejected as every
+  // GMT Plain date-time input rejects it (`isValidDateTime`, a duration `relativeTo`), although
+  // Temporal would clamp it to :59.
+  it.each`
+    value                                        | reason
+    ${"2024-10-03T14:30:00Z"}                    | ${"UTC designator"}
+    ${"2024-10-03T14:30:00Z[u-ca=hebrew]"}       | ${"UTC designator"}
+    ${"2024-10-03T24:00[u-ca=hebrew]"}           | ${"hour 24"}
+    ${"2024-10-03T00:00[!foo=bar][u-ca=hebrew]"} | ${"unknown critical annotation"}
+    ${"2024-10-03T00:00[u-ca=chinese]"}          | ${"not supported by GMT"}
+    ${"2024-10-03T"}                             | ${"no time after T"}
+    ${"2024-10-03T23:59:60[u-ca=hebrew]"}        | ${"leap second"}
+    ${"2024-10-03 235960"}                       | ${"leap second, basic digits"}
+  `("throws for the date-time $value ($reason)", ({ value }) => {
+    expect(() => parseCalendarDateValue(value)).toThrow();
+  });
+
+  // GMT's strict shape before the first `[` (the house rule of `isValidDate`
+  // and `isValidDateTime`): the extended date or date-time only. Native Chromium 153
+  // `Temporal.PlainDate.from` accepts every one of these (basic format, a space or lower-case `t`
+  // separator, a UTC offset); GMT rejects them, as `isValidDate`/`isValidDateTime` do.
+  it.each`
+    value                                                         | reason
+    ${"20241003"}                                                 | ${"basic format date"}
+    ${"20241003[u-ca=hebrew]"}                                    | ${"basic format date"}
+    ${"20241003T143000[u-ca=hebrew]"}                             | ${"basic format date-time"}
+    ${"2024-10-03T1430[u-ca=hebrew]"}                             | ${"basic format time"}
+    ${"2024-10-03 14:30[u-ca=hebrew]"}                            | ${"space separator"}
+    ${"2024-10-03t14:30[u-ca=hebrew]"}                            | ${"lower-case t separator"}
+    ${"2024-10-03T14:30+01:00[u-ca=hebrew]"}                      | ${"UTC offset"}
+    ${"2024-10-03T14:30:00-05:00[America/New_York][u-ca=hebrew]"} | ${"UTC offset before a time zone annotation"}
+  `(
+    "throws for $value ($reason), outside GMT's strict date or date-time shape",
+    ({ value }) => {
       expect(() => parseCalendarDateValue(value)).toThrow();
     },
   );
-});
-
-describe("formatCalendarDate", () => {
-  it("formats an iso8601 PlainDate without a calendar annotation", () => {
-    const date = Temporal.PlainDate.from("2024-10-03");
-    expect(formatCalendarDate(date)).toBe("2024-10-03");
-  });
-
-  it("formats a hebrew PlainDate with calendar-native fields and annotation", () => {
-    const date = Temporal.PlainDate.from("2024-10-03").withCalendar("hebrew");
-    expect(formatCalendarDate(date)).toBe("5785-01-01[u-ca=hebrew]");
-  });
-
-  it("zero-pads a hebrew leap-month ordinal to two digits", () => {
-    const date = Temporal.PlainDate.from({
-      year: 5784,
-      month: 6,
-      day: 1,
-      calendar: "hebrew",
-    });
-    expect(formatCalendarDate(date)).toBe("5784-06-01[u-ca=hebrew]");
-  });
-
-  it("annotates with GMT's own id, not Temporal's differing calendarId", () => {
-    const date =
-      Temporal.PlainDate.from("2024-10-03").withCalendar("islamic-tbla");
-    expect(date.calendarId).toBe("islamic-tbla");
-    expect(formatCalendarDate(date)).toBe("1446-03-30[u-ca=islamic-tabular]");
-  });
-
-  it("annotates with GMT's own id, not Temporal's differing calendarId (taiwan/roc)", () => {
-    const date = Temporal.PlainDate.from("2024-10-03").withCalendar("roc");
-    expect(date.calendarId).toBe("roc");
-    expect(formatCalendarDate(date)).toBe("0113-10-03[u-ca=taiwan]");
-  });
-
-  it("tags a japanese PlainDate with eraYear and an era suffix instead of the proleptic year", () => {
-    const date = Temporal.PlainDate.from("2024-10-03").withCalendar("japanese");
-    expect(date.year).toBe(2024);
-    expect(date.eraYear).toBe(6);
-    expect(date.era).toBe("reiwa");
-    expect(formatCalendarDate(date)).toBe(
-      "0006-10-03[u-ca=japanese;era=reiwa]",
-    );
-  });
-
-  // CORE-6 D8: the Intl era/monthCode proposal's codes, whatever era name the polyfill reads.
-  it.each`
-    iso                | expected
-    ${"1800-01-01"}    | ${"1800-01-01[u-ca=japanese;era=ce]"}
-    ${"1872-12-31"}    | ${"1872-12-31[u-ca=japanese;era=ce]"}
-    ${"1873-01-01"}    | ${"0006-01-01[u-ca=japanese;era=meiji]"}
-    ${"-000500-06-15"} | ${"0501-06-15[u-ca=japanese;era=bce]"}
-  `(
-    "tags the japanese PlainDate $iso with the proposal era as $expected",
-    ({ iso, expected }: { iso: string; expected: string }) => {
-      const date = Temporal.PlainDate.from(iso).withCalendar("japanese");
-      expect(formatCalendarDate(date)).toBe(expected);
-    },
-  );
-
-  // Ethiopic-family dates ("ethiopic" / "ethiopic-amete-alem" / "coptic") never reach this
-  // function — they format via formatEthiopicFamilyDate in ethiopicFamilyCalendar.ts
-  // instead, which never constructs or reads a Temporal PlainDate calendared as "ethiopic"
-  // or "coptic" (see that file's tests, and its module comment for why).
 });

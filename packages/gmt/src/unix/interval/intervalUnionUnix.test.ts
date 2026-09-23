@@ -1,6 +1,26 @@
 import { intervalUnionUnix } from "./intervalUnionUnix";
 
 describe("intervalUnionUnix", () => {
+  // Half-open [start, end) (coding-standards § 8; A = 2024-01-01T09:00Z, B = 12:00Z, C = 13:00Z,
+  // D = 17:00Z in ms). The union is the single run `mergeIntervalsUnix` makes of the pair: touching
+  // intervals join, a gap gives null, and an empty interval adds no instants, so it is absorbed
+  // when it touches the other and dropped when it does not.
+  it.each`
+    aStart           | aEnd             | bStart           | bEnd             | expected                                        | reason
+    ${1704099600000} | ${1704110400000} | ${1704110400000} | ${1704128400000} | ${{ start: 1704099600000, end: 1704128400000 }} | ${"touching [A, B) and [B, D) join"}
+    ${1704099600000} | ${1704110400000} | ${1704110400001} | ${1704128400000} | ${null}                                         | ${"one-unit gap"}
+    ${1704099600000} | ${1704114000000} | ${1704110400000} | ${1704128400000} | ${{ start: 1704099600000, end: 1704128400000 }} | ${"overlapping [A, C) and [B, D)"}
+    ${1704099600000} | ${1704110400000} | ${1704128400000} | ${1704128400000} | ${{ start: 1704099600000, end: 1704110400000 }} | ${"empty [D, D) apart from [A, B) adds nothing"}
+    ${1704128400000} | ${1704128400000} | ${1704099600000} | ${1704110400000} | ${{ start: 1704099600000, end: 1704110400000 }} | ${"empty first interval apart from the second adds nothing"}
+    ${1704110400000} | ${1704110400000} | ${1704110400000} | ${1704110400000} | ${null}                                         | ${"two empty intervals have no instant to span"}
+    ${1704110400000} | ${1704110400000} | ${1704128400000} | ${1704128400000} | ${null}                                         | ${"two empty intervals at different instants"}
+  `(
+    "returns $expected for [$aStart, $aEnd) and [$bStart, $bEnd) ($reason)",
+    ({ aStart, aEnd, bStart, bEnd, expected }) => {
+      expect(intervalUnionUnix(aStart, aEnd, bStart, bEnd)).toEqual(expected);
+    },
+  );
+
   it.each`
     aStart     | aEnd          | bStart     | bEnd          | expected
     ${0}       | ${1700000000} | ${1000000} | ${2000000}    | ${{ start: 0, end: 1700000000 }}

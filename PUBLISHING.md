@@ -30,7 +30,9 @@ In the branch where you changed something publishable:
 pnpm run changeset:add
 ```
 
-Pick the changed package(s), pick `patch|minor|major`, write the description.
+Pick the changed package(s), pick `patch` or `minor`, write the description. A breaking
+change is `minor` too, with a **Breaking changes** migration section; `major` is never used
+(see [coding-standards § Changesets](./context/coding-standards.md#changesets)).
 
 **This writes a markdown file and nothing else.** It does not touch any
 `package.json` and does not bump anything — the bump level you pick is recorded
@@ -186,4 +188,5 @@ who can approve its runs.
 
 - `patch` — bug fix (`1.0.0 → 1.0.1`)
 - `minor` — new feature, backwards-compatible (`1.0.0 → 1.1.0`)
-- `major` — breaking change, or an initial stable `1.0.0` release (`0.x → 1.0.0`)
+- `minor` with a **Breaking changes** section — breaking change. `major` is never used: GMT's
+  users are internal, so breaking changes ship in a minor release (owner decision, 2026-09-17)

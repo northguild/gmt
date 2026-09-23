@@ -326,7 +326,7 @@ export const RELATIONSHIP_PRESETS: RelationshipPresetInfo[] = [
     type: "adjacent",
     label: "Adjacent (touching)",
     description:
-      "A ends the instant B starts. GMT's positional interval functions are closed, so that instant belongs to both and they overlap.",
+      "A ends the instant B starts. GMT's interval functions are half-open, so the intervals share no instant and do not overlap.",
   },
 ];
 

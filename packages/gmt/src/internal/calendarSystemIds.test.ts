@@ -1,102 +1,104 @@
-import { isCalendarSystem, temporalCalendarIds } from "./calendarSystemIds";
+import {
+  calendarSystems,
+  canonicalCalendarSystem,
+  computationCalendarId,
+  isCalendarSystem,
+} from "./calendarSystemIds";
 
-describe("temporalCalendarIds", () => {
-  it.each`
-    calendar                 | temporalId
-    ${"gregorian"}           | ${"iso8601"}
-    ${"hebrew"}              | ${"hebrew"}
-    ${"islamic-civil"}       | ${"islamic-civil"}
-    ${"islamic-tabular"}     | ${"islamic-tbla"}
-    ${"islamic-umalqura"}    | ${"islamic-umalqura"}
-    ${"japanese"}            | ${"japanese"}
-    ${"buddhist"}            | ${"buddhist"}
-    ${"taiwan"}              | ${"roc"}
-    ${"persian"}             | ${"persian"}
-    ${"indian"}              | ${"indian"}
-    ${"ethiopic"}            | ${"ethiopic"}
-    ${"ethiopic-amete-alem"} | ${"ethioaa"}
-    ${"coptic"}              | ${"coptic"}
-  `(
-    "maps $calendar to Temporal calendar id $temporalId",
-    ({
-      calendar,
-      temporalId,
-    }: {
-      calendar:
-        | "gregorian"
-        | "hebrew"
-        | "islamic-civil"
-        | "islamic-tabular"
-        | "islamic-umalqura"
-        | "japanese"
-        | "buddhist"
-        | "taiwan"
-        | "persian"
-        | "indian"
-        | "ethiopic"
-        | "ethiopic-amete-alem"
-        | "coptic";
-      temporalId: string;
-    }) => {
-      expect(temporalCalendarIds[calendar]).toBe(temporalId);
-    },
-  );
-
-  it("exposes exactly the CalendarSystem identifiers, no more and no fewer", () => {
-    expect(Object.keys(temporalCalendarIds).sort()).toEqual([
+// Canonical ids: CLDR common/bcp47/calendar.xml types, restricted to the rows of the Intl Era and
+// Month Code proposal's table-calendar-types (plus "iso8601") that GMT supports. GMT does not
+// support "chinese" or "dangi"; "islamic" and "islamic-rgsa" are not in the proposal's table.
+describe("calendarSystems", () => {
+  it("lists exactly the canonical ids GMT supports", () => {
+    expect([...calendarSystems].sort()).toEqual([
       "buddhist",
       "coptic",
+      "ethioaa",
       "ethiopic",
-      "ethiopic-amete-alem",
-      "gregorian",
+      "gregory",
       "hebrew",
       "indian",
       "islamic-civil",
-      "islamic-tabular",
+      "islamic-tbla",
       "islamic-umalqura",
+      "iso8601",
       "japanese",
       "persian",
-      "taiwan",
+      "roc",
     ]);
   });
 });
 
 describe("isCalendarSystem", () => {
-  it.each`
-    value
-    ${"gregorian"}
-    ${"hebrew"}
-    ${"islamic-civil"}
-    ${"islamic-tabular"}
-    ${"islamic-umalqura"}
-    ${"japanese"}
-    ${"buddhist"}
-    ${"taiwan"}
-    ${"persian"}
-    ${"indian"}
-    ${"ethiopic"}
-    ${"ethiopic-amete-alem"}
-    ${"coptic"}
-  `(
-    "returns true for supported calendar: $value",
-    ({ value }: { value: string }) => {
+  it.each(calendarSystems.map((value) => ({ value })))(
+    "returns true for the canonical id $value",
+    ({ value }) => {
       expect(isCalendarSystem(value)).toBe(true);
     },
   );
 
   it.each`
-    value
-    ${"islamic-tbla"}
-    ${"islamic"}
-    ${"roc"}
-    ${"ethioaa"}
-    ${"martian"}
-    ${""}
-    ${"Hebrew"}
-  `(
-    "returns false for unsupported calendar: $value",
-    ({ value }: { value: string }) => {
-      expect(isCalendarSystem(value)).toBe(false);
-    },
-  );
+    value                    | reason
+    ${"gregorian"}           | ${"CLDR alias, not a Temporal calendar id"}
+    ${"taiwan"}              | ${"GMT's pre-1.16.0 name for roc"}
+    ${"islamic-tabular"}     | ${"GMT's pre-1.16.0 name for islamic-tbla"}
+    ${"ethiopic-amete-alem"} | ${"alias of ethioaa, not canonical"}
+    ${"islamicc"}            | ${"deprecated alias of islamic-civil, not canonical"}
+    ${"Hebrew"}              | ${"not ASCII-lowercase"}
+    ${"islamic"}             | ${"not in the proposal's calendar table"}
+    ${"chinese"}             | ${"not supported by GMT"}
+    ${"martian"}             | ${"unknown"}
+    ${""}                    | ${"empty"}
+  `("returns false for $value ($reason)", ({ value }) => {
+    expect(isCalendarSystem(value)).toBe(false);
+  });
+});
+
+describe("canonicalCalendarSystem", () => {
+  // Temporal CanonicalizeCalendar: ASCII-lowercase membership in AvailableCalendars, then
+  // CanonicalizeUValue("ca", id), which maps the CLDR aliases to their preferred type.
+  it.each`
+    value                    | expected
+    ${"hebrew"}              | ${"hebrew"}
+    ${"HEBREW"}              | ${"hebrew"}
+    ${"ethiopic-amete-alem"} | ${"ethioaa"}
+    ${"islamicc"}            | ${"islamic-civil"}
+    ${"ISO8601"}             | ${"iso8601"}
+    ${"gregory"}             | ${"gregory"}
+    ${"roc"}                 | ${"roc"}
+  `("canonicalizes $value to $expected", ({ value, expected }) => {
+    expect(canonicalCalendarSystem(value)).toBe(expected);
+  });
+
+  it.each`
+    value                | reason
+    ${"gregorian"}       | ${"Temporal rejects the CLDR alias"}
+    ${"taiwan"}          | ${"CLDR alias absent from AvailableCanonicalCalendars"}
+    ${"islamic-tabular"} | ${"CLDR alias absent from AvailableCanonicalCalendars"}
+    ${"islamic"}         | ${"not in the proposal's calendar table"}
+    ${"islamic-rgsa"}    | ${"not in the proposal's calendar table"}
+    ${"chinese"}         | ${"not supported by GMT"}
+    ${"dangi"}           | ${"not supported by GMT"}
+    ${"martian"}         | ${"unknown"}
+    ${""}                | ${"empty"}
+  `("returns null for $value ($reason)", ({ value }) => {
+    expect(canonicalCalendarSystem(value)).toBeNull();
+  });
+});
+
+describe("computationCalendarId", () => {
+  // The Ethiopic family computes through "ethioaa" (polyfill 0.5.1 cannot read ethiopic or coptic
+  // fields under ICU 78); every other calendar computes in itself.
+  it.each`
+    calendar      | expected
+    ${"ethiopic"} | ${"ethioaa"}
+    ${"coptic"}   | ${"ethioaa"}
+    ${"ethioaa"}  | ${"ethioaa"}
+    ${"hebrew"}   | ${"hebrew"}
+    ${"iso8601"}  | ${"iso8601"}
+    ${"gregory"}  | ${"gregory"}
+    ${"roc"}      | ${"roc"}
+  `("computes $calendar in $expected", ({ calendar, expected }) => {
+    expect(computationCalendarId(calendar)).toBe(expected);
+  });
 });

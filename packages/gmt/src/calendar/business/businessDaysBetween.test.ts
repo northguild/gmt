@@ -104,6 +104,44 @@ describe("businessDaysBetween", () => {
     expect(businessDaysBetween("2024-07-03", end, usIndependence)).toBe(amount);
   });
 
+  // From a non-business start the inverse holds only for n >= 0. Walking back n business days
+  // from a weekend lands on the nth business day before it, and (end, start] then holds only
+  // n − 1 of them, because start itself is not a business day. Hand count, Sat–Sun weekend:
+  // 6 Jul (Sat) −1 → Fri 5, and (5, 6] is just Saturday, so 0; 6 Jul −5 → Mon 1, (1, 6] holds
+  // Tue–Fri, so −4; 7 Jul (Sun) −3 → Wed 3, (3, 7] holds Thu and Fri, so −2; 6 Jul +1 → Mon 8,
+  // (6, 8] holds Monday, so 1.
+  it.each`
+    start           | amount | end             | expected
+    ${"2024-07-06"} | ${-1}  | ${"2024-07-05"} | ${0}
+    ${"2024-07-06"} | ${-5}  | ${"2024-07-01"} | ${-4}
+    ${"2024-07-07"} | ${-3}  | ${"2024-07-03"} | ${-2}
+    ${"2024-07-06"} | ${1}   | ${"2024-07-08"} | ${1}
+    ${"2024-07-06"} | ${5}   | ${"2024-07-12"} | ${5}
+  `(
+    "counts $expected, not $amount, from weekend start $start to addBusinessDays' $end",
+    ({ start, amount, end, expected }) => {
+      expect(addBusinessDays(start, amount, satSunNoHolidays)).toBe(end);
+      expect(
+        Object.is(businessDaysBetween(start, end, satSunNoHolidays), expected),
+      ).toBe(true);
+    },
+  );
+
+  // A reversed range with no business days is 0, never IEEE 754 negative zero, which
+  // Object.is and toBe tell apart from 0.
+  it.each`
+    start           | end             | description
+    ${"2024-07-06"} | ${"2024-07-05"} | ${"(Fri, Sat] holds only Saturday"}
+    ${"2024-07-07"} | ${"2024-07-06"} | ${"(Sat, Sun] holds only Sunday"}
+    ${"2024-07-07"} | ${"2024-07-05"} | ${"(Fri, Sun] holds only the weekend"}
+  `(
+    "returns positive 0 for reversed $start to $end — $description",
+    ({ start, end, description }) => {
+      const result = businessDaysBetween(start, end, satSunNoHolidays);
+      expect(Object.is(result, 0), description).toBe(true);
+    },
+  );
+
   // Counted, never walked — a 38-year range costs the same as a one-week one.
   it("counts a range far past any step cap", () => {
     expect(

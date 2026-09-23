@@ -127,8 +127,7 @@ describe("getDurationUnit", () => {
   it.each`
     unit
     ${"fortnights"}
-    ${"hour"}
-    ${"day"}
+    ${"fortnight"}
     ${""}
     ${null}
     ${undefined}
@@ -147,4 +146,26 @@ describe("getDurationUnit", () => {
       getDurationUnit("not a duration", "nope" as never),
     ).not.toThrow();
   });
+
+  // Temporal §13.17 GetTemporalUnitValuedOption: a singular unit name is the same unit as its plural.
+  it.each`
+    unit             | expected
+    ${"year"}        | ${1}
+    ${"month"}       | ${2}
+    ${"week"}        | ${3}
+    ${"day"}         | ${4}
+    ${"hour"}        | ${5}
+    ${"minute"}      | ${6}
+    ${"second"}      | ${7}
+    ${"millisecond"} | ${8}
+    ${"microsecond"} | ${9}
+    ${"nanosecond"}  | ${10}
+  `(
+    "returns $expected for singular unit $unit of P1Y2M3W4DT5H6M7.008009010S",
+    ({ unit, expected }) => {
+      expect(getDurationUnit("P1Y2M3W4DT5H6M7.008009010S", unit)).toBe(
+        expected,
+      );
+    },
+  );
 });

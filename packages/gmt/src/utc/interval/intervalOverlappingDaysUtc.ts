@@ -1,23 +1,18 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
-import { isLeapSecond } from "../../plain/validate/isLeapSecond";
-import { utcDateTime } from "../../regex/utc-date-time";
+import { halfOpenIntersection } from "../../internal";
+import { isValidUtc } from "../validate";
 
 /**
  * Return how many distinct UTC calendar dates two UTC intervals share.
  *
- * - Counts the number of UTC dates touched by the closed intersection
- *   `[max(aStart, bStart), min(aEnd, bEnd)]` — inclusive of both endpoints.
- * - Boundaries are UTC boundaries — no DST is involved.
- * - Adjacent intervals (e.g. `aEnd === bStart`) share one date and count as `1`.
- * - Returns `0` when the intervals do not overlap at all (a well-defined answer, not
- *   invalid input).
+ * - Half-open: an interval holds every `t` with `start <= t < end`. The count is the number of
+ *   calendar days holding at least one instant of the intersection `[max(aStart, bStart),
+ *   min(aEnd, bEnd))`. An intersection ending exactly at midnight does not reach that day.
+ * - Touching intervals (`aEnd === bStart`) share no instant and count `0`; so does an empty interval.
+ * - Returns `0` when the intervals share nothing (a well-defined answer, not invalid input).
  * - Returns `null` if either interval is invalid (`start > end`).
  * - Returns `null` on invalid input (wrong type, malformed strings, leap seconds).
- * - Diverges from date-fns's `getOverlappingDaysInIntervals`, which rounds up elapsed
- *   24-hour periods instead of counting calendar dates (its own doc example — Jan 10-20 vs
- *   Jan 17-21 — returns 3 there, 4 here). To reproduce date-fns's number, compose
- *   `intervalIntersectionUtc` with `intervalCountUtc`:
- *   `const span = intervalIntersectionUtc(aStart, aEnd, bStart, bEnd); span ? intervalCountUtc(span.start, span.end, "day") : 0;`
  *
  * @param aStart ISO 8601 UTC datetime string for the first interval start
  * @param aEnd ISO 8601 UTC datetime string for the first interval end
@@ -26,8 +21,8 @@ import { utcDateTime } from "../../regex/utc-date-time";
  * @returns number of shared calendar dates, `0` when disjoint, or null on invalid input
  *
  * @example intervalOverlappingDaysUtc("2024-01-01T23:59:00Z", "2024-01-02T00:01:00Z", "2024-01-01T23:59:00Z", "2024-01-02T00:01:00Z") // 2
- * @example intervalOverlappingDaysUtc("2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z", "2024-01-02T00:00:00Z", "2024-01-03T00:00:00Z") // 1 (adjacent)
- * @example intervalOverlappingDaysUtc("2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z", "2024-01-03T00:00:00Z", "2024-01-04T00:00:00Z") // 0 (disjoint)
+ * @example intervalOverlappingDaysUtc("2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z", "2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z") // 1
+ * @example intervalOverlappingDaysUtc("2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z", "2024-01-02T00:00:00Z", "2024-01-03T00:00:00Z") // 0 (touching)
  * @example intervalOverlappingDaysUtc("invalid", "2024-06-30T23:59:59Z", "2024-04-01T00:00:00Z", "2024-12-31T23:59:59Z") // null
  */
 export function intervalOverlappingDaysUtc(
@@ -46,19 +41,10 @@ export function intervalOverlappingDaysUtc(
   }
 
   if (
-    !utcDateTime.test(aStart) ||
-    !utcDateTime.test(aEnd) ||
-    !utcDateTime.test(bStart) ||
-    !utcDateTime.test(bEnd)
-  ) {
-    return null;
-  }
-
-  if (
-    isLeapSecond(aStart) ||
-    isLeapSecond(aEnd) ||
-    isLeapSecond(bStart) ||
-    isLeapSecond(bEnd)
+    !isValidUtc(aStart) ||
+    !isValidUtc(aEnd) ||
+    !isValidUtc(bStart) ||
+    !isValidUtc(bEnd)
   ) {
     return null;
   }
@@ -69,27 +55,31 @@ export function intervalOverlappingDaysUtc(
     const bS = Temporal.Instant.from(bStart);
     const bE = Temporal.Instant.from(bEnd);
 
-    if (Temporal.Instant.compare(aS, aE) > 0) {
-      return null;
-    }
-
-    if (Temporal.Instant.compare(bS, bE) > 0) {
-      return null;
-    }
-
     if (
-      Temporal.Instant.compare(aE, bS) < 0 ||
-      Temporal.Instant.compare(bE, aS) < 0
+      Temporal.Instant.compare(aS, aE) > 0 ||
+      Temporal.Instant.compare(bS, bE) > 0
     ) {
+      return null;
+    }
+
+    const shared = halfOpenIntersection(
+      { start: aS, end: aE },
+      { start: bS, end: bE },
+      Temporal.Instant.compare,
+    );
+
+    if (shared === null || shared.start.equals(shared.end)) {
       return 0;
     }
 
-    const start = Temporal.Instant.compare(aS, bS) >= 0 ? aS : bS;
-    const end = Temporal.Instant.compare(aE, bE) <= 0 ? aE : bE;
-    const startDate = start.toZonedDateTimeISO("UTC").toPlainDate();
-    const endDate = end.toZonedDateTimeISO("UTC").toPlainDate();
+    const start = shared.start.toZonedDateTimeISO("UTC");
+    const end = shared.end.toZonedDateTimeISO("UTC");
+    const endsAtMidnight = end.toPlainTime().equals(new Temporal.PlainTime());
+    const days = start
+      .toPlainDate()
+      .until(end.toPlainDate(), { largestUnit: "day" }).days;
 
-    return startDate.until(endDate, { largestUnit: "day" }).days + 1;
+    return endsAtMidnight ? days : days + 1;
   } catch {
     return null;
   }

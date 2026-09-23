@@ -1,16 +1,17 @@
 import { intervalDifferenceDate } from "./intervalDifferenceDate";
 
 describe("intervalDifferenceDate", () => {
-  // Closed [start, end]: the shared endpoint belongs to both intervals, so A minus B loses it and the
-  // remaining piece stops (or starts) one unit short of it.
+  // Half-open [start, end): the shared endpoint belongs to neither interval, so touching B removes
+  // nothing and every piece ends exactly where B starts or starts exactly where B ends
+  // (CORE-6 §3 subtractIntervals). No piece is ever stepped by one unit.
   it.each`
     aStart             | aEnd               | bStart             | bEnd               | expected                                              | reason
-    ${"2024-01-01"}    | ${"2024-06-30"}    | ${"2024-06-30"}    | ${"2024-12-31"}    | ${[{ start: "2024-01-01", end: "2024-06-29" }]}       | ${"A ends where B starts"}
-    ${"2024-06-30"}    | ${"2024-12-31"}    | ${"2024-01-01"}    | ${"2024-06-30"}    | ${[{ start: "2024-07-01", end: "2024-12-31" }]}       | ${"A starts where B ends"}
-    ${"+275760-09-12"} | ${"+275760-09-13"} | ${"+275760-09-10"} | ${"+275760-09-12"} | ${[{ start: "+275760-09-13", end: "+275760-09-13" }]} | ${"A ends on the last PlainDate"}
-    ${"-271821-04-19"} | ${"-271821-04-20"} | ${"-271821-04-20"} | ${"-271821-04-25"} | ${[{ start: "-271821-04-19", end: "-271821-04-19" }]} | ${"A starts on the first PlainDate"}
+    ${"2024-01-01"}    | ${"2024-06-30"}    | ${"2024-06-30"}    | ${"2024-12-31"}    | ${[{ start: "2024-01-01", end: "2024-06-30" }]}       | ${"A ends where B starts"}
+    ${"2024-06-30"}    | ${"2024-12-31"}    | ${"2024-01-01"}    | ${"2024-06-30"}    | ${[{ start: "2024-06-30", end: "2024-12-31" }]}       | ${"A starts where B ends"}
+    ${"+275760-09-12"} | ${"+275760-09-13"} | ${"+275760-09-10"} | ${"+275760-09-12"} | ${[{ start: "+275760-09-12", end: "+275760-09-13" }]} | ${"A ends on the last PlainDate"}
+    ${"-271821-04-19"} | ${"-271821-04-20"} | ${"-271821-04-20"} | ${"-271821-04-25"} | ${[{ start: "-271821-04-19", end: "-271821-04-20" }]} | ${"A starts on the first PlainDate"}
   `(
-    "returns $expected for touching A=[$aStart, $aEnd] minus B=[$bStart, $bEnd] ($reason)",
+    "returns $expected for touching A=[$aStart, $aEnd) minus B=[$bStart, $bEnd) ($reason)",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalDifferenceDate(aStart, aEnd, bStart, bEnd)).toEqual(
         expected,
@@ -20,7 +21,7 @@ describe("intervalDifferenceDate", () => {
 
   it.each`
     aStart          | aEnd            | bStart          | bEnd            | expected
-    ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-02"} | ${"2024-01-05"} | ${[{ start: "2024-01-01", end: "2024-01-01" }]}
+    ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-02"} | ${"2024-01-05"} | ${[]}
     ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${[]}
   `(
     "returns $expected for zero-length A=$aStart to $aEnd minus B=$bStart to $bEnd",
@@ -33,11 +34,13 @@ describe("intervalDifferenceDate", () => {
 
   it.each`
     aStart          | aEnd            | bStart          | bEnd            | expected
-    ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-06-01"} | ${"2024-07-01"} | ${{ result: [{ start: "2024-01-01", end: "2024-05-31" }, { start: "2024-07-02", end: "2024-12-31" }] }}
-    ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-03-01"} | ${"2024-10-31"} | ${{ result: [{ start: "2024-01-01", end: "2024-02-29" }, { start: "2024-11-01", end: "2024-12-31" }] }}
-    ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-06-01"} | ${"2024-12-31"} | ${{ result: [{ start: "2024-01-01", end: "2024-05-31" }] }}
-    ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-01-01"} | ${"2024-06-30"} | ${{ result: [{ start: "2024-07-01", end: "2024-12-31" }] }}
+    ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-06-01"} | ${"2024-07-01"} | ${{ result: [{ start: "2024-01-01", end: "2024-06-01" }, { start: "2024-07-01", end: "2024-12-31" }] }}
+    ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-03-01"} | ${"2024-10-31"} | ${{ result: [{ start: "2024-01-01", end: "2024-03-01" }, { start: "2024-10-31", end: "2024-12-31" }] }}
+    ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-06-01"} | ${"2024-12-31"} | ${{ result: [{ start: "2024-01-01", end: "2024-06-01" }] }}
+    ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-01-01"} | ${"2024-06-30"} | ${{ result: [{ start: "2024-06-30", end: "2024-12-31" }] }}
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-01-01"} | ${"2024-12-31"} | ${{ result: [] }}
+    ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-06-01"} | ${"2024-06-01"} | ${{ result: [{ start: "2024-01-01", end: "2024-12-31" }] }}
+    ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-12-31"} | ${"2025-01-10"} | ${{ result: [{ start: "2024-01-01", end: "2024-12-31" }] }}
   `(
     "returns $expected when A=$aStart to $aEnd and B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
@@ -48,13 +51,13 @@ describe("intervalDifferenceDate", () => {
   );
 
   // B entirely before A removes nothing from A: the remaining piece is A itself, never a piece that
-  // starts the day after B ends, inside the gap between them.
+  // starts where B ends, inside the gap between them.
   it.each`
     aStart          | aEnd            | bStart          | bEnd            | expected
     ${"2024-01-05"} | ${"2024-01-10"} | ${"2024-01-01"} | ${"2024-01-02"} | ${[{ start: "2024-01-05", end: "2024-01-10" }]}
     ${"2024-01-05"} | ${"2024-01-10"} | ${"2024-01-01"} | ${"2024-01-04"} | ${[{ start: "2024-01-05", end: "2024-01-10" }]}
   `(
-    "returns $expected for A=[$aStart, $aEnd] minus B=[$bStart, $bEnd] entirely before A",
+    "returns $expected for A=[$aStart, $aEnd) minus B=[$bStart, $bEnd) entirely before A",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalDifferenceDate(aStart, aEnd, bStart, bEnd)).toEqual(
         expected,
@@ -108,22 +111,22 @@ describe("intervalDifferenceDate", () => {
   it("computes the difference in the shared calendar when all four arguments carry the same tag", () => {
     expect(
       intervalDifferenceDate(
-        "5784-06-01[u-ca=hebrew]",
-        "5784-06-30[u-ca=hebrew]",
-        "5784-06-10[u-ca=hebrew]",
-        "5784-06-20[u-ca=hebrew]",
+        "2024-02-10[u-ca=hebrew]",
+        "2024-03-10[u-ca=hebrew]",
+        "2024-02-19[u-ca=hebrew]",
+        "2024-02-29[u-ca=hebrew]",
       ),
     ).toEqual([
-      { start: "5784-06-01[u-ca=hebrew]", end: "5784-06-09[u-ca=hebrew]" },
-      { start: "5784-06-21[u-ca=hebrew]", end: "5784-06-30[u-ca=hebrew]" },
+      { start: "2024-02-10[u-ca=hebrew]", end: "2024-02-19[u-ca=hebrew]" },
+      { start: "2024-02-29[u-ca=hebrew]", end: "2024-03-10[u-ca=hebrew]" },
     ]);
   });
 
   it("returns [] when calendars mismatch across the four arguments", () => {
     expect(
       intervalDifferenceDate(
-        "5784-06-01[u-ca=hebrew]",
-        "5784-06-30[u-ca=hebrew]",
+        "2024-02-10[u-ca=hebrew]",
+        "2024-03-10[u-ca=hebrew]",
         "2024-01-01",
         "2024-01-05",
       ),

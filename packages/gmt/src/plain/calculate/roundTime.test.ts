@@ -17,6 +17,22 @@ describe("roundTime", () => {
     },
   );
 
+  // Temporal §13.17 GetTemporalUnitValuedOption: "Both singular and plural unit names are accepted".
+  it.each`
+    value                   | unit              | expected
+    ${"12:34:56"}           | ${"hours"}        | ${"13:00:00"}
+    ${"12:34:56"}           | ${"minutes"}      | ${"12:35:00"}
+    ${"12:34:56.5"}         | ${"seconds"}      | ${"12:34:57"}
+    ${"12:34:56.123456789"} | ${"milliseconds"} | ${"12:34:56.123"}
+    ${"12:34:56.123456789"} | ${"microseconds"} | ${"12:34:56.123457"}
+    ${"12:34:56.123456789"} | ${"nanoseconds"}  | ${"12:34:56.123456789"}
+  `(
+    "returns $expected for $value rounded to the plural unit $unit",
+    ({ value, unit, expected }) => {
+      expect(roundTime(value, { smallestUnit: unit })).toBe(expected);
+    },
+  );
+
   it.each`
     value                   | unit             | roundingMode | expected
     ${"12:34:56"}           | ${"hour"}        | ${"floor"}   | ${"12:00:00"}
@@ -118,7 +134,9 @@ describe("roundTime", () => {
     ${"month"}
     ${"week"}
     ${"day"}
-    ${"hours"}
+    ${"days"}
+    ${"hourss"}
+    ${"Hours"}
     ${"minutez"}
     ${""}
     ${null}

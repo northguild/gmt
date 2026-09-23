@@ -1,24 +1,30 @@
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "@js-temporal/polyfill";
-import { plainDateTime } from "../../regex";
+import { halfOpenOverlap } from "../../internal";
+import { isValidDateTime } from "../validate";
 
 /**
- * Return true when intervals `[aStart, aEnd]` and `[bStart, bEnd]` share at least one instant.
+ * Return true when the half-open datetime intervals `[aStart, aEnd)` and `[bStart, bEnd)` share at
+ * least one moment.
  *
+ * - Half-open: an interval holds every `t` with `start <= t < end`, so `end` itself is not in it
+ *   (the rule CORE-6's `intervalsOverlap` uses). The test is `aStart < bEnd && bStart < aEnd`.
+ * - Touching intervals (`aEnd` equal to `bStart`) share no moment and do not overlap.
+ * - An empty interval (`start === end`) overlaps only an interval it lies strictly inside.
  * - Uses `Temporal.PlainDateTime.compare` for comparison.
- * - Touching intervals (`aEnd` equal to `bStart`) share that endpoint and DO overlap — returns `true`.
  * - Returns `false` if either interval is invalid (`start > end`).
  * - Returns `false` on invalid input (wrong type, malformed strings).
  *
  * @param aStart ISO 8601 datetime string for the first interval start
- * @param aEnd ISO 8601 datetime string for the first interval end
+ * @param aEnd ISO 8601 datetime string for the first interval end (excluded)
  * @param bStart ISO 8601 datetime string for the second interval start
- * @param bEnd ISO 8601 datetime string for the second interval end
+ * @param bEnd ISO 8601 datetime string for the second interval end (excluded)
  * @returns true if intervals overlap, or false on invalid input
  *
- * @example intervalsOverlapDateTime("2024-01-01T10:00:00", "2024-06-30T23:59:59", "2024-04-01T00:00:00", "2024-12-31T23:59:59") // true
- * @example intervalsOverlapDateTime("2024-01-01T10:00:00", "2024-06-30T23:59:59", "2024-07-01T00:00:00", "2024-12-31T23:59:59") // false (disjoint, one-second gap)
- * @example intervalsOverlapDateTime("2024-01-01T10:00:00", "2024-06-30T23:59:59", "2024-06-30T23:59:59", "2024-12-31T23:59:59") // true (touching)
- * @example intervalsOverlapDateTime("2024-01-01T10:00:00", "2024-06-30T23:59:59", "2024-07-02T00:00:00", "2024-12-31T23:59:59") // false (disjoint)
+ * @example intervalsOverlapDateTime("2024-01-01T09:00:00", "2024-01-01T13:00:00", "2024-01-01T12:00:00", "2024-01-01T17:00:00") // true
+ * @example intervalsOverlapDateTime("2024-01-01T09:00:00", "2024-01-01T12:00:00", "2024-01-01T12:00:00", "2024-01-01T17:00:00") // false (touching)
+ * @example intervalsOverlapDateTime("2024-01-01T09:00:00", "2024-01-01T17:00:00", "2024-01-01T12:00:00", "2024-01-01T12:00:00") // true (empty interval strictly inside)
+ * @example intervalsOverlapDateTime("2024-01-01T09:00:00", "2024-01-01T12:00:00", "2024-01-01T12:00:00", "2024-01-01T12:00:00") // false (empty interval at the end)
  * @example intervalsOverlapDateTime("invalid", "2024-06-30T23:59:59", "2024-04-01T00:00:00", "2024-12-31T23:59:59") // false
  */
 export function intervalsOverlapDateTime(
@@ -37,10 +43,10 @@ export function intervalsOverlapDateTime(
   }
 
   if (
-    !plainDateTime.test(aStart) ||
-    !plainDateTime.test(aEnd) ||
-    !plainDateTime.test(bStart) ||
-    !plainDateTime.test(bEnd)
+    !isValidDateTime(aStart) ||
+    !isValidDateTime(aEnd) ||
+    !isValidDateTime(bStart) ||
+    !isValidDateTime(bEnd)
   ) {
     return false;
   }
@@ -59,9 +65,10 @@ export function intervalsOverlapDateTime(
       return false;
     }
 
-    return (
-      Temporal.PlainDateTime.compare(aE, bS) >= 0 &&
-      Temporal.PlainDateTime.compare(bE, aS) >= 0
+    return halfOpenOverlap(
+      { start: aS, end: aE },
+      { start: bS, end: bE },
+      Temporal.PlainDateTime.compare,
     );
   } catch {
     return false;

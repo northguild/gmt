@@ -89,10 +89,15 @@ export const Reasoning = memo(
       if (isStreaming) {
         hasEverStreamedRef.current = true;
         if (startTimeRef.current === null) {
-          startTimeRef.current = Date.now();
+          // date-ban: elapsed time, not a date — and `performance.now()` is monotonic, so a
+          // clock adjustment mid-stream cannot make the reasoning look negative or hours long.
+          startTimeRef.current = performance.now();
         }
       } else if (startTimeRef.current !== null) {
-        setDuration(Math.ceil((Date.now() - startTimeRef.current) / MS_IN_S));
+        // date-ban: elapsed time against the monotonic clock above.
+        setDuration(
+          Math.ceil((performance.now() - startTimeRef.current) / MS_IN_S),
+        );
         startTimeRef.current = null;
       }
     }, [isStreaming, setDuration]);

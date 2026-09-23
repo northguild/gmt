@@ -103,13 +103,13 @@ function unix(unit: "milliseconds" | "seconds", label: string): ResetFormat {
     route: "/reference/utc/convert/convertUtcToUnix",
     zoned: false,
     format: (value) => {
-      const epoch = convertUtcToUnix(value, unit);
+      const epoch = convertUtcToUnix(value, { epochUnit: unit });
       return epoch === null ? "" : String(epoch);
     },
     call: () =>
       unit === "milliseconds"
         ? "convertUtcToUnix(resetsAt)"
-        : 'convertUtcToUnix(resetsAt, "seconds")',
+        : 'convertUtcToUnix(resetsAt, { epochUnit: "seconds" })',
   };
 }
 

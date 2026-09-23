@@ -181,4 +181,4 @@ GMT imports `@js-temporal/polyfill` everywhere (dependency `^0.5.1`) and never u
 - test262: `built-ins/Temporal/ZonedDateTime/from/argument-string-limits.js`.
 - js-temporal/temporal-polyfill: v0.5.1 `lib/ecmascript.ts`; commit `05ce7a3`; PR #359.
 - Reproductions: GMT's built `dist` (Node 24.21.0), Chromium 152 via Playwright, Node `--harmony-temporal`.
-- GMT specification: [CORE-6 spec](../specs/CORE-6-spec.md), [CORE-6 issue](../issues/CORE-6.md), [CORE-54 issue](../issues/CORE-54.md).
+- GMT specification: [CORE-6 spec](../specs/CORE-6-spec.md), [CORE-6 issue](../issues/CORE-6.md), [coding-standards § 8 half-open intervals](../../coding-standards.md#8-intervals-are-half-open-start-end).

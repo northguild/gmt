@@ -16,21 +16,27 @@ import { isValidUtc } from "../validate/isValidUtc";
  * @example minUtc([]) // null
  */
 export function minUtc(utcDateTimes: string[]): string | null {
-  if (!utcDateTimes.length) return null;
-
-  const valid = utcDateTimes.filter(isValidUtc);
-  if (!valid.length) return null;
-
   try {
-    const min = valid.reduce((currentMin, candidateStr) => {
-      const candidate = Temporal.Instant.from(candidateStr);
-      return Temporal.Instant.compare(candidate, currentMin) < 0
-        ? candidate
-        : currentMin;
-    }, Temporal.Instant.from(valid[0]));
+    if (!Array.isArray(utcDateTimes) || !utcDateTimes.length) return null;
 
-    return min.toString();
+    const valid = utcDateTimes.filter(isValidUtc);
+    if (!valid.length) return null;
+
+    try {
+      const min = valid.reduce((currentMin, candidateStr) => {
+        const candidate = Temporal.Instant.from(candidateStr);
+        return Temporal.Instant.compare(candidate, currentMin) < 0
+          ? candidate
+          : currentMin;
+      }, Temporal.Instant.from(valid[0]));
+
+      return min.toString();
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

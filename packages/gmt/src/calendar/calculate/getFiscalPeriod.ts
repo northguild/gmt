@@ -35,10 +35,12 @@ const DAYS_PER_WEEK = 7;
  *   runs 2023-01-29 to 2024-02-03. Organisations labelling by the end year should add one.
  * - **`year` is not a unique key for a rule anchored near 1 January.** A 52/53-week year is
  *   364 or 371 days, so it drifts against the calendar, and no label taken from a calendar
- *   year survives that for every anchor. Under `yearEndsOn: "2027-01-02"` — "the Saturday
- *   nearest to 31 December", a common convention — two consecutive fiscal years both start in
- *   2023 and share the label, and 2018, 2024 and 2029 label no fiscal year at all. Grouping by
- *   `year` there merges 104 weeks and drops a year. January/February anchors like the NRF's
+ *   year survives that for every anchor. Under `yearEndsOn: "2022-12-31"` — the Saturday
+ *   nearest to 31 December — two consecutive fiscal years both start in 2023 and share the
+ *   label, and 2020, 2025 and 2031 label no fiscal year at all. Grouping by `year` there
+ *   merges 104 weeks and drops a year. `"2027-01-02"` states a different rule, the Saturday
+ *   nearest to 2 January: it too gives 2023 twice, merging 105 weeks, and skips 2018, 2024
+ *   and 2029. January/February anchors like the NRF's
  *   are unaffected. If your rule sits near a year boundary, key on the fiscal year's own start
  *   date — which `yearEndsOn` determines, and which is yours to enumerate — not on `year`.
  *   GMT does not invent a label the inputs do not fix.
@@ -71,32 +73,41 @@ export function getFiscalPeriod(
   value: string,
   calendar: FiscalCalendar,
 ): { year: number; period: number; week: number } | null {
-  const pattern = calendar?.pattern;
-  const yearEndsOn = calendar?.yearEndsOn;
-
-  if (!isValidFiscalPattern(pattern) || !isValidDate(yearEndsOn)) {
-    return null;
-  }
-
-  const date = zonelessCalendarDate(value);
-  if (!date) return null;
-
   try {
-    const fiscalYear = fiscalYearOf(date, Temporal.PlainDate.from(yearEndsOn));
-    if (!fiscalYear) return null;
+    const pattern = calendar?.pattern;
+    const yearEndsOn = calendar?.yearEndsOn;
 
-    const { start, weeks } = fiscalYear;
-    const week =
-      Math.floor(
-        start.until(date, { largestUnit: "day" }).days / DAYS_PER_WEEK,
-      ) + 1;
+    if (!isValidFiscalPattern(pattern) || !isValidDate(yearEndsOn)) {
+      return null;
+    }
 
-    return {
-      year: start.year,
-      period: fiscalPeriodOfWeek(week, weeks, pattern),
-      week,
-    };
+    const date = zonelessCalendarDate(value);
+    if (!date) return null;
+
+    try {
+      const fiscalYear = fiscalYearOf(
+        date,
+        Temporal.PlainDate.from(yearEndsOn),
+      );
+      if (!fiscalYear) return null;
+
+      const { start, weeks } = fiscalYear;
+      const week =
+        Math.floor(
+          start.until(date, { largestUnit: "day" }).days / DAYS_PER_WEEK,
+        ) + 1;
+
+      return {
+        year: start.year,
+        period: fiscalPeriodOfWeek(week, weeks, pattern),
+        week,
+      };
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

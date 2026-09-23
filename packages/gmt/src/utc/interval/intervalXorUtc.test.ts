@@ -1,31 +1,24 @@
 import { intervalXorUtc } from "./intervalXorUtc";
 
 describe("intervalXorUtc", () => {
-  // Closed [start, end]: the shared endpoint is covered twice, so xor excludes it from both pieces,
-  // each stepping one unit in from it. Pieces list A's remainder, then B's.
+  // Half-open [start, end): the symmetric difference is every maximal run covered by exactly one
+  // interval, sorted by start. Pieces end exactly where the other interval starts (no one-unit
+  // steps), touching intervals form one run, and an empty interval contributes nothing.
   it.each`
-    aStart                    | aEnd                      | bStart                    | bEnd                      | expected                                                                                                                                                | reason
-    ${"2024-01-01T09:00:00Z"} | ${"2024-06-30T12:00:00Z"} | ${"2024-06-30T12:00:00Z"} | ${"2024-12-31T17:00:00Z"} | ${[{ start: "2024-01-01T09:00:00Z", end: "2024-06-30T11:59:59.999999999Z" }, { start: "2024-06-30T12:00:00.000000001Z", end: "2024-12-31T17:00:00Z" }]} | ${"A ends where B starts"}
-    ${"2024-06-30T12:00:00Z"} | ${"2024-12-31T17:00:00Z"} | ${"2024-01-01T09:00:00Z"} | ${"2024-06-30T12:00:00Z"} | ${[{ start: "2024-06-30T12:00:00.000000001Z", end: "2024-12-31T17:00:00Z" }, { start: "2024-01-01T09:00:00Z", end: "2024-06-30T11:59:59.999999999Z" }]} | ${"A starts where B ends"}
+    aStart                        | aEnd                         | bStart                       | bEnd                         | expected                                                                                                                            | reason
+    ${"2024-01-01T09:00:00Z"}     | ${"2024-01-01T13:00:00Z"}    | ${"2024-01-01T12:00:00Z"}    | ${"2024-01-01T17:00:00Z"}    | ${[{ start: "2024-01-01T09:00:00Z", end: "2024-01-01T12:00:00Z" }, { start: "2024-01-01T13:00:00Z", end: "2024-01-01T17:00:00Z" }]} | ${"story row: (A, C) xor (B, D)"}
+    ${"2024-01-01T09:00:00Z"}     | ${"2024-06-30T12:00:00Z"}    | ${"2024-06-30T12:00:00Z"}    | ${"2024-12-31T17:00:00Z"}    | ${[{ start: "2024-01-01T09:00:00Z", end: "2024-12-31T17:00:00Z" }]}                                                                 | ${"touching: one run"}
+    ${"2024-06-30T12:00:00Z"}     | ${"2024-12-31T17:00:00Z"}    | ${"2024-01-01T09:00:00Z"}    | ${"2024-06-30T12:00:00Z"}    | ${[{ start: "2024-01-01T09:00:00Z", end: "2024-12-31T17:00:00Z" }]}                                                                 | ${"touching, reversed order"}
+    ${"2024-01-01T09:00:00Z"}     | ${"2024-12-31T17:00:00Z"}    | ${"2024-04-01T11:00:00Z"}    | ${"2024-06-30T12:00:00Z"}    | ${[{ start: "2024-01-01T09:00:00Z", end: "2024-04-01T11:00:00Z" }, { start: "2024-06-30T12:00:00Z", end: "2024-12-31T17:00:00Z" }]} | ${"B inside A"}
+    ${"2024-01-01T09:00:00Z"}     | ${"2024-12-31T17:00:00Z"}    | ${"2024-01-01T09:00:00Z"}    | ${"2024-12-31T17:00:00Z"}    | ${[]}                                                                                                                               | ${"identical"}
+    ${"2024-07-01T13:00:00Z"}     | ${"2024-12-31T17:00:00Z"}    | ${"2024-01-01T09:00:00Z"}    | ${"2024-06-30T12:00:00Z"}    | ${[{ start: "2024-01-01T09:00:00Z", end: "2024-06-30T12:00:00Z" }, { start: "2024-07-01T13:00:00Z", end: "2024-12-31T17:00:00Z" }]} | ${"disjoint, sorted by start"}
+    ${"2024-01-01T09:00:00Z"}     | ${"2024-01-01T17:00:00Z"}    | ${"2024-01-01T12:00:00Z"}    | ${"2024-01-01T12:00:00Z"}    | ${[{ start: "2024-01-01T09:00:00Z", end: "2024-01-01T17:00:00Z" }]}                                                                 | ${"empty B"}
+    ${"2024-01-01T09:00:00.000Z"} | ${"2024-01-01T13:00Z"}       | ${"2024-01-01T12:00:00Z"}    | ${"2024-01-01T17:00:00Z"}    | ${[{ start: "2024-01-01T09:00:00Z", end: "2024-01-01T12:00:00Z" }, { start: "2024-01-01T13:00:00Z", end: "2024-01-01T17:00:00Z" }]} | ${"re-serialised"}
+    ${"+275760-09-12T00:00:00Z"}  | ${"+275760-09-13T00:00:00Z"} | ${"+275760-09-12T12:00:00Z"} | ${"+275760-09-13T00:00:00Z"} | ${[{ start: "+275760-09-12T00:00:00Z", end: "+275760-09-12T12:00:00Z" }]}                                                           | ${"ends on the last instant"}
   `(
-    "returns $expected for touching A=[$aStart, $aEnd] xor B=[$bStart, $bEnd] ($reason)",
+    "returns $expected for A=[$aStart, $aEnd) xor B=[$bStart, $bEnd) ($reason)",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalXorUtc(aStart, aEnd, bStart, bEnd)).toEqual(expected);
-    },
-  );
-
-  it.each`
-    aStart                    | aEnd                      | bStart                    | bEnd                      | expected
-    ${"2024-01-01T09:00:00Z"} | ${"2024-06-30T12:00:00Z"} | ${"2024-04-01T11:00:00Z"} | ${"2024-12-31T17:00:00Z"} | ${{ result: [{ start: "2024-01-01T09:00:00Z", end: "2024-04-01T10:59:59.999999999Z" }, { start: "2024-06-30T12:00:00.000000001Z", end: "2024-12-31T17:00:00Z" }] }}
-    ${"2024-01-01T09:00:00Z"} | ${"2024-12-31T17:00:00Z"} | ${"2024-04-01T11:00:00Z"} | ${"2024-06-30T12:00:00Z"} | ${{ result: [{ start: "2024-01-01T09:00:00Z", end: "2024-04-01T10:59:59.999999999Z" }, { start: "2024-06-30T12:00:00.000000001Z", end: "2024-12-31T17:00:00Z" }] }}
-    ${"2024-01-01T09:00:00Z"} | ${"2024-12-31T17:00:00Z"} | ${"2024-01-01T09:00:00Z"} | ${"2024-12-31T17:00:00Z"} | ${{ result: [] }}
-    ${"2024-01-01T09:00:00Z"} | ${"2024-06-30T12:00:00Z"} | ${"2024-07-01T13:00:00Z"} | ${"2024-12-31T17:00:00Z"} | ${{ result: [{ start: "2024-01-01T09:00:00Z", end: "2024-06-30T12:00:00Z" }, { start: "2024-07-01T13:00:00Z", end: "2024-12-31T17:00:00Z" }] }}
-  `(
-    "returns $expected when A=$aStart to $aEnd and B=$bStart to $bEnd",
-    ({ aStart, aEnd, bStart, bEnd, expected }) => {
-      expect(intervalXorUtc(aStart, aEnd, bStart, bEnd)).toEqual(
-        expected.result,
-      );
     },
   );
 

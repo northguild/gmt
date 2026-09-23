@@ -92,7 +92,7 @@ describe("sumIntervals", () => {
     ${{ start: "2024-01-01T17:00:00Z", end: "2024-01-01T09:00:00Z" }}                 | ${"inverted"}
     ${{ start: "2024-01-01T09:30:00Z", end: "2024-01-01T10:00:00+01:00" }}            | ${"inverted by instant, ascending as text"}
     ${{ start: "2016-12-31T23:59:60Z", end: "2017-01-01T00:00:00Z" }}                 | ${"leap second"}
-    ${{ start: "2024-01-01T09:00:00Z[u-ca=iso8601]", end: "2024-01-01T17:00:00Z" }}   | ${"calendar annotation"}
+    ${{ start: "2024-01-01T09:00:00Z[!foo=bar]", end: "2024-01-01T17:00:00Z" }}       | ${"unknown critical annotation"}
     ${{ start: "2024-01-01T09:00:00", end: "2024-01-01T17:00:00Z" }}                  | ${"zoneless"}
     ${{ start: "2024-01-01T09:00:00[UTC]", end: "2024-01-01T17:00:00Z" }}             | ${"bracket-only zone"}
     ${{ start: "2024-01-01", end: "2024-01-01T17:00:00Z" }}                           | ${"date only"}
@@ -108,5 +108,23 @@ describe("sumIntervals", () => {
     mockTemporalDurationFromThrow();
 
     expect(sumIntervals([A])).toBe("");
+  });
+
+  // Temporal.Instant.from ignores a calendar annotation (critical or not) and an elective unknown
+  // annotation (proposal-temporal ParseTemporalInstantString; RFC 9557 §3.3), so these endpoints
+  // are the unannotated instants. GMT echoes the caller's text (CORE-6), annotation included.
+  it("sums annotated disjoint intervals by instant: [09:00Z, 12:00Z) + [13:00Z, 17:00Z) → PT7H", () => {
+    expect(
+      sumIntervals([
+        {
+          start: "2024-01-01T09:00:00Z[u-ca=iso8601]",
+          end: "2024-01-01T12:00:00Z[foo=bar]",
+        },
+        {
+          start: "2024-01-01T13:00:00Z[!u-ca=hebrew]",
+          end: "2024-01-01T17:00:00Z",
+        },
+      ]),
+    ).toBe("PT7H");
   });
 });

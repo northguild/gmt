@@ -1,5 +1,9 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { battleTestTimeZones } from "../../test";
+import {
+  battleTestTimeZones,
+  dateLineCrossingAt,
+  dateLineCrossingTimeZones,
+} from "../../test";
 import { roundZoned } from "./roundZoned";
 
 const baseInstant = Temporal.Instant.from("2024-06-15T16:34:56.789123456Z");
@@ -508,6 +512,8 @@ describe("roundZoned", () => {
   it.each`
     invalidUnit
     ${"invalid-unit"}
+    ${"hourss"}
+    ${"Days"}
     ${""}
     ${null}
     ${undefined}
@@ -519,12 +525,28 @@ describe("roundZoned", () => {
     ).toBe("");
   });
 
+  // Temporal §13.17 GetTemporalUnitValuedOption: "Both singular and plural unit names are accepted".
+  it.each`
+    value                                                 | unit              | expected
+    ${"2024-06-15T12:34:56-04:00[America/New_York]"}      | ${"days"}         | ${"2024-06-16T00:00:00-04:00[America/New_York]"}
+    ${"2024-06-15T12:34:56-04:00[America/New_York]"}      | ${"hours"}        | ${"2024-06-15T13:00:00-04:00[America/New_York]"}
+    ${"2024-06-15T12:34:56-04:00[America/New_York]"}      | ${"minutes"}      | ${"2024-06-15T12:35:00-04:00[America/New_York]"}
+    ${"2024-06-15T12:34:56.5-04:00[America/New_York]"}    | ${"seconds"}      | ${"2024-06-15T12:34:57-04:00[America/New_York]"}
+    ${"2024-06-15T12:34:56.1234-04:00[America/New_York]"} | ${"milliseconds"} | ${"2024-06-15T12:34:56.123-04:00[America/New_York]"}
+  `(
+    "returns $expected for $value rounded to the plural unit $unit",
+    ({ value, unit, expected }) => {
+      expect(roundZoned(value, { smallestUnit: unit })).toBe(expected);
+    },
+  );
+
   // unsupported date units (year, month, week) return ""
   it.each`
     unit
     ${"year"}
     ${"month"}
     ${"week"}
+    ${"weeks"}
   `("returns empty string for unsupported date unit $unit", ({ unit }) => {
     expect(
       roundZoned("2024-06-15T12:34:56-04:00[America/New_York]", {
@@ -579,6 +601,31 @@ describe("roundZoned at the maximum instant", () => {
     "rounds $value to the $smallestUnit giving $expected",
     ({ value, smallestUnit, expected }) => {
       expect(roundZoned(value, { smallestUnit })).toBe(expected);
+    },
+  );
+});
+
+// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
+// are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
+// 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
+
+describe("roundZoned across the 1844 date-line crossings (zoned.E)", () => {
+  // 1844-12-30 is 24 hours long, so its noon is an exact half and halfExpand rounds up to the
+  // next day's start, the crossing; 11:00 rounds down.
+  it.each(dateLineCrossingTimeZones)(
+    "rounds 1844-12-30 in $timeZone to a day",
+    (crossing) => {
+      expect(
+        roundZoned(dateLineCrossingAt(crossing, -12).toString(), {
+          smallestUnit: "day",
+        }),
+      ).toBe(dateLineCrossingAt(crossing, 0).toString());
+      expect(
+        roundZoned(dateLineCrossingAt(crossing, -13).toString(), {
+          smallestUnit: "day",
+        }),
+      ).toBe(dateLineCrossingAt(crossing, -24).toString());
     },
   );
 });

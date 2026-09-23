@@ -1,8 +1,7 @@
+// fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "@js-temporal/polyfill";
 import { countZonedBuckets, resolveDateTimeUnit } from "../../internal";
 import { isValidDateTimeUnit } from "../../plain/validate";
-import { isLeapSecond } from "../../plain/validate/isLeapSecond";
-import { utcDateTime } from "../../regex/utc-date-time";
 import { isValidUtc } from "../validate/isValidUtc";
 
 /**
@@ -12,8 +11,8 @@ import { isValidUtc } from "../validate/isValidUtc";
  *   from `diffUtc`, which measures exact elapsed duration. An interval from 23:59 to 00:01 is
  *   two minutes long but touches 2 day boundaries.
  * - The end boundary is excluded: midnight to midnight two days later counts 2 days.
- * - A zero-length interval counts 1 when it sits mid-unit and 0 when it sits exactly on a
- *   unit boundary.
+ * - A zero-length interval (`start === end`) returns `0`: the empty `[start, start)` holds no instant,
+ *   so it touches no unit (before 1.16.0 it counted 1 when mid-unit).
  * - Boundaries are UTC boundaries — no DST is involved.
  * - Weeks start on Monday (ISO 8601).
  * - Accepts singular or plural units (`"day"` and `"days"` behave identically).
@@ -28,8 +27,7 @@ import { isValidUtc } from "../validate/isValidUtc";
  * @example intervalCountUtc("2024-01-01T23:59:00Z", "2024-01-02T00:01:00Z", "day") // 2
  * @example intervalCountUtc("2024-01-01T00:00:00Z", "2024-01-03T00:00:00Z", "day") // 2
  * @example intervalCountUtc("2024-01-15T00:00:00Z", "2024-03-10T00:00:00Z", "month") // 3
- * @example intervalCountUtc("2024-01-01T05:00:00Z", "2024-01-01T05:00:00Z", "day") // 1 (zero-length, mid-day)
- * @example intervalCountUtc("2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z", "day") // 0 (zero-length, on the boundary)
+ * @example intervalCountUtc("2024-01-01T05:00:00Z", "2024-01-01T05:00:00Z", "day") // 0 (zero-length: holds no instant)
  * @example intervalCountUtc("invalid", "2024-01-02T00:00:00Z", "day") // null
  */
 export function intervalCountUtc(
@@ -38,14 +36,6 @@ export function intervalCountUtc(
   unit: string,
 ): number | null {
   if (typeof start !== "string" || typeof end !== "string") {
-    return null;
-  }
-
-  if (!utcDateTime.test(start) || !utcDateTime.test(end)) {
-    return null;
-  }
-
-  if (isLeapSecond(start) || isLeapSecond(end)) {
     return null;
   }
 
@@ -67,8 +57,15 @@ export function intervalCountUtc(
     const startVal = Temporal.Instant.from(start).toZonedDateTimeISO("UTC");
     const endVal = Temporal.Instant.from(end).toZonedDateTimeISO("UTC");
 
-    if (Temporal.ZonedDateTime.compare(startVal, endVal) > 0) {
+    const order = Temporal.ZonedDateTime.compare(startVal, endVal);
+
+    if (order > 0) {
       return null;
+    }
+
+    // An empty interval [t, t) holds no instant, so it touches no unit (CORE-6 empty-interval rule).
+    if (order === 0) {
+      return 0;
     }
 
     return countZonedBuckets(startVal, endVal, resolvedUnit);

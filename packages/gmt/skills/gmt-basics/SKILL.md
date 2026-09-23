@@ -49,7 +49,9 @@ input before you act on it.
 1. **ISO 8601 strings in.** Public APIs consume ISO strings, IANA timezone ids,
    or numeric Unix epochs — never `new Date()`.
 2. **Sentinel returns, never throws.** `""` for strings, `null` for numbers,
-   `false` for booleans, `[]` for arrays. Always check before using.
+   `false` for booleans, `[]` for arrays. Always check before using. This holds
+   for a `null` or wrong-typed argument too (`addDate(x, null)` is `""`), so a
+   `try`/`catch` around a GMT call is dead code.
 3. **Read the README.** This skill is a routing pointer. For full API
    signatures, locale matrices, and code examples, read the installed package's
    `README.md` and the source JSDoc of the function you intend to call.
@@ -73,13 +75,41 @@ input before you act on it.
 
 ## Common pitfalls
 
-- `formatRelativeDate` requires a `reference` option — without it, you get `""`.
+- `formatRelative*` measure from now when `reference` is omitted, so the output
+  changes from day to day. Pass `reference` whenever the result must be deterministic.
 - `parseDateWithPattern`, `parseRfc2822` and `parseHttp` return `""` on
   shape-valid-but-unreal dates such as 31 February (regex only proves shape;
   Temporal validates the real value). Parsers reject; only arithmetic clamps.
+- `parseRfc2822` reads everything RFC 5322 says a receiver must: comments,
+  folding whitespace, any case, two-digit years and zone names such as `EST`
+  (an unknown name reads as `+00:00`). `parseHttp` reads all three HTTP-date
+  forms, including `rfc850-date` and `asctime-date`. Both return `""` when the
+  day name contradicts the date (`"Sat, 15 Mar 2024 …"`), so do not synthesise
+  a day name; omit it. The `rfc2822DateTime` and `httpDate` regexes stay strict
+  and match only what GMT writes, so do not use them to pre-filter parser input.
+- `formatRfc2822`, `formatHttp` and `formatRfc3339` return `""` for a year their
+  grammar cannot hold (before 0000, or after 9999 for RFC 3339 and HTTP).
+  `formatRfc3339` writes a sub-minute historical offset as the same instant at
+  `+00:00`. Use Temporal's `toString()` when you need any year.
+- Text formatters follow ECMA-402 as Temporal amends it, so text equals the
+  `…ToParts` result joined. `era` or `timeZoneName` alone keep the default
+  fields. A plain value never shows a zone name, and a style for fields the type
+  lacks (`timeStyle` on `formatDate`, `dateStyle` on `formatTime`) returns `""`.
+  Zoned formatters return `""`/`[]` for a `timeZone` option: to show an instant
+  in another zone, use `formatUtc(value, locale, { timeZone })`.
+- Leap seconds (`:60`) are invalid in every spelling (`T`, `t`, space, basic
+  format). `isLeapSecond` tells you one is there. Validators return `false`.
+- `isValidTimeZone` accepts every IANA name, including single-component links
+  such as `Japan`, `Zulu` and `EST5EDT`, and ignores case. It also accepts
+  offset zone ids such as `"+05:00"`, as Temporal does.
+- `isLeapYear` and `getWeekNumber` take a `PlainDate` only: a date-time returns
+  `false`/`null`. Pass `value.slice(0, 10)` for a date-time's date.
 - Week numbers are ambiguous across year boundaries — `getIsoWeekDate` returns
   the week-numbering year with the week so the pair can never drift apart, and
   `getWeekYear` reads that year on its own.
+- `getLocaleWeekYear` and `getWeeksInLocaleWeekYear` use the ISO rule (`minimalDays` 4)
+  unless you pass `{ minimalDays }`: ECMA-402 no longer exposes a locale's value. CLDR's
+  world default is `1` (`en-US` included), so pass `{ minimalDays: 1 }` for those locales.
 - The `calendar/` identifier functions take a **zoneless** date or datetime. An
   instant has no calendar date until you name a zone — floor it with
   `floorToZone` first, or convert it in the zone you mean.
@@ -94,4 +124,4 @@ input before you act on it.
 ## References
 
 - [README — API Surface and Quick Start](README.md)
-- [Full API reference](/reference/plain)
+- [Core date operations guides](/guides/core-date-operations/get-current/)

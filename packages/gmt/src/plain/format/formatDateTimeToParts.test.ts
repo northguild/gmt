@@ -38,6 +38,154 @@ describe("formatDateTimeToParts", () => {
     });
   });
 
+  describe("no options — ECMA-402 GetDateTimeFormat(~any~, ~all~) defaults", () => {
+    // With no required field and no dateStyle/timeStyle, ECMA-402 (as amended
+    // by Temporal) formats a PlainDateTime with year, month, day, hour, minute
+    // and second all "numeric" — the output PlainDateTime#toLocaleString gives.
+    // Expected values: runtime Intl.DateTimeFormat given those six fields
+    // explicitly (timeZone "UTC"), cross-checked against the polyfill's
+    // Intl.DateTimeFormat#formatToParts(plainDateTime).
+    it.each`
+      locale                  | expected
+      ${MustTestLocales.enUS} | ${[{ type: "month", value: "3" }, { type: "literal", value: "/" }, { type: "day", value: "15" }, { type: "literal", value: "/" }, { type: "year", value: "2024" }, { type: "literal", value: ", " }, { type: "hour", value: "2" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }, { type: "literal", value: ":" }, { type: "second", value: "00" }, { type: "literal", value: " " }, { type: "dayPeriod", value: "PM" }]}
+      ${MustTestLocales.deDE} | ${[{ type: "day", value: "15" }, { type: "literal", value: "." }, { type: "month", value: "3" }, { type: "literal", value: "." }, { type: "year", value: "2024" }, { type: "literal", value: ", " }, { type: "hour", value: "14" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }, { type: "literal", value: ":" }, { type: "second", value: "00" }]}
+    `(
+      "no options for $locale formats date and time to the second",
+      ({ locale, expected }) => {
+        const actual = formatDateTimeToParts("2024-03-15T14:30:00", locale);
+        expectDateTimeEqual(JSON.stringify(actual), JSON.stringify(expected));
+      },
+    );
+
+    it("era-only options still get the date and time defaults (era is not a required field)", () => {
+      const actual = formatDateTimeToParts(
+        "2024-03-15T14:30:00",
+        MustTestLocales.enUS,
+        { era: "short" },
+      );
+      const expected = [
+        { type: "month", value: "3" },
+        { type: "literal", value: "/" },
+        { type: "day", value: "15" },
+        { type: "literal", value: "/" },
+        { type: "year", value: "2024" },
+        { type: "literal", value: " " },
+        { type: "era", value: "AD" },
+        { type: "literal", value: ", " },
+        { type: "hour", value: "2" },
+        { type: "literal", value: ":" },
+        { type: "minute", value: "30" },
+        { type: "literal", value: ":" },
+        { type: "second", value: "00" },
+        { type: "literal", value: " " },
+        { type: "dayPeriod", value: "PM" },
+      ];
+      expectDateTimeEqual(JSON.stringify(actual), JSON.stringify(expected));
+    });
+
+    it("an explicit field set is not given defaults", () => {
+      const actual = formatDateTimeToParts(
+        "2024-03-15T14:30:00",
+        MustTestLocales.enUS,
+        { hour: "numeric", minute: "numeric" },
+      );
+      const expected = [
+        { type: "hour", value: "2" },
+        { type: "literal", value: ":" },
+        { type: "minute", value: "30" },
+        { type: "literal", value: " " },
+        { type: "dayPeriod", value: "PM" },
+      ];
+      expectDateTimeEqual(JSON.stringify(actual), JSON.stringify(expected));
+    });
+  });
+
+  describe("a zoneless value never prints a zone name", () => {
+    // timeZoneName is not a field a PlainDateTime format inherits
+    // (GetDateTimeFormat inherit ~relevant~), so the internal UTC anchor
+    // must never surface as "UTC".
+    it.each`
+      description                                    | options                                      | expected
+      ${"timeZoneName short alone (defaults apply)"} | ${{ timeZoneName: "short" }}                 | ${[{ type: "month", value: "3" }, { type: "literal", value: "/" }, { type: "day", value: "15" }, { type: "literal", value: "/" }, { type: "year", value: "2024" }, { type: "literal", value: ", " }, { type: "hour", value: "2" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }, { type: "literal", value: ":" }, { type: "second", value: "00" }, { type: "literal", value: " " }, { type: "dayPeriod", value: "PM" }]}
+      ${"hour with timeZoneName long"}               | ${{ hour: "numeric", timeZoneName: "long" }} | ${[{ type: "hour", value: "2" }, { type: "literal", value: " " }, { type: "dayPeriod", value: "PM" }]}
+    `("$description produces no timeZoneName part", ({ options, expected }) => {
+      const actual = formatDateTimeToParts(
+        "2024-03-15T14:30:00",
+        MustTestLocales.enUS,
+        options,
+      );
+      expectDateTimeEqual(JSON.stringify(actual), JSON.stringify(expected));
+    });
+  });
+
+  describe("a timeStyle never brings a zone name (AdjustDateTimeStyleFormat)", () => {
+    // [[TemporalPlainDateTimeFormat]] = AdjustDateTimeStyleFormat(…,
+    // « weekday, era, year, month, day, dayPeriod, hour, minute, second,
+    // fractionalSecondDigits »): the long/full time formats' timeZoneName is
+    // removed and the remaining hour, minute and second are kept. The expected
+    // parts are the runtime Intl.DateTimeFormat medium time format at the UTC
+    // anchor — the same fields, no zone.
+    const EN_US_NOON = [
+      { type: "hour", value: "12" },
+      { type: "literal", value: ":" },
+      { type: "minute", value: "00" },
+      { type: "literal", value: ":" },
+      { type: "second", value: "00" },
+      { type: "literal", value: "\u202f" },
+      { type: "dayPeriod", value: "PM" },
+    ];
+    const EN_US_FULL_DATE = [
+      { type: "weekday", value: "Thursday" },
+      { type: "literal", value: ", " },
+      { type: "month", value: "February" },
+      { type: "literal", value: " " },
+      { type: "day", value: "29" },
+      { type: "literal", value: ", " },
+      { type: "year", value: "2024" },
+      { type: "literal", value: " at " },
+    ];
+    const DE_DE_MEDIUM = [
+      { type: "day", value: "29" },
+      { type: "literal", value: "." },
+      { type: "month", value: "02" },
+      { type: "literal", value: "." },
+      { type: "year", value: "2024" },
+      { type: "literal", value: ", " },
+      { type: "hour", value: "12" },
+      { type: "literal", value: ":" },
+      { type: "minute", value: "00" },
+      { type: "literal", value: ":" },
+      { type: "second", value: "00" },
+    ];
+
+    it.each`
+      locale                  | options                                       | expected
+      ${MustTestLocales.enUS} | ${{ timeStyle: "long" }}                      | ${EN_US_NOON}
+      ${MustTestLocales.enUS} | ${{ timeStyle: "full" }}                      | ${EN_US_NOON}
+      ${MustTestLocales.enUS} | ${{ dateStyle: "full", timeStyle: "full" }}   | ${[...EN_US_FULL_DATE, ...EN_US_NOON]}
+      ${MustTestLocales.deDE} | ${{ dateStyle: "medium", timeStyle: "long" }} | ${DE_DE_MEDIUM}
+    `(
+      "$locale with $options has no timeZoneName part",
+      ({ locale, options, expected }) => {
+        const actual = formatDateTimeToParts(
+          "2024-02-29T12:00",
+          locale,
+          options,
+        );
+        expectDateTimeEqual(JSON.stringify(actual), JSON.stringify(expected));
+      },
+    );
+
+    it("dateStyle with an explicit timeZoneName is a TypeError in CreateDateTimeFormat, so []", () => {
+      expect(
+        formatDateTimeToParts("2024-02-29T12:00", MustTestLocales.enUS, {
+          dateStyle: "full",
+          timeZoneName: "short",
+        }),
+      ).toEqual([]);
+    });
+  });
+
   describe("part order differs between locales", () => {
     it("en-US puts month before day; fr-FR puts day before month", () => {
       const enParts = formatDateTimeToParts(
@@ -137,6 +285,19 @@ describe("formatDateTimeToParts", () => {
       );
       expect(emptyOpts).toEqual(noOpts);
     });
+
+    it("an option present as undefined is read as absent (ECMA-402 GetOption), so defaults still fill it", () => {
+      const noOpts = formatDateTimeToParts(
+        "2024-03-15T14:30:00",
+        MustTestLocales.enUS,
+      );
+      const undefinedYear = formatDateTimeToParts(
+        "2024-03-15T14:30:00",
+        MustTestLocales.enUS,
+        { year: undefined },
+      );
+      expect(undefinedYear).toEqual(noOpts);
+    });
   });
 
   describe("invalid input", () => {
@@ -153,5 +314,51 @@ describe("formatDateTimeToParts", () => {
     `("returns [] for invalid input: $value", ({ value }) => {
       expect(formatDateTimeToParts(value as never)).toEqual([]);
     });
+  });
+
+  // ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale data
+  // is used, and a malformed tag anywhere in the list is invalid input. Expected strings from native
+  // Intl with the same list.
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"3 févr. 2024, 14:30"}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
+  `(
+    "returns $expected (parts joined) for locale list $locale",
+    ({ locale, expected }) => {
+      const actual = formatDateTimeToParts("2024-02-03T14:30:45", locale, {
+        dateStyle: "medium",
+        timeStyle: "short",
+      });
+      expect(
+        Array.isArray(actual)
+          ? actual.map((part) => part.value).join("")
+          : actual,
+      ).toEqual(expected);
+    },
+  );
+});
+
+// Plan #14: ECMA-402 CoerceOptionsToObject throws TypeError for null options and wraps any other
+// primitive with ToObject, which carries no formatting fields, so a string or number formats with
+// the defaults. Expected strings from native Chromium 153 (`toLocaleString("en-US", 1)` and
+// `new Intl.DateTimeFormat("en-US", null)`, which throws).
+describe("formatDateTimeToParts with primitive options", () => {
+  it.each`
+    options   | expected
+    ${null}   | ${""}
+    ${"long"} | ${"2/3/2024, 2:30:00 PM"}
+    ${1}      | ${"2/3/2024, 2:30:00 PM"}
+  `("returns $expected for options $options", ({ options, expected }) => {
+    expectDateTimeEqual(
+      formatDateTimeToParts(
+        "2024-02-03T14:30:00",
+        MustTestLocales.enUS,
+        options as never,
+      )
+        .map((part) => part.value)
+        .join(""),
+      expected,
+    );
   });
 });

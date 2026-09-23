@@ -1,7 +1,8 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { resolveOverflow } from "../../internal";
-import type { Disambiguation, Offset, Overflow } from "../../types";
+import type { Overflow } from "../../types";
 import { isValidUtc } from "../validate/isValidUtc";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return a UTC Instant string with the given `fields` set on `value`.
@@ -17,15 +18,13 @@ import { isValidUtc } from "../validate/isValidUtc";
  * - `overflow` ("constrain" (default) | "reject") controls out-of-range results, e.g. setting
  *   `month: 2` on a value whose `day` is 31: "constrain" clamps to Feb 29/28, "reject" throws
  *   (resulting in "").
- * - `disambiguation` and `offset` are accepted for API consistency with `setZoned`/`setUnix`,
- *   but are **permanently inert** here: "UTC" has no DST transitions, so there is never an
- *   ambiguous local time or a stale offset for either option to act on (same precedent as
- *   `startOfUtc`/`endOfUtc`, Story C1/C2). Do not "fix" this by removing them.
+ * - There are no `disambiguation` or `offset` options (removed in 1.16.0): a UTC instant's wall
+ *   clock is never ambiguous and its offset is always +00:00, so neither had anything to act on.
  * - Returns "" for invalid input.
  *
  * @param value ISO UTC datetime string (e.g. "2024-03-10T12:00:00Z")
  * @param fields Partial<Temporal.ZonedDateTimeLike> object (excluding calendar/timeZone/offset) specifying fields to set
- * @param options optional: overflow ("constrain" | "reject"), disambiguation (accepted but inert, see above), offset (accepted but inert, see above)
+ * @param options optional: overflow ("constrain" | "reject")
  * @returns UTC Instant string with fields set, or "" on invalid input
  *
  * @example setUtc("2024-03-10T12:00:00Z", { hour: 9 }) // "2024-03-10T09:00:00Z"
@@ -39,27 +38,33 @@ export function setUtc(
   fields: Omit<Temporal.ZonedDateTimeLike, "calendar" | "timeZone" | "offset">,
   options?: {
     overflow?: Overflow;
-    disambiguation?: Disambiguation;
-    offset?: Offset;
   },
 ): string {
-  if (!isValidUtc(value)) return "";
-
-  const overflow = resolveOverflow(options?.overflow);
-  const disambiguation = options?.disambiguation ?? "compatible";
-  const offset = options?.offset ?? "ignore";
-
   try {
-    const instant = Temporal.Instant.from(value);
-    const zoned = instant.toZonedDateTimeISO("UTC");
-    // Temporal.ZonedDateTime.prototype.with() throws on an empty fields object ("no supported
-    // properties found") rather than treating it as a no-op, so short-circuit here.
-    const result =
-      Object.keys(fields).length === 0
-        ? zoned
-        : zoned.with(fields, { overflow, disambiguation, offset });
-    return result.toInstant().toString();
+    if (!isOptionsArgument(options)) {
+      return "";
+    }
+
+    if (!isValidUtc(value)) return "";
+
+    const overflow = resolveOverflow(options?.overflow);
+
+    try {
+      const instant = Temporal.Instant.from(value);
+      const zoned = instant.toZonedDateTimeISO("UTC");
+      // Temporal.ZonedDateTime.prototype.with() throws on an empty fields object ("no supported
+      // properties found") rather than treating it as a no-op, so short-circuit here.
+      const result =
+        Object.keys(fields).length === 0
+          ? zoned
+          : zoned.with(fields, { overflow });
+      return result.toInstant().toString();
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

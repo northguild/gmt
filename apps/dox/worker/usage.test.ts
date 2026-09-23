@@ -16,8 +16,9 @@ import {
   type UsageStore,
 } from "./usage";
 import { BRAINS } from "../src/lib/chat-constants";
+import { convertUtcToUnix } from "@northguild/gmt";
 
-const NOW = Date.UTC(2026, 5, 15, 19, 0, 0); // noon Pacific
+const NOW = convertUtcToUnix("2026-06-15T19:00:00Z")!; // noon Pacific
 
 /** An in-memory stand-in for KV. `failOn` lets a test make a specific key
  * throw, which is how the "never fail a chat" promise gets proved. */
@@ -96,9 +97,9 @@ describe("readUsage / recordRequest", () => {
   it("buckets a Gemini brain by Pacific day, so a UTC rollover does not reset it", async () => {
     const store = fakeStore();
     // 23:00 Pacific and 01:00 UTC the next calendar day are the same PT day.
-    const latePacific = Date.UTC(2026, 5, 16, 6, 0, 0);
+    const latePacific = convertUtcToUnix("2026-06-16T06:00:00Z")!;
     await recordRequest(store, geminiBrain, "v1", latePacific);
-    const stillSameDay = Date.UTC(2026, 5, 16, 6, 30, 0);
+    const stillSameDay = convertUtcToUnix("2026-06-16T06:30:00Z")!;
     const snapshot = await readUsage(store, BRAINS, "v1", stillSameDay);
     expect(snapshot.visitor).toBe(1);
     expect(snapshot.perBrain[geminiBrain.id]).toBe(1);
@@ -128,9 +129,9 @@ describe("readUsage / recordRequest", () => {
 
 describe("each brain on its provider's clock (DOX-C4)", () => {
   // 16:30 PDT on the 15th — the 15th in both zones.
-  const beforeUtcMidnight = Date.UTC(2026, 5, 15, 23, 30, 0);
+  const beforeUtcMidnight = convertUtcToUnix("2026-06-15T23:30:00Z")!;
   // 17:30 PDT, still the 15th in Pacific but already the 16th in UTC.
-  const afterUtcMidnight = Date.UTC(2026, 5, 16, 0, 30, 0);
+  const afterUtcMidnight = convertUtcToUnix("2026-06-16T00:30:00Z")!;
 
   it("refills a Workers AI count at UTC midnight and a Gemini count at Pacific midnight", async () => {
     const store = fakeStore();
@@ -150,11 +151,11 @@ describe("each brain on its provider's clock (DOX-C4)", () => {
     // on the 16th (08:00Z, still the 16th in UTC). Bucketed by the Pacific day
     // this mark vanished at Pacific midnight, sixteen hours too early.
     const store = fakeStore();
-    const markedAt = Date.UTC(2026, 5, 16, 1, 0, 0);
+    const markedAt = convertUtcToUnix("2026-06-16T01:00:00Z")!;
     await markBrain(store, workersAIBrain, "spent", markedAt);
     await markBrain(store, geminiBrain, "spent", markedAt);
 
-    const readAt = Date.UTC(2026, 5, 16, 8, 0, 0);
+    const readAt = convertUtcToUnix("2026-06-16T08:00:00Z")!;
     const { states } = await readUsage(store, BRAINS, "v1", readAt);
     expect(states[workersAIBrain.id]).toBe("spent");
     expect(states[geminiBrain.id]).toBe("ok");
@@ -190,12 +191,12 @@ describe("providerResets", () => {
       {
         id: "google",
         label: "Gemini",
-        resetsAt: "2026-06-16T07:00:00.000Z",
+        resetsAt: "2026-06-16T07:00:00Z",
       },
       {
         id: "workers-ai",
         label: "Workers AI",
-        resetsAt: "2026-06-16T00:00:00.000Z",
+        resetsAt: "2026-06-16T00:00:00Z",
       },
     ]);
   });

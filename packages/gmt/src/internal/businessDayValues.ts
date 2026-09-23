@@ -5,7 +5,7 @@ import {
   stepBusinessDates,
 } from "./businessCalendar";
 import { isValidAmount } from "./isValidAmount";
-import { isValidDate } from "../plain/validate";
+import { isValidDate } from "../plain/validate/isValidDate";
 import type { BusinessCalendar } from "../types";
 
 /**
@@ -35,11 +35,11 @@ export function stepBusinessDaysValue(
     return "";
   }
 
-  if (amount === 0) {
-    return value;
-  }
-
   try {
+    if (amount === 0) {
+      return Temporal.PlainDate.from(value).toString();
+    }
+
     const direction: 1 | -1 = amount > 0 ? sign : sign === 1 ? -1 : 1;
     const result = stepBusinessDates(
       Temporal.PlainDate.from(value),

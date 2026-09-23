@@ -68,8 +68,8 @@ describe("foreignEpochs", () => {
     expect(FILE_TIME_EPOCH_OFFSET_TICKS).toBe(116_444_736_000_000_000n);
   });
 
-  it("caps FILETIME at the unsigned 64-bit maximum", () => {
-    expect(MAX_FILE_TIME).toBe(2n ** 64n - 1n);
+  it("caps FILETIME below 0x8000000000000000, the limit FileTimeToSystemTime enforces", () => {
+    expect(MAX_FILE_TIME).toBe(2n ** 63n - 1n);
   });
 
   it("puts the .NET ticks epoch 621 355 968 000 000 000 ticks before the Unix epoch", () => {

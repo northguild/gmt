@@ -10,7 +10,8 @@ import { zonedDateTimeFrom } from "../../internal";
  * @param value ISO zoned datetime string (e.g., "2024-03-15T14:30:45.123456+00:00[UTC]")
  * @returns Microsecond (000-999) or "" on invalid input
  *
- * @example parseMicrosecondFromZoned("2024-03-15T14:30:45.123+00:00[UTC]") // "123"
+ * @example parseMicrosecondFromZoned("2024-03-15T14:30:45.123+00:00[UTC]") // "000"
+ * @example parseMicrosecondFromZoned("2024-03-15T14:30:45.123456+00:00[UTC]") // "456"
  * @example parseMicrosecondFromZoned("invalid") // ""
  */
 export function parseMicrosecondFromZoned(value: string): string {

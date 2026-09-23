@@ -1,4 +1,8 @@
-import { calendarZonedFixtures } from "../../test";
+import {
+  calendarZonedFixtures,
+  dateLineCrossingAt,
+  dateLineCrossingTimeZones,
+} from "../../test";
 import { Temporal } from "@js-temporal/polyfill";
 import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
 import { battleTestTimeZones } from "../../test/timeZoneMatrix";
@@ -78,11 +82,11 @@ describe("intervalCountZoned", () => {
   it.each`
     start                               | end                                 | unit      | expected
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"day"}  | ${0}
-    ${"2024-01-01T05:00:00+00:00[UTC]"} | ${"2024-01-01T05:00:00+00:00[UTC]"} | ${"day"}  | ${1}
+    ${"2024-01-01T05:00:00+00:00[UTC]"} | ${"2024-01-01T05:00:00+00:00[UTC]"} | ${"day"}  | ${0}
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"hour"} | ${0}
-    ${"2024-01-01T05:30:00+00:00[UTC]"} | ${"2024-01-01T05:30:00+00:00[UTC]"} | ${"hour"} | ${1}
+    ${"2024-01-01T05:30:00+00:00[UTC]"} | ${"2024-01-01T05:30:00+00:00[UTC]"} | ${"hour"} | ${0}
   `(
-    "returns $expected for zero-length $start to $end counted in $unit",
+    "returns $expected for zero-length $start to $end counted in $unit (an empty interval holds no instant)",
     ({ start, end, unit, expected }) => {
       expect(intervalCountZoned(start, end, unit)).toBe(expected);
     },
@@ -108,7 +112,7 @@ describe("intervalCountZoned", () => {
   it.each`
     start                                            | end                                              | unit     | expected
     ${"2024-09-07T12:00:00-04:00[America/Santiago]"} | ${"2024-09-09T12:00:00-03:00[America/Santiago]"} | ${"day"} | ${3}
-    ${"2024-09-08T12:00:00-03:00[America/Santiago]"} | ${"2024-09-08T12:00:00-03:00[America/Santiago]"} | ${"day"} | ${1}
+    ${"2024-09-08T12:00:00-03:00[America/Santiago]"} | ${"2024-09-08T13:00:00-03:00[America/Santiago]"} | ${"day"} | ${1}
   `(
     "returns $expected $unit boundaries for $start to $end when local midnight is skipped",
     ({ start, end, unit, expected }) => {
@@ -256,9 +260,9 @@ describe("intervalCountZoned", () => {
       ),
     ).toBeNull();
   });
-  // E5 (issue #78), decision of record D2 — see isValidZonedDateTime.test.ts for the full
-  // rationale: zoned/ rejects any [u-ca=...] calendar annotation outright.
-  it("returns null when start carries a calendar annotation", () => {
+  // The arguments name different calendars (hebrew and a bare iso8601 string), so the
+  // result is the sentinel (TC39 CalendarEquals makes until throw).
+  it("returns null when start and end name different calendars", () => {
     expect(
       intervalCountZoned(
         "2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]",
@@ -270,13 +274,13 @@ describe("intervalCountZoned", () => {
 });
 
 // ---------------------------------------------------------------------------------------------
-// E7 (issue #152), D5-zoned + DoD-11. Every expected value produced by running
-// @js-temporal/polyfill@0.5.1.
+// E7 (issue #152) DoD-11. Same-calendar values produced by running @js-temporal/polyfill@0.5.1.
+// Different calendars return null (native Chromium 153 until: "Mismatched calendars.").
 // ---------------------------------------------------------------------------------------------
 describe("intervalCountZoned with GMT calendar-annotated values", () => {
   const Y = calendarZonedFixtures.hebrewLeapYearSpan;
   const ISLAMIC_END =
-    "1446-03-30T00:00:00-04:00[u-ca=islamic-tabular][America/New_York]";
+    "2024-10-03T00:00:00-04:00[America/New_York][u-ca=islamic-tbla]";
 
   // DoD-11: the headline number. A Hebrew leap year crosses 13 month boundaries; the same span
   // measured in ISO crosses 14.
@@ -294,27 +298,22 @@ describe("intervalCountZoned with GMT calendar-annotated values", () => {
     expect(intervalCountZoned(Y.isoStart, Y.isoEnd, "year")).toBe(2);
   });
 
-  // The `.equals()` regression guard: mismatched-calendar endpoints must produce the D5
-  // Gregorian-fallback NUMBER, not the sentinel. Before the pair policy was applied to both
-  // operands together, `startOfStart.until(startOfEnd)` threw here and this returned null.
+  // TC39 CalendarEquals — endpoints naming different calendars return null, in every
+  // unit.
   it.each`
-    label                       | start                    | end                      | expected
-    ${"mismatched tags"}        | ${Y.tishri1_5784NewYork} | ${ISLAMIC_END}           | ${14}
-    ${"tagged start, bare end"} | ${Y.tishri1_5784NewYork} | ${Y.isoEnd}              | ${14}
-    ${"bare start, tagged end"} | ${Y.isoStart}            | ${Y.tishri1_5785NewYork} | ${14}
-  `(
-    "returns the Gregorian-fallback count $expected for $label rather than null",
-    ({ start, end, expected }) => {
-      const result = intervalCountZoned(start, end, "month");
-      expect(result).not.toBeNull();
-      expect(result).toBe(expected);
-    },
-  );
+    label                       | start                    | end
+    ${"mismatched tags"}        | ${Y.tishri1_5784NewYork} | ${ISLAMIC_END}
+    ${"tagged start, bare end"} | ${Y.tishri1_5784NewYork} | ${Y.isoEnd}
+    ${"bare start, tagged end"} | ${Y.isoStart}            | ${Y.tishri1_5785NewYork}
+  `("returns null for $label (different calendars)", ({ start, end }) => {
+    expect(intervalCountZoned(start, end, "month")).toBeNull();
+    expect(intervalCountZoned(start, end, "hour")).toBeNull();
+  });
 
   it.each`
     value                                                         | reason
-    ${"5784-01-01T00:00:00-04:00[America/New_York][u-ca=hebrew]"} | ${"GMT digits in Temporal's segment ordering"}
-    ${"5785-13-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"} | ${"month 13 in a non-leap Hebrew year"}
+    ${"5784-01-01T00:00:00-04:00[America/New_York][u-ca=hebrew]"} | ${"-04:00 is not New York's offset on ISO 5784-01-01"}
+    ${"2024-13-15T14:30:00-05:00[America/New_York][u-ca=hebrew]"} | ${"ISO month 13 (the digits are ISO)"}
     ${"2024-06-30T23:59:60+00:00[UTC]"}                           | ${"leap second"}
   `("returns null when the start is $value ($reason)", ({ value }) => {
     expect(intervalCountZoned(value, Y.isoEnd, "day")).toBeNull();
@@ -326,9 +325,9 @@ describe("intervalCountZoned with GMT calendar-annotated values", () => {
   // day still has 23 hour buckets. Verified on @js-temporal/polyfill@0.5.1.
   it.each`
     start                                                         | end                                                           | unit       | expected
-    ${"5784-06-21T12:00:00-05:00[u-ca=hebrew][America/New_York]"} | ${"5784-07-10T12:00:00-04:00[u-ca=hebrew][America/New_York]"} | ${"month"} | ${2}
+    ${"2024-03-01T12:00:00-05:00[America/New_York][u-ca=hebrew]"} | ${"2024-03-20T12:00:00-04:00[America/New_York][u-ca=hebrew]"} | ${"month"} | ${2}
     ${"2024-03-01T12:00:00-05:00[America/New_York]"}              | ${"2024-03-20T12:00:00-04:00[America/New_York]"}              | ${"month"} | ${1}
-    ${"5784-06-30T00:00:00-05:00[u-ca=hebrew][America/New_York]"} | ${"5784-07-01T00:00:00-04:00[u-ca=hebrew][America/New_York]"} | ${"hour"}  | ${23}
+    ${"2024-03-10T00:00:00-05:00[America/New_York][u-ca=hebrew]"} | ${"2024-03-11T00:00:00-04:00[America/New_York][u-ca=hebrew]"} | ${"hour"}  | ${23}
   `(
     "returns $expected $unit buckets for $start to $end across the spring-forward",
     ({ start, end, unit, expected }) => {
@@ -343,11 +342,11 @@ describe("intervalCountZoned with GMT calendar-annotated values", () => {
   // @js-temporal/polyfill@0.5.1.
   it.each`
     start                                                         | end                                                           | unit      | expected
-    ${"5785-02-02T01:30:00-05:00[u-ca=hebrew][America/New_York]"} | ${"5785-02-02T01:45:00-05:00[u-ca=hebrew][America/New_York]"} | ${"hour"} | ${1}
+    ${"2024-11-03T01:30:00-05:00[America/New_York][u-ca=hebrew]"} | ${"2024-11-03T01:45:00-05:00[America/New_York][u-ca=hebrew]"} | ${"hour"} | ${1}
     ${"2024-11-03T01:30:00-05:00[America/New_York]"}              | ${"2024-11-03T01:45:00-05:00[America/New_York]"}              | ${"hour"} | ${1}
-    ${"5785-02-02T01:30:00-04:00[u-ca=hebrew][America/New_York]"} | ${"5785-02-02T01:30:00-05:00[u-ca=hebrew][America/New_York]"} | ${"hour"} | ${2}
+    ${"2024-11-03T01:30:00-04:00[America/New_York][u-ca=hebrew]"} | ${"2024-11-03T01:30:00-05:00[America/New_York][u-ca=hebrew]"} | ${"hour"} | ${2}
     ${"2024-11-03T01:30:00-04:00[America/New_York]"}              | ${"2024-11-03T01:30:00-05:00[America/New_York]"}              | ${"hour"} | ${2}
-    ${"5785-02-01T12:00:00-04:00[u-ca=hebrew][America/New_York]"} | ${"5785-02-02T01:30:00-05:00[u-ca=hebrew][America/New_York]"} | ${"day"}  | ${2}
+    ${"2024-11-02T12:00:00-04:00[America/New_York][u-ca=hebrew]"} | ${"2024-11-03T01:30:00-05:00[America/New_York][u-ca=hebrew]"} | ${"day"}  | ${2}
     ${"2024-11-02T12:00:00-04:00[America/New_York]"}              | ${"2024-11-03T01:30:00-05:00[America/New_York]"}              | ${"day"}  | ${2}
   `(
     "returns $expected $unit buckets for $start to $end across the fall-back",
@@ -444,16 +443,58 @@ describe("intervalCountZoned across a transition near the maximum", () => {
 describe("intervalCountZoned in non-ISO calendars (CORE-6)", () => {
   it.each`
     start                                                              | end                                                                | expected | reason
-    ${"279517-08-05T00:00:00+00:00[u-ca=hebrew][UTC]"}                 | ${"279517-10-08T00:00:00+00:00[u-ca=hebrew][UTC]"}                 | ${3}     | ${"D1 near the maximum"}
-    ${"279517-08-05T00:00:00-04:00[u-ca=hebrew][America/New_York]"}    | ${"279517-10-08T00:00:00-04:00[u-ca=hebrew][America/New_York]"}    | ${3}     | ${"D1 near the maximum in a named zone"}
-    ${"-096239-06-23T00:00:00+00:00[u-ca=hebrew][UTC]"}                | ${"-096239-08-04T00:00:00+00:00[u-ca=hebrew][UTC]"}                | ${3}     | ${"hebrew year <= 0"}
-    ${"-096239-06-23T00:00:00-12:00[u-ca=hebrew][Etc/GMT+12]"}         | ${"-096239-08-04T00:00:00-12:00[u-ca=hebrew][Etc/GMT+12]"}         | ${3}     | ${"hebrew year <= 0 behind UTC"}
-    ${"1543-01-15T00:00:00+00:00[u-ca=buddhist][UTC]"}                 | ${"1543-03-15T00:00:00+00:00[u-ca=buddhist][UTC]"}                 | ${3}     | ${"proleptic buddhist"}
-    ${"1543-01-15T00:00:00-04:56:02[u-ca=buddhist][America/New_York]"} | ${"1543-03-15T00:00:00-04:56:02[u-ca=buddhist][America/New_York]"} | ${3}     | ${"proleptic buddhist in a named zone"}
+    ${"+275760-07-10T00:00:00+00:00[UTC][u-ca=hebrew]"}                | ${"+275760-09-10T00:00:00+00:00[UTC][u-ca=hebrew]"}                | ${3}     | ${"D1 near the maximum"}
+    ${"+275760-07-10T00:00:00-04:00[America/New_York][u-ca=hebrew]"}   | ${"+275760-09-10T00:00:00-04:00[America/New_York][u-ca=hebrew]"}   | ${3}     | ${"D1 near the maximum in a named zone"}
+    ${"-100000-01-01T00:00:00+00:00[UTC][u-ca=hebrew]"}                | ${"-100000-02-10T00:00:00+00:00[UTC][u-ca=hebrew]"}                | ${3}     | ${"hebrew year <= 0"}
+    ${"-100000-01-01T00:00:00-12:00[Etc/GMT+12][u-ca=hebrew]"}         | ${"-100000-02-10T00:00:00-12:00[Etc/GMT+12][u-ca=hebrew]"}         | ${3}     | ${"hebrew year <= 0 behind UTC"}
+    ${"1000-01-15T00:00:00+00:00[UTC][u-ca=buddhist]"}                 | ${"1000-03-15T00:00:00+00:00[UTC][u-ca=buddhist]"}                 | ${3}     | ${"proleptic buddhist"}
+    ${"1000-01-15T00:00:00-04:56:02[America/New_York][u-ca=buddhist]"} | ${"1000-03-15T00:00:00-04:56:02[America/New_York][u-ca=buddhist]"} | ${3}     | ${"proleptic buddhist in a named zone"}
   `(
     "counts $expected months from $start to $end ($reason)",
     ({ start, end, expected }) => {
       expect(intervalCountZoned(start, end, "month")).toBe(expected);
+    },
+  );
+
+  // -271821-04-20T00:00:00Z is Temporal's minimum instant and a Tuesday. The week (from Monday
+  // 04-19), month and year holding it began before it, but the interval still touches exactly that
+  // one bucket — and one more once it reaches the next bucket start (04-26, 05-01, -271820-01-01).
+  // The empty interval at the minimum instant holds no instant, so it touches no week.
+  it.each`
+    end                                    | unit       | expected
+    ${"-271821-04-20T01:00:00+00:00[UTC]"} | ${"week"}  | ${1}
+    ${"-271821-04-20T01:00:00+00:00[UTC]"} | ${"month"} | ${1}
+    ${"-271821-04-20T01:00:00+00:00[UTC]"} | ${"year"}  | ${1}
+    ${"-271821-04-27T00:00:00+00:00[UTC]"} | ${"week"}  | ${2}
+    ${"-271821-05-02T00:00:00+00:00[UTC]"} | ${"month"} | ${2}
+    ${"-271821-04-20T00:00:00+00:00[UTC]"} | ${"week"}  | ${0}
+  `(
+    "counts $expected $unit buckets from the minimum instant to $end",
+    ({ end, unit, expected }) => {
+      expect(
+        intervalCountZoned("-271821-04-20T00:00:00+00:00[UTC]", end, unit),
+      ).toBe(expected);
+    },
+  );
+});
+
+// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
+// are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
+// 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
+
+describe("intervalCountZoned across the 1844 date-line crossings (zoned.E)", () => {
+  // December 1844 has 31 dates less the skipped 12-31, January 31: 61 local days.
+  it.each(dateLineCrossingTimeZones)(
+    "counts 61 days from 1844-12-01 to 1845-02-01 in $timeZone",
+    (crossing) => {
+      expect(
+        intervalCountZoned(
+          dateLineCrossingAt(crossing, -30 * 24).toString(),
+          dateLineCrossingAt(crossing, 31 * 24).toString(),
+          "day",
+        ),
+      ).toBe(61);
     },
   );
 });

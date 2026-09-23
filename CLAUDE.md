@@ -39,6 +39,7 @@ Skills live in `.agents/skills/` and are symlinked into `.claude/skills/`. Run t
 | Skill              | What it does                                                                |
 | ------------------ | --------------------------------------------------------------------------- |
 | `/update-readme`   | Diffs vs main, updates the root and package READMEs to reflect changes      |
+| `/plain-english`   | ISO 24495-1 plain-language rules for prose a person reads, not runs         |
 | `/changelog`       | Rewrites the pending `.changeset/*.md` description to match CHANGELOG style |
 | `/commit-message`  | Drafts a ready-to-copy commit message from the current diff (read-only)     |
 | `/pr-desc`         | Drafts a PR title and description from the branch diff (read-only)          |

@@ -78,4 +78,51 @@ describe("startOfDateTime", () => {
       "",
     );
   });
+
+  // Temporal §13.17 GetTemporalUnitValuedOption: a plural unit name is the same unit as its singular.
+  it.each`
+    unit              | expected
+    ${"years"}        | ${"2024-01-01T00:00:00"}
+    ${"months"}       | ${"2024-02-01T00:00:00"}
+    ${"weeks"}        | ${"2024-02-26T00:00:00"}
+    ${"days"}         | ${"2024-02-29T00:00:00"}
+    ${"hours"}        | ${"2024-02-29T13:00:00"}
+    ${"minutes"}      | ${"2024-02-29T13:45:00"}
+    ${"seconds"}      | ${"2024-02-29T13:45:30"}
+    ${"milliseconds"} | ${"2024-02-29T13:45:30.123"}
+    ${"microseconds"} | ${"2024-02-29T13:45:30.123456"}
+    ${"nanoseconds"}  | ${"2024-02-29T13:45:30.123456789"}
+  `(
+    "returns $expected for plural unit $unit on 2024-02-29T13:45:30.123456789",
+    ({ unit, expected }) => {
+      expect(startOfDateTime("2024-02-29T13:45:30.123456789", unit)).toBe(
+        expected,
+      );
+    },
+  );
+
+  // weekStartsOn only names "monday" or "sunday"; any other value is invalid input, for every unit
+  // (Temporal GetOption rejects a value outside its allowed list; undefined means the default).
+  it.each`
+    unit      | weekStartsOn
+    ${"week"} | ${"tuesday"}
+    ${"week"} | ${"Monday"}
+    ${"week"} | ${""}
+    ${"week"} | ${null}
+    ${"week"} | ${1}
+    ${"week"} | ${true}
+    ${"day"}  | ${"tuesday"}
+    ${"day"}  | ${"Monday"}
+    ${"day"}  | ${""}
+    ${"day"}  | ${null}
+    ${"day"}  | ${1}
+    ${"day"}  | ${true}
+  `(
+    "returns an empty string for unit $unit with invalid weekStartsOn $weekStartsOn",
+    ({ unit, weekStartsOn }) => {
+      expect(
+        startOfDateTime("2024-02-29T13:45:30", unit, { weekStartsOn }),
+      ).toBe("");
+    },
+  );
 });

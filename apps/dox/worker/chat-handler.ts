@@ -1,3 +1,4 @@
+import { convertUnixToUtc, sortUtc } from "@northguild/gmt";
 import {
   convertToModelMessages,
   createUIMessageStream,
@@ -88,16 +89,19 @@ export interface ChatHandlerDeps {
  * instant in the reader's own zone.
  */
 function allowanceSpent(brains: readonly Brain[], nowMs: number): Response {
-  // Every `resetsAt` is `toISOString()` output — same width, always `Z` — so
-  // the lexicographically smallest is also the earliest.
-  const [soonest] = providerResets(brains, nowMs)
-    .map((provider) => provider.resetsAt)
-    .sort();
+  // `sortUtc` compares instants, not text. A bare `.sort()` would be
+  // lexicographic, and these are not fixed-width: `nextMidnightMs` falls back
+  // to returning `nowMs` unchanged when its zone lookup fails, so a stray
+  // subsecond can appear — and `"…T00:00:00.500Z"` sorts before
+  // `"…T00:00:00Z"` because `.` < `Z`, putting a *later* instant first.
+  const [soonest] = sortUtc(
+    providerResets(brains, nowMs).map((provider) => provider.resetsAt),
+  );
   return Response.json(
     {
       error: "Dox has used its free allowance for today.",
       retryable: false,
-      resetsAt: soonest ?? new Date(nextPtMidnightMs(nowMs)).toISOString(),
+      resetsAt: soonest ?? convertUnixToUtc(nextPtMidnightMs(nowMs)),
     },
     { status: 429 },
   );
@@ -186,7 +190,7 @@ export function createChatHandler(deps: ChatHandlerDeps) {
           // The visitor cap is Dox's own, and it is always on the Pacific day.
           error: `You have used your ${VISITOR_DAILY_MAX} questions for today. They reset at midnight Pacific.`,
           retryable: false,
-          resetsAt: new Date(nextPtMidnightMs(nowMs)).toISOString(),
+          resetsAt: convertUnixToUtc(nextPtMidnightMs(nowMs)),
         },
         { status: 429 },
       );

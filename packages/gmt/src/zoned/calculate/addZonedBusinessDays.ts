@@ -1,10 +1,13 @@
-import { adjustZonedBusinessDays, isValidAmount } from "../../internal";
+import { isValidAmount } from "../../internal";
+import { adjustZonedBusinessDays } from "../../internal/adjustZonedBusinessDays";
 import { isValidZonedDateTime } from "../validate";
 
 /**
  * Return a zoned ISO 8601 datetime string with `amount` business days added to `value`.
  *
  * - Uses fixed ISO Monday–Friday business days (no locale awareness).
+ * - Has no calendar parameter, so no other weekend and no holidays. It is not the
+ *   zoned form of the plain `addBusinessDays`, which takes a `BusinessCalendar`.
  * - Saturday and Sunday are skipped during the count.
  * - Preserves the original time component through the operation.
  * - Returns "" on invalid input.
@@ -24,7 +27,7 @@ export function addZonedBusinessDays(value: string, amount: number): string {
   }
 
   if (amount === 0) {
-    return value;
+    return adjustZonedBusinessDays(value, 1, 0);
   }
 
   const absAmount = Math.abs(amount);

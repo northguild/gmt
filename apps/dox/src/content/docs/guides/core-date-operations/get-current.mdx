@@ -14,7 +14,7 @@ point for almost every other operation — arithmetic, comparison, formatting.
 import { getNow, getToday } from "@northguild/gmt";
 
 getToday(); // "2024-03-15" — current date in the system timezone
-getNow(); // "2024-03-15T14:30:45" — current datetime in the system timezone
+getNow(); // "2024-03-15T14:30:45.123456789" — current datetime in the system timezone
 ```
 
 Both resolve "now" in the **system timezone**. For deterministic results regardless
@@ -23,23 +23,26 @@ of the host machine's timezone, use the zoned variants with an explicit zone.
 ## Get the current UTC date or datetime
 
 ```typescript
-import { getUtcToday, getUtcNow } from "@northguild/gmt/utc";
+import { convertUtcToPlainDate, getUtcNow } from "@northguild/gmt/utc";
 
-getUtcToday(); // "2024-03-15"
-getUtcNow(); // "2024-03-17T14:30:45Z"
+getUtcNow(); // "2024-03-15T18:30:45.123456789Z"
+convertUtcToPlainDate(getUtcNow()); // "2024-03-15" — the current date in UTC
 ```
+
+There is no separate "UTC today" accessor: `convertUtcToPlainDate` takes the date of a UTC
+instant, in UTC unless you pass `{ timeZone }`.
 
 ## Get the current Unix timestamp
 
 ```typescript
-import { getUnixNow, getUnixTimeMs } from "@northguild/gmt/unix";
+import { getUnixNow } from "@northguild/gmt/unix";
 
-getUnixNow(); // 1710504645 — seconds since epoch
-getUnixTimeMs(); // 1710504645000 — milliseconds since epoch
+getUnixNow(); // 1710527445123 — milliseconds since epoch
+getUnixNow({ epochUnit: "seconds" }); // 1710527445 — seconds since epoch
 ```
 
-`getUnixNow` returns **seconds** (the Unix convention). Use `getUnixTimeMs` when
-you need milliseconds — and be consistent: mixing the two is a common source of
+`getUnixNow` returns **milliseconds** unless you pass `{ epochUnit: "seconds" }`. Name the unit the
+consumer expects — and be consistent: mixing the two is a common source of
 1000x errors.
 
 ## Get the current time in a specific timezone
@@ -47,7 +50,7 @@ you need milliseconds — and be consistent: mixing the two is a common source o
 ```typescript
 import { getZonedNow, getZonedToday } from "@northguild/gmt/zoned";
 
-getZonedNow("America/New_York"); // "2024-03-15T10:30:45"
+getZonedNow("America/New_York"); // "2024-03-15T14:30:45.123-04:00[America/New_York]"
 getZonedToday("Asia/Tokyo"); // "2024-03-16"
 ```
 
@@ -57,7 +60,7 @@ getZonedToday("Asia/Tokyo"); // "2024-03-16"
 import { getSystemTimeZone, getTimeZones } from "@northguild/gmt/zoned";
 
 getSystemTimeZone(); // "America/New_York"
-getTimeZones(); // ["America/New_York", "Europe/London", ...] — ~422 entries
+getTimeZones(); // ["Africa/Abidjan", "Africa/Accra", ...] — 418 entries on Node.js 24
 ```
 
 `getTimeZones()` returns every IANA zone the runtime's ICU data knows about. The

@@ -30,10 +30,13 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildGuideChunks } from "../src/lib/retrieval/guide-chunks";
 import { toGuideSource } from "../src/lib/retrieval/guide-source-parse";
+import { gmtVersion } from "../src/generated/versions";
+import { pageExpressionValues } from "../src/lib/page-expression-values";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const APP = resolve(HERE, "..");
-const GUIDES = join(APP, "src/content/docs/guides");
+const DOCS = join(APP, "src/content/docs");
+const GUIDES = join(DOCS, "guides");
 const CORPUS_JSON = join(APP, "src/generated/reference/gmt-corpus.json");
 const OUT = join(APP, "src/generated/corpus-counts.ts");
 
@@ -48,6 +51,14 @@ function guideFiles(dir: string): string[] {
   return found;
 }
 
+/** Every top-level `.md`/`.mdx` directly under content/docs/ — the fs twin of
+ * the second glob in `guide-sources.ts`. */
+function topLevelFiles(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && /\.mdx?$/.test(entry.name))
+    .map((entry) => join(dir, entry.name));
+}
+
 const corpusEntries = JSON.parse(readFileSync(CORPUS_JSON, "utf8")) as {
   kind: string;
 }[];
@@ -57,9 +68,12 @@ const referenceCount = corpusEntries.length;
 const functionCount = corpusEntries.filter((e) => e.kind === "function").length;
 
 const guideCount = buildGuideChunks(
-  guideFiles(GUIDES)
-    .sort()
-    .map((path) => toGuideSource(path, readFileSync(path, "utf8"))),
+  [...guideFiles(GUIDES), ...topLevelFiles(DOCS)].sort().map((path) =>
+    toGuideSource(path, readFileSync(path, "utf8"), {
+      gmtVersion,
+      values: pageExpressionValues(),
+    }),
+  ),
 ).length;
 
 const next = `// GENERATED FILE — do not edit by hand.

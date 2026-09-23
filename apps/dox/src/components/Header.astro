@@ -114,5 +114,43 @@ const shouldRenderSearch =
         align-content: center;
       }
     }
+
+    /* Wide screens with a sidebar: the search box sits exactly over the
+       content column and is exactly as wide (react.dev's layout). Mirrors the
+       column rules in gmt-shell.css — the content is centred in the pane
+       between the sidebar and the fixed-width TOC, and shrinks to that pane
+       minus its padding when the pane is narrower than --sl-content-width.
+       `100%` here is this grid's content box: the viewport minus
+       --sl-nav-pad-x on each side. */
+    @media (min-width: 72rem) {
+      :global(:root[data-has-sidebar]) .header {
+        --__toc: var(--sl-sidebar-width);
+        --__column: min(
+          var(--sl-content-width),
+          100% + 2 * var(--sl-nav-pad-x) - var(--sl-sidebar-width) -
+            var(--__toc) - 2 * var(--sl-content-pad-x)
+        );
+        grid-template-columns:
+          minmax(
+            calc(
+              (100% + var(--sl-sidebar-width) - var(--__toc) - var(--__column)) /
+                2 - var(--sl-nav-gap)
+            ),
+            auto
+          )
+          minmax(0, var(--__column))
+          1fr;
+      }
+      :global(:root[data-has-sidebar]:not([data-has-toc])) .header {
+        --__toc: 0rem;
+      }
+      :global(:root[data-has-sidebar]) .right-group {
+        justify-self: end;
+      }
+      /* Starlight caps the button at 22rem; here the column sets the width. */
+      :global(:root[data-has-sidebar]) .header :global(button[data-open-modal]) {
+        max-width: none;
+      }
+    }
   }
 </style>

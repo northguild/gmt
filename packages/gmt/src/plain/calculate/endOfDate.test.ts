@@ -83,4 +83,41 @@ describe("endOfDate", () => {
       expect(endOfDate(value, unit, { weekStartsOn })).toBe(expected);
     },
   );
+
+  // Temporal §13.17 GetTemporalUnitValuedOption: a plural unit name is the same unit as its singular.
+  it.each`
+    unit        | expected
+    ${"years"}  | ${"2024-12-31"}
+    ${"months"} | ${"2024-02-29"}
+    ${"weeks"}  | ${"2024-03-03"}
+    ${"days"}   | ${"2024-02-29"}
+  `(
+    "returns $expected for plural unit $unit on 2024-02-29",
+    ({ unit, expected }) => {
+      expect(endOfDate("2024-02-29", unit)).toBe(expected);
+    },
+  );
+
+  // weekStartsOn only names "monday" or "sunday"; any other value is invalid input, for every unit
+  // (Temporal GetOption rejects a value outside its allowed list; undefined means the default).
+  it.each`
+    unit      | weekStartsOn
+    ${"week"} | ${"tuesday"}
+    ${"week"} | ${"Monday"}
+    ${"week"} | ${""}
+    ${"week"} | ${null}
+    ${"week"} | ${1}
+    ${"week"} | ${true}
+    ${"day"}  | ${"tuesday"}
+    ${"day"}  | ${"Monday"}
+    ${"day"}  | ${""}
+    ${"day"}  | ${null}
+    ${"day"}  | ${1}
+    ${"day"}  | ${true}
+  `(
+    "returns an empty string for unit $unit with invalid weekStartsOn $weekStartsOn",
+    ({ unit, weekStartsOn }) => {
+      expect(endOfDate("2024-02-29", unit, { weekStartsOn })).toBe("");
+    },
+  );
 });

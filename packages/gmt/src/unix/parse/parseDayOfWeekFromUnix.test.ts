@@ -1,5 +1,5 @@
 import { battleTestLeapYearUnix } from "../../test";
-import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
+import { mockTemporalInstantFromEpochMillisecondsThrow } from "../../test/mocks";
 import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
 import { parseDayOfWeekFromUnix } from "./parseDayOfWeekFromUnix";
 
@@ -36,7 +36,7 @@ describe("parseDayOfWeekFromUnix", () => {
     ${1709164800}    | ${"seconds"}      | ${4}
     ${1704067200000} | ${"milliseconds"} | ${1}
   `(
-    "returns $expected for $value with epochUnit $epochUnit",
+    "returns $expected for $value in milliseconds and seconds",
     ({ value, epochUnit, expected }) => {
       expect(
         parseDayOfWeekFromUnix(value as never, {
@@ -58,8 +58,37 @@ describe("parseDayOfWeekFromUnix", () => {
   });
 
   it("returns empty string on failure", () => {
-    mockTemporalZonedDateTimeFromThrow();
+    mockTemporalInstantFromEpochMillisecondsThrow();
     const result = parseDayOfWeekFromUnix(battleTestLeapYearUnix);
     expect(result).toBeNull();
+  });
+});
+
+describe("parseDayOfWeekFromUnix with a blank epoch string", () => {
+  // Number("") and Number("   ") are 0 (ECMA-262 StringToNumber), a coercion artefact: a blank
+  // string holds no epoch value (POSIX XBD 4.19 defines an integer), so it is invalid input.
+  it.each`
+    label                | value
+    ${"empty"}           | ${""}
+    ${"spaces"}          | ${"   "}
+    ${"newline and tab"} | ${"\n\t"}
+    ${"no-break space"}  | ${"\u00a0"}
+  `(
+    "returns null for a $label string in milliseconds and seconds",
+    ({ value }) => {
+      expect(parseDayOfWeekFromUnix(value, { timeZone: "UTC" })).toBe(null);
+      expect(
+        parseDayOfWeekFromUnix(value, {
+          epochUnit: "seconds",
+          timeZone: "UTC",
+        }),
+      ).toBe(null);
+    },
+  );
+});
+
+describe("parseDayOfWeekFromUnix invalid-input @example", () => {
+  it('returns null for parseDayOfWeekFromUnix("")', () => {
+    expect(parseDayOfWeekFromUnix("")).toBe(null);
   });
 });

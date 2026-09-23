@@ -14,21 +14,27 @@ import { isValidDate } from "../validate";
  * @example minDate([]) // null
  */
 export function minDate(dates: string[]): string | null {
-  if (!dates.length) return null;
-
-  const valid = dates.filter(isValidDate);
-  if (!valid.length) return null;
-
   try {
-    const min = valid.reduce((currentMin, candidateStr) => {
-      const candidate = Temporal.PlainDate.from(candidateStr);
-      return Temporal.PlainDate.compare(candidate, currentMin) < 0
-        ? candidate
-        : currentMin;
-    }, Temporal.PlainDate.from(valid[0]));
+    if (!Array.isArray(dates) || !dates.length) return null;
 
-    return min.toString();
+    const valid = dates.filter(isValidDate);
+    if (!valid.length) return null;
+
+    try {
+      const min = valid.reduce((currentMin, candidateStr) => {
+        const candidate = Temporal.PlainDate.from(candidateStr);
+        return Temporal.PlainDate.compare(candidate, currentMin) < 0
+          ? candidate
+          : currentMin;
+      }, Temporal.PlainDate.from(valid[0]));
+
+      return min.toString();
+    } catch {
+      return null;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
 }

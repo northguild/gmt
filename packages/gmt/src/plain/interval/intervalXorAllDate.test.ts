@@ -11,8 +11,8 @@ describe("intervalXorAllDate", () => {
 
     expect(result).toEqual(intervalXorDate(a.start, a.end, b.start, b.end));
     expect(result).toEqual([
-      { start: "2024-01-01", end: "2024-03-31" },
-      { start: "2024-07-01", end: "2024-12-31" },
+      { start: "2024-01-01", end: "2024-04-01" },
+      { start: "2024-06-30", end: "2024-12-31" },
     ]);
   });
 
@@ -48,7 +48,7 @@ describe("intervalXorAllDate", () => {
   });
 
   it("handles a 3-way overlap, keeping only oddly-covered regions (odd-vs-even sweep)", () => {
-    // A=[1,10] B=[5,15] C=[8,20]: [1,4]=1x(odd), [5,7]=2x(even), [8,10]=3x(odd), [11,15]=2x(even), [16,20]=1x(odd)
+    // Half-open A=[1,10) B=[5,15) C=[8,20): [1,5)=1x(odd), [5,8)=2x(even), [8,10)=3x(odd), [10,15)=2x(even), [15,20)=1x(odd)
     expect(
       intervalXorAllDate([
         { start: "2024-01-01", end: "2024-01-10" },
@@ -56,9 +56,9 @@ describe("intervalXorAllDate", () => {
         { start: "2024-01-08", end: "2024-01-20" },
       ]),
     ).toEqual([
-      { start: "2024-01-01", end: "2024-01-04" },
+      { start: "2024-01-01", end: "2024-01-05" },
       { start: "2024-01-08", end: "2024-01-10" },
-      { start: "2024-01-16", end: "2024-01-20" },
+      { start: "2024-01-15", end: "2024-01-20" },
     ]);
   });
 
@@ -70,9 +70,9 @@ describe("intervalXorAllDate", () => {
         { start: "2024-01-05", end: "2024-01-15" },
       ]),
     ).toEqual([
-      { start: "2024-01-01", end: "2024-01-04" },
+      { start: "2024-01-01", end: "2024-01-05" },
       { start: "2024-01-08", end: "2024-01-10" },
-      { start: "2024-01-16", end: "2024-01-20" },
+      { start: "2024-01-15", end: "2024-01-20" },
     ]);
   });
 
@@ -99,30 +99,31 @@ describe("intervalXorAllDate", () => {
   it("computes the symmetric difference in the shared calendar when every interval carries the same tag", () => {
     expect(
       intervalXorAllDate([
-        { start: "5784-01-01[u-ca=hebrew]", end: "5784-01-10[u-ca=hebrew]" },
-        { start: "5784-01-05[u-ca=hebrew]", end: "5784-01-15[u-ca=hebrew]" },
+        { start: "2023-09-16[u-ca=hebrew]", end: "2023-09-25[u-ca=hebrew]" },
+        { start: "2023-09-20[u-ca=hebrew]", end: "2023-09-30[u-ca=hebrew]" },
       ]),
     ).toEqual([
-      { start: "5784-01-01[u-ca=hebrew]", end: "5784-01-04[u-ca=hebrew]" },
-      { start: "5784-01-11[u-ca=hebrew]", end: "5784-01-15[u-ca=hebrew]" },
+      { start: "2023-09-16[u-ca=hebrew]", end: "2023-09-20[u-ca=hebrew]" },
+      { start: "2023-09-25[u-ca=hebrew]", end: "2023-09-30[u-ca=hebrew]" },
     ]);
   });
 
   it("returns [] when any interval in the list carries a mismatched calendar tag", () => {
     expect(
       intervalXorAllDate([
-        { start: "5784-01-01[u-ca=hebrew]", end: "5784-01-10[u-ca=hebrew]" },
+        { start: "2023-09-16[u-ca=hebrew]", end: "2023-09-25[u-ca=hebrew]" },
         { start: "2024-01-05", end: "2024-01-15" },
       ]),
     ).toEqual([]);
   });
 
   // The last representable PlainDate is +275760-09-13, so no boundary may be computed as
-  // `end + 1 day`. Nested: 09-11..09-12 is covered twice, leaving 09-10 and 09-13 covered once.
+  // `end + 1 day`. Nested: [09-11, 09-12) is covered twice, leaving [09-10, 09-11) and
+  // [09-12, 09-13) covered once.
   it.each`
     intervals                                                                                               | expected
     ${[{ start: "+275760-09-10", end: "+275760-09-13" }]}                                                   | ${[{ start: "+275760-09-10", end: "+275760-09-13" }]}
-    ${[{ start: "+275760-09-10", end: "+275760-09-13" }, { start: "+275760-09-11", end: "+275760-09-12" }]} | ${[{ start: "+275760-09-10", end: "+275760-09-10" }, { start: "+275760-09-13", end: "+275760-09-13" }]}
+    ${[{ start: "+275760-09-10", end: "+275760-09-13" }, { start: "+275760-09-11", end: "+275760-09-12" }]} | ${[{ start: "+275760-09-10", end: "+275760-09-11" }, { start: "+275760-09-12", end: "+275760-09-13" }]}
   `(
     "returns $expected for $intervals (an end at the maximum PlainDate)",
     ({ intervals, expected }) => {

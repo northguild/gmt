@@ -14,7 +14,7 @@ to a zoned one, a UTC string to a Unix epoch, a date in a non-Gregorian calendar
 import { convertPlainDateTimeToZoned, convertZonedToPlainDateTime } from "@northguild/gmt/zoned";
 
 convertPlainDateTimeToZoned("2024-03-15T14:30:45", "America/New_York");
-// "2024-03-15T14:30:45[America/New_York]"
+// "2024-03-15T14:30:45.000-04:00[America/New_York]"
 
 convertZonedToPlainDateTime("2024-03-15T14:30:45[America/New_York]");
 // "2024-03-15T14:30:45"
@@ -26,19 +26,20 @@ see [Zoned Operations](/guides/zoned-date-operations/zoned-operations/).
 ## UTC and Unix
 
 ```typescript
-import { convertUtcToUnix, convertUnixToUtc } from "@northguild/gmt/unix";
+import { convertUtcToUnix } from "@northguild/gmt/utc";
+import { convertUnixToUtc } from "@northguild/gmt/unix";
 
-convertUtcToUnix("2024-03-15T14:30:45"); // 1710504645 — seconds
-convertUnixToUtc(1710504645); // "2024-03-15T14:30:45"
+convertUtcToUnix("2024-03-15T14:30:45Z"); // 1710513045000 — milliseconds
+convertUnixToUtc(1710513045000); // "2024-03-15T14:30:45Z"
 
-// Milliseconds variants:
-import { convertUtcToUnixMs, convertUnixMsToUtc } from "@northguild/gmt/unix";
-convertUtcToUnixMs("2024-03-15T14:30:45"); // 1710504645000
-convertUnixMsToUtc(1710504645000); // "2024-03-15T14:30:45"
+// Seconds: pass the unit explicitly, in both directions
+convertUtcToUnix("2024-03-15T14:30:45Z", { epochUnit: "seconds" }); // 1710513045
+convertUnixToUtc(1710513045, { epochUnit: "seconds" }); // "2024-03-15T14:30:45Z"
 ```
 
-`convertUtcToUnix` returns **seconds** (the Unix convention). Use the `…Ms` variants
-for milliseconds — and be consistent: mixing the two is a common source of 1000x errors.
+Both directions default to **milliseconds** and take an optional `{ epochUnit: "seconds" }` — there
+are no separate `…Ms` functions. Name the unit whenever you store or send a value, and be
+consistent: mixing the two is a common source of 1000x errors.
 
 ## Zoned to UTC and back
 
@@ -46,8 +47,8 @@ for milliseconds — and be consistent: mixing the two is a common source of 100
 import { convertZonedToUtc } from "@northguild/gmt/zoned";
 import { convertUtcToZoned } from "@northguild/gmt/utc";
 
-convertZonedToUtc("2024-03-15T14:30:45[America/New_York]"); // "2024-03-15T19:30:45"
-convertUtcToZoned("2024-03-15T14:30:45", "America/New_York"); // "2024-03-15T10:30:45[America/New_York]"
+convertZonedToUtc("2024-03-15T14:30:45[America/New_York]"); // "2024-03-15T18:30:45Z"
+convertUtcToZoned("2024-03-15T14:30:45Z", "America/New_York"); // "2024-03-15T10:30:45-04:00[America/New_York]"
 ```
 
 ## Between timezones
@@ -56,7 +57,7 @@ convertUtcToZoned("2024-03-15T14:30:45", "America/New_York"); // "2024-03-15T10:
 import { convertZonedToZoned } from "@northguild/gmt/zoned";
 
 convertZonedToZoned("2024-03-15T14:30:45[America/New_York]", "Europe/London");
-// "2024-03-15T18:30:45[Europe/London]"
+// "2024-03-15T18:30:45+00:00[Europe/London]"
 ```
 
 ## Non-Gregorian calendar systems
@@ -65,24 +66,26 @@ convertZonedToZoned("2024-03-15T14:30:45[America/New_York]", "Europe/London");
 import { convertDateToCalendar } from "@northguild/gmt/plain";
 
 convertDateToCalendar("2024-10-03", "hebrew");
-// "5785-01-01[u-ca=hebrew]" — calendar-native year/month/day
+// "2024-10-03[u-ca=hebrew]"
 
 convertDateToCalendar("2024-10-03", "japanese");
-// "0006-10-03[u-ca=japanese;era=reiwa]" — era-relative year, not proleptic 2024
+// "2024-10-03[u-ca=japanese]"
 ```
 
-The annotated string carries the calendar's **own** digits — not the ISO/Gregorian
-digits Temporal's own `[u-ca=...]` convention keeps. Round-trip through
-`convertDateToCalendar(value, "gregorian")` to get back to a bare ISO string.
+The string is the RFC 9557 form `Temporal.PlainDate.prototype.toString()` writes: the ISO
+digits, then a `[u-ca=<id>]` annotation naming the calendar. Calendar fields such as the
+Hebrew year or the Japanese era are read values, never string content. Convert with
+`convertDateToCalendar(value, "iso8601")` to get back to a bare ISO string.
 
 For zoned values, use `convertZonedToCalendar` (zoned namespace) — it keeps the
-instant, offset, and IANA zone unchanged. See [Calendar Systems](../core-date-operations/calendar-systems/)
+instant, offset, and IANA zone unchanged. See [Calendar Systems](/guides/core-date-operations/calendar-systems/)
 for the full calendar-aware arithmetic story.
 
 ## See also
 
-- [Calendar Systems](../core-date-operations/calendar-systems/) — calendar-aware arithmetic
+- [Calendar Systems](/guides/core-date-operations/calendar-systems/) — calendar-aware arithmetic
 - [Zoned Operations](/guides/zoned-date-operations/zoned-operations/) — DST disambiguation on conversion
 - [`convertPlainDateTimeToZoned` reference](/reference/zoned/convert/convertPlainDateTimeToZoned)
-- [`convertUtcToUnix` reference](/reference/unix/convert/convertUtcToUnix)
+- [`convertUtcToUnix` reference](/reference/utc/convert/convertUtcToUnix)
+- [`convertUnixToUtc` reference](/reference/unix/convert/convertUnixToUtc)
 - [`convertDateToCalendar` reference](/reference/plain/convert/convertDateToCalendar)

@@ -181,8 +181,6 @@ describe("spanWallClock", () => {
     ${"minutes"}
     ${"weeks"}
     ${"months"}
-    ${"day"}
-    ${"hour"}
     ${"Days"}
     ${""}
     ${null}
@@ -258,4 +256,22 @@ describe("spanWallClock", () => {
       ),
     ).toBeNull();
   });
+
+  // Temporal §13.17 GetTemporalUnitValuedOption: a singular unit name is the same unit as its plural.
+  it.each`
+    unit      | expected
+    ${"day"}  | ${1}
+    ${"hour"} | ${24}
+  `(
+    "returns $expected for singular unit $unit across one wall-clock day",
+    ({ unit, expected }) => {
+      expect(
+        spanWallClock(
+          "2024-03-01T12:00:00-05:00[America/New_York]",
+          "2024-03-02T12:00:00-05:00[America/New_York]",
+          unit,
+        ),
+      ).toBe(expected);
+    },
+  );
 });

@@ -20,7 +20,7 @@ import { renderToString } from "react-dom/server";
 import { DoxChat } from "./DoxChat";
 import type { BrainsInfo } from "./use-brains";
 
-const PACIFIC_MIDNIGHT = "2026-06-16T07:00:00.000Z";
+const PACIFIC_MIDNIGHT = "2026-06-16T07:00:00Z";
 
 function budget(visitorRemaining: number): BrainsInfo {
   return {

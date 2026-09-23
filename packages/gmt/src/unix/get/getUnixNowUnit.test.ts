@@ -25,11 +25,30 @@ describe("getUnixNowUnit", () => {
     ${"nanosecond"}  | ${"000"}
   `("returns $expected for unit $unit", ({ unit, expected }) => {
     const val = getUnixNowUnit(unit as never);
+    // Temporal.Now reads sub-millisecond host time the fake clock does not fix, so only the
+    // 3-digit width of the 0-999 microsecond and nanosecond fields is deterministic.
     if (unit === "microsecond" || unit === "nanosecond") {
       expect(val).toMatch(/^\d{3}$/);
     } else {
       expect(val).toBe(expected);
     }
+  });
+
+  // Temporal §13.17: plural unit names are the singular unit; dayOfWeek has no plural.
+  it.each`
+    unit            | expected
+    ${"years"}      | ${"2024"}
+    ${"months"}     | ${"02"}
+    ${"days"}       | ${"29"}
+    ${"weeks"}      | ${"9"}
+    ${"hours"}      | ${"00"}
+    ${"dayOfWeeks"} | ${""}
+  `("returns $expected for plural unit $unit", ({ unit, expected }) => {
+    expect(getUnixNowUnit(unit as never)).toBe(expected);
+  });
+
+  it("returns a 3-digit field for plural unit nanoseconds", () => {
+    expect(getUnixNowUnit("nanoseconds" as never)).toMatch(/^\d{3}$/);
   });
 
   it.each`

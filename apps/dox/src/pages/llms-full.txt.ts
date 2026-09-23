@@ -6,6 +6,11 @@ import {
   stripFrontmatter,
   stripMdx,
 } from "~/lib/page-markdown";
+import { topLevelPages } from "~/lib/top-level-pages";
+import { pageExpressionValues } from "~/lib/page-expression-values";
+
+/** The splash pages' figures, evaluated once per build. */
+const values = pageExpressionValues();
 
 const RAW = import.meta.glob("../content/docs/**/*.{md,mdx}", {
   query: "?raw",
@@ -28,7 +33,7 @@ export const GET: APIRoute = ({ site }: APIContext) => {
       if (rel === "guides/index") return null;
 
       const { data, body } = stripFrontmatter(raw);
-      const md = stripMdx(body, { gmtVersion });
+      const md = stripMdx(body, { gmtVersion, values });
       const title = data.title ?? rel;
       return {
         title,
@@ -49,7 +54,7 @@ export const GET: APIRoute = ({ site }: APIContext) => {
       if (rel === "scenarios/index") return null;
 
       const { data, body } = stripFrontmatter(raw);
-      const md = stripMdx(body, { gmtVersion });
+      const md = stripMdx(body, { gmtVersion, values });
       const title = data.title ?? rel;
       return {
         title,
@@ -70,7 +75,7 @@ export const GET: APIRoute = ({ site }: APIContext) => {
       if (rel === "mistakes/index") return null;
 
       const { data, body } = stripFrontmatter(raw);
-      const md = stripMdx(body, { gmtVersion });
+      const md = stripMdx(body, { gmtVersion, values });
       const title = data.title ?? rel;
       return {
         title,
@@ -81,28 +86,17 @@ export const GET: APIRoute = ({ site }: APIContext) => {
     .filter((p): p is NonNullable<typeof p> => p != null)
     .sort((a, b) => a.title.localeCompare(b.title));
 
-  // Start-here pages (install, why-gmt, core-rules)
-  const startSlugs = ["install", "why-gmt", "core-rules"];
-  const startPages = startSlugs
-    .map((slug) => {
-      const rawKey = Object.keys(RAW).find((k) => {
-        const rel = k
-          .replace(/^.*\/content\/docs\//, "")
-          .replace(/\.(md|mdx)$/, "");
-        return rel === slug;
-      });
-      if (!rawKey) return null;
-
-      const raw = RAW[rawKey];
-      const { data, body } = stripFrontmatter(raw);
-      const md = stripMdx(body, { gmtVersion });
-      return {
-        title: data.title ?? slug,
-        url: `${base}/${slug}.md`,
-        markdown: pageToMarkdown({ title: data.title ?? slug, body: md }),
-      };
-    })
-    .filter((p): p is NonNullable<typeof p> => p != null);
+  // Start-here pages: every top-level page under content/docs/, in sidebar order
+  // (any top-level page not in START_ORDER follows, alphabetically).
+  const startPages = topLevelPages(RAW).map(({ slug, source }) => {
+    const { data, body } = stripFrontmatter(source);
+    const md = stripMdx(body, { gmtVersion, values });
+    return {
+      title: data.title ?? slug,
+      url: `${base}/${slug}.md`,
+      markdown: pageToMarkdown({ title: data.title ?? slug, body: md }),
+    };
+  });
 
   // Reference pages (sorted by slug)
   const refPages = Object.entries(RAW)
@@ -115,7 +109,7 @@ export const GET: APIRoute = ({ site }: APIContext) => {
 
       const { data, body } = stripFrontmatter(raw);
       const slug = data.slug ?? rel;
-      const md = stripMdx(body, { gmtVersion });
+      const md = stripMdx(body, { gmtVersion, values });
       return {
         title: data.title ?? rel,
         url: `${base}/${slug}.md`,

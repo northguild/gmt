@@ -1,48 +1,31 @@
 /**
- * RegExp matching GMT's own calendar-annotated ZonedDateTime string — the zoned sibling of
- * `calendarDate` (regex/calendar-date.ts). Shape:
+ * RegExp matching a calendar-annotated ZonedDateTime string in the RFC 9557 form Temporal writes
+ * and reads — the zoned sibling of `calendarDate` (regex/calendar-date.ts):
  *
- *   <calendar-native-date>T<time><offset>[u-ca=<id>[;era=<era>]][<timeZone>]
- *   5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]
- *   0031-04-30T12:00:00+09:00[u-ca=japanese;era=heisei][Asia/Tokyo]
+ *   <date>T<time><offset>[<timeZone>][u-ca=<id>]
+ *   2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]
  *
- * The date half (`(\d{4,6}|-(?!0{6})\d{6})-(\d{2})-(\d{2})`: a negative year is a sign plus six
- * digits, never `-000000`) and the annotation half
- * (`\[u-ca=([a-z][a-z0-9-]*)(?:;era=([a-z]+(?:-[a-z]+)*))?\]`) are deliberately byte-identical to
- * `calendarDate`'s, so the two grammars cannot drift apart —
- * `calendar-zoned-date-time.test.ts` asserts every `convertDateToCalendar` output splices
- * into this pattern.
+ * This is exactly `Temporal.ZonedDateTime#toString()` for a non-ISO calendar. The digits are ISO
+ * and the calendar annotation follows the time zone annotation, in RFC 9557 §4.1 order. The date,
+ * time and offset are ISO 8601 extended format with an upper-case `Z`. The date
+ * half and the annotation are the same groups as `calendarDate`'s. The offset is optional; the
+ * time zone annotation may carry RFC 9557's critical flag (`[!America/New_York]`), and so may the
+ * calendar annotation.
  *
- * SEGMENT ORDERING: `[u-ca=...]` comes BEFORE `[timeZone]` — the reverse of RFC 9557.
- * This is deliberate and load-bearing, not an oversight, and it must not be "fixed" to
- * match Temporal's own string convention. Verified against @js-temporal/polyfill@0.5.1:
+ * A match proves shape only: `internal/calendarZonedString.ts` hands the string to
+ * `Temporal.ZonedDateTime.from` (zone, offset, DST) and the calendar id to Temporal's
+ * `CanonicalizeCalendar`. This is the written form. GMT's calendar functions read more
+ * (`isValidCalendarZonedDateTime`): every date-time `isValidZonedDateTime` reads (the functions
+ * take the same strings as the non-calendar zoned functions, then the calendar annotation), and
+ * the rest of Temporal's annotation grammar, such as an elective `[foo=bar]`, which Temporal
+ * ignores.
  *
- *  1. GMT's digits are calendar-native (Hebrew year 5784, not ISO year 5784), so a GMT
- *     string is never a valid RFC 9557 string — round-trippability through
- *     `Temporal.ZonedDateTime.from` was never achievable, and the `;era=` suffix makes it
- *     impossible regardless of ordering.
- *  2. RFC 9557's own ordering is actively dangerous here.
- *     `Temporal.ZonedDateTime.from("5784-01-01T14:30:00-05:00[America/New_York][u-ca=hebrew]")`
- *     SUCCEEDS, silently reading `5784-01-01` as ISO year 5784 — a ~3760-year misparse
- *     with no error. GMT's ordering makes that same shape uniformly rejected:
- *     `Temporal.ZonedDateTime.from("...-05:00[u-ca=hebrew][America/New_York]")` throws
- *     `RangeError: invalid RFC 9557 string` for all 13 calendars.
- *  3. `isValidZonedDateTime` is imported by ~90 non-test files, only ~18 of which are in
- *     scope. With `[u-ca=]` first, every out-of-scope function fails closed (returns its
- *     sentinel) rather than silently returning an answer computed against the wrong calendar.
+ * Capture groups: 1 year, 2 month, 3 day, 4 time, 5 offset (optional), 6 time zone annotation
+ * (with its critical flag, if any), 7 calendar critical flag (`"!"` or undefined), 8 calendar id.
  *
- * The offset stays between the time and the bracketed tail, so `<date>T<time><offset>`
- * remains a contiguous, familiar ISO-8601 head; only the bracketed tail reorders.
- *
- * Capture groups: 1 year, 2 month, 3 day, 4 time, 5 offset (optional), 6 calendar id,
- * 7 era (optional), 8 time zone. As with every GMT grammar regex, a match proves SHAPE
- * ONLY — real field/calendar/era/zone validation is delegated to
- * `Temporal.*.from(fields, { overflow: "reject" })` in `internal/calendarZonedString.ts`
- * (see `context/coding-standards.md`'s scoped manual-string-parsing exception, rule 2).
- *
- * @example calendarZonedDateTime.test("5784-06-15T14:30:00-05:00[u-ca=hebrew][America/New_York]") // true
- * @example calendarZonedDateTime.test("0031-04-30T12:00:00+09:00[u-ca=japanese;era=heisei][Asia/Tokyo]") // true
- * @example calendarZonedDateTime.test("2024-03-15T14:30:00Z") // false (no calendar tag)
+ * @example calendarZonedDateTime.test("2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]") // true
+ * @example calendarZonedDateTime.test("2024-02-24T14:30:00-05:00[u-ca=hebrew][America/New_York]") // false (calendar before zone)
+ * @example calendarZonedDateTime.test("2024-03-15T14:30:00Z[UTC]") // false (no calendar annotation)
  */
 export const calendarZonedDateTime: RegExp =
-  /^(\d{4,6}|-(?!0{6})\d{6})-(\d{2})-(\d{2})T(\d{2}:\d{2}(?::\d{2}(?:[.,]\d{1,9})?)?)((?:[+-]\d{2}:\d{2}(?::\d{2}(?:[.,]\d{1,9})?)?)|[Zz])?\[u-ca=([a-z][a-z0-9-]*)(?:;era=([a-z]+(?:-[a-z]+)*))?\]\[([^[\]]+)\]$/;
+  /^(\d{4}|\+\d{6}|-(?!0{6})\d{6})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])T(\d{2}:\d{2}(?::\d{2}(?:[.,]\d{1,9})?)?)((?:[+-]\d{2}:\d{2}(?::\d{2}(?:[.,]\d{1,9})?)?)|Z)?\[(!?[^[\]=!]+)\]\[(!)?u-ca=([A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)\]$/;

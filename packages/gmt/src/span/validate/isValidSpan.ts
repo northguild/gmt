@@ -7,8 +7,12 @@ import { parseInstantNanoseconds } from "../../internal";
  * endpoints both parse, so there is an elapsed time between them.
  *
  * - Accepts what `toNanoseconds` does on both sides: an offset designator is required,
- *   optionally followed by a bracketed IANA zone; no leap seconds, no `[u-ca=...]`
- *   calendar annotations. The two endpoints need not share a zone.
+ *   optionally followed by a bracketed IANA zone; no leap seconds. Calendar and elective
+ *   annotations are ignored, as `Temporal.Instant.from` ignores them. The two endpoints need not
+ *   share a zone.
+ * - **A bracketed zone annotation is syntactic only.** As in `Temporal.Instant.from`, it is
+ *   ignored: each offset alone fixes its instant, and a zone that does not exist or disagrees
+ *   with the offset is not checked.
  * - Order does not matter. A span is signed, not invalid, when `start` is after `end`, so
  *   this is symmetric.
  * - **`spanMs` can still return `null` on a pair this accepts** — a span wider than
@@ -27,6 +31,7 @@ import { parseInstantNanoseconds } from "../../internal";
  * @example isValidSpan("2024-03-10T12:00:00Z", "2024-03-10T12:00:00Z") // true — a zero span is a span
  * @example isValidSpan("2024-03-10T12:00:01Z", "2024-03-10T12:00:00Z") // true — spans are signed
  * @example isValidSpan("2024-03-10T07:00:00-05:00[America/New_York]", "2024-03-10T12:00:00Z") // true
+ * @example isValidSpan("2024-03-10T12:00:00+05:00[America/New_York]", "2024-03-10T12:00:00Z[Not/AZone]") // true — zone annotations are not checked
  * @example isValidSpan("-271821-04-20T00:00:00Z", "+275760-09-13T00:00:00Z") // true — but spanMs returns null, use spanNs
  * @example isValidSpan("2024-03-10T12:00:00Z", "invalid") // false
  * @example isValidSpan("2024-03-10T12:00:00[America/New_York]", "2024-03-11T12:00:00[America/New_York]") // false — no offset designator

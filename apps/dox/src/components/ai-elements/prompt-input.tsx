@@ -9,6 +9,7 @@ import {
   CommandList,
   CommandSeparator,
 } from "~/components/ui/command";
+import { getUnixNow, getUtcNow } from "@northguild/gmt";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -153,14 +154,15 @@ const captureScreenshot = async (): Promise<File | null> => {
       return null;
     }
 
-    const timestamp = new Date()
-      .toISOString()
+    // GMT, not `new Date().toISOString()`: this is a calendar value a reader sees in a
+    // filename, on the site that argues `Date` is the wrong tool for exactly that.
+    const timestamp = getUtcNow()
       .replaceAll(/[:.]/g, "-")
       .replace("T", "_")
       .replace("Z", "");
 
     return new File([blob], `screenshot-${timestamp}.png`, {
-      lastModified: Date.now(),
+      lastModified: getUnixNow() ?? 0,
       type: "image/png",
     });
   } finally {

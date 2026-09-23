@@ -1,3 +1,4 @@
+import { normalizeDateTime } from "../../internal";
 import { Temporal } from "@js-temporal/polyfill";
 import { vi } from "vitest";
 import { MustTestLocales, expectDateTimeEqual } from "../../test";
@@ -181,6 +182,29 @@ describe("formatCalendar", () => {
       },
     );
 
+    // A plain date-time has no zone: Temporal's [[TemporalPlainDateTimeFormat]]
+    // is AdjustDateTimeStyleFormat(…) without timeZoneName, so "long"/"full"
+    // (outside the type, reachable from JS) keep hour, minute and second and
+    // drop the zone — the locale's medium time format.
+    it.each`
+      timeStyle | locale                  | value                    | expected
+      ${"long"} | ${MustTestLocales.enUS} | ${"2024-03-16T14:30:00"} | ${"tomorrow at 2:30:00 PM"}
+      ${"full"} | ${MustTestLocales.enUS} | ${"2024-03-16T14:30:00"} | ${"tomorrow at 2:30:00 PM"}
+      ${"long"} | ${MustTestLocales.enUS} | ${"2024-03-22T14:30:00"} | ${"March 22, 2024 at 2:30:00 PM"}
+      ${"full"} | ${MustTestLocales.enUS} | ${"2024-03-22T14:30:00"} | ${"March 22, 2024 at 2:30:00 PM"}
+      ${"full"} | ${MustTestLocales.zhCN} | ${"2024-03-22T14:30:00"} | ${"2024年3月22日 14:30:00"}
+    `(
+      "timeStyle:$timeStyle for $locale $value prints no zone name: $expected",
+      ({ timeStyle, locale, value, expected }) => {
+        expect(
+          formatCalendar(value, locale, {
+            reference: REF,
+            timeStyle: timeStyle as never,
+          }),
+        ).toBe(expected);
+      },
+    );
+
     it("defaults to 'short' when timeStyle is omitted (matches explicit 'short')", () => {
       const omitted = formatCalendar(
         "2024-03-16T14:30:00",
@@ -256,5 +280,40 @@ describe("formatCalendar", () => {
         "",
       );
     });
+  });
+
+  // ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale data
+  // is used, and a malformed tag anywhere in the list is invalid input. Expected strings from native
+  // Intl with the same list.
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"demain à 14:30"}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
+  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+    expect(
+      formatCalendar("2024-03-16T14:30:00", locale, {
+        reference: "2024-03-15T09:00:00",
+      }),
+    ).toBe(normalizeDateTime(expected));
+  });
+});
+
+// Plan #14: options must be an object or omitted, as Temporal's GetOptionsObject requires (native
+// Chromium 153 `Temporal.PlainDate.from("2024-02-03", null)`, `"x"` and `1` all throw TypeError), so
+// null and every other non-object is invalid input.
+describe("formatCalendar with non-object options", () => {
+  it.each`
+    options
+    ${null}
+    ${"long"}
+    ${1}
+  `("returns an empty string for options $options", ({ options }) => {
+    expect(
+      formatCalendar(
+        "2024-03-12T10:00:00",
+        MustTestLocales.enUS,
+        options as never,
+      ),
+    ).toBe("");
   });
 });

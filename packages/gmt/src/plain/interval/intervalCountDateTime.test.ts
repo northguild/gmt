@@ -50,13 +50,13 @@ describe("intervalCountDateTime", () => {
   it.each`
     start                    | end                      | unit       | expected
     ${"2024-01-01T00:00:00"} | ${"2024-01-01T00:00:00"} | ${"day"}   | ${0}
-    ${"2024-01-01T05:00:00"} | ${"2024-01-01T05:00:00"} | ${"day"}   | ${1}
+    ${"2024-01-01T05:00:00"} | ${"2024-01-01T05:00:00"} | ${"day"}   | ${0}
     ${"2024-01-01T00:00:00"} | ${"2024-01-01T00:00:00"} | ${"hour"}  | ${0}
-    ${"2024-01-01T05:30:00"} | ${"2024-01-01T05:30:00"} | ${"hour"}  | ${1}
+    ${"2024-01-01T05:30:00"} | ${"2024-01-01T05:30:00"} | ${"hour"}  | ${0}
     ${"2024-01-01T00:00:00"} | ${"2024-01-01T00:00:00"} | ${"month"} | ${0}
-    ${"2024-01-15T08:00:00"} | ${"2024-01-15T08:00:00"} | ${"month"} | ${1}
+    ${"2024-01-15T08:00:00"} | ${"2024-01-15T08:00:00"} | ${"month"} | ${0}
   `(
-    "returns $expected for zero-length $start to $end counted in $unit",
+    "returns $expected for zero-length $start to $end counted in $unit (an empty interval holds no instant)",
     ({ start, end, unit, expected }) => {
       expect(intervalCountDateTime(start, end, unit)).toBe(expected);
     },
@@ -77,11 +77,11 @@ describe("intervalCountDateTime", () => {
   // The first representable PlainDateTime is -271821-04-19T00:00:00.000000001 (a Monday), so the
   // day, week, month and year holding T12:00:00 on that date all began before the range. Their
   // buckets can still be counted: days 19 and 20; weeks of 04-19 and 04-26 (1 when the end sits on
-  // 04-26T00:00, the second week's start); April and May; and a zero-length value mid-day touches 1.
+  // 04-26T00:00, the second week's start); April and May; and one hour mid-day touches 1.
   it.each`
     start                       | end                         | unit       | expected
     ${"-271821-04-19T12:00:00"} | ${"-271821-04-20T12:00:00"} | ${"day"}   | ${2}
-    ${"-271821-04-19T12:00:00"} | ${"-271821-04-19T12:00:00"} | ${"day"}   | ${1}
+    ${"-271821-04-19T12:00:00"} | ${"-271821-04-19T13:00:00"} | ${"day"}   | ${1}
     ${"-271821-04-19T12:00:00"} | ${"-271821-04-27T00:00:00"} | ${"week"}  | ${2}
     ${"-271821-04-19T12:00:00"} | ${"-271821-04-26T00:00:00"} | ${"week"}  | ${1}
     ${"-271821-04-19T12:00:00"} | ${"-271821-05-10T00:00:00"} | ${"month"} | ${2}

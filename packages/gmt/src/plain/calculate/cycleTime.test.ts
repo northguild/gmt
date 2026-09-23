@@ -39,20 +39,17 @@ describe("cycleTime", () => {
     expect(cycleTime("09:30:00", "hour", 0)).toBe("09:30:00");
   });
 
-  // overflow is inert for cycleTime: the wrapped value is always in-range for its own field, so
-  // there's nothing for setTime's .with() to constrain or reject (unlike cycleDate/cycleDateTime/
-  // cycleZoned, where cycling month/year can push day out of range for the new month).
-  it.each`
-    overflow
-    ${undefined}
-    ${"constrain"}
-    ${"reject"}
-  `(
-    "returns the same result regardless of overflow $overflow (inert for time fields)",
-    ({ overflow }) => {
-      expect(cycleTime("23:00:00", "hour", 1, { overflow })).toBe("00:00:00");
-    },
-  );
+  // `overflow` was removed in 1.16.0: the cycled value is always in range for its own field, so
+  // there was nothing to constrain or reject. Passing it is a type error, and a JavaScript caller's
+  // stray property changes nothing.
+  it("treats the removed overflow option as a type error and ignores it at runtime", () => {
+    expect(
+      cycleTime("23:00:00", "hour", 1, {
+        // @ts-expect-error -- `overflow` was removed in 1.16.0
+        overflow: "reject",
+      }),
+    ).toBe("00:00:00");
+  });
 
   it.each`
     amount | round    | expected
@@ -91,6 +88,25 @@ describe("cycleTime", () => {
     "returns an empty string for an invalid value $invalidValue",
     ({ invalidValue }) => {
       expect(cycleTime(invalidValue, "hour", 1)).toBe("");
+    },
+  );
+
+  // `amount` must be a finite number (isValidAmount); anything else is invalid input, never 0.
+  it.each`
+    amount
+    ${null}
+    ${undefined}
+    ${""}
+    ${"1"}
+    ${[]}
+    ${{}}
+    ${true}
+    ${Number.NaN}
+    ${Number.POSITIVE_INFINITY}
+  `(
+    "returns an empty string for a non-finite-number amount $amount",
+    ({ amount }) => {
+      expect(cycleTime("09:30:00", "hour", amount)).toBe("");
     },
   );
 });

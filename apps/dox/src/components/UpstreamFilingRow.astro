@@ -1,0 +1,57 @@
+---
+/**
+ * One row of the `/upstream/` tracker.
+ *
+ * Split out of `UpstreamTracker.astro` because a filing is the unit the table is made of: the
+ * tracker now loops, and everything that varies per filing is decided here, next to the markup it
+ * decides.
+ */
+import type { UpstreamFiling } from "../data/upstream-filings";
+import { filingInGmt, filingStatus } from "../lib/upstream-status";
+import UpstreamFilingKind from "./UpstreamFilingKind.astro";
+import UpstreamFilingRefs from "./UpstreamFilingRefs.astro";
+
+interface Props {
+  filing: UpstreamFiling;
+  /** Formats an ISO stamp for display; passed in so the whole table shares one formatter. */
+  formatDate: (iso: string) => string;
+}
+
+// Asserted rather than left to Astro's own `Props` inference: this app's `tsconfig.json` sets
+// `jsx: "react-jsx"` for its React islands, which turns that inference off, so `Astro.props` is
+// `Record<string, any>` in every `.astro` file here. Without this, `filing.kind` is `any` and
+// indexing a const map with it fails `astro check` under `strict`.
+const { filing, formatDate } = Astro.props as Props;
+
+const inGmt = filingInGmt(filing);
+
+/** The `Polyfill: ` prefix is noise in a table whose rows are already grouped by repository. */
+const title = filing.title.replace(/^Polyfill: /, "");
+
+/** Shown only when no workaround covers the defect, so the two never contradict each other. */
+const note = filing.gmtGuard ? null : filing.gmtNote;
+---
+
+<tr>
+  <td>
+    <a href={filing.url}>#{filing.number}</a>
+  </td>
+  <td>
+    <span class:list={["gmt-upstream-badge", inGmt.handled && "gmt-upstream-badge--ok"]}>
+      {inGmt.handled ? "✓ " : ""}{inGmt.label}
+    </span>
+  </td>
+  <td>
+    <strong>{title}</strong>
+    {filing.summary && <p>{filing.summary}</p>}
+    {note && <p class="gmt-upstream-links">{note}</p>}
+    <UpstreamFilingRefs filing={filing} />
+  </td>
+  <UpstreamFilingKind filing={filing} />
+  <td>
+    {filingStatus(filing)}
+    {filing.outcome && <p class="gmt-upstream-muted">{filing.outcome}</p>}
+  </td>
+  <td>{filing.maintainerComments}</td>
+  <td>{formatDate(filing.updatedAt)}</td>
+</tr>

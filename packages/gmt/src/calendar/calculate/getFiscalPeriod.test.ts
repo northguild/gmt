@@ -153,11 +153,41 @@ describe("getFiscalPeriod", () => {
     ${"2023-12-30"} | ${{ year: 2023, period: 12, week: 52 }} | ${"and closes, both inside 2023"}
     ${"2023-12-31"} | ${{ year: 2023, period: 1, week: 1 }}   | ${"so the next one collides on the label — a documented limit of a rule anchored near 1 January"}
     ${"2024-12-29"} | ${{ year: 2023, period: 12, week: 53 }} | ${"and no fiscal year is labelled 2024 at all"}
+    ${"2025-01-04"} | ${{ year: 2023, period: 12, week: 53 }} | ${"the second 2023 year closes in week 53, so 2023 labels 105 weeks"}
+    ${"2019-01-05"} | ${{ year: 2017, period: 12, week: 53 }} | ${"the second 2017 year closes in 2019, so none is labelled 2018"}
+    ${"2019-01-06"} | ${{ year: 2019, period: 1, week: 1 }}   | ${"the next opens as 2019"}
+    ${"2030-01-05"} | ${{ year: 2028, period: 12, week: 53 }} | ${"the second 2028 year closes in 2030, so none is labelled 2029"}
+    ${"2030-01-06"} | ${{ year: 2030, period: 1, week: 1 }}   | ${"the next opens as 2030"}
   `(
     "labels by the year a fiscal year starts in, collisions included: $value is $expected ($description)",
     ({ value, expected }) => {
       expect(
         getFiscalPeriod(value, { pattern: "4-5-4", yearEndsOn: "2027-01-02" }),
+      ).toEqual(expected);
+    },
+  );
+
+  // "2022-12-31" states the Saturday nearest 31 December. Derived with Date.UTC: its years run
+  // 2019-12-29..2021-01-02 (53 weeks), 2023-01-01..2023-12-30, 2023-12-31..2024-12-28,
+  // 2024-12-29..2026-01-03 (53) and 2030-12-29..2032-01-03 (53), each labelled by its start
+  // year — so 2023 labels two 52-week years and 2020, 2025 and 2031 label none.
+  it.each`
+    value           | expected                                | description
+    ${"2020-06-15"} | ${{ year: 2019, period: 6, week: 25 }}  | ${"mid-2020 belongs to the year that started 2019-12-29"}
+    ${"2021-01-02"} | ${{ year: 2019, period: 12, week: 53 }} | ${"which closes in 2021, so no year is labelled 2020"}
+    ${"2021-01-03"} | ${{ year: 2021, period: 1, week: 1 }}   | ${"the next year opens as 2021"}
+    ${"2023-12-30"} | ${{ year: 2023, period: 12, week: 52 }} | ${"one 2023 year closes"}
+    ${"2023-12-31"} | ${{ year: 2023, period: 1, week: 1 }}   | ${"and the next opens with the same label"}
+    ${"2024-12-28"} | ${{ year: 2023, period: 12, week: 52 }} | ${"closing after 104 weeks labelled 2023"}
+    ${"2026-01-03"} | ${{ year: 2024, period: 12, week: 53 }} | ${"the 2024 year closes in 2026, so no year is labelled 2025"}
+    ${"2026-01-04"} | ${{ year: 2026, period: 1, week: 1 }}   | ${"the next year opens as 2026"}
+    ${"2032-01-03"} | ${{ year: 2030, period: 12, week: 53 }} | ${"the 2030 year closes in 2032, so no year is labelled 2031"}
+    ${"2032-01-04"} | ${{ year: 2032, period: 1, week: 1 }}   | ${"the next year opens as 2032"}
+  `(
+    "labels the Saturday-nearest-31-December rule by start year: $value is $expected ($description)",
+    ({ value, expected }) => {
+      expect(
+        getFiscalPeriod(value, { pattern: "4-5-4", yearEndsOn: "2022-12-31" }),
       ).toEqual(expected);
     },
   );

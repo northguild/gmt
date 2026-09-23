@@ -1,4 +1,5 @@
 import { zonelessCalendarDate } from "../../internal";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /** Months in a quarter. */
 const MONTHS_PER_QUARTER = 3;
@@ -40,24 +41,37 @@ export function getQuarter(
   value: string,
   optionsArg?: { fiscalYearStartMonth?: number },
 ): { year: number; quarter: number } | null {
-  const fiscalYearStartMonth = optionsArg?.fiscalYearStartMonth ?? 1;
+  try {
+    if (!isOptionsArgument(optionsArg)) {
+      return null;
+    }
 
-  if (
-    !Number.isInteger(fiscalYearStartMonth) ||
-    fiscalYearStartMonth < 1 ||
-    fiscalYearStartMonth > MONTHS_PER_YEAR
-  ) {
+    const fiscalYearStartMonth =
+      optionsArg?.fiscalYearStartMonth === undefined
+        ? 1
+        : optionsArg.fiscalYearStartMonth;
+
+    if (
+      !Number.isInteger(fiscalYearStartMonth) ||
+      fiscalYearStartMonth < 1 ||
+      fiscalYearStartMonth > MONTHS_PER_YEAR
+    ) {
+      return null;
+    }
+
+    const date = zonelessCalendarDate(value);
+    if (!date) return null;
+
+    const monthsIntoYear =
+      (date.month - fiscalYearStartMonth + MONTHS_PER_YEAR) % MONTHS_PER_YEAR;
+
+    return {
+      year: date.month < fiscalYearStartMonth ? date.year - 1 : date.year,
+      quarter: Math.floor(monthsIntoYear / MONTHS_PER_QUARTER) + 1,
+    };
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return null;
   }
-
-  const date = zonelessCalendarDate(value);
-  if (!date) return null;
-
-  const monthsIntoYear =
-    (date.month - fiscalYearStartMonth + MONTHS_PER_YEAR) % MONTHS_PER_YEAR;
-
-  return {
-    year: date.month < fiscalYearStartMonth ? date.year - 1 : date.year,
-    quarter: Math.floor(monthsIntoYear / MONTHS_PER_QUARTER) + 1,
-  };
 }

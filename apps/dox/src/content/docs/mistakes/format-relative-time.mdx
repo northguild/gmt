@@ -13,34 +13,34 @@ import Mistake from "../../../components/Mistake.astro";
 
 <Mistake
   severity="high"
-  title="Forgetting reference"
-  description="formatRelativeDate and friends require a reference point to compute 'ago' or 'in'. Omitting the reference returns an empty string or an incorrect result."
-  wrongCode={`formatRelativeDate("2024-03-15"); // missing reference — empty or wrong result`}
+  title="Forgetting reference where the output must be deterministic"
+  description="Without a reference, formatRelativeDate and friends measure from now: the system clock and, for plain values, the system time zone. The same call returns a different string tomorrow. Pass reference wherever the output is tested, cached or rendered on a server. It goes in the options object; the second argument is the locale."
+  wrongCode={`formatRelativeDate("2024-03-15", "en-US"); // measured from today — changes from day to day`}
   rightCode={`import { formatRelativeDate } from "@northguild/gmt";
 
-formatRelativeDate("2024-03-15", "2024-03-20"); // "5 days ago"`}
+formatRelativeDate("2024-03-15", "en-US", { reference: "2024-03-20" }); // "5 days ago"`}
 />
 
 <Mistake
   severity="high"
   title="Mismatched input shape between value and reference"
-  description="A plain date and a zoned datetime are different shapes. Passing a plain date as the value and a zoned string as the reference (or vice versa) produces a wrong relative description or an empty string."
-  wrongCode={`formatRelativeDate("2024-03-15", "2024-03-20T10:00:00-05:00[America/New_York]");
-// plain vs zoned mismatch`}
+  description="A plain date and a zoned datetime are different shapes. Passing a plain date as the value and a zoned string as the reference (or vice versa) returns an empty string."
+  wrongCode={`formatRelativeDate("2024-03-15", "en-US", { reference: "2024-03-20T10:00:00-04:00[America/New_York]" });
+// "" — plain value, zoned reference`}
   rightCode={`import { formatRelativeDate } from "@northguild/gmt";
 
-formatRelativeDate("2024-03-15", "2024-03-20"); // both plain — correct`}
+formatRelativeDate("2024-03-15", "en-US", { reference: "2024-03-20" }); // "5 days ago" — both plain`}
 />
 
 <Mistake
   severity="high"
   title="Hand-rolling diff math with Date"
-  description="Computing '3 days ago' by subtracting 86400000 from Date.now() ignores DST transitions, leap seconds, and timezone boundaries. GMT's formatRelative functions handle all of these."
+  description="Computing '3 days ago' by dividing a millisecond difference by 86400000 assumes every day is 24 hours, and new Date(target) reads a date-only string as UTC midnight, so the count shifts with the time of day, the host time zone and DST changes. GMT's formatRelative functions count calendar days."
   wrongCode={`const diff = Math.floor((Date.now() - new Date(target).getTime()) / 86400000);
-// "3 days" — wrong when a DST gap or leap second is in between`}
+// "3 days" — off by one depending on the hour, the host zone, or a DST change in between`}
   rightCode={`import { formatRelativeDate } from "@northguild/gmt";
 
-formatRelativeDate(target, new Date().toISOString()); // "3 days ago" — DST-aware`}
+formatRelativeDate("2024-03-08", "en-US", { reference: "2024-03-11" }); // "3 days ago" — calendar days, across the 2024-03-10 DST change`}
 />
 
 <Mistake
@@ -49,10 +49,10 @@ formatRelativeDate(target, new Date().toISOString()); // "3 days ago" — DST-aw
   description="formatRelativeUnix is the formatter for Unix timestamps. Passing a Unix value to formatRelativeDate or formatRelativeDateTime returns an empty string because the input shape does not match."
   wrongCode={`import { formatRelativeDate } from "@northguild/gmt";
 
-formatRelativeDate(1710504645, 1710504645); // epoch seconds passed to plain formatter — ""`}
+formatRelativeDate(1710504645000, "en-US"); // "" — an epoch number is not a plain date`}
   rightCode={`import { formatRelativeUnix } from "@northguild/gmt/unix";
 
-formatRelativeUnix(1710504645, 1710504645); // "just now" — correct Unix formatter`}
+formatRelativeUnix(1710504645000, "en-US", { reference: 1710504645000 }); // "now" — milliseconds by default`}
 />
 
 ## See also

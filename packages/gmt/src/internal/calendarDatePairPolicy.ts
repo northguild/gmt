@@ -11,20 +11,18 @@ export interface CalendarDatePair {
 
 /**
  * Parse two GMT PlainDate values for calendar-unit arithmetic (diff, count, length, split-by-
- * unit): measure in the endpoints' shared calendar when both match, fall back to Gregorian/ISO
- * otherwise, rather than rejecting outright.
+ * unit): both must name the same calendar, which the pair is measured in.
  *
- * E5 decision of record D5: unlike D4's value-returning interval set-operations (union,
- * intersection, difference, xor, split, divide, merge — which reject a mismatch via
- * `calendarOfAllDateValues` instead, since there's no principled output calendar to pick for a
- * *value* the caller reads back as a date), ordering and duration math both remain well-defined
- * across mismatched calendars: Temporal's own `compare` is calendar-independent, and falling
- * back to ISO for a genuinely mismatched pair is a reasonable, well-defined answer rather than
- * an arbitrary pick.
+ * Follows TC39 Temporal's `DifferenceTemporalPlainDate`: when `CalendarEquals` is false it throws
+ * a RangeError, for every `largestUnit`. Calendars are compared by their canonical id, so
+ * `ethiopic-amete-alem` and `ethioaa` agree, while `iso8601` and `gregory`, or `ethiopic` and
+ * `ethioaa`, do not. A bare ISO string names `iso8601`. Callers catch the throw and return their
+ * sentinel. (Before 1.16.0 the pair fell back to ISO; ordering-only functions still accept
+ * mixed calendars, because `Temporal.PlainDate.compare` has no calendar check.)
  *
- * Throws if either value fails to parse as a valid GMT PlainDate string — callers are expected
- * to have already validated both values (e.g. via `isValidCalendarDate`) before calling this,
- * consistent with GMT's existing gate-then-parse-inside-try structure.
+ * Throws if either value fails to parse as a valid GMT PlainDate string, or if the calendars
+ * differ — callers validate both values first (e.g. via `isValidCalendarDate`) and wrap this in
+ * try-catch, consistent with GMT's gate-then-parse-inside-try structure.
  */
 export function parseCalendarDatePairForArithmetic(
   aValue: string,
@@ -35,13 +33,11 @@ export function parseCalendarDatePairForArithmetic(
   const a = parseCalendarDateValue(aValue);
   const b = parseCalendarDateValue(bValue);
 
-  if (calendarA && calendarB && calendarA === calendarB) {
-    return { calendar: calendarA, a, b };
+  if (!calendarA || calendarA !== calendarB) {
+    throw new RangeError(
+      `Mismatched calendars: ${String(calendarA)} and ${String(calendarB)}`,
+    );
   }
 
-  return {
-    calendar: "gregorian",
-    a: a.withCalendar("iso8601"),
-    b: b.withCalendar("iso8601"),
-  };
+  return { calendar: calendarA, a, b };
 }

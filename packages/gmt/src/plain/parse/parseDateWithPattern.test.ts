@@ -336,4 +336,20 @@ describe("parseDateWithPattern", () => {
       ).toBe("");
     });
   });
+
+  // ECMA-402 CanonicalizeLocaleList: the pattern's names are read from the first tag of a locale list
+  // with locale data; a malformed tag anywhere in the list is invalid input.
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"2024-05-19"}
+    ${[MustTestLocales.enUS, MustTestLocales.frFR]} | ${""}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
+  `(
+    "returns $expected for a French month name with locale list $locale",
+    ({ locale, expected }) => {
+      expect(parseDateWithPattern("19 mai 2024", "d MMMM yyyy", locale)).toBe(
+        expected,
+      );
+    },
+  );
 });

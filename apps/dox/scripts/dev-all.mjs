@@ -17,27 +17,20 @@
  * and that's the dozen lines below.
  */
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "..");
 const WORKER_PORT = process.env.DOX_WORKER_PORT ?? "8787";
+const SITE_PORT = process.env.DOX_SITE_PORT ?? "4321";
 
-// The Worker reads the retrieval index through its own assets binding — i.e.
-// out of `dist/`. With no build there is nothing to search, and every answer
-// would come back empty-handed.
-if (existsSync(path.join(root, "dist"))) {
-  start();
-} else {
-  console.log(
-    "[dev-all] no dist/ yet — building once so the Worker has a corpus to search…",
-  );
-  const build = spawn("pnpm", ["run", "build"], {
-    cwd: root,
-    stdio: "inherit",
-  });
-  build.on("exit", (code) => (code === 0 ? start() : process.exit(code ?? 1)));
-}
+// The Worker reads the retrieval corpus from the running `astro dev` server
+// (`DOX_ASSETS_ORIGIN`, see `worker/index.ts`), not from a build — so no
+// `astro build` before starting, and the chat sees content edits as they land.
+// `wrangler.jsonc` still names `dist/` as the assets directory and Wrangler
+// refuses to start when it is missing, so an empty one is enough.
+mkdirSync(path.join(root, "dist"), { recursive: true });
+start();
 
 function start() {
   const children = [];
@@ -46,18 +39,28 @@ function start() {
   const shutdown = (code) => {
     if (shuttingDown) return;
     shuttingDown = true;
+    // Both servers are this script's own foreground children (see `run` below),
+    // so signalling them stops exactly what this script started. It never runs
+    // `astro dev stop`: that stops whichever server holds this project's lock,
+    // which may be one another terminal or agent started.
     for (const c of children) c.kill("SIGTERM");
-    // Astro's dev server daemonises itself, so killing the process we spawned
-    // doesn't stop it — it has its own lifecycle command.
-    spawn("npx", ["astro", "dev", "stop"], { cwd: root, stdio: "ignore" });
+    // The process normally ends on its own once the children exit — before the
+    // unref'd timer fires — so the code has to be set here to survive that.
+    process.exitCode = code;
     setTimeout(() => process.exit(code), 2000).unref();
   };
 
-  /** @param daemonises `astro dev` forks a background server and the process
-   * we spawned exits 0 immediately. That's success, not a crash — only a
-   * non-zero exit means something actually broke. */
-  const run = (name, cmd, args, { daemonises = false } = {}) => {
-    const child = spawn(cmd, args, { cwd: root });
+  const run = (name, bin, args) => {
+    // The local binaries, not `npx`: no package lookup on every start, and none
+    // of the npm config warnings `npx` prints under pnpm.
+    const child = spawn(path.join(root, "node_modules", ".bin", bin), args, {
+      cwd: root,
+      // Astro 7 moves `astro dev` into a detached background server when it
+      // detects an AI agent environment. `ASTRO_DEV_BACKGROUND` switches that
+      // detection off, so the server stays a foreground child in every
+      // environment and Ctrl+C (or the other server failing) stops it.
+      env: { ...process.env, ASTRO_DEV_BACKGROUND: "1" },
+    });
     const pipe = (stream) => (chunk) => {
       for (const line of chunk.toString().split("\n")) {
         if (line.trim()) stream.write(`[${name}] ${line}\n`);
@@ -67,7 +70,6 @@ function start() {
     child.stderr.on("data", pipe(process.stderr));
     child.on("exit", (code) => {
       if (shuttingDown) return;
-      if (daemonises && code === 0) return;
       console.error(
         `[dev-all] ${name} exited (${code}) — stopping the other process too.`,
       );
@@ -79,8 +81,14 @@ function start() {
   process.on("SIGINT", () => shutdown(0));
   process.on("SIGTERM", () => shutdown(0));
 
-  run("worker", "npx", ["wrangler", "dev", "--port", WORKER_PORT]);
-  run("astro", "npx", ["astro", "dev"], { daemonises: true });
+  run("worker", "wrangler", [
+    "dev",
+    "--port",
+    WORKER_PORT,
+    "--var",
+    `DOX_ASSETS_ORIGIN:http://localhost:${SITE_PORT}`,
+  ]);
+  run("astro", "astro", ["dev", "--port", SITE_PORT]);
 
   console.log(
     `\n[dev-all] Worker on :${WORKER_PORT}. Astro prints its own URL below —\n` +

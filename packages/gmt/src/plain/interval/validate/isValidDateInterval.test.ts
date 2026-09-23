@@ -52,8 +52,9 @@ describe("isValidDateInterval", () => {
     start                    | end                      | expected
     ${"2024-12-31T23:59:60"} | ${"2025-01-01"}          | ${false}
     ${"2024-01-01"}          | ${"2024-12-31T23:59:60"} | ${false}
+    ${"2024-12-31T23:59:59"} | ${"2025-01-01"}          | ${true}
   `(
-    "returns $expected for leap-second input: $start vs $end",
+    "returns $expected for leap-second and date-time input: $start vs $end",
     ({ start, end, expected }) => {
       expect(isValidDateInterval(start, end)).toBe(expected);
     },
@@ -80,7 +81,7 @@ describe("isValidDateInterval", () => {
   // accepted since ordering is calendar-independent (D4). Golden verified directly against
   // @js-temporal/polyfill.
   it("accepts mixed calendars", () => {
-    expect(isValidDateInterval("5785-01-01[u-ca=hebrew]", "2024-10-31")).toBe(
+    expect(isValidDateInterval("2024-10-03[u-ca=hebrew]", "2024-10-31")).toBe(
       true,
     );
   });

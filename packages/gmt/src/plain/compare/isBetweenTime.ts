@@ -1,6 +1,8 @@
+// fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "@js-temporal/polyfill";
 
 import { isValidTime } from "../validate";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return true when `time` is between `start` and `end` (inclusive by default).
@@ -32,31 +34,47 @@ export function isBetweenTime(
   end: string,
   options?: { inclusiveStart?: boolean; inclusiveEnd?: boolean },
 ): boolean {
-  const inclusiveStart = options?.inclusiveStart ?? true;
-  const inclusiveEnd = options?.inclusiveEnd ?? true;
-
-  if (!isValidTime(time) || !isValidTime(start) || !isValidTime(end)) {
-    return false;
-  }
-
   try {
-    const t = Temporal.PlainTime.from(time);
-    const s = Temporal.PlainTime.from(start);
-    const e = Temporal.PlainTime.from(end);
-
-    if (Temporal.PlainTime.compare(s, e) === 1) {
+    if (!isOptionsArgument(options)) {
       return false;
     }
 
-    const startCheck = inclusiveStart
-      ? Temporal.PlainTime.compare(s, t) <= 0
-      : Temporal.PlainTime.compare(s, t) < 0;
-    const endCheck = inclusiveEnd
-      ? Temporal.PlainTime.compare(t, e) <= 0
-      : Temporal.PlainTime.compare(t, e) < 0;
+    // Only an omitted flag takes the `true` default. An explicit `null` is a value, and every
+    // reading of it gives `false`: ECMA-402 reads a boolean option through ToBoolean (null → false),
+    // and the house rule rejects an invalid member outright — neither yields `true`. So `null`
+    // behaves here exactly as `0` and `""` already do.
+    const inclusiveStart =
+      options?.inclusiveStart === undefined ? true : options.inclusiveStart;
+    const inclusiveEnd =
+      options?.inclusiveEnd === undefined ? true : options.inclusiveEnd;
 
-    return startCheck && endCheck;
+    if (!isValidTime(time) || !isValidTime(start) || !isValidTime(end)) {
+      return false;
+    }
+
+    try {
+      const t = Temporal.PlainTime.from(time);
+      const s = Temporal.PlainTime.from(start);
+      const e = Temporal.PlainTime.from(end);
+
+      if (Temporal.PlainTime.compare(s, e) === 1) {
+        return false;
+      }
+
+      const startCheck = inclusiveStart
+        ? Temporal.PlainTime.compare(s, t) <= 0
+        : Temporal.PlainTime.compare(s, t) < 0;
+      const endCheck = inclusiveEnd
+        ? Temporal.PlainTime.compare(t, e) <= 0
+        : Temporal.PlainTime.compare(t, e) < 0;
+
+      return startCheck && endCheck;
+    } catch {
+      return false;
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return false;
   }
 }

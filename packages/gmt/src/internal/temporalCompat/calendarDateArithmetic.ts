@@ -1,8 +1,9 @@
 import type { Temporal } from "@js-temporal/polyfill";
-import { hasReadCorrection } from "./calendarFields";
+import { calendarFieldsOf, hasReadCorrection } from "./calendarFields";
 import { isDefectPresent } from "./capabilities";
 import { hebrewArithmeticModel } from "./hebrewArithmetic";
 import { indianArithmeticModel } from "./indianArithmetic";
+import { isLargeMonthSpan, isLargeYearSpan } from "./largeMonthSpan";
 import {
   type ArithmeticModel,
   type ArithmeticOverflow,
@@ -74,6 +75,7 @@ function reachesCorrectedRange(calendarId: string, years: number[]): boolean {
 function untilWorkaroundNeeded(calendarId: string): boolean {
   return (
     isDefectPresent("D1", calendarId) ||
+    isDefectPresent("D10", calendarId) ||
     isDefectPresent("D6", calendarId) ||
     isDefectPresent("D7", calendarId)
   );
@@ -85,11 +87,28 @@ function verifiedPolyfillUntil(
   largestUnit: "year" | "month",
 ): DateDurationFields {
   const calendarId = one.calendarId;
+  if (
+    largestUnit === "month" &&
+    isLargeYearSpan(
+      calendarFieldsOf(one, calendarId).year,
+      calendarFieldsOf(two, calendarId).year,
+    )
+  ) {
+    // D9: the polyfill counts months one at a time; the spec loops count whole years instead.
+    return nonIsoDateUntil(
+      readArithmeticModel(calendarId),
+      one,
+      two,
+      largestUnit,
+    );
+  }
   let result: DateDurationFields;
   try {
     result = fieldsOf(one.until(two, { largestUnit }));
   } catch (error) {
-    if (!(error instanceof RangeError) || !untilWorkaroundNeeded(calendarId)) {
+    // Any throw but a RangeError is a polyfill defect, not a spec answer (an assertion from a
+    // #3292 port without the tc39/proposal-temporal#3329 fix): the spec algorithm answers.
+    if (error instanceof RangeError && !untilWorkaroundNeeded(calendarId)) {
       throw error;
     }
     return nonIsoDateUntil(
@@ -123,6 +142,8 @@ function verifiedPolyfillUntil(
  * - D1: a polyfill RangeError near a range limit is answered by the spec loops.
  * - D2/D3/D4/D5: in a corrected range the spec loops run over ISO (buddhist) or the owned Hebrew
  *   and Indian arithmetic.
+ * - D9: months counted across `LARGE_MONTH_SPAN` months or more run the spec loops, whose month
+ *   counts are bounded.
  */
 export function calendarDateUntil(
   one: Temporal.PlainDate,
@@ -161,6 +182,31 @@ export function calendarDateUntil(
 }
 
 /**
+ * The owned (Hebrew, Indian) model's sum, when `date`'s calendar has an active owned model and
+ * either end reaches the corrected range; otherwise undefined, and the polyfill answers.
+ */
+function ownedDateAdd(
+  date: Temporal.PlainDate,
+  fields: DateDurationFields,
+  overflow: ArithmeticOverflow,
+): Temporal.PlainDate | undefined {
+  const calendarId = date.calendarId;
+  const owned = activeOwnedModel(calendarId);
+  if (owned === undefined) {
+    return undefined;
+  }
+  // Owned arithmetic is the spec's for every year, so its RangeErrors stand; its result is kept
+  // when either end reaches the corrected range, and the polyfill answers elsewhere.
+  const result = nonIsoDateAdd(owned, date, fields, overflow);
+  return reachesCorrectedRange(calendarId, [
+    owned.fields(date).year,
+    owned.fields(result).year,
+  ])
+    ? result.withCalendar(calendarId)
+    : undefined;
+}
+
+/**
  * `date.add(duration, { overflow })`, made correct where `@js-temporal/polyfill` is not (TC39
  * `CalendarDateAdd`, Intl era/monthCode proposal `NonISODateAdd`).
  *
@@ -169,6 +215,7 @@ export function calendarDateUntil(
  * - D1: a polyfill RangeError near a range limit is answered by the spec algorithm.
  * - D2/D3/D4/D5: in a corrected range the spec algorithm runs over ISO (buddhist) or the owned
  *   Hebrew and Indian arithmetic.
+ * - D9: `LARGE_MONTH_SPAN` months or more run the spec algorithm, whose month jumps are bounded.
  *
  * @returns a PlainDate in `date`'s calendar; throws RangeError out of range or on `reject`
  */
@@ -196,24 +243,29 @@ export function calendarDateAdd(
       .add(fields, { overflow })
       .withCalendar(calendarId);
   }
-  const owned = activeOwnedModel(calendarId);
-  if (owned !== undefined) {
-    // Owned arithmetic is the spec's for every year, so its RangeErrors stand; its result is kept
-    // when either end reaches the corrected range, and the polyfill answers elsewhere.
-    const result = nonIsoDateAdd(owned, date, fields, overflow);
-    if (
-      reachesCorrectedRange(calendarId, [
-        owned.fields(date).year,
-        owned.fields(result).year,
-      ])
-    ) {
-      return result.withCalendar(calendarId);
-    }
+  const ownedResult = ownedDateAdd(date, fields, overflow);
+  if (ownedResult !== undefined) {
+    return ownedResult;
+  }
+  if (isLargeMonthSpan(fields.months)) {
+    // D9: the polyfill adds months one at a time; the spec algorithm jumps whole years instead.
+    return nonIsoDateAdd(
+      readArithmeticModel(calendarId),
+      date,
+      fields,
+      overflow,
+    ).withCalendar(calendarId);
   }
   try {
     return date.add(fields, { overflow });
   } catch (error) {
-    if (!(error instanceof RangeError) || !isDefectPresent("D1", calendarId)) {
+    // As in verifiedPolyfillUntil: a throw that is not a RangeError (tc39/proposal-temporal#3329)
+    // always takes the spec algorithm, which throws the RangeError itself for an out-of-range sum.
+    if (
+      error instanceof RangeError &&
+      !isDefectPresent("D1", calendarId) &&
+      !isDefectPresent("D10", calendarId)
+    ) {
       throw error;
     }
     return nonIsoDateAdd(

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -22,6 +22,33 @@ const mdxExists = existsSync(refDir);
 // Import pure helpers (no Astro globals needed)
 import { renderLlmsFull, renderLlmsTxt } from "../src/lib/llms";
 import { stripFrontmatter, stripMdx } from "../src/lib/page-markdown";
+
+/**
+ * The built site, or a reason to stop.
+ *
+ * These gates read `dist`, so without a build they have nothing to check — and a test that checks
+ * nothing still reports as passing. That is not hypothetical: the CI Tests job builds only
+ * `@northguild/gmt`, so all three of them had never run there, and a raw `<UpstreamDefects />`
+ * reached every text surface with the suite green (CORE-8 review, #253). Locally a skip is the
+ * right call, because requiring a 45-second build before `vitest` would be hostile. The same is
+ * true of the CI Tests job, which runs this suite across three Node versions and has no reason to
+ * build the site three times.
+ *
+ * So the failure is keyed to `DOX_DIST_REQUIRED`, which `Story consistency` sets on the one step
+ * that builds the site first — not to `CI`, which is set everywhere and would turn a legitimate
+ * skip into a failure in every other job.
+ */
+function distDirOrSkip(): string | null {
+  const distDir = resolve(import.meta.dirname, "..", "dist");
+  if (existsSync(distDir)) return distDir;
+  if (process.env.DOX_DIST_REQUIRED) {
+    throw new Error(
+      "apps/dox/dist is missing, so the text-surface gates would silently pass. " +
+        "The step that sets DOX_DIST_REQUIRED must run `pnpm --filter dox run build` first.",
+    );
+  }
+  return null;
+}
 
 describe("llms.txt surface", () => {
   it("has a non-empty corpus to build sections from", () => {
@@ -313,6 +340,26 @@ Note about installation.
       expect(result).toContain("2.5.0");
       expect(result).not.toContain("{gmtVersion}");
     });
+
+    it('removes a multi-line import in full, leaving no `} from "..."` remnant', () => {
+      // The old regex (`/^\s*import\s.+$/gm`) only matched an import's first
+      // line, so a multi-line named import left every continuation line —
+      // including the closing `} from "...";` — behind as literal text.
+      const input = `import UpstreamTracker from "../../components/UpstreamTracker.astro";
+import {
+  filingsByKind,
+  handledInGmt,
+  totalFilings,
+  unaffectingGmt,
+} from "../../data/upstream-filings";
+
+Some content that must survive.`;
+      const result = stripMdx(input, { gmtVersion: "1.0.0" });
+      expect(result).not.toMatch(/import/);
+      expect(result).not.toMatch(/\}\s*from\s*["']/);
+      expect(result).not.toContain("filingsByKind");
+      expect(result).toContain("Some content that must survive.");
+    });
   });
 
   describe("stripFrontmatter", () => {
@@ -390,6 +437,207 @@ Body text here.`;
       if (!existsSync(distHtml)) return;
       const html = readFileSync(distHtml, "utf8");
       expect(html).toContain("<!DOCTYPE html>");
+    });
+
+    /** Every `.md` file under `dist`, recursively. */
+    function allDistMdFiles(dir: string): string[] {
+      const found: string[] = [];
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = resolve(dir, entry.name);
+        if (entry.isDirectory()) found.push(...allDistMdFiles(full));
+        else if (entry.name.endsWith(".md")) found.push(full);
+      }
+      return found;
+    }
+
+    /**
+     * The page text with every fenced code block removed.
+     *
+     * A code sample is allowed to contain anything a code sample contains, `import` lines and
+     * their `} from "x";` closing line included — the mistake and scenario cards are made of
+     * such samples. Only the prose around them is MDX that should have been stripped.
+     */
+    const proseOnly = (text: string): string =>
+      text.replace(/^```[\s\S]*?^```/gm, "");
+
+    it('no built .md or llms-full.txt leaves a stray `} from "..."` behind', () => {
+      // The exact shape a multi-line import left when only its first line was
+      // stripped: `import {\n  a,\n} from "x";` became a standalone leftover
+      // `} from "x";` line.
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
+      const strayImportRe = /^\}[ \t]*from[ \t]*["']/m;
+
+      for (const file of allDistMdFiles(distDir)) {
+        const text = proseOnly(readFileSync(file, "utf8"));
+        expect(text, `${file} has a leftover import line`).not.toMatch(
+          strayImportRe,
+        );
+        expect(text, `${file} has a leftover import statement`).not.toMatch(
+          /^[ \t]*import[ \t]/m,
+        );
+      }
+
+      const llmsFull = resolve(distDir, "llms-full.txt");
+      if (existsSync(llmsFull)) {
+        expect(
+          proseOnly(readFileSync(llmsFull, "utf8")),
+          "llms-full.txt has a leftover import line",
+        ).not.toMatch(strayImportRe);
+      }
+    });
+
+    it("the /upstream/ page carries no unresolved JSX expression in its .md, llms-full.txt or retrieval chunk", () => {
+      // `upstream.mdx` used to compute its summary counts inline
+      // (`{totalFilings}`, `{prs}`, a `{coversAll ? … : …}` ternary) —
+      // `stripMdx` never evaluates JSX, so all three shipped as literal
+      // braces. The counts now live in `UpstreamTracker.astro`, computed
+      // from the same `upstream-filings.ts` data and rendered live; the MDX
+      // body carries no expression beyond the supported `{gmtVersion}`.
+      const distDir = resolve(import.meta.dirname, "..", "dist");
+      const placeholderRe = /\{(totalFilings|prs|coversAll)\b/;
+
+      const distMd = resolve(distDir, "upstream.md");
+      if (existsSync(distMd)) {
+        expect(readFileSync(distMd, "utf8")).not.toMatch(placeholderRe);
+      }
+
+      const llmsFull = resolve(distDir, "llms-full.txt");
+      if (existsSync(llmsFull)) {
+        expect(readFileSync(llmsFull, "utf8")).not.toMatch(placeholderRe);
+      }
+
+      const retrievalChunks = resolve(distDir, "retrieval-chunks.json");
+      if (existsSync(retrievalChunks)) {
+        const chunks = JSON.parse(
+          readFileSync(retrievalChunks, "utf8"),
+        ) as Array<{ url: string; text: string }>;
+        const upstreamChunks = chunks.filter((c) =>
+          c.url.startsWith("/upstream/"),
+        );
+        expect(upstreamChunks.length).toBeGreaterThan(0);
+        for (const chunk of upstreamChunks) {
+          expect(chunk.text).not.toMatch(placeholderRe);
+          expect(chunk.text).not.toMatch(/^\}[ \t]*from[ \t]*["']/m);
+          expect(chunk.text).not.toMatch(/^\s*import\s/m);
+        }
+      }
+    });
+
+    /*
+     * The splash pages state every figure as an expression over the stats modules, and the
+     * mistake and scenario cards hold their code samples in JSX props. Both are source text in
+     * the `.md`, `llms-full.txt` and retrieval surfaces, which are built from the raw `.mdx`, so
+     * both used to ship as JSX. `stripMdx` now evaluates the figures and renders the cards.
+     *
+     * A few brace pairs in these pages are prose and must survive: the `{yyyy}`, `{MM}` and
+     * `{dd}` pattern tokens the formatting guides describe, and the `{RelativeUnit}` type name.
+     */
+    const PROSE_BRACES =
+      /^\{(yyyy|MM|dd|HH|mm|ss|RelativeUnit|[A-Z][A-Za-z]*Unit)\}$/;
+
+    const unresolvedExpressions = (text: string): string[] =>
+      (text.match(/\{[A-Za-z_][^}\n]{0,80}\}/g) ?? []).filter(
+        (found) => !PROSE_BRACES.test(found),
+      );
+
+    it("no built text surface carries an unevaluated JSX expression", () => {
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
+
+      for (const name of readdirSync(distDir).filter((f) =>
+        f.endsWith(".md"),
+      )) {
+        expect({
+          file: name,
+          left: unresolvedExpressions(
+            readFileSync(resolve(distDir, name), "utf8"),
+          ),
+        }).toEqual({ file: name, left: [] });
+      }
+
+      const llmsFull = resolve(distDir, "llms-full.txt");
+      if (existsSync(llmsFull)) {
+        expect(unresolvedExpressions(readFileSync(llmsFull, "utf8"))).toEqual(
+          [],
+        );
+      }
+
+      const retrievalChunks = resolve(distDir, "retrieval-chunks.json");
+      if (existsSync(retrievalChunks)) {
+        const chunks = JSON.parse(
+          readFileSync(retrievalChunks, "utf8"),
+        ) as Array<{ url: string; text: string }>;
+        for (const chunk of chunks) {
+          expect({
+            url: chunk.url,
+            left: unresolvedExpressions(chunk.text),
+          }).toEqual({ url: chunk.url, left: [] });
+        }
+      }
+    });
+
+    /**
+     * Any capitalised tag, not a list of the ones we remembered.
+     *
+     * This used to name nine components — exactly the nine `renderMdxComponents` handles — so it
+     * mirrored the handler list instead of checking it, and `<UpstreamDefects />` shipped raw into
+     * every text surface while the gate stayed green (CORE-8 review, #253). A lowercase HTML tag is
+     * fine in Markdown; an uppercase one is a component that never rendered.
+     *
+     * The lookbehind keeps TypeScript generics out: a signature like `RoundingOptions<DateUnit>`
+     * in a documented result is not a tag, and a `<` that follows an identifier character never
+     * opens one.
+     */
+    const rawComponentTags = (text: string): string[] =>
+      text.match(/(?<![A-Za-z0-9_])<\/?[A-Z][A-Za-z0-9]*(?=[\s/>])/g) ?? [];
+
+    it("no built text surface carries a raw component tag", () => {
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
+
+      for (const name of readdirSync(distDir).filter((f) =>
+        f.endsWith(".md"),
+      )) {
+        expect({
+          file: name,
+          left: rawComponentTags(readFileSync(resolve(distDir, name), "utf8")),
+        }).toEqual({ file: name, left: [] });
+      }
+
+      const llmsFull = resolve(distDir, "llms-full.txt");
+      if (existsSync(llmsFull)) {
+        expect(rawComponentTags(readFileSync(llmsFull, "utf8"))).toEqual([]);
+      }
+
+      const retrievalChunks = resolve(distDir, "retrieval-chunks.json");
+      if (existsSync(retrievalChunks)) {
+        const chunks = JSON.parse(
+          readFileSync(retrievalChunks, "utf8"),
+        ) as Array<{ url: string; text: string }>;
+        for (const chunk of chunks) {
+          expect({
+            url: chunk.url,
+            left: rawComponentTags(chunk.text),
+          }).toEqual({ url: chunk.url, left: [] });
+        }
+      }
+    });
+
+    it("a rendered mistake card keeps its code samples whole", () => {
+      const llmsFull = resolve(
+        import.meta.dirname,
+        "..",
+        "dist",
+        "llms-full.txt",
+      );
+      if (!existsSync(llmsFull)) return;
+
+      const text = readFileSync(llmsFull, "utf8");
+      // The import line of a sample sits at column 0 inside a fence: the import rule has to
+      // leave fenced code alone, or the sample loses the line that names the function.
+      expect(text).toContain('import { isBeforeDate } from "@northguild/gmt";');
+      expect(text).toContain("### Using string comparison for dates");
     });
   });
 });

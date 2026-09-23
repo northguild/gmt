@@ -1,12 +1,17 @@
 import { isValidZoneBucketUnit } from "./isValidZoneBucketUnit";
 
 describe("isValidZoneBucketUnit", () => {
+  // Temporal §13.17: a plural unit name is the same unit, and floorToZone/bucketRange take both.
   it.each`
     unit
     ${"hour"}
     ${"day"}
     ${"week"}
     ${"month"}
+    ${"hours"}
+    ${"days"}
+    ${"weeks"}
+    ${"months"}
   `("returns true for valid zone bucket unit: $unit", ({ unit }) => {
     expect(isValidZoneBucketUnit(unit)).toBe(true);
   });
@@ -17,7 +22,10 @@ describe("isValidZoneBucketUnit", () => {
     ${"quarter"} | ${"a quarter is getQuarter's question"}
     ${"minute"}  | ${"a sub-hour boundary needs no zone"}
     ${"second"}  | ${"a sub-hour boundary needs no zone"}
-    ${"days"}    | ${"plural"}
+    ${"years"}   | ${"a calendar year, plural"}
+    ${"minutes"} | ${"a sub-hour boundary, plural"}
+    ${"Days"}    | ${"wrong case, plural"}
+    ${"dayss"}   | ${"not a unit name"}
     ${"Day"}     | ${"wrong case"}
     ${"invalid"} | ${"not a unit at all"}
     ${""}        | ${"empty string"}

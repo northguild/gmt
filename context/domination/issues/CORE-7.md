@@ -36,7 +36,7 @@ Beyond weekends and holidays, the missing piece is **roll conventions**: what ha
 | `endOfMonth` | The last business day of the date's own month, wherever in the month the date falls |
 | `none` | Return unadjusted |
 
-The first four are defined by [ISDA 2006 Definitions §4.12(a)](https://www.isda.org/book/2006-isda-definitions/) — the text that governs them, since no TC39, ECMA or RFC standard does — and `none` is what [OpenGamma Strata](https://strata.opengamma.io/apidocs/com/opengamma/strata/basics/date/BusinessDayConventions.html) calls `NO_ADJUST`. `endOfMonth` is GMT's own primitive: it is neither an ISDA business-day convention nor the industry "EOM rule", which is a schedule rule rather than a roll.
+`following`, `modifiedFollowing` and `preceding` are defined by [ISDA 2006 Definitions §4.12(a)(i)–(iii)](https://www.isda.org/book/2006-isda-definitions/) — the text that governs them, since no TC39, ECMA or RFC standard does — and `modifiedPreceding`, which §4.12(a) does not define, is FpML's `BusinessDayConventionEnum` `MODPRECEDING` (corrected in CORE-8); and `none` is what [OpenGamma Strata](https://strata.opengamma.io/apidocs/com/opengamma/strata/basics/date/BusinessDayConventions.html) calls `NO_ADJUST`. `endOfMonth` is GMT's own primitive: it is neither an ISDA business-day convention nor the industry "EOM rule", which is a schedule rule rather than a roll.
 
 ## Design notes
 

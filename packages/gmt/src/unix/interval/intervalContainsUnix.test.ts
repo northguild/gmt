@@ -5,8 +5,9 @@ describe("intervalContainsUnix", () => {
     intervalStart | intervalEnd   | pointOrStart  | pointEnd     | expected
     ${0}          | ${1700000000} | ${170000000}  | ${undefined} | ${true}
     ${0}          | ${1700000000} | ${0}          | ${undefined} | ${true}
-    ${0}          | ${1700000000} | ${1700000000} | ${undefined} | ${true}
-    ${1000}       | ${1000}       | ${1000}       | ${undefined} | ${true}
+    ${0}          | ${1700000000} | ${1700000000} | ${undefined} | ${false}
+    ${0}          | ${1700000000} | ${1699999999} | ${undefined} | ${true}
+    ${1000}       | ${1000}       | ${1000}       | ${undefined} | ${false}
     ${0}          | ${1700000000} | ${-100}       | ${undefined} | ${false}
     ${0}          | ${1700000000} | ${2000000000} | ${undefined} | ${false}
   `(
@@ -27,8 +28,8 @@ describe("intervalContainsUnix", () => {
     intervalStart | intervalEnd   | innerStart    | innerEnd      | expected
     ${0}          | ${1700000000} | ${100000}     | ${1000000}    | ${true}
     ${0}          | ${1700000000} | ${0}          | ${1700000000} | ${true}
-    ${0}          | ${1700000000} | ${1700000000} | ${1700000000} | ${true}
-    ${1000}       | ${1000}       | ${1000}       | ${1000}       | ${true}
+    ${0}          | ${1700000000} | ${1700000000} | ${1700000000} | ${false}
+    ${1000}       | ${1000}       | ${1000}       | ${1000}       | ${false}
     ${0}          | ${1700000000} | ${-100}       | ${100000}     | ${false}
     ${0}          | ${1700000000} | ${1000000}    | ${2000000000} | ${false}
     ${0}          | ${1700000000} | ${1000000}    | ${100000}     | ${false}
@@ -37,6 +38,39 @@ describe("intervalContainsUnix", () => {
     ({ intervalStart, intervalEnd, innerStart, innerEnd, expected }) => {
       expect(
         intervalContainsUnix(intervalStart, intervalEnd, innerStart, innerEnd),
+      ).toBe(expected);
+    },
+  );
+
+  // Half-open [start, end) (coding-standards § 8; A = 2024-01-01T09:00Z, B = 12:00Z, D = 17:00Z in
+  // ms). A point is inside when `start <= point < end`, as in `intervalContains`. An inner interval
+  // is inside when the two overlap and its bounds lie within the outer bounds, so an empty inner
+  // interval counts only strictly inside — as `clampInterval` clamps it to itself there and to
+  // `null` at an edge.
+  it.each`
+    intervalStart    | intervalEnd      | pointOrStart     | pointEnd         | expected | reason
+    ${1704099600000} | ${1704110400000} | ${1704110400000} | ${undefined}     | ${false} | ${"point at the exclusive end"}
+    ${1704099600000} | ${1704110400000} | ${1704110399999} | ${undefined}     | ${true}  | ${"point one unit before the end"}
+    ${1704099600000} | ${1704110400000} | ${1704099600000} | ${undefined}     | ${true}  | ${"point at the inclusive start"}
+    ${1704110400000} | ${1704110400000} | ${1704110400000} | ${undefined}     | ${false} | ${"an empty interval contains no point"}
+    ${1704099600000} | ${1704128400000} | ${1704110400000} | ${1704128400000} | ${true}  | ${"inner [B, D) shares the end of [A, D)"}
+    ${1704099600000} | ${1704128400000} | ${1704099600000} | ${1704128400000} | ${true}  | ${"inner equal to the outer interval"}
+    ${1704099600000} | ${1704128400000} | ${1704110400000} | ${1704110400000} | ${true}  | ${"empty inner [B, B) strictly inside"}
+    ${1704099600000} | ${1704128400000} | ${1704128400000} | ${1704128400000} | ${false} | ${"empty inner [D, D) at the end edge"}
+    ${1704099600000} | ${1704128400000} | ${1704099600000} | ${1704099600000} | ${false} | ${"empty inner [A, A) at the start edge"}
+    ${1704110400000} | ${1704110400000} | ${1704110400000} | ${1704110400000} | ${false} | ${"identical empty intervals"}
+    ${1704099600000} | ${1704110400000} | ${1704114000000} | ${1704114000000} | ${false} | ${"empty inner [C, C) beyond the end"}
+    ${1704099600000} | ${1704110400000} | ${1704110400000} | ${1704110400001} | ${false} | ${"inner runs one unit past the end"}
+  `(
+    "returns $expected for $pointOrStart (inner end $pointEnd) in [$intervalStart, $intervalEnd) ($reason)",
+    ({ intervalStart, intervalEnd, pointOrStart, pointEnd, expected }) => {
+      expect(
+        intervalContainsUnix(
+          intervalStart,
+          intervalEnd,
+          pointOrStart,
+          pointEnd,
+        ),
       ).toBe(expected);
     },
   );
@@ -146,13 +180,13 @@ describe("intervalContainsUnix", () => {
   );
 
   it.each`
-    intervalStart | intervalEnd     | pointOrStart
-    ${"0"}        | ${"1700000000"} | ${"170000000"}
-    ${"0"}        | ${"1700000000"} | ${"0"}
-    ${"0"}        | ${"1700000000"} | ${"1700000000"}
+    intervalStart | intervalEnd     | pointOrStart    | expected
+    ${"0"}        | ${"1700000000"} | ${"170000000"}  | ${true}
+    ${"0"}        | ${"1700000000"} | ${"0"}          | ${true}
+    ${"0"}        | ${"1700000000"} | ${"1700000000"} | ${false}
   `(
-    "accepts string inputs: $pointOrStart",
-    ({ intervalStart, intervalEnd, pointOrStart }) => {
+    "accepts string inputs: $pointOrStart in [$intervalStart, $intervalEnd) gives $expected",
+    ({ intervalStart, intervalEnd, pointOrStart, expected }) => {
       expect(
         intervalContainsUnix(
           intervalStart,
@@ -160,7 +194,7 @@ describe("intervalContainsUnix", () => {
           pointOrStart,
           undefined,
         ),
-      ).toBe(true);
+      ).toBe(expected);
     },
   );
 

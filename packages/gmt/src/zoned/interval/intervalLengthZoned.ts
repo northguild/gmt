@@ -1,5 +1,6 @@
 import {
   durationTotal,
+  isCalendarDifferenceAcrossZones,
   parseCalendarZonedPairForArithmetic,
   resolveDateTimeUnit,
   zonedUntil,
@@ -17,15 +18,21 @@ import { isValidCalendarZonedInterval } from "./validate";
  * - Uses `Temporal.Duration.prototype.total` with `relativeTo` set to `start`, so the result is
  *   DST-aware: dividing a spring-forward day's length in hours returns `23`, not `24`.
  * - Returns `0` for a zero-length interval (`start === end`).
- * - Accepts GMT calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
+ * - Two values in different time zones (by TC39 TimeZoneEquals, so `UTC` equals `Etc/UTC`) can
+ *   only be measured in time units: a calendar unit (day, week, month, year) returns null, as
+ *   Temporal's `until` throws, because day lengths differ between zones.
+ * - Compatibility: before 1.16.0 a calendar unit across two zones returned a number. To measure
+ *   such a pair, convert both ends to one zone first with `convertZonedToZoned`.
+ * - Accepts RFC 9557 calendar-annotated zoned strings (as produced by `convertZonedToCalendar`) as
  *   well as bare ISO ones — E7 (issue #152). When BOTH endpoints carry the same calendar tag the
- *   measurement is made in that calendar; when the tags mismatch, or either endpoint is bare ISO,
- *   it falls back to Gregorian/ISO rather than returning the sentinel (E7's D5-zoned). The
- *   fallback is mandatory, not a convenience: `ZonedDateTime.prototype.until` throws across
- *   mismatched calendars for EVERY `largestUnit` — verified, including `"hour"` and
- *   `"nanosecond"`.
+ *   measurement is made in that calendar. When they name different calendars (a bare ISO string
+ *   names `iso8601`) the result is `null` in every unit, `"hour"` included, as
+ *   `ZonedDateTime.prototype.until` throws when TC39 `CalendarEquals` is false (before 1.16.0 it
+ *   was measured in ISO).
  * - Returns `null` on invalid input (unparseable start/end, `start > end`, unsupported unit,
  *   leap-second strings).
+ * - Compatibility: since 1.16.0 calendar strings are RFC 9557 (ISO digits, the `[u-ca=<id>]`
+ *   annotation after the zone, canonical calendar ids); see `isValidCalendarZonedDateTime`.
  *
  * @param start ISO 8601 zoned datetime string for the interval start
  * @param end ISO 8601 zoned datetime string for the interval end
@@ -35,6 +42,9 @@ import { isValidCalendarZonedInterval } from "./validate";
  * @example intervalLengthZoned("2024-03-10T00:00:00-05:00[America/New_York]", "2024-03-11T00:00:00-04:00[America/New_York]", "hour") // 23 (spring forward)
  * @example intervalLengthZoned("2024-03-10T00:00:00-05:00[America/New_York]", "2024-03-11T00:00:00-04:00[America/New_York]", "day") // 1
  * @example intervalLengthZoned("2024-01-01T00:00:00+00:00[UTC]", "2024-01-01T00:00:00+00:00[UTC]", "day") // 0
+ * @example intervalLengthZoned("2024-01-01T00:00:00-05:00[America/New_York]", "2024-01-03T00:00:00+01:00[Europe/Paris]", "hour") // 42
+ * @example intervalLengthZoned("2024-01-01T00:00:00-05:00[America/New_York]", "2024-01-03T00:00:00+01:00[Europe/Paris]", "day") // null (calendar unit across two time zones)
+ * @example intervalLengthZoned("2024-01-01T00:00:00-05:00[America/New_York]", convertZonedToZoned("2024-01-03T00:00:00+01:00[Europe/Paris]", "America/New_York"), "day") // 1.75 (both ends in one zone first)
  * @example intervalLengthZoned("invalid", "2024-01-02T00:00:00+00:00[UTC]", "day") // null
  */
 export function intervalLengthZoned(
@@ -61,6 +71,10 @@ export function intervalLengthZoned(
       start,
       end,
     );
+
+    if (isCalendarDifferenceAcrossZones(startVal, endVal, resolvedUnit)) {
+      return null;
+    }
 
     const duration = zonedUntil(startVal, endVal, {
       largestUnit: resolvedUnit,

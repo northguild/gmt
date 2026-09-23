@@ -1,5 +1,5 @@
 import { battleTestLeapYearUnix } from "../../test";
-import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
+import { mockTemporalInstantFromEpochMillisecondsThrow } from "../../test/mocks";
 import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
 import { parseMonthFromUnix } from "./parseMonthFromUnix";
 
@@ -37,7 +37,7 @@ describe("parseMonthFromUnix", () => {
     ${1709164800}    | ${"seconds"}      | ${"02"}
     ${1704067200000} | ${"milliseconds"} | ${"01"}
   `(
-    "returns $expected for $value with epochUnit $epochUnit",
+    "returns $expected for $value in milliseconds and seconds",
     ({ value, epochUnit, expected }) => {
       expect(
         parseMonthFromUnix(value as never, { epochUnit: epochUnit as never }),
@@ -57,8 +57,34 @@ describe("parseMonthFromUnix", () => {
   });
 
   it("returns empty string on failure", () => {
-    mockTemporalZonedDateTimeFromThrow();
+    mockTemporalInstantFromEpochMillisecondsThrow();
     const result = parseMonthFromUnix(battleTestLeapYearUnix);
     expect(result).toBe("");
+  });
+});
+
+describe("parseMonthFromUnix with a blank epoch string", () => {
+  // Number("") and Number("   ") are 0 (ECMA-262 StringToNumber), a coercion artefact: a blank
+  // string holds no epoch value (POSIX XBD 4.19 defines an integer), so it is invalid input.
+  it.each`
+    label                | value
+    ${"empty"}           | ${""}
+    ${"spaces"}          | ${"   "}
+    ${"newline and tab"} | ${"\n\t"}
+    ${"no-break space"}  | ${"\u00a0"}
+  `(
+    'returns "" for a $label string in milliseconds and seconds',
+    ({ value }) => {
+      expect(parseMonthFromUnix(value, { timeZone: "UTC" })).toBe("");
+      expect(
+        parseMonthFromUnix(value, { epochUnit: "seconds", timeZone: "UTC" }),
+      ).toBe("");
+    },
+  );
+});
+
+describe("parseMonthFromUnix invalid-input @example", () => {
+  it('returns "" for parseMonthFromUnix("")', () => {
+    expect(parseMonthFromUnix("")).toBe("");
   });
 });

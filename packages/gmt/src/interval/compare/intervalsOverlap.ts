@@ -11,8 +11,8 @@ import type { Interval } from "../../types";
  *   else — not at an edge, not another empty interval at the same instant (GMT rule: an empty
  *   interval covers no time, so only a strictly interior position is shared).
  * - Compares instants: endpoints may name different zones.
- * - The closed `intervalsOverlapUtc`, `intervalsOverlapZoned`, `intervalsOverlapDate` (…) return
- *   `true` for touching intervals; this is the half-open standard.
+ * - The positional `intervalsOverlapUtc`, `intervalsOverlapZoned`, `intervalsOverlapDate` (…)
+ *   follow the same half-open rule, so touching intervals do not overlap there either.
  * - For zone-aligned windows (a local day, a trading session), build the endpoints with
  *   `floorToZone` first.
  * - Returns `false` on invalid input — either interval not an `Interval`, or inverted.
@@ -28,12 +28,18 @@ import type { Interval } from "../../types";
  * @example intervalsOverlap({ start: "2024-01-01T17:00:00Z", end: "2024-01-01T09:00:00Z" }, { start: "2024-01-01T09:00:00Z", end: "2024-01-01T17:00:00Z" }) // false — inverted
  */
 export function intervalsOverlap(a: Interval, b: Interval): boolean {
-  const first = parseIntervalNanoseconds(a);
-  const second = parseIntervalNanoseconds(b);
+  try {
+    const first = parseIntervalNanoseconds(a);
+    const second = parseIntervalNanoseconds(b);
 
-  if (first === null || second === null) {
+    if (first === null || second === null) {
+      return false;
+    }
+
+    return first.start < second.end && second.start < first.end;
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return false;
   }
-
-  return first.start < second.end && second.start < first.end;
 }

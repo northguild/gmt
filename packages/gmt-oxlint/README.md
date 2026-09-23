@@ -121,11 +121,11 @@ Array form also supported:
 
 | Pattern                    | Rule                        | Suggestion                                                                                                            |
 | -------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `Date` global reference    | `no-date-global`            | Use `getNow()`, `getUnixNow('milliseconds' or 'seconds')`, `getUtcNow()`, or `getZonedNow(timezone)`                  |
+| `Date` global reference    | `no-date-global`            | Use `getNow()`, `getUnixNow({ epochUnit: 'milliseconds' or 'seconds' })`, `getUtcNow()`, or `getZonedNow(timezone)`   |
 | `new Date(...)`            | `no-new-date`               | Use `getUtcNow()`, `getNow()`, or `getZonedNow(timezone)`                                                             |
-| `Date.now()`               | `no-date-now`               | Use `getUnixNow('milliseconds' or 'seconds')` or `getNow()`                                                           |
+| `Date.now()`               | `no-date-now`               | Use `getUnixNow({ epochUnit: 'milliseconds' or 'seconds' })` or `getNow()`                                            |
 | `Date.parse(...)`          | `no-date-parse`             | Use `convertZonedToUnix(value)`                                                                                       |
-| `Date.UTC(...)`            | `no-date-utc`               | Use `convertUtcDateTimeToUnix('YYYY-MM-DDTHH:mm:ss', 'milliseconds' or 'seconds')`                                    |
+| `Date.UTC(...)`            | `no-date-utc`               | Use `convertUtcToUnix('YYYY-MM-DDTHH:mm:ssZ', { epochUnit: 'milliseconds' or 'seconds' })`                            |
 | `date.getTimezoneOffset()` | `no-date-getTimezoneOffset` | Use `getZonedNow(timezone)`, other gmt zoned helpers such as `convertZonedToUnix(value)`, or `Temporal.ZonedDateTime` |
 
 > **`@js-joda/core` is deliberately allowed.** It has its own value types and touches

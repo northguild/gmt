@@ -218,3 +218,179 @@ describe("splitIntervalByUnitUtc", () => {
     ).toEqual([]);
   });
 });
+
+describe("splitIntervalByUnitUtc maxPieces", () => {
+  // Owner decision A2: maxPieces bounds the number of slices. At or above the slice count the
+  // output is unchanged; one below it returns the sentinel.
+  it.each`
+    maxPieces
+    ${4}
+    ${9}
+  `(
+    "returns 4 slices for 2024-01-31T10:00:00Z to 2024-05-15T10:00:00Z by 1 month with maxPieces $maxPieces",
+    ({ maxPieces }) => {
+      expect(
+        splitIntervalByUnitUtc(
+          "2024-01-31T10:00:00Z",
+          "2024-05-15T10:00:00Z",
+          "month",
+          1,
+          { maxPieces },
+        ),
+      ).toEqual([
+        { start: "2024-01-31T10:00:00Z", end: "2024-02-29T10:00:00Z" },
+        { start: "2024-02-29T10:00:00Z", end: "2024-03-31T10:00:00Z" },
+        { start: "2024-03-31T10:00:00Z", end: "2024-04-30T10:00:00Z" },
+        { start: "2024-04-30T10:00:00Z", end: "2024-05-15T10:00:00Z" },
+      ]);
+    },
+  );
+
+  it.each`
+    maxPieces
+    ${3}
+    ${1}
+  `(
+    "returns [] for 2024-01-31T10:00:00Z to 2024-05-15T10:00:00Z by 1 month (4 slices) over maxPieces $maxPieces",
+    ({ maxPieces }) => {
+      expect(
+        splitIntervalByUnitUtc(
+          "2024-01-31T10:00:00Z",
+          "2024-05-15T10:00:00Z",
+          "month",
+          1,
+          { maxPieces },
+        ).length,
+      ).toBe(0);
+    },
+  );
+
+  it.each`
+    maxPieces
+    ${3}
+    ${8}
+  `(
+    "returns 3 slices for 2024-01-01T00:00:00Z to 2024-01-01T03:00:00Z by 1 hour with maxPieces $maxPieces",
+    ({ maxPieces }) => {
+      expect(
+        splitIntervalByUnitUtc(
+          "2024-01-01T00:00:00Z",
+          "2024-01-01T03:00:00Z",
+          "hour",
+          1,
+          { maxPieces },
+        ),
+      ).toEqual([
+        { start: "2024-01-01T00:00:00Z", end: "2024-01-01T01:00:00Z" },
+        { start: "2024-01-01T01:00:00Z", end: "2024-01-01T02:00:00Z" },
+        { start: "2024-01-01T02:00:00Z", end: "2024-01-01T03:00:00Z" },
+      ]);
+    },
+  );
+
+  it.each`
+    maxPieces
+    ${2}
+    ${1}
+  `(
+    "returns [] for 2024-01-01T00:00:00Z to 2024-01-01T03:00:00Z by 1 hour (3 slices) over maxPieces $maxPieces",
+    ({ maxPieces }) => {
+      expect(
+        splitIntervalByUnitUtc(
+          "2024-01-01T00:00:00Z",
+          "2024-01-01T03:00:00Z",
+          "hour",
+          1,
+          { maxPieces },
+        ).length,
+      ).toBe(0);
+    },
+  );
+
+  it("returns one slice for a zero-length interval with maxPieces 1", () => {
+    expect(
+      splitIntervalByUnitUtc(
+        "2024-01-01T00:00:00Z",
+        "2024-01-01T00:00:00Z",
+        "hour",
+        1,
+        { maxPieces: 1 },
+      ),
+    ).toEqual([{ start: "2024-01-01T00:00:00Z", end: "2024-01-01T00:00:00Z" }]);
+  });
+
+  it.each`
+    label                   | options
+    ${"maxPieces 0"}        | ${{ maxPieces: 0 }}
+    ${"maxPieces -1"}       | ${{ maxPieces: -1 }}
+    ${"maxPieces 1.5"}      | ${{ maxPieces: 1.5 }}
+    ${"maxPieces NaN"}      | ${{ maxPieces: Number.NaN }}
+    ${"maxPieces Infinity"} | ${{ maxPieces: Number.POSITIVE_INFINITY }}
+    ${"maxPieces string"}   | ${{ maxPieces: "5" }}
+    ${"null options"}       | ${null}
+    ${"number options"}     | ${5}
+  `("returns [] for invalid $label", ({ options }) => {
+    expect(
+      splitIntervalByUnitUtc(
+        "2024-01-01T00:00:00Z",
+        "2024-01-01T03:00:00Z",
+        "hour",
+        1,
+        options as never,
+      ).length,
+    ).toBe(0);
+  });
+});
+
+describe("splitIntervalByUnitUtc default piece limit", () => {
+  // Default maxPieces is 1_000_000: a larger split returns the sentinel instead of exhausting the
+  // heap.
+  it.each`
+    start                        | end                           | unit             | slices
+    ${"2024-01-01T00:00:00Z"}    | ${"2024-01-01T00:00:01Z"}     | ${"nanosecond"}  | ${"1_000_000_000 nanoseconds"}
+    ${"2024-01-01T00:00:00Z"}    | ${"2024-01-01T00:16:40.001Z"} | ${"millisecond"} | ${"1_000_001 milliseconds"}
+    ${"-271821-04-20T00:00:00Z"} | ${"+275760-09-13T00:00:00Z"}  | ${"day"}         | ${"200_000_000 days"}
+  `(
+    "returns [] for $start to $end by 1 $unit ($slices)",
+    ({ start, end, unit }) => {
+      expect(splitIntervalByUnitUtc(start, end, unit, 1).length).toBe(0);
+    },
+  );
+
+  // A step past Temporal's maximum (instant +275760-09-13T00:00:00Z; PlainDateTime
+  // +275760-09-13T23:59:59.999999999; PlainDate +275760-09-13) lands after the representable `end`,
+  // so the last piece is trimmed to `end` rather than discarding the split.
+  it.each`
+    start                        | unit       | amount
+    ${"+275760-09-12T23:00:00Z"} | ${"hour"}  | ${2}
+    ${"+275760-09-12T12:00:00Z"} | ${"day"}   | ${1}
+    ${"+275760-09-01T00:00:00Z"} | ${"month"} | ${1}
+  `(
+    "returns one piece from $start to the maximum instant by $amount $unit",
+    ({ start, unit, amount }) => {
+      expect(
+        splitIntervalByUnitUtc(start, "+275760-09-13T00:00:00Z", unit, amount),
+      ).toEqual([{ start, end: "+275760-09-13T00:00:00Z" }]);
+    },
+  );
+});
+
+// An unknown unit is invalid input whatever the span: a non-empty interval already returns
+// [] for it, so a zero-length interval must too, rather than the one zero-length slice a valid
+// unit gives.
+describe("splitIntervalByUnitUtc rejects an invalid unit on a zero-length interval", () => {
+  it.each`
+    unit
+    ${"invalid"}
+    ${"fortnight"}
+  `("returns [] for unit $unit", ({ unit }) => {
+    expect(
+      splitIntervalByUnitUtc(
+        "2024-01-01T00:00:00Z",
+        "2024-01-01T00:00:00Z",
+        unit,
+        1,
+      ),
+    ).toEqual([]);
+  });
+});

@@ -47,7 +47,6 @@ describe("mapZonedDatesInRange", () => {
     ${"2024-03-01T10:00:00-05:00[America/New_York]"} | ${"2024-03-03T10:00:00-05:00[America/New_York]"} | ${-1}
     ${"2024-03-01T10:00:00-05:00[America/New_York]"} | ${"2024-03-03T10:00:00-05:00[America/New_York]"} | ${1.5}
     ${"2024-03-01T10:00:00-05:00[America/New_York]"} | ${"2024-03-03T10:00:00-05:00[America/New_York]"} | ${null}
-    ${"2024-03-01T10:00:00-05:00[America/New_York]"} | ${"2024-03-03T10:00:00-05:00[America/New_York]"} | ${undefined}
   `(
     "returns an empty array for invalid stepDays $invalidStep",
     ({ start, end, invalidStep }) => {
@@ -125,4 +124,108 @@ describe("mapZonedDatesInRange", () => {
       expect(mapZonedDatesInRange(start, end)).toEqual(expected);
     });
   }
+});
+
+describe("mapZonedDatesInRange maxPieces", () => {
+  // 2024-02-28..2024-03-02 local dates inclusive: 4 dates at step 1, 2 at step 2.
+  it.each`
+    stepDays | maxPieces | expected
+    ${1}     | ${4}      | ${["2024-02-28", "2024-02-29", "2024-03-01", "2024-03-02"]}
+    ${1}     | ${10}     | ${["2024-02-28", "2024-02-29", "2024-03-01", "2024-03-02"]}
+    ${2}     | ${2}      | ${["2024-02-28", "2024-03-01"]}
+  `(
+    "returns $expected for step $stepDays with maxPieces $maxPieces",
+    ({ stepDays, maxPieces, expected }) => {
+      expect(
+        mapZonedDatesInRange(
+          "2024-02-28T12:00:00+00:00[UTC]",
+          "2024-03-02T12:00:00+00:00[UTC]",
+          stepDays,
+          { maxPieces },
+        ),
+      ).toEqual(expected);
+    },
+  );
+
+  // Owner decision A2: more dates than maxPieces returns the sentinel.
+  it.each`
+    stepDays | maxPieces
+    ${1}     | ${3}
+    ${2}     | ${1}
+  `(
+    "returns [] at step $stepDays over maxPieces $maxPieces",
+    ({ stepDays, maxPieces }) => {
+      expect(
+        mapZonedDatesInRange(
+          "2024-02-28T12:00:00+00:00[UTC]",
+          "2024-03-02T12:00:00+00:00[UTC]",
+          stepDays,
+          { maxPieces },
+        ).length,
+      ).toBe(0);
+    },
+  );
+
+  it.each`
+    label                   | options
+    ${"maxPieces 0"}        | ${{ maxPieces: 0 }}
+    ${"maxPieces -1"}       | ${{ maxPieces: -1 }}
+    ${"maxPieces 1.5"}      | ${{ maxPieces: 1.5 }}
+    ${"maxPieces NaN"}      | ${{ maxPieces: Number.NaN }}
+    ${"maxPieces Infinity"} | ${{ maxPieces: Number.POSITIVE_INFINITY }}
+    ${"maxPieces string"}   | ${{ maxPieces: "5" }}
+    ${"null options"}       | ${null}
+    ${"number options"}     | ${5}
+  `("returns [] for invalid $label", ({ options }) => {
+    expect(
+      mapZonedDatesInRange(
+        "2024-02-28T12:00:00+00:00[UTC]",
+        "2024-03-02T12:00:00+00:00[UTC]",
+        1,
+        options as never,
+      ).length,
+    ).toBe(0);
+  });
+});
+
+describe("mapZonedDatesInRange default piece limit", () => {
+  // Default maxPieces is 1_000_000. 2024-01-01 + 1_000_000 days = 4761-11-28 (Temporal
+  // PlainDate.add), so the inclusive range holds 1_000_001 dates.
+  it("returns [] for 1_000_001 local dates in UTC", () => {
+    expect(
+      mapZonedDatesInRange(
+        "2024-01-01T00:00:00+00:00[UTC]",
+        "4761-11-28T00:00:00+00:00[UTC]",
+      ).length,
+    ).toBe(0);
+  });
+
+  // Temporal: the maximum instant +275760-09-13T00:00Z is valid, so its local date is in range; the
+  // cursor stepping past the date limit after it ends the walk instead of discarding the result.
+  it.each`
+    start                                  | end                                    | stepDays | expected
+    ${"+275760-09-12T00:00:00+00:00[UTC]"} | ${"+275760-09-13T00:00:00+00:00[UTC]"} | ${1}     | ${["+275760-09-12", "+275760-09-13"]}
+    ${"+275760-09-13T00:00:00+00:00[UTC]"} | ${"+275760-09-13T00:00:00+00:00[UTC]"} | ${1}     | ${["+275760-09-13"]}
+    ${"2024-01-01T00:00:00+00:00[UTC]"}    | ${"2024-01-02T00:00:00+00:00[UTC]"}    | ${1e15}  | ${["2024-01-01"]}
+  `(
+    "returns $expected from $start to $end every $stepDays days at the date limit",
+    ({ start, end, stepDays, expected }) => {
+      expect(mapZonedDatesInRange(start, end, stepDays)).toEqual(expected);
+    },
+  );
+
+  // An explicit undefined argument is the omitted argument (TC39 GetOption treats undefined as absent),
+  // so stepDays undefined is the default step of 1 day and still reaches options.
+  it("uses the default step for an explicit undefined stepDays", () => {
+    const start = "2024-03-01T10:00:00-05:00[America/New_York]";
+    const end = "2024-03-03T10:00:00-05:00[America/New_York]";
+    expect(mapZonedDatesInRange(start, end, undefined)).toEqual([
+      "2024-03-01",
+      "2024-03-02",
+      "2024-03-03",
+    ]);
+    expect(
+      mapZonedDatesInRange(start, end, undefined, { maxPieces: 2 }),
+    ).toEqual([]);
+  });
 });

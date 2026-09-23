@@ -10,7 +10,8 @@ import { isValidTime } from "../validate";
  * @param value ISO time string
  * @returns Nanosecond (000-999) or "" on invalid input
  *
- * @example parseNanosecondFromTime("12:30:45.123") // "123"
+ * @example parseNanosecondFromTime("12:30:45.123") // "000"
+ * @example parseNanosecondFromTime("12:30:45.123456789") // "789"
  * @example parseNanosecondFromTime("12:30:45.000") // "000"
  * @example parseNanosecondFromTime("invalid") // ""
  */

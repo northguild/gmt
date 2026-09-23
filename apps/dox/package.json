@@ -5,9 +5,10 @@
   "description": "Documentation site for @northguild/gmt",
   "type": "module",
   "scripts": {
-    "generate": "node ./scripts/generate-version-map.mjs && tsx ./scripts/build-reference.ts && node ./scripts/build-guides.mjs && node ./scripts/build-scenario-index.mjs && node ./scripts/ensure-sidebar-order.mjs && tsx ./scripts/build-corpus-counts.ts",
-    "predev": "pnpm --filter @northguild/gmt build",
+    "generate": "node ../../scripts/upstream.mjs refresh && node ./scripts/generate-version-map.mjs && tsx ./scripts/build-reference.ts && node ./scripts/build-guides.mjs && node ./scripts/build-scenario-index.mjs && node ./scripts/ensure-sidebar-order.mjs && tsx ./scripts/build-corpus-counts.ts",
+    "predev": "pnpm --filter @northguild/gmt build:dev",
     "dev": "pnpm run generate && node ./scripts/dev-all.mjs",
+    "predev:site": "pnpm --filter @northguild/gmt build:dev",
     "dev:site": "pnpm run generate && astro dev",
     "dev:chat": "pnpm run build && wrangler dev",
     "build": "pnpm run generate && astro build",
@@ -52,8 +53,8 @@
     "motion": "^13.2.0",
     "nanoid": "^6.0.1",
     "radix-ui": "^1.6.7",
-    "react": "19.2.8",
-    "react-dom": "19.2.8",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
     "shiki": "^4.4.3",
     "streamdown": "^2.6.0",
     "tailwind-merge": "3.6.0",
@@ -67,14 +68,13 @@
     "@ai-sdk/provider": "^4.0.12",
     "@astrojs/check": "^0.9.10",
     "@northguild/gmt-oxlint": "workspace:*",
-    "@open-wc/testing": "^5.0.0",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "4.3.3",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "16.3.3",
     "@types/d3-geo": "^3.1.1",
-    "@types/react": "19.2.18",
-    "@types/react-dom": "19.2.7",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
     "@types/topojson-client": "^3.1.5",
     "jsdom": "^30.0.1",
     "oxlint": "^1.78.0",
@@ -86,6 +86,6 @@
     "wrangler": "4.126.0"
   },
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=22.16.0"
   }
 }

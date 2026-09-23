@@ -10,6 +10,7 @@ import {
   mockTemporalPlainDateTimeFromThrow,
   mockTemporalZonedDateTimeFromThrow,
 } from "../../test/mocks";
+import { fromOffsetInstant } from "./fromOffsetInstant";
 import { toOffsetInstant } from "./toOffsetInstant";
 
 /**
@@ -87,8 +88,6 @@ describe("toOffsetInstant", () => {
     ${"2024-07-15T16:00:00+00:00"}           | ${{ instant: "2024-07-15T16:00:00Z", offset: "+00:00" }}
     ${"2024-07-15T16:00:00-00:00"}           | ${{ instant: "2024-07-15T16:00:00Z", offset: "+00:00" }}
     ${"2024-07-15T12:00:00.123456789-04:00"} | ${{ instant: "2024-07-15T16:00:00.123456789Z", offset: "-04:00" }}
-    ${"2024-07-15 12:00:00-04:00"}           | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00" }}
-    ${"20240715T120000-0400"}                | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00" }}
     ${"1969-12-31T23:15:30-00:44:30"}        | ${{ instant: "1970-01-01T00:00:00Z", offset: "-00:44:30" }}
   `(
     "splits the zoneless $value into $expected, with no timeZone field",
@@ -225,28 +224,66 @@ describe("toOffsetInstant", () => {
     },
   );
 
+  // Temporal §14.6.2: every IANA Zone and Link name is a valid zone argument, slash-less or not.
+  // EST5EDT follows US rules (tzdb `backward`), so July is EDT, -04:00; Zulu links to Etc/UTC.
   it.each`
-    timeZone     | description
-    ${"EST5EDT"} | ${"a slash-less IANA zone"}
-    ${"Zulu"}    | ${"a slash-less IANA alias"}
+    timeZone     | expected                                                                      | description
+    ${"EST5EDT"} | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "EST5EDT" }} | ${"a slash-less IANA zone"}
+    ${"Zulu"}    | ${{ instant: "2024-07-15T16:00:00Z", offset: "+00:00", timeZone: "Zulu" }}    | ${"a slash-less IANA alias"}
+    ${"Japan"}   | ${{ instant: "2024-07-15T16:00:00Z", offset: "+09:00", timeZone: "Japan" }}   | ${"a slash-less IANA link to Asia/Tokyo"}
   `(
-    "returns null when the timeZone argument is $timeZone ($description), which isValidTimeZone rejects everywhere in GMT",
-    ({ timeZone }) => {
-      expect(toOffsetInstant("2024-07-15T16:00:00Z", timeZone)).toBeNull();
+    "reads the offset in the timeZone argument $timeZone ($description)",
+    ({ timeZone, expected }) => {
+      expect(toOffsetInstant("2024-07-15T16:00:00Z", timeZone)).toEqual(
+        expected,
+      );
     },
   );
 
+  // ECMA-402 GetAvailableNamedTimeZoneIdentifier: case-insensitive match, IANA casing returned —
+  // the same identifier the bracket path and fromOffsetInstant return, so the round trip holds.
   it.each`
-    value                                                      | description
-    ${"2024-07-15T12:00:00-04:00[foo=bar]"}                    | ${"an annotation standing where a time zone would"}
-    ${"2024-07-15T12:00:00Z[foo=bar]"}                         | ${"the same on a Z instant"}
-    ${"2024-07-15T12:00:00-04:00[America/New_York][foo=bar]"}  | ${"an annotation alongside a real zone, which Temporal would silently drop"}
-    ${"2024-07-15T12:00:00-04:00[America/New_York][!foo=bar]"} | ${"a critical unknown annotation"}
-    ${"2024-07-15T12:00:00-04:00[x-provenance=estimated]"}     | ${"an annotation that changes what the timestamp asserts"}
+    timeZone              | expected
+    ${"america/new_york"} | ${"America/New_York"}
+    ${"AMERICA/NEW_YORK"} | ${"America/New_York"}
+    ${"utc"}              | ${"UTC"}
+    ${"japan"}            | ${"Japan"}
+    ${"asia/calcutta"}    | ${"Asia/Calcutta"}
   `(
-    "returns null for $value ($description) — GMT cannot vouch for an annotation, so it refuses rather than ignores",
-    ({ value }) => {
-      expect(toOffsetInstant(value)).toBeNull();
+    "returns the IANA-cased identifier $expected for the timeZone argument $timeZone",
+    ({ timeZone, expected }) => {
+      expect(toOffsetInstant("2024-07-15T16:00:00Z", timeZone)?.timeZone).toBe(
+        expected,
+      );
+    },
+  );
+
+  it("round-trips a pair built with a lower-case zone through fromOffsetInstant", () => {
+    const pair = toOffsetInstant("2024-07-15T16:00:00Z", "america/new_york");
+    expect(pair).not.toBeNull();
+    expect(toOffsetInstant(fromOffsetInstant(pair as never))).toEqual(pair);
+  });
+
+  // Temporal reads RFC 9557 annotations (proposal-temporal `ParseISODateTime`, RFC 9557 §3.3): an
+  // elective or calendar annotation is ignored, and an unknown critical one, or a key before the
+  // time zone annotation, is rejected. Native Temporal (Chromium 153) agrees on every row.
+  it.each`
+    value                                                         | expected
+    ${"2024-07-15T12:00:00-04:00[foo=bar]"}                       | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00" }}
+    ${"2024-07-15T12:00:00Z[foo=bar]"}                            | ${{ instant: "2024-07-15T12:00:00Z", offset: "+00:00" }}
+    ${"2024-07-15T12:00:00-04:00[x-provenance=estimated]"}        | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00" }}
+    ${"2024-07-15T12:00:00-04:00[u-ca=hebrew]"}                   | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00" }}
+    ${"2024-07-15T12:00:00-04:00[America/New_York][foo=bar]"}     | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "America/New_York" }}
+    ${"2024-07-15T12:00:00-04:00[America/New_York][u-ca=hebrew]"} | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "America/New_York" }}
+    ${"2024-07-15T12:00:00-04:00[-04:00][foo=bar]"}               | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00" }}
+    ${"2024-07-15T12:00:00-04:00[America/New_York][!foo=bar]"}    | ${null}
+    ${"2024-07-15T12:00:00-04:00[!foo=bar]"}                      | ${null}
+    ${"2024-07-15T12:00:00-04:00[foo=bar][America/New_York]"}     | ${null}
+    ${"2024-07-15T12:00:00-05:00[America/New_York][foo=bar]"}     | ${null}
+  `(
+    "reads the annotations of $value as Temporal does → $expected",
+    ({ value, expected }) => {
+      expect(toOffsetInstant(value)).toEqual(expected);
     },
   );
 
@@ -266,6 +303,9 @@ describe("toOffsetInstant", () => {
     ${"2024-07-15T12:00:00-04:00[-05:00]"}           | ${"an offset contradicting a bracketed offset time zone"}
     ${"2024-01-15T12:00:00-04:00[America/New_York]"} | ${"a winter offset contradicting the zone"}
     ${"2024-03-10T02:30:00-05:00[America/New_York]"} | ${"a wall time inside the spring-forward gap"}
+    ${"2024-07-15 12:00:00-04:00"}                   | ${"a space separator (strict extended shape)"}
+    ${"20240715T120000-0400"}                        | ${"basic format (strict extended shape)"}
+    ${"2024-07-15t12:00:00-04:00[America/New_York]"} | ${"a lower-case t separator (strict extended shape)"}
   `("returns null for $value ($description)", ({ value }) => {
     expect(toOffsetInstant(value)).toBeNull();
   });
@@ -277,7 +317,6 @@ describe("toOffsetInstant", () => {
     ${"2024-07-15"}                             | ${"a date with no time"}
     ${"2016-12-31T23:59:60Z"}                   | ${"a leap second"}
     ${"2016-12-31 23:59:60Z"}                   | ${"a leap second with a space separator"}
-    ${"2024-07-15T12:00:00-04:00[u-ca=hebrew]"} | ${"a calendar annotation"}
     ${"2024-02-30T12:00:00Z"}                   | ${"a date that does not exist"}
     ${"2024-07-15T12:00:00+01:00:00.5"}         | ${"a sub-second offset, which no zone or standard uses"}
     ${"2024-07-15T12:00:00+01:00:00.000000001"} | ${"a nanosecond-precision offset"}
@@ -290,7 +329,6 @@ describe("toOffsetInstant", () => {
   it.each`
     timeZone          | description
     ${"Invalid/Zone"} | ${"is not an IANA identifier"}
-    ${"-05:00"}       | ${"is an offset, not a zone"}
     ${""}             | ${"is empty"}
     ${null}           | ${"is null"}
     ${123}            | ${"is a number"}
@@ -334,4 +372,23 @@ describe("toOffsetInstant", () => {
     mockTemporalPlainDateTimeFromThrow();
     expect(toOffsetInstant("2024-07-15T12:00:00-04:00")).toBeNull();
   });
+
+  // Temporal's `TimeZoneIdentifier ::: UTCOffset[~SubMinutePrecision] | TimeZoneIANAName`
+  // (proposal-temporal spec/abstractops.html): `±HH`, `±HHMM` or `±HH:MM`, hour 00–23, no seconds.
+  // Native Temporal and Intl.DateTimeFormat (Chromium 153) accept and reject the same rows.
+  // An offset names no place, so, as for a bracketed offset zone, the pair carries no `timeZone`.
+  it.each`
+    timeZone    | expected
+    ${"-05:00"} | ${{ instant: "2024-07-15T16:00:00Z", offset: "-05:00" }}
+    ${"+0530"}  | ${{ instant: "2024-07-15T16:00:00Z", offset: "+05:30" }}
+    ${"-00:00"} | ${{ instant: "2024-07-15T16:00:00Z", offset: "+00:00" }}
+    ${"+24:00"} | ${null}
+  `(
+    "reads 2024-07-15T16:00:00Z in the offset zone $timeZone → $expected",
+    ({ timeZone, expected }) => {
+      expect(toOffsetInstant("2024-07-15T16:00:00Z", timeZone)).toEqual(
+        expected,
+      );
+    },
+  );
 });

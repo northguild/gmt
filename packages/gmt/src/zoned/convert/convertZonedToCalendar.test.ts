@@ -1,30 +1,27 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { battleTestTimeZones, MustTestCalendars } from "../../test";
 import type { CalendarSystem } from "../../types";
-import {
-  mockTemporalPlainDateFromThrow,
-  mockTemporalZonedDateTimeFromThrow,
-} from "../../test/mocks";
+import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
 import { convertZonedToCalendar } from "./convertZonedToCalendar";
 
 const BASE = "2024-10-03T14:30:45-04:00[America/New_York]";
 
 describe("convertZonedToCalendar", () => {
   it.each`
-    calendar                 | expected
-    ${"gregorian"}           | ${"2024-10-03T14:30:45-04:00[America/New_York]"}
-    ${"hebrew"}              | ${"5785-01-01T14:30:45-04:00[u-ca=hebrew][America/New_York]"}
-    ${"islamic-civil"}       | ${"1446-03-29T14:30:45-04:00[u-ca=islamic-civil][America/New_York]"}
-    ${"islamic-tabular"}     | ${"1446-03-30T14:30:45-04:00[u-ca=islamic-tabular][America/New_York]"}
-    ${"islamic-umalqura"}    | ${"1446-03-30T14:30:45-04:00[u-ca=islamic-umalqura][America/New_York]"}
-    ${"japanese"}            | ${"0006-10-03T14:30:45-04:00[u-ca=japanese;era=reiwa][America/New_York]"}
-    ${"buddhist"}            | ${"2567-10-03T14:30:45-04:00[u-ca=buddhist][America/New_York]"}
-    ${"taiwan"}              | ${"0113-10-03T14:30:45-04:00[u-ca=taiwan][America/New_York]"}
-    ${"persian"}             | ${"1403-07-12T14:30:45-04:00[u-ca=persian][America/New_York]"}
-    ${"indian"}              | ${"1946-07-11T14:30:45-04:00[u-ca=indian][America/New_York]"}
-    ${"ethiopic"}            | ${"2017-01-23T14:30:45-04:00[u-ca=ethiopic;era=ethiopic][America/New_York]"}
-    ${"ethiopic-amete-alem"} | ${"7517-01-23T14:30:45-04:00[u-ca=ethiopic-amete-alem][America/New_York]"}
-    ${"coptic"}              | ${"1741-01-23T14:30:45-04:00[u-ca=coptic][America/New_York]"}
+    calendar              | expected
+    ${"iso8601"}          | ${"2024-10-03T14:30:45-04:00[America/New_York]"}
+    ${"hebrew"}           | ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=hebrew]"}
+    ${"islamic-civil"}    | ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=islamic-civil]"}
+    ${"islamic-tbla"}     | ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=islamic-tbla]"}
+    ${"islamic-umalqura"} | ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=islamic-umalqura]"}
+    ${"japanese"}         | ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=japanese]"}
+    ${"buddhist"}         | ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=buddhist]"}
+    ${"roc"}              | ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=roc]"}
+    ${"persian"}          | ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=persian]"}
+    ${"indian"}           | ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=indian]"}
+    ${"ethiopic"}         | ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=ethiopic]"}
+    ${"ethioaa"}          | ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=ethioaa]"}
+    ${"coptic"}           | ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=coptic]"}
   `(
     "converts the base value to $calendar as $expected",
     ({ calendar, expected }) => {
@@ -34,35 +31,37 @@ describe("convertZonedToCalendar", () => {
     },
   );
 
-  // DoD-1: every calendar chains back to gregorian, which is the property that makes the grammar
-  // a real round trip rather than a one-way display format.
+  // Every calendar: the output is exactly Temporal's own ZonedDateTime#toString for the same
+  // instant, zone and calendar, and it chains back to the original bare ISO value.
   it.each(Object.values(MustTestCalendars).map((calendar) => ({ calendar })))(
-    "chains $calendar back to the original bare ISO value",
+    "writes $calendar as Temporal.ZonedDateTime#toString and chains back to the original bare ISO value",
     ({ calendar }) => {
       const annotated = convertZonedToCalendar(
         BASE,
         calendar as CalendarSystem,
       );
-      expect(convertZonedToCalendar(annotated, "gregorian")).toBe(BASE);
+      expect(annotated).toBe(
+        Temporal.ZonedDateTime.from(BASE).withCalendar(calendar).toString(),
+      );
+      expect(convertZonedToCalendar(annotated, "iso8601")).toBe(BASE);
     },
   );
 
-  // CORE-6 D1: the date half of a zoned value at the TC39 maximum parses through the same
-  // fields -> ISO path as plain dates. Values: test262 extreme-dates.js max rows.
+  // The TC39 maximum instant in every calendar (test262 extreme-dates.js max date).
   it.each`
-    calendar                 | expected
-    ${"hebrew"}              | ${"279517-10-11T00:00:00+00:00[u-ca=hebrew][UTC]"}
-    ${"buddhist"}            | ${"276303-09-13T00:00:00+00:00[u-ca=buddhist][UTC]"}
-    ${"islamic-civil"}       | ${"283583-05-23T00:00:00+00:00[u-ca=islamic-civil][UTC]"}
-    ${"islamic-tabular"}     | ${"283583-05-24T00:00:00+00:00[u-ca=islamic-tabular][UTC]"}
-    ${"islamic-umalqura"}    | ${"283583-05-23T00:00:00+00:00[u-ca=islamic-umalqura][UTC]"}
-    ${"persian"}             | ${"275139-07-12T00:00:00+00:00[u-ca=persian][UTC]"}
-    ${"indian"}              | ${"275682-06-22T00:00:00+00:00[u-ca=indian][UTC]"}
-    ${"japanese"}            | ${"273742-09-13T00:00:00+00:00[u-ca=japanese;era=reiwa][UTC]"}
-    ${"taiwan"}              | ${"273849-09-13T00:00:00+00:00[u-ca=taiwan][UTC]"}
-    ${"ethiopic-amete-alem"} | ${"281247-05-22T00:00:00+00:00[u-ca=ethiopic-amete-alem][UTC]"}
-    ${"coptic"}              | ${"275471-05-22T00:00:00+00:00[u-ca=coptic][UTC]"}
-    ${"ethiopic"}            | ${"275747-05-22T00:00:00+00:00[u-ca=ethiopic;era=ethiopic][UTC]"}
+    calendar              | expected
+    ${"hebrew"}           | ${"+275760-09-13T00:00:00+00:00[UTC][u-ca=hebrew]"}
+    ${"buddhist"}         | ${"+275760-09-13T00:00:00+00:00[UTC][u-ca=buddhist]"}
+    ${"islamic-civil"}    | ${"+275760-09-13T00:00:00+00:00[UTC][u-ca=islamic-civil]"}
+    ${"islamic-tbla"}     | ${"+275760-09-13T00:00:00+00:00[UTC][u-ca=islamic-tbla]"}
+    ${"islamic-umalqura"} | ${"+275760-09-13T00:00:00+00:00[UTC][u-ca=islamic-umalqura]"}
+    ${"persian"}          | ${"+275760-09-13T00:00:00+00:00[UTC][u-ca=persian]"}
+    ${"indian"}           | ${"+275760-09-13T00:00:00+00:00[UTC][u-ca=indian]"}
+    ${"japanese"}         | ${"+275760-09-13T00:00:00+00:00[UTC][u-ca=japanese]"}
+    ${"roc"}              | ${"+275760-09-13T00:00:00+00:00[UTC][u-ca=roc]"}
+    ${"ethioaa"}          | ${"+275760-09-13T00:00:00+00:00[UTC][u-ca=ethioaa]"}
+    ${"coptic"}           | ${"+275760-09-13T00:00:00+00:00[UTC][u-ca=coptic]"}
+    ${"ethiopic"}         | ${"+275760-09-13T00:00:00+00:00[UTC][u-ca=ethiopic]"}
   `(
     "converts the maximum instant to $calendar as $expected and back",
     ({ calendar, expected }) => {
@@ -70,28 +69,26 @@ describe("convertZonedToCalendar", () => {
       expect(convertZonedToCalendar(max, calendar as CalendarSystem)).toBe(
         expected,
       );
-      expect(convertZonedToCalendar(expected, "gregorian")).toBe(max);
+      expect(convertZonedToCalendar(expected, "iso8601")).toBe(max);
     },
   );
 
-  // CORE-6 D1 + G1: the minimum instant in UTC, whose date is -271821-04-20 (minimum + 1 day), so
-  // the date half sits inside every D1 min window. Values: Chromium 152 reads of that date
-  // (q2-xscan-chromium152.json edge[<calendar>].min[1]); coptic = ethioaa year - 5776.
+  // The TC39 minimum instant in UTC, whose date is -271821-04-20 (minimum + 1 day).
   it.each`
-    calendar                 | expected
-    ${"gregorian"}           | ${"-271821-04-20T00:00:00+00:00[UTC]"}
-    ${"islamic-civil"}       | ${"-280804-03-22T00:00:00+00:00[u-ca=islamic-civil][UTC]"}
-    ${"islamic-tabular"}     | ${"-280804-03-23T00:00:00+00:00[u-ca=islamic-tabular][UTC]"}
-    ${"islamic-umalqura"}    | ${"-280804-03-22T00:00:00+00:00[u-ca=islamic-umalqura][UTC]"}
-    ${"persian"}             | ${"-272442-01-10T00:00:00+00:00[u-ca=persian][UTC]"}
-    ${"taiwan"}              | ${"-273732-04-20T00:00:00+00:00[u-ca=taiwan][UTC]"}
-    ${"ethiopic-amete-alem"} | ${"-266323-03-24T00:00:00+00:00[u-ca=ethiopic-amete-alem][UTC]"}
-    ${"coptic"}              | ${"-272099-03-24T00:00:00+00:00[u-ca=coptic][UTC]"}
-    ${"ethiopic"}            | ${"-266323-03-24T00:00:00+00:00[u-ca=ethiopic;era=ethioaa][UTC]"}
-    ${"buddhist"}            | ${"-271278-04-20T00:00:00+00:00[u-ca=buddhist][UTC]"}
-    ${"hebrew"}              | ${"-268058-11-05T00:00:00+00:00[u-ca=hebrew][UTC]"}
-    ${"indian"}              | ${"-271899-01-30T00:00:00+00:00[u-ca=indian][UTC]"}
-    ${"japanese"}            | ${"271822-04-20T00:00:00+00:00[u-ca=japanese;era=bce][UTC]"}
+    calendar              | expected
+    ${"iso8601"}          | ${"-271821-04-20T00:00:00+00:00[UTC]"}
+    ${"islamic-civil"}    | ${"-271821-04-20T00:00:00+00:00[UTC][u-ca=islamic-civil]"}
+    ${"islamic-tbla"}     | ${"-271821-04-20T00:00:00+00:00[UTC][u-ca=islamic-tbla]"}
+    ${"islamic-umalqura"} | ${"-271821-04-20T00:00:00+00:00[UTC][u-ca=islamic-umalqura]"}
+    ${"persian"}          | ${"-271821-04-20T00:00:00+00:00[UTC][u-ca=persian]"}
+    ${"roc"}              | ${"-271821-04-20T00:00:00+00:00[UTC][u-ca=roc]"}
+    ${"ethioaa"}          | ${"-271821-04-20T00:00:00+00:00[UTC][u-ca=ethioaa]"}
+    ${"coptic"}           | ${"-271821-04-20T00:00:00+00:00[UTC][u-ca=coptic]"}
+    ${"ethiopic"}         | ${"-271821-04-20T00:00:00+00:00[UTC][u-ca=ethiopic]"}
+    ${"buddhist"}         | ${"-271821-04-20T00:00:00+00:00[UTC][u-ca=buddhist]"}
+    ${"hebrew"}           | ${"-271821-04-20T00:00:00+00:00[UTC][u-ca=hebrew]"}
+    ${"indian"}           | ${"-271821-04-20T00:00:00+00:00[UTC][u-ca=indian]"}
+    ${"japanese"}         | ${"-271821-04-20T00:00:00+00:00[UTC][u-ca=japanese]"}
   `(
     "converts the minimum instant in UTC to $calendar as $expected and back",
     ({ calendar, expected }) => {
@@ -99,36 +96,35 @@ describe("convertZonedToCalendar", () => {
       expect(convertZonedToCalendar(min, calendar as CalendarSystem)).toBe(
         expected,
       );
-      expect(convertZonedToCalendar(expected, "gregorian")).toBe(min);
+      expect(convertZonedToCalendar(expected, "iso8601")).toBe(min);
     },
   );
 
-  // CORE-6 owner decisions: buddhist is proleptic (ISO year + 543); hebrew years <= 0 and indian
-  // dates before ISO year 1 follow the published arithmetic; japanese emits the Intl era/monthCode
-  // proposal's era codes. Values: Chromium 152 reads (spec §4.2, §5.1).
+  // The CORE-6 far-past rows (buddhist before 1582, hebrew years <= 0, indian before ISO year 1,
+  // japanese before 1873): the string is the ISO instant plus the annotation.
   it.each`
     value                                  | calendar      | expected
-    ${"1000-01-01T00:00:00+00:00[UTC]"}    | ${"buddhist"} | ${"1543-01-01T00:00:00+00:00[u-ca=buddhist][UTC]"}
-    ${"-100000-01-01T00:00:00+00:00[UTC]"} | ${"hebrew"}   | ${"-096239-06-23T00:00:00+00:00[u-ca=hebrew][UTC]"}
-    ${"-000500-06-15T00:00:00+00:00[UTC]"} | ${"indian"}   | ${"-000578-03-25T00:00:00+00:00[u-ca=indian][UTC]"}
-    ${"1800-01-01T00:00:00+00:00[UTC]"}    | ${"japanese"} | ${"1800-01-01T00:00:00+00:00[u-ca=japanese;era=ce][UTC]"}
-    ${"-000500-06-15T00:00:00+00:00[UTC]"} | ${"japanese"} | ${"0501-06-15T00:00:00+00:00[u-ca=japanese;era=bce][UTC]"}
+    ${"1000-01-01T00:00:00+00:00[UTC]"}    | ${"buddhist"} | ${"1000-01-01T00:00:00+00:00[UTC][u-ca=buddhist]"}
+    ${"-100000-01-01T00:00:00+00:00[UTC]"} | ${"hebrew"}   | ${"-100000-01-01T00:00:00+00:00[UTC][u-ca=hebrew]"}
+    ${"-000500-06-15T00:00:00+00:00[UTC]"} | ${"indian"}   | ${"-000500-06-15T00:00:00+00:00[UTC][u-ca=indian]"}
+    ${"1800-01-01T00:00:00+00:00[UTC]"}    | ${"japanese"} | ${"1800-01-01T00:00:00+00:00[UTC][u-ca=japanese]"}
+    ${"-000500-06-15T00:00:00+00:00[UTC]"} | ${"japanese"} | ${"-000500-06-15T00:00:00+00:00[UTC][u-ca=japanese]"}
   `(
     "converts $value to $calendar as $expected and back",
     ({ value, calendar, expected }) => {
       expect(convertZonedToCalendar(value, calendar as CalendarSystem)).toBe(
         expected,
       );
-      expect(convertZonedToCalendar(expected, "gregorian")).toBe(value);
+      expect(convertZonedToCalendar(expected, "iso8601")).toBe(value);
     },
   );
 
   it.each`
-    from                     | to                 | expected
-    ${"hebrew"}              | ${"islamic-civil"} | ${"1446-03-29T14:30:45-04:00[u-ca=islamic-civil][America/New_York]"}
-    ${"japanese"}            | ${"hebrew"}        | ${"5785-01-01T14:30:45-04:00[u-ca=hebrew][America/New_York]"}
-    ${"ethiopic"}            | ${"coptic"}        | ${"1741-01-23T14:30:45-04:00[u-ca=coptic][America/New_York]"}
-    ${"ethiopic-amete-alem"} | ${"japanese"}      | ${"0006-10-03T14:30:45-04:00[u-ca=japanese;era=reiwa][America/New_York]"}
+    from          | to                 | expected
+    ${"hebrew"}   | ${"islamic-civil"} | ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=islamic-civil]"}
+    ${"japanese"} | ${"hebrew"}        | ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=hebrew]"}
+    ${"ethiopic"} | ${"coptic"}        | ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=coptic]"}
+    ${"ethioaa"}  | ${"japanese"}      | ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=japanese]"}
   `(
     "chains directly from $from to $to as $expected",
     ({ from, to, expected }) => {
@@ -154,24 +150,25 @@ describe("convertZonedToCalendar", () => {
     ({ timeZone, value }) => {
       const annotated = convertZonedToCalendar(value, "hebrew");
 
-      expect(annotated).toContain("[u-ca=hebrew]");
-      expect(annotated).toContain(`[${timeZone}]`);
-      // Segment ordering: the calendar annotation must precede the time zone.
-      expect(annotated.indexOf("[u-ca=")).toBeLessThan(
-        annotated.indexOf(`[${timeZone}]`),
-      );
-      expect(convertZonedToCalendar(annotated, "gregorian")).toBe(value);
+      // RFC 9557 §4.1 order: the time zone annotation, then the calendar annotation.
+      expect(annotated).toBe(`${value}[u-ca=hebrew]`);
+      expect(annotated.endsWith(`[${timeZone}][u-ca=hebrew]`)).toBe(true);
+      expect(convertZonedToCalendar(annotated, "iso8601")).toBe(value);
     },
   );
 
   it.each`
-    value                                                         | calendar       | reason
-    ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=hebrew]"} | ${"gregorian"} | ${"Temporal's RFC 9557 segment ordering"}
-    ${"5785-01-01T14:30:45-04:00[America/New_York][u-ca=hebrew]"} | ${"gregorian"} | ${"GMT digits in RFC 9557 ordering"}
-    ${"2024-10-03[u-ca=hebrew]"}                                  | ${"hebrew"}    | ${"a plain calendar date, not a zoned value"}
-    ${"2024-10-03T14:30:45"}                                      | ${"hebrew"}    | ${"a PlainDateTime with no zone"}
-    ${"2024-06-30T23:59:60+00:00[UTC]"}                           | ${"hebrew"}    | ${"leap second"}
-    ${"invalid"}                                                  | ${"hebrew"}    | ${"not a datetime at all"}
+    value                                                                     | calendar       | reason
+    ${"2024-10-03T14:30:45-04:00[u-ca=hebrew][America/New_York]"}             | ${"iso8601"}   | ${"calendar before zone (not RFC 9557)"}
+    ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=japanese;era=reiwa]"} | ${"iso8601"}   | ${"';era=' is not RFC 9557 syntax"}
+    ${"279517-10-11T14:30:45-04:00[America/New_York][u-ca=hebrew]"}           | ${"iso8601"}   | ${"six-digit unsigned year"}
+    ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=taiwan]"}             | ${"iso8601"}   | ${"pre-1.16.0 GMT id"}
+    ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=chinese]"}            | ${"iso8601"}   | ${"calendar GMT does not support"}
+    ${"2024-10-03[u-ca=hebrew]"}                                              | ${"hebrew"}    | ${"a plain calendar date, not a zoned value"}
+    ${"2024-10-03T14:30:45-04:00[America/New_York]"}                          | ${"gregorian"} | ${"CLDR alias Temporal does not accept"}
+    ${"2024-10-03T14:30:45"}                                                  | ${"hebrew"}    | ${"a PlainDateTime with no zone"}
+    ${"2024-06-30T23:59:60+00:00[UTC]"}                                       | ${"hebrew"}    | ${"leap second"}
+    ${"invalid"}                                                              | ${"hebrew"}    | ${"not a datetime at all"}
   `('returns "" for $value ($reason)', ({ value, calendar }) => {
     expect(convertZonedToCalendar(value, calendar as CalendarSystem)).toBe("");
   });
@@ -201,12 +198,12 @@ describe("convertZonedToCalendar", () => {
     expect(convertZonedToCalendar(BASE, "hebrew")).toBe("");
   });
 
-  it('returns "" when Temporal.PlainDate.from throws while decomposing an annotated date half', () => {
-    mockTemporalPlainDateFromThrow();
+  it('returns "" when Temporal.ZonedDateTime.from throws for an annotated value', () => {
+    mockTemporalZonedDateTimeFromThrow();
     expect(
       convertZonedToCalendar(
-        "5785-01-01T14:30:45-04:00[u-ca=hebrew][America/New_York]",
-        "gregorian",
+        "2024-10-03T14:30:45-04:00[America/New_York][u-ca=hebrew]",
+        "iso8601",
       ),
     ).toBe("");
   });
@@ -220,20 +217,20 @@ describe("convertZonedToCalendar", () => {
 // offset-less string resolves. Dates: test262 extreme-dates.js min rows.
 describe("convertZonedToCalendar at the minimum instant behind UTC (CORE-6)", () => {
   it.each`
-    calendar                 | expected
-    ${"gregorian"}           | ${"-271821-04-19T12:00:00-12:00[Etc/GMT+12]"}
-    ${"hebrew"}              | ${"-268058-11-04T12:00:00-12:00[u-ca=hebrew][Etc/GMT+12]"}
-    ${"buddhist"}            | ${"-271278-04-19T12:00:00-12:00[u-ca=buddhist][Etc/GMT+12]"}
-    ${"islamic-civil"}       | ${"-280804-03-21T12:00:00-12:00[u-ca=islamic-civil][Etc/GMT+12]"}
-    ${"islamic-tabular"}     | ${"-280804-03-22T12:00:00-12:00[u-ca=islamic-tabular][Etc/GMT+12]"}
-    ${"islamic-umalqura"}    | ${"-280804-03-21T12:00:00-12:00[u-ca=islamic-umalqura][Etc/GMT+12]"}
-    ${"persian"}             | ${"-272442-01-09T12:00:00-12:00[u-ca=persian][Etc/GMT+12]"}
-    ${"indian"}              | ${"-271899-01-29T12:00:00-12:00[u-ca=indian][Etc/GMT+12]"}
-    ${"taiwan"}              | ${"-273732-04-19T12:00:00-12:00[u-ca=taiwan][Etc/GMT+12]"}
-    ${"japanese"}            | ${"271822-04-19T12:00:00-12:00[u-ca=japanese;era=bce][Etc/GMT+12]"}
-    ${"ethiopic-amete-alem"} | ${"-266323-03-23T12:00:00-12:00[u-ca=ethiopic-amete-alem][Etc/GMT+12]"}
-    ${"coptic"}              | ${"-272099-03-23T12:00:00-12:00[u-ca=coptic][Etc/GMT+12]"}
-    ${"ethiopic"}            | ${"-266323-03-23T12:00:00-12:00[u-ca=ethiopic;era=ethioaa][Etc/GMT+12]"}
+    calendar              | expected
+    ${"iso8601"}          | ${"-271821-04-19T12:00:00-12:00[Etc/GMT+12]"}
+    ${"hebrew"}           | ${"-271821-04-19T12:00:00-12:00[Etc/GMT+12][u-ca=hebrew]"}
+    ${"buddhist"}         | ${"-271821-04-19T12:00:00-12:00[Etc/GMT+12][u-ca=buddhist]"}
+    ${"islamic-civil"}    | ${"-271821-04-19T12:00:00-12:00[Etc/GMT+12][u-ca=islamic-civil]"}
+    ${"islamic-tbla"}     | ${"-271821-04-19T12:00:00-12:00[Etc/GMT+12][u-ca=islamic-tbla]"}
+    ${"islamic-umalqura"} | ${"-271821-04-19T12:00:00-12:00[Etc/GMT+12][u-ca=islamic-umalqura]"}
+    ${"persian"}          | ${"-271821-04-19T12:00:00-12:00[Etc/GMT+12][u-ca=persian]"}
+    ${"indian"}           | ${"-271821-04-19T12:00:00-12:00[Etc/GMT+12][u-ca=indian]"}
+    ${"roc"}              | ${"-271821-04-19T12:00:00-12:00[Etc/GMT+12][u-ca=roc]"}
+    ${"japanese"}         | ${"-271821-04-19T12:00:00-12:00[Etc/GMT+12][u-ca=japanese]"}
+    ${"ethioaa"}          | ${"-271821-04-19T12:00:00-12:00[Etc/GMT+12][u-ca=ethioaa]"}
+    ${"coptic"}           | ${"-271821-04-19T12:00:00-12:00[Etc/GMT+12][u-ca=coptic]"}
+    ${"ethiopic"}         | ${"-271821-04-19T12:00:00-12:00[Etc/GMT+12][u-ca=ethiopic]"}
   `(
     "converts the offset-less minimum wall clock in Etc/GMT+12 to $calendar as $expected",
     ({ calendar, expected }) => {
@@ -246,22 +243,22 @@ describe("convertZonedToCalendar at the minimum instant behind UTC (CORE-6)", ()
     },
   );
 
-  it("converts the offset-less minimum wall clock in America/New_York to hebrew in local mean time", () => {
+  // Temporal TemporalZonedDateTimeToString writes the offset with FormatDateTimeUTCOffsetRounded:
+  // local mean time -04:56:02 is written -04:56 (Chromium 153 agrees).
+  it("converts the offset-less minimum wall clock in America/New_York to hebrew in local mean time, offset rounded to the minute", () => {
     expect(
       convertZonedToCalendar(
         "-271821-04-19T19:03:58[America/New_York]",
         "hebrew",
       ),
-    ).toBe("-268058-11-04T19:03:58-04:56:02[u-ca=hebrew][America/New_York]");
+    ).toBe("-271821-04-19T19:03:58-04:56[America/New_York][u-ca=hebrew]");
   });
 
   it.each`
     value                                                               | calendar
     ${"-271821-04-19T12:00:00-12:00[Etc/GMT+12]"}                       | ${"hebrew"}
-    ${"-271821-04-19T12:00:00-12:00[Etc/GMT+12]"}                       | ${"gregorian"}
-    ${"-268058-11-04T12:00:00-12:00[u-ca=hebrew][Etc/GMT+12]"}          | ${"gregorian"}
-    ${"-271821-04-19T19:03:58-04:56:02[America/New_York]"}              | ${"hebrew"}
-    ${"-268058-11-04T19:03:58-04:56:02[u-ca=hebrew][America/New_York]"} | ${"gregorian"}
+    ${"-271821-04-19T12:00:00-12:00[Etc/GMT+12]"}                       | ${"iso8601"} | ${"-271821-04-19T12:00:00-12:00[Etc/GMT+12][u-ca=hebrew]"} | ${"iso8601"} | ${"-271821-04-19T19:03:58-04:56:02[America/New_York]"} | ${"hebrew"}
+    ${"-271821-04-19T19:03:58-04:56:02[America/New_York][u-ca=hebrew]"} | ${"iso8601"}
   `(
     'returns "" converting $value to $calendar: its offset makes TC39 check the local date against the day range',
     ({ value, calendar }) => {

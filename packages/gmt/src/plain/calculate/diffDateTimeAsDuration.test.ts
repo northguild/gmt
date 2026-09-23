@@ -73,10 +73,6 @@ describe("diffDateTimeAsDuration", () => {
     ${""}
     ${null}
     ${undefined}
-    ${"hour"}
-    ${"day"}
-    ${"month"}
-    ${"year"}
     ${["days"]}
   `('returns "" for invalid unit $invalidUnit', ({ invalidUnit }) => {
     expect(
@@ -156,4 +152,46 @@ describe("diffDateTimeAsDuration", () => {
       ).toBe(expected);
     },
   );
+
+  // Temporal §13.17 GetTemporalUnitValuedOption: a singular unit name is the same unit as its plural.
+  it.each`
+    unit      | expected
+    ${"week"} | ${"P1W"}
+    ${"day"}  | ${"P7D"}
+    ${"hour"} | ${"PT168H"}
+  `(
+    "returns $expected for singular unit $unit from 2024-01-01T00:00:00 to 2024-01-08T00:00:00",
+    ({ unit, expected }) => {
+      expect(
+        diffDateTimeAsDuration(
+          "2024-01-01T00:00:00",
+          "2024-01-08T00:00:00",
+          unit,
+        ),
+      ).toBe(expected);
+    },
+  );
+});
+
+// Temporal GetOptionsObject: an options argument that is not an object or undefined throws
+// TypeError (native Chromium 153: `until(other, null)`, `"x"`, `5` and `true` all throw), so each is
+// invalid input. Omitted options measure normally (P31D).
+describe("diffDateTimeAsDuration with a non-object options argument", () => {
+  it.each`
+    options      | expected
+    ${null}      | ${""}
+    ${"x"}       | ${""}
+    ${5}         | ${""}
+    ${true}      | ${""}
+    ${undefined} | ${"P31D"}
+  `("returns $expected for options $options", ({ options, expected }) => {
+    expect(
+      diffDateTimeAsDuration(
+        "2024-01-01T00:00:00",
+        "2024-02-01T00:00:00",
+        "days",
+        options,
+      ),
+    ).toBe(expected);
+  });
 });

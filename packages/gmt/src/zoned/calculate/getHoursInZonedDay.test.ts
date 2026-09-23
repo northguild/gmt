@@ -1,5 +1,9 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { battleTestTimeZones } from "../../test";
+import {
+  battleTestTimeZones,
+  dateLineCrossingAt,
+  dateLineCrossingTimeZones,
+} from "../../test";
 import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
 import { getHoursInZonedDay } from "./getHoursInZonedDay";
 
@@ -205,6 +209,34 @@ describe("getHoursInZonedDay at the range limits", () => {
     ${"+275760-09-06T12:00:00-04:00[America/Santiago]"} | ${24}    | ${"the day before the change"}
     ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"} | ${null}  | ${"the next Sydney day starts past the maximum"}
   `("returns $expected for $value ($reason)", ({ value, expected }) => {
+    expect(getHoursInZonedDay(value)).toBe(expected);
+  });
+});
+
+// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
+// are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
+// 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
+
+describe("getHoursInZonedDay across the 1844 date-line crossings (zoned.E)", () => {
+  it.each(dateLineCrossingTimeZones)(
+    "gives 1844-12-30 and 1845-01-01 24 hours each in $timeZone",
+    (crossing) => {
+      expect(
+        getHoursInZonedDay(dateLineCrossingAt(crossing, -12).toString()),
+      ).toBe(24);
+      expect(
+        getHoursInZonedDay(dateLineCrossingAt(crossing, 12).toString()),
+      ).toBe(24);
+    },
+  );
+
+  it.each`
+    value                                            | expected
+    ${"1846-06-01T12:00:00-00:01:15[Europe/London]"} | ${24}
+    ${"1847-12-01T12:00:00+00:00[Europe/London]"}    | ${23.979166666666668}
+    ${"1883-11-18T12:00:00-05:00[America/New_York]"} | ${24.066111111111113}
+  `("gives $value $expected hours (control)", ({ value, expected }) => {
     expect(getHoursInZonedDay(value)).toBe(expected);
   });
 });

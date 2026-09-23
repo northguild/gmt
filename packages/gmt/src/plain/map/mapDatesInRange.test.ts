@@ -41,7 +41,6 @@ describe("mapDatesInRange", () => {
     ${"2024-03-01"} | ${"2024-03-03"} | ${1.5}
     ${"2024-03-01"} | ${"2024-03-03"} | ${NaN}
     ${"2024-03-01"} | ${"2024-03-03"} | ${null}
-    ${"2024-03-01"} | ${"2024-03-03"} | ${undefined}
   `(
     "returns an empty array for invalid stepDays $invalidStep",
     ({ startDate, endDate, invalidStep }) => {
@@ -82,4 +81,97 @@ describe("mapDatesInRange", () => {
       ).toEqual([]);
     },
   );
+});
+
+describe("mapDatesInRange maxPieces", () => {
+  // 2024-03-01..2024-03-05 inclusive is 5 dates at step 1 and 3 dates at step 2.
+  it.each`
+    stepDays | maxPieces | expected
+    ${1}     | ${5}      | ${["2024-03-01", "2024-03-02", "2024-03-03", "2024-03-04", "2024-03-05"]}
+    ${1}     | ${10}     | ${["2024-03-01", "2024-03-02", "2024-03-03", "2024-03-04", "2024-03-05"]}
+    ${2}     | ${3}      | ${["2024-03-01", "2024-03-03", "2024-03-05"]}
+  `(
+    "returns $expected for step $stepDays with maxPieces $maxPieces",
+    ({ stepDays, maxPieces, expected }) => {
+      expect(
+        mapDatesInRange("2024-03-01", "2024-03-05", stepDays, { maxPieces }),
+      ).toEqual(expected);
+    },
+  );
+
+  // Owner decision A2: more dates than maxPieces returns the sentinel.
+  it.each`
+    endDate         | stepDays | maxPieces
+    ${"2024-03-05"} | ${1}     | ${4}
+    ${"2024-03-05"} | ${2}     | ${2}
+    ${"2024-03-02"} | ${1}     | ${1}
+  `(
+    "returns [] for 2024-03-01 to $endDate at step $stepDays over maxPieces $maxPieces",
+    ({ endDate, stepDays, maxPieces }) => {
+      expect(
+        mapDatesInRange("2024-03-01", endDate, stepDays, { maxPieces }).length,
+      ).toBe(0);
+    },
+  );
+
+  it.each`
+    label                   | options
+    ${"maxPieces 0"}        | ${{ maxPieces: 0 }}
+    ${"maxPieces -1"}       | ${{ maxPieces: -1 }}
+    ${"maxPieces 1.5"}      | ${{ maxPieces: 1.5 }}
+    ${"maxPieces NaN"}      | ${{ maxPieces: Number.NaN }}
+    ${"maxPieces Infinity"} | ${{ maxPieces: Number.POSITIVE_INFINITY }}
+    ${"maxPieces string"}   | ${{ maxPieces: "5" }}
+    ${"null options"}       | ${null}
+    ${"number options"}     | ${5}
+  `("returns [] for invalid $label", ({ options }) => {
+    expect(
+      mapDatesInRange("2024-03-01", "2024-03-05", 1, options as never).length,
+    ).toBe(0);
+  });
+});
+
+describe("mapDatesInRange default piece limit", () => {
+  // Default maxPieces is 1_000_000. 2024-01-01 + 1_000_000 days = 4761-11-28 (Temporal
+  // PlainDate.add), so the inclusive range holds 1_000_001 dates. The full PlainDate range
+  // holds 200_000_002 dates.
+  it.each`
+    startDate          | endDate            | stepDays
+    ${"2024-01-01"}    | ${"4761-11-28"}    | ${1}
+    ${"-271821-04-19"} | ${"+275760-09-13"} | ${1}
+    ${"-271821-04-19"} | ${"+275760-09-13"} | ${100}
+  `(
+    "returns [] for $startDate to $endDate at step $stepDays",
+    ({ startDate, endDate, stepDays }) => {
+      expect(mapDatesInRange(startDate, endDate, stepDays).length).toBe(0);
+    },
+  );
+
+  // Temporal ISODateWithinLimits: +275760-09-13 is a valid PlainDate, so a range ending there yields
+  // its dates; the cursor stepping past the limit after the last in-range date ends the walk.
+  it.each`
+    startDate          | endDate            | stepDays | expected
+    ${"+275760-09-11"} | ${"+275760-09-13"} | ${1}     | ${["+275760-09-11", "+275760-09-12", "+275760-09-13"]}
+    ${"+275760-09-13"} | ${"+275760-09-13"} | ${1}     | ${["+275760-09-13"]}
+    ${"+275760-09-10"} | ${"+275760-09-13"} | ${2}     | ${["+275760-09-10", "+275760-09-12"]}
+    ${"2024-01-01"}    | ${"2024-01-02"}    | ${1e15}  | ${["2024-01-01"]}
+  `(
+    "returns $expected from $startDate to $endDate every $stepDays days at the date limit",
+    ({ startDate, endDate, stepDays, expected }) => {
+      expect(mapDatesInRange(startDate, endDate, stepDays)).toEqual(expected);
+    },
+  );
+
+  // An explicit undefined argument is the omitted argument (TC39 GetOption treats undefined as absent),
+  // so stepDays undefined is the default step of 1 day and still reaches options.
+  it("uses the default step for an explicit undefined stepDays", () => {
+    expect(mapDatesInRange("2024-03-01", "2024-03-03", undefined)).toEqual([
+      "2024-03-01",
+      "2024-03-02",
+      "2024-03-03",
+    ]);
+    expect(
+      mapDatesInRange("2024-03-01", "2024-03-03", undefined, { maxPieces: 2 }),
+    ).toEqual([]);
+  });
 });

@@ -3,10 +3,16 @@ import { intervalEngulfsDateTime } from "./intervalEngulfsDateTime";
 describe("intervalEngulfsDateTime", () => {
   it.each`
     aStart                   | aEnd                     | bStart                   | bEnd                     | expected
+    // Half-open: B within A and overlapping it, so an empty B counts only strictly inside A
+    // (CORE-6 §3 clampInterval clamps an empty interval at an edge to null).
     ${"2024-01-01T09:00:00"} | ${"2024-12-31T17:00:00"} | ${"2024-06-01T12:00:00"} | ${"2024-07-01T13:00:00"} | ${true}
     ${"2024-01-01T09:00:00"} | ${"2024-12-31T17:00:00"} | ${"2024-01-01T09:00:00"} | ${"2024-12-31T17:00:00"} | ${true}
     ${"2024-01-01T09:00:00"} | ${"2024-12-31T17:00:00"} | ${"2024-01-01T09:00:00"} | ${"2024-06-30T12:00:00"} | ${true}
     ${"2024-01-01T09:00:00"} | ${"2024-12-31T17:00:00"} | ${"2024-06-01T12:00:00"} | ${"2024-12-31T17:00:00"} | ${true}
+    ${"2024-01-01T09:00:00"} | ${"2024-12-31T17:00:00"} | ${"2024-06-01T12:00:00"} | ${"2024-06-01T12:00:00"} | ${true}
+    ${"2024-01-01T09:00:00"} | ${"2024-12-31T17:00:00"} | ${"2024-12-31T17:00:00"} | ${"2024-12-31T17:00:00"} | ${false}
+    ${"2024-01-01T09:00:00"} | ${"2024-12-31T17:00:00"} | ${"2024-01-01T09:00:00"} | ${"2024-01-01T09:00:00"} | ${false}
+    ${"2024-06-01T12:00:00"} | ${"2024-06-01T12:00:00"} | ${"2024-06-01T12:00:00"} | ${"2024-06-01T12:00:00"} | ${false}
   `(
     "returns $expected when B is inside A ($aStart to $aEnd, $bStart to $bEnd)",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {

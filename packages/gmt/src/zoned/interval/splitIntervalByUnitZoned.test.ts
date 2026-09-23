@@ -326,9 +326,9 @@ describe("splitIntervalByUnitZoned", () => {
       expect(result[0].end).toBe(end);
     }
   });
-  // E5 (issue #78), decision of record D2 — see isValidZonedDateTime.test.ts for the full
-  // rationale: zoned/ rejects any [u-ca=...] calendar annotation outright.
-  it("returns [] when start carries a calendar annotation", () => {
+  // The arguments name different calendars (hebrew and a bare iso8601 string), so the
+  // result is the sentinel (TC39 CalendarEquals makes until throw).
+  it("returns [] when start and end name different calendars", () => {
     expect(
       splitIntervalByUnitZoned(
         "2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]",
@@ -347,7 +347,7 @@ describe("splitIntervalByUnitZoned", () => {
 describe("splitIntervalByUnitZoned with GMT calendar-annotated values", () => {
   const Y = calendarZonedFixtures.hebrewLeapYearSpan;
   const ISLAMIC_END =
-    "1446-03-30T00:00:00-04:00[u-ca=islamic-tabular][America/New_York]";
+    "2024-10-03T00:00:00-04:00[America/New_York][u-ca=islamic-tbla]";
 
   it("splits a Hebrew leap year into 13 month-slices, tagging every boundary", () => {
     const slices = splitIntervalByUnitZoned(
@@ -361,8 +361,8 @@ describe("splitIntervalByUnitZoned with GMT calendar-annotated values", () => {
     for (const slice of slices) {
       expect(slice.start).toContain("[u-ca=hebrew]");
       expect(slice.end).toContain("[u-ca=hebrew]");
-      expect(slice.start.indexOf("[u-ca=")).toBeLessThan(
-        slice.start.indexOf("[America/New_York]"),
+      expect(slice.start.indexOf("[America/New_York]")).toBeLessThan(
+        slice.start.indexOf("[u-ca="),
       );
     }
     expect(slices[0].start).toBe(Y.tishri1_5784NewYork);
@@ -370,50 +370,41 @@ describe("splitIntervalByUnitZoned with GMT calendar-annotated values", () => {
   });
 
   it("steps a sub-day unit inside the resolved calendar", () => {
-    const dayStart = "5784-04-20T00:00:00-05:00[u-ca=hebrew][America/New_York]";
-    const dayEnd = "5784-04-21T00:00:00-05:00[u-ca=hebrew][America/New_York]";
+    const dayStart = "2024-01-01T00:00:00-05:00[America/New_York][u-ca=hebrew]";
+    const dayEnd = "2024-01-02T00:00:00-05:00[America/New_York][u-ca=hebrew]";
 
     expect(splitIntervalByUnitZoned(dayStart, dayEnd, "hour", 6)).toEqual([
       {
         start: dayStart,
-        end: "5784-04-20T06:00:00-05:00[u-ca=hebrew][America/New_York]",
+        end: "2024-01-01T06:00:00-05:00[America/New_York][u-ca=hebrew]",
       },
       {
-        start: "5784-04-20T06:00:00-05:00[u-ca=hebrew][America/New_York]",
-        end: "5784-04-20T12:00:00-05:00[u-ca=hebrew][America/New_York]",
+        start: "2024-01-01T06:00:00-05:00[America/New_York][u-ca=hebrew]",
+        end: "2024-01-01T12:00:00-05:00[America/New_York][u-ca=hebrew]",
       },
       {
-        start: "5784-04-20T12:00:00-05:00[u-ca=hebrew][America/New_York]",
-        end: "5784-04-20T18:00:00-05:00[u-ca=hebrew][America/New_York]",
+        start: "2024-01-01T12:00:00-05:00[America/New_York][u-ca=hebrew]",
+        end: "2024-01-01T18:00:00-05:00[America/New_York][u-ca=hebrew]",
       },
       {
-        start: "5784-04-20T18:00:00-05:00[u-ca=hebrew][America/New_York]",
+        start: "2024-01-01T18:00:00-05:00[America/New_York][u-ca=hebrew]",
         end: dayEnd,
       },
     ]);
   });
 
-  // D5 fallback: a mismatched pair steps in Gregorian rather than returning the sentinel, and the
-  // boundaries come back as bare ISO because "gregorian" is the resolved calendar.
-  it("falls back to Gregorian month-stepping for a mismatched pair", () => {
-    const slices = splitIntervalByUnitZoned(
-      Y.tishri1_5784NewYork,
-      ISLAMIC_END,
-      "month",
-      1,
-    );
-
-    expect(slices).toHaveLength(13);
-    for (const slice of slices) {
-      expect(slice.start).not.toContain("[u-ca=");
-      expect(slice.end).not.toContain("[u-ca=");
-    }
+  // TC39 CalendarEquals — a pair naming different calendars returns [] (native Chromium
+  // 153 until: "Mismatched calendars.").
+  it("returns [] for a pair naming different calendars", () => {
+    expect(
+      splitIntervalByUnitZoned(Y.tishri1_5784NewYork, ISLAMIC_END, "month", 1),
+    ).toEqual([]);
   });
 
   it.each`
     value                                                         | reason
-    ${"5784-01-01T00:00:00-04:00[America/New_York][u-ca=hebrew]"} | ${"GMT digits in Temporal's segment ordering"}
-    ${"5785-13-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"} | ${"month 13 in a non-leap Hebrew year"}
+    ${"5784-01-01T00:00:00-04:00[America/New_York][u-ca=hebrew]"} | ${"-04:00 is not New York's offset on ISO 5784-01-01"}
+    ${"2024-13-15T14:30:00-05:00[America/New_York][u-ca=hebrew]"} | ${"ISO month 13 (the digits are ISO)"}
   `("returns [] when the start is $value ($reason)", ({ value }) => {
     expect(splitIntervalByUnitZoned(value, Y.isoEnd, "day", 1)).toEqual([]);
   });
@@ -422,67 +413,304 @@ describe("splitIntervalByUnitZoned with GMT calendar-annotated values", () => {
 // CORE-6 S5: calendar-unit boundaries are the calendar's own NonISODateAdd from the start (anchored).
 // Values: Chromium 153 native Temporal `start.add({ months: k })`, read in the calendar.
 describe("splitIntervalByUnitZoned in non-ISO calendars (CORE-6)", () => {
-  it("splits 279517-08-05 to 279517-10-05 in hebrew by month near the maximum (D1)", () => {
+  it("splits +275760-07-10 to +275760-09-07 in hebrew by month near the maximum (D1)", () => {
     expect(
       splitIntervalByUnitZoned(
-        "279517-08-05T00:00:00+00:00[u-ca=hebrew][UTC]",
-        "279517-10-05T00:00:00+00:00[u-ca=hebrew][UTC]",
+        "+275760-07-10T00:00:00+00:00[UTC][u-ca=hebrew]",
+        "+275760-09-07T00:00:00+00:00[UTC][u-ca=hebrew]",
         "month",
         1,
       ),
     ).toEqual([
       {
-        start: "279517-08-05T00:00:00+00:00[u-ca=hebrew][UTC]",
-        end: "279517-09-05T00:00:00+00:00[u-ca=hebrew][UTC]",
+        start: "+275760-07-10T00:00:00+00:00[UTC][u-ca=hebrew]",
+        end: "+275760-08-09T00:00:00+00:00[UTC][u-ca=hebrew]",
       },
       {
-        start: "279517-09-05T00:00:00+00:00[u-ca=hebrew][UTC]",
-        end: "279517-10-05T00:00:00+00:00[u-ca=hebrew][UTC]",
+        start: "+275760-08-09T00:00:00+00:00[UTC][u-ca=hebrew]",
+        end: "+275760-09-07T00:00:00+00:00[UTC][u-ca=hebrew]",
       },
     ]);
   });
 
-  it("splits 1543-01-31 to 1543-04-30 in buddhist by month with proleptic month ends (D2)", () => {
+  it("splits 1000-01-31 to 1000-04-30 in buddhist by month with proleptic month ends (D2)", () => {
     expect(
       splitIntervalByUnitZoned(
-        "1543-01-31T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]",
-        "1543-04-30T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]",
+        "1000-01-31T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]",
+        "1000-04-30T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]",
         "month",
         1,
       ),
     ).toEqual([
       {
-        start: "1543-01-31T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]",
-        end: "1543-02-28T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]",
+        start: "1000-01-31T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]",
+        end: "1000-02-28T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]",
       },
       {
-        start: "1543-02-28T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]",
-        end: "1543-03-31T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]",
+        start: "1000-02-28T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]",
+        end: "1000-03-31T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]",
       },
       {
-        start: "1543-03-31T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]",
-        end: "1543-04-30T00:00:00-12:00[u-ca=buddhist][Etc/GMT+12]",
+        start: "1000-03-31T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]",
+        end: "1000-04-30T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]",
       },
     ]);
   });
 
-  it("splits -096239-06-23 to -096239-08-23 in hebrew by month in a year <= 0 (D3)", () => {
+  // The offset is written by FormatDateTimeUTCOffsetRounded, so local mean time -04:56:02 is
+  // written -04:56 (native Chromium 153 agrees).
+  it("splits -100000-01-01 to -100000-02-29 in hebrew by month in a year <= 0 (D3)", () => {
     expect(
       splitIntervalByUnitZoned(
-        "-096239-06-23T00:00:00-04:56:02[u-ca=hebrew][America/New_York]",
-        "-096239-08-23T00:00:00-04:56:02[u-ca=hebrew][America/New_York]",
+        "-100000-01-01T00:00:00-04:56:02[America/New_York][u-ca=hebrew]",
+        "-100000-02-29T00:00:00-04:56:02[America/New_York][u-ca=hebrew]",
         "month",
         1,
       ),
     ).toEqual([
       {
-        start: "-096239-06-23T00:00:00-04:56:02[u-ca=hebrew][America/New_York]",
-        end: "-096239-07-23T00:00:00-04:56:02[u-ca=hebrew][America/New_York]",
+        start: "-100000-01-01T00:00:00-04:56[America/New_York][u-ca=hebrew]",
+        end: "-100000-01-30T00:00:00-04:56[America/New_York][u-ca=hebrew]",
       },
       {
-        start: "-096239-07-23T00:00:00-04:56:02[u-ca=hebrew][America/New_York]",
-        end: "-096239-08-23T00:00:00-04:56:02[u-ca=hebrew][America/New_York]",
+        start: "-100000-01-30T00:00:00-04:56[America/New_York][u-ca=hebrew]",
+        end: "-100000-02-29T00:00:00-04:56[America/New_York][u-ca=hebrew]",
       },
     ]);
+  });
+});
+
+describe("splitIntervalByUnitZoned maxPieces", () => {
+  // Owner decision A2: maxPieces bounds the number of slices. At or above the slice count the
+  // output is unchanged; one below it returns the sentinel.
+  it.each`
+    maxPieces
+    ${4}
+    ${9}
+  `(
+    "returns 4 slices for 2024-01-31T10:00:00+00:00[UTC] to 2024-05-15T10:00:00+00:00[UTC] by 1 month with maxPieces $maxPieces",
+    ({ maxPieces }) => {
+      expect(
+        splitIntervalByUnitZoned(
+          "2024-01-31T10:00:00+00:00[UTC]",
+          "2024-05-15T10:00:00+00:00[UTC]",
+          "month",
+          1,
+          { maxPieces },
+        ),
+      ).toEqual([
+        {
+          start: "2024-01-31T10:00:00+00:00[UTC]",
+          end: "2024-02-29T10:00:00+00:00[UTC]",
+        },
+        {
+          start: "2024-02-29T10:00:00+00:00[UTC]",
+          end: "2024-03-31T10:00:00+00:00[UTC]",
+        },
+        {
+          start: "2024-03-31T10:00:00+00:00[UTC]",
+          end: "2024-04-30T10:00:00+00:00[UTC]",
+        },
+        {
+          start: "2024-04-30T10:00:00+00:00[UTC]",
+          end: "2024-05-15T10:00:00+00:00[UTC]",
+        },
+      ]);
+    },
+  );
+
+  it.each`
+    maxPieces
+    ${3}
+    ${1}
+  `(
+    "returns [] for 2024-01-31T10:00:00+00:00[UTC] to 2024-05-15T10:00:00+00:00[UTC] by 1 month (4 slices) over maxPieces $maxPieces",
+    ({ maxPieces }) => {
+      expect(
+        splitIntervalByUnitZoned(
+          "2024-01-31T10:00:00+00:00[UTC]",
+          "2024-05-15T10:00:00+00:00[UTC]",
+          "month",
+          1,
+          { maxPieces },
+        ).length,
+      ).toBe(0);
+    },
+  );
+
+  it.each`
+    maxPieces
+    ${3}
+    ${8}
+  `(
+    "returns 3 slices for 2024-01-01T00:00:00+00:00[UTC] to 2024-01-01T03:00:00+00:00[UTC] by 1 hour with maxPieces $maxPieces",
+    ({ maxPieces }) => {
+      expect(
+        splitIntervalByUnitZoned(
+          "2024-01-01T00:00:00+00:00[UTC]",
+          "2024-01-01T03:00:00+00:00[UTC]",
+          "hour",
+          1,
+          { maxPieces },
+        ),
+      ).toEqual([
+        {
+          start: "2024-01-01T00:00:00+00:00[UTC]",
+          end: "2024-01-01T01:00:00+00:00[UTC]",
+        },
+        {
+          start: "2024-01-01T01:00:00+00:00[UTC]",
+          end: "2024-01-01T02:00:00+00:00[UTC]",
+        },
+        {
+          start: "2024-01-01T02:00:00+00:00[UTC]",
+          end: "2024-01-01T03:00:00+00:00[UTC]",
+        },
+      ]);
+    },
+  );
+
+  it.each`
+    maxPieces
+    ${2}
+    ${1}
+  `(
+    "returns [] for 2024-01-01T00:00:00+00:00[UTC] to 2024-01-01T03:00:00+00:00[UTC] by 1 hour (3 slices) over maxPieces $maxPieces",
+    ({ maxPieces }) => {
+      expect(
+        splitIntervalByUnitZoned(
+          "2024-01-01T00:00:00+00:00[UTC]",
+          "2024-01-01T03:00:00+00:00[UTC]",
+          "hour",
+          1,
+          { maxPieces },
+        ).length,
+      ).toBe(0);
+    },
+  );
+
+  // 20 day slices in UTC. The zoned lower bound allows for offset changes and stalled steps, so
+  // this limit is enforced while stepping rather than up front.
+  it.each`
+    maxPieces | expected
+    ${20}     | ${20}
+    ${19}     | ${0}
+  `(
+    "returns $expected slices for 20 days by 1 day with maxPieces $maxPieces",
+    ({ maxPieces, expected }) => {
+      const result = splitIntervalByUnitZoned(
+        "2024-01-01T00:00:00+00:00[UTC]",
+        "2024-01-21T00:00:00+00:00[UTC]",
+        "day",
+        1,
+        { maxPieces },
+      );
+      expect(result.length).toBe(expected);
+      if (expected > 0) {
+        expect(result[0]).toEqual({
+          start: "2024-01-01T00:00:00+00:00[UTC]",
+          end: "2024-01-02T00:00:00+00:00[UTC]",
+        });
+        expect(result[19]).toEqual({
+          start: "2024-01-20T00:00:00+00:00[UTC]",
+          end: "2024-01-21T00:00:00+00:00[UTC]",
+        });
+      }
+    },
+  );
+
+  it("returns one slice for a zero-length interval with maxPieces 1", () => {
+    expect(
+      splitIntervalByUnitZoned(
+        "2024-01-01T00:00:00+00:00[UTC]",
+        "2024-01-01T00:00:00+00:00[UTC]",
+        "hour",
+        1,
+        { maxPieces: 1 },
+      ),
+    ).toEqual([
+      {
+        start: "2024-01-01T00:00:00+00:00[UTC]",
+        end: "2024-01-01T00:00:00+00:00[UTC]",
+      },
+    ]);
+  });
+
+  it.each`
+    label                   | options
+    ${"maxPieces 0"}        | ${{ maxPieces: 0 }}
+    ${"maxPieces -1"}       | ${{ maxPieces: -1 }}
+    ${"maxPieces 1.5"}      | ${{ maxPieces: 1.5 }}
+    ${"maxPieces NaN"}      | ${{ maxPieces: Number.NaN }}
+    ${"maxPieces Infinity"} | ${{ maxPieces: Number.POSITIVE_INFINITY }}
+    ${"maxPieces string"}   | ${{ maxPieces: "5" }}
+    ${"null options"}       | ${null}
+    ${"number options"}     | ${5}
+  `("returns [] for invalid $label", ({ options }) => {
+    expect(
+      splitIntervalByUnitZoned(
+        "2024-01-01T00:00:00+00:00[UTC]",
+        "2024-01-01T03:00:00+00:00[UTC]",
+        "hour",
+        1,
+        options as never,
+      ).length,
+    ).toBe(0);
+  });
+});
+
+describe("splitIntervalByUnitZoned default piece limit", () => {
+  // Default maxPieces is 1_000_000: a larger split returns the sentinel instead of exhausting the
+  // heap.
+  it.each`
+    start                                  | end                                     | unit             | slices
+    ${"2024-01-01T00:00:00+00:00[UTC]"}    | ${"2024-01-01T00:00:01+00:00[UTC]"}     | ${"nanosecond"}  | ${"1_000_000_000 nanoseconds"}
+    ${"2024-01-01T00:00:00+00:00[UTC]"}    | ${"2024-01-01T00:16:40.001+00:00[UTC]"} | ${"millisecond"} | ${"1_000_001 milliseconds"}
+    ${"-271821-04-20T00:00:00+00:00[UTC]"} | ${"+275760-09-13T00:00:00+00:00[UTC]"}  | ${"day"}         | ${"200_000_000 days"}
+  `(
+    "returns [] for $start to $end by 1 $unit ($slices)",
+    ({ start, end, unit }) => {
+      expect(splitIntervalByUnitZoned(start, end, unit, 1).length).toBe(0);
+    },
+  );
+
+  // A step past Temporal's maximum (instant +275760-09-13T00:00:00Z; PlainDateTime
+  // +275760-09-13T23:59:59.999999999; PlainDate +275760-09-13) lands after the representable `end`,
+  // so the last piece is trimmed to `end` rather than discarding the split.
+  it.each`
+    start                                               | unit      | amount
+    ${"+275760-09-12T23:00:00+00:00[UTC]"}              | ${"hour"} | ${2}
+    ${"+275760-09-12T12:00:00+00:00[UTC]"}              | ${"day"}  | ${1}
+    ${"+275760-09-12T08:00:00-04:00[America/New_York]"} | ${"day"}  | ${1}
+  `(
+    "returns one piece from $start to the maximum instant by $amount $unit",
+    ({ start, unit, amount }) => {
+      const end = start.endsWith("[UTC]")
+        ? "+275760-09-13T00:00:00+00:00[UTC]"
+        : "+275760-09-12T20:00:00-04:00[America/New_York]";
+      expect(splitIntervalByUnitZoned(start, end, unit, amount)).toEqual([
+        { start, end },
+      ]);
+    },
+  );
+});
+
+// An unknown unit is invalid input whatever the span: a non-empty interval already returns
+// [] for it, so a zero-length interval must too, rather than the one zero-length slice a valid
+// unit gives.
+describe("splitIntervalByUnitZoned rejects an invalid unit on a zero-length interval", () => {
+  it.each`
+    unit
+    ${"invalid"}
+    ${"fortnight"}
+  `("returns [] for unit $unit", ({ unit }) => {
+    expect(
+      splitIntervalByUnitZoned(
+        "2024-01-01T00:00:00+00:00[UTC]",
+        "2024-01-01T00:00:00+00:00[UTC]",
+        unit,
+        1,
+      ),
+    ).toEqual([]);
   });
 });

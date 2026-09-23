@@ -93,19 +93,45 @@ export function isEmptyField(f: CallField): boolean {
 }
 
 /** Format one field as source text. */
+/**
+ * The control is free text (a `number` input cannot hold a nanosecond
+ * timestamp without losing precision to the double round-trip), so anything
+ * that is not an integer falls back to `0n` rather than producing an
+ * un-parseable call line.
+ */
+function formatBigintArg(v: string): string {
+  const digits = v.replace(/n$/, "");
+  return /^-?\d+$/.test(digits) ? `${digits}n` : "0n";
+}
+
+/**
+ * `expr` elements are source text (an object literal per row) and go in
+ * verbatim; quoting them would pass the source as a string.
+ */
+function formatListArg(f: CallField): string {
+  const bare = f.element === "number" || f.element === "expr";
+  const els = (f.items ?? [])
+    .filter((x) => x.trim() !== "")
+    .map((x) => (bare ? x.trim() : JSON.stringify(x)));
+  return `[${els.join(", ")}]`;
+}
+
+function formatIntervalsArg(f: CallField): string {
+  const items = (f.pairs ?? [])
+    .filter(([s, e]) => s.trim() !== "" || e.trim() !== "")
+    .map(
+      ([s, e]) => `{ start: ${JSON.stringify(s)}, end: ${JSON.stringify(e)} }`,
+    );
+  return `[${items.join(", ")}]`;
+}
+
 export function formatArg(f: CallField): string {
   const v = (f.value ?? "").trim();
   switch (f.kind) {
     case "number":
       return v === "" ? "0" : v;
-    case "bigint": {
-      // The control is free text (a `number` input cannot hold a nanosecond
-      // timestamp without losing precision to the double round-trip), so
-      // anything that is not an integer falls back to `0n` rather than
-      // producing an un-parseable call line.
-      const digits = v.replace(/n$/, "");
-      return /^-?\d+$/.test(digits) ? `${digits}n` : "0n";
-    }
+    case "bigint":
+      return formatBigintArg(v);
     case "boolean":
       return v === "true" ? "true" : "false";
     case "expr":
@@ -114,24 +140,10 @@ export function formatArg(f: CallField): string {
       return v === "" ? "undefined" : v;
     case "units":
       return `{ ${f.unit || "days"}: ${v === "" ? "0" : v} }`;
-    case "list": {
-      // `expr` elements are source text (an object literal per row) and go in
-      // verbatim; quoting them would pass the source as a string.
-      const bare = f.element === "number" || f.element === "expr";
-      const els = (f.items ?? [])
-        .filter((x) => x.trim() !== "")
-        .map((x) => (bare ? x.trim() : JSON.stringify(x)));
-      return `[${els.join(", ")}]`;
-    }
-    case "intervals": {
-      const items = (f.pairs ?? [])
-        .filter(([s, e]) => s.trim() !== "" || e.trim() !== "")
-        .map(
-          ([s, e]) =>
-            `{ start: ${JSON.stringify(s)}, end: ${JSON.stringify(e)} }`,
-        );
-      return `[${items.join(", ")}]`;
-    }
+    case "list":
+      return formatListArg(f);
+    case "intervals":
+      return formatIntervalsArg(f);
     default:
       // string + enum
       return JSON.stringify(f.value ?? "");

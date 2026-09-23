@@ -29,16 +29,10 @@ function compile(source: string) {
   host.fileExists = (f) => f === fileName || origFileExists(f);
   const origReadFile = host.readFile.bind(host);
   host.readFile = (f) => (f === fileName ? source : origReadFile(f));
+  // The generator's own options, so a test sees the types the reference pages see.
   const program = ts.createProgram(
     [fileName],
-    {
-      target: ts.ScriptTarget.ESNext,
-      module: ts.ModuleKind.ESNext,
-      moduleResolution: ts.ModuleResolutionKind.Bundler,
-      skipLibCheck: true,
-      noEmit: true,
-      strict: false,
-    },
+    BR.REFERENCE_COMPILER_OPTIONS,
     host,
   );
   return { checker: program.getTypeChecker(), sourceFile };
@@ -131,6 +125,65 @@ describe("extractFunction", () => {
     expect(result!.playgroundSpec!.fn).toBe("formatDuration");
     expect(result!.livePlaygroundTemplate).toBeDefined();
     expect(result!.livePlaygroundTemplate!.template).toBe("formatDuration()");
+  });
+});
+
+describe("extractFunction nullable types", () => {
+  function extract(src: string, name: string): FnDoc {
+    const { checker, sourceFile } = compile(src);
+    let result: FnDoc | undefined;
+    sourceFile.forEachChild((node) => {
+      if (ts.isFunctionDeclaration(node) && node.name?.text === name) {
+        result = BR.extractFunction(
+          checker,
+          node,
+          "plain",
+          "calculate",
+          gmtPath("plain/calculate/diffDate.ts"),
+          new Set(),
+        );
+      }
+    });
+    expect(result).toBeDefined();
+    return result!;
+  }
+
+  it.each`
+    source                                                                                                                                                                                                                                                                                                                                                                                                                                           | name          | signature
+    ${"function diffDays(a: string, b: string): number | null { return null; }"}                                                                                                                                                                                                                                                                                                                                                                     | ${"diffDays"} | ${"diffDays(a: string, b: string): number | null"}
+    ${"function maybe(a: string | undefined): string { return ''; }"}                                                                                                                                                                                                                                                                                                                                                                                | ${"maybe"}    | ${"maybe(a: string | undefined): string"}
+    ${"interface O { unit?: string }\nfunction opt(a: string, options?: O): string { return a; }"}                                                                                                                                                                                                                                                                                                                                                   | ${"opt"}      | ${"opt(a: string, options?: O): string"}
+    ${"function inl(options?: { unit?: string; zone?: string | undefined }): number | null { return null; }"}                                                                                                                                                                                                                                                                                                                                        | ${"inl"}      | ${"inl(options?: { unit?: string; zone?: string | undefined; }): number | null"}
+    ${"function wide(a: string): 'lit00_abcdefgh' | 'lit01_abcdefgh' | 'lit02_abcdefgh' | 'lit03_abcdefgh' | 'lit04_abcdefgh' | 'lit05_abcdefgh' | 'lit06_abcdefgh' | 'lit07_abcdefgh' | 'lit08_abcdefgh' | 'lit09_abcdefgh' | 'lit10_abcdefgh' | 'lit11_abcdefgh' | 'lit12_abcdefgh' | 'lit13_abcdefgh' | 'lit14_abcdefgh' | 'lit15_abcdefgh' | 'lit16_abcdefgh' | 'lit17_abcdefgh' | 'lit18_abcdefgh' | 'lit19_abcdefgh' | null { return null; }"} | ${"wide"}     | ${'wide(a: string): "lit00_abcdefgh" | "lit01_abcdefgh" | "lit02_abcdefgh" | "lit03_abcdefgh" | "lit04_abcdefgh" | "lit05_abcdefgh" | "lit06_abcdefgh" | "lit07_abcdefgh" | "lit08_abcdefgh" | "lit09_abcdefgh" | "lit10_abcdefgh" | "lit11_abcdefgh" | "lit12_abcdefgh" | "lit13_abcdefgh" | "lit14_abcdefgh" | "lit15_abcdefgh" | "lit16_abcdefgh" | "lit17_abcdefgh" | "lit18_abcdefgh" | "lit19_abcdefgh" | null'}
+  `(
+    "renders $name as written in source: $signature",
+    ({ source, name, signature }) => {
+      expect(extract(source, name).signature).toBe(signature);
+    },
+  );
+
+  it.each`
+    source                                                                               | name      | param  | type
+    ${"/** @param a - x */\nfunction nul(a: string | null): string { return ''; }"}      | ${"nul"}  | ${"a"} | ${"string | null"}
+    ${"/** @param a - x */\nfunction und(a: string | undefined): string { return ''; }"} | ${"und"}  | ${"a"} | ${"string | undefined"}
+    ${"/** @param a - x */\nfunction optp(a?: string): string { return ''; }"}           | ${"optp"} | ${"a"} | ${"string"}
+  `(
+    "types param $param of $name as written: $type",
+    ({ source, name, param, type }) => {
+      const doc = extract(source, name);
+      expect(doc.params.find((p) => p.name === param)?.type).toBe(type);
+    },
+  );
+
+  it("keeps the options of an optional options parameter, without an implicit undefined", () => {
+    const doc = extract(
+      "/** @param options - opts */\ninterface O { unit?: string; zone: string | null }\nfunction withOpts(a: string, options?: O): string { return a; }",
+      "withOpts",
+    );
+    expect(doc.options).toEqual([
+      { name: "unit?", type: "string", description: "" },
+      { name: "zone", type: "string | null", description: "" },
+    ]);
   });
 });
 
@@ -719,7 +772,7 @@ describe("buildPlaygroundFields", () => {
         returnType: "string",
         params: [{ name: "value", type: "string", value: "" }],
       },
-      "foo(new Date())",
+      "foo(new Date())", // date-ban: source text in a fixture, asserting the playground builder rejects a call expression it cannot parse
     );
     expect(callExprArg).toBeUndefined();
   });

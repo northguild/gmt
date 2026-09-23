@@ -1,6 +1,12 @@
+// fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "@js-temporal/polyfill";
-import { getSystemTimeZone } from "../../zoned/get";
-import { isValidTimeZone } from "../../zoned/validate";
+import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
+import {
+  resolveUnixEpochUnit,
+  unixEpochToInstant,
+} from "../../internal/unixEpochValue";
+import type { UnixUnit } from "../validate/isValidUnixUnit";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return true when the Unix timestamp is between start and end (inclusive by default).
@@ -8,56 +14,58 @@ import { isValidTimeZone } from "../../zoned/validate";
  * - Uses Temporal.Instant.compare for comparison.
  * - Returns false if start > end or inputs are invalid.
  * - Use options.inclusiveStart/inclusiveEnd to control boundaries.
+ * - Each value is a safe integer or a digit string (`"1705000000000"`); anything else returns false.
+ * - `timeZone` is only validated (the comparison is on exact instants): omitted is UTC, `"local"`
+ *   the system zone, and an unknown zone returns false.
  *
- * @param value Unix timestamp to check
- * @param start Unix timestamp for range start
- * @param end Unix timestamp for range end
- * @param options optional: epochUnit ("seconds" | "milliseconds"), timeZone (IANA), inclusiveStart (boolean), inclusiveEnd (boolean)
+ * @param value Unix epoch to check: a safe integer, or a string of optionally negative ASCII digits
+ * @param start Unix epoch for range start, in the same form and unit
+ * @param end Unix epoch for range end, in the same form and unit
+ * @param options optional: epochUnit ("seconds" | "milliseconds", singular accepted; default "milliseconds"), timeZone (IANA, or "local" for the system zone; default "UTC" — only validated, the comparison is on exact instants), inclusiveStart (boolean), inclusiveEnd (boolean)
  * @returns boolean indicating whether value is between start and end
  *
  * @example isBetweenUnix(1705000000000, 1704000000000, 1706000000000) // true
  * @example isBetweenUnix(1705000000, 1704000000, 1706000000, { epochUnit: "seconds" }) // true
  * @example isBetweenUnix(1703000000000, 1704000000000, 1706000000000) // false
+ * @example isBetweenUnix("1705000000", "1704000000", "1706000000", { epochUnit: "second" }) // true (digit strings)
+ * @example isBetweenUnix(1705000000000, 1704000000000, 1706000000000, { timeZone: "Mars/Olympus" }) // false (unknown zone)
  */
 export function isBetweenUnix(
-  value: number,
-  start: number,
-  end: number,
+  value: number | string,
+  start: number | string,
+  end: number | string,
   options?: {
-    epochUnit?: "seconds" | "milliseconds";
+    epochUnit?: UnixUnit;
     timeZone?: string;
     inclusiveStart?: boolean;
     inclusiveEnd?: boolean;
   },
 ): boolean {
-  const epochUnit = options?.epochUnit ?? "milliseconds";
-  const timeZone = options?.timeZone ?? getSystemTimeZone();
-  const inclusiveStart = options?.inclusiveStart ?? true;
-  const inclusiveEnd = options?.inclusiveEnd ?? true;
-
-  if (!timeZone || !isValidTimeZone(timeZone)) return false;
-
-  if (
-    !Number.isFinite(value) ||
-    !Number.isInteger(value) ||
-    !Number.isFinite(start) ||
-    !Number.isInteger(start) ||
-    !Number.isFinite(end) ||
-    !Number.isInteger(end)
-  ) {
-    return false;
-  }
-
   try {
-    const instant = Temporal.Instant.fromEpochMilliseconds(
-      epochUnit === "seconds" ? value * 1000 : value,
-    );
-    const startInstant = Temporal.Instant.fromEpochMilliseconds(
-      epochUnit === "seconds" ? start * 1000 : start,
-    );
-    const endInstant = Temporal.Instant.fromEpochMilliseconds(
-      epochUnit === "seconds" ? end * 1000 : end,
-    );
+    if (!isOptionsArgument(options)) {
+      return false;
+    }
+
+    const epochUnit = resolveUnixEpochUnit(options?.epochUnit);
+    const timeZone = normalizeTimeZone(options?.timeZone);
+    // Only an omitted flag takes the `true` default. An explicit `null` is a value, and every
+    // reading of it gives `false`: ECMA-402 reads a boolean option through ToBoolean (null → false),
+    // and the house rule rejects an invalid member outright — neither yields `true`. So `null`
+    // behaves here exactly as `0` and `""` already do.
+    const inclusiveStart =
+      options?.inclusiveStart === undefined ? true : options.inclusiveStart;
+    const inclusiveEnd =
+      options?.inclusiveEnd === undefined ? true : options.inclusiveEnd;
+
+    if (!timeZone || epochUnit === null) return false;
+
+    const instant = unixEpochToInstant(value, epochUnit);
+    const startInstant = unixEpochToInstant(start, epochUnit);
+    const endInstant = unixEpochToInstant(end, epochUnit);
+
+    if (instant === null || startInstant === null || endInstant === null) {
+      return false;
+    }
 
     if (Temporal.Instant.compare(startInstant, endInstant) === 1) {
       return false;
@@ -72,6 +80,8 @@ export function isBetweenUnix(
 
     return startCheck && endCheck;
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return false;
   }
 }

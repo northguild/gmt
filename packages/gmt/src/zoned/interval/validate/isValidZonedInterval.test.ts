@@ -83,15 +83,31 @@ describe("isValidZonedInterval", () => {
     });
   }
 
-  // E5 (issue #78), decision of record D2 — see isValidZonedDateTime.test.ts for the full
-  // rationale.
+  // Validator mirror (#22): an endpoint accepts exactly what isValidZonedDateTime accepts.
+  // Temporal.ZonedDateTime.from ignores an elective annotation and names the calendar from `u-ca`
+  // (native Chromium 153: `…[UTC][u-ca=iso8601]` and `…[UTC][foo=bar]` are iso8601, `…[!foo=bar]`
+  // throws); GMT's zoned values are ISO, so a non-ISO calendar is isValidCalendarZonedInterval's input.
   it.each`
-    start                                             | end
-    ${"2024-01-01T10:00:00+00:00[UTC][u-ca=hebrew]"}  | ${"2024-12-31T23:59:59+00:00[UTC]"}
-    ${"2024-01-01T10:00:00+00:00[UTC]"}               | ${"2024-12-31T23:59:59+00:00[UTC][u-ca=hebrew]"}
-    ${"2024-01-01T10:00:00+00:00[UTC][!u-ca=hebrew]"} | ${"2024-12-31T23:59:59+00:00[UTC]"}
+    start                                             | end                                                | reason
+    ${"2024-01-01T10:00:00+00:00[UTC][u-ca=iso8601]"} | ${"2024-12-31T23:59:59+00:00[UTC]"}                | ${"ISO calendar annotation"}
+    ${"2024-01-01T10:00:00+00:00[UTC]"}               | ${"2024-12-31T23:59:59+00:00[UTC][!u-ca=iso8601]"} | ${"critical ISO calendar annotation"}
+    ${"2024-01-01T10:00:00+00:00[UTC][foo=bar]"}      | ${"2024-12-31T23:59:59+00:00[UTC]"}                | ${"elective unknown annotation"}
   `(
-    "returns false when either endpoint carries a calendar annotation: $start, $end",
+    "returns true for $start to $end ($reason)",
+    ({ start, end }: { start: string; end: string }) => {
+      expect(isValidZonedInterval(start, end)).toBe(true);
+    },
+  );
+
+  it.each`
+    start                                             | end                                              | reason
+    ${"2024-01-01T10:00:00+00:00[UTC][u-ca=hebrew]"}  | ${"2024-12-31T23:59:59+00:00[UTC]"}              | ${"non-ISO calendar"}
+    ${"2024-01-01T10:00:00+00:00[UTC]"}               | ${"2024-12-31T23:59:59+00:00[UTC][u-ca=hebrew]"} | ${"non-ISO calendar"}
+    ${"2024-01-01T10:00:00+00:00[UTC][!u-ca=hebrew]"} | ${"2024-12-31T23:59:59+00:00[UTC]"}              | ${"critical non-ISO calendar"}
+    ${"2024-01-01T10:00:00+00:00[UTC][!foo=bar]"}     | ${"2024-12-31T23:59:59+00:00[UTC]"}              | ${"unknown critical annotation"}
+    ${"2024-12-31T23:59:59+00:00[UTC][u-ca=iso8601]"} | ${"2024-01-01T10:00:00+00:00[UTC][foo=bar]"}     | ${"annotated, but inverted"}
+  `(
+    "returns false for $start to $end ($reason)",
     ({ start, end }: { start: string; end: string }) => {
       expect(isValidZonedInterval(start, end)).toBe(false);
     },

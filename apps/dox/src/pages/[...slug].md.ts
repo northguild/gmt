@@ -5,6 +5,10 @@ import {
   stripFrontmatter,
   stripMdx,
 } from "~/lib/page-markdown";
+import { pageExpressionValues } from "~/lib/page-expression-values";
+
+/** The splash pages' figures, evaluated once per build. */
+const values = pageExpressionValues();
 
 const RAW = import.meta.glob("../content/docs/**/*.{md,mdx}", {
   query: "?raw",
@@ -19,7 +23,7 @@ const pages = Object.entries(RAW).flatMap(([path, raw]) => {
   if (rel === "index") return []; // splash homepage — skip
   const { data, body } = stripFrontmatter(raw);
   const slug = data.slug ?? rel; // reference pages carry explicit slug:
-  const md = stripMdx(body, { gmtVersion });
+  const md = stripMdx(body, { gmtVersion, values });
   return [
     { slug, markdown: pageToMarkdown({ title: data.title ?? slug, body: md }) },
   ];

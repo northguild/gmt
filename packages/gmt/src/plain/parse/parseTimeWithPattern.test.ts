@@ -191,4 +191,20 @@ describe("parseTimeWithPattern", () => {
       ).toBe("");
     });
   });
+
+  // ECMA-402 CanonicalizeLocaleList: the pattern's names are read from the first tag of a locale list
+  // with locale data; a malformed tag anywhere in the list is invalid input.
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.jaJP, MustTestLocales.enUS]} | ${"22:20:00"}
+    ${[MustTestLocales.enUS, MustTestLocales.frFR]} | ${""}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
+  `(
+    "returns $expected for the Japanese meridiem 午後 with locale list $locale",
+    ({ locale, expected }) => {
+      expect(parseTimeWithPattern("午後 10:20", "a h:mm", locale)).toBe(
+        expected,
+      );
+    },
+  );
 });

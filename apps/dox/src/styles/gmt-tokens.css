@@ -246,11 +246,12 @@
 
 /* ---- Font imports (self-hosted, no CDN) ---- */
 /*
- * The file is vendored into `public/fonts/` (source: `@fontsource/michroma`,
- * a root devDependency) so it has a stable, un-hashed URL that the Starlight
- * `head` config can `<link rel="preload">`. Preloading it stops the site
- * title and every heading from reflowing out of the mono fallback on each
- * navigation.
+ * The file is vendored into `public/fonts/`, taken from the `@fontsource/michroma`
+ * package (v5.3.0, `files/michroma-latin-400-normal.woff2`), so it has a stable,
+ * un-hashed URL that the Starlight `head` config can `<link rel="preload">`.
+ * Preloading it stops the site title and every heading from reflowing out of the
+ * mono fallback on each navigation. The package itself is not a dependency: one
+ * committed file needs no install step, and re-vendoring is a deliberate act.
  */
 @font-face {
   font-family: "Michroma";

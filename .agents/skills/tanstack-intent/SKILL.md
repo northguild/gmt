@@ -43,7 +43,7 @@ grep -m1 '"version"' packages/gmt/package.json
 ls .changeset/*.md 2>/dev/null
 ```
 
-Read any pending changeset(s) — they describe the user-visible API change and will tell you the next version bump (`patch`/`minor`/`major`).
+Read any pending changeset(s) — they describe the user-visible API change and will tell you the next version bump (`patch`/`minor`; a breaking change is `minor` with a **Breaking changes** section).
 
 Build a working list of:
 

@@ -1,25 +1,30 @@
-import { Temporal } from "@js-temporal/polyfill";
-import { isLeapSecond } from "../../plain/validate/isLeapSecond";
-import { utcDateTime } from "../../regex/utc-date-time";
+// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
+import { intervalsOverlap } from "../../interval/compare";
+import { isValidUtc } from "../validate";
 
 /**
- * Return true when intervals `[aStart, aEnd]` and `[bStart, bEnd]` share at least one instant.
+ * Return true when the half-open UTC intervals `[aStart, aEnd)` and `[bStart, bEnd)` share at
+ * least one instant.
  *
- * - Uses `Temporal.Instant.compare` for comparison (same instant semantics).
- * - Touching intervals (`aEnd` equal to `bStart`) share that endpoint and DO overlap — returns `true`.
+ * - Half-open: an interval holds every instant `t` with `start <= t < end`, so `end` itself is not
+ *   in it. The test is `aStart < bEnd && bStart < aEnd`.
+ * - Delegates to CORE-6's `intervalsOverlap` once the arguments pass the UTC-string gate, so the
+ *   answer always equals `intervalsOverlap({ start: aStart, end: aEnd }, { start: bStart, end: bEnd })`.
+ * - Touching intervals (`aEnd` equal to `bStart`) share no instant and do not overlap.
+ * - An empty interval (`start === end`) overlaps only an interval it lies strictly inside.
  * - Returns `false` if either interval is invalid (`start > end`).
- * - Returns `false` on invalid input (wrong type, malformed strings, leap seconds).
+ * - Returns `false` on invalid input (wrong type, non-`Z` strings, malformed strings, leap seconds).
  *
  * @param aStart ISO 8601 UTC datetime string for the first interval start
- * @param aEnd ISO 8601 UTC datetime string for the first interval end
+ * @param aEnd ISO 8601 UTC datetime string for the first interval end (excluded)
  * @param bStart ISO 8601 UTC datetime string for the second interval start
- * @param bEnd ISO 8601 UTC datetime string for the second interval end
+ * @param bEnd ISO 8601 UTC datetime string for the second interval end (excluded)
  * @returns true if intervals overlap, or false on invalid input
  *
- * @example intervalsOverlapUtc("2024-01-01T00:00:00Z", "2024-06-30T23:59:59Z", "2024-04-01T00:00:00Z", "2024-12-31T23:59:59Z") // true
- * @example intervalsOverlapUtc("2024-01-01T00:00:00Z", "2024-06-30T23:59:59Z", "2024-07-01T00:00:00Z", "2024-12-31T23:59:59Z") // false (disjoint, one-second gap)
- * @example intervalsOverlapUtc("2024-01-01T00:00:00Z", "2024-06-30T23:59:59Z", "2024-06-30T23:59:59Z", "2024-12-31T23:59:59Z") // true (touching)
- * @example intervalsOverlapUtc("2024-01-01T00:00:00Z", "2024-06-30T23:59:59Z", "2024-07-02T00:00:00Z", "2024-12-31T23:59:59Z") // false (disjoint)
+ * @example intervalsOverlapUtc("2024-01-01T09:00:00Z", "2024-01-01T13:00:00Z", "2024-01-01T12:00:00Z", "2024-01-01T17:00:00Z") // true
+ * @example intervalsOverlapUtc("2024-01-01T09:00:00Z", "2024-01-01T12:00:00Z", "2024-01-01T12:00:00Z", "2024-01-01T17:00:00Z") // false (touching)
+ * @example intervalsOverlapUtc("2024-01-01T09:00:00Z", "2024-01-01T12:00:00.000000001Z", "2024-01-01T12:00:00Z", "2024-01-01T17:00:00Z") // true (1 ns shared)
+ * @example intervalsOverlapUtc("2024-01-01T09:00:00Z", "2024-01-01T12:00:00Z", "2024-01-01T12:00:00Z", "2024-01-01T12:00:00Z") // false (empty interval at the end)
  * @example intervalsOverlapUtc("invalid", "2024-06-30T23:59:59Z", "2024-04-01T00:00:00Z", "2024-12-31T23:59:59Z") // false
  */
 export function intervalsOverlapUtc(
@@ -38,42 +43,16 @@ export function intervalsOverlapUtc(
   }
 
   if (
-    !utcDateTime.test(aStart) ||
-    !utcDateTime.test(aEnd) ||
-    !utcDateTime.test(bStart) ||
-    !utcDateTime.test(bEnd)
+    !isValidUtc(aStart) ||
+    !isValidUtc(aEnd) ||
+    !isValidUtc(bStart) ||
+    !isValidUtc(bEnd)
   ) {
     return false;
   }
 
-  if (
-    isLeapSecond(aStart) ||
-    isLeapSecond(aEnd) ||
-    isLeapSecond(bStart) ||
-    isLeapSecond(bEnd)
-  ) {
-    return false;
-  }
-
-  try {
-    const aSI = Temporal.Instant.from(aStart);
-    const aEI = Temporal.Instant.from(aEnd);
-    const bSI = Temporal.Instant.from(bStart);
-    const bEI = Temporal.Instant.from(bEnd);
-
-    if (Temporal.Instant.compare(aSI, aEI) > 0) {
-      return false;
-    }
-
-    if (Temporal.Instant.compare(bSI, bEI) > 0) {
-      return false;
-    }
-
-    return (
-      Temporal.Instant.compare(aEI, bSI) >= 0 &&
-      Temporal.Instant.compare(bEI, aSI) >= 0
-    );
-  } catch {
-    return false;
-  }
+  return intervalsOverlap(
+    { start: aStart, end: aEnd },
+    { start: bStart, end: bEnd },
+  );
 }

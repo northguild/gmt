@@ -34,6 +34,25 @@ describe("intervalDivideEquallyDateTime", () => {
     ]);
   });
 
+  // Spans past 2^53 ns (about 104 days) must still split exactly: each boundary is
+  // start + round((end - start) · i / n) in integer nanoseconds. 2024-01-01 to 2024-12-31 is 365
+  // days, so 365 d + 3 ns splits into 121 d 16 h + 1 ns steps. The first and last PlainDateTime
+  // are epoch day -100,000,001 + 1 ns and epoch day 100,000,000 + 1 d - 1 ns, so their midpoint
+  // is epoch 0. Values from days-from-civil and BigInt arithmetic, not GMT.
+  it.each`
+    start                                 | end                                   | n    | boundaries
+    ${"2024-01-01T00:00:00"}              | ${"2024-12-31T00:00:00.000000003"}    | ${3} | ${["2024-05-01T16:00:00.000000001", "2024-08-31T08:00:00.000000002"]}
+    ${"-271821-04-19T00:00:00.000000001"} | ${"+275760-09-13T23:59:59.999999999"} | ${2} | ${["1970-01-01T00:00:00"]}
+  `(
+    "splits $start to $end into $n exact pieces at $boundaries",
+    ({ start, end, n, boundaries }) => {
+      const cuts = [start, ...boundaries, end];
+      expect(intervalDivideEquallyDateTime(start, end, n)).toEqual(
+        cuts.slice(0, -1).map((cut, i) => ({ start: cut, end: cuts[i + 1] })),
+      );
+    },
+  );
+
   it.each`
     n
     ${0}
@@ -71,5 +90,98 @@ describe("intervalDivideEquallyDateTime", () => {
         3,
       ),
     ).toEqual([]);
+  });
+});
+
+describe("intervalDivideEquallyDateTime maxPieces", () => {
+  // 72 hours / 3 = 24 hours: n = 3 pieces, so a limit of 3 or more leaves the output unchanged.
+  it.each`
+    n    | maxPieces
+    ${3} | ${3}
+    ${3} | ${10}
+  `(
+    "returns the 3 pieces for n $n with maxPieces $maxPieces",
+    ({ n, maxPieces }) => {
+      expect(
+        intervalDivideEquallyDateTime(
+          "2024-01-01T00:00:00",
+          "2024-01-04T00:00:00",
+          n,
+          { maxPieces },
+        ),
+      ).toEqual([
+        { start: "2024-01-01T00:00:00", end: "2024-01-02T00:00:00" },
+        { start: "2024-01-02T00:00:00", end: "2024-01-03T00:00:00" },
+        { start: "2024-01-03T00:00:00", end: "2024-01-04T00:00:00" },
+      ]);
+    },
+  );
+
+  // Owner decision A2: an output larger than maxPieces returns the sentinel, decided before any
+  // piece is built.
+  it.each`
+    start                    | end                      | n    | maxPieces
+    ${"2024-01-01T00:00:00"} | ${"2024-01-04T00:00:00"} | ${3} | ${2}
+    ${"2024-01-01T00:00:00"} | ${"2024-01-01T00:00:00"} | ${3} | ${2}
+    ${"2024-01-01T00:00:00"} | ${"2024-01-04T00:00:00"} | ${2} | ${1}
+  `(
+    "returns [] for $start to $end with n $n over maxPieces $maxPieces",
+    ({ start, end, n, maxPieces }) => {
+      expect(
+        intervalDivideEquallyDateTime(start, end, n, { maxPieces }).length,
+      ).toBe(0);
+    },
+  );
+
+  it.each`
+    label                   | options
+    ${"maxPieces 0"}        | ${{ maxPieces: 0 }}
+    ${"maxPieces -1"}       | ${{ maxPieces: -1 }}
+    ${"maxPieces 1.5"}      | ${{ maxPieces: 1.5 }}
+    ${"maxPieces NaN"}      | ${{ maxPieces: Number.NaN }}
+    ${"maxPieces Infinity"} | ${{ maxPieces: Number.POSITIVE_INFINITY }}
+    ${"maxPieces string"}   | ${{ maxPieces: "3" }}
+    ${"null options"}       | ${null}
+    ${"number options"}     | ${5}
+  `("returns [] for invalid $label", ({ options }) => {
+    expect(
+      intervalDivideEquallyDateTime(
+        "2024-01-01T00:00:00",
+        "2024-01-04T00:00:00",
+        3,
+        options as never,
+      ).length,
+    ).toBe(0);
+  });
+});
+
+describe("intervalDivideEquallyDateTime default piece limit", () => {
+  // Default maxPieces is 1_000_000 (owner decision A2). An array holds at most 2^32 - 1
+  // elements (ECMA-262 §10.4.2), so n >= 2^32 is the sentinel whatever the limit.
+  it.each`
+    n            | options
+    ${1_000_001} | ${undefined}
+    ${2 ** 32}   | ${undefined}
+    ${2 ** 32}   | ${{ maxPieces: 2 ** 40 }}
+  `("returns [] for n $n with options $options", ({ n, options }) => {
+    expect(
+      intervalDivideEquallyDateTime(
+        "2024-01-01T00:00:00",
+        "2024-01-04T00:00:00",
+        n,
+        options,
+      ).length,
+    ).toBe(0);
+  });
+
+  it("returns [] for equal endpoints and n 2^32 under maxPieces 2^40", () => {
+    expect(
+      intervalDivideEquallyDateTime(
+        "2024-01-01T00:00:00",
+        "2024-01-01T00:00:00",
+        2 ** 32,
+        { maxPieces: 2 ** 40 },
+      ).length,
+    ).toBe(0);
   });
 });

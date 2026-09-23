@@ -1,5 +1,5 @@
 import { battleTestLeapYearUnix } from "../../test";
-import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
+import { mockTemporalInstantFromEpochMillisecondsThrow } from "../../test/mocks";
 import * as getSystemTimeZoneModule from "../../zoned/get/getSystemTimeZone";
 import { parseNanosecondFromUnix } from "./parseNanosecondFromUnix";
 
@@ -23,21 +23,21 @@ describe("parseNanosecondFromUnix", () => {
 
   it.each`
     value                     | expected
-    ${battleTestLeapYearUnix} | ${"000000000"}
-    ${1704067200000}          | ${"000000000"}
-    ${0}                      | ${"000000000"}
+    ${battleTestLeapYearUnix} | ${"000"}
+    ${1704067200000}          | ${"000"}
+    ${0}                      | ${"000"}
   `("returns $expected for $value", ({ value, expected }) => {
     expect(parseNanosecondFromUnix(value)).toBe(expected);
   });
 
   it.each`
     value            | epochUnit         | expected
-    ${-86400}        | ${"seconds"}      | ${"000000000"}
-    ${-31536000}     | ${"seconds"}      | ${"000000000"}
-    ${1709164800}    | ${"seconds"}      | ${"000000000"}
-    ${1704067200000} | ${"milliseconds"} | ${"000000000"}
+    ${-86400}        | ${"seconds"}      | ${"000"}
+    ${-31536000}     | ${"seconds"}      | ${"000"}
+    ${1709164800}    | ${"seconds"}      | ${"000"}
+    ${1704067200000} | ${"milliseconds"} | ${"000"}
   `(
-    "returns $expected for $value with epochUnit $epochUnit",
+    "returns $expected for $value in milliseconds and seconds",
     ({ value, epochUnit, expected }) => {
       expect(
         parseNanosecondFromUnix(value as never, {
@@ -59,8 +59,37 @@ describe("parseNanosecondFromUnix", () => {
   });
 
   it("returns empty string on failure", () => {
-    mockTemporalZonedDateTimeFromThrow();
+    mockTemporalInstantFromEpochMillisecondsThrow();
     const result = parseNanosecondFromUnix(battleTestLeapYearUnix);
     expect(result).toBe("");
+  });
+});
+
+describe("parseNanosecondFromUnix with a blank epoch string", () => {
+  // Number("") and Number("   ") are 0 (ECMA-262 StringToNumber), a coercion artefact: a blank
+  // string holds no epoch value (POSIX XBD 4.19 defines an integer), so it is invalid input.
+  it.each`
+    label                | value
+    ${"empty"}           | ${""}
+    ${"spaces"}          | ${"   "}
+    ${"newline and tab"} | ${"\n\t"}
+    ${"no-break space"}  | ${"\u00a0"}
+  `(
+    'returns "" for a $label string in milliseconds and seconds',
+    ({ value }) => {
+      expect(parseNanosecondFromUnix(value, { timeZone: "UTC" })).toBe("");
+      expect(
+        parseNanosecondFromUnix(value, {
+          epochUnit: "seconds",
+          timeZone: "UTC",
+        }),
+      ).toBe("");
+    },
+  );
+});
+
+describe("parseNanosecondFromUnix invalid-input @example", () => {
+  it('returns "" for parseNanosecondFromUnix("")', () => {
+    expect(parseNanosecondFromUnix("")).toBe("");
   });
 });

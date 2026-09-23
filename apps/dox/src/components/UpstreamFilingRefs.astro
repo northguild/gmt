@@ -1,0 +1,46 @@
+---
+/**
+ * The "same fix / closes / depends on" line under a filing's description.
+ *
+ * Its own component because the three lists are the same shape and differ only in their label:
+ * building them here turns what were three nested `.map()`s inside a conditional into one loop.
+ */
+import type { UpstreamFiling } from "../data/upstream-filings";
+
+interface Props {
+  filing: UpstreamFiling;
+}
+
+// See `UpstreamFilingRow.astro`: `Astro.props` is untyped in this app, so `Props` is applied here.
+const { filing } = Astro.props as Props;
+
+/** `"owner/repo#number"` as the short label and URL the table shows. */
+function ref(r: string): { label: string; href: string } {
+  const [repo, number] = r.split("#");
+  const short = repo === "tc39/proposal-temporal" ? "tc39" : "polyfill";
+  return {
+    label: `${short} #${number}`,
+    href: `https://github.com/${repo}/issues/${number}`,
+  };
+}
+
+const links = [
+  { relation: "Same fix", refs: filing.pairsWith },
+  { relation: "Closes", refs: filing.closes },
+  { relation: "Depends on", refs: filing.dependsOn },
+].flatMap(({ relation, refs }) =>
+  refs.map((r) => ({ relation, ...ref(r) })),
+);
+---
+
+{
+  links.length > 0 && (
+    <p class="gmt-upstream-links">
+      {links.map((link) => (
+        <span>
+          {link.relation}: <a href={link.href}>{link.label}</a>{" "}
+        </span>
+      ))}
+    </p>
+  )
+}

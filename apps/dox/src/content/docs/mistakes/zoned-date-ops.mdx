@@ -13,39 +13,47 @@ import Mistake from "../../../components/Mistake.astro";
 
 <Mistake
   severity="high"
-  title="Writing the calendar annotation in RFC 9557 order"
-  description="RFC 9557 specifies [u-ca=...] after the timezone offset. Swapping the order produces a string that looks correct but fails to parse with parseRfc3339 or convertZonedToCalendar."
-  wrongCode={`"2024-03-15T10:00:00[japanese][America/New_York]" // wrong order — annotation before zone`}
-  rightCode={`"2024-03-15T10:00:00-05:00[America/New_York][u-ca=japanese]" // RFC 9557 order`}
+  title="Writing the calendar annotation before the time zone"
+  description="A calendar-annotated zoned string is the RFC 9557 form Temporal.ZonedDateTime#toString() writes: the time zone annotation first, then [u-ca=...]. A calendar annotation before the zone is not RFC 9557, and convertZonedToCalendar and the other calendar-aware zoned functions reject it."
+  wrongCode={`convertZonedToCalendar("2024-03-15T10:00:00+09:00[u-ca=japanese][Asia/Tokyo]", "iso8601");
+// "" — the calendar annotation comes after the zone`}
+  rightCode={`import { convertZonedToCalendar } from "@northguild/gmt/zoned";
+
+convertZonedToCalendar("2024-03-15T10:00:00+09:00[Asia/Tokyo][u-ca=japanese]", "iso8601");
+// "2024-03-15T10:00:00+09:00[Asia/Tokyo]"`}
 />
 
 <Mistake
   severity="high"
-  title="Converting a calendar-annotated PlainDate to a zoned value drops the calendar"
-  description="convertPlainDateTimeToZoned strips the [u-ca=...] annotation. The resulting zoned value is Gregorian-only. If you need the calendar preserved, annotate the zoned result explicitly."
-  wrongCode={`const z = convertPlainDateTimeToZoned("2024-03-15T00:00:00[japanese][Asia/Tokyo]");
-// z is "2024-03-15T00:00:00+09:00[Asia/Tokyo]" — [u-ca=japanese] is gone`}
-  rightCode={`// annotate after conversion if the calendar must be preserved
-const z = convertPlainDateTimeToZoned("2024-03-15T00:00:00[Asia/Tokyo]");
-// "[u-ca=japanese][Asia/Tokyo]" — calendar annotation re-attached if needed`}
+  title="Passing a calendar-annotated value to convertPlainDateTimeToZoned"
+  description="convertPlainDateTimeToZoned has no calendar grammar: a [u-ca=...] annotation makes the input invalid, and the result is an empty string. Convert the Gregorian wall time first, then express the zoned result in the calendar with convertZonedToCalendar."
+  wrongCode={`convertPlainDateTimeToZoned("2024-03-15T00:00:00[u-ca=japanese]", "Asia/Tokyo");
+// "" — the annotation is invalid input here`}
+  rightCode={`import { convertPlainDateTimeToZoned, convertZonedToCalendar } from "@northguild/gmt/zoned";
+
+const z = convertPlainDateTimeToZoned("2024-03-15T00:00:00", "Asia/Tokyo");
+// "2024-03-15T00:00:00.000+09:00[Asia/Tokyo]"
+convertZonedToCalendar(z, "japanese");
+// "2024-03-15T00:00:00+09:00[Asia/Tokyo][u-ca=japanese]"`}
 />
 
 <Mistake
   severity="high"
   title="Assuming every zoned/ function accepts the annotation"
-  description="addZoned, subtractZoned, startOfZoned, and most arithmetic functions operate on the underlying Gregorian instant. The [u-ca=...] annotation is for display and parsing, not arithmetic."
-  wrongCode={`addZoned("2024-03-15T00:00:00[japanese][Asia/Tokyo]", 1, "month");
-// arithmetic runs on the Gregorian date, not the Japanese calendar`}
-  rightCode={`// arithmetic is always on the plain Gregorian representation
-addZoned("2024-03-15T00:00:00[Asia/Tokyo]", 1, "month");
-// "2024-04-15T00:00:00+09:00[Asia/Tokyo]"`}
+  description="Only the calendar-aware subset — addZoned, subtractZoned, diffZoned, diffZonedAsDuration, convertZonedToCalendar and the zoned interval functions — accepts a calendar-annotated zoned string, and there calendar units resolve in that calendar. Every other zoned/ function treats the annotation as invalid input."
+  wrongCode={`startOfZoned("2024-03-15T10:00:00+09:00[Asia/Tokyo][u-ca=japanese]", "day");
+// "" — startOfZoned does not accept the annotation`}
+  rightCode={`import { addZoned } from "@northguild/gmt/zoned";
+
+addZoned("2024-01-31T00:00:00+09:00[Asia/Tokyo][u-ca=japanese]", { months: 1 });
+// "2024-02-29T00:00:00+09:00[Asia/Tokyo][u-ca=japanese]" — month arithmetic in the Japanese calendar`}
 />
 
 <Mistake
   severity="high"
   title="Using offset instead of IANA timezone"
-  description="Passing an offset like '-05:00' instead of 'America/New_York' loses DST awareness. '-05:00' is always EST, never EDT. The IANA zone identifier is the only correct argument."
-  wrongCode={`getZonedNow("-05:00"); // always EST — never switches to EDT`}
+  description="An offset like '-05:00' is not a time zone: it has no DST rules, so it could never become EDT. GMT's zoned functions reject it and return their sentinel. The IANA zone identifier, such as 'America/New_York', is the only correct argument."
+  wrongCode={`getZonedNow("-05:00"); // "" — an offset is not an IANA zone`}
   rightCode={`import { getZonedNow } from "@northguild/gmt/zoned";
 
 getZonedNow("America/New_York"); // switches between EST and EDT automatically`}
@@ -54,7 +62,7 @@ getZonedNow("America/New_York"); // switches between EST and EDT automatically`}
 <Mistake
   severity="high"
   title="Not validating timezone before use"
-  description="An invalid timezone string silently produces an empty string from every zoned function. Always run isValidTimeZone first."
+  description="An invalid timezone string silently produces the invalid-input sentinel from every zoned function — an empty string, or null from those that return a number. Always run isValidTimeZone first."
   wrongCode={`getZonedNow("not-a-zone"); // ""`}
   rightCode={`import { isValidTimeZone, getZonedNow } from "@northguild/gmt/zoned";
 
@@ -65,71 +73,85 @@ getZonedNow("America/New_York"); // safe
 
 <Mistake
   severity="high"
-  title="Assuming addZoned/subtractZoned rejects DST gaps"
-  description="addZoned and subtractZoned use the disambiguation option to resolve DST gaps, but they do not reject them by default. Use disambiguation: reject when a gap is an error condition."
-  wrongCode={`addZoned("2024-03-10T01:30:00-05:00[America/New_York]", 1, "hour");
-// "2024-03-10T03:30:00-04:00[America/New_York]" — silently crossed the spring-forward gap`}
-  rightCode={`addZoned("2024-03-10T01:30:00-05:00[America/New_York]", 1, "hour", {
-  disambiguation: "reject"
-}); // throws RangeError if the target is in the gap`}
+  title="Expecting addZoned to always move a DST-gap landing forward"
+  description="When the date part of the duration lands in a spring-forward gap, addZoned, subtractZoned and intervalFromDurationZoned resolve it with your disambiguation, as TC39's AddZonedDateTime resolves the intermediate date-time: 'compatible' and 'later' move it forward, 'earlier' back, and 'reject' returns an empty string. Before 1.16.0 the landing always moved forward. Pass 'earlier' only when an earlier result is what you want, and check for the sentinel when you pass 'reject'."
+  wrongCode={`addZoned("2024-03-09T02:30:00-05:00[America/New_York]", { days: 1 }, { disambiguation: "earlier" });
+// assumed "2024-03-10T03:30:00-04:00[America/New_York]", but returns
+// "2024-03-10T01:30:00-05:00[America/New_York]" — 02:30 on 10 March is in the gap, and "earlier" moves back`}
+  rightCode={`const next = addZoned("2024-03-09T02:30:00-05:00[America/New_York]", { days: 1 }, { disambiguation: "reject" });
+if (next === "") {
+  // ask the user: the renewal time does not exist on 10 March
+}
+addZoned("2024-03-09T02:30:00-05:00[America/New_York]", { days: 1 });
+// "2024-03-10T03:30:00-04:00[America/New_York]" — "compatible" moves forward
+addZoned("2024-03-09T02:30:00-05:00[America/New_York]", { days: 1 }, { disambiguation: "earlier" });
+// "2024-03-10T01:30:00-05:00[America/New_York]"`}
 />
 
 <Mistake
   severity="high"
-  title="Passing offset: 'prefer' with disambiguation"
-  description="The `offset` option ('prefer', 'use', 'ignore', 'reject') and the `disambiguation` option ('compatible', 'earlier', 'later', 'reject') control different things. Using 'prefer' together with disambiguation can produce surprising results — 'prefer' keeps the input's offset, while disambiguation resolves the ambiguity."
-  wrongCode={`setZoned("2024-03-10T02:30:00", "America/New_York", {
-  offset: "prefer",
-  disambiguation: "later"
-}); // 'prefer' keeps the original offset — disambiguation is moot`}
-  rightCode={`setZoned("2024-03-10T02:30:00", "America/New_York", {
-  offset: "use",
-  disambiguation: "later"
-}); // 'use' adopts the zone's offset — disambiguation applies`}
+  title="Expecting disambiguation to run while offset: 'prefer' still fits"
+  description="The `offset` option ('prefer', 'use', 'ignore', 'reject') decides whether the input's own UTC offset is kept, and the `disambiguation` option ('compatible', 'earlier', 'later', 'reject') resolves a wall time the offset does not settle. setZoned defaults to 'prefer', as Temporal's ZonedDateTime#with does: an offset that is still valid settles the time, so disambiguation never runs. Pass offset: 'ignore' to make disambiguation decide."
+  wrongCode={`setZoned("2024-11-03T01:45:00-05:00[America/New_York]", { minute: 0 }, {
+  disambiguation: "reject"
+}); // "2024-11-03T01:00:00-05:00[America/New_York]" — -05:00 kept, reject never fired`}
+  rightCode={`setZoned("2024-11-03T01:45:00-05:00[America/New_York]", { minute: 0 }, {
+  offset: "ignore",
+  disambiguation: "reject"
+}); // "" — the offset is ignored, so reject fires on the overlap`}
 />
 
 <Mistake
   severity="high"
-  title="'I passed disambiguation: 'reject' to setZoned and it didn't throw'"
-  description="disambiguation: 'reject' only throws when the input time is ambiguous (a DST overlap), not when it falls in a gap. Gaps are resolved by the offset option. To reject both, combine offset: 'reject' with disambiguation: 'reject'."
-  wrongCode={`setZoned("2024-03-10T02:30:00", "America/New_York", { disambiguation: "reject" });
-// 02:30 is in the gap, not ambiguous — no throw`}
-  rightCode={`setZoned("2024-03-10T02:30:00", "America/New_York", {
-  offset: "reject",
-  disambiguation: "reject"
-}); // throws on gap AND overlap`}
+  title="Expecting disambiguation: 'reject' to throw"
+  description="GMT functions never throw: a rejected wall time returns an empty string. disambiguation: 'reject' fires whenever the wall time is not settled by the offset: always in a spring-forward gap, and in a fall-back overlap when you pass offset: 'ignore'. Check the result instead of wrapping the call in try/catch."
+  wrongCode={`try {
+  setZoned("2024-03-09T02:30:00-05:00[America/New_York]", { day: 10 }, { disambiguation: "reject" });
+} catch {
+  // never reached — 02:30 on 10 March is in the gap, and the result is ""
+}`}
+  rightCode={`const r = setZoned("2024-03-09T02:30:00-05:00[America/New_York]", { day: 10 }, { disambiguation: "reject" }); // ""
+if (r === "") {
+  // invalid input, or a wall time in a gap or an overlap
+}`}
 />
 
 <Mistake
   severity="medium"
   title="Confusing hasDaylightSaving, getDstTransitions, and isInDaylightSaving"
-  description="hasDaylightSaving tells you whether a zone *ever* has DST. getDstTransitions returns the transition instants for a year range. isInDaylightSaving tells you whether a specific instant is in DST. They answer three different questions."
+  description="hasDaylightSaving tells you whether a zone *ever* has DST. getDstTransitions returns the transitions in one year. isInDaylightSaving tells you whether a specific instant is in DST. They answer three different questions."
   wrongCode={`hasDaylightSaving("America/New_York"); // true — the zone has DST
 // used to check whether a specific date is in DST — wrong function`}
   rightCode={`import { isInDaylightSaving, getDstTransitions } from "@northguild/gmt/zoned";
 
 isInDaylightSaving("2024-07-01T12:00:00-04:00[America/New_York]"); // true
-getDstTransitions("America/New_York", 2024, 2024); // [Instant, Instant] — transitions`}
+getDstTransitions("America/New_York", 2024);
+// [
+//   { instant: "2024-03-10T07:00:00Z", offsetBefore: "-05:00", offsetAfter: "-04:00" },
+//   { instant: "2024-11-03T06:00:00Z", offsetBefore: "-04:00", offsetAfter: "-05:00" },
+// ]`}
 />
 
 <Mistake
   severity="medium"
   title="Reaching for cycleZoned when calendar arithmetic is wanted (or vice versa)"
-  description="cycleZoned cycles within a timezone's wall-clock cycles. addZoned/subtractZoned with calendar units handle month/year boundaries. They are not interchangeable."
-  wrongCode={`cycleZoned("2024-01-15T00:00:00[America/New_York]", { unit: "month", step: 1 });
-// cycles months but does not handle year boundaries the way addMonths does`}
+  description="cycleZoned moves one field around its own range and wraps without carrying into the next field. addZoned/subtractZoned with calendar units carry across month and year boundaries. They are not interchangeable."
+  wrongCode={`cycleZoned("2024-12-15T00:00:00-05:00[America/New_York]", "month", 1);
+// "2024-01-15T00:00:00-05:00[America/New_York]" — wraps within the year`}
   rightCode={`import { addZoned } from "@northguild/gmt/zoned";
 
-addZoned("2024-01-15T00:00:00[America/New_York]", 1, "month");
-// "2024-02-15T00:00:00-05:00[America/New_York]" — calendar arithmetic`}
+addZoned("2024-12-15T00:00:00-05:00[America/New_York]", { months: 1 });
+// "2025-01-15T00:00:00-05:00[America/New_York]" — calendar arithmetic`}
 />
 
 ## See also
 
-- [DST Disambiguation guide](/guides/dst-disambiguation/)
-- [Zoned Operations guide](/guides/zoned-date-operations/)
+- [DST Disambiguation guide](/guides/concepts/dst-disambiguation/)
+- [Zoned Operations guide](/guides/zoned-date-operations/zoned-operations/)
 - [`isValidTimeZone` reference](/reference/zoned/validate/isValidTimeZone)
 - [`addZoned` reference](/reference/zoned/calculate/addZoned)
+- [`convertZonedToCalendar` reference](/reference/zoned/convert/convertZonedToCalendar)
+- [`getDstTransitions` reference](/reference/zoned/get/getDstTransitions)
 - [`setZoned` reference](/reference/zoned/calculate/setZoned)
 - [`isInDaylightSaving` reference](/reference/zoned/compare/isInDaylightSaving)
 - [`hasDaylightSaving` reference](/reference/zoned/validate/hasDaylightSaving)

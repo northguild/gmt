@@ -29,7 +29,7 @@ Each realm is an **inner module** under `packages/gmt/src/`. Single package, tre
 shared Temporal dependency.
 
 **Start here:** [painpoints.md](painpoints.md) records the researched evidence behind every
-realm. [tracker.md](tracker.md) has the 53 stories in build order.
+realm. [tracker.md](tracker.md) has the 54 stories in build order.
 
 ---
 
@@ -117,9 +117,9 @@ packages/gmt-otel/ (DELETE — too niche)
 
 Each realm follows the existing three-level convention
 (`src/<realm>/<category>/<functionName>.ts`), one exported function per file, colocated
-`.test.ts`, `index.ts` barrels at every level. Each new realm needs a hand-written three-entry
-block in `packages/gmt/package.json` `exports` (`"./realm"`, `"./realm/*"`,
-`"./realm/*/*": null`).
+`.test.ts`, `index.ts` barrels at every level. Each new realm needs hand-written entries
+block in `packages/gmt/package.json` `exports` (`"./realm"` plus one explicit `"./realm/<category>"`
+entry per category barrel, mirrored in `typesVersions`).
 
 ---
 
@@ -190,7 +190,7 @@ See [painpoints.md](painpoints.md) for the full parked list with reasons.
 
 | Risk                          | Mitigation                                                                          |
 | ----------------------------- | ------------------------------------------------------------------------------------- |
-| Epic size (53 stories)        | Phase boundaries are clean cut points. Phases 1–2 deliver the priority realms alone.  |
+| Epic size (54 stories)        | Phase boundaries are clean cut points. Phases 1–2 deliver the priority realms alone.  |
 | Bundled data staleness        | Every data module exposes provenance and a staleness predicate. Never on the hot path.|
 | Holiday calendar maintenance  | Caller-supplied by default. Opt-in reference calendars carry coverage windows.        |
 | IERS data staleness           | Bundle Bulletin C and A at build. `isTableStale` / `isUt1Stale` surface expiry.       |
@@ -207,8 +207,8 @@ See [painpoints.md](painpoints.md) for the full parked list with reasons.
 ## References
 
 - [painpoints.md](painpoints.md) — researched evidence per realm, with citations
-- [tracker.md](tracker.md) — 53 stories, `Blocked by` column, Definition of Done
-- [issues/](issues/) — story specs, `CORE-1` through `SPA-53`
+- [tracker.md](tracker.md) — 54 stories, `Blocked by` column, Definition of Done
+- [issues/](issues/) — story specs, one file per story, named by story ID
 - [research/spacetime-reference-frames.md](research/spacetime-reference-frames.md) — research on space/satellite time standards
 
 Standards cited by stories in this epic, each verified against a primary source:

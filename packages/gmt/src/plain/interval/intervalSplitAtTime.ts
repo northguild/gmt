@@ -1,6 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { plainTime } from "../../regex";
 import { isValidTimeInterval } from "./validate";
+import { isValidTime } from "../validate";
 
 /**
  * Split a time interval at arbitrary `points`, producing consecutive sub-intervals.
@@ -14,6 +14,9 @@ import { isValidTimeInterval } from "./validate";
  * - Duplicate points collapse to a single boundary.
  * - Returns consecutive `{ start, end }` records, each record's `end` equal to the next
  *   record's `start`.
+ * - Every piece is half-open `[start, end)`: a boundary belongs only to the piece that starts
+ *   there, so the pieces share no value and together cover the interval exactly once (the rule
+ *   CORE-6's `splitIntervalAt` uses).
  * - Returns `[{ start, end }]` (the whole interval, unsplit) when no valid in-range point remains.
  * - Returns `[]` when `points` is not an array, when any element is not a valid ISO PlainTime
  *   string, or on invalid input (unparseable start/end, `start > end`).
@@ -35,52 +38,61 @@ export function intervalSplitAtTime(
   end: string,
   points: string[],
 ): Array<{ start: string; end: string }> {
-  if (!Array.isArray(points)) {
-    return [];
-  }
-
-  if (!isValidTimeInterval(start, end)) {
-    return [];
-  }
-
-  if (!points.every((point) => typeof point === "string")) {
-    return [];
-  }
-
-  if (!points.every((point) => plainTime.test(point))) {
-    return [];
-  }
-
   try {
-    const startVal = Temporal.PlainTime.from(start);
-    const endVal = Temporal.PlainTime.from(end);
-
-    const parsedPoints = points.map((point) => Temporal.PlainTime.from(point));
-
-    const inRangePoints = parsedPoints.filter(
-      (point) =>
-        Temporal.PlainTime.compare(point, startVal) > 0 &&
-        Temporal.PlainTime.compare(point, endVal) < 0,
-    );
-
-    inRangePoints.sort(Temporal.PlainTime.compare);
-
-    const uniquePoints = inRangePoints.filter(
-      (point, index) => index === 0 || !point.equals(inRangePoints[index - 1]),
-    );
-
-    const boundaries = [startVal, ...uniquePoints, endVal];
-
-    const result: Array<{ start: string; end: string }> = [];
-    for (let i = 0; i < boundaries.length - 1; i++) {
-      result.push({
-        start: boundaries[i].toString(),
-        end: boundaries[i + 1].toString(),
-      });
+    if (!Array.isArray(points)) {
+      return [];
     }
 
-    return result;
+    if (!isValidTimeInterval(start, end)) {
+      return [];
+    }
+
+    if (!points.every((point) => typeof point === "string")) {
+      return [];
+    }
+
+    if (!points.every((point) => isValidTime(point))) {
+      return [];
+    }
+
+    try {
+      const startVal = Temporal.PlainTime.from(start);
+      const endVal = Temporal.PlainTime.from(end);
+
+      const parsedPoints = points.map((point) =>
+        Temporal.PlainTime.from(point),
+      );
+
+      const inRangePoints = parsedPoints.filter(
+        (point) =>
+          Temporal.PlainTime.compare(point, startVal) > 0 &&
+          Temporal.PlainTime.compare(point, endVal) < 0,
+      );
+
+      inRangePoints.sort(Temporal.PlainTime.compare);
+
+      const uniquePoints = inRangePoints.filter(
+        (point, index) =>
+          index === 0 || !point.equals(inRangePoints[index - 1]),
+      );
+
+      const boundaries = [startVal, ...uniquePoints, endVal];
+
+      const result: Array<{ start: string; end: string }> = [];
+      for (let i = 0; i < boundaries.length - 1; i++) {
+        result.push({
+          start: boundaries[i].toString(),
+          end: boundaries[i + 1].toString(),
+        });
+      }
+
+      return result;
+    } catch {
+      return [];
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

@@ -1,4 +1,4 @@
-import { MustTestLocales } from "../../test";
+import { expectDateTimeEqual, MustTestLocales } from "../../test";
 import { formatDateToParts } from "./formatDateToParts";
 
 describe("formatDateToParts", () => {
@@ -106,6 +106,56 @@ describe("formatDateToParts", () => {
     });
   });
 
+  describe("a PlainDate yields only date fields (Temporal ECMA-402 amendments)", () => {
+    // [[TemporalPlainDateFormat]] is null when dateStyle is undefined and
+    // timeStyle is set, and GetDateTimeFormat(~date~, ~date~, ~relevant~)
+    // returns null when only non-date fields are given: both throw a
+    // TypeError, so there is nothing to format. timeZoneName is never
+    // inherited (~relevant~). With dateStyle, AdjustDateTimeStyleFormat keeps
+    // only « weekday, era, year, month, day ».
+    const THURSDAY_FEB_29 = [
+      { type: "weekday", value: "Thursday" },
+      { type: "literal", value: ", " },
+      { type: "month", value: "February" },
+      { type: "literal", value: " " },
+      { type: "day", value: "29" },
+      { type: "literal", value: ", " },
+      { type: "year", value: "2024" },
+    ];
+    const NUMERIC_FEB_29 = [
+      { type: "month", value: "2" },
+      { type: "literal", value: "/" },
+      { type: "day", value: "29" },
+      { type: "literal", value: "/" },
+      { type: "year", value: "2024" },
+    ];
+
+    it.each`
+      description                                         | options                                                                        | expected
+      ${"timeStyle long alone (no PlainDate format)"}     | ${{ timeStyle: "long" }}                                                       | ${[]}
+      ${"timeStyle short alone (no PlainDate format)"}    | ${{ timeStyle: "short" }}                                                      | ${[]}
+      ${"hour alone (only a non-date field)"}             | ${{ hour: "numeric" }}                                                         | ${[]}
+      ${"minute and second alone"}                        | ${{ minute: "2-digit", second: "2-digit" }}                                    | ${[]}
+      ${"dateStyle full + timeStyle full drops the time"} | ${{ dateStyle: "full", timeStyle: "full" }}                                    | ${THURSDAY_FEB_29}
+      ${"date fields + hour drops the hour"}              | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric" }}      | ${NUMERIC_FEB_29}
+      ${"timeZoneName alone is not inherited (defaults)"} | ${{ timeZoneName: "short" }}                                                   | ${NUMERIC_FEB_29}
+      ${"date fields + timeZoneName long"}                | ${{ year: "numeric", month: "numeric", day: "numeric", timeZoneName: "long" }} | ${NUMERIC_FEB_29}
+    `("en-US $description", ({ options, expected }) => {
+      expect(
+        formatDateToParts("2024-02-29", MustTestLocales.enUS, options),
+      ).toEqual(expected);
+    });
+
+    it("dateStyle with an explicit timeZoneName is a TypeError in CreateDateTimeFormat, so []", () => {
+      expect(
+        formatDateToParts("2024-02-29", MustTestLocales.enUS, {
+          dateStyle: "full",
+          timeZoneName: "short",
+        }),
+      ).toEqual([]);
+    });
+  });
+
   describe("invalid input", () => {
     it.each`
       value
@@ -120,5 +170,44 @@ describe("formatDateToParts", () => {
     `("returns [] for invalid input: $value", ({ value }) => {
       expect(formatDateToParts(value as never)).toEqual([]);
     });
+  });
+
+  // ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale data
+  // is used, and a malformed tag anywhere in the list is invalid input. Expected strings from native
+  // Intl with the same list.
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"03/02/2024"}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
+  `(
+    "returns $expected (parts joined) for locale list $locale",
+    ({ locale, expected }) => {
+      const actual = formatDateToParts("2024-02-03", locale);
+      expect(
+        Array.isArray(actual)
+          ? actual.map((part) => part.value).join("")
+          : actual,
+      ).toEqual(expected);
+    },
+  );
+});
+
+// Plan #14: ECMA-402 CoerceOptionsToObject throws TypeError for null options and wraps any other
+// primitive with ToObject, which carries no formatting fields, so a string or number formats with
+// the defaults. Expected strings from native Chromium 153 (`toLocaleString("en-US", 1)` and
+// `new Intl.DateTimeFormat("en-US", null)`, which throws).
+describe("formatDateToParts with primitive options", () => {
+  it.each`
+    options   | expected
+    ${null}   | ${""}
+    ${"long"} | ${"2/3/2024"}
+    ${1}      | ${"2/3/2024"}
+  `("returns $expected for options $options", ({ options, expected }) => {
+    expectDateTimeEqual(
+      formatDateToParts("2024-02-03", MustTestLocales.enUS, options as never)
+        .map((part) => part.value)
+        .join(""),
+      expected,
+    );
   });
 });

@@ -13,15 +13,15 @@ import Mistake from "../../../components/Mistake.astro";
 
 <Mistake
   severity="high"
-  title="Not handling null on invalid input"
-  description="parseRfc2822, parseHttp, and parseSql return null for invalid input, not an empty string. Checking for falsy is not enough — null and an empty string are different sentinels with different meanings."
-  wrongCode={`const result = parseRfc2822(invalidInput);
-if (!result) { /* catches null and "" */ } // ambiguous`}
+  title="Not handling the empty string on invalid input"
+  description="parseRfc2822, parseHttp, and parseSql return an empty string for invalid input and never throw. Passing the result on unchecked turns bad input into an empty value somewhere downstream."
+  wrongCode={`const result = parseRfc2822(invalidInput); // ""
+save({ sentAt: result }); // stores an empty timestamp`}
   rightCode={`import { parseRfc2822 } from "@northguild/gmt/zoned";
 
 const result = parseRfc2822(invalidInput);
-if (result === null) {
-  // specifically invalid Rfc2822
+if (result === "") {
+  // invalid RFC 2822 input
 }`}
 />
 
@@ -40,24 +40,24 @@ const d = parseDayFromDate(dateStr);`}
 <Mistake
   severity="medium"
   title="Assuming month is 1-indexed in arithmetic"
-  description="Temporal.PlainMonthDay uses 1-indexed months, but parseMonthFromDate returns 1-12. Adding or subtracting months without normalizing through a date-aware function can produce invalid month values."
-  wrongCode={`const m = parseMonthFromDate("2024-12-15"); // 12
-const next = m + 1; // 13 — not a valid month`}
-  rightCode={`import { addMonths } from "@northguild/gmt";
+  description="parseMonthFromDate returns the 1-indexed month as a two-digit string, '01' to '12'. Adding or subtracting months on that number without a date-aware function can produce invalid month values."
+  wrongCode={`const m = parseMonthFromDate("2024-12-15"); // "12"
+const next = Number(m) + 1; // 13 — not a valid month`}
+  rightCode={`import { addDate } from "@northguild/gmt";
 
-addMonths("2024-12-15", 1); // "2025-01-15" — handles overflow`}
+addDate("2024-12-15", { months: 1 }); // "2025-01-15" — handles overflow`}
 />
 
 <Mistake
   severity="medium"
   title="Confusing getWeekOfMonth with parseWeekFromDate"
   description="getWeekOfMonth tells you which week-of-month a date falls in (1-6). parseWeekFromDate returns the ISO week number (1-53). They answer different questions and produce different numbers for the same input."
-  wrongCode={`const wom = getWeekOfMonth("2024-01-31"); // 5
+  wrongCode={`const wom = getWeekOfMonth("2024-01-31", "en-US"); // 5
 // used as if it were an ISO week number`}
-  rightCode={`import { parseWeekFromDate, parseYearFromDate } from "@northguild/gmt";
+  rightCode={`import { getIsoWeekDate, parseWeekFromDate } from "@northguild/gmt";
 
 const isoWeek = parseWeekFromDate("2024-01-31"); // 5
-const weekYear = parseYearFromDate("2024-01-31"); // 2024 — the week-year, not the calendar year`}
+getIsoWeekDate("2024-01-31"); // { year: 2024, week: 5, weekday: 3 } — year is the week-year`}
 />
 
 <Mistake
@@ -65,25 +65,26 @@ const weekYear = parseYearFromDate("2024-01-31"); // 2024 — the week-year, not
   title="Week number without week-year is a bug in waiting"
   description="'Wait until week 35' is ambiguous without a week-year. ISO week 35 of 2024 and week 35 of 2025 are 52 weeks apart. Always pair the week number with its week-year."
   wrongCode={`const week = parseWeekFromDate(startDate); // 35
-// wait until week 35 — but which year?`}
-  rightCode={`import { parseWeekFromDate, parseYearFromDate } from "@northguild/gmt";
+// wait until week 35 — but which year?
+parseYearFromDate("2024-12-30"); // "2024" — the calendar year, but that date is in week 1 of 2025`}
+  rightCode={`import { getIsoWeekDate } from "@northguild/gmt";
 
-const week = parseWeekFromDate(startDate);
-const weekYear = parseYearFromDate(startDate);
+getIsoWeekDate("2024-12-30"); // { year: 2025, week: 1, weekday: 1 }
+const { year: weekYear, week } = getIsoWeekDate(startDate);
 // wait until week <week> of <weekYear>`}
 />
 
 <Mistake
   severity="medium"
   title="Checking for null on parseRfc2822/parseHttp/parseSql/parseRfc3339"
-  description="These functions return null for invalid input. Checking for a falsy return masks the difference between invalid (null) and valid-but-empty (an empty string). Check for null explicitly."
+  description="These functions return an empty string for invalid input, never null. A null check never fires, so invalid input passes straight through it. Check for the empty string."
   wrongCode={`const r = parseRfc3339(input);
-if (!r) { /* treats null and "" identically */ }`}
+if (r === null) { /* never true — invalid input returns "" */ }`}
   rightCode={`import { parseRfc3339 } from "@northguild/gmt/zoned";
 
 const r = parseRfc3339(input);
-if (r === null) {
-  // explicitly invalid input
+if (r === "") {
+  // invalid input
 }`}
 />
 
@@ -94,3 +95,4 @@ if (r === null) {
 - [`parseRfc3339` reference](/reference/zoned/parse/parseRfc3339)
 - [`parseYearFromDate` reference](/reference/plain/parse/parseYearFromDate)
 - [`parseWeekFromDate` reference](/reference/plain/parse/parseWeekFromDate)
+- [`getIsoWeekDate` reference](/reference/calendar/calculate/getIsoWeekDate)

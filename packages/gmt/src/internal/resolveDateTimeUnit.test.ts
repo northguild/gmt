@@ -45,4 +45,15 @@ describe("resolveDateTimeUnit", () => {
   `("returns $unit unchanged when it is not a DateTimeUnit", ({ unit }) => {
     expect(resolveDateTimeUnit(unit)).toBe(unit);
   });
+  // Callers pass raw user input, which may not be a string (Temporal GetOption: a non-string unit is rejected, not coerced here).
+  it.each`
+    unit
+    ${undefined}
+    ${null}
+    ${42}
+    ${true}
+    ${["days"]}
+  `("returns non-string $unit unchanged without throwing", ({ unit }) => {
+    expect(resolveDateTimeUnit(unit)).toBe(unit);
+  });
 });

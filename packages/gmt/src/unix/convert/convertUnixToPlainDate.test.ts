@@ -58,3 +58,32 @@ describe("convertUnixToPlainDate", () => {
     expect(convertUnixToPlainDate(unix as never)).toBe("");
   });
 });
+
+describe("convertUnixToPlainDate non-object options", () => {
+  // Temporal GetOptionsObject: a legacy positional unit string (or null, or a number) is not an
+  // options object, so it is the sentinel — never read as the default milliseconds, which would turn
+  // 1710460800 seconds (2024-03-15) into "1970-01-20".
+  it.each`
+    options
+    ${"seconds"}
+    ${null}
+    ${1000}
+  `(
+    'returns "" for convertUnixToPlainDate(1710460800, $options)',
+    ({ options }) => {
+      expect(convertUnixToPlainDate(1710460800, options as never)).toBe("");
+    },
+  );
+
+  it('reads { epochUnit: "seconds" } as 2024-03-15 (UTC)', () => {
+    expect(convertUnixToPlainDate(1710460800, { epochUnit: "seconds" })).toBe(
+      "2024-03-15",
+    );
+  });
+});
+
+describe("convertUnixToPlainDate invalid-input @example", () => {
+  it('returns "" for convertUnixToPlainDate(NaN)', () => {
+    expect(convertUnixToPlainDate(NaN)).toBe("");
+  });
+});

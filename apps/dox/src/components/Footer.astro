@@ -1,0 +1,12 @@
+---
+// Override of Starlight's Footer that appends an empty end-of-page marker. The
+// `<link rel="expect" href="#gmt-page-end" blocking="render">` in astro.config
+// holds the first paint of each page until the parser reaches this element.
+// Without it, Chrome paints a reference page (~200 KB, most of it sidebar) in
+// pieces as it streams in — header first, then sidebar, then content — which
+// reads as the sidebar and content flashing on every route change.
+import Default from '@astrojs/starlight/components/Footer.astro';
+---
+
+<Default />
+<div id="gmt-page-end" hidden></div>

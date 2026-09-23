@@ -1,4 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
 import { durationUntilString } from "../../internal";
 import type {
   DateTimeDurationUnit,
@@ -6,6 +7,7 @@ import type {
   RoundingOptions,
 } from "../../types";
 import { isValidDateTime, isValidDateTimeDurationUnit } from "../validate";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return the difference between two PlainDateTime values as an ISO 8601 duration string,
@@ -28,7 +30,7 @@ import { isValidDateTime, isValidDateTimeDurationUnit } from "../validate";
  * @param dateTime1 ISO PlainDateTime string for the start
  * @param dateTime2 ISO PlainDateTime string for the end
  * @param unit DateTimeDurationUnit to use as the duration's largestUnit
- * @param options optional: smallestUnit, roundingIncrement, roundingMode (.until() rounding); toStringSmallestUnit, fractionalSecondDigits, toStringRoundingMode (.toString() precision)
+ * @param options optional: smallestUnit, roundingIncrement, roundingMode (.until() rounding); toStringSmallestUnit, fractionalSecondDigits, toStringRoundingMode (.toString() precision); a non-object value (such as `null`) is invalid
  * @returns ISO 8601 duration string, or "" on invalid input
  *
  * @example diffDateTimeAsDuration("2024-03-10T00:00:00", "2024-03-11T02:00:00", "days") // "P1DT2H"
@@ -40,12 +42,17 @@ import { isValidDateTime, isValidDateTimeDurationUnit } from "../validate";
 export function diffDateTimeAsDuration(
   dateTime1: string,
   dateTime2: string,
-  unit: DateTimeDurationUnit,
+  unit: DateTimeDurationUnit | Temporal.DateTimeUnit,
   options?: RoundingOptions<Temporal.DateTimeUnit> & DurationStringOptions,
 ): string {
+  // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
+  if (!isOptionsArgument(options)) {
+    return "";
+  }
   const validDateTimes =
     isValidDateTime(dateTime1) && isValidDateTime(dateTime2);
-  const validUnit = isValidDateTimeDurationUnit(unit);
+  const resolvedUnit = resolveDurationUnit(unit);
+  const validUnit = isValidDateTimeDurationUnit(resolvedUnit);
 
   if (!validDateTimes || !validUnit) {
     return "";
@@ -55,7 +62,7 @@ export function diffDateTimeAsDuration(
     const dt1 = Temporal.PlainDateTime.from(dateTime1);
     const dt2 = Temporal.PlainDateTime.from(dateTime2);
 
-    return durationUntilString(dt1, dt2, unit, options);
+    return durationUntilString(dt1, dt2, resolvedUnit, options);
   } catch {
     return "";
   }

@@ -41,7 +41,8 @@ Use **`pnpm`** for all install and registry commands. Never `npm install` or `ya
 These bind every change.
 
 1. **Module-granularity imports only.** `@northguild/gmt/plain/calculate`. **Never**
-   per-function — `packages/gmt/package.json` sets `"./plain/*/*": null`, so it is
+   per-function — `packages/gmt/package.json` `exports` declares only the root, namespace and
+   category barrels, so it is
    impossible, not merely discouraged. **Never** namespace-level
    (`@northguild/gmt/plain`) — the namespace barrels open with
    `export * from "@js-temporal/polyfill"` and drag 2.98 MB.

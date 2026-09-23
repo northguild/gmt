@@ -1,0 +1,56 @@
+---
+/**
+ * One defect in the `/upstream/` table: what it breaks, whether GMT still works around it, and
+ * what we sent about it.
+ *
+ * The "still needed" numbers come from `temporal-compat.json`, which `pnpm compat:snapshot`
+ * writes from the same probes `pnpm compat` runs, so the column is a measurement rather than a
+ * sentence anyone typed.
+ */
+import type { CompatGroup } from "../data/temporal-compat";
+import { groupLabel, groupWhatBreaks } from "../data/temporal-compat";
+import type { UpstreamFiling } from "../data/upstream-filings";
+
+interface Props {
+  group: CompatGroup;
+  /** The filings whose `gmtGuard` names one of this group's defects. */
+  filings: readonly UpstreamFiling[];
+}
+
+// See `UpstreamFilingRow.astro`: `Astro.props` is untyped in this app, so `Props` is applied here.
+const { group, filings } = Astro.props as Props;
+
+const shortRef = (repo: string, number: number): string =>
+  `${repo === "tc39/proposal-temporal" ? "tc39" : "polyfill"} #${number}`;
+
+const stillNeeded = group.failing > 0;
+const probeCount = stillNeeded
+  ? `${group.failing} of ${group.probes} checks fail`
+  : `${group.probes} of ${group.probes} checks pass`;
+---
+
+<tr>
+  <td class="gmt-defects-what">
+    <strong>{groupLabel(group)}</strong>
+    <p>{groupWhatBreaks(group)}</p>
+  </td>
+  <td class="gmt-defects-state">
+    <span class:list={["gmt-defects-badge", stillNeeded && "gmt-defects-badge--ok"]}>
+      {stillNeeded ? "✓ Yes" : "No"}
+    </span>
+    <p>{probeCount}</p>
+  </td>
+  <td class="gmt-defects-sent">
+    {filings.length === 0 ? (
+      <p class="gmt-defects-none">—</p>
+    ) : (
+      <ul class="gmt-defects-refs">
+        {filings.map((f) => (
+          <li>
+            <a href={f.contributionUrl ?? f.url}>{shortRef(f.repo, f.number)}</a>
+          </li>
+        ))}
+      </ul>
+    )}
+  </td>
+</tr>

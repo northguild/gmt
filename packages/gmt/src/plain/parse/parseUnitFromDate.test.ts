@@ -55,4 +55,52 @@ describe("parseUnitFromDate", () => {
     const result = parseUnitFromDate("2024-02-29", "year");
     expect(result).toBe("");
   });
+
+  // UTS #35 Part 4, firstDay Sunday and minDays 1: 2024-12-31 (a Tuesday) shares its Sunday-first
+  // week with 1 January 2025, so it is week 1; 2024-12-28 (Saturday, day 363 = 6 + 7 x 51) is 52.
+  it("returns the UTS #35 Sunday-first week number at the year end", () => {
+    expect(
+      parseUnitFromDate("2024-12-31", "week", { weekStartsOn: "sunday" }),
+    ).toBe("1");
+    expect(
+      parseUnitFromDate("2024-12-28", "week", { weekStartsOn: "sunday" }),
+    ).toBe("52");
+  });
+
+  // weekStartsOn only names "monday" or "sunday"; any other value is invalid input, for every unit
+  // (Temporal GetOption rejects a value outside its allowed list; undefined means the default).
+  it.each`
+    unit      | weekStartsOn
+    ${"week"} | ${"tuesday"}
+    ${"week"} | ${"Monday"}
+    ${"week"} | ${""}
+    ${"week"} | ${null}
+    ${"week"} | ${1}
+    ${"week"} | ${true}
+    ${"day"}  | ${"tuesday"}
+    ${"day"}  | ${"Monday"}
+    ${"day"}  | ${""}
+    ${"day"}  | ${null}
+    ${"day"}  | ${1}
+    ${"day"}  | ${true}
+  `(
+    "returns an empty string for unit $unit with invalid weekStartsOn $weekStartsOn",
+    ({ unit, weekStartsOn }) => {
+      expect(parseUnitFromDate("2024-03-15", unit, { weekStartsOn })).toBe("");
+    },
+  );
+
+  // Temporal §13.17 GetTemporalUnitValuedOption: a plural unit name is the same unit as its singular.
+  it.each`
+    unit        | expected
+    ${"years"}  | ${"2024"}
+    ${"months"} | ${"03"}
+    ${"weeks"}  | ${"11"}
+    ${"days"}   | ${"17"}
+  `(
+    "returns $expected for plural unit $unit of 2024-03-17",
+    ({ unit, expected }) => {
+      expect(parseUnitFromDate("2024-03-17", unit)).toBe(expected);
+    },
+  );
 });

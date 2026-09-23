@@ -11,14 +11,14 @@ import Scenario from "~/components/Scenario.astro";
   naiveCode={`// The naive approach: add 7 days as milliseconds
 const meeting = new Date("2024-03-06T14:00:00-05:00");
 const next = new Date(meeting.getTime() + 7 * 24 * 60 * 60 * 1000);
-// next is 2024-03-13T13:00:00-04:00 — the meeting silently moved to 1 PM!
+// next is 2024-03-13T19:00:00.000Z, which is 3 PM in New York (EDT) — the meeting silently moved to 3 PM!
 console.log(next.toISOString());`}
-  explanation={`When you add 7 days as milliseconds (7 × 24 × 60 × 60 × 1000), you are adding exactly 604,800,000 milliseconds of *absolute* time. On the spring-forward day, the local clock jumps from 2 AM to 3 AM, so only 23 hours of local time pass in that 604,800,000 milliseconds. The meeting drifts from 2 PM to 1 PM. GMT's \`addZoned\` preserves the *local* wall-clock time instead of the absolute elapsed time.`}
+  explanation={`When you add 7 days as milliseconds (7 × 24 × 60 × 60 × 1000), you are adding exactly 604,800,000 milliseconds of *absolute* time. On the spring-forward day, the local clock jumps from 2 AM to 3 AM, so that local day is only 23 hours long and those 604,800,000 milliseconds carry the wall clock one hour further. The meeting drifts from 2 PM to 3 PM. GMT's \`addZoned\` preserves the *local* wall-clock time instead of the absolute elapsed time.`}
   gmtCode={`import { addZoned } from "@northguild/gmt/zoned";
 
 const thisWednesday = "2024-03-06T14:00:00-05:00[America/New_York]";
 const next = addZoned(thisWednesday, { days: 7 });
-// "2024-03-13T14:00:00-04:00" — still 2 PM, still New York`}
+// "2024-03-13T14:00:00-04:00[America/New_York]" — still 2 PM, still New York`}
   fixedSpecId="addZoned"
 />
 

@@ -117,4 +117,23 @@ describe("cycleDate", () => {
       expect(cycleDate(invalidValue, "month", 1)).toBe("");
     },
   );
+
+  // `amount` must be a finite number (isValidAmount); anything else is invalid input, never 0.
+  it.each`
+    amount
+    ${null}
+    ${undefined}
+    ${""}
+    ${"1"}
+    ${[]}
+    ${{}}
+    ${true}
+    ${Number.NaN}
+    ${Number.POSITIVE_INFINITY}
+  `(
+    "returns an empty string for a non-finite-number amount $amount",
+    ({ amount }) => {
+      expect(cycleDate("2024-01-31", "month", amount)).toBe("");
+    },
+  );
 });

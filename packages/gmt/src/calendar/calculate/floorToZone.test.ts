@@ -1,4 +1,9 @@
-import { battleTestTimeZones, MustTestDstTimeZones } from "../../test";
+import {
+  battleTestTimeZones,
+  dateLineCrossingAt,
+  dateLineCrossingTimeZones,
+  MustTestDstTimeZones,
+} from "../../test";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import { floorToZone } from "./floorToZone";
 
@@ -147,6 +152,14 @@ describe("floorToZone", () => {
     },
   );
 
+  // Temporal §14.6.2: a single-component IANA link is a zone. Singapore links to Asia/Singapore
+  // (+08:00, tzdb `backward`), so 12:00Z is 20:00 local on 1 January, whose midnight is 16:00Z.
+  it("floors in a single-component IANA zone name", () => {
+    expect(floorToZone("2024-01-01T12:00:00Z", "day", "Singapore")).toBe(
+      "2023-12-31T16:00:00Z",
+    );
+  });
+
   it("floors to the local day, not the UTC day, for the same instant", () => {
     expect(floorToZone(sourceInstant, "day", "America/New_York")).toBe(
       "2024-06-14T04:00:00Z",
@@ -252,7 +265,6 @@ describe("floorToZone", () => {
     ${"second"}  | ${"the same"}
     ${"year"}    | ${"a unit above month, which getQuarter and getFiscalPeriod answer"}
     ${"quarter"} | ${"not a Temporal unit at all"}
-    ${"days"}    | ${"a plural spelling"}
     ${"Day"}     | ${"a capitalised spelling"}
     ${""}        | ${"an empty string"}
     ${undefined} | ${"absent"}
@@ -279,15 +291,29 @@ describe("floorToZone", () => {
     },
   );
 
+  // isValidInstant reads annotations as Temporal.Instant.from does: a calendar or elective
+  // annotation is ignored (an instant has no calendar) and an unknown critical one is rejected.
+  // 03:00Z is 23:00 EDT on 14 June, whose day began at 04:00Z.
   it.each`
-    value                                  | description
-    ${"2024-06-15T03:00:00"}               | ${"a zoneless datetime, which names no instant"}
-    ${"2024-06-15"}                        | ${"a date"}
-    ${"invalid"}                           | ${"an unparseable string"}
-    ${""}                                  | ${"an empty string"}
-    ${"2016-12-31T23:59:60Z"}              | ${"a leap second"}
-    ${"2024-02-30T00:00:00Z"}              | ${"a date that does not exist"}
-    ${"2024-06-15T03:00:00Z[u-ca=hebrew]"} | ${"a calendar annotation"}
+    value                                  | expected
+    ${"2024-06-15T03:00:00Z[u-ca=hebrew]"} | ${"2024-06-14T04:00:00Z"}
+    ${"2024-06-15T03:00:00Z[foo=bar]"}     | ${"2024-06-14T04:00:00Z"}
+    ${"2024-06-15T03:00:00Z[!foo=bar]"}    | ${""}
+  `(
+    "reads the annotations of $value as Temporal does → $expected",
+    ({ value, expected }) => {
+      expect(floorToZone(value, "day", "America/New_York")).toBe(expected);
+    },
+  );
+
+  it.each`
+    value                     | description
+    ${"2024-06-15T03:00:00"}  | ${"a zoneless datetime, which names no instant"}
+    ${"2024-06-15"}           | ${"a date"}
+    ${"invalid"}              | ${"an unparseable string"}
+    ${""}                     | ${"an empty string"}
+    ${"2016-12-31T23:59:60Z"} | ${"a leap second"}
+    ${"2024-02-30T00:00:00Z"} | ${"a date that does not exist"}
   `("returns an empty string when $value is $description", ({ value }) => {
     expect(floorToZone(value, "day", "America/New_York")).toBe("");
   });
@@ -336,5 +362,46 @@ describe("floorToZone", () => {
   it("returns an empty string when Temporal.Instant.from throws", () => {
     mockTemporalInstantFromThrow();
     expect(floorToZone(sourceInstant, "day", "America/New_York")).toBe("");
+  });
+
+  // Temporal §13.17 GetTemporalUnitValuedOption: a plural unit name is the same unit as its singular.
+  // 2024-05-15T10:20:30.123Z is Wednesday 12:20:30 in Berlin (+02:00): its local hour, day, Monday week and month
+  // start at 10:00Z, 2024-05-14T22:00Z, 2024-05-12T22:00Z and 2024-04-30T22:00Z.
+  it.each`
+    unit        | expected
+    ${"hours"}  | ${"2024-05-15T10:00:00Z"}
+    ${"days"}   | ${"2024-05-14T22:00:00Z"}
+    ${"weeks"}  | ${"2024-05-12T22:00:00Z"}
+    ${"months"} | ${"2024-04-30T22:00:00Z"}
+  `("returns $expected for plural unit $unit", ({ unit, expected }) => {
+    expect(floorToZone("2024-05-15T10:20:30.123Z", unit, "Europe/Berlin")).toBe(
+      expected,
+    );
+  });
+});
+
+// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
+// are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
+// 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
+
+describe("floorToZone across the 1844 date-line crossings (zoned.E)", () => {
+  it.each(dateLineCrossingTimeZones)(
+    "floors 1845-01-02T12:00 in $timeZone to Monday 1844-12-30 by week",
+    (crossing) => {
+      expect(
+        floorToZone(
+          dateLineCrossingAt(crossing, 36).toInstant().toString(),
+          "week",
+          crossing.timeZone,
+        ),
+      ).toBe(dateLineCrossingAt(crossing, -24).toInstant().toString());
+    },
+  );
+
+  it("floors Manila's 1845-01-02T12:00 to 1844-12-30T15:56:08Z by week", () => {
+    expect(floorToZone("1845-01-02T03:56:08Z", "week", "Asia/Manila")).toBe(
+      "1844-12-30T15:56:08Z",
+    );
   });
 });

@@ -4,27 +4,22 @@ import { battleTestTimeZones } from "../../test/timeZoneMatrix";
 import { intervalXorZoned } from "./intervalXorZoned";
 
 describe("intervalXorZoned", () => {
-  // Closed [start, end]: the shared endpoint is covered twice, so xor excludes it from both pieces,
-  // each stepping one unit in from it. Pieces list A's remainder, then B's.
+  // Half-open [start, end): the result is every maximal run covered by exactly one interval, sorted
+  // by start. Touching intervals share no instant, so they join into one run, and every boundary is
+  // an input's own start or end — no nanosecond step (coding-standards § 8; A = 2024-01-01T09:00Z,
+  // B = 12:00Z, C = 13:00Z, D = 17:00Z).
   it.each`
-    aStart                              | aEnd                                | bStart                              | bEnd                                | expected                                                                                                                                                                                        | reason
-    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-06-30T12:00:00+00:00[UTC]"} | ${"2024-06-30T12:00:00+00:00[UTC]"} | ${"2024-12-31T17:00:00+00:00[UTC]"} | ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-06-30T11:59:59.999999999+00:00[UTC]" }, { start: "2024-06-30T12:00:00.000000001+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" }]} | ${"A ends where B starts"}
-    ${"2024-06-30T12:00:00+00:00[UTC]"} | ${"2024-12-31T17:00:00+00:00[UTC]"} | ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-06-30T12:00:00+00:00[UTC]"} | ${[{ start: "2024-06-30T12:00:00.000000001+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" }, { start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-06-30T11:59:59.999999999+00:00[UTC]" }]} | ${"A starts where B ends"}
+    aStart                              | aEnd                                | bStart                                           | bEnd                                | expected                                                                                                                                                                                 | reason
+    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-01-01T13:00:00+00:00[UTC]"} | ${"2024-01-01T12:00:00+00:00[UTC]"}              | ${"2024-01-01T17:00:00+00:00[UTC]"} | ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-01-01T12:00:00+00:00[UTC]" }, { start: "2024-01-01T13:00:00+00:00[UTC]", end: "2024-01-01T17:00:00+00:00[UTC]" }]}              | ${"[A, C) xor [B, D) is [A, B) and [C, D)"}
+    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-01-01T13:00:00+00:00[UTC]"} | ${"2024-01-01T07:00:00-05:00[America/New_York]"} | ${"2024-01-01T17:00:00+00:00[UTC]"} | ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-01-01T07:00:00-05:00[America/New_York]" }, { start: "2024-01-01T13:00:00+00:00[UTC]", end: "2024-01-01T17:00:00+00:00[UTC]" }]} | ${"a boundary keeps the zone of the input that supplied it"}
+    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-06-30T12:00:00+00:00[UTC]"} | ${"2024-06-30T12:00:00+00:00[UTC]"}              | ${"2024-12-31T17:00:00+00:00[UTC]"} | ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" }]}                                                                                                  | ${"A ends where B starts: one joined run"}
+    ${"2024-06-30T12:00:00+00:00[UTC]"} | ${"2024-12-31T17:00:00+00:00[UTC]"} | ${"2024-01-01T09:00:00+00:00[UTC]"}              | ${"2024-06-30T12:00:00+00:00[UTC]"} | ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" }]}                                                                                                  | ${"A starts where B ends: one joined run"}
+    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-06-30T12:00:00+00:00[UTC]"} | ${"2024-01-01T09:00:00+00:00[UTC]"}              | ${"2024-12-31T17:00:00+00:00[UTC]"} | ${[{ start: "2024-06-30T12:00:00+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" }]}                                                                                                  | ${"shared start"}
+    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-12-31T17:00:00+00:00[UTC]"} | ${"2024-06-30T12:00:00+00:00[UTC]"}              | ${"2024-12-31T17:00:00+00:00[UTC]"} | ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-06-30T12:00:00+00:00[UTC]" }]}                                                                                                  | ${"shared end"}
+    ${"2024-07-01T13:00:00+00:00[UTC]"} | ${"2024-12-31T17:00:00+00:00[UTC]"} | ${"2024-01-01T09:00:00+00:00[UTC]"}              | ${"2024-06-30T12:00:00+00:00[UTC]"} | ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-06-30T12:00:00+00:00[UTC]" }, { start: "2024-07-01T13:00:00+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" }]}              | ${"disjoint, B first: sorted by start"}
+    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-01-01T17:00:00+00:00[UTC]"} | ${"2024-01-01T12:00:00+00:00[UTC]"}              | ${"2024-01-01T12:00:00+00:00[UTC]"} | ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-01-01T17:00:00+00:00[UTC]" }]}                                                                                                  | ${"an empty B holds no instant"}
   `(
-    "returns $expected for touching A=[$aStart, $aEnd] xor B=[$bStart, $bEnd] ($reason)",
-    ({ aStart, aEnd, bStart, bEnd, expected }) => {
-      expect(intervalXorZoned(aStart, aEnd, bStart, bEnd)).toEqual(expected);
-    },
-  );
-
-  // A shared start or end means the shorter interval is covered entirely, so only the longer
-  // one's remainder is left, stepping one nanosecond past the end of the covered part.
-  it.each`
-    aStart                              | aEnd                                | bStart                              | bEnd                                | expected                                                                                          | reason
-    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-06-30T12:00:00+00:00[UTC]"} | ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-12-31T17:00:00+00:00[UTC]"} | ${[{ start: "2024-06-30T12:00:00.000000001+00:00[UTC]", end: "2024-12-31T17:00:00+00:00[UTC]" }]} | ${"shared start"}
-    ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-12-31T17:00:00+00:00[UTC]"} | ${"2024-06-30T12:00:00+00:00[UTC]"} | ${"2024-12-31T17:00:00+00:00[UTC]"} | ${[{ start: "2024-01-01T09:00:00+00:00[UTC]", end: "2024-06-30T11:59:59.999999999+00:00[UTC]" }]} | ${"shared end"}
-  `(
-    "returns $expected for A=[$aStart, $aEnd] xor B=[$bStart, $bEnd] ($reason)",
+    "returns $expected for A=[$aStart, $aEnd) xor B=[$bStart, $bEnd) ($reason)",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalXorZoned(aStart, aEnd, bStart, bEnd)).toEqual(expected);
     },
@@ -72,10 +67,9 @@ describe("intervalXorZoned", () => {
     ).toEqual([]);
   });
 
-  it("computes interior boundaries at exactly ±1 nanosecond from the overlap edges — not copied, not rounded to the second", () => {
-    // Regression test for the JSDoc @example drift this guards: the interior
-    // boundaries are re-derived one nanosecond off the overlap region's
-    // edges, never truncated to whole seconds.
+  it("cuts interior boundaries exactly at the overlap edges — no nanosecond step, not rounded to the second", () => {
+    // Half-open: the piece before the overlap ends at B's start and the piece after it starts at A's
+    // end, each excluded from the piece it bounds on the other side.
     const result = intervalXorZoned(
       "2024-01-01T09:00:00+00:00[UTC]",
       "2024-06-30T12:00:00+00:00[UTC]",
@@ -85,19 +79,18 @@ describe("intervalXorZoned", () => {
     expect(result).toEqual([
       {
         start: "2024-01-01T09:00:00+00:00[UTC]",
-        end: "2024-04-01T10:59:59.999999999+00:00[UTC]",
+        end: "2024-04-01T11:00:00+00:00[UTC]",
       },
       {
-        start: "2024-06-30T12:00:00.000000001+00:00[UTC]",
+        start: "2024-06-30T12:00:00+00:00[UTC]",
         end: "2024-12-31T17:00:00+00:00[UTC]",
       },
     ]);
   });
 
   it("returns two remainder pieces (not one) when B is strictly contained inside A", () => {
-    // Regression test for the corrected JSDoc prose — this used to (wrongly)
-    // claim [{ start, end }] for full containment; it's actually two pieces,
-    // same shape as a partial overlap.
+    // Full containment leaves the part of A before B and the part after it: two pieces, the same
+    // shape as a partial overlap.
     const result = intervalXorZoned(
       "2024-01-01T09:00:00+00:00[UTC]",
       "2024-12-31T17:00:00+00:00[UTC]",
@@ -107,10 +100,10 @@ describe("intervalXorZoned", () => {
     expect(result).toEqual([
       {
         start: "2024-01-01T09:00:00+00:00[UTC]",
-        end: "2024-02-01T07:59:59.999999999+00:00[UTC]",
+        end: "2024-02-01T08:00:00+00:00[UTC]",
       },
       {
-        start: "2024-03-01T10:00:00.000000001+00:00[UTC]",
+        start: "2024-03-01T10:00:00+00:00[UTC]",
         end: "2024-12-31T17:00:00+00:00[UTC]",
       },
     ]);
@@ -135,19 +128,13 @@ describe("intervalXorZoned", () => {
       expect(
         Temporal.ZonedDateTime.from(result[0].start).toInstant().toString(),
       ).toBe(aStartInstant.toString());
-      const xorFirstEnd = Temporal.ZonedDateTime.from(
-        result[0].end,
-      ).toInstant();
-      expect(Temporal.Instant.compare(xorFirstEnd, bStartInstant)).toBeLessThan(
-        0,
-      );
-      // Second piece: A end to B end
-      const xorSecondStart = Temporal.ZonedDateTime.from(
-        result[1].start,
-      ).toInstant();
       expect(
-        Temporal.Instant.compare(xorSecondStart, aEndInstant),
-      ).toBeGreaterThanOrEqual(0);
+        Temporal.ZonedDateTime.from(result[0].end).toInstant().toString(),
+      ).toBe(bStartInstant.toString());
+      // Second piece: A end to B end
+      expect(
+        Temporal.ZonedDateTime.from(result[1].start).toInstant().toString(),
+      ).toBe(aEndInstant.toString());
       expect(
         Temporal.ZonedDateTime.from(result[1].end).toInstant().toString(),
       ).toBe(bEndInstant.toString());
@@ -227,9 +214,9 @@ describe("intervalXorZoned", () => {
     }
   });
 
-  it("proves zone-invariance across battleTestTimeZones for touching intervals (xor excludes the shared instant from both pieces)", () => {
-    // A ends at the instant B starts. Closed, so that instant is covered by both and every piece
-    // stops 1 ns short of it.
+  it("proves zone-invariance across battleTestTimeZones for touching intervals (xor joins them into one run)", () => {
+    // A ends at the instant B starts. Half-open, so no instant is covered twice and the two pieces
+    // join at the shared boundary.
     const aStartInstant = Temporal.Instant.from("2024-01-01T09:00:00Z");
     const sharedInstant = Temporal.Instant.from("2024-06-30T12:00:00Z");
     const bEndInstant = Temporal.Instant.from("2024-12-31T17:00:00Z");
@@ -247,26 +234,19 @@ describe("intervalXorZoned", () => {
       ]);
 
       expect(instants).toEqual([
-        [
-          aStartInstant.toString(),
-          sharedInstant.subtract({ nanoseconds: 1 }).toString(),
-        ],
-        [
-          sharedInstant.add({ nanoseconds: 1 }).toString(),
-          bEndInstant.toString(),
-        ],
+        [aStartInstant.toString(), bEndInstant.toString()],
       ]);
     }
   });
 
-  // E5 (issue #78), decision of record D2 — see isValidZonedDateTime.test.ts for the full
-  // rationale: zoned/ rejects any [u-ca=...] calendar annotation outright.
+  // The arguments name different calendars (hebrew and a bare iso8601 string), so the
+  // result is the sentinel (there is no single output calendar).
   it.each`
     aStart                                           | aEnd                                | bStart                                           | bEnd
     ${"2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC]"}              | ${"2024-06-30T23:59:59+00:00[UTC]"}
     ${"2024-01-01T00:00:00+00:00[UTC]"}              | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]"} | ${"2024-06-30T23:59:59+00:00[UTC]"}
   `(
-    "returns [] when an argument carries a calendar annotation: $aStart, $aEnd, $bStart, $bEnd",
+    "returns [] for mixed calendars: $aStart, $aEnd, $bStart, $bEnd",
     ({
       aStart,
       aEnd,

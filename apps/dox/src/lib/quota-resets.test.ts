@@ -3,8 +3,8 @@
 import { listResets, nextReset, type QuotaInfo } from "./quota-resets";
 
 /** Pacific midnight (07:00Z) and the UTC midnight seven hours before it. */
-const PACIFIC_MIDNIGHT = "2026-06-16T07:00:00.000Z";
-const UTC_MIDNIGHT = "2026-06-16T00:00:00.000Z";
+const PACIFIC_MIDNIGHT = "2026-06-16T07:00:00Z";
+const UTC_MIDNIGHT = "2026-06-16T00:00:00Z";
 
 function info(overrides: {
   gemini?: number;

@@ -105,9 +105,10 @@ the globe above is computed live in your browser and recomputed every second.
 <div data-reveal-group>
 <CardGrid>
 <Card title="No borrowed test oracle" icon="magnifier">
-  Every test in GMT's suite is checked against the Temporal spec itself —
-  the standard, not another library's output. Correctness that doesn't
-  hinge on trusting a wrapper to also be right.
+  GMT's expected answers come from the standards themselves — Temporal, the
+  RFCs, the official test262 suite — and from the Temporal built into Chrome,
+  never from the polyfill GMT runs on or from another date library. That's how
+  GMT catches the polyfill's own bugs: [see the fixes we've sent upstream](/upstream/).
 </Card>
 
 <Card title={`~${executionRatio(combinedCompetitorExecutions())}× more CI test executions`} icon="rocket">

@@ -22,21 +22,27 @@ export function sortZoned(
   zonedDateTimes: string[],
   order: "asc" | "desc" = "asc",
 ): string[] {
-  if (!zonedDateTimes.length) return [];
-
-  const valid = zonedDateTimes.filter(isValidZonedDateTime);
-  if (!valid.length) return [];
-
   try {
-    const comparables = valid.map((d) => zonedDateTimeFrom(d));
-    comparables.sort(Temporal.ZonedDateTime.compare);
+    if (!Array.isArray(zonedDateTimes) || !zonedDateTimes.length) return [];
 
-    if (order === "desc") {
-      return comparables.reverse().map((d) => d.toString());
+    const valid = zonedDateTimes.filter(isValidZonedDateTime);
+    if (!valid.length) return [];
+
+    try {
+      const comparables = valid.map((d) => zonedDateTimeFrom(d));
+      comparables.sort(Temporal.ZonedDateTime.compare);
+
+      if (order === "desc") {
+        return comparables.reverse().map((d) => d.toString());
+      }
+
+      return comparables.map((d) => d.toString());
+    } catch {
+      return [];
     }
-
-    return comparables.map((d) => d.toString());
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return [];
   }
 }

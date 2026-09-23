@@ -180,30 +180,19 @@ describe("convertPlainDateTimeToZoned", () => {
     },
   );
 
-  // offset is accepted but inert: value has no offset embedded, so every offset value produces identical output
-  it.each`
-    offset
-    ${undefined}
-    ${"prefer"}
-    ${"use"}
-    ${"ignore"}
-    ${"reject"}
-  `(
-    "produces identical output regardless of offset $offset (inert on this function)",
-    ({ offset }) => {
-      const withoutOffset = convertPlainDateTimeToZoned(
+  // `offset` was removed in 1.16.0: Temporal PlainDateTime#toZonedDateTime reads only
+  // `disambiguation`, and a plain date-time has no UTC offset for `offset` to act on. Passing it is
+  // a type error, and a JavaScript caller's stray property changes nothing.
+  it("treats the removed offset option as a type error and ignores it at runtime", () => {
+    expect(
+      convertPlainDateTimeToZoned(
         "2024-11-03T01:30:00",
         "America/New_York",
-        { disambiguation: "later" },
-      );
-      const withOffset = convertPlainDateTimeToZoned(
-        "2024-11-03T01:30:00",
-        "America/New_York",
-        { disambiguation: "later", offset },
-      );
-      expect(withOffset).toBe(withoutOffset);
-    },
-  );
+        // @ts-expect-error -- `offset` was removed in 1.16.0
+        { disambiguation: "later", offset: "reject" },
+      ),
+    ).toBe("2024-11-03T01:30:00.000-05:00[America/New_York]");
+  });
 });
 
 describe("convertPlainDateTimeToZoned at the range limits", () => {
@@ -217,6 +206,39 @@ describe("convertPlainDateTimeToZoned at the range limits", () => {
     "converts $value in $timeZone to $expected",
     ({ value, timeZone, expected }) => {
       expect(convertPlainDateTimeToZoned(value, timeZone)).toBe(expected);
+    },
+  );
+
+  // Temporal's ISO grammar reads an elective annotation (`[foo=bar]`) and `[u-ca=iso8601]` and ignores
+  // them (RFC 9557 §3.3; native Temporal agrees), so the result is the unannotated input's.
+  it.each`
+    value                                  | expected
+    ${"2024-02-29T14:30:45[foo=bar]"}      | ${"2024-02-29T14:30:45.000-05:00[America/New_York]"}
+    ${"2024-02-29T14:30:45[u-ca=iso8601]"} | ${"2024-02-29T14:30:45.000-05:00[America/New_York]"}
+    ${"2024-02-29T14:30:45[Asia/Tokyo]"}   | ${"2024-02-29T14:30:45.000-05:00[America/New_York]"}
+  `(
+    "reads the annotations of $value as Temporal.PlainDateTime.from does → $expected",
+    ({ value, expected }) => {
+      expect(convertPlainDateTimeToZoned(value, "America/New_York")).toBe(
+        expected,
+      );
+    },
+  );
+
+  // Temporal's `TimeZoneIdentifier ::: UTCOffset[~SubMinutePrecision] | TimeZoneIANAName`
+  // (proposal-temporal spec/abstractops.html): `±HH`, `±HHMM` or `±HH:MM`, hour 00–23, no seconds.
+  // Native Temporal and Intl.DateTimeFormat (Chromium 153) accept and reject the same rows.
+  it.each`
+    timeZone    | expected
+    ${"+05:30"} | ${"2024-02-29T14:30:45.000+05:30[+05:30]"}
+    ${"-0800"}  | ${"2024-02-29T14:30:45.000-08:00[-08:00]"}
+    ${"+24:00"} | ${""}
+  `(
+    "converts 2024-02-29T14:30:45 into the offset zone $timeZone → $expected",
+    ({ timeZone, expected }) => {
+      expect(convertPlainDateTimeToZoned("2024-02-29T14:30:45", timeZone)).toBe(
+        expected,
+      );
     },
   );
 });

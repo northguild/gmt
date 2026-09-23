@@ -150,18 +150,24 @@ describe("formatCalendarUtc", () => {
       ).toBe("tomorrow at 6:30 PM");
     });
 
-    it("defaults timeZone to UTC for an invalid timeZone string", () => {
+    // ECMA-402 and Temporal throw RangeError for an unknown zone, so a typo is the sentinel, never UTC.
+    it.each`
+      timeZone
+      ${"Not/AZone"}
+      ${""}
+      ${null}
+    `("returns '' for invalid timeZone $timeZone", ({ timeZone }) => {
       expect(
         formatCalendarUtc(VAL, MustTestLocales.enUS, {
           reference: REF,
-          timeZone: "Not/AZone",
+          timeZone,
         }),
-      ).toBe("tomorrow at 6:30 PM");
+      ).toBe("");
     });
 
     it("defaults reference to 'now' when omitted", () => {
       vi.useFakeTimers();
-      vi.setSystemTime(new Date(REF));
+      vi.setSystemTime(REF);
       try {
         expect(
           formatCalendarUtc(VAL, MustTestLocales.enUS, {
@@ -204,6 +210,22 @@ describe("formatCalendarUtc", () => {
     `("returns '' for invalid value $value", ({ value }) => {
       expect(formatCalendarUtc(value as never, MustTestLocales.enUS)).toBe("");
     });
+
+    // Temporal GetOptionsObject throws TypeError for null (and any non-object), so it is invalid.
+    it.each`
+      options
+      ${null}
+      ${"UTC"}
+      ${1}
+    `("returns '' for options $options", ({ options }) => {
+      expect(
+        formatCalendarUtc(
+          "2024-03-15T12:00:00Z",
+          MustTestLocales.enUS,
+          options as never,
+        ),
+      ).toBe("");
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -214,5 +236,20 @@ describe("formatCalendarUtc", () => {
       mockTemporalNowInstantThrow();
       expect(formatCalendarUtc(VAL, MustTestLocales.enUS)).toBe("");
     });
+  });
+});
+
+// ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale data
+// is used, and a malformed tag anywhere in the list is invalid input. Expected strings from native
+// Intl with the same list (Chromium 153).
+describe("formatCalendarUtc with a locale list", () => {
+  it.each`
+    locale                                          | expected
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"demain à 18:30"}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
+  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+    expect(formatCalendarUtc(VAL, locale as string[], { reference: REF })).toBe(
+      expected,
+    );
   });
 });

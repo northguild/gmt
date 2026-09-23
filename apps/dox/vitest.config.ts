@@ -49,6 +49,15 @@ export default defineConfig({
       "worker/**/*.test.ts",
     ],
     environment: "node",
+    // Vitest's default is 5 s, which was never chosen for this suite. Several tests here are
+    // import-bound rather than slow: they `await import()` a GMT namespace, which pulls in
+    // `@js-temporal/polyfill` and costs ~3.9 s in a fresh worker on an idle machine
+    // (`dst-inspector.test.ts`'s instant-format test, measured). `pnpm run validate` then runs
+    // this suite alongside `packages/gmt`'s 36k tests through `pnpm -r run test`, and on a shared
+    // CPU that 3.9 s crossed 5 s and failed the whole gate. 20 s leaves five times the measured
+    // cost while still failing a test that has genuinely hung.
+    testTimeout: 20_000,
+    hookTimeout: 20_000,
     // Blocks every non-loopback connection, so no test can reach Gemini or
     // Workers AI and spend real budget. Preloaded with `--import` so it is in
     // place before any test, setup file or dependency loads. Proven live by

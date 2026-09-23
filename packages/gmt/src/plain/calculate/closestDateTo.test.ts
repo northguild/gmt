@@ -23,10 +23,10 @@ describe("closestDateTo", () => {
 
   it.each`
     target          | expected
-    ${"2024-03-15"} | ${null}
-    ${"2024-01-01"} | ${null}
+    ${"2024-03-15"} | ${""}
+    ${"2024-01-01"} | ${""}
   `(
-    "returns null when candidates is empty (target=$target)",
+    "returns an empty string when candidates is empty (target=$target)",
     ({ target, expected }) => {
       expect(closestDateTo(target, [])).toBe(expected);
     },
@@ -34,11 +34,11 @@ describe("closestDateTo", () => {
 
   it.each`
     target          | candidates        | expected
-    ${"invalid"}    | ${["2024-03-01"]} | ${null}
-    ${""}           | ${["2024-03-01"]} | ${null}
-    ${"2024-02-30"} | ${["2024-03-01"]} | ${null}
+    ${"invalid"}    | ${["2024-03-01"]} | ${""}
+    ${""}           | ${["2024-03-01"]} | ${""}
+    ${"2024-02-30"} | ${["2024-03-01"]} | ${""}
   `(
-    "returns null when target is invalid ($target)",
+    "returns an empty string when target is invalid ($target)",
     ({ target, candidates, expected }) => {
       expect(closestDateTo(target, candidates)).toBe(expected);
     },
@@ -46,10 +46,10 @@ describe("closestDateTo", () => {
 
   it.each`
     target          | candidates                   | expected
-    ${"2024-03-15"} | ${["invalid", "2024-02-30"]} | ${null}
-    ${"2024-03-15"} | ${["", "not-a-date"]}        | ${null}
+    ${"2024-03-15"} | ${["invalid", "2024-02-30"]} | ${""}
+    ${"2024-03-15"} | ${["", "not-a-date"]}        | ${""}
   `(
-    "returns null when all candidates are invalid",
+    "returns an empty string when all candidates are invalid",
     ({ target, candidates, expected }) => {
       expect(closestDateTo(target, candidates)).toBe(expected);
     },
@@ -122,6 +122,20 @@ describe("closestDateTo", () => {
     "returns $expected when target matches a candidate exactly",
     ({ target, candidates, expected }) => {
       expect(closestDateTo(target, candidates)).toBe(expected);
+    },
+  );
+
+  // A string function's sentinel is "" (coding-standards § API Contract).
+  it.each`
+    candidates
+    ${null}
+    ${undefined}
+    ${"2024-03-01"}
+    ${{}}
+  `(
+    "returns an empty string for non-array candidates $candidates",
+    ({ candidates }) => {
+      expect(closestDateTo("2024-03-15", candidates)).toBe("");
     },
   );
 });

@@ -3,9 +3,12 @@ import { mockTemporalInstantFromThrow } from "../../test/mocks";
 
 describe("intervalOverlappingDaysUtc", () => {
   it.each`
-    aStart                    | aEnd                      | bStart                    | bEnd                      | expected
-    ${"2024-01-01T23:59:00Z"} | ${"2024-01-02T00:01:00Z"} | ${"2024-01-01T23:59:00Z"} | ${"2024-01-02T00:01:00Z"} | ${2}
-    ${"2014-01-10T00:00:00Z"} | ${"2014-01-20T00:00:00Z"} | ${"2014-01-17T00:00:00Z"} | ${"2014-01-21T00:00:00Z"} | ${4}
+    aStart                       | aEnd                         | bStart                       | bEnd                         | expected
+    ${"2024-01-01T23:59:00Z"}    | ${"2024-01-02T00:01:00Z"}    | ${"2024-01-01T23:59:00Z"}    | ${"2024-01-02T00:01:00Z"}    | ${2}
+    ${"2014-01-10T00:00:00Z"}    | ${"2014-01-20T00:00:00Z"}    | ${"2014-01-17T00:00:00Z"}    | ${"2014-01-21T00:00:00Z"}    | ${3}
+    ${"2024-01-01T00:00:00Z"}    | ${"2024-01-02T00:00:00Z"}    | ${"2024-01-01T00:00:00Z"}    | ${"2024-01-02T00:00:00Z"}    | ${1}
+    ${"2024-01-01T12:00:00Z"}    | ${"2024-01-01T12:00:00Z"}    | ${"2024-01-01T09:00:00Z"}    | ${"2024-01-01T17:00:00Z"}    | ${0}
+    ${"+275760-09-12T00:00:00Z"} | ${"+275760-09-13T00:00:00Z"} | ${"-271821-04-20T00:00:00Z"} | ${"+275760-09-13T00:00:00Z"} | ${1}
   `(
     "returns $expected shared dates for $aStart to $aEnd × $bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
@@ -15,7 +18,8 @@ describe("intervalOverlappingDaysUtc", () => {
     },
   );
 
-  it("returns 1 for adjacent intervals sharing one instant", () => {
+  // Half-open (coding-standards § 8): touching intervals share no instant, so no day.
+  it("returns 0 for touching intervals [01-01, 01-02) and [01-02, 01-03)", () => {
     expect(
       intervalOverlappingDaysUtc(
         "2024-01-01T00:00:00Z",
@@ -23,7 +27,7 @@ describe("intervalOverlappingDaysUtc", () => {
         "2024-01-02T00:00:00Z",
         "2024-01-03T00:00:00Z",
       ),
-    ).toBe(1);
+    ).toBe(0);
   });
 
   it("returns 0 for disjoint intervals", () => {

@@ -1,4 +1,5 @@
 import { localeWeekInfo } from "./localeWeekInfo";
+import type { LocalesArgument } from "./resolveLocale";
 
 /**
  * Resolve the ISO day-of-week number (1 = Monday .. 7 = Sunday) that a
@@ -6,12 +7,15 @@ import { localeWeekInfo } from "./localeWeekInfo";
  * (`Intl.Locale#getWeekInfo`, or the older `weekInfo` accessor — see
  * `localeWeekInfo`).
  *
- * - Returns `null` if `locale` is not a valid BCP 47 tag.
+ * - Returns `null` if `locale` is not a well-formed BCP 47 tag; a well-formed tag with no
+ *   locale data does not throw, so it does not return `null` either.
  * - Falls back to `1` (Monday, matching GMT's existing ISO default in
  *   `startOfDate`/`startOfZoned`) if the runtime exposes no week data or
  *   none for the given locale.
  */
-export function getLocaleFirstDayOfWeek(locale: string): number | null {
+export function getLocaleFirstDayOfWeek(
+  locale: LocalesArgument,
+): number | null {
   try {
     const weekInfo = localeWeekInfo(locale);
     if (!weekInfo || typeof weekInfo.firstDay !== "number") {

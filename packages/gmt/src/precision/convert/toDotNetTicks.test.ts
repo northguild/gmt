@@ -59,17 +59,25 @@ describe("toDotNetTicks", () => {
   );
 
   it.each`
-    value                                       | reason
-    ${"2024-03-10"}                             | ${"date-only, no offset"}
-    ${"2024-03-10T12:00:00"}                    | ${"no offset designator"}
-    ${"2024-02-30T12:00:00Z"}                   | ${"day out of range"}
-    ${"2016-12-31T23:59:60Z"}                   | ${"leap second"}
-    ${"2016-12-31 23:59:60Z"}                   | ${"leap second, space separator"}
-    ${"2024-03-10T12:00:00-05:00[u-ca=hebrew]"} | ${"calendar annotation"}
-    ${"invalid"}                                | ${"unparseable"}
-    ${""}                                       | ${"empty string"}
+    value                     | reason
+    ${"2024-03-10"}           | ${"date-only, no offset"}
+    ${"2024-03-10T12:00:00"}  | ${"no offset designator"}
+    ${"2024-02-30T12:00:00Z"} | ${"day out of range"}
+    ${"2016-12-31T23:59:60Z"} | ${"leap second"}
+    ${"2016-12-31 23:59:60Z"} | ${"leap second, space separator"}
+    ${"invalid"}              | ${"unparseable"}
+    ${""}                     | ${"empty string"}
   `("returns 0n when $value is invalid ($reason)", ({ value }) => {
     expect(toDotNetTicks(value)).toBe(0n);
+  });
+
+  // A calendar annotation is read and ignored, as `Temporal.Instant.from` ignores it (an instant has
+  // no calendar): 2024-03-10T12:00:00-05:00 is 2024-03-10T17:00:00Z. Expected value computed from
+  // native Temporal (Chromium 153) epoch nanoseconds.
+  it("returns 638456868000000000n for 2024-03-10T12:00:00-05:00[u-ca=hebrew]", () => {
+    expect(toDotNetTicks("2024-03-10T12:00:00-05:00[u-ca=hebrew]")).toBe(
+      638456868000000000n,
+    );
   });
 
   it.each`

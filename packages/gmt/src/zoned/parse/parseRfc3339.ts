@@ -11,6 +11,11 @@ import { rfc3339DateTime } from "../../regex";
  * - RFC 3339 carries no IANA zone name, so the parsed offset becomes the
  *   result's time zone identifier too (e.g. `Z` → `+00:00[+00:00]`) — the
  *   same fixed-offset-as-zone convention `parseRfc2822` uses.
+ * - **`Z` and `-00:00` become `+00:00`.** RFC 9557 §2.2 (updating RFC 3339
+ *   §4.3) gives `Z` and the older `-00:00` the meaning "the time in UTC is
+ *   known, but the offset to local time is unknown", unlike `+00:00`. A
+ *   Temporal offset cannot carry that distinction, so it is lost; the instant
+ *   is exact.
  * - Rejects GMT's own bracketed zoned strings (`...+00:00[UTC]`) — that
  *   annotation is not valid RFC 3339 input; use `Temporal.ZonedDateTime.from`
  *   / `isValidZonedDateTime` directly for GMT's native format instead.
@@ -20,6 +25,7 @@ import { rfc3339DateTime } from "../../regex";
  *
  * @example parseRfc3339("2024-03-15T14:30:00-04:00") // "2024-03-15T14:30:00-04:00[-04:00]"
  * @example parseRfc3339("2024-03-15T14:30:00Z") // "2024-03-15T14:30:00+00:00[+00:00]"
+ * @example parseRfc3339("2024-03-15T14:30:00-00:00") // "2024-03-15T14:30:00+00:00[+00:00]"
  * @example parseRfc3339("2024-03-15T14:30:00+00:00[UTC]") // "" (bracket annotation not valid RFC 3339)
  * @example parseRfc3339("not a date") // ""
  */

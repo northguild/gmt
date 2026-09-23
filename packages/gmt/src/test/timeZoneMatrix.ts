@@ -85,6 +85,58 @@ export const validOnlyBattleTestTimeZones = [
   "Asia/Calcutta",
 ] as const;
 
+/**
+ * Every single-component (slash-less) Zone and Link name in IANA tzdb 2026d's `backward` file.
+ * Temporal §14.6.2 requires every IANA Zone and Link name to be accepted, and its
+ * `TimeZoneIANAName` grammar allows a single component (`TZLeadingChar ::: Alpha . _`, with
+ * `TZChar` adding digits, `-` and `+`), so none of these may be refused on shape.
+ */
+export const ianaSingleComponentTimeZones = [
+  "CET",
+  "CST6CDT",
+  "Cuba",
+  "EET",
+  "EST",
+  "EST5EDT",
+  "Egypt",
+  "Eire",
+  "GB",
+  "GB-Eire",
+  "GMT+0",
+  "GMT-0",
+  "GMT0",
+  "Greenwich",
+  "HST",
+  "Hongkong",
+  "Iceland",
+  "Iran",
+  "Israel",
+  "Jamaica",
+  "Japan",
+  "Kwajalein",
+  "Libya",
+  "MET",
+  "MST",
+  "MST7MDT",
+  "NZ",
+  "NZ-CHAT",
+  "Navajo",
+  "PRC",
+  "PST8PDT",
+  "Poland",
+  "Portugal",
+  "ROC",
+  "ROK",
+  "Singapore",
+  "Turkey",
+  "UCT",
+  "UTC",
+  "Universal",
+  "W-SU",
+  "WET",
+  "Zulu",
+] as const;
+
 // Shared modern instant used to prove zone conversions preserve exact instants.
 const battleTestInstant = Temporal.Instant.from("2024-02-29T00:00:00Z");
 // Unix epoch instant used for historical offset behavior coverage.
@@ -264,6 +316,64 @@ export const localDstEdgeBattleCases = battleTestTimeZones.map((timeZone) => ({
   // Local noon on the leap day, which no zone in the matrix transitions near.
   unique: "2024-02-29T12:00:00",
 }));
+
+/**
+ * The five zones whose first offset change is the 1844-12-31 date-line crossing: tzdb moved the
+ * Philippines and the Marianas, Carolines and Palau from the American to the Asian side of the
+ * date line by dropping Tuesday 31 December 1844, so local 1844-12-30T24:00 in the old LMT offset
+ * is 1845-01-01T00:00 in the new one and the whole of 1844-12-31 never happened. Values are
+ * Chromium 153 native Temporal (tzdata `asia` Zone Asia/Manila and `australasia` Pacific/Guam,
+ * Kosrae, Palau; Saipan links to Guam) — never the polyfill, whose transition search starts at
+ * 1847-01-01 and misses them (js-temporal/temporal-polyfill#372, tc39/proposal-temporal#3330).
+ *
+ * Kept out of `MustTestDstTimeZones`: every fixture derived from that table is 2024-shaped.
+ */
+export const dateLineCrossingTimeZones = [
+  {
+    timeZone: "Asia/Manila",
+    instant: "1844-12-31T15:56:08Z",
+    offsetBefore: "-15:56:08",
+    offsetAfter: "+08:03:52",
+  },
+  {
+    timeZone: "Pacific/Guam",
+    instant: "1844-12-31T14:21:00Z",
+    offsetBefore: "-14:21",
+    offsetAfter: "+09:39",
+  },
+  {
+    timeZone: "Pacific/Saipan",
+    instant: "1844-12-31T14:21:00Z",
+    offsetBefore: "-14:21",
+    offsetAfter: "+09:39",
+  },
+  {
+    timeZone: "Pacific/Kosrae",
+    instant: "1844-12-31T13:08:04Z",
+    offsetBefore: "-13:08:04",
+    offsetAfter: "+10:51:56",
+  },
+  {
+    timeZone: "Pacific/Palau",
+    instant: "1844-12-31T15:02:04Z",
+    offsetBefore: "-15:02:04",
+    offsetAfter: "+08:57:56",
+  },
+] as const;
+
+/**
+ * A `dateLineCrossingTimeZones` zone `hours` from its crossing (negative: before it), built from
+ * the exact time so no wall clock is resolved. `-12` is 1844-12-30T12:00 in the old offset, `0`
+ * is 1845-01-01T00:00 in the new one, `36` is 1845-01-02T12:00.
+ */
+export function dateLineCrossingAt(
+  crossing: { timeZone: string; instant: string },
+  hours: number,
+): Temporal.ZonedDateTime {
+  return Temporal.Instant.from(crossing.instant)
+    .add({ hours })
+    .toZonedDateTimeISO(crossing.timeZone);
+}
 
 // Stable fake "now" instant used by now/today related tests.
 // Equivalent to Unix time 1709164800000, which is 2024-02-29T00:00:00Z.

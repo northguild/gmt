@@ -80,50 +80,56 @@ import {
  *
  * @param value The string to decode (e.g. "03/15/2024 14:30:00")
  * @param pattern The token pattern describing `value`'s shape (e.g. "MM/dd/yyyy HH:mm:ss")
- * @param locale Optional BCP 47 locale for name-based tokens (default "en-US")
+ * @param locale Optional BCP 47 locale tag, or a preference list of tags, for name-based tokens (default "en-US")
  * @returns ISO `PlainDateTime` string, or "" on no match, malformed pattern, or invalid input
  *
  * @example parseDateTimeWithPattern("03/15/2024 14:30:00", "MM/dd/yyyy HH:mm:ss") // "2024-03-15T14:30:00"
  * @example parseDateTimeWithPattern("15-Mar-2024 02:30 PM", "dd-MMM-yyyy hh:mm a") // "2024-03-15T14:30:00"
  * @example parseDateTimeWithPattern("02/31/2024 14:30:00", "MM/dd/yyyy HH:mm:ss") // "" (shape-valid, not a real date)
  * @example parseDateTimeWithPattern("not a date", "MM/dd/yyyy HH:mm:ss") // ""
+ * @example parseDateTimeWithPattern("19 mai 2024 10:20", "d MMMM yyyy HH:mm", ["fr-FR", "en-US"]) // "2024-05-19T10:20:00"
  */
 export function parseDateTimeWithPattern(
   value: string,
   pattern: string,
-  locale?: string,
+  locale?: string | string[],
 ): string {
-  if (typeof value !== "string") return "";
-  if (typeof pattern !== "string") return "";
-  if (locale !== undefined && typeof locale !== "string") return "";
-
-  const fields = parseValueWithPattern(
-    value,
-    pattern,
-    locale,
-    DATE_TIME_PATTERN_FIELDS,
-  );
-  if (fields === null) return "";
-
   try {
-    // The regex only proved `value` has the right *shape* for `pattern`
-    // (e.g. "02/31/2024 14:30:00" matches "MM/dd/yyyy HH:mm:ss") —
-    // Temporal is what proves the value is real: `overflow: "reject"`
-    // throws instead of silently clamping an out-of-range field, which
-    // is what the default "constrain" would do.
-    return Temporal.PlainDateTime.from(
-      {
-        year: fields.year,
-        month: fields.month,
-        day: fields.day,
-        hour: fields.hour,
-        minute: fields.minute,
-        second: fields.second,
-        millisecond: fields.millisecond,
-      },
-      { overflow: "reject" },
-    ).toString();
+    if (typeof value !== "string") return "";
+    if (typeof pattern !== "string") return "";
+
+    const fields = parseValueWithPattern(
+      value,
+      pattern,
+      locale,
+      DATE_TIME_PATTERN_FIELDS,
+    );
+    if (fields === null) return "";
+
+    try {
+      // The regex only proved `value` has the right *shape* for `pattern`
+      // (e.g. "02/31/2024 14:30:00" matches "MM/dd/yyyy HH:mm:ss") —
+      // Temporal is what proves the value is real: `overflow: "reject"`
+      // throws instead of silently clamping an out-of-range field, which
+      // is what the default "constrain" would do.
+      return Temporal.PlainDateTime.from(
+        {
+          year: fields.year,
+          month: fields.month,
+          day: fields.day,
+          hour: fields.hour,
+          minute: fields.minute,
+          second: fields.second,
+          millisecond: fields.millisecond,
+        },
+        { overflow: "reject" },
+      ).toString();
+    } catch {
+      return "";
+    }
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

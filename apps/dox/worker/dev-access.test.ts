@@ -8,9 +8,10 @@ import {
   signDevToken,
   verifyDevToken,
 } from "./dev-access";
+import { convertUtcToUnix } from "@northguild/gmt";
 
 const SECRET = "correct-horse-battery-staple";
-const NOW = Date.UTC(2026, 5, 15, 12, 0, 0);
+const NOW = convertUtcToUnix("2026-06-15T12:00:00Z")!;
 
 describe("signDevToken / verifyDevToken", () => {
   it("accepts a token it just signed", async () => {

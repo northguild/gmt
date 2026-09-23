@@ -65,4 +65,18 @@ describe("getZonedOffsetAs", () => {
       ),
     ).toBe(null);
   });
+
+  // Temporal §13.17 GetTemporalUnitValuedOption: a singular unit name is the same unit as its plural.
+  it.each`
+    unit            | expected
+    ${"minute"}     | ${-240}
+    ${"nanosecond"} | ${-14_400_000_000_000}
+  `(
+    "returns $expected for singular unit $unit of New York's -04:00",
+    ({ unit, expected }) => {
+      expect(
+        getZonedOffsetAs("2024-07-15T12:00:00-04:00[America/New_York]", unit),
+      ).toBe(expected);
+    },
+  );
 });

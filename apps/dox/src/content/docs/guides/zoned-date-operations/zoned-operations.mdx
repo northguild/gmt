@@ -28,7 +28,7 @@ import {
 } from "@northguild/gmt/zoned";
 
 formatZonedDateTime("2024-03-15T14:30:45[America/New_York]", "en-US");
-// "3/15/2024, 10:30:45 AM"
+// "3/15/2024, 2:30:45 PM EDT"
 
 isValidTimeZone("America/New_York"); // true
 ```
@@ -41,7 +41,7 @@ Attaching a timezone to a plain value is where DST gaps and overlaps matter:
 import { convertPlainDateTimeToZoned } from "@northguild/gmt/zoned";
 
 convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York");
-// "2024-03-10T03:30:00-04:00[America/New_York]" — default "compatible" rounds forward
+// "2024-03-10T03:30:00.000-04:00[America/New_York]" — default "compatible" rounds forward
 
 convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York", {
   disambiguation: "reject",
@@ -50,7 +50,7 @@ convertPlainDateTimeToZoned("2024-03-10T02:30:00", "America/New_York", {
 ```
 
 `disambiguation` is `"compatible"` (default) | `"earlier"` | `"later"` | `"reject"`.
-See [DST Disambiguation](../concepts/dst-disambiguation/) for the full table.
+See [DST Disambiguation](/guides/concepts/dst-disambiguation/) for the full table.
 
 ## Add/subtract a duration
 
@@ -61,9 +61,18 @@ addZoned("2024-03-15T14:30:45[America/New_York]", { days: 1 });
 // "2024-03-16T14:30:45-04:00[America/New_York]"
 ```
 
-`disambiguation` only affects **fall-back overlaps** here — it has no effect on
-spring-forward gaps. This is a property of how Temporal's arithmetic works, not a
-GMT limitation.
+The date part of the duration (years to days) moves the wall clock and the time part
+(hours and smaller) is added in exact time, as in TC39's AddZonedDateTime.
+`disambiguation` resolves the date part's landing when it falls in a spring-forward gap
+or a fall-back overlap; a time-only duration ignores it.
+
+```typescript
+addZoned("2024-03-09T02:30:00-05:00[America/New_York]", { days: 1 }, { disambiguation: "earlier" });
+// "2024-03-10T01:30:00-05:00[America/New_York]" — 02:30 is in the gap; "earlier" moves back
+
+addZoned("2024-03-09T02:30:00-05:00[America/New_York]", { days: 1 }, { disambiguation: "reject" });
+// ""
+```
 
 ## Boundaries (start/end of unit, quarter, hours-in-day)
 
@@ -74,7 +83,7 @@ startOfZoned("2024-03-15T14:30:45[America/New_York]", "month");
 // "2024-03-01T00:00:00-05:00[America/New_York]"
 
 endOfZoned("2024-03-15T14:30:45[America/New_York]", "hour");
-// "2024-03-15T14:59:59-04:00[America/New_York]"
+// "2024-03-15T14:59:59.999999999-04:00[America/New_York]"
 ```
 
 These always return the real start and end of the unit that contains the input: the
@@ -89,8 +98,8 @@ startOfZoned("2024-11-03T01:45:00-05:00[America/New_York]", "hour");
 // "2024-11-03T01:00:00-05:00[America/New_York]" — the repeated 1 a.m. is its own hour
 ```
 
-Their `disambiguation` and `offset` options are deprecated and ignored: a boundary is a
-real instant, exactly as TC39's `startOfDay()` takes no such options. Resolution
+They take no `disambiguation` or `offset` options: a boundary is a real instant, exactly as
+TC39's `startOfDay()` takes no such options. Resolution
 options belong on functions that set wall-clock fields (`convertPlainDateTimeToZoned`,
 `addZoned`, `setZoned`). Don't floor with `roundZoned` and `roundingMode: "trunc"`:
 it rounds the wall clock and re-resolves it, which can land after the input. Use
@@ -111,7 +120,15 @@ setZoned(
   { minute: 0 },
   { disambiguation: "reject" },
 );
-// "" — offset defaults to "ignore" so disambiguation actually fires
+// "2024-11-03T01:00:00-05:00[America/New_York]" — offset defaults to "prefer", as Temporal's
+// ZonedDateTime#with does, so the still-valid -05:00 is kept
+
+setZoned(
+  "2024-11-03T01:45:00-05:00[America/New_York]",
+  { minute: 0 },
+  { disambiguation: "reject", offset: "ignore" },
+);
+// "" — offset "ignore" re-resolves the repeated 01:00, and "reject" fires
 ```
 
 ## Cycle a single field (wrap, don't carry)
@@ -123,7 +140,7 @@ cycleZoned("2024-12-15T09:30:00-06:00[America/Chicago]", "month", 1);
 // "2024-01-15T09:30:00-06:00[America/Chicago]" — wraps, stays in the same year
 
 cycleZoned("2024-03-10T01:30:00-06:00[America/Chicago]", "hour", 1);
-// "2024-03-10T03:30:00-05:00[America/Chicago]" — cycled hour lands in a gap
+// "2024-03-10T03:30:00-05:00[America/Chicago]" — cycled hour lands in a gap; disambiguation resolves it
 ```
 
 ## Hours in a zoned calendar day
@@ -163,8 +180,8 @@ and `getDstTransitions(zone, year)` (enumerates transitions).
 
 ## See also
 
-- [DST Disambiguation](../concepts/dst-disambiguation/) — the full disambiguation/offset walkthrough
-- [Conversion](../converting-types/) — converting between plain, zoned, unix, and UTC
+- [DST Disambiguation](/guides/concepts/dst-disambiguation/) — the full disambiguation/offset walkthrough
+- [Conversion](/guides/conversion/converting-types/) — converting between plain, zoned, unix, and UTC
 - [`convertPlainDateTimeToZoned` reference](/reference/zoned/convert/convertPlainDateTimeToZoned)
 - [`addZoned` reference](/reference/zoned/calculate/addZoned)
 - [`startOfZoned` reference](/reference/zoned/calculate/startOfZoned)

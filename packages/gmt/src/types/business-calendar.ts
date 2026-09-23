@@ -9,7 +9,8 @@
  * - `holidays` is ISO PlainDate strings (`"2024-07-04"`), never datetimes. Order does not
  *   matter and duplicates are ignored. GMT bundles no holiday table — holiday data is
  *   jurisdictional, changes annually and sometimes with days of notice, so the caller supplies
- *   it. Named exchange calendars live behind an opt-in `…/data` subpath.
+ *   it. No exchange or currency calendar ships either; an opt-in data subpath for them is
+ *   planned, not published.
  * - `timeZone` is an IANA identifier recording which locality the calendar describes. The
  *   business-day functions never read it: they take and return local dates, so the answer is
  *   the same whatever it says. It is what a caller holding an *instant* needs, to reduce that

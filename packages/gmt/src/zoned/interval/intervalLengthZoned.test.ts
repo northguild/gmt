@@ -2,6 +2,7 @@ import { calendarZonedFixtures } from "../../test";
 import { Temporal } from "@js-temporal/polyfill";
 import { mockTemporalZonedDateTimeFromThrow } from "../../test/mocks";
 import { battleTestTimeZones } from "../../test/timeZoneMatrix";
+import { convertZonedToZoned } from "../convert/convertZonedToZoned";
 import { intervalLengthZoned } from "./intervalLengthZoned";
 
 describe("intervalLengthZoned", () => {
@@ -76,9 +77,9 @@ describe("intervalLengthZoned", () => {
       expect(intervalLengthZoned(start, end, "hour")).toBe(5);
     }
   });
-  // E5 (issue #78), decision of record D2 — see isValidZonedDateTime.test.ts for the full
-  // rationale: zoned/ rejects any [u-ca=...] calendar annotation outright.
-  it("returns null when start carries a calendar annotation", () => {
+  // The arguments name different calendars (hebrew and a bare iso8601 string), so the
+  // result is the sentinel (TC39 CalendarEquals makes until throw).
+  it("returns null when start and end name different calendars", () => {
     expect(
       intervalLengthZoned(
         "2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]",
@@ -93,10 +94,47 @@ describe("intervalLengthZoned", () => {
 // E7 (issue #152), D5-zoned. Every expected value produced by running
 // @js-temporal/polyfill@0.5.1 — see the R2 note below for why that matters more here than usual.
 // ---------------------------------------------------------------------------------------------
+// Temporal DifferenceTemporalZonedDateTime: a largestUnit of day or larger across two zones that are
+// not TimeZoneEquals throws RangeError ("day lengths can vary between time zones"), so the calendar
+// units are null; time units measure exact elapsed time. New York 2024-01-01T00:00-05:00 is 05:00Z
+// and Paris 2024-01-03T00:00+01:00 is 2024-01-02T23:00Z: 42 hours apart.
+describe("intervalLengthZoned across two time zones", () => {
+  it.each`
+    start                                            | end                                          | unit        | expected | why
+    ${"2024-01-01T00:00:00-05:00[America/New_York]"} | ${"2024-01-03T00:00:00+01:00[Europe/Paris]"} | ${"hour"}   | ${42}    | ${"time unit: exact elapsed time"}
+    ${"2024-01-01T00:00:00-05:00[America/New_York]"} | ${"2024-01-03T00:00:00+01:00[Europe/Paris]"} | ${"minute"} | ${2520}  | ${"time unit: exact elapsed time"}
+    ${"2024-01-01T00:00:00-05:00[America/New_York]"} | ${"2024-01-03T00:00:00+01:00[Europe/Paris]"} | ${"day"}    | ${null}  | ${"calendar unit across zones"}
+    ${"2024-01-01T00:00:00-05:00[America/New_York]"} | ${"2024-01-03T00:00:00+01:00[Europe/Paris]"} | ${"week"}   | ${null}  | ${"calendar unit across zones"}
+    ${"2024-01-01T00:00:00-05:00[America/New_York]"} | ${"2024-01-03T00:00:00+01:00[Europe/Paris]"} | ${"month"}  | ${null}  | ${"calendar unit across zones"}
+    ${"2024-01-01T00:00:00-05:00[America/New_York]"} | ${"2024-01-03T00:00:00+01:00[Europe/Paris]"} | ${"years"}  | ${null}  | ${"calendar unit (plural) across zones"}
+    ${"2024-01-01T00:00:00+00:00[UTC]"}              | ${"2024-01-03T00:00:00+00:00[Etc/UTC]"}      | ${"day"}    | ${2}     | ${"UTC and Etc/UTC are TimeZoneEquals"}
+    ${"2024-01-01T00:00:00+05:30[Asia/Calcutta]"}    | ${"2024-01-03T00:00:00+05:30[Asia/Kolkata]"} | ${"day"}    | ${2}     | ${"Asia/Calcutta links to Asia/Kolkata"}
+  `(
+    "$start → $end in $unit is $expected ($why)",
+    ({ start, end, unit, expected }) => {
+      expect(intervalLengthZoned(start, end, unit)).toBe(expected);
+    },
+  );
+
+  it("measures calendar units once both ends are in one zone (the compatibility path)", () => {
+    // Paris 2024-01-03T00:00+01:00 is New York 2024-01-02T18:00-05:00: 42 hours, 1.75 days.
+    expect(
+      intervalLengthZoned(
+        "2024-01-01T00:00:00-05:00[America/New_York]",
+        convertZonedToZoned(
+          "2024-01-03T00:00:00+01:00[Europe/Paris]",
+          "America/New_York",
+        ),
+        "day",
+      ),
+    ).toBe(1.75);
+  });
+});
+
 describe("intervalLengthZoned with GMT calendar-annotated values", () => {
   const Y = calendarZonedFixtures.hebrewLeapYearSpan;
   const ISLAMIC_END =
-    "1446-03-30T00:00:00-04:00[u-ca=islamic-tabular][America/New_York]";
+    "2024-10-03T00:00:00-04:00[America/New_York][u-ca=islamic-tbla]";
 
   it("measures a Hebrew leap year as exactly 13 months", () => {
     expect(
@@ -114,32 +152,21 @@ describe("intervalLengthZoned with GMT calendar-annotated values", () => {
     ).toBe(383);
   });
 
-  // R2: this is the number the `relativeTo` trap corrupts. If `relativeTo` is anchored on the
-  // RAW calendar-tagged operand instead of the pair policy's normalized one, this returns
-  // 12.586206896551724 — plausible, between the correct ISO answer and the correct Hebrew 13, and
-  // invisible to inspection. Both values below came from actually running the polyfill.
+  // TC39 CalendarEquals — endpoints naming different calendars return null (native
+  // Chromium 153 until: "Mismatched calendars."). The all-ISO control is polyfill-verified.
   it.each`
     label                       | start                    | end            | expected
-    ${"mismatched tags"}        | ${Y.tishri1_5784NewYork} | ${ISLAMIC_END} | ${12.566666666666666}
-    ${"tagged start, bare end"} | ${Y.tishri1_5784NewYork} | ${Y.isoEnd}    | ${12.566666666666666}
+    ${"mismatched tags"}        | ${Y.tishri1_5784NewYork} | ${ISLAMIC_END} | ${null}
+    ${"tagged start, bare end"} | ${Y.tishri1_5784NewYork} | ${Y.isoEnd}    | ${null}
     ${"both bare ISO"}          | ${Y.isoStart}            | ${Y.isoEnd}    | ${12.566666666666666}
-  `(
-    "returns the Gregorian-fallback length $expected for $label",
-    ({ start, end, expected }) => {
-      expect(intervalLengthZoned(start, end, "month")).toBe(expected);
-    },
-  );
-
-  it("never returns the wrong-relativeTo value for a mismatched pair", () => {
-    expect(
-      intervalLengthZoned(Y.tishri1_5784NewYork, ISLAMIC_END, "month"),
-    ).not.toBe(12.586206896551724);
+  `("returns $expected months for $label", ({ start, end, expected }) => {
+    expect(intervalLengthZoned(start, end, "month")).toBe(expected);
   });
 
   it.each`
     value                                                         | reason
-    ${"5784-01-01T00:00:00-04:00[America/New_York][u-ca=hebrew]"} | ${"GMT digits in Temporal's segment ordering"}
-    ${"5785-13-15T14:30:00-05:00[u-ca=hebrew][America/New_York]"} | ${"month 13 in a non-leap Hebrew year"}
+    ${"5784-01-01T00:00:00-04:00[America/New_York][u-ca=hebrew]"} | ${"-04:00 is not New York's offset on ISO 5784-01-01"}
+    ${"2024-13-15T14:30:00-05:00[America/New_York][u-ca=hebrew]"} | ${"ISO month 13 (the digits are ISO)"}
   `("returns null when the start is $value ($reason)", ({ value }) => {
     expect(intervalLengthZoned(value, Y.isoEnd, "day")).toBeNull();
   });
@@ -183,10 +210,10 @@ describe("intervalLengthZoned at the maximum instant", () => {
 describe("intervalLengthZoned in non-ISO calendars (CORE-6)", () => {
   it.each`
     start                                               | end                                                 | unit        | expected              | reason
-    ${"2566-08-31T00:00:00+00:00[u-ca=buddhist][UTC]"}  | ${"2566-09-30T00:00:00+00:00[u-ca=buddhist][UTC]"}  | ${"months"} | ${1}                  | ${"D6: the 1-month window ends exactly on the end"}
-    ${"1543-01-31T00:00:00+00:00[u-ca=buddhist][UTC]"}  | ${"1543-02-28T00:00:00+00:00[u-ca=buddhist][UTC]"}  | ${"months"} | ${1}                  | ${"proleptic buddhist: Jan 31 + 1 month is Feb 28 in ISO 1000"}
-    ${"-096239-06-23T00:00:00+00:00[u-ca=hebrew][UTC]"} | ${"-096239-08-04T00:00:00+00:00[u-ca=hebrew][UTC]"} | ${"months"} | ${1.3666666666666667} | ${"hebrew year <= 0: 1 month and 11 of M07's 30 days"}
-    ${"279517-08-01T00:00:00+00:00[u-ca=hebrew][UTC]"}  | ${"279517-10-11T00:00:00+00:00[u-ca=hebrew][UTC]"}  | ${"months"} | ${null}               | ${"D1: the third month's window ends past the maximum"}
+    ${"2023-08-31T00:00:00+00:00[UTC][u-ca=buddhist]"}  | ${"2023-09-30T00:00:00+00:00[UTC][u-ca=buddhist]"}  | ${"months"} | ${1}                  | ${"D6: the 1-month window ends exactly on the end"}
+    ${"1000-01-31T00:00:00+00:00[UTC][u-ca=buddhist]"}  | ${"1000-02-28T00:00:00+00:00[UTC][u-ca=buddhist]"}  | ${"months"} | ${1}                  | ${"proleptic buddhist: Jan 31 + 1 month is Feb 28 in ISO 1000"}
+    ${"-100000-01-01T00:00:00+00:00[UTC][u-ca=hebrew]"} | ${"-100000-02-10T00:00:00+00:00[UTC][u-ca=hebrew]"} | ${"months"} | ${1.3666666666666667} | ${"hebrew year <= 0: 1 month and 11 of M07's 30 days"}
+    ${"+275760-07-06T00:00:00+00:00[UTC][u-ca=hebrew]"} | ${"+275760-09-13T00:00:00+00:00[UTC][u-ca=hebrew]"} | ${"months"} | ${null}               | ${"D1: the third month's window ends past the maximum"}
   `(
     "returns $expected $unit from $start to $end ($reason)",
     ({ start, end, unit, expected }) => {

@@ -42,37 +42,41 @@ bun add @northguild/gmt
 
 ## What you get
 
-The package exports seven top-level namespaces:
+Every public function, type and regex is a flat named export of the package root, and
+`Temporal` is re-exported from `@js-temporal/polyfill` beside them. There are no namespace
+objects to import — a namespace is a subpath:
 
 ```typescript
-// The most common helpers are re-exported from the package root
-import { addDate, getNow, formatRelativeZoned } from "@northguild/gmt";
+// Everything is available from the package root
+import { addDate, formatRelativeZoned, getNow, Temporal } from "@northguild/gmt";
 
-// Import from name-spaced if you only want to focus on a certain signature
-import { addDate, getNow } from "@northguild/gmt/plain";
-import { addZoned, getNowZoned } from "@northguild/gmt/zoned";
-import { addUtc, getNowUtc } from "@northguild/gmt/utc";
-import { addUnix, getNowUnix } from "@northguild/gmt/unix";
+// A namespace subpath, if you only want one family of helpers
+import { addZoned, getZonedNow } from "@northguild/gmt/zoned";
+import { addUtc, getUtcNow } from "@northguild/gmt/utc";
+import { addUnix, getUnixNow } from "@northguild/gmt/unix";
 
-// Of course we give you Temporal for fine-grained control
-import { Temporal } from "@northguild/gmt";
+// A module subpath narrows further, to one namespace's module
+import { addDateTime, diffDate } from "@northguild/gmt/plain/calculate";
 ```
 
-| Namespace  | What it covers                                               |
-| ---------- | ------------------------------------------------------------ |
-| `Temporal` | Re-exported from `@js-temporal/polyfill`                     |
-| `duration` | ISO 8601 duration string parsing, validation, and arithmetic |
-| `plain`    | Timezone-free helpers                                        |
-| `zoned`    | Timezone-aware helpers                                       |
-| `unix`     | Unix epoch (seconds or milliseconds) helpers                 |
-| `utc`      | UTC instant helpers                                          |
-| `regex`    | Low-level regex building blocks                              |
+Module subpaths (`@northguild/gmt/<namespace>/<module>`) exist for every namespace except
+`regex` and `types`, which you import whole. The reference lists each export under its
+namespace and module.
 
-You can also import members directly from the package root:
-
-```typescript
-import { addDate, getNow, formatRelativeZoned } from "@northguild/gmt";
-```
+| Subpath     | What it covers                                                                                   |
+| ----------- | ------------------------------------------------------------------------------------------------ |
+| `calendar`  | ISO week and ordinal dates, quarter and fiscal periods, zone-aware bucketing, business calendars |
+| `duration`  | ISO 8601 duration string parsing, validation, and arithmetic                                     |
+| `instant`   | The instant-plus-offset pair, and explicit resolution of zoneless local wall times               |
+| `interval`  | Half-open `[start, end)` interval algebra over instants                                          |
+| `plain`     | Timezone-free helpers                                                                            |
+| `precision` | Nanosecond (`bigint`) instants, their JSON bridge, storage truncation, and foreign epoch bridges |
+| `regex`     | Low-level regex building blocks                                                                  |
+| `span`      | Elapsed and wall-clock durations between two timestamps, as raw numbers                          |
+| `types`     | The shared option and unit types                                                                 |
+| `unix`      | Unix epoch (seconds or milliseconds) helpers                                                     |
+| `utc`       | UTC instant helpers                                                                              |
+| `zoned`     | Timezone-aware helpers                                                                           |
 
 ## AI Agent Skills
 

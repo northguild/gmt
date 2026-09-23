@@ -1,12 +1,12 @@
 ---
 title: Calendar Systems
-description: Express a date in a non-Gregorian calendar system (Hebrew, Islamic, Japanese, Buddhist, and more) with calendar-native arithmetic.
+description: Express a date in a non-ISO calendar system (Hebrew, Islamic, Japanese, Buddhist, and more) as an RFC 9557 string, with arithmetic in that calendar.
 sidebar:
   order: 9
 ---
 
-GMT's `convertDateToCalendar` expresses a date in any of 13 non-Gregorian calendar
-systems, using Temporal's native calendar support — no bundled leap-year tables.
+GMT's `convertDateToCalendar` expresses a date in any of 14 calendar systems, using
+Temporal's native calendar support. No leap-year tables are bundled.
 
 ## Convert a date to another calendar
 
@@ -14,67 +14,111 @@ systems, using Temporal's native calendar support — no bundled leap-year table
 import { convertDateToCalendar } from "@northguild/gmt";
 
 convertDateToCalendar("2024-10-03", "hebrew");
-// "5785-01-01[u-ca=hebrew]" — Rosh Hashanah 5785
+// "2024-10-03[u-ca=hebrew]" — Rosh Hashanah 5785
 
-convertDateToCalendar("5785-01-01[u-ca=hebrew]", "gregorian");
-// "2024-10-03" — round-trips back
+convertDateToCalendar("2024-10-03[u-ca=hebrew]", "iso8601");
+// "2024-10-03" — iso8601 writes no annotation
 
 convertDateToCalendar("2024-10-03", "islamic-umalqura");
-// "1446-03-30[u-ca=islamic-umalqura]"
+// "2024-10-03[u-ca=islamic-umalqura]"
 
-convertDateToCalendar("2024-10-03", "buddhist");
-// "2567-10-03[u-ca=buddhist]"
+convertDateToCalendar("2024-10-03", "gregory");
+// "2024-10-03[u-ca=gregory]"
 ```
 
-The annotated string carries the calendar's **own** year/month/day — not the
-ISO/Gregorian digits Temporal's own `[u-ca=...]` convention keeps. A Hebrew year
-like 5785 is visible directly in the string.
+The string is exactly what `Temporal.PlainDate.prototype.toString()` writes: the ISO 8601
+date, then an RFC 9557 `[u-ca=<id>]` annotation. The digits are always ISO, and the
+annotation names the calendar the date is presented and computed in (RFC 9557 §3.3). GMT,
+Temporal and any other RFC 9557 parser read the string as the same date.
 
-`CalendarSystem` is `"gregorian" | "hebrew" | "islamic-civil" | "islamic-tabular" |
-"islamic-umalqura" | "japanese" | "buddhist" | "taiwan" | "persian" | "indian" |
-"ethiopic" | "ethiopic-amete-alem" | "coptic"`.
+`CalendarSystem` is `"iso8601" | "gregory" | "hebrew" | "islamic-civil" | "islamic-tbla" |
+"islamic-umalqura" | "japanese" | "buddhist" | "roc" | "persian" | "indian" | "ethiopic" |
+"ethioaa" | "coptic"`. These are the canonical BCP 47 / CLDR ids Temporal uses, in the
+annotation and as function arguments. Aliases and other letter cases are canonicalized as
+Temporal's `withCalendar` does (`"ethiopic-amete-alem"` writes `[u-ca=ethioaa]`).
+`gregorian`, `taiwan` and `islamic-tabular` are not calendar ids and return the sentinel.
+
+## Calendar fields are read values
+
+The Hebrew year 5785 or the Japanese era year 6 is a property of the date, never part of the
+string. Read it from Temporal, which every GMT entry point re-exports:
+
+```typescript
+import { Temporal } from "@northguild/gmt";
+
+Temporal.PlainDate.from("2024-10-03[u-ca=hebrew]").year; // 5785
+Temporal.PlainDate.from("2024-10-03[u-ca=japanese]").eraYear; // 6
+```
 
 ## Three Islamic variants — not interchangeable
 
 - `"islamic-civil"` — fixed 30-year leap-year cycle, Friday epoch.
-- `"islamic-tabular"` — same arithmetic, Thursday epoch one day earlier.
+- `"islamic-tbla"` — same arithmetic, Thursday epoch one day earlier.
 - `"islamic-umalqura"` — the Saudi civil calendar, tabulated, not approximated by
   either fixed variant.
 
-## Japanese and Ethiopic use era-relative years
-
-Temporal's `.year` for `"japanese"` stays proleptic across era changes (a stable
-sort key), so `convertDateToCalendar` uses `.eraYear` + an `;era=` tag instead:
+Each calendar steps its own months, so the same ISO date plus one month lands on different
+ISO dates:
 
 ```typescript
-convertDateToCalendar("2024-10-03", "japanese");
-// "0006-10-03[u-ca=japanese;era=reiwa]" — year 6 of Reiwa, not 2024
+import { addDate } from "@northguild/gmt";
+
+addDate("2020-02-24[u-ca=islamic-umalqura]", { months: 1 }); // "2020-03-24[u-ca=islamic-umalqura]"
+addDate("2020-02-24[u-ca=islamic-tbla]", { months: 1 }); // "2020-03-25[u-ca=islamic-tbla]"
 ```
 
-The Ethiopic family is computed with GMT-owned arithmetic (not Temporal's native
-calendar ids) to route around an ICU-version bug in `@js-temporal/polyfill`.
+## The Ethiopic family computes in `ethioaa`
+
+`ethiopic`, `ethioaa` and `coptic` share months, days and arithmetic, and differ only by a
+constant year offset. `@js-temporal/polyfill` cannot read `ethiopic` and `coptic` fields under
+ICU 78 or later, so GMT computes all three in `ethioaa` and writes the id you asked for.
 
 ## Calendar-aware arithmetic
 
-The annotated string feeds directly into `addDate`/`subtractDate`/`diffDate` and
-every `Date`-suffixed `plain/interval/*` function — calendar-unit arithmetic
-resolves in the value's own calendar:
+A calendar-annotated date feeds `addDate`/`subtractDate`/`diffDate` and every
+`Date`-suffixed `plain/interval/*` function. Calendar units resolve in the value's own
+calendar:
 
 ```typescript
-import { addDate, intervalCountDate, convertDateToCalendar } from "@northguild/gmt";
+import { addDate, intervalCountDate } from "@northguild/gmt";
 
-addDate("5784-06-15[u-ca=hebrew]", { months: 1 });
-// "5784-07-15[u-ca=hebrew]" — Adar I -> Adar
+addDate("2024-02-24[u-ca=hebrew]", { months: 1 });
+// "2024-03-25[u-ca=hebrew]" — 15 Adar I to 15 Adar II
 
-intervalCountDate("5784-01-01[u-ca=hebrew]", "5785-01-01[u-ca=hebrew]", "month");
-// 13 — a Hebrew leap year crosses 13 month boundaries, not 12
+intervalCountDate("2023-09-16[u-ca=hebrew]", "2024-10-03[u-ca=hebrew]", "month");
+// 13 — Hebrew leap year 5784 has 13 months; the same ISO span touches 14 ISO months
 ```
 
-`utc/` and `unix/` reject a `[u-ca=...]` annotation outright.
+A difference between two values that name different calendars returns the sentinel, as
+Temporal's `until` throws; a bare ISO string names `iso8601`. Ordering functions such as
+`intervalContainsDate` accept mixed calendars. `utc/` reads a string as `Temporal.Instant.from`
+does, so a `[u-ca=...]` annotation is ignored there. A `zoned/` function that is not
+calendar-aware accepts `[u-ca=iso8601]` and returns the sentinel for any other calendar.
+
+## Zoned values
+
+`convertZonedToCalendar` writes the RFC 9557 zoned form, with the time zone annotation before
+the calendar:
+
+```typescript
+import { convertZonedToCalendar } from "@northguild/gmt/zoned";
+
+convertZonedToCalendar("2024-10-03T14:30:45-04:00[America/New_York]", "hebrew");
+// "2024-10-03T14:30:45-04:00[America/New_York][u-ca=hebrew]"
+```
+
+## Strings from before 1.16.0
+
+Earlier releases wrote the calendar's own digits (`"5785-01-01[u-ca=hebrew]"` for ISO
+2024-10-03), a `;era=` suffix, the zoned calendar annotation before the zone, and the ids
+`gregorian`, `taiwan`, `islamic-tabular` and `ethiopic-amete-alem`. Most of those strings
+are valid RFC 9557 for a different ISO date and are read that way without an error, so
+regenerate stored values from their ISO dates with `convertDateToCalendar` or
+`convertZonedToCalendar`.
 
 ## See also
 
-- [Conversion](../converting-types/) — `convertZonedToCalendar` for zoned values
+- [Conversion](/guides/conversion/converting-types/) — `convertZonedToCalendar` for zoned values
 - [Plain Arithmetic](../plain-arithmetic/) — the `addDate`/`diffDate` functions
-- [Intervals](../intervals/) — calendar-aware interval arithmetic
+- [Intervals](/guides/intervals/interval-basics/) — calendar-aware interval arithmetic
 - [`convertDateToCalendar` reference](/reference/plain/convert/convertDateToCalendar)

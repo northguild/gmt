@@ -4,11 +4,14 @@ import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 describe("intervalContainsDate", () => {
   it.each`
     intervalStart   | intervalEnd     | pointOrStart    | pointEnd     | expected
+    // Half-open [start, end): start <= point < end, so the end date and every point of an empty
+    // interval are outside (CORE-6 §3 intervalContains).
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-06-15"} | ${undefined} | ${true}
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-01-01"} | ${undefined} | ${true}
-    ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-12-31"} | ${undefined} | ${true}
-    ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${undefined} | ${true}
-    ${"2024-06-15"} | ${"2024-06-15"} | ${"2024-06-15"} | ${undefined} | ${true}
+    ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-12-30"} | ${undefined} | ${true}
+    ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-12-31"} | ${undefined} | ${false}
+    ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${undefined} | ${false}
+    ${"2024-06-15"} | ${"2024-06-15"} | ${"2024-06-15"} | ${undefined} | ${false}
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2023-12-31"} | ${undefined} | ${false}
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2025-01-01"} | ${undefined} | ${false}
   `(
@@ -27,10 +30,15 @@ describe("intervalContainsDate", () => {
 
   it.each`
     intervalStart   | intervalEnd     | innerStart      | innerEnd        | expected
+    // Inner within outer and overlapping it: an empty inner counts only strictly inside
+    // (CORE-6 §3 clampInterval clamps an empty interval at an edge to null).
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-03-01"} | ${"2024-09-01"} | ${true}
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-01-01"} | ${"2024-12-31"} | ${true}
-    ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-12-31"} | ${"2024-12-31"} | ${true}
-    ${"2024-06-15"} | ${"2024-06-15"} | ${"2024-06-15"} | ${"2024-06-15"} | ${true}
+    ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-06-01"} | ${"2024-12-31"} | ${true}
+    ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-06-01"} | ${"2024-06-01"} | ${true}
+    ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-01-01"} | ${"2024-01-01"} | ${false}
+    ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-12-31"} | ${"2024-12-31"} | ${false}
+    ${"2024-06-15"} | ${"2024-06-15"} | ${"2024-06-15"} | ${"2024-06-15"} | ${false}
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2023-12-01"} | ${"2024-06-15"} | ${false}
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-06-15"} | ${"2025-01-01"} | ${false}
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-06-15"} | ${"2024-06-10"} | ${false}
@@ -153,7 +161,7 @@ describe("intervalContainsDate", () => {
       intervalContainsDate(
         "2024-10-01",
         "2024-10-31",
-        "5785-01-01[u-ca=hebrew]",
+        "2024-10-03[u-ca=hebrew]",
       ),
     ).toBe(true);
   });

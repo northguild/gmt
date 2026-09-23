@@ -8,14 +8,16 @@ import { isValidZonedDateTime } from "../../zoned/validate";
  * | --- | --- |
  * | `days` | Whole wall-clock days — a calendar day, whatever number of hours it happened to last. |
  * | `hours` | Whole wall-clock hours — the hours a clock face advanced, not the hours that elapsed. |
+ * | `day`, `hour` | The singular names, accepted as Temporal accepts them. |
  */
-export type WallClockSpanUnit = "days" | "hours";
+export type WallClockSpanUnit = "days" | "hours" | "day" | "hour";
 
-const WALL_CLOCK_SPAN_UNITS: Record<WallClockSpanUnit, Temporal.DateTimeUnit> =
-  {
-    days: "day",
-    hours: "hour",
-  };
+const WALL_CLOCK_SPAN_UNITS: Record<WallClockSpanUnit, "day" | "hour"> = {
+  days: "day",
+  hours: "hour",
+  day: "day",
+  hour: "hour",
+};
 
 /**
  * Return the wall-clock distance between two zoned datetime strings — calendar time, not
@@ -53,7 +55,7 @@ const WALL_CLOCK_SPAN_UNITS: Record<WallClockSpanUnit, Temporal.DateTimeUnit> =
  *
  * @param start zoned ISO 8601 datetime string the span is measured from
  * @param end zoned ISO 8601 datetime string the span is measured to
- * @param unit "days" or "hours" of wall-clock distance
+ * @param unit "days" or "hours" (or the singular "day" or "hour") of wall-clock distance
  * @returns whole wall-clock units, negative when start is after end, or null on invalid input
  *
  * @example spanWallClock("2024-03-09T12:00:00-05:00[America/New_York]", "2024-03-10T12:00:00-04:00[America/New_York]", "hours") // 24 — spanMs reports 82800000 (23 hours)
@@ -62,6 +64,7 @@ const WALL_CLOCK_SPAN_UNITS: Record<WallClockSpanUnit, Temporal.DateTimeUnit> =
  * @example spanWallClock("2024-03-02T18:00:00-05:00[America/New_York]", "2024-03-01T12:00:00-05:00[America/New_York]", "hours") // -30
  * @example spanWallClock("2024-03-10T23:00:00-04:00[America/New_York]", "2024-03-11T11:00:00+01:00[Europe/Berlin]", "hours") // 12 — each endpoint's own wall clock
  * @example spanWallClock("2024-03-10T02:30:00[America/New_York]", "2024-03-11T02:30:00[America/New_York]", "hours") // 24 — a wall time that never occurred is measured as written
+ * @example spanWallClock("2024-03-01T12:00:00-05:00[America/New_York]", "2024-03-02T12:00:00-05:00[America/New_York]", "day") // 1 — singular unit name
  * @example spanWallClock("2024-03-10T12:00:00Z", "2024-03-11T12:00:00Z", "days") // null — no bracketed time zone
  * @example spanWallClock("2024-03-01T12:00:00-05:00[America/New_York]", "2024-03-02T12:00:00-05:00[America/New_York]", "minutes") // null
  */
@@ -70,8 +73,12 @@ export function spanWallClock(
   end: string,
   unit: WallClockSpanUnit,
 ): number | null {
+  if (typeof unit !== "string") {
+    return null;
+  }
+
   if (
-    (unit !== "days" && unit !== "hours") ||
+    !Object.hasOwn(WALL_CLOCK_SPAN_UNITS, unit) ||
     !isValidZonedDateTime(start) ||
     !isValidZonedDateTime(end)
   ) {
@@ -85,7 +92,9 @@ export function spanWallClock(
       largestUnit: WALL_CLOCK_SPAN_UNITS[unit],
     });
 
-    return unit === "days" ? duration.days : duration.hours;
+    return WALL_CLOCK_SPAN_UNITS[unit] === "day"
+      ? duration.days
+      : duration.hours;
   } catch {
     return null;
   }

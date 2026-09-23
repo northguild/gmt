@@ -25,11 +25,14 @@ normalized epoch numbers — never on `Date` objects or fuzzy strings:
 Validate timezone params before using them as a key or persisting them:
 
 ```js
-if (!isValidTimezone(tzParam)) throw new Error("Invalid timezone");
+import { isValidTimeZone } from "@northguild/gmt/zoned";
+
+if (!isValidTimeZone(tzParam)) throw new Error("Invalid timezone");
 ```
 
 For Unix epoch times, pick one canonical unit (milliseconds recommended) and stick to
-it. Convert explicitly when needed with `convertUtcToUnixMs` / `convertUnixMsToUtc`.
+it. Convert explicitly when needed with `convertUtcToUnix` / `convertUnixToUtc`, which
+use milliseconds unless you pass `{ epochUnit: "seconds" }`.
 
 ## Routers
 
@@ -52,5 +55,5 @@ across environments.
 
 ## See also
 
-- [Linting](./linting/) — enforce these rules at the lint level
+- [Linting](/guides/integration/linting/) — enforce these rules at the lint level
 - [Core Rules](/core-rules/) — the full statement of GMT's contract

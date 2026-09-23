@@ -51,7 +51,7 @@ const DATE_PART_TYPES = new Set<string>([
 export function joinDateTimeConnector(
   epochMilliseconds: number,
   timeZone: string,
-  locale: string | undefined,
+  locale: string | string[] | undefined,
   dayLabel: string,
   timeStyle: "short" | "medium" | "full",
 ): string {

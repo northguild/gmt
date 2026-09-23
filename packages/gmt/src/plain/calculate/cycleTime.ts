@@ -1,8 +1,13 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { cycleFieldValue, timeCycleFieldBounds } from "../../internal";
-import type { Overflow, TimeCycleField } from "../../types";
+import {
+  cycleFieldValue,
+  isValidAmount,
+  timeCycleFieldBounds,
+} from "../../internal";
+import type { TimeCycleField } from "../../types";
 import { isValidTime, isValidTimeCycleField } from "../validate";
 import { setTime } from "./setTime";
+import { isOptionsArgument } from "../../internal/isObject";
 
 /**
  * Return a PlainTime ISO string with `field` cycled by `amount`, wrapping at that field's own
@@ -18,16 +23,15 @@ import { setTime } from "./setTime";
  *   of `amount` in the direction of its sign (ceiling for positive, floor for negative), matching
  *   `@internationalized/date`'s `CycleOptions.round`. E.g. cycling minute `22` by `+15` with
  *   `round: true` lands on `30` (the next multiple of 15 above 22), not `15` (the nearest one).
- * - `options.overflow` is accepted for signature consistency with `cycleDate`/`cycleDateTime`/
- *   `cycleZoned` but is **inert** here: time fields don't share bounds the way `day` shares a
- *   month with `month`/`year`, so the wrapped value `cycleTime` computes is always already valid —
- *   `setTime`'s `.with()` call never has anything to constrain or reject.
- * - Returns "" for an invalid `value` or an invalid `field`.
+ * - There is no `overflow` option (removed in 1.16.0): time fields don't share bounds the way `day`
+ *   shares a month with `month`/`year`, so the wrapped value is always already valid and there is
+ *   nothing to constrain or reject.
+ * - Returns "" for an invalid `value`, an invalid `field`, or an `amount` that is not a finite number.
  *
  * @param value ISO PlainTime string
  * @param field the field to cycle: "hour" | "minute" | "second" | "millisecond" | "microsecond" | "nanosecond"
  * @param amount signed amount to cycle by
- * @param options optional: round (boolean, default false), overflow ("constrain" | "reject", inert — see above)
+ * @param options optional: round (boolean, default false)
  * @returns ISO PlainTime string with `field` cycled, or "" on invalid input
  *
  * @example cycleTime("09:30:00", "hour", 1) // "10:30:00"
@@ -41,9 +45,19 @@ export function cycleTime(
   value: string,
   field: TimeCycleField,
   amount: number,
-  options?: { round?: boolean; overflow?: Overflow },
+  options?: { round?: boolean },
 ): string {
-  if (!isValidTime(value) || !isValidTimeCycleField(field)) return "";
+  if (!isOptionsArgument(options)) {
+    return "";
+  }
+
+  if (
+    !isValidTime(value) ||
+    !isValidTimeCycleField(field) ||
+    !isValidAmount(amount)
+  ) {
+    return "";
+  }
 
   try {
     const time = Temporal.PlainTime.from(value);
@@ -54,11 +68,7 @@ export function cycleTime(
       bounds,
       options?.round ?? false,
     );
-    return setTime(
-      value,
-      { [field]: newValue },
-      { overflow: options?.overflow },
-    );
+    return setTime(value, { [field]: newValue });
   } catch {
     return "";
   }

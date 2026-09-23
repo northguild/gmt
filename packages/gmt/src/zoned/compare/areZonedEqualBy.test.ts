@@ -1,4 +1,9 @@
-import { localNoonBattleCases, sameInstantBattleCases } from "../../test";
+import {
+  dateLineCrossingAt,
+  dateLineCrossingTimeZones,
+  localNoonBattleCases,
+  sameInstantBattleCases,
+} from "../../test";
 import { areZonedEqualBy } from "./areZonedEqualBy";
 
 describe("areZonedEqualBy", () => {
@@ -150,6 +155,95 @@ describe("areZonedEqualBy across zone transitions", () => {
     "returns $expected for $value1 and $value2 by $unit ($description)",
     ({ value1, value2, unit, expected }) => {
       expect(areZonedEqualBy(value1, value2, unit)).toBe(expected);
+    },
+  );
+
+  // Temporal §13.17 GetTemporalUnitValuedOption: a plural unit name is the same unit as its singular.
+  it.each`
+    unit              | value1                                                  | value2                                                  | expected
+    ${"years"}        | ${"2024-01-01T12:00:00+01:00[Europe/Berlin]"}           | ${"2024-12-31T12:00:00+01:00[Europe/Berlin]"}           | ${true}
+    ${"years"}        | ${"2024-12-31T12:00:00+01:00[Europe/Berlin]"}           | ${"2025-01-01T12:00:00+01:00[Europe/Berlin]"}           | ${false}
+    ${"months"}       | ${"2024-02-01T12:00:00+01:00[Europe/Berlin]"}           | ${"2024-02-29T12:00:00+01:00[Europe/Berlin]"}           | ${true}
+    ${"months"}       | ${"2024-02-29T12:00:00+01:00[Europe/Berlin]"}           | ${"2024-03-01T12:00:00+01:00[Europe/Berlin]"}           | ${false}
+    ${"weeks"}        | ${"2024-02-26T12:00:00+01:00[Europe/Berlin]"}           | ${"2024-03-03T12:00:00+01:00[Europe/Berlin]"}           | ${true}
+    ${"weeks"}        | ${"2024-03-03T12:00:00+01:00[Europe/Berlin]"}           | ${"2024-03-04T12:00:00+01:00[Europe/Berlin]"}           | ${false}
+    ${"days"}         | ${"2024-02-29T12:00:00+01:00[Europe/Berlin]"}           | ${"2024-02-29T12:00:00+01:00[Europe/Berlin]"}           | ${true}
+    ${"days"}         | ${"2024-02-29T12:00:00+01:00[Europe/Berlin]"}           | ${"2024-03-01T12:00:00+01:00[Europe/Berlin]"}           | ${false}
+    ${"hours"}        | ${"2024-02-29T13:00:00+01:00[Europe/Berlin]"}           | ${"2024-02-29T13:59:59.999999999+01:00[Europe/Berlin]"} | ${true}
+    ${"hours"}        | ${"2024-02-29T13:59:59.999999999+01:00[Europe/Berlin]"} | ${"2024-02-29T14:00:00+01:00[Europe/Berlin]"}           | ${false}
+    ${"minutes"}      | ${"2024-02-29T13:45:00+01:00[Europe/Berlin]"}           | ${"2024-02-29T13:45:59.999999999+01:00[Europe/Berlin]"} | ${true}
+    ${"minutes"}      | ${"2024-02-29T13:45:59.999999999+01:00[Europe/Berlin]"} | ${"2024-02-29T13:46:00+01:00[Europe/Berlin]"}           | ${false}
+    ${"seconds"}      | ${"2024-02-29T13:45:30+01:00[Europe/Berlin]"}           | ${"2024-02-29T13:45:30.999999999+01:00[Europe/Berlin]"} | ${true}
+    ${"seconds"}      | ${"2024-02-29T13:45:30.999999999+01:00[Europe/Berlin]"} | ${"2024-02-29T13:45:31+01:00[Europe/Berlin]"}           | ${false}
+    ${"milliseconds"} | ${"2024-02-29T13:45:30.123+01:00[Europe/Berlin]"}       | ${"2024-02-29T13:45:30.123999999+01:00[Europe/Berlin]"} | ${true}
+    ${"milliseconds"} | ${"2024-02-29T13:45:30.123999999+01:00[Europe/Berlin]"} | ${"2024-02-29T13:45:30.124+01:00[Europe/Berlin]"}       | ${false}
+    ${"microseconds"} | ${"2024-02-29T13:45:30.123456+01:00[Europe/Berlin]"}    | ${"2024-02-29T13:45:30.123456999+01:00[Europe/Berlin]"} | ${true}
+    ${"microseconds"} | ${"2024-02-29T13:45:30.123456999+01:00[Europe/Berlin]"} | ${"2024-02-29T13:45:30.123457+01:00[Europe/Berlin]"}    | ${false}
+    ${"nanoseconds"}  | ${"2024-02-29T13:45:30.123456789+01:00[Europe/Berlin]"} | ${"2024-02-29T13:45:30.123456789+01:00[Europe/Berlin]"} | ${true}
+    ${"nanoseconds"}  | ${"2024-02-29T13:45:30.123456789+01:00[Europe/Berlin]"} | ${"2024-02-29T13:45:30.12345679+01:00[Europe/Berlin]"}  | ${false}
+  `(
+    "returns $expected for $value1 and $value2 by plural unit $unit",
+    ({ unit, value1, value2, expected }) => {
+      expect(areZonedEqualBy(value1, value2, unit)).toBe(expected);
+    },
+  );
+
+  // weekStartsOn only names "monday" or "sunday"; any other value is invalid input, for every unit
+  // (Temporal GetOption rejects a value outside its allowed list; undefined means the default).
+  it.each`
+    unit      | weekStartsOn
+    ${"week"} | ${"tuesday"}
+    ${"week"} | ${"Monday"}
+    ${"week"} | ${""}
+    ${"week"} | ${null}
+    ${"week"} | ${1}
+    ${"week"} | ${true}
+    ${"day"}  | ${"tuesday"}
+    ${"day"}  | ${"Monday"}
+    ${"day"}  | ${""}
+    ${"day"}  | ${null}
+    ${"day"}  | ${1}
+    ${"day"}  | ${true}
+  `(
+    "returns false by unit $unit with invalid weekStartsOn $weekStartsOn",
+    ({ unit, weekStartsOn }) => {
+      expect(
+        areZonedEqualBy(
+          "2024-02-29T13:45:30+01:00[Europe/Berlin]",
+          "2024-02-29T13:45:30+01:00[Europe/Berlin]",
+          unit,
+          { weekStartsOn },
+        ),
+      ).toBe(false);
+    },
+  );
+});
+
+// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
+// are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
+// 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
+
+describe("areZonedEqualBy across the 1844 date-line crossings (zoned.E)", () => {
+  // Monday 1844-12-30 and Thursday 1845-01-02 share a week; Sunday 12-29 closes the one before.
+  it.each(dateLineCrossingTimeZones)(
+    "puts 1844-12-30 and 1845-01-02 in one week in $timeZone, and 1844-12-29 in the one before",
+    (crossing) => {
+      const monday = dateLineCrossingAt(crossing, -12).toString();
+      expect(
+        areZonedEqualBy(
+          monday,
+          dateLineCrossingAt(crossing, 36).toString(),
+          "week",
+        ),
+      ).toBe(true);
+      expect(
+        areZonedEqualBy(
+          monday,
+          dateLineCrossingAt(crossing, -36).toString(),
+          "week",
+        ),
+      ).toBe(false);
     },
   );
 });

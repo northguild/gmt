@@ -3,8 +3,8 @@
  * versions (which track Node major versions — see
  * https://nodejs.org/en/download/releases for the ICU version each Node
  * release ships). A handful of goldens in this suite depend on locale
- * strings that changed wording between ICU 77 (Node 20) and ICU 78
- * (Node 22/24) — e.g. pt-PT's day period ("da tarde" -> "p.m."), Turkish
+ * strings that changed wording between ICU 77 (Node 22.16–22.22) and ICU 78
+ * (Node 20.20+, 22.23+, 24, 26 — per each release's `tools/icu/current_ver.dep`) — e.g. pt-PT's day period ("da tarde" -> "p.m."), Turkish
  * and Korean long time zone names, and Hebrew/Swedish relative-time
  * phrasing. These are not "full" vs "partial" ICU — every Node LTS here
  * ships complete locale data; the *wording* CLDR chose for a given
@@ -14,7 +14,7 @@
  * so the assertion still fails if the formatter starts returning
  * something else, but doesn't fail on a CLDR wording revision alone.
  *
- * Use this only for goldens verified (against real Node 20/22/24 runs) to
+ * Use this only for goldens verified (against real runs of the Node release that ships each ICU) to
  * differ solely by CLDR wording, not for masking an actual bug — every
  * variant listed should be independently confirmed to come from a real
  * ICU version.

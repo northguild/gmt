@@ -61,3 +61,9 @@ describe("convertUnixToPlainDateTime", () => {
     expect(convertUnixToPlainDateTime(unix as never)).toBe("");
   });
 });
+
+describe("convertUnixToPlainDateTime invalid-input @example", () => {
+  it('returns "" for convertUnixToPlainDateTime(NaN)', () => {
+    expect(convertUnixToPlainDateTime(NaN)).toBe("");
+  });
+});

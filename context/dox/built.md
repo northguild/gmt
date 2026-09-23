@@ -60,6 +60,11 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `.gitignore`, but `reference/corpus.ts`, `reference/gmt-corpus.json` and
   `reference/route-manifest.ts` predate that rule and stay tracked, so regenerating them
   produces a diff to keep. The MDX reference pages are ignored and untracked.
+  - It skips when the content hash in `src/generated/reference/.inputs-hash` matches (gmt
+    source, the `exports` map and the generator itself), and otherwise writes only changed
+    pages and deletes only stale ones (`scripts/build-utils/generated-files.mjs`). Never go
+    back to `rm -rf` + rewrite: every file event reaches `astro dev`, VS Code's watcher and
+    its TypeScript server.
   - `@example` is one inline line, `fn(args) // result (note)`, split on `/\s+\/\/\s/`. The
     one multi-line example is `getDstTransitions`.
   - `plain/calculate/weekOfYear.ts` is the only file exporting two functions.
@@ -370,6 +375,16 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 
 ### Runbooks
 
+- **Local dev:** `pnpm dox:dev` (site + chat Worker) or `pnpm dox:dev:site` (site only).
+  A warm start is ~10 s: the gmt build is incremental (`build:dev`), every `generate` step
+  skips when its inputs are unchanged, and `upstream refresh` makes no network calls
+  while its live file is under 6 h old (`UPSTREAM_REFRESH=force`). No site build is
+  needed — the Worker reads `/retrieval-chunks.json` from `astro dev` through
+  `DOX_ASSETS_ORIGIN`. Content edits hot-reload; gmt source edits regenerate the
+  reference in place (`src/lib/gmt-reference-watch.ts`); a new export needs a restart.
+  `dev-all.mjs` only ever stops its own children. If another `astro dev` holds this
+  project's lock (per project, not per port) it exits instead of replacing it — stop that
+  one with `astro dev stop` first. A taken Worker port needs `DOX_WORKER_PORT`.
 - **Local chat:** `pnpm dev:chat` (build, then `wrangler dev`), or `npx wrangler dev --port
   8799` with `dist/` already built. `.dev.vars` holds `NORTHGUILD_GMT_GEMINI_API_KEY` and
   `DOX_DEV_KEY` (`.dev.vars.example`).
