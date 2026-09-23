@@ -26,7 +26,15 @@ import {
   type ToolUIPart,
   type UIMessage,
 } from "ai";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  ViewTransition,
+} from "react";
 import type { StickToBottomContext } from "use-stick-to-bottom";
 
 import { SearchIcon } from "lucide-react";
@@ -354,7 +362,10 @@ export function DoxChat({
     onWidget?.(ready.toolCallId, getToolName(ready), ready.input);
   }, [messages, onWidget]);
 
-  const isEmpty = messages.length === 0;
+  /* Deferred so the swap from the empty hub to the transcript runs as a
+     transition and its <ViewTransition>s animate. `useChat` pushes the first
+     message as a plain synchronous update, which never triggers one. */
+  const isEmpty = useDeferredValue(messages.length === 0);
 
   /** Between `sendMessage` and the first streamed token, `status` is
    * "submitted" and no assistant message exists yet — so without a placeholder
@@ -377,35 +388,42 @@ export function DoxChat({
           no-op. The flex sizing belongs on this element. */}
       <Conversation className="gmt-hive-scroll" contextRef={conversationRef}>
         <ConversationContent className="gmt-hive">
+          {/* The first send plays the hub out and the transcript in
+              (gmt-hive.css, "Rail and transcript view transitions").
+              `default="none"`: streaming tokens and later turns update inside
+              these without animating. */}
           {isEmpty ? (
-            <div className="gmt-hive-empty">
-              <HiveHub />
-              <p className="gmt-hive-status">Dox // {CORPUS_SUMMARY}</p>
-              {/* Name the character. A reader arriving here should learn that
+            <ViewTransition key="empty" exit="gmt-hive-out" default="none">
+              <div className="gmt-hive-empty">
+                <HiveHub />
+                <p className="gmt-hive-status">Dox // {CORPUS_SUMMARY}</p>
+                {/* Name the character. A reader arriving here should learn that
                   the thing answering is called Dox — and the code treatment
                   ties the name to the crystal above it and to the same
                   treatment `@northguild/gmt` gets, so both read as identifiers
                   rather than prose. */}
-              <p className="gmt-hive-prompt">
-                Ask <code className="gmt-hive-name">Dox</code> about dates,
-                times, and zones in <code>@northguild/gmt</code>.
-              </p>
-              <div className="gmt-hive-starters">
-                {CHAT_STARTERS.map((starter) => (
-                  <Suggestion
-                    key={starter.widget}
-                    className="gmt-hive-starter gmt-sonar-focus"
-                    suggestion={starter.text}
-                    onClick={send}
-                  />
-                ))}
+                <p className="gmt-hive-prompt">
+                  Ask <code className="gmt-hive-name">Dox</code> about dates,
+                  times, and zones in <code>@northguild/gmt</code>.
+                </p>
+                <div className="gmt-hive-starters">
+                  {CHAT_STARTERS.map((starter) => (
+                    <Suggestion
+                      key={starter.widget}
+                      className="gmt-hive-starter gmt-sonar-focus"
+                      suggestion={starter.text}
+                      onClick={send}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
+            </ViewTransition>
           ) : (
-            messages.map((message, index) => {
-              const role = message.role === "user" ? "user" : "assistant";
-              const trace = retrievalTraceOf(message);
-              /* The stream has opened and the trace has landed, but no token
+            <ViewTransition key="transcript" enter="gmt-hive-in" default="none">
+              {messages.map((message, index) => {
+                const role = message.role === "user" ? "user" : "assistant";
+                const trace = retrievalTraceOf(message);
+                /* The stream has opened and the trace has landed, but no token
                  has arrived yet. Dox is still working, so the crystal keeps
                  turning and the card keeps its sheen — one condition driving
                  both, so the marker and the surface can never disagree about
@@ -418,74 +436,77 @@ export function DoxChat({
                  again on every subsequent question, so a single earlier failure
                  left a card apparently loading for the rest of the session.
                  Only the newest turn can be in progress. */
-              const widgetCalls = widgetCallsOf(message);
-              /* `widgetCalls.length === 0` is the DOX-C3b clause. A turn whose
+                const widgetCalls = widgetCallsOf(message);
+                /* `widgetCalls.length === 0` is the DOX-C3b clause. A turn whose
                  only content is a tool call has `messageText() === ""` forever,
                  so without it the crystal would keep spinning under a perfectly
                  finished answer. */
-              const isThinking =
-                role === "assistant" &&
-                status === "streaming" &&
-                index === messages.length - 1 &&
-                messageText(message) === "" &&
-                widgetCalls.length === 0;
+                const isThinking =
+                  role === "assistant" &&
+                  status === "streaming" &&
+                  index === messages.length - 1 &&
+                  messageText(message) === "" &&
+                  widgetCalls.length === 0;
 
-              return (
-                <div key={message.id} className="contents">
-                  <article className="gmt-hive-turn" data-role={role}>
-                    <HiveNode role={role} pending={isThinking} />
-                    <div
-                      className="gmt-hive-card"
-                      data-pending={isThinking ? "" : undefined}
-                    >
-                      {trace && <RetrievalTrace data={trace} />}
-                      {/* The trace lands before the first token, so without
+                return (
+                  <div key={message.id} className="contents">
+                    <article className="gmt-hive-turn" data-role={role}>
+                      <HiveNode role={role} pending={isThinking} />
+                      <div
+                        className="gmt-hive-card"
+                        data-pending={isThinking ? "" : undefined}
+                      >
+                        {trace && <RetrievalTrace data={trace} />}
+                        {/* The trace lands before the first token, so without
                           this the card sits visibly empty beneath it for as
                           long as the model takes to start. Same scanline as
                           the pending turn, so the two states read as one
                           continuous "working" rather than two. */}
-                      {isThinking && (
-                        <span
-                          className="gmt-hive-scanline"
-                          aria-hidden="true"
-                        />
-                      )}
-                      {role === "assistant" ? (
-                        <MessageResponse
-                          className="gmt-ask-response"
-                          components={linkComponents}
-                          shikiTheme={SHIKI_THEME}
-                          lineNumbers={false}
-                        >
-                          {messageText(message)}
-                        </MessageResponse>
-                      ) : (
-                        <p className="gmt-hive-user-text">
-                          {messageText(message)}
-                        </p>
-                      )}
-                      {/* After the prose, never interleaved with it. One
+                        {isThinking && (
+                          <span
+                            className="gmt-hive-scanline"
+                            aria-hidden="true"
+                          />
+                        )}
+                        {role === "assistant" ? (
+                          <MessageResponse
+                            className="gmt-ask-response"
+                            components={linkComponents}
+                            shikiTheme={SHIKI_THEME}
+                            lineNumbers={false}
+                          >
+                            {messageText(message)}
+                          </MessageResponse>
+                        ) : (
+                          <p className="gmt-hive-user-text">
+                            {messageText(message)}
+                          </p>
+                        )}
+                        {/* After the prose, never interleaved with it. One
                           `MessageResponse` per turn is deliberate: Gemini emits
                           text → tool-call → text, and a markdown construct that
                           straddles that boundary (an unclosed fence, a link
                           whose `]` and `(` land in different parts) renders
                           wrong across two Streamdown instances — and the link
                           hardening only ever sees what each instance parsed. */}
-                      {widgetCalls.map((part) => (
-                        <WidgetReceipt
-                          key={part.toolCallId}
-                          part={part}
-                          onOpen={openWidget}
-                        />
-                      ))}
-                    </div>
-                  </article>
-                </div>
-              );
-            })
+                        {widgetCalls.map((part) => (
+                          <WidgetReceipt
+                            key={part.toolCallId}
+                            part={part}
+                            onOpen={openWidget}
+                          />
+                        ))}
+                      </div>
+                    </article>
+                  </div>
+                );
+              })}
+            </ViewTransition>
           )}
 
-          {isWaiting && (
+          {/* Gated on the deferred `isEmpty` too, so the placeholder arrives
+              with the transcript rather than one frame early under the hub. */}
+          {isWaiting && !isEmpty && (
             <>
               <article className="gmt-hive-turn" data-role="assistant">
                 <HiveNode role="assistant" pending />

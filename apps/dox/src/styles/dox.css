@@ -75,19 +75,9 @@ html:not([data-has-sidebar]) .sl-container {
  * (zero specificity), so `.sl-container:has(...)` alone already outranks
  * it without any of the above.
  *
- * `flex-grow: 1` alone still isn't enough, though: Starlight's own `width`
- * formulas already partition 100% of the flex row between `.main-pane` and
- * its sibling `.right-sidebar-container` (the "On this page" TOC) — the TOC
- * gets a bonus share of any extra viewport width too, so there is no spare
- * space left for `.main-pane` to grow into. `.gmt-globe`/`.gmt-scrubber-block`
- * aren't inside `.right-sidebar-container`, so `:has([data-tools-fullbleed])`
- * can't target it directly — reach it via the flex row's common ancestor
- * instead and give the TOC back only its own base width, freeing the bonus
- * share for `.main-pane` to claim. */
-.main-frame:has([data-tools-fullbleed]) .right-sidebar-container {
-  width: var(--sl-sidebar-width);
-}
-
+ * The TOC no longer takes a bonus share of the spare width on any page — it is
+ * a fixed `--sl-sidebar-width` site-wide (gmt-shell.css, "Wide-screen
+ * columns") — so there is nothing to claw back from it here. */
 .main-frame:has([data-tools-fullbleed]) .main-pane {
   flex-grow: 1;
 }
