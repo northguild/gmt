@@ -6,6 +6,8 @@ A monorepo for NorthGuild community libraries, focused on making JavaScript date
 
 Head to our [docs site](https://gmt-dox.northguild.workers.dev/) for the best way to get started.
 
+Questions, or want to help? Join us on [Discord](https://discord.gg/TdvQdP3t5a).
+
 **Why GMT:**
 
 - **100% Temporal, Temporal-first.** GMT is built directly on the TC39 `Temporal` standard (via `@js-temporal/polyfill`) — not a custom, homegrown date/time type system like `@internationalized/date`'s own `CalendarDate`/`ZonedDateTime` classes. No `Date` object anywhere, enforced by 3 dedicated lint packages.
