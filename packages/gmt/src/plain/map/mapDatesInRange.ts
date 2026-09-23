@@ -14,6 +14,11 @@ import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
  *   `maxPieces` also returns `[]`.
  * - An explicit `undefined` `stepDays` is the default step, so `(start, end, undefined, options)`
  *   reaches `options`. **Compatibility:** before 1.16.0 it returned `[]`.
+ * - **End-inclusive, where the `interval*` functions are half-open.** This enumerates the dates a
+ *   range covers, so `endDate` is one of them; an interval bounds a span as `[start, end)`, so its
+ *   `end` is not. The same pair therefore yields one more date here than `intervalCountDate`
+ *   counts. To read one set of bounds both ways, pass `addDate(endDate, { days: 1 })` to the
+ *   `interval*` call, or `subtractDate(endDate, { days: 1 })` to this one.
  *
  * @param startDate ISO PlainDate string for the first date
  * @param endDate ISO PlainDate string for the last date (inclusive)

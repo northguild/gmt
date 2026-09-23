@@ -73,8 +73,8 @@ describe("canonicalCalendarSystem", () => {
   it.each`
     value                | reason
     ${"gregorian"}       | ${"Temporal rejects the CLDR alias"}
-    ${"taiwan"}          | ${"not a calendar id"}
-    ${"islamic-tabular"} | ${"not a calendar id"}
+    ${"taiwan"}          | ${"CLDR alias absent from AvailableCanonicalCalendars"}
+    ${"islamic-tabular"} | ${"CLDR alias absent from AvailableCanonicalCalendars"}
     ${"islamic"}         | ${"not in the proposal's calendar table"}
     ${"islamic-rgsa"}    | ${"not in the proposal's calendar table"}
     ${"chinese"}         | ${"not supported by GMT"}

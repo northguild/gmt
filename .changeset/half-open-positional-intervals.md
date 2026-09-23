@@ -78,4 +78,4 @@ Migration:
   splitIntervalByUnitDate("2024-01-01", "2024-01-05", "day", 1).length; // 4
   ```
 
-  The same `start`/`end` pair therefore yields `n + 1` from the `map*` functions and `n` from the `interval*` ones. To read one set of bounds both ways, pass `addDate(end, { days: 1 })` to the `interval*` call, or `subDate(end, { days: 1 })` to the `map*` call.
+  The same `start`/`end` pair therefore yields `n + 1` from the `map*` functions and `n` from the `interval*` ones. To read one set of bounds both ways, pass `addDate(end, { days: 1 })` to the `interval*` call, or `subtractDate(end, { days: 1 })` to the `map*` call.

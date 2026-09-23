@@ -165,7 +165,7 @@ describe("convertZonedToCalendar", () => {
     ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=taiwan]"}             | ${"iso8601"}   | ${"pre-1.16.0 GMT id"}
     ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=chinese]"}            | ${"iso8601"}   | ${"calendar GMT does not support"}
     ${"2024-10-03[u-ca=hebrew]"}                                              | ${"hebrew"}    | ${"a plain calendar date, not a zoned value"}
-    ${"2024-10-03T14:30:45-04:00[America/New_York]"}                          | ${"gregorian"} | ${"CLDR alias, not a calendar id"}
+    ${"2024-10-03T14:30:45-04:00[America/New_York]"}                          | ${"gregorian"} | ${"CLDR alias Temporal does not accept"}
     ${"2024-10-03T14:30:45"}                                                  | ${"hebrew"}    | ${"a PlainDateTime with no zone"}
     ${"2024-06-30T23:59:60+00:00[UTC]"}                                       | ${"hebrew"}    | ${"leap second"}
     ${"invalid"}                                                              | ${"hebrew"}    | ${"not a datetime at all"}

@@ -14,6 +14,10 @@ import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
  *   `maxPieces` also returns `[]`.
  * - An explicit `undefined` `stepDays` is the default step, so `(start, end, undefined, options)`
  *   reaches `options`. **Compatibility:** before 1.16.0 it returned `[]`.
+ * - **End-inclusive, where the `interval*` functions are half-open.** This enumerates the dates a
+ *   range covers, so the end date is one of them; an interval bounds a span as `[start, end)`, so
+ *   its `end` is not. The same pair therefore yields one more date here than `intervalCountZoned`
+ *   counts.
  *
  * @param startZonedDateTime start zoned ISO 8601 datetime string
  * @param endZonedDateTime end zoned ISO 8601 datetime string
