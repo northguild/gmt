@@ -120,6 +120,16 @@ jobs:
       - name: Upstream filing tracker matches the committed snapshot
         run: node scripts/upstream.mjs check
 
+      # Two content pages are generated, not committed: `guides/concepts/dst-disambiguation.md`
+      # (copied from the canonical `docs/dst-disambiguation.md`) and `scenarios/index.mdx`.
+      # Seven pages link to the first of them, so without this step `api-surface` reports them
+      # as broken site links and this job fails on a checkout that is perfectly fine. Both
+      # generators read tracked sources, so CI produces byte-identical pages to a local run.
+      - name: Generate the dox content pages that are not committed
+        run: |
+          node apps/dox/scripts/build-guides.mjs
+          node apps/dox/scripts/build-scenario-index.mjs
+
       - name: Public API surface — reachability, examples, doc imports and links
         run: node scripts/api-surface.mjs check
 
