@@ -6,16 +6,15 @@ description: >
   arithmetic and interval range math. Covers the half-open [start, end) interval
   algebra over instants (intervalsOverlap, intervalContains, intersectIntervals,
   clampInterval, mergeIntervals, subtractIntervals, splitIntervalAt,
-  sumIntervals, isValidInterval, Interval) and the positional
-  interval*Date / *Utc / *Zoned / *Unix functions on the same rule, business calendars
+  sumIntervals, isValidInterval, Interval) and the positional interval*Date /
+  *Utc / *Zoned / *Unix functions on the same rule, business calendars
   (BusinessCalendar, RollConvention, isBusinessDay, addBusinessDays,
   subtractBusinessDays, businessDaysBetween, nextBusinessDay,
   previousBusinessDay, rollDate, mergeCalendars), overflow "constrain" month-end
   clamping, splitIntervalByUnit* stepping from the anchor, maxPieces limits,
-  intervalCount*
-  matching bucketRange, RFC 9557 calendar strings, and the correct-at-the-edges
-  guarantees at the first and last representable instant. A routing pointer,
-  not an API dump.
+  intervalCount* matching bucketRange, RFC 9557 calendar strings, and the
+  correct-at-the-edges guarantees at the first and last representable instant. A
+  routing pointer, not an API dump.
 sources:
   - 'northguild/gmt:README.md'
   - 'northguild/gmt:packages/gmt/src/plain/calculate/index.ts'
