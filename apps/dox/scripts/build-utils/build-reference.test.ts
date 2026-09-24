@@ -901,4 +901,66 @@ describe("buildLivePlaygroundTemplate integration", () => {
     expect(doc!.livePlaygroundTemplate).toBeDefined();
     expect(doc!.livePlaygroundTemplate!.allowEmptyArray).toBe(true);
   });
+
+  /** Extract one declared function the way the generator does. */
+  function templateFor(src: string, name: string) {
+    const { checker, sourceFile } = compile(src);
+    let doc: FnDoc | undefined;
+    sourceFile.forEachChild((node) => {
+      if (ts.isFunctionDeclaration(node) && node.name?.text === name) {
+        doc = BR.extractFunction(
+          checker,
+          node,
+          "zoned",
+          "interval",
+          gmtPath("zoned/interval.ts"),
+          new Set(),
+        );
+      }
+    });
+    return doc?.livePlaygroundTemplate;
+  }
+
+  it("classifies an object | null result as object, with no empty flag by default", () => {
+    const t = templateFor(
+      `
+      interface Dwell { duration: string; calendarDays: number }
+      /** Dwell.
+       * @example dwellTime("2024-06-15T23:00:00Z", "2024-06-16T01:00:00Z", "UTC") // { duration: "PT2H", calendarDays: 1 }
+       */
+      function dwellTime(entry: string, exit: string, zone?: string): Dwell | null { return null; }
+    `,
+      "dwellTime",
+    );
+    expect(t?.returnType).toBe("object");
+    expect(t?.nullIsEmpty).toBeUndefined();
+  });
+
+  it("sets nullIsEmpty for a function on the allowlist", () => {
+    const t = templateFor(
+      `
+      /** Intersect.
+       * @example intervalIntersectionZoned("a", "b", "c", "d") // null (touching)
+       */
+      function intervalIntersectionZoned(a: string, b: string, c: string, d: string): { start: string; end: string } | null { return null; }
+    `,
+      "intervalIntersectionZoned",
+    );
+    expect(t?.returnType).toBe("object");
+    expect(t?.nullIsEmpty).toBe(true);
+  });
+
+  it("refuses an allowlisted name whose return is not an object", () => {
+    expect(() =>
+      templateFor(
+        `
+        /** Wrong shape.
+         * @example intervalIntersectionZoned("a", "b", "c", "d") // ""
+         */
+        function intervalIntersectionZoned(a: string, b: string, c: string, d: string): string { return ""; }
+      `,
+        "intervalIntersectionZoned",
+      ),
+    ).toThrow(/NULL_IS_EMPTY/);
+  });
 });

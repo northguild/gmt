@@ -122,7 +122,9 @@ local midnight is `2`. An exit exactly at local midnight does not touch the new 
 half-open rule as [`bucketRange`](/reference/calendar/calculate/bucketRange) and the
 [interval functions](/guides/intervals/interval-basics/). The count comes from the zone's real
 day boundaries via [`floorToZone`](/reference/calendar/calculate/floorToZone), so a 23- or
-25-hour local day is one day.
+25-hour local day is one day. The [Dwell Ledger](/tools/dwell-ledger/) draws this on a zone's
+real day grid: drag the exit across a midnight and watch the count change while the hours
+barely move.
 
 ```typescript
 // An exit exactly at local midnight does not touch the new day.
@@ -163,6 +165,7 @@ deciding what a midnight is.
 
 ## See it break, then work
 
+- [Dwell Ledger: drag a dwell across local midnights](/tools/dwell-ledger/)
 - [Container dwell: two hours, two days](/scenarios/container-dwell-days/)
 - [A 26-hour rail leg across spring-forward](/scenarios/transit-across-dst/)
 - [Two arrivals, one wall time: the fall-back night](/scenarios/arrival-on-a-fall-back-night/)

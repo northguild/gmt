@@ -68,6 +68,22 @@ export const showIntervalVisualizerInput = z.object({
   bEnd: dateTimeSchema,
 });
 
+/**
+ * A dwell: two instants and the zone its days are counted in.
+ *
+ * `zone` is required here although `dwellTime` can take it from a bracketed
+ * entry: a model answering "23:00 in New York" sends a wall time with no
+ * offset, and the widget reads it in this zone (`resolveWallTime`). Without a
+ * zone there is nothing to count days in, which the widget can still show, but
+ * is not a question worth a tool call.
+ */
+export const showDwellLedgerInput = z.object({
+  entry: dateTimeSchema,
+  exit: dateTimeSchema,
+  zone: zoneSchema,
+  compareZone: zoneSchema.optional(),
+});
+
 export const showConverterBenchInput = z.object({
   value: dateTimeSchema,
   from: zoneSchema,
@@ -93,13 +109,15 @@ export type DoxToolName =
   | "showGlobe"
   | "showDstInspector"
   | "showIntervalVisualizer"
-  | "showConverterBench";
+  | "showConverterBench"
+  | "showDwellLedger";
 
 export const DOX_TOOL_INPUTS = {
   showGlobe: showGlobeInput,
   showDstInspector: showDstInspectorInput,
   showIntervalVisualizer: showIntervalVisualizerInput,
   showConverterBench: showConverterBenchInput,
+  showDwellLedger: showDwellLedgerInput,
 } as const;
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -137,6 +155,13 @@ export const DOX_TOOL_DOCS: {
     when: "the reader asks to convert a specific time between two zones, or how it formats",
     args: "value (ISO date-time; a plain 2024-03-15T14:30:00 is read as UTC), from (IANA id), to (IANA id), locale (optional BCP-47 tag)",
   },
+  {
+    name: "showDwellLedger",
+    purpose:
+      "A dwell drawn on a zone's real local-day grid: the elapsed hours, and every local calendar day the dwell touched, counted by dwellTime.",
+    when: "the reader asks how long something sat somewhere, or how many days a dwell, stay, layover or visit counts",
+    args: "entry, exit (ISO date-times; a plain 2024-06-15T23:00:00 is read as wall time in zone), zone (IANA id the days are counted in), compareZone (optional second IANA id, to show the same instants counted elsewhere)",
+  },
 ];
 
 /**
@@ -161,6 +186,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[3].purpose,
     inputSchema: showConverterBenchInput,
   }),
+  showDwellLedger: tool({
+    description: DOX_TOOL_DOCS[4].purpose,
+    inputSchema: showDwellLedgerInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -181,13 +210,14 @@ export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
  * here without registering its widget fails the suite rather than reaching a
  * reader.
  *
- * All four are now enabled, every one backed by a registered widget.
+ * All five are enabled, every one backed by a registered widget.
  */
 export const ENABLED_TOOL_NAMES = [
   "showGlobe",
   "showConverterBench",
   "showIntervalVisualizer",
   "showDstInspector",
+  "showDwellLedger",
 ] as const satisfies readonly DoxToolName[];
 
 export type EnabledToolName = (typeof ENABLED_TOOL_NAMES)[number];

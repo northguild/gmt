@@ -210,7 +210,7 @@ export async function run(
       convertVal.value,
       convertTarget.value,
     );
-    renderResult(convertOut, result, result === "");
+    renderResult(convertOut, result, result === "" ? "sentinel" : "live");
   }
 
   const fmtVal = q<HTMLInputElement>("format-value");
@@ -225,7 +225,7 @@ export async function run(
 
     if (partsOut) {
       const parts = modules.formatZonedToParts(fmtVal.value, locale);
-      renderResult(partsOut, parts, parts.length === 0);
+      renderResult(partsOut, parts, parts.length === 0 ? "sentinel" : "live");
       renderCallLine(
         q("call-format-parts"),
         "formatZonedToParts",
@@ -235,7 +235,7 @@ export async function run(
     }
     if (relOut) {
       const rel = modules.formatRelativeZoned(fmtVal.value, locale);
-      renderResult(relOut, rel, rel === "");
+      renderResult(relOut, rel, rel === "" ? "sentinel" : "live");
       renderCallLine(
         q("call-format-relative"),
         "formatRelativeZoned",

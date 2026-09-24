@@ -16,6 +16,36 @@ shape the rest follow.
 
 A later story in a realm that already has pages extends them rather than adding a parallel set.
 
+## Purpose-built widgets
+
+Every function gets a live playground for free. A story may also ship one teaching widget when
+the rule it teaches is better seen than read, and a playground cannot show it. TRAN-8's Dwell
+Ledger is the first: `calendarDays` only makes sense drawn on a zone's real local-day grid.
+
+A widget follows the Tier 2 shape in [../dox/built.md](../dox/built.md), under
+`apps/dox/src/`:
+
+| Piece | Path |
+| --- | --- |
+| Pure logic and its test | `lib/<widget>.ts`, `lib/<widget>.test.ts` |
+| Template, mount and their test | `lib/<widget>-mount.ts`, `lib/<widget>-mount.test.tsx` |
+| Astro shell | `components/<Widget>.astro` |
+| Tool page | `content/docs/tools/<slug>.mdx` |
+| Styles | `styles/gmt-<widget>.css`, registered in `astro.config.mjs` |
+
+It is also a Dox chat tool, because the chat can only offer a widget it can mount:
+
+- a schema, prompt copy and an `ENABLED_TOOL_NAMES` entry in `lib/dox-tools.ts`;
+- a Worker tool with a trivial `execute` in `worker/tools.ts`;
+- a registry entry in `components/ask/widget-registry.ts`;
+- a `WidgetKind` and page path in `lib/widget-permalink.ts`;
+- a starter pill in `CHAT_STARTERS` (`lib/chat-constants.ts`).
+
+`widget-registry.test.ts`, `chat-starters.test.ts`, `widget-permalink.test.ts` and
+`client-graph.test.ts` fail if any of these is missing. Add the tool page to
+`scripts/html-diff.mjs` and `scripts/visual-snapshot.mjs`. Every preset shows the function's
+real output, asserted in the mount test.
+
 ## Rules
 
 - **Ported, not rewritten.** The guide ports the section the story added to
@@ -31,8 +61,9 @@ A later story in a realm that already has pages extends them rather than adding 
   build throws on an unknown key.
 - **Justify with specs only**, the same rule as the specs: TC39 Temporal, ISO 8601, RFC 9557 and
   the realm's own primary source. No peer library is named.
-- **MDX only.** No widget markup or CSS changes, so no `html-diff` or `visual:diff` run is owed.
-  React stays inside `/dox`.
+- **MDX only unless the story ships a widget.** With no widget, there are no markup or CSS
+  changes, so no `html-diff` or `visual:diff` run is owed. With one, both are owed. React stays
+  inside `/dox`.
 
 ## Checks
 

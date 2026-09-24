@@ -26,6 +26,14 @@ All transport modes share three basic operations: adding a duration to a departu
     added on the wall clock, calendar durations, an offset that contradicts its zone, a fixed
     offset used as a zone, a zoneless arrival.
   - Index entries in `guides/index.mdx` and `mistakes/index.mdx`.
+  - The Dwell Ledger (`tools/dwell-ledger.mdx`), the first realm teaching widget: a dwell drawn
+    on a zone's real local-day grid, with draggable entry and exit, an optional compare zone,
+    and the real `dwellTime` result. It is the Dox chat tool
+    `showDwellLedger({ entry, exit, zone, compareZone? })`, and the guide and the
+    `container-dwell-days` scenario link to it.
+  - The playground renders a `null` from an object-returning function as the sentinel. Before
+    this, `dwellTime`'s `null` showed as a live value. Interval functions whose `null` means
+    "no shared span" render it as the empty state instead.
 
 ## Design notes
 
@@ -65,4 +73,10 @@ The same draft wrapped a single leg as `containerLeg`, adding opaque `mode`, `or
 - `battleTestTimeZones` coverage plus probe-zone transition rows for timezone-aware functions (see `context/coding-standards.md` § Calendar & zone semantics)
 - Every result on the docs-site pages matches the built package, and every internal link on
   them resolves
+- Each Dwell Ledger preset prints the `dwellTime` JSDoc example it draws, asserted in the mount
+  test, and its shaded days equal `calendarDays` in every zone it shows
+- The chat parity tests pass with the fifth tool; `html-diff` and `visual:diff` show changes on
+  the new page only; a keyboard-only pass and a `prefers-reduced-motion` check pass
+- The `dwellTime` playground shows `NO SIGNAL` for bare instants with no zone, and a disjoint
+  `intervalIntersectionZoned` playground shows the empty state
 - `pnpm run validate` stays green

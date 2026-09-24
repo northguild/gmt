@@ -63,8 +63,14 @@ export interface LivePlaygroundTemplate {
   module: string;
   fn: string;
   template: string;
-  returnType: "string" | "number" | "bigint" | "boolean" | "array";
+  returnType: "string" | "number" | "bigint" | "boolean" | "array" | "object";
   allowEmptyArray?: boolean;
+  /**
+   * `null` can be a correct empty answer (two intervals that share no span), so
+   * it renders as the empty state rather than the sentinel. Set from
+   * `scripts/build-utils/null-is-empty.ts`.
+   */
+  nullIsEmpty?: boolean;
   /**
    * The form-control schema `<PlaygroundForm>` renders from. Present whenever the
    * first `@example` survived `buildPlaygroundFields` — an empty array is valid

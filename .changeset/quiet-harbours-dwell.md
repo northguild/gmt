@@ -19,7 +19,9 @@ dwellTime("2024-06-15T22:30:00Z", "2024-06-16T01:00:00Z", "Europe/London");
 // { duration: "PT2H30M", enter: "2024-06-15T23:30:00+01:00[Europe/London]",
 //   exit: "2024-06-16T02:00:00+01:00[Europe/London]", calendarDays: 2 }
 dwellTime("2024-06-15T22:30:00Z", "2024-06-16T01:00:00Z", "Europe/Amsterdam");
-// { …, calendarDays: 1 } — the same two instants, one fewer day: the zone decides
+// { duration: "PT2H30M", enter: "2024-06-16T00:30:00+02:00[Europe/Amsterdam]",
+//   exit: "2024-06-16T03:00:00+02:00[Europe/Amsterdam]", calendarDays: 1 }
+// — the same two instants, one fewer day: the zone decides
 ```
 
 - **`transitTime` adds exact time.** Hours, minutes and seconds are elapsed time and a `D` component is 24 hours exactly; the wall clock at arrival reflects any DST shift in between. Years, months and weeks return `""` — no leg takes "a month" without a reference point. The departure's zone is preserved: a bracketed IANA zone stays that zone, `Z` stays `Z`, an offset stays an offset. A bracketed zone that does not exist or contradicts its offset is rejected, not silently reinterpreted.

@@ -35,5 +35,7 @@ dwellTime("2024-06-16T03:00:00Z", "2024-06-16T05:00:00Z", "Europe/Amsterdam").ca
 Edit the exit above to `2024-06-16T00:00:00-04:00[America/New_York]` and the count drops to
 `1`: an exit exactly at local midnight does not touch the new day, because the interval is
 half-open at the exit. Remove the zones and pass two `Z` instants with no third argument and
-the result is `null`, because a day count has no meaning without a place. The full rules are
-in [Transport: Legs and Dwell](/guides/industries/transport-legs-and-dwell/).
+the result is `null`, because a day count has no meaning without a place. To see the same dwell
+drawn on New York's day grid, open it in the [Dwell
+Ledger](/tools/dwell-ledger/?w=dwell&wa=%7B%22entry%22%3A%222024-06-15T23%3A00%3A00-04%3A00%5BAmerica%2FNew_York%5D%22%2C%22exit%22%3A%222024-06-16T01%3A00%3A00-04%3A00%5BAmerica%2FNew_York%5D%22%2C%22zone%22%3A%22America%2FNew_York%22%7D).
+The full rules are in [Transport: Legs and Dwell](/guides/industries/transport-legs-and-dwell/).

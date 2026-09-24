@@ -122,8 +122,17 @@
   .gmt-input:focus,
   .gmt-select:focus,
   .gmt-field:focus-visible,
-  .gmt-button:focus-visible {
+  .gmt-button:focus-visible,
+  .gmt-dwell-handle:focus-visible {
     outline: 2px solid Highlight;
+  }
+
+  /* Forced colours drop fills, and the shaded days are the Dwell Ledger's
+     answer: paint a counted day in the system highlight instead. */
+  .gmt-dwell-cell--touched {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
   }
 
   .gmt-popover {

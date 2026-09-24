@@ -33,7 +33,7 @@ import {
 // In-memory TS program helpers (for checker-backed classification tests)
 // ---------------------------------------------------------------------------
 
-function compile(source: string) {
+function compile(source: string, options: ts.CompilerOptions = {}) {
   const fileName = "subject.ts";
   const sourceFile = ts.createSourceFile(
     fileName,
@@ -60,6 +60,7 @@ function compile(source: string) {
       skipLibCheck: true,
       noEmit: true,
       strict: false,
+      ...options,
     },
     host,
   );
@@ -349,6 +350,27 @@ describe("classifyReturnTypeFromString", () => {
     expect(classifyReturnTypeFromString("bigint")).toBe("bigint");
     expect(classifyReturnTypeFromString("bigint[]")).toBe("array");
   });
+
+  /* An object result is its own kind, whose sentinel is `null`. Before it
+     existed, `{ … } | null` fell through to "string" (sentinel `""`), so an
+     invalid-input `null` rendered as a live green value; and a shape whose text
+     happened to contain "number" was read as a number. */
+  it("detects object shapes before the substring checks", () => {
+    expect(
+      classifyReturnTypeFromString("{ start: string; end: string; } | null"),
+    ).toBe("object");
+    expect(
+      classifyReturnTypeFromString("{ year: number; quarter: number; } | null"),
+    ).toBe("object");
+    expect(
+      classifyReturnTypeFromString("{ start: string; end: string; }[]"),
+    ).toBe("array");
+    expect(
+      classifyReturnTypeFromString(
+        "number | Record<DateDurationUnit, number> | null",
+      ),
+    ).toBe("number");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -413,6 +435,46 @@ describe("classifyReturnType", () => {
       "array",
     );
     expect(classifyReturnType(checker, undefined)).toBe("string");
+  });
+
+  /* Compiled with `strictNullChecks`, as the reference generator compiles the
+     library, so `| null` survives into the type the checker hands back. */
+  describe("object results", () => {
+    const objSrc = `
+      interface Dwell { duration: string; calendarDays: number }
+      type Verdict = "unique" | "ambiguous" | "nonexistent";
+      declare class PlainDate { year: number }
+      function dwell(): Dwell | null { return null; }
+      function shape(): { start: string; end: string } | null { return null; }
+      function numShape(): { year: number; quarter: number } | null { return null; }
+      function instance(): PlainDate | null { return null; }
+      function always(): Dwell { return { duration: "", calendarDays: 1 }; }
+      function verdict(): Verdict | null { return null; }
+      function diff(): number | Record<string, number> | null { return null; }
+      function maybeString(): string | null { return null; }
+      function shapes(): { start: string }[] { return []; }
+    `;
+    const compiled = compile(objSrc, { strictNullChecks: true });
+    const kind = (name: string) =>
+      classifyReturnType(
+        compiled.checker,
+        sigOf(compiled.checker, compiled.sourceFile, name),
+      );
+
+    it("classifies interfaces, literal shapes and class instances as object", () => {
+      expect(kind("dwell")).toBe("object");
+      expect(kind("shape")).toBe("object");
+      expect(kind("numShape")).toBe("object");
+      expect(kind("instance")).toBe("object");
+      expect(kind("always")).toBe("object");
+    });
+
+    it("leaves string-literal aliases, primitive unions and arrays alone", () => {
+      expect(kind("verdict")).toBe("string");
+      expect(kind("diff")).toBe("number");
+      expect(kind("maybeString")).toBe("string");
+      expect(kind("shapes")).toBe("array");
+    });
   });
 });
 

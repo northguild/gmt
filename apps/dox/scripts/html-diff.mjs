@@ -26,7 +26,7 @@
  * the two apart was to read the diff by hand and decide — which is precisely
  * the judgement a gate is supposed to make for you.
  */
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 const PAGES = [
@@ -41,6 +41,10 @@ const PAGES = [
   {
     path: "reference/zoned/convert/convertZonedToZoned",
     widget: "gmt-converter gmt-widget",
+  },
+  {
+    path: "tools/dwell-ledger",
+    widget: "gmt-dwell gmt-widget",
   },
 ];
 
@@ -123,6 +127,13 @@ let widgetChanged = 0;
 let pageChanged = 0;
 
 for (const p of PAGES) {
+  /* A widget page added since the baseline was captured has nothing to be
+     compared against. Say so, rather than crash or pass it silently; the
+     visual gate still covers what it looks like. */
+  if (!existsSync(path.join(dir, slug(p.path)))) {
+    console.log(`+ ${p.path} — new widget page, no baseline to compare`);
+    continue;
+  }
   const beforeRaw = readFileSync(path.join(dir, slug(p.path)), "utf8");
   const afterRaw = readFileSync(`dist/${p.path}/index.html`, "utf8");
 

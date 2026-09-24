@@ -1,0 +1,34 @@
+---
+title: Dwell Ledger
+description: Drag a gate-in and a gate-out across a zone's real local-day grid and watch dwellTime count the elapsed hours and the local calendar days the dwell touched.
+---
+
+import DwellLedger from "../../../components/DwellLedger.astro";
+
+Terminals, yards, gates and berths charge dwell by the local calendar days
+something was present, not by elapsed hours. A container that gates in at 23:00
+and out at 01:00 has been there two hours and two days, and dividing hours by 24
+can never see the midnight in between.
+
+The track below is one zone's local days, each cell as wide as that day really
+is: New York's 10 March 2024 had 23 hours, so its cell is narrower. The bar is
+the elapsed time. Shaded cells are the dates the dwell touched, counted
+half-open: an exit exactly at local midnight does not touch the new day. The
+output is the real
+[`dwellTime`](/reference/transport/calculate/dwellTime/) call for what is on
+screen.
+
+<DwellLedger />
+
+**Worth trying:** [the same two instants in London and
+Amsterdam](/tools/dwell-ledger/?w=dwell&wa=%7B%22entry%22%3A%222024-06-15T22%3A30%3A00Z%22%2C%22exit%22%3A%222024-06-16T01%3A00%3A00Z%22%2C%22zone%22%3A%22Europe%2FLondon%22%2C%22compareZone%22%3A%22Europe%2FAmsterdam%22%7D).
+The bar is identical on both rows, and the count is two days in London and one
+in Amsterdam, because Amsterdam's midnight falls before the entry. Then [drop
+the zone](/tools/dwell-ledger/?w=dwell&wa=%7B%22entry%22%3A%222024-06-15T22%3A30%3A00Z%22%2C%22exit%22%3A%222024-06-16T01%3A00%3A00Z%22%7D):
+two bare instants name no place, an offset is not a zone, and `dwellTime`
+returns `null` rather than guess.
+
+Reference: [`dwellTime`](/reference/transport/calculate/dwellTime/) counts the
+days; [`floorToZone`](/reference/calendar/calculate/floorToZone/) is where its
+day boundaries come from. The rules are in [Transport: Legs and
+Dwell](/guides/industries/transport-legs-and-dwell/).

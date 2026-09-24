@@ -24,6 +24,7 @@ import type {
 import { argToValue, parseCallArgs } from "../src/lib/playground-parsers";
 import type { PlaygroundSpec } from "./build-utils/build-utils";
 import * as BU from "./build-utils/build-utils";
+import { NULL_IS_EMPTY } from "./build-utils/null-is-empty";
 import {
   hashFiles,
   syncTree,
@@ -847,6 +848,12 @@ function buildLivePlaygroundTemplate(
     doc.playgroundSpec?.allowEmptyArray ??
     (returnType === "array" &&
       doc.examples.some((e) => e.result.trim() === "[]"));
+  const nullIsEmpty = NULL_IS_EMPTY.has(doc.name);
+  if (nullIsEmpty && returnType !== "object") {
+    throw new Error(
+      `[reference] ${doc.name} is in NULL_IS_EMPTY but returns ${returnType}, not an object. Remove it from scripts/build-utils/null-is-empty.ts.`,
+    );
+  }
 
   const formFields = doc.playgroundSpec
     ? buildPlaygroundFields(doc.playgroundSpec, template)
@@ -858,6 +865,7 @@ function buildLivePlaygroundTemplate(
     template,
     returnType,
     allowEmptyArray,
+    ...(nullIsEmpty ? { nullIsEmpty: true } : {}),
     ...(formFields
       ? {
           fields: formFields.fields,
@@ -1953,6 +1961,14 @@ export const corpus: CorpusEntry[] = data as CorpusEntry[];
     if (d.kind === "function" && d.livePlaygroundTemplate) {
       templatesRecord[d.name] = d.livePlaygroundTemplate;
     }
+  }
+  const staleNullIsEmpty = [...NULL_IS_EMPTY.keys()].filter(
+    (name) => !templatesRecord[name]?.nullIsEmpty,
+  );
+  if (staleNullIsEmpty.length > 0) {
+    throw new Error(
+      `[reference] NULL_IS_EMPTY names functions with no playground: ${staleNullIsEmpty.join(", ")}. Rename or remove them in scripts/build-utils/null-is-empty.ts.`,
+    );
   }
   const templatesTs = `// GENERATED FILE — do not edit by hand.
 // Produced by apps/dox/scripts/build-reference.ts (\`pnpm dox:generate\`).
