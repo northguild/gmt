@@ -160,9 +160,14 @@ export default defineConfig({
           })();`,
         },
       ],
+      /* Every group starts collapsed. Starlight still opens any group that
+         contains the current page (SidebarSublist: open when an entry is
+         current or the group is not collapsed), so a page opens only its own
+         ancestors. */
       sidebar: [
         {
           label: "Start here",
+          collapsed: true,
           items: [
             { slug: "why-gmt" },
             { slug: "upstream" },
@@ -170,22 +175,26 @@ export default defineConfig({
             { slug: "install" },
           ],
         },
-        { label: "API Reference", items: referenceSidebar },
+        { label: "API Reference", collapsed: true, items: referenceSidebar },
         {
           label: "Guides",
-          items: [{ autogenerate: { directory: "guides" } }],
+          collapsed: true,
+          items: [{ autogenerate: { directory: "guides", collapsed: true } }],
         },
         {
           label: "Tools",
-          items: [{ autogenerate: { directory: "tools" } }],
+          collapsed: true,
+          items: [{ autogenerate: { directory: "tools", collapsed: true } }],
         },
         {
           label: "Scenarios",
-          items: [{ autogenerate: { directory: "scenarios" } }],
+          collapsed: true,
+          items: [{ autogenerate: { directory: "scenarios", collapsed: true } }],
         },
         {
           label: "Mistakes",
-          items: [{ autogenerate: { directory: "mistakes" } }],
+          collapsed: true,
+          items: [{ autogenerate: { directory: "mistakes", collapsed: true } }],
         },
       ],
       components: {
