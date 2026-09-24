@@ -17,7 +17,8 @@
  * Renders nothing until mount, for the same reason every date in the chat does:
  * the server's zone and locale are not the reader's (#418).
  */
-import { getSystemTimeZone, getUtcNow } from "@northguild/gmt";
+import { getUtcNow } from "@northguild/gmt/utc/get";
+import { getSystemTimeZone } from "@northguild/gmt/zoned/get";
 import { useSelector } from "@tanstack/react-store";
 import { useEffect, useState } from "react";
 import { dateDisplayStore, hydrateDateDisplay } from "~/lib/date-display-store";

@@ -74,7 +74,7 @@ export type NoThrowCase = {
  * turns invalid input into a thrown `TypeError` instead of the sentinel.
  */
 /** A proxy whose every trap throws: hostile to reads, key enumeration and `Array.isArray` alike. */
-function hostileProxy(): unknown {
+export function hostileProxy(): unknown {
   const trap = (): never => {
     throw new TypeError("hostile proxy");
   };
@@ -91,7 +91,7 @@ function hostileProxy(): unknown {
 }
 
 /** A revoked proxy: every internal method throws, including the ones a `typeof` guard cannot see. */
-function revokedProxy(): unknown {
+export function revokedProxy(): unknown {
   const { proxy, revoke } = Proxy.revocable({}, {});
   revoke();
   return proxy;
@@ -563,6 +563,15 @@ export function exportedFunctionNames(): string[] {
 
 export function corpusFunctionNames(): string[] {
   return loadCorpus().map((entry) => entry.name);
+}
+
+/**
+ * Every namespace that holds a public function, from the corpus, sorted. The harness fuzzes each
+ * one, so a new namespace is covered the day it gains a function rather than when someone
+ * remembers to list it (`intermodal` and `transport` were missed that way, PR #281).
+ */
+export function corpusNamespaces(): string[] {
+  return [...new Set(loadCorpus().map((entry) => entry.namespace))].sort();
 }
 
 function matchesKind(result: unknown, kind: ReturnKind): boolean {

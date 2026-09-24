@@ -141,7 +141,8 @@ function isKnownZone(zone: string): boolean {
 }
 
 /** A trailing `Z` or numeric offset, before any bracketed annotation. */
-const HAS_OFFSET = /(?:Z|[+-]\d{2}:?\d{2}(?::\d{2}(?:\.\d+)?)?)(?:\[[^\]]*\])*$/i;
+const HAS_OFFSET =
+  /(?:Z|[+-]\d{2}:?\d{2}(?::\d{2}(?:\.\d+)?)?)(?:\[[^\]]*\])*$/i;
 
 /**
  * A wall time with no offset (`2024-06-15T23:00:00`), read in `zone`.
@@ -187,7 +188,10 @@ function snapMinutesFor(spanMs: number): number {
   return spanMs <= 7 * DAY_MS ? 15 : 60;
 }
 
-export function createLedgerCanvas(startMs: number, endMs: number): LedgerCanvas {
+export function createLedgerCanvas(
+  startMs: number,
+  endMs: number,
+): LedgerCanvas {
   const spanMs = Math.max(1, endMs - startMs);
   const snapMinutes = snapMinutesFor(spanMs);
   const snapMs = snapMinutes * MINUTE_MS;
@@ -205,7 +209,8 @@ export function createLedgerCanvas(startMs: number, endMs: number): LedgerCanvas
       const raw = startMs + (pct / 100) * spanMs;
       return clamp(Math.round(raw / snapMs) * snapMs);
     },
-    step: (ms, steps) => clamp(Math.round(ms / snapMs) * snapMs + steps * snapMs),
+    step: (ms, steps) =>
+      clamp(Math.round(ms / snapMs) * snapMs + steps * snapMs),
   };
 }
 
@@ -324,14 +329,26 @@ export function dayCells(
 // ---------------------------------------------------------------------------
 
 const MONTHS = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ];
 
 /** `15 Jun 23:00` in `zone`. */
 export function formatLocal(ms: number, zone: string): string {
   try {
-    const z = Temporal.Instant.fromEpochMilliseconds(Math.round(ms)).toZonedDateTimeISO(zone);
+    const z = Temporal.Instant.fromEpochMilliseconds(
+      Math.round(ms),
+    ).toZonedDateTimeISO(zone);
     const hh = String(z.hour).padStart(2, "0");
     const mm = String(z.minute).padStart(2, "0");
     return `${z.day} ${MONTHS[z.month - 1]} ${hh}:${mm}`;

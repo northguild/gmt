@@ -128,6 +128,17 @@ This is money, and the current spec gets the model wrong.
 - Day boundaries are counted in terminal-local time, so the zone-aware bucketing
   problem decides the charge.
 
+- **Free days and charged days are counted on different bases.** The dominant published shape
+  is free time in working days, then every calendar day charged ("FREE DAYS ARE IN WORKING DAYS
+  ... BILLABLE IN CALENDAR DAYS", CMA CGM US; "Rate per Calendar day", Hapag-Lloyd US); California
+  forbids charges while the gate is closed or on a holiday (Cal. Bus. & Prof. Code § 22928).
+- **Each clock runs on both legs, and many carriers merge them.** Export demurrage runs from full
+  gate-in to loaded on board and export detention from empty release to full gate-in; Maersk,
+  CMA CGM and MSC sell a combined clock (discharge to empty return, or empty release to loaded).
+- **No world standard counts the days.** DCSA defines the charges and the free-time unit; the only
+  invoice regulation is the US one (46 CFR 541). Full record:
+  [research/int-12-demurrage-conventions.md](research/int-12-demurrage-conventions.md).
+
 ([ACL](https://www.aclcargo.com/free-time-demurrage/),
 [Navo24](https://navo24.com/blog/msc-demurrage-detention-free-time/)) → TRAN-8, INT-12
 

@@ -82,8 +82,10 @@ function stubTrackGeometry(root: HTMLElement) {
   }
 }
 
-const q = <T extends HTMLElement = HTMLElement>(root: HTMLElement, role: string) =>
-  root.querySelector(`[data-role="${role}"]`) as T;
+const q = <T extends HTMLElement = HTMLElement>(
+  root: HTMLElement,
+  role: string,
+) => root.querySelector(`[data-role="${role}"]`) as T;
 
 async function mount(args = {}, templateArgs = args) {
   const root = document.createElement("div");
@@ -250,7 +252,9 @@ describe("mountDwellLedger", () => {
     const { root } = await mount();
     type(root, "entry", "2024-06-16T02:00:00-04:00[America/New_York]");
     expect(q(root, "dwell-output").textContent).toBe("NO SIGNAL");
-    expect(q(root, "reason-aside").textContent).toContain("exit is before the entry");
+    expect(q(root, "reason-aside").textContent).toContain(
+      "exit is before the entry",
+    );
     expect(q(root, "bar").classList).toContain("gmt-dwell-bar--invalid");
     expect(touchedDates(root, "cells-dwell")).toEqual([]);
   });
@@ -259,11 +263,19 @@ describe("mountDwellLedger", () => {
     const { root } = await mount();
     const handle = q(root, "handle-exit");
     const before = q<HTMLInputElement>(root, "exit").value;
-    handle.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerId: 1 }));
-    root.dispatchEvent(
-      new PointerEvent("pointermove", { bubbles: true, pointerId: 1, clientX: 900 }),
+    handle.dispatchEvent(
+      new PointerEvent("pointerdown", { bubbles: true, pointerId: 1 }),
     );
-    root.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, pointerId: 1 }));
+    root.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        pointerId: 1,
+        clientX: 900,
+      }),
+    );
+    root.dispatchEvent(
+      new PointerEvent("pointerup", { bubbles: true, pointerId: 1 }),
+    );
     const after = q<HTMLInputElement>(root, "exit").value;
     expect(after).not.toBe(before);
     expect(after).toMatch(/\[America\/New_York\]$/);
@@ -272,9 +284,15 @@ describe("mountDwellLedger", () => {
   it("keeps the entry from passing the exit", async () => {
     const { root } = await mount();
     const handle = q(root, "handle-entry");
-    handle.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerId: 1 }));
+    handle.dispatchEvent(
+      new PointerEvent("pointerdown", { bubbles: true, pointerId: 1 }),
+    );
     root.dispatchEvent(
-      new PointerEvent("pointermove", { bubbles: true, pointerId: 1, clientX: 1000 }),
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        pointerId: 1,
+        clientX: 1000,
+      }),
     );
     expect(q<HTMLInputElement>(root, "entry").value).toBe(
       q<HTMLInputElement>(root, "exit").value,
@@ -284,7 +302,9 @@ describe("mountDwellLedger", () => {
   it("ignores a pointermove no handle started", async () => {
     const { root } = await mount();
     const before = q<HTMLInputElement>(root, "exit").value;
-    root.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, clientX: 900 }));
+    root.dispatchEvent(
+      new PointerEvent("pointermove", { bubbles: true, clientX: 900 }),
+    );
     expect(q<HTMLInputElement>(root, "exit").value).toBe(before);
   });
 
@@ -292,7 +312,9 @@ describe("mountDwellLedger", () => {
     const { root } = await mount();
     const handle = q(root, "handle-exit");
     const key = (k: string, shiftKey = false) =>
-      handle.dispatchEvent(new KeyboardEvent("keydown", { key: k, shiftKey, bubbles: true }));
+      handle.dispatchEvent(
+        new KeyboardEvent("keydown", { key: k, shiftKey, bubbles: true }),
+      );
     key("ArrowRight");
     expect(q<HTMLInputElement>(root, "exit").value).toBe(
       "2024-06-16T01:15:00-04:00[America/New_York]",
@@ -328,9 +350,13 @@ describe("mountDwellLedger", () => {
     expect(q<HTMLInputElement>(root, "entry").value).toBe(
       "2024-06-15T23:00:00-04:00[America/New_York]",
     );
-    expect(q(root, "dwell-output").textContent).toBe(EXPECTED["two-hours-two-days"]![0]);
+    expect(q(root, "dwell-output").textContent).toBe(
+      EXPECTED["two-hours-two-days"]![0],
+    );
     // Resolved, it is exactly the first preset, and the picker says so.
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("two-hours-two-days");
+    expect(q<HTMLSelectElement>(root, "preset").value).toBe(
+      "two-hours-two-days",
+    );
   });
 
   it("round-trips its state as a permalink, omitting empty zones", async () => {
@@ -346,7 +372,10 @@ describe("mountDwellLedger", () => {
       exit: "2024-06-16T01:00:00Z",
     });
     // And a link with no zone key reproduces the no-zone state.
-    const again = await mount({ entry: "2024-06-15T22:30:00Z", exit: "2024-06-16T01:00:00Z" });
+    const again = await mount({
+      entry: "2024-06-15T22:30:00Z",
+      exit: "2024-06-16T01:00:00Z",
+    });
     expect(q(again.root, "dwell-output").textContent).toBe("NO SIGNAL");
   });
 

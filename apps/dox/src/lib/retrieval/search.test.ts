@@ -1,6 +1,6 @@
 /// <reference types="vitest/globals" />
 import { buildRetrievalCorpus } from "./corpus";
-import { searchChunks } from "./search";
+import { indexFor, searchChunks } from "./search";
 import type { RetrievalChunk } from "./types";
 
 /* DOX-C1 (#137) DoD: "Retrieval returns sensible chunks for a spread of real
@@ -161,5 +161,22 @@ describe("searchChunks — the refusal path's honesty", () => {
     for (const question of OFF_DOMAIN) {
       expect(searchChunks(chunks, question).length).toBeLessThan(5);
     }
+  });
+});
+
+describe("searchChunks — one index per corpus", () => {
+  it("reuses the index for the same chunk array and builds a fresh one for a new array", () => {
+    const same = indexFor(chunks);
+    expect(indexFor(chunks)).toBe(same);
+    // A copy is a different corpus as far as the memo is concerned — a test
+    // or a corpus refresh must never see a stale index.
+    expect(indexFor([...chunks])).not.toBe(same);
+  });
+
+  it("returns the same results warm as cold", () => {
+    const cold = searchChunks([...chunks], "what happens during a DST gap");
+    searchChunks(chunks, "unrelated warm-up query");
+    const warm = searchChunks(chunks, "what happens during a DST gap");
+    expect(warm.map((c) => c.id)).toEqual(cold.map((c) => c.id));
   });
 });

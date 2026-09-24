@@ -85,6 +85,12 @@
       "instant/convert": [
         "./dist/instant/convert/index.d.ts"
       ],
+      "intermodal": [
+        "./dist/intermodal/index.d.ts"
+      ],
+      "intermodal/calculate": [
+        "./dist/intermodal/calculate/index.d.ts"
+      ],
       "interval": [
         "./dist/interval/index.d.ts"
       ],
@@ -323,6 +329,14 @@
     "./instant/convert": {
       "types": "./dist/instant/convert/index.d.ts",
       "default": "./dist/instant/convert/index.js"
+    },
+    "./intermodal": {
+      "types": "./dist/intermodal/index.d.ts",
+      "default": "./dist/intermodal/index.js"
+    },
+    "./intermodal/calculate": {
+      "types": "./dist/intermodal/calculate/index.d.ts",
+      "default": "./dist/intermodal/calculate/index.js"
     },
     "./interval": {
       "types": "./dist/interval/index.d.ts",

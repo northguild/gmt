@@ -46,6 +46,10 @@ const PAGES = [
     path: "tools/dwell-ledger",
     widget: "gmt-dwell gmt-widget",
   },
+  {
+    path: "tools/free-time-ledger",
+    widget: "gmt-freetime gmt-widget",
+  },
 ];
 
 const slug = (p) => p.replaceAll("/", "_") + ".html";

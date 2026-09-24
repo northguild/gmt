@@ -2,7 +2,10 @@
 
 import { describe, expect, it } from "vitest";
 import { GMT_MODULES } from "../lib/gmt-modules";
-import { classifyPlaygroundResult, evaluateArg } from "../lib/playground-client";
+import {
+  classifyPlaygroundResult,
+  evaluateArg,
+} from "../lib/playground-client";
 import {
   buildCall,
   type CallField,

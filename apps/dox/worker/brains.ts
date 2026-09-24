@@ -43,6 +43,7 @@ import {
   type Brain,
   type BrainProvider,
 } from "../src/lib/chat-constants";
+import type { BrainAttemptTrace } from "../src/lib/chat-types";
 import type { BrainState, UsageSnapshot } from "./usage";
 
 export interface BrainChoice {
@@ -133,6 +134,26 @@ export function brainStateFromError(
 }
 
 /**
+ * The model is overloaded for this request, not out for the day: HTTP 503
+ * ("This model is currently experiencing high demand", observed from Gemini on
+ * 2026-09-24) or 529 ("overloaded").
+ *
+ * Separate from `brainStateFromError` because the answer is different on both
+ * sides. It is worth the next brain *now* — the overload belongs to one model,
+ * and with `maxRetries: 0` nothing else would move the request on — but it says
+ * nothing about tomorrow, so it never reaches the ledger. A 500 is not in this
+ * set: an error in the request itself would fail on every brain, and walking
+ * them all would spend the day's budget on one broken question.
+ */
+export function isTransientOverload(rawError: unknown): boolean {
+  const error = unwrapModelError(rawError);
+  return (
+    APICallError.isInstance(error) &&
+    (error.statusCode === 503 || error.statusCode === 529)
+  );
+}
+
+/**
  * Workers AI's daily-allocation failure, in both shapes it arrives in: code
  * 3036 (documented; the provider maps it to 429) and code 4006 (undocumented,
  * unmapped, and widely reported on Cloudflare's community forum as "you have
@@ -194,6 +215,10 @@ function unwrapModelError(error: unknown): unknown {
 export interface BrainAttempt {
   brain: Brain;
   result: ReturnType<typeof streamText>;
+  /** Every brain tried, in order, the answering one last. Feeds the
+   * retrieval trace and the `dox-timing` log line, so a slow answer can be
+   * told apart from a slow walk past spent brains. */
+  attempts: BrainAttemptTrace[];
 }
 
 /**
@@ -252,6 +277,8 @@ export async function openFirstWorkingBrain({
   messages,
   tools,
   onBrainOut,
+  onAttempt,
+  onMovedOn,
 }: {
   candidates: readonly Brain[];
   resolveModel: (brainId: string) => LanguageModel;
@@ -262,8 +289,18 @@ export async function openFirstWorkingBrain({
    *  anything has been written to the reader. */
   tools?: ToolSet;
   onBrainOut: (brainId: string, state: Exclude<BrainState, "ok">) => void;
+  /** Before each brain is asked. For the reader's progress line only. */
+  onAttempt?: (brain: Brain) => void;
+  /** After a brain refused and the walk moves on. For progress only; the
+   *  ledger hears about `spent`/`unavailable` through `onBrainOut`. */
+  onMovedOn?: (brain: Brain, outcome: "busy" | "spent" | "unavailable") => void;
 }): Promise<BrainAttempt | undefined> {
   const exhaustedProviders = new Set<BrainProvider>();
+  const attempts: BrainAttemptTrace[] = [];
+  /* The last overload seen. If every brain was either out or busy, this is
+     thrown rather than returning "spent": a reader who hit a busy minute has
+     not used up anyone's allowance, and should be told to try again. */
+  let lastOverload: unknown;
 
   for (const brain of candidates) {
     // One Workers AI brain reporting an exhausted allocation means all of them
@@ -279,6 +316,8 @@ export async function openFirstWorkingBrain({
     // is unrecoverable from the rejection alone. `onError` is where the real
     // one surfaces, so it is captured here and classified after the await.
     let providerError: unknown;
+    const started = performance.now();
+    onAttempt?.(brain);
 
     const result = streamText({
       model: resolveModel(brain.id),
@@ -288,6 +327,17 @@ export async function openFirstWorkingBrain({
       // Workers AI defaults `max_tokens` to 256, which cuts a Dox answer off
       // mid-sentence; its brains carry an explicit cap. Unset for Gemini.
       maxOutputTokens: brain.maxOutputTokens,
+      // Gemini 3 thinks before it answers; `thinkingLevel` bounds how long.
+      // Set per brain in `chat-constants.ts`, so a brain that needs more
+      // depth to keep calling its widget can have it on its own.
+      providerOptions:
+        brain.provider === "google" && brain.thinkingLevel
+          ? {
+              google: {
+                thinkingConfig: { thinkingLevel: brain.thinkingLevel },
+              },
+            }
+          : undefined,
       // One structured line per answered request, so real token counts — and
       // from them, real Neuron cost — can be read from `wrangler dev` or
       // Workers Logs instead of estimated. `scripts/probe-brains.ts` parses it.
@@ -309,12 +359,14 @@ export async function openFirstWorkingBrain({
       onError: ({ error }) => {
         providerError = error;
       },
-      // The SDK retries a 429 three times with exponential backoff by default.
-      // That made sense with a single model, where waiting was the only option.
-      // With failover it is harmful: a *daily* quota will not refill for hours,
-      // so the backoff only delays moving to a brain that would have answered
-      // immediately. One retry is kept for a genuinely transient blip.
-      maxRetries: 1,
+      // The SDK retries a 429 three times with exponential backoff by default,
+      // starting at 2 s. That made sense with a single model, where waiting
+      // was the only option. With failover it is harmful: a *daily* quota will
+      // not refill for hours, so every retry only delays moving to a brain
+      // that would have answered at once — and even one retry put a 2 s pause
+      // in front of every failover. The next brain *is* the retry for a
+      // transient blip, so none are kept here.
+      maxRetries: 0,
     });
 
     try {
@@ -322,23 +374,46 @@ export async function openFirstWorkingBrain({
       // rejects if that call failed — the seam that lets a 429 be caught before
       // anything has been written to the reader.
       await result.warnings;
-      return { brain, result };
+      attempts.push({
+        brainId: brain.id,
+        ms: Math.round(performance.now() - started),
+        outcome: "answered",
+      });
+      return { brain, result, attempts };
     } catch (error) {
       // Prefer the provider's error over the SDK's contentless wrapper.
       const underlying = providerError ?? error;
       const state = brainStateFromError(underlying);
+      if (!state && isTransientOverload(underlying)) {
+        attempts.push({
+          brainId: brain.id,
+          ms: Math.round(performance.now() - started),
+          outcome: "busy",
+        });
+        console.error(`brain ${brain.id} is busy; trying the next`, underlying);
+        lastOverload = underlying;
+        onMovedOn?.(brain, "busy");
+        continue;
+      }
       if (!state) throw underlying;
 
+      attempts.push({
+        brainId: brain.id,
+        ms: Math.round(performance.now() - started),
+        outcome: state,
+      });
       console.error(
         `brain ${brain.id} is ${state}; trying the next`,
         underlying,
       );
       onBrainOut(brain.id, state);
+      onMovedOn?.(brain, state);
       if (isWorkersAIAllocationExhausted(underlying)) {
         exhaustedProviders.add(brain.provider);
       }
     }
   }
 
+  if (lastOverload !== undefined) throw lastOverload;
   return undefined;
 }

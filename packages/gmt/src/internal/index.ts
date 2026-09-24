@@ -56,6 +56,13 @@ export { timeCycleFieldBounds } from "./timeCycleFieldBounds";
 export { durationUntilString } from "./durationUntilString";
 export { formatDateInCalendar } from "./formatDateInCalendar";
 export {
+  bandsByTier,
+  parseFreeDays,
+  parseFreeTimeTerms,
+  parseTiers,
+  walkFreeTime,
+} from "./freeTimeLedger";
+export {
   halfOpenAbuts,
   halfOpenContainsPoint,
   halfOpenContainsSpan,

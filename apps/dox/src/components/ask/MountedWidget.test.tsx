@@ -13,7 +13,14 @@
  */
 /// <reference types="vitest/globals" />
 import { StrictMode } from "react";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { WidgetLoadError } from "~/lib/widget-mount";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { MountedWidget } from "./MountedWidget";
 import type { AnyWidgetEntry } from "./widget-registry";
@@ -27,9 +34,9 @@ function spyEntry(overrides: Partial<AnyWidgetEntry> = {}) {
     title: "Test Widget",
     kind: "globe",
     parse: (input) => ({ ok: true, args: input }),
-    renderTemplate: (idPrefix) =>
-      `<div data-role="stage" id="${idPrefix}-stage"></div>`,
     load: async () => ({
+      renderTemplate: (idPrefix) =>
+        `<div data-role="stage" id="${idPrefix}-stage"></div>`,
       mount: async (root, _args, signal) => {
         log.push("mount");
         // A real mount awaits a dynamic import; this is the window in which
@@ -101,8 +108,8 @@ describe("MountedWidget", () => {
       title: "Slow Widget",
       kind: "globe",
       parse: (input) => ({ ok: true, args: input }),
-      renderTemplate: () => "<div></div>",
       load: async () => ({
+        renderTemplate: () => "<div></div>",
         mount: async (_root, _args, signal) => {
           log.push("mount:entered");
           await gate;
@@ -146,8 +153,8 @@ describe("MountedWidget", () => {
       title: "Careless Widget",
       kind: "globe",
       parse: (input) => ({ ok: true, args: input }),
-      renderTemplate: () => "<div></div>",
       load: async () => ({
+        renderTemplate: () => "<div></div>",
         mount: async () => {
           log.push("entered");
           await gate;
@@ -209,6 +216,7 @@ describe("MountedWidget", () => {
   it("survives a mount that throws, rather than taking the panel down", async () => {
     const { entry } = spyEntry({
       load: async () => ({
+        renderTemplate: () => "<div></div>",
         mount: async () => {
           throw new Error("boom");
         },
@@ -247,5 +255,125 @@ describe("MountedWidget", () => {
       await Promise.resolve();
     });
     expect(log.filter((l) => l === "wired")).toHaveLength(1);
+  });
+
+  it("marks the host busy until the mount has wired it", async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const { entry } = spyEntry({
+      load: async () => {
+        await gate;
+        return spyEntry().entry.load();
+      },
+    });
+    render(<MountedWidget entry={entry} args={{}} idPrefix="t" />);
+
+    const host = document.querySelector(".gmt-hive-widget-host");
+    expect(host?.getAttribute("aria-busy")).toBe("true");
+
+    await act(async () => {
+      release();
+      await gate;
+    });
+    await waitFor(() =>
+      expect(document.querySelector("[data-mounted]")).not.toBeNull(),
+    );
+    expect(host?.hasAttribute("aria-busy")).toBe(false);
+  });
+
+  it("offers a retry when the library failed to load, and remounts on it", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    let failures = 1;
+    const { entry: working, log } = spyEntry();
+    const { entry } = spyEntry({
+      load: async () => {
+        if (failures > 0) {
+          failures -= 1;
+          return {
+            renderTemplate: () => "<div></div>",
+            mount: async () => {
+              throw new WidgetLoadError(new Error("offline"));
+            },
+          };
+        }
+        return working.load();
+      },
+    });
+    render(<MountedWidget entry={entry} args={{}} idPrefix="t" />);
+
+    const retry = await screen.findByRole("button", { name: "Try again" });
+    expect(screen.getByRole("status").textContent).toContain("didn't load");
+
+    fireEvent.click(retry);
+    await waitFor(() => expect(log).toContain("wired"));
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    vi.restoreAllMocks();
+  });
+
+  it("treats a failed import of the mount module itself as a load failure", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { entry } = spyEntry({
+      load: async () => {
+        throw new TypeError(
+          "Failed to fetch dynamically imported module: x.js",
+        );
+      },
+    });
+    render(<MountedWidget entry={entry} args={{}} idPrefix="t" />);
+    expect(
+      await screen.findByRole("button", { name: "Try again" }),
+    ).not.toBeNull();
+    vi.restoreAllMocks();
+  });
+
+  it("offers no retry for a nonsense argument or a mount that throws on its input", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { entry } = spyEntry({
+      load: async () => ({
+        renderTemplate: () => "<div></div>",
+        mount: async () => {
+          throw new Error("bad input");
+        },
+      }),
+    });
+    render(<MountedWidget entry={entry} args={{}} idPrefix="t" />);
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toContain(
+        "couldn't be shown",
+      ),
+    );
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    vi.restoreAllMocks();
+  });
+
+  it("shows a loading placeholder while the widget's chunk loads, then the template", async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const { entry } = spyEntry();
+    const slow: AnyWidgetEntry = {
+      ...entry,
+      load: async () => {
+        await gate;
+        return entry.load();
+      },
+    };
+    render(<MountedWidget entry={slow} args={{}} idPrefix="t" />);
+
+    expect(screen.getByRole("status").textContent).toBe(
+      "Loading Test Widget\u2026",
+    );
+    expect(document.querySelector('[data-role="stage"]')).toBeNull();
+
+    await act(async () => {
+      release();
+      await gate;
+    });
+    await waitFor(() =>
+      expect(document.getElementById("t-stage")).not.toBeNull(),
+    );
   });
 });

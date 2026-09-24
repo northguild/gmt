@@ -321,7 +321,10 @@ describe("classifyPlaygroundResult", () => {
 
   it("renders an allowed empty array as empty, not live", () => {
     expect(
-      classifyPlaygroundResult([], { returnType: "array", allowEmptyArray: true }),
+      classifyPlaygroundResult([], {
+        returnType: "array",
+        allowEmptyArray: true,
+      }),
     ).toBe("empty");
     expect(classifyPlaygroundResult([], { returnType: "array" })).toBe(
       "sentinel",

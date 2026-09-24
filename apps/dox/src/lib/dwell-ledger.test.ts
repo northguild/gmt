@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { dwellTime } from "@northguild/gmt/transport/calculate";
-import {
-  isValidInstant,
-} from "@northguild/gmt/precision/validate";
+import { isValidInstant } from "@northguild/gmt/precision/validate";
 import {
   isValidTimeZone,
   isValidZonedDateTime,
@@ -42,7 +40,9 @@ describe("toEpochMs", () => {
 
 describe("gridZone", () => {
   it("prefers the chosen zone, then the entry's bracket, else none", () => {
-    expect(gridZone("2024-06-15T22:30:00Z", "Europe/London")).toBe("Europe/London");
+    expect(gridZone("2024-06-15T22:30:00Z", "Europe/London")).toBe(
+      "Europe/London",
+    );
     expect(
       gridZone("2024-06-15T23:00:00-04:00[America/New_York]", NO_ZONE),
     ).toBe("America/New_York");
@@ -275,7 +275,11 @@ describe("explainNull", () => {
       ["2024-06-15T23:00:00", "2024-06-16T01:00:00Z", "UTC"],
     ];
     for (const [entry, exit, zone] of cases) {
-      const result = dwellTime(entry, exit, zone === NO_ZONE ? undefined : zone);
+      const result = dwellTime(
+        entry,
+        exit,
+        zone === NO_ZONE ? undefined : zone,
+      );
       const reason = explainNull(entry, exit, zone, validators);
       expect(reason === null, `${entry} → ${exit} in "${zone}"`).toBe(
         result !== null,
@@ -297,7 +301,9 @@ describe("presets", () => {
 
   it("are recognised from their inputs", () => {
     const p = DWELL_PRESETS[3]!;
-    expect(matchPreset(p.entry, p.exit, p.zone, p.compareZone ?? "")).toBe(p.id);
+    expect(matchPreset(p.entry, p.exit, p.zone, p.compareZone ?? "")).toBe(
+      p.id,
+    );
     expect(matchPreset(p.entry, p.exit, p.zone, "")).toBe(CUSTOM_PRESET_ID);
   });
 });

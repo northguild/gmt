@@ -57,6 +57,11 @@
   line-height: 1.5;
 }
 
+/* Per-view prose after the chart: spaced like the paragraph that follows a chart container. */
+.gmt-chart-after {
+  margin-top: var(--gmt-space-6);
+}
+
 /* ---- Embedded SVG chart ---- */
 
 .gmt-chart {

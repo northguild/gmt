@@ -27,10 +27,45 @@ export interface GmtStats {
   /** Exported regex patterns. */
   patterns: number;
   /** Functions per namespace, largest first. */
-  byNamespace: readonly { namespace: string; count: number }[];
+  byNamespace: readonly NamespaceCount[];
+  /** The namespaces that are industry layers built on the core, in `byNamespace` order. */
+  industries: readonly string[];
+}
+
+export interface NamespaceCount {
+  namespace: string;
+  count: number;
 }
 
 export const gmtStats: GmtStats = data;
+
+/** The core primitives: every namespace that is not an industry layer, largest first. */
+export const coreNamespaces: readonly NamespaceCount[] =
+  gmtStats.byNamespace.filter(
+    (row) => !gmtStats.industries.includes(row.namespace),
+  );
+
+/** The industry layers, largest first. */
+export const industryNamespaces: readonly NamespaceCount[] =
+  gmtStats.byNamespace.filter((row) =>
+    gmtStats.industries.includes(row.namespace),
+  );
+
+const sumCounts = (rows: readonly NamespaceCount[]): number =>
+  rows.reduce((sum, row) => sum + row.count, 0);
+
+export const coreFunctions = sumCounts(coreNamespaces);
+export const industryFunctions = sumCounts(industryNamespaces);
+
+const listFormat = new Intl.ListFormat("en-US", {
+  style: "long",
+  type: "conjunction",
+});
+
+/** Namespaces as prose: "`plain`, `zoned`, and `utc`". */
+export function formatNamespaceList(rows: readonly NamespaceCount[]): string {
+  return listFormat.format(rows.map((row) => `\`${row.namespace}\``));
+}
 
 const countFormat = new Intl.NumberFormat("en-US");
 

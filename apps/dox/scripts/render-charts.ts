@@ -40,6 +40,11 @@ export function renderNamespaceChart(): string {
   return renderBarChart("namespaces");
 }
 
+/** The industry layers — the API-surface toggle's other view. */
+export function renderIndustryChart(): string {
+  return renderBarChart("industries");
+}
+
 // Family key + base tile opacity. TanStack's static renderer doesn't evaluate
 // mark `states`, so every cell rect comes out with the same flat fill. We give
 // the matrix its heatmap read by post-processing the SVG: each tile gets its own
@@ -153,4 +158,5 @@ export function renderLocaleMatrixChart(): string {
 export const testExecutionSvg = renderTestExecutionChart();
 export const suiteTestSvg = renderSuiteTestChart();
 export const namespaceDistributionSvg = renderNamespaceChart();
+export const industryDistributionSvg = renderIndustryChart();
 export const localeMatrixSvg = renderLocaleMatrixChart();

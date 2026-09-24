@@ -30,6 +30,7 @@ const { heading, caption, embedded = false } = Astro.props;
 
 <script>
   import { mountGlobe } from "../lib/globe-mount";
+  import { showUnavailable } from "../lib/widget-mount";
 
   /* Deferred until the stage is near the viewport: the mount pulls d3-geo,
      world-atlas and the Temporal polyfill, and this component sits on the
@@ -43,7 +44,9 @@ const { heading, caption, embedded = false } = Astro.props;
     const start = () => {
       if (started) return;
       started = true;
-      void mountGlobe(root, {}, new AbortController().signal);
+      mountGlobe(root, {}, new AbortController().signal).catch((error) =>
+        showUnavailable(root, error),
+      );
     };
 
     if ("IntersectionObserver" in window) {

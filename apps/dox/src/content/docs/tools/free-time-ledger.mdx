@@ -1,0 +1,35 @@
+---
+title: Free Time Ledger
+description: Drag a container's clock start and gate-out across a terminal's real local-day grid, set the tariff's terms, and watch freeTimeExpiry and chargeableDays lay out the free days, the expiry and the dates charged.
+---
+
+import FreeTimeLedger from "../../../components/FreeTimeLedger.astro";
+
+Free time is counted in the terminal's local days, and none of its terms is a
+fact about the port. Whether the day of discharge is free day one, whether
+weekends count, how the days after free time are charged, and how many days are free are set
+by the tariff, and the two start-day conventions alone differ by a full day of charges.
+
+The track below is one zone's local days, each cell as wide as that day really
+is. Free days are green, chargeable days amber, and on a working-day tariff the
+closed days are hatched and not counted. Free days and charged days each have their own basis: outside the US both are mostly calendar days, and where free time is in working days (the usual US shape) the days after it are mostly charged as calendar days. The bar is the dwell, half-open at the
+gate-out: leaving exactly at the expiry line charges nothing. The outputs are
+the real [`freeTimeExpiry`](/reference/intermodal/calculate/freeTimeExpiry/) and
+[`chargeableDays`](/reference/intermodal/calculate/chargeableDays/) calls for
+what is on screen, including the charged dates.
+
+<FreeTimeLedger />
+
+**Worth trying:** [the same Friday discharge read as
+`nextDay`](/tools/free-time-ledger/?w=freetime&wa=%7B%22clockStart%22%3A%222024-06-14T19%3A00%3A00Z%22%2C%22clockEnd%22%3A%222024-06-17T04%3A00%3A01Z%22%2C%22freeDays%22%3A%223%22%2C%22firstDay%22%3A%22nextDay%22%2C%22basis%22%3A%22calendar%22%2C%22chargeBasis%22%3A%22calendar%22%2C%22zone%22%3A%22America%2FNew_York%22%7D).
+The bar does not move, but the free window slides a day and the Monday gate-out
+is no longer charged. Then [gate out exactly at the
+expiry](/tools/free-time-ledger/?w=freetime&wa=%7B%22clockStart%22%3A%222024-06-14T19%3A00%3A00Z%22%2C%22clockEnd%22%3A%222024-06-17T04%3A00%3A00Z%22%2C%22freeDays%22%3A%223%22%2C%22firstDay%22%3A%22eventDay%22%2C%22basis%22%3A%22calendar%22%2C%22chargeBasis%22%3A%22calendar%22%2C%22zone%22%3A%22America%2FNew_York%22%7D)
+and step the end handle one notch right: the dwell is half-open, so that
+instant is free and the next is not.
+
+Reference: [`freeTimeExpiry`](/reference/intermodal/calculate/freeTimeExpiry/)
+lays out the free window; [`chargeableDays`](/reference/intermodal/calculate/chargeableDays/)
+counts and lists the charged days; both count from the same local-day boundary
+as [`dwellTime`](/reference/transport/calculate/dwellTime/). The rules are in
+[Intermodal: Free Time and Demurrage](/guides/industries/intermodal-free-time-and-demurrage/).

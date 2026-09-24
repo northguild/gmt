@@ -14,13 +14,19 @@
  * `.gmt-hive-body`. The rail collapses to nothing when empty, so a conversation
  * with no widget in it lays out exactly as it did before.
  */
-import { startTransition, useCallback, useEffect, useState } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { DoxChat } from "./DoxChat";
 import { HeaderClock } from "./HeaderClock";
 import { useBrains } from "./use-brains";
 import { ChatErrorBoundary } from "./ChatErrorBoundary";
 import { WidgetRail, type RailWidget } from "./WidgetRail";
-import { resolveWidget } from "./widget-registry";
+import { isSameWidget, resolveWidget } from "./widget-registry";
 
 /** Which Worker this page is talking to.
  *
@@ -50,6 +56,9 @@ export default function DoxPage() {
   /* The rail's state lives here rather than in `DoxChat`: it is this host's
      chrome, and the dock will lay widgets out its own way. One at a time. */
   const [railWidget, setRailWidget] = useState<RailWidget | null>(null);
+  /* Read by `showWidget`, which is stable (no deps) and so cannot see state. */
+  const railWidgetRef = useRef<RailWidget | null>(null);
+  railWidgetRef.current = railWidget;
 
   const showWidget = useCallback(
     (toolCallId: string, toolName: string, input: unknown) => {
@@ -58,6 +67,12 @@ export default function DoxPage() {
          receipt in the transcript has already said so. */
       const resolved = resolveWidget(toolName, input);
       if (!resolved.ok) return;
+      /* A starter pill seeds its widget on click; the model's own call for the
+         same widget and the same arguments must not remount it (and reset
+         anything the reader has already dragged). */
+      if (isSameWidget(railWidgetRef.current, resolved.entry, resolved.args)) {
+        return;
+      }
       /* In a transition so the rail's <ViewTransition> slides it in (and the
          previous widget out); a plain setState would swap it with no motion. */
       startTransition(() => {

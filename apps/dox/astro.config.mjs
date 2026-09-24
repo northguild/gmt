@@ -39,6 +39,22 @@ export default defineConfig({
       },
     },
     plugins: [tailwindcss()],
+    optimizeDeps: {
+      // Astro points Vite's startup dependency scan at .jsx/.tsx/.vue/.svelte/
+      // .html only. Every widget, chart and globe is an .astro <script> into a
+      // plain .ts module under src/lib, so their packages (@tanstack/charts,
+      // d3-geo, topojson-client, …) were discovered only when a page first
+      // imported them. Vite then re-bundled and force-reloaded every open page,
+      // and any dynamic import in flight — a widget's chunk — failed with
+      // "Failed to fetch dynamically imported module" (seen 2026-09-24). Scanning
+      // src/lib finds them at startup instead. Tests and the server-only
+      // retrieval modules are left out; they never reach a browser.
+      entries: [
+        "src/lib/**/*.ts",
+        "!src/lib/**/*.test.ts",
+        "!src/lib/retrieval/**",
+      ],
+    },
     build: {
       cssTarget: ["chrome107", "edge107", "firefox104", "safari16"],
       cssMinify: "esbuild",
@@ -189,7 +205,9 @@ export default defineConfig({
         {
           label: "Scenarios",
           collapsed: true,
-          items: [{ autogenerate: { directory: "scenarios", collapsed: true } }],
+          items: [
+            { autogenerate: { directory: "scenarios", collapsed: true } },
+          ],
         },
         {
           label: "Mistakes",
@@ -220,6 +238,7 @@ export default defineConfig({
         "./src/styles/gmt-dst-inspector.css", // DST Transition Inspector widget (DOX-B2b)
         "./src/styles/gmt-interval-visualizer.css", // Interval Algebra Visualizer widget (DOX-B2c)
         "./src/styles/gmt-dwell-ledger.css", // Dwell Ledger widget (TRAN-8)
+        "./src/styles/gmt-free-time-ledger.css", // Free Time Ledger widget (INT-12)
         "./src/styles/gmt-converter-bench.css", // Converter + format bench + regex tester widget
         "./src/styles/gmt-playground-form.css", // form-control playground (POC, chore/136)
         "./src/styles/gmt-charts.css", // chart theme variables + container styles

@@ -33,7 +33,7 @@ import {
   wireCopyButtons,
 } from "./widget-ui";
 import { normaliseZonedInput } from "./zoned-input";
-import { onceDestroy, type MountFn } from "./widget-mount";
+import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 
 const DEFAULT_VALUE = "2024-03-15T14:30:00.000-04:00[America/New_York]";
 const DEFAULT_SOURCE_ZONE = "America/New_York";
@@ -264,10 +264,9 @@ export const mountConverterBench: MountFn<ConverterArgs> = async (
   let modules: Awaited<ReturnType<typeof loadModules>>;
   try {
     modules = await loadModules();
-  } catch {
-    // The page stays readable without the library; the controls simply do
-    // nothing, exactly as before this was extracted.
-    return onceDestroy(() => {});
+  } catch (cause) {
+    // Loud, not inert: the host decides what to show (see `WidgetLoadError`).
+    throw new WidgetLoadError(cause);
   }
   if (signal.aborted) return onceDestroy(() => {});
 

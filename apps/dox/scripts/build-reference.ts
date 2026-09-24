@@ -1636,7 +1636,9 @@ interface SymbolEntry {
  * - Ordering inside a namespace: multi-symbol module groups first (alpha),
  *   then hoisted single-symbol items (alpha by symbol name).
  */
-export function buildSidebar(moduleSymbols: Map<string, SymbolEntry[]>): string {
+export function buildSidebar(
+  moduleSymbols: Map<string, SymbolEntry[]>,
+): string {
   const item = (sym: SymbolEntry) =>
     sym.unreleased
       ? `{ slug: "${sym.slug}", badge: ${UNRELEASED_BADGE} }`
@@ -1747,7 +1749,9 @@ function main() {
      still regenerates. */
   const baseline = releasedBaseline(repoRoot);
   if ("none" in baseline) {
-    console.log(`[reference] no published gmt tag (${baseline.none}); no Unreleased badges`);
+    console.log(
+      `[reference] no published gmt tag (${baseline.none}); no Unreleased badges`,
+    );
   }
   const hash = `${hashFiles(referenceInputs())}|${baselineKey(baseline)}`;
   // The MDX tree is gitignored, so a fresh checkout (or a manual `rm -rf`) can

@@ -26,11 +26,13 @@
 import {
   convertUtcToUnix,
   convertUtcToZoned,
+} from "@northguild/gmt/utc/convert";
+import {
   formatCalendarUtc,
   formatHttp,
   formatRelativeUtc,
   formatUtc,
-} from "@northguild/gmt";
+} from "@northguild/gmt/utc/format";
 
 export interface ResetFormatContext {
   /** IANA zone the reader chose. Ignored by presets that are not `zoned`. */

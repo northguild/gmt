@@ -19,7 +19,7 @@
  */
 import { codeFrameHtml } from "./code-frame";
 import { normaliseZonedInput } from "./zoned-input";
-import { onceDestroy, type MountFn } from "./widget-mount";
+import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import {
   FIXED_YEAR_SCALE,
   INTERVAL_OPERATIONS,
@@ -569,9 +569,9 @@ export const mountIntervalVisualizer: MountFn<IntervalArgs> = async (
   let modules: Awaited<ReturnType<typeof loadModules>>;
   try {
     modules = await loadModules();
-  } catch {
-    // The page stays readable without the library, exactly as before.
-    return onceDestroy(() => {});
+  } catch (cause) {
+    // Loud, not inert: the host decides what to show (see `WidgetLoadError`).
+    throw new WidgetLoadError(cause);
   }
   if (signal.aborted) return onceDestroy(() => {});
 

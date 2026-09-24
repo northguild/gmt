@@ -342,6 +342,36 @@
   letter-spacing: 0.08em;
 }
 
+.gmt-hive-widget-retry {
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+  padding: var(--gmt-space-1) var(--gmt-space-3);
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* The placeholder while the widget's chunk loads (MountedWidget). */
+.gmt-hive-widget-loading {
+  margin: 0;
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+}
+
+/* Painted but not yet wired (MountedWidget sets aria-busy until the mount has
+   loaded the library): dim it and keep clicks off controls that would do
+   nothing yet. */
+.gmt-hive-widget-host[aria-busy="true"] {
+  opacity: 0.6;
+  pointer-events: none;
+  transition: opacity var(--gmt-duration-fast) ease;
+}
+
 /* ---- Error boundary ----
  * The last line before a blank page. Sized to sit in either host: centred in
  * the transcript column, or filling the rail. Uses the same `--gmt-signal`

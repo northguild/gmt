@@ -1,0 +1,343 @@
+/*
+ * Free Time Ledger widget (INT-12).
+ *
+ * Card/section/controls/codeframe/output chrome lives in gmt-widget.css. This
+ * sheet holds what is specific to the ledger: a track divided into local-day
+ * cells of their real width, coloured the way the tariff reads each day, the
+ * dwell bar over them with its two handles, the expiry line, the axis and the
+ * legend.
+ *
+ * The cell colours are content, not housing: which days are free, closed or
+ * chargeable is the answer the widget exists to show, so every state carries a
+ * fill, a border or a hatch, a text marker and an aria-label, and never relies
+ * on colour alone.
+ */
+
+.gmt-freetime-timeline > *,
+.gmt-freetime-track > *,
+.gmt-freetime-cell,
+.gmt-freetime-cell > *,
+.gmt-freetime-handle,
+.gmt-freetime-legend > *,
+.gmt-freetime-working > * {
+  margin: 0;
+}
+
+.gmt-freetime-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-2);
+  padding: var(--gmt-space-2) 0;
+}
+
+.gmt-freetime-row {
+  display: flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+}
+
+.gmt-freetime-row-label {
+  flex: 0 0 auto;
+  width: 8.5rem;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.7rem;
+  color: var(--gmt-ice-dim);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.gmt-freetime-track {
+  position: relative;
+  flex: 1 1 auto;
+  height: 56px;
+  background: var(--gmt-fill-subtle);
+  border-radius: var(--gmt-radius-sm);
+  overflow: visible;
+}
+
+.gmt-freetime-cells {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: var(--gmt-radius-sm);
+}
+
+/* One local day. Its left edge is that zone's midnight. */
+.gmt-freetime-cell {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gmt-space-1);
+  padding: 3px 5px;
+  border-left: 1px solid var(--gmt-border);
+  font-family: var(--gmt-font-mono);
+  font-size: 0.68rem;
+  line-height: 1.2;
+  color: var(--gmt-ice);
+  white-space: nowrap;
+  overflow: hidden;
+  transition: background var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-freetime-cell--free {
+  background: color(from var(--gmt-spring) srgb r g b / 0.18);
+  box-shadow: inset 0 0 0 1px var(--gmt-spring);
+  font-weight: 700;
+}
+
+.gmt-freetime-cell--chargeable {
+  background: color(from var(--gmt-signal) srgb r g b / 0.22);
+  box-shadow: inset 0 0 0 1px var(--gmt-signal);
+  font-weight: 700;
+}
+
+.gmt-freetime-cell--chargeable::after {
+  content: "\20AC\FE0E";
+  content: "$";
+  position: absolute;
+  right: 5px;
+  bottom: 3px;
+  font-weight: 700;
+  color: var(--gmt-signal);
+}
+
+/* A weekend day or holiday on the working basis: visited, not counted. */
+.gmt-freetime-cell--closed {
+  background: repeating-linear-gradient(
+    135deg,
+    transparent 0 4px,
+    color(from var(--gmt-ice-dim) srgb r g b / 0.28) 4px 6px
+  );
+  color: var(--gmt-ice-dim);
+}
+
+/* The event day under nextDay: the dwell touched it, the tariff did not count it. */
+.gmt-freetime-cell--event {
+  background: color(from var(--gmt-ice-dim) srgb r g b / 0.12);
+  color: var(--gmt-ice-dim);
+  font-style: italic;
+}
+
+/* The last charged day of a tier band: the rate changes after this line. */
+.gmt-freetime-cell--tier-end {
+  border-right: 2px solid var(--gmt-signal);
+}
+
+.gmt-freetime-cell--narrow .gmt-freetime-cell-label,
+.gmt-freetime-cell--narrow .gmt-freetime-cell-hours {
+  display: none;
+}
+
+/* A 23- or 25-hour day: still one cell, flagged. */
+.gmt-freetime-cell-hours {
+  margin-left: auto;
+  padding: 0 3px;
+  border: 1px dashed var(--gmt-dst-gold);
+  border-radius: var(--gmt-radius-sm);
+  color: var(--gmt-dst-gold);
+  font-weight: 600;
+}
+
+/* The dwell, drawn under the day labels. */
+.gmt-freetime-bar {
+  position: absolute;
+  top: 30px;
+  bottom: 6px;
+  min-width: 2px;
+  background: color(from var(--gmt-cyan) srgb r g b / 0.3);
+  border: 1px solid var(--gmt-cyan);
+  border-radius: var(--gmt-radius-sm);
+  color: var(--gmt-cyan);
+}
+
+.gmt-freetime-bar--invalid {
+  background: var(--gmt-signal-fill);
+  border-color: var(--gmt-signal-border);
+  color: var(--gmt-signal);
+}
+
+/* The instant free time ends. */
+.gmt-freetime-expiry {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 0;
+  border-left: 2px dashed var(--gmt-signal);
+  pointer-events: none;
+}
+
+.gmt-freetime-expiry[hidden] {
+  display: none;
+}
+
+.gmt-freetime-expiry > span {
+  position: absolute;
+  top: -1.1rem;
+  left: 3px;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.62rem;
+  color: var(--gmt-signal);
+  white-space: nowrap;
+}
+
+.gmt-freetime-handle {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--gmt-void);
+  border: 2px solid currentColor;
+  cursor: grab;
+  touch-action: none;
+  transition:
+    box-shadow var(--gmt-duration-fast) var(--gmt-easing),
+    transform var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+/* A 44px target around a 14px dot. */
+.gmt-freetime-handle::before {
+  content: "";
+  position: absolute;
+  inset: -15px;
+}
+
+.gmt-freetime-handle:first-child {
+  left: 0;
+}
+
+.gmt-freetime-handle:last-child {
+  left: 100%;
+}
+
+.gmt-freetime-handle:active {
+  cursor: grabbing;
+  transform: translate(-50%, -50%) scale(1.15);
+}
+
+.gmt-freetime-handle:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--gmt-void),
+    0 0 0 4px currentColor;
+}
+
+.gmt-freetime-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-left: calc(8.5rem + var(--gmt-space-2));
+  font-family: var(--gmt-font-mono);
+  font-size: 0.65rem;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-freetime-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-1) var(--gmt-space-3);
+  margin-left: calc(8.5rem + var(--gmt-space-2));
+  padding: 0;
+  list-style: none;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.65rem;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-freetime-legend > li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-1);
+}
+
+.gmt-freetime-swatch {
+  display: inline-block;
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 2px;
+  border-left: 0;
+}
+
+.gmt-freetime-swatch.gmt-freetime-cell--chargeable::after {
+  content: none;
+}
+
+/* The working-day terms: shown only on the working basis. */
+.gmt-freetime-working[hidden] {
+  display: none;
+}
+
+.gmt-freetime-weekend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-1) var(--gmt-space-2);
+  padding: var(--gmt-space-1) var(--gmt-space-2);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+}
+
+.gmt-freetime-weekend > legend {
+  padding: 0 var(--gmt-space-1);
+  font-family: var(--gmt-font-mono);
+  font-size: 0.7rem;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-freetime-weekday {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.72rem;
+  color: var(--gmt-ice);
+}
+
+.gmt-freetime-holidays {
+  min-height: 2.6rem;
+  resize: vertical;
+}
+
+/* The library's numbers, in words. */
+.gmt-freetime-summary {
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--gmt-ice);
+}
+
+.gmt-freetime-summary:empty {
+  display: none;
+}
+
+/* Narrow: labels above their track, axis and legend full width. */
+@media (max-width: 40rem) {
+  .gmt-freetime-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--gmt-space-1);
+  }
+
+  .gmt-freetime-row-label {
+    width: auto;
+    text-align: left;
+  }
+
+  .gmt-freetime-track {
+    flex: 0 0 auto;
+  }
+
+  .gmt-freetime-axis,
+  .gmt-freetime-legend {
+    margin-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gmt-freetime-cell,
+  .gmt-freetime-handle {
+    transition: none;
+  }
+}

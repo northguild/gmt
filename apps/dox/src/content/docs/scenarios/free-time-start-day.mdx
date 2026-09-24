@@ -1,0 +1,46 @@
+---
+title: "Free Time: Which Day Is Day One"
+description: A container is discharged on Friday afternoon with three free days. Adding 72 hours says Monday afternoon; the tariff says Monday 00:00 or Tuesday 00:00, and nothing in between.
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="Free Time: Which Day Is Day One"
+  description="A container is discharged at a New York terminal at 15:00 on Friday 14 June 2024 with three free days. When does free time end?"
+  naiveCode={`// The naive approach: three days is 72 hours
+const discharged = new Date("2024-06-14T19:00:00Z");
+const expires = new Date(discharged.getTime() + 3 * 86400000);
+// 2024-06-17T19:00:00Z — Monday 15:00 in New York
+// The tariff counts days, not hours: free time ended at 00:00 on Monday, or on Tuesday`}
+  explanation={`Free days are local calendar days at the terminal, and whether the day of discharge is free day one is a term of the tariff. Under \`firstDay: "eventDay"\` Friday is day one, so Friday, Saturday and Sunday are free and free time ends at Monday 00:00 local. Under \`"nextDay"\` free time starts Saturday and ends a full day later. The two answers differ by exactly one day of charges, which is why \`freeTimeExpiry\` has no default for it and returns \`null\` when it is missing. \`expiresAt\` is the first instant of the day after the last free day, as a UTC instant: 04:00Z is midnight EDT.`}
+  gmtCode={`import { freeTimeExpiry } from "@northguild/gmt/intermodal";
+
+freeTimeExpiry("2024-06-14T19:00:00Z", 3, {
+  basis: "calendar",
+  timeZone: "America/New_York",
+  firstDay: "eventDay",
+});
+// { freeTimeStart: "2024-06-14", lastFreeDay: "2024-06-16", expiresAt: "2024-06-17T04:00:00Z" }
+
+freeTimeExpiry("2024-06-14T19:00:00Z", 3, {
+  basis: "calendar",
+  timeZone: "America/New_York",
+  firstDay: "nextDay",
+});
+// { freeTimeStart: "2024-06-15", lastFreeDay: "2024-06-17", expiresAt: "2024-06-18T04:00:00Z" }
+
+freeTimeExpiry("2024-06-14T19:00:00Z", 3, { basis: "calendar", timeZone: "America/New_York" });
+// null — firstDay has no default`}
+  fixedSpecId="freeTimeExpiry"
+/>
+
+Change `basis` to `"working"` above and add
+`calendar: { weekend: [6, 7], holidays: [], timeZone: "America/New_York" }`: the weekend no
+longer counts, the free days are Friday, Monday and Tuesday, and free time ends on Wednesday at
+`2024-06-19T04:00:00Z`. Move the discharge to `2024-06-15T03:00:00Z`, which is 23:00 on Friday in
+New York, and the whole window is unchanged: an hour of Friday is a free day. To see the window
+drawn on New York's day grid, open it in the [Free Time
+Ledger](/tools/free-time-ledger/?w=freetime&wa=%7B%22clockStart%22%3A%222024-06-14T19%3A00%3A00Z%22%2C%22clockEnd%22%3A%222024-06-17T04%3A00%3A01Z%22%2C%22freeDays%22%3A3%2C%22firstDay%22%3A%22eventDay%22%2C%22basis%22%3A%22calendar%22%2C%22chargeBasis%22%3A%22calendar%22%2C%22zone%22%3A%22America%2FNew_York%22%7D).
+The full rules are in [Intermodal: Free Time and
+Demurrage](/guides/industries/intermodal-free-time-and-demurrage/).

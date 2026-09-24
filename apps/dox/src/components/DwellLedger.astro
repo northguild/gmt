@@ -19,6 +19,7 @@ import { renderDwellLedgerTemplate } from "../lib/dwell-ledger-mount";
 
 <script>
   import { mountDwellLedger } from "../lib/dwell-ledger-mount";
+  import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
 
   if (typeof window !== "undefined") {
@@ -27,7 +28,9 @@ import { renderDwellLedgerTemplate } from "../lib/dwell-ledger-mount";
        first preset. */
     const seed = seedFromLocation("dwell");
     document.querySelectorAll<HTMLElement>(".gmt-dwell").forEach((el) => {
-      void mountDwellLedger(el, seed, new AbortController().signal);
+      mountDwellLedger(el, seed, new AbortController().signal).catch((error) =>
+        showUnavailable(el, error),
+      );
     });
   }
 </script>

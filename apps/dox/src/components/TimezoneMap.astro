@@ -31,6 +31,7 @@ const { title, caption } = Astro.props;
 <script>
   import { initTimezoneMap } from "../lib/timezone-map";
   import { TIMEZONES } from "../lib/timezones";
+  import { showUnavailable } from "../lib/widget-mount";
 
   const host = document.getElementById("tz-map-host");
   const clockPanel = document.getElementById("tz-clock-panel");
@@ -76,6 +77,6 @@ const { title, caption } = Astro.props;
           setSelected(null);
         });
       })
-      .catch(() => {});
+      .catch((error) => showUnavailable(host, error));
   }
 </script>

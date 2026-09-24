@@ -38,15 +38,17 @@ import { isValidTimeZone } from "../../zoned/validate/isValidTimeZone";
  * @example etaAtZone("2024-06-15T12:30:00Z", "Asia/Tokio") // ""
  */
 export function etaAtZone(arrivalUtc: string, targetZone: string): string {
-  if (!isValidInstant(arrivalUtc) || !isValidTimeZone(targetZone)) {
-    return "";
-  }
-
   try {
+    if (!isValidInstant(arrivalUtc) || !isValidTimeZone(targetZone)) {
+      return "";
+    }
+
     return Temporal.Instant.from(arrivalUtc)
       .toZonedDateTimeISO(targetZone)
       .toString();
   } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
     return "";
   }
 }

@@ -5,6 +5,7 @@ template: splash
 ---
 
 import {
+  industryDistributionSvg,
   localeMatrixSvg,
   namespaceDistributionSvg,
   suiteTestSvg,
@@ -13,7 +14,16 @@ import {
 import ChartContainer from "../../components/ChartContainer.astro";
 import GridSection from "../../components/GridSection.astro";
 import TimezoneMap from "../../components/TimezoneMap.astro";
-import { formatCount, gmtStats, runsPerTest } from "../../data/gmt-stats";
+import {
+  coreFunctions,
+  coreNamespaces,
+  formatCount,
+  formatNamespaceList,
+  gmtStats,
+  industryFunctions,
+  industryNamespaces,
+  runsPerTest,
+} from "../../data/gmt-stats";
 import {
   competitorExecutionRange,
   competitorPublicApiRange,
@@ -43,10 +53,11 @@ export const localeFamilyCounts = familyCounts(gmtStats.localeList);
 export const zoneOffsets = zoneOffsetRange(gmtStats.timezoneList);
 export const offsetWindowHours =
   (zoneOffsets.max.minutes - zoneOffsets.min.minutes) / 60;
-export const namespaceList = new Intl.ListFormat("en-US", {
-  style: "long",
-  type: "conjunction",
-}).format(gmtStats.byNamespace.map((row) => `\`${row.namespace}\``));
+export const coreNamespaceList = formatNamespaceList(coreNamespaces);
+export const industryNamespaceList = formatNamespaceList(industryNamespaces);
+export const plainAndZoned = coreNamespaces
+  .filter((row) => row.namespace === "plain" || row.namespace === "zoned")
+  .reduce((sum, row) => sum + row.count, 0);
 
 `@northguild/gmt` is not the latest entry in a crowded field — it is a
 fundamentally different bet about what a date/time library should guarantee.
@@ -94,18 +105,53 @@ alternative and about {formatCount(executionRatio(executionRange.min))}× the le
 
 <GridSection>
 
-## API surface by namespace
+## API surface
 
-GMT exposes {formatCount(gmtStats.functions)} public functions across {gmtStats.byNamespace.length} namespaces — {namespaceList} — plus
-{gmtStats.patterns} exported regex patterns in `regex`, each generated from the same
-TypeScript source and verified by the same test suite.
+GMT exposes {formatCount(gmtStats.functions)} public functions across {gmtStats.byNamespace.length} namespaces, plus {gmtStats.patterns}
+regex patterns in `regex`. {coreNamespaces.length} namespaces are the core — {coreNamespaceList} — and
+{industryNamespaces.length} are industry layers built on it: {industryNamespaceList}. All of it is generated
+from the same TypeScript source and verified by the same test suite.
 
 <ChartContainer
-  svg={namespaceDistributionSvg}
-  chart="namespaces"
-  title="Public functions by namespace"
-  caption={`${formatCount(gmtStats.functions)} functions total, plus ${gmtStats.patterns} regex patterns. Every namespace shares the same implementation contract: ISO 8601 strings in, typed values out, no Date object.`}
-/>
+  title="Public functions per namespace"
+  toggleLabel="API surface view"
+  views={[
+    {
+      id: "namespaces",
+      label: "By namespace",
+      chart: "namespaces",
+      svg: namespaceDistributionSvg,
+      caption: `${formatCount(coreFunctions)} core functions across ${coreNamespaces.length} namespaces, plus ${gmtStats.patterns} regex patterns. Every namespace shares one contract: ISO 8601 strings in, typed values out, no Date object.`,
+    },
+    {
+      id: "industries",
+      label: "By industry",
+      chart: "industries",
+      svg: industryDistributionSvg,
+      caption: `${industryFunctions} functions across ${industryNamespaces.length} industry layers. Each names one operation a trade performs, and returns the same ISO 8601 and RFC 9557 strings as the core.`,
+    },
+  ]}
+>
+
+<Fragment slot="after-namespaces">
+
+The core is weighted toward `plain` and `zoned`, which hold {formatCount(plainAndZoned)} of its {formatCount(coreFunctions)} functions.
+`plain` has one set of operations for each wall-clock shape — dates, times and date-times —
+and `zoned` carries them into a real time zone, where a day is not always 24 hours long.
+`utc` and `unix` apply the same rules to UTC strings and epoch numbers.
+
+</Fragment>
+
+<Fragment slot="after-industries">
+
+The industry layers are small on purpose. Each is built on the core, so every layer agrees on
+what a midnight, a day or an elapsed hour is. The facts come from the caller: GMT does not
+map a port to a time zone or look up a carrier's free days, so it holds no registry that can
+go stale. [Read the industry guides →](/guides/industries/)
+
+</Fragment>
+
+</ChartContainer>
 
 </GridSection>
 

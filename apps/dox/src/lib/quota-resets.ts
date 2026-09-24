@@ -7,7 +7,7 @@
  * instants, and this module picks between them — pure, so the rules are tested
  * without rendering anything.
  */
-import { convertUtcToUnix } from "@northguild/gmt";
+import { convertUtcToUnix } from "@northguild/gmt/utc/convert";
 import type { BrainProvider } from "./chat-constants";
 
 export interface QuotaReset {
