@@ -9,8 +9,11 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **`apps/dox` must not perturb `packages/gmt`.** `pnpm run validate` stays green,
   including the CI timezone matrix (10 zones × Node 22/24/26 — see README). No changesets unless a change also touches
   `packages/gmt`.
-- **Merging to `main` deploys.** `deploy-dox.yml` runs on every push to `main`, with no
-  path filter and no manual trigger.
+- **Merging to `main` deploys.** `deploy-dox.yml` runs when the Release workflow finishes
+  on `main`, which Release does on every push, so every merge still deploys, after its
+  release tag exists. It checks out the commit Release ran on, with every tag. A daily
+  schedule and `workflow_dispatch` also deploy. If Release ever stops running on pushes,
+  merges stop deploying.
 - **Generate, don't maintain.** `scripts/build-reference.ts` is the single extraction.
   Never re-derive pages, corpus, manifest or playground seeds by re-walking source or
   re-parsing MDX.
