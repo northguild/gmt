@@ -268,7 +268,8 @@ function renderUpstreamTracker(): string {
  * Render the components that carry prose, and unwrap the ones that don't.
  *
  * `ChartContainer` and `TimezoneMap` draw an SVG from data that is already stated in the
- * surrounding text, so their tags go and their captions stay. `UpstreamTracker` used to be dropped
+ * surrounding text, so their tags go and their captions stay. A `<Fragment slot>` is a chart
+ * view's own prose, so it unwraps to its text. `UpstreamTracker` used to be dropped
  * on the same reasoning, but the prose that summarised it moved into the component, so it now keeps
  * its tally sentence.
  *
@@ -281,7 +282,13 @@ export function renderMdxComponents(body: string): string {
   out = replaceElements(out, "Mistake", renderMistake);
   out = replaceElements(out, "Scenario", renderScenario);
 
-  for (const wrapper of ["GridSection", "ChartContainer", "CardGrid", "Card"]) {
+  for (const wrapper of [
+    "GridSection",
+    "ChartContainer",
+    "Fragment",
+    "CardGrid",
+    "Card",
+  ]) {
     out = replaceElements(out, wrapper, (props, children) => {
       const caption = [props.title, props.caption].filter(Boolean).join(" — ");
       return `${caption ? `\n**${caption}**\n` : ""}${children}`;

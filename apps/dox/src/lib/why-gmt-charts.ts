@@ -18,7 +18,14 @@ import type {
   ChartTooltipExtension,
   ChartTooltipRow,
 } from "@tanstack/charts/tooltip";
-import { formatCount, gmtStats } from "../data/gmt-stats";
+import {
+  coreFunctions,
+  coreNamespaces,
+  formatCount,
+  gmtStats,
+  industryFunctions,
+  industryNamespaces,
+} from "../data/gmt-stats";
 import {
   libraryComparisons,
   type LibraryComparison,
@@ -186,7 +193,7 @@ function ciBarsDefinition(
 }
 
 // ---------------------------------------------------------------------------
-// Public functions by namespace
+// Public functions by namespace, and by industry layer
 // ---------------------------------------------------------------------------
 
 export interface NamespaceRow {
@@ -194,14 +201,21 @@ export interface NamespaceRow {
   count: number;
 }
 
-/** Functions per namespace, largest first, then `regex`'s patterns — from gmt-stats.json. */
+/**
+ * Functions per core namespace, largest first, then `regex`'s patterns — from gmt-stats.json.
+ * The industry layers have a chart of their own: beside `plain`'s hundreds their bars were slivers.
+ */
 export const NAMESPACE_COUNTS: readonly NamespaceRow[] = [
-  ...gmtStats.byNamespace,
+  ...coreNamespaces,
   { namespace: "regex", count: gmtStats.patterns },
 ];
 
+/** Functions per industry layer, largest first. */
+export const INDUSTRY_COUNTS: readonly NamespaceRow[] = industryNamespaces;
+
 /** `regex` exports patterns, not functions, so it sits outside the total. */
-export const PUBLIC_FUNCTION_TOTAL = gmtStats.functions;
+export const CORE_FUNCTION_TOTAL = coreFunctions;
+export const INDUSTRY_FUNCTION_TOTAL = industryFunctions;
 
 export function namespaceTooltip(
   row: NamespaceRow | undefined,
@@ -221,22 +235,45 @@ export function namespaceTooltip(
     rows: [
       { label: "Public functions", value: formatCount(row.count) },
       {
-        label: "Share of API",
-        value: shareFormat.format(row.count / PUBLIC_FUNCTION_TOTAL),
+        label: "Share of core",
+        value: shareFormat.format(row.count / CORE_FUNCTION_TOTAL),
       },
     ],
   };
 }
 
-export function namespaceDefinition(tooltip?: ChartTooltipExtension) {
+export function industryTooltip(
+  row: NamespaceRow | undefined,
+): ChartTooltipContent {
+  if (!row) return { rows: [] };
+  return {
+    title: row.namespace,
+    color: "var(--gmt-spring)",
+    rows: [
+      { label: "Public functions", value: formatCount(row.count) },
+      {
+        label: "Share of industry layers",
+        value: shareFormat.format(row.count / INDUSTRY_FUNCTION_TOTAL),
+      },
+    ],
+  };
+}
+
+/** Both API-surface views share one bar definition, so they differ in rows, hue and tooltip. */
+function apiSurfaceDefinition(
+  rows: readonly NamespaceRow[],
+  hue: BarHue,
+  content: (row: NamespaceRow | undefined) => ChartTooltipContent,
+  tooltip?: ChartTooltipExtension,
+) {
   return defineChart({
     marks: [
-      barY(NAMESPACE_COUNTS, {
+      barY(rows, {
         x: "namespace",
         y: "count",
         xScale: "x",
         yScale: "y",
-        fill: `url(#${barGradientId("cyan")})`,
+        fill: `url(#${barGradientId(hue)})`,
         stroke: "var(--gmt-border-strong)",
         strokeWidth: 1,
         radius: 0,
@@ -258,16 +295,39 @@ export function namespaceDefinition(tooltip?: ChartTooltipExtension) {
       y: { scale: scaleLinear, nice: true, grid: true },
     },
     ...withTooltip(tooltip, (datum) =>
-      namespaceTooltip(datum as NamespaceRow | undefined),
+      content(datum as NamespaceRow | undefined),
     ),
   });
+}
+
+export function namespaceDefinition(tooltip?: ChartTooltipExtension) {
+  return apiSurfaceDefinition(
+    NAMESPACE_COUNTS,
+    "cyan",
+    namespaceTooltip,
+    tooltip,
+  );
+}
+
+/** Industry layers are painted spring green, so the toggle reads as a change of chart, not of data. */
+export function industryDefinition(tooltip?: ChartTooltipExtension) {
+  return apiSurfaceDefinition(
+    INDUSTRY_COUNTS,
+    "spring",
+    industryTooltip,
+    tooltip,
+  );
 }
 
 // ---------------------------------------------------------------------------
 // Registry
 // ---------------------------------------------------------------------------
 
-export type BarChartId = "ci-executions" | "ci-suite" | "namespaces";
+export type BarChartId =
+  | "ci-executions"
+  | "ci-suite"
+  | "namespaces"
+  | "industries";
 
 export interface BarChart {
   ariaLabel: string;
@@ -301,12 +361,20 @@ export const BAR_CHARTS: Record<BarChartId, BarChart> = {
     definition: ciSuiteDefinition as unknown as BarChart["definition"],
   },
   namespaces: {
-    ariaLabel: "API surface by namespace",
+    ariaLabel: "Public functions by core namespace",
     idPrefix: "namespace-distribution",
     width: 1200,
     height: 360,
     gradients: [barGradient("cyan")],
     definition: namespaceDefinition as unknown as BarChart["definition"],
+  },
+  industries: {
+    ariaLabel: "Public functions by industry layer",
+    idPrefix: "industry-distribution",
+    width: 1200,
+    height: 360,
+    gradients: [barGradient("spring")],
+    definition: industryDefinition as unknown as BarChart["definition"],
   },
 };
 

@@ -2,15 +2,23 @@
 
 import { createChartRuntime, renderChartSvg } from "@tanstack/charts";
 import { describe, expect, it } from "vitest";
-import { formatCount, gmtStats } from "../data/gmt-stats";
+import {
+  coreNamespaces,
+  formatCount,
+  gmtStats,
+  industryNamespaces,
+} from "../data/gmt-stats";
 import { libraryComparisons } from "../data/library-comparison";
 import {
   BAR_CHARTS,
+  CORE_FUNCTION_TOTAL,
+  INDUSTRY_COUNTS,
+  INDUSTRY_FUNCTION_TOTAL,
   NAMESPACE_COUNTS,
-  PUBLIC_FUNCTION_TOTAL,
   ciExecutionRows,
   ciExecutionTooltip,
   ciSuiteRows,
+  industryTooltip,
   isBarChartId,
   namespaceTooltip,
   type BarChartId,
@@ -159,21 +167,21 @@ describe("ciExecutionTooltip", () => {
 // ---------------------------------------------------------------------------
 
 describe("namespaceTooltip", () => {
-  it("totals the namespaces' functions, leaving regex patterns out", () => {
+  it("totals the core namespaces' functions, leaving regex patterns out", () => {
     const functions = NAMESPACE_COUNTS.filter((r) => r.namespace !== "regex");
     expect(functions.reduce((sum, r) => sum + r.count, 0)).toBe(
-      PUBLIC_FUNCTION_TOTAL,
+      CORE_FUNCTION_TOTAL,
     );
   });
 
-  it("shows a namespace's function count and share of the API", () => {
+  it("shows a namespace's function count and share of the core", () => {
     const plain = NAMESPACE_COUNTS.find((r) => r.namespace === "plain");
     const [count, share] = namespaceTooltip(plain).rows;
     expect(count).toEqual({
       label: "Public functions",
       value: formatCount(plain?.count ?? 0),
     });
-    expect(share?.label).toBe("Share of API");
+    expect(share?.label).toBe("Share of core");
     expect(share?.value).toMatch(/^\d{1,3}(\.\d)?%$/);
   });
 
@@ -182,6 +190,55 @@ describe("namespaceTooltip", () => {
     expect(namespaceTooltip(regex).rows).toEqual([
       { label: "Exported patterns", value: formatCount(gmtStats.patterns) },
     ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Core and industry split
+// ---------------------------------------------------------------------------
+
+describe("namespace and industry charts", () => {
+  it("charts every namespace exactly once between them", () => {
+    const charted = [...NAMESPACE_COUNTS, ...INDUSTRY_COUNTS]
+      .map((r) => r.namespace)
+      .filter((namespace) => namespace !== "regex");
+    expect(charted.sort()).toEqual(
+      gmtStats.byNamespace.map((r) => r.namespace).sort(),
+    );
+  });
+
+  it("keeps the industry layers out of the core chart", () => {
+    const core = NAMESPACE_COUNTS.map((r) => r.namespace);
+    for (const { namespace } of INDUSTRY_COUNTS) {
+      expect(core).not.toContain(namespace);
+    }
+  });
+
+  it("splits the public function total between core and industry", () => {
+    expect(CORE_FUNCTION_TOTAL + INDUSTRY_FUNCTION_TOTAL).toBe(
+      gmtStats.functions,
+    );
+  });
+});
+
+describe("industryTooltip", () => {
+  it("shows a layer's function count and share of the industry layers", () => {
+    const [layer] = INDUSTRY_COUNTS;
+    expect(industryTooltip(layer)).toEqual({
+      title: layer?.namespace,
+      color: "var(--gmt-spring)",
+      rows: [
+        { label: "Public functions", value: formatCount(layer?.count ?? 0) },
+        {
+          label: "Share of industry layers",
+          value: expect.stringMatching(/^\d{1,3}(\.\d)?%$/),
+        },
+      ],
+    });
+  });
+
+  it("returns no rows without a point", () => {
+    expect(industryTooltip(undefined)).toEqual({ rows: [] });
   });
 });
 
@@ -204,6 +261,15 @@ describe("static bar chart render", () => {
     },
   );
 
+  it.each([
+    ["namespaces", "gmt-bar-cyan", coreNamespaces.length + 1],
+    ["industries", "gmt-bar-spring", industryNamespaces.length],
+  ] as const)("draws %s as one %s bar per row", (id, gradient, bars) => {
+    const rects = barRects(renderStatic(id));
+    expect(rects).toHaveLength(bars);
+    expect(rects.every((r) => r.gradient === gradient)).toBe(true);
+  });
+
   it("only references gradients its container declares", () => {
     for (const id of Object.keys(BAR_CHARTS) as BarChartId[]) {
       const declared = BAR_CHARTS[id].gradients.map((g) => g.id);
@@ -217,8 +283,11 @@ describe("static bar chart render", () => {
 describe("namespace chart labels", () => {
   // /why-gmt lays the chart out in a grid column about 524px wide, where the axis thinned the
   // labels of precision, interval and calendar away. Every bar must keep its namespace label.
-  it("keeps every namespace label at the page's real chart width", () => {
-    const chart = BAR_CHARTS.namespaces;
+  it.each([
+    ["namespaces", NAMESPACE_COUNTS],
+    ["industries", INDUSTRY_COUNTS],
+  ] as const)("keeps every %s label at the page's real chart width", (id, rows) => {
+    const chart = BAR_CHARTS[id];
     const width = 524;
     const runtime = createChartRuntime();
     const scene = runtime.render(chart.definition(), {
@@ -234,7 +303,7 @@ describe("namespace chart labels", () => {
     const labels = [...svg.matchAll(/<text[^>]*>([^<]*)<\/text>/g)].map(
       ([, text]) => text,
     );
-    for (const { namespace } of NAMESPACE_COUNTS) {
+    for (const { namespace } of rows) {
       expect(labels).toContain(namespace);
     }
   });
@@ -243,6 +312,7 @@ describe("namespace chart labels", () => {
 describe("isBarChartId", () => {
   it("accepts registered charts and rejects everything else", () => {
     expect(isBarChartId("namespaces")).toBe(true);
+    expect(isBarChartId("industries")).toBe(true);
     expect(isBarChartId("ci-suite")).toBe(true);
     expect(isBarChartId("locale-matrix")).toBe(false);
     expect(isBarChartId(undefined)).toBe(false);

@@ -1,7 +1,16 @@
 /// <reference types="vitest/globals" />
 
 import { describe, expect, it } from "vitest";
-import { formatCount, gmtStats, runsPerTest } from "./gmt-stats";
+import {
+  coreFunctions,
+  coreNamespaces,
+  formatCount,
+  formatNamespaceList,
+  gmtStats,
+  industryFunctions,
+  industryNamespaces,
+  runsPerTest,
+} from "./gmt-stats";
 import {
   competitorComparisons,
   competitorExecutionRange,
@@ -28,6 +37,32 @@ describe("gmtStats", () => {
     const counts = gmtStats.byNamespace.map((row) => row.count);
     expect(counts).toEqual([...counts].sort((a, b) => b - a));
   });
+
+  it("names only exporting namespaces as industry layers", () => {
+    const namespaces = gmtStats.byNamespace.map((row) => row.namespace);
+    for (const industry of gmtStats.industries) {
+      expect(namespaces).toContain(industry);
+    }
+  });
+
+  it("splits every namespace into core or industry", () => {
+    expect(coreNamespaces.length + industryNamespaces.length).toBe(
+      gmtStats.byNamespace.length,
+    );
+    expect(coreFunctions + industryFunctions).toBe(gmtStats.functions);
+  });
+});
+
+describe("formatNamespaceList", () => {
+  it("lists namespaces as code, joined as prose", () => {
+    expect(
+      formatNamespaceList([
+        { namespace: "plain", count: 2 },
+        { namespace: "zoned", count: 1 },
+        { namespace: "utc", count: 1 },
+      ]),
+    ).toBe("`plain`, `zoned`, and `utc`");
+  });
 });
 
 // why-gmt.mdx states these as facts, so a data change that falsifies one must
@@ -37,6 +72,20 @@ describe("claims the why-gmt copy makes", () => {
     expect(gmtStats.tests).toBeGreaterThan(
       largestCompetitorSuite().stats.tests,
     );
+  });
+
+  it("`plain` and `zoned` are the two largest core namespaces", () => {
+    expect(
+      coreNamespaces
+        .slice(0, 2)
+        .map((row) => row.namespace)
+        .sort(),
+    ).toEqual(["plain", "zoned"]);
+  });
+
+  it("there is at least one industry layer beside the core", () => {
+    expect(industryNamespaces.length).toBeGreaterThan(0);
+    expect(coreNamespaces.length).toBeGreaterThan(0);
   });
 
   it("GMT's CI executions exceed every alternative's", () => {

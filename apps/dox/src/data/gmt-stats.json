@@ -1,8 +1,8 @@
 {
   "suite": "packages/gmt",
-  "tests": 36792,
+  "tests": 36839,
   "files": 673,
-  "executions": 1103760,
+  "executions": 1105170,
   "nodes": ["22", "24", "26"],
   "timezones": 10,
   "timezoneList": [
@@ -88,5 +88,6 @@
       "namespace": "transport",
       "count": 3
     }
-  ]
+  ],
+  "industries": ["intermodal", "transport"]
 }
