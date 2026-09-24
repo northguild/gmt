@@ -1,17 +1,17 @@
 ---
 title: "Intermodal: Free Time and Demurrage"
-description: freeTimeExpiry, chargeableDays and demurrageClock — which clock, which start day, which basis and whose calendar, counted in the terminal's real local days, with the charged dates an invoice has to print.
+description: freeTimeExpiry, chargeableDays and demurrageClock — which clock, which start day, how free days and charged days are counted, and whose calendar, in the terminal's real local days, with the charged dates behind every count.
 sidebar:
   order: 2
 ---
 
 Free time is the money calculation in container logistics, and the first thing to know about it
-is that none of its terms is a fact about the port. How many free days there are, whether the day
-of discharge is free day one, and whether weekends count are set by the carrier's tariff, the
-lane and the service contract. So every term is a parameter, none has a default, and what comes
-back is what a demurrage or detention invoice has to state: the free time allowed, when it
-started and ended, and the specific dates that were charged
-([46 CFR 541.6](https://www.law.cornell.edu/cfr/text/46/541.6)).
+is that none of its terms is a fact about the port, and none is fixed by a world standard. How
+many free days there are, whether the day of discharge is free day one, whether weekends count,
+and how the days after free time are charged are set by the carrier's tariff, the lane and the
+service contract. DCSA, the container carriers' standards body, defines what demurrage,
+detention and storage are, but not how their days are counted. So every term is a parameter,
+none has a default, and what comes back is the free-time window and the specific dates charged.
 
 ```typescript
 import { chargeableDays, demurrageClock, freeTimeExpiry } from "@northguild/gmt/intermodal";
@@ -19,51 +19,85 @@ import { chargeableDays, demurrageClock, freeTimeExpiry } from "@northguild/gmt/
 
 The functions live in `@northguild/gmt/intermodal`, all under `@northguild/gmt/intermodal/calculate`.
 
-## Three clocks: `demurrageClock`
+## Which clock: `demurrageClock`
 
-Three charges run on a container, and they are routinely confused. **Demurrage** runs from
-discharge from the vessel until the container leaves the terminal gate. **Detention** runs from
-gate-out until the empty is returned. Terminal **storage** runs over the same window as demurrage
-but is the terminal's own charge, with its own free time.
-[`demurrageClock(events, scope, options?)`](/reference/intermodal/calculate/demurrageClock)
-selects the start and end events for the charge you asked about, so the wrong pair can never
-reach the day count.
+Three charges run on a container, and they are routinely confused. DCSA's glossary draws the line
+they rest on: **demurrage** is charged while the container is inside the terminal or depot,
+**detention** while it is outside, and **storage** is the terminal's own charge for its space,
+with its own free time. Many carriers also sell a **combined** (merged) clock that runs demurrage
+and detention as one period. The carriers' published tariffs agree on the events each clock runs
+between, and they differ by direction:
+
+| Clock | Import | Export |
+| --- | --- | --- |
+| Demurrage, storage | discharge → full gate-out | full gate-in → loaded on board |
+| Detention | full gate-out → empty returned | empty picked up → full gate-in |
+| Combined | discharge → empty returned | empty picked up → loaded on board |
+
+[`demurrageClock(events, scope, options)`](/reference/intermodal/calculate/demurrageClock)
+selects the pair for the charge and direction you name, so the wrong pair can never reach the day
+count. The event names follow DCSA's Track & Trace equipment events: `discharged` is DISC,
+`gatedOut` and `emptyReleased` are GTOT laden and empty, `emptyReturned` and `gatedIn` are GTIN
+empty and laden, and `loaded` is LOAD.
 
 ```typescript
 import { demurrageClock } from "@northguild/gmt/intermodal";
 
-const events = [
+const imported = [
   { type: "discharged", at: "2024-06-14T19:00:00Z" },
   { type: "available", at: "2024-06-15T12:00:00Z" },
   { type: "gatedOut", at: "2024-06-20T14:30:00Z" },
   { type: "emptyReturned", at: "2024-06-27T09:00:00Z" },
 ];
 
-demurrageClock(events, "demurrage");
+demurrageClock(imported, "demurrage", { direction: "import" });
 // { start: "2024-06-14T19:00:00Z", end: "2024-06-20T14:30:00Z" }
 
-demurrageClock(events, "detention");
+demurrageClock(imported, "detention", { direction: "import" });
 // { start: "2024-06-20T14:30:00Z", end: "2024-06-27T09:00:00Z" } — gate-out to empty return
 
-// Some tariffs start the import clock at the availability date, which the invoice must show too.
-demurrageClock(events, "demurrage", { startEvent: "available" });
+demurrageClock(imported, "combined", { direction: "import" });
+// { start: "2024-06-14T19:00:00Z", end: "2024-06-27T09:00:00Z" } — merged: discharge to empty return
+
+// Some tariffs start the import clock at the availability date.
+demurrageClock(imported, "demurrage", { direction: "import", startEvent: "available" });
 // { start: "2024-06-15T12:00:00Z", end: "2024-06-20T14:30:00Z" }
+
+const exported = [
+  { type: "emptyReleased", at: "2024-07-01T08:00:00Z" },
+  { type: "gatedIn", at: "2024-07-05T16:00:00Z" },
+  { type: "loaded", at: "2024-07-09T03:00:00Z" },
+];
+
+demurrageClock(exported, "demurrage", { direction: "export" });
+// { start: "2024-07-05T16:00:00Z", end: "2024-07-09T03:00:00Z" } — gate-in full to loaded on board
+
+demurrageClock(exported, "detention", { direction: "export" });
+// { start: "2024-07-01T08:00:00Z", end: "2024-07-05T16:00:00Z" } — empty picked up to gate-in full
 ```
 
-The result is a half-open [`Interval`](/reference/types/interval/Interval), `[start, end)`, in
-the caller's own strings, and feeds `chargeableDays(start, end, …)` directly. A required event
-that is missing, or present twice, returns `null`: a container discharged twice is a data error,
-not a choice.
+`direction` has no default: the same scope runs between different events on each leg, and
+guessing the leg from the events present would be a silent guess. `startEvent` is read only on
+import. A tariff that starts at customs release, or ends export demurrage at the cut-off or the
+scheduled sailing, passes that instant as the event's `at`. The result is a half-open
+[`Interval`](/reference/types/interval/Interval), `[start, end)`, in your own strings, and feeds
+`chargeableDays(start, end, …)` directly. A required event that is missing, or present twice,
+returns `null`: a container discharged twice is a data error, not a choice.
 
 ```typescript
-demurrageClock([{ type: "discharged", at: "2024-06-14T19:00:00Z" }], "demurrage");
+demurrageClock([{ type: "discharged", at: "2024-06-14T19:00:00Z" }], "demurrage", { direction: "import" });
 // null — still in the terminal: no gate-out
 ```
+
+The words differ in US usage, not the events: some US tariffs call the in-terminal container
+charge "detention" and the out-of-terminal one "per diem", and in India "demurrage" usually
+means the port's storage charge. The scope names here follow the global usage.
 
 ## Which day is day one: `firstDay`
 
 Whether the day of the triggering event counts as free day one, or free time starts the
-following day, is a tariff term. The two conventions differ by a full day of charges, so
+following day, is a tariff term: some carriers count "the first calendar day following complete
+discharge", others begin "on the day of discharge". The two differ by a full day of charges, so
 `firstDay` has no default: omit it and every function returns `null`.
 [`freeTimeExpiry(clockStart, freeDays, options)`](/reference/intermodal/calculate/freeTimeExpiry)
 lays the window out.
@@ -102,7 +136,8 @@ read), and its local date in `options.timeZone` is the event day. A container di
 23:00 has used a free day by 00:01 under `firstDay: "eventDay"`. Day boundaries are the zone's
 real ones, the same ones [`floorToZone`](/reference/calendar/calculate/floorToZone) and
 [`dwellTime`](/reference/transport/calculate/dwellTime) find: a 23- or 25-hour day is one day, a
-date the zone deleted is never a free day, and a date the clock falls back into is one day.
+date the zone deleted is never a free day, and a fall-back that re-enters an earlier date never
+moves the count backwards.
 
 ```typescript
 // 23:00 local on the 14th: the free day is over an hour later.
@@ -126,13 +161,14 @@ The zone is the caller's fact. GMT does not resolve a port or terminal code to a
 takes an IANA identifier. A fixed offset such as `"+02:00"` is accepted, as
 [`isValidTimeZone`](/reference/zoned/validate/isValidTimeZone) accepts it, but observes no DST.
 
-## Calendar days or working days: `basis`
+## How free days are counted: `basis`
 
-Most carriers count **calendar days**, so a weekend burns two free days while the terminal is
-shut. Some tariffs count **working days**, usually only for detention, and then the terminal's
-own weekend and holidays decide which days count. The working basis needs the terminal's
+Outside the United States most tariffs count free time in **calendar days**, so a weekend burns
+two free days while the terminal is shut. Many US tariffs, and some elsewhere, count free time in
+**working days**, the days the terminal is open, and then the terminal's own weekend and
+holidays decide which days count. The working basis needs the terminal's
 [`BusinessCalendar`](/reference/types/business-calendar/BusinessCalendar); without one it returns
-`null`, because a working-day count with a guessed weekend is a wrong invoice.
+`null`, because a working-day count with a guessed weekend is a wrong charge.
 
 ```typescript
 const terminal = { weekend: [6, 7], holidays: [], timeZone: "America/New_York" };
@@ -172,10 +208,9 @@ freeTimeExpiry("2024-06-14T19:00:00Z", 3, {
 // null — a working-day count needs the terminal's calendar
 ```
 
-The calendar's `weekend` is ISO weekday numbers, so a Friday–Saturday terminal passes `[5, 6]`.
-Its `timeZone` field is not read; `options.timeZone` is the counting zone. Both bases run on
-the same walk over the zone's real local days, with the working basis simply not counting a
-closed day, so the two can never disagree about where a day begins.
+The calendar's `weekend` is ISO weekday numbers, so a Friday–Saturday terminal passes `[5, 6]`,
+and a tariff counting "calendar days excluding bank holidays" passes an empty `weekend` with the
+holidays. Its `timeZone` field is not read; `options.timeZone` is the counting zone.
 
 ## Expiry is half-open, and the charged dates are listed: `chargeableDays`
 
@@ -188,14 +223,19 @@ chargeable day; one second later is. The same
 ```typescript
 import { chargeableDays } from "@northguild/gmt/intermodal";
 
-const tariff = { basis: "calendar", timeZone: "America/New_York", firstDay: "eventDay" };
+const tariff = {
+  basis: "calendar",
+  chargeBasis: "calendar",
+  timeZone: "America/New_York",
+  firstDay: "eventDay",
+};
 
 // Out exactly as free time ends: nothing to pay.
 chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T04:00:00Z", 3, tariff);
 // { freeDaysUsed: 3, chargeableDays: 0, expiresAt: "2024-06-17T04:00:00Z",
 //   chargedDates: [], byTier: [{ from: 1, to: null, days: 0 }] }
 
-// One second later: one charged day, and the invoice can name it.
+// One second later: one charged day, and its date.
 chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T04:00:01Z", 3, tariff);
 // { freeDaysUsed: 3, chargeableDays: 1, expiresAt: "2024-06-17T04:00:00Z",
 //   chargedDates: ["2024-06-17"], byTier: [{ from: 1, to: null, days: 1 }] }
@@ -206,27 +246,13 @@ chargeableDays("2024-06-14T19:00:00Z", "2024-06-15T15:00:00Z", 3, tariff);
 //   chargedDates: [], byTier: [{ from: 1, to: null, days: 0 }] }
 ```
 
-`chargedDates` is the list [46 CFR 541.6](https://www.law.cornell.edu/cfr/text/46/541.6)
-requires a demurrage or detention invoice to print, "the specific date(s) for which demurrage
-and/or detention were charged". Returning it makes the count auditable instead of asserted. On
-the calendar basis with `firstDay: "eventDay"`, `freeDaysUsed + chargeableDays` is exactly
+`chargedDates` makes the count auditable instead of asserted: it is the list a carrier's
+day-numbered tariff grid is applied to. On the calendar basis with `firstDay: "eventDay"`,
+`freeDaysUsed + chargeableDays` is exactly
 [`dwellTime`](/reference/transport/calculate/dwellTime)'s `calendarDays` for the same dwell: the
-two never disagree about a midnight.
-
-On the working basis the clock is suspended on closed days, so a weekend or holiday after expiry
-is not charged either.
-
-```typescript
-chargeableDays("2024-06-14T19:00:00Z", "2024-06-24T15:00:00Z", 3, {
-  basis: "working",
-  timeZone: "America/New_York",
-  firstDay: "eventDay",
-  calendar: { weekend: [6, 7], holidays: ["2024-06-19"], timeZone: "America/New_York" },
-});
-// { freeDaysUsed: 3, chargeableDays: 3, expiresAt: "2024-06-19T04:00:00Z",
-//   chargedDates: ["2024-06-20", "2024-06-21", "2024-06-24"],
-//   byTier: [{ from: 1, to: null, days: 3 }] }
-```
+two never disagree about a midnight. The one exception is a fall-back that re-enters the day
+before the event day (Goose Bay, 7 November 2010), a date `dwellTime` counts as touched and a
+tariff never counts.
 
 A tariff with no free time passes `freeDays: 0` to `chargeableDays`; every counted day is
 charged and `expiresAt` is the start of day one. `freeTimeExpiry` returns `null` for `0`, because
@@ -236,6 +262,45 @@ there is no last free day to name.
 chargeableDays("2024-06-14T19:00:00Z", "2024-06-16T15:00:00Z", 0, tariff);
 // { freeDaysUsed: 0, chargeableDays: 3, expiresAt: "2024-06-14T04:00:00Z",
 //   chargedDates: ["2024-06-14", "2024-06-15", "2024-06-16"],
+//   byTier: [{ from: 1, to: null, days: 3 }] }
+```
+
+## How charged days are counted: `chargeBasis`
+
+How the days after free time are charged is a separate tariff term from how free days are
+counted, and the published tariffs mostly count the two differently: free time in working days,
+then every calendar day charged, weekends and holidays included ("Once free time expires ...
+charged on calendar days"). That is `basis: "working", chargeBasis: "calendar"`. Some tariffs
+charge working days only, and California law requires it at its terminals: no charges while the
+gate is closed or on a holiday (Cal. Bus. & Prof. Code § 22928). That is
+`chargeBasis: "working"`. The two differ by every closed day after expiry, so `chargeBasis` has
+no default either.
+
+```typescript
+const shutForJuneteenth = { weekend: [6, 7], holidays: ["2024-06-19"], timeZone: "America/New_York" };
+
+// Working-day free time, every calendar day charged after it.
+chargeableDays("2024-06-14T19:00:00Z", "2024-06-24T15:00:00Z", 3, {
+  basis: "working",
+  chargeBasis: "calendar",
+  timeZone: "America/New_York",
+  firstDay: "eventDay",
+  calendar: shutForJuneteenth,
+});
+// { freeDaysUsed: 3, chargeableDays: 6, expiresAt: "2024-06-19T04:00:00Z",
+//   chargedDates: ["2024-06-19", "2024-06-20", "2024-06-21", "2024-06-22", "2024-06-23", "2024-06-24"],
+//   byTier: [{ from: 1, to: null, days: 6 }] }
+
+// Working days throughout: the holiday and the weekend are not charged.
+chargeableDays("2024-06-14T19:00:00Z", "2024-06-24T15:00:00Z", 3, {
+  basis: "working",
+  chargeBasis: "working",
+  timeZone: "America/New_York",
+  firstDay: "eventDay",
+  calendar: shutForJuneteenth,
+});
+// { freeDaysUsed: 3, chargeableDays: 3, expiresAt: "2024-06-19T04:00:00Z",
+//   chargedDates: ["2024-06-20", "2024-06-21", "2024-06-24"],
 //   byTier: [{ from: 1, to: null, days: 3 }] }
 ```
 
@@ -258,15 +323,17 @@ chargeableDays("2024-06-14T19:00:00Z", "2024-06-28T15:00:00Z", 3, { ...tariff, t
 // null — tiers must ascend
 ```
 
-## What the invoice has to print
+## The US invoice rule
 
-Since 28 May 2024 a demurrage or detention invoice on a US trade must state the allowed free
-time in days, the start and end dates of free time, the container availability date for
-imports or the earliest return date for exports, and the specific dates charged
+No world regulation governs demurrage and detention invoices. The United States does: since 28
+May 2024 an invoice on a US trade must state the allowed free time in days, the start and end
+dates of free time, the container availability date for imports or the earliest return date for
+exports, and the specific dates charged
 ([46 CFR 541.6](https://www.law.cornell.edu/cfr/text/46/541.6)). `freeDays`, `freeTimeStart`,
-`lastFreeDay`, the `available` event and `chargedDates` are those fields. The invoice, dispute
-and resolution deadlines around that invoice are date arithmetic on these outputs and are not
-part of this layer.
+`lastFreeDay`, the `available` event and `chargedDates` supply those fields. The availability
+date and the earliest return date exist only in that US rule; the rest are what every tariff
+states anyway. The US invoice, dispute and resolution deadlines around that invoice are date
+arithmetic on these outputs and are not part of this layer.
 
 ## See it break, then work
 

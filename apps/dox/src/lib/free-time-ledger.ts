@@ -32,6 +32,8 @@ export interface FreeTimeLedgerArgs {
   freeDays?: number | string;
   firstDay?: string;
   basis?: string;
+  /** How days after free time are charged: `calendar` or `working`. */
+  chargeBasis?: string;
   /** IANA zone the days are counted in. */
   zone?: string;
   /** ISO weekday numbers, or their comma-joined text. */
@@ -49,6 +51,7 @@ export interface LedgerState {
   freeDays: string;
   firstDay: FirstDay;
   basis: Basis;
+  chargeBasis: Basis;
   zone: string;
   /** ISO weekday numbers, ascending. */
   weekend: number[];
@@ -87,6 +90,7 @@ export const FREE_TIME_PRESETS: readonly FreeTimePreset[] = [
     freeDays: "3",
     firstDay: "eventDay",
     basis: "calendar",
+    chargeBasis: "calendar",
     zone: newYork,
     weekend: [6, 7],
     holidays: "",
@@ -102,6 +106,7 @@ export const FREE_TIME_PRESETS: readonly FreeTimePreset[] = [
     freeDays: "3",
     firstDay: "nextDay",
     basis: "calendar",
+    chargeBasis: "calendar",
     zone: newYork,
     weekend: [6, 7],
     holidays: "",
@@ -117,6 +122,7 @@ export const FREE_TIME_PRESETS: readonly FreeTimePreset[] = [
     freeDays: "3",
     firstDay: "eventDay",
     basis: "calendar",
+    chargeBasis: "calendar",
     zone: newYork,
     weekend: [6, 7],
     holidays: "",
@@ -124,29 +130,31 @@ export const FREE_TIME_PRESETS: readonly FreeTimePreset[] = [
   },
   {
     id: "working-days",
-    label: "Working days skip the weekend",
+    label: "Working-day free time, calendar-day charges",
     description:
-      "The same discharge on a working-day tariff. Saturday and Sunday do not count, free time ends on Wednesday, and the clock stops again on the next weekend.",
-    clockStart: friday,
-    clockEnd: "2024-06-22T15:00:00Z",
-    freeDays: "3",
-    firstDay: "eventDay",
-    basis: "working",
-    zone: newYork,
-    weekend: [6, 7],
-    holidays: "",
-    tiers: "",
-  },
-  {
-    id: "terminal-holiday",
-    label: "A terminal holiday",
-    description:
-      "A working-day tariff with the terminal shut on Wednesday 19 June. Free time ends as the holiday begins, and the holiday is neither free nor charged: the clock is suspended until Thursday.",
+      "The usual published shape: free time counted in working days, then every calendar day charged. The weekend does not burn free time, but Juneteenth and the next weekend are billed once free time has ended.",
     clockStart: friday,
     clockEnd: "2024-06-24T15:00:00Z",
     freeDays: "3",
     firstDay: "eventDay",
     basis: "working",
+    chargeBasis: "calendar",
+    zone: newYork,
+    weekend: [6, 7],
+    holidays: "2024-06-19",
+    tiers: "",
+  },
+  {
+    id: "terminal-holiday",
+    label: "Working days throughout (California)",
+    description:
+      "The same dwell charged on working days only, as California law requires at its terminals: the Juneteenth holiday and the weekend after expiry are not charged, so three days are billed instead of six.",
+    clockStart: friday,
+    clockEnd: "2024-06-24T15:00:00Z",
+    freeDays: "3",
+    firstDay: "eventDay",
+    basis: "working",
+    chargeBasis: "working",
     zone: newYork,
     weekend: [6, 7],
     holidays: "2024-06-19",
@@ -162,6 +170,7 @@ export const FREE_TIME_PRESETS: readonly FreeTimePreset[] = [
     freeDays: "3",
     firstDay: "eventDay",
     basis: "calendar",
+    chargeBasis: "calendar",
     zone: newYork,
     weekend: [6, 7],
     holidays: "",
@@ -177,6 +186,7 @@ export const FREE_TIME_PRESETS: readonly FreeTimePreset[] = [
     freeDays: "0",
     firstDay: "eventDay",
     basis: "calendar",
+    chargeBasis: "calendar",
     zone: newYork,
     weekend: [6, 7],
     holidays: "",
@@ -234,6 +244,7 @@ export function readArgs(args: FreeTimeLedgerArgs): LedgerState {
         : String(args.freeDays),
     firstDay: args.firstDay === "nextDay" ? "nextDay" : "eventDay",
     basis: args.basis === "working" ? "working" : "calendar",
+    chargeBasis: args.chargeBasis === "working" ? "working" : "calendar",
     zone: args.zone ?? "",
     weekend:
       weekendItems === null
@@ -253,8 +264,9 @@ export function matchPreset(state: LedgerState): string {
       p.freeDays === state.freeDays &&
       p.firstDay === state.firstDay &&
       p.basis === state.basis &&
+      p.chargeBasis === state.chargeBasis &&
       p.zone === state.zone &&
-      (p.basis === "calendar" ||
+      ((p.basis === "calendar" && p.chargeBasis === "calendar") ||
         (p.weekend.join(",") === state.weekend.join(",") &&
           splitList(p.holidays).join(",") ===
             splitList(state.holidays).join(","))) &&
@@ -280,7 +292,18 @@ export interface TermsArg {
   calendar?: BusinessCalendarArg;
 }
 
-/** The options object the library is called with, exactly as the call line prints it. */
+export interface ChargeTermsArg {
+  basis: Basis;
+  chargeBasis: Basis;
+  timeZone: string;
+  firstDay: FirstDay;
+  calendar?: BusinessCalendarArg;
+}
+
+/**
+ * The options object `freeTimeExpiry` is called with, exactly as the call line prints it. The
+ * calendar is passed when free days are counted on it.
+ */
 export function termsOf(state: LedgerState): TermsArg {
   const terms: TermsArg = {
     basis: state.basis,
@@ -288,6 +311,27 @@ export function termsOf(state: LedgerState): TermsArg {
     firstDay: state.firstDay,
   };
   if (state.basis === "working") {
+    terms.calendar = {
+      weekend: state.weekend,
+      holidays: splitList(state.holidays),
+      timeZone: state.zone,
+    };
+  }
+  return terms;
+}
+
+/**
+ * The options object `chargeableDays` is called with: the free-time terms plus the charge basis,
+ * and the calendar when either basis is working.
+ */
+export function chargeTermsOf(state: LedgerState): ChargeTermsArg {
+  const terms: ChargeTermsArg = {
+    basis: state.basis,
+    chargeBasis: state.chargeBasis,
+    timeZone: state.zone,
+    firstDay: state.firstDay,
+  };
+  if (state.basis === "working" || state.chargeBasis === "working") {
     terms.calendar = {
       weekend: state.weekend,
       holidays: splitList(state.holidays),
@@ -354,9 +398,10 @@ export function isClosedDate(
 /**
  * Classify a day cell from the library's answers. A charged date is what
  * `chargedDates` says; a free day lies inside the window `freeTimeExpiry`
- * named; a closed day is one the working-day calendar skips; and a touched day
- * before free time began is the event day the tariff did not count. Cells the
- * dwell never touched are plain.
+ * named; a closed day is one the working-day calendar skips, read on `basis`
+ * before expiry and on `chargeBasis` after it; and a touched day before free
+ * time began is the event day the tariff did not count. Cells the dwell never
+ * touched are plain.
  */
 export function cellState(
   cell: DayCell,
@@ -366,10 +411,12 @@ export function cellState(
 ): CellState {
   if (charges?.chargedDates.includes(cell.date)) return "chargeable";
   if (!cell.touched) return "none";
+  const expiresMs = charges ? epochMs(charges.expiresAt) : freeTime ? epochMs(freeTime.expiresAt) : Number.NaN;
+  const afterExpiry = !Number.isNaN(expiresMs) && cell.startMs >= expiresMs;
   if (
     isClosedDate(
       cell.date,
-      state.basis,
+      afterExpiry ? state.chargeBasis : state.basis,
       state.weekend,
       splitList(state.holidays),
     )
@@ -472,7 +519,7 @@ function tiersValid(tiers: number[] | undefined | null): boolean {
   if (tiers === undefined) return true;
   if (tiers === null) return false;
   return tiers.every(
-    (t, i) => Number.isInteger(t) && t >= 1 && (i === 0 || t > tiers[i - 1]!),
+    (t, i) => Number.isSafeInteger(t) && t >= 1 && (i === 0 || t > tiers[i - 1]!),
   );
 }
 
@@ -486,7 +533,7 @@ export function explainNull(
   state: LedgerState,
   v: NullValidators,
 ): NullReason | null {
-  const terms = termsOf(state);
+  const terms = chargeTermsOf(state);
   if (!v.isValidInstant(state.clockStart)) return "invalid-start";
   if (!v.isValidInstant(state.clockEnd)) return "invalid-end";
   if (!v.isValidTimeZone(state.zone)) return "unknown-zone";
@@ -499,21 +546,23 @@ export function explainNull(
   return null;
 }
 
-/** Why `freeTimeExpiry` returned `null`: the charge reasons, or zero free days. */
+/**
+ * Why `freeTimeExpiry` returned `null`, from its own checks: it reads no clock end, no tiers and
+ * no charge basis, so only the start, the zone, the free-time calendar and the free days can stop
+ * it, and zero free days leaves no last free day to name.
+ */
 export function explainExpiryNull(
   state: LedgerState,
   v: NullValidators,
 ): NullReason | null {
-  const reason = explainNull(state, v);
-  if (
-    reason === "invalid-end" ||
-    reason === "inverted" ||
-    reason === "invalid-tiers"
-  ) {
-    return freeDaysOf(state) === 0 ? "no-free-days" : null;
-  }
-  if (reason !== null) return reason;
-  return freeDaysOf(state) === 0 ? "no-free-days" : null;
+  const terms = termsOf(state);
+  if (!v.isValidInstant(state.clockStart)) return "invalid-start";
+  if (!v.isValidTimeZone(state.zone)) return "unknown-zone";
+  if (terms.calendar && !v.isValidBusinessCalendar(terms.calendar))
+    return "invalid-calendar";
+  const days = freeDaysOf(state);
+  if (!Number.isInteger(days) || days < 0) return "invalid-free-days";
+  return days === 0 ? "no-free-days" : null;
 }
 
 function epochMs(iso: string): number {

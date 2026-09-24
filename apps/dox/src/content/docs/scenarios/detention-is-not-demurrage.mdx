@@ -13,7 +13,7 @@ const discharged = new Date("2024-06-14T19:00:00Z");
 const emptyReturned = new Date("2024-06-27T09:00:00Z");
 const days = Math.ceil((emptyReturned.getTime() - discharged.getTime()) / 86400000);
 // 13 — six of those days were demurrage at the terminal, not detention on the road`}
-  explanation={`Demurrage runs from discharge until the container leaves the terminal gate. Detention runs from gate-out until the empty is returned. Terminal storage runs over the demurrage window but is the terminal's own charge, with its own free time. \`demurrageClock\` picks the start and end events for the charge you name, in any event order, and returns a half-open interval in your own strings that \`chargeableDays\` takes directly. A required event that is missing, or present twice, returns \`null\`, because a container discharged twice is a data error and not a choice.`}
+  explanation={`On an import, demurrage runs from discharge until the container leaves the terminal gate, and detention from gate-out until the empty is returned. On an export the same two charges run from the full gate-in to loading, and from the empty pick-up to the full gate-in. Terminal storage runs over the demurrage window but is the terminal's own charge, with its own free time, and many carriers also sell a combined clock that runs both as one period. \`demurrageClock\` picks the start and end events for the charge and direction you name, in any event order, and returns a half-open interval in your own strings that \`chargeableDays\` takes directly. A required event that is missing, or present twice, returns \`null\`, because a container discharged twice is a data error and not a choice.`}
   gmtCode={`import { demurrageClock } from "@northguild/gmt/intermodal";
 
 const events = [
@@ -23,21 +23,22 @@ const events = [
   { type: "emptyReturned", at: "2024-06-27T09:00:00Z" },
 ];
 
-demurrageClock(events, "detention");
+demurrageClock(events, "detention", { direction: "import" });
 // { start: "2024-06-20T14:30:00Z", end: "2024-06-27T09:00:00Z" }
 
-demurrageClock(events, "demurrage");
+demurrageClock(events, "demurrage", { direction: "import" });
 // { start: "2024-06-14T19:00:00Z", end: "2024-06-20T14:30:00Z" }
 
 // A tariff that starts the import clock at the availability date.
-demurrageClock(events, "demurrage", { startEvent: "available" });
+demurrageClock(events, "demurrage", { direction: "import", startEvent: "available" });
 // { start: "2024-06-15T12:00:00Z", end: "2024-06-20T14:30:00Z" }`}
   fixedSpecId="demurrageClock"
 />
 
 Remove the `emptyReturned` event above and the detention clock returns `null`: the container is
 still out, and there is no end to count to. Ask for `"storage"` and you get the demurrage window
-again, because the terminal's charge runs over the same two events. Feed the detention result to
-`chargeableDays(start, end, freeDays, terms)` with the detention tariff, which is usually the
-one counted in working days. The full rules are in [Intermodal: Free Time and
+again, because the terminal's charge runs over the same two events. Ask for `"combined"` and you
+get discharge to empty return, the merged clock. Feed the detention result to
+`chargeableDays(start, end, freeDays, terms)` with the detention tariff's own free days and
+counting terms. The full rules are in [Intermodal: Free Time and
 Demurrage](/guides/industries/intermodal-free-time-and-demurrage/).

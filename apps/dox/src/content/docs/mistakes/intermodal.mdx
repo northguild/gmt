@@ -63,7 +63,7 @@ gatedOut >= expires ? 1 : 0;
 // 1 — nothing of Monday was used`}
   rightCode={`import { chargeableDays } from "@northguild/gmt/intermodal";
 
-const tariff = { basis: "calendar", timeZone: "America/New_York", firstDay: "eventDay" };
+const tariff = { basis: "calendar", chargeBasis: "calendar", timeZone: "America/New_York", firstDay: "eventDay" };
 chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T04:00:00Z", 3, tariff).chargeableDays; // 0
 chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T04:00:01Z", 3, tariff).chargeableDays; // 1`}
   rightSpecId="chargeableDays"
@@ -100,9 +100,35 @@ const events = [
   { type: "gatedOut", at: "2024-06-20T14:30:00Z" },
   { type: "emptyReturned", at: "2024-06-27T09:00:00Z" },
 ];
-demurrageClock(events, "detention");
+demurrageClock(events, "detention", { direction: "import" });
 // { start: "2024-06-20T14:30:00Z", end: "2024-06-27T09:00:00Z" }`}
   rightSpecId="demurrageClock"
+/>
+
+<Mistake
+  severity="high"
+  title="Assuming working-day free time means working-day charges"
+  description="How free days are counted and how charged days are counted are separate tariff terms. Most published tariffs grant free time in working days and then charge every calendar day, weekends and holidays included; California law and some tariffs charge working days only. Charging on the free-time basis under-bills the first and over-bills the second, so chargeBasis has no default."
+  wrongCode={`// Free time in working days, so charge working days too?
+chargeableDays("2024-06-14T19:00:00Z", "2024-06-24T15:00:00Z", 3, {
+  basis: "working",
+  chargeBasis: "working",
+  timeZone: "America/New_York",
+  firstDay: "eventDay",
+  calendar: { weekend: [6, 7], holidays: ["2024-06-19"], timeZone: "America/New_York" },
+}).chargedDates;
+// ["2024-06-20", "2024-06-21", "2024-06-24"] — the tariff charges calendar days after expiry`}
+  rightCode={`import { chargeableDays } from "@northguild/gmt/intermodal";
+
+chargeableDays("2024-06-14T19:00:00Z", "2024-06-24T15:00:00Z", 3, {
+  basis: "working",
+  chargeBasis: "calendar",
+  timeZone: "America/New_York",
+  firstDay: "eventDay",
+  calendar: { weekend: [6, 7], holidays: ["2024-06-19"], timeZone: "America/New_York" },
+}).chargedDates;
+// ["2024-06-19", "2024-06-20", "2024-06-21", "2024-06-22", "2024-06-23", "2024-06-24"]`}
+  rightSpecId="chargeableDays"
 />
 
 <Mistake
@@ -114,7 +140,7 @@ Math.max(0, Math.ceil((hours - 72) / 24));
 // 0 — the tariff charges Monday`}
   rightCode={`import { chargeableDays } from "@northguild/gmt/intermodal";
 
-chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T04:00:01Z", 3, { basis: "calendar", timeZone: "America/New_York", firstDay: "eventDay" });
+chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T04:00:01Z", 3, { basis: "calendar", chargeBasis: "calendar", timeZone: "America/New_York", firstDay: "eventDay" });
 // { freeDaysUsed: 3, chargeableDays: 1, expiresAt: "2024-06-17T04:00:00Z", chargedDates: ["2024-06-17"], byTier: [{ from: 1, to: null, days: 1 }] }`}
   rightSpecId="chargeableDays"
 />
@@ -123,11 +149,11 @@ chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T04:00:01Z", 3, { basis: "cale
   severity="medium"
   title="Putting rates inside the day count"
   description="Tiers are day bands, not rates. tiers names the last chargeable-day ordinal of each band, and byTier says how many charged days fell in each, empty bands included, so a rate table applies by index. Money is the caller's; a list that is not strictly ascending is refused."
-  wrongCode={`chargeableDays("2024-06-14T19:00:00Z", "2024-06-28T15:00:00Z", 3, { basis: "calendar", timeZone: "America/New_York", firstDay: "eventDay", tiers: [10, 5] });
+  wrongCode={`chargeableDays("2024-06-14T19:00:00Z", "2024-06-28T15:00:00Z", 3, { basis: "calendar", chargeBasis: "calendar", timeZone: "America/New_York", firstDay: "eventDay", tiers: [10, 5] });
 // null — tiers must ascend`}
   rightCode={`import { chargeableDays } from "@northguild/gmt/intermodal";
 
-chargeableDays("2024-06-14T19:00:00Z", "2024-06-28T15:00:00Z", 3, { basis: "calendar", timeZone: "America/New_York", firstDay: "eventDay", tiers: [5, 10] }).byTier;
+chargeableDays("2024-06-14T19:00:00Z", "2024-06-28T15:00:00Z", 3, { basis: "calendar", chargeBasis: "calendar", timeZone: "America/New_York", firstDay: "eventDay", tiers: [5, 10] }).byTier;
 // [{ from: 1, to: 5, days: 5 }, { from: 6, to: 10, days: 5 }, { from: 11, to: null, days: 2 }]`}
   rightSpecId="chargeableDays"
 />

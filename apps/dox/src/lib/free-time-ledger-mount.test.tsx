@@ -24,6 +24,7 @@ const REQUIRED_ROLES = [
   "free-days",
   "first-day",
   "basis",
+  "charge-basis",
   "tiers",
   "working-terms",
   "weekend",
@@ -69,7 +70,7 @@ const EXPECTED: Record<string, [string, string]> = {
   ],
   "working-days": [
     '{ freeTimeStart: "2024-06-14",\n  lastFreeDay: "2024-06-18",\n  expiresAt: "2024-06-19T04:00:00Z" }',
-    '{ freeDaysUsed: 3,\n  chargeableDays: 3,\n  expiresAt: "2024-06-19T04:00:00Z",\n  chargedDates: ["2024-06-19", "2024-06-20", "2024-06-21"],\n  byTier: [{ from: 1, to: null, days: 3 }] }',
+    '{ freeDaysUsed: 3,\n  chargeableDays: 6,\n  expiresAt: "2024-06-19T04:00:00Z",\n  chargedDates: ["2024-06-19", "2024-06-20", "2024-06-21", "2024-06-22", "2024-06-23", "2024-06-24"],\n  byTier: [{ from: 1, to: null, days: 6 }] }',
   ],
   "terminal-holiday": [
     '{ freeTimeStart: "2024-06-14",\n  lastFreeDay: "2024-06-18",\n  expiresAt: "2024-06-19T04:00:00Z" }',
@@ -251,7 +252,7 @@ describe("mountFreeTimeLedger", () => {
     );
     expect(q(root, "expiry-marker").hidden).toBe(false);
     expect(q(root, "call-charges").textContent).toBe(
-      'chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T04:00:01Z", 3, { basis: "calendar", timeZone: "America/New_York", firstDay: "eventDay" })',
+      'chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T04:00:01Z", 3, { basis: "calendar", chargeBasis: "calendar", timeZone: "America/New_York", firstDay: "eventDay" })',
     );
   });
 
@@ -303,6 +304,32 @@ describe("mountFreeTimeLedger", () => {
     expect(q(root, "call-charges").textContent).toContain(
       'calendar: { weekend: [6, 7], holidays: ["2024-06-19"], timeZone: "America/New_York" }',
     );
+  });
+
+  it("charges the holiday and the weekend after working-day free time on calendar-day charging", async () => {
+    const { root } = await mount();
+    choosePreset(root, "working-days");
+    // Closed days inside the free window are not counted; after expiry every day is charged.
+    expect(datesIn(root, "closed")).toEqual(["2024-06-15", "2024-06-16"]);
+    expect(datesIn(root, "free")).toEqual(["2024-06-14", "2024-06-17", "2024-06-18"]);
+    expect(datesIn(root, "chargeable")).toEqual([
+      "2024-06-19", "2024-06-20", "2024-06-21", "2024-06-22", "2024-06-23", "2024-06-24",
+    ]);
+    expect(q(root, "call-charges").textContent).toContain('basis: "working", chargeBasis: "calendar"');
+    // Switching only the charge basis suspends charging on the closed days after expiry.
+    select(root, "charge-basis", "working");
+    expect(datesIn(root, "chargeable")).toEqual(["2024-06-20", "2024-06-21", "2024-06-24"]);
+    expect(datesIn(root, "closed")).toEqual(["2024-06-15", "2024-06-16", "2024-06-19", "2024-06-22", "2024-06-23"]);
+    expect(q<HTMLSelectElement>(root, "preset").value).toBe("terminal-holiday");
+  });
+
+  it("shows the working-day terms when only the charge basis is working", async () => {
+    const { root } = await mount();
+    expect(q(root, "working-terms").hidden).toBe(true);
+    select(root, "charge-basis", "working");
+    expect(q(root, "working-terms").hidden).toBe(false);
+    expect(q(root, "call-expiry").textContent).not.toContain("calendar: {");
+    expect(q(root, "call-charges").textContent).toContain("calendar: {");
   });
 
   it("draws a tier boundary after the fifth and tenth charged days", async () => {
@@ -430,6 +457,7 @@ describe("mountFreeTimeLedger", () => {
       freeDays: 3,
       firstDay: "eventDay",
       basis: "calendar",
+      chargeBasis: "calendar",
       zone: "America/New_York",
     });
     expect(q<HTMLInputElement>(root, "clock-start").value).toBe(
@@ -448,6 +476,7 @@ describe("mountFreeTimeLedger", () => {
       freeDays: "3",
       firstDay: "eventDay",
       basis: "calendar",
+      chargeBasis: "calendar",
       zone: "America/New_York",
     });
     choosePreset(root, "terminal-holiday");

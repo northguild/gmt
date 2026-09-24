@@ -15,8 +15,8 @@ description: >
   days crossed), and the intermodal free-time primitives — freeTimeExpiry (the
   free window and its half-open expiry in the terminal's local days),
   chargeableDays (the days and dates charged, with tier bands) and
-  demurrageClock (which two events a demurrage, detention or storage clock runs
-  between). Reads the installed package README.md and source JSDoc for API
+  demurrageClock (which two events a demurrage, detention, storage or combined
+  clock runs between, on the import or export leg). Reads the installed package README.md and source JSDoc for API
   details; this skill is a routing pointer, not an API dump.
 sources:
   - 'northguild/gmt:README.md'
@@ -202,11 +202,17 @@ converting between time zones, or doing arithmetic that must respect DST.
     `firstDay` (`"eventDay"` | `"nextDay"`) has no default because the two
     differ by a day of charges; `basis: "working"` needs a `BusinessCalendar`
     and returns `null` without one. `chargeableDays(clockStart, clockEnd,
-    freeDays, options)` counts the days on or after `expiresAt` the half-open
-    dwell touched, lists them as `chargedDates` (46 CFR 541.6), and splits them
-    into `tiers` bands; `freeDays: 0` is allowed there. `demurrageClock(events,
-    scope, { startEvent? })` selects discharge (or availability) to gate-out for
-    demurrage and storage, and gate-out to empty return for detention.
+    freeDays, options)` also needs `chargeBasis` (no default): most tariffs
+    count free time in working days and then charge every calendar day,
+    California charges working days only. It counts the days on or after
+    `expiresAt` the half-open dwell touched, lists them as `chargedDates`, and
+    splits them into `tiers` bands; `freeDays: 0` is allowed there.
+    `demurrageClock(events, scope, { direction, startEvent? })` selects the
+    events per leg: import demurrage and storage run discharge (or
+    availability) to gate-out, detention gate-out to empty return; export
+    demurrage gate-in to loaded, detention empty release to gate-in; `combined`
+    runs both as one period. No world regulation exists; 46 CFR 541.6 is the
+    US invoice rule only.
 17. **Read the README.** This skill is a routing pointer. For the full DST
     disambiguation walkthrough, code examples, and locale ICU notes, read the
     installed package's `README.md` and the source JSDoc.

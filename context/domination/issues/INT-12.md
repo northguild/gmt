@@ -12,7 +12,7 @@ This is the money calculation in container logistics, and the first draft reduce
 - **Whose calendar.** Working-day counting needs the terminal's holiday calendar.
 - **Which contract.** Free time varies by carrier, lane, trade and service contract.
 
-US invoices are now regulated: 46 CFR Part 541 requires a demurrage or detention invoice to state the allowed free time in days, the start and end dates of free time, the container availability date (imports) or earliest return date (exports), and the specific dates for which charges were assessed. Those are exactly this story's outputs.
+No world regulation or industry standard governs how demurrage and detention days are counted; DCSA, the carriers' standards body, defines what the charges are and types the free-time unit, and nothing else. One jurisdiction regulates the invoice: in the United States, 46 CFR Part 541 requires a demurrage or detention invoice to state the allowed free time in days, the start and end dates of free time, the container availability date (imports) or earliest return date (exports), and the specific dates for which charges were assessed. Those are this story's outputs, and every tariff states them anyway; the US rule is where printing them is mandatory. The research record is [int-12-demurrage-conventions.md](../research/int-12-demurrage-conventions.md).
 
 ([ACL](https://www.aclcargo.com/free-time-demurrage/), [Navo24](https://navo24.com/blog/msc-demurrage-detention-free-time/), [46 CFR 541.6](https://www.law.cornell.edu/cfr/text/46/541.6))
 
@@ -21,13 +21,13 @@ US invoices are now regulated: 46 CFR Part 541 requires a demurrage or detention
 - `packages/gmt/src/intermodal/calculate/freeTimeExpiry.ts`:
   - `freeTimeExpiry(clockStart: string, freeDays: number, options: { basis: 'calendar' | 'working', timeZone: string, firstDay: 'eventDay' | 'nextDay', calendar?: BusinessCalendar }): { freeTimeStart: string, lastFreeDay: string, expiresAt: string } | null` — `freeTimeStart` and `lastFreeDay` are local dates; `expiresAt` is the instant free time ends (the start of the local day after `lastFreeDay`). Working-day basis requires `calendar`.
 - `packages/gmt/src/intermodal/calculate/chargeableDays.ts`:
-  - `chargeableDays(clockStart: string, clockEnd: string, freeDays: number, options: FreeTimeOptions & { tiers?: number[] }): { freeDaysUsed: number, chargeableDays: number, expiresAt: string, chargedDates: string[], byTier: { from: number, to: number | null, days: number }[] } | null` — Days beyond free time, the local dates they fell on, and — when `tiers` gives band boundaries in chargeable-day ordinals, e.g. `[5, 10]` for days 1–5, 6–10 and 11 onward — how many days fell in each band.
+  - `chargeableDays(clockStart: string, clockEnd: string, freeDays: number, options: FreeTimeOptions & { chargeBasis: 'calendar' | 'working', tiers?: number[] }): { freeDaysUsed: number, chargeableDays: number, expiresAt: string, chargedDates: string[], byTier: { from: number, to: number | null, days: number }[] } | null` — Days beyond free time, the local dates they fell on, and — when `tiers` gives band boundaries in chargeable-day ordinals, e.g. `[5, 10]` for days 1–5, 6–10 and 11 onward — how many days fell in each band. `chargeBasis` says how days after expiry are counted, separately from `basis`, which counts free days.
 - `packages/gmt/src/intermodal/calculate/demurrageClock.ts`:
-  - `demurrageClock(events: { type: 'discharged' | 'available' | 'gatedOut' | 'emptyReturned', at: string }[], scope: 'demurrage' | 'detention' | 'storage', options?: { startEvent?: 'discharged' | 'available' }): { start: string, end: string } | null` — Selects the correct start and end events for the requested charge. Demurrage and storage run from discharge (or availability, where the tariff says so) to gate-out; detention runs from gate-out to empty return.
+  - `demurrageClock(events: { type: 'discharged' | 'available' | 'gatedOut' | 'emptyReturned' | 'emptyReleased' | 'gatedIn' | 'loaded', at: string }[], scope: 'demurrage' | 'detention' | 'storage' | 'combined', options: { direction: 'import' | 'export', startEvent?: 'discharged' | 'available' }): { start: string, end: string } | null` — Selects the correct start and end events for the requested charge and leg. Import: demurrage and storage run from discharge (or availability) to gate-out, detention from gate-out to empty return, combined from discharge to empty return. Export: demurrage and storage run from full gate-in to loaded on board, detention from empty release to full gate-in, combined from empty release to loaded.
 - Docs site (`apps/dox/src/content/docs/`, per [../docs-site.md](../docs-site.md)):
   - `guides/industries/intermodal-free-time-and-demurrage.mdx` — the three clocks, which day is
     day one, calendar or working days, the half-open expiry, charged dates and tiers, and what
-    46 CFR 541.6 makes an invoice print, ported from the README section.
+    the US invoice rule (46 CFR 541.6), ported from the README section.
   - Scenarios: `free-time-start-day` (`freeTimeExpiry`), `demurrage-across-a-weekend`
     (`chargeableDays`), `detention-is-not-demurrage` (`demurrageClock`).
   - `mistakes/intermodal.mdx` — a defaulted `firstDay`, a per-port free-time table, counting in
@@ -45,12 +45,13 @@ US invoices are now regulated: 46 CFR Part 541 requires a demurrage or detention
 
 ## Design notes
 
-- **Day boundaries are local to the terminal**, so every count comes from `dwellTime` (TRAN-8) and `floorToZone` (CORE-5), never from dividing elapsed hours by 24. A container discharged at 23:00 has used a free day by 00:01 under `firstDay: 'eventDay'`.
+- **Day boundaries are local to the terminal**, so every count is a walk over the zone's real local-day buckets, the machinery behind `floorToZone` and `bucketRange` (CORE-5), never a division of elapsed hours by 24; `dwellTime` (TRAN-8) is the oracle the count is asserted against. A container discharged at 23:00 has used a free day by 00:01 under `firstDay: 'eventDay'`.
 - **`firstDay` has no default.** Tariffs differ, the difference is one full day of charges, and a silent default here is a wrong invoice. Same rule as `freeDays`.
 - **Half-open counting.** Gate-out at exactly `expiresAt` is not a chargeable day. See CORE-6 for why the convention is fixed library-wide.
-- **`chargedDates` is the list an FMC-compliant invoice has to print** ("the specific date(s) for which demurrage and/or detention were charged", 46 CFR 541.6). Returning it makes the count auditable instead of asserted.
+- **`chargedDates` makes the count auditable instead of asserted.** It is the list a carrier's day-numbered tariff grid is applied to, and on US trades the list the invoice must print ("the specific date(s) for which demurrage and/or detention were charged", 46 CFR 541.6(b)(8), the US invoice rule).
 - **Tiers are day bands, not rates.** Carrier tariffs escalate by day band; `byTier` returns the days in each band so the consumer can apply its own rates. GMT computes days, never money.
 - `available` exists because some tariffs start the import clock at the container availability date rather than at discharge, and 46 CFR 541.6 requires that date on the invoice. `startEvent` selects it explicitly; the default is `'discharged'` because that is the classic definition of demurrage.
+- Storage as a third clock with its own free time is the terminal's charge, not the carrier's: ACL's tariff lists "Import Quay Rent" for Liverpool, Dublin and Cork with its own counting rule beside demurrage ([ACL](https://www.aclcargo.com/free-time-demurrage/)). 46 CFR 541.3 folds terminal space into its single "demurrage or detention" definition, so the invoice rules apply to it too.
 - Working-day basis suspends the clock on weekends and holidays; calendar basis does not. Both are implemented over the same interval algebra so they cannot drift apart.
 - Invoice, dispute and resolution deadlines under 46 CFR 541.7–541.8 are INT-58's problem; this story stops at the day count.
 
@@ -82,15 +83,45 @@ Decisions of record (owner, 2026-09-24):
   serve all three scopes. The result is an `Interval` in the caller's own strings.
 - **Type names avoid a case-only clash with a function name** (`FreeTimeCharges`, not
   `ChargeableDays`): the reference generator refuses two pages whose paths differ only by case.
-- `FreeTimeOptions`, `FreeTimeBasis` and `FreeTimeFirstDay` live in `types/`, as `BusinessCalendar`
-  does; result types live beside their function, as `Dwell` does.
+- **The walker only ever advances to a later date** (gmt-reviewer finding, 2026-09-24). A clock
+  that starts inside the one-minute first pass of Goose Bay's 7 November must not free or charge
+  the re-entered 6th; `nextLocalDay` steps past any bucket whose date is not later than the day
+  being left. This is the one case where `freeDaysUsed + chargeableDays` and
+  `dwellTime.calendarDays` differ: `dwellTime` counts the 6th as touched, a tariff never counts a
+  date before the event day.
+- **`tiers` and `freeDays` are safe integers with no holes** (gmt-reviewer finding, 2026-09-24):
+  `Array.prototype.every` skips a hole, so `[5, , ]` reached `bandsByTier` as `NaN`; the list is
+  materialised with `Array.from` and checked with `Number.isSafeInteger` before it is read.
+- **`chargeBasis` is a separate term with no default** (decided against the published tariffs,
+  2026-09-24; research record linked above). No regulation or standard fixes how days after
+  expiry are counted. The dominant published shape is working-day free time with every calendar
+  day charged after it (CMA CGM US: "FREE DAYS ARE IN WORKING DAYS ... BILLABLE IN CALENDAR
+  DAYS"; Hapag-Lloyd US "Rate per Calendar day"; ACL "Once free time expires ... charged on
+  calendar days"; Maersk and Hapag-Lloyd switched US charging to calendar days in 2024). Working-day
+  charging is real and a legal requirement in one place: Cal. Bus. & Prof. Code § 22928 forbids
+  charges while the gate is closed or on a holiday. The first draft let `basis: "working"` also
+  suspend charging, which matches neither shape's name and under-bills the dominant one.
+  `chargeBasis` has no default, on the story's own rule: it is worth every closed day after expiry.
+- **`demurrageClock` covers both legs and the combined clock** (same research). Maersk's terms,
+  CMA CGM's general terms, Hapag-Lloyd and ACL agree on the events: export demurrage from full
+  gate-in to loaded on board, export detention from empty release to full gate-in, and a named
+  merged product ("Combined", "merged", "Combined Detention and Demurrage Tariff") from discharge to
+  empty return or empty release to loaded. `direction` is required because the same scope selects
+  different events per leg. Event names map to DCSA Track & Trace equipment events (DISC, GTOT,
+  GTIN, LOAD with LADEN/EMPTY). No `customsReleased` event: it rests on one tariff (Hapag-Lloyd
+  Japan); such a tariff passes the release instant as the start event's `at`.
+- **What is US-only.** The `available` event and the invoice-field wording rest on US law alone
+  (46 CFR 541.6(b)(6)); the earliest return date has no counterpart GMT models (TRAN-10 cut-offs).
+  Everything else rests on the published tariffs or DCSA and holds worldwide. US wording differs
+  (MSC USA calls in-terminal container time "detention" and outside time "per diem"; in India
+  "demurrage" usually means port storage); GMT's scope names follow the global usage.
 
 ## What gmt provides (do not re-implement)
 
-- `dwellTime` from TRAN-8 — the underlying dwell measurement and the local calendar-day count
-- `BusinessCalendar` / `isBusinessDay` / `addBusinessDays` from CORE-7 — working-day counting
-- `subtractIntervals` / `sumIntervals` from CORE-6 — suspending the clock across closures
-- `floorToZone` from CORE-5 — local day boundaries
+- `zonedUnitStart` / `nextZonedBucketStart` (`internal/zonedBucket.ts`), the machinery behind `floorToZone` and `bucketRange` from CORE-5 — real local-day boundaries
+- `BusinessCalendar` / `parseBusinessCalendar` / `isBusinessDate` (`internal/businessCalendar.ts`) from CORE-7 — which local dates are working days
+- `dwellTime` from TRAN-8 — the local calendar-day count the free-time ledger is asserted against
+- `Interval` from CORE-6 — the shape `demurrageClock` returns
 
 ## Verification
 
@@ -101,8 +132,10 @@ Decisions of record (owner, 2026-09-24):
 - Gate-out exactly at `expiresAt` returns `chargeableDays: 0` and an empty `chargedDates`
 - Gate-out one second later returns `chargeableDays: 1` and one charged date
 - `tiers: [5, 10]` over twelve chargeable days returns bands of 5, 5 and 2
-- `demurrageClock` with `scope: 'detention'` selects gate-out to empty-return, not discharge
+- `demurrageClock` with `scope: 'detention'` and `direction: 'import'` selects gate-out to empty-return, not discharge
 - `demurrageClock` with `startEvent: 'available'` starts at the availability event and returns the sentinel when that event is missing
+- `demurrageClock` selects the export pairs and the combined clock in both directions; a missing `direction` returns the sentinel
+- `basis: 'working'` with `chargeBasis: 'calendar'` charges the holiday and weekend after expiry; `chargeBasis: 'working'` does not; a missing `chargeBasis` returns the sentinel
 - Missing required event returns the sentinel
 - Working basis without a `calendar`, or a missing `firstDay`, returns the sentinel
 - Probe-zone rows: Santiago's skipped midnight starts the day at 01:00; Apia's deleted

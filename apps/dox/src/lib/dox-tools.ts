@@ -87,9 +87,9 @@ export const showDwellLedgerInput = z.object({
 /**
  * A container's clock and the tariff it is read against.
  *
- * `firstDay` and `basis` are required here as they are in the library: the two
- * start-day conventions differ by a day of charges, so a model must say which
- * the reader meant rather than have one picked for them. `zone` is the terminal's.
+ * `firstDay`, `basis` and `chargeBasis` are required here as they are in the
+ * library: each is worth days of charges, so a model must say which the reader
+ * meant rather than have one picked for them. `zone` is the terminal's.
  */
 export const showFreeTimeLedgerInput = z.object({
   clockStart: dateTimeSchema,
@@ -97,6 +97,7 @@ export const showFreeTimeLedgerInput = z.object({
   freeDays: z.number().int().min(0).max(365),
   firstDay: z.enum(["eventDay", "nextDay"]),
   basis: z.enum(["calendar", "working"]),
+  chargeBasis: z.enum(["calendar", "working"]),
   zone: zoneSchema,
   weekend: z.array(z.number().int().min(1).max(7)).max(7).optional(),
   holidays: z.array(z.string().min(10).max(10)).max(64).optional(),
@@ -188,7 +189,7 @@ export const DOX_TOOL_DOCS: {
     purpose:
       "A container's free time and demurrage drawn on the terminal's real local-day grid: the free days, the expiry, the chargeable days and their dates, counted by freeTimeExpiry and chargeableDays.",
     when: "the reader asks when free time ends, how many days of demurrage or detention are due, which dates are charged, or how the start-day convention or a working-day tariff changes the answer",
-    args: "clockStart, clockEnd (ISO date-times; a plain 2024-06-14T15:00:00 is read as wall time in zone), freeDays (whole number), firstDay (eventDay | nextDay: whether the event day is free day one; ask if the reader did not say), basis (calendar | working), zone (the terminal's IANA id), weekend (optional ISO weekday numbers, working basis), holidays (optional ISO dates, working basis), tiers (optional last chargeable-day ordinal of each band)",
+    args: "clockStart, clockEnd (ISO date-times; a plain 2024-06-14T15:00:00 is read as wall time in zone), freeDays (whole number), firstDay (eventDay | nextDay: whether the event day is free day one; ask if the reader did not say), basis (calendar | working: how free days are counted), chargeBasis (calendar | working: how days after free time are charged; most tariffs charge calendar days, California terminals working days; ask if the reader did not say), zone (the terminal's IANA id), weekend (optional ISO weekday numbers, working basis), holidays (optional ISO dates, working basis), tiers (optional last chargeable-day ordinal of each band)",
   },
 ];
 
