@@ -37,6 +37,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      announce:
+        description: Post only the Discord announcement for these already-published tags, space-separated (e.g. @northguild/gmt@1.16.0). Publishes nothing. Leave empty to publish.
+        type: string
+        default: ""
 
 # A release must never be cancelled halfway through, so this queues rather than
 # cancelling in-flight runs the way ci.yml does.
@@ -49,6 +54,9 @@ permissions: {}
 jobs:
   mode:
     name: Select mode
+    # An announce-only dispatch must not publish, and a dispatch bypasses the
+    # version guard, so skip the mode (and with it `publish`) entirely.
+    if: ${{ inputs.announce == '' || inputs.announce == null }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -214,6 +222,10 @@ jobs:
         with:
           publish-plan-artifact-id: ${{ needs.mode.outputs.publish-plan }}
 
+      # GitHub Releases are cut in the next step, not here. The action posts the
+      # whole CHANGELOG section as the body, and GitHub rejects one over 125,000
+      # characters. That error fails this step after npm has published, which
+      # left `published` unset and skipped the Discord announcement (1.16.0).
       - uses: changesets/action/publish@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         id: publish
         with:
@@ -221,42 +233,39 @@ jobs:
           # Changesets' own tag format, `@northguild/<pkg>@<version>` — the same
           # one every existing tag and GitHub Release already uses.
           push-git-tags: true
-          create-github-releases: true
+          create-github-releases: false
 
-      # Build the message first: `published-packages` is JSON, and a release
-      # can carry more than one package, unlike the single-package repos this
-      # notifier is shared with.
-      - name: Compose the announcement
+      - name: Create the GitHub Releases
         if: steps.publish.outputs.published == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBLISHED: ${{ steps.publish.outputs.published-packages }}
+        run: |
+          set -euo pipefail
+          node -e 'for (const p of JSON.parse(process.env.PUBLISHED)) console.log(p.name, p.version)' |
+            while read -r NAME VERSION; do
+              TAG="$NAME@$VERSION"
+              if gh release view "$TAG" > /dev/null 2>&1; then
+                echo "$TAG already has a GitHub Release."
+                continue
+              fi
+              node scripts/release-notes.mjs "$NAME" "$VERSION" > "$RUNNER_TEMP/notes.md"
+              PRERELEASE=()
+              if [[ "$VERSION" == *-* ]]; then PRERELEASE=(--prerelease); fi
+              gh release create "$TAG" --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md" --verify-tag "${PRERELEASE[@]}"
+            done
+
+      # `!cancelled()`: the packages are on npm by now, so a failure creating a
+      # GitHub Release must not also swallow the announcement.
+      - name: Compose the announcement
+        if: ${{ !cancelled() && steps.publish.outputs.published == 'true' }}
         env:
           PUBLISHED: ${{ steps.publish.outputs.published-packages }}
         run: |
           set -euo pipefail
           {
             echo "DISCORD_MESSAGE<<GMT_DISCORD_EOF"
-            node -e '
-              const pkgs = JSON.parse(process.env.PUBLISHED);
-              const repo = process.env.GITHUB_REPOSITORY;
-              const blocks = pkgs.map((p) => {
-                const tag = p.name + "@" + p.version;
-                const url =
-                  "https://github.com/" + repo + "/releases/tag/" + encodeURIComponent(tag);
-                // Name the dist-tag only when it is not `latest`; Changesets
-                // publishes pre-mode versions under their pre-tag.
-                const pre = p.version.includes("-")
-                  ? p.version.split("-")[1].split(".")[0]
-                  : null;
-                const where = pre ? " under the \u0060" + pre + "\u0060 tag" : "";
-                // The URL goes out bare on its own line: Discord unfurls it into
-                // the release card carrying the changelog, so the card speaks for
-                // itself. Wrapping it in <> would suppress that card.
-                return [
-                  "\ud83d\ude80 Version \u0060" + tag + "\u0060 is now live on npm" + where + "!",
-                  url,
-                ].join("\n");
-              });
-              process.stdout.write(blocks.join("\n\n"));
-            '
+            node scripts/release-announcement.mjs
             echo
             echo "GMT_DISCORD_EOF"
           } >> "$GITHUB_ENV"
@@ -267,8 +276,62 @@ jobs:
       # Never fails the job: by the time it runs the packages are already on
       # npm, so a red run would only invite a re-run that cannot help.
       - name: Announce on Discord
-        if: steps.publish.outputs.published == 'true' && env.DISCORD_WEBHOOK != ''
+        if: ${{ !cancelled() && steps.publish.outputs.published == 'true' && env.DISCORD_WEBHOOK != '' }}
         continue-on-error: true
+        uses: Ilshidur/action-discord@0c4b27844ba47cb1c7bee539c8eead5284ce9fa9 # 0.3.2
+        with:
+          args: ${{ env.DISCORD_MESSAGE }}
+
+  # Run workflow with `announce` set posts the Discord message for versions that
+  # are already on npm, and publishes nothing. It is for a release whose
+  # announcement was lost, such as one whose publish step failed after npm.
+  announce:
+    name: Announce on Discord
+    if: ${{ inputs.announce != '' && inputs.announce != null }}
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+    env:
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Refuse without a webhook
+        if: env.DISCORD_WEBHOOK == ''
+        run: |
+          echo "::error::DISCORD_WEBHOOK is not set in the release environment."
+          exit 1
+
+      - name: Compose the announcement
+        env:
+          TAGS: ${{ inputs.announce }}
+        run: |
+          set -euo pipefail
+          for TAG in $TAGS; do
+            if ! git rev-parse -q --verify "refs/tags/$TAG" > /dev/null; then
+              echo "::error::$TAG is not a tag in this repository."
+              exit 1
+            fi
+          done
+          # `@northguild/gmt@1.16.0` splits at its last `@` into name and version.
+          PUBLISHED=$(node -e '
+            const tags = process.env.TAGS.split(/\s+/).filter(Boolean);
+            console.log(JSON.stringify(tags.map((t) => {
+              const at = t.lastIndexOf("@");
+              return { name: t.slice(0, at), version: t.slice(at + 1) };
+            })));
+          ')
+          {
+            echo "DISCORD_MESSAGE<<GMT_DISCORD_EOF"
+            PUBLISHED="$PUBLISHED" node scripts/release-announcement.mjs
+            echo
+            echo "GMT_DISCORD_EOF"
+          } >> "$GITHUB_ENV"
+
+      - name: Announce on Discord
         uses: Ilshidur/action-discord@0c4b27844ba47cb1c7bee539c8eead5284ce9fa9 # 0.3.2
         with:
           args: ${{ env.DISCORD_MESSAGE }}

@@ -119,6 +119,15 @@ attestation and ships whatever is in your working tree.
 **A publish died and no run is left to retry.** Actions → Release → Run
 workflow. A manual dispatch bypasses the version guard deliberately.
 
+**The Discord announcement never went out.** Actions → Release → Run workflow,
+with `announce` set to the published tags, space-separated:
+
+```bash
+gh workflow run release.yml -f announce="@northguild/gmt@1.16.0 @northguild/gmt-biome@1.1.1"
+```
+
+That run posts the message and publishes nothing.
+
 **Nothing happened when I merged.** Check the run's summary — it says what it
 decided and why. If it reports pending changesets, you merged a feature PR, not
 a release PR.
