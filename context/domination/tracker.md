@@ -87,8 +87,8 @@ npm. A Core primitive ships with the realm that first uses it.
 | 7  | CORE-7  | Core       | Business calendars,<br>`mergeCalendars`, roll conventions                         | —                      | #188  | 1.16.0  | Done        |
 | 8  | CORE-8  | Core       | Full-API standards review with<br>`gmt-reviewer` (pre-1.16.0)                     | —                      | #251  | 1.16.0  | Done        |
 | 9  | TRAN-8  | Transport  | `transitTime` + `etaAtZone` +<br>`dwellTime`                                      | —                      | #189  | —       | Done        |
-| 10 | INT-12  | Intermodal | `freeTimeExpiry` + `chargeableDays`<br>+ `demurrageClock`                         | —                      | #193  | —       | Not started |
-| 11 | INT-58  | Intermodal | FMC demurrage and detention billing<br>timelines (46 CFR 541)                     | INT-12                 | #260  | Cut     | Not started |
+| 10 | INT-12  | Intermodal | `freeTimeExpiry` + `chargeableDays`<br>+ `demurrageClock`                         | —                      | #193  | —       | Done        |
+| 11 | INT-58  | Intermodal | FMC demurrage and detention billing<br>timelines (46 CFR 541)                     | —                      | #260  | Cut     | Not started |
 | 12 | CORE-55 | Core       | Operating hours and recurring<br>windows, open-time SLA arithmetic                | —                      | #257  | —       | Not started |
 | 13 | TRAN-9  | Transport  | `scheduleDelivery` + `crossingTime`                                               | —                      | #190  | —       | Not started |
 | 14 | TRAN-10 | Transport  | `cutoffAt` + `cutoffSchedule` +<br>`isPastCutoff`                                 | —                      | #191  | —       | Not started |
