@@ -25,30 +25,46 @@ export const MAX_WALKED_DAYS = 10_000;
  */
 const MAX_REVISITED_BUCKETS = 8;
 
-/** The tariff terms reduced to what the walk reads. `calendar` is `null` on the calendar basis. */
+/**
+ * The tariff terms reduced to what the walk reads. `calendar` is the working-day calendar free
+ * days are counted against, `null` on the calendar basis; `chargeCalendar` is the one charged days
+ * are counted against, `null` when every local day after expiry is charged.
+ */
 export type FreeTimeTerms = {
   timeZone: string;
   firstDay: "eventDay" | "nextDay";
   calendar: ResolvedBusinessCalendar | null;
+  chargeCalendar: ResolvedBusinessCalendar | null;
 };
 
 /**
  * Read a `FreeTimeOptions` bag, or `null` when it is not one: a non-object, an unknown `basis`
  * or `firstDay`, a missing `firstDay` (no default: the two conventions differ by a day of
  * charges), an invalid `timeZone`, or a `"working"` basis without a valid `BusinessCalendar`.
- * On the `"calendar"` basis `calendar` is not read.
+ * The `calendar` is read only when a basis that needs it is `"working"`.
+ *
+ * With `readChargeBasis`, `chargeBasis` is required too, and has no default for the same reason:
+ * published tariffs mostly charge every calendar day after free time, but California law and
+ * some tariffs charge working days only, and the two differ by the weekend.
  */
-export function parseFreeTimeTerms(options: unknown): FreeTimeTerms | null {
+export function parseFreeTimeTerms(
+  options: unknown,
+  readChargeBasis = false,
+): FreeTimeTerms | null {
   if (!isObject(options)) {
     return null;
   }
 
-  const { basis, firstDay, timeZone, calendar } = options as Record<
-    string,
-    unknown
-  >;
+  const { basis, chargeBasis, firstDay, timeZone, calendar } =
+    options as Record<string, unknown>;
 
-  if (basis !== "calendar" && basis !== "working") {
+  const isBasis = (value: unknown): value is "calendar" | "working" =>
+    value === "calendar" || value === "working";
+
+  if (!isBasis(basis)) {
+    return null;
+  }
+  if (readChargeBasis && !isBasis(chargeBasis)) {
     return null;
   }
   if (firstDay !== "eventDay" && firstDay !== "nextDay") {
@@ -58,14 +74,20 @@ export function parseFreeTimeTerms(options: unknown): FreeTimeTerms | null {
     return null;
   }
 
-  if (basis === "working") {
-    const resolved = parseBusinessCalendar(calendar);
-    return resolved === null
-      ? null
-      : { timeZone, firstDay, calendar: resolved };
+  const needsCalendar =
+    basis === "working" || (readChargeBasis && chargeBasis === "working");
+  const resolved = needsCalendar ? parseBusinessCalendar(calendar) : null;
+  if (needsCalendar && resolved === null) {
+    return null;
   }
 
-  return { timeZone, firstDay, calendar: null };
+  return {
+    timeZone,
+    firstDay,
+    calendar: basis === "working" ? resolved : null,
+    chargeCalendar:
+      readChargeBasis && chargeBasis === "working" ? resolved : null,
+  };
 }
 
 /** A whole number of free days no smaller than `minimum`, or `null`. */
@@ -196,16 +218,18 @@ function nextLocalDay(day: LedgerDay): LedgerDay | null | undefined {
  *
  * Each day is a bucket `zonedUnitStart` / `nextZonedBucketStart` returns for `"day"`, the same
  * boundaries `floorToZone` and `bucketRange` use, so a 23- or 25-hour day is one day, a date the
- * zone deleted is never visited, and a date the clock falls back into is one day. On the working
- * basis a weekend day or holiday is visited but not counted; on the calendar basis every day
- * counts. The day of the event is not counted at all under `"nextDay"`.
+ * zone deleted is never visited, and a date the clock falls back into is one day. Free days and
+ * charged days are counted against their own terms: on a working basis a weekend day or holiday is
+ * visited but not counted; on a calendar basis every day counts. The day of the event is neither
+ * free nor charged under `"nextDay"`.
  *
- * - Free days are the first `freeDays` counted days. `expiresAt` is the start of the day after
- *   the last of them, whether or not that day counts; with `freeDays` of `0` it is the start of
- *   the first counted day.
+ * - Free days are the first `freeDays` days counted on `calendar`. `expiresAt` is the start of the
+ *   day after the last of them, whether or not that day counts; with `freeDays` of `0` it is the
+ *   start of the first counted day.
  * - With a `clockEnd`, the dwell `[clockStart, clockEnd)` is half-open: a day is touched when it
  *   starts before `clockEnd`, and a zero-length dwell touches the day it sits on, as `dwellTime`
- *   counts. `used` is the free days touched; `charged` the counted days from `expiresAt` touched.
+ *   counts. `used` is the free days touched; `charged` the days from `expiresAt` touched that count
+ *   on `chargeCalendar`.
  * - Returns `null` when the walk would visit more than `MAX_WALKED_DAYS` local days, when a day
  *   boundary cannot be found, or when the expiry lies past the last representable instant.
  */
@@ -227,6 +251,9 @@ export function walkFreeTime(
   const counts = (day: LedgerDay): boolean =>
     terms.calendar === null ||
     isBusinessDate(day.start.toPlainDate(), terms.calendar);
+  const charges = (day: LedgerDay): boolean =>
+    terms.chargeCalendar === null ||
+    isBusinessDate(day.start.toPlainDate(), terms.chargeCalendar);
 
   const free: LedgerDay[] = [];
   const charged: LedgerDay[] = [];
@@ -242,6 +269,7 @@ export function walkFreeTime(
 
   // One more visit than the cap: the day after the last touched one is what ends the walk.
   for (let i = 0; i <= MAX_WALKED_DAYS; i++) {
+    const eventDaySkipped = skipEventDay;
     const counted = !skipEventDay && counts(day);
     skipEventDay = false;
 
@@ -266,7 +294,8 @@ export function walkFreeTime(
       if (Temporal.ZonedDateTime.compare(day.start, last) > 0) {
         return { free, expiresAt, used, charged };
       }
-      if (counted) charged.push(day);
+      // The day of the event under `nextDay` is never charged: free time has not started on it.
+      if (!eventDaySkipped && charges(day)) charged.push(day);
     }
 
     const next = nextLocalDay(day);

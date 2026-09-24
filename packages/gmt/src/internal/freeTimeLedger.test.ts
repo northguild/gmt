@@ -7,6 +7,12 @@ import {
 
 const weekdays = { weekend: [6, 7], holidays: [], timeZone: "UTC" };
 
+/** Sparse tier lists: `Array.prototype.every` skips a hole, so these must be rejected explicitly. */
+const trailingHole: number[] = [5];
+trailingHole.length = 2;
+const leadingHole: number[] = [];
+leadingHole[1] = 5;
+
 describe("parseFreeTimeTerms", () => {
   it("reduces a calendar-basis bag and does not read its calendar", () => {
     expect(
@@ -16,7 +22,46 @@ describe("parseFreeTimeTerms", () => {
         firstDay: "nextDay",
         calendar: "junk",
       }),
-    ).toEqual({ timeZone: "UTC", firstDay: "nextDay", calendar: null });
+    ).toEqual({
+      timeZone: "UTC",
+      firstDay: "nextDay",
+      calendar: null,
+      chargeCalendar: null,
+    });
+  });
+
+  it("requires a charge basis only when asked to read one", () => {
+    const bag = { basis: "calendar", timeZone: "UTC", firstDay: "eventDay" };
+    expect(parseFreeTimeTerms(bag)).not.toBeNull();
+    expect(parseFreeTimeTerms(bag, true)).toBeNull();
+    expect(parseFreeTimeTerms({ ...bag, chargeBasis: "calendar" }, true)).toEqual({
+      timeZone: "UTC",
+      firstDay: "eventDay",
+      calendar: null,
+      chargeCalendar: null,
+    });
+  });
+
+  it("resolves one calendar for whichever basis is working", () => {
+    const free = parseFreeTimeTerms(
+      { basis: "working", chargeBasis: "calendar", timeZone: "UTC", firstDay: "eventDay", calendar: weekdays },
+      true,
+    );
+    expect(free?.calendar?.weekend).toEqual(new Set([6, 7]));
+    expect(free?.chargeCalendar).toBeNull();
+    const charge = parseFreeTimeTerms(
+      { basis: "calendar", chargeBasis: "working", timeZone: "UTC", firstDay: "eventDay", calendar: weekdays },
+      true,
+    );
+    expect(charge?.calendar).toBeNull();
+    expect(charge?.chargeCalendar?.weekend).toEqual(new Set([6, 7]));
+    expect(
+      parseFreeTimeTerms({ basis: "calendar", chargeBasis: "working", timeZone: "UTC", firstDay: "eventDay" }, true),
+    ).toBeNull();
+    // Without a charge basis to read, a stray `chargeBasis` is ignored, as freeTimeExpiry ignores it.
+    expect(
+      parseFreeTimeTerms({ basis: "calendar", chargeBasis: "working", timeZone: "UTC", firstDay: "eventDay" }),
+    ).not.toBeNull();
   });
 
   it("resolves the calendar on the working basis", () => {
@@ -56,6 +101,7 @@ describe("parseFreeDays", () => {
     ${2.5}      | ${0}    | ${null}
     ${"3"}      | ${0}    | ${null}
     ${Infinity} | ${0}    | ${null}
+    ${2 ** 53}   | ${0}    | ${null}
     ${NaN}      | ${0}    | ${null}
   `(
     "reads $freeDays with minimum $minimum as $expected",
@@ -77,6 +123,9 @@ describe("parseTiers", () => {
     ${[0]}       | ${null}
     ${[2.5]}     | ${null}
     ${["5"]}     | ${null}
+    ${trailingHole}     | ${null}
+    ${leadingHole}       | ${null}
+    ${[2 ** 53]}   | ${null}
     ${"5"}       | ${null}
     ${null}      | ${null}
   `("reads $tiers as $expected", ({ tiers, expected }) => {

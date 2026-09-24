@@ -23,15 +23,17 @@ export interface FreeTime {
  * Free time is the money calculation in container logistics, and none of its terms is a fact
  * about the port: the number of free days, whether the day of discharge is free day one, and
  * whether weekends count are all set by the carrier's tariff or the service contract. So every
- * term is a parameter, and the result is what 46 CFR 541.6 requires a demurrage or detention
- * invoice to state: the allowed free time, and the start and end dates of that free time.
+ * term is a parameter. No regulation or industry standard fixes how free time is counted (DCSA
+ * types only its unit, calendar or working days); the result is the window every tariff states,
+ * and on US trades the US invoice rule requires an invoice to print it: the allowed free time and
+ * the start and end dates of free time (46 CFR 541.6(b)(3)–(5)).
  *
  * - **Days are the terminal's local days.** `clockStart` is an instant (`Z`, an offset, or a
  *   bracketed zone, of which only the instant is read); its local date in `options.timeZone` is
  *   the event day. A container discharged at 23:00 has used a free day by 00:01 under
  *   `firstDay: "eventDay"`. Day boundaries are the zone's real ones, as `floorToZone` and
- *   `dwellTime` find them: a 23- or 25-hour day is one day, and a date the zone deleted is never a
- *   free day.
+ *   `dwellTime` find them: a 23- or 25-hour day is one day, a date the zone deleted is never a
+ *   free day, and a fall-back that re-enters an earlier date never moves the count backwards.
  * - **`firstDay` has no default.** `"eventDay"` makes the event day free day one; `"nextDay"`
  *   starts free time on the following counted day. The two differ by exactly one day of charges,
  *   and a silent default here is a wrong invoice, so omitting it returns `null`.
@@ -40,6 +42,9 @@ export interface FreeTime {
  *   `options.calendar` (its weekend and holidays; `calendar.timeZone` is not read), and is
  *   required to have one: a working-day count without a calendar is a guess and returns `null`.
  *   Under `"working"` a Saturday discharge starts free time on Monday under either `firstDay`.
+ *   A tariff counting "calendar days excluding bank holidays" (Hapag-Lloyd Japan, MSC Vietnam) is
+ *   `"working"` with an empty `weekend`. How days after expiry are charged is a separate term;
+ *   see `chargeableDays`'s `chargeBasis`.
  * - **`expiresAt` is half-open.** It is the first instant of the local day after `lastFreeDay`,
  *   as a UTC instant. A gate-out at exactly `expiresAt` is not a chargeable day; see
  *   `chargeableDays`. Under `"working"` it can fall on a weekend, which is then simply not

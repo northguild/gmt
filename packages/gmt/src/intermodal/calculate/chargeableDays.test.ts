@@ -8,6 +8,7 @@ const friday = "2024-06-14T19:00:00Z";
 const expiry = "2024-06-17T04:00:00Z";
 const calendar = {
   basis: "calendar",
+  chargeBasis: "calendar",
   timeZone: "America/New_York",
   firstDay: "eventDay",
 } as const;
@@ -18,6 +19,12 @@ const weekdays = {
 };
 const working = { ...calendar, basis: "working", calendar: weekdays } as const;
 const openBand = (days: number) => [{ from: 1, to: null, days }];
+
+/** Sparse tier lists: `Array.prototype.every` skips a hole, so these must be rejected explicitly. */
+const trailingHole: number[] = [5];
+trailingHole.length = 2;
+const leadingHole: number[] = [];
+leadingHole[1] = 5;
 
 describe("chargeableDays", () => {
   it("returns the spec's own example: twelve chargeable days in bands of 5, 5 and 2", () => {
@@ -110,41 +117,46 @@ describe("chargeableDays", () => {
     });
   });
 
-  it("suspends the clock on weekends and holidays on the working basis", () => {
+  // Free days and charged days are counted on their own terms. The dominant published shape is
+  // working-day free time with every calendar day charged after it (Hapag-Lloyd US, ACL, CMA CGM
+  // US); California law and some tariffs charge working days only (Cal. Bus. & Prof. Code 22928).
+  // Discharged Friday 14 June, three free days, terminal shut on Juneteenth (Wednesday 19 June).
+  it.each`
+    basis         | chargeBasis   | expiresAt                 | chargedDates                                                                                                          | shape
+    ${"working"}  | ${"calendar"} | ${"2024-06-19T04:00:00Z"} | ${["2024-06-19", "2024-06-20", "2024-06-21", "2024-06-22", "2024-06-23", "2024-06-24"]}                                 | ${"working-day free time, calendar-day charges: the holiday and the weekend are billed"}
+    ${"working"}  | ${"working"}  | ${"2024-06-19T04:00:00Z"} | ${["2024-06-20", "2024-06-21", "2024-06-24"]}                                                                         | ${"working days throughout: the clock is suspended on closed days"}
+    ${"calendar"} | ${"working"}  | ${"2024-06-17T04:00:00Z"} | ${["2024-06-17", "2024-06-18", "2024-06-20", "2024-06-21", "2024-06-24"]}                                             | ${"calendar-day free time, working-day charges"}
+    ${"calendar"} | ${"calendar"} | ${"2024-06-17T04:00:00Z"} | ${["2024-06-17", "2024-06-18", "2024-06-19", "2024-06-20", "2024-06-21", "2024-06-22", "2024-06-23", "2024-06-24"]} | ${"calendar days throughout"}
+  `("counts $shape", ({ basis, chargeBasis, expiresAt, chargedDates }) => {
     expect(
       chargeableDays(friday, "2024-06-24T15:00:00Z", 3, {
-        ...working,
+        ...calendar,
+        basis,
+        chargeBasis,
         calendar: { ...weekdays, holidays: ["2024-06-19"] },
       }),
     ).toEqual({
       freeDaysUsed: 3,
-      chargeableDays: 3,
-      expiresAt: "2024-06-19T04:00:00Z",
-      chargedDates: ["2024-06-20", "2024-06-21", "2024-06-24"],
-      byTier: openBand(3),
+      chargeableDays: chargedDates.length,
+      expiresAt,
+      chargedDates,
+      byTier: openBand(chargedDates.length),
     });
   });
 
-  it("charges nothing for a working-basis gate-out on the weekend after expiry", () => {
-    // Free time ends Wednesday 00:00; out on Saturday afternoon: Wednesday to Friday charged.
+  // Free time that ends at Saturday 00:00 on a working-day tariff: the weekend after expiry is
+  // billed on calendar-day charging and not on working-day charging.
+  it.each`
+    chargeBasis   | chargedDates
+    ${"calendar"} | ${["2024-06-15", "2024-06-16"]}
+    ${"working"}  | ${[]}
+  `("charges $chargedDates for a weekend after expiry under $chargeBasis charging", ({ chargeBasis, chargedDates }) => {
     expect(
-      chargeableDays(friday, "2024-06-22T15:00:00Z", 3, working),
-    ).toMatchObject({
-      chargedDates: ["2024-06-19", "2024-06-20", "2024-06-21"],
-    });
-    // A tariff whose free time ends Saturday 00:00 charges nothing until Monday.
-    expect(
-      chargeableDays(
-        "2024-06-12T19:00:00Z",
-        "2024-06-16T20:00:00Z",
-        3,
-        working,
-      ),
-    ).toMatchObject({
-      expiresAt: "2024-06-15T04:00:00Z",
-      chargeableDays: 0,
-      chargedDates: [],
-    });
+      chargeableDays("2024-06-12T19:00:00Z", "2024-06-16T20:00:00Z", 3, {
+        ...working,
+        chargeBasis,
+      }),
+    ).toMatchObject({ expiresAt: "2024-06-15T04:00:00Z", chargedDates });
   });
 
   it("accepts a tariff with no free time: every day is charged from day one", () => {
@@ -194,6 +206,10 @@ describe("chargeableDays", () => {
     ${"2024-11-01T12:00:00Z"} | ${"2024-11-05T12:00:00Z"} | ${"America/New_York"}  | ${"2024-11-02T04:00:00Z"} | ${["2024-11-02", "2024-11-03", "2024-11-04", "2024-11-05"]} | ${"the 25-hour 3rd is one charged day"}
     ${"2024-11-01T12:00:00Z"} | ${"2024-11-05T12:00:00Z"} | ${"America/Havana"}    | ${"2024-11-02T04:00:00Z"} | ${["2024-11-02", "2024-11-03", "2024-11-04", "2024-11-05"]} | ${"a repeated midnight is one charged day"}
     ${"2024-09-07T15:00:00Z"} | ${"2024-09-09T15:00:00Z"} | ${"America/Santiago"}  | ${"2024-09-08T04:00:00Z"} | ${["2024-09-08", "2024-09-09"]}                             | ${"the 8th starts at 01:00 and is charged"}
+    ${"2010-11-07T03:00:30Z"} | ${"2010-11-09T12:00:00Z"} | ${"America/Goose_Bay"} | ${"2010-11-08T04:00:00Z"} | ${["2010-11-08", "2010-11-09"]}                                             | ${"a clock starting in the first pass of the 7th never charges the re-entered 6th"}
+    ${"1844-12-30T12:00:00Z"} | ${"1845-01-01T12:00:00Z"} | ${"Asia/Manila"}       | ${"1844-12-30T15:56:08Z"} | ${["1844-12-30", "1845-01-01"]}                                             | ${"the 31st was deleted crossing the date line"}
+    ${"2024-04-06T12:00:00Z"} | ${"2024-04-09T12:00:00Z"} | ${"Australia/Lord_Howe"} | ${"2024-04-06T13:00:00Z"} | ${["2024-04-07", "2024-04-08", "2024-04-09"]}                             | ${"the 30-minute fall-back day is one charged day"}
+    ${"2020-10-03T12:00:00Z"} | ${"2020-10-06T12:00:00Z"} | ${"Antarctica/Casey"}  | ${"2020-10-03T16:00:00Z"} | ${["2020-10-04", "2020-10-05", "2020-10-06"]}                             | ${"the three-hour jump on the 4th is one charged day"}
   `(
     "charges real local dates in $timeZone where $transition",
     ({ clockStart, clockEnd, timeZone, expiresAt, chargedDates }) => {
@@ -208,6 +224,31 @@ describe("chargeableDays", () => {
       });
     },
   );
+
+  it("lists charged dates ascending from a start in Goose Bay's first pass of the 7th, with no free days too", () => {
+    const goose = { ...calendar, timeZone: "America/Goose_Bay" };
+    expect(chargeableDays("2010-11-07T03:00:30Z", "2010-11-09T12:00:00Z", 0, goose)).toMatchObject({
+      expiresAt: "2010-11-07T03:00:00Z",
+      chargedDates: ["2010-11-07", "2010-11-08", "2010-11-09"],
+    });
+    // The one place the dwellTime invariant does not hold: dwellTime counts the re-entered 6th
+    // as a date the dwell touched (4), while a tariff never counts a date before the event day.
+    expect(dwellTime("2010-11-07T03:00:30Z", "2010-11-09T12:00:00Z", "America/Goose_Bay")?.calendarDays).toBe(4);
+    const charges = chargeableDays("2010-11-07T03:00:30Z", "2010-11-09T12:00:00Z", 1, goose)!;
+    expect(charges.freeDaysUsed + charges.chargeableDays).toBe(3);
+  });
+
+  // Temporal's last instant is +275760-09-13T00:00:00Z: a free day ending there is representable,
+  // a second one is not.
+  it.each`
+    freeDays | expected
+    ${1}     | ${{ freeDaysUsed: 1, chargeableDays: 0, expiresAt: "+275760-09-13T00:00:00Z", chargedDates: [], byTier: [{ from: 1, to: null, days: 0 }] }}
+    ${2}     | ${null}
+  `("handles $freeDays free day(s) at the range maximum", ({ freeDays, expected }) => {
+    expect(
+      chargeableDays("+275760-09-12T23:00:00Z", "+275760-09-13T00:00:00Z", freeDays, { ...calendar, timeZone: "UTC" }),
+    ).toEqual(expected);
+  });
 
   // On the calendar basis with the event day counted, free days used plus days charged is
   // exactly dwellTime's local-day count: the two never disagree about a midnight.
@@ -261,7 +302,10 @@ describe("chargeableDays", () => {
     ${friday}                | ${expiry}                | ${1.5}   | ${calendar}                                            | ${"fractional free days"}
     ${friday}                | ${expiry}                | ${3}     | ${undefined}                                           | ${"no options"}
     ${friday}                | ${expiry}                | ${3}     | ${null}                                                | ${"null options"}
-    ${friday}                | ${expiry}                | ${3}     | ${{ basis: "calendar", timeZone: "America/New_York" }} | ${"firstDay has no default"}
+    ${friday}                | ${expiry}                | ${3}     | ${{ basis: "calendar", chargeBasis: "calendar", timeZone: "America/New_York" }} | ${"firstDay has no default"}
+    ${friday}                | ${expiry}                | ${3}     | ${{ basis: "calendar", timeZone: "America/New_York", firstDay: "eventDay" }} | ${"chargeBasis has no default"}
+    ${friday}                | ${expiry}                | ${3}     | ${{ ...calendar, chargeBasis: "weekdays" }}            | ${"unknown chargeBasis"}
+    ${friday}                | ${expiry}                | ${3}     | ${{ ...calendar, chargeBasis: "working" }}             | ${"working charge basis without a calendar"}
     ${friday}                | ${expiry}                | ${3}     | ${{ ...calendar, basis: "working" }}                   | ${"working basis without a calendar"}
     ${friday}                | ${expiry}                | ${3}     | ${{ ...calendar, timeZone: "America/Nueva_York" }}     | ${"invalid timeZone"}
     ${friday}                | ${expiry}                | ${3}     | ${{ ...calendar, tiers: [10, 5] }}                     | ${"tiers not ascending"}
@@ -270,6 +314,10 @@ describe("chargeableDays", () => {
     ${friday}                | ${expiry}                | ${3}     | ${{ ...calendar, tiers: [2.5] }}                       | ${"fractional tier"}
     ${friday}                | ${expiry}                | ${3}     | ${{ ...calendar, tiers: "5,10" }}                      | ${"tiers not an array"}
     ${friday}                | ${expiry}                | ${3}     | ${{ ...calendar, tiers: [null] }}                      | ${"a non-numeric tier"}
+    ${friday}                 | ${expiry}                 | ${3}     | ${{ ...calendar, tiers: trailingHole }}                        | ${"a trailing hole in the tiers"}
+    ${friday}                 | ${expiry}                 | ${3}     | ${{ ...calendar, tiers: leadingHole }}                          | ${"a leading hole in the tiers"}
+    ${friday}                 | ${expiry}                 | ${3}     | ${{ ...calendar, tiers: [2 ** 53] }}                      | ${"a tier past the safe integer range"}
+    ${friday}                 | ${expiry}                 | ${2 ** 53} | ${calendar}                                             | ${"free days past the safe integer range"}
   `(
     "returns the sentinel for $reason",
     ({ clockStart, clockEnd, freeDays, options }) => {

@@ -123,6 +123,11 @@ describe("freeTimeExpiry", () => {
     ${"2024-11-02T12:00:00Z"} | ${2}     | ${"America/New_York"}  | ${"2024-11-02"} | ${"2024-11-03"} | ${"2024-11-04T05:00:00Z"} | ${"the 25-hour fall-back day is one day"}
     ${"2024-11-02T12:00:00Z"} | ${2}     | ${"America/Havana"}    | ${"2024-11-02"} | ${"2024-11-03"} | ${"2024-11-04T05:00:00Z"} | ${"a repeated midnight on the same date is one day"}
     ${"2024-09-28T12:00:00Z"} | ${1}     | ${"Pacific/Chatham"}   | ${"2024-09-29"} | ${"2024-09-29"} | ${"2024-09-29T10:15:00Z"} | ${"a +12:45 spring-forward day ends at 00:00 +13:45"}
+    ${"2010-11-07T03:00:30Z"} | ${1}     | ${"America/Goose_Bay"} | ${"2010-11-07"} | ${"2010-11-07"} | ${"2010-11-08T04:00:00Z"} | ${"the clock starts in the one-minute first pass of the 7th: the re-entered 6th is never a free day"}
+    ${"2010-11-07T03:00:30Z"} | ${2}     | ${"America/Goose_Bay"} | ${"2010-11-07"} | ${"2010-11-08"} | ${"2010-11-09T04:00:00Z"} | ${"the same start with two free days runs forward, not back into the 6th"}
+    ${"1844-12-30T12:00:00Z"} | ${1}     | ${"Asia/Manila"}       | ${"1844-12-29"} | ${"1844-12-29"} | ${"1844-12-30T15:56:08Z"} | ${"the date line crossing before the polyfill's transition search floor"}
+    ${"2024-04-06T12:00:00Z"} | ${2}     | ${"Australia/Lord_Howe"} | ${"2024-04-06"} | ${"2024-04-07"} | ${"2024-04-07T13:30:00Z"} | ${"a 30-minute fall-back day is one day"}
+    ${"2020-10-03T12:00:00Z"} | ${2}     | ${"Antarctica/Casey"}  | ${"2020-10-03"} | ${"2020-10-04"} | ${"2020-10-04T13:00:00Z"} | ${"a three-hour jump on the 4th is one day"}
     ${"2024-06-14T19:00:00Z"} | ${1}     | ${"+02:00"}            | ${"2024-06-14"} | ${"2024-06-14"} | ${"2024-06-14T22:00:00Z"} | ${"a fixed offset counts days with no DST"}
   `(
     "finds the real day boundary in $timeZone where $transition",
@@ -143,6 +148,20 @@ describe("freeTimeExpiry", () => {
       });
     },
   );
+
+  it("never starts free time on the day before the event: nextDay in Goose Bay's first pass of the 7th", () => {
+    expect(
+      freeTimeExpiry("2010-11-07T03:00:30Z", 1, {
+        basis: "calendar",
+        timeZone: "America/Goose_Bay",
+        firstDay: "nextDay",
+      }),
+    ).toEqual({
+      freeTimeStart: "2010-11-08",
+      lastFreeDay: "2010-11-08",
+      expiresAt: "2010-11-09T04:00:00Z",
+    });
+  });
 
   it("counts working days against the calendar's own weekend (Friday–Saturday in Riyadh)", () => {
     expect(
@@ -214,6 +233,7 @@ describe("freeTimeExpiry", () => {
     ${friday}                 | ${-1}    | ${calendar}                                                                  | ${"negative free days"}
     ${friday}                 | ${2.5}   | ${calendar}                                                                  | ${"fractional free days"}
     ${friday}                 | ${"3"}   | ${calendar}                                                                  | ${"free days as a string"}
+    ${friday}                   | ${2 ** 53} | ${calendar}                                                             | ${"free days past the safe integer range"}
     ${friday}                 | ${3}     | ${undefined}                                                                 | ${"no options"}
     ${friday}                 | ${3}     | ${null}                                                                      | ${"null options"}
     ${friday}                 | ${3}     | ${"calendar"}                                                                | ${"options as a string"}

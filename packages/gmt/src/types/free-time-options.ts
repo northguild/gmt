@@ -1,6 +1,10 @@
 import type { BusinessCalendar } from "./business-calendar";
 
-/** How free time is counted: every local calendar day, or only the terminal's working days. */
+/**
+ * How days are counted: every local calendar day, or only the terminal's working days. Used for
+ * free time (`basis`) and, separately, for the days charged after it (`chargeBasis`), because
+ * published tariffs commonly count the two differently.
+ */
 export type FreeTimeBasis = "calendar" | "working";
 
 /**

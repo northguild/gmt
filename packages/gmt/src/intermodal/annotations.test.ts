@@ -13,6 +13,7 @@ import { chargeableDays, demurrageClock, freeTimeExpiry } from "./index";
 const clockStart = "2024-06-14T19:00:00Z";
 const terms = {
   basis: "calendar",
+  chargeBasis: "calendar",
   timeZone: "UTC",
   firstDay: "eventDay",
 } as const;
@@ -64,6 +65,7 @@ describe("intermodal annotations (RFC 9557)", () => {
             { type: "gatedOut", at: value },
           ],
           "demurrage",
+          { direction: "import" },
         ),
       ).toEqual(accepted ? { start: value, end: value } : null);
     },
