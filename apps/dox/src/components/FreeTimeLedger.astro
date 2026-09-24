@@ -20,6 +20,7 @@ import { renderFreeTimeLedgerTemplate } from "../lib/free-time-ledger-mount";
 
 <script>
   import { mountFreeTimeLedger } from "../lib/free-time-ledger-mount";
+  import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
 
   if (typeof window !== "undefined") {
@@ -28,7 +29,9 @@ import { renderFreeTimeLedgerTemplate } from "../lib/free-time-ledger-mount";
        first preset. */
     const seed = seedFromLocation("freetime");
     document.querySelectorAll<HTMLElement>(".gmt-freetime").forEach((el) => {
-      void mountFreeTimeLedger(el, seed, new AbortController().signal);
+      mountFreeTimeLedger(el, seed, new AbortController().signal).catch((error) =>
+        showUnavailable(el, error),
+      );
     });
   }
 </script>

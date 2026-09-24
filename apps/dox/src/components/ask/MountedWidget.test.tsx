@@ -13,7 +13,14 @@
  */
 /// <reference types="vitest/globals" />
 import { StrictMode } from "react";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { WidgetLoadError } from "~/lib/widget-mount";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { MountedWidget } from "./MountedWidget";
 import type { AnyWidgetEntry } from "./widget-registry";
@@ -247,5 +254,90 @@ describe("MountedWidget", () => {
       await Promise.resolve();
     });
     expect(log.filter((l) => l === "wired")).toHaveLength(1);
+  });
+
+  it("marks the host busy until the mount has wired it", async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const { entry } = spyEntry({
+      load: async () => {
+        await gate;
+        return spyEntry().entry.load();
+      },
+    });
+    render(<MountedWidget entry={entry} args={{}} idPrefix="t" />);
+
+    const host = document.querySelector(".gmt-hive-widget-host");
+    expect(host?.getAttribute("aria-busy")).toBe("true");
+
+    await act(async () => {
+      release();
+      await gate;
+    });
+    await waitFor(() =>
+      expect(document.querySelector("[data-mounted]")).not.toBeNull(),
+    );
+    expect(host?.hasAttribute("aria-busy")).toBe(false);
+  });
+
+  it("offers a retry when the library failed to load, and remounts on it", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    let failures = 1;
+    const { entry: working, log } = spyEntry();
+    const { entry } = spyEntry({
+      load: async () => {
+        if (failures > 0) {
+          failures -= 1;
+          return {
+            mount: async () => {
+              throw new WidgetLoadError(new Error("offline"));
+            },
+          };
+        }
+        return working.load();
+      },
+    });
+    render(<MountedWidget entry={entry} args={{}} idPrefix="t" />);
+
+    const retry = await screen.findByRole("button", { name: "Try again" });
+    expect(screen.getByRole("status").textContent).toContain("didn't load");
+
+    fireEvent.click(retry);
+    await waitFor(() => expect(log).toContain("wired"));
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    vi.restoreAllMocks();
+  });
+
+  it("treats a failed import of the mount module itself as a load failure", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { entry } = spyEntry({
+      load: async () => {
+        throw new TypeError("Failed to fetch dynamically imported module: x.js");
+      },
+    });
+    render(<MountedWidget entry={entry} args={{}} idPrefix="t" />);
+    expect(await screen.findByRole("button", { name: "Try again" })).not.toBeNull();
+    vi.restoreAllMocks();
+  });
+
+  it("offers no retry for a nonsense argument or a mount that throws on its input", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { entry } = spyEntry({
+      load: async () => ({
+        mount: async () => {
+          throw new Error("bad input");
+        },
+      }),
+    });
+    render(<MountedWidget entry={entry} args={{}} idPrefix="t" />);
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toContain(
+        "couldn't be shown",
+      ),
+    );
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    vi.restoreAllMocks();
   });
 });

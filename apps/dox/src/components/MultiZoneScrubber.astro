@@ -24,14 +24,20 @@ const {
 </div>
 
 <script>
+  import { showUnavailable } from "../lib/widget-mount";
+
   const host = document.getElementById("scrubber-host");
   if (host) {
     let started = false;
     const start = async () => {
       if (started) return;
       started = true;
-      const { initScrubber } = await import("../lib/multi-zone-scrubber");
-      await initScrubber(host);
+      try {
+        const { initScrubber } = await import("../lib/multi-zone-scrubber");
+        await initScrubber(host);
+      } catch (error) {
+        showUnavailable(host, error);
+      }
     };
 
     if ("IntersectionObserver" in window) {

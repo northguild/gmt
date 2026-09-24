@@ -24,6 +24,7 @@ import { renderDstTemplate } from "../lib/dst-inspector-mount";
 
 <script>
   import { mountDstInspector } from "../lib/dst-inspector-mount";
+  import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
 
   /* One mount per instance on the page. The rail passes a real AbortSignal;
@@ -35,7 +36,9 @@ import { renderDstTemplate } from "../lib/dst-inspector-mount";
        widget opens on its defaults, exactly as before. */
     const seed = seedFromLocation("dst");
     document.querySelectorAll<HTMLElement>(".gmt-dst").forEach((el) => {
-      void mountDstInspector(el, seed, new AbortController().signal);
+      mountDstInspector(el, seed, new AbortController().signal).catch((error) =>
+        showUnavailable(el, error),
+      );
     });
   }
 </script>

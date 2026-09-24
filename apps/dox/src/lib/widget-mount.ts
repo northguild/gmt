@@ -69,6 +69,34 @@ export class WidgetLoadError extends Error {
   }
 }
 
+/** The class of the notice `showUnavailable` adds, and the CSS hook for it. */
+export const UNAVAILABLE_CLASS = "gmt-widget-unavailable";
+
+/**
+ * Tell the reader a page widget cannot work, instead of leaving controls that
+ * look live and do nothing.
+ *
+ * For the `.astro` shells, which have no React to render an error state: they
+ * call this from the `.catch` on their mount. It marks the root
+ * `data-state="unavailable"` (gmt-widget.css dims and disables whatever is
+ * already there) and adds one notice with a reload link, which is the only
+ * retry a static page has. Idempotent — a second failure adds no second notice.
+ */
+export function showUnavailable(root: HTMLElement, error: unknown): void {
+  console.error("widget failed to load", error);
+  root.dataset.state = "unavailable";
+  if (root.querySelector(`:scope > .${UNAVAILABLE_CLASS}`)) return;
+
+  const notice = document.createElement("p");
+  notice.className = UNAVAILABLE_CLASS;
+  notice.setAttribute("role", "status");
+  const reload = document.createElement("a");
+  reload.href = "";
+  reload.textContent = "Reload the page";
+  notice.append("This widget couldn\u2019t load. ", reload, " to try again.");
+  root.prepend(notice);
+}
+
 /** A handle that owns nothing — what an aborted mount returns. */
 export const INERT_HANDLE: WidgetHandle = {
   destroy() {},

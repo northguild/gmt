@@ -31,6 +31,7 @@ import { renderIntervalTemplate } from "../lib/interval-visualizer-mount";
 
 <script>
   import { mountIntervalVisualizer } from "../lib/interval-visualizer-mount";
+  import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
 
   /* One mount per instance on the page. The rail passes a real AbortSignal;
@@ -42,7 +43,9 @@ import { renderIntervalTemplate } from "../lib/interval-visualizer-mount";
        widget opens on its defaults, exactly as before. */
     const seed = seedFromLocation("interval");
     document.querySelectorAll<HTMLElement>(".gmt-interval").forEach((el) => {
-      void mountIntervalVisualizer(el, seed, new AbortController().signal);
+      mountIntervalVisualizer(el, seed, new AbortController().signal).catch((error) =>
+        showUnavailable(el, error),
+      );
     });
   }
 </script>

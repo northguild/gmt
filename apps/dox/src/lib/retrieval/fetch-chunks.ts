@@ -1,3 +1,4 @@
+import { getUnixNow } from "@northguild/gmt/unix/get";
 import type { RetrievalChunk } from "./types";
 
 /** Minimal subset of the Web Cache API (`caches.default` in a Cloudflare
@@ -22,7 +23,8 @@ export interface FetchChunksOptions {
    * not a measured optimum; retuning it needs production traffic DOX-C2
    * doesn't have yet. */
   cacheTtlSeconds?: number;
-  /** Injectable clock for the in-memory memo's TTL; defaults to `Date.now`. */
+  /** Injectable clock (epoch ms) for the in-memory memo's TTL; defaults to
+   * gmt's `getUnixNow`. */
   now?: () => number;
 }
 
@@ -36,6 +38,12 @@ const CHUNKS_PATH = "/retrieval-chunks.json";
    corpus; the TTL matches the Cache API entry's, so the two expire together. */
 let memo: { url: string; chunks: RetrievalChunk[]; expiresAt: number } | null =
   null;
+
+/** gmt's clock, or +Infinity if it reports its `null` sentinel: an unreadable
+ * clock must expire the memo (re-read the corpus), never keep it forever. */
+function unixNowOrExpired(): number {
+  return getUnixNow() ?? Number.POSITIVE_INFINITY;
+}
 
 /** Forgets the in-memory corpus. Tests only. */
 export function resetChunksMemo(): void {
@@ -65,7 +73,7 @@ export async function fetchChunks(
     fetchImpl = fetch,
     cache,
     cacheTtlSeconds = 300,
-    now = Date.now,
+    now = unixNowOrExpired,
   } = options;
   const url = new URL(CHUNKS_PATH, origin).toString();
   const cacheKey = new Request(url);

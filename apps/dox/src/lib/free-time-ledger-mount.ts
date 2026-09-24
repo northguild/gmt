@@ -43,6 +43,7 @@ import {
   normaliseWeekend,
   readArgs,
   summaryText,
+  chargeTermsOf,
   termsOf,
   tierEnds,
   tiersOf,
@@ -50,6 +51,7 @@ import {
   type FreeTimeLedgerArgs,
   type FreeTimeResult,
   type LedgerState,
+  type ChargeTermsArg,
   type TermsArg,
 } from "./free-time-ledger";
 import { GMT_MODULES } from "./gmt-modules";
@@ -153,13 +155,16 @@ export function renderFreeTimeLedgerTemplate(
     `<label class="gmt-label"><span>Day one</span>` +
     `<select class="gmt-select" data-role="first-day">${options(["eventDay", "nextDay"], ["eventDay: the event day", "nextDay: the day after"], state.firstDay)}</select>` +
     `</label>` +
-    `<label class="gmt-label"><span>Basis</span>` +
+    `<label class="gmt-label"><span>Free days count</span>` +
     `<select class="gmt-select" data-role="basis">${options(["calendar", "working"], ["calendar days", "working days"], state.basis)}</select>` +
+    `</label>` +
+    `<label class="gmt-label"><span>Charged days count</span>` +
+    `<select class="gmt-select" data-role="charge-basis">${options(["calendar", "working"], ["calendar days", "working days"], state.chargeBasis)}</select>` +
     `</label>` +
     `<label class="gmt-label"><span>Tiers</span>` +
     `<input class="gmt-input" data-role="tiers" type="text" spellcheck="false" placeholder="5, 10" value="${escapeAttr(state.tiers)}"></label>` +
     `</div>` +
-    `<div class="gmt-widget-controls gmt-freetime-working" data-role="working-terms"${state.basis === "working" ? "" : " hidden"}>` +
+    `<div class="gmt-widget-controls gmt-freetime-working" data-role="working-terms"${state.basis === "working" || state.chargeBasis === "working" ? "" : " hidden"}>` +
     `<fieldset class="gmt-freetime-weekend"><legend>Weekend</legend>${weekendBoxes}</fieldset>` +
     `<label class="gmt-label gmt-label-wide"><span>Holidays, one date per line</span>` +
     `<textarea class="gmt-input gmt-freetime-holidays" data-role="holidays" rows="2" spellcheck="false">${escapeHtml(state.holidays)}</textarea></label>` +
@@ -216,7 +221,7 @@ type ChargesFn = (
   clockStart: string,
   clockEnd: string,
   freeDays: number,
-  options: TermsArg & { tiers?: number[] },
+  options: ChargeTermsArg & { tiers?: number[] },
 ) => ChargesResult | null;
 
 interface Modules {
@@ -329,7 +334,7 @@ function placeExpiry(
 
 /** The options object as source text: highlighted HTML and plain text to copy. */
 function optionsSource(
-  terms: TermsArg,
+  terms: TermsArg & { chargeBasis?: string },
   tiers: number[] | undefined,
 ): [string, string] {
   const str = (s: string) => codeSpan("str", JSON.stringify(s));
@@ -342,6 +347,7 @@ function optionsSource(
   const parts = (f: (s: string) => string): string[] => {
     const out = [
       `basis: ${f(terms.basis)}`,
+      ...(terms.chargeBasis === undefined ? [] : [`chargeBasis: ${f(terms.chargeBasis)}`]),
       `timeZone: ${f(terms.timeZone)}`,
       `firstDay: ${f(terms.firstDay)}`,
     ];
@@ -379,6 +385,7 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
   const freeDaysEl = q<HTMLInputElement>("free-days");
   const firstDayEl = q<HTMLSelectElement>("first-day");
   const basisEl = q<HTMLSelectElement>("basis");
+  const chargeBasisEl = q<HTMLSelectElement>("charge-basis");
   const tiersEl = q<HTMLInputElement>("tiers");
   const holidaysEl = q<HTMLTextAreaElement>("holidays");
   const weekendEls = qa<HTMLInputElement>("weekend");
@@ -390,6 +397,7 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
     !freeDaysEl ||
     !firstDayEl ||
     !basisEl ||
+    !chargeBasisEl ||
     !tiersEl ||
     !holidaysEl
   ) {
@@ -404,6 +412,7 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
     freeDays: freeDaysEl.value.trim(),
     firstDay: firstDayEl.value === "nextDay" ? "nextDay" : "eventDay",
     basis: basisEl.value === "working" ? "working" : "calendar",
+    chargeBasis: chargeBasisEl.value === "working" ? "working" : "calendar",
     zone: zoneEl.value,
     weekend: normaliseWeekend(
       weekendEls.filter((el) => el.checked).map((el) => Number(el.value)),
@@ -432,12 +441,15 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
         "";
     }
     const working = q("working-terms");
-    if (working) working.hidden = basisEl!.value !== "working";
+    if (working)
+      working.hidden =
+        basisEl!.value !== "working" && chargeBasisEl!.value !== "working";
   }
 
   function render(): void {
     const s = state();
     const terms = termsOf(s);
+    const chargeTerms = chargeTermsOf(s);
     const days = freeDaysOf(s);
     const tiers = tiersOf(s);
     const startMs = toEpochMs(s.clockStart);
@@ -446,7 +458,7 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
 
     const freeTime = m.freeTimeExpiry(s.clockStart, days, terms);
     const charges = m.chargeableDays(s.clockStart, s.clockEnd, days, {
-      ...terms,
+      ...chargeTerms,
       ...(tiers === undefined ? {} : { tiers: tiers ?? [] }),
     });
     const reason = charges === null ? explainNull(s, m) : null;
@@ -505,7 +517,7 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
       `${JSON.stringify(s.clockStart)}, ${days}, ${optPlain}`,
     );
     const [chargeOptHtml, chargeOptPlain] = optionsSource(
-      terms,
+      chargeTerms,
       tiers ?? undefined,
     );
     renderCallLine(
@@ -569,6 +581,7 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
     freeDaysEl!.value = preset.freeDays;
     firstDayEl!.value = preset.firstDay;
     basisEl!.value = preset.basis;
+    chargeBasisEl!.value = preset.chargeBasis;
     tiersEl!.value = preset.tiers;
     holidaysEl!.value = preset.holidays;
     for (const el of weekendEls)
@@ -698,7 +711,7 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
       render();
     });
   }
-  for (const el of [zoneEl, firstDayEl, basisEl, ...weekendEls]) {
+  for (const el of [zoneEl, firstDayEl, basisEl, chargeBasisEl, ...weekendEls]) {
     el.addEventListener("change", () => {
       syncPreset();
       refit();
@@ -749,6 +762,7 @@ function applyArgs(root: HTMLElement, args: FreeTimeLedgerArgs): void {
   set("free-days", s.freeDays);
   set("first-day", s.firstDay);
   set("basis", s.basis);
+  set("charge-basis", s.chargeBasis);
   set("tiers", s.tiers);
   set("holidays", s.holidays);
   for (const el of root.querySelectorAll<HTMLInputElement>(
@@ -757,7 +771,8 @@ function applyArgs(root: HTMLElement, args: FreeTimeLedgerArgs): void {
     el.checked = s.weekend.includes(Number(el.value));
   }
   const working = q("working-terms");
-  if (working) working.hidden = s.basis !== "working";
+  if (working)
+    working.hidden = s.basis !== "working" && s.chargeBasis !== "working";
   const presetEl = q<HTMLSelectElement>("preset");
   if (presetEl) {
     presetEl.value = matchPreset({
@@ -816,9 +831,10 @@ export const mountFreeTimeLedger: MountFn<FreeTimeLedgerArgs> = async (
         freeDays: v("free-days"),
         firstDay: v("first-day"),
         basis: v("basis"),
+        chargeBasis: v("charge-basis"),
         zone: v("zone"),
       };
-      if (v("basis") === "working") {
+      if (v("basis") === "working" || v("charge-basis") === "working") {
         out.weekend = weekend;
         const holidays = v("holidays")
           .split("\n")
