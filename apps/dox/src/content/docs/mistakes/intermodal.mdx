@@ -1,0 +1,133 @@
+---
+title: Intermodal
+description: Common mistakes with free time, demurrage and detention in GMT's intermodal layer.
+---
+
+The intermodal layer is three functions, `freeTimeExpiry`, `chargeableDays` and
+`demurrageClock`, and the mistakes around them are the ones that turn into disputed invoices:
+a defaulted start day, a free-time table keyed by port, a clock counted from the wrong event,
+and a day count taken from elapsed hours. Every output shown here is what the function returns.
+
+## Mistakes
+
+import Mistake from "../../../components/Mistake.astro";
+
+<Mistake
+  severity="high"
+  title="Defaulting which day is free day one"
+  description="Whether the day of discharge is free day one, or free time starts the following day, is a tariff term, and the two differ by a full day of charges. freeTimeExpiry and chargeableDays have no default for firstDay and return null without it; a silent default here is a wrong invoice."
+  wrongCode={`freeTimeExpiry("2024-06-14T19:00:00Z", 3, { basis: "calendar", timeZone: "America/New_York" });
+// null — firstDay has no default`}
+  rightCode={`import { freeTimeExpiry } from "@northguild/gmt/intermodal";
+
+freeTimeExpiry("2024-06-14T19:00:00Z", 3, { basis: "calendar", timeZone: "America/New_York", firstDay: "eventDay" });
+// { freeTimeStart: "2024-06-14", lastFreeDay: "2024-06-16", expiresAt: "2024-06-17T04:00:00Z" }
+freeTimeExpiry("2024-06-14T19:00:00Z", 3, { basis: "calendar", timeZone: "America/New_York", firstDay: "nextDay" });
+// { freeTimeStart: "2024-06-15", lastFreeDay: "2024-06-17", expiresAt: "2024-06-18T04:00:00Z" }`}
+  rightSpecId="freeTimeExpiry"
+/>
+
+<Mistake
+  severity="high"
+  title="Looking free time up by port"
+  description="Free time is set by carrier, lane, trade and service contract, not by the port, so a per-port free-time table encodes something that is not a fact. The terms are parameters: pass the tariff's free days, start-day convention and basis, and the terminal's IANA zone. GMT does not resolve a port code to a zone or a free-time allowance."
+  wrongCode={`const FREE_DAYS = { USNYC: 4, NLRTM: 5 };
+const freeDays = FREE_DAYS[port]; // the carrier's contract says 3 on this lane`}
+  rightCode={`import { freeTimeExpiry } from "@northguild/gmt/intermodal";
+
+// The contract's terms, at the terminal's zone.
+freeTimeExpiry("2024-06-14T19:00:00Z", 3, { basis: "calendar", timeZone: "America/New_York", firstDay: "eventDay" });
+// { freeTimeStart: "2024-06-14", lastFreeDay: "2024-06-16", expiresAt: "2024-06-17T04:00:00Z" }`}
+/>
+
+<Mistake
+  severity="high"
+  title="Counting free days in UTC instead of at the terminal"
+  description="Days are the terminal's local days. A discharge at 23:00 on Friday in New York is 03:00Z on Saturday, and counting in UTC moves the whole window by a day. Pass the terminal's zone; the local date of the discharge instant there is the event day."
+  wrongCode={`freeTimeExpiry("2024-06-15T03:00:00Z", 1, { basis: "calendar", timeZone: "UTC", firstDay: "eventDay" });
+// { freeTimeStart: "2024-06-15", lastFreeDay: "2024-06-15", expiresAt: "2024-06-16T00:00:00Z" } — a day late`}
+  rightCode={`import { freeTimeExpiry } from "@northguild/gmt/intermodal";
+
+freeTimeExpiry("2024-06-15T03:00:00Z", 1, { basis: "calendar", timeZone: "America/New_York", firstDay: "eventDay" });
+// { freeTimeStart: "2024-06-14", lastFreeDay: "2024-06-14", expiresAt: "2024-06-15T04:00:00Z" }`}
+  rightSpecId="freeTimeExpiry"
+/>
+
+<Mistake
+  severity="high"
+  title="Charging the day the container left exactly as free time ended"
+  description="The dwell is half-open: a gate-out at exactly expiresAt is not a chargeable day, and one second later is. Comparing dates instead of instants charges Monday for a box that left at Monday 00:00:00."
+  wrongCode={`const gatedOut = "2024-06-17T04:00:00Z"; // Monday 00:00 in New York
+const expires = "2024-06-17T04:00:00Z";
+gatedOut >= expires ? 1 : 0;
+// 1 — nothing of Monday was used`}
+  rightCode={`import { chargeableDays } from "@northguild/gmt/intermodal";
+
+const tariff = { basis: "calendar", timeZone: "America/New_York", firstDay: "eventDay" };
+chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T04:00:00Z", 3, tariff).chargeableDays; // 0
+chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T04:00:01Z", 3, tariff).chargeableDays; // 1`}
+  rightSpecId="chargeableDays"
+/>
+
+<Mistake
+  severity="high"
+  title="Counting working days without the terminal's calendar"
+  description="A working-day tariff needs the terminal's weekend and holidays; Saturday–Sunday is not universal and a holiday moves expiry by a day. The working basis returns null without a BusinessCalendar rather than assume one. Its timeZone field is not read: the options' timeZone is the counting zone."
+  wrongCode={`freeTimeExpiry("2024-06-14T19:00:00Z", 3, { basis: "working", timeZone: "America/New_York", firstDay: "eventDay" });
+// null — a working-day count needs the terminal's calendar`}
+  rightCode={`import { freeTimeExpiry } from "@northguild/gmt/intermodal";
+
+freeTimeExpiry("2024-06-14T19:00:00Z", 3, {
+  basis: "working",
+  timeZone: "America/New_York",
+  firstDay: "eventDay",
+  calendar: { weekend: [6, 7], holidays: ["2024-06-17"], timeZone: "America/New_York" },
+});
+// { freeTimeStart: "2024-06-14", lastFreeDay: "2024-06-19", expiresAt: "2024-06-20T04:00:00Z" }`}
+  rightSpecId="freeTimeExpiry"
+/>
+
+<Mistake
+  severity="high"
+  title="Starting the detention clock at discharge"
+  description="Demurrage runs from discharge to gate-out; detention runs from gate-out to empty return; terminal storage runs over the demurrage window with its own free time. Counting detention from discharge bills the terminal days twice. demurrageClock selects the pair for the charge you name."
+  wrongCode={`chargeableDays("2024-06-14T19:00:00Z", "2024-06-27T09:00:00Z", 5, detentionTariff);
+// discharge to empty return: the terminal days are billed as detention too`}
+  rightCode={`import { demurrageClock } from "@northguild/gmt/intermodal";
+
+const events = [
+  { type: "discharged", at: "2024-06-14T19:00:00Z" },
+  { type: "gatedOut", at: "2024-06-20T14:30:00Z" },
+  { type: "emptyReturned", at: "2024-06-27T09:00:00Z" },
+];
+demurrageClock(events, "detention");
+// { start: "2024-06-20T14:30:00Z", end: "2024-06-27T09:00:00Z" }`}
+  rightSpecId="demurrageClock"
+/>
+
+<Mistake
+  severity="medium"
+  title="Turning elapsed hours into chargeable days"
+  description="A container discharged Friday 15:00 and out Monday 00:00:01 has been there 57 hours and used four local days. Hours divided by 24 never sees a midnight, and this is the same mistake as dividing dwell hours. chargeableDays counts local days from the same boundary dwellTime uses, and freeDaysUsed plus chargeableDays equals dwellTime's calendarDays on the calendar basis."
+  wrongCode={`const hours = 57.0003;
+Math.max(0, Math.ceil((hours - 72) / 24));
+// 0 — the tariff charges Monday`}
+  rightCode={`import { chargeableDays } from "@northguild/gmt/intermodal";
+
+chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T04:00:01Z", 3, { basis: "calendar", timeZone: "America/New_York", firstDay: "eventDay" });
+// { freeDaysUsed: 3, chargeableDays: 1, expiresAt: "2024-06-17T04:00:00Z", chargedDates: ["2024-06-17"], byTier: [{ from: 1, to: null, days: 1 }] }`}
+  rightSpecId="chargeableDays"
+/>
+
+<Mistake
+  severity="medium"
+  title="Putting rates inside the day count"
+  description="Tiers are day bands, not rates. tiers names the last chargeable-day ordinal of each band, and byTier says how many charged days fell in each, empty bands included, so a rate table applies by index. Money is the caller's; a list that is not strictly ascending is refused."
+  wrongCode={`chargeableDays("2024-06-14T19:00:00Z", "2024-06-28T15:00:00Z", 3, { basis: "calendar", timeZone: "America/New_York", firstDay: "eventDay", tiers: [10, 5] });
+// null — tiers must ascend`}
+  rightCode={`import { chargeableDays } from "@northguild/gmt/intermodal";
+
+chargeableDays("2024-06-14T19:00:00Z", "2024-06-28T15:00:00Z", 3, { basis: "calendar", timeZone: "America/New_York", firstDay: "eventDay", tiers: [5, 10] }).byTier;
+// [{ from: 1, to: 5, days: 5 }, { from: 6, to: 10, days: 5 }, { from: 11, to: null, days: 2 }]`}
+  rightSpecId="chargeableDays"
+/>

@@ -1,6 +1,6 @@
 ---
 title: Industries
-description: Guides for the industry layers built on GMT's core — transport first — showing how the shared primitives are used in the trade, with real-world scenarios.
+description: Guides for the industry layers built on GMT's core — transport and intermodal so far — showing how the shared primitives are used in the trade, with real-world scenarios.
 sidebar:
   order: 0
 ---
@@ -29,6 +29,9 @@ Three things hold across every industry layer:
 - [Transport: legs and dwell](./transport-legs-and-dwell/) — add a leg's transit time to a
   departure, show an arrival where it lands, and measure dwell in exact hours and local
   calendar days. Shared by road, rail, sea and air.
+- [Intermodal: free time and demurrage](./intermodal-free-time-and-demurrage/) — which clock a
+  charge runs on, which day is free day one, calendar or working days, and the chargeable days
+  and dates an invoice has to print. Built on the transport layer's day count.
 
 ## Scenarios
 
@@ -38,6 +41,9 @@ GMT approach working, on the same live widget:
 - [Container dwell: two hours, two days](/scenarios/container-dwell-days/)
 - [A 26-hour rail leg across spring-forward](/scenarios/transit-across-dst/)
 - [Two arrivals, one wall time: the fall-back night](/scenarios/arrival-on-a-fall-back-night/)
+- [Free time: which day is day one](/scenarios/free-time-start-day/)
+- [Demurrage across a weekend](/scenarios/demurrage-across-a-weekend/)
+- [Detention is not demurrage](/scenarios/detention-is-not-demurrage/)
 
-The mistakes that have hurt people in this layer are collected under
-[Transport mistakes](/mistakes/transport/).
+The mistakes that have hurt people in these layers are collected under
+[Transport mistakes](/mistakes/transport/) and [Intermodal mistakes](/mistakes/intermodal/).
