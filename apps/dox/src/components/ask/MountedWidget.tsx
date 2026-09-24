@@ -98,7 +98,8 @@ export function MountedWidget({
         setError(
           loadFailed
             ? {
-                message: "Its library didn't load, which is usually the connection.",
+                message:
+                  "Its library didn't load, which is usually the connection.",
                 retryable: true,
               }
             : { message: "This widget couldn't be shown.", retryable: false },

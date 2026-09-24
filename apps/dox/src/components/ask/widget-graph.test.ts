@@ -138,6 +138,10 @@ describe("the chat island's static import graph", () => {
   });
 
   it("never imports the polyfill or gmt's root barrel, which re-exports it", () => {
-    expect([...bare].filter((s) => s === "@js-temporal/polyfill" || s === "@northguild/gmt")).toEqual([]);
+    expect(
+      [...bare].filter(
+        (s) => s === "@js-temporal/polyfill" || s === "@northguild/gmt",
+      ),
+    ).toEqual([]);
   });
 });

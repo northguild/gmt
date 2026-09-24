@@ -348,7 +348,8 @@ export function createChatHandler(deps: ChatHandlerDeps) {
                   const brain = brains.find(
                     (candidate) => candidate.id === brainId,
                   );
-                  if (usage && brain) void markBrain(usage, brain, state, nowMs);
+                  if (usage && brain)
+                    void markBrain(usage, brain, state, nowMs);
                 },
               }),
             );

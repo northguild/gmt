@@ -117,7 +117,10 @@ function partsOfType(body: string, type: string): Record<string, unknown>[] {
 }
 
 /** The refusal written into an open stream, as `{ status, payload }`. */
-function refusalOf(body: string): { status: number; payload: Record<string, unknown> } {
+function refusalOf(body: string): {
+  status: number;
+  payload: Record<string, unknown>;
+} {
   const [part] = partsOfType(body, "data-refusal");
   expect(part, "expected a data-refusal part").toBeDefined();
   expect(part.transient).toBe(true);
@@ -427,7 +430,9 @@ describe("createChatHandler", () => {
     const finishedTimings = finished.timings as Record<string, number>;
     expect(typeof finishedTimings.firstToken).toBe("number");
     expect(typeof finishedTimings.total).toBe("number");
-    expect(finishedTimings.total).toBeGreaterThanOrEqual(finishedTimings.firstToken);
+    expect(finishedTimings.total).toBeGreaterThanOrEqual(
+      finishedTimings.firstToken,
+    );
     expect(finished.toolCalled).toBeNull();
     expect(finished.attempts).toEqual([
       { brainId: BRAINS[0].id, ms: expect.any(Number), outcome: "answered" },
@@ -794,8 +799,7 @@ describe("brains, budgets and failover", () => {
     });
     const fallback = fakeModel("Answered by the fallback brain.");
     const handler = makeHandler({
-      resolveModel: (brainId) =>
-        brainId === BRAINS[0].id ? spent : fallback,
+      resolveModel: (brainId) => (brainId === BRAINS[0].id ? spent : fallback),
     });
 
     const started = performance.now();
@@ -1036,7 +1040,9 @@ describe("brains, budgets and failover", () => {
       },
     });
     vi.spyOn(console, "error").mockImplementation(() => {});
-    await handler(chatRequest({ messages: [userMessage("what is a DST gap")] }));
+    await handler(
+      chatRequest({ messages: [userMessage("what is a DST gap")] }),
+    );
     vi.restoreAllMocks();
     expect(asked).toEqual([BRAINS[0].id]);
   });

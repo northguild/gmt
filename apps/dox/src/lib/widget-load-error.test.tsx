@@ -36,11 +36,31 @@ import {
 installJsdomShims();
 
 const MOUNTS: [string, () => string, MountFn<never>][] = [
-  ["dwell ledger", () => renderDwellLedgerTemplate(), mountDwellLedger as MountFn<never>],
-  ["free time ledger", () => renderFreeTimeLedgerTemplate(), mountFreeTimeLedger as MountFn<never>],
-  ["DST inspector", () => renderDstTemplate(), mountDstInspector as MountFn<never>],
-  ["interval visualizer", () => renderIntervalTemplate(), mountIntervalVisualizer as MountFn<never>],
-  ["converter bench", () => renderConverterTemplate(), mountConverterBench as MountFn<never>],
+  [
+    "dwell ledger",
+    () => renderDwellLedgerTemplate(),
+    mountDwellLedger as MountFn<never>,
+  ],
+  [
+    "free time ledger",
+    () => renderFreeTimeLedgerTemplate(),
+    mountFreeTimeLedger as MountFn<never>,
+  ],
+  [
+    "DST inspector",
+    () => renderDstTemplate(),
+    mountDstInspector as MountFn<never>,
+  ],
+  [
+    "interval visualizer",
+    () => renderIntervalTemplate(),
+    mountIntervalVisualizer as MountFn<never>,
+  ],
+  [
+    "converter bench",
+    () => renderConverterTemplate(),
+    mountConverterBench as MountFn<never>,
+  ],
 ];
 
 describe("a widget whose library fails to load", () => {
@@ -60,18 +80,25 @@ describe("a widget whose library fails to load", () => {
     document.body.innerHTML = "";
   });
 
-  it.each(MOUNTS)("%s throws WidgetLoadError carrying the cause", async (_name, template, mount) => {
-    const root = document.createElement("div");
-    root.innerHTML = template();
-    document.body.append(root);
+  it.each(MOUNTS)(
+    "%s throws WidgetLoadError carrying the cause",
+    async (_name, template, mount) => {
+      const root = document.createElement("div");
+      root.innerHTML = template();
+      document.body.append(root);
 
-    const failure = await mount(root, {} as never, new AbortController().signal).then(
-      () => null,
-      (error: unknown) => error,
-    );
-    expect(failure).toBeInstanceOf(WidgetLoadError);
-    expect((failure as Error).cause).toBe(offline);
-  });
+      const failure = await mount(
+        root,
+        {} as never,
+        new AbortController().signal,
+      ).then(
+        () => null,
+        (error: unknown) => error,
+      );
+      expect(failure).toBeInstanceOf(WidgetLoadError);
+      expect((failure as Error).cause).toBe(offline);
+    },
+  );
 });
 
 describe("showUnavailable", () => {

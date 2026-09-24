@@ -10,7 +10,13 @@
  * empty answer turn left behind.
  */
 /// <reference types="vitest/globals" />
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { CHAT_STARTERS } from "~/lib/chat-constants";
 import { installJsdomShims } from "~/test/jsdom-shims";
@@ -67,7 +73,9 @@ describe("DoxChat while the Worker chooses a brain", () => {
 
     const onWidget = vi.fn();
     render(<DoxChat onWidget={onWidget} />);
-    fireEvent.click(screen.getByRole("button", { name: CHAT_STARTERS[0].text }));
+    fireEvent.click(
+      screen.getByRole("button", { name: CHAT_STARTERS[0].text }),
+    );
 
     // The seeded widget opens on the click, before any reply.
     expect(onWidget).toHaveBeenCalledWith(
@@ -77,9 +85,9 @@ describe("DoxChat while the Worker chooses a brain", () => {
     );
 
     await waitFor(() =>
-      expect(document.querySelector(".gmt-hive-pending")?.textContent).toContain(
-        "3.8 Flash is busy",
-      ),
+      expect(
+        document.querySelector(".gmt-hive-pending")?.textContent,
+      ).toContain("3.8 Flash is busy"),
     );
 
     await act(async () => {
@@ -87,12 +95,14 @@ describe("DoxChat while the Worker chooses a brain", () => {
     });
 
     await waitFor(() =>
-      expect(document.querySelector(".gmt-hive-warning")?.textContent).toContain(
-        "free allowance",
-      ),
+      expect(
+        document.querySelector(".gmt-hive-warning")?.textContent,
+      ).toContain("free allowance"),
     );
     // Transient parts never became a message: only the reader's question.
-    expect(document.querySelectorAll('.gmt-hive-turn[data-role="assistant"]')).toHaveLength(0);
+    expect(
+      document.querySelectorAll('.gmt-hive-turn[data-role="assistant"]'),
+    ).toHaveLength(0);
     expect(document.querySelector(".gmt-hive-pending")).toBeNull();
   });
 });

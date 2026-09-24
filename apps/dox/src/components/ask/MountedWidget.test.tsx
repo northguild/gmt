@@ -316,11 +316,15 @@ describe("MountedWidget", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const { entry } = spyEntry({
       load: async () => {
-        throw new TypeError("Failed to fetch dynamically imported module: x.js");
+        throw new TypeError(
+          "Failed to fetch dynamically imported module: x.js",
+        );
       },
     });
     render(<MountedWidget entry={entry} args={{}} idPrefix="t" />);
-    expect(await screen.findByRole("button", { name: "Try again" })).not.toBeNull();
+    expect(
+      await screen.findByRole("button", { name: "Try again" }),
+    ).not.toBeNull();
     vi.restoreAllMocks();
   });
 
@@ -359,7 +363,9 @@ describe("MountedWidget", () => {
     };
     render(<MountedWidget entry={slow} args={{}} idPrefix="t" />);
 
-    expect(screen.getByRole("status").textContent).toBe("Loading Test Widget\u2026");
+    expect(screen.getByRole("status").textContent).toBe(
+      "Loading Test Widget\u2026",
+    );
     expect(document.querySelector('[data-role="stage"]')).toBeNull();
 
     await act(async () => {

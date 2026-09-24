@@ -4,7 +4,8 @@ import { observeOutput, Stopwatch } from "./timing";
 
 async function drain<T>(stream: ReadableStream<T>): Promise<T[]> {
   const out: T[] = [];
-  for await (const chunk of stream as unknown as AsyncIterable<T>) out.push(chunk);
+  for await (const chunk of stream as unknown as AsyncIterable<T>)
+    out.push(chunk);
   return out;
 }
 

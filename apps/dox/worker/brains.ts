@@ -332,7 +332,11 @@ export async function openFirstWorkingBrain({
       // depth to keep calling its widget can have it on its own.
       providerOptions:
         brain.provider === "google" && brain.thinkingLevel
-          ? { google: { thinkingConfig: { thinkingLevel: brain.thinkingLevel } } }
+          ? {
+              google: {
+                thinkingConfig: { thinkingLevel: brain.thinkingLevel },
+              },
+            }
           : undefined,
       // One structured line per answered request, so real token counts — and
       // from them, real Neuron cost — can be read from `wrangler dev` or

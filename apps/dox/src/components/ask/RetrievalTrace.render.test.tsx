@@ -21,7 +21,9 @@ function renderOpen(ui: React.ReactElement) {
   const result = render(ui);
   // `TaskTrigger` renders `asChild`, so the trigger is the div carrying the
   // Radix state attribute, not a <button>.
-  const trigger = result.container.querySelector("[data-slot='collapsible-trigger']");
+  const trigger = result.container.querySelector(
+    "[data-slot='collapsible-trigger']",
+  );
   if (trigger) fireEvent.click(trigger);
   return result;
 }
@@ -45,8 +47,16 @@ describe("RetrievalTrace timings", () => {
 
   it("lists the stages in pipeline order, leaving out the ones not yet known", () => {
     expect(
-      describeTimings({ usage: 3, corpus: 12, search: 55, prompt: 4, brains: 1800 }),
-    ).toBe("ledger 3 ms · corpus 12 ms · search 55 ms · prompt 4 ms · brains 1.8 s");
+      describeTimings({
+        usage: 3,
+        corpus: 12,
+        search: 55,
+        prompt: 4,
+        brains: 1800,
+      }),
+    ).toBe(
+      "ledger 3 ms · corpus 12 ms · search 55 ms · prompt 4 ms · brains 1.8 s",
+    );
     expect(
       describeTimings({
         usage: 0,
@@ -66,7 +76,9 @@ describe("RetrievalTrace timings", () => {
         { brainId: BRAINS[0].id, ms: 2100, outcome: "spent" },
         { brainId: BRAINS[1].id, ms: 1800, outcome: "answered" },
       ]),
-    ).toBe(`${BRAINS[0].label} spent 2.1 s → ${BRAINS[1].label} answered 1.8 s`);
+    ).toBe(
+      `${BRAINS[0].label} spent 2.1 s → ${BRAINS[1].label} answered 1.8 s`,
+    );
   });
 
   it("renders nothing extra when the Worker sent no timings", () => {
@@ -95,9 +107,9 @@ describe("RetrievalTrace timings", () => {
         }}
       />,
     );
-    expect(container.querySelector("[data-role='timings']")?.textContent).toContain(
-      "total 4.0 s",
-    );
+    expect(
+      container.querySelector("[data-role='timings']")?.textContent,
+    ).toContain("total 4.0 s");
     expect(container.querySelector("[data-role='attempts']")?.textContent).toBe(
       `${BRAINS[0].label} answered 900 ms`,
     );

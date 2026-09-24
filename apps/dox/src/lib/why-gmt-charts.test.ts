@@ -286,27 +286,30 @@ describe("namespace chart labels", () => {
   it.each([
     ["namespaces", NAMESPACE_COUNTS],
     ["industries", INDUSTRY_COUNTS],
-  ] as const)("keeps every %s label at the page's real chart width", (id, rows) => {
-    const chart = BAR_CHARTS[id];
-    const width = 524;
-    const runtime = createChartRuntime();
-    const scene = runtime.render(chart.definition(), {
-      width,
-      height: Math.round((width * chart.height) / chart.width),
-    });
-    const svg = renderChartSvg(scene, {
-      ariaLabel: chart.ariaLabel,
-      idPrefix: chart.idPrefix,
-    });
-    runtime.destroy();
+  ] as const)(
+    "keeps every %s label at the page's real chart width",
+    (id, rows) => {
+      const chart = BAR_CHARTS[id];
+      const width = 524;
+      const runtime = createChartRuntime();
+      const scene = runtime.render(chart.definition(), {
+        width,
+        height: Math.round((width * chart.height) / chart.width),
+      });
+      const svg = renderChartSvg(scene, {
+        ariaLabel: chart.ariaLabel,
+        idPrefix: chart.idPrefix,
+      });
+      runtime.destroy();
 
-    const labels = [...svg.matchAll(/<text[^>]*>([^<]*)<\/text>/g)].map(
-      ([, text]) => text,
-    );
-    for (const { namespace } of rows) {
-      expect(labels).toContain(namespace);
-    }
-  });
+      const labels = [...svg.matchAll(/<text[^>]*>([^<]*)<\/text>/g)].map(
+        ([, text]) => text,
+      );
+      for (const { namespace } of rows) {
+        expect(labels).toContain(namespace);
+      }
+    },
+  );
 });
 
 describe("isBarChartId", () => {
