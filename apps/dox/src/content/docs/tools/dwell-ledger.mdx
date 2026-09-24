@@ -29,6 +29,7 @@ two bare instants name no place, an offset is not a zone, and `dwellTime`
 returns `null` rather than guess.
 
 Reference: [`dwellTime`](/reference/transport/calculate/dwellTime/) counts the
-days; [`floorToZone`](/reference/calendar/calculate/floorToZone/) is where its
-day boundaries come from. The rules are in [Transport: Legs and
+days across the zone's real transitions;
+[`floorToZone`](/reference/calendar/calculate/floorToZone/) finds the start of
+any local day. The rules are in [Transport: Legs and
 Dwell](/guides/industries/transport-legs-and-dwell/).

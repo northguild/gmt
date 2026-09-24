@@ -182,8 +182,9 @@ converting between time zones, or doing arithmetic that must respect DST.
     GMT never resolves a port, airport or station code to a zone.
     `dwellTime(entry, exit, targetZone?)` returns `{ duration, enter, exit,
     calendarDays }`; `calendarDays` is the number of distinct local dates the
-    half-open `[entry, exit)` touches, from the zone's real day boundaries
-    (`floorToZone`), and is the library's one "local midnights crossed" count.
+    half-open `[entry, exit)` touches, walked across the zone's real transitions
+    (a skipped date is not counted, a re-entered one only once), and is the
+    library's one "local days crossed" count.
     Bare instants with no `targetZone` return `null`: an offset is not a place.
 16. **Read the README.** This skill is a routing pointer. For the full DST
     disambiguation walkthrough, code examples, and locale ICU notes, read the

@@ -1,4 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { utcOffsetStringNanoseconds, zonedDateTimeFrom } from "../../internal";
 import { isValidDuration } from "../../duration/validate/isValidDuration";
 import { isValidInstant } from "../../precision/validate/isValidInstant";
 import { isValidZonedDateTime } from "../../zoned/validate/isValidZonedDateTime";
@@ -6,8 +7,12 @@ import { isValidZonedDateTime } from "../../zoned/validate/isValidZonedDateTime"
 /** Trailing `Z` or `±HH:MM[:SS[.fraction]]` offset of an instant string, before any annotation. */
 const trailingOffset = /(Z|[+-]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?)(?:\[[^\]]*\])*$/;
 
-/** A bracketed annotation that is not a calendar: the string claims a time zone. */
-const zoneAnnotation = /\[!?(?!u-ca=)[^\]]+\]/;
+/**
+ * A time-zone annotation: a bracket whose content has no `=` (RFC 9557 §4.1). Every `key=value`
+ * bracket is a tagged annotation — a calendar, or an unknown key that is ignored when elective
+ * and rejected when critical (§3.3), as `isValidInstant` already decides.
+ */
+const zoneAnnotation = /\[!?[^\]=]+\]/;
 
 /**
  * Add a transit duration to a departure and return the arrival, in the departure's own zone.
@@ -18,20 +23,27 @@ const zoneAnnotation = /\[!?(?!u-ca=)[^\]]+\]/;
  * interval, so the local arrival time reflects the shift.
  *
  * - **Transit time is exact time.** Hours, minutes, seconds and fractions are added as elapsed
- *   time, and a day component means 24 hours, exactly (Temporal balances it without a
- *   `relativeTo`). A 26-hour leg that starts the evening before a spring-forward arrives at a
- *   wall time one hour later than a wall-clock reading would suggest, because that is when the
- *   vessel, train or aircraft actually gets there.
+ *   time, and a day component means 24 hours, exactly. That is TC39 Temporal's rule:
+ *   `Duration.prototype.round` and `total` without a `relativeTo` treat a day as 24 hours and
+ *   require a `relativeTo` for weeks, months and years. A 26-hour leg that starts the evening
+ *   before a spring-forward arrives at a wall time one hour later than a wall-clock reading would
+ *   suggest, because that is when the vessel, train or aircraft actually gets there.
  * - **Calendar units are refused.** A `duration` with years, months or weeks returns `""`: no
  *   leg takes "a month" in a sense that time arithmetic can fix without a reference point, and
  *   Temporal will not add them to an instant either. Scheduled connections that are dated rather
  *   than timed belong to `scheduleDelivery`.
  * - **The departure's zone is preserved.** A bracketed IANA zone (`…-05:00[America/New_York]`)
  *   stays that zone, so the arrival's offset is whatever is in force there at arrival. A `Z`
- *   instant returns a `Z` instant; an offset-only instant keeps its offset (an offset is not a
+ *   instant returns a `Z` instant; an offset-only instant keeps its offset, written exactly as
+ *   the departure wrote it, sub-minute offsets such as `+05:30:15` included (an offset is not a
  *   zone, so nothing else can be inferred from it — see `toOffsetInstant`). A bracketed zone
  *   that does not exist, or that contradicts its offset, is rejected as `isValidZonedDateTime`
  *   rejects it; it does not fall back to the offset.
+ * - RFC 9557 annotations are read as `Temporal.Instant.from` reads them: a bracket without `=`
+ *   is a time zone, and a `key=value` bracket with an unknown key is ignored when elective and
+ *   rejected when critical (`[!…]`). A calendar on a departure without a zone is accepted and
+ *   changes nothing, since an instant has no calendar; a zoned departure's calendar must be ISO,
+ *   as `isValidZonedDateTime` requires.
  * - A negative duration is allowed and moves backwards; that is how a departure is recovered
  *   from an arrival.
  * - Returns `""` when `departure` is not a zoned datetime or instant string, or `duration` is
@@ -46,6 +58,8 @@ const zoneAnnotation = /\[!?(?!u-ca=)[^\]]+\]/;
  * @example transitTime("2024-03-09T12:00:00-05:00[America/New_York]", "P1D") // "2024-03-10T13:00:00-04:00[America/New_York]" (a day is 24 elapsed hours, not "the same wall time tomorrow")
  * @example transitTime("2024-06-15T10:00:00Z", "PT36H") // "2024-06-16T22:00:00Z"
  * @example transitTime("2024-06-15T10:00:00+09:00", "PT1H") // "2024-06-15T11:00:00+09:00" (an offset stays an offset)
+ * @example transitTime("2024-06-15T10:00:00+05:30:15", "PT1H") // "2024-06-15T11:00:00+05:30:15" (a sub-minute offset is kept as written)
+ * @example transitTime("2024-06-15T10:00:00Z[foo=bar]", "PT1H") // "2024-06-15T11:00:00Z" (an elective unknown annotation is ignored)
  * @example transitTime("2024-06-15T12:30:00-04:00[America/New_York]", "-PT2H30M") // "2024-06-15T10:00:00-04:00[America/New_York]"
  * @example transitTime("2024-06-15T10:00:00-04:00[America/New_York]", "P1M") // "" (calendar units need a reference point)
  * @example transitTime("2024-06-15T10:00:00-05:00[America/New_York]", "PT2H") // "" (New York is -04:00 in June: the offset contradicts the zone)
@@ -73,7 +87,7 @@ export function transitTime(departure: string, duration: string): string {
     const exact = parsed.round({ largestUnit: "hours" });
 
     if (zoned) {
-      return Temporal.ZonedDateTime.from(departure).add(exact).toString();
+      return zonedDateTimeFrom(departure).add(exact).toString();
     }
 
     const arrival = Temporal.Instant.from(departure).add(exact);
@@ -81,9 +95,15 @@ export function transitTime(departure: string, duration: string): string {
     if (offset === "Z") {
       return arrival.toString();
     }
-    return arrival
-      .toZonedDateTimeISO(offset)
-      .toString({ timeZoneName: "never" });
+    // The arrival's wall clock in the departure's own offset, written with that offset's text.
+    // Not `toZonedDateTimeISO(offset)`: an offset time zone is minute precision, and an instant
+    // may carry `+05:30:15`. The wall clock is shifted as a PlainDateTime, whose range reaches a
+    // day past the instant range, so an arrival at either limit still renders.
+    const wall = arrival
+      .toZonedDateTimeISO("UTC")
+      .toPlainDateTime()
+      .add({ nanoseconds: Number(utcOffsetStringNanoseconds(offset)) });
+    return `${wall.toString()}${offset}`;
   } catch {
     return "";
   }

@@ -120,7 +120,7 @@ export {
   zonedUnitStart,
 } from "./zonedBucket";
 export { countZonedLocalDates } from "./zonedLocalDates";
-export { zonedDateTimeFrom } from "./zonedWallClock";
+export { utcOffsetStringNanoseconds, zonedDateTimeFrom } from "./zonedWallClock";
 export {
   durationCompare,
   durationRound,

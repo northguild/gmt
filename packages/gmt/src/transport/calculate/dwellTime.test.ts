@@ -55,6 +55,8 @@ describe("dwellTime", () => {
     ${"2024-06-10T12:00:00Z"}   | ${"2024-06-15T12:00:00Z"}   | ${"UTC"}              | ${"PT120H"}   | ${"2024-06-10T12:00:00+00:00[UTC]"}              | ${"2024-06-15T12:00:00+00:00[UTC]"}              | ${6}
     ${"2024-06-15T10:00:00Z"}   | ${"2024-06-15T10:00:00.5Z"} | ${"UTC"}              | ${"PT0.5S"}   | ${"2024-06-15T10:00:00+00:00[UTC]"}              | ${"2024-06-15T10:00:00.5+00:00[UTC]"}            | ${1}
     ${"2024-06-15T10:00:00Z"}   | ${"2024-06-15T10:00:00Z"}   | ${"Asia/Tokyo"}       | ${"PT0S"}     | ${"2024-06-15T19:00:00+09:00[Asia/Tokyo]"}       | ${"2024-06-15T19:00:00+09:00[Asia/Tokyo]"}       | ${1}
+    ${"2024-06-15T22:30:00Z"}   | ${"2024-06-16T01:00:00Z"}   | ${"+02:00"}           | ${"PT2H30M"}  | ${"2024-06-16T00:30:00+02:00[+02:00]"}           | ${"2024-06-16T03:00:00+02:00[+02:00]"}           | ${1}
+    ${"2011-12-30T08:00:00Z"}   | ${"2011-12-30T11:00:00Z"}   | ${"Pacific/Apia"}     | ${"PT3H"}     | ${"2011-12-29T22:00:00-10:00[Pacific/Apia]"}     | ${"2011-12-31T01:00:00+14:00[Pacific/Apia]"}     | ${2}
   `(
     "measures $duration over $calendarDays local day(s) in $targetZone",
     ({ entry, exit, targetZone, duration, enter, exitLocal, calendarDays }) => {
@@ -110,6 +112,32 @@ describe("dwellTime", () => {
     ).toMatchObject({ duration: "PT25H", calendarDays: 1 });
   });
 
+  // Probe-zone transitions (coding-standards § Calendar & zone semantics). Expected counts are the
+  // distinct local date labels of [entry, exit), from tzdb's transition data: a deleted date is
+  // never touched, and a date the clock falls back into again is counted once.
+  it.each`
+    entry                                | exit                                 | targetZone              | calendarDays | reason
+    ${"2011-12-30T08:00:00Z"}            | ${"2011-12-30T11:00:00Z"}            | ${"Pacific/Apia"}       | ${2}         | ${"29th 22:00 -10:00 to 31st 01:00 +14:00: the 30th was deleted"}
+    ${"2010-11-07T02:30:00Z"}            | ${"2010-11-07T03:45:00Z"}            | ${"America/Goose_Bay"}  | ${2}         | ${"6th, the 7th's first minute, then the 6th again at 00:01 -03:00 -> 23:01 -04:00"}
+    ${"2010-11-07T03:00:30Z"}            | ${"2010-11-07T03:30:00Z"}            | ${"America/Goose_Bay"}  | ${2}         | ${"entry on the 7th at 00:00:30 -03:00, exit back on the 6th at 23:30 -04:00"}
+    ${"2010-11-07T02:30:00Z"}            | ${"2010-11-08T04:00:00Z"}            | ${"America/Goose_Bay"}  | ${2}         | ${"6th, 7th, 6th, 7th: two distinct dates, exit at the 8th's midnight"}
+    ${"1844-12-30T12:00:00Z"}            | ${"1845-01-01T12:00:00Z"}            | ${"Asia/Manila"}        | ${3}         | ${"29th, 30th, then 1 January: Manila deleted 1844-12-31 crossing the date line"}
+    ${"2024-11-03T04:00:00Z"}            | ${"2024-11-04T04:00:00Z"}            | ${"America/Havana"}     | ${1}         | ${"3rd 00:00 -04:00 to 23:00 -05:00: the repeated midnight stays on the 3rd"}
+    ${"2024-11-03T03:30:00Z"}            | ${"2024-11-03T06:00:00Z"}            | ${"America/Havana"}     | ${2}         | ${"2nd 23:30 -04:00 to 3rd 01:00 -05:00 across the repeated hour"}
+    ${"2024-09-07T20:00:00Z"}            | ${"2024-09-08T04:00:00Z"}            | ${"America/Santiago"}   | ${1}         | ${"exit 2024-09-08T01:00-03:00 is the 8th's first instant: midnight was skipped"}
+    ${"2024-09-07T20:00:00Z"}            | ${"2024-09-08T04:00:00.000000001Z"}  | ${"America/Santiago"}   | ${2}         | ${"one nanosecond into the 8th after the skipped midnight"}
+    ${"2020-10-03T12:00:00Z"}            | ${"2020-10-03T17:00:00Z"}            | ${"Antarctica/Casey"}   | ${2}         | ${"3rd 20:00 +08:00 to 4th 04:00 +11:00 across the three-hour jump"}
+    ${"2024-09-28T10:00:00Z"}            | ${"2024-09-28T15:00:00Z"}            | ${"Pacific/Chatham"}    | ${2}         | ${"28th 22:45 +12:45 to 29th 04:45 +13:45 across the spring-forward"}
+    ${"2024-04-06T10:00:00Z"}            | ${"2024-04-06T15:00:00Z"}            | ${"Pacific/Chatham"}    | ${2}         | ${"6th 23:45 +13:45 to 7th 03:45 +12:45 across the fall-back"}
+    ${"2024-04-06T13:00:00Z"}            | ${"2024-04-06T16:00:00Z"}            | ${"Australia/Lord_Howe"} | ${1}        | ${"7th 00:00 +11:00 to 02:30 +10:30 through the half-hour fall-back"}
+    ${"2024-10-05T13:00:00Z"}            | ${"2024-10-05T16:00:00Z"}            | ${"Australia/Lord_Howe"} | ${2}        | ${"5th 23:30 +10:30 to 6th 03:00 +11:00 across the half-hour spring-forward"}
+  `(
+    "counts $calendarDays distinct local date(s) in $targetZone: $reason",
+    ({ entry, exit, targetZone, calendarDays }) => {
+      expect(dwellTime(entry, exit, targetZone)?.calendarDays).toBe(calendarDays);
+    },
+  );
+
   it.each(battleTestTimeZones)(
     "counts the local dates touched in %s from the zone's own boundaries",
     (timeZone) => {
@@ -136,6 +164,20 @@ describe("dwellTime", () => {
       ),
     ).toMatchObject({ calendarDays: 2, exit: "2024-06-16T02:00:00+01:00[Europe/London]" });
   });
+
+  it.each`
+    entry                                         | exit                                    | targetZone     | reason
+    ${"2024-06-15T23:30:00+01:00[Europe/London]"} | ${"2024-06-16T01:00:00Z[Not/AZone]"}    | ${undefined}   | ${"the exit's bracket is never read"}
+    ${"2024-06-15T22:30:00Z[Not/AZone]"}          | ${"2024-06-16T01:00:00Z"}               | ${"Europe/London"} | ${"the entry's bracket is not read when targetZone is given"}
+  `(
+    "reads only the instant when $reason, as Temporal.Instant.from does",
+    ({ entry, exit, targetZone }) => {
+      expect(dwellTime(entry, exit, targetZone)).toMatchObject({
+        calendarDays: 2,
+        exit: "2024-06-16T02:00:00+01:00[Europe/London]",
+      });
+    },
+  );
 
   it("lets targetZone override the entry's bracketed zone", () => {
     expect(
@@ -164,6 +206,21 @@ describe("dwellTime", () => {
     "returns the sentinel when $reason",
     ({ entry, exit, targetZone }) => {
       expect(dwellTime(entry, exit, targetZone)).toBeNull();
+    },
+  );
+
+  // Temporal's last instant, +275760-09-13T00:00:00Z (TC39 nsMaxInstant), is 10:00 +10:00 in
+  // Sydney; the zone comes from the bracket, so the zoned parse must work at the limit.
+  it.each`
+    entry                                                          | exit                                                           | expected
+    ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"}            | ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"}            | ${{ duration: "PT0S", enter: "+275760-09-13T10:00:00+10:00[Australia/Sydney]", exit: "+275760-09-13T10:00:00+10:00[Australia/Sydney]", calendarDays: 1 }}
+    ${"+275760-09-12T23:30:00+10:00[Australia/Sydney]"}            | ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"}            | ${{ duration: "PT10H30M", enter: "+275760-09-12T23:30:00+10:00[Australia/Sydney]", exit: "+275760-09-13T10:00:00+10:00[Australia/Sydney]", calendarDays: 2 }}
+    ${"+275760-09-13T10:00:00.000000001+10:00[Australia/Sydney]"}  | ${"+275760-09-13T10:00:00.000000001+10:00[Australia/Sydney]"}  | ${null}
+    ${"+275760-09-13T09:00:00+10:00[Australia/Sydney]"}            | ${"+275760-09-13T10:00:00.000000001+10:00[Australia/Sydney]"}  | ${null}
+  `(
+    "measures $entry to $exit at the range maximum",
+    ({ entry, exit, expected }) => {
+      expect(dwellTime(entry, exit)).toEqual(expected);
     },
   );
 

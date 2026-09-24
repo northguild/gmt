@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { floorToZone } from "../../calendar/calculate/floorToZone";
+import { countZonedLocalDates, zonedDateTimeFrom } from "../../internal";
 import { isValidInstant } from "../../precision/validate/isValidInstant";
 import { isValidTimeZone } from "../../zoned/validate/isValidTimeZone";
 import { isValidZonedDateTime } from "../../zoned/validate/isValidZonedDateTime";
@@ -30,7 +30,7 @@ function dwellZone(entry: string, targetZone: string | undefined): string | null
     return null;
   }
   try {
-    return Temporal.ZonedDateTime.from(entry).timeZoneId;
+    return zonedDateTimeFrom(entry).timeZoneId;
   } catch {
     return null;
   }
@@ -54,22 +54,34 @@ function dwellZone(entry: string, targetZone: string | undefined): string | null
  *   same local date is `1`, across one local midnight is `2`, and so on. A dwell that ends
  *   exactly at a local midnight does not touch the new day, because the exit instant itself
  *   is excluded — the same half-open rule as `bucketRange` and CORE-6's intervals. A zero-length
- *   dwell touches one date. The count comes from the zone's real day boundaries via
- *   `floorToZone`, so a 23- or 25-hour local day is one day, not 0.96 or 1.04 of one.
+ *   dwell touches one date. The count walks the zone's real transitions: between two of them
+ *   the wall clock runs forward without a break, so each stretch touches every date from its
+ *   first instant to its last, and the count is the size of the union of those dates. A 23- or
+ *   25-hour local day is one day, not 0.96 or 1.04 of one; a date the zone deleted is never
+ *   touched (`Pacific/Apia` skipped 2011-12-30); and a date the clock falls back into is still
+ *   one date (`America/Goose_Bay` fell back from 00:01 on 7 November 2010 into the 6th).
  * - **The zone decides the count, so it has to be stated.** `targetZone` is used when given.
- *   Without it, the entry's bracketed IANA zone is used. If the entry and exit are bare
+ *   Without it, the entry's bracketed IANA zone is used. As in `Temporal.Instant.from`, a
+ *   bracketed zone is otherwise not read, so it is not validated either: the entry's is read
+ *   (and must exist and agree with its offset) only when it supplies the dwell zone, because
+ *   `targetZone` is omitted, and the exit's is never read. If the entry and exit are bare
  *   instants — `Z` or an offset — and no `targetZone` is given, the result is `null`: an
  *   offset is not a zone (CORE-4), and a day count in an unstated locality would be a guess.
  * - `enter` and `exit` are the two instants rendered in the dwell zone, so a charging record
  *   shows the local times the terminal's own clock showed.
- * - GMT does not resolve a port, terminal or station code to a zone; the caller supplies an
- *   IANA identifier.
+ * - `targetZone` is whatever `isValidTimeZone` accepts, which is what Temporal accepts: an IANA
+ *   identifier, or a fixed offset such as `"+02:00"`, as `etaAtZone` also takes. Days are then
+ *   counted in that offset, which observes no DST, so pass the place's IANA zone when there is one.
+ * - GMT does not resolve a port, terminal or station code to a zone; the caller supplies the
+ *   identifier.
+ * - Long dwells stay cheap: the walk visits zone transitions, not days. A dwell that crosses
+ *   more than 10,000 transitions (about 5,000 years of twice-yearly DST) returns `null`.
  * - Returns `null` when either instant is invalid, when `exit` is before `entry` (an inverted
  *   dwell is a data error, not a negative stay), or when no zone can be determined.
  *
  * @param entry ISO 8601 zoned datetime or instant string of the gate-in, arrival or admission
  * @param exit ISO 8601 zoned datetime or instant string of the gate-out, departure or discharge
- * @param targetZone IANA timeZone identifier the days are counted in; defaults to `entry`'s bracketed zone
+ * @param targetZone IANA timeZone identifier or fixed offset the days are counted in; defaults to `entry`'s bracketed zone
  * @returns exact duration, zone-local entry and exit, and the local calendar days touched, or null on invalid input
  *
  * @example dwellTime("2024-06-15T23:00:00-04:00[America/New_York]", "2024-06-16T01:00:00-04:00[America/New_York]") // { duration: "PT2H", enter: "2024-06-15T23:00:00-04:00[America/New_York]", exit: "2024-06-16T01:00:00-04:00[America/New_York]", calendarDays: 2 }
@@ -78,6 +90,8 @@ function dwellZone(entry: string, targetZone: string | undefined): string | null
  * @example dwellTime("2024-06-15T22:30:00Z", "2024-06-16T01:00:00Z", "Europe/Amsterdam") // { duration: "PT2H30M", enter: "2024-06-16T00:30:00+02:00[Europe/Amsterdam]", exit: "2024-06-16T03:00:00+02:00[Europe/Amsterdam]", calendarDays: 1 } (the same two instants, one fewer day: the zone decides)
  * @example dwellTime("2024-06-15T22:00:00Z", "2024-06-16T04:00:00Z", "America/New_York") // { duration: "PT6H", enter: "2024-06-15T18:00:00-04:00[America/New_York]", exit: "2024-06-16T00:00:00-04:00[America/New_York]", calendarDays: 1 } (an exit exactly at local midnight does not touch the new day)
  * @example dwellTime("2024-03-10T05:00:00Z", "2024-03-10T12:00:00Z", "America/New_York") // { duration: "PT7H", enter: "2024-03-10T00:00:00-05:00[America/New_York]", exit: "2024-03-10T08:00:00-04:00[America/New_York]", calendarDays: 1 } (seven elapsed hours across the spring-forward, one local day)
+ * @example dwellTime("2011-12-30T08:00:00Z", "2011-12-30T11:00:00Z", "Pacific/Apia") // { duration: "PT3H", enter: "2011-12-29T22:00:00-10:00[Pacific/Apia]", exit: "2011-12-31T01:00:00+14:00[Pacific/Apia]", calendarDays: 2 } (29 and 31 December: Samoa deleted the 30th)
+ * @example dwellTime("2024-06-15T22:30:00Z", "2024-06-16T01:00:00Z", "+02:00") // { duration: "PT2H30M", enter: "2024-06-16T00:30:00+02:00[+02:00]", exit: "2024-06-16T03:00:00+02:00[+02:00]", calendarDays: 1 } (a fixed offset counts days with no DST)
  * @example dwellTime("2024-06-15T22:30:00Z", "2024-06-16T01:00:00Z") // null (bare instants and no zone: the day count has no locality)
  * @example dwellTime("2024-06-16T01:00:00Z", "2024-06-15T22:30:00Z", "Europe/London") // null (exit before entry)
  * @example dwellTime("2024-06-15T22:30:00Z", "2024-06-16T01:00:00Z", "Europe/Londres") // null
@@ -106,16 +120,16 @@ export function dwellTime(
     const enter = entryInstant.toZonedDateTimeISO(zone);
     const leave = exitInstant.toZonedDateTimeISO(zone);
 
-    // Half-open at the exit: an exit sitting exactly on a local day boundary belongs to the
-    // day before it. A zero-length dwell still touches the one date it sits on.
-    const exitOnBoundary =
-      Temporal.Instant.compare(entryInstant, exitInstant) < 0 &&
-      floorToZone(exitInstant.toString(), "day", zone) === exitInstant.toString();
-    const lastDate = exitOnBoundary
-      ? leave.subtract({ nanoseconds: 1 }).toPlainDate()
-      : leave.toPlainDate();
-    const calendarDays =
-      enter.toPlainDate().until(lastDate, { largestUnit: "days" }).days + 1;
+    // Half-open at the exit: the dwell's last instant is one nanosecond before it, so an exit
+    // exactly on a local day boundary does not touch the new day. A zero-length dwell still
+    // touches the one date it sits on.
+    const last = Temporal.Instant.compare(entryInstant, exitInstant) < 0
+      ? leave.subtract({ nanoseconds: 1 })
+      : leave;
+    const calendarDays = countZonedLocalDates(enter, last);
+    if (calendarDays === null) {
+      return null;
+    }
 
     return {
       duration: entryInstant.until(exitInstant, { largestUnit: "hours" }).toString(),

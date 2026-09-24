@@ -78,7 +78,7 @@ transitTime("2024-06-15T10:00:00-04:00[America/New_York]", "PT2H");
 <Mistake
   severity="medium"
   title="Rendering an arrival in a fixed offset instead of the destination's zone"
-  description="etaAtZone accepts a fixed offset as a zone, as Temporal does, but an offset observes no DST. On the fall-back night the destination is already on -05:00 for the second arrival and still on -04:00 for the first; a fixed -05:00 shows both an hour early or an hour late. GMT does not resolve an airport code to a zone, so pass the IANA identifier."
+  description="etaAtZone accepts a fixed offset as a zone, as Temporal does, but an offset observes no DST. On the fall-back night the destination is still on -04:00 for the first arrival and already on -05:00 for the second, so a fixed -05:00 shows the first an hour early (00:30 instead of 01:30). The second comes out right only because New York has just moved to -05:00, and all summer every arrival shows an hour early. GMT does not resolve an airport code to a zone, so pass the IANA identifier."
   wrongCode={`etaAtZone("2024-11-03T05:30:00Z", "-05:00");
 // "2024-11-03T00:30:00-05:00[-05:00]" — New York was still on EDT; the board is an hour early`}
   rightCode={`import { etaAtZone } from "@northguild/gmt/transport";

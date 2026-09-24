@@ -92,6 +92,46 @@ describe("transitTime", () => {
     },
   );
 
+  // An offset-only departure keeps its offset text, including sub-minute offsets that Temporal
+  // cannot use as an offset time zone (those identifiers are minute precision).
+  it.each`
+    departure                             | duration     | expected                              | reason
+    ${"2024-06-15T10:00:00+05:30:15"}     | ${"PT1H"}    | ${"2024-06-15T11:00:00+05:30:15"}     | ${"seconds offset: 04:29:45Z + 1h read at +05:30:15"}
+    ${"2024-06-15T10:00:00+05:30:00.5"}   | ${"PT1H"}    | ${"2024-06-15T11:00:00+05:30:00.5"}   | ${"fractional-second offset"}
+    ${"2024-06-15T23:59:59.5-00:00:30"}   | ${"PT0.5S"}  | ${"2024-06-16T00:00:00-00:00:30"}     | ${"sub-minute negative offset across local midnight"}
+    ${"2024-06-15T10:00:00-00:00"}        | ${"PT1H"}    | ${"2024-06-15T11:00:00-00:00"}        | ${"-00:00 is kept as written"}
+    ${"2024-06-15T10:00:00.5+09:00"}      | ${"PT0.25S"} | ${"2024-06-15T10:00:00.75+09:00"}     | ${"fractional seconds in the wall time"}
+  `(
+    "keeps the offset of $departure + $duration giving $expected ($reason)",
+    ({ departure, duration, expected }) => {
+      expect(transitTime(departure, duration)).toBe(expected);
+    },
+  );
+
+  // Temporal's instants run from -8.64e21 to 8.64e21 ns (TC39 Temporal, nsMinInstant/nsMaxInstant;
+  // test262 ZonedDateTime/from/argument-string-limits.js): -271821-04-20T00:00:00Z, which is
+  // 19:00 on the 19th at -05:00, to +275760-09-13T00:00:00Z, which is 10:00 +10:00 in Sydney
+  // (AEST; daylight saving there starts in October).
+  it.each`
+    departure                                                      | duration                  | expected
+    ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"}            | ${"PT0S"}                 | ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"}
+    ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"}            | ${"-PT1H"}                | ${"+275760-09-13T09:00:00+10:00[Australia/Sydney]"}
+    ${"+275760-09-13T09:00:00+10:00[Australia/Sydney]"}            | ${"-PT1H"}                | ${"+275760-09-13T08:00:00+10:00[Australia/Sydney]"}
+    ${"+275760-09-13T09:00:00+10:00[Australia/Sydney]"}            | ${"PT1H"}                 | ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"}
+    ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"}            | ${"PT0.000000001S"}       | ${""}
+    ${"+275760-09-13T10:00:00.000000001+10:00[Australia/Sydney]"}  | ${"-PT1H"}                | ${""}
+    ${"+275760-09-13T10:00:00+10:00"}                              | ${"PT0S"}                 | ${"+275760-09-13T10:00:00+10:00"}
+    ${"+275760-09-13T09:00:00+10:00"}                              | ${"PT1H"}                 | ${"+275760-09-13T10:00:00+10:00"}
+    ${"-271821-04-19T19:00:00-05:00"}                              | ${"PT0S"}                 | ${"-271821-04-19T19:00:00-05:00"}
+    ${"-271821-04-19T20:00:00-05:00"}                              | ${"-PT1H"}                | ${"-271821-04-19T19:00:00-05:00"}
+    ${"-271821-04-19T20:00:00-05:00"}                              | ${"-PT1H0.000000001S"}    | ${""}
+  `(
+    "adds $duration to $departure at the range limit giving '$expected'",
+    ({ departure, duration, expected }) => {
+      expect(transitTime(departure, duration)).toBe(expected);
+    },
+  );
+
   it("returns the sentinel when the zoned parse throws", () => {
     mockTemporalZonedDateTimeFromThrow();
     expect(

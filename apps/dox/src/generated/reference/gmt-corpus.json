@@ -10871,6 +10871,14 @@
         "result": "{ duration: \"PT7H\", enter: \"2024-03-10T00:00:00-05:00[America/New_York]\", exit: \"2024-03-10T08:00:00-04:00[America/New_York]\", calendarDays: 1 } (seven elapsed hours across the spring-forward, one local day)"
       },
       {
+        "call": "dwellTime(\"2011-12-30T08:00:00Z\", \"2011-12-30T11:00:00Z\", \"Pacific/Apia\")",
+        "result": "{ duration: \"PT3H\", enter: \"2011-12-29T22:00:00-10:00[Pacific/Apia]\", exit: \"2011-12-31T01:00:00+14:00[Pacific/Apia]\", calendarDays: 2 } (29 and 31 December: Samoa deleted the 30th)"
+      },
+      {
+        "call": "dwellTime(\"2024-06-15T22:30:00Z\", \"2024-06-16T01:00:00Z\", \"+02:00\")",
+        "result": "{ duration: \"PT2H30M\", enter: \"2024-06-16T00:30:00+02:00[+02:00]\", exit: \"2024-06-16T03:00:00+02:00[+02:00]\", calendarDays: 1 } (a fixed offset counts days with no DST)"
+      },
+      {
         "call": "dwellTime(\"2024-06-15T22:30:00Z\", \"2024-06-16T01:00:00Z\")",
         "result": "null (bare instants and no zone: the day count has no locality)"
       },
@@ -10913,6 +10921,14 @@
       {
         "call": "transitTime(\"2024-06-15T10:00:00+09:00\", \"PT1H\")",
         "result": "\"2024-06-15T11:00:00+09:00\" (an offset stays an offset)"
+      },
+      {
+        "call": "transitTime(\"2024-06-15T10:00:00+05:30:15\", \"PT1H\")",
+        "result": "\"2024-06-15T11:00:00+05:30:15\" (a sub-minute offset is kept as written)"
+      },
+      {
+        "call": "transitTime(\"2024-06-15T10:00:00Z[foo=bar]\", \"PT1H\")",
+        "result": "\"2024-06-15T11:00:00Z\" (an elective unknown annotation is ignored)"
       },
       {
         "call": "transitTime(\"2024-06-15T12:30:00-04:00[America/New_York]\", \"-PT2H30M\")",

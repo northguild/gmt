@@ -43,12 +43,13 @@ transitTime("2024-06-15T12:30:00-04:00[America/New_York]", "-PT2H30M");
 ```
 
 The departure's form is preserved. A bracketed IANA zone stays that zone, `Z` stays `Z`, and
-an offset stays an offset, because an offset is not a zone and nothing more can be inferred
-from it.
+an offset stays an offset, written as the departure wrote it, because an offset is not a
+zone and nothing more can be inferred from it.
 
 ```typescript
 transitTime("2024-06-15T10:00:00Z", "PT36H"); // "2024-06-16T22:00:00Z"
 transitTime("2024-06-15T10:00:00+09:00", "PT1H"); // "2024-06-15T11:00:00+09:00"
+transitTime("2024-06-15T10:00:00+05:30:15", "PT1H"); // "2024-06-15T11:00:00+05:30:15"
 ```
 
 Two inputs are refused rather than reinterpreted. Years, months and weeks return `""`: no leg
@@ -120,9 +121,10 @@ dwellTime("2024-06-15T22:30:00Z", "2024-06-16T01:00:00Z", "Europe/Amsterdam");
 half-open interval `[entry, exit)` touches: entry and exit on the same date is `1`, across one
 local midnight is `2`. An exit exactly at local midnight does not touch the new day, the same
 half-open rule as [`bucketRange`](/reference/calendar/calculate/bucketRange) and the
-[interval functions](/guides/intervals/interval-basics/). The count comes from the zone's real
-day boundaries via [`floorToZone`](/reference/calendar/calculate/floorToZone), so a 23- or
-25-hour local day is one day. The [Dwell Ledger](/tools/dwell-ledger/) draws this on a zone's
+[interval functions](/guides/intervals/interval-basics/). The count walks the zone's real
+transitions, so a 23- or 25-hour local day is one day, a date the zone deleted is never
+touched (Samoa skipped 2011-12-30), and a date the clock falls back into is counted once
+(`America/Goose_Bay` fell back from 00:01 on 7 November 2010 into the 6th). The [Dwell Ledger](/tools/dwell-ledger/) draws this on a zone's
 real day grid: drag the exit across a midnight and watch the count change while the hours
 barely move.
 
@@ -149,7 +151,9 @@ a calendar.
 ## A day count needs a place
 
 The zone comes from `targetZone`, or from the entry's bracketed IANA zone when `targetZone`
-is omitted. Bare instants, `Z` or an offset, with no `targetZone` return `null`: an offset is
+is omitted. `targetZone` may also be a fixed offset such as `"+02:00"`, as
+[`etaAtZone`](/reference/transport/convert/etaAtZone) accepts; days are then counted in that
+offset, which observes no DST. Bare instants, `Z` or an offset, with no `targetZone` return `null`: an offset is
 not a zone, and a day count in an unstated locality would be a guess. An inverted dwell, with
 the exit before the entry, is a data error and also returns `null`.
 
