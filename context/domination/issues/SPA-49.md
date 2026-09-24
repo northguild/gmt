@@ -38,6 +38,7 @@ The original spec's `instantToJulianDate(isoString): number` bakes that loss in 
 - **The two-part form is primary; the single-value form is a convenience.** Both are provided because callers integrating with systems that accept only one number need it, but the lossy one carries its error bound in its JSDoc so the choice is informed.
 - **MJD is materially more precise than JD as a single double**, because subtracting 2 400 000.5 frees several digits of mantissa. Worth stating, since it is a cheap mitigation for callers stuck with one number.
 - **The time scale matters and defaults differ by function.** J2000 seconds default to TDB because that is SPICE's ephemeris time; JD conversions default to UTC. Divergent defaults are justified by convention but must be explicit in every signature and JSDoc, or callers will assume one applies to all.
+- **TDB is not this story's to compute.** `toTDB` lives in SPA-74, which depends on this story's two-part JD, so this story cannot depend on it back. Until SPA-74 lands, `toJ2000Seconds` supports `'UTC'`, `'TAI'` and `'TT'` and returns the sentinel for `'TDB'` rather than approximating the correction; SPA-74 then registers the TDB scale. The default stays documented as TDB so the signature does not change when it arrives.
 - JD begins at **noon**, not midnight — a half-day offset that is a classic source of off-by-12-hours errors.
 
 ## Corrections
@@ -47,7 +48,7 @@ The original spec's `instantToJulianDate(isoString): number` bakes that loss in 
 ## What gmt provides (do not re-implement)
 
 - `toNanoseconds` / `fromNanoseconds` from CORE-1 — precision conversion
-- `toTT` / `toTDB` from SPA-47 — scale conversion before the JD calculation
+- `toTT` from SPA-47 — scale conversion before the JD calculation
 - `taiMinusUtc` from SPA-48 — leap-second handling
 
 ## Verification

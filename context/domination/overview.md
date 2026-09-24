@@ -29,7 +29,7 @@ Each realm is an **inner module** under `packages/gmt/src/`. Single package, tre
 shared Temporal dependency.
 
 **Start here:** [painpoints.md](painpoints.md) records the researched evidence behind every
-realm. [tracker.md](tracker.md) has the 54 stories in build order.
+realm. [tracker.md](tracker.md) has the 75 stories in build order, and [research/realm-gap-spike-2026-09.md](research/realm-gap-spike-2026-09.md) records the September 2026 pass that took it from 54.
 
 ---
 
@@ -91,24 +91,25 @@ which were correct, complete, or GMT's facts to assert.
                                     ├── duration/       (existing)
                                     ├── regex/          (existing)
                                     │
-                                    ├── precision/      (CORE-1, CORE-3)
+                                    ├── precision/      (CORE-1, CORE-3, CORE-56)
                                     ├── span/           (CORE-2)
                                     ├── instant/        (CORE-4)
-                                    ├── calendar/       (CORE-5, CORE-7)
+                                    ├── calendar/       (CORE-5, CORE-7, CORE-54, CORE-55)
                                     ├── interval/       (CORE-6)
                                     │
-                                    ├── transport/      (TRAN-8 … TRAN-10)
-                                    ├── intermodal/     (INT-11 … INT-15)
-                                    ├── maritime/       (MAR-16 … MAR-19)
-                                    ├── road/           (ROAD-20, ROAD-21)
-                                    ├── rail/           (RAI-22 … RAI-24)
-                                    ├── aviation/       (AV-25 … AV-28)
+                                    ├── transport/      (TRAN-8 … TRAN-10, TRAN-57)
+                                    ├── intermodal/     (INT-12 … INT-15, INT-58)
+                                    │   └── data/       (opt-in: filing-rule table)
+                                    ├── road/           (ROAD-20, ROAD-21, ROAD-61, ROAD-62)
+                                    ├── maritime/       (MAR-16 … MAR-19, MAR-59, MAR-60)
+                                    ├── aviation/       (AV-25 … AV-28, AV-64, AV-65)
                                     │   └── data/       (opt-in: curfews, FDP tables)
-                                    ├── iot/            (IOT-29 … IOT-32)
-                                    ├── health/         (HLTH-33 … HLTH-39)
-                                    ├── finance/        (FIN-40 … FIN-45)
+                                    ├── rail/           (RAI-22 … RAI-24, RAI-63)
+                                    ├── iot/            (IOT-29 … IOT-32, IOT-66)
+                                    ├── health/         (HLTH-33 … HLTH-39, HLTH-67 … HLTH-70)
+                                    ├── finance/        (FIN-40 … FIN-45, FIN-71 … FIN-73)
                                     │   └── data/       (opt-in: exchange calendars)
-                                    └── space/          (SPA-46 … SPA-53)
+                                    └── space/          (SPA-46 … SPA-53, SPA-74, SPA-75)
                                         └── data/       (leap seconds, Bulletin A)
 
 packages/gmt-time/ (DELETE — value moved to core)
@@ -133,15 +134,17 @@ entry per category barrel, mirrored in `typesVersions`).
 
 | Module       | Story          | What it provides                                                          |
 | ------------ | -------------- | ------------------------------------------------------------------------- |
-| `precision/` | CORE-1, CORE-3 | Nanosecond bridge, JSON serialisation, foreign epoch conversion           |
+| `precision/` | CORE-1, CORE-3, CORE-56 | Nanosecond bridge, JSON serialisation, foreign epoch conversion, timestamps inside identifiers and data-platform encodings |
 | `span/`      | CORE-2         | Exact and wall-clock spans                                                 |
 | `instant/`   | CORE-4         | Instant-plus-offset pairs, explicit local-time resolution                 |
-| `calendar/`  | CORE-5, CORE-7 | ISO week, ordinal, fiscal periods, zone-aware buckets, business calendars |
+| `calendar/`  | CORE-5, CORE-7, CORE-54, CORE-55 | ISO week, ordinal, fiscal periods, zone-aware buckets, business calendars, holiday rules, operating hours |
 | `interval/`  | CORE-6         | Overlap, intersect, clamp, subtract, merge, split, sum                     |
 
 These are universal primitives. `interval/` and `calendar/` in particular are consumed by
 laytime, driver hours, free time, market sessions and medication windows — five realms that
-would otherwise each implement interval arithmetic and disagree about boundaries.
+would otherwise each implement interval arithmetic and disagree about boundaries. The
+September 2026 spike added `CORE-54` … `CORE-56` for the same reason: holiday rules, weekly
+opening windows and identifier timestamps were each about to be written several times.
 
 ---
 
@@ -155,7 +158,7 @@ recording what was removed and why, so the same API is not re-derived later.
 | ------ | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | MAR-17 | `mmsiTimestamp(mmsi, embeddedTime)`         | An MMSI is a nine-digit identity (`MIDXXXXXX`). It contains no timestamp, and the spec's "bits 20–47" do not exist in a nine-digit number. |
 | INT-13 | `customsClearance(...) => estimatedHours`   | A time library cannot predict how long a customs authority takes. Replaced by advance-filing deadline math, which is deterministic. |
-| INT-11 | `portDwell(..., port) => inFreeTime`        | Free time is set by carrier, lane and service contract — not by port. The hardcoded table encoded a non-fact. |
+| TRAN-8 | `portDwell(..., port) => inFreeTime`        | Free time is set by carrier, lane and service contract — not by port. The hardcoded table encoded a non-fact. |
 | IOT-30 | `deviceSync(deviceTime, serverTime)`        | Two timestamps cannot separate offset from drift. Replaced by the NTP four-timestamp exchange.               |
 | IOT-29 | `monotonicNow(): string`                    | A monotonic reading has no wall-clock meaning; formatting it as ISO invites the misuse it should prevent.     |
 | SPA-49 | `instantToJulianDate(): number`             | A single-double JD resolves to only ~100 µs. Replaced by a two-part JD, as used by ERFA and astropy.        |
@@ -165,6 +168,14 @@ recording what was removed and why, so the same API is not re-derived later.
 | SPA-48 | Leap-second acceptance criteria             | Claimed a leap second in 2022 (there was none) and ~10 between 2000–2024 (there were 5).                      |
 | SPA-46 | `GPS − UTC = -18s`                          | Sign backwards — GPS runs **ahead** of UTC. The same error appeared in the original MAR-1, compounded by asserting an 18 s offset at the GPS epoch, where it was 0. |
 | AV-28  | `notamTimestamp` parsing `DDHHMM`           | That is the METAR format. ICAO NOTAM items B) and C) use ten-digit `YYMMDDHHMM`, plus `EST` and `PERM`.       |
+| FIN-42 | `'30/360 US'`, `'30/360 ISDA'`, `'30E+/360'` | Not ISDA or FpML codes. The set is FpML's; the February rule belongs to `30E/360.ISDA`; `ACT/ACT.ICMA`, `ACT/365L`, `BUS/252`, `RBA` were missing. |
+| ROAD-20 | Day boundaries "local"                     | The FMCSA day begins "at the time designated by the motor carrier" for the home terminal (49 CFR 395.2); §395.5 has no 34-hour restart. |
+| ROAD-21 | Fortnight as a rolling 14 × 24 h window    | The week is fixed Monday 00:00 – Sunday 24:00 (Art 4(i)); the fortnight is two adjacent fixed weeks.          |
+| MAR-19 | Gencon NOR after noon → 08:00 next working day | Gencon 94 cl. 6(c) says **06:00**, and time used before commencement counts.                              |
+| RAI-23 | UIC 406 blocking-time component list        | The leaflet is paid and its text was not reached; a list from secondary papers is not a citation. Components are the caller's. |
+| SPA-47 | TT and TDB in one story, depending on SPA-49 | TDB and TCB moved to SPA-74; TT and TCG need no Julian Date. The mutual dependency is gone.                  |
+| IOT-30 | Uncertainty half-width δ/2                  | RFC 5905's correctness interval uses λ = ε + δ/2; the delay-only form understates it.                          |
+| AV-64  | AIRAC anchor as bundled data; 42 days a Standard | Annex 15 §6.2.1 names 8 November 2018; 28 days is the Standard, 42 a Note, 56 a Recommendation.           |
 
 ---
 
@@ -190,7 +201,7 @@ See [painpoints.md](painpoints.md) for the full parked list with reasons.
 
 | Risk                          | Mitigation                                                                          |
 | ----------------------------- | ------------------------------------------------------------------------------------- |
-| Epic size (54 stories)        | Phase boundaries are clean cut points. Phases 1–2 deliver the priority realms alone.  |
+| Epic size (75 stories)        | Phase boundaries are clean cut points. Phases 1–2 deliver the priority realms alone.  |
 | Bundled data staleness        | Every data module exposes provenance and a staleness predicate. Never on the hot path.|
 | Holiday calendar maintenance  | Caller-supplied by default. Opt-in reference calendars carry coverage windows.        |
 | IERS data staleness           | Bundle Bulletin C and A at build. `isTableStale` / `isUt1Stale` surface expiry.       |
@@ -207,7 +218,8 @@ See [painpoints.md](painpoints.md) for the full parked list with reasons.
 ## References
 
 - [painpoints.md](painpoints.md) — researched evidence per realm, with citations
-- [tracker.md](tracker.md) — 54 stories, `Blocked by` column, Definition of Done
+- [tracker.md](tracker.md) — 75 stories, `Blocked by` column, Definition of Done
+- [research/realm-gap-spike-2026-09.md](research/realm-gap-spike-2026-09.md) — the September 2026 research spike: corrections, additions and what could not be verified
 - [issues/](issues/) — story specs, one file per story, named by story ID
 - [research/spacetime-reference-frames.md](research/spacetime-reference-frames.md) — research on space/satellite time standards
 
@@ -225,7 +237,29 @@ Standards cited by stories in this epic, each verified against a primary source:
 - FMCSA 49 CFR Part 395 / EU Regulation (EC) No 561/2006 — driver hours
 - HL7 v2.x DTM, FHIR R4, DICOM PS3.5 §6.2 — clinical and imaging timestamps
 - UIC 406 — capacity, blocking time and dwell (**not** "UIC 9602", which does not exist)
-- IERS Bulletin A (Earth orientation) and Bulletin C (leap seconds)
-- NAIF SPICE — TDB/TT conversion and SCLK reference
+- IERS Bulletin A (Earth orientation) and Bulletin C (leap seconds); IERS Conventions (2010) ch. 10
+- IAU 2000 Resolution B1.9 (TT/TCG rate) and IAU 2006 Resolution B3 (TDB/TCB)
+- NAIF SPICE — TDB/TT conversion and SCLK reference; CHRONOS time types
 - ERFA / SOFA — two-part Julian Date, Fairhead & Bretagnon TDB−TT model
-- IATA SSIM — Standard Schedules Information Manual
+- IATA SSIM — Standard Schedules Information Manual (paid; field layout labelled secondary)
+- 49 CFR 395.1, 395.2, 395.3, 395.5 and Subpart B Appendix A — FMCSA hours of service and ELDs
+- SOR/2005-313 — Canadian Commercial Vehicle Drivers Hours of Service Regulations
+- 49 U.S.C. §§21103–21104 — railroad hours of service
+- 14 CFR 117.3, 117.23, 117.25; ORO.FTL.105, .210, .235 (Regulation (EU) 83/2014) — crew limits
+- 14 CFR 234.2, 234.4 — on-time performance and OOOI reporting
+- ICAO Annex 15 ch. 6 (AIRAC); EUROCONTROL OPADD 4.1 (NOTAM item D); WMO-No. 306 FM 51 (TAF)
+- BIMCO Laytime Definitions for Charter Parties 2013; Gencon 1994 cl. 6(c); *Dias v Louis Dreyfus* [1978] 1 WLR 261
+- MLC 2006 Standard A2.3; STCW Code A-VIII/1 (Manila) via UK MCA MGN 566
+- Bowditch, *The American Practical Navigator* (2019) ch. 16 §1607; ACP 121(G) para 317c
+- IS-GPS-200N; Galileo OS SIS ICD 2.0; BDS-SIS-ICD 2.0; GLONASS ICD 5.1; IS-QZSS-PNT-003
+- 46 CFR Part 541 — FMC demurrage and detention billing
+- 19 CFR 149.2, 19 CFR 4.7, 33 CFR 160.212; DA (EU) 2015/2446 Art 105–106; SOR/86-873 — advance filing
+- X12 data elements 623 and 1250; UN/EDIFACT data element 2379
+- Decision (EU) 2017/2075 Annex VII — rail working timetable; railML `operatingPeriod`
+- RFC 5905 (NTP); RFC 9562 (UUID); Kulkarni et al. 2014 (HLC); Corbett et al. 2012 (Spanner); Akidau et al. 2015 (Dataflow)
+- HL7 v2.5.1 ch. 2A; FHIRPath N1 / v3.0.0; CQL v2.0.0 Appendix B; FHIR R4 `Timing`
+- AAP 2004 age terminology; ACOG Committee Opinion 700; CDC ACIP GBP and CDSi 4.6; PQA PDC; CMS MBPM ch. 3 §20.1; 42 CFR 412.3; ACGME CPR
+- FpML day-count-fraction 2-3, business-center 9-4, `CalculationPeriodDates`, `RollConventionEnum`; ISDA 2006 Definitions §4.16 with Supplements 14 and 43; ISDA RFR memorandum; ARRC SOFR guide; ISDA CDS roll FAQ (2015)
+- FIX Latest data types; SWIFT MT fields 32A, 13C, 13D; RTS 25 (Regulation (EU) 2017/574)
+- 5 U.S.C. §6103 — US federal holidays and observance
+- D. J. Bernstein, libtai TAI64; Espenak & Meeus ΔT polynomials; USNO rise/set definitions; NOAA solar calculator
