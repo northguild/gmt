@@ -12,7 +12,11 @@ description: >
   maximum, Etc/GMT+12 at the minimum), and the transport leg primitives —
   transitTime (exact elapsed time in the departure's zone), etaAtZone (render an
   instant where it lands) and dwellTime (elapsed duration plus local calendar
-  days crossed). Reads the installed package README.md and source JSDoc for API
+  days crossed), and the intermodal free-time primitives — freeTimeExpiry (the
+  free window and its half-open expiry in the terminal's local days),
+  chargeableDays (the days and dates charged, with tier bands) and
+  demurrageClock (which two events a demurrage, detention or storage clock runs
+  between). Reads the installed package README.md and source JSDoc for API
   details; this skill is a routing pointer, not an API dump.
 sources:
   - 'northguild/gmt:README.md'
@@ -34,6 +38,7 @@ sources:
   - 'northguild/gmt:packages/gmt/src/calendar/validate/index.ts'
   - 'northguild/gmt:packages/gmt/src/transport/calculate/index.ts'
   - 'northguild/gmt:packages/gmt/src/transport/convert/index.ts'
+  - 'northguild/gmt:packages/gmt/src/intermodal/calculate/index.ts'
 metadata:
   type: core
   library: '@northguild/gmt'
@@ -60,6 +65,9 @@ converting between time zones, or doing arithmetic that must respect DST.
 - The user is adding a leg's transit time to a departure, showing an arrival in
   the zone where it lands, or counting how long cargo, a vessel or a patient sat
   somewhere in local calendar days.
+- The user is working out when a container's free time ends, how many days of
+  demurrage or detention are chargeable and for which dates, or which events a
+  charge's clock runs between.
 
 ## Core rules
 
@@ -186,7 +194,20 @@ converting between time zones, or doing arithmetic that must respect DST.
     (a skipped date is not counted, a re-entered one only once), and is the
     library's one "local days crossed" count.
     Bare instants with no `targetZone` return `null`: an offset is not a place.
-16. **Read the README.** This skill is a routing pointer. For the full DST
+16. **Free time is counted in the terminal's local days; the start day and the
+    basis are tariff terms, never defaults.**
+    `freeTimeExpiry(clockStart, freeDays, { basis, timeZone, firstDay, calendar? })`
+    returns `{ freeTimeStart, lastFreeDay, expiresAt }`: local dates in
+    `timeZone`, and the first instant of the day after the last free day.
+    `firstDay` (`"eventDay"` | `"nextDay"`) has no default because the two
+    differ by a day of charges; `basis: "working"` needs a `BusinessCalendar`
+    and returns `null` without one. `chargeableDays(clockStart, clockEnd,
+    freeDays, options)` counts the days on or after `expiresAt` the half-open
+    dwell touched, lists them as `chargedDates` (46 CFR 541.6), and splits them
+    into `tiers` bands; `freeDays: 0` is allowed there. `demurrageClock(events,
+    scope, { startEvent? })` selects discharge (or availability) to gate-out for
+    demurrage and storage, and gate-out to empty return for detention.
+17. **Read the README.** This skill is a routing pointer. For the full DST
     disambiguation walkthrough, code examples, and locale ICU notes, read the
     installed package's `README.md` and the source JSDoc.
 
@@ -213,6 +234,8 @@ converting between time zones, or doing arithmetic that must respect DST.
 - **Zone-aware buckets**: `floorToZone`, `bucketRange`,
   `isValidZoneBucketUnit`
 - **Transport legs and dwell**: `transitTime`, `etaAtZone`, `dwellTime`
+- **Free time and demurrage**: `freeTimeExpiry`, `chargeableDays`,
+  `demurrageClock`
 
 ## References
 

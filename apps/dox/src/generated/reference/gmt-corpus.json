@@ -1445,6 +1445,254 @@
     ]
   },
   {
+    "url": "/reference/intermodal/calculate/TierBand",
+    "name": "TierBand",
+    "namespace": "intermodal",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The TierBand type.",
+    "sourcePath": "packages/gmt/src/intermodal/calculate/chargeableDays.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/intermodal/calculate/FreeTimeCharges",
+    "name": "FreeTimeCharges",
+    "namespace": "intermodal",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The FreeTimeCharges type.",
+    "sourcePath": "packages/gmt/src/intermodal/calculate/chargeableDays.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/intermodal/calculate/FreeTimeChargeOptions",
+    "name": "FreeTimeChargeOptions",
+    "namespace": "intermodal",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The FreeTimeChargeOptions type.",
+    "sourcePath": "packages/gmt/src/intermodal/calculate/chargeableDays.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/intermodal/calculate/chargeableDays",
+    "name": "chargeableDays",
+    "namespace": "intermodal",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "chargeableDays(clockStart: string, clockEnd: string, freeDays: number, options: FreeTimeChargeOptions): FreeTimeCharges | null",
+    "description": "Count the days a container is charged for between the start of its clock and its exit,",
+    "sourcePath": "packages/gmt/src/intermodal/calculate/chargeableDays.ts",
+    "examples": [
+      {
+        "call": "chargeableDays(\"2024-06-14T19:00:00Z\", \"2024-06-17T04:00:00Z\", 3, { basis: \"calendar\", timeZone: \"America/New_York\", firstDay: \"eventDay\" })",
+        "result": "{ freeDaysUsed: 3, chargeableDays: 0, expiresAt: \"2024-06-17T04:00:00Z\", chargedDates: [], byTier: [{ from: 1, to: null, days: 0 }] } (gate-out exactly at expiry is free)"
+      },
+      {
+        "call": "chargeableDays(\"2024-06-14T19:00:00Z\", \"2024-06-17T04:00:01Z\", 3, { basis: \"calendar\", timeZone: \"America/New_York\", firstDay: \"eventDay\" })",
+        "result": "{ freeDaysUsed: 3, chargeableDays: 1, expiresAt: \"2024-06-17T04:00:00Z\", chargedDates: [\"2024-06-17\"], byTier: [{ from: 1, to: null, days: 1 }] } (one second later is a charged day)"
+      },
+      {
+        "call": "chargeableDays(\"2024-06-14T19:00:00Z\", \"2024-06-17T04:00:01Z\", 3, { basis: \"calendar\", timeZone: \"America/New_York\", firstDay: \"nextDay\" })",
+        "result": "{ freeDaysUsed: 3, chargeableDays: 0, expiresAt: \"2024-06-18T04:00:00Z\", chargedDates: [], byTier: [{ from: 1, to: null, days: 0 }] } (the other start-day convention: still free)"
+      },
+      {
+        "call": "chargeableDays(\"2024-06-14T19:00:00Z\", \"2024-06-28T15:00:00Z\", 3, { basis: \"calendar\", timeZone: \"America/New_York\", firstDay: \"eventDay\", tiers: [5, 10] })",
+        "result": "{ freeDaysUsed: 3, chargeableDays: 12, expiresAt: \"2024-06-17T04:00:00Z\", chargedDates: [\"2024-06-17\", \"2024-06-18\", \"2024-06-19\", \"2024-06-20\", \"2024-06-21\", \"2024-06-22\", \"2024-06-23\", \"2024-06-24\", \"2024-06-25\", \"2024-06-26\", \"2024-06-27\", \"2024-06-28\"], byTier: [{ from: 1, to: 5, days: 5 }, { from: 6, to: 10, days: 5 }, { from: 11, to: null, days: 2 }] }"
+      },
+      {
+        "call": "chargeableDays(\"2024-06-14T19:00:00Z\", \"2024-06-24T15:00:00Z\", 3, { basis: \"working\", timeZone: \"America/New_York\", firstDay: \"eventDay\", calendar: { weekend: [6, 7], holidays: [\"2024-06-19\"], timeZone: \"America/New_York\" } })",
+        "result": "{ freeDaysUsed: 3, chargeableDays: 3, expiresAt: \"2024-06-19T04:00:00Z\", chargedDates: [\"2024-06-20\", \"2024-06-21\", \"2024-06-24\"], byTier: [{ from: 1, to: null, days: 3 }] } (Juneteenth and the weekend are not charged)"
+      },
+      {
+        "call": "chargeableDays(\"2024-06-14T19:00:00Z\", \"2024-06-15T15:00:00Z\", 3, { basis: \"calendar\", timeZone: \"America/New_York\", firstDay: \"eventDay\" })",
+        "result": "{ freeDaysUsed: 2, chargeableDays: 0, expiresAt: \"2024-06-17T04:00:00Z\", chargedDates: [], byTier: [{ from: 1, to: null, days: 0 }] } (out on the second free day)"
+      },
+      {
+        "call": "chargeableDays(\"2024-06-14T19:00:00Z\", \"2024-06-16T15:00:00Z\", 0, { basis: \"calendar\", timeZone: \"America/New_York\", firstDay: \"eventDay\" })",
+        "result": "{ freeDaysUsed: 0, chargeableDays: 3, expiresAt: \"2024-06-14T04:00:00Z\", chargedDates: [\"2024-06-14\", \"2024-06-15\", \"2024-06-16\"], byTier: [{ from: 1, to: null, days: 3 }] } (no free time: every day is charged)"
+      },
+      {
+        "call": "chargeableDays(\"2024-06-14T19:00:00Z\", \"2024-06-28T15:00:00Z\", 3, { basis: \"calendar\", timeZone: \"America/New_York\", firstDay: \"eventDay\", tiers: [10, 5] })",
+        "result": "null (tiers must ascend)"
+      },
+      {
+        "call": "chargeableDays(\"2024-06-17T04:00:01Z\", \"2024-06-14T19:00:00Z\", 3, { basis: \"calendar\", timeZone: \"America/New_York\", firstDay: \"eventDay\" })",
+        "result": "null (exit before the clock started)"
+      },
+      {
+        "call": "chargeableDays(\"2024-06-14T19:00:00Z\", \"2024-06-17T04:00:01Z\", 3, { basis: \"calendar\", timeZone: \"America/New_York\" })",
+        "result": "null (firstDay has no default)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/intermodal/calculate/ClockEventType",
+    "name": "ClockEventType",
+    "namespace": "intermodal",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The ClockEventType type.",
+    "sourcePath": "packages/gmt/src/intermodal/calculate/demurrageClock.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/intermodal/calculate/ClockEvent",
+    "name": "ClockEvent",
+    "namespace": "intermodal",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The ClockEvent type.",
+    "sourcePath": "packages/gmt/src/intermodal/calculate/demurrageClock.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/intermodal/calculate/ClockScope",
+    "name": "ClockScope",
+    "namespace": "intermodal",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The ClockScope type.",
+    "sourcePath": "packages/gmt/src/intermodal/calculate/demurrageClock.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/intermodal/calculate/ClockStartEvent",
+    "name": "ClockStartEvent",
+    "namespace": "intermodal",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The ClockStartEvent type.",
+    "sourcePath": "packages/gmt/src/intermodal/calculate/demurrageClock.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/intermodal/calculate/demurrageClock",
+    "name": "demurrageClock",
+    "namespace": "intermodal",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "demurrageClock(events: ClockEvent[], scope: ClockScope, options?: { startEvent?: ClockStartEvent; }): Interval | null",
+    "description": "Pick the two events a charge's clock runs between.",
+    "sourcePath": "packages/gmt/src/intermodal/calculate/demurrageClock.ts",
+    "examples": [
+      {
+        "call": "demurrageClock([{ type: \"discharged\", at: \"2024-06-14T19:00:00Z\" }, { type: \"available\", at: \"2024-06-15T12:00:00Z\" }, { type: \"gatedOut\", at: \"2024-06-20T14:30:00Z\" }, { type: \"emptyReturned\", at: \"2024-06-27T09:00:00Z\" }], \"demurrage\")",
+        "result": "{ start: \"2024-06-14T19:00:00Z\", end: \"2024-06-20T14:30:00Z\" }"
+      },
+      {
+        "call": "demurrageClock([{ type: \"discharged\", at: \"2024-06-14T19:00:00Z\" }, { type: \"available\", at: \"2024-06-15T12:00:00Z\" }, { type: \"gatedOut\", at: \"2024-06-20T14:30:00Z\" }, { type: \"emptyReturned\", at: \"2024-06-27T09:00:00Z\" }], \"detention\")",
+        "result": "{ start: \"2024-06-20T14:30:00Z\", end: \"2024-06-27T09:00:00Z\" } (gate-out to empty return, not discharge)"
+      },
+      {
+        "call": "demurrageClock([{ type: \"discharged\", at: \"2024-06-14T19:00:00Z\" }, { type: \"available\", at: \"2024-06-15T12:00:00Z\" }, { type: \"gatedOut\", at: \"2024-06-20T14:30:00Z\" }], \"demurrage\", { startEvent: \"available\" })",
+        "result": "{ start: \"2024-06-15T12:00:00Z\", end: \"2024-06-20T14:30:00Z\" }"
+      },
+      {
+        "call": "demurrageClock([{ type: \"discharged\", at: \"2024-06-14T19:00:00Z\" }, { type: \"gatedOut\", at: \"2024-06-20T14:30:00Z\" }], \"storage\")",
+        "result": "{ start: \"2024-06-14T19:00:00Z\", end: \"2024-06-20T14:30:00Z\" }"
+      },
+      {
+        "call": "demurrageClock([{ type: \"gatedOut\", at: \"2024-06-20T10:30:00-04:00[America/New_York]\" }, { type: \"emptyReturned\", at: \"2024-06-27T09:00:00Z\" }], \"detention\", { startEvent: \"available\" })",
+        "result": "{ start: \"2024-06-20T10:30:00-04:00[America/New_York]\", end: \"2024-06-27T09:00:00Z\" } (startEvent is not read for detention; strings are echoed as given)"
+      },
+      {
+        "call": "demurrageClock([{ type: \"discharged\", at: \"2024-06-14T19:00:00Z\" }, { type: \"gatedOut\", at: \"2024-06-20T14:30:00Z\" }], \"demurrage\", { startEvent: \"available\" })",
+        "result": "null (no availability event)"
+      },
+      {
+        "call": "demurrageClock([{ type: \"discharged\", at: \"2024-06-14T19:00:00Z\" }], \"demurrage\")",
+        "result": "null (still in the terminal: no gate-out)"
+      },
+      {
+        "call": "demurrageClock([{ type: \"discharged\", at: \"2024-06-14T19:00:00Z\" }, { type: \"discharged\", at: \"2024-06-15T19:00:00Z\" }, { type: \"gatedOut\", at: \"2024-06-20T14:30:00Z\" }], \"demurrage\")",
+        "result": "null (discharged twice)"
+      },
+      {
+        "call": "demurrageClock([{ type: \"discharged\", at: \"2024-06-21T19:00:00Z\" }, { type: \"gatedOut\", at: \"2024-06-20T14:30:00Z\" }], \"demurrage\")",
+        "result": "null (gate-out before discharge)"
+      },
+      {
+        "call": "demurrageClock([{ type: \"discharged\", at: \"2024-06-14T19:00:00Z\" }, { type: \"gatedOut\", at: \"2024-06-20T14:30:00Z\" }], \"laytime\")",
+        "result": "null (not a clock this function selects)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/intermodal/calculate/FreeTime",
+    "name": "FreeTime",
+    "namespace": "intermodal",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The FreeTime type.",
+    "sourcePath": "packages/gmt/src/intermodal/calculate/freeTimeExpiry.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/intermodal/calculate/freeTimeExpiry",
+    "name": "freeTimeExpiry",
+    "namespace": "intermodal",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "freeTimeExpiry(clockStart: string, freeDays: number, options: FreeTimeOptions): FreeTime | null",
+    "description": "Lay out a container's free time from the instant its clock started, and say when it ends.",
+    "sourcePath": "packages/gmt/src/intermodal/calculate/freeTimeExpiry.ts",
+    "examples": [
+      {
+        "call": "freeTimeExpiry(\"2024-06-14T19:00:00Z\", 3, { basis: \"calendar\", timeZone: \"America/New_York\", firstDay: \"eventDay\" })",
+        "result": "{ freeTimeStart: \"2024-06-14\", lastFreeDay: \"2024-06-16\", expiresAt: \"2024-06-17T04:00:00Z\" } (a Friday discharge: the weekend is consumed)"
+      },
+      {
+        "call": "freeTimeExpiry(\"2024-06-14T19:00:00Z\", 3, { basis: \"calendar\", timeZone: \"America/New_York\", firstDay: \"nextDay\" })",
+        "result": "{ freeTimeStart: \"2024-06-15\", lastFreeDay: \"2024-06-17\", expiresAt: \"2024-06-18T04:00:00Z\" } (the same tariff read the other way: one more day)"
+      },
+      {
+        "call": "freeTimeExpiry(\"2024-06-14T19:00:00Z\", 3, { basis: \"working\", timeZone: \"America/New_York\", firstDay: \"eventDay\", calendar: { weekend: [6, 7], holidays: [], timeZone: \"America/New_York\" } })",
+        "result": "{ freeTimeStart: \"2024-06-14\", lastFreeDay: \"2024-06-18\", expiresAt: \"2024-06-19T04:00:00Z\" } (Friday, Monday, Tuesday: the weekend does not count)"
+      },
+      {
+        "call": "freeTimeExpiry(\"2024-06-14T19:00:00Z\", 3, { basis: \"working\", timeZone: \"America/New_York\", firstDay: \"eventDay\", calendar: { weekend: [6, 7], holidays: [\"2024-06-17\"], timeZone: \"America/New_York\" } })",
+        "result": "{ freeTimeStart: \"2024-06-14\", lastFreeDay: \"2024-06-19\", expiresAt: \"2024-06-20T04:00:00Z\" } (a terminal holiday on the Monday moves expiry a day)"
+      },
+      {
+        "call": "freeTimeExpiry(\"2024-06-15T14:00:00Z\", 2, { basis: \"working\", timeZone: \"America/New_York\", firstDay: \"eventDay\", calendar: { weekend: [6, 7], holidays: [], timeZone: \"America/New_York\" } })",
+        "result": "{ freeTimeStart: \"2024-06-17\", lastFreeDay: \"2024-06-18\", expiresAt: \"2024-06-19T04:00:00Z\" } (a Saturday discharge: free time starts Monday)"
+      },
+      {
+        "call": "freeTimeExpiry(\"2024-06-15T03:00:00Z\", 1, { basis: \"calendar\", timeZone: \"America/New_York\", firstDay: \"eventDay\" })",
+        "result": "{ freeTimeStart: \"2024-06-14\", lastFreeDay: \"2024-06-14\", expiresAt: \"2024-06-15T04:00:00Z\" } (23:00 local on the 14th: the free day is over an hour later)"
+      },
+      {
+        "call": "freeTimeExpiry(\"2024-09-07T15:00:00Z\", 1, { basis: \"calendar\", timeZone: \"America/Santiago\", firstDay: \"eventDay\" })",
+        "result": "{ freeTimeStart: \"2024-09-07\", lastFreeDay: \"2024-09-07\", expiresAt: \"2024-09-08T04:00:00Z\" } (Santiago skipped midnight on the 8th, so the day starts at 01:00)"
+      },
+      {
+        "call": "freeTimeExpiry(\"2024-06-14T19:00:00Z\", 3, { basis: \"calendar\", timeZone: \"America/New_York\" })",
+        "result": "null (firstDay has no default)"
+      },
+      {
+        "call": "freeTimeExpiry(\"2024-06-14T19:00:00Z\", 3, { basis: \"working\", timeZone: \"America/New_York\", firstDay: \"eventDay\" })",
+        "result": "null (a working-day count needs the terminal's calendar)"
+      },
+      {
+        "call": "freeTimeExpiry(\"2024-06-14T19:00:00Z\", 0, { basis: \"calendar\", timeZone: \"America/New_York\", firstDay: \"eventDay\" })",
+        "result": "null (no free days means no last free day)"
+      },
+      {
+        "call": "freeTimeExpiry(\"2024-06-14T19:00:00\", 3, { basis: \"calendar\", timeZone: \"America/New_York\", firstDay: \"eventDay\" })",
+        "result": "null (no offset: not an instant)"
+      }
+    ]
+  },
+  {
     "url": "/reference/interval/calculate/clampInterval",
     "name": "clampInterval",
     "namespace": "interval",
@@ -11177,6 +11425,39 @@
     "signature": "",
     "description": "used in Temporal with methods like toString({ fractionalSecondDigits: fractionalDigits[unit] })",
     "sourcePath": "packages/gmt/src/types/fractional-digit.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/free-time-options/FreeTimeBasis",
+    "name": "FreeTimeBasis",
+    "namespace": "types",
+    "module": "free-time-options",
+    "kind": "type",
+    "signature": "",
+    "description": "The FreeTimeBasis type.",
+    "sourcePath": "packages/gmt/src/types/free-time-options.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/free-time-options/FreeTimeFirstDay",
+    "name": "FreeTimeFirstDay",
+    "namespace": "types",
+    "module": "free-time-options",
+    "kind": "type",
+    "signature": "",
+    "description": "The FreeTimeFirstDay type.",
+    "sourcePath": "packages/gmt/src/types/free-time-options.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/free-time-options/FreeTimeOptions",
+    "name": "FreeTimeOptions",
+    "namespace": "types",
+    "module": "free-time-options",
+    "kind": "type",
+    "signature": "",
+    "description": "The FreeTimeOptions type.",
+    "sourcePath": "packages/gmt/src/types/free-time-options.ts",
     "examples": []
   },
   {
