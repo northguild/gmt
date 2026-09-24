@@ -12,6 +12,12 @@ import { useEffect, useRef, useState } from "react";
 import { WidgetLoadError, type WidgetHandle } from "~/lib/widget-mount";
 import type { AnyWidgetEntry } from "./widget-registry";
 
+/** The registry's titles are literals, but the placeholder is `innerHTML`, so
+ * escape rather than rely on that. */
+function escapeText(text: string): string {
+  return text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+}
+
 export function MountedWidget({
   entry,
   args,
@@ -47,10 +53,11 @@ export function MountedWidget({
     let cancelled = false;
 
     setError(null);
-    root.innerHTML = entry.renderTemplate(idPrefix, args);
-    /* The template paints at once, but its controls do nothing until the mount
-       has loaded the library. Say so rather than invite clicks that go nowhere. */
+    /* Busy from the first frame until the mount has wired the widget: first a
+       placeholder while its chunk loads, then the template, whose controls do
+       nothing until the mount has loaded the library. */
     root.setAttribute("aria-busy", "true");
+    root.innerHTML = `<p class="gmt-hive-widget-loading" role="status">Loading ${escapeText(entry.title)}\u2026</p>`;
 
     void (async () => {
       try {
@@ -64,8 +71,9 @@ export function MountedWidget({
           return;
         }
 
-        const { mount } = await entry.load();
+        const { mount, renderTemplate } = await entry.load();
         if (cancelled) return;
+        root.innerHTML = renderTemplate(idPrefix, args as never);
 
         const mounted = await mount(root, args as never, controller.signal);
         if (cancelled) {

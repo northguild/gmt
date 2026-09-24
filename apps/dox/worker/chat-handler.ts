@@ -13,9 +13,13 @@ import type {
 import { fetchChunks } from "../src/lib/retrieval/fetch-chunks";
 import { searchChunks } from "../src/lib/retrieval/search";
 import {
+  REFUSAL_PART_TYPE,
   RETRIEVAL_PART_ID,
   RETRIEVAL_PART_TYPE,
+  STATUS_PART_TYPE,
+  type RefusalData,
   type RetrievalTraceData,
+  type StatusData,
 } from "../src/lib/chat-types";
 import { observeOutput, Stopwatch } from "./timing";
 import { getUnixNowMs } from "./clock";
@@ -298,44 +302,97 @@ export function createChatHandler(deps: ChatHandlerDeps) {
       //
       // The ledger is now an optimisation (skip brains already known to be out,
       // and drive the badge), not the mechanism.
-      const attempt = await watch.time("brains", () =>
-        openFirstWorkingBrain({
-          candidates: candidateBrains,
-          resolveModel,
-          instructions: systemPrompt,
-          messages: modelMessages,
-          tools,
-          onBrainOut: (brainId, state) => {
-            // `markBrain` expires the mark on the brain's own provider clock —
-            // UTC midnight for Workers AI, Pacific for Gemini.
-            const brain = brains.find((candidate) => candidate.id === brainId);
-            if (usage && brain) void markBrain(usage, brain, state, nowMs);
-          },
-        }),
-      );
-
-      if (!attempt) return allowanceSpent(brains, nowMs);
-
-      /* Written twice with the same `id`: once before the answer, so the trace
-         is there while the reader waits, and once after it, with the first
-         token, the total and whether a tool was called. The SDK replaces a
-         `data-*` part by `id`, so the transcript keeps one trace, not two. */
-      const trace = (extra: Partial<RetrievalTraceData>): RetrievalTraceData => ({
-        totalChunks: chunks.length,
-        retrievedCount: retrieved.length,
-        chunkTitles: retrieved.map((chunk) => chunk.title),
-        chunkUrls: retrieved.map((chunk) => chunk.url),
-        // The brain that actually answered — after a failover this is not
-        // the one selection first proposed.
-        brainId: attempt.brain.id,
-        brainLabel: attempt.brain.label,
-        timings: watch.snapshot(),
-        attempts: attempt.attempts,
-        ...extra,
-      });
-
+      /* The stream opens *before* a brain is chosen, so the reader sees each
+         step of the walk ("3.8 Flash is busy — trying 3.7 Flash…") instead of
+         a silent wait: measured 2026-09-24, two busy brains cost 2.8 s of a
+         6.7 s answer. Everything written before a brain answers is
+         `transient` — progress and refusals reach `onData` but never enter a
+         message, so a refused request leaves no empty turn in the history.
+         A refusal carries the exact `{ status, payload }` the HTTP error used
+         to, and the client classifies it through the same `classifyChatError`,
+         so the warning, retry and reset time are unchanged. */
       const stream = createUIMessageStream({
-        execute: ({ writer }) => {
+        execute: async ({ writer }) => {
+          const refuse = (status: number, payload: unknown) =>
+            writer.write({
+              type: REFUSAL_PART_TYPE,
+              data: { status, payload } satisfies RefusalData,
+              transient: true,
+            });
+          const progress = (text: string) =>
+            writer.write({
+              type: STATUS_PART_TYPE,
+              data: { text } satisfies StatusData,
+              transient: true,
+            });
+
+          let attempt: Awaited<ReturnType<typeof openFirstWorkingBrain>>;
+          try {
+            attempt = await watch.time("brains", () =>
+              openFirstWorkingBrain({
+                candidates: candidateBrains,
+                resolveModel,
+                instructions: systemPrompt,
+                messages: modelMessages,
+                tools,
+                onAttempt: (brain) => progress(`Asking ${brain.label}\u2026`),
+                onMovedOn: (brain, outcome) =>
+                  progress(
+                    outcome === "busy"
+                      ? `${brain.label} is busy \u2014 trying the next model\u2026`
+                      : `${brain.label} is out for today \u2014 trying the next model\u2026`,
+                  ),
+                onBrainOut: (brainId, state) => {
+                  // `markBrain` expires the mark on the brain's own provider
+                  // clock — UTC midnight for Workers AI, Pacific for Gemini.
+                  const brain = brains.find(
+                    (candidate) => candidate.id === brainId,
+                  );
+                  if (usage && brain) void markBrain(usage, brain, state, nowMs);
+                },
+              }),
+            );
+          } catch (error) {
+            console.error("chat-handler error", error);
+            const mapped = mapUpstreamError(error);
+            refuse(mapped.status, mapped.body);
+            return;
+          }
+
+          if (!attempt) {
+            const spent = allowanceSpent(brains, nowMs);
+            refuse(spent.status, await spent.json());
+            return;
+          }
+          const answered = attempt;
+
+          // Recorded as soon as a brain has accepted the request: it counts
+          // against the quota whether or not the reader reads the answer.
+          // Best-effort: a ledger failure must never fail a chat.
+          if (usage) {
+            void recordRequest(usage, answered.brain, visitorHash, nowMs);
+          }
+
+          /* Written twice with the same `id`: once before the answer, so the
+             trace is there while the reader waits, and once after it, with the
+             first token, the total and whether a tool was called. The SDK
+             replaces a `data-*` part by `id`, so the transcript keeps one. */
+          const trace = (
+            extra: Partial<RetrievalTraceData>,
+          ): RetrievalTraceData => ({
+            totalChunks: chunks.length,
+            retrievedCount: retrieved.length,
+            chunkTitles: retrieved.map((chunk) => chunk.title),
+            chunkUrls: retrieved.map((chunk) => chunk.url),
+            // The brain that actually answered — after a failover this is not
+            // the one selection first proposed.
+            brainId: answered.brain.id,
+            brainLabel: answered.brain.label,
+            timings: watch.snapshot(),
+            attempts: answered.attempts,
+            ...extra,
+          });
+
           writer.write({
             type: RETRIEVAL_PART_TYPE,
             id: RETRIEVAL_PART_ID,
@@ -343,7 +400,7 @@ export function createChatHandler(deps: ChatHandlerDeps) {
           });
 
           let toolCalled: string | null = null;
-          const observed = observeOutput(attempt.result.stream, {
+          const observed = observeOutput(answered.result.stream, {
             onFirstOutput: () => watch.markFirstToken(),
             onToolCall: (toolName) => {
               toolCalled = toolName;
@@ -356,7 +413,7 @@ export function createChatHandler(deps: ChatHandlerDeps) {
               console.log(
                 "dox-timing",
                 JSON.stringify({
-                  brain: attempt.brain.id,
+                  brain: answered.brain.id,
                   toolCalled,
                   timings: finished.timings,
                   attempts: finished.attempts,
@@ -388,14 +445,6 @@ export function createChatHandler(deps: ChatHandlerDeps) {
         },
         onError: onStreamError,
       });
-
-      // Recorded now rather than on success, because the request has been sent
-      // to the provider by the time the stream is consumed and it counts
-      // against the quota whether or not the reader ever reads the answer.
-      // Best-effort: a ledger failure must never fail a chat.
-      if (usage) {
-        void recordRequest(usage, attempt.brain, visitorHash, nowMs);
-      }
 
       return createUIMessageStreamResponse({ stream });
     } catch (error) {

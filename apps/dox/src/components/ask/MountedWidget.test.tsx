@@ -34,9 +34,9 @@ function spyEntry(overrides: Partial<AnyWidgetEntry> = {}) {
     title: "Test Widget",
     kind: "globe",
     parse: (input) => ({ ok: true, args: input }),
-    renderTemplate: (idPrefix) =>
-      `<div data-role="stage" id="${idPrefix}-stage"></div>`,
     load: async () => ({
+      renderTemplate: (idPrefix) =>
+        `<div data-role="stage" id="${idPrefix}-stage"></div>`,
       mount: async (root, _args, signal) => {
         log.push("mount");
         // A real mount awaits a dynamic import; this is the window in which
@@ -108,8 +108,8 @@ describe("MountedWidget", () => {
       title: "Slow Widget",
       kind: "globe",
       parse: (input) => ({ ok: true, args: input }),
-      renderTemplate: () => "<div></div>",
       load: async () => ({
+        renderTemplate: () => "<div></div>",
         mount: async (_root, _args, signal) => {
           log.push("mount:entered");
           await gate;
@@ -153,8 +153,8 @@ describe("MountedWidget", () => {
       title: "Careless Widget",
       kind: "globe",
       parse: (input) => ({ ok: true, args: input }),
-      renderTemplate: () => "<div></div>",
       load: async () => ({
+        renderTemplate: () => "<div></div>",
         mount: async () => {
           log.push("entered");
           await gate;
@@ -216,6 +216,7 @@ describe("MountedWidget", () => {
   it("survives a mount that throws, rather than taking the panel down", async () => {
     const { entry } = spyEntry({
       load: async () => ({
+        renderTemplate: () => "<div></div>",
         mount: async () => {
           throw new Error("boom");
         },
@@ -291,6 +292,7 @@ describe("MountedWidget", () => {
         if (failures > 0) {
           failures -= 1;
           return {
+            renderTemplate: () => "<div></div>",
             mount: async () => {
               throw new WidgetLoadError(new Error("offline"));
             },
@@ -326,6 +328,7 @@ describe("MountedWidget", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const { entry } = spyEntry({
       load: async () => ({
+        renderTemplate: () => "<div></div>",
         mount: async () => {
           throw new Error("bad input");
         },
@@ -339,5 +342,32 @@ describe("MountedWidget", () => {
     );
     expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
     vi.restoreAllMocks();
+  });
+
+  it("shows a loading placeholder while the widget's chunk loads, then the template", async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const { entry } = spyEntry();
+    const slow: AnyWidgetEntry = {
+      ...entry,
+      load: async () => {
+        await gate;
+        return entry.load();
+      },
+    };
+    render(<MountedWidget entry={slow} args={{}} idPrefix="t" />);
+
+    expect(screen.getByRole("status").textContent).toBe("Loading Test Widget\u2026");
+    expect(document.querySelector('[data-role="stage"]')).toBeNull();
+
+    await act(async () => {
+      release();
+      await gate;
+    });
+    await waitFor(() =>
+      expect(document.getElementById("t-stage")).not.toBeNull(),
+    );
   });
 });

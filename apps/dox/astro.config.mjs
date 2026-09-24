@@ -39,6 +39,22 @@ export default defineConfig({
       },
     },
     plugins: [tailwindcss()],
+    optimizeDeps: {
+      // Astro points Vite's startup dependency scan at .jsx/.tsx/.vue/.svelte/
+      // .html only. Every widget, chart and globe is an .astro <script> into a
+      // plain .ts module under src/lib, so their packages (@tanstack/charts,
+      // d3-geo, topojson-client, …) were discovered only when a page first
+      // imported them. Vite then re-bundled and force-reloaded every open page,
+      // and any dynamic import in flight — a widget's chunk — failed with
+      // "Failed to fetch dynamically imported module" (seen 2026-09-24). Scanning
+      // src/lib finds them at startup instead. Tests and the server-only
+      // retrieval modules are left out; they never reach a browser.
+      entries: [
+        "src/lib/**/*.ts",
+        "!src/lib/**/*.test.ts",
+        "!src/lib/retrieval/**",
+      ],
+    },
     build: {
       cssTarget: ["chrome107", "edge107", "firefox104", "safari16"],
       cssMinify: "esbuild",

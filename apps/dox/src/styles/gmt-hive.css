@@ -355,6 +355,14 @@
   cursor: pointer;
 }
 
+/* The placeholder while the widget's chunk loads (MountedWidget). */
+.gmt-hive-widget-loading {
+  margin: 0;
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+}
+
 /* Painted but not yet wired (MountedWidget sets aria-busy until the mount has
    loaded the library): dim it and keep clicks off controls that would do
    nothing yet. */

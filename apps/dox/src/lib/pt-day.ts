@@ -15,12 +15,9 @@
  * days a year are 23 and 25 hours long. Doing it with `Date` maths would be the
  * bug this library was written to prevent.
  */
-import {
-  addZoned,
-  convertUnixToZoned,
-  convertZonedToUnix,
-  startOfZoned,
-} from "@northguild/gmt";
+import { convertUnixToZoned } from "@northguild/gmt/unix/convert";
+import { addZoned, startOfZoned } from "@northguild/gmt/zoned/calculate";
+import { convertZonedToUnix } from "@northguild/gmt/zoned/convert";
 
 /** Google resets RPD quotas at midnight in this zone, and the visitor cap
  * resets with it. */

@@ -134,6 +134,26 @@ export function brainStateFromError(
 }
 
 /**
+ * The model is overloaded for this request, not out for the day: HTTP 503
+ * ("This model is currently experiencing high demand", observed from Gemini on
+ * 2026-09-24) or 529 ("overloaded").
+ *
+ * Separate from `brainStateFromError` because the answer is different on both
+ * sides. It is worth the next brain *now* — the overload belongs to one model,
+ * and with `maxRetries: 0` nothing else would move the request on — but it says
+ * nothing about tomorrow, so it never reaches the ledger. A 500 is not in this
+ * set: an error in the request itself would fail on every brain, and walking
+ * them all would spend the day's budget on one broken question.
+ */
+export function isTransientOverload(rawError: unknown): boolean {
+  const error = unwrapModelError(rawError);
+  return (
+    APICallError.isInstance(error) &&
+    (error.statusCode === 503 || error.statusCode === 529)
+  );
+}
+
+/**
  * Workers AI's daily-allocation failure, in both shapes it arrives in: code
  * 3036 (documented; the provider maps it to 429) and code 4006 (undocumented,
  * unmapped, and widely reported on Cloudflare's community forum as "you have
@@ -257,6 +277,8 @@ export async function openFirstWorkingBrain({
   messages,
   tools,
   onBrainOut,
+  onAttempt,
+  onMovedOn,
 }: {
   candidates: readonly Brain[];
   resolveModel: (brainId: string) => LanguageModel;
@@ -267,9 +289,18 @@ export async function openFirstWorkingBrain({
    *  anything has been written to the reader. */
   tools?: ToolSet;
   onBrainOut: (brainId: string, state: Exclude<BrainState, "ok">) => void;
+  /** Before each brain is asked. For the reader's progress line only. */
+  onAttempt?: (brain: Brain) => void;
+  /** After a brain refused and the walk moves on. For progress only; the
+   *  ledger hears about `spent`/`unavailable` through `onBrainOut`. */
+  onMovedOn?: (brain: Brain, outcome: "busy" | "spent" | "unavailable") => void;
 }): Promise<BrainAttempt | undefined> {
   const exhaustedProviders = new Set<BrainProvider>();
   const attempts: BrainAttemptTrace[] = [];
+  /* The last overload seen. If every brain was either out or busy, this is
+     thrown rather than returning "spent": a reader who hit a busy minute has
+     not used up anyone's allowance, and should be told to try again. */
+  let lastOverload: unknown;
 
   for (const brain of candidates) {
     // One Workers AI brain reporting an exhausted allocation means all of them
@@ -286,6 +317,7 @@ export async function openFirstWorkingBrain({
     // one surfaces, so it is captured here and classified after the await.
     let providerError: unknown;
     const started = performance.now();
+    onAttempt?.(brain);
 
     const result = streamText({
       model: resolveModel(brain.id),
@@ -348,6 +380,17 @@ export async function openFirstWorkingBrain({
       // Prefer the provider's error over the SDK's contentless wrapper.
       const underlying = providerError ?? error;
       const state = brainStateFromError(underlying);
+      if (!state && isTransientOverload(underlying)) {
+        attempts.push({
+          brainId: brain.id,
+          ms: Math.round(performance.now() - started),
+          outcome: "busy",
+        });
+        console.error(`brain ${brain.id} is busy; trying the next`, underlying);
+        lastOverload = underlying;
+        onMovedOn?.(brain, "busy");
+        continue;
+      }
       if (!state) throw underlying;
 
       attempts.push({
@@ -360,11 +403,13 @@ export async function openFirstWorkingBrain({
         underlying,
       );
       onBrainOut(brain.id, state);
+      onMovedOn?.(brain, state);
       if (isWorkersAIAllocationExhausted(underlying)) {
         exhaustedProviders.add(brain.provider);
       }
     }
   }
 
+  if (lastOverload !== undefined) throw lastOverload;
   return undefined;
 }

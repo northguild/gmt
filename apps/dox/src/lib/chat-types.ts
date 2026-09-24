@@ -69,7 +69,9 @@ export interface RetrievalTimings {
 export interface BrainAttemptTrace {
   brainId: string;
   ms: number;
-  outcome: "answered" | "spent" | "unavailable";
+  /** `busy`: the model was overloaded (503) for this request only — tried
+   * the next brain, marked nothing in the ledger. */
+  outcome: "answered" | "spent" | "unavailable" | "busy";
 }
 
 /** The `id` on the retrieval part. Fixed, so the finishing write replaces the
@@ -79,3 +81,24 @@ export const RETRIEVAL_PART_ID = "retrieval" as const;
 /** The `type` discriminant on the emitted part. `data-` prefix is the AI SDK's
  * convention for custom data parts (`DataUIPart`'s `type: \`data-${NAME}\``). */
 export const RETRIEVAL_PART_TYPE = "data-retrieval" as const;
+
+/** Progress while Dox chooses a brain — "Asking 3.8 Flash…", "3.8 Flash is
+ * busy — trying the next model…". Written `transient`: it reaches `onData`
+ * and the pending card, never the message or the history. */
+export interface StatusData {
+  text: string;
+}
+export const STATUS_PART_TYPE = "data-status" as const;
+
+/**
+ * A request the Worker could not answer once its stream was open — every brain
+ * out, or an upstream failure. Carries exactly the `{ status, payload }` a
+ * non-OK HTTP response used to, so the client hands it to the same
+ * `classifyChatError` and the reader sees the same warning. `transient`, so no
+ * empty assistant turn is left behind.
+ */
+export interface RefusalData {
+  status: number;
+  payload: unknown;
+}
+export const REFUSAL_PART_TYPE = "data-refusal" as const;

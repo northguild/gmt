@@ -278,8 +278,21 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 | Sanitise invisible characters, **then** apply length and conversation caps | `400` |
 | Per-visitor daily cap (KV, hashed IP; dev cookie exempt) | `429` |
 | No configured brain | `500` |
-| Retrieve → assemble prompt → in-request failover | pool spent → `429` with the soonest refill |
-| Stream: `createUIMessageStream` writes the retrieval trace part, then merges `toUIMessageStream` (`sendReasoning: false`, `onError` on both layers) | mapped error text, never a raw upstream payload |
+| Retrieve → assemble prompt | mapped error, never a raw upstream payload |
+| Open the stream, then in-request failover, writing transient `data-status` progress per brain | pool spent, or every brain busy → transient `data-refusal` |
+| Write the retrieval trace part, then merge `toUIMessageStream` (`sendReasoning: false`, `onError` on both layers) | mapped error text, never a raw upstream payload |
+
+- **The stream opens before a brain is chosen.** Measured 2026-09-24: two busy brains
+  took 2.8 s of a 6.7 s answer, and the reader saw nothing but "Searching corpus…". Now
+  each step arrives as a transient `data-status` part ("3.8 Flash is busy — trying the
+  next model…") and shows in the pending card.
+- **A refusal is a transient `data-refusal` part** carrying the `{ status, payload }` the
+  HTTP error used to (`RefusalData`, `src/lib/chat-types.ts`). `DoxChat` passes it to the
+  same `classifyChatError`, so the warning, retry and reset time are unchanged. Transient
+  parts never enter a message, so a refused request leaves no empty turn in the history
+  (`DoxChat.progress.test.tsx`). What is known before the stream opens — the burst
+  limiter, a bad body, the visitor cap, every brain already marked out — is still a plain
+  HTTP error.
 
 - **System prompt** (`worker/system-prompt.ts`), eight sections in order: Persona and
   scope · Standing order (the prompt-injection boundary) · Linking rules (only this
@@ -345,6 +358,13 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **Parity:** `ENABLED_TOOL_NAMES` equals the widget registry's keys
   (`widget-registry.test.ts`), and every enabled tool has a `CHAT_STARTERS` pill
   (`chat-starters.test.ts`). A tool nobody can mount or discover cannot ship.
+- **A starter pill opens its widget on the click.** Each `CHAT_STARTERS` entry carries the
+  `args` its question describes; the click sends the question and calls `onWidget` with
+  them (`starterWidgetCall`), so the widget does not wait on a round trip or on the model
+  choosing to call the tool. The model's own call replaces it unless `isSameWidget` says
+  the tool and arguments match (key order ignored), which keeps anything the reader has
+  already dragged. `chat-starters.test.ts` runs every seed through its schema and
+  `validate`, so a seed that drifts from its tool fails the suite.
 - **Worker tools carry a trivial `execute`** (no I/O) in `worker/tools.ts`. Without one, a
   replayed turn has a tool call with no tool result, which the provider rejects on the
   reader's next question (`tools.test.ts`). `convertToModelMessages` runs with
@@ -355,14 +375,24 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   checks IANA zones with gmt's `isValidTimeZone`; a nonsense zone renders an error state.
   The registry is fixed and typed, with a literal `import()` per mount and no `eval` or
   dynamic code on the path. `showPlayground` was cut to keep that true.
-  - **Known gap:** the registry imports each `render*Template` statically from the same
-    `*-mount.ts` as its mount, so every mount and the Temporal polyfill are in the `/dox`
-    chunk and the `import()` loads nothing new. Splitting the templates into
-    polyfill-free modules is the fix.
+  - **Template and mount load together**, from the one `import()`: an entry's `load()`
+    returns `{ renderTemplate, mount }`. The registry imports only *types* from the mount
+    modules. It used to import each `render*Template` as a value, which put every mount,
+    each widget's logic and the Temporal polyfill in the `/dox` chunk and made every
+    `import()` load nothing new. `widget-graph.test.ts` walks the island's static value
+    imports and fails if one reaches a mount, `gmt-modules.ts`, a widget's logic, a direct
+    polyfill import or gmt's root barrel. Chat code imports gmt by module path for the
+    same reason: the root barrel re-exports the polyfill.
+  - **The polyfill still ships with `/dox`,** through gmt itself: the header and reset
+    clocks call `@northguild/gmt/zoned/get`, whose built chunk imports it
+    (`get → zonedNowUnitValue → index.esm`). The exports map stops at module level, so
+    there is no narrower import. Measured on the 2026-09-24 build, the first-load
+    JavaScript went from ~755 KB to 722 KB gzipped; the widgets now load only when one
+    opens.
 - **`MountedWidget.tsx`** renders an empty host, and the widget's DOM lives outside React.
   An `AbortSignal` handles StrictMode's double effect.
-  - The host is `aria-busy` (dimmed, inert) from the template paint until the mount has
-    wired it.
+  - The host is `aria-busy` (dimmed, inert) until the mount has wired it: a "Loading …"
+    placeholder while the chunk loads, then the template.
   - A `WidgetLoadError`, or a failed `import()` of the mount module, shows the error with
     **Try again**, which clears the error and remounts. A bad argument or a mount that throws
     on its input gets no retry: the same input fails the same way.
@@ -402,6 +432,13 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     brain at once; a capacity 429 (3040) retires only that brain.
   - `maxRetries: 0`. The SDK's retry backs off from 2 s, which put a pause in front of
     every failover; the next brain is the retry.
+  - **A busy model moves on, and is not marked.** Gemini answers 503 "This model is
+    currently experiencing high demand" (seen 2026-09-24, on two brains in a row). That
+    used to be rethrown, failing the whole answer. `isTransientOverload` (503, 529) now
+    tries the next brain with outcome `busy` and writes nothing to the ledger; if every
+    brain was out or busy, the last overload becomes a retryable refusal, not "allowance
+    used". A 500 still stops at the first brain: an error in the request would fail on all
+    of them.
 - **Thinking level.** Each Gemini brain carries `thinkingLevel` (`chat-constants.ts`), passed
   as `providerOptions.google.thinkingConfig`. All are `"low"`: left unset, Gemini 3 thinks
   dynamically over the 10–16k-token prompt before its first token. A brain that stops
@@ -444,6 +481,14 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 
 ### Runbooks
 
+- **Vite scans `src/lib` at startup** (`optimizeDeps.entries`, `astro.config.mjs`). Astro
+  scans only `.jsx/.tsx/.vue/.svelte/.html`, so packages reached from an `.astro` script
+  (`@tanstack/charts`, `d3-geo`, …) were found when a page first imported them; Vite then
+  re-bundled and force-reloaded every open page, and a widget chunk in flight failed with
+  "Failed to fetch dynamically imported module". Keep the entries when adding a widget.
+- **gmt is not pre-bundled in dev, on purpose.** A cold widget page wires in ~0.6 s with its
+  ~117 gmt requests (measured 2026-09-24), and pre-bundling a linked package would need a
+  dev-server restart after every gmt rebuild to avoid serving stale code.
 - **Local dev:** `pnpm dox:dev` (site + chat Worker) or `pnpm dox:dev:site` (site only).
   A warm start is ~10 s: the gmt build is incremental (`build:dev`), every `generate` step
   skips when its inputs are unchanged, and `upstream refresh` makes no network calls

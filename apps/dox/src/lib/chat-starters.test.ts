@@ -8,7 +8,8 @@
  * that is not enabled.
  */
 import { describe, expect, it } from "vitest";
-import { CHAT_STARTERS } from "./chat-constants";
+import { CHAT_STARTERS, starterWidgetCall } from "./chat-constants";
+import { resolveWidget } from "~/components/ask/widget-registry";
 import { DOX_TOOL_DOCS, ENABLED_TOOL_NAMES } from "./dox-tools";
 
 describe("CHAT_STARTERS", () => {
@@ -57,5 +58,26 @@ describe("CHAT_STARTERS", () => {
     for (const starter of CHAT_STARTERS) {
       expect(starter.text.length, starter.widget).toBeLessThan(110);
     }
+  });
+
+  it.each(CHAT_STARTERS.map((s) => [s.widget, s] as const))(
+    "seeds %s with arguments its tool accepts and the widget can show",
+    async (_name, starter) => {
+      const call = starterWidgetCall(starter);
+      expect(call.toolName).toBe(starter.widget);
+      const resolved = resolveWidget(call.toolName, call.input);
+      expect(resolved.ok, JSON.stringify(resolved)).toBe(true);
+      if (!resolved.ok) return;
+      // The semantic layer too: real zones, not merely zone-shaped strings.
+      expect(await resolved.entry.validate?.(resolved.args)).toBeFalsy();
+    },
+  );
+
+  it("gives each pill a stable call id, so a second click does not remount", () => {
+    const ids = CHAT_STARTERS.map((s) => starterWidgetCall(s).toolCallId);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(starterWidgetCall(CHAT_STARTERS[0]).toolCallId).toBe(
+      starterWidgetCall(CHAT_STARTERS[0]).toolCallId,
+    );
   });
 });
