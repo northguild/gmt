@@ -1,9 +1,20 @@
 name: Deploy Dox
 
 on:
-  push:
-    branches:
-      - main
+  # After Release, never alongside it. Release runs on every push to main, so this
+  # still deploys every merge. A push that publishes pushes its
+  # `@northguild/gmt@X.Y.Z` tag before Release completes, so the docs build sees
+  # the release it belongs to; running in parallel, as this used to, could build
+  # before the tag existed. The site deploys whatever Release concluded, success
+  # or failure.
+  #
+  # Failure mode: if Release ever stops running on pushes to main (renamed,
+  # disabled, or given a path filter), merges stop deploying the docs. The daily
+  # schedule and workflow_dispatch below still deploy.
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+    branches: [main]
   # Refreshes the /upstream/ tracker even on a week with no push — see
   # scripts/upstream.mjs. workflow_dispatch is the manual "refresh it now" button.
   schedule:
@@ -28,6 +39,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          # The commit Release ran on, not whatever main is now; the schedule and
+          # manual runs have no workflow_run, so they take main's head.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          # Full history and every tag, so the build can read release tags.
           fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
