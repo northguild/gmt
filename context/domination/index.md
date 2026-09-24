@@ -6,9 +6,12 @@ This file is a progressive-disclosure entry point. Read what you need:
   table, risks, and the verified standards list. **The entry file.**
 - [painpoints.md](painpoints.md) — Researched domain evidence per realm, with primary-source
   citations. **Read this before adding or changing any realm function.**
-- [tracker.md](tracker.md) — The 54 stories in build order, the `Blocked by` column, and
+- [tracker.md](tracker.md) — The 75 stories in build order, the `Blocked by` column, and
   the Definition of Done binding every story.
 - [issues/](issues/) — Full specs, one file per story, named by story ID.
+- [docs-site.md](docs-site.md) — The guide, scenarios and mistakes page every realm story ships on
+  the docs site, and the rules for them.
+- [research/](research/) — Research records; start with [realm-gap-spike-2026-09.md](research/realm-gap-spike-2026-09.md), the September 2026 pass over every realm.
 
 ## Orientation
 

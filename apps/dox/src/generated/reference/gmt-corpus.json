@@ -10826,6 +10826,173 @@
     ]
   },
   {
+    "url": "/reference/transport/calculate/Dwell",
+    "name": "Dwell",
+    "namespace": "transport",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "The Dwell type.",
+    "sourcePath": "packages/gmt/src/transport/calculate/dwellTime.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/transport/calculate/dwellTime",
+    "name": "dwellTime",
+    "namespace": "transport",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "dwellTime(entry: string, exit: string, targetZone?: string): Dwell | null",
+    "description": "Measure how long something sat somewhere, and how many local calendar days it sat there.",
+    "sourcePath": "packages/gmt/src/transport/calculate/dwellTime.ts",
+    "examples": [
+      {
+        "call": "dwellTime(\"2024-06-15T23:00:00-04:00[America/New_York]\", \"2024-06-16T01:00:00-04:00[America/New_York]\")",
+        "result": "{ duration: \"PT2H\", enter: \"2024-06-15T23:00:00-04:00[America/New_York]\", exit: \"2024-06-16T01:00:00-04:00[America/New_York]\", calendarDays: 2 }"
+      },
+      {
+        "call": "dwellTime(\"2024-06-15T08:00:00Z\", \"2024-06-15T17:30:00Z\", \"Europe/Berlin\")",
+        "result": "{ duration: \"PT9H30M\", enter: \"2024-06-15T10:00:00+02:00[Europe/Berlin]\", exit: \"2024-06-15T19:30:00+02:00[Europe/Berlin]\", calendarDays: 1 }"
+      },
+      {
+        "call": "dwellTime(\"2024-06-15T22:30:00Z\", \"2024-06-16T01:00:00Z\", \"Europe/London\")",
+        "result": "{ duration: \"PT2H30M\", enter: \"2024-06-15T23:30:00+01:00[Europe/London]\", exit: \"2024-06-16T02:00:00+01:00[Europe/London]\", calendarDays: 2 }"
+      },
+      {
+        "call": "dwellTime(\"2024-06-15T22:30:00Z\", \"2024-06-16T01:00:00Z\", \"Europe/Amsterdam\")",
+        "result": "{ duration: \"PT2H30M\", enter: \"2024-06-16T00:30:00+02:00[Europe/Amsterdam]\", exit: \"2024-06-16T03:00:00+02:00[Europe/Amsterdam]\", calendarDays: 1 } (the same two instants, one fewer day: the zone decides)"
+      },
+      {
+        "call": "dwellTime(\"2024-06-15T22:00:00Z\", \"2024-06-16T04:00:00Z\", \"America/New_York\")",
+        "result": "{ duration: \"PT6H\", enter: \"2024-06-15T18:00:00-04:00[America/New_York]\", exit: \"2024-06-16T00:00:00-04:00[America/New_York]\", calendarDays: 1 } (an exit exactly at local midnight does not touch the new day)"
+      },
+      {
+        "call": "dwellTime(\"2024-03-10T05:00:00Z\", \"2024-03-10T12:00:00Z\", \"America/New_York\")",
+        "result": "{ duration: \"PT7H\", enter: \"2024-03-10T00:00:00-05:00[America/New_York]\", exit: \"2024-03-10T08:00:00-04:00[America/New_York]\", calendarDays: 1 } (seven elapsed hours across the spring-forward, one local day)"
+      },
+      {
+        "call": "dwellTime(\"2011-12-30T08:00:00Z\", \"2011-12-30T11:00:00Z\", \"Pacific/Apia\")",
+        "result": "{ duration: \"PT3H\", enter: \"2011-12-29T22:00:00-10:00[Pacific/Apia]\", exit: \"2011-12-31T01:00:00+14:00[Pacific/Apia]\", calendarDays: 2 } (29 and 31 December: Samoa deleted the 30th)"
+      },
+      {
+        "call": "dwellTime(\"2024-06-15T22:30:00Z\", \"2024-06-16T01:00:00Z\", \"+02:00\")",
+        "result": "{ duration: \"PT2H30M\", enter: \"2024-06-16T00:30:00+02:00[+02:00]\", exit: \"2024-06-16T03:00:00+02:00[+02:00]\", calendarDays: 1 } (a fixed offset counts days with no DST)"
+      },
+      {
+        "call": "dwellTime(\"2024-06-15T22:30:00Z\", \"2024-06-16T01:00:00Z\")",
+        "result": "null (bare instants and no zone: the day count has no locality)"
+      },
+      {
+        "call": "dwellTime(\"2024-06-16T01:00:00Z\", \"2024-06-15T22:30:00Z\", \"Europe/London\")",
+        "result": "null (exit before entry)"
+      },
+      {
+        "call": "dwellTime(\"2024-06-15T22:30:00Z\", \"2024-06-16T01:00:00Z\", \"Europe/Londres\")",
+        "result": "null"
+      }
+    ]
+  },
+  {
+    "url": "/reference/transport/calculate/transitTime",
+    "name": "transitTime",
+    "namespace": "transport",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "transitTime(departure: string, duration: string): string",
+    "description": "Add a transit duration to a departure and return the arrival, in the departure's own zone.",
+    "sourcePath": "packages/gmt/src/transport/calculate/transitTime.ts",
+    "examples": [
+      {
+        "call": "transitTime(\"2024-06-15T10:00:00-04:00[America/New_York]\", \"PT2H30M\")",
+        "result": "\"2024-06-15T12:30:00-04:00[America/New_York]\""
+      },
+      {
+        "call": "transitTime(\"2024-03-09T23:00:00-05:00[America/New_York]\", \"PT4H\")",
+        "result": "\"2024-03-10T04:00:00-04:00[America/New_York]\" (four elapsed hours across the spring-forward, so the wall clock reads 04:00, not 03:00)"
+      },
+      {
+        "call": "transitTime(\"2024-03-09T12:00:00-05:00[America/New_York]\", \"P1D\")",
+        "result": "\"2024-03-10T13:00:00-04:00[America/New_York]\" (a day is 24 elapsed hours, not \"the same wall time tomorrow\")"
+      },
+      {
+        "call": "transitTime(\"2024-06-15T10:00:00Z\", \"PT36H\")",
+        "result": "\"2024-06-16T22:00:00Z\""
+      },
+      {
+        "call": "transitTime(\"2024-06-15T10:00:00+09:00\", \"PT1H\")",
+        "result": "\"2024-06-15T11:00:00+09:00\" (an offset stays an offset)"
+      },
+      {
+        "call": "transitTime(\"2024-06-15T10:00:00+05:30:15\", \"PT1H\")",
+        "result": "\"2024-06-15T11:00:00+05:30:15\" (a sub-minute offset is kept as written)"
+      },
+      {
+        "call": "transitTime(\"2024-06-15T10:00:00Z[foo=bar]\", \"PT1H\")",
+        "result": "\"2024-06-15T11:00:00Z\" (an elective unknown annotation is ignored)"
+      },
+      {
+        "call": "transitTime(\"2024-06-15T12:30:00-04:00[America/New_York]\", \"-PT2H30M\")",
+        "result": "\"2024-06-15T10:00:00-04:00[America/New_York]\""
+      },
+      {
+        "call": "transitTime(\"2024-06-15T10:00:00-04:00[America/New_York]\", \"P1M\")",
+        "result": "\"\" (calendar units need a reference point)"
+      },
+      {
+        "call": "transitTime(\"2024-06-15T10:00:00-05:00[America/New_York]\", \"PT2H\")",
+        "result": "\"\" (New York is -04:00 in June: the offset contradicts the zone)"
+      },
+      {
+        "call": "transitTime(\"2024-06-15T10:00:00\", \"PT2H\")",
+        "result": "\"\" (no zone and no offset: not a moment)"
+      },
+      {
+        "call": "transitTime(\"2024-06-15T10:00:00Z\", \"2 hours\")",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/transport/convert/etaAtZone",
+    "name": "etaAtZone",
+    "namespace": "transport",
+    "module": "convert",
+    "kind": "function",
+    "signature": "etaAtZone(arrivalUtc: string, targetZone: string): string",
+    "description": "Render an arrival instant as local time in the zone where it will be read.",
+    "sourcePath": "packages/gmt/src/transport/convert/etaAtZone.ts",
+    "examples": [
+      {
+        "call": "etaAtZone(\"2024-06-15T12:30:00Z\", \"Asia/Tokyo\")",
+        "result": "\"2024-06-15T21:30:00+09:00[Asia/Tokyo]\""
+      },
+      {
+        "call": "etaAtZone(\"2024-06-15T12:30:00Z\", \"America/Los_Angeles\")",
+        "result": "\"2024-06-15T05:30:00-07:00[America/Los_Angeles]\""
+      },
+      {
+        "call": "etaAtZone(\"2024-06-15T12:30:00+02:00\", \"Pacific/Apia\")",
+        "result": "\"2024-06-15T23:30:00+13:00[Pacific/Apia]\" (the offset fixes the instant; the zone renders it)"
+      },
+      {
+        "call": "etaAtZone(\"2024-11-03T05:30:00Z\", \"America/New_York\")",
+        "result": "\"2024-11-03T01:30:00-04:00[America/New_York]\" (the first 01:30 of the fall-back night)"
+      },
+      {
+        "call": "etaAtZone(\"2024-11-03T06:30:00Z\", \"America/New_York\")",
+        "result": "\"2024-11-03T01:30:00-05:00[America/New_York]\" (the second; the offset tells them apart)"
+      },
+      {
+        "call": "etaAtZone(\"2024-06-15T12:30:00\", \"Asia/Tokyo\")",
+        "result": "\"\" (no offset designator: not a moment)"
+      },
+      {
+        "call": "etaAtZone(\"2024-06-15T12:30:00Z\", \"Asia/Tokio\")",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
     "url": "/reference/types/business-calendar/BusinessCalendar",
     "name": "BusinessCalendar",
     "namespace": "types",

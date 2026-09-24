@@ -47,6 +47,10 @@ export const GMT_MODULES: Record<
   "interval/compare": () => import("@northguild/gmt/interval/compare"),
   "interval/validate": () => import("@northguild/gmt/interval/validate"),
 
+  // --- transport ---
+  "transport/calculate": () => import("@northguild/gmt/transport/calculate"),
+  "transport/convert": () => import("@northguild/gmt/transport/convert"),
+
   // --- duration ---
   duration: () => import("@northguild/gmt/duration"),
 

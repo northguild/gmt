@@ -380,4 +380,8 @@ export const CHAT_STARTERS: readonly {
     text: "What happens to 1:30am on 3 November 2024 in New York?",
     widget: "showDstInspector",
   },
+  {
+    text: "How many days is a container at a New York terminal from 23:00 on 15 June 2024 to 01:00 the next morning?",
+    widget: "showDwellLedger",
+  },
 ];

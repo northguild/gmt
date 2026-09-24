@@ -901,4 +901,118 @@ describe("buildLivePlaygroundTemplate integration", () => {
     expect(doc!.livePlaygroundTemplate).toBeDefined();
     expect(doc!.livePlaygroundTemplate!.allowEmptyArray).toBe(true);
   });
+
+  /** Extract one declared function the way the generator does. */
+  function templateFor(src: string, name: string) {
+    const { checker, sourceFile } = compile(src);
+    let doc: FnDoc | undefined;
+    sourceFile.forEachChild((node) => {
+      if (ts.isFunctionDeclaration(node) && node.name?.text === name) {
+        doc = BR.extractFunction(
+          checker,
+          node,
+          "zoned",
+          "interval",
+          gmtPath("zoned/interval.ts"),
+          new Set(),
+        );
+      }
+    });
+    return doc?.livePlaygroundTemplate;
+  }
+
+  it("classifies an object | null result as object, with no empty flag by default", () => {
+    const t = templateFor(
+      `
+      interface Dwell { duration: string; calendarDays: number }
+      /** Dwell.
+       * @example dwellTime("2024-06-15T23:00:00Z", "2024-06-16T01:00:00Z", "UTC") // { duration: "PT2H", calendarDays: 1 }
+       */
+      function dwellTime(entry: string, exit: string, zone?: string): Dwell | null { return null; }
+    `,
+      "dwellTime",
+    );
+    expect(t?.returnType).toBe("object");
+    expect(t?.nullIsEmpty).toBeUndefined();
+  });
+
+  it("sets nullIsEmpty for a function on the allowlist", () => {
+    const t = templateFor(
+      `
+      /** Intersect.
+       * @example intervalIntersectionZoned("a", "b", "c", "d") // null (touching)
+       */
+      function intervalIntersectionZoned(a: string, b: string, c: string, d: string): { start: string; end: string } | null { return null; }
+    `,
+      "intervalIntersectionZoned",
+    );
+    expect(t?.returnType).toBe("object");
+    expect(t?.nullIsEmpty).toBe(true);
+  });
+
+  it("refuses an allowlisted name whose return is not an object", () => {
+    expect(() =>
+      templateFor(
+        `
+        /** Wrong shape.
+         * @example intervalIntersectionZoned("a", "b", "c", "d") // ""
+         */
+        function intervalIntersectionZoned(a: string, b: string, c: string, d: string): string { return ""; }
+      `,
+        "intervalIntersectionZoned",
+      ),
+    ).toThrow(/NULL_IS_EMPTY/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Unreleased badges in the generated sidebar
+// ---------------------------------------------------------------------------
+
+describe("buildSidebar", () => {
+  const badge = 'badge: { text: "Unreleased", variant: "caution" }';
+
+  it("badges unreleased items, and a group only when all of it is unreleased", () => {
+    const out = BR.buildSidebar(
+      new Map([
+        [
+          "transport/calculate",
+          [
+            { name: "dwellTime", slug: "reference/transport/calculate/dwellTime", unreleased: true },
+            { name: "transitTime", slug: "reference/transport/calculate/transitTime", unreleased: true },
+          ],
+        ],
+        [
+          "calendar/calculate",
+          [
+            { name: "floorToZone", slug: "reference/calendar/calculate/floorToZone" },
+            { name: "newThing", slug: "reference/calendar/calculate/newThing", unreleased: true },
+          ],
+        ],
+      ]),
+    );
+    expect(out).toContain(
+      `{ slug: "reference/transport/calculate/dwellTime", ${badge} }`,
+    );
+    expect(out).toContain(`{ slug: "reference/calendar/calculate/floorToZone" }`);
+    expect(out).toContain(
+      `{ slug: "reference/calendar/calculate/newThing", ${badge} }`,
+    );
+    // transport and its module group are all new; calendar is mixed.
+    expect(out).toMatch(/label: "transport",\n\s+badge:/);
+    expect(out).toMatch(/label: "calculate",\n\s+badge:/);
+    expect(out).not.toMatch(/label: "calendar",\n\s+badge:/);
+  });
+
+  it("emits no badge when nothing is unreleased", () => {
+    const out = BR.buildSidebar(
+      new Map([
+        ["calendar/calculate", [
+          { name: "a", slug: "reference/calendar/calculate/a" },
+          { name: "b", slug: "reference/calendar/calculate/b" },
+        ]],
+      ]),
+    );
+    expect(out).not.toContain("badge");
+  });
 });

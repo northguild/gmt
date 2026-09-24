@@ -7,6 +7,7 @@ export * from "./plain";
 export * from "./precision";
 export * from "./regex";
 export * from "./span";
+export * from "./transport";
 export * from "./types";
 export * from "./unix";
 export * from "./utc";

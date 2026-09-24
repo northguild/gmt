@@ -65,6 +65,19 @@ describe("reference corpus", () => {
     }
   });
 
+  it("no two routes differ only by case", async () => {
+    // macOS and Windows write `Foo.mdx` and `foo.mdx` to the same file, so such a pair
+    // would ship as one page and a dangling sidebar slug.
+    const mod = await import(resolve(outGen, "route-manifest.ts"));
+    const routes = mod.referenceRoutes as Set<string>;
+    const folded = new Map<string, string>();
+    for (const route of routes) {
+      const clash = folded.get(route.toLowerCase());
+      expect(clash, `${route} collides with ${clash}`).toBeUndefined();
+      folded.set(route.toLowerCase(), route);
+    }
+  });
+
   it("every MDX page slug is in the route manifest", async () => {
     if (!mdxExists) return;
     const mod = await import(resolve(outGen, "route-manifest.ts"));

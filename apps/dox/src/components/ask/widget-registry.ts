@@ -44,12 +44,17 @@ import {
 import { renderGlobeTemplate, type GlobeArgs } from "~/lib/globe-mount";
 import { renderDstTemplate, type DstArgs } from "~/lib/dst-inspector-mount";
 import {
+  renderDwellLedgerTemplate,
+  type DwellLedgerArgs,
+} from "~/lib/dwell-ledger-mount";
+import {
   renderIntervalTemplate,
   type IntervalArgs,
 } from "~/lib/interval-visualizer-mount";
 import {
   showConverterBenchInput,
   showDstInspectorInput,
+  showDwellLedgerInput,
   showGlobeInput,
   showIntervalVisualizerInput,
 } from "~/lib/dox-tools";
@@ -142,9 +147,10 @@ const globeEntry = defineWidget<GlobeArgs>({
 /**
  * A literal object with literal keys. Do not make this dynamic.
  *
- * All four Tier 2 widgets are registered. `ENABLED_TOOL_NAMES` remains the
- * declaration of what the model is offered, and a test asserts the two sets
- * are equal — so a fifth tool cannot be offered without a widget to mount. Until then those tool names are known to `dox-tools.ts` but
+ * The four Tier 2 widgets and the Dwell Ledger (TRAN-8) are registered.
+ * `ENABLED_TOOL_NAMES` remains the declaration of what the model is offered,
+ * and a test asserts the two sets are equal — so a tool cannot be offered
+ * without a widget to mount. Until then those tool names are known to `dox-tools.ts` but
  * unregistered here — and `ENABLED_TOOL_NAMES` keeps them from being offered to
  * the model at all, so Dox can never promise a widget this build cannot show.
  */
@@ -219,11 +225,35 @@ const dstEntry = defineWidget<DstArgs>({
   validate: ({ zone }) => (zone ? checkZones([zone]) : Promise.resolve(null)),
 });
 
+const dwellEntry = defineWidget<DwellLedgerArgs>({
+  title: "Dwell ledger",
+  kind: "dwell",
+  parse: (input) => {
+    const result = showDwellLedgerInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template, like the DST inspector: every argument is a control
+     value. The mount then reads a zoneless wall time in `zone`. */
+  renderTemplate: (_idPrefix, args) => renderDwellLedgerTemplate(args),
+  load: () =>
+    import("~/lib/dwell-ledger-mount").then((m) => ({
+      mount: m.mountDwellLedger,
+    })),
+  validate: ({ zone, compareZone }) =>
+    checkZones([zone, compareZone].filter((z): z is string => !!z)),
+});
+
 export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showGlobe: globeEntry,
   showConverterBench: converterEntry,
   showIntervalVisualizer: intervalEntry,
   showDstInspector: dstEntry,
+  showDwellLedger: dwellEntry,
 };
 
 /** Whether a streamed tool part names a widget this build actually has. */

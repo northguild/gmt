@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest";
 import { GMT_MODULES } from "../lib/gmt-modules";
-import { evaluateArg, sentinelFor } from "../lib/playground-client";
+import { classifyPlaygroundResult, evaluateArg } from "../lib/playground-client";
 import {
   buildCall,
   type CallField,
@@ -98,11 +98,13 @@ describe("live playground templates", () => {
         .map(evaluateArg);
       const result = (fn as (...a: unknown[]) => unknown)(...args);
 
-      const sentinel = sentinelFor(t.returnType, t.allowEmptyArray ?? false);
-      const isSentinel =
-        result === sentinel && result !== 0 && result !== false;
-
-      expect(isSentinel, `${call} returned the sentinel`).toBe(false);
+      // The same decision the form makes, so a seeded call that renders as
+      // NO SIGNAL on the page fails here first. A seeded empty answer is
+      // allowed: `mergeIntervalsUnix([])` is `[]`, correctly.
+      expect(
+        classifyPlaygroundResult(result, t),
+        `${call} renders as the sentinel`,
+      ).not.toBe("sentinel");
     },
   );
 });

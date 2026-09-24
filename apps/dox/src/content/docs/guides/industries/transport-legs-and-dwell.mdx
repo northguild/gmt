@@ -1,0 +1,176 @@
+---
+title: "Transport: Legs and Dwell"
+description: transitTime, etaAtZone and dwellTime — the three operations every transport mode shares, with exact elapsed legs, arrivals rendered where they land, and dwell counted in local calendar days.
+sidebar:
+  order: 1
+---
+
+Every transport mode shares three operations: add a leg's duration to a departure, show the
+arrival in the zone where it lands, and measure how long something sat at a terminal, berth,
+gate or yard. Every mode also gets the same two things wrong: a leg across a DST transition is
+a fixed number of *elapsed* hours, and dwell is charged in *local calendar days*, not hours.
+
+```typescript
+import { dwellTime, etaAtZone, transitTime } from "@northguild/gmt/transport";
+```
+
+The functions live in `@northguild/gmt/transport`, split into
+`@northguild/gmt/transport/calculate` (`transitTime`, `dwellTime`) and
+`@northguild/gmt/transport/convert` (`etaAtZone`).
+
+## A leg is exact time: `transitTime`
+
+[`transitTime(departure, duration)`](/reference/transport/calculate/transitTime) adds an ISO
+8601 duration to a departure as elapsed time, in the departure's own zone. Hours, minutes and
+seconds are exact, and a `D` component is 24 hours exactly. The arrival's wall clock reflects
+whatever DST shift happened in between, because that is when the vessel, train or aircraft
+actually gets there.
+
+```typescript
+import { transitTime } from "@northguild/gmt/transport";
+
+// Four elapsed hours across New York's spring-forward: the clock reads 04:00, not 03:00.
+transitTime("2024-03-09T23:00:00-05:00[America/New_York]", "PT4H");
+// "2024-03-10T04:00:00-04:00[America/New_York]"
+
+// A day is 24 exact hours, not "the same wall time tomorrow".
+transitTime("2024-03-09T20:00:00-05:00[America/New_York]", "P1DT2H");
+// "2024-03-10T23:00:00-04:00[America/New_York]"
+
+// A negative duration recovers the departure from an arrival.
+transitTime("2024-06-15T12:30:00-04:00[America/New_York]", "-PT2H30M");
+// "2024-06-15T10:00:00-04:00[America/New_York]"
+```
+
+The departure's form is preserved. A bracketed IANA zone stays that zone, `Z` stays `Z`, and
+an offset stays an offset, written as the departure wrote it, because an offset is not a
+zone and nothing more can be inferred from it.
+
+```typescript
+transitTime("2024-06-15T10:00:00Z", "PT36H"); // "2024-06-16T22:00:00Z"
+transitTime("2024-06-15T10:00:00+09:00", "PT1H"); // "2024-06-15T11:00:00+09:00"
+transitTime("2024-06-15T10:00:00+05:30:15", "PT1H"); // "2024-06-15T11:00:00+05:30:15"
+```
+
+Two inputs are refused rather than reinterpreted. Years, months and weeks return `""`: no leg
+takes "a month" in a sense that time arithmetic can settle without a reference point, and a
+dated connection belongs to [`addZoned`](/reference/zoned/calculate/addZoned). A bracketed
+zone whose offset contradicts it also returns `""`, as
+[`isValidZonedDateTime`](/reference/zoned/validate/isValidZonedDateTime) rejects it.
+
+```typescript
+transitTime("2024-06-15T10:00:00Z", "P1M"); // ""
+transitTime("2024-06-15T10:00:00-05:00[America/New_York]", "PT2H"); // "" — June is -04:00
+```
+
+## An arrival is rendered where it lands: `etaAtZone`
+
+[`etaAtZone(arrivalUtc, targetZone)`](/reference/transport/convert/etaAtZone) takes an
+instant and renders it in the zone the reader is in. Only the instant is read from the input;
+`targetZone` is where it is shown.
+
+```typescript
+import { etaAtZone } from "@northguild/gmt/transport";
+
+etaAtZone("2024-06-15T12:30:00Z", "Asia/Tokyo");
+// "2024-06-15T21:30:00+09:00[Asia/Tokyo]"
+```
+
+No disambiguation arises here. A moment has exactly one wall time in a zone, so the
+`disambiguation` vocabulary of [`resolveLocal`](/reference/instant/convert/resolveLocal) does
+not apply. On a fall-back night two arrivals an hour apart print the same wall time, and the
+offset in the result is what tells them apart. That is why the result carries its offset and
+zone rather than a bare wall time.
+
+```typescript
+etaAtZone("2024-11-03T05:30:00Z", "America/New_York");
+// "2024-11-03T01:30:00-04:00[America/New_York]" — the first 01:30
+etaAtZone("2024-11-03T06:30:00Z", "America/New_York");
+// "2024-11-03T01:30:00-05:00[America/New_York]" — the second; the offset tells them apart
+```
+
+The zone is the caller's fact. GMT does not resolve a port, airport or station code to a
+time zone, and takes an IANA identifier instead. A fixed offset such as `"+09:00"` is accepted
+as a zone, as [`isValidTimeZone`](/reference/zoned/validate/isValidTimeZone) accepts it, but
+it observes no DST: pass the place's IANA zone when there is one.
+
+## Dwell is hours and days: `dwellTime`
+
+[`dwellTime(entry, exit, targetZone?)`](/reference/transport/calculate/dwellTime) returns the
+exact duration, the entry and exit rendered in the dwell zone, and `calendarDays`, the number
+of distinct local dates the dwell touched.
+
+```typescript
+import { dwellTime } from "@northguild/gmt/transport";
+
+dwellTime("2024-06-15T22:30:00Z", "2024-06-16T01:00:00Z", "Europe/London");
+// { duration: "PT2H30M",
+//   enter: "2024-06-15T23:30:00+01:00[Europe/London]",
+//   exit: "2024-06-16T02:00:00+01:00[Europe/London]",
+//   calendarDays: 2 }
+
+// The same two instants, one fewer day: the zone decides.
+dwellTime("2024-06-15T22:30:00Z", "2024-06-16T01:00:00Z", "Europe/Amsterdam");
+// { duration: "PT2H30M",
+//   enter: "2024-06-16T00:30:00+02:00[Europe/Amsterdam]",
+//   exit: "2024-06-16T03:00:00+02:00[Europe/Amsterdam]",
+//   calendarDays: 1 }
+```
+
+`calendarDays` is not `duration` rounded up. It is the number of distinct local dates the
+half-open interval `[entry, exit)` touches: entry and exit on the same date is `1`, across one
+local midnight is `2`. An exit exactly at local midnight does not touch the new day, the same
+half-open rule as [`bucketRange`](/reference/calendar/calculate/bucketRange) and the
+[interval functions](/guides/intervals/interval-basics/). The count walks the zone's real
+transitions, so a 23- or 25-hour local day is one day, a date the zone deleted is never
+touched (Samoa skipped 2011-12-30), and a date the clock falls back into is counted once
+(`America/Goose_Bay` fell back from 00:01 on 7 November 2010 into the 6th). The [Dwell Ledger](/tools/dwell-ledger/) draws this on a zone's
+real day grid: drag the exit across a midnight and watch the count change while the hours
+barely move.
+
+```typescript
+// An exit exactly at local midnight does not touch the new day.
+dwellTime("2024-06-15T22:00:00Z", "2024-06-16T04:00:00Z", "America/New_York");
+// { duration: "PT6H",
+//   enter: "2024-06-15T18:00:00-04:00[America/New_York]",
+//   exit: "2024-06-16T00:00:00-04:00[America/New_York]",
+//   calendarDays: 1 }
+
+// Seven elapsed hours across the spring-forward, one local day.
+dwellTime("2024-03-10T05:00:00Z", "2024-03-10T12:00:00Z", "America/New_York");
+// { duration: "PT7H",
+//   enter: "2024-03-10T00:00:00-05:00[America/New_York]",
+//   exit: "2024-03-10T08:00:00-04:00[America/New_York]",
+//   calendarDays: 1 }
+```
+
+`duration` is exact elapsed time with hours as the largest unit, the same form
+[`sumIntervals`](/reference/interval/calculate/sumIntervals) reports, so it never depends on
+a calendar.
+
+## A day count needs a place
+
+The zone comes from `targetZone`, or from the entry's bracketed IANA zone when `targetZone`
+is omitted. `targetZone` may also be a fixed offset such as `"+02:00"`, as
+[`etaAtZone`](/reference/transport/convert/etaAtZone) accepts; days are then counted in that
+offset, which observes no DST. Bare instants, `Z` or an offset, with no `targetZone` return `null`: an offset is
+not a zone, and a day count in an unstated locality would be a guess. An inverted dwell, with
+the exit before the entry, is a data error and also returns `null`.
+
+```typescript
+dwellTime("2024-06-15T22:30:00Z", "2024-06-16T01:00:00Z"); // null — no place to count days in
+dwellTime("2024-06-16T01:00:00Z", "2024-06-15T22:30:00Z", "Europe/London"); // null — inverted
+```
+
+`dwellTime` reports dwell without judging it. Whether those days were free, chargeable,
+calendar or working depends on a contract, not on the place. Free time and demurrage, laytime
+and hospital length of stay will all count from this one day boundary rather than each
+deciding what a midnight is.
+
+## See it break, then work
+
+- [Dwell Ledger: drag a dwell across local midnights](/tools/dwell-ledger/)
+- [Container dwell: two hours, two days](/scenarios/container-dwell-days/)
+- [A 26-hour rail leg across spring-forward](/scenarios/transit-across-dst/)
+- [Two arrivals, one wall time: the fall-back night](/scenarios/arrival-on-a-fall-back-night/)
+- [Transport mistakes](/mistakes/transport/)

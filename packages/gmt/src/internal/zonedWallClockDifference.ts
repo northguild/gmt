@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import type { DurationRelativeTo } from "../types";
+import { TIME_ZONE_ANNOTATION } from "./isoStringBody";
 import {
   MAX_EPOCH_NANOSECONDS,
   MIN_EPOCH_NANOSECONDS,
@@ -149,7 +150,7 @@ const OPTIONS_PROBE = new Temporal.ZonedDateTime(0n, "UTC");
 const ZERO_DURATION = new Temporal.Duration();
 
 /** An RFC 9557 time zone annotation (`[Europe/London]`, `[!+01:00]`), never a `key=value` one. */
-const TIME_ZONE_ANNOTATION = /\[!?[^\]=]+\]/;
+const timeZoneAnnotation = new RegExp(TIME_ZONE_ANNOTATION);
 
 interface DateDuration {
   years: number;
@@ -1495,7 +1496,7 @@ function zonedRelativeTo(
 
   try {
     if (typeof relativeTo === "string") {
-      return TIME_ZONE_ANNOTATION.test(relativeTo)
+      return timeZoneAnnotation.test(relativeTo)
         ? zonedDateTimeFrom(relativeTo)
         : null;
     }
@@ -1643,7 +1644,7 @@ function plainRelativeToNeedingCompat(
     } else if (
       typeof relativeTo === "string" &&
       relativeTo.includes("u-ca=") &&
-      !TIME_ZONE_ANNOTATION.test(relativeTo)
+      !timeZoneAnnotation.test(relativeTo)
     ) {
       plain = Temporal.PlainDate.from(relativeTo);
     } else {
@@ -1801,7 +1802,7 @@ function plainRelativeTo(
     }
     if (
       typeof relativeTo === "string" &&
-      !TIME_ZONE_ANNOTATION.test(relativeTo)
+      !timeZoneAnnotation.test(relativeTo)
     ) {
       return Temporal.PlainDate.from(relativeTo);
     }

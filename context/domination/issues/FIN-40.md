@@ -1,6 +1,6 @@
 # FIN-40 — Finance: Market sessions
 
-**Scope:** Whether a market is open, modelled as a list of intervals rather than a single window.
+**Scope:** Whether a market is open, modelled as a list of intervals rather than a single window, and which trade date a session belongs to.
 
 ## Gap
 
@@ -11,23 +11,29 @@ The original `isMarketOpen(isoString, exchange)` returns wrong answers for two c
 
 The correct model is that a trading day is an ordered **list** of intervals — pre-market, opening auction, continuous, lunch, continuous, closing auction, post-market — and any of them may be absent or shortened on a given date.
 
+A third case the draft did not consider: **the trade date is not the calendar date.** CME Globex opens "Sunday at 5:00 p.m. Central Time" and everything traded from then on belongs to the *next* day's trade date — CME's own notices are written that way ("Effective this Sunday, May 3 (trade date Monday, May 4)"), and "All holiday or weekend trading from Friday evening through Sunday evening will have a trade date of the following business day". Futures margining, settlement prices and daily volume are all keyed on the trade date, and deriving it from the calendar date of the fill is wrong for every evening session. ([CME Globex Notice, 27 April 2026](https://www.cmegroup.com/notices/electronic-trading/2026/04/20260427.html); the Rulebook's own definition of "Trade Date" was not reachable from this environment and is to be cited at implementation)
+
 ## Scope
 
 - `packages/gmt/src/finance/get/tradingSessions.ts`:
-  - `tradingSessions(date: string, calendar: MarketCalendar): { phase: SessionPhase, interval: Interval }[] | null` — Every session on a date, in order. Empty array on a non-trading day.
+  - `tradingSessions(date: string, calendar: MarketCalendar): { phase: SessionPhase, interval: Interval }[] | null` — Every session on a trade date, in order. Empty array on a non-trading day.
 - `packages/gmt/src/finance/compare/isMarketOpen.ts`:
   - `isMarketOpen(isoString: string, calendar: MarketCalendar, options?: { phases?: SessionPhase[] }): boolean` — Defaults to continuous trading only; `phases` widens it to pre- or post-market.
   - `currentPhase(isoString: string, calendar: MarketCalendar): SessionPhase | 'closed' | null`
 - `packages/gmt/src/finance/get/marketBounds.ts`:
   - `marketOpenAt(date: string, calendar: MarketCalendar): string` — First continuous-session open.
   - `marketCloseAt(date: string, calendar: MarketCalendar): string` — Last continuous-session close, reflecting half-day overrides.
+- `packages/gmt/src/finance/get/tradeDate.ts`:
+  - `tradeDateFor(isoString: string, calendar: MarketCalendar): string | null` — The trade date an instant belongs to, honouring `sessionRollover`.
 - `SessionPhase` is `'preMarket' | 'openingAuction' | 'continuous' | 'lunch' | 'closingAuction' | 'postMarket'`.
-- `MarketCalendar` is `{ timeZone: string, weekend: number[], sessions: SessionTemplate[], holidays: string[], halfDays: { date: string, sessions: SessionTemplate[] }[] }`.
+- `MarketCalendar` is `{ timeZone: string, weekend: number[], sessions: SessionTemplate[], holidays: string[], halfDays: { date: string, sessions: SessionTemplate[] }[], sessionRollover?: string }`. `sessionRollover` is the local time of day at which the trade date advances; absent, the trade date is the local calendar date.
 
 ## Design notes
 
 - **`isMarketOpen` defaults to continuous trading**, because that is what the question almost always means, but the phase list makes the alternative reachable. A boolean with no phase concept cannot distinguish "open" from "quotable".
 - **Half days are date-keyed session overrides**, not a shortened close time — some half days also drop the closing auction, which a close-time override cannot express.
+- **`sessionRollover` makes a session template span midnight.** A template `{ phase: 'continuous', from: '17:00', to: '16:00' }` with `sessionRollover: '17:00'` is one session belonging to the following trade date. Without the rollover field the same template is invalid, because the library cannot tell a 23-hour session from a typo.
+- **Session templates are a specialisation of the operating-hours model in CORE-55.** They add phases and trade-date semantics on top of it; the weekday-window mechanics and midnight wrap are shared, not duplicated.
 - **The calendar is caller-supplied.** Exchange calendars change annually and by regulatory action. Convenience calendars ship behind the opt-in `@northguild/gmt/finance/data` subpath (FIN-41), never on the default import path.
 - **US and EU DST transitions do not coincide** — there are roughly three weeks each spring and autumn when the London–New York overlap shifts by an hour. Sessions are defined in local time and resolved per date, so this falls out correctly rather than needing special handling; the test matrix must cover those weeks.
 
@@ -41,6 +47,7 @@ The original FIN-1 hardcoded a five-exchange table with a single `Hours (local)`
 - `BusinessCalendar` / `isBusinessDay` from CORE-7 — trading-day determination
 - `resolveLocal` from CORE-4 — local session boundaries
 - `floorToZone` from CORE-5 — local date boundaries
+- `recurringWindows` from CORE-55 — the weekday-window mechanics under session templates
 
 ## Verification
 
@@ -50,6 +57,8 @@ The original FIN-1 hardcoded a five-exchange table with a single `Hours (local)`
 - A half day that drops the closing auction returns no such session
 - A holiday returns an empty session list and `marketOpenAt` of `''`
 - `isMarketOpen` with `phases: ['preMarket', 'continuous']` returns `true` before the open
+- With `sessionRollover: '17:00'` in `America/Chicago`, an instant at Sunday 18:00 local returns Monday's trade date, and Monday 16:30 local returns Monday's; Monday 17:30 returns Tuesday's
+- Without `sessionRollover`, a template whose `to` precedes its `from` returns the sentinel
 - Sessions resolve correctly during the spring weeks when US and EU DST are misaligned
 - `battleTestTimeZones` coverage plus probe-zone transition rows for timezone-aware functions (see `context/coding-standards.md` § Calendar & zone semantics)
 - `pnpm run validate` stays green

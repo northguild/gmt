@@ -31,7 +31,21 @@ const DOX_SUB = /\bitem (DOX-[A-E]\d+[a-z]?)\b/;
 const DOX_ID = /\bDOX-[A-E]\d+[a-z]?\b/g;
 
 const STORY_ID = /\b(?:CORE|TRAN|INT|MAR|ROAD|RAI|AV|IOT|HLTH|FIN|SPA)-\d+\b/g;
-const orderOf = (id) => Number(id.split("-")[1]);
+/**
+ * Build-order position of a story: its row position in the tracker's story table, not the
+ * number in its ID. The two agreed until CORE-8 took slot 8, and the Core primitives added
+ * later (CORE-54, CORE-55, CORE-56) sit among realm rows with smaller numbers, so the ID
+ * number can no longer tell "built earlier" from "built later". `dominationTracker()` fills
+ * the map, and `orderOf` calls it on first use, so the order never depends on which command
+ * happened to parse the tracker first. A story with no tracker row yet sorts last so `check`
+ * still reports it as missing. (`dominationTracker` is declared further down; `orderOf` only
+ * calls it at run time, after every module-level `const` is initialised.)
+ */
+const buildOrder = new Map();
+const orderOf = (id) => {
+  if (buildOrder.size === 0) dominationTracker();
+  return buildOrder.get(id) ?? 100000 + Number(id.split("-")[1]);
+};
 
 /** Row shape: { line, id, cells: string[], deps: string[], status } */
 
@@ -217,12 +231,16 @@ function parseTracker(path, { idColumn, depColumn, columns }) {
   return { lines, rows, headerLine };
 }
 
-const dominationTracker = () =>
-  parseTracker(DOMINATION, {
+const dominationTracker = () => {
+  const parsed = parseTracker(DOMINATION, {
     idColumn: DOMINATION_COLUMNS.Story,
     depColumn: DOMINATION_COLUMNS["Blocked by"],
     columns: DOMINATION_COLUMNS,
   });
+  // Row order is the build order; every `orderOf` comparison reads from this map.
+  parsed.rows.forEach((r, i) => buildOrder.set(r.id, i));
+  return parsed;
+};
 const doxTracker = () =>
   parseTracker(DOX, {
     idColumn: DOX_COLUMNS.Story,
@@ -291,8 +309,9 @@ function repad(lines, headerLine, rows) {
 // ---------------------------------------------------------------- commands
 
 function sync() {
-  const declared = declaredDeps();
+  // The tracker is parsed first: `declaredDeps` sorts by build order, which it populates.
   const { lines, rows, headerLine } = dominationTracker();
+  const declared = declaredDeps();
   const done = doneSet(rows);
   let changed = 0;
   for (const r of rows) {
@@ -329,8 +348,8 @@ function sync() {
 function check() {
   const problems = [];
   const warnings = [];
-  const declared = declaredDeps();
   const { rows } = dominationTracker();
+  const declared = declaredDeps();
   const known = new Set(rows.map((r) => r.id));
   const done = doneSet(rows);
 
@@ -445,12 +464,12 @@ function whoneeds() {
     console.error("Usage: node scripts/deps.mjs whoneeds <STORY-ID>");
     process.exit(1);
   }
+  const status = new Map(dominationTracker().rows.map((r) => [r.id, r.status]));
   const declared = declaredDeps();
   if (!declared.has(target)) {
     console.error(`Unknown story: ${target}`);
     process.exit(1);
   }
-  const status = new Map(dominationTracker().rows.map((r) => [r.id, r.status]));
   const consumers = [...declared]
     .filter(([, deps]) => deps.includes(target))
     .map(([id]) => id)

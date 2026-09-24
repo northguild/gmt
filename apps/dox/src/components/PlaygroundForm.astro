@@ -43,7 +43,7 @@ if (!template.fields) {
   throw new Error(`<PlaygroundForm>: template "${specId}" has no form fields`);
 }
 
-const { module: mod, fn: fnName, returnType, allowEmptyArray, fields } = template;
+const { module: mod, fn: fnName, returnType, allowEmptyArray, nullIsEmpty, fields } = template;
 const optionsSuffix = template.optionsSuffix ?? "";
 const objectArg = template.objectArg ?? false;
 
@@ -58,6 +58,7 @@ const isWide = (kind: string) => isList(kind) || kind === "expr";
   data-fn={fnName}
   data-return-type={returnType}
   data-allow-empty-array={allowEmptyArray ? "true" : ""}
+  data-null-is-empty={nullIsEmpty ? "true" : ""}
   data-options-suffix={optionsSuffix}
   data-object-arg={objectArg ? "true" : ""}
 >
@@ -236,7 +237,11 @@ const isWide = (kind: string) => isList(kind) || kind === "expr";
 
 <script>
   import { GMT_MODULES } from "../lib/gmt-modules";
-  import { evaluateArg, renderResult, sentinelFor } from "../lib/playground-client";
+  import {
+    classifyPlaygroundResult,
+    evaluateArg,
+    renderResult,
+  } from "../lib/playground-client";
   import {
     buildCall,
     parseCallArgs,
@@ -396,6 +401,7 @@ const isWide = (kind: string) => isList(kind) || kind === "expr";
     const fnName = container.dataset.fn ?? "";
     const returnType = container.dataset.returnType ?? "string";
     const allowEmptyArray = container.dataset.allowEmptyArray === "true";
+    const nullIsEmpty = container.dataset.nullIsEmpty === "true";
     const optionsSuffix = container.dataset.optionsSuffix ?? "";
     const objectArg = container.dataset.objectArg === "true";
 
@@ -418,11 +424,13 @@ const isWide = (kind: string) => isList(kind) || kind === "expr";
 
       const result = (fn as (...a: unknown[]) => unknown)(...args.map(evaluateArg));
 
-      const sentinel = sentinelFor(returnType, allowEmptyArray);
-      const isSentinel = result === sentinel && result !== 0 && result !== false;
-      renderResult(outputEl, result as string, isSentinel);
+      renderResult(
+        outputEl,
+        result,
+        classifyPlaygroundResult(result, { returnType, allowEmptyArray, nullIsEmpty }),
+      );
     } catch {
-      renderResult(outputEl, "", true);
+      renderResult(outputEl, "", "sentinel");
     }
   }
 

@@ -1,0 +1,43 @@
+---
+title: Industries
+description: Guides for the industry layers built on GMT's core — transport first — showing how the shared primitives are used in the trade, with real-world scenarios.
+sidebar:
+  order: 0
+---
+
+The core of GMT is a set of general primitives: zoned arithmetic, real day boundaries,
+half-open intervals, business calendars. Each industry layer is a small set of functions
+that name the operation an industry actually performs, built on those primitives so every
+layer agrees about what a midnight, a day or an elapsed hour is.
+
+Three things hold across every industry layer:
+
+- **Facts come from the caller.** A port, airport, terminal or station code is not resolved
+  to a time zone, and a contract term is not looked up by carrier. You pass the IANA zone and
+  the terms; GMT does the time arithmetic. That keeps the library free of registries that go
+  stale.
+- **Elapsed time and calendar days are different answers.** A leg is elapsed hours across
+  whatever DST transition it crosses. A charge is counted in local calendar days at the place
+  the thing sat. The industry functions return both where both matter, and never derive one
+  from the other.
+- **Every result is a standard string.** The same ISO 8601 and RFC 9557 strings as the rest of
+  the library, so an industry result feeds straight back into `interval/`, `zoned/` or a
+  business calendar.
+
+## Layers
+
+- [Transport: legs and dwell](./transport-legs-and-dwell/) — add a leg's transit time to a
+  departure, show an arrival where it lands, and measure dwell in exact hours and local
+  calendar days. Shared by road, rail, sea and air.
+
+## Scenarios
+
+Each layer comes with real-world scenarios that show the naive approach breaking beside the
+GMT approach working, on the same live widget:
+
+- [Container dwell: two hours, two days](/scenarios/container-dwell-days/)
+- [A 26-hour rail leg across spring-forward](/scenarios/transit-across-dst/)
+- [Two arrivals, one wall time: the fall-back night](/scenarios/arrival-on-a-fall-back-night/)
+
+The mistakes that have hurt people in this layer are collected under
+[Transport mistakes](/mistakes/transport/).
