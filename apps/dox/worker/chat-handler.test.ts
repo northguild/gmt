@@ -106,6 +106,16 @@ function userMessage(text: string) {
   return { id: "m1", role: "user", parts: [{ type: "text", text }] };
 }
 
+/** Every `data-retrieval` part in a streamed body, parsed, in order. */
+function retrievalParts(body: string): Record<string, unknown>[] {
+  return body
+    .split("\n")
+    .filter(
+      (line) => line.startsWith("data: ") && line.includes('"data-retrieval"'),
+    )
+    .map((line) => JSON.parse(line.slice("data: ".length)));
+}
+
 describe("createChatHandler", () => {
   beforeEach(() => resetRateLimitState());
 
@@ -372,6 +382,108 @@ describe("createChatHandler", () => {
     expect(bodyText).toContain('"chunkTitles":[]');
   });
 
+  it("carries stage timings in the trace, then finishes it with first token, total and the tool outcome", async () => {
+    const handler = makeHandler({
+      resolveModel: singleBrain(fakeModel("An answer.")),
+      searchChunksImpl: () => SAMPLE_CHUNKS,
+    });
+
+    const response = await handler(
+      chatRequest({ messages: [userMessage("what is dwellTime")] }),
+    );
+    const parts = retrievalParts(await response.text());
+
+    // Two writes of the same part: the client replaces the first by id.
+    expect(parts).toHaveLength(2);
+    expect(parts.every((part) => part.id === "retrieval")).toBe(true);
+
+    const opening = parts[0].data as Record<string, unknown>;
+    const timings = opening.timings as Record<string, number>;
+    for (const stage of ["usage", "corpus", "search", "prompt", "brains"]) {
+      expect(typeof timings[stage]).toBe("number");
+    }
+    expect(timings.firstToken).toBeUndefined();
+    expect(opening.toolCalled).toBeUndefined();
+
+    const finished = parts[1].data as Record<string, unknown>;
+    const finishedTimings = finished.timings as Record<string, number>;
+    expect(typeof finishedTimings.firstToken).toBe("number");
+    expect(typeof finishedTimings.total).toBe("number");
+    expect(finishedTimings.total).toBeGreaterThanOrEqual(finishedTimings.firstToken);
+    expect(finished.toolCalled).toBeNull();
+    expect(finished.attempts).toEqual([
+      { brainId: BRAINS[0].id, ms: expect.any(Number), outcome: "answered" },
+    ]);
+    // The rest of the trace is unchanged between the two writes.
+    expect(finished.chunkTitles).toEqual(opening.chunkTitles);
+    expect(finished.brainId).toBe(BRAINS[0].id);
+  });
+
+  it("names the widget tool the model called in the finished trace", async () => {
+    const model = new MockLanguageModelV4({
+      doStream: async () => ({
+        stream: convertArrayToReadableStream([
+          { type: "stream-start", warnings: [] },
+          {
+            type: "tool-call",
+            toolCallId: "call-1",
+            toolName: "showGlobe",
+            input: JSON.stringify({ zone: "Asia/Tokyo" }),
+          },
+          {
+            type: "finish",
+            finishReason: { unified: "tool-calls", raw: undefined },
+            usage: {
+              inputTokens: {
+                total: 10,
+                noCache: 10,
+                cacheRead: undefined,
+                cacheWrite: undefined,
+              },
+              outputTokens: { total: 10, text: 0, reasoning: undefined },
+            },
+          },
+        ] satisfies LanguageModelV4StreamPart[]),
+      }),
+    });
+    const handler = makeHandler({
+      resolveModel: singleBrain(model),
+      searchChunksImpl: () => SAMPLE_CHUNKS,
+    });
+
+    const response = await handler(
+      chatRequest({ messages: [userMessage("show me Tokyo")] }),
+    );
+    const parts = retrievalParts(await response.text());
+    const finished = parts.at(-1)?.data as Record<string, unknown>;
+    expect(finished.toolCalled).toBe("showGlobe");
+  });
+
+  it("logs one dox-timing line per answered request", async () => {
+    const logged: string[] = [];
+    const spy = vi.spyOn(console, "log").mockImplementation((...args) => {
+      logged.push(args.map(String).join(" "));
+    });
+    try {
+      const handler = makeHandler({
+        resolveModel: singleBrain(fakeModel("An answer.")),
+        searchChunksImpl: () => SAMPLE_CHUNKS,
+      });
+      const response = await handler(
+        chatRequest({ messages: [userMessage("what is dwellTime")] }),
+      );
+      await response.text();
+    } finally {
+      spy.mockRestore();
+    }
+    const lines = logged.filter((line) => line.startsWith("dox-timing "));
+    expect(lines).toHaveLength(1);
+    const payload = JSON.parse(lines[0].slice("dox-timing ".length));
+    expect(payload.brain).toBe(BRAINS[0].id);
+    expect(payload.toolCalled).toBeNull();
+    expect(typeof payload.timings.total).toBe("number");
+  });
+
   it("maps an upstream model failure to a mapped error, never a raw one", async () => {
     // This used to assert a 200 with an in-stream error frame, because the
     // model call happened lazily while the stream was consumed. Failover
@@ -619,6 +731,63 @@ describe("brains, budgets and failover", () => {
     expect(asked).toEqual([BRAINS[0].id, BRAINS[1].id]);
     // And the transcript names the brain that actually answered.
     expect(body).toContain(`"brainId":"${BRAINS[1].id}"`);
+    // The trace shows the walk: the spent brain, then the one that answered.
+    const [opening] = retrievalParts(body);
+    expect((opening.data as Record<string, unknown>).attempts).toEqual([
+      { brainId: BRAINS[0].id, ms: expect.any(Number), outcome: "spent" },
+      { brainId: BRAINS[1].id, ms: expect.any(Number), outcome: "answered" },
+    ]);
+  });
+
+  it("bounds Gemini's thinking with the brain's thinkingLevel", async () => {
+    const model = fakeModel("ok");
+    const handler = makeHandler({
+      resolveModel: singleBrain(model),
+      searchChunksImpl: () => SAMPLE_CHUNKS,
+    });
+    const response = await handler(
+      chatRequest({ messages: [userMessage("what is a DST gap")] }),
+    );
+    await response.text();
+
+    const [call] = model.doStreamCalls;
+    expect(BRAINS[0].provider).toBe("google");
+    expect(call.providerOptions).toEqual({
+      google: { thinkingConfig: { thinkingLevel: BRAINS[0].thinkingLevel } },
+    });
+    expect(BRAINS[0].thinkingLevel).toBe("low");
+  });
+
+  it("moves to the next brain on a retryable 429 without retrying the spent one first", async () => {
+    // A daily quota does not refill in two seconds. Every SDK retry was a
+    // 2 s pause in front of the failover; the next brain is the retry.
+    const quota = new APICallError({
+      message: "quota",
+      url: "https://x.test",
+      requestBodyValues: {},
+      statusCode: 429,
+      isRetryable: true,
+    });
+    const spent = new MockLanguageModelV4({
+      doStream: async () => {
+        throw quota;
+      },
+    });
+    const fallback = fakeModel("Answered by the fallback brain.");
+    const handler = makeHandler({
+      resolveModel: (brainId) =>
+        brainId === BRAINS[0].id ? spent : fallback,
+    });
+
+    const started = performance.now();
+    const response = await handler(
+      chatRequest({ messages: [userMessage("what is a DST gap")] }),
+    );
+    const body = await response.text();
+
+    expect(body).toContain("Answered by the fallback brain.");
+    expect(spent.doStreamCalls).toHaveLength(1);
+    expect(performance.now() - started).toBeLessThan(1500);
   });
 
   it("walks past several exhausted brains in one request", async () => {

@@ -9,7 +9,8 @@ import {
   CommandList,
   CommandSeparator,
 } from "~/components/ui/command";
-import { getUnixNow, getUtcNow } from "@northguild/gmt";
+import { getUnixNow } from "@northguild/gmt/unix/get";
+import { getUtcNow } from "@northguild/gmt/utc/get";
 import {
   DropdownMenu,
   DropdownMenuContent,

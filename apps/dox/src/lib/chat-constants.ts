@@ -77,24 +77,28 @@ export const BRAINS = [
     id: "gemini-3.8-flash",
     label: "3.8 Flash",
     provider: "google",
+    thinkingLevel: "low",
     dailyLimit: 20,
   },
   {
     id: "gemini-3.7-flash",
     label: "3.7 Flash",
     provider: "google",
+    thinkingLevel: "low",
     dailyLimit: 20,
   },
   {
     id: "gemini-3.6-flash",
     label: "3.6 Flash",
     provider: "google",
+    thinkingLevel: "low",
     dailyLimit: 20,
   },
   {
     id: "gemini-3.5-flash",
     label: "3.5 Flash",
     provider: "google",
+    thinkingLevel: "low",
     dailyLimit: 20,
   },
   // Flash-Lite — faster and cheaper, still comfortably good enough for
@@ -103,24 +107,28 @@ export const BRAINS = [
     id: "gemini-3.5-flash-lite",
     label: "3.5 Flash-Lite",
     provider: "google",
+    thinkingLevel: "low",
     dailyLimit: 20,
   },
   {
     id: "gemini-3.1-flash-lite",
     label: "3.1 Flash-Lite",
     provider: "google",
+    thinkingLevel: "low",
     dailyLimit: 20,
   },
   {
     id: "gemini-3.1-flash-lite-preview",
     label: "3.1 Lite Preview",
     provider: "google",
+    thinkingLevel: "low",
     dailyLimit: 20,
   },
   {
     id: "gemini-3-flash-preview",
     label: "3 Flash Preview",
     provider: "google",
+    thinkingLevel: "low",
     dailyLimit: 20,
   },
   // Pro, last resort. Confirmed real (it answered 429, not 404) but its free
@@ -130,6 +138,7 @@ export const BRAINS = [
     id: "gemini-3.1-pro-preview",
     label: "3.1 Pro Preview",
     provider: "google",
+    thinkingLevel: "low",
     dailyLimit: 5,
   },
   // Workers AI (DOX-C4, #240) — a second, independent free pool, tried only
@@ -218,6 +227,14 @@ export interface Brain {
    * the reader never sees. `null` turns thinking off where the model allows
    * it; unset leaves the model's default. */
   reasoningEffort?: "low" | "medium" | "high" | null;
+  /** Gemini 3 thinking depth (`thinkingConfig.thinkingLevel`). Left unset,
+   * Gemini 3 thinks dynamically over the whole 10–16k-token prompt before its
+   * first token. `"low"` is meant to cut that pause while keeping the tool call
+   * and the grounded answer — the timing trace (`dox-timing`) shows whether it
+   * does. A brain that stops calling its widget under `"low"` moves to
+   * `"medium"`.
+   * Ignored for Workers AI brains, which use `reasoningEffort`. */
+  thinkingLevel?: "minimal" | "low" | "medium" | "high";
   /** Advisory only — used to render "N left", never to refuse a request. */
   dailyLimit: number;
 }

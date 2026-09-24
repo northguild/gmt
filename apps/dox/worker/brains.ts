@@ -43,6 +43,7 @@ import {
   type Brain,
   type BrainProvider,
 } from "../src/lib/chat-constants";
+import type { BrainAttemptTrace } from "../src/lib/chat-types";
 import type { BrainState, UsageSnapshot } from "./usage";
 
 export interface BrainChoice {
@@ -194,6 +195,10 @@ function unwrapModelError(error: unknown): unknown {
 export interface BrainAttempt {
   brain: Brain;
   result: ReturnType<typeof streamText>;
+  /** Every brain tried, in order, the answering one last. Feeds the
+   * retrieval trace and the `dox-timing` log line, so a slow answer can be
+   * told apart from a slow walk past spent brains. */
+  attempts: BrainAttemptTrace[];
 }
 
 /**
@@ -264,6 +269,7 @@ export async function openFirstWorkingBrain({
   onBrainOut: (brainId: string, state: Exclude<BrainState, "ok">) => void;
 }): Promise<BrainAttempt | undefined> {
   const exhaustedProviders = new Set<BrainProvider>();
+  const attempts: BrainAttemptTrace[] = [];
 
   for (const brain of candidates) {
     // One Workers AI brain reporting an exhausted allocation means all of them
@@ -279,6 +285,7 @@ export async function openFirstWorkingBrain({
     // is unrecoverable from the rejection alone. `onError` is where the real
     // one surfaces, so it is captured here and classified after the await.
     let providerError: unknown;
+    const started = performance.now();
 
     const result = streamText({
       model: resolveModel(brain.id),
@@ -288,6 +295,13 @@ export async function openFirstWorkingBrain({
       // Workers AI defaults `max_tokens` to 256, which cuts a Dox answer off
       // mid-sentence; its brains carry an explicit cap. Unset for Gemini.
       maxOutputTokens: brain.maxOutputTokens,
+      // Gemini 3 thinks before it answers; `thinkingLevel` bounds how long.
+      // Set per brain in `chat-constants.ts`, so a brain that needs more
+      // depth to keep calling its widget can have it on its own.
+      providerOptions:
+        brain.provider === "google" && brain.thinkingLevel
+          ? { google: { thinkingConfig: { thinkingLevel: brain.thinkingLevel } } }
+          : undefined,
       // One structured line per answered request, so real token counts — and
       // from them, real Neuron cost — can be read from `wrangler dev` or
       // Workers Logs instead of estimated. `scripts/probe-brains.ts` parses it.
@@ -309,12 +323,14 @@ export async function openFirstWorkingBrain({
       onError: ({ error }) => {
         providerError = error;
       },
-      // The SDK retries a 429 three times with exponential backoff by default.
-      // That made sense with a single model, where waiting was the only option.
-      // With failover it is harmful: a *daily* quota will not refill for hours,
-      // so the backoff only delays moving to a brain that would have answered
-      // immediately. One retry is kept for a genuinely transient blip.
-      maxRetries: 1,
+      // The SDK retries a 429 three times with exponential backoff by default,
+      // starting at 2 s. That made sense with a single model, where waiting
+      // was the only option. With failover it is harmful: a *daily* quota will
+      // not refill for hours, so every retry only delays moving to a brain
+      // that would have answered at once — and even one retry put a 2 s pause
+      // in front of every failover. The next brain *is* the retry for a
+      // transient blip, so none are kept here.
+      maxRetries: 0,
     });
 
     try {
@@ -322,13 +338,23 @@ export async function openFirstWorkingBrain({
       // rejects if that call failed — the seam that lets a 429 be caught before
       // anything has been written to the reader.
       await result.warnings;
-      return { brain, result };
+      attempts.push({
+        brainId: brain.id,
+        ms: Math.round(performance.now() - started),
+        outcome: "answered",
+      });
+      return { brain, result, attempts };
     } catch (error) {
       // Prefer the provider's error over the SDK's contentless wrapper.
       const underlying = providerError ?? error;
       const state = brainStateFromError(underlying);
       if (!state) throw underlying;
 
+      attempts.push({
+        brainId: brain.id,
+        ms: Math.round(performance.now() - started),
+        outcome: state,
+      });
       console.error(
         `brain ${brain.id} is ${state}; trying the next`,
         underlying,

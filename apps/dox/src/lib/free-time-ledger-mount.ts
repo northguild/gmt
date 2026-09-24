@@ -53,7 +53,7 @@ import {
   type TermsArg,
 } from "./free-time-ledger";
 import { GMT_MODULES } from "./gmt-modules";
-import { onceDestroy, type MountFn } from "./widget-mount";
+import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import {
   codeSpan,
   escapeAttr,
@@ -782,9 +782,9 @@ export const mountFreeTimeLedger: MountFn<FreeTimeLedgerArgs> = async (
   let modules: Modules;
   try {
     modules = await loadModules();
-  } catch {
-    // The page stays readable without the library.
-    return onceDestroy(() => {});
+  } catch (cause) {
+    // Loud, not inert: the host decides what to show (see `WidgetLoadError`).
+    throw new WidgetLoadError(cause);
   }
   if (signal.aborted) return onceDestroy(() => {});
 

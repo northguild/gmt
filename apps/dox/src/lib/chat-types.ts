@@ -34,7 +34,47 @@ export interface RetrievalTraceData {
    * out, and an unexplained change in tone reads as a bug. */
   brainId?: string;
   brainLabel?: string;
+  /** Where the time went, in milliseconds per stage. Present from the first
+   * write; `firstToken`, `total` and `toolCalled` arrive when the answer
+   * finishes, in a second write of the same part (same `id`, so the client
+   * replaces it in place rather than appending a second trace). */
+  timings?: RetrievalTimings;
+  /** Every brain tried this request, in order, with how long each took and
+   * why the walk moved on. The last row is the one that answered. */
+  attempts?: BrainAttemptTrace[];
+  /** The widget tool the model called, or `null` once the answer finished
+   * without one. Absent until then. */
+  toolCalled?: string | null;
 }
+
+/** Milliseconds spent in each stage of one `/api/chat` request. Whole
+ * numbers — a sub-millisecond stage is 0, not noise. */
+export interface RetrievalTimings {
+  /** The KV ledger read. 0 without a ledger. */
+  usage: number;
+  /** Fetching (or re-reading) the chunk corpus. */
+  corpus: number;
+  /** MiniSearch: index build plus the query. */
+  search: number;
+  /** Assembling the system prompt and converting the transcript. */
+  prompt: number;
+  /** Every brain attempt, including the ones that failed over. */
+  brains: number;
+  /** From the request arriving to the first text or tool chunk. */
+  firstToken?: number;
+  /** From the request arriving to the last chunk. */
+  total?: number;
+}
+
+export interface BrainAttemptTrace {
+  brainId: string;
+  ms: number;
+  outcome: "answered" | "spent" | "unavailable";
+}
+
+/** The `id` on the retrieval part. Fixed, so the finishing write replaces the
+ * opening one — the AI SDK reconciles a `data-*` part by `id`. */
+export const RETRIEVAL_PART_ID = "retrieval" as const;
 
 /** The `type` discriminant on the emitted part. `data-` prefix is the AI SDK's
  * convention for custom data parts (`DataUIPart`'s `type: \`data-${NAME}\``). */

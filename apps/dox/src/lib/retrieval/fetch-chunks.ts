@@ -22,9 +22,25 @@ export interface FetchChunksOptions {
    * not a measured optimum; retuning it needs production traffic DOX-C2
    * doesn't have yet. */
   cacheTtlSeconds?: number;
+  /** Injectable clock for the in-memory memo's TTL; defaults to `Date.now`. */
+  now?: () => number;
 }
 
 const CHUNKS_PATH = "/retrieval-chunks.json";
+
+/* The parsed corpus, once per isolate. The Cache API below survives across
+   isolates but hands back bytes, and `response.json()` over 750 KB was being
+   paid on every request. This memo returns the *same array* for the life of
+   its TTL, which is also what lets `search.ts` keep one index per corpus.
+   Keyed on the URL so a test (or a second origin) never sees another's
+   corpus; the TTL matches the Cache API entry's, so the two expire together. */
+let memo: { url: string; chunks: RetrievalChunk[]; expiresAt: number } | null =
+  null;
+
+/** Forgets the in-memory corpus. Tests only. */
+export function resetChunksMemo(): void {
+  memo = null;
+}
 
 /**
  * DOX-C1 (#137) — "the Worker fetches the corpus from the static site it is
@@ -45,13 +61,25 @@ export async function fetchChunks(
   origin: string,
   options: FetchChunksOptions = {},
 ): Promise<RetrievalChunk[]> {
-  const { fetchImpl = fetch, cache, cacheTtlSeconds = 300 } = options;
+  const {
+    fetchImpl = fetch,
+    cache,
+    cacheTtlSeconds = 300,
+    now = Date.now,
+  } = options;
   const url = new URL(CHUNKS_PATH, origin).toString();
   const cacheKey = new Request(url);
 
+  if (memo && memo.url === url && memo.expiresAt > now()) return memo.chunks;
+
+  const remember = (chunks: RetrievalChunk[]): RetrievalChunk[] => {
+    memo = { url, chunks, expiresAt: now() + cacheTtlSeconds * 1000 };
+    return chunks;
+  };
+
   if (cache) {
     const cached = await cache.match(cacheKey);
-    if (cached) return (await cached.json()) as RetrievalChunk[];
+    if (cached) return remember((await cached.json()) as RetrievalChunk[]);
   }
 
   const response = await fetchImpl(url);
@@ -72,5 +100,5 @@ export async function fetchChunks(
     await cache.put(cacheKey, cacheResponse);
   }
 
-  return chunks;
+  return remember(chunks);
 }

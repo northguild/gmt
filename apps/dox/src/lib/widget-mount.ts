@@ -52,6 +52,23 @@ export type MountFn<Args = void> = (
   signal: AbortSignal,
 ) => Promise<WidgetHandle>;
 
+/**
+ * The library could not be loaded, so the widget cannot work.
+ *
+ * Thrown by every mount when its dynamic `import()` of `@northguild/gmt`
+ * fails — a dropped connection, a `dist/` mid-rebuild, a stale deploy. It used
+ * to be swallowed: the mount returned an inert handle and the reader was left
+ * with controls that looked live and did nothing. The distinction from any
+ * other mount failure matters to the host: a load failure is worth a retry,
+ * an argument the model invented is not.
+ */
+export class WidgetLoadError extends Error {
+  override readonly name = "WidgetLoadError";
+  constructor(cause: unknown) {
+    super("The library for this widget could not be loaded.", { cause });
+  }
+}
+
 /** A handle that owns nothing — what an aborted mount returns. */
 export const INERT_HANDLE: WidgetHandle = {
   destroy() {},

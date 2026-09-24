@@ -111,14 +111,40 @@ function buildIndex(chunks: RetrievalChunk[]): MiniSearch<RetrievalChunk> {
   return index;
 }
 
+interface Indexed {
+  index: MiniSearch<RetrievalChunk>;
+  byId: Map<string, RetrievalChunk>;
+}
+
+/* One index per corpus array, for as long as that array lives. Building it
+   over the 884-chunk corpus measured 50–70 ms in Node (2026-09-24), which
+   was being paid on every chat request; `fetch-chunks.ts` hands the Worker
+   the same array back for the life of its memo, so the build now happens
+   once per isolate per corpus refresh. A `WeakMap` keyed on the array means
+   a test that passes a fresh array always gets a fresh index, and nothing
+   here can outlive the corpus it was built from. */
+const INDEXES = new WeakMap<RetrievalChunk[], Indexed>();
+
+/** The index for exactly this array — the same object back until the array
+ * is garbage-collected. Exported for the memo test only. */
+export function indexFor(chunks: RetrievalChunk[]): Indexed {
+  let indexed = INDEXES.get(chunks);
+  if (!indexed) {
+    indexed = {
+      index: buildIndex(chunks),
+      byId: new Map(chunks.map((c) => [c.id, c])),
+    };
+    INDEXES.set(chunks, indexed);
+  }
+  return indexed;
+}
+
 /**
  * DOX-C1 (#137) — keyword/BM25 retrieval over the chunk corpus, with a
- * namespace bias (not a filter) toward the current page's context. Builds a
- * fresh index every call rather than caching one across calls — at this
- * corpus size (597 functions + 164 guide sections) that's low
- * single-digit milliseconds, and it keeps this function pure and easy to
- * test. DOX-C2's Worker should build the index once per isolate instead of
- * once per request — see `fetch-chunks.ts`'s caching note.
+ * namespace bias (not a filter) toward the current page's context. A pure
+ * function of its inputs: the index is memoised per corpus array (see
+ * `indexFor`), never per query, so two calls with the same chunks and query
+ * return the same results whether or not the memo was warm.
  */
 export function searchChunks(
   chunks: RetrievalChunk[],
@@ -126,8 +152,7 @@ export function searchChunks(
   options: SearchOptions = {},
 ): RetrievalChunk[] {
   const { namespace, limit = 15 } = options;
-  const index = buildIndex(chunks);
-  const byId = new Map(chunks.map((c) => [c.id, c]));
+  const { index, byId } = indexFor(chunks);
 
   const results = index.search(query, {
     boostDocument: namespace
