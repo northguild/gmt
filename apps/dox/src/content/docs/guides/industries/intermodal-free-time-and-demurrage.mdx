@@ -10,8 +10,7 @@ is that none of its terms is a fact about the port, and none is fixed by a world
 many free days there are, whether the day of discharge is free day one, whether weekends count,
 and how the days after free time are charged are set by the carrier's tariff, the lane and the
 service contract. DCSA, the container carriers' standards body, defines what demurrage,
-detention and storage are, but not how their days are counted. So every term is a parameter,
-none has a default, and what comes back is the free-time window and the specific dates charged.
+detention and storage are, but not how their days are counted. So every term is a parameter, no counting term has a default, and what comes back is the free-time window and the specific dates charged.
 
 ```typescript
 import { chargeableDays, demurrageClock, freeTimeExpiry } from "@northguild/gmt/intermodal";
@@ -25,8 +24,7 @@ Three charges run on a container, and they are routinely confused. DCSA's glossa
 they rest on: **demurrage** is charged while the container is inside the terminal or depot,
 **detention** while it is outside, and **storage** is the terminal's own charge for its space,
 with its own free time. Many carriers also sell a **combined** (merged) clock that runs demurrage
-and detention as one period. The carriers' published tariffs agree on the events each clock runs
-between, and they differ by direction:
+and detention as one period. The carriers' published tariffs agree on the events each clock runs between (Maersk, CMA CGM and ACL on both legs, Hapag-Lloyd on imports), and they differ by direction. Export storage follows from DCSA's definition of storage; no tariff read quotes it:
 
 | Clock | Import | Export |
 | --- | --- | --- |
@@ -254,8 +252,7 @@ two never disagree about a midnight. The one exception is a fall-back that re-en
 before the event day (Goose Bay, 7 November 2010), a date `dwellTime` counts as touched and a
 tariff never counts.
 
-A tariff with no free time passes `freeDays: 0` to `chargeableDays`; every counted day is
-charged and `expiresAt` is the start of day one. `freeTimeExpiry` returns `null` for `0`, because
+A tariff with no free time passes `freeDays: 0` to `chargeableDays`; `expiresAt` is the start of day one, the first day counted on `basis`, and days before it are neither free nor charged. `freeTimeExpiry` returns `null` for `0`, because
 there is no last free day to name.
 
 ```typescript
@@ -268,12 +265,12 @@ chargeableDays("2024-06-14T19:00:00Z", "2024-06-16T15:00:00Z", 0, tariff);
 ## How charged days are counted: `chargeBasis`
 
 How the days after free time are charged is a separate tariff term from how free days are
-counted, and the published tariffs mostly count the two differently: free time in working days,
-then every calendar day charged, weekends and holidays included ("Once free time expires ...
-charged on calendar days"). That is `basis: "working", chargeBasis: "calendar"`. Some tariffs
-charge working days only, and California law requires it at its terminals: no charges while the
-gate is closed or on a holiday (Cal. Bus. & Prof. Code § 22928). That is
-`chargeBasis: "working"`. The two differ by every closed day after expiry, so `chargeBasis` has
+counted. Outside the US both are mostly calendar days. Where free time is granted in working
+days, the usual US shape, the days after it are mostly charged as calendar days, weekends and
+holidays included ("Once free time expires ... charged on calendar days"). That is
+`basis: "working", chargeBasis: "calendar"`. Some tariffs charge working days only, and California
+law requires it at its terminals for free time and charges alike: neither runs while the gate is
+closed or on a holiday (Cal. Bus. & Prof. Code § 22928). That is both set to `"working"`. The two differ by every closed day after expiry, so `chargeBasis` has
 no default either.
 
 ```typescript

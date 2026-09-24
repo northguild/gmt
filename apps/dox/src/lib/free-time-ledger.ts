@@ -132,7 +132,7 @@ export const FREE_TIME_PRESETS: readonly FreeTimePreset[] = [
     id: "working-days",
     label: "Working-day free time, calendar-day charges",
     description:
-      "The usual published shape: free time counted in working days, then every calendar day charged. The weekend does not burn free time, but Juneteenth and the next weekend are billed once free time has ended.",
+      "The usual US shape: free time counted in working days, then every calendar day charged. The weekend does not burn free time, but Juneteenth and the next weekend are billed once free time has ended.",
     clockStart: friday,
     clockEnd: "2024-06-24T15:00:00Z",
     freeDays: "3",
@@ -411,7 +411,11 @@ export function cellState(
 ): CellState {
   if (charges?.chargedDates.includes(cell.date)) return "chargeable";
   if (!cell.touched) return "none";
-  const expiresMs = charges ? epochMs(charges.expiresAt) : freeTime ? epochMs(freeTime.expiresAt) : Number.NaN;
+  const expiresMs = charges
+    ? epochMs(charges.expiresAt)
+    : freeTime
+      ? epochMs(freeTime.expiresAt)
+      : Number.NaN;
   const afterExpiry = !Number.isNaN(expiresMs) && cell.startMs >= expiresMs;
   if (
     isClosedDate(
@@ -519,7 +523,8 @@ function tiersValid(tiers: number[] | undefined | null): boolean {
   if (tiers === undefined) return true;
   if (tiers === null) return false;
   return tiers.every(
-    (t, i) => Number.isSafeInteger(t) && t >= 1 && (i === 0 || t > tiers[i - 1]!),
+    (t, i) =>
+      Number.isSafeInteger(t) && t >= 1 && (i === 0 || t > tiers[i - 1]!),
   );
 }
 

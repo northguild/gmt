@@ -41,7 +41,7 @@ Change `firstDay` to `"nextDay"` above and the Monday-morning gate-out is still 
 free time then ends on Tuesday. Change `basis` to `"working"`, add
 `calendar: { weekend: [6, 7], holidays: ["2024-06-19"], timeZone: "America/New_York" }` and gate
 out at `2024-06-24T15:00:00Z`: the free days are Friday, Monday and Tuesday, and free time ends
-as Juneteenth begins. With `chargeBasis: "calendar"`, the usual tariff shape, all six days from
+as Juneteenth begins. With `chargeBasis: "calendar"`, the usual shape where free time is in working days, all six days from
 the 19th to the 24th are charged, holiday and weekend included. Change `chargeBasis` to
 `"working"`, as California law requires at its terminals, and only the 20th, 21st and 24th are. To
 drag the gate-out across the expiry yourself, open it in the [Free Time

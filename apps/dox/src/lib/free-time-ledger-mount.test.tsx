@@ -311,15 +311,36 @@ describe("mountFreeTimeLedger", () => {
     choosePreset(root, "working-days");
     // Closed days inside the free window are not counted; after expiry every day is charged.
     expect(datesIn(root, "closed")).toEqual(["2024-06-15", "2024-06-16"]);
-    expect(datesIn(root, "free")).toEqual(["2024-06-14", "2024-06-17", "2024-06-18"]);
-    expect(datesIn(root, "chargeable")).toEqual([
-      "2024-06-19", "2024-06-20", "2024-06-21", "2024-06-22", "2024-06-23", "2024-06-24",
+    expect(datesIn(root, "free")).toEqual([
+      "2024-06-14",
+      "2024-06-17",
+      "2024-06-18",
     ]);
-    expect(q(root, "call-charges").textContent).toContain('basis: "working", chargeBasis: "calendar"');
+    expect(datesIn(root, "chargeable")).toEqual([
+      "2024-06-19",
+      "2024-06-20",
+      "2024-06-21",
+      "2024-06-22",
+      "2024-06-23",
+      "2024-06-24",
+    ]);
+    expect(q(root, "call-charges").textContent).toContain(
+      'basis: "working", chargeBasis: "calendar"',
+    );
     // Switching only the charge basis suspends charging on the closed days after expiry.
     select(root, "charge-basis", "working");
-    expect(datesIn(root, "chargeable")).toEqual(["2024-06-20", "2024-06-21", "2024-06-24"]);
-    expect(datesIn(root, "closed")).toEqual(["2024-06-15", "2024-06-16", "2024-06-19", "2024-06-22", "2024-06-23"]);
+    expect(datesIn(root, "chargeable")).toEqual([
+      "2024-06-20",
+      "2024-06-21",
+      "2024-06-24",
+    ]);
+    expect(datesIn(root, "closed")).toEqual([
+      "2024-06-15",
+      "2024-06-16",
+      "2024-06-19",
+      "2024-06-22",
+      "2024-06-23",
+    ]);
     expect(q<HTMLSelectElement>(root, "preset").value).toBe("terminal-holiday");
   });
 

@@ -1,6 +1,6 @@
 ---
 title: Free Time Ledger
-description: Drag a container's clock start and gate-out across a terminal's real local-day grid, set the tariff's terms, and watch freeTimeExpiry and chargeableDays lay out the free days, the expiry and the dates an invoice has to print.
+description: Drag a container's clock start and gate-out across a terminal's real local-day grid, set the tariff's terms, and watch freeTimeExpiry and chargeableDays lay out the free days, the expiry and the dates charged.
 ---
 
 import FreeTimeLedger from "../../../components/FreeTimeLedger.astro";
@@ -12,8 +12,7 @@ by the tariff, and the two start-day conventions alone differ by a full day of c
 
 The track below is one zone's local days, each cell as wide as that day really
 is. Free days are green, chargeable days amber, and on a working-day tariff the
-closed days are hatched and not counted. Free days and charged days each have their own basis:
-most tariffs count free time in working days and then charge every calendar day. The bar is the dwell, half-open at the
+closed days are hatched and not counted. Free days and charged days each have their own basis: outside the US both are mostly calendar days, and where free time is in working days (the usual US shape) the days after it are mostly charged as calendar days. The bar is the dwell, half-open at the
 gate-out: leaving exactly at the expiry line charges nothing. The outputs are
 the real [`freeTimeExpiry`](/reference/intermodal/calculate/freeTimeExpiry/) and
 [`chargeableDays`](/reference/intermodal/calculate/chargeableDays/) calls for

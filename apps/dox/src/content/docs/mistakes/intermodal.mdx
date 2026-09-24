@@ -108,7 +108,7 @@ demurrageClock(events, "detention", { direction: "import" });
 <Mistake
   severity="high"
   title="Assuming working-day free time means working-day charges"
-  description="How free days are counted and how charged days are counted are separate tariff terms. Most published tariffs grant free time in working days and then charge every calendar day, weekends and holidays included; California law and some tariffs charge working days only. Charging on the free-time basis under-bills the first and over-bills the second, so chargeBasis has no default."
+  description="How free days are counted and how charged days are counted are separate tariff terms. Where free time is granted in working days, the usual US shape, most tariffs then charge every calendar day, weekends and holidays included; California law and some tariffs charge working days only. Charging on the free-time basis under-bills the first and over-bills the second, so chargeBasis has no default."
   wrongCode={`// Free time in working days, so charge working days too?
 chargeableDays("2024-06-14T19:00:00Z", "2024-06-24T15:00:00Z", 3, {
   basis: "working",

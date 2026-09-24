@@ -347,7 +347,9 @@ function optionsSource(
   const parts = (f: (s: string) => string): string[] => {
     const out = [
       `basis: ${f(terms.basis)}`,
-      ...(terms.chargeBasis === undefined ? [] : [`chargeBasis: ${f(terms.chargeBasis)}`]),
+      ...(terms.chargeBasis === undefined
+        ? []
+        : [`chargeBasis: ${f(terms.chargeBasis)}`]),
       `timeZone: ${f(terms.timeZone)}`,
       `firstDay: ${f(terms.firstDay)}`,
     ];
@@ -711,7 +713,13 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
       render();
     });
   }
-  for (const el of [zoneEl, firstDayEl, basisEl, chargeBasisEl, ...weekendEls]) {
+  for (const el of [
+    zoneEl,
+    firstDayEl,
+    basisEl,
+    chargeBasisEl,
+    ...weekendEls,
+  ]) {
     el.addEventListener("change", () => {
       syncPreset();
       refit();
