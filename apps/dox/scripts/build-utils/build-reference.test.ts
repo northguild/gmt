@@ -964,3 +964,55 @@ describe("buildLivePlaygroundTemplate integration", () => {
     ).toThrow(/NULL_IS_EMPTY/);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Unreleased badges in the generated sidebar
+// ---------------------------------------------------------------------------
+
+describe("buildSidebar", () => {
+  const badge = 'badge: { text: "Unreleased", variant: "caution" }';
+
+  it("badges unreleased items, and a group only when all of it is unreleased", () => {
+    const out = BR.buildSidebar(
+      new Map([
+        [
+          "transport/calculate",
+          [
+            { name: "dwellTime", slug: "reference/transport/calculate/dwellTime", unreleased: true },
+            { name: "transitTime", slug: "reference/transport/calculate/transitTime", unreleased: true },
+          ],
+        ],
+        [
+          "calendar/calculate",
+          [
+            { name: "floorToZone", slug: "reference/calendar/calculate/floorToZone" },
+            { name: "newThing", slug: "reference/calendar/calculate/newThing", unreleased: true },
+          ],
+        ],
+      ]),
+    );
+    expect(out).toContain(
+      `{ slug: "reference/transport/calculate/dwellTime", ${badge} }`,
+    );
+    expect(out).toContain(`{ slug: "reference/calendar/calculate/floorToZone" }`);
+    expect(out).toContain(
+      `{ slug: "reference/calendar/calculate/newThing", ${badge} }`,
+    );
+    // transport and its module group are all new; calendar is mixed.
+    expect(out).toMatch(/label: "transport",\n\s+badge:/);
+    expect(out).toMatch(/label: "calculate",\n\s+badge:/);
+    expect(out).not.toMatch(/label: "calendar",\n\s+badge:/);
+  });
+
+  it("emits no badge when nothing is unreleased", () => {
+    const out = BR.buildSidebar(
+      new Map([
+        ["calendar/calculate", [
+          { name: "a", slug: "reference/calendar/calculate/a" },
+          { name: "b", slug: "reference/calendar/calculate/b" },
+        ]],
+      ]),
+    );
+    expect(out).not.toContain("badge");
+  });
+});

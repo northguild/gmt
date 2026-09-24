@@ -54,8 +54,11 @@ real output, asserted in the mount test.
   JSDoc, not these MDX pages. Before publishing, run each page's examples against
   `packages/gmt/dist` with a throwaway script and paste the returned values. Elide nothing:
   `{ …, calendarDays: 1 }` is a result nobody can check.
-- **Only shipped functions are named.** A story still in the tracker is not mentioned on the
-  site, not as "coming soon" and not in prose.
+- **Unreleased functions are badged for you.** The reference marks every export missing from
+  the newest published release, in the sidebar and on its page. Nothing needs marking by hand.
+- **Only merged functions are named.** A story whose tracker `Status` is not `Done` is not
+  mentioned on the site, not as "coming soon" and not in prose. Merged but not yet on npm is
+  fine: that is what the Unreleased badge is for.
 - **Widgets come for free.** `fixedSpecId` and `rightSpecId` must be keys of
   `LIVE_PLAYGROUND_TEMPLATES`, which the reference generator emits for every new function. The
   build throws on an unknown key.
