@@ -17,10 +17,11 @@ import { nextZonedBucketStart, zonedUnitStart } from "./zonedBucket";
 export const MAX_WALKED_DAYS = 10_000;
 
 /**
- * Buckets stepped over while looking for a date not yet visited. A fall-back that re-enters the
- * previous date (`America/Goose_Bay`, 2010-11-07 00:01 back into the 6th) opens a one-minute
- * 7 November bucket, then a 6 November one, then 7 November again: two already-seen labels in a
- * row. One transition can do no more than that, so eight is a generous bound.
+ * Buckets stepped over while looking for a later date. A fall-back that re-enters the previous
+ * date (`America/Goose_Bay`, 2010-11-07 00:01 back into the 6th) opens a one-minute 7 November
+ * bucket, then a 6 November one, then 7 November again: two buckets in a row whose date is not
+ * later than the day being left. One transition can do no more than that, so eight is a
+ * generous bound.
  */
 const MAX_REVISITED_BUCKETS = 8;
 
@@ -73,7 +74,7 @@ export function parseFreeDays(
   minimum: 0 | 1,
 ): number | null {
   return typeof freeDays === "number" &&
-    Number.isInteger(freeDays) &&
+    Number.isSafeInteger(freeDays) &&
     freeDays >= minimum
     ? freeDays
     : null;
@@ -81,7 +82,8 @@ export function parseFreeDays(
 
 /**
  * Read a `tiers` option: omitted means no bands, otherwise a strictly ascending list of positive
- * whole chargeable-day ordinals, each the last day of its band. Anything else is `null`.
+ * safe whole chargeable-day ordinals, each the last day of its band, with no holes. Anything
+ * else is `null`.
  */
 export function parseTiers(tiers: unknown): number[] | null {
   if (tiers === undefined) {
@@ -91,15 +93,18 @@ export function parseTiers(tiers: unknown): number[] | null {
     return null;
   }
 
-  const ascending = tiers.every(
+  // `Array.from` fills holes with `undefined`, which the check below rejects; `every` alone
+  // would skip them and let `[5, , ]` through to a `NaN` band.
+  const items = Array.from(tiers) as unknown[];
+  const ascending = items.every(
     (tier, index) =>
       typeof tier === "number" &&
-      Number.isInteger(tier) &&
+      Number.isSafeInteger(tier) &&
       tier >= 1 &&
-      (index === 0 || tier > (tiers[index - 1] as number)),
+      (index === 0 || tier > (items[index - 1] as number)),
   );
 
-  return ascending ? (tiers as number[]) : null;
+  return ascending ? (items as number[]) : null;
 }
 
 /**
@@ -154,14 +159,14 @@ function localDayOf(zoned: Temporal.ZonedDateTime): LedgerDay | null {
 }
 
 /**
- * The first local day after `day` whose date has not been visited, folding any bucket that
- * re-enters a date already seen (as `countZonedLocalDates` counts a date once). `undefined` when
- * the next day starts past the last representable instant, `null` when the walk gives up.
+ * The first local day after `day` whose date is later than `day`'s. A bucket that re-enters an
+ * earlier or equal date is folded into the day already laid out: a clock that starts in the
+ * one-minute first pass of Goose Bay's 7 November must not free or charge the 6th, and
+ * `countZonedLocalDates` counts a re-entered date once. `undefined` when the next day starts
+ * past the last representable instant, `null` when the walk gives up.
  */
-function nextLocalDay(
-  day: LedgerDay,
-  seen: ReadonlySet<string>,
-): LedgerDay | null | undefined {
+function nextLocalDay(day: LedgerDay): LedgerDay | null | undefined {
+  const current = day.start.toPlainDate();
   let cursor = day.start;
 
   for (let i = 0; i < MAX_REVISITED_BUCKETS; i++) {
@@ -176,9 +181,9 @@ function nextLocalDay(
       return null;
     }
 
-    const date = next.toPlainDate().toString();
-    if (!seen.has(date)) {
-      return { start: next, date };
+    const date = next.toPlainDate();
+    if (Temporal.PlainDate.compare(date, current) > 0) {
+      return { start: next, date: date.toString() };
     }
     cursor = next;
   }
@@ -234,7 +239,6 @@ export function walkFreeTime(
   if (day === null) {
     return null;
   }
-  const seen = new Set<string>([day.date]);
 
   // One more visit than the cap: the day after the last touched one is what ends the walk.
   for (let i = 0; i <= MAX_WALKED_DAYS; i++) {
@@ -265,7 +269,7 @@ export function walkFreeTime(
       if (counted) charged.push(day);
     }
 
-    const next = nextLocalDay(day, seen);
+    const next = nextLocalDay(day);
     if (next === undefined) {
       // No representable day follows: free time can still be laid out only if it has ended.
       return expiresAt === null ? null : { free, expiresAt, used, charged };
@@ -273,7 +277,6 @@ export function walkFreeTime(
     if (next === null) {
       return null;
     }
-    seen.add(next.date);
     day = next;
   }
 

@@ -92,7 +92,9 @@ export function renderDwellLedgerTemplate(args: DwellLedgerArgs = {}): string {
   const entry = seeded ? (args.entry ?? "") : base.entry;
   const exit = seeded ? (args.exit ?? "") : base.exit;
   const zone = seeded ? (args.zone ?? NO_ZONE) : base.zone;
-  const compareZone = seeded ? (args.compareZone ?? NO_ZONE) : (base.compareZone ?? NO_ZONE);
+  const compareZone = seeded
+    ? (args.compareZone ?? NO_ZONE)
+    : (base.compareZone ?? NO_ZONE);
   const presetId = matchPreset(entry, exit, zone, compareZone);
   const preset = DWELL_PRESETS.find((p) => p.id === presetId);
 
@@ -112,7 +114,9 @@ export function renderDwellLedgerTemplate(args: DwellLedgerArgs = {}): string {
     `<div class="gmt-dwell-track" data-role="track-${id}">` +
     `<div class="gmt-dwell-cells" data-role="cells-${id}" role="list"></div>` +
     `<div class="gmt-dwell-bar" data-role="${id === "dwell" ? "bar" : "bar-compare"}">` +
-    (withHandles ? handle("handle-entry", "Entry") + handle("handle-exit", "Exit") : "") +
+    (withHandles
+      ? handle("handle-entry", "Entry") + handle("handle-exit", "Exit")
+      : "") +
     `</div></div></div>`;
 
   return (
@@ -163,7 +167,11 @@ export function renderDwellLedgerTemplate(args: DwellLedgerArgs = {}): string {
   );
 }
 
-type DwellFn = (entry: string, exit: string, zone?: string) => DwellResult | null;
+type DwellFn = (
+  entry: string,
+  exit: string,
+  zone?: string,
+) => DwellResult | null;
 
 interface Modules {
   dwellTime: DwellFn;
@@ -182,7 +190,9 @@ async function loadModules(): Promise<Modules> {
     dwellTime: transport["dwellTime"] as DwellFn,
     isValidInstant: precision["isValidInstant"] as (v: string) => boolean,
     isValidTimeZone: zoned["isValidTimeZone"] as (v: string) => boolean,
-    isValidZonedDateTime: zoned["isValidZonedDateTime"] as (v: string) => boolean,
+    isValidZonedDateTime: zoned["isValidZonedDateTime"] as (
+      v: string,
+    ) => boolean,
   };
 }
 
@@ -296,8 +306,10 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
 
   function refit(): void {
     const s = state();
-    const zones = [s.grid, s.compareZone === NO_ZONE ? null : gridZone("", s.compareZone)]
-      .filter((z): z is string => z !== null);
+    const zones = [
+      s.grid,
+      s.compareZone === NO_ZONE ? null : gridZone("", s.compareZone),
+    ].filter((z): z is string => z !== null);
     const fitted = fitLedgerCanvas(s.entryMs, s.exitMs, zones);
     if (fitted) canvas = fitted;
     render();
@@ -315,7 +327,11 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
 
   function render(): void {
     const s = state();
-    const result = m.dwellTime(s.entry, s.exit, s.zone === NO_ZONE ? undefined : s.zone);
+    const result = m.dwellTime(
+      s.entry,
+      s.exit,
+      s.zone === NO_ZONE ? undefined : s.zone,
+    );
     const reason =
       result === null ? explainNull(s.entry, s.exit, s.zone, m) : null;
 
@@ -338,7 +354,10 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
       const pct = canvas.toPercent(ms);
       h.setAttribute("aria-valuemin", "0");
       h.setAttribute("aria-valuemax", "100");
-      h.setAttribute("aria-valuenow", Number.isNaN(pct) ? "0" : String(Math.round(pct)));
+      h.setAttribute(
+        "aria-valuenow",
+        Number.isNaN(pct) ? "0" : String(Math.round(pct)),
+      );
       h.setAttribute(
         "aria-valuetext",
         Number.isNaN(ms) ? "not a time" : formatLocal(ms, s.grid ?? "UTC"),
@@ -379,12 +398,19 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
         canvas,
         compareResult !== null,
       );
-      placeBar(q("bar-compare"), s.entryMs, s.exitMs, canvas, reason === "inverted");
+      placeBar(
+        q("bar-compare"),
+        s.entryMs,
+        s.exitMs,
+        canvas,
+        reason === "inverted",
+      );
       const [cHtml, cPlain] = callArgs(s.entry, s.exit, s.compareZone);
       renderCallLine(q("call-compare"), "dwellTime", cHtml, cPlain);
       const cOut = q("compare-output");
       if (cOut) {
-        if (compareResult === null) renderWidgetOutput(cOut, "NO SIGNAL", "sentinel");
+        if (compareResult === null)
+          renderWidgetOutput(cOut, "NO SIGNAL", "sentinel");
         else renderWidgetOutput(cOut, formatDwell(compareResult), "live");
       }
     }
@@ -399,7 +425,9 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
           `${result.duration} elapsed · ${dayCountText(result.calendarDays)} in ${s.grid ?? s.zone}`,
         ];
         if (compareResult) {
-          lines.push(`${dayCountText(compareResult.calendarDays)} in ${s.compareZone}`);
+          lines.push(
+            `${dayCountText(compareResult.calendarDays)} in ${s.compareZone}`,
+          );
         }
         summary.textContent = lines.join(" · ");
       }
@@ -409,7 +437,12 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
     const aside = q("reason-aside");
     if (aside) {
       if (reason) {
-        renderAside(aside, "caution", "Why null", `<p>${escapeHtml(NULL_REASON_TEXT[reason])}</p>`);
+        renderAside(
+          aside,
+          "caution",
+          "Why null",
+          `<p>${escapeHtml(NULL_REASON_TEXT[reason])}</p>`,
+        );
       } else if (result) {
         const odd = s.grid
           ? dayCells(canvas, s.grid, s.entryMs, s.exitMs).find(
@@ -457,8 +490,12 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
     // A handle cannot pass the other one.
     const bounded =
       role === "handle-entry"
-        ? Number.isNaN(s.exitMs) ? ms : Math.min(ms, s.exitMs)
-        : Number.isNaN(s.entryMs) ? ms : Math.max(ms, s.entryMs);
+        ? Number.isNaN(s.exitMs)
+          ? ms
+          : Math.min(ms, s.exitMs)
+        : Number.isNaN(s.entryMs)
+          ? ms
+          : Math.max(ms, s.entryMs);
     input.value = formatHandleValue(bounded, s.grid);
     syncPreset();
     render();
@@ -600,7 +637,12 @@ function applyArgs(root: HTMLElement, args: DwellLedgerArgs): void {
   if (exitEl) exitEl.value = resolveWallTime(args.exit ?? "", zone);
   const presetEl = q<HTMLSelectElement>("preset");
   if (presetEl && entryEl && exitEl) {
-    presetEl.value = matchPreset(entryEl.value, exitEl.value, zone, compareZone);
+    presetEl.value = matchPreset(
+      entryEl.value,
+      exitEl.value,
+      zone,
+      compareZone,
+    );
     const desc = q("preset-description");
     if (desc) {
       desc.textContent =
@@ -631,10 +673,12 @@ export const mountDwellLedger: MountFn<DwellLedgerArgs> = async (
     () => controller?.release(),
     () => {
       const v = (role: string) =>
-        (root.querySelector(`[data-role="${role}"]`) as
-          | HTMLInputElement
-          | HTMLSelectElement
-          | null)?.value ?? "";
+        (
+          root.querySelector(`[data-role="${role}"]`) as
+            | HTMLInputElement
+            | HTMLSelectElement
+            | null
+        )?.value ?? "";
       const out: Record<string, string> = {
         entry: v("entry"),
         exit: v("exit"),

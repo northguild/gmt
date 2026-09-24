@@ -22,7 +22,10 @@ export interface Dwell {
  * An entry written with a bracketed IANA zone names a place; `Z` and offset-only strings name a
  * moment and nothing else, so with no `targetZone` there is no locality to count days in.
  */
-function dwellZone(entry: string, targetZone: string | undefined): string | null {
+function dwellZone(
+  entry: string,
+  targetZone: string | undefined,
+): string | null {
   if (targetZone !== undefined) {
     return isValidTimeZone(targetZone) ? targetZone : null;
   }
@@ -123,16 +126,19 @@ export function dwellTime(
     // Half-open at the exit: the dwell's last instant is one nanosecond before it, so an exit
     // exactly on a local day boundary does not touch the new day. A zero-length dwell still
     // touches the one date it sits on.
-    const last = Temporal.Instant.compare(entryInstant, exitInstant) < 0
-      ? leave.subtract({ nanoseconds: 1 })
-      : leave;
+    const last =
+      Temporal.Instant.compare(entryInstant, exitInstant) < 0
+        ? leave.subtract({ nanoseconds: 1 })
+        : leave;
     const calendarDays = countZonedLocalDates(enter, last);
     if (calendarDays === null) {
       return null;
     }
 
     return {
-      duration: entryInstant.until(exitInstant, { largestUnit: "hours" }).toString(),
+      duration: entryInstant
+        .until(exitInstant, { largestUnit: "hours" })
+        .toString(),
       enter: enter.toString(),
       exit: leave.toString(),
       calendarDays,
