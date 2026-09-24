@@ -51,6 +51,9 @@ export const GMT_MODULES: Record<
   "transport/calculate": () => import("@northguild/gmt/transport/calculate"),
   "transport/convert": () => import("@northguild/gmt/transport/convert"),
 
+  // --- intermodal ---
+  "intermodal/calculate": () => import("@northguild/gmt/intermodal/calculate"),
+
   // --- duration ---
   duration: () => import("@northguild/gmt/duration"),
 

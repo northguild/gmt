@@ -12,6 +12,7 @@ import {
 import {
   hashVisitor,
   markBrain,
+  readUsage,
   recordRequest,
   type UsageStore,
 } from "./usage";
@@ -104,6 +105,36 @@ function chatRequest(body: unknown): Request {
 
 function userMessage(text: string) {
   return { id: "m1", role: "user", parts: [{ type: "text", text }] };
+}
+
+/** Every streamed chunk of one `type`, parsed, in order. */
+function partsOfType(body: string, type: string): Record<string, unknown>[] {
+  return body
+    .split("\n")
+    .filter((line) => line.startsWith("data: ") && line.includes(`"${type}"`))
+    .map((line) => JSON.parse(line.slice("data: ".length)))
+    .filter((part) => part.type === type);
+}
+
+/** The refusal written into an open stream, as `{ status, payload }`. */
+function refusalOf(body: string): {
+  status: number;
+  payload: Record<string, unknown>;
+} {
+  const [part] = partsOfType(body, "data-refusal");
+  expect(part, "expected a data-refusal part").toBeDefined();
+  expect(part.transient).toBe(true);
+  return part.data as { status: number; payload: Record<string, unknown> };
+}
+
+/** Every `data-retrieval` part in a streamed body, parsed, in order. */
+function retrievalParts(body: string): Record<string, unknown>[] {
+  return body
+    .split("\n")
+    .filter(
+      (line) => line.startsWith("data: ") && line.includes('"data-retrieval"'),
+    )
+    .map((line) => JSON.parse(line.slice("data: ".length)));
 }
 
 describe("createChatHandler", () => {
@@ -372,13 +403,115 @@ describe("createChatHandler", () => {
     expect(bodyText).toContain('"chunkTitles":[]');
   });
 
+  it("carries stage timings in the trace, then finishes it with first token, total and the tool outcome", async () => {
+    const handler = makeHandler({
+      resolveModel: singleBrain(fakeModel("An answer.")),
+      searchChunksImpl: () => SAMPLE_CHUNKS,
+    });
+
+    const response = await handler(
+      chatRequest({ messages: [userMessage("what is dwellTime")] }),
+    );
+    const parts = retrievalParts(await response.text());
+
+    // Two writes of the same part: the client replaces the first by id.
+    expect(parts).toHaveLength(2);
+    expect(parts.every((part) => part.id === "retrieval")).toBe(true);
+
+    const opening = parts[0].data as Record<string, unknown>;
+    const timings = opening.timings as Record<string, number>;
+    for (const stage of ["usage", "corpus", "search", "prompt", "brains"]) {
+      expect(typeof timings[stage]).toBe("number");
+    }
+    expect(timings.firstToken).toBeUndefined();
+    expect(opening.toolCalled).toBeUndefined();
+
+    const finished = parts[1].data as Record<string, unknown>;
+    const finishedTimings = finished.timings as Record<string, number>;
+    expect(typeof finishedTimings.firstToken).toBe("number");
+    expect(typeof finishedTimings.total).toBe("number");
+    expect(finishedTimings.total).toBeGreaterThanOrEqual(
+      finishedTimings.firstToken,
+    );
+    expect(finished.toolCalled).toBeNull();
+    expect(finished.attempts).toEqual([
+      { brainId: BRAINS[0].id, ms: expect.any(Number), outcome: "answered" },
+    ]);
+    // The rest of the trace is unchanged between the two writes.
+    expect(finished.chunkTitles).toEqual(opening.chunkTitles);
+    expect(finished.brainId).toBe(BRAINS[0].id);
+  });
+
+  it("names the widget tool the model called in the finished trace", async () => {
+    const model = new MockLanguageModelV4({
+      doStream: async () => ({
+        stream: convertArrayToReadableStream([
+          { type: "stream-start", warnings: [] },
+          {
+            type: "tool-call",
+            toolCallId: "call-1",
+            toolName: "showGlobe",
+            input: JSON.stringify({ zone: "Asia/Tokyo" }),
+          },
+          {
+            type: "finish",
+            finishReason: { unified: "tool-calls", raw: undefined },
+            usage: {
+              inputTokens: {
+                total: 10,
+                noCache: 10,
+                cacheRead: undefined,
+                cacheWrite: undefined,
+              },
+              outputTokens: { total: 10, text: 0, reasoning: undefined },
+            },
+          },
+        ] satisfies LanguageModelV4StreamPart[]),
+      }),
+    });
+    const handler = makeHandler({
+      resolveModel: singleBrain(model),
+      searchChunksImpl: () => SAMPLE_CHUNKS,
+    });
+
+    const response = await handler(
+      chatRequest({ messages: [userMessage("show me Tokyo")] }),
+    );
+    const parts = retrievalParts(await response.text());
+    const finished = parts.at(-1)?.data as Record<string, unknown>;
+    expect(finished.toolCalled).toBe("showGlobe");
+  });
+
+  it("logs one dox-timing line per answered request", async () => {
+    const logged: string[] = [];
+    const spy = vi.spyOn(console, "log").mockImplementation((...args) => {
+      logged.push(args.map(String).join(" "));
+    });
+    try {
+      const handler = makeHandler({
+        resolveModel: singleBrain(fakeModel("An answer.")),
+        searchChunksImpl: () => SAMPLE_CHUNKS,
+      });
+      const response = await handler(
+        chatRequest({ messages: [userMessage("what is dwellTime")] }),
+      );
+      await response.text();
+    } finally {
+      spy.mockRestore();
+    }
+    const lines = logged.filter((line) => line.startsWith("dox-timing "));
+    expect(lines).toHaveLength(1);
+    const payload = JSON.parse(lines[0].slice("dox-timing ".length));
+    expect(payload.brain).toBe(BRAINS[0].id);
+    expect(payload.toolCalled).toBeNull();
+    expect(typeof payload.timings.total).toBe("number");
+  });
+
   it("maps an upstream model failure to a mapped error, never a raw one", async () => {
-    // This used to assert a 200 with an in-stream error frame, because the
-    // model call happened lazily while the stream was consumed. Failover
-    // changed that for the better: the call is now forced *before* any stream
-    // opens, so a failure that says nothing about the brain (this one) is
-    // reported as a plain JSON error instead of a 200 carrying a failure.
-    // Either way the raw upstream text must never reach the reader.
+    // The stream now opens before a brain is chosen (so the reader sees the
+    // walk), which means a failure found while choosing arrives as a transient
+    // refusal carrying the status and body the HTTP error used to. Either way
+    // the raw upstream text must never reach the reader.
     const model = new MockLanguageModelV4({
       doStream: async () => {
         throw new Error("simulated upstream failure");
@@ -391,10 +524,13 @@ describe("createChatHandler", () => {
         messages: [userMessage("how do I convert between zones")],
       }),
     );
-    expect(response.status).toBe(500);
     const bodyText = await response.text();
     expect(bodyText).not.toContain("simulated upstream failure");
-    expect(bodyText).toContain("Something went wrong answering that question.");
+    const refusal = refusalOf(bodyText);
+    expect(refusal.status).toBe(500);
+    expect(refusal.payload.error).toBe(
+      "Something went wrong answering that question.",
+    );
   });
 });
 
@@ -619,6 +755,62 @@ describe("brains, budgets and failover", () => {
     expect(asked).toEqual([BRAINS[0].id, BRAINS[1].id]);
     // And the transcript names the brain that actually answered.
     expect(body).toContain(`"brainId":"${BRAINS[1].id}"`);
+    // The trace shows the walk: the spent brain, then the one that answered.
+    const [opening] = retrievalParts(body);
+    expect((opening.data as Record<string, unknown>).attempts).toEqual([
+      { brainId: BRAINS[0].id, ms: expect.any(Number), outcome: "spent" },
+      { brainId: BRAINS[1].id, ms: expect.any(Number), outcome: "answered" },
+    ]);
+  });
+
+  it("bounds Gemini's thinking with the brain's thinkingLevel", async () => {
+    const model = fakeModel("ok");
+    const handler = makeHandler({
+      resolveModel: singleBrain(model),
+      searchChunksImpl: () => SAMPLE_CHUNKS,
+    });
+    const response = await handler(
+      chatRequest({ messages: [userMessage("what is a DST gap")] }),
+    );
+    await response.text();
+
+    const [call] = model.doStreamCalls;
+    expect(BRAINS[0].provider).toBe("google");
+    expect(call.providerOptions).toEqual({
+      google: { thinkingConfig: { thinkingLevel: BRAINS[0].thinkingLevel } },
+    });
+    expect(BRAINS[0].thinkingLevel).toBe("low");
+  });
+
+  it("moves to the next brain on a retryable 429 without retrying the spent one first", async () => {
+    // A daily quota does not refill in two seconds. Every SDK retry was a
+    // 2 s pause in front of the failover; the next brain is the retry.
+    const quota = new APICallError({
+      message: "quota",
+      url: "https://x.test",
+      requestBodyValues: {},
+      statusCode: 429,
+      isRetryable: true,
+    });
+    const spent = new MockLanguageModelV4({
+      doStream: async () => {
+        throw quota;
+      },
+    });
+    const fallback = fakeModel("Answered by the fallback brain.");
+    const handler = makeHandler({
+      resolveModel: (brainId) => (brainId === BRAINS[0].id ? spent : fallback),
+    });
+
+    const started = performance.now();
+    const response = await handler(
+      chatRequest({ messages: [userMessage("what is a DST gap")] }),
+    );
+    const body = await response.text();
+
+    expect(body).toContain("Answered by the fallback brain.");
+    expect(spent.doStreamCalls).toHaveLength(1);
+    expect(performance.now() - started).toBeLessThan(1500);
   });
 
   it("walks past several exhausted brains in one request", async () => {
@@ -714,10 +906,145 @@ describe("brains, budgets and failover", () => {
     const response = await handler(
       chatRequest({ messages: [userMessage("what is a DST gap")] }),
     );
-    expect(response.status).toBe(429);
-    const body = (await response.json()) as Record<string, unknown>;
-    expect(String(body.error)).toMatch(/free allowance/);
-    expect(typeof body.resetsAt).toBe("string");
+    const refusal = refusalOf(await response.text());
+    expect(refusal.status).toBe(429);
+    expect(String(refusal.payload.error)).toMatch(/free allowance/);
+    expect(typeof refusal.payload.resetsAt).toBe("string");
+  });
+
+  /** Gemini's overload reply, as observed live on 2026-09-24. */
+  function highDemand(): APICallError {
+    return new APICallError({
+      message:
+        "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+      url: "https://generativelanguage.googleapis.com/x",
+      requestBodyValues: {},
+      statusCode: 503,
+      isRetryable: true,
+    });
+  }
+
+  it("moves past a model that is busy right now, and does not mark it out for the day", async () => {
+    const usage = fakeUsage();
+    const asked: string[] = [];
+    const handler = makeHandler({
+      usage,
+      resolveModel: (brainId) => {
+        asked.push(brainId);
+        if (brainId === BRAINS[0].id) {
+          return new MockLanguageModelV4({
+            doStream: async () => {
+              throw highDemand();
+            },
+          });
+        }
+        return fakeModel("Answered by the next brain.");
+      },
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const response = await handler(
+      chatRequest({ messages: [userMessage("what is a DST gap")] }),
+    );
+    const body = await response.text();
+    vi.restoreAllMocks();
+
+    expect(response.status).toBe(200);
+    expect(body).toContain("Answered by the next brain.");
+    expect(asked).toEqual([BRAINS[0].id, BRAINS[1].id]);
+    const [opening] = retrievalParts(body);
+    expect((opening.data as Record<string, unknown>).attempts).toEqual([
+      { brainId: BRAINS[0].id, ms: expect.any(Number), outcome: "busy" },
+      { brainId: BRAINS[1].id, ms: expect.any(Number), outcome: "answered" },
+    ]);
+    // A busy minute is not a spent day: the next request tries it again.
+    const snapshot = await readUsage(usage, BRAINS, "x", getUnixNowMs());
+    expect(snapshot.states[BRAINS[0].id] ?? "ok").toBe("ok");
+  });
+
+  it("asks the reader to try again, not 'allowance used', when every brain is busy", async () => {
+    const asked: string[] = [];
+    const handler = makeHandler({
+      brains: BRAINS.slice(0, 3),
+      resolveModel: (brainId) => {
+        asked.push(brainId);
+        return new MockLanguageModelV4({
+          doStream: async () => {
+            throw highDemand();
+          },
+        });
+      },
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const response = await handler(
+      chatRequest({ messages: [userMessage("what is a DST gap")] }),
+    );
+    const refusal = refusalOf(await response.text());
+    vi.restoreAllMocks();
+
+    expect(asked).toEqual(BRAINS.slice(0, 3).map((brain) => brain.id));
+    expect(refusal.status).not.toBe(429);
+    expect(refusal.payload.retryable).toBe(true);
+    expect(String(refusal.payload.error)).not.toContain("allowance");
+  });
+
+  it("narrates the walk across brains as transient progress, before the answer", async () => {
+    const handler = makeHandler({
+      resolveModel: (brainId) =>
+        brainId === BRAINS[0].id
+          ? new MockLanguageModelV4({
+              doStream: async () => {
+                throw highDemand();
+              },
+            })
+          : fakeModel("An answer."),
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const response = await handler(
+      chatRequest({ messages: [userMessage("what is a DST gap")] }),
+    );
+    const body = await response.text();
+    vi.restoreAllMocks();
+
+    const status = partsOfType(body, "data-status");
+    expect(status.every((part) => part.transient === true)).toBe(true);
+    expect(status.map((part) => (part.data as { text: string }).text)).toEqual([
+      `Asking ${BRAINS[0].label}\u2026`,
+      `${BRAINS[0].label} is busy \u2014 trying the next model\u2026`,
+      `Asking ${BRAINS[1].label}\u2026`,
+    ]);
+    // All progress lands before the trace, which lands before the answer.
+    expect(body.indexOf("data-status")).toBeLessThan(
+      body.indexOf("data-retrieval"),
+    );
+    expect(partsOfType(body, "data-refusal")).toEqual([]);
+  });
+
+  it("still stops at the first brain on a 500, which says nothing about the model", async () => {
+    const asked: string[] = [];
+    const handler = makeHandler({
+      resolveModel: (brainId) => {
+        asked.push(brainId);
+        return new MockLanguageModelV4({
+          doStream: async () => {
+            throw new APICallError({
+              message: "internal",
+              url: "https://x.test",
+              requestBodyValues: {},
+              statusCode: 500,
+              isRetryable: true,
+            });
+          },
+        });
+      },
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    await handler(
+      chatRequest({ messages: [userMessage("what is a DST gap")] }),
+    );
+    vi.restoreAllMocks();
+    expect(asked).toEqual([BRAINS[0].id]);
   });
 
   it("does not burn the candidate list on an unrelated failure", async () => {
@@ -739,7 +1066,7 @@ describe("brains, budgets and failover", () => {
       chatRequest({ messages: [userMessage("what is a DST gap")] }),
     );
     expect(asked).toEqual([BRAINS[0].id]);
-    expect(response.status).toBe(500);
+    expect(refusalOf(await response.text()).status).toBe(500);
   });
 
   it("marks a brain spent when the model reports a quota failure", async () => {

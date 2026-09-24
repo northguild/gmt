@@ -19,7 +19,15 @@ import {
   executionRatio,
   largestCompetitorSuite,
 } from "../data/library-comparison";
-import { formatCount, gmtStats, runsPerTest } from "../data/gmt-stats";
+import {
+  coreFunctions,
+  coreNamespaces,
+  formatCount,
+  formatNamespaceList,
+  gmtStats,
+  industryNamespaces,
+  runsPerTest,
+} from "../data/gmt-stats";
 import { familyCounts, formatFamilyCounts } from "./locale-families";
 import { formatOffset, zoneOffsetRange } from "./timezone-offset-range";
 
@@ -36,10 +44,9 @@ export function pageExpressionValues(): Record<string, string> {
   const zoneOffsets = zoneOffsetRange(gmtStats.timezoneList);
   const offsetWindowHours =
     (zoneOffsets.max.minutes - zoneOffsets.min.minutes) / 60;
-  const namespaceList = new Intl.ListFormat("en-US", {
-    style: "long",
-    type: "conjunction",
-  }).format(gmtStats.byNamespace.map((row) => `\`${row.namespace}\``));
+  const plainAndZoned = coreNamespaces
+    .filter((row) => row.namespace === "plain" || row.namespace === "zoned")
+    .reduce((sum, row) => sum + row.count, 0);
 
   return {
     "gmtStats.tests": String(gmtStats.tests),
@@ -53,7 +60,12 @@ export function pageExpressionValues(): Record<string, string> {
     "formatCount(gmtStats.executions)": formatCount(gmtStats.executions),
     "formatCount(gmtStats.functions)": formatCount(gmtStats.functions),
     runsPerTest: String(runsPerTest),
-    namespaceList,
+    "coreNamespaces.length": String(coreNamespaces.length),
+    "industryNamespaces.length": String(industryNamespaces.length),
+    coreNamespaceList: formatNamespaceList(coreNamespaces),
+    industryNamespaceList: formatNamespaceList(industryNamespaces),
+    "formatCount(coreFunctions)": formatCount(coreFunctions),
+    "formatCount(plainAndZoned)": formatCount(plainAndZoned),
     offsetWindowHours: String(offsetWindowHours),
     "localeFamilyCounts.length": String(localeFamilyCounts.length),
     "formatFamilyCounts(localeFamilyCounts)":

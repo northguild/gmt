@@ -77,24 +77,28 @@ export const BRAINS = [
     id: "gemini-3.8-flash",
     label: "3.8 Flash",
     provider: "google",
+    thinkingLevel: "low",
     dailyLimit: 20,
   },
   {
     id: "gemini-3.7-flash",
     label: "3.7 Flash",
     provider: "google",
+    thinkingLevel: "low",
     dailyLimit: 20,
   },
   {
     id: "gemini-3.6-flash",
     label: "3.6 Flash",
     provider: "google",
+    thinkingLevel: "low",
     dailyLimit: 20,
   },
   {
     id: "gemini-3.5-flash",
     label: "3.5 Flash",
     provider: "google",
+    thinkingLevel: "low",
     dailyLimit: 20,
   },
   // Flash-Lite — faster and cheaper, still comfortably good enough for
@@ -103,24 +107,28 @@ export const BRAINS = [
     id: "gemini-3.5-flash-lite",
     label: "3.5 Flash-Lite",
     provider: "google",
+    thinkingLevel: "low",
     dailyLimit: 20,
   },
   {
     id: "gemini-3.1-flash-lite",
     label: "3.1 Flash-Lite",
     provider: "google",
+    thinkingLevel: "low",
     dailyLimit: 20,
   },
   {
     id: "gemini-3.1-flash-lite-preview",
     label: "3.1 Lite Preview",
     provider: "google",
+    thinkingLevel: "low",
     dailyLimit: 20,
   },
   {
     id: "gemini-3-flash-preview",
     label: "3 Flash Preview",
     provider: "google",
+    thinkingLevel: "low",
     dailyLimit: 20,
   },
   // Pro, last resort. Confirmed real (it answered 429, not 404) but its free
@@ -130,6 +138,7 @@ export const BRAINS = [
     id: "gemini-3.1-pro-preview",
     label: "3.1 Pro Preview",
     provider: "google",
+    thinkingLevel: "low",
     dailyLimit: 5,
   },
   // Workers AI (DOX-C4, #240) — a second, independent free pool, tried only
@@ -218,6 +227,14 @@ export interface Brain {
    * the reader never sees. `null` turns thinking off where the model allows
    * it; unset leaves the model's default. */
   reasoningEffort?: "low" | "medium" | "high" | null;
+  /** Gemini 3 thinking depth (`thinkingConfig.thinkingLevel`). Left unset,
+   * Gemini 3 thinks dynamically over the whole 10–16k-token prompt before its
+   * first token. `"low"` is meant to cut that pause while keeping the tool call
+   * and the grounded answer — the timing trace (`dox-timing`) shows whether it
+   * does. A brain that stops calling its widget under `"low"` moves to
+   * `"medium"`.
+   * Ignored for Workers AI brains, which use `reasoningEffort`. */
+  thinkingLevel?: "minimal" | "low" | "medium" | "high";
   /** Advisory only — used to render "N left", never to refuse a request. */
   dailyLimit: number;
 }
@@ -354,34 +371,93 @@ export const CORPUS_SUMMARY = `${FUNCTIONS} functions · ${GUIDES} guide section
  * `widget-registry.test.ts` enforces between the tools and the registry, for
  * the same reason — a widget nobody can discover may as well not ship.
  *
- * **`widget` is intent, not a guarantee.** Tool choice belongs to the model, so
- * nothing here can force a call; these are phrased to match each tool's
- * `Call when` line (see `dox-tools.ts`) and to lead with the imperative, which
- * measurably raises the hit rate. They are not a substitute for the widgets'
- * own `/tools` pages, which mount deterministically.
+ * **The widget opens on the click, not on the model.** Tool choice belongs to
+ * the model and nothing here can force a call, so a pill used to show its
+ * widget only if the model happened to call the tool — after the whole round
+ * trip, and sometimes not at all. A pill is the reader asking for that widget
+ * by name, so `args` seeds it at once (`DoxChat` → `onWidget`) while the
+ * question is still in flight. The model's own call, if one comes, replaces it
+ * unless its arguments are the same. `args` must describe exactly what `text`
+ * asks; `chat-starters.test.ts` runs each through its tool's schema and the
+ * registry's `validate`. The texts are still phrased to match each tool's
+ * `Call when` line (see `dox-tools.ts`), so the answer and the widget agree.
  */
 export const CHAT_STARTERS: readonly {
   readonly text: string;
   readonly widget: DoxToolName;
+  /** The tool input this question describes. Plain data, checked by test. */
+  readonly args: Readonly<Record<string, unknown>>;
 }[] = [
   {
     text: "Show me what time it is in Tokyo right now.",
     widget: "showGlobe",
+    args: { zone: "Asia/Tokyo" },
   },
   {
     text: "Convert 2:30pm on 15 March 2024 in New York to Tokyo time.",
     widget: "showConverterBench",
+    // New York is on EDT (-04:00) from 10 March 2024.
+    args: {
+      value: "2024-03-15T14:30:00-04:00[America/New_York]",
+      from: "America/New_York",
+      to: "Asia/Tokyo",
+    },
   },
   {
     text: "Show me how a meeting from 9am to 11am overlaps one from 10am to noon on 15 March 2024 in London.",
     widget: "showIntervalVisualizer",
+    // London is on GMT (+00:00) until 31 March 2024.
+    args: {
+      aStart: "2024-03-15T09:00:00+00:00[Europe/London]",
+      aEnd: "2024-03-15T11:00:00+00:00[Europe/London]",
+      bStart: "2024-03-15T10:00:00+00:00[Europe/London]",
+      bEnd: "2024-03-15T12:00:00+00:00[Europe/London]",
+    },
   },
   {
     text: "What happens to 1:30am on 3 November 2024 in New York?",
     widget: "showDstInspector",
+    // 3 November 2024 is New York's fall-back day: 1:30am happens twice.
+    args: { zone: "America/New_York", year: 2024, preset: "overlap" },
   },
   {
     text: "How many days is a container at a New York terminal from 23:00 on 15 June 2024 to 01:00 the next morning?",
     widget: "showDwellLedger",
+    // Wall times, read in `zone` by the widget.
+    args: {
+      entry: "2024-06-15T23:00",
+      exit: "2024-06-16T01:00",
+      zone: "America/New_York",
+    },
+  },
+  {
+    text: "Discharged in New York on Friday afternoon, three free days, out Tuesday morning: what is chargeable?",
+    widget: "showFreeTimeLedger",
+    // Friday 14 June 2024, 15:00 to Tuesday 18 June, 09:00, wall times in
+    // `zone`. The question names no start-day or basis convention, so the
+    // seed takes the widget's first preset's: the event day, calendar days.
+    args: {
+      clockStart: "2024-06-14T15:00",
+      clockEnd: "2024-06-18T09:00",
+      freeDays: 3,
+      firstDay: "eventDay",
+      basis: "calendar",
+      chargeBasis: "calendar",
+      zone: "America/New_York",
+    },
   },
 ];
+
+/** The rail call a starter pill makes on click: a stable id per starter, so a
+ * second click on the same pill does not remount an identical widget. */
+export function starterWidgetCall(starter: (typeof CHAT_STARTERS)[number]): {
+  toolCallId: string;
+  toolName: DoxToolName;
+  input: Readonly<Record<string, unknown>>;
+} {
+  return {
+    toolCallId: `starter-${starter.widget}`,
+    toolName: starter.widget,
+    input: starter.args,
+  };
+}

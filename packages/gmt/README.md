@@ -17,8 +17,8 @@ Read the [docs](https://gmt-dox.northguild.workers.dev/), or ask us on [Discord]
 
 - **100% Temporal, Temporal-first.** GMT is built directly on the TC39 `Temporal` standard (via `@js-temporal/polyfill`) — not a custom, homegrown date/time type system like `@internationalized/date`'s own `CalendarDate`/`ZonedDateTime` classes. No `Date` object anywhere, enforced by 3 dedicated lint packages.
 - **A full replacement for any and all of them.** Luxon, date-fns, Moment.js, and react-aria's `@internationalized/date` don't have parity with each other — GMT covers the combined capabilities of all four in one library, plus what none of them do alone.
-- **~54× more CI test executions than all four competitors combined**: 1,096,980 from 36,566 tests run in all 10 timezones × 3 Node versions, vs. their combined 20,190.
-- **~95× more test cases than `@internationalized/date`**: 36,566 vs. 386 — Adobe's own library, run at its own commit.
+- **~55× more CI test executions than all four competitors combined**: 1,106,400 from 36,880 tests run in all 10 timezones × 3 Node versions, vs. their combined 20,190.
+- **~96× more test cases than `@internationalized/date`**: 36,880 vs. 386 — Adobe's own library, run at its own commit.
 - **The only one of the five that tests systematically across locales in CI at all.** Zero of the four comparison libraries run a locale-test matrix; GMT mandates all 17 locales on every locale-aware function.
 - **The only one that runs its entire suite under a real `TZ` env var across real-world zones.** Luxon and `@internationalized/date` have no CI timezone matrix; date-fns's zone scope is unclear; Moment.js covers 6 zones but not its full suite.
 - **Explicit DST disambiguation control on both construction _and_ arithmetic** — a control none of the others expose.
@@ -94,7 +94,7 @@ GMT's test suite balances **thoroughness** against **maintenance burden** by tes
 - **Non-string input tables** — functions that guard with `typeof x !== "string"` return the same sentinel for `null`, `undefined`, `123`, `true`, `[]`, and `{}`. We test one representative non-string per argument position rather than all six types × N positions. The collapse is safe because all non-string types hit the identical early-return code path.
 - **Redundant permutations** — adjacent/disjoint/reversed interval cases that produce identical results are not duplicated across every function variant. The `plain/`, `zoned/`, `utc/`, and `unix/` families share the same mathematical behavior; each family gets the minimum set of cases needed to prove correctness.
 
-**Result:** 36,566 tests across 668 files that exercise real behavior differences without redundant permutations. They run in CI as 1,096,980 executions — every one of them × 3 Node versions × 10 timezones.
+**Result:** 36,880 tests across 673 files that exercise real behavior differences without redundant permutations. They run in CI as 1,106,400 executions — every one of them × 3 Node versions × 10 timezones.
 
 ## How GMT is tested, vs. the libraries it targets
 
@@ -110,9 +110,9 @@ GMT is measured directly against react-aria's **`@internationalized/date`**, **L
 
 | Metric                          | GMT                                                | `@internationalized/date`      | Luxon                                | date-fns                                  | Moment.js                        |
 | ------------------------------- | -------------------------------------------------- | ------------------------------ | ------------------------------------ | ----------------------------------------- | -------------------------------- |
-| Test files                      | 668                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
-| Individual test cases           | **36,566**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
-| Effective CI test<br>executions | **1,096,980**<br>(36,566 × 3 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
+| Test files                      | 673                                                | 6                              | 58 / 60<br>(2 didn't run<br>locally) | 256                                       | 191<br>(52 core +<br>139 locale) |
+| Individual test cases           | **36,880**                                         | 386                            | 1,222                                | 3,213                                     | 3,901                            |
+| Effective CI test<br>executions | **1,106,400**<br>(36,880 × 3 Node<br>× 10 timezones) | 386<br>(×1 Node)               | 4,888<br>(1,222 × 4 Node)            | 3,213<br>(×1 Node)                        | 11,703<br>(3,901 × 3 Node)       |
 | CI Node.js matrix               | 22, 24, 26                                         | n/a — tests<br>React 16–canary | 20, 22, 24, 25                       | not explicit<br>(`node = "latest"`)       | LTS, LTS-1,<br>latest            |
 | CI timezone matrix              | **10 zones × 3**<br>**Node, full suite**           | none found                     | none found                           | dedicated workflow,<br>zone scope unclear | 6 zones,<br>partial suite only   |
 | Locale test matrix              | **17 locales**,<br>every locale fn                 | none found                     | none found                           | none found                                | none found                       |
@@ -148,7 +148,7 @@ Specific, sourced claims — not a repeat of the metrics above.
 | Only GMT enforces a mandatory<br>17-locale test matrix on every<br>locale-aware function                                                      | No CI-level or systematic<br>locale-matrix testing found<br>in any of the four                                                        |
 | Only GMT exposes explicit DST<br>disambiguation control on both<br>construction _and_ arithmetic                                              | Luxon's docs call this explicitly<br>undefined; `@internationalized/date`<br>only covers construction, not arithmetic                 |
 | Only GMT is Temporal-native with<br>zero `Date` usage, enforced by<br>3 dedicated lint packages                                               | Luxon, date-fns, and Moment.js all<br>still wrap or depend on `Date` internally                                                       |
-| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~54×                                                  | 1,096,980 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
+| GMT's effective CI test<br>executions exceed all four<br>competitors **combined**<br>by ~55×                                                  | 1,106,400 vs. 386 + 4,888 + 3,213<br>+ 11,703 = 20,190                                                                                  |
 
 ## Package Layout
 
@@ -160,7 +160,7 @@ namespace objects: a namespace is a subpath.
 import { addDate, getNow, formatRelativeZoned, Temporal } from "@northguild/gmt";
 ```
 
-The thirteen namespace subpaths:
+The fourteen namespace subpaths:
 
 - `@northguild/gmt/calendar`: ISO week and ordinal dates, quarter and fiscal periods, zone-aware bucketing, and business calendars with holiday sets and roll conventions
 - `@northguild/gmt/duration`: ISO 8601 duration string parsing, validation, and arithmetic
@@ -170,6 +170,7 @@ The thirteen namespace subpaths:
 - `@northguild/gmt/precision`: nanosecond (`bigint`) instants, their JSON bridge, storage truncation, and foreign epoch bridges
 - `@northguild/gmt/span`: elapsed and wall-clock durations between two timestamps, as raw numbers
 - `@northguild/gmt/transport`: transit legs as exact elapsed time, arrivals rendered where they land, and dwell measured in local calendar days
+- `@northguild/gmt/intermodal`: free time, demurrage and detention counted in the terminal's local days, with the charged dates behind every count
 - `@northguild/gmt/zoned`: timezone-aware helpers
 - `@northguild/gmt/unix`: Unix epoch (seconds or milliseconds) helpers
 - `@northguild/gmt/utc`: UTC instant helpers
@@ -2259,6 +2260,123 @@ dwellTime("2024-06-16T01:00:00Z", "2024-06-15T22:30:00Z", "Europe/London"); // n
   falls back into (`America/Goose_Bay`, 2010-11-07) is counted once. `duration` is the exact elapsed time with hours as the largest unit, as
   `sumIntervals` reports it.
 
+### Free time and demurrage
+
+Free time is the money calculation in container logistics, and none of its terms is a fact about
+the port or fixed by a world standard. How many days are free, whether the day of discharge is
+free day one, how free days and charged days are counted, and which clock a charge runs on are set
+by the carrier's tariff and the service contract. DCSA defines what demurrage, detention and
+storage are, but not how their days are counted. So every term is a parameter, no counting term has a default, and what comes back is the free-time window and the specific dates charged.
+
+```typescript
+import { chargeableDays, demurrageClock, freeTimeExpiry } from "@northguild/gmt";
+
+const tariff = { basis: "calendar", chargeBasis: "calendar", timeZone: "America/New_York", firstDay: "eventDay" };
+
+// A Friday afternoon discharge in New York with three free calendar days: the weekend is
+// consumed, and free time ends at Monday 00:00 local.
+freeTimeExpiry("2024-06-14T19:00:00Z", 3, tariff);
+// { freeTimeStart: "2024-06-14", lastFreeDay: "2024-06-16", expiresAt: "2024-06-17T04:00:00Z" }
+
+// The same tariff read the other way: one more day. firstDay has no default.
+freeTimeExpiry("2024-06-14T19:00:00Z", 3, { ...tariff, firstDay: "nextDay" });
+// { freeTimeStart: "2024-06-15", lastFreeDay: "2024-06-17", expiresAt: "2024-06-18T04:00:00Z" }
+freeTimeExpiry("2024-06-14T19:00:00Z", 3, { basis: "calendar", timeZone: "America/New_York" }); // null
+
+// Working days skip the weekend, and a terminal holiday moves expiry a day.
+const terminal = { weekend: [6, 7], holidays: [], timeZone: "America/New_York" };
+freeTimeExpiry("2024-06-14T19:00:00Z", 3, { ...tariff, basis: "working", calendar: terminal });
+// { freeTimeStart: "2024-06-14", lastFreeDay: "2024-06-18", expiresAt: "2024-06-19T04:00:00Z" }
+freeTimeExpiry("2024-06-14T19:00:00Z", 3, { ...tariff, basis: "working", calendar: { ...terminal, holidays: ["2024-06-17"] } });
+// { freeTimeStart: "2024-06-14", lastFreeDay: "2024-06-19", expiresAt: "2024-06-20T04:00:00Z" }
+
+// Expiry is half-open: out exactly as free time ends is free, one second later is a charged day,
+// and the date is listed.
+chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T04:00:00Z", 3, tariff);
+// { freeDaysUsed: 3, chargeableDays: 0, expiresAt: "2024-06-17T04:00:00Z",
+//   chargedDates: [], byTier: [{ from: 1, to: null, days: 0 }] }
+chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T04:00:01Z", 3, tariff);
+// { freeDaysUsed: 3, chargeableDays: 1, expiresAt: "2024-06-17T04:00:00Z",
+//   chargedDates: ["2024-06-17"], byTier: [{ from: 1, to: null, days: 1 }] }
+
+// Charged days are counted on their own basis. Where free time is in working days (the usual
+// US shape), the days after it are mostly charged as calendar days; California charges working days.
+const juneteenth = { ...terminal, holidays: ["2024-06-19"] };
+chargeableDays("2024-06-14T19:00:00Z", "2024-06-24T15:00:00Z", 3, { ...tariff, basis: "working", calendar: juneteenth });
+// { freeDaysUsed: 3, chargeableDays: 6, expiresAt: "2024-06-19T04:00:00Z",
+//   chargedDates: ["2024-06-19", "2024-06-20", "2024-06-21", "2024-06-22", "2024-06-23", "2024-06-24"],
+//   byTier: [{ from: 1, to: null, days: 6 }] }
+chargeableDays("2024-06-14T19:00:00Z", "2024-06-24T15:00:00Z", 3, { ...tariff, basis: "working", chargeBasis: "working", calendar: juneteenth });
+// { freeDaysUsed: 3, chargeableDays: 3, expiresAt: "2024-06-19T04:00:00Z",
+//   chargedDates: ["2024-06-20", "2024-06-21", "2024-06-24"],
+//   byTier: [{ from: 1, to: null, days: 3 }] }
+
+// Tiers are day bands, not rates: twelve charged days in bands of 5, 5 and the rest.
+chargeableDays("2024-06-14T19:00:00Z", "2024-06-28T15:00:00Z", 3, { ...tariff, tiers: [5, 10] });
+// { freeDaysUsed: 3, chargeableDays: 12, expiresAt: "2024-06-17T04:00:00Z",
+//   chargedDates: ["2024-06-17", "2024-06-18", "2024-06-19", "2024-06-20", "2024-06-21",
+//                  "2024-06-22", "2024-06-23", "2024-06-24", "2024-06-25", "2024-06-26",
+//                  "2024-06-27", "2024-06-28"],
+//   byTier: [{ from: 1, to: 5, days: 5 }, { from: 6, to: 10, days: 5 }, { from: 11, to: null, days: 2 }] }
+
+// Which two events a charge runs between, on the import or the export leg.
+const imported = [
+  { type: "discharged", at: "2024-06-14T19:00:00Z" },
+  { type: "available", at: "2024-06-15T12:00:00Z" },
+  { type: "gatedOut", at: "2024-06-20T14:30:00Z" },
+  { type: "emptyReturned", at: "2024-06-27T09:00:00Z" },
+];
+demurrageClock(imported, "demurrage", { direction: "import" }); // { start: "2024-06-14T19:00:00Z", end: "2024-06-20T14:30:00Z" }
+demurrageClock(imported, "detention", { direction: "import" }); // { start: "2024-06-20T14:30:00Z", end: "2024-06-27T09:00:00Z" }
+demurrageClock(imported, "combined", { direction: "import" }); // { start: "2024-06-14T19:00:00Z", end: "2024-06-27T09:00:00Z" }
+demurrageClock(imported, "demurrage", { direction: "import", startEvent: "available" }); // { start: "2024-06-15T12:00:00Z", end: "2024-06-20T14:30:00Z" }
+const exported = [
+  { type: "emptyReleased", at: "2024-07-01T08:00:00Z" },
+  { type: "gatedIn", at: "2024-07-05T16:00:00Z" },
+  { type: "loaded", at: "2024-07-09T03:00:00Z" },
+];
+demurrageClock(exported, "demurrage", { direction: "export" }); // { start: "2024-07-05T16:00:00Z", end: "2024-07-09T03:00:00Z" }
+demurrageClock(exported, "detention", { direction: "export" }); // { start: "2024-07-01T08:00:00Z", end: "2024-07-05T16:00:00Z" }
+demurrageClock([{ type: "discharged", at: "2024-06-14T19:00:00Z" }], "demurrage", { direction: "import" }); // null (no gate-out yet)
+```
+
+- **Days are the terminal's local days.** `clockStart` and `clockEnd` are instants; their local
+  dates in `options.timeZone` are what is counted, over the zone's real day boundaries, the same
+  ones `dwellTime` and `floorToZone` find. A 23- or 25-hour day is one day, a date the zone deleted
+  is never a free or charged day, and a date the clock falls back into counts once. On the calendar
+  basis with `firstDay: "eventDay"`, `freeDaysUsed + chargeableDays` is exactly
+  `dwellTime(...).calendarDays` for the same dwell, except that a fall-back re-entering the day
+  before the event day (Goose Bay, 7 November 2010) is a date `dwellTime` counts and a tariff
+  never does.
+- **`firstDay` has no default.** `"eventDay"` makes the event day free day one; `"nextDay"` starts
+  free time the following counted day. The two differ by a full day of charges, so omitting it
+  returns `null`.
+- **`basis` counts free days; `chargeBasis` counts charged days.** `"calendar"` counts every local
+  day; `"working"` counts only the working days of `options.calendar`, a `BusinessCalendar` (its
+  weekend and holidays; its `timeZone` is not read), and returns `null` without one. Outside the US both are mostly calendar days. Where free time is in working days (the usual US
+  shape), the days after it are mostly charged as calendar days; California law (Cal. Bus. & Prof.
+  Code § 22928) and some tariffs charge working days only. Neither has a default.
+  "Calendar days excluding bank holidays" is `"working"` with an empty `weekend`.
+- **Expiry is half-open.** `expiresAt` is the first instant of the local day after `lastFreeDay`, as
+  a UTC instant. A gate-out at exactly `expiresAt` is not a chargeable day; one nanosecond later is.
+- **`chargedDates` makes the count auditable.** It is the list a carrier's day-numbered tariff grid
+  is applied to. On US trades the invoice must also print it (46 CFR 541.6, the US invoice rule;
+  no world regulation of these invoices exists).
+- **Tiers are day bands, not rates.** `tiers: [5, 10]` names days 1–5, 6–10 and 11 onward; `byTier`
+  says how many charged days fell in each band, empty bands included, so a rate table applies by
+  index. Omitted, it is the single open band. GMT computes days, never money.
+- **`freeDays: 0`** is a tariff with no free time: `chargeableDays` charges every counted day from day
+  one, and `freeTimeExpiry` returns `null` because there is no last free day to name.
+- **`demurrageClock` selects the pair, per leg.** DCSA's glossary puts demurrage inside the terminal
+  or depot and detention outside it; the carriers' published tariffs agree on the events. Import: demurrage and
+  storage run from `startEvent` (`"discharged"` by default, or `"available"`) to `gatedOut`, detention
+  from `gatedOut` to `emptyReturned`, and the combined clock from `startEvent` to `emptyReturned`.
+  Export: demurrage and storage run from `gatedIn` to `loaded`, detention from `emptyReleased` to
+  `gatedIn`, and the combined clock from `emptyReleased` to `loaded`. `direction` has no default. The
+  event names follow DCSA's Track & Trace equipment events (DISC, GTOT, GTIN, LOAD). A required event
+  that is missing or present twice, or an end before its start, returns `null`, and the result is an
+  `Interval` in the caller's own strings, ready for `chargeableDays(start, end, …)`.
+
 ## API Surface
 
 For the complete API listing, see the namespace documentation on GitHub:
@@ -2272,6 +2390,7 @@ For the complete API listing, see the namespace documentation on GitHub:
 - [Calendar API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/calendar) — ISO week and ordinal dates, quarter and fiscal periods, zone-aware bucketing, and business calendars with holiday sets and roll conventions
 - [Interval API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/interval) — half-open interval algebra over instants: overlap, intersect, clamp, merge, subtract, split, sum
 - [Transport API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/transport) — transit legs as exact elapsed time, arrivals rendered in the zone where they land, dwell in local calendar days
+- [Intermodal API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/intermodal) — free time, demurrage and detention: which clock, which start day, calendar or working days, and the charged dates (which a US invoice must print)
 - [Instant API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/instant) — the instant-plus-offset pair, and explicit local-time resolution
 - [UTC API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/utc) — UTC instant utilities
 - [Regex API](https://github.com/northguild/gmt/tree/main/packages/gmt/src/regex) — composable regex patterns

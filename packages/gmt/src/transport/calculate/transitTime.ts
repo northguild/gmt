@@ -78,6 +78,23 @@ const zoneAnnotation = new RegExp(TIME_ZONE_ANNOTATION);
  * @example transitTime("2024-06-15T10:00:00Z", "2 hours") // ""
  */
 export function transitTime(departure: string, duration: string): string {
+  // A non-string would reach the regex tests below, which coerce it: a throwing `toString`, a
+  // Symbol or a hostile Proxy would escape. Refuse it before any read.
+  if (typeof departure !== "string" || typeof duration !== "string") {
+    return "";
+  }
+
+  try {
+    return addLeg(departure, duration);
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
+    return "";
+  }
+}
+
+/** `transitTime` for two strings, without the guard. */
+function addLeg(departure: string, duration: string): string {
   if (!isValidDuration(duration)) {
     return "";
   }

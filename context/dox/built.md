@@ -120,13 +120,22 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   functions whose `null` also means "no shared span". Those render `null` as empty. The
   generator refuses an entry that is missing or not an object.
 - **Teaching widgets:** DST inspector (`B2b`), interval visualizer (`B2c`), the converter
-  bench with format and regex tester (`B2d`), and the Dwell Ledger (TRAN-8, the first a realm
+  bench with format and regex tester (`B2d`), the Dwell Ledger (TRAN-8, the first a realm
   story shipped; its day cells come from Temporal's `startOfDay`, so a 23-hour day is drawn
-  23 hours wide). Each is a `src/lib/<widget>-mount.ts` exporting
+  23 hours wide), and the Free Time Ledger (INT-12, the same day grid with each day coloured
+  as the tariff reads it; it imports the Dwell Ledger's grid helpers rather than copying them). Each is a `src/lib/<widget>-mount.ts` exporting
   `renderTemplate(args)` and `mount(root, args)`. The `.astro` shell server-renders the
   template with `<Fragment set:html>`, and the `/dox` rail string-mounts the same markup.
+- **A widget that cannot load says so.** A mount whose `GMT_MODULES` import fails throws
+  `WidgetLoadError` (`src/lib/widget-mount.ts`); it never returns an inert handle, which
+  left controls that looked live and did nothing. Every `.astro` shell — the five teaching
+  widgets, the globe, the scrubber and the timezone map — catches its mount and calls
+  `showUnavailable(root, error)`: `data-state="unavailable"` dims and disables the
+  server-rendered markup (`gmt-widget.css`), and one amber notice offers a reload.
+  `widget-load-error.test.tsx` runs every library-backed mount against a `GMT_MODULES`
+  whose imports all reject.
 - **Tool pages:** `/tools/dst-inspector/`, `/tools/interval-visualizer/`,
-  `/tools/converter-bench/`, `/tools/dwell-ledger/`, plus the Tier 4 `/tools/zoned-earth/` and `/tools/zone-planner/`.
+  `/tools/converter-bench/`, `/tools/dwell-ledger/`, `/tools/free-time-ledger/`, plus the Tier 4 `/tools/zoned-earth/` and `/tools/zone-planner/`.
   Permalinks (`?w=&wa=`) seed a widget through `seedFromLocation`, with structural checks
   rather than zod so a docs page never pulls in the `ai` package.
 - **`escapeAttr` on every template interpolation.** Values come from a model or from a URL
@@ -237,6 +246,12 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   URL) and one per guide `##` heading (`github-slugger` anchors). Guides load through
   `import.meta.glob`, not `fs` — `fs` breaks once Astro bundles the endpoint. The Worker
   fetches the chunks same-origin, through the Cache API (`fetch-chunks.ts`).
+- **Once per isolate, not once per request.** `fetchChunks` keeps the parsed array in
+  memory for the Cache API's TTL (300 s) and returns the *same array* until it expires, so a
+  warm request no longer re-parses 750 KB of JSON. `search.ts` memoises the MiniSearch index
+  in a `WeakMap` keyed on that array; the build over 884 chunks measured 50–70 ms and was
+  paid on every question. A new array — a test fixture or a refreshed corpus — always gets
+  a fresh index, and `searchChunks` stays a pure function of its inputs.
 - **Search:** MiniSearch BM25 (`src/lib/retrieval/search.ts`) with a stopword list,
   `MIN_RELEVANCE_SCORE`, and up to 15 chunks.
   - Without stopwords, "format a date for display" matched most of the corpus.
@@ -263,8 +278,23 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 | Sanitise invisible characters, **then** apply length and conversation caps | `400` |
 | Per-visitor daily cap (KV, hashed IP; dev cookie exempt) | `429` |
 | No configured brain | `500` |
-| Retrieve → assemble prompt → in-request failover | pool spent → `429` with the soonest refill |
-| Stream: `createUIMessageStream` writes the retrieval trace part, then merges `toUIMessageStream` (`sendReasoning: false`, `onError` on both layers) | mapped error text, never a raw upstream payload |
+| Retrieve → assemble prompt | mapped error, never a raw upstream payload |
+| Open the stream, then in-request failover, writing transient `data-status` progress per brain | pool spent, or every brain busy → transient `data-refusal` |
+| Write the retrieval trace part, then merge `toUIMessageStream` (`sendReasoning: false`, `onError` on both layers) | mapped error text, never a raw upstream payload |
+
+- **The stream opens before a brain is chosen.** Measured 2026-09-24: two busy brains
+  took 2.8 s of a 6.7 s answer, and the reader saw nothing but "Searching corpus…". Now
+  each step arrives as a transient `data-status` part ("3.8 Flash is busy — trying the
+  next model…") and shows in the pending card.
+- **A refusal is a transient `data-refusal` part** carrying the `{ status, payload }` the
+  HTTP error used to (`RefusalData`, `src/lib/chat-types.ts`). `DoxChat` passes it to the
+  same `classifyChatError`, so the warning, retry and reset time are unchanged. Transient
+  parts never enter a message, so a refused request leaves no empty turn in the history
+  (`DoxChat.progress.test.tsx`). What is known before the stream opens — the burst
+  limiter, a bad body, the visitor cap, every brain already marked out — is still a plain
+  HTTP error. Anything watching the endpoint should note the change: a pool spent or every
+  brain busy *during* the answer is now HTTP 200 with the refusal in the stream, not a
+  non-OK status (PR #281 review).
 
 - **System prompt** (`worker/system-prompt.ts`), eight sections in order: Persona and
   scope · Standing order (the prompt-injection boundary) · Linking rules (only this
@@ -303,22 +333,40 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   on any AI Elements re-sync.
 - **Retrieval trace** (`RetrievalTrace.tsx`): chunk count and titles, zero for an
   out-of-corpus question, plus the brain that actually answered.
+  - **Timings.** The Worker times each stage (`worker/timing.ts`): ledger, corpus, search,
+    prompt, the walk across brains with each attempt's outcome, first token and total, and
+    which widget tool was called. The part is written twice with one `id`
+    (`RETRIEVAL_PART_ID`) — before the answer, then when it ends — and the SDK replaces it
+    in place, so the transcript keeps one trace.
+  - The same numbers go to the Worker log as one `dox-timing` line per answer, beside
+    `dox-usage`. Read them there before tuning anything.
 - **Brain menu, reset clock, header clock:** see design-system.md "The composer control bar".
 - **Not wired:** `sources.tsx` / `inline-citation.tsx` — the hardened inline links are the
   citations.
 
 ### Widget tools
 
-- **Five tools**, schemas shared by client and Worker in `src/lib/dox-tools.ts`:
+- **Six tools**, schemas shared by client and Worker in `src/lib/dox-tools.ts`:
   - `showGlobe({ zone })`
   - `showConverterBench({ value, from, to, locale? })`
   - `showIntervalVisualizer({ aStart, aEnd, bStart, bEnd })`
   - `showDstInspector({ zone, year, preset?, disambiguation?, offset? })`
   - `showDwellLedger({ entry, exit, zone, compareZone? })`: a zoneless wall time is read in
     `zone` with `disambiguation: "reject"`, so a skipped hour is never moved silently.
+  - `showFreeTimeLedger({ clockStart, clockEnd, freeDays, firstDay, basis, chargeBasis, zone, weekend?, holidays?, tiers? })`:
+    `firstDay`, `basis` and `chargeBasis` are required, as the library requires them; a zoneless wall time is
+    read in `zone` with `disambiguation: "reject"`. Its permalink carries every list and number
+    as a string, because `seedFromLocation` passes only strings and years.
 - **Parity:** `ENABLED_TOOL_NAMES` equals the widget registry's keys
   (`widget-registry.test.ts`), and every enabled tool has a `CHAT_STARTERS` pill
   (`chat-starters.test.ts`). A tool nobody can mount or discover cannot ship.
+- **A starter pill opens its widget on the click.** Each `CHAT_STARTERS` entry carries the
+  `args` its question describes; the click sends the question and calls `onWidget` with
+  them (`starterWidgetCall`), so the widget does not wait on a round trip or on the model
+  choosing to call the tool. The model's own call replaces it unless `isSameWidget` says
+  the tool and arguments match (key order ignored), which keeps anything the reader has
+  already dragged. `chat-starters.test.ts` runs every seed through its schema and
+  `validate`, so a seed that drifts from its tool fails the suite.
 - **Worker tools carry a trivial `execute`** (no I/O) in `worker/tools.ts`. Without one, a
   replayed turn has a tool call with no tool result, which the provider rejects on the
   reader's next question (`tools.test.ts`). `convertToModelMessages` runs with
@@ -327,10 +375,29 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   call happens after headers are sent.
 - **The client never trusts tool input.** `widget-registry.ts` re-validates at mount and
   checks IANA zones with gmt's `isValidTimeZone`; a nonsense zone renders an error state.
-  The registry is fixed and typed, with lazy `import()` and no `eval` or dynamic code on the
-  path. `showPlayground` was cut to keep that true.
+  The registry is fixed and typed, with a literal `import()` per mount and no `eval` or
+  dynamic code on the path. `showPlayground` was cut to keep that true.
+  - **Template and mount load together**, from the one `import()`: an entry's `load()`
+    returns `{ renderTemplate, mount }`. The registry imports only *types* from the mount
+    modules. It used to import each `render*Template` as a value, which put every mount,
+    each widget's logic and the Temporal polyfill in the `/dox` chunk and made every
+    `import()` load nothing new. `widget-graph.test.ts` walks the island's static value
+    imports and fails if one reaches a mount, `gmt-modules.ts`, a widget's logic, a direct
+    polyfill import or gmt's root barrel. Chat code imports gmt by module path for the
+    same reason: the root barrel re-exports the polyfill.
+  - **The polyfill still ships with `/dox`,** through gmt itself: the header and reset
+    clocks call `@northguild/gmt/zoned/get`, whose built chunk imports it
+    (`get → zonedNowUnitValue → index.esm`). The exports map stops at module level, so
+    there is no narrower import. Measured on the 2026-09-24 build, the first-load
+    JavaScript went from ~755 KB to 722 KB gzipped; the widgets now load only when one
+    opens.
 - **`MountedWidget.tsx`** renders an empty host, and the widget's DOM lives outside React.
   An `AbortSignal` handles StrictMode's double effect.
+  - The host is `aria-busy` (dimmed, inert) until the mount has wired it: a "Loading …"
+    placeholder while the chunk loads, then the template.
+  - A `WidgetLoadError`, or a failed `import()` of the mount module, shows the error with
+    **Try again**, which clears the error and remounts. A bad argument or a mount that throws
+    on its input gets no retry: the same input fails the same way.
 - **Rail** (`WidgetRail.tsx`, AI Elements `Artifact`): opens for a tool call, collapses when
   empty, and has a copy-permalink button. The transcript's `WidgetReceipt` chip is a seeded
   link to the widget's tool page.
@@ -365,7 +432,20 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - Known-out brains are tried last, never pruned — the ledger can be stale.
   - Workers AI allocation exhaustion (3036, or the unmapped 4006) retires every Workers AI
     brain at once; a capacity 429 (3040) retires only that brain.
-  - `maxRetries: 1`: backoff is pointless against a daily quota.
+  - `maxRetries: 0`. The SDK's retry backs off from 2 s, which put a pause in front of
+    every failover; the next brain is the retry.
+  - **A busy model moves on, and is not marked.** Gemini answers 503 "This model is
+    currently experiencing high demand" (seen 2026-09-24, on two brains in a row). That
+    used to be rethrown, failing the whole answer. `isTransientOverload` (503, 529) now
+    tries the next brain with outcome `busy` and writes nothing to the ledger; if every
+    brain was out or busy, the last overload becomes a retryable refusal, not "allowance
+    used". A 500 still stops at the first brain: an error in the request would fail on all
+    of them.
+- **Thinking level.** Each Gemini brain carries `thinkingLevel` (`chat-constants.ts`), passed
+  as `providerOptions.google.thinkingConfig`. All are `"low"`: left unset, Gemini 3 thinks
+  dynamically over the 10–16k-token prompt before its first token. A brain that stops
+  calling its widget under `"low"` moves to `"medium"` on its own; confirm with
+  `probe-brains.ts` after changing any.
 - **Workers AI wiring:** `workers-ai-provider@4` over the `AI` binding (`remote: true`).
   - `worker/index.ts` offers only configured brains — Gemini needs the key, Workers AI the
     binding — so a missing provider shrinks the list instead of failing requests.
@@ -403,6 +483,14 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 
 ### Runbooks
 
+- **Vite scans `src/lib` at startup** (`optimizeDeps.entries`, `astro.config.mjs`). Astro
+  scans only `.jsx/.tsx/.vue/.svelte/.html`, so packages reached from an `.astro` script
+  (`@tanstack/charts`, `d3-geo`, …) were found when a page first imported them; Vite then
+  re-bundled and force-reloaded every open page, and a widget chunk in flight failed with
+  "Failed to fetch dynamically imported module". Keep the entries when adding a widget.
+- **gmt is not pre-bundled in dev, on purpose.** A cold widget page wires in ~0.6 s with its
+  ~117 gmt requests (measured 2026-09-24), and pre-bundling a linked package would need a
+  dev-server restart after every gmt rebuild to avoid serving stale code.
 - **Local dev:** `pnpm dox:dev` (site + chat Worker) or `pnpm dox:dev:site` (site only).
   A warm start is ~10 s: the gmt build is incremental (`build:dev`), every `generate` step
   skips when its inputs are unchanged, and `upstream refresh` makes no network calls

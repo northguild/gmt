@@ -203,7 +203,7 @@ skills:
   - name: GMT Timezone
     slug: gmt-timezone
     domain: zoned-date-operations
-    description: Work with timezone-aware dates and times; includes formatZonedDateTime, formatZonedRange, formatRelativeZoned, convertPlainDateTimeToZoned with full DST disambiguation control, addZoned/subtractZoned, clampZoned, convertZonedToUtc, convertUtcToZoned, convertDateToCalendar, toOffsetInstant/fromOffsetInstant, classifyLocal/resolveLocal, floorToZone/bucketRange, transitTime/etaAtZone/dwellTime
+    description: Work with timezone-aware dates and times; includes formatZonedDateTime, formatZonedRange, formatRelativeZoned, convertPlainDateTimeToZoned with full DST disambiguation control, addZoned/subtractZoned, clampZoned, convertZonedToUtc, convertUtcToZoned, convertDateToCalendar, toOffsetInstant/fromOffsetInstant, classifyLocal/resolveLocal, floorToZone/bucketRange, transitTime/etaAtZone/dwellTime, freeTimeExpiry/chargeableDays/demurrageClock
     type: core
     packages:
       - '@northguild/gmt'
@@ -251,6 +251,9 @@ skills:
       - transitTime
       - etaAtZone
       - dwellTime
+      - freeTimeExpiry
+      - chargeableDays
+      - demurrageClock
     tasks:
       - Get current time in a timezone
       - Format datetime in a timezone
@@ -277,6 +280,9 @@ skills:
       - Add a leg's transit time to a departure as exact elapsed time in the departure's zone
       - Render a UTC arrival as local time in the zone where it lands
       - Measure dwell as elapsed duration plus local calendar days crossed
+      - Lay out a container's free time and its half-open expiry in the terminal's local days
+      - Count and list the chargeable days of a dwell, with tier bands
+      - Select the events a demurrage, detention, storage or combined clock runs between, on the import or export leg
 
   - name: GMT Integration
     slug: gmt-integration

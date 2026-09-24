@@ -65,7 +65,10 @@ export function parseExportNames(grepOutput: string): Set<string> {
 }
 
 /** Every name the library declared as an export at `tag`. */
-export function releasedExportNames(repoRoot: string, tag: string): Set<string> {
+export function releasedExportNames(
+  repoRoot: string,
+  tag: string,
+): Set<string> {
   let out = "";
   try {
     out = git(repoRoot, [
@@ -108,7 +111,10 @@ export function baselineKey(baseline: ReleasedBaseline): string {
 }
 
 /** Whether `name` is documented but not in the published baseline. */
-export function isUnreleased(baseline: ReleasedBaseline, name: string): boolean {
+export function isUnreleased(
+  baseline: ReleasedBaseline,
+  name: string,
+): boolean {
   return "tag" in baseline && !baseline.names.has(name);
 }
 

@@ -46,6 +46,7 @@ import {
   showConverterBenchInput,
   showDstInspectorInput,
   showDwellLedgerInput,
+  showFreeTimeLedgerInput,
   showGlobeInput,
   showIntervalVisualizerInput,
 } from "../src/lib/dox-tools";
@@ -146,6 +147,18 @@ export function buildWorkerTools(
             )
           : accept("dwell-ledger");
       },
+    }),
+
+    showFreeTimeLedger: tool({
+      description: docFor("showFreeTimeLedger"),
+      inputSchema: showFreeTimeLedgerInput,
+      execute: ({ zone }) =>
+        isValidTimeZone(zone)
+          ? accept("free-time-ledger")
+          : reject(
+              "free-time-ledger",
+              `"${zone}" is not an IANA time zone this runtime knows.`,
+            ),
     }),
   };
 

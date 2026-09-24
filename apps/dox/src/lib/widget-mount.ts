@@ -52,6 +52,51 @@ export type MountFn<Args = void> = (
   signal: AbortSignal,
 ) => Promise<WidgetHandle>;
 
+/**
+ * The library could not be loaded, so the widget cannot work.
+ *
+ * Thrown by every mount when its dynamic `import()` of `@northguild/gmt`
+ * fails — a dropped connection, a `dist/` mid-rebuild, a stale deploy. It used
+ * to be swallowed: the mount returned an inert handle and the reader was left
+ * with controls that looked live and did nothing. The distinction from any
+ * other mount failure matters to the host: a load failure is worth a retry,
+ * an argument the model invented is not.
+ */
+export class WidgetLoadError extends Error {
+  override readonly name = "WidgetLoadError";
+  constructor(cause: unknown) {
+    super("The library for this widget could not be loaded.", { cause });
+  }
+}
+
+/** The class of the notice `showUnavailable` adds, and the CSS hook for it. */
+export const UNAVAILABLE_CLASS = "gmt-widget-unavailable";
+
+/**
+ * Tell the reader a page widget cannot work, instead of leaving controls that
+ * look live and do nothing.
+ *
+ * For the `.astro` shells, which have no React to render an error state: they
+ * call this from the `.catch` on their mount. It marks the root
+ * `data-state="unavailable"` (gmt-widget.css dims and disables whatever is
+ * already there) and adds one notice with a reload link, which is the only
+ * retry a static page has. Idempotent — a second failure adds no second notice.
+ */
+export function showUnavailable(root: HTMLElement, error: unknown): void {
+  console.error("widget failed to load", error);
+  root.dataset.state = "unavailable";
+  if (root.querySelector(`:scope > .${UNAVAILABLE_CLASS}`)) return;
+
+  const notice = document.createElement("p");
+  notice.className = UNAVAILABLE_CLASS;
+  notice.setAttribute("role", "status");
+  const reload = document.createElement("a");
+  reload.href = "";
+  reload.textContent = "Reload the page";
+  notice.append("This widget couldn\u2019t load. ", reload, " to try again.");
+  root.prepend(notice);
+}
+
 /** A handle that owns nothing — what an aborted mount returns. */
 export const INERT_HANDLE: WidgetHandle = {
   destroy() {},

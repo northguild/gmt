@@ -21,6 +21,7 @@ import { renderConverterTemplate } from "../lib/converter-bench-mount";
 
 <script>
   import { mountConverterBench } from "../lib/converter-bench-mount";
+  import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
 
   /* One mount per instance on the page. The rail passes a real AbortSignal;
@@ -32,7 +33,9 @@ import { renderConverterTemplate } from "../lib/converter-bench-mount";
        widget opens on its defaults, exactly as before. */
     const seed = seedFromLocation("converter");
     document.querySelectorAll<HTMLElement>(".gmt-converter").forEach((el) => {
-      void mountConverterBench(el, seed, new AbortController().signal);
+      mountConverterBench(el, seed, new AbortController().signal).catch((error) =>
+        showUnavailable(el, error),
+      );
     });
   }
 </script>

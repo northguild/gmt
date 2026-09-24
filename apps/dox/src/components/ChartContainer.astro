@@ -5,7 +5,10 @@ import {
   type BarGradient,
 } from "../lib/why-gmt-charts";
 
-/** One selectable view of a chart, e.g. "One run" vs "CI executions". */
+/**
+ * One selectable view of a chart, e.g. "One run" vs "CI executions". Prose that belongs to one
+ * view goes in the slot `after-<id>`, and is shown and hidden with it.
+ */
 interface ChartView {
   id: string;
   label: string;
@@ -34,6 +37,14 @@ const panels: readonly ChartView[] =
     ? views
     : [{ id: "default", label: "", svg: svg ?? "", chart, caption }];
 const hasToggle = panels.length > 1;
+
+const afterSlots = await Promise.all(
+  panels.map((panel) =>
+    Astro.slots.has(`after-${panel.id}`)
+      ? Astro.slots.render(`after-${panel.id}`)
+      : undefined,
+  ),
+);
 
 // Every view's gradients, once each: a hidden view's live mount still paints with them.
 const gradients: BarGradient[] = [
@@ -100,6 +111,9 @@ const gradients: BarGradient[] = [
           set:html={panel.svg}
         />
         {panel.caption && <p class="gmt-chart-caption">{panel.caption}</p>}
+        {afterSlots[index] && (
+          <div class="gmt-chart-after" set:html={afterSlots[index]} />
+        )}
       </div>
     ))
   }

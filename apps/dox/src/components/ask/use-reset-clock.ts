@@ -18,7 +18,8 @@
  * `DoxPage`'s `useEnvironment` already had to learn about. Until the effect
  * has run, `ready` is false and every consumer renders no reset at all.
  */
-import { getSystemTimeZone, getTimeZones, getUtcNow } from "@northguild/gmt";
+import { getUtcNow } from "@northguild/gmt/utc/get";
+import { getSystemTimeZone, getTimeZones } from "@northguild/gmt/zoned/get";
 import { useSelector } from "@tanstack/react-store";
 import { useEffect, useState } from "react";
 import {

@@ -33,28 +33,28 @@
  *      documents.
  *   3. **Runtime** — `MountedWidget` wraps the mount in try/catch.
  *
- * Templates are imported statically and mounts dynamically, on purpose: a
- * template is a pure string function with no heavy dependencies, and the rail
- * needs it *before* the mount module has loaded.
+ * Template and mount arrive together, from the one `import()`. The template
+ * functions live in the same modules as their mounts, and those modules import
+ * the Temporal polyfill and each widget's logic at the top — importing a
+ * template statically put every mount and the polyfill in the chat's first
+ * download, and made every `import()` here load nothing new. The rail shows a
+ * loading state for the moment the chunk takes instead.
  */
-import {
-  renderConverterTemplate,
-  type ConverterArgs,
-} from "~/lib/converter-bench-mount";
-import { renderGlobeTemplate, type GlobeArgs } from "~/lib/globe-mount";
-import { renderDstTemplate, type DstArgs } from "~/lib/dst-inspector-mount";
-import {
-  renderDwellLedgerTemplate,
-  type DwellLedgerArgs,
-} from "~/lib/dwell-ledger-mount";
-import {
-  renderIntervalTemplate,
-  type IntervalArgs,
-} from "~/lib/interval-visualizer-mount";
+/* Type-only: erased at build time, so none of these modules — nor the Temporal
+   polyfill and gmt modules behind them — enter the chat chunk. The one runtime
+   path to a mount module is each entry's `load()`. `widget-graph.test.ts`
+   fails if a value import creeps back in. */
+import type { ConverterArgs } from "~/lib/converter-bench-mount";
+import type { GlobeArgs } from "~/lib/globe-mount";
+import type { DstArgs } from "~/lib/dst-inspector-mount";
+import type { DwellLedgerArgs } from "~/lib/dwell-ledger-mount";
+import type { FreeTimeLedgerArgs } from "~/lib/free-time-ledger-mount";
+import type { IntervalArgs } from "~/lib/interval-visualizer-mount";
 import {
   showConverterBenchInput,
   showDstInspectorInput,
   showDwellLedgerInput,
+  showFreeTimeLedgerInput,
   showGlobeInput,
   showIntervalVisualizerInput,
 } from "~/lib/dox-tools";
@@ -78,9 +78,22 @@ export interface AnyWidgetEntry {
   parse: (
     input: unknown,
   ) => { ok: true; args: unknown } | { ok: false; reason: string };
-  renderTemplate: (idPrefix: string, args: unknown) => string;
-  load: () => Promise<{ mount: MountFn<never> }>;
+  load: () => Promise<LoadedWidget<never>>;
   validate?: (args: unknown) => Promise<string | null>;
+}
+
+/** What one `load()` brings back: the markup and the code that wires it. */
+export interface LoadedWidget<Args> {
+  /**
+   * Markup for the mount to wire. Pure — no DOM access.
+   *
+   * Takes the args so a seeded widget paints seeded on its first frame rather
+   * than rendering defaults and correcting itself a moment later. `idPrefix`
+   * namespaces any `id` the markup needs, so a widget in the rail cannot
+   * collide with the same widget on the page behind it.
+   */
+  renderTemplate: (idPrefix: string, args: Args) => string;
+  mount: MountFn<Args>;
 }
 
 export interface WidgetEntry<Args> {
@@ -91,17 +104,8 @@ export interface WidgetEntry<Args> {
   parse: (
     input: unknown,
   ) => { ok: true; args: Args } | { ok: false; reason: string };
-  /**
-   * Markup for the mount to wire. Pure — no DOM access.
-   *
-   * Takes the args so a seeded widget paints seeded on its first frame rather
-   * than rendering defaults and correcting itself a moment later. `idPrefix`
-   * namespaces any `id` the markup needs, so a widget in the rail cannot
-   * collide with the same widget on the page behind it.
-   */
-  renderTemplate: (idPrefix: string, args: Args) => string;
-  /** Lazy, with a literal specifier. */
-  load: () => Promise<{ mount: MountFn<Args> }>;
+  /** Lazy, with a literal specifier. The only runtime path to the widget. */
+  load: () => Promise<LoadedWidget<Args>>;
   /** Semantic check the schema cannot make. `null` means fine. */
   validate?: (args: Args) => Promise<string | null>;
 }
@@ -138,16 +142,19 @@ const globeEntry = defineWidget<GlobeArgs>({
   },
   // The globe seeds after mount instead: `focusZone` animates there, which
   // reads better than snapping to the zone on the first frame.
-  renderTemplate: (idPrefix) => renderGlobeTemplate({ idPrefix }),
   load: () =>
-    import("~/lib/globe-mount").then((m) => ({ mount: m.mountGlobe })),
+    import("~/lib/globe-mount").then((m) => ({
+      renderTemplate: (idPrefix) => m.renderGlobeTemplate({ idPrefix }),
+      mount: m.mountGlobe,
+    })),
   validate: ({ zone }) => (zone ? checkZones([zone]) : Promise.resolve(null)),
 });
 
 /**
  * A literal object with literal keys. Do not make this dynamic.
  *
- * The four Tier 2 widgets and the Dwell Ledger (TRAN-8) are registered.
+ * The four Tier 2 widgets, the Dwell Ledger (TRAN-8) and the Free Time Ledger
+ * (INT-12) are registered.
  * `ENABLED_TOOL_NAMES` remains the declaration of what the model is offered,
  * and a test asserts the two sets are equal — so a tool cannot be offered
  * without a widget to mount. Until then those tool names are known to `dox-tools.ts` but
@@ -166,9 +173,9 @@ const converterEntry = defineWidget<ConverterArgs>({
           reason: "The widget was asked for with arguments that don't fit.",
         };
   },
-  renderTemplate: (_idPrefix, args) => renderConverterTemplate(args),
   load: () =>
     import("~/lib/converter-bench-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) => m.renderConverterTemplate(args),
       mount: m.mountConverterBench,
     })),
   /* `ConverterArgs` are all optional — the template falls back to its own
@@ -191,9 +198,9 @@ const intervalEntry = defineWidget<IntervalArgs>({
   },
   // Seeds after mount rather than in the template: `applyPreset()` runs at the
   // end of setup and would overwrite anything painted here.
-  renderTemplate: () => renderIntervalTemplate(),
   load: () =>
     import("~/lib/interval-visualizer-mount").then((m) => ({
+      renderTemplate: () => m.renderIntervalTemplate(),
       mount: m.mountIntervalVisualizer,
     })),
   /* No zones to check. The widget pre-validates each interval with the
@@ -217,9 +224,9 @@ const dstEntry = defineWidget<DstArgs>({
   /* Seeded in the template rather than after mount: every argument here is a
      control value, and `setupWidget` reads those controls on its first render.
      Writing them afterwards would be a second source of truth for one state. */
-  renderTemplate: (_idPrefix, args) => renderDstTemplate(args),
   load: () =>
     import("~/lib/dst-inspector-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) => m.renderDstTemplate(args),
       mount: m.mountDstInspector,
     })),
   validate: ({ zone }) => (zone ? checkZones([zone]) : Promise.resolve(null)),
@@ -239,13 +246,35 @@ const dwellEntry = defineWidget<DwellLedgerArgs>({
   },
   /* Seeded in the template, like the DST inspector: every argument is a control
      value. The mount then reads a zoneless wall time in `zone`. */
-  renderTemplate: (_idPrefix, args) => renderDwellLedgerTemplate(args),
   load: () =>
     import("~/lib/dwell-ledger-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) => m.renderDwellLedgerTemplate(args),
       mount: m.mountDwellLedger,
     })),
   validate: ({ zone, compareZone }) =>
     checkZones([zone, compareZone].filter((z): z is string => !!z)),
+});
+
+const freeTimeEntry = defineWidget<FreeTimeLedgerArgs>({
+  title: "Free time ledger",
+  kind: "freetime",
+  parse: (input) => {
+    const result = showFreeTimeLedgerInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template, like the Dwell Ledger: every argument is a control
+     value. The mount then reads a zoneless wall time in `zone`. */
+  load: () =>
+    import("~/lib/free-time-ledger-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) => m.renderFreeTimeLedgerTemplate(args),
+      mount: m.mountFreeTimeLedger,
+    })),
+  validate: ({ zone }) => (zone ? checkZones([zone]) : Promise.resolve(null)),
 });
 
 export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
@@ -254,11 +283,45 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showIntervalVisualizer: intervalEntry,
   showDstInspector: dstEntry,
   showDwellLedger: dwellEntry,
+  showFreeTimeLedger: freeTimeEntry,
 };
 
 /** Whether a streamed tool part names a widget this build actually has. */
 export function isRegisteredWidget(toolName: string): boolean {
   return Object.hasOwn(WIDGET_REGISTRY, toolName);
+}
+
+/** JSON with object keys sorted, so two equal argument objects built in a
+ * different key order compare equal. */
+function canonical(value: unknown): string {
+  return JSON.stringify(value, (_key, v: unknown) =>
+    v && typeof v === "object" && !Array.isArray(v)
+      ? Object.fromEntries(
+          Object.entries(v as Record<string, unknown>).sort(([a], [b]) =>
+            a < b ? -1 : a > b ? 1 : 0,
+          ),
+        )
+      : v,
+  );
+}
+
+/**
+ * Whether the rail already shows this widget with these arguments.
+ *
+ * A starter pill seeds its widget on click; when the model then calls the same
+ * tool with the same arguments, remounting would throw away anything the
+ * reader has done with it in the meantime.
+ */
+export function isSameWidget(
+  current: { entry: AnyWidgetEntry; args: unknown } | null,
+  entry: AnyWidgetEntry,
+  args: unknown,
+): boolean {
+  return (
+    current !== null &&
+    current.entry === entry &&
+    canonical(current.args) === canonical(args)
+  );
 }
 
 export type ResolvedWidget =

@@ -27,7 +27,7 @@
  */
 import { codeFrameHtml } from "./code-frame";
 import { CURATED_TIMEZONES } from "./curated-timezones";
-import { onceDestroy, type MountFn } from "./widget-mount";
+import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import {
   VALUE_PRESETS,
   buildValuePreset,
@@ -670,9 +670,9 @@ export const mountDstInspector: MountFn<DstArgs> = async (
   let modules: Awaited<ReturnType<typeof loadModules>>;
   try {
     modules = await loadModules();
-  } catch {
-    // The page stays readable without the library, exactly as before.
-    return onceDestroy(() => {});
+  } catch (cause) {
+    // Loud, not inert: the host decides what to show (see `WidgetLoadError`).
+    throw new WidgetLoadError(cause);
   }
   if (signal.aborted) return onceDestroy(() => {});
 

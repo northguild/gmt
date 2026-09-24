@@ -40,7 +40,11 @@ import type { StickToBottomContext } from "use-stick-to-bottom";
 import { SearchIcon } from "lucide-react";
 
 import { referenceRoutes } from "~/generated/reference/route-manifest";
-import { CHAT_STARTERS, CORPUS_SUMMARY } from "~/lib/chat-constants";
+import {
+  CHAT_STARTERS,
+  CORPUS_SUMMARY,
+  starterWidgetCall,
+} from "~/lib/chat-constants";
 import { checkUserText } from "~/lib/chat-sanitize";
 import { pageContextFromReferrer } from "~/lib/page-context";
 import { nextReset } from "~/lib/quota-resets";
@@ -49,7 +53,14 @@ import { BrainSelector } from "./BrainSelector";
 import { ResetClock } from "./ResetClock";
 import type { BrainsInfo } from "./use-brains";
 import { useResetClock } from "./use-reset-clock";
-import { RETRIEVAL_PART_TYPE, type RetrievalTraceData } from "~/lib/chat-types";
+import {
+  REFUSAL_PART_TYPE,
+  RETRIEVAL_PART_TYPE,
+  STATUS_PART_TYPE,
+  type RefusalData,
+  type RetrievalTraceData,
+  type StatusData,
+} from "~/lib/chat-types";
 import {
   Conversation,
   ConversationContent,
@@ -151,6 +162,9 @@ export function DoxChat({
   onWidget,
 }: DoxChatProps = {}) {
   const [warning, setWarning] = useState<ChatWarningState | null>(null);
+  /** The Worker's latest progress line while it chooses a brain; null shows
+   * the default "Searching corpus…". */
+  const [progress, setProgress] = useState<string | null>(null);
   /** Every URL retrieved this session. Unioned with the reference manifest to
    * decide which links are real — the manifest holds only `/reference/...`
    * paths, so guide citations would otherwise be downgraded to plain text. */
@@ -204,7 +218,27 @@ export function DoxChat({
     transport,
     onError: (error) => setWarning(classifyChatError(error)),
     onData: (part) => {
+      if (part.type === STATUS_PART_TYPE) {
+        setProgress((part.data as StatusData).text);
+        return;
+      }
+      if (part.type === REFUSAL_PART_TYPE) {
+        /* The same `{ status, payload }` `chatFetch` attaches to a non-OK
+           response, through the same classifier — so a refusal written into
+           the open stream warns exactly as the HTTP error did. */
+        const { status, payload } = part.data as RefusalData;
+        setProgress(null);
+        setWarning(
+          classifyChatError(
+            new Error(`Chat request failed with ${status}`, {
+              cause: { status, payload },
+            }),
+          ),
+        );
+        return;
+      }
       if (part.type !== RETRIEVAL_PART_TYPE) return;
+      setProgress(null);
       const data = part.data as RetrievalTraceData;
       setRetrievedUrls((current) => {
         const next = new Set(current);
@@ -300,6 +334,7 @@ export function DoxChat({
       }
 
       setWarning(null);
+      setProgress(null);
       sendMessage({ text: checked.text });
       conversationRef.current?.scrollToBottom();
       // Re-read the budget after the request has had a moment to be recorded.
@@ -372,7 +407,12 @@ export function DoxChat({
    * the page shows nothing at all for the whole round trip and reads as frozen.
    * Derived from status rather than pushed into `messages`, so it can't leak
    * into the next request's history (the same discipline as ChatWarning). */
-  const isWaiting = status === "submitted";
+  /* Also while streaming with no assistant turn yet: the Worker opens the
+     stream before it has a brain, and until one answers it sends only
+     transient progress, which creates no message. */
+  const isWaiting =
+    status === "submitted" ||
+    (status === "streaming" && messages.at(-1)?.role === "user");
 
   return (
     // Transcript + composer only. The surrounding shell (viewport height, the
@@ -412,7 +452,14 @@ export function DoxChat({
                       key={starter.widget}
                       className="gmt-hive-starter gmt-sonar-focus"
                       suggestion={starter.text}
-                      onClick={send}
+                      onClick={(text) => {
+                        /* Open the pill's widget now, seeded, rather than wait
+                           a whole round trip for a tool call that may not
+                           come. Only if the question was actually sent. */
+                        if (!send(text)) return;
+                        const call = starterWidgetCall(starter);
+                        onWidget?.(call.toolCallId, call.toolName, call.input);
+                      }}
                     />
                   ))}
                 </div>
@@ -515,7 +562,7 @@ export function DoxChat({
                     {/* Same icon the retrieval trace uses, so "searching" and
                         the trace it resolves into read as one step. */}
                     <SearchIcon aria-hidden="true" />
-                    Searching corpus&#8230;
+                    {progress ?? "Searching corpus\u2026"}
                   </p>
                   <span className="gmt-hive-scanline" aria-hidden="true" />
                 </div>

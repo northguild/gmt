@@ -29,7 +29,15 @@ describe("parseExportNames", () => {
       ].join("\n"),
     );
     expect([...names].sort()).toEqual(
-      ["Dwell", "Kind", "RollConvention", "Thing", "dwellTime", "isoDate", "load"].sort(),
+      [
+        "Dwell",
+        "Kind",
+        "RollConvention",
+        "Thing",
+        "dwellTime",
+        "isoDate",
+        "load",
+      ].sort(),
     );
   });
 });
@@ -60,7 +68,17 @@ describe("releasedBaseline", () => {
   const git = (...args: string[]) =>
     execFileSync(
       "git",
-      ["-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false", ...args],
+      [
+        "-c",
+        "user.name=t",
+        "-c",
+        "user.email=t@t",
+        "-c",
+        "commit.gpgsign=false",
+        "-c",
+        "tag.gpgsign=false",
+        ...args,
+      ],
       { cwd: repo, stdio: "pipe" },
     );
   const write = (rel: string, text: string) => {
@@ -80,14 +98,23 @@ describe("releasedBaseline", () => {
     repo = mkdtempSync(join(tmpdir(), "released-exports-"));
     git("init", "-q");
     write("packages/gmt/src/a/addDays.ts", "export function addDays() {}\n");
-    write("packages/gmt/src/a/addDays.test.ts", "export function onlyInTests() {}\n");
+    write(
+      "packages/gmt/src/a/addDays.test.ts",
+      "export function onlyInTests() {}\n",
+    );
     commit("one");
     git("tag", "@northguild/gmt@1.9.0");
-    write("packages/gmt/src/b/floorToZone.ts", "export function floorToZone() {}\n");
+    write(
+      "packages/gmt/src/b/floorToZone.ts",
+      "export function floorToZone() {}\n",
+    );
     commit("two");
     git("tag", "@northguild/gmt@1.10.0");
     git("tag", "@northguild/gmt@1.11.0-beta.0");
-    write("packages/gmt/src/t/dwellTime.ts", "export function dwellTime() {}\n");
+    write(
+      "packages/gmt/src/t/dwellTime.ts",
+      "export function dwellTime() {}\n",
+    );
     commit("three, unpublished");
   }
 
@@ -115,7 +142,10 @@ describe("releasedBaseline", () => {
   it("badges nothing without tags", () => {
     repo = mkdtempSync(join(tmpdir(), "released-exports-"));
     git("init", "-q");
-    write("packages/gmt/src/t/dwellTime.ts", "export function dwellTime() {}\n");
+    write(
+      "packages/gmt/src/t/dwellTime.ts",
+      "export function dwellTime() {}\n",
+    );
     commit("only");
     const b = releasedBaseline(repo);
     expect(baselineKey(b)).toBe("none:no-tags");

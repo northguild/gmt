@@ -1,5 +1,5 @@
 /// <reference types="vitest/globals" />
-import { fetchChunks } from "./fetch-chunks";
+import { fetchChunks, resetChunksMemo } from "./fetch-chunks";
 import type { RetrievalChunk } from "./types";
 
 const SAMPLE: RetrievalChunk[] = [
@@ -25,6 +25,7 @@ function mockCache() {
 }
 
 describe("fetchChunks", () => {
+  beforeEach(() => resetChunksMemo());
   afterEach(() => vi.restoreAllMocks());
 
   it("fetches /retrieval-chunks.json relative to the given origin", async () => {
@@ -76,5 +77,66 @@ describe("fetchChunks", () => {
     expect(cache.put).toHaveBeenCalledTimes(1);
     const [, storedResponse] = cache.put.mock.calls[0];
     expect(storedResponse.headers.get("cache-control")).toBe("max-age=60");
+  });
+
+  it("hands back the same parsed array within the TTL without touching the cache or fetch", async () => {
+    const cache = mockCache();
+    const fetchImpl = vi.fn(
+      async () => new Response(JSON.stringify(SAMPLE), { status: 200 }),
+    );
+    let now = 1_000_000;
+    const options = { fetchImpl, cache, cacheTtlSeconds: 60, now: () => now };
+
+    const first = await fetchChunks("https://gmt-dox.example", options);
+    now += 59_000;
+    const second = await fetchChunks("https://gmt-dox.example", options);
+
+    // Same object, not merely equal: `search.ts` keys its index on identity.
+    expect(second).toBe(first);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(cache.match).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-reads once the TTL has passed, so a redeployed corpus is picked up", async () => {
+    const cache = mockCache();
+    const fetchImpl = vi.fn(
+      async () => new Response(JSON.stringify(SAMPLE), { status: 200 }),
+    );
+    let now = 1_000_000;
+    const options = { fetchImpl, cache, cacheTtlSeconds: 60, now: () => now };
+
+    const first = await fetchChunks("https://gmt-dox.example", options);
+    now += 60_001;
+    const second = await fetchChunks("https://gmt-dox.example", options);
+
+    expect(second).not.toBe(first);
+    expect(second).toEqual(first);
+    // The Cache API entry was still warm, so the bytes came from there.
+    expect(cache.match).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not keep the corpus forever when the clock was unreadable as it was stored", async () => {
+    const fetchImpl = vi.fn(
+      async () => new Response(JSON.stringify(SAMPLE), { status: 200 }),
+    );
+    // The clock reads +Infinity (its null sentinel) at the moment the memo is written, then
+    // recovers. The memo must not survive on an expiry of Infinity.
+    let now = Number.POSITIVE_INFINITY;
+    const options = { fetchImpl, cacheTtlSeconds: 60, now: () => now };
+
+    await fetchChunks("https://gmt-dox.example", options);
+    now = 1_000_000;
+    await fetchChunks("https://gmt-dox.example", options);
+
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps one origin's corpus from answering for another", async () => {
+    const fetchImpl = vi.fn(
+      async () => new Response(JSON.stringify(SAMPLE), { status: 200 }),
+    );
+    await fetchChunks("https://gmt-dox.example", { fetchImpl });
+    await fetchChunks("http://localhost:8787", { fetchImpl });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 });

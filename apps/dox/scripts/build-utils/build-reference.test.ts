@@ -978,15 +978,30 @@ describe("buildSidebar", () => {
         [
           "transport/calculate",
           [
-            { name: "dwellTime", slug: "reference/transport/calculate/dwellTime", unreleased: true },
-            { name: "transitTime", slug: "reference/transport/calculate/transitTime", unreleased: true },
+            {
+              name: "dwellTime",
+              slug: "reference/transport/calculate/dwellTime",
+              unreleased: true,
+            },
+            {
+              name: "transitTime",
+              slug: "reference/transport/calculate/transitTime",
+              unreleased: true,
+            },
           ],
         ],
         [
           "calendar/calculate",
           [
-            { name: "floorToZone", slug: "reference/calendar/calculate/floorToZone" },
-            { name: "newThing", slug: "reference/calendar/calculate/newThing", unreleased: true },
+            {
+              name: "floorToZone",
+              slug: "reference/calendar/calculate/floorToZone",
+            },
+            {
+              name: "newThing",
+              slug: "reference/calendar/calculate/newThing",
+              unreleased: true,
+            },
           ],
         ],
       ]),
@@ -994,7 +1009,9 @@ describe("buildSidebar", () => {
     expect(out).toContain(
       `{ slug: "reference/transport/calculate/dwellTime", ${badge} }`,
     );
-    expect(out).toContain(`{ slug: "reference/calendar/calculate/floorToZone" }`);
+    expect(out).toContain(
+      `{ slug: "reference/calendar/calculate/floorToZone" }`,
+    );
     expect(out).toContain(
       `{ slug: "reference/calendar/calculate/newThing", ${badge} }`,
     );
@@ -1007,10 +1024,13 @@ describe("buildSidebar", () => {
   it("emits no badge when nothing is unreleased", () => {
     const out = BR.buildSidebar(
       new Map([
-        ["calendar/calculate", [
-          { name: "a", slug: "reference/calendar/calculate/a" },
-          { name: "b", slug: "reference/calendar/calculate/b" },
-        ]],
+        [
+          "calendar/calculate",
+          [
+            { name: "a", slug: "reference/calendar/calculate/a" },
+            { name: "b", slug: "reference/calendar/calculate/b" },
+          ],
+        ],
       ]),
     );
     expect(out).not.toContain("badge");

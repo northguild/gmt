@@ -1,0 +1,50 @@
+---
+title: "Demurrage Across a Weekend"
+description: The same container gates out on Monday morning. Whether that is zero chargeable days or one turns on a second, and the invoice has to name the date.
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="Demurrage Across a Weekend"
+  description="Discharged Friday 15:00 with three free calendar days, the container gates out on Monday morning. How many days of demurrage are due, and for which dates?"
+  naiveCode={`// The naive approach: elapsed hours beyond the free time, rounded up
+const discharged = new Date("2024-06-14T19:00:00Z");
+const gatedOut = new Date("2024-06-17T04:00:01Z");
+const hours = (gatedOut.getTime() - discharged.getTime()) / 36e5; // 57.0003
+const chargeable = Math.max(0, Math.ceil((hours - 72) / 24));
+// 0 — but free time ended at Monday 00:00, and the box left one second into Monday`}
+  explanation={`Free time ended at 00:00 on Monday, the start of the local day after the last free day. The dwell is half-open, so a gate-out at exactly that instant is not a chargeable day, and a gate-out one second later is one: Monday 17 June, which \`chargedDates\` lists, so the count can be checked date by date (on US trades the invoice must print those dates, under 46 CFR 541.6). The weekend was consumed on the calendar basis whether or not the terminal was open. \`freeDaysUsed\` plus \`chargeableDays\` is exactly \`dwellTime\`'s \`calendarDays\` for the same dwell.`}
+  gmtCode={`import { chargeableDays } from "@northguild/gmt/intermodal";
+
+const tariff = { basis: "calendar", chargeBasis: "calendar", timeZone: "America/New_York", firstDay: "eventDay" };
+
+chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T04:00:00Z", 3, tariff);
+// { freeDaysUsed: 3, chargeableDays: 0, expiresAt: "2024-06-17T04:00:00Z",
+//   chargedDates: [], byTier: [{ from: 1, to: null, days: 0 }] }
+
+chargeableDays("2024-06-14T19:00:00Z", "2024-06-17T04:00:01Z", 3, tariff);
+// { freeDaysUsed: 3, chargeableDays: 1, expiresAt: "2024-06-17T04:00:00Z",
+//   chargedDates: ["2024-06-17"], byTier: [{ from: 1, to: null, days: 1 }] }
+
+// Twelve chargeable days in bands of five, five and the rest.
+chargeableDays("2024-06-14T19:00:00Z", "2024-06-28T15:00:00Z", 3, { ...tariff, tiers: [5, 10] });
+// { freeDaysUsed: 3, chargeableDays: 12, expiresAt: "2024-06-17T04:00:00Z",
+//   chargedDates: ["2024-06-17", "2024-06-18", "2024-06-19", "2024-06-20", "2024-06-21",
+//                  "2024-06-22", "2024-06-23", "2024-06-24", "2024-06-25", "2024-06-26",
+//                  "2024-06-27", "2024-06-28"],
+//   byTier: [{ from: 1, to: 5, days: 5 }, { from: 6, to: 10, days: 5 }, { from: 11, to: null, days: 2 }] }`}
+  fixedSpecId="chargeableDays"
+/>
+
+Change `firstDay` to `"nextDay"` above and the Monday-morning gate-out is still free, because
+free time then ends on Tuesday. Change `basis` to `"working"`, add
+`calendar: { weekend: [6, 7], holidays: ["2024-06-19"], timeZone: "America/New_York" }` and gate
+out at `2024-06-24T15:00:00Z`: the free days are Friday, Monday and Tuesday, and free time ends
+as Juneteenth begins. With `chargeBasis: "calendar"`, the usual shape where free time is in working days, all six days from
+the 19th to the 24th are charged, holiday and weekend included. Change `chargeBasis` to
+`"working"`, as California law requires at its terminals, and only the 20th, 21st and 24th are. To
+drag the gate-out across the expiry yourself, open it in the [Free Time
+Ledger](/tools/free-time-ledger/?w=freetime&wa=%7B%22clockStart%22%3A%222024-06-14T19%3A00%3A00Z%22%2C%22clockEnd%22%3A%222024-06-17T04%3A00%3A00Z%22%2C%22freeDays%22%3A3%2C%22firstDay%22%3A%22eventDay%22%2C%22basis%22%3A%22calendar%22%2C%22chargeBasis%22%3A%22calendar%22%2C%22zone%22%3A%22America%2FNew_York%22%7D).
+The full rules are in [Intermodal: Free Time and
+Demurrage](/guides/industries/intermodal-free-time-and-demurrage/).

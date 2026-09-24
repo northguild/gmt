@@ -15,6 +15,7 @@ import {
   isRegisteredWidget,
   resolveWidget,
   WIDGET_REGISTRY,
+  isSameWidget,
 } from "./widget-registry";
 
 describe("resolveWidget", () => {
@@ -83,12 +84,13 @@ describe("resolveWidget", () => {
     expect(await result.entry.validate?.(result.args)).toBeNull();
   });
 
-  it("produces markup carrying every role its mount looks up", () => {
+  it("produces markup carrying every role its mount looks up", async () => {
     // `mountGlobe` uses null-tolerant lookups, so a missing data-role would not
     // throw — it would silently make a control inert.
     const entry = WIDGET_REGISTRY.showGlobe;
     expect(entry).toBeDefined();
-    const html = entry?.renderTemplate("probe", {}) ?? "";
+    const loaded = await entry?.load();
+    const html = loaded?.renderTemplate("probe", {} as never) ?? "";
     for (const role of [
       'data-role="stage"',
       'data-role="clocks"',
@@ -181,5 +183,27 @@ describe("no dynamic code execution on the dispatch path", () => {
       // A literal string argument, not an identifier or a template with a hole.
       expect(match[1].trim()).toMatch(/^["'][^"'`]+["']$/);
     }
+  });
+});
+
+describe("isSameWidget", () => {
+  const globe = WIDGET_REGISTRY.showGlobe!;
+  const dst = WIDGET_REGISTRY.showDstInspector!;
+
+  it("matches the same widget with equal arguments in any key order", () => {
+    expect(
+      isSameWidget(
+        { entry: dst, args: { zone: "America/New_York", year: 2024 } },
+        dst,
+        { year: 2024, zone: "America/New_York" },
+      ),
+    ).toBe(true);
+  });
+
+  it("does not match different arguments, a different widget, or an empty rail", () => {
+    const current = { entry: globe, args: { zone: "Asia/Tokyo" } };
+    expect(isSameWidget(current, globe, { zone: "Europe/London" })).toBe(false);
+    expect(isSameWidget(current, dst, { zone: "Asia/Tokyo" })).toBe(false);
+    expect(isSameWidget(null, globe, { zone: "Asia/Tokyo" })).toBe(false);
   });
 });

@@ -1,3 +1,4 @@
+import { getUnixNow } from "@northguild/gmt/unix/get";
 import type { RetrievalChunk } from "./types";
 
 /** Minimal subset of the Web Cache API (`caches.default` in a Cloudflare
@@ -22,9 +23,34 @@ export interface FetchChunksOptions {
    * not a measured optimum; retuning it needs production traffic DOX-C2
    * doesn't have yet. */
   cacheTtlSeconds?: number;
+  /** Injectable clock (epoch ms) for the in-memory memo's TTL; defaults to
+   * gmt's `getUnixNow`. */
+  now?: () => number;
 }
 
 const CHUNKS_PATH = "/retrieval-chunks.json";
+
+/* The parsed corpus, once per isolate. The Cache API below survives across
+   isolates but hands back bytes, and `response.json()` over 750 KB was being
+   paid on every request. This memo returns the *same array* for the life of
+   its TTL, which is also what lets `search.ts` keep one index per corpus.
+   Keyed on the URL so a test (or a second origin) never sees another's
+   corpus; the TTL matches the Cache API entry's, so the two expire together. */
+let memo: { url: string; chunks: RetrievalChunk[]; expiresAt: number } | null =
+  null;
+
+/** gmt's clock, or +Infinity if it reports its `null` sentinel: an unreadable
+ * clock must expire the memo (re-read the corpus), never keep it forever. On a
+ * read that means "already expired"; on a write, `remember` stores an expiry
+ * of 0 instead, since `Infinity + ttl` would never expire. */
+function unixNowOrExpired(): number {
+  return getUnixNow() ?? Number.POSITIVE_INFINITY;
+}
+
+/** Forgets the in-memory corpus. Tests only. */
+export function resetChunksMemo(): void {
+  memo = null;
+}
 
 /**
  * DOX-C1 (#137) — "the Worker fetches the corpus from the static site it is
@@ -45,13 +71,29 @@ export async function fetchChunks(
   origin: string,
   options: FetchChunksOptions = {},
 ): Promise<RetrievalChunk[]> {
-  const { fetchImpl = fetch, cache, cacheTtlSeconds = 300 } = options;
+  const {
+    fetchImpl = fetch,
+    cache,
+    cacheTtlSeconds = 300,
+    now = unixNowOrExpired,
+  } = options;
   const url = new URL(CHUNKS_PATH, origin).toString();
   const cacheKey = new Request(url);
 
+  if (memo && memo.url === url && memo.expiresAt > now()) return memo.chunks;
+
+  const remember = (chunks: RetrievalChunk[]): RetrievalChunk[] => {
+    const at = now();
+    // An unreadable clock (+Infinity) stores an already-expired memo, so the next
+    // request re-reads once the clock recovers.
+    const expiresAt = Number.isFinite(at) ? at + cacheTtlSeconds * 1000 : 0;
+    memo = { url, chunks, expiresAt };
+    return chunks;
+  };
+
   if (cache) {
     const cached = await cache.match(cacheKey);
-    if (cached) return (await cached.json()) as RetrievalChunk[];
+    if (cached) return remember((await cached.json()) as RetrievalChunk[]);
   }
 
   const response = await fetchImpl(url);
@@ -72,5 +114,5 @@ export async function fetchChunks(
     await cache.put(cacheKey, cacheResponse);
   }
 
-  return chunks;
+  return remember(chunks);
 }

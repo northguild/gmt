@@ -24,6 +24,8 @@
  *   tests, test files   `vitest list --json` — collection only; it never runs a test body
  *   functions/namespace `apps/dox/src/generated/reference/gmt-corpus.json`, the generated
  *                       reference corpus (`kind: "function"`, grouped by `namespace`)
+ *   industry layers     `apps/dox/src/content/docs/guides/industries/`, one guide per layer,
+ *                       each named for its namespace (`transport-legs-and-dwell.mdx`)
  *   CI multipliers      `.github/workflows/ci.yml`'s `gmt-matrix` node/timezone matrix
  *   locales             `MustTestLocales` in `packages/gmt/src/test/localeMatrix.ts`
  *
@@ -46,7 +48,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve, sep } from "node:path";
 
 import { formatJson } from "./lib/format-json.mjs";
@@ -54,6 +56,7 @@ import { formatJson } from "./lib/format-json.mjs";
 const CORPUS = "apps/dox/src/generated/reference/gmt-corpus.json";
 const WORKFLOW = ".github/workflows/ci.yml";
 const LOCALES = "packages/gmt/src/test/localeMatrix.ts";
+const INDUSTRY_GUIDES = "apps/dox/src/content/docs/guides/industries";
 const VITEST_CONFIG = "packages/gmt/vitest.config.ts";
 
 const ROOT_README = "README.md";
@@ -157,11 +160,35 @@ function apiSurface() {
 
   // Descending, so the generated chart data reads in bar order.
   const byNamespace = [...functions.entries()].sort((a, b) => b[1] - a[1]);
+  const industries = industryLayers(new Set(functions.keys()));
   return {
     byNamespace,
+    industries: byNamespace
+      .map(([namespace]) => namespace)
+      .filter((namespace) => industries.has(namespace)),
     functions: byNamespace.reduce((sum, [, count]) => sum + count, 0),
     patterns,
   };
+}
+
+/**
+ * The namespaces that are industry layers rather than core primitives. Every layer ships with a
+ * guide under INDUSTRY_GUIDES named `<namespace>-<topic>.mdx`, so the guides are the list — a new
+ * layer joins the /why-gmt industry chart when its guide lands, with nothing typed here.
+ */
+function industryLayers(namespaces) {
+  const layers = new Set();
+  for (const file of readdirSync(INDUSTRY_GUIDES)) {
+    if (!file.endsWith(".mdx") || file === "index.mdx") continue;
+    const namespace = file.slice(0, file.indexOf("-"));
+    if (!namespaces.has(namespace)) {
+      throw new Error(
+        `${INDUSTRY_GUIDES}/${file}: an industry guide is named for its namespace, and \`${namespace}\` exports no function`,
+      );
+    }
+    layers.add(namespace);
+  }
+  return layers;
 }
 
 /** The CI matrix the executions figure multiplies by. */
@@ -246,6 +273,7 @@ function statsObject(f) {
       namespace,
       count,
     })),
+    industries: f.industries,
   };
 }
 
@@ -448,7 +476,9 @@ function show() {
     `public functions ${n(f.functions)} across ${f.byNamespace.length} namespaces, plus ${f.patterns} regex patterns`,
   );
   for (const [ns, count] of f.byNamespace)
-    console.log(`    ${ns.padEnd(10)} ${count}`);
+    console.log(
+      `    ${ns.padEnd(10)} ${count}${f.industries.includes(ns) ? "  (industry)" : ""}`,
+    );
 }
 
 function sync() {
