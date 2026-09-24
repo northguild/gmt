@@ -8,10 +8,12 @@ description: >
   (startOfZoned/endOfZoned/startOfUnix/endOfUnix, never after the input), hours
   in a local day, and flooring or bucketing instants on local calendar
   boundaries (floorToZone/bucketRange) instead of roundZoned, calendar-annotated
-  zoned strings, and zoned values exact at the range limits (Australia/Sydney at
-  the maximum, Etc/GMT+12 at the minimum). Reads the installed package README.md
-  and source JSDoc for API details; this skill is a routing pointer, not an API
-  dump.
+  zoned strings, zoned values exact at the range limits (Australia/Sydney at the
+  maximum, Etc/GMT+12 at the minimum), and the transport leg primitives —
+  transitTime (exact elapsed time in the departure's zone), etaAtZone (render an
+  instant where it lands) and dwellTime (elapsed duration plus local calendar
+  days crossed). Reads the installed package README.md and source JSDoc for API
+  details; this skill is a routing pointer, not an API dump.
 sources:
   - 'northguild/gmt:README.md'
   - 'northguild/gmt:packages/gmt/src/zoned/get/index.ts'
@@ -30,10 +32,12 @@ sources:
   - 'northguild/gmt:packages/gmt/src/instant/convert/index.ts'
   - 'northguild/gmt:packages/gmt/src/calendar/calculate/index.ts'
   - 'northguild/gmt:packages/gmt/src/calendar/validate/index.ts'
+  - 'northguild/gmt:packages/gmt/src/transport/calculate/index.ts'
+  - 'northguild/gmt:packages/gmt/src/transport/convert/index.ts'
 metadata:
   type: core
   library: '@northguild/gmt'
-  library_version: '1.16.0'
+  library_version: '1.17.0'
 ---
 
 # GMT Timezone
@@ -53,6 +57,9 @@ converting between time zones, or doing arithmetic that must respect DST.
 - The user needs the start or end of a local hour, day, week, month or quarter.
 - The user is grouping or aggregating UTC timestamps by local day, hour, week or
   month — an observability rollup, a chargeable-days count.
+- The user is adding a leg's transit time to a departure, showing an arrival in
+  the zone where it lands, or counting how long cargo, a vessel or a patient sat
+  somewhere in local calendar days.
 
 ## Core rules
 
@@ -164,7 +171,21 @@ converting between time zones, or doing arithmetic that must respect DST.
     `formatZonedRange` and `formatZonedToParts` return `""`/`[]` for a
     `timeZone` option. To show an instant in another zone, use
     `formatUtc(convertZonedToUtc(value), locale, { timeZone })`.
-15. **Read the README.** This skill is a routing pointer. For the full DST
+15. **Transport legs are exact time; dwell is counted in local days.**
+    `transitTime(departure, duration)` adds hours, minutes and seconds as
+    elapsed time (`P1D` is 24 exact hours) in the departure's own zone, so a leg
+    across a DST transition lands at the wall time the vehicle really arrives;
+    years, months and weeks return `""`, and a bracketed zone that contradicts
+    its offset is rejected rather than reinterpreted. `etaAtZone(instant, zone)`
+    renders a moment in the zone the caller names — no disambiguation arises,
+    the offset in the result tells the two passes of a fall-back hour apart, and
+    GMT never resolves a port, airport or station code to a zone.
+    `dwellTime(entry, exit, targetZone?)` returns `{ duration, enter, exit,
+    calendarDays }`; `calendarDays` is the number of distinct local dates the
+    half-open `[entry, exit)` touches, from the zone's real day boundaries
+    (`floorToZone`), and is the library's one "local midnights crossed" count.
+    Bare instants with no `targetZone` return `null`: an offset is not a place.
+16. **Read the README.** This skill is a routing pointer. For the full DST
     disambiguation walkthrough, code examples, and locale ICU notes, read the
     installed package's `README.md` and the source JSDoc.
 
@@ -190,6 +211,7 @@ converting between time zones, or doing arithmetic that must respect DST.
 - **Local-time resolution**: `classifyLocal`, `resolveLocal`
 - **Zone-aware buckets**: `floorToZone`, `bucketRange`,
   `isValidZoneBucketUnit`
+- **Transport legs and dwell**: `transitTime`, `etaAtZone`, `dwellTime`
 
 ## References
 

@@ -68,6 +68,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - `@example` is one inline line, `fn(args) // result (note)`, split on `/\s+\/\/\s/`. The
     one multi-line example is `getDstTransitions`.
   - `plain/calculate/weekOfYear.ts` is the only file exporting two functions.
+  - Two exports whose page paths differ only by case (a `DwellTime` type beside a `dwellTime`
+    function) are one file on macOS and Windows, so one page overwrites the other and the
+    sidebar points at a missing slug. The generator refuses such a pair before writing, and
+    `reference-corpus.test.ts` checks the manifest. The fix is a rename in `packages/gmt/src`.
   - The source has no `@category` / `@see` / `@since` tags. Taxonomy comes from the
     directory tree, cross-links from signature types. `src/regex/*` documents with `//`
     comments, not JSDoc.

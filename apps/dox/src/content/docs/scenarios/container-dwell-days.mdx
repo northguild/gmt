@@ -1,0 +1,39 @@
+---
+title: "Container Dwell: Two Hours, Two Days"
+description: A container gates in at 23:00 and out at 01:00. The terminal charges two days, and dividing hours by 24 says one.
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="Container Dwell: Two Hours, Two Days"
+  description="A container gates in at a New York terminal at 23:00 and gates out at 01:00. How many days of dwell does the terminal count?"
+  naiveCode={`// The naive approach: elapsed hours, rounded up to days
+const gateIn = new Date("2024-06-15T23:00:00-04:00");
+const gateOut = new Date("2024-06-16T01:00:00-04:00");
+const hours = (gateOut.getTime() - gateIn.getTime()) / 36e5; // 2
+const days = Math.ceil(hours / 24);
+// 1 — but the terminal's bill says 2, and it is right`}
+  explanation={`Terminals, depots and yards do not charge by elapsed hours. They count the local calendar days the container was present, and this one was present on the 15th and on the 16th. Elapsed time divided by 24 can never see a midnight. \`dwellTime\` returns both answers: the exact elapsed duration, and \`calendarDays\`, the number of distinct local dates the half-open interval [entry, exit) touches in the terminal's own zone. The zone is what decides the count, which is why the same two instants can be one day in Amsterdam and two in New York.`}
+  gmtCode={`import { dwellTime } from "@northguild/gmt/transport";
+
+dwellTime(
+  "2024-06-15T23:00:00-04:00[America/New_York]",
+  "2024-06-16T01:00:00-04:00[America/New_York]",
+);
+// { duration: "PT2H",
+//   enter: "2024-06-15T23:00:00-04:00[America/New_York]",
+//   exit: "2024-06-16T01:00:00-04:00[America/New_York]",
+//   calendarDays: 2 }
+
+// The same two instants, counted where the box actually sat:
+dwellTime("2024-06-16T03:00:00Z", "2024-06-16T05:00:00Z", "America/New_York").calendarDays; // 2
+dwellTime("2024-06-16T03:00:00Z", "2024-06-16T05:00:00Z", "Europe/Amsterdam").calendarDays; // 1`}
+  fixedSpecId="dwellTime"
+/>
+
+Edit the exit above to `2024-06-16T00:00:00-04:00[America/New_York]` and the count drops to
+`1`: an exit exactly at local midnight does not touch the new day, because the interval is
+half-open at the exit. Remove the zones and pass two `Z` instants with no third argument and
+the result is `null`, because a day count has no meaning without a place. The full rules are
+in [Transport: Legs and Dwell](/guides/industries/transport-legs-and-dwell/).

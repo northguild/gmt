@@ -1855,6 +1855,22 @@ function runGeneration() {
     return true;
   });
 
+  // Two pages whose paths differ only by case (a `Dwell` type beside a `dwellTime` function
+  // would have been `DwellTime`) are one file on a case-insensitive filesystem, so one page
+  // silently overwrites the other and the sidebar then points at a slug that does not exist.
+  // Refuse before anything is written: the fix is a rename in `packages/gmt/src`.
+  const byFoldedUrl = new Map<string, string>();
+  for (const d of dedupedDocs) {
+    const url = pageUrl(d.namespace, d.module, d.name);
+    const clash = byFoldedUrl.get(url.toLowerCase());
+    if (clash !== undefined) {
+      throw new Error(
+        `[reference] two exports would share one page on a case-insensitive filesystem: ${clash} and ${url}. Rename one of them.`,
+      );
+    }
+    byFoldedUrl.set(url.toLowerCase(), url);
+  }
+
   const usedBy = buildUsedBy(dedupedDocs);
 
   // Every page this run emits, keyed by its path under `outMdx`. `syncTree` writes only the
