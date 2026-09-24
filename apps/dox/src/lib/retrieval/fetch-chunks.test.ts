@@ -115,6 +115,22 @@ describe("fetchChunks", () => {
     expect(cache.match).toHaveBeenCalledTimes(2);
   });
 
+  it("does not keep the corpus forever when the clock was unreadable as it was stored", async () => {
+    const fetchImpl = vi.fn(
+      async () => new Response(JSON.stringify(SAMPLE), { status: 200 }),
+    );
+    // The clock reads +Infinity (its null sentinel) at the moment the memo is written, then
+    // recovers. The memo must not survive on an expiry of Infinity.
+    let now = Number.POSITIVE_INFINITY;
+    const options = { fetchImpl, cacheTtlSeconds: 60, now: () => now };
+
+    await fetchChunks("https://gmt-dox.example", options);
+    now = 1_000_000;
+    await fetchChunks("https://gmt-dox.example", options);
+
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
   it("keeps one origin's corpus from answering for another", async () => {
     const fetchImpl = vi.fn(
       async () => new Response(JSON.stringify(SAMPLE), { status: 200 }),

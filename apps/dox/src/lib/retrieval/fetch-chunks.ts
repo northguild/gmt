@@ -40,7 +40,9 @@ let memo: { url: string; chunks: RetrievalChunk[]; expiresAt: number } | null =
   null;
 
 /** gmt's clock, or +Infinity if it reports its `null` sentinel: an unreadable
- * clock must expire the memo (re-read the corpus), never keep it forever. */
+ * clock must expire the memo (re-read the corpus), never keep it forever. On a
+ * read that means "already expired"; on a write, `remember` stores an expiry
+ * of 0 instead, since `Infinity + ttl` would never expire. */
 function unixNowOrExpired(): number {
   return getUnixNow() ?? Number.POSITIVE_INFINITY;
 }
@@ -81,7 +83,11 @@ export async function fetchChunks(
   if (memo && memo.url === url && memo.expiresAt > now()) return memo.chunks;
 
   const remember = (chunks: RetrievalChunk[]): RetrievalChunk[] => {
-    memo = { url, chunks, expiresAt: now() + cacheTtlSeconds * 1000 };
+    const at = now();
+    // An unreadable clock (+Infinity) stores an already-expired memo, so the next
+    // request re-reads once the clock recovers.
+    const expiresAt = Number.isFinite(at) ? at + cacheTtlSeconds * 1000 : 0;
+    memo = { url, chunks, expiresAt };
     return chunks;
   };
 

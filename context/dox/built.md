@@ -292,7 +292,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   parts never enter a message, so a refused request leaves no empty turn in the history
   (`DoxChat.progress.test.tsx`). What is known before the stream opens — the burst
   limiter, a bad body, the visitor cap, every brain already marked out — is still a plain
-  HTTP error.
+  HTTP error. Anything watching the endpoint should note the change: a pool spent or every
+  brain busy *during* the answer is now HTTP 200 with the refusal in the stream, not a
+  non-OK status (PR #281 review).
 
 - **System prompt** (`worker/system-prompt.ts`), eight sections in order: Persona and
   scope · Standing order (the prompt-injection boundary) · Linking rules (only this
